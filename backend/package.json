@@ -4,7 +4,8 @@
   "main": "server.js",
   "scripts": {
     "dev": "nodemon server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "migrate": "node migrations/migrate.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
