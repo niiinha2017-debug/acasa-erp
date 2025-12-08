@@ -1,0 +1,32 @@
+:root {
+    /* ===== Cores principais ===== */
+    --primary: #4a6cf7;
+    --primary-hover: #3b5ae0;
+
+    --secondary: #f1f5f9;
+    --secondary-dark: #e2e8f0;
+
+    --success: #16a34a;
+    --danger: #dc2626;
+    --warning: #facc15;
+
+    --text-dark: #1e293b;
+    --text-light: #64748b;
+    --white: #ffffff;
+
+    --bg-light: #f8fafc;
+    --bg-dark: #0f172a;
+
+    /* ===== Formatos ===== */
+    --radius: 10px;
+    --shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+    --transition: .2s ease-in-out;
+
+    /* ===== Espaçamentos ===== */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+}

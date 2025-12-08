@@ -4,11 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ACASA ERP - Login</title>
+
+    <!-- GLOBAL CSS -->
+    <link rel="stylesheet" href="./Shared/styles/Reset.css">
+    <link rel="stylesheet" href="./Shared/styles/Variables.css">
+    <link rel="stylesheet" href="./Shared/styles/Global.css">
+    <link rel="stylesheet" href="./Shared/styles/Utility.css">
+
+    <!-- LOGIN PAGE CSS -->
     <link rel="stylesheet" href="style.css">
-    
+
     <style>
         #global-loader {
-            display: none; /* Começa escondido */
+            display: none;
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255,255,255,0.8); z-index: 9999;
             justify-content: center; align-items: center; flex-direction: column;
@@ -18,7 +26,10 @@
             border-top: 4px solid #2c3e50; border-radius: 50%;
             animation: spin 1s linear infinite;
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
     </style>
 </head>
 
