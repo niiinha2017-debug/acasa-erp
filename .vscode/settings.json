@@ -12,7 +12,10 @@
             "driver": "MySQL",
             "name": "acasa-erp",
             "database": "acasa_erp",
-            "username": "root"
+            "username": "root",
+            "password": "gmgt33APCS!"
+
         }
     ]
 }
+
