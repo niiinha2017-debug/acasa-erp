@@ -1,14 +1,13 @@
+require('dotenv').config();        // Carrega o .env
+
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
-
-dotenv.config();
 
 const authRoutes = require('./routes/auth.routes');
 const clientesRoutes = require('./routes/clientes.routes');
 const authMiddleware = require('./middleware/authMiddleware');
 
-const app = express();
+const app = express();             // Apenas UMA vez
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
