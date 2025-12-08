@@ -1,5 +1,5 @@
 export const AppConfig = {
-    API_BASE_URL: "http://localhost:3000/api",
+    API_BASE_URL: "https://35.168.111.198:3000/api",
 
     TIMEOUT: 15000,
 
