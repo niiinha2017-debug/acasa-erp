@@ -1,5 +1,3 @@
-console.log("🔥 Entrou no AuthController.login");
-
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const UserModel = require('../models/user.model');
@@ -9,8 +7,14 @@ const JWT_EXPIRES_IN = '8h';
 
 const AuthController = {
     async login(req, res) {
+        // Movi o log para DENTRO da função para você ver acontecendo
+        console.log("🔥 [AUTH] Tentativa de login iniciada...");
+
         try {
+            // O Front manda 'senha', mas o banco tem 'password'
             const { email, senha } = req.body;
+
+            console.log("📥 Dados recebidos:", { email, senhaPresente: !!senha });
 
             if (!email || !senha) {
                 return res.status(400).json({
@@ -19,44 +23,55 @@ const AuthController = {
                 });
             }
 
+            // Busca no banco
             const user = await UserModel.findByEmail(email);
 
             if (!user) {
+                console.log("❌ Usuário não encontrado no banco.");
                 return res.status(401).json({
                     success: false,
                     message: 'Usuário ou senha inválidos.'
                 });
             }
 
-            // Aqui usamos o campo correto do banco: "password"
+            // Debug para garantir que o Model trouxe a senha criptografada
+            if (!user.password) {
+                console.error("⛔ ERRO CRÍTICO: O Model não retornou o campo 'password'. Verifique o SELECT.");
+                return res.status(500).json({ success: false, message: "Erro de configuração no servidor." });
+            }
+
+            // Compara a senha (Texto limpo vs Hash do banco)
             const senhaValida = await bcrypt.compare(senha, user.password);
 
             if (!senhaValida) {
+                console.log("❌ Senha incorreta.");
                 return res.status(401).json({
                     success: false,
                     message: 'Usuário ou senha inválidos.'
                 });
             }
 
-            // Ajustado para "name" ao invés de "nome"
+            // Gera o Token
             const token = jwt.sign(
                 { id: user.id, email: user.email, name: user.name, role: user.role },
                 JWT_SECRET,
                 { expiresIn: JWT_EXPIRES_IN }
             );
 
+            console.log("✅ Login Sucesso! Token gerado para:", user.name);
+
             return res.json({
                 token,
                 user: {
                     id: user.id,
-                    nome: user.name,     // Mantemos 'nome' no front, mas pegando 'name'
+                    nome: user.name,   // Mapeando 'name' (banco) para 'nome' (front)
                     email: user.email,
                     role: user.role
                 }
             });
 
         } catch (error) {
-            console.error('Erro no login:', error);
+            console.error('🔥 Erro FATAL no login:', error);
             return res.status(500).json({
                 success: false,
                 message: 'Erro interno no servidor.'
