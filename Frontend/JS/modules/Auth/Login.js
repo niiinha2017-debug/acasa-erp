@@ -1,52 +1,34 @@
-// =========================
-//  AUTH - LOGIN MODULE
-// =========================
+import { api } from "../core/ApiService.js";
+import { AppConfig } from "../config/api.js";
 
-// Import loader global
-import { showLoader, hideLoader } from "../../Shared/helpers/loader.js";
+export async function fazerLogin(event) {
+    event.preventDefault();
 
-// Import API base config
-import API from "../../config/api.js"; 
-// (vamos criar api.js em seguida se ainda não existir)
-
-
-// ====================================================
-//  FUNÇÃO PRINCIPAL DE LOGIN
-// ====================================================
-export async function fazerLogin() {
     const email = document.getElementById("email").value.trim();
     const senha = document.getElementById("senha").value.trim();
 
     if (!email || !senha) {
-        return alert("Preencha e-mail e senha!");
+        alert("Preencha o e-mail e a senha.");
+        return;
     }
 
     try {
-        showLoader("Validando credenciais...");
+        const result = await api.post("/auth/login", { email, senha });
 
-        const response = await fetch(`${API}/auth/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, senha })
-        });
+        if (result.success) {
+            localStorage.setItem(AppConfig.STORAGE_KEYS.TOKEN, result.token);
+            localStorage.setItem(AppConfig.STORAGE_KEYS.USER, JSON.stringify(result.user));
 
-        const data = await response.json();
+            alert("Login realizado com sucesso!");
 
-        if (!response.ok) {
-            hideLoader();
-            return alert(data.message || "Falha ao acessar o sistema.");
+            // ❗NÃO REDIRECIONA PRA DASHBOARD  
+            // Aqui você define a próxima página no futuro.
+            // Exemplo:
+            // window.location.href = "/Frontend/alguma-pagina.html";
         }
-
-        // Salva token no navegador
-        localStorage.setItem("ACASA_TOKEN", data.token);
-        localStorage.setItem("ACASA_USER", JSON.stringify(data.user));
-
-        hideLoader();
-        window.location.href = "dashboard.html"; // Página após login
-
-    } catch (error) {
-        hideLoader();
-        alert("Erro ao conectar ao servidor.");
-        console.error("LOGIN ERROR:", error);
+    } catch (err) {
+        alert(err.message || "Erro ao fazer login");
     }
 }
+
+window.fazerLogin = fazerLogin;

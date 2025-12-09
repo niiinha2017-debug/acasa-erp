@@ -1,60 +1,47 @@
-import { AppConfig } from '../config/AppConfig.js';
+import { AppConfig } from "../config/api.js";
 
 class ApiService {
-    constructor() {
-        this.baseUrl = AppConfig.API_BASE_URL;
-    }
-
-    async _request(endpoint, method, body = null) {
-        // Pega o token salvo
+    async request(endpoint, method = "GET", body = null) {
         const token = localStorage.getItem(AppConfig.STORAGE_KEYS.TOKEN);
-        
+
         const headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            "Content-Type": "application/json"
         };
 
-        // Se tiver token, anexa no cabeçalho automaticamente
-        if (token) headers['Authorization'] = `Bearer ${token}`;
+        if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+        }
 
-        const options = { method, headers };
-        if (body) options.body = JSON.stringify(body);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), AppConfig.TIMEOUT);
 
         try {
-            const response = await fetch(`${this.baseUrl}${endpoint}`, options);
+            const response = await fetch(AppConfig.API_BASE_URL + endpoint, {
+                method,
+                headers,
+                body: body ? JSON.stringify(body) : null,
+                signal: controller.signal
+            });
 
-            // Se der erro 401 (Sessão Expirada), desloga na hora
-            if (response.status === 401) {
-                this.handleUnauthorized();
-                return null;
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok || data.success === false) {
+                throw new Error(data.message || "Erro na requisição");
             }
 
-            // Se der outro erro, lança para o sistema tratar
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || `Erro do Servidor: ${response.status}`);
-            }
-
-            return await response.json();
-        } catch (error) {
-            console.error(`[Erro API] ${method} ${endpoint}:`, error);
-            throw error;
+            return data;
+        } finally {
+            clearTimeout(timeout);
         }
     }
 
-    handleUnauthorized() {
-        // Limpa tudo e manda pro login
-        localStorage.removeItem(AppConfig.STORAGE_KEYS.TOKEN);
-        localStorage.removeItem(AppConfig.STORAGE_KEYS.USER);
-        window.location.href = AppConfig.ROUTES.LOGIN;
+    get(endpoint) {
+        return this.request(endpoint, "GET");
     }
 
-    // Métodos Públicos (Simplificados)
-    get(endpoint) { return this._request(endpoint, 'GET'); }
-    post(endpoint, body) { return this._request(endpoint, 'POST', body); }
-    put(endpoint, body) { return this._request(endpoint, 'PUT', body); }
-    delete(endpoint) { return this._request(endpoint, 'DELETE'); }
+    post(endpoint, body) {
+        return this.request(endpoint, "POST", body);
+    }
 }
 
-// Exporta uma única instância para o projeto todo usar
 export const api = new ApiService();
