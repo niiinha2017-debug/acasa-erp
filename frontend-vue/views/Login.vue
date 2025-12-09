@@ -1,129 +1,76 @@
 <script setup>
 import { ref } from 'vue';
-import { api } from '../services/api'; // Importa sua API configurada
+import api from '../services/api'; // Sua API configurada
 
-// Variáveis Reativas (v-model)
-const email = ref('admin@acasa.com'); // Valor padrão para teste
-const senha = ref('123456');
+const email = ref('admin@acasa.com');
+const senha = ref('123456'); // Variável local do input
 const carregando = ref(false);
-const erro = ref('');
 
-// Função de Login
-async function fazerLogin() {
-    // Limpa erros anteriores
-    erro.value = '';
+const fazerLogin = async () => {
+  carregando.value = true;
 
-    if (!email.value || !senha.value) {
-        erro.value = 'Por favor, preencha todos os campos.';
-        return;
-    }
+  try {
+    console.log("Enviando dados:", { email: email.value, senha: senha.value });
 
-    carregando.value = true;
+    // AQUI ESTÁ O SEGREDO: Enviamos 'senha' (português) para o backend entender
+    const response = await api.post('/auth/login', { 
+      email: email.value, 
+      senha: senha.value  // <--- Antes estava 'password', agora está 'senha'
+    });
 
-    try {
-        // Chama o Backend (usando seu arquivo api.js)
-        const resposta = await api.post('/auth/login', { 
-            email: email.value, 
-            senha: senha.value 
-        });
+    // Se chegou aqui, funcionou!
+    console.log("Resposta do servidor:", response);
+    
+    // O axios devolve os dados dentro de .data
+    const token = response.data.token;
+    const usuario = response.data.user;
 
-        // Se chegou aqui, deu certo! Salva o token.
-        localStorage.setItem('acasa_token', resposta.token);
-        localStorage.setItem('acasa_user', JSON.stringify(resposta.user));
+    // Salva no navegador
+    localStorage.setItem('acasa_token', token);
+    localStorage.setItem('acasa_user', JSON.stringify(usuario));
 
-        alert('Login realizado! Bem-vindo(a) ' + resposta.user.nome);
-        
-        // AQUI VAMOS DIRECIONAR PRO DASHBOARD (No futuro usaremos Router)
-        // window.location.href = '/dashboard'; 
+    alert("✅ Sucesso! Bem-vindo " + usuario.nome);
+    
+    // Redirecionamento provisório (até instalarmos o Router)
+    // window.location.reload(); 
 
-    } catch (error) {
-        console.error(error);
-        erro.value = error.message || 'Erro ao conectar com o servidor.';
-    } finally {
-        carregando.value = false;
-    }
-}
-// Adicione isso logo no começo do <script setup>
-const emit = defineEmits(['login-sucesso']);
-
-// ... dentro da função fazerLogin, logo depois de salvar o token:
-// localStorage.setItem...
-emit('login-sucesso'); // <--- AVISA O APP QUE LOGOU
+  } catch (error) {
+    console.error("Erro completo:", error);
+    // Tenta pegar a mensagem de erro do backend, senão mostra erro genérico
+    const msg = error.response?.data?.message || error.message || "Erro desconhecido";
+    alert("❌ Falha no login: " + msg);
+  } finally {
+    carregando.value = false;
+  }
+};
 </script>
 
 <template>
-    <div class="auth-container">
+  <div class="auth-container">
+    <div class="auth-card">
+      <h2 class="auth-title">A Casa ERP</h2>
+      <form @submit.prevent="fazerLogin">
+        
+        <div class="auth-group">
+          <label class="label">E-mail</label>
+          <input type="text" v-model="email" class="input">
+        </div>
+        
+        <div class="auth-group">
+          <label class="label">Senha</label>
+          <input type="password" v-model="senha" class="input">
+        </div>
+        
+        <button type="submit" class="botao botao-primario" :disabled="carregando">
+          {{ carregando ? 'Conectando...' : 'Acessar' }}
+        </button>
 
-        <aside class="auth-left">
-            <div class="auth-left-content">
-                <div class="auth-logo">
-                    <h1><i class="fas fa-home"></i> A Casa</h1>
-                    <p>Sistema de Gestão Empresarial</p>
-                </div>
-                <section class="auth-features">
-                    <article class="auth-feature">
-                        <h3><i class="fas fa-chart-line"></i> Gestão Estratégica</h3>
-                        <p>Controle financeiro e produção em um só lugar.</p>
-                    </article>
-                </section>
-            </div>
-        </aside>
-
-        <main class="auth-right">
-            <article class="auth-card">
-                <h2 class="auth-title">Acessar Sistema</h2>
-                <p class="auth-subtitle">Digite suas credenciais</p>
-
-                <form @submit.prevent="fazerLogin" class="auth-form">
-
-                    <div class="auth-group">
-                        <label class="auth-label">E-mail</label>
-                        <input 
-                            type="text" 
-                            v-model="email" 
-                            class="auth-input" 
-                            placeholder="exemplo@acasa.com"
-                            autofocus
-                        >
-                    </div>
-
-                    <div class="auth-group">
-                        <label class="auth-label">Senha</label>
-                        <input 
-                            type="password" 
-                            v-model="senha" 
-                            class="auth-input" 
-                            placeholder="••••••"
-                        >
-                    </div>
-
-                    <div v-if="erro" class="alert error" style="margin-bottom: 15px; font-size: 0.9rem;">
-                        {{ erro }}
-                    </div>
-
-                    <button type="submit" class="auth-btn" :disabled="carregando">
-                        <span v-if="!carregando">
-                            Entrar <i class="fas fa-arrow-right" style="margin-left: 8px;"></i>
-                        </span>
-                        <span v-else>
-                            <i class="fas fa-spinner fa-spin"></i> Acessando...
-                        </span>
-                    </button>
-
-                    <div class="auth-links">
-                        <a href="#">Esqueci minha senha</a>
-                    </div>
-
-                </form>
-            </article>
-        </main>
-
+      </form>
     </div>
+  </div>
 </template>
 
 <style scoped>
-/* O 'scoped' garante que esse CSS só afete ESSA tela.
-   Importamos o CSS específico do Login que você já tinha criado.
-*/
-@import '../assets/css/pages/Login.css';
+/* Garante que carregue seu CSS */
+@import '../assets/CSS/pages/Login.css';
 </style>
