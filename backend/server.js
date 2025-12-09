@@ -7,7 +7,7 @@ const authRoutes = require('./routes/auth.routes');
 const clientesRoutes = require('./routes/clientes.routes');
 const authMiddleware = require('./middleware/authMiddleware');
 
-const app = express();             // Apenas UMA vez
+const app = express();             
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
@@ -18,8 +18,8 @@ app.get('/api', (req, res) => {
     res.json({ message: 'API ACASA ERP funcionando 🚀' });
 });
 
-// Rotas públicas
-app.use('/api', authRoutes);
+// Rotas públicas (AQUI CORRIGIDO)
+app.use('/api/auth', authRoutes);
 
 // Rotas protegidas
 app.use('/api/clientes', authMiddleware, clientesRoutes);

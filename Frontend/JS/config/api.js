@@ -1,14 +1,10 @@
 export const AppConfig = {
     API_BASE_URL: "https://iniciantevencedor.com.br/api",
-
-    ROUTES: {
-        LOGIN: "/Frontend/index.html"
-    },
-
+    
+    TIMEOUT: 10000, // 10s padrão
+    
     STORAGE_KEYS: {
-        TOKEN: "acasa_token",
-        USER: "acasa_user"
-    },
-
-    TIMEOUT: 15000
+        TOKEN: "ACASA_TOKEN",
+        USER: "ACASA_USER"
+    }
 };
