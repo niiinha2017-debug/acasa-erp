@@ -1,6 +1,6 @@
 console.log("TESTE LOGIN.JS — CARREGOU");
 
-import { api } from "../../services/ApiService.js";
+import { api } from "../../core/ApiService.js";
 
 window.fazerLogin = async function () {
     console.log("FUNÇÃO CHAMADA — OK");
