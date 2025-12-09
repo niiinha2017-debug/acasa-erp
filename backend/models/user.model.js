@@ -8,7 +8,8 @@ const UserModel = {
                 id,
                 name,
                 email,
-                password AS senha
+                password, 
+                role
             FROM users
             WHERE email = ?
             LIMIT 1
