@@ -1,3 +1,4 @@
+console.log("🔌 Auth Routes Loaded");
 const express = require('express');
 const AuthController = require('../controllers/auth.controller');
 

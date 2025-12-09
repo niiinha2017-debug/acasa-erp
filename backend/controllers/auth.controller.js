@@ -1,3 +1,5 @@
+console.log("🔥 Entrou no AuthController.login");
+
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const UserModel = require('../models/user.model');

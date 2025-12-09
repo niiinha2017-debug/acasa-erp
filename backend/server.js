@@ -12,6 +12,11 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+app.use((req, res, next) => {
+    console.log("📥 REQUEST:", req.method, req.originalUrl);
+    next();
+});
+
 
 // Rota de teste
 app.get('/api', (req, res) => {
@@ -20,6 +25,11 @@ app.get('/api', (req, res) => {
 
 // Rotas públicas (AQUI CORRIGIDO)
 app.use('/api/auth', authRoutes);
+app.use((req, res, next) => {
+    console.log("📥 REQUEST:", req.method, req.originalUrl);
+    next();
+});
+
 
 // Rotas protegidas
 app.use('/api/clientes', authMiddleware, clientesRoutes);
