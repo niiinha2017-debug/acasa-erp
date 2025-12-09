@@ -26,7 +26,8 @@ const AuthController = {
                 });
             }
 
-            const senhaValida = await bcrypt.compare(senha, user.senha);
+            // Aqui usamos o campo correto do banco: "password"
+            const senhaValida = await bcrypt.compare(senha, user.password);
 
             if (!senhaValida) {
                 return res.status(401).json({
@@ -35,8 +36,9 @@ const AuthController = {
                 });
             }
 
+            // Ajustado para "name" ao invés de "nome"
             const token = jwt.sign(
-                { id: user.id, email: user.email },
+                { id: user.id, email: user.email, name: user.name, role: user.role },
                 JWT_SECRET,
                 { expiresIn: JWT_EXPIRES_IN }
             );
@@ -45,10 +47,12 @@ const AuthController = {
                 token,
                 user: {
                     id: user.id,
-                    nome: user.nome,
-                    email: user.email
+                    nome: user.name,     // Mantemos 'nome' no front, mas pegando 'name'
+                    email: user.email,
+                    role: user.role
                 }
             });
+
         } catch (error) {
             console.error('Erro no login:', error);
             return res.status(500).json({
