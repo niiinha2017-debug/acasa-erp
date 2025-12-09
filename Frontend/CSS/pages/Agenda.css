@@ -1,0 +1,33 @@
+/* Card Tarefa */
+.card-tarefa { background: white; border-radius: var(--radius); padding: var(--space-2); border-left: 4px solid; border: 1px solid var(--cinza-200); box-shadow: var(--shadow-sm); cursor: pointer; margin-bottom: var(--space-2); transition: all 0.2s ease; position: relative; overflow: hidden; }
+.card-tarefa::before { content: ""; position: absolute; inset: -30%; background: linear-gradient(120deg, rgba(59,130,246,0.3), transparent 60%); opacity: 0; transition: opacity 0.25s ease; }
+.card-tarefa:hover { transform: translateY(-2px); box-shadow: 0 18px 35px rgba(15,23,42,0.25), 0 0 0 1px rgba(59,130,246,0.55); border-color: rgba(59,130,246,0.6); }
+.card-tarefa:hover::before { opacity: 1; }
+.card-tarefa.cliente { border-left-color: var(--azul-500); background: linear-gradient(135deg, #eff6ff, white); }
+.card-tarefa.fornecedor { border-left-color: var(--sucesso); background: linear-gradient(135deg, #f0fdf4, white); }
+.tarefa-header { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.tarefa-origem { font-size: 0.7rem; font-weight: 600; padding: 2px 6px; border-radius: 999px; color: white; }
+.tarefa-origem.cliente { background: var(--azul-500); }
+.tarefa-origem.fornecedor { background: var(--sucesso); }
+.tarefa-status { font-size: 0.7rem; color: var(--cinza-500); background: var(--cinza-100); padding: 2px 6px; border-radius: 10px; }
+.tarefa-descricao { font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; }
+.tarefa-info { font-size: 0.75rem; color: var(--cinza-600); }
+
+/* Timeline */
+.timeline-header { display: flex; background: var(--cinza-100); border-bottom: 1px solid var(--cinza-200); }
+.timeline-horario { width: 80px; padding: var(--space-3); font-weight: 600; text-align: center; }
+.timeline-dias { display: flex; flex: 1; }
+.dia-col { flex: 1; padding: var(--space-3); text-align: center; border-right: 1px solid var(--cinza-200); }
+.dia-col:last-child { border-right: none; }
+.linha-horario { display: flex; border-bottom: 1px solid var(--cinza-100); }
+.horario-label { width: 80px; padding: var(--space-3); text-align: center; background: var(--cinza-50); font-size: 0.8rem; color: #64748b; }
+.horario-slots { display: flex; flex: 1; }
+.slot-dia { flex: 1; min-height: 100px; border-right: 1px solid var(--cinza-100); padding: var(--space-2); background: white; }
+.slot-dia:last-child { border-right: none; }
+
+/* Página Específica */
+#pagina-agenda-producao { background: radial-gradient(circle at top left, #e0f2fe 0, #f8fafc 40%, #eef2ff 100%); border-radius: 16px; padding: var(--space-6); box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18); }
+#pagina-agenda-producao .titulo-secao { font-size: 1.5rem; display: flex; align-items: center; gap: 8px; }
+#pagina-agenda-producao .titulo-secao::after { content: ""; width: 52px; height: 3px; border-radius: 999px; background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4); box-shadow: 0 0 18px rgba(59,130,246,0.6); }
+#pagina-agenda-producao .controles-superiores { display: inline-flex; align-items: center; gap: 10px; }
+#info-semana-atual { padding: 6px 16px; border-radius: 999px; background: rgba(15,23,42,0.96); color: #e5e7eb; font-size: 0.8rem; box-shadow: 0 10px 25px rgba(15,23,42,0.45); border: 1px solid rgba(148,163,184,0.4); }
