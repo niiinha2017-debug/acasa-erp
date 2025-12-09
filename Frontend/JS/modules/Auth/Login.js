@@ -1,5 +1,5 @@
-import { api } from "../core/ApiService.js";
-import { AppConfig } from "../config/api.js";
+import { api } from "../../core/ApiService.js";
+import { AppConfig } from "../../config/api.js";
 
 export async function fazerLogin(event) {
     event.preventDefault();
