@@ -1,0 +1,28 @@
+.topbar { display: flex; align-items: center; background: var(--cinza-900); color: #fff; padding: 0.75rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.12); }
+.logo { font-size: 1.4rem; font-weight: 700; cursor: pointer; margin: 0; }
+.menu-hamburger { display: none; background: none; border: none; color: inherit; font-size: 1.6rem; cursor: pointer; margin-right: 1rem; }
+#topbarMenu { flex: 1; display: flex; align-items: center; }
+.menu-container { flex: 1; display: flex; justify-content: center; align-items: center; gap: 2.2rem; margin-left: 2rem; }
+.category-btn { background: none; border: none; color: #fff; font-size: 0.95rem; font-weight: 500; cursor: pointer; padding: 0.3rem 0.2rem; border-bottom: 2px solid transparent; transition: 0.25s ease; }
+.category-btn:hover { border-color: var(--azul-400); color: var(--azul-300); }
+.menu-category { position: relative; }
+.category-dropdown { display: none; position: absolute; top: 100%; left: 0; width: 220px; background: #fff; border: 1px solid var(--cinza-200); border-radius: 8px; margin-top: 0.35rem; overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,0.08); z-index: 1000; }
+.category-dropdown a { display: block; padding: 0.75rem 1rem; font-size: 0.9rem; text-decoration: none; color: var(--cinza-700); transition: 0.2s ease; }
+.category-dropdown a:hover { background: var(--azul-50); color: var(--azul-600); padding-left: 1.2rem; }
+.user-area { margin-left: auto; display: flex; align-items: center; gap: 1rem; }
+#userNameDisplay { font-weight: 600; color: var(--cinza-100); }
+#logoutBtn { background: none; border: 1px solid rgba(255,255,255,0.3); padding: 0.35rem 0.7rem; border-radius: 6px; color: #fff; font-size: 0.85rem; cursor: pointer; transition: background 0.2s ease; }
+#logoutBtn:hover { background: rgba(255,255,255,0.15); }
+
+@media (max-width: 768px) {
+  .menu-hamburger { display: block; }
+  #topbarMenu { width: 100%; }
+  .menu-container { display: none; flex-direction: column; width: 100%; background: var(--cinza-900); padding: 1rem 0; border-top: 1px solid rgba(255,255,255,0.12); }
+  #topbarMenu.active .menu-container { display: flex; }
+  .menu-category { position: static; width: 100%; padding: 0 1rem; }
+  .category-btn { width: 100%; padding: 0.8rem 0; text-align: left; border-bottom: none; }
+  .category-dropdown { position: static; width: 100%; border: none; border-radius: 0; background: var(--cinza-800); box-shadow: none; }
+  .category-dropdown a { color: var(--cinza-200); border-bottom: 1px solid var(--cinza-700); }
+  .category-dropdown a:hover { background: var(--cinza-700); color: var(--azul-300); }
+  .user-area { width: 100%; justify-content: space-between; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.12); }
+}

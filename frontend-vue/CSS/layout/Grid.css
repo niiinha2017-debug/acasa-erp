@@ -1,0 +1,22 @@
+.pagina { padding: var(--space-6); }
+.secao { margin-top: var(--space-6); }
+
+.titulo-secao, .subtitulo-secao { font-weight: 600; margin-bottom: var(--space-4); color: var(--cinza-900); }
+.titulo-secao { font-size: 1.4rem; font-weight: 700; }
+.subtitulo-secao { font-size: 1.1rem; color: var(--cinza-800); margin: var(--space-4) 0 var(--space-2); }
+
+/* Topo de Página Premium */
+.topo-pagina { margin-bottom: 25px; }
+.titulo-pagina { font-size: 1.8rem; font-weight: 700; color: var(--cinza-900); display: flex; align-items: center; gap: 10px; margin: 0; padding: 0; }
+.titulo-pagina i { font-size: 1.4rem; color: var(--azul-700); }
+.subtitulo-pagina { margin: 4px 0 0 0; font-size: 0.95rem; color: var(--cinza-600); font-weight: 500; }
+
+/* Grid Flex */
+.row { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-4); }
+.row > .col { flex: 1; min-width: 220px; }
+
+/* Responsividade Básica */
+@media (max-width: 768px) {
+  .row { flex-direction: column; gap: var(--space-2); }
+  .col { min-width: 100%; }
+}
