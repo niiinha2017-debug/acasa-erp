@@ -14,14 +14,20 @@ const usuarioLogado = ref(false)
 const username = ref('')
 const password = ref('')
 
-// Função de Login
+
 const handleLogin = () => {
-  if(username.value.length > 0) {
-    usuarioLogado.value = true
-  } else {
-    alert("Por favor, digite um usuário.")
+  console.log("USERNAME:", username.value);
+  console.log("PASSWORD:", password.value); 
+
+  if (!username.value || !password.value) {
+    alert("Preencha usuário e senha.");
+    return;
   }
-}
+
+  usuarioLogado.value = true;
+};
+
+
 
 // Função de Logout (passada para o Dashboard)
 const handleLogout = () => {
