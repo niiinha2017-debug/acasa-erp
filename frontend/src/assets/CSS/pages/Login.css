@@ -1,0 +1,48 @@
+/* src/assets/CSS/pages/Login.css */
+
+.login-container {
+  /* Usa variáveis do seu Global/Main para manter o padrão */
+  background: var(--cinza-100); 
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  background-color: white;
+  padding: 2.5rem;
+  border-radius: 12px;
+  /* Sombra suave */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); 
+  
+  /* Animação suave de entrada */
+  animation: fade-up 0.6s ease-out;
+}
+
+.login-header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.actions {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: center;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.footer-links {
+  margin-top: 1.5rem;
+  text-align: center;
+}
