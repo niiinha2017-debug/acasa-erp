@@ -1,75 +1,122 @@
 <script setup>
 import { ref } from 'vue'
 
-// --- IMPORTANTE: Trazendo o CSS isolado do Login ---
-// O "@" significa "src", então ele acha a pasta certinho
-import './assets/CSS/pages/Login.css' 
+// Importamos a página do Painel
+import Dashboard from '/pages/Dashboard.vue'
 
-const email = ref('')
+// Importamos o CSS do Login V3 (Caminho corrigido com ponto no início)
+import './assets/CSS/pages/Login.css'
+
+// Controle de estado (Logado ou Não)
+const usuarioLogado = ref(false)
+
+// Variáveis do formulário
+const username = ref('')
 const password = ref('')
 
+// Função de Login
 const handleLogin = () => {
-  // Aqui futuramente entra a lógica do Supabase/Backend
-  console.log("Tentando logar:", email.value)
+  if(username.value.length > 0) {
+    usuarioLogado.value = true
+  } else {
+    alert("Por favor, digite um usuário.")
+  }
+}
+
+// Função de Logout (passada para o Dashboard)
+const handleLogout = () => {
+  usuarioLogado.value = false
+  username.value = ''
+  password.value = ''
 }
 </script>
 
 <template>
-  <div class="login-container">
-    <div class="login-card">
-      
-      <div class="login-header">
-        <h1 class="titulo-pagina" style="justify-content: center;">
-           ACASA ERP
-        </h1>
-        <p class="subtitulo-pagina" style="text-align: center;">
-          Bem-vindo de volta
-        </p>
+  <Dashboard v-if="usuarioLogado" @logout="handleLogout" />
+
+  <div v-else class="auth-container">
+    
+    <aside class="auth-left">
+      <div class="auth-left-content">
+        <div class="auth-logo">
+          <h1><i class="fas fa-home"></i> A Casa</h1>
+          <p>Sistema de Gestão Empresarial</p>
+        </div>
+
+        <section class="auth-features">
+          <div class="auth-feature">
+            <i class="fas fa-money-bill-wave fa-lg"></i>
+            <div>
+              <h3>Gestão Financeira</h3>
+              <p>Controle de receitas e despesas.</p>
+            </div>
+          </div>
+          <div class="auth-feature">
+            <i class="fas fa-cogs fa-lg"></i>
+            <div>
+              <h3>Controle de Produção</h3>
+              <p>Acompanhe processos em tempo real.</p>
+            </div>
+          </div>
+          <div class="auth-feature">
+            <i class="fas fa-chart-line fa-lg"></i>
+            <div>
+              <h3>Gestão Estratégica</h3>
+              <p>Indicadores para decisões inteligentes.</p>
+            </div>
+          </div>
+        </section>
       </div>
+    </aside>
 
-      <form @submit.prevent="handleLogin">
-        <div class="form-group">
-          <label class="label" for="email">E-mail</label>
-          <input 
-            type="email" 
-            id="email" 
-            class="input" 
-            v-model="email"
-            placeholder="seu@email.com" 
-            required
-          />
-        </div>
+    <main class="auth-right">
+      <div class="auth-card">
+        <header>
+          <h2 class="auth-title">Entrar no Sistema</h2>
+          <p class="auth-subtitle">Bem-vindo de volta!</p>
+        </header>
 
-        <div class="form-group">
-          <label class="label" for="password">Senha</label>
-          <input 
-            type="password" 
-            id="password" 
-            class="input" 
-            v-model="password"
-            placeholder="Sua senha" 
-            required
-          />
-        </div>
+        <form @submit.prevent="handleLogin">
+          <div class="auth-group">
+            <label class="auth-label" for="username">Usuário</label>
+            <input 
+              type="text" 
+              id="username" 
+              class="auth-input" 
+              v-model="username" 
+              placeholder="Digite seu usuário" 
+              required
+            >
+          </div>
 
-        <div class="actions" style="margin-top: 25px;">
-          <button type="submit" class="botao botao-primario full-width">
-            ACESSAR SISTEMA
+          <div class="auth-group">
+            <label class="auth-label" for="password">Senha</label>
+            <input 
+              type="password" 
+              id="password" 
+              class="auth-input" 
+              v-model="password" 
+              placeholder="Sua senha" 
+              required
+            >
+          </div>
+
+          <button type="submit" class="auth-btn">
+            ENTRAR
           </button>
-        </div>
 
-        <div class="footer-links" style="text-align: center; margin-top: 15px;">
-          <a href="#" style="font-size: 0.85rem; color: var(--cinza-500);">Esqueci minha senha</a>
-        </div>
-      </form>
-    </div>
+          <div class="auth-links">
+            <a href="#" class="auth-link">Esqueci a senha</a>
+            <span>|</span>
+            <a href="#" class="auth-link">Solicitar Acesso</a>
+          </div>
+        </form>
+      </div>
+    </main>
+
   </div>
 </template>
 
 <style scoped>
-/* Ajuste fino local caso o Login.css precise de algo extra */
-.full-width {
-  width: 100%;
-  justify-content: center;
-}
+/* Nenhum estilo extra necessário aqui, pois tudo vem do Login.css importado no script */
 </style>
