@@ -4,7 +4,7 @@
 import { ref } from 'vue'
 
 // Importamos a página do Painel
-import Dashboard from '/pages/Dashboard.vue'
+import Dashboard from '.Dashboard.vue'
 
 
 // Importamos o CSS do Login V3 (Caminho corrigido com ponto no início)
