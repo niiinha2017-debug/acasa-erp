@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from './entities/user.entity';
+import { User } from '../user.entity';
 
 @Injectable()
 export class UsersService {
@@ -18,6 +18,10 @@ export class UsersService {
     return this.usersRepository.findOneBy({ id });
   }
 
+  async findByEmail(email: string): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { email } });
+  }
+
   create(createDto: any) {
     return 'Criar (em breve)';
   }
@@ -28,27 +32,5 @@ export class UsersService {
 
   remove(id: number) {
     return 'Deletar (em breve)';
-  }
-
-  async login(email: string, password: string) {
-    const user = await this.usersRepository.findOne({ where: { email } });
-
-    if (!user) {
-      return { error: true, message: "Usuário não encontrado" };
-    }
-
-    if (user.password !== password) {
-      return { error: true, message: "Senha incorreta" };
-    }
-
-    return {
-      success: true,
-      message: "Login realizado com sucesso",
-      user: {
-        id: user.id,
-        nome: user.nome,
-        email: user.email,
-      }
-    };
   }
 }
