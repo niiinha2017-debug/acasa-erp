@@ -15,7 +15,7 @@ jobs:
     - name: Setup SSH
       uses: webfactory/ssh-agent@v0.5.3
       with:
-        ssh-private-key: ${{ secrets.AWS_SSH_KEY }}
+        ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
     - name: Upload project to server
       run: |
