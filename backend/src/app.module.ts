@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { User } from './user.entity'; // <--- Importação importante
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { User } from './user.entity'; // <--- Importação importante
       entities: [User], // <--- O User tem que estar aqui dentro
       synchronize: false, // <--- MUDEI PARA FALSE!
     }),
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
