@@ -1,22 +1,19 @@
+// src/users/users.service.ts
+
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from './user.entity'; // Exatamente assim.
+import { User } from './user.entity'; 
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectRepository(User) // Injete o Repositório do TypeORM
+    @InjectRepository(User)
     private usersRepository: Repository<User>,
   ) {}
 
-  // Novo método: Encontrar usuário pelo username
-  async findOne(username: string): Promise<User | undefined> {
+  // 💡 CORREÇÃO TS2322: Alterado de 'User | undefined' para 'User | null'
+async findOne(username: string): Promise<User | null> {
     return this.usersRepository.findOne({ where: { username: username } });
   }
-
-  // Se você tiver um método de criação (create), garanta que ele usa o bcrypt antes de salvar!
-  // async create(userData: Partial<User>): Promise<User> {
-  //   // ... código com bcrypt.hash() ...
-  // }
 }
