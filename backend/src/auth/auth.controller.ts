@@ -1,4 +1,11 @@
-import { Controller, Post, Request, UseGuards } from '@nestjs/common';
+import { 
+  Controller, 
+  Post, 
+  Request, 
+  UseGuards, 
+  UnauthorizedException // 1. CLASSE AGORA IMPORTADA
+} from '@nestjs/common'; // <-- Importe do pacote @nestjs/common
+
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 
@@ -6,22 +13,20 @@ import { AuthService } from './auth.service';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // POST /auth/login
-  // @UseGuards(AuthGuard('local')) -- Se você estivesse usando a Strategy Local
-  // Por enquanto, vamos usar a validação direta para simplificar:
   @Post('login')
   async login(@Request() req) {
-    // Busca o usuário pelo body da requisição
     const validatedUser = await this.authService.validateUser(
       req.body.username,
       req.body.password,
     );
     
+    // 2. ADICIONE A VERIFICAÇÃO DE FALHA AQUI
     if (!validatedUser) {
+      // O TypeScript agora reconhecerá essa classe
       throw new UnauthorizedException('Credenciais inválidas.');
     }
     
-    // Se for válido, gera o token JWT
+    // 3. Se for válido, gera o token JWT
     return this.authService.login(validatedUser);
   }
 }

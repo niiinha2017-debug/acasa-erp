@@ -21,39 +21,52 @@ onMounted(() => {
 
 const handleLogin = async () => {
   if (!username.value || !password.value) {
-    errorMessage.value = 'Por favor, preencha todos os campos'
-    return
+    errorMessage.value = 'Por favor, preencha todos os campos.';
+    return;
   }
 
-  isLoading.value = true
-  errorMessage.value = ''
-  
+  isLoading.value = true;
+  errorMessage.value = '';
+
   try {
-    const response = await api.post('/users/login', {
-      email: username.value.trim(),
-      password: password.value
-    })
-
-    if (response.data.error) {
-      errorMessage.value = response.data.message
-      return
-    }
-
-    // Armazenar token JWT se a API retornar
-    if (response.data.token) {
-      localStorage.setItem('acasa_token', response.data.token)
-    }
+    // 💡 Ajuste 1 e 2: Usando a rota '/auth/login' do NestJS e o campo 'username'
+    const response = await api.post('/auth/login', {
+      username: username.value.trim(), 
+      password: password.value,
+    });
     
-    localStorage.setItem('acasa_user', JSON.stringify(response.data.user))
-    usuarioLogado.value = true
+    // O backend NestJS deve retornar 'access_token' e, opcionalmente, o objeto do usuário
+    const { access_token, user } = response.data; 
+
+    // 💡 Ajuste 3: Verifica e armazena o access_token
+    if (access_token) {
+      localStorage.setItem('acasa_token', access_token);
+      
+      // Armazena o usuário (se o backend o retornar) ou um objeto simples
+      const userPayload = user || { username: username.value.trim() }; 
+      localStorage.setItem('acasa_user', JSON.stringify(userPayload));
+
+      usuarioLogado.value = true;
+      
+      // ✅ DICA: Aqui você pode configurar o token no axios imediatamente,
+      // embora o Interceptor que discutimos já fará isso na próxima requisição.
+      // api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+
+    } else {
+      // Caso a requisição seja 200 (OK), mas o token não venha (erro interno do servidor)
+      errorMessage.value = 'Resposta de login inválida: token não recebido.';
+    }
 
   } catch (err) {
-    console.error('Login error:', err)
-    errorMessage.value = err.response?.data?.message || 'Erro ao tentar fazer login!'
+    console.error('Login error:', err);
+    // Captura a mensagem de erro que vem do backend (e.g., "Credenciais inválidas.")
+    // No NestJS, erros 401 ou 403 geralmente trazem a mensagem em err.response.data.message
+    errorMessage.value = err.response?.data?.message || 'Erro ao tentar fazer login! Verifique o servidor.';
+    
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
-}
+};
 
 const handleLogout = () => {
   localStorage.removeItem('acasa_user')
