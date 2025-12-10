@@ -67,7 +67,7 @@ const handleLogout = () => {
 <template>
   <Dashboard v-if="usuarioLogado" @logout="handleLogout" />
 
-  <div v-else class="auth-container">
+  <div v-else>
     <div class="login-wrapper">
       <div class="login-card">
         
