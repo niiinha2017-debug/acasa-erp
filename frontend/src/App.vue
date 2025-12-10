@@ -1,8 +1,11 @@
 <script setup>
+  console.log("🔥 ESTE É O NOVO APP.VUE!");
+
 import { ref } from 'vue'
 
 // Importamos a página do Painel
 import Dashboard from '/pages/Dashboard.vue'
+
 
 // Importamos o CSS do Login V3 (Caminho corrigido com ponto no início)
 import './assets/CSS/pages/Login.css'
