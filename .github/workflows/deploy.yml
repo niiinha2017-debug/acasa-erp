@@ -21,13 +21,14 @@ jobs:
     - name: Prepare project (remove heavy folders)
       run: |
         rm -rf backend/node_modules
-        rm -rf frontend-vue/node_modules
-        rm -rf frontend-vue/dist
+        rm -rf frontend/node_modules       # Mudei de frontend-vue para frontend
+        rm -rf frontend/dist               # Mudei de frontend-vue para frontend
         rm -rf .git
         rm -rf .github
 
     - name: Upload project to server
       run: |
+        # Usei o IP que você mandou, mas se tiver nos secrets, pode usar ${{ secrets.HOST }}
         ssh -o StrictHostKeyChecking=no ec2-user@54.164.55.32 "rm -rf ~/acasa-erp"
         scp -o StrictHostKeyChecking=no -r . ec2-user@54.164.55.32:~/acasa-erp
 
@@ -37,9 +38,11 @@ jobs:
 
     - name: Build frontend
       run: |
-        ssh ec2-user@54.164.55.32 "cd ~/acasa-erp/frontend-vue && npm install && npm run build"
+        # AQUI É IMPORTANTE: O caminho mudou para ~/acasa-erp/frontend
+        ssh ec2-user@54.164.55.32 "cd ~/acasa-erp/frontend && npm install && npm run build"
 
     - name: Deploy frontend to NGINX
       run: |
-        ssh ec2-user@54.164.55.32 "sudo rm -rf /var/www/acasa-frontend/*"
-        ssh ec2-user@54.164.55.32 "sudo cp -r ~/acasa-erp/frontend-vue/dist/* /var/www/acasa-frontend/"
+        # Caminhos novos no servidor: /var/www/frontend
+        ssh ec2-user@54.164.55.32 "sudo rm -rf /var/www/frontend/*"
+        ssh ec2-user@54.164.55.32 "sudo cp -r ~/acasa-erp/frontend/dist/* /var/www/frontend/"
