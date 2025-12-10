@@ -5,17 +5,16 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
-import { User } from './user.entity'; 
 import { UsersModule } from './users/users.module';
+import { User } from './users/entities/user.entity';  //  <-- IMPORT CERTO
+
 
 @Module({
   imports: [
-    // Carrega variáveis do .env globalmente
     ConfigModule.forRoot({
       isGlobal: true,
     }),
 
-    // Conexão com MariaDB da EC2 usando .env
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -25,7 +24,7 @@ import { UsersModule } from './users/users.module';
         username: config.get<string>('DB_USER'),
         password: config.get<string>('DB_PASSWORD'),
         database: config.get<string>('DB_NAME'),
-        entities: [User],
+        entities: [User],        // <-- AQUI AGORA ESTÁ CORRETO
         synchronize: false,
         retryAttempts: 5,
         retryDelay: 3000,

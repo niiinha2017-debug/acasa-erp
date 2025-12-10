@@ -6,27 +6,30 @@ import { ref } from 'vue'
 // Importamos a página do Painel
 import Dashboard from '@/pages/Dashboard.vue'
 
-// Importamos o CSS do Login V3 (Caminho corrigido com ponto no início)
-import '@/assets/CSS/pages/Login.css'
+import api from '@/services/api'
+import { AppConfig } from '@/config'
 
-// Controle de estado (Logado ou Não)
-const usuarioLogado = ref(false)
+const handleLogin = async () => {
+  try {
+    console.log("🔐 Enviando login para API...");
 
-// Variáveis do formulário
-const username = ref('')
-const password = ref('')
+    const response = await api.post('/auth/login', {
+      email: username.value,
+      password: password.value
+    });
 
+    console.log("🔑 Login recebido:", response.data);
 
-const handleLogin = () => {
-  console.log("USERNAME:", username.value);
-  console.log("PASSWORD:", password.value); 
+    // Salva token e usuário nas chaves definidas no config
+    localStorage.setItem(AppConfig.STORAGE_KEYS.TOKEN, response.data.token);
+    localStorage.setItem(AppConfig.STORAGE_KEYS.USER, JSON.stringify(response.data.user));
 
-  if (!username.value || !password.value) {
-    alert("Preencha usuário e senha.");
-    return;
+    usuarioLogado.value = true;
+
+  } catch (error) {
+    console.error("❌ Erro ao fazer login:", error);
+    alert("Usuário ou senha incorretos.");
   }
-
-  usuarioLogado.value = true;
 };
 
 
