@@ -1,7 +1,7 @@
 <script setup>
-import Login from './views/Login.vue';
 </script>
 
 <template>
-  <Login />
+  <h1>ACASA ERP - Painel</h1>
+  <p>Sistema rodando!</p>
 </template>
