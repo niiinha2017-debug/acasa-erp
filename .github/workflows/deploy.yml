@@ -9,6 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
     - name: Checkout code
       uses: actions/checkout@v3
 
@@ -16,6 +17,14 @@ jobs:
       uses: webfactory/ssh-agent@v0.5.3
       with:
         ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+    - name: Prepare project (remove heavy folders)
+      run: |
+        rm -rf backend/node_modules
+        rm -rf frontend-vue/node_modules
+        rm -rf frontend-vue/dist
+        rm -rf .git
+        rm -rf .github
 
     - name: Upload project to server
       run: |
@@ -34,4 +43,3 @@ jobs:
       run: |
         ssh ec2-user@54.164.55.32 "sudo rm -rf /var/www/acasa-frontend/*"
         ssh ec2-user@54.164.55.32 "sudo cp -r ~/acasa-erp/frontend-vue/dist/* /var/www/acasa-frontend/"
-
