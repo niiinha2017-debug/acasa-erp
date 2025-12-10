@@ -4,11 +4,10 @@
 import { ref } from 'vue'
 
 // Importamos a página do Painel
-import Dashboard from './pages/Dashboard.vue'
-
+import Dashboard from '@/pages/Dashboard.vue'
 
 // Importamos o CSS do Login V3 (Caminho corrigido com ponto no início)
-import './assets/CSS/pages/Login.css'
+import '@/assets/CSS/pages/Login.css'
 
 // Controle de estado (Logado ou Não)
 const usuarioLogado = ref(false)
