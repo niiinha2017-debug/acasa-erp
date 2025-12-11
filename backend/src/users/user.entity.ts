@@ -2,18 +2,23 @@
 
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
-@Entity('users') // Opcional: define o nome da tabela no banco
+@Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ unique: true })
-  username: string;
+  @Column()
+  name: string;
 
-  // A senha deve ser criptografada antes de ser salva,
-  // mas aqui definimos a coluna que irá armazená-la.
+  @Column({ unique: true })
+  email: string;
+
   @Column()
   password: string;
 
-  // Você pode adicionar mais campos como email, nome, etc.
+  @Column({ default: 'user' })
+  role: string;
+
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  created_at: Date;
 }
