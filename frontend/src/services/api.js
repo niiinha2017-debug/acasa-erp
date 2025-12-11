@@ -1,17 +1,22 @@
-import axios from 'axios';
-import { AppConfig } from '../config'; // <--- Importamos a config aqui
+const API_URL = import.meta.env.VITE_API_URL;
 
-const api = axios.create({
-  baseURL: AppConfig.API_BASE_URL, // Usa a URL da config
-  timeout: AppConfig.TIMEOUT
-});
+export const api = {
+  get: async (endpoint) => {
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem(AppConfig.STORAGE_KEYS.TOKEN); // Usa a chave da config
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+    return response.json();
+  },
 
-export default api;
+  post: async (endpoint, body) => {
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    return response.json();
+  },
+};
