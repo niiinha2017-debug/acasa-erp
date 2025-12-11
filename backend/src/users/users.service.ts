@@ -1,19 +1,25 @@
-// backend/src/users/users.service.ts
-
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-// CORREÇÃO CRÍTICA: Use o caminho ./entities/user.ts (conforme Imagem 2b9f73)
-import { User } from './user'; 
+import { User } from './user.entity';
 
 @Injectable()
-export class UsersService { // <--- PRECISA DESTA CLASSE (TS1005)
+export class UsersService {
   constructor(
-    @InjectRepository(User) 
+    @InjectRepository(User)
     private userRepository: Repository<User>,
   ) {}
 
   async findByEmail(email: string): Promise<User | null> {
     return this.userRepository.findOne({ where: { email } });
+  }
+
+  async findById(id: number): Promise<User | null> {
+    return this.userRepository.findOne({ where: { id } });
+  }
+
+  async createUser(data: Partial<User>): Promise<User> {
+    const user = this.userRepository.create(data);
+    return this.userRepository.save(user);
   }
 }
