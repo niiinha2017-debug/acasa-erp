@@ -6,7 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 @Module({
   imports: [
     TypeOrmModule.forRoot({
-      type: 'postgres', // Ou 'mysql', 'sqlite', etc.
+      type: 'mysql', // Ou 'mysql', 'sqlite', etc.
       host: process.env.DB_HOST,
       port: parseInt(process.env.DB_PORT, 10),
       username: process.env.DB_USERNAME,
