@@ -6,7 +6,6 @@ export const api = {
       method: "GET",
       headers: { "Content-Type": "application/json" },
     });
-
     return response.json();
   },
 
@@ -16,7 +15,6 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-
     return response.json();
   },
 };

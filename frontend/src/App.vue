@@ -3,7 +3,7 @@ import '@/assets/CSS/pages/Login.css'
 
 import { ref, onMounted } from 'vue' // ← ADICIONAR onMounted aqui
 import Dashboard from '@/pages/Dashboard.vue'
-import api from './services/api'
+import { api } from './services/api'
 
 const username = ref('')
 const password = ref('')
