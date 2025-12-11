@@ -21,7 +21,7 @@ jobs:
     # ===== BACKEND =====
     - name: Sync backend to EC2 (safe sync)
       run: |
-        rsync -avz \
+        rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
         --exclude=node_modules \
         --exclude=dist \
         --exclude=.env \
@@ -31,7 +31,7 @@ jobs:
 
     - name: Install + Build backend + Restart PM2
       run: |
-        ssh ec2-user@54.164.55.32 "
+        ssh -o StrictHostKeyChecking=no ec2-user@54.164.55.32 "
           cd ~/acasa-erp/backend &&
           npm install &&
           npm run build &&
@@ -41,7 +41,7 @@ jobs:
     # ===== FRONTEND =====
     - name: Sync frontend to EC2
       run: |
-        rsync -avz \
+        rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
         --exclude=node_modules \
         --exclude=dist \
         --exclude=.git \
@@ -50,7 +50,7 @@ jobs:
 
     - name: Build frontend
       run: |
-        ssh ec2-user@54.164.55.32 "
+        ssh -o StrictHostKeyChecking=no ec2-user@54.164.55.32 "
           cd ~/acasa-erp/frontend &&
           npm install &&
           npm run build
@@ -58,7 +58,7 @@ jobs:
 
     - name: Deploy frontend to nginx
       run: |
-        ssh ec2-user@54.164.55.32 "
+        ssh -o StrictHostKeyChecking=no ec2-user@54.164.55.32 "
           sudo rm -rf /var/www/frontend/* &&
           sudo cp -r ~/acasa-erp/frontend/dist/* /var/www/frontend/
         "
