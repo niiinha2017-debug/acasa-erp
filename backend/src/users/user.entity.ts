@@ -12,7 +12,10 @@ export class User {
   email: string;
 
   @Column()
-  password: string;
+  senhaHash: string;
+
+  @Column({ default: true })
+  ativo: boolean;
 
   @Column({ default: 'user' })
   role: string;
