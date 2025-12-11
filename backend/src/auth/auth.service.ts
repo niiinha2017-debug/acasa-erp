@@ -11,22 +11,17 @@ export class AuthService {
   ) {}
 
   // Valida email + senha
-  async validateUser(email: string, pass: string): Promise<any> {
-    const user = await this.usersService.findByEmail(email);
+async validateUser(email: string, pass: string): Promise<any> {
+  const user = await this.usersService.findByEmail(email);
 
-    if (!user) {
-      return null; // usuário não encontrado
-    }
+  if (!user) return null;
 
-    const isMatch = await bcrypt.compare(pass, user.password);
+  const isMatch = await bcrypt.compare(pass, user.password);
+  if (!isMatch) return null;
 
-    if (!isMatch) {
-      return null; // senha inválida
-    }
-
-    const { password, ...result } = user;
-    return result;
-  }
+  const { password, ...result } = user;
+  return result;
+}
 
   async login(user: any) {
     // Payload do JWT:

@@ -10,10 +10,8 @@ export class UsersService {
     private usersRepository: Repository<User>,
   ) {}
 
-  // Buscar usuário pelo email (correto)
+  // Busca pelo email
   async findByEmail(email: string): Promise<User | null> {
-    return this.usersRepository.findOne({
-      where: { email },
-    });
+    return this.usersRepository.findOne({ where: { email } });
   }
 }
