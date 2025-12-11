@@ -1,11 +1,16 @@
+// backend/src/auth/auth.module.ts
+
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { UsersService } from './users.service';
-import { User } from './entities/user';
+// ... outros imports
+
+// O UsersModule está um nível acima (../users/users.module)
+import { UsersModule } from '../users/user.module'; 
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User])],
-  providers: [UsersService],
-  exports: [UsersService],
+  imports: [
+    UsersModule, // Adicionado
+    // ...
+  ],
+  // ...
 })
-export class UsersModule {}
+export class AuthModule {}

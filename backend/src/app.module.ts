@@ -2,25 +2,27 @@
 
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { UsersModule } from './users/user.module'; // Caminho CORRETO (módulo na mesma hierarquia)
+import { UsersModule } from './users/user.module'; 
 import { ConfigModule } from '@nestjs/config'; 
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    // 1. ConfigModule para ler o .env (resolve TS2345 ao fornecer valores)
+    ConfigModule.forRoot({ isGlobal: true }), 
+    
     TypeOrmModule.forRoot({
-      type: 'mysql', // CORREÇÃO: MySQL
+      type: 'mysql', // CORREÇÃO CRÍTICA PARA MYSQL
       host: process.env.DB_HOST,
-      port: parseInt(process.env.DB_PORT, 10),
+      // 2. Usar valores default se for undefined
+      port: parseInt(process.env.DB_PORT, 10) || 3306, 
       username: process.env.DB_USERNAME,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_DATABASE,
-      // Usar glob para garantir que encontre a entity no caminho aninhado
       entities: [__dirname + '/**/*.entity{.ts,.js}'], 
       synchronize: true, 
     }),
-    UsersModule, // Adicionado
-    // Outros Módulos...
+    UsersModule, 
+    // Outros Módulos
   ],
   controllers: [],
   providers: [],
