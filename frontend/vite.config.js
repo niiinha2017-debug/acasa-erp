@@ -8,5 +8,9 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src')
     }
+  },
+  define: {
+    'import.meta.env.VITE_API_URL': JSON.stringify('https://iniciantevencedor.com.br/api')
   }
 })
+
