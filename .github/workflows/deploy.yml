@@ -2,7 +2,7 @@ name: Deploy ACASA ERP
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   deploy:
@@ -10,39 +10,55 @@ jobs:
 
     steps:
 
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Setup SSH
+    - name: Start SSH agent
       uses: webfactory/ssh-agent@v0.5.3
       with:
         ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
-    - name: Prepare project (remove heavy folders)
+    # ===== BACKEND =====
+    - name: Sync backend to EC2 (safe sync)
       run: |
-        rm -rf backend/node_modules
-        rm -rf frontend/node_modules       # Mudei de frontend-vue para frontend
-        rm -rf frontend/dist               # Mudei de frontend-vue para frontend
-        rm -rf .git
-        rm -rf .github
+        rsync -avz \
+        --exclude=node_modules \
+        --exclude=dist \
+        --exclude=.env \
+        --exclude=.git \
+        --exclude=.github \
+        ./backend/ ec2-user@54.164.55.32:~/acasa-erp/backend/
 
-    - name: Upload project to server
+    - name: Install + Build backend + Restart PM2
       run: |
-        # Usei o IP que você mandou, mas se tiver nos secrets, pode usar ${{ secrets.HOST }}
-        ssh -o StrictHostKeyChecking=no ec2-user@54.164.55.32 "rm -rf ~/acasa-erp"
-        scp -o StrictHostKeyChecking=no -r . ec2-user@54.164.55.32:~/acasa-erp
+        ssh ec2-user@54.164.55.32 "
+          cd ~/acasa-erp/backend &&
+          npm install &&
+          npm run build &&
+          pm2 restart acasa-backend || pm2 start dist/main.js --name acasa-backend
+        "
 
-    - name: Build backend and restart PM2
+    # ===== FRONTEND =====
+    - name: Sync frontend to EC2
       run: |
-        ssh ec2-user@54.164.55.32 "cd ~/acasa-erp/backend && npm install && pm2 restart all"
+        rsync -avz \
+        --exclude=node_modules \
+        --exclude=dist \
+        --exclude=.git \
+        --exclude=.github \
+        ./frontend/ ec2-user@54.164.55.32:~/acasa-erp/frontend/
 
     - name: Build frontend
       run: |
-        # AQUI É IMPORTANTE: O caminho mudou para ~/acasa-erp/frontend
-        ssh ec2-user@54.164.55.32 "cd ~/acasa-erp/frontend && npm install && npm run build"
+        ssh ec2-user@54.164.55.32 "
+          cd ~/acasa-erp/frontend &&
+          npm install &&
+          npm run build
+        "
 
-    - name: Deploy frontend to NGINX
+    - name: Deploy frontend to nginx
       run: |
-        # Caminhos novos no servidor: /var/www/frontend
-        ssh ec2-user@54.164.55.32 "sudo rm -rf /var/www/frontend/*"
-        ssh ec2-user@54.164.55.32 "sudo cp -r ~/acasa-erp/frontend/dist/* /var/www/frontend/"
+        ssh ec2-user@54.164.55.32 "
+          sudo rm -rf /var/www/frontend/* &&
+          sudo cp -r ~/acasa-erp/frontend/dist/* /var/www/frontend/
+        "
