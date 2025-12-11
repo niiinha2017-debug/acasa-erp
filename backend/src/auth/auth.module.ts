@@ -1,14 +1,12 @@
 // backend/src/auth/auth.module.ts
 
 import { Module } from '@nestjs/common';
+import { UsersModule } from '../users/user.module'; // Importa o UsersModule
 // ... outros imports
-
-// O UsersModule está um nível acima (../users/users.module)
-import { UsersModule } from '../users/user.module'; 
 
 @Module({
   imports: [
-    UsersModule, // Adicionado
+    UsersModule, // <--- Adiciona o UsersModule
     // ...
   ],
   // ...

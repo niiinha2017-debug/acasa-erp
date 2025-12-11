@@ -1,14 +1,14 @@
-// backend/src/users/user.module.ts (ou users.module.ts)
+// backend/src/users/user.module.ts
 
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersService } from './users.service';
-// Caminho ajustado:
-import { User } from './entities/user.entity'; 
+// CORREÇÃO CRÍTICA: Use o caminho ./entities/user.ts
+import { User } from './user'; 
 
 @Module({
   imports: [TypeOrmModule.forFeature([User])],
   providers: [UsersService],
-  exports: [UsersService], // Necessário para o AuthModule
+  exports: [UsersService], 
 })
 export class UsersModule {}
