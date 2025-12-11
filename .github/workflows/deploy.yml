@@ -19,15 +19,18 @@ jobs:
         ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
     # ===== BACKEND =====
-    - name: Sync backend to EC2 (safe sync)
+    - name: Sync backend to EC2 (clean and sync)
       run: |
+        ssh -o StrictHostKeyChecking=no ec2-user@54.164.55.32 "rm -rf ~/acasa-erp/backend/*"
         rsync -avz -e "ssh -o StrictHostKeyChecking=no" \
-        --exclude=node_modules \
-        --exclude=dist \
-        --exclude=.env \
-        --exclude=.git \
-        --exclude=.github \
-        ./backend/ ec2-user@54.164.55.32:~/acasa-erp/backend/
+          --exclude=node_modules \
+          --exclude=dist \
+          --exclude=.env \
+          --exclude=.git \
+          --exclude=.github \
+          ./backend/ ec2-user@54.164.55.32:~/acasa-erp/backend/
+
+
 
     - name: Install + Build backend + Restart PM2
       run: |
