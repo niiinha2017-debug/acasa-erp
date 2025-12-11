@@ -1,9 +1,7 @@
-// src/users/users.service.ts
-
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from './user.entity'; 
+import { User } from './user.entity';
 
 @Injectable()
 export class UsersService {
@@ -12,8 +10,10 @@ export class UsersService {
     private usersRepository: Repository<User>,
   ) {}
 
-  // 💡 CORREÇÃO TS2322: Alterado de 'User | undefined' para 'User | null'
-async findOne(username: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { username: username } });
+  // Buscar usuário pelo email (correto)
+  async findByEmail(email: string): Promise<User | null> {
+    return this.usersRepository.findOne({
+      where: { email },
+    });
   }
 }
