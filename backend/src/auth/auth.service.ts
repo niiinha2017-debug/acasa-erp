@@ -1,8 +1,7 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { UsersService } from 'src/users/users.service';
+import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-
 
 @Injectable()
 export class AuthService {
@@ -14,12 +13,23 @@ export class AuthService {
   async login(email: string, password: string) {
     const user = await this.usersService.findByEmail(email);
 
-    if (!user) throw new UnauthorizedException('Usuário não encontrado.');
+    if (!user) {
+      throw new UnauthorizedException('Usuário não encontrado.');
+    }
 
     const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) throw new UnauthorizedException('Senha inválida.');
+    if (!passwordMatch) {
+      throw new UnauthorizedException('Senha inválida.');
+    }
 
-    const token = this.jwtService.sign({ id: user.id });
+const token = this.jwtService.sign(
+  { id: user.id },
+  {
+    secret: process.env.JWT_SECRET || 'acasa_fallback_secret',
+  },
+);
+
+
 
     return {
       message: 'Login efetuado com sucesso!',
@@ -27,6 +37,7 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
+        role: user.role,
       },
     };
   }

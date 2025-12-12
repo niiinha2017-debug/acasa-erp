@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+// src/users/user.entity.ts
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
 
 @Entity('users')
 export class User {
@@ -21,10 +22,6 @@ export class User {
   })
   role: 'admin' | 'user';
 
-  @Column({
-    type: 'timestamp',
-    name: 'created_at',
-    default: () => 'CURRENT_TIMESTAMP',
-  })
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

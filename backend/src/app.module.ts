@@ -1,21 +1,19 @@
-import { Module } from '@nestjs/common'
-import { ConfigModule } from '@nestjs/config'
-import { TypeOrmModule } from '@nestjs/typeorm'
-import { join } from 'path'
-import { AuthModule } from './auth/auth.module'
+// src/app.module.ts
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+
+import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
+    // 🔑 ENV
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: join(
-        process.cwd(),
-        process.env.NODE_ENV === 'production'
-          ? '.env.production'
-          : '.env',
-      ),
     }),
 
+    // 🗄️ BANCO
     TypeOrmModule.forRoot({
       type: 'mysql',
       host: process.env.DB_HOST,
@@ -23,10 +21,12 @@ import { AuthModule } from './auth/auth.module'
       username: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_DATABASE,
-      autoLoadEntities: true,
-      synchronize: true,
+      entities: [__dirname + '/**/*.entity{.ts,.js}'],
+      synchronize: false,
     }),
 
+    // 📦 MÓDULOS
+    UsersModule,
     AuthModule,
   ],
 })
