@@ -120,5 +120,5 @@ const handleLogout = () => {
 </template>
 
 <style>
-@import '../assets/css/pages/Login.css';
+@import '../assets/CSS/pages/Login.css';
 </style>
