@@ -13,9 +13,9 @@ export class ClientesService {
   ) {}
 
 create(dto: CreateClienteDto) {
-  const cliente = this.repo.create(dto);
-  return this.repo.save(cliente);
+  return this.repo.save(dto);
 }
+
 
 
   findAll() {
