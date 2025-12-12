@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
-import Dashboard from './ClientesList.vue';
+import ClientesList from './Clientes/ClientesList.vue';
 
 const email = ref('');
 const password = ref('');
