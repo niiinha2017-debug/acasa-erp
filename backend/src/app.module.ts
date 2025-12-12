@@ -1,12 +1,20 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthModule } from './auth/auth.module';
-import { User } from './users/user.entity';
+import { Module } from '@nestjs/common'
+import { ConfigModule } from '@nestjs/config'
+import { TypeOrmModule } from '@nestjs/typeorm'
+import { join } from 'path'
+import { AuthModule } from './auth/auth.module'
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: join(
+        process.cwd(),
+        process.env.NODE_ENV === 'production'
+          ? '.env.production'
+          : '.env',
+      ),
+    }),
 
     TypeOrmModule.forRoot({
       type: 'mysql',
@@ -14,9 +22,9 @@ import { User } from './users/user.entity';
       port: Number(process.env.DB_PORT),
       username: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      entities: [User],
-      synchronize: false, // IMPORTANTE → SUA TABELA JÁ EXISTE!
+      database: process.env.DB_DATABASE,
+      autoLoadEntities: true,
+      synchronize: true,
     }),
 
     AuthModule,
