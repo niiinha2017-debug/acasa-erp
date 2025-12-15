@@ -9,8 +9,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src')
     }
   },
-  define: {
-    'import.meta.env.VITE_API_URL': JSON.stringify('https://iniciantevencedor.com.br/api')
-  }
+  
+  // 🛑 REMOVER ESTA SEÇÃO: O Vite já trata as variáveis de ambiente (VITE_*)
+  // define: {
+  //   'import.meta.env.VITE_API_URL': JSON.stringify('https://iniciantevencedor.com.br/api')
+  // }
 })
-

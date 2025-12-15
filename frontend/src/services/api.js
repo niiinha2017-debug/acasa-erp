@@ -1,20 +1,34 @@
 const API_URL = import.meta.env.VITE_API_URL;
 
 export const api = {
-  get: async (endpoint) => {
+  async post(endpoint, body) {
     const response = await fetch(`${API_URL}${endpoint}`, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-    });
-    return response.json();
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',  // ADICIONADO
+      body: JSON.stringify(body),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Erro na requisição')
+    }
+
+    return data
   },
 
-  post: async (endpoint, body) => {
+  async get(endpoint) {
     const response = await fetch(`${API_URL}${endpoint}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    return response.json();
-  },
-};
+      credentials: 'include',  // ADICIONADO
+    })
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Erro na requisição')
+    }
+
+    return data
+  }
+}
+

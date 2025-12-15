@@ -1,29 +1,171 @@
-/* ==============================================
-   ACASA ERP - CSS MESTRE V4
-============================================== */
+/* ===== RESET & BASE ===== */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
 
-/* 1. Base */
-@import url('./base/Variables.css');
-@import url('./base/Reset.css');
-@import url('./base/Animations.css');
+body {
+    margin: 0;
+    font: 14px/1.5 Inter, system-ui, sans-serif;
+    background: #f8fafc;
+    color: #0f172a;
+}
 
-/* 2. Layout */
-@import url('./layout/Grid.css');
-@import url('./layout/Menu.css');
+/* ===== LAYOUT ===== */
+.page {
+    max-width: 1200px;
+    margin: 32px auto;
+    padding: 0 24px;
+}
 
-/* 3. Componentes */
-@import url('./components/Buttons.css');
-@import url('./components/Forms.css');
-@import url('./components/Cards.css');
-@import url('./components/Tables.css');
-@import url('./components/Modals.css');
-@import url('./components/Alerts.css');
-@import url('./components/Stepper.css');
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e5e7eb;
+}
 
-/* 4. Páginas */
-@import url('./pages/Agenda.css');
-/* Nota: Login.css não entra aqui pois é página isolada */
+.page-header h1 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
 
-/* 5. Utilitários */
-@import url('./utility/Utility.css');
+.page-content {
+    margin-top: 24px;
+}
 
+/* ===== COMPONENTES DE FORMULÁRIO ===== */
+input,
+select {
+    width: 100%;
+    height: 34px;
+    padding: 0 6px;
+    font-size: 13px;
+    border: none;
+    border-bottom: 1px solid #cbd5e1;
+    background: transparent;
+    transition: border-color 0.15s ease;
+}
+
+input:focus,
+select:focus {
+    outline: none;
+    border-bottom-color: #4f46e5;
+}
+
+/* ===== SISTEMA DE GRID ===== */
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.col-12 { grid-column: span 12; }
+.col-8  { grid-column: span 8; }
+.col-6  { grid-column: span 6; }
+.col-4  { grid-column: span 4; }
+.col-3  { grid-column: span 3; }
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+}
+
+/* ===== BOTÕES ===== */
+.btn-gradient {
+    position: relative;
+    padding: 6px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #4f46e5, #3b82f6);
+    cursor: pointer;
+    transition: transform 0.15s ease;
+    overflow: hidden;
+}
+
+.btn-gradient::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(135deg, #3b82f6, #4f46e5);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.btn-gradient:hover {
+    transform: translateY(-1px);
+}
+
+.btn-gradient:hover::after {
+    opacity: 1;
+}
+
+/* ===== TABELAS ===== */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.table th {
+    text-align: left;
+    font-weight: 600;
+    color: #475569;
+    padding: 8px 4px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.table td {
+    padding: 10px 4px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+/* ===== AÇÕES DA TABELA ===== */
+.table-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.action-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 4px;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+}
+
+/* Variantes de cor */
+.action-btn.edit { color: #2563eb; }
+.action-btn.toggle { color: #64748b; }
+.action-btn.delete { color: #dc2626; }
+
+/* Estados hover */
+.action-btn.edit:hover { 
+    background: rgba(37, 99, 235, 0.08); 
+    color: #1d4ed8;
+}
+
+.action-btn.toggle:hover { 
+    background: rgba(100, 116, 139, 0.12); 
+    color: #475569;
+}
+
+.action-btn.delete:hover { 
+    background: rgba(220, 38, 38, 0.12); 
+    color: #b91c1c;
+}

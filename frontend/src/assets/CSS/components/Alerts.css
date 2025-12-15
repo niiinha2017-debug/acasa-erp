@@ -1,7 +1,0 @@
-.alert { display: flex; width: 100%; max-width: 800px; margin: var(--space-4) 0; border-radius: var(--radius); box-shadow: var(--shadow-md); overflow: hidden; }
-.alert-side { padding: var(--space-4) var(--space-3); display: flex; align-items: center; min-width: 50px; }
-.alert-content { flex: 1; padding: var(--space-4); background: white; display: flex; justify-content: space-between; align-items: center; }
-.alert.info { border-left: 4px solid var(--azul-500); } .alert.info .alert-side { background: var(--azul-500); }
-.alert.success { border-left: 4px solid var(--sucesso); } .alert.success .alert-side { background: var(--sucesso); }
-.alert.warning { border-left: 4px solid var(--aviso); } .alert.warning .alert-side { background: var(--aviso); }
-.alert.error { border-left: 4px solid var(--erro); } .alert.error .alert-side { background: var(--erro); }

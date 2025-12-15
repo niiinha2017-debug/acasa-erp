@@ -1,0 +1,79 @@
+/* ===== PÁGINA DE LOGIN ===== */
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+}
+
+.login-box {
+    width: 100%;
+    max-width: 360px;
+    padding: 32px 28px;
+}
+
+.login-title {
+    margin: 0 0 24px;
+    font-size: 18px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+/* Reutilização de estilos base (evita duplicação) */
+.login-form input {
+    height: 36px;
+    padding: 0 6px;
+    font-size: 13px;
+    border: none;
+    border-bottom: 1px solid #cbd5e1;
+    background: transparent;
+    transition: border-color 0.15s ease;
+}
+
+.login-form input:focus {
+    outline: none;
+    border-bottom-color: #4f46e5;
+}
+
+/* Botão específico para login */
+.login-form .btn-gradient {
+    margin-top: 16px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-error {
+    margin-top: 12px;
+    font-size: 12px;
+    color: #dc2626;
+    text-align: center;
+    min-height: 18px; /* Evita "pulo" quando aparece/desaparece */
+}
+
+.login-footer {
+    margin-top: 18px;
+    text-align: center;
+    font-size: 12px;
+    color: #64748b;
+}
+
+/* ===== RESPONSIVIDADE ADICIONAL (opcional) ===== */
+@media (max-width: 480px) {
+    .login-box {
+        padding: 24px 20px;
+        margin: 0 16px;
+    }
+    
+    .login-title {
+        font-size: 16px;
+    }
+}

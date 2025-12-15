@@ -1,9 +1,16 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import DefaultLayout from '@/layouts/DefaultLayout.vue'
+// --- Importações CORRETAS ---
+import { createRouter, createWebHistory } from 'vue-router';
 
-import Dashboard from '@/views/Dashboard.vue'
-import ClientesList from '@/views/Clientes/ClientesList.vue'
-import Login from '@/views/Login.vue'
+import Login from '@/views/Login.vue';
+import DefaultLayout from '@/layouts/DefaultLayout.vue'; // (Assumindo que você usa layouts)
+import Index from '@/views/Index.vue';
+
+// 🛑 Novo caminho para ClientesList e ClientesCreate 
+import ClientesList from '@/views/Clientes/ClientesList.vue'; 
+import ClientesCreate from '@/views/Clientes/ClientesCreate.vue'; 
+
+
+// --- Rotas CORRIGIDAS ---
 
 const routes = [
   {
@@ -14,17 +21,22 @@ const routes = [
     path: '/',
     component: DefaultLayout,
     children: [
-      {
-        path: '',
-        component: Dashboard
+      { path: '', component: Index, name: 'Home' },
+      
+      // ROTAS DE CLIENTES
+      { 
+          path: 'clientes', 
+          component: ClientesList, // Use a variável importada
+          name: 'ClientesListagem'
       },
-      {
-        path: 'clientes',
-        component: ClientesList
+      { 
+          path: 'clientes/novo', 
+          component: ClientesCreate, // Use a variável importada (SEM .vue)
+          name: 'ClientesCadastro' 
       }
     ]
   }
-]
+];
 
 export default createRouter({
   history: createWebHistory(),
