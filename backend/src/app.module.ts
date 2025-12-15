@@ -10,7 +10,7 @@ import { FornecedoresModule } from './fornecedores/fornecedores.module'
 import { ProdutosModule } from './produtos/produtos.module'
 import { ComprasModule } from './compras/compras.module'
 import { VendasModule } from './vendas/vendas.module';
-import { VendasFornecedorModule } from './vendas-fornecedor/vendas-fornecedor.module';
+//import { VendasFornecedorModule } from './vendas-fornecedor/vendas-fornecedor.module';
 
 @Module({
   imports: [
@@ -40,7 +40,7 @@ import { VendasFornecedorModule } from './vendas-fornecedor/vendas-fornecedor.mo
     ProdutosModule,
     ComprasModule,
     VendasModule,
-    VendasFornecedorModule,
+    //VendasFornecedorModule,
   ],
 })
 export class AppModule {}
