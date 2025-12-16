@@ -1,17 +1,23 @@
 <template>
-  <div :class="['card', { 'hoverable': hoverable, 'shadow': shadow }]">
+  <div
+    class="card"
+    :class="{
+      'card--hoverable': hoverable,
+      'card--shadow': shadow
+    }"
+  >
     <div v-if="$slots.header || title" class="card-header">
       <slot name="header">
         <h3 v-if="title" class="card-title">{{ title }}</h3>
       </slot>
     </div>
-    
+
     <div class="card-body">
-      <slot></slot>
+      <slot />
     </div>
-    
+
     <div v-if="$slots.footer" class="card-footer">
-      <slot name="footer"></slot>
+      <slot name="footer" />
     </div>
   </div>
 </template>
@@ -19,54 +25,67 @@
 <script setup>
 defineProps({
   title: String,
-  hoverable: {
-    type: Boolean,
-    default: false
-  },
-  shadow: {
-    type: Boolean,
-    default: true
-  }
+  hoverable: { type: Boolean, default: false },
+  shadow: { type: Boolean, default: true }
 })
 </script>
 
 <style scoped>
+/* =====================================================
+   BASE
+===================================================== */
 .card {
-  background: white;
-  border-radius: 16px;
+  background: var(--bg-card);
+  border-radius: var(--card-radius);
+  border: 1px solid var(--border-soft);
   overflow: hidden;
-  transition: all 0.3s ease;
+  transition: var(--transition-base);
 }
 
-.card.shadow {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+/* =====================================================
+   SHADOW
+===================================================== */
+.card--shadow {
+  box-shadow: var(--card-shadow);
 }
 
-.card.hoverable:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+/* =====================================================
+   HOVER
+===================================================== */
+.card--hoverable:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
+/* =====================================================
+   HEADER
+===================================================== */
 .card-header {
-  padding: 20px 24px;
-  border-bottom: 1px solid #e2e8f0;
-  background: #f8fafc;
+  padding: 16px 20px;
+  background: var(--bg-input);
+  border-bottom: 1px solid var(--border-soft);
 }
 
 .card-title {
   margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  color: #1e293b;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-main);
 }
 
+/* =====================================================
+   BODY
+===================================================== */
 .card-body {
-  padding: 24px;
+  padding: 20px;
 }
 
+/* =====================================================
+   FOOTER
+===================================================== */
 .card-footer {
-  padding: 20px 24px;
-  border-top: 1px solid #e2e8f0;
-  background: #f8fafc;
+  padding: 16px 20px;
+  background: var(--bg-input);
+  border-top: 1px solid var(--border-soft);
 }
 </style>

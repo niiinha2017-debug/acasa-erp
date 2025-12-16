@@ -1,5 +1,8 @@
 <template>
-  <div class="table-container" :class="{ 'striped': striped, 'hoverable': hoverable }">
+  <div
+    class="table-container"
+    :class="{ 'is-striped': striped, 'is-hoverable': hoverable }"
+  >
     <table class="table">
       <thead>
         <tr>
@@ -12,7 +15,7 @@
           </th>
         </tr>
       </thead>
-      
+
       <tbody>
         <tr
           v-for="(row, rowIndex) in data"
@@ -34,18 +37,20 @@
             </slot>
           </td>
         </tr>
-        
+
+        <!-- Loading -->
         <tr v-if="loading">
-          <td :colspan="columns.length" class="loading-cell">
+          <td :colspan="columns.length" class="table-state">
             <div class="table-loading">
-              <div class="loading-spinner"></div>
-              <span>Carregando dados...</span>
+              <span class="spinner"></span>
+              <span>Carregando dados…</span>
             </div>
           </td>
         </tr>
-        
-        <tr v-else-if="data.length === 0">
-          <td :colspan="columns.length" class="empty-cell">
+
+        <!-- Empty -->
+        <tr v-else-if="!data.length">
+          <td :colspan="columns.length" class="table-state">
             <div class="table-empty">
               <span class="empty-icon">📄</span>
               <span>{{ emptyText }}</span>
@@ -54,32 +59,19 @@
         </tr>
       </tbody>
     </table>
-    
-    <!-- Pagination slot -->
+
     <div v-if="$slots.footer" class="table-footer">
-      <slot name="footer"></slot>
+      <slot name="footer" />
     </div>
   </div>
 </template>
 
 <script setup>
 defineProps({
-  columns: {
-    type: Array,
-    default: () => []
-  },
-  data: {
-    type: Array,
-    default: () => []
-  },
-  striped: {
-    type: Boolean,
-    default: true
-  },
-  hoverable: {
-    type: Boolean,
-    default: true
-  },
+  columns: { type: Array, default: () => [] },
+  data: { type: Array, default: () => [] },
+  striped: { type: Boolean, default: true },
+  hoverable: { type: Boolean, default: true },
   loading: Boolean,
   emptyText: {
     type: String,
@@ -91,98 +83,100 @@ defineEmits(['row-click'])
 </script>
 
 <style scoped>
+/* =====================================================
+   CONTAINER
+===================================================== */
 .table-container {
-  background: white;
-  border-radius: 12px;
+  background: var(--bg-card);
+  border-radius: var(--card-radius);
+  border: 1px solid var(--border-soft);
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
+/* =====================================================
+   TABLE
+===================================================== */
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: var(--font-size-md);
 }
 
 .table th {
-  padding: 16px;
+  padding: 14px 16px;
   text-align: left;
-  font-weight: 600;
-  color: #475569;
-  background: #f8fafc;
-  border-bottom: 2px solid #e2e8f0;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-muted);
+  background: var(--bg-input);
+  border-bottom: 1px solid var(--border-soft);
   white-space: nowrap;
 }
 
 .table td {
-  padding: 16px;
-  border-bottom: 1px solid #f1f5f9;
-  color: #334155;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text-main);
 }
 
-/* Striped rows */
-.table-container.striped tbody tr:nth-child(even) {
-  background: #f8fafc;
+/* =====================================================
+   STRIPED / HOVER
+===================================================== */
+.is-striped tbody tr:nth-child(even) {
+  background: var(--gray-50);
 }
 
-/* Hover effect */
-.table-container.hoverable tbody tr:hover {
-  background: rgba(102, 126, 234, 0.05);
+.is-hoverable tbody tr:hover {
+  background: var(--bg-hover);
   cursor: pointer;
 }
 
-/* Alignment classes */
-.text-left { text-align: left; }
-.text-center { text-align: center; }
-.text-right { text-align: right; }
-
-/* Loading state */
-.loading-cell {
+/* =====================================================
+   STATES
+===================================================== */
+.table-state {
   padding: 48px !important;
 }
 
-.table-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  color: #64748b;
-}
-
-.loading-spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid #e2e8f0;
-  border-radius: 50%;
-  border-top-color: #667eea;
-  animation: spin 1s linear infinite;
-}
-
-/* Empty state */
-.empty-cell {
-  padding: 48px !important;
-}
-
+.table-loading,
 .table-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   gap: 12px;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .empty-icon {
-  font-size: 32px;
+  font-size: 28px;
 }
 
-/* Footer */
-.table-footer {
-  padding: 16px;
-  border-top: 1px solid #e2e8f0;
-  background: #f8fafc;
+/* =====================================================
+   SPINNER
+===================================================== */
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--border-soft);
+  border-top-color: var(--brand-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
+
+/* =====================================================
+   FOOTER
+===================================================== */
+.table-footer {
+  padding: 12px 16px;
+  background: var(--bg-input);
+  border-top: 1px solid var(--border-soft);
+}
+
+/* =====================================================
+   ALIGNMENT HELPERS
+===================================================== */
+.text-left { text-align: left; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
 
 @keyframes spin {
   to { transform: rotate(360deg); }

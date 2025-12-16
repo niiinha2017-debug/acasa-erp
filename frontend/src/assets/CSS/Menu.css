@@ -1,433 +1,262 @@
-/* ===== TOPBAR / MENU (MODERN MINIMAL) ===== */
+/* =========================================================
+   VARIÁVEIS
+========================================================= */
 :root {
     --topbar-bg: rgba(248, 250, 252, 0.96);
-    --topbar-border: rgba(255, 255, 255, 0.2);
-    --topbar-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    --topbar-text: #1e293b;
-    --topbar-text-secondary: #64748b;
-    --topbar-hover: rgba(15, 23, 42, 0.05);
-    --topbar-active: rgba(79, 70, 229, 0.12);
+    --topbar-border: rgba(255,255,255,.2);
+    --topbar-shadow: 0 4px 20px rgba(0,0,0,.08);
+
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --hover-bg: rgba(15,23,42,.05);
+
+    --gradient-primary: linear-gradient(135deg,#667eea,#764ba2);
+    --gradient-active: linear-gradient(135deg,rgba(102,126,234,.14),rgba(118,75,162,.1));
+
+    --nav-height: 44px;
+    --nav-radius: 10px;
+    --nav-padding-x: 18px;
+    --nav-font-size: 14px;
+
+    --dropdown-width: 220px;
+
+    --transition: all .25s cubic-bezier(.4,0,.2,1);
 }
 
+/* =========================================================
+   TOPBAR
+========================================================= */
 .topbar {
     position: sticky;
     top: 0;
     z-index: 1000;
     background: var(--topbar-bg);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(18px) saturate(180%);
     border-bottom: 1px solid var(--topbar-border);
     box-shadow: var(--topbar-shadow);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .topbar.scrolled {
-    --topbar-bg: rgba(255, 255, 255, 0.98);
-    --topbar-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 8px 30px rgba(0,0,0,.12);
 }
 
 .topbar-inner {
     max-width: 1200px;
-    margin: 0 auto;
+    margin: auto;
     padding: 12px 24px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 24px;
 }
 
-/* Logo Moderna */
+/* =========================================================
+   BRAND
+========================================================= */
 .brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    font-size: 20px;
     font-weight: 800;
-    font-size: 18px;
-    color: var(--topbar-text);
+    color: var(--text-main);
     cursor: pointer;
-    user-select: none;
-    text-decoration: none;
-    position: relative;
-    padding: 4px 0;
+    white-space: nowrap;
 }
 
-.brand::before {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 24px;
-    height: 3px;
-    background: linear-gradient(90deg, #667eea, #764ba2);
-    border-radius: 2px;
-    transition: width 0.3s ease;
-}
-
-.brand:hover::before {
-    width: 100%;
-}
-
-.brand-logo {
-    font-size: 24px;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-/* Navegação Moderna */
+/* =========================================================
+   NAV
+========================================================= */
 .nav {
+    flex: 1;
     display: flex;
     align-items: center;
-    gap: 4px;
-    background: rgba(255, 255, 255, 0.6);
-    padding: 4px;
-    border-radius: 12px;
-    border: 1px solid rgba(226, 232, 240, 0.8);
+    justify-content: center;
+    gap: 8px;
+
+    padding: 6px;
+    background: rgba(255,255,255,.6);
+    border-radius: 14px;
+    border: 1px solid rgba(226,232,240,.8);
 }
 
-.nav a,
-.nav button {
-    appearance: none;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    font-size: 13px;
+/* =========================================================
+   ITENS PADRÃO (router-link)
+========================================================= */
+.nav > a,
+.dropdown-toggle {
+    height: var(--nav-height);
+    padding: 0 var(--nav-padding-x);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: var(--nav-font-size);
     font-weight: 600;
-    color: var(--topbar-text-secondary);
-    padding: 8px 16px;
-    border-radius: 8px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    text-decoration: none;
+    color: var(--text-muted);
+
+    border-radius: var(--nav-radius);
+    background: transparent;
+    cursor: pointer;
     position: relative;
-    overflow: hidden;
+    transition: var(--transition);
 }
 
-.nav a::before,
-.nav button::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-    transition: 0.5s;
+/* Hover */
+.nav > a:hover,
+.dropdown-toggle:hover {
+    background: var(--hover-bg);
+    color: var(--text-main);
+    transform: translateY(-2px);
 }
 
-.nav a:hover::before,
-.nav button:hover::before {
-    left: 100%;
-}
-
-.nav a:hover,
-.nav button:hover {
-    background: var(--topbar-hover);
-    color: var(--topbar-text);
-    transform: translateY(-1px);
-}
-
-/* Item Ativo */
-.nav a.router-link-active,
-.nav button.active {
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.12), rgba(118, 75, 162, 0.08));
+/* Ativo */
+.router-link-exact-active,
+.dropdown-menu.active .dropdown-toggle {
+    background: var(--gradient-active);
     color: #667eea;
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+    box-shadow: 0 4px 14px rgba(102,126,234,.25);
 }
 
-.nav a.router-link-active::after,
-.nav button.active::after {
-    content: '';
+/* =========================================================
+   DROPDOWN
+========================================================= */
+.dropdown-menu {
+    position: relative;
+}
+
+/* =========================================================
+   CONTEÚDO DO DROPDOWN
+========================================================= */
+.dropdown-content {
     position: absolute;
-    bottom: -4px;
+    top: calc(100% + 10px);
     left: 50%;
-    transform: translateX(-50%);
-    width: 20px;
-    height: 2px;
-    background: linear-gradient(90deg, #667eea, #764ba2);
-    border-radius: 1px;
+    transform: translateX(-50%) translateY(10px);
+
+    width: var(--dropdown-width);
+    padding: 6px;
+
+    background: var(--topbar-bg);
+    border-radius: 12px;
+    border: 1px solid rgba(226,232,240,.8);
+    box-shadow: 0 12px 32px rgba(0,0,0,.12);
+
+    opacity: 0;
+    visibility: hidden;
+    transition: var(--transition);
+    z-index: 10;
 }
 
-/* Área do Usuário Moderna */
+/* Dropdown ativo */
+.dropdown-menu.active .dropdown-content {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* =========================================================
+   ITENS DO DROPDOWN
+========================================================= */
+.dropdown-content a {
+    padding: 10px 14px;
+    display: block;
+
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-main);
+
+    border-radius: 8px;
+    transition: var(--transition);
+}
+
+.dropdown-content a:hover {
+    background: var(--hover-bg);
+}
+
+.dropdown-content .router-link-exact-active {
+    background: var(--gradient-active);
+    color: #667eea;
+}
+
+/* =========================================================
+   USER AREA
+========================================================= */
 .user-area {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 6px 12px;
-    background: rgba(255, 255, 255, 0.8);
-    border-radius: 12px;
-    border: 1px solid rgba(226, 232, 240, 0.8);
+    gap: 14px;
+
+    padding: 8px 16px;
+    background: rgba(255,255,255,.8);
+    border-radius: 14px;
+    border: 1px solid rgba(226,232,240,.8);
+
+    white-space: nowrap;
 }
 
-.user-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.user-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 600;
-    font-size: 14px;
-    border: 2px solid white;
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-}
-
-.user-details {
-    display: flex;
-    flex-direction: column;
-}
-
-.user-name {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--topbar-text);
-}
-
-.user-role {
-    font-size: 11px;
-    color: var(--topbar-text-secondary);
-    font-weight: 500;
-}
-
-/* Botões Modernos */
 .btn-logout {
-    background: transparent;
+    background: none;
     border: none;
-    padding: 6px 12px;
-    font-size: 12px;
+    font-size: 14px;
     font-weight: 600;
-    color: var(--topbar-text-secondary);
+    color: var(--text-muted);
     cursor: pointer;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    transition: var(--transition);
 }
 
 .btn-logout:hover {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.08));
     color: #dc2626;
-    transform: translateY(-1px);
 }
 
-.btn-logout::before {
-    content: '→';
-    font-size: 14px;
-    opacity: 0.6;
-}
-
-/* Botão Gradient Moderno */
-.topbar .btn-gradient {
-    padding: 8px 20px;
-    font-size: 13px;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    border-radius: 10px;
-    border: none;
-    color: white;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.topbar .btn-gradient:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
-}
-
-/* ===== RESPONSIVIDADE ===== */
-
-/* Tablet (768px - 1024px) */
+/* =========================================================
+   RESPONSIVO
+========================================================= */
 @media (max-width: 1024px) {
-    .topbar-inner {
-        padding: 12px 20px;
-        gap: 20px;
-    }
-    
-    .nav {
-        gap: 2px;
-    }
-    
-    .nav a,
-    .nav button {
-        padding: 8px 14px;
-        font-size: 12px;
-    }
-    
-    .user-area {
-        gap: 12px;
-    }
-    
-    .user-name {
-        font-size: 12px;
+    .nav > a,
+    .dropdown-toggle {
+        padding: 0 14px;
+        font-size: 13px;
     }
 }
 
-/* Mobile (480px - 768px) */
 @media (max-width: 768px) {
     .topbar-inner {
-        padding: 10px 16px;
-        flex-wrap: wrap;
-        gap: 12px;
-    }
-    
-    .brand {
-        font-size: 16px;
-        order: 1;
-        flex: 1;
-    }
-    
-    .nav {
-        order: 3;
-        width: 100%;
-        justify-content: center;
-        margin-top: 8px;
-        background: transparent;
-        border: none;
-        padding: 0;
-    }
-    
-    .nav a,
-    .nav button {
-        padding: 8px 12px;
-        font-size: 12px;
-        flex: 1;
-        text-align: center;
-    }
-    
-    .user-area {
-        order: 2;
-        background: transparent;
-        border: none;
-        padding: 0;
-    }
-    
-    .user-details {
-        display: none;
-    }
-    
-    .btn-logout span {
-        display: none;
-    }
-    
-    .btn-logout::before {
-        content: '🚪';
-        font-size: 16px;
-    }
-    
-    .topbar .btn-gradient {
-        display: none;
-    }
-}
-
-/* Small Mobile (< 480px) */
-@media (max-width: 480px) {
-    .topbar-inner {
-        padding: 8px 12px;
-    }
-    
-    .brand {
-        font-size: 14px;
-    }
-    
-    .nav {
         overflow-x: auto;
-        justify-content: flex-start;
-        padding-bottom: 4px;
     }
-    
-    .nav a,
-    .nav button {
-        white-space: nowrap;
-        flex: 0 0 auto;
-        font-size: 11px;
-        padding: 6px 10px;
-    }
-    
-    .user-avatar {
-        width: 28px;
-        height: 28px;
-        font-size: 12px;
-    }
-}
 
-/* ===== ANIMAÇÕES ===== */
-@keyframes slideInTopbar {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
+    .nav {
+        min-width: max-content;
     }
-    to {
+
+    .dropdown-content {
+        position: static;
+        width: 100%;
+        box-shadow: none;
+        border: none;
+        background: transparent;
+        transform: none;
         opacity: 1;
-        transform: translateY(0);
+        visibility: visible;
+        padding: 0;
+    }
+
+    .dropdown-menu.active .dropdown-toggle {
+        background: var(--gradient-active);
     }
 }
 
-.topbar {
-    animation: slideInTopbar 0.6s cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-/* ===== DARK MODE ===== */
+/* =========================================================
+   DARK MODE
+========================================================= */
 @media (prefers-color-scheme: dark) {
     :root {
-        --topbar-bg: rgba(15, 23, 42, 0.96);
-        --topbar-border: rgba(255, 255, 255, 0.1);
-        --topbar-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-        --topbar-text: #f1f5f9;
-        --topbar-text-secondary: #94a3b8;
-        --topbar-hover: rgba(255, 255, 255, 0.05);
-        --topbar-active: rgba(102, 126, 234, 0.2);
+        --topbar-bg: rgba(15,23,42,.96);
+        --text-main: #f1f5f9;
+        --text-muted: #94a3b8;
+        --hover-bg: rgba(255,255,255,.05);
     }
-    
-    .topbar.scrolled {
-        --topbar-bg: rgba(15, 23, 42, 0.98);
-    }
-    
+
     .nav,
     .user-area {
-        background: rgba(30, 41, 59, 0.8);
-        border-color: rgba(51, 65, 85, 0.8);
-    }
-    
-    .brand {
-        color: #f1f5f9;
-    }
-    
-    .nav a.router-link-active,
-    .nav button.active {
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.15));
-        color: #818cf8;
+        background: rgba(30,41,59,.85);
+        border-color: rgba(51,65,85,.8);
     }
 }
-
-/* ===== UTILITY CLASSES ===== */
-.hidden-mobile {
-    display: none;
-}
-
-@media (min-width: 769px) {
-    .hidden-mobile {
-        display: flex;
-    }
-}
-
-.flex-center {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.gap-2 { gap: 8px; }
-.gap-3 { gap: 12px; }
-
-.text-sm { font-size: 13px; }
-.text-xs { font-size: 11px; }

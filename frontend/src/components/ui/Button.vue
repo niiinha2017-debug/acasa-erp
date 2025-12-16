@@ -2,30 +2,33 @@
   <button
     :type="type"
     :disabled="loading || disabled"
-    :class="['btn', variant, size, { 'loading': loading, 'full-width': fullWidth }]"
+    class="btn"
+    :class="[
+      `btn--${variant}`,
+      `btn--${size}`,
+      { 'btn--loading': loading, 'btn--full': fullWidth }
+    ]"
     @click="handleClick"
   >
-    <span v-if="loading" class="btn-spinner"></span>
-    <slot v-if="!loading">{{ label }}</slot>
+    <span v-if="loading" class="btn__spinner"></span>
+    <span v-if="!loading"><slot>{{ label }}</slot></span>
     <span v-if="loading && loadingText">{{ loadingText }}</span>
   </button>
 </template>
 
 <script setup>
-defineProps({
-  type: {
-    type: String,
-    default: 'button'
-  },
+const props = defineProps({
+  type: { type: String, default: 'button' },
   variant: {
     type: String,
     default: 'primary',
-    validator: (value) => ['primary', 'secondary', 'outline', 'danger', 'success'].includes(value)
+    validator: v =>
+      ['primary', 'secondary', 'outline', 'danger', 'success'].includes(v)
   },
   size: {
     type: String,
     default: 'md',
-    validator: (value) => ['sm', 'md', 'lg'].includes(value)
+    validator: v => ['sm', 'md', 'lg'].includes(v)
   },
   label: String,
   loading: Boolean,
@@ -44,122 +47,142 @@ const handleClick = (event) => {
 </script>
 
 <style scoped>
+/* =====================================================
+   BASE
+===================================================== */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  font-weight: 600;
-  border: none;
-  border-radius: 10px;
+
+  font-family: var(--font-main);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-md);
+
+  height: var(--control-height-md);
+  padding: 0 20px;
+
+  border-radius: var(--control-radius-md);
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: inherit;
+
+  transition: var(--transition-base);
 }
 
 .btn:disabled {
-  opacity: 0.6;
+  opacity: .6;
   cursor: not-allowed;
 }
 
-/* Variants */
-.btn.primary {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
+/* =====================================================
+   SIZES
+===================================================== */
+.btn--sm {
+  height: var(--control-height-sm);
+  padding: 0 14px;
+  font-size: var(--font-size-sm);
 }
 
-.btn.secondary {
-  background: #f1f5f9;
-  color: #475569;
-  border: 1px solid #e2e8f0;
+.btn--lg {
+  height: var(--control-height-lg);
+  padding: 0 24px;
+  font-size: var(--font-size-lg);
 }
 
-.btn.outline {
+/* =====================================================
+   VARIANTS
+===================================================== */
+.btn--primary::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 120%;
+  height: 100%;
+
+  background: linear-gradient(
+    120deg,
+    transparent,
+    rgba(255, 255, 255, 0.35),
+    transparent
+  );
+
+  transition: left 0.6s ease;
+}
+
+
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--brand-primary-dark);
+}
+
+.btn--secondary {
+  background: var(--bg-card);
+  color: var(--text-main);
+  border-color: var(--border-soft);
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.btn--outline {
   background: transparent;
-  color: #667eea;
-  border: 2px solid #667eea;
+  color: var(--brand-primary);
+  border-color: var(--brand-primary);
 }
 
-.btn.danger {
-  background: #fee2e2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
+.btn--outline:hover:not(:disabled) {
+  background: var(--bg-hover);
 }
 
-.btn.success {
-  background: #dcfce7;
-  color: #16a34a;
-  border: 1px solid #bbf7d0;
+.btn--danger {
+  background: var(--danger);
+  color: var(--text-invert);
 }
 
-/* Sizes */
-.btn.sm {
-  padding: 6px 12px;
-  font-size: 12px;
+.btn--danger:hover:not(:disabled) {
+  background: #b91c1c;
 }
 
-.btn.md {
-  padding: 10px 20px;
-  font-size: 14px;
+.btn--success {
+  background: #16a34a;
+  color: var(--text-invert);
 }
 
-.btn.lg {
-  padding: 14px 28px;
-  font-size: 16px;
+/* =====================================================
+   STATES
+===================================================== */
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
-/* Hover effects */
-.btn.primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+.btn--loading {
+  pointer-events: none;
 }
 
-.btn.secondary:hover:not(:disabled) {
-  background: #e2e8f0;
-  transform: translateY(-1px);
+.btn--full {
+  width: 100%;
 }
 
-.btn.outline:hover:not(:disabled) {
-  background: rgba(102, 126, 234, 0.1);
-}
-
-.btn.danger:hover:not(:disabled) {
-  background: #fecaca;
-  transform: translateY(-1px);
-}
-
-.btn.success:hover:not(:disabled) {
-  background: #bbf7d0;
-  transform: translateY(-1px);
-}
-
-/* Loading state */
-.btn.loading {
-  cursor: wait;
-}
-
-.btn-spinner {
+/* =====================================================
+   SPINNER
+===================================================== */
+.btn__spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.4);
   border-top-color: white;
-  animation: spin 0.8s linear infinite;
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
 }
 
-.btn.outline .btn-spinner {
-  border-color: rgba(102, 126, 234, 0.3);
-  border-top-color: #667eea;
-}
-
-.btn.secondary .btn-spinner {
-  border-color: rgba(71, 85, 105, 0.3);
-  border-top-color: #475569;
-}
-
-/* Full width */
-.btn.full-width {
-  width: 100%;
+.btn--secondary .btn__spinner,
+.btn--outline .btn__spinner {
+  border-color: rgba(58,120,168,.3);
+  border-top-color: var(--brand-primary);
 }
 
 @keyframes spin {

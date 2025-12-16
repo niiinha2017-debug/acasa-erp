@@ -4,6 +4,8 @@ import { useAuth } from '@/composables/useAuth'
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 
+import DespesasCreate from '@/views/despesas/DespesasCreate.vue'
+
 import Login from '@/views/Login.vue'
 import Index from '@/views/Index.vue'
 
@@ -26,18 +28,18 @@ import ProdutosCreate from '@/views/produtos/ProdutosCreate.vue'
 
 
 const routes = [
-  {
-    path: '/login',
-    component: AuthLayout,
-    meta: { public: true },
-    children: [
-      {
-        path: '',
-        name: 'login',
-        component: Login,
-      }
-    ]
-  },
+{
+  path: '/login',
+  component: AuthLayout,
+  children: [
+    {
+      path: '',
+      name: 'login',
+      component: Login,
+      meta: { public: true } // 👈 AQUI
+    }
+  ]
+},
 
 {
   path: '/',
@@ -49,6 +51,12 @@ const routes = [
       name: 'dashboard',
       component: Index,
     },
+    { path: 'despesas/novo', 
+      component: DespesasCreate 
+    },
+   /* {
+      path: 'despesas', component: },*/
+
 {
   path: 'planos-corte',
   component: PlanosCorteList,
@@ -113,24 +121,21 @@ const router = createRouter({
 })
 
 /* 🔐 GUARDA GLOBAL */
-router.beforeEach((to) => {
+router.beforeEach((to, from, next) => {
   const auth = useAuth()
-  const isPublic = to.meta.public
-  const isAuthenticated = auth.isAuthenticated()
 
-  console.log('🧭 ROUTER GUARD')
-  console.log('➡️ rota:', to.path)
-  console.log('🔐 autenticado:', isAuthenticated)
-
-  if (!isPublic && !isAuthenticated) {
-    console.warn('⛔ bloqueado, redirecionando para /login')
-    return '/login'
+  if (to.meta.public) {
+    return next()
   }
 
-  if (to.path === '/login' && isAuthenticated) {
-    console.log('🔁 já logado, indo para /')
-    return '/'
+  if (to.meta.requiresAuth && !auth.isAuthenticated()) {
+    return next('/login')
   }
+
+  return next()
 })
 
+
 export default router
+
+
