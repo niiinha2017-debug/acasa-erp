@@ -1,100 +1,433 @@
-/* ===== TOPBAR / MENU (MINIMAL) ===== */
+/* ===== TOPBAR / MENU (MODERN MINIMAL) ===== */
+:root {
+    --topbar-bg: rgba(248, 250, 252, 0.96);
+    --topbar-border: rgba(255, 255, 255, 0.2);
+    --topbar-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    --topbar-text: #1e293b;
+    --topbar-text-secondary: #64748b;
+    --topbar-hover: rgba(15, 23, 42, 0.05);
+    --topbar-active: rgba(79, 70, 229, 0.12);
+}
 
 .topbar {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  background: rgba(248, 250, 252, 0.9); /* mesmo do fundo, leve */
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid #e5e7eb;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background: var(--topbar-bg);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid var(--topbar-border);
+    box-shadow: var(--topbar-shadow);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.topbar.scrolled {
+    --topbar-bg: rgba(255, 255, 255, 0.98);
+    --topbar-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
 }
 
 .topbar-inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 10px 24px;          /* compacto */
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
 }
 
-/* Logo / título */
+/* Logo Moderna */
 .brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 0.2px;
-  color: #0f172a;
-  cursor: pointer;
-  user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 800;
+    font-size: 18px;
+    color: var(--topbar-text);
+    cursor: pointer;
+    user-select: none;
+    text-decoration: none;
+    position: relative;
+    padding: 4px 0;
 }
 
-/* Navegação */
+.brand::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 24px;
+    height: 3px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.brand:hover::before {
+    width: 100%;
+}
+
+.brand-logo {
+    font-size: 24px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Navegação Moderna */
 .nav {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.6);
+    padding: 4px;
+    border-radius: 12px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
 }
 
-/* Link estilo "linha", sem botão grande */
 .nav a,
 .nav button {
-  appearance: none;
-  background: transparent;
-  border: none;
-  cursor: pointer;
+    appearance: none;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--topbar-text-secondary);
+    padding: 8px 16px;
+    border-radius: 8px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+}
 
-  font-size: 12px;
-  font-weight: 600;
-  color: #334155;
+.nav a::before,
+.nav button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: 0.5s;
+}
 
-  padding: 6px 10px;
-  border-radius: 999px;
-  transition: transform .15s ease, background-color .15s ease, color .15s ease;
+.nav a:hover::before,
+.nav button:hover::before {
+    left: 100%;
 }
 
 .nav a:hover,
 .nav button:hover {
-  background: rgba(15, 23, 42, 0.06);
-  transform: translateY(-1px);
+    background: var(--topbar-hover);
+    color: var(--topbar-text);
+    transform: translateY(-1px);
 }
 
-/* Item ativo (router-link-active) */
-.nav a.router-link-active {
-  color: #0f172a;
-  background: rgba(79, 70, 229, 0.10);
+/* Item Ativo */
+.nav a.router-link-active,
+.nav button.active {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.12), rgba(118, 75, 162, 0.08));
+    color: #667eea;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
 }
 
-/* Área do usuário */
+.nav a.router-link-active::after,
+.nav button.active::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 2px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 1px;
+}
+
+/* Área do Usuário Moderna */
 .user-area {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 12px;
-  color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 12px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
 }
 
-/* Botão de ação com gradiente (se quiser no topo) */
-.topbar .btn-gradient {
-  padding: 6px 14px;
-  font-size: 12px;
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
+
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    border: 2px solid white;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--topbar-text);
+}
+
+.user-role {
+    font-size: 11px;
+    color: var(--topbar-text-secondary);
+    font-weight: 500;
+}
+
+/* Botões Modernos */
 .btn-logout {
-  background: transparent;
-  border: none;
-  padding: 6px 10px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #64748b;
-  cursor: pointer;
-  border-radius: 999px;
-  transition: background-color .15s ease, color .15s ease;
+    background: transparent;
+    border: none;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--topbar-text-secondary);
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .btn-logout:hover {
-  background: rgba(220, 38, 38, 0.08);
-  color: #dc2626;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.08));
+    color: #dc2626;
+    transform: translateY(-1px);
 }
+
+.btn-logout::before {
+    content: '→';
+    font-size: 14px;
+    opacity: 0.6;
+}
+
+/* Botão Gradient Moderno */
+.topbar .btn-gradient {
+    padding: 8px 20px;
+    font-size: 13px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 10px;
+    border: none;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.topbar .btn-gradient:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+/* ===== RESPONSIVIDADE ===== */
+
+/* Tablet (768px - 1024px) */
+@media (max-width: 1024px) {
+    .topbar-inner {
+        padding: 12px 20px;
+        gap: 20px;
+    }
+    
+    .nav {
+        gap: 2px;
+    }
+    
+    .nav a,
+    .nav button {
+        padding: 8px 14px;
+        font-size: 12px;
+    }
+    
+    .user-area {
+        gap: 12px;
+    }
+    
+    .user-name {
+        font-size: 12px;
+    }
+}
+
+/* Mobile (480px - 768px) */
+@media (max-width: 768px) {
+    .topbar-inner {
+        padding: 10px 16px;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    
+    .brand {
+        font-size: 16px;
+        order: 1;
+        flex: 1;
+    }
+    
+    .nav {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+        margin-top: 8px;
+        background: transparent;
+        border: none;
+        padding: 0;
+    }
+    
+    .nav a,
+    .nav button {
+        padding: 8px 12px;
+        font-size: 12px;
+        flex: 1;
+        text-align: center;
+    }
+    
+    .user-area {
+        order: 2;
+        background: transparent;
+        border: none;
+        padding: 0;
+    }
+    
+    .user-details {
+        display: none;
+    }
+    
+    .btn-logout span {
+        display: none;
+    }
+    
+    .btn-logout::before {
+        content: '🚪';
+        font-size: 16px;
+    }
+    
+    .topbar .btn-gradient {
+        display: none;
+    }
+}
+
+/* Small Mobile (< 480px) */
+@media (max-width: 480px) {
+    .topbar-inner {
+        padding: 8px 12px;
+    }
+    
+    .brand {
+        font-size: 14px;
+    }
+    
+    .nav {
+        overflow-x: auto;
+        justify-content: flex-start;
+        padding-bottom: 4px;
+    }
+    
+    .nav a,
+    .nav button {
+        white-space: nowrap;
+        flex: 0 0 auto;
+        font-size: 11px;
+        padding: 6px 10px;
+    }
+    
+    .user-avatar {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
+}
+
+/* ===== ANIMAÇÕES ===== */
+@keyframes slideInTopbar {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.topbar {
+    animation: slideInTopbar 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* ===== DARK MODE ===== */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --topbar-bg: rgba(15, 23, 42, 0.96);
+        --topbar-border: rgba(255, 255, 255, 0.1);
+        --topbar-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        --topbar-text: #f1f5f9;
+        --topbar-text-secondary: #94a3b8;
+        --topbar-hover: rgba(255, 255, 255, 0.05);
+        --topbar-active: rgba(102, 126, 234, 0.2);
+    }
+    
+    .topbar.scrolled {
+        --topbar-bg: rgba(15, 23, 42, 0.98);
+    }
+    
+    .nav,
+    .user-area {
+        background: rgba(30, 41, 59, 0.8);
+        border-color: rgba(51, 65, 85, 0.8);
+    }
+    
+    .brand {
+        color: #f1f5f9;
+    }
+    
+    .nav a.router-link-active,
+    .nav button.active {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.15));
+        color: #818cf8;
+    }
+}
+
+/* ===== UTILITY CLASSES ===== */
+.hidden-mobile {
+    display: none;
+}
+
+@media (min-width: 769px) {
+    .hidden-mobile {
+        display: flex;
+    }
+}
+
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+
+.text-sm { font-size: 13px; }
+.text-xs { font-size: 11px; }

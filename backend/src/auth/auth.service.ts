@@ -22,18 +22,17 @@ export class AuthService {
       throw new UnauthorizedException('Senha inválida.');
     }
 
-const token = this.jwtService.sign(
-  { id: user.id },
-  {
-    secret: process.env.JWT_SECRET || 'acasa_fallback_secret',
-  },
-);
-
-
+    const token = this.jwtService.sign(
+      { id: user.id },
+      {
+        secret: process.env.JWT_SECRET || 'acasa_fallback_secret',
+        expiresIn: '1d', // Expiração do token, ex: 1 dia
+      },
+    );
 
     return {
       message: 'Login efetuado com sucesso!',
-      token,
+      token, // Retorna o token
       user: {
         id: user.id,
         email: user.email,

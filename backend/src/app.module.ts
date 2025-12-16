@@ -2,15 +2,27 @@ import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { TypeOrmModule } from '@nestjs/typeorm'
 
+// CORE
 import { AuthModule } from './auth/auth.module'
 import { UsersModule } from './users/users.module'
+
+// CADASTROS
 import { ClientesModule } from './clientes/clientes.module'
 import { FuncionariosModule } from './funcionarios/funcionarios.module'
 import { FornecedoresModule } from './fornecedores/fornecedores.module'
 import { ProdutosModule } from './produtos/produtos.module'
+import { InsumosModule } from './insumos/insumos.module'
+
+// OPERAÇÃO
 import { ComprasModule } from './compras/compras.module'
-import { VendasModule } from './vendas/vendas.module';
-//import { VendasFornecedorModule } from './vendas-fornecedor/vendas-fornecedor.module';
+import { VendasModule } from './vendas/vendas.module'
+import { PlanoCorteModule } from './plano-corte/plano-corte.module'
+import { AgendaModule } from './agenda/agenda.module'
+
+// FINANCEIRO
+import { DespesasModule } from './despesas/despesas.module'
+import { FinanceiroModule } from './financeiro/financeiro.module'
+import { TarefasModule } from './tarefas/tarefas.module';
 
 @Module({
   imports: [
@@ -31,16 +43,27 @@ import { VendasModule } from './vendas/vendas.module';
       synchronize: false,
     }),
 
-    // MÓDULOS
-    UsersModule,
+    // CORE
     AuthModule,
+    UsersModule,
+
+    // CADASTROS
     ClientesModule,
     FuncionariosModule,
     FornecedoresModule,
     ProdutosModule,
+    InsumosModule,
+
+    // OPERAÇÃO
     ComprasModule,
     VendasModule,
-    //VendasFornecedorModule,
+    PlanoCorteModule,
+    AgendaModule,
+
+    // FINANCEIRO
+    DespesasModule,
+    FinanceiroModule,
+    TarefasModule,
   ],
 })
 export class AppModule {}

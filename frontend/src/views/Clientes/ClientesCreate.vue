@@ -1,131 +1,206 @@
 <template>
-  <div class="page">
-    <!-- Header da página -->
-    <header class="page-header">
-      <h1>Novo Cliente</h1>
-    </header>
+  <div class="main-container clientes-form">
+    <div class="form-card">
 
-    <!-- Conteúdo -->
-    <div class="page-content">
+      <!-- HEADER -->
+      <div class="form-header">
+        <h1 class="form-title">Cadastro de Cliente</h1>
+      </div>
+
+      <!-- BUSCA DE CLIENTE -->
+      <div class="form-grid">
+        <div class="form-group col-span-9">
+          <label class="form-label">Buscar cliente</label>
+          <input
+            class="form-input"
+            v-model="busca"
+            placeholder="Nome, e-mail ou CPF"
+            @input="buscarClientes"
+          />
+        </div>
+
+        <div class="form-group col-span-3">
+          <label class="form-label">&nbsp;</label>
+          <button class="btn btn-secondary" @click="limparFormulario">
+            Novo Cliente
+          </button>
+        </div>
+
+        <!-- RESULTADOS -->
+        <div
+          v-if="clientesEncontrados.length"
+          class="form-group col-span-12"
+        >
+          <ul class="lista-busca">
+            <li
+              v-for="c in clientesEncontrados"
+              :key="c.id"
+              @click="selecionarCliente(c)"
+            >
+              {{ c.nome }} — {{ c.email || 'sem e-mail' }}
+            </li>
+          </ul>
+        </div>
+      </div>
 
       <form @submit.prevent="submitForm">
+        <div class="form-grid">
 
-        <!-- Nome + Indicação -->
-        <div class="form-row">
-          <div class="col-8">
+          <!-- TIPO DE PESSOA -->
+          <div class="form-group col-span-12">
+            <label class="form-label">Tipo de Pessoa</label>
+            <div class="toggle-group">
+              <button
+                type="button"
+                class="toggle-btn"
+                :class="{ active: tipoPessoa === 'FISICA' }"
+                @click="setPessoa('FISICA')"
+              >Física</button>
+
+              <button
+                type="button"
+                class="toggle-btn"
+                :class="{ active: tipoPessoa === 'JURIDICA' }"
+                @click="setPessoa('JURIDICA')"
+              >Jurídica</button>
+            </div>
+          </div>
+
+          <!-- DADOS PRINCIPAIS -->
+          <div class="form-group col-span-6">
+            <label class="form-label">Nome *</label>
+            <input class="form-input" v-model="cliente.nome" required />
+          </div>
+
+          <div class="form-group col-span-6">
+            <label class="form-label">E-mail</label>
+            <input class="form-input" v-model="cliente.email" />
+          </div>
+
+          <div class="form-group col-span-6">
+            <label class="form-label">Telefone</label>
+            <input class="form-input" v-model="cliente.telefone" @input="onTelefone" />
+          </div>
+
+          <div class="form-group col-span-6">
+            <label class="form-label">Indicação</label>
+            <input class="form-input" v-model="cliente.indicacao" />
+          </div>
+
+          <!-- DOCUMENTOS -->
+          <div class="form-group col-span-6">
+            <label class="form-label">
+              {{ tipoPessoa === 'FISICA' ? 'CPF' : 'CNPJ' }}
+            </label>
             <input
-              placeholder="Nome completo *"
-              v-model="cliente.nome"
-              required
+              class="form-input"
+              v-model="cliente.cpf_cnpj"
+              @input="onCpfCnpj"
             />
           </div>
-          <div class="col-4">
-            <input
-              placeholder="Indicação"
-              v-model="cliente.indicacao"
-            />
-          </div>
-        </div>
 
-        <!-- Email + Telefone -->
-        <div class="form-row">
-          <div class="col-6">
-            <input placeholder="E-mail" v-model="cliente.email" />
+          <div class="form-group col-span-6">
+            <label class="form-label">
+              {{ tipoPessoa === 'FISICA' ? 'RG' : 'IE' }}
+            </label>
+            <input class="form-input" v-model="cliente.rg_ie" />
           </div>
-          <div class="col-6">
-            <input placeholder="Telefone" v-model="cliente.telefone" />
-          </div>
-        </div>
 
-        <!-- CPF + RG -->
-        <div class="form-row">
-          <div class="col-6">
-            <input placeholder="CPF / CNPJ" v-model="cliente.cpf_cnpj" />
+          <!-- ENDEREÇO -->
+          <div class="form-group col-span-4">
+            <label class="form-label">CEP</label>
+            <input class="form-input" v-model="cliente.cep" @input="onCep" />
           </div>
-          <div class="col-6">
-            <input placeholder="RG / IE" v-model="cliente.rg_ie" />
-          </div>
-        </div>
 
-        <!-- CEP + Endereço -->
-        <div class="form-row">
-          <div class="col-4">
-            <input placeholder="CEP" v-model="cliente.cep" />
+          <div class="form-group col-span-8">
+            <label class="form-label">Endereço</label>
+            <input class="form-input" v-model="cliente.endereco" />
           </div>
-          <div class="col-8">
-            <input placeholder="Endereço" v-model="cliente.endereco" />
-          </div>
-        </div>
 
-        <!-- Número / Complemento / Bairro -->
-        <div class="form-row">
-          <div class="col-4">
-            <input placeholder="Número" v-model="cliente.numero" />
+          <div class="form-group col-span-4">
+            <label class="form-label">Número</label>
+            <input class="form-input" v-model="cliente.numero" />
           </div>
-          <div class="col-4">
-            <input placeholder="Complemento" v-model="cliente.complemento" />
-          </div>
-          <div class="col-4">
-            <input placeholder="Bairro" v-model="cliente.bairro" />
-          </div>
-        </div>
 
-        <!-- Cidade / UF / Status -->
-        <div class="form-row">
-          <div class="col-6">
-            <input placeholder="Cidade" v-model="cliente.cidade" />
+          <div class="form-group col-span-4">
+            <label class="form-label">Complemento</label>
+            <input class="form-input" v-model="cliente.complemento" />
           </div>
-          <div class="col-3">
-            <input placeholder="UF" maxlength="2" v-model="cliente.estado" />
+
+          <div class="form-group col-span-4">
+            <label class="form-label">Bairro</label>
+            <input class="form-input" v-model="cliente.bairro" />
           </div>
-          <div class="col-3">
-            <select v-model="cliente.status">
+
+          <div class="form-group col-span-6">
+            <label class="form-label">Cidade</label>
+            <input class="form-input" v-model="cliente.cidade" />
+          </div>
+
+          <div class="form-group col-span-3">
+            <label class="form-label">UF</label>
+            <input class="form-input" v-model="cliente.estado" maxlength="2" />
+          </div>
+
+          <div class="form-group col-span-3">
+            <label class="form-label">Status</label>
+            <select class="form-input form-select" v-model="cliente.status">
               <option value="Ativo">Ativo</option>
               <option value="Inativo">Inativo</option>
               <option value="Potencial">Potencial</option>
             </select>
           </div>
-        </div>
 
-        <!-- Observação -->
-        <div class="form-row">
-          <div class="col-12">
-            <textarea
-              placeholder="Observação"
-              v-model="cliente.observacao"
-            ></textarea>
+          <div class="form-group col-span-12">
+            <label class="form-label">Observação</label>
+            <textarea class="form-textarea" v-model="cliente.observacao" />
           </div>
+
         </div>
 
-        <!-- Ações -->
         <div class="form-actions">
-          <button type="button" @click="cancelar">
+          <button class="btn btn-secondary" type="button" @click="cancelar">
             Cancelar
           </button>
-
-          <button type="submit" class="btn-gradient">
-            Salvar Cliente
+          <button class="btn btn-primary" type="submit">
+            Salvar
           </button>
         </div>
-
-        <div v-if="mensagemErro">{{ mensagemErro }}</div>
-
       </form>
+
     </div>
   </div>
 </template>
-
-
 <script>
+import {
+  maskCPF,
+  maskCNPJ,
+  maskTelefone,
+  maskCEP,
+  buscarCep
+} from '@/utils/utils'
+
 export default {
   name: 'ClientesCreate',
+
   data() {
     return {
+      // BUSCA
+      busca: '',
+      clientesEncontrados: [],
+      clienteId: null,
+
+      // TIPO DE PESSOA
+      tipoPessoa: 'FISICA',
+
+      // FORM
       cliente: {
         nome: '',
-        indicacao: '',
         email: '',
         telefone: '',
+        indicacao: '',
+        cpf_cnpj: '',
+        rg_ie: '',
         cep: '',
         endereco: '',
         numero: '',
@@ -133,50 +208,120 @@ export default {
         bairro: '',
         cidade: '',
         estado: '',
-        cpf_cnpj: '',
-        rg_ie: '',
+        status: 'Ativo',
         observacao: '',
-        status: 'Ativo', // Default para 'Ativo'
       },
-      mensagemSucesso: '',
+
       mensagemErro: '',
-    };
-  },
-  methods: {
-    // A lógica de submitForm permanece a mesma, pois envia o objeto this.cliente completo
-    async submitForm() {
-        // ... (Lógica de POST para /clientes) ...
-        this.mensagemSucesso = '';
-        this.mensagemErro = '';
-
-        // 🛑 CORREÇÃO: Forçando o uso do localhost para contornar o erro do .env
-        const apiUrl = import.meta.env.VITE_API_URL;
-        const endpoint = `${apiUrl}/clientes`;
-
-        try {
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(this.cliente), 
-            });
-
-            if (response.ok || response.status === 201) {
-                this.mensagemSucesso = 'Cliente cadastrado com sucesso!';
-                this.$router.push('/clientes'); 
-            } else {
-                const errorData = await response.json();
-                this.mensagemErro = `Erro ao cadastrar: ${errorData.message || response.statusText}`;
-            }
-        } catch (error) {
-            this.mensagemErro = 'Erro de conexão com a API. Verifique se o Backend está rodando.';
-            console.error('Erro de rede:', error);
-        }
-    },
-    
-    cancelar() {
-      this.$router.push('/clientes');
+      mensagemSucesso: '',
     }
-  }
-};
+  },
+
+  methods: {
+    /* =====================
+       BUSCAR CLIENTES
+    ===================== */
+    async buscarClientes() {
+      if (!this.busca || this.busca.length < 3) {
+        this.clientesEncontrados = []
+        return
+      }
+
+      try {
+        const res = await fetch(
+          `${import.meta.env.VITE_API_URL}/clientes?busca=${this.busca}`
+        )
+        this.clientesEncontrados = await res.json()
+      } catch (e) {
+        console.error(e)
+      }
+    },
+
+    selecionarCliente(c) {
+      this.clienteId = c.id
+      this.cliente = { ...c }
+      this.tipoPessoa =
+        c.cpf_cnpj && c.cpf_cnpj.length > 14 ? 'JURIDICA' : 'FISICA'
+      this.busca = c.nome
+      this.clientesEncontrados = []
+    },
+
+    limparFormulario() {
+      this.clienteId = null
+      this.busca = ''
+      this.clientesEncontrados = []
+      Object.keys(this.cliente).forEach(k => (this.cliente[k] = ''))
+      this.cliente.status = 'Ativo'
+      this.tipoPessoa = 'FISICA'
+    },
+
+    /* =====================
+       TIPO DE PESSOA
+    ===================== */
+    setPessoa(tipo) {
+      this.tipoPessoa = tipo
+      this.cliente.cpf_cnpj = ''
+      this.cliente.rg_ie = ''
+    },
+
+    /* =====================
+       MÁSCARAS
+    ===================== */
+    onCpfCnpj(e) {
+      const v = e.target.value
+      this.cliente.cpf_cnpj =
+        this.tipoPessoa === 'FISICA'
+          ? maskCPF(v)
+          : maskCNPJ(v)
+    },
+
+    onTelefone(e) {
+      this.cliente.telefone = maskTelefone(e.target.value)
+    },
+
+    async onCep(e) {
+      this.cliente.cep = maskCEP(e.target.value)
+
+      const data = await buscarCep(this.cliente.cep)
+      if (!data) return
+
+      this.cliente.endereco = data.logradouro
+      this.cliente.bairro = data.bairro
+      this.cliente.cidade = data.localidade
+      this.cliente.estado = data.uf
+    },
+
+    /* =====================
+       SUBMIT
+    ===================== */
+    async submitForm() {
+      this.mensagemErro = ''
+
+      const method = this.clienteId ? 'PUT' : 'POST'
+      const endpoint = this.clienteId
+        ? `${import.meta.env.VITE_API_URL}/clientes/${this.clienteId}`
+        : `${import.meta.env.VITE_API_URL}/clientes`
+
+      try {
+        const res = await fetch(endpoint, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.cliente),
+        })
+
+        if (!res.ok) throw new Error()
+
+        this.$router.push('/clientes')
+      } catch (e) {
+        this.mensagemErro = 'Erro ao salvar cliente'
+      }
+    },
+
+    cancelar() {
+      this.$router.push('/clientes')
+    },
+  },
+}
 </script>
+
 

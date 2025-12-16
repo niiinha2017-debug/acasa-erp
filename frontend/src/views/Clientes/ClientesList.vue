@@ -36,26 +36,28 @@ export default {
 
 
 <template>
-  <div class="page">
-    <!-- Header da página -->
-    <header class="page-header">
-      <h1>Clientes</h1>
+  <div class="main-container">
 
-      <button
-        class="btn-gradient"
-        @click="$router.push('/clientes/novo')"
-      >
-        Novo Cliente
-      </button>
-    </header>
+    <div class="form-card">
 
-    <!-- Conteúdo -->
-    <div class="page-content">
+      <!-- HEADER -->
+      <div class="form-header">
+        <h1 class="form-title">Clientes</h1>
 
+        <button
+          class="btn btn-primary"
+          @click="$router.push('/clientes/novo')"
+        >
+          Novo Cliente
+        </button>
+      </div>
+
+      <!-- ESTADOS -->
       <div v-if="loading">Carregando…</div>
       <div v-if="error">{{ error }}</div>
 
-      <table class="table">
+      <!-- TABELA -->
+      <table class="table" v-if="!loading">
         <thead>
           <tr>
             <th>Nome</th>
@@ -70,46 +72,27 @@ export default {
         <tbody>
           <tr v-for="cliente in clientes" :key="cliente.id">
             <td>{{ cliente.nome }}</td>
-            <td>{{ cliente.telefone }}</td>
-            <td>{{ cliente.email }}</td>
-            <td>{{ cliente.cpf_cnpj }}</td>
+            <td>{{ cliente.telefone || '-' }}</td>
+            <td>{{ cliente.email || '-' }}</td>
+            <td>{{ cliente.cpf_cnpj || '-' }}</td>
             <td>{{ cliente.status }}</td>
-            <td class="table-actions">
-  <!-- Editar -->
-  <button
-    class="action-btn edit"
-    title="Editar"
-    @click="$router.push(`/clientes/${cliente.id}/editar`)"
-  >
-    ✏️
-  </button>
-
-  <!-- Inativar / Ativar -->
-  <button
-    class="action-btn toggle"
-    :title="cliente.status === 'Ativo' ? 'Inativar' : 'Ativar'"
-    @click="toggleStatus(cliente)"
-  >
-    ⏸
-  </button>
-
-  <!-- Excluir -->
-  <button
-    class="action-btn delete"
-    title="Excluir"
-    @click="excluirCliente(cliente.id)"
-  >
-    🗑
-  </button>
-</td>
+            <td>
+              <button
+                class="btn btn-secondary"
+                @click="$router.push(`/clientes/${cliente.id}`)"
+              >
+                Editar
+              </button>
+            </td>
           </tr>
 
-          <tr v-if="!loading && clientes.length === 0">
+          <tr v-if="clientes.length === 0">
             <td colspan="6">Nenhum cliente cadastrado.</td>
           </tr>
         </tbody>
       </table>
 
     </div>
+
   </div>
 </template>

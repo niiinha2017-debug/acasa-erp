@@ -3,8 +3,13 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 
+// CSS base + estrutural
+import './assets/CSS/Main.css'
+import './assets/CSS/Menu.css'
 
-import './assets/CSS/main.css'   // se existir
-import './assets/CSS/Menu.css'   // ← ESTE É O CARA
-
-createApp(App).use(router).mount('#app')
+// ===============================
+// APP
+// ===============================
+const app = createApp(App)
+app.use(router)
+app.mount('#app')
