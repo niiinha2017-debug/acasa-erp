@@ -45,6 +45,14 @@
             <router-link to="/produtos" exact-active-class="router-link-exact-active">
               Produtos
             </router-link>
+            <router-link to="/orcamentos" exact-active-class="router-link-exact-active">
+  Orçamentos
+</router-link>
+
+<router-link to="/vendas" exact-active-class="router-link-exact-active">
+  Vendas
+</router-link>
+
           </div>
         </div>
         

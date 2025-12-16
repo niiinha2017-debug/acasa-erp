@@ -24,6 +24,9 @@ import { DespesasModule } from './despesas/despesas.module'
 import { FinanceiroModule } from './financeiro/financeiro.module'
 import { TarefasModule } from './tarefas/tarefas.module';
 
+// VENDAS
+import { OrcamentosModule } from './orcamento/orcamentos.module';
+
 @Module({
   imports: [
     // ENV
@@ -64,6 +67,9 @@ import { TarefasModule } from './tarefas/tarefas.module';
     DespesasModule,
     FinanceiroModule,
     TarefasModule,
+
+    //Vendas
+     OrcamentosModule,
   ],
 })
 export class AppModule {}

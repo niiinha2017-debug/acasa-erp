@@ -15,6 +15,8 @@ import ClientesCreate from '@/views/Clientes/ClientesCreate.vue'
 import PlanosCorteList from '@/views/PlanodeCorte/PlanosCorteList.vue'
 import PlanoCorteCreate from '@/views/PlanodeCorte/PlanoCorteCreate.vue'
 
+import OrcamentosList from '@/views/orcamento/OrcamentosList.vue'
+import OrcamentoCreate from '@/views/orcamento/OrcamentoCreate.vue'  
 
 import FornecedoresList from '@/views/fornecedores/FornecedoresList.vue'
 import FornecedoresCreate from '@/views/fornecedores/FornecedoresCreate.vue'
@@ -66,8 +68,6 @@ const routes = [
   component: PlanoCorteCreate,
 },
 
-
-
     {
   path: 'clientes',
   component: ClientesList,
@@ -94,7 +94,14 @@ const routes = [
   path: 'funcionarios/novo',
   component: FuncionariosCreate,
 },
-
+{
+  path: 'orcamentos',
+  component: OrcamentosList
+},
+{
+  path: 'orcamentos/novo',
+  component: OrcamentoCreate
+},
 {
   path: 'produtos',
   name: 'produtos',
