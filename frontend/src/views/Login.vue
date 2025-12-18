@@ -115,10 +115,10 @@
 </template>
 
 <script setup>
-import '../assets/CSS/Main.css';
+import '../assets/CSS/Login.css';
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuth } from '@/composables/useAuth'
+import { useAuth } from '@/services/useAuth'
 
 const router = useRouter()
 const auth = useAuth()

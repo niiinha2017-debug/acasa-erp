@@ -85,7 +85,7 @@
 import '../assets/CSS/Menu.css'
 import { useRouter } from 'vue-router'
 import { ref, onMounted, onUnmounted } from 'vue'
-import { useAuth } from '@/composables/useAuth' 
+import { useAuth } from '@/services/useAuth' 
 
 const router = useRouter()
 const { logout } = useAuth() // Desestrutura para pegar apenas o logout

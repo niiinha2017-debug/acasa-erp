@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import api from '@/services/api'
 import { storage } from '@/utils/storage'
 
@@ -26,7 +26,6 @@ export function useAuth() {
         password,
       })
 
-      // 🔐 token REAL do backend
       token.value = data.token
       user.value = data.user
 
@@ -68,7 +67,7 @@ export function useAuth() {
      AUTH CHECK
   ===================== */
   function isAuthenticated() {
-    return !!token.value
+    return !!token.value && !!user.value
   }
 
   /* =====================
@@ -77,7 +76,7 @@ export function useAuth() {
   return {
     token,
     user,
-    loading: computed(() => loading.value),
+    loading,
 
     login,
     logout,

@@ -6,10 +6,16 @@ import {
   Delete,
   Body,
   Param,
+  UseGuards,
 } from '@nestjs/common'
 
 import { ClientesService } from './clientes.service'
+import { JwtAuthGuard } from '../auth/jwt-auth.guard'
+import { PermissionGuard } from '../auth/permission/permission.guard'
+import { RequirePermission } from '../auth/permission/permission.decorator'
 
+@UseGuards(JwtAuthGuard, PermissionGuard)
+@RequirePermission('clientes.ver')
 @Controller('clientes')
 export class ClientesController {
   constructor(
