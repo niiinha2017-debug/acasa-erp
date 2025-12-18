@@ -52,3 +52,39 @@ export async function buscarCep(cep) {
 
   return data
 }
+export function maskRG(value = '') {
+  const v = value.replace(/\D/g, '')
+
+  if (v.length <= 8) {
+    return v
+      .replace(/(\d{2})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+  }
+
+  return v
+    .slice(0, 9)
+    .replace(/(\d{2})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1})$/, '$1-$2')
+}
+export function maskMoneyBR(value = '') {
+  let v = value.replace(/\D/g, '')
+
+  if (!v) return ''
+
+  v = (Number(v) / 100).toFixed(2)
+
+  return v
+    .replace('.', ',')
+    .replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+}
+export function moneyBRToNumber(value = '') {
+  if (!value) return null
+
+  return Number(
+    value
+      .replace(/\./g, '')
+      .replace(',', '.')
+  )
+}
+

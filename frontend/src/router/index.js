@@ -5,6 +5,7 @@ import AuthLayout from '@/layouts/AuthLayout.vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 
 import DespesasCreate from '@/views/despesas/DespesasCreate.vue'
+import DespesasList from '@/views/despesas/DespesasList.vue'
 
 import Login from '@/views/Login.vue'
 import Index from '@/views/Index.vue'
@@ -27,6 +28,8 @@ import FuncionariosCreate from '@/views/funcionarios/FuncionariosCreate.vue'
 import ProdutosList from '@/views/produtos/ProdutosList.vue'
 import ProdutosCreate from '@/views/produtos/ProdutosCreate.vue'
 
+import ConstantesCreate from '@/views/constantes/ConstantesCreate.vue'
+import ConstantesList from '@/views/constantes/ConstantesList.vue'
 
 
 const routes = [
@@ -53,11 +56,22 @@ const routes = [
       name: 'dashboard',
       component: Index,
     },
-    { path: 'despesas/novo', 
-      component: DespesasCreate 
+    {path: 'constantes',
+     component: ConstantesList,
     },
-   /* {
-      path: 'despesas', component: },*/
+    {path: 'constantes/nova',
+     component: ConstantesCreate,
+    },
+{
+  path: 'despesas',
+  name: 'DespesasList',
+  component: DespesasList,
+},
+{
+  path: 'despesas/nova',
+  name: 'DespesasCreate',
+  component: DespesasCreate,
+},
 
 {
   path: 'planos-corte',
@@ -103,15 +117,13 @@ const routes = [
   component: OrcamentoCreate
 },
 {
-  path: 'produtos',
-  name: 'produtos',
-  component: ProdutosList,
+  path: '/produtos',
+  component: ProdutosList
 },
-
 {
-  path: 'produtos/novo',
-  component: ProdutosCreate,
-},
+  path: '/produtos/novo',
+  component: ProdutosCreate
+}
   ]
 },
 

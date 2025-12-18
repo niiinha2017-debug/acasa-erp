@@ -2,7 +2,7 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn
+  CreateDateColumn,
 } from 'typeorm'
 
 @Entity('despesas')
@@ -10,30 +10,34 @@ export class Despesa {
   @PrimaryGeneratedColumn()
   id: number
 
-  @Column({ length: 200 })
+  @Column({ length: 255 })
   descricao: string
 
   @Column({ length: 100, nullable: true })
   categoria: string
 
+  // campo existente no banco
+  @Column({ type: 'date' })
+  data: Date
+
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   valor: number
 
-  @Column({ type: 'date' })
+  @Column({ type: 'date', nullable: true })
   data_vencimento: Date
 
   @Column({ type: 'date', nullable: true })
   data_pagamento: Date
 
-  @Column({
-    type: 'enum',
-    enum: ['Pendente', 'Pago', 'Cancelado'],
-    default: 'Pendente'
-  })
+  // 🔥 STATUS É APENAS UM CÓDIGO DA CONSTANTE
+  @Column({ length: 50 })
   status: string
 
-  @Column({ nullable: true })
-  fornecedor_id: number
+  @Column({ length: 50, nullable: true })
+  forma_pagamento: string
+
+  @Column({ length: 100, nullable: true })
+  centro_custo: string
 
   @Column({ type: 'text', nullable: true })
   observacao: string

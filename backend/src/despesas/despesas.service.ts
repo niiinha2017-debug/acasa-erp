@@ -9,13 +9,14 @@ import { LancamentoFinanceiro } from '../financeiro/lancamento-financeiro.entity
 export class DespesasService {
   constructor(
     @InjectRepository(Despesa)
-    private repo: Repository<Despesa>,
+    private readonly repo: Repository<Despesa>,
 
     @InjectRepository(LancamentoFinanceiro)
-    private financeiroRepo: Repository<LancamentoFinanceiro>,
+    private readonly financeiroRepo: Repository<LancamentoFinanceiro>,
   ) {}
 
   async create(data: Partial<Despesa>) {
+    // 🔥 backend NÃO decide status
     const despesa = this.repo.create(data)
     const saved = await this.repo.save(despesa)
 
@@ -25,8 +26,7 @@ export class DespesasService {
       descricao: saved.descricao,
       valor: saved.valor,
       data_vencimento: saved.data_vencimento,
-      fornecedor_id: saved.fornecedor_id,
-      status: 'Pendente',
+      status: saved.status, // 🔥 vem da despesa
     })
 
     await this.financeiroRepo.save(lancamento)
@@ -47,14 +47,11 @@ export class DespesasService {
     return this.findOne(id)
   }
 
-async remove(id: number) {
-  const result = await this.repo.delete(id)
-
-  if (result.affected === 0) {
-    throw new NotFoundException('Despesa não encontrada')
+  async remove(id: number) {
+    const result = await this.repo.delete(id)
+    if (result.affected === 0) {
+      throw new NotFoundException('Despesa não encontrada')
+    }
+    return { ok: true }
   }
-
-  return { ok: true }
-}
-
 }

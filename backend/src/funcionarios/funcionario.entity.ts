@@ -16,6 +16,9 @@ export class Funcionario {
   @Column({ length: 20, unique: true })
   cpf: string
 
+  @Column({ nullable: true })
+  rg: string
+
   @Column({ type: 'date', nullable: true })
   nascimento: string
 
@@ -55,8 +58,8 @@ export class Funcionario {
   @Column({ length: 50, nullable: true })
   setor: string
 
-  @Column({ length: 50, nullable: true })
-  funcao: string
+  @Column({ nullable: true })
+  funcao: string  
 
   @Column({ length: 50, nullable: true })
   tipo_contrato: string

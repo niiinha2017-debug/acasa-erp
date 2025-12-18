@@ -1,71 +1,86 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import api from '@/services/api'
+import { storage } from '@/utils/storage'
 
+/* =====================
+   STATE GLOBAL
+===================== */
+const token = ref(storage.getToken())
+const user = ref(storage.getUser())
+const loading = ref(false)
+
+/* =====================
+   COMPOSABLE
+===================== */
 export function useAuth() {
-  console.log('🧩 [useAuth] INSTANCIADO')
 
-  const loading = ref(false)
-  const error = ref(null)
-
+  /* =====================
+     LOGIN
+  ===================== */
   async function login({ email, password }) {
-    console.log('🔐 [useAuth.login] chamado')
-    console.log('📧 email:', email)
-    console.log('🔑 password:', password)
-
     loading.value = true
-    error.value = null
 
     try {
-      console.log('⏳ iniciando login...')
+      const { data } = await api.post('/auth/login', {
+        email,
+        password,
+      })
 
-      // 🔁 AQUI depois entra o fetch real
-      // const response = await fetch(...)
+      // 🔐 token REAL do backend
+      token.value = data.token
+      user.value = data.user
 
-      // SIMULA SUCESSO
-      localStorage.setItem('acasa_token', 'TOKEN_TESTE')
-      localStorage.setItem('acasa_user', JSON.stringify({ email }))
+      storage.setToken(data.token)
+      storage.setUser(data.user)
 
-      console.log('💾 token salvo:', localStorage.getItem('acasa_token'))
+      return {
+        success: true,
+        user: data.user,
+      }
 
-      return { success: true }
+    } catch (error) {
+      console.error('❌ Erro no login:', error)
 
-    } catch (err) {
-      console.error('❌ erro no login:', err)
-      error.value = 'Erro ao efetuar login'
-      return { success: false }
+      return {
+        success: false,
+        message:
+          error.response?.data?.message ||
+          'Erro ao realizar login',
+      }
 
     } finally {
       loading.value = false
-      console.log('⏹ loading =', loading.value)
     }
   }
 
+  /* =====================
+     LOGOUT
+  ===================== */
   function logout() {
-    console.log('🚪 [useAuth.logout] chamado')
+    token.value = null
+    user.value = null
 
-    console.log('🧹 antes do logout, token =', localStorage.getItem('acasa_token'))
-
-    localStorage.removeItem('acasa_token')
-    localStorage.removeItem('acasa_user')
-
-    console.log('🧼 depois do logout, token =', localStorage.getItem('acasa_token'))
+    storage.removeToken()
+    storage.removeUser()
   }
 
+  /* =====================
+     AUTH CHECK
+  ===================== */
   function isAuthenticated() {
-    const token = localStorage.getItem('acasa_token')
-    const result = !!token
-
-    console.log('🔍 [useAuth.isAuthenticated]')
-    console.log('🔑 token:', token)
-    console.log('✅ resultado:', result)
-
-    return result
+    return !!token.value
   }
 
+  /* =====================
+     EXPORT
+  ===================== */
   return {
-    loading,
-    error,
+    token,
+    user,
+    loading: computed(() => loading.value),
+
     login,
     logout,
-    isAuthenticated
+    isAuthenticated,
   }
 }

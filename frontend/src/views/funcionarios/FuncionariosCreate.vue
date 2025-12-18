@@ -19,12 +19,22 @@
 
           <div class="form-group col-span-3">
             <label class="form-label">CPF *</label>
-            <input class="form-input" v-model="funcionario.cpf" required />
+            <input
+  class="form-input"
+  :value="funcionario.cpf"
+  @input="onCpf"
+  required
+/>
           </div>
 
           <div class="form-group col-span-3">
             <label class="form-label">RG</label>
-            <input class="form-input" v-model="funcionario.rg" />
+            <input
+  class="form-input"
+  :value="funcionario.rg"
+  @input="onRg"
+/>
+
           </div>
 
           <div class="form-group col-span-3">
@@ -60,13 +70,23 @@
 
           <div class="form-group col-span-6">
             <label class="form-label">Telefone</label>
-            <input class="form-input" v-model="funcionario.telefone" />
+            <input
+  class="form-input"
+  :value="funcionario.telefone"
+  @input="onTelefone"
+/>
+
           </div>
 
           <!-- ENDEREÇO -->
           <div class="form-group col-span-4">
             <label class="form-label">CEP</label>
-            <input class="form-input" v-model="funcionario.cep" />
+            <input
+  class="form-input"
+  :value="funcionario.cep"
+  @input="onCep"
+/>
+
           </div>
 
           <div class="form-group col-span-8">
@@ -100,15 +120,45 @@
           </div>
 
           <!-- VÍNCULO PROFISSIONAL -->
-          <div class="form-group col-span-3">
-            <label class="form-label">Setor</label>
-            <input class="form-input" v-model="funcionario.setor" />
-          </div>
+<!-- SETOR -->
+<div class="form-group col-span-3">
+  <label class="form-label">Setor *</label>
+  <select
+    class="form-input form-select"
+    v-model="funcionario.setor"
+    required
+  >
+    <option value="">Selecione</option>
+    <option
+      v-for="s in setores"
+      :key="s.codigo"
+      :value="s.codigo"
+    >
+      {{ s.label }}
+    </option>
+  </select>
+</div>
 
-          <div class="form-group col-span-3">
-            <label class="form-label">Função</label>
-            <input class="form-input" v-model="funcionario.funcao" />
-          </div>
+<!-- FUNÇÃO -->
+<div class="form-group col-span-3">
+  <label class="form-label">Função *</label>
+  <select
+    class="form-input form-select"
+    v-model="funcionario.funcao"
+    :disabled="!funcionario.setor"
+    required
+  >
+    <option value="">Selecione</option>
+    <option
+      v-for="f in funcoes"
+      :key="f.codigo"
+      :value="f.codigo"
+    >
+      {{ f.label }}
+    </option>
+  </select>
+</div>
+
 
           <div class="form-group col-span-3">
             <label class="form-label">Tipo de Contrato</label>
@@ -133,7 +183,13 @@
           <!-- FINANCEIRO -->
           <div class="form-group col-span-3">
             <label class="form-label">Salário Base</label>
-            <input type="number" step="0.01" class="form-input" v-model="funcionario.salario_base" />
+<input
+  class="form-input"
+  :value="salarioBaseMasked"
+  @input="onSalarioBase"
+/>
+
+
           </div>
 
           <div class="form-group col-span-3">
@@ -143,7 +199,14 @@
 
           <div class="form-group col-span-3">
             <label class="form-label">Custo Hora</label>
-            <input type="number" step="0.01" class="form-input" v-model="funcionario.custo_hora" />
+            <input
+  type="number"
+  step="0.01"
+  class="form-input"
+  v-model="funcionario.custo_hora"
+  readonly
+/>
+
           </div>
 
           <div class="form-group col-span-3">
@@ -201,12 +264,31 @@
 </template>
 
 <script>
+import {
+  maskCPF,
+  maskRG,
+  maskCEP,
+  maskTelefone,
+  onlyNumbers,
+  buscarCep,
+  maskMoneyBR,
+  moneyBRToNumber,
+} from '@/utils/utils'
+
 export default {
   name: 'FuncionariosForm',
 
   data() {
     return {
       funcionarioId: null,
+
+      // CONSTANTES
+      setores: [],
+      funcoesTodas: [],
+
+      // MÁSCARAS
+      salarioBaseMasked: '',
+
       funcionario: {
         nome: '',
         cpf: '',
@@ -215,6 +297,7 @@ export default {
         sexo: '',
         estado_civil: '',
         escolaridade: '',
+
         cep: '',
         endereco: '',
         numero: '',
@@ -222,39 +305,117 @@ export default {
         bairro: '',
         cidade: '',
         estado: '',
+
         email: '',
         telefone: '',
+
         setor: '',
         funcao: '',
         tipo_contrato: '',
         data_admissao: null,
         data_demissao: null,
+
         status: 'Ativo',
+
         salario_base: null,
         salario_adicional: null,
         carga_horaria: null,
         custo_hora: null,
+
         forma_pagamento: '',
         banco: '',
         agencia: '',
         conta_corrente: '',
         tipo_conta: '',
-        chave_pix: ''
-      }
+        chave_pix: '',
+      },
     }
   },
 
+  computed: {
+    funcoes() {
+      if (!this.funcionario.setor) return []
+
+      return this.funcoesTodas.filter(
+        f => f.extra?.setor === this.funcionario.setor
+      )
+    },
+  },
+
   async mounted() {
+    await this.carregarConstantes()
+
     if (this.$route.params.id) {
       this.funcionarioId = this.$route.params.id
       const res = await fetch(
         `${import.meta.env.VITE_API_URL}/funcionarios/${this.funcionarioId}`
       )
-      this.funcionario = await res.json()
+      const data = await res.json()
+
+      this.funcionario = data
+
+      // aplica máscara ao editar
+      if (data.salario_base) {
+        this.salarioBaseMasked = maskMoneyBR(
+          String(data.salario_base * 100)
+        )
+      }
     }
   },
 
   methods: {
+    async carregarConstantes() {
+      const api = import.meta.env.VITE_API_URL
+
+      const resSetores = await fetch(`${api}/constantes?grupo=SETOR`)
+      this.setores = await resSetores.json()
+
+      const resFuncoes = await fetch(`${api}/constantes?grupo=FUNCAO`)
+      this.funcoesTodas = await resFuncoes.json()
+    },
+
+    onCpf(e) {
+      this.funcionario.cpf = maskCPF(e.target.value)
+    },
+
+    onRg(e) {
+      this.funcionario.rg = maskRG(e.target.value)
+    },
+
+    onTelefone(e) {
+      this.funcionario.telefone = maskTelefone(e.target.value)
+    },
+
+    async onCep(e) {
+      this.funcionario.cep = maskCEP(e.target.value)
+
+      const cepLimpo = onlyNumbers(this.funcionario.cep)
+      if (cepLimpo.length !== 8) return
+
+      const data = await buscarCep(cepLimpo)
+      if (!data) return
+
+      this.funcionario.endereco = data.logradouro
+      this.funcionario.bairro = data.bairro
+      this.funcionario.cidade = data.localidade
+      this.funcionario.estado = data.uf
+    },
+
+    onSalarioBase(e) {
+      this.salarioBaseMasked = maskMoneyBR(e.target.value)
+
+      const valor = moneyBRToNumber(this.salarioBaseMasked)
+      this.funcionario.salario_base = valor
+
+      this.calcularCustoHora()
+    },
+
+    calcularCustoHora() {
+      const salario = Number(this.funcionario.salario_base || 0)
+      this.funcionario.custo_hora =
+        salario > 0 ? Number((salario / 220).toFixed(2)) : null
+    },
+
     async submitForm() {
       const method = this.funcionarioId ? 'PUT' : 'POST'
       const url = this.funcionarioId
@@ -264,7 +425,7 @@ export default {
       await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(this.funcionario)
+        body: JSON.stringify(this.funcionario),
       })
 
       this.$router.push('/funcionarios')
@@ -272,7 +433,9 @@ export default {
 
     voltar() {
       this.$router.push('/funcionarios')
-    }
-  }
+    },
+  },
 }
 </script>
+
+

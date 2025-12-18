@@ -1,190 +1,371 @@
 <template>
   <div class="main-container">
-
     <div class="form-card">
 
       <!-- HEADER -->
       <div class="form-header">
-        <h1 class="form-title">Plano de Corte</h1>
-      </div>
-
-      <!-- FORNECEDOR (OBRIGATÓRIO) -->
-      <div class="form-grid">
-        <div class="form-group col-span-6">
-          <label class="form-label">Fornecedor *</label>
-          <select class="form-input form-select">
-            <option value="">Selecione o fornecedor</option>
-            <!-- options via JS -->
-          </select>
+        <div>
+          <h1 class="form-title">Plano de Corte</h1>
+          <p class="form-subtitle">
+            Registro de venda de serviço para produção
+          </p>
         </div>
       </div>
 
-      <!-- ITENS -->
-      <div class="form-header" style="margin-top:32px">
-        <h2 class="form-title">Itens do Plano</h2>
+      <!-- FORM -->
+      <form @submit.prevent="salvar">
 
-        <button
-          type="button"
-          class="btn btn-secondary"
-        >
-          Adicionar Item
-        </button>
-      </div>
+        <!-- DADOS DO PLANO -->
+        <div class="form-grid">
 
-      <!-- TABELA COM SCROLL -->
-      <div class="table-container">
-        <table class="table">
+          <div class="form-group col-span-6">
+            <label class="form-label form-label-required">
+              Fornecedor
+            </label>
+            <select
+              class="form-select"
+              v-model="plano.fornecedor_id"
+              required
+            >
+              <option value="">Selecione</option>
+              <option
+                v-for="f in fornecedores"
+                :key="f.id"
+                :value="f.id"
+              >
+                {{ f.nome }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group col-span-6">
+            <label class="form-label">
+              Data prevista
+            </label>
+            <input
+              type="date"
+              class="form-input"
+              v-model="plano.data_prevista"
+            />
+          </div>
+
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- ITENS -->
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-semibold">
+            Itens do Plano
+          </h3>
+
+          <button
+            type="button"
+            class="btn btn-outline"
+            @click="adicionarItem"
+          >
+            Adicionar item
+          </button>
+        </div>
+
+        <table class="table table--compact">
           <thead>
             <tr>
-              <th>Nome</th>
-              <th>Cor</th>
+              <th>Produto</th>
               <th>Unidade</th>
-              <th>Quantidade</th>
-              <th>Valor Unitário</th>
-              <th>Valor Total</th>
+              <th>Qtd</th>
+              <th>Valor unit.</th>
+              <th>Total</th>
               <th></th>
             </tr>
           </thead>
 
-          <tbody>
-            <!-- LINHA DE ITEM -->
-            <tr>
+          <tbody v-if="plano.itens.length">
+            <tr v-for="(item, index) in plano.itens" :key="index">
+
+              <!-- PRODUTO -->
               <td>
-                <input class="form-input" placeholder="Ex: MDF" />
+                <input
+                  class="form-input"
+                  v-model="item.busca"
+                  placeholder="Buscar produto"
+                  @blur="onBuscarProduto(item)"
+                />
+                <div v-if="item.produtoNaoEncontrado" class="mt-2">
+  <button
+    type="button"
+    class="btn btn-sm btn-outline"
+    @click="abrirModalProduto(item)"
+  >
+    Cadastrar produto
+  </button>
+</div>
+
+                <small
+                  v-if="item.produto"
+                  class="text-tertiary"
+                >
+                  {{ item.produto.nome }} • {{ item.produto.unidade }}
+                </small>
+              </td>
+
+              <!-- UNIDADE -->
+              <td>
+                <select
+                  class="form-select"
+                  v-model="item.unidade"
+                  disabled
+                >
+                  <option :value="item.unidade">
+                    {{ item.unidade }}
+                  </option>
+                </select>
+              </td>
+
+              <!-- QTD -->
+              <td>
+                <input
+                  type="number"
+                  step="0.001"
+                  class="form-input"
+                  v-model.number="item.quantidade"
+                />
+              </td>
+
+              <!-- VALOR -->
+              <td>
+                <input
+                  type="number"
+                  step="0.01"
+                  class="form-input"
+                  v-model.number="item.valor_unitario"
+                />
+              </td>
+
+              <!-- TOTAL -->
+              <td class="text-right">
+                R$ {{ totalItem(item) }}
               </td>
 
               <td>
-                <input class="form-input" placeholder="Ex: Branco" />
-              </td>
-
-              <td>
-                <input class="form-input" placeholder="Metro" />
-              </td>
-
-              <td>
-                <input class="form-input" type="number" step="0.001" />
-              </td>
-
-              <td>
-                <input class="form-input" type="number" step="0.01" />
-              </td>
-
-              <td>
-                R$ 0,00
-              </td>
-
-              <td>
-                <button type="button" class="btn btn-secondary">
-                  ✖
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-icon"
+                  @click="removerItem(index)"
+                >
+                  ✕
                 </button>
               </td>
-            </tr>
 
-            <!-- SEM ITENS -->
+            </tr>
+          </tbody>
+
+          <tbody v-else>
             <tr>
-              <td colspan="7">Nenhum item adicionado.</td>
+              <td colspan="6" class="text-center text-secondary">
+                Nenhum item adicionado
+              </td>
             </tr>
           </tbody>
         </table>
-      </div>
 
-      <!-- TOTAL + SALVAR -->
-      <div class="form-actions">
-        <strong>Total: R$ 0,00</strong>
+        <div class="divider"></div>
 
-        <button type="submit" class="btn btn-primary">
-          Salvar e Enviar para Produção
-        </button>
-      </div>
+        <!-- TOTAL -->
+        <div class="flex justify-between items-center">
+          <strong>Total</strong>
+          <span class="text-xl font-bold">
+            R$ {{ totalPlano }}
+          </span>
+        </div>
 
+        <!-- AÇÃO -->
+        <div class="form-actions">
+          <button
+            type="submit"
+            class="btn btn-primary"
+          >
+            Salvar e enviar para produção
+          </button>
+        </div>
+
+      </form>
     </div>
+
+    <!-- MODAL PRODUTO (ÚNICO) -->
+    <ProdutoModal
+      v-if="mostrarModalProduto"
+      :produtoInicial="produtoBase"
+      @salvo="onProdutoCriado"
+      @fechar="mostrarModalProduto = false"
+    />
 
   </div>
 </template>
 
 
 <script>
+import ProdutoModal from '@/components/ProdutoModal.vue'
+
 export default {
+  name: 'PlanoCorteCreate',
+
+  components: {
+    ProdutoModal
+  },
+
   data() {
     return {
       fornecedores: [],
-      fornecedor_id: '',
-      itens: []
+      produtos: [],
+      unidades: [],
+
+      plano: {
+        fornecedor_id: '',
+        data_prevista: '',
+        itens: []
+      },
+
+      // controle do modal
+      mostrarModalProduto: false,
+      itemProdutoAtual: null,
+
+      produtoBase: {
+        nome: '',
+        fornecedor: '',
+        medida: '',
+        cor: '',
+        unidade: '',
+        quantidade: 0,
+        valor_unitario: 0
+      }
     }
   },
 
   computed: {
-    total() {
-      return this.itens.reduce((s, i) => s + (i.valor_total || 0), 0)
+    totalPlano() {
+      return this.plano.itens
+        .reduce(
+          (total, item) =>
+            total +
+            Number(item.quantidade || 0) *
+            Number(item.valor_unitario || 0),
+          0
+        )
+        .toFixed(2)
     }
   },
 
-  mounted() {
-    this.carregarFornecedores()
+  async mounted() {
+    this.fornecedores = await (
+      await fetch(`${import.meta.env.VITE_API_URL}/fornecedores`)
+    ).json()
+
+    this.produtos = await (
+      await fetch(`${import.meta.env.VITE_API_URL}/produtos`)
+    ).json()
+
+    this.unidades = await (
+      await fetch(
+        `${import.meta.env.VITE_API_URL}/constantes?grupo=UNIDADE`
+      )
+    ).json()
   },
 
   methods: {
-    async carregarFornecedores() {
-      const api = import.meta.env.VITE_API_URL
-      const res = await fetch(`${api}/fornecedores`)
-      this.fornecedores = await res.json()
-    },
-
     adicionarItem() {
-      this.itens.push({
-        nome: '',
-        cor: '',
+      this.plano.itens.push({
+        busca: '',
+        produto: null,
         unidade: '',
         quantidade: 0,
         valor_unitario: 0,
-        valor_total: 0
+        produtoNaoEncontrado: false
       })
     },
 
     removerItem(index) {
-      this.itens.splice(index, 1)
+      this.plano.itens.splice(index, 1)
     },
 
-    calcularItem(item) {
-      item.valor_total =
-        (Number(item.quantidade) || 0) *
-        (Number(item.valor_unitario) || 0)
+    totalItem(item) {
+      return (
+        (Number(item.quantidade || 0) *
+          Number(item.valor_unitario || 0))
+      ).toFixed(2)
+    },
+
+    // 🔍 BUSCA SOMENTE
+    onBuscarProduto(item) {
+      item.produtoNaoEncontrado = false
+      item.produto = null
+
+      const texto = item.busca?.trim().toLowerCase()
+      if (!texto) return
+
+      const produto = this.produtos.find(
+        p =>
+          p.nome.toLowerCase() === texto &&
+          p.fornecedor === this.plano.fornecedor_id
+      )
+
+      if (produto) {
+        item.produto = produto
+        item.unidade = produto.unidade
+        item.valor_unitario = produto.valor_unitario
+        return
+      }
+
+      item.produtoNaoEncontrado = true
+    },
+
+    // ➕ ABRE MODAL POR BOTÃO
+    abrirModalProduto(item) {
+      this.itemProdutoAtual = item
+
+      this.produtoBase = {
+        nome: item.busca,
+        fornecedor: this.plano.fornecedor_id,
+        medida: '',
+        cor: '',
+        unidade: '',
+        quantidade: 0,
+        valor_unitario: 0
+      }
+
+      this.mostrarModalProduto = true
+    },
+
+    // ❌ FECHAR MODAL
+    fecharModalProduto() {
+      this.mostrarModalProduto = false
+      this.itemProdutoAtual = null
+    },
+
+    // ✅ PRODUTO CRIADO
+    onProdutoCriado(produto) {
+      this.produtos.push(produto)
+
+      if (this.itemProdutoAtual) {
+        this.itemProdutoAtual.produto = produto
+        this.itemProdutoAtual.busca = produto.nome
+        this.itemProdutoAtual.unidade = produto.unidade
+        this.itemProdutoAtual.valor_unitario =
+          produto.valor_unitario
+        this.itemProdutoAtual.produtoNaoEncontrado = false
+      }
+
+      this.fecharModalProduto()
     },
 
     async salvar() {
-      if (!this.fornecedor_id) {
-        alert('Selecione o fornecedor')
-        return
-      }
-
-      if (this.itens.length === 0) {
-        alert('Adicione pelo menos um item')
-        return
-      }
-
-      const api = import.meta.env.VITE_API_URL
-
-      // 1️⃣ cria o plano de corte (VENDA PARA FORNECEDOR)
-      const res = await fetch(`${api}/planos-corte`, {
+      await fetch(`${import.meta.env.VITE_API_URL}/planos-corte`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fornecedor_id: this.fornecedor_id,
-          valor_total: this.total,
-          itens: this.itens
-        })
+        body: JSON.stringify(this.plano)
       })
 
-      const data = await res.json()
-      const planoId = data.id
-
-      // 2️⃣ envia direto para produção
-      await fetch(`${api}/planos-corte/${planoId}/producao`, {
-        method: 'POST'
-      })
-
-      // 3️⃣ volta para lista
-      this.$router.push('/planos-corte')
+      this.$router.push('/plano-corte')
     }
   }
 }

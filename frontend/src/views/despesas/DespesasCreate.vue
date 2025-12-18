@@ -1,130 +1,221 @@
 <template>
   <div class="main-container">
-    <div class="form-card">
+    <div class="form-card animate-fadeIn">
+
       <!-- HEADER -->
       <div class="form-header">
-        <h1 class="form-title">Nova Despesa</h1>
+        <div>
+          <h1 class="form-title">Nova Despesa</h1>
+        </div>
       </div>
 
-      <!-- FORM -->
       <form @submit.prevent="submitForm">
+
+        <!-- LINHA 1 -->
         <div class="form-grid">
-          <!-- Descrição -->
-          <div class="form-group col-span-12">
-            <label class="form-label">Descrição *</label>
-            <input
-              class="form-input"
-              v-model.trim="despesa.descricao"
-              required
-              placeholder="Ex: Conta de luz / combustível / manutenção"
-            />
-          </div>
-
-          <!-- Categoria -->
           <div class="form-group col-span-6">
-            <label class="form-label">Categoria</label>
+            <label class="form-label form-label-required">
+              Descrição
+            </label>
+            <select
+              v-model="despesa.descricao"
+              required
+              class="form-select"
+            >
+              <option value="">Selecione</option>
+              <option
+                v-for="d in descricoesFinanceiras"
+                :key="d.id"
+                :value="d.codigo"
+              >
+                {{ d.label }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group col-span-6">
+            <label class="form-label">
+              Categoria
+            </label>
             <input
+              type="text"
+              v-model="despesa.categoria"
+              disabled
               class="form-input"
-              v-model.trim="despesa.categoria"
-              placeholder="Ex: Energia, Transporte, Manutenção..."
+            />
+          </div>
+        </div>
+
+        <!-- LINHA 2 -->
+        <div class="form-grid">
+          <div class="form-group col-span-6">
+            <label class="form-label form-label-required">
+              Tipo
+            </label>
+            <select
+              v-model="despesa.tipo"
+              required
+              class="form-select"
+            >
+              <option value="">Selecione</option>
+              <option
+                v-for="t in tiposFinanceiros"
+                :key="t.id"
+                :value="t.codigo"
+              >
+                {{ t.label }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group col-span-6">
+            <label class="form-label form-label-required">
+              Status
+            </label>
+            <select
+              v-model="despesa.status"
+              required
+              class="form-select"
+            >
+              <option
+                v-for="s in statusFinanceiro"
+                :key="s.id"
+                :value="s.codigo"
+              >
+                {{ s.label }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <!-- LINHA 3 -->
+        <div class="form-grid">
+          <div class="form-group col-span-6">
+            <label class="form-label form-label-required">
+              Forma de Pagamento
+            </label>
+            <select
+              v-model="despesa.forma_pagamento"
+              required
+              class="form-select"
+            >
+              <option value="">Selecione</option>
+              <option
+                v-for="f in formasPagamento"
+                :key="f.id"
+                :value="f.codigo"
+              >
+                {{ f.label }}
+              </option>
+            </select>
+          </div>
+
+          <div
+            class="form-group col-span-6"
+            v-if="exigeParcelas"
+          >
+            <label class="form-label">
+              Parcelas
+            </label>
+            <select
+              v-model="despesa.parcelas"
+              class="form-select"
+            >
+              <option value="">Selecione</option>
+              <option
+                v-for="p in parcelasCartao"
+                :key="p.id"
+                :value="p.codigo"
+              >
+                {{ p.label }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <!-- LINHA 4 -->
+        <div class="form-grid">
+          <div class="form-group col-span-6">
+            <label class="form-label form-label-required">
+              Valor
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              v-model="despesa.valor"
+              required
+              class="form-input"
             />
           </div>
 
-          <!-- Data -->
-          <div class="form-group col-span-3">
-            <label class="form-label">Data *</label>
+          <div class="form-group col-span-6">
+            <label class="form-label form-label-required">
+              Data
+            </label>
             <input
-              class="form-input"
               type="date"
               v-model="despesa.data"
               required
-            />
-          </div>
-
-          <!-- Status -->
-          <div class="form-group col-span-3">
-            <label class="form-label">Status</label>
-            <select class="form-input form-select" v-model="despesa.status">
-              <option value="Pendente">Pendente</option>
-              <option value="Pago">Pago</option>
-              <option value="Cancelado">Cancelado</option>
-            </select>
-          </div>
-
-          <!-- Valor -->
-          <div class="form-group col-span-4">
-            <label class="form-label">Valor (R$) *</label>
-            <input
               class="form-input"
-              type="number"
-              step="0.01"
-              min="0"
-              v-model.number="despesa.valor"
-              required
-              placeholder="0,00"
             />
           </div>
+        </div>
 
-          <!-- Forma de pagamento -->
-          <div class="form-group col-span-4">
-            <label class="form-label">Forma de Pagamento</label>
-            <select class="form-input form-select" v-model="despesa.forma_pagamento">
-              <option value="">Selecione</option>
-              <option value="Dinheiro">Dinheiro</option>
-              <option value="Pix">Pix</option>
-              <option value="Cartão">Cartão</option>
-              <option value="Boleto">Boleto</option>
-              <option value="Transferência">Transferência</option>
-            </select>
-          </div>
-
-          <!-- Centro de custo -->
-          <div class="form-group col-span-4">
-            <label class="form-label">Centro de Custo</label>
-            <input
-              class="form-input"
-              v-model.trim="despesa.centro_custo"
-              placeholder="Ex: Produção, Administrativo..."
-            />
-          </div>
-
-          <!-- Observação -->
-          <div class="form-group col-span-12">
-            <label class="form-label">Observação</label>
-            <textarea
-              class="form-textarea"
-              v-model.trim="despesa.observacao"
-              placeholder="Detalhes adicionais..."
-            ></textarea>
-          </div>
+        <!-- OBSERVAÇÃO -->
+        <div class="form-group col-span-12">
+          <label class="form-label">
+            Observação
+          </label>
+          <textarea
+            v-model="despesa.observacao"
+            rows="3"
+            class="form-textarea"
+          ></textarea>
         </div>
 
         <!-- AÇÕES -->
         <div class="form-actions">
-          <button type="button" class="btn btn-secondary" @click="cancelar">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="cancelar"
+          >
             Cancelar
           </button>
 
-          <button type="submit" class="btn btn-primary" :disabled="salvando">
-            {{ salvando ? 'Salvando...' : 'Salvar Despesa' }}
+          <button
+            type="submit"
+            class="btn btn-primary"
+            :disabled="salvando"
+          >
+            {{ salvando ? 'Salvando...' : 'Salvar' }}
           </button>
         </div>
 
-        <p v-if="mensagemErro" class="text-sm" style="color: var(--danger); margin-top: 12px;">
+        <!-- MENSAGENS -->
+        <p v-if="mensagemErro" class="form-error">
           {{ mensagemErro }}
         </p>
 
-        <p v-if="mensagemSucesso" class="text-sm" style="color: var(--success); margin-top: 12px;">
+        <p v-if="mensagemSucesso" class="form-help">
           {{ mensagemSucesso }}
         </p>
+
       </form>
     </div>
   </div>
 </template>
 
+
 <script>
+import SearchInput from '@/components/ui/SearchInput.vue'
+
 export default {
   name: 'DespesasCreate',
+
+  components: {
+    SearchInput,
+  },
 
   data() {
     return {
@@ -132,58 +223,95 @@ export default {
       mensagemErro: '',
       mensagemSucesso: '',
 
+      // CONSTANTES (VINDAS DO BACKEND)
+      descricoesFinanceiras: [],
+      tiposFinanceiros: [],
+      statusFinanceiro: [],
+      formasPagamento: [],
+      parcelasCartao: [],
+
       despesa: {
         descricao: '',
         categoria: '',
-        data: this.todayISO(),
-        valor: 0,
-        status: 'Pendente',
+        tipo: '',
+        status: '',
         forma_pagamento: '',
-        centro_custo: '',
+        parcelas: '',
+        valor: null,
+        data: '',
         observacao: '',
       },
     }
   },
 
+  async mounted() {
+    await Promise.all([
+      this.carregarConstantes('DESCRICOES_FINANCEIRAS', 'descricoesFinanceiras'),
+      this.carregarConstantes('TIPOS_FINANCEIROS', 'tiposFinanceiros'),
+      this.carregarConstantes('STATUS_FINANCEIRO', 'statusFinanceiro'),
+      this.carregarConstantes('FORMAS_PAGAMENTO', 'formasPagamento'),
+      this.carregarConstantes('PARCELAS_CARTAO', 'parcelasCartao'),
+    ])
+  },
+
+  watch: {
+    // DESCRIÇÃO → CATEGORIA AUTOMÁTICA
+    'despesa.descricao'(codigo) {
+      const item = this.descricoesFinanceiras.find(
+        d => d.codigo === codigo
+      )
+      this.despesa.categoria = item ? item.extra?.categoria || '' : ''
+    },
+  },
+
+  computed: {
+    exigeParcelas() {
+      return (
+        this.despesa.forma_pagamento === 'CREDITO' ||
+        this.despesa.forma_pagamento === 'CHEQUE'
+      )
+    },
+  },
+
   methods: {
-    todayISO() {
-      const d = new Date()
-      const yyyy = d.getFullYear()
-      const mm = String(d.getMonth() + 1).padStart(2, '0')
-      const dd = String(d.getDate()).padStart(2, '0')
-      return `${yyyy}-${mm}-${dd}`
+    async carregarConstantes(grupo, destino) {
+      try {
+        const res = await fetch(
+          `${import.meta.env.VITE_API_URL}/constantes?grupo=${grupo}&ativo=1`
+        )
+
+        if (!res.ok) throw new Error(`Erro ao carregar ${grupo}`)
+
+        this[destino] = await res.json()
+      } catch (e) {
+        console.error(e)
+        this.mensagemErro = 'Erro ao carregar constantes do sistema'
+      }
     },
 
     async submitForm() {
       this.mensagemErro = ''
-      this.mensagemSucesso = ''
       this.salvando = true
 
-      const apiUrl = import.meta.env.VITE_API_URL
-      const endpoint = `${apiUrl}/despesas`
-
       try {
-        const res = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(this.despesa),
-        })
+        const res = await fetch(
+          `${import.meta.env.VITE_API_URL}/despesas`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(this.despesa),
+          }
+        )
 
-        if (res.ok || res.status === 201) {
-          this.mensagemSucesso = 'Despesa cadastrada com sucesso!'
-          // volta pra lista (ajuste a rota se usar outro caminho)
-          this.$router.push('/despesas')
-        } else {
-          let msg = 'Erro ao cadastrar despesa.'
-          try {
-            const data = await res.json()
-            msg = data?.message || msg
-          } catch (_) {}
-          this.mensagemErro = msg
+        if (!res.ok) {
+          throw new Error('Erro ao salvar despesa')
         }
+
+        this.mensagemSucesso = 'Despesa salva com sucesso'
+        this.$router.push('/despesas')
+
       } catch (e) {
-        this.mensagemErro = 'Erro de conexão com a API. Verifique o backend.'
-        console.error(e)
+        this.mensagemErro = e.message
       } finally {
         this.salvando = false
       }
@@ -195,3 +323,6 @@ export default {
   },
 }
 </script>
+
+
+

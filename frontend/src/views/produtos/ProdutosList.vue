@@ -2,114 +2,147 @@
   <div class="main-container">
     <div class="form-card">
 
+      <!-- HEADER -->
       <div class="form-header">
-        <h1 class="form-title">
-          {{ produtoId ? 'Editar Produto' : 'Novo Produto' }}
-        </h1>
+        <h1 class="form-title">Produtos</h1>
+
+        <button
+          class="btn btn-primary"
+          @click="$router.push('/produtos/novo')"
+        >
+          Novo Produto
+        </button>
       </div>
 
-      <form @submit.prevent="submitForm">
-        <div class="form-grid">
+      <!-- BUSCA -->
+      <div class="form-grid gap-md mb-4">
+        <SearchInput
+          v-model="busca"
+          label="Buscar produto"
+          placeholder="Nome, fornecedor, unidade, valor..."
+          colSpan="col-span-6"
+        />
+      </div>
 
-          <div class="form-group col-span-6">
-            <label class="form-label">Nome *</label>
-            <input class="form-input" v-model="produto.nome" required />
-          </div>
+      <!-- TABELA -->
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Fornecedor</th>
+            <th>Unidade</th>
+            <th>Qtd</th>
+            <th>Valor Unit.</th>
+            <th></th>
+          </tr>
+        </thead>
 
-          <div class="form-group col-span-6">
-            <label class="form-label">Fornecedor</label>
-            <input class="form-input" v-model="produto.fornecedor" />
-          </div>
+        <tbody>
+          <tr v-for="p in produtosFiltrados" :key="p.id">
+            <td>{{ p.nome }}</td>
+            <td>{{ p.fornecedor || '-' }}</td>
+            <td>{{ p.unidade || '-' }}</td>
+            <td>{{ p.quantidade }}</td>
+            <td>
+              R$ {{ p.valor_unitario }}
+            </td>
+            <td class="text-right">
+              <button
+                class="btn btn-secondary btn-sm"
+                @click="editar(p.id)"
+              >
+                Editar
+              </button>
+            </td>
+          </tr>
 
-          <div class="form-group col-span-4">
-            <label class="form-label">Medida</label>
-            <input class="form-input" v-model="produto.medida" />
-          </div>
-
-          <div class="form-group col-span-4">
-            <label class="form-label">Cor</label>
-            <input class="form-input" v-model="produto.cor" />
-          </div>
-
-          <div class="form-group col-span-4">
-            <label class="form-label">Unidade</label>
-            <input class="form-input" v-model="produto.unidade" />
-          </div>
-
-          <div class="form-group col-span-6">
-            <label class="form-label">Quantidade</label>
-            <input type="number" class="form-input" v-model="produto.quantidade" />
-          </div>
-
-          <div class="form-group col-span-6">
-            <label class="form-label">Valor Unitário</label>
-            <input type="number" step="0.01" class="form-input" v-model="produto.valor_unitario" />
-          </div>
-
-        </div>
-
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" @click="voltar">
-            Cancelar
-          </button>
-          <button type="submit" class="btn btn-primary">
-            Salvar
-          </button>
-        </div>
-      </form>
+          <tr v-if="!produtosFiltrados.length">
+            <td colspan="6" class="text-center text-secondary">
+              Nenhum produto encontrado
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
     </div>
   </div>
 </template>
 
+
 <script>
+import SearchInput from '@/components/ui/SearchInput.vue'
+import { parseBuscaProduto } from '@/utils/search' // ajuste o caminho se necessário
+
 export default {
-  name: 'ProdutosForm',
+  name: 'ProdutosIndex',
+
+  components: {
+    SearchInput
+  },
 
   data() {
     return {
-      produtoId: null,
-      produto: {
-        nome: '',
-        fornecedor: '',
-        medida: '',
-        cor: '',
-        unidade: '',
-        quantidade: 0,
-        valor_unitario: 0
-      }
+      produtos: [],
+      busca: ''
     }
   },
 
   async mounted() {
-    if (this.$route.params.id) {
-      this.produtoId = this.$route.params.id
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/produtos/${this.produtoId}`
-      )
-      this.produto = await res.json()
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/produtos`)
+    this.produtos = await res.json()
+  },
+
+  computed: {
+    produtosFiltrados() {
+      if (!this.busca) return this.produtos
+
+      const filtros = parseBuscaProduto(this.busca)
+
+      return this.produtos.filter(p => {
+        // texto livre (nome / fornecedor)
+        const textoBase = `
+          ${p.nome}
+          ${p.fornecedor}
+        `.toLowerCase()
+
+        if (
+          filtros.texto.length &&
+          !filtros.texto.every(t => textoBase.includes(t))
+        ) {
+          return false
+        }
+
+        // unidade
+        if (filtros.unidade && p.unidade !== filtros.unidade) {
+          return false
+        }
+
+        // quantidade
+        if (
+          filtros.quantidade !== null &&
+          Number(p.quantidade) !== filtros.quantidade
+        ) {
+          return false
+        }
+
+        // valor unitário
+        if (
+          filtros.valor !== null &&
+          Number(p.valor_unitario) !== filtros.valor
+        ) {
+          return false
+        }
+
+        return true
+      })
     }
   },
 
   methods: {
-    async submitForm() {
-      const method = this.produtoId ? 'PUT' : 'POST'
-      const url = this.produtoId
-        ? `${import.meta.env.VITE_API_URL}/produtos/${this.produtoId}`
-        : `${import.meta.env.VITE_API_URL}/produtos`
-
-      await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(this.produto)
-      })
-
-      this.$router.push('/produtos')
-    },
-
-    voltar() {
-      this.$router.push('/produtos')
+    editar(id) {
+      this.$router.push(`/produtos/${id}`)
     }
   }
 }
 </script>
+

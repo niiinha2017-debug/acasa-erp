@@ -1,6 +1,5 @@
 <template>
   <div class="main-container">
-
     <div class="form-card">
 
       <!-- HEADER -->
@@ -14,85 +13,163 @@
           Novo Plano
         </button>
       </div>
-
-      <!-- ESTADOS -->
-      <div v-if="loading">Carregando…</div>
-      <div v-if="error">{{ error }}</div>
+<div class="form-group mb-4">
+  <input
+    class="form-input"
+    v-model="busca"
+    placeholder="Buscar por fornecedor, item, status ou data"
+  />
+</div>
 
       <!-- TABELA -->
-      <table class="table" v-if="!loading">
+      <table class="table">
         <thead>
           <tr>
-            <th>#</th>
             <th>Fornecedor</th>
             <th>Descrição</th>
+            <th>Valor total</th>
             <th>Status</th>
-            <th>Total</th>
-            <th>Criado em</th>
+            <th>Data</th>
             <th></th>
           </tr>
         </thead>
 
-        <tbody>
+        <tbody v-if="planos.length">
           <tr v-for="plano in planos" :key="plano.id">
-            <td>{{ plano.id }}</td>
-            <td>{{ plano.fornecedor_nome }}</td>
-            <td>{{ plano.descricao_geral || '-' }}</td>
-            <td>{{ plano.status }}</td>
-            <td>R$ {{ Number(plano.valor_total).toFixed(2) }}</td>
-            <td>{{ formatarData(plano.created_at) }}</td>
+
+            <!-- FORNECEDOR -->
+            <td>
+              {{ plano.fornecedor?.nome || '-' }}
+            </td>
+
+            <!-- DESCRIÇÃO -->
+            <td class="text-secondary">
+              {{ descricaoItens(plano.itens) }}
+            </td>
+
+            <!-- VALOR -->
+            <td>
+              R$ {{ plano.valor_total.toFixed(2) }}
+            </td>
+
+            <!-- STATUS -->
+            <td>
+              <span class="badge">
+                {{ plano.status }}
+              </span>
+            </td>
+
+            <!-- DATA -->
+            <td>
+              {{ formatarData(plano.created_at) }}
+            </td>
+
+            <!-- AÇÕES -->
             <td>
               <button
-                class="btn btn-secondary"
-                @click="$router.push(`/planos-corte/${plano.id}`)"
+                class="btn btn-ghost btn-sm"
+                @click="abrir(plano.id)"
               >
                 Ver
               </button>
             </td>
-          </tr>
 
-          <tr v-if="planos.length === 0">
-            <td colspan="7">Nenhum plano de corte cadastrado.</td>
+          </tr>
+        </tbody>
+
+        <tbody v-else>
+          <tr>
+            <td colspan="6" class="text-center text-secondary">
+              Nenhum plano cadastrado
+            </td>
           </tr>
         </tbody>
       </table>
 
     </div>
-
   </div>
 </template>
+
 <script>
+import { parseBuscaPlanoCorte } from '@/utils/search'
+
 export default {
+  name: 'PlanoCorteList',
+
   data() {
     return {
       planos: [],
-      loading: true,
-      error: null,
+      busca: ''
     }
   },
 
-  mounted() {
-    this.carregarPlanos()
+  async mounted() {
+    const res = await fetch(
+      `${import.meta.env.VITE_API_URL}/planos-corte`
+    )
+    this.planos = await res.json()
+  },
+
+  computed: {
+    planosFiltrados() {
+      if (!this.busca) return this.planos
+
+      const filtros = parseBuscaPlanoCorte(this.busca)
+
+      return this.planos.filter(plano => {
+        // STATUS
+        if (filtros.status && plano.status !== filtros.status) {
+          return false
+        }
+
+        // DATA
+        if (filtros.data) {
+          const dataPlano = new Date(plano.created_at)
+            .toLocaleDateString('pt-BR')
+
+          if (!dataPlano.includes(filtros.data)) {
+            return false
+          }
+        }
+
+        // TEXTO (fornecedor + itens)
+const textoPlano = [
+  plano.fornecedor?.nome,
+  ...plano.itens.map(i =>
+    i.cor ? `${i.nome} ${i.cor}` : i.nome
+  )
+]
+  .join(' ')
+  .toLowerCase()
+
+
+        return filtros.texto.every(t =>
+          textoPlano.includes(t)
+        )
+      })
+    }
   },
 
   methods: {
-    async carregarPlanos() {
-      const apiUrl = import.meta.env.VITE_API_URL
-      try {
-        const res = await fetch(`${apiUrl}/planos-corte`)
-        if (!res.ok) throw new Error('Erro ao buscar planos')
-        this.planos = await res.json()
-      } catch (e) {
-        this.error = 'Falha ao carregar planos de corte.'
-      } finally {
-        this.loading = false
-      }
-    },
+descricaoItens(itens = []) {
+  return itens
+    .map(i => {
+      if (i.cor) return `${i.nome} (${i.cor})`
+      return i.nome
+    })
+    .join(' • ')
+},
+
 
     formatarData(data) {
       if (!data) return '-'
       return new Date(data).toLocaleDateString('pt-BR')
+    },
+
+    abrir(id) {
+      this.$router.push(`/planos-corte/${id}`)
     }
   }
 }
 </script>
+

@@ -5,21 +5,19 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm'
+
 import { PlanoCorte } from './plano-corte.entity'
 
-@Entity('itens_plano_corte')
-export class ItemPlanoCorte {
+@Entity('insumos_plano_corte')
+export class InsumoPlanoCorte {
   @PrimaryGeneratedColumn()
   id: number
 
   @Column()
   plano_corte_id: number
 
-  @Column({ length: 255 })
-  nome: string
-
-  @Column({ length: 100, nullable: true })
-  cor: string
+  @Column()
+  produto_id: number
 
   @Column({ length: 20 })
   unidade: string
@@ -28,13 +26,10 @@ export class ItemPlanoCorte {
   quantidade: number
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
-  valor_unitario: number
+  custo_unitario: number
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
-  valor_total: number
-
-  // 🔥 ESSA LINHA RESOLVE O ERRO
-  @ManyToOne(() => PlanoCorte, plano => plano.itens)
-  @JoinColumn({ name: 'plano_corte_id' })
-  plano: PlanoCorte
+  custo_total: number
 }
+
+

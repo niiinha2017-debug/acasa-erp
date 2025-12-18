@@ -15,28 +15,19 @@ export class PlanoCorte {
   @Column()
   fornecedor_id: number
 
-  @Column({ type: 'text', nullable: true })
-  descricao: string
-
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   valor_total: number
 
-  @Column({
-    type: 'enum',
-    enum: ['Rascunho', 'EmProducao', 'Finalizado', 'Cancelado'],
-    default: 'Rascunho'
-  })
+  @Column({ length: 30 })
   status: string
 
   @Column({ type: 'date', nullable: true })
   data_prevista: Date
 
-  @OneToMany(() => ItemPlanoCorte, item => item.plano, {
-    cascade: true
-  })
-  itens: ItemPlanoCorte[]
-
   @CreateDateColumn()
   created_at: Date
+
+  @OneToMany(() => ItemPlanoCorte, item => item.plano)
+  itens: ItemPlanoCorte[]
 }
 

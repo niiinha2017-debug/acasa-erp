@@ -8,33 +8,42 @@ import {
   Delete
 } from '@nestjs/common'
 import { ProdutosService } from './produtos.service'
+import { Produto } from './produto.entity'
 
 @Controller('produtos')
 export class ProdutosController {
   constructor(private readonly service: ProdutosService) {}
 
+  // CREATE
   @Post()
-  create(@Body() body: any) {
+  async create(@Body() body: Partial<Produto>) {
     return this.service.create(body)
   }
 
+  // LIST
   @Get()
-  findAll() {
+  async findAll() {
     return this.service.findAll()
   }
 
+  // GET ONE
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  async findOne(@Param('id') id: string) {
     return this.service.findOne(Number(id))
   }
 
+  // UPDATE
   @Put(':id')
-  update(@Param('id') id: string, @Body() body: any) {
+  async update(
+    @Param('id') id: string,
+    @Body() body: Partial<Produto>
+  ) {
     return this.service.update(Number(id), body)
   }
 
+  // DELETE
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  async remove(@Param('id') id: string) {
     return this.service.remove(Number(id))
   }
 }

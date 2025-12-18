@@ -1,20 +1,56 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import api from '@/services/api'
+    
+import { reactive } from 'vue'
 
-const router = useRouter()
-const orcamentos = ref([])
+const orcamento = reactive({
+  cliente: {
+    nome: '',
+    endereco: '',
+    contato: ''
+  },
+  ambientes: [
+    {
+      nome: '',
+      opcoes: [
+        {
+          titulo: '',
+          descritivo: '',
+          valor: 0
+        }
+      ]
+    }
+  ],
+  condicoes: {
+    pagamento: '',
+    prazo_entrega: ''
+  }
+})
 
-function novoOrcamento() {
-  router.push('/orcamentos/novo')
+function adicionarAmbiente() {
+  orcamento.ambientes.push({
+    nome: '',
+    opcoes: [
+      {
+        titulo: '',
+        descritivo: '',
+        valor: 0
+      }
+    ]
+  })
 }
 
-onMounted(async () => {
-  const { data } = await api.get('/orcamentos')
-  orcamentos.value = data
-})
+function adicionarOpcao(indexAmbiente) {
+  orcamento.ambientes[indexAmbiente].opcoes.push({
+    titulo: '',
+    descritivo: '',
+    valor: 0
+  })
+}
 </script>
+<input v-model="orcamento.cliente.nome" placeholder="Nome do cliente" />
+<input v-model="orcamento.cliente.endereco" placeholder="Endereço" />
+<input v-model="orcamento.cliente.contato" placeholder="Contato" />
+
 
 <template>
   <div class="page">

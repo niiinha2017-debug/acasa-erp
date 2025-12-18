@@ -2,94 +2,84 @@
   <header class="topbar" :class="{ scrolled: isScrolled }">
     <div class="topbar-inner">
 
+      <!-- BRAND -->
       <div class="brand" @click="router.push('/')">
         A CASA-ERP
       </div>
 
+      <!-- NAV -->
       <nav class="nav">
-        <div 
-          class="dropdown-menu" 
-          :class="{ active: activeDropdown === 'financeiro' }" 
+
+        <!-- FINANCEIRO -->
+        <div
+          class="dropdown-menu"
+          :class="{ active: activeDropdown === 'financeiro' }"
           @click="toggleDropdown('financeiro')"
         >
           <button class="dropdown-toggle">Financeiro</button>
           <div class="dropdown-content" @click.stop>
-            <router-link to="/despesas/novo" exact-active-class="router-link-exact-active">
-              Despesas
-            </router-link>
-            <router-link to="/contas-a-receber" exact-active-class="router-link-exact-active">
-              Contas a Receber
-            </router-link>
-            <router-link to="/fluxo-de-caixa" exact-active-class="router-link-exact-active">
-              Fluxo de Caixa
-            </router-link>
+            <router-link to="/despesas">Despesas</router-link>
+            <router-link to="/contas-a-receber">Contas a Receber</router-link>
+            <router-link to="/fluxo-de-caixa">Fluxo de Caixa</router-link>
           </div>
         </div>
 
-        <div 
-          class="dropdown-menu" 
-          :class="{ active: activeDropdown === 'cadastro' }" 
+        <!-- CADASTROS -->
+        <div
+          class="dropdown-menu"
+          :class="{ active: activeDropdown === 'cadastro' }"
           @click="toggleDropdown('cadastro')"
         >
-          <button class="dropdown-toggle">Cadastro</button>
+          <button class="dropdown-toggle">Cadastros</button>
           <div class="dropdown-content" @click.stop>
-            <router-link to="/clientes" exact-active-class="router-link-exact-active">
-              Clientes
-            </router-link>
-            <router-link to="/fornecedores" exact-active-class="router-link-exact-active">
-              Fornecedores
-            </router-link>
-            <router-link to="/funcionarios" exact-active-class="router-link-exact-active">
-              Funcionários
-            </router-link>
-            <router-link to="/produtos" exact-active-class="router-link-exact-active">
-              Produtos
-            </router-link>
-            <router-link to="/orcamentos" exact-active-class="router-link-exact-active">
-  Orçamentos
-</router-link>
-
-<router-link to="/vendas" exact-active-class="router-link-exact-active">
-  Vendas
-</router-link>
-
+            <router-link to="/clientes">Clientes</router-link>
+            <router-link to="/fornecedores">Fornecedores</router-link>
+            <router-link to="/funcionarios">Funcionários</router-link>
+            <router-link to="/produtos">Produtos</router-link>
+            <router-link to="/orcamentos">Orçamentos</router-link>
+            <router-link to="/vendas">Vendas</router-link>
           </div>
         </div>
-        
-        <div 
-          class="dropdown-menu" 
-          :class="{ active: activeDropdown === 'producao' }" 
+
+        <!-- PRODUÇÃO -->
+        <div
+          class="dropdown-menu"
+          :class="{ active: activeDropdown === 'producao' }"
           @click="toggleDropdown('producao')"
         >
           <button class="dropdown-toggle">Produção</button>
           <div class="dropdown-content" @click.stop>
-            <router-link to="/planos-corte" exact-active-class="router-link-exact-active">
-              Plano de Corte
-            </router-link>
-            <router-link to="/ordens-servico" exact-active-class="router-link-exact-active">
-              Ordens de Serviço
-            </router-link>
+            <router-link to="/planos-corte">Plano de Corte</router-link>
+            <router-link to="/ordens-servico">Ordens de Serviço</router-link>
           </div>
         </div>
 
-        <router-link to="/vendas" exact-active-class="router-link-exact-active">
-          Vendas
-        </router-link>
+        <!-- CONFIGURAÇÕES -->
+        <div
+          class="dropdown-menu"
+          :class="{ active: activeDropdown === 'configuracoes' }"
+          @click="toggleDropdown('configuracoes')"
+        >
+          <button class="dropdown-toggle">Configurações</button>
+          <div class="dropdown-content" @click.stop>
+            <router-link to="/constantes">Constantes</router-link>
+          </div>
+        </div>
 
-        <router-link to="/relatorios" exact-active-class="router-link-exact-active">
-          Relatórios
-        </router-link>
       </nav>
 
+      <!-- USER -->
       <div class="user-area">
         <span>Olá, Ana</span>
         <button class="btn-logout" @click="handleLogout">
           Sair
         </button>
       </div>
+
     </div>
   </header>
 </template>
+
 
 <script setup>
 import '../assets/CSS/Menu.css'
