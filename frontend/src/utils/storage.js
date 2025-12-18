@@ -1,4 +1,4 @@
-import { AppConfig } from '@/config'
+import { AppConfig } from '@/services/config'
 
 const TOKEN_KEY = AppConfig.STORAGE_KEYS.TOKEN
 const USER_KEY = AppConfig.STORAGE_KEYS.USER
