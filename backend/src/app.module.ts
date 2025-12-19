@@ -26,15 +26,21 @@ import { DespesasModule } from './despesas/despesas.module'
 import { FinanceiroModule } from './financeiro/financeiro.module'
 import { TarefasModule } from './tarefas/tarefas.module'
 
-// VENDAS
+// VENDAS / OUTROS
 import { OrcamentosModule } from './orcamento/orcamentos.module'
 import { CnpjModule } from './cnpj/cnpj.module'
 import { ConstantesModule } from './constants/constantes.module'
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    // 🔑 ENV — PRODUÇÃO (EC2)
+ConfigModule.forRoot({
+  isGlobal: true,
+  envFilePath: ['.env.production', '.env'],
+}),
 
+
+    // 🗄️ DATABASE
     TypeOrmModule.forRoot({
       type: 'mysql',
       host: process.env.DB_HOST,
@@ -46,25 +52,30 @@ import { ConstantesModule } from './constants/constantes.module'
       synchronize: false,
     }),
 
+    // CORE
     AuthModule,
     UsersModule,
 
+    // CADASTROS
     ClientesModule,
     FuncionariosModule,
     FornecedoresModule,
     ProdutosModule,
     InsumosModule,
 
+    // OPERAÇÃO
     ComprasModule,
     VendasModule,
     PlanoCorteModule,
     AgendaModule,
     InsumoPlanoCorteModule,
 
+    // FINANCEIRO
     DespesasModule,
     FinanceiroModule,
     TarefasModule,
 
+    // OUTROS
     OrcamentosModule,
     CnpjModule,
     ConstantesModule,
