@@ -5,27 +5,29 @@ const USER_KEY = AppConfig.STORAGE_KEYS.USER
 
 export const storage = {
   getToken() {
-    return localStorage.getItem(TOKEN_KEY)
+    // Agora busca na sessão temporária
+    return sessionStorage.getItem(TOKEN_KEY)
   },
 
   setToken(token) {
-    localStorage.setItem(TOKEN_KEY, token)
+    // Grava apenas enquanto a aba estiver aberta
+    sessionStorage.setItem(TOKEN_KEY, token)
   },
 
   removeToken() {
-    localStorage.removeItem(TOKEN_KEY)
+    sessionStorage.removeItem(TOKEN_KEY)
   },
 
   getUser() {
-    const v = localStorage.getItem(USER_KEY)
+    const v = sessionStorage.getItem(USER_KEY)
     return v ? JSON.parse(v) : null
   },
 
   setUser(user) {
-    localStorage.setItem(USER_KEY, JSON.stringify(user))
+    sessionStorage.setItem(USER_KEY, JSON.stringify(user))
   },
 
   removeUser() {
-    localStorage.removeItem(USER_KEY)
+    sessionStorage.removeItem(USER_KEY)
   },
 }
