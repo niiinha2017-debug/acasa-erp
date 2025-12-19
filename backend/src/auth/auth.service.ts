@@ -10,11 +10,11 @@ export class AuthService {
     private dataSource: DataSource,
   ) {}
 
-  async login(email: string, password: string) {
-    /**
-     * 1️⃣ Busca usuário + role + permissions
-     */
-    const rows = await this.dataSource
+async login(email: string, password: string) {
+  console.log('EMAIL:', email);
+  console.log('PASSWORD RECEBIDO:', password);
+
+  const rows = await this.dataSource
       .createQueryBuilder()
       .select([
         'u.id AS id',
@@ -27,7 +27,7 @@ export class AuthService {
         'p.codigo AS permission',
       ])
       .from('users', 'u')
-      .innerJoin('roles', 'r', 'r.id = u.role_id AND r.ativo = 1')
+      .innerJoin('roles', 'r', 'r.id = u.role_id')
       .leftJoin('role_permissions', 'rp', 'rp.role_id = r.id')
       .leftJoin('permissions', 'p', 'p.id = rp.permission_id')
       .where('u.email = :email', { email })
