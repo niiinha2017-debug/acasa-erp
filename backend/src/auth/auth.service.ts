@@ -14,24 +14,26 @@ async login(email: string, password: string) {
   console.log('EMAIL:', email);
   console.log('PASSWORD RECEBIDO:', password);
 
-  const rows = await this.dataSource
-      .createQueryBuilder()
-      .select([
-        'u.id AS id',
-        'u.name AS name',
-        'u.email AS email',
-        'u.password AS password',
-        'r.id AS role_id',
-        'r.codigo AS role_codigo',
-        'r.label AS role_label',
-        'p.codigo AS permission',
-      ])
-      .from('users', 'u')
-      .innerJoin('roles', 'r', 'r.id = u.role_id')
-      .leftJoin('role_permissions', 'rp', 'rp.role_id = r.id')
-      .leftJoin('permissions', 'p', 'p.id = rp.permission_id')
-      .where('u.email = :email', { email })
-      .getRawMany();
+const rows = await this.dataSource.query(
+  `
+  SELECT
+    u.id,
+    u.name,
+    u.email,
+    u.password,
+    r.id AS role_id,
+    r.codigo AS role_codigo,
+    r.label AS role_label,
+    p.codigo AS permission
+  FROM users u
+  INNER JOIN roles r ON r.id = u.role_id
+  LEFT JOIN role_permissions rp ON rp.role_id = r.id
+  LEFT JOIN permissions p ON p.id = rp.permission_id
+  WHERE u.email = ?
+  `,
+  [email],
+);
+
 
     if (!rows.length) {
       throw new UnauthorizedException('Usuário não encontrado.');
