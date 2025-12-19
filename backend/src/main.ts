@@ -4,7 +4,7 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.setGlobalPrefix('api'); // 👈 ESTA LINHA
+  app.setGlobalPrefix('api');
 
   app.enableCors({
     origin: [
@@ -14,11 +14,11 @@ async function bootstrap() {
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-    ],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
-  await app.listen(3000);
+  await app.listen(3000, '0.0.0.0');
+  console.log('🚀 Backend rodando na porta 3000');
 }
+
+bootstrap(); // ⬅️ ISTO ESTAVA FALTANDO
