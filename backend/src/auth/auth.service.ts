@@ -1,115 +1,46 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { UsersService } from '../users/users.service';
 import * as bcrypt from 'bcryptjs';
-import { DataSource } from 'typeorm';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private jwtService: JwtService,
-    private dataSource: DataSource,
+    private readonly usersService: UsersService,
+    private readonly jwtService: JwtService,
   ) {}
 
-async login(email: string, password: string) {
-  console.log('EMAIL:', email);
-  console.log('PASSWORD RECEBIDO:', password);
+  async validateUser(email: string, pass: string): Promise<any> {
+    console.log('--- DIAGNÓSTICO DE LOGIN ---');
+    console.log('Tentando validar email:', email);
+    
+    const user = await this.usersService.findByEmail(email);
+    
+    if (user) {
+      console.log('Usuário encontrado no banco. Comparando senhas...');
+      const isMatch = await bcrypt.compare(pass, user.password);
+      console.log('Resultado do Match (Bcrypt):', isMatch);
 
-const rows = await this.dataSource.query(
-  `
-  SELECT
-    u.id,
-    u.name,
-    u.email,
-    u.password,
-    r.id AS role_id,
-    r.codigo AS role_codigo,
-    r.label AS role_label,
-    p.codigo AS permission
-  FROM users u
-  INNER JOIN roles r ON r.id = u.role_id
-  LEFT JOIN role_permissions rp ON rp.role_id = r.id
-  LEFT JOIN permissions p ON p.id = rp.permission_id
-  WHERE u.email = ?
-  `,
-  [email],
-);
-
-
-    if (!rows.length) {
-      throw new UnauthorizedException('Usuário não encontrado.');
+      if (isMatch) {
+        const { password, ...result } = user;
+        return result;
+      }
+    } else {
+      console.log('Usuário não encontrado para o email:', email);
     }
+    return null;
+  }
 
-    /**
-     * 2️⃣ Validação de senha
-     */
-/**
- * 2️⃣ Validação de senha
- */
-console.log('--- VALIDANDO SENHA ---');
-console.log('Senha que você digitou no Postman:', password);
-console.log('Hash que veio do Banco de Dados:', rows[0].password);
-
-const passwordMatch = await bcrypt.compare(
-  password, 
-  rows[0].password
-);
-
-console.log('Resultado da comparação Bcrypt:', passwordMatch);
-
-if (!passwordMatch) {
-  // Se você quiser forçar a entrada enquanto arruma, 
-  // pode comentar a linha abaixo temporariamente (NÃO RECOMENDADO EM PROD)
-  throw new UnauthorizedException('Senha inválida.');
-}
-
-    /**
-     * 3️⃣ Agrupa permissões
-     */
-    const permissions = [
-      ...new Set(
-        rows
-          .map(r => r.permission)
-          .filter(Boolean),
-      ),
-    ];
-
-    /**
-     * 4️⃣ Objeto final do usuário (contrato fixo)
-     */
-    const user = {
-      id: rows[0].id,
-      name: rows[0].name,
-      email: rows[0].email,
-      role: {
-        id: rows[0].role_id,
-        codigo: rows[0].role_codigo,
-        label: rows[0].role_label,
-      },
-      permissions,
-    };
-
-    /**
-     * 5️⃣ JWT LIMPO (controle, não profile)
-     */
-    const token = this.jwtService.sign(
-      {
-        sub: user.id,
-        role: user.role.codigo,
-        permissions: user.permissions,
-      },
-      {
-        secret: process.env.JWT_SECRET || 'acasa_fallback_secret',
-        expiresIn: '1d',
-      },
-    );
-
-    /**
-     * 6️⃣ Retorno final
-     */
+  async login(user: any) {
+    const payload = { email: user.email, sub: user.id, role: user.role };
     return {
-      message: 'Login efetuado com sucesso!',
-      token,
-      user,
+      access_token: this.jwtService.sign(payload),
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
     };
   }
 }
