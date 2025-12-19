@@ -21,4 +21,4 @@ async function bootstrap() {
   console.log('🚀 Backend rodando na porta 3000');
 }
 
-bootstrap(); // ⬅️ ISTO ESTAVA FALTANDO
+bootstrap();

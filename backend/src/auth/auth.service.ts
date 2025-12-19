@@ -42,14 +42,25 @@ const rows = await this.dataSource.query(
     /**
      * 2️⃣ Validação de senha
      */
-    const passwordMatch = await bcrypt.compare(
-      password,
-      rows[0].password,
-    );
+/**
+ * 2️⃣ Validação de senha
+ */
+console.log('--- VALIDANDO SENHA ---');
+console.log('Senha que você digitou no Postman:', password);
+console.log('Hash que veio do Banco de Dados:', rows[0].password);
 
-    if (!passwordMatch) {
-      throw new UnauthorizedException('Senha inválida.');
-    }
+const passwordMatch = await bcrypt.compare(
+  password, 
+  rows[0].password
+);
+
+console.log('Resultado da comparação Bcrypt:', passwordMatch);
+
+if (!passwordMatch) {
+  // Se você quiser forçar a entrada enquanto arruma, 
+  // pode comentar a linha abaixo temporariamente (NÃO RECOMENDADO EM PROD)
+  throw new UnauthorizedException('Senha inválida.');
+}
 
     /**
      * 3️⃣ Agrupa permissões
