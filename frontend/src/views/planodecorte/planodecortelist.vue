@@ -8,7 +8,7 @@
 
         <button
           class="btn btn-primary"
-          @click="$router.push('/planos-corte/novo')"
+          @click="$router.push('/planodecorte/novo')"
         >
           Novo Plano
         </button>
@@ -167,7 +167,7 @@ descricaoItens(itens = []) {
     },
 
     abrir(id) {
-      this.$router.push(`/planos-corte/${id}`)
+      this.$router.push(`/planoscorte/novo/${id}`)
     }
   }
 }

@@ -208,7 +208,7 @@
 import ProdutoModal from '@/components/ProdutoModal.vue'
 
 export default {
-  name: 'PlanoCorteCreate',
+  name: 'planodeCorteCreate',
 
   components: {
     ProdutoModal

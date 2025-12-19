@@ -13,6 +13,7 @@ import { FuncionariosModule } from './funcionarios/funcionarios.module'
 import { FornecedoresModule } from './fornecedores/fornecedores.module'
 import { ProdutosModule } from './produtos/produtos.module'
 import { InsumosModule } from './insumos/insumos.module'
+import { SolicitacoesModule } from './solicitacoes/solicitacoes.module'
 
 // OPERAÇÃO
 import { ComprasModule } from './compras/compras.module'
@@ -30,6 +31,7 @@ import { TarefasModule } from './tarefas/tarefas.module'
 import { OrcamentosModule } from './orcamento/orcamentos.module'
 import { CnpjModule } from './cnpj/cnpj.module'
 import { ConstantesModule } from './constants/constantes.module'
+
 
 @Module({
   imports: [
@@ -62,6 +64,7 @@ ConfigModule.forRoot({
     FornecedoresModule,
     ProdutosModule,
     InsumosModule,
+    SolicitacoesModule,
 
     // OPERAÇÃO
     ComprasModule,
@@ -79,6 +82,7 @@ ConfigModule.forRoot({
     OrcamentosModule,
     CnpjModule,
     ConstantesModule,
-  ],
+    SolicitacoesModule,
+],
 })
 export class AppModule {}

@@ -36,8 +36,6 @@
             <router-link to="/fornecedores">Fornecedores</router-link>
             <router-link to="/funcionarios">Funcionários</router-link>
             <router-link to="/produtos">Produtos</router-link>
-            <router-link to="/orcamentos">Orçamentos</router-link>
-            <router-link to="/vendas">Vendas</router-link>
           </div>
         </div>
 
@@ -49,8 +47,7 @@
         >
           <button class="dropdown-toggle">Produção</button>
           <div class="dropdown-content" @click.stop>
-            <router-link to="/planos-corte">Plano de Corte</router-link>
-            <router-link to="/ordens-servico">Ordens de Serviço</router-link>
+            <router-link to="/planodecorte">Plano de Corte</router-link>
           </div>
         </div>
 
@@ -63,6 +60,7 @@
           <button class="dropdown-toggle">Configurações</button>
           <div class="dropdown-content" @click.stop>
             <router-link to="/constantes">Constantes</router-link>
+            <router-link to="/usuarios">Liberar Usuários</router-link>
           </div>
         </div>
 
@@ -85,7 +83,7 @@
 import '../assets/CSS/Menu.css'
 import { useRouter } from 'vue-router'
 import { ref, onMounted, onUnmounted } from 'vue'
-import { useAuth } from '@/services/useAuth' 
+import { useAuth } from '@/services/useauth' 
 
 const router = useRouter()
 const { logout } = useAuth() // Desestrutura para pegar apenas o logout

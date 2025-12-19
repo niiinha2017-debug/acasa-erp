@@ -74,7 +74,7 @@ import SearchInput from '@/components/ui/SearchInput.vue'
 import { parseBuscaProduto } from '@/utils/search' // ajuste o caminho se necessário
 
 export default {
-  name: 'ProdutosIndex',
+  name: 'ProdutosList',
 
   components: {
     SearchInput

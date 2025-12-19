@@ -14,7 +14,7 @@ export class AuthService {
     console.log('--- DIAGNÓSTICO DE LOGIN ---');
     console.log('Tentando validar email:', email);
     
-    const user = await this.usersService.findByEmail(email);
+    const user = await this.usersService.findByEmailOrUsername(email);
     
     if (user) {
       console.log('Usuário encontrado no banco. Comparando senhas...');

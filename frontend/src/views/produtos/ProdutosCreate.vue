@@ -129,7 +129,7 @@ import { listarConstantes } from '@/services/constantes'
 import api from '@/services/api'
 
 export default {
-  name: 'ProdutosForm',
+  name: 'ProdutosCreate',
 
   data() {
     return {

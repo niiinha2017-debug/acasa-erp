@@ -22,11 +22,17 @@ export class PermissionGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest();
+const request = context.switchToHttp().getRequest();
     const user = request.user;
 
+    // Se o usuário for 'admin', ele pula a verificação de permissão e entra direto
+    if (user?.role === 'admin') {
+      return true;
+    }
+
+    // Caso contrário, verifica se ele tem a permissão específica
     if (!user?.permissions?.includes(requiredPermission)) {
-      throw new ForbiddenException('Acesso negado');
+      throw new ForbiddenException('Você não tem permissão para acessar este recurso');
     }
 
     return true;
