@@ -1,0 +1,675 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+
+model agenda_producao {
+  id                Int                     @id @default(autoincrement())
+  plano_corte_id    Int
+  fornecedor_id     Int
+  descricao         String                  @db.Text
+  data_inicio       DateTime?               @db.Date
+  data_fim_prevista DateTime?               @db.Date
+  status            agenda_producao_status? @default(Planejado)
+  created_at        DateTime?               @default(now()) @db.Timestamp(0)
+  planos_corte      planos_corte            @relation(fields: [plano_corte_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "agenda_producao_ibfk_1")
+  fornecedores      fornecedores            @relation(fields: [fornecedor_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "agenda_producao_ibfk_2")
+
+  @@index([fornecedor_id], map: "fornecedor_id")
+  @@index([plano_corte_id], map: "plano_corte_id")
+}
+
+model ambientes_venda {
+  id                  Int                   @id @default(autoincrement())
+  venda_id            Int
+  nome                String                @db.VarChar(100)
+  descricao           String?               @db.Text
+  vendas              vendas                @relation(fields: [venda_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ambientes_venda_ibfk_1")
+  itens_compra_rateio itens_compra_rateio[]
+  itens_venda         itens_venda[]
+
+  @@index([venda_id], map: "pedido_id")
+}
+
+model apontamento_producao {
+  id                Int          @id @default(autoincrement())
+  funcionario_id    Int
+  tarefa_id         Int
+  horas_trabalhadas Decimal      @db.Decimal(5, 2)
+  created_at        DateTime?    @default(now()) @db.Timestamp(0)
+  funcionarios      funcionarios @relation(fields: [funcionario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "apontamento_producao_ibfk_1")
+  tarefas           tarefas      @relation(fields: [tarefa_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "apontamento_producao_ibfk_2")
+
+  @@index([funcionario_id], map: "funcionario_id")
+  @@index([tarefa_id], map: "tarefa_id")
+}
+
+model clientes {
+  id                      Int                       @id @default(autoincrement())
+  nome                    String                    @db.VarChar(150)
+  indicacao               String?                   @db.VarChar(150)
+  email                   String?                   @db.VarChar(150)
+  telefone                String?                   @db.VarChar(20)
+  cep                     String?                   @db.VarChar(10)
+  endereco                String?                   @db.Text
+  numero                  String?                   @db.VarChar(20)
+  complemento             String?                   @db.VarChar(100)
+  bairro                  String?                   @db.VarChar(100)
+  cidade                  String?                   @db.VarChar(100)
+  estado                  String?                   @db.VarChar(2)
+  cpf_cnpj                String?                   @unique(map: "cpf_cnpj") @db.VarChar(20)
+  rg_ie                   String?                   @db.VarChar(30)
+  observacao              String?                   @db.Text
+  status                  String?                   @default("Ativo") @db.VarChar(20)
+  created_at              DateTime                  @default(now()) @db.Timestamp(0)
+  compras                 compras[]
+  lancamentos_financeiros lancamentos_financeiros[]
+  tarefas                 tarefas[]
+  tarefas_producao        tarefas_producao[]
+  vendas                  vendas[]
+}
+
+model compras {
+  id                   Int               @id @default(autoincrement())
+  fornecedor_id        Int
+  cliente_id           Int?
+  data_compra          DateTime          @db.Date
+  data_emissao_nf      DateTime?         @db.Date
+  numero_nf            String?           @db.VarChar(50)
+  valor_total_produtos Decimal?          @default(0.00) @db.Decimal(10, 2)
+  valor_frete          Decimal?          @default(0.00) @db.Decimal(10, 2)
+  valor_outros         Decimal?          @default(0.00) @db.Decimal(10, 2)
+  valor_final          Decimal           @db.Decimal(10, 2)
+  status               String?           @default("Pendente") @db.VarChar(20)
+  observacao           String?           @db.Text
+  created_at           DateTime          @default(now()) @db.Timestamp(0)
+  venda_id             Int?
+  fornecedores         fornecedores      @relation(fields: [fornecedor_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "compras_ibfk_1")
+  clientes             clientes?         @relation(fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "compras_ibfk_2")
+  vendas               vendas?           @relation(fields: [venda_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_compras_venda")
+  entrada_insumos      entrada_insumos[]
+  itens_compra         itens_compra[]
+
+  @@index([cliente_id], map: "cliente_id")
+  @@index([venda_id], map: "fk_compras_venda")
+  @@index([fornecedor_id], map: "fornecedor_id")
+}
+
+model constantes {
+  id         Int       @id @default(autoincrement())
+  grupo      String    @db.VarChar(50)
+  codigo     String    @db.VarChar(50)
+  label      String    @db.VarChar(100)
+  valor      String?   @db.VarChar(100)
+  extra      Json?
+  ativo      Boolean?  @default(true)
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+
+  @@unique([grupo, codigo], map: "uk_constante")
+}
+
+model consumo_insumos {
+  id             Int                    @id @default(autoincrement())
+  insumo_id      Int
+  origem         consumo_insumos_origem
+  venda_id       Int?
+  plano_corte_id Int?
+  quantidade     Decimal                @db.Decimal(10, 3)
+  custo_total    Decimal                @db.Decimal(10, 2)
+  created_at     DateTime?              @default(now()) @db.Timestamp(0)
+  insumos        insumos                @relation(fields: [insumo_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "consumo_insumos_ibfk_1")
+
+  @@index([insumo_id], map: "insumo_id")
+}
+
+model despesas {
+  id              Int       @id @default(autoincrement())
+  descricao       String    @db.VarChar(255)
+  categoria       String?   @db.VarChar(100)
+  data            DateTime  @db.Date
+  valor           Decimal   @db.Decimal(10, 2)
+  status          String?   @default("Pendente") @db.VarChar(20)
+  forma_pagamento String?   @db.VarChar(50)
+  centro_custo    String?   @db.VarChar(100)
+  observacao      String?   @db.Text
+  created_at      DateTime? @default(now()) @db.Timestamp(0)
+  data_vencimento DateTime? @db.Date
+  data_pagamento  DateTime? @db.Date
+}
+
+model entrada_insumos {
+  id             Int       @id @default(autoincrement())
+  insumo_id      Int
+  compra_id      Int?
+  quantidade     Decimal   @db.Decimal(10, 3)
+  valor_unitario Decimal   @db.Decimal(10, 2)
+  valor_total    Decimal   @db.Decimal(10, 2)
+  created_at     DateTime? @default(now()) @db.Timestamp(0)
+  insumos        insumos   @relation(fields: [insumo_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "entrada_insumos_ibfk_1")
+  compras        compras?  @relation(fields: [compra_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "entrada_insumos_ibfk_2")
+
+  @@index([compra_id], map: "compra_id")
+  @@index([insumo_id], map: "insumo_id")
+}
+
+model estoque_sobras {
+  id             Int      @id @default(autoincrement())
+  produto_pai_id Int
+  comprimento    Decimal? @db.Decimal(10, 2)
+  largura        Decimal? @db.Decimal(10, 2)
+  espessura      Decimal? @db.Decimal(10, 2)
+  quantidade     Int?     @default(1)
+  localizacao    String?  @db.VarChar(50)
+  status         String?  @default("Disponível") @db.VarChar(20)
+  data_entrada   DateTime @default(now()) @db.Timestamp(0)
+  produtos       produtos @relation(fields: [produto_pai_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "estoque_sobras_ibfk_1")
+
+  @@index([produto_pai_id], map: "produto_pai_id")
+}
+
+model fornecedores {
+  id                      Int                       @id @default(autoincrement())
+  nome_fantasia           String                    @db.VarChar(150)
+  razao_social            String?                   @db.VarChar(150)
+  cpf_cnpj                String?                   @unique(map: "cpf_cnpj") @db.VarChar(20)
+  inscricao_estadual      String?                   @db.VarChar(30)
+  telefone_loja           String?                   @db.VarChar(20)
+  email_loja              String?                   @db.VarChar(150)
+  vendedor_nome           String?                   @db.VarChar(100)
+  vendedor_contato        String?                   @db.VarChar(100)
+  cep                     String?                   @db.VarChar(10)
+  endereco                String?                   @db.VarChar(255)
+  numero                  String?                   @db.VarChar(20)
+  bairro                  String?                   @db.VarChar(100)
+  cidade                  String?                   @db.VarChar(100)
+  estado                  String?                   @db.VarChar(2)
+  dia_fechamento          Int?
+  dia_vencimento          Int?
+  chave_pix               String?                   @db.VarChar(100)
+  dados_bancarios         String?                   @db.Text
+  observacao              String?                   @db.Text
+  status                  String?                   @default("Ativo") @db.VarChar(20)
+  created_at              DateTime                  @default(now()) @db.Timestamp(0)
+  agenda_producao         agenda_producao[]
+  compras                 compras[]
+  lancamentos_financeiros lancamentos_financeiros[]
+  planos_corte            planos_corte[]
+}
+
+model funcionarios {
+  id                      Int                       @id @default(autoincrement())
+  nome                    String                    @db.VarChar(150)
+  nascimento              DateTime?                 @db.Date
+  sexo                    String?                   @db.VarChar(20)
+  estado_civil            String?                   @db.VarChar(30)
+  escolaridade            String?                   @db.VarChar(50)
+  cpf                     String                    @unique(map: "cpf") @db.VarChar(20)
+  rg                      String?                   @db.VarChar(20)
+  cep                     String?                   @db.VarChar(10)
+  endereco                String?                   @db.VarChar(200)
+  numero                  String?                   @db.VarChar(20)
+  complemento             String?                   @db.VarChar(100)
+  bairro                  String?                   @db.VarChar(100)
+  cidade                  String?                   @db.VarChar(100)
+  estado                  String?                   @db.VarChar(2)
+  email                   String?                   @db.VarChar(150)
+  telefone                String?                   @db.VarChar(20)
+  setor                   String?                   @db.VarChar(50)
+  funcao                  String?                   @db.VarChar(50)
+  tipo_contrato           String?                   @db.VarChar(50)
+  data_admissao           DateTime?                 @db.Date
+  data_demissao           DateTime?                 @db.Date
+  status                  String?                   @default("Ativo") @db.VarChar(20)
+  salario_base            Decimal?                  @db.Decimal(10, 2)
+  salario_adicional       Decimal?                  @db.Decimal(10, 2)
+  carga_horaria           Int?
+  custo_hora              Decimal?                  @db.Decimal(10, 2)
+  forma_pagamento         String?                   @db.VarChar(50)
+  banco                   String?                   @db.VarChar(50)
+  agencia                 String?                   @db.VarChar(20)
+  conta_corrente          String?                   @db.VarChar(30)
+  tipo_conta              String?                   @db.VarChar(30)
+  chave_pix               String?                   @db.VarChar(100)
+  created_at              DateTime                  @default(now()) @db.Timestamp(0)
+  apontamento_producao    apontamento_producao[]
+  lancamentos_financeiros lancamentos_financeiros[]
+  ponto_justificativas    ponto_justificativas[]
+  ponto_registros         ponto_registros[]
+  tarefas                 tarefas[]
+  tarefas_funcionarios    tarefas_funcionarios[]
+}
+
+model insumos {
+  id              Int               @id @default(autoincrement())
+  nome            String            @db.VarChar(150)
+  unidade         String            @db.VarChar(20)
+  estoque_atual   Decimal?          @default(0.000) @db.Decimal(10, 3)
+  estoque_minimo  Decimal?          @default(0.000) @db.Decimal(10, 3)
+  custo_medio     Decimal?          @default(0.00) @db.Decimal(10, 2)
+  status          insumos_status?   @default(Ativo)
+  created_at      DateTime?         @default(now()) @db.Timestamp(0)
+  consumo_insumos consumo_insumos[]
+  entrada_insumos entrada_insumos[]
+}
+
+model insumos_plano_corte {
+  id             Int          @id @default(autoincrement())
+  plano_corte_id Int
+  produto_id     Int
+  unidade        String       @db.VarChar(20)
+  quantidade     Decimal      @db.Decimal(10, 3)
+  custo_unitario Decimal      @db.Decimal(10, 2)
+  custo_total    Decimal      @db.Decimal(10, 2)
+  created_at     DateTime?    @default(now()) @db.Timestamp(0)
+  planos_corte   planos_corte @relation(fields: [plano_corte_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_insumo_plano")
+  produtos       produtos     @relation(fields: [produto_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_insumo_produto")
+
+  @@index([plano_corte_id], map: "idx_plano_corte")
+  @@index([produto_id], map: "idx_produto")
+}
+
+model itens_compra {
+  id                  Int                   @id @default(autoincrement())
+  compra_id           Int
+  produto_id          Int
+  quantidade          Decimal               @db.Decimal(10, 3)
+  valor_unitario      Decimal               @db.Decimal(10, 2)
+  valor_total         Decimal               @db.Decimal(10, 2)
+  unidade_compra      String?               @db.VarChar(20)
+  compras             compras               @relation(fields: [compra_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "itens_compra_ibfk_1")
+  produtos            produtos              @relation(fields: [produto_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "itens_compra_ibfk_2")
+  itens_compra_rateio itens_compra_rateio[]
+
+  @@index([compra_id], map: "compra_id")
+  @@index([produto_id], map: "produto_id")
+}
+
+model itens_compra_rateio {
+  id              Int             @id @default(autoincrement())
+  item_compra_id  Int
+  ambiente_id     Int
+  percentual      Decimal?        @db.Decimal(5, 2)
+  valor_alocado   Decimal?        @db.Decimal(10, 2)
+  itens_compra    itens_compra    @relation(fields: [item_compra_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "itens_compra_rateio_ibfk_1")
+  ambientes_venda ambientes_venda @relation(fields: [ambiente_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "itens_compra_rateio_ibfk_2")
+
+  @@index([ambiente_id], map: "ambiente_id")
+  @@index([item_compra_id], map: "item_compra_id")
+}
+
+model itens_plano_corte {
+  id             Int          @id @default(autoincrement())
+  plano_corte_id Int
+  nome           String       @db.VarChar(150)
+  cor            String?      @db.VarChar(100)
+  unidade        String       @db.VarChar(20)
+  quantidade     Decimal      @db.Decimal(10, 3)
+  valor_unitario Decimal      @db.Decimal(10, 2)
+  valor_total    Decimal      @db.Decimal(10, 2)
+  planos_corte   planos_corte @relation(fields: [plano_corte_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "itens_plano_corte_ibfk_1")
+
+  @@index([plano_corte_id], map: "plano_corte_id")
+}
+
+model itens_venda {
+  id              Int             @id @default(autoincrement())
+  venda_id        Int
+  ambiente_id     Int
+  descricao       String          @db.Text
+  quantidade      Decimal?        @default(1.000) @db.Decimal(10, 3)
+  valor_unitario  Decimal?        @default(0.00) @db.Decimal(10, 2)
+  valor_total     Decimal?        @default(0.00) @db.Decimal(10, 2)
+  vendas          vendas          @relation(fields: [venda_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "itens_venda_ibfk_1")
+  ambientes_venda ambientes_venda @relation(fields: [ambiente_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "itens_venda_ibfk_2")
+
+  @@index([ambiente_id], map: "ambiente_id")
+  @@index([venda_id], map: "venda_id")
+}
+
+model lancamentos_financeiros {
+  id              Int                             @id @default(autoincrement())
+  tipo            lancamentos_financeiros_tipo
+  origem          lancamentos_financeiros_origem?
+  descricao       String?                         @db.VarChar(100)
+  categoria       String?                         @db.VarChar(100)
+  beneficiario    String?                         @db.VarChar(150)
+  valor           Decimal                         @db.Decimal(10, 2)
+  data_vencimento DateTime                        @db.Date
+  data_pagamento  DateTime?                       @db.Date
+  status          String?                         @default("Pendente") @db.VarChar(20)
+  forma_pagamento String?                         @db.VarChar(50)
+  numero_parcelas Int?                            @default(1)
+  loja_local      String?                         @db.VarChar(100)
+  funcionario_id  Int?
+  created_at      DateTime                        @default(now()) @db.Timestamp(0)
+  cliente_id      Int?
+  fornecedor_id   Int?
+  venda_id        Int?
+  plano_corte_id  Int?
+  compra_id       Int?
+  clientes        clientes?                       @relation(fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lf_cliente")
+  fornecedores    fornecedores?                   @relation(fields: [fornecedor_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lf_fornecedor")
+  planos_corte    planos_corte?                   @relation(fields: [plano_corte_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lf_plano_corte")
+  funcionarios    funcionarios?                   @relation(fields: [funcionario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lancamentos_financeiros_ibfk_1")
+
+  @@index([cliente_id], map: "fk_lf_cliente")
+  @@index([fornecedor_id], map: "fk_lf_fornecedor")
+  @@index([plano_corte_id], map: "fk_lf_plano_corte")
+  @@index([funcionario_id], map: "funcionario_id")
+}
+
+model orcamento_ambientes {
+  id               Int                @id @default(autoincrement())
+  orcamento_id     Int
+  nome             String             @db.VarChar(100)
+  ordem            Int?               @default(0)
+  orcamentos       orcamentos         @relation(fields: [orcamento_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "orcamento_ambientes_ibfk_1")
+  orcamento_opcoes orcamento_opcoes[]
+
+  @@index([orcamento_id], map: "orcamento_id")
+}
+
+model orcamento_opcoes {
+  id                  Int                 @id @default(autoincrement())
+  ambiente_id         Int
+  titulo              String              @db.VarChar(150)
+  descritivo          String              @db.Text
+  valor               Decimal             @db.Decimal(10, 2)
+  ordem               Int?                @default(0)
+  orcamento_ambientes orcamento_ambientes @relation(fields: [ambiente_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "orcamento_opcoes_ibfk_1")
+
+  @@index([ambiente_id], map: "ambiente_id")
+}
+
+model orcamentos {
+  id                  Int                   @id @default(autoincrement())
+  cliente_nome        String                @db.VarChar(150)
+  cliente_endereco    String?               @db.VarChar(255)
+  cliente_contato     String?               @db.VarChar(100)
+  data_orcamento      DateTime              @db.Date
+  validade_dias       Int?                  @default(7)
+  condicoes_pagamento String?               @db.Text
+  prazo_entrega       String?               @db.Text
+  observacoes         String?               @db.Text
+  criado_em           DateTime?             @default(now()) @db.DateTime(0)
+  atualizado_em       DateTime?             @default(now()) @db.DateTime(0)
+  orcamento_ambientes orcamento_ambientes[]
+}
+
+model permissions {
+  id               Int                @id @default(autoincrement())
+  codigo           String             @unique(map: "codigo") @db.VarChar(100)
+  label            String             @db.VarChar(150)
+  role_permissions role_permissions[]
+}
+
+model planos_corte {
+  id                      Int                       @id @default(autoincrement())
+  fornecedor_id           Int
+  descricao_geral         String?                   @db.Text
+  valor_total             Decimal?                  @default(0.00) @db.Decimal(10, 2)
+  status                  planos_corte_status?      @default(Rascunho)
+  data_prevista           DateTime?                 @db.Date
+  created_at              DateTime?                 @default(now()) @db.Timestamp(0)
+  agenda_producao         agenda_producao[]
+  insumos_plano_corte     insumos_plano_corte[]
+  itens_plano_corte       itens_plano_corte[]
+  lancamentos_financeiros lancamentos_financeiros[]
+  fornecedores            fornecedores              @relation(fields: [fornecedor_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "planos_corte_ibfk_1")
+
+  @@index([fornecedor_id], map: "fornecedor_id")
+}
+
+model ponto_justificativas {
+  id             Int          @id @default(autoincrement())
+  funcionario_id Int
+  data_inicio    DateTime     @db.Date
+  data_fim       DateTime     @db.Date
+  tipo           String       @db.VarChar(50)
+  observacao     String?      @db.Text
+  anexo_url      String?      @db.VarChar(255)
+  created_at     DateTime     @default(now()) @db.Timestamp(0)
+  funcionarios   funcionarios @relation(fields: [funcionario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ponto_justificativas_ibfk_1")
+
+  @@index([funcionario_id], map: "funcionario_id")
+}
+
+model ponto_registros {
+  id             Int          @id @default(autoincrement())
+  funcionario_id Int
+  data_registro  DateTime     @db.Date
+  hora_registro  DateTime     @db.Time(0)
+  tipo           String?      @db.VarChar(20)
+  origem         String?      @default("Sistema") @db.VarChar(50)
+  editado_por    Int?
+  motivo_edicao  String?      @db.VarChar(255)
+  created_at     DateTime     @default(now()) @db.Timestamp(0)
+  funcionarios   funcionarios @relation(fields: [funcionario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ponto_registros_ibfk_1")
+
+  @@index([funcionario_id], map: "funcionario_id")
+}
+
+model produtos {
+  id                  Int                   @id @default(autoincrement())
+  nome                String                @db.VarChar(150)
+  fornecedor          String?               @db.VarChar(150)
+  medida              String?               @db.VarChar(50)
+  cor                 String?               @db.VarChar(50)
+  unidade             String?               @db.VarChar(20)
+  quantidade          Decimal?              @db.Decimal(10, 2)
+  valor_unitario      Decimal?              @db.Decimal(10, 2)
+  valor_total         Decimal?              @db.Decimal(10, 2)
+  created_at          DateTime              @default(now()) @db.Timestamp(0)
+  estoque_sobras      estoque_sobras[]
+  insumos_plano_corte insumos_plano_corte[]
+  itens_compra        itens_compra[]
+}
+
+model recuperacao_senha {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  token      String   @db.VarChar(100)
+  expira_em  DateTime @db.DateTime(0)
+  usado      Boolean? @default(false)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "recuperacao_senha_ibfk_1")
+
+  @@index([user_id], map: "user_id")
+}
+
+model role_permissions {
+  role_id       Int
+  permission_id Int
+  roles         roles       @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "role_permissions_ibfk_1")
+  permissions   permissions @relation(fields: [permission_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "role_permissions_ibfk_2")
+
+  @@id([role_id, permission_id])
+  @@index([permission_id], map: "permission_id")
+}
+
+model roles {
+  id               Int                @id @default(autoincrement())
+  codigo           String             @unique(map: "codigo") @db.VarChar(50)
+  label            String             @db.VarChar(100)
+  ativo            Boolean?           @default(true)
+  role_permissions role_permissions[]
+  users            users[]
+}
+
+model solicitacoes_cadastro {
+  id           Int      @id @default(autoincrement())
+  nome         String   @db.VarChar(150)
+  email        String   @db.VarChar(150)
+  usuario      String   @db.VarChar(50)
+  senha        String   @db.VarChar(255)
+  nivel_acesso Int?     @default(2)
+  status       String?  @default("Pendente") @db.VarChar(20)
+  created_at   DateTime @default(now()) @db.Timestamp(0)
+}
+
+model tarefas {
+  id                   Int                    @id @default(autoincrement())
+  origem               tarefas_origem
+  titulo               String                 @db.VarChar(150)
+  descricao            String?                @db.Text
+  data_inicio          DateTime               @db.DateTime(0)
+  data_fim             DateTime?              @db.DateTime(0)
+  prioridade           tarefas_prioridade?    @default(Normal)
+  status               tarefas_status?        @default(Pendente)
+  cliente_id           Int?
+  funcionario_id       Int?
+  venda_id             Int?
+  plano_corte_id       Int?
+  created_at           DateTime?              @default(now()) @db.Timestamp(0)
+  apontamento_producao apontamento_producao[]
+  clientes             clientes?              @relation(fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "tarefas_ibfk_1")
+  funcionarios         funcionarios?          @relation(fields: [funcionario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "tarefas_ibfk_2")
+
+  @@index([cliente_id], map: "cliente_id")
+  @@index([funcionario_id], map: "funcionario_id")
+}
+
+model tarefas_funcionarios {
+  id               Int              @id @default(autoincrement())
+  tarefa_id        Int
+  funcionario_id   Int
+  tarefas_producao tarefas_producao @relation(fields: [tarefa_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "tarefas_funcionarios_ibfk_1")
+  funcionarios     funcionarios     @relation(fields: [funcionario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "tarefas_funcionarios_ibfk_2")
+
+  @@index([funcionario_id], map: "funcionario_id")
+  @@index([tarefa_id], map: "tarefa_id")
+}
+
+model tarefas_producao {
+  id                   Int                      @id @default(autoincrement())
+  titulo               String                   @db.VarChar(150)
+  descricao            String?                  @db.Text
+  tipo                 tarefas_producao_tipo
+  data_inicio          DateTime                 @db.DateTime(0)
+  data_fim             DateTime                 @db.DateTime(0)
+  status               tarefas_producao_status? @default(Agendada)
+  cliente_id           Int?
+  plano_corte_id       Int?
+  venda_id             Int?
+  created_at           DateTime?                @default(now()) @db.Timestamp(0)
+  tarefas_funcionarios tarefas_funcionarios[]
+  clientes             clientes?                @relation(fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "tarefas_producao_ibfk_1")
+
+  @@index([cliente_id], map: "cliente_id")
+}
+
+model users {
+  id                Int                 @id @default(autoincrement())
+  name              String              @db.VarChar(120)
+  email             String              @unique(map: "IDX_97672ac88f789774dd47f7c8be") @db.VarChar(120)
+  password          String              @db.VarChar(255)
+  created_at        DateTime            @default(now()) @db.DateTime(6)
+  role_id           Int?
+  recuperacao_senha recuperacao_senha[]
+  roles             roles?              @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "users_ibfk_1")
+  vendas            vendas[]
+
+  @@index([role_id], map: "role_id")
+}
+
+model vendas {
+  id              Int               @id @default(autoincrement())
+  cliente_id      Int
+  vendedor_id     Int?
+  data_emissao    DateTime?         @default(now()) @db.DateTime(0)
+  data_entrega    DateTime?         @db.Date
+  valor_total     Decimal?          @db.Decimal(10, 2)
+  desconto        Decimal?          @default(0.00) @db.Decimal(10, 2)
+  valor_final     Decimal?          @db.Decimal(10, 2)
+  status          String?           @default("Aberto") @db.VarChar(20)
+  observacao      String?           @db.Text
+  ambientes_venda ambientes_venda[]
+  compras         compras[]
+  itens_venda     itens_venda[]
+  clientes        clientes          @relation(fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "vendas_ibfk_1")
+  users           users?            @relation(fields: [vendedor_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "vendas_ibfk_2")
+
+  @@index([cliente_id], map: "cliente_id")
+  @@index([vendedor_id], map: "vendedor_id")
+}
+
+enum lancamentos_financeiros_tipo {
+  Pagar
+  Receber
+}
+
+enum tarefas_origem {
+  VendaCliente
+  PlanoCorte
+  Garantia
+  Manutencao
+  ProducaoInterna
+  Ajuste
+}
+
+enum consumo_insumos_origem {
+  VendaCliente
+  PlanoCorte
+}
+
+enum lancamentos_financeiros_origem {
+  VendaCliente
+  PlanoCorte
+  Compra
+  Despesa
+}
+
+enum tarefas_producao_tipo {
+  VendaCliente
+  PlanoCorte
+  Manutencao
+  ProducaoInterna
+}
+
+enum planos_corte_status {
+  Rascunho
+  Enviado
+  Em_Producao @map("Em Producao")
+  Concluido
+  Cancelado
+}
+
+enum agenda_producao_status {
+  Planejado
+  Em_Producao @map("Em Producao")
+  Finalizado
+}
+
+enum insumos_status {
+  Ativo
+  Inativo
+}
+
+enum tarefas_prioridade {
+  Baixa
+  Normal
+  Alta
+  Urgente
+}
+
+enum tarefas_producao_status {
+  Agendada
+  EmExecucao
+  Pausada
+  Finalizada
+  Cancelada
+}
+
+enum tarefas_status {
+  Pendente
+  Agendada
+  EmProducao
+  Pausada
+  Finalizada
+  Cancelada
+}
