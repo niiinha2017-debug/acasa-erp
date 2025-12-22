@@ -4,15 +4,13 @@ const TOKEN_KEY = AppConfig.STORAGE_KEYS.TOKEN
 const USER_KEY = AppConfig.STORAGE_KEYS.USER
 
 export const storage = {
-  getToken() {
-    // Agora busca na sessão temporária
-    return sessionStorage.getItem(TOKEN_KEY)
-  },
+getToken() {
+  return localStorage.getItem(TOKEN_KEY)
+},
 
-  setToken(token) {
-    // Grava apenas enquanto a aba estiver aberta
-    sessionStorage.setItem(TOKEN_KEY, token)
-  },
+setToken(token) {
+  localStorage.setItem(TOKEN_KEY, token)
+},
 
   removeToken() {
     sessionStorage.removeItem(TOKEN_KEY)
