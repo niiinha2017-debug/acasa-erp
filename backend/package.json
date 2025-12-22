@@ -13,6 +13,7 @@
     "start:prod": "node dist/main.js",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "db:deploy": "prisma migrate deploy && prisma db seed",
+    "deploy:prod": "npm install && npx prisma generate && npm run db:deploy && npm run build && pm2 restart acasa-backend",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
