@@ -32,14 +32,20 @@ import { OrcamentosModule } from './orcamento/orcamentos.module'
 import { CnpjModule } from './cnpj/cnpj.module'
 import { ConstantesModule } from './constants/constantes.module'
 
+import { join } from 'path';
 
 @Module({
   imports: [
     // 🔑 ENV — PRODUÇÃO (EC2)
+
 ConfigModule.forRoot({
   isGlobal: true,
-  envFilePath: ['.env.production', '.env'],
+  envFilePath: [
+    join(process.cwd(), '.env.production'),
+    join(process.cwd(), '.env'),
+  ],
 }),
+
 
 
     // 🗄️ DATABASE
