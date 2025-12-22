@@ -154,50 +154,35 @@ export default {
   },
 
   methods: {
-    async fetchClientes() {
-      console.group('📡 fetchClientes')
+async fetchClientes() {
+  console.group('📡 fetchClientes DEBUG REAL')
 
-      console.log('ANTES da requisição', {
-        loading: this.loading,
-        clientes: this.clientes,
-      })
+  const token = localStorage.getItem('TOKEN') // ajuste se o nome for outro
 
-      this.loading = true
-      this.error = null
+  console.log('🔑 Token no localStorage:', token)
+  console.log('🔑 Tipo do token:', typeof token)
+  console.log('🔑 Tamanho do token:', token?.length)
 
-      try {
-        console.log('➡️ chamando API /clientes')
-        const response = await api.get('/clientes')
+  console.log('➡️ Headers que o axios vai usar:', api.defaults.headers)
 
-        console.log('⬅️ resposta bruta:', response)
-        console.log('⬅️ response.data:', response.data)
+  this.loading = true
+  this.error = null
 
-        if (!Array.isArray(response.data)) {
-          throw new Error('Resposta da API não é um array')
-        }
+  try {
+    console.log('➡️ chamando API /clientes')
+    const response = await api.get('/clientes')
 
-        this.clientes = response.data
+    console.log('⬅️ resposta completa:', response)
+    this.clientes = response.data
 
-        console.log('✅ clientes setados com sucesso', this.clientes)
-
-      } catch (e) {
-        console.error('❌ ERRO REAL em fetchClientes', e)
-
-        this.error = 'Erro ao carregar clientes'
-        this.clientes = []
-
-      } finally {
-        this.loading = false
-
-        console.log('FIM do fetchClientes', {
-          loading: this.loading,
-          clientes: this.clientes,
-          error: this.error,
-        })
-
-        console.groupEnd()
-      }
-    },
+  } catch (e) {
+    console.error('❌ ERRO REAL em fetchClientes', e)
+    this.error = 'Erro ao carregar clientes'
+  } finally {
+    this.loading = false
+    console.groupEnd()
+  }
+},
 
     async excluir(id) {
       console.group('🗑 excluir cliente')

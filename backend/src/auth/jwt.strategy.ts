@@ -7,6 +7,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor() {
     const jwtSecret = process.env.JWT_SECRET;
 
+    console.log('🔐 JWT STRATEGY INIT');
+    console.log('JWT_SECRET existe?', !!jwtSecret);
+
     if (!jwtSecret) {
       throw new Error('JWT_SECRET não definido');
     }
@@ -19,6 +22,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
+    console.log('🟢 JWT VALIDATE CHAMADO');
+    console.log('Payload recebido:', payload);
+
     return {
       userId: payload.sub,
       role: payload.role,
@@ -26,3 +32,5 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     };
   }
 }
+
+
