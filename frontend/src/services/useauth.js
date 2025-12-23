@@ -33,7 +33,9 @@ async function login({ email, password }) {
     user.value = data.user
 
     storage.setToken(accessToken)
+    console.log('TOKEN SALVO:', accessToken)
     storage.setUser(data.user)
+    console.log('USER SALVO:', data.user)
 
     return {
       success: true,

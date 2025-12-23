@@ -1,25 +1,25 @@
+<script setup>
+// 👇 Importando o seu CSS de Login
+import '../assets/CSS/Login.css'
+</script>
+
 <template>
-  <div class="login-page">
-    <router-view />
+  <div class="auth-layout">
+    <div class="auth-content">
+      <slot />
+    </div>
   </div>
 </template>
 
-<script setup>
-</script>
-
-
 <style scoped>
+/* Se o seu Login.css já tiver as classes de container (.auth-layout, etc),
+  você nem precisa desse style aqui embaixo. 
+  Mas vou deixar um básico de segurança para centralizar tudo caso o CSS falhe.
+*/
 .auth-layout {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px;
-}
-
-.auth-content {
-  width: 100%;
-  max-width: 440px;
 }
 </style>
