@@ -1,26 +1,27 @@
 /* =========================================================
    VARIÁVEIS
 ========================================================= */
-:root {
-    --topbar-bg: rgba(248, 250, 252, 0.96);
-    --topbar-border: rgba(255,255,255,.2);
-    --topbar-shadow: 0 4px 20px rgba(0,0,0,.08);
+/* Variáveis apenas do Menu, sem mexer no :root global */
+.topbar {
+  --topbar-bg: rgba(248, 250, 252, 0.96);
+  --topbar-border: rgba(255,255,255,.2);
+  --topbar-shadow: 0 4px 20px rgba(0,0,0,.08);
 
-    --text-main: #1e293b;
-    --text-muted: #64748b;
-    --hover-bg: rgba(15,23,42,.05);
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --hover-bg: rgba(15,23,42,.05);
 
-    --gradient-primary: linear-gradient(135deg,#667eea,#764ba2);
-    --gradient-active: linear-gradient(135deg,rgba(102,126,234,.14),rgba(118,75,162,.1));
+  --gradient-primary: linear-gradient(135deg,#667eea,#764ba2);
+  --gradient-active: linear-gradient(135deg,rgba(102,126,234,.14),rgba(118,75,162,.1));
 
-    --nav-height: 44px;
-    --nav-radius: 10px;
-    --nav-padding-x: 18px;
-    --nav-font-size: 14px;
+  --nav-height: 44px;
+  --nav-radius: 10px;
+  --nav-padding-x: 18px;
+  --nav-font-size: 14px;
 
-    --dropdown-width: 220px;
+  --dropdown-width: 220px;
 
-    --transition: all .25s cubic-bezier(.4,0,.2,1);
+  --transition: all .25s cubic-bezier(.4,0,.2,1);
 }
 
 /* =========================================================
@@ -247,16 +248,17 @@
    DARK MODE
 ========================================================= */
 @media (prefers-color-scheme: dark) {
-    :root {
-        --topbar-bg: rgba(15,23,42,.96);
-        --text-main: #f1f5f9;
-        --text-muted: #94a3b8;
-        --hover-bg: rgba(255,255,255,.05);
-    }
+  .topbar {
+    --topbar-bg: rgba(15,23,42,.96);
+    --text-main: #f1f5f9;
+    --text-muted: #94a3b8;
+    --hover-bg: rgba(255,255,255,.05);
+  }
 
-    .nav,
-    .user-area {
-        background: rgba(30,41,59,.85);
-        border-color: rgba(51,65,85,.8);
-    }
+  .nav,
+  .user-area {
+    background: rgba(30,41,59,.85);
+    border-color: rgba(51,65,85,.8);
+  }
 }
+

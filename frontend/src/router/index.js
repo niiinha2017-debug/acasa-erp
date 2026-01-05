@@ -1,26 +1,32 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { routes } from 'vue-router/auto-routes' // 👈 A mágica: importa as rotas geradas
-import { useAuth } from '../services/useauth'
+import Login from '@/pages/login.vue'
+import Home from '@/pages/index.vue'
 import { storage } from '@/utils/storage'
 
-// Cria o router usando as rotas automáticas
 const router = createRouter({
   history: createWebHistory(),
-  routes, 
+  routes: [
+    { path: '/login', name: 'login', component: Login, meta: { public: true } },
+    { path: '/', name: 'home', component: Home },
+    { path: '/:pathMatch(.*)*', redirect: '/' },
+  ],
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((to) => {
   const token = storage.getToken()
-  const user = storage.getUser()
+  const isPublic = !!to.meta.public
 
-  if (to.meta?.public) return next()
-
-  if (!token || !user) {
-    return next('/login')
+  // se não tem token e rota não é pública => manda pro login
+  if (!token && !isPublic) {
+    return { name: 'login' }
   }
 
-  return next()
-})
+  // se tem token e tenta ir pro login => manda pra home
+  if (token && to.name === 'login') {
+    return { name: 'home' }
+  }
 
+  return true
+})
 
 export default router

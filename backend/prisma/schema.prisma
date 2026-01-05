@@ -1,14 +1,40 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
+}
+
+model usuarios {
+  id            Int      @id @default(autoincrement())
+  nome          String
+  usuario       String   @unique
+  email         String   @unique
+  setor         String
+  funcao        String
+  senha         String
+  status        String
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  recuperacoes recuperacao_senha[] // ✅ lado oposto da relação
+
+  @@map("usuarios")
+}
+
+model recuperacao_senha {
+  id           Int      @id @default(autoincrement())
+  usuario_id   Int
+  email        String
+  senha_antiga String?
+  senha_nova   String?
+  token        String?
+  utilizado    Boolean  @default(false)
+  criado_em    DateTime @default(now())
+
+  usuario usuarios @relation(fields: [usuario_id], references: [id])
+
+  @@map("recuperacao_senha")
 }

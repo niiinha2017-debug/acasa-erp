@@ -4,37 +4,37 @@
     <!-- LADO ESQUERDO -->
     <div class="login-left-side">
       <div class="left-content">
-
         <div class="brand-header">
           <h1 class="brand-title">A Casa</h1>
           <h2 class="brand-subtitle">Sistema de Gestão</h2>
         </div>
 
-<div class="features-grid">
-  <div class="feature-card">
-    <div class="feature-icon">🏠</div>
-    <div class="feature-content">
-      <h3>Financeiro</h3>
-      <p>Receitas e despesas</p>
-    </div>
-  </div>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">🏠</div>
+            <div class="feature-content">
+              <h3>Financeiro</h3>
+              <p>Receitas e despesas</p>
+            </div>
+          </div>
 
-  <div class="feature-card">
-    <div class="feature-icon">🏭</div>
-    <div class="feature-content">
-      <h3>Produção</h3>
-      <p>Processos em tempo real</p>
-    </div>
-  </div>
+          <div class="feature-card">
+            <div class="feature-icon">🏭</div>
+            <div class="feature-content">
+              <h3>Produção</h3>
+              <p>Processos em tempo real</p>
+            </div>
+          </div>
 
-  <div class="feature-card">
-    <div class="feature-icon">📊</div>
-    <div class="feature-content">
-      <h3>Gestão</h3>
-      <p>Controle e relatórios do negócio</p>
-    </div>
-  </div>
-</div>
+          <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <div class="feature-content">
+              <h3>Gestão</h3>
+              <p>Controle e relatórios do negócio</p>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -50,12 +50,13 @@
         <form class="login-form" @submit.prevent="handleLogin">
 
           <div class="form-group">
-            <label class="form-label">E-mail</label>
+            <label class="form-label">Usuário</label>
             <input
-              type="email"
+              type="text"
               class="form-input"
-              v-model="email"
-              placeholder="admin@acasa.com"
+              v-model="usuario"
+              placeholder="admin"
+              autocomplete="username"
               required
             />
           </div>
@@ -66,27 +67,48 @@
               <input
                 :type="showPassword ? 'text' : 'password'"
                 class="form-input"
-                v-model="password"
+                v-model="senha"
+                autocomplete="current-password"
                 required
               />
-              <button
-                type="button"
-                class="password-toggle"
-                @click="showPassword = !showPassword"
-                :aria-label="showPassword ? 'Ocultar senha' : 'Mostrar senha'"
-              >
-                {{ showPassword ? '🙈' : '👁️' }}
-              </button>
+<button
+  type="button"
+  class="password-toggle"
+  @click="showPassword = !showPassword"
+  :aria-label="showPassword ? 'Ocultar senha' : 'Mostrar senha'"
+>
+  <svg v-if="!showPassword" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none"
+       viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+      d="M2.458 12C3.732 7.943 7.523 5 12 5
+         c4.478 0 8.268 2.943 9.542 7
+         -1.274 4.057-5.064 7-9.542 7
+         -4.477 0-8.268-2.943-9.542-7z" />
+  </svg>
+
+  <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none"
+       viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+      d="M13.875 18.825A10.05 10.05 0 0112 19
+         c-4.478 0-8.268-2.943-9.542-7
+         a9.956 9.956 0 012.042-3.368" />
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+      d="M6.223 6.223A9.957 9.957 0 0112 5
+         c4.478 0 8.268 2.943 9.542 7
+         a9.97 9.97 0 01-4.042 5.568" />
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+      d="M3 3l18 18" />
+  </svg>
+</button>
+
             </div>
           </div>
 
-          <!-- LINK ESQUECI SENHA -->
+          <!-- ESQUECI MINHA SENHA -->
           <div class="mt-1">
-            <a
-              href="#"
-              class="request-access-link"
-              @click.prevent="exibirModalEsqueciSenha = true"
-            >
+            <a href="#" class="request-access-link" @click.prevent="abrirRecuperacao">
               Esqueci minha senha
             </a>
           </div>
@@ -94,19 +116,20 @@
           <button
             type="submit"
             class="submit-button"
-            :disabled="isLoading"
-            :aria-busy="isLoading"
+            :disabled="loading"
+            :aria-busy="loading"
           >
-            {{ isLoading ? 'Entrando...' : 'Entrar no sistema' }}
+            {{ loading ? 'Entrando...' : 'Entrar no sistema' }}
           </button>
 
+          <!-- SOLICITAR CADASTRO -->
           <p class="request-access-link">
             Ainda não tem acesso?
-            <a href="#" @click.prevent="showModal = true">Solicitar Cadastro</a>
+            <a href="#" @click.prevent="abrirCadastro">Solicitar Cadastro</a>
           </p>
 
-          <div v-if="errorMessage" class="error-message">
-            {{ errorMessage }}
+          <div v-if="erro" class="error-message">
+            {{ erro }}
           </div>
 
         </form>
@@ -114,198 +137,196 @@
       </div>
     </div>
 
-<!-- MODAL SOLICITAR ACESSO -->
-<div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
-  <div class="modal-container">
-    <div class="modal-header">
-      <h3>Solicitar Acesso</h3>
-      <p>Seus dados serão analisados pelo administrador.</p>
+    <!-- MODAL: SOLICITAR CADASTRO -->
+    <div v-if="showModalCadastro" class="modal-overlay" @click.self="showModalCadastro = false">
+      <div class="modal-container">
+
+        <div class="modal-header">
+          <h3>Solicitar Cadastro</h3>
+          <p>Seus dados serão analisados pelo administrador.</p>
+        </div>
+
+        <form @submit.prevent="handleCadastro">
+          <div class="form-group">
+            <label class="form-label">Nome Completo</label>
+            <input class="form-input" v-model="cadastro.nome" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">E-mail</label>
+            <input type="email" class="form-input" v-model="cadastro.email" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Usuário</label>
+            <input class="form-input" v-model="cadastro.usuario" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Senha</label>
+            <input type="password" class="form-input" v-model="cadastro.senha" minlength="6" required />
+          </div>
+
+          <div class="modal-footer modal-footer-actions">
+            <button type="button" class="btn-cancel" @click="showModalCadastro = false">
+              Cancelar
+            </button>
+
+            <button type="submit" class="submit-button" :disabled="cadastroLoading">
+              {{ cadastroLoading ? 'Enviando...' : 'Enviar' }}
+            </button>
+          </div>
+        </form>
+
+      </div>
     </div>
 
-    <form @submit.prevent="handleRequestAccess">
-      <div class="form-group">
-        <label class="form-label">Nome Completo</label>
-        <input class="form-input" v-model="formRequest.nome" required />
+    <!-- MODAL: RECUPERAR SENHA -->
+    <div v-if="showModalRecuperacao" class="modal-overlay" @click.self="showModalRecuperacao = false">
+      <div class="modal-container">
+
+        <div class="modal-header">
+          <h3>Recuperar Senha</h3>
+          <p>Digite seu e-mail cadastrado para receber as instruções.</p>
+        </div>
+
+        <form @submit.prevent="handleRecuperacao">
+          <div class="form-group">
+            <label class="form-label">E-mail</label>
+            <input
+              type="email"
+              class="form-input"
+              v-model="recuperacaoEmail"
+              placeholder="seu@email.com"
+              required
+            />
+          </div>
+
+          <div class="modal-footer modal-footer-actions">
+            <button type="button" class="btn-cancel" @click="showModalRecuperacao = false">
+              Cancelar
+            </button>
+
+            <button type="submit" class="submit-button" :disabled="recuperacaoLoading">
+              {{ recuperacaoLoading ? 'Enviando...' : 'Enviar link' }}
+            </button>
+          </div>
+        </form>
+
       </div>
-
-      <div class="form-group">
-        <label class="form-label">E-mail</label>
-        <input class="form-input" v-model="formRequest.email" required />
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Usuário</label>
-        <input class="form-input" v-model="formRequest.usuario" required />
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Senha</label>
-        <input type="password" class="form-input" v-model="formRequest.senha" required />
-      </div>
-
-      <div class="modal-footer modal-footer-actions">
-        <button type="button" class="btn-cancel" @click="showModal = false">
-          Cancelar
-        </button>
-        <button type="submit" class="submit-button">
-          Enviar
-        </button>
-      </div>
-    </form>
-  </div>
-</div>
-
-   <!-- MODAL RECUPERAR SENHA -->
-<div
-  v-if="exibirModalEsqueciSenha"
-  class="modal-overlay"
-  @click.self="exibirModalEsqueciSenha = false"
->
-  <div class="modal-container">
-
-    <div class="modal-header">
-      <h3>Recuperar Senha</h3>
-      <p>Digite seu e-mail cadastrado para receber as instruções.</p>
     </div>
 
-    <form @submit.prevent="enviarSolicitacaoSenha">
-
-      <div class="form-group">
-        <label class="form-label">E-mail</label>
-        <input
-          type="email"
-          class="form-input"
-          v-model="emailRecuperacao"
-          placeholder="seu@email.com"
-          required
-        />
-      </div>
-
-      <div class="modal-footer modal-footer-actions">
-  <button
-    type="button"
-    class="btn-cancel"
-    @click="exibirModalEsqueciSenha = false"
-  >
-    Cancelar
-  </button>
-
-  <button
-    type="submit"
-    class="submit-button"
-    :disabled="carregando"
-  >
-    {{ carregando ? 'Enviando...' : 'Enviar Link' }}
-  </button>
-</div>
-
-
-    </form>
-
-  </div>
-</div>
   </div>
 </template>
 
-
-
 <script setup>
-import '../assets/CSS/Login.css';
-import { ref, reactive } from 'vue';
-import { useRouter } from 'vue-router';
-import { useAuth } from '@/services/useauth';
-import api from '@/services/api'; // Certifique-se que aponta para seu axios
+import '../assets/CSS/Login.css'
+import { ref, reactive } from 'vue'
+import { useRouter } from 'vue-router'
+import api from '@/services/api'
+import { storage } from '@/utils/storage'
 
-const exibirModalEsqueciSenha = ref(false);
-const emailRecuperacao = ref('');
-const carregando = ref(false);
+const router = useRouter()
 
-const enviarSolicitacaoSenha = async () => {
-  if (!emailRecuperacao.value) {
-    return alert('Por favor, digite seu e-mail.');
-  }
+// LOGIN
+const usuario = ref('')
+const senha = ref('')
+const showPassword = ref(false)
+const loading = ref(false)
+const erro = ref('')
+
+async function handleLogin() {
+  loading.value = true
+  erro.value = ''
 
   try {
-    carregando.value = true;
-    // Chama a rota do backend que cria o token e envia o e-mail
-    await api.post('/auth/forgot-password', { email: emailRecuperacao.value }); 
-    
-    alert('Se o e-mail existir no sistema, você receberá um link de recuperação em instantes.');
-    exibirModalEsqueciSenha.value = false;
-  } catch (error) {
-    alert('Erro ao processar solicitação. Tente novamente.');
+    const { data } = await api.post('/auth/login', {
+      usuario: usuario.value,
+      senha: senha.value,
+    })
+
+    storage.setToken(data.token)
+    storage.setUser(data.usuario)
+
+    router.push('/')
+  } catch (e) {
+    erro.value = e?.response?.data?.message || 'Erro ao fazer login'
   } finally {
-    carregando.value = false;
+    loading.value = false
   }
-};
+}
 
-const router = useRouter();
-const auth = useAuth();
-
-// Login
-const email = ref('');
-const password = ref('');
-const showPassword = ref(false);
-const isLoading = ref(false);
-const errorMessage = ref('');
-
-// Modal
-const showModal = ref(false);
-const isRequesting = ref(false);
-const formRequest = reactive({
+// MODAL CADASTRO
+const showModalCadastro = ref(false)
+const cadastroLoading = ref(false)
+const cadastro = reactive({
   nome: '',
   email: '',
   usuario: '',
-  senha: ''
-});
+  senha: '',
+})
 
-const handleLogin = async () => {
-  isLoading.value = true;
-  try {
-    const result = await auth.login({ email: email.value, password: password.value });
-    if (result?.success !== false) {
-  console.log('REDIRECT PARA / AGORA')
-  router.push('/')
+function abrirCadastro() {
+  // limpa e abre
+  cadastro.nome = ''
+  cadastro.email = ''
+  cadastro.usuario = ''
+  cadastro.senha = ''
+  showModalCadastro.value = true
 }
 
-    else errorMessage.value = result?.message || 'Erro ao fazer login';
-  } catch (err) {
-    errorMessage.value = 'Erro inesperado';
-  } finally { isLoading.value = false; }
-};
+async function handleCadastro() {
+  cadastroLoading.value = true
 
-const handleRequestAccess = async () => {
-  isRequesting.value = true;
   try {
-    // Usamos o 'api' (axios) em vez de 'fetch' para seguir o padrão do seu projeto
-    const response = await api.post('/users/registrar', {
-      name: formRequest.nome,      // Mapeando 'nome' do formulário para 'name' do banco
-      email: formRequest.email,
-      usuario: formRequest.usuario,
-      password: formRequest.senha  // Mapeando 'senha' para 'password' do banco
-    });
+    // backend atual exige: setor/funcao/status (usuario não escolhe)
+    await api.post('/auth/cadastro', {
+      nome: cadastro.nome,
+      usuario: cadastro.usuario,
+      email: cadastro.email,
+      senha: cadastro.senha,
 
-    if (response.status === 201 || response.status === 200) {
-      alert('Solicitação enviada com sucesso! Aguarde a aprovação do administrador.');
-      showModal.value = false;
-      // Limpa os campos após enviar
-      formRequest.name = '';
-      formRequest.email = '';
-      formRequest.usuario = '';
-      formRequest.senha = '';
-    }
-  } catch (err) {
-    console.error('Erro detalhado:', err.response?.data);
-    const mensagem = err.response?.data?.message || 'Erro ao enviar solicitação.';
-    alert(mensagem);
+      // provisório para satisfazer o DTO atual
+      setor: 'PENDENTE',
+      funcao: 'PENDENTE',
+      status: 'PENDENTE',
+    })
+
+    alert('Solicitação enviada! Aguarde aprovação do administrador.')
+    showModalCadastro.value = false
+  } catch (e) {
+    const msg = e?.response?.data?.message || 'Erro ao solicitar cadastro'
+    alert(msg)
   } finally {
-    isRequesting.value = false;
+    cadastroLoading.value = false
   }
-};
+}
+
+// MODAL RECUPERAÇÃO
+const showModalRecuperacao = ref(false)
+const recuperacaoEmail = ref('')
+const recuperacaoLoading = ref(false)
+
+function abrirRecuperacao() {
+  recuperacaoEmail.value = ''
+  showModalRecuperacao.value = true
+}
+
+async function handleRecuperacao() {
+  recuperacaoLoading.value = true
+  try {
+    await api.post('/recuperacao-senha/solicitar', { email: recuperacaoEmail.value })
+    alert('Se o e-mail existir, você receberá instruções em instantes.')
+    showModalRecuperacao.value = false
+  } catch (e) {
+    alert('Erro ao solicitar recuperação. Tente novamente.')
+  } finally {
+    recuperacaoLoading.value = false
+  }
+}
 </script>
 
 <route lang="yaml">
 meta:
-  layout: auth
   public: true
 </route>

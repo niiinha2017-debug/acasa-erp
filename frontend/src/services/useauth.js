@@ -2,89 +2,48 @@ import { ref } from 'vue'
 import api from '@/services/api'
 import { storage } from '@/utils/storage'
 
-/* =====================
-   STATE GLOBAL
-===================== */
 const token = ref(storage.getToken())
-const user = ref(storage.getUser())
+const usuarioLogado = ref(storage.getUser())
 const loading = ref(false)
+const error = ref('')
 
-/* =====================
-   COMPOSABLE
-===================== */
 export function useAuth() {
+  async function login({ usuario, senha }) {
+    loading.value = true
+    error.value = ''
 
-  /* =====================
-     LOGIN
-  ===================== */
-async function login({ email, password }) {
-  loading.value = true
+    try {
+      const { data } = await api.post('/auth/login', { usuario, senha })
 
-  try {
-    const { data } = await api.post('/auth/login', {
-      email,
-      password,
-    })
+      // 🔥 backend retorna { token, usuario }
+      storage.setToken(data.token)
+      storage.setUser(data.usuario)
 
-    // 🚨 AQUI ESTAVA O ERRO: Mude data.token para data.access_token
-    const accessToken = data.access_token || data.token 
-    
-    token.value = accessToken
-    user.value = data.user
+      token.value = data.token
+      usuarioLogado.value = data.usuario
 
-    storage.setToken(accessToken)
-    console.log('TOKEN SALVO:', accessToken)
-    storage.setUser(data.user)
-    console.log('USER SALVO:', data.user)
-
-    return {
-      success: true,
-      user: data.user,
-    }
-
-    } catch (error) {
-      console.error('❌ Erro no login:', error)
-
-      return {
-        success: false,
-        message:
-          error.response?.data?.message ||
-          'Erro ao realizar login',
-      }
-
+      return data
+    } catch (e) {
+      error.value = e?.response?.data?.message || 'Erro ao fazer login'
+      throw e
     } finally {
       loading.value = false
     }
   }
 
-  /* =====================
-     LOGOUT
-  ===================== */
   function logout() {
-    token.value = null
-    user.value = null
-
     storage.removeToken()
     storage.removeUser()
+    token.value = null
+    usuarioLogado.value = null
   }
 
-  /* =====================
-     AUTH CHECK
-  ===================== */
-  function isAuthenticated() {
-    return !!token.value && !!user.value
-  }
-
-  /* =====================
-     EXPORT
-  ===================== */
   return {
     token,
-    user,
+    usuarioLogado,
     loading,
-
+    error,
     login,
     logout,
-    isAuthenticated,
   }
 }

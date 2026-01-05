@@ -5,6 +5,9 @@ import { join } from 'path'
 
 // PRISMA
 import { PrismaModule } from './prisma/prisma.module'
+import { AuthModule } from './auth/auth.module';
+import { UsuariosModule } from './usuarios/usuarios.module';
+import { RecuperacaoSenhaModule } from './recuperacao-senha/recuperacao-senha.module';
 
 @Module({
   imports: [
@@ -19,6 +22,12 @@ import { PrismaModule } from './prisma/prisma.module'
 
     // 🧠 ORM ÚNICO
     PrismaModule,
+
+    AuthModule,
+
+    UsuariosModule,
+
+    RecuperacaoSenhaModule,
 
    
   ],

@@ -1,12 +1,10 @@
+<script setup>
+import Menu from '@/layouts/Menu.vue'
+</script>
+
 <template>
   <div>
-    <h1>Bem-vindo ao ACASA ERP</h1>
-    <p>Dashboard principal</p>
+    <Menu />
+    <div style="padding:24px;">Bem-vindo ao ACASA ERP</div>
   </div>
 </template>
-
-<route lang="yaml">
-meta:
-  layout: default
-  requiresAuth: true
-</route>
