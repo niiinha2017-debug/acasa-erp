@@ -430,3 +430,24 @@
     flex-direction: column;
   }
 }
+/* =========================
+   RESET AUTOFILL (BROWSER)
+========================= */
+
+/* Chrome / Edge / Safari */
+.form-input:-webkit-autofill,
+.form-input:-webkit-autofill:hover,
+.form-input:-webkit-autofill:focus,
+.form-input:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--text-primary);
+  caret-color: var(--text-primary);
+  -webkit-box-shadow: 0 0 0px 1000px var(--bg-input) inset;
+  box-shadow: 0 0 0px 1000px var(--bg-input) inset;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* Firefox */
+.form-input:-moz-autofill {
+  box-shadow: 0 0 0px 1000px var(--bg-input) inset;
+  filter: none;
+}
