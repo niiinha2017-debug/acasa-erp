@@ -8,6 +8,7 @@ import { PrismaModule } from './prisma/prisma.module'
 import { AuthModule } from './auth/auth.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { RecuperacaoSenhaModule } from './recuperacao-senha/recuperacao-senha.module';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
@@ -28,6 +29,8 @@ import { RecuperacaoSenhaModule } from './recuperacao-senha/recuperacao-senha.mo
     UsuariosModule,
 
     RecuperacaoSenhaModule,
+
+    MailModule,
 
    
   ],

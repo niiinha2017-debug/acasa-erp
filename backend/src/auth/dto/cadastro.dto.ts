@@ -21,9 +21,10 @@ export class CadastroDto {
   @IsNotEmpty()
   funcao: string;
 
-  @IsString()
-  @MinLength(6)
-  senha: string;
+@IsString()
+@IsNotEmpty()
+@MinLength(6)
+senha: string;
 
   @IsString()
   @IsNotEmpty()

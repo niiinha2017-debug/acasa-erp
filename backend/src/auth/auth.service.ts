@@ -16,47 +16,53 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
-  // =========================
-  // LOGIN
-  // =========================
-  async login(usuario: string, senha: string) {
-    const registro = await this.prisma.usuarios.findUnique({
-      where: { usuario },
-    });
+// =========================
+// LOGIN (usuario OU email)
+// =========================
+async login(usuario: string, senha: string) {
+  const login = String(usuario || '').trim().toLowerCase();
+  const isEmail = login.includes('@');
 
-    if (!registro) {
-      throw new UnauthorizedException('Usuário ou senha inválidos');
-    }
+  const registro = await this.prisma.usuarios.findFirst({
+    where: isEmail
+      ? { email: login }
+      : { usuario: login },
+  });
 
-    const senhaOk = await bcrypt.compare(senha, registro.senha);
-    if (!senhaOk) {
-      throw new UnauthorizedException('Usuário ou senha inválidos');
-    }
+  if (!registro) {
+    throw new UnauthorizedException('Usuário ou senha inválidos');
+  }
 
-    const payload = {
-      sub: registro.id,
+  const senhaOk = await bcrypt.compare(senha, registro.senha);
+  if (!senhaOk) {
+    throw new UnauthorizedException('Usuário ou senha inválidos');
+  }
+
+  const payload = {
+    sub: registro.id,
+    usuario: registro.usuario,
+    email: registro.email,
+    status: registro.status,
+  };
+
+  const token = await this.jwt.signAsync(payload);
+
+  return {
+    token,
+    usuario: {
+      id: registro.id,
+      nome: registro.nome,
       usuario: registro.usuario,
       email: registro.email,
+      setor: registro.setor,
+      funcao: registro.funcao,
       status: registro.status,
-    };
+      criado_em: registro.criado_em,
+      atualizado_em: registro.atualizado_em,
+    },
+  };
+}
 
-    const token = await this.jwt.signAsync(payload);
-
-    return {
-      token,
-      usuario: {
-        id: registro.id,
-        nome: registro.nome,
-        usuario: registro.usuario,
-        email: registro.email,
-        setor: registro.setor,
-        funcao: registro.funcao,
-        status: registro.status,
-        criado_em: registro.criado_em,
-        atualizado_em: registro.atualizado_em,
-      },
-    };
-  }
 
   // =========================
   // CADASTRO
