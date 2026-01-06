@@ -7,23 +7,20 @@ async function main() {
   const senha = '081317' // <- sua senha
   const senhaHash = await bcrypt.hash(senha, 10)
 
-  await prisma.usuarios.upsert({
-    where: { usuario: 'admin' },
-    update: {
-      // se já existir, você pode atualizar o hash:
-      senha: senhaHash,
-      status: 'ATIVO',
-    },
-    create: {
-      nome: 'Admin',
-      usuario: 'admin',
-      email: 'admin@acasa.com',
-      setor: 'ADMIN',
-      funcao: 'Administrador',
-      senha: senhaHash,
-      status: 'ATIVO',
-    },
-  })
+// prisma/seed.ts
+await prisma.usuarios.upsert({
+  where: { usuario: 'Ana.P' },
+  update: {},
+  create: {
+    nome: 'Ana Paula Costa de Souza',
+    usuario: 'Ana.P',
+    email: 'ana.paulacosta01@hotmail.com', // use o email real do print
+    setor: 'ADMIN',
+    funcao: 'ADMIN', // Use ADMIN aqui para garantir o acesso na EC2
+    senha: await bcrypt.hash('081317', 10),
+    status: 'ATIVO',
+  },
+})
 
   console.log('OK: admin criado/atualizado')
 }
