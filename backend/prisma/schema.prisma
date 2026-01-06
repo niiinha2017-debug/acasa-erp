@@ -80,5 +80,25 @@ model Cliente {
   @@map("clientes")
 }
 
+model Fornecedores {
+  id               Int      @id @default(autoincrement())
+  razao_social     String
+  nome_fantasia    String
+  cnpj             String   @unique
+  ie               String?
+  telefone         String?
+  whatsapp         String?
+  cep              String?
+  endereco         String?
+  numero           String?
+  bairro           String?
+  cidade           String?
+  estado           String?
+  forma_pagamento  String?
+  data_vencimento  Int?     // Usando Int para o dia do vencimento (ex: 10, 15)
+  criado_em        DateTime @default(now())
+  atualizado_em    DateTime @updatedAt
 
+  @@map("fornecedores")
+}
 
