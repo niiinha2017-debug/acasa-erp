@@ -7,6 +7,7 @@ export const format = {
   },
 
   date(value) {
+    if (!value) return ''
     return new Date(value).toLocaleDateString('pt-BR')
   }
 }

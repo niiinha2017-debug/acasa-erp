@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { RecuperacaoSenhaModule } from './recuperacao-senha/recuperacao-senha.module';
 import { MailModule } from './mail/mail.module';
+import { ClientesModule } from './clientes/clientes.module'
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { MailModule } from './mail/mail.module';
 
     MailModule,
 
+    ClientesModule,
    
   ],
 })

@@ -135,7 +135,19 @@ export class UsuariosService {
       throw e;
     }
   }
+async remover(id: number) {
+  // Opcional: Verificar se o usuário existe antes de deletar
+  const usuario = await this.buscarPorId(id);
+  
+  if (!usuario) {
+    throw new NotFoundException(`Usuário com ID ${id} não encontrado`);
+  }
 
+  // Deleta do banco usando o Prisma
+  return this.prisma.usuarios.delete({
+    where: { id },
+  });
+}
   async atualizarStatus(id: number, status: string) {
     const existe = await this.prisma.usuarios.findUnique({ where: { id } });
     if (!existe) throw new NotFoundException('Usuário não encontrado');

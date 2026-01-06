@@ -1,0 +1,516 @@
+/* =========================================================
+   ACASA-ERP — UI GLOBAL (classes do projeto inteiro)
+   Depende de: tokens.css
+========================================================= */
+
+/* =========================================================
+   ALIAS (pra não quebrar componentes antigos)
+   - Seus componentes usam var's como --text-main, --border-soft etc.
+   - Aqui a gente mapeia essas var's para os TOKENS reais.
+========================================================= */
+:root {
+  --text-main: var(--text-primary);
+  --border-soft: var(--border-light);
+
+  --card-radius: var(--border-radius-lg);
+  --card-shadow: var(--shadow-card);
+
+  --font-main: var(--font-sans);
+
+  /* “focus-ring” era o círculo chato: agora vira o foco padrão */
+  --focus-ring: var(--shadow-focus);
+
+  --control-radius-md: var(--border-radius-md);
+
+  /* Alguns tamanhos que você vinha usando */
+  --font-size-md: var(--font-size-base);
+}
+
+/* =========================================================
+   RESET BASE (mínimo e seguro)
+========================================================= */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--bg-page);
+  color: var(--text-primary);
+}
+
+/* Foco global: tira “outline” feio e usa foco ACASA */
+:where(a, button, input, select, textarea, [tabindex]):focus {
+  outline: none;
+}
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* =========================================================
+   GRID (usado no SearchInput colSpan)
+========================================================= */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--grid-gap-md);
+}
+
+.col-span-12 { grid-column: span 12; }
+.col-span-9  { grid-column: span 9; }
+.col-span-8  { grid-column: span 8; }
+.col-span-6  { grid-column: span 6; }
+.col-span-4  { grid-column: span 4; }
+.col-span-3  { grid-column: span 3; }
+
+/* =========================================================
+   CARD (Card.vue)
+========================================================= */
+.card {
+  background: var(--bg-card);
+  border-radius: var(--card-radius);
+  border: 1px solid var(--border-soft);
+  overflow: hidden;
+  transition: var(--transition-base);
+}
+
+.card--shadow {
+  box-shadow: var(--card-shadow);
+}
+
+.card--hoverable:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.card-header {
+  padding: var(--spacing-4) var(--spacing-5);
+  background: var(--bg-input);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.card-title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-main);
+}
+
+.card-body {
+  padding: var(--spacing-5);
+}
+
+.card-footer {
+  padding: var(--spacing-4) var(--spacing-5);
+  background: var(--bg-input);
+  border-top: 1px solid var(--border-soft);
+}
+
+/* =========================================================
+   FORM (SearchInput usa .form-group/.form-label/.form-input)
+========================================================= */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.form-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+}
+
+.form-label span {
+  color: var(--danger);
+  margin-left: 2px;
+}
+
+.form-input {
+  width: 100%;
+  height: var(--control-height-md);
+  padding: 0 var(--control-padding-x-md);
+
+  font-family: var(--font-main);
+  font-size: var(--font-size-md);
+
+  color: var(--text-main);
+  background: var(--bg-input);
+
+  border-radius: var(--control-radius-md);
+  border: 1px solid var(--border-soft);
+
+  transition: var(--transition-base);
+}
+
+.form-input::placeholder {
+  color: var(--text-muted);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-focus);
+}
+
+.form-input:disabled,
+.form-input[readonly] {
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   INPUT (Input.vue)
+========================================================= */
+.input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-muted);
+}
+
+.required {
+  color: var(--danger);
+  margin-left: 2px;
+}
+
+.input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-field {
+  width: 100%;
+  height: var(--control-height-md);
+  padding: 0 var(--control-padding-x-md);
+
+  font-family: var(--font-main);
+  font-size: var(--font-size-md);
+
+  color: var(--text-main);
+  background: var(--bg-input);
+
+  border-radius: var(--control-radius-md);
+  border: 1px solid var(--border-soft);
+
+  transition: var(--transition-base);
+}
+
+.input-field::placeholder {
+  color: var(--text-muted);
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-focus);
+}
+
+.is-disabled .input-field {
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
+}
+
+.has-error .input-field {
+  border-color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.has-error .input-field:focus {
+  box-shadow: var(--shadow-focus-error);
+}
+
+.input-prefix,
+.input-suffix {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+}
+
+.input-prefix { left: 12px; }
+.input-suffix { right: 12px; }
+
+.input-message {
+  min-height: 18px;
+}
+
+.input-error {
+  font-size: var(--font-size-sm);
+  color: var(--danger);
+  font-weight: var(--font-weight-medium);
+}
+
+.input-hint {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+}
+
+/* Padding quando tiver prefix/suffix (sem :has pra não depender de suporte) */
+.input-wrapper.has-prefix .input-field { padding-left: 40px; }
+.input-wrapper.has-suffix .input-field { padding-right: 40px; }
+
+/* =========================================================
+   TABLE (Table.vue)
+========================================================= */
+.table-container {
+  background: var(--bg-card);
+  border-radius: var(--card-radius);
+  border: 1px solid var(--border-soft);
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-md);
+}
+
+.table th {
+  padding: 14px 16px;
+  text-align: left;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-muted);
+  background: var(--bg-input);
+  border-bottom: 1px solid var(--border-soft);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text-main);
+}
+
+.is-striped tbody tr:nth-child(even) {
+  background: var(--gray-50);
+}
+
+.is-hoverable tbody tr:hover {
+  background: var(--bg-hover);
+  cursor: pointer;
+}
+
+.table-state {
+  padding: 48px !important;
+}
+
+.table-loading,
+.table-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-muted);
+}
+
+.empty-icon {
+  font-size: 28px;
+}
+
+.table-footer {
+  padding: 12px 16px;
+  background: var(--bg-input);
+  border-top: 1px solid var(--border-soft);
+}
+
+/* =========================================================
+   BUTTON (Button.vue)
+========================================================= */
+.btn {
+  position: relative;
+  overflow: hidden;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  font-family: var(--font-main);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-md);
+
+  height: var(--control-height-md);
+  padding: 0 20px;
+
+  border-radius: var(--control-radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+
+  transition: var(--transition-base);
+}
+
+.btn:disabled {
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
+}
+
+.btn--sm {
+  height: var(--control-height-sm);
+  padding: 0 14px;
+  font-size: var(--font-size-sm);
+}
+
+.btn--lg {
+  height: var(--control-height-lg);
+  padding: 0 24px;
+  font-size: var(--font-size-lg);
+}
+
+/* Variants */
+.btn--primary {
+  background: var(--bg-primary);
+  color: var(--text-on-primary);
+}
+
+.btn--primary::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 120%;
+  height: 100%;
+  background: linear-gradient(
+    120deg,
+    transparent,
+    rgba(255, 255, 255, 0.35),
+    transparent
+  );
+  transition: left 0.6s ease;
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--bg-primary-hover);
+}
+
+.btn--primary:hover:not(:disabled)::after {
+  left: 120%;
+}
+
+.btn--secondary {
+  background: var(--bg-card);
+  color: var(--text-main);
+  border-color: var(--border-soft);
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.btn--outline {
+  background: transparent;
+  color: var(--brand-primary);
+  border-color: var(--brand-primary);
+}
+
+.btn--outline:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.btn--danger {
+  background: var(--danger);
+  color: var(--text-invert);
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.btn--success {
+  background: var(--success);
+  color: var(--text-invert);
+}
+
+/* Foco (mata o círculo e usa padrão ACASA) */
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* Loading */
+.btn--loading {
+  pointer-events: none;
+}
+.btn--full {
+  width: 100%;
+}
+
+.btn__spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,.4);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+
+.btn--secondary .btn__spinner,
+.btn--outline .btn__spinner {
+  border-color: rgba(58,120,168,.3);
+  border-top-color: var(--brand-primary);
+}
+
+/* Spinner global (reaproveitado na Table também) */
+.spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--border-soft);
+  border-top-color: var(--brand-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Helpers de alinhamento (Table.vue usa) */
+.text-left { text-align: left; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+
+/* =========================================================
+   LOADING (Loading.vue)
+========================================================= */
+.loading {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.loading.inline {
+  position: relative;
+}
+
+.loading.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
+  z-index: var(--z-modal);
+  justify-content: center;
+}
+
+.loading-text {
+  font-weight: var(--font-weight-medium);
+}

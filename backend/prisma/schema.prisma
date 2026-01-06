@@ -38,3 +38,47 @@ model recuperacao_senha {
 
   @@map("recuperacao_senha")
 }
+
+model Cliente {
+  id              Int       @id @default(autoincrement())
+
+  indicacao_id    Int?
+  indicacao       Cliente?  @relation("ClienteIndicacao", fields: [indicacao_id], references: [id])
+  indicados       Cliente[] @relation("ClienteIndicacao")
+
+  nome_completo   String
+  razao_social    String?
+  data_nascimento DateTime
+
+  cpf             String?
+  rg              String?
+  cnpj            String?
+  ie              String?
+
+  telefone        String?
+  whatsapp        String?
+  email           String
+
+  enviar_aniversario_email     Boolean @default(true)
+  enviar_aniversario_whatsapp  Boolean @default(false)
+
+  cep             String?
+  endereco        String?
+  numero          String?
+  bairro          String?
+  cidade          String?
+  estado          String?
+
+  criado_em       DateTime  @default(now())
+  atualizado_em   DateTime  @updatedAt
+
+  @@index([indicacao_id])
+  @@unique([cpf])
+  @@unique([cnpj])
+  @@unique([email])
+
+  @@map("clientes")
+}
+
+
+

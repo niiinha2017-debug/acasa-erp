@@ -19,9 +19,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: JwtPayload) {
-    if (!payload?.sub) throw new UnauthorizedException('Token inválido');
-    // O retorno do validate vira req.user
-    return payload;
-  }
+async validate(payload: any) { // Use any ou atualize seu Type JwtPayload
+  if (!payload?.sub) throw new UnauthorizedException('Token inválido');
+  
+  // O retorno aqui vira o 'req.user' que o sistema todo vai usar
+  return { 
+    id: payload.sub, 
+    usuario: payload.usuario, 
+    setor: payload.setor, // <-- É crucial que o setor venha no Token!
+    status: payload.status 
+  };
+}
 }

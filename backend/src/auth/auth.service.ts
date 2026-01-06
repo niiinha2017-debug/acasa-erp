@@ -38,11 +38,12 @@ async login(usuario: string, senha: string) {
     throw new UnauthorizedException('Usuário ou senha inválidos');
   }
 
-  const payload = {
+const payload = {
     sub: registro.id,
     usuario: registro.usuario,
     email: registro.email,
     status: registro.status,
+    setor: registro.setor, // <--- ADICIONE ESTA LINHA AQUI
   };
 
   const token = await this.jwt.signAsync(payload);

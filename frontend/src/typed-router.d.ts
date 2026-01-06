@@ -30,6 +30,27 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/clientes/': RouteRecordInfo<
+      '/clientes/',
+      '/clientes',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/clientes/novo': RouteRecordInfo<
+      '/clientes/novo',
+      '/clientes/novo',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/configuracoes/usuarios/': RouteRecordInfo<
+      '/configuracoes/usuarios/',
+      '/configuracoes/usuarios',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/login': RouteRecordInfo<
       '/login',
       '/login',
@@ -53,6 +74,24 @@ declare module 'vue-router/auto-routes' {
     'src/pages/index.vue': {
       routes:
         | '/'
+      views:
+        | never
+    }
+    'src/pages/clientes/index.vue': {
+      routes:
+        | '/clientes/'
+      views:
+        | never
+    }
+    'src/pages/clientes/novo.vue': {
+      routes:
+        | '/clientes/novo'
+      views:
+        | never
+    }
+    'src/pages/configuracoes/usuarios/index.vue': {
+      routes:
+        | '/configuracoes/usuarios/'
       views:
         | never
     }

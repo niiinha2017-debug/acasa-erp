@@ -6,36 +6,38 @@
       </div>
 
       <nav class="nav">
-        <!-- Financeiro -->
+        <RouterLink to="/">Início</RouterLink>
+
         <div
+          v-if="temAcesso('financeiro')"
           class="dropdown-menu"
           :class="{ active: activeDropdown === 'financeiro' }"
           @click="toggleDropdown('financeiro')"
         >
           <button type="button" class="dropdown-toggle">Financeiro</button>
           <div class="dropdown-content" @click.stop>
-            <!-- Por enquanto só Home existe. Deixa como placeholder sem navegar. -->
             <a href="#" @click.prevent="avisar('Despesas')">Despesas</a>
+            <a href="#" @click.prevent="avisar('Receitas')">Receitas</a>
           </div>
         </div>
 
-        <!-- Cadastros -->
         <div
+          v-if="temAcesso('clientes')"
           class="dropdown-menu"
           :class="{ active: activeDropdown === 'cadastros' }"
           @click="toggleDropdown('cadastros')"
         >
           <button type="button" class="dropdown-toggle">Cadastros</button>
           <div class="dropdown-content" @click.stop>
-            <a href="#" @click.prevent="avisar('Clientes')">Clientes</a>
+            <a href="#" @click.stop.prevent="irPara('/clientes')">Clientes</a>
             <a href="#" @click.prevent="avisar('Fornecedores')">Fornecedores</a>
-            <a href="#" @click.prevent="avisar('Funcionários')">Funcionários</a>
+            <a v-if="temAcesso('usuarios')" href="#" @click.prevent="avisar('Funcionários')">Funcionários</a>
             <a href="#" @click.prevent="avisar('Produtos')">Produtos</a>
           </div>
         </div>
 
-        <!-- Produção -->
         <div
+          v-if="temAcesso('producao')"
           class="dropdown-menu"
           :class="{ active: activeDropdown === 'producao' }"
           @click="toggleDropdown('producao')"
@@ -43,29 +45,31 @@
           <button type="button" class="dropdown-toggle">Produção</button>
           <div class="dropdown-content" @click.stop>
             <a href="#" @click.prevent="avisar('Plano de Corte')">Plano de Corte</a>
+            <a href="#" @click.prevent="avisar('Ordens de Serviço')">Ordens de Serviço</a>
           </div>
         </div>
 
-        <!-- Configurações -->
         <div
+          v-if="temAcesso('configuracoes')"
           class="dropdown-menu"
-          :class="{ active: activeDropdown === 'config' }"
-          @click="toggleDropdown('config')"
+          :class="{ active: activeDropdown === 'configuracoes' }"
+          @click="toggleDropdown('configuracoes')"
         >
           <button type="button" class="dropdown-toggle">Configurações</button>
           <div class="dropdown-content" @click.stop>
             <a href="#" @click.prevent="avisar('Constantes')">Constantes</a>
-            <a href="#" @click.prevent="avisar('Usuários')">Usuários</a>
+            <a href="#" @click.stop.prevent="irPara('/configuracoes/usuarios')">Usuários</a>
+            <a href="#" @click.prevent="avisar('Logs do Sistema')">Logs</a>
           </div>
         </div>
-
-        <!-- Link direto para Home -->
-        <RouterLink to="/">Início</RouterLink>
       </nav>
 
       <div class="user-area">
-        <span>Olá, {{ user?.nome || 'Usuário' }}</span>
-        <button class="btn-logout" type="button" @click="logout">
+        <div class="user-info">
+          <span class="user-name">Olá, {{ user?.nome || 'Usuário' }}</span>
+          <span class="user-role">{{ user?.setor }}</span>
+        </div>
+        <button class="btn-logout" type="button" @click="handleLogout">
           Sair
         </button>
       </div>
@@ -77,11 +81,12 @@
 import '@/assets/CSS/Menu.css'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { storage } from '@/utils/storage'
+import { useAuth } from '@/services/useauth' // Importamos seu novo Auth
 
 const router = useRouter()
+const { usuarioLogado, logout, temAcesso } = useAuth() // Pegamos as funções mágicas
 
-const user = computed(() => storage.getUser())
+const user = computed(() => usuarioLogado.value)
 const isScrolled = ref(false)
 const activeDropdown = ref(null)
 
@@ -96,17 +101,23 @@ function closeDropdownOnClickOutside(event) {
   }
 }
 
+async function irPara(path) {
+  activeDropdown.value = null
+  try {
+    await router.push(path)
+  } catch (err) {
+    console.error('[MENU] erro ao navegar:', err)
+  }
+}
+
 function handleScroll() {
   isScrolled.value = window.scrollY > 20
 }
 
-function logout() {
-  storage.removeToken()
-  storage.removeUser()
-  router.push('/login')
+function handleLogout() {
+  logout() // Usa a função do service que limpa storage e redireciona
 }
 
-// enquanto as páginas não existem, não navega
 function avisar(modulo) {
   activeDropdown.value = null
   alert(`${modulo}: página ainda não criada.`)
@@ -123,3 +134,23 @@ onUnmounted(() => {
   document.removeEventListener('click', closeDropdownOnClickOutside)
 })
 </script>
+
+<style scoped>
+/* Pequeno ajuste para exibir o setor abaixo do nome */
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-right: var(--spacing-4);
+}
+.user-name {
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+}
+.user-role {
+  font-size: var(--font-size-xs);
+  color: var(--brand-primary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+</style>

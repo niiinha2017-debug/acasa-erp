@@ -1,6 +1,3 @@
-<script setup>
-import Menu from '@/layouts/Menu.vue'
-</script>
 
 <template>
   <div>
