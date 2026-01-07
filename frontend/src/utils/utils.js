@@ -1,90 +1,48 @@
 /* =====================
-   HELPERS
-===================== */
-export function onlyNumbers(v = '') {
-  return v.replace(/\D/g, '')
-}
-
-/* =====================
-   MÁSCARAS
-===================== */
-export function maskCPF(v = '') {
-  const n = onlyNumbers(v).slice(0, 11)
-  return n
-    .replace(/(\d{3})(\d)/, '$1.$2')
-    .replace(/(\d{3})(\d)/, '$1.$2')
-    .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
-}
-
-export function maskCNPJ(v = '') {
-  const n = onlyNumbers(v).slice(0, 14)
-  return n
-    .replace(/^(\d{2})(\d)/, '$1.$2')
-    .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
-    .replace(/\.(\d{3})(\d)/, '.$1/$2')
-    .replace(/(\d{4})(\d)/, '$1-$2')
-}
-
-export function maskTelefone(v = '') {
-  const n = onlyNumbers(v).slice(0, 11)
-  if (n.length <= 10)
-    return n.replace(/(\d{2})(\d)/, '($1) $2')
-            .replace(/(\d{4})(\d)/, '$1-$2')
-  return n.replace(/(\d{2})(\d)/, '($1) $2')
-          .replace(/(\d{5})(\d)/, '$1-$2')
-}
-
-export function maskCEP(v = '') {
-  const n = onlyNumbers(v).slice(0, 8)
-  return n.replace(/(\d{5})(\d)/, '$1-$2')
-}
-
-/* =====================
    CEP
 ===================== */
 export async function buscarCep(cep) {
-  const n = onlyNumbers(cep)
+  const n = cep.replace(/\D/g, '') // Garante que só tenha números
   if (n.length !== 8) return null
 
-  const res = await fetch(`https://viacep.com.br/ws/${n}/json`)
-  const data = await res.json()
-  if (data.erro) return null
-
-  return data
-}
-export function maskRG(value = '') {
-  const v = value.replace(/\D/g, '')
-
-  if (v.length <= 8) {
-    return v
-      .replace(/(\d{2})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d)/, '$1.$2')
+  try {
+    const res = await fetch(`https://viacep.com.br/ws/${n}/json`)
+    const data = await res.json()
+    return data.erro ? null : data
+  } catch (err) {
+    return null
   }
-
-  return v
-    .slice(0, 9)
-    .replace(/(\d{2})(\d)/, '$1.$2')
-    .replace(/(\d{3})(\d)/, '$1.$2')
-    .replace(/(\d{3})(\d{1})$/, '$1-$2')
 }
-export function maskMoneyBR(value = '') {
-  let v = value.replace(/\D/g, '')
 
-  if (!v) return ''
+export async function buscarCnpj(cnpj) {
+  const limpo = String(cnpj || '').replace(/\D/g, '')
+  if (limpo.length !== 14) return null
 
-  v = (Number(v) / 100).toFixed(2)
+  try {
+    const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${limpo}`)
+    if (!res.ok) return null
+    const data = await res.json()
 
-  return v
-    .replace('.', ',')
-    .replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+    const s = (x) => String(x ?? '').trim()
+
+    return {
+      razao_social: s(data.razao_social),
+      nome_fantasia: s(data.nome_fantasia),
+      telefone: s(data.ddd_telefone_1 || data.ddd_telefone_2),
+      cep: s(data.cep),
+      endereco: s(data.logradouro),
+      numero: s(data.numero),
+      bairro: s(data.bairro),
+      cidade: s(data.municipio),
+      estado: s(data.uf),
+      // IE: BrasilAPI pode não ter esse campo; deixa seguro
+      ie: s(data.inscricao_estadual),
+    }
+  } catch {
+    return null
+  }
 }
-export function moneyBRToNumber(value = '') {
-  if (!value) return null
 
-  return Number(
-    value
-      .replace(/\./g, '')
-      .replace(',', '.')
-  )
-}
+
+
 

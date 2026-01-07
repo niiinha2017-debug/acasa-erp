@@ -17,4 +17,15 @@ export function parseBuscaProduto(texto = '') {
   })
   return filtros
 }
+export function buscarFornecedor(lista = [], texto = '') {
+  const termo = texto.toLowerCase().trim()
+  if (!termo) return lista
+
+  return lista.filter(f =>
+    f.razao_social?.toLowerCase().includes(termo) ||
+    f.nome_fantasia?.toLowerCase().includes(termo) ||
+    f.cnpj?.includes(termo)
+  )
+}
+
 

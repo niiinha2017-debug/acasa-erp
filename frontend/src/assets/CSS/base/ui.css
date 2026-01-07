@@ -486,7 +486,14 @@ body {
 .text-left { text-align: left; }
 .text-center { text-align: center; }
 .text-right { text-align: right; }
-
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+}
+.status-badge.active { background: var(--success); color: white; }
+.status-badge.inactive { background: var(--warning); color: black; }
 /* =========================================================
    LOADING (Loading.vue)
 ========================================================= */
@@ -513,4 +520,176 @@ body {
 
 .loading-text {
   font-weight: var(--font-weight-medium);
+}
+/* ===== GRID DO FORM (corrige desproporção) ===== */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.col-span-12 { grid-column: span 12; }
+.col-span-6  { grid-column: span 6; }
+.col-span-5  { grid-column: span 5; }
+.col-span-4  { grid-column: span 4; }
+.col-span-3  { grid-column: span 3; }
+
+/* ===== Ajustes de consistência ===== */
+.form-group {
+  min-width: 0; /* evita estourar inputs */
+}
+
+.form-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Checkbox alinhado bonitinho (não fica solto no meio) */
+.check-row {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding-top: 6px;
+}
+
+/* Responsivo: no celular, tudo vira 1 coluna */
+@media (max-width: 900px) {
+  .col-span-6,
+  .col-span-5,
+  .col-span-4,
+  .col-span-3 {
+    grid-column: span 12;
+  }
+}
+.table td {
+  vertical-align: middle; /* Alinha select e botões na mesma linha invisível */
+}
+
+/* Garante que o select não fique gigante */
+.table .form-input {
+  height: 32px; 
+  padding: 0 8px;
+}
+/* Badge Base */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Variantes de Cor */
+.badge-success {
+  background-color: #dcfce7; /* Verde suave */
+  color: #166534;           /* Verde escuro */
+}
+
+.badge-warning {
+  background-color: #fef9c3; /* Amarelo suave */
+  color: #854d0e;           /* Marrom/Dourado */
+}
+
+.badge-danger {
+  background-color: #fee2e2; /* Vermelho suave */
+  color: #991b1b;           /* Vermelho escuro */
+}
+.table td {
+  padding: 12px 16px;
+  vertical-align: middle; /* Alinhamento centralizado verticalmente */
+  border-bottom: 1px solid var(--border-soft);
+}
+
+/* Ajuste para botões e selects dentro da tabela */
+.table .btn--sm {
+  height: 28px;
+  padding: 0 8px;
+}
+
+.table .form-input {
+  height: 32px;
+  font-size: 13px;
+}
+/* Container de ações na tabela */
+.table-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;       /* Espaço entre os botões */
+  height: 100%;   /* Garante que ocupe a altura da célula */
+}
+
+/* Ajuste específico para os botões dentro da tabela para não 'pularem' */
+.table td .btn {
+  margin: 0; 
+  vertical-align: middle;
+}
+
+/* Força o alinhamento vertical de todas as células da tabela */
+.table td {
+  vertical-align: middle !important;
+}
+
+.header-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+.card-body--flush {
+  padding: 0;
+}
+/* faixa de filtro igual Clientes */
+.card-filter {
+  padding: 15px 20px;
+  background: var(--bg-input);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+/* body sem padding para tabela encostar igual */
+.card-body--flush {
+  padding: 0;
+}
+
+/* textos auxiliares padronizados (sem inline) */
+.cell-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cell-muted {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* badge neutra (igual você fazia inline) */
+.badge-neutral {
+  background: var(--bg-page);
+  color: var(--text-main);
+}
+.header-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 1rem;
+}
+
+.cell-stack {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
 }

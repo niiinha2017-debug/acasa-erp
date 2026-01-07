@@ -14,8 +14,8 @@ const error = ref('')
  */
 const MAPA_DE_ACESSO = 
 {
-  'ADMIN': ['dashboard', 'clientes', 'usuarios', 'financeiro', 'producao', 'estoque', 'relatorios', 'configuracoes'],
-  'FINANCEIRO': ['dashboard', 'clientes', 'financeiro', 'relatorios'],
+  'ADMIN': ['clientes','fornecedores','funcionarios', 'usuarios','plano-corte', 'configuracoes', 'produtos', 'financeiro', 'producao', 'vendas', 'dashboard', 'relatorios', 'estoque'],
+  'FINANCEIRO': ['dashboard', 'clientes', 'financeiro', 'relatorios','plano-corte'],
   'PRODUCAO': ['dashboard', 'producao', 'estoque'],
   'VENDAS': ['dashboard', 'clientes']
 }

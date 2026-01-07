@@ -10,6 +10,13 @@ import { UsuariosModule } from './usuarios/usuarios.module';
 import { RecuperacaoSenhaModule } from './recuperacao-senha/recuperacao-senha.module';
 import { MailModule } from './mail/mail.module';
 import { ClientesModule } from './clientes/clientes.module'
+import { FornecedoresModule } from './fornecedores/fornecedores.module';
+import { ProdutosModule } from './produtos/produtos.module';
+import { PlanoCorteModule } from './plano-corte/plano-corte.module';
+import { PlanoCorteConsumosModule } from './plano-corte-consumos/plano-corte-consumos.module';
+import { PlanoCorteItensModule } from './plano-corte-itens/plano-corte-itens.module';
+import { FuncionariosModule } from './funcionarios/funcionarios.module';
+import { ConstantesModule } from './constantes/constantes.module';
 
 @Module({
   imports: [
@@ -34,6 +41,20 @@ import { ClientesModule } from './clientes/clientes.module'
     MailModule,
 
     ClientesModule,
+
+    FornecedoresModule,
+
+    ProdutosModule,
+
+    PlanoCorteModule,
+
+    PlanoCorteConsumosModule,
+
+    PlanoCorteItensModule,
+
+    FuncionariosModule,
+
+    ConstantesModule,
    
   ],
 })

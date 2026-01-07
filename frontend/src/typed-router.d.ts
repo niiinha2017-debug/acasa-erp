@@ -30,6 +30,27 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/clientes/': RouteRecordInfo<
+      '/clientes/',
+      '/clientes',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/clientes/[id]': RouteRecordInfo<
+      '/clientes/[id]',
+      '/clientes/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/clientes/novo': RouteRecordInfo<
+      '/clientes/novo',
+      '/clientes/novo',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/configuracoes/usuarios/': RouteRecordInfo<
       '/configuracoes/usuarios/',
       '/configuracoes/usuarios',
@@ -37,9 +58,93 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/fornecedores/': RouteRecordInfo<
+      '/fornecedores/',
+      '/fornecedores',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/fornecedores/[id]': RouteRecordInfo<
+      '/fornecedores/[id]',
+      '/fornecedores/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/fornecedores/novo': RouteRecordInfo<
+      '/fornecedores/novo',
+      '/fornecedores/novo',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/funcionarios/': RouteRecordInfo<
+      '/funcionarios/',
+      '/funcionarios',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/funcionarios/[id]': RouteRecordInfo<
+      '/funcionarios/[id]',
+      '/funcionarios/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/funcionarios/novo': RouteRecordInfo<
+      '/funcionarios/novo',
+      '/funcionarios/novo',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/login': RouteRecordInfo<
       '/login',
       '/login',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/plano-corte/': RouteRecordInfo<
+      '/plano-corte/',
+      '/plano-corte',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/plano-corte/[id]': RouteRecordInfo<
+      '/plano-corte/[id]',
+      '/plano-corte/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/plano-corte/novo': RouteRecordInfo<
+      '/plano-corte/novo',
+      '/plano-corte/novo',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/produtos/': RouteRecordInfo<
+      '/produtos/',
+      '/produtos',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/produtos/[id]': RouteRecordInfo<
+      '/produtos/[id]',
+      '/produtos/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/produtos/novo': RouteRecordInfo<
+      '/produtos/novo',
+      '/produtos/novo',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -63,15 +168,105 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/clientes/index.vue': {
+      routes:
+        | '/clientes/'
+      views:
+        | never
+    }
+    'src/pages/clientes/[id].vue': {
+      routes:
+        | '/clientes/[id]'
+      views:
+        | never
+    }
+    'src/pages/clientes/novo.vue': {
+      routes:
+        | '/clientes/novo'
+      views:
+        | never
+    }
     'src/pages/configuracoes/usuarios/index.vue': {
       routes:
         | '/configuracoes/usuarios/'
       views:
         | never
     }
+    'src/pages/fornecedores/index.vue': {
+      routes:
+        | '/fornecedores/'
+      views:
+        | never
+    }
+    'src/pages/fornecedores/[id].vue': {
+      routes:
+        | '/fornecedores/[id]'
+      views:
+        | never
+    }
+    'src/pages/fornecedores/novo.vue': {
+      routes:
+        | '/fornecedores/novo'
+      views:
+        | never
+    }
+    'src/pages/funcionarios/index.vue': {
+      routes:
+        | '/funcionarios/'
+      views:
+        | never
+    }
+    'src/pages/funcionarios/[id].vue': {
+      routes:
+        | '/funcionarios/[id]'
+      views:
+        | never
+    }
+    'src/pages/funcionarios/novo.vue': {
+      routes:
+        | '/funcionarios/novo'
+      views:
+        | never
+    }
     'src/pages/login.vue': {
       routes:
         | '/login'
+      views:
+        | never
+    }
+    'src/pages/plano-corte/index.vue': {
+      routes:
+        | '/plano-corte/'
+      views:
+        | never
+    }
+    'src/pages/plano-corte/[id].vue': {
+      routes:
+        | '/plano-corte/[id]'
+      views:
+        | never
+    }
+    'src/pages/plano-corte/novo.vue': {
+      routes:
+        | '/plano-corte/novo'
+      views:
+        | never
+    }
+    'src/pages/produtos/index.vue': {
+      routes:
+        | '/produtos/'
+      views:
+        | never
+    }
+    'src/pages/produtos/[id].vue': {
+      routes:
+        | '/produtos/[id]'
+      views:
+        | never
+    }
+    'src/pages/produtos/novo.vue': {
+      routes:
+        | '/produtos/novo'
       views:
         | never
     }

@@ -1,5 +1,5 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import { routes } from 'vue-router/auto-routes' 
+import { createRouter, createWebHistory } from 'vue-router/auto'
+import { routes } from 'vue-router/auto-routes'
 import { storage } from '@/utils/storage'
 
 const router = createRouter({
@@ -29,7 +29,7 @@ router.beforeEach((to) => {
 
     // Mapeamento (Deve bater com o nome das pastas em /pages)
     const permissaoPorPasta = {
-      'FINANCEIRO': ['financeiro', 'clientes'],
+      'FINANCEIRO': ['financeiro', 'clientes','fornecedores'],
       'PRODUCAO': ['producao'],
       'VENDAS': ['clientes', 'vendas'],
       // 'CONFIGURACOES' geralmente não fica aqui porque só o ADMIN entra

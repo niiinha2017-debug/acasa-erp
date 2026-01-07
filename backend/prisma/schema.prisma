@@ -40,65 +40,248 @@ model recuperacao_senha {
 }
 
 model Cliente {
-  id              Int       @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  indicacao_id    Int?
-  indicacao       Cliente?  @relation("ClienteIndicacao", fields: [indicacao_id], references: [id])
-  indicados       Cliente[] @relation("ClienteIndicacao")
+  indicacao_id Int?
+  indicacao    Cliente?  @relation("ClienteIndicacao", fields: [indicacao_id], references: [id])
+  indicados    Cliente[] @relation("ClienteIndicacao")
 
   nome_completo   String
   razao_social    String?
   data_nascimento DateTime
 
-  cpf             String?
-  rg              String?
-  cnpj            String?
-  ie              String?
+  cpf  String?
+  rg   String?
+  cnpj String?
+  ie   String?
 
+  telefone String?
+  whatsapp String?
+  email    String
+
+  enviar_aniversario_email    Boolean @default(true)
+  enviar_aniversario_whatsapp Boolean @default(false)
+
+  cep      String?
+  endereco String?
+  numero   String?
+  bairro   String?
+  cidade   String?
+  estado   String?
+
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  @@unique([cpf])
+  @@unique([cnpj])
+  @@unique([email])
+  @@index([indicacao_id])
+  @@map("clientes")
+}
+
+model Fornecedores {
+  id              Int      @id @default(autoincrement())
+  razao_social    String
+  nome_fantasia   String
+  cnpj            String   @unique
+  ie              String?
   telefone        String?
   whatsapp        String?
-  email           String
-
-  enviar_aniversario_email     Boolean @default(true)
-  enviar_aniversario_whatsapp  Boolean @default(false)
-
+  email           String?
   cep             String?
   endereco        String?
   numero          String?
   bairro          String?
   cidade          String?
   estado          String?
+  forma_pagamento String?
+  data_vencimento Int?
+  criado_em       DateTime @default(now())
+  atualizado_em   DateTime @updatedAt
 
-  criado_em       DateTime  @default(now())
-  atualizado_em   DateTime  @updatedAt
-
-  @@index([indicacao_id])
-  @@unique([cpf])
-  @@unique([cnpj])
-  @@unique([email])
-
-  @@map("clientes")
-}
-
-model Fornecedores {
-  id               Int      @id @default(autoincrement())
-  razao_social     String
-  nome_fantasia    String
-  cnpj             String   @unique
-  ie               String?
-  telefone         String?
-  whatsapp         String?
-  cep              String?
-  endereco         String?
-  numero           String?
-  bairro           String?
-  cidade           String?
-  estado           String?
-  forma_pagamento  String?
-  data_vencimento  Int?     // Usando Int para o dia do vencimento (ex: 10, 15)
-  criado_em        DateTime @default(now())
-  atualizado_em    DateTime @updatedAt
+  produtos         produtos[] // 👈 LADO OPOSTO DA RELAÇÃO
+  plano_corte      plano_corte[]
+  plano_corte_item plano_corte_item[]
 
   @@map("fornecedores")
 }
 
+model produtos {
+  id Int @id @default(autoincrement())
+
+  fornecedor_id Int
+  fornecedor    Fornecedores @relation(fields: [fornecedor_id], references: [id])
+
+  nome_produto String
+  cor          String?
+  medida       String?
+
+  quantidade     Int
+  valor_unitario Decimal @db.Decimal(10, 2)
+  valor_total    Decimal @db.Decimal(10, 2)
+
+  status String
+
+  criado_em           DateTime              @default(now())
+  atualizado_em       DateTime              @updatedAt
+  plano_corte_consumo plano_corte_consumo[]
+
+  @@index([fornecedor_id])
+  @@map("produtos")
+}
+
+model plano_corte {
+  id            Int      @id @default(autoincrement())
+  fornecedor_id Int
+  data_venda    DateTime
+
+  valor_total Decimal @db.Decimal(10, 2)
+  status      String
+
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  fornecedor Fornecedores @relation(fields: [fornecedor_id], references: [id])
+
+  produtos plano_corte_produto[]
+  consumos plano_corte_consumo[]
+
+  @@map("plano_corte")
+}
+
+model plano_corte_item {
+  id            Int @id @default(autoincrement())
+  fornecedor_id Int
+
+  nome    String
+  cor     String?
+  medida  String?
+  unidade String // ex: METRO
+  status  String
+
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  fornecedor Fornecedores @relation(fields: [fornecedor_id], references: [id])
+
+  produtos plano_corte_produto[]
+
+  @@index([fornecedor_id])
+  @@map("plano_corte_item")
+}
+
+model plano_corte_produto {
+  id             Int @id @default(autoincrement())
+  plano_corte_id Int
+  item_id        Int
+
+  quantidade     Decimal @db.Decimal(10, 2)
+  valor_unitario Decimal @db.Decimal(10, 2)
+  valor_total    Decimal @db.Decimal(10, 2)
+  status         String
+
+  plano_corte plano_corte      @relation(fields: [plano_corte_id], references: [id])
+  item        plano_corte_item @relation(fields: [item_id], references: [id])
+
+  @@map("plano_corte_produto")
+}
+
+model plano_corte_consumo {
+  id             Int @id @default(autoincrement())
+  plano_corte_id Int
+  produto_id     Int // 👈 produto JÁ EXISTENTE (compras)
+
+  quantidade Decimal @db.Decimal(10, 2) // METRO usado
+
+  criado_em DateTime @default(now())
+
+  plano_corte plano_corte @relation(fields: [plano_corte_id], references: [id])
+  produto     produtos    @relation(fields: [produto_id], references: [id])
+
+  @@map("plano_corte_consumo")
+}
+
+model funcionarios {
+  id Int @id @default(autoincrement())
+
+  // Dados pessoais
+  nome         String
+  cpf          String
+  rg           String?
+  telefone     String?
+  whatsapp     String?
+  email        String?
+  estado_civil String?
+  escolaridade String?
+
+  // Empresa
+  setor  String?
+  cargo  String?
+  funcao String?
+
+  // Endereço
+  cep      String?
+  endereco String?
+  numero   String?
+  bairro   String?
+  cidade   String?
+  estado   String?
+
+  // Registro / vínculo
+  registro String?
+  admissao DateTime?
+  demissao DateTime?
+
+  // Financeiro
+  salario_base      Decimal? @db.Decimal(12, 2)
+  salario_adicional Decimal? @db.Decimal(12, 2)
+  custo_hora        Decimal? @db.Decimal(12, 2)
+  vale              Decimal? @db.Decimal(12, 2)
+
+  // Horários
+  horario_entrada String?
+  horario_almoco  String?
+  horario_saida   String?
+
+  // Pagamento
+  conta_bancaria  String?
+  forma_pagamento String?
+  data_pagamento  DateTime?
+
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  @@unique([cpf])
+  @@map("funcionarios")
+}
+
+model constantes {
+  id Int @id @default(autoincrement())
+
+  // Agrupador do select/uso no frontend (ex: "FORMA_PAGAMENTO", "STATUS_FINANCEIRO")
+  categoria String
+
+  // Identificador estável (ex: "PIX", "CARTAO_CREDITO")
+  chave String
+
+  // Texto pra exibir (ex: "Pix", "Cartão de Crédito")
+  rotulo String
+
+  // Tipo do valor (ex: "TEXTO" | "NUMERO" | "BOOLEANO" | "JSON")
+  tipo String
+
+  valor_texto    String?
+  valor_numero   Decimal? @db.Decimal(12, 2)
+  valor_booleano Boolean?
+  valor_json     Json?
+
+  ordem Int     @default(0)
+  ativo Boolean @default(true)
+
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  @@unique([categoria, chave])
+  @@index([categoria, ativo, ordem])
+  @@map("constantes")
+}

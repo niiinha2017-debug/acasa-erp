@@ -21,20 +21,30 @@
           </div>
         </div>
 
-        <div
-          v-if="temAcesso('clientes')"
-          class="dropdown-menu"
-          :class="{ active: activeDropdown === 'cadastros' }"
-          @click="toggleDropdown('cadastros')"
-        >
-          <button type="button" class="dropdown-toggle">Cadastros</button>
-          <div class="dropdown-content" @click.stop>
-            <a href="#" @click.stop.prevent="irPara('/clientes')">Clientes</a>
-            <a href="#" @click.prevent="avisar('Fornecedores')">Fornecedores</a>
-            <a v-if="temAcesso('usuarios')" href="#" @click.prevent="avisar('Funcionários')">Funcionários</a>
-            <a href="#" @click.prevent="avisar('Produtos')">Produtos</a>
-          </div>
-        </div>
+<div
+  v-if="temAcesso('clientes') || temAcesso('fornecedores')"
+  class="dropdown-menu"
+  :class="{ active: activeDropdown === 'cadastros' }"
+>
+  <button
+    type="button"
+    class="dropdown-toggle"
+    @click.stop="toggleDropdown('cadastros')"
+  >
+    Cadastros
+  </button>
+
+  <div v-if="activeDropdown === 'cadastros'" class="dropdown-content" @click.stop>
+    <a v-if="temAcesso('clientes')" href="#" @click.prevent="irPara('/clientes')">Clientes</a>
+    <a v-if="temAcesso('fornecedores')" href="#" @click.prevent="irPara('/fornecedores')">Fornecedores</a>
+    <a v-if="temAcesso('produtos')" href="#" @click.prevent="irPara('/produtos')">Produtos</a>
+    <a v-if="temAcesso('plano-corte')" href="#" @click.prevent="irPara('/plano-corte')">Plano de Corte</a> 
+    <a v-if="temAcesso('funcionarios')" href="#" @click.prevent="irPara('/funcionarios')">Funcionários</a> 
+  </div>
+</div>
+
+
+
 
         <div
           v-if="temAcesso('producao')"
@@ -103,12 +113,27 @@ function closeDropdownOnClickOutside(event) {
 
 async function irPara(path) {
   activeDropdown.value = null
+
+  // ✅ 1) Log do clique
+  console.log('[MENU] clique ->', path)
+
+  // ✅ 2) Log das rotas que EXISTEM no runtime
+  const rotas = router.getRoutes().map(r => r.path).sort()
+  console.log('[MENU] rotas runtime:', rotas)
+
+  // ✅ 3) Confirma se a rota existe
+  const existe = router.getRoutes().some(r => r.path === path)
+  console.log('[MENU] existe rota?', path, '=>', existe)
+
+  // ✅ 4) Tenta navegar e loga o resultado
   try {
-    await router.push(path)
+    const res = await router.push(path)
+    console.log('[MENU] push OK:', path, res)
   } catch (err) {
-    console.error('[MENU] erro ao navegar:', err)
+    console.error('[MENU] push ERRO:', path, err)
   }
 }
+
 
 function handleScroll() {
   isScrolled.value = window.scrollY > 20
@@ -122,6 +147,9 @@ function avisar(modulo) {
   activeDropdown.value = null
   alert(`${modulo}: página ainda não criada.`)
 }
+onMounted(() => {
+  console.log('[ROTAS RUNTIME]', router.getRoutes().map(r => r.path))
+})
 
 onMounted(() => {
   window.addEventListener('scroll', handleScroll)
