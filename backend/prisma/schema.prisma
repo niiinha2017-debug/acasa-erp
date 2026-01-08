@@ -248,12 +248,16 @@ model funcionarios {
   forma_pagamento String?
   data_pagamento  DateTime?
 
+  // ✅ lado oposto da relação com despesas
+  despesas despesas[]
+
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
   @@unique([cpf])
   @@map("funcionarios")
 }
+
 
 model constantes {
   id Int @id @default(autoincrement())
@@ -284,4 +288,52 @@ model constantes {
   @@unique([categoria, chave])
   @@index([categoria, ativo, ordem])
   @@map("constantes")
+}
+
+model despesas {
+  id                   Int      @id @default(autoincrement())
+
+  // Entrada / Saída
+  tipo_movimento       String   // "ENTRADA" | "SAIDA" (constantes)
+
+  // Combustível / Energia / Água / etc
+  categoria            String   // (constantes)
+
+  // Custo fixo / custo variável / despesa fixa / despesa variável
+  classificacao        String   // (constantes)
+
+  // Loja / Fábrica
+  local                String   // (constantes)
+
+  // Valor total
+  valor_total          Decimal  @db.Decimal(10, 2)
+
+  // Forma de pagamento
+  forma_pagamento      String   // (constantes)
+
+  // Quantidade de parcelas
+  quantidade_parcelas  Int
+
+  // Datas
+  data_registro        DateTime @default(now())
+  data_vencimento      DateTime
+  data_pagamento       DateTime?
+
+  // Funcionário
+ funcionario_id       Int?
+funcionario          funcionarios? @relation(fields: [funcionario_id], references: [id])
+
+
+  // Status
+  status               String   // (constantes)
+
+  @@index([tipo_movimento])
+  @@index([categoria])
+  @@index([classificacao])
+  @@index([local])
+  @@index([status])
+  @@index([data_vencimento])
+  @@index([funcionario_id])
+
+  @@map("despesas")
 }

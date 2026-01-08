@@ -78,9 +78,85 @@
         </Table>
       </div>
     </Card>
+<div v-if="exibirModal" class="modal-overlay" @click.self="fecharModal">
+  <div class="modal-content">
+    <Card>
+      <header class="card-header header-between">
+        <div>
+          <h3 class="card-title" style="margin:0;">
+            {{ modoEdicao ? 'Editar Usuário' : 'Novo Usuário' }}
+          </h3>
+          <p class="cell-muted" style="margin:0;">
+            {{ modoEdicao ? 'Atualize os dados do usuário.' : 'Cadastre um novo usuário para acessar o sistema.' }}
+          </p>
+        </div>
 
-    <div v-if="exibirModal" class="modal-overlay">
+        <Button variant="outline" size="sm" type="button" @click="fecharModal">
+          ✕
+        </Button>
+      </header>
+
+      <div style="padding: 16px 20px;">
+        <form class="form-grid" @submit.prevent="salvar">
+          <Input
+            v-model="formUsuario.nome"
+            label="Nome Completo"
+            placeholder="Ex: Maria Silva"
+            class="col-span-12"
+            :required="true"
+          />
+
+          <Input
+            v-model="formUsuario.usuario"
+            label="Usuário"
+            placeholder="Ex: maria"
+            class="col-span-4"
+            :required="true"
+          />
+
+          <Input
+            v-model="formUsuario.email"
+            label="E-mail"
+            placeholder="ex: maria@email.com"
+            class="col-span-8"
+            :required="true"
+          />
+
+          <Input
+            v-model="formUsuario.senha"
+            :label="modoEdicao ? 'Senha (opcional)' : 'Senha'"
+            :placeholder="modoEdicao ? 'Deixe vazio para não alterar' : 'Digite a senha'"
+            type="password"
+            class="col-span-6"
+            :required="!modoEdicao"
+            autocomplete="new-password"
+          />
+
+          <div class="form-group col-span-6">
+            <label class="form-label">Setor <span class="required">*</span></label>
+            <select v-model="formUsuario.setor" class="form-input" required>
+              <option value="ADMIN">ADMIN</option>
+              <option value="FINANCEIRO">FINANCEIRO</option>
+              <option value="PRODUCAO">PRODUÇÃO</option>
+              <option value="VENDAS">VENDAS</option>
+            </select>
+          </div>
+
+          <div class="col-span-12" style="display:flex; justify-content:flex-end; gap:10px; margin-top: 6px;">
+            <Button variant="outline" type="button" @click="fecharModal" :disabled="loadingSalvar">
+              Cancelar
+            </Button>
+
+            <Button type="submit" :loading="loadingSalvar" :disabled="loadingSalvar">
+              {{ modoEdicao ? 'Salvar alterações' : 'Cadastrar' }}
+            </Button>
+          </div>
+        </form>
       </div>
+    </Card>
+  </div>
+</div>
+
   </div>
 
   <div v-else class="page-container" style="display:flex; justify-content:center; align-items:center; height:200px;">
@@ -89,7 +165,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, onUnmounted } from 'vue'
 import api from '@/services/api'
 import { useAuth } from '@/services/useauth'
 
@@ -164,6 +240,21 @@ function editarUsuario(u) {
   formUsuario.value = { ...u, senha: '' }
   exibirModal.value = true
 }
+
+function handleEsc(e) {
+  if (e.key === 'Escape' && exibirModal.value) {
+    fecharModal()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', handleEsc)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleEsc)
+})
+
 
 function fecharModal() { exibirModal.value = false }
 

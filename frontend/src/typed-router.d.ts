@@ -58,6 +58,48 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/constantes/': RouteRecordInfo<
+      '/constantes/',
+      '/constantes',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/constantes/[id]': RouteRecordInfo<
+      '/constantes/[id]',
+      '/constantes/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/constantes/novo': RouteRecordInfo<
+      '/constantes/novo',
+      '/constantes/novo',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/despesas/': RouteRecordInfo<
+      '/despesas/',
+      '/despesas',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/despesas/[id]': RouteRecordInfo<
+      '/despesas/[id]',
+      '/despesas/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/despesas/novo': RouteRecordInfo<
+      '/despesas/novo',
+      '/despesas/novo',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/fornecedores/': RouteRecordInfo<
       '/fornecedores/',
       '/fornecedores',
@@ -189,6 +231,42 @@ declare module 'vue-router/auto-routes' {
     'src/pages/configuracoes/usuarios/index.vue': {
       routes:
         | '/configuracoes/usuarios/'
+      views:
+        | never
+    }
+    'src/pages/constantes/index.vue': {
+      routes:
+        | '/constantes/'
+      views:
+        | never
+    }
+    'src/pages/constantes/[id].vue': {
+      routes:
+        | '/constantes/[id]'
+      views:
+        | never
+    }
+    'src/pages/constantes/novo.vue': {
+      routes:
+        | '/constantes/novo'
+      views:
+        | never
+    }
+    'src/pages/despesas/index.vue': {
+      routes:
+        | '/despesas/'
+      views:
+        | never
+    }
+    'src/pages/despesas/[id].vue': {
+      routes:
+        | '/despesas/[id]'
+      views:
+        | never
+    }
+    'src/pages/despesas/novo.vue': {
+      routes:
+        | '/despesas/novo'
       views:
         | never
     }

@@ -1,84 +1,88 @@
 <template>
   <header class="topbar" :class="{ scrolled: isScrolled }">
     <div class="topbar-inner">
-      <div class="brand" @click="router.push('/')">
+      <div class="brand" @click="irPara('/')">
         A CASA-ERP
       </div>
 
-      <nav class="nav">
+      <nav class="nav" ref="navEl">
         <RouterLink to="/">Início</RouterLink>
 
+        <!-- FINANCEIRO -->
         <div
           v-if="temAcesso('financeiro')"
           class="dropdown-menu"
           :class="{ active: activeDropdown === 'financeiro' }"
-          @click="toggleDropdown('financeiro')"
         >
-          <button type="button" class="dropdown-toggle">Financeiro</button>
+          <button type="button" class="dropdown-toggle" @click.stop="toggleDropdown('financeiro')">
+            Financeiro
+          </button>
+
           <div class="dropdown-content" @click.stop>
-            <a href="#" @click.prevent="avisar('Despesas')">Despesas</a>
-            <a href="#" @click.prevent="avisar('Receitas')">Receitas</a>
+            <a v-if="temAcesso('despesas')" href="#" @click.prevent="irPara('/despesas')">Despesas</a>
+            <a href="#" @click.prevent="irPara('/receitas')">Receitas</a>
           </div>
         </div>
 
-<div
-  v-if="temAcesso('clientes') || temAcesso('fornecedores')"
-  class="dropdown-menu"
-  :class="{ active: activeDropdown === 'cadastros' }"
->
-  <button
-    type="button"
-    class="dropdown-toggle"
-    @click.stop="toggleDropdown('cadastros')"
-  >
-    Cadastros
-  </button>
-
-  <div v-if="activeDropdown === 'cadastros'" class="dropdown-content" @click.stop>
-    <a v-if="temAcesso('clientes')" href="#" @click.prevent="irPara('/clientes')">Clientes</a>
-    <a v-if="temAcesso('fornecedores')" href="#" @click.prevent="irPara('/fornecedores')">Fornecedores</a>
-    <a v-if="temAcesso('produtos')" href="#" @click.prevent="irPara('/produtos')">Produtos</a>
-    <a v-if="temAcesso('plano-corte')" href="#" @click.prevent="irPara('/plano-corte')">Plano de Corte</a> 
-    <a v-if="temAcesso('funcionarios')" href="#" @click.prevent="irPara('/funcionarios')">Funcionários</a> 
-  </div>
-</div>
-
-
-
-
+        <!-- CADASTROS -->
         <div
-          v-if="temAcesso('producao')"
+          v-if="temAcesso('clientes') || temAcesso('fornecedores') || temAcesso('produtos') || temAcesso('funcionarios')"
+          class="dropdown-menu"
+          :class="{ active: activeDropdown === 'cadastros' }"
+        >
+          <button type="button" class="dropdown-toggle" @click.stop="toggleDropdown('cadastros')">
+            Cadastros
+          </button>
+
+          <div class="dropdown-content" @click.stop>
+            <a v-if="temAcesso('clientes')" href="#" @click.prevent="irPara('/clientes')">Clientes</a>
+            <a v-if="temAcesso('fornecedores')" href="#" @click.prevent="irPara('/fornecedores')">Fornecedores</a>
+            <a v-if="temAcesso('produtos')" href="#" @click.prevent="irPara('/produtos')">Produtos</a>
+            <a v-if="temAcesso('funcionarios')" href="#" @click.prevent="irPara('/funcionarios')">Funcionários</a>
+          </div>
+        </div>
+
+        <!-- PRODUÇÃO -->
+        <div
+          v-if="temAcesso('producao') || temAcesso('plano-corte')"
           class="dropdown-menu"
           :class="{ active: activeDropdown === 'producao' }"
-          @click="toggleDropdown('producao')"
         >
-          <button type="button" class="dropdown-toggle">Produção</button>
+          <button type="button" class="dropdown-toggle" @click.stop="toggleDropdown('producao')">
+            Produção
+          </button>
+
           <div class="dropdown-content" @click.stop>
-            <a href="#" @click.prevent="avisar('Plano de Corte')">Plano de Corte</a>
-            <a href="#" @click.prevent="avisar('Ordens de Serviço')">Ordens de Serviço</a>
+            <a v-if="temAcesso('plano-corte')" href="#" @click.prevent="irPara('/plano-corte')">Plano de Corte</a>
+            <a href="#" @click.prevent="irPara('/ordens-servico')">Ordens de Serviço</a>
           </div>
         </div>
 
+        <!-- CONFIGURAÇÕES -->
         <div
-          v-if="temAcesso('configuracoes')"
+          v-if="temAcesso('configuracoes') || temAcesso('constantes')"
           class="dropdown-menu"
           :class="{ active: activeDropdown === 'configuracoes' }"
-          @click="toggleDropdown('configuracoes')"
         >
-          <button type="button" class="dropdown-toggle">Configurações</button>
+          <button type="button" class="dropdown-toggle" @click.stop="toggleDropdown('configuracoes')">
+            Configurações
+          </button>
+
           <div class="dropdown-content" @click.stop>
-            <a href="#" @click.prevent="avisar('Constantes')">Constantes</a>
-            <a href="#" @click.stop.prevent="irPara('/configuracoes/usuarios')">Usuários</a>
-            <a href="#" @click.prevent="avisar('Logs do Sistema')">Logs</a>
+            <a v-if="temAcesso('constantes')" href="#" @click.prevent="irPara('/constantes')">Constantes</a>
+            <a href="#" @click.prevent="irPara('/configuracoes/usuarios')">Usuários</a>
+            <a href="#" @click.prevent="irPara('/logs')">Logs</a>
           </div>
         </div>
-      </nav>
+      
+        </nav>
 
       <div class="user-area">
         <div class="user-info">
-          <span class="user-name">Olá, {{ user?.nome || 'Usuário' }}</span>
-          <span class="user-role">{{ user?.setor }}</span>
+          <span class="user-name">Olá, {{ usuarioLogado?.nome || 'Usuário' }}</span>
+          <span class="user-role">{{ usuarioLogado?.setor || '-' }}</span>
         </div>
+
         <button class="btn-logout" type="button" @click="handleLogout">
           Sair
         </button>
@@ -91,69 +95,85 @@
 import '@/assets/CSS/Menu.css'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuth } from '@/services/useauth' // Importamos seu novo Auth
+import { useAuth } from '@/services/useauth'
+
+const DEBUG_MENU = true
 
 const router = useRouter()
-const { usuarioLogado, logout, temAcesso } = useAuth() // Pegamos as funções mágicas
+const { usuarioLogado, logout, temAcesso } = useAuth()
 
 const user = computed(() => usuarioLogado.value)
+
 const isScrolled = ref(false)
 const activeDropdown = ref(null)
+
+const navEl = ref(null)
 
 function toggleDropdown(menu) {
   activeDropdown.value = activeDropdown.value === menu ? null : menu
 }
 
+function fecharDropdowns() {
+  activeDropdown.value = null
+}
+
 function closeDropdownOnClickOutside(event) {
-  const navElement = document.querySelector('.nav')
-  if (navElement && !navElement.contains(event.target)) {
-    activeDropdown.value = null
+  if (!navEl.value) return
+  if (!navEl.value.contains(event.target)) {
+    fecharDropdowns()
   }
 }
 
 async function irPara(path) {
-  activeDropdown.value = null
+  fecharDropdowns()
 
-  // ✅ 1) Log do clique
-  console.log('[MENU] clique ->', path)
+  if (DEBUG_MENU) {
+    console.log('[MENU] clique ->', path)
 
-  // ✅ 2) Log das rotas que EXISTEM no runtime
-  const rotas = router.getRoutes().map(r => r.path).sort()
-  console.log('[MENU] rotas runtime:', rotas)
+    const rotas = router.getRoutes().map(r => r.path).sort()
+    console.log('[MENU] rotas runtime:', rotas)
 
-  // ✅ 3) Confirma se a rota existe
-  const existe = router.getRoutes().some(r => r.path === path)
-  console.log('[MENU] existe rota?', path, '=>', existe)
+    const existe = router.getRoutes().some(r => r.path === path)
+    console.log('[MENU] existe rota?', path, '=>', existe)
 
-  // ✅ 4) Tenta navegar e loga o resultado
+    if (!existe) {
+      console.warn('[MENU] rota não existe no runtime:', path)
+      return
+    }
+  }
+
   try {
     const res = await router.push(path)
-    console.log('[MENU] push OK:', path, res)
+    if (DEBUG_MENU) console.log('[MENU] push OK:', path, res)
   } catch (err) {
     console.error('[MENU] push ERRO:', path, err)
+  } finally {
+    fecharDropdowns()
   }
 }
-
 
 function handleScroll() {
   isScrolled.value = window.scrollY > 20
 }
 
 function handleLogout() {
-  logout() // Usa a função do service que limpa storage e redireciona
+  fecharDropdowns()
+  logout()
 }
 
 function avisar(modulo) {
-  activeDropdown.value = null
+  fecharDropdowns()
   alert(`${modulo}: página ainda não criada.`)
 }
-onMounted(() => {
-  console.log('[ROTAS RUNTIME]', router.getRoutes().map(r => r.path))
-})
 
 onMounted(() => {
-  window.addEventListener('scroll', handleScroll)
+  if (DEBUG_MENU) {
+    console.log('[ROTAS RUNTIME]', router.getRoutes().map(r => r.path))
+  }
+
+  window.addEventListener('scroll', handleScroll, { passive: true })
   document.addEventListener('click', closeDropdownOnClickOutside)
+
   handleScroll()
 })
 

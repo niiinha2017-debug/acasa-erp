@@ -17,6 +17,7 @@ import { PlanoCorteConsumosModule } from './plano-corte-consumos/plano-corte-con
 import { PlanoCorteItensModule } from './plano-corte-itens/plano-corte-itens.module';
 import { FuncionariosModule } from './funcionarios/funcionarios.module';
 import { ConstantesModule } from './constantes/constantes.module';
+import { DespesasModule } from './despesas/despesas.module';
 
 @Module({
   imports: [
@@ -55,6 +56,8 @@ import { ConstantesModule } from './constantes/constantes.module';
     FuncionariosModule,
 
     ConstantesModule,
+
+    DespesasModule,
    
   ],
 })
