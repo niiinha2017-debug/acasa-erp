@@ -210,17 +210,9 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { FuncionarioService } from '@/services'
 
-/* ✅ seus componentes (ajuste o path conforme seu projeto) */
-import Card from '@/components/ui/Card.vue'
-import Button from '@/components/ui/Button.vue'
-import Input from '@/components/ui/Input.vue'
-
-/* ✅ padrão fixo do frontend */
-import api from '@/services/api'
-import { format } from '@/utils/format'
-
-/* ✅ máscaras/utilitários que você já usa */
+// máscaras e util
 import { maskCPF, maskRG, maskTelefone, maskCEP, maskMoneyBR, onlyNumbers } from '@/utils/masks'
 import { buscarCep, calcularCustoHora } from '@/utils/utils'
 import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
@@ -231,20 +223,20 @@ const route = useRoute()
 const salvando = ref(false)
 
 /* =========================
-   ID novo vs editar
+   NOVO vs EDITAR (sem erro)
 ========================= */
-const paramId = route.params.id
-const isEditing = computed(() => paramId && paramId !== 'novo')
-const id = computed(() => (isEditing.value ? String(paramId).replace(/\D/g, '') : null))
+const routeId = computed(() => String(route.params.id || 'novo'))
+const isEditing = computed(() => routeId.value !== 'novo')
+const cleanId = computed(() => (isEditing.value ? routeId.value.replace(/\D/g, '') : null))
 
 /* =========================
-   FORM (espelho Prisma)
+   FORM (espelho)
 ========================= */
-const form = ref({
+const initialForm = () => ({
   nome: '',
   cpf: '',
   rg: '',
-  data_nascimento: '',
+  data_nascimento: null,
   telefone: '',
   whatsapp: '',
   email: '',
@@ -265,8 +257,8 @@ const form = ref({
   estado: '',
 
   registro: '',
-  admissao: '',
-  demissao: '',
+  admissao: null,
+  demissao: null,
 
   salario_base: 0,
   salario_adicional: 0,
@@ -277,10 +269,10 @@ const form = ref({
   tem_vale_transporte: false,
   vale_transporte: 0,
 
-  horario_entrada_1: '',
-  horario_saida_1: '',
-  horario_entrada_2: '',
-  horario_saida_2: '',
+  horario_entrada_1: null,
+  horario_saida_1: null,
+  horario_entrada_2: null,
+  horario_saida_2: null,
 
   forma_pagamento: 'DINHEIRO',
   banco: '',
@@ -289,11 +281,13 @@ const form = ref({
   pix_tipo_chave: '',
   pix_chave: '',
 
-  data_pagamento: ''
+  data_pagamento: null
 })
 
+const form = ref(initialForm())
+
 /* =========================
-   UI (máscaras)
+   UI refs (máscaras)
 ========================= */
 const cpfUi = ref('')
 const rgUi = ref('')
@@ -306,10 +300,9 @@ const salarioAdicionalUi = ref('0,00')
 const valeUi = ref('0,00')
 const valeTransporteUi = ref('0,00')
 
-/* ✅ custo hora exibido (você já tinha) */
+/* exibição */
 const custoHoraExibicao = computed(() => numeroParaMoeda(form.value.custo_hora))
 
-/* ✅ tempo de serviço (você já tinha) */
 const tempoServico = computed(() => {
   if (!form.value.admissao) return '---'
   const inicio = new Date(form.value.admissao)
@@ -318,16 +311,20 @@ const tempoServico = computed(() => {
 
   let anos = fim.getFullYear() - inicio.getFullYear()
   let meses = fim.getMonth() - inicio.getMonth()
-  if (meses < 0) {
-    anos--
-    meses += 12
-  }
+  if (meses < 0) { anos--; meses += 12 }
   return anos > 0 ? `${anos} anos e ${meses} meses` : `${meses} meses`
 })
 
 /* =========================
-   Sync financeiro
+   helpers
 ========================= */
+function fmtDateInput(v) {
+  if (!v) return null
+  // vem Date ou ISO
+  const s = String(v)
+  return s.includes('T') ? s.split('T')[0] : s
+}
+
 function syncFinanceiro() {
   form.value.salario_base = moedaParaNumero(salarioBaseUi.value)
   form.value.salario_adicional = moedaParaNumero(salarioAdicionalUi.value)
@@ -337,49 +334,85 @@ function syncFinanceiro() {
   form.value.custo_hora = calcularCustoHora(form.value.salario_base + form.value.salario_adicional)
 }
 
+function limparPayload(p) {
+  // nunca manda "" em campos de data/hora, manda null
+  const camposNull = [
+    'data_nascimento',
+    'admissao',
+    'demissao',
+    'data_pagamento',
+    'horario_entrada_1',
+    'horario_saida_1',
+    'horario_entrada_2',
+    'horario_saida_2'
+  ]
+  for (const c of camposNull) {
+    if (p[c] === '') p[c] = null
+  }
+
+  // email raw e lower
+  p.email = raw(p.email ? String(p.email).toLowerCase().trim() : '')
+
+  return p
+}
+
+function resetUIFromForm() {
+  cpfUi.value = form.value.cpf ? maskCPF(form.value.cpf) : ''
+  rgUi.value = form.value.rg || ''
+  whatsappUi.value = form.value.whatsapp ? maskTelefone(form.value.whatsapp) : ''
+  telefoneUi.value = form.value.telefone ? maskTelefone(form.value.telefone) : ''
+  cepUi.value = form.value.cep ? maskCEP(form.value.cep) : ''
+
+  salarioBaseUi.value = numeroParaMoeda(form.value.salario_base || 0)
+  salarioAdicionalUi.value = numeroParaMoeda(form.value.salario_adicional || 0)
+  valeUi.value = numeroParaMoeda(form.value.vale || 0)
+  valeTransporteUi.value = numeroParaMoeda(form.value.vale_transporte || 0)
+}
+
 /* =========================
-   Load edição
+   carregar (novo/editar)
 ========================= */
-onMounted(async () => {
-  if (!isEditing.value) return
+async function carregar() {
+  // NOVO: limpa tudo
+  if (!isEditing.value) {
+    form.value = initialForm()
+    resetUIFromForm()
+    return
+  }
 
+  // EDITAR
   try {
-    // ✅ usando seu api padrão (sem service genérico)
-    const { data } = await api.get(`/funcionarios/${id.value}`)
-
-    const fmtDate = (d) => (d ? String(d).split('T')[0] : '')
+    const { data } = await FuncionarioService.buscar(cleanId.value)
 
     form.value = {
-      ...form.value,
+      ...initialForm(),
       ...data,
-      data_nascimento: fmtDate(data.data_nascimento),
-      admissao: fmtDate(data.admissao),
-      demissao: fmtDate(data.demissao),
-      data_pagamento: fmtDate(data.data_pagamento)
+      data_nascimento: fmtDateInput(data.data_nascimento),
+      admissao: fmtDateInput(data.admissao),
+      demissao: fmtDateInput(data.demissao),
+      data_pagamento: fmtDateInput(data.data_pagamento),
+
+      // horários (se vierem vazios)
+      horario_entrada_1: data.horario_entrada_1 || null,
+      horario_saida_1: data.horario_saida_1 || null,
+      horario_entrada_2: data.horario_entrada_2 || null,
+      horario_saida_2: data.horario_saida_2 || null
     }
 
-    // preenche UIs
-    cpfUi.value = data.cpf || ''
-    rgUi.value = data.rg || ''
-    whatsappUi.value = data.whatsapp || ''
-    telefoneUi.value = data.telefone || ''
-    cepUi.value = data.cep || ''
-
-    salarioBaseUi.value = numeroParaMoeda(data.salario_base || 0)
-    salarioAdicionalUi.value = numeroParaMoeda(data.salario_adicional || 0)
-    valeUi.value = numeroParaMoeda(data.vale || 0)
-    valeTransporteUi.value = numeroParaMoeda(data.vale_transporte || 0)
-
-    // garante cálculo atualizado
+    resetUIFromForm()
     syncFinanceiro()
   } catch (err) {
     router.push('/funcionarios')
   }
-})
+}
+
+onMounted(carregar)
+
+// MUITO IMPORTANTE: quando navegar de um id pra outro sem recarregar o componente
+watch(() => routeId.value, () => carregar())
 
 /* =========================
    WATCHERS (máscaras)
-   ✅ aqui estava o “form errado”
 ========================= */
 watch(cpfUi, (v) => {
   cpfUi.value = maskCPF(v)
@@ -437,10 +470,10 @@ watch(cepUi, async (v) => {
 })
 
 /* =========================
-   SALVAR (PUT, como sua regra)
+   SALVAR (NOVO/EDITAR)
 ========================= */
 async function salvar() {
-  if (!form.value.nome || (form.value.cpf || '').length < 11) {
+  if (!form.value.nome || String(form.value.cpf || '').length < 11) {
     return alert('Nome e CPF obrigatórios.')
   }
 
@@ -448,14 +481,12 @@ async function salvar() {
   try {
     syncFinanceiro()
 
-    const payload = {
-      ...form.value,
-      email: raw(form.value.email?.toLowerCase())
-    }
+    const payload = limparPayload({ ...form.value })
 
-    // ✅ sua regra: controller usa PUT (criar e atualizar)
-    const endpoint = isEditing.value ? `/funcionarios/${id.value}` : `/funcionarios/novo`
-    await api.put(endpoint, payload)
+    // ✅ usa seu service exatamente como você mandou:
+    // - POST quando id é null/novo
+    // - PUT quando id existe
+    await FuncionarioService.salvar(isEditing.value ? cleanId.value : null, payload)
 
     router.push('/funcionarios')
   } catch (err) {
