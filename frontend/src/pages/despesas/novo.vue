@@ -1,14 +1,22 @@
 <template>
   <div class="page-container">
-    <Card>
+    <div class="card card--shadow">
       <header class="card-header header-between">
         <div>
           <h2 class="card-title">Nova Despesa</h2>
-          <p class="cell-muted">Crie um lançamento de despesa.</p>
+          <p class="card-subtitle">Crie um lançamento de despesa.</p>
+        </div>
+        <div class="header-actions">
+          <Button 
+            variant="outline" 
+            size="md" 
+            label="Voltar" 
+            @click="router.back()" 
+          />
         </div>
       </header>
 
-      <div style="padding: 16px 20px;">
+      <div class="card-body">
         <form class="form-grid" @submit.prevent="salvar">
           <Input v-model="form.tipo_movimento" label="Entrada / Saída" placeholder="SAIDA" class="col-span-3" :required="true" />
           <Input v-model="form.categoria" label="Categoria" placeholder="Energia / Água / Combustível..." class="col-span-3" :required="true" />
@@ -26,19 +34,25 @@
 
           <Input v-model="form.funcionario_id" label="Funcionário (ID)" type="number" class="col-span-4" />
 
-          <div class="col-span-12" style="display:flex; justify-content:flex-end; gap:10px;">
-            <Button variant="outline" type="button" @click="router.back()">Voltar</Button>
-            <Button type="submit" :loading="loading" :disabled="loading">Salvar</Button>
-          </div>
-
           <div v-if="erro" class="col-span-12">
-            <p style="color: var(--danger); font-size: var(--font-size-sm); margin: 0;">
+            <p class="text-danger text-sm">
               {{ erro }}
             </p>
           </div>
         </form>
       </div>
-    </Card>
+
+      <footer class="card-footer footer-end">
+        <Button 
+          variant="primary" 
+          size="md" 
+          label="Salvar Despesa"
+          :loading="loading" 
+          :disabled="loading"
+          @click="salvar"
+        />
+      </footer>
+    </div>
   </div>
 </template>
 

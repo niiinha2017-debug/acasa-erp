@@ -1,18 +1,22 @@
 <template>
   <div class="page-container">
-    <Card>
+    <div class="card card--shadow">
       <header class="card-header header-between">
         <div>
           <h2 class="card-title">Editar Despesa</h2>
-          <p class="cell-muted">Atualize os dados do lançamento.</p>
+          <p class="card-subtitle">Atualize os dados do lançamento.</p>
         </div>
-
-        <Button variant="danger" size="sm" type="button" :disabled="loading" @click="excluir">
-          Excluir
-        </Button>
+        <div class="header-actions">
+          <Button 
+            variant="outline" 
+            size="md" 
+            label="Voltar" 
+            @click="router.back()" 
+          />
+        </div>
       </header>
 
-      <div style="padding: 16px 20px;">
+      <div class="card-body">
         <form class="form-grid" @submit.prevent="salvar">
           <Input v-model="form.tipo_movimento" label="Entrada / Saída" class="col-span-3" :required="true" />
           <Input v-model="form.categoria" label="Categoria" class="col-span-3" :required="true" />
@@ -30,19 +34,37 @@
 
           <Input v-model="form.funcionario_id" label="Funcionário (ID)" type="number" class="col-span-4" />
 
-          <div class="col-span-12" style="display:flex; justify-content:flex-end; gap:10px;">
-            <Button variant="outline" type="button" @click="router.back()">Voltar</Button>
-            <Button type="submit" :loading="loading" :disabled="loading">Salvar alterações</Button>
-          </div>
-
           <div v-if="erro" class="col-span-12">
-            <p style="color: var(--danger); font-size: var(--font-size-sm); margin: 0;">
+            <p class="text-danger text-sm">
               {{ erro }}
             </p>
           </div>
         </form>
       </div>
-    </Card>
+
+      <footer class="card-footer footer-between">
+        <div class="footer-left">
+          <Button 
+            variant="danger" 
+            size="md" 
+            label="Excluir" 
+            :disabled="loading" 
+            @click="excluir" 
+          />
+        </div>
+
+        <div class="footer-right">
+          <Button 
+            variant="primary" 
+            size="md" 
+            label="Salvar Alterações"
+            :loading="loading" 
+            :disabled="loading"
+            @click="salvar"
+          />
+        </div>
+      </footer>
+    </div>
   </div>
 </template>
 

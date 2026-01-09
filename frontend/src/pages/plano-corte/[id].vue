@@ -6,12 +6,8 @@
           <h2 class="card-title">Edição de Plano #{{ route.params.id }}</h2>
           <p class="cell-muted">Ajuste itens, quantidades e valores do serviço.</p>
         </div>
-
         <div class="header-actions">
-          <Button variant="secondary" @click="router.push('/plano-corte')">Voltar</Button>
-          <Button variant="primary" :loading="salvando" @click="salvar">
-            Atualizar Plano
-          </Button>
+          <Button variant="outline" size="md" label="Voltar" @click="router.push('/plano-corte')" />
         </div>
       </header>
 
@@ -100,6 +96,25 @@
           </div>
         </div>
       </div>
+
+      <footer class="card-footer footer-end flex gap-2">
+        <Button
+          variant="secondary"
+          size="md"
+          label="Atualizar Plano"
+          :loading="salvando"
+          @click="salvar"
+        />
+
+        <Button
+          variant="primary"
+          size="md"
+          label="Encaminhar para Produção"
+          :loading="encaminhando"
+          :disabled="jaEncaminhado"
+          @click="encaminharParaProducao"
+        />
+      </footer>
     </Card>
 
     <Card v-else style="padding: 100px; text-align: center;">
@@ -129,6 +144,7 @@ const carregandoDados = ref(true)
 const salvando = ref(false)
 const fornecedores = ref([])
 const itensDisponiveis = ref([])
+const encaminhando = ref(false)
 
 // Form
 const fornecedorId = ref(null)
@@ -215,6 +231,26 @@ function adicionarNaLista() {
 
 function removerDaLista(idx) {
   produtos.value.splice(idx, 1)
+}
+
+async function encaminharParaProducao() {
+  encaminhando.value = true
+  try {
+    await api.post('/producao/encaminhar', {
+      origem_tipo: 'PLANO_CORTE',
+      origem_id: Number(route.params.id),
+      status: 'ENCAMINHADO_PRODUCAO'
+    })
+
+    // atualiza status local só para UI
+    statusPlano.value = 'ENCAMINHADO_PRODUCAO'
+
+    router.push('/producao/agenda')
+  } catch (err) {
+    alert('Erro ao encaminhar para produção.')
+  } finally {
+    encaminhando.value = false
+  }
 }
 
 async function salvar() {

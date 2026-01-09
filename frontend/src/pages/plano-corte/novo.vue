@@ -1,15 +1,13 @@
 <template>
   <div class="page-container">
-    <Card>
+    <Card shadow>
       <header class="card-header header-between">
         <div>
           <h2 class="card-title">Novo Plano de Corte</h2>
           <p class="cell-muted">Cadastre a venda do serviço e o consumo de insumo.</p>
         </div>
-
         <div class="header-actions">
-          <Button variant="secondary" @click="router.push('/plano-corte')">Voltar</Button>
-          <Button variant="primary" :loading="salvando" @click="salvar">Salvar Plano</Button>
+          <Button variant="outline" size="md" label="Voltar" @click="router.push('/plano-corte')" />
         </div>
       </header>
 
@@ -132,6 +130,24 @@
           </div>
         </div>
       </div>
+
+      <footer class="card-footer footer-end flex gap-2">
+        <Button 
+          variant="secondary" 
+          size="md" 
+          label="Salvar Plano" 
+          :loading="salvando" 
+          @click="salvar(false)" 
+        />
+        
+        <Button 
+          variant="primary" 
+          size="md" 
+          label="Encaminhar para Produção" 
+          :loading="encaminhando" 
+          @click="salvar(true)" 
+        />
+      </footer>
     </Card>
   </div>
 </template>
@@ -144,11 +160,12 @@ import Card from '@/components/ui/Card.vue'
 import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
 import Table from '@/components/ui/Table.vue'
-import SearchSelect from '@/components/ui/SearchInput.vue'
 import { maskMoneyBR } from '@/utils/masks'
 
 const router = useRouter()
 const salvando = ref(false)
+const encaminhando = ref(false)
+
 
 // Dados do Plano
 const fornecedores = ref([])
@@ -277,8 +294,13 @@ function adicionarConsumo() {
 
 function removerConsumo(index) { consumos.value.splice(index, 1) }
 
-async function salvar() {
-  salvando.value = true
+async function salvar(encaminhar = false) {
+  if (!fornecedorId.value) return alert('Selecione o fornecedor.')
+  if (!produtos.value.length) return alert('Adicione ao menos 1 item do serviço.')
+
+  if (encaminhar) encaminhando.value = true
+  else salvando.value = true
+
   try {
     const payload = {
       fornecedor_id: fornecedorId.value,
@@ -286,16 +308,40 @@ async function salvar() {
       status: statusPlano.value,
       valor_total: totalPlano.value,
       produtos: produtos.value,
-      consumos: consumos.value
+      consumos: consumos.value,
     }
-    await api.post('/plano-corte', payload)
+
+    // 1) cria o plano
+    const { data } = await api.post('/plano-corte', payload)
+
+    // ✅ precisa vir id do backend
+    const planoId = Number(data?.id)
+    if (!planoId || Number.isNaN(planoId)) {
+      throw new Error('Backend não retornou o id do plano')
+    }
+
+    // 2) se for encaminhar, chama produção
+    if (encaminhar) {
+      await api.post('/producao/encaminhar', {
+        origem_tipo: 'PLANO_CORTE',
+        origem_id: planoId,
+        status: 'ENCAMINHADO_PRODUCAO',
+      })
+
+      router.push('/producao/agenda')
+      return
+    }
+
+    // 3) se for só salvar
     router.push('/plano-corte')
   } catch (err) {
-    alert('Erro ao salvar plano')
+    alert(encaminhar ? 'Erro ao encaminhar para produção.' : 'Erro ao salvar plano.')
   } finally {
     salvando.value = false
+    encaminhando.value = false
   }
 }
+
 
 onMounted(carregarFornecedores)
 </script>

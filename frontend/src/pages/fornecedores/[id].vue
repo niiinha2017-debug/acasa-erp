@@ -109,19 +109,19 @@
           </div>
 
           <!-- AÇÕES -->
-          <div class="col-span-12 form-actions">
-            <Button
-              variant="secondary"
-              type="button"
-              @click="router.push('/fornecedores')"
-            >
-              Cancelar
-            </Button>
+<div class="col-span-12" style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;">
+  <Button
+    variant="secondary"
+    type="button"
+    @click="router.push('/fornecedores')"
+  >
+    Cancelar
+  </Button>
 
-            <Button variant="primary" type="submit" :loading="salvando">
-              Salvar Alterações
-            </Button>
-          </div>
+  <Button variant="primary" type="submit" :loading="salvando">
+    Salvar Alterações
+  </Button>
+</div>
         </form>
       </div>
     </Card>

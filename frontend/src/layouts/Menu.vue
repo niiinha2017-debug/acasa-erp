@@ -15,12 +15,15 @@
           :class="{ active: activeDropdown === 'financeiro' }"
         >
           <button type="button" class="dropdown-toggle" @click.stop="toggleDropdown('financeiro')">
+        
             Financeiro
           </button>
 
           <div class="dropdown-content" @click.stop>
             <a v-if="temAcesso('despesas')" href="#" @click.prevent="irPara('/despesas')">Despesas</a>
-            <a href="#" @click.prevent="irPara('/receitas')">Receitas</a>
+            <a v-if="temAcesso('contas-pagar')" href="#" @click.prevent="irPara('/financeiro/contas-pagar')">Contas a Pagar</a>
+            <a v-if="temAcesso('contas-receber')" href="#" @click.prevent="irPara('/financeiro/contas-receber')">Contas a Receber</a>
+            <a v-if="temAcesso('compras')" href="#" @click.prevent="irPara('/compras')">Compras</a>
           </div>
         </div>
 
@@ -54,9 +57,42 @@
 
           <div class="dropdown-content" @click.stop>
             <a v-if="temAcesso('plano-corte')" href="#" @click.prevent="irPara('/plano-corte')">Plano de Corte</a>
+            <a v-if="temAcesso('producao')" href="#" @click.prevent="irPara('/producao/agenda')">Agenda de Produção</a>
             <a href="#" @click.prevent="irPara('/ordens-servico')">Ordens de Serviço</a>
           </div>
         </div>
+
+        <!-- VENDAS -->
+<div
+  v-if="temAcesso('vendas')"
+  class="dropdown-menu"
+  :class="{ active: activeDropdown === 'vendas' }"
+>
+  <button type="button" class="dropdown-toggle" @click.stop="toggleDropdown('vendas')">
+    Vendas
+  </button>
+
+  <div class="dropdown-content" @click.stop>
+    <a
+      v-if="temAcesso('orcamentos')"
+      href="#"
+      @click.prevent="irPara('/orcamentos')"
+    >
+      Orçamentos
+    </a>
+
+      <div class="dropdown-content" @click.stop>
+    <a
+      v-if="temAcesso('vendas')"
+      href="#"
+      @click.prevent="irPara('/vendas')"
+    >
+      Vendas
+    </a>
+      </div>
+  </div>
+</div>
+
 
         <!-- CONFIGURAÇÕES -->
         <div

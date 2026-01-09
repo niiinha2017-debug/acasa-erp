@@ -18,6 +18,12 @@ import { PlanoCorteItensModule } from './plano-corte-itens/plano-corte-itens.mod
 import { FuncionariosModule } from './funcionarios/funcionarios.module';
 import { ConstantesModule } from './constantes/constantes.module';
 import { DespesasModule } from './despesas/despesas.module';
+import { OrcamentosModule } from './orcamentos/orcamentos.module';
+import { VendasService } from './vendas/vendas.service';
+import { VendasController } from './vendas/vendas.controller';
+import { ProducaoModule } from './producao/producao.module';
+import { FinanceiroModule } from './financeiro/financeiro.module';
+import { ComprasModule } from './compras/compras.module';
 
 @Module({
   imports: [
@@ -58,7 +64,17 @@ import { DespesasModule } from './despesas/despesas.module';
     ConstantesModule,
 
     DespesasModule,
+
+    OrcamentosModule,
+
+    ProducaoModule,
+
+    FinanceiroModule,
+
+    ComprasModule,
    
   ],
+  providers: [VendasService],
+  controllers: [VendasController],
 })
 export class AppModule {}

@@ -51,6 +51,27 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/compras/': RouteRecordInfo<
+      '/compras/',
+      '/compras',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/compras/[id]': RouteRecordInfo<
+      '/compras/[id]',
+      '/compras/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/compras/novo': RouteRecordInfo<
+      '/compras/novo',
+      '/compras/novo',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/configuracoes/usuarios/': RouteRecordInfo<
       '/configuracoes/usuarios/',
       '/configuracoes/usuarios',
@@ -96,6 +117,20 @@ declare module 'vue-router/auto-routes' {
     '/despesas/novo': RouteRecordInfo<
       '/despesas/novo',
       '/despesas/novo',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/financeiro/contas-pagar/': RouteRecordInfo<
+      '/financeiro/contas-pagar/',
+      '/financeiro/contas-pagar',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/financeiro/contas-receber/': RouteRecordInfo<
+      '/financeiro/contas-receber/',
+      '/financeiro/contas-receber',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -149,6 +184,27 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/orcamentos/': RouteRecordInfo<
+      '/orcamentos/',
+      '/orcamentos',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/orcamentos/[id]': RouteRecordInfo<
+      '/orcamentos/[id]',
+      '/orcamentos/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/orcamentos/novo': RouteRecordInfo<
+      '/orcamentos/novo',
+      '/orcamentos/novo',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/plano-corte/': RouteRecordInfo<
       '/plano-corte/',
       '/plano-corte',
@@ -170,6 +226,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/producao/agenda': RouteRecordInfo<
+      '/producao/agenda',
+      '/producao/agenda',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/produtos/': RouteRecordInfo<
       '/produtos/',
       '/produtos',
@@ -187,6 +250,27 @@ declare module 'vue-router/auto-routes' {
     '/produtos/novo': RouteRecordInfo<
       '/produtos/novo',
       '/produtos/novo',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/vendas/': RouteRecordInfo<
+      '/vendas/',
+      '/vendas',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/vendas/[id]': RouteRecordInfo<
+      '/vendas/[id]',
+      '/vendas/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/vendas/novo': RouteRecordInfo<
+      '/vendas/novo',
+      '/vendas/novo',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -225,6 +309,24 @@ declare module 'vue-router/auto-routes' {
     'src/pages/clientes/novo.vue': {
       routes:
         | '/clientes/novo'
+      views:
+        | never
+    }
+    'src/pages/compras/index.vue': {
+      routes:
+        | '/compras/'
+      views:
+        | never
+    }
+    'src/pages/compras/[id].vue': {
+      routes:
+        | '/compras/[id]'
+      views:
+        | never
+    }
+    'src/pages/compras/novo.vue': {
+      routes:
+        | '/compras/novo'
       views:
         | never
     }
@@ -270,6 +372,18 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/financeiro/contas-pagar/index.vue': {
+      routes:
+        | '/financeiro/contas-pagar/'
+      views:
+        | never
+    }
+    'src/pages/financeiro/contas-receber/index.vue': {
+      routes:
+        | '/financeiro/contas-receber/'
+      views:
+        | never
+    }
     'src/pages/fornecedores/index.vue': {
       routes:
         | '/fornecedores/'
@@ -312,6 +426,24 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/orcamentos/index.vue': {
+      routes:
+        | '/orcamentos/'
+      views:
+        | never
+    }
+    'src/pages/orcamentos/[id].vue': {
+      routes:
+        | '/orcamentos/[id]'
+      views:
+        | never
+    }
+    'src/pages/orcamentos/novo.vue': {
+      routes:
+        | '/orcamentos/novo'
+      views:
+        | never
+    }
     'src/pages/plano-corte/index.vue': {
       routes:
         | '/plano-corte/'
@@ -330,6 +462,12 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/producao/agenda.vue': {
+      routes:
+        | '/producao/agenda'
+      views:
+        | never
+    }
     'src/pages/produtos/index.vue': {
       routes:
         | '/produtos/'
@@ -345,6 +483,24 @@ declare module 'vue-router/auto-routes' {
     'src/pages/produtos/novo.vue': {
       routes:
         | '/produtos/novo'
+      views:
+        | never
+    }
+    'src/pages/vendas/index.vue': {
+      routes:
+        | '/vendas/'
+      views:
+        | never
+    }
+    'src/pages/vendas/[id].vue': {
+      routes:
+        | '/vendas/[id]'
+      views:
+        | never
+    }
+    'src/pages/vendas/novo.vue': {
+      routes:
+        | '/vendas/novo'
       views:
         | never
     }

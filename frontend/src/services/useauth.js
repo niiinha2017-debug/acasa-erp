@@ -22,12 +22,16 @@ const MAPA_DE_ACESSO =
     'configuracoes',
     'produtos', 
     'financeiro',
+    'contas-pagar',
+    'contas-receber',
     'producao',
     'vendas', 
+    'agenda',
+    'compras',
     'dashboard',
     'constantes', 
-    'estoque'],
-    
+    'despesas',],
+
   'FINANCEIRO': ['dashboard', 'clientes', 'financeiro', 'relatorios','plano-corte'],
   'PRODUCAO': ['dashboard', 'producao', 'estoque'],
   'VENDAS': ['dashboard', 'clientes']
