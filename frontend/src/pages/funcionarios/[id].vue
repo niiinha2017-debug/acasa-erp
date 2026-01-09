@@ -125,23 +125,44 @@ const valeUi = ref('0,00'); const valeTransporteUi = ref('0,00');
 // Busca dados iniciais
 onMounted(async () => {
   try {
-    const { data } = await api.get(`/funcionarios/${id}`)
-    form.value = { ...data }
+    // Limpamos o ID caso venha com algum caractere estranho da URL
+    const cleanId = String(id).replace(':', '');
     
-    // Atualiza as UIs para as máscaras funcionarem
+    const { data } = await api.get(`/funcionarios/${cleanId}`)
+    
+    // Função auxiliar para limpar datas ISO (2025-08-06T00:00... -> 2025-08-06)
+    const formatToInputDate = (isoString) => {
+      if (!isoString) return ''
+      return isoString.split('T')[0]
+    }
+
+    // Preenche o formulário tratando as datas
+    form.value = { 
+      ...data,
+      data_nascimento: formatToInputDate(data.data_nascimento),
+      admissao: formatToInputDate(data.admissao),
+      demissao: formatToInputDate(data.demissao),
+      data_pagamento: formatToInputDate(data.data_pagamento)
+    }
+    
+    // Preenche as máscaras da UI
     cpfUi.value = data.cpf || ''
     rgUi.value = data.rg || ''
     whatsappUi.value = data.whatsapp || ''
     telefoneUi.value = data.telefone || ''
     cepUi.value = data.cep || ''
     
+    // Formata os valores monetários para a UI
     salarioBaseUi.value = numeroParaMoeda(data.salario_base || 0)
     valeUi.value = numeroParaMoeda(data.vale || 0)
     valeTransporteUi.value = numeroParaMoeda(data.vale_transporte || 0)
     
+    // Calcula o custo hora inicial
     syncFinanceiro()
+    
   } catch (err) {
-    alert('Erro ao carregar dados do funcionário')
+    console.error("Erro no carregamento:", err)
+    alert('Funcionário não encontrado ou erro na conexão.')
     router.push('/funcionarios')
   }
 })
