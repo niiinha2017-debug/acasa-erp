@@ -210,9 +210,16 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+
+/* ✅ COMPONENTES (obrigatório) */
+import Card from '@/components/ui/Card.vue'
+import Button from '@/components/ui/Button.vue'
+import Input from '@/components/ui/Input.vue'
+
+/* ✅ SEU SERVICE */
 import { FuncionarioService } from '@/services'
 
-// máscaras e util
+/* ✅ máscaras e util */
 import { maskCPF, maskRG, maskTelefone, maskCEP, maskMoneyBR, onlyNumbers } from '@/utils/masks'
 import { buscarCep, calcularCustoHora } from '@/utils/utils'
 import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
@@ -223,68 +230,71 @@ const route = useRoute()
 const salvando = ref(false)
 
 /* =========================
-   NOVO vs EDITAR (sem erro)
+   NOVO vs EDITAR
 ========================= */
-const routeId = computed(() => String(route.params.id || 'novo'))
-const isEditing = computed(() => routeId.value !== 'novo')
-const cleanId = computed(() => (isEditing.value ? routeId.value.replace(/\D/g, '') : null))
+const paramId = computed(() => String(route.params.id || 'novo'))
+const isEditing = computed(() => paramId.value !== 'novo')
+const id = computed(() => (isEditing.value ? paramId.value.replace(/\D/g, '') : null))
 
 /* =========================
-   FORM (espelho)
+   FORM (defaults)
+   (date/time como '' pra Input type=date/time)
 ========================= */
-const initialForm = () => ({
-  nome: '',
-  cpf: '',
-  rg: '',
-  data_nascimento: null,
-  telefone: '',
-  whatsapp: '',
-  email: '',
+function novoForm() {
+  return {
+    nome: '',
+    cpf: '',
+    rg: '',
+    data_nascimento: '',
+    telefone: '',
+    whatsapp: '',
+    email: '',
 
-  estado_civil: '',
-  escolaridade: '',
+    estado_civil: '',
+    escolaridade: '',
 
-  setor: '',
-  cargo: '',
-  funcao: '',
+    setor: '',
+    cargo: '',
+    funcao: '',
 
-  cep: '',
-  endereco: '',
-  numero: '',
-  complemento: '',
-  bairro: '',
-  cidade: '',
-  estado: '',
+    cep: '',
+    endereco: '',
+    numero: '',
+    complemento: '',
+    bairro: '',
+    cidade: '',
+    estado: '',
 
-  registro: '',
-  admissao: null,
-  demissao: null,
+    registro: '',
+    admissao: '',
+    demissao: '',
 
-  salario_base: 0,
-  salario_adicional: 0,
-  custo_hora: 0,
+    salario_base: 0,
+    salario_adicional: 0,
+    custo_hora: 0,
 
-  tem_vale: false,
-  vale: 0,
-  tem_vale_transporte: false,
-  vale_transporte: 0,
+    tem_vale: false,
+    vale: 0,
+    tem_vale_transporte: false,
+    vale_transporte: 0,
 
-  horario_entrada_1: null,
-  horario_saida_1: null,
-  horario_entrada_2: null,
-  horario_saida_2: null,
+    horario_entrada_1: '',
+    horario_saida_1: '',
+    horario_entrada_2: '',
+    horario_saida_2: '',
 
-  forma_pagamento: 'DINHEIRO',
-  banco: '',
-  agencia: '',
-  conta: '',
-  pix_tipo_chave: '',
-  pix_chave: '',
+    forma_pagamento: 'DINHEIRO',
+    banco: '',
+    agencia: '',
+    conta: '',
+    pix_tipo_chave: '',
+    pix_chave: '',
 
-  data_pagamento: null
-})
+    data_pagamento: ''
+  }
+}
 
-const form = ref(initialForm())
+const form = ref(novoForm())
 
 /* =========================
    UI refs (máscaras)
@@ -300,7 +310,9 @@ const salarioAdicionalUi = ref('0,00')
 const valeUi = ref('0,00')
 const valeTransporteUi = ref('0,00')
 
-/* exibição */
+/* =========================
+   Computeds
+========================= */
 const custoHoraExibicao = computed(() => numeroParaMoeda(form.value.custo_hora))
 
 const tempoServico = computed(() => {
@@ -311,19 +323,17 @@ const tempoServico = computed(() => {
 
   let anos = fim.getFullYear() - inicio.getFullYear()
   let meses = fim.getMonth() - inicio.getMonth()
-  if (meses < 0) { anos--; meses += 12 }
+  if (meses < 0) {
+    anos--
+    meses += 12
+  }
   return anos > 0 ? `${anos} anos e ${meses} meses` : `${meses} meses`
 })
 
 /* =========================
-   helpers
+   Helpers
 ========================= */
-function fmtDateInput(v) {
-  if (!v) return null
-  // vem Date ou ISO
-  const s = String(v)
-  return s.includes('T') ? s.split('T')[0] : s
-}
+const fmtDate = (d) => (d ? String(d).split('T')[0] : '')
 
 function syncFinanceiro() {
   form.value.salario_base = moedaParaNumero(salarioBaseUi.value)
@@ -334,29 +344,7 @@ function syncFinanceiro() {
   form.value.custo_hora = calcularCustoHora(form.value.salario_base + form.value.salario_adicional)
 }
 
-function limparPayload(p) {
-  // nunca manda "" em campos de data/hora, manda null
-  const camposNull = [
-    'data_nascimento',
-    'admissao',
-    'demissao',
-    'data_pagamento',
-    'horario_entrada_1',
-    'horario_saida_1',
-    'horario_entrada_2',
-    'horario_saida_2'
-  ]
-  for (const c of camposNull) {
-    if (p[c] === '') p[c] = null
-  }
-
-  // email raw e lower
-  p.email = raw(p.email ? String(p.email).toLowerCase().trim() : '')
-
-  return p
-}
-
-function resetUIFromForm() {
+function preencherUIComForm() {
   cpfUi.value = form.value.cpf ? maskCPF(form.value.cpf) : ''
   rgUi.value = form.value.rg || ''
   whatsappUi.value = form.value.whatsapp ? maskTelefone(form.value.whatsapp) : ''
@@ -370,36 +358,29 @@ function resetUIFromForm() {
 }
 
 /* =========================
-   carregar (novo/editar)
+   Carregar (novo vs editar)
 ========================= */
 async function carregar() {
-  // NOVO: limpa tudo
   if (!isEditing.value) {
-    form.value = initialForm()
-    resetUIFromForm()
+    form.value = novoForm()
+    preencherUIComForm()
+    syncFinanceiro()
     return
   }
 
-  // EDITAR
   try {
-    const { data } = await FuncionarioService.buscar(cleanId.value)
+    const { data } = await FuncionarioService.buscar(id.value)
 
     form.value = {
-      ...initialForm(),
+      ...novoForm(),
       ...data,
-      data_nascimento: fmtDateInput(data.data_nascimento),
-      admissao: fmtDateInput(data.admissao),
-      demissao: fmtDateInput(data.demissao),
-      data_pagamento: fmtDateInput(data.data_pagamento),
-
-      // horários (se vierem vazios)
-      horario_entrada_1: data.horario_entrada_1 || null,
-      horario_saida_1: data.horario_saida_1 || null,
-      horario_entrada_2: data.horario_entrada_2 || null,
-      horario_saida_2: data.horario_saida_2 || null
+      data_nascimento: fmtDate(data.data_nascimento),
+      admissao: fmtDate(data.admissao),
+      demissao: fmtDate(data.demissao),
+      data_pagamento: fmtDate(data.data_pagamento)
     }
 
-    resetUIFromForm()
+    preencherUIComForm()
     syncFinanceiro()
   } catch (err) {
     router.push('/funcionarios')
@@ -408,8 +389,8 @@ async function carregar() {
 
 onMounted(carregar)
 
-// MUITO IMPORTANTE: quando navegar de um id pra outro sem recarregar o componente
-watch(() => routeId.value, () => carregar())
+/* 🔥 importante com auto-routes: muda id sem reload */
+watch(() => paramId.value, () => carregar())
 
 /* =========================
    WATCHERS (máscaras)
@@ -434,6 +415,21 @@ watch(telefoneUi, (v) => {
   form.value.telefone = onlyNumbers(telefoneUi.value)
 })
 
+watch(cepUi, async (v) => {
+  cepUi.value = maskCEP(v)
+  form.value.cep = onlyNumbers(cepUi.value)
+
+  if (form.value.cep.length === 8) {
+    const d = await buscarCep(form.value.cep)
+    if (d) {
+      form.value.endereco = upper(d.logradouro)
+      form.value.bairro = upper(d.bairro)
+      form.value.cidade = upper(d.localidade)
+      form.value.estado = upper(d.uf)
+    }
+  }
+})
+
 watch(salarioBaseUi, (v) => {
   salarioBaseUi.value = maskMoneyBR(v)
   syncFinanceiro()
@@ -454,23 +450,10 @@ watch(valeTransporteUi, (v) => {
   syncFinanceiro()
 })
 
-watch(cepUi, async (v) => {
-  cepUi.value = maskCEP(v)
-  form.value.cep = onlyNumbers(cepUi.value)
-
-  if (form.value.cep.length === 8) {
-    const d = await buscarCep(form.value.cep)
-    if (d) {
-      form.value.endereco = upper(d.logradouro)
-      form.value.bairro = upper(d.bairro)
-      form.value.cidade = upper(d.localidade)
-      form.value.estado = upper(d.uf)
-    }
-  }
-})
-
 /* =========================
-   SALVAR (NOVO/EDITAR)
+   SALVAR (usa SEU service)
+   - novo: POST /funcionarios
+   - editar: PUT /funcionarios/:id
 ========================= */
 async function salvar() {
   if (!form.value.nome || String(form.value.cpf || '').length < 11) {
@@ -481,12 +464,12 @@ async function salvar() {
   try {
     syncFinanceiro()
 
-    const payload = limparPayload({ ...form.value })
+    const payload = {
+      ...form.value,
+      email: raw(form.value.email ? String(form.value.email).toLowerCase().trim() : '')
+    }
 
-    // ✅ usa seu service exatamente como você mandou:
-    // - POST quando id é null/novo
-    // - PUT quando id existe
-    await FuncionarioService.salvar(isEditing.value ? cleanId.value : null, payload)
+    await FuncionarioService.salvar(isEditing.value ? id.value : null, payload)
 
     router.push('/funcionarios')
   } catch (err) {
@@ -496,3 +479,4 @@ async function salvar() {
   }
 }
 </script>
+
