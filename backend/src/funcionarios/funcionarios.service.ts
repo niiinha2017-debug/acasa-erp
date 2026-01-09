@@ -30,7 +30,8 @@ export class FuncionariosService {
   ) {
     const data: any = { ...dto }
 
-    // se vier string ISO, converte; se não vier, não mexe
+    // Datas ISO -> Date
+    if (data.data_nascimento) data.data_nascimento = new Date(data.data_nascimento)
     if (data.admissao) data.admissao = new Date(data.admissao)
     if (data.demissao) data.demissao = new Date(data.demissao)
     if (data.data_pagamento) data.data_pagamento = new Date(data.data_pagamento)
@@ -44,7 +45,6 @@ export class FuncionariosService {
         data: this.normalizarDatas(dto),
       })
     } catch (e: any) {
-      // Prisma unique constraint (CPF)
       if (e?.code === 'P2002') {
         throw new BadRequestException('CPF já cadastrado.')
       }

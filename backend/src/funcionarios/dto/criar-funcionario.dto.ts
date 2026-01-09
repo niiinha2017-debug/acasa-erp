@@ -1,4 +1,4 @@
-import { IsEmail, IsInt, IsOptional, IsString, Max, Min } from 'class-validator'
+import { IsEmail, IsOptional, IsString, IsNumber } from 'class-validator'
 
 export class CriarFuncionarioDto {
   // Dados pessoais
@@ -11,6 +11,10 @@ export class CriarFuncionarioDto {
   @IsOptional()
   @IsString()
   rg?: string
+
+  @IsOptional()
+  @IsString()
+  data_nascimento?: string
 
   @IsOptional()
   @IsString()
@@ -32,7 +36,7 @@ export class CriarFuncionarioDto {
   @IsString()
   escolaridade?: string
 
-    // Empresa
+  // Empresa
   @IsOptional()
   @IsString()
   setor?: string
@@ -44,7 +48,6 @@ export class CriarFuncionarioDto {
   @IsOptional()
   @IsString()
   funcao?: string
-
 
   // Endereço
   @IsOptional()
@@ -76,7 +79,6 @@ export class CriarFuncionarioDto {
   @IsString()
   registro?: string
 
-  // Datas como string ISO no body (Nest/Prisma convertem)
   @IsOptional()
   @IsString()
   admissao?: string
@@ -85,42 +87,67 @@ export class CriarFuncionarioDto {
   @IsString()
   demissao?: string
 
-  // Financeiro (enviar como número no JSON)
+  // Financeiro
   @IsOptional()
+  @IsNumber()
   salario_base?: number
 
   @IsOptional()
+  @IsNumber()
   salario_adicional?: number
 
   @IsOptional()
+  @IsNumber()
   custo_hora?: number
 
   @IsOptional()
+  @IsNumber()
   vale?: number
 
-  // Horários
+  // Horários (4 horários)
   @IsOptional()
   @IsString()
-  horario_entrada?: string
+  horario_entrada_1?: string
 
   @IsOptional()
   @IsString()
-  horario_almoco?: string
+  horario_saida_1?: string
 
   @IsOptional()
   @IsString()
-  horario_saida?: string
+  horario_entrada_2?: string
 
+  @IsOptional()
+  @IsString()
+  horario_saida_2?: string
   // Pagamento
-  @IsOptional()
-  @IsString()
-  conta_bancaria?: string
+  
+@IsOptional()
+@IsString()
+data_pagamento?: string
 
-  @IsOptional()
-  @IsString()
-  forma_pagamento?: string
+@IsOptional()
+@IsString()
+forma_pagamento?: string
 
-  @IsOptional()
-  @IsString()
-  data_pagamento?: string
+@IsOptional()
+@IsString()
+banco?: string
+
+@IsOptional()
+@IsString()
+agencia?: string
+
+@IsOptional()
+@IsString()
+conta?: string
+
+@IsOptional()
+@IsString()
+pix_tipo_chave?: string
+
+@IsOptional()
+@IsString()
+pix_chave?: string
+
 }
