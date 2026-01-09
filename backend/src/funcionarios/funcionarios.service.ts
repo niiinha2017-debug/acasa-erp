@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
+import PDFDocument from 'pdfkit'
 import { CriarFuncionarioDto } from './dto/criar-funcionario.dto'
 import { AtualizarFuncionarioDto } from './dto/atualizar-funcionario.dto'
 
@@ -43,6 +44,68 @@ private normalizarDatas(dto: any) {
 
   return data;
 }
+
+ async gerarPdf(ids: number[]): Promise<Buffer> {
+    const funcionarios = await this.prisma.funcionarios.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, nome: true, cpf: true, rg: true },
+      orderBy: { nome: 'asc' }
+    })
+
+    if (!funcionarios.length) {
+      throw new NotFoundException('Nenhum funcionário encontrado para gerar o PDF.')
+    }
+
+    // PDF em memória (Buffer)
+    const doc = new PDFDocument({ size: 'A4', margin: 40 })
+    const chunks: Buffer[] = []
+
+    doc.on('data', (c) => chunks.push(c))
+    const done = new Promise<Buffer>((resolve) => {
+      doc.on('end', () => resolve(Buffer.concat(chunks)))
+    })
+
+    // Cabeçalho
+    doc.fontSize(16).text('Lista de Funcionários', { align: 'center' })
+    doc.moveDown(0.5)
+    doc.fontSize(10).text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, { align: 'center' })
+    doc.moveDown(1)
+
+    // Tabela simples
+    const startX = 40
+    let y = doc.y
+
+    const colNome = startX
+    const colCpf = 310
+    const colRg = 430
+
+    doc.fontSize(11).text('NOME', colNome, y, { width: 260 })
+    doc.text('CPF', colCpf, y, { width: 110 })
+    doc.text('RG', colRg, y, { width: 120 })
+    y += 18
+    doc.moveTo(startX, y).lineTo(555, y).stroke()
+    y += 10
+
+    doc.fontSize(10)
+
+    for (const f of funcionarios) {
+      // Quebra de página
+      if (y > 760) {
+        doc.addPage()
+        y = 60
+      }
+
+      doc.text(f.nome || '-', colNome, y, { width: 260 })
+      doc.text(f.cpf || '-', colCpf, y, { width: 110 })
+      doc.text(f.rg || '-', colRg, y, { width: 120 })
+
+      y += 18
+    }
+
+    doc.end()
+    return done
+  }
+
 
   async criar(dto: CriarFuncionarioDto) {
     try {
