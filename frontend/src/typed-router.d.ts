@@ -170,13 +170,6 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
-    '/funcionarios/novo': RouteRecordInfo<
-      '/funcionarios/novo',
-      '/funcionarios/novo',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
     '/login': RouteRecordInfo<
       '/login',
       '/login',
@@ -411,12 +404,6 @@ declare module 'vue-router/auto-routes' {
     'src/pages/funcionarios/[id].vue': {
       routes:
         | '/funcionarios/[id]'
-      views:
-        | never
-    }
-    'src/pages/funcionarios/novo.vue': {
-      routes:
-        | '/funcionarios/novo'
       views:
         | never
     }

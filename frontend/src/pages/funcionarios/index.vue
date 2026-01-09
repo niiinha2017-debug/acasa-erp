@@ -7,9 +7,9 @@
           <p class="cell-muted">Gestão e controle de colaboradores</p>
         </div>
         <div class="header-actions">
-          <Button variant="primary" @click="router.push('/funcionarios/novo')">
-            + Novo Funcionário
-          </Button>
+<Button variant="primary" @click="router.push('/funcionarios/novo')">
+  + Novo Funcionário
+</Button>
         </div>
       </header>
 
