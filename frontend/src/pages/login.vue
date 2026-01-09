@@ -57,32 +57,48 @@
       name="usuario_login_erp" 
       autocomplete="one-time-code" 
     />
-    </div>
+  </div>
 
-  <div class="form-group" style="margin-top: var(--spacing-4);">
+  <div class="form-group" style="margin-top: 20px;">
     <label class="form-label">Senha</label>
-    <div class="input-container">
+    
+    <div class="input-container" style="position: relative; display: flex; align-items: center;">
       <input 
         v-model="formLogin.senha" 
         :type="showPassword ? 'text' : 'password'" 
         class="form-input" 
         required 
         name="senha_login_erp"
-        autocomplete="new-password" 
+        autocomplete="new-password"
+        style="padding-right: 45px; width: 100%;" 
       />
+      
       <button 
         type="button" 
         class="password-toggle" 
         @click="showPassword = !showPassword"
         tabindex="-1"
+        style="position: absolute; right: 12px; background: none; border: none; cursor: pointer; color: #8892b0; display: flex; align-items: center; justify-content: center; transition: color 0.2s;"
       >
-        </button>
+        <svg v-if="showPassword" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+        <svg v-else xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 12s3-7 10-7 10 7 10 7" />
+          <path d="m15 19-2-3" /><path d="m20 17-2-3" /><path d="m4 17 2-3" /><path d="m9 19 2-3" />
+        </svg>
+      </button>
     </div>
   </div>
+  <div class="remember-me" style="display: flex; align-items: center; margin-top: 10px; gap: 8px;">
+  <input type="checkbox" id="remember" v-model="lembrarUsuario" style="cursor: pointer;" />
+  <label for="remember" style="font-size: 14px; color: #666; cursor: pointer;">Lembrar meu usuário</label>
+</div>
 
-            <button type="submit" class="submit-button" :disabled="loading">
-              {{ loading ? 'Entrando...' : 'Entrar no sistema' }}
-            </button>
+  <button type="submit" class="submit-button" :disabled="loading" style="margin-top: 20px;">
+    {{ loading ? 'Entrando...' : 'Entrar no sistema' }}
+  </button>
 
             <div class="form-links">
               <a href="#" class="link" @click.prevent="showModalRecuperacao = true">Esqueci minha senha</a>
@@ -180,7 +196,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue' // Adicionado onMounted aqui
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/services/useauth'
 import '@/assets/CSS/Login.css'
@@ -192,22 +208,49 @@ const showPassword = ref(false)
 const showModalCadastro = ref(false)
 const showModalRecuperacao = ref(false)
 const emailRecuperacao = ref('')
+const lembrarUsuario = ref(false)
 
 const formLogin = reactive({ usuario: '', senha: '' })
 const formCadastro = reactive({ nome: '', email: '', usuario: '', senha: '' })
 
+// 1. LOGICA DE INICIALIZAÇÃO (Lembrar usuário do sistema, não do navegador)
+onMounted(() => {
+  const salvo = localStorage.getItem('erp_lembrar_usuario')
+  if (salvo) {
+    formLogin.usuario = salvo
+    lembrarUsuario.value = true
+  }
+
+  // Limpa o lixo que o navegador tenta injetar automaticamente
+  setTimeout(() => {
+    if (!lembrarUsuario.value) {
+      formLogin.usuario = ''
+    }
+    formLogin.senha = '' 
+  }, 100)
+})
+
+// 2. SUBMIT DO LOGIN
 async function handleLoginSubmit() {
   try {
     await login(formLogin)
+    
+    // Gerencia a memória do "Lembrar meu usuário"
+    if (lembrarUsuario.value) {
+      localStorage.setItem('erp_lembrar_usuario', formLogin.usuario)
+    } else {
+      localStorage.removeItem('erp_lembrar_usuario')
+    }
+
     router.push('/')
   } catch (e) {
     console.error("Login falhou")
   }
 }
 
+// 3. SUBMIT DO CADASTRO
 async function handleCadastroSubmit() {
   try {
-    // 1. Envia para o servidor
     await solicitarCadastro({ 
       ...formCadastro, 
       setor: 'PENDENTE',
@@ -215,37 +258,23 @@ async function handleCadastroSubmit() {
       status: 'PENDENTE'
     })
     
-    // 2. SE CHEGOU AQUI, DEU CERTO:
-    // Fecha o modal
-    showModalCadastro.value = false
-    
-    // Limpa os campos para a próxima vez que abrir
-    Object.assign(formCadastro, { 
-      nome: '', 
-      email: '', 
-      usuario: '', 
-      senha: '' 
-    })
-    
+    fecharCadastro() // Usa a função de fechar que já limpa os campos
     alert('Solicitação enviada! Aguarde a aprovação do administrador.')
-
   } catch (e) {
-    // SE DER ERRO:
-    // O modal continua aberto e os dados NÃO são limpos 
-    // para o usuário poder corrigir o erro (ex: e-mail já existe)
-    alert(e?.response?.data?.message || 'Erro: Verifique os campos corretamente.')
+    alert('Erro: Verifique se preencheu todos os campos corretamente.')
   }
 }
+
+// 4. AUXILIARES
 function fecharCadastro() {
   showModalCadastro.value = false
-  // Limpa o formulário ao desistir
   Object.assign(formCadastro, { nome: '', email: '', usuario: '', senha: '' })
 }
+
 function handleRecuperarSenha() {
   alert('Se o e-mail existir, as instruções foram enviadas.')
   showModalRecuperacao.value = false
 }
-
 </script>
 
 <style scoped>
