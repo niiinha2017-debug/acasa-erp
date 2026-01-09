@@ -111,12 +111,13 @@
       </div>
     </div>
 
-    <div v-if="showModalCadastro" class="modal-overlay" @click.self="showModalCadastro = false">
+<div v-if="showModalCadastro" class="modal-overlay" @click.self="fecharCadastro">
       <div class="modal-container">
         <header class="modal-header">
           <h3 class="modal-title">Solicitar Cadastro</h3>
           <p class="modal-subtitle">Dados para análise de acesso.</p>
         </header>
+
         <form class="modal-body" @submit.prevent="handleCadastroSubmit">
           <div class="form-grid">
             <div class="form-group col-span-12">
@@ -136,9 +137,14 @@
               <input v-model="formCadastro.senha" type="password" class="form-input" required />
             </div>
           </div>
+
           <footer class="modal-footer">
-            <button type="button" class="btn-cancel" @click="showModalCadastro = false">Cancelar</button>
-            <button type="submit" class="btn btn--primary" style="flex: 2" :disabled="loading">Solicitar</button>
+            <button type="button" class="btn-cancel" @click="fecharCadastro">
+              Cancelar
+            </button>
+            <button type="submit" class="btn btn--primary" style="flex: 2" :disabled="loading">
+              {{ loading ? 'Enviando...' : 'Solicitar' }}
+            </button>
           </footer>
         </form>
       </div>
@@ -174,25 +180,40 @@ async function handleLoginSubmit() {
 
 async function handleCadastroSubmit() {
   try {
-    // Adicionamos os campos que o seu DTO exige como obrigatórios
+    // 1. Envia para o servidor
     await solicitarCadastro({ 
       ...formCadastro, 
-      setor: 'PENDENTE',  // O DTO exige setor
-      funcao: 'Aguardando', // O DTO exige funcao
-      status: 'PENDENTE'  // O DTO exige status
+      setor: 'PENDENTE',
+      funcao: 'Aguardando',
+      status: 'PENDENTE'
     })
     
+    // 2. SE CHEGOU AQUI, DEU CERTO:
+    // Fecha o modal
     showModalCadastro.value = false
-    alert('Solicitação enviada! Aguarde a aprovação do administrador.')
     
-    // Limpa o formulário
-    Object.assign(formCadastro, { nome: '', email: '', usuario: '', senha: '' })
+    // Limpa os campos para a próxima vez que abrir
+    Object.assign(formCadastro, { 
+      nome: '', 
+      email: '', 
+      usuario: '', 
+      senha: '' 
+    })
+    
+    alert('Solicitação enviada! Aguarde a aprovação do administrador.')
+
   } catch (e) {
-    // Se cair aqui, é porque o DTO ainda recusou algo
-    alert('Erro: Verifique se preencheu todos os campos corretamente.')
+    // SE DER ERRO:
+    // O modal continua aberto e os dados NÃO são limpos 
+    // para o usuário poder corrigir o erro (ex: e-mail já existe)
+    alert(e?.response?.data?.message || 'Erro: Verifique os campos corretamente.')
   }
 }
-
+function fecharCadastro() {
+  showModalCadastro.value = false
+  // Limpa o formulário ao desistir
+  Object.assign(formCadastro, { nome: '', email: '', usuario: '', senha: '' })
+}
 function handleRecuperarSenha() {
   alert('Se o e-mail existir, as instruções foram enviadas.')
   showModalRecuperacao.value = false
