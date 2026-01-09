@@ -44,38 +44,41 @@
             <p class="form-subtitle">Entre com suas credenciais</p>
           </header>
 
-          <form class="login-form" @submit.prevent="handleLoginSubmit">
-            <div class="form-group">
-              <label class="form-label">Usuário ou e-mail</label>
-              <input 
-                v-model="formLogin.usuario" 
-                type="text" 
-                class="form-input" 
-                placeholder="Usuario ou seu@email.com" 
-                required 
-              />
-            </div>
+<form class="login-form" @submit.prevent="handleLoginSubmit" autocomplete="off">
+  
+  <div class="form-group">
+    <label class="form-label">Usuário ou e-mail</label>
+    <input 
+      v-model="formLogin.usuario" 
+      type="text" 
+      class="form-input" 
+      placeholder="Usuario ou seu@email.com" 
+      required 
+      name="usuario_login_erp" 
+      autocomplete="one-time-code" 
+    />
+    </div>
 
-            <div class="form-group" style="margin-top: var(--spacing-4);">
-              <label class="form-label">Senha</label>
-              <div class="input-container">
-                <input 
-                  v-model="formLogin.senha" 
-                  :type="showPassword ? 'text' : 'password'" 
-                  class="form-input" 
-                  required 
-                />
-                <button 
-                  type="button" 
-                  class="password-toggle" 
-                  @click="showPassword = !showPassword"
-                  tabindex="-1"
-                >
-                  <svg v-if="!showPassword" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                  <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
-                </button>
-              </div>
-            </div>
+  <div class="form-group" style="margin-top: var(--spacing-4);">
+    <label class="form-label">Senha</label>
+    <div class="input-container">
+      <input 
+        v-model="formLogin.senha" 
+        :type="showPassword ? 'text' : 'password'" 
+        class="form-input" 
+        required 
+        name="senha_login_erp"
+        autocomplete="new-password" 
+      />
+      <button 
+        type="button" 
+        class="password-toggle" 
+        @click="showPassword = !showPassword"
+        tabindex="-1"
+      >
+        </button>
+    </div>
+  </div>
 
             <button type="submit" class="submit-button" :disabled="loading">
               {{ loading ? 'Entrando...' : 'Entrar no sistema' }}
@@ -120,23 +123,47 @@
 
         <form class="modal-body" @submit.prevent="handleCadastroSubmit">
           <div class="form-grid">
-            <div class="form-group col-span-12">
-              <label class="form-label">Nome Completo</label>
-              <input v-model="formCadastro.nome" type="text" class="form-input" required />
-            </div>
-            <div class="form-group col-span-12">
-              <label class="form-label">E-mail</label>
-              <input v-model="formCadastro.email" type="email" class="form-input" required />
-            </div>
-            <div class="form-group col-span-6">
-              <label class="form-label">Usuário</label>
-              <input v-model="formCadastro.usuario" type="text" class="form-input" required />
-            </div>
-            <div class="form-group col-span-6">
-              <label class="form-label">Senha</label>
-              <input v-model="formCadastro.senha" type="password" class="form-input" required />
-            </div>
-          </div>
+  <div class="form-group col-span-12">
+    <label class="form-label">Nome Completo</label>
+    <input v-model="formCadastro.nome" type="text" class="form-input" required autocomplete="off" />
+  </div>
+
+  <div class="form-group col-span-12">
+    <label class="form-label">E-mail</label>
+    <input 
+      v-model="formCadastro.email" 
+      type="email" 
+      class="form-input" 
+      required 
+      name="novo_email_registro"
+      autocomplete="new-password" 
+    />
+  </div>
+
+  <div class="form-group col-span-6">
+    <label class="form-label">Usuário</label>
+    <input 
+      v-model="formCadastro.usuario" 
+      type="text" 
+      class="form-input" 
+      required 
+      name="novo_usuario_registro"
+      autocomplete="off" 
+    />
+  </div>
+
+  <div class="form-group col-span-6">
+    <label class="form-label">Senha</label>
+    <input 
+      v-model="formCadastro.senha" 
+      type="password" 
+      class="form-input" 
+      required 
+      name="nova_senha_registro"
+      autocomplete="new-password" 
+    />
+  </div>
+</div>
 
           <footer class="modal-footer">
             <button type="button" class="btn-cancel" @click="fecharCadastro">
@@ -218,6 +245,7 @@ function handleRecuperarSenha() {
   alert('Se o e-mail existir, as instruções foram enviadas.')
   showModalRecuperacao.value = false
 }
+
 </script>
 
 <style scoped>
