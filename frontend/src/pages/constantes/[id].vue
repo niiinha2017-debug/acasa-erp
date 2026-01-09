@@ -3,13 +3,20 @@
     <Card>
       <header class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
         <div>
-          <h2 class="card-title">Editar Constante</h2>
+          <h2 class="card-title">{{ isNovo ? 'Nova Constante' : 'Editar Constante' }}</h2>
           <p style="font-size: var(--font-size-sm); margin: 0; opacity: .85;">
-            Atualize os dados da constante.
+            {{ isNovo ? 'Cadastre uma nova constante do sistema.' : 'Atualize os dados da constante.' }}
           </p>
         </div>
 
-        <Button variant="danger" size="sm" type="button" :disabled="loading" @click="excluir">
+        <Button
+          v-if="!isNovo"
+          variant="danger"
+          size="sm"
+          type="button"
+          :disabled="loading"
+          @click="excluir"
+        >
           Excluir
         </Button>
       </header>
@@ -18,15 +25,15 @@
         <form class="form-grid" @submit.prevent="salvar">
           <Input
             v-model="form.categoria"
-            label="Categoria"
-            placeholder="Ex: FORMA_PAGAMENTO"
+            label="Categoria *"
+            placeholder="Ex: FORMA_DE_PAGAMENTO"
             :required="true"
             class="col-span-4"
           />
 
           <Input
             v-model="form.chave"
-            label="Chave"
+            label="Chave *"
             placeholder="Ex: PIX"
             :required="true"
             class="col-span-4"
@@ -34,7 +41,7 @@
 
           <Input
             v-model="form.rotulo"
-            label="Rótulo"
+            label="Rótulo *"
             placeholder="Ex: Pix"
             :required="true"
             class="col-span-4"
@@ -70,13 +77,13 @@
             v-if="form.tipo === 'TEXTO'"
             v-model="form.valor_texto"
             label="Valor (Texto)"
-            placeholder="Ex: Cartão de Crédito"
+            placeholder="Ex: CELULAR / EMAIL / CPF"
             class="col-span-12"
           />
 
           <Input
             v-if="form.tipo === 'NUMERO'"
-            v-model="form.valor_numero"
+            v-model.number="form.valor_numero"
             label="Valor (Número)"
             placeholder="Ex: 2.99"
             class="col-span-6"
@@ -109,7 +116,7 @@
             </Button>
 
             <Button type="submit" :loading="loading" :disabled="loading">
-              Salvar alterações
+              {{ isNovo ? 'Criar constante' : 'Salvar alterações' }}
             </Button>
           </div>
 
@@ -136,7 +143,8 @@ import Button from '@/components/ui/Button.vue'
 const route = useRoute()
 const router = useRouter()
 
-const id = computed(() => Number(route.params.id))
+const isNovo = computed(() => String(route.params.id) === 'novo')
+const id = computed(() => (isNovo.value ? null : Number(route.params.id)))
 
 const loading = ref(false)
 const erro = ref('')
@@ -147,7 +155,7 @@ const form = ref({
   rotulo: '',
   tipo: 'TEXTO',
   valor_texto: '',
-  valor_numero: '',
+  valor_numero: null,
   valor_booleano: true,
   ordem: 0,
   ativo: true,
@@ -164,10 +172,9 @@ function aplicarNoForm(data) {
   form.value.ativo = !!data?.ativo
 
   form.value.valor_texto = data?.valor_texto ?? ''
-  form.value.valor_numero = data?.valor_numero ?? ''
+  form.value.valor_numero = data?.valor_numero ?? null
   form.value.valor_booleano = data?.valor_booleano ?? true
 
-  // valor_json pode vir como objeto; mantemos editável no textarea
   valorJsonTexto.value = data?.valor_json ? JSON.stringify(data.valor_json, null, 2) : ''
 }
 
@@ -187,14 +194,18 @@ const payload = computed(() => {
   }
 
   if (base.tipo === 'TEXTO') base.valor_texto = form.value.valor_texto || null
-  if (base.tipo === 'NUMERO') base.valor_numero = form.value.valor_numero || null
+  if (base.tipo === 'NUMERO') base.valor_numero = (form.value.valor_numero ?? null)
   if (base.tipo === 'BOOLEANO') base.valor_booleano = !!form.value.valor_booleano
-  if (base.tipo === 'JSON') base.valor_json = valorJsonTexto.value || null
+  if (base.tipo === 'JSON') {
+    base.valor_json = valorJsonTexto.value ? JSON.parse(valorJsonTexto.value) : null
+  }
 
   return base
 })
 
 async function carregar() {
+  if (isNovo.value) return
+
   erro.value = ''
   loading.value = true
 
@@ -213,21 +224,28 @@ async function salvar() {
   loading.value = true
 
   try {
-    if (payload.value.tipo === 'JSON' && payload.value.valor_json) {
-      JSON.parse(payload.value.valor_json)
+    // valida JSON antes de enviar
+    if (form.value.tipo === 'JSON' && valorJsonTexto.value) {
+      JSON.parse(valorJsonTexto.value)
     }
 
-    await api.patch(`/constantes/${id.value}`, payload.value)
+    if (isNovo.value) {
+      await api.post('/constantes', payload.value)
+    } else {
+      await api.patch(`/constantes/${id.value}`, payload.value)
+    }
+
     router.push('/constantes')
   } catch (e) {
-    erro.value = e?.response?.data?.message || 'Erro ao salvar alterações.'
+    erro.value = e?.response?.data?.message || (isNovo.value ? 'Erro ao criar constante.' : 'Erro ao salvar alterações.')
   } finally {
     loading.value = false
   }
 }
 
 async function excluir() {
-  // sem modal (você não pediu) — se quiser confirmação, você manda depois
+  if (isNovo.value) return
+
   erro.value = ''
   loading.value = true
 

@@ -25,57 +25,43 @@ export class ConstantesService {
     return item
   }
 
-  async criar(dto: CriarConstanteDto) {
-    try {
-      return await this.prisma.constantes.create({
-        data: {
-          categoria: dto.categoria,
-          chave: dto.chave,
-          rotulo: dto.rotulo,
-          tipo: dto.tipo,
-          valor_texto: dto.valor_texto ?? null,
-          valor_numero: dto.valor_numero ?? null,
-          valor_booleano: dto.valor_booleano ?? null,
-          valor_json: dto.valor_json ?? null,
-          ordem: dto.ordem ?? 0,
-          ativo: dto.ativo ?? true,
-        },
-      })
-    } catch (e: any) {
-      // unique (categoria, chave)
-      if (e?.code === 'P2002') {
-        throw new BadRequestException('Já existe uma constante com esta categoria e chave')
-      }
-      throw e
-    }
-  }
+async criar(dto: CriarConstanteDto) {
+  return this.prisma.constantes.create({
+    data: {
+      categoria: dto.categoria,
+      chave: dto.chave,
+      rotulo: dto.rotulo,
+      tipo: dto.tipo,
+      valor_texto: dto.valor_texto ?? null,
+      valor_numero: dto.valor_numero ?? null,
+      valor_booleano: dto.valor_booleano ?? null,
+      valor_json: dto.valor_json ?? null,
+      ordem: dto.ordem ?? 0,
+      ativo: dto.ativo ?? true,
+    },
+  })
+}
 
-  async atualizar(id: number, dto: AtualizarConstanteDto) {
-    await this.buscarPorId(id)
 
-    try {
-      return await this.prisma.constantes.update({
-        where: { id },
-        data: {
-          categoria: dto.categoria,
-          chave: dto.chave,
-          rotulo: dto.rotulo,
-          tipo: dto.tipo,
-          valor_texto: dto.valor_texto === undefined ? undefined : dto.valor_texto,
-          valor_numero: dto.valor_numero === undefined ? undefined : dto.valor_numero,
-          valor_booleano: dto.valor_booleano === undefined ? undefined : dto.valor_booleano,
-          valor_json: dto.valor_json === undefined ? undefined : dto.valor_json,
-          ordem: dto.ordem,
-          ativo: dto.ativo,
-        },
-      })
-    } catch (e: any) {
-      if (e?.code === 'P2002') {
-        throw new BadRequestException('Já existe uma constante com esta categoria e chave')
-      }
-      throw e
-    }
-  }
+async atualizar(id: number, dto: AtualizarConstanteDto) {
+  await this.buscarPorId(id)
+
+  return this.prisma.constantes.update({
+    where: { id },
+    data: {
+      categoria: dto.categoria,
+      chave: dto.chave,
+      rotulo: dto.rotulo,
+      tipo: dto.tipo,
+      valor_texto: dto.valor_texto === undefined ? undefined : dto.valor_texto,
+      valor_numero: dto.valor_numero === undefined ? undefined : dto.valor_numero,
+      valor_booleano: dto.valor_booleano === undefined ? undefined : dto.valor_booleano,
+      valor_json: dto.valor_json === undefined ? undefined : dto.valor_json,
+      ordem: dto.ordem,
+      ativo: dto.ativo,
+    },
+  })
+}
 
   async remover(id: number) {
     await this.buscarPorId(id)
