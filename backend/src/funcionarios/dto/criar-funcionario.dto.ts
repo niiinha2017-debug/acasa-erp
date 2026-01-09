@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, IsString, IsNumber } from 'class-validator'
+import { IsEmail, IsOptional, IsString, IsNumber, IsBoolean } from 'class-validator'
 
 export class CriarFuncionarioDto {
   // Dados pessoais
@@ -64,6 +64,10 @@ export class CriarFuncionarioDto {
 
   @IsOptional()
   @IsString()
+  complemento?: string // <--- ADICIONADO PARA O NOVO CAMPO
+
+  @IsOptional()
+  @IsString()
   bairro?: string
 
   @IsOptional()
@@ -100,9 +104,23 @@ export class CriarFuncionarioDto {
   @IsNumber()
   custo_hora?: number
 
+  // Vale Alimentação / Refeição
+  @IsOptional()
+  @IsBoolean()
+  tem_vale?: boolean // <--- ADICIONADO PARA O CHECKBOX
+
   @IsOptional()
   @IsNumber()
   vale?: number
+
+  // Vale Transporte
+  @IsOptional()
+  @IsBoolean()
+  tem_vale_transporte?: boolean // <--- ADICIONADO PARA O CHECKBOX
+
+  @IsOptional()
+  @IsNumber()
+  vale_transporte?: number // <--- ADICIONADO PARA O VALOR DO VT
 
   // Horários (4 horários)
   @IsOptional()
@@ -120,34 +138,33 @@ export class CriarFuncionarioDto {
   @IsOptional()
   @IsString()
   horario_saida_2?: string
+
   // Pagamento
-  
-@IsOptional()
-@IsString()
-data_pagamento?: string
+  @IsOptional()
+  @IsString()
+  data_pagamento?: string
 
-@IsOptional()
-@IsString()
-forma_pagamento?: string
+  @IsOptional()
+  @IsString()
+  forma_pagamento?: string
 
-@IsOptional()
-@IsString()
-banco?: string
+  @IsOptional()
+  @IsString()
+  banco?: string
 
-@IsOptional()
-@IsString()
-agencia?: string
+  @IsOptional()
+  @IsString()
+  agencia?: string
 
-@IsOptional()
-@IsString()
-conta?: string
+  @IsOptional()
+  @IsString()
+  conta?: string
 
-@IsOptional()
-@IsString()
-pix_tipo_chave?: string
+  @IsOptional()
+  @IsString()
+  pix_tipo_chave?: string
 
-@IsOptional()
-@IsString()
-pix_chave?: string
-
+  @IsOptional()
+  @IsString()
+  pix_chave?: string
 }

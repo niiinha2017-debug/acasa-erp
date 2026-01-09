@@ -4,7 +4,7 @@ import {
   Delete,
   Get,
   Param,
-  Patch,
+  Put, // Alterado para Put para combinar com o Front-end
   Post,
   UseGuards,
 } from '@nestjs/common'
@@ -28,7 +28,9 @@ export class FuncionariosController {
 
   @Get(':id')
   buscarPorId(@Param('id') id: string) {
-    return this.service.buscarPorId(Number(id))
+    // Tratamento para garantir que o ID seja apenas números (remove ":" indesejados)
+    const cleanId = id.replace(/\D/g, '') 
+    return this.service.buscarPorId(Number(cleanId))
   }
 
   @Post()
@@ -36,13 +38,16 @@ export class FuncionariosController {
     return this.service.criar(dto)
   }
 
-  @Patch(':id')
+  // Alterado de @Patch para @Put para aceitar o api.put do seu Front-end
+  @Put(':id')
   atualizar(@Param('id') id: string, @Body() dto: AtualizarFuncionarioDto) {
-    return this.service.atualizar(Number(id), dto)
+    const cleanId = id.replace(/\D/g, '')
+    return this.service.atualizar(Number(cleanId), dto)
   }
 
   @Delete(':id')
   remover(@Param('id') id: string) {
-    return this.service.remover(Number(id))
+    const cleanId = id.replace(/\D/g, '')
+    return this.service.remover(Number(cleanId))
   }
 }

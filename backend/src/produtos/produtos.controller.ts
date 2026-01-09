@@ -1,4 +1,6 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, ParseIntPipe } from '@nestjs/common'
+import { 
+  Controller, Get, Post, Put, Delete, Param, Body, HttpCode, HttpStatus 
+} from '@nestjs/common'
 import { ProdutosService } from './produtos.service'
 import { CreateProdutoDto } from './dto/criar-produto.dto'
 import { UpdateProdutoDto } from './dto/atualizar-produto.dto'
@@ -7,31 +9,40 @@ import { UpdateProdutoDto } from './dto/atualizar-produto.dto'
 export class ProdutosController {
   constructor(private readonly service: ProdutosService) {}
 
+  /**
+   * Função de limpeza de IDs - O coração da nossa blindagem
+   */
+  private cleanId(id: string | number): number {
+    return Number(String(id).replace(/\D/g, ''));
+  }
+
   @Post()
   criar(@Body() dto: CreateProdutoDto) {
-    return this.service.criar(dto)
+    return this.service.criar(dto);
   }
 
   @Get()
   listar() {
-    return this.service.listar()
+    return this.service.listar();
   }
 
   @Get(':id')
-  buscar(@Param('id', ParseIntPipe) id: number) {
-    return this.service.buscarPorId(id)
+  buscar(@Param('id') id: string) {
+    // Substituímos o ParseIntPipe pelo cleanId para maior resiliência
+    return this.service.buscarPorId(this.cleanId(id));
   }
 
-  @Patch(':id')
+  @Put(':id') // Padronizado para PUT (Edição completa do produto)
   atualizar(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body() dto: UpdateProdutoDto,
   ) {
-    return this.service.atualizar(id, dto)
+    return this.service.atualizar(this.cleanId(id), dto);
   }
 
   @Delete(':id')
-  remover(@Param('id', ParseIntPipe) id: number) {
-    return this.service.remover(id)
+  @HttpCode(HttpStatus.NO_CONTENT) // Retorno 204 para remoções
+  remover(@Param('id') id: string) {
+    return this.service.remover(this.cleanId(id));
   }
 }

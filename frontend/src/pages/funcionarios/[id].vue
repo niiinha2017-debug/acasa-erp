@@ -90,21 +90,26 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import api from '@/services/api'
 
+// 🛡️ Importação dos Serviços e Utilitários Centralizados
+import { FuncionarioService } from '@/services' 
 import { maskCPF, maskRG, maskTelefone, maskCEP, onlyNumbers, maskMoneyBR } from '@/utils/masks'
 import { buscarCep, calcularCustoHora } from '@/utils/utils'
 import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
 
+// UI Components
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 
 const router = useRouter()
 const route = useRoute()
-const id = route.params.id // Pega o ID da URL
+
+// Blindagem: Extrai apenas os números do ID da URL
+const id = String(route.params.id).replace(/\D/g, '') 
 const salvando = ref(false)
 
+// Estado do Formulário (Dados para o Banco)
 const form = ref({
   nome: '', cpf: '', rg: '', telefone: '', whatsapp: '', email: '',
   estado_civil: '', escolaridade: '', data_nascimento: '',
@@ -117,82 +122,66 @@ const form = ref({
   tem_vale: false, vale: 0, tem_vale_transporte: false, vale_transporte: 0,
 })
 
-const cpfUi = ref(''); const rgUi = ref(''); const whatsappUi = ref(''); 
-const telefoneUi = ref(''); const cepUi = ref('');
-const salarioBaseUi = ref('0,00'); const custoHoraUi = ref('0,00');
-const valeUi = ref('0,00'); const valeTransporteUi = ref('0,00');
+// Estado da UI (Dados com Máscaras)
+const cpfUi = ref('')
+const rgUi = ref('')
+const whatsappUi = ref('')
+const telefoneUi = ref('')
+const cepUi = ref('')
+const salarioBaseUi = ref('0,00')
+const custoHoraUi = ref('0,00')
+const valeUi = ref('0,00')
+const valeTransporteUi = ref('0,00')
 
-// Busca dados iniciais
+/**
+ * 🔄 Carregamento Inicial
+ */
 onMounted(async () => {
-  try {
-    // Limpamos o ID caso venha com algum caractere estranho da URL
-    const cleanId = String(id).replace(':', '');
-    
-    const { data } = await api.get(`/funcionarios/${cleanId}`)
-    
-    // Função auxiliar para limpar datas ISO (2025-08-06T00:00... -> 2025-08-06)
-    const formatToInputDate = (isoString) => {
-      if (!isoString) return ''
-      return isoString.split('T')[0]
-    }
+  if (!id) {
+    alert('ID não fornecido.')
+    return router.push('/funcionarios')
+  }
 
-    // Preenche o formulário tratando as datas
+  try {
+    const { data } = await FuncionarioService.buscar(id)
+    
+    // Helper para converter ISO Date para o formato YYYY-MM-DD do <input type="date">
+    const formatToInputDate = (iso) => (iso ? iso.split('T')[0] : '')
+
     form.value = { 
       ...data,
       data_nascimento: formatToInputDate(data.data_nascimento),
       admissao: formatToInputDate(data.admissao),
-      demissao: formatToInputDate(data.demissao),
-      data_pagamento: formatToInputDate(data.data_pagamento)
+      demissao: formatToInputDate(data.demissao)
     }
     
-    // Preenche as máscaras da UI
+    // Populando campos de interface com as máscaras
     cpfUi.value = data.cpf || ''
     rgUi.value = data.rg || ''
     whatsappUi.value = data.whatsapp || ''
     telefoneUi.value = data.telefone || ''
     cepUi.value = data.cep || ''
-    
-    // Formata os valores monetários para a UI
     salarioBaseUi.value = numeroParaMoeda(data.salario_base || 0)
     valeUi.value = numeroParaMoeda(data.vale || 0)
     valeTransporteUi.value = numeroParaMoeda(data.vale_transporte || 0)
     
-    // Calcula o custo hora inicial
     syncFinanceiro()
-    
   } catch (err) {
     console.error("Erro no carregamento:", err)
-    alert('Funcionário não encontrado ou erro na conexão.')
+    alert('Erro ao carregar dados do funcionário.')
     router.push('/funcionarios')
   }
 })
 
-// Maiúsculas automáticas
-const fieldsToUpper = ['nome', 'estado_civil', 'escolaridade', 'endereco', 'bairro', 'cidade', 'estado', 'setor', 'cargo', 'registro', 'forma_pagamento', 'banco']
-fieldsToUpper.forEach(f => {
-  watch(() => form.value[f], (v) => { if (v) form.value[f] = v.toUpperCase() })
-})
-
-// Watchers de Máscaras
-watch(cpfUi, (v) => { cpfUi.value = maskCPF(v); form.value.cpf = onlyNumbers(v) })
-watch(rgUi, (v) => { rgUi.value = maskRG(v); form.value.rg = onlyNumbers(v) })
-watch(whatsappUi, (v) => { whatsappUi.value = maskTelefone(v); form.value.whatsapp = onlyNumbers(v) })
-watch(telefoneUi, (v) => { telefoneUi.value = maskTelefone(v); form.value.telefone = onlyNumbers(v) })
-watch(cepUi, (v) => { 
-  cepUi.value = maskCEP(v); 
-  form.value.cep = onlyNumbers(v);
-  if (form.value.cep.length === 8) handleCep(form.value.cep)
-})
-
-// Dinheiro real-time
-watch(salarioBaseUi, (v) => salarioBaseUi.value = maskMoneyBR(v))
-watch(valeUi, (v) => valeUi.value = maskMoneyBR(v))
-watch(valeTransporteUi, (v) => valeTransporteUi.value = maskMoneyBR(v))
-
+/**
+ * 🛠️ Helpers de Sincronização e Cálculos
+ */
 function syncFinanceiro() {
   form.value.salario_base = moedaParaNumero(salarioBaseUi.value) || 0
   form.value.vale = moedaParaNumero(valeUi.value) || 0
   form.value.vale_transporte = moedaParaNumero(valeTransporteUi.value) || 0
+  
+  // Cálculo automático do custo hora baseado no salário base
   form.value.custo_hora = calcularCustoHora(form.value.salario_base)
   custoHoraUi.value = numeroParaMoeda(form.value.custo_hora)
 }
@@ -200,21 +189,62 @@ function syncFinanceiro() {
 async function handleCep(n) {
   const d = await buscarCep(n)
   if (d) {
-    form.value.endereco = d.logradouro || ''; form.value.bairro = d.bairro || ''
-    form.value.cidade = d.localidade || ''; form.value.estado = d.uf || ''
+    form.value.endereco = d.logradouro?.toUpperCase() || ''
+    form.value.bairro = d.bairro?.toUpperCase() || ''
+    form.value.cidade = d.localidade?.toUpperCase() || ''
+    form.value.estado = d.uf?.toUpperCase() || ''
   }
 }
 
+/**
+ * 🧐 Watchers (Máscaras e Tratamentos)
+ */
+// Maiúsculas automáticas
+const fieldsToUpper = ['nome', 'estado_civil', 'escolaridade', 'endereco', 'bairro', 'cidade', 'estado', 'setor', 'cargo', 'registro', 'forma_pagamento', 'banco']
+fieldsToUpper.forEach(f => {
+  watch(() => form.value[f], (v) => { if (v) form.value[f] = v.toUpperCase() })
+})
+
+// Máscaras de Documentos e Contatos
+watch(cpfUi, (v) => { cpfUi.value = maskCPF(v); form.value.cpf = onlyNumbers(v) })
+watch(rgUi, (v) => { rgUi.value = maskRG(v); form.value.rg = onlyNumbers(v) })
+watch(whatsappUi, (v) => { whatsappUi.value = maskTelefone(v); form.value.whatsapp = onlyNumbers(v) })
+watch(telefoneUi, (v) => { telefoneUi.value = maskTelefone(v); form.value.telefone = onlyNumbers(v) })
+
+// CEP com busca automática
+watch(cepUi, (v) => { 
+  cepUi.value = maskCEP(v)
+  form.value.cep = onlyNumbers(v)
+  if (form.value.cep.length === 8) handleCep(form.value.cep)
+})
+
+// Dinheiro (Sincroniza UI -> Form)
+watch(salarioBaseUi, (v) => { salarioBaseUi.value = maskMoneyBR(v); syncFinanceiro() })
+watch(valeUi, (v) => { valeUi.value = maskMoneyBR(v); syncFinanceiro() })
+watch(valeTransporteUi, (v) => { valeTransporteUi.value = maskMoneyBR(v); syncFinanceiro() })
+
+/**
+ * 💾 Ação de Salvar
+ */
 async function salvar() {
   salvando.value = true
   try {
-    syncFinanceiro()
-    const payload = { ...form.value, email: form.value.email?.toLowerCase().trim() || null }
-    await api.put(`/funcionarios/${id}`, payload)
-    alert('Atualizado com sucesso!')
+    syncFinanceiro() // Garantia final de conversão numérica
+    
+    // Blindagem de E-mail e Matrícula
+    const payload = { 
+      ...form.value, 
+      email: form.value.email?.toLowerCase().trim() || null 
+    }
+    
+    // Uso do serviço centralizado (PUT /funcionarios/:id)
+    await FuncionarioService.salvar(id, payload)
+    
+    alert('Funcionário atualizado com sucesso!')
     router.push('/funcionarios')
   } catch (err) {
-    alert(err.response?.data?.error || 'Erro ao atualizar')
+    const msg = err.response?.data?.message || 'Erro ao atualizar dados.'
+    alert(Array.isArray(msg) ? msg[0] : msg)
   } finally {
     salvando.value = false
   }

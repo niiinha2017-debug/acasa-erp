@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common'
+import { 
+  Body, 
+  Controller, 
+  Delete, 
+  Get,
+  Post, 
+  Param, 
+  Put,
+  Query,
+  HttpCode,
+  HttpStatus
+} from '@nestjs/common'
 import { ComprasService } from './compras.service'
 import { CriarCompraDto } from './dto/criar-compra.dto'
 import { AtualizarCompraDto } from './dto/atualizar-compra.dto'
@@ -13,28 +24,32 @@ export class ComprasController {
     @Query('tipo_compra') tipo_compra?: string,
   ) {
     return this.service.listar({
-      venda_id: venda_id ? Number(venda_id) : undefined,
-      tipo_compra: tipo_compra || undefined,
+      venda_id: venda_id ? Number(venda_id.replace(/\D/g, '')) : undefined,
+      tipo_compra: tipo_compra?.trim() || undefined,
     })
   }
 
   @Get(':id')
   buscarPorId(@Param('id') id: string) {
-    return this.service.buscarPorId(Number(id))
+    return this.service.buscarPorId(Number(id.replace(/\D/g, '')))
   }
 
-  @Post()
-  criar(@Body() dto: CriarCompraDto) {
-    return this.service.criar(dto)
-  }
+  // ✅ CRIAÇÃO (PUT)
+@Post()
+criar(@Body() dto: CriarCompraDto) {
+  return this.service.criar(dto)
+}
 
-  @Patch(':id')
+
+  // ✅ ATUALIZAÇÃO (PUT)
+  @Put(':id')
   atualizar(@Param('id') id: string, @Body() dto: AtualizarCompraDto) {
-    return this.service.atualizar(Number(id), dto)
+    return this.service.atualizar(Number(id.replace(/\D/g, '')), dto)
   }
 
   @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
   remover(@Param('id') id: string) {
-    return this.service.remover(Number(id))
+    return this.service.remover(Number(id.replace(/\D/g, '')))
   }
 }

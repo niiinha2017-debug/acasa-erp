@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { 
+  Body, 
+  Controller, 
+  Delete, 
+  Get, 
+  Param, 
+  Put, // Alterado: PUT para o formulário de edição
+  Post, 
+  HttpCode, 
+  HttpStatus 
+} from '@nestjs/common';
 import { CreateFornecedorDto } from './dto/criar-fornecedor.dto'
 import { UpdateFornecedorDto } from './dto/atualizar-fornecedor.dto'
 import { FornecedoresService } from './fornecedores.service';
@@ -14,7 +24,9 @@ export class FornecedoresController {
 
   @Get(':id')
   buscarPorId(@Param('id') id: string) {
-    return this.service.buscarPorId(Number(id));
+    // Blindagem de ID: removendo caracteres não numéricos
+    const cleanId = Number(id.replace(/\D/g, ''));
+    return this.service.buscarPorId(cleanId);
   }
 
   @Post()
@@ -22,13 +34,16 @@ export class FornecedoresController {
     return this.service.criar(dto);
   }
 
-  @Patch(':id')
+  @Put(':id') // Padronizado: PUT em vez de PATCH
   atualizar(@Param('id') id: string, @Body() dto: UpdateFornecedorDto) {
-    return this.service.atualizar(Number(id), dto);
+    const cleanId = Number(id.replace(/\D/g, ''));
+    return this.service.atualizar(cleanId, dto);
   }
 
   @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT) // Retorna 204 após deletar
   remover(@Param('id') id: string) {
-    return this.service.remover(Number(id));
+    const cleanId = Number(id.replace(/\D/g, ''));
+    return this.service.remover(cleanId);
   }
 }

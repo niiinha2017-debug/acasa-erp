@@ -60,10 +60,11 @@
 </template>
 
 <script setup>
-// Adicione o 'watch' aqui dentro das chaves!
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import api from '@/services/api'
+
+// 🔄 Importação do serviço centralizado
+import { FuncionarioService } from '@/services'
 
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
@@ -73,7 +74,7 @@ import SearchInput from '@/components/ui/SearchInput.vue'
 const router = useRouter()
 const loading = ref(true)
 const filtro = ref('')
-const funcionarios = ref([]) // Inicializado como array vazio
+const funcionarios = ref([]) 
 
 const columns = [
   { key: 'nome', label: 'Funcionário' },
@@ -83,17 +84,16 @@ const columns = [
   { key: 'acoes', label: 'Ações', align: 'center', width: '180px' }
 ]
 
-// BLINDAGEM AQUI: Adicionei verificações extras para evitar o erro de subTree
+/**
+ * 🔍 FILTRO INTELIGENTE (COMPUTED)
+ * Incluímos o opcional chaining (?.) para evitar quebra caso algum dado venha nulo do banco
+ */
 const funcionariosFiltrados = computed(() => {
-  // 1. Se funcionarios não for array ou estiver nulo, retorna vazio imediatamente
   if (!Array.isArray(funcionarios.value)) return []
   
   const termo = filtro.value?.toLowerCase().trim()
-  
-  // 2. Se não tem termo, retorna a lista original com segurança
   if (!termo) return funcionarios.value
   
-  // 3. Filtro com interrogação (?) para evitar erro em campos nulos
   return funcionarios.value.filter(f => {
     return (
       f.nome?.toLowerCase().includes(termo) || 
@@ -104,30 +104,44 @@ const funcionariosFiltrados = computed(() => {
   })
 })
 
+/**
+ * 📥 CARREGAMENTO DE DADOS
+ */
 async function carregar() {
   loading.value = true
   try {
-    const { data } = await api.get('/funcionarios')
-    // 4. Garante que se a data vier nula, vira um array vazio
+    // Usando o Service em vez do api direto
+    const { data } = await FuncionarioService.listar()
     funcionarios.value = Array.isArray(data) ? data : []
   } catch (err) {
-    console.error('Erro ao buscar funcionários:', err)
-    funcionarios.value = [] // Reseta para evitar quebra do computed
+    console.error('Erro na listagem:', err)
+    funcionarios.value = [] 
   } finally {
     loading.value = false
   }
 }
 
+/**
+ * 🗑️ EXCLUSÃO COM CONFIRMAÇÃO
+ */
 async function excluir(row) {
+  // Confirm padrão do navegador (pode ser trocado por um Modal UI futuramente)
   if (!confirm(`Deseja realmente remover o funcionário ${row.nome}?`)) return
+  
   try {
-    await api.delete(`/funcionarios/${row.id}`)
+    // Usando o Service centralizado para remoção
+    await FuncionarioService.remover(row.id)
+    
+    // Atualização otimista: remove da lista sem precisar recarregar tudo do banco
     funcionarios.value = funcionarios.value.filter(f => f.id !== row.id)
+    
+    // Opcional: Adicionar um Toast de sucesso aqui
   } catch (err) {
-    alert("Erro ao excluir funcionário.")
+    alert(err.response?.data?.message || "Erro ao excluir funcionário.")
   }
 }
 
+// Inicializa a tabela
 onMounted(carregar)
 </script>
 

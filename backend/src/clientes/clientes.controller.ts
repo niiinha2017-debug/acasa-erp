@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common'
+import { 
+  Body, 
+  Controller, 
+  Delete, 
+  Get, 
+  Param, 
+  Put, // Alterado para Put
+  Post, 
+  Query,
+  HttpCode,
+  HttpStatus
+} from '@nestjs/common'
 import { ClientesService } from './clientes.service'
 import { CriarClienteDto } from './dto/criar-cliente.dto'
 import { AtualizarClienteDto } from './dto/atualizar-cliente.dto'
@@ -17,28 +28,34 @@ export class ClientesController {
     return this.service.listar()
   }
 
-  @Get(':id')
-  buscar(@Param('id') id: string) {
-    return this.service.buscarPorId(Number(id))
-  }
-
-  @Patch(':id')
-  atualizar(@Param('id') id: string, @Body() dto: AtualizarClienteDto) {
-    return this.service.atualizar(Number(id), dto)
-  }
-
-  @Delete(':id')
-  remover(@Param('id') id: string) {
-    return this.service.remover(Number(id))
-  }
-
-  // Ex.: /clientes/aniversariantes?data=2026-01-05&enviar=email
+  // IMPORTANTE: Rotas de relatórios devem vir ANTES de rotas com :id
+  // para evitar que o NestJS ache que "relatorios" é um ID numérico.
   @Get('relatorios/aniversariantes')
   aniversariantes(
     @Query('data') data?: string,
     @Query('enviar') enviar?: 'email' | 'whatsapp',
   ) {
-    const hoje = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
+    const hoje = new Date().toISOString().slice(0, 10)
     return this.service.aniversariantesDoDia(data ?? hoje, enviar)
+  }
+
+  @Get(':id')
+  buscar(@Param('id') id: string) {
+    // Limpeza de ID padronizada
+    const cleanId = Number(id.replace(/\D/g, ''))
+    return this.service.buscarPorId(cleanId)
+  }
+
+  @Put(':id') // Mudou de Patch para Put
+  atualizar(@Param('id') id: string, @Body() dto: AtualizarClienteDto) {
+    const cleanId = Number(id.replace(/\D/g, ''))
+    return this.service.atualizar(cleanId, dto)
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT) // Retorna 204 após deletar (Padrão REST)
+  remover(@Param('id') id: string) {
+    const cleanId = Number(id.replace(/\D/g, ''))
+    return this.service.remover(cleanId)
   }
 }

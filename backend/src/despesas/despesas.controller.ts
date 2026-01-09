@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
+import { 
+  Body, 
+  Controller, 
+  Delete, 
+  Get, 
+  Param, 
+  Put, // Padronizado para Put
+  Post, 
+  HttpCode, 
+  HttpStatus 
+} from '@nestjs/common';
 import { DespesasService } from './despesas.service';
 import { CreateDespesaDto } from './dto/create-despesa.dto';
 import { UpdateDespesaDto } from './dto/update-despesa.dto';
@@ -18,17 +28,22 @@ export class DespesasController {
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.service.findOne(id);
+  findOne(@Param('id') id: string) {
+    // Limpeza de ID padronizada para evitar erros de Pipe
+    const cleanId = Number(id.replace(/\D/g, ''));
+    return this.service.findOne(cleanId);
   }
 
-  @Patch(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateDespesaDto) {
-    return this.service.update(id, dto);
+  @Put(':id') // Alterado de Patch para Put
+  update(@Param('id') id: string, @Body() dto: UpdateDespesaDto) {
+    const cleanId = Number(id.replace(/\D/g, ''));
+    return this.service.update(cleanId, dto);
   }
 
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.service.remove(id);
+  @HttpCode(HttpStatus.NO_CONTENT) // Retorna 204 após deletar
+  remove(@Param('id') id: string) {
+    const cleanId = Number(id.replace(/\D/g, ''));
+    return this.service.remove(cleanId);
   }
 }

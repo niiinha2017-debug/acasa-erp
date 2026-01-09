@@ -162,21 +162,27 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import api from '@/services/api'
+
+// 🛡️ Integração com os Serviços do ERP
+import { FuncionarioService } from '@/services'
+
+// Utilitários de Máscara e Transformação
+import { maskCPF, maskRG, maskTelefone, maskCEP, onlyNumbers, maskMoneyBR } from '@/utils/masks'
+import { buscarCep, calcularCustoHora } from '@/utils/utils'
+import { upper, raw } from '@/utils/text'
+import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
+
+// UI Components
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 
-import { maskCPF, maskRG, maskTelefone, maskCEP, onlyNumbers, maskMoneyBR } from '@/utils/masks'
-import { buscarCep, calcularCustoHora } from '@/utils/utils'
-import { upper, upperOrNull, raw } from '@/utils/text'
-import { moedaParaNumero, numeroParaMoeda, toBoolean } from '@/utils/number'
-
 const router = useRouter()
 const salvando = ref(false)
 
+// Estado Inicial Limpo
 const form = ref({
   nome: '', cpf: '', rg: '', telefone: '', whatsapp: '', email: '',
   estado_civil: '', escolaridade: '', data_nascimento: '',
@@ -189,78 +195,97 @@ const form = ref({
   tem_vale: false, vale: 0, tem_vale_transporte: false, vale_transporte: 0,
 })
 
-const cpfUi = ref(''); const rgUi = ref(''); const whatsappUi = ref(''); 
-const telefoneUi = ref(''); const cepUi = ref('');
-const salarioBaseUi = ref('0,00'); const custoHoraUi = ref('0,00');
-const valeUi = ref('0,00'); const valeTransporteUi = ref('0,00');
+// Estados da Interface (Camada de Máscaras)
+const cpfUi = ref('')
+const rgUi = ref('')
+const whatsappUi = ref('')
+const telefoneUi = ref('')
+const cepUi = ref('')
+const salarioBaseUi = ref('0,00')
+const custoHoraUi = ref('0,00')
+const valeUi = ref('0,00')
+const valeTransporteUi = ref('0,00')
 
-/* --- WATCHERS PARA MAIÚSCULAS --- */
-watch(() => form.value.nome, (v) => form.value.nome = upper(v))
-watch(() => form.value.estado_civil, (v) => form.value.estado_civil = upper(v))
-watch(() => form.value.escolaridade, (v) => form.value.escolaridade = upper(v))
-watch(() => form.value.endereco, (v) => form.value.endereco = upper(v))
-watch(() => form.value.bairro, (v) => form.value.bairro = upper(v))
-watch(() => form.value.cidade, (v) => form.value.cidade = upper(v))
-watch(() => form.value.estado, (v) => form.value.estado = upper(v))
-watch(() => form.value.setor, (v) => form.value.setor = upper(v))
-watch(() => form.value.cargo, (v) => form.value.cargo = upper(v))
-watch(() => form.value.forma_pagamento, (v) => form.value.forma_pagamento = upper(v))
+/**
+ * 🔄 SINCRONIZAÇÃO FINANCEIRA
+ * Centraliza o cálculo de custo/hora sempre que um valor muda
+ */
+function syncFinanceiro() {
+  form.value.salario_base = moedaParaNumero(salarioBaseUi.value) || 0
+  form.value.vale = moedaParaNumero(valeUi.value) || 0
+  form.value.vale_transporte = moedaParaNumero(valeTransporteUi.value) || 0
+  
+  // Regra de negócio: Custo hora é derivado do salário
+  form.value.custo_hora = calcularCustoHora(form.value.salario_base)
+  custoHoraUi.value = numeroParaMoeda(form.value.custo_hora)
+}
 
-/* --- WATCHERS PARA MÁSCARAS --- */
+/**
+ * 🧐 WATCHERS: MAIÚSCULAS AUTOMÁTICAS
+ */
+const camposUpper = ['nome', 'estado_civil', 'escolaridade', 'endereco', 'bairro', 'cidade', 'estado', 'setor', 'cargo', 'forma_pagamento']
+camposUpper.forEach(campo => {
+  watch(() => form.value[campo], (v) => form.value[campo] = upper(v))
+})
+
+/**
+ * 🧐 WATCHERS: MÁSCARAS E BUSCA DE CEP
+ */
 watch(cpfUi, (v) => { cpfUi.value = maskCPF(v); form.value.cpf = onlyNumbers(v) })
 watch(rgUi, (v) => { rgUi.value = maskRG(v); form.value.rg = onlyNumbers(v) })
 watch(whatsappUi, (v) => { whatsappUi.value = maskTelefone(v); form.value.whatsapp = onlyNumbers(v) })
 watch(telefoneUi, (v) => { telefoneUi.value = maskTelefone(v); form.value.telefone = onlyNumbers(v) })
-watch(cepUi, (v) => { cepUi.value = maskCEP(v); form.value.cep = onlyNumbers(v) })
 
-/* --- WATCHERS PARA DINHEIRO (REAL TIME) --- */
-watch(salarioBaseUi, (v) => salarioBaseUi.value = maskMoneyBR(v))
-watch(valeUi, (v) => valeUi.value = maskMoneyBR(v))
-watch(valeTransporteUi, (v) => valeTransporteUi.value = maskMoneyBR(v))
-
-function normalizarSalario() {
-  form.value.salario_base = moedaParaNumero(salarioBaseUi.value) || 0
-  form.value.custo_hora = calcularCustoHora(form.value.salario_base)
-  salarioBaseUi.value = numeroParaMoeda(form.value.salario_base)
-  custoHoraUi.value = numeroParaMoeda(form.value.custo_hora)
-}
-
-function normalizarVale() {
-  form.value.vale = moedaParaNumero(valeUi.value) || 0
-  valeUi.value = numeroParaMoeda(form.value.vale)
-}
-
-function normalizarValeTransporte() {
-  form.value.vale_transporte = moedaParaNumero(valeTransporteUi.value) || 0
-  valeTransporteUi.value = numeroParaMoeda(form.value.vale_transporte)
-}
-
-watch(() => onlyNumbers(form.value.cep), async (n) => {
-  if (n?.length === 8) {
-    const d = await buscarCep(n)
+watch(cepUi, async (v) => {
+  cepUi.value = maskCEP(v)
+  const limpo = onlyNumbers(v)
+  form.value.cep = limpo
+  
+  if (limpo?.length === 8) {
+    const d = await buscarCep(limpo)
     if (d) {
-      form.value.endereco = d.logradouro || ''; form.value.bairro = d.bairro || ''
-      form.value.cidade = d.localidade || ''; form.value.estado = d.uf || ''
+      form.value.endereco = upper(d.logradouro)
+      form.value.bairro = upper(d.bairro)
+      form.value.cidade = upper(d.localidade)
+      form.value.estado = upper(d.uf)
     }
   }
 })
 
+/**
+ * 🧐 WATCHERS: DINHEIRO
+ */
+watch(salarioBaseUi, (v) => { salarioBaseUi.value = maskMoneyBR(v); syncFinanceiro() })
+watch(valeUi, (v) => { valeUi.value = maskMoneyBR(v); syncFinanceiro() })
+watch(valeTransporteUi, (v) => { valeTransporteUi.value = maskMoneyBR(v); syncFinanceiro() })
+
+/**
+ * 💾 AÇÃO PRINCIPAL: SALVAR
+ */
 async function salvar() {
+  // Validações Básicas (Blindagem de UI)
   if (!form.value.nome) return alert('Nome é obrigatório')
-  if (form.value.cpf.length < 11) return alert('CPF inválido')
+  if (form.value.cpf.length < 11) return alert('CPF incompleto')
   
   salvando.value = true
   try {
-    const payload = { ...form.value }
-    // Limpezas finais
-    payload.email = raw(form.value.email?.toLowerCase().trim())
-    payload.salario_base = Number(form.value.salario_base)
+    // Sincronização final para garantir números no payload
+    syncFinanceiro()
     
-    await api.post('/funcionarios', payload)
-    alert('Cadastrado com sucesso!')
+    // Preparação do Payload final
+    const payload = { 
+      ...form.value,
+      email: raw(form.value.email?.toLowerCase().trim())
+    }
+    
+    // Chamada via Service centralizado (POST)
+    await FuncionarioService.salvar(null, payload)
+    
+    alert('Funcionário cadastrado com sucesso!')
     router.push('/funcionarios')
   } catch (err) {
-    alert(err.response?.data?.error || 'Erro ao salvar')
+    const erroMsg = err.response?.data?.message || 'Erro ao salvar funcionário'
+    alert(Array.isArray(erroMsg) ? erroMsg[0] : erroMsg)
   } finally {
     salvando.value = false
   }
