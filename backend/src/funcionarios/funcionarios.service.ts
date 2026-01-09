@@ -25,19 +25,24 @@ export class FuncionariosService {
     return funcionario
   }
 
-  private normalizarDatas(
-    dto: Partial<CriarFuncionarioDto | AtualizarFuncionarioDto>,
-  ) {
-    const data: any = { ...dto }
+private normalizarDatas(dto: any) {
+  const data = { ...dto };
 
-    // Datas ISO -> Date
-    if (data.data_nascimento) data.data_nascimento = new Date(data.data_nascimento)
-    if (data.admissao) data.admissao = new Date(data.admissao)
-    if (data.demissao) data.demissao = new Date(data.demissao)
-    if (data.data_pagamento) data.data_pagamento = new Date(data.data_pagamento)
+  // Lista de campos que são Datas no Banco
+  const camposData = ['data_nascimento', 'admissao', 'demissao', 'data_pagamento'];
 
-    return data
-  }
+  camposData.forEach(campo => {
+    if (data[campo]) {
+      // Se tiver valor, converte para Date
+      data[campo] = new Date(data[campo]);
+    } else {
+      // Se vier "" ou undefined, força ser NULL para o Prisma não reclamar
+      data[campo] = null;
+    }
+  });
+
+  return data;
+}
 
   async criar(dto: CriarFuncionarioDto) {
     try {

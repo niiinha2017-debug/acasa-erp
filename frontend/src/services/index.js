@@ -69,9 +69,27 @@ export const FornecedorService = {
 // --- SERVIÇO DE FUNCIONÁRIOS (SOMENTE ADMIN) ---
 export const FuncionarioService = {
   listar: () => api.get('/funcionarios'),
-  buscar: (id) => api.get(`/funcionarios/${id}`),
-  salvar: (id, dados) => id ? api.put(`/funcionarios/${id}`, dados) : api.post('/funcionarios', dados),
-  remover: (id) => api.delete(`/funcionarios/${id}`)
+  
+  buscar: (id) => {
+    // Se o ID for null ou undefined, nem tenta a requisição
+    if (!id) return Promise.reject('ID não fornecido');
+    const cleanId = String(id).replace(/\D/g, ''); 
+    return api.get(`/funcionarios/${cleanId}`);
+  },
+
+  salvar: (id, dados) => {
+    // Se existir ID, é edição (PUT), se não, é criação (POST)
+    if (id && id !== 'novo') {
+      const cleanId = String(id).replace(/\D/g, '');
+      return api.put(`/funcionarios/${cleanId}`, dados);
+    }
+    return api.post('/funcionarios', dados);
+  },
+
+  remover: (id) => {
+    const cleanId = String(id).replace(/\D/g, '');
+    return api.delete(`/funcionarios/${cleanId}`);
+  }
 }
 
 // --- SERVIÇO DE E-MAIL (TESTES E NOTIFICAÇÕES) ---
