@@ -747,3 +747,13 @@ body {
   font-weight: var(--font-weight-bold);
   text-decoration: none;
 }
+/* Garante que o dropdown flutue sobre tudo */
+.search-input-dropdown { /* Substitua pelo nome real da classe do seu dropdown */
+  position: absolute;
+  z-index: 9999 !important;
+}
+
+/* Remova overflow: hidden de containers pai que podem estar cortando o menu */
+.card-body, .form-grid {
+  overflow: visible !important;
+}

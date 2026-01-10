@@ -20,6 +20,7 @@
         :readonly="readonly"
         v-model="texto"
         @focus="abrir = true"
+        @input="abrir = true"
       />
 
       <div v-if="abrir" class="search-select__dropdown">
@@ -27,7 +28,7 @@
           v-for="opt in filtrados"
           :key="opt.value"
           class="search-select__option"
-          @click="selecionar(opt)"
+          @click.stop="selecionar(opt)"
         >
           {{ opt.label }}
         </div>
@@ -38,6 +39,49 @@
     </div>
   </div>
 </template>
+
+<style scoped>
+.search-container {
+  position: relative; /* Necessário para o dropdown absoluto se alinhar aqui */
+}
+
+.search-select__dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 9999; /* Garante que fique acima de tudo */
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 4px;
+}
+
+.search-select__option {
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+  color: #1e293b;
+}
+
+.search-select__option:hover {
+  background-color: #f1f5f9;
+  color: #3b82f6;
+}
+
+/* Garante que o container do formulário não esconda o menu */
+:deep(.form-group) {
+  position: relative;
+}
+
+/* Pulo do gato: Quando o input está focado, aumentamos o z-index da coluna inteira */
+.form-group:focus-within {
+  z-index: 50;
+}
+</style>
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
@@ -60,7 +104,9 @@ const abrir = ref(false)
 const filtrados = computed(() => {
   const termo = texto.value?.toLowerCase().trim() || ''
   if (!termo) return props.options
-  return props.options.filter(opt => opt.label.toLowerCase().includes(termo))
+  return props.options.filter(opt => 
+    String(opt.label).toLowerCase().includes(termo)
+  )
 })
 
 function selecionar(opt) {
@@ -69,14 +115,19 @@ function selecionar(opt) {
   abrir.value = false
 }
 
+// Fecha o menu ao clicar fora
+const fecharAoClicarFora = (e) => {
+  if (!e.target.closest('.form-group')) {
+    abrir.value = false
+  }
+}
+
 watch(() => props.modelValue, (val) => {
   const opt = props.options.find(o => o.value === val)
   if (opt) texto.value = opt.label
   else if (!val) texto.value = ''
 }, { immediate: true })
 
-const fechar = () => { abrir.value = false }
-onMounted(() => document.addEventListener('click', fechar))
-onUnmounted(() => document.removeEventListener('click', fechar))
+onMounted(() => document.addEventListener('click', fecharAoClicarFora))
+onUnmounted(() => document.removeEventListener('click', fecharAoClicarFora))
 </script>
-
