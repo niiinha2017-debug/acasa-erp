@@ -338,39 +338,28 @@ model constantes {
 model despesas {
   id Int @id @default(autoincrement())
 
-  // Entrada / Saída
-  tipo_movimento String // "ENTRADA" | "SAIDA" (constantes)
-
-  // Combustível / Energia / Água / etc
-  categoria String // (constantes)
-
-  // Custo fixo / custo variável / despesa fixa / despesa variável
-  classificacao String // (constantes)
-
-  // Loja / Fábrica
-  local String // (constantes)
-
-  // Valor total
-  valor_total Decimal @db.Decimal(10, 2)
-
-  // Forma de pagamento
-  forma_pagamento String // (constantes)
-
-  // Quantidade de parcelas
+  tipo_movimento String
+  categoria      String
+  classificacao  String
+  local          String
+  valor_total    Decimal @db.Decimal(10, 2)
+  forma_pagamento String
   quantidade_parcelas Int
 
-  // Datas
   data_registro   DateTime  @default(now())
   data_vencimento DateTime
   data_pagamento  DateTime?
 
-  // Funcionário
   funcionario_id Int?
   funcionario    funcionarios? @relation(fields: [funcionario_id], references: [id])
 
-  // Status
-  status String // (constantes)
+  status String
 
+  // ✅ RECORRÊNCIA
+  recorrencia_id String?  @db.VarChar(36)
+  parcela_numero Int?
+
+  @@index([recorrencia_id])
   @@index([tipo_movimento])
   @@index([categoria])
   @@index([classificacao])

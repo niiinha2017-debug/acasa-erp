@@ -26,14 +26,15 @@
             class="col-span-8"
           />
 
-          <SearchInput 
-            v-model="form.categoria" 
-            label="Item (Ex: Água, Vale) *" 
-            :options="cat.opcoes.value"
-            required
-            class="col-span-6"
-            @update:model-value="vincularClassificacaoChave"
-          />
+<SearchInput
+  v-model="categoriaSelecionada"
+  label="Item (Ex: Água, Vale) *"
+  :options="cat.opcoes.value"
+  required
+  class="col-span-6"
+  @update:modelValue="vincularClassificacaoChave"
+/>
+
 
           <Input 
             v-model="form.classificacao" 
@@ -109,6 +110,9 @@ const pag = useConstantes()
 const sta = useConstantes()
 const listaFuncionarios = ref([])
 
+const categoriaSelecionada = ref('')
+
+
 const form = ref({
   tipo_movimento: 'SAÍDA',
   categoria: '',      
@@ -125,31 +129,59 @@ const form = ref({
 })
 
 // LÓGICA: Classificação vem da CHAVE da constante
-function vincularClassificacaoChave(rotuloSelecionado) {
-  form.value.categoria = rotuloSelecionado
-  const opt = cat.opcoes.value.find(o => o.label === rotuloSelecionado)
+function vincularClassificacaoChave(valorSelecionado) {
+  const opt = cat.opcoes.value.find(o => o.value === valorSelecionado)
+
+  // Se opt existe:
+  // - categoria (DB) fica com o rótulo (ex.: "Água")
+  // - classificacao (DB) fica com a chave (ex.: "CUSTO FIXO")
   if (opt) {
-    // Agora pega a CHAVE (ex: CUSTO FIXO) e não o rótulo
-    form.value.classificacao = opt.value 
+    form.value.categoria = opt.label
+    form.value.classificacao = opt.value
+  } else {
+    form.value.categoria = ''
+    form.value.classificacao = ''
   }
 }
+
 
 async function salvar() {
   loading.value = true
   try {
-    const payload = { 
-      ...form.value, 
-      valor_total: Number(form.value.valor_total),
-      // O backend deve usar a quantidade_parcelas para criar N registros recorrentes
-      quantidade_parcelas: Number(form.value.quantidade_parcelas)
+const payload = {
+  ...form.value,
+  valor_total: String(form.value.valor_total),
+  quantidade_parcelas: Number(form.value.quantidade_parcelas),
+  funcionario_id: form.value.funcionario_id ? Number(form.value.funcionario_id) : null
+}
+
+    if (isEdit.value) {
+      await api.put(`/despesas/${id.value}`, payload)
+    } else {
+      await api.put('/despesas', payload)
     }
-    
-    if (isEdit.value) await api.patch(`/despesas/${id.value}`, payload)
-    else await api.post('/despesas', payload)
-    
+
     router.push('/despesas')
-  } catch (e) { alert('Erro ao processar lançamento.') }
-  finally { loading.value = false }
+  } catch (e) {
+    console.error(e)
+    alert('Erro ao processar lançamento.')
+  } finally {
+    loading.value = false
+  }
+}
+async function excluir() {
+  if (!confirm('Deseja realmente excluir este lançamento?')) return
+
+  loading.value = true
+  try {
+    await api.delete(`/despesas/${id.value}`)
+    router.push('/despesas')
+  } catch (e) {
+    console.error(e)
+    alert('Erro ao excluir lançamento.')
+  } finally {
+    loading.value = false
+  }
 }
 
 async function carregarFuncionarios() {
@@ -166,12 +198,18 @@ onMounted(async () => {
     sta.carregarCategoria('STATUS FINANCEIRO'),
     carregarFuncionarios()
   ])
-  if (isEdit.value) {
-    const { data } = await api.get(`/despesas/${id.value}`)
-    Object.assign(form.value, data)
-    if (data.data_vencimento) form.value.data_vencimento = data.data_vencimento.slice(0, 10)
-    if (data.data_pagamento) form.value.data_pagamento = data.data_pagamento.slice(0, 10)
-    if (data.data_registro) form.value.data_registro = data.data_registro.slice(0, 10)
-  }
+if (isEdit.value) {
+  const { data } = await api.get(`/despesas/${id.value}`)
+  Object.assign(form.value, data)
+
+  // repopula o select de categoria (SearchInput trabalha com value/chave)
+  const opt = cat.opcoes.value.find(o => o.label === data.categoria)
+  categoriaSelecionada.value = opt ? opt.value : ''
+
+  if (data.data_vencimento) form.value.data_vencimento = data.data_vencimento.slice(0, 10)
+  if (data.data_pagamento) form.value.data_pagamento = data.data_pagamento.slice(0, 10)
+  if (data.data_registro) form.value.data_registro = data.data_registro.slice(0, 10)
+}
+
 })
 </script>

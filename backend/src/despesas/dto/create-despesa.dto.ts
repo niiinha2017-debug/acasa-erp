@@ -6,6 +6,7 @@ import {
   IsString,
   Min,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateDespesaDto {
   @IsString()
@@ -33,9 +34,10 @@ export class CreateDespesaDto {
   @IsNotEmpty()
   forma_pagamento: string;
 
-  @IsInt()
-  @Min(1)
-  quantidade_parcelas: number;
+@Type(() => Number)
+@IsInt()
+@Min(1)
+quantidade_parcelas: number;
 
   @IsOptional()
   @IsDateString()
@@ -48,9 +50,10 @@ export class CreateDespesaDto {
   @IsDateString()
   data_pagamento?: string;
 
-  @IsOptional()
-  @IsInt()
-  funcionario_id?: number;
+@IsOptional()
+@Type(() => Number)
+@IsInt()
+funcionario_id?: number;
 
   @IsString()
   @IsNotEmpty()
