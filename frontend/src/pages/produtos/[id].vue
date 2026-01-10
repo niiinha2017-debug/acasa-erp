@@ -99,25 +99,23 @@ watch(
  * Então: carrega MODULO e filtra chave UNIDADE
  */
 const unidadesOptions = computed(() => {
-  const opts = Array.isArray(uni.opcoes.value) ? uni.opcoes.value : []
+  // 1. Pega os dados que o useConstantes já buscou e mapeou
+  const listaDoComposable = Array.isArray(uni.opcoes.value) ? uni.opcoes.value : []
 
-  // tenta descobrir quais campos existem
-  const peek = opts[0] || {}
-  if (opts.length) console.log('[UNIDADE] keys do item:', Object.keys(peek))
-
-  const getChave = (o) =>
-    (o.chave ?? o.key ?? o.chave_interno ?? o.chaveInterno ?? o.id_interno ?? o.idInterno ?? o.tipo ?? o.grupo ?? '')
-
-  const getRotulo = (o) =>
-    (o.rotulo ?? o.label ?? o.nome ?? o.descricao ?? o.valor_texto ?? o.valorTexto ?? o.valor ?? '')
-
-  return opts
-    .filter(o => String(getChave(o)).toUpperCase() === 'UNIDADE')
-    .map(o => {
-      const rotulo = String(getRotulo(o) || '').trim()
-      return { label: rotulo, value: rotulo }
+  return listaDoComposable
+    .filter(o => {
+      // Filtra apenas o que tem a CHAVE (value no composable) como 'UNIDADE'
+      return String(o.value || '').toUpperCase() === 'UNIDADE'
     })
-    .filter(o => o.label)
+    .map(o => {
+      // Agora invertemos: o que era LABEL (Caixa, Metros) 
+      // vira tanto o rótulo quanto o valor que será salvo no banco.
+      return { 
+        label: o.label, // Ex: "Caixa" (aparece na lista)
+        value: o.label  // Ex: "Caixa" (será salvo em form.unidade)
+      }
+    })
+    .filter(o => o.label) // Garante que não venha nada nulo
 })
 
 
@@ -241,10 +239,15 @@ onMounted(async () => {
   try {
     await Promise.all([
       carregarFornecedores(),
-      uni.carregarCategoria('MODULO'), // ✅ correto
-      console.log('[UNIDADE] carregou categoria MODULO, opcoes:', uni.opcoes.value)
-
+      uni.carregarCategoria('MODULO') // Removi o await interno
     ])
+
+    if (isEdit.value) await carregarProduto()
+    else resetForm()
+    
+    console.log('[UNIDADE] carregou categoria MODULO, opcoes:', uni.opcoes.value)
+  } catch (err) {
+
 
     if (isEdit.value) await carregarProduto()
     else resetForm()

@@ -88,6 +88,8 @@ const loading = ref(false)
 const columns = [
   { key: 'nome_produto', label: 'Produto' },
   { key: 'fornecedor_nome', label: 'Fornecedor' },
+  { key: 'unidade', label: 'Unidade' }, // <--- Adicionado
+  { key: 'medida', label: 'Medida/Dimensão' }, // <--- Adicionado
   { key: 'quantidade', label: 'Qtd', align: 'center' },
   { key: 'valor_unitario', label: 'Valor Unit.', align: 'right' },
   { key: 'valor_total', label: 'Valor Total', align: 'right' },
@@ -108,10 +110,13 @@ const rows = computed(() => {
     .map(p => ({
       ...p,
       fornecedor_nome: p.fornecedor?.razao_social || '-',
+      unidade: p.unidade || '-', // Garante o traço se estiver vazio
+      medida: p.medida || '-',   // Garante o traço se estiver vazio
       valor_unitario: maskMoneyBR(p.valor_unitario),
       valor_total: maskMoneyBR(p.valor_total),
     }))
 })
+
 
 async function carregar() {
   loading.value = true
