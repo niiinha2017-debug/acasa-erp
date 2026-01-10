@@ -87,16 +87,15 @@ const filtro = ref('')
 const constantes = ref([])
 
 /* =========================
-   COLUNAS DA TABELA
+   COLUNAS DA TABELA (Simplificadas)
 ========================= */
 const columns = [
   { key: 'categoria', label: 'Categoria' },
-  { key: 'chave', label: 'Chave' },
-  { key: 'rotulo', label: 'Rótulo' },
-  { key: 'tipo', label: 'Tipo', width: '120px' },
-  { key: 'ordem', label: 'Ordem', width: '80px', align: 'center' },
-  { key: 'ativo', label: 'Status', width: '100px', align: 'center' },
-  { key: 'acoes', label: 'Ações', width: '140px', align: 'center' },
+  { key: 'chave',     label: 'Chave' },
+  { key: 'valor',     label: 'Valor' }, // Agora exibindo o conteúdo do campo valor
+  { key: 'ordem',     label: 'Ordem',  width: '80px', align: 'center' },
+  { key: 'ativo',     label: 'Status', width: '100px', align: 'center' },
+  { key: 'acoes',     label: 'Ações',  width: '140px', align: 'center' },
 ]
 
 /* =========================
@@ -109,10 +108,9 @@ const constantesFiltradas = computed(() => {
   return constantes.value.filter(c =>
     c.categoria?.toLowerCase().includes(termo) ||
     c.chave?.toLowerCase().includes(termo) ||
-    c.rotulo?.toLowerCase().includes(termo)
+    c.valor?.toLowerCase().includes(termo) // Filtra pelo valor que aparece na lista
   )
 })
-
 /* =========================
    LOAD
 ========================= */
