@@ -6,7 +6,11 @@
 /* =========================================================
    ALIAS (pra não quebrar componentes antigos)
 ========================================================= */
-:root {
+/* =========================================================
+   ALIAS (pra não quebrar componentes antigos)
+   - não redefine :root inteiro
+========================================================= */
+html {
   --text-main: var(--text-primary);
   --border-soft: var(--border-light);
 
@@ -20,6 +24,7 @@
   --control-radius-md: var(--border-radius-md);
   --font-size-md: var(--font-size-base);
 }
+
 
 /* =========================================================
    RESET BASE (mínimo e seguro)
@@ -728,4 +733,17 @@ body {
   align-items: center;
   flex-wrap: wrap;
   padding-top: 6px;
+}
+/* Link de solicitação (LOGIN) */
+.request-access-link {
+  text-align: center;
+  margin-top: var(--spacing-6);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.request-access-link a {
+  color: var(--brand-primary);
+  font-weight: var(--font-weight-bold);
+  text-decoration: none;
 }

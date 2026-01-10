@@ -5,12 +5,16 @@
         <div>
           <h2 class="card-title">{{ isEdit ? 'Editar Lançamento' : 'Nova Despesa/Vale' }}</h2>
         </div>
-        <Button variant="outline" size="sm" @click="router.back()">Voltar</Button>
+
+        <!-- Regra: botão Voltar no topo à direita -->
+        <Button variant="outline" size="sm" type="button" @click="router.back()">
+          Voltar
+        </Button>
       </header>
 
       <div class="card-body">
         <form class="form-grid" @submit.prevent="salvar">
-          
+          <!-- Movimentação -->
           <div class="form-group col-span-4">
             <label class="form-label">Movimentação <span class="required">*</span></label>
             <select v-model="form.tipo_movimento" class="form-input" required>
@@ -19,54 +23,65 @@
             </select>
           </div>
 
-          <SearchInput 
-            v-model="form.funcionario_id" 
-            label="Funcionário (Vale/Pagamento)" 
+          <!-- Funcionário -->
+          <SearchInput
+            v-model="form.funcionario_id"
+            label="Funcionário (Vale/Pagamento) *"
             :options="listaFuncionarios"
+            required
             class="col-span-8"
           />
 
-<SearchInput
-  v-model="categoriaSelecionada"
-  label="Item (Ex: Água, Vale) *"
-  :options="cat.opcoes.value"
-  required
-  class="col-span-6"
-  @update:modelValue="vincularClassificacaoChave"
-/>
+          <!-- Item / Categoria -->
+          <SearchInput
+            v-model="categoriaSelecionada"
+            label="Item (Ex: Água, Vale) *"
+            :options="cat.opcoes.value"
+            required
+            class="col-span-6"
+            @update:modelValue="vincularClassificacaoChave"
+          />
 
-
-          <Input 
-            v-model="form.classificacao" 
-            label="Classificação (Chave Auto)" 
-            readonly 
-            class="col-span-6" 
+          <!-- Classificação (auto) -->
+          <Input
+            v-model="form.classificacao"
+            label="Classificação (Chave Auto)"
+            readonly
+            class="col-span-6"
           />
 
           <Input v-model="form.local" label="Local / Fornecedor *" required class="col-span-8" />
-          <Input v-model="form.valor_total" label="Valor Total *" type="number" step="0.01" required class="col-span-4" />
-          
-          <hr class="col-span-12 my-2 border-gray-100" />
+          <Input
+            v-model="form.valor_total"
+            label="Valor Total *"
+            type="number"
+            step="0.01"
+            required
+            class="col-span-4"
+          />
 
-          <SearchInput 
-            v-model="form.forma_pagamento" 
-            label="Forma de Pagamento *" 
+          <!-- Divisor padrão do projeto -->
+          <div class="form-divider"></div>
+
+          <SearchInput
+            v-model="form.forma_pagamento"
+            label="Forma de Pagamento *"
             :options="pag.opcoes.value"
             required
             class="col-span-5"
           />
 
-          <Input 
-            v-model.number="form.quantidade_parcelas" 
-            label="Qtd. Parcelas (Recorrente)" 
-            type="number" 
+          <Input
+            v-model.number="form.quantidade_parcelas"
+            label="Qtd. Parcelas (Recorrente)"
+            type="number"
             min="1"
-            class="col-span-3" 
+            class="col-span-3"
           />
-          
-          <SearchInput 
-            v-model="form.status" 
-            label="Status *" 
+
+          <SearchInput
+            v-model="form.status"
+            label="Status *"
             :options="sta.opcoes.value"
             required
             class="col-span-4"
@@ -76,8 +91,12 @@
           <Input v-model="form.data_pagamento" label="Data de Pagamento" type="date" class="col-span-4" />
           <Input v-model="form.data_registro" label="Data do Registro *" type="date" required class="col-span-4" />
 
-          <div class="col-span-12 page-actions">
-            <Button v-if="isEdit" variant="danger" type="button" @click="excluir">Excluir</Button>
+          <!-- Regra: ações principais no rodapé à direita -->
+          <div class="col-span-12 container-botoes">
+            <Button v-if="isEdit" variant="danger" type="button" @click="excluir">
+              Excluir
+            </Button>
+
             <Button variant="primary" type="submit" :loading="loading">
               {{ isEdit ? 'Salvar' : 'Gerar Lançamentos' }}
             </Button>
@@ -101,6 +120,7 @@ import SearchInput from '@/components/ui/SearchInput.vue'
 
 const route = useRoute()
 const router = useRouter()
+
 const id = computed(() => route.params.id)
 const isEdit = computed(() => !!id.value && id.value !== 'novo')
 const loading = ref(false)
@@ -108,18 +128,17 @@ const loading = ref(false)
 const cat = useConstantes()
 const pag = useConstantes()
 const sta = useConstantes()
+
 const listaFuncionarios = ref([])
-
 const categoriaSelecionada = ref('')
-
 
 const form = ref({
   tipo_movimento: 'SAÍDA',
-  categoria: '',      
-  classificacao: '',  
+  categoria: '',
+  classificacao: '',
   local: '',
   valor_total: '',
-  forma_pagamento: '', 
+  forma_pagamento: '',
   quantidade_parcelas: 1,
   funcionario_id: null,
   data_registro: new Date().toISOString().slice(0, 10),
@@ -132,28 +151,48 @@ const form = ref({
 function vincularClassificacaoChave(valorSelecionado) {
   const opt = cat.opcoes.value.find(o => o.value === valorSelecionado)
 
-  // Se opt existe:
-  // - categoria (DB) fica com o rótulo (ex.: "Água")
-  // - classificacao (DB) fica com a chave (ex.: "CUSTO FIXO")
+  // - categoria (DB) fica com o rótulo (label)
+  // - classificacao (DB) fica com a chave (value)
   if (opt) {
     form.value.categoria = opt.label
     form.value.classificacao = opt.value
-  } else {
-    form.value.categoria = ''
-    form.value.classificacao = ''
+    return
   }
+
+  form.value.categoria = ''
+  form.value.classificacao = ''
 }
 
+function validarObrigatorios() {
+  if (!form.value.tipo_movimento) return 'Selecione a Movimentação.'
+  if (!form.value.funcionario_id) return 'Selecione o Funcionário (Vale/Pagamento).'
+  if (!categoriaSelecionada.value) return 'Selecione o Item (Ex: Água, Vale).'
+  if (!form.value.local) return 'Informe o Local / Fornecedor.'
+  if (!form.value.valor_total) return 'Informe o Valor Total.'
+  if (!form.value.forma_pagamento) return 'Selecione a Forma de Pagamento.'
+  if (!form.value.status) return 'Selecione o Status.'
+  if (!form.value.data_vencimento) return 'Informe o 1º Vencimento.'
+  if (!form.value.data_registro) return 'Informe a Data do Registro.'
+  return null
+}
 
 async function salvar() {
+  const erro = validarObrigatorios()
+  if (erro) {
+    alert(erro)
+    return
+  }
+
   loading.value = true
   try {
-const payload = {
-  ...form.value,
-  valor_total: String(form.value.valor_total),
-  quantidade_parcelas: Number(form.value.quantidade_parcelas),
-  funcionario_id: form.value.funcionario_id ? Number(form.value.funcionario_id) : null
-}
+    const valor = Number(form.value.valor_total)
+
+    const payload = {
+      ...form.value,
+      valor_total: Number.isFinite(valor) ? valor.toFixed(2) : '0.00',
+      quantidade_parcelas: Number(form.value.quantidade_parcelas || 1),
+      funcionario_id: form.value.funcionario_id ? Number(form.value.funcionario_id) : null
+    }
 
     if (isEdit.value) {
       await api.put(`/despesas/${id.value}`, payload)
@@ -169,6 +208,7 @@ const payload = {
     loading.value = false
   }
 }
+
 async function excluir() {
   if (!confirm('Deseja realmente excluir este lançamento?')) return
 
@@ -188,7 +228,9 @@ async function carregarFuncionarios() {
   try {
     const { data } = await api.get('/funcionarios')
     listaFuncionarios.value = data.map(f => ({ label: f.nome, value: f.id }))
-  } catch (e) { console.error(e) }
+  } catch (e) {
+    console.error(e)
+  }
 }
 
 onMounted(async () => {
@@ -198,18 +240,19 @@ onMounted(async () => {
     sta.carregarCategoria('STATUS FINANCEIRO'),
     carregarFuncionarios()
   ])
-if (isEdit.value) {
+
+  if (!isEdit.value) return
+
   const { data } = await api.get(`/despesas/${id.value}`)
   Object.assign(form.value, data)
 
   // repopula o select de categoria (SearchInput trabalha com value/chave)
   const opt = cat.opcoes.value.find(o => o.label === data.categoria)
   categoriaSelecionada.value = opt ? opt.value : ''
+  vincularClassificacaoChave(categoriaSelecionada.value)
 
   if (data.data_vencimento) form.value.data_vencimento = data.data_vencimento.slice(0, 10)
   if (data.data_pagamento) form.value.data_pagamento = data.data_pagamento.slice(0, 10)
   if (data.data_registro) form.value.data_registro = data.data_registro.slice(0, 10)
-}
-
 })
 </script>
