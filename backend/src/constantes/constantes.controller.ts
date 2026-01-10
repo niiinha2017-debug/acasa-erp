@@ -6,7 +6,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { RolesGuard } from '../auth/roles.guard'
 import { Roles } from '../auth/roles.decorator'
 
-@UseGuards(JwtAuthGuard)
+// @UseGuards(JwtAuthGuard) // <--- Comentado para permitir acesso sem login
 @Controller('constantes')
 export class ConstantesController {
   constructor(private readonly service: ConstantesService) {}
@@ -28,23 +28,23 @@ export class ConstantesController {
     return this.service.buscarPorId(id)
   }
 
-  // Escrita: só ADMIN
-  @UseGuards(RolesGuard)
-  @Roles('ADMIN')
+  // Escrita: Temporariamente aberta (sem Guards)
+  // @UseGuards(RolesGuard)
+  // @Roles('ADMIN')
   @Post()
   criar(@Body() dto: CriarConstanteDto) {
     return this.service.criar(dto)
   }
 
-  @UseGuards(RolesGuard)
-  @Roles('ADMIN')
+  // @UseGuards(RolesGuard)
+  // @Roles('ADMIN')
   @Patch(':id')
   atualizar(@Param('id', ParseIntPipe) id: number, @Body() dto: AtualizarConstanteDto) {
     return this.service.atualizar(id, dto)
   }
 
-  @UseGuards(RolesGuard)
-  @Roles('ADMIN')
+  // @UseGuards(RolesGuard)
+  // @Roles('ADMIN')
   @Delete(':id')
   remover(@Param('id', ParseIntPipe) id: number) {
     return this.service.remover(id)
