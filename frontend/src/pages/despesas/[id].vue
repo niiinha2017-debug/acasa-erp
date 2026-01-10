@@ -4,7 +4,6 @@
       <header class="card-header header-between">
         <div>
           <h2 class="card-title">{{ isEdit ? 'Editar Lançamento' : 'Nova Despesa/Vale' }}</h2>
-          <p class="cell-muted">Gestão financeira de saídas e pagamentos a funcionários.</p>
         </div>
         <Button variant="outline" size="sm" @click="router.back()">Voltar</Button>
       </header>
@@ -12,7 +11,7 @@
       <div class="card-body">
         <form class="form-grid" @submit.prevent="salvar">
           
-          <div class="form-group col-span-3">
+          <div class="form-group col-span-4">
             <label class="form-label">Movimentação <span class="required">*</span></label>
             <select v-model="form.tipo_movimento" class="form-input" required>
               <option value="SAÍDA">SAÍDA</option>
@@ -22,18 +21,10 @@
 
           <SearchInput 
             v-model="form.funcionario_id" 
-            label="Funcionário (Para Vales)" 
-            placeholder="Selecione se for pagamento a pessoal..."
+            label="Funcionário (Opcional)" 
+            placeholder="Selecione o funcionário..."
             :options="listaFuncionarios"
-            class="col-span-5"
-          />
-
-          <Input 
-            v-model="form.local" 
-            label="Local / Unidade *" 
-            placeholder="Ex: Fábrica, Loja 01"
-            required 
-            class="col-span-4" 
+            class="col-span-8"
           />
 
           <SearchInput 
@@ -47,9 +38,17 @@
 
           <Input 
             v-model="form.classificacao" 
-            label="Classificação (Custo Fixo/Variável)" 
+            label="Classificação (Auto)" 
             readonly 
             class="col-span-6" 
+          />
+
+          <Input 
+            v-model="form.local" 
+            label="Local / Fornecedor *" 
+            placeholder="Ex: Fábrica, Loja 01"
+            required 
+            class="col-span-8" 
           />
 
           <Input 
@@ -61,19 +60,21 @@
             class="col-span-4" 
           />
           
+          <hr class="col-span-12 my-2 border-gray-100" />
+
           <SearchInput 
             v-model="form.forma_pagamento" 
-            label="Forma de Pagamento (Despesa) *" 
+            label="Forma de Pagamento *" 
             :options="pag.opcoes.value"
             required
-            class="col-span-4"
+            class="col-span-5"
           />
 
           <Input 
             v-model.number="form.quantidade_parcelas" 
-            label="Qtd. Parcelas" 
+            label="Parcelas" 
             type="number" 
-            class="col-span-4" 
+            class="col-span-2" 
           />
           
           <SearchInput 
@@ -81,22 +82,19 @@
             label="Status Financeiro *" 
             :options="sta.opcoes.value"
             required
-            class="col-span-4"
+            class="col-span-5"
           />
 
           <Input v-model="form.data_vencimento" label="Vencimento *" type="date" required class="col-span-4" />
-          <Input v-model="form.data_pagamento" label="Data de Pagamento" type="date" class="col-span-4" />
+          <Input v-model="form.data_pagamento" label="Pagamento" type="date" class="col-span-4" />
+          <Input v-model="form.data_registro" label="Data do Registro *" type="date" required class="col-span-4" />
 
-          <hr class="col-span-12 my-2 border-gray-100" />
-
-          <div class="col-span-12 flex-end gap-2 mt-4">
+          <div class="col-span-12 flex-end gap-2 mt-6">
             <Button v-if="isEdit" variant="danger" type="button" @click="excluir">Excluir</Button>
             <Button variant="primary" type="submit" :loading="loading">
-              {{ isEdit ? 'Salvar Alterações' : 'Confirmar Lançamento' }}
+              {{ isEdit ? 'Salvar Lançamento' : 'Cadastrar Lançamento' }}
             </Button>
           </div>
-          
-          <p v-if="erro" class="col-span-12 error-message">{{ erro }}</p>
         </form>
       </div>
     </Card>
