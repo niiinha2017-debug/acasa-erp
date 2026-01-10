@@ -84,6 +84,14 @@ const valorUnitarioInput = ref('0,00')
 
 /** ✅ Constantes: Categoria MODULO / Chave UNIDADE */
 const uni = useConstantes()
+watch(
+  () => uni.opcoes.value,
+  (v) => {
+    console.log('[UNIDADE] uni.opcoes.value length:', Array.isArray(v) ? v.length : 'nao-array')
+    console.log('[UNIDADE] first item:', Array.isArray(v) ? v[0] : v)
+  },
+  { deep: true }
+)
 
 /**
  * ✅ SearchInput precisa [{label, value}]
@@ -91,16 +99,27 @@ const uni = useConstantes()
  * Então: carrega MODULO e filtra chave UNIDADE
  */
 const unidadesOptions = computed(() => {
-  const opts = uni.opcoes.value || []
+  const opts = Array.isArray(uni.opcoes.value) ? uni.opcoes.value : []
+
+  // tenta descobrir quais campos existem
+  const peek = opts[0] || {}
+  if (opts.length) console.log('[UNIDADE] keys do item:', Object.keys(peek))
+
+  const getChave = (o) =>
+    (o.chave ?? o.key ?? o.chave_interno ?? o.chaveInterno ?? o.id_interno ?? o.idInterno ?? o.tipo ?? o.grupo ?? '')
+
+  const getRotulo = (o) =>
+    (o.rotulo ?? o.label ?? o.nome ?? o.descricao ?? o.valor_texto ?? o.valorTexto ?? o.valor ?? '')
 
   return opts
-    .filter(o => String(o.chave || o.key || o.chave_interno || '').toUpperCase() === 'UNIDADE')
-    .map(o => ({
-      label: o.rotulo ?? o.label ?? o.nome ?? '',
-      value: o.rotulo ?? o.value ?? o.label ?? '',
-    }))
+    .filter(o => String(getChave(o)).toUpperCase() === 'UNIDADE')
+    .map(o => {
+      const rotulo = String(getRotulo(o) || '').trim()
+      return { label: rotulo, value: rotulo }
+    })
     .filter(o => o.label)
 })
+
 
 const form = ref({
   fornecedor_id: null,
@@ -223,6 +242,8 @@ onMounted(async () => {
     await Promise.all([
       carregarFornecedores(),
       uni.carregarCategoria('MODULO'), // ✅ correto
+      console.log('[UNIDADE] carregou categoria MODULO, opcoes:', uni.opcoes.value)
+
     ])
 
     if (isEdit.value) await carregarProduto()
