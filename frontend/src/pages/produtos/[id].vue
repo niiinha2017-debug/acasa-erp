@@ -9,7 +9,6 @@
           </p>
         </div>
 
-        <!-- Regra: Voltar no topo à direita -->
         <Button variant="outline" size="sm" type="button" @click="router.push('/produtos')">
           Voltar
         </Button>
@@ -17,7 +16,6 @@
 
       <div class="card-body">
         <form class="form-grid" @submit.prevent="salvar">
-          <!-- Fornecedor -->
           <SearchInput
             v-model="form.fornecedor_id"
             label="Fornecedor *"
@@ -26,38 +24,30 @@
             class="col-span-12"
           />
 
-          <!-- Nome / Status -->
           <Input v-model="form.nome_produto" label="Nome do Produto *" required class="col-span-8" />
           <Input v-model="form.status" label="Status *" required class="col-span-4" />
 
-          <!-- Marca / Cor / Medida -->
           <Input v-model="form.marca" label="Marca" class="col-span-4" />
           <Input v-model="form.cor" label="Cor" class="col-span-4" />
           <Input v-model="form.medida" label="Medida" class="col-span-4" />
 
-          <!-- Quantidade / Valor Unitário / Valor Total -->
-          <Input
-            v-model="quantidadeMask"
-            label="Quantidade *"
+          <!-- ✅ UNIDADE das CONSTANTES -->
+          <SearchInput
+            v-model="form.unidade"
+            label="Unidade *"
+            :options="unidadesOptions"
             required
-            inputmode="numeric"
             class="col-span-4"
           />
-          <Input
-            v-model="valorUnitarioInput"
-            label="Valor Unitário *"
-            required
-            inputmode="numeric"
-            class="col-span-4"
-          />
+
+          <Input v-model="quantidadeMask" label="Quantidade *" required inputmode="numeric" class="col-span-4" />
+          <Input v-model="valorUnitarioInput" label="Valor Unitário *" required inputmode="numeric" class="col-span-4" />
           <Input :model-value="valorTotalMask" label="Valor Total" readonly class="col-span-4" />
 
-          <!-- Ações (rodapé à direita) -->
           <div class="col-span-12 container-botoes">
             <Button variant="secondary" type="button" @click="router.push('/produtos')">
               Cancelar
             </Button>
-
             <Button variant="primary" type="submit" :loading="salvando">
               {{ isEdit ? 'Salvar Alterações' : 'Salvar' }}
             </Button>
@@ -74,6 +64,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 import api from '@/services/api'
 import { maskMoneyBR } from '@/utils/masks'
+import { useConstantes } from '@/composables/useConstantes'
 
 import Card from '@/components/ui/Card.vue'
 import Input from '@/components/ui/Input.vue'
@@ -88,16 +79,19 @@ const isEdit = computed(() => id.value !== 'novo')
 
 const salvando = ref(false)
 const fornecedores = ref([])
-
-// Campo mascarado que o usuário digita
 const valorUnitarioInput = ref('0,00')
+
+/** ✅ Constantes: CHAVE = UNIDADE */
+const uni = useConstantes()
+const unidadesOptions = computed(() => uni.opcoes.value || [])
 
 const form = ref({
   fornecedor_id: null,
   nome_produto: '',
-  marca: '', // opcional
+  marca: '',
   cor: '',
   medida: '',
+  unidade: '',
   quantidade: 0,
   valor_unitario: 0,
   valor_total: 0,
@@ -108,7 +102,6 @@ const fornecedoresOptions = computed(() =>
   fornecedores.value.map(f => ({ value: f.id, label: f.razao_social }))
 )
 
-/* Quantidade (só números) */
 const quantidadeMask = computed({
   get: () => (form.value.quantidade === 0 ? '' : String(form.value.quantidade)),
   set: v => {
@@ -117,7 +110,6 @@ const quantidadeMask = computed({
   },
 })
 
-/* Valor unitário com máscara BR */
 watch(valorUnitarioInput, (v) => {
   const apenasNumeros = String(v || '').replace(/\D/g, '')
   const valorNumerico = apenasNumeros ? Number(apenasNumeros) / 100 : 0
@@ -128,7 +120,6 @@ watch(valorUnitarioInput, (v) => {
   if (v !== formatado) valorUnitarioInput.value = formatado
 })
 
-/* Total calculado */
 const valorTotalMask = computed(() => {
   const total = Number(form.value.quantidade || 0) * Number(form.value.valor_unitario || 0)
   form.value.valor_total = total
@@ -138,6 +129,7 @@ const valorTotalMask = computed(() => {
 function validarObrigatorios() {
   if (!form.value.fornecedor_id) return 'Selecione o fornecedor.'
   if (!form.value.nome_produto) return 'Informe o nome do produto.'
+  if (!form.value.unidade) return 'Selecione a unidade.'
   if (!form.value.quantidade) return 'Informe a quantidade.'
   if (!form.value.valor_unitario) return 'Informe o valor unitário.'
   if (!form.value.status) return 'Informe o status.'
@@ -151,6 +143,7 @@ function resetForm() {
     marca: '',
     cor: '',
     medida: '',
+    unidade: '',
     quantidade: 0,
     valor_unitario: 0,
     valor_total: 0,
@@ -160,15 +153,13 @@ function resetForm() {
 }
 
 async function carregarFornecedores() {
-  const resF = await api.get('/fornecedores')
-  fornecedores.value = resF.data
+  const res = await api.get('/fornecedores')
+  fornecedores.value = res.data
 }
 
 async function carregarProduto() {
   const { data } = await api.get(`/produtos/${id.value}`)
-  // injeta mantendo defaults
   form.value = { ...form.value, ...data }
-  // máscara no campo editável
   valorUnitarioInput.value = maskMoneyBR(Number(data.valor_unitario || 0))
 }
 
@@ -184,16 +175,17 @@ async function salvar() {
       quantidade: Number(form.value.quantidade || 0),
       valor_unitario: Number(form.value.valor_unitario || 0),
       valor_total: Number(form.value.valor_total || 0),
+      unidade: form.value.unidade ? String(form.value.unidade) : null,
       marca: form.value.marca ? String(form.value.marca) : null,
       cor: form.value.cor ? String(form.value.cor) : null,
       medida: form.value.medida ? String(form.value.medida) : null,
     }
 
     if (isEdit.value) {
-      await api.put(`/produtos/${id.value}`, payload)
+      await api.put(`/produtos/${id.value}`, payload)  // ✅ PUT atualiza
       alert('Produto atualizado com sucesso!')
     } else {
-      await api.put('/produtos', payload)
+      await api.post('/produtos', payload)            // ✅ POST cria
       alert('Produto cadastrado com sucesso!')
     }
 
@@ -208,16 +200,16 @@ async function salvar() {
 
 onMounted(async () => {
   try {
-    await carregarFornecedores()
+    await Promise.all([
+      carregarFornecedores(),
+      uni.carregarCategoria('UNIDADE'),
+    ])
 
-    if (isEdit.value) {
-      await carregarProduto()
-    } else {
-      resetForm()
-    }
+    if (isEdit.value) await carregarProduto()
+    else resetForm()
   } catch (err) {
     console.error(err)
-    alert(isEdit.value ? 'Erro ao carregar produto.' : 'Erro ao carregar fornecedores.')
+    alert('Erro ao carregar dados.')
     router.push('/produtos')
   }
 })

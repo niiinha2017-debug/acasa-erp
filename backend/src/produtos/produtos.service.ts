@@ -14,6 +14,7 @@ data: {
   nome_produto: dto.nome_produto,
   marca: dto.marca ?? null,
   cor: dto.cor ?? null,
+  unidade: dto.unidade ?? null,
   medida: dto.medida ?? null,
   quantidade: dto.quantidade,
   valor_unitario: dto.valor_unitario,

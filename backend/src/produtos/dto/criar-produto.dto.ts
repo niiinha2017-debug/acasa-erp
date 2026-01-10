@@ -21,6 +21,11 @@ export class CreateProdutoDto {
   @IsString()
   medida?: string
 
+  @IsOptional()
+@IsString()
+unidade?: string
+
+
   @Type(() => Number)
   @IsInt()
   quantidade: number
