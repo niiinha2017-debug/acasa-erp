@@ -1,33 +1,36 @@
-import { IsInt, IsOptional, IsString, IsNumber } from 'class-validator'
+import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common'
+import { ProdutosService } from './produtos.service'
+import { CreateProdutoDto } from './dto/criar-produto.dto'
+import { UpdateProdutoDto } from './dto/atualizar-produto.dto'
 
-export class UpsertProdutoDto {
-  @IsInt()
-  fornecedor_id: number
+@Controller('produtos')
+export class ProdutosController {
+  constructor(private readonly produtosService: ProdutosService) {}
 
-  @IsString()
-  nome_produto: string
+  @Get()
+  listar() {
+    return this.produtosService.listar()
+  }
 
-  @IsOptional()
-  @IsString()
-  marca?: string
+  @Get(':id')
+  buscarPorId(@Param('id') id: string) {
+    return this.produtosService.buscarPorId(Number(id))
+  }
 
-  @IsOptional()
-  @IsString()
-  cor?: string
+  // ✅ PADRÃO: POST cria
+  @Post()
+  criar(@Body() dto: CreateProdutoDto) {
+    return this.produtosService.criar(dto)
+  }
 
-  @IsOptional()
-  @IsString()
-  medida?: string
+  // ✅ PADRÃO: PUT atualiza
+  @Put(':id')
+  atualizar(@Param('id') id: string, @Body() dto: UpdateProdutoDto) {
+    return this.produtosService.atualizar(Number(id), dto)
+  }
 
-  @IsInt()
-  quantidade: number
-
-  @IsNumber()
-  valor_unitario: number
-
-  @IsNumber()
-  valor_total: number
-
-  @IsString()
-  status: string
+  @Delete(':id')
+  remover(@Param('id') id: string) {
+    return this.produtosService.remover(Number(id))
+  }
 }
