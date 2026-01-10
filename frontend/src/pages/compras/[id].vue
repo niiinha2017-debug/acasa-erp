@@ -3,9 +3,13 @@
     <div class="card card--shadow">
       <header class="card-header header-between">
         <div>
-          <h2 class="card-title">Editar Compra #{{ compraId }}</h2>
+          <h2 class="card-title">
+            {{ isEdit ? `Editar Compra #${compraId}` : 'Nova Compra' }}
+          </h2>
           <p class="card-subtitle">
-            {{ tipoCompra === 'INSUMOS' ? 'Compra de INSUMOS (Marcenaria)' : 'Compra de CLIENTE x AMBIENTES (Venda)' }}
+            {{ tipoCompra === 'INSUMOS'
+              ? 'Compra de INSUMOS (Marcenaria)'
+              : 'Compra de CLIENTE x AMBIENTES (Venda)' }}
           </p>
         </div>
 
@@ -15,26 +19,42 @@
       </header>
 
       <div class="card-body">
-        <div v-if="loading" class="loading-box">
-          Carregando...
-        </div>
+        <div v-if="loading" class="loading-box">Carregando...</div>
 
         <template v-else>
+          <!-- Tipo -->
           <div class="type-box">
             <label class="check">
-              <input type="checkbox" :checked="tipoCompra === 'INSUMOS'" disabled />
+              <input
+                type="checkbox"
+                :checked="tipoCompra === 'INSUMOS'"
+                :disabled="isEdit"
+                @change="() => (tipoCompra = 'INSUMOS')"
+              />
               <span>Compra de INSUMOS (Marcenaria)</span>
             </label>
 
             <label class="check">
-              <input type="checkbox" :checked="tipoCompra === 'CLIENTE_AMBIENTE'" disabled />
+              <input
+                type="checkbox"
+                :checked="tipoCompra === 'CLIENTE_AMBIENTE'"
+                :disabled="isEdit"
+                @change="() => (tipoCompra = 'CLIENTE_AMBIENTE')"
+              />
               <span>Compra de CLIENTE x AMBIENTES (Venda)</span>
             </label>
           </div>
 
+          <!-- Dados principais -->
           <div class="form-grid">
             <div v-if="tipoCompra === 'CLIENTE_AMBIENTE'" class="form-group col-span-3">
-              <Input v-model="form.venda_id" label="Venda (ID)" type="number" placeholder="Ex: 123" :required="true" />
+              <Input
+                v-model="form.venda_id"
+                label="Venda (ID)"
+                type="number"
+                placeholder="Ex: 123"
+                :required="true"
+              />
             </div>
 
             <div class="form-group" :class="tipoCompra === 'CLIENTE_AMBIENTE' ? 'col-span-5' : 'col-span-9'">
@@ -57,6 +77,7 @@
             </div>
           </div>
 
+          <!-- Ambientes + rateio -->
           <div v-if="tipoCompra === 'CLIENTE_AMBIENTE'" class="section">
             <div class="section-divider"></div>
 
@@ -93,42 +114,68 @@
 
               <div class="rateio-total">
                 <span>Soma rateio:</span>
-                <b :class="{ 'rateio-bad': somaRateio !== totalCalculado }">{{ format.currency(somaRateio) }}</b>
+                <b :class="{ 'rateio-bad': somaRateio !== totalCalculado }">
+                  {{ format.currency(somaRateio) }}
+                </b>
               </div>
             </div>
           </div>
 
           <div class="section-divider"></div>
 
+          <!-- Itens -->
           <div class="section-header header-between">
             <div>
               <h3 class="card-title items-title">Itens</h3>
               <p class="items-subtitle">Materiais/serviços desta compra.</p>
             </div>
-            <Button label="+ Adicionar item" variant="secondary" size="sm" @click="addItem" />
+
+            <div class="flex gap-2">
+              <Button label="+ Adicionar item" variant="secondary" size="sm" @click="addItem()" />
+              <Button label="+ Novo produto" variant="outline" size="sm" @click="abrirModalProduto()" />
+            </div>
           </div>
 
           <div class="items-list">
             <div v-for="(it, idx) in itens" :key="it._key" class="item-card card--shadow-sm">
               <div class="form-grid">
+                <!-- Busca de produto -->
                 <div class="form-group col-span-6">
-                  <Input v-model="it.descricao" label="Descrição" placeholder="Ex: MDF 18mm" :required="true" />
+                  <SearchInput
+                    v-model="it.produto_id"
+                    label="Produto"
+                    :options="produtoOptions"
+                    placeholder="Buscar produto..."
+                    colSpan="col-span-12"
+                    @update:modelValue="(v) => aplicarProdutoNoItem(idx, v)"
+                  />
                 </div>
+
                 <div class="form-group col-span-2">
                   <Input v-model="it.unidade" label="Unidade" placeholder="UN / PL" />
                 </div>
+
                 <div class="form-group col-span-2">
                   <Input v-model="it.quantidade" label="Qtd" type="number" @input="() => recalcularItem(idx)" />
                 </div>
+
                 <div class="form-group col-span-2">
                   <Input v-model="it.valor_unitario" label="Vlr Unit." type="number" @input="() => recalcularItem(idx)" />
                 </div>
+
                 <div class="form-group col-span-3">
                   <Input v-model="it.valor_total" label="Total" type="number" readonly />
                 </div>
+
                 <div class="col-span-9 flex justify-end items-end">
-                   <Button label="Remover" variant="danger" size="sm" @click="removerItem(idx)" />
+                  <Button label="Remover" variant="danger" size="sm" @click="removerItem(idx)" />
                 </div>
+              </div>
+
+              <!-- Descrição fica “snapshot” pra não travar, mas você pode remover se quiser -->
+              <div class="item-snapshot">
+                <span class="cell-muted">Descrição:</span>
+                <b>{{ it.descricao || '—' }}</b>
               </div>
             </div>
           </div>
@@ -145,6 +192,7 @@
       <footer class="card-footer footer-between">
         <div class="footer-left">
           <Button
+            v-if="isEdit"
             label="Excluir compra"
             variant="danger"
             :loading="excluindo"
@@ -153,25 +201,66 @@
         </div>
 
         <div class="footer-right flex gap-2">
-          <Button 
-            label="Salvar Alterações" 
-            variant="primary" 
+          <Button
+            :label="isEdit ? 'Salvar Alterações' : 'Criar Compra'"
+            variant="primary"
             size="md"
-            :loading="salvando" 
-            @click="salvar" 
+            :loading="salvando"
+            @click="salvar"
           />
         </div>
       </footer>
+    </div>
+
+    <!-- MODAL PRODUTO -->
+    <div v-if="modalProduto.aberto" class="modal-backdrop" @click.self="fecharModalProduto()">
+      <div class="modal card card--shadow">
+        <header class="card-header header-between">
+          <div>
+            <h3 class="card-title">Cadastrar Produto</h3>
+            <p class="card-subtitle">Crie um produto e ele já entra na busca.</p>
+          </div>
+          <Button label="Fechar" variant="outline" size="sm" @click="fecharModalProduto()" />
+        </header>
+
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-group col-span-6">
+              <Input v-model="modalProduto.form.nome" label="Nome" placeholder="Ex: MDF 18mm Duratex" :required="true" />
+            </div>
+
+            <div class="form-group col-span-3">
+              <Input v-model="modalProduto.form.unidade" label="Unidade" placeholder="UN / PL / M" />
+            </div>
+
+            <div class="form-group col-span-3">
+              <Input v-model="modalProduto.form.preco" label="Preço sugerido" type="number" placeholder="0" />
+            </div>
+
+            <div class="form-group col-span-12">
+              <Input v-model="modalProduto.form.observacao" label="Observação" placeholder="Opcional" />
+            </div>
+          </div>
+        </div>
+
+        <footer class="card-footer footer-between">
+          <div></div>
+          <div class="flex gap-2">
+            <Button label="Cancelar" variant="outline" @click="fecharModalProduto()" />
+            <Button label="Salvar Produto" variant="primary" :loading="modalProduto.salvando" @click="salvarProduto()" />
+          </div>
+        </footer>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import api from '@/services/api'
-import { format } from '@/utils/format'
+import format from '@/utils/format'
 
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
@@ -180,7 +269,12 @@ import SearchInput from '@/components/ui/SearchInput.vue'
 const route = useRoute()
 const router = useRouter()
 
-const compraId = Number(route.params.id)
+const compraId = computed(() => {
+  const n = Number(route.params.id)
+  return Number.isFinite(n) ? n : null
+})
+
+const isEdit = computed(() => compraId.value !== null)
 
 const loading = ref(false)
 const salvando = ref(false)
@@ -189,11 +283,18 @@ const excluindo = ref(false)
 const tipoCompra = ref('INSUMOS')
 
 const form = ref({ venda_id: '', status: 'RASCUNHO', observacao: '' })
+
 const itens = ref([])
 
+// fornecedores
 const fornecedorOptions = ref([])
 const fornecedorSelecionado = ref(null)
 
+// produtos
+const produtoOptions = ref([])
+const produtoMap = ref(new Map()) // id -> produto
+
+// ambientes/rateio
 const ambientes = ref([])
 const ambientesSelecionados = ref(new Set())
 const rateios = ref([])
@@ -246,16 +347,24 @@ function removerRateio(idx) {
   recalcularSomaRateio()
 }
 
-function addItem() {
+// itens
+function addItem(prefill = {}) {
   itens.value.push({
     id: undefined,
+    produto_id: null,
     descricao: '',
     unidade: '',
     quantidade: 1,
     valor_unitario: 0,
     valor_total: 0,
-    _key: `tmp-${Math.random().toString(36).slice(2)}`
+    _key: `tmp-${Math.random().toString(36).slice(2)}`,
+    ...prefill,
   })
+}
+
+function removerItem(idx) {
+  itens.value.splice(idx, 1)
+  recalcularTudo()
 }
 
 function recalcularItem(idx) {
@@ -271,6 +380,22 @@ function recalcularTudo() {
   else recalcularSomaRateio()
 }
 
+function aplicarProdutoNoItem(idx, produtoId) {
+  const id = Number(produtoId || 0)
+  if (!id || Number.isNaN(id)) return
+
+  const p = produtoMap.value.get(id)
+  if (!p) return
+
+  const it = itens.value[idx]
+  it.produto_id = id
+  it.descricao = p.nome || p.descricao || it.descricao
+  it.unidade = p.unidade || it.unidade
+  if (Number(it.valor_unitario || 0) === 0 && p.preco) it.valor_unitario = Number(p.preco)
+  recalcularItem(idx)
+}
+
+// loaders
 async function carregarFornecedores() {
   const { data } = await api.get('/fornecedores')
   const arr = Array.isArray(data) ? data : []
@@ -278,6 +403,18 @@ async function carregarFornecedores() {
     value: f.id,
     label: f.nome_fantasia || f.razao_social || `Fornecedor #${f.id}`,
   }))
+}
+
+async function carregarProdutos() {
+  const { data } = await api.get('/produtos')
+  const arr = Array.isArray(data) ? data : []
+  produtoOptions.value = arr.map((p) => ({
+    value: p.id,
+    label: p.nome || p.descricao || `Produto #${p.id}`,
+  }))
+  const map = new Map()
+  arr.forEach((p) => map.set(p.id, p))
+  produtoMap.value = map
 }
 
 async function carregarAmbientesDaVenda(vendaId) {
@@ -292,28 +429,29 @@ async function carregarAmbientesDaVenda(vendaId) {
   const { data } = await api.get(`/vendas/${vendaId}`)
   const itensVenda = Array.isArray(data?.itens) ? data.itens : []
 
-  const nomes = Array.from(new Set(itensVenda.map((i) => String(i?.nome_ambiente || '').trim()).filter(Boolean)))
-    .sort((a, b) => a.localeCompare(b))
+  const nomes = Array.from(
+    new Set(itensVenda.map((i) => String(i?.nome_ambiente || '').trim()).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b))
 
   ambientes.value = nomes
 
-  // mantém seleção atual se possível
   const setAtual = new Set(ambientesSelecionados.value)
   const setNovo = new Set(nomes.filter((n) => setAtual.has(n)))
   ambientesSelecionados.value = setNovo
 
-  // se não tinha seleção, tenta inferir do rateio existente
   if (!setNovo.size && rateios.value.length) {
     ambientesSelecionados.value = new Set(rateios.value.map((r) => r.nome_ambiente))
   }
 }
 
 async function carregarCompra() {
+  if (!isEdit.value) return
+
   loading.value = true
   try {
-    const { data } = await api.get(`/compras/${compraId}`)
+    const { data } = await api.get(`/compras/${compraId.value}`)
 
-    tipoCompra.value = data.tipo_compra
+    tipoCompra.value = data.tipo_compra || 'INSUMOS'
 
     form.value.venda_id = data.venda_id ? String(data.venda_id) : ''
     form.value.status = data.status || 'RASCUNHO'
@@ -323,6 +461,7 @@ async function carregarCompra() {
 
     itens.value = (Array.isArray(data.itens) ? data.itens : []).map((i) => ({
       id: i.id,
+      produto_id: i.produto_id ? Number(i.produto_id) : null,
       descricao: i.descricao,
       unidade: i.unidade || '',
       quantidade: Number(i.quantidade || 0),
@@ -342,14 +481,24 @@ async function carregarCompra() {
       ambientesSelecionados.value = new Set(rateios.value.map((r) => r.nome_ambiente))
       await carregarAmbientesDaVenda(Number(data.venda_id))
     }
+
+    if (!itens.value.length) addItem()
   } finally {
     loading.value = false
   }
 }
 
+// salvar/excluir
 async function salvar() {
   if (!fornecedorSelecionado.value) return alert('Selecione um fornecedor.')
   if (!form.value.status) return alert('Informe o status.')
+  if (!itens.value.length) return alert('Adicione pelo menos 1 item.')
+
+  // valida itens
+  for (const it of itens.value) {
+    if (!it.descricao && !it.produto_id) return alert('Selecione um produto ou preencha a descrição.')
+    if (Number(it.quantidade || 0) <= 0) return alert('Quantidade precisa ser maior que zero.')
+  }
 
   if (tipoCompra.value === 'CLIENTE_AMBIENTE') {
     if (!form.value.venda_id) return alert('Informe a venda (ID).')
@@ -362,7 +511,7 @@ async function salvar() {
   salvando.value = true
   try {
     const payload = {
-      // tipo_compra não altera
+      tipo_compra: tipoCompra.value, // no "novo" precisa ir
       venda_id: tipoCompra.value === 'CLIENTE_AMBIENTE' ? Number(form.value.venda_id) : null,
       fornecedor_id: Number(fornecedorSelecionado.value),
       status: form.value.status,
@@ -370,6 +519,7 @@ async function salvar() {
 
       itens: itens.value.map((it) => ({
         id: it.id,
+        produto_id: it.produto_id ? Number(it.produto_id) : null,
         descricao: it.descricao,
         unidade: it.unidade || '',
         quantidade: Number(it.quantidade || 0),
@@ -383,24 +533,33 @@ async function salvar() {
           : undefined,
     }
 
-    await api.patch(`/compras/${compraId}`, payload)
-    alert('Salvo com sucesso!')
+    // ✅ Regra do projeto: PUT para criar/atualizar
+    if (isEdit.value) {
+      await api.put(`/compras/${compraId.value}`, payload)
+      alert('Salvo com sucesso!')
+    } else {
+      await api.put('/compras', payload) // ajuste aqui se seu backend usar outra rota
+      alert('Compra criada com sucesso!')
+      router.push('/compras')
+    }
   } finally {
     salvando.value = false
   }
 }
 
 async function excluir() {
+  if (!isEdit.value) return
   if (!confirm('Deseja excluir esta compra?')) return
   excluindo.value = true
   try {
-    await api.delete(`/compras/${compraId}`)
+    await api.delete(`/compras/${compraId.value}`)
     router.push('/compras')
   } finally {
     excluindo.value = false
   }
 }
 
+// watch venda_id
 watch(
   () => form.value.venda_id,
   async (v) => {
@@ -411,83 +570,93 @@ watch(
   },
 )
 
+// Modal Produto
+const modalProduto = reactive({
+  aberto: false,
+  salvando: false,
+  form: {
+    nome: '',
+    unidade: '',
+    preco: '',
+    observacao: '',
+  },
+})
+
+function abrirModalProduto() {
+  modalProduto.aberto = true
+  modalProduto.form.nome = ''
+  modalProduto.form.unidade = ''
+  modalProduto.form.preco = ''
+  modalProduto.form.observacao = ''
+}
+
+function fecharModalProduto() {
+  modalProduto.aberto = false
+}
+
+async function salvarProduto() {
+  if (!modalProduto.form.nome) return alert('Informe o nome do produto.')
+
+  modalProduto.salvando = true
+  try {
+    const payload = {
+      nome: modalProduto.form.nome,
+      unidade: modalProduto.form.unidade || null,
+      preco: modalProduto.form.preco ? Number(modalProduto.form.preco) : null,
+      observacao: modalProduto.form.observacao || null,
+    }
+
+    // ✅ Regra do projeto: PUT
+    await api.put('/produtos', payload) // ajuste se sua rota for /produtos/:id ou outro padrão
+
+    await carregarProdutos()
+    fecharModalProduto()
+    alert('Produto cadastrado!')
+  } finally {
+    modalProduto.salvando = false
+  }
+}
+
 onMounted(async () => {
-  await carregarFornecedores()
-  await carregarCompra()
-  if (!itens.value.length) addItem()
+  loading.value = true
+  try {
+    await Promise.all([carregarFornecedores(), carregarProdutos()])
+    await carregarCompra()
+    if (!isEdit.value && !itens.value.length) addItem()
+  } finally {
+    loading.value = false
+  }
 })
 </script>
 
 <style scoped>
-.card-subtitle { color: var(--text-muted); font-size: var(--font-size-sm); margin: 0; }
-.header-actions { display: flex; gap: 10px; }
-
-.loading-box {
-  padding: 14px;
-  border: 1px dashed var(--border-soft);
-  border-radius: var(--border-radius-md);
-  color: var(--text-muted);
-  font-size: var(--font-size-sm);
+/* Se você já tem modal global no ui.css, pode apagar isso aqui */
+.modal-backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 50;
+}
+.modal{
+  width: min(920px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  border-radius: 16px;
 }
 
-.type-box {
-  display: flex; gap: 16px; flex-wrap: wrap;
-  padding: 12px 14px;
-  border: 1px solid var(--border-soft);
-  border-radius: var(--border-radius-md);
-  background: var(--bg-input);
-  margin-bottom: 16px;
-}
-.check { display: flex; gap: 8px; align-items: center; font-size: var(--font-size-sm); color: var(--text-primary); }
-
-.section-divider { border-top: 1px solid var(--border-soft); margin: 18px 0; }
-.section-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
-.section-title { margin: 0; }
-.section-subtitle { margin: 4px 0 0; color: var(--text-muted); font-size: var(--font-size-sm); }
-.section-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-
-.ambientes-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-@media (max-width: 900px) { .ambientes-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 560px) { .ambientes-grid { grid-template-columns: 1fr; } }
-
-.rateio-box {
-  margin-top: 14px;
-  border: 1px solid var(--border-soft);
-  border-radius: var(--border-radius-md);
-  padding: 12px;
-  background: var(--bg-card);
-}
-.rateio-title { margin: 0 0 10px; font-size: var(--font-size-sm); color: var(--text-secondary); }
-.rateio-row {
-  display: grid;
-  grid-template-columns: 1fr 240px 130px 46px;
-  gap: 10px; align-items: end;
-  padding: 10px 0;
-  border-top: 1px solid var(--border-soft);
-}
-.rateio-row:first-of-type { border-top: 0; }
-.rateio-name { font-weight: 600; color: var(--text-primary); }
-.rateio-hint { text-align: right; color: var(--text-secondary); font-size: var(--font-size-sm); }
-.rateio-total { display: flex; justify-content: flex-end; gap: 10px; padding-top: 10px; border-top: 1px solid var(--border-soft); }
-.rateio-bad { color: var(--danger); }
-
-.items-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
-.items-title { margin: 0; }
-.items-subtitle { margin: 4px 0 0; color: var(--text-muted); font-size: var(--font-size-sm); }
-
-.items-list { display: flex; flex-direction: column; gap: 12px; }
-.item-card { border: 1px solid var(--border-soft); border-radius: var(--border-radius-md); padding: 14px; background: var(--bg-card); }
-.item-actions { display: flex; justify-content: flex-end; margin-top: 6px; }
-.empty-items { padding: 14px; border: 1px dashed var(--border-soft); border-radius: var(--border-radius-md); color: var(--text-muted); font-size: var(--font-size-sm); }
-
-.total-box {
-  margin-top: 16px;
-  padding: 12px 14px;
-  border: 1px solid var(--border-soft);
-  border-radius: var(--border-radius-md);
-  background: var(--bg-input);
-  display: flex; justify-content: space-between; align-items: center;
+.item-snapshot{
+  padding: 8px 12px 12px;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  border-top: 1px solid var(--gray-200);
 }
 
-.danger-zone { margin-top: 16px; }
+.rateio-bad{
+  color: var(--danger-600);
+}
 </style>

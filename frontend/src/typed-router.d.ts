@@ -65,13 +65,6 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
-    '/compras/novo': RouteRecordInfo<
-      '/compras/novo',
-      '/compras/novo',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
     '/configuracoes/permissoes': RouteRecordInfo<
       '/configuracoes/permissoes',
       '/configuracoes/permissoes',
@@ -300,12 +293,6 @@ declare module 'vue-router/auto-routes' {
     'src/pages/compras/[id].vue': {
       routes:
         | '/compras/[id]'
-      views:
-        | never
-    }
-    'src/pages/compras/novo.vue': {
-      routes:
-        | '/compras/novo'
       views:
         | never
     }
