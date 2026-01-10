@@ -167,24 +167,28 @@ const form = ref({
 
 // PAYLOAD LIMPO: Envia apenas o que o banco espera baseado no tipo
 const gerarPayload = () => {
-  const p = { ...form.value }
-  
-  // Reseta campos que não pertencem ao tipo selecionado para evitar lixo no banco
-  if (p.tipo !== 'TEXTO') p.valor_texto = null
-  if (p.tipo !== 'NUMERO') p.valor_numero = null
-  if (p.tipo !== 'BOOLEANO') p.valor_booleano = null
-  
-  if (p.tipo === 'JSON') {
+  // Criamos um objeto apenas com o que o Model constantes tem no Prisma
+  const payload = {
+    categoria: form.value.categoria,
+    chave: form.value.chave,
+    rotulo: form.value.rotulo,
+    ordem: Number(form.value.ordem) || 0,
+    ativo: form.value.ativo,
+    // Tratamento de valores nulos para não enviar lixo
+    valor_texto: form.value.tipo === 'TEXTO' ? form.value.valor_texto : null,
+    valor_numero: form.value.tipo === 'NUMERO' ? Number(form.value.valor_numero) : null,
+  }
+
+  // Se for JSON, tratamos a parte
+  if (form.value.tipo === 'JSON') {
     try {
-      p.valor_json = valorJsonTexto.value ? JSON.parse(valorJsonTexto.value) : null
+      payload.valor_json = valorJsonTexto.value ? JSON.parse(valorJsonTexto.value) : null
     } catch (e) {
       throw new Error('O formato JSON é inválido.')
     }
-  } else {
-    p.valor_json = null
   }
-  
-  return p
+
+  return payload
 }
 
 async function carregar() {
@@ -192,9 +196,25 @@ async function carregar() {
   loading.value = true
   try {
     const { data } = await api.get(`/constantes/${id.value}`)
+    
+    // Lógica para preencher o "tipo" baseado no que veio do banco
+    if (data.valor_numero !== null && data.valor_numero !== undefined) {
+      data.tipo = 'NUMERO'
+    } else if (data.valor_json) {
+      data.tipo = 'JSON'
+    } else if (typeof data.valor_booleano === 'boolean') {
+      data.tipo = 'BOOLEANO'
+    } else {
+      data.tipo = 'TEXTO'
+    }
+
     Object.assign(form.value, data)
-    if (data.valor_json) valorJsonTexto.value = JSON.stringify(data.valor_json, null, 2)
+    
+    if (data.valor_json) {
+      valorJsonTexto.value = JSON.stringify(data.valor_json, null, 2)
+    }
   } catch (e) {
+    console.error(e)
     erro.value = 'Erro ao carregar dados.'
   } finally {
     loading.value = false

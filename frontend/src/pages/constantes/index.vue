@@ -90,25 +90,34 @@ const constantes = ref([])
    COLUNAS DA TABELA (Simplificadas)
 ========================= */
 const columns = [
-  { key: 'categoria', label: 'Categoria' },
-  { key: 'chave',     label: 'Chave' },
-  { key: 'valor',     label: 'Valor' }, // Agora exibindo o conteúdo do campo valor
-  { key: 'ordem',     label: 'Ordem',  width: '80px', align: 'center' },
-  { key: 'ativo',     label: 'Status', width: '100px', align: 'center' },
-  { key: 'acoes',     label: 'Ações',  width: '140px', align: 'center' },
+  { key: 'categoria',    label: 'Categoria' },
+  { key: 'chave',        label: 'Chave' },
+  { key: 'rotulo',       label: 'Rótulo' }, // Adicionei rótulo que é mais amigável
+  { key: 'valor_exibido', label: 'Valor' }, // 👈 Alterado aqui
+  { key: 'ordem',        label: 'Ordem',  width: '80px', align: 'center' },
+  { key: 'ativo',        label: 'Status', width: '100px', align: 'center' },
+  { key: 'acoes',        label: 'Ações',  width: '140px', align: 'center' },
 ]
 
 /* =========================
-   FILTRO
+   FILTRO E FORMATAÇÃO
 ========================= */
 const constantesFiltradas = computed(() => {
-  const termo = (filtro.value || '').toLowerCase().trim()
-  if (!termo) return constantes.value
+  // Primeiro, formatamos os dados para a tabela entender o que exibir
+  const listaFormatada = constantes.value.map(c => ({
+    ...c,
+    // Cria um campo virtual "valor_exibido" para a tabela
+    valor_exibido: c.valor_numero !== null ? `${c.valor_numero}%` : (c.valor_texto || '-')
+  }))
 
-  return constantes.value.filter(c =>
+  const termo = (filtro.value || '').toLowerCase().trim()
+  if (!termo) return listaFormatada
+
+  return listaFormatada.filter(c =>
     c.categoria?.toLowerCase().includes(termo) ||
     c.chave?.toLowerCase().includes(termo) ||
-    c.valor?.toLowerCase().includes(termo) // Filtra pelo valor que aparece na lista
+    c.rotulo?.toLowerCase().includes(termo) ||
+    String(c.valor_exibido).toLowerCase().includes(termo)
   )
 })
 /* =========================
