@@ -22,32 +22,32 @@
         <div v-if="loading" class="loading-box">Carregando...</div>
 
         <template v-else>
-          <!-- Tipo -->
-          <div class="type-box">
-            <label class="check">
-              <input
-                type="checkbox"
-                :checked="tipoCompra === 'INSUMOS'"
-                :disabled="isEdit"
-                @change="() => (tipoCompra = 'INSUMOS')"
-              />
-              <span>Compra de INSUMOS (Marcenaria)</span>
-            </label>
+          <div class="section mb-6">
+            <div class="section-header">
+              <h3 class="section-title">Tipo de Compra</h3>
+              <p class="section-subtitle">Selecione o tipo de compra que está realizando.</p>
+            </div>
 
-            <label class="check">
-              <input
-                type="checkbox"
-                :checked="tipoCompra === 'CLIENTE_AMBIENTE'"
+            <div class="type-box flex gap-4 mt-4">
+              <CustomCheckbox
+                label="Compra de INSUMOS"
+                description="Uso interno da marcenaria"
+                :model-value="tipoCompra === 'INSUMOS'"
                 :disabled="isEdit"
-                @change="() => (tipoCompra = 'CLIENTE_AMBIENTE')"
+                @update:model-value="() => (tipoCompra = 'INSUMOS')"
               />
-              <span>Compra de CLIENTE x AMBIENTES (Venda)</span>
-            </label>
+
+              <CustomCheckbox
+                label="Compra de CLIENTE x AMBIENTES"
+                description="Venda vinculada a projeto"
+                :model-value="tipoCompra === 'CLIENTE_AMBIENTE'"
+                :disabled="isEdit"
+                @update:model-value="() => (tipoCompra = 'CLIENTE_AMBIENTE')"
+              />
+            </div>
           </div>
 
-          <!-- Dados principais (SEM RASCUNHO/STATUS E SEM OBSERVAÇÃO) -->
-          <div class="form-grid">
-            <!-- VENDA por nome -->
+          <div class="form-grid mt-6">
             <div v-if="tipoCompra === 'CLIENTE_AMBIENTE'" class="form-group col-span-6">
               <SearchInput
                 v-model="vendaSelecionada"
@@ -59,7 +59,6 @@
               />
             </div>
 
-            <!-- FORNECEDOR -->
             <div class="form-group" :class="tipoCompra === 'CLIENTE_AMBIENTE' ? 'col-span-6' : 'col-span-12'">
               <SearchInput
                 v-model="fornecedorSelecionado"
@@ -72,8 +71,7 @@
             </div>
           </div>
 
-          <!-- Ambientes + rateio -->
-          <div v-if="tipoCompra === 'CLIENTE_AMBIENTE'" class="section">
+          <div v-if="tipoCompra === 'CLIENTE_AMBIENTE'" class="section mt-8">
             <div class="section-divider"></div>
 
             <div class="section-header header-between">
@@ -88,28 +86,33 @@
               </div>
             </div>
 
-            <div class="ambientes-grid">
-              <label v-for="a in ambientes" :key="a" class="check">
-                <input type="checkbox" :checked="ambientesSelecionados.has(a)" @change="toggleAmbiente(a)" />
-                <span>{{ a }}</span>
-              </label>
+            <div class="ambientes-grid flex flex-wrap gap-4 mt-4">
+              <CustomCheckbox 
+                v-for="a in ambientes" 
+                :key="a"
+                :label="a"
+                :model-value="ambientesSelecionados.has(a)"
+                @update:model-value="toggleAmbiente(a)"
+              />
             </div>
 
-            <div class="rateio-box">
-              <h4 class="rateio-title">Rateio (editável)</h4>
+            <div class="rateio-box mt-6 p-4 bg-light rounded-lg">
+              <h4 class="rateio-title font-bold mb-4">Rateio (editável)</h4>
 
-              <div v-for="(r, idx) in rateios" :key="r.nome_ambiente" class="rateio-row">
-                <div class="rateio-name">{{ r.nome_ambiente }}</div>
-                <div class="rateio-input">
-                  <Input v-model="r.valor_alocado" label="" type="number" placeholder="0" @input="recalcularSomaRateio" />
+              <div v-for="(r, idx) in rateios" :key="r.nome_ambiente" class="rateio-row grid grid-cols-12 gap-4 items-center mb-2">
+                <div class="rateio-name col-span-4">{{ r.nome_ambiente }}</div>
+                <div class="rateio-input col-span-3">
+                  <Input v-model="r.valor_alocado" type="number" placeholder="0" @input="recalcularSomaRateio" />
                 </div>
-                <div class="rateio-hint">{{ format.currency(r.valor_alocado) }}</div>
-                <Button label="X" variant="danger" size="sm" @click="removerRateio(idx)" />
+                <div class="rateio-hint col-span-3 text-muted">{{ format.currency(r.valor_alocado) }}</div>
+                <div class="col-span-2 flex justify-end">
+                  <Button label="X" variant="danger" size="sm" @click="removerRateio(idx)" />
+                </div>
               </div>
 
-              <div class="rateio-total">
+              <div class="rateio-total mt-4 pt-4 border-t flex justify-between items-center">
                 <span>Soma rateio:</span>
-                <b :class="{ 'rateio-bad': somaRateio !== totalCalculado }">
+                <b :class="{ 'text-danger': somaRateio !== totalCalculado, 'text-success': somaRateio === totalCalculado }">
                   {{ format.currency(somaRateio) }}
                 </b>
               </div>
@@ -118,8 +121,7 @@
 
           <div class="section-divider"></div>
 
-          <!-- Itens -->
-          <div class="section-header header-between">
+          <div class="section-header header-between mt-8">
             <div>
               <h3 class="card-title items-title">Itens</h3>
               <p class="items-subtitle">Materiais/serviços desta compra.</p>
@@ -131,10 +133,9 @@
             </div>
           </div>
 
-          <div class="items-list">
-            <div v-for="(it, idx) in itens" :key="it._key" class="item-card card--shadow-sm">
+          <div class="items-list mt-4">
+            <div v-for="(it, idx) in itens" :key="it._key" class="item-card card--shadow-sm mb-4 p-4 border rounded-lg">
               <div class="form-grid">
-                <!-- Busca de produto -->
                 <div class="form-group col-span-6">
                   <SearchInput
                     v-model="it.produto_id"
@@ -162,22 +163,22 @@
                   <Input v-model="it.valor_total" label="Total" type="number" readonly />
                 </div>
 
-                <div class="col-span-9 flex justify-end items-end">
+                <div class="col-span-9 flex justify-end items-end pb-1">
                   <Button label="Remover" variant="danger" size="sm" @click="removerItem(idx)" />
                 </div>
               </div>
 
-              <div class="item-snapshot">
-                <span class="cell-muted">Descrição:</span>
-                <b>{{ it.descricao || '—' }}</b>
+              <div class="item-snapshot mt-2 text-sm text-muted">
+                <span>Descrição:</span>
+                <b class="ml-2">{{ it.descricao || '—' }}</b>
               </div>
             </div>
           </div>
 
-          <div class="total-box-wrapper flex justify-end">
-            <div class="total-box">
-              <span class="cell-muted">Total da compra:</span>
-              <strong class="text-xl text-primary">{{ format.currency(totalCalculado) }}</strong>
+          <div class="total-box-wrapper flex justify-end mt-6">
+            <div class="total-box p-4 bg-primary-light rounded-lg">
+              <span class="cell-muted mr-4">Total da compra:</span>
+              <strong class="text-2xl text-primary">{{ format.currency(totalCalculado) }}</strong>
             </div>
           </div>
         </template>
@@ -206,61 +207,64 @@
       </footer>
     </div>
 
-    <!-- MODAL PRODUTO (IGUAL PRODUTOS) -->
     <div v-if="modalProduto.aberto" class="modal-backdrop" @click.self="fecharModalProduto()">
-      <div class="modal card card--shadow">
-        <header class="card-header header-between">
-          <div>
-            <h3 class="card-title">Novo Produto</h3>
-            <p class="muted" style="margin: 0;">Cadastre um novo produto abaixo.</p>
-          </div>
-          <Button label="Fechar" variant="outline" size="sm" @click="fecharModalProduto()" />
-        </header>
-
-        <div class="card-body">
-          <form class="form-grid" @submit.prevent="salvarProduto">
-            <SearchInput
-              v-model="modalProduto.form.fornecedor_id"
-              label="Fornecedor *"
-              :options="fornecedorOptions"
-              required
-              class="col-span-12"
-            />
-
-            <Input v-model="modalProduto.form.nome_produto" label="Nome do Produto *" required class="col-span-8" />
-            <Input v-model="modalProduto.form.status" label="Status *" required class="col-span-4" />
-
-            <Input v-model="modalProduto.form.marca" label="Marca" class="col-span-4" />
-            <Input v-model="modalProduto.form.cor" label="Cor" class="col-span-4" />
-            <Input v-model="modalProduto.form.medida" label="Medida" class="col-span-4" />
-
-            <SearchInput
-              v-model="modalProduto.form.unidade"
-              label="Unidade *"
-              :options="unidadesOptions"
-              required
-              class="col-span-4"
-            />
-
-            <Input v-model="modalProduto.quantidadeMask" label="Quantidade *" required inputmode="numeric" class="col-span-4" />
-            <Input v-model="modalProduto.valorUnitarioInput" label="Valor Unitário *" required inputmode="numeric" class="col-span-4" />
-            <Input :model-value="modalProduto.valorTotalMask" label="Valor Total" readonly class="col-span-4" />
-
-            <div class="col-span-12 container-botoes">
-              <Button variant="secondary" type="button" @click="fecharModalProduto()">
-                Cancelar
-              </Button>
-              <Button variant="primary" type="submit" :loading="modalProduto.salvando">
-                Salvar
-              </Button>
+      <div class="modal-card-container">
+        <div class="card card--shadow modal-content-box">
+          <header class="card-header header-between">
+            <div>
+              <h3 class="card-title">Novo Produto</h3>
+              <p class="muted">Cadastre um novo produto abaixo.</p>
             </div>
-          </form>
+            <Button label="✕" variant="ghost" size="sm" @click="fecharModalProduto()" />
+          </header>
+
+          <div class="card-body">
+            <form class="form-grid" @submit.prevent="salvarProduto">
+              <SearchInput
+                v-model="modalProduto.form.fornecedor_id"
+                label="Fornecedor *"
+                :options="fornecedorOptions"
+                required
+                class="col-span-12"
+              />
+
+              <Input v-model="modalProduto.form.nome_produto" label="Nome do Produto *" required class="col-span-8" />
+              
+              <div class="col-span-4 flex items-end pb-2">
+                 <CustomCheckbox 
+                  label="Ativo" 
+                  :model-value="modalProduto.form.status === 'ATIVO'"
+                  @update:model-value="(v) => modalProduto.form.status = v ? 'ATIVO' : 'INATIVO'" 
+                />
+              </div>
+
+              <Input v-model="modalProduto.form.marca" label="Marca" class="col-span-4" />
+              <Input v-model="modalProduto.form.cor" label="Cor" class="col-span-4" />
+              <Input v-model="modalProduto.form.medida" label="Medida" class="col-span-4" />
+
+              <SearchInput
+                v-model="modalProduto.form.unidade"
+                label="Unidade *"
+                :options="unidadesOptions"
+                required
+                class="col-span-4"
+              />
+
+              <Input v-model="modalProduto.quantidadeMask" label="Quantidade *" required class="col-span-4" />
+              <Input v-model="modalProduto.valorUnitarioInput" label="Valor Unitário *" required class="col-span-4" />
+              <Input :model-value="modalProduto.valorTotalMask" label="Valor Total" readonly class="col-span-4" />
+
+              <div class="col-span-12 flex justify-end gap-3 mt-6">
+                <Button variant="outline" type="button" @click="fecharModalProduto()">Cancelar</Button>
+                <Button variant="primary" type="submit" :loading="modalProduto.salvando">Salvar Produto</Button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </template>
-
 
 <script setup>
 import { ref, computed, reactive, watch, onMounted } from 'vue'
@@ -274,6 +278,8 @@ import { useConstantes } from '@/composables/useConstantes'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import SearchInput from '@/components/ui/SearchInput.vue'
+// No <script setup>
+import CustomCheckbox from '@/components/ui/CustomCheckbox.vue' // Ajuste o caminho conforme necessário
 
 /* -------------------------------------------------------------------------- */
 /* ROUTE / MODE (NOVO + EDITAR JUNTOS)                                         */
@@ -560,10 +566,18 @@ async function carregarCompra() {
 /* -------------------------------------------------------------------------- */
 /* SALVAR / EXCLUIR                                                            */
 /* -------------------------------------------------------------------------- */
+/* ... (restante do código acima permanece igual) ... */
+
 async function salvar() {
   if (!fornecedorSelecionado.value) return alert('Selecione o fornecedor.')
-  if (tipoCompra.value === 'CLIENTE_AMBIENTE' && !vendaSelecionada.value) {
-    return alert('Selecione a venda.')
+  
+  if (tipoCompra.value === 'CLIENTE_AMBIENTE') {
+    if (!vendaSelecionada.value) return alert('Selecione a venda.')
+    
+    // Validação opcional: O rateio deve bater com o total
+    if (Math.abs(somaRateio.value - totalCalculado.value) > 0.01) {
+      return alert('A soma do rateio deve ser igual ao total da compra.')
+    }
   }
 
   salvando.value = true
@@ -572,21 +586,36 @@ async function salvar() {
       tipo_compra: tipoCompra.value,
       fornecedor_id: fornecedorSelecionado.value,
       venda_id: tipoCompra.value === 'CLIENTE_AMBIENTE' ? vendaSelecionada.value : null,
-      itens,
-      rateios,
+      itens: itens.value,    // ADICIONADO .value
+      rateios: rateios.value, // ADICIONADO .value
+      valor_total: totalCalculado.value // Geralmente o backend pede o total geral
     }
 
     if (isEdit.value) {
       await api.put(`/compras/${compraId.value}`, payload)
     } else {
-      await api.put('/compras', payload)
+      await api.post('/compras', payload) // ALTERADO para POST
     }
 
     router.push('/compras')
+  } catch (error) {
+    console.error(error)
+    alert('Erro ao salvar compra. Verifique os dados.')
   } finally {
     salvando.value = false
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* WATCHERS / INIT                                                            */
+/* -------------------------------------------------------------------------- */
+
+// Adicionei um watch para recalcular o rateio se o total da compra mudar
+watch(totalCalculado, () => {
+  if (tipoCompra.value === 'CLIENTE_AMBIENTE' && ambientesSelecionados.value.size > 0) {
+    ratearAutomatico()
+  }
+})
 
 async function excluir() {
   if (!confirm('Deseja excluir esta compra?')) return
@@ -603,6 +632,11 @@ async function excluir() {
 /* WATCHERS / INIT                                                             */
 /* -------------------------------------------------------------------------- */
 watch(vendaSelecionada, async (v) => {
+  // Limpa ambientes se trocar de venda
+  ambientes.value = []
+  ambientesSelecionados.value = new Set()
+  rateios.value = []
+
   if (tipoCompra.value === 'CLIENTE_AMBIENTE' && v) {
     form.value.venda_id = v
     await carregarAmbientesDaVenda(v)
@@ -627,3 +661,42 @@ onMounted(async () => {
 })
 </script>
 
+<style scoped>
+/* Estilos para garantir que o modal apareça corretamente */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.modal-card-container {
+  width: 100%;
+  max-width: 850px;
+  max-height: 95vh;
+  overflow-y: auto;
+}
+
+.modal-content-box {
+  background: white;
+  border-radius: 12px;
+}
+
+.section-divider {
+  height: 1px;
+  background: var(--border-soft);
+  margin: 24px 0;
+}
+
+.bg-light { background-color: #f9fafb; }
+.bg-primary-light { background-color: rgba(37, 99, 235, 0.05); }
+
+/* Ajustes de tipografia */
+.section-title { font-size: 1.1rem; font-weight: 600; color: var(--text-main); }
+.section-subtitle { font-size: 0.85rem; color: var(--text-muted); }
+</style>
