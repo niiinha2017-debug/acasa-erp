@@ -1,23 +1,22 @@
-import { IsBoolean, IsInt, IsOptional, IsString, IsNumber, Min } from 'class-validator'
+// backend/src/constantes/dto/criar-constante.dto.ts
+import { IsBoolean, IsInt, IsOptional, IsString, IsNumber } from 'class-validator'
 
 export class CriarConstanteDto {
-  @IsString({ message: 'A categoria deve ser um texto' })
+  @IsString()
   categoria: string
 
-  @IsString({ message: 'A chave deve ser um identificador em texto' })
+  @IsString()
   chave: string
 
-  @IsString({ message: 'O rótulo é obrigatório para exibição' })
+  @IsString()
   rotulo: string
 
   @IsOptional()
   @IsString()
   valor_texto?: string
 
-  // Agora validamos como número (importante para as taxas de cartão)
   @IsOptional()
-  @IsNumber({}, { message: 'O valor numérico deve ser um número válido' })
-  @Min(0, { message: 'O valor não pode ser negativo' })
+  @IsNumber()
   valor_numero?: number
 
   @IsOptional()

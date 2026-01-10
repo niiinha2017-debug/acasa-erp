@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service'
 import { CriarConstanteDto } from './dto/criar-constante.dto'
 import { AtualizarConstanteDto } from './dto/atualizar-constante.dto'
@@ -26,33 +27,50 @@ export class ConstantesService {
     return item
   }
 
-  async criar(dto: CriarConstanteDto) {
-    return this.prisma.constantes.create({
-      data: {
-        ...dto, // O spread já pega categoria, chave, rotulo, etc.
-        // Se o valor_numero vier, garantimos que o Prisma trate como Decimal se necessário
-        valor_numero: dto.valor_numero ?? null,
-        ordem: dto.ordem ?? 0,
-        ativo: dto.ativo ?? true,
-      },
-    })
+async criar(dto: CriarConstanteDto) {
+    try {
+      return await this.prisma.constantes.create({
+        data: {
+          categoria: dto.categoria,
+          chave: dto.chave,
+          rotulo: dto.rotulo,
+          valor_texto: dto.valor_texto || null,
+          // Converte o número para Decimal do Prisma (resolve erro 500)
+          valor_numero: dto.valor_numero ? new Prisma.Decimal(dto.valor_numero) : null,
+          ordem: Number(dto.ordem) || 0,
+          ativo: dto.ativo ?? true,
+        },
+      })
+    } catch (error) {
+      console.error('Erro ao criar constante:', error)
+      throw new BadRequestException('Erro ao salvar no banco. Verifique os campos.')
+    }
   }
 
   async atualizar(id: number, dto: AtualizarConstanteDto) {
-    // Garante que o item existe antes de tentar mudar
     await this.buscarPorId(id)
 
-    return this.prisma.constantes.update({
-      where: { id },
-      data: {
-        ...dto,
-        // Tratamos campos opcionais para não sobrescrever com null sem querer
-        valor_texto: dto.valor_texto !== undefined ? dto.valor_texto : undefined,
-        valor_numero: dto.valor_numero !== undefined ? dto.valor_numero : undefined,
-      },
-    })
+    try {
+      return await this.prisma.constantes.update({
+        where: { id },
+        data: {
+          categoria: dto.categoria,
+          chave: dto.chave,
+          rotulo: dto.rotulo,
+          valor_texto: dto.valor_texto !== undefined ? dto.valor_texto : undefined,
+          // Converte com segurança
+          valor_numero: dto.valor_numero !== undefined 
+            ? (dto.valor_numero ? new Prisma.Decimal(dto.valor_numero) : null) 
+            : undefined,
+          ordem: dto.ordem !== undefined ? Number(dto.ordem) : undefined,
+          ativo: dto.ativo !== undefined ? dto.ativo : undefined,
+        },
+      })
+    } catch (error) {
+      console.error('Erro ao atualizar constante:', error)
+      throw new BadRequestException('Erro ao atualizar no banco.')
+    }
   }
-
   async remover(id: number) {
     await this.buscarPorId(id)
     return this.prisma.constantes.delete({ where: { id } })
