@@ -260,7 +260,8 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import api from '@/services/api'
-import format from '@/utils/format'
+import { format } from '@/utils/format'
+import { useConstantes } from '@/composables/useConstantes'
 
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
@@ -269,12 +270,16 @@ import SearchInput from '@/components/ui/SearchInput.vue'
 const route = useRoute()
 const router = useRouter()
 
+const rawId = computed(() => String(route.params.id || 'novo'))
+
+const isEdit = computed(() => rawId.value !== 'novo')
+
 const compraId = computed(() => {
-  const n = Number(route.params.id)
+  if (!isEdit.value) return null
+  const n = Number(rawId.value)
   return Number.isFinite(n) ? n : null
 })
 
-const isEdit = computed(() => compraId.value !== null)
 
 const loading = ref(false)
 const salvando = ref(false)
@@ -443,9 +448,8 @@ async function carregarAmbientesDaVenda(vendaId) {
     ambientesSelecionados.value = new Set(rateios.value.map((r) => r.nome_ambiente))
   }
 }
-
 async function carregarCompra() {
-  if (!isEdit.value) return
+  if (!isEdit.value || !compraId.value) return
 
   loading.value = true
   try {
@@ -622,11 +626,13 @@ onMounted(async () => {
   try {
     await Promise.all([carregarFornecedores(), carregarProdutos()])
     await carregarCompra()
+
     if (!isEdit.value && !itens.value.length) addItem()
   } finally {
     loading.value = false
   }
 })
+
 </script>
 
 <style scoped>
