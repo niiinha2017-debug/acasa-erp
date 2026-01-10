@@ -45,35 +45,30 @@
             </label>
           </div>
 
-          <!-- Dados principais -->
+          <!-- Dados principais (SEM RASCUNHO/STATUS E SEM OBSERVAÇÃO) -->
           <div class="form-grid">
-            <div v-if="tipoCompra === 'CLIENTE_AMBIENTE'" class="form-group col-span-3">
-              <Input
-                v-model="form.venda_id"
-                label="Venda (ID)"
-                type="number"
-                placeholder="Ex: 123"
-                :required="true"
-              />
-            </div>
-
-            <div class="form-group" :class="tipoCompra === 'CLIENTE_AMBIENTE' ? 'col-span-5' : 'col-span-9'">
+            <!-- VENDA por nome -->
+            <div v-if="tipoCompra === 'CLIENTE_AMBIENTE'" class="form-group col-span-6">
               <SearchInput
-                v-model="fornecedorSelecionado"
-                label="Fornecedor"
-                :options="fornecedorOptions"
-                placeholder="Buscar fornecedor..."
+                v-model="vendaSelecionada"
+                label="Venda *"
+                :options="vendaOptions"
+                placeholder="Buscar venda pelo nome..."
                 :required="true"
                 colSpan="col-span-12"
               />
             </div>
 
-            <div class="form-group col-span-3">
-              <Input v-model="form.status" label="Status" placeholder="RASCUNHO" :required="true" />
-            </div>
-
-            <div class="form-group col-span-12">
-              <Input v-model="form.observacao" label="Observação" placeholder="Opcional" />
+            <!-- FORNECEDOR -->
+            <div class="form-group" :class="tipoCompra === 'CLIENTE_AMBIENTE' ? 'col-span-6' : 'col-span-12'">
+              <SearchInput
+                v-model="fornecedorSelecionado"
+                label="Fornecedor *"
+                :options="fornecedorOptions"
+                placeholder="Buscar fornecedor..."
+                :required="true"
+                colSpan="col-span-12"
+              />
             </div>
           </div>
 
@@ -172,7 +167,6 @@
                 </div>
               </div>
 
-              <!-- Descrição fica “snapshot” pra não travar, mas você pode remover se quiser -->
               <div class="item-snapshot">
                 <span class="cell-muted">Descrição:</span>
                 <b>{{ it.descricao || '—' }}</b>
@@ -212,66 +206,82 @@
       </footer>
     </div>
 
-    <!-- MODAL PRODUTO -->
+    <!-- MODAL PRODUTO (IGUAL PRODUTOS) -->
     <div v-if="modalProduto.aberto" class="modal-backdrop" @click.self="fecharModalProduto()">
       <div class="modal card card--shadow">
         <header class="card-header header-between">
           <div>
-            <h3 class="card-title">Cadastrar Produto</h3>
-            <p class="card-subtitle">Crie um produto e ele já entra na busca.</p>
+            <h3 class="card-title">Novo Produto</h3>
+            <p class="muted" style="margin: 0;">Cadastre um novo produto abaixo.</p>
           </div>
           <Button label="Fechar" variant="outline" size="sm" @click="fecharModalProduto()" />
         </header>
 
         <div class="card-body">
-          <div class="form-grid">
-            <div class="form-group col-span-6">
-              <Input v-model="modalProduto.form.nome" label="Nome" placeholder="Ex: MDF 18mm Duratex" :required="true" />
-            </div>
+          <form class="form-grid" @submit.prevent="salvarProduto">
+            <SearchInput
+              v-model="modalProduto.form.fornecedor_id"
+              label="Fornecedor *"
+              :options="fornecedorOptions"
+              required
+              class="col-span-12"
+            />
 
-            <div class="form-group col-span-3">
-              <Input v-model="modalProduto.form.unidade" label="Unidade" placeholder="UN / PL / M" />
-            </div>
+            <Input v-model="modalProduto.form.nome_produto" label="Nome do Produto *" required class="col-span-8" />
+            <Input v-model="modalProduto.form.status" label="Status *" required class="col-span-4" />
 
-            <div class="form-group col-span-3">
-              <Input v-model="modalProduto.form.preco" label="Preço sugerido" type="number" placeholder="0" />
-            </div>
+            <Input v-model="modalProduto.form.marca" label="Marca" class="col-span-4" />
+            <Input v-model="modalProduto.form.cor" label="Cor" class="col-span-4" />
+            <Input v-model="modalProduto.form.medida" label="Medida" class="col-span-4" />
 
-            <div class="form-group col-span-12">
-              <Input v-model="modalProduto.form.observacao" label="Observação" placeholder="Opcional" />
+            <SearchInput
+              v-model="modalProduto.form.unidade"
+              label="Unidade *"
+              :options="unidadesOptions"
+              required
+              class="col-span-4"
+            />
+
+            <Input v-model="modalProduto.quantidadeMask" label="Quantidade *" required inputmode="numeric" class="col-span-4" />
+            <Input v-model="modalProduto.valorUnitarioInput" label="Valor Unitário *" required inputmode="numeric" class="col-span-4" />
+            <Input :model-value="modalProduto.valorTotalMask" label="Valor Total" readonly class="col-span-4" />
+
+            <div class="col-span-12 container-botoes">
+              <Button variant="secondary" type="button" @click="fecharModalProduto()">
+                Cancelar
+              </Button>
+              <Button variant="primary" type="submit" :loading="modalProduto.salvando">
+                Salvar
+              </Button>
             </div>
-          </div>
+          </form>
         </div>
-
-        <footer class="card-footer footer-between">
-          <div></div>
-          <div class="flex gap-2">
-            <Button label="Cancelar" variant="outline" @click="fecharModalProduto()" />
-            <Button label="Salvar Produto" variant="primary" :loading="modalProduto.salvando" @click="salvarProduto()" />
-          </div>
-        </footer>
       </div>
     </div>
   </div>
 </template>
 
+
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { ref, computed, reactive, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import api from '@/services/api'
 import { format } from '@/utils/format'
+import { maskMoneyBR } from '@/utils/masks'
 import { useConstantes } from '@/composables/useConstantes'
 
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import SearchInput from '@/components/ui/SearchInput.vue'
 
+/* -------------------------------------------------------------------------- */
+/* ROUTE / MODE (NOVO + EDITAR JUNTOS)                                         */
+/* -------------------------------------------------------------------------- */
 const route = useRoute()
 const router = useRouter()
 
 const rawId = computed(() => String(route.params.id || 'novo'))
-
 const isEdit = computed(() => rawId.value !== 'novo')
 
 const compraId = computed(() => {
@@ -280,55 +290,163 @@ const compraId = computed(() => {
   return Number.isFinite(n) ? n : null
 })
 
-
+/* -------------------------------------------------------------------------- */
+/* STATE GERAL                                                                 */
+/* -------------------------------------------------------------------------- */
 const loading = ref(false)
 const salvando = ref(false)
 const excluindo = ref(false)
 
 const tipoCompra = ref('INSUMOS')
 
-const form = ref({ venda_id: '', status: 'RASCUNHO', observacao: '' })
+const form = ref({
+  venda_id: null,
+})
 
-const itens = ref([])
-
-// fornecedores
-const fornecedorOptions = ref([])
+/* -------------------------------------------------------------------------- */
+/* FORNECEDORES                                                                */
+/* -------------------------------------------------------------------------- */
+const fornecedores = ref([])
 const fornecedorSelecionado = ref(null)
 
-// produtos
-const produtoOptions = ref([])
-const produtoMap = ref(new Map()) // id -> produto
+const fornecedorOptions = computed(() =>
+  fornecedores.value.map(f => ({
+    value: f.id,
+    label: f.razao_social || f.nome_fantasia || `Fornecedor #${f.id}`,
+  }))
+)
 
-// ambientes/rateio
-const ambientes = ref([])
-const ambientesSelecionados = ref(new Set())
-const rateios = ref([])
-const somaRateio = ref(0)
+async function carregarFornecedores() {
+  const { data } = await api.get('/fornecedores')
+  fornecedores.value = Array.isArray(data) ? data : []
+}
 
-function round2(n) { return Math.round((Number(n) + Number.EPSILON) * 100) / 100 }
+/* -------------------------------------------------------------------------- */
+/* VENDAS (BUSCA POR NOME)                                                     */
+/* -------------------------------------------------------------------------- */
+const vendaSelecionada = ref(null)
+const vendaOptions = ref([])
+
+async function carregarVendas() {
+  const { data } = await api.get('/vendas')
+  const arr = Array.isArray(data) ? data : []
+
+  vendaOptions.value = arr.map(v => ({
+    value: v.id,
+    label:
+      v.nome ||
+      v.cliente_nome ||
+      v.cliente?.nome ||
+      `Venda #${v.id}`,
+  }))
+}
+
+/* -------------------------------------------------------------------------- */
+/* CONSTANTES (UNIDADE)                                                        */
+/* -------------------------------------------------------------------------- */
+const uni = useConstantes()
+
+const unidadesOptions = computed(() => {
+  const lista = Array.isArray(uni.opcoes.value) ? uni.opcoes.value : []
+
+  return lista
+    .filter(o => String(o.value || '').toUpperCase() === 'UNIDADE')
+    .map(o => ({
+      label: o.label,
+      value: o.label,
+    }))
+    .filter(o => o.label)
+})
+
+/* -------------------------------------------------------------------------- */
+/* ITENS                                                                       */
+/* -------------------------------------------------------------------------- */
+const itens = ref([])
+
+function round2(n) {
+  return Math.round((Number(n) + Number.EPSILON) * 100) / 100
+}
 
 const totalCalculado = computed(() =>
   round2(itens.value.reduce((acc, it) => acc + Number(it.valor_total || 0), 0))
 )
 
-function rateioAutomaticoValores(total, nomes) {
-  const qtd = nomes.length
-  if (!qtd) return []
-  const base = round2(total / qtd)
-  const arr = nomes.map((n) => ({ nome_ambiente: n, valor_alocado: base }))
-  const soma = round2(arr.reduce((a, r) => a + Number(r.valor_alocado || 0), 0))
-  const diff = round2(total - soma)
-  arr[arr.length - 1].valor_alocado = round2(arr[arr.length - 1].valor_alocado + diff)
-  return arr
+function addItem() {
+  itens.value.push({
+    id: undefined,
+    produto_id: null,
+    descricao: '',
+    unidade: '',
+    quantidade: 1,
+    valor_unitario: 0,
+    valor_total: 0,
+    _key: `tmp-${Math.random().toString(36).slice(2)}`,
+  })
 }
 
+function removerItem(idx) {
+  itens.value.splice(idx, 1)
+}
+
+function recalcularItem(idx) {
+  const it = itens.value[idx]
+  it.valor_total = round2(Number(it.quantidade || 0) * Number(it.valor_unitario || 0))
+}
+
+/* -------------------------------------------------------------------------- */
+/* PRODUTOS (BUSCA + MAP)                                                      */
+/* -------------------------------------------------------------------------- */
+const produtoOptions = ref([])
+const produtoMap = ref(new Map())
+
+async function carregarProdutos() {
+  const { data } = await api.get('/produtos')
+  const arr = Array.isArray(data) ? data : []
+
+  produtoOptions.value = arr.map(p => ({
+    value: p.id,
+    label: p.nome_produto || p.nome || `Produto #${p.id}`,
+  }))
+
+  const map = new Map()
+  arr.forEach(p => map.set(p.id, p))
+  produtoMap.value = map
+}
+
+function aplicarProdutoNoItem(idx, produtoId) {
+  const p = produtoMap.value.get(Number(produtoId))
+  if (!p) return
+
+  const it = itens.value[idx]
+  it.produto_id = p.id
+  it.descricao = p.nome_produto || p.nome
+  it.unidade = p.unidade
+  if (!it.valor_unitario) it.valor_unitario = Number(p.valor_unitario || 0)
+  recalcularItem(idx)
+}
+
+/* -------------------------------------------------------------------------- */
+/* AMBIENTES / RATEIO                                                          */
+/* -------------------------------------------------------------------------- */
+const ambientes = ref([])
+const ambientesSelecionados = ref(new Set())
+const rateios = ref([])
+const somaRateio = ref(0)
+
 function recalcularSomaRateio() {
-  somaRateio.value = round2(rateios.value.reduce((acc, r) => acc + Number(r.valor_alocado || 0), 0))
+  somaRateio.value = round2(rateios.value.reduce((a, r) => a + Number(r.valor_alocado || 0), 0))
+}
+
+function rateioAutomaticoValores(total, nomes) {
+  const base = round2(total / nomes.length)
+  const arr = nomes.map(n => ({ nome_ambiente: n, valor_alocado: base }))
+  const diff = round2(total - arr.reduce((a, r) => a + r.valor_alocado, 0))
+  arr[arr.length - 1].valor_alocado += diff
+  return arr
 }
 
 function ratearAutomatico() {
   const nomes = Array.from(ambientesSelecionados.value)
-  if (!nomes.length) return alert('Selecione pelo menos 1 ambiente.')
   rateios.value = rateioAutomaticoValores(totalCalculado.value, nomes)
   recalcularSomaRateio()
 }
@@ -340,219 +458,137 @@ function selecionarTodosAmbientes() {
 
 function toggleAmbiente(nome) {
   const set = new Set(ambientesSelecionados.value)
-  if (set.has(nome)) set.delete(nome)
-  else set.add(nome)
+  set.has(nome) ? set.delete(nome) : set.add(nome)
   ambientesSelecionados.value = set
   ratearAutomatico()
 }
 
 function removerRateio(idx) {
   rateios.value.splice(idx, 1)
-  ambientesSelecionados.value = new Set(rateios.value.map((r) => r.nome_ambiente))
   recalcularSomaRateio()
 }
 
-// itens
-function addItem(prefill = {}) {
-  itens.value.push({
-    id: undefined,
-    produto_id: null,
-    descricao: '',
-    unidade: '',
-    quantidade: 1,
-    valor_unitario: 0,
-    valor_total: 0,
-    _key: `tmp-${Math.random().toString(36).slice(2)}`,
-    ...prefill,
-  })
-}
-
-function removerItem(idx) {
-  itens.value.splice(idx, 1)
-  recalcularTudo()
-}
-
-function recalcularItem(idx) {
-  const it = itens.value[idx]
-  const qtd = Number(it.quantidade || 0)
-  const vu = Number(it.valor_unitario || 0)
-  it.valor_total = round2(qtd * vu)
-  recalcularTudo()
-}
-
-function recalcularTudo() {
-  if (tipoCompra.value === 'CLIENTE_AMBIENTE' && ambientesSelecionados.value.size) ratearAutomatico()
-  else recalcularSomaRateio()
-}
-
-function aplicarProdutoNoItem(idx, produtoId) {
-  const id = Number(produtoId || 0)
-  if (!id || Number.isNaN(id)) return
-
-  const p = produtoMap.value.get(id)
-  if (!p) return
-
-  const it = itens.value[idx]
-  it.produto_id = id
-  it.descricao = p.nome || p.descricao || it.descricao
-  it.unidade = p.unidade || it.unidade
-  if (Number(it.valor_unitario || 0) === 0 && p.preco) it.valor_unitario = Number(p.preco)
-  recalcularItem(idx)
-}
-
-// loaders
-async function carregarFornecedores() {
-  const { data } = await api.get('/fornecedores')
-  const arr = Array.isArray(data) ? data : []
-  fornecedorOptions.value = arr.map((f) => ({
-    value: f.id,
-    label: f.nome_fantasia || f.razao_social || `Fornecedor #${f.id}`,
-  }))
-}
-
-async function carregarProdutos() {
-  const { data } = await api.get('/produtos')
-  const arr = Array.isArray(data) ? data : []
-  produtoOptions.value = arr.map((p) => ({
-    value: p.id,
-    label: p.nome || p.descricao || `Produto #${p.id}`,
-  }))
-  const map = new Map()
-  arr.forEach((p) => map.set(p.id, p))
-  produtoMap.value = map
-}
-
 async function carregarAmbientesDaVenda(vendaId) {
-  if (!vendaId) {
-    ambientes.value = []
-    ambientesSelecionados.value = new Set()
-    rateios.value = []
-    somaRateio.value = 0
-    return
-  }
-
   const { data } = await api.get(`/vendas/${vendaId}`)
   const itensVenda = Array.isArray(data?.itens) ? data.itens : []
 
-  const nomes = Array.from(
-    new Set(itensVenda.map((i) => String(i?.nome_ambiente || '').trim()).filter(Boolean))
-  ).sort((a, b) => a.localeCompare(b))
+  ambientes.value = Array.from(
+    new Set(itensVenda.map(i => i.nome_ambiente).filter(Boolean))
+  )
+}
 
-  ambientes.value = nomes
+/* -------------------------------------------------------------------------- */
+/* MODAL PRODUTO (IGUAL CADASTRO)                                              */
+/* -------------------------------------------------------------------------- */
+const modalProduto = reactive({
+  aberto: false,
+  salvando: false,
+  form: {
+    fornecedor_id: null,
+    nome_produto: '',
+    marca: '',
+    cor: '',
+    medida: '',
+    unidade: '',
+    quantidade: 0,
+    valor_unitario: 0,
+    valor_total: 0,
+    status: 'ATIVO',
+  },
+  quantidadeMask: '',
+  valorUnitarioInput: '0,00',
+  valorTotalMask: '0,00',
+})
 
-  const setAtual = new Set(ambientesSelecionados.value)
-  const setNovo = new Set(nomes.filter((n) => setAtual.has(n)))
-  ambientesSelecionados.value = setNovo
+function abrirModalProduto() {
+  modalProduto.aberto = true
+}
 
-  if (!setNovo.size && rateios.value.length) {
-    ambientesSelecionados.value = new Set(rateios.value.map((r) => r.nome_ambiente))
+function fecharModalProduto() {
+  modalProduto.aberto = false
+}
+
+watch(() => modalProduto.quantidadeMask, v => {
+  modalProduto.form.quantidade = Number(String(v || '').replace(/\D/g, '')) || 0
+})
+
+watch(() => modalProduto.valorUnitarioInput, v => {
+  const n = String(v || '').replace(/\D/g, '')
+  const valor = n ? Number(n) / 100 : 0
+  modalProduto.form.valor_unitario = valor
+  modalProduto.valorUnitarioInput = maskMoneyBR(valor)
+})
+
+watch(
+  () => [modalProduto.form.quantidade, modalProduto.form.valor_unitario],
+  () => {
+    const total = modalProduto.form.quantidade * modalProduto.form.valor_unitario
+    modalProduto.form.valor_total = total
+    modalProduto.valorTotalMask = maskMoneyBR(total)
+  },
+  { deep: true }
+)
+
+async function salvarProduto() {
+  modalProduto.salvando = true
+  try {
+    await api.post('/produtos', modalProduto.form)
+    await carregarProdutos()
+    fecharModalProduto()
+  } finally {
+    modalProduto.salvando = false
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* CARREGAR COMPRA (EDITAR)                                                    */
+/* -------------------------------------------------------------------------- */
 async function carregarCompra() {
   if (!isEdit.value || !compraId.value) return
 
-  loading.value = true
-  try {
-    const { data } = await api.get(`/compras/${compraId.value}`)
+  const { data } = await api.get(`/compras/${compraId.value}`)
 
-    tipoCompra.value = data.tipo_compra || 'INSUMOS'
+  tipoCompra.value = data.tipo_compra
+  fornecedorSelecionado.value = data.fornecedor_id
+  vendaSelecionada.value = data.venda_id
+  form.value.venda_id = data.venda_id
 
-    form.value.venda_id = data.venda_id ? String(data.venda_id) : ''
-    form.value.status = data.status || 'RASCUNHO'
-    form.value.observacao = data.observacao || ''
-
-    fornecedorSelecionado.value = data.fornecedor_id ? Number(data.fornecedor_id) : null
-
-    itens.value = (Array.isArray(data.itens) ? data.itens : []).map((i) => ({
-      id: i.id,
-      produto_id: i.produto_id ? Number(i.produto_id) : null,
-      descricao: i.descricao,
-      unidade: i.unidade || '',
-      quantidade: Number(i.quantidade || 0),
-      valor_unitario: Number(i.valor_unitario || 0),
-      valor_total: Number(i.valor_total || 0),
-      _key: String(i.id),
-    }))
-
-    rateios.value = (Array.isArray(data.rateios) ? data.rateios : []).map((r) => ({
-      nome_ambiente: r.nome_ambiente,
-      valor_alocado: Number(r.valor_alocado || 0),
-    }))
-
-    recalcularSomaRateio()
-
-    if (tipoCompra.value === 'CLIENTE_AMBIENTE' && data.venda_id) {
-      ambientesSelecionados.value = new Set(rateios.value.map((r) => r.nome_ambiente))
-      await carregarAmbientesDaVenda(Number(data.venda_id))
-    }
-
-    if (!itens.value.length) addItem()
-  } finally {
-    loading.value = false
-  }
+  itens.value = data.itens || []
+  rateios.value = data.rateios || []
 }
 
-// salvar/excluir
+/* -------------------------------------------------------------------------- */
+/* SALVAR / EXCLUIR                                                            */
+/* -------------------------------------------------------------------------- */
 async function salvar() {
-  if (!fornecedorSelecionado.value) return alert('Selecione um fornecedor.')
-  if (!form.value.status) return alert('Informe o status.')
-  if (!itens.value.length) return alert('Adicione pelo menos 1 item.')
-
-  // valida itens
-  for (const it of itens.value) {
-    if (!it.descricao && !it.produto_id) return alert('Selecione um produto ou preencha a descrição.')
-    if (Number(it.quantidade || 0) <= 0) return alert('Quantidade precisa ser maior que zero.')
-  }
-
-  if (tipoCompra.value === 'CLIENTE_AMBIENTE') {
-    if (!form.value.venda_id) return alert('Informe a venda (ID).')
-    if (!rateios.value.length) return alert('Selecione ambientes e gere o rateio.')
-    if (round2(somaRateio.value) !== round2(totalCalculado.value)) {
-      return alert('A soma do rateio precisa ser igual ao total da compra.')
-    }
+  if (!fornecedorSelecionado.value) return alert('Selecione o fornecedor.')
+  if (tipoCompra.value === 'CLIENTE_AMBIENTE' && !vendaSelecionada.value) {
+    return alert('Selecione a venda.')
   }
 
   salvando.value = true
   try {
     const payload = {
-      tipo_compra: tipoCompra.value, // no "novo" precisa ir
-      venda_id: tipoCompra.value === 'CLIENTE_AMBIENTE' ? Number(form.value.venda_id) : null,
-      fornecedor_id: Number(fornecedorSelecionado.value),
-      status: form.value.status,
-      observacao: form.value.observacao || null,
-
-      itens: itens.value.map((it) => ({
-        id: it.id,
-        produto_id: it.produto_id ? Number(it.produto_id) : null,
-        descricao: it.descricao,
-        unidade: it.unidade || '',
-        quantidade: Number(it.quantidade || 0),
-        valor_unitario: Number(it.valor_unitario || 0),
-        valor_total: Number(it.valor_total || 0),
-      })),
-
-      rateios:
-        tipoCompra.value === 'CLIENTE_AMBIENTE'
-          ? rateios.value.map((r) => ({ nome_ambiente: r.nome_ambiente, valor_alocado: Number(r.valor_alocado || 0) }))
-          : undefined,
+      tipo_compra: tipoCompra.value,
+      fornecedor_id: fornecedorSelecionado.value,
+      venda_id: tipoCompra.value === 'CLIENTE_AMBIENTE' ? vendaSelecionada.value : null,
+      itens,
+      rateios,
     }
 
-    // ✅ Regra do projeto: PUT para criar/atualizar
     if (isEdit.value) {
       await api.put(`/compras/${compraId.value}`, payload)
-      alert('Salvo com sucesso!')
     } else {
-      await api.put('/compras', payload) // ajuste aqui se seu backend usar outra rota
-      alert('Compra criada com sucesso!')
-      router.push('/compras')
+      await api.put('/compras', payload)
     }
+
+    router.push('/compras')
   } finally {
     salvando.value = false
   }
 }
 
 async function excluir() {
-  if (!isEdit.value) return
   if (!confirm('Deseja excluir esta compra?')) return
   excluindo.value = true
   try {
@@ -563,106 +599,31 @@ async function excluir() {
   }
 }
 
-// watch venda_id
-watch(
-  () => form.value.venda_id,
-  async (v) => {
-    if (tipoCompra.value !== 'CLIENTE_AMBIENTE') return
-    const id = Number(v)
-    if (!id || Number.isNaN(id)) return
-    await carregarAmbientesDaVenda(id)
-  },
-)
-
-// Modal Produto
-const modalProduto = reactive({
-  aberto: false,
-  salvando: false,
-  form: {
-    nome: '',
-    unidade: '',
-    preco: '',
-    observacao: '',
-  },
-})
-
-function abrirModalProduto() {
-  modalProduto.aberto = true
-  modalProduto.form.nome = ''
-  modalProduto.form.unidade = ''
-  modalProduto.form.preco = ''
-  modalProduto.form.observacao = ''
-}
-
-function fecharModalProduto() {
-  modalProduto.aberto = false
-}
-
-async function salvarProduto() {
-  if (!modalProduto.form.nome) return alert('Informe o nome do produto.')
-
-  modalProduto.salvando = true
-  try {
-    const payload = {
-      nome: modalProduto.form.nome,
-      unidade: modalProduto.form.unidade || null,
-      preco: modalProduto.form.preco ? Number(modalProduto.form.preco) : null,
-      observacao: modalProduto.form.observacao || null,
-    }
-
-    // ✅ Regra do projeto: PUT
-    await api.put('/produtos', payload) // ajuste se sua rota for /produtos/:id ou outro padrão
-
-    await carregarProdutos()
-    fecharModalProduto()
-    alert('Produto cadastrado!')
-  } finally {
-    modalProduto.salvando = false
+/* -------------------------------------------------------------------------- */
+/* WATCHERS / INIT                                                             */
+/* -------------------------------------------------------------------------- */
+watch(vendaSelecionada, async (v) => {
+  if (tipoCompra.value === 'CLIENTE_AMBIENTE' && v) {
+    form.value.venda_id = v
+    await carregarAmbientesDaVenda(v)
   }
-}
+})
 
 onMounted(async () => {
   loading.value = true
   try {
-    await Promise.all([carregarFornecedores(), carregarProdutos()])
-    await carregarCompra()
+    await Promise.all([
+      carregarFornecedores(),
+      carregarProdutos(),
+      carregarVendas(),
+      uni.carregarCategoria('MODULO'),
+    ])
 
-    if (!isEdit.value && !itens.value.length) addItem()
+    await carregarCompra()
+    if (!itens.value.length) addItem()
   } finally {
     loading.value = false
   }
 })
-
 </script>
 
-<style scoped>
-/* Se você já tem modal global no ui.css, pode apagar isso aqui */
-.modal-backdrop{
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  z-index: 50;
-}
-.modal{
-  width: min(920px, 100%);
-  max-height: 90vh;
-  overflow: auto;
-  border-radius: 16px;
-}
-
-.item-snapshot{
-  padding: 8px 12px 12px;
-  display: flex;
-  gap: 8px;
-  align-items: baseline;
-  border-top: 1px solid var(--gray-200);
-}
-
-.rateio-bad{
-  color: var(--danger-600);
-}
-</style>
