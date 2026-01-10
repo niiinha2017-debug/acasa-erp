@@ -21,44 +21,29 @@
 
           <SearchInput 
             v-model="form.funcionario_id" 
-            label="Funcionário (Opcional)" 
-            placeholder="Selecione o funcionário..."
+            label="Funcionário (Vale/Pagamento)" 
             :options="listaFuncionarios"
             class="col-span-8"
           />
 
           <SearchInput 
             v-model="form.categoria" 
-            label="Item (Ex: Água, Vale, Energia) *" 
+            label="Item (Ex: Água, Vale) *" 
             :options="cat.opcoes.value"
             required
             class="col-span-6"
-            @update:model-value="vincularClassificacao"
+            @update:model-value="vincularClassificacaoChave"
           />
 
           <Input 
             v-model="form.classificacao" 
-            label="Classificação (Auto)" 
+            label="Classificação (Chave Auto)" 
             readonly 
             class="col-span-6" 
           />
 
-          <Input 
-            v-model="form.local" 
-            label="Local / Fornecedor *" 
-            placeholder="Ex: Fábrica, Loja 01"
-            required 
-            class="col-span-8" 
-          />
-
-          <Input 
-            v-model="form.valor_total" 
-            label="Valor Total *" 
-            type="number" 
-            step="0.01" 
-            required 
-            class="col-span-4" 
-          />
+          <Input v-model="form.local" label="Local / Fornecedor *" required class="col-span-8" />
+          <Input v-model="form.valor_total" label="Valor Total *" type="number" step="0.01" required class="col-span-4" />
           
           <hr class="col-span-12 my-2 border-gray-100" />
 
@@ -72,27 +57,28 @@
 
           <Input 
             v-model.number="form.quantidade_parcelas" 
-            label="Parcelas" 
+            label="Qtd. Parcelas (Recorrente)" 
             type="number" 
-            class="col-span-2" 
+            min="1"
+            class="col-span-3" 
           />
           
           <SearchInput 
             v-model="form.status" 
-            label="Status Financeiro *" 
+            label="Status *" 
             :options="sta.opcoes.value"
             required
-            class="col-span-5"
+            class="col-span-4"
           />
 
-          <Input v-model="form.data_vencimento" label="Vencimento *" type="date" required class="col-span-4" />
-          <Input v-model="form.data_pagamento" label="Pagamento" type="date" class="col-span-4" />
+          <Input v-model="form.data_vencimento" label="1º Vencimento *" type="date" required class="col-span-4" />
+          <Input v-model="form.data_pagamento" label="Data de Pagamento" type="date" class="col-span-4" />
           <Input v-model="form.data_registro" label="Data do Registro *" type="date" required class="col-span-4" />
 
-          <div class="col-span-12 flex-end gap-2 mt-6">
+          <div class="col-span-12 flex justify-end gap-3 mt-6">
             <Button v-if="isEdit" variant="danger" type="button" @click="excluir">Excluir</Button>
             <Button variant="primary" type="submit" :loading="loading">
-              {{ isEdit ? 'Salvar Lançamento' : 'Cadastrar Lançamento' }}
+              {{ isEdit ? 'Salvar' : 'Gerar Lançamentos' }}
             </Button>
           </div>
         </form>
@@ -117,7 +103,6 @@ const router = useRouter()
 const id = computed(() => route.params.id)
 const isEdit = computed(() => !!id.value && id.value !== 'novo')
 const loading = ref(false)
-const erro = ref('')
 
 const cat = useConstantes()
 const pag = useConstantes()
@@ -139,65 +124,54 @@ const form = ref({
   status: ''
 })
 
-async function carregarFuncionarios() {
-  try {
-    const { data } = await api.get('/funcionarios')
-    listaFuncionarios.value = data.map(f => ({ label: f.nome, value: f.id }))
-  } catch (e) { console.error("Erro funcionários:", e) }
-}
-
-function vincularClassificacao(itemSelecionado) {
-  form.value.categoria = itemSelecionado
-  const opt = cat.opcoes.value.find(o => o.value === itemSelecionado)
+// LÓGICA: Classificação vem da CHAVE da constante
+function vincularClassificacaoChave(rotuloSelecionado) {
+  form.value.categoria = rotuloSelecionado
+  const opt = cat.opcoes.value.find(o => o.label === rotuloSelecionado)
   if (opt) {
-    // Alinhado com seu model: Classificação é o Rótulo (ex: Custo Fixo)
-    form.value.classificacao = opt.label 
+    // Agora pega a CHAVE (ex: CUSTO FIXO) e não o rótulo
+    form.value.classificacao = opt.value 
   }
 }
 
-async function carregarDados() {
-  if (!isEdit.value) return
-  loading.value = true
-  try {
-    const { data } = await api.get(`/despesas/${id.value}`)
-    Object.assign(form.value, data)
-    // Formatação de datas para o input HTML
-    if (data.data_vencimento) form.value.data_vencimento = data.data_vencimento.slice(0, 10)
-    if (data.data_pagamento) form.value.data_pagamento = data.data_pagamento.slice(0, 10)
-  } catch (e) { erro.value = 'Erro ao carregar dados.' }
-  finally { loading.value = false }
-}
-
 async function salvar() {
-  erro.value = ''
   loading.value = true
   try {
     const payload = { 
       ...form.value, 
       valor_total: Number(form.value.valor_total),
-      funcionario_id: form.value.funcionario_id || null
+      // O backend deve usar a quantidade_parcelas para criar N registros recorrentes
+      quantidade_parcelas: Number(form.value.quantidade_parcelas)
     }
+    
     if (isEdit.value) await api.patch(`/despesas/${id.value}`, payload)
     else await api.post('/despesas', payload)
+    
     router.push('/despesas')
-  } catch (e) { erro.value = 'Erro ao salvar despesa.' }
+  } catch (e) { alert('Erro ao processar lançamento.') }
   finally { loading.value = false }
+}
+
+async function carregarFuncionarios() {
+  try {
+    const { data } = await api.get('/funcionarios')
+    listaFuncionarios.value = data.map(f => ({ label: f.nome, value: f.id }))
+  } catch (e) { console.error(e) }
 }
 
 onMounted(async () => {
   await Promise.all([
     cat.carregarCategoria('SAÍDA'),
-    // Usando a nova lógica de separação que você sugeriu
-    pag.carregarCategoria('FORMA DE PAGAMENTO FINANCEIRO'), 
+    pag.carregarCategoria('FORMA DE PAGAMENTO FINANCEIRO'),
     sta.carregarCategoria('STATUS FINANCEIRO'),
     carregarFuncionarios()
   ])
-  if (isEdit.value) carregarDados()
+  if (isEdit.value) {
+    const { data } = await api.get(`/despesas/${id.value}`)
+    Object.assign(form.value, data)
+    if (data.data_vencimento) form.value.data_vencimento = data.data_vencimento.slice(0, 10)
+    if (data.data_pagamento) form.value.data_pagamento = data.data_pagamento.slice(0, 10)
+    if (data.data_registro) form.value.data_registro = data.data_registro.slice(0, 10)
+  }
 })
 </script>
-
-<style scoped>
-.flex-end { display: flex; justify-content: flex-end; }
-.error-message { color: #ef4444; font-size: 13px; margin-top: 10px; }
-.required { color: #ef4444; }
-</style>
