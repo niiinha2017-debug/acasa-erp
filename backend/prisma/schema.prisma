@@ -126,6 +126,7 @@ model produtos {
   fornecedor    Fornecedores @relation(fields: [fornecedor_id], references: [id])
 
   nome_produto String
+  marca        String?      // ✅ NOVO
   cor          String?
   medida       String?
 
@@ -139,8 +140,6 @@ model produtos {
   atualizado_em DateTime @updatedAt
 
   plano_corte_consumo plano_corte_consumo[]
-
-  // ✅ NOVO: lado oposto
   compras_itens compras_itens[]
 
   @@index([fornecedor_id])

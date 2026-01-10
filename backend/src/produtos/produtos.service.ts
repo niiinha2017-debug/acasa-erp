@@ -9,16 +9,18 @@ export class ProdutosService {
 
   async criar(dto: CreateProdutoDto) {
     return this.prisma.produtos.create({
-      data: {
-        fornecedor_id: dto.fornecedor_id,
-        nome_produto: dto.nome_produto,
-        cor: dto.cor ?? null,
-        medida: dto.medida ?? null,
-        quantidade: dto.quantidade,
-        valor_unitario: dto.valor_unitario,
-        valor_total: dto.valor_total,
-        status: dto.status,
-      },
+data: {
+  fornecedor_id: dto.fornecedor_id,
+  nome_produto: dto.nome_produto,
+  marca: dto.marca ?? null,
+  cor: dto.cor ?? null,
+  medida: dto.medida ?? null,
+  quantidade: dto.quantidade,
+  valor_unitario: dto.valor_unitario,
+  valor_total: dto.valor_total,
+  status: dto.status,
+}
+
     })
   }
 
