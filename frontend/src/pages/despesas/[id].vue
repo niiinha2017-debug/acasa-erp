@@ -21,9 +21,9 @@
           </div>
 
           <SearchInput 
-            v-model="form.classificacao" 
+            v-model="form.classificacao_id" 
             label="Classificação (Rótulo)" 
-            placeholder="Ex: Combustível, Salário..."
+            placeholder="Ex: Combustível..."
             :options="cat.opcoes.value"
             :required="true"
             colSpan="col-span-3"
@@ -32,21 +32,20 @@
 
           <Input 
             v-model="form.categoria" 
-            label="Chave (Auto)" 
+            label="Chave (Categoria)" 
             class="col-span-3" 
             readonly 
           />
           
           <Input v-model="form.local" label="Local / Fornecedor" class="col-span-3" required />
 
-          <hr class="col-span-12 my-4" />
+          <hr class="col-span-12 my-4 border-gray-100" />
 
           <Input v-model="form.valor_total" label="Valor total" type="number" step="0.01" class="col-span-3" required />
           
           <SearchInput 
             v-model="form.forma_pagamento" 
             label="Forma de Pagamento" 
-            placeholder="Pesquisar pagamento..."
             :options="pag.opcoes.value"
             :required="true"
             colSpan="col-span-3"
@@ -57,7 +56,6 @@
           <SearchInput 
             v-model="form.status" 
             label="Status Financeiro" 
-            placeholder="Pesquisar status..."
             :options="sta.opcoes.value"
             :required="true"
             colSpan="col-span-3"
@@ -89,29 +87,29 @@ import { useRoute, useRouter } from 'vue-router'
 import api from '@/services/api'
 import { useConstantes } from '@/composables/useConstantes'
 
-// Componentes UI
 import Card from '@/components/ui/Card.vue'
 import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
-import SearchInput from '@/components/ui/SearchInput.vue' // Seu componente de busca
+import SearchInput from '@/components/ui/SearchInput.vue'
 
 const route = useRoute()
 const router = useRouter()
 
 const id = computed(() => route.params.id)
-const isEdit = computed(() => !!id.value)
+// Mata o 404: Só é edição se o ID for diferente de 'novo'
+const isEdit = computed(() => !!id.value && id.value !== 'novo')
 const loading = ref(false)
 const erro = ref('')
 
-// Composables para as listas
 const cat = useConstantes()
 const pag = useConstantes()
 const sta = useConstantes()
 
 const form = ref({
   tipo_movimento: 'SAÍDA',
-  categoria: '',      // Chave (Ex: CUSTO VARIAVEL)
-  classificacao: '',  // Rótulo (Ex: Combustível)
+  categoria: '',      
+  classificacao: '',  
+  classificacao_id: '',
   local: '',
   valor_total: '',
   forma_pagamento: '',
@@ -122,32 +120,30 @@ const form = ref({
   status: ''
 })
 
-/**
- * Lógica para preencher a Chave Pai automaticamente
- * disparada quando o SearchInput de classificação muda.
- */
-function vincularChaveCategoria(valorSelecionado) {
-  // Como o SearchInput emite o 'value', e no seu useConstantes 
-  // você definiu: label: item.rotulo e value: item.chave
-  // O valorSelecionado já é a CHAVE (ex: CUSTO VARIAVEL)
-  form.value.categoria = valorSelecionado
-
-  // Opcional: Se você quiser que o SearchInput mostre o Rótulo mas salve a Chave,
-  // seu componente já faz isso através do watch interno.
+function vincularChaveCategoria(chaveSelecionada) {
+  form.value.categoria = chaveSelecionada
+  const opt = cat.opcoes.value.find(o => o.value === chaveSelecionada)
+  if (opt) {
+    form.value.classificacao = opt.label
+  }
 }
 
 async function carregarDados() {
+  // SEGUNDA TRAVA ANTI-404
   if (!isEdit.value) return
+
   loading.value = true
   try {
     const { data } = await api.get(`/despesas/${id.value}`)
     form.value = { ...data }
-    // Limpeza de datas
+    form.value.classificacao_id = data.categoria 
+    
+    // Formata datas para o input HTML
     if (data.data_vencimento) form.value.data_vencimento = data.data_vencimento.slice(0, 10)
     if (data.data_pagamento) form.value.data_pagamento = data.data_pagamento.slice(0, 10)
     if (data.data_registro) form.value.data_registro = data.data_registro.slice(0, 10)
   } catch (e) {
-    erro.value = 'Não foi possível carregar os dados.'
+    erro.value = 'Erro ao carregar dados da despesa.'
   } finally {
     loading.value = false
   }
@@ -164,42 +160,40 @@ async function salvar() {
     }
     router.push('/despesas')
   } catch (e) {
-    erro.value = e.response?.data?.message || 'Erro ao salvar despesa.'
+    erro.value = e.response?.data?.message || 'Erro ao salvar.'
   } finally {
     loading.value = false
   }
 }
 
 async function excluir() {
-  if (!confirm('Deseja excluir este registro?')) return
-  loading.value = true
+  if (!confirm('Deseja excluir?')) return
   try {
     await api.delete(`/despesas/${id.value}`)
     router.push('/despesas')
-  } catch (e) {
-    erro.value = 'Erro ao excluir.'
-  } finally {
-    loading.value = false
-  }
+  } catch (e) { erro.value = 'Erro ao excluir.' }
 }
 
 onMounted(async () => {
-  // Carrega as opções dos campos de busca
+  // Carrega as opções das constantes independente de ser novo ou edit
   await Promise.all([
     cat.carregarCategoria('SAÍDA'),
     pag.carregarCategoria('FORMA DE PAGAMENTO'),
-    sta.carregarCategoria('STATUS FINANCEIRO') // Carrega conforme imagem
+    sta.carregarCategoria('STATUS FINANCEIRO')
   ])
   
-  if (isEdit.value) await carregarDados()
+  if (isEdit.value) {
+    carregarDados()
+  }
 })
 </script>
 
 <style scoped>
 .required { color: #ef4444; margin-left: 2px; }
-.form-label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.25rem; }
+.form-label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.4rem; color: #374151; }
 .form-input { 
   width: 100%; height: 40px; padding: 0 10px; 
   border: 1px solid #e2e8f0; border-radius: 8px; 
+  background-color: white; outline: none;
 }
 </style>
