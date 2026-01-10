@@ -82,9 +82,25 @@ const salvando = ref(false)
 const fornecedores = ref([])
 const valorUnitarioInput = ref('0,00')
 
-/** ✅ Constantes: CHAVE = UNIDADE */
+/** ✅ Constantes: Categoria MODULO / Chave UNIDADE */
 const uni = useConstantes()
-const unidadesOptions = computed(() => uni.opcoes.value || [])
+
+/**
+ * ✅ SearchInput precisa [{label, value}]
+ * Seu cadastro é: Categoria=MODULO, Chave=UNIDADE, Rótulo=Caixa/Metros/...
+ * Então: carrega MODULO e filtra chave UNIDADE
+ */
+const unidadesOptions = computed(() => {
+  const opts = uni.opcoes.value || []
+
+  return opts
+    .filter(o => String(o.chave || o.key || o.chave_interno || '').toUpperCase() === 'UNIDADE')
+    .map(o => ({
+      label: o.rotulo ?? o.label ?? o.nome ?? '',
+      value: o.rotulo ?? o.value ?? o.label ?? '',
+    }))
+    .filter(o => o.label)
+})
 
 const form = ref({
   fornecedor_id: null,
@@ -103,6 +119,7 @@ const fornecedoresOptions = computed(() =>
   fornecedores.value.map(f => ({ value: f.id, label: f.razao_social }))
 )
 
+/* Quantidade (só números) */
 const quantidadeMask = computed({
   get: () => (form.value.quantidade === 0 ? '' : String(form.value.quantidade)),
   set: v => {
@@ -111,6 +128,7 @@ const quantidadeMask = computed({
   },
 })
 
+/* Valor unitário com máscara BR */
 watch(valorUnitarioInput, (v) => {
   const apenasNumeros = String(v || '').replace(/\D/g, '')
   const valorNumerico = apenasNumeros ? Number(apenasNumeros) / 100 : 0
@@ -121,6 +139,7 @@ watch(valorUnitarioInput, (v) => {
   if (v !== formatado) valorUnitarioInput.value = formatado
 })
 
+/* Total calculado */
 const valorTotalMask = computed(() => {
   const total = Number(form.value.quantidade || 0) * Number(form.value.valor_unitario || 0)
   form.value.valor_total = total
@@ -164,18 +183,6 @@ async function carregarProduto() {
   valorUnitarioInput.value = maskMoneyBR(Number(data.valor_unitario || 0))
 }
 
-const unidadesOptions = computed(() => {
-  const opts = uni.opcoes.value || []
-
-  return opts
-    .filter(o => String(o.chave || o.key || o.chave_interno || '').toUpperCase() === 'UNIDADE')
-    .map(o => ({
-      label: o.label ?? o.rotulo ?? o.nome ?? '',
-      value: o.value ?? o.rotulo ?? o.label ?? '',
-    }))
-    .filter(o => o.label)
-})
-
 async function salvar() {
   const erro = validarObrigatorios()
   if (erro) return alert(erro)
@@ -195,10 +202,10 @@ async function salvar() {
     }
 
     if (isEdit.value) {
-      await api.put(`/produtos/${id.value}`, payload)  // ✅ PUT atualiza
+      await api.put(`/produtos/${id.value}`, payload) // ✅ PUT atualiza
       alert('Produto atualizado com sucesso!')
     } else {
-      await api.post('/produtos', payload)            // ✅ POST cria
+      await api.post('/produtos', payload) // ✅ POST cria
       alert('Produto cadastrado com sucesso!')
     }
 
@@ -215,7 +222,7 @@ onMounted(async () => {
   try {
     await Promise.all([
       carregarFornecedores(),
-      uni.carregarCategoria('MODULO')
+      uni.carregarCategoria('MODULO'), // ✅ correto
     ])
 
     if (isEdit.value) await carregarProduto()
@@ -227,3 +234,4 @@ onMounted(async () => {
   }
 })
 </script>
+
