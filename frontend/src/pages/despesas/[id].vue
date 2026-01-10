@@ -4,7 +4,7 @@
       <header class="card-header header-between">
         <div>
           <h2 class="card-title">{{ isEdit ? 'Editar Lançamento' : 'Nova Despesa/Vale' }}</h2>
-          <p class="cell-muted">Registre os detalhes financeiros e vínculos de funcionários.</p>
+          <p class="cell-muted">Gestão financeira de saídas e pagamentos a funcionários.</p>
         </div>
         <Button variant="outline" size="sm" @click="router.back()">Voltar</Button>
       </header>
@@ -23,15 +23,15 @@
           <SearchInput 
             v-model="form.funcionario_id" 
             label="Funcionário (Para Vales)" 
-            placeholder="Selecione o funcionário..."
+            placeholder="Selecione se for pagamento a pessoal..."
             :options="listaFuncionarios"
             class="col-span-5"
           />
 
           <Input 
             v-model="form.local" 
-            label="Local / Fornecedor *" 
-            placeholder="Ex: Madeireira Silva"
+            label="Local / Unidade *" 
+            placeholder="Ex: Fábrica, Loja 01"
             required 
             class="col-span-4" 
           />
@@ -41,15 +41,15 @@
             label="Item (Ex: Água, Vale, Energia) *" 
             :options="cat.opcoes.value"
             required
-            class="col-span-4"
+            class="col-span-6"
             @update:model-value="vincularClassificacao"
           />
 
           <Input 
             v-model="form.classificacao" 
-            label="Classificação (Auto)" 
+            label="Classificação (Custo Fixo/Variável)" 
             readonly 
-            class="col-span-4" 
+            class="col-span-6" 
           />
 
           <Input 
@@ -61,11 +61,9 @@
             class="col-span-4" 
           />
           
-          <hr class="col-span-12 my-2 border-gray-100" />
-
           <SearchInput 
             v-model="form.forma_pagamento" 
-            label="Forma de Pagamento *" 
+            label="Forma de Pagamento (Despesa) *" 
             :options="pag.opcoes.value"
             required
             class="col-span-4"
@@ -75,7 +73,7 @@
             v-model.number="form.quantidade_parcelas" 
             label="Qtd. Parcelas" 
             type="number" 
-            class="col-span-2" 
+            class="col-span-4" 
           />
           
           <SearchInput 
@@ -83,17 +81,18 @@
             label="Status Financeiro *" 
             :options="sta.opcoes.value"
             required
-            class="col-span-6"
+            class="col-span-4"
           />
 
-          <Input v-model="form.data_vencimento" label="Data de Vencimento *" type="date" required class="col-span-4" />
+          <Input v-model="form.data_vencimento" label="Vencimento *" type="date" required class="col-span-4" />
           <Input v-model="form.data_pagamento" label="Data de Pagamento" type="date" class="col-span-4" />
-          <Input v-model="form.data_registro" label="Data do Registro" type="date" class="col-span-4" />
+
+          <hr class="col-span-12 my-2 border-gray-100" />
 
           <div class="col-span-12 flex-end gap-2 mt-4">
             <Button v-if="isEdit" variant="danger" type="button" @click="excluir">Excluir</Button>
             <Button variant="primary" type="submit" :loading="loading">
-              {{ isEdit ? 'Salvar Alterações' : 'Cadastrar Lançamento' }}
+              {{ isEdit ? 'Salvar Alterações' : 'Confirmar Lançamento' }}
             </Button>
           </div>
           
@@ -153,6 +152,7 @@ function vincularClassificacao(itemSelecionado) {
   form.value.categoria = itemSelecionado
   const opt = cat.opcoes.value.find(o => o.value === itemSelecionado)
   if (opt) {
+    // Alinhado com seu model: Classificação é o Rótulo (ex: Custo Fixo)
     form.value.classificacao = opt.label 
   }
 }
@@ -163,9 +163,9 @@ async function carregarDados() {
   try {
     const { data } = await api.get(`/despesas/${id.value}`)
     Object.assign(form.value, data)
+    // Formatação de datas para o input HTML
     if (data.data_vencimento) form.value.data_vencimento = data.data_vencimento.slice(0, 10)
     if (data.data_pagamento) form.value.data_pagamento = data.data_pagamento.slice(0, 10)
-    if (data.data_registro) form.value.data_registro = data.data_registro.slice(0, 10)
   } catch (e) { erro.value = 'Erro ao carregar dados.' }
   finally { loading.value = false }
 }
@@ -174,26 +174,23 @@ async function salvar() {
   erro.value = ''
   loading.value = true
   try {
-    const payload = { ...form.value, valor_total: Number(form.value.valor_total) }
+    const payload = { 
+      ...form.value, 
+      valor_total: Number(form.value.valor_total),
+      funcionario_id: form.value.funcionario_id || null
+    }
     if (isEdit.value) await api.patch(`/despesas/${id.value}`, payload)
     else await api.post('/despesas', payload)
     router.push('/despesas')
-  } catch (e) { erro.value = e.response?.data?.message || 'Erro ao salvar.' }
+  } catch (e) { erro.value = 'Erro ao salvar despesa.' }
   finally { loading.value = false }
-}
-
-async function excluir() {
-  if (!confirm('Deseja excluir este registro?')) return
-  try {
-    await api.delete(`/despesas/${id.value}`)
-    router.push('/despesas')
-  } catch (e) { erro.value = 'Erro ao excluir.' }
 }
 
 onMounted(async () => {
   await Promise.all([
     cat.carregarCategoria('SAÍDA'),
-    pag.carregarCategoria('FORMA DE PAGAMENTO'),
+    // Usando a nova lógica de separação que você sugeriu
+    pag.carregarCategoria('FORMA DE PAGAMENTO FINANCEIRO'), 
     sta.carregarCategoria('STATUS FINANCEIRO'),
     carregarFuncionarios()
   ])
@@ -203,5 +200,6 @@ onMounted(async () => {
 
 <style scoped>
 .flex-end { display: flex; justify-content: flex-end; }
-.error-message { color: var(--danger); font-size: 13px; margin-top: 10px; }
+.error-message { color: #ef4444; font-size: 13px; margin-top: 10px; }
+.required { color: #ef4444; }
 </style>
