@@ -4,6 +4,7 @@ import VueRouter from 'unplugin-vue-router/vite'
 import path from 'path'
 
 export default defineConfig({
+  base: '/', // ⬅️ ADICIONE ISSO para o build de produção
   plugins: [
     VueRouter({
       dts: 'src/typed-router.d.ts',
@@ -15,6 +16,7 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // O proxy só funciona no 'npm run dev' (desenvolvimento)
   server: {
     port: 5173,
     proxy: {
@@ -25,4 +27,8 @@ export default defineConfig({
       },
     },
   },
+  // DICA: Adicione isso para limpar o console de avisos de arquivos grandes
+  build: {
+    chunkSizeWarningLimit: 2000,
+  }
 })
