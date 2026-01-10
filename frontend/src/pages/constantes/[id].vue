@@ -3,23 +3,21 @@
     <Card>
       <header class="card-header header-between">
         <div>
-          <h2 class="card-title">{{ isNovo ? 'Nova Constante' : 'Editar Constante' }}</h2>
-          <p class="cell-muted">
-            {{ isNovo ? 'Configure um novo parâmetro global para o sistema.' : 'Atualize as definições desta constante.' }}
-          </p>
+          <h2 class="card-title">{{ isEdit ? 'Editar Constante' : 'Nova Constante' }}</h2>
+          <p class="cell-muted">Gerencie os parâmetros globais do sistema.</p>
         </div>
 
         <div class="flex-gap-2">
           <Button
-            v-if="!isNovo"
+            v-if="isEdit"
             variant="danger"
             size="sm"
             type="button"
-            :disabled="loading"
             @click="excluir"
           >
             Excluir
           </Button>
+          <Button variant="outline" size="sm" @click="router.push('/constantes')">Voltar</Button>
         </div>
       </header>
 
@@ -28,7 +26,7 @@
           <Input
             v-model="form.categoria"
             label="Categoria *"
-            placeholder="Ex: STATUS_PRODUCAO"
+            placeholder="Ex: STATUS_FINANCEIRO"
             required
             class="col-span-4"
             @input="form.categoria = form.categoria.toUpperCase()"
@@ -37,7 +35,7 @@
           <Input
             v-model="form.chave"
             label="Chave (ID Interno) *"
-            placeholder="Ex: EM_ATRASO"
+            placeholder="Ex: PAGO"
             required
             class="col-span-4"
             @input="form.chave = form.chave.toUpperCase()"
@@ -45,8 +43,8 @@
 
           <Input
             v-model="form.rotulo"
-            label="Rótulo (Nome de Exibição) *"
-            placeholder="Ex: Em Atraso"
+            label="Rótulo (Exibição) *"
+            placeholder="Ex: Pago"
             required
             class="col-span-4"
           />
@@ -56,8 +54,6 @@
             <select v-model="form.tipo" class="form-input" required>
               <option value="TEXTO">TEXTO (Cores, Descrições)</option>
               <option value="NUMERO">NÚMERO (Taxas, Prazos)</option>
-              <option value="BOOLEANO">BOOLEANO (Sim/Não)</option>
-              <option value="JSON">JSON (Configurações Complexas)</option>
             </select>
           </div>
 
@@ -76,58 +72,36 @@
             </select>
           </div>
 
-          <transition name="fade">
-            <div class="col-span-12 form-grid" style="margin: 0; padding: 0;">
-              
-              <Input
-                v-if="form.tipo === 'TEXTO'"
-                v-model="form.valor_texto"
-                :label="form.categoria.includes('STATUS') ? 'Cor do Badge (Hexadecimal)' : 'Valor em Texto'"
-                placeholder="Ex: #FF0000 ou Observação"
-                class="col-span-12"
-              />
+          <div class="col-span-12">
+            <Input
+              v-if="form.tipo === 'TEXTO'"
+              v-model="form.valor_texto"
+              :label="form.categoria.includes('STATUS') ? 'Cor do Badge (Hex)' : 'Valor em Texto'"
+              placeholder="Ex: #3b82f6"
+              class="col-span-12"
+            />
 
-              <Input
-                v-if="form.tipo === 'NUMERO'"
-                v-model.number="form.valor_numero"
-                :label="form.categoria.includes('PAGAMENTO') ? 'Taxa da Operadora (%)' : 'Valor Numérico'"
-                type="number"
-                step="0.01"
-                placeholder="Ex: 3.50"
-                class="col-span-6"
-              />
-
-              <div v-if="form.tipo === 'BOOLEANO'" class="form-group col-span-6">
-                <label class="form-label">Valor Booleano</label>
-                <select v-model="form.valor_booleano" class="form-input">
-                  <option :value="true">Verdadeiro (True)</option>
-                  <option :value="false">Falso (False)</option>
-                </select>
-              </div>
-
-              <div v-if="form.tipo === 'JSON'" class="form-group col-span-12">
-                <label class="form-label">Configuração JSON</label>
-                <textarea
-                  v-model="valorJsonTexto"
-                  class="form-input code-font"
-                  rows="5"
-                  placeholder='{"key": "value"}'
-                ></textarea>
-              </div>
-            </div>
-          </transition>
+            <Input
+              v-if="form.tipo === 'NUMERO'"
+              v-model.number="form.valor_numero"
+              :label="form.categoria.includes('PAGAMENTO') ? 'Taxa (%)' : 'Valor Numérico'"
+              type="number"
+              step="0.0001"
+              placeholder="Ex: 2.99"
+              class="col-span-6"
+            />
+          </div>
 
           <div class="col-span-12 flex-end gap-2 mt-4">
             <Button variant="outline" type="button" @click="router.push('/constantes')">
               Cancelar
             </Button>
-
-            <Button type="submit" :loading="loading">
-              {{ isNovo ? 'Criar Constante' : 'Salvar Alterações' }}
+            <Button type="submit" :loading="loading" variant="primary">
+              {{ isEdit ? 'Salvar Alterações' : 'Criar Constante' }}
             </Button>
           </div>
 
-          <p v-if="erro" class="col-span-12 error-message">{{ erro }}</p>
+          <p v-if="erro" class="col-span-12 error-message text-center">{{ erro }}</p>
         </form>
       </div>
     </Card>
@@ -145,13 +119,11 @@ import Button from '@/components/ui/Button.vue'
 
 const route = useRoute()
 const router = useRouter()
-
 const loading = ref(false)
 const erro = ref('')
-const valorJsonTexto = ref('')
 
-const isNovo = computed(() => route.params.id === 'novo')
-const id = computed(() => isNovo.value ? null : route.params.id)
+const id = computed(() => route.params.id)
+const isEdit = computed(() => !!id.value && id.value !== 'novo')
 
 const form = ref({
   categoria: '',
@@ -160,107 +132,69 @@ const form = ref({
   tipo: 'TEXTO',
   valor_texto: '',
   valor_numero: null,
-  valor_booleano: true,
   ordem: 0,
   ativo: true
 })
 
-// PAYLOAD LIMPO: Envia apenas o que o banco espera baseado no tipo
-const gerarPayload = () => {
-  // Criamos um objeto apenas com o que o Model constantes tem no Prisma
-  const payload = {
-    categoria: form.value.categoria,
-    chave: form.value.chave,
-    rotulo: form.value.rotulo,
-    ordem: Number(form.value.ordem) || 0,
-    ativo: form.value.ativo,
-    // Tratamento de valores nulos para não enviar lixo
-    valor_texto: form.value.tipo === 'TEXTO' ? form.value.valor_texto : null,
-    valor_numero: form.value.tipo === 'NUMERO' ? Number(form.value.valor_numero) : null,
-  }
-
-  // Se for JSON, tratamos a parte
-  if (form.value.tipo === 'JSON') {
-    try {
-      payload.valor_json = valorJsonTexto.value ? JSON.parse(valorJsonTexto.value) : null
-    } catch (e) {
-      throw new Error('O formato JSON é inválido.')
+const salvar = async () => {
+  erro.value = ''
+  loading.value = true
+  
+  try {
+    const payload = {
+      categoria: form.value.categoria,
+      chave: form.value.chave,
+      rotulo: form.value.rotulo,
+      ordem: Number(form.value.ordem) || 0,
+      ativo: form.value.ativo,
+      // Envia apenas o campo que o banco possui
+      valor_texto: form.value.tipo === 'TEXTO' ? form.value.valor_texto : null,
+      valor_numero: form.value.tipo === 'NUMERO' ? Number(form.value.valor_numero) : null
     }
-  }
 
-  return payload
+    if (isEdit.value) {
+      await api.patch(`/constantes/${id.value}`, payload)
+    } else {
+      await api.post('/constantes', payload)
+    }
+    router.push('/constantes')
+  } catch (e) {
+    erro.value = e.response?.data?.message || 'Erro ao salvar constante.'
+  } finally {
+    loading.value = false
+  }
 }
 
-async function carregar() {
-  if (isNovo.value) return
+const carregarDados = async () => {
+  if (!isEdit.value) return
   loading.value = true
   try {
     const { data } = await api.get(`/constantes/${id.value}`)
     
-    // Lógica para preencher o "tipo" baseado no que veio do banco
-    if (data.valor_numero !== null && data.valor_numero !== undefined) {
-      data.tipo = 'NUMERO'
-    } else if (data.valor_json) {
-      data.tipo = 'JSON'
-    } else if (typeof data.valor_booleano === 'boolean') {
-      data.tipo = 'BOOLEANO'
-    } else {
-      data.tipo = 'TEXTO'
-    }
-
-    Object.assign(form.value, data)
+    // Define o tipo visual baseado no que veio preenchido
+    data.tipo = data.valor_numero !== null ? 'NUMERO' : 'TEXTO'
     
-    if (data.valor_json) {
-      valorJsonTexto.value = JSON.stringify(data.valor_json, null, 2)
-    }
+    Object.assign(form.value, data)
   } catch (e) {
-    console.error(e)
     erro.value = 'Erro ao carregar dados.'
   } finally {
     loading.value = false
   }
 }
 
-async function salvar() {
-  erro.value = ''
-  loading.value = true
-  try {
-    const payload = gerarPayload()
-    if (isNovo.value) {
-      await api.post('/constantes', payload)
-    } else {
-      await api.patch(`/constantes/${id.value}`, payload)
-    }
-    router.push('/constantes')
-  } catch (e) {
-    erro.value = e.message || 'Erro ao processar requisição.'
-  } finally {
-    loading.value = false
-  }
-}
-
-async function excluir() {
-  if (!confirm('Tem certeza que deseja remover esta constante?')) return
+const excluir = async () => {
+  if (!confirm('Excluir esta constante?')) return
   try {
     await api.delete(`/constantes/${id.value}`)
     router.push('/constantes')
-  } catch (e) {
-    alert('Erro ao excluir.')
-  }
+  } catch (e) { erro.value = 'Erro ao excluir.' }
 }
 
-onMounted(carregar)
+onMounted(carregarDados)
 </script>
 
 <style scoped>
-.code-font {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 13px;
-  background: #f8fafc;
-}
 .flex-gap-2 { display: flex; gap: 8px; }
 .flex-end { display: flex; justify-content: flex-end; }
-.error-message { color: var(--danger); font-size: 13px; margin-top: 10px; }
-.fade-enter-active, .fade-leave-active { transition: opacity 0.3s; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
+.error-message { color: #ef4444; margin-top: 10px; }
 </style>
