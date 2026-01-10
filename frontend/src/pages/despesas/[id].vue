@@ -1,70 +1,85 @@
 <template>
   <div class="page-container">
-    <div class="card card--shadow">
+    <Card>
       <header class="card-header header-between">
         <div>
-          <h2 class="card-title">Editar Despesa</h2>
-          <p class="card-subtitle">Atualize os dados do lançamento.</p>
+          <h2 class="card-title">{{ isEdit ? 'Editar Despesa' : 'Nova Despesa' }}</h2>
+          <p class="card-subtitle">{{ isEdit ? 'Atualize os dados do lançamento.' : 'Preencha os dados para novo registro.' }}</p>
         </div>
-        <div class="header-actions">
-          <Button 
-            variant="outline" 
-            size="md" 
-            label="Voltar" 
-            @click="router.back()" 
-          />
-        </div>
+        <Button variant="outline" label="Voltar" @click="router.back()" />
       </header>
 
       <div class="card-body">
         <form class="form-grid" @submit.prevent="salvar">
-          <Input v-model="form.tipo_movimento" label="Entrada / Saída" class="col-span-3" :required="true" />
-          <Input v-model="form.categoria" label="Categoria" class="col-span-3" :required="true" />
-          <Input v-model="form.classificacao" label="Classificação" class="col-span-3" :required="true" />
-          <Input v-model="form.local" label="Local" class="col-span-3" :required="true" />
+          
+          <div class="col-span-3">
+            <label class="form-label">Entrada / Saída <span class="required">*</span></label>
+            <select v-model="form.tipo_movimento" class="form-input" required>
+              <option value="SAÍDA">SAÍDA</option>
+              <option value="ENTRADA">ENTRADA</option>
+            </select>
+          </div>
 
-          <Input v-model="form.valor_total" label="Valor total" class="col-span-3" :required="true" />
-          <Input v-model="form.forma_pagamento" label="Forma de pagamento" class="col-span-3" :required="true" />
+          <SearchInput 
+            v-model="form.classificacao" 
+            label="Classificação (Rótulo)" 
+            placeholder="Ex: Combustível, Salário..."
+            :options="cat.opcoes.value"
+            :required="true"
+            colSpan="col-span-3"
+            @update:model-value="vincularChaveCategoria"
+          />
+
+          <Input 
+            v-model="form.categoria" 
+            label="Chave (Auto)" 
+            class="col-span-3" 
+            readonly 
+          />
+          
+          <Input v-model="form.local" label="Local / Fornecedor" class="col-span-3" required />
+
+          <hr class="col-span-12 my-4" />
+
+          <Input v-model="form.valor_total" label="Valor total" type="number" step="0.01" class="col-span-3" required />
+          
+          <SearchInput 
+            v-model="form.forma_pagamento" 
+            label="Forma de Pagamento" 
+            placeholder="Pesquisar pagamento..."
+            :options="pag.opcoes.value"
+            :required="true"
+            colSpan="col-span-3"
+          />
+
           <Input v-model.number="form.quantidade_parcelas" label="Qtd. parcelas" type="number" class="col-span-3" />
-          <Input v-model="form.status" label="Status" class="col-span-3" :required="true" />
+          
+          <SearchInput 
+            v-model="form.status" 
+            label="Status Financeiro" 
+            placeholder="Pesquisar status..."
+            :options="sta.opcoes.value"
+            :required="true"
+            colSpan="col-span-3"
+          />
 
-          <Input v-model="form.data_vencimento" label="Data de vencimento" type="date" class="col-span-4" :required="true" />
+          <Input v-model="form.data_vencimento" label="Data de vencimento" type="date" class="col-span-4" required />
           <Input v-model="form.data_pagamento" label="Data de pagamento" type="date" class="col-span-4" />
           <Input v-model="form.data_registro" label="Data do registro" type="date" class="col-span-4" />
 
-          <Input v-model="form.funcionario_id" label="Funcionário (ID)" type="number" class="col-span-4" />
-
-          <div v-if="erro" class="col-span-12">
-            <p class="text-danger text-sm">
-              {{ erro }}
-            </p>
+          <div v-if="erro" class="col-span-12 mt-2">
+            <p class="text-danger text-sm">{{ erro }}</p>
           </div>
         </form>
       </div>
 
       <footer class="card-footer footer-between">
-        <div class="footer-left">
-          <Button 
-            variant="danger" 
-            size="md" 
-            label="Excluir" 
-            :disabled="loading" 
-            @click="excluir" 
-          />
-        </div>
-
-        <div class="footer-right">
-          <Button 
-            variant="primary" 
-            size="md" 
-            label="Salvar Alterações"
-            :loading="loading" 
-            :disabled="loading"
-            @click="salvar"
-          />
-        </div>
+        <Button v-if="isEdit" variant="danger" label="Excluir" :loading="loading" @click="excluir" />
+        <div v-else></div>
+        
+        <Button variant="primary" :label="isEdit ? 'Salvar Alterações' : 'Cadastrar'" :loading="loading" @click="salvar" />
       </footer>
-    </div>
+    </Card>
   </div>
 </template>
 
@@ -72,57 +87,67 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/services/api'
+import { useConstantes } from '@/composables/useConstantes'
 
+// Componentes UI
 import Card from '@/components/ui/Card.vue'
 import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
+import SearchInput from '@/components/ui/SearchInput.vue' // Seu componente de busca
 
 const route = useRoute()
 const router = useRouter()
 
-const id = computed(() => Number(route.params.id))
-
+const id = computed(() => route.params.id)
+const isEdit = computed(() => !!id.value)
 const loading = ref(false)
 const erro = ref('')
 
+// Composables para as listas
+const cat = useConstantes()
+const pag = useConstantes()
+const sta = useConstantes()
+
 const form = ref({
-  tipo_movimento: '',
-  categoria: '',
-  classificacao: '',
+  tipo_movimento: 'SAÍDA',
+  categoria: '',      // Chave (Ex: CUSTO VARIAVEL)
+  classificacao: '',  // Rótulo (Ex: Combustível)
   local: '',
   valor_total: '',
   forma_pagamento: '',
   quantidade_parcelas: 1,
-  data_registro: '',
+  data_registro: new Date().toISOString().slice(0, 10),
   data_vencimento: '',
   data_pagamento: '',
-  funcionario_id: '',
-  status: '',
+  status: ''
 })
 
-function aplicar(data) {
-  form.value.tipo_movimento = data?.tipo_movimento ?? ''
-  form.value.categoria = data?.categoria ?? ''
-  form.value.classificacao = data?.classificacao ?? ''
-  form.value.local = data?.local ?? ''
-  form.value.valor_total = data?.valor_total ?? ''
-  form.value.forma_pagamento = data?.forma_pagamento ?? ''
-  form.value.quantidade_parcelas = data?.quantidade_parcelas ?? 1
-  form.value.data_registro = data?.data_registro ? String(data.data_registro).slice(0,10) : ''
-  form.value.data_vencimento = data?.data_vencimento ? String(data.data_vencimento).slice(0,10) : ''
-  form.value.data_pagamento = data?.data_pagamento ? String(data.data_pagamento).slice(0,10) : ''
-  form.value.funcionario_id = data?.funcionario_id ?? ''
-  form.value.status = data?.status ?? ''
+/**
+ * Lógica para preencher a Chave Pai automaticamente
+ * disparada quando o SearchInput de classificação muda.
+ */
+function vincularChaveCategoria(valorSelecionado) {
+  // Como o SearchInput emite o 'value', e no seu useConstantes 
+  // você definiu: label: item.rotulo e value: item.chave
+  // O valorSelecionado já é a CHAVE (ex: CUSTO VARIAVEL)
+  form.value.categoria = valorSelecionado
+
+  // Opcional: Se você quiser que o SearchInput mostre o Rótulo mas salve a Chave,
+  // seu componente já faz isso através do watch interno.
 }
 
-async function carregar() {
-  erro.value = ''
+async function carregarDados() {
+  if (!isEdit.value) return
   loading.value = true
   try {
     const { data } = await api.get(`/despesas/${id.value}`)
-    aplicar(data)
+    form.value = { ...data }
+    // Limpeza de datas
+    if (data.data_vencimento) form.value.data_vencimento = data.data_vencimento.slice(0, 10)
+    if (data.data_pagamento) form.value.data_pagamento = data.data_pagamento.slice(0, 10)
+    if (data.data_registro) form.value.data_registro = data.data_registro.slice(0, 10)
   } catch (e) {
-    erro.value = e?.response?.data?.message || 'Erro ao carregar despesa'
+    erro.value = 'Não foi possível carregar os dados.'
   } finally {
     loading.value = false
   }
@@ -132,35 +157,49 @@ async function salvar() {
   erro.value = ''
   loading.value = true
   try {
-    const payload = {
-      ...form.value,
-      quantidade_parcelas: Number(form.value.quantidade_parcelas || 1),
-      funcionario_id: form.value.funcionario_id ? Number(form.value.funcionario_id) : null,
-      data_pagamento: form.value.data_pagamento || null,
+    if (isEdit.value) {
+      await api.patch(`/despesas/${id.value}`, form.value)
+    } else {
+      await api.post('/despesas', form.value)
     }
-
-    await api.patch(`/despesas/${id.value}`, payload)
     router.push('/despesas')
   } catch (e) {
-    erro.value = e?.response?.data?.message || 'Erro ao salvar alterações'
+    erro.value = e.response?.data?.message || 'Erro ao salvar despesa.'
   } finally {
     loading.value = false
   }
 }
 
 async function excluir() {
-  if (!confirm(`Deseja excluir a despesa #${id.value}?`)) return
-  erro.value = ''
+  if (!confirm('Deseja excluir este registro?')) return
   loading.value = true
   try {
     await api.delete(`/despesas/${id.value}`)
     router.push('/despesas')
   } catch (e) {
-    erro.value = e?.response?.data?.message || 'Erro ao excluir'
+    erro.value = 'Erro ao excluir.'
   } finally {
     loading.value = false
   }
 }
 
-onMounted(carregar)
+onMounted(async () => {
+  // Carrega as opções dos campos de busca
+  await Promise.all([
+    cat.carregarCategoria('SAÍDA'),
+    pag.carregarCategoria('FORMA DE PAGAMENTO'),
+    sta.carregarCategoria('STATUS FINANCEIRO') // Carrega conforme imagem
+  ])
+  
+  if (isEdit.value) await carregarDados()
+})
 </script>
+
+<style scoped>
+.required { color: #ef4444; margin-left: 2px; }
+.form-label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.25rem; }
+.form-input { 
+  width: 100%; height: 40px; padding: 0 10px; 
+  border: 1px solid #e2e8f0; border-radius: 8px; 
+}
+</style>
