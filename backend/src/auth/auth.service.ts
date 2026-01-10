@@ -8,12 +8,15 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { CadastroDto } from './dto/cadastro.dto';
+import { PermissoesService } from '../permissoes/permissoes.service';
+
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly permissoesService: PermissoesService, 
   ) {}
 
 // =========================
@@ -24,29 +27,31 @@ async login(usuario: string, senha: string) {
   const isEmail = login.includes('@');
 
   const registro = await this.prisma.usuarios.findFirst({
-    where: isEmail
-      ? { email: login }
-      : { usuario: login },
+    where: isEmail ? { email: login } : { usuario: login },
   });
 
-  if (!registro) {
-    throw new UnauthorizedException('Usuário ou senha inválidos');
-  }
+  if (!registro) throw new UnauthorizedException('Usuário ou senha inválidos');
 
   const senhaOk = await bcrypt.compare(senha, registro.senha);
-  if (!senhaOk) {
-    throw new UnauthorizedException('Usuário ou senha inválidos');
-  }
+  if (!senhaOk) throw new UnauthorizedException('Usuário ou senha inválidos');
 
-const payload = {
+  const payload = {
     sub: registro.id,
     usuario: registro.usuario,
     email: registro.email,
     status: registro.status,
-    setor: registro.setor, // <--- ADICIONE ESTA LINHA AQUI
+    setor: registro.setor,
   };
 
   const token = await this.jwt.signAsync(payload);
+
+  // ✅ AQUI: pega permissões do banco (sem derrubar login)
+  let permissoes: string[] = []
+  try {
+    permissoes = await this.permissoesService.permissoesDoUsuarioPorId(registro.id)
+  } catch (e) {
+    permissoes = []
+  }
 
   return {
     token,
@@ -60,6 +65,7 @@ const payload = {
       status: registro.status,
       criado_em: registro.criado_em,
       atualizado_em: registro.atualizado_em,
+      permissoes, // ✅ AQUI
     },
   };
 }
@@ -110,24 +116,29 @@ const payload = {
   // AUTH / ME
   // =========================
   async me(usuarioId: number) {
-    const registro = await this.prisma.usuarios.findUnique({
-      where: { id: usuarioId },
-    });
+  const registro = await this.prisma.usuarios.findUnique({
+    where: { id: usuarioId },
+  });
 
-    if (!registro) {
-      throw new NotFoundException('Usuário não encontrado');
-    }
+  if (!registro) throw new NotFoundException('Usuário não encontrado');
 
-    return {
-      id: registro.id,
-      nome: registro.nome,
-      usuario: registro.usuario,
-      email: registro.email,
-      setor: registro.setor,
-      funcao: registro.funcao,
-      status: registro.status,
-      criado_em: registro.criado_em,
-      atualizado_em: registro.atualizado_em,
-    };
+  let permissoes: string[] = []
+  try {
+    permissoes = await this.permissoesService.permissoesDoUsuarioPorId(usuarioId)
+  } catch (e) {
+    permissoes = []
   }
+
+  return {
+    id: registro.id,
+    nome: registro.nome,
+    usuario: registro.usuario,
+    email: registro.email,
+    setor: registro.setor,
+    funcao: registro.funcao,
+    status: registro.status,
+    criado_em: registro.criado_em,
+    permissoes, // ✅ AQUI
+  };
+}
 }

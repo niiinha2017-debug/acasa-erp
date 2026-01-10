@@ -72,8 +72,15 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/configuracoes/usuarios/': RouteRecordInfo<
-      '/configuracoes/usuarios/',
+    '/configuracoes/permissoes': RouteRecordInfo<
+      '/configuracoes/permissoes',
+      '/configuracoes/permissoes',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/configuracoes/usuarios': RouteRecordInfo<
+      '/configuracoes/usuarios',
       '/configuracoes/usuarios',
       Record<never, never>,
       Record<never, never>,
@@ -91,13 +98,6 @@ declare module 'vue-router/auto-routes' {
       '/constantes/:id',
       { id: ParamValue<true> },
       { id: ParamValue<false> },
-      | never
-    >,
-    '/constantes/novo': RouteRecordInfo<
-      '/constantes/novo',
-      '/constantes/novo',
-      Record<never, never>,
-      Record<never, never>,
       | never
     >,
     '/despesas/': RouteRecordInfo<
@@ -323,9 +323,15 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/configuracoes/usuarios/index.vue': {
+    'src/pages/configuracoes/permissoes.vue': {
       routes:
-        | '/configuracoes/usuarios/'
+        | '/configuracoes/permissoes'
+      views:
+        | never
+    }
+    'src/pages/configuracoes/usuarios.vue': {
+      routes:
+        | '/configuracoes/usuarios'
       views:
         | never
     }
@@ -338,12 +344,6 @@ declare module 'vue-router/auto-routes' {
     'src/pages/constantes/[id].vue': {
       routes:
         | '/constantes/[id]'
-      views:
-        | never
-    }
-    'src/pages/constantes/novo.vue': {
-      routes:
-        | '/constantes/novo'
       views:
         | never
     }

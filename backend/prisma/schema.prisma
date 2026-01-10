@@ -20,6 +20,8 @@ model usuarios {
   atualizado_em DateTime @updatedAt
 
   recuperacoes recuperacao_senha[] // ✅ lado oposto da relação
+  permissoes usuarios_permissoes[]
+
 
   @@map("usuarios")
 }
@@ -38,6 +40,7 @@ model recuperacao_senha {
 
   @@map("recuperacao_senha")
 }
+
 
 model Cliente {
   id Int @id @default(autoincrement())
@@ -759,4 +762,29 @@ model compras_rateio {
   @@index([compra_id])
   @@index([nome_ambiente])
   @@map("compras_rateio")
+}
+model permissoes {
+  id         Int      @id @default(autoincrement())
+  chave      String   @unique
+  descricao  String?
+  criado_em  DateTime @default(now())
+
+  usuarios   usuarios_permissoes[]
+
+  @@map("permissoes")
+}
+
+model usuarios_permissoes {
+  id            Int      @id @default(autoincrement())
+  usuario_id    Int
+  permissao_id  Int
+  criado_em     DateTime @default(now())
+
+  usuario       usuarios    @relation(fields: [usuario_id], references: [id])
+  permissao     permissoes  @relation(fields: [permissao_id], references: [id])
+
+  @@unique([usuario_id, permissao_id])
+  @@index([usuario_id])
+  @@index([permissao_id])
+  @@map("usuarios_permissoes")
 }

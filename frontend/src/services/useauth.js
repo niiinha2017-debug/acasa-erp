@@ -2,75 +2,48 @@ import { ref, computed } from 'vue'
 import api from '@/services/api'
 import { storage } from '@/utils/storage'
 
-// Estado Global (Singleton) - Compartilhado entre todas as páginas
+// Estado Global (Singleton)
 const token = ref(storage.getToken())
 const usuarioLogado = ref(storage.getUser())
 const loading = ref(false)
 const error = ref('')
 
-/**
- * MAPA DE ACESSO (O "Cérebro" do seu ERP)
- * Define quais telas cada setor pode enxergar.
- */
-const MAPA_DE_ACESSO = 
-{
-  'ADMIN': ['clientes',
-    'fornecedores',
-    'funcionarios', 
-    'usuarios',
-    'plano-corte', 
-    'configuracoes',
-    'produtos', 
-    'financeiro',
-    'contas-pagar',
-    'contas-receber',
-    'producao',
-    'vendas', 
-    'agenda',
-    'compras',
-    'dashboard',
-    'constantes', 
-    'despesas',],
-
-  'FINANCEIRO': ['dashboard', 'clientes', 'financeiro', 'relatorios','plano-corte'],
-  'PRODUCAO': ['dashboard', 'producao', 'estoque'],
-  'VENDAS': ['dashboard', 'clientes']
-}
-
 export function useAuth() {
-  
-  // Verifica se o usuário está logado
   const isAuthenticated = computed(() => !!token.value)
 
-  /**
-   * FUNÇÃO CHAVE: temAcesso
-   * Verifica se o setor do usuário permite ver uma tela específica
-   * Ex: v-if="temAcesso('financeiro')"
-   */
-  const temAcesso = (nomeDaPagina) => {
+  // ✅ Permissões vindas do backend (usuario.permissoes)
+  const permissoes = computed(() => {
     const user = usuarioLogado.value
-    if (!user || !user.setor) return false
-    
-    // Se o setor não existir no mapa, negamos por segurança
-    const permissoesDoSetor = MAPA_DE_ACESSO[user.setor.toUpperCase()] || []
-    
-    // ADMIN tem passe livre ou verificamos na lista
-    if (user.setor.toUpperCase() === 'ADMIN') return true
-    
-    return permissoesDoSetor.includes(nomeDaPagina)
+    return Array.isArray(user?.permissoes) ? user.permissoes : []
+  })
+
+  // ✅ temAcesso por chave (ex: 'clientes.ver')
+// ✅ temAcesso por chave (ex: 'clientes.ver')
+const temAcesso = (chave) => {
+  const user = usuarioLogado.value;
+  
+  // 1. Se não houver usuário, nega tudo
+  if (!user) return false;
+
+  // 2. SE FOR ADMIN, RETORNA TRUE PARA QUALQUER PÁGINA
+  // Usamos toUpperCase() para evitar problemas com 'Admin' vs 'ADMIN'
+  if (user.setor?.toUpperCase() === 'ADMIN') {
+    return true;
   }
+
+  // 3. Caso contrário, verifica as permissões específicas
+  return permissoes.value.includes(chave);
+}
 
   async function login({ usuario, senha }) {
     loading.value = true
     error.value = ''
     try {
       const { data } = await api.post('/auth/login', { usuario, senha })
-      
-      // Salva no LocalStorage (persistência)
+
       storage.setToken(data.token)
       storage.setUser(data.usuario)
 
-      // Atualiza o estado reativo (reatividade)
       token.value = data.token
       usuarioLogado.value = data.usuario
 
@@ -86,7 +59,6 @@ export function useAuth() {
   async function solicitarCadastro(dados) {
     loading.value = true
     try {
-      // Envia para o backend que salva via Prisma
       const { data } = await api.post('/auth/cadastro', dados)
       return data
     } catch (e) {
@@ -102,7 +74,7 @@ export function useAuth() {
     storage.removeUser()
     token.value = null
     usuarioLogado.value = null
-    window.location.href = '/login' // Reset total da memória
+    window.location.href = '/login'
   }
 
   return {
@@ -114,6 +86,7 @@ export function useAuth() {
     login,
     logout,
     solicitarCadastro,
-    temAcesso // <--- Agora você pode usar isso em qualquer lugar
+    temAcesso,
+    permissoes, // ✅ agora existe e funciona
   }
 }

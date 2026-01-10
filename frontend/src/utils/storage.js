@@ -5,28 +5,37 @@ const USER_KEY = AppConfig.STORAGE_KEYS.USER
 
 export const storage = {
   getToken() {
-    // sessionStorage apaga ao fechar a aba
-    return sessionStorage.getItem(TOKEN_KEY)
+    return localStorage.getItem(TOKEN_KEY)
   },
 
   setToken(token) {
-    sessionStorage.setItem(TOKEN_KEY, token)
+    localStorage.setItem(TOKEN_KEY, token)
   },
 
   removeToken() {
-    sessionStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(TOKEN_KEY)
   },
 
   getUser() {
-    const v = sessionStorage.getItem(USER_KEY)
-    return v ? JSON.parse(v) : null
+    const v = localStorage.getItem(USER_KEY)
+    try {
+      // O JSON.parse é essencial porque o user é um objeto
+      return v ? JSON.parse(v) : null
+    } catch (e) {
+      console.error("Erro ao ler usuário do storage", e)
+      return null
+    }
   },
 
   setUser(user) {
-    sessionStorage.setItem(USER_KEY, JSON.stringify(user))
+    localStorage.setItem(USER_KEY, JSON.stringify(user))
   },
 
   removeUser() {
-    sessionStorage.removeItem(USER_KEY)
+    localStorage.removeItem(USER_KEY)
   },
+
+  clear() {
+    localStorage.clear()
+  }
 }

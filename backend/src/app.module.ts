@@ -24,6 +24,7 @@ import { VendasController } from './vendas/vendas.controller';
 import { ProducaoModule } from './producao/producao.module';
 import { FinanceiroModule } from './financeiro/financeiro.module';
 import { ComprasModule } from './compras/compras.module';
+import { PermissoesModule } from './permissoes/permissoes.module';
 
 @Module({
   imports: [
@@ -72,6 +73,8 @@ import { ComprasModule } from './compras/compras.module';
     FinanceiroModule,
 
     ComprasModule,
+
+    PermissoesModule,
    
   ],
   providers: [VendasService],

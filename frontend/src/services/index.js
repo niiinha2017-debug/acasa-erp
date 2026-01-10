@@ -191,3 +191,16 @@ export const VendaService = {
   // Alteração rápida de status (Ex: Aprovar Venda, Cancelar, Finalizar)
   atualizarStatus: (id, status) => api.put(`/vendas/${id}/status`, { status })
 }
+
+// --- SERVIÇO DE PERMISSÕES (RBAC) ---
+export const PermissoesService = {
+  // Lista todas as permissões genéricas cadastradas no sistema
+  listar: () => api.get('/permissoes'),
+
+  // Busca as permissões específicas de um usuário selecionado
+  listarDoUsuario: (id) => api.get(`/usuarios/${id}/permissoes`),
+
+  // Define/Salva o array de chaves de permissão para o usuário
+  definirParaUsuario: (id, permissoes) => 
+    api.put(`/usuarios/${id}/permissoes`, { permissoes })
+}

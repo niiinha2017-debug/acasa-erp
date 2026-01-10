@@ -1,12 +1,12 @@
 <script setup>
-// Verifique se este caminho está 100% correto
-import Menu from '@/layouts/Menu.vue' 
+// Certifique-se que o arquivo se chama Menu.vue (M maiúsculo)
+// e está dentro da pasta src/layouts/
+import Menu from './Menu.vue' 
 </script>
 
 <template>
   <div class="layout-default">
     <Menu /> 
-
     <main class="page-content">
       <div class="content-wrapper">
         <slot /> 
