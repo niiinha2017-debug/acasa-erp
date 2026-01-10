@@ -1,65 +1,69 @@
 <template>
   <div class="page-container">
     <Card>
-      <header class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+      <header class="card-header header-between">
         <div>
           <h2 class="card-title">{{ isNovo ? 'Nova Constante' : 'Editar Constante' }}</h2>
-          <p style="font-size: var(--font-size-sm); margin: 0; opacity: .85;">
-            {{ isNovo ? 'Cadastre uma nova constante do sistema.' : 'Atualize os dados da constante.' }}
+          <p class="cell-muted">
+            {{ isNovo ? 'Configure um novo parâmetro global para o sistema.' : 'Atualize as definições desta constante.' }}
           </p>
         </div>
 
-        <Button
-          v-if="!isNovo"
-          variant="danger"
-          size="sm"
-          type="button"
-          :disabled="loading"
-          @click="excluir"
-        >
-          Excluir
-        </Button>
+        <div class="flex-gap-2">
+          <Button
+            v-if="!isNovo"
+            variant="danger"
+            size="sm"
+            type="button"
+            :disabled="loading"
+            @click="excluir"
+          >
+            Excluir
+          </Button>
+        </div>
       </header>
 
-      <div style="padding: 16px 20px;">
+      <div class="card-body">
         <form class="form-grid" @submit.prevent="salvar">
           <Input
             v-model="form.categoria"
             label="Categoria *"
-            placeholder="Ex: FORMA_DE_PAGAMENTO"
-            :required="true"
+            placeholder="Ex: STATUS_PRODUCAO"
+            required
             class="col-span-4"
+            @input="form.categoria = form.categoria.toUpperCase()"
           />
 
           <Input
             v-model="form.chave"
-            label="Chave *"
-            placeholder="Ex: PIX"
-            :required="true"
+            label="Chave (ID Interno) *"
+            placeholder="Ex: EM_ATRASO"
+            required
             class="col-span-4"
+            @input="form.chave = form.chave.toUpperCase()"
           />
 
           <Input
             v-model="form.rotulo"
-            label="Rótulo *"
-            placeholder="Ex: Pix"
-            :required="true"
+            label="Rótulo (Nome de Exibição) *"
+            placeholder="Ex: Em Atraso"
+            required
             class="col-span-4"
           />
 
           <div class="form-group col-span-4">
-            <label class="form-label">Tipo <span class="required">*</span></label>
+            <label class="form-label">Tipo de Dado <span class="required">*</span></label>
             <select v-model="form.tipo" class="form-input" required>
-              <option value="TEXTO">TEXTO</option>
-              <option value="NUMERO">NUMERO</option>
-              <option value="BOOLEANO">BOOLEANO</option>
-              <option value="JSON">JSON</option>
+              <option value="TEXTO">TEXTO (Cores, Descrições)</option>
+              <option value="NUMERO">NÚMERO (Taxas, Prazos)</option>
+              <option value="BOOLEANO">BOOLEANO (Sim/Não)</option>
+              <option value="JSON">JSON (Configurações Complexas)</option>
             </select>
           </div>
 
           <Input
             v-model.number="form.ordem"
-            label="Ordem"
+            label="Ordem de Exibição"
             type="number"
             class="col-span-4"
           />
@@ -72,59 +76,58 @@
             </select>
           </div>
 
-          <!-- Valores condicionais -->
-          <Input
-            v-if="form.tipo === 'TEXTO'"
-            v-model="form.valor_texto"
-            label="Valor (Texto)"
-            placeholder="Ex: CELULAR / EMAIL / CPF"
-            class="col-span-12"
-          />
+          <transition name="fade">
+            <div class="col-span-12 form-grid" style="margin: 0; padding: 0;">
+              
+              <Input
+                v-if="form.tipo === 'TEXTO'"
+                v-model="form.valor_texto"
+                :label="form.categoria.includes('STATUS') ? 'Cor do Badge (Hexadecimal)' : 'Valor em Texto'"
+                placeholder="Ex: #FF0000 ou Observação"
+                class="col-span-12"
+              />
 
-          <Input
-            v-if="form.tipo === 'NUMERO'"
-            v-model.number="form.valor_numero"
-            label="Valor (Número)"
-            placeholder="Ex: 2.99"
-            class="col-span-6"
-          />
+              <Input
+                v-if="form.tipo === 'NUMERO'"
+                v-model.number="form.valor_numero"
+                :label="form.categoria.includes('PAGAMENTO') ? 'Taxa da Operadora (%)' : 'Valor Numérico'"
+                type="number"
+                step="0.01"
+                placeholder="Ex: 3.50"
+                class="col-span-6"
+              />
 
-          <div v-if="form.tipo === 'BOOLEANO'" class="form-group col-span-6">
-            <label class="form-label">Valor (Booleano)</label>
-            <select v-model="form.valor_booleano" class="form-input">
-              <option :value="true">true</option>
-              <option :value="false">false</option>
-            </select>
-          </div>
+              <div v-if="form.tipo === 'BOOLEANO'" class="form-group col-span-6">
+                <label class="form-label">Valor Booleano</label>
+                <select v-model="form.valor_booleano" class="form-input">
+                  <option :value="true">Verdadeiro (True)</option>
+                  <option :value="false">Falso (False)</option>
+                </select>
+              </div>
 
-          <div v-if="form.tipo === 'JSON'" class="form-group col-span-12">
-            <label class="form-label">Valor (JSON)</label>
-            <textarea
-              v-model="valorJsonTexto"
-              class="form-input"
-              rows="6"
-              placeholder='Ex: {"taxa": 2.99}'
-            />
-            <p style="margin-top: 6px; font-size: var(--font-size-sm); opacity: .85;">
-              JSON precisa ser válido.
-            </p>
-          </div>
+              <div v-if="form.tipo === 'JSON'" class="form-group col-span-12">
+                <label class="form-label">Configuração JSON</label>
+                <textarea
+                  v-model="valorJsonTexto"
+                  class="form-input code-font"
+                  rows="5"
+                  placeholder='{"key": "value"}'
+                ></textarea>
+              </div>
+            </div>
+          </transition>
 
-          <div class="col-span-12" style="display:flex; justify-content:flex-end; gap:10px;">
-            <Button variant="outline" type="button" @click="router.back()">
-              Voltar
+          <div class="col-span-12 flex-end gap-2 mt-4">
+            <Button variant="outline" type="button" @click="router.push('/constantes')">
+              Cancelar
             </Button>
 
-            <Button type="submit" :loading="loading" :disabled="loading">
-              {{ isNovo ? 'Criar constante' : 'Salvar alterações' }}
+            <Button type="submit" :loading="loading">
+              {{ isNovo ? 'Criar Constante' : 'Salvar Alterações' }}
             </Button>
           </div>
 
-          <div v-if="erro" class="col-span-12">
-            <p style="color: var(--danger); font-size: var(--font-size-sm); margin: 0;">
-              {{ erro }}
-            </p>
-          </div>
+          <p v-if="erro" class="col-span-12 error-message">{{ erro }}</p>
         </form>
       </div>
     </Card>
@@ -143,11 +146,12 @@ import Button from '@/components/ui/Button.vue'
 const route = useRoute()
 const router = useRouter()
 
-const isNovo = computed(() => String(route.params.id) === 'novo')
-const id = computed(() => (isNovo.value ? null : Number(route.params.id)))
-
 const loading = ref(false)
 const erro = ref('')
+const valorJsonTexto = ref('')
+
+const isNovo = computed(() => route.params.id === 'novo')
+const id = computed(() => isNovo.value ? null : route.params.id)
 
 const form = ref({
   categoria: '',
@@ -158,62 +162,40 @@ const form = ref({
   valor_numero: null,
   valor_booleano: true,
   ordem: 0,
-  ativo: true,
+  ativo: true
 })
 
-const valorJsonTexto = ref('')
-
-function aplicarNoForm(data) {
-  form.value.categoria = data?.categoria ?? ''
-  form.value.chave = data?.chave ?? ''
-  form.value.rotulo = data?.rotulo ?? ''
-  form.value.tipo = data?.tipo ?? 'TEXTO'
-  form.value.ordem = data?.ordem ?? 0
-  form.value.ativo = !!data?.ativo
-
-  form.value.valor_texto = data?.valor_texto ?? ''
-  form.value.valor_numero = data?.valor_numero ?? null
-  form.value.valor_booleano = data?.valor_booleano ?? true
-
-  valorJsonTexto.value = data?.valor_json ? JSON.stringify(data.valor_json, null, 2) : ''
+// PAYLOAD LIMPO: Envia apenas o que o banco espera baseado no tipo
+const gerarPayload = () => {
+  const p = { ...form.value }
+  
+  // Reseta campos que não pertencem ao tipo selecionado para evitar lixo no banco
+  if (p.tipo !== 'TEXTO') p.valor_texto = null
+  if (p.tipo !== 'NUMERO') p.valor_numero = null
+  if (p.tipo !== 'BOOLEANO') p.valor_booleano = null
+  
+  if (p.tipo === 'JSON') {
+    try {
+      p.valor_json = valorJsonTexto.value ? JSON.parse(valorJsonTexto.value) : null
+    } catch (e) {
+      throw new Error('O formato JSON é inválido.')
+    }
+  } else {
+    p.valor_json = null
+  }
+  
+  return p
 }
-
-const payload = computed(() => {
-  const base = {
-    categoria: form.value.categoria,
-    chave: form.value.chave,
-    rotulo: form.value.rotulo,
-    tipo: form.value.tipo,
-    ordem: form.value.ordem,
-    ativo: form.value.ativo,
-
-    valor_texto: null,
-    valor_numero: null,
-    valor_booleano: null,
-    valor_json: null,
-  }
-
-  if (base.tipo === 'TEXTO') base.valor_texto = form.value.valor_texto || null
-  if (base.tipo === 'NUMERO') base.valor_numero = (form.value.valor_numero ?? null)
-  if (base.tipo === 'BOOLEANO') base.valor_booleano = !!form.value.valor_booleano
-  if (base.tipo === 'JSON') {
-    base.valor_json = valorJsonTexto.value ? JSON.parse(valorJsonTexto.value) : null
-  }
-
-  return base
-})
 
 async function carregar() {
   if (isNovo.value) return
-
-  erro.value = ''
   loading.value = true
-
   try {
     const { data } = await api.get(`/constantes/${id.value}`)
-    aplicarNoForm(data)
+    Object.assign(form.value, data)
+    if (data.valor_json) valorJsonTexto.value = JSON.stringify(data.valor_json, null, 2)
   } catch (e) {
-    erro.value = e?.response?.data?.message || 'Não foi possível carregar a constante.'
+    erro.value = 'Erro ao carregar dados.'
   } finally {
     loading.value = false
   }
@@ -222,42 +204,43 @@ async function carregar() {
 async function salvar() {
   erro.value = ''
   loading.value = true
-
   try {
-    // valida JSON antes de enviar
-    if (form.value.tipo === 'JSON' && valorJsonTexto.value) {
-      JSON.parse(valorJsonTexto.value)
-    }
-
+    const payload = gerarPayload()
     if (isNovo.value) {
-      await api.post('/constantes', payload.value)
+      await api.post('/constantes', payload)
     } else {
-      await api.patch(`/constantes/${id.value}`, payload.value)
+      await api.patch(`/constantes/${id.value}`, payload)
     }
-
     router.push('/constantes')
   } catch (e) {
-    erro.value = e?.response?.data?.message || (isNovo.value ? 'Erro ao criar constante.' : 'Erro ao salvar alterações.')
+    erro.value = e.message || 'Erro ao processar requisição.'
   } finally {
     loading.value = false
   }
 }
 
 async function excluir() {
-  if (isNovo.value) return
-
-  erro.value = ''
-  loading.value = true
-
+  if (!confirm('Tem certeza que deseja remover esta constante?')) return
   try {
     await api.delete(`/constantes/${id.value}`)
     router.push('/constantes')
   } catch (e) {
-    erro.value = e?.response?.data?.message || 'Erro ao excluir.'
-  } finally {
-    loading.value = false
+    alert('Erro ao excluir.')
   }
 }
 
 onMounted(carregar)
 </script>
+
+<style scoped>
+.code-font {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  background: #f8fafc;
+}
+.flex-gap-2 { display: flex; gap: 8px; }
+.flex-end { display: flex; justify-content: flex-end; }
+.error-message { color: var(--danger); font-size: 13px; margin-top: 10px; }
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+</style>

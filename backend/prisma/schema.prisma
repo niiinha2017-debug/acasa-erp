@@ -312,28 +312,28 @@ model funcionarios {
 
 
 model constantes {
-  id Int @id @default(autoincrement())
+  id            Int      @id @default(autoincrement())
+  
+  // Identificadores
+  categoria     String   // Ex: 'FORMA_PAGAMENTO', 'STATUS_PRODUCAO'
+  chave         String   // Ex: 'CARTAO_CREDITO_VISA', 'EM_ABERTO'
+  rotulo        String   // Ex: 'Cartão de Crédito (Visa)'
+  
+  // Valores (Unificamos para facilitar)
+  valor_texto   String?  // Para descrições ou observações extras
+  valor_numero  Decimal? @db.Decimal(12, 2) // 👈 PERFEITO para Taxas (Ex: 3.50 para 3.5%)
+  
+  // Organização
+  ordem         Int      @default(0)
+  ativo         Boolean  @default(true)
 
-  categoria String
-  chave     String
-  rotulo    String
-  tipo      String
-
-  valor_texto    String?
-  valor_numero   Decimal? @db.Decimal(12, 2)
-  valor_booleano Boolean?
-  valor_json     Json?
-
-  ordem Int     @default(0)
-  ativo Boolean @default(true)
-
+  // Auditoria
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
   @@index([categoria, ativo, ordem])
   @@map("constantes")
 }
-
 
 model despesas {
   id Int @id @default(autoincrement())

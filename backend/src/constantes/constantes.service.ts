@@ -15,6 +15,7 @@ export class ConstantesService {
         ...(categoria ? { categoria } : {}),
         ...(typeof ativas === 'boolean' ? { ativo: ativas } : {}),
       },
+      // Mantive sua ordenação que está excelente para relatórios
       orderBy: [{ categoria: 'asc' }, { ordem: 'asc' }, { rotulo: 'asc' }],
     })
   }
@@ -25,43 +26,32 @@ export class ConstantesService {
     return item
   }
 
-async criar(dto: CriarConstanteDto) {
-  return this.prisma.constantes.create({
-    data: {
-      categoria: dto.categoria,
-      chave: dto.chave,
-      rotulo: dto.rotulo,
-      tipo: dto.tipo,
-      valor_texto: dto.valor_texto ?? null,
-      valor_numero: dto.valor_numero ?? null,
-      valor_booleano: dto.valor_booleano ?? null,
-      valor_json: dto.valor_json ?? null,
-      ordem: dto.ordem ?? 0,
-      ativo: dto.ativo ?? true,
-    },
-  })
-}
+  async criar(dto: CriarConstanteDto) {
+    return this.prisma.constantes.create({
+      data: {
+        ...dto, // O spread já pega categoria, chave, rotulo, etc.
+        // Se o valor_numero vier, garantimos que o Prisma trate como Decimal se necessário
+        valor_numero: dto.valor_numero ?? null,
+        ordem: dto.ordem ?? 0,
+        ativo: dto.ativo ?? true,
+      },
+    })
+  }
 
+  async atualizar(id: number, dto: AtualizarConstanteDto) {
+    // Garante que o item existe antes de tentar mudar
+    await this.buscarPorId(id)
 
-async atualizar(id: number, dto: AtualizarConstanteDto) {
-  await this.buscarPorId(id)
-
-  return this.prisma.constantes.update({
-    where: { id },
-    data: {
-      categoria: dto.categoria,
-      chave: dto.chave,
-      rotulo: dto.rotulo,
-      tipo: dto.tipo,
-      valor_texto: dto.valor_texto === undefined ? undefined : dto.valor_texto,
-      valor_numero: dto.valor_numero === undefined ? undefined : dto.valor_numero,
-      valor_booleano: dto.valor_booleano === undefined ? undefined : dto.valor_booleano,
-      valor_json: dto.valor_json === undefined ? undefined : dto.valor_json,
-      ordem: dto.ordem,
-      ativo: dto.ativo,
-    },
-  })
-}
+    return this.prisma.constantes.update({
+      where: { id },
+      data: {
+        ...dto,
+        // Tratamos campos opcionais para não sobrescrever com null sem querer
+        valor_texto: dto.valor_texto !== undefined ? dto.valor_texto : undefined,
+        valor_numero: dto.valor_numero !== undefined ? dto.valor_numero : undefined,
+      },
+    })
+  }
 
   async remover(id: number) {
     await this.buscarPorId(id)

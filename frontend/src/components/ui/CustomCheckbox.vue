@@ -117,4 +117,16 @@ input {
   cursor: not-allowed;
   opacity: 0.6;
 }
+/* Classes dinâmicas baseadas no banco */
+.badge-constant {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  /* A cor de fundo vira a cor do banco com opacidade */
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
 </style>
