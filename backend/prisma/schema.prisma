@@ -129,6 +129,7 @@ model produtos {
   marca        String?      // ✅ NOVO
   cor          String?
   medida       String?
+  unidade      String?
 
   quantidade     Int
   valor_unitario Decimal @db.Decimal(10, 2)
