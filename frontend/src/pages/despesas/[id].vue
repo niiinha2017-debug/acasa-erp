@@ -76,7 +76,7 @@
           <Input v-model="form.data_pagamento" label="Data de Pagamento" type="date" class="col-span-4" />
           <Input v-model="form.data_registro" label="Data do Registro *" type="date" required class="col-span-4" />
 
-          <div class="col-span-12 flex justify-end gap-3 mt-6">
+          <div class="col-span-12 page-actions">
             <Button v-if="isEdit" variant="danger" type="button" @click="excluir">Excluir</Button>
             <Button variant="primary" type="submit" :loading="loading">
               {{ isEdit ? 'Salvar' : 'Gerar Lançamentos' }}

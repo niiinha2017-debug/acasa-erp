@@ -5,8 +5,6 @@
 
 /* =========================================================
    ALIAS (pra não quebrar componentes antigos)
-   - Seus componentes usam var's como --text-main, --border-soft etc.
-   - Aqui a gente mapeia essas var's para os TOKENS reais.
 ========================================================= */
 :root {
   --text-main: var(--text-primary);
@@ -17,12 +15,9 @@
 
   --font-main: var(--font-sans);
 
-  /* “focus-ring” era o círculo chato: agora vira o foco padrão */
   --focus-ring: var(--shadow-focus);
 
   --control-radius-md: var(--border-radius-md);
-
-  /* Alguns tamanhos que você vinha usando */
   --font-size-md: var(--font-size-base);
 }
 
@@ -35,7 +30,8 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   height: 100%;
 }
 
@@ -46,7 +42,7 @@ body {
   color: var(--text-primary);
 }
 
-/* Foco global: tira “outline” feio e usa foco ACASA */
+/* Foco global */
 :where(a, button, input, select, textarea, [tabindex]):focus {
   outline: none;
 }
@@ -56,9 +52,8 @@ body {
 }
 
 /* =========================================================
-   GRID (usado no SearchInput colSpan)
+   GRID — FORM (PADRÃO ÚNICO)
 ========================================================= */
-/* ===== GRID DO FORM (PADRÃO ÚNICO) ===== */
 .form-grid {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
@@ -66,7 +61,7 @@ body {
   align-items: start;
 }
 
-/* spans (complete) */
+/* spans */
 .col-span-12 { grid-column: span 12; }
 .col-span-11 { grid-column: span 11; }
 .col-span-10 { grid-column: span 10; }
@@ -80,9 +75,11 @@ body {
 .col-span-2  { grid-column: span 2; }
 .col-span-1  { grid-column: span 1; }
 
-/* garante que input não estoura */
-.input-wrapper { min-width: 0; }
-.input-field { width: 100%; box-sizing: border-box; }
+/* evita “estouro” em grid */
+.form-group,
+.input-wrapper {
+  min-width: 0;
+}
 
 /* Responsivo */
 @media (max-width: 900px) {
@@ -135,8 +132,18 @@ body {
   color: var(--text-main);
 }
 
+.card-subtitle {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  margin: 0;
+}
+
 .card-body {
   padding: var(--spacing-5);
+}
+
+.card-body--flush {
+  padding: 0;
 }
 
 .card-footer {
@@ -146,7 +153,38 @@ body {
 }
 
 /* =========================================================
-   FORM (SearchInput usa .form-group/.form-label/.form-input)
+   HEADERS / FOOTERS (padrões)
+========================================================= */
+.header-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* footer padrão com ações à direita (se você usar) */
+.footer-between {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 18px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.footer-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* =========================================================
+   FORM (usado por SearchInput também)
 ========================================================= */
 .form-group {
   display: flex;
@@ -160,7 +198,7 @@ body {
   color: var(--text-secondary);
 }
 
-.form-label span {
+.required {
   color: var(--danger);
   margin-left: 2px;
 }
@@ -178,8 +216,8 @@ body {
 
   border-radius: var(--control-radius-md);
   border: 1px solid var(--border-soft);
-
   transition: var(--transition-base);
+  box-sizing: border-box;
 }
 
 .form-input::placeholder {
@@ -214,11 +252,6 @@ body {
   color: var(--text-muted);
 }
 
-.required {
-  color: var(--danger);
-  margin-left: 2px;
-}
-
 .input-container {
   position: relative;
   display: flex;
@@ -240,6 +273,7 @@ body {
   border: 1px solid var(--border-soft);
 
   transition: var(--transition-base);
+  box-sizing: border-box;
 }
 
 .input-field::placeholder {
@@ -295,72 +329,85 @@ body {
   color: var(--text-muted);
 }
 
-/* Padding quando tiver prefix/suffix (sem :has pra não depender de suporte) */
+/* Padding quando tiver prefix/suffix */
 .input-wrapper.has-prefix .input-field { padding-left: 40px; }
 .input-wrapper.has-suffix .input-field { padding-right: 40px; }
 
 /* =========================================================
-   TABLE (Table.vue)
+   SEARCHINPUT (SearchInput.vue)
+   - dropdown acima de tudo
+   - sem mexer no overflow do card global (não quebra)
 ========================================================= */
-.table-container {
-  background: var(--bg-card);
-  border-radius: var(--card-radius);
-  border: 1px solid var(--border-soft);
-  overflow: hidden;
+.search-container {
+  position: relative;
 }
 
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--font-size-md);
-}
-
-.table th {
-  padding: 14px 16px;
-  text-align: left;
-  font-weight: var(--font-weight-semibold);
+.search-icon-wrapper {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
   color: var(--text-muted);
-  background: var(--bg-input);
-  border-bottom: 1px solid var(--border-soft);
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
 }
 
-.table td {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border-soft);
+/* quando usar "has-icon" */
+.form-input.has-icon,
+.input-field.has-icon {
+  padding-left: 40px;
+}
+
+/* Dropdown */
+.search-select__dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 9999;
+
+  background: var(--bg-card);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-md);
+  overflow: auto;
+  max-height: 260px;
+}
+
+/* Opção */
+.search-select__option {
+  padding: 10px 12px;
+  cursor: pointer;
   color: var(--text-main);
 }
 
-.is-striped tbody tr:nth-child(even) {
-  background: var(--gray-50);
-}
-
-.is-hoverable tbody tr:hover {
+.search-select__option:hover {
   background: var(--bg-hover);
-  cursor: pointer;
 }
 
-.table-state {
-  padding: 48px !important;
-}
-
-.table-loading,
-.table-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
+.search-select__empty {
+  padding: 10px 12px;
   color: var(--text-muted);
 }
 
-.empty-icon {
-  font-size: 28px;
+/* =========================================================
+   DIVISORES / SEÇÕES (padrões de form)
+========================================================= */
+.form-divider {
+  grid-column: span 12;
+  height: 1px;
+  background: var(--border-soft);
+  margin: 12px 0;
 }
 
-.table-footer {
-  padding: 12px 16px;
-  background: var(--bg-input);
-  border-top: 1px solid var(--border-soft);
+.form-section-title {
+  grid-column: span 12;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin-top: 16px;
+  margin-bottom: 8px;
 }
 
 /* =========================================================
@@ -406,6 +453,8 @@ body {
   font-size: var(--font-size-lg);
 }
 
+.btn--full { width: 100%; }
+
 /* Variants */
 .btn--primary {
   background: var(--bg-primary);
@@ -419,12 +468,7 @@ body {
   left: -120%;
   width: 120%;
   height: 100%;
-  background: linear-gradient(
-    120deg,
-    transparent,
-    rgba(255, 255, 255, 0.35),
-    transparent
-  );
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.35), transparent);
   transition: left 0.6s ease;
 }
 
@@ -470,36 +514,31 @@ body {
   color: var(--text-invert);
 }
 
-/* Foco (mata o círculo e usa padrão ACASA) */
+/* Foco */
 .btn:focus-visible {
   outline: none;
   box-shadow: var(--shadow-focus);
 }
 
 /* Loading */
-.btn--loading {
-  pointer-events: none;
-}
-.btn--full {
-  width: 100%;
-}
+.btn--loading { pointer-events: none; }
 
 .btn__spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid rgba(255,255,255,.4);
+  border: 2px solid rgba(255, 255, 255, 0.4);
   border-top-color: white;
   border-radius: 50%;
-  animation: spin .8s linear infinite;
+  animation: spin 0.8s linear infinite;
 }
 
 .btn--secondary .btn__spinner,
 .btn--outline .btn__spinner {
-  border-color: rgba(58,120,168,.3);
+  border-color: rgba(58, 120, 168, 0.3);
   border-top-color: var(--brand-primary);
 }
 
-/* Spinner global (reaproveitado na Table também) */
+/* Spinner global */
 .spinner {
   width: 28px;
   height: 28px;
@@ -513,18 +552,147 @@ body {
   to { transform: rotate(360deg); }
 }
 
-/* Helpers de alinhamento (Table.vue usa) */
+/* =========================================================
+   TABLE (Table.vue)
+========================================================= */
+.table-wrapper {
+  background: var(--bg-card);
+  border-radius: var(--card-radius);
+  border: 1px solid var(--border-soft);
+  overflow: hidden;
+}
+
+.custom-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-md);
+}
+
+.custom-table th {
+  padding: 14px 16px;
+  text-align: left;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-muted);
+  background: var(--bg-input);
+  border-bottom: 1px solid var(--border-soft);
+  white-space: nowrap;
+}
+
+.custom-table td {
+  padding: 12px 16px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text-main);
+}
+
+.table-state {
+  padding: 48px !important;
+}
+
+.table-loading,
+.table-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-muted);
+}
+
+.empty-icon { font-size: 28px; }
+
+/* Ajustes para elementos dentro da tabela */
+.custom-table .btn--sm {
+  height: 28px;
+  padding: 0 8px;
+}
+
+.custom-table .form-input {
+  height: 32px;
+  font-size: 13px;
+  padding: 0 8px;
+}
+
+/* Container de ações na tabela */
+.table-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+}
+
+/* =========================================================
+   BADGES / STATUS
+========================================================= */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-success {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.badge-warning {
+  background-color: #fef9c3;
+  color: #854d0e;
+}
+
+.badge-danger {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.badge-neutral {
+  background: var(--bg-page);
+  color: var(--text-main);
+}
+
+/* =========================================================
+   HELPERS
+========================================================= */
 .text-left { text-align: left; }
 .text-center { text-align: center; }
 .text-right { text-align: right; }
-.status-badge {
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: bold;
+
+.cell-stack {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  gap: 2px;
 }
-.status-badge.active { background: var(--success); color: white; }
-.status-badge.inactive { background: var(--warning); color: black; }
+
+.cell-muted {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* =========================================================
+   FILTER STRIP (padrão em index tipo Clientes)
+========================================================= */
+.card-filter {
+  padding: 15px 20px;
+  background: var(--bg-input);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+/* =========================================================
+   ACTIONS (rodapé de form / botões à direita)
+   - usa na tela: <div class="col-span-12 container-botoes">
+========================================================= */
+.container-botoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 /* =========================================================
    LOADING (Loading.vue)
 ========================================================= */
@@ -536,9 +704,7 @@ body {
   font-size: var(--font-size-sm);
 }
 
-.loading.inline {
-  position: relative;
-}
+.loading.inline { position: relative; }
 
 .loading.overlay {
   position: fixed;
@@ -553,206 +719,13 @@ body {
   font-weight: var(--font-weight-medium);
 }
 
-/* ===== Ajustes de consistência ===== */
-.form-group {
-  min-width: 0; /* evita estourar inputs */
-}
-
-.form-input {
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* Checkbox alinhado bonitinho (não fica solto no meio) */
+/* =========================================================
+   CHECKBOX ROW (quando usar)
+========================================================= */
 .check-row {
   display: flex;
   gap: 18px;
   align-items: center;
   flex-wrap: wrap;
   padding-top: 6px;
-}
-
-/* Responsivo: no celular, tudo vira 1 coluna */
-@media (max-width: 900px) {
-  .col-span-6,
-  .col-span-5,
-  .col-span-4,
-  .col-span-3 {
-    grid-column: span 12;
-  }
-}
-.table td {
-  vertical-align: middle; /* Alinha select e botões na mesma linha invisível */
-}
-
-/* Garante que o select não fique gigante */
-.table .form-input {
-  height: 32px; 
-  padding: 0 8px;
-}
-/* Badge Base */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 12px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-/* Variantes de Cor */
-.badge-success {
-  background-color: #dcfce7; /* Verde suave */
-  color: #166534;           /* Verde escuro */
-}
-
-.badge-warning {
-  background-color: #fef9c3; /* Amarelo suave */
-  color: #854d0e;           /* Marrom/Dourado */
-}
-
-.badge-danger {
-  background-color: #fee2e2; /* Vermelho suave */
-  color: #991b1b;           /* Vermelho escuro */
-}
-.table td {
-  padding: 12px 16px;
-  vertical-align: middle; /* Alinhamento centralizado verticalmente */
-  border-bottom: 1px solid var(--border-soft);
-}
-
-/* Ajuste para botões e selects dentro da tabela */
-.table .btn--sm {
-  height: 28px;
-  padding: 0 8px;
-}
-
-.table .form-input {
-  height: 32px;
-  font-size: 13px;
-}
-/* Container de ações na tabela */
-.table-actions {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;       /* Espaço entre os botões */
-  height: 100%;   /* Garante que ocupe a altura da célula */
-}
-
-/* Ajuste específico para os botões dentro da tabela para não 'pularem' */
-.table td .btn {
-  margin: 0; 
-  vertical-align: middle;
-}
-
-/* Força o alinhamento vertical de todas as células da tabela */
-.table td {
-  vertical-align: middle !important;
-}
-
-.header-between {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-md);
-}
-.card-body--flush {
-  padding: 0;
-}
-/* faixa de filtro igual Clientes */
-.card-filter {
-  padding: 15px 20px;
-  background: var(--bg-input);
-  border-bottom: 1px solid var(--border-soft);
-}
-
-/* body sem padding para tabela encostar igual */
-.card-body--flush {
-  padding: 0;
-}
-
-/* textos auxiliares padronizados (sem inline) */
-.cell-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.cell-muted {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-/* badge neutra (igual você fazia inline) */
-.badge-neutral {
-  background: var(--bg-page);
-  color: var(--text-main);
-}
-.header-between {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  padding-bottom: 1rem;
-}
-
-.cell-stack {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
-}
-
-.badge {
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-.card-subtitle{
-  color: var(--text-muted);
-  font-size: var(--font-size-sm);
-  margin: 0;
-}
-
-.footer-between{
-  display:flex;
-  justify-content:space-between;
-  gap:12px;
-  align-items:center;
-  padding:14px 18px;
-  border-top:1px solid var(--border-soft);
-}
-
-.footer-actions{
-  display:flex;
-  gap:10px;
-  align-items:center;
-}
-
-.muted{
-  color: var(--text-muted);
-  font-size: var(--font-size-sm);
-}
-.container-botoes {
-  display: flex;
-  justify-content: flex-end; /* Empurra tudo para a direita */
-  gap: 10px;                /* Espaço entre os botões */
-}
-/* divisor simples dentro de forms */
-.form-divider {
-  grid-column: span 12;
-  height: 1px;
-  background: var(--border-soft);
-  margin: 12px 0;
-}
-.form-section-title {
-  grid-column: span 12;
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--text-primary);
-  margin-top: 16px;
-  margin-bottom: 8px;
 }
