@@ -237,23 +237,23 @@ async function salvar() {
 
 onMounted(async () => {
   try {
+    // 1. Carrega os dados necessários para os selects em paralelo
     await Promise.all([
       carregarFornecedores(),
-      uni.carregarCategoria('MODULO') // Removi o await interno
+      uni.carregarCategoria('MODULO')
     ])
 
-    if (isEdit.value) await carregarProduto()
-    else resetForm()
-    
-    console.log('[UNIDADE] carregou categoria MODULO, opcoes:', uni.opcoes.value)
-  } catch (err) {
+    // 2. Decide se carrega um produto existente ou reseta para um novo
+    if (isEdit.value) {
+      await carregarProduto()
+    } else {
+      resetForm()
+    }
 
-
-    if (isEdit.value) await carregarProduto()
-    else resetForm()
+    console.log('[UNIDADE] Dados carregados com sucesso:', uni.opcoes.value)
   } catch (err) {
-    console.error(err)
-    alert('Erro ao carregar dados.')
+    console.error('Erro ao inicializar formulário:', err)
+    alert('Erro ao carregar dados iniciais.')
     router.push('/produtos')
   }
 })
