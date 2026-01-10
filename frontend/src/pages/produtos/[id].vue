@@ -32,13 +32,14 @@
           <Input v-model="form.medida" label="Medida" class="col-span-4" />
 
           <!-- ✅ UNIDADE das CONSTANTES -->
-          <SearchInput
-            v-model="form.unidade"
-            label="Unidade *"
-            :options="unidadesOptions"
-            required
-            class="col-span-4"
-          />
+<SearchInput
+  v-model="form.unidade"
+  label="Unidade *"
+  :options="unidadesOptions"
+  required
+  class="col-span-4"
+/>
+
 
           <Input v-model="quantidadeMask" label="Quantidade *" required inputmode="numeric" class="col-span-4" />
           <Input v-model="valorUnitarioInput" label="Valor Unitário *" required inputmode="numeric" class="col-span-4" />
@@ -163,6 +164,18 @@ async function carregarProduto() {
   valorUnitarioInput.value = maskMoneyBR(Number(data.valor_unitario || 0))
 }
 
+const unidadesOptions = computed(() => {
+  const opts = uni.opcoes.value || []
+
+  return opts
+    .filter(o => String(o.chave || o.key || o.chave_interno || '').toUpperCase() === 'UNIDADE')
+    .map(o => ({
+      label: o.label ?? o.rotulo ?? o.nome ?? '',
+      value: o.value ?? o.rotulo ?? o.label ?? '',
+    }))
+    .filter(o => o.label)
+})
+
 async function salvar() {
   const erro = validarObrigatorios()
   if (erro) return alert(erro)
@@ -202,7 +215,7 @@ onMounted(async () => {
   try {
     await Promise.all([
       carregarFornecedores(),
-      uni.carregarCategoria('UNIDADE'),
+      uni.carregarCategoria('MODULO')
     ])
 
     if (isEdit.value) await carregarProduto()
