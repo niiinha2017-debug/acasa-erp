@@ -67,7 +67,7 @@ export class ComprasService {
   }
 
 // No ComprasService.ts
-private async atualizarEstoqueEValorProdutos(
+await this.atualizarEstoqueEValorProdutos(
   itens: Array<{ produto_id?: number | null; quantidade: any; valor_unitario: any }>,
 ) {
   if (!itens?.length) return
