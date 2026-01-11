@@ -150,6 +150,8 @@ export class ComprasService {
 
         venda_id: tipo === 'CLIENTE_AMBIENTE' ? (dto as any).venda_id : null,
 
+        data_compra: (dto as any).data_compra ? new Date((dto as any).data_compra) : undefined,
+
         fornecedor_id: (dto as any).fornecedor_id,
 
         // ✅ persiste se vier (Prisma tem venda_item_id Int?)
@@ -203,6 +205,8 @@ export class ComprasService {
       include: { itens: true, rateios: true },
     })
     if (!existe) throw new NotFoundException('Compra não encontrada')
+      const dataCompra = (dto as any).data_compra ? new Date((dto as any).data_compra) : undefined
+
 
     const tipoAtual = String(existe.tipo_compra || '').trim()
     const tipoNovo = (dto as any).tipo_compra ? String((dto as any).tipo_compra).trim() : tipoAtual
@@ -294,24 +298,26 @@ export class ComprasService {
       }
     }
 
-    const compraAtualizada = await this.prisma.compras.update({
-      where: { id },
-      data: {
-        venda_id:
-          tipoAtual === 'CLIENTE_AMBIENTE'
-            ? ((dto as any).venda_id === undefined ? undefined : (dto as any).venda_id)
-            : null,
+const compraAtualizada = await this.prisma.compras.update({
+  where: { id },
+  data: {
+    venda_id:
+      tipoAtual === 'CLIENTE_AMBIENTE'
+        ? ((dto as any).venda_id === undefined ? undefined : (dto as any).venda_id)
+        : null,
 
-        fornecedor_id: (dto as any).fornecedor_id ?? undefined,
-        status: (dto as any).status ?? undefined,
+    fornecedor_id: (dto as any).fornecedor_id ?? undefined,
+    status: (dto as any).status ?? undefined,
 
-        // ✅ permite atualizar vínculo se você mandar
-        venda_item_id: (dto as any).venda_item_id ?? undefined,
+    // ✅ AQUI (faltava)
+    data_compra: dataCompra,
 
-        valor_total: total,
-      },
-      include: { itens: true, rateios: true },
-    })
+    venda_item_id: (dto as any).venda_item_id ?? undefined,
+    valor_total: total,
+  },
+  include: { itens: true, rateios: true },
+})
+
 
     await this.atualizarUltimoValorProdutos(itensAtualizados as any)
 

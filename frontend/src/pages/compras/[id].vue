@@ -50,9 +50,6 @@
     required
   />
 </div>
-
-
-
           <div v-if="tipoCompra === 'CLIENTE_AMBIENTE'" class="col-span-12">
             <SearchInput
               v-model="vendaSelecionada"
@@ -283,6 +280,9 @@ const form = ref({
   data_compra: '', // YYYY-MM-DD
 })
 
+/* =========================
+   FORNECEDORES / VENDAS
+========================= */
 const fornecedores = ref([])
 const fornecedorSelecionado = ref(null)
 
@@ -290,7 +290,7 @@ const fornecedorOptions = computed(() =>
   fornecedores.value.map((f) => ({
     value: f.id,
     label: f.razao_social || f.nome_fantasia || `Fornecedor #${f.id}`,
-  }))
+  })),
 )
 
 async function carregarFornecedores() {
@@ -311,6 +311,9 @@ async function carregarVendas() {
   }))
 }
 
+/* =========================
+   UNIDADES (CONST)
+========================= */
 const uni = useConstantes()
 
 const unidadesOptions = computed(() => {
@@ -325,27 +328,33 @@ const unidadesOptions = computed(() => {
     .filter((o) => o.label)
 })
 
+/* =========================
+   ITENS
+========================= */
 const itens = ref([])
 
-const itemNovo = reactive({
-  produto_id: null,
-  descricao: '',
-  unidade: '',
-  quantidade: '1',
-  valorUnitarioMask: '0,00',
-  valor_total: 0,
-  valorTotalMask: '0,00',
-})
+// ✅ FIX: itensValidos DEPOIS de itens
+const itensValidos = computed(() => (itens.value || []).filter((i) => i && i.produto_id))
 
 function round2(n) {
   return Math.round((Number(n) + Number.EPSILON) * 100) / 100
 }
 
 const totalCalculado = computed(() =>
-  round2(itens.value.reduce((acc, it) => acc + Number(it?.valor_total || 0), 0))
+  round2(itens.value.reduce((acc, it) => acc + Number(it?.valor_total || 0), 0)),
 )
+
+// ✅ colunas mínimas (ajuste keys conforme seu Table.vue se precisar)
+const columnsItens = [
+  { key: 'descricao', label: 'Produto' },
+  { key: 'unidade', label: 'Un.' },
+  { key: 'quantidade', label: 'Qtd' },
+  { key: 'valor_unitario', label: 'V. Unit.' },
+  { key: 'valor_total', label: 'Subtotal' },
+]
+
 function dateOnlyToIso(dateOnly) {
-  // usa meio-dia local pra não cair no dia anterior ao converter pra ISO
+  // meio-dia local pra não cair no dia anterior
   if (!dateOnly) return null
   const d = new Date(`${dateOnly}T12:00:00`)
   return Number.isNaN(d.getTime()) ? null : d.toISOString()
@@ -374,16 +383,9 @@ function addItem() {
   })
 }
 
-function removerItem(idx) {
-  itens.value.splice(idx, 1)
-}
-
-function recalcularItem(idx) {
-  const it = itens.value[idx]
-  if (!it) return
-  it.valor_total = round2(Number(it.quantidade || 0) * Number(it.valor_unitario || 0))
-}
-
+/* =========================
+   PRODUTOS
+========================= */
 const produtoOptions = ref([])
 const produtoMap = ref(new Map())
 
@@ -409,21 +411,18 @@ function montarDescricaoProduto(p) {
   return `${nome} — ${partes.join(' • ')}`
 }
 
-function aplicarProdutoNoItem(idx, produtoId) {
-  const p = produtoMap.value.get(Number(produtoId))
-  if (!p) return
-
-  const it = itens.value[idx]
-  if (!it) return
-
-  it.produto_id = p.id
-  it.descricao = montarDescricaoProduto(p)
-  it.unidade = p.unidade || it.unidade
-
-  if (!it.valor_unitario) it.valor_unitario = Number(p.valor_unitario || 0)
-
-  recalcularItem(idx)
-}
+/* =========================
+   ITEM NOVO (registrar)
+========================= */
+const itemNovo = reactive({
+  produto_id: null,
+  descricao: '',
+  unidade: '',
+  quantidade: '1',
+  valorUnitarioMask: '0,00',
+  valor_total: 0,
+  valorTotalMask: '0,00',
+})
 
 function limparItemNovo() {
   itemNovo.produto_id = null
@@ -455,7 +454,7 @@ watch(
     itemNovo.valor_total = total
     itemNovo.valorTotalMask = maskMoneyBR(total)
   },
-  { deep: true }
+  { deep: true },
 )
 
 function registrarItemNovo() {
@@ -481,6 +480,9 @@ function registrarItemNovo() {
   limparItemNovo()
 }
 
+/* =========================
+   RATEIO (CLIENTE_AMBIENTE)
+========================= */
 const ambientes = ref([])
 const ambientesSelecionados = ref(new Set())
 const rateios = ref([])
@@ -509,30 +511,15 @@ function ratearAutomatico() {
   recalcularSomaRateio()
 }
 
-function selecionarTodosAmbientes() {
-  ambientesSelecionados.value = new Set(ambientes.value)
-  ratearAutomatico()
-}
-
-function toggleAmbiente(nome) {
-  const set = new Set(ambientesSelecionados.value)
-  set.has(nome) ? set.delete(nome) : set.add(nome)
-  ambientesSelecionados.value = set
-  ratearAutomatico()
-}
-
-function removerRateio(idx) {
-  rateios.value.splice(idx, 1)
-  recalcularSomaRateio()
-}
-
 async function carregarAmbientesDaVenda(vendaId) {
   const { data } = await api.get(`/vendas/${vendaId}`)
   const itensVenda = Array.isArray(data?.itens) ? data.itens : []
-
   ambientes.value = Array.from(new Set(itensVenda.map((i) => i?.nome_ambiente).filter(Boolean)))
 }
 
+/* =========================
+   MODAL PRODUTO
+========================= */
 const modalProduto = reactive({
   aberto: false,
   salvando: false,
@@ -568,7 +555,7 @@ watch(
   () => modalProduto.quantidadeMask,
   (v) => {
     modalProduto.form.quantidade = Number(String(v || '').replace(/\D/g, '')) || 0
-  }
+  },
 )
 
 watch(
@@ -578,17 +565,8 @@ watch(
     const valor = n ? Number(n) / 100 : 0
     modalProduto.form.valor_unitario = valor
     modalProduto.valorUnitarioInput = maskMoneyBR(valor)
-  }
+  },
 )
-
-watch(() => tipoCompra.value, () => {
-  ambientesSelecionados.value?.clear?.()
-})
-
-watch(() => vendaSelecionada.value, () => {
-  ambientesSelecionados.value?.clear?.()
-})
-
 
 watch(
   () => [modalProduto.form.quantidade, modalProduto.form.valor_unitario],
@@ -597,26 +575,23 @@ watch(
     modalProduto.form.valor_total = total
     modalProduto.valorTotalMask = maskMoneyBR(total)
   },
-  { deep: true }
+  { deep: true },
 )
 
 async function salvarProduto() {
   modalProduto.salvando = true
   try {
-    const { data } = await api.post('/produtos', modalProduto.form)
+    await api.post('/produtos', modalProduto.form)
     await carregarProdutos()
-
-    const novoId = data?.id
-    if (novoId && modalProduto.targetIdx !== null) {
-      aplicarProdutoNoItem(modalProduto.targetIdx, novoId)
-    }
-
     fecharModalProduto()
   } finally {
     modalProduto.salvando = false
   }
 }
 
+/* =========================
+   CARREGAR / SALVAR / EXCLUIR
+========================= */
 async function carregarCompra() {
   if (!isEdit.value || !compraId.value) return
 
@@ -628,17 +603,20 @@ async function carregarCompra() {
   form.value.venda_id = data?.venda_id ?? null
   form.value.data_compra = isoToDateOnly(data?.data_compra)
 
-
-  itens.value = Array.isArray(data?.itens) ? data.itens.filter(Boolean).map((it) => ({
-    id: it.id ?? undefined,
-    produto_id: it.produto_id ?? null,
-    descricao: it.descricao ?? '',
-    unidade: it.unidade ?? '',
-    quantidade: Number(it.quantidade ?? 0),
-    valor_unitario: Number(it.valor_unitario ?? 0),
-    valor_total: Number(it.valor_total ?? 0),
-    _key: it._key || `db-${it.id || Math.random().toString(36).slice(2)}`,
-  })) : []
+  itens.value = Array.isArray(data?.itens)
+    ? data.itens
+        .filter(Boolean)
+        .map((it) => ({
+          id: it.id ?? undefined,
+          produto_id: it.produto_id ?? null,
+          descricao: it.descricao ?? '',
+          unidade: it.unidade ?? '',
+          quantidade: Number(it.quantidade ?? 0),
+          valor_unitario: Number(it.valor_unitario ?? 0),
+          valor_total: Number(it.valor_total ?? 0),
+          _key: it._key || `db-${it.id || Math.random().toString(36).slice(2)}`,
+        }))
+    : []
 
   rateios.value = Array.isArray(data?.rateios) ? data.rateios.filter(Boolean) : []
   recalcularSomaRateio()
@@ -647,6 +625,10 @@ async function carregarCompra() {
 async function salvar() {
   if (!fornecedorSelecionado.value) return alert('Selecione o fornecedor.')
   if (!form.value.data_compra) return alert('Informe a data da compra.')
+
+  if (!itensValidos.value.length) {
+    return alert('Adicione ao menos 1 item.')
+  }
 
   if (tipoCompra.value === 'CLIENTE_AMBIENTE') {
     if (!vendaSelecionada.value) return alert('Selecione a venda.')
@@ -663,8 +645,9 @@ async function salvar() {
       fornecedor_id: fornecedorSelecionado.value,
       venda_id: tipoCompra.value === 'CLIENTE_AMBIENTE' ? vendaSelecionada.value : null,
       data_compra: dateOnlyToIso(form.value.data_compra),
-      itens: itens.value,
-      rateios: rateios.value,
+      status: 'ATIVO',
+      itens: itensValidos.value,
+      rateios: tipoCompra.value === 'CLIENTE_AMBIENTE' ? rateios.value : [],
       valor_total: totalCalculado.value,
     }
 
@@ -683,7 +666,6 @@ async function salvar() {
   }
 }
 
-
 async function excluir() {
   if (!confirm('Deseja excluir esta compra?')) return
   excluindo.value = true
@@ -695,6 +677,9 @@ async function excluir() {
   }
 }
 
+/* =========================
+   WATCHERS
+========================= */
 watch(totalCalculado, () => {
   if (tipoCompra.value === 'CLIENTE_AMBIENTE' && ambientesSelecionados.value.size > 0) {
     ratearAutomatico()
@@ -727,6 +712,9 @@ watch(tipoCompra, async (novo) => {
   }
 })
 
+/* =========================
+   MOUNT
+========================= */
 onMounted(async () => {
   loading.value = true
   try {
@@ -756,6 +744,6 @@ onMounted(async () => {
     loading.value = false
   }
 })
-
 </script>
+
 

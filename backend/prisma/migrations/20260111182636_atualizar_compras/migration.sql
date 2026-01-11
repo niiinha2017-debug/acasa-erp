@@ -1,0 +1,8 @@
+-- AlterTable
+ALTER TABLE `compras` MODIFY `status` VARCHAR(191) NOT NULL DEFAULT 'ATIVO';
+
+-- AlterTable
+ALTER TABLE `despesas` MODIFY `status` VARCHAR(191) NOT NULL DEFAULT 'ATIVO';
+
+-- AlterTable
+ALTER TABLE `produtos` MODIFY `status` VARCHAR(191) NOT NULL DEFAULT 'ATIVO';

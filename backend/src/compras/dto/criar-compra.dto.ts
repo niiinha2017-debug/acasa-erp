@@ -6,15 +6,12 @@ import {
   IsOptional,
   IsString,
   Min,
-  ValidateIf,
   ValidateNested,
 } from 'class-validator'
 
 export class CriarCompraItemDto {
-  // ✅ Prisma: produto_id Int?
-  // Aceita number ou null
+  // Prisma: produto_id Int?
   @IsOptional()
-  @ValidateIf((_, v) => v !== null)
   @Type(() => Number)
   @IsInt()
   produto_id?: number | null
@@ -56,10 +53,8 @@ export class CriarCompraDto {
   @IsString()
   tipo_compra: string // INSUMOS | CLIENTE_AMBIENTE
 
-  // ✅ Prisma: venda_id Int?
-  // Aceita number ou null
+  // Prisma: venda_id Int?
   @IsOptional()
-  @ValidateIf((_, v) => v !== null)
   @Type(() => Number)
   @IsInt()
   venda_id?: number | null
@@ -68,16 +63,16 @@ export class CriarCompraDto {
   @IsInt()
   fornecedor_id: number
 
-  // ✅ Prisma: venda_item_id Int?
-  // Aceita number ou null
+  // Prisma: venda_item_id Int?
   @IsOptional()
-  @ValidateIf((_, v) => v !== null)
   @Type(() => Number)
   @IsInt()
   venda_item_id?: number | null
 
+  // ✅ se você colocou @default("ATIVO") no Prisma, NÃO precisa obrigar no DTO
+  @IsOptional()
   @IsString()
-  status: string
+  status?: string
 
   @IsOptional()
   @Type(() => Number)

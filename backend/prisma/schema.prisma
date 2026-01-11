@@ -136,7 +136,8 @@ model produtos {
   valor_unitario Decimal @db.Decimal(10, 2)
   valor_total    Decimal @db.Decimal(10, 2)
 
-  status String
+  status String @default("ATIVO")
+
 
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
@@ -360,7 +361,7 @@ model despesas {
   funcionario_id Int?
   funcionario    funcionarios? @relation(fields: [funcionario_id], references: [id])
 
-  status String
+  status String @default("ATIVO")
 
   // ✅ RECORRÊNCIA
   recorrencia_id String?  @db.VarChar(36)
@@ -697,7 +698,7 @@ model compras {
   venda_item_id Int?
   venda_item    vendas_itens? @relation(fields: [venda_item_id], references: [id], onDelete: SetNull)
 
-  status String
+  status String @default("ATIVO")
 
   data_compra DateTime @default(now())
 

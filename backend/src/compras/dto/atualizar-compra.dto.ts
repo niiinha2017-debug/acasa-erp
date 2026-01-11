@@ -6,7 +6,6 @@ import {
   IsOptional,
   IsString,
   Min,
-  ValidateIf,
   ValidateNested,
 } from 'class-validator'
 
@@ -16,9 +15,8 @@ export class AtualizarCompraItemDto {
   @IsInt()
   id?: number
 
-  // ✅ compatível com Prisma Int? (aceita number ou null)
+  // aceita number ou null
   @IsOptional()
-  @ValidateIf((_, v) => v !== null)
   @Type(() => Number)
   @IsInt()
   produto_id?: number | null
@@ -61,9 +59,8 @@ export class AtualizarCompraDto {
   @IsString()
   tipo_compra?: string
 
-  // ✅ compatível com Prisma Int? (aceita number ou null)
+  // aceita number ou null
   @IsOptional()
-  @ValidateIf((_, v) => v !== null)
   @Type(() => Number)
   @IsInt()
   venda_id?: number | null
@@ -73,9 +70,8 @@ export class AtualizarCompraDto {
   @IsInt()
   fornecedor_id?: number
 
-  // ✅ compatível com Prisma Int? (aceita number ou null)
+  // aceita number ou null
   @IsOptional()
-  @ValidateIf((_, v) => v !== null)
   @Type(() => Number)
   @IsInt()
   venda_item_id?: number | null
@@ -84,6 +80,7 @@ export class AtualizarCompraDto {
   @IsString()
   status?: string
 
+  // se você estiver calculando no service, pode até remover do DTO
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
