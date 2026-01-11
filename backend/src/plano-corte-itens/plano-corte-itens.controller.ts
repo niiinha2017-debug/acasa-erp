@@ -1,5 +1,14 @@
-import { 
-  Controller, Get, Post, Body, Put, Param, Delete, Query, HttpCode, HttpStatus 
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Put,
+  Param,
+  Delete,
+  Query,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common'
 import { PlanoCorteItensService } from './plano-corte-itens.service'
 import { CreatePlanoCorteItemDto } from './dto/create-plano-corte-iten.dto'
@@ -9,32 +18,28 @@ import { UpdatePlanoCorteItemDto } from './dto/update-plano-corte-iten.dto'
 export class PlanoCorteItensController {
   constructor(private readonly service: PlanoCorteItensService) {}
 
-  /**
-   * Função de limpeza para evitar erros de string/caractere no ID
-   */
   private cleanId(id: string | number): number {
-    return Number(String(id).replace(/\D/g, ''));
+    return Number(String(id).replace(/\D/g, ''))
   }
 
-  @Post()
+  @Post() // ✅ CRIAR = POST
   create(@Body() dto: CreatePlanoCorteItemDto) {
     return this.service.create(dto)
   }
 
   @Get()
   findAll(@Query('fornecedor_id') fornecedor_id?: string) {
-    // Aplicando a limpeza também no Query Parameter
-    const fId = fornecedor_id ? this.cleanId(fornecedor_id) : undefined;
+    const fId = fornecedor_id ? this.cleanId(fornecedor_id) : undefined
     return this.service.findAll(fId)
   }
 
-  @Put(':id') // Mudamos Patch para Put para seguir o padrão do ERP
+  @Put(':id') // ✅ ATUALIZAR = PUT
   update(@Param('id') id: string, @Body() dto: UpdatePlanoCorteItemDto) {
     return this.service.update(this.cleanId(id), dto)
   }
 
   @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT) // Retorna 204 (Sucesso sem conteúdo)
+  @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id') id: string) {
     return this.service.remove(this.cleanId(id))
   }

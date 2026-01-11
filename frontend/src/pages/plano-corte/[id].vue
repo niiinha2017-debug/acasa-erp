@@ -1,161 +1,276 @@
 <template>
-  <Card>
+  <Card :shadow="true">
     <!-- HEADER -->
     <header class="flex items-start justify-between gap-4 p-6 border-b border-gray-100">
       <div>
         <h2 class="text-xl font-black tracking-tight text-gray-900 uppercase">
           {{ isEdit ? `Editar Plano #${planoId}` : 'Novo Plano de Corte' }}
         </h2>
-        <p class="mt-1 text-sm font-semibold text-gray-400">
-          {{ isEdit
-            ? 'Ajuste itens, quantidades e valores do serviço.'
-            : 'Cadastre um novo plano de corte para o fornecedor.' }}
-        </p>
       </div>
 
-      <Button variant="secondary" size="sm" @click="router.push('/plano-corte')">
-        <i class="pi pi-arrow-left mr-2 text-xs"></i>
+      <Button variant="secondary" size="sm" type="button" @click="router.back()">
         Voltar
       </Button>
     </header>
 
     <!-- BODY -->
-    <div class="p-6 space-y-8">
-      <!-- BLOCO: DADOS GERAIS -->
-      <section class="space-y-4">
-        <div class="grid grid-cols-12 gap-5">
-          <div class="col-span-12 md:col-span-6">
-            <label class="text-xs font-black uppercase text-gray-500">Fornecedor</label>
-            <select
-              v-model="fornecedorId"
-              class="w-full h-11 px-4 rounded-xl border border-gray-200 bg-gray-50 text-sm font-semibold"
-              :disabled="isEdit"
-            >
-              <option v-for="f in fornecedores" :key="f.id" :value="f.id">
-                {{ f.razao_social }}
-              </option>
-            </select>
-          </div>
+    <div class="p-6">
+      <template v-if="!loading">
+        <form class="grid grid-cols-12 gap-x-5 gap-y-6" @submit.prevent>
+  <!-- Fornecedor -->
+  <div class="col-span-12 md:col-span-6">
+    <SearchInput
+      v-model="fornecedorSelecionado"
+      label="Fornecedor *"
+      :options="fornecedorOptions"
+      required
+      :colSpan="12"
+      @update:modelValue="(v) => onSelecionarFornecedor(v)"
+    />
+  </div>
 
-          <div class="col-span-12 md:col-span-3">
-            <Input v-model="dataVenda" type="date" label="Data da Venda *" />
-          </div>
+  <!-- Data -->
+  <div class="col-span-12 md:col-span-3">
+    <Input
+      v-model="dataVenda"
+      label="Data *"
+      type="date"
+      required
+    />
+  </div>
 
-          <div class="col-span-12 md:col-span-3">
-            <label class="text-xs font-black uppercase text-gray-500">Status</label>
-            <select
-              v-model="statusPlano"
-              class="w-full h-11 px-4 rounded-xl border border-gray-200 bg-white text-sm font-semibold"
-            >
-              <option value="ABERTO">ABERTO</option>
-              <option value="EM_PRODUCAO">EM PRODUÇÃO</option>
-              <option value="CONCLUIDO">CONCLUÍDO</option>
-              <option value="CANCELADO">CANCELADO</option>
-            </select>
-          </div>
-        </div>
-      </section>
+  <!-- Status -->
+  <div class="col-span-12 md:col-span-3">
+    <SearchInput
+      v-model="statusPlano"
+      label="Status *"
+      :options="statusPlanoOptions"
+      required
+      :colSpan="12"
+    />
+  </div>
+</form>
+        <form class="grid grid-cols-12 gap-x-5 gap-y-6 mt-8" @submit.prevent>
+          <!-- Registrar Item -->
+          <div class="col-span-12 flex items-end justify-between">
+            <h3 class="text-[10px] font-extrabold uppercase tracking-[0.18em] text-gray-400">
+              Registrar Item
+            </h3>
 
-      <div class="h-px w-full bg-gray-100"></div>
-
-      <!-- BLOCO: ADICIONAR ITEM -->
-      <section class="space-y-4">
-        <div>
-          <h3 class="text-sm font-black uppercase text-gray-900">Itens do Plano</h3>
-          <p class="text-xs font-semibold text-gray-400">
-            Adicione produtos ou serviços ao plano.
-          </p>
-        </div>
-
-        <div class="grid grid-cols-12 gap-5 items-end">
-          <div class="col-span-12 md:col-span-5">
-            <label class="text-xs font-black uppercase text-gray-500">Item</label>
-            <select
-              v-model="itemId"
-              class="w-full h-11 px-4 rounded-xl border border-gray-200 bg-white text-sm font-semibold"
-            >
-              <option :value="null">Selecione…</option>
-              <option v-for="i in itensDisponiveis" :key="i.id" :value="i.id">
-                {{ i.nome }} {{ i.cor ? `- ${i.cor}` : '' }}
-              </option>
-            </select>
-          </div>
-
-          <div class="col-span-12 md:col-span-2">
-            <Input v-model="qtd" label="Qtd (m²)" type="number" step="0.01" />
-          </div>
-
-          <div class="col-span-12 md:col-span-3">
-            <Input v-model="valorUnitInput" label="Valor Unitário" />
-          </div>
-
-          <div class="col-span-12 md:col-span-2">
-            <Button
-              variant="secondary"
-              class="w-full"
-              :disabled="!podeAdicionar"
-              @click="adicionarNaLista"
-            >
-              + Incluir
+            <Button variant="secondary" size="sm" type="button" @click="abrirModalProduto()">
+              + Novo Produto
             </Button>
           </div>
-        </div>
 
-        <!-- TABELA -->
-        <div class="overflow-hidden rounded-2xl border border-gray-100">
-          <Table :columns="columns" :rows="produtos">
-            <template #cell-item="{ row }">
-              <strong>{{ row.item?.nome || 'Item' }}</strong>
-            </template>
+          <!-- Produto -->
+          <div class="col-span-12 md:col-span-6">
+<SearchInput
+  v-model="itemNovo.item_id"
+              label="Produto *"
+              :options="produtoOptions"
+              required
+              :colSpan="12"
+              @update:modelValue="(v) => onSelecionarProdutoNovo(v)"
+            />
+          </div>
 
-            <template #cell-valor_unitario="{ row }">
-              {{ maskMoneyBR(row.valor_unitario) }}
-            </template>
+          <!-- Unidade -->
+          <div class="col-span-12 md:col-span-2">
+            <Input v-model="itemNovo.unidade" label="Unidade" readonly />
+          </div>
 
-            <template #cell-valor_total="{ row }">
-              {{ maskMoneyBR(row.valor_total) }}
-            </template>
+          <!-- QTD -->
+          <div class="col-span-12 md:col-span-2">
+            <Input v-model="itemNovo.quantidade" label="QTD *" required />
+          </div>
 
-            <template #cell-acoes="{ index }">
-              <Button variant="danger" size="sm" @click="removerDaLista(index)">
-                <i class="pi pi-trash text-xs"></i>
-              </Button>
-            </template>
-          </Table>
-        </div>
+          <!-- Valor Unit -->
+          <div class="col-span-12 md:col-span-2">
+            <Input v-model="itemNovo.valorUnitarioMask" label="Valor Unit. *" required />
+          </div>
 
-        <!-- TOTAL -->
-        <div class="flex justify-end">
-          <div class="text-right">
-            <div class="text-xs font-black uppercase text-gray-400">Total do Serviço</div>
-            <div class="text-2xl font-black text-gray-900">
-              {{ maskMoneyBR(totalGeral) }}
+          <!-- Subtotal -->
+          <div class="col-span-12 md:col-span-4">
+            <Input :model-value="itemNovoValorTotalMask" label="Subtotal Item" readonly />
+          </div>
+
+          <!-- Ações do item -->
+          <div class="col-span-12 md:col-span-8 flex items-end justify-end gap-3 pb-1">
+            <Button variant="secondary" type="button" @click="limparItemNovo()">
+              Limpar
+            </Button>
+            <Button variant="primary" type="button" :disabled="!podeAdicionarItem" @click="registrarItemNovo()">
+              Adicionar Item
+            </Button>
+          </div>
+
+          <!-- Itens Adicionados -->
+          <div class="col-span-12 mt-4">
+            <label class="block text-[10px] font-extrabold uppercase tracking-[0.18em] text-gray-400 mb-3">
+              Itens Adicionados
+            </label>
+
+            <div class="border border-gray-100 rounded-2xl overflow-hidden">
+              <Table
+                :columns="columnsItens"
+                :rows="itens"
+                :loading="false"
+                empty-text="Nenhum item adicionado."
+              >
+                <template #cell-produto="{ row }">
+                  <strong>{{ row.item?.nome_produto || 'Item' }}</strong>
+                </template>
+
+                <template #cell-valor_unitario="{ row }">
+                  {{ maskMoneyBR(row.valor_unitario || 0) }}
+                </template>
+
+                <template #cell-valor_total="{ row }">
+                  {{ maskMoneyBR(row.valor_total || 0) }}
+                </template>
+
+                <template #cell-acoes="{ index }">
+                  <Button variant="danger" size="sm" type="button" @click="removerItem(index)">
+                    <i class="pi pi-trash text-xs"></i>
+                  </Button>
+                </template>
+              </Table>
+
+              <div class="flex items-center justify-end p-4 border-t border-gray-100 bg-gray-50">
+                <span class="text-sm font-black text-gray-900 uppercase">
+                  Total: {{ maskMoneyBR(totalCalculado) }}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </form>
+      </template>
+
+      <!-- Loading -->
+      <div v-else class="flex flex-col items-center justify-center py-20 gap-3">
+        <i class="pi pi-spin pi-spinner text-2xl text-brand-primary"></i>
+        <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Carregando...</span>
+      </div>
     </div>
 
     <!-- FOOTER -->
-    <footer class="flex items-center justify-end gap-3 p-6 border-t border-gray-100">
-      <Button
-        variant="secondary"
-        :loading="salvando"
-        @click="salvar"
-      >
-        {{ isEdit ? 'Salvar Alterações' : 'Criar Plano' }}
+    <footer class="flex items-center justify-between p-6 border-t border-gray-100 bg-white">
+      <Button v-if="isEdit" variant="danger" type="button" @click="excluir">
+        Excluir
       </Button>
+      <div v-else></div>
 
-      <Button
-        v-if="isEdit"
-        variant="primary"
-        :loading="encaminhando"
-        @click="encaminharParaProducao"
-      >
-        Encaminhar para Produção
-      </Button>
+      <div class="flex items-center gap-3">
+        <Button
+          v-if="isEdit"
+          variant="secondary"
+          :loading="encaminhando"
+          type="button"
+          @click="encaminharParaProducao"
+        >
+          Encaminhar para Produção
+        </Button>
+
+        <Button variant="primary" :loading="salvando" type="button" @click="salvar">
+          {{ isEdit ? 'Salvar Alterações' : 'Finalizar Plano' }}
+        </Button>
+      </div>
     </footer>
   </Card>
+
+  <!-- MODAL: NOVO PRODUTO (igual ao da Compras) -->
+  <Transition name="fade">
+    <div
+      v-if="modalProduto.aberto"
+      class="fixed inset-0 z-modal flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm"
+      @click.self="fecharModalProduto()"
+    >
+      <div class="w-full max-w-3xl bg-white rounded-3xl border border-gray-100 shadow-2xl overflow-hidden">
+        <header class="flex items-start justify-between gap-4 px-8 py-6 border-b border-gray-50 bg-gray-50/30">
+          <div>
+            <h3 class="text-xl font-black text-gray-900 tracking-tighter uppercase">Novo Produto</h3>
+            <p class="text-sm font-semibold text-gray-400 mt-1">Cadastre um novo produto abaixo.</p>
+          </div>
+
+          <button
+            class="w-8 h-8 flex items-center justify-center rounded-xl bg-white border border-gray-100 text-gray-400 hover:text-red-600 hover:border-red-200 transition-all shadow-sm"
+            @click="fecharModalProduto()"
+          >
+            <i class="pi pi-times text-xs"></i>
+          </button>
+        </header>
+
+        <div class="p-8">
+          <form class="grid grid-cols-12 gap-5" @submit.prevent="salvarProduto">
+            <div class="col-span-12">
+              <SearchInput
+                v-model="modalProduto.form.fornecedor_id"
+                label="Fornecedor *"
+                :options="fornecedorOptions"
+                required
+                :colSpan="12"
+              />
+            </div>
+
+            <div class="col-span-12 md:col-span-8">
+              <Input v-model="modalProduto.form.nome_produto" label="Nome do Produto *" required />
+            </div>
+
+            <div class="col-span-12 md:col-span-4 flex items-end pb-1.5">
+              <CustomCheckbox
+                label="Ativo"
+                :model-value="modalProduto.form.status === 'ATIVO'"
+                @update:model-value="(v) => (modalProduto.form.status = v ? 'ATIVO' : 'INATIVO')"
+              />
+            </div>
+
+            <div class="col-span-12 md:col-span-4">
+              <Input v-model="modalProduto.form.marca" label="Marca" />
+            </div>
+            <div class="col-span-12 md:col-span-4">
+              <Input v-model="modalProduto.form.cor" label="Cor" />
+            </div>
+            <div class="col-span-12 md:col-span-4">
+              <Input v-model="modalProduto.form.medida" label="Medida" />
+            </div>
+
+            <div class="col-span-12 md:col-span-4">
+<SearchInput
+  v-model="modalProduto.form.unidade"
+  label="Unidade *"
+  :options="unidadesOptions"
+  required
+  :colSpan="12"
+/>
+
+            </div>
+
+            <div class="col-span-12 md:col-span-4">
+              <Input v-model="modalProduto.quantidadeMask" label="Quantidade *" required />
+            </div>
+
+            <div class="col-span-12 md:col-span-4">
+              <Input v-model="modalProduto.valorUnitarioInput" label="Valor Unitário *" required />
+            </div>
+
+            <div class="col-span-12 md:col-span-4">
+              <Input :model-value="modalProdutoValorTotalMask" label="Valor Total" readonly />
+            </div>
+
+            <div class="col-span-12 flex justify-end gap-3 pt-2 border-t border-gray-50 mt-2">
+              <Button variant="outline" type="button" @click="fecharModalProduto()">
+                Cancelar
+              </Button>
+              <Button variant="primary" type="submit" :loading="modalProduto.salvando">
+                <i class="pi pi-check mr-2 text-xs"></i>
+                Salvar Produto
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </Transition>
 </template>
 
 <script setup>
@@ -168,6 +283,12 @@ import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Table from '@/components/ui/Table.vue'
+import SearchInput from '@/components/ui/SearchInput.vue'
+import CustomCheckbox from '@/components/ui/CustomCheckbox.vue'
+
+const statusProducaoRaw = ref([])
+const modulosRaw = ref([])
+
 
 const router = useRouter()
 const route = useRoute()
@@ -176,75 +297,226 @@ const rawId = computed(() => String(route.params.id || 'novo'))
 const isEdit = computed(() => rawId.value !== 'novo')
 const planoId = computed(() => (isEdit.value ? Number(rawId.value) : null))
 
-const carregando = ref(false)
+const loading = ref(false)
 const salvando = ref(false)
 const encaminhando = ref(false)
 
+/**
+ * Campos do PLANO (backend exige)
+ */
+const dataVenda = ref('')       // string "YYYY-MM-DD"
+const statusPlano = ref('')
+
+
+/**
+ * Fornecedores
+ */
 const fornecedores = ref([])
+const fornecedorOptions = computed(() =>
+  fornecedores.value.map((f) => ({
+    label: f.razao_social,
+    value: f.id,
+    raw: f,
+  }))
+)
+
+const statusPlanoOptions = computed(() => {
+  // categoria: STATUS PRODUÇÃO
+  // chave: PLANO DE CORTE
+  const filtrados = statusProducaoRaw.value.filter((i) => i.chave === 'PLANO DE CORTE')
+
+  return filtrados.map((i) => ({
+    label: i.rotulo,     // UI
+    value: i.rotulo,     // ⚠️ aqui é o valor salvo no plano (se seu backend salva o texto)
+    // se seu backend salva a "chave do item", troque por: value: i.algumCampo
+    metadata: {
+      taxa: i.valor_numero,
+      info: i.valor_texto,
+    },
+  }))
+})
+
+async function carregarModulosConstantes() {
+  const { data } = await api.get(`/constantes?categoria=${encodeURIComponent('MODULO')}`)
+  modulosRaw.value = Array.isArray(data) ? data : []
+}
+
+
+async function carregarStatusPlanoCorte() {
+  const { data } = await api.get(`/constantes?categoria=${encodeURIComponent('STATUS PRODUÇÃO')}`)
+  statusProducaoRaw.value = Array.isArray(data) ? data : []
+}
+
+
+// IMPORTANTE: aqui assumo que SearchInput retorna o VALUE (id).
+// Se retornar objeto, ajuste no onSelecionarFornecedor abaixo.
+const fornecedorSelecionado = ref(null)
+
+/**
+ * Itens disponíveis por fornecedor (plano_corte_item)
+ */
 const itensDisponiveis = ref([])
+const produtoOptions = computed(() =>
+  itensDisponiveis.value.map((i) => ({
+    label: `${i.nome_produto}${i.cor ? ` - ${i.cor}` : ''}`,
+    value: i.id,
+    raw: i,
+  }))
+)
 
-const fornecedorId = ref(null)
-const dataVenda = ref('')
-const statusPlano = ref('ABERTO')
-const produtos = ref([])
+/**
+ * Form do item do PLANO
+ */
+const itemNovo = ref({
+  item_id: null,            // <-- item_id (não produto_id)
+  unidade: '',
+  quantidade: '',
+  valorUnitarioMask: '0,00',
+})
 
-const itemId = ref(null)
-const qtd = ref('')
-const valorUnitInput = ref('0,00')
+const podeAdicionarItem = computed(() => {
+  return !!itemNovo.value.item_id && Number(itemNovo.value.quantidade) > 0
+})
 
-const columns = [
-  { key: 'item', label: 'Item' },
-  { key: 'quantidade', label: 'Qtd', width: '80px' },
+const unidadesOptions = computed(() => {
+  return modulosRaw.value
+    .filter((i) => i.chave === 'UNIDADE')
+    .map((i) => ({
+      label: i.rotulo,   // Caixa / Metros / Rolo / Unidade
+      value: i.rotulo,   // ✅ o que vai ser salvo no form (não pode ser "UNIDADE")
+      raw: i,
+    }))
+})
+
+
+/**
+ * Subtotal do item (QTD * Unit)
+ */
+const subtotalItem = computed(() => {
+  const v = Number(String(itemNovo.value.valorUnitarioMask).replace(/\D/g, '')) / 100
+  const q = Number(itemNovo.value.quantidade)
+  return (q || 0) * (v || 0)
+})
+
+const itemNovoValorTotalMask = computed(() => maskMoneyBR(subtotalItem.value))
+
+/**
+ * Lista final de itens do PLANO (backend exige produtos[])
+ * Cada item precisa ter: item_id, quantidade, valor_unitario, valor_total, status
+ */
+const itens = ref([])
+
+const totalCalculado = computed(() =>
+  itens.value.reduce((acc, it) => acc + (it.valor_total || 0), 0)
+)
+
+const columnsItens = [
+  { key: 'produto', label: 'Produto' },
+  { key: 'quantidade', label: 'Qtd', width: '90px' },
   { key: 'valor_unitario', label: 'Unitário', width: '140px' },
   { key: 'valor_total', label: 'Total', width: '140px' },
   { key: 'acoes', label: '', width: '60px' },
 ]
 
-watch(valorUnitInput, (v) => {
-  const n = String(v).replace(/\D/g, '')
-  const valor = n ? Number(n) / 100 : 0
-  valorUnitInput.value = maskMoneyBR(valor)
-})
-
-const totalGeral = computed(() =>
-  produtos.value.reduce((acc, p) => acc + p.valor_total, 0)
+/**
+ * Máscara do valor unitário do item do PLANO
+ */
+watch(
+  () => itemNovo.value.valorUnitarioMask,
+  (v) => {
+    const n = String(v || '').replace(/\D/g, '')
+    const valor = n ? Number(n) / 100 : 0
+    itemNovo.value.valorUnitarioMask = maskMoneyBR(valor)
+  }
 )
 
-const podeAdicionar = computed(() =>
-  itemId.value && Number(qtd.value) > 0
-)
+/**
+ * Seleções
+ */
+function onSelecionarFornecedor(v) {
+  // Se SearchInput devolver objeto {value}, usa v?.value.
+  const fornecedorId = v?.value ?? v
+  fornecedorSelecionado.value = fornecedorId
 
-function adicionarNaLista() {
-  const item = itensDisponiveis.value.find(i => i.id === itemId.value)
-  const v = Number(String(valorUnitInput.value).replace(/\D/g, '')) / 100
-  const q = Number(qtd.value)
+  if (fornecedorId) carregarItensDisponiveis(fornecedorId)
+  else itensDisponiveis.value = []
 
-  produtos.value.push({
-    item_id: item.id,
-    item: { nome: item.nome },
+  // limpa seleção de produto ao trocar fornecedor (operacional)
+  limparItemNovo()
+  itens.value = []
+}
+
+function onSelecionarProdutoNovo(v) {
+  const itemId = v?.value ?? v
+  itemNovo.value.item_id = itemId
+
+  const item = itensDisponiveis.value.find((i) => i.id === itemId)
+  itemNovo.value.unidade = item?.unidade || ''
+}
+
+/**
+ * Ações do item
+ */
+function limparItemNovo() {
+  itemNovo.value.item_id = null
+  itemNovo.value.unidade = ''
+  itemNovo.value.quantidade = ''
+  itemNovo.value.valorUnitarioMask = '0,00'
+}
+
+function registrarItemNovo() {
+  const item = itensDisponiveis.value.find((i) => i.id === itemNovo.value.item_id)
+  const v = Number(String(itemNovo.value.valorUnitarioMask).replace(/\D/g, '')) / 100
+  const q = Number(itemNovo.value.quantidade)
+
+  itens.value.push({
+    item_id: item?.id,
+    item: { nome_produto: item?.nome_produto }, // só pra render na tabela
     quantidade: q,
     valor_unitario: v,
     valor_total: q * v,
+    status: 'ATIVO', // backend exige p.status no create()
   })
 
-  itemId.value = null
-  qtd.value = ''
-  valorUnitInput.value = '0,00'
+  limparItemNovo()
 }
 
-function removerDaLista(idx) {
-  produtos.value.splice(idx, 1)
+function removerItem(idx) {
+  itens.value.splice(idx, 1)
 }
 
+/**
+ * Carregamentos
+ */
+async function carregarFornecedores() {
+  const resF = await api.get('/fornecedores')
+  fornecedores.value = resF.data || []
+}
+
+async function carregarItensDisponiveis(fornecedorId) {
+  const resItens = await api.get('/plano-corte-itens', {
+    params: { fornecedor_id: fornecedorId },
+  })
+  itensDisponiveis.value = resItens.data || []
+}
+
+/**
+ * SALVAR PLANO (POST/PUT) - payload 100% do backend
+ */
 async function salvar() {
   salvando.value = true
   try {
     const payload = {
-      fornecedor_id: fornecedorId.value,
-      data_venda: dataVenda.value,
+      fornecedor_id: fornecedorSelecionado.value,
+      data_venda: dataVenda.value,     // backend usa new Date(dto.data_venda)
       status: statusPlano.value,
-      valor_total: totalGeral.value,
-      produtos: produtos.value,
+      produtos: itens.value.map((p) => ({
+        item_id: p.item_id,
+        quantidade: p.quantidade,
+        valor_unitario: p.valor_unitario,
+        valor_total: p.valor_total,
+        status: p.status,
+      })),
     }
 
     if (isEdit.value) {
@@ -272,26 +544,128 @@ async function encaminharParaProducao() {
   }
 }
 
-onMounted(async () => {
-  carregando.value = true
+/**
+ * DELETE do plano (rota existe no controller)
+ */
+async function excluir() {
+  if (!isEdit.value) return
+  await api.delete(`/plano-corte/${planoId.value}`)
+  router.push('/plano-corte')
+}
+
+
+const modalProduto = ref({
+  aberto: false,
+  salvando: false,
+  form: {
+    fornecedor_id: null,
+    nome_produto: '',
+    marca: '',
+    cor: '',
+    medida: '',
+    unidade: null,
+    status: 'ATIVO',
+  },
+  quantidadeMask: '',
+  valorUnitarioInput: '',
+})
+
+const modalProdutoValorTotalMask = computed(() => {
+  const q = parseInt(String(modalProduto.value.quantidadeMask || '').replace(/\D/g, ''), 10) || 0
+  const v = Number(String(modalProduto.value.valorUnitarioInput || '').replace(/\D/g, '')) / 100 || 0
+  return maskMoneyBR(q * v)
+})
+
+function abrirModalProduto() {
+  modalProduto.value.form.fornecedor_id = fornecedorSelecionado.value
+  modalProduto.value.aberto = true
+}
+
+function fecharModalProduto() {
+  modalProduto.value.aberto = false
+}
+
+async function salvarProduto() {
+  modalProduto.value.salvando = true
   try {
-    const resF = await api.get('/fornecedores')
-    fornecedores.value = resF.data
+    const quantidade = parseInt(String(modalProduto.value.quantidadeMask || '').replace(/\D/g, ''), 10) || 0
+    const valor_unitario =
+      Number(String(modalProduto.value.valorUnitarioInput || '').replace(/\D/g, '')) / 100 || 0
+    const valor_total = quantidade * valor_unitario
+
+    await api.post('/plano-corte-itens', {
+      fornecedor_id: modalProduto.value.form.fornecedor_id,
+      nome_produto: modalProduto.value.form.nome_produto,
+      marca: modalProduto.value.form.marca,
+      cor: modalProduto.value.form.cor,
+      medida: modalProduto.value.form.medida,
+      unidade: modalProduto.value.form.unidade,
+      quantidade,
+      valor_unitario,
+      valor_total,
+      status: modalProduto.value.form.status,
+    })
+
+    if (fornecedorSelecionado.value) {
+      await carregarItensDisponiveis(fornecedorSelecionado.value)
+    }
+
+    fecharModalProduto()
+  } finally {
+    modalProduto.value.salvando = false
+  }
+}
+
+/**
+ * ONMOUNT: carrega fornecedores e, se for edição, carrega o plano
+ */
+onMounted(async () => {
+  loading.value = true
+  try {
+    await carregarFornecedores()
+    await carregarStatusPlanoCorte()
+    await carregarModulosConstantes()
+
+
+    // define data_venda default no "novo" (operacional)
+    if (!isEdit.value) {
+      const hoje = new Date()
+      const yyyy = hoje.getFullYear()
+      const mm = String(hoje.getMonth() + 1).padStart(2, '0')
+      const dd = String(hoje.getDate()).padStart(2, '0')
+      dataVenda.value = `${yyyy}-${mm}-${dd}`
+    }
 
     if (isEdit.value) {
       const { data } = await api.get(`/plano-corte/${planoId.value}`)
-      fornecedorId.value = data.fornecedor_id
-      dataVenda.value = data.data_venda
-      statusPlano.value = data.status
-      produtos.value = data.produtos || []
 
-      const resItens = await api.get('/plano-corte-itens', {
-        params: { fornecedor_id: data.fornecedor_id },
-      })
-      itensDisponiveis.value = resItens.data
+      fornecedorSelecionado.value = data.fornecedor_id
+      statusPlano.value = data.status || 'ABERTO'
+
+      // data_venda pode vir ISO; mantém YYYY-MM-DD pro input date
+      if (data.data_venda) {
+        const d = new Date(data.data_venda)
+        const yyyy = d.getFullYear()
+        const mm = String(d.getMonth() + 1).padStart(2, '0')
+        const dd = String(d.getDate()).padStart(2, '0')
+        dataVenda.value = `${yyyy}-${mm}-${dd}`
+      }
+      // itens do plano (produtos)
+      itens.value = (data.produtos || []).map((p) => ({
+        item_id: p.item_id,
+        item: p.item,
+        quantidade: Number(p.quantidade),
+        valor_unitario: Number(p.valor_unitario),
+        valor_total: Number(p.valor_total),
+        status: p.status || 'ATIVO',
+      }))
+
+      if (data.fornecedor_id) {
+        await carregarItensDisponiveis(data.fornecedor_id)
+      }
     }
   } finally {
-    carregando.value = false
+    loading.value = false
   }
 })
 </script>

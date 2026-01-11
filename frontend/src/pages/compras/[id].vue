@@ -1,356 +1,141 @@
 <template>
   <Card :shadow="true">
-    <!-- HEADER -->
     <header class="flex items-start justify-between gap-4 p-6 border-b border-gray-100">
       <div>
         <h2 class="text-xl font-black tracking-tight text-gray-900 uppercase">
           {{ isEdit ? `Editar Compra #${compraId}` : 'Nova Compra' }}
         </h2>
-        <p class="mt-1 text-sm font-semibold text-gray-400">
-          {{ tipoCompra === 'INSUMOS'
-            ? 'Compra de INSUMOS (Marcenaria)'
-            : 'Compra de CLIENTE x AMBIENTES (Venda)' }}
-        </p>
       </div>
 
       <Button variant="secondary" size="sm" type="button" @click="router.back()">
-        <i class="pi pi-arrow-left mr-2 text-xs"></i>
         Voltar
       </Button>
     </header>
 
-    <!-- BODY -->
     <div class="p-6">
-      <div v-if="loading" class="flex items-center justify-center py-12">
-        <div class="flex items-center gap-3 text-sm font-bold text-gray-400">
-          <i class="pi pi-spin pi-spinner"></i>
-          Carregando...
-        </div>
-      </div>
-
-      <template v-else>
-        <section class="space-y-8">
-          <!-- BLOCO: TIPO + FORNECEDOR + VENDA -->
-          <div class="grid grid-cols-12 gap-5">
-            <div class="col-span-12 md:col-span-4">
-              <div class="rounded-2xl border border-gray-100 bg-white p-4">
-                <div class="flex items-center justify-between gap-4">
-                  <div>
-                    <div class="text-xs font-black uppercase text-gray-400">Tipo de Compra</div>
-                    <div class="text-sm font-black text-gray-900 mt-1">
-                      {{ tipoCompra === 'INSUMOS'
-                        ? 'INSUMOS (Marcenaria)'
-                        : 'CLIENTE x AMBIENTES (Venda)' }}
-                    </div>
-                  </div>
-
-                  <CustomCheckbox
-                    label="Cliente x Ambientes"
-                    :model-value="tipoCompra === 'CLIENTE_AMBIENTE'"
-                    @update:model-value="(v) => (tipoCompra = v ? 'CLIENTE_AMBIENTE' : 'INSUMOS')"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div class="col-span-12 md:col-span-8">
-              <SearchInput
-                v-model="fornecedorSelecionado"
-                label="Fornecedor *"
-                :options="fornecedorOptions"
-                required
-                :colSpan="12"
-              />
-            </div>
-
-            <div v-if="tipoCompra === 'CLIENTE_AMBIENTE'" class="col-span-12">
-              <SearchInput
-                v-model="vendaSelecionada"
-                label="Venda / Cliente *"
-                :options="vendaOptions"
-                required
-                :colSpan="12"
+      <template v-if="!loading">
+        <form class="grid grid-cols-12 gap-x-5 gap-y-6" @submit.prevent>
+          
+          <div class="col-span-12">
+            <label class="block text-[10px] font-extrabold uppercase tracking-[0.18em] text-gray-400 mb-2">
+              Tipo de Compra
+            </label>
+            <div class="flex items-center gap-4">
+              <span class="text-sm font-black text-gray-900 uppercase">
+                {{ tipoCompra === 'INSUMOS' ? 'INSUMOS (Marcenaria)' : 'CLIENTE x AMBIENTES (Venda)' }}
+              </span>
+              <CustomCheckbox
+                label="Mudar para Cliente x Ambientes"
+                :model-value="tipoCompra === 'CLIENTE_AMBIENTE'"
+                @update:model-value="(v) => (tipoCompra = v ? 'CLIENTE_AMBIENTE' : 'INSUMOS')"
               />
             </div>
           </div>
 
-          <div class="h-px w-full bg-gray-100"></div>
+          <div class="col-span-12">
+            <SearchInput
+              v-model="fornecedorSelecionado"
+              label="Fornecedor *"
+              :options="fornecedorOptions"
+              required
+              :colSpan="12"
+            />
+          </div>
 
-          <!-- BLOCO: REGISTRAR ITEM -->
-          <div class="rounded-2xl border border-gray-100 bg-white p-4">
-            <div class="flex items-start justify-between gap-4">
-              <div>
-                <h3 class="text-sm font-black tracking-tight text-gray-900 uppercase">Registrar Item</h3>
-                <p class="text-xs font-semibold text-gray-400 mt-1">
-                  Preencha e clique em Registrar para adicionar à compra.
-                </p>
-              </div>
+          <div v-if="tipoCompra === 'CLIENTE_AMBIENTE'" class="col-span-12">
+            <SearchInput
+              v-model="vendaSelecionada"
+              label="Venda / Cliente *"
+              :options="vendaOptions"
+              required
+              :colSpan="12"
+            />
+          </div>
 
-              <div class="flex items-center gap-2">
-                <Button variant="secondary" type="button" @click="abrirModalProduto()">
-                  <i class="pi pi-box mr-2 text-xs"></i>
-                  Novo Produto
-                </Button>
-              </div>
-            </div>
+          <div class="col-span-12 h-px bg-gray-100 my-2"></div>
 
-            <div class="grid grid-cols-12 gap-5 mt-4">
-              <div class="col-span-12 md:col-span-6">
-                <SearchInput
-                  v-model="itemNovo.produto_id"
-                  label="Produto *"
-                  :options="produtoOptions"
-                  required
-                  :colSpan="12"
-                  @update:modelValue="(v) => onSelecionarProdutoNovo(v)"
-                />
-                <div v-if="itemNovo.descricao" class="mt-2 text-xs font-semibold text-gray-400">
-                  {{ itemNovo.descricao }}
-                </div>
-              </div>
+          <div class="col-span-12 flex items-end justify-between">
+            <h3 class="text-[10px] font-extrabold uppercase tracking-[0.18em] text-gray-400">
+              Registrar Item
+            </h3>
+<Button variant="secondary" size="sm" type="button" @click="abrirModalProduto()">
+  + Novo Produto
+</Button>
 
-              <div class="col-span-12 md:col-span-2">
-                <Input v-model="itemNovo.unidade" label="Unidade" readonly />
-              </div>
+          </div>
 
-              <div class="col-span-12 md:col-span-2">
-                <Input v-model="itemNovo.quantidade" label="Quantidade *" required />
-              </div>
+          <div class="col-span-12 md:col-span-6">
+            <SearchInput
+              v-model="itemNovo.produto_id"
+              label="Produto *"
+              :options="produtoOptions"
+              required
+              :colSpan="12"
+              @update:modelValue="(v) => onSelecionarProdutoNovo(v)"
+            />
+          </div>
 
-              <div class="col-span-12 md:col-span-2">
-                <Input v-model="itemNovo.valorUnitarioMask" label="Valor Unitário *" required />
-              </div>
+          <div class="col-span-12 md:col-span-2">
+            <Input v-model="itemNovo.unidade" label="Unidade" readonly />
+          </div>
 
-              <div class="col-span-12 md:col-span-3">
-                <Input :model-value="itemNovo.valorTotalMask" label="Total" readonly />
-              </div>
+          <div class="col-span-12 md:col-span-2">
+            <Input v-model="itemNovo.quantidade" label="QTD *" required />
+          </div>
 
-              <div class="col-span-12 md:col-span-9 flex justify-end gap-2 items-end">
-                <Button variant="outline" type="button" @click="limparItemNovo()">
-                  Limpar
-                </Button>
-                <Button variant="primary" type="button" @click="registrarItemNovo()">
-                  <i class="pi pi-check mr-2 text-xs"></i>
-                  Registrar Item
-                </Button>
+          <div class="col-span-12 md:col-span-2">
+            <Input v-model="itemNovo.valorUnitarioMask" label="Valor Unit. *" required />
+          </div>
+
+          <div class="col-span-12 md:col-span-4">
+            <Input :model-value="itemNovo.valorTotalMask" label="Subtotal Item" readonly />
+          </div>
+
+          <div class="col-span-12 md:col-span-8 flex items-end justify-end gap-3 pb-1">
+            <Button variant="secondary" type="button" @click="limparItemNovo()">
+              Limpar
+            </Button>
+            <Button variant="primary" type="button" @click="registrarItemNovo()">
+              Adicionar Item
+            </Button>
+          </div>
+
+          <div class="col-span-12 mt-4">
+            <label class="block text-[10px] font-extrabold uppercase tracking-[0.18em] text-gray-400 mb-3">
+              Itens Adicionados
+            </label>
+            <div class="border border-gray-100 rounded-2xl overflow-hidden">
+              <Table
+  :columns="columnsItens"
+  :rows="itens"
+  :loading="false"
+  empty-text="Nenhum item adicionado."
+/>
+              <div class="flex items-center justify-end p-4 border-t border-gray-100 bg-gray-50">
+                <span class="text-sm font-black text-gray-900 uppercase">
+                  Total: R$ {{ totalCalculado.toFixed(2) }}
+                </span>
               </div>
             </div>
           </div>
-
-          <!-- BLOCO: ITENS REGISTRADOS -->
-          <div class="space-y-4">
-            <div class="flex items-start justify-between gap-4">
-              <div>
-                <h3 class="text-sm font-black tracking-tight text-gray-900 uppercase">Itens da Compra</h3>
-                <p class="text-xs font-semibold text-gray-400 mt-1">
-                  Itens já adicionados nesta compra.
-                </p>
-              </div>
-
-              <div class="flex items-center gap-2">
-                <Button variant="outline" type="button" @click="addItem()">
-                  <i class="pi pi-plus mr-2 text-xs"></i>
-                  Adicionar Item Manual
-                </Button>
-              </div>
-            </div>
-
-            <div class="space-y-3">
-              <div
-                v-for="(it, idx) in itens"
-                :key="it._key || it.id || idx"
-                class="rounded-2xl border border-gray-100 bg-white p-4"
-              >
-                <div class="grid grid-cols-12 gap-4">
-                  <div class="col-span-12 md:col-span-6">
-                    <SearchInput
-                      v-model="it.produto_id"
-                      label="Produto *"
-                      :options="produtoOptions"
-                      required
-                      :colSpan="12"
-                      @update:modelValue="(v) => aplicarProdutoNoItem(idx, v)"
-                    />
-                    <div v-if="it.descricao" class="mt-2 text-xs font-semibold text-gray-400">
-                      {{ it.descricao }}
-                    </div>
-                    <div class="mt-3">
-                      <Button variant="secondary" size="sm" type="button" @click="abrirModalProduto(idx)">
-                        <i class="pi pi-box mr-2 text-xs"></i>
-                        Novo Produto
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div class="col-span-12 md:col-span-2">
-                    <Input v-model="it.unidade" label="Unidade" readonly />
-                  </div>
-
-                  <div class="col-span-12 md:col-span-2">
-                    <Input
-                      :model-value="String(it.quantidade ?? '')"
-                      label="Quantidade *"
-                      required
-                      @update:modelValue="(v) => { it.quantidade = Number(String(v || '').replace(',', '.')) || 0; recalcularItem(idx) }"
-                    />
-                  </div>
-
-                  <div class="col-span-12 md:col-span-2">
-                    <Input
-                      :model-value="maskMoneyBR(it.valor_unitario || 0)"
-                      label="Valor Unitário *"
-                      required
-                      @update:modelValue="(v) => { 
-                        const n = String(v || '').replace(/\\D/g, '')
-                        it.valor_unitario = n ? Number(n) / 100 : 0
-                        recalcularItem(idx)
-                      }"
-                    />
-                  </div>
-
-                  <div class="col-span-12 md:col-span-3">
-                    <Input :model-value="maskMoneyBR(it.valor_total || 0)" label="Total" readonly />
-                  </div>
-
-                  <div class="col-span-12 md:col-span-9 flex items-end justify-end">
-                    <Button variant="danger" size="sm" type="button" @click="removerItem(idx)">
-                      <i class="pi pi-trash mr-2 text-xs"></i>
-                      Remover
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="flex items-center justify-end">
-              <div class="text-right">
-                <div class="text-xs font-black uppercase text-gray-400">Total da Compra</div>
-                <div class="text-2xl font-black tracking-tight text-gray-900">
-                  {{ maskMoneyBR(totalCalculado) }}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- RATEIO -->
-          <template v-if="tipoCompra === 'CLIENTE_AMBIENTE'">
-            <div class="h-px w-full bg-gray-100"></div>
-
-            <div class="space-y-4">
-              <div class="flex items-start justify-between gap-4">
-                <div>
-                  <h3 class="text-sm font-black tracking-tight text-gray-900 uppercase">Rateio por Ambientes</h3>
-                  <p class="text-xs font-semibold text-gray-400 mt-1">
-                    Selecione os ambientes e rateie automaticamente pelo total.
-                  </p>
-                </div>
-
-                <div class="flex items-center gap-2">
-                  <Button variant="outline" type="button" @click="selecionarTodosAmbientes()">
-                    Selecionar Todos
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    type="button"
-                    @click="ratearAutomatico()"
-                    :disabled="ambientesSelecionados.size === 0"
-                  >
-                    Ratear Automático
-                  </Button>
-                </div>
-              </div>
-
-              <div class="grid grid-cols-12 gap-3">
-                <button
-                  v-for="nome in ambientes"
-                  :key="nome"
-                  type="button"
-                  class="col-span-12 md:col-span-4 rounded-2xl border border-gray-100 bg-white px-4 py-3 text-left transition-all"
-                  :class="ambientesSelecionados.has(nome) ? 'ring-2 ring-blue-200 border-blue-200' : 'hover:border-gray-200'"
-                  @click="toggleAmbiente(nome)"
-                >
-                  <div class="flex items-center justify-between gap-3">
-                    <div class="text-sm font-black text-gray-900 truncate">{{ nome }}</div>
-                    <i v-if="ambientesSelecionados.has(nome)" class="pi pi-check text-xs text-green-600"></i>
-                  </div>
-                </button>
-
-                <div v-if="!ambientes.length" class="col-span-12 text-sm font-bold text-gray-400">
-                  Nenhum ambiente encontrado para esta venda.
-                </div>
-              </div>
-
-              <div class="space-y-3">
-                <div
-                  v-for="(r, idx) in rateios"
-                  :key="`${r.nome_ambiente}-${idx}`"
-                  class="rounded-2xl border border-gray-100 bg-white p-4"
-                >
-                  <div class="grid grid-cols-12 gap-4 items-end">
-                    <div class="col-span-12 md:col-span-7">
-                      <Input :model-value="r.nome_ambiente" label="Ambiente" readonly />
-                    </div>
-
-                    <div class="col-span-12 md:col-span-3">
-                      <Input
-                        :model-value="maskMoneyBR(r.valor_alocado || 0)"
-                        label="Valor Alocado *"
-                        required
-                        @update:modelValue="(v) => {
-                          const n = String(v || '').replace(/\\D/g, '')
-                          r.valor_alocado = n ? Number(n) / 100 : 0
-                          recalcularSomaRateio()
-                        }"
-                      />
-                    </div>
-
-                    <div class="col-span-12 md:col-span-2 flex justify-end">
-                      <Button variant="danger" size="sm" type="button" @click="removerRateio(idx)">
-                        Remover
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                <div v-if="!rateios.length" class="text-sm font-bold text-gray-400">
-                  Selecione ambientes acima para gerar o rateio.
-                </div>
-              </div>
-
-              <div class="flex items-center justify-end">
-                <div class="text-right">
-                  <div class="text-xs font-black uppercase text-gray-400">Soma do Rateio</div>
-                  <div
-                    class="text-xl font-black tracking-tight"
-                    :class="Math.abs(somaRateio - totalCalculado) <= 0.01 ? 'text-green-700' : 'text-red-700'"
-                  >
-                    {{ maskMoneyBR(somaRateio) }}
-                  </div>
-                  <div class="text-[11px] font-bold text-gray-400 mt-1">
-                    Deve bater com o total da compra.
-                  </div>
-                </div>
-              </div>
-            </div>
-          </template>
-        </section>
+        </form>
       </template>
+
+      <div v-else class="flex flex-col items-center justify-center py-20 gap-3">
+        <i class="pi pi-spin pi-spinner text-2xl text-brand-primary"></i>
+        <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Carregando...</span>
+      </div>
     </div>
 
-    <!-- FOOTER -->
-    <footer class="flex items-center justify-between gap-4 p-6 border-t border-gray-100">
-      <div>
-        <Button v-if="isEdit" variant="danger" :loading="excluindo" type="button" @click="excluir">
-          <i class="pi pi-trash mr-2 text-xs"></i>
-          Excluir compra
-        </Button>
-      </div>
-
-      <div class="flex justify-end gap-2">
-        <Button variant="primary" size="md" :loading="salvando" type="button" @click="salvar">
-          {{ isEdit ? 'Salvar Alterações' : 'Criar Compra' }}
-        </Button>
-      </div>
+    <footer class="flex items-center justify-between p-6 border-t border-gray-100 bg-white">
+      <Button v-if="isEdit" variant="danger" type="button" @click="excluir">
+        Excluir
+      </Button>
+      <div v-else></div>
+      
+      <Button variant="primary" :loading="salvando" type="button" @click="salvar">
+        {{ isEdit ? 'Salvar Alterações' : 'Finalizar Compra' }}
+      </Button>
     </footer>
   </Card>
 
@@ -461,6 +246,8 @@ import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import SearchInput from '@/components/ui/SearchInput.vue'
 import CustomCheckbox from '@/components/ui/CustomCheckbox.vue'
+import Card from '@/components/ui/Card.vue'
+import Table from '@/components/ui/Table.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -765,6 +552,15 @@ watch(
     modalProduto.valorUnitarioInput = maskMoneyBR(valor)
   }
 )
+
+watch(() => tipoCompra.value, () => {
+  ambientesSelecionados.value?.clear?.()
+})
+
+watch(() => vendaSelecionada.value, () => {
+  ambientesSelecionados.value?.clear?.()
+})
+
 
 watch(
   () => [modalProduto.form.quantidade, modalProduto.form.valor_unitario],

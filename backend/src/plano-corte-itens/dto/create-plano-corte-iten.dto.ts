@@ -1,8 +1,15 @@
 export class CreatePlanoCorteItemDto {
   fornecedor_id: number
-  nome: string
+
+  nome_produto: string
+  marca?: string
   cor?: string
   medida?: string
-  unidade: string
+  unidade?: string
+
+  quantidade: number
+  valor_unitario: number
+  valor_total: number
+
   status: string
 }

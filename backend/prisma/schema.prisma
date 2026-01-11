@@ -171,11 +171,17 @@ model plano_corte_item {
   id            Int @id @default(autoincrement())
   fornecedor_id Int
 
-  nome    String
-  cor     String?
-  medida  String?
-  unidade String // ex: METRO
-  status  String
+  nome_produto String
+  marca        String?      // ✅ NOVO
+  cor          String?
+  medida       String?
+  unidade      String?
+
+  quantidade     Int
+  valor_unitario Decimal @db.Decimal(10, 2)
+  valor_total    Decimal @db.Decimal(10, 2)
+
+  status String
 
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
