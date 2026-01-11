@@ -700,7 +700,6 @@ model compras {
   status String
 
   data_compra DateTime @default(now())
-  observacao  String?
 
   valor_total Decimal @default(0.00) @db.Decimal(10, 2)
 
@@ -725,8 +724,6 @@ model compras_itens {
   // ✅ NOVO: vínculo com produto
   produto_id Int?
   produto    produtos? @relation(fields: [produto_id], references: [id], onDelete: SetNull)
-
-  descricao String
 
   quantidade     Decimal @default(1.00) @db.Decimal(10, 2)
   unidade        String

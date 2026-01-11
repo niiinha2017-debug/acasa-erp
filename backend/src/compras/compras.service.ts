@@ -45,9 +45,7 @@ export class ComprasService {
       .filter(Boolean)
 
     if (nomes.length !== rateios.length) {
-      throw new BadRequestException(
-        'Rateio: nome_ambiente obrigatório em todas as linhas.',
-      )
+      throw new BadRequestException('Rateio: nome_ambiente obrigatório em todas as linhas.')
     }
 
     const set = new Set(nomes.map((n) => n.toLowerCase()))
@@ -132,14 +130,10 @@ export class ComprasService {
     // ✅ Regras por tipo
     if (tipo === 'CLIENTE_AMBIENTE') {
       if (!(dto as any).venda_id) {
-        throw new BadRequestException(
-          'venda_id é obrigatório para compra de cliente/ambiente.',
-        )
+        throw new BadRequestException('venda_id é obrigatório para compra de cliente/ambiente.')
       }
       if (!(dto as any).rateios?.length) {
-        throw new BadRequestException(
-          'Rateio é obrigatório para compra de cliente/ambiente.',
-        )
+        throw new BadRequestException('Rateio é obrigatório para compra de cliente/ambiente.')
       }
       this.validarRateios((dto as any).rateios, total)
     } else if (tipo === 'INSUMOS') {
@@ -158,8 +152,10 @@ export class ComprasService {
 
         fornecedor_id: (dto as any).fornecedor_id,
 
+        // ✅ persiste se vier (Prisma tem venda_item_id Int?)
+        venda_item_id: (dto as any).venda_item_id ?? null,
+
         status: (dto as any).status,
-        observacao: (dto as any).observacao ?? null,
         valor_total: total,
 
         itens: (dto as any).itens?.length
@@ -174,7 +170,6 @@ export class ComprasService {
 
                 return {
                   produto_id: i.produto_id ?? null,
-                  descricao: i.descricao,
                   unidade: i.unidade ?? '',
                   quantidade,
                   valor_unitario: valorUnit,
@@ -236,7 +231,6 @@ export class ComprasService {
             where: { id: item.id },
             data: {
               produto_id: item.produto_id ?? null,
-              descricao: item.descricao,
               unidade: item.unidade ?? '',
               quantidade,
               valor_unitario: valorUnit,
@@ -248,7 +242,6 @@ export class ComprasService {
             data: {
               compra_id: id,
               produto_id: item.produto_id ?? null,
-              descricao: item.descricao,
               unidade: item.unidade ?? '',
               quantidade,
               valor_unitario: valorUnit,
@@ -279,9 +272,7 @@ export class ComprasService {
         (dto as any).venda_id === undefined ? existe.venda_id : (dto as any).venda_id
 
       if (!vendaIdFinal) {
-        throw new BadRequestException(
-          'venda_id é obrigatório para compra de cliente/ambiente.',
-        )
+        throw new BadRequestException('venda_id é obrigatório para compra de cliente/ambiente.')
       }
 
       if ((dto as any).rateios) {
@@ -313,7 +304,10 @@ export class ComprasService {
 
         fornecedor_id: (dto as any).fornecedor_id ?? undefined,
         status: (dto as any).status ?? undefined,
-        observacao: (dto as any).observacao ?? undefined,
+
+        // ✅ permite atualizar vínculo se você mandar
+        venda_item_id: (dto as any).venda_item_id ?? undefined,
+
         valor_total: total,
       },
       include: { itens: true, rateios: true },

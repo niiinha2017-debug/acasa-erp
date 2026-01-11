@@ -32,15 +32,26 @@
             </div>
           </div>
 
-          <div class="col-span-12">
-            <SearchInput
-              v-model="fornecedorSelecionado"
-              label="Fornecedor *"
-              :options="fornecedorOptions"
-              required
-              :colSpan="12"
-            />
-          </div>
+   <div class="col-span-12 md:col-span-8">
+  <SearchInput
+    v-model="fornecedorSelecionado"
+    label="Fornecedor *"
+    :options="fornecedorOptions"
+    required
+    :colSpan="12"
+  />
+</div>
+
+<div class="col-span-12 md:col-span-4">
+  <Input
+    v-model="form.data_compra"
+    label="Data da Compra *"
+    type="date"
+    required
+  />
+</div>
+
+
 
           <div v-if="tipoCompra === 'CLIENTE_AMBIENTE'" class="col-span-12">
             <SearchInput
@@ -269,6 +280,7 @@ const tipoCompra = ref('INSUMOS')
 
 const form = ref({
   venda_id: null,
+  data_compra: '', // YYYY-MM-DD
 })
 
 const fornecedores = ref([])
@@ -332,6 +344,22 @@ function round2(n) {
 const totalCalculado = computed(() =>
   round2(itens.value.reduce((acc, it) => acc + Number(it?.valor_total || 0), 0))
 )
+function dateOnlyToIso(dateOnly) {
+  // usa meio-dia local pra não cair no dia anterior ao converter pra ISO
+  if (!dateOnly) return null
+  const d = new Date(`${dateOnly}T12:00:00`)
+  return Number.isNaN(d.getTime()) ? null : d.toISOString()
+}
+
+function isoToDateOnly(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 
 function addItem() {
   itens.value.push({
@@ -598,6 +626,8 @@ async function carregarCompra() {
   fornecedorSelecionado.value = data?.fornecedor_id ?? null
   vendaSelecionada.value = data?.venda_id ?? null
   form.value.venda_id = data?.venda_id ?? null
+  form.value.data_compra = isoToDateOnly(data?.data_compra)
+
 
   itens.value = Array.isArray(data?.itens) ? data.itens.filter(Boolean).map((it) => ({
     id: it.id ?? undefined,
@@ -616,6 +646,7 @@ async function carregarCompra() {
 
 async function salvar() {
   if (!fornecedorSelecionado.value) return alert('Selecione o fornecedor.')
+  if (!form.value.data_compra) return alert('Informe a data da compra.')
 
   if (tipoCompra.value === 'CLIENTE_AMBIENTE') {
     if (!vendaSelecionada.value) return alert('Selecione a venda.')
@@ -631,6 +662,7 @@ async function salvar() {
       tipo_compra: tipoCompra.value,
       fornecedor_id: fornecedorSelecionado.value,
       venda_id: tipoCompra.value === 'CLIENTE_AMBIENTE' ? vendaSelecionada.value : null,
+      data_compra: dateOnlyToIso(form.value.data_compra),
       itens: itens.value,
       rateios: rateios.value,
       valor_total: totalCalculado.value,
@@ -650,6 +682,7 @@ async function salvar() {
     salvando.value = false
   }
 }
+
 
 async function excluir() {
   if (!confirm('Deseja excluir esta compra?')) return
@@ -705,6 +738,15 @@ onMounted(async () => {
     ])
 
     await carregarCompra()
+
+    if (!isEdit.value) {
+      const hoje = new Date()
+      const y = hoje.getFullYear()
+      const m = String(hoje.getMonth() + 1).padStart(2, '0')
+      const d = String(hoje.getDate()).padStart(2, '0')
+      form.value.data_compra = `${y}-${m}-${d}`
+    }
+
     if (!itens.value.length) addItem()
 
     if (tipoCompra.value === 'CLIENTE_AMBIENTE' && vendaSelecionada.value) {
@@ -714,5 +756,6 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
 </script>
 

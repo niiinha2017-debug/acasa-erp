@@ -6,32 +6,37 @@ import {
   IsOptional,
   IsString,
   Min,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator'
 
 export class CriarCompraItemDto {
+  // ✅ Prisma: produto_id Int?
+  // Aceita number ou null
   @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @Type(() => Number)
   @IsInt()
   produto_id?: number | null
-
-  @IsString()
-  descricao: string
 
   @IsOptional()
   @IsString()
   unidade?: string
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   quantidade?: number
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   valor_unitario?: number
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   valor_total?: number
@@ -41,6 +46,7 @@ export class CriarCompraRateioDto {
   @IsString()
   nome_ambiente: string
 
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   valor_alocado: number
@@ -50,15 +56,23 @@ export class CriarCompraDto {
   @IsString()
   tipo_compra: string // INSUMOS | CLIENTE_AMBIENTE
 
+  // ✅ Prisma: venda_id Int?
+  // Aceita number ou null
   @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @Type(() => Number)
   @IsInt()
-  venda_id?: number
+  venda_id?: number | null
 
+  @Type(() => Number)
   @IsInt()
   fornecedor_id: number
 
-  // opcional: se quiser amarrar compra em 1 item específico da venda
+  // ✅ Prisma: venda_item_id Int?
+  // Aceita number ou null
   @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @Type(() => Number)
   @IsInt()
   venda_item_id?: number | null
 
@@ -66,12 +80,7 @@ export class CriarCompraDto {
   status: string
 
   @IsOptional()
-  @IsString()
-  observacao?: string
-
-  // opcional: se você quiser permitir mandar o total manual
-  // (o service pode ignorar e recalcular pelos itens)
-  @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   valor_total?: number
