@@ -43,20 +43,6 @@ export const DespesaService = {
   remover: (id) => api.delete(`/despesas/${id}`)
 }
 
-// --- SERVIÇO FINANCEIRO (CONTAS A PAGAR, RECEBER E COMPENSAÇÃO) ---
-export const FinanceiroService = {
-  listarPagar: (filtros = {}) => api.get('/financeiro/contas-pagar', { params: filtros }),
-  buscarPagar: (id) => api.get(`/financeiro/contas-pagar/${id}`),
-  salvarPagar: (id, dados) => id ? api.put(`/financeiro/contas-pagar/${id}`, dados) : api.post('/financeiro/contas-pagar', dados),
-  pagar: (id, dados) => api.post(`/financeiro/contas-pagar/${id}/pagar`, dados),
-
-  listarReceber: (filtros = {}) => api.get('/financeiro/contas-receber', { params: filtros }),
-  buscarReceber: (id) => api.get(`/financeiro/contas-receber/${id}`),
-  salvarReceber: (id, dados) => id ? api.put(`/financeiro/contas-receber/${id}`, dados) : api.post('/financeiro/contas-receber', dados),
-  receber: (id, dados) => api.post(`/financeiro/contas-receber/${id}/receber`, dados),
-
-  compensar: (fornecedorId, dados) => api.post(`/financeiro/fornecedores/${fornecedorId}/compensar`, dados)
-}
 
 // --- SERVIÇO DE FORNECEDORES ---
 export const FornecedorService = {
@@ -205,13 +191,21 @@ export const PermissoesService = {
     api.put(`/usuarios/${id}/permissoes`, { permissoes })
 }
 
-export const financeiroService = {
-  // Busca lista de contas a pagar
+// Localize o FinanceiroService e deixe-o assim:
+export const FinanceiroService = {
+  // Funções que já existiam
+  listarPagar: (filtros = {}) => api.get('/financeiro/contas-pagar', { params: filtros }),
+  buscarPagar: (id) => api.get(`/financeiro/contas-pagar/${id}`),
+  salvarPagar: (id, dados) => id ? api.put(`/financeiro/contas-pagar/${id}`, dados) : api.post('/financeiro/contas-pagar', dados),
+  pagar: (id, dados) => api.post(`/financeiro/contas-pagar/${id}/pagar`, dados),
+
+  // Adicione/Garanta que estes nomes existam (para bater com o que o Vue pede)
   getContasPagar: () => api.get('/financeiro/contas-pagar'),
-  
-  // Atualiza status (ex: pagar uma conta)
   liquidarConta: (id) => api.patch(`/financeiro/contas-pagar/${id}/pagar`),
-  
-  // Cria nova conta
-  salvarConta: (dados) => api.post('/financeiro/contas-pagar', dados)
-};
+  salvarConta: (dados) => api.post('/financeiro/contas-pagar', dados),
+
+  // Outras funções (Receber, Compensar...)
+  listarReceber: (filtros = {}) => api.get('/financeiro/contas-receber', { params: filtros }),
+}
+
+// DELETE aquele bloco "export const financeiroService" que está no final do arquivo!

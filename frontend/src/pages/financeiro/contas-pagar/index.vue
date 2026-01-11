@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
-import { financeiroService } from '@/services/financeiro.service';
+import { FinanceiroService } from '@/services/index.js';
 import { numeroParaMoeda as formatCurrency } from '@/utils/number'; // Vi que você tem utils/number.js!
 
 const contas = ref([]);
