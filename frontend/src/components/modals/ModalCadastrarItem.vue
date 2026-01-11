@@ -1,36 +1,48 @@
 <template>
   <Transition name="fade">
-    <div v-if="open" class="modal-overlay" @click.self="emit('close')">
-      <div class="modal-card">
-        <header class="modal-header">
+    <div 
+      v-if="open" 
+      class="fixed inset-0 flex items-center justify-center p-4 z-modal bg-gray-900/40 backdrop-blur-sm"
+      @click.self="emit('close')"
+    >
+      <div 
+        class="w-full max-w-2xl bg-white rounded-3xl border border-gray-100 shadow-2xl overflow-hidden animate-slide-up-custom"
+      >
+        <header class="flex justify-between items-start px-8 py-6 border-b border-gray-50 bg-gray-50/30">
           <div>
-            <h3 class="modal-title">Cadastrar item</h3>
-            <p class="modal-subtitle">Item não encontrado. Cadastre rapidamente.</p>
+            <h3 class="text-xl font-black text-gray-900 tracking-tighter uppercase">Cadastrar item</h3>
+            <p class="text-sm font-semibold text-gray-400 mt-1">Item não encontrado. Cadastre rapidamente.</p>
           </div>
-          <button class="modal-x" @click="emit('close')">✕</button>
+          <button 
+            class="w-8 h-8 flex items-center justify-center rounded-xl bg-white border border-gray-100 text-gray-400 hover:text-danger hover:border-danger/20 transition-all shadow-sm"
+            @click="emit('close')"
+          >
+            <i class="pi pi-times text-xs"></i>
+          </button>
         </header>
 
-        <div class="modal-body">
-          <div class="form-grid">
-            <div class="form-group col-span-6">
-              <Input v-model="form.nome" label="Nome" placeholder="Ex: MDF" :required="true" />
+        <div class="p-8">
+          <div class="grid grid-cols-12 gap-5">
+            <div class="col-span-12 md:col-span-6">
+              <Input v-model="form.nome" label="Nome do Item" placeholder="Ex: MDF" :required="true" />
             </div>
 
-            <div class="form-group col-span-3">
-              <Input v-model="form.cor" label="Cor" placeholder="Ex: Branco" />
+            <div class="col-span-6 md:col-span-3">
+              <Input v-model="form.cor" label="Cor/Acabamento" placeholder="Ex: Branco" />
             </div>
 
-            <div class="form-group col-span-3">
-              <Input v-model="form.medida" label="Medida" placeholder="Ex: 18mm" />
+            <div class="col-span-6 md:col-span-3">
+              <Input v-model="form.medida" label="Medida/Espessura" placeholder="Ex: 18mm" />
             </div>
 
-            <div class="form-group col-span-3">
-              <Input v-model="form.unidade" label="Unidade" placeholder="METRO / UN" :required="true" />
+            <div class="col-span-12 md:col-span-4">
+              <Input v-model="form.unidade" label="Unidade de Medida" placeholder="METRO / UN" :required="true" />
             </div>
 
-            <div class="form-group col-span-9 flex items-center h-full pt-6">
-               <CustomCheckbox
-                label="Item Ativo"
+            <div class="col-span-12 md:col-span-8 flex items-end pb-1.5">
+              <CustomCheckbox
+                label="Item Ativo no Sistema"
+                description="Itens inativos não aparecem em novas vendas"
                 :model-value="form.status === 'ATIVO'"
                 @update:model-value="(val) => form.status = val ? 'ATIVO' : 'INATIVO'"
               />
@@ -38,14 +50,18 @@
           </div>
         </div>
 
-        <footer class="modal-footer">
+        <footer class="flex justify-end gap-3 px-8 py-6 border-t border-gray-50 bg-gray-50/30">
           <Button label="Cancelar" variant="outline" @click="emit('close')" />
           <Button
             label="Salvar item"
             variant="success"
             :loading="salvando"
             @click="salvar"
-          />
+          >
+            <template #default>
+              <i class="pi pi-check mr-2"></i> Confirmar Cadastro
+            </template>
+          </Button>
         </footer>
       </div>
     </div>
@@ -57,7 +73,7 @@ import { reactive, ref, watch } from 'vue'
 import api from '@/services/api'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
-import CustomCheckbox from '@/components/ui/CustomCheckbox.vue' // Importando o novo padrão
+import CustomCheckbox from '@/components/ui/CustomCheckbox.vue'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -101,55 +117,3 @@ async function salvar() {
   }
 }
 </script>
-
-<style scoped>
-.modal-overlay{
-  position:fixed; inset:0;
-  background: rgba(0,0,0,.45);
-  display:flex; align-items:center; justify-content:center;
-  padding: 18px;
-  z-index: 50;
-}
-
-.modal-card{
-  width: 100%;
-  max-width: 760px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow-card);
-  overflow: hidden;
-}
-
-.modal-header{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap: 12px;
-  padding: 16px 18px;
-  border-bottom: 1px solid var(--border-soft);
-  background: var(--bg-input);
-}
-
-.modal-title{ margin:0; font-size: 1.05rem; }
-.modal-subtitle{ margin: 4px 0 0; color: var(--text-muted); font-size: var(--font-size-sm); }
-
-.modal-x{
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-  font-size: 18px;
-  color: var(--text-secondary);
-}
-
-.modal-body{ padding: 16px 18px; }
-
-.modal-footer{
-  display:flex;
-  justify-content:flex-end;
-  gap: 10px;
-  padding: 14px 18px;
-  border-top: 1px solid var(--border-soft);
-  background: var(--bg-input);
-}
-</style>

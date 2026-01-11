@@ -1,79 +1,93 @@
 <template>
-  <div class="page-container">
-    <div class="card card--shadow">
-      <header class="card-header header-between">
-        <div>
-          <h2 class="card-title">Vendas</h2>
-          <p class="card-subtitle">
-            Gestão de vendas (módulo antigo) com cálculos de pós-venda.
-          </p>
-        </div>
-
-        <Button
-          variant="primary"
-          size="md"
-          label="+ Nova Venda"
-          @click="router.push('/vendas/novo')"
-        />
-      </header>
-
-      <div class="card-filter">
-        <SearchInput
-          v-model="filtro"
-          label="Buscar"
-          placeholder="Buscar por cliente, status, forma de pagamento..."
-          :colSpan="'col-span-12'"
-        />
+  <Card :shadow="true">
+    <!-- HEADER -->
+    <header class="flex items-start justify-between gap-4 border-b border-gray-100 p-6">
+      <div class="min-w-0">
+        <h2 class="text-xl font-black tracking-tight text-gray-900 uppercase">Vendas</h2>
+        <p class="mt-1 text-sm font-semibold text-gray-400">
+          Gestão de vendas (módulo antigo) com cálculos de pós-venda.
+        </p>
       </div>
 
-      <div class="card-body card-body--flush">
-        <Table
-          :columns="columns"
-          :rows="filtradas"
-          :loading="loading"
-          emptyText="Nenhuma venda encontrada"
-        >
-          <template #cell-status="{ row }">
-            <span class="pill" :class="pillClass(row.status)">
-              {{ row.status }}
-            </span>
-          </template>
+      <Button
+        variant="primary"
+        size="sm"
+        type="button"
+        @click="router.push('/vendas/novo')"
+      >
+        <i class="pi pi-plus mr-2 text-xs"></i>
+        Nova Venda
+      </Button>
+    </header>
 
-          <template #cell-valor_total="{ row }">
-            {{ format(row.valor_total) }}
-          </template>
+    <!-- BODY -->
+    <div class="p-6 space-y-5">
+      <SearchInput
+        v-model="filtro"
+        label="Buscar"
+        placeholder="Buscar por cliente, status, forma de pagamento..."
+        colSpan="12"
+      />
 
-          <template #cell-data_venda="{ row }">
-            {{ formatarData(row.data_venda) }}
-          </template>
+      <Table
+        :columns="columns"
+        :rows="filtradas"
+        :loading="loading"
+        empty-text="Nenhuma venda encontrada"
+      >
+        <template #cell-status="{ row }">
+          <span
+            class="inline-flex items-center rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider border"
+            :class="pillClassTailwind(row.status)"
+          >
+            {{ row.status }}
+          </span>
+        </template>
 
-          <template #cell-acoes="{ row }">
-            <div class="table-actions">
-              <Button
-                variant="secondary"
-                size="sm"
-                label="Editar"
-                @click="router.push(`/vendas/${row.id}`)"
-              />
-              <Button
-                variant="danger"
-                size="sm"
-                label="Excluir"
-                :loading="deletandoId === row.id"
-                loadingText="Excluindo..."
-                @click="excluir(row.id)"
-              />
-            </div>
-          </template>
-        </Table>
-      </div>
+        <template #cell-valor_total="{ row }">
+          <span class="text-sm font-black text-gray-900">
+            {{ moeda(row.valor_total) }}
+          </span>
+        </template>
+
+        <template #cell-data_venda="{ row }">
+          <span class="text-sm font-semibold text-gray-700">
+            {{ dataBr(row.data_venda) }}
+          </span>
+        </template>
+
+        <template #cell-acoes="{ row }">
+          <div class="flex justify-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              type="button"
+              @click="router.push(`/vendas/${row.id}`)"
+            >
+              Editar
+            </Button>
+
+            <Button
+              variant="danger"
+              size="sm"
+              type="button"
+              :loading="deletandoId === row.id"
+              loadingText="Excluindo..."
+              @click="excluir(row.id)"
+            >
+              Excluir
+            </Button>
+          </div>
+        </template>
+      </Table>
     </div>
-  </div>
+  </Card>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import Card from '@/components/ui/Card.vue'
 import Table from '@/components/ui/Table.vue'
 import Button from '@/components/ui/Button.vue'
 import SearchInput from '@/components/ui/SearchInput.vue'
@@ -94,7 +108,7 @@ const columns = [
   { key: 'forma_pagamento_chave', label: 'Pagamento' },
   { key: 'data_venda', label: 'Data' },
   { key: 'valor_total', label: 'Total' },
-  { key: 'acoes', label: 'Ações', width: '220px' },
+  { key: 'acoes', label: 'Ações', width: '220px', align: 'center' },
 ]
 
 const filtradas = computed(() => {
@@ -105,25 +119,20 @@ const filtradas = computed(() => {
     const cliente = (v?.cliente?.nome || v?.cliente?.razao_social || '').toLowerCase()
     const status = (v?.status || '').toLowerCase()
     const pag = (v?.forma_pagamento_chave || '').toLowerCase()
-    const id = String(v?.id || '')
+    const id = String(v?.id || '').toLowerCase()
 
-    return (
-      cliente.includes(f) ||
-      status.includes(f) ||
-      pag.includes(f) ||
-      id.includes(f)
-    )
+    return cliente.includes(f) || status.includes(f) || pag.includes(f) || id.includes(f)
   })
 })
 
-function pillClass(status) {
-  const s = (status || '').toUpperCase()
-  if (s === 'FECHADA') return 'pill--success'
-  if (s === 'CANCELADA') return 'pill--danger'
-  return 'pill--muted'
+function pillClassTailwind(status) {
+  const s = String(status || '').toUpperCase()
+  if (s === 'FECHADA') return 'bg-emerald-50 text-emerald-700 border-emerald-100'
+  if (s === 'CANCELADA') return 'bg-rose-50 text-rose-700 border-rose-100'
+  return 'bg-gray-50 text-gray-700 border-gray-200'
 }
 
-// helpers para template (se estiver usando nos slots)
+// helpers para template
 function moeda(v) {
   return format.currency(v)
 }

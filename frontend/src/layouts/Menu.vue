@@ -1,93 +1,93 @@
 <template>
-  <header class="topbar" :class="{ scrolled: isScrolled }">
-    <div class="topbar-inner">
-      <div class="brand" @click="irPara('/')">A CASA-ERP</div>
+  <header 
+    class="sticky top-0 z-sticky w-full transition-all duration-300"
+    :class="[
+      isScrolled 
+        ? 'bg-white/90 backdrop-blur-xl shadow-lg border-b border-gray-200/50 py-2' 
+        : 'bg-white/95 backdrop-blur-md border-b border-gray-100 py-3'
+    ]"
+  >
+    <div class="max-w-[1440px] mx-auto px-6 flex items-center gap-8">
+      
+      <div 
+        @click="irPara('/')" 
+        class="text-xl font-black text-gray-900 cursor-pointer whitespace-nowrap tracking-tighter hover:text-brand-primary transition-colors uppercase"
+      >
+        A CASA<span class="text-brand-primary">-ERP</span>
+      </div>
 
-      <nav class="nav" ref="navEl">
-        <RouterLink to="/">Início</RouterLink>
+      <nav ref="navEl" class="flex-1 hidden lg:flex items-center justify-center gap-1 p-1.5 bg-gray-50/50 rounded-xl border border-gray-100">
+        
+        <RouterLink to="/" class="nav-link-tw" active-class="nav-link-active-tw">
+          Início
+        </RouterLink>
 
-        <div v-if="temAcesso('financeiro.ver')" class="dropdown-menu" :class="{ active: activeDropdown === 'financeiro' }">
-          <button type="button" class="dropdown-toggle" @click.stop="toggleDropdown('financeiro')">
+        <div class="relative group">
+          <button @click.stop="toggleDropdown('operacional')" class="nav-link-tw" :class="{'nav-link-active-tw': activeDropdown === 'operacional'}">
+            Operacional
+            <i class="pi pi-chevron-down text-[10px] transition-transform" :class="{ 'rotate-180': activeDropdown === 'operacional' }"></i>
+          </button>
+          <div v-if="activeDropdown === 'operacional'" class="dropdown-container-tw">
+            <a href="#" @click.prevent="irPara('/vendas')" class="dropdown-item-tw"><i class="pi pi-cart-plus mr-2 opacity-50"></i> Vendas</a>
+            <a href="#" @click.prevent="irPara('/orçamentos')" class="dropdown-item-tw"><i class="pi pi-file-edit mr-2 opacity-50"></i> Orçamentos</a>
+            <hr class="my-1 border-gray-50">
+            <a href="#" @click.prevent="irPara('/producao')" class="dropdown-item-tw"><i class="pi pi-box mr-2 opacity-50"></i> Produção</a>
+            <a href="#" @click.prevent="irPara('/plano-corte')" class="dropdown-item-tw"><i class="pi pi-table mr-2 opacity-50"></i> Plano de Corte</a>
+          </div>
+        </div>
+
+        <div class="relative group">
+          <button @click.stop="toggleDropdown('financeiro')" class="nav-link-tw" :class="{'nav-link-active-tw': activeDropdown === 'financeiro'}">
             Financeiro
+            <i class="pi pi-chevron-down text-[10px] transition-transform" :class="{ 'rotate-180': activeDropdown === 'financeiro' }"></i>
           </button>
-          <div class="dropdown-content">
-            <a v-if="temAcesso('despesas.ver')" href="#" @click.prevent="irPara('/despesas')">Despesas</a>
-            <a v-if="temAcesso('contas-pagar.ver')" href="#" @click.prevent="irPara('/financeiro/contas-pagar')">Contas a Pagar</a>
-            <a v-if="temAcesso('contas-receber.ver')" href="#" @click.prevent="irPara('/financeiro/contas-receber')">Contas a Receber</a>
-            <a v-if="temAcesso('compras.ver')" href="#" @click.prevent="irPara('/compras')">Compras</a>
+          <div v-if="activeDropdown === 'financeiro'" class="dropdown-container-tw">
+            <a href="#" @click.prevent="irPara('/financeiro')" class="dropdown-item-tw"><i class="pi pi-wallet mr-2 opacity-50"></i> Fluxo de Caixa</a>
+            <a href="#" @click.prevent="irPara('/despesas')" class="dropdown-item-tw"><i class="pi pi-minus-circle mr-2 opacity-50"></i> Despesas</a>
+            <a href="#" @click.prevent="irPara('/compras')" class="dropdown-item-tw"><i class="pi pi-shopping-bag mr-2 opacity-50"></i> Compras</a>
           </div>
         </div>
 
-        <div 
-          v-if="temAcesso('clientes.ver') || temAcesso('fornecedores.ver') || temAcesso('produtos.ver') || temAcesso('funcionarios.ver')" 
-          class="dropdown-menu" 
-          :class="{ active: activeDropdown === 'cadastros' }"
-        >
-          <button type="button" class="dropdown-toggle" @click.stop="toggleDropdown('cadastros')">
+        <div class="relative group">
+          <button @click.stop="toggleDropdown('cadastros')" class="nav-link-tw" :class="{'nav-link-active-tw': activeDropdown === 'cadastros'}">
             Cadastros
+            <i class="pi pi-chevron-down text-[10px] transition-transform" :class="{ 'rotate-180': activeDropdown === 'cadastros' }"></i>
           </button>
-          <div class="dropdown-content">
-            <a v-if="temAcesso('clientes.ver')" href="#" @click.prevent="irPara('/clientes')">Clientes</a>
-            <a v-if="temAcesso('fornecedores.ver')" href="#" @click.prevent="irPara('/fornecedores')">Fornecedores</a>
-            <a v-if="temAcesso('produtos.ver')" href="#" @click.prevent="irPara('/produtos')">Produtos</a>
-            <a v-if="temAcesso('funcionarios.ver')" href="#" @click.prevent="irPara('/funcionarios')">Funcionários</a>
+          <div v-if="activeDropdown === 'cadastros'" class="dropdown-container-tw">
+            <a href="#" @click.prevent="irPara('/clientes')" class="dropdown-item-tw"><i class="pi pi-users mr-2 opacity-50"></i> Clientes</a>
+            <a href="#" @click.prevent="irPara('/fornecedores')" class="dropdown-item-tw"><i class="pi pi-truck mr-2 opacity-50"></i> Fornecedores</a>
+            <a href="#" @click.prevent="irPara('/funcionarios')" class="dropdown-item-tw"><i class="pi pi-id-card mr-2 opacity-50"></i> Funcionários</a>
+            <a href="#" @click.prevent="irPara('/produtos')" class="dropdown-item-tw"><i class="pi pi-tag mr-2 opacity-50"></i> Produtos</a>
           </div>
         </div>
 
-        <div 
-          v-if="temAcesso('producao.ver') || temAcesso('plano-corte.ver')" 
-          class="dropdown-menu" 
-          :class="{ active: activeDropdown === 'producao' }"
-        >
-          <button type="button" class="dropdown-toggle" @click.stop="toggleDropdown('producao')">
-            Produção
-          </button>
-          <div class="dropdown-content">
-            <a v-if="temAcesso('plano-corte.ver')" href="#" @click.prevent="irPara('/plano-corte')">Plano de Corte</a>
-            <a v-if="temAcesso('producao.ver')" href="#" @click.prevent="irPara('/producao')">Agenda de Produção</a>
-            <a href="#" @click.prevent="irPara('/producao/ordens-servico')">Ordens de Serviço</a>
-          </div>
-        </div>
-
-        <div v-if="temAcesso('vendas.ver') || temAcesso('orcamentos.ver')" class="dropdown-menu" :class="{ active: activeDropdown === 'vendas' }">
-          <button type="button" class="dropdown-toggle" @click.stop="toggleDropdown('vendas')">
-            Vendas
-          </button>
-          <div class="dropdown-content">
-            <a v-if="temAcesso('orcamentos.ver')" href="#" @click.prevent="irPara('/orcamentos')">Orçamentos</a>
-            <a v-if="temAcesso('vendas.ver')" href="#" @click.prevent="irPara('/vendas')">Vendas</a>
-          </div>
-        </div>
-
-        <div 
-          v-if="temAcesso('configuracoes.ver') || temAcesso('usuarios.ver') || temAcesso('permissoes.gerenciar')" 
-          class="dropdown-menu" 
-          :class="{ active: activeDropdown === 'configuracoes' }"
-        >
-          <button type="button" class="dropdown-toggle" @click.stop="toggleDropdown('configuracoes')">
+        <div class="relative group">
+          <button @click.stop="toggleDropdown('configuracoes')" class="nav-link-tw" :class="{'nav-link-active-tw': activeDropdown === 'configuracoes'}">
             Configurações
+            <i class="pi pi-chevron-down text-[10px] transition-transform" :class="{ 'rotate-180': activeDropdown === 'configuracoes' }"></i>
           </button>
-          <div class="dropdown-content">
-            <a v-if="temAcesso('constantes.ver')" href="#" @click.prevent="irPara('/constantes')">Constantes</a>
-            <a v-if="temAcesso('usuarios.ver')" href="#" @click.prevent="irPara('/configuracoes/usuarios')">Usuários</a>
-            <a v-if="temAcesso('permissoes.gerenciar')" href="#" @click.prevent="irPara('/configuracoes/permissoes')">Permissões</a>
+          <div v-if="activeDropdown === 'configuracoes'" class="dropdown-container-tw">
+            <a href="#" @click.prevent="irPara('/configuracoes/permissoes')" class="dropdown-item-tw"><i class="pi pi-users mr-2 opacity-50"></i> Permissões</a>
+            <a href="#" @click.prevent="irPara('/configuracoes/usuarios')" class="dropdown-item-tw"><i class="pi pi-truck mr-2 opacity-50"></i> Usuários</a>
+            <a href="#" @click.prevent="irPara('/constantes')" class="dropdown-item-tw"><i class="pi pi-building mr-2 opacity-50"></i> Constantes</a>
           </div>
         </div>
       </nav>
-
-      <div class="user-area">
-        <div class="user-info">
-          <span class="user-name">Olá, {{ usuarioLogado?.nome?.split(' ')[0] || 'Usuário' }}</span>
-          <span class="user-role">{{ usuarioLogado?.setor || '-' }}</span>
+      <div class="flex items-center gap-4 pl-4 border-l border-gray-100 font-sans">
+        <div class="hidden sm:flex flex-col items-end leading-tight">
+          <span class="text-sm font-bold text-gray-900 leading-none mb-1">{{ usuarioLogado?.nome?.split(' ')[0] || 'Usuário' }}</span>
+          <span class="text-[10px] font-black text-brand-primary uppercase tracking-[0.15em]">{{ usuarioLogado?.setor || '-' }}</span>
         </div>
-        <button class="btn-logout" type="button" @click="handleLogout">Sair</button>
+        
+        <button @click="handleLogout" class="w-10 h-10 rounded-xl flex items-center justify-center text-gray-400 hover:text-danger hover:bg-red-50 transition-all group">
+          <i class="pi pi-power-off font-bold group-hover:scale-110 transition-transform"></i>
+        </button>
       </div>
     </div>
   </header>
 </template>
 
 <script setup>
-import '@/assets/CSS/Menu.css'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/services/useauth'
@@ -99,6 +99,7 @@ const isScrolled = ref(false)
 const activeDropdown = ref(null)
 const navEl = ref(null)
 
+// Alterna entre os menus: 'operacional', 'financeiro' ou 'cadastros'
 const toggleDropdown = (menu) => {
   activeDropdown.value = activeDropdown.value === menu ? null : menu
 }
@@ -110,18 +111,23 @@ const irPara = (path) => {
   router.push(path).catch(err => console.error('Erro ao navegar:', err))
 }
 
-const handleLogout = () => {
-  fecharDropdowns()
-  logout()
+const handleLogout = async () => {
+  if (confirm('Deseja realmente sair do sistema?')) {
+    fecharDropdowns()
+    await logout()
+    router.push('/login') // Redireciona para o login após limpar a sessão
+  }
 }
 
+// Fecha o menu se clicar em qualquer lugar fora da área do <nav>
 const closeDropdownOnClickOutside = (event) => {
   if (navEl.value && !navEl.value.contains(event.target)) {
     fecharDropdowns()
   }
 }
 
-const handleScroll = () => { isScrolled.value = window.scrollY > 20 }
+// Controla a aparência do menu (transparência/sombra) ao rolar a página
+const handleScroll = () => { isScrolled.value = window.scrollY > 10 }
 
 onMounted(() => {
   window.addEventListener('scroll', handleScroll, { passive: true })
@@ -133,23 +139,3 @@ onUnmounted(() => {
   document.removeEventListener('click', closeDropdownOnClickOutside)
 })
 </script>
-
-<style scoped>
-/* Pequeno ajuste para exibir o setor abaixo do nome */
-.user-info {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  margin-right: var(--spacing-4);
-}
-.user-name {
-  font-weight: var(--font-weight-semibold);
-  font-size: var(--font-size-sm);
-}
-.user-role {
-  font-size: var(--font-size-xs);
-  color: var(--brand-primary);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-</style>

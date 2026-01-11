@@ -34,7 +34,7 @@ export class ComprasController {
     return this.service.buscarPorId(Number(id.replace(/\D/g, '')))
   }
 
-  // ✅ CRIAÇÃO (PUT)
+  // ✅ CRIAÇÃO (POST)
 @Post()
 criar(@Body() dto: CriarCompraDto) {
   return this.service.criar(dto)

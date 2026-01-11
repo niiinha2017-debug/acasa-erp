@@ -1,55 +1,52 @@
 <template>
-  <div class="page-container">
-    <Card>
-      <!-- HEADER -->
-      <header class="card-header header-between">
-        <div>
-          <h2 class="card-title">Constantes</h2>
-          <p class="cell-muted">
-            Gestão de constantes do sistema (formas de pagamento, status, categorias, etc).
-          </p>
-        </div>
-
-        <Button
-          variant="primary"
-          @click="router.push('/constantes/novo')"
-        >
-          + Nova Constante
-        </Button>
-      </header>
-
-      <!-- FILTRO -->
-      <div class="card-filter">
-        <SearchInput
-          v-model="filtro"
-          placeholder="Buscar por categoria, chave ou rótulo..."
-        />
+  <Card :shadow="true">
+    <!-- HEADER -->
+    <header class="flex items-start justify-between gap-4 p-6 border-b border-gray-100">
+      <div>
+        <h2 class="text-xl font-black tracking-tight text-gray-900 uppercase">Constantes</h2>
+        <p class="mt-1 text-sm font-semibold text-gray-400">
+          Gestão de constantes do sistema (formas de pagamento, status, categorias, etc).
+        </p>
       </div>
 
-      <!-- TABELA -->
-      <div class="card-body--flush">
+      <Button variant="primary" size="sm" type="button" @click="router.push('/constantes/novo')">
+        <i class="pi pi-plus mr-2 text-xs"></i>
+        Nova Constante
+      </Button>
+    </header>
+
+    <!-- BODY -->
+    <div class="p-6 space-y-5">
+      <SearchInput
+        v-model="filtro"
+        placeholder="Buscar por categoria, chave ou rótulo..."
+        colSpan="12"
+      />
+
+      <div class="overflow-hidden rounded-2xl border border-gray-100">
         <Table
           :columns="columns"
           :rows="constantesFiltradas"
           :loading="loading"
           empty-text="Nenhuma constante encontrada."
         >
-          <!-- STATUS -->
           <template #cell-ativo="{ row }">
             <span
-              class="status"
-              :class="row.ativo ? 'status--success' : 'status--danger'"
+              class="inline-flex items-center rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider border"
+              :class="row.ativo
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                : 'bg-gray-50 text-gray-700 border-gray-200'"
             >
               {{ row.ativo ? 'Ativo' : 'Inativo' }}
             </span>
           </template>
 
-          <!-- AÇÕES -->
           <template #cell-acoes="{ row }">
-            <div class="table-actions">
+            <div class="flex justify-center gap-2">
               <Button
                 variant="secondary"
                 size="sm"
+                type="button"
                 @click="router.push(`/constantes/${row.id}`)"
               >
                 Editar
@@ -58,6 +55,7 @@
               <Button
                 variant="danger"
                 size="sm"
+                type="button"
                 @click="excluir(row)"
               >
                 Excluir
@@ -66,9 +64,10 @@
           </template>
         </Table>
       </div>
-    </Card>
-  </div>
+    </div>
+  </Card>
 </template>
+
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
@@ -152,28 +151,3 @@ async function excluir(row) {
 onMounted(carregar)
 </script>
 
-<style scoped>
-.table-actions {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-}
-
-.status {
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.status--success {
-  background: #dcfce7;
-  color: #15803d;
-}
-
-.status--danger {
-  background: #fee2e2;
-  color: #b91c1c;
-}
-</style>

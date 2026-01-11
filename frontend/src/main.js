@@ -2,9 +2,11 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 
-// Importações base
-import '@/assets/CSS/base/tokens.css'
-import '@/assets/CSS/base/ui.css' 
+// 1. Importe o CSS do Tailwind (crie este arquivo se não existir)
+import '@/assets/CSS/tailwind.css' 
+
+// 2. Importe o PrimeIcons que você instalou
+import 'primeicons/primeicons.css' 
 
 // Reset Global para garantir tela cheia
 const style = document.createElement('style')

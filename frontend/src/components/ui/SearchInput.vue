@@ -1,19 +1,20 @@
 <template>
-  <div class="form-group" :class="colSpan" @click.stop>
-    <label v-if="label" class="form-label">
-      {{ label }} <span v-if="required" class="required">*</span>
+  <div class="search-container relative flex flex-col gap-1.5" :class="[colSpan, { 'z-50': abrir }]" @click.stop>
+    <label v-if="label" class="text-xs font-black uppercase tracking-widest text-gray-500 ml-1">
+      {{ label }} <span v-if="required" class="text-danger ml-0.5">*</span>
     </label>
 
-    <div class="search-container">
-      <span class="search-icon-wrapper">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <div class="relative group">
+      <span class="absolute left-4 top-1/2 -translate-y-1/2 text-brand-primary group-focus-within:scale-110 transition-transform">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
       </span>
 
       <input
-        class="form-input has-icon"
+        class="w-full h-11 pl-11 pr-4 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 transition-all duration-200
+               focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 placeholder:text-gray-400 placeholder:font-normal"
         type="text"
         :placeholder="placeholder"
         :required="required"
@@ -23,65 +24,30 @@
         @input="abrir = true"
       />
 
-      <div v-if="abrir" class="search-select__dropdown">
+      <transition name="fade">
         <div
-          v-for="opt in filtrados"
-          :key="opt.value"
-          class="search-select__option"
-          @click.stop="selecionar(opt)"
+          v-if="abrir"
+          class="absolute top-[calc(100%+8px)] left-0 right-0 bg-white/95 backdrop-blur-xl border border-gray-100 rounded-2xl shadow-2xl z-[9999] overflow-hidden"
         >
-          {{ opt.label }}
+          <div v-if="filtrados.length" class="max-h-60 overflow-y-auto p-1.5">
+            <div
+              v-for="opt in filtrados"
+              :key="opt.value"
+              class="flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 rounded-lg cursor-pointer transition-colors hover:bg-brand-primary/10 hover:text-brand-primary"
+              @click.stop="selecionar(opt)"
+            >
+              {{ opt.label }}
+            </div>
+          </div>
+
+          <div v-else class="px-4 py-3 text-sm font-semibold text-gray-400">
+            Nenhum resultado
+          </div>
         </div>
-        <div v-if="!filtrados.length" class="search-select__empty">
-          Nenhum resultado encontrado
-        </div>
-      </div>
+      </transition>
     </div>
   </div>
 </template>
-
-<style scoped>
-.search-container {
-  position: relative; /* Necessário para o dropdown absoluto se alinhar aqui */
-}
-
-.search-select__dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  z-index: 9999; /* Garante que fique acima de tudo */
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.5rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  max-height: 200px;
-  overflow-y: auto;
-  margin-top: 4px;
-}
-
-.search-select__option {
-  padding: 10px 12px;
-  cursor: pointer;
-  transition: background 0.2s;
-  color: #1e293b;
-}
-
-.search-select__option:hover {
-  background-color: #f1f5f9;
-  color: #3b82f6;
-}
-
-/* Garante que o container do formulário não esconda o menu */
-:deep(.form-group) {
-  position: relative;
-}
-
-/* Pulo do gato: Quando o input está focado, aumentamos o z-index da coluna inteira */
-.form-group:focus-within {
-  z-index: 50;
-}
-</style>
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
@@ -93,7 +59,7 @@ const props = defineProps({
   placeholder: { type: String, default: 'Pesquisar...' },
   required: Boolean,
   readonly: Boolean,
-  colSpan: { type: String, default: 'col-span-4' }
+  colSpan: { type: String, default: 'col-span-4' },
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -102,10 +68,10 @@ const texto = ref('')
 const abrir = ref(false)
 
 const filtrados = computed(() => {
-  const termo = texto.value?.toLowerCase().trim() || ''
+  const termo = String(texto.value || '').toLowerCase().trim()
   if (!termo) return props.options
-  return props.options.filter(opt => 
-    String(opt.label).toLowerCase().includes(termo)
+  return props.options.filter((opt) =>
+    String(opt.label || '').toLowerCase().includes(termo)
   )
 })
 
@@ -115,18 +81,21 @@ function selecionar(opt) {
   abrir.value = false
 }
 
-// Fecha o menu ao clicar fora
-const fecharAoClicarFora = (e) => {
-  if (!e.target.closest('.form-group')) {
+function fecharAoClicarFora(e) {
+  if (!e.target.closest('.search-container')) {
     abrir.value = false
   }
 }
 
-watch(() => props.modelValue, (val) => {
-  const opt = props.options.find(o => o.value === val)
-  if (opt) texto.value = opt.label
-  else if (!val) texto.value = ''
-}, { immediate: true })
+watch(
+  () => props.modelValue,
+  (val) => {
+    const opt = props.options.find((o) => o.value === val)
+    if (opt) texto.value = opt.label
+    else if (!val) texto.value = ''
+  },
+  { immediate: true }
+)
 
 onMounted(() => document.addEventListener('click', fecharAoClicarFora))
 onUnmounted(() => document.removeEventListener('click', fecharAoClicarFora))

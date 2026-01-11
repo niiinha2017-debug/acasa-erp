@@ -1,44 +1,52 @@
 <template>
-  <div class="table-wrapper">
-    <table class="custom-table">
+  <div
+    :class="boxed
+      ? 'w-full overflow-x-auto rounded-2xl border border-gray-100 bg-white shadow-sm'
+      : 'w-full overflow-x-auto'"
+  >
+    <table class="w-full border-collapse min-w-[600px]">
       <thead>
-        <tr>
-          <th 
-            v-for="col in columns" 
-            :key="col.key" 
-            :style="{ 
-              width: col.width || 'auto',
-              textAlign: col.align || 'left' 
-            }"
+        <tr class="bg-gray-50/50 border-b border-gray-100">
+          <th
+            v-for="col in columns"
+            :key="col.key"
+            class="px-6 py-4 text-[10px] font-black uppercase tracking-[0.15em] text-gray-400"
+            :style="{ width: col.width || 'auto', textAlign: col.align || 'left' }"
           >
             {{ col.label }}
           </th>
         </tr>
       </thead>
 
-      <tbody>
+      <tbody class="divide-y divide-gray-50">
         <tr v-if="loading">
-          <td class="table-state" :colspan="columns.length">
-            <div class="table-loading">
-              <div class="spinner"></div>
-              <span>Carregando dados...</span>
+          <td :colspan="columns.length" class="py-20 text-center">
+            <div class="flex flex-col items-center justify-center gap-3">
+              <div class="w-8 h-8 border-4 border-gray-100 border-t-brand-primary rounded-full animate-spin"></div>
+              <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Buscando dados...</span>
             </div>
           </td>
         </tr>
 
         <tr v-else-if="!rows?.length">
-          <td class="table-state" :colspan="columns.length">
-            <div class="table-empty">
-              <span class="empty-icon">📄</span>
-              <span>{{ emptyText }}</span>
+          <td :colspan="columns.length" class="py-20 text-center">
+            <div class="flex flex-col items-center justify-center gap-2 opacity-40">
+              <i class="pi pi-folder-open text-4xl text-gray-300"></i>
+              <span class="text-sm font-semibold text-gray-500">{{ emptyText }}</span>
             </div>
           </td>
         </tr>
 
-        <tr v-else v-for="(row, index) in rows" :key="row.id ?? index">
-          <td 
-            v-for="col in columns" 
+        <tr
+          v-else
+          v-for="(row, index) in rows"
+          :key="row.id ?? index"
+          class="group transition-colors hover:bg-brand-primary/[0.02]"
+        >
+          <td
+            v-for="col in columns"
             :key="col.key"
+            class="px-6 py-4 text-sm font-semibold text-gray-600 transition-colors group-hover:text-brand-primary"
             :style="{ textAlign: col.align || 'left' }"
           >
             <slot :name="`cell-${col.key}`" :row="row" :value="row[col.key]" :index="index">
@@ -57,74 +65,6 @@ defineProps({
   rows: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
   emptyText: { type: String, default: 'Nenhum registro encontrado.' },
+  boxed: { type: Boolean, default: false }, // ✅ novo
 })
 </script>
-
-<style scoped>
-.table-wrapper {
-  width: 100%;
-  overflow-x: auto;
-}
-
-.custom-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-.custom-table thead tr {
-  background-color: var(--bg-page); /* Ou um cinza bem claro #f9fafb */
-  border-bottom: 2px solid var(--border-soft);
-}
-
-.custom-table th {
-  padding: 12px 16px;
-  font-weight: 600;
-  color: var(--text-main);
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-}
-
-.custom-table td {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border-soft);
-  color: var(--text-main);
-  vertical-align: middle;
-}
-
-.custom-table tbody tr:hover {
-  background-color: rgba(0, 0, 0, 0.02);
-}
-
-.table-state {
-  padding: 40px !important;
-  text-align: center;
-}
-
-.table-loading, .table-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  color: var(--text-muted);
-}
-
-.spinner {
-  width: 24px;
-  height: 24px;
-  border: 3px solid var(--border-soft);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.empty-icon {
-  font-size: 2rem;
-  opacity: 0.5;
-}
-</style>

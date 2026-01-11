@@ -1,71 +1,84 @@
 <template>
-  <div class="page-container">
-    <Card shadow>
-      <header class="card-header header-between">
-        <div>
-          <h2 class="card-title">Produtos</h2>
-          <p class="cell-muted">Lista de produtos e materiais cadastrados.</p>
-        </div>
-        <Button variant="primary" @click="router.push('/produtos/novo')">
-          + Novo Produto
-        </Button>
-      </header>
-
-      <div class="card-filter">
-        <SearchInput 
-          v-model="search" 
-          placeholder="Digite o nome do produto ou fornecedor..." 
-        />
+  <Card :shadow="true">
+    <!-- HEADER -->
+    <header class="flex items-start justify-between gap-4 border-b border-gray-100 p-6">
+      <div class="min-w-0">
+        <h2 class="text-xl font-black tracking-tight text-gray-900 uppercase">Produtos</h2>
+        <p class="mt-1 text-sm font-semibold text-gray-400">
+          Lista de produtos e materiais cadastrados.
+        </p>
       </div>
 
-      <div class="card-body--flush">
-        <Table
-          :columns="columns"
-          :rows="rows"
-          :loading="loading"
-          empty-text="Nenhum produto cadastrado"
-        >
-          <template #cell-nome_produto="{ row }">
-            <div class="cell-stack">
-              <strong>{{ row.nome_produto }}</strong>
-              <span class="cell-muted">Ref: {{ row.id.toString().padStart(4, '0') }}</span>
-            </div>
-          </template>
+      <Button variant="primary" size="sm" type="button" @click="router.push('/produtos/novo')">
+        <i class="pi pi-plus mr-2 text-xs"></i>
+        Novo Produto
+      </Button>
+    </header>
 
-          <template #cell-status="{ row }">
-            <span
-              class="badge"
-              :class="row.status === 'ATIVO' ? 'badge-success' : 'badge-warning'"
-            >
-              {{ row.status }}
+    <!-- BODY -->
+    <div class="p-6 space-y-5">
+      <SearchInput
+        v-model="search"
+        placeholder="Digite o nome do produto ou fornecedor..."
+        colSpan="12"
+      />
+
+      <!-- TABELA (sem “card dentro do card”) -->
+      <Table
+        :columns="columns"
+        :rows="rows"
+        :loading="loading"
+        empty-text="Nenhum produto cadastrado"
+      >
+        <template #cell-nome_produto="{ row }">
+          <div class="flex flex-col">
+            <strong class="text-sm font-black text-gray-900">
+              {{ row.nome_produto }}
+            </strong>
+            <span class="text-xs font-semibold text-gray-400">
+              Ref: {{ row.id.toString().padStart(4, '0') }}
             </span>
-          </template>
+          </div>
+        </template>
 
-          <template #cell-acoes="{ row }">
-            <div class="table-actions">
-              <Button
-                variant="secondary"
-                size="sm"
-                @click="router.push(`/produtos/${row.id}`)"
-                title="Editar"
-              >
-                ✏️
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                @click="excluir(row)"
-                title="Excluir"
-              >
-                🗑️
-              </Button>
-            </div>
-          </template>
-        </Table>
-      </div>
-    </Card>
-  </div>
+        <template #cell-status="{ row }">
+          <span
+            class="inline-flex items-center rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider border"
+            :class="row.status === 'ATIVO'
+              ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+              : 'bg-amber-50 text-amber-700 border-amber-100'"
+          >
+            {{ row.status }}
+          </span>
+        </template>
+
+        <template #cell-acoes="{ row }">
+          <div class="flex justify-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              type="button"
+              @click="router.push(`/produtos/${row.id}`)"
+              title="Editar"
+            >
+              Editar
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              type="button"
+              @click="excluir(row)"
+              title="Excluir"
+            >
+              Excluir
+            </Button>
+          </div>
+        </template>
+      </Table>
+    </div>
+  </Card>
 </template>
+
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'

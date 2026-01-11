@@ -1,111 +1,143 @@
 <template>
-  <div class="page-container">
-    <Card>
-      <header class="card-header header-between">
-        <div>
-          <h2 class="card-title">{{ isEdit ? 'Editar Lançamento' : 'Nova Despesa/Vale' }}</h2>
+  <Card>
+    <!-- HEADER -->
+    <header class="flex items-start justify-between gap-4 p-6 border-b border-gray-100">
+      <div>
+        <h2 class="text-xl font-black tracking-tight text-gray-900 uppercase">
+          {{ isEdit ? 'Editar Lançamento' : 'Nova Despesa/Vale' }}
+        </h2>
+      </div>
+
+      <Button variant="secondary" size="sm" type="button" @click="router.back()">
+        Voltar
+      </Button>
+    </header>
+
+    <!-- BODY -->
+    <div class="p-6">
+      <form class="grid grid-cols-12 gap-5" @submit.prevent="salvar">
+        <!-- Movimentação -->
+        <div class="col-span-12 md:col-span-4">
+          <label class="block text-xs font-extrabold uppercase tracking-[0.18em] text-gray-500 mb-2">
+            Movimentação <span class="text-danger">*</span>
+          </label>
+
+          <select
+            v-model="form.tipo_movimento"
+            required
+            class="w-full h-11 rounded-2xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-900
+                   outline-none transition focus:border-brand-primary/40 focus:ring-4 focus:ring-brand-primary/10"
+          >
+            <option value="SAÍDA">SAÍDA</option>
+            <option value="ENTRADA">ENTRADA</option>
+          </select>
         </div>
 
-        <!-- Regra: botão Voltar no topo à direita -->
-        <Button variant="outline" size="sm" type="button" @click="router.back()">
-          Voltar
-        </Button>
-      </header>
-
-      <div class="card-body">
-        <form class="form-grid" @submit.prevent="salvar">
-          <!-- Movimentação -->
-          <div class="form-group col-span-4">
-            <label class="form-label">Movimentação <span class="required">*</span></label>
-            <select v-model="form.tipo_movimento" class="form-input" required>
-              <option value="SAÍDA">SAÍDA</option>
-              <option value="ENTRADA">ENTRADA</option>
-            </select>
-          </div>
-
-          <!-- Funcionário -->
+        <!-- Funcionário -->
+        <div class="col-span-12 md:col-span-8">
           <SearchInput
             v-model="form.funcionario_id"
             label="Funcionário (Vale/Pagamento) *"
             :options="listaFuncionarios"
             required
-            class="col-span-8"
+            :colSpan="12"
           />
+        </div>
 
-          <!-- Item / Categoria -->
+        <!-- Item / Categoria -->
+        <div class="col-span-12 md:col-span-6">
           <SearchInput
             v-model="categoriaSelecionada"
             label="Item (Ex: Água, Vale) *"
             :options="cat.opcoes.value"
             required
-            class="col-span-6"
+            :colSpan="12"
             @update:modelValue="vincularClassificacaoChave"
           />
+        </div>
 
-          <!-- Classificação (auto) -->
+        <!-- Classificação (auto) -->
+        <div class="col-span-12 md:col-span-6">
           <Input
             v-model="form.classificacao"
             label="Classificação (Chave Auto)"
             readonly
-            class="col-span-6"
           />
+        </div>
 
-          <Input v-model="form.local" label="Local / Fornecedor *" required class="col-span-8" />
+        <div class="col-span-12 md:col-span-8">
+          <Input v-model="form.local" label="Local / Fornecedor *" required />
+        </div>
+
+        <div class="col-span-12 md:col-span-4">
           <Input
             v-model="form.valor_total"
             label="Valor Total *"
             type="number"
             step="0.01"
             required
-            class="col-span-4"
           />
+        </div>
 
-          <!-- Divisor padrão do projeto -->
-          <div class="form-divider"></div>
+        <!-- Divisor -->
+        <div class="col-span-12 h-px bg-gray-100 my-1"></div>
 
+        <div class="col-span-12 md:col-span-5">
           <SearchInput
             v-model="form.forma_pagamento"
             label="Forma de Pagamento *"
             :options="pag.opcoes.value"
             required
-            class="col-span-5"
+            :colSpan="12"
           />
+        </div>
 
+        <div class="col-span-12 md:col-span-3">
           <Input
             v-model.number="form.quantidade_parcelas"
             label="Qtd. Parcelas (Recorrente)"
             type="number"
             min="1"
-            class="col-span-3"
           />
+        </div>
 
+        <div class="col-span-12 md:col-span-4">
           <SearchInput
             v-model="form.status"
             label="Status *"
             :options="sta.opcoes.value"
             required
-            class="col-span-4"
+            :colSpan="12"
           />
+        </div>
 
-          <Input v-model="form.data_vencimento" label="1º Vencimento *" type="date" required class="col-span-4" />
-          <Input v-model="form.data_pagamento" label="Data de Pagamento" type="date" class="col-span-4" />
-          <Input v-model="form.data_registro" label="Data do Registro *" type="date" required class="col-span-4" />
+        <div class="col-span-12 md:col-span-4">
+          <Input v-model="form.data_vencimento" label="1º Vencimento *" type="date" required />
+        </div>
 
-          <!-- Regra: ações principais no rodapé à direita -->
-          <div class="col-span-12 container-botoes">
-            <Button v-if="isEdit" variant="danger" type="button" @click="excluir">
-              Excluir
-            </Button>
+        <div class="col-span-12 md:col-span-4">
+          <Input v-model="form.data_pagamento" label="Data de Pagamento" type="date" />
+        </div>
 
-            <Button variant="primary" type="submit" :loading="loading">
-              {{ isEdit ? 'Salvar' : 'Gerar Lançamentos' }}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </Card>
-  </div>
+        <div class="col-span-12 md:col-span-4">
+          <Input v-model="form.data_registro" label="Data do Registro *" type="date" required />
+        </div>
+      </form>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="flex justify-end gap-3 p-6 border-t border-gray-100">
+      <Button v-if="isEdit" variant="danger" type="button" @click="excluir">
+        Excluir
+      </Button>
+
+      <Button variant="primary" type="button" :loading="loading" @click="salvar">
+        {{ isEdit ? 'Salvar' : 'Gerar Lançamentos' }}
+      </Button>
+    </footer>
+  </Card>
 </template>
+
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'

@@ -1,27 +1,29 @@
 <template>
-  <div class="page-container">
-    <Card shadow>
-      <header class="card-header header-between">
-        <div>
-          <h2 class="card-title">Compras</h2>
-          <p class="cell-muted">
-            Gerencie compras de insumos e vinculadas a ambientes/vendas.
-          </p>
-        </div>
-
-        <Button variant="primary" @click="router.push('/compras/novo')">
-          + Nova Compra
-        </Button>
-      </header>
-
-      <div class="card-filter">
-        <SearchInput
-          v-model="filtro"
-          placeholder="Buscar por fornecedor, status, tipo ou ID da venda..."
-        />
+  <Card :shadow="true">
+    <!-- HEADER -->
+    <header class="flex items-start justify-between gap-4 p-6 border-b border-gray-100">
+      <div>
+        <h2 class="text-xl font-black tracking-tight text-gray-900 uppercase">Compras</h2>
+        <p class="mt-1 text-sm font-semibold text-gray-400">
+          Gerencie compras de insumos e vinculadas a ambientes/vendas.
+        </p>
       </div>
 
-      <div class="card-body--flush">
+      <Button variant="primary" size="sm" type="button" @click="router.push('/compras/novo')">
+        <i class="pi pi-plus mr-2 text-xs"></i>
+        Nova Compra
+      </Button>
+    </header>
+
+    <!-- BODY -->
+    <div class="p-6 space-y-5">
+      <SearchInput
+        v-model="filtro"
+        placeholder="Buscar por fornecedor, status, tipo ou ID da venda..."
+        :colSpan="12"
+      />
+
+      <div class="overflow-hidden rounded-2xl border border-gray-100">
         <Table
           :columns="columns"
           :rows="filtradas"
@@ -29,63 +31,84 @@
           empty-text="Nenhuma compra encontrada."
         >
           <template #cell-tipo_compra="{ row }">
-            <span 
-              :class="['badge', row.tipo_compra === 'INSUMOS' ? 'badge--info' : 'badge--warning']"
+            <span
+              class="inline-flex items-center rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider"
+              :class="row.tipo_compra === 'INSUMOS'
+                ? 'bg-blue-50 text-blue-700 border border-blue-100'
+                : 'bg-amber-50 text-amber-700 border border-amber-100'"
             >
               {{ row.tipo_compra === 'INSUMOS' ? 'INSUMOS' : 'CLIENTE/AMBIENTE' }}
             </span>
           </template>
 
           <template #cell-fornecedor="{ row }">
-            <strong>{{ nomeFornecedor(row) }}</strong>
+            <span class="font-black text-gray-900">
+              {{ nomeFornecedor(row) }}
+            </span>
           </template>
 
           <template #cell-venda_id="{ row }">
-            <span v-if="row.venda_id" class="text-code">#{{ row.venda_id }}</span>
-            <span v-else class="cell-muted">-</span>
+            <span
+              v-if="row.venda_id"
+              class="inline-flex items-center rounded-xl border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-black text-gray-700"
+            >
+              #{{ row.venda_id }}
+            </span>
+            <span v-else class="text-sm font-semibold text-gray-400">-</span>
           </template>
 
           <template #cell-valor_total="{ row }">
-            <span class="text-primary font-bold">
+            <span class="text-sm font-black text-gray-900">
               {{ format.currency(row.valor_total) }}
             </span>
           </template>
 
           <template #cell-data_compra="{ row }">
-            {{ format.date(row.data_compra) }}
+            <span class="text-sm font-semibold text-gray-600">
+              {{ format.date(row.data_compra) }}
+            </span>
           </template>
 
           <template #cell-status="{ row }">
-             <span class="status status--info">
+            <span
+              class="inline-flex items-center rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider border"
+              :class="(row.status || 'RASCUNHO') === 'RASCUNHO'
+                ? 'bg-gray-50 text-gray-700 border-gray-200'
+                : 'bg-emerald-50 text-emerald-700 border-emerald-100'"
+            >
               {{ row.status || 'RASCUNHO' }}
             </span>
           </template>
 
           <template #cell-acoes="{ row }">
-            <div class="table-actions">
+            <div class="flex justify-end gap-2">
               <Button
                 variant="secondary"
                 size="sm"
+                type="button"
                 @click="router.push(`/compras/${row.id}`)"
               >
-                ✏️
+                <i class="pi pi-pencil text-xs"></i>
               </Button>
 
               <Button
                 variant="danger"
                 size="sm"
+                type="button"
                 :loading="deletandoId === row.id"
                 @click="excluir(row.id)"
               >
-                🗑️
+                <i class="pi pi-trash text-xs"></i>
               </Button>
             </div>
           </template>
         </Table>
       </div>
-    </Card>
-  </div>
+    </div>
+  </Card>
 </template>
+
+
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'

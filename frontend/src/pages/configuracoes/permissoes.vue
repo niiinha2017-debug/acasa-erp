@@ -1,86 +1,150 @@
 <template>
-  <div v-if="isAuthenticated && usuarioLogado" class="page-container">
-    <div class="grid grid-cols-12 gap-6">
-      
-      <div class="col-span-4">
-        <Card>
-          <header class="card-header">
-            <h2 class="card-title">Colaboradores</h2>
-            <p class="cell-muted">Selecione para editar acessos</p>
-          </header>
-          
-          <div class="p-4">
-            <SearchInput 
-              v-model="filtroUsuarios" 
-              placeholder="Filtrar por nome..." 
+  <template v-if="isAuthenticated && usuarioLogado">
+    <Card :shadow="true">
+      <!-- HEADER -->
+      <header class="flex flex-col gap-4 px-8 pt-8 pb-6 border-b border-gray-100">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-3">
+              <i class="pi pi-shield text-brand-primary text-xl"></i>
+              <h2 class="text-2xl font-black text-gray-900 tracking-tight">Permissões</h2>
+            </div>
+
+            <p class="text-sm font-semibold text-gray-400 mt-2">
+              Selecione um colaborador e marque os módulos que ele pode acessar.
+            </p>
+          </div>
+
+          <Button variant="secondary" size="sm" type="button" @click="$router.back()">
+            Voltar
+          </Button>
+        </div>
+      </header>
+
+      <!-- BODY -->
+      <div class="p-8">
+        <div class="grid grid-cols-12 gap-6">
+          <!-- ESQUERDA -->
+          <section class="col-span-12 lg:col-span-4">
+            <div class="pb-3 mb-4 border-b border-gray-100">
+              <h3 class="text-sm font-black text-gray-900 tracking-tight">Colaboradores</h3>
+              <p class="text-xs font-semibold text-gray-400 mt-1">Selecione para editar acessos.</p>
+            </div>
+
+            <SearchInput
+              v-model="filtroUsuarios"
+              placeholder="Filtrar por nome..."
+              colSpan="w-full"
             />
-          </div>
 
-          <div class="usuarios-lista-scroll">
-            <div 
-              v-for="u in usuariosFiltrados" 
-              :key="u.id"
-              :class="['user-selection-item', { active: usuarioSelecionado?.id === u.id }]"
-              @click="selecionarUsuario(u)"
-            >
-              <div class="avatar-mini">{{ u.nome.charAt(0) }}</div>
-              <div class="flex-1">
-                <div class="font-bold text-sm">{{ u.nome }}</div>
-                <div class="cell-muted text-xs uppercase">{{ u.setor }}</div>
-              </div>
-              <span v-if="usuarioSelecionado?.id === u.id" class="text-blue-500">➜</span>
-            </div>
-          </div>
-        </Card>
-      </div>
+            <div class="mt-4 max-h-[520px] overflow-auto pr-1">
+              <button
+                v-for="u in usuariosFiltrados"
+                :key="u.id"
+                type="button"
+                @click="selecionarUsuario(u)"
+                class="w-full flex items-center gap-3 p-3 rounded-2xl border border-gray-100 bg-white hover:bg-gray-50 transition-all text-left mb-2"
+                :class="usuarioSelecionado?.id === u.id ? 'ring-2 ring-brand-primary/10 border-brand-primary/20 bg-brand-primary/[0.03]' : ''"
+              >
+                <div class="w-10 h-10 rounded-2xl bg-gray-100 text-gray-700 flex items-center justify-center font-black">
+                  {{ (u.nome || '-').charAt(0) }}
+                </div>
 
-      <div class="col-span-8">
-        <Card v-if="usuarioSelecionado">
-          <header class="card-header header-between">
-            <div>
-              <h2 class="card-title">Permissões: {{ usuarioSelecionado.nome }}</h2>
-              <p class="cell-muted">Marque os módulos que este usuário pode acessar.</p>
-            </div>
-            <Button 
-              variant="primary" 
-              @click="salvar" 
-              :loading="loadingSalvar"
-            >
-              Salvar Alterações
-            </Button>
-          </header>
-
-          <div class="card-body grid grid-cols-2 gap-6">
-            <div v-for="(permissoes, modulo) in mapaPermissoes" :key="modulo" class="modulo-card">
-              <h3 class="modulo-titulo">{{ modulo }}</h3>
-              <div class="space-y-3">
-                <label v-for="p in permissoes" :key="p.chave" class="permission-check">
-                  <input 
-                    type="checkbox" 
-                    :value="p.chave" 
-                    v-model="permissoesAtivas"
-                  />
-                  <div class="check-label">
-                    <span class="block font-medium">{{ p.nome }}</span>
-                    <code class="text-xs text-gray-400">{{ p.chave }}</code>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-black text-gray-900 truncate">{{ u.nome }}</div>
+                  <div class="text-[10px] font-black text-brand-primary uppercase tracking-[0.15em]">
+                    {{ u.setor }}
                   </div>
-                </label>
+                </div>
+
+                <i v-if="usuarioSelecionado?.id === u.id" class="pi pi-angle-right text-brand-primary"></i>
+              </button>
+            </div>
+          </section>
+
+          <!-- DIREITA -->
+          <section class="col-span-12 lg:col-span-8">
+            <div class="pb-3 mb-4 border-b border-gray-100">
+              <h3 class="text-sm font-black text-gray-900 tracking-tight">
+                {{ usuarioSelecionado ? `Permissões: ${usuarioSelecionado.nome}` : 'Permissões do usuário' }}
+              </h3>
+              <p class="text-xs font-semibold text-gray-400 mt-1">
+                {{ usuarioSelecionado ? 'Marque os módulos que este usuário pode acessar.' : 'Selecione um colaborador à esquerda.' }}
+              </p>
+            </div>
+
+            <div v-if="usuarioSelecionado" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div
+                v-for="(permissoes, modulo) in mapaPermissoes"
+                :key="modulo"
+                class="rounded-3xl border border-gray-100 bg-white shadow-sm p-5"
+              >
+                <h4 class="text-sm font-black text-gray-900 tracking-tight">
+                  {{ modulo }}
+                </h4>
+
+                <div class="mt-4 space-y-3">
+                  <label
+                    v-for="p in permissoes"
+                    :key="p.chave"
+                    class="flex items-start gap-3 p-3 rounded-2xl border border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      :value="p.chave"
+                      v-model="permissoesAtivas"
+                      class="mt-1 w-4 h-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary"
+                    />
+
+                    <div class="min-w-0">
+                      <span class="block text-sm font-bold text-gray-800">
+                        {{ p.nome }}
+                      </span>
+                      <code class="block text-[11px] font-semibold text-gray-400 truncate">
+                        {{ p.chave }}
+                      </code>
+                    </div>
+                  </label>
+                </div>
               </div>
             </div>
-          </div>
-        </Card>
 
-        <Card v-else class="empty-selection">
-          <div class="text-center p-12">
-            <div class="text-4xl mb-4">🛡️</div>
-            <h3 class="card-title">Nenhum usuário selecionado</h3>
-            <p class="cell-muted">Selecione um colaborador à esquerda para gerenciar os níveis de acesso.</p>
-          </div>
-        </Card>
+            <div v-else class="rounded-3xl border border-gray-100 bg-gray-50/40 p-10 text-center">
+              <i class="pi pi-shield text-4xl text-gray-300"></i>
+              <h3 class="text-base font-black text-gray-900 mt-4">Nenhum usuário selecionado</h3>
+              <p class="text-sm font-semibold text-gray-400 mt-2">
+                Selecione um colaborador à esquerda para gerenciar os níveis de acesso.
+              </p>
+            </div>
+          </section>
+        </div>
       </div>
-    </div>
-  </div>
+
+      <!-- FOOTER -->
+      <footer class="flex justify-end px-8 py-6 border-t border-gray-100">
+        <Button
+          variant="primary"
+          type="button"
+          @click="salvar"
+          :loading="loadingSalvar"
+          :disabled="!usuarioSelecionado"
+        >
+          Salvar Alterações
+        </Button>
+      </footer>
+    </Card>
+  </template>
+
+  <template v-else>
+    <Card :shadow="true">
+      <div class="p-10 flex flex-col items-center justify-center gap-3">
+        <i class="pi pi-spin pi-spinner text-brand-primary text-4xl"></i>
+        <p class="text-gray-400 font-medium animate-pulse">Sincronizando acessos ACASA...</p>
+      </div>
+    </Card>
+  </template>
 </template>
+
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
@@ -109,7 +173,13 @@ const mapaPermissoes = {
   'Módulo Financeiro': [
     { nome: 'Contas a Pagar', chave: 'contas-pagar.ver' },
     { nome: 'Contas a Receber', chave: 'contas-receber.ver' },
-    { nome: 'Fluxo de Caixa', chave: 'financeiro.ver' }
+    { nome: 'Fluxo de Caixa', chave: 'financeiro.ver' },
+  ],
+
+  'Módulo de Estoque': [
+    { nome: 'Visualizar Estoque', chave: 'estoque.ver' },
+    { nome: 'Gerenciar Produtos', chave: 'produtos.gerenciar' },
+    { nome: 'Fornecedores', chave: 'fornecedores.ver' }
   ],
   'Configurações Avançadas': [
     { nome: 'Gerenciar Usuários', chave: 'usuarios.ver' },
@@ -146,67 +216,3 @@ async function salvar() {
 
 onMounted(carregar)
 </script>
-
-<style scoped>
-.usuarios-lista-scroll {
-  max-height: 600px;
-  overflow-y: auto;
-}
-
-.user-selection-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  cursor: pointer;
-  transition: all 0.2s;
-  border-left: 4px solid transparent;
-}
-
-.user-selection-item:hover { background: var(--bg-hover); }
-.user-selection-item.active {
-  background: #f0f7ff;
-  border-left-color: var(--primary-color);
-}
-
-.avatar-mini {
-  width: 32px; height: 32px;
-  background: var(--primary-color);
-  color: white;
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-weight: bold;
-}
-
-.modulo-card {
-  background: #fdfdfd;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
-  padding: 16px;
-}
-
-.modulo-titulo {
-  font-weight: bold;
-  color: var(--text-main);
-  border-bottom: 1px solid #eee;
-  padding-bottom: 8px;
-  margin-bottom: 12px;
-}
-
-.permission-check {
-  display: flex;
-  gap: 10px;
-  cursor: pointer;
-}
-
-.permission-check input[type="checkbox"] {
-  width: 18px; height: 18px;
-  margin-top: 2px;
-}
-
-.empty-selection {
-  border: 2px dashed #eee !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-</style>

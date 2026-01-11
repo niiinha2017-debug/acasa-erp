@@ -1,14 +1,15 @@
 <template>
-  <div
-    class="input-wrapper"
-    :class="{ 'has-error': error, 'is-disabled': disabled }"
-  >
-    <label v-if="label" :for="inputId" class="input-label">
+  <div class="w-full flex flex-col gap-1.5" :class="{ 'opacity-60 pointer-events-none': disabled }">
+    <label v-if="label" :for="inputId" class="text-xs font-black uppercase tracking-widest text-gray-500 ml-1">
       {{ label }}
-      <span v-if="required" class="required">*</span>
+      <span v-if="required" class="text-danger ml-0.5">*</span>
     </label>
 
-    <div class="input-container">
+    <div class="relative group">
+      <div v-if="$slots.prefix" class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand-primary transition-colors">
+        <slot name="prefix" />
+      </div>
+
       <input
         :id="inputId"
         :type="type"
@@ -17,25 +18,32 @@
         :disabled="disabled"
         :readonly="readonly"
         :autocomplete="autocomplete"
-        class="input-field"
+        class="w-full h-11 transition-all duration-200 bg-white border rounded-xl text-sm font-semibold text-gray-700 placeholder:text-gray-400 placeholder:font-normal"
+        :class="[
+          error 
+            ? 'border-danger/50 focus:border-danger focus:ring-4 focus:ring-danger/10' 
+            : 'border-gray-200 focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10',
+          $slots.prefix ? 'pl-11' : 'pl-4',
+          $slots.suffix ? 'pr-11' : 'pr-4'
+        ]"
         @input="handleInput"
         @blur="handleBlur"
         @focus="handleFocus"
       />
 
-      <span v-if="$slots.prefix" class="input-prefix">
-        <slot name="prefix" />
-      </span>
-
-      <span v-if="$slots.suffix" class="input-suffix">
+      <div v-if="$slots.suffix" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-brand-primary transition-colors">
         <slot name="suffix" />
-      </span>
+      </div>
     </div>
 
-    <div v-if="error || hint" class="input-message">
-      <span v-if="error" class="input-error">{{ error }}</span>
-      <span v-else class="input-hint">{{ hint }}</span>
-    </div>
+    <transition name="fade">
+      <div v-if="error || hint" class="flex items-center gap-1.5 ml-1">
+        <i v-if="error" class="pi pi-exclamation-circle text-[10px] text-danger"></i>
+        <span class="text-[11px] font-bold italic" :class="error ? 'text-danger' : 'text-gray-400'">
+          {{ error || hint }}
+        </span>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -58,9 +66,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'input', 'blur', 'focus'])
 
-const inputId = ref(
-  props.id || `input-${Math.random().toString(36).slice(2)}`
-)
+const inputId = ref(props.id || `input-${Math.random().toString(36).slice(2)}`)
 
 const handleInput = e => {
   emit('update:modelValue', e.target.value)
@@ -70,4 +76,3 @@ const handleInput = e => {
 const handleBlur = e => emit('blur', e)
 const handleFocus = e => emit('focus', e)
 </script>
-

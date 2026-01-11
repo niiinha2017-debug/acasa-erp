@@ -1,211 +1,254 @@
 <template>
-  <div class="page-container">
-    <Card>
+  <div class="w-full">
+    <Card :shadow="true">
       <!-- HEADER -->
-      <header class="card-header header-between">
-        <div>
-          <h2 class="card-title">{{ isEditing ? 'Editar' : 'Novo' }} Funcionário</h2>
-        </div>
+      <div class="flex flex-col gap-4 px-8 pt-8 pb-6 border-b border-gray-100">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h2 class="text-2xl font-black text-gray-900 tracking-tight uppercase">
+              {{ isEditing ? 'Editar' : 'Novo' }} Funcionário
+            </h2>
+          </div>
 
-        <Button variant="secondary" @click="router.push('/funcionarios')">Voltar</Button>
-      </header>
+          <Button
+            variant="outline"
+            size="sm"
+            type="button"
+            @click="router.push('/funcionarios')"
+          >
+            Voltar
+          </Button>
+        </div>
+      </div>
 
       <!-- BODY -->
-      <div class="card-body">
-        <div class="form-grid">
+      <div class="p-8">
+        <div class="grid grid-cols-12 gap-6">
           <!-- 1. Informações Pessoais -->
           <div class="col-span-12">
-            <h3 class="card-title" style="font-size: 1rem;">1. Informações Pessoais</h3>
+            <div class="pb-3 mb-4 border-b border-gray-100">
+              <h3 class="text-sm font-black text-gray-900 tracking-tight uppercase">
+                1. Informações Pessoais
+              </h3>
+            </div>
           </div>
 
-          <div class="col-span-6">
+          <div class="col-span-12 md:col-span-6">
             <Input v-model="form.nome" label="Nome Completo" required />
           </div>
-          <div class="col-span-3">
+          <div class="col-span-12 md:col-span-3">
             <Input v-model="cpfUi" label="CPF" required />
           </div>
-          <div class="col-span-3">
+          <div class="col-span-12 md:col-span-3">
             <Input v-model="rgUi" label="RG" />
           </div>
 
-          <div class="col-span-4">
+          <div class="col-span-12 md:col-span-4">
             <Input v-model="form.email" label="E-mail" />
           </div>
-          <div class="col-span-4">
+          <div class="col-span-12 md:col-span-4">
             <Input v-model="whatsappUi" label="WhatsApp" />
           </div>
-          <div class="col-span-4">
+          <div class="col-span-12 md:col-span-4">
             <Input v-model="form.data_nascimento" label="Data Nascimento" type="date" />
           </div>
 
-          <div class="col-span-6">
+          <div class="col-span-12 md:col-span-6">
             <Input v-model="form.estado_civil" label="Estado Civil" />
           </div>
-          <div class="col-span-6">
+          <div class="col-span-12 md:col-span-6">
             <Input v-model="form.escolaridade" label="Escolaridade" />
           </div>
 
-          <div class="form-divider"></div>
+          <div class="col-span-12">
+            <div class="h-px bg-gray-100 my-2"></div>
+          </div>
 
           <!-- 2. Endereço -->
           <div class="col-span-12">
-            <h3 class="card-title" style="font-size: 1rem;">2. Endereço</h3>
+            <div class="pb-3 mb-4 border-b border-gray-100">
+              <h3 class="text-sm font-black text-gray-900 tracking-tight uppercase">
+                2. Endereço
+              </h3>
+            </div>
           </div>
 
-          <div class="col-span-3">
+          <div class="col-span-12 md:col-span-3">
             <Input v-model="cepUi" label="CEP" />
           </div>
-          <div class="col-span-7">
+          <div class="col-span-12 md:col-span-7">
             <Input v-model="form.endereco" label="Rua/Logradouro" />
           </div>
-          <div class="col-span-2">
+          <div class="col-span-12 md:col-span-2">
             <Input v-model="form.numero" label="Nº" />
           </div>
 
-          <div class="col-span-4">
+          <div class="col-span-12 md:col-span-4">
             <Input v-model="form.complemento" label="Complemento" />
           </div>
-          <div class="col-span-3">
+          <div class="col-span-12 md:col-span-3">
             <Input v-model="form.bairro" label="Bairro" />
           </div>
-          <div class="col-span-3">
+          <div class="col-span-12 md:col-span-3">
             <Input v-model="form.cidade" label="Cidade" />
           </div>
-          <div class="col-span-2">
+          <div class="col-span-12 md:col-span-2">
             <Input v-model="form.estado" label="UF" />
           </div>
 
-          <div class="form-divider"></div>
+          <div class="col-span-12">
+            <div class="h-px bg-gray-100 my-2"></div>
+          </div>
 
           <!-- 3. Dados da Empresa e Horários -->
           <div class="col-span-12">
-            <h3 class="card-title" style="font-size: 1rem;">3. Dados da Empresa e Horários</h3>
+            <div class="pb-3 mb-4 border-b border-gray-100">
+              <h3 class="text-sm font-black text-gray-900 tracking-tight uppercase">
+                3. Dados da Empresa e Horários
+              </h3>
+            </div>
           </div>
 
-          <div class="col-span-4">
+          <div class="col-span-12 md:col-span-4">
             <Input v-model="form.setor" label="Setor" />
           </div>
-          <div class="col-span-4">
+          <div class="col-span-12 md:col-span-4">
             <Input v-model="form.cargo" label="Cargo" />
           </div>
-          <div class="col-span-4">
+          <div class="col-span-12 md:col-span-4">
             <Input v-model="form.funcao" label="Função" />
           </div>
 
-          <div class="col-span-3">
+          <div class="col-span-12 md:col-span-3">
             <Input v-model="form.registro" label="Nº Registro" />
           </div>
-          <div class="col-span-3">
+          <div class="col-span-12 md:col-span-3">
             <Input v-model="form.admissao" label="Data Admissão" type="date" />
           </div>
-          <div class="col-span-3">
+          <div class="col-span-12 md:col-span-3">
             <Input v-model="form.demissao" label="Data Demissão" type="date" />
           </div>
 
-          <div class="col-span-3" v-if="form.admissao">
-            <div style="display:flex; align-items:center; height: 100%;">
-              <div style="width:100%; padding: 10px; border: 1px solid var(--border-soft); border-radius: var(--border-radius-md); background: var(--bg-input); text-align: center;">
-                <b>Tempo Casa:</b> {{ tempoServico }}
+          <!-- tempo de casa: NÃO vira card, só uma linha neutra -->
+          <div class="col-span-12 md:col-span-3" v-if="form.admissao">
+            <div class="h-full flex items-center">
+              <div class="w-full rounded-2xl border border-gray-100 bg-white px-4 py-3 text-sm">
+                <span class="font-black text-gray-900">Tempo Casa:</span>
+                <span class="ml-2 font-semibold text-gray-500">{{ tempoServico }}</span>
               </div>
             </div>
           </div>
 
-          <div class="col-span-3">
+          <div class="col-span-12 md:col-span-3">
             <Input v-model="form.horario_entrada_1" label="Entrada 1" type="time" />
           </div>
-          <div class="col-span-3">
+          <div class="col-span-12 md:col-span-3">
             <Input v-model="form.horario_saida_1" label="Saída 1" type="time" />
           </div>
-          <div class="col-span-3">
+          <div class="col-span-12 md:col-span-3">
             <Input v-model="form.horario_entrada_2" label="Entrada 2" type="time" />
           </div>
-          <div class="col-span-3">
+          <div class="col-span-12 md:col-span-3">
             <Input v-model="form.horario_saida_2" label="Saída 2" type="time" />
           </div>
 
-          <div class="form-divider"></div>
+          <div class="col-span-12">
+            <div class="h-px bg-gray-100 my-2"></div>
+          </div>
 
           <!-- 4. Financeiro e Pagamento -->
           <div class="col-span-12">
-            <h3 class="card-title" style="font-size: 1rem;">4. Financeiro e Pagamento</h3>
+            <div class="pb-3 mb-4 border-b border-gray-100">
+              <h3 class="text-sm font-black text-gray-900 tracking-tight uppercase">
+                4. Financeiro e Pagamento
+              </h3>
+            </div>
           </div>
 
-          <div class="col-span-3">
+          <div class="col-span-12 md:col-span-3">
             <Input v-model="salarioBaseUi" label="Salário Base" />
           </div>
-          <div class="col-span-3">
+          <div class="col-span-12 md:col-span-3">
             <Input v-model="salarioAdicionalUi" label="Adicional" />
           </div>
-          <div class="col-span-3">
+          <div class="col-span-12 md:col-span-3">
             <Input v-model="form.data_pagamento" label="Data Pagto Padrão" type="date" />
           </div>
-          <div class="col-span-3">
+          <div class="col-span-12 md:col-span-3">
             <Input :model-value="custoHoraExibicao" label="Custo Hora (Calculado)" disabled />
           </div>
 
-          <div class="col-span-4 form-group">
-            <label class="input-label">Forma de Pagamento</label>
-            <select v-model="form.forma_pagamento" class="input-field">
+          <div class="col-span-12 md:col-span-4">
+            <label class="block text-xs font-black uppercase tracking-[0.18em] text-gray-500 mb-2">
+              Forma de Pagamento
+            </label>
+            <select
+              v-model="form.forma_pagamento"
+              class="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
+            >
               <option value="DINHEIRO">DINHEIRO</option>
               <option value="PIX">PIX</option>
               <option value="TRANSFERENCIA">TRANSFERÊNCIA</option>
             </select>
           </div>
 
-          <div class="col-span-8">
+          <div class="col-span-12 md:col-span-8">
             <Input v-model="form.banco" label="Banco" />
           </div>
-          <div class="col-span-3">
+          <div class="col-span-12 md:col-span-3">
             <Input v-model="form.agencia" label="Agência" />
           </div>
-          <div class="col-span-3">
+          <div class="col-span-12 md:col-span-3">
             <Input v-model="form.conta" label="Conta" />
           </div>
-          <div class="col-span-3">
+          <div class="col-span-12 md:col-span-3">
             <Input v-model="form.pix_tipo_chave" label="Tipo Chave PIX" />
           </div>
-          <div class="col-span-3">
+          <div class="col-span-12 md:col-span-3">
             <Input v-model="form.pix_chave" label="Chave PIX" />
           </div>
 
-          <div class="col-span-12" style="display:flex; gap: 18px; align-items:center; padding: 10px; border: 1px solid var(--border-soft); border-radius: var(--border-radius-md); background: var(--bg-input);">
-            <label style="display:flex; gap: 8px; align-items:center;">
-              <input type="checkbox" v-model="form.tem_vale" />
-              Tem Vale
-            </label>
+          <!-- checkboxes: neutro, sem “card” visual -->
+          <div class="col-span-12">
+            <div class="rounded-2xl border border-gray-100 bg-white p-4 flex flex-wrap gap-8 items-center">
+              <label class="flex items-center gap-2 text-sm font-black text-gray-700">
+                <input
+                  type="checkbox"
+                  v-model="form.tem_vale"
+                  class="h-4 w-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary/20"
+                />
+                Tem Vale
+              </label>
 
-            <label style="display:flex; gap: 8px; align-items:center;">
-              <input type="checkbox" v-model="form.tem_vale_transporte" />
-              Tem VT
-            </label>
+              <label class="flex items-center gap-2 text-sm font-black text-gray-700">
+                <input
+                  type="checkbox"
+                  v-model="form.tem_vale_transporte"
+                  class="h-4 w-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary/20"
+                />
+                Tem VT
+              </label>
+            </div>
           </div>
 
-          <div class="col-span-6" v-if="form.tem_vale">
+          <div class="col-span-12 md:col-span-6" v-if="form.tem_vale">
             <Input v-model="valeUi" label="Valor Vale" />
           </div>
-          <div class="col-span-6" v-if="form.tem_vale_transporte">
+          <div class="col-span-12 md:col-span-6" v-if="form.tem_vale_transporte">
             <Input v-model="valeTransporteUi" label="Valor VT" />
           </div>
         </div>
-      </div>
 
-      <!-- FOOTER (ações) -->
-      <footer class="card-footer" style="display:flex; justify-content:flex-end;">
-        <Button variant="primary" :loading="salvando" @click="salvar">Salvar Dados</Button>
-      </footer>
+        <!-- FOOTER -->
+        <div class="mt-8 pt-6 border-t border-gray-100 flex justify-end">
+          <Button variant="primary" :loading="salvando" type="button" @click="salvar">
+            Salvar Dados
+          </Button>
+        </div>
+      </div>
     </Card>
   </div>
 </template>
-
-
-<style scoped>
-.section-title { font-size: 1rem; font-weight: 700; color: #1e293b; margin: 10px 0; border-left: 4px solid #3b82f6; padding-left: 10px; }
-.form-divider { grid-column: span 12; height: 1px; background: #e2e8f0; margin: 20px 0; }
-.tempo-servico-badge { background: #eff6ff; padding: 8px; border-radius: 6px; font-size: 0.8rem; color: #1d4ed8; text-align: center; border: 1px solid #dbeafe; }
-.select-custom { width: 100%; height: 42px; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0 10px; background: white; }
-.form-actions { display: flex; justify-content: flex-end; margin-top: 20px; }
-.check-row { display: flex; gap: 20px; background: #f8fafc; padding: 10px; border-radius: 6px; }
-</style>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'

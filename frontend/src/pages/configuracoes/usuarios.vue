@@ -1,48 +1,57 @@
 <template>
-  <div v-if="isAuthenticated && usuarioLogado" class="page-container">
+  <template v-if="isAuthenticated && usuarioLogado">
     <Card>
-      <header class="card-header header-between">
+      <!-- HEADER -->
+      <header class="flex flex-col md:flex-row justify-between items-center gap-4 p-6 border-b border-gray-100">
         <div>
-          <h2 class="card-title">Gestão de Usuários</h2>
-          <p class="form-label" style="margin:0; color: var(--text-muted);">
-            Gerencie permissões, e-mails e acessos ao sistema.
+          <h2 class="text-2xl font-black text-gray-900 flex items-center gap-2 tracking-tight">
+            <i class="pi pi-users text-brand-primary"></i>
+            Gestão de Usuários
+          </h2>
+          <p class="text-sm font-semibold text-gray-400 mt-1">
+            Gerencie permissões e acessos da equipe ACASA.
           </p>
         </div>
 
         <Button variant="primary" @click="abrirModalCadastro">
-          + Novo Usuário
+          <i class="pi pi-user-plus mr-2"></i>
+          Novo Usuário
         </Button>
       </header>
 
+      <!-- SEARCH -->
+      <div class="p-4 border-b border-gray-100 bg-gray-50/50">
+        <div class="max-w-md">
+          <SearchInput
+            v-model="filtro"
+            placeholder="Buscar por nome, e-mail ou setor..."
+            :options="optionsParaBusca"
+          />
+        </div>
+      </div>
 
-<div class="card-filter">
-  <SearchInput 
-    v-model="filtro" 
-    placeholder="Buscar por nome, CPF ou cargo..." 
-    :options="optionsParaBusca"
-  />
-</div>
-
-
-      <div class="card-body--flush">
+      <!-- TABLE -->
+      <div class="overflow-x-auto">
         <Table
           :columns="columns"
-          :rows="usuariosFiltrados" 
+          :rows="usuariosFiltrados"
           :loading="loadingTabela"
           empty-text="Nenhum usuário encontrado."
         >
           <template #cell-acesso="{ row }">
-            <div class="cell-stack">
-              <strong style="font-size: 0.95rem;">{{ row.usuario }}</strong>
-              <span class="cell-muted">{{ row.email }}</span>
+            <div class="flex flex-col py-1">
+              <span class="font-semibold text-gray-700">{{ row.usuario }}</span>
+              <span class="text-[11px] font-semibold text-brand-primary/70">
+                {{ row.email }}
+              </span>
             </div>
           </template>
 
           <template #cell-setor="{ row }">
             <select
               v-model="row.setor"
-              class="form-input"
-              style="padding: 4px 8px; height: auto; font-size: 0.85rem;"
+              class="text-xs font-semibold bg-white border border-gray-200 rounded-md px-2 py-1
+                     outline-none focus:border-brand-primary transition disabled:opacity-50"
               @change="alterarSetor(row)"
               :disabled="row.id === usuarioLogado?.id"
             >
@@ -55,114 +64,130 @@
 
           <template #cell-status="{ row }">
             <span
-              :class="['badge', row.status === 'ATIVO' ? 'badge-success' : 'badge-danger']"
+              :class="[
+                'px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase border',
+                row.status === 'ATIVO'
+                  ? 'bg-green-50 text-success border-green-200'
+                  : 'bg-red-50 text-danger border-red-200'
+              ]"
             >
               {{ row.status }}
             </span>
           </template>
 
           <template #cell-acoes="{ row }">
-            <div class="table-actions">
-              <Button variant="secondary" size="sm" @click="editarUsuario(row)">✏</Button>
-              <Button v-if="row.status !== 'ATIVO'" variant="success" size="sm" @click="alterarStatus(row, 'ATIVO')">✔</Button>
-              <Button 
-                variant="danger" 
-                size="sm" 
-                @click="confirmarExclusao(row)"
-                :disabled="row.id === usuarioLogado?.id"
+            <div class="flex items-center justify-center gap-1">
+              <Button
+                variant="secondary"
+                size="sm"
+                @click="editarUsuario(row)"
               >
-                🗑
+                <i class="pi pi-pencil text-xs"></i>
+              </Button>
+
+              <Button
+                v-if="row.status !== 'ATIVO'"
+                variant="success"
+                size="sm"
+                @click="alterarStatus(row, 'ATIVO')"
+              >
+                <i class="pi pi-check-circle text-xs"></i>
+              </Button>
+
+              <Button
+                variant="danger"
+                size="sm"
+                :disabled="row.id === usuarioLogado?.id"
+                @click="confirmarExclusao(row)"
+              >
+                <i class="pi pi-trash text-xs"></i>
               </Button>
             </div>
           </template>
         </Table>
       </div>
     </Card>
-<div v-if="exibirModal" class="modal-overlay" @click.self="fecharModal">
-  <div class="modal-content">
-    <Card>
-      <header class="card-header header-between">
-        <div>
-          <h3 class="card-title" style="margin:0;">
-            {{ modoEdicao ? 'Editar Usuário' : 'Novo Usuário' }}
+
+    <!-- MODAL -->
+    <div
+      v-if="exibirModal"
+      class="fixed inset-0 z-modal flex items-center justify-center p-4
+             bg-slate-900/60 backdrop-blur-sm"
+      @click.self="fecharModal"
+    >
+      <div class="w-full max-w-xl bg-white rounded-3xl shadow-xl overflow-hidden">
+        <header class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+          <h3 class="text-lg font-black text-gray-900 uppercase tracking-tight">
+            {{ modoEdicao ? 'Editar Usuário' : 'Novo Registro' }}
           </h3>
-          <p class="cell-muted" style="margin:0;">
-            {{ modoEdicao ? 'Atualize os dados do usuário.' : 'Cadastre um novo usuário para acessar o sistema.' }}
-          </p>
-        </div>
 
-        <Button variant="outline" size="sm" type="button" @click="fecharModal">
-          ✕
-        </Button>
-      </header>
+          <button
+            @click="fecharModal"
+            class="text-gray-400 hover:text-danger transition"
+          >
+            <i class="pi pi-times"></i>
+          </button>
+        </header>
 
-      <div style="padding: 16px 20px;">
-        <form class="form-grid" @submit.prevent="salvar">
-          <Input
-            v-model="formUsuario.nome"
-            label="Nome Completo"
-            placeholder="Ex: Maria Silva"
-            class="col-span-12"
-            :required="true"
-          />
+        <form class="p-6 space-y-5" @submit.prevent="salvar">
+          <div class="grid grid-cols-12 gap-4">
+            <Input v-model="formUsuario.nome" label="Nome Completo" class="col-span-12" required />
+            <Input v-model="formUsuario.usuario" label="Usuário" class="col-span-5" required />
+            <Input v-model="formUsuario.email" label="E-mail Corporativo" class="col-span-7" required />
 
-          <Input
-            v-model="formUsuario.usuario"
-            label="Usuário"
-            placeholder="Ex: maria"
-            class="col-span-4"
-            :required="true"
-          />
+            <Input
+              v-model="formUsuario.senha"
+              :label="modoEdicao ? 'Senha (opcional)' : 'Senha de Acesso'"
+              type="password"
+              class="col-span-6"
+              :required="!modoEdicao"
+            />
 
-          <Input
-            v-model="formUsuario.email"
-            label="E-mail"
-            placeholder="ex: maria@email.com"
-            class="col-span-8"
-            :required="true"
-          />
-
-          <Input
-            v-model="formUsuario.senha"
-            :label="modoEdicao ? 'Senha (opcional)' : 'Senha'"
-            :placeholder="modoEdicao ? 'Deixe vazio para não alterar' : 'Digite a senha'"
-            type="password"
-            class="col-span-6"
-            :required="!modoEdicao"
-            autocomplete="new-password"
-          />
-
-          <div class="form-group col-span-6">
-            <label class="form-label">Setor <span class="required">*</span></label>
-            <select v-model="formUsuario.setor" class="form-input" required>
-              <option value="ADMIN">ADMIN</option>
-              <option value="FINANCEIRO">FINANCEIRO</option>
-              <option value="PRODUCAO">PRODUÇÃO</option>
-              <option value="VENDAS">VENDAS</option>
-            </select>
+            <div class="col-span-6">
+              <label class="text-xs font-black uppercase text-gray-500 mb-1 block">
+                Setor
+              </label>
+              <select
+                v-model="formUsuario.setor"
+                class="w-full h-10 px-3 border border-gray-200 rounded-md
+                       text-sm font-semibold focus:border-brand-primary outline-none"
+                required
+              >
+                <option value="ADMIN">ADMINISTRAÇÃO</option>
+                <option value="FINANCEIRO">FINANCEIRO</option>
+                <option value="PRODUCAO">PRODUÇÃO</option>
+                <option value="VENDAS">VENDAS</option>
+              </select>
+            </div>
           </div>
 
-          <div class="col-span-12" style="display:flex; justify-content:flex-end; gap:10px; margin-top: 6px;">
-            <Button variant="outline" type="button" @click="fecharModal" :disabled="loadingSalvar">
+          <footer class="flex justify-end gap-3 pt-4 border-t border-gray-100">
+            <Button variant="secondary" type="button" @click="fecharModal">
               Cancelar
             </Button>
 
-            <Button type="submit" :loading="loadingSalvar" :disabled="loadingSalvar">
-              {{ modoEdicao ? 'Salvar alterações' : 'Cadastrar' }}
+            <Button variant="primary" type="submit" :loading="loadingSalvar">
+              {{ modoEdicao ? 'Atualizar Dados' : 'Finalizar Cadastro' }}
             </Button>
-          </div>
+          </footer>
         </form>
       </div>
+    </div>
+  </template>
+
+  <!-- LOADING -->
+  <template v-else>
+    <Card>
+      <div class="p-10 flex flex-col items-center justify-center gap-3">
+        <i class="pi pi-spin pi-spinner text-brand-primary text-4xl"></i>
+        <p class="text-gray-400 font-medium animate-pulse">
+          Sincronizando acessos ACASA...
+        </p>
+      </div>
     </Card>
-  </div>
-</div>
-
-  </div>
-
-  <div v-else class="page-container" style="display:flex; justify-content:center; align-items:center; height:200px;">
-    <p>Verificando permissões...</p>
-  </div>
+  </template>
 </template>
+
 
 <script setup>
 import { ref, onMounted, computed, onUnmounted } from 'vue'
@@ -313,22 +338,3 @@ onMounted(async () => {
 </script>
 
 
-<style scoped>
-.modal-overlay {
-  position: fixed;
-  top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0,0,0,0.5);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 9999;
-}
-.modal-content {
-  width: 100%;
-  max-width: 500px;
-  padding: 20px;
-}
-.table-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-}
-</style>

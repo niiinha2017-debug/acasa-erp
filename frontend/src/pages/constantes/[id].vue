@@ -1,112 +1,154 @@
 <template>
-  <div class="page-container">
-    <Card>
-      <header class="card-header header-between">
-        <div>
-          <h2 class="card-title">{{ isEdit ? 'Editar Constante' : 'Nova Constante' }}</h2>
-          <p class="cell-muted">Gerencie os parâmetros globais do sistema.</p>
-        </div>
+  <Card :shadow="true">
+    <!-- HEADER -->
+    <header class="flex items-start justify-between gap-4 p-6 border-b border-gray-100">
+      <div>
+        <h2 class="text-xl font-black tracking-tight text-gray-900 uppercase">
+          {{ isEdit ? 'Editar Constante' : 'Nova Constante' }}
+        </h2>
+        <p class="mt-1 text-sm font-semibold text-gray-400">
+          Gerencie os parâmetros globais do sistema.
+        </p>
+      </div>
 
-        <div class="flex-gap-2">
-          <Button
-            v-if="isEdit"
-            variant="danger"
-            size="sm"
-            type="button"
-            @click="excluir"
-          >
-            Excluir
-          </Button>
-          <Button variant="outline" size="sm" @click="router.push('/constantes')">Voltar</Button>
-        </div>
-      </header>
+      <div class="flex items-center gap-2">
+        <Button
+          v-if="isEdit"
+          variant="danger"
+          size="sm"
+          type="button"
+          @click="excluir"
+        >
+          Excluir
+        </Button>
 
-      <div class="card-body">
-        <form class="form-grid" @submit.prevent="salvar">
+        <Button
+          variant="secondary"
+          size="sm"
+          type="button"
+          @click="router.push('/constantes')"
+        >
+          <i class="pi pi-arrow-left mr-2 text-xs"></i>
+          Voltar
+        </Button>
+      </div>
+    </header>
+
+    <!-- BODY -->
+    <div class="p-6">
+      <form class="grid grid-cols-12 gap-5" @submit.prevent="salvar">
+        <div class="col-span-12 md:col-span-4">
           <Input
             v-model="form.categoria"
             label="Categoria *"
             placeholder="Ex: STATUS_FINANCEIRO"
             required
-            class="col-span-4"
             @input="form.categoria = form.categoria.toUpperCase()"
           />
+        </div>
 
+        <div class="col-span-12 md:col-span-4">
           <Input
             v-model="form.chave"
             label="Chave (ID Interno) *"
             placeholder="Ex: PAGO"
             required
-            class="col-span-4"
             @input="form.chave = form.chave.toUpperCase()"
           />
+        </div>
 
+        <div class="col-span-12 md:col-span-4">
           <Input
             v-model="form.rotulo"
             label="Rótulo (Exibição) *"
             placeholder="Ex: Pago"
             required
-            class="col-span-4"
           />
+        </div>
 
-          <div class="form-group col-span-4">
-            <label class="form-label">Tipo de Dado <span class="required">*</span></label>
-            <select v-model="form.tipo" class="form-input" required>
-              <option value="TEXTO">TEXTO (Cores, Descrições)</option>
-              <option value="NUMERO">NÚMERO (Taxas, Prazos)</option>
-            </select>
-          </div>
+        <div class="col-span-12 md:col-span-4">
+          <label class="text-xs font-black uppercase tracking-widest text-gray-500 ml-1">
+            Tipo de Dado <span class="text-danger ml-0.5">*</span>
+          </label>
+          <select
+            v-model="form.tipo"
+            required
+            class="w-full h-11 px-4 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 transition-all
+                   focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10"
+          >
+            <option value="TEXTO">TEXTO (Cores, Descrições)</option>
+            <option value="NUMERO">NÚMERO (Taxas, Prazos)</option>
+          </select>
+        </div>
 
+        <div class="col-span-12 md:col-span-4">
           <Input
             v-model.number="form.ordem"
             label="Ordem de Exibição"
             type="number"
-            class="col-span-4"
+          />
+        </div>
+
+        <div class="col-span-12 md:col-span-4">
+          <label class="text-xs font-black uppercase tracking-widest text-gray-500 ml-1">
+            Status
+          </label>
+          <select
+            v-model="form.ativo"
+            class="w-full h-11 px-4 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 transition-all
+                   focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10"
+          >
+            <option :value="true">Ativo</option>
+            <option :value="false">Inativo</option>
+          </select>
+        </div>
+
+        <div class="col-span-12">
+          <Input
+            v-if="form.tipo === 'TEXTO'"
+            v-model="form.valor_texto"
+            :label="form.categoria.includes('STATUS') ? 'Cor do Badge (Hex)' : 'Valor em Texto'"
+            placeholder="Ex: #3b82f6"
           />
 
-          <div class="form-group col-span-4">
-            <label class="form-label">Status</label>
-            <select v-model="form.ativo" class="form-input">
-              <option :value="true">Ativo</option>
-              <option :value="false">Inativo</option>
-            </select>
+          <div v-if="form.tipo === 'NUMERO'" class="grid grid-cols-12 gap-5">
+            <div class="col-span-12 md:col-span-6">
+              <Input
+                v-model.number="form.valor_numero"
+                :label="form.categoria.includes('PAGAMENTO') ? 'Taxa (%)' : 'Valor Numérico'"
+                type="number"
+                step="0.0001"
+                placeholder="Ex: 2.99"
+              />
+            </div>
           </div>
+        </div>
 
-          <div class="col-span-12">
-            <Input
-              v-if="form.tipo === 'TEXTO'"
-              v-model="form.valor_texto"
-              :label="form.categoria.includes('STATUS') ? 'Cor do Badge (Hex)' : 'Valor em Texto'"
-              placeholder="Ex: #3b82f6"
-              class="col-span-12"
-            />
-
-            <Input
-              v-if="form.tipo === 'NUMERO'"
-              v-model.number="form.valor_numero"
-              :label="form.categoria.includes('PAGAMENTO') ? 'Taxa (%)' : 'Valor Numérico'"
-              type="number"
-              step="0.0001"
-              placeholder="Ex: 2.99"
-              class="col-span-6"
-            />
+        <div v-if="erro" class="col-span-12">
+          <div class="rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-700 text-center">
+            {{ erro }}
           </div>
+        </div>
 
-          <div class="col-span-12 flex-end gap-2 mt-4">
-            <Button variant="outline" type="button" @click="router.push('/constantes')">
-              Cancelar
-            </Button>
-            <Button type="submit" :loading="loading" variant="primary">
-              {{ isEdit ? 'Salvar Alterações' : 'Criar Constante' }}
-            </Button>
-          </div>
+        <!-- divisória visual opcional -->
+        <div class="col-span-12">
+          <div class="h-px w-full bg-gray-100"></div>
+        </div>
+      </form>
+    </div>
 
-          <p v-if="erro" class="col-span-12 error-message text-center">{{ erro }}</p>
-        </form>
-      </div>
-    </Card>
-  </div>
+    <!-- FOOTER -->
+    <footer class="flex items-center justify-end gap-2 p-6 border-t border-gray-100">
+      <Button variant="outline" type="button" @click="router.push('/constantes')">
+        Cancelar
+      </Button>
+      <Button type="button" :loading="loading" variant="primary" @click="salvar">
+        {{ isEdit ? 'Salvar Alterações' : 'Criar Constante' }}
+      </Button>
+    </footer>
+  </Card>
 </template>
+
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
@@ -193,8 +235,3 @@ const excluir = async () => {
 onMounted(carregarDados)
 </script>
 
-<style scoped>
-.flex-gap-2 { display: flex; gap: 8px; }
-.flex-end { display: flex; justify-content: flex-end; }
-.error-message { color: #ef4444; margin-top: 10px; }
-</style>

@@ -1,289 +1,467 @@
 <template>
-  <div class="page-container">
-    <div class="card card--shadow">
-      <header class="card-header header-between">
-        <div>
-          <h2 class="card-title">
-            {{ isEdit ? `Editar Compra #${compraId}` : 'Nova Compra' }}
-          </h2>
-          <p class="card-subtitle">
-            {{ tipoCompra === 'INSUMOS'
-              ? 'Compra de INSUMOS (Marcenaria)'
-              : 'Compra de CLIENTE x AMBIENTES (Venda)' }}
-          </p>
+  <Card :shadow="true">
+    <!-- HEADER -->
+    <header class="flex items-start justify-between gap-4 p-6 border-b border-gray-100">
+      <div>
+        <h2 class="text-xl font-black tracking-tight text-gray-900 uppercase">
+          {{ isEdit ? `Editar Compra #${compraId}` : 'Nova Compra' }}
+        </h2>
+        <p class="mt-1 text-sm font-semibold text-gray-400">
+          {{ tipoCompra === 'INSUMOS'
+            ? 'Compra de INSUMOS (Marcenaria)'
+            : 'Compra de CLIENTE x AMBIENTES (Venda)' }}
+        </p>
+      </div>
+
+      <Button variant="secondary" size="sm" type="button" @click="router.back()">
+        <i class="pi pi-arrow-left mr-2 text-xs"></i>
+        Voltar
+      </Button>
+    </header>
+
+    <!-- BODY -->
+    <div class="p-6">
+      <div v-if="loading" class="flex items-center justify-center py-12">
+        <div class="flex items-center gap-3 text-sm font-bold text-gray-400">
+          <i class="pi pi-spin pi-spinner"></i>
+          Carregando...
         </div>
+      </div>
 
-        <div class="header-actions">
-          <Button label="Voltar" variant="outline" size="md" @click="router.back()" />
-        </div>
-      </header>
+      <template v-else>
+        <section class="space-y-8">
+          <!-- BLOCO: TIPO + FORNECEDOR + VENDA -->
+          <div class="grid grid-cols-12 gap-5">
+            <div class="col-span-12 md:col-span-4">
+              <div class="rounded-2xl border border-gray-100 bg-white p-4">
+                <div class="flex items-center justify-between gap-4">
+                  <div>
+                    <div class="text-xs font-black uppercase text-gray-400">Tipo de Compra</div>
+                    <div class="text-sm font-black text-gray-900 mt-1">
+                      {{ tipoCompra === 'INSUMOS'
+                        ? 'INSUMOS (Marcenaria)'
+                        : 'CLIENTE x AMBIENTES (Venda)' }}
+                    </div>
+                  </div>
 
-      <div class="card-body">
-        <div v-if="loading" class="loading-box">Carregando...</div>
-
-        <template v-else>
-          <div class="section mb-6">
-            <div class="section-header">
-              <h3 class="section-title">Tipo de Compra</h3>
-              <p class="section-subtitle">Selecione o tipo de compra que está realizando.</p>
+                  <CustomCheckbox
+                    label="Cliente x Ambientes"
+                    :model-value="tipoCompra === 'CLIENTE_AMBIENTE'"
+                    @update:model-value="(v) => (tipoCompra = v ? 'CLIENTE_AMBIENTE' : 'INSUMOS')"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div class="type-box flex gap-4 mt-4">
-              <CustomCheckbox
-                label="Compra de INSUMOS"
-                description="Uso interno da marcenaria"
-                :model-value="tipoCompra === 'INSUMOS'"
-                :disabled="isEdit"
-                @update:model-value="() => (tipoCompra = 'INSUMOS')"
-              />
-
-              <CustomCheckbox
-                label="Compra de CLIENTE x AMBIENTES"
-                description="Venda vinculada a projeto"
-                :model-value="tipoCompra === 'CLIENTE_AMBIENTE'"
-                :disabled="isEdit"
-                @update:model-value="() => (tipoCompra = 'CLIENTE_AMBIENTE')"
-              />
-            </div>
-          </div>
-
-          <div class="form-grid mt-6">
-            <div v-if="tipoCompra === 'CLIENTE_AMBIENTE'" class="form-group col-span-6">
-              <SearchInput
-                v-model="vendaSelecionada"
-                label="Venda *"
-                :options="vendaOptions"
-                placeholder="Buscar venda pelo nome..."
-                :required="true"
-                colSpan="col-span-12"
-              />
-            </div>
-
-            <div class="form-group" :class="tipoCompra === 'CLIENTE_AMBIENTE' ? 'col-span-6' : 'col-span-12'">
+            <div class="col-span-12 md:col-span-8">
               <SearchInput
                 v-model="fornecedorSelecionado"
                 label="Fornecedor *"
                 :options="fornecedorOptions"
-                placeholder="Buscar fornecedor..."
-                :required="true"
-                colSpan="col-span-12"
+                required
+                :colSpan="12"
+              />
+            </div>
+
+            <div v-if="tipoCompra === 'CLIENTE_AMBIENTE'" class="col-span-12">
+              <SearchInput
+                v-model="vendaSelecionada"
+                label="Venda / Cliente *"
+                :options="vendaOptions"
+                required
+                :colSpan="12"
               />
             </div>
           </div>
 
-          <div v-if="tipoCompra === 'CLIENTE_AMBIENTE'" class="section mt-8">
-            <div class="section-divider"></div>
+          <div class="h-px w-full bg-gray-100"></div>
 
-            <div class="section-header header-between">
+          <!-- BLOCO: REGISTRAR ITEM -->
+          <div class="rounded-2xl border border-gray-100 bg-white p-4">
+            <div class="flex items-start justify-between gap-4">
               <div>
-                <h3 class="card-title section-title">Ambientes</h3>
-                <p class="section-subtitle">Selecione os ambientes e ajuste o rateio.</p>
+                <h3 class="text-sm font-black tracking-tight text-gray-900 uppercase">Registrar Item</h3>
+                <p class="text-xs font-semibold text-gray-400 mt-1">
+                  Preencha e clique em Registrar para adicionar à compra.
+                </p>
               </div>
 
-              <div class="section-actions flex gap-2">
-                <Button label="Selecionar todos" variant="outline" size="sm" @click="selecionarTodosAmbientes" />
-                <Button label="Ratear automaticamente" variant="secondary" size="sm" @click="ratearAutomatico" />
+              <div class="flex items-center gap-2">
+                <Button variant="secondary" type="button" @click="abrirModalProduto()">
+                  <i class="pi pi-box mr-2 text-xs"></i>
+                  Novo Produto
+                </Button>
               </div>
             </div>
 
-            <div class="ambientes-grid flex flex-wrap gap-4 mt-4">
-              <CustomCheckbox 
-                v-for="a in ambientes" 
-                :key="a"
-                :label="a"
-                :model-value="ambientesSelecionados.has(a)"
-                @update:model-value="toggleAmbiente(a)"
-              />
-            </div>
-
-            <div class="rateio-box mt-6 p-4 bg-light rounded-lg">
-              <h4 class="rateio-title font-bold mb-4">Rateio (editável)</h4>
-
-              <div v-for="(r, idx) in rateios" :key="r.nome_ambiente" class="rateio-row grid grid-cols-12 gap-4 items-center mb-2">
-                <div class="rateio-name col-span-4">{{ r.nome_ambiente }}</div>
-                <div class="rateio-input col-span-3">
-                  <Input v-model="r.valor_alocado" type="number" placeholder="0" @input="recalcularSomaRateio" />
-                </div>
-                <div class="rateio-hint col-span-3 text-muted">{{ format.currency(r.valor_alocado) }}</div>
-                <div class="col-span-2 flex justify-end">
-                  <Button label="X" variant="danger" size="sm" @click="removerRateio(idx)" />
+            <div class="grid grid-cols-12 gap-5 mt-4">
+              <div class="col-span-12 md:col-span-6">
+                <SearchInput
+                  v-model="itemNovo.produto_id"
+                  label="Produto *"
+                  :options="produtoOptions"
+                  required
+                  :colSpan="12"
+                  @update:modelValue="(v) => onSelecionarProdutoNovo(v)"
+                />
+                <div v-if="itemNovo.descricao" class="mt-2 text-xs font-semibold text-gray-400">
+                  {{ itemNovo.descricao }}
                 </div>
               </div>
 
-              <div class="rateio-total mt-4 pt-4 border-t flex justify-between items-center">
-                <span>Soma rateio:</span>
-                <b :class="{ 'text-danger': somaRateio !== totalCalculado, 'text-success': somaRateio === totalCalculado }">
-                  {{ format.currency(somaRateio) }}
-                </b>
-              </div>
-            </div>
-          </div>
-
-          <div class="section-divider"></div>
-
-          <div class="section-header header-between mt-8">
-            <div>
-              <h3 class="card-title items-title">Itens</h3>
-              <p class="items-subtitle">Materiais/serviços desta compra.</p>
-            </div>
-
-            <div class="flex gap-2">
-              <Button label="+ Adicionar item" variant="secondary" size="sm" @click="addItem()" />
-              <Button label="+ Novo produto" variant="outline" size="sm" @click="abrirModalProduto()" />
-            </div>
-          </div>
-
-          <div class="items-list mt-4">
-            <div v-for="(it, idx) in itens" :key="it._key" class="item-card card--shadow-sm mb-4 p-4 border rounded-lg">
-              <div class="form-grid">
-                <div class="form-group col-span-6">
-                  <SearchInput
-                    v-model="it.produto_id"
-                    label="Produto"
-                    :options="produtoOptions"
-                    placeholder="Buscar produto..."
-                    colSpan="col-span-12"
-                    @update:modelValue="(v) => aplicarProdutoNoItem(idx, v)"
-                  />
-                </div>
-
-                <div class="form-group col-span-2">
-                  <Input v-model="it.unidade" label="Unidade" placeholder="UN / PL" />
-                </div>
-
-                <div class="form-group col-span-2">
-                  <Input v-model="it.quantidade" label="Qtd" type="number" @input="() => recalcularItem(idx)" />
-                </div>
-
-                <div class="form-group col-span-2">
-                  <Input v-model="it.valor_unitario" label="Vlr Unit." type="number" @input="() => recalcularItem(idx)" />
-                </div>
-
-                <div class="form-group col-span-3">
-                  <Input v-model="it.valor_total" label="Total" type="number" readonly />
-                </div>
-
-                <div class="col-span-9 flex justify-end items-end pb-1">
-                  <Button label="Remover" variant="danger" size="sm" @click="removerItem(idx)" />
-                </div>
+              <div class="col-span-12 md:col-span-2">
+                <Input v-model="itemNovo.unidade" label="Unidade" readonly />
               </div>
 
-              <div class="item-snapshot mt-2 text-sm text-muted">
-                <span>Descrição:</span>
-                <b class="ml-2">{{ it.descricao || '—' }}</b>
+              <div class="col-span-12 md:col-span-2">
+                <Input v-model="itemNovo.quantidade" label="Quantidade *" required />
+              </div>
+
+              <div class="col-span-12 md:col-span-2">
+                <Input v-model="itemNovo.valorUnitarioMask" label="Valor Unitário *" required />
+              </div>
+
+              <div class="col-span-12 md:col-span-3">
+                <Input :model-value="itemNovo.valorTotalMask" label="Total" readonly />
+              </div>
+
+              <div class="col-span-12 md:col-span-9 flex justify-end gap-2 items-end">
+                <Button variant="outline" type="button" @click="limparItemNovo()">
+                  Limpar
+                </Button>
+                <Button variant="primary" type="button" @click="registrarItemNovo()">
+                  <i class="pi pi-check mr-2 text-xs"></i>
+                  Registrar Item
+                </Button>
               </div>
             </div>
           </div>
 
-          <div class="total-box-wrapper flex justify-end mt-6">
-            <div class="total-box p-4 bg-primary-light rounded-lg">
-              <span class="cell-muted mr-4">Total da compra:</span>
-              <strong class="text-2xl text-primary">{{ format.currency(totalCalculado) }}</strong>
+          <!-- BLOCO: ITENS REGISTRADOS -->
+          <div class="space-y-4">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h3 class="text-sm font-black tracking-tight text-gray-900 uppercase">Itens da Compra</h3>
+                <p class="text-xs font-semibold text-gray-400 mt-1">
+                  Itens já adicionados nesta compra.
+                </p>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <Button variant="outline" type="button" @click="addItem()">
+                  <i class="pi pi-plus mr-2 text-xs"></i>
+                  Adicionar Item Manual
+                </Button>
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <div
+                v-for="(it, idx) in itens"
+                :key="it._key || it.id || idx"
+                class="rounded-2xl border border-gray-100 bg-white p-4"
+              >
+                <div class="grid grid-cols-12 gap-4">
+                  <div class="col-span-12 md:col-span-6">
+                    <SearchInput
+                      v-model="it.produto_id"
+                      label="Produto *"
+                      :options="produtoOptions"
+                      required
+                      :colSpan="12"
+                      @update:modelValue="(v) => aplicarProdutoNoItem(idx, v)"
+                    />
+                    <div v-if="it.descricao" class="mt-2 text-xs font-semibold text-gray-400">
+                      {{ it.descricao }}
+                    </div>
+                    <div class="mt-3">
+                      <Button variant="secondary" size="sm" type="button" @click="abrirModalProduto(idx)">
+                        <i class="pi pi-box mr-2 text-xs"></i>
+                        Novo Produto
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div class="col-span-12 md:col-span-2">
+                    <Input v-model="it.unidade" label="Unidade" readonly />
+                  </div>
+
+                  <div class="col-span-12 md:col-span-2">
+                    <Input
+                      :model-value="String(it.quantidade ?? '')"
+                      label="Quantidade *"
+                      required
+                      @update:modelValue="(v) => { it.quantidade = Number(String(v || '').replace(',', '.')) || 0; recalcularItem(idx) }"
+                    />
+                  </div>
+
+                  <div class="col-span-12 md:col-span-2">
+                    <Input
+                      :model-value="maskMoneyBR(it.valor_unitario || 0)"
+                      label="Valor Unitário *"
+                      required
+                      @update:modelValue="(v) => { 
+                        const n = String(v || '').replace(/\\D/g, '')
+                        it.valor_unitario = n ? Number(n) / 100 : 0
+                        recalcularItem(idx)
+                      }"
+                    />
+                  </div>
+
+                  <div class="col-span-12 md:col-span-3">
+                    <Input :model-value="maskMoneyBR(it.valor_total || 0)" label="Total" readonly />
+                  </div>
+
+                  <div class="col-span-12 md:col-span-9 flex items-end justify-end">
+                    <Button variant="danger" size="sm" type="button" @click="removerItem(idx)">
+                      <i class="pi pi-trash mr-2 text-xs"></i>
+                      Remover
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-end">
+              <div class="text-right">
+                <div class="text-xs font-black uppercase text-gray-400">Total da Compra</div>
+                <div class="text-2xl font-black tracking-tight text-gray-900">
+                  {{ maskMoneyBR(totalCalculado) }}
+                </div>
+              </div>
             </div>
           </div>
-        </template>
-      </div>
 
-      <footer class="card-footer footer-between">
-        <div class="footer-left">
-          <Button
-            v-if="isEdit"
-            label="Excluir compra"
-            variant="danger"
-            :loading="excluindo"
-            @click="excluir"
-          />
-        </div>
+          <!-- RATEIO -->
+          <template v-if="tipoCompra === 'CLIENTE_AMBIENTE'">
+            <div class="h-px w-full bg-gray-100"></div>
 
-        <div class="footer-right flex gap-2">
-          <Button
-            :label="isEdit ? 'Salvar Alterações' : 'Criar Compra'"
-            variant="primary"
-            size="md"
-            :loading="salvando"
-            @click="salvar"
-          />
-        </div>
-      </footer>
+            <div class="space-y-4">
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <h3 class="text-sm font-black tracking-tight text-gray-900 uppercase">Rateio por Ambientes</h3>
+                  <p class="text-xs font-semibold text-gray-400 mt-1">
+                    Selecione os ambientes e rateie automaticamente pelo total.
+                  </p>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <Button variant="outline" type="button" @click="selecionarTodosAmbientes()">
+                    Selecionar Todos
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    type="button"
+                    @click="ratearAutomatico()"
+                    :disabled="ambientesSelecionados.size === 0"
+                  >
+                    Ratear Automático
+                  </Button>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-12 gap-3">
+                <button
+                  v-for="nome in ambientes"
+                  :key="nome"
+                  type="button"
+                  class="col-span-12 md:col-span-4 rounded-2xl border border-gray-100 bg-white px-4 py-3 text-left transition-all"
+                  :class="ambientesSelecionados.has(nome) ? 'ring-2 ring-blue-200 border-blue-200' : 'hover:border-gray-200'"
+                  @click="toggleAmbiente(nome)"
+                >
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="text-sm font-black text-gray-900 truncate">{{ nome }}</div>
+                    <i v-if="ambientesSelecionados.has(nome)" class="pi pi-check text-xs text-green-600"></i>
+                  </div>
+                </button>
+
+                <div v-if="!ambientes.length" class="col-span-12 text-sm font-bold text-gray-400">
+                  Nenhum ambiente encontrado para esta venda.
+                </div>
+              </div>
+
+              <div class="space-y-3">
+                <div
+                  v-for="(r, idx) in rateios"
+                  :key="`${r.nome_ambiente}-${idx}`"
+                  class="rounded-2xl border border-gray-100 bg-white p-4"
+                >
+                  <div class="grid grid-cols-12 gap-4 items-end">
+                    <div class="col-span-12 md:col-span-7">
+                      <Input :model-value="r.nome_ambiente" label="Ambiente" readonly />
+                    </div>
+
+                    <div class="col-span-12 md:col-span-3">
+                      <Input
+                        :model-value="maskMoneyBR(r.valor_alocado || 0)"
+                        label="Valor Alocado *"
+                        required
+                        @update:modelValue="(v) => {
+                          const n = String(v || '').replace(/\\D/g, '')
+                          r.valor_alocado = n ? Number(n) / 100 : 0
+                          recalcularSomaRateio()
+                        }"
+                      />
+                    </div>
+
+                    <div class="col-span-12 md:col-span-2 flex justify-end">
+                      <Button variant="danger" size="sm" type="button" @click="removerRateio(idx)">
+                        Remover
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div v-if="!rateios.length" class="text-sm font-bold text-gray-400">
+                  Selecione ambientes acima para gerar o rateio.
+                </div>
+              </div>
+
+              <div class="flex items-center justify-end">
+                <div class="text-right">
+                  <div class="text-xs font-black uppercase text-gray-400">Soma do Rateio</div>
+                  <div
+                    class="text-xl font-black tracking-tight"
+                    :class="Math.abs(somaRateio - totalCalculado) <= 0.01 ? 'text-green-700' : 'text-red-700'"
+                  >
+                    {{ maskMoneyBR(somaRateio) }}
+                  </div>
+                  <div class="text-[11px] font-bold text-gray-400 mt-1">
+                    Deve bater com o total da compra.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </section>
+      </template>
     </div>
 
-    <div v-if="modalProduto.aberto" class="modal-backdrop" @click.self="fecharModalProduto()">
-      <div class="modal-card-container">
-        <div class="card card--shadow modal-content-box">
-          <header class="card-header header-between">
-            <div>
-              <h3 class="card-title">Novo Produto</h3>
-              <p class="muted">Cadastre um novo produto abaixo.</p>
-            </div>
-            <Button label="✕" variant="ghost" size="sm" @click="fecharModalProduto()" />
-          </header>
+    <!-- FOOTER -->
+    <footer class="flex items-center justify-between gap-4 p-6 border-t border-gray-100">
+      <div>
+        <Button v-if="isEdit" variant="danger" :loading="excluindo" type="button" @click="excluir">
+          <i class="pi pi-trash mr-2 text-xs"></i>
+          Excluir compra
+        </Button>
+      </div>
 
-          <div class="card-body">
-            <form class="form-grid" @submit.prevent="salvarProduto">
+      <div class="flex justify-end gap-2">
+        <Button variant="primary" size="md" :loading="salvando" type="button" @click="salvar">
+          {{ isEdit ? 'Salvar Alterações' : 'Criar Compra' }}
+        </Button>
+      </div>
+    </footer>
+  </Card>
+
+  <!-- MODAL: NOVO PRODUTO -->
+  <Transition name="fade">
+    <div
+      v-if="modalProduto.aberto"
+      class="fixed inset-0 z-modal flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm"
+      @click.self="fecharModalProduto()"
+    >
+      <div class="w-full max-w-3xl bg-white rounded-3xl border border-gray-100 shadow-2xl overflow-hidden">
+        <header class="flex items-start justify-between gap-4 px-8 py-6 border-b border-gray-50 bg-gray-50/30">
+          <div>
+            <h3 class="text-xl font-black text-gray-900 tracking-tighter uppercase">Novo Produto</h3>
+            <p class="text-sm font-semibold text-gray-400 mt-1">Cadastre um novo produto abaixo.</p>
+          </div>
+
+          <button
+            class="w-8 h-8 flex items-center justify-center rounded-xl bg-white border border-gray-100 text-gray-400 hover:text-red-600 hover:border-red-200 transition-all shadow-sm"
+            @click="fecharModalProduto()"
+          >
+            <i class="pi pi-times text-xs"></i>
+          </button>
+        </header>
+
+        <div class="p-8">
+          <form class="grid grid-cols-12 gap-5" @submit.prevent="salvarProduto">
+            <div class="col-span-12">
               <SearchInput
                 v-model="modalProduto.form.fornecedor_id"
                 label="Fornecedor *"
                 :options="fornecedorOptions"
                 required
-                class="col-span-12"
+                :colSpan="12"
               />
+            </div>
 
-              <Input v-model="modalProduto.form.nome_produto" label="Nome do Produto *" required class="col-span-8" />
-              
-              <div class="col-span-4 flex items-end pb-2">
-                 <CustomCheckbox 
-                  label="Ativo" 
-                  :model-value="modalProduto.form.status === 'ATIVO'"
-                  @update:model-value="(v) => modalProduto.form.status = v ? 'ATIVO' : 'INATIVO'" 
-                />
-              </div>
+            <div class="col-span-12 md:col-span-8">
+              <Input v-model="modalProduto.form.nome_produto" label="Nome do Produto *" required />
+            </div>
 
-              <Input v-model="modalProduto.form.marca" label="Marca" class="col-span-4" />
-              <Input v-model="modalProduto.form.cor" label="Cor" class="col-span-4" />
-              <Input v-model="modalProduto.form.medida" label="Medida" class="col-span-4" />
+            <div class="col-span-12 md:col-span-4 flex items-end pb-1.5">
+              <CustomCheckbox
+                label="Ativo"
+                :model-value="modalProduto.form.status === 'ATIVO'"
+                @update:model-value="(v) => (modalProduto.form.status = v ? 'ATIVO' : 'INATIVO')"
+              />
+            </div>
 
+            <div class="col-span-12 md:col-span-4">
+              <Input v-model="modalProduto.form.marca" label="Marca" />
+            </div>
+            <div class="col-span-12 md:col-span-4">
+              <Input v-model="modalProduto.form.cor" label="Cor" />
+            </div>
+            <div class="col-span-12 md:col-span-4">
+              <Input v-model="modalProduto.form.medida" label="Medida" />
+            </div>
+
+            <div class="col-span-12 md:col-span-4">
               <SearchInput
                 v-model="modalProduto.form.unidade"
                 label="Unidade *"
                 :options="unidadesOptions"
                 required
-                class="col-span-4"
+                :colSpan="12"
               />
+            </div>
 
-              <Input v-model="modalProduto.quantidadeMask" label="Quantidade *" required class="col-span-4" />
-              <Input v-model="modalProduto.valorUnitarioInput" label="Valor Unitário *" required class="col-span-4" />
-              <Input :model-value="modalProduto.valorTotalMask" label="Valor Total" readonly class="col-span-4" />
+            <div class="col-span-12 md:col-span-4">
+              <Input v-model="modalProduto.quantidadeMask" label="Quantidade *" required />
+            </div>
 
-              <div class="col-span-12 flex justify-end gap-3 mt-6">
-                <Button variant="outline" type="button" @click="fecharModalProduto()">Cancelar</Button>
-                <Button variant="primary" type="submit" :loading="modalProduto.salvando">Salvar Produto</Button>
-              </div>
-            </form>
-          </div>
+            <div class="col-span-12 md:col-span-4">
+              <Input v-model="modalProduto.valorUnitarioInput" label="Valor Unitário *" required />
+            </div>
+
+            <div class="col-span-12 md:col-span-4">
+              <Input :model-value="modalProduto.valorTotalMask" label="Valor Total" readonly />
+            </div>
+
+            <div class="col-span-12 flex justify-end gap-3 pt-2 border-t border-gray-50 mt-2">
+              <Button variant="outline" type="button" @click="fecharModalProduto()">
+                Cancelar
+              </Button>
+              <Button variant="primary" type="submit" :loading="modalProduto.salvando">
+                <i class="pi pi-check mr-2 text-xs"></i>
+                Salvar Produto
+              </Button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
-  </div>
+  </Transition>
 </template>
+
 
 <script setup>
 import { ref, computed, reactive, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import api from '@/services/api'
-import { format } from '@/utils/format'
 import { maskMoneyBR } from '@/utils/masks'
 import { useConstantes } from '@/composables/useConstantes'
 
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import SearchInput from '@/components/ui/SearchInput.vue'
-// No <script setup>
-import CustomCheckbox from '@/components/ui/CustomCheckbox.vue' // Ajuste o caminho conforme necessário
+import CustomCheckbox from '@/components/ui/CustomCheckbox.vue'
 
-/* -------------------------------------------------------------------------- */
-/* ROUTE / MODE (NOVO + EDITAR JUNTOS)                                         */
-/* -------------------------------------------------------------------------- */
 const route = useRoute()
 const router = useRouter()
 
@@ -296,9 +474,6 @@ const compraId = computed(() => {
   return Number.isFinite(n) ? n : null
 })
 
-/* -------------------------------------------------------------------------- */
-/* STATE GERAL                                                                 */
-/* -------------------------------------------------------------------------- */
 const loading = ref(false)
 const salvando = ref(false)
 const excluindo = ref(false)
@@ -309,14 +484,11 @@ const form = ref({
   venda_id: null,
 })
 
-/* -------------------------------------------------------------------------- */
-/* FORNECEDORES                                                                */
-/* -------------------------------------------------------------------------- */
 const fornecedores = ref([])
 const fornecedorSelecionado = ref(null)
 
 const fornecedorOptions = computed(() =>
-  fornecedores.value.map(f => ({
+  fornecedores.value.map((f) => ({
     value: f.id,
     label: f.razao_social || f.nome_fantasia || `Fornecedor #${f.id}`,
   }))
@@ -327,9 +499,6 @@ async function carregarFornecedores() {
   fornecedores.value = Array.isArray(data) ? data : []
 }
 
-/* -------------------------------------------------------------------------- */
-/* VENDAS (BUSCA POR NOME)                                                     */
-/* -------------------------------------------------------------------------- */
 const vendaSelecionada = ref(null)
 const vendaOptions = ref([])
 
@@ -337,44 +506,44 @@ async function carregarVendas() {
   const { data } = await api.get('/vendas')
   const arr = Array.isArray(data) ? data : []
 
-  vendaOptions.value = arr.map(v => ({
+  vendaOptions.value = arr.map((v) => ({
     value: v.id,
-    label:
-      v.nome ||
-      v.cliente_nome ||
-      v.cliente?.nome ||
-      `Venda #${v.id}`,
+    label: v.nome || v.cliente_nome || v.cliente?.nome || `Venda #${v.id}`,
   }))
 }
 
-/* -------------------------------------------------------------------------- */
-/* CONSTANTES (UNIDADE)                                                        */
-/* -------------------------------------------------------------------------- */
 const uni = useConstantes()
 
 const unidadesOptions = computed(() => {
   const lista = Array.isArray(uni.opcoes.value) ? uni.opcoes.value : []
 
   return lista
-    .filter(o => String(o.value || '').toUpperCase() === 'UNIDADE')
-    .map(o => ({
+    .filter((o) => String(o.value || '').toUpperCase() === 'UNIDADE')
+    .map((o) => ({
       label: o.label,
       value: o.label,
     }))
-    .filter(o => o.label)
+    .filter((o) => o.label)
 })
 
-/* -------------------------------------------------------------------------- */
-/* ITENS                                                                       */
-/* -------------------------------------------------------------------------- */
 const itens = ref([])
+
+const itemNovo = reactive({
+  produto_id: null,
+  descricao: '',
+  unidade: '',
+  quantidade: '1',
+  valorUnitarioMask: '0,00',
+  valor_total: 0,
+  valorTotalMask: '0,00',
+})
 
 function round2(n) {
   return Math.round((Number(n) + Number.EPSILON) * 100) / 100
 }
 
 const totalCalculado = computed(() =>
-  round2(itens.value.reduce((acc, it) => acc + Number(it.valor_total || 0), 0))
+  round2(itens.value.reduce((acc, it) => acc + Number(it?.valor_total || 0), 0))
 )
 
 function addItem() {
@@ -396,12 +565,10 @@ function removerItem(idx) {
 
 function recalcularItem(idx) {
   const it = itens.value[idx]
+  if (!it) return
   it.valor_total = round2(Number(it.quantidade || 0) * Number(it.valor_unitario || 0))
 }
 
-/* -------------------------------------------------------------------------- */
-/* PRODUTOS (BUSCA + MAP)                                                      */
-/* -------------------------------------------------------------------------- */
 const produtoOptions = ref([])
 const produtoMap = ref(new Map())
 
@@ -409,14 +576,22 @@ async function carregarProdutos() {
   const { data } = await api.get('/produtos')
   const arr = Array.isArray(data) ? data : []
 
-  produtoOptions.value = arr.map(p => ({
+  produtoOptions.value = arr.map((p) => ({
     value: p.id,
     label: p.nome_produto || p.nome || `Produto #${p.id}`,
   }))
 
   const map = new Map()
-  arr.forEach(p => map.set(p.id, p))
+  arr.forEach((p) => map.set(p.id, p))
   produtoMap.value = map
+}
+
+function montarDescricaoProduto(p) {
+  const nome = p?.nome_produto || p?.nome || ''
+  const partes = [p?.marca, p?.cor, p?.medida].filter(Boolean)
+  if (!nome && partes.length === 0) return ''
+  if (partes.length === 0) return nome
+  return `${nome} — ${partes.join(' • ')}`
 }
 
 function aplicarProdutoNoItem(idx, produtoId) {
@@ -424,35 +599,97 @@ function aplicarProdutoNoItem(idx, produtoId) {
   if (!p) return
 
   const it = itens.value[idx]
+  if (!it) return
+
   it.produto_id = p.id
-  it.descricao = p.nome_produto || p.nome
-  it.unidade = p.unidade
+  it.descricao = montarDescricaoProduto(p)
+  it.unidade = p.unidade || it.unidade
+
   if (!it.valor_unitario) it.valor_unitario = Number(p.valor_unitario || 0)
+
   recalcularItem(idx)
 }
 
-/* -------------------------------------------------------------------------- */
-/* AMBIENTES / RATEIO                                                          */
-/* -------------------------------------------------------------------------- */
+function limparItemNovo() {
+  itemNovo.produto_id = null
+  itemNovo.descricao = ''
+  itemNovo.unidade = ''
+  itemNovo.quantidade = '1'
+  itemNovo.valorUnitarioMask = '0,00'
+  itemNovo.valor_total = 0
+  itemNovo.valorTotalMask = '0,00'
+}
+
+function onSelecionarProdutoNovo(produtoId) {
+  const p = produtoMap.value.get(Number(produtoId))
+  if (!p) return
+
+  itemNovo.produto_id = p.id
+  itemNovo.descricao = montarDescricaoProduto(p)
+  itemNovo.unidade = p.unidade || ''
+  itemNovo.valorUnitarioMask = maskMoneyBR(Number(p.valor_unitario || 0))
+}
+
+watch(
+  () => [itemNovo.quantidade, itemNovo.valorUnitarioMask],
+  () => {
+    const q = Number(String(itemNovo.quantidade || '').replace(',', '.')) || 0
+    const n = String(itemNovo.valorUnitarioMask || '').replace(/\D/g, '')
+    const vu = n ? Number(n) / 100 : 0
+    const total = round2(q * vu)
+    itemNovo.valor_total = total
+    itemNovo.valorTotalMask = maskMoneyBR(total)
+  },
+  { deep: true }
+)
+
+function registrarItemNovo() {
+  if (!itemNovo.produto_id) return alert('Selecione o produto.')
+
+  const q = Number(String(itemNovo.quantidade || '').replace(',', '.')) || 0
+  if (q <= 0) return alert('Quantidade inválida.')
+
+  const n = String(itemNovo.valorUnitarioMask || '').replace(/\D/g, '')
+  const vu = n ? Number(n) / 100 : 0
+
+  itens.value.push({
+    id: undefined,
+    produto_id: itemNovo.produto_id,
+    descricao: itemNovo.descricao,
+    unidade: itemNovo.unidade,
+    quantidade: q,
+    valor_unitario: vu,
+    valor_total: round2(q * vu),
+    _key: `tmp-${Math.random().toString(36).slice(2)}`,
+  })
+
+  limparItemNovo()
+}
+
 const ambientes = ref([])
 const ambientesSelecionados = ref(new Set())
 const rateios = ref([])
 const somaRateio = ref(0)
 
 function recalcularSomaRateio() {
-  somaRateio.value = round2(rateios.value.reduce((a, r) => a + Number(r.valor_alocado || 0), 0))
+  somaRateio.value = round2(rateios.value.reduce((a, r) => a + Number(r?.valor_alocado || 0), 0))
 }
 
 function rateioAutomaticoValores(total, nomes) {
   const base = round2(total / nomes.length)
-  const arr = nomes.map(n => ({ nome_ambiente: n, valor_alocado: base }))
+  const arr = nomes.map((n) => ({ nome_ambiente: n, valor_alocado: base }))
   const diff = round2(total - arr.reduce((a, r) => a + r.valor_alocado, 0))
-  arr[arr.length - 1].valor_alocado += diff
+  if (arr.length) arr[arr.length - 1].valor_alocado += diff
   return arr
 }
 
 function ratearAutomatico() {
   const nomes = Array.from(ambientesSelecionados.value)
+  if (!nomes.length) {
+    rateios.value = []
+    recalcularSomaRateio()
+    return
+  }
   rateios.value = rateioAutomaticoValores(totalCalculado.value, nomes)
   recalcularSomaRateio()
 }
@@ -478,17 +715,13 @@ async function carregarAmbientesDaVenda(vendaId) {
   const { data } = await api.get(`/vendas/${vendaId}`)
   const itensVenda = Array.isArray(data?.itens) ? data.itens : []
 
-  ambientes.value = Array.from(
-    new Set(itensVenda.map(i => i.nome_ambiente).filter(Boolean))
-  )
+  ambientes.value = Array.from(new Set(itensVenda.map((i) => i?.nome_ambiente).filter(Boolean)))
 }
 
-/* -------------------------------------------------------------------------- */
-/* MODAL PRODUTO (IGUAL CADASTRO)                                              */
-/* -------------------------------------------------------------------------- */
 const modalProduto = reactive({
   aberto: false,
   salvando: false,
+  targetIdx: null,
   form: {
     fornecedor_id: null,
     nome_produto: '',
@@ -506,29 +739,37 @@ const modalProduto = reactive({
   valorTotalMask: '0,00',
 })
 
-function abrirModalProduto() {
+function abrirModalProduto(idx = null) {
+  modalProduto.targetIdx = idx
   modalProduto.aberto = true
 }
 
 function fecharModalProduto() {
   modalProduto.aberto = false
+  modalProduto.targetIdx = null
 }
 
-watch(() => modalProduto.quantidadeMask, v => {
-  modalProduto.form.quantidade = Number(String(v || '').replace(/\D/g, '')) || 0
-})
+watch(
+  () => modalProduto.quantidadeMask,
+  (v) => {
+    modalProduto.form.quantidade = Number(String(v || '').replace(/\D/g, '')) || 0
+  }
+)
 
-watch(() => modalProduto.valorUnitarioInput, v => {
-  const n = String(v || '').replace(/\D/g, '')
-  const valor = n ? Number(n) / 100 : 0
-  modalProduto.form.valor_unitario = valor
-  modalProduto.valorUnitarioInput = maskMoneyBR(valor)
-})
+watch(
+  () => modalProduto.valorUnitarioInput,
+  (v) => {
+    const n = String(v || '').replace(/\D/g, '')
+    const valor = n ? Number(n) / 100 : 0
+    modalProduto.form.valor_unitario = valor
+    modalProduto.valorUnitarioInput = maskMoneyBR(valor)
+  }
+)
 
 watch(
   () => [modalProduto.form.quantidade, modalProduto.form.valor_unitario],
   () => {
-    const total = modalProduto.form.quantidade * modalProduto.form.valor_unitario
+    const total = Number(modalProduto.form.quantidade || 0) * Number(modalProduto.form.valor_unitario || 0)
     modalProduto.form.valor_total = total
     modalProduto.valorTotalMask = maskMoneyBR(total)
   },
@@ -538,43 +779,51 @@ watch(
 async function salvarProduto() {
   modalProduto.salvando = true
   try {
-    await api.post('/produtos', modalProduto.form)
+    const { data } = await api.post('/produtos', modalProduto.form)
     await carregarProdutos()
+
+    const novoId = data?.id
+    if (novoId && modalProduto.targetIdx !== null) {
+      aplicarProdutoNoItem(modalProduto.targetIdx, novoId)
+    }
+
     fecharModalProduto()
   } finally {
     modalProduto.salvando = false
   }
 }
 
-/* -------------------------------------------------------------------------- */
-/* CARREGAR COMPRA (EDITAR)                                                    */
-/* -------------------------------------------------------------------------- */
 async function carregarCompra() {
   if (!isEdit.value || !compraId.value) return
 
   const { data } = await api.get(`/compras/${compraId.value}`)
 
-  tipoCompra.value = data.tipo_compra
-  fornecedorSelecionado.value = data.fornecedor_id
-  vendaSelecionada.value = data.venda_id
-  form.value.venda_id = data.venda_id
+  tipoCompra.value = data?.tipo_compra || 'INSUMOS'
+  fornecedorSelecionado.value = data?.fornecedor_id ?? null
+  vendaSelecionada.value = data?.venda_id ?? null
+  form.value.venda_id = data?.venda_id ?? null
 
-  itens.value = data.itens || []
-  rateios.value = data.rateios || []
+  itens.value = Array.isArray(data?.itens) ? data.itens.filter(Boolean).map((it) => ({
+    id: it.id ?? undefined,
+    produto_id: it.produto_id ?? null,
+    descricao: it.descricao ?? '',
+    unidade: it.unidade ?? '',
+    quantidade: Number(it.quantidade ?? 0),
+    valor_unitario: Number(it.valor_unitario ?? 0),
+    valor_total: Number(it.valor_total ?? 0),
+    _key: it._key || `db-${it.id || Math.random().toString(36).slice(2)}`,
+  })) : []
+
+  rateios.value = Array.isArray(data?.rateios) ? data.rateios.filter(Boolean) : []
+  recalcularSomaRateio()
 }
-
-/* -------------------------------------------------------------------------- */
-/* SALVAR / EXCLUIR                                                            */
-/* -------------------------------------------------------------------------- */
-/* ... (restante do código acima permanece igual) ... */
 
 async function salvar() {
   if (!fornecedorSelecionado.value) return alert('Selecione o fornecedor.')
-  
+
   if (tipoCompra.value === 'CLIENTE_AMBIENTE') {
     if (!vendaSelecionada.value) return alert('Selecione a venda.')
-    
-    // Validação opcional: O rateio deve bater com o total
+
     if (Math.abs(somaRateio.value - totalCalculado.value) > 0.01) {
       return alert('A soma do rateio deve ser igual ao total da compra.')
     }
@@ -586,15 +835,15 @@ async function salvar() {
       tipo_compra: tipoCompra.value,
       fornecedor_id: fornecedorSelecionado.value,
       venda_id: tipoCompra.value === 'CLIENTE_AMBIENTE' ? vendaSelecionada.value : null,
-      itens: itens.value,    // ADICIONADO .value
-      rateios: rateios.value, // ADICIONADO .value
-      valor_total: totalCalculado.value // Geralmente o backend pede o total geral
+      itens: itens.value,
+      rateios: rateios.value,
+      valor_total: totalCalculado.value,
     }
 
     if (isEdit.value) {
       await api.put(`/compras/${compraId.value}`, payload)
     } else {
-      await api.post('/compras', payload) // ALTERADO para POST
+      await api.post('/compras', payload)
     }
 
     router.push('/compras')
@@ -605,17 +854,6 @@ async function salvar() {
     salvando.value = false
   }
 }
-
-/* -------------------------------------------------------------------------- */
-/* WATCHERS / INIT                                                            */
-/* -------------------------------------------------------------------------- */
-
-// Adicionei um watch para recalcular o rateio se o total da compra mudar
-watch(totalCalculado, () => {
-  if (tipoCompra.value === 'CLIENTE_AMBIENTE' && ambientesSelecionados.value.size > 0) {
-    ratearAutomatico()
-  }
-})
 
 async function excluir() {
   if (!confirm('Deseja excluir esta compra?')) return
@@ -628,18 +866,35 @@ async function excluir() {
   }
 }
 
-/* -------------------------------------------------------------------------- */
-/* WATCHERS / INIT                                                             */
-/* -------------------------------------------------------------------------- */
+watch(totalCalculado, () => {
+  if (tipoCompra.value === 'CLIENTE_AMBIENTE' && ambientesSelecionados.value.size > 0) {
+    ratearAutomatico()
+  }
+})
+
 watch(vendaSelecionada, async (v) => {
-  // Limpa ambientes se trocar de venda
   ambientes.value = []
   ambientesSelecionados.value = new Set()
   rateios.value = []
+  somaRateio.value = 0
 
   if (tipoCompra.value === 'CLIENTE_AMBIENTE' && v) {
     form.value.venda_id = v
     await carregarAmbientesDaVenda(v)
+  }
+})
+
+watch(tipoCompra, async (novo) => {
+  if (novo !== 'CLIENTE_AMBIENTE') {
+    ambientes.value = []
+    ambientesSelecionados.value = new Set()
+    rateios.value = []
+    somaRateio.value = 0
+    return
+  }
+
+  if (vendaSelecionada.value) {
+    await carregarAmbientesDaVenda(vendaSelecionada.value)
   }
 })
 
@@ -655,48 +910,13 @@ onMounted(async () => {
 
     await carregarCompra()
     if (!itens.value.length) addItem()
+
+    if (tipoCompra.value === 'CLIENTE_AMBIENTE' && vendaSelecionada.value) {
+      await carregarAmbientesDaVenda(vendaSelecionada.value)
+    }
   } finally {
     loading.value = false
   }
 })
 </script>
 
-<style scoped>
-/* Estilos para garantir que o modal apareça corretamente */
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  padding: 20px;
-}
-
-.modal-card-container {
-  width: 100%;
-  max-width: 850px;
-  max-height: 95vh;
-  overflow-y: auto;
-}
-
-.modal-content-box {
-  background: white;
-  border-radius: 12px;
-}
-
-.section-divider {
-  height: 1px;
-  background: var(--border-soft);
-  margin: 24px 0;
-}
-
-.bg-light { background-color: #f9fafb; }
-.bg-primary-light { background-color: rgba(37, 99, 235, 0.05); }
-
-/* Ajustes de tipografia */
-.section-title { font-size: 1.1rem; font-weight: 600; color: var(--text-main); }
-.section-subtitle { font-size: 0.85rem; color: var(--text-muted); }
-</style>

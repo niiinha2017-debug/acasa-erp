@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@theme {
+  /* Cores Principais */
+  --color-brand-primary: #3a78a8;
+  --color-brand-dark: #2c5a7d;
+  --color-danger: #ef4444;
+  --color-success: #059669;
+  --color-warning: #d97706;
+  --color-info: #3a78a8;
+
+  /* Aliases para compatibilidade (O Pulo do Gato) */
+  --color-text-primary: #111827; /* gray-900 */
+  --color-border-light: #f2f2f2; /* gray-100 */
+  --color-bg-page: #f2f2f2;      /* gray-100 */
+  --color-bg-input: #fafafa;     /* gray-50 */
+
+  /* Z-Index */
+  --z-index-dropdown: 1000;
+  --z-index-sticky: 1020;
+  --z-index-modal: 1050;
+}
+@layer components {
+  /* Links da navegação */
+  .nav-link-tw {
+    @apply h-10 px-5 flex items-center justify-center text-sm font-bold rounded-lg transition-all text-gray-500 hover:bg-white hover:text-brand-primary hover:shadow-sm;
+  }
+
+  .nav-link-active-tw {
+    @apply bg-white text-brand-primary shadow-sm ring-1 ring-gray-100;
+  }
+
+  /* REGRAS DE DROPDOWN SEM O @APPLY QUE DÁ ERRO */
+  .dropdown-container-tw {
+    @apply absolute top-[calc(100%+12px)] left-1/2 -translate-x-1/2 w-60 p-2 bg-white rounded-2xl border border-gray-100 shadow-2xl z-dropdown;
+    /* Usando transição nativa de opacidade para evitar o erro de animação desconhecida */
+    transition: all 0.2s ease-out;
+  }
+
+  .dropdown-item-tw {
+    @apply flex items-center w-full px-4 py-2.5 text-[13px] font-semibold text-gray-600 rounded-lg transition-colors hover:bg-gray-50 hover:text-brand-primary;
+  }
+}
+
+/* Animação em CSS Puro (fora do @layer para o Tailwind não implicar) */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px) translateX(-50%); }
+  to { opacity: 1; transform: translateY(0) translateX(-50%); }
+}
+
+.animate-slide-up-custom {
+  animation: slideUp 0.2s ease-out forwards;
+}

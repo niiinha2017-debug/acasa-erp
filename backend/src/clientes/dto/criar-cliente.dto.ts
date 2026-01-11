@@ -31,6 +31,7 @@ export class CriarClienteDto {
   @IsOptional() @IsString() cep?: string
   @IsOptional() @IsString() endereco?: string
   @IsOptional() @IsString() numero?: string
+  @IsOptional() @IsString() complemento?: string
   @IsOptional() @IsString() bairro?: string
   @IsOptional() @IsString() cidade?: string
   @IsOptional() @IsString() estado?: string

@@ -1,63 +1,112 @@
 <template>
-  <div class="page-container">
-    <Card>
-      <header class="card-header header-between">
-        <div>
-          <h2 class="card-title">{{ isEdit ? 'Editar Produto' : 'Novo Produto' }}</h2>
-          <p class="muted" style="margin: 0;">
-            {{ isEdit ? 'Atualize os dados do produto abaixo.' : 'Cadastre um novo produto abaixo.' }}
-          </p>
-        </div>
+  <Card :shadow="true">
+    <!-- HEADER -->
+    <header class="flex items-start justify-between gap-4 border-b border-gray-100 p-6">
+      <div class="min-w-0">
+        <h2 class="text-xl font-black tracking-tight text-gray-900 uppercase">
+          {{ isEdit ? 'Editar Produto' : 'Novo Produto' }}
+        </h2>
+        <p class="mt-1 text-sm font-semibold text-gray-400">
+          {{ isEdit ? 'Atualize os dados do produto abaixo.' : 'Cadastre um novo produto abaixo.' }}
+        </p>
+      </div>
 
-        <Button variant="outline" size="sm" type="button" @click="router.push('/produtos')">
-          Voltar
-        </Button>
-      </header>
+      <Button
+        variant="secondary"
+        size="sm"
+        type="button"
+        @click="router.push('/produtos')"
+      >
+        Voltar
+      </Button>
+    </header>
 
-      <div class="card-body">
-        <form class="form-grid" @submit.prevent="salvar">
+    <!-- BODY -->
+    <div class="p-6">
+      <form class="grid grid-cols-12 gap-4" @submit.prevent="salvar">
+        <!-- Fornecedor -->
+        <div class="col-span-12">
           <SearchInput
             v-model="form.fornecedor_id"
             label="Fornecedor *"
             :options="fornecedoresOptions"
             required
-            class="col-span-12"
           />
+        </div>
 
-          <Input v-model="form.nome_produto" label="Nome do Produto *" required class="col-span-8" />
-          <Input v-model="form.status" label="Status *" required class="col-span-4" />
+        <!-- Nome / Status -->
+        <div class="col-span-12 md:col-span-8">
+          <Input v-model="form.nome_produto" label="Nome do Produto *" required />
+        </div>
+        <div class="col-span-12 md:col-span-4">
+          <Input v-model="form.status" label="Status *" required />
+        </div>
 
-          <Input v-model="form.marca" label="Marca" class="col-span-4" />
-          <Input v-model="form.cor" label="Cor" class="col-span-4" />
-          <Input v-model="form.medida" label="Medida" class="col-span-4" />
+        <!-- Marca / Cor / Medida -->
+        <div class="col-span-12 md:col-span-4">
+          <Input v-model="form.marca" label="Marca" />
+        </div>
+        <div class="col-span-12 md:col-span-4">
+          <Input v-model="form.cor" label="Cor" />
+        </div>
+        <div class="col-span-12 md:col-span-4">
+          <Input v-model="form.medida" label="Medida" />
+        </div>
 
-          <!-- ✅ UNIDADE das CONSTANTES -->
-<SearchInput
-  v-model="form.unidade"
-  label="Unidade *"
-  :options="unidadesOptions"
-  required
-  class="col-span-4"
-/>
+        <!-- Unidade (constantes) -->
+        <div class="col-span-12 md:col-span-4">
+          <SearchInput
+            v-model="form.unidade"
+            label="Unidade *"
+            :options="unidadesOptions"
+            required
+          />
+        </div>
 
+        <!-- Quantidade / Valor Unitário / Valor Total -->
+        <div class="col-span-12 md:col-span-4">
+          <Input
+            v-model="quantidadeMask"
+            label="Quantidade *"
+            required
+            inputmode="numeric"
+          />
+        </div>
+        <div class="col-span-12 md:col-span-4">
+          <Input
+            v-model="valorUnitarioInput"
+            label="Valor Unitário *"
+            required
+            inputmode="numeric"
+          />
+        </div>
+        <div class="col-span-12 md:col-span-4">
+          <Input
+            :model-value="valorTotalMask"
+            label="Valor Total"
+            readonly
+          />
+        </div>
 
-          <Input v-model="quantidadeMask" label="Quantidade *" required inputmode="numeric" class="col-span-4" />
-          <Input v-model="valorUnitarioInput" label="Valor Unitário *" required inputmode="numeric" class="col-span-4" />
-          <Input :model-value="valorTotalMask" label="Valor Total" readonly class="col-span-4" />
+        <!-- DIVISOR (opcional, se você quiser separar visualmente antes do footer) -->
+        <div class="col-span-12">
+          <div class="h-px w-full bg-gray-100"></div>
+        </div>
 
-          <div class="col-span-12 container-botoes">
-            <Button variant="secondary" type="button" @click="router.push('/produtos')">
-              Cancelar
-            </Button>
-            <Button variant="primary" type="submit" :loading="salvando">
-              {{ isEdit ? 'Salvar Alterações' : 'Salvar' }}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </Card>
-  </div>
+        <!-- FOOTER (ações à direita) -->
+        <div class="col-span-12 flex items-center justify-end gap-3 pt-2">
+          <Button variant="secondary" type="button" @click="router.push('/produtos')">
+            Cancelar
+          </Button>
+          <Button variant="primary" type="submit" :loading="salvando">
+            {{ isEdit ? 'Salvar Alterações' : 'Salvar' }}
+          </Button>
+        </div>
+      </form>
+    </div>
+  </Card>
 </template>
+
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'

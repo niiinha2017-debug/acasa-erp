@@ -6,10 +6,10 @@ import Menu from './Menu.vue'
 
 <template>
   <div class="layout-default">
-    <Menu /> 
+    <Menu />
     <main class="page-content">
       <div class="content-wrapper">
-        <slot /> 
+        <slot />
       </div>
     </main>
   </div>
@@ -25,20 +25,16 @@ import Menu from './Menu.vue'
 .page-content {
   flex: 1;
   display: flex;
-  justify-content: center; /* Centraliza o wrapper em telas gigantes */
-  background-color: var(--bg-page); /* Usa sua variável do ui.css */
+  justify-content: center;
+  background-color: var(--bg-page, #f3f4f6); /* fallback */
 }
 
 .content-wrapper {
   width: 100%;
-  max-width: 1440px;      /* Largura confortável para ERPs */
-  padding: 32px;          /* O respiro lateral que faltava nas fotos */
+  max-width: 1680px;
+  padding: clamp(16px, 2vw, 32px);
   box-sizing: border-box;
 }
-
-@media (max-width: 768px) {
-  .content-wrapper {
-    padding: 16px;        /* Reduz o espaço em telas pequenas */
-  }
-}
 </style>
+
+

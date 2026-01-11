@@ -1,72 +1,103 @@
 <template>
-  <div class="page-container">
-    <Card :shadow="true">
-      <header class="card-header header-between">
-        <div>
-          <h2 class="card-title">Funcionários</h2>
-          <p class="cell-muted">Gestão e controle de colaboradores</p>
-        </div>
-<div class="header-actions">
-  <Button
-    variant="secondary"
-    :disabled="selecionados.length === 0"
-    @click="gerarPdf"
-  >
-    Gerar PDF ({{ selecionados.length }})
-  </Button>
+  <div class="w-full">
+    <Card>
+      <!-- HEADER -->
+      <div class="flex flex-col gap-4 px-8 pt-8 pb-6 border-b border-gray-100">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h2 class="text-2xl font-black text-gray-900 tracking-tight">
+              Funcionários
+            </h2>
+            <p class="text-sm font-semibold text-gray-400 mt-2">
+              Gestão e controle de colaboradores
+            </p>
+          </div>
 
-  <Button variant="primary" @click="router.push('/funcionarios/novo')">
-    + Novo Funcionário
-  </Button>
-</div>
+          <div class="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              type="button"
+              :disabled="selecionados.length === 0"
+              @click="gerarPdf"
+            >
+              Gerar PDF ({{ selecionados.length }})
+            </Button>
 
-      </header>
-
-      <div class="card-filter">
-        <div class="form-grid">
-          <SearchInput 
-            v-model="filtro" 
-            placeholder="Buscar por nome, CPF ou cargo..." 
-            col-span="col-span-12"
-          />
+            <Button
+              variant="primary"
+              size="sm"
+              type="button"
+              @click="router.push('/funcionarios/novo')"
+            >
+              Novo Funcionário
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div class="card-body--flush">
-        <Table 
-          :columns="columns" 
-          :rows="funcionariosFiltrados" 
-          :loading="loading"
-          empty-text="Nenhum funcionário encontrado."
-        >
-<template #cell-nome="{ row }">
-  <div class="flex-column" style="gap: 6px;">
-    <div style="display:flex; align-items:center; gap: 10px;">
-      <input
-        type="checkbox"
-        :checked="selectedIds.has(row.id)"
-        @change="toggle(row.id)"
-      />
-      <strong class="text-main">{{ row.nome }}</strong>
-    </div>
+      <!-- PESQUISAR -->
+      <div class="px-8 py-6 border-b border-gray-100">
+        <SearchInput
+          v-model="filtro"
+          placeholder="Buscar por nome, CPF ou cargo..."
+          colSpan="w-full"
+        />
+      </div>
 
-    <small class="cell-muted">{{ row.cpf }}</small>
-  </div>
-</template>
+      <!-- TABELA (DENTRO DO MESMO CARD) -->
+      <div class="px-8 pb-8">
+<Table
+  :columns="columns"
+  :rows="funcionariosFiltrados"
+  :loading="loading"
+  empty-text="Nenhum funcionário encontrado."
+  :boxed="false"
+>
 
+          <template #cell-nome="{ row }">
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary/20"
+                  :checked="selectedIds.has(row.id)"
+                  @change="toggle(row.id)"
+                />
+                <span class="font-black text-gray-900">{{ row.nome }}</span>
+              </div>
+              <span class="text-xs font-semibold text-gray-400">{{ row.cpf }}</span>
+            </div>
+          </template>
 
           <template #cell-status="{ row }">
-            <span class="badge-status" :class="row.demissao ? 'inactive' : 'active'">
+            <span
+              class="inline-flex items-center rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider border"
+              :class="row.demissao
+                ? 'bg-gray-50 text-gray-700 border-gray-200'
+                : 'bg-emerald-50 text-emerald-700 border-emerald-100'"
+            >
               {{ row.demissao ? 'Inativo' : 'Ativo' }}
             </span>
           </template>
 
           <template #cell-acoes="{ row }">
-            <div class="header-actions justify-center">
-              <Button variant="secondary" size="sm" @click="router.push(`/funcionarios/${row.id}`)">
+            <div class="flex justify-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                type="button"
+                @click="router.push(`/funcionarios/${row.id}`)"
+              >
                 Editar
               </Button>
-              <Button variant="danger" size="sm" @click="excluir(row)">
+
+              <Button
+                variant="danger"
+                size="sm"
+                type="button"
+                @click="excluir(row)"
+              >
                 Excluir
               </Button>
             </div>
@@ -76,6 +107,8 @@
     </Card>
   </div>
 </template>
+
+
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
@@ -180,21 +213,3 @@ async function excluir(row) {
 
 onMounted(carregar)
 </script>
-
-
-<style scoped>
-.flex-column { display: flex; flex-direction: column; }
-.text-main { color: var(--text-main); font-size: 0.875rem; }
-.justify-center { justify-content: center; }
-
-/* Badges Padronizadas */
-.badge-status {
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-.badge-status.active { background: #dcfce7; color: #15803d; }
-.badge-status.inactive { background: #fee2e2; color: #b91c1c; }
-</style>
