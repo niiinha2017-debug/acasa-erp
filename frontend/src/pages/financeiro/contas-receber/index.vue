@@ -155,7 +155,6 @@
 </template>
 
 <script setup>
-import '@/assets/CSS/financeiro-contas-receber.css'
 import { ref, computed, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
