@@ -67,31 +67,29 @@ export class ComprasService {
   }
 
 // No ComprasService.ts
-await this.atualizarEstoqueEValorProdutos(
-  itens: Array<{ produto_id?: number | null; quantidade: any; valor_unitario: any }>,
-) {
-  if (!itens?.length) return
+private async atualizarEstoqueEValorProdutos(
+    itens: Array<{ produto_id?: number | null; quantidade: any; valor_unitario: any }>,
+  ) {
+    if (!itens?.length) return;
 
-  for (const it of itens) {
-    if (!it.produto_id) continue
+    for (const it of itens) {
+      if (!it.produto_id) continue;
 
-    const valorUnit = this.round2(this.num(it.valor_unitario ?? 0, 'itens.valor_unitario'))
-    const qtdComprada = this.num(it.quantidade ?? 0, 'itens.quantidade')
+      const valorUnit = this.num(it.valor_unitario ?? 0);
+      const qtdComprada = this.num(it.quantidade ?? 0);
 
-    await this.prisma.produtos.update({
-      where: { id: it.produto_id },
-      data: {
-        // ✅ Atualiza o valor unitário para o último preço pago
-        valor_unitario: valorUnit,
-        // ✅ Incrementa o estoque automaticamente no banco de dados
-        quantidade: {
-          increment: qtdComprada
+      await this.prisma.produtos.update({
+        where: { id: it.produto_id },
+        data: {
+          valor_unitario: valorUnit,
+          quantidade: {
+            increment: qtdComprada,
+          },
+          atualizado_em: new Date(),
         },
-        atualizado_em: new Date(),
-      },
-    })
+      });
+    }
   }
-}
   // --- MÉTODOS PRINCIPAIS ---
 
   async listar(filtros: { venda_id?: number; tipo_compra?: string }) {
