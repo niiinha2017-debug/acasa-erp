@@ -66,28 +66,32 @@ export class ComprasService {
     }
   }
 
-  private async atualizarUltimoValorProdutos(
-    itens: Array<{ produto_id?: number | null; valor_unitario?: any }>,
-  ) {
-    if (!itens?.length) return
+// No ComprasService.ts
+private async atualizarEstoqueEValorProdutos(
+  itens: Array<{ produto_id?: number | null; quantidade: any; valor_unitario: any }>,
+) {
+  if (!itens?.length) return
 
-    for (const it of itens) {
-      if (!it.produto_id) continue
+  for (const it of itens) {
+    if (!it.produto_id) continue
 
-      const valorUnit = this.round2(
-        this.num(it.valor_unitario ?? 0, 'itens.valor_unitario'),
-      )
+    const valorUnit = this.round2(this.num(it.valor_unitario ?? 0, 'itens.valor_unitario'))
+    const qtdComprada = this.num(it.quantidade ?? 0, 'itens.quantidade')
 
-      await this.prisma.produtos.update({
-        where: { id: it.produto_id },
-        data: {
-          valor_unitario: valorUnit,
-          atualizado_em: new Date(),
+    await this.prisma.produtos.update({
+      where: { id: it.produto_id },
+      data: {
+        // ✅ Atualiza o valor unitário para o último preço pago
+        valor_unitario: valorUnit,
+        // ✅ Incrementa o estoque automaticamente no banco de dados
+        quantidade: {
+          increment: qtdComprada
         },
-      })
-    }
+        atualizado_em: new Date(),
+      },
+    })
   }
-
+}
   // --- MÉTODOS PRINCIPAIS ---
 
   async listar(filtros: { venda_id?: number; tipo_compra?: string }) {

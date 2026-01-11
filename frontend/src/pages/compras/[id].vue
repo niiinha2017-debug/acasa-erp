@@ -122,12 +122,36 @@
               Itens Adicionados
             </label>
             <div class="border border-gray-100 rounded-2xl overflow-hidden">
-              <Table
+<Table
   :columns="columnsItens"
   :rows="itens"
   :loading="false"
   empty-text="Nenhum item adicionado."
-/>
+>
+  <template #cell-nome_produto="{ row }">
+    <div class="flex flex-col">
+      <span class="font-bold text-gray-900 uppercase">{{ row.nome_produto }}</span>
+      <div class="flex gap-2 mt-1">
+        <span v-if="row.marca" class="text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-500 uppercase">
+          {{ row.marca }}
+        </span>
+        <span v-if="row.cor" class="text-[10px] bg-brand-primary/10 px-2 py-0.5 rounded text-brand-primary uppercase">
+          {{ row.cor }}
+        </span>
+      </div>
+    </div>
+  </template>
+
+  <template #cell-valor_unitario="{ value }">
+    R$ {{ Number(value).toFixed(2) }}
+  </template>
+
+  <template #cell-valor_total="{ value }">
+    <span class="text-brand-primary font-black">
+      R$ {{ Number(value).toFixed(2) }}
+    </span>
+  </template>
+</Table>
               <div class="flex items-center justify-end p-4 border-t border-gray-100 bg-gray-50">
                 <span class="text-sm font-black text-gray-900 uppercase">
                   Total: R$ {{ totalCalculado.toFixed(2) }}
@@ -467,18 +491,18 @@ function limparItemNovo() {
 }
 
 
+// No seu script setup da página de compra
 function onSelecionarProdutoNovo(produtoId) {
   const p = produtoMap.value.get(Number(produtoId))
   if (!p) return
 
   itemNovo.produto_id = p.id
-  // ✅ Capturando dados detalhados para o DTO
   itemNovo.nome_produto = p.nome_produto
   itemNovo.marca = p.marca || ''
   itemNovo.cor = p.cor || ''
-  itemNovo.medida = p.medida || ''
-  
   itemNovo.unidade = p.unidade || ''
+  
+  // ✅ Aqui ele já traz o valor_unitario que o Service atualizou na última compra
   itemNovo.valorUnitarioMask = maskMoneyBR(Number(p.valor_unitario || 0))
 }
 
