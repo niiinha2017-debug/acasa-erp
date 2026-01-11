@@ -15,11 +15,27 @@ export class AtualizarCompraItemDto {
   @IsInt()
   id?: number
 
-  // aceita number ou null
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   produto_id?: number | null
+
+  // ✅ NOVOS CAMPOS PARA O HISTÓRICO/RELATÓRIO
+  @IsOptional()
+  @IsString()
+  nome_produto?: string
+
+  @IsOptional()
+  @IsString()
+  marca?: string
+
+  @IsOptional()
+  @IsString()
+  cor?: string
+
+  @IsOptional()
+  @IsString()
+  medida?: string
 
   @IsOptional()
   @IsString()
@@ -59,7 +75,6 @@ export class AtualizarCompraDto {
   @IsString()
   tipo_compra?: string
 
-  // aceita number ou null
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -70,17 +85,20 @@ export class AtualizarCompraDto {
   @IsInt()
   fornecedor_id?: number
 
-  // aceita number ou null
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   venda_item_id?: number | null
 
+  // ✅ ADICIONADO PARA O SERVICE
+  @IsOptional()
+  @IsString()
+  data_compra?: string
+
   @IsOptional()
   @IsString()
   status?: string
 
-  // se você estiver calculando no service, pode até remover do DTO
   @IsOptional()
   @Type(() => Number)
   @IsNumber()

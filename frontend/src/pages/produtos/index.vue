@@ -114,19 +114,19 @@ const rows = computed(() => {
   const termo = search.value.toLowerCase().trim()
 
   return produtos.value
-    .filter(p => {
+    .filter((p) => {
       if (!termo) return true
-      const nomeProduto = p.nome_produto?.toLowerCase() || ''
-      const fornecedor = p.fornecedor?.razao_social?.toLowerCase() || ''
+      const nomeProduto = (p.nome_produto || '').toLowerCase()
+      const fornecedor = (p.fornecedor?.razao_social || '').toLowerCase()
       return nomeProduto.includes(termo) || fornecedor.includes(termo)
     })
-    .map(p => ({
+    .map((p) => ({
       ...p,
       fornecedor_nome: p.fornecedor?.razao_social || '-',
-      unidade: p.unidade || '-', // Garante o traço se estiver vazio
-      medida: p.medida || '-',   // Garante o traço se estiver vazio
-      valor_unitario: maskMoneyBR(p.valor_unitario),
-      valor_total: maskMoneyBR(p.valor_total),
+      unidade: p.unidade || '-',
+      medida: p.medida || '-',
+      valor_unitario: maskMoneyBR(Number(p.valor_unitario || 0)),
+      valor_total: maskMoneyBR(Number(p.valor_total || 0)),
     }))
 })
 

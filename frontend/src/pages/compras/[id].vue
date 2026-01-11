@@ -66,21 +66,30 @@
             <h3 class="text-[10px] font-extrabold uppercase tracking-[0.18em] text-gray-400">
               Registrar Item
             </h3>
-<Button variant="secondary" size="sm" type="button" @click="abrirModalProduto()">
+<Button
+  variant="secondary"
+  size="sm"
+  type="button"
+  :disabled="!fornecedorSelecionado"
+  @click="abrirModalProduto()"
+>
   + Novo Produto
 </Button>
+
 
           </div>
 
           <div class="col-span-12 md:col-span-6">
-            <SearchInput
-              v-model="itemNovo.produto_id"
-              label="Produto *"
-              :options="produtoOptions"
-              required
-              :colSpan="12"
-              @update:modelValue="(v) => onSelecionarProdutoNovo(v)"
-            />
+<SearchInput
+  :key="itemNovoKey"
+  v-model="itemNovo.produto_id"
+  label="Produto *"
+  :options="produtoOptions"
+  required
+  :colSpan="12"
+  @update:modelValue="(v) => onSelecionarProdutoNovo(v)"
+/>
+
           </div>
 
           <div class="col-span-12 md:col-span-2">
@@ -259,6 +268,8 @@ import Table from '@/components/ui/Table.vue'
 
 const route = useRoute()
 const router = useRouter()
+const itemNovoKey = ref(0)
+
 
 const rawId = computed(() => String(route.params.id || 'novo'))
 const isEdit = computed(() => rawId.value !== 'novo')
@@ -346,8 +357,9 @@ const totalCalculado = computed(() =>
 
 // ✅ colunas mínimas (ajuste keys conforme seu Table.vue se precisar)
 const columnsItens = [
-  { key: 'descricao', label: 'Produto' },
-  { key: 'unidade', label: 'Un.' },
+  { key: 'nome_produto', label: 'Produto' }, // Alterado de 'descricao' para 'nome_produto'
+  { key: 'marca', label: 'Marca' },          // ✅ Nova coluna
+  { key: 'cor', label: 'Cor' },              // ✅ Nova coluna
   { key: 'quantidade', label: 'Qtd' },
   { key: 'valor_unitario', label: 'V. Unit.' },
   { key: 'valor_total', label: 'Subtotal' },
@@ -390,12 +402,21 @@ const produtoOptions = ref([])
 const produtoMap = ref(new Map())
 
 async function carregarProdutos() {
-  const { data } = await api.get('/produtos')
+  if (!fornecedorSelecionado.value) {
+    produtoOptions.value = []
+    produtoMap.value = new Map()
+    return
+  }
+
+  const { data } = await api.get('/produtos', {
+    params: { fornecedor_id: fornecedorSelecionado.value },
+  })
+
   const arr = Array.isArray(data) ? data : []
 
   produtoOptions.value = arr.map((p) => ({
     value: p.id,
-    label: p.nome_produto || p.nome || `Produto #${p.id}`,
+    label: montarDescricaoProduto(p),
   }))
 
   const map = new Map()
@@ -403,20 +424,29 @@ async function carregarProdutos() {
   produtoMap.value = map
 }
 
+
 function montarDescricaoProduto(p) {
+  const fornecedor =
+    p?.fornecedor?.razao_social || p?.fornecedor?.nome_fantasia || ''
+
   const nome = p?.nome_produto || p?.nome || ''
-  const partes = [p?.marca, p?.cor, p?.medida].filter(Boolean)
-  if (!nome && partes.length === 0) return ''
-  if (partes.length === 0) return nome
-  return `${nome} — ${partes.join(' • ')}`
+  const marca = p?.marca || ''
+  const cor = p?.cor || ''
+
+  const partes = [fornecedor, nome, marca, cor].filter(Boolean)
+  return partes.join(' — ')
 }
+
 
 /* =========================
    ITEM NOVO (registrar)
 ========================= */
 const itemNovo = reactive({
   produto_id: null,
-  descricao: '',
+  nome_produto: '', // ✅ Adicionado
+  marca: '',        // ✅ Adicionado
+  cor: '',          // ✅ Adicionado
+  medida: '',       // ✅ Adicionado
   unidade: '',
   quantidade: '1',
   valorUnitarioMask: '0,00',
@@ -432,14 +462,22 @@ function limparItemNovo() {
   itemNovo.valorUnitarioMask = '0,00'
   itemNovo.valor_total = 0
   itemNovo.valorTotalMask = '0,00'
+
+  itemNovoKey.value += 1 // ✅ força SearchInput resetar texto
 }
+
 
 function onSelecionarProdutoNovo(produtoId) {
   const p = produtoMap.value.get(Number(produtoId))
   if (!p) return
 
   itemNovo.produto_id = p.id
-  itemNovo.descricao = montarDescricaoProduto(p)
+  // ✅ Capturando dados detalhados para o DTO
+  itemNovo.nome_produto = p.nome_produto
+  itemNovo.marca = p.marca || ''
+  itemNovo.cor = p.cor || ''
+  itemNovo.medida = p.medida || ''
+  
   itemNovo.unidade = p.unidade || ''
   itemNovo.valorUnitarioMask = maskMoneyBR(Number(p.valor_unitario || 0))
 }
@@ -456,9 +494,15 @@ watch(
   },
   { deep: true },
 )
+watch(fornecedorSelecionado, async () => {
+  // limpa seleção atual do item novo quando trocar fornecedor
+  limparItemNovo()
+  await carregarProdutos()
+})
 
 function registrarItemNovo() {
   if (!itemNovo.produto_id) return alert('Selecione o produto.')
+  if (!fornecedorSelecionado.value) return alert('Selecione o fornecedor primeiro.')
 
   const q = Number(String(itemNovo.quantidade || '').replace(',', '.')) || 0
   if (q <= 0) return alert('Quantidade inválida.')
@@ -469,7 +513,12 @@ function registrarItemNovo() {
   itens.value.push({
     id: undefined,
     produto_id: itemNovo.produto_id,
-    descricao: itemNovo.descricao,
+    // ✅ Enviando dados linha por linha para o relatório
+    nome_produto: itemNovo.nome_produto,
+    marca: itemNovo.marca,
+    cor: itemNovo.cor,
+    medida: itemNovo.medida,
+    
     unidade: itemNovo.unidade,
     quantidade: q,
     valor_unitario: vu,
@@ -603,20 +652,23 @@ async function carregarCompra() {
   form.value.venda_id = data?.venda_id ?? null
   form.value.data_compra = isoToDateOnly(data?.data_compra)
 
-  itens.value = Array.isArray(data?.itens)
-    ? data.itens
-        .filter(Boolean)
-        .map((it) => ({
-          id: it.id ?? undefined,
-          produto_id: it.produto_id ?? null,
-          descricao: it.descricao ?? '',
-          unidade: it.unidade ?? '',
-          quantidade: Number(it.quantidade ?? 0),
-          valor_unitario: Number(it.valor_unitario ?? 0),
-          valor_total: Number(it.valor_total ?? 0),
-          _key: it._key || `db-${it.id || Math.random().toString(36).slice(2)}`,
-        }))
-    : []
+itens.value = Array.isArray(data?.itens)
+  ? data.itens.filter(Boolean).map((it) => ({
+      id: it.id,
+      produto_id: it.produto_id,
+      // ✅ Mapeando o que vem do banco para o estado da tabela
+      nome_produto: it.nome_produto,
+      marca: it.marca,
+      cor: it.cor,
+      medida: it.medida,
+      
+      unidade: it.unidade,
+      quantidade: Number(it.quantidade),
+      valor_unitario: Number(it.valor_unitario),
+      valor_total: Number(it.valor_total),
+      _key: `db-${it.id}`,
+    }))
+  : []
 
   rateios.value = Array.isArray(data?.rateios) ? data.rateios.filter(Boolean) : []
   recalcularSomaRateio()

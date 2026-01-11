@@ -10,11 +10,27 @@ import {
 } from 'class-validator'
 
 export class CriarCompraItemDto {
-  // Prisma: produto_id Int?
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   produto_id?: number | null
+
+  // ✅ NOVOS CAMPOS PARA O RELATÓRIO (Snapshot)
+  @IsOptional()
+  @IsString()
+  nome_produto?: string
+
+  @IsOptional()
+  @IsString()
+  marca?: string
+
+  @IsOptional()
+  @IsString()
+  cor?: string
+
+  @IsOptional()
+  @IsString()
+  medida?: string
 
   @IsOptional()
   @IsString()
@@ -53,7 +69,6 @@ export class CriarCompraDto {
   @IsString()
   tipo_compra: string // INSUMOS | CLIENTE_AMBIENTE
 
-  // Prisma: venda_id Int?
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -63,13 +78,15 @@ export class CriarCompraDto {
   @IsInt()
   fornecedor_id: number
 
-  // Prisma: venda_item_id Int?
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   venda_item_id?: number | null
 
-  // ✅ se você colocou @default("ATIVO") no Prisma, NÃO precisa obrigar no DTO
+  @IsOptional()
+  @IsString()
+  data_compra?: string // Adicionado para suportar a data no Service
+
   @IsOptional()
   @IsString()
   status?: string

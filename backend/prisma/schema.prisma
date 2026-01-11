@@ -717,24 +717,28 @@ model compras {
 }
 
 model compras_itens {
-  id Int @id @default(autoincrement())
-
+  id        Int     @id @default(autoincrement())
   compra_id Int
   compra    compras @relation(fields: [compra_id], references: [id], onDelete: Cascade)
 
-  // ✅ NOVO: vínculo com produto
   produto_id Int?
   produto    produtos? @relation(fields: [produto_id], references: [id], onDelete: SetNull)
 
+  // ✅ CAMPOS REPLICADOS PARA HISTÓRICO E RELATÓRIO DETALHADO
+  nome_produto String
+  marca        String?
+  cor          String?
+  medida       String?
+  unidade      String
+
   quantidade     Decimal @default(1.00) @db.Decimal(10, 2)
-  unidade        String
   valor_unitario Decimal @default(0.00) @db.Decimal(10, 2)
   valor_total    Decimal @default(0.00) @db.Decimal(10, 2)
 
   criado_em DateTime @default(now())
 
   @@index([compra_id])
-  @@index([produto_id]) // ✅ NOVO
+  @@index([produto_id])
   @@map("compras_itens")
 }
 
