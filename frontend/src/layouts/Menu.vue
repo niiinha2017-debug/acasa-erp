@@ -45,6 +45,8 @@
             <a href="#" @click.prevent="irPara('/financeiro')" class="dropdown-item-tw"><i class="pi pi-wallet mr-2 opacity-50"></i> Fluxo de Caixa</a>
             <a href="#" @click.prevent="irPara('/despesas')" class="dropdown-item-tw"><i class="pi pi-minus-circle mr-2 opacity-50"></i> Despesas</a>
             <a href="#" @click.prevent="irPara('/compras')" class="dropdown-item-tw"><i class="pi pi-shopping-bag mr-2 opacity-50"></i> Compras</a>
+            <a href="#" @click.prevent="irPara('/financeiro/contas-receber')" class="dropdown-item-tw"><i class="pi pi-inbox mr-2 opacity-50"></i> Contas a Receber</a>  
+            <a href="#" @click.prevent="irPara('/financeiro/contas-pagar')" class="dropdown-item-tw"><i class="pi pi-outbox mr-2 opacity-50"></i> Contas a Pagar</a>
           </div>
         </div>
 
