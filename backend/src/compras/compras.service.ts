@@ -75,8 +75,8 @@ private async atualizarEstoqueEValorProdutos(
     for (const it of itens) {
       if (!it.produto_id) continue;
 
-      const valorUnit = this.num(it.valor_unitario ?? 0);
-      const qtdComprada = this.num(it.quantidade ?? 0);
+const valorUnit = this.num(it.valor_unitario ?? 0, 'item.valor_unitario');
+const qtdComprada = this.num(it.quantidade ?? 0, 'item.quantidade');
 
       await this.prisma.produtos.update({
         where: { id: it.produto_id },
@@ -195,7 +195,7 @@ private async atualizarEstoqueEValorProdutos(
       include: { itens: true, rateios: true },
     })
 
-    await this.atualizarUltimoValorProdutos(compra.itens as any)
+    await this.atualizarEstoqueEValorProdutos(compra.itens as any)
     return compra
   }
 
