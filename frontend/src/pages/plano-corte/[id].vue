@@ -286,10 +286,11 @@ import Table from '@/components/ui/Table.vue'
 import SearchInput from '@/components/ui/SearchInput.vue'
 import CustomCheckbox from '@/components/ui/CustomCheckbox.vue'
 
-const statusProducaoRaw = ref([])
-const modulosRaw = ref([])
+import { useConstantes } from '@/composables/useConstantes'
 
-
+/* ------------------------------------------------------------------
+ * ROUTER / CONTEXTO
+ * ------------------------------------------------------------------ */
 const router = useRouter()
 const route = useRoute()
 
@@ -301,74 +302,80 @@ const loading = ref(false)
 const salvando = ref(false)
 const encaminhando = ref(false)
 
+/* ------------------------------------------------------------------
+ * CONSTANTES (GLOBAL – PADRÃO ÚNICO)
+ * ------------------------------------------------------------------ */
+const constantes = useConstantes()
+
 /**
- * Campos do PLANO (backend exige)
+ * STATUS DO PLANO
+ * Categoria: STATUS PRODUÇÃO
+ * Chave: PLANO DE CORTE
  */
-const dataVenda = ref('')       // string "YYYY-MM-DD"
+const statusPlanoOptions = computed(() => {
+  return constantes.opcoes.value
+    .filter(o => o.metadata?.categoria === 'STATUS PRODUÇÃO')
+    .filter(o => o.value === 'PLANO DE CORTE')
+    .map(o => ({
+      label: o.label, // Ex: Em aberto / Produção / Finalizado
+      value: o.label, // salva exatamente o texto
+    }))
+})
+
+/**
+ * UNIDADES DO PRODUTO
+ * Categoria: MODULO
+ * Chave: UNIDADE
+ */
+const unidadesOptions = computed(() => {
+  return constantes.opcoes.value
+    .filter(o => o.metadata?.categoria === 'MODULO')
+    .filter(o => o.value === 'UNIDADE')
+    .map(o => ({
+      label: o.label, // Caixa / Metros / Rolo / Unidade
+      value: o.label,
+    }))
+})
+
+/* ------------------------------------------------------------------
+ * CAMPOS DO PLANO
+ * ------------------------------------------------------------------ */
+const dataVenda = ref('')
 const statusPlano = ref('')
 
-
-/**
- * Fornecedores
- */
+/* ------------------------------------------------------------------
+ * FORNECEDORES
+ * ------------------------------------------------------------------ */
 const fornecedores = ref([])
+
 const fornecedorOptions = computed(() =>
-  fornecedores.value.map((f) => ({
+  fornecedores.value.map(f => ({
     label: f.razao_social,
     value: f.id,
     raw: f,
   }))
 )
 
-const statusPlanoOptions = computed(() => {
-  // categoria: STATUS PRODUÇÃO
-  // chave: PLANO DE CORTE
-  const filtrados = statusProducaoRaw.value.filter((i) => i.chave === 'PLANO DE CORTE')
-
-  return filtrados.map((i) => ({
-    label: i.rotulo,     // UI
-    value: i.rotulo,     // ⚠️ aqui é o valor salvo no plano (se seu backend salva o texto)
-    // se seu backend salva a "chave do item", troque por: value: i.algumCampo
-    metadata: {
-      taxa: i.valor_numero,
-      info: i.valor_texto,
-    },
-  }))
-})
-
-async function carregarModulosConstantes() {
-  const { data } = await api.get(`/constantes?categoria=${encodeURIComponent('MODULO')}`)
-  modulosRaw.value = Array.isArray(data) ? data : []
-}
-
-
-async function carregarStatusPlanoCorte() {
-  const { data } = await api.get(`/constantes?categoria=${encodeURIComponent('STATUS PRODUÇÃO')}`)
-  statusProducaoRaw.value = Array.isArray(data) ? data : []
-}
-
-
-// IMPORTANTE: aqui assumo que SearchInput retorna o VALUE (id).
-// Se retornar objeto, ajuste no onSelecionarFornecedor abaixo.
 const fornecedorSelecionado = ref(null)
 
-/**
- * Itens disponíveis por fornecedor (plano_corte_item)
- */
+/* ------------------------------------------------------------------
+ * ITENS DISPONÍVEIS (plano_corte_item)
+ * ------------------------------------------------------------------ */
 const itensDisponiveis = ref([])
+
 const produtoOptions = computed(() =>
-  itensDisponiveis.value.map((i) => ({
+  itensDisponiveis.value.map(i => ({
     label: `${i.nome_produto}${i.cor ? ` - ${i.cor}` : ''}`,
     value: i.id,
     raw: i,
   }))
 )
 
-/**
- * Form do item do PLANO
- */
+/* ------------------------------------------------------------------
+ * ITEM NOVO DO PLANO
+ * ------------------------------------------------------------------ */
 const itemNovo = ref({
-  item_id: null,            // <-- item_id (não produto_id)
+  item_id: null,
   unidade: '',
   quantidade: '',
   valorUnitarioMask: '0,00',
@@ -378,32 +385,28 @@ const podeAdicionarItem = computed(() => {
   return !!itemNovo.value.item_id && Number(itemNovo.value.quantidade) > 0
 })
 
-const unidadesOptions = computed(() => {
-  return modulosRaw.value
-    .filter((i) => i.chave === 'UNIDADE')
-    .map((i) => ({
-      label: i.rotulo,   // Caixa / Metros / Rolo / Unidade
-      value: i.rotulo,   // ✅ o que vai ser salvo no form (não pode ser "UNIDADE")
-      raw: i,
-    }))
-})
-
-
-/**
- * Subtotal do item (QTD * Unit)
- */
 const subtotalItem = computed(() => {
   const v = Number(String(itemNovo.value.valorUnitarioMask).replace(/\D/g, '')) / 100
   const q = Number(itemNovo.value.quantidade)
   return (q || 0) * (v || 0)
 })
 
-const itemNovoValorTotalMask = computed(() => maskMoneyBR(subtotalItem.value))
+const itemNovoValorTotalMask = computed(() =>
+  maskMoneyBR(subtotalItem.value)
+)
 
-/**
- * Lista final de itens do PLANO (backend exige produtos[])
- * Cada item precisa ter: item_id, quantidade, valor_unitario, valor_total, status
- */
+watch(
+  () => itemNovo.value.valorUnitarioMask,
+  v => {
+    const n = String(v || '').replace(/\D/g, '')
+    const valor = n ? Number(n) / 100 : 0
+    itemNovo.value.valorUnitarioMask = maskMoneyBR(valor)
+  }
+)
+
+/* ------------------------------------------------------------------
+ * ITENS DO PLANO
+ * ------------------------------------------------------------------ */
 const itens = ref([])
 
 const totalCalculado = computed(() =>
@@ -418,30 +421,16 @@ const columnsItens = [
   { key: 'acoes', label: '', width: '60px' },
 ]
 
-/**
- * Máscara do valor unitário do item do PLANO
- */
-watch(
-  () => itemNovo.value.valorUnitarioMask,
-  (v) => {
-    const n = String(v || '').replace(/\D/g, '')
-    const valor = n ? Number(n) / 100 : 0
-    itemNovo.value.valorUnitarioMask = maskMoneyBR(valor)
-  }
-)
-
-/**
- * Seleções
- */
+/* ------------------------------------------------------------------
+ * SELEÇÕES
+ * ------------------------------------------------------------------ */
 function onSelecionarFornecedor(v) {
-  // Se SearchInput devolver objeto {value}, usa v?.value.
   const fornecedorId = v?.value ?? v
   fornecedorSelecionado.value = fornecedorId
 
   if (fornecedorId) carregarItensDisponiveis(fornecedorId)
   else itensDisponiveis.value = []
 
-  // limpa seleção de produto ao trocar fornecedor (operacional)
   limparItemNovo()
   itens.value = []
 }
@@ -450,13 +439,13 @@ function onSelecionarProdutoNovo(v) {
   const itemId = v?.value ?? v
   itemNovo.value.item_id = itemId
 
-  const item = itensDisponiveis.value.find((i) => i.id === itemId)
+  const item = itensDisponiveis.value.find(i => i.id === itemId)
   itemNovo.value.unidade = item?.unidade || ''
 }
 
-/**
- * Ações do item
- */
+/* ------------------------------------------------------------------
+ * AÇÕES DO ITEM
+ * ------------------------------------------------------------------ */
 function limparItemNovo() {
   itemNovo.value.item_id = null
   itemNovo.value.unidade = ''
@@ -465,17 +454,17 @@ function limparItemNovo() {
 }
 
 function registrarItemNovo() {
-  const item = itensDisponiveis.value.find((i) => i.id === itemNovo.value.item_id)
+  const item = itensDisponiveis.value.find(i => i.id === itemNovo.value.item_id)
   const v = Number(String(itemNovo.value.valorUnitarioMask).replace(/\D/g, '')) / 100
   const q = Number(itemNovo.value.quantidade)
 
   itens.value.push({
-    item_id: item?.id,
-    item: { nome_produto: item?.nome_produto }, // só pra render na tabela
+    item_id: item.id,
+    item: { nome_produto: item.nome_produto },
     quantidade: q,
     valor_unitario: v,
     valor_total: q * v,
-    status: 'ATIVO', // backend exige p.status no create()
+    status: 'ATIVO',
   })
 
   limparItemNovo()
@@ -485,32 +474,32 @@ function removerItem(idx) {
   itens.value.splice(idx, 1)
 }
 
-/**
- * Carregamentos
- */
+/* ------------------------------------------------------------------
+ * API
+ * ------------------------------------------------------------------ */
 async function carregarFornecedores() {
-  const resF = await api.get('/fornecedores')
-  fornecedores.value = resF.data || []
+  const res = await api.get('/fornecedores')
+  fornecedores.value = res.data || []
 }
 
 async function carregarItensDisponiveis(fornecedorId) {
-  const resItens = await api.get('/plano-corte-itens', {
+  const res = await api.get('/plano-corte-itens', {
     params: { fornecedor_id: fornecedorId },
   })
-  itensDisponiveis.value = resItens.data || []
+  itensDisponiveis.value = res.data || []
 }
 
-/**
- * SALVAR PLANO (POST/PUT) - payload 100% do backend
- */
+/* ------------------------------------------------------------------
+ * SALVAR PLANO
+ * ------------------------------------------------------------------ */
 async function salvar() {
   salvando.value = true
   try {
     const payload = {
       fornecedor_id: fornecedorSelecionado.value,
-      data_venda: dataVenda.value,     // backend usa new Date(dto.data_venda)
+      data_venda: dataVenda.value,
       status: statusPlano.value,
-      produtos: itens.value.map((p) => ({
+      produtos: itens.value.map(p => ({
         item_id: p.item_id,
         quantidade: p.quantidade,
         valor_unitario: p.valor_unitario,
@@ -531,133 +520,37 @@ async function salvar() {
   }
 }
 
-async function encaminharParaProducao() {
-  encaminhando.value = true
-  try {
-    await api.post('/producao/encaminhar', {
-      origem_tipo: 'PLANO_CORTE',
-      origem_id: planoId.value,
-    })
-    router.push('/producao/agenda')
-  } finally {
-    encaminhando.value = false
-  }
-}
-
-/**
- * DELETE do plano (rota existe no controller)
- */
-async function excluir() {
-  if (!isEdit.value) return
-  await api.delete(`/plano-corte/${planoId.value}`)
-  router.push('/plano-corte')
-}
-
-
-const modalProduto = ref({
-  aberto: false,
-  salvando: false,
-  form: {
-    fornecedor_id: null,
-    nome_produto: '',
-    marca: '',
-    cor: '',
-    medida: '',
-    unidade: null,
-    status: 'ATIVO',
-  },
-  quantidadeMask: '',
-  valorUnitarioInput: '',
-})
-
-const modalProdutoValorTotalMask = computed(() => {
-  const q = parseInt(String(modalProduto.value.quantidadeMask || '').replace(/\D/g, ''), 10) || 0
-  const v = Number(String(modalProduto.value.valorUnitarioInput || '').replace(/\D/g, '')) / 100 || 0
-  return maskMoneyBR(q * v)
-})
-
-function abrirModalProduto() {
-  modalProduto.value.form.fornecedor_id = fornecedorSelecionado.value
-  modalProduto.value.aberto = true
-}
-
-function fecharModalProduto() {
-  modalProduto.value.aberto = false
-}
-
-async function salvarProduto() {
-  modalProduto.value.salvando = true
-  try {
-    const quantidade = parseInt(String(modalProduto.value.quantidadeMask || '').replace(/\D/g, ''), 10) || 0
-    const valor_unitario =
-      Number(String(modalProduto.value.valorUnitarioInput || '').replace(/\D/g, '')) / 100 || 0
-    const valor_total = quantidade * valor_unitario
-
-    await api.post('/plano-corte-itens', {
-      fornecedor_id: modalProduto.value.form.fornecedor_id,
-      nome_produto: modalProduto.value.form.nome_produto,
-      marca: modalProduto.value.form.marca,
-      cor: modalProduto.value.form.cor,
-      medida: modalProduto.value.form.medida,
-      unidade: modalProduto.value.form.unidade,
-      quantidade,
-      valor_unitario,
-      valor_total,
-      status: modalProduto.value.form.status,
-    })
-
-    if (fornecedorSelecionado.value) {
-      await carregarItensDisponiveis(fornecedorSelecionado.value)
-    }
-
-    fecharModalProduto()
-  } finally {
-    modalProduto.value.salvando = false
-  }
-}
-
-/**
- * ONMOUNT: carrega fornecedores e, se for edição, carrega o plano
- */
+/* ------------------------------------------------------------------
+ * ON MOUNT
+ * ------------------------------------------------------------------ */
 onMounted(async () => {
   loading.value = true
   try {
-    await carregarFornecedores()
-    await carregarStatusPlanoCorte()
-    await carregarModulosConstantes()
+    await Promise.all([
+      carregarFornecedores(),
+      constantes.carregarCategoria('STATUS PRODUÇÃO'),
+      constantes.carregarCategoria('MODULO'),
+    ])
 
-
-    // define data_venda default no "novo" (operacional)
     if (!isEdit.value) {
       const hoje = new Date()
-      const yyyy = hoje.getFullYear()
-      const mm = String(hoje.getMonth() + 1).padStart(2, '0')
-      const dd = String(hoje.getDate()).padStart(2, '0')
-      dataVenda.value = `${yyyy}-${mm}-${dd}`
+      dataVenda.value = hoje.toISOString().slice(0, 10)
     }
 
     if (isEdit.value) {
       const { data } = await api.get(`/plano-corte/${planoId.value}`)
 
       fornecedorSelecionado.value = data.fornecedor_id
-      statusPlano.value = data.status || 'ABERTO'
+      statusPlano.value = data.status
+      dataVenda.value = data.data_venda?.slice(0, 10)
 
-      // data_venda pode vir ISO; mantém YYYY-MM-DD pro input date
-      if (data.data_venda) {
-        const d = new Date(data.data_venda)
-        const yyyy = d.getFullYear()
-        const mm = String(d.getMonth() + 1).padStart(2, '0')
-        const dd = String(d.getDate()).padStart(2, '0')
-        dataVenda.value = `${yyyy}-${mm}-${dd}`
-      }
-      // itens do plano (produtos)
-      itens.value = (data.produtos || []).map((p) => ({
+      itens.value = (data.produtos || []).map(p => ({
         item_id: p.item_id,
         item: p.item,
         quantidade: Number(p.quantidade),
         valor_unitario: Number(p.valor_unitario),
         valor_total: Number(p.valor_total),
-        status: p.status || 'ATIVO',
+        status: p.status,
       }))
 
       if (data.fornecedor_id) {
@@ -669,3 +562,4 @@ onMounted(async () => {
   }
 })
 </script>
+
