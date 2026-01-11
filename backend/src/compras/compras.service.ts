@@ -289,7 +289,7 @@ const qtdComprada = this.num(it.quantidade ?? 0, 'item.quantidade');
       include: { itens: true, rateios: true },
     })
 
-    await this.atualizarUltimoValorProdutos(itensAtualizados as any)
+    await this.atualizarEstoqueEValorProdutos(itensAtualizados as any)
     return compraAtualizada
   }
 
