@@ -7,15 +7,13 @@ import { UpdateOrcamentoItemDto } from './dto/update-orcamento-item.dto';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 
-// Importante: instalar com 'npm install pdfkit pdf-lib'
-import PDFDocument from 'pdfkit';
-import { PDFDocument as PDFLib } from 'pdf-lib';
+// Fixando o import para evitar conflitos com o DOM
+const { PDFDocument } = require('pdf-lib'); 
+import PDFKitDoc from 'pdfkit';
 
 @Injectable()
 export class OrcamentosService {
   constructor(private readonly prisma: PrismaService) {}
-
-  // --- LÓGICA DE GERAÇÃO DE PDF (Agora dentro da classe) ---
 
   async gerarPdfCompleto(orc: any): Promise<Uint8Array> {
     const miolo = await this.gerarMioloPdfBuffer(orc);
@@ -24,17 +22,15 @@ export class OrcamentosService {
 
   private async gerarMioloPdfBuffer(orc: any): Promise<Buffer> {
     return new Promise((resolve) => {
-      const doc = new PDFDocument({ size: 'A4', margin: 40 });
+      const doc = new PDFKitDoc({ size: 'A4', margin: 40 });
       const chunks: Buffer[] = [];
       doc.on('data', (c) => chunks.push(c));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
-
       doc.fontSize(16).text('ORÇAMENTO', { align: 'center' });
       doc.moveDown(1);
       doc.fontSize(11).text(`Cliente: ${orc.cliente_nome_snapshot}`);
       doc.text(`CPF: ${orc.cliente_cpf_snapshot || '-'}`);
       doc.moveDown(1);
-
       let total = 0;
       for (const item of orc.itens || []) {
         const vt = Number(item.valor_total || 0);
@@ -46,42 +42,48 @@ export class OrcamentosService {
         doc.moveDown(0.8);
         if (doc.y > 740) doc.addPage();
       }
-
       doc.moveDown(1);
-      doc.fontSize(12).text(`Total do orçamento: R$ ${total.toFixed(2)}`, { bold: true });
+      doc.font('Helvetica-Bold').fontSize(12).text(`Total do orçamento: R$ ${total.toFixed(2)}`);
+// Se quiser que o resto do texto volte ao normal depois, adicione:
+doc.font('Helvetica');
       doc.end();
     });
   }
 
-  private async mesclarCapaMioloRodape(miolo: Buffer): Promise<Uint8Array> {
+private async mesclarCapaMioloRodape(miolo: Buffer): Promise<Uint8Array> {
     const capaPath = path.resolve(process.cwd(), 'assets', 'pdf', 'Logo Orçamento.pdf');
     const rodapePath = path.resolve(process.cwd(), 'assets', 'pdf', 'Paginas Seguintes.pdf');
 
     const [capaBytes, rodapeBytes] = await Promise.all([
-      fs.readFile(capaPath),
-      fs.readFile(rodapePath),
+      fs.readFile(capaPath).catch(() => null),
+      fs.readFile(rodapePath).catch(() => null),
     ]);
 
-    const out = await PDFLib.create();
-    const capaDoc = await PDFLib.load(capaBytes);
-    const mioloDoc = await PDFLib.load(miolo);
-    const rodapeDoc = await PDFLib.load(rodapeBytes);
+    // Agora usamos apenas PDFDocument diretamente:
+    const pdfFinal = await PDFDocument.create();
 
-    const docs = [capaDoc, mioloDoc, rodapeDoc];
-    for (const d of docs) {
-      const pages = await out.copyPages(d, d.getPageIndices());
-      pages.forEach(p => out.addPage(p));
+    if (capaBytes) {
+      const capaDoc = await PDFDocument.load(capaBytes);
+      const pages = await pdfFinal.copyPages(capaDoc, capaDoc.getPageIndices());
+      pages.forEach((p: any) => pdfFinal.addPage(p));
     }
 
-    return out.save();
+    const mioloDoc = await PDFDocument.load(miolo);
+    const mioloPages = await pdfFinal.copyPages(mioloDoc, mioloDoc.getPageIndices());
+    mioloPages.forEach((p: any) => pdfFinal.addPage(p));
+
+    if (rodapeBytes) {
+      const rodapeDoc = await PDFDocument.load(rodapeBytes);
+      const rodapePages = await pdfFinal.copyPages(rodapeDoc, rodapeDoc.getPageIndices());
+      rodapePages.forEach((p: any) => pdfFinal.addPage(p));
+    }
+
+    return pdfFinal.save();
   }
-
-  // --- CRUD E OUTROS MÉTODOS ---
-
+  // --- CRUD MÉTODOS ---
   async criar(dto: CreateOrcamentoDto) {
     const cliente = await this.prisma.cliente.findUnique({ where: { id: dto.cliente_id } });
     if (!cliente) throw new NotFoundException('Cliente não encontrado.');
-
     return this.prisma.orcamentos.create({
       data: {
         cliente_id: cliente.id,
@@ -106,24 +108,14 @@ export class OrcamentosService {
   async detalhar(id: number) {
     const orc = await this.prisma.orcamentos.findUnique({
       where: { id },
-      include: {
-        cliente: true,
-        itens: { orderBy: { id: 'asc' } },
-        arquivos: { orderBy: { id: 'desc' } },
-      },
+      include: { cliente: true, itens: { orderBy: { id: 'asc' } }, arquivos: { orderBy: { id: 'desc' } } },
     });
     if (!orc) throw new NotFoundException('Orçamento não encontrado.');
     return orc;
   }
 
   async atualizar(id: number, dto: UpdateOrcamentoDto) {
-    return this.prisma.orcamentos.update({
-      where: { id },
-      data: {
-        cliente_nome_snapshot: dto.cliente_nome_snapshot,
-        cliente_cpf_snapshot: dto.cliente_cpf_snapshot,
-      },
-    });
+    return this.prisma.orcamentos.update({ where: { id }, data: { cliente_nome_snapshot: dto.cliente_nome_snapshot, cliente_cpf_snapshot: dto.cliente_cpf_snapshot } });
   }
 
   async remover(id: number) {
@@ -133,27 +125,11 @@ export class OrcamentosService {
   }
 
   async adicionarItem(orcamentoId: number, dto: CreateOrcamentoItemDto) {
-    return this.prisma.orcamento_itens.create({
-      data: {
-        orcamento_id: orcamentoId,
-        nome_ambiente: dto.nome_ambiente,
-        descricao: dto.descricao,
-        valor_unitario: Number(dto.valor_unitario),
-        valor_total: Number(dto.valor_total),
-      },
-    });
+    return this.prisma.orcamento_itens.create({ data: { orcamento_id: orcamentoId, nome_ambiente: dto.nome_ambiente, descricao: dto.descricao, valor_unitario: Number(dto.valor_unitario), valor_total: Number(dto.valor_total) } });
   }
 
   async atualizarItem(orcId: number, itemId: number, dto: UpdateOrcamentoItemDto) {
-    return this.prisma.orcamento_itens.update({
-      where: { id: itemId },
-      data: {
-        nome_ambiente: dto.nome_ambiente,
-        descricao: dto.descricao,
-        valor_unitario: dto.valor_unitario ? Number(dto.valor_unitario) : undefined,
-        valor_total: dto.valor_total ? Number(dto.valor_total) : undefined,
-      },
-    });
+    return this.prisma.orcamento_itens.update({ where: { id: itemId }, data: { nome_ambiente: dto.nome_ambiente, descricao: dto.descricao, valor_unitario: dto.valor_unitario ? Number(dto.valor_unitario) : undefined, valor_total: dto.valor_total ? Number(dto.valor_total) : undefined } });
   }
 
   async removerItem(orcId: number, itemId: number) {
@@ -167,21 +143,11 @@ export class OrcamentosService {
     const nomeFinal = `${Date.now()}-${file.originalname.replace(/\s/g, '_')}`;
     const caminhoFinal = path.join(pasta, nomeFinal);
     await fs.writeFile(caminhoFinal, file.buffer);
-    return this.prisma.orcamento_arquivos.create({
-      data: {
-        orcamento_id: orcId,
-        nome_original: file.originalname,
-        mime_type: file.mimetype,
-        tamanho: file.size,
-        caminho: `uploads/orcamentos/${orcId}/${nomeFinal}`,
-      },
-    });
+    return this.prisma.orcamento_arquivos.create({ data: { orcamento_id: orcId, nome_original: file.originalname, mime_type: file.mimetype, tamanho: file.size, caminho: `uploads/orcamentos/${orcId}/${nomeFinal}` } });
   }
 
   async obterArquivo(orcId: number, arquivoId: number) {
-    const arq = await this.prisma.orcamento_arquivos.findFirst({
-      where: { id: arquivoId, orcamento_id: orcId },
-    });
+    const arq = await this.prisma.orcamento_arquivos.findFirst({ where: { id: arquivoId, orcamento_id: orcId } });
     if (!arq) throw new NotFoundException('Arquivo não encontrado.');
     return { arq, abs: path.resolve(process.cwd(), arq.caminho) };
   }

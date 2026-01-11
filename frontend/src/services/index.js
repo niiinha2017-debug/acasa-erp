@@ -204,3 +204,14 @@ export const PermissoesService = {
   definirParaUsuario: (id, permissoes) => 
     api.put(`/usuarios/${id}/permissoes`, { permissoes })
 }
+
+export const financeiroService = {
+  // Busca lista de contas a pagar
+  getContasPagar: () => api.get('/financeiro/contas-pagar'),
+  
+  // Atualiza status (ex: pagar uma conta)
+  liquidarConta: (id) => api.patch(`/financeiro/contas-pagar/${id}/pagar`),
+  
+  // Cria nova conta
+  salvarConta: (dados) => api.post('/financeiro/contas-pagar', dados)
+};
