@@ -218,7 +218,6 @@
 </template>
 
 <script setup>
-import '@/assets/CSS/producao-agenda.css'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Button from '@/components/ui/Button.vue'
