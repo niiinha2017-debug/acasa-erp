@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  Put,
+} from '@nestjs/common'
 import { ProdutosService } from './produtos.service'
 import { CreateProdutoDto } from './dto/criar-produto.dto'
 import { UpdateProdutoDto } from './dto/atualizar-produto.dto'
@@ -13,8 +22,8 @@ export class ProdutosController {
   }
 
   @Get(':id')
-  buscarPorId(@Param('id') id: string) {
-    return this.produtosService.buscarPorId(Number(id))
+  buscarPorId(@Param('id', ParseIntPipe) id: number) {
+    return this.produtosService.buscarPorId(id)
   }
 
   // ✅ PADRÃO: POST cria
@@ -25,12 +34,12 @@ export class ProdutosController {
 
   // ✅ PADRÃO: PUT atualiza
   @Put(':id')
-  atualizar(@Param('id') id: string, @Body() dto: UpdateProdutoDto) {
-    return this.produtosService.atualizar(Number(id), dto)
+  atualizar(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateProdutoDto) {
+    return this.produtosService.atualizar(id, dto)
   }
 
   @Delete(':id')
-  remover(@Param('id') id: string) {
-    return this.produtosService.remover(Number(id))
+  remover(@Param('id', ParseIntPipe) id: number) {
+    return this.produtosService.remover(id)
   }
 }
