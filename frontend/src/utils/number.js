@@ -39,3 +39,4 @@ export function numeroParaMoeda(valor) {
 export function toBoolean(valor) {
   return !!valor
 }
+export const formatCurrency = numeroParaMoeda;
