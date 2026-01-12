@@ -82,37 +82,36 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-
 import api from '@/services/api'
+import { ProdutosService } from '@/services/index' // Importação unificada
+import { maskMoneyBR } from '@/utils/masks'
+
+// Componentes UI
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import Table from '@/components/ui/Table.vue'
-import SearchInput from '@/components/ui/SearchInput.vue' // Adicionado
-import { ProdutosService } from '@/services/index' // Adicionado
+import SearchInput from '@/components/ui/SearchInput.vue'
 
-import { maskMoneyBR } from '@/utils/masks'
-
-const router = useRouter()
 const search = ref('')
 const produtos = ref([])
-const carregando = ref(true)
 const loading = ref(false)
 
-// Ajustado de 'field' para 'key' para bater com seu componente Table
 const columns = [
-  { key: 'nome_produto', label: 'Produto', width: '250px' }, // Coluna principal maior
+  { key: 'nome_produto', label: 'Produto', width: '250px' },
   { key: 'fornecedor_nome', label: 'Fornecedor' },
-  { key: 'unidade', label: 'Un.', width: '70px', align: 'center' }, // Abreviei para economizar espaço
+  { key: 'unidade', label: 'Un.', width: '70px', align: 'center' },
   { key: 'quantidade', label: 'Qtd', width: '80px', align: 'center' },
   { key: 'valor_total', label: 'Valor Total', width: '130px', align: 'right' },
   { key: 'status', label: 'Status', width: '110px', align: 'center' },
   { key: 'acoes', label: 'Ações', width: '160px', align: 'center' },
 ]
 
+// LÓGICA DE FILTRAGEM: Filtra os dados que já vieram do banco
 const rows = computed(() => {
-  const termo = search.value.toLowerCase().trim()
-
+  const termo = String(search.value || '').toLowerCase().trim()
+  
+  if (!produtos.value) return []
+  
   return produtos.value
     .filter((p) => {
       if (!termo) return true
@@ -123,49 +122,26 @@ const rows = computed(() => {
     .map((p) => ({
       ...p,
       fornecedor_nome: p.fornecedor?.razao_social || '-',
-      unidade: p.unidade || '-',
-      medida: p.medida || '-',
-      valor_unitario: maskMoneyBR(Number(p.valor_unitario || 0)),
       valor_total: maskMoneyBR(Number(p.valor_total || 0)),
     }))
 })
 
-
-async function carregar() {
+// FUNÇÃO ÚNICA: Chama o backend
+async function buscarDadosDoBanco() {
   loading.value = true
   try {
+    // Trocamos ProdutosService por chamada direta para testar se o problema é o Service
     const { data } = await api.get('/produtos')
+    console.log("Dados que chegaram do banco:", data) // <--- Veja isso no console F12
     produtos.value = data || []
   } catch (err) {
-    alert('Erro ao carregar lista de produtos')
+    console.error('Erro ao buscar produtos:', err)
   } finally {
     loading.value = false
   }
 }
-async function buscarProdutos() {
-  try {
-    carregando.value = true
-    // Verifique se esta linha existe e se o service está importado certo
-    const response = await ProdutosService.listar() 
-    produtos.value = response.data
-  } catch (error) {
-    console.error("Erro ao buscar:", error)
-  } finally {
-    carregando.value = false
-  }
-}
-
-async function excluir(produto) {
-  if (!confirm(`Deseja excluir o produto "${produto.nome_produto}"?`)) return
-  try {
-    await api.delete(`/produtos/${produto.id}`)
-    produtos.value = produtos.value.filter(p => p.id !== produto.id)
-  } catch (err) {
-    alert('Erro ao excluir produto')
-  }
-}
 
 onMounted(() => {
-  buscarProdutos()
+  buscarDadosDoBanco()
 })
 </script>
