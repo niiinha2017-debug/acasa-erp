@@ -61,10 +61,7 @@ const props = defineProps({
   readonly: Boolean,
   colSpan: { type: String, default: 'col-span-4' },
 
-  // ✅ NOVO: define o comportamento
   mode: { type: String, default: 'search' }, // 'search' | 'select'
-
-  // ✅ NOVO: para usar API {id,nome} sem map no parent
   labelKey: { type: String, default: 'label' },
   valueKey: { type: String, default: 'value' },
 })
@@ -74,7 +71,7 @@ const emit = defineEmits(['update:modelValue'])
 const texto = ref('')
 const abrir = ref(false)
 
-// ✅ normaliza options para sempre virar {label, value}
+// ✅ normaliza options (sempre {label,value})
 const normalizados = computed(() =>
   (props.options || []).map((o) => ({
     label: o?.[props.labelKey],
@@ -82,53 +79,74 @@ const normalizados = computed(() =>
   }))
 )
 
-// 1) filtro da lista (autocomplete)
 const filtrados = computed(() => {
   const termo = String(texto.value || '').toLowerCase().trim()
   const lista = normalizados.value
-
   if (!termo) return lista
-
   return lista.filter((opt) =>
     String(opt.label || '').toLowerCase().includes(termo)
   )
 })
 
-// 2) ✅ BUSCA em tabela: emite enquanto digita (somente no mode search)
+// ✅ 1) Emite enquanto digita APENAS no modo search
 watch(texto, (novoTexto) => {
+  // DEBUG:
+  // console.log('[SearchInput] digitando:', novoTexto, 'mode:', props.mode)
+
   if (props.mode === 'search') {
     emit('update:modelValue', novoTexto)
   }
 })
 
-// 3) sincronizar quando modelValue muda externamente
+// ✅ 2) Sincroniza modelValue -> texto, MAS sem brigar com a digitação
 watch(
-  () => [props.modelValue, props.options],
-  ([val]) => {
+  () => props.modelValue,
+  (val) => {
+    // DEBUG:
+    // console.log('[SearchInput] modelValue mudou:', val, 'mode:', props.mode)
+
     if (val === null || val === undefined || val === '') {
-      texto.value = ''
+      if (texto.value !== '') texto.value = ''
       return
     }
 
-    if (props.mode === 'select') {
-      const encontrada = normalizados.value.find((o) => String(o.value) === String(val))
-      if (encontrada) texto.value = encontrada.label || ''
+    // mode search: texto espelha modelValue, mas só se estiver diferente
+    if (props.mode === 'search') {
+      const nv = String(val)
+      if (texto.value !== nv) texto.value = nv
       return
     }
 
-    // mode search: texto = o próprio valor
-    texto.value = String(val)
+    // mode select: mostra label correspondente ao ID
+    const encontrada = normalizados.value.find((o) => String(o.value) === String(val))
+    const label = encontrada?.label ? String(encontrada.label) : ''
+    if (texto.value !== label) texto.value = label
   },
   { immediate: true }
 )
 
+// ✅ 3) Se options mudarem no modo select, atualiza o label (sem loop)
+watch(
+  () => normalizados.value,
+  () => {
+    if (props.mode !== 'select') return
+    const val = props.modelValue
+    if (val === null || val === undefined || val === '') return
+
+    const encontrada = normalizados.value.find((o) => String(o.value) === String(val))
+    const label = encontrada?.label ? String(encontrada.label) : ''
+    if (texto.value !== label) texto.value = label
+  }
+)
+
 function selecionar(opt) {
-  texto.value = opt.label || ''
+  const label = opt?.label ? String(opt.label) : ''
+  texto.value = label
 
   if (props.mode === 'select') {
-    emit('update:modelValue', opt.value) // ✅ emite ID
+    emit('update:modelValue', opt.value) // emite ID
   } else {
-    emit('update:modelValue', texto.value) // ✅ emite texto
+    emit('update:modelValue', label) // emite texto
   }
 
   abrir.value = false
@@ -141,3 +159,4 @@ function fecharAoClicarFora(e) {
 onMounted(() => document.addEventListener('click', fecharAoClicarFora))
 onUnmounted(() => document.removeEventListener('click', fecharAoClicarFora))
 </script>
+
