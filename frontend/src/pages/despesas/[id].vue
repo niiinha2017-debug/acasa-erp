@@ -37,7 +37,7 @@
         <div class="col-span-12 md:col-span-8">
           <SearchInput
             v-model="form.funcionario_id"
-            label="Funcionário (Vale/Pagamento) *"
+            label="Funcionário (Vale/Pagamento)"
             :options="listaFuncionarios"
             required
             :colSpan="12"
@@ -197,7 +197,6 @@ function vincularClassificacaoChave(valorSelecionado) {
 
 function validarObrigatorios() {
   if (!form.value.tipo_movimento) return 'Selecione a Movimentação.'
-  if (!form.value.funcionario_id) return 'Selecione o Funcionário (Vale/Pagamento).'
   if (!categoriaSelecionada.value) return 'Selecione o Item (Ex: Água, Vale).'
   if (!form.value.local) return 'Informe o Local / Fornecedor.'
   if (!form.value.valor_total) return 'Informe o Valor Total.'
