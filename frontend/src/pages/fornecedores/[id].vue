@@ -183,6 +183,7 @@ import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
 
 import { maskCNPJ, maskTelefone, maskCEP, maskIE } from '@/utils/masks'
+import { buscarCep, buscarCnpj } from '@/utils/utils'
 
 const route = useRoute()
 const router = useRouter()
@@ -253,10 +254,7 @@ const dataVencimentoMask = computed({
 })
 
 async function tratarBuscaCep() {
-  const cepLimpo = String(form.value.cep || '').replace(/\D/g, '')
-  if (cepLimpo.length !== 8) return
-
-  const dados = await buscarCep(cepLimpo)
+  const dados = await buscarCep(form.value.cep)
   if (!dados) return
 
   form.value.endereco = dados.logradouro || form.value.endereco
@@ -267,41 +265,24 @@ async function tratarBuscaCep() {
   document.getElementById('numero-input')?.focus()
 }
 
+
+
 async function tratarBuscaCnpj() {
-  const cnpjLimpo = String(form.value.cnpj || '').replace(/\D/g, '')
-  if (cnpjLimpo.length !== 14) return
-
-  const dados = await buscarCnpjUtil(cnpjLimpo)
+  const dados = await buscarCnpj(form.value.cnpj)
   if (!dados) return
-
-  const rua =
-    dados.logradouro ||
-    dados.nome_rua ||
-    dados.rua ||
-    dados.endereco ||
-    ''
-
-  const cidade =
-    dados.municipio ||
-    dados.cidade ||
-    dados.localidade ||
-    ''
-
-  const estado =
-    dados.uf ||
-    dados.estado ||
-    ''
 
   form.value.razao_social = dados.razao_social || form.value.razao_social
   form.value.nome_fantasia = dados.nome_fantasia || form.value.nome_fantasia
 
+  form.value.telefone = dados.telefone ? maskTelefone(dados.telefone) : form.value.telefone
   form.value.cep = dados.cep ? maskCEP(dados.cep) : form.value.cep
-  form.value.endereco = rua || form.value.endereco
-  form.value.numero = (dados.numero || dados.num || '') || form.value.numero
-  form.value.bairro = (dados.bairro || '') || form.value.bairro
-  form.value.cidade = cidade || form.value.cidade
-  form.value.estado = estado || form.value.estado
-  form.value.complemento = (dados.complemento || '') || form.value.complemento
+
+  form.value.endereco = dados.endereco || form.value.endereco
+  form.value.numero = dados.numero || form.value.numero
+  form.value.bairro = dados.bairro || form.value.bairro
+  form.value.cidade = dados.cidade || form.value.cidade
+  form.value.estado = dados.estado || form.value.estado
+  form.value.ie = dados.ie || form.value.ie
 }
 
 
