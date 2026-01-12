@@ -77,15 +77,16 @@ const filtrados = computed(() => {
 
 // 1. Emitir o texto em tempo real para filtros (Index)
 watch(texto, (novoTexto) => {
-  if (props.options.length === 0) {
-    emit('update:modelValue', novoTexto)
+  // Se o usuário limpou o campo de texto, avisamos o componente pai
+  if (!novoTexto) {
+    emit('update:modelValue', '')
   }
 })
 
 // 2. Função para selecionar uma opção da lista (Autocomplete)
 function selecionar(opt) {
-  texto.value = opt.label
-  emit('update:modelValue', opt.value)
+  texto.value = opt.label // O que aparece para o usuário
+  emit('update:modelValue', opt.value) // O que vai para o banco (ID)
   abrir.value = false
 }
 
@@ -97,24 +98,21 @@ function fecharAoClicarFora(e) {
 
 // 3. Sincronizar quando o valor vem de fora (ex: reset de filtro ou carregar edição)
 watch(
-  () => props.modelValue,
-  (val) => {
-    // Se o modelValue mudou para vazio de fora para dentro, limpamos o texto
+  () => [props.modelValue, props.options], // Monitora o valor E as opções chegando
+  ([val, opts]) => {
     if (!val) {
       texto.value = ''
       return
     }
     
-    // Se temos opções, buscamos o label correspondente ao valor (ID)
-    const opt = props.options.find((o) => o.value === val)
-    if (opt) {
-      texto.value = opt.label
-    } else if (props.options.length === 0) {
-      // Se não há opções, assumimos que o modelValue é o próprio texto
-      texto.value = val
+    if (opts && opts.length > 0) {
+      const encontrada = opts.find((o) => String(o.value) === String(val))
+      if (encontrada) {
+        texto.value = encontrada.label
+      }
     }
   },
-  { immediate: true }
+  { immediate: true, deep: true }
 )
 
 onMounted(() => document.addEventListener('click', fecharAoClicarFora))

@@ -1,108 +1,247 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import { FinanceiroService } from '@/services/index.js';
-import { numeroParaMoeda as formatCurrency } from '@/utils/number'; // Vi que você tem utils/number.js!
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 
-import Card from '@/components/ui/Card.vue';
-import Button from '@/components/ui/Button.vue';
-import SearchInput from '@/components/ui/SearchInput.vue';
-import Select from '@/components/ui/Input.vue';
+import Card from '@/components/ui/Card.vue'
+import Table from '@/components/ui/Table.vue'
+import Button from '@/components/ui/Button.vue'
+import LoadingOverlay from '@/components/ui/LoadingOverlay.vue'
 
-const contas = ref([]);
-const loading = ref(true);
-const filtroStatus = ref('TODOS');
+import { api } from '@/services/api'
+import { format } from '@/utils/format'
 
-const buscarDados = async () => {
-  loading.value = true;
-  try {
-    const { data } = await FinanceiroService.getContasPagar();
-    contas.value = data;
-  } finally {
-    loading.value = false;
+const router = useRouter()
+
+const loading = ref(false)
+const rows = ref([])
+
+// ✅ ajuste aqui se seu endpoint for outro
+const ENDPOINT = '/financeiro/contas-pagar/consolidado'
+
+// ✅ colunas: mantém simples (ajuste se quiser)
+const columns = [
+  { key: 'tipo', label: 'Tipo' },
+  { key: 'referencia', label: 'Referência' },
+  { key: 'fornecedor', label: 'Fornecedor' },
+  { key: 'vencimento', label: 'Vencimento' },
+  { key: 'valor', label: 'Valor' },
+  { key: 'status', label: 'Status' },
+  { key: 'acoes', label: 'Ações' },
+]
+
+// ✅ normaliza o que vier do backend pra tabela (sem inventar regra)
+function mapRow(r) {
+  // ajuste os nomes aqui conforme seu payload real
+  const tipo = r.tipo || r.origem || (r.fornecedor_id ? 'COMPRA' : 'DESPESA')
+  const referencia =
+    r.descricao ||
+    r.titulo ||
+    r.referencia ||
+    (r.id ? `${tipo} #${r.id}` : tipo)
+
+  const fornecedor =
+    r.fornecedor?.nome ||
+    r.fornecedor_nome ||
+    (r.fornecedor_id ? `Fornecedor #${r.fornecedor_id}` : '—')
+
+  const vencimento = r.data_vencimento || r.vencimento || r.data || null
+  const valor =
+    r.valor_total ??
+    r.valor ??
+    r.valor_original ??
+    r.total ??
+    0
+
+  const status = r.status || r.status_financeiro || 'EM_ABERTO'
+
+  return {
+    raw: r,
+    tipo,
+    referencia,
+    fornecedor,
+    vencimento,
+    valor,
+    status,
   }
-};
+}
 
-const contasFiltradas = computed(() => {
-  if (filtroStatus.value === 'TODOS') return contas.value;
-  return contas.value.filter(c => c.status === filtroStatus.value);
-});
+async function fetchData() {
+  loading.value = true
+  try {
+    const { data } = await api.get(ENDPOINT)
+    const lista = Array.isArray(data) ? data : (data?.rows || data?.data || [])
+    rows.value = lista.map(mapRow)
+  } finally {
+    loading.value = false
+  }
+}
 
-onMounted(buscarDados);
+// ✅ agrupamento por 3 tabelas
+const rowsAtrasados = computed(() =>
+  rows.value.filter(r => String(r.status).toUpperCase() === 'ATRASADO')
+)
+
+const rowsEmAberto = computed(() =>
+  rows.value.filter(r => String(r.status).toUpperCase() === 'EM_ABERTO')
+)
+
+const rowsPagos = computed(() =>
+  rows.value.filter(r => String(r.status).toUpperCase() === 'PAGO')
+)
+
+onMounted(fetchData)
+
+// ações (placeholder) — você manda o que existe de verdade
+function verDetalhes(row) {
+  // ajuste rota se tiver detalhes
+  console.log('DETALHES', row.raw)
+}
 </script>
 
 <template>
-  <div class="p-6 max-w-7xl mx-auto">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+  <Card :shadow="true" class="w-full h-full">
+    <!-- HEADER -->
+    <header class="flex items-start justify-between gap-4 p-6 border-b border-gray-100">
       <div>
-        <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">Contas a Pagar</h1>
-        <p class="text-gray-500">Gerencie suas obrigações financeiras e fluxo de caixa.</p>
+        <h2 class="text-xl font-black tracking-tight text-gray-900 uppercase">
+          Contas a Pagar
+        </h2>
+        <p class="mt-1 text-sm font-semibold text-gray-400">
+          Visão de todas as saídas da empresa (despesas + compras)
+        </p>
       </div>
-      
-      <button class="inline-flex items-center px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/30 transition-all active:scale-95">
-        <span class="mr-2">＋</span> Nova Conta
-      </button>
-    </div>
 
-    <div class="flex gap-2 p-1 bg-gray-100 rounded-xl w-fit mb-6">
-      <button 
-        v-for="status in ['TODOS', 'PENDENTE', 'PAGO', 'ATRASADO']" 
-        :key="status"
-        @click="filtroStatus = status"
-        :class="[
-          'px-4 py-2 rounded-lg text-sm font-bold transition-all',
-          filtroStatus === status ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-        ]"
-      >
-        {{ status }}
-      </button>
-    </div>
+      <div class="flex items-center gap-2">
+        <Button variant="secondary" size="sm" type="button" @click="fetchData">
+          Atualizar
+        </Button>
+      </div>
+    </header>
 
-    <div class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
-      <table class="w-full text-left">
-        <thead class="bg-gray-50/50 border-b border-gray-100">
-          <tr>
-            <th class="px-6 py-4 text-xs font-bold text-gray-400 uppercase">Fornecedor</th>
-            <th class="px-6 py-4 text-xs font-bold text-gray-400 uppercase">Vencimento</th>
-            <th class="px-6 py-4 text-xs font-bold text-gray-400 uppercase">Valor</th>
-            <th class="px-6 py-4 text-xs font-bold text-gray-400 uppercase text-center">Status</th>
-            <th class="px-6 py-4 text-xs font-bold text-gray-400 uppercase"></th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-50">
-          <tr v-for="conta in contasFiltradas" :key="conta.id" class="group hover:bg-blue-50/30 transition-colors">
-            <td class="px-6 py-4">
-              <div class="font-bold text-gray-800">{{ conta.fornecedor?.nome_fantasia }}</div>
-              <div class="text-xs text-gray-400">{{ conta.categoria || 'Geral' }}</div>
-            </td>
-            <td class="px-6 py-4 text-gray-600 font-medium">
-              {{ new Date(conta.data_vencimento).toLocaleDateString('pt-BR') }}
-            </td>
-            <td class="px-6 py-4 font-black text-gray-900">
-              {{ formatCurrency(conta.valor) }}
-            </td>
-            <td class="px-6 py-4">
-              <div class="flex justify-center">
-                <span :class="{
-                  'bg-orange-100 text-orange-600': conta.status === 'PENDENTE',
-                  'bg-green-100 text-green-600': conta.status === 'PAGO',
-                  'bg-red-100 text-red-600': conta.status === 'ATRASADO'
-                }" class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                  {{ conta.status }}
-                </span>
-              </div>
-            </td>
-            <td class="px-6 py-4 text-right">
-              <button class="p-2 hover:bg-white rounded-lg border border-transparent hover:border-gray-200 transition-all">
-                ⚙️
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      
-      <div v-if="contasFiltradas.length === 0" class="p-20 text-center text-gray-400">
-        Nenhuma conta encontrada para este filtro.
+    <!-- BODY -->
+    <div class="relative p-6">
+      <LoadingOverlay v-if="loading" :overlay="true" text="Carregando..." />
+
+      <!-- 1) ATRASADOS -->
+      <div class="mb-8">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-black uppercase tracking-widest text-gray-900">
+            Atrasados
+          </h3>
+          <span class="text-xs font-extrabold uppercase tracking-widest text-gray-400">
+            {{ rowsAtrasados.length }} itens
+          </span>
+        </div>
+
+        <Table
+          :columns="columns"
+          :rows="rowsAtrasados"
+          :loading="loading"
+          empty-text="Nenhum pagamento atrasado."
+        >
+          <template #cell-vencimento="{ row }">
+            <span class="text-sm font-semibold text-gray-900">
+              {{ row.vencimento ? format.data(row.vencimento) : '—' }}
+            </span>
+          </template>
+
+          <template #cell-valor="{ row }">
+            <span class="text-sm font-black text-gray-900">
+              {{ format.moeda(row.valor) }}
+            </span>
+          </template>
+
+          <template #cell-acoes="{ row }">
+            <div class="flex items-center gap-2">
+              <Button variant="secondary" size="sm" type="button" @click="verDetalhes(row)">
+                Ver
+              </Button>
+            </div>
+          </template>
+        </Table>
+      </div>
+
+      <div class="h-px w-full bg-gray-100 my-6"></div>
+
+      <!-- 2) EM ABERTO -->
+      <div class="mb-8">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-black uppercase tracking-widest text-gray-900">
+            Em aberto
+          </h3>
+          <span class="text-xs font-extrabold uppercase tracking-widest text-gray-400">
+            {{ rowsEmAberto.length }} itens
+          </span>
+        </div>
+
+        <Table
+          :columns="columns"
+          :rows="rowsEmAberto"
+          :loading="loading"
+          empty-text="Nenhum pagamento em aberto."
+        >
+          <template #cell-vencimento="{ row }">
+            <span class="text-sm font-semibold text-gray-900">
+              {{ row.vencimento ? format.data(row.vencimento) : '—' }}
+            </span>
+          </template>
+
+          <template #cell-valor="{ row }">
+            <span class="text-sm font-black text-gray-900">
+              {{ format.moeda(row.valor) }}
+            </span>
+          </template>
+
+          <template #cell-acoes="{ row }">
+            <div class="flex items-center gap-2">
+              <Button variant="secondary" size="sm" type="button" @click="verDetalhes(row)">
+                Ver
+              </Button>
+            </div>
+          </template>
+        </Table>
+      </div>
+
+      <div class="h-px w-full bg-gray-100 my-6"></div>
+
+      <!-- 3) PAGOS -->
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-black uppercase tracking-widest text-gray-900">
+            Pagos
+          </h3>
+          <span class="text-xs font-extrabold uppercase tracking-widest text-gray-400">
+            {{ rowsPagos.length }} itens
+          </span>
+        </div>
+
+        <Table
+          :columns="columns"
+          :rows="rowsPagos"
+          :loading="loading"
+          empty-text="Nenhum pagamento pago."
+        >
+          <template #cell-vencimento="{ row }">
+            <span class="text-sm font-semibold text-gray-900">
+              {{ row.vencimento ? format.data(row.vencimento) : '—' }}
+            </span>
+          </template>
+
+          <template #cell-valor="{ row }">
+            <span class="text-sm font-black text-gray-900">
+              {{ format.moeda(row.valor) }}
+            </span>
+          </template>
+
+          <template #cell-acoes="{ row }">
+            <div class="flex items-center gap-2">
+              <Button variant="secondary" size="sm" type="button" @click="verDetalhes(row)">
+                Ver
+              </Button>
+            </div>
+          </template>
+        </Table>
       </div>
     </div>
-  </div>
+  </Card>
 </template>
