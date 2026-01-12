@@ -4,10 +4,11 @@ import { ref, computed, onMounted, watch } from 'vue'
 import Card from '@/components/ui/Card.vue'
 import Table from '@/components/ui/Table.vue'
 import Button from '@/components/ui/Button.vue'
-import LoadingOverlay from '@/components/ui/LoadingOverlay.vue'
+import LoadingOverlay from '@/components/common/Loading.vue'
 
-import format from '@/utils/format'
-import { FinanceiroService } from '@/services/services'
+import { format } from '@/utils/format'
+import { FinanceiroService } from '@/services/index.js'
+
 
 // -----------------------
 // Estado

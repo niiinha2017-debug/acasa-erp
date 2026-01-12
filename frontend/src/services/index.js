@@ -191,32 +191,27 @@ export const PermissoesService = {
     api.put(`/usuarios/${id}/permissoes`, { permissoes })
 }
 
-// Localize o FinanceiroService e deixe-o assim:
 export const FinanceiroService = {
-  // ✅ CONSOLIDADO (despesas + compras) + auto-atualizar vencidos (backend já faz antes de retornar)
   listarPagar: (filtros = {}) => api.get('/financeiro/contas-pagar', { params: filtros }),
 
-  // CONTAS A PAGAR (tabela contas_pagar) — se você ainda usa na tela de detalhe
   buscarContaPagar: (id) => api.get(`/financeiro/contas-pagar/${id}`),
   criarContaPagar: (dados) => api.post('/financeiro/contas-pagar', dados),
   atualizarContaPagar: (id, dados) => api.put(`/financeiro/contas-pagar/${id}`, dados),
   pagarContaPagar: (id, dados) => api.post(`/financeiro/contas-pagar/${id}/pagar`, dados),
 
-  // ✅ FECHAMENTO (botão “Fechar mês”)
   fecharMesFornecedor: (dados) => api.post('/financeiro/fechamento/fornecedor', dados),
 
-  // CONTAS A RECEBER
   listarReceber: (filtros = {}) => api.get('/financeiro/contas-receber', { params: filtros }),
   buscarReceber: (id) => api.get(`/financeiro/contas-receber/${id}`),
   criarReceber: (dados) => api.post('/financeiro/contas-receber', dados),
   atualizarReceber: (id, dados) => api.put(`/financeiro/contas-receber/${id}`, dados),
   receber: (id, dados) => api.post(`/financeiro/contas-receber/${id}/receber`, dados),
 
-  // CHEQUES
   listarCheques: (filtros = {}) => api.get('/financeiro/cheques', { params: filtros }),
   buscarCheque: (id) => api.get(`/financeiro/cheques/${id}`),
   atualizarStatusCheque: (id, dados) => api.put(`/financeiro/cheques/${id}/status`, dados),
 }
+
 
 export const ConfiguracaoService = {
   async carregar() {
