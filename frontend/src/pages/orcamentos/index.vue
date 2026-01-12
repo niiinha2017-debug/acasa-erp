@@ -1,31 +1,37 @@
 <template>
-  <div class="page-container">
-    <div class="card card--shadow">
-      <header class="card-header header-between">
+  <div class="p-6">
+    <Card>
+      <header class="flex items-start justify-between gap-4 p-6 border-b border-gray-100">
         <div>
-          <h2 class="card-title">Orçamentos</h2>
-          <p class="card-subtitle">
-            Criação e gestão de orçamentos (sem financeiro).
+          <h2 class="text-xl font-black tracking-tight text-gray-900 uppercase">
+            Orçamentos
+          </h2>
+          <p class="text-sm font-semibold text-gray-500 mt-1">
+            Gestão de orçamentos e projetos.
           </p>
         </div>
 
         <Button
-          label="+ Novo Orçamento"
           variant="primary"
           @click="router.push('/orcamentos/novo')"
-        />
+        >
+          + Novo Orçamento
+        </Button>
       </header>
 
-      <div class="card-filter">
-        <SearchInput
-          v-model="filtro"
-          label="Buscar"
-          placeholder="Buscar por cliente ou ID..."
-          :colSpan="'col-span-4'"
-        />
+      <div class="p-6 pb-0">
+        <div class="grid grid-cols-12">
+          <div class="col-span-12 md:col-span-4">
+            <SearchInput
+              v-model="filtro"
+              label="Buscar"
+              placeholder="Cliente ou ID..."
+            />
+          </div>
+        </div>
       </div>
 
-      <div class="card-body card-body--flush">
+      <div class="p-6">
         <Table
           :columns="columns"
           :rows="filtrados"
@@ -33,41 +39,43 @@
           emptyText="Nenhum orçamento encontrado."
         >
           <template #cell-id="{ row }">
-            <span class="muted">#{{ row.id }}</span>
+            <span class="text-gray-400 font-bold">#{{ row.id }}</span>
           </template>
 
           <template #cell-cliente="{ row }">
-            <div class="cell-main">
-              <div class="cell-title">{{ row.cliente_nome_snapshot }}</div>
-              <div class="cell-subtitle muted">
-                CPF: {{ row.cliente_cpf_snapshot || '-' }}
-              </div>
+            <div class="flex flex-col">
+              <span class="font-bold text-gray-900">{{ row.cliente_nome_snapshot || 'Cliente não identificado' }}</span>
+              <span class="text-xs text-gray-500">{{ row.cliente_cpf_snapshot || 'Sem CPF/CNPJ' }}</span>
             </div>
           </template>
 
           <template #cell-total="{ row }">
-            {{ format(row.total_itens || 0) }}
+            <span class="font-bold text-brand-primary">
+              {{ format.currency(row.total_itens || 0) }}
+            </span>
           </template>
 
           <template #cell-acoes="{ row }">
-            <div class="table-actions">
+            <div class="flex justify-end gap-2">
               <Button
-                label="Abrir"
                 size="sm"
                 variant="secondary"
                 @click="router.push(`/orcamentos/${row.id}`)"
-              />
+              >
+                Abrir
+              </Button>
               <Button
-                label="PDF"
                 size="sm"
                 variant="outline"
                 @click="abrirPdf(row.id)"
-              />
+              >
+                PDF
+              </Button>
             </div>
           </template>
         </Table>
       </div>
-    </div>
+    </Card>
   </div>
 </template>
 
@@ -79,6 +87,7 @@ import api from '@/services/api'
 import Table from '@/components/ui/Table.vue'
 import Button from '@/components/ui/Button.vue'
 import SearchInput from '@/components/ui/SearchInput.vue'
+import Card from '@/components/ui/Card.vue' // <-- Faltava esta importação
 import { format } from '@/utils/format'
 
 const router = useRouter()
@@ -111,13 +120,16 @@ async function carregar() {
   try {
     const { data } = await api.get('/orcamentos')
     rows.value = data || []
+  } catch (e) {
+    console.error("Erro ao carregar orçamentos:", e)
   } finally {
     loading.value = false
   }
 }
 
 function abrirPdf(id) {
-  window.open(`${import.meta.env.VITE_API_URL}/orcamentos/${id}/pdf`, '_blank')
+  const base = import.meta.env.VITE_API_URL
+  window.open(`${base}/orcamentos/${id}/pdf`, '_blank')
 }
 
 onMounted(carregar)
