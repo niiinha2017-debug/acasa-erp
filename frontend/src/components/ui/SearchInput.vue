@@ -55,50 +55,82 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 const props = defineProps({
   modelValue: [String, Number],
   label: String,
-  options: { type: Array, default: () => [] }, // Lista para o Autocomplete
+  options: { type: Array, default: () => [] },
   placeholder: { type: String, default: 'Pesquisar...' },
   required: Boolean,
   readonly: Boolean,
   colSpan: { type: String, default: 'col-span-4' },
+
+  // ✅ NOVO: define o comportamento
+  mode: { type: String, default: 'search' }, // 'search' | 'select'
+
+  // ✅ NOVO: para usar API {id,nome} sem map no parent
+  labelKey: { type: String, default: 'label' },
+  valueKey: { type: String, default: 'value' },
 })
 
 const emit = defineEmits(['update:modelValue'])
+
 const texto = ref('')
 const abrir = ref(false)
 
-// 1. Filtro da lista suspensa
+// ✅ normaliza options para sempre virar {label, value}
+const normalizados = computed(() =>
+  (props.options || []).map((o) => ({
+    label: o?.[props.labelKey],
+    value: o?.[props.valueKey],
+  }))
+)
+
+// 1) filtro da lista (autocomplete)
 const filtrados = computed(() => {
   const termo = String(texto.value || '').toLowerCase().trim()
-  if (!termo) return props.options
-  return props.options.filter((opt) =>
+  const lista = normalizados.value
+
+  if (!termo) return lista
+
+  return lista.filter((opt) =>
     String(opt.label || '').toLowerCase().includes(termo)
   )
 })
 
-// 2. ESSENCIAL: Emitir o texto enquanto digita (Para buscas gerais em tabelas)
+// 2) ✅ BUSCA em tabela: emite enquanto digita (somente no mode search)
 watch(texto, (novoTexto) => {
-  // Se não estamos usando a lista de opções, o valor é o próprio texto
-  if (props.options.length === 0) {
+  if (props.mode === 'search') {
     emit('update:modelValue', novoTexto)
   }
 })
 
-// 3. Sincronizar quando o valor muda externamente (ex: carregar edição)
-watch(() => [props.modelValue, props.options], ([val, opts]) => {
-  if (!val) { texto.value = ''; return }
-  
-  if (opts && opts.length > 0) {
-    const encontrada = opts.find((o) => String(o.value) === String(val))
-    if (encontrada) texto.value = encontrada.label
-  } else {
-    // Se não há opções, o texto é o próprio valor
-    texto.value = val
-  }
-}, { immediate: true })
+// 3) sincronizar quando modelValue muda externamente
+watch(
+  () => [props.modelValue, props.options],
+  ([val]) => {
+    if (val === null || val === undefined || val === '') {
+      texto.value = ''
+      return
+    }
+
+    if (props.mode === 'select') {
+      const encontrada = normalizados.value.find((o) => String(o.value) === String(val))
+      if (encontrada) texto.value = encontrada.label || ''
+      return
+    }
+
+    // mode search: texto = o próprio valor
+    texto.value = String(val)
+  },
+  { immediate: true }
+)
 
 function selecionar(opt) {
-  texto.value = opt.label
-  emit('update:modelValue', opt.value) // Emite o ID
+  texto.value = opt.label || ''
+
+  if (props.mode === 'select') {
+    emit('update:modelValue', opt.value) // ✅ emite ID
+  } else {
+    emit('update:modelValue', texto.value) // ✅ emite texto
+  }
+
   abrir.value = false
 }
 
