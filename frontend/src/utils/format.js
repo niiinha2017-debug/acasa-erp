@@ -11,3 +11,6 @@ export const format = {
     return new Date(value).toLocaleDateString('pt-BR')
   },
 }
+
+// ✅ adiciona isso:
+export default format
