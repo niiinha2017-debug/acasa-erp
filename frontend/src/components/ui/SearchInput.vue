@@ -55,7 +55,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 const props = defineProps({
   modelValue: [String, Number],
   label: String,
-  options: { type: Array, default: () => [] },
+  options: { type: Array, default: () => [] }, // Lista para o Autocomplete
   placeholder: { type: String, default: 'Pesquisar...' },
   required: Boolean,
   readonly: Boolean,
@@ -63,11 +63,10 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:modelValue'])
-
 const texto = ref('')
 const abrir = ref(false)
 
-// Filtra as opções apenas se houver algo digitado
+// 1. Filtro da lista suspensa
 const filtrados = computed(() => {
   const termo = String(texto.value || '').toLowerCase().trim()
   if (!termo) return props.options
@@ -76,36 +75,35 @@ const filtrados = computed(() => {
   )
 })
 
-// Sincroniza o label inicial quando o componente carrega ou o ID muda
-watch(
-  () => [props.modelValue, props.options],
-  ([val, opts]) => {
-    if (!val) {
-      texto.value = ''
-      return
-    }
-    // Procura o label na lista de opções usando o ID (modelValue)
-    if (opts && opts.length > 0) {
-      const encontrada = opts.find((o) => String(o.value) === String(val))
-      if (encontrada) {
-        texto.value = encontrada.label
-      }
-    }
-  },
-  { immediate: true }
-)
+// 2. ESSENCIAL: Emitir o texto enquanto digita (Para buscas gerais em tabelas)
+watch(texto, (novoTexto) => {
+  // Se não estamos usando a lista de opções, o valor é o próprio texto
+  if (props.options.length === 0) {
+    emit('update:modelValue', novoTexto)
+  }
+})
+
+// 3. Sincronizar quando o valor muda externamente (ex: carregar edição)
+watch(() => [props.modelValue, props.options], ([val, opts]) => {
+  if (!val) { texto.value = ''; return }
+  
+  if (opts && opts.length > 0) {
+    const encontrada = opts.find((o) => String(o.value) === String(val))
+    if (encontrada) texto.value = encontrada.label
+  } else {
+    // Se não há opções, o texto é o próprio valor
+    texto.value = val
+  }
+}, { immediate: true })
 
 function selecionar(opt) {
-  texto.value = opt.label // Mostra o nome para o usuário
-  emit('update:modelValue', opt.value) // Envia o ID para o componente pai
+  texto.value = opt.label
+  emit('update:modelValue', opt.value) // Emite o ID
   abrir.value = false
 }
 
-// Fecha a lista se o usuário clicar fora
 function fecharAoClicarFora(e) {
-  if (!e.target.closest('.search-container')) {
-    abrir.value = false
-  }
+  if (!e.target.closest('.search-container')) abrir.value = false
 }
 
 onMounted(() => document.addEventListener('click', fecharAoClicarFora))
