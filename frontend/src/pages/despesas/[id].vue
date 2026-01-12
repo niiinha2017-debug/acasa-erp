@@ -186,22 +186,26 @@ const form = ref({
 })
 
 const vincularClassificacaoChave = (valorSelecionado) => {
-  // 1. Procura na lista de constantes o item que você clicou
-  const itemBanco = cat.opcoes.value.find(c => c.value === valorSelecionado)
+  // Encontra o objeto completo dentro das opções carregadas das constantes
+  const itemBanco = cat.opcoes.value.find(c => c.value === valorSelecionado);
 
   if (itemBanco) {
-    // 2. ITEM (Categoria) recebe o RÓTULO (Ex: "Energia") - O que você quer ver na tabela
-    form.value.categoria = itemBanco.label 
+    // 1. O formulário recebe o Rótulo (ex: "Energia") para salvar no banco
+    form.value.categoria = itemBanco.label; 
     
-    // 3. CLASSIFICAÇÃO recebe o que está no metadata (Ex: "CUSTO FIXO")
-    form.value.classificacao = itemBanco.metadata?.info || ''
+    // 2. A Classificação vem do metadata (ex: "CUSTO FIXO")
+    // Se o metadata estiver vazio, definimos um padrão para evitar erro 502
+    form.value.classificacao = itemBanco.metadata?.info || 'CUSTO FIXO';
     
-    // 4. Mantém o ID na busca para o campo não esvaziar
-    categoriaSelecionada.value = valorSelecionado
+    // 3. Mantém o ID no controle do SearchInput para a tela não limpar
+    categoriaSelecionada.value = valorSelecionado;
     
-    console.log('✅ Vinculado:', form.value.categoria, '| Classe:', form.value.classificacao)
+    console.log('✅ Debug Vinculação:', {
+      item: form.value.categoria,
+      classe: form.value.classificacao
+    });
   }
-}
+};
 function validarObrigatorios() {
   if (!form.value.tipo_movimento) return 'Selecione a Movimentação.'
   if (!form.value.unidade) return 'Selecione a Unidade (Fábrica ou Loja).'
@@ -216,42 +220,49 @@ function validarObrigatorios() {
 }
 
 async function salvar() {
-  const erro = validarObrigatorios()
+  const erro = validarObrigatorios();
   if (erro) {
-    alert(erro)
-    return
+    alert(erro);
+    return;
   }
 
-  loading.value = true
+  loading.value = true;
   try {
-    // 1. Sincroniza a categoria selecionada no SearchInput com o formulário
-    // Isso evita que salve "Aluguel" se você selecionou "Energia"
-    form.value.categoria = categoriaSelecionada.value
+    // GARANTIA FINAL: Se por algum motivo o vincularClassificacao não rodou,
+    // buscamos o item pelo ID que está no SearchInput antes de enviar
+    if (!form.value.categoria || form.value.classificacao === '') {
+      const backup = cat.opcoes.value.find(c => c.value === categoriaSelecionada.value);
+      if (backup) {
+        form.value.categoria = backup.label;
+        form.value.classificacao = backup.metadata?.info || 'CUSTO FIXO';
+      }
+    }
 
-    const valor = Number(form.value.valor_total)
+    const valor = Number(form.value.valor_total);
 
     const payload = {
       ...form.value,
+      // Garante formato numérico correto para o banco
       valor_total: Number.isFinite(valor) ? valor.toFixed(2) : '0.00',
       quantidade_parcelas: Number(form.value.quantidade_parcelas || 1),
-      // Garante que o ID do funcionário seja número ou nulo
       funcionario_id: form.value.funcionario_id ? Number(form.value.funcionario_id) : null
-    }
+    };
+
+    console.log('🚀 Payload Final para o Servidor:', payload);
 
     if (isEdit.value) {
-      await api.put(`/despesas/${id.value}`, payload)
+      await api.put(`/despesas/${id.value}`, payload);
     } else {
-      // Dica: Geralmente para criar novos registros usa-se api.post
-      // Mas mantive api.put conforme seu código original
-      await api.put('/despesas', payload)
+      // Usar POST para novos registros costuma ser mais estável que PUT
+      await api.post('/despesas', payload);
     }
 
-    router.push('/despesas')
+    router.push('/despesas');
   } catch (e) {
-    console.error('Erro ao salvar despesa:', e)
-    alert('Erro ao processar lançamento. Verifique o console.')
+    console.error('❌ Erro no Debug:', e.response?.data || e);
+    alert('Erro 502: O servidor rejeitou os dados. Verifique se a Categoria e Local estão preenchidos.');
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
