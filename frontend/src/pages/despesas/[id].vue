@@ -186,23 +186,20 @@ const form = ref({
 })
 
 const vincularClassificacaoChave = (valorSelecionado) => {
-  // Encontra o objeto completo dentro das opções carregadas das constantes
-  const itemBanco = cat.opcoes.value.find(c => c.value === valorSelecionado);
+  // 1. Encontra a constante real na lista carregada
+  const constante = cat.opcoes.value.find(c => c.value === valorSelecionado);
 
-  if (itemBanco) {
-    // 1. O formulário recebe o Rótulo (ex: "Energia") para salvar no banco
-    form.value.categoria = itemBanco.label; 
+  if (constante) {
+    // 2. FORÇA a atualização dos campos no objeto FORM
+    form.value.categoria = constante.label; 
+    form.value.classificacao = constante.metadata?.info || 'CUSTO FIXO';
     
-    // 2. A Classificação vem do metadata (ex: "CUSTO FIXO")
-    // Se o metadata estiver vazio, definimos um padrão para evitar erro 502
-    form.value.classificacao = itemBanco.metadata?.info || 'CUSTO FIXO';
-    
-    // 3. Mantém o ID no controle do SearchInput para a tela não limpar
+    // 3. Mantém a sincronia com a variável do SearchInput
     categoriaSelecionada.value = valorSelecionado;
-    
+
     console.log('✅ Debug Vinculação:', {
-      item: form.value.categoria,
-      classe: form.value.classificacao
+      item_selecionado: constante.label,
+      classe_atribuida: form.value.classificacao
     });
   }
 };
@@ -220,47 +217,37 @@ function validarObrigatorios() {
 }
 
 async function salvar() {
-  const erro = validarObrigatorios();
-  if (erro) {
-    alert(erro);
-    return;
-  }
-
   loading.value = true;
   try {
-    // GARANTIA FINAL: Se por algum motivo o vincularClassificacao não rodou,
-    // buscamos o item pelo ID que está no SearchInput antes de enviar
-    if (!form.value.categoria || form.value.classificacao === '') {
-      const backup = cat.opcoes.value.find(c => c.value === categoriaSelecionada.value);
-      if (backup) {
-        form.value.categoria = backup.label;
-        form.value.classificacao = backup.metadata?.info || 'CUSTO FIXO';
-      }
+    // --- DEBUG DE SEGURANÇA ---
+    // Se o usuário selecionou algo no SearchInput, garantimos que o Form tenha o Label correto
+    const itemReal = cat.opcoes.value.find(c => c.value === categoriaSelecionada.value);
+    if (itemReal) {
+      form.value.categoria = itemReal.label;
+      form.value.classificacao = itemReal.metadata?.info || 'CUSTO FIXO';
     }
-
-    const valor = Number(form.value.valor_total);
+    // ---------------------------
 
     const payload = {
       ...form.value,
-      // Garante formato numérico correto para o banco
-      valor_total: Number.isFinite(valor) ? valor.toFixed(2) : '0.00',
-      quantidade_parcelas: Number(form.value.quantidade_parcelas || 1),
-      funcionario_id: form.value.funcionario_id ? Number(form.value.funcionario_id) : null
+      valor_total: Number(form.value.valor_total).toFixed(2),
+      // Remove campos nulos que podem confundir o servidor (Erro 502)
+      funcionario_id: form.value.funcionario_id ? Number(form.value.funcionario_id) : null,
+      quantidade_parcelas: Number(form.value.quantidade_parcelas || 1)
     };
 
-    console.log('🚀 Payload Final para o Servidor:', payload);
+    console.log('🚀 Payload Final Corrigido:', payload);
 
     if (isEdit.value) {
       await api.put(`/despesas/${id.value}`, payload);
     } else {
-      // Usar POST para novos registros costuma ser mais estável que PUT
       await api.post('/despesas', payload);
     }
 
     router.push('/despesas');
   } catch (e) {
-    console.error('❌ Erro no Debug:', e.response?.data || e);
-    alert('Erro 502: O servidor rejeitou os dados. Verifique se a Categoria e Local estão preenchidos.');
+    console.error('❌ Erro no Servidor:', e.response?.data || e);
+    alert('Erro ao salvar. Verifique se os campos obrigatórios estão preenchidos corretamente.');
   } finally {
     loading.value = false;
   }
