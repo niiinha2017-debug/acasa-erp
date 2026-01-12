@@ -146,7 +146,7 @@ async function buscarProdutos() {
   try {
     carregando.value = true
     // Verifique se esta linha existe e se o service está importado certo
-    const response = await ProdutoService.listar() 
+    const response = await ProdutosService.listar() 
     produtos.value = response.data
   } catch (error) {
     console.error("Erro ao buscar:", error)
