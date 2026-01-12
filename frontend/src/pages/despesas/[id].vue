@@ -81,10 +81,6 @@
   <Input v-model="form.local" label="Local / Fornecedor *" required />
 </div>
 
-        <div class="col-span-12 md:col-span-8">
-          <Input v-model="form.local" label="Local / Fornecedor *" required />
-        </div>
-
         <div class="col-span-12 md:col-span-4">
           <Input
             v-model="form.valor_total"
