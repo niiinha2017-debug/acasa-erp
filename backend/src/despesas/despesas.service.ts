@@ -87,6 +87,7 @@ export class DespesasService {
     const data: Prisma.despesasUpdateInput = {}
 
     if (dto.tipo_movimento !== undefined) data.tipo_movimento = dto.tipo_movimento
+    if (dto.unidade !== undefined) data.unidade = dto.unidade;
     if (dto.categoria !== undefined) data.categoria = dto.categoria
     if (dto.classificacao !== undefined) data.classificacao = dto.classificacao
     if (dto.local !== undefined) data.local = dto.local

@@ -39,6 +39,7 @@ export class FinanceiroService {
       await tx.despesas.create({
         data: {
           tipo_movimento: 'SAIDA', // Corrigido de 'tipo_movemento'
+          unidade: dto.unidade || 'FÁBRICA',
           categoria: 'PAGAMENTO_FORNECEDOR',
           classificacao: 'OPERACIONAL',
           local: 'ESTOQUE',
