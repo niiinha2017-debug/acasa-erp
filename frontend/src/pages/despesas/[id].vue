@@ -38,14 +38,13 @@
         </div>
 
 <div class="col-span-12 md:col-span-6">
-  <SearchInput
-    v-model="categoriaSelecionada"
-    label="Item (Busque pelo nome: Energia, Internet...) *"
-    :options="cat.opcoes.value"
-    required
-    :colSpan="12"
-    @update:modelValue="vincularClassificacaoChave"
-  />
+<SearchInput
+  v-model="categoriaSelecionada"
+  :options="cat.opcoes.value"
+  label="Item (Energia, Internet...) *"
+  required
+  @update:modelValue="vincularClassificacaoChave"
+/>
 </div>
 
 <div class="col-span-12 md:col-span-6">
@@ -184,25 +183,20 @@ const form = ref({
   data_pagamento: '',
   status: ''
 })
+const vincularClassificacaoChave = (valorChave) => {
+  if (!valorChave) return
 
-const vincularClassificacaoChave = (valorSelecionado) => {
-  // 1. Encontra a constante real na lista carregada
-  const constante = cat.opcoes.value.find(c => c.value === valorSelecionado);
-
-  if (constante) {
-    // 2. FORÇA a atualização dos campos no objeto FORM
-    form.value.categoria = constante.label; 
-    form.value.classificacao = constante.metadata?.info || 'CUSTO FIXO';
+  const item = cat.opcoes.value.find(o => o.value === valorChave)
+  
+  if (item) {
+    // Atualiza o objeto form com os dados reais da constante
+    form.value.categoria = item.label            // Ex: "Energia" (salva no banco)
+    form.value.classificacao = item.metadata?.info || 'CUSTO FIXO' // Automático
     
-    // 3. Mantém a sincronia com a variável do SearchInput
-    categoriaSelecionada.value = valorSelecionado;
-
-    console.log('✅ Debug Vinculação:', {
-      item_selecionado: constante.label,
-      classe_atribuida: form.value.classificacao
-    });
+    console.log('✅ Vinculado com sucesso:', form.value.categoria, '|', form.value.classificacao)
   }
-};
+}
+
 function validarObrigatorios() {
   if (!form.value.tipo_movimento) return 'Selecione a Movimentação.'
   if (!form.value.unidade) return 'Selecione a Unidade (Fábrica ou Loja).'
@@ -217,42 +211,48 @@ function validarObrigatorios() {
 }
 
 async function salvar() {
-  loading.value = true;
-  try {
-    // --- DEBUG DE SEGURANÇA ---
-    // Se o usuário selecionou algo no SearchInput, garantimos que o Form tenha o Label correto
-    const itemReal = cat.opcoes.value.find(c => c.value === categoriaSelecionada.value);
-    if (itemReal) {
-      form.value.categoria = itemReal.label;
-      form.value.classificacao = itemReal.metadata?.info || 'CUSTO FIXO';
-    }
-    // ---------------------------
+  // 1. Validamos antes de qualquer coisa
+  const mensagemErro = validarObrigatorios()
+  if (mensagemErro) {
+    alert(mensagemErro)
+    return
+  }
 
+  loading.value = true
+  try {
+    // 2. FORÇA BRUTA: Se o SearchInput falhou, tentamos capturar o valor 
+    // direto da variável de controle categoriaSelecionada
+    const constanteReal = cat.opcoes.value.find(c => c.value === categoriaSelecionada.value)
+    
+    if (constanteReal) {
+      form.value.categoria = constanteReal.label
+      form.value.classificacao = constanteReal.metadata?.info || 'CUSTO FIXO'
+    }
+
+    // 3. Montagem do Payload limpo
     const payload = {
       ...form.value,
       valor_total: Number(form.value.valor_total).toFixed(2),
-      // Remove campos nulos que podem confundir o servidor (Erro 502)
       funcionario_id: form.value.funcionario_id ? Number(form.value.funcionario_id) : null,
       quantidade_parcelas: Number(form.value.quantidade_parcelas || 1)
-    };
-
-    console.log('🚀 Payload Final Corrigido:', payload);
-
-    if (isEdit.value) {
-      await api.put(`/despesas/${id.value}`, payload);
-    } else {
-      await api.post('/despesas', payload);
     }
 
-    router.push('/despesas');
+    console.log('🚀 Enviando Payload Final:', payload)
+
+    if (isEdit.value) {
+      await api.put(`/despesas/${id.value}`, payload)
+    } else {
+      await api.post('/despesas', payload)
+    }
+
+    router.push('/despesas')
   } catch (e) {
-    console.error('❌ Erro no Servidor:', e.response?.data || e);
-    alert('Erro ao salvar. Verifique se os campos obrigatórios estão preenchidos corretamente.');
+    console.error('❌ Erro no Servidor:', e.response?.data || e)
+    alert('Erro ao salvar. Verifique a conexão com o servidor.')
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
-
 async function excluir() {
   if (!confirm('Deseja realmente excluir este lançamento?')) return
 
@@ -276,8 +276,8 @@ async function carregarFuncionarios() {
     console.error(e)
   }
 }
-
 onMounted(async () => {
+  // 1. Carrega todas as listas primeiro (Aguardamos todas)
   await Promise.all([
     cat.carregarCategoria('SAÍDA'),
     pag.carregarCategoria('FORMA DE PAGAMENTO FINANCEIRO'),
@@ -285,18 +285,36 @@ onMounted(async () => {
     carregarFuncionarios()
   ])
 
-  if (!isEdit.value) return
+  // Se for novo lançamento, para aqui
+  if (!isEdit.value) {
+    // Sugestão: Definir data de registro padrão como hoje
+    form.value.data_registro = new Date().toISOString().slice(0, 10)
+    return
+  }
+  
+  // 2. Se for Edição, busca os dados do banco
+  try {
+    const { data } = await api.get(`/despesas/${id.value}`)
+    
+    // Usamos o spread para garantir reatividade total
+    form.value = { ...data }
 
-  const { data } = await api.get(`/despesas/${id.value}`)
-  Object.assign(form.value, data)
+    // 3. SINCRONIZAÇÃO CRÍTICA:
+    // O SearchInput precisa da CHAVE (value), mas o banco guardou o RÓTULO (categoria)
+    const encontrado = cat.opcoes.value.find(o => o.label === data.categoria)
+    
+    if (encontrado) {
+      categoriaSelecionada.value = encontrado.value // Seta a chave no SearchInput (ex: energia_id)
+      form.value.classificacao = encontrado.metadata?.info || data.classificacao // Garante a classe
+    }
 
-  // repopula o select de categoria (SearchInput trabalha com value/chave)
-  const opt = cat.opcoes.value.find(o => o.label === data.categoria)
-  categoriaSelecionada.value = opt ? opt.value : ''
-  vincularClassificacaoChave(categoriaSelecionada.value)
-
-  if (data.data_vencimento) form.value.data_vencimento = data.data_vencimento.slice(0, 10)
-  if (data.data_pagamento) form.value.data_pagamento = data.data_pagamento.slice(0, 10)
-  if (data.data_registro) form.value.data_registro = data.data_registro.slice(0, 10)
+    // 4. Formata as datas para o input HTML (YYYY-MM-DD)
+    if (data.data_vencimento) form.value.data_vencimento = data.data_vencimento.slice(0, 10)
+    if (data.data_pagamento) form.value.data_pagamento = data.data_pagamento.slice(0, 10)
+    if (data.data_registro) form.value.data_registro = data.data_registro.slice(0, 10)
+    
+  } catch (err) {
+    console.error("Erro ao carregar despesa:", err)
+  }
 })
 </script>
