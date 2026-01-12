@@ -10,7 +10,7 @@ const filtroStatus = ref('TODOS');
 const buscarDados = async () => {
   loading.value = true;
   try {
-    const { data } = await financeiroService.getContasPagar();
+    const { data } = await FinanceiroService.getContasPagar();
     contas.value = data;
   } finally {
     loading.value = false;
