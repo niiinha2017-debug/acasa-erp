@@ -5,10 +5,11 @@ import { useRouter } from 'vue-router'
 import Card from '@/components/ui/Card.vue'
 import Table from '@/components/ui/Table.vue'
 import Button from '@/components/ui/Button.vue'
-import LoadingOverlay from '@/components/ui/LoadingOverlay.vue'
+import LoadingOverlay from '@/components/common/Loading.vue'
 
 import { api } from '@/services/api'
 import { format } from '@/utils/format'
+
 
 const router = useRouter()
 
