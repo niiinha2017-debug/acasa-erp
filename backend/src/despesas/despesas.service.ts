@@ -36,6 +36,7 @@ export class DespesasService {
 
  const baseData = {
   tipo_movimento: dto.tipo_movimento,
+  unidade: dto.unidade,
   categoria: dto.categoria,
   classificacao: dto.classificacao,
   local: dto.local,

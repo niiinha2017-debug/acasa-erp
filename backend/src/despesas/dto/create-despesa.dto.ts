@@ -15,6 +15,10 @@ export class CreateDespesaDto {
 
   @IsString()
   @IsNotEmpty()
+  unidade: string;
+
+  @IsString()
+  @IsNotEmpty()
   categoria: string; // combustivel / energia / agua / etc
 
   @IsString()

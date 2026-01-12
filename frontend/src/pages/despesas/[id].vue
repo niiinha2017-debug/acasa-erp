@@ -63,6 +63,23 @@
             readonly
           />
         </div>
+        <div class="col-span-12 md:col-span-4">
+  <label class="block text-xs font-extrabold uppercase tracking-[0.18em] text-gray-500 mb-2">
+    Unidade <span class="text-danger">*</span>
+  </label>
+  <select
+    v-model="form.unidade"
+    required
+    class="w-full h-11 rounded-2xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-900 outline-none transition focus:border-brand-primary/40 focus:ring-4 focus:ring-brand-primary/10"
+  >
+    <option value="FÁBRICA">FÁBRICA</option>
+    <option value="LOJA">LOJA</option>
+  </select>
+</div>
+
+<div class="col-span-12 md:col-span-8">
+  <Input v-model="form.local" label="Local / Fornecedor *" required />
+</div>
 
         <div class="col-span-12 md:col-span-8">
           <Input v-model="form.local" label="Local / Fornecedor *" required />
@@ -165,6 +182,7 @@ const categoriaSelecionada = ref('')
 
 const form = ref({
   tipo_movimento: 'SAÍDA',
+  unidade: 'FÁBRICA',
   categoria: '',
   classificacao: '',
   local: '',
@@ -196,6 +214,7 @@ function vincularClassificacaoChave(valorSelecionado) {
 
 function validarObrigatorios() {
   if (!form.value.tipo_movimento) return 'Selecione a Movimentação.'
+  if (!form.value.unidade) return 'Selecione a Unidade (Fábrica ou Loja).'
   if (!categoriaSelecionada.value) return 'Selecione o Item (Ex: Água, Vale).'
   if (!form.value.local) return 'Informe o Local / Fornecedor.'
   if (!form.value.valor_total) return 'Informe o Valor Total.'

@@ -347,6 +347,7 @@ model despesas {
   id Int @id @default(autoincrement())
 
   tipo_movimento String
+  unidade         String
   categoria      String
   classificacao  String
   local          String
@@ -369,6 +370,7 @@ model despesas {
   recorrencia_id String?  @db.VarChar(36)
   parcela_numero Int?
 
+  @@index([unidade]) // Opcional, mas recomendado para relatórios
   @@index([recorrencia_id])
   @@index([tipo_movimento])
   @@index([categoria])
