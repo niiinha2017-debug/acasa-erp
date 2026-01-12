@@ -104,7 +104,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/services/api'
-import { FuncionarioService } from '@/services/funcionarioService'
+import { FuncionarioService } from '@/services/index'
 
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
