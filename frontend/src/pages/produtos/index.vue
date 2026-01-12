@@ -16,14 +16,7 @@
     </header>
 
     <!-- BODY -->
-    <div class="p-6 space-y-5">
-      <SearchInput
-        v-model="search"
-        placeholder="Digite o nome do produto ou fornecedor..."
-        colSpan="12"
-      />
-
-      <!-- TABELA (sem “card dentro do card”) -->
+    <div class="p-6">
       <Table
         :columns="columns"
         :rows="rows"
@@ -35,9 +28,9 @@
             <strong class="text-sm font-black text-gray-900">
               {{ row.nome_produto }}
             </strong>
-<span class="text-xs font-semibold text-gray-400">
-  Ref: {{ String(row.id || 0).padStart(4, '0') }}
-</span>
+            <span class="text-xs font-semibold text-gray-400">
+              Ref: {{ String(row.id || 0).padStart(4, '0') }}
+            </span>
           </div>
         </template>
 
@@ -79,20 +72,16 @@
   </Card>
 </template>
 
-
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import api from '@/services/api'
-import { ProdutosService } from '@/services/index' // Importação unificada
 import { maskMoneyBR } from '@/utils/masks'
 
-// Componentes UI
+// UI
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import Table from '@/components/ui/Table.vue'
-import SearchInput from '@/components/ui/SearchInput.vue'
 
-const search = ref('')
 const produtos = ref([])
 const loading = ref(false)
 
@@ -106,38 +95,18 @@ const columns = [
   { key: 'acoes', label: 'Ações', width: '160px', align: 'center' },
 ]
 
-// LÓGICA DE FILTRAGEM: Filtra os dados que já vieram do banco
-const rows = computed(() => {
-  const termo = String(search.value || '').toLowerCase().trim()
-  
-  if (!produtos.value) return []
-  
-  return produtos.value
-    .filter((p) => {
-      if (!termo) return true
-      const nomeProduto = (p.nome_produto || '').toLowerCase()
-      const fornecedor = (p.fornecedor?.razao_social || '').toLowerCase()
-      return nomeProduto.includes(termo) || fornecedor.includes(termo)
-    })
-    .map((p) => ({
-      ...p,
-      fornecedor_nome: p.fornecedor?.razao_social || '-',
-      valor_total: maskMoneyBR(Number(p.valor_total || 0)),
-    }))
-})
-
-
+const rows = computed(() =>
+  (produtos.value || []).map((p) => ({
+    ...p,
+    fornecedor_nome: p.fornecedor?.razao_social || '-',
+    valor_total: maskMoneyBR(Number(p.valor_total || 0)),
+  }))
+)
 
 async function buscarDadosDoBanco() {
   loading.value = true
   try {
-    console.log('[Produtos] baseURL:', api.defaults.baseURL)
-    console.log('[Produtos] token header:', api.defaults.headers?.common?.Authorization)
-
     const resp = await api.get('/produtos')
-    console.log('[Produtos] status:', resp.status)
-    console.log('[Produtos] data:', resp.data)
-
     produtos.value = resp.data || []
   } catch (err) {
     console.error('Erro ao buscar produtos:', err?.response || err)
@@ -145,7 +114,6 @@ async function buscarDadosDoBanco() {
     loading.value = false
   }
 }
-
 
 onMounted(() => {
   buscarDadosDoBanco()
