@@ -95,6 +95,7 @@ import { maskMoneyBR } from '@/utils/masks'
 const router = useRouter()
 const search = ref('')
 const produtos = ref([])
+const carregando = ref(true)
 const loading = ref(false)
 
 // Ajustado de 'field' para 'key' para bater com seu componente Table
@@ -140,6 +141,18 @@ async function carregar() {
     loading.value = false
   }
 }
+async function buscarProdutos() {
+  try {
+    carregando.value = true
+    // Verifique se esta linha existe e se o service está importado certo
+    const response = await ProdutoService.listar() 
+    produtos.value = response.data
+  } catch (error) {
+    console.error("Erro ao buscar:", error)
+  } finally {
+    carregando.value = false
+  }
+}
 
 async function excluir(produto) {
   if (!confirm(`Deseja excluir o produto "${produto.nome_produto}"?`)) return
@@ -151,5 +164,7 @@ async function excluir(produto) {
   }
 }
 
-onMounted(carregar)
+onMounted(() => {
+  buscarProdutos()
+})
 </script>
