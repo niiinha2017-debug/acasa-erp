@@ -20,13 +20,12 @@ export default defineConfig({
     },
   },
 
-  build: {
-    emptyOutDir: true,
-    assetsDir: 'assets',
-    modulePreload: {
-      polyfill: true
-    }
-  },
+build: {
+  emptyOutDir: true,
+  assetsDir: 'assets',
+  modulePreload: { polyfill: true },
+  sourcemap: true,
+},
 
   server: {
     port: 5173,
