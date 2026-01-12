@@ -362,15 +362,15 @@ model despesas {
   funcionario_id Int?
   funcionario    funcionarios? @relation(fields: [funcionario_id], references: [id])
 
-  status String @default("ATIVO")
+  // ✅ status financeiro (mesmas constantes do financeiro)
+  status String @default("EM_ABERTO")
 
   conta_pagar  contas_pagar?
 
-  // ✅ RECORRÊNCIA
   recorrencia_id String?  @db.VarChar(36)
   parcela_numero Int?
 
-  @@index([unidade]) // Opcional, mas recomendado para relatórios
+  @@index([unidade])
   @@index([recorrencia_id])
   @@index([tipo_movimento])
   @@index([categoria])
@@ -381,6 +381,7 @@ model despesas {
   @@index([funcionario_id])
   @@map("despesas")
 }
+
 
 model orcamentos {
   id Int @id @default(autoincrement())
@@ -595,6 +596,9 @@ model contas_pagar {
   origem_tipo String?
   origem_id   Int?
 
+  mes_referencia Int
+  ano_referencia Int
+
   descricao  String?
   observacao String?
 
@@ -693,10 +697,8 @@ model fornecedor_compensacoes {
 model compras {
   id Int @id @default(autoincrement())
 
-  // ✅ define o tipo da compra (constantes)
-  tipo_compra String // "INSUMOS" | "CLIENTE_AMBIENTE"
+  tipo_compra String
 
-  // ✅ venda só quando for cliente/ambiente
   venda_id Int?
   venda    vendas? @relation(fields: [venda_id], references: [id], onDelete: Cascade)
 
@@ -706,9 +708,13 @@ model compras {
   venda_item_id Int?
   venda_item    vendas_itens? @relation(fields: [venda_item_id], references: [id], onDelete: SetNull)
 
-  status String @default("ATIVO")
+  // ✅ agora é status financeiro (EM_ABERTO / VENCIDO / PAGO...)
+  status String @default("EM_ABERTO")
 
   data_compra DateTime @default(now())
+
+  // ✅ vencimento para virar VENCIDO automaticamente
+  vencimento_em DateTime?
 
   valor_total Decimal @default(0.00) @db.Decimal(10, 2)
 
@@ -721,8 +727,13 @@ model compras {
   @@index([tipo_compra])
   @@index([venda_id])
   @@index([fornecedor_id])
+  @@index([status])
+  @@index([vencimento_em])
   @@map("compras")
 }
+
+
+
 
 model compras_itens {
   id        Int     @id @default(autoincrement())
@@ -814,4 +825,23 @@ model cheques {
   atualizado_em   DateTime @updatedAt
 
   @@map("cheques")
+}
+model Empresa {
+  id            Int      @id @default(1) // Forçamos o ID 1
+  razao_social  String?
+  nome_fantasia String?
+  cnpj          String?  @unique
+  ie            String?
+  logradouro    String?
+  numero        String?
+  bairro        String?
+  cidade        String?
+  uf            String?  @db.VarChar(2)
+  cep           String?
+  email         String?
+  telefone      String?
+  logo_url      String?  @db.Text // Para salvar o caminho da imagem ou base64
+  updated_at    DateTime @updatedAt
+
+  @@map("empresa") // Nome da tabela no banco de dados
 }

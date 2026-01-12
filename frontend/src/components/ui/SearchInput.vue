@@ -75,6 +75,14 @@ const filtrados = computed(() => {
   )
 })
 
+// 1. Emitir o texto em tempo real para filtros (Index)
+watch(texto, (novoTexto) => {
+  if (props.options.length === 0) {
+    emit('update:modelValue', novoTexto)
+  }
+})
+
+// 2. Função para selecionar uma opção da lista (Autocomplete)
 function selecionar(opt) {
   texto.value = opt.label
   emit('update:modelValue', opt.value)
@@ -87,12 +95,24 @@ function fecharAoClicarFora(e) {
   }
 }
 
+// 3. Sincronizar quando o valor vem de fora (ex: reset de filtro ou carregar edição)
 watch(
   () => props.modelValue,
   (val) => {
+    // Se o modelValue mudou para vazio de fora para dentro, limpamos o texto
+    if (!val) {
+      texto.value = ''
+      return
+    }
+    
+    // Se temos opções, buscamos o label correspondente ao valor (ID)
     const opt = props.options.find((o) => o.value === val)
-    if (opt) texto.value = opt.label
-    else if (!val) texto.value = ''
+    if (opt) {
+      texto.value = opt.label
+    } else if (props.options.length === 0) {
+      // Se não há opções, assumimos que o modelValue é o próprio texto
+      texto.value = val
+    }
   },
   { immediate: true }
 )

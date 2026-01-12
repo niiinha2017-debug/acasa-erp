@@ -35,9 +35,9 @@
             <strong class="text-sm font-black text-gray-900">
               {{ row.nome_produto }}
             </strong>
-            <span class="text-xs font-semibold text-gray-400">
-              Ref: {{ row.id.toString().padStart(4, '0') }}
-            </span>
+<span class="text-xs font-semibold text-gray-400">
+  Ref: {{ String(row.id || 0).padStart(4, '0') }}
+</span>
           </div>
         </template>
 
@@ -99,15 +99,13 @@ const loading = ref(false)
 
 // Ajustado de 'field' para 'key' para bater com seu componente Table
 const columns = [
-  { key: 'nome_produto', label: 'Produto' },
+  { key: 'nome_produto', label: 'Produto', width: '250px' }, // Coluna principal maior
   { key: 'fornecedor_nome', label: 'Fornecedor' },
-  { key: 'unidade', label: 'Unidade' }, // <--- Adicionado
-  { key: 'medida', label: 'Medida/Dimensão' }, // <--- Adicionado
-  { key: 'quantidade', label: 'Qtd', align: 'center' },
-  { key: 'valor_unitario', label: 'Valor Unit.', align: 'right' },
-  { key: 'valor_total', label: 'Valor Total', align: 'right' },
-  { key: 'status', label: 'Status', align: 'center' },
-  { key: 'acoes', label: 'Ações', align: 'center' },
+  { key: 'unidade', label: 'Un.', width: '70px', align: 'center' }, // Abreviei para economizar espaço
+  { key: 'quantidade', label: 'Qtd', width: '80px', align: 'center' },
+  { key: 'valor_total', label: 'Valor Total', width: '130px', align: 'right' },
+  { key: 'status', label: 'Status', width: '110px', align: 'center' },
+  { key: 'acoes', label: 'Ações', width: '160px', align: 'center' },
 ]
 
 const rows = computed(() => {

@@ -31,11 +31,11 @@
               <p class="text-xs font-semibold text-gray-400 mt-1">Selecione para editar acessos.</p>
             </div>
 
-            <SearchInput
-              v-model="filtroUsuarios"
-              placeholder="Filtrar por nome..."
-              colSpan="w-full"
-            />
+<SearchInput
+  v-model="filtroUsuarios"
+  placeholder="Filtrar por nome..."
+  colSpan="col-span-12" 
+/>
 
             <div class="mt-4 max-h-[520px] overflow-auto pr-1">
               <button
@@ -202,8 +202,15 @@ async function carregar() {
 
 async function selecionarUsuario(u) {
   usuarioSelecionado.value = u
-  const { data } = await PermissoesService.listarDoUsuario(u.id)
-  permissoesAtivas.value = data.map(p => typeof p === 'string' ? p : p.chave)
+  permissoesAtivas.value = [] // 1. Limpa as marcas atuais (feedback visual imediato)
+  
+  try {
+    const { data } = await PermissoesService.listarDoUsuario(u.id)
+    // 2. Preenche com os novos dados
+    permissoesAtivas.value = data.map(p => typeof p === 'string' ? p : p.chave)
+  } catch (e) {
+    alert('Erro ao carregar permissões')
+  }
 }
 
 async function salvar() {

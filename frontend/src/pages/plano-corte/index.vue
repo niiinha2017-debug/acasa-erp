@@ -114,11 +114,18 @@ const rowsFiltrados = computed(() => {
   const termo = (busca.value || '').toLowerCase().trim()
   if (!termo) return planos.value
 
-  return planos.value.filter(p =>
-    p.fornecedor?.razao_social?.toLowerCase().includes(termo) ||
-    p.status?.toLowerCase().includes(termo) ||
-    String(p.numero_pedido || '').toLowerCase().includes(termo)
-  )
+  return planos.value.filter(p => {
+    // Buscamos em múltiplos campos do fornecedor e do pedido
+    const razao = p.fornecedor?.razao_social?.toLowerCase() || ''
+    const fantasia = p.fornecedor?.nome_fantasia?.toLowerCase() || ''
+    const status = p.status?.toLowerCase() || ''
+    const pedido = String(p.numero_pedido || '').toLowerCase()
+
+    return razao.includes(termo) || 
+           fantasia.includes(termo) || 
+           status.includes(termo) || 
+           pedido.includes(termo)
+  })
 })
 
 function statusClassTailwind(status) {

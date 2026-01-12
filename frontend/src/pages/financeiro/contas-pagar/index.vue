@@ -3,6 +3,11 @@ import { ref, onMounted, computed } from 'vue';
 import { FinanceiroService } from '@/services/index.js';
 import { numeroParaMoeda as formatCurrency } from '@/utils/number'; // Vi que você tem utils/number.js!
 
+import Card from '@/components/ui/Card.vue';
+import Button from '@/components/ui/Button.vue';
+import SearchInput from '@/components/ui/SearchInput.vue';
+import Select from '@/components/ui/Input.vue';
+
 const contas = ref([]);
 const loading = ref(true);
 const filtroStatus = ref('TODOS');

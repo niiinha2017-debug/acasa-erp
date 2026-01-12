@@ -35,6 +35,17 @@
         :loading="loading"
         empty-text="Nenhuma venda encontrada"
       >
+
+      <template #cell-cliente="{ row }">
+  <div class="flex flex-col">
+    <strong class="text-sm font-black text-gray-900">
+      {{ row.cliente?.nome || row.cliente?.razao_social || 'Consumidor' }}
+    </strong>
+    <span class="text-xs font-semibold text-gray-400">
+      {{ row.cliente?.cpf || row.cliente?.cnpj || 'Sem documento' }}
+    </span>
+  </div>
+</template>
         <template #cell-status="{ row }">
           <span
             class="inline-flex items-center rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider border"
@@ -102,13 +113,13 @@ const vendas = ref([])
 const filtro = ref('')
 
 const columns = [
-  { key: 'id', label: 'ID' },
+  { key: 'id', label: 'ID', width: '80px' },
   { key: 'cliente', label: 'Cliente' },
-  { key: 'status', label: 'Status' },
+  { key: 'status', label: 'Status', width: '120px', align: 'center' },
   { key: 'forma_pagamento_chave', label: 'Pagamento' },
-  { key: 'data_venda', label: 'Data' },
-  { key: 'valor_total', label: 'Total' },
-  { key: 'acoes', label: 'Ações', width: '220px', align: 'center' },
+  { key: 'data_venda', label: 'Data', width: '110px' },
+  { key: 'valor_total', label: 'Total', align: 'right', width: '130px' },
+  { key: 'acoes', label: 'Ações', width: '180px', align: 'center' },
 ]
 
 const filtradas = computed(() => {

@@ -107,9 +107,22 @@ const despesasFiltradas = computed(() => {
   if (!termo) return despesas.value
 
   return despesas.value.filter(d => {
-    const txt = `${d.tipo_movimento ?? ''} ${d.categoria ?? ''} ${d.classificacao ?? ''} ${d.local ?? ''} ${d.status ?? ''}`
-      .toLowerCase()
-    return txt.includes(termo)
+    // 1. Incluímos o valor e o ID para aumentar a precisão da busca
+    // 2. Usamos String() para garantir que números não quebrem o .toLowerCase()
+    const campos = [
+      d.id,
+      d.tipo_movimento,
+      d.categoria,
+      d.classificacao,
+      d.local,
+      d.status,
+      d.valor_total
+    ]
+
+    // 3. Transformamos tudo em uma única string ignorando valores nulos
+    return campos.some(campo => 
+      String(campo ?? '').toLowerCase().includes(termo)
+    )
   })
 })
 

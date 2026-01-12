@@ -72,6 +72,7 @@
             <a href="#" @click.prevent="irPara('/configuracoes/permissoes')" class="dropdown-item-tw"><i class="pi pi-users mr-2 opacity-50"></i> Permissões</a>
             <a href="#" @click.prevent="irPara('/configuracoes/usuarios')" class="dropdown-item-tw"><i class="pi pi-truck mr-2 opacity-50"></i> Usuários</a>
             <a href="#" @click.prevent="irPara('/constantes')" class="dropdown-item-tw"><i class="pi pi-building mr-2 opacity-50"></i> Constantes</a>
+            <a href="#" @click.prevent="irPara('/configuracoes')" class="dropdown-item-tw"><i class="pi pi-cog mr-2 opacity-50"></i> Configurações Gerais</a>
           </div>
         </div>
       </nav>

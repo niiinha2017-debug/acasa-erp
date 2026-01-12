@@ -39,9 +39,13 @@
               <Input v-model="cnpjMask" label="CNPJ *" required @blur="tratarBuscaCnpj" />
             </div>
 
-            <div class="col-span-12 md:col-span-4">
-              <Input v-model="form.ie" label="Inscrição Estadual" />
-            </div>
+<div class="col-span-12 md:col-span-4">
+  <Input 
+    v-model="ieMask" 
+    label="Inscrição Estadual" 
+    placeholder="000.000.000.000"
+  />
+</div>
 
             <div class="col-span-12 md:col-span-4">
               <Input
@@ -179,7 +183,7 @@ import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
 
 import { maskCNPJ, maskTelefone, maskCEP } from '@/utils/masks'
-import { buscarCep, buscarCnpj as buscarCnpjUtil } from '@/utils/utils'
+import { maskCNPJ, maskTelefone, maskCEP, maskIE } from '@/utils/masks'
 
 const route = useRoute()
 const router = useRouter()
@@ -219,6 +223,11 @@ const form = ref({
 const cnpjMask = computed({
   get: () => form.value.cnpj,
   set: (v) => (form.value.cnpj = maskCNPJ(v)),
+})
+
+const ieMask = computed({
+  get: () => form.value.ie,
+  set: (v) => (form.value.ie = maskIE(v)),
 })
 
 const telefoneMask = computed({

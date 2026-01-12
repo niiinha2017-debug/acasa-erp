@@ -69,13 +69,11 @@
         <!-- INDICAÇÃO -->
         <div class="grid grid-cols-12 gap-5">
           <div class="col-span-12 relative">
-            <Input
-              v-model="indicacaoBusca"
-              label="Indicação"
-              placeholder="Buscar cliente..."
-              @focus="abrirSugestoes = true"
-              @blur="fecharSugestoesComDelay"
-            />
+<SearchInput 
+  v-model="form.indicacao_id" 
+  :options="todosClientes.map(c => ({ label: c.nome, value: c.id }))"
+  label="Indicação"
+/>
 
             <div
               v-if="abrirSugestoes && sugestoesIndicacao.length"

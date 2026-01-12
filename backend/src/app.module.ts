@@ -25,6 +25,7 @@ import { ProducaoModule } from './producao/producao.module';
 import { FinanceiroModule } from './financeiro/financeiro.module';
 import { ComprasModule } from './compras/compras.module';
 import { PermissoesModule } from './permissoes/permissoes.module';
+import { EmpresaModule } from './modulos/empresa.module';
 
 @Module({
   imports: [
@@ -75,6 +76,8 @@ import { PermissoesModule } from './permissoes/permissoes.module';
     ComprasModule,
 
     PermissoesModule,
+
+    EmpresaModule,
    
   ],
   providers: [VendasService],

@@ -193,19 +193,39 @@ export const PermissoesService = {
 
 // Localize o FinanceiroService e deixe-o assim:
 export const FinanceiroService = {
-  // Funções que já existiam
+  // ✅ CONSOLIDADO (despesas + compras) + auto-atualizar vencidos (backend já faz antes de retornar)
   listarPagar: (filtros = {}) => api.get('/financeiro/contas-pagar', { params: filtros }),
-  buscarPagar: (id) => api.get(`/financeiro/contas-pagar/${id}`),
-  salvarPagar: (id, dados) => id ? api.put(`/financeiro/contas-pagar/${id}`, dados) : api.post('/financeiro/contas-pagar', dados),
-  pagar: (id, dados) => api.post(`/financeiro/contas-pagar/${id}/pagar`, dados),
 
-  // Adicione/Garanta que estes nomes existam (para bater com o que o Vue pede)
-  getContasPagar: () => api.get('/financeiro/contas-pagar'),
-  liquidarConta: (id) => api.patch(`/financeiro/contas-pagar/${id}/pagar`),
-  salvarConta: (dados) => api.post('/financeiro/contas-pagar', dados),
+  // CONTAS A PAGAR (tabela contas_pagar) — se você ainda usa na tela de detalhe
+  buscarContaPagar: (id) => api.get(`/financeiro/contas-pagar/${id}`),
+  criarContaPagar: (dados) => api.post('/financeiro/contas-pagar', dados),
+  atualizarContaPagar: (id, dados) => api.put(`/financeiro/contas-pagar/${id}`, dados),
+  pagarContaPagar: (id, dados) => api.post(`/financeiro/contas-pagar/${id}/pagar`, dados),
 
-  // Outras funções (Receber, Compensar...)
+  // ✅ FECHAMENTO (botão “Fechar mês”)
+  fecharMesFornecedor: (dados) => api.post('/financeiro/fechamento/fornecedor', dados),
+
+  // CONTAS A RECEBER
   listarReceber: (filtros = {}) => api.get('/financeiro/contas-receber', { params: filtros }),
+  buscarReceber: (id) => api.get(`/financeiro/contas-receber/${id}`),
+  criarReceber: (dados) => api.post('/financeiro/contas-receber', dados),
+  atualizarReceber: (id, dados) => api.put(`/financeiro/contas-receber/${id}`, dados),
+  receber: (id, dados) => api.post(`/financeiro/contas-receber/${id}/receber`, dados),
+
+  // CHEQUES
+  listarCheques: (filtros = {}) => api.get('/financeiro/cheques', { params: filtros }),
+  buscarCheque: (id) => api.get(`/financeiro/cheques/${id}`),
+  atualizarStatusCheque: (id, dados) => api.put(`/financeiro/cheques/${id}/status`, dados),
 }
 
+export const ConfiguracaoService = {
+  async carregar() {
+    const { data } = await api.get('/configuracoes/1')
+    return data
+  },
+  async salvar(dados) {
+    const { data } = await api.put('/configuracoes/1', dados)
+    return data
+  }
+}
 // DELETE aquele bloco "export const financeiroService" que está no final do arquivo!

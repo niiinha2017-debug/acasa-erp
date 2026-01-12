@@ -1,5 +1,5 @@
 import { Controller, Get, Param, Put, Query, ParseIntPipe } from '@nestjs/common';
-import { FinanceiroService } from '../financeiro.service';
+import { FinanceiroService } from './financeiro.service';
 
 @Controller('financeiro/cheques')
 export class ChequesController {

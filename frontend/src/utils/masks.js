@@ -71,3 +71,23 @@ export const maskMoneyBR = (value) => {
   v = (Number(v) / 100).toFixed(2)
   return v.replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 }
+// Em @/utils/masks.js
+
+export const maskIE = (value) => {
+  if (!value) return ''
+  
+  // Remove tudo que não for dígito
+  let v = value.replace(/\D/g, '')
+  
+  // Limita a 12 dígitos (padrão 111.111.111.111)
+  v = v.substring(0, 12)
+  
+  // Aplica a pontuação progressivamente
+  v = v.replace(/(\={3})/, '$1.') // Não usado aqui, apenas exemplo
+  
+  // 111.111.111.111
+  return v
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+}
