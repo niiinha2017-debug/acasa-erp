@@ -35,13 +35,12 @@
 
         <!-- Funcionário -->
         <div class="col-span-12 md:col-span-8">
-          <SearchInput
-            v-model="form.funcionario_id"
-            label="Funcionário (Vale/Pagamento)"
-            :options="listaFuncionarios"
-            required
-            :colSpan="12"
-          />
+<SearchInput
+  v-model="form.funcionario_id"
+  label="Funcionário (Opcional)"
+  :options="listaFuncionarios"
+  :colSpan="12"
+/>
         </div>
 
         <!-- Item / Categoria -->
