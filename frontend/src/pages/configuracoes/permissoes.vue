@@ -168,7 +168,9 @@ const mapaPermissoes = {
   'Módulo Comercial': [
     { nome: 'Visualizar Vendas', chave: 'vendas.ver' },
     { nome: 'Gerenciar Orçamentos', chave: 'orcamentos.ver' },
-    { nome: 'Clientes', chave: 'clientes.ver' }
+    { nome: 'Clientes', chave: 'clientes.ver' },
+    { nome: 'Fornecedores', chave: 'fornecedores.ver' },
+    { nome: 'Gerenciar Orçamentos', chave: 'orcamentos.gerenciar' }
   ],
   'Módulo Financeiro': [
     { nome: 'Contas a Pagar', chave: 'contas-pagar.ver' },

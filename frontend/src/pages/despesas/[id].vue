@@ -40,7 +40,7 @@
 <div class="col-span-12 md:col-span-6">
   <SearchInput
     v-model="categoriaSelecionada"
-    label="Item (Ex: Água, Vale) *"
+    label="Item (Busque pelo nome) *"
     :options="cat.opcoes.value"
     required
     :colSpan="12"
@@ -48,13 +48,14 @@
   />
 </div>
 
-        <div class="col-span-12 md:col-span-6">
-          <Input
-            v-model="form.classificacao"
-            label="Classificação (Chave Auto)"
-            readonly
-          />
-        </div>
+<div class="col-span-12 md:col-span-6">
+  <Input
+    v-model="form.classificacao"
+    label="Classificação (Automática)"
+    readonly
+    class="bg-gray-50 font-bold text-brand-primary"
+  />
+</div>
 
         <div class="col-span-12 md:col-span-4">
           <label class="block text-xs font-extrabold uppercase tracking-[0.18em] text-gray-500 mb-2">
@@ -183,20 +184,19 @@ const form = ref({
   status: ''
 })
 
-// LÓGICA: Classificação vem da CHAVE da constante  
-const vincularClassificacaoChave = (chaveSelecionada) => {
-  // 1. Encontra o objeto completo da constante que foi selecionada
-  const itemEncontrado = cat.opcoes.value.find(opt => opt.value === chaveSelecionada)
+const vincularClassificacaoChave = (valorSelecionado) => {
+  // 1. Procuramos na lista de constantes o item que tem essa CHAVE
+  const constanteEncontrada = cat.opcoes.value.find(c => c.value === valorSelecionado)
 
-  if (itemEncontrado) {
-    // 2. Salva o Rótulo (ex: "Energia") no campo categoria do formulário
-    form.value.categoria = itemEncontrado.label 
+  if (constanteEncontrada) {
+    // 2. ITEM (Categoria) recebe o Rótulo (ex: "Energia")
+    form.value.categoria = constanteEncontrada.label
     
-    // 3. Salva a Classificação (ex: "CUSTO FIXO") que vem no metadata.info
-    form.value.classificacao = itemEncontrado.metadata?.info || ''
+    // 3. CLASSIFICAÇÃO recebe o campo info do metadata (ex: "CUSTO FIXO")
+    form.value.classificacao = constanteEncontrada.metadata?.info || ''
     
-    // 4. Atualiza a variável de exibição do SearchInput
-    categoriaSelecionada.value = itemEncontrado.value
+    // 4. Mantemos a categoriaSelecionada com o valor para o SearchInput não limpar
+    categoriaSelecionada.value = valorSelecionado
   }
 }
 function validarObrigatorios() {
