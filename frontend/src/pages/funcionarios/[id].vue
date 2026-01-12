@@ -260,7 +260,7 @@ import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 
 /* ✅ SEU SERVICE */
-import { FuncionarioService } from '@/services/index'
+import { FuncionarioService  } from '@/services/index'
 
 /* ✅ máscaras e util */
 import { maskCPF, maskRG, maskTelefone, maskCEP, maskMoneyBR, onlyNumbers } from '@/utils/masks'
