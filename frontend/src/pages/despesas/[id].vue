@@ -43,7 +43,6 @@
   :options="cat.opcoes.value"
   label="Item (Energia, Internet...) *"
   required
-  @update:modelValue="vincularClassificacaoChave"
 />
 </div>
 
@@ -144,7 +143,7 @@
 
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/services/api'
 import { useConstantes } from '@/composables/useConstantes'
@@ -167,6 +166,7 @@ const sta = useConstantes()
 
 const listaFuncionarios = ref([])
 const categoriaSelecionada = ref('')
+const syncCategoria = ref(false)
 
 const form = ref({
   tipo_movimento: 'SAÍDA',
@@ -183,19 +183,46 @@ const form = ref({
   data_pagamento: '',
   status: ''
 })
-const vincularClassificacaoChave = (valorChave) => {
-  if (!valorChave) return
 
-  const item = cat.opcoes.value.find(o => o.value === valorChave)
-  
-  if (item) {
-    // Atualiza o objeto form com os dados reais da constante
-    form.value.categoria = item.label            // Ex: "Energia" (salva no banco)
-    form.value.classificacao = item.metadata?.info || 'CUSTO FIXO' // Automático
-    
-    console.log('✅ Vinculado com sucesso:', form.value.categoria, '|', form.value.classificacao)
+const vincularClassificacaoChave = (entrada) => {
+  if (!entrada) return
+
+  const chave = typeof entrada === 'object' ? entrada.value : entrada
+  const label = typeof entrada === 'object' ? entrada.label : entrada
+
+  const item =
+    cat.opcoes.value.find(o => o.value === chave) ||
+    cat.opcoes.value.find(o => o.label === label)
+
+  if (!item) {
+    console.log('❌ Não achei item nas constantes. Recebi:', entrada)
+    return
   }
+
+  // evita loop do watch
+  syncCategoria.value = true
+
+  // mantém o SearchInput com a CHAVE
+  categoriaSelecionada.value = item.value
+
+  // salva no form o que vai pro banco
+  form.value.categoria = item.label
+  form.value.classificacao = item.metadata?.info || 'CUSTO FIXO'
+
+  console.log('✅ Categoria OK:', form.value.categoria, '|', form.value.classificacao, '| key:', categoriaSelecionada.value)
 }
+
+watch(
+  () => categoriaSelecionada.value,
+  (v) => {
+    if (syncCategoria.value) {
+      syncCategoria.value = false
+      return
+    }
+    vincularClassificacaoChave(v)
+  }
+)
+
 
 function validarObrigatorios() {
   if (!form.value.tipo_movimento) return 'Selecione a Movimentação.'
@@ -220,14 +247,6 @@ async function salvar() {
 
   loading.value = true
   try {
-    // 2. FORÇA BRUTA: Se o SearchInput falhou, tentamos capturar o valor 
-    // direto da variável de controle categoriaSelecionada
-    const constanteReal = cat.opcoes.value.find(c => c.value === categoriaSelecionada.value)
-    
-    if (constanteReal) {
-      form.value.categoria = constanteReal.label
-      form.value.classificacao = constanteReal.metadata?.info || 'CUSTO FIXO'
-    }
 
     // 3. Montagem do Payload limpo
     const payload = {
@@ -301,12 +320,10 @@ onMounted(async () => {
 
     // 3. SINCRONIZAÇÃO CRÍTICA:
     // O SearchInput precisa da CHAVE (value), mas o banco guardou o RÓTULO (categoria)
-    const encontrado = cat.opcoes.value.find(o => o.label === data.categoria)
-    
-    if (encontrado) {
-      categoriaSelecionada.value = encontrado.value // Seta a chave no SearchInput (ex: energia_id)
-      form.value.classificacao = encontrado.metadata?.info || data.classificacao // Garante a classe
-    }
+   const encontrado = cat.opcoes.value.find(o => o.label === data.categoria)
+if (encontrado) vincularClassificacaoChave(encontrado) // <- em vez de setar na mão
+
+
 
     // 4. Formata as datas para o input HTML (YYYY-MM-DD)
     if (data.data_vencimento) form.value.data_vencimento = data.data_vencimento.slice(0, 10)
