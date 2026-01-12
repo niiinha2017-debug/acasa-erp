@@ -215,6 +215,7 @@ const vincularClassificacaoChave = (entrada) => {
 watch(
   () => categoriaSelecionada.value,
   (v) => {
+    console.log('🟡 categoriaSelecionada mudou para:', v, '| tipo:', typeof v)
     if (syncCategoria.value) {
       syncCategoria.value = false
       return
@@ -222,6 +223,7 @@ watch(
     vincularClassificacaoChave(v)
   }
 )
+
 
 
 function validarObrigatorios() {
@@ -249,20 +251,21 @@ async function salvar() {
   try {
 
     // 3. Montagem do Payload limpo
-    const payload = {
-      ...form.value,
-      valor_total: Number(form.value.valor_total).toFixed(2),
-      funcionario_id: form.value.funcionario_id ? Number(form.value.funcionario_id) : null,
-      quantidade_parcelas: Number(form.value.quantidade_parcelas || 1)
-    }
+const payload = {
+  ...dadosSemId,
+  valor_total: Number(form.value.valor_total).toFixed(2),
+  funcionario_id: form.value.funcionario_id ? Number(form.value.funcionario_id) : null,
+  quantidade_parcelas: Number(form.value.quantidade_parcelas || 1),
+}
 
     console.log('🚀 Enviando Payload Final:', payload)
 
-    if (isEdit.value) {
-      await api.put(`/despesas/${id.value}`, payload)
-    } else {
-      await api.post('/despesas', payload)
-    }
+if (isEdit.value) {
+  await api.put(`/ROTA/${id.value}`, payload)
+} else {
+  await api.post('/ROTA', payload)
+}
+
 
     router.push('/despesas')
   } catch (e) {
