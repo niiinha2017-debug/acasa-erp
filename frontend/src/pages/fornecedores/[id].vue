@@ -182,7 +182,6 @@ import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
 
-import { maskCNPJ, maskTelefone, maskCEP } from '@/utils/masks'
 import { maskCNPJ, maskTelefone, maskCEP, maskIE } from '@/utils/masks'
 
 const route = useRoute()
