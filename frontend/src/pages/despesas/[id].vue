@@ -37,19 +37,16 @@
           />
         </div>
 
-        <div class="col-span-12 md:col-span-6">
-          <SearchInput
-            v-model="categoriaSelecionada"
-            label="Item (Ex: Água, Vale) *"
-            :options="cat.opcoes.value"
-            required
-            :colSpan="12"
-            @update:modelValue="(val) => { 
-              form.categoria = val; 
-              vincularClassificacaoChave(val); 
-            }"
-          />
-        </div>
+<div class="col-span-12 md:col-span-6">
+  <SearchInput
+    v-model="categoriaSelecionada"
+    label="Item (Ex: Água, Vale) *"
+    :options="cat.opcoes.value"
+    required
+    :colSpan="12"
+    @update:modelValue="vincularClassificacaoChave"
+  />
+</div>
 
         <div class="col-span-12 md:col-span-6">
           <Input
@@ -186,22 +183,22 @@ const form = ref({
   status: ''
 })
 
-// LÓGICA: Classificação vem da CHAVE da constante
-function vincularClassificacaoChave(valorSelecionado) {
-  const opt = cat.opcoes.value.find(o => o.value === valorSelecionado)
+// LÓGICA: Classificação vem da CHAVE da constante  
+const vincularClassificacaoChave = (chaveSelecionada) => {
+  // 1. Encontra o objeto completo da constante que foi selecionada
+  const itemEncontrado = cat.opcoes.value.find(opt => opt.value === chaveSelecionada)
 
-  // - categoria (DB) fica com o rótulo (label)
-  // - classificacao (DB) fica com a chave (value)
-  if (opt) {
-    form.value.categoria = opt.label
-    form.value.classificacao = opt.value
-    return
+  if (itemEncontrado) {
+    // 2. Salva o Rótulo (ex: "Energia") no campo categoria do formulário
+    form.value.categoria = itemEncontrado.label 
+    
+    // 3. Salva a Classificação (ex: "CUSTO FIXO") que vem no metadata.info
+    form.value.classificacao = itemEncontrado.metadata?.info || ''
+    
+    // 4. Atualiza a variável de exibição do SearchInput
+    categoriaSelecionada.value = itemEncontrado.value
   }
-
-  form.value.categoria = ''
-  form.value.classificacao = ''
 }
-
 function validarObrigatorios() {
   if (!form.value.tipo_movimento) return 'Selecione a Movimentação.'
   if (!form.value.unidade) return 'Selecione a Unidade (Fábrica ou Loja).'
