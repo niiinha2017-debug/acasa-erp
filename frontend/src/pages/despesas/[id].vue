@@ -1,6 +1,5 @@
 <template>
   <Card>
-    <!-- HEADER -->
     <header class="flex items-start justify-between gap-4 p-6 border-b border-gray-100">
       <div>
         <h2 class="text-xl font-black tracking-tight text-gray-900 uppercase">
@@ -13,37 +12,31 @@
       </Button>
     </header>
 
-    <!-- BODY -->
     <div class="p-6">
       <form class="grid grid-cols-12 gap-5" @submit.prevent="salvar">
-        <!-- Movimentação -->
         <div class="col-span-12 md:col-span-4">
           <label class="block text-xs font-extrabold uppercase tracking-[0.18em] text-gray-500 mb-2">
             Movimentação <span class="text-danger">*</span>
           </label>
-
           <select
             v-model="form.tipo_movimento"
             required
-            class="w-full h-11 rounded-2xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-900
-                   outline-none transition focus:border-brand-primary/40 focus:ring-4 focus:ring-brand-primary/10"
+            class="w-full h-11 rounded-2xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-900 outline-none transition focus:border-brand-primary/40 focus:ring-4 focus:ring-brand-primary/10"
           >
             <option value="SAÍDA">SAÍDA</option>
             <option value="ENTRADA">ENTRADA</option>
           </select>
         </div>
 
-        <!-- Funcionário -->
         <div class="col-span-12 md:col-span-8">
-<SearchInput
-  v-model="form.funcionario_id"
-  label="Funcionário (Opcional)"
-  :options="listaFuncionarios"
-  :colSpan="12"
-/>
+          <SearchInput
+            v-model="form.funcionario_id"
+            label="Funcionário (Opcional)"
+            :options="listaFuncionarios"
+            :colSpan="12"
+          />
         </div>
 
-        <!-- Item / Categoria -->
         <div class="col-span-12 md:col-span-6">
           <SearchInput
             v-model="categoriaSelecionada"
@@ -51,11 +44,13 @@
             :options="cat.opcoes.value"
             required
             :colSpan="12"
-            @update:modelValue="vincularClassificacaoChave"
+            @update:modelValue="(val) => { 
+              form.categoria = val; 
+              vincularClassificacaoChave(val); 
+            }"
           />
         </div>
 
-        <!-- Classificação (auto) -->
         <div class="col-span-12 md:col-span-6">
           <Input
             v-model="form.classificacao"
@@ -63,25 +58,26 @@
             readonly
           />
         </div>
-        <div class="col-span-12 md:col-span-4">
-  <label class="block text-xs font-extrabold uppercase tracking-[0.18em] text-gray-500 mb-2">
-    Unidade <span class="text-danger">*</span>
-  </label>
-  <select
-    v-model="form.unidade"
-    required
-    class="w-full h-11 rounded-2xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-900 outline-none transition focus:border-brand-primary/40 focus:ring-4 focus:ring-brand-primary/10"
-  >
-    <option value="FÁBRICA">FÁBRICA</option>
-    <option value="LOJA">LOJA</option>
-  </select>
-</div>
-
-<div class="col-span-12 md:col-span-8">
-  <Input v-model="form.local" label="Local / Fornecedor *" required />
-</div>
 
         <div class="col-span-12 md:col-span-4">
+          <label class="block text-xs font-extrabold uppercase tracking-[0.18em] text-gray-500 mb-2">
+            Unidade <span class="text-danger">*</span>
+          </label>
+          <select
+            v-model="form.unidade"
+            required
+            class="w-full h-11 rounded-2xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-900 outline-none transition focus:border-brand-primary/40 focus:ring-4 focus:ring-brand-primary/10"
+          >
+            <option value="FÁBRICA">FÁBRICA</option>
+            <option value="LOJA">LOJA</option>
+          </select>
+        </div>
+
+        <div class="col-span-12 md:col-span-5">
+          <Input v-model="form.local" label="Local / Fornecedor *" required />
+        </div>
+
+        <div class="col-span-12 md:col-span-3">
           <Input
             v-model="form.valor_total"
             label="Valor Total *"
@@ -91,8 +87,7 @@
           />
         </div>
 
-        <!-- Divisor -->
-        <div class="col-span-12 h-px bg-gray-100 my-1"></div>
+        <div class="col-span-12 h-px bg-gray-100 my-2"></div>
 
         <div class="col-span-12 md:col-span-5">
           <SearchInput
@@ -107,7 +102,7 @@
         <div class="col-span-12 md:col-span-3">
           <Input
             v-model.number="form.quantidade_parcelas"
-            label="Qtd. Parcelas (Recorrente)"
+            label="Qtd. Parcelas"
             type="number"
             min="1"
           />
@@ -137,7 +132,6 @@
       </form>
     </div>
 
-    <!-- FOOTER -->
     <footer class="flex justify-end gap-3 p-6 border-t border-gray-100">
       <Button v-if="isEdit" variant="danger" type="button" @click="excluir">
         Excluir
@@ -230,25 +224,32 @@ async function salvar() {
 
   loading.value = true
   try {
+    // 1. Sincroniza a categoria selecionada no SearchInput com o formulário
+    // Isso evita que salve "Aluguel" se você selecionou "Energia"
+    form.value.categoria = categoriaSelecionada.value
+
     const valor = Number(form.value.valor_total)
 
     const payload = {
       ...form.value,
       valor_total: Number.isFinite(valor) ? valor.toFixed(2) : '0.00',
       quantidade_parcelas: Number(form.value.quantidade_parcelas || 1),
+      // Garante que o ID do funcionário seja número ou nulo
       funcionario_id: form.value.funcionario_id ? Number(form.value.funcionario_id) : null
     }
 
     if (isEdit.value) {
       await api.put(`/despesas/${id.value}`, payload)
     } else {
+      // Dica: Geralmente para criar novos registros usa-se api.post
+      // Mas mantive api.put conforme seu código original
       await api.put('/despesas', payload)
     }
 
     router.push('/despesas')
   } catch (e) {
-    console.error(e)
-    alert('Erro ao processar lançamento.')
+    console.error('Erro ao salvar despesa:', e)
+    alert('Erro ao processar lançamento. Verifique o console.')
   } finally {
     loading.value = false
   }

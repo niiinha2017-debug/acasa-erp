@@ -89,13 +89,15 @@ import Button from '@/components/ui/Button.vue'
 import SearchInput from '@/components/ui/SearchInput.vue'
 import Card from '@/components/ui/Card.vue' //
 import { format } from '@/utils/format'
+import { useConstantes } from '@/composables/useConstantes'
 
 const router = useRouter()
 const loading = ref(false)
 const filtro = ref('')
 const rows = ref([])
+const cat = useConstantes()
 
-[cite_start]// Colunas ajustadas para os dados do orçamento (ex: Eduardo) [cite: 9, 24]
+
 const columns = [
   { key: 'id', label: 'ID', width: '90px' },
   { key: 'cliente', label: 'Cliente' },
