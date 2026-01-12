@@ -70,6 +70,7 @@ import Table from '@/components/ui/Table.vue'
 
 const produtos = ref([])
 const loading = ref(false)
+const router = useRouter()
 
 const columns = [
   { key: 'nome_produto', label: 'Produto', width: '250px' },
