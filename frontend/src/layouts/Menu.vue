@@ -29,7 +29,7 @@
           </button>
           <div v-if="activeDropdown === 'operacional'" class="dropdown-container-tw">
             <a href="#" @click.prevent="irPara('/vendas')" class="dropdown-item-tw"><i class="pi pi-cart-plus mr-2 opacity-50"></i> Vendas</a>
-            <a href="#" @click.prevent="irPara('/orçamentos')" class="dropdown-item-tw"><i class="pi pi-file-edit mr-2 opacity-50"></i> Orçamentos</a>
+            <a href="#" @click.prevent="irPara('/orcamentos')" class="dropdown-item-tw"><i class="pi pi-file-edit mr-2 opacity-50"></i> Orçamentos</a>
             <hr class="my-1 border-gray-50">
             <a href="#" @click.prevent="irPara('/producao')" class="dropdown-item-tw"><i class="pi pi-box mr-2 opacity-50"></i> Produção</a>
             <a href="#" @click.prevent="irPara('/plano-corte')" class="dropdown-item-tw"><i class="pi pi-table mr-2 opacity-50"></i> Plano de Corte</a>
