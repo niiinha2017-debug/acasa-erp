@@ -126,20 +126,26 @@ const rows = computed(() => {
     }))
 })
 
-// FUNÇÃO ÚNICA: Chama o backend
+
+
 async function buscarDadosDoBanco() {
   loading.value = true
   try {
-    // Trocamos ProdutosService por chamada direta para testar se o problema é o Service
-    const { data } = await api.get('/produtos')
-    console.log("Dados que chegaram do banco:", data) // <--- Veja isso no console F12
-    produtos.value = data || []
+    console.log('[Produtos] baseURL:', api.defaults.baseURL)
+    console.log('[Produtos] token header:', api.defaults.headers?.common?.Authorization)
+
+    const resp = await api.get('/produtos')
+    console.log('[Produtos] status:', resp.status)
+    console.log('[Produtos] data:', resp.data)
+
+    produtos.value = resp.data || []
   } catch (err) {
-    console.error('Erro ao buscar produtos:', err)
+    console.error('Erro ao buscar produtos:', err?.response || err)
   } finally {
     loading.value = false
   }
 }
+
 
 onMounted(() => {
   buscarDadosDoBanco()
