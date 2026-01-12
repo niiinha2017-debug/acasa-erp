@@ -85,7 +85,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { ConfiguracaoService } from '@/services/configuracaoService'
+import { ConfiguracaoService } from '@/services/ConfiguracaoService'
 import { maskCNPJ, maskCEP, maskTelefone, maskIE } from '@/utils/masks'
 import { buscarCep } from '@/utils/utils'
 
