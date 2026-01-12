@@ -1,6 +1,15 @@
 import axios from 'axios'
 import { storage } from '@/utils/storage'
 
+const token = storage.getToken()
+const resp = await api.get('/produtos', {
+  headers: { Authorization: `Bearer ${token}` },
+})
+
+console.log('TOKEN USADO:', token?.slice(0, 20))
+console.log('DATA:', resp.data)
+
+
 const api = axios.create({
   baseURL: '/api',
   headers: { 'Content-Type': 'application/json' },
