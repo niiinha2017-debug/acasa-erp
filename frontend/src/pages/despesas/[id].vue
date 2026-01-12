@@ -40,7 +40,7 @@
 <div class="col-span-12 md:col-span-6">
   <SearchInput
     v-model="categoriaSelecionada"
-    label="Item (Busque pelo nome) *"
+    label="Item (Busque pelo nome: Energia, Internet...) *"
     :options="cat.opcoes.value"
     required
     :colSpan="12"
@@ -53,7 +53,8 @@
     v-model="form.classificacao"
     label="Classificação (Automática)"
     readonly
-    class="bg-gray-50 font-bold text-brand-primary"
+    class="bg-gray-50 font-bold text-blue-600" 
+    placeholder="Selecione um item..."
   />
 </div>
 
@@ -185,18 +186,20 @@ const form = ref({
 })
 
 const vincularClassificacaoChave = (valorSelecionado) => {
-  // 1. Procuramos na lista de constantes o item que tem essa CHAVE
-  const constanteEncontrada = cat.opcoes.value.find(c => c.value === valorSelecionado)
+  // 1. Procura na lista de constantes o item que você clicou
+  const itemBanco = cat.opcoes.value.find(c => c.value === valorSelecionado)
 
-  if (constanteEncontrada) {
-    // 2. ITEM (Categoria) recebe o Rótulo (ex: "Energia")
-    form.value.categoria = constanteEncontrada.label
+  if (itemBanco) {
+    // 2. ITEM (Categoria) recebe o RÓTULO (Ex: "Energia") - O que você quer ver na tabela
+    form.value.categoria = itemBanco.label 
     
-    // 3. CLASSIFICAÇÃO recebe o campo info do metadata (ex: "CUSTO FIXO")
-    form.value.classificacao = constanteEncontrada.metadata?.info || ''
+    // 3. CLASSIFICAÇÃO recebe o que está no metadata (Ex: "CUSTO FIXO")
+    form.value.classificacao = itemBanco.metadata?.info || ''
     
-    // 4. Mantemos a categoriaSelecionada com o valor para o SearchInput não limpar
+    // 4. Mantém o ID na busca para o campo não esvaziar
     categoriaSelecionada.value = valorSelecionado
+    
+    console.log('✅ Vinculado:', form.value.categoria, '| Classe:', form.value.classificacao)
   }
 }
 function validarObrigatorios() {
