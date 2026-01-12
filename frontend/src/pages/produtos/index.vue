@@ -25,9 +25,7 @@
       >
         <template #cell-nome_produto="{ row }">
           <div class="flex flex-col">
-            <strong class="text-sm font-black text-gray-900">
-              {{ row.nome_produto }}
-            </strong>
+            <strong class="text-sm font-black text-gray-900">{{ row.nome_produto }}</strong>
             <span class="text-xs font-semibold text-gray-400">
               Ref: {{ String(row.id || 0).padStart(4, '0') }}
             </span>
@@ -47,22 +45,10 @@
 
         <template #cell-acoes="{ row }">
           <div class="flex justify-center gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              type="button"
-              @click="router.push(`/produtos/${row.id}`)"
-              title="Editar"
-            >
+            <Button variant="secondary" size="sm" type="button" @click="router.push(`/produtos/${row.id}`)">
               Editar
             </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              type="button"
-              @click="excluir(row)"
-              title="Excluir"
-            >
+            <Button variant="danger" size="sm" type="button" @click="excluir(row)">
               Excluir
             </Button>
           </div>
@@ -76,8 +62,8 @@
 import { ref, computed, onMounted } from 'vue'
 import api from '@/services/api'
 import { maskMoneyBR } from '@/utils/masks'
+import { useRouter } from 'vue-router'
 
-// UI
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import Table from '@/components/ui/Table.vue'
@@ -113,6 +99,10 @@ async function buscarDadosDoBanco() {
   } finally {
     loading.value = false
   }
+}
+
+function excluir(row) {
+  console.log('excluir:', row)
 }
 
 onMounted(() => {
