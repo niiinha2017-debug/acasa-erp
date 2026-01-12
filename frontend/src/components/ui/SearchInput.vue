@@ -67,6 +67,7 @@ const emit = defineEmits(['update:modelValue'])
 const texto = ref('')
 const abrir = ref(false)
 
+// Filtra as opções apenas se houver algo digitado
 const filtrados = computed(() => {
   const termo = String(texto.value || '').toLowerCase().trim()
   if (!termo) return props.options
@@ -75,36 +76,15 @@ const filtrados = computed(() => {
   )
 })
 
-// 1. Emitir o texto em tempo real para filtros (Index)
-watch(texto, (novoTexto) => {
-  // Se o usuário limpou o campo de texto, avisamos o componente pai
-  if (!novoTexto) {
-    emit('update:modelValue', '')
-  }
-})
-
-// 2. Função para selecionar uma opção da lista (Autocomplete)
-function selecionar(opt) {
-  texto.value = opt.label // O que aparece para o usuário
-  emit('update:modelValue', opt.value) // O que vai para o banco (ID)
-  abrir.value = false
-}
-
-function fecharAoClicarFora(e) {
-  if (!e.target.closest('.search-container')) {
-    abrir.value = false
-  }
-}
-
-// 3. Sincronizar quando o valor vem de fora (ex: reset de filtro ou carregar edição)
+// Sincroniza o label inicial quando o componente carrega ou o ID muda
 watch(
-  () => [props.modelValue, props.options], // Monitora o valor E as opções chegando
+  () => [props.modelValue, props.options],
   ([val, opts]) => {
     if (!val) {
       texto.value = ''
       return
     }
-    
+    // Procura o label na lista de opções usando o ID (modelValue)
     if (opts && opts.length > 0) {
       const encontrada = opts.find((o) => String(o.value) === String(val))
       if (encontrada) {
@@ -112,8 +92,21 @@ watch(
       }
     }
   },
-  { immediate: true, deep: true }
+  { immediate: true }
 )
+
+function selecionar(opt) {
+  texto.value = opt.label // Mostra o nome para o usuário
+  emit('update:modelValue', opt.value) // Envia o ID para o componente pai
+  abrir.value = false
+}
+
+// Fecha a lista se o usuário clicar fora
+function fecharAoClicarFora(e) {
+  if (!e.target.closest('.search-container')) {
+    abrir.value = false
+  }
+}
 
 onMounted(() => document.addEventListener('click', fecharAoClicarFora))
 onUnmounted(() => document.removeEventListener('click', fecharAoClicarFora))
