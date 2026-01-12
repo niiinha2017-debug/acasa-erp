@@ -240,7 +240,6 @@ function validarObrigatorios() {
 }
 
 async function salvar() {
-  // 1. Validamos antes de qualquer coisa
   const mensagemErro = validarObrigatorios()
   if (mensagemErro) {
     alert(mensagemErro)
@@ -249,23 +248,24 @@ async function salvar() {
 
   loading.value = true
   try {
+    // ✅ tira o id do form pra não mandar no "criar"
+    const { id: _id, ...dadosSemId } = form.value
 
-    // 3. Montagem do Payload limpo
-const payload = {
-  ...dadosSemId,
-  valor_total: Number(form.value.valor_total).toFixed(2),
-  funcionario_id: form.value.funcionario_id ? Number(form.value.funcionario_id) : null,
-  quantidade_parcelas: Number(form.value.quantidade_parcelas || 1),
-}
+    const payload = {
+      ...dadosSemId,
+      valor_total: Number(form.value.valor_total).toFixed(2),
+      funcionario_id: form.value.funcionario_id ? Number(form.value.funcionario_id) : null,
+      quantidade_parcelas: Number(form.value.quantidade_parcelas || 1),
+    }
 
     console.log('🚀 Enviando Payload Final:', payload)
 
-if (isEdit.value) {
-  await api.put(`/ROTA/${id.value}`, payload)
-} else {
-  await api.post('/ROTA', payload)
-}
-
+    if (isEdit.value) {
+      await api.put(`/despesas/${id.value}`, payload)
+    } else {
+      // ✅ seu backend tem PUT /api/despesas (não POST)
+      await api.put('/despesas', payload)
+    }
 
     router.push('/despesas')
   } catch (e) {
@@ -275,6 +275,7 @@ if (isEdit.value) {
     loading.value = false
   }
 }
+
 async function excluir() {
   if (!confirm('Deseja realmente excluir este lançamento?')) return
 
