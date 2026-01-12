@@ -89,6 +89,7 @@ import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import Table from '@/components/ui/Table.vue'
 import SearchInput from '@/components/ui/SearchInput.vue' // Adicionado
+import { ProdutoService } from '@/services/index' // Adicionado
 
 import { maskMoneyBR } from '@/utils/masks'
 
