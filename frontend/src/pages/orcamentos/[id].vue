@@ -4,10 +4,10 @@
     <header class="flex items-start justify-between gap-4 p-6 border-b border-gray-100">
       <div>
         <h2 class="text-xl font-black tracking-tight text-gray-900 uppercase">
-          {{ isEdit ? `Editar Orçamento #${orcamentoId}` : 'Novo Orçamento' }}
+          {{ isNovo ? 'Novo Orçamento' : `Orçamento #${orcamentoId}` }}
         </h2>
         <p class="text-sm font-semibold text-gray-500 mt-1">
-          Cliente é opcional. Esta tela edita em rascunho — só salva quando você clicar em “Salvar”.
+          Arquitetura da tela (sem salvar). Só conferência.
         </p>
       </div>
 
@@ -17,183 +17,170 @@
         </Button>
 
         <Button
-          v-if="isEdit"
           variant="outline"
           size="sm"
           type="button"
-          @click="abrirPdf()"
+          :disabled="isNovo"
+          @click="gerarPdf()"
         >
-          PDF
+          Gerar PDF
         </Button>
       </div>
     </header>
 
     <!-- BODY -->
     <div class="p-6">
-      <!-- LOADING -->
-      <div v-if="loading" class="flex items-center justify-center py-10">
-        <div class="text-xs font-extrabold uppercase tracking-[0.18em] text-gray-400">
-          Carregando...
+      <div class="grid grid-cols-12 gap-x-5 gap-y-6">
+
+        <!-- LINHA: Cliente + Status -->
+        <div class="col-span-12 md:col-span-8">
+          <SearchInput
+            v-model="draft.cliente_nome"
+            label="Nome do cliente"
+            placeholder="Nome do cliente..."
+          />
         </div>
-      </div>
 
-      <template v-else>
-        <div class="grid grid-cols-12 gap-x-5 gap-y-6">
-          <!-- Cliente (opcional) -->
-          <div class="col-span-12 md:col-span-6">
-            <SearchInput
-              v-model="draft.cliente_nome_snapshot"
-              label="Cliente (opcional)"
-              placeholder="Digite o nome do cliente (ou deixe em branco)..."
-            />
-          </div>
+        <div class="col-span-12 md:col-span-4">
+          <SearchInput
+            v-model="draft.status"
+            label="Status"
+            placeholder="Status..."
+          />
+        </div>
 
-          <div class="col-span-12 md:col-span-3">
-            <SearchInput
-              v-model="draft.cliente_cpf_snapshot"
-              label="CPF (opcional)"
-              placeholder="000.000.000-00"
-            />
-          </div>
+        <div class="col-span-12">
+          <div class="h-px bg-gray-100"></div>
+        </div>
 
-          <div class="col-span-12 md:col-span-3">
-            <SearchInput
-              v-model="draft.status"
-              label="Status"
-              placeholder="EX: RASCUNHO / ENVIADO / APROVADO..."
-            />
-          </div>
+        <!-- BLOCO: Add Ambiente -->
+        <div class="col-span-12">
+          <div class="grid grid-cols-12 gap-x-5 gap-y-4">
 
-          <!-- Divider -->
-          <div class="col-span-12">
-            <div class="h-px bg-gray-100"></div>
-          </div>
-
-          <!-- Campos básicos do orçamento (mantidos genéricos) -->
-          <div class="col-span-12 md:col-span-4">
-            <SearchInput
-              v-model="draft.referencia"
-              label="Referência (opcional)"
-              placeholder="EX: Cozinha / Quarto / Pedido..."
-            />
-          </div>
-
-          <div class="col-span-12 md:col-span-4">
-            <SearchInput
-              v-model="draft.observacoes"
-              label="Observações (opcional)"
-              placeholder="Observações internas..."
-            />
-          </div>
-
-          <div class="col-span-12 md:col-span-4">
-            <div class="flex flex-col gap-2">
-              <span class="text-[10px] font-extrabold uppercase tracking-[0.18em] text-gray-400">
-                Total (visual)
-              </span>
-              <div class="text-lg font-black text-brand-primary">
-                {{ format.currency(totalVisual) }}
-              </div>
-              <p class="text-xs font-semibold text-gray-400">
-                (apenas conferência na tela; não salva sozinho)
-              </p>
+            <div class="col-span-12 md:col-span-3">
+              <SearchInput
+                v-model="ambForm.nome_ambiente"
+                label="Nome do ambiente"
+                placeholder="Ex: Cozinha"
+              />
             </div>
-          </div>
 
-          <!-- Divider -->
-          <div class="col-span-12">
-            <div class="h-px bg-gray-100"></div>
-          </div>
+            <div class="col-span-12 md:col-span-6">
+              <SearchInput
+                v-model="ambForm.descricao"
+                label="Descrição"
+                placeholder="Descrição..."
+              />
+            </div>
 
-          <!-- Itens (simples, rascunho local) -->
-          <div class="col-span-12">
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <h3 class="text-sm font-black uppercase tracking-tight text-gray-900">
-                  Itens
-                </h3>
-                <p class="text-xs font-semibold text-gray-400">
-                  Você pode editar aqui só para conferir. Nada é salvo até clicar em Salvar.
-                </p>
-              </div>
+            <div class="col-span-12 md:col-span-3">
+              <SearchInput
+                v-model="ambForm.valor_unitario"
+                label="Valor unitário"
+                placeholder="0,00"
+              />
+            </div>
 
-              <Button variant="primary" size="sm" type="button" @click="adicionarItem()">
-                + Adicionar item
+            <div class="col-span-12">
+              <SearchInput
+                v-model="ambForm.observacao"
+                label="Observação do ambiente"
+                placeholder="Observação..."
+              />
+            </div>
+
+            <div class="col-span-12 flex justify-end">
+              <Button variant="primary" type="button" @click="addOuAtualizarAmbiente()">
+                {{ editIdx !== null ? 'Atualizar' : 'Add' }}
               </Button>
             </div>
+          </div>
+        </div>
 
-            <div class="mt-4">
-              <Table
-                :columns="columnsItens"
-                :rows="draft.itens"
-                :loading="false"
-                emptyText="Nenhum item adicionado."
-              >
-                <template #cell-descricao="{ row, index }">
-                  <input
-                    class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-brand-primary/30"
-                    v-model="draft.itens[index].descricao"
-                    placeholder="Descrição..."
-                  />
-                </template>
+        <div class="col-span-12">
+          <div class="h-px bg-gray-100"></div>
+        </div>
 
-                <template #cell-quantidade="{ row, index }">
-                  <input
-                    type="number"
-                    step="0.01"
-                    class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-brand-primary/30"
-                    v-model.number="draft.itens[index].quantidade"
-                  />
-                </template>
+        <!-- TABELA -->
+        <div class="col-span-12">
+          <Table
+            :columns="columns"
+            :rows="rowsTabela"
+            :loading="false"
+            emptyText="Nenhum ambiente adicionado."
+          >
+            <template #cell-valor_unitario="{ row }">
+              <span class="font-black text-brand-primary">
+                {{ format.currency(row.valor_unitario || 0) }}
+              </span>
+            </template>
 
-                <template #cell-valor_unitario="{ row, index }">
-                  <input
-                    type="number"
-                    step="0.01"
-                    class="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-900 outline-none focus:ring-2 focus:ring-brand-primary/30 text-right"
-                    v-model.number="draft.itens[index].valor_unitario"
-                  />
-                </template>
+            <template #cell-acoes="{ row }">
+              <div class="flex justify-end gap-2">
+                <Button size="sm" variant="secondary" type="button" @click="editar(row.__idx)">
+                  Editar
+                </Button>
+                <Button size="sm" variant="danger" type="button" @click="excluir(row.__idx)">
+                  Excluir
+                </Button>
+              </div>
+            </template>
+          </Table>
 
-                <template #cell-total="{ row, index }">
-                  <span class="font-black text-gray-900">
-                    {{ format.currency(itemTotal(draft.itens[index])) }}
-                  </span>
-                </template>
-
-                <template #cell-acoes="{ row, index }">
-                  <div class="flex justify-end">
-                    <Button variant="danger" size="sm" type="button" @click="removerItem(index)">
-                      Remover
-                    </Button>
-                  </div>
-                </template>
-              </Table>
+          <div class="flex items-center justify-end mt-4">
+            <div class="text-sm font-black uppercase tracking-tight text-gray-900">
+              Total: <span class="text-brand-primary">{{ format.currency(total) }}</span>
             </div>
           </div>
         </div>
-      </template>
+
+        <div class="col-span-12">
+          <div class="h-px bg-gray-100"></div>
+        </div>
+
+        <!-- ANEXOS -->
+        <div class="col-span-12">
+          <div class="text-[10px] font-extrabold uppercase tracking-[0.18em] text-gray-400">
+            Anexos (PDF/PNG/JPG/JPEG/WORD)
+          </div>
+
+          <div class="mt-3">
+            <input
+              ref="fileInput"
+              type="file"
+              multiple
+              class="text-sm"
+              accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+              @change="onSelectFiles"
+            />
+          </div>
+
+          <div v-if="draft.anexos.length" class="mt-3 space-y-2">
+            <div
+              v-for="(f, i) in draft.anexos"
+              :key="i"
+              class="flex items-center justify-between rounded-2xl border border-gray-100 px-4 py-2"
+            >
+              <div class="min-w-0">
+                <div class="text-sm font-bold text-gray-900 truncate">{{ f.name }}</div>
+                <div class="text-xs font-semibold text-gray-400">
+                  {{ (f.size / 1024 / 1024).toFixed(2) }} MB
+                </div>
+              </div>
+
+              <Button variant="danger" size="sm" type="button" @click="removerArquivo(i)">
+                Remover
+              </Button>
+            </div>
+          </div>
+        </div>
+
+      </div>
     </div>
 
     <!-- FOOTER -->
     <footer class="flex items-center justify-end gap-2 p-6 border-t border-gray-100">
-      <Button
-        v-if="isEdit"
-        variant="outline"
-        type="button"
-        :disabled="!alterado"
-        @click="descartarAlteracoes()"
-      >
-        Descartar alterações
-      </Button>
-
-      <Button
-        variant="primary"
-        type="button"
-        :loading="saving"
-        :disabled="saving"
-        @click="salvar()"
-      >
+      <Button variant="primary" type="button" disabled>
         Salvar
       </Button>
     </footer>
@@ -201,163 +188,122 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import api from '@/services/api'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
-import Table from '@/components/ui/Table.vue'
 import SearchInput from '@/components/ui/SearchInput.vue'
+import Table from '@/components/ui/Table.vue'
 import { format } from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()
 
-const loading = ref(false)
-const saving = ref(false)
-
 const orcamentoId = computed(() => route.params.id)
-const isEdit = computed(() => !!orcamentoId.value && String(orcamentoId.value) !== 'novo')
+const isNovo = computed(() => String(orcamentoId.value) === 'novo')
 
 /**
- * ⚠️ Aqui está o ponto do "editar sem salvar":
- * - `draft` é o que a tela edita (rascunho local).
- * - `original` guarda a cópia do que veio da API.
- * - Só chama API no botão Salvar.
+ * Arquitetura local (sem API)
  */
-const original = ref(null)
-
 const draft = reactive({
-  id: null,
-  cliente_nome_snapshot: '',
-  cliente_cpf_snapshot: '',
-  status: 'RASCUNHO',
-  referencia: '',
-  observacoes: '',
-  itens: [],
+  cliente_nome: '',
+  status: '',
+  ambientes: [],
+  anexos: [],
 })
 
-const columnsItens = [
+const ambForm = reactive({
+  nome_ambiente: '',
+  descricao: '',
+  valor_unitario: '',
+  observacao: '',
+})
+
+const editIdx = ref(null)
+
+const columns = [
+  { key: 'nome_ambiente', label: 'Ambiente', width: '220px' },
   { key: 'descricao', label: 'Descrição' },
-  { key: 'quantidade', label: 'Qtd', width: '120px' },
-  { key: 'valor_unitario', label: 'V. Unit', width: '140px', align: 'right' },
-  { key: 'total', label: 'Total', width: '140px', align: 'right' },
-  { key: 'acoes', label: 'Ações', width: '140px', align: 'right' },
+  { key: 'valor_unitario', label: 'Valor', width: '160px', align: 'right' },
+  { key: 'acoes', label: 'Ações', width: '200px', align: 'right' },
 ]
 
-function normalizeNumber(v) {
-  const n = Number(v)
+function parseMoney(v) {
+  const s = String(v ?? '').trim()
+  if (!s) return 0
+  const normalized = s.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')
+  const n = Number(normalized)
   return Number.isFinite(n) ? n : 0
 }
 
-function itemTotal(item) {
-  return normalizeNumber(item.quantidade) * normalizeNumber(item.valor_unitario)
+const rowsTabela = computed(() =>
+  draft.ambientes.map((a, idx) => ({ ...a, __idx: idx })),
+)
+
+const total = computed(() =>
+  draft.ambientes.reduce((acc, a) => acc + (Number(a.valor_unitario) || 0), 0),
+)
+
+function limparForm() {
+  ambForm.nome_ambiente = ''
+  ambForm.descricao = ''
+  ambForm.valor_unitario = ''
+  ambForm.observacao = ''
+  editIdx.value = null
 }
 
-const totalVisual = computed(() => {
-  return (draft.itens || []).reduce((acc, it) => acc + itemTotal(it), 0)
-})
+function addOuAtualizarAmbiente() {
+  const nome = (ambForm.nome_ambiente || '').trim()
+  if (!nome) return
 
-const alterado = computed(() => {
-  if (!original.value) return false
-  // comparação simples e direta
-  return JSON.stringify(toPlain(draft)) !== JSON.stringify(original.value)
-})
-
-function toPlain(obj) {
-  // tira reactivity e garante shape simples
-  return JSON.parse(JSON.stringify(obj))
-}
-
-function aplicarDados(payload) {
-  draft.id = payload?.id ?? null
-  draft.cliente_nome_snapshot = payload?.cliente_nome_snapshot ?? ''
-  draft.cliente_cpf_snapshot = payload?.cliente_cpf_snapshot ?? ''
-  draft.status = payload?.status ?? 'RASCUNHO'
-  draft.referencia = payload?.referencia ?? ''
-  draft.observacoes = payload?.observacoes ?? ''
-  draft.itens = Array.isArray(payload?.itens) ? payload.itens.map((i) => ({
-    descricao: i?.descricao ?? '',
-    quantidade: normalizeNumber(i?.quantidade ?? 1),
-    valor_unitario: normalizeNumber(i?.valor_unitario ?? 0),
-  })) : []
-}
-
-async function carregar() {
-  if (!isEdit.value) {
-    // novo: começa vazio e não precisa original
-    original.value = null
-    aplicarDados(null)
-    return
+  const payload = {
+    nome_ambiente: nome,
+    descricao: (ambForm.descricao || '').trim(),
+    valor_unitario: parseMoney(ambForm.valor_unitario),
+    observacao: (ambForm.observacao || '').trim(),
   }
 
-  loading.value = true
-  try {
-    const { data } = await api.get(`/orcamentos/${orcamentoId.value}`)
-    aplicarDados(data || {})
-    original.value = toPlain(draft) // salva o estado inicial para "Descartar"
-  } catch (e) {
-    console.error('Erro ao carregar orçamento:', e)
-  } finally {
-    loading.value = false
+  if (editIdx.value !== null) {
+    draft.ambientes.splice(editIdx.value, 1, payload)
+  } else {
+    draft.ambientes.push(payload)
   }
+
+  limparForm()
 }
 
-function adicionarItem() {
-  draft.itens.push({
-    descricao: '',
-    quantidade: 1,
-    valor_unitario: 0,
-  })
+function editar(idx) {
+  const a = draft.ambientes[idx]
+  if (!a) return
+  ambForm.nome_ambiente = a.nome_ambiente || ''
+  ambForm.descricao = a.descricao || ''
+  ambForm.valor_unitario = String(a.valor_unitario ?? '')
+  ambForm.observacao = a.observacao || ''
+  editIdx.value = idx
 }
 
-function removerItem(index) {
-  draft.itens.splice(index, 1)
+function excluir(idx) {
+  draft.ambientes.splice(idx, 1)
+  if (editIdx.value === idx) limparForm()
 }
 
-function descartarAlteracoes() {
-  if (!original.value) return
-  aplicarDados(original.value)
+const fileInput = ref(null)
+
+function onSelectFiles(e) {
+  const files = Array.from(e.target.files || [])
+  if (!files.length) return
+  draft.anexos.push(...files)
+  if (fileInput.value) fileInput.value.value = ''
 }
 
-async function salvar() {
-  saving.value = true
-  try {
-    const payload = toPlain({
-      cliente_nome_snapshot: draft.cliente_nome_snapshot || null,
-      cliente_cpf_snapshot: draft.cliente_cpf_snapshot || null,
-      status: draft.status || 'RASCUNHO',
-      referencia: draft.referencia || null,
-      observacoes: draft.observacoes || null,
-      itens: (draft.itens || []).map((i) => ({
-        descricao: i.descricao || '',
-        quantidade: normalizeNumber(i.quantidade),
-        valor_unitario: normalizeNumber(i.valor_unitario),
-      })),
-    })
-
-    if (isEdit.value) {
-      await api.put(`/orcamentos/${orcamentoId.value}`, payload)
-    } else {
-      const { data } = await api.post('/orcamentos', payload)
-      // se a API retornar o id, já redireciona pra edição
-      if (data?.id) router.replace(`/orcamentos/${data.id}`)
-    }
-
-    // recarrega e redefine original (estado salvo)
-    await carregar()
-  } catch (e) {
-    console.error('Erro ao salvar orçamento:', e)
-  } finally {
-    saving.value = false
-  }
+function removerArquivo(i) {
+  draft.anexos.splice(i, 1)
 }
 
-function abrirPdf() {
-  if (!isEdit.value) return
+function gerarPdf() {
+  // arquitetura apenas: botão existe, mas PDF real só quando tiver id numérico
+  if (isNovo.value) return
   window.open(`${import.meta.env.VITE_API_URL}/orcamentos/${orcamentoId.value}/pdf`, '_blank')
 }
-
-onMounted(carregar)
 </script>
