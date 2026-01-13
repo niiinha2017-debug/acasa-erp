@@ -11,10 +11,7 @@
           </p>
         </div>
 
-        <Button
-          variant="primary"
-          @click="router.push('/orcamentos/novo')"
-        >
+        <Button variant="primary" @click="router.push('/orcamentos/novo')">
           + Novo Orçamento
         </Button>
       </header>
@@ -31,45 +28,43 @@
         </div>
       </div>
 
+      <!-- ✅ TABELA ÚNICA: CLIENTES COM ORÇAMENTOS -->
       <div class="p-6">
         <Table
           :columns="columns"
-          :rows="filtrados"
+          :rows="grupos"
           :loading="loading"
-          emptyText="Nenhum orçamento encontrado."
+          emptyText="Nenhum cliente com orçamento encontrado."
         >
-          <template #cell-id="{ row }">
-            <span class="text-gray-400 font-bold">#{{ row.id }}</span>
-          </template>
-
           <template #cell-cliente="{ row }">
             <div class="flex flex-col">
-              <span class="font-bold text-gray-900">{{ row.cliente_nome_snapshot || 'Cliente não identificado' }}</span>
-              <span class="text-xs text-gray-500">{{ row.cliente_cpf_snapshot || 'Sem CPF/CNPJ' }}</span>
+              <span class="font-bold text-gray-900">
+                {{ row.cliente_nome_snapshot || 'Cliente não identificado' }}
+              </span>
+              <span class="text-xs text-gray-500">
+                {{ row.cliente_cpf_snapshot || 'Sem CPF/CNPJ' }}
+              </span>
             </div>
           </template>
 
-          <template #cell-total="{ row }">
-            <span class="font-bold text-brand-primary">
-              {{ format.currency(row.total_itens || 0) }}
+          <template #cell-qtd="{ row }">
+            <span class="font-black text-gray-900">{{ row.qtd }}</span>
+          </template>
+
+          <template #cell-ultimo="{ row }">
+            <span class="text-gray-500 font-bold">
+              #{{ row.ultimo_id || '—' }}
             </span>
           </template>
 
           <template #cell-acoes="{ row }">
             <div class="flex justify-end gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                @click="router.push(`/orcamentos/${row.id}`)"
-              >
-                Abrir
+              <Button size="sm" variant="primary" @click="novoParaCliente(row.cliente_id)">
+                NOVO
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                @click="abrirPdf(row.id)"
-              >
-                PDF
+
+              <Button size="sm" variant="secondary" @click="abrirListaDoCliente(row.cliente_id)">
+                ORÇAMENTOS
               </Button>
             </div>
           </template>
@@ -78,6 +73,7 @@
     </Card>
   </div>
 </template>
+
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
@@ -100,8 +96,9 @@ const columns = [
   { key: 'id', label: 'ID', width: '90px' },
   { key: 'cliente', label: 'Cliente' },
   { key: 'total', label: 'Total', width: '140px', align: 'right' },
-  { key: 'acoes', label: 'Ações', width: '180px', align: 'right' },
+  { key: 'acoes', label: 'Ações', width: '260px', align: 'right' },
 ]
+
 
 const filtrados = computed(() => {
   const f = (filtro.value || '').trim().toLowerCase()
@@ -126,6 +123,76 @@ async function carregar() {
     loading.value = false
   }
 }
+
+const grupos = computed(() => {
+  const f = (filtro.value || '').trim().toLowerCase()
+
+  const map = new Map()
+
+  for (const o of rows.value || []) {
+    const clienteId = o.cliente_id || o.clienteId
+    if (!clienteId) continue
+
+    const nome = o.cliente_nome_snapshot || ''
+    const cpf = o.cliente_cpf_snapshot || ''
+
+    if (!map.has(clienteId)) {
+      map.set(clienteId, {
+        cliente_id: clienteId,
+        cliente_nome_snapshot: nome,
+        cliente_cpf_snapshot: cpf,
+        orcamentos: [],
+      })
+    }
+
+    map.get(clienteId).orcamentos.push(o)
+  }
+
+  // ordena orçamentos de cada cliente (mais recente primeiro, se tiver data)
+  for (const g of map.values()) {
+    g.orcamentos.sort((a, b) => {
+      const da = new Date(a.criado_em || a.data || 0).getTime()
+      const db = new Date(b.criado_em || b.data || 0).getTime()
+      return db - da
+    })
+  }
+
+  let lista = Array.from(map.values()).map((g) => {
+    const ultimo = g.orcamentos[0]
+    return {
+      ...g,
+      qtd: g.orcamentos.length,
+      ultimo_id: ultimo?.id,
+      ultimo_em: ultimo?.criado_em || ultimo?.data || null,
+    }
+  })
+
+  // filtro por cliente
+  if (f) {
+    lista = lista.filter((g) => {
+      const id = String(g.cliente_id || '')
+      const nome = String(g.cliente_nome_snapshot || '').toLowerCase()
+      const cpf = String(g.cliente_cpf_snapshot || '').toLowerCase()
+      return id.includes(f) || nome.includes(f) || cpf.includes(f)
+    })
+  }
+
+  // ordena clientes pelo último orçamento (mais recente primeiro)
+  lista.sort((a, b) => {
+    const da = new Date(a.ultimo_em || 0).getTime()
+    const db = new Date(b.ultimo_em || 0).getTime()
+    return db - da
+  })
+
+  return lista
+})
+function novoParaCliente(clienteId) {
+  router.push({ path: '/orcamentos/novo', query: { cliente_id: String(clienteId) } })
+}
+function abrirListaDoCliente(clienteId) {
+  router.push(`/orcamentos/cliente/${clienteId}`)
+}
+
 
 function abrirPdf(id) {
   const base = import.meta.env.VITE_API_URL
