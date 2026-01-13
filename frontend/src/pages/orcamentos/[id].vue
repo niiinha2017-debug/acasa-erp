@@ -149,48 +149,83 @@
     />
   </div>
 
-  <!-- arquivos já salvos -->
-  <div v-if="draft.arquivosExistentes.length" class="mt-4 space-y-2">
+  <!-- arquivos já salvos (backend) -->
+  <div v-if="draft.arquivosExistentes?.length" class="mt-4 space-y-2">
     <div
       v-for="arq in draft.arquivosExistentes"
       :key="arq.id"
       class="flex items-center justify-between rounded-2xl border border-gray-100 px-4 py-2"
     >
       <div class="min-w-0">
-        <div class="text-sm font-bold text-gray-900 truncate">{{ arq.nome_original }}</div>
+        <div class="text-sm font-bold text-gray-900 truncate">
+          {{ arq.nome_original }}
+        </div>
         <div class="text-xs font-semibold text-gray-400">
           {{ (arq.tamanho / 1024 / 1024).toFixed(2) }} MB
         </div>
       </div>
 
       <div class="flex items-center gap-2">
-        <Button variant="secondary" size="sm" type="button" @click="abrirArquivo(arq)">
+        <Button
+          variant="secondary"
+          size="sm"
+          type="button"
+          @click="abrirArquivo(arq)"
+        >
+          <i class="pi pi-external-link mr-2"></i>
           Abrir
         </Button>
-        <Button variant="danger" size="sm" type="button" @click="excluirArquivo(arq)">
+
+        <Button
+          variant="danger"
+          size="sm"
+          type="button"
+          @click="excluirArquivo(arq)"
+        >
+          <i class="pi pi-trash mr-2"></i>
           Excluir
         </Button>
       </div>
     </div>
   </div>
 
-  <!-- novos anexos (ainda não enviados) -->
-  <div v-if="draft.anexos.length" class="mt-4 space-y-2">
+  <!-- novos anexos (local, ainda não enviados) -->
+  <div v-if="draft.anexos?.length" class="mt-4 space-y-2">
     <div
       v-for="(arq, i) in draft.anexos"
       :key="i"
       class="flex items-center justify-between rounded-2xl border border-gray-100 px-4 py-2"
     >
       <div class="min-w-0">
-        <div class="text-sm font-bold text-gray-900 truncate">{{ arq.name }}</div>
+        <div class="text-sm font-bold text-gray-900 truncate">
+          {{ arq.name }}
+        </div>
         <div class="text-xs font-semibold text-gray-400">
           {{ (arq.size / 1024 / 1024).toFixed(2) }} MB
         </div>
       </div>
 
-      <Button variant="danger" size="sm" type="button" @click="removerArquivo(i)">
-        Remover
-      </Button>
+      <div class="flex items-center gap-2">
+        <Button
+          variant="secondary"
+          size="sm"
+          type="button"
+          @click="abrirLocal(arq)"
+        >
+          <i class="pi pi-eye mr-2"></i>
+          Abrir
+        </Button>
+
+        <Button
+          variant="danger"
+          size="sm"
+          type="button"
+          @click="removerArquivo(i)"
+        >
+          <i class="pi pi-trash mr-2"></i>
+          Remover
+        </Button>
+      </div>
     </div>
   </div>
 </div>
@@ -333,6 +368,12 @@ async function excluirArquivo(arq) {
   await api.delete(`/orcamentos/${orcamentoId.value}/arquivos/${arq.id}`)
   await carregarArquivos()
 }
+function abrirLocal(file) {
+  const url = URL.createObjectURL(file)
+  window.open(url, '_blank')
+  setTimeout(() => URL.revokeObjectURL(url), 60_000) // ✅ libera depois de 1 min
+}
+
 
 
 const fileInput = ref(null)
