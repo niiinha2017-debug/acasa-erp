@@ -1,17 +1,15 @@
 import { IsNotEmpty, IsNumber, IsString } from 'class-validator'
 
 export class CreateOrcamentoItemDto {
-  @IsNotEmpty()
-  @IsString()
+  @IsNotEmpty() @IsString()
   nome_ambiente: string
 
-  @IsNotEmpty()
-  @IsString()
+  @IsNotEmpty() @IsString()
   descricao: string
+
+  @IsNotEmpty() @IsString()
+  observacao: string
 
   @IsNumber()
   valor_unitario: number
-
-  @IsNumber()
-  valor_total: number
 }

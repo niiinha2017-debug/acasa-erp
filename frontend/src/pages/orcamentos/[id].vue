@@ -43,14 +43,6 @@
 
         </div>
 
-        <div class="col-span-12 md:col-span-4">
-          <SearchInput
-            v-model="draft.status"
-            label="Status"
-            placeholder="Status..."
-          />
-        </div>
-
         <div class="col-span-12">
           <div class="h-px bg-gray-100"></div>
         </div>
@@ -142,45 +134,68 @@
         </div>
 
         <!-- ANEXOS -->
-        <div class="col-span-12">
-          <div class="text-[10px] font-extrabold uppercase tracking-[0.18em] text-gray-400">
-            Anexos (PDF/PNG/JPG/JPEG/WORD)
-          </div>
+<!-- ANEXOS -->
+<div class="col-span-12">
+  <div class="text-xs font-black uppercase tracking-[0.18em] text-gray-400">
+    Anexos
+  </div>
 
-          <div class="mt-3">
-            <input
-              ref="fileInput"
-              type="file"
-              multiple
-              class="text-sm"
-              accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
-              @change="onSelectFiles"
-            />
-          </div>
+  <div class="mt-3">
+    <input
+      ref="fileInput"
+      type="file"
+      multiple
+      @change="onSelectFiles"
+    />
+  </div>
 
-          <div v-if="draft.anexos.length" class="mt-3 space-y-2">
-            <div
-              v-for="(f, i) in draft.anexos"
-              :key="i"
-              class="flex items-center justify-between rounded-2xl border border-gray-100 px-4 py-2"
-            >
-              <div class="min-w-0">
-                <div class="text-sm font-bold text-gray-900 truncate">{{ f.name }}</div>
-                <div class="text-xs font-semibold text-gray-400">
-                  {{ (f.size / 1024 / 1024).toFixed(2) }} MB
-                </div>
-              </div>
-
-              <Button variant="danger" size="sm" type="button" @click="removerArquivo(i)">
-                Remover
-              </Button>
-            </div>
-          </div>
+  <!-- arquivos já salvos -->
+  <div v-if="draft.arquivosExistentes.length" class="mt-4 space-y-2">
+    <div
+      v-for="arq in draft.arquivosExistentes"
+      :key="arq.id"
+      class="flex items-center justify-between rounded-2xl border border-gray-100 px-4 py-2"
+    >
+      <div class="min-w-0">
+        <div class="text-sm font-bold text-gray-900 truncate">{{ arq.nome_original }}</div>
+        <div class="text-xs font-semibold text-gray-400">
+          {{ (arq.tamanho / 1024 / 1024).toFixed(2) }} MB
         </div>
+      </div>
 
+      <div class="flex items-center gap-2">
+        <Button variant="secondary" size="sm" type="button" @click="abrirArquivo(arq)">
+          Abrir
+        </Button>
+        <Button variant="danger" size="sm" type="button" @click="excluirArquivo(arq)">
+          Excluir
+        </Button>
       </div>
     </div>
+  </div>
 
+  <!-- novos anexos (ainda não enviados) -->
+  <div v-if="draft.anexos.length" class="mt-4 space-y-2">
+    <div
+      v-for="(arq, i) in draft.anexos"
+      :key="i"
+      class="flex items-center justify-between rounded-2xl border border-gray-100 px-4 py-2"
+    >
+      <div class="min-w-0">
+        <div class="text-sm font-bold text-gray-900 truncate">{{ arq.name }}</div>
+        <div class="text-xs font-semibold text-gray-400">
+          {{ (arq.size / 1024 / 1024).toFixed(2) }} MB
+        </div>
+      </div>
+
+      <Button variant="danger" size="sm" type="button" @click="removerArquivo(i)">
+        Remover
+      </Button>
+    </div>
+  </div>
+</div>
+      </div>
+    </div>
     <!-- FOOTER -->
     <footer class="flex items-center justify-end gap-2 p-6 border-t border-gray-100">
       <Button variant="primary" type="button" disabled>
@@ -191,32 +206,35 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import api from '@/services/api'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import SearchInput from '@/components/ui/SearchInput.vue'
 import Table from '@/components/ui/Table.vue'
-import { format } from '@/utils/format'
 import Input from '@/components/ui/Input.vue'
-
+import { format } from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()
 
 const orcamentoId = computed(() => route.params.id)
 const isNovo = computed(() => String(orcamentoId.value) === 'novo')
+
 const clientesOptions = ref([])
+
 /**
- * Arquitetura local (sem API)
+ * Arquitetura local (sem salvar ainda)
  */
 const draft = reactive({
-  cliente_nome: '',
-  status: '',
+  cliente_id: null,
   ambientes: [],
   anexos: [],
+  arquivosExistentes: [], // ✅ usado no template
 })
+
 
 const ambForm = reactive({
   nome_ambiente: '',
@@ -249,6 +267,7 @@ const rowsTabela = computed(() =>
 const total = computed(() =>
   draft.ambientes.reduce((acc, a) => acc + (Number(a.valor_unitario) || 0), 0),
 )
+
 async function carregarClientes() {
   const { data } = await api.get('/clientes')
   clientesOptions.value = (data || []).map((c) => ({
@@ -256,6 +275,7 @@ async function carregarClientes() {
     value: c.id,
   }))
 }
+
 function limparForm() {
   ambForm.nome_ambiente = ''
   ambForm.descricao = ''
@@ -299,6 +319,22 @@ function excluir(idx) {
   if (editIdx.value === idx) limparForm()
 }
 
+async function carregarArquivos() {
+  if (isNovo.value) return
+  const { data } = await api.get(`/orcamentos/${orcamentoId.value}/arquivos`)
+  draft.arquivosExistentes = data || []
+}
+
+function abrirArquivo(arq) {
+  window.open(`${import.meta.env.VITE_API_URL}/orcamentos/${orcamentoId.value}/arquivos/${arq.id}`, '_blank')
+}
+
+async function excluirArquivo(arq) {
+  await api.delete(`/orcamentos/${orcamentoId.value}/arquivos/${arq.id}`)
+  await carregarArquivos()
+}
+
+
 const fileInput = ref(null)
 
 function onSelectFiles(e) {
@@ -313,9 +349,15 @@ function removerArquivo(i) {
 }
 
 function gerarPdf() {
-  // arquitetura apenas: botão existe, mas PDF real só quando tiver id numérico
   if (isNovo.value) return
   window.open(`${import.meta.env.VITE_API_URL}/orcamentos/${orcamentoId.value}/pdf`, '_blank')
 }
-onMounted(carregarClientes)
+
+onMounted(async () => {
+  await carregarClientes()
+  await carregarArquivos()
+})
+
+
 </script>
+

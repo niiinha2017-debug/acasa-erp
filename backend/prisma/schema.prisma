@@ -123,6 +123,8 @@ model orcamentos {
   cliente_nome_snapshot String
   cliente_cpf_snapshot  String
 
+  qtd_ambientes Int @default(0) // ✅ NOVO
+
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
@@ -135,6 +137,7 @@ model orcamentos {
   @@map("orcamentos")
 }
 
+
 model orcamento_itens {
   id           Int        @id @default(autoincrement())
   orcamento_id Int
@@ -144,6 +147,7 @@ model orcamento_itens {
   descricao      String
   valor_unitario Decimal @db.Decimal(10, 2)
   valor_total    Decimal @db.Decimal(10, 2)
+  observacao     String
 
   criado_em DateTime @default(now())
 

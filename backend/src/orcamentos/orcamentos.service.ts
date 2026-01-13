@@ -30,6 +30,7 @@ export class OrcamentosService {
       doc.moveDown(1);
       doc.fontSize(11).text(`Cliente: ${orc.cliente_nome_snapshot}`);
       doc.text(`CPF: ${orc.cliente_cpf_snapshot || '-'}`);
+      doc.text(`Qtd. de ambientes: ${orc.qtd_ambientes ?? (orc.itens?.length || 0)}`)
       doc.moveDown(1);
       let total = 0;
       for (const item of orc.itens || []) {
@@ -37,6 +38,7 @@ export class OrcamentosService {
         total += vt;
         doc.fontSize(10).text(`Ambiente: ${item.nome_ambiente}`);
         doc.text(`Descrição: ${item.descricao}`);
+        doc.text(`Observação: ${item.observacao || '-'}`); 
         doc.text(`Valor unitário: R$ ${Number(item.valor_unitario).toFixed(2)}`);
         doc.text(`Valor total: R$ ${vt.toFixed(2)}`);
         doc.moveDown(0.8);
@@ -84,14 +86,15 @@ private async mesclarCapaMioloRodape(miolo: Buffer): Promise<Uint8Array> {
   async criar(dto: CreateOrcamentoDto) {
     const cliente = await this.prisma.cliente.findUnique({ where: { id: dto.cliente_id } });
     if (!cliente) throw new NotFoundException('Cliente não encontrado.');
-    return this.prisma.orcamentos.create({
-      data: {
-        cliente_id: cliente.id,
-        cliente_nome_snapshot: cliente.nome_completo,
-        cliente_cpf_snapshot: cliente.cpf || '',
-      },
-      include: { cliente: true, itens: true, arquivos: true },
-    });
+return this.prisma.orcamentos.create({
+  data: {
+    cliente_id: cliente.id,
+    cliente_nome_snapshot: cliente.nome_completo,
+    cliente_cpf_snapshot: cliente.cpf || '',
+    qtd_ambientes: 0, // ✅
+  },
+  include: { cliente: true, itens: true, arquivos: true },
+});
   }
 
   async listar() {
@@ -123,18 +126,59 @@ private async mesclarCapaMioloRodape(miolo: Buffer): Promise<Uint8Array> {
     await fs.rm(dir, { recursive: true, force: true }).catch(() => null);
     return this.prisma.orcamentos.delete({ where: { id } });
   }
+async adicionarItem(orcamentoId: number, dto: CreateOrcamentoItemDto) {
+  const valor = Number(dto.valor_unitario || 0)
 
-  async adicionarItem(orcamentoId: number, dto: CreateOrcamentoItemDto) {
-    return this.prisma.orcamento_itens.create({ data: { orcamento_id: orcamentoId, nome_ambiente: dto.nome_ambiente, descricao: dto.descricao, valor_unitario: Number(dto.valor_unitario), valor_total: Number(dto.valor_total) } });
-  }
+  const item = await this.prisma.orcamento_itens.create({
+    data: {
+      orcamento_id: orcamentoId,
+      nome_ambiente: dto.nome_ambiente,
+      descricao: dto.descricao,
+      observacao: dto.observacao,
+      valor_unitario: valor,
+      valor_total: valor,
+    },
+  })
 
-  async atualizarItem(orcId: number, itemId: number, dto: UpdateOrcamentoItemDto) {
-    return this.prisma.orcamento_itens.update({ where: { id: itemId }, data: { nome_ambiente: dto.nome_ambiente, descricao: dto.descricao, valor_unitario: dto.valor_unitario ? Number(dto.valor_unitario) : undefined, valor_total: dto.valor_total ? Number(dto.valor_total) : undefined } });
-  }
+  await this.atualizarQtdAmbientes(orcamentoId) // ✅
 
-  async removerItem(orcId: number, itemId: number) {
-    return this.prisma.orcamento_itens.delete({ where: { id: itemId } });
-  }
+  return item
+}
+
+
+async atualizarItem(orcId: number, itemId: number, dto: UpdateOrcamentoItemDto) {
+  const valor = dto.valor_unitario !== undefined ? Number(dto.valor_unitario || 0) : undefined
+
+  return this.prisma.orcamento_itens.update({
+    where: { id: itemId },
+    data: {
+      nome_ambiente: dto.nome_ambiente,
+      descricao: dto.descricao,
+      observacao: dto.observacao,
+      valor_unitario: valor,
+      valor_total: valor, // ✅ TRAVADO (segue unitário)
+    },
+  })
+}
+private async atualizarQtdAmbientes(orcamentoId: number) {
+  const count = await this.prisma.orcamento_itens.count({
+    where: { orcamento_id: orcamentoId },
+  })
+
+  await this.prisma.orcamentos.update({
+    where: { id: orcamentoId },
+    data: { qtd_ambientes: count },
+  })
+}
+
+
+async removerItem(orcId: number, itemId: number) {
+  await this.prisma.orcamento_itens.delete({
+    where: { id: itemId },
+  })
+
+  await this.atualizarQtdAmbientes(orcId) // ✅
+}
 
   async anexarArquivo(orcId: number, file: any) {
     if (!file) throw new BadRequestException('Arquivo não enviado.');
@@ -151,4 +195,26 @@ private async mesclarCapaMioloRodape(miolo: Buffer): Promise<Uint8Array> {
     if (!arq) throw new NotFoundException('Arquivo não encontrado.');
     return { arq, abs: path.resolve(process.cwd(), arq.caminho) };
   }
+
+  async listarArquivos(orcId: number) {
+  return this.prisma.orcamento_arquivos.findMany({
+    where: { orcamento_id: orcId },
+    orderBy: { id: 'desc' },
+  })
+}
+
+async removerArquivo(orcId: number, arquivoId: number) {
+  const arq = await this.prisma.orcamento_arquivos.findFirst({
+    where: { id: arquivoId, orcamento_id: orcId },
+  })
+  if (!arq) throw new NotFoundException('Arquivo não encontrado.')
+
+  // remove físico
+  const abs = path.resolve(process.cwd(), arq.caminho)
+  await fs.unlink(abs).catch(() => null)
+
+  // remove registro
+  await this.prisma.orcamento_arquivos.delete({ where: { id: arquivoId } })
+}
+
 }

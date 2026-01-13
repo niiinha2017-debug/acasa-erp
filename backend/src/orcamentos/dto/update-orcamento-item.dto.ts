@@ -1,19 +1,15 @@
 import { IsNumber, IsOptional, IsString } from 'class-validator'
 
 export class UpdateOrcamentoItemDto {
-  @IsOptional()
-  @IsString()
+  @IsOptional() @IsString()
   nome_ambiente?: string
 
-  @IsOptional()
-  @IsString()
+  @IsOptional() @IsString()
   descricao?: string
 
-  @IsOptional()
-  @IsNumber()
-  valor_unitario?: number
+  @IsOptional() @IsString()
+  observacao?: string
 
-  @IsOptional()
-  @IsNumber()
-  valor_total?: number
+  @IsOptional() @IsNumber()
+  valor_unitario?: number
 }

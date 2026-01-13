@@ -82,4 +82,34 @@ export class OrcamentosController {
     res.setHeader('Content-Disposition', `inline; filename="orcamento-${orcId}.pdf"`);
     return res.end(Buffer.from(pdfFinal));
   }
+
+  @Get(':id/arquivos')
+listarArquivos(@Param('id') id: string) {
+  return this.service.listarArquivos(this.cleanId(id))
+}
+
+@Get(':id/arquivos/:arquivoId')
+async abrirArquivo(
+  @Param('id') id: string,
+  @Param('arquivoId') arquivoId: string,
+  @Res() res: Response,
+) {
+  const orcId = this.cleanId(id)
+  const arqId = this.cleanId(arquivoId)
+  const { arq, abs } = await this.service.obterArquivo(orcId, arqId)
+
+  res.setHeader('Content-Type', arq.mime_type)
+  res.setHeader('Content-Disposition', `inline; filename="${arq.nome_original}"`)
+  return res.sendFile(abs)
+}
+
+@Delete(':id/arquivos/:arquivoId')
+@HttpCode(HttpStatus.NO_CONTENT)
+removerArquivo(
+  @Param('id') id: string,
+  @Param('arquivoId') arquivoId: string,
+) {
+  return this.service.removerArquivo(this.cleanId(id), this.cleanId(arquivoId))
+}
+
 }
