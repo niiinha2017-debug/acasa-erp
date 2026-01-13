@@ -139,15 +139,24 @@
   <div class="text-xs font-black uppercase tracking-[0.18em] text-gray-400">
     Anexos
   </div>
+<div class="mt-3 flex items-center gap-3">
+  <input
+    ref="fileInput"
+    type="file"
+    multiple
+    class="hidden"
+    @change="onSelectFiles"
+  />
 
-  <div class="mt-3">
-    <input
-      ref="fileInput"
-      type="file"
-      multiple
-      @change="onSelectFiles"
-    />
+  <Button variant="secondary" size="sm" type="button" @click="fileInput?.click()">
+    <i class="pi pi-paperclip mr-2"></i>
+    Anexar arquivos
+  </Button>
+
+  <div class="text-xs font-semibold text-gray-400">
+    {{ draft.anexos.length ? `${draft.anexos.length} selecionado(s)` : 'Nenhum arquivo selecionado' }}
   </div>
+</div>
 
   <!-- arquivos já salvos (backend) -->
   <div v-if="draft.arquivosExistentes?.length" class="mt-4 space-y-2">
