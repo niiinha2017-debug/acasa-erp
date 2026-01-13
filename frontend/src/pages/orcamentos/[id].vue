@@ -34,11 +34,13 @@
 
         <!-- LINHA: Cliente + Status -->
         <div class="col-span-12 md:col-span-8">
-          <SearchInput
-            v-model="draft.cliente_nome"
-            label="Nome do cliente"
-            placeholder="Nome do cliente..."
-          />
+<SearchInput
+  v-model="draft.cliente_id"
+  label="Nome do cliente"
+  placeholder="Pesquisar cliente..."
+  :options="clientesOptions"
+/>
+
         </div>
 
         <div class="col-span-12 md:col-span-4">
@@ -57,37 +59,38 @@
         <div class="col-span-12">
           <div class="grid grid-cols-12 gap-x-5 gap-y-4">
 
-            <div class="col-span-12 md:col-span-3">
-              <SearchInput
-                v-model="ambForm.nome_ambiente"
-                label="Nome do ambiente"
-                placeholder="Ex: Cozinha"
-              />
-            </div>
+<div class="col-span-12 md:col-span-3">
+  <Input
+    v-model="ambForm.nome_ambiente"
+    label="Nome do ambiente"
+    placeholder="Ex: Cozinha"
+  />
+</div>
 
-            <div class="col-span-12 md:col-span-6">
-              <SearchInput
-                v-model="ambForm.descricao"
-                label="Descrição"
-                placeholder="Descrição..."
-              />
-            </div>
+<div class="col-span-12 md:col-span-6">
+  <Input
+    v-model="ambForm.descricao"
+    label="Descrição"
+    placeholder="Descrição..."
+  />
+</div>
 
-            <div class="col-span-12 md:col-span-3">
-              <SearchInput
-                v-model="ambForm.valor_unitario"
-                label="Valor unitário"
-                placeholder="0,00"
-              />
-            </div>
+<div class="col-span-12 md:col-span-3">
+  <Input
+    v-model="ambForm.valor_unitario"
+    label="Valor unitário"
+    placeholder="0,00"
+  />
+</div>
 
-            <div class="col-span-12">
-              <SearchInput
-                v-model="ambForm.observacao"
-                label="Observação do ambiente"
-                placeholder="Observação..."
-              />
-            </div>
+<div class="col-span-12">
+  <Input
+    v-model="ambForm.observacao"
+    label="Observação do ambiente"
+    placeholder="Observação..."
+  />
+</div>
+
 
             <div class="col-span-12 flex justify-end">
               <Button variant="primary" type="button" @click="addOuAtualizarAmbiente()">
@@ -196,13 +199,15 @@ import Button from '@/components/ui/Button.vue'
 import SearchInput from '@/components/ui/SearchInput.vue'
 import Table from '@/components/ui/Table.vue'
 import { format } from '@/utils/format'
+import Input from '@/components/ui/Input.vue'
+
 
 const route = useRoute()
 const router = useRouter()
 
 const orcamentoId = computed(() => route.params.id)
 const isNovo = computed(() => String(orcamentoId.value) === 'novo')
-
+const clientesOptions = ref([])
 /**
  * Arquitetura local (sem API)
  */
@@ -244,7 +249,13 @@ const rowsTabela = computed(() =>
 const total = computed(() =>
   draft.ambientes.reduce((acc, a) => acc + (Number(a.valor_unitario) || 0), 0),
 )
-
+async function carregarClientes() {
+  const { data } = await api.get('/clientes')
+  clientesOptions.value = (data || []).map((c) => ({
+    label: c.nome_completo || c.nome || `Cliente #${c.id}`,
+    value: c.id,
+  }))
+}
 function limparForm() {
   ambForm.nome_ambiente = ''
   ambForm.descricao = ''
@@ -306,4 +317,5 @@ function gerarPdf() {
   if (isNovo.value) return
   window.open(`${import.meta.env.VITE_API_URL}/orcamentos/${orcamentoId.value}/pdf`, '_blank')
 }
+onMounted(carregarClientes)
 </script>
