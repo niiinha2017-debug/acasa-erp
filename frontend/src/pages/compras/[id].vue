@@ -293,6 +293,7 @@ import Table from '@/components/ui/Table.vue'
 const route = useRoute()
 const router = useRouter()
 const itemNovoKey = ref(0)
+const statusCompra = ref('EM_ABERTO')
 
 
 const rawId = computed(() => String(route.params.id || 'novo'))
@@ -316,21 +317,21 @@ const form = ref({
 })
 
 /* =========================
-   FORNECEDORES / VENDAS
+   FORNECEDOR / VENDAS
 ========================= */
-const fornecedores = ref([])
+const fornecedor = ref([])
 const fornecedorSelecionado = ref(null)
 
 const fornecedorOptions = computed(() =>
-  fornecedores.value.map((f) => ({
+  fornecedor.value.map((f) => ({
     value: f.id,
     label: f.razao_social || f.nome_fantasia || `Fornecedor #${f.id}`,
   })),
 )
 
-async function carregarFornecedores() {
-  const { data } = await api.get('/fornecedores')
-  fornecedores.value = Array.isArray(data) ? data : []
+async function carregarFornecedor() {
+  const { data } = await api.get('/fornecedor')
+  fornecedor.value = Array.isArray(data) ? data : []
 }
 
 const vendaSelecionada = ref(null)
@@ -674,6 +675,7 @@ async function carregarCompra() {
   fornecedorSelecionado.value = data?.fornecedor_id ?? null
   vendaSelecionada.value = data?.venda_id ?? null
   form.value.venda_id = data?.venda_id ?? null
+  statusCompra.value = data?.status || 'EM_ABERTO'
   form.value.data_compra = isoToDateOnly(data?.data_compra)
 
 itens.value = Array.isArray(data?.itens)
@@ -721,7 +723,8 @@ async function salvar() {
       fornecedor_id: fornecedorSelecionado.value,
       venda_id: tipoCompra.value === 'CLIENTE_AMBIENTE' ? vendaSelecionada.value : null,
       data_compra: dateOnlyToIso(form.value.data_compra),
-      status: 'ATIVO',
+      status: statusCompra.value,
+      
       itens: itensValidos.value,
       rateios: tipoCompra.value === 'CLIENTE_AMBIENTE' ? rateios.value : [],
       valor_total: totalCalculado.value,
@@ -795,7 +798,7 @@ onMounted(async () => {
   loading.value = true
   try {
     await Promise.all([
-      carregarFornecedores(),
+      carregarFornecedor(),
       carregarProdutos(),
       carregarVendas(),
       uni.carregarCategoria('MODULO'),
@@ -809,6 +812,7 @@ onMounted(async () => {
       const m = String(hoje.getMonth() + 1).padStart(2, '0')
       const d = String(hoje.getDate()).padStart(2, '0')
       form.value.data_compra = `${y}-${m}-${d}`
+      statusCompra.value = 'EM_ABERTO'
     }
 
     if (!itens.value.length) addItem()

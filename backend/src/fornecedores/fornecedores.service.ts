@@ -5,11 +5,11 @@ import { CreateFornecedorDto } from './dto/criar-fornecedor.dto'
 import { UpdateFornecedorDto } from './dto/atualizar-fornecedor.dto'
 
 @Injectable()
-export class FornecedoresService {
+export class FornecedorService {
   constructor(private readonly prisma: PrismaService) {}
 
   async listar() {
-    return this.prisma.fornecedores.findMany({
+    return this.prisma.fornecedor.findMany({
       orderBy: { id: 'desc' },
       select: {
         id: true,
@@ -34,7 +34,7 @@ export class FornecedoresService {
   }
 
   async buscarPorId(id: number) {
-    const fornecedor = await this.prisma.fornecedores.findUnique({
+    const fornecedor = await this.prisma.fornecedor.findUnique({
       where: { id },
       select: {
         id: true,
@@ -63,7 +63,7 @@ export class FornecedoresService {
 
   async criar(dto: CreateFornecedorDto) {
     try {
-      return await this.prisma.fornecedores.create({
+      return await this.prisma.fornecedor.create({
         data: {
           razao_social: dto.razao_social,
           nome_fantasia: dto.nome_fantasia,
@@ -113,7 +113,7 @@ export class FornecedoresService {
     await this.buscarPorId(id);
 
     try {
-      return await this.prisma.fornecedores.update({
+      return await this.prisma.fornecedor.update({
         where: { id },
         data: {
           razao_social: dto.razao_social,
@@ -161,7 +161,7 @@ export class FornecedoresService {
 
   async remover(id: number) {
     await this.buscarPorId(id);
-    await this.prisma.fornecedores.delete({ where: { id } });
+    await this.prisma.fornecedor.delete({ where: { id } });
     return { ok: true };
   }
 }

@@ -11,12 +11,11 @@ import {
 } from '@nestjs/common';
 import { CreateFornecedorDto } from './dto/criar-fornecedor.dto'
 import { UpdateFornecedorDto } from './dto/atualizar-fornecedor.dto'
-import { FornecedoresService } from './fornecedores.service';
+import { FornecedorService } from './fornecedores.service';
 
-@Controller('fornecedores')
-export class FornecedoresController {
-  constructor(private readonly service: FornecedoresService) {}
-
+@Controller('fornecedor')
+export class FornecedorController {
+  constructor(private readonly service: FornecedorService) {}
   @Get()
   listar() {
     return this.service.listar();

@@ -57,7 +57,7 @@
           </button>
           <div v-if="activeDropdown === 'cadastros'" class="dropdown-container-tw">
             <a href="#" @click.prevent="irPara('/clientes')" class="dropdown-item-tw"><i class="pi pi-users mr-2 opacity-50"></i> Clientes</a>
-            <a href="#" @click.prevent="irPara('/fornecedores')" class="dropdown-item-tw"><i class="pi pi-truck mr-2 opacity-50"></i> Fornecedores</a>
+            <a href="#" @click.prevent="irPara('/fornecedor')" class="dropdown-item-tw"><i class="pi pi-truck mr-2 opacity-50"></i> Fornecedor</a>
             <a href="#" @click.prevent="irPara('/funcionarios')" class="dropdown-item-tw"><i class="pi pi-id-card mr-2 opacity-50"></i> Funcionários</a>
             <a href="#" @click.prevent="irPara('/produtos')" class="dropdown-item-tw"><i class="pi pi-tag mr-2 opacity-50"></i> Produtos</a>
           </div>

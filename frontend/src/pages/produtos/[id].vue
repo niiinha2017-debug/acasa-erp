@@ -29,7 +29,7 @@
           <SearchInput
             v-model="form.fornecedor_id"
             label="Fornecedor *"
-            :options="fornecedoresOptions"
+            :options="fornecedorOptions"
             required
           />
         </div>
@@ -128,7 +128,7 @@ const id = computed(() => String(route.params.id || 'novo'))
 const isEdit = computed(() => id.value !== 'novo')
 
 const salvando = ref(false)
-const fornecedores = ref([])
+const fornecedor = ref([])
 const valorUnitarioInput = ref('0,00')
 
 /** ✅ Constantes: Categoria MODULO / Chave UNIDADE */
@@ -181,8 +181,8 @@ const form = ref({
   status: 'ATIVO',
 })
 
-const fornecedoresOptions = computed(() =>
-  fornecedores.value.map(f => ({ value: f.id, label: f.razao_social }))
+const fornecedorOptions = computed(() =>
+  fornecedor.value.map(f => ({ value: f.id, label: f.razao_social }))
 )
 
 /* Quantidade (só números) */
@@ -238,9 +238,9 @@ function resetForm() {
   valorUnitarioInput.value = '0,00'
 }
 
-async function carregarFornecedores() {
-  const res = await api.get('/fornecedores')
-  fornecedores.value = res.data
+async function carregarFornecedor() {
+  const res = await api.get('/fornecedor')
+  fornecedor.value = res.data
 }
 
 async function carregarProduto() {
@@ -288,7 +288,7 @@ onMounted(async () => {
   try {
     // 1. Carrega os dados necessários para os selects em paralelo
     await Promise.all([
-      carregarFornecedores(),
+      carregarFornecedor(),
       uni.carregarCategoria('MODULO')
     ])
 

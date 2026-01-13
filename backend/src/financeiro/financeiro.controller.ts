@@ -84,7 +84,7 @@ export class FinanceiroController {
   }
 
   // ===== COMPENSAÇÃO (ABATIMENTO) =====
-  @Post('fornecedores/:fornecedorId/compensar')
+  @Post('fornecedor/:fornecedorId/compensar')
   @HttpCode(HttpStatus.OK)
   compensar(@Param('fornecedorId') fornecedorId: string, @Body() body: any) {
     return this.service.compensarFornecedor(Number(String(fornecedorId).replace(/\D/g, '')), body)

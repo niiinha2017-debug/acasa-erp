@@ -3,13 +3,13 @@
     <!-- HEADER -->
     <header class="flex items-start justify-between gap-4 p-6 border-b border-gray-100">
       <div>
-        <h2 class="text-xl font-black tracking-tight text-gray-900 uppercase">Fornecedores</h2>
+        <h2 class="text-xl font-black tracking-tight text-gray-900 uppercase">Fornecedor</h2>
         <p class="mt-1 text-sm font-semibold text-gray-400">
-          Gestão de fornecedores e dados cadastrais.
+          Gestão de fornecedor e dados cadastrais.
         </p>
       </div>
 
-      <Button variant="primary" size="sm" type="button" @click="router.push('/fornecedores/novo')">
+      <Button variant="primary" size="sm" type="button" @click="router.push('/fornecedor/novo')">
         <i class="pi pi-plus mr-2 text-xs"></i>
         Novo Fornecedor
       </Button>
@@ -26,7 +26,7 @@
       <div class="overflow-hidden rounded-2xl border border-gray-100">
         <Table
           :columns="columns"
-          :rows="fornecedoresFiltrados"
+          :rows="fornecedorFiltrados"
           :loading="carregando"
           empty-text="Nenhum fornecedor encontrado."
         >
@@ -63,7 +63,7 @@
                 variant="secondary"
                 size="sm"
                 type="button"
-                @click="router.push(`/fornecedores/${row.id}`)"
+                @click="router.push(`/fornecedor/${row.id}`)"
               >
                 <i class="pi pi-pencil text-xs"></i>
               </Button>
@@ -97,7 +97,7 @@ import SearchInput from '@/components/ui/SearchInput.vue'
 
 const router = useRouter()
 
-const fornecedores = ref([])
+const fornecedor = ref([])
 const carregando = ref(false)
 const filtro = ref('')
 const deletandoId = ref(null)
@@ -109,11 +109,11 @@ const columns = [
   { key: 'acoes', label: 'Ações', width: '120px', align: 'center' }, // Ajustado para 120px
 ]
 
-const fornecedoresFiltrados = computed(() => {
+const fornecedorFiltrados = computed(() => {
   const termo = (filtro.value || '').toLowerCase().trim().replace(/[./-]/g, '') // Remove máscara da busca
-  if (!termo) return fornecedores.value
+  if (!termo) return fornecedor.value
 
-  return fornecedores.value.filter(f => {
+  return fornecedor.value.filter(f => {
     const cnpjLimpo = String(f.cnpj || '').replace(/[./-]/g, '')
     return String(f.razao_social || '').toLowerCase().includes(termo) ||
            String(f.nome_fantasia || '').toLowerCase().includes(termo) ||
@@ -124,11 +124,11 @@ const fornecedoresFiltrados = computed(() => {
 async function carregar() {
   carregando.value = true
   try {
-    const { data } = await api.get('/fornecedores')
-    fornecedores.value = Array.isArray(data) ? data : []
+    const { data } = await api.get('/fornecedor')
+    fornecedor.value = Array.isArray(data) ? data : []
   } catch (err) {
     console.error(err)
-    fornecedores.value = []
+    fornecedor.value = []
   } finally {
     carregando.value = false
   }
@@ -138,8 +138,8 @@ async function excluir(row) {
   if (!confirm(`Deseja excluir o fornecedor "${row.razao_social || 'Sem nome'}"?`)) return
   deletandoId.value = row.id
   try {
-    await api.delete(`/fornecedores/${row.id}`)
-    fornecedores.value = fornecedores.value.filter(item => item.id !== row.id)
+    await api.delete(`/fornecedor/${row.id}`)
+    fornecedor.value = fornecedor.value.filter(item => item.id !== row.id)
   } catch (err) {
     console.error(err)
     alert('Erro ao excluir fornecedor.')

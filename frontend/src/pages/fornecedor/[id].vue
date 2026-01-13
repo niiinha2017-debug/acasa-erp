@@ -10,7 +10,7 @@
         </p>
       </div>
 
-      <Button variant="secondary" size="sm" type="button" @click="router.push('/fornecedores')">
+      <Button variant="secondary" size="sm" type="button" @click="router.push('/fornecedor')">
         <i class="pi pi-arrow-left mr-2 text-xs"></i>
         Voltar
       </Button>
@@ -161,7 +161,7 @@
       </div>
 
       <div class="flex justify-end gap-2">
-        <Button variant="outline" type="button" @click="router.push('/fornecedores')">
+        <Button variant="outline" type="button" @click="router.push('/fornecedor')">
           Cancelar
         </Button>
 
@@ -288,7 +288,7 @@ async function tratarBuscaCnpj() {
 
 async function carregarFornecedor() {
   if (!isEdit.value || !fornecedorId.value) return
-  const { data } = await api.get(`/fornecedores/${fornecedorId.value}`)
+  const { data } = await api.get(`/fornecedor/${fornecedorId.value}`)
   form.value = { ...form.value, ...(data || {}) }
 }
 
@@ -296,11 +296,11 @@ async function salvar() {
   salvando.value = true
   try {
     if (isEdit.value) {
-      await api.put(`/fornecedores/${fornecedorId.value}`, form.value)
+      await api.put(`/fornecedor/${fornecedorId.value}`, form.value)
     } else {
-      await api.post('/fornecedores', form.value)
+      await api.post('/fornecedor', form.value)
     }
-    router.push('/fornecedores')
+    router.push('/fornecedor')
   } catch (e) {
     alert('Erro ao salvar fornecedor. Verifique os dados.')
   } finally {
@@ -314,8 +314,8 @@ async function excluir() {
 
   excluindo.value = true
   try {
-    await api.delete(`/fornecedores/${fornecedorId.value}`)
-    router.push('/fornecedores')
+    await api.delete(`/fornecedor/${fornecedorId.value}`)
+    router.push('/fornecedor')
   } finally {
     excluindo.value = false
   }

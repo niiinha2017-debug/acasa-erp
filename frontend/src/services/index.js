@@ -44,12 +44,12 @@ export const DespesaService = {
 }
 
 
-// --- SERVIÇO DE FORNECEDORES ---
+// --- SERVIÇO DE FORNECEDOR ---
 export const FornecedorService = {
-  listar: () => api.get('/fornecedores'),
-  buscar: (id) => api.get(`/fornecedores/${id}`),
-  salvar: (id, dados) => id ? api.put(`/fornecedores/${id}`, dados) : api.post('/fornecedores', dados),
-  remover: (id) => api.delete(`/fornecedores/${id}`)
+  listar: () => api.get('/fornecedor'),
+  buscar: (id) => api.get(`/fornecedor/${id}`),
+  salvar: (id, dados) => id ? api.put(`/fornecedor/${id}`, dados) : api.post('/fornecedor', dados),
+  remover: (id) => api.delete(`/fornecedor/${id}`)
 }
 
 // --- SERVIÇO DE FUNCIONÁRIOS (SOMENTE ADMIN) ---

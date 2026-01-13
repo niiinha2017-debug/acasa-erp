@@ -344,12 +344,12 @@ const dataVenda = ref('')
 const statusPlano = ref('')
 
 /* ------------------------------------------------------------------
- * FORNECEDORES
+ * FORNECEDOR
  * ------------------------------------------------------------------ */
-const fornecedores = ref([])
+const fornecedor = ref([])
 
 const fornecedorOptions = computed(() =>
-  fornecedores.value.map(f => ({
+  fornecedor.value.map(f => ({
     label: f.razao_social,
     value: f.id,
     raw: f,
@@ -477,9 +477,9 @@ function removerItem(idx) {
 /* ------------------------------------------------------------------
  * API
  * ------------------------------------------------------------------ */
-async function carregarFornecedores() {
-  const res = await api.get('/fornecedores')
-  fornecedores.value = res.data || []
+async function carregarFornecedor() {
+  const res = await api.get('/fornecedor')
+  fornecedor.value = res.data || []
 }
 
 async function carregarItensDisponiveis(fornecedorId) {
@@ -527,7 +527,7 @@ onMounted(async () => {
   loading.value = true
   try {
     await Promise.all([
-      carregarFornecedores(),
+      carregarFornecedor(),
       constantes.carregarCategoria('STATUS PRODUÇÃO'),
       constantes.carregarCategoria('MODULO'),
     ])

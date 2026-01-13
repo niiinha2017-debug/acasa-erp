@@ -36,9 +36,37 @@ model recuperacao_senha {
   utilizado    Boolean  @default(false)
   criado_em    DateTime @default(now())
 
-  usuario usuarios @relation(fields: [usuario_id], references: [id])
-
+  usuario   usuarios   @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+  
+  @@index([usuario_id])
   @@map("recuperacao_senha")
+}
+
+model usuarios_permissoes {
+  id Int @id @default(autoincrement())
+
+  usuario_id   Int
+  permissao_id Int
+
+  usuario   usuarios   @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+  permissao permissoes @relation(fields: [permissao_id], references: [id], onDelete: Cascade)
+
+  @@unique([usuario_id, permissao_id])
+  @@index([usuario_id])
+  @@index([permissao_id])
+  @@map("usuarios_permissoes")
+}
+
+
+model permissoes {
+  id        Int      @id @default(autoincrement())
+  chave     String   @unique
+  descricao String?
+  criado_em DateTime @default(now())
+
+  usuarios usuarios_permissoes[]
+
+  @@map("permissoes")
 }
 
 
@@ -86,7 +114,151 @@ model Cliente {
   @@map("clientes")
 }
 
-model Fornecedores {
+model orcamentos {
+  id Int @id @default(autoincrement())
+
+  cliente_id Int
+  cliente    Cliente @relation(fields: [cliente_id], references: [id])
+
+  cliente_nome_snapshot String
+  cliente_cpf_snapshot  String
+
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  itens    orcamento_itens[]
+  arquivos orcamento_arquivos[]
+
+  vendas vendas[]
+
+  @@index([cliente_id])
+  @@map("orcamentos")
+}
+
+model orcamento_itens {
+  id           Int        @id @default(autoincrement())
+  orcamento_id Int
+  orcamento    orcamentos @relation(fields: [orcamento_id], references: [id], onDelete: Cascade)
+
+  nome_ambiente  String
+  descricao      String
+  valor_unitario Decimal @db.Decimal(10, 2)
+  valor_total    Decimal @db.Decimal(10, 2)
+
+  criado_em DateTime @default(now())
+
+  @@map("orcamento_itens")
+}
+
+model orcamento_arquivos {
+  id           Int        @id @default(autoincrement())
+  orcamento_id Int
+  orcamento    orcamentos @relation(fields: [orcamento_id], references: [id], onDelete: Cascade)
+
+  nome_original String
+  mime_type     String
+  tamanho       Int
+  caminho       String // ex: uploads/orcamentos/123/arquivo.pdf
+
+  criado_em DateTime @default(now())
+
+  @@map("orcamento_arquivos")
+}
+
+model vendas {
+  id Int @id @default(autoincrement())
+
+  // vínculo
+  cliente_id Int
+  cliente    Cliente @relation(fields: [cliente_id], references: [id])
+
+  // venda pode nascer de um orçamento
+  orcamento_id Int?
+  orcamento    orcamentos? @relation(fields: [orcamento_id], references: [id])
+
+  // status via constantes (ex: RASCUNHO, FECHADA, CANCELADA)
+  status String
+
+  data_venda DateTime @default(now())
+  observacao String?
+
+  // forma de pagamento (chave da constante)
+  forma_pagamento_chave String?
+
+  // totais (base)
+  valor_bruto Decimal @default(0.00) @db.Decimal(10, 2)
+
+  // pós-venda (taxas/markup)
+  taxa_pagamento_percentual_aplicado Decimal? @db.Decimal(5, 2)
+  valor_taxa_pagamento               Decimal  @default(0.00) @db.Decimal(10, 2)
+
+  taxa_nota_fiscal_percentual_aplicado Decimal? @db.Decimal(5, 2)
+  valor_nota_fiscal                    Decimal  @default(0.00) @db.Decimal(10, 2)
+
+  valor_total Decimal @default(0.00) @db.Decimal(10, 2)
+
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  itens     vendas_itens[]
+  comissoes vendas_comissoes[]
+
+  compras compras[] // ✅ NOVO (oposto)
+
+  @@index([cliente_id])
+  @@index([orcamento_id])
+  @@index([status])
+  @@map("vendas")
+}
+
+model vendas_itens {
+  id Int @id @default(autoincrement())
+
+  venda_id Int
+  venda    vendas @relation(fields: [venda_id], references: [id], onDelete: Cascade)
+
+  // item “congelado” na venda
+  nome_ambiente String
+  descricao     String
+
+  quantidade     Decimal @default(1.00) @db.Decimal(10, 2)
+  valor_unitario Decimal @db.Decimal(10, 2)
+  valor_total    Decimal @db.Decimal(10, 2)
+
+  compras compras[] // ✅ NOVO (oposto, se usar venda_item_id)
+
+  criado_em DateTime @default(now())
+
+  @@index([venda_id])
+  @@map("vendas_itens")
+}
+
+model vendas_comissoes {
+  id Int @id @default(autoincrement())
+
+  venda_id Int
+  venda    vendas @relation(fields: [venda_id], references: [id], onDelete: Cascade)
+
+  // chave da constante: VENDEDOR / ARQUITETO / PROJETISTA
+  tipo_comissao_chave String
+
+  // snapshot aplicado no dia (ex: 3 / 5 / 10)
+  percentual_aplicado Decimal @db.Decimal(5, 2)
+
+  // valor calculado
+  valor_comissao Decimal @default(0.00) @db.Decimal(10, 2)
+
+  // opcional: quem é (nome, ou depois vira vínculo com usuario/funcionario)
+  responsavel_nome String?
+
+  criado_em DateTime @default(now())
+
+  @@index([venda_id])
+  @@index([tipo_comissao_chave])
+  @@map("vendas_comissoes")
+}
+
+model Fornecedor {
   id              Int      @id @default(autoincrement())
   razao_social    String
   nome_fantasia   String
@@ -117,14 +289,14 @@ model Fornecedores {
   compensacoes_fornecedor fornecedor_compensacoes[]
   compras                 compras[]
 
-  @@map("fornecedores")
+  @@map("fornecedor")
 }
 
 model produtos {
   id Int @id @default(autoincrement())
 
   fornecedor_id Int
-  fornecedor    Fornecedores @relation(fields: [fornecedor_id], references: [id])
+  fornecedor    Fornecedor @relation(fields: [fornecedor_id], references: [id])
 
   nome_produto String
   marca        String?      // ✅ NOVO
@@ -160,7 +332,7 @@ model plano_corte {
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
-  fornecedor Fornecedores @relation(fields: [fornecedor_id], references: [id])
+  fornecedor Fornecedor   @relation(fields: [fornecedor_id], references: [id])
 
   produtos plano_corte_produto[]
   consumos plano_corte_consumo[]
@@ -190,7 +362,7 @@ model plano_corte_item {
   ultimo_valor_vendido Decimal   @default(0.00) @db.Decimal(10, 2)
   ultimo_vendido_em    DateTime?
 
-  fornecedor Fornecedores @relation(fields: [fornecedor_id], references: [id])
+  fornecedor Fornecedor @relation(fields: [fornecedor_id], references: [id])
 
   produtos plano_corte_produto[]
 
@@ -383,150 +555,6 @@ model despesas {
 }
 
 
-model orcamentos {
-  id Int @id @default(autoincrement())
-
-  cliente_id Int
-  cliente    Cliente @relation(fields: [cliente_id], references: [id])
-
-  cliente_nome_snapshot String
-  cliente_cpf_snapshot  String
-
-  criado_em     DateTime @default(now())
-  atualizado_em DateTime @updatedAt
-
-  itens    orcamento_itens[]
-  arquivos orcamento_arquivos[]
-
-  vendas vendas[]
-
-  @@index([cliente_id])
-  @@map("orcamentos")
-}
-
-model orcamento_itens {
-  id           Int        @id @default(autoincrement())
-  orcamento_id Int
-  orcamento    orcamentos @relation(fields: [orcamento_id], references: [id], onDelete: Cascade)
-
-  nome_ambiente  String
-  descricao      String
-  valor_unitario Decimal @db.Decimal(10, 2)
-  valor_total    Decimal @db.Decimal(10, 2)
-
-  criado_em DateTime @default(now())
-
-  @@map("orcamento_itens")
-}
-
-model orcamento_arquivos {
-  id           Int        @id @default(autoincrement())
-  orcamento_id Int
-  orcamento    orcamentos @relation(fields: [orcamento_id], references: [id], onDelete: Cascade)
-
-  nome_original String
-  mime_type     String
-  tamanho       Int
-  caminho       String // ex: uploads/orcamentos/123/arquivo.pdf
-
-  criado_em DateTime @default(now())
-
-  @@map("orcamento_arquivos")
-}
-
-model vendas {
-  id Int @id @default(autoincrement())
-
-  // vínculo
-  cliente_id Int
-  cliente    Cliente @relation(fields: [cliente_id], references: [id])
-
-  // venda pode nascer de um orçamento
-  orcamento_id Int?
-  orcamento    orcamentos? @relation(fields: [orcamento_id], references: [id])
-
-  // status via constantes (ex: RASCUNHO, FECHADA, CANCELADA)
-  status String
-
-  data_venda DateTime @default(now())
-  observacao String?
-
-  // forma de pagamento (chave da constante)
-  forma_pagamento_chave String?
-
-  // totais (base)
-  valor_bruto Decimal @default(0.00) @db.Decimal(10, 2)
-
-  // pós-venda (taxas/markup)
-  taxa_pagamento_percentual_aplicado Decimal? @db.Decimal(5, 2)
-  valor_taxa_pagamento               Decimal  @default(0.00) @db.Decimal(10, 2)
-
-  taxa_nota_fiscal_percentual_aplicado Decimal? @db.Decimal(5, 2)
-  valor_nota_fiscal                    Decimal  @default(0.00) @db.Decimal(10, 2)
-
-  valor_total Decimal @default(0.00) @db.Decimal(10, 2)
-
-  criado_em     DateTime @default(now())
-  atualizado_em DateTime @updatedAt
-
-  itens     vendas_itens[]
-  comissoes vendas_comissoes[]
-
-  compras compras[] // ✅ NOVO (oposto)
-
-  @@index([cliente_id])
-  @@index([orcamento_id])
-  @@index([status])
-  @@map("vendas")
-}
-
-model vendas_itens {
-  id Int @id @default(autoincrement())
-
-  venda_id Int
-  venda    vendas @relation(fields: [venda_id], references: [id], onDelete: Cascade)
-
-  // item “congelado” na venda
-  nome_ambiente String
-  descricao     String
-
-  quantidade     Decimal @default(1.00) @db.Decimal(10, 2)
-  valor_unitario Decimal @db.Decimal(10, 2)
-  valor_total    Decimal @db.Decimal(10, 2)
-
-  compras compras[] // ✅ NOVO (oposto, se usar venda_item_id)
-
-  criado_em DateTime @default(now())
-
-  @@index([venda_id])
-  @@map("vendas_itens")
-}
-
-model vendas_comissoes {
-  id Int @id @default(autoincrement())
-
-  venda_id Int
-  venda    vendas @relation(fields: [venda_id], references: [id], onDelete: Cascade)
-
-  // chave da constante: VENDEDOR / ARQUITETO / PROJETISTA
-  tipo_comissao_chave String
-
-  // snapshot aplicado no dia (ex: 3 / 5 / 10)
-  percentual_aplicado Decimal @db.Decimal(5, 2)
-
-  // valor calculado
-  valor_comissao Decimal @default(0.00) @db.Decimal(10, 2)
-
-  // opcional: quem é (nome, ou depois vira vínculo com usuario/funcionario)
-  responsavel_nome String?
-
-  criado_em DateTime @default(now())
-
-  @@index([venda_id])
-  @@index([tipo_comissao_chave])
-  @@map("vendas_comissoes")
-}
-
 model producao_projetos {
   id Int @id @default(autoincrement())
 
@@ -586,11 +614,11 @@ model contas_pagar {
 
   // Fornecedor "centro" (ex: Cityfer)
   fornecedor_id Int
-  fornecedor    Fornecedores @relation("contas_pagar_fornecedor", fields: [fornecedor_id], references: [id])
+  fornecedor    Fornecedor @relation("contas_pagar_fornecedor", fields: [fornecedor_id], references: [id])
 
   // Fornecedor "cobrador" (ex: Rimad) - opcional
   fornecedor_cobrador_id Int?
-  fornecedor_cobrador    Fornecedores? @relation("contas_pagar_fornecedor_cobrador", fields: [fornecedor_cobrador_id], references: [id])
+  fornecedor_cobrador    Fornecedor? @relation("contas_pagar_fornecedor_cobrador", fields: [fornecedor_cobrador_id], references: [id])
 
   // Origem (opcional) para rastrear de onde veio (compra, etc.)
   origem_tipo String?
@@ -640,7 +668,7 @@ model contas_receber {
 
   // Fornecedor "centro" (ex: Cityfer)
   fornecedor_id Int
-  fornecedor    Fornecedores @relation("contas_receber_fornecedor", fields: [fornecedor_id], references: [id])
+  fornecedor    Fornecedor @relation("contas_receber_fornecedor", fields: [fornecedor_id], references: [id])
 
   // Origem (ex: PLANO_CORTE)
   origem_tipo String?
@@ -676,7 +704,7 @@ model fornecedor_compensacoes {
   id Int @id @default(autoincrement())
 
   fornecedor_id Int
-  fornecedor    Fornecedores @relation(fields: [fornecedor_id], references: [id])
+  fornecedor    Fornecedor @relation(fields: [fornecedor_id], references: [id])
 
   conta_pagar_id Int
   conta_pagar    contas_pagar @relation("compensacoes_pagar", fields: [conta_pagar_id], references: [id], onDelete: Cascade)
@@ -703,7 +731,7 @@ model compras {
   venda    vendas? @relation(fields: [venda_id], references: [id], onDelete: Cascade)
 
   fornecedor_id Int
-  fornecedor    Fornecedores @relation(fields: [fornecedor_id], references: [id])
+  fornecedor    Fornecedor @relation(fields: [fornecedor_id], references: [id])
 
   venda_item_id Int?
   venda_item    vendas_itens? @relation(fields: [venda_item_id], references: [id], onDelete: SetNull)
@@ -780,31 +808,7 @@ model compras_rateio {
   @@index([nome_ambiente])
   @@map("compras_rateio")
 }
-model permissoes {
-  id         Int      @id @default(autoincrement())
-  chave      String   @unique
-  descricao  String?
-  criado_em  DateTime @default(now())
 
-  usuarios   usuarios_permissoes[]
-
-  @@map("permissoes")
-}
-
-model usuarios_permissoes {
-  id            Int      @id @default(autoincrement())
-  usuario_id    Int
-  permissao_id  Int
-  criado_em     DateTime @default(now())
-
-  usuario       usuarios    @relation(fields: [usuario_id], references: [id])
-  permissao     permissoes  @relation(fields: [permissao_id], references: [id])
-
-  @@unique([usuario_id, permissao_id])
-  @@index([usuario_id])
-  @@index([permissao_id])
-  @@map("usuarios_permissoes")
-}
 model cheques {
   id              Int      @id @default(autoincrement())
   numero          String   @unique
