@@ -278,14 +278,15 @@ const emailUi = computed({
 })
 
 const salarioBaseUi = computed({
-  get: () => numeroParaMoeda(form.value.salario_base || 0),
-  set: (v) => (form.value.salario_base = moedaParaNumero(v)),
+  get: () => numeroParaMoeda(Number(form.value.salario_base || 0)),
+  set: (v) => (form.value.salario_base = Number(moedaParaNumero(v) || 0)),
 })
 
 const salarioAdicionalUi = computed({
-  get: () => numeroParaMoeda(form.value.salario_adicional || 0),
-  set: (v) => (form.value.salario_adicional = moedaParaNumero(v)),
+  get: () => numeroParaMoeda(Number(form.value.salario_adicional || 0)),
+  set: (v) => (form.value.salario_adicional = Number(moedaParaNumero(v) || 0)),
 })
+
 
 const valeUi = computed({
   get: () => numeroParaMoeda(form.value.vale || 0),
@@ -314,15 +315,15 @@ const tempoServico = computed(() => {
 })
 
 function recalcularCustoHora() {
-  console.log('DEBUG', {
-  salario_base: form.value.salario_base,
-  adicional: form.value.salario_adicional,
-  total: (form.value.salario_base || 0) + (form.value.salario_adicional || 0),
-  custo: calcularCustoHora((form.value.salario_base || 0) + (form.value.salario_adicional || 0)),
-})
+  const base = Number(form.value.salario_base || 0)
+  const adicional = Number(form.value.salario_adicional || 0)
+  const total = base + adicional
 
-  form.value.custo_hora = calcularCustoHora((form.value.salario_base || 0) + (form.value.salario_adicional || 0))
+  console.log('DEBUG', { salario_base: base, adicional, total, custo: calcularCustoHora(total) })
+
+  form.value.custo_hora = calcularCustoHora(total)
 }
+
 
 /* recalcula custo hora quando mexe em valores */
 watch(
