@@ -20,7 +20,7 @@ import { Permissoes } from '../auth/permissoes.decorator'
 import { GerarPdfFuncionariosDto } from './dto/gerar-pdf-funcionarios.dto'
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@Permissoes('admin')
+@Permissoes('ADMIN')
 @Controller('funcionarios')
 export class FuncionariosController {
   constructor(private readonly service: FuncionariosService) {}
