@@ -34,17 +34,18 @@ export class FuncionariosController {
   @Post('pdf')
   async gerarPdfLote(
     @Body() dto: GerarPdfFuncionariosDto,
-    @Res({ passthrough: true }) res: Response
+    @Res() res: Response
   ) {
     const pdfBuffer = await this.service.gerarPdf(dto.ids)
 
-    res.set({
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': 'inline; filename=relatorio_funcionarios.pdf',
-    })
+    res.status(HttpStatus.OK)
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', 'inline; filename="relatorio_funcionarios.pdf"')
+    res.setHeader('Content-Length', pdfBuffer.length)
 
-    return pdfBuffer
+    return res.end(pdfBuffer)
   }
+
 
   @Get(':id')
   buscarPorId(@Param('id') id: string) {
