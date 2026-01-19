@@ -43,5 +43,18 @@ export function calcularCustoHora(salarioMensal, diasMes = 22, horasDia = 8) {
   return Math.round(v * 100) / 100
 }
 
+function getDeviceUUID() {
+  const KEY = 'ponto_device_uuid'
+  let uuid = localStorage.getItem(KEY)
+
+  if (!uuid) {
+    uuid =
+      (crypto?.randomUUID && crypto.randomUUID()) ||
+      `dev-${Date.now()}-${Math.random().toString(16).slice(2)}`
+    localStorage.setItem(KEY, uuid)
+  }
+
+  return uuid
+}
 
 

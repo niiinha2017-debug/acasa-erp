@@ -181,6 +181,16 @@ async function copiar(texto) {
   }
 }
 
+const device_uuid = getDeviceUUID()
+
+await api.post('/ponto/ativar', {
+  code,
+  device_uuid,
+  device_nome: navigator.userAgent,
+  plataforma: 'WEB',
+})
+
+
 function abrirWhats() {
   if (!convite.value?.url) return
 
