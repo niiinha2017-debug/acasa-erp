@@ -196,9 +196,18 @@ ${convite.value.url}
 
 Se expirar, me avise que eu gero outro.`
 
-const url = `https://wa.me/?text=${encodeURIComponent(msg)}`
-window.open(url, '_blank', 'noopener,noreferrer')
+  const url = `https://wa.me/?text=${encodeURIComponent(msg)}`
+  window.open(url, '_blank', 'noopener,noreferrer')
+} // ✅ FECHA A FUNÇÃO AQUI
 
+function formatDate(v) {
+  if (!v) return '—'
+  try {
+    return new Date(v).toLocaleString('pt-BR')
+  } catch {
+    return String(v)
+  }
+}
 
 
 function formatDate(v) {
