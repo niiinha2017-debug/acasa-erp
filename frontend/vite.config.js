@@ -23,9 +23,9 @@ export default defineConfig({
         enabled: true,
       },
 
-      manifest: {
-        name: 'ACASA Ponto',
-        short_name: 'Ponto',
+manifest: {
+        name: 'ACASA ERP',         // Mude de Ponto para ERP
+        short_name: 'ERP',         // Mude de Ponto para ERP
         start_url: '/',
         scope: '/',
         display: 'standalone',
