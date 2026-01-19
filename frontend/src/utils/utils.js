@@ -34,12 +34,14 @@ export async function buscarCnpj(cnpj) {
   }
 }
 
-
-
-export const calcularCustoHora = (salario) => {
-  if (!salario || salario <= 0) return 0
-  // Cálculo padrão: Salário / 220 horas
-  return parseFloat((salario / 220).toFixed(2))
+// app/utils/utils.js (ou src/utils/utils.js)
+export function calcularCustoHora(salarioMensal, diasMes = 22, horasDia = 8) {
+  const s = Number(salarioMensal || 0)
+  const horasMes = Number(diasMes) * Number(horasDia)
+  if (!horasMes) return 0
+  const v = s / horasMes
+  return Math.round(v * 100) / 100
 }
+
 
 

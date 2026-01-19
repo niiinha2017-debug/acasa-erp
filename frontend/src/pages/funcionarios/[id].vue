@@ -150,10 +150,35 @@
 </template>
 
 <style scoped>
-/* Estilo para os inputs dentro da área escura de benefícios */
-.inverted-input :deep(label) { color: #94a3b8 !important; }
-.inverted-input :deep(input) { background-color: #1e293b !important; border: 1px solid #334155 !important; color: white !important; }
+/* Inputs dentro da área escura */
+.inverted-input :deep(label) {
+  color: #94a3b8 !important;
+}
+
+.inverted-input :deep(input) {
+  background-color: #1e293b !important;
+  border: 1px solid #334155 !important;
+  color: white !important;
+}
+
+/* Checkbox dentro da área escura */
+.dark-check :deep(*) {
+  color: #e2e8f0 !important; /* texto principal */
+}
+
+.dark-check :deep(.text-slate-900),
+.dark-check :deep(.text-slate-800),
+.dark-check :deep(.text-slate-700) {
+  color: #e2e8f0 !important;
+}
+
+.dark-check :deep(.text-slate-500),
+.dark-check :deep(.text-slate-400) {
+  color: #94a3b8 !important; /* texto secundário */
+}
 </style>
+
+
 
 
 <script setup>
