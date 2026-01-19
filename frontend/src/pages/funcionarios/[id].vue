@@ -314,6 +314,13 @@ const tempoServico = computed(() => {
 })
 
 function recalcularCustoHora() {
+  console.log('DEBUG', {
+  salario_base: form.value.salario_base,
+  adicional: form.value.salario_adicional,
+  total: (form.value.salario_base || 0) + (form.value.salario_adicional || 0),
+  custo: calcularCustoHora((form.value.salario_base || 0) + (form.value.salario_adicional || 0)),
+})
+
   form.value.custo_hora = calcularCustoHora((form.value.salario_base || 0) + (form.value.salario_adicional || 0))
 }
 
