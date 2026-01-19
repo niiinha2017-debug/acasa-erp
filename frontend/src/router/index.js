@@ -4,7 +4,8 @@ import storage from '@/utils/storage'
 
 
 const router = createRouter({
-  history: createWebHistory(),
+  // Adicione o '/ponto/' como argumento aqui
+  history: createWebHistory('/ponto/'), 
   routes,
 })
 

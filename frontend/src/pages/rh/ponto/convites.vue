@@ -149,15 +149,14 @@ async function gerar() {
     const res = await PontoService.gerarConvite(Number(funcionario_id.value))
     const data = res.data || {}
 
-    // aceita vários nomes possíveis
+    // 1. Pega o código que veio da API
     const code = data.code || data.codigo || data.token || data.convite || null
-
-    // monte a URL do app do ponto (ajuste o path para o seu)
-    const base = window.location.origin
+    
+    // 2. Monta a URL usando a variável 'code' que acabamos de criar (e não convite.value)
     const PONTO_BASE_URL = `${window.location.origin}/ponto`
-    const url = `${PONTO_BASE_URL}/ativar?code=${convite.value.code}`
+    const url = `${PONTO_BASE_URL}/ativar?code=${code}`
 
-
+    // 3. Agora sim, salva no estado para aparecer na tela
     convite.value = {
       ...data,
       code,
@@ -166,6 +165,7 @@ async function gerar() {
 
     notify?.success?.('Convite gerado.')
   } catch (e) {
+    console.error(e)
     notify?.error?.(e?.response?.data?.message || 'Não foi possível gerar o convite.')
   } finally {
     loadingGerar.value = false
