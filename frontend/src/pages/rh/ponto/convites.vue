@@ -154,7 +154,9 @@ async function gerar() {
 
     // monte a URL do app do ponto (ajuste o path para o seu)
     const base = window.location.origin
-    const url = code ? `${base}/ponto/ativar?code=${encodeURIComponent(code)}` : null
+    const PONTO_BASE_URL = `${window.location.origin}/ponto`
+    const url = `${PONTO_BASE_URL}/ativar?code=${convite.value.code}`
+
 
     convite.value = {
       ...data,
