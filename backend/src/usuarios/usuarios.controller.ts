@@ -19,37 +19,37 @@ export class UsuariosController {
   }
 
   @Get()
-  @Permissoes('admin.acesso')
+  @Permissoes('admin')
   listar() {
     return this.service.listar()
   }
 
   @Get(':id')
-  @Permissoes('admin.acesso')
+  @Permissoes('admin')
   buscar(@Param('id') id: string) {
     return this.service.buscarPorId(this.cleanId(id))
   }
 
   @Post()
-  @Permissoes('admin.acesso')
+  @Permissoes('admin')
   criar(@Body() dto: CriarUsuarioDto) {
     return this.service.criar(dto)
   }
 
   @Put(':id')
-  @Permissoes('admin.acesso')
+  @Permissoes('admin')
   atualizar(@Param('id') id: string, @Body() dto: AtualizarUsuarioDto) {
     return this.service.atualizar(this.cleanId(id), dto)
   }
 
   @Put(':id/status')
-  @Permissoes('admin.acesso')
+  @Permissoes('admin')
   atualizarStatus(@Param('id') id: string, @Body() dto: AtualizarStatusDto) {
     return this.service.atualizarStatus(this.cleanId(id), dto.status)
   }
 
   @Delete(':id')
-  @Permissoes('admin.acesso')
+  @Permissoes('admin')
   @HttpCode(HttpStatus.NO_CONTENT)
   remover(@Param('id') id: string) {
     return this.service.remover(this.cleanId(id))
