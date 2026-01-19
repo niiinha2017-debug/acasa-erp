@@ -183,12 +183,10 @@ export class PontoService {
   }
 
 async registrar(dto: RegistrarPontoDto, req: any) {
-  // 1. Identificação do Funcionário e Dispositivo através do Request (Token)
-  const funcionario_id = this.getFuncionarioId(req);
-  const dispositivo_id = this.getDispositivoId(req);
-  const { inicio, fim } = this.rangeHoje();
+  const funcionario_id = this.getFuncionarioId(req)
+  const dispositivo_id = this.getDispositivoId(req)
+  const { inicio, fim } = this.rangeHoje()
 
-  // 2. ✅ BLOQUEIO: Evita duplicidade de sequência (Ex: Duas ENTRADAS seguidas)
   const ultimoHoje = await this.prisma.ponto_registros.findFirst({
     where: {
       funcionario_id,
@@ -197,75 +195,78 @@ async registrar(dto: RegistrarPontoDto, req: any) {
     },
     orderBy: { data_hora: 'desc' },
     select: { tipo: true, data_hora: true },
-  });
+  })
 
-  const tipo = dto.tipo as any;
+  // ✅ NORMALIZA tipo (ENTRADA / SAIDA) antes de qualquer coisa
+  const tipoRaw = String((dto as any)?.tipo || '')
+  const tipoNorm = tipoRaw
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // tira acentos
+    .trim()
+
+  const tipo: 'ENTRADA' | 'SAIDA' =
+    tipoNorm === 'SAIDA' ? 'SAIDA' : 'ENTRADA'
+
+  // ✅ BLOQUEIO: evita duas iguais seguidas
   if (ultimoHoje?.tipo === tipo) {
-    throw new BadRequestException(`O último registro já foi uma ${tipo}.`);
+    throw new BadRequestException(`O último registro já foi uma ${tipo}.`)
   }
 
-  // 3. ✅ BLOQUEIO: Double Tap (Evita cliques acidentais em menos de 30 segundos)
+  // ✅ BLOQUEIO: double tap 30s
   if (ultimoHoje?.data_hora) {
-    const diffMs = Date.now() - new Date(ultimoHoje.data_hora).getTime();
+    const diffMs = Date.now() - new Date(ultimoHoje.data_hora).getTime()
     if (diffMs < 30_000) {
-      throw new BadRequestException('Aguarde 30 segundos para registrar novamente.');
+      throw new BadRequestException('Aguarde 30 segundos para registrar novamente.')
     }
   }
 
-  // 4. Captura de metadados de rede
-  // 4. Captura de metadados de rede
-const ip =
-  (req.headers?.['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || null
-const user_agent = String(req.headers?.['user-agent'] || '')
+  const ip =
+    (req.headers?.['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || null
+  const user_agent = String(req.headers?.['user-agent'] || '')
 
-// ✅ AQUI: normalização (antes do create)
-const cep = dto.cep ? String(dto.cep).replace(/\D/g, '').slice(0, 8) : null
-const localidade = dto.localidade ? String(dto.localidade).trim().slice(0, 150) : null
+  const cep = dto.cep ? String(dto.cep).replace(/\D/g, '').slice(0, 8) : null
+  const localidade = dto.localidade ? String(dto.localidade).trim().slice(0, 150) : null
 
-// 5. ✅ PERSISTÊNCIA NO BANCO (Prisma)
-const registro = await this.prisma.ponto_registros.create({
-  data: {
-    funcionario_id,
-    dispositivo_id,
-    tipo,
-    latitude: dto.latitude ?? null,
-    longitude: dto.longitude ?? null,
-    precisao_metros: dto.precisao_metros ?? null,
+  const registro = await this.prisma.ponto_registros.create({
+    data: {
+      funcionario_id,
+      dispositivo_id,
+      tipo, // ✅ agora sempre ENTRADA|SAIDA (sem acento)
+      latitude: dto.latitude ?? null,
+      longitude: dto.longitude ?? null,
+      precisao_metros: dto.precisao_metros ?? null,
+      cep,
+      localidade,
+      ip,
+      user_agent: user_agent || null,
+      status: 'ATIVO',
+      observacao: dto.observacao ?? null,
+    },
+    select: {
+      id: true,
+      funcionario_id: true,
+      tipo: true,
+      data_hora: true,
+      latitude: true,
+      longitude: true,
+      precisao_metros: true,
+      cep: true,
+      localidade: true,
+      status: true,
+    },
+  })
 
-    // ✅ AQUI: usa as variáveis normalizadas
-    cep,
-    localidade,
-
-    ip,
-    user_agent: user_agent || null,
-    status: 'ATIVO',
-    observacao: dto.observacao ?? null,
-  },
-  select: {
-    id: true,
-    funcionario_id: true,
-    tipo: true,
-    data_hora: true,
-    latitude: true,
-    longitude: true,
-    precisao_metros: true,
-    cep: true,
-    localidade: true,
-    status: true,
-  },
-})
-
-
-  // 6. ✅ ATUALIZAÇÃO: Marca o último uso do dispositivo pareado
   if (dispositivo_id) {
     await this.prisma.ponto_dispositivos.update({
       where: { id: dispositivo_id },
       data: { ultimo_uso_em: new Date() },
-    });
+    })
   }
 
-  return registro;
+  return registro
 }
+
 
   async ultimo(req: any) {
     const funcionario_id = this.getFuncionarioId(req)
