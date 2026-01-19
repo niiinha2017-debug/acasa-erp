@@ -153,7 +153,7 @@ async function gerar() {
     const code = data.code || data.codigo || data.token || data.convite || null
     
     // 2. Monta a URL usando a variável 'code' que acabamos de criar (e não convite.value)
-    const PONTO_BASE_URL = `${window.location.origin}/ponto`
+    const PONTO_BASE_URL = `https://acasamarcenaria.com.br/ponto`
     const url = `${PONTO_BASE_URL}/ativar?code=${code}`
 
     // 3. Agora sim, salva no estado para aparecer na tela
@@ -181,15 +181,6 @@ async function copiar(texto) {
   }
 }
 
-const device_uuid = getDeviceUUID()
-
-await api.post('/ponto/ativar', {
-  code,
-  device_uuid,
-  device_nome: navigator.userAgent,
-  plataforma: 'WEB',
-})
-
 
 function abrirWhats() {
   if (!convite.value?.url) return
@@ -205,9 +196,9 @@ ${convite.value.url}
 
 Se expirar, me avise que eu gero outro.`
 
-  const url = `https://web.whatsapp.com/send?text=${encodeURIComponent(msg)}`
-  window.open(url, '_blank')
-}
+const url = `https://wa.me/?text=${encodeURIComponent(msg)}`
+window.open(url, '_blank', 'noopener,noreferrer')
+
 
 
 function formatDate(v) {
