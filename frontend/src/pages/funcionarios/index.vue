@@ -111,7 +111,7 @@
       <input
         type="checkbox"
         class="h-4 w-4 accent-brand-primary"
-        :checked="selectedIds.value.has(row.id)"
+        :checked="selectedIds.has(row.id)"
         @change="toggle(row.id)"
       />
       <div class="font-black text-[11px] uppercase tracking-widest text-[var(--text-main)]">
@@ -176,9 +176,11 @@ const funcionarios = ref([])
 
 const selectedIds = ref(new Set())
 const selecionados = computed(() => Array.from(selectedIds.value))
+
 const funcionariosAtivos = computed(() =>
   funcionarios.value.filter(f => String(f.status || '').toUpperCase() === 'ATIVO').length
 )
+
 
 
 const columns = [
