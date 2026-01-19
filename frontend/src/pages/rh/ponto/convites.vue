@@ -144,7 +144,7 @@ async function gerar() {
   convite.value = null
 
   try {
-    const res = await PontoService.gerarConvite(funcionario_id.value)
+    const res = await PontoService.gerarConvite(Number(funcionario_id.value))
     convite.value = res.data
     notify?.success?.('Convite gerado.')
   } catch (e) {
@@ -166,8 +166,9 @@ async function copiar(texto) {
 function abrirWhats() {
   if (!convite.value?.url) return
 
-  const f = funcionarios.value.find((x) => x.id === funcionario_id.value)
-  const nome = f?.nome ? String(f.nome).trim() : 'FUNCIONÁRIO'
+const id = Number(funcionario_id.value)
+const f = funcionarios.value.find((x) => x.id === id)
+
 
   const msg =
 `Olá ${nome}!
