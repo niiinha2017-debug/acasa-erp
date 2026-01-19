@@ -6,14 +6,11 @@ import { PrismaModule } from '../prisma/prisma.module'
 
 import { PontoService } from './ponto.service'
 import { PontoAppController } from './ponto-app.controller'
+import { PontoAdminController } from './ponto-admin.controller'
 
 @Module({
-  imports: [
-    ConfigModule,  // se já for global pode até tirar, mas pode deixar
-    PrismaModule,
-    AuthModule,    // ✅ ISSO resolve o JwtService
-  ],
-  controllers: [PontoAppController],
+  imports: [ConfigModule, PrismaModule, AuthModule],
+  controllers: [PontoAppController, PontoAdminController],
   providers: [PontoService],
 })
 export class PontoModule {}
