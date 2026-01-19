@@ -27,7 +27,6 @@ manifest: {
         name: 'ACASA ERP',         // Mude de Ponto para ERP
         short_name: 'ERP',         // Mude de Ponto para ERP
         start_url: '/',
-        scope: '/',
         display: 'standalone',
         background_color: '#ffffff',
         theme_color: '#111827',
