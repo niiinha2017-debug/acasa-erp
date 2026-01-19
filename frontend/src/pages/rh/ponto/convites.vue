@@ -128,8 +128,10 @@ const funcionariosOptions = computed(() =>
 
 onMounted(async () => {
   try {
-    const res = await FuncionarioService.listar()
-    funcionarios.value = res?.data || []
+const res = await FuncionarioService.listar()
+funcionarios.value = res?.data || []
+console.log('[FUNCIONARIOS] qtd:', funcionarios.value.length)
+
   } catch (e) {
     console.log('[ERRO listar funcionarios]', e) // <- 1 log real
     notify?.error?.(e?.response?.data?.message || 'Falha ao carregar funcionários.')
@@ -145,7 +147,21 @@ async function gerar() {
 
   try {
     const res = await PontoService.gerarConvite(Number(funcionario_id.value))
-    convite.value = res.data
+    const data = res.data || {}
+
+    // aceita vários nomes possíveis
+    const code = data.code || data.codigo || data.token || data.convite || null
+
+    // monte a URL do app do ponto (ajuste o path para o seu)
+    const base = window.location.origin
+    const url = code ? `${base}/ponto/ativar?code=${encodeURIComponent(code)}` : null
+
+    convite.value = {
+      ...data,
+      code,
+      url,
+    }
+
     notify?.success?.('Convite gerado.')
   } catch (e) {
     notify?.error?.(e?.response?.data?.message || 'Não foi possível gerar o convite.')
@@ -166,9 +182,9 @@ async function copiar(texto) {
 function abrirWhats() {
   if (!convite.value?.url) return
 
-const id = Number(funcionario_id.value)
-const f = funcionarios.value.find((x) => x.id === id)
-
+  const id = Number(funcionario_id.value)
+  const f = funcionarios.value.find((x) => x.id === id)
+  const nome = f?.nome ? String(f.nome).trim() : 'tudo bem'
 
   const msg =
 `Olá ${nome}!
@@ -180,6 +196,7 @@ Se expirar, me avise que eu gero outro.`
   const url = `https://web.whatsapp.com/send?text=${encodeURIComponent(msg)}`
   window.open(url, '_blank')
 }
+
 
 function formatDate(v) {
   if (!v) return '—'
