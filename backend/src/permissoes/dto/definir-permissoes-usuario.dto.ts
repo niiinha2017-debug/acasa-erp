@@ -1,7 +1,7 @@
-import { IsArray, IsString } from 'class-validator'
+import { IsArray, IsInt } from 'class-validator'
 
 export class DefinirPermissoesUsuarioDto {
   @IsArray()
-  @IsString({ each: true })
-  permissoes: string[]
+  @IsInt({ each: true })
+  permissoes: number[]
 }

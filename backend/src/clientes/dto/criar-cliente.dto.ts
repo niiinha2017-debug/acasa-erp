@@ -1,4 +1,11 @@
-import { IsBoolean, IsEmail, IsOptional, IsString, IsDateString, MaxLength } from 'class-validator'
+import {
+  IsBoolean,
+  IsEmail,
+  IsOptional,
+  IsString,
+  IsDateString,
+  MaxLength,
+} from 'class-validator'
 
 export class CriarClienteDto {
   @IsOptional()
@@ -13,7 +20,12 @@ export class CriarClienteDto {
   @MaxLength(255)
   razao_social?: string
 
-  // Data ISO: "2026-01-05T00:00:00.000Z" ou "2026-01-05"
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  nome_fantasia?: string
+
+  // ISO date
   @IsDateString()
   data_nascimento!: string
 
@@ -36,7 +48,11 @@ export class CriarClienteDto {
   @IsOptional() @IsString() cidade?: string
   @IsOptional() @IsString() estado?: string
 
-  // checkboxes (preferências)
+  // ✅ status vem das constantes
+  @IsString()
+  status!: string
+
+  // preferências
   @IsOptional()
   @IsBoolean()
   enviar_aniversario_email?: boolean

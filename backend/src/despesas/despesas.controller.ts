@@ -3,10 +3,12 @@ import {
   Controller,
   Delete,
   Get,
-  Param,
-  Put,
   HttpCode,
   HttpStatus,
+  Param,
+  Post,
+  Put,
+  Query,
 } from '@nestjs/common'
 import { DespesasService } from './despesas.service'
 import { CreateDespesaDto } from './dto/create-despesa.dto'
@@ -16,16 +18,17 @@ import { UpdateDespesaDto } from './dto/update-despesa.dto'
 export class DespesasController {
   constructor(private readonly service: DespesasService) {}
 
-  // ✅ CRIAR (PADRÃO DO PROJETO: PUT, não POST)
-  // Cria 1 ou N parcelas (recorrência)
-  @Put()
-  create(@Body() dto: CreateDespesaDto) {
-    return this.service.create(dto) // retorna despesas[]
-  }
-
   @Get()
-  findAll() {
-    return this.service.findAll()
+  findAll(
+    @Query('status') status?: string,
+    @Query('unidade') unidade?: string,
+    @Query('tipo_movimento') tipo_movimento?: string,
+  ) {
+    return this.service.findAll({
+      status: status?.trim() || undefined,
+      unidade: unidade?.trim() || undefined,
+      tipo_movimento: tipo_movimento?.trim() || undefined,
+    })
   }
 
   @Get(':id')
@@ -34,35 +37,35 @@ export class DespesasController {
     return this.service.findOne(cleanId)
   }
 
-  // ✅ ATUALIZAR UMA PARCELA (PUT)
+  @Post()
+  create(@Body() dto: CreateDespesaDto) {
+    return this.service.create(dto)
+  }
+
+  @Put('recorrencia/:recorrenciaId')
+  updateRecorrencia(
+    @Param('recorrenciaId') recorrenciaId: string,
+    @Body() dto: UpdateDespesaDto,
+  ) {
+    return this.service.updateRecorrencia(recorrenciaId, dto)
+  }
+
   @Put(':id')
   update(@Param('id') id: string, @Body() dto: UpdateDespesaDto) {
     const cleanId = Number(id.replace(/\D/g, ''))
     return this.service.update(cleanId, dto)
   }
 
-  // ✅ ATUALIZAR O GRUPO (RECORRÊNCIA)
-  // Atualiza todos os lançamentos com o mesmo recorrencia_id
-  @Put('recorrencia/:recorrenciaId')
-  updateRecorrencia(
-    @Param('recorrenciaId') recorrenciaId: string,
-    @Body() dto: UpdateDespesaDto,
-  ) {
-    return this.service.updateRecorrencia(recorrenciaId, dto) // retorna count
+  @Delete('recorrencia/:recorrenciaId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  removeRecorrencia(@Param('recorrenciaId') recorrenciaId: string) {
+    return this.service.removeRecorrencia(recorrenciaId)
   }
 
-  // ✅ EXCLUIR UMA PARCELA
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id') id: string) {
     const cleanId = Number(id.replace(/\D/g, ''))
     return this.service.remove(cleanId)
-  }
-
-  // ✅ EXCLUIR O GRUPO (RECORRÊNCIA)
-  @Delete('recorrencia/:recorrenciaId')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  removeRecorrencia(@Param('recorrenciaId') recorrenciaId: string) {
-    return this.service.removeRecorrencia(recorrenciaId) // retorna count
   }
 }

@@ -1,829 +1,584 @@
 <template>
   <Card :shadow="true">
-    <header class="flex items-start justify-between gap-4 p-6 border-b border-gray-100">
-      <div>
-        <h2 class="text-xl font-black tracking-tight text-gray-900 uppercase">
-          {{ isEdit ? `Editar Compra #${compraId}` : 'Nova Compra' }}
-        </h2>
+<PageHeader
+  :title="isEdit ? `Compra #${compraId}` : 'Nova Compra'"
+  subtitle="Registre uma nova entrada de materiais."
+  icon="pi pi-shopping-cart"
+  :showBack="true" 
+/>
+    <div class="p-6 relative">
+      <div
+        v-if="loading"
+        class="absolute inset-0 z-20 flex items-center justify-center bg-[var(--bg-page)]/70 backdrop-blur-md rounded-[inherit]"
+      >
+        <Loading />
       </div>
 
-      <Button variant="secondary" size="sm" type="button" @click="router.back()">
-        Voltar
-      </Button>
-    </header>
-
-    <div class="p-6">
-      <template v-if="!loading">
-        <form class="grid grid-cols-12 gap-x-5 gap-y-6" @submit.prevent>
-          
-          <div class="col-span-12">
-            <label class="block text-[10px] font-extrabold uppercase tracking-[0.18em] text-gray-400 mb-2">
-              Tipo de Compra
-            </label>
-            <div class="flex items-center gap-4">
-              <span class="text-sm font-black text-gray-900 uppercase">
-                {{ tipoCompra === 'INSUMOS' ? 'INSUMOS (Marcenaria)' : 'CLIENTE x AMBIENTES (Venda)' }}
-              </span>
-              <CustomCheckbox
-                label="Mudar para Cliente x Ambientes"
-                :model-value="tipoCompra === 'CLIENTE_AMBIENTE'"
-                @update:model-value="(v) => (tipoCompra = v ? 'CLIENTE_AMBIENTE' : 'INSUMOS')"
-              />
-            </div>
+      <form v-else class="space-y-8" @submit.prevent>
+        <section class="space-y-4">
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-black uppercase tracking-[0.2em] text-brand-primary">
+              01. Origem e Fornecedor
+            </span>
+            <div class="flex-1 h-px bg-[var(--border-ui)]"></div>
           </div>
 
-   <div class="col-span-12 md:col-span-8">
-  <SearchInput
-    v-model="fornecedorSelecionado"
-    label="Fornecedor *"
-    :options="fornecedorOptions"
-    required
-    :colSpan="12"
-  />
-</div>
+          <div class="grid grid-cols-12 gap-4 items-end">
+            <div class="col-span-12 md:col-span-4">
+              <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">
+                Origem do Gasto
+              </label>
 
-<div class="col-span-12 md:col-span-4">
-  <Input
-    v-model="form.data_compra"
-    label="Data da Compra *"
-    type="date"
-    required
-  />
-</div>
-          <div v-if="tipoCompra === 'CLIENTE_AMBIENTE'" class="col-span-12">
+              <div class="flex gap-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="md"
+                  class="flex-1 justify-center transition-all"
+                  :class="tipoCompra === 'INSUMOS' ? 'ring-2 ring-brand-primary bg-brand-primary/10' : ''"
+                  @click="tipoCompra = 'INSUMOS'"
+                >
+                  <span class="text-xs font-black uppercase">Estoque</span>
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="md"
+                  class="flex-1 justify-center transition-all"
+                  :class="tipoCompra === 'CLIENTE_AMBIENTE' ? 'ring-2 ring-brand-primary bg-brand-primary/10' : ''"
+                  @click="tipoCompra = 'CLIENTE_AMBIENTE'"
+                >
+                  <span class="text-xs font-black uppercase">Venda</span>
+                </Button>
+              </div>
+            </div>
+
             <SearchInput
-              v-model="vendaSelecionada"
-              label="Venda / Cliente *"
-              :options="vendaOptions"
+              class="col-span-12 md:col-span-5"
+              v-model="fornecedorSelecionado"
+              mode="select"
+              label="Fornecedor *"
+              :options="fornecedorOptions"
               required
-              :colSpan="12"
+              placeholder="Selecione o fornecedor..."
+            />
+
+            <Input
+              class="col-span-12 md:col-span-3"
+              v-model="form.data_compra"
+              label="Data da Compra *"
+              type="date"
+              required
             />
           </div>
+        </section>
 
-          <div class="col-span-12 h-px bg-gray-100 my-2"></div>
+        <div class="h-px bg-[var(--border-ui)]"></div>
 
-          <div class="col-span-12 flex items-end justify-between">
-            <h3 class="text-[10px] font-extrabold uppercase tracking-[0.18em] text-gray-400">
-              Registrar Item
-            </h3>
-<Button
-  variant="secondary"
-  size="sm"
-  type="button"
-  :disabled="!fornecedorSelecionado"
-  @click="abrirModalProduto()"
->
-  + Novo Produto
-</Button>
-
-
+        <section v-if="tipoCompra === 'CLIENTE_AMBIENTE'" class="space-y-4">
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-black uppercase tracking-[0.2em] text-brand-primary">
+              02. Cliente x Ambiente
+            </span>
+            <div class="flex-1 h-px bg-[var(--border-ui)]"></div>
           </div>
 
-          <div class="col-span-12 md:col-span-6">
-<SearchInput
-  :key="itemNovoKey"
-  v-model="itemNovo.produto_id"
-  label="Produto *"
-  :options="produtoOptions"
-  required
-  :colSpan="12"
-  @update:modelValue="(v) => onSelecionarProdutoNovo(v)"
-/>
+          <div class="grid grid-cols-12 gap-4 items-end">
+            <SearchInput
+              class="col-span-12 md:col-span-8"
+              v-model="vendaSelecionada"
+              mode="select"
+              label="Venda / Cliente Relacionado *"
+              :options="vendaOptions"
+              required
+              placeholder="Selecione a venda para rateio..."
+            />
 
-          </div>
-
-          <div class="col-span-12 md:col-span-2">
-            <Input v-model="itemNovo.unidade" label="Unidade" readonly />
-          </div>
-
-          <div class="col-span-12 md:col-span-2">
-            <Input v-model="itemNovo.quantidade" label="QTD *" required />
-          </div>
-
-          <div class="col-span-12 md:col-span-2">
-            <Input v-model="itemNovo.valorUnitarioMask" label="Valor Unit. *" required />
-          </div>
-
-          <div class="col-span-12 md:col-span-4">
-            <Input :model-value="itemNovo.valorTotalMask" label="Subtotal Item" readonly />
-          </div>
-
-          <div class="col-span-12 md:col-span-8 flex items-end justify-end gap-3 pb-1">
-            <Button variant="secondary" type="button" @click="limparItemNovo()">
-              Limpar
-            </Button>
-            <Button variant="primary" type="button" @click="registrarItemNovo()">
-              Adicionar Item
-            </Button>
-          </div>
-
-          <div class="col-span-12 mt-4">
-            <label class="block text-[10px] font-extrabold uppercase tracking-[0.18em] text-gray-400 mb-3">
-              Itens Adicionados
-            </label>
-            <div class="border border-gray-100 rounded-2xl overflow-hidden">
-<Table
-  :columns="columnsItens"
-  :rows="itens"
-  :loading="false"
-  empty-text="Nenhum item adicionado."
->
-  <template #cell-nome_produto="{ row }">
-    <div class="flex flex-col">
-      <span class="font-bold text-gray-900 uppercase">{{ row.nome_produto }}</span>
-      <div class="flex gap-2 mt-1">
-        <span v-if="row.marca" class="text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-500 uppercase">
-          {{ row.marca }}
-        </span>
-        <span v-if="row.cor" class="text-[10px] bg-brand-primary/10 px-2 py-0.5 rounded text-brand-primary uppercase">
-          {{ row.cor }}
-        </span>
-      </div>
-    </div>
-  </template>
-
-  <template #cell-valor_unitario="{ value }">
-    R$ {{ Number(value).toFixed(2) }}
-  </template>
-
-  <template #cell-valor_total="{ value }">
-    <span class="text-brand-primary font-black">
-      R$ {{ Number(value).toFixed(2) }}
-    </span>
-  </template>
-</Table>
-              <div class="flex items-center justify-end p-4 border-t border-gray-100 bg-gray-50">
-                <span class="text-sm font-black text-gray-900 uppercase">
-                  Total: R$ {{ totalCalculado.toFixed(2) }}
-                </span>
+            <div class="col-span-12 md:col-span-4">
+              <div class="rounded-2xl border border-brand-primary/20 bg-brand-primary/5 p-4">
+                <p class="text-[9px] font-black uppercase tracking-widest text-brand-primary">Informativo</p>
+                <p class="mt-1 text-xs font-semibold text-[var(--text-main)] opacity-70 leading-relaxed">
+                  O valor desta compra será debitado diretamente no lucro da venda selecionada.
+                </p>
               </div>
             </div>
           </div>
-        </form>
-      </template>
+        </section>
 
-      <div v-else class="flex flex-col items-center justify-center py-20 gap-3">
-        <i class="pi pi-spin pi-spinner text-2xl text-brand-primary"></i>
-        <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Carregando...</span>
-      </div>
-    </div>
+        <div v-if="tipoCompra === 'CLIENTE_AMBIENTE'" class="h-px bg-[var(--border-ui)]"></div>
 
-    <footer class="flex items-center justify-between p-6 border-t border-gray-100 bg-white">
-      <Button v-if="isEdit" variant="danger" type="button" @click="excluir">
-        Excluir
-      </Button>
-      <div v-else></div>
-      
-      <Button variant="primary" :loading="salvando" type="button" @click="salvar">
-        {{ isEdit ? 'Salvar Alterações' : 'Finalizar Compra' }}
-      </Button>
-    </footer>
-  </Card>
+        <section class="space-y-4">
+          <div class="flex flex-wrap items-end justify-between gap-3">
+            <div class="flex items-center gap-2 flex-1">
+              <span class="text-[10px] font-black uppercase tracking-[0.2em] text-brand-primary">
+                03. Itens da Nota
+              </span>
+              <div class="flex-1 h-px bg-[var(--border-ui)]"></div>
+            </div>
 
-  <!-- MODAL: NOVO PRODUTO -->
-  <Transition name="fade">
-    <div
-      v-if="modalProduto.aberto"
-      class="fixed inset-0 z-modal flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm"
-      @click.self="fecharModalProduto()"
-    >
-      <div class="w-full max-w-3xl bg-white rounded-3xl border border-gray-100 shadow-2xl overflow-hidden">
-        <header class="flex items-start justify-between gap-4 px-8 py-6 border-b border-gray-50 bg-gray-50/30">
-          <div>
-            <h3 class="text-xl font-black text-gray-900 tracking-tighter uppercase">Novo Produto</h3>
-            <p class="text-sm font-semibold text-gray-400 mt-1">Cadastre um novo produto abaixo.</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              type="button"
+              class="text-[10px] font-bold uppercase tracking-wider"
+              :disabled="!fornecedorSelecionado"
+              @click="abrirModalProduto"
+            >
+              <i class="pi pi-plus mr-2"></i>
+              Produto não cadastrado?
+            </Button>
           </div>
 
-          <button
-            class="w-8 h-8 flex items-center justify-center rounded-xl bg-white border border-gray-100 text-gray-400 hover:text-red-600 hover:border-red-200 transition-all shadow-sm"
-            @click="fecharModalProduto()"
-          >
-            <i class="pi pi-times text-xs"></i>
-          </button>
-        </header>
+          <div class="grid grid-cols-12 gap-4 p-5 rounded-3xl border border-[var(--border-ui)] bg-[var(--bg-page)]/50 items-end shadow-inner">
+            <SearchInput
+              class="col-span-12 md:col-span-5"
+              :key="itemNovoKey"
+              v-model="itemNovo.produto_id"
+              mode="select"
+              label="Buscar Produto *"
+              :options="produtoOptions"
+              @update:modelValue="onSelecionarProdutoNovo"
+              placeholder="Digite e selecione..."
+              required
+            />
 
-        <div class="p-8">
-          <form class="grid grid-cols-12 gap-5" @submit.prevent="salvarProduto">
+            <Input
+              class="col-span-12 md:col-span-2"
+              v-model="itemNovo.quantidade"
+              label="Quantidade *"
+              type="number"
+              required
+            />
+<Input
+  class="col-span-12 md:col-span-3"
+  v-model="itemNovo.valorUnitarioMask"
+  label="Valor Unitário *"
+  placeholder="0,00"
+  required
+  @input="itemNovo.valorUnitarioMask = maskMoneyBR($event.target.value)"
+/>
+
+<Input
+  class="col-span-12 md:col-span-2"
+  :modelValue="subtotalNovoMask"
+  label="Subtotal"
+  readonly
+/>
+
             <div class="col-span-12">
-              <SearchInput
-                v-model="modalProduto.form.fornecedor_id"
-                label="Fornecedor *"
-                :options="fornecedorOptions"
-                required
-                :colSpan="12"
-              />
-            </div>
-
-            <div class="col-span-12 md:col-span-8">
-              <Input v-model="modalProduto.form.nome_produto" label="Nome do Produto *" required />
-            </div>
-
-            <div class="col-span-12 md:col-span-4 flex items-end pb-1.5">
-              <CustomCheckbox
-                label="Ativo"
-                :model-value="modalProduto.form.status === 'ATIVO'"
-                @update:model-value="(v) => (modalProduto.form.status = v ? 'ATIVO' : 'INATIVO')"
-              />
-            </div>
-
-            <div class="col-span-12 md:col-span-4">
-              <Input v-model="modalProduto.form.marca" label="Marca" />
-            </div>
-            <div class="col-span-12 md:col-span-4">
-              <Input v-model="modalProduto.form.cor" label="Cor" />
-            </div>
-            <div class="col-span-12 md:col-span-4">
-              <Input v-model="modalProduto.form.medida" label="Medida" />
-            </div>
-
-            <div class="col-span-12 md:col-span-4">
-              <SearchInput
-                v-model="modalProduto.form.unidade"
-                label="Unidade *"
-                :options="unidadesOptions"
-                required
-                :colSpan="12"
-              />
-            </div>
-
-            <div class="col-span-12 md:col-span-4">
-              <Input v-model="modalProduto.quantidadeMask" label="Quantidade *" required />
-            </div>
-
-            <div class="col-span-12 md:col-span-4">
-              <Input v-model="modalProduto.valorUnitarioInput" label="Valor Unitário *" required />
-            </div>
-
-            <div class="col-span-12 md:col-span-4">
-              <Input :model-value="modalProduto.valorTotalMask" label="Valor Total" readonly />
-            </div>
-
-            <div class="col-span-12 flex justify-end gap-3 pt-2 border-t border-gray-50 mt-2">
-              <Button variant="outline" type="button" @click="fecharModalProduto()">
-                Cancelar
-              </Button>
-              <Button variant="primary" type="submit" :loading="modalProduto.salvando">
-                <i class="pi pi-check mr-2 text-xs"></i>
-                Salvar Produto
+              <Button variant="primary" size="lg" class="w-full shadow-lg shadow-brand-primary/10" type="button" @click="registrarItemNovo">
+                <i class="pi pi-plus-circle mr-2 text-xs"></i>
+                Adicionar Item à Nota
               </Button>
             </div>
-          </form>
-        </div>
-      </div>
+          </div>
+
+          <div v-if="itens.length > 0" class="rounded-3xl border border-[var(--border-ui)] overflow-hidden bg-[var(--bg-card)] shadow-sm">
+            <Table :columns="columnsItens" :rows="itens" boxed>
+              <template #cell-nome_produto="{ row }">
+                <div class="flex flex-col py-2">
+                  <span class="font-black text-[var(--text-main)] uppercase text-xs">{{ row.nome_produto }}</span>
+                  <div class="flex gap-1.5 mt-1.5">
+                    <span v-if="row.marca" class="text-[8px] bg-slate-800 text-white px-2 py-0.5 rounded-full uppercase font-black">
+                      {{ row.marca }}
+                    </span>
+                    <span v-if="row.unidade" class="text-[8px] bg-[var(--bg-page)] text-slate-500 px-2 py-0.5 rounded-full uppercase font-black border border-[var(--border-ui)]">
+                      {{ row.unidade }}
+                    </span>
+                  </div>
+                </div>
+              </template>
+
+              <template #cell-valor_unitario="{ value }">
+                <span class="text-xs font-bold text-slate-500">
+                  R$ {{ Number(value).toLocaleString('pt-br', { minimumFractionDigits: 2 }) }}
+                </span>
+              </template>
+
+              <template #cell-valor_total="{ value }">
+                <span class="text-sm font-black text-[var(--text-main)]">
+                  R$ {{ Number(value).toLocaleString('pt-br', { minimumFractionDigits: 2 }) }}
+                </span>
+              </template>
+
+              <template #cell-acoes="{ row }">
+                <Button type="button" variant="ghost" size="sm" class="text-danger hover:bg-danger/10" @click="removerItemPorKey(row._key)">
+                  <i class="pi pi-trash"></i>
+                </Button>
+              </template>
+            </Table>
+
+            <div class="flex items-center justify-between p-5 bg-slate-950 text-white">
+              <div class="flex items-center gap-3">
+                <div class="p-2 bg-white/5 rounded-lg text-brand-primary border border-white/10">
+                  <i class="pi pi-calculator"></i>
+                </div>
+                <span class="text-[10px] uppercase font-black tracking-widest text-slate-400">Resumo da Nota</span>
+              </div>
+
+              <div class="text-right">
+                <p class="text-[10px] uppercase font-bold text-brand-primary/80">Valor Geral</p>
+                <p class="text-2xl font-black tabular-nums">
+                  R$ {{ totalCalculado.toLocaleString('pt-br', { minimumFractionDigits: 2 }) }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </form>
     </div>
-  </Transition>
+
+    <FormActions class="px-6 pb-6">
+      <template #left>
+        <Button variant="secondary" type="button" @click="router.back()">Descartar</Button>
+      </template>
+
+      <template #right>
+        <Button v-if="isEdit" variant="ghost" type="button" class="text-danger mr-2" :loading="excluindo" @click="excluirCompra">
+          Excluir Registro
+        </Button>
+
+        <Button variant="primary" type="button" :loading="salvando" @click="salvar">
+          {{ isEdit ? 'Atualizar Compra' : 'Confirmar e Salvar' }}
+        </Button>
+      </template>
+    </FormActions>
+
+    <QuickCreateProduto
+      v-if="modalProdutoOpen"
+      :open="modalProdutoOpen"
+      :textoInicial="textoInicialProduto"
+      :fornecedorId="fornecedorSelecionado"
+      @close="modalProdutoOpen = false"
+      @created="onProdutoCriado"
+    />
+  </Card>
 </template>
 
-
 <script setup>
-import { ref, computed, reactive, watch, onMounted } from 'vue'
+import { reactive, ref, watch, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import api from '@/services/api'
+import { CompraService, FornecedorService, VendaService, ProdutosService } from '@/services/index'
+import QuickCreateProduto from '@/components/modals/QuickCreateProduto.vue'
+import { notify } from '@/services/notify'
+import { confirm } from '@/services/confirm'
 import { maskMoneyBR } from '@/utils/masks'
-import { useConstantes } from '@/composables/useConstantes'
+import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
 
-import Button from '@/components/ui/Button.vue'
-import Input from '@/components/ui/Input.vue'
-import SearchInput from '@/components/ui/SearchInput.vue'
-import CustomCheckbox from '@/components/ui/CustomCheckbox.vue'
-import Card from '@/components/ui/Card.vue'
-import Table from '@/components/ui/Table.vue'
+// ✅ constante direta (sem composable)
+import { UNIDADES } from '@/constantes/unidades'
 
 const route = useRoute()
 const router = useRouter()
-const itemNovoKey = ref(0)
-const statusCompra = ref('EM_ABERTO')
-
-
-const rawId = computed(() => String(route.params.id || 'novo'))
-const isEdit = computed(() => rawId.value !== 'novo')
-
-const compraId = computed(() => {
-  if (!isEdit.value) return null
-  const n = Number(rawId.value)
-  return Number.isFinite(n) ? n : null
-})
 
 const loading = ref(false)
 const salvando = ref(false)
 const excluindo = ref(false)
+const itemNovoKey = ref(0)
+
+const isEdit = computed(() => route.params.id && route.params.id !== 'novo')
+const compraId = computed(() => (isEdit.value ? Number(route.params.id) : null))
 
 const tipoCompra = ref('INSUMOS')
+const fornecedorSelecionado = ref(null)
+const vendaSelecionada = ref(null)
+
+const modalProdutoOpen = ref(false)
+const textoInicialProduto = ref('')
 
 const form = ref({
-  venda_id: null,
-  data_compra: '', // YYYY-MM-DD
+  data_compra: new Date().toISOString().split('T')[0],
 })
 
-/* =========================
-   FORNECEDOR / VENDAS
-========================= */
-const fornecedor = ref([])
-const fornecedorSelecionado = ref(null)
+const itens = ref([])
+const itensRemoverIds = ref([]) // ✅ para PUT (itens_remover_ids)
+
+// options
+const listaFornecedores = ref([])
+const listaVendas = ref([])
+const produtoMap = ref(new Map())
+const produtoOptions = ref([])
 
 const fornecedorOptions = computed(() =>
-  fornecedor.value.map((f) => ({
+  listaFornecedores.value.map((f) => ({
     value: f.id,
-    label: f.razao_social || f.nome_fantasia || `Fornecedor #${f.id}`,
+    label: f.razao_social || f.nome_fantasia,
   })),
 )
 
-async function carregarFornecedor() {
-  const { data } = await api.get('/fornecedor')
-  fornecedor.value = Array.isArray(data) ? data : []
-}
-
-const vendaSelecionada = ref(null)
-const vendaOptions = ref([])
-
-async function carregarVendas() {
-  const { data } = await api.get('/vendas')
-  const arr = Array.isArray(data) ? data : []
-
-  vendaOptions.value = arr.map((v) => ({
+const vendaOptions = computed(() =>
+  listaVendas.value.map((v) => ({
     value: v.id,
-    label: v.nome || v.cliente_nome || v.cliente?.nome || `Venda #${v.id}`,
-  }))
-}
-
-/* =========================
-   UNIDADES (CONST)
-========================= */
-const uni = useConstantes()
-
-const unidadesOptions = computed(() => {
-  const lista = Array.isArray(uni.opcoes.value) ? uni.opcoes.value : []
-
-  return lista
-    .filter((o) => String(o.value || '').toUpperCase() === 'UNIDADE')
-    .map((o) => ({
-      label: o.label,
-      value: o.label,
-    }))
-    .filter((o) => o.label)
-})
-
-/* =========================
-   ITENS
-========================= */
-const itens = ref([])
-
-// ✅ FIX: itensValidos DEPOIS de itens
-const itensValidos = computed(() => (itens.value || []).filter((i) => i && i.produto_id))
-
-function round2(n) {
-  return Math.round((Number(n) + Number.EPSILON) * 100) / 100
-}
-
-const totalCalculado = computed(() =>
-  round2(itens.value.reduce((acc, it) => acc + Number(it?.valor_total || 0), 0)),
+    label: v.cliente?.nome_completo || `Venda #${v.id}`,
+  })),
 )
 
-// ✅ colunas mínimas (ajuste keys conforme seu Table.vue se precisar)
-const columnsItens = [
-  { key: 'nome_produto', label: 'Produto' }, // Alterado de 'descricao' para 'nome_produto'
-  { key: 'marca', label: 'Marca' },          // ✅ Nova coluna
-  { key: 'cor', label: 'Cor' },              // ✅ Nova coluna
-  { key: 'quantidade', label: 'Qtd' },
-  { key: 'valor_unitario', label: 'V. Unit.' },
-  { key: 'valor_total', label: 'Subtotal' },
-]
+// ✅ unidade direto da constante
+const unidadesOptions = computed(() =>
+  (Array.isArray(UNIDADES) ? UNIDADES : []).map((u) => ({
+    value: u.key,
+    label: u.label,
+  })),
+)
 
-function dateOnlyToIso(dateOnly) {
-  // meio-dia local pra não cair no dia anterior
-  if (!dateOnly) return null
-  const d = new Date(`${dateOnly}T12:00:00`)
-  return Number.isNaN(d.getTime()) ? null : d.toISOString()
-}
-
-function isoToDateOnly(iso) {
-  if (!iso) return ''
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-function addItem() {
-  itens.value.push({
-    id: undefined,
-    produto_id: null,
-    descricao: '',
-    unidade: '',
-    quantidade: 1,
-    valor_unitario: 0,
-    valor_total: 0,
-    _key: `tmp-${Math.random().toString(36).slice(2)}`,
-  })
-}
-
-/* =========================
-   PRODUTOS
-========================= */
-const produtoOptions = ref([])
-const produtoMap = ref(new Map())
-
-async function carregarProdutos() {
-  if (!fornecedorSelecionado.value) {
-    produtoOptions.value = []
-    produtoMap.value = new Map()
-    return
-  }
-
-  const { data } = await api.get('/produtos', {
-    params: { fornecedor_id: fornecedorSelecionado.value },
-  })
-
-  const arr = Array.isArray(data) ? data : []
-
-  produtoOptions.value = arr.map((p) => ({
-    value: p.id,
-    label: montarDescricaoProduto(p),
-  }))
-
-  const map = new Map()
-  arr.forEach((p) => map.set(p.id, p))
-  produtoMap.value = map
-}
-
-
-function montarDescricaoProduto(p) {
-  const fornecedor =
-    p?.fornecedor?.razao_social || p?.fornecedor?.nome_fantasia || ''
-
-  const nome = p?.nome_produto || p?.nome || ''
-  const marca = p?.marca || ''
-  const cor = p?.cor || ''
-
-  const partes = [fornecedor, nome, marca, cor].filter(Boolean)
-  return partes.join(' — ')
-}
-
-
-/* =========================
-   ITEM NOVO (registrar)
-========================= */
 const itemNovo = reactive({
   produto_id: null,
-  nome_produto: '', // ✅ Adicionado
-  marca: '',        // ✅ Adicionado
-  cor: '',          // ✅ Adicionado
-  medida: '',       // ✅ Adicionado
+  nome_produto: '',
+  marca: '',
+  cor: '',
   unidade: '',
-  quantidade: '1',
+  quantidade: 1,
   valorUnitarioMask: '0,00',
   valor_total: 0,
-  valorTotalMask: '0,00',
 })
 
-function limparItemNovo() {
-  itemNovo.produto_id = null
-  itemNovo.descricao = ''
-  itemNovo.unidade = ''
-  itemNovo.quantidade = '1'
-  itemNovo.valorUnitarioMask = '0,00'
-  itemNovo.valor_total = 0
-  itemNovo.valorTotalMask = '0,00'
+const totalCalculado = computed(() => {
+  const total = itens.value.reduce((acc, it) => acc + Number(it.valor_total || 0), 0)
+  return parseFloat(total.toFixed(2))
+})
 
-  itemNovoKey.value += 1 // ✅ força SearchInput resetar texto
+const columnsItens = [
+  { key: 'nome_produto', label: 'Produto' },
+  { key: 'quantidade', label: 'Qtd', align: 'center' },
+  { key: 'valor_unitario', label: 'V. Unit.' },
+  { key: 'valor_total', label: 'Subtotal' },
+  { key: 'acoes', label: '', width: '80px', align: 'right' },
+]
+
+// modal
+const abrirModalProduto = () => {
+  if (!fornecedorSelecionado.value) return notify.warn('Selecione um fornecedor.')
+  modalProdutoOpen.value = true
 }
-
-
-// No seu script setup da página de compra
-function onSelecionarProdutoNovo(produtoId) {
-  const p = produtoMap.value.get(Number(produtoId))
-  if (!p) return
-
-  itemNovo.produto_id = p.id
-  itemNovo.nome_produto = p.nome_produto
-  itemNovo.marca = p.marca || ''
-  itemNovo.cor = p.cor || ''
-  itemNovo.unidade = p.unidade || ''
+const onProdutoCriado = async (novoProduto) => {
+  await carregarProdutosPorFornecedor()
   
-  // ✅ Aqui ele já traz o valor_unitario que o Service atualizou na última compra
-  itemNovo.valorUnitarioMask = maskMoneyBR(Number(p.valor_unitario || 0))
-}
-
-watch(
-  () => [itemNovo.quantidade, itemNovo.valorUnitarioMask],
-  () => {
-    const q = Number(String(itemNovo.quantidade || '').replace(',', '.')) || 0
-    const n = String(itemNovo.valorUnitarioMask || '').replace(/\D/g, '')
-    const vu = n ? Number(n) / 100 : 0
-    const total = round2(q * vu)
-    itemNovo.valor_total = total
-    itemNovo.valorTotalMask = maskMoneyBR(total)
-  },
-  { deep: true },
-)
-watch(fornecedorSelecionado, async () => {
-  // limpa seleção atual do item novo quando trocar fornecedor
-  limparItemNovo()
-  await carregarProdutos()
-})
-
-function registrarItemNovo() {
-  if (!itemNovo.produto_id) return alert('Selecione o produto.')
-  if (!fornecedorSelecionado.value) return alert('Selecione o fornecedor primeiro.')
-
-  const q = Number(String(itemNovo.quantidade || '').replace(',', '.')) || 0
-  if (q <= 0) return alert('Quantidade inválida.')
-
-  const n = String(itemNovo.valorUnitarioMask || '').replace(/\D/g, '')
-  const vu = n ? Number(n) / 100 : 0
-
-  itens.value.push({
-    id: undefined,
-    produto_id: itemNovo.produto_id,
-    // ✅ Enviando dados linha por linha para o relatório
-    nome_produto: itemNovo.nome_produto,
-    marca: itemNovo.marca,
-    cor: itemNovo.cor,
-    medida: itemNovo.medida,
-    
-    unidade: itemNovo.unidade,
-    quantidade: q,
-    valor_unitario: vu,
-    valor_total: round2(q * vu),
-    _key: `tmp-${Math.random().toString(36).slice(2)}`,
-  })
-
-  limparItemNovo()
-}
-
-/* =========================
-   RATEIO (CLIENTE_AMBIENTE)
-========================= */
-const ambientes = ref([])
-const ambientesSelecionados = ref(new Set())
-const rateios = ref([])
-const somaRateio = ref(0)
-
-function recalcularSomaRateio() {
-  somaRateio.value = round2(rateios.value.reduce((a, r) => a + Number(r?.valor_alocado || 0), 0))
-}
-
-function rateioAutomaticoValores(total, nomes) {
-  const base = round2(total / nomes.length)
-  const arr = nomes.map((n) => ({ nome_ambiente: n, valor_alocado: base }))
-  const diff = round2(total - arr.reduce((a, r) => a + r.valor_alocado, 0))
-  if (arr.length) arr[arr.length - 1].valor_alocado += diff
-  return arr
-}
-
-function ratearAutomatico() {
-  const nomes = Array.from(ambientesSelecionados.value)
-  if (!nomes.length) {
-    rateios.value = []
-    recalcularSomaRateio()
-    return
+  // Se o modal emitiu o objeto criado, selecionamos ele na hora
+  if (novoProduto && novoProduto.id) {
+    itemNovo.produto_id = novoProduto.id
+    onSelecionarProdutoNovo(novoProduto.id)
   }
-  rateios.value = rateioAutomaticoValores(totalCalculado.value, nomes)
-  recalcularSomaRateio()
 }
 
-async function carregarAmbientesDaVenda(vendaId) {
-  const { data } = await api.get(`/vendas/${vendaId}`)
-  const itensVenda = Array.isArray(data?.itens) ? data.itens : []
-  ambientes.value = Array.from(new Set(itensVenda.map((i) => i?.nome_ambiente).filter(Boolean)))
+// load
+const carregarDadosIniciais = async () => {
+  loading.value = true
+  try {
+    const [fornRes, vendRes] = await Promise.all([
+      FornecedorService.listar(),
+      VendaService.listar(),
+    ])
+
+    const fornData = fornRes?.data ?? fornRes
+    const vendData = vendRes?.data ?? vendRes
+
+    listaFornecedores.value = Array.isArray(fornData) ? fornData : []
+    listaVendas.value = Array.isArray(vendData) ? vendData : []
+
+    if (isEdit.value) await buscarCompra()
+  } catch (err) {
+    console.error(err)
+    notify.error('Erro ao carregar dados auxiliares.')
+  } finally {
+    loading.value = false
+  }
 }
 
-/* =========================
-   MODAL PRODUTO
-========================= */
-const modalProduto = reactive({
-  aberto: false,
-  salvando: false,
-  targetIdx: null,
-  form: {
-    fornecedor_id: null,
+const buscarCompra = async () => {
+  try {
+    const res = await CompraService.buscar(compraId.value)
+    const data = res?.data ?? res
+
+    tipoCompra.value = data.tipo_compra || 'INSUMOS'
+    fornecedorSelecionado.value = data.fornecedor_id ?? null
+    vendaSelecionada.value = data.venda_id ?? null
+    form.value.data_compra = data.data_compra?.split('T')[0] || form.value.data_compra
+
+    itens.value = (data.itens || []).map((it) => ({
+      ...it,
+      _key: it._key || `db-${it.id}`,
+    }))
+
+    itensRemoverIds.value = []
+  } catch (err) {
+    notify.error('Compra não encontrada.')
+    router.push('/compras')
+  }
+}
+
+const carregarProdutosPorFornecedor = async () => {
+  if (!fornecedorSelecionado.value) return
+  try {
+    const res = await ProdutosService.listar({ fornecedor_id: fornecedorSelecionado.value })
+    const data = res?.data ?? res
+
+    produtoOptions.value = (Array.isArray(data) ? data : []).map((p) => ({
+      value: p.id,
+      label: `${p.nome_produto} (${p.marca || 'S/M'})`,
+    }))
+
+    produtoMap.value = new Map()
+    ;(Array.isArray(data) ? data : []).forEach((p) => produtoMap.value.set(p.id, p))
+  } catch (err) {
+    produtoOptions.value = []
+    produtoMap.value = new Map()
+    notify.error('Erro ao carregar produtos do fornecedor.')
+  }
+}
+
+// ✅ Ao selecionar o produto, "limpamos" os zeros do banco
+const onSelecionarProdutoNovo = (id) => {
+  const p = produtoMap.value.get(id);
+  if (!p) return;
+  
+  itemNovo.nome_produto = p.nome_produto;
+  itemNovo.unidade = p.unidade || '';
+  
+  // Se o banco trouxer 0.001500, isso vira "0,00"
+  // Se trouxer 150.00, vira "150,00"
+  itemNovo.valorUnitarioMask = numeroParaMoeda(Number(p.valor_unitario || 0));
+};
+
+
+
+const resetItemNovo = () => {
+  Object.assign(itemNovo, {
+    produto_id: null,
     nome_produto: '',
     marca: '',
     cor: '',
-    medida: '',
     unidade: '',
-    quantidade: 0,
-    valor_unitario: 0,
+    quantidade: 1,
+    valorUnitarioMask: '0,00',
     valor_total: 0,
-    status: 'ATIVO',
-  },
-  quantidadeMask: '',
-  valorUnitarioInput: '0,00',
-  valorTotalMask: '0,00',
-})
-
-function abrirModalProduto(idx = null) {
-  modalProduto.targetIdx = idx
-  modalProduto.aberto = true
+  })
+  itemNovoKey.value++
 }
 
-function fecharModalProduto() {
-  modalProduto.aberto = false
-  modalProduto.targetIdx = null
+const registrarItemNovo = () => {
+  if (!itemNovo.produto_id) return notify.warn('Selecione um produto.')
+
+  // ✅ Converte "150,00" (string) em 150 (number) de forma segura
+  const vUnit = moedaParaNumero(itemNovo.valorUnitarioMask)
+  const qtd = Number(itemNovo.quantidade)
+
+  if (qtd <= 0) return notify.warn('Informe a quantidade.')
+  if (vUnit <= 0) return notify.warn('Informe o valor unitário.')
+
+  itens.value.push({
+    ...itemNovo,
+    valor_unitario: vUnit,
+    valor_total: parseFloat((vUnit * qtd).toFixed(2)),
+    _key: Date.now(),
+  })
+
+  resetItemNovo()
 }
 
-watch(
-  () => modalProduto.quantidadeMask,
-  (v) => {
-    modalProduto.form.quantidade = Number(String(v || '').replace(/\D/g, '')) || 0
-  },
-)
+const removerItemPorKey = async (key) => {
+  const item = itens.value.find((it) => it._key === key)
 
-watch(
-  () => modalProduto.valorUnitarioInput,
-  (v) => {
-    const n = String(v || '').replace(/\D/g, '')
-    const valor = n ? Number(n) / 100 : 0
-    modalProduto.form.valor_unitario = valor
-    modalProduto.valorUnitarioInput = maskMoneyBR(valor)
-  },
-)
+  const ok = await confirm.show('Remover Item', 'Tem certeza que deseja remover este produto da lista?')
+  if (!ok) return
 
-watch(
-  () => [modalProduto.form.quantidade, modalProduto.form.valor_unitario],
-  () => {
-    const total = Number(modalProduto.form.quantidade || 0) * Number(modalProduto.form.valor_unitario || 0)
-    modalProduto.form.valor_total = total
-    modalProduto.valorTotalMask = maskMoneyBR(total)
-  },
-  { deep: true },
-)
+  // ✅ se veio do banco e está em edição, manda pro backend remover
+  if (isEdit.value && item?.id) itensRemoverIds.value.push(item.id)
 
-async function salvarProduto() {
-  modalProduto.salvando = true
-  try {
-    await api.post('/produtos', modalProduto.form)
-    await carregarProdutos()
-    fecharModalProduto()
-  } finally {
-    modalProduto.salvando = false
-  }
+  itens.value = itens.value.filter((it) => it._key !== key)
+  notify.success('Item removido da lista.')
 }
 
-/* =========================
-   CARREGAR / SALVAR / EXCLUIR
-========================= */
-async function carregarCompra() {
-  if (!isEdit.value || !compraId.value) return
-
-  const { data } = await api.get(`/compras/${compraId.value}`)
-
-  tipoCompra.value = data?.tipo_compra || 'INSUMOS'
-  fornecedorSelecionado.value = data?.fornecedor_id ?? null
-  vendaSelecionada.value = data?.venda_id ?? null
-  form.value.venda_id = data?.venda_id ?? null
-  statusCompra.value = data?.status || 'EM_ABERTO'
-  form.value.data_compra = isoToDateOnly(data?.data_compra)
-
-itens.value = Array.isArray(data?.itens)
-  ? data.itens.filter(Boolean).map((it) => ({
-      id: it.id,
-      produto_id: it.produto_id,
-      // ✅ Mapeando o que vem do banco para o estado da tabela
-      nome_produto: it.nome_produto,
-      marca: it.marca,
-      cor: it.cor,
-      medida: it.medida,
-      
-      unidade: it.unidade,
-      quantidade: Number(it.quantidade),
-      valor_unitario: Number(it.valor_unitario),
-      valor_total: Number(it.valor_total),
-      _key: `db-${it.id}`,
-    }))
-  : []
-
-  rateios.value = Array.isArray(data?.rateios) ? data.rateios.filter(Boolean) : []
-  recalcularSomaRateio()
-}
-
-async function salvar() {
-  if (!fornecedorSelecionado.value) return alert('Selecione o fornecedor.')
-  if (!form.value.data_compra) return alert('Informe a data da compra.')
-
-  if (!itensValidos.value.length) {
-    return alert('Adicione ao menos 1 item.')
-  }
-
-  if (tipoCompra.value === 'CLIENTE_AMBIENTE') {
-    if (!vendaSelecionada.value) return alert('Selecione a venda.')
-
-    if (Math.abs(somaRateio.value - totalCalculado.value) > 0.01) {
-      return alert('A soma do rateio deve ser igual ao total da compra.')
-    }
-  }
+// salvar
+// ✅ 1. Ajuste na função salvar para limpar IDs inexistentes
+const salvar = async () => {
+  if (itens.value.length === 0) return notify.warn('Adicione ao menos um item.')
+  if (!fornecedorSelecionado.value) return notify.warn('Selecione um fornecedor.')
 
   salvando.value = true
+
+  const payload = {
+    tipo_compra: tipoCompra.value,
+    fornecedor_id: fornecedorSelecionado.value,
+    venda_id: tipoCompra.value === 'CLIENTE_AMBIENTE' ? vendaSelecionada.value : null,
+    data_compra: form.value.data_compra,
+    valor_total: totalCalculado.value,
+    itens: itens.value.map((it) => {
+      const item = {
+        produto_id: it.produto_id,
+        quantidade: Number(it.quantidade),
+        unidade: it.unidade,
+        valor_unitario: Number(it.valor_unitario),
+        valor_total: Number(it.valor_total),
+      }
+      // Só inclui o ID se ele vier do banco (edição)
+      if (it.id) item.id = it.id
+      return item
+    }),
+  }
+
+  if (isEdit.value && itensRemoverIds.value.length) {
+    payload.itens_remover_ids = itensRemoverIds.value
+  }
+
   try {
-    const payload = {
-      tipo_compra: tipoCompra.value,
-      fornecedor_id: fornecedorSelecionado.value,
-      venda_id: tipoCompra.value === 'CLIENTE_AMBIENTE' ? vendaSelecionada.value : null,
-      data_compra: dateOnlyToIso(form.value.data_compra),
-      status: statusCompra.value,
-      
-      itens: itensValidos.value,
-      rateios: tipoCompra.value === 'CLIENTE_AMBIENTE' ? rateios.value : [],
-      valor_total: totalCalculado.value,
-    }
-
-    if (isEdit.value) {
-      await api.put(`/compras/${compraId.value}`, payload)
-    } else {
-      await api.post('/compras', payload)
-    }
-
+    await CompraService.salvar(compraId.value, payload)
+    notify.success('Compra salva com sucesso!')
     router.push('/compras')
-  } catch (error) {
-    console.error(error)
-    alert('Erro ao salvar compra. Verifique os dados.')
+  } catch (err) {
+    notify.error(err?.response?.data?.message || 'Erro ao salvar compra.')
   } finally {
     salvando.value = false
   }
 }
 
-async function excluir() {
-  if (!confirm('Deseja excluir esta compra?')) return
+
+const excluirCompra = async () => {
+  const ok = await confirm.show(
+    'Excluir Compra',
+    `Deseja realmente excluir a Compra #${compraId.value}? Esta ação não pode ser desfeita.`,
+  )
+  if (!ok) return
+
   excluindo.value = true
   try {
-    await api.delete(`/compras/${compraId.value}`)
+    await CompraService.remover(compraId.value)
+    notify.success('Compra excluída com sucesso!')
     router.push('/compras')
+  } catch (err) {
+    notify.error('Erro ao excluir a compra.')
   } finally {
     excluindo.value = false
   }
 }
 
-/* =========================
-   WATCHERS
-========================= */
-watch(totalCalculado, () => {
-  if (tipoCompra.value === 'CLIENTE_AMBIENTE' && ambientesSelecionados.value.size > 0) {
-    ratearAutomatico()
-  }
+// watchers
+watch(tipoCompra, (t) => {
+  if (t !== 'CLIENTE_AMBIENTE') vendaSelecionada.value = null
 })
 
-watch(vendaSelecionada, async (v) => {
-  ambientes.value = []
-  ambientesSelecionados.value = new Set()
-  rateios.value = []
-  somaRateio.value = 0
+// ✅ O subtotal agora vai ler os números corretamente
+const subtotalNovoMask = computed(() => {
+  const vUnit = moedaParaNumero(itemNovo.valorUnitarioMask); // Transforma "150,00" em 150
+  const qtd = Number(itemNovo.quantidade || 0);
+  return numeroParaMoeda(vUnit * qtd); // Formata 150 * 1 para "150,00"
+});
 
-  if (tipoCompra.value === 'CLIENTE_AMBIENTE' && v) {
-    form.value.venda_id = v
-    await carregarAmbientesDaVenda(v)
-  }
-})
 
-watch(tipoCompra, async (novo) => {
-  if (novo !== 'CLIENTE_AMBIENTE') {
-    ambientes.value = []
-    ambientesSelecionados.value = new Set()
-    rateios.value = []
-    somaRateio.value = 0
+
+
+watch(fornecedorSelecionado, async (id) => {
+  if (!id) {
+    produtoOptions.value = []
+    produtoMap.value = new Map()
+    resetItemNovo()
     return
   }
-
-  if (vendaSelecionada.value) {
-    await carregarAmbientesDaVenda(vendaSelecionada.value)
-  }
+  resetItemNovo()
+  await carregarProdutosPorFornecedor()
 })
 
-/* =========================
-   MOUNT
-========================= */
-onMounted(async () => {
-  loading.value = true
-  try {
-    await Promise.all([
-      carregarFornecedor(),
-      carregarProdutos(),
-      carregarVendas(),
-      uni.carregarCategoria('MODULO'),
-    ])
-
-    await carregarCompra()
-
-    if (!isEdit.value) {
-      const hoje = new Date()
-      const y = hoje.getFullYear()
-      const m = String(hoje.getMonth() + 1).padStart(2, '0')
-      const d = String(hoje.getDate()).padStart(2, '0')
-      form.value.data_compra = `${y}-${m}-${d}`
-      statusCompra.value = 'EM_ABERTO'
-    }
-
-    if (!itens.value.length) addItem()
-
-    if (tipoCompra.value === 'CLIENTE_AMBIENTE' && vendaSelecionada.value) {
-      await carregarAmbientesDaVenda(vendaSelecionada.value)
-    }
-  } finally {
-    loading.value = false
-  }
-})
+// init
+onMounted(carregarDadosIniciais)
 </script>
-
-

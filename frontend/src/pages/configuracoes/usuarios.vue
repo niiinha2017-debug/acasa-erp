@@ -1,210 +1,154 @@
 <template>
   <template v-if="isAuthenticated && usuarioLogado">
-    <Card>
-      <!-- HEADER -->
-      <header class="flex flex-col md:flex-row justify-between items-center gap-4 p-6 border-b border-gray-100">
-        <div>
-          <h2 class="text-2xl font-black text-gray-900 flex items-center gap-2 tracking-tight">
-            <i class="pi pi-users text-brand-primary"></i>
-            Gestão de Usuários
-          </h2>
-          <p class="text-sm font-semibold text-gray-400 mt-1">
-            Gerencie permissões e acessos da equipe ACASA.
-          </p>
+    <Card :shadow="true" class="!rounded-[2.5rem] overflow-hidden">
+      
+      <header class="flex flex-col md:flex-row justify-between items-center gap-4 p-8 border-b border-[var(--border-ui)] bg-slate-500/5">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-lg">
+            <i class="pi pi-users text-xl"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-black text-[var(--text-main)] tracking-tight uppercase leading-none">
+              Gestão de Equipe
+            </h2>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2">Controle de acessos ACASA</p>
+          </div>
         </div>
 
-        <Button variant="primary" @click="abrirModalCadastro">
-          <i class="pi pi-user-plus mr-2"></i>
-          Novo Usuário
+        <Button variant="primary" class="!rounded-2xl shadow-xl shadow-brand-primary/20" @click="abrirModal()">
+          <i class="pi pi-user-plus mr-2"></i> Novo Usuário
         </Button>
       </header>
 
-      <!-- SEARCH -->
-      <div class="p-4 border-b border-gray-100 bg-gray-50/50">
-        <div class="max-w-md">
-          <SearchInput
-            v-model="filtro"
-            placeholder="Buscar por nome, e-mail ou setor..."
-            :options="optionsParaBusca"
-          />
+      <div class="p-6">
+        <div class="max-w-md mb-6">
+          <Input v-model="filtro" placeholder="BUSCAR POR NOME OU E-MAIL...">
+            <template #prefix><i class="pi pi-search text-[10px] text-slate-400"></i></template>
+          </Input>
         </div>
-      </div>
 
-      <!-- TABLE -->
-      <div class="overflow-x-auto">
-        <Table
-          :columns="columns"
-          :rows="usuariosFiltrados"
-          :loading="loadingTabela"
-          empty-text="Nenhum usuário encontrado."
-        >
-          <template #cell-acesso="{ row }">
-            <div class="flex flex-col py-1">
-              <span class="font-semibold text-gray-700">{{ row.usuario }}</span>
-              <span class="text-[11px] font-semibold text-brand-primary/70">
-                {{ row.email }}
-              </span>
+        <Table :columns="columns" :rows="usuariosFiltrados" :loading="loadingTabela">
+          <template #cell-nome="{ row }">
+            <div class="flex items-center gap-3">
+               <div class="w-9 h-9 rounded-xl bg-brand-primary/10 text-brand-primary flex items-center justify-center text-xs font-black border border-brand-primary/20 shadow-sm">
+                {{ row.nome.charAt(0).toUpperCase() }}
+              </div>
+              <div class="flex flex-col">
+                <span class="font-black text-[var(--text-main)] uppercase text-[11px] tracking-tight">{{ row.nome }}</span>
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{{ row.nivel_acesso || 'Sem Nível' }}</span>
+              </div>
             </div>
           </template>
 
-          <template #cell-setor="{ row }">
-            <select
-              v-model="row.setor"
-              class="text-xs font-semibold bg-white border border-gray-200 rounded-md px-2 py-1
-                     outline-none focus:border-brand-primary transition disabled:opacity-50"
-              @change="alterarSetor(row)"
-              :disabled="row.id === usuarioLogado?.id"
-            >
-              <option value="ADMIN">ADMIN</option>
-              <option value="FINANCEIRO">FINANCEIRO</option>
-              <option value="PRODUCAO">PRODUÇÃO</option>
-              <option value="VENDAS">VENDAS</option>
-            </select>
+          <template #cell-acesso="{ row }">
+            <div class="flex flex-col">
+              <span class="text-[11px] font-bold text-slate-600">@{{ row.usuario }}</span>
+              <span class="text-[10px] text-slate-400 lowercase">{{ row.email }}</span>
+            </div>
           </template>
 
           <template #cell-status="{ row }">
-            <span
-              :class="[
-                'px-3 py-1 rounded-full text-[10px] font-black tracking-wider uppercase border',
-                row.status === 'ATIVO'
-                  ? 'bg-green-50 text-success border-green-200'
-                  : 'bg-red-50 text-danger border-red-200'
-              ]"
+             <button
+              :disabled="row.id === usuarioLogado?.id"
+              @click="toggleStatus(row)"
+              class="px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all"
+              :class="row.status === 'ATIVO' 
+                ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
+                : 'bg-red-500/10 text-red-600 border-red-500/20'"
             >
               {{ row.status }}
-            </span>
+            </button>
           </template>
 
           <template #cell-acoes="{ row }">
-            <div class="flex items-center justify-center gap-1">
-              <Button
-                variant="secondary"
-                size="sm"
-                @click="editarUsuario(row)"
-              >
+            <div class="flex gap-2 justify-end">
+              <button @click="abrirModal(row)" class="p-2.5 rounded-xl bg-slate-100 text-slate-500 hover:bg-brand-primary hover:text-white transition-all shadow-sm">
                 <i class="pi pi-pencil text-xs"></i>
-              </Button>
-
-              <Button
-                v-if="row.status !== 'ATIVO'"
-                variant="success"
-                size="sm"
-                @click="alterarStatus(row, 'ATIVO')"
-              >
-                <i class="pi pi-check-circle text-xs"></i>
-              </Button>
-
-              <Button
-                variant="danger"
-                size="sm"
-                :disabled="row.id === usuarioLogado?.id"
-                @click="confirmarExclusao(row)"
-              >
+              </button>
+              
+              <button v-if="row.id !== usuarioLogado?.id" @click="confirmarExclusao(row)" class="p-2.5 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm">
                 <i class="pi pi-trash text-xs"></i>
-              </Button>
+              </button>
             </div>
           </template>
         </Table>
       </div>
     </Card>
 
-    <!-- MODAL -->
-    <div
-      v-if="exibirModal"
-      class="fixed inset-0 z-modal flex items-center justify-center p-4
-             bg-slate-900/60 backdrop-blur-sm"
-      @click.self="fecharModal"
-    >
-      <div class="w-full max-w-xl bg-white rounded-3xl shadow-xl overflow-hidden">
-        <header class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-          <h3 class="text-lg font-black text-gray-900 uppercase tracking-tight">
-            {{ modoEdicao ? 'Editar Usuário' : 'Novo Registro' }}
-          </h3>
-
-          <button
-            @click="fecharModal"
-            class="text-gray-400 hover:text-danger transition"
-          >
-            <i class="pi pi-times"></i>
-          </button>
-        </header>
-
-        <form class="p-6 space-y-5" @submit.prevent="salvar">
-          <div class="grid grid-cols-12 gap-4">
-            <Input v-model="formUsuario.nome" label="Nome Completo" class="col-span-12" required />
-            <Input v-model="formUsuario.usuario" label="Usuário" class="col-span-5" required />
-            <Input v-model="formUsuario.email" label="E-mail Corporativo" class="col-span-7" required />
-
-            <Input
-              v-model="formUsuario.senha"
-              :label="modoEdicao ? 'Senha (opcional)' : 'Senha de Acesso'"
-              type="password"
-              class="col-span-6"
-              :required="!modoEdicao"
-            />
-
-            <div class="col-span-6">
-              <label class="text-xs font-black uppercase text-gray-500 mb-1 block">
-                Setor
-              </label>
-              <select
-                v-model="formUsuario.setor"
-                class="w-full h-10 px-3 border border-gray-200 rounded-md
-                       text-sm font-semibold focus:border-brand-primary outline-none"
-                required
-              >
-                <option value="ADMIN">ADMINISTRAÇÃO</option>
-                <option value="FINANCEIRO">FINANCEIRO</option>
-                <option value="PRODUCAO">PRODUÇÃO</option>
-                <option value="VENDAS">VENDAS</option>
-              </select>
+    <div v-if="exibirModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-md">
+      <div class="w-full max-w-xl animate-in zoom-in-95 duration-300">
+        <Card class="!overflow-visible shadow-2xl border-[var(--border-ui)] !rounded-[2.5rem]">
+          <header class="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 !rounded-t-[2.5rem]">
+            <div>
+              <h3 class="text-sm font-black text-slate-900 uppercase tracking-[0.2em]">
+                {{ modoEdicao ? 'Atualizar Colaborador' : 'Novo Colaborador' }}
+              </h3>
+              <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Configurações de conta e acesso</p>
             </div>
-          </div>
+            <button @click="fecharModal" class="w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 text-slate-400 hover:bg-red-500 hover:text-white transition-all">
+              <i class="pi pi-times text-xs"></i>
+            </button>
+          </header>
 
-          <footer class="flex justify-end gap-3 pt-4 border-t border-gray-100">
-            <Button variant="secondary" type="button" @click="fecharModal">
-              Cancelar
-            </Button>
+          <form class="p-8 space-y-6" @submit.prevent="salvar">
+            <div class="grid grid-cols-12 gap-5">
+              <Input v-model="formUsuario.nome" label="Nome Completo" class="col-span-12" required />
+              
+              <Input v-model="formUsuario.usuario" label="Usuário (@)" class="col-span-6" required />
+              <Input v-model="formUsuario.email" label="E-mail" class="col-span-6" required />
 
-            <Button variant="primary" type="submit" :loading="loadingSalvar">
-              {{ modoEdicao ? 'Atualizar Dados' : 'Finalizar Cadastro' }}
-            </Button>
-          </footer>
-        </form>
+              <div class="col-span-12">
+                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block ml-1">Nível de Acesso</label>
+                <select 
+                  v-model="formUsuario.nivel_acesso" 
+                  class="w-full h-12 bg-slate-50 border border-slate-200 rounded-2xl px-4 text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-primary transition-all appearance-none"
+                >
+                  <option value="ADMIN">ADMINISTRADOR TOTAL</option>
+                  <option value="GERENTE">GERENTE DE PRODUÇÃO</option>
+                  <option value="VENDEDOR">VENDEDOR / COMERCIAL</option>
+                  <option value="OPERADOR">OPERADOR DE FÁBRICA</option>
+                </select>
+              </div>
+              
+              <Input 
+                v-model="formUsuario.senha" 
+                :label="modoEdicao ? 'Alterar Senha (opcional)' : 'Senha de Acesso'" 
+                type="password" 
+                class="col-span-12" 
+                :required="!modoEdicao" 
+              />
+            </div>
+
+            <footer class="flex justify-end gap-3 pt-6 border-t border-slate-100">
+              <Button variant="ghost" type="button" @click="fecharModal" class="!rounded-xl">Cancelar</Button>
+              <Button variant="primary" type="submit" :loading="loadingSalvar" class="!rounded-xl !px-8">
+                {{ modoEdicao ? 'Atualizar Cadastro' : 'Confirmar Cadastro' }}
+              </Button>
+            </footer>
+          </form>
+        </Card>
       </div>
     </div>
   </template>
 
-  <!-- LOADING -->
-  <template v-else>
-    <Card>
-      <div class="p-10 flex flex-col items-center justify-center gap-3">
-        <i class="pi pi-spin pi-spinner text-brand-primary text-4xl"></i>
-        <p class="text-gray-400 font-medium animate-pulse">
-          Sincronizando acessos ACASA...
-        </p>
-      </div>
-    </Card>
-  </template>
+  <div v-else class="h-96 flex flex-col items-center justify-center gap-4">
+      <i class="pi pi-spin pi-spinner text-4xl text-brand-primary"></i>
+      <span class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Autenticando sessão...</span>
+  </div>
 </template>
-
 
 <script setup>
 import { ref, onMounted, computed, onUnmounted } from 'vue'
-import api from '@/services/api'
 import { useAuth } from '@/services/useauth'
-
-// 1. IMPORTAÇÕES (Garanta que o SearchInput está aqui)
-import Card from '@/components/ui/Card.vue'
-import Button from '@/components/ui/Button.vue'
-import Input from '@/components/ui/Input.vue'
-import Table from '@/components/ui/Table.vue'
-import SearchInput from '@/components/ui/SearchInput.vue'
+import { notify } from '@/services/notify'
+import { confirm } from '@/services/confirm'
+import { UsuariosService } from '@/services/index'
 
 const { usuarioLogado, isAuthenticated, logout } = useAuth()
 
+// --- ESTADOS ---
 const usuarios = ref([])
-const filtro = ref('') // 2. ESTADO DA BUSCA
+const filtro = ref('')
 const exibirModal = ref(false)
 const modoEdicao = ref(false)
 const loadingTabela = ref(false)
@@ -216,125 +160,116 @@ const formUsuario = ref({
   usuario: '',
   email: '',
   senha: '',
-  setor: 'PRODUCAO',
+  status: 'ATIVO',
+  nivel_acesso: 'OPERADOR', // Valor padrão
 })
 
 const columns = [
-  { key: 'nome', label: 'Nome Completo' },
-  { key: 'acesso', label: 'Login / E-mail' },
-  { key: 'setor', label: 'Setor' },
+  { key: 'nome', label: 'Colaborador' },
+  { key: 'acesso', label: 'Login' },
   { key: 'status', label: 'Status' },
   { key: 'acoes', label: 'Ações' },
 ]
 
-// 3. LÓGICA DE FILTRAGEM (O que faz a busca funcionar)
+// --- BUSCA ---
 const usuariosFiltrados = computed(() => {
-  const termo = filtro.value.toLowerCase()
-  if (!termo) return usuarios.value
+  const t = String(filtro.value || '').toLowerCase().trim()
+  if (!t) return usuarios.value
 
-  return usuarios.value.filter(u => 
-    u.nome?.toLowerCase().includes(termo) ||
-    u.usuario?.toLowerCase().includes(termo) ||
-    u.email?.toLowerCase().includes(termo) ||
-    u.setor?.toLowerCase().includes(termo)
+  return usuarios.value.filter((u) =>
+    [u?.nome, u?.usuario, u?.email, u?.nivel_acesso].some((field) => 
+      String(field || '').toLowerCase().includes(t)
+    )
   )
 })
 
-async function carregar() {
-  if (!isAuthenticated.value) return 
+// --- CARREGAR TABELA ---
+const carregar = async () => {
+  if (!isAuthenticated.value) return
   loadingTabela.value = true
   try {
-    const { data } = await api.get('/usuarios')
-    usuarios.value = data || []
+    const { data } = await UsuariosService.listar()
+    usuarios.value = Array.isArray(data) ? data : []
   } catch (err) {
-    if (err.response?.status === 401) logout()
+    if (err?.response?.status === 401) logout()
+    notify.error('Erro ao carregar usuários')
   } finally {
     loadingTabela.value = false
   }
 }
 
-// Funções de apoio (Modal e Ações)
-function abrirModalCadastro() {
-  modoEdicao.value = false
-  formUsuario.value = { id: null, nome: '', usuario: '', email: '', senha: '', setor: 'PRODUCAO' }
-  exibirModal.value = true
-}
-
-function editarUsuario(u) {
-  modoEdicao.value = true
-  formUsuario.value = { ...u, senha: '' }
-  exibirModal.value = true
-}
-
-function handleEsc(e) {
-  if (e.key === 'Escape' && exibirModal.value) {
-    fecharModal()
+// --- MODAL ---
+const abrirModal = (user = null) => {
+  modoEdicao.value = !!user
+  
+  if (user) {
+    formUsuario.value = {
+      id: user.id,
+      nome: user.nome || '',
+      usuario: user.usuario || '',
+      email: user.email || '',
+      senha: '', 
+      status: user.status || 'ATIVO',
+      nivel_acesso: user.nivel_acesso || 'OPERADOR'
+    }
+  } else {
+    formUsuario.value = {
+      id: null,
+      nome: '',
+      usuario: '',
+      email: '',
+      senha: '',
+      status: 'ATIVO',
+      nivel_acesso: 'OPERADOR'
+    }
   }
+  exibirModal.value = true
 }
 
-onMounted(() => {
-  document.addEventListener('keydown', handleEsc)
-})
+const fecharModal = () => { exibirModal.value = false }
 
-onUnmounted(() => {
-  document.removeEventListener('keydown', handleEsc)
-})
-
-
-function fecharModal() { exibirModal.value = false }
-
-async function salvar() {
+// --- SALVAR ---
+const salvar = async () => {
   loadingSalvar.value = true
   try {
-    if (modoEdicao.value) {
-      await api.patch(`/usuarios/${formUsuario.value.id}`, formUsuario.value)
-    } else {
-      await api.post('/auth/cadastro', formUsuario.value)
-    }
-    fecharModal()
+    const payload = { ...formUsuario.value }
+    if (modoEdicao.value && !payload.senha) delete payload.senha
+
+    await UsuariosService.salvar(formUsuario.value.id, payload)
+    notify.success(modoEdicao.value ? 'Usuário atualizado!' : 'Novo colaborador cadastrado!')
+    
+    exibirModal.value = false
     await carregar()
   } catch (err) {
-    alert(err?.response?.data?.message || 'Erro na operação')
+    notify.error(err?.response?.data?.message || 'Erro na operação')
   } finally {
     loadingSalvar.value = false
   }
 }
 
-async function alterarSetor(user) {
+// --- STATUS ---
+const toggleStatus = async (row) => {
+  if (row.id === usuarioLogado.value?.id) return
+  const novo = row.status === 'ATIVO' ? 'INATIVO' : 'ATIVO'
   try {
-    await api.patch(`/usuarios/${user.id}`, { setor: user.setor })
-  } catch (err) { alert('Erro ao atualizar setor') }
-}
-
-async function alterarStatus(user, novoStatus) {
-  try {
-    await api.patch(`/usuarios/${user.id}/status`, { status: novoStatus })
-    user.status = novoStatus
-  } catch (err) { alert('Erro ao alterar status') }
-}
-
-async function confirmarExclusao(user) {
-  if (!confirm(`Excluir ${user.nome}?`)) return
-  try {
-    await api.delete(`/usuarios/${user.id}`)
-    usuarios.value = usuarios.value.filter(u => u.id !== user.id)
-  } catch (err) { alert('Erro ao excluir') }
-}
-
-onMounted(async () => {
-  // Pequena pausa para garantir que o storage foi lido
-  if (!isAuthenticated.value) {
-     // Tenta reidratar se necessário ou espera um ciclo
-     await new Promise(resolve => setTimeout(resolve, 100)); 
+    await UsuariosService.atualizarStatus(row.id, novo)
+    row.status = novo
+    notify.success('Status atualizado')
+  } catch (err) {
+    notify.error('Erro ao atualizar status')
   }
-  
-  if (isAuthenticated.value) {
-    carregar();
-  } else {
-    console.error("Usuário não autenticado no momento do onMounted");
-  }
-});
+}
 
+// --- EXCLUIR ---
+const confirmarExclusao = async (user) => {
+  const ok = await confirm.show('Excluir Usuário', `Deseja remover ${user.nome}?`)
+  if (!ok) return
+  try {
+    await UsuariosService.remover(user.id)
+    usuarios.value = usuarios.value.filter((u) => u.id !== user.id)
+    notify.success('Usuário removido')
+  } catch (err) { notify.error('Erro ao excluir') }
+}
+
+onMounted(carregar)
 </script>
-
-

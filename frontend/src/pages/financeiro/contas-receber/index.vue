@@ -1,339 +1,435 @@
+<!-- src/pages/financeiro/contas-receber/index.vue -->
 <template>
-  <div class="page-container">
-    <div class="card card--shadow">
-      <header class="card-header header-between">
-        <div>
-          <h2 class="card-title">Contas a Receber</h2>
-          <p class="card-subtitle">Relatório de receitas (Cliente + Plano de Corte) com baixa de recebimento.</p>
-        </div>
+  <Card :shadow="true">
+    <PageHeader
+      title="Contas a Receber"
+      subtitle="Receitas previstas e recebidas (cliente ou fornecedor)."
+      icon="pi pi-arrow-up-right"
+      :backTo="null"
+    />
 
-        <div class="header-actions">
-          <Button variant="outline" size="md" label="Voltar" @click="router.back()" />
-          <Button
-            variant="outline"
-            size="md"
-            label="Atualizar"
-            :loading="loading"
-            loadingText="Carregando..."
-            @click="carregar"
-          />
-        </div>
-      </header>
+    <div class="p-6 relative space-y-6">
+      <Loading v-if="loading" />
 
-      <!-- filtros (relatório) -->
-      <div class="card-filter fr-filter">
-        <div class="fr-filter__row">
+      <template v-else>
+        <!-- FILTROS -->
+        <div class="grid grid-cols-12 gap-4">
           <SearchInput
-            v-model="filtroFornecedorId"
-            label="Fornecedor"
-            :options="fornecedoresOptions"
-            placeholder="Selecione..."
-            :colSpan="'col-span-4'"
+            class="col-span-12 md:col-span-7"
+            v-model="filtroTexto"
+            mode="search"
+            label="Buscar"
+            placeholder="Buscar por descrição, origem, status..."
           />
 
           <SearchInput
+            class="col-span-12 md:col-span-5"
             v-model="filtroStatus"
+            mode="select"
             label="Status"
-            :options="STATUS_RECEBER_OPTIONS"
-            placeholder="Todos"
-            :colSpan="'col-span-4'"
+            placeholder="Selecione..."
+            :options="STATUS_OPTIONS"
           />
-
-          <Input v-model="busca" label="Buscar" placeholder="Buscar por origem / descrição / fornecedor..." />
         </div>
-      </div>
 
-      <div class="card-body card-body--flush">
-        <Table :columns="columns" :rows="rowsExibidas" :loading="loading">
-          <template #cell-origem="{ row }">
-            <div class="fr-origem">
-              <strong>{{ origemLabel(row.origem_tipo, row.origem_id) }}</strong>
-              <div class="cell-muted" v-if="row.descricao">{{ row.descricao }}</div>
+        <!-- RESUMO -->
+        <div class="grid grid-cols-12 gap-4">
+          <div class="col-span-12 md:col-span-4 px-4 py-3 rounded-2xl bg-gray-50 border border-gray-100">
+            <div class="text-[9px] font-black uppercase tracking-[0.22em] text-gray-400">Total</div>
+            <div class="text-lg font-black text-gray-900">{{ format.currency(totais.total) }}</div>
+            <div class="text-xs font-bold text-gray-500">{{ contagens.total }} registros</div>
+          </div>
+
+          <div class="col-span-12 md:col-span-4 px-4 py-3 rounded-2xl bg-green-50 border border-green-100">
+            <div class="text-[9px] font-black uppercase tracking-[0.22em] text-green-500">Recebidos</div>
+            <div class="text-lg font-black text-green-700">{{ format.currency(totais.recebido) }}</div>
+            <div class="text-xs font-bold text-green-600">{{ contagens.recebido }} registros</div>
+          </div>
+
+          <div class="col-span-12 md:col-span-4 px-4 py-3 rounded-2xl bg-amber-50 border border-amber-100">
+            <div class="text-[9px] font-black uppercase tracking-[0.22em] text-amber-500">Em aberto</div>
+            <div class="text-lg font-black text-amber-700">{{ format.currency(totais.aberto) }}</div>
+            <div class="text-xs font-bold text-amber-600">{{ contagens.aberto }} registros</div>
+          </div>
+        </div>
+
+        <!-- TABELA -->
+        <Table
+          :columns="columns"
+          :rows="rowsFiltrados"
+          :loading="false"
+          emptyText="Nenhuma conta a receber encontrada."
+          :boxed="true"
+        >
+          <template #cell-partes="{ row }">
+            <div class="font-black text-gray-900">
+              <template v-if="row.cliente_id">Cliente #{{ row.cliente_id }}</template>
+              <template v-else-if="row.fornecedor_id">Fornecedor #{{ row.fornecedor_id }}</template>
+              <template v-else>—</template>
+            </div>
+            <div class="text-xs font-bold text-gray-400">
+              <template v-if="row.descricao">{{ row.descricao }}</template>
+              <template v-else>Sem descrição</template>
             </div>
           </template>
 
-          <template #cell-fornecedor="{ row }">
-            <div>
-              <strong>{{ fornecedorNome(row.fornecedor_id) }}</strong>
-              <div class="cell-muted">Fornecedor ID: {{ row.fornecedor_id }}</div>
+          <template #cell-origem="{ row }">
+            <div class="font-black text-gray-900">{{ row.origem_tipo || '—' }}</div>
+            <div class="text-xs font-bold text-gray-400">
+              <template v-if="row.origem_id">#{{ row.origem_id }}</template>
+              <template v-else>—</template>
             </div>
           </template>
 
           <template #cell-vencimento="{ row }">
-            <span v-if="row.vencimento_em">{{ format.date(row.vencimento_em) }}</span>
-            <span v-else class="cell-muted">—</span>
+            <div class="text-xs font-black text-gray-900">{{ format.date(row.vencimento_em) }}</div>
           </template>
 
-          <template #cell-valores="{ row }">
-            <div class="fr-values">
-              <div><span class="cell-muted">Original:</span> <strong>{{ format.currency(num(row.valor_original)) }}</strong></div>
-              <div><span class="cell-muted">Abatido:</span> {{ format.currency(num(row.valor_compensado)) }}</div>
-              <div><span class="cell-muted">Aberto:</span> <strong>{{ format.currency(saldoReceber(row)) }}</strong></div>
+          <template #cell-valor="{ row }">
+            <div class="font-black text-gray-900 text-right">
+              {{ format.currency(Number(row.valor_original || 0)) }}
+            </div>
+            <div class="text-xs font-bold text-gray-400 text-right">
+              Comp.: {{ format.currency(Number(row.valor_compensado || 0)) }}
             </div>
           </template>
 
           <template #cell-status="{ row }">
-            <span class="fr-status">{{ row.status }}</span>
+            <StatusBadge :value="row.status" />
           </template>
 
           <template #cell-acoes="{ row }">
-            <div class="fr-actions">
+            <div class="flex justify-end gap-2">
               <Button
-                variant="primary"
+                variant="secondary"
                 size="sm"
-                label="Baixar"
-                :disabled="saldoReceber(row) <= 0"
-                @click="abrirModalBaixar(row)"
-              />
+                type="button"
+                :disabled="acaoLoadingId === row.id"
+                @click="abrirReceber(row)"
+              >
+                Receber
+              </Button>
             </div>
           </template>
         </Table>
-      </div>
+      </template>
+
+      <!-- MODAL: RECEBER -->
+      <transition name="fade-slide">
+        <div
+          v-if="receberModal.open"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4"
+          @mousedown.self="fecharReceber"
+        >
+          <div class="absolute inset-0 bg-black/20 backdrop-blur-sm"></div>
+
+          <div class="relative w-full max-w-2xl rounded-3xl bg-white shadow-2xl overflow-hidden">
+            <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/40">
+              <div class="text-xs font-black uppercase tracking-[0.22em] text-gray-400">Receber</div>
+              <div class="text-lg font-black text-gray-900">
+                Conta a Receber #{{ receberModal.id }}
+              </div>
+            </div>
+
+            <div class="p-6 space-y-6">
+              <div class="grid grid-cols-12 gap-4">
+                <div class="col-span-12 md:col-span-6">
+                  <Input :modelValue="receberModal.parteLabel" label="Parte" readonly />
+                </div>
+
+                <div class="col-span-12 md:col-span-6">
+                  <Input :modelValue="receberModal.origemLabel" label="Origem" readonly />
+                </div>
+
+                <div class="col-span-12 md:col-span-6">
+                  <Input :modelValue="format.currency(Number(receberModal.valor_original || 0))" label="Valor" readonly />
+                </div>
+
+                <div class="col-span-12 md:col-span-6">
+                  <Input :modelValue="format.date(receberModal.vencimento_em)" label="Vencimento" readonly />
+                </div>
+              </div>
+
+              <div class="h-px bg-slate-100"></div>
+
+              <div class="grid grid-cols-12 gap-4">
+                <div class="col-span-12 md:col-span-6">
+                  <SearchInput
+                    v-model="receberModal.forma_recebimento_chave"
+                    mode="search"
+                    label="Forma de recebimento (chave)"
+                    placeholder="Ex: PIX, DINHEIRO, CARTAO..."
+                  />
+                </div>
+
+                <div class="col-span-12 md:col-span-6">
+                  <label class="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400 mb-2 block">
+                    Data de recebimento
+                  </label>
+                  <input
+                    type="datetime-local"
+                    class="w-full h-12 px-4 rounded-2xl bg-gray-100 border-none font-bolding text-gray-700 font-bold"
+                    v-model="receberModal.recebido_em_input"
+                  />
+                </div>
+
+                <div class="col-span-12">
+                  <SearchInput
+                    v-model="receberModal.observacao"
+                    mode="search"
+                    label="Observação"
+                    placeholder="Opcional..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/40 flex items-center justify-end gap-3">
+              <Button variant="secondary" type="button" :disabled="receberModal.saving" @click="fecharReceber">
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                type="button"
+                :loading="receberModal.saving"
+                :disabled="!podeConfirmarRecebimento"
+                @click="confirmarRecebimento"
+              >
+                Confirmar
+              </Button>
+            </div>
+          </div>
+        </div>
+      </transition>
     </div>
-
-    <!-- MODAL BAIXA -->
-    <div v-if="modal.aberto" class="fr-modal-backdrop" @click.self="fecharModal">
-      <div class="fr-modal">
-        <div class="fr-modal__header">
-          <div>
-            <h3 class="fr-modal__title">Baixar recebimento</h3>
-            <p class="fr-modal__subtitle">
-              <b>#{{ modal.conta?.id }}</b> — {{ origemLabel(modal.conta?.origem_tipo, modal.conta?.origem_id) }}
-            </p>
-          </div>
-
-          <Button variant="outline" size="sm" label="Fechar" @click="fecharModal" />
-        </div>
-
-        <div class="fr-modal__body">
-          <div class="fr-box">
-            <div class="fr-box__row">
-              <span class="cell-muted">Fornecedor</span>
-              <strong>{{ fornecedorNome(modal.conta?.fornecedor_id) }}</strong>
-            </div>
-
-            <div class="fr-box__row">
-              <span class="cell-muted">Valor em aberto</span>
-              <strong>{{ format.currency(saldoReceber(modal.conta)) }}</strong>
-            </div>
-          </div>
-
-          <div class="form-grid">
-            <div class="col-span-6 form-group">
-              <Input v-model="modal.recebido_em" type="date" label="Data do recebimento" />
-            </div>
-
-            <div class="col-span-6 form-group">
-              <!-- status vem da constante (você define) -->
-              <Input v-model="modal.status" label="Status (constante)" placeholder="Ex: RECEBIDO" />
-            </div>
-
-            <div class="col-span-12 form-group">
-              <Input v-model="modal.observacao" label="Observação" placeholder="Opcional..." />
-            </div>
-          </div>
-        </div>
-
-        <div class="fr-modal__footer footer-between">
-          <span class="cell-muted">Confirma a baixa?</span>
-          <div class="header-actions">
-            <Button variant="outline" size="md" label="Cancelar" @click="fecharModal" />
-            <Button
-              variant="primary"
-              size="md"
-              label="Confirmar"
-              :loading="modal.salvando"
-              loadingText="Salvando..."
-              @click="confirmarBaixa"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div>
+  </Card>
 </template>
 
 <script setup>
 import { ref, computed, reactive, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-
-import api from '@/services/api'
+import { FinanceiroService } from '@/services/index'
 import { format } from '@/utils/format'
 
-import Button from '@/components/ui/Button.vue'
-import Input from '@/components/ui/Input.vue'
-import SearchInput from '@/components/ui/SearchInput.vue'
-import Table from '@/components/ui/Table.vue'
+// ✅ sem importar componentes (já estão no main.js)
 
-const router = useRouter()
+const loading = ref(true)
+const rows = ref([])
 
-const loading = ref(false)
-const busca = ref('')
-
-// filtros
-const filtroFornecedorId = ref(null)
+const filtroTexto = ref('')
 const filtroStatus = ref(null)
 
-// ⚠️ depois você troca para suas CONSTANTES oficiais
-const STATUS_RECEBER_OPTIONS = [
-  { label: 'Todos', value: null },
-  // { label: 'EM ABERTO', value: 'EM_ABERTO' },
-  // { label: 'RECEBIDO', value: 'RECEBIDO' },
+const acaoLoadingId = ref(null)
+
+const STATUS_OPTIONS = [
+  { label: 'EM_ABERTO', value: 'EM_ABERTO' },
+  { label: 'VENCIDO', value: 'VENCIDO' },
+  { label: 'RECEBIDO', value: 'RECEBIDO' },
+  { label: 'CANCELADO', value: 'CANCELADO' },
 ]
 
-const fornecedores = ref([])
-const contas = ref([])
-
+// colunas
 const columns = [
-  { key: 'origem', label: 'Origem' },
-  { key: 'fornecedor', label: 'Fornecedor', width: '260px' },
-  { key: 'vencimento', label: 'Vencimento', width: '140px' },
-  { key: 'valores', label: 'Valores', width: '280px' },
-  { key: 'status', label: 'Status', width: '140px' },
-  { key: 'acoes', label: '', width: '140px' },
+  { key: 'partes', label: 'Parte / Descrição' },
+  { key: 'origem', label: 'Origem', width: '180px' },
+  { key: 'vencimento', label: 'Vencimento', width: '160px' },
+  { key: 'valor', label: 'Valor', width: '200px', align: 'right' },
+  { key: 'status', label: 'Status', width: '160px' },
+  { key: 'acoes', label: 'Ações', width: '160px', align: 'right' },
 ]
 
-function num(v) {
-  const n = Number(v)
-  return Number.isFinite(n) ? n : 0
-}
+// filtros em memória
+const rowsFiltrados = computed(() => {
+  const txt = String(filtroTexto.value || '').trim().toLowerCase()
+  const st = filtroStatus.value ? String(filtroStatus.value).trim() : null
 
-function fornecedorNome(id) {
-  if (!id) return ''
-  const f = fornecedores.value.find((x) => Number(x.id) === Number(id))
-  return f?.razao_social || f?.nome_fantasia || `Fornecedor #${id}`
-}
+  return (rows.value || []).filter((r) => {
+    if (st && String(r.status || '').trim() !== st) return false
+    if (!txt) return true
 
-const fornecedoresOptions = computed(() =>
-  fornecedores.value.map((f) => ({
-    value: f.id,
-    label: f.razao_social || f.nome_fantasia || `Fornecedor #${f.id}`,
-  })),
-)
+    const hay = [
+      r.descricao,
+      r.observacao,
+      r.origem_tipo,
+      r.origem_id,
+      r.status,
+      r.forma_recebimento_chave,
+      r.cliente_id,
+      r.fornecedor_id,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
 
-function saldoReceber(row) {
-  if (!row) return 0
-  const aberto = num(row.valor_original) - num(row.valor_compensado)
-  return Math.max(0, Math.round((aberto + Number.EPSILON) * 100) / 100)
-}
-
-function origemLabel(tipo, id) {
-  const t = String(tipo || '').toUpperCase()
-  if (!t) return 'Sem origem'
-  if (t.includes('PLANO')) return `Plano de Corte #${id || ''}`.trim()
-  if (t.includes('VENDA')) return `Venda #${id || ''}`.trim()
-  // fallback
-  return `${t} ${id ? `#${id}` : ''}`.trim()
-}
-
-const rowsExibidas = computed(() => {
-  let rows = [...(contas.value || [])]
-
-  if (filtroFornecedorId.value) {
-    rows = rows.filter((r) => Number(r.fornecedor_id) === Number(filtroFornecedorId.value))
-  }
-
-  if (filtroStatus.value) {
-    rows = rows.filter((r) => String(r.status || '') === String(filtroStatus.value))
-  }
-
-  const q = String(busca.value || '').toLowerCase().trim()
-  if (q) {
-    rows = rows.filter((r) => {
-      const forn = fornecedorNome(r.fornecedor_id).toLowerCase()
-      const desc = String(r.descricao || '').toLowerCase()
-      const org = `${r.origem_tipo || ''} ${r.origem_id || ''}`.toLowerCase()
-      return forn.includes(q) || desc.includes(q) || org.includes(q)
-    })
-  }
-
-  // ordena por vencimento (sem vencimento vai pro final)
-  rows.sort((a, b) => {
-    const da = a.vencimento_em ? new Date(a.vencimento_em).getTime() : Number.POSITIVE_INFINITY
-    const db = b.vencimento_em ? new Date(b.vencimento_em).getTime() : Number.POSITIVE_INFINITY
-    return da - db
+    return hay.includes(txt)
   })
-
-  return rows
 })
 
-async function carregarFornecedores() {
-  const { data } = await api.get('/fornecedores')
-  fornecedores.value = data || []
-}
+const contagens = computed(() => {
+  const base = rowsFiltrados.value || []
+  const c = { total: base.length, recebido: 0, aberto: 0 }
+  for (const r of base) {
+    const s = String(r.status || '').toUpperCase()
+    if (s === 'RECEBIDO') c.recebido += 1
+    else c.aberto += 1
+  }
+  return c
+})
+
+const totais = computed(() => {
+  const base = rowsFiltrados.value || []
+  const t = { total: 0, recebido: 0, aberto: 0 }
+
+  for (const r of base) {
+    const s = String(r.status || '').toUpperCase()
+    const v = Number(r.valor_original || 0)
+    t.total += v
+    if (s === 'RECEBIDO') t.recebido += v
+    else t.aberto += v
+  }
+  return t
+})
 
 async function carregar() {
   loading.value = true
   try {
-    const params = {}
-    if (filtroFornecedorId.value) params.fornecedor_id = Number(filtroFornecedorId.value)
-    if (filtroStatus.value) params.status = String(filtroStatus.value)
-
-    const { data } = await api.get('/financeiro/contas-receber', { params })
-    contas.value = data || []
+    const { data } = await FinanceiroService.listarReceber({})
+    rows.value = Array.isArray(data) ? data : []
   } finally {
     loading.value = false
   }
 }
 
-/* ===== MODAL BAIXA ===== */
-const modal = reactive({
-  aberto: false,
-  conta: null,
-  recebido_em: new Date().toISOString().slice(0, 10),
-  status: '',
+// =======================
+// MODAL RECEBER
+// =======================
+const receberModal = reactive({
+  open: false,
+  saving: false,
+
+  id: null,
+
+  cliente_id: null,
+  fornecedor_id: null,
+
+  origem_tipo: null,
+  origem_id: null,
+
+  descricao: '',
   observacao: '',
-  salvando: false,
+
+  valor_original: 0,
+  valor_compensado: 0,
+
+  vencimento_em: null,
+
+  forma_recebimento_chave: '',
+  recebido_em_input: '',
 })
 
-function abrirModalBaixar(conta) {
-  modal.aberto = true
-  modal.conta = conta
-  modal.recebido_em = new Date().toISOString().slice(0, 10)
-  modal.status = '' // constante define
-  modal.observacao = ''
+function toInputDateTime(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  return `${y}-${m}-${day}T${hh}:${mm}`
+}
+function inputToISO(v) {
+  if (!v) return null
+  const d = new Date(v)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toISOString()
 }
 
-function fecharModal() {
-  modal.aberto = false
-  modal.conta = null
-  modal.recebido_em = new Date().toISOString().slice(0, 10)
-  modal.status = ''
-  modal.observacao = ''
+const podeConfirmarRecebimento = computed(() => {
+  if (receberModal.saving) return false
+  if (!receberModal.id) return false
+  // data de recebimento pode ser agora se vazio, mas vou exigir preenchido pra não inventar
+  if (!String(receberModal.recebido_em_input || '').trim()) return false
+  // forma_recebimento é opcional no model, então não obrigo
+  return true
+})
+
+function abrirReceber(row) {
+  receberModal.open = true
+  receberModal.saving = false
+
+  receberModal.id = row.id
+
+  receberModal.cliente_id = row.cliente_id ?? null
+  receberModal.fornecedor_id = row.fornecedor_id ?? null
+
+  receberModal.origem_tipo = row.origem_tipo ?? null
+  receberModal.origem_id = row.origem_id ?? null
+
+  receberModal.descricao = row.descricao ?? ''
+  receberModal.observacao = row.observacao ?? ''
+
+  receberModal.valor_original = Number(row.valor_original || 0)
+  receberModal.valor_compensado = Number(row.valor_compensado || 0)
+
+  receberModal.vencimento_em = row.vencimento_em ?? null
+
+  receberModal.forma_recebimento_chave = row.forma_recebimento_chave ?? ''
+  receberModal.recebido_em_input = toInputDateTime(new Date().toISOString())
 }
 
-async function confirmarBaixa() {
-  if (!modal.conta) return
+function fecharReceber() {
+  receberModal.open = false
+}
 
-  // data no meio-dia pra evitar “voltar um dia” por timezone
-  const iso = new Date(`${modal.recebido_em}T12:00:00`).toISOString()
+const parteLabel = computed(() => {
+  if (receberModal.cliente_id) return `Cliente #${receberModal.cliente_id}`
+  if (receberModal.fornecedor_id) return `Fornecedor #${receberModal.fornecedor_id}`
+  return '—'
+})
+const origemLabel = computed(() => {
+  const t = receberModal.origem_tipo ? String(receberModal.origem_tipo) : ''
+  const id = receberModal.origem_id ? `#${receberModal.origem_id}` : '—'
+  return t ? `${t} ${id}` : '—'
+})
 
-  modal.salvando = true
+Object.defineProperty(receberModal, 'parteLabel', { get: () => parteLabel.value })
+Object.defineProperty(receberModal, 'origemLabel', { get: () => origemLabel.value })
+
+async function confirmarRecebimento() {
+  if (!podeConfirmarRecebimento.value) return
+  acaoLoadingId.value = receberModal.id
+  receberModal.saving = true
+
   try {
-    await api.post(`/financeiro/contas-receber/${modal.conta.id}/receber`, {
-      recebido_em: iso,
-      status: modal.status?.trim() ? modal.status.trim() : undefined,
-    })
-
-    // observação (se seu backend aceitar no PATCH, deixo pronto)
-    if (modal.observacao?.trim()) {
-      await api.patch(`/financeiro/contas-receber/${modal.conta.id}`, {
-        observacao: modal.observacao.trim(),
-      })
+    const payload = {
+      status: 'RECEBIDO',
+      recebido_em: inputToISO(receberModal.recebido_em_input),
+      forma_recebimento_chave: receberModal.forma_recebimento_chave
+        ? String(receberModal.forma_recebimento_chave).trim()
+        : null,
+      observacao: receberModal.observacao ? String(receberModal.observacao).trim() : null,
     }
 
-    fecharModal()
+    await FinanceiroService.receber(receberModal.id, payload)
+    fecharReceber()
     await carregar()
-  } catch (e) {
-    alert('Erro ao dar baixa no recebimento.')
   } finally {
-    modal.salvando = false
+    receberModal.saving = false
+    acaoLoadingId.value = null
   }
 }
 
-onMounted(async () => {
-  await carregarFornecedores()
-  await carregar()
-})
+onMounted(carregar)
 </script>
+
+<style scoped>
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.16s ease;
+}
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+</style>

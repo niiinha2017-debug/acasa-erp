@@ -1,6 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import * as bcrypt from 'bcrypt';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
+import { PrismaService } from '../prisma/prisma.service'
+import * as bcrypt from 'bcrypt'
 
 @Injectable()
 export class UsuariosService {
@@ -13,14 +13,12 @@ export class UsuariosService {
         nome: true,
         usuario: true,
         email: true,
-        setor: true,
-        funcao: true,
         status: true,
         criado_em: true,
         atualizado_em: true,
       },
       orderBy: { id: 'asc' },
-    });
+    })
   }
 
   async buscarPorId(id: number) {
@@ -31,28 +29,24 @@ export class UsuariosService {
         nome: true,
         usuario: true,
         email: true,
-        setor: true,
-        funcao: true,
         status: true,
         criado_em: true,
         atualizado_em: true,
       },
-    });
+    })
 
-    if (!registro) throw new NotFoundException('Usuário não encontrado');
-    return registro;
+    if (!registro) throw new NotFoundException('Usuário não encontrado')
+    return registro
   }
 
   async criar(data: {
-    nome: string;
-    usuario: string;
-    email: string;
-    setor: string;
-    funcao: string;
-    senha: string;
-    status: string;
+    nome: string
+    usuario: string
+    email: string
+    senha: string
+    status: string
   }) {
-    const senhaHash = await bcrypt.hash(data.senha, 10);
+    const senhaHash = await bcrypt.hash(data.senha, 10)
 
     try {
       const criado = await this.prisma.usuarios.create({
@@ -60,8 +54,6 @@ export class UsuariosService {
           nome: data.nome,
           usuario: data.usuario,
           email: data.email,
-          setor: data.setor,
-          funcao: data.funcao,
           senha: senhaHash,
           status: data.status,
         },
@@ -70,37 +62,35 @@ export class UsuariosService {
           nome: true,
           usuario: true,
           email: true,
-          setor: true,
-          funcao: true,
           status: true,
           criado_em: true,
           atualizado_em: true,
         },
-      });
+      })
 
-      return criado;
+      return criado
     } catch (e: any) {
       if (e?.code === 'P2002') {
         const alvo = Array.isArray(e?.meta?.target)
           ? e.meta.target.join(', ')
-          : 'usuario/email';
-        throw new BadRequestException(`Já existe cadastro com: ${alvo}`);
+          : 'usuario/email'
+        throw new BadRequestException(`Já existe cadastro com: ${alvo}`)
       }
-      throw e;
+      throw e
     }
   }
 
-  async atualizar(id: number, data: {
-    nome?: string;
-    usuario?: string;
-    email?: string;
-    setor?: string;
-    funcao?: string;
-    status?: string;
-  }) {
-    // garante que existe
-    const existe = await this.prisma.usuarios.findUnique({ where: { id } });
-    if (!existe) throw new NotFoundException('Usuário não encontrado');
+  async atualizar(
+    id: number,
+    data: {
+      nome?: string
+      usuario?: string
+      email?: string
+      status?: string
+    },
+  ) {
+    const existe = await this.prisma.usuarios.findUnique({ where: { id } })
+    if (!existe) throw new NotFoundException('Usuário não encontrado')
 
     try {
       return await this.prisma.usuarios.update({
@@ -109,8 +99,6 @@ export class UsuariosService {
           nome: data.nome,
           usuario: data.usuario,
           email: data.email,
-          setor: data.setor,
-          funcao: data.funcao,
           status: data.status,
         },
         select: {
@@ -118,39 +106,34 @@ export class UsuariosService {
           nome: true,
           usuario: true,
           email: true,
-          setor: true,
-          funcao: true,
           status: true,
           criado_em: true,
           atualizado_em: true,
         },
-      });
+      })
     } catch (e: any) {
       if (e?.code === 'P2002') {
         const alvo = Array.isArray(e?.meta?.target)
           ? e.meta.target.join(', ')
-          : 'usuario/email';
-        throw new BadRequestException(`Já existe cadastro com: ${alvo}`);
+          : 'usuario/email'
+        throw new BadRequestException(`Já existe cadastro com: ${alvo}`)
       }
-      throw e;
+      throw e
     }
   }
-async remover(id: number) {
-  // Opcional: Verificar se o usuário existe antes de deletar
-  const usuario = await this.buscarPorId(id);
-  
-  if (!usuario) {
-    throw new NotFoundException(`Usuário com ID ${id} não encontrado`);
+
+  async remover(id: number) {
+    // mantém seu padrão de checagem
+    await this.buscarPorId(id)
+
+    return this.prisma.usuarios.delete({
+      where: { id },
+    })
   }
 
-  // Deleta do banco usando o Prisma
-  return this.prisma.usuarios.delete({
-    where: { id },
-  });
-}
   async atualizarStatus(id: number, status: string) {
-    const existe = await this.prisma.usuarios.findUnique({ where: { id } });
-    if (!existe) throw new NotFoundException('Usuário não encontrado');
+    const existe = await this.prisma.usuarios.findUnique({ where: { id } })
+    if (!existe) throw new NotFoundException('Usuário não encontrado')
 
     return this.prisma.usuarios.update({
       where: { id },
@@ -160,12 +143,10 @@ async remover(id: number) {
         nome: true,
         usuario: true,
         email: true,
-        setor: true,
-        funcao: true,
         status: true,
         criado_em: true,
         atualizado_em: true,
       },
-    });
+    })
   }
 }

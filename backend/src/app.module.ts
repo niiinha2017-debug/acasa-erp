@@ -13,8 +13,6 @@ import { ClientesModule } from './clientes/clientes.module'
 import { FornecedorModule } from './fornecedores/fornecedores.module';
 import { ProdutosModule } from './produtos/produtos.module';
 import { PlanoCorteModule } from './plano-corte/plano-corte.module';
-import { PlanoCorteConsumosModule } from './plano-corte-consumos/plano-corte-consumos.module';
-import { PlanoCorteItensModule } from './plano-corte-itens/plano-corte-itens.module';
 import { FuncionariosModule } from './funcionarios/funcionarios.module';
 import { ConstantesModule } from './constantes/constantes.module';
 import { DespesasModule } from './despesas/despesas.module';
@@ -26,10 +24,13 @@ import { FinanceiroModule } from './financeiro/financeiro.module';
 import { ComprasModule } from './compras/compras.module';
 import { PermissoesModule } from './permissoes/permissoes.module';
 import { EmpresaModule } from './modulos/empresa.module';
+import { UtilsModule } from './utils/utils.module';
+import { ObrasModule } from './obras/obras.module';
+import { PontoModule } from './ponto/ponto.module';
+
 
 @Module({
   imports: [
-    // 🔑 ENV
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [
@@ -38,49 +39,33 @@ import { EmpresaModule } from './modulos/empresa.module';
       ],
     }),
 
-    // 🧠 ORM ÚNICO
     PrismaModule,
-
     AuthModule,
-
     UsuariosModule,
-
     RecuperacaoSenhaModule,
-
     MailModule,
-
     ClientesModule,
-
     FornecedorModule,
-
     ProdutosModule,
-
     PlanoCorteModule,
-
-    PlanoCorteConsumosModule,
-
-    PlanoCorteItensModule,
-
     FuncionariosModule,
-
     ConstantesModule,
-
     DespesasModule,
-
     OrcamentosModule,
-
     ProducaoModule,
-
     FinanceiroModule,
-
     ComprasModule,
-
     PermissoesModule,
-
     EmpresaModule,
-   
+
+    UtilsModule,
+
+    ObrasModule,
+
+    PontoModule, // ✅ fica aqui
   ],
-  providers: [VendasService],
   controllers: [VendasController],
+  providers: [VendasService],
 })
 export class AppModule {}
+

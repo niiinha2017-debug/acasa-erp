@@ -1,413 +1,210 @@
 <template>
-  <Card>
-    <!-- HEADER -->
-    <header class="flex items-start justify-between gap-4 p-6 border-b border-gray-100">
-      <div>
-        <h2 class="text-xl font-black tracking-tight text-gray-900 uppercase">
-          {{ isNovo ? 'Novo Orçamento' : `Orçamento #${orcamentoId}` }}
-        </h2>
-        <p class="text-sm font-semibold text-gray-500 mt-1">
-          Arquitetura da tela (sem salvar). Só conferência.
-        </p>
-      </div>
-
-      <div class="flex items-center gap-2">
-        <Button variant="secondary" size="sm" type="button" @click="router.back()">
-          Voltar
+  <div class="space-y-6 pb-20">
+    <PageHeader :title="isNovo ? 'Novo Orçamento' : `Orçamento #${orcamentoId}`">
+      <template #actions>
+        <Button variant="outline" size="sm" @click="gerarPdf" :disabled="isNovo">
+          <i class="pi pi-file-pdf mr-2"></i> Gerar PDF
         </Button>
+      </template>
+    </PageHeader>
 
-        <Button
-          variant="outline"
-          size="sm"
-          type="button"
-          :disabled="isNovo"
-          @click="gerarPdf()"
-        >
-          Gerar PDF
-        </Button>
-      </div>
-    </header>
-
-    <!-- BODY -->
-    <div class="p-6">
-      <div class="grid grid-cols-12 gap-x-5 gap-y-6">
-
-        <!-- LINHA: Cliente + Status -->
-        <div class="col-span-12 md:col-span-8">
-<SearchInput
-  v-model="draft.cliente_id"
-  label="Nome do cliente"
-  placeholder="Pesquisar cliente..."
-  :options="clientesOptions"
-/>
-
+    <Card shadow>
+      <div class="p-8 space-y-8">
+        
+        <div>
+          <div class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4">Cliente</div>
+          <SearchInput v-model="draft.cliente_id" mode="select" :options="clientesOptions" />
         </div>
 
-        <div class="col-span-12">
-          <div class="h-px bg-gray-100"></div>
-        </div>
-
-        <!-- BLOCO: Add Ambiente -->
-        <div class="col-span-12">
-          <div class="grid grid-cols-12 gap-x-5 gap-y-4">
-
-<div class="col-span-12 md:col-span-3">
-  <Input
-    v-model="ambForm.nome_ambiente"
-    label="Nome do ambiente"
-    placeholder="Ex: Cozinha"
-  />
-</div>
-
-<div class="col-span-12 md:col-span-6">
-  <Input
-    v-model="ambForm.descricao"
-    label="Descrição"
-    placeholder="Descrição..."
-  />
-</div>
-
-<div class="col-span-12 md:col-span-3">
-  <Input
-    v-model="ambForm.valor_unitario"
-    label="Valor unitário"
-    placeholder="0,00"
-  />
-</div>
-
-<div class="col-span-12">
-  <Input
-    v-model="ambForm.observacao"
-    label="Observação do ambiente"
-    placeholder="Observação..."
-  />
-</div>
-
-
+        <div>
+          <div class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4">Itens do Orçamento</div>
+          <div class="grid grid-cols-12 gap-4 bg-slate-50 dark:bg-slate-900/50 p-6 rounded-[1.5rem] border mb-6">
+            <div class="col-span-4"><Input v-model="ambForm.nome_ambiente" label="Ambiente" /></div>
+            <div class="col-span-5"><Input v-model="ambForm.descricao" label="Acabamento" /></div>
+            <div class="col-span-3"><Input v-model="ambForm.valor_unitario" label="Valor" @input="aplicarMascaraDinheiro" /></div>
+            <div class="col-span-12"><Input v-model="ambForm.observacao" label="Descritivo Técnico" /></div>
             <div class="col-span-12 flex justify-end">
-              <Button variant="primary" type="button" @click="addOuAtualizarAmbiente()">
-                {{ editIdx !== null ? 'Atualizar' : 'Add' }}
+              <Button variant="primary" @click="handleAdicionarOuEditar">
+                {{ editIdx !== null ? 'Atualizar Item' : 'Adicionar Item' }}
               </Button>
             </div>
           </div>
-        </div>
 
-        <div class="col-span-12">
-          <div class="h-px bg-gray-100"></div>
-        </div>
-
-        <!-- TABELA -->
-        <div class="col-span-12">
-          <Table
-            :columns="columns"
-            :rows="rowsTabela"
-            :loading="false"
-            emptyText="Nenhum ambiente adicionado."
-          >
+          <Table :columns="columns" :rows="rowsTabela">
             <template #cell-valor_unitario="{ row }">
-              <span class="font-black text-brand-primary">
-                {{ format.currency(row.valor_unitario || 0) }}
-              </span>
+              <span class="font-bold text-brand-primary">{{ format.currency(row.valor_unitario) }}</span>
             </template>
-
             <template #cell-acoes="{ row }">
-              <div class="flex justify-end gap-2">
-                <Button size="sm" variant="secondary" type="button" @click="editar(row.__idx)">
-                  Editar
-                </Button>
-                <Button size="sm" variant="danger" type="button" @click="excluir(row.__idx)">
-                  Excluir
-                </Button>
+              <div class="flex gap-2">
+                <Button size="sm" variant="ghost" @click="iniciarEdicao(row.__idx)"><i class="pi pi-pencil"></i></Button>
+                <Button size="sm" variant="ghost" class="text-red-500" @click="removerDaLista(row.__idx)"><i class="pi pi-trash"></i></Button>
               </div>
             </template>
           </Table>
+        </div>
 
-          <div class="flex items-center justify-end mt-4">
-            <div class="text-sm font-black uppercase tracking-tight text-gray-900">
-              Total: <span class="text-brand-primary">{{ format.currency(total) }}</span>
+        <div class="h-px bg-slate-100 dark:bg-slate-800"></div>
+
+        <div class="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-[1.5rem] border border-dashed border-slate-300">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <div class="text-[10px] font-black uppercase text-slate-400">Anexos (Word/PDF/Fotos)</div>
+              <p class="text-xs text-slate-500">Importe arquivos externos do projeto aqui</p>
+            </div>
+            <input type="file" ref="fileInput" class="hidden" @change="uploadArquivoInteligente" />
+            <Button variant="secondary" @click="fileInput.click()" :loading="uploading">
+              <i class="pi pi-upload mr-2"></i> Importar Arquivo
+            </Button>
+          </div>
+
+          <div v-if="arquivos.length > 0" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div v-for="file in arquivos" :key="file.id" class="flex items-center justify-between p-3 bg-white dark:bg-slate-800 border rounded-xl shadow-sm">
+              <div class="flex items-center gap-2 truncate">
+                <i :class="getFileIcon(file.nome)" class="text-brand-primary"></i>
+                <span class="text-[10px] font-bold truncate">{{ file.nome }}</span>
+              </div>
+              <div class="flex gap-1">
+                <Button size="sm" variant="ghost" @click="abrirArquivo(file.id)"><i class="pi pi-external-link"></i></Button>
+                <Button size="sm" variant="ghost" class="text-red-400" @click="deletarAnexo(file.id)"><i class="pi pi-trash"></i></Button>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="col-span-12">
-          <div class="h-px bg-gray-100"></div>
-        </div>
-
-        <!-- ANEXOS -->
-<!-- ANEXOS -->
-<div class="col-span-12">
-  <div class="text-xs font-black uppercase tracking-[0.18em] text-gray-400">
-    Anexos
+        <FormActions 
+          :is-edit="!isNovo"
+          :loading-save="saving"
+          @save="salvarTudo"
+          @delete="confirmarExclusao"
+        />
+      </div>
+    </Card>
   </div>
-<div class="mt-3 flex items-center gap-3">
-  <input
-    ref="fileInput"
-    type="file"
-    multiple
-    class="hidden"
-    @change="onSelectFiles"
-  />
-
-  <Button variant="secondary" size="sm" type="button" @click="fileInput?.click()">
-    <i class="pi pi-paperclip mr-2"></i>
-    Anexar arquivos
-  </Button>
-
-  <div class="text-xs font-semibold text-gray-400">
-    {{ draft.anexos.length ? `${draft.anexos.length} selecionado(s)` : 'Nenhum arquivo selecionado' }}
-  </div>
-</div>
-
-  <!-- arquivos já salvos (backend) -->
-  <div v-if="draft.arquivosExistentes?.length" class="mt-4 space-y-2">
-    <div
-      v-for="arq in draft.arquivosExistentes"
-      :key="arq.id"
-      class="flex items-center justify-between rounded-2xl border border-gray-100 px-4 py-2"
-    >
-      <div class="min-w-0">
-        <div class="text-sm font-bold text-gray-900 truncate">
-          {{ arq.nome_original }}
-        </div>
-        <div class="text-xs font-semibold text-gray-400">
-          {{ (arq.tamanho / 1024 / 1024).toFixed(2) }} MB
-        </div>
-      </div>
-
-      <div class="flex items-center gap-2">
-        <Button
-          variant="secondary"
-          size="sm"
-          type="button"
-          @click="abrirArquivo(arq)"
-        >
-          <i class="pi pi-external-link mr-2"></i>
-          Abrir
-        </Button>
-
-        <Button
-          variant="danger"
-          size="sm"
-          type="button"
-          @click="excluirArquivo(arq)"
-        >
-          <i class="pi pi-trash mr-2"></i>
-          Excluir
-        </Button>
-      </div>
-    </div>
-  </div>
-
-  <!-- novos anexos (local, ainda não enviados) -->
-  <div v-if="draft.anexos?.length" class="mt-4 space-y-2">
-    <div
-      v-for="(arq, i) in draft.anexos"
-      :key="i"
-      class="flex items-center justify-between rounded-2xl border border-gray-100 px-4 py-2"
-    >
-      <div class="min-w-0">
-        <div class="text-sm font-bold text-gray-900 truncate">
-          {{ arq.name }}
-        </div>
-        <div class="text-xs font-semibold text-gray-400">
-          {{ (arq.size / 1024 / 1024).toFixed(2) }} MB
-        </div>
-      </div>
-
-      <div class="flex items-center gap-2">
-        <Button
-          variant="secondary"
-          size="sm"
-          type="button"
-          @click="abrirLocal(arq)"
-        >
-          <i class="pi pi-eye mr-2"></i>
-          Abrir
-        </Button>
-
-        <Button
-          variant="danger"
-          size="sm"
-          type="button"
-          @click="removerArquivo(i)"
-        >
-          <i class="pi pi-trash mr-2"></i>
-          Remover
-        </Button>
-      </div>
-    </div>
-  </div>
-</div>
-      </div>
-    </div>
-    <!-- FOOTER -->
-    <footer class="flex items-center justify-end gap-2 p-6 border-t border-gray-100">
-      <Button variant="primary" type="button" disabled>
-        Salvar
-      </Button>
-    </footer>
-  </Card>
 </template>
 
 <script setup>
-import { computed, reactive, ref, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-
-import api from '@/services/api'
-import Card from '@/components/ui/Card.vue'
-import Button from '@/components/ui/Button.vue'
-import SearchInput from '@/components/ui/SearchInput.vue'
-import Table from '@/components/ui/Table.vue'
-import Input from '@/components/ui/Input.vue'
+import { OrcamentosService, ClienteService } from '@/services/index'
 import { format } from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()
+const fileInput = ref(null)
 
 const orcamentoId = computed(() => route.params.id)
 const isNovo = computed(() => String(orcamentoId.value) === 'novo')
 
+// ESTADO
 const clientesOptions = ref([])
-
-/**
- * Arquitetura local (sem salvar ainda)
- */
-const draft = reactive({
-  cliente_id: null,
-  ambientes: [],
-  anexos: [],
-  arquivosExistentes: [], // ✅ usado no template
-})
-
-
-const ambForm = reactive({
-  nome_ambiente: '',
-  descricao: '',
-  valor_unitario: '',
-  observacao: '',
-})
-
+const arquivos = ref([])
+const uploading = ref(false)
+const saving = ref(false)
 const editIdx = ref(null)
 
+const draft = reactive({ cliente_id: null, ambientes: [] })
+const ambForm = reactive({ nome_ambiente: '', descricao: '', valor_unitario: '', observacao: '' })
+
 const columns = [
-  { key: 'nome_ambiente', label: 'Ambiente', width: '220px' },
-  { key: 'descricao', label: 'Descrição' },
-  { key: 'valor_unitario', label: 'Valor', width: '160px', align: 'right' },
-  { key: 'acoes', label: 'Ações', width: '200px', align: 'right' },
+  { key: 'nome_ambiente', label: 'Item/Ambiente' },
+  { key: 'descricao', label: 'Acabamento' },
+  { key: 'valor_unitario', label: 'Valor', align: 'right' },
+  { key: 'acoes', label: '', align: 'right' }
 ]
 
+// --- FUNÇÕES DA TABELA ---
+function aplicarMascaraDinheiro(e) {
+  let v = e.target.value.replace(/\D/g, '')
+  if (!v) { ambForm.valor_unitario = ''; return }
+  ambForm.valor_unitario = (Number(v) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
 function parseMoney(v) {
-  const s = String(v ?? '').trim()
-  if (!s) return 0
-  const normalized = s.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '')
-  const n = Number(normalized)
-  return Number.isFinite(n) ? n : 0
+  if (typeof v === 'number') return v
+  return Number(v.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0
 }
 
-const rowsTabela = computed(() =>
-  draft.ambientes.map((a, idx) => ({ ...a, __idx: idx })),
-)
+const rowsTabela = computed(() => draft.ambientes.map((a, idx) => ({ ...a, __idx: idx })))
+const total = computed(() => draft.ambientes.reduce((acc, a) => acc + parseMoney(a.valor_unitario), 0))
 
-const total = computed(() =>
-  draft.ambientes.reduce((acc, a) => acc + (Number(a.valor_unitario) || 0), 0),
-)
-
-async function carregarClientes() {
-  const { data } = await api.get('/clientes')
-  clientesOptions.value = (data || []).map((c) => ({
-    label: c.nome_completo || c.nome || `Cliente #${c.id}`,
-    value: c.id,
-  }))
-}
-
-function limparForm() {
-  ambForm.nome_ambiente = ''
-  ambForm.descricao = ''
-  ambForm.valor_unitario = ''
-  ambForm.observacao = ''
+function handleAdicionarOuEditar() {
+  if (!ambForm.nome_ambiente) return
+  const item = { ...ambForm, valor_unitario: parseMoney(ambForm.valor_unitario) }
+  if (editIdx.value !== null) draft.ambientes.splice(editIdx.value, 1, item)
+  else draft.ambientes.push(item)
+  Object.keys(ambForm).forEach(k => ambForm[k] = '')
   editIdx.value = null
 }
 
-function addOuAtualizarAmbiente() {
-  const nome = (ambForm.nome_ambiente || '').trim()
-  if (!nome) return
-
-  const payload = {
-    nome_ambiente: nome,
-    descricao: (ambForm.descricao || '').trim(),
-    valor_unitario: parseMoney(ambForm.valor_unitario),
-    observacao: (ambForm.observacao || '').trim(),
-  }
-
-  if (editIdx.value !== null) {
-    draft.ambientes.splice(editIdx.value, 1, payload)
-  } else {
-    draft.ambientes.push(payload)
-  }
-
-  limparForm()
-}
-
-function editar(idx) {
+function iniciarEdicao(idx) {
   const a = draft.ambientes[idx]
-  if (!a) return
-  ambForm.nome_ambiente = a.nome_ambiente || ''
-  ambForm.descricao = a.descricao || ''
-  ambForm.valor_unitario = String(a.valor_unitario ?? '')
-  ambForm.observacao = a.observacao || ''
+  Object.assign(ambForm, { ...a, valor_unitario: a.valor_unitario.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) })
   editIdx.value = idx
 }
 
-function excluir(idx) {
-  draft.ambientes.splice(idx, 1)
-  if (editIdx.value === idx) limparForm()
+function removerDaLista(idx) { draft.ambientes.splice(idx, 1) }
+
+// --- ARQUIVOS ---
+async function uploadArquivoInteligente(event) {
+  const file = event.target.files[0]
+  if (!file) return
+  uploading.value = true
+  try {
+    let id = orcamentoId.value
+    if (isNovo.value) {
+      const res = await OrcamentosService.criar({ cliente_id: draft.cliente_id })
+      id = res.data.id
+      router.replace(`/orcamentos/${id}`)
+    }
+    await OrcamentosService.anexarArquivo(id, file)
+    const resArqs = await OrcamentosService.listarArquivos(id)
+    arquivos.value = resArqs.data
+  } finally {
+    uploading.value = false
+    event.target.value = ''
+  }
 }
 
-async function carregarArquivos() {
-  if (isNovo.value) return
-  const { data } = await api.get(`/orcamentos/${orcamentoId.value}/arquivos`)
-  draft.arquivosExistentes = data || []
+function abrirArquivo(id) { window.open(OrcamentosService.abrirArquivoUrl(orcamentoId.value || route.params.id, id), '_blank') }
+async function deletarAnexo(id) { if(confirm('Excluir?')) { await OrcamentosService.removerArquivo(orcamentoId.value, id); arquivos.value = arquivos.value.filter(a => a.id !== id) } }
+function getFileIcon(n) { 
+  const e = n.split('.').pop().toLowerCase()
+  return e === 'pdf' ? 'pi pi-file-pdf' : (e.includes('doc') ? 'pi pi-file-word' : 'pi pi-image')
 }
 
-function abrirArquivo(arq) {
-  window.open(`${import.meta.env.VITE_API_URL}/orcamentos/${orcamentoId.value}/arquivos/${arq.id}`, '_blank')
+// --- SALVAMENTO E PDF (RESOLVENDO OS ERROS DO CONSOLE) ---
+async function salvarTudo() {
+  if (!draft.cliente_id) return alert('Selecione um cliente.')
+  saving.value = true
+  try {
+    const payload = { cliente_id: draft.cliente_id, itens: draft.ambientes }
+    if (isNovo.value) await OrcamentosService.criar(payload)
+    else await OrcamentosService.atualizar(orcamentoId.value, payload)
+    router.push('/orcamentos')
+  } finally { saving.value = false }
 }
 
-async function excluirArquivo(arq) {
-  await api.delete(`/orcamentos/${orcamentoId.value}/arquivos/${arq.id}`)
-  await carregarArquivos()
-}
-function abrirLocal(file) {
-  const url = URL.createObjectURL(file)
-  window.open(url, '_blank')
-  setTimeout(() => URL.revokeObjectURL(url), 60_000) // ✅ libera depois de 1 min
-}
-
-
-
-const fileInput = ref(null)
-
-function onSelectFiles(e) {
-  const files = Array.from(e.target.files || [])
-  if (!files.length) return
-  draft.anexos.push(...files)
-  if (fileInput.value) fileInput.value.value = ''
-}
-
-function removerArquivo(i) {
-  draft.anexos.splice(i, 1)
+async function confirmarExclusao() {
+  if (confirm('Deseja excluir permanentemente este orçamento?')) {
+    await OrcamentosService.remover(orcamentoId.value)
+    router.push('/orcamentos')
+  }
 }
 
 function gerarPdf() {
   if (isNovo.value) return
-  window.open(`${import.meta.env.VITE_API_URL}/orcamentos/${orcamentoId.value}/pdf`, '_blank')
+  OrcamentosService.abrirPdf(orcamentoId.value)
 }
 
 onMounted(async () => {
-  await carregarClientes()
-  await carregarArquivos()
+  const { data: clis } = await ClienteService.listar()
+  clientesOptions.value = clis.map(c => ({ label: c.nome, value: c.id }))
+  if (!isNovo.value) {
+    const res = await OrcamentosService.detalhar(orcamentoId.value)
+    draft.cliente_id = res.data.cliente_id
+    draft.ambientes = res.data.itens || []
+    const resArqs = await OrcamentosService.listarArquivos(orcamentoId.value)
+    arquivos.value = resArqs.data
+  }
 })
-
-
 </script>
-

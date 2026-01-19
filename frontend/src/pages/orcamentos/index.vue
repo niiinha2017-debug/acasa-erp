@@ -1,71 +1,138 @@
 <template>
-  <div class="p-6">
-    <Card>
-      <header class="flex items-start justify-between gap-4 p-6 border-b border-gray-100">
+  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-in fade-in duration-700">
+    
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <Card hoverable class="p-6 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-slate-900/10 text-slate-900 flex items-center justify-center">
+          <i class="pi pi-file-edit text-xl"></i>
+        </div>
         <div>
-          <h2 class="text-xl font-black tracking-tight text-gray-900 uppercase">
-            Orçamentos
-          </h2>
-          <p class="text-sm font-semibold text-gray-500 mt-1">
-            Gestão de orçamentos e projetos.
+          <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Total de Projetos</p>
+          <p class="text-xl font-black text-[var(--text-main)]">{{ rows.length }}</p>
+        </div>
+      </Card>
+
+      <Card hoverable class="p-6 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
+          <i class="pi pi-users text-xl"></i>
+        </div>
+        <div>
+          <p class="text-[10px] font-black uppercase tracking-widest text-blue-500">Clientes Ativos</p>
+          <p class="text-xl font-black text-[var(--text-main)]">{{ grupos.length }}</p>
+        </div>
+      </Card>
+
+      <Card hoverable class="p-6 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+          <i class="pi pi-dollar text-xl"></i>
+        </div>
+        <div>
+          <p class="text-[10px] font-black uppercase tracking-widest text-emerald-500">Valor Acumulado</p>
+          <p class="text-xl font-black text-[var(--text-main)]">
+            {{ format.currency(rows.reduce((acc, o) => acc + (Number(o.total_itens) || 0), 0)) }}
           </p>
         </div>
+      </Card>
 
-        <Button variant="primary" @click="router.push('/orcamentos/novo')">
-          + Novo Orçamento
-        </Button>
-      </header>
+      <Card hoverable class="p-6 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+          <i class="pi pi-clock text-xl animate-pulse"></i>
+        </div>
+        <div>
+          <p class="text-[10px] font-black uppercase tracking-widest text-amber-500">Recentes</p>
+          <p class="text-xl font-black text-[var(--text-main)]">{{ rows.slice(0, 5).length }}</p>
+        </div>
+      </Card>
+    </div>
 
-      <div class="p-6 pb-0">
-        <div class="grid grid-cols-12">
-          <div class="col-span-12 md:col-span-4">
-            <SearchInput
-              v-model="filtro"
-              label="Buscar"
-              placeholder="Cliente ou ID..."
-            />
+    <Card :shadow="true" class="!rounded-[2.5rem] overflow-hidden border-[var(--border-ui)]">
+      <header class="flex flex-col md:flex-row items-center justify-between gap-6 p-8 border-b border-[var(--border-ui)] bg-slate-500/5">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-lg">
+            <i class="pi pi-briefcase text-xl"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-black tracking-tight text-[var(--text-main)] uppercase">Orçamentos</h2>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Gestão de propostas e itens técnicos</p>
           </div>
         </div>
-      </div>
 
-      <!-- ✅ TABELA ÚNICA: CLIENTES COM ORÇAMENTOS -->
-      <div class="p-6">
+        <div class="flex items-center gap-3 w-full md:w-auto">
+          <div class="relative flex-1 md:w-96">
+            <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input 
+              v-model="filtro" 
+              type="text" 
+              placeholder="BUSCAR POR CLIENTE OU CPF..."
+              class="w-full pl-10 pr-4 h-11 bg-[var(--bg-card)] border border-[var(--border-ui)] rounded-2xl text-xs font-bold focus:ring-2 focus:ring-brand-primary outline-none transition-all uppercase"
+            />
+          </div>
+          
+          <Button variant="primary" class="!h-11 !rounded-2xl !px-6 shadow-xl shadow-brand-primary/20" @click="router.push('/orcamentos/novo')">
+            <i class="pi pi-plus mr-2 text-xs"></i>
+            Novo Orçamento
+          </Button>
+        </div>
+      </header>
+
+      <div class="p-4">
         <Table
           :columns="columns"
           :rows="grupos"
           :loading="loading"
-          emptyText="Nenhum cliente com orçamento encontrado."
+          empty-text="Nenhum orçamento encontrado."
+          class="!border-none"
         >
           <template #cell-cliente="{ row }">
-            <div class="flex flex-col">
-              <span class="font-bold text-gray-900">
-                {{ row.cliente_nome_snapshot || 'Cliente não identificado' }}
+            <div class="flex flex-col py-1">
+              <span class="text-[14px] font-black text-gray-900 leading-tight uppercase tracking-tight">
+                {{ row.cliente_nome_snapshot || 'CLIENTE NÃO IDENTIFICADO' }}
               </span>
-              <span class="text-xs text-gray-500">
-                {{ row.cliente_cpf_snapshot || 'Sem CPF/CNPJ' }}
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                {{ row.cliente_cpf_snapshot || 'SEM CPF/CNPJ' }}
               </span>
             </div>
           </template>
 
-          <template #cell-qtd="{ row }">
-            <span class="font-black text-gray-900">{{ row.qtd }}</span>
+          <template #cell-orcamentos="{ row }">
+            <div class="flex flex-wrap gap-2 justify-end">
+              <button
+                v-for="o in row.orcamentos"
+                :key="o.id"
+                class="px-3 py-1.5 rounded-xl border border-slate-200 text-[10px] font-black text-slate-700
+                       hover:border-brand-primary hover:text-brand-primary transition-all bg-white shadow-sm"
+                @click="router.push(`/orcamentos/${o.id}`)"
+              >
+                #{{ o.id }}
+              </button>
+            </div>
           </template>
 
-          <template #cell-ultimo="{ row }">
-            <span class="text-gray-500 font-bold">
-              #{{ row.ultimo_id || '—' }}
-            </span>
+          <template #cell-total="{ row }">
+            <div class="flex flex-col items-end py-1">
+              <span class="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Acumulado</span>
+              <span class="text-sm font-black text-brand-primary">
+                {{ format.currency(row.total || 0) }}
+              </span>
+            </div>
           </template>
 
           <template #cell-acoes="{ row }">
             <div class="flex justify-end gap-2">
-              <Button size="sm" variant="primary" @click="novoParaCliente(row.cliente_id)">
-                NOVO
-              </Button>
-
-              <Button size="sm" variant="secondary" @click="abrirListaDoCliente(row.cliente_id)">
-                ORÇAMENTOS
-              </Button>
+              <button 
+                @click="novoParaCliente(row.cliente_id)"
+                class="p-2.5 rounded-xl bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white transition-all shadow-sm"
+                title="Novo Orçamento para este cliente"
+              >
+                <i class="pi pi-plus text-xs font-bold"></i>
+              </button>
+              <button 
+                @click="abrirListaDoCliente(row.cliente_id)"
+                class="p-2.5 rounded-xl bg-slate-500/10 text-slate-500 hover:bg-slate-900 hover:text-white transition-all shadow-sm"
+                title="Ver todos deste cliente"
+              >
+                <i class="pi pi-list text-xs"></i>
+              </button>
             </div>
           </template>
         </Table>
@@ -74,43 +141,23 @@
   </div>
 </template>
 
-
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-
 import api from '@/services/api'
-import Table from '@/components/ui/Table.vue'
-import Button from '@/components/ui/Button.vue'
-import SearchInput from '@/components/ui/SearchInput.vue'
-import Card from '@/components/ui/Card.vue' // <-- Faltava esta importação
 import { format } from '@/utils/format'
 
 const router = useRouter()
-
 const loading = ref(false)
 const filtro = ref('')
 const rows = ref([])
 
 const columns = [
-  { key: 'id', label: 'ID', width: '90px' },
-  { key: 'cliente', label: 'Cliente' },
-  { key: 'total', label: 'Total', width: '140px', align: 'right' },
-  { key: 'acoes', label: 'Ações', width: '260px', align: 'right' },
+  { key: 'cliente', label: 'Cliente / Documento', width: '40%' },
+  { key: 'orcamentos', label: 'Projetos Vinculados', width: '26%', align: 'right' },
+  { key: 'total', label: 'Financeiro', width: '18%', align: 'right' },
+  { key: 'acoes', label: 'Ações', width: '16%', align: 'right' },
 ]
-
-
-const filtrados = computed(() => {
-  const f = (filtro.value || '').trim().toLowerCase()
-  if (!f) return rows.value
-
-  return rows.value.filter((r) => {
-    const id = String(r.id || '')
-    const nome = String(r.cliente_nome_snapshot || '').toLowerCase()
-    const cpf = String(r.cliente_cpf_snapshot || '').toLowerCase()
-    return id.includes(f) || nome.includes(f) || cpf.includes(f)
-  })
-})
 
 async function carregar() {
   loading.value = true
@@ -118,7 +165,7 @@ async function carregar() {
     const { data } = await api.get('/orcamentos')
     rows.value = data || []
   } catch (e) {
-    console.error("Erro ao carregar orçamentos:", e)
+    console.error(e)
   } finally {
     loading.value = false
   }
@@ -126,77 +173,42 @@ async function carregar() {
 
 const grupos = computed(() => {
   const f = (filtro.value || '').trim().toLowerCase()
-
   const map = new Map()
 
   for (const o of rows.value || []) {
-    const clienteId = o.cliente_id || o.clienteId
-    if (!clienteId) continue
-
-    const nome = o.cliente_nome_snapshot || ''
-    const cpf = o.cliente_cpf_snapshot || ''
-
-    if (!map.has(clienteId)) {
-      map.set(clienteId, {
-        cliente_id: clienteId,
-        cliente_nome_snapshot: nome,
-        cliente_cpf_snapshot: cpf,
+    const cid = o.cliente_id || o.clienteId
+    if (!cid) continue
+    if (!map.has(cid)) {
+      map.set(cid, {
+        cliente_id: cid,
+        cliente_nome_snapshot: o.cliente_nome_snapshot || '',
+        cliente_cpf_snapshot: o.cliente_cpf_snapshot || '',
         orcamentos: [],
       })
     }
-
-    map.get(clienteId).orcamentos.push(o)
+    map.get(cid).orcamentos.push(o)
   }
 
-  // ordena orçamentos de cada cliente (mais recente primeiro, se tiver data)
-  for (const g of map.values()) {
-    g.orcamentos.sort((a, b) => {
-      const da = new Date(a.criado_em || a.data || 0).getTime()
-      const db = new Date(b.criado_em || b.data || 0).getTime()
-      return db - da
-    })
-  }
+  let lista = Array.from(map.values()).map(g => ({
+    ...g,
+    total: g.orcamentos.reduce((acc, o) => acc + (Number(o.total_itens) || 0), 0)
+  }))
 
-  let lista = Array.from(map.values()).map((g) => {
-    const ultimo = g.orcamentos[0]
-    return {
-      ...g,
-      qtd: g.orcamentos.length,
-      ultimo_id: ultimo?.id,
-      ultimo_em: ultimo?.criado_em || ultimo?.data || null,
-    }
-  })
-
-  // filtro por cliente
   if (f) {
-    lista = lista.filter((g) => {
-      const id = String(g.cliente_id || '')
-      const nome = String(g.cliente_nome_snapshot || '').toLowerCase()
-      const cpf = String(g.cliente_cpf_snapshot || '').toLowerCase()
-      return id.includes(f) || nome.includes(f) || cpf.includes(f)
-    })
+    lista = lista.filter(g => 
+      g.cliente_nome_snapshot.toLowerCase().includes(f) || 
+      g.cliente_cpf_snapshot.toLowerCase().includes(f)
+    )
   }
-
-  // ordena clientes pelo último orçamento (mais recente primeiro)
-  lista.sort((a, b) => {
-    const da = new Date(a.ultimo_em || 0).getTime()
-    const db = new Date(b.ultimo_em || 0).getTime()
-    return db - da
-  })
-
   return lista
 })
+
 function novoParaCliente(clienteId) {
   router.push({ path: '/orcamentos/novo', query: { cliente_id: String(clienteId) } })
 }
+
 function abrirListaDoCliente(clienteId) {
   router.push(`/orcamentos/cliente/${clienteId}`)
-}
-
-
-function abrirPdf(id) {
-  const base = import.meta.env.VITE_API_URL
-  window.open(`${base}/orcamentos/${id}/pdf`, '_blank')
 }
 
 onMounted(carregar)

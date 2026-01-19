@@ -36,35 +36,34 @@ export class ProdutosService {
       )
     }
   }
+async criar(dto: CreateProdutoDto) {
+  const fornecedor_id = Number(dto.fornecedor_id)
+  if (!fornecedor_id) throw new BadRequestException('fornecedor_id é obrigatório.')
 
-  async criar(dto: CreateProdutoDto) {
-    const fornecedor_id = Number(dto.fornecedor_id)
-    if (!fornecedor_id) throw new BadRequestException('fornecedor_id é obrigatório.')
+  const nome_produto = String(dto.nome_produto ?? '').trim()
+  if (!nome_produto) throw new BadRequestException('nome_produto é obrigatório.')
 
-    const nome_produto = String(dto.nome_produto ?? '').trim()
-    if (!nome_produto) throw new BadRequestException('nome_produto é obrigatório.')
+  const marca = this.normStr(dto.marca)
+  const cor = this.normStr(dto.cor)
 
-    const marca = this.normStr(dto.marca)
-    const cor = this.normStr(dto.cor)
+  // ✅ BLOQUEIO DUPLICADO
+  await this.checarDuplicado({ fornecedor_id, nome_produto, marca, cor })
 
-    // ✅ BLOQUEIO DUPLICADO
-    await this.checarDuplicado({ fornecedor_id, nome_produto, marca, cor })
-
-    return this.prisma.produtos.create({
-      data: {
-        fornecedor_id,
-        nome_produto,
-        marca,
-        cor,
-        unidade: this.normStr(dto.unidade),
-        medida: this.normStr(dto.medida),
-        quantidade: Number(dto.quantidade ?? 0),
-        valor_unitario: dto.valor_unitario,
-        valor_total: dto.valor_total,
-        status: dto.status ?? 'ATIVO',
-      },
-    })
-  }
+  return this.prisma.produtos.create({
+    data: {
+      fornecedor_id,
+      nome_produto,
+      marca,
+      cor,
+      unidade: this.normStr(dto.unidade),
+      medida: this.normStr(dto.medida),
+      quantidade: Number(dto.quantidade ?? 0),
+      valor_unitario: Number(dto.valor_unitario ?? 0),
+      valor_total: Number(dto.valor_total ?? 0),
+      status: dto.status ?? 'ATIVO',
+    },
+  })
+}
 
   async listar(filtro?: { fornecedor_id?: number }) {
     const where: any = {}
@@ -92,44 +91,58 @@ export class ProdutosService {
     return produto
   }
 
-  async atualizar(id: number, dto: UpdateProdutoDto) {
-    const atual = await this.buscarPorId(id)
+async atualizar(id: number, dto: UpdateProdutoDto) {
+  const atual = await this.buscarPorId(id)
 
-    const fornecedor_id =
-      dto.fornecedor_id === undefined ? atual.fornecedor_id : Number(dto.fornecedor_id)
+  const fornecedor_id =
+    dto.fornecedor_id === undefined ? atual.fornecedor_id : Number(dto.fornecedor_id)
 
-    const nome_produto =
-      dto.nome_produto === undefined ? atual.nome_produto : String(dto.nome_produto ?? '').trim()
+  const nome_produto =
+    dto.nome_produto === undefined ? atual.nome_produto : String(dto.nome_produto ?? '').trim()
 
-    const marca =
-      dto.marca === undefined ? (atual.marca ?? null) : this.normStr(dto.marca)
+  const marca =
+    dto.marca === undefined ? (atual.marca ?? null) : this.normStr(dto.marca)
 
-    const cor =
-      dto.cor === undefined ? (atual.cor ?? null) : this.normStr(dto.cor)
+  const cor =
+    dto.cor === undefined ? (atual.cor ?? null) : this.normStr(dto.cor)
 
-    // ✅ BLOQUEIO DUPLICADO (na atualização também)
-    await this.checarDuplicado({
+  // ✅ BLOQUEIO DUPLICADO (na atualização também)
+  await this.checarDuplicado({
+    fornecedor_id,
+    nome_produto,
+    marca,
+    cor,
+    ignorarId: id,
+  })
+
+  return this.prisma.produtos.update({
+    where: { id },
+    data: {
       fornecedor_id,
       nome_produto,
       marca,
       cor,
-      ignorarId: id,
-    })
+      unidade: dto.unidade === undefined ? atual.unidade : this.normStr(dto.unidade),
+      medida: dto.medida === undefined ? atual.medida : this.normStr(dto.medida),
+      quantidade: dto.quantidade === undefined ? atual.quantidade : Number(dto.quantidade),
+      valor_unitario:
+        dto.valor_unitario === undefined ? Number(atual.valor_unitario) : Number(dto.valor_unitario),
+      valor_total:
+        dto.valor_total === undefined ? Number(atual.valor_total) : Number(dto.valor_total),
+      status: dto.status === undefined ? atual.status : dto.status,
+    },
+  })
+}
 
-    return this.prisma.produtos.update({
-      where: { id },
-      data: {
-        ...dto,
-        fornecedor_id,
-        nome_produto,
-        marca,
-        cor,
-      },
-    })
-  }
 
-  async remover(id: number) {
-    await this.buscarPorId(id)
-    return this.prisma.produtos.delete({ where: { id } })
+
+async remover(id: number) {
+  await this.buscarPorId(id)
+  try {
+    return await this.prisma.produtos.delete({ where: { id } })
+  } catch (e: any) {
+    throw new BadRequestException('Não é possível excluir: produto está em uso (compras/plano de corte).')
   }
+}
+
 }

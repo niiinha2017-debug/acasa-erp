@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common'
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common'
 import { ProdutosService } from './produtos.service'
 import { CreateProdutoDto } from './dto/criar-produto.dto'
 import { UpdateProdutoDto } from './dto/atualizar-produto.dto'
@@ -9,14 +20,14 @@ export class ProdutosController {
 
   @Get()
   listar(@Query('fornecedor_id') fornecedor_id?: string) {
-    return this.produtosService.listar({
-      fornecedor_id: fornecedor_id ? Number(fornecedor_id) : undefined,
-    })
+    const fId = fornecedor_id ? Number(String(fornecedor_id).replace(/\D/g, '')) : undefined
+    return this.produtosService.listar({ fornecedor_id: fId })
   }
 
   @Get(':id')
   buscarPorId(@Param('id') id: string) {
-    return this.produtosService.buscarPorId(Number(id))
+    const cleanId = Number(String(id).replace(/\D/g, ''))
+    return this.produtosService.buscarPorId(cleanId)
   }
 
   @Post()
@@ -26,11 +37,14 @@ export class ProdutosController {
 
   @Put(':id')
   atualizar(@Param('id') id: string, @Body() dto: UpdateProdutoDto) {
-    return this.produtosService.atualizar(Number(id), dto)
+    const cleanId = Number(String(id).replace(/\D/g, ''))
+    return this.produtosService.atualizar(cleanId, dto)
   }
 
   @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
   remover(@Param('id') id: string) {
-    return this.produtosService.remover(Number(id))
+    const cleanId = Number(String(id).replace(/\D/g, ''))
+    return this.produtosService.remover(cleanId)
   }
 }

@@ -1,268 +1,166 @@
 <template>
-  <div class="w-full">
-    <Card :shadow="true">
-      <!-- HEADER -->
-      <div class="flex flex-col gap-4 px-8 pt-8 pb-6 border-b border-gray-100">
-        <div class="flex items-start justify-between gap-4">
-          <div>
-            <h2 class="text-2xl font-black text-gray-900 tracking-tight uppercase">
-              {{ isEditing ? 'Editar' : 'Novo' }} Funcionário
-            </h2>
+  <Card :shadow="true" class="overflow-visible">
+    <PageHeader
+      :title="isEditing ? `Editar Funcionário: ${form.nome}` : 'Novo Funcionário'"
+      subtitle="Cadastros / Gestão de Pessoas"
+      icon="pi pi-id-card"
+      :backTo="'/funcionarios'"
+      iconClass="bg-slate-900 text-white shadow-lg"
+    />
+
+    <div class="p-8 relative">
+      <Loading v-if="loading" />
+
+      <form v-else class="space-y-12">
+        
+        <div class="grid grid-cols-12 gap-x-6 gap-y-8">
+          <div class="col-span-12 flex items-center gap-3 mb-2">
+            <div class="w-1.5 h-4 bg-slate-900 rounded-full"></div>
+            <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">01. Informações Pessoais</span>
           </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            type="button"
-            @click="router.push('/funcionarios')"
-          >
-            Voltar
-          </Button>
+          <Input class="col-span-12 md:col-span-6" v-model="form.nome" label="Nome Completo *" required placeholder="NOME SEM ABREVIAÇÕES" />
+          <Input class="col-span-12 md:col-span-3" v-model="cpfUi" label="CPF *" required placeholder="000.000.000-00" />
+          <Input class="col-span-12 md:col-span-3" v-model="rgUi" label="RG" placeholder="00.000.000-0" />
+
+          <Input class="col-span-12 md:col-span-4" v-model="emailUi" label="E-mail Pessoal" placeholder="exemplo@email.com" />
+          <Input class="col-span-12 md:col-span-4" v-model="whatsappUi" label="WhatsApp / Celular" placeholder="(00) 0 0000-0000" />
+          <Input class="col-span-12 md:col-span-4" v-model="form.data_nascimento" label="Data de Nascimento" type="date" />
+
+          <Input class="col-span-12 md:col-span-6" v-model="form.estado_civil" label="Estado Civil" placeholder="SOLTEIRO(A), CASADO(A)..." />
+          <Input class="col-span-12 md:col-span-6" v-model="form.escolaridade" label="Escolaridade" placeholder="ENSINO MÉDIO, SUPERIOR..." />
         </div>
-      </div>
 
-      <!-- BODY -->
-      <div class="p-8">
-        <div class="grid grid-cols-12 gap-6">
-          <!-- 1. Informações Pessoais -->
-          <div class="col-span-12">
-            <div class="pb-3 mb-4 border-b border-gray-100">
-              <h3 class="text-sm font-black text-gray-900 tracking-tight uppercase">
-                1. Informações Pessoais
-              </h3>
+        <div class="h-px bg-slate-100/50"></div>
+
+        <div class="grid grid-cols-12 gap-x-6 gap-y-8">
+          <div class="col-span-12 flex items-center gap-3 mb-2">
+            <div class="w-1.5 h-4 bg-slate-900 rounded-full"></div>
+            <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">02. Localização</span>
+          </div>
+
+          <Input class="col-span-12 md:col-span-3" v-model="cepUi" label="CEP" placeholder="00000-000" @blur="tratarBuscaCep" />
+          <Input class="col-span-12 md:col-span-7" v-model="form.endereco" label="Rua / Logradouro" />
+          <Input id="numero-input" class="col-span-12 md:col-span-2" v-model="form.numero" label="Nº" />
+
+          <Input class="col-span-12 md:col-span-4" v-model="form.complemento" label="Complemento" placeholder="APTO, BLOCO, FUNDOS..." />
+          <Input class="col-span-12 md:col-span-3" v-model="form.bairro" label="Bairro" />
+          <Input class="col-span-12 md:col-span-3" v-model="form.cidade" label="Cidade" />
+          <Input class="col-span-12 md:col-span-2" v-model="form.estado" label="UF" maxlength="2" />
+        </div>
+
+        <div class="h-px bg-slate-100/50"></div>
+
+        <div class="grid grid-cols-12 gap-x-6 gap-y-8">
+          <div class="col-span-12 flex items-center gap-3 mb-2">
+            <div class="w-1.5 h-4 bg-slate-900 rounded-full"></div>
+            <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">03. Contrato e Jornada</span>
+          </div>
+
+          <Input class="col-span-12 md:col-span-4" v-model="form.setor" label="Setor / Departamento" />
+          <Input class="col-span-12 md:col-span-4" v-model="form.cargo" label="Cargo" />
+          <Input class="col-span-12 md:col-span-4" v-model="form.funcao" label="Função Específica" />
+
+          <Input class="col-span-12 md:col-span-3" v-model="form.registro" label="Nº Registro (Matrícula)" />
+          <Input class="col-span-12 md:col-span-3" v-model="form.admissao" label="Data de Admissão" type="date" />
+          <Input class="col-span-12 md:col-span-3" v-model="form.demissao" label="Data de Demissão" type="date" />
+          
+          <div class="col-span-12 md:col-span-3">
+            <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">Tempo de Casa</label>
+            <div class="h-12 flex items-center px-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-500 font-bold text-sm">
+              {{ tempoServico || '—' }}
             </div>
           </div>
 
-          <div class="col-span-12 md:col-span-6">
-            <Input v-model="form.nome" label="Nome Completo" required />
-          </div>
-          <div class="col-span-12 md:col-span-3">
-            <Input v-model="cpfUi" label="CPF" required />
-          </div>
-          <div class="col-span-12 md:col-span-3">
-            <Input v-model="rgUi" label="RG" />
-          </div>
-
-          <div class="col-span-12 md:col-span-4">
-            <Input v-model="form.email" label="E-mail" />
-          </div>
-          <div class="col-span-12 md:col-span-4">
-            <Input v-model="whatsappUi" label="WhatsApp" />
-          </div>
-          <div class="col-span-12 md:col-span-4">
-            <Input v-model="form.data_nascimento" label="Data Nascimento" type="date" />
-          </div>
-
-          <div class="col-span-12 md:col-span-6">
-            <Input v-model="form.estado_civil" label="Estado Civil" />
-          </div>
-          <div class="col-span-12 md:col-span-6">
-            <Input v-model="form.escolaridade" label="Escolaridade" />
-          </div>
-
-          <div class="col-span-12">
-            <div class="h-px bg-gray-100 my-2"></div>
-          </div>
-
-          <!-- 2. Endereço -->
-          <div class="col-span-12">
-            <div class="pb-3 mb-4 border-b border-gray-100">
-              <h3 class="text-sm font-black text-gray-900 tracking-tight uppercase">
-                2. Endereço
-              </h3>
-            </div>
-          </div>
-
-          <div class="col-span-12 md:col-span-3">
-            <Input v-model="cepUi" label="CEP" />
-          </div>
-          <div class="col-span-12 md:col-span-7">
-            <Input v-model="form.endereco" label="Rua/Logradouro" />
-          </div>
-          <div class="col-span-12 md:col-span-2">
-            <Input v-model="form.numero" label="Nº" />
-          </div>
-
-          <div class="col-span-12 md:col-span-4">
-            <Input v-model="form.complemento" label="Complemento" />
-          </div>
-          <div class="col-span-12 md:col-span-3">
-            <Input v-model="form.bairro" label="Bairro" />
-          </div>
-          <div class="col-span-12 md:col-span-3">
-            <Input v-model="form.cidade" label="Cidade" />
-          </div>
-          <div class="col-span-12 md:col-span-2">
-            <Input v-model="form.estado" label="UF" />
-          </div>
-
-          <div class="col-span-12">
-            <div class="h-px bg-gray-100 my-2"></div>
-          </div>
-
-          <!-- 3. Dados da Empresa e Horários -->
-          <div class="col-span-12">
-            <div class="pb-3 mb-4 border-b border-gray-100">
-              <h3 class="text-sm font-black text-gray-900 tracking-tight uppercase">
-                3. Dados da Empresa e Horários
-              </h3>
-            </div>
-          </div>
-
-          <div class="col-span-12 md:col-span-4">
-            <Input v-model="form.setor" label="Setor" />
-          </div>
-          <div class="col-span-12 md:col-span-4">
-            <Input v-model="form.cargo" label="Cargo" />
-          </div>
-          <div class="col-span-12 md:col-span-4">
-            <Input v-model="form.funcao" label="Função" />
-          </div>
-
-          <div class="col-span-12 md:col-span-3">
-            <Input v-model="form.registro" label="Nº Registro" />
-          </div>
-          <div class="col-span-12 md:col-span-3">
-            <Input v-model="form.admissao" label="Data Admissão" type="date" />
-          </div>
-          <div class="col-span-12 md:col-span-3">
-            <Input v-model="form.demissao" label="Data Demissão" type="date" />
-          </div>
-
-          <!-- tempo de casa: NÃO vira card, só uma linha neutra -->
-          <div class="col-span-12 md:col-span-3" v-if="form.admissao">
-            <div class="h-full flex items-center">
-              <div class="w-full rounded-2xl border border-gray-100 bg-white px-4 py-3 text-sm">
-                <span class="font-black text-gray-900">Tempo Casa:</span>
-                <span class="ml-2 font-semibold text-gray-500">{{ tempoServico }}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="col-span-12 md:col-span-3">
+          <div class="col-span-12 grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100/50">
             <Input v-model="form.horario_entrada_1" label="Entrada 1" type="time" />
-          </div>
-          <div class="col-span-12 md:col-span-3">
             <Input v-model="form.horario_saida_1" label="Saída 1" type="time" />
-          </div>
-          <div class="col-span-12 md:col-span-3">
             <Input v-model="form.horario_entrada_2" label="Entrada 2" type="time" />
-          </div>
-          <div class="col-span-12 md:col-span-3">
             <Input v-model="form.horario_saida_2" label="Saída 2" type="time" />
           </div>
+        </div>
 
-          <div class="col-span-12">
-            <div class="h-px bg-gray-100 my-2"></div>
+        <div class="h-px bg-slate-100/50"></div>
+
+        <div class="grid grid-cols-12 gap-x-6 gap-y-8">
+          <div class="col-span-12 flex items-center gap-3 mb-2">
+            <div class="w-1.5 h-4 bg-slate-900 rounded-full"></div>
+            <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">04. Financeiro e Pagamento</span>
           </div>
 
-          <!-- 4. Financeiro e Pagamento -->
-          <div class="col-span-12">
-            <div class="pb-3 mb-4 border-b border-gray-100">
-              <h3 class="text-sm font-black text-gray-900 tracking-tight uppercase">
-                4. Financeiro e Pagamento
-              </h3>
+          <Input class="col-span-12 md:col-span-3" v-model="salarioBaseUi" label="Salário Base (R$)" />
+          <Input class="col-span-12 md:col-span-3" v-model="salarioAdicionalUi" label="Adicional / Gratificação" />
+          <Input class="col-span-12 md:col-span-3" v-model="form.data_pagamento" label="Data Pagto Padrão" type="date" />
+          
+          <div class="col-span-12 md:col-span-3">
+            <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">Custo Hora</label>
+            <div class="h-12 flex items-center px-4 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 font-black text-sm">
+              {{ custoHoraExibicao }}
             </div>
           </div>
 
-          <div class="col-span-12 md:col-span-3">
-            <Input v-model="salarioBaseUi" label="Salário Base" />
-          </div>
-          <div class="col-span-12 md:col-span-3">
-            <Input v-model="salarioAdicionalUi" label="Adicional" />
-          </div>
-          <div class="col-span-12 md:col-span-3">
-            <Input v-model="form.data_pagamento" label="Data Pagto Padrão" type="date" />
-          </div>
-          <div class="col-span-12 md:col-span-3">
-            <Input :model-value="custoHoraExibicao" label="Custo Hora (Calculado)" disabled />
-          </div>
-
           <div class="col-span-12 md:col-span-4">
-            <label class="block text-xs font-black uppercase tracking-[0.18em] text-gray-500 mb-2">
-              Forma de Pagamento
-            </label>
-            <select
-              v-model="form.forma_pagamento"
-              class="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
-            >
+            <label class="text-[10px] font-black uppercase text-slate-500 mb-2 block tracking-widest ml-1">Forma de Pagamento</label>
+            <select v-model="form.forma_pagamento" class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 focus:border-brand-primary outline-none transition-all text-sm shadow-sm">
               <option value="DINHEIRO">DINHEIRO</option>
               <option value="PIX">PIX</option>
               <option value="TRANSFERENCIA">TRANSFERÊNCIA</option>
             </select>
           </div>
 
-          <div class="col-span-12 md:col-span-8">
-            <Input v-model="form.banco" label="Banco" />
-          </div>
-          <div class="col-span-12 md:col-span-3">
-            <Input v-model="form.agencia" label="Agência" />
-          </div>
-          <div class="col-span-12 md:col-span-3">
-            <Input v-model="form.conta" label="Conta" />
-          </div>
-          <div class="col-span-12 md:col-span-3">
-            <Input v-model="form.pix_tipo_chave" label="Tipo Chave PIX" />
-          </div>
-          <div class="col-span-12 md:col-span-3">
-            <Input v-model="form.pix_chave" label="Chave PIX" />
+          <Input class="col-span-12 md:col-span-8" v-model="form.banco" label="Banco" placeholder="EX: ITAÚ, NUBANK..." />
+          <Input class="col-span-12 md:col-span-3" v-model="form.agencia" label="Agência" />
+          <Input class="col-span-12 md:col-span-3" v-model="form.conta" label="Conta com Dígito" />
+          <Input class="col-span-12 md:col-span-3" v-model="form.pix_tipo_chave" label="Tipo Chave PIX" />
+          <Input class="col-span-12 md:col-span-3" v-model="form.pix_chave" label="Chave PIX" />
+        </div>
+
+        <div class="bg-slate-900 rounded-[2.5rem] p-8 text-white grid grid-cols-12 gap-6 items-center">
+          <div class="col-span-12 md:col-span-4">
+             <h3 class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mb-4">05. Benefícios Adicionais</h3>
+             <div class="space-y-4">
+               <CustomCheckbox v-model="form.tem_vale" label="Habilitar Vale Antecipação" class="dark-check" />
+               <CustomCheckbox v-model="form.tem_vale_transporte" label="Habilitar Vale Transporte" class="dark-check" />
+             </div>
           </div>
 
-          <!-- checkboxes: neutro, sem “card” visual -->
-          <div class="col-span-12">
-            <div class="rounded-2xl border border-gray-100 bg-white p-4 flex flex-wrap gap-8 items-center">
-              <label class="flex items-center gap-2 text-sm font-black text-gray-700">
-                <input
-                  type="checkbox"
-                  v-model="form.tem_vale"
-                  class="h-4 w-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary/20"
-                />
-                Tem Vale
-              </label>
-
-              <label class="flex items-center gap-2 text-sm font-black text-gray-700">
-                <input
-                  type="checkbox"
-                  v-model="form.tem_vale_transporte"
-                  class="h-4 w-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary/20"
-                />
-                Tem VT
-              </label>
-            </div>
-          </div>
-
-          <div class="col-span-12 md:col-span-6" v-if="form.tem_vale">
-            <Input v-model="valeUi" label="Valor Vale" />
-          </div>
-          <div class="col-span-12 md:col-span-6" v-if="form.tem_vale_transporte">
-            <Input v-model="valeTransporteUi" label="Valor VT" />
+          <div class="col-span-12 md:col-span-8 grid grid-cols-2 gap-4">
+             <div v-if="form.tem_vale" class="transition-all animate-in fade-in slide-in-from-left-4">
+               <Input v-model="valeUi" label="Valor do Vale (R$)" class="inverted-input" />
+             </div>
+             <div v-if="form.tem_vale_transporte" class="transition-all animate-in fade-in slide-in-from-left-4">
+               <Input v-model="valeTransporteUi" label="Valor VT (R$)" class="inverted-input" />
+             </div>
           </div>
         </div>
 
-        <!-- FOOTER -->
-        <div class="mt-8 pt-6 border-t border-gray-100 flex justify-end">
-          <Button variant="primary" :loading="salvando" type="button" @click="salvar">
-            Salvar Dados
+        <div class="flex items-center justify-between gap-3 pt-8 border-t border-gray-100">
+          <Button variant="secondary" type="button" @click="router.push('/funcionarios')" class="!rounded-2xl !px-8">
+            Cancelar
+          </Button>
+
+          <Button variant="primary" :loading="salvando" type="button" @click="salvar" class="!rounded-2xl !px-12 h-14 shadow-xl shadow-brand-primary/20">
+            <i class="pi pi-save mr-2"></i>
+            Salvar Funcionário
           </Button>
         </div>
-      </div>
-    </Card>
-  </div>
+      </form>
+    </div>
+  </Card>
 </template>
+
+<style scoped>
+/* Estilo para os inputs dentro da área escura de benefícios */
+.inverted-input :deep(label) { color: #94a3b8 !important; }
+.inverted-input :deep(input) { background-color: #1e293b !important; border: 1px solid #334155 !important; color: white !important; }
+</style>
+
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-
-/* ✅ COMPONENTES (obrigatório) */
-import Card from '@/components/ui/Card.vue'
-import Button from '@/components/ui/Button.vue'
-import Input from '@/components/ui/Input.vue'
-
-/* ✅ SEU SERVICE */
 import { FuncionarioService } from '@/services/index'
 
-/* ✅ máscaras e util */
 import { maskCPF, maskRG, maskTelefone, maskCEP, maskMoneyBR, onlyNumbers } from '@/utils/masks'
 import { buscarCep, calcularCustoHora } from '@/utils/utils'
 import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
@@ -272,19 +170,15 @@ const router = useRouter()
 const route = useRoute()
 const salvando = ref(false)
 
-/* =========================
-   NOVO vs EDITAR
-========================= */
 const paramId = computed(() => String(route.params.id || 'novo'))
 const isEditing = computed(() => paramId.value !== 'novo')
 const id = computed(() => (isEditing.value ? paramId.value.replace(/\D/g, '') : null))
 
-/* =========================
-   FORM (defaults)
-   (date/time como '' pra Input type=date/time)
-========================= */
+const fmtDate = (d) => (d ? String(d).split('T')[0] : '')
+
 function novoForm() {
   return {
+    status: 'INATIVO', // <- default (vai ser recalculado)
     nome: '',
     cpf: '',
     rg: '',
@@ -292,14 +186,11 @@ function novoForm() {
     telefone: '',
     whatsapp: '',
     email: '',
-
     estado_civil: '',
     escolaridade: '',
-
     setor: '',
     cargo: '',
     funcao: '',
-
     cep: '',
     endereco: '',
     numero: '',
@@ -307,56 +198,81 @@ function novoForm() {
     bairro: '',
     cidade: '',
     estado: '',
-
     registro: '',
     admissao: '',
     demissao: '',
-
     salario_base: 0,
     salario_adicional: 0,
     custo_hora: 0,
-
     tem_vale: false,
     vale: 0,
     tem_vale_transporte: false,
     vale_transporte: 0,
-
     horario_entrada_1: '',
     horario_saida_1: '',
     horario_entrada_2: '',
     horario_saida_2: '',
-
     forma_pagamento: 'DINHEIRO',
+    data_pagamento: '',
     banco: '',
     agencia: '',
     conta: '',
     pix_tipo_chave: '',
     pix_chave: '',
-
-    data_pagamento: ''
   }
 }
 
+
 const form = ref(novoForm())
 
-/* =========================
-   UI refs (máscaras)
-========================= */
-const cpfUi = ref('')
-const rgUi = ref('')
-const whatsappUi = ref('')
-const telefoneUi = ref('')
-const cepUi = ref('')
+/* ======= UI (computed get/set) ======= */
+const cpfUi = computed({
+  get: () => (form.value.cpf ? maskCPF(form.value.cpf) : ''),
+  set: (v) => (form.value.cpf = onlyNumbers(maskCPF(v))),
+})
 
-const salarioBaseUi = ref('0,00')
-const salarioAdicionalUi = ref('0,00')
-const valeUi = ref('0,00')
-const valeTransporteUi = ref('0,00')
+const rgUi = computed({
+  get: () => (form.value.rg ? String(form.value.rg) : ''),
+  set: (v) => (form.value.rg = raw(maskRG(v))),
+})
 
-/* =========================
-   Computeds
-========================= */
-const custoHoraExibicao = computed(() => numeroParaMoeda(form.value.custo_hora))
+const whatsappUi = computed({
+  get: () => (form.value.whatsapp ? maskTelefone(form.value.whatsapp) : ''),
+  set: (v) => (form.value.whatsapp = onlyNumbers(maskTelefone(v))),
+})
+
+const cepUi = computed({
+  get: () => (form.value.cep ? maskCEP(form.value.cep) : ''),
+  set: (v) => (form.value.cep = onlyNumbers(maskCEP(v))),
+})
+
+const emailUi = computed({
+  get: () => (form.value.email ? String(form.value.email) : ''),
+  set: (v) => (form.value.email = raw(String(v || '').toLowerCase().trim())),
+})
+
+const salarioBaseUi = computed({
+  get: () => numeroParaMoeda(form.value.salario_base || 0),
+  set: (v) => (form.value.salario_base = moedaParaNumero(maskMoneyBR(v))),
+})
+
+const salarioAdicionalUi = computed({
+  get: () => numeroParaMoeda(form.value.salario_adicional || 0),
+  set: (v) => (form.value.salario_adicional = moedaParaNumero(maskMoneyBR(v))),
+})
+
+const valeUi = computed({
+  get: () => numeroParaMoeda(form.value.vale || 0),
+  set: (v) => (form.value.vale = moedaParaNumero(maskMoneyBR(v))),
+})
+
+const valeTransporteUi = computed({
+  get: () => numeroParaMoeda(form.value.vale_transporte || 0),
+  set: (v) => (form.value.vale_transporte = moedaParaNumero(maskMoneyBR(v))),
+})
+
+/* ======= calculados ======= */
+const custoHoraExibicao = computed(() => numeroParaMoeda(form.value.custo_hora || 0))
 
 const tempoServico = computed(() => {
   if (!form.value.admissao) return '---'
@@ -366,138 +282,89 @@ const tempoServico = computed(() => {
 
   let anos = fim.getFullYear() - inicio.getFullYear()
   let meses = fim.getMonth() - inicio.getMonth()
-  if (meses < 0) {
-    anos--
-    meses += 12
-  }
+  if (meses < 0) { anos--; meses += 12 }
   return anos > 0 ? `${anos} anos e ${meses} meses` : `${meses} meses`
 })
 
-/* =========================
-   Helpers
-========================= */
-const fmtDate = (d) => (d ? String(d).split('T')[0] : '')
-
-function syncFinanceiro() {
-  form.value.salario_base = moedaParaNumero(salarioBaseUi.value)
-  form.value.salario_adicional = moedaParaNumero(salarioAdicionalUi.value)
-  form.value.vale = moedaParaNumero(valeUi.value)
-  form.value.vale_transporte = moedaParaNumero(valeTransporteUi.value)
-
-  form.value.custo_hora = calcularCustoHora(form.value.salario_base + form.value.salario_adicional)
+function recalcularCustoHora() {
+  form.value.custo_hora = calcularCustoHora((form.value.salario_base || 0) + (form.value.salario_adicional || 0))
 }
 
-function preencherUIComForm() {
-  cpfUi.value = form.value.cpf ? maskCPF(form.value.cpf) : ''
-  rgUi.value = form.value.rg || ''
-  whatsappUi.value = form.value.whatsapp ? maskTelefone(form.value.whatsapp) : ''
-  telefoneUi.value = form.value.telefone ? maskTelefone(form.value.telefone) : ''
-  cepUi.value = form.value.cep ? maskCEP(form.value.cep) : ''
+/* recalcula custo hora quando mexe em valores */
+watch(
+  () => [form.value.salario_base, form.value.salario_adicional],
+  () => recalcularCustoHora(),
+  { immediate: true }
+)
 
-  salarioBaseUi.value = numeroParaMoeda(form.value.salario_base || 0)
-  salarioAdicionalUi.value = numeroParaMoeda(form.value.salario_adicional || 0)
-  valeUi.value = numeroParaMoeda(form.value.vale || 0)
-  valeTransporteUi.value = numeroParaMoeda(form.value.vale_transporte || 0)
+/* busca CEP quando completo */
+watch(
+  () => form.value.cep,
+  async (cep) => {
+    if (String(cep || '').length !== 8) return
+    const d = await buscarCep(cep)
+    if (!d) return
+    form.value.endereco = upper(d.logradouro)
+    form.value.bairro = upper(d.bairro)
+    form.value.cidade = upper(d.localidade)
+    form.value.estado = upper(d.uf)
+  }
+)
+
+function recalcularStatus() {
+  const registro = String(form.value.registro || '').trim()
+  const demissao = form.value.demissao ? String(form.value.demissao).trim() : ''
+
+  if (demissao) {
+    form.value.status = 'INATIVO'
+    return
+  }
+
+  if (registro) {
+    form.value.status = 'ATIVO'
+    return
+  }
+
+  // se não tem registro e não tem demissão, você decide:
+  // aqui eu deixo INATIVO pra ficar coerente com a regra que você falou
+  form.value.status = 'INATIVO'
 }
 
-/* =========================
-   Carregar (novo vs editar)
-========================= */
+watch(
+  () => [form.value.registro, form.value.demissao],
+  () => recalcularStatus(),
+  { immediate: true }
+)
+
+
+/* ======= carregar ======= */
 async function carregar() {
   if (!isEditing.value) {
     form.value = novoForm()
-    preencherUIComForm()
-    syncFinanceiro()
+    recalcularCustoHora()
     return
   }
 
   try {
     const { data } = await FuncionarioService.buscar(id.value)
-
     form.value = {
       ...novoForm(),
       ...data,
       data_nascimento: fmtDate(data.data_nascimento),
       admissao: fmtDate(data.admissao),
       demissao: fmtDate(data.demissao),
-      data_pagamento: fmtDate(data.data_pagamento)
+      data_pagamento: fmtDate(data.data_pagamento),
     }
-
-    preencherUIComForm()
-    syncFinanceiro()
-  } catch (err) {
+    recalcularCustoHora()
+  } catch {
     router.push('/funcionarios')
   }
 }
 
 onMounted(carregar)
-
-/* 🔥 importante com auto-routes: muda id sem reload */
 watch(() => paramId.value, () => carregar())
 
-/* =========================
-   WATCHERS (máscaras)
-========================= */
-watch(cpfUi, (v) => {
-  cpfUi.value = maskCPF(v)
-  form.value.cpf = onlyNumbers(cpfUi.value)
-})
-
-watch(rgUi, (v) => {
-  rgUi.value = maskRG(v)
-  form.value.rg = raw(rgUi.value)
-})
-
-watch(whatsappUi, (v) => {
-  whatsappUi.value = maskTelefone(v)
-  form.value.whatsapp = onlyNumbers(whatsappUi.value)
-})
-
-watch(telefoneUi, (v) => {
-  telefoneUi.value = maskTelefone(v)
-  form.value.telefone = onlyNumbers(telefoneUi.value)
-})
-
-watch(cepUi, async (v) => {
-  cepUi.value = maskCEP(v)
-  form.value.cep = onlyNumbers(cepUi.value)
-
-  if (form.value.cep.length === 8) {
-    const d = await buscarCep(form.value.cep)
-    if (d) {
-      form.value.endereco = upper(d.logradouro)
-      form.value.bairro = upper(d.bairro)
-      form.value.cidade = upper(d.localidade)
-      form.value.estado = upper(d.uf)
-    }
-  }
-})
-
-watch(salarioBaseUi, (v) => {
-  salarioBaseUi.value = maskMoneyBR(v)
-  syncFinanceiro()
-})
-
-watch(salarioAdicionalUi, (v) => {
-  salarioAdicionalUi.value = maskMoneyBR(v)
-  syncFinanceiro()
-})
-
-watch(valeUi, (v) => {
-  valeUi.value = maskMoneyBR(v)
-  syncFinanceiro()
-})
-
-watch(valeTransporteUi, (v) => {
-  valeTransporteUi.value = maskMoneyBR(v)
-  syncFinanceiro()
-})
-
-/* =========================
-   SALVAR (usa SEU service)
-   - novo: POST /funcionarios
-   - editar: PUT /funcionarios/:id
-========================= */
+/* ======= salvar ======= */
 async function salvar() {
   if (!form.value.nome || String(form.value.cpf || '').length < 11) {
     return alert('Nome e CPF obrigatórios.')
@@ -505,15 +372,20 @@ async function salvar() {
 
   salvando.value = true
   try {
-    syncFinanceiro()
+    recalcularCustoHora()
+    recalcularStatus()
 
     const payload = {
       ...form.value,
-      email: raw(form.value.email ? String(form.value.email).toLowerCase().trim() : '')
+      email: emailUi.value,
+      // datas: manda null em vez de ''
+      data_nascimento: form.value.data_nascimento || null,
+      admissao: form.value.admissao || null,
+      demissao: form.value.demissao || null,
+      data_pagamento: form.value.data_pagamento || null,
     }
 
     await FuncionarioService.salvar(isEditing.value ? id.value : null, payload)
-
     router.push('/funcionarios')
   } catch (err) {
     alert(err?.response?.data?.message || 'Erro ao salvar')
@@ -521,5 +393,5 @@ async function salvar() {
     salvando.value = false
   }
 }
-</script>
 
+</script>

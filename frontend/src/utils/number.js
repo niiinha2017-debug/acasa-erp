@@ -1,38 +1,24 @@
 // src/utils/number.js
 
-/**
- * Converte valor monetário pt-BR para número
- * Exemplos:
- *  "8,60"   -> 8.6
- *  "1.234,56" -> 1234.56
- *  10       -> 10
- *  null     -> null
- */
 export function moedaParaNumero(valor) {
-  if (valor === null || valor === undefined) return null
-
-  const str = String(valor).trim()
-  if (!str) return null
-
-  return Number(
-    str
-      .replace(/\./g, '') // remove milhar
-      .replace(',', '.')  // troca decimal
-  )
+  if (!valor) return 0;
+  if (typeof valor === 'number') return valor;
+  
+  // Remove TUDO que não for número (pontos, vírgulas, letras)
+  const apenasNumeros = valor.toString().replace(/\D/g, '');
+  if (!apenasNumeros) return 0;
+  
+  // Transforma em decimal dividindo por 100 (ex: "15000" vira 150.00)
+  return parseFloat((Number(apenasNumeros) / 100).toFixed(2));
 }
 
-/**
- * Converte número para pt-BR (string)
- * 8.6 -> "8,60"
- */
 export function numeroParaMoeda(valor) {
-  if (valor === null || valor === undefined) return ''
-  return Number(valor).toLocaleString('pt-BR', {
+  const n = (typeof valor === 'number') ? valor : moedaParaNumero(valor);
+  return n.toLocaleString('pt-BR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })
+  });
 }
-
 /**
  * Garante boolean real (checkbox)
  */

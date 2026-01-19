@@ -1,341 +1,429 @@
 <template>
-  <Card>
-    <header class="flex items-start justify-between gap-4 p-6 border-b border-gray-100">
-      <div>
-        <h2 class="text-xl font-black tracking-tight text-gray-900 uppercase">
-          {{ isEdit ? 'Editar Lançamento' : 'Nova Despesa/Vale' }}
-        </h2>
-      </div>
+  <Card :shadow="true">
+    <PageHeader
+      :title="isEdit ? 'Editar Lançamento' : 'Novo Lançamento'"
+      subtitle="Financeiro / Despesas"
+      icon="pi pi-arrow-down-right"
+      :backTo="'/despesas'"
+    />
 
-      <Button variant="secondary" size="sm" type="button" @click="router.back()">
-        Voltar
-      </Button>
-    </header>
+    <div class="p-8 relative">
+      <Loading v-if="loading" />
 
-    <div class="p-6">
-      <form class="grid grid-cols-12 gap-5" @submit.prevent="salvar">
-        <div class="col-span-12 md:col-span-4">
-          <label class="block text-xs font-extrabold uppercase tracking-[0.18em] text-gray-500 mb-2">
-            Movimentação <span class="text-danger">*</span>
-          </label>
-          <select
-            v-model="form.tipo_movimento"
-            required
-            class="w-full h-11 rounded-2xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-900 outline-none transition focus:border-brand-primary/40 focus:ring-4 focus:ring-brand-primary/10"
-          >
-            <option value="SAÍDA">SAÍDA</option>
-            <option value="ENTRADA">ENTRADA</option>
-          </select>
+      <form v-else @submit.prevent="salvar" class="space-y-8">
+        <div class="grid grid-cols-12 gap-x-6 gap-y-8">
+          
+          <div class="col-span-12 grid grid-cols-12 gap-4">
+            <div class="col-span-12 md:col-span-3">
+              <label class="text-[10px] font-black uppercase text-slate-500 mb-2 block tracking-widest ml-1">
+                Movimentação
+              </label>
+              <select
+                v-model="form.tipo_movimento"
+                class="w-full h-11 px-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-ui)] font-bold text-[var(--text-main)] focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 outline-none transition-all text-sm uppercase tracking-tighter"
+              >
+                <option value="SAIDA">🔴 SAÍDA (Despesa)</option>
+                <option value="ENTRADA">🟢 ENTRADA (Receita)</option>
+              </select>
+            </div>
+
+            <SearchInput
+              class="col-span-12 md:col-span-9"
+              v-model="form.funcionario_id"
+              mode="select"
+              label="Vincular Funcionário (Opcional)"
+              :options="funcionariosOptions"
+              placeholder="PESQUISE O COLABORADOR..."
+            />
+          </div>
+
+          <div class="col-span-12 h-px bg-[var(--border-ui)]"></div>
+
+          <div class="col-span-12 md:col-span-6 space-y-6">
+            <SearchInput
+              v-model="form.categoria"
+              mode="select"
+              :options="categoriasOptions"
+              label="O que está sendo pago? *"
+              placeholder="SELECIONE A CATEGORIA..."
+              required
+            />
+
+            <div class="p-4 bg-brand-primary/5 rounded-2xl border border-brand-primary/10 flex items-center justify-between">
+              <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Classificação:</span>
+              <span class="text-xs font-black text-brand-primary uppercase">
+                {{ classificacaoLabel || '—' }}
+              </span>
+            </div>
+          </div>
+
+          <div class="col-span-12 md:col-span-6 grid grid-cols-2 gap-4">
+            <div class="col-span-2 md:col-span-1">
+              <label class="text-[10px] font-black uppercase text-slate-500 mb-2 block tracking-widest ml-1">
+                Unidade
+              </label>
+              <select
+                v-model="form.unidade"
+                class="w-full h-11 px-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-ui)] font-bold text-[var(--text-main)] outline-none focus:border-brand-primary transition-all text-sm uppercase"
+              >
+                <option v-for="u in unidadesOptions" :key="u.value" :value="u.value">
+                  {{ u.label }}
+                </option>
+              </select>
+            </div>
+
+            <Input
+              v-model="form.local"
+              label="Fornecedor / Destino *"
+              placeholder="EX: CPFL, MERCADO..."
+              class="col-span-2 md:col-span-1"
+              required
+            />
+
+            <div class="col-span-2">
+              <Input
+                :model-value="numeroParaMoeda(form.valor_total)"
+                @update:modelValue="onValorTotalChange"
+                label="Valor Total (R$) *"
+                placeholder="0,00"
+                required
+              >
+                <template #prefix><span class="text-xs font-bold text-slate-400">R$</span></template>
+              </Input>
+            </div>
+          </div>
+
+          <div class="col-span-12 h-px bg-[var(--border-ui)]"></div>
+
+          <div class="col-span-12 grid grid-cols-12 gap-5">
+            <SearchInput
+              v-model="form.forma_pagamento"
+              mode="select"
+              label="Meio de Pagamento *"
+              :options="formasPagamentoOptions"
+              class="col-span-12 md:col-span-5"
+              required
+            />
+
+            <Input
+              v-model.number="form.quantidade_parcelas"
+              label="Parcelas"
+              type="number"
+              min="1"
+              class="col-span-6 md:col-span-3"
+            />
+
+            <SearchInput
+              v-model="form.status"
+              mode="select"
+              label="Situação *"
+              :options="statusOptions"
+              class="col-span-6 md:col-span-4"
+              required
+            />
+          </div>
+
+          <div class="col-span-12 grid grid-cols-1 md:grid-cols-3 gap-5">
+            <Input v-model="form.data_vencimento" label="Data de Vencimento *" type="date" required />
+            <Input v-model="form.data_pagamento" label="Data do Pagamento" type="date" />
+            <Input v-model="form.data_registro" label="Competência *" type="date" required />
+          </div>
         </div>
 
-        <div class="col-span-12 md:col-span-8">
-          <SearchInput
-            v-model="form.funcionario_id"
-            label="Funcionário (Opcional)"
-            :options="listaFuncionarios"
-            :colSpan="12"
+        <div class="pt-6 border-t border-[var(--border-ui)] flex justify-end">
+          <FormActions
+            :isEdit="isEdit"
+            :loadingSave="loading"
+            :loadingDelete="loadingDelete"
+            :showDelete="isEdit"
+            :showSave="true"
+            @save="salvar"
+            @delete="excluir"
           />
-        </div>
-
-<div class="col-span-12 md:col-span-6">
-<SearchInput
-  v-model="categoriaSelecionada"
-  :options="cat.opcoes.value"
-  label="Item (Energia, Internet...) *"
-  required
-/>
-</div>
-
-<div class="col-span-12 md:col-span-6">
-  <Input
-    v-model="form.classificacao"
-    label="Classificação (Automática)"
-    readonly
-    class="bg-gray-50 font-bold text-blue-600" 
-    placeholder="Selecione um item..."
-  />
-</div>
-
-        <div class="col-span-12 md:col-span-4">
-          <label class="block text-xs font-extrabold uppercase tracking-[0.18em] text-gray-500 mb-2">
-            Unidade <span class="text-danger">*</span>
-          </label>
-          <select
-            v-model="form.unidade"
-            required
-            class="w-full h-11 rounded-2xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-900 outline-none transition focus:border-brand-primary/40 focus:ring-4 focus:ring-brand-primary/10"
-          >
-            <option value="FÁBRICA">FÁBRICA</option>
-            <option value="LOJA">LOJA</option>
-          </select>
-        </div>
-
-        <div class="col-span-12 md:col-span-5">
-          <Input v-model="form.local" label="Local / Fornecedor *" required />
-        </div>
-
-        <div class="col-span-12 md:col-span-3">
-          <Input
-            v-model="form.valor_total"
-            label="Valor Total *"
-            type="number"
-            step="0.01"
-            required
-          />
-        </div>
-
-        <div class="col-span-12 h-px bg-gray-100 my-2"></div>
-
-        <div class="col-span-12 md:col-span-5">
-          <SearchInput
-            v-model="form.forma_pagamento"
-            label="Forma de Pagamento *"
-            :options="pag.opcoes.value"
-            required
-            :colSpan="12"
-          />
-        </div>
-
-        <div class="col-span-12 md:col-span-3">
-          <Input
-            v-model.number="form.quantidade_parcelas"
-            label="Qtd. Parcelas"
-            type="number"
-            min="1"
-          />
-        </div>
-
-        <div class="col-span-12 md:col-span-4">
-          <SearchInput
-            v-model="form.status"
-            label="Status *"
-            :options="sta.opcoes.value"
-            required
-            :colSpan="12"
-          />
-        </div>
-
-        <div class="col-span-12 md:col-span-4">
-          <Input v-model="form.data_vencimento" label="1º Vencimento *" type="date" required />
-        </div>
-
-        <div class="col-span-12 md:col-span-4">
-          <Input v-model="form.data_pagamento" label="Data de Pagamento" type="date" />
-        </div>
-
-        <div class="col-span-12 md:col-span-4">
-          <Input v-model="form.data_registro" label="Data do Registro *" type="date" required />
         </div>
       </form>
     </div>
-
-    <footer class="flex justify-end gap-3 p-6 border-t border-gray-100">
-      <Button v-if="isEdit" variant="danger" type="button" @click="excluir">
-        Excluir
-      </Button>
-
-      <Button variant="primary" type="button" :loading="loading" @click="salvar">
-        {{ isEdit ? 'Salvar' : 'Gerar Lançamentos' }}
-      </Button>
-    </footer>
   </Card>
 </template>
 
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import api from '@/services/api'
-import { useConstantes } from '@/composables/useConstantes'
 
-import Card from '@/components/ui/Card.vue'
-import Input from '@/components/ui/Input.vue'
-import Button from '@/components/ui/Button.vue'
-import SearchInput from '@/components/ui/SearchInput.vue'
+import { FuncionarioService, DespesaService } from '@/services/index'
+import { notify } from '@/services/notify'
+import { maskMoneyBR } from '@/utils/masks'
+import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
+
+
+import {
+  FINANCEIRO_CATEGORIAS,
+  FORMAS_PAGAMENTO,
+  STATUS_FINANCEIRO,
+  UNIDADES_OPERACIONAIS,
+  RECEITA_OPERACIONAL,
+} from '@/constantes/index'
 
 const route = useRoute()
 const router = useRouter()
 
-const id = computed(() => route.params.id)
-const isEdit = computed(() => !!id.value && id.value !== 'novo')
+const despesaId = computed(() => Number(route.params?.id || 0) || null)
+const isEdit = computed(() => !!despesaId.value)
+
 const loading = ref(false)
+const loadingDelete = ref(false)
 
-const cat = useConstantes()
-const pag = useConstantes()
-const sta = useConstantes()
+const funcionariosOptions = ref([])
 
-const listaFuncionarios = ref([])
-const categoriaSelecionada = ref('')
-const syncCategoria = ref(false)
-
-const form = ref({
-  tipo_movimento: 'SAÍDA',
-  unidade: 'FÁBRICA',
-  categoria: '',
-  classificacao: '',
-  local: '',
-  valor_total: '',
-  forma_pagamento: '',
-  quantidade_parcelas: 1,
+const form = reactive({
+  tipo_movimento: 'SAIDA',
   funcionario_id: null,
-  data_registro: new Date().toISOString().slice(0, 10),
+
+  categoria: null,
+  classificacao: null,
+
+  unidade: null,
+  local: '',
+
+  valor_total: 0,
+  forma_pagamento: null,
+
+  quantidade_parcelas: 1,
+  status: null,
+
   data_vencimento: '',
   data_pagamento: '',
-  status: ''
+  data_registro: '',
 })
 
-const vincularClassificacaoChave = (entrada) => {
-  if (!entrada) return
+// -----------------------------
+// OPTIONS (Selects)
+// -----------------------------
+const unidadesOptions = computed(() => {
+  const base = Array.isArray(UNIDADES_OPERACIONAIS)
+    ? UNIDADES_OPERACIONAIS
+    : Object.values(UNIDADES_OPERACIONAIS || {}).flat()
 
-  const chave = typeof entrada === 'object' ? entrada.value : entrada
-  const label = typeof entrada === 'object' ? entrada.label : entrada
+  return (base || []).map((u) => ({
+    label: u.label,
+    value: u.key,
+  }))
+})
 
-  const item =
-    cat.opcoes.value.find(o => o.value === chave) ||
-    cat.opcoes.value.find(o => o.label === label)
+const formasPagamentoOptions = computed(() => {
+  const base = Array.isArray(FORMAS_PAGAMENTO)
+    ? FORMAS_PAGAMENTO
+    : Object.values(FORMAS_PAGAMENTO || {}).flat()
 
-  if (!item) {
-    console.log('❌ Não achei item nas constantes. Recebi:', entrada)
-    return
-  }
+  return (base || []).map((f) => ({
+    label: f.label,
+    value: f.key,
+  }))
+})
 
-  // evita loop do watch
-  syncCategoria.value = true
+const statusOptions = computed(() => {
+  const base = Array.isArray(STATUS_FINANCEIRO)
+    ? STATUS_FINANCEIRO
+    : Object.values(STATUS_FINANCEIRO || {}).flat()
 
-  // mantém o SearchInput com a CHAVE
-  categoriaSelecionada.value = item.value
+  return (base || []).map((s) => ({
+    label: s.label,
+    value: s.key,
+  }))
+})
 
-  // salva no form o que vai pro banco
-  form.value.categoria = item.label
-  form.value.classificacao = item.metadata?.info || 'CUSTO FIXO'
-
-  console.log('✅ Categoria OK:', form.value.categoria, '|', form.value.classificacao, '| key:', categoriaSelecionada.value)
+// transforma "CUSTO_FIXO" => "Custo fixo"
+function labelGrupo(grupoKey) {
+  return String(grupoKey || '')
+    .toLowerCase()
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (m) => m.toUpperCase())
 }
 
+// ✅ monta categorias já com classificacao (grupo)
+const categoriasOptions = computed(() => {
+  // ENTRADA (Receita)
+  if (form.tipo_movimento === 'ENTRADA') {
+    return (RECEITA_OPERACIONAL || []).map((i) => ({
+      label: i.label,
+      value: i.key,
+      classificacaoKey: 'RECEITA_OPERACIONAL',
+      classificacaoLabel: 'Receita operacional',
+    }))
+  }
+
+  // SAIDA (Despesa/Custo) -> classificação é o grupo do FINANCEIRO_CATEGORIAS
+  const out = []
+  const grupos = FINANCEIRO_CATEGORIAS || {}
+
+  Object.entries(grupos).forEach(([grupoKey, itens]) => {
+    ;(itens || []).forEach((i) => {
+      out.push({
+        label: i.label,
+        value: i.key,
+        classificacaoKey: grupoKey,
+        classificacaoLabel: labelGrupo(grupoKey),
+      })
+    })
+  })
+
+  return out
+})
+function onValorTotalChange(valor) {
+  form.valor_total = moedaParaNumero(valor)
+}
+
+const categoriaSelecionada = computed(() => {
+  return categoriasOptions.value.find((o) => o.value === form.categoria) || null
+})
+
+const classificacaoLabel = computed(() => {
+  return categoriaSelecionada.value?.classificacaoLabel || null
+})
+
 watch(
-  () => categoriaSelecionada.value,
-  (v) => {
-    console.log('🟡 categoriaSelecionada mudou para:', v, '| tipo:', typeof v)
-    if (syncCategoria.value) {
-      syncCategoria.value = false
-      return
-    }
-    vincularClassificacaoChave(v)
+  () => form.categoria,
+  () => {
+    form.classificacao = categoriaSelecionada.value?.classificacaoKey || null
   }
 )
 
+watch(
+  () => form.tipo_movimento,
+  () => {
+    form.categoria = null
+    form.classificacao = null
+  }
+)
 
+// -----------------------------
+// VALOR (máscara)
+// -----------------------------
+const valorTotalMask = computed({
+  get() {
+    return maskMoneyBR(form.valor_total || 0)
+  },
+  set(v) {
+    const raw = String(v || '')
+    const limpo = raw.replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, '')
+    const num = Number(limpo || 0)
+    form.valor_total = Number.isFinite(num) ? num : 0
+  },
+})
 
-function validarObrigatorios() {
-  if (!form.value.tipo_movimento) return 'Selecione a Movimentação.'
-  if (!form.value.unidade) return 'Selecione a Unidade (Fábrica ou Loja).'
-  if (!categoriaSelecionada.value) return 'Selecione o Item (Ex: Água, Vale).'
-  if (!form.value.local) return 'Informe o Local / Fornecedor.'
-  if (!form.value.valor_total) return 'Informe o Valor Total.'
-  if (!form.value.forma_pagamento) return 'Selecione a Forma de Pagamento.'
-  if (!form.value.status) return 'Selecione o Status.'
-  if (!form.value.data_vencimento) return 'Informe o 1º Vencimento.'
-  if (!form.value.data_registro) return 'Informe a Data do Registro.'
+// -----------------------------
+// LOADERS
+// -----------------------------
+async function carregarFuncionarios() {
+  try {
+    const res = await FuncionarioService.listar?.()
+    const rows = res?.data || []
+    funcionariosOptions.value = rows.map((f) => ({
+      label: f.nome || f.usuario || `#${f.id}`,
+      value: f.id,
+    }))
+  } catch (err) {
+    notify.error?.('Erro ao carregar funcionários')
+  }
+}
+
+async function carregarDespesa() {
+  if (!isEdit.value) return
+
+  loading.value = true
+  try {
+    const res = await DespesaService.buscar(despesaId.value)
+    const d = res?.data
+
+    form.tipo_movimento = d?.tipo_movimento ?? 'SAIDA'
+    form.funcionario_id = d?.funcionario_id ?? null
+
+    form.categoria = d?.categoria ?? null
+    form.classificacao = d?.classificacao ?? null
+
+    form.unidade = d?.unidade ?? null
+    form.local = d?.local ?? ''
+
+    form.valor_total = Number(d?.valor_total ?? 0) || 0
+    form.forma_pagamento = d?.forma_pagamento ?? null
+
+    form.quantidade_parcelas = Number(d?.quantidade_parcelas ?? 1) || 1
+    form.status = d?.status ?? null
+
+    form.data_vencimento = (d?.data_vencimento || '').slice(0, 10)
+    form.data_pagamento = (d?.data_pagamento || '').slice(0, 10)
+    form.data_registro = (d?.data_registro || '').slice(0, 10)
+  } catch (err) {
+    notify.error?.('Erro ao carregar lançamento')
+  } finally {
+    loading.value = false
+  }
+}
+
+// -----------------------------
+// ACTIONS
+// -----------------------------
+function validar() {
+  if (!form.tipo_movimento) return 'Selecione a movimentação.'
+  if (!form.categoria) return 'Selecione a categoria.'
+  if (!form.unidade) return 'Selecione a unidade.'
+  if (!form.local?.trim()) return 'Informe o fornecedor/destino.'
+  if (!form.valor_total || Number(form.valor_total) <= 0) return 'Informe o valor total.'
+  if (!form.forma_pagamento) return 'Selecione o meio de pagamento.'
+  if (!form.status) return 'Selecione a situação.'
+  if (!form.data_vencimento) return 'Informe a data de vencimento.'
+  if (!form.data_registro) return 'Informe a competência (mês/ref).'
   return null
 }
 
 async function salvar() {
-  const mensagemErro = validarObrigatorios()
-  if (mensagemErro) {
-    alert(mensagemErro)
+  const erro = validar()
+  if (erro) {
+    notify.warn?.(erro)
     return
   }
 
   loading.value = true
   try {
-    // ✅ tira o id do form pra não mandar no "criar"
-    const { id: _id, ...dadosSemId } = form.value
-
     const payload = {
-      ...dadosSemId,
-      valor_total: Number(form.value.valor_total).toFixed(2),
-      funcionario_id: form.value.funcionario_id ? Number(form.value.funcionario_id) : null,
-      quantidade_parcelas: Number(form.value.quantidade_parcelas || 1),
+      ...form,
+      quantidade_parcelas: Number(form.quantidade_parcelas || 1),
+      valor_total: Number(form.valor_total || 0),
+      funcionario_id: form.funcionario_id ? Number(form.funcionario_id) : null,
     }
 
-    console.log('🚀 Enviando Payload Final:', payload)
-
-    if (isEdit.value) {
-      await api.put(`/despesas/${id.value}`, payload)
-    } else {
-      // ✅ seu backend tem PUT /api/despesas (não POST)
-      await api.put('/despesas', payload)
-    }
-
+    await DespesaService.salvar(despesaId.value, payload)
+    notify.success?.(isEdit.value ? 'Lançamento atualizado.' : 'Lançamento criado.')
     router.push('/despesas')
-  } catch (e) {
-    console.error('❌ Erro no Servidor:', e.response?.data || e)
-    alert('Erro ao salvar. Verifique a conexão com o servidor.')
+  } catch (err) {
+    notify.error?.('Erro ao salvar lançamento')
   } finally {
     loading.value = false
   }
 }
 
 async function excluir() {
-  if (!confirm('Deseja realmente excluir este lançamento?')) return
+  if (!isEdit.value) return
 
-  loading.value = true
+  loadingDelete.value = true
   try {
-    await api.delete(`/despesas/${id.value}`)
+    await DespesaService.remover(despesaId.value)
+    notify.success?.('Lançamento removido.')
     router.push('/despesas')
-  } catch (e) {
-    console.error(e)
-    alert('Erro ao excluir lançamento.')
-  } finally {
-    loading.value = false
-  }
-}
-
-async function carregarFuncionarios() {
-  try {
-    const { data } = await api.get('/funcionarios')
-    listaFuncionarios.value = data.map(f => ({ label: f.nome, value: f.id }))
-  } catch (e) {
-    console.error(e)
-  }
-}
-onMounted(async () => {
-  // 1. Carrega todas as listas primeiro (Aguardamos todas)
-  await Promise.all([
-    cat.carregarCategoria('SAÍDA'),
-    pag.carregarCategoria('FORMA DE PAGAMENTO FINANCEIRO'),
-    sta.carregarCategoria('STATUS FINANCEIRO'),
-    carregarFuncionarios()
-  ])
-
-  // Se for novo lançamento, para aqui
-  if (!isEdit.value) {
-    // Sugestão: Definir data de registro padrão como hoje
-    form.value.data_registro = new Date().toISOString().slice(0, 10)
-    return
-  }
-  
-  // 2. Se for Edição, busca os dados do banco
-  try {
-    const { data } = await api.get(`/despesas/${id.value}`)
-    
-    // Usamos o spread para garantir reatividade total
-    form.value = { ...data }
-
-    // 3. SINCRONIZAÇÃO CRÍTICA:
-    // O SearchInput precisa da CHAVE (value), mas o banco guardou o RÓTULO (categoria)
-   const encontrado = cat.opcoes.value.find(o => o.label === data.categoria)
-if (encontrado) vincularClassificacaoChave(encontrado) // <- em vez de setar na mão
-
-
-
-    // 4. Formata as datas para o input HTML (YYYY-MM-DD)
-    if (data.data_vencimento) form.value.data_vencimento = data.data_vencimento.slice(0, 10)
-    if (data.data_pagamento) form.value.data_pagamento = data.data_pagamento.slice(0, 10)
-    if (data.data_registro) form.value.data_registro = data.data_registro.slice(0, 10)
-    
   } catch (err) {
-    console.error("Erro ao carregar despesa:", err)
+    notify.error?.('Erro ao remover lançamento')
+  } finally {
+    loadingDelete.value = false
   }
+}
+
+onMounted(async () => {
+  await carregarFuncionarios()
+  await carregarDespesa()
+
+  if (!form.unidade && unidadesOptions.value?.length) form.unidade = unidadesOptions.value[0].value
+  if (!form.status && statusOptions.value?.length) form.status = statusOptions.value[0].value
+  if (!form.forma_pagamento && formasPagamentoOptions.value?.length) form.forma_pagamento = formasPagamentoOptions.value[0].value
 })
 </script>

@@ -3,9 +3,11 @@
     "@types/multer": "^2.0.0",
     "autoprefixer": "^10.4.23",
     "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.18"
+    "tailwindcss": "^4.1.18",
+    "vite-plugin-pwa": "^1.2.0"
   },
   "dependencies": {
+    "@vueuse/core": "^14.1.0",
     "pdf-lib": "^1.17.1",
     "primeicons": "^7.0.0"
   }

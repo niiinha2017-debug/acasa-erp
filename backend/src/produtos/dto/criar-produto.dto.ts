@@ -1,5 +1,18 @@
 import { Type } from 'class-transformer'
-import { IsInt, IsNumber, IsOptional, IsString } from 'class-validator'
+import {
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsEnum,
+  Min,
+  IsPositive,
+} from 'class-validator'
+
+export enum StatusProduto {
+  ATIVO = 'ATIVO',
+  INATIVO = 'INATIVO',
+}
 
 export class CreateProdutoDto {
   @Type(() => Number)
@@ -22,22 +35,24 @@ export class CreateProdutoDto {
   medida?: string
 
   @IsOptional()
-@IsString()
-unidade?: string
-
+  @IsString()
+  unidade?: string
 
   @Type(() => Number)
   @IsInt()
+  @Min(0)
   quantidade: number
 
   @Type(() => Number)
   @IsNumber()
+  @IsPositive()
   valor_unitario: number
 
   @Type(() => Number)
   @IsNumber()
+  @Min(0)
   valor_total: number
 
-  @IsString()
-  status: string
+  @IsEnum(StatusProduto)
+  status: StatusProduto
 }

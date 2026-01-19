@@ -18,11 +18,12 @@ export class PermissoesController {
     return this.service.listarPermissoesDoUsuario(id)
   }
 
-  @Put('usuarios/:id/permissoes')
-  definirPermissoesDoUsuario(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: DefinirPermissoesUsuarioDto,
-  ) {
-    return this.service.definirPermissoesDoUsuario(id, dto.permissoes || [])
-  }
+@Put('usuarios/:id/permissoes')
+definirPermissoesDoUsuario(
+  @Param('id', ParseIntPipe) id: number,
+  @Body() dto: DefinirPermissoesUsuarioDto,
+) {
+  return this.service.definirPermissoesDoUsuario(id, dto.permissoes || [])
+}
+
 }

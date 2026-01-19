@@ -13,14 +13,6 @@ export class CadastroDto {
   @IsNotEmpty()
   email: string;
 
-  @IsString()
-  @IsNotEmpty()
-  setor: string;
-
-  @IsString()
-  @IsNotEmpty()
-  funcao: string;
-
 @IsString()
 @IsNotEmpty()
 @MinLength(6)

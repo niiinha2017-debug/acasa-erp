@@ -1,3 +1,7 @@
+//src/utils/utils.js
+
+import api from '@/services/api'
+
 /* =====================
    CEP
 ===================== */
@@ -19,29 +23,18 @@ export async function buscarCnpj(cnpj) {
   if (limpo.length !== 14) return null
 
   try {
-    const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${limpo}`)
-    if (!res.ok) return null
-    const data = await res.json()
-
-    const s = (x) => String(x ?? '').trim()
-
-    return {
-      razao_social: s(data.razao_social),
-      nome_fantasia: s(data.nome_fantasia),
-      telefone: s(data.ddd_telefone_1 || data.ddd_telefone_2),
-      cep: s(data.cep),
-      endereco: s(data.logradouro),
-      numero: s(data.numero),
-      bairro: s(data.bairro),
-      cidade: s(data.municipio),
-      estado: s(data.uf),
-      // IE: BrasilAPI pode não ter esse campo; deixa seguro
-      ie: s(data.inscricao_estadual),
-    }
-  } catch {
+    const res = await api.get(`/utils/cnpj/${limpo}`)
+    console.log('[buscarCnpj] status:', res.status)
+    console.log('[buscarCnpj] data:', res.data)
+    return res.data || null
+  } catch (err) {
+    console.log('[buscarCnpj] ERRO status:', err?.response?.status)
+    console.log('[buscarCnpj] ERRO data:', err?.response?.data)
     return null
   }
 }
+
+
 
 export const calcularCustoHora = (salario) => {
   if (!salario || salario <= 0) return 0

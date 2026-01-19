@@ -1,18 +1,18 @@
 // src/modulos/empresa/empresa.controller.ts
-import { Controller, Get, Put, Body } from '@nestjs/common';
-import { EmpresaService } from './empresa.service';
+import { Controller, Get, Put, Body } from '@nestjs/common'
+import { EmpresaService } from './empresa.service'
 
-@Controller('configuracoes')
+@Controller('configuracoes/empresa')
 export class EmpresaController {
   constructor(private readonly empresaService: EmpresaService) {}
 
-  @Get('1')
+  @Get()
   buscar() {
-    return this.empresaService.buscar();
+    return this.empresaService.buscar()
   }
 
-  @Put('1')
+  @Put()
   salvar(@Body() dados: any) {
-    return this.empresaService.salvar(dados);
+    return this.empresaService.salvar(dados)
   }
 }

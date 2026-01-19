@@ -30,6 +30,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/agendamentos/': RouteRecordInfo<
+      '/agendamentos/',
+      '/agendamentos',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/clientes/': RouteRecordInfo<
       '/clientes/',
       '/clientes',
@@ -37,11 +44,11 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/clientes/[id]': RouteRecordInfo<
-      '/clientes/[id]',
-      '/clientes/:id',
-      { id: ParamValue<true> },
-      { id: ParamValue<false> },
+    '/clientes/novo': RouteRecordInfo<
+      '/clientes/novo',
+      '/clientes/novo',
+      Record<never, never>,
+      Record<never, never>,
       | never
     >,
     '/compras/': RouteRecordInfo<
@@ -79,20 +86,6 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/constantes/': RouteRecordInfo<
-      '/constantes/',
-      '/constantes',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/constantes/[id]': RouteRecordInfo<
-      '/constantes/[id]',
-      '/constantes/:id',
-      { id: ParamValue<true> },
-      { id: ParamValue<false> },
-      | never
-    >,
     '/despesas/': RouteRecordInfo<
       '/despesas/',
       '/despesas',
@@ -105,6 +98,13 @@ declare module 'vue-router/auto-routes' {
       '/despesas/:id',
       { id: ParamValue<true> },
       { id: ParamValue<false> },
+      | never
+    >,
+    '/financeiro/cheques/': RouteRecordInfo<
+      '/financeiro/cheques/',
+      '/financeiro/cheques',
+      Record<never, never>,
+      Record<never, never>,
       | never
     >,
     '/financeiro/contas-pagar/': RouteRecordInfo<
@@ -121,16 +121,16 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/fornecedores/': RouteRecordInfo<
-      '/fornecedores/',
-      '/fornecedores',
+    '/fornecedor/': RouteRecordInfo<
+      '/fornecedor/',
+      '/fornecedor',
       Record<never, never>,
       Record<never, never>,
       | never
     >,
-    '/fornecedores/[id]': RouteRecordInfo<
-      '/fornecedores/[id]',
-      '/fornecedores/:id',
+    '/fornecedor/[id]': RouteRecordInfo<
+      '/fornecedor/[id]',
+      '/fornecedor/:id',
       { id: ParamValue<true> },
       { id: ParamValue<false> },
       | never
@@ -170,6 +170,13 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
+    '/orcamentos/cliente/[id]': RouteRecordInfo<
+      '/orcamentos/cliente/[id]',
+      '/orcamentos/cliente/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
     '/plano-corte/': RouteRecordInfo<
       '/plano-corte/',
       '/plano-corte',
@@ -184,11 +191,18 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
-    '/producao/agenda': RouteRecordInfo<
-      '/producao/agenda',
-      '/producao/agenda',
+    '/producao/': RouteRecordInfo<
+      '/producao/',
+      '/producao',
       Record<never, never>,
       Record<never, never>,
+      | never
+    >,
+    '/producao/[id]': RouteRecordInfo<
+      '/producao/[id]',
+      '/producao/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
       | never
     >,
     '/produtos/': RouteRecordInfo<
@@ -203,6 +217,20 @@ declare module 'vue-router/auto-routes' {
       '/produtos/:id',
       { id: ParamValue<true> },
       { id: ParamValue<false> },
+      | never
+    >,
+    '/rh/ponto/convites': RouteRecordInfo<
+      '/rh/ponto/convites',
+      '/rh/ponto/convites',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/rh/ponto/relatorio/': RouteRecordInfo<
+      '/rh/ponto/relatorio/',
+      '/rh/ponto/relatorio',
+      Record<never, never>,
+      Record<never, never>,
       | never
     >,
     '/vendas/': RouteRecordInfo<
@@ -238,15 +266,21 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/agendamentos/index.vue': {
+      routes:
+        | '/agendamentos/'
+      views:
+        | never
+    }
     'src/pages/clientes/index.vue': {
       routes:
         | '/clientes/'
       views:
         | never
     }
-    'src/pages/clientes/[id].vue': {
+    'src/pages/clientes/novo.vue': {
       routes:
-        | '/clientes/[id]'
+        | '/clientes/novo'
       views:
         | never
     }
@@ -280,18 +314,6 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/constantes/index.vue': {
-      routes:
-        | '/constantes/'
-      views:
-        | never
-    }
-    'src/pages/constantes/[id].vue': {
-      routes:
-        | '/constantes/[id]'
-      views:
-        | never
-    }
     'src/pages/despesas/index.vue': {
       routes:
         | '/despesas/'
@@ -301,6 +323,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/despesas/[id].vue': {
       routes:
         | '/despesas/[id]'
+      views:
+        | never
+    }
+    'src/pages/financeiro/cheques/index.vue': {
+      routes:
+        | '/financeiro/cheques/'
       views:
         | never
     }
@@ -316,15 +344,15 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/fornecedores/index.vue': {
+    'src/pages/fornecedor/index.vue': {
       routes:
-        | '/fornecedores/'
+        | '/fornecedor/'
       views:
         | never
     }
-    'src/pages/fornecedores/[id].vue': {
+    'src/pages/fornecedor/[id].vue': {
       routes:
-        | '/fornecedores/[id]'
+        | '/fornecedor/[id]'
       views:
         | never
     }
@@ -358,6 +386,12 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/orcamentos/cliente/[id].vue': {
+      routes:
+        | '/orcamentos/cliente/[id]'
+      views:
+        | never
+    }
     'src/pages/plano-corte/index.vue': {
       routes:
         | '/plano-corte/'
@@ -370,9 +404,15 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/producao/agenda.vue': {
+    'src/pages/producao/index.vue': {
       routes:
-        | '/producao/agenda'
+        | '/producao/'
+      views:
+        | never
+    }
+    'src/pages/producao/[id].vue': {
+      routes:
+        | '/producao/[id]'
       views:
         | never
     }
@@ -385,6 +425,18 @@ declare module 'vue-router/auto-routes' {
     'src/pages/produtos/[id].vue': {
       routes:
         | '/produtos/[id]'
+      views:
+        | never
+    }
+    'src/pages/rh/ponto/convites.vue': {
+      routes:
+        | '/rh/ponto/convites'
+      views:
+        | never
+    }
+    'src/pages/rh/ponto/relatorio/index.vue': {
+      routes:
+        | '/rh/ponto/relatorio/'
       views:
         | never
     }

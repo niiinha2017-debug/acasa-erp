@@ -1,103 +1,89 @@
 <template>
   <Card :shadow="true">
-    <!-- HEADER -->
-    <header class="flex items-start justify-between gap-4 border-b border-gray-100 p-6">
-      <div class="min-w-0">
-        <h2 class="text-xl font-black tracking-tight text-gray-900 uppercase">
-          {{ isEdit ? 'Editar Produto' : 'Novo Produto' }}
-        </h2>
-        <p class="mt-1 text-sm font-semibold text-gray-400">
-          {{ isEdit ? 'Atualize os dados do produto abaixo.' : 'Cadastre um novo produto abaixo.' }}
-        </p>
-      </div>
+    <PageHeader
+      :title="isEdit ? 'Editar Produto' : 'Novo Produto'"
+      subtitle="Cadastro de produtos"
+      icon="pi pi-box"
+      :backTo="'/produtos'"
+    />
 
-      <Button
-        variant="secondary"
-        size="sm"
-        type="button"
-        @click="router.push('/produtos')"
-      >
-        Voltar
-      </Button>
-    </header>
+    <div class="p-6 relative">
+      <Loading v-if="loading" />
 
-    <!-- BODY -->
-    <div class="p-6">
-      <form class="grid grid-cols-12 gap-4" @submit.prevent="salvar">
-        <!-- Fornecedor -->
+      <form v-else class="grid grid-cols-12 gap-4" @submit.prevent="salvar">
+        <!-- FORNECEDOR -->
         <div class="col-span-12">
           <SearchInput
             v-model="form.fornecedor_id"
+            mode="select"
             label="Fornecedor *"
             :options="fornecedorOptions"
             required
           />
         </div>
 
-        <!-- Nome / Status -->
+        <!-- NOME / STATUS -->
         <div class="col-span-12 md:col-span-8">
           <Input v-model="form.nome_produto" label="Nome do Produto *" required />
         </div>
+
         <div class="col-span-12 md:col-span-4">
-          <Input v-model="form.status" label="Status *" required />
+          <SearchInput
+            v-model="form.status"
+            mode="select"
+            label="Status *"
+            :options="statusOptions"
+            required
+          />
         </div>
 
-        <!-- Marca / Cor / Medida -->
+        <!-- MARCA / COR / MEDIDA -->
         <div class="col-span-12 md:col-span-4">
           <Input v-model="form.marca" label="Marca" />
         </div>
+
         <div class="col-span-12 md:col-span-4">
           <Input v-model="form.cor" label="Cor" />
         </div>
+
         <div class="col-span-12 md:col-span-4">
           <Input v-model="form.medida" label="Medida" />
         </div>
 
-        <!-- Unidade (constantes) -->
+        <!-- UNIDADE -->
         <div class="col-span-12 md:col-span-4">
-          <SearchInput
-            v-model="form.unidade"
-            label="Unidade *"
-            :options="unidadesOptions"
-            required
-          />
+<SearchInput
+  v-model="form.unidade"
+  mode="select"
+  label="Unidade *"
+  :options="unidadesOptions"
+  required
+/>
+
         </div>
 
-        <!-- Quantidade / Valor Unitário / Valor Total -->
+        <!-- QTD / VALOR UNIT / TOTAL -->
         <div class="col-span-12 md:col-span-4">
-          <Input
-            v-model="quantidadeMask"
-            label="Quantidade *"
-            required
-            inputmode="numeric"
-          />
-        </div>
-        <div class="col-span-12 md:col-span-4">
-          <Input
-            v-model="valorUnitarioInput"
-            label="Valor Unitário *"
-            required
-            inputmode="numeric"
-          />
-        </div>
-        <div class="col-span-12 md:col-span-4">
-          <Input
-            :model-value="valorTotalMask"
-            label="Valor Total"
-            readonly
-          />
+          <Input v-model="quantidadeInput" label="Quantidade *" inputmode="numeric" required />
         </div>
 
-        <!-- DIVISOR (opcional, se você quiser separar visualmente antes do footer) -->
+        <div class="col-span-12 md:col-span-4">
+          <Input v-model="valorUnitarioMask" label="Valor Unitário *" inputmode="numeric" required />
+        </div>
+
+        <div class="col-span-12 md:col-span-4">
+          <Input :model-value="valorTotalMask" label="Valor Total" readonly />
+        </div>
+
         <div class="col-span-12">
           <div class="h-px w-full bg-gray-100"></div>
         </div>
 
-        <!-- FOOTER (ações à direita) -->
-        <div class="col-span-12 flex items-center justify-end gap-3 pt-2">
+        <div class="col-span-12 flex items-center justify-end gap-3">
           <Button variant="secondary" type="button" @click="router.push('/produtos')">
             Cancelar
           </Button>
+
           <Button variant="primary" type="submit" :loading="salvando">
             {{ isEdit ? 'Salvar Alterações' : 'Salvar' }}
           </Button>
@@ -107,67 +93,34 @@
   </Card>
 </template>
 
-
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-
-import api from '@/services/api'
 import { maskMoneyBR } from '@/utils/masks'
-import { useConstantes } from '@/composables/useConstantes'
-
-import Card from '@/components/ui/Card.vue'
-import Input from '@/components/ui/Input.vue'
-import Button from '@/components/ui/Button.vue'
-import SearchInput from '@/components/ui/SearchInput.vue'
+import { UNIDADES } from '@/constantes'
+import { ProdutosService, FornecedorService } from '@/services/index'
 
 const route = useRoute()
 const router = useRouter()
 
-const id = computed(() => String(route.params.id || 'novo'))
-const isEdit = computed(() => id.value !== 'novo')
+const rawId = computed(() => String(route.params.id || 'novo'))
+const isEdit = computed(() => rawId.value !== 'novo')
+const produtoId = computed(() => (isEdit.value ? Number(String(rawId.value).replace(/\D/g, '')) : null))
 
+const loading = ref(false)
 const salvando = ref(false)
-const fornecedor = ref([])
-const valorUnitarioInput = ref('0,00')
 
-/** ✅ Constantes: Categoria MODULO / Chave UNIDADE */
-const uni = useConstantes()
-watch(
-  () => uni.opcoes.value,
-  (v) => {
-    console.log('[UNIDADE] uni.opcoes.value length:', Array.isArray(v) ? v.length : 'nao-array')
-    console.log('[UNIDADE] first item:', Array.isArray(v) ? v[0] : v)
-  },
-  { deep: true }
+const fornecedor = ref([])
+const fornecedorOptions = computed(() =>
+  (fornecedor.value || []).map(f => ({ label: f.razao_social, value: f.id }))
 )
 
-/**
- * ✅ SearchInput precisa [{label, value}]
- * Seu cadastro é: Categoria=MODULO, Chave=UNIDADE, Rótulo=Caixa/Metros/...
- * Então: carrega MODULO e filtra chave UNIDADE
- */
-const unidadesOptions = computed(() => {
-  // 1. Pega os dados que o useConstantes já buscou e mapeou
-  const listaDoComposable = Array.isArray(uni.opcoes.value) ? uni.opcoes.value : []
+const statusOptions = [
+  { label: 'ATIVO', value: 'ATIVO' },
+  { label: 'INATIVO', value: 'INATIVO' },
+]
 
-  return listaDoComposable
-    .filter(o => {
-      // Filtra apenas o que tem a CHAVE (value no composable) como 'UNIDADE'
-      return String(o.value || '').toUpperCase() === 'UNIDADE'
-    })
-    .map(o => {
-      // Agora invertemos: o que era LABEL (Caixa, Metros) 
-      // vira tanto o rótulo quanto o valor que será salvo no banco.
-      return { 
-        label: o.label, // Ex: "Caixa" (aparece na lista)
-        value: o.label  // Ex: "Caixa" (será salvo em form.unidade)
-      }
-    })
-    .filter(o => o.label) // Garante que não venha nada nulo
-})
-
-
+// ======= FORM (estado numérico) =======
 const form = ref({
   fornecedor_id: null,
   nome_produto: '',
@@ -181,43 +134,51 @@ const form = ref({
   status: 'ATIVO',
 })
 
-const fornecedorOptions = computed(() =>
-  fornecedor.value.map(f => ({ value: f.id, label: f.razao_social }))
+// ======= Inputs auxiliares (máscaras) =======
+const quantidadeInput = ref('')
+const valorUnitarioMask = ref('R$ 0,00')
+
+const valorTotalNumerico = computed(() => {
+  const qtd = Number(form.value.quantidade || 0)
+  const v = Number(form.value.valor_unitario || 0)
+  return qtd * v
+})
+
+watch(valorTotalNumerico, (t) => {
+  form.value.valor_total = t
+})
+
+const valorTotalMask = computed(() => maskMoneyBR(valorTotalNumerico.value))
+
+watch(quantidadeInput, (v) => {
+  const n = String(v || '').replace(/\D/g, '')
+  form.value.quantidade = n ? Number(n) : 0
+  if (v !== n) quantidadeInput.value = n
+})
+
+watch(valorUnitarioMask, (v) => {
+  const n = String(v || '').replace(/\D/g, '')
+  const valor = n ? Number(n) / 100 : 0
+  form.value.valor_unitario = valor
+
+  const formatado = maskMoneyBR(valor)
+  if (v !== formatado) valorUnitarioMask.value = formatado
+})
+
+// ======= UNIDADES (constantes) =======
+// robusto: tenta achar opções que representem unidades dentro da categoria MODULO
+const unidadesOptions = computed(() =>
+  UNIDADES.map(u => ({ label: u.label, value: u.key }))
 )
 
-/* Quantidade (só números) */
-const quantidadeMask = computed({
-  get: () => (form.value.quantidade === 0 ? '' : String(form.value.quantidade)),
-  set: v => {
-    const n = String(v || '').replace(/\D/g, '')
-    form.value.quantidade = n ? Number(n) : 0
-  },
-})
 
-/* Valor unitário com máscara BR */
-watch(valorUnitarioInput, (v) => {
-  const apenasNumeros = String(v || '').replace(/\D/g, '')
-  const valorNumerico = apenasNumeros ? Number(apenasNumeros) / 100 : 0
-
-  form.value.valor_unitario = valorNumerico
-
-  const formatado = maskMoneyBR(valorNumerico)
-  if (v !== formatado) valorUnitarioInput.value = formatado
-})
-
-/* Total calculado */
-const valorTotalMask = computed(() => {
-  const total = Number(form.value.quantidade || 0) * Number(form.value.valor_unitario || 0)
-  form.value.valor_total = total
-  return maskMoneyBR(total)
-})
-
-function validarObrigatorios() {
+// ======= CRUD =======
+function validar() {
   if (!form.value.fornecedor_id) return 'Selecione o fornecedor.'
   if (!form.value.nome_produto) return 'Informe o nome do produto.'
   if (!form.value.unidade) return 'Selecione a unidade.'
-  if (!form.value.quantidade) return 'Informe a quantidade.'
-  if (!form.value.valor_unitario) return 'Informe o valor unitário.'
+  if (!form.value.quantidade || Number(form.value.quantidade) <= 0) return 'Informe a quantidade.'
+  if (!form.value.valor_unitario || Number(form.value.valor_unitario) <= 0) return 'Informe o valor unitário.'
   if (!form.value.status) return 'Informe o status.'
   return null
 }
@@ -235,22 +196,33 @@ function resetForm() {
     valor_total: 0,
     status: 'ATIVO',
   }
-  valorUnitarioInput.value = '0,00'
+  quantidadeInput.value = ''
+  valorUnitarioMask.value = 'R$ 0,00'
 }
 
 async function carregarFornecedor() {
-  const res = await api.get('/fornecedor')
-  fornecedor.value = res.data
+  const { data } = await FornecedorService.listar()
+  fornecedor.value = data || []
 }
 
 async function carregarProduto() {
-  const { data } = await api.get(`/produtos/${id.value}`)
-  form.value = { ...form.value, ...data }
-  valorUnitarioInput.value = maskMoneyBR(Number(data.valor_unitario || 0))
+  const { data } = await ProdutosService.buscar(produtoId.value)
+  form.value = {
+    ...form.value,
+    ...data,
+    fornecedor_id: data.fornecedor_id ?? null,
+    quantidade: Number(data.quantidade || 0),
+    valor_unitario: Number(data.valor_unitario || 0),
+    valor_total: Number(data.valor_total || 0),
+    status: data.status || 'ATIVO',
+  }
+
+  quantidadeInput.value = form.value.quantidade ? String(form.value.quantidade) : ''
+  valorUnitarioMask.value = maskMoneyBR(form.value.valor_unitario || 0)
 }
 
 async function salvar() {
-  const erro = validarObrigatorios()
+  const erro = validar()
   if (erro) return alert(erro)
 
   salvando.value = true
@@ -267,14 +239,7 @@ async function salvar() {
       medida: form.value.medida ? String(form.value.medida) : null,
     }
 
-    if (isEdit.value) {
-      await api.put(`/produtos/${id.value}`, payload) // ✅ PUT atualiza
-      alert('Produto atualizado com sucesso!')
-    } else {
-      await api.post('/produtos', payload) // ✅ POST cria
-      alert('Produto cadastrado com sucesso!')
-    }
-
+    await ProdutosService.salvar(isEdit.value ? produtoId.value : null, payload)
     router.push('/produtos')
   } catch (err) {
     console.error(err)
@@ -285,26 +250,22 @@ async function salvar() {
 }
 
 onMounted(async () => {
+  loading.value = true
   try {
-    // 1. Carrega os dados necessários para os selects em paralelo
-    await Promise.all([
-      carregarFornecedor(),
-      uni.carregarCategoria('MODULO')
-    ])
+    await carregarFornecedor()
 
-    // 2. Decide se carrega um produto existente ou reseta para um novo
     if (isEdit.value) {
       await carregarProduto()
     } else {
       resetForm()
     }
-
-    console.log('[UNIDADE] Dados carregados com sucesso:', uni.opcoes.value)
   } catch (err) {
-    console.error('Erro ao inicializar formulário:', err)
+    console.error('[PRODUTOS] erro no mounted:', err)
     alert('Erro ao carregar dados iniciais.')
     router.push('/produtos')
+  } finally {
+    loading.value = false
   }
 })
-</script>
 
+</script>

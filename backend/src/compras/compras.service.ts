@@ -66,30 +66,97 @@ export class ComprasService {
     }
   }
 
-// No ComprasService.ts
-private async atualizarEstoqueEValorProdutos(
+  // ============================
+  // ESTOQUE (CREATE) -> increment
+  // ============================
+  private async atualizarEstoqueEValorProdutosCreate(
     itens: Array<{ produto_id?: number | null; quantidade: any; valor_unitario: any }>,
   ) {
-    if (!itens?.length) return;
+    if (!itens?.length) return
 
     for (const it of itens) {
-      if (!it.produto_id) continue;
+      if (!it.produto_id) continue
 
-const valorUnit = this.num(it.valor_unitario ?? 0, 'item.valor_unitario');
-const qtdComprada = this.num(it.quantidade ?? 0, 'item.quantidade');
+      const valorUnit = this.num(it.valor_unitario ?? 0, 'item.valor_unitario')
+      const qtdComprada = this.num(it.quantidade ?? 0, 'item.quantidade')
 
       await this.prisma.produtos.update({
         where: { id: it.produto_id },
         data: {
           valor_unitario: valorUnit,
-          quantidade: {
-            increment: qtdComprada,
-          },
+          quantidade: { increment: qtdComprada },
           atualizado_em: new Date(),
         },
-      });
+      })
     }
   }
+
+  // ============================
+  // ESTOQUE (UPDATE) -> delta
+  // + atualiza valor_unitario pelo "último" visto em depois
+  // ============================
+  private somarPorProdutoId(
+    itens: Array<{ produto_id?: number | null; quantidade: any; valor_unitario?: any }>,
+    fieldPrefix: string,
+  ) {
+    const map = new Map<number, { qtd: number; valor_unitario: number }>()
+    for (const it of itens || []) {
+      if (!it.produto_id) continue
+
+      const id = Number(it.produto_id)
+      const qtd = this.num(it.quantidade ?? 0, `${fieldPrefix}.quantidade`)
+      const vu = this.num(it.valor_unitario ?? 0, `${fieldPrefix}.valor_unitario`)
+
+      const atual = map.get(id) || { qtd: 0, valor_unitario: vu }
+      atual.qtd = this.round2(atual.qtd + qtd)
+      atual.valor_unitario = vu // mantém o último valor_unitario visto nesse "depois"
+      map.set(id, atual)
+    }
+    return map
+  }
+
+  private async aplicarDeltaEstoque(
+    antes: Array<{ produto_id?: number | null; quantidade: any; valor_unitario?: any }>,
+    depois: Array<{ produto_id?: number | null; quantidade: any; valor_unitario?: any }>,
+  ) {
+    const A = this.somarPorProdutoId(antes, 'antes')
+    const B = this.somarPorProdutoId(depois, 'depois')
+
+    const ids = new Set<number>([...A.keys(), ...B.keys()])
+
+    for (const produto_id of ids) {
+      const a = A.get(produto_id)?.qtd || 0
+      const b = B.get(produto_id)?.qtd || 0
+      const delta = this.round2(b - a)
+
+      if (delta === 0) {
+        // mesmo sem delta, se quiser manter valor_unitario atualizado pelo "depois"
+        const vuMesmo = B.get(produto_id)?.valor_unitario
+        if (vuMesmo !== undefined) {
+          await this.prisma.produtos.update({
+            where: { id: produto_id },
+            data: { valor_unitario: vuMesmo, atualizado_em: new Date() },
+          })
+        }
+        continue
+      }
+
+      const valorUnit = B.get(produto_id)?.valor_unitario ?? A.get(produto_id)?.valor_unitario ?? 0
+
+      await this.prisma.produtos.update({
+        where: { id: produto_id },
+        data: {
+          valor_unitario: valorUnit,
+          quantidade:
+            delta > 0
+              ? { increment: delta }
+              : { decrement: Math.abs(delta) },
+          atualizado_em: new Date(),
+        },
+      })
+    }
+  }
+
   // --- MÉTODOS PRINCIPAIS ---
 
   async listar(filtros: { venda_id?: number; tipo_compra?: string }) {
@@ -101,9 +168,7 @@ const qtdComprada = this.num(it.quantidade ?? 0, 'item.quantidade');
       where,
       orderBy: { id: 'desc' },
       include: {
-        fornecedor: {
-          select: { id: true, razao_social: true, nome_fantasia: true, cnpj: true },
-        },
+        fornecedor: { select: { id: true, razao_social: true, nome_fantasia: true, cnpj: true } },
         itens: true,
         rateios: true,
       },
@@ -114,9 +179,7 @@ const qtdComprada = this.num(it.quantidade ?? 0, 'item.quantidade');
     const compra = await this.prisma.compras.findUnique({
       where: { id },
       include: {
-        fornecedor: {
-          select: { id: true, razao_social: true, nome_fantasia: true, cnpj: true },
-        },
+        fornecedor: { select: { id: true, razao_social: true, nome_fantasia: true, cnpj: true } },
         itens: true,
         rateios: true,
         venda: { select: { id: true, cliente_id: true, status: true, data_venda: true } },
@@ -130,9 +193,10 @@ const qtdComprada = this.num(it.quantidade ?? 0, 'item.quantidade');
     const tipo = String((dto as any).tipo_compra || '').trim()
     const total = this.calcTotalItens((dto as any).itens)
 
-    // Validações de Regra de Negócio
     if (tipo === 'CLIENTE_AMBIENTE') {
-      if (!(dto as any).venda_id) throw new BadRequestException('venda_id é obrigatório para CLIENTE_AMBIENTE.')
+      if (!(dto as any).venda_id) {
+        throw new BadRequestException('venda_id é obrigatório para CLIENTE_AMBIENTE.')
+      }
       this.validarRateios((dto as any).rateios, total)
     } else if (tipo === 'INSUMOS') {
       if ((dto as any).rateios?.length) throw new BadRequestException('Insumos não permitem rateio.')
@@ -140,12 +204,11 @@ const qtdComprada = this.num(it.quantidade ?? 0, 'item.quantidade');
       throw new BadRequestException('tipo_compra inválido.')
     }
 
-    // Preparar Itens com snapshot dos dados do produto
-    const itensParaCriar = []
+    const itensParaCriar: any[] = []
     if ((dto as any).itens?.length) {
       for (const i of (dto as any).itens) {
-        let dadosProd: any = { nome_produto: 'Item Avulso' } // Fallback se não tiver produto_id
-        
+        let dadosProd: any = { nome_produto: 'Item Avulso' }
+
         if (i.produto_id) {
           const p = await this.prisma.produtos.findUnique({ where: { id: i.produto_id } })
           if (p) {
@@ -161,13 +224,18 @@ const qtdComprada = this.num(it.quantidade ?? 0, 'item.quantidade');
 
         const quantidade = this.round2(this.num(i.quantidade ?? 1, 'itens.quantidade'))
         const valorUnit = this.round2(this.num(i.valor_unitario ?? 0, 'itens.valor_unitario'))
-        const valorTotal = i.valor_total !== undefined 
-          ? this.round2(this.num(i.valor_total, 'itens.valor_total')) 
-          : this.round2(quantidade * valorUnit)
+        const valorTotal =
+          i.valor_total !== undefined
+            ? this.round2(this.num(i.valor_total, 'itens.valor_total'))
+            : this.round2(quantidade * valorUnit)
+
+        const unidade = String(i.unidade || (dadosProd as any).unidade || '').trim()
+        if (!unidade) throw new BadRequestException('itens.unidade é obrigatório.')
 
         itensParaCriar.push({
           produto_id: i.produto_id ?? null,
           ...dadosProd,
+          unidade,
           quantidade,
           valor_unitario: valorUnit,
           valor_total: valorTotal,
@@ -182,20 +250,23 @@ const qtdComprada = this.num(it.quantidade ?? 0, 'item.quantidade');
         data_compra: (dto as any).data_compra ? new Date((dto as any).data_compra) : undefined,
         fornecedor_id: (dto as any).fornecedor_id,
         venda_item_id: (dto as any).venda_item_id ?? null,
-        status: (dto as any).status,
+        status: String((dto as any).status || '').trim() || 'EM_ABERTO',
         valor_total: total,
         itens: { create: itensParaCriar },
-        rateios: tipo === 'CLIENTE_AMBIENTE' ? {
-          create: (dto as any).rateios.map((r: any) => ({
-            nome_ambiente: String(r.nome_ambiente).trim(),
-            valor_alocado: this.round2(this.num(r.valor_alocado, 'rateios.valor_alocado')),
-          })),
-        } : undefined,
+        rateios:
+          tipo === 'CLIENTE_AMBIENTE'
+            ? {
+                create: (dto as any).rateios.map((r: any) => ({
+                  nome_ambiente: String(r.nome_ambiente).trim(),
+                  valor_alocado: this.round2(this.num(r.valor_alocado, 'rateios.valor_alocado')),
+                })),
+              }
+            : undefined,
       },
       include: { itens: true, rateios: true },
     })
 
-    await this.atualizarEstoqueEValorProdutos(compra.itens as any)
+    await this.atualizarEstoqueEValorProdutosCreate(compra.itens as any)
     return compra
   }
 
@@ -207,7 +278,10 @@ const qtdComprada = this.num(it.quantidade ?? 0, 'item.quantidade');
     if (!existe) throw new NotFoundException('Compra não encontrada')
 
     const tipoAtual = String(existe.tipo_compra || '').trim()
-    
+
+    // ✅ pega snapshot "antes" (para delta de estoque)
+    const itensAntes = await this.prisma.compras_itens.findMany({ where: { compra_id: id } })
+
     // 1. Remover itens solicitados
     if ((dto as any).itens_remover_ids?.length) {
       await this.prisma.compras_itens.deleteMany({
@@ -219,6 +293,7 @@ const qtdComprada = this.num(it.quantidade ?? 0, 'item.quantidade');
     if ((dto as any).itens?.length) {
       for (const item of (dto as any).itens) {
         let dadosProd: any = {}
+
         if (item.produto_id) {
           const p = await this.prisma.produtos.findUnique({ where: { id: item.produto_id } })
           if (p) {
@@ -234,13 +309,18 @@ const qtdComprada = this.num(it.quantidade ?? 0, 'item.quantidade');
 
         const quantidade = this.round2(this.num(item.quantidade ?? 1, 'itens.quantidade'))
         const valorUnit = this.round2(this.num(item.valor_unitario ?? 0, 'itens.valor_unitario'))
-        const valorTotal = item.valor_total !== undefined 
-          ? this.round2(this.num(item.valor_total, '')) 
-          : this.round2(quantidade * valorUnit)
+        const valorTotal =
+          item.valor_total !== undefined
+            ? this.round2(this.num(item.valor_total, 'itens.valor_total'))
+            : this.round2(quantidade * valorUnit)
+
+        const unidade = String(item.unidade || (dadosProd as any).unidade || '').trim()
+        if (!unidade) throw new BadRequestException('itens.unidade é obrigatório.')
 
         const payloadItem = {
           produto_id: item.produto_id ?? null,
           ...dadosProd,
+          unidade,
           quantidade,
           valor_unitario: valorUnit,
           valor_total: valorTotal,
@@ -255,8 +335,8 @@ const qtdComprada = this.num(it.quantidade ?? 0, 'item.quantidade');
     }
 
     // 3. Recalcular total e validar rateios
-    const itensAtualizados = await this.prisma.compras_itens.findMany({ where: { compra_id: id } })
-    const total = this.calcTotalItens(itensAtualizados as any)
+    const itensDepois = await this.prisma.compras_itens.findMany({ where: { compra_id: id } })
+    const total = this.calcTotalItens(itensDepois as any)
 
     if (tipoAtual === 'CLIENTE_AMBIENTE') {
       const rateiosInput = (dto as any).rateios
@@ -281,7 +361,9 @@ const qtdComprada = this.num(it.quantidade ?? 0, 'item.quantidade');
       where: { id },
       data: {
         fornecedor_id: (dto as any).fornecedor_id ?? undefined,
-        status: (dto as any).status ?? undefined,
+        status: (dto as any).status !== undefined
+  ? (String((dto as any).status || '').trim() || 'EM_ABERTO')
+  : undefined,
         data_compra: (dto as any).data_compra ? new Date((dto as any).data_compra) : undefined,
         valor_total: total,
         venda_id: tipoAtual === 'CLIENTE_AMBIENTE' ? ((dto as any).venda_id ?? undefined) : null,
@@ -289,7 +371,9 @@ const qtdComprada = this.num(it.quantidade ?? 0, 'item.quantidade');
       include: { itens: true, rateios: true },
     })
 
-    await this.atualizarEstoqueEValorProdutos(itensAtualizados as any)
+    // ✅ aplica delta (atualiza quantidade e valor_unitario do produto)
+    await this.aplicarDeltaEstoque(itensAntes as any, itensDepois as any)
+
     return compraAtualizada
   }
 

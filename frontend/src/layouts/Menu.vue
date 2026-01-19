@@ -1,144 +1,57 @@
 <template>
-  <header 
-    class="sticky top-0 z-sticky w-full transition-all duration-300"
-    :class="[
-      isScrolled 
-        ? 'bg-white/90 backdrop-blur-xl shadow-lg border-b border-gray-200/50 py-2' 
-        : 'bg-white/95 backdrop-blur-md border-b border-gray-100 py-3'
-    ]"
-  >
-    <div class="max-w-[1440px] mx-auto px-6 flex items-center gap-8">
-      
-      <div 
-        @click="irPara('/')" 
-        class="text-xl font-black text-gray-900 cursor-pointer whitespace-nowrap tracking-tighter hover:text-brand-primary transition-colors uppercase"
-      >
-        A CASA<span class="text-brand-primary">-ERP</span>
-      </div>
+  <nav class="flex items-center justify-center gap-2 w-full h-14 relative z-[100] bg-[var(--bg-card)] border-b border-[var(--border-ui)] shadow-sm transition-colors duration-300">
+    
+    <RouterLink 
+      to="/" 
+      class="flex items-center px-4 py-2 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-brand-primary transition-all"
+    >
+      Início
+    </RouterLink>
 
-      <nav ref="navEl" class="flex-1 hidden lg:flex items-center justify-center gap-1 p-1.5 bg-gray-50/50 rounded-xl border border-gray-100">
-        
-        <RouterLink to="/" class="nav-link-tw" active-class="nav-link-active-tw">
-          Início
-        </RouterLink>
+    <NavMenu label="Operacional" :items="NAV_SCHEMA.operacional" />
+    <NavMenu label="Financeiro" :items="NAV_SCHEMA.financeiro" />
+    <NavMenu label="Cadastros" :items="NAV_SCHEMA.cadastros" />
+    <NavMenu label="Configurações" :items="NAV_SCHEMA.configuracoes" />
 
-        <div class="relative group">
-          <button @click.stop="toggleDropdown('operacional')" class="nav-link-tw" :class="{'nav-link-active-tw': activeDropdown === 'operacional'}">
-            Operacional
-            <i class="pi pi-chevron-down text-[10px] transition-transform" :class="{ 'rotate-180': activeDropdown === 'operacional' }"></i>
-          </button>
-          <div v-if="activeDropdown === 'operacional'" class="dropdown-container-tw">
-            <a href="#" @click.prevent="irPara('/vendas')" class="dropdown-item-tw"><i class="pi pi-cart-plus mr-2 opacity-50"></i> Vendas</a>
-            <a href="#" @click.prevent="irPara('/orcamentos')" class="dropdown-item-tw"><i class="pi pi-file-edit mr-2 opacity-50"></i> Orçamentos</a>
-            <hr class="my-1 border-gray-50">
-            <a href="#" @click.prevent="irPara('/producao')" class="dropdown-item-tw"><i class="pi pi-box mr-2 opacity-50"></i> Produção</a>
-            <a href="#" @click.prevent="irPara('/plano-corte')" class="dropdown-item-tw"><i class="pi pi-table mr-2 opacity-50"></i> Plano de Corte</a>
-          </div>
-        </div>
+    <div class="h-6 w-[1px] bg-[var(--border-ui)] mx-2"></div>
 
-        <div class="relative group">
-          <button @click.stop="toggleDropdown('financeiro')" class="nav-link-tw" :class="{'nav-link-active-tw': activeDropdown === 'financeiro'}">
-            Financeiro
-            <i class="pi pi-chevron-down text-[10px] transition-transform" :class="{ 'rotate-180': activeDropdown === 'financeiro' }"></i>
-          </button>
-          <div v-if="activeDropdown === 'financeiro'" class="dropdown-container-tw">
-            <a href="#" @click.prevent="irPara('/financeiro')" class="dropdown-item-tw"><i class="pi pi-wallet mr-2 opacity-50"></i> Fluxo de Caixa</a>
-            <a href="#" @click.prevent="irPara('/despesas')" class="dropdown-item-tw"><i class="pi pi-minus-circle mr-2 opacity-50"></i> Despesas</a>
-            <a href="#" @click.prevent="irPara('/compras')" class="dropdown-item-tw"><i class="pi pi-shopping-bag mr-2 opacity-50"></i> Compras</a>
-            <a href="#" @click.prevent="irPara('/financeiro/contas-receber')" class="dropdown-item-tw"><i class="pi pi-inbox mr-2 opacity-50"></i> Contas a Receber</a>  
-            <a href="#" @click.prevent="irPara('/financeiro/contas-pagar')" class="dropdown-item-tw"><i class="pi pi-outbox mr-2 opacity-50"></i> Contas a Pagar</a>
-          </div>
-        </div>
+    <button 
+      @click="toggleDark()" 
+      class="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300
+             hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 dark:text-yellow-400"
+      title="Alternar Tema"
+    >
+      <i :class="isDark ? 'pi pi-sun text-lg' : 'pi pi-moon text-lg'"></i>
+    </button>
 
-        <div class="relative group">
-          <button @click.stop="toggleDropdown('cadastros')" class="nav-link-tw" :class="{'nav-link-active-tw': activeDropdown === 'cadastros'}">
-            Cadastros
-            <i class="pi pi-chevron-down text-[10px] transition-transform" :class="{ 'rotate-180': activeDropdown === 'cadastros' }"></i>
-          </button>
-          <div v-if="activeDropdown === 'cadastros'" class="dropdown-container-tw">
-            <a href="#" @click.prevent="irPara('/clientes')" class="dropdown-item-tw"><i class="pi pi-users mr-2 opacity-50"></i> Clientes</a>
-            <a href="#" @click.prevent="irPara('/fornecedor')" class="dropdown-item-tw"><i class="pi pi-truck mr-2 opacity-50"></i> Fornecedor</a>
-            <a href="#" @click.prevent="irPara('/funcionarios')" class="dropdown-item-tw"><i class="pi pi-id-card mr-2 opacity-50"></i> Funcionários</a>
-            <a href="#" @click.prevent="irPara('/produtos')" class="dropdown-item-tw"><i class="pi pi-tag mr-2 opacity-50"></i> Produtos</a>
-          </div>
-        </div>
+    <div class="h-6 w-[1px] bg-[var(--border-ui)] mx-2"></div>
 
-        <div class="relative group">
-          <button @click.stop="toggleDropdown('configuracoes')" class="nav-link-tw" :class="{'nav-link-active-tw': activeDropdown === 'configuracoes'}">
-            Configurações
-            <i class="pi pi-chevron-down text-[10px] transition-transform" :class="{ 'rotate-180': activeDropdown === 'configuracoes' }"></i>
-          </button>
-          <div v-if="activeDropdown === 'configuracoes'" class="dropdown-container-tw">
-            <a href="#" @click.prevent="irPara('/configuracoes/permissoes')" class="dropdown-item-tw"><i class="pi pi-users mr-2 opacity-50"></i> Permissões</a>
-            <a href="#" @click.prevent="irPara('/configuracoes/usuarios')" class="dropdown-item-tw"><i class="pi pi-truck mr-2 opacity-50"></i> Usuários</a>
-            <a href="#" @click.prevent="irPara('/constantes')" class="dropdown-item-tw"><i class="pi pi-building mr-2 opacity-50"></i> Constantes</a>
-            <a href="#" @click.prevent="irPara('/configuracoes')" class="dropdown-item-tw"><i class="pi pi-cog mr-2 opacity-50"></i> Configurações Gerais</a>
-          </div>
-        </div>
-      </nav>
-      <div class="flex items-center gap-4 pl-4 border-l border-gray-100 font-sans">
-        <div class="hidden sm:flex flex-col items-end leading-tight">
-          <span class="text-sm font-bold text-gray-900 leading-none mb-1">{{ usuarioLogado?.nome?.split(' ')[0] || 'Usuário' }}</span>
-          <span class="text-[10px] font-black text-brand-primary uppercase tracking-[0.15em]">{{ usuarioLogado?.setor || '-' }}</span>
-        </div>
-        
-        <button @click="handleLogout" class="w-10 h-10 rounded-xl flex items-center justify-center text-gray-400 hover:text-danger hover:bg-red-50 transition-all group">
-          <i class="pi pi-power-off font-bold group-hover:scale-110 transition-transform"></i>
-        </button>
-      </div>
-    </div>
-  </header>
+    <button 
+      @click="handleLogout" 
+      class="flex items-center gap-2 px-4 py-2 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all group"
+    >
+      <i class="pi pi-power-off text-xs group-hover:scale-110 transition-transform"></i>
+      <span class="font-black text-[11px] uppercase tracking-widest">Sair</span>
+    </button>
+  </nav>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuth } from '@/services/useauth'
+import { NAV_SCHEMA } from '@/services/navigation'
+import storage from '@/utils/storage' 
+import { useDark, useToggle } from '@vueuse/core'
 
 const router = useRouter()
-const { usuarioLogado, logout, temAcesso } = useAuth()
 
-const isScrolled = ref(false)
-const activeDropdown = ref(null)
-const navEl = ref(null)
+// Lógica de Dark Mode Profissional
+const isDark = useDark() // Detecta preferência do sistema e gerencia a classe .dark no HTML
+const toggleDark = useToggle(isDark)
 
-// Alterna entre os menus: 'operacional', 'financeiro' ou 'cadastros'
-const toggleDropdown = (menu) => {
-  activeDropdown.value = activeDropdown.value === menu ? null : menu
+const handleLogout = () => {
+  storage.removeToken()
+  storage.removeUser()
+  localStorage.removeItem('erp_lembrar_usuario')
+  router.push('/login')
 }
-
-const fecharDropdowns = () => { activeDropdown.value = null }
-
-const irPara = (path) => {
-  fecharDropdowns()
-  router.push(path).catch(err => console.error('Erro ao navegar:', err))
-}
-
-const handleLogout = async () => {
-  if (confirm('Deseja realmente sair do sistema?')) {
-    fecharDropdowns()
-    await logout()
-    router.push('/login') // Redireciona para o login após limpar a sessão
-  }
-}
-
-// Fecha o menu se clicar em qualquer lugar fora da área do <nav>
-const closeDropdownOnClickOutside = (event) => {
-  if (navEl.value && !navEl.value.contains(event.target)) {
-    fecharDropdowns()
-  }
-}
-
-// Controla a aparência do menu (transparência/sombra) ao rolar a página
-const handleScroll = () => { isScrolled.value = window.scrollY > 10 }
-
-onMounted(() => {
-  window.addEventListener('scroll', handleScroll, { passive: true })
-  document.addEventListener('click', closeDropdownOnClickOutside)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('scroll', handleScroll)
-  document.removeEventListener('click', closeDropdownOnClickOutside)
-})
 </script>

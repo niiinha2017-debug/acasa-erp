@@ -58,34 +58,20 @@ export const maskCEP = (v = '') => {
 export const maskMoneyBR = (value) => {
   if (value === undefined || value === null || value === '') return '0,00'
 
-  // Se o valor já for um número (ex: vindo do banco), formatamos direto
-  if (typeof value === 'number') {
-    return new Intl.NumberFormat('pt-BR', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(value)
-  }
+  // Se vier número do banco (ex: 150.5), vira "15050" para a lógica de centavos
+  let v = typeof value === 'number' 
+    ? value.toFixed(2).replace(/\D/g, '') 
+    : value.replace(/\D/g, '')
 
-  // Se for string (digitado), limpamos e transformamos em centavos
-  let v = value.replace(/\D/g, '')
-  v = (Number(v) / 100).toFixed(2)
-  return v.replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  // Transforma em número e formata com padrão brasileiro
+  return (Number(v) / 100).toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })
 }
-// Em @/utils/masks.js
+export const maskIE = (value = '') => {
+  const v = onlyNumbers(value).slice(0, 12)
 
-export const maskIE = (value) => {
-  if (!value) return ''
-  
-  // Remove tudo que não for dígito
-  let v = value.replace(/\D/g, '')
-  
-  // Limita a 12 dígitos (padrão 111.111.111.111)
-  v = v.substring(0, 12)
-  
-  // Aplica a pontuação progressivamente
-  v = v.replace(/(\={3})/, '$1.') // Não usado aqui, apenas exemplo
-  
-  // 111.111.111.111
   return v
     .replace(/(\d{3})(\d)/, '$1.$2')
     .replace(/(\d{3})(\d)/, '$1.$2')

@@ -1,40 +1,27 @@
-<script setup>
-// Certifique-se que o arquivo se chama Menu.vue (M maiúsculo)
-// e está dentro da pasta src/layouts/
-import Menu from './Menu.vue' 
-</script>
-
 <template>
-  <div class="layout-default">
+  <div class="min-h-screen bg-[var(--bg-page)] text-[var(--text-main)] transition-colors duration-300">
+    
     <Menu />
-    <main class="page-content">
-      <div class="content-wrapper">
-        <slot />
-      </div>
+
+    <main class="max-w-[1600px] mx-auto p-4 md:p-8 animate-fade-in">
+      <slot />
     </main>
+
   </div>
 </template>
 
+<script setup>
+import Menu from '@/layouts/Menu.vue'
+</script>
+
 <style scoped>
-.layout-default {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
+/* Uma animação sutil para quando o usuário navega entre as telas */
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out;
 }
 
-.page-content {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  background-color: var(--bg-page, #f3f4f6); /* fallback */
-}
-
-.content-wrapper {
-  width: 100%;
-  max-width: 1680px;
-  padding: clamp(16px, 2vw, 32px);
-  box-sizing: border-box;
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>
-
-

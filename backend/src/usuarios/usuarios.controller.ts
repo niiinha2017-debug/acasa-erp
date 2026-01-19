@@ -1,60 +1,57 @@
-import { 
-  Body, Controller, Delete, Get, Param, Put, Post, UseGuards, HttpCode, HttpStatus 
-} from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
-import { Roles } from '../auth/roles.decorator';
-import { UsuariosService } from './usuarios.service';
-import { CriarUsuarioDto } from './dto/criar-usuario.dto';
-import { AtualizarUsuarioDto } from './dto/atualizar-usuario.dto';
-import { AtualizarStatusDto } from './dto/atualizar-status.dto';
+import {
+  Body, Controller, Delete, Get, Param, Put, Post, UseGuards, HttpCode, HttpStatus
+} from '@nestjs/common'
+import { JwtAuthGuard } from '../auth/jwt-auth.guard'
+import { PermissionsGuard } from '../auth/permissions.guard'
+import { Permissoes } from '../auth/permissoes.decorator'
+import { UsuariosService } from './usuarios.service'
+import { CriarUsuarioDto } from './dto/criar-usuario.dto'
+import { AtualizarUsuarioDto } from './dto/atualizar-usuario.dto'
+import { AtualizarStatusDto } from './dto/atualizar-status.dto'
 
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('usuarios')
 export class UsuariosController {
   constructor(private readonly service: UsuariosService) {}
 
-  /**
-   * Função de limpeza de IDs para garantir que apenas números cheguem ao Service
-   */
   private cleanId(id: string | number): number {
-    return Number(String(id).replace(/\D/g, ''));
+    return Number(String(id).replace(/\D/g, ''))
   }
 
   @Get()
-  @Roles('ADMIN')
+  @Permissoes('admin.acesso')
   listar() {
-    return this.service.listar();
+    return this.service.listar()
   }
 
   @Get(':id')
-  @Roles('ADMIN')
+  @Permissoes('admin.acesso')
   buscar(@Param('id') id: string) {
-    return this.service.buscarPorId(this.cleanId(id));
+    return this.service.buscarPorId(this.cleanId(id))
   }
 
   @Post()
-  @Roles('ADMIN')
+  @Permissoes('admin.acesso')
   criar(@Body() dto: CriarUsuarioDto) {
-    return this.service.criar(dto);
+    return this.service.criar(dto)
   }
 
-  @Put(':id') // Trocado Patch por Put para seguir o padrão de edição completa
-  @Roles('ADMIN')
+  @Put(':id')
+  @Permissoes('admin.acesso')
   atualizar(@Param('id') id: string, @Body() dto: AtualizarUsuarioDto) {
-    return this.service.atualizar(this.cleanId(id), dto);
+    return this.service.atualizar(this.cleanId(id), dto)
   }
 
-  @Put(':id/status') // Trocado Patch por Put para consistência
-  @Roles('ADMIN')
+  @Put(':id/status')
+  @Permissoes('admin.acesso')
   atualizarStatus(@Param('id') id: string, @Body() dto: AtualizarStatusDto) {
-    return this.service.atualizarStatus(this.cleanId(id), dto.status);
+    return this.service.atualizarStatus(this.cleanId(id), dto.status)
   }
 
   @Delete(':id')
-  @Roles('ADMIN')
-  @HttpCode(HttpStatus.NO_CONTENT) // Retorno 204 para exclusão bem-sucedida
+  @Permissoes('admin.acesso')
+  @HttpCode(HttpStatus.NO_CONTENT)
   remover(@Param('id') id: string) {
-    return this.service.remover(this.cleanId(id));
+    return this.service.remover(this.cleanId(id))
   }
 }

@@ -1,124 +1,134 @@
 <template>
-  <div class="w-full">
-    <Card>
-      <div class="flex flex-col gap-4 px-8 pt-8 pb-6 border-b border-gray-100">
-        <div class="flex items-start justify-between gap-4">
-          <div>
-            <h2 class="text-2xl font-black text-gray-900 tracking-tight uppercase">Funcionários</h2>
-            <p class="text-sm font-semibold text-gray-400 mt-1">Gestão e controle de colaboradores</p>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <Button
-              v-if="selecionados.length > 0"
-              variant="secondary"
-              size="sm"
-              :loading="gerandoPdf" 
-              @click="gerarPdf"
-            >
-              <i class="pi pi-file-pdf mr-2"></i>
-              Relatório Selecionados ({{ selecionados.length }})
-            </Button>
-
-            <Button
-              variant="primary"
-              size="sm"
-              @click="router.push('/funcionarios/novo')"
-            >
-              <i class="pi pi-plus mr-2"></i>
-              Novo Funcionário
-            </Button>
+  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-in fade-in duration-700">
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      
+      <Card hoverable class="p-6 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-brand-primary/10 text-brand-primary flex items-center justify-center">
+          <i class="pi pi-users text-xl"></i>
+        </div>
+        <div>
+          <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Equipe Total</p>
+          <div class="flex items-baseline gap-2">
+            <p class="text-2xl font-black text-[var(--text-main)]">{{ funcionarios.length }}</p>
+            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Colaboradores</span>
           </div>
         </div>
-      </div>
+      </Card>
 
-      <div class="px-8 py-6 border-b border-gray-100 bg-gray-50/30">
-        <SearchInput
-          v-model="filtro"
-          placeholder="Buscar por nome, CPF ou cargo..."
-          colSpan="w-full"
-        />
-      </div>
+      <Card hoverable class="p-6 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+          <i class="pi pi-user-plus text-xl"></i>
+        </div>
+        <div>
+          <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Ativos Agora</p>
+          <p class="text-2xl font-black text-emerald-500">{{ funcionariosAtivos }}</p>
+        </div>
+      </Card>
 
-      <div class="px-8 pb-8">
+      <Card 
+        :variant="selecionados.length > 0 ? 'dark' : 'default'"
+        :active="selecionados.length > 0"
+        class="p-6 flex items-center justify-between transition-all duration-300"
+      >
+        <div class="flex items-center gap-4">
+          <div 
+            class="w-12 h-12 rounded-2xl flex items-center justify-center transition-colors"
+            :class="selecionados.length > 0 ? 'bg-white/20 text-white' : 'bg-slate-500/10 text-slate-400'"
+          >
+            <i class="pi pi-file-pdf text-xl"></i>
+          </div>
+          <div>
+            <p 
+              class="text-[10px] font-black uppercase tracking-widest"
+              :class="selecionados.length > 0 ? 'text-slate-300' : 'text-slate-400'"
+            >
+              Selecionados
+            </p>
+            <p 
+              class="text-2xl font-black"
+              :class="selecionados.length > 0 ? 'text-white' : 'text-[var(--text-main)]'"
+            >
+              {{ selecionados.length }}
+            </p>
+          </div>
+        </div>
+
+        <button 
+          v-if="selecionados.length > 0"
+          @click="gerarPdf"
+          class="h-10 px-6 rounded-xl bg-brand-primary text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-brand-primary/20 flex items-center gap-2"
+        >
+          <i class="pi pi-download"></i>
+          Exportar
+        </button>
+        <span v-else class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter italic">
+          Selecione na lista
+        </span>
+      </Card>
+    </div>
+
+    <Card :shadow="true" class="!rounded-[2.5rem] overflow-hidden border-[var(--border-ui)]">
+      <header class="flex flex-col md:flex-row items-center justify-between gap-6 p-8 border-b border-[var(--border-ui)] bg-slate-500/5">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-lg">
+            <i class="pi pi-id-card text-xl"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-black tracking-tight text-[var(--text-main)] uppercase">Gestão de Pessoas</h2>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">RH & Controle de Colaboradores</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 w-full md:w-auto">
+          <div class="relative flex-1 md:w-80">
+            <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input 
+              v-model="filtro" 
+              type="text" 
+              placeholder="BUSCAR NOME, CPF OU CARGO..."
+              class="w-full pl-10 pr-4 h-11 bg-[var(--bg-card)] border border-[var(--border-ui)] rounded-2xl text-[10px] font-black focus:ring-2 focus:ring-brand-primary outline-none transition-all uppercase tracking-widest"
+            />
+          </div>
+          
+          <Button variant="primary" class="!h-11 !rounded-2xl !px-6 shadow-xl shadow-brand-primary/20" @click="router.push('/funcionarios/novo')">
+            <i class="pi pi-plus mr-2 text-xs"></i>
+            Novo Funcionário
+          </Button>
+        </div>
+      </header>
+
+      <div class="p-4">
         <Table
           :columns="columns"
           :rows="funcionariosFiltrados"
           :loading="loading"
-          empty-text="Nenhum funcionário encontrado."
+          class="!border-none"
         >
-          <template #cell-nome="{ row }">
-            <div class="flex items-center gap-4">
-              <input
-                type="checkbox"
-                class="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                :checked="selectedIds.has(row.id)"
-                @change="toggle(row.id)"
-              />
-              <div class="flex flex-col">
-                <span class="font-black text-gray-900 leading-tight">{{ row.nome }}</span>
-                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">{{ row.cpf }}</span>
-              </div>
-            </div>
-          </template>
-
-          <template #cell-status="{ row }">
-            <span
-              class="inline-flex items-center rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider border"
-              :class="row.demissao
-                ? 'bg-gray-50 text-gray-500 border-gray-200'
-                : 'bg-emerald-50 text-emerald-700 border-emerald-100'"
-            >
-              {{ row.demissao ? 'Inativo' : 'Ativo' }}
-            </span>
-          </template>
-
-          <template #cell-acoes="{ row }">
-            <div class="flex justify-center gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                title="Editar"
-                @click="router.push(`/funcionarios/${row.id}`)"
-              >
-                <i class="pi pi-pencil"></i>
-              </Button>
-
-              <Button
-                variant="danger"
-                size="sm"
-                title="Excluir"
-                @click="excluir(row)"
-              >
-                <i class="pi pi-trash"></i>
-              </Button>
-            </div>
-          </template>
-        </Table>
+          </Table>
       </div>
     </Card>
   </div>
 </template>
 
+
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/services/api'
-import { FuncionarioService } from '@/services/index'
-
-import Card from '@/components/ui/Card.vue'
-import Button from '@/components/ui/Button.vue'
-import Table from '@/components/ui/Table.vue'
-import SearchInput from '@/components/ui/SearchInput.vue'
+import { FuncionarioService } from '@/services'
 
 const router = useRouter()
+
 const loading = ref(true)
 const gerandoPdf = ref(false)
+
 const filtro = ref('')
 const funcionarios = ref([])
-const selectedIds = ref(new Set())
 
+const selectedIds = ref(new Set())
 const selecionados = computed(() => Array.from(selectedIds.value))
+const funcionariosAtivos = computed(() => funcionarios.value.filter(f => !f.demissao).length)
 
 const columns = [
   { key: 'nome', label: 'Funcionário' },
@@ -135,37 +145,14 @@ function toggle(id) {
   selectedIds.value = set
 }
 
-async function gerarPdf() {
-  if (selecionados.value.length === 0) return
-  
-  gerandoPdf.value = true
-  try {
-    const res = await api.post(
-      '/funcionarios/relatorio/lote', // Rota que vai ler a tabela Empresa
-      { ids: selecionados.value },
-      { responseType: 'blob' }
-    )
-
-    const blob = new Blob([res.data], { type: 'application/pdf' })
-    const url = window.URL.createObjectURL(blob)
-    window.open(url, '_blank')
-    
-    // Limpar seleção após gerar para evitar erros
-    selectedIds.value = new Set()
-  } catch (err) {
-    alert('Erro ao gerar o documento. Verifique as configurações da ACASA.')
-  } finally {
-    gerandoPdf.value = false
-  }
-}
-
 const funcionariosFiltrados = computed(() => {
-  const termo = filtro.value?.toLowerCase().trim()
+  const termo = String(filtro.value || '').toLowerCase().trim()
   if (!termo) return funcionarios.value
-  return funcionarios.value.filter(f => 
-    f.nome?.toLowerCase().includes(termo) || 
-    f.cpf?.includes(termo) ||
-    f.cargo?.toLowerCase().includes(termo)
+
+  return funcionarios.value.filter((f) =>
+    String(f.nome || '').toLowerCase().includes(termo) ||
+    String(f.cpf || '').includes(termo) ||
+    String(f.cargo || '').toLowerCase().includes(termo)
   )
 })
 
@@ -179,12 +166,38 @@ async function carregar() {
   }
 }
 
+async function gerarPdf() {
+  if (selecionados.value.length === 0) return
+
+  gerandoPdf.value = true
+  try {
+    const res = await api.post(
+      '/funcionarios/pdf',
+      { ids: selecionados.value },
+      { responseType: 'blob' }
+    )
+
+    const blob = new Blob([res.data], { type: 'application/pdf' })
+    const url = window.URL.createObjectURL(blob)
+    window.open(url, '_blank')
+
+    selectedIds.value = new Set()
+  } catch (err) {
+    alert('Erro ao gerar o documento.')
+  } finally {
+    gerandoPdf.value = false
+  }
+}
+
 async function excluir(row) {
   if (!confirm(`Deseja remover ${row.nome}?`)) return
   try {
     await FuncionarioService.remover(row.id)
-    funcionarios.value = funcionarios.value.filter(f => f.id !== row.id)
-    selectedIds.value.delete(row.id)
+    funcionarios.value = funcionarios.value.filter((f) => f.id !== row.id)
+
+    const set = new Set(selectedIds.value)
+    set.delete(row.id)
+    selectedIds.value = set
   } catch (err) {
     alert('Erro ao excluir.')
   }

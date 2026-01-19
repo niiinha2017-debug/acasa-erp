@@ -1,207 +1,342 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
+// src/vendas/vendas.service.ts
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateVendaDto } from './dto/create-venda.dto'
 import { UpdateVendaDto } from './dto/update-venda.dto'
+import { promises as fs } from 'fs'
+import * as path from 'path'
 
 function round2(n: number) {
-  return Math.round((n + Number.EPSILON) * 100) / 100
+  return Math.round((Number(n) + Number.EPSILON) * 100) / 100
+}
+function toNumber(v: any): number {
+  const n = Number(v)
+  return Number.isFinite(n) ? n : 0
 }
 
 @Injectable()
 export class VendasService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private calcularVenda(input: {
-    itens: Array<{ quantidade: number; valor_unitario: number }>
-    taxa_pagamento_percentual_aplicado?: number | null
-    taxa_nota_fiscal_percentual_aplicado?: number | null
-    comissoes?: Array<{ percentual_aplicado: number }>
-  }) {
-    const valor_bruto = round2(
-      (input.itens || []).reduce((acc, it) => acc + Number(it.quantidade) * Number(it.valor_unitario), 0),
-    )
-
-    const taxaPag = Number(input.taxa_pagamento_percentual_aplicado ?? 0)
-    const taxaNf = Number(input.taxa_nota_fiscal_percentual_aplicado ?? 0)
-
-    const valor_taxa_pagamento = round2(valor_bruto * (taxaPag / 100))
-    const valor_nota_fiscal = round2(valor_bruto * (taxaNf / 100))
-
-    const soma_comissoes = round2(
-      (input.comissoes || []).reduce((acc, c) => acc + (valor_bruto * (Number(c.percentual_aplicado) / 100)), 0),
-    )
-
-    const valor_total = round2(valor_bruto + valor_taxa_pagamento + valor_nota_fiscal + soma_comissoes)
-
-    return {
-      valor_bruto,
-      valor_taxa_pagamento,
-      valor_nota_fiscal,
-      valor_total,
-      soma_comissoes,
+  // ===============================
+  // VALIDACOES
+  // ===============================
+  private validarSomaPagamentos(pagamentos: any[], valorVendido: number) {
+    const soma = round2((pagamentos || []).reduce((acc, p) => acc + toNumber(p?.valor || 0), 0))
+    if (round2(soma - valorVendido) !== 0) {
+      throw new BadRequestException(
+        `Soma dos pagamentos (${soma}) precisa bater com valor_vendido (${valorVendido}).`,
+      )
     }
   }
 
+  // ===============================
+  // CALCULOS (BASE = valor_vendido)
+  // ===============================
+  private calcularComissoes(valorVendido: number, dtoComissoes: any[] = []) {
+    return (dtoComissoes || []).map((c) => {
+      const tipo = String(c?.tipo_comissao_chave || '')
+      const pct = round2(toNumber(c?.percentual_aplicado || 0))
+      return {
+        tipo_comissao_chave: tipo,
+        percentual_aplicado: pct,
+        valor_comissao: round2(valorVendido * (pct / 100)),
+        responsavel_nome: c?.responsavel_nome ? String(c.responsavel_nome) : null,
+      }
+    })
+  }
+
+  private calcularTaxaPagamento(valorVendido: number, dto: any) {
+    const pct = round2(toNumber(dto?.taxa_pagamento_percentual_aplicado || 0))
+    const valor = round2(valorVendido * (pct / 100))
+    return { percentual_aplicado: pct, valor_taxa_pagamento: valor }
+  }
+
+  private calcularNotaFiscal(valorVendido: number, dto: any) {
+    const tem = Boolean(dto?.tem_nota_fiscal)
+    const pct = tem ? round2(toNumber(dto?.taxa_nota_fiscal_percentual_aplicado || 0)) : 0
+    const valor = tem ? round2(valorVendido * (pct / 100)) : 0
+    return { tem_nota_fiscal: tem, percentual_aplicado: pct, valor_nota_fiscal: valor }
+  }
+
+  private calcularTotais(input: {
+    valor_vendido: number
+    valor_taxa_pagamento: number
+    valor_nota_fiscal: number
+    soma_comissoes: number
+  }) {
+    const base = round2(toNumber(input.valor_vendido))
+    const taxaPag = round2(toNumber(input.valor_taxa_pagamento))
+    const nf = round2(toNumber(input.valor_nota_fiscal))
+    const com = round2(toNumber(input.soma_comissoes))
+
+    return {
+      valor_bruto: base,
+      valor_taxa_pagamento: taxaPag,
+      valor_nota_fiscal: nf,
+      soma_comissoes: com,
+      valor_total: round2(base + taxaPag + nf + com),
+    }
+  }
+
+  // ===============================
+  // LISTAR / DETALHAR
+  // ===============================
   async listar() {
     return this.prisma.vendas.findMany({
       orderBy: { id: 'desc' },
-      include: { itens: true, comissoes: true },
+      include: {
+        cliente: true,
+        orcamento: true,
+        itens: true,
+        comissoes: true,
+        pagamentos: true,
+        arquivos: true,
+      },
     })
   }
 
   async buscarPorId(id: number) {
     const venda = await this.prisma.vendas.findUnique({
       where: { id },
-      include: { itens: true, comissoes: true },
+      include: {
+        cliente: true,
+        orcamento: true,
+        itens: true,
+        comissoes: true,
+        pagamentos: true,
+        arquivos: true,
+      },
     })
     if (!venda) throw new NotFoundException('Venda não encontrada')
     return venda
   }
 
+  // ===============================
+  // CRIAR
+  // ===============================
   async criar(dto: CreateVendaDto) {
-    if (!dto.itens?.length) throw new BadRequestException('Venda precisa ter ao menos 1 item')
+    if (!dto.orcamento_id) throw new BadRequestException('orcamento_id é obrigatório.')
+    if (dto.valor_vendido === undefined || dto.valor_vendido === null)
+      throw new BadRequestException('valor_vendido é obrigatório.')
+    if (!dto.pagamentos?.length) throw new BadRequestException('Venda precisa ter ao menos 1 pagamento.')
 
-    const calc = this.calcularVenda({
-      itens: dto.itens,
-      taxa_pagamento_percentual_aplicado: dto.taxa_pagamento_percentual_aplicado ?? null,
-      taxa_nota_fiscal_percentual_aplicado: dto.taxa_nota_fiscal_percentual_aplicado ?? null,
-      comissoes: dto.comissoes || [],
+    const orc = await this.prisma.orcamentos.findUnique({
+      where: { id: dto.orcamento_id },
+      include: { itens: { orderBy: { id: 'asc' } }, cliente: true },
+    })
+    if (!orc) throw new NotFoundException('Orçamento não encontrado.')
+    if (!orc.itens?.length) throw new BadRequestException('Orçamento precisa ter ao menos 1 ambiente.')
+
+    if (dto.cliente_id && dto.cliente_id !== orc.cliente_id) {
+      throw new BadRequestException('cliente_id não bate com o cliente do orçamento.')
+    }
+
+    const valorVendido = round2(toNumber(dto.valor_vendido))
+    this.validarSomaPagamentos(dto.pagamentos, valorVendido)
+
+    // itens congelados do orçamento
+    const itensClonados = orc.itens.map((it) => ({
+      nome_ambiente: it.nome_ambiente,
+      descricao: it.descricao,
+      quantidade: 1,
+      valor_unitario: round2(toNumber(it.valor_unitario ?? 0)),
+    }))
+
+    const comissoesCalc = this.calcularComissoes(valorVendido, dto.comissoes || [])
+    const somaComissoes = round2(comissoesCalc.reduce((acc, c) => acc + toNumber(c.valor_comissao), 0))
+
+    const taxaPag = this.calcularTaxaPagamento(valorVendido, dto)
+    const nf = this.calcularNotaFiscal(valorVendido, dto)
+
+    const totais = this.calcularTotais({
+      valor_vendido: valorVendido,
+      valor_taxa_pagamento: taxaPag.valor_taxa_pagamento,
+      valor_nota_fiscal: nf.valor_nota_fiscal,
+      soma_comissoes: somaComissoes,
     })
 
     return this.prisma.$transaction(async (tx) => {
       const venda = await tx.vendas.create({
         data: {
-          cliente_id: dto.cliente_id,
-          orcamento_id: dto.orcamento_id ?? null,
+          cliente_id: orc.cliente_id,
+          orcamento_id: orc.id,
           status: dto.status,
+
           data_venda: dto.data_venda ? new Date(dto.data_venda) : undefined,
+          data_entrega: dto.data_entrega ? new Date(dto.data_entrega) : undefined,
           observacao: dto.observacao ?? null,
-          forma_pagamento_chave: dto.forma_pagamento_chave ?? null,
 
-          taxa_pagamento_percentual_aplicado: dto.taxa_pagamento_percentual_aplicado ?? null,
-          valor_taxa_pagamento: calc.valor_taxa_pagamento,
+          valor_vendido: valorVendido,
 
-          taxa_nota_fiscal_percentual_aplicado: dto.taxa_nota_fiscal_percentual_aplicado ?? null,
-          valor_nota_fiscal: calc.valor_nota_fiscal,
+          valor_bruto: totais.valor_bruto,
 
-          valor_bruto: calc.valor_bruto,
-          valor_total: calc.valor_total,
+          taxa_pagamento_percentual_aplicado: taxaPag.percentual_aplicado,
+          valor_taxa_pagamento: totais.valor_taxa_pagamento,
+
+          taxa_nota_fiscal_percentual_aplicado: nf.percentual_aplicado,
+          valor_nota_fiscal: totais.valor_nota_fiscal,
+
+          valor_total: totais.valor_total,
+
+          // ⚠️ tem_nota_fiscal só entra aqui se existir no Prisma:
+          // tem_nota_fiscal: nf.tem_nota_fiscal,
         },
       })
 
-      // itens (congelados)
       await tx.vendas_itens.createMany({
-        data: dto.itens.map((it) => ({
+        data: itensClonados.map((it) => ({
           venda_id: venda.id,
           nome_ambiente: it.nome_ambiente,
           descricao: it.descricao,
           quantidade: it.quantidade,
           valor_unitario: it.valor_unitario,
-          valor_total: round2(Number(it.quantidade) * Number(it.valor_unitario)),
+          valor_total: round2(toNumber(it.quantidade) * toNumber(it.valor_unitario)),
         })),
       })
 
-      // comissões (snapshot + valor calculado)
-      if (dto.comissoes?.length) {
+      if (comissoesCalc.length) {
         await tx.vendas_comissoes.createMany({
-          data: dto.comissoes.map((c) => ({
+          data: comissoesCalc.map((c) => ({
             venda_id: venda.id,
             tipo_comissao_chave: c.tipo_comissao_chave,
             percentual_aplicado: c.percentual_aplicado,
-            valor_comissao: round2(calc.valor_bruto * (Number(c.percentual_aplicado) / 100)),
-            responsavel_nome: c.responsavel_nome ?? null,
+            valor_comissao: c.valor_comissao,
+            responsavel_nome: c.responsavel_nome,
           })),
         })
       }
 
+      await tx.vendas_pagamentos.createMany({
+        data: (dto.pagamentos || []).map((p) => ({
+          venda_id: venda.id,
+          forma_pagamento_chave: String(p.forma_pagamento_chave),
+          valor: round2(toNumber(p.valor)),
+          data_prevista_recebimento: p.data_prevista_recebimento
+            ? new Date(p.data_prevista_recebimento)
+            : dto.data_entrega
+              ? new Date(dto.data_entrega)
+              : null,
+          data_recebimento: p.data_recebimento ? new Date(p.data_recebimento) : null,
+          status_financeiro_chave: p.status_financeiro_chave ? String(p.status_financeiro_chave) : 'EM_ABERTO',
+          observacao: (p as any).observacao ?? null,
+        })),
+      })
+
       return tx.vendas.findUnique({
         where: { id: venda.id },
-        include: { itens: true, comissoes: true },
+        include: {
+          cliente: true,
+          orcamento: true,
+          itens: true,
+          comissoes: true,
+          pagamentos: true,
+          arquivos: true,
+        },
       })
     })
   }
 
+  // ===============================
+  // ATUALIZAR
+  // ===============================
   async atualizar(id: number, dto: UpdateVendaDto) {
     const atual = await this.prisma.vendas.findUnique({
       where: { id },
-      include: { itens: true, comissoes: true },
+      include: { pagamentos: true },
     })
     if (!atual) throw new NotFoundException('Venda não encontrada')
 
-    const itens = dto.itens ?? atual.itens.map((i) => ({
-      quantidade: Number(i.quantidade),
-      valor_unitario: Number(i.valor_unitario),
-    }))
+    const valorVendido =
+      dto.valor_vendido !== undefined && dto.valor_vendido !== null
+        ? round2(toNumber(dto.valor_vendido))
+        : round2(toNumber(atual.valor_vendido))
 
-    const comissoes = dto.comissoes ?? atual.comissoes.map((c) => ({
-      percentual_aplicado: Number(c.percentual_aplicado),
-    }))
+    if (dto.pagamentos?.length) this.validarSomaPagamentos(dto.pagamentos as any, valorVendido)
 
-    const calc = this.calcularVenda({
-      itens,
-      taxa_pagamento_percentual_aplicado:
-        (dto.taxa_pagamento_percentual_aplicado ?? atual.taxa_pagamento_percentual_aplicado) as any,
-      taxa_nota_fiscal_percentual_aplicado:
-        (dto.taxa_nota_fiscal_percentual_aplicado ?? atual.taxa_nota_fiscal_percentual_aplicado) as any,
-      comissoes,
+    const comissoesCalc = dto.comissoes ? this.calcularComissoes(valorVendido, dto.comissoes) : []
+    const somaComissoes = round2(comissoesCalc.reduce((acc, c) => acc + toNumber(c.valor_comissao), 0))
+
+    const taxaPag = this.calcularTaxaPagamento(valorVendido, dto)
+    const nf = this.calcularNotaFiscal(valorVendido, dto)
+
+    const totais = this.calcularTotais({
+      valor_vendido: valorVendido,
+      valor_taxa_pagamento: taxaPag.valor_taxa_pagamento,
+      valor_nota_fiscal: nf.valor_nota_fiscal,
+      soma_comissoes: somaComissoes,
     })
 
     return this.prisma.$transaction(async (tx) => {
       await tx.vendas.update({
         where: { id },
         data: {
-          cliente_id: dto.cliente_id ?? undefined,
-          orcamento_id: dto.orcamento_id ?? undefined,
           status: dto.status ?? undefined,
           data_venda: dto.data_venda ? new Date(dto.data_venda) : undefined,
+          data_entrega: dto.data_entrega ? new Date(dto.data_entrega) : undefined,
           observacao: dto.observacao ?? undefined,
-          forma_pagamento_chave: dto.forma_pagamento_chave ?? undefined,
 
-          taxa_pagamento_percentual_aplicado: dto.taxa_pagamento_percentual_aplicado ?? undefined,
-          valor_taxa_pagamento: calc.valor_taxa_pagamento,
+          valor_vendido: valorVendido,
 
-          taxa_nota_fiscal_percentual_aplicado: dto.taxa_nota_fiscal_percentual_aplicado ?? undefined,
-          valor_nota_fiscal: calc.valor_nota_fiscal,
+          valor_bruto: totais.valor_bruto,
 
-          valor_bruto: calc.valor_bruto,
-          valor_total: calc.valor_total,
+          taxa_pagamento_percentual_aplicado: taxaPag.percentual_aplicado,
+          valor_taxa_pagamento: totais.valor_taxa_pagamento,
+
+          taxa_nota_fiscal_percentual_aplicado: nf.percentual_aplicado,
+          valor_nota_fiscal: totais.valor_nota_fiscal,
+
+          valor_total: totais.valor_total,
+
+          // ⚠️ tem_nota_fiscal só entra aqui se existir no Prisma:
+          // tem_nota_fiscal: nf.tem_nota_fiscal,
         },
       })
 
-      // se vier itens no dto: substitui tudo
-      if (dto.itens) {
-        await tx.vendas_itens.deleteMany({ where: { venda_id: id } })
-        await tx.vendas_itens.createMany({
-          data: dto.itens.map((it) => ({
-            venda_id: id,
-            nome_ambiente: it.nome_ambiente,
-            descricao: it.descricao,
-            quantidade: it.quantidade,
-            valor_unitario: it.valor_unitario,
-            valor_total: round2(Number(it.quantidade) * Number(it.valor_unitario)),
-          })),
-        })
-      }
-
-      // se vier comissões no dto: substitui tudo
       if (dto.comissoes) {
         await tx.vendas_comissoes.deleteMany({ where: { venda_id: id } })
-        if (dto.comissoes.length) {
+        if (comissoesCalc.length) {
           await tx.vendas_comissoes.createMany({
-            data: dto.comissoes.map((c) => ({
+            data: comissoesCalc.map((c) => ({
               venda_id: id,
               tipo_comissao_chave: c.tipo_comissao_chave,
               percentual_aplicado: c.percentual_aplicado,
-              valor_comissao: round2(calc.valor_bruto * (Number(c.percentual_aplicado) / 100)),
-              responsavel_nome: c.responsavel_nome ?? null,
+              valor_comissao: c.valor_comissao,
+              responsavel_nome: c.responsavel_nome,
             })),
           })
         }
       }
 
+      if (dto.pagamentos) {
+        await tx.vendas_pagamentos.deleteMany({ where: { venda_id: id } })
+        await tx.vendas_pagamentos.createMany({
+          data: (dto.pagamentos || []).map((p) => ({
+            venda_id: id,
+            forma_pagamento_chave: String(p.forma_pagamento_chave),
+            valor: round2(toNumber(p.valor)),
+            data_prevista_recebimento: p.data_prevista_recebimento
+              ? new Date(p.data_prevista_recebimento)
+              : dto.data_entrega
+                ? new Date(dto.data_entrega)
+                : null,
+            data_recebimento: p.data_recebimento ? new Date(p.data_recebimento) : null,
+            status_financeiro_chave: p.status_financeiro_chave ? String(p.status_financeiro_chave) : 'EM_ABERTO',
+            observacao: (p as any).observacao ?? null,
+          })),
+        })
+      }
+
       return tx.vendas.findUnique({
         where: { id },
-        include: { itens: true, comissoes: true },
+        include: {
+          cliente: true,
+          orcamento: true,
+          itens: true,
+          comissoes: true,
+          pagamentos: true,
+          arquivos: true,
+        },
       })
     })
   }
@@ -213,7 +348,8 @@ export class VendasService {
 
   async remover(id: number) {
     await this.buscarPorId(id)
-    // itens e comissões já têm onDelete: Cascade
+    const dir = path.resolve(process.cwd(), 'uploads', 'vendas', String(id))
+    await fs.rm(dir, { recursive: true, force: true }).catch(() => null)
     return this.prisma.vendas.delete({ where: { id } })
   }
 }

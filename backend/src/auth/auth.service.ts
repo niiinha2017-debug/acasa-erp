@@ -5,140 +5,137 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs'; // Alterado para bcryptjs para manter consistência com o seu seed
 import { PrismaService } from '../prisma/prisma.service';
 import { CadastroDto } from './dto/cadastro.dto';
 import { PermissoesService } from '../permissoes/permissoes.service';
-
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
-    private readonly permissoesService: PermissoesService, 
+    private readonly permissoesService: PermissoesService,
   ) {}
 
-// =========================
-// LOGIN (usuario OU email)
-// =========================
-async login(usuario: string, senha: string) {
-  const login = String(usuario || '').trim().toLowerCase();
-  const isEmail = login.includes('@');
+  // =========================
+  // LOGIN (usuario OU email)
+  // =========================
+  async login(usuario: string, senha: string) {
+    const loginLimpo = String(usuario || '').trim().toLowerCase();
+    const isEmail = loginLimpo.includes('@');
 
-  const registro = await this.prisma.usuarios.findFirst({
-    where: isEmail ? { email: login } : { usuario: login },
-  });
+    // Busca o usuário apenas pelos campos que restaram no seu model
+    const registro = await this.prisma.usuarios.findFirst({
+      where: isEmail ? { email: loginLimpo } : { usuario: loginLimpo },
+    });
 
-  if (!registro) throw new UnauthorizedException('Usuário ou senha inválidos');
+    if (!registro) {
+      throw new UnauthorizedException('Usuário ou senha inválidos');
+    }
 
-  const senhaOk = await bcrypt.compare(senha, registro.senha);
-  if (!senhaOk) throw new UnauthorizedException('Usuário ou senha inválidos');
+    // Validação da senha
+    const senhaOk = await bcrypt.compare(senha, registro.senha);
+    if (!senhaOk) {
+      throw new UnauthorizedException('Usuário ou senha inválidos');
+    }
 
-  const payload = {
-    sub: registro.id,
-    usuario: registro.usuario,
-    email: registro.email,
-    status: registro.status,
-    setor: registro.setor,
-  };
+    if (registro.status !== 'ATIVO') {
+      throw new UnauthorizedException('Este usuário está inativo');
+    }
 
-  const token = await this.jwt.signAsync(payload);
+    // Busca as permissões na tabela pivô através do serviço dedicado
+    let permissoes: string[] = [];
+    try {
+      permissoes = await this.permissoesService.permissoesDoUsuarioPorId(registro.id);
+    } catch (e) {
+      permissoes = [];
+    }
 
-  // ✅ AQUI: pega permissões do banco (sem derrubar login)
-  let permissoes: string[] = []
-  try {
-    permissoes = await this.permissoesService.permissoesDoUsuarioPorId(registro.id)
-  } catch (e) {
-    permissoes = []
-  }
-
-  return {
-    token,
-    usuario: {
-      id: registro.id,
-      nome: registro.nome,
+    const payload = {
+      sub: registro.id,
       usuario: registro.usuario,
       email: registro.email,
-      setor: registro.setor,
-      funcao: registro.funcao,
       status: registro.status,
-      criado_em: registro.criado_em,
-      atualizado_em: registro.atualizado_em,
-      permissoes, // ✅ AQUI
-    },
-  };
-}
+      // Opcional: incluir permissões no payload do JWT se o token não ficar muito grande
+      // permissoes, 
+    };
 
+    const token = await this.jwt.signAsync(payload);
+
+    return {
+      token,
+      usuario: {
+        id: registro.id,
+        nome: registro.nome,
+        usuario: registro.usuario,
+        email: registro.email,
+        status: registro.status,
+        criado_em: registro.criado_em,
+        permissoes, // Retorna as permissões para o frontend
+      },
+    };
+  }
 
   // =========================
   // CADASTRO
   // =========================
   async cadastro(dto: CadastroDto) {
+    // Garanta que o DTO não envie 'setor' ou 'funcao'
     const senhaHash = await bcrypt.hash(dto.senha, 10);
 
     try {
       const criado = await this.prisma.usuarios.create({
         data: {
           nome: dto.nome,
-          usuario: dto.usuario,
-          email: dto.email,
-          setor: dto.setor,
-          funcao: dto.funcao,
+          usuario: dto.usuario.toLowerCase().trim(),
+          email: dto.email.toLowerCase().trim(),
           senha: senhaHash,
-          status: dto.status,
+          status: dto.status || 'ATIVO',
         },
       });
 
-      return {
-        id: criado.id,
-        nome: criado.nome,
-        usuario: criado.usuario,
-        email: criado.email,
-        setor: criado.setor,
-        funcao: criado.funcao,
-        status: criado.status,
-        criado_em: criado.criado_em,
-        atualizado_em: criado.atualizado_em,
-      };
+      // Retorno formatado sem a senha
+      const { senha, ...result } = criado;
+      return result;
+      
     } catch (e: any) {
+      // P2002 é o erro de restrição de unicidade do Prisma (@unique)
       if (e?.code === 'P2002') {
-        const alvo = Array.isArray(e?.meta?.target)
-          ? e.meta.target.join(', ')
-          : 'usuario/email';
-        throw new BadRequestException(`Já existe cadastro com: ${alvo}`);
+        const alvo = e?.meta?.target;
+        throw new BadRequestException(`Já existe um cadastro com este ${alvo}`);
       }
       throw e;
     }
   }
 
   // =========================
-  // AUTH / ME
+  // AUTH / ME (Verificar perfil logado)
   // =========================
   async me(usuarioId: number) {
-  const registro = await this.prisma.usuarios.findUnique({
-    where: { id: usuarioId },
-  });
+    const registro = await this.prisma.usuarios.findUnique({
+      where: { id: usuarioId },
+    });
 
-  if (!registro) throw new NotFoundException('Usuário não encontrado');
+    if (!registro) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
 
-  let permissoes: string[] = []
-  try {
-    permissoes = await this.permissoesService.permissoesDoUsuarioPorId(usuarioId)
-  } catch (e) {
-    permissoes = []
+    let permissoes: string[] = [];
+    try {
+      permissoes = await this.permissoesService.permissoesDoUsuarioPorId(usuarioId);
+    } catch (e) {
+      permissoes = [];
+    }
+
+    return {
+      id: registro.id,
+      nome: registro.nome,
+      usuario: registro.usuario,
+      email: registro.email,
+      status: registro.status,
+      criado_em: registro.criado_em,
+      permissoes,
+    };
   }
-
-  return {
-    id: registro.id,
-    nome: registro.nome,
-    usuario: registro.usuario,
-    email: registro.email,
-    setor: registro.setor,
-    funcao: registro.funcao,
-    status: registro.status,
-    criado_em: registro.criado_em,
-    permissoes, // ✅ AQUI
-  };
-}
 }

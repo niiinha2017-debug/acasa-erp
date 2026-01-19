@@ -1,227 +1,244 @@
 <template>
-  <template v-if="isAuthenticated && usuarioLogado">
-    <Card :shadow="true">
-      <!-- HEADER -->
-      <header class="flex flex-col gap-4 px-8 pt-8 pb-6 border-b border-gray-100">
-        <div class="flex items-start justify-between gap-4">
-          <div>
-            <div class="flex items-center gap-3">
-              <i class="pi pi-shield text-brand-primary text-xl"></i>
-              <h2 class="text-2xl font-black text-gray-900 tracking-tight">Permissões</h2>
-            </div>
+  <Card :shadow="true">
+    <PageHeader
+      title="Permissões"
+      subtitle="ADMIN — Controle de acessos por usuário"
+      :showBack="true"
+    >
+      <template #action>
+        <div class="text-[11px] font-black uppercase tracking-[0.15em] text-brand-primary">
+          {{ usuarioSelecionado ? `Sessão: ${usuarioSelecionado.nome}` : 'Aguardando Seleção' }}
+        </div>
+      </template>
+    </PageHeader>
 
-            <p class="text-sm font-semibold text-gray-400 mt-2">
-              Selecione um colaborador e marque os módulos que ele pode acessar.
-            </p>
+    <div class="p-8">
+      <div class="grid grid-cols-12 gap-10">
+        
+        <div class="col-span-12 lg:col-span-4 space-y-4">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="h-[2px] w-4 bg-brand-primary rounded-full"></div>
+            <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">Colaboradores</span>
           </div>
 
-          <Button variant="secondary" size="sm" type="button" @click="$router.back()">
-            Voltar
-          </Button>
-        </div>
-      </header>
+          <SearchInput
+            v-model="filtroUsuarios"
+            placeholder="Filtrar por nome..."
+          />
 
-      <!-- BODY -->
-      <div class="p-8">
-        <div class="grid grid-cols-12 gap-6">
-          <!-- ESQUERDA -->
-          <section class="col-span-12 lg:col-span-4">
-            <div class="pb-3 mb-4 border-b border-gray-100">
-              <h3 class="text-sm font-black text-gray-900 tracking-tight">Colaboradores</h3>
-              <p class="text-xs font-semibold text-gray-400 mt-1">Selecione para editar acessos.</p>
+          <div class="mt-4 max-h-[600px] overflow-y-auto custom-scroll pr-2">
+            <div v-if="loadingDados" class="p-4 text-center text-slate-400 text-[10px] font-black uppercase">
+              Sincronizando...
             </div>
 
-<SearchInput
-  v-model="filtroUsuarios"
-  placeholder="Filtrar por nome..."
-  colSpan="col-span-12" 
-/>
-
-            <div class="mt-4 max-h-[520px] overflow-auto pr-1">
+            <div v-else class="space-y-2">
               <button
-                v-for="u in usuariosFiltrados"
-                :key="u.id"
-                type="button"
-                @click="selecionarUsuario(u)"
-                class="w-full flex items-center gap-3 p-3 rounded-2xl border border-gray-100 bg-white hover:bg-gray-50 transition-all text-left mb-2"
-                :class="usuarioSelecionado?.id === u.id ? 'ring-2 ring-brand-primary/10 border-brand-primary/20 bg-brand-primary/[0.03]' : ''"
+                v-for="row in usuariosFiltrados"
+                :key="row.id"
+                @click="selecionarUsuario(row)"
+                :class="[
+                  'w-full p-4 rounded-2xl transition-all duration-300 text-left border',
+                  usuarioSelecionado?.id === row.id 
+                    ? 'bg-brand-primary/10 border-brand-primary shadow-sm' 
+                    : 'bg-transparent border-[var(--border-ui)] hover:border-brand-primary/50'
+                ]"
               >
-                <div class="w-10 h-10 rounded-2xl bg-gray-100 text-gray-700 flex items-center justify-center font-black">
-                  {{ (u.nome || '-').charAt(0) }}
+                <div class="flex flex-col">
+                  <span :class="['text-xs font-black uppercase tracking-tight', usuarioSelecionado?.id === row.id ? 'text-brand-primary' : 'text-[var(--text-main)]']">
+                    {{ row.nome }}
+                  </span>
+                  <span class="text-[9px] font-bold uppercase mt-1 text-slate-500">
+                    {{ row.setor || 'Geral' }} • {{ row.status || 'Ativo' }}
+                  </span>
                 </div>
-
-                <div class="flex-1 min-w-0">
-                  <div class="text-sm font-black text-gray-900 truncate">{{ u.nome }}</div>
-                  <div class="text-[10px] font-black text-brand-primary uppercase tracking-[0.15em]">
-                    {{ u.setor }}
-                  </div>
-                </div>
-
-                <i v-if="usuarioSelecionado?.id === u.id" class="pi pi-angle-right text-brand-primary"></i>
               </button>
             </div>
-          </section>
+          </div>
+        </div>
 
-          <!-- DIREITA -->
-          <section class="col-span-12 lg:col-span-8">
-            <div class="pb-3 mb-4 border-b border-gray-100">
-              <h3 class="text-sm font-black text-gray-900 tracking-tight">
-                {{ usuarioSelecionado ? `Permissões: ${usuarioSelecionado.nome}` : 'Permissões do usuário' }}
-              </h3>
-              <p class="text-xs font-semibold text-gray-400 mt-1">
-                {{ usuarioSelecionado ? 'Marque os módulos que este usuário pode acessar.' : 'Selecione um colaborador à esquerda.' }}
-              </p>
+        <div class="col-span-12 lg:col-span-8">
+          <div v-if="!usuarioSelecionado" class="h-full flex flex-col items-center justify-center rounded-[2.5rem] bg-slate-500/5 border-2 border-dashed border-[var(--border-ui)] p-20">
+             <div class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Selecione um perfil ao lado</div>
+          </div>
+
+          <div v-else class="space-y-10 animate-in fade-in slide-in-from-right-2 duration-400">
+            
+            <div class="flex items-center gap-3">
+              <div class="h-[2px] w-6 bg-brand-primary rounded-full"></div>
+              <h3 class="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--text-main)]">Acessos do Usuário</h3>
             </div>
 
-            <div v-if="usuarioSelecionado" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div
-                v-for="(permissoes, modulo) in mapaPermissoes"
-                :key="modulo"
-                class="rounded-3xl border border-gray-100 bg-white shadow-sm p-5"
-              >
-                <h4 class="text-sm font-black text-gray-900 tracking-tight">
-                  {{ modulo }}
-                </h4>
-
-                <div class="mt-4 space-y-3">
-                  <label
-                    v-for="p in permissoes"
-                    :key="p.chave"
-                    class="flex items-start gap-3 p-3 rounded-2xl border border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      :value="p.chave"
-                      v-model="permissoesAtivas"
-                      class="mt-1 w-4 h-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary"
-                    />
-
-                    <div class="min-w-0">
-                      <span class="block text-sm font-bold text-gray-800">
-                        {{ p.nome }}
-                      </span>
-                      <code class="block text-[11px] font-semibold text-gray-400 truncate">
-                        {{ p.chave }}
-                      </code>
-                    </div>
-                  </label>
+            <div v-for="(perms, modulo) in MAPA_PERMISSOES" :key="modulo" class="space-y-4">
+              <div class="flex items-center justify-between border-b border-[var(--border-ui)] pb-2">
+                <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">{{ modulo }}</span>
+                <div class="flex gap-4">
+                  <button @click="marcarTudoModulo(modulo, true)" class="text-[9px] font-black uppercase text-brand-primary hover:underline">Marcar Tudo</button>
+                  <button @click="marcarTudoModulo(modulo, false)" class="text-[9px] font-black uppercase text-slate-400 hover:text-red-500">Limpar</button>
                 </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label
+                  v-for="p in perms"
+                  :key="p.chave"
+                  :class="[
+                    'flex items-center p-4 rounded-2xl border transition-all cursor-pointer select-none',
+                    temPermissao(p.chave) 
+                      ? 'bg-brand-primary/5 border-brand-primary/30' 
+                      : 'bg-transparent border-[var(--border-ui)] hover:border-slate-400'
+                  ]"
+                >
+                  <input
+                    type="checkbox"
+                    class="h-4 w-4 rounded border-slate-300 text-brand-primary focus:ring-brand-primary mr-4"
+                    :checked="temPermissao(p.chave)"
+                    @change="togglePermissao(p.chave)"
+                  />
+                  <div class="flex flex-col min-w-0">
+                    <span class="text-[10px] font-black uppercase tracking-tight text-[var(--text-main)] truncate">{{ p.nome }}</span>
+                    <span class="text-[9px] font-bold text-slate-500 uppercase leading-none mt-1">{{ p.chave }}</span>
+                  </div>
+                </label>
               </div>
             </div>
 
-            <div v-else class="rounded-3xl border border-gray-100 bg-gray-50/40 p-10 text-center">
-              <i class="pi pi-shield text-4xl text-gray-300"></i>
-              <h3 class="text-base font-black text-gray-900 mt-4">Nenhum usuário selecionado</h3>
-              <p class="text-sm font-semibold text-gray-400 mt-2">
-                Selecione um colaborador à esquerda para gerenciar os níveis de acesso.
-              </p>
+            <div class="flex justify-end pt-10 border-t border-[var(--border-ui)]">
+              <Button
+                variant="primary"
+                :loading="loadingSalvar"
+                @click="salvar"
+              >
+                Salvar Alterações
+              </Button>
             </div>
-          </section>
+          </div>
         </div>
       </div>
-
-      <!-- FOOTER -->
-      <footer class="flex justify-end px-8 py-6 border-t border-gray-100">
-        <Button
-          variant="primary"
-          type="button"
-          @click="salvar"
-          :loading="loadingSalvar"
-          :disabled="!usuarioSelecionado"
-        >
-          Salvar Alterações
-        </Button>
-      </footer>
-    </Card>
-  </template>
-
-  <template v-else>
-    <Card :shadow="true">
-      <div class="p-10 flex flex-col items-center justify-center gap-3">
-        <i class="pi pi-spin pi-spinner text-brand-primary text-4xl"></i>
-        <p class="text-gray-400 font-medium animate-pulse">Sincronizando acessos ACASA...</p>
-      </div>
-    </Card>
-  </template>
+    </div>
+  </Card>
 </template>
 
+<style scoped>
+.custom-scroll::-webkit-scrollbar {
+  width: 3px;
+}
+.custom-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-ui);
+  border-radius: 10px;
+}
+</style>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useAuth } from '@/services/useauth'
-import { UsuariosService, PermissoesService } from '@/services'
+import { useRouter } from 'vue-router'
+import { UsuariosService, PermissoesService } from '@/services/index'
+import { AppConfig } from '@/services/config'
+import { useAuth } from '@/services/useauth' 
+import { notify } from '@/services/notify'
 
-// Componentes da sua UI
-import Card from '@/components/ui/Card.vue'
-import Button from '@/components/ui/Button.vue'
-import SearchInput from '@/components/ui/SearchInput.vue'
+const router = useRouter()
+const { temAcesso } = useAuth()
 
-const { usuarioLogado, isAuthenticated } = useAuth()
-
+const MAPA_PERMISSOES = AppConfig.PERMISSIONS_MAP
+const mapaChaveParaId = ref({})
 const usuarios = ref([])
 const filtroUsuarios = ref('')
 const usuarioSelecionado = ref(null)
 const permissoesAtivas = ref([])
+
 const loadingSalvar = ref(false)
+const loadingDados = ref(false)
+const loadingPermissoes = ref(false)
 
-const mapaPermissoes = {
-  'Módulo Comercial': [
-    { nome: 'Visualizar Vendas', chave: 'vendas.ver' },
-    { nome: 'Gerenciar Orçamentos', chave: 'orcamentos.ver' },
-    { nome: 'Clientes', chave: 'clientes.ver' },
-    { nome: 'Fornecedores', chave: 'fornecedores.ver' },
-    { nome: 'Gerenciar Orçamentos', chave: 'orcamentos.gerenciar' }
-  ],
-  'Módulo Financeiro': [
-    { nome: 'Contas a Pagar', chave: 'contas-pagar.ver' },
-    { nome: 'Contas a Receber', chave: 'contas-receber.ver' },
-    { nome: 'Fluxo de Caixa', chave: 'financeiro.ver' },
-  ],
+const columnsUsuarios = [
+  { key: 'nome', label: 'Usuário' },
+  { key: 'acoes', label: 'Ação', align: 'center', width: '110px' },
+]
 
-  'Módulo de Estoque': [
-    { nome: 'Visualizar Estoque', chave: 'estoque.ver' },
-    { nome: 'Gerenciar Produtos', chave: 'produtos.gerenciar' },
-    { nome: 'Fornecedores', chave: 'fornecedores.ver' }
-  ],
-  'Configurações Avançadas': [
-    { nome: 'Gerenciar Usuários', chave: 'usuarios.ver' },
-    { nome: 'Editar Permissões', chave: 'permissoes.gerenciar' },
-    { nome: 'Ajustar Constantes', chave: 'constantes.ver' }
-  ]
-}
-
+// --- COMPUTED ---
 const usuariosFiltrados = computed(() => {
-  const termo = filtroUsuarios.value.toLowerCase()
-  return usuarios.value.filter(u => u.nome.toLowerCase().includes(termo))
+  const termo = String(filtroUsuarios.value || '').toLowerCase().trim()
+  if (!termo) return usuarios.value
+  return usuarios.value.filter(u => 
+    String(u?.nome).toLowerCase().includes(termo) || 
+    String(u?.setor).toLowerCase().includes(termo)
+  )
 })
 
-async function carregar() {
-  const { data } = await UsuariosService.listar()
-  usuarios.value = data || []
-}
-
-async function selecionarUsuario(u) {
-  usuarioSelecionado.value = u
-  permissoesAtivas.value = [] // 1. Limpa as marcas atuais (feedback visual imediato)
-  
+// --- MÉTODOS ---
+const carregarCatalogo = async () => {
   try {
-    const { data } = await PermissoesService.listarDoUsuario(u.id)
-    // 2. Preenche com os novos dados
-    permissoesAtivas.value = data.map(p => typeof p === 'string' ? p : p.chave)
+    const { data } = await PermissoesService.listar()
+    mapaChaveParaId.value = (data || []).reduce((acc, p) => {
+      if (p.chave) acc[p.chave] = p.id
+      return acc
+    }, {})
   } catch (e) {
-    alert('Erro ao carregar permissões')
+    notify.error('Catálogo de permissões indisponível')
   }
 }
 
-async function salvar() {
+const carregarUsuarios = async () => {
+  loadingDados.value = true
+  try {
+    const { data } = await UsuariosService.listar()
+    usuarios.value = data || []
+  } finally {
+    loadingDados.value = false
+  }
+}
+
+const selecionarUsuario = async (u) => {
+  usuarioSelecionado.value = u
+  loadingPermissoes.value = true
+  try {
+    const { data } = await PermissoesService.listarDoUsuario(u.id)
+    permissoesAtivas.value = (data || []).map(p => typeof p === 'string' ? p : p.chave)
+  } finally {
+    loadingPermissoes.value = false
+  }
+}
+
+const temPermissao = (chave) => permissoesAtivas.value.includes(chave)
+
+const togglePermissao = (chave) => {
+  const idx = permissoesAtivas.value.indexOf(chave)
+  if (idx >= 0) permissoesAtivas.value.splice(idx, 1)
+  else permissoesAtivas.value.push(chave)
+}
+
+const marcarTudoModulo = (modulo, marcar) => {
+  const chavesModulo = MAPA_PERMISSOES[modulo].map(p => p.chave)
+  const set = new Set(permissoesAtivas.value)
+  chavesModulo.forEach(k => marcar ? set.add(k) : set.delete(k))
+  permissoesAtivas.value = Array.from(set)
+}
+
+const salvar = async () => {
   loadingSalvar.value = true
   try {
-    await PermissoesService.definirParaUsuario(usuarioSelecionado.value.id, permissoesAtivas.value)
-    alert('Acessos atualizados!')
+    const ids = permissoesAtivas.value
+      .map(k => mapaChaveParaId.value[k])
+      .filter(Boolean)
+      
+    await PermissoesService.definirParaUsuario(usuarioSelecionado.value.id, ids)
+    notify.success('Permissões atualizadas com sucesso!')
+  } catch (e) {
+    notify.error('Erro ao salvar permissões')
   } finally {
     loadingSalvar.value = false
   }
 }
 
-onMounted(carregar)
+onMounted(async () => {
+  if (!temAcesso('permissoes.ver')) {
+    notify.error('Você não tem acesso a esta tela.')
+    router.push('/')
+    return
+  }
+  await Promise.all([carregarUsuarios(), carregarCatalogo()])
+})
 </script>

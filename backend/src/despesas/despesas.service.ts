@@ -5,6 +5,12 @@ import { CreateDespesaDto } from './dto/create-despesa.dto'
 import { UpdateDespesaDto } from './dto/update-despesa.dto'
 import { randomUUID } from 'crypto'
 
+type FiltrosDespesas = {
+  status?: string
+  unidade?: string
+  tipo_movimento?: string
+}
+
 @Injectable()
 export class DespesasService {
   constructor(private readonly prisma: PrismaService) {}
@@ -20,7 +26,9 @@ export class DespesasService {
     if (!Number.isFinite(parcelas) || parcelas < 1) parcelas = 1
 
     const primeiroVenc = new Date(dto.data_vencimento)
-    if (isNaN(primeiroVenc.getTime())) throw new BadRequestException('data_vencimento inválida')
+    if (isNaN(primeiroVenc.getTime())) {
+      throw new BadRequestException('data_vencimento inválida')
+    }
 
     const dataRegistro = dto.data_registro ? new Date(dto.data_registro) : undefined
     if (dto.data_registro && isNaN(new Date(dto.data_registro).getTime())) {
@@ -34,7 +42,7 @@ export class DespesasService {
 
     const recorrenciaId = parcelas > 1 ? randomUUID() : null
 
- const baseData = {
+const baseData: Prisma.despesasCreateInput = {
   tipo_movimento: dto.tipo_movimento,
   unidade: dto.unidade,
   categoria: dto.categoria,
@@ -42,16 +50,13 @@ export class DespesasService {
   local: dto.local,
   valor_total: new Prisma.Decimal(dto.valor_total),
   forma_pagamento: dto.forma_pagamento,
-  quantidade_parcelas: parcelas,
-  data_registro: dataRegistro,
+  quantidade_parcelas: dto.quantidade_parcelas,
+  data_registro: new Date(),
+  data_vencimento: dto.data_vencimento, // ✅ AQUI
   status: dto.status,
-  recorrencia_id: recorrenciaId,
-
-  funcionario: dto.funcionario_id
-    ? { connect: { id: dto.funcionario_id } }
-    : undefined,
+  recorrencia_id: dto.recorrencia_id,
+  funcionario: { connect: { id: dto.funcionario_id } },
 }
-
 
     const criadas = await this.prisma.$transaction(
       Array.from({ length: parcelas }).map((_, i) =>
@@ -69,8 +74,13 @@ export class DespesasService {
     return criadas
   }
 
-  async findAll(): Promise<despesas[]> {
+  async findAll(filtros: FiltrosDespesas = {}): Promise<despesas[]> {
     return this.prisma.despesas.findMany({
+      where: {
+        status: filtros.status || undefined,
+        unidade: filtros.unidade || undefined,
+        tipo_movimento: filtros.tipo_movimento || undefined,
+      },
       orderBy: { data_registro: 'desc' },
     })
   }
@@ -87,7 +97,7 @@ export class DespesasService {
     const data: Prisma.despesasUpdateInput = {}
 
     if (dto.tipo_movimento !== undefined) data.tipo_movimento = dto.tipo_movimento
-    if (dto.unidade !== undefined) data.unidade = dto.unidade;
+    if (dto.unidade !== undefined) data.unidade = dto.unidade
     if (dto.categoria !== undefined) data.categoria = dto.categoria
     if (dto.classificacao !== undefined) data.classificacao = dto.classificacao
     if (dto.local !== undefined) data.local = dto.local
@@ -127,7 +137,6 @@ export class DespesasService {
       data.data_pagamento = dto.data_pagamento ? new Date(dto.data_pagamento) : null
     }
 
-    // ✅ atualizar vínculo do funcionário (connect / disconnect)
     if (dto.funcionario_id !== undefined) {
       data.funcionario = dto.funcionario_id
         ? { connect: { id: dto.funcionario_id } }
@@ -137,8 +146,6 @@ export class DespesasService {
     return this.prisma.despesas.update({ where: { id }, data })
   }
 
-  // ✅ Atualiza TODAS as parcelas da recorrência
-  // Para updateMany não dá pra usar relation nested, então usamos UncheckedUpdateManyInput (seta FK direto)
   async updateRecorrencia(recorrenciaId: string, dto: UpdateDespesaDto): Promise<number> {
     const existe = await this.prisma.despesas.findFirst({
       where: { recorrencia_id: recorrenciaId },
@@ -149,6 +156,7 @@ export class DespesasService {
     const data: Prisma.despesasUncheckedUpdateManyInput = {}
 
     if (dto.tipo_movimento !== undefined) data.tipo_movimento = { set: dto.tipo_movimento }
+    if (dto.unidade !== undefined) data.unidade = { set: dto.unidade }
     if (dto.categoria !== undefined) data.categoria = { set: dto.categoria }
     if (dto.classificacao !== undefined) data.classificacao = { set: dto.classificacao }
     if (dto.local !== undefined) data.local = { set: dto.local }
@@ -167,9 +175,23 @@ export class DespesasService {
       data.valor_total = { set: new Prisma.Decimal(dto.valor_total) }
     }
 
-    // ✅ aqui o Unchecked permite setar FK direto
     if (dto.funcionario_id !== undefined) {
       data.funcionario_id = { set: dto.funcionario_id ?? null }
+    }
+
+    // (mantive datas opcionais como você colocou)
+    if (dto.data_registro !== undefined) {
+      if (dto.data_registro && isNaN(new Date(dto.data_registro).getTime())) {
+        throw new BadRequestException('data_registro inválida')
+      }
+      data.data_registro = { set: dto.data_registro ? new Date(dto.data_registro) : null }
+    }
+
+    if (dto.data_pagamento !== undefined) {
+      if (dto.data_pagamento && isNaN(new Date(dto.data_pagamento).getTime())) {
+        throw new BadRequestException('data_pagamento inválida')
+      }
+      data.data_pagamento = { set: dto.data_pagamento ? new Date(dto.data_pagamento) : null }
     }
 
     const res = await this.prisma.despesas.updateMany({

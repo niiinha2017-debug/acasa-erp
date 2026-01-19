@@ -2,25 +2,80 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 
-// 1. Importe o CSS do Tailwind (crie este arquivo se não existir)
+// Estilos
 import '@/assets/CSS/tailwind.css' 
-
-// 2. Importe o PrimeIcons que você instalou
 import 'primeicons/primeicons.css' 
 
-// Reset Global para garantir tela cheia
-const style = document.createElement('style')
-style.innerHTML = `
-  body, html, #app {
-    margin: 0;
-    padding: 0;
-    height: 100vh;
-    width: 100vw;
-    overflow-x: hidden;
-  }
-`
-document.head.appendChild(style)
+// UI Components
+import Button from '@/components/ui/Button.vue'
+import Card from '@/components/ui/Card.vue'
+import ConfirmModal from '@/components/ui/ConfirmModal.vue'
+import CustomCheckbox from '@/components/ui/CustomCheckbox.vue'
+import FormActions from '@/components/ui/FormActions.vue'
+import Input from '@/components/ui/Input.vue'
+import MetricCard from '@/components/ui/MetricCard.vue'
+import NavMenu from '@/components/ui/NavMenu.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import SearchInput from '@/components/ui/SearchInput.vue'
+import StatusBadge from '@/components/ui/StatusBadge.vue'
+import Table from '@/components/ui/Table.vue'
+import TableActions from '@/components/ui/TableActions.vue'
+import ToastContainer from '@/components/ui/ToastContainer.vue' // Adicionado .vue
+import CardSection from '@/components/ui/CardSection.vue'
 
-createApp(App)
-  .use(router)
-  .mount('#app')
+
+// Modals
+import QuickCreateProduto from '@/components/modals/QuickCreateProduto.vue'
+
+// Common
+import Loading from '@/components/common/Loading.vue' // Corrigido nome da variável e .vue
+import ProcessoClienteFlow from '@/components/common/ProcessoClienteFlow.vue'
+
+// Importação da Diretiva de Permissão
+import { can } from '@/services/permissions'
+
+const app = createApp(App)
+
+// Registro Global - UI
+app.component('Button', Button)
+app.component('Card', Card)
+app.component('ConfirmModal', ConfirmModal)
+app.component('CustomCheckbox', CustomCheckbox)
+app.component('FormActions', FormActions) // Corrigido de 'FormaActions'
+app.component('Input', Input)
+app.component ('MetricCard',MetricCard)
+app.component('NavMenu', NavMenu)
+app.component('PageHeader', PageHeader)
+app.component('SearchInput', SearchInput)
+app.component('StatusBadge', StatusBadge)
+app.component('Table', Table)
+app.component('TableActions', TableActions)
+app.component('ToastContainer', ToastContainer)
+app.component('CardSection',CardSection)
+
+// Common
+app.component('Loading', Loading)
+app.component('ProcessoClienteFlow', ProcessoClienteFlow)
+
+// Modals
+app.component('QuickCreateProduto', QuickCreateProduto)
+
+// Diretiva v-can
+app.directive('can', {
+  beforeMount(el, binding) {
+    const allowed = can(binding.value)
+    el.__vCanDisplay = el.style.display
+    if (!allowed) el.style.display = 'none'
+  },
+  updated(el, binding) {
+    const allowed = can(binding.value)
+    const original = el.__vCanDisplay ?? ''
+    el.style.display = allowed ? original : 'none'
+  },
+  unmounted(el) {
+    delete el.__vCanDisplay
+  }
+})
+
+app.use(router)
+app.mount('#app')

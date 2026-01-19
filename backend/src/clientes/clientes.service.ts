@@ -4,7 +4,6 @@ import { CriarClienteDto } from './dto/criar-cliente.dto'
 import { AtualizarClienteDto } from './dto/atualizar-cliente.dto'
 import { Prisma } from '@prisma/client'
 
-
 @Injectable()
 export class ClientesService {
   constructor(private readonly prisma: PrismaService) {}
@@ -13,8 +12,11 @@ export class ClientesService {
     return this.prisma.cliente.create({
       data: {
         indicacao_id: dto.indicacao_id ?? null,
+
         nome_completo: dto.nome_completo,
         razao_social: dto.razao_social ?? null,
+        nome_fantasia: dto.nome_fantasia ?? null,
+
         data_nascimento: new Date(dto.data_nascimento),
 
         cpf: dto.cpf ?? null,
@@ -33,6 +35,8 @@ export class ClientesService {
         bairro: dto.bairro ?? null,
         cidade: dto.cidade ?? null,
         estado: dto.estado ?? null,
+
+        status: dto.status, // ✅ obrigatório no banco
 
         enviar_aniversario_email: dto.enviar_aniversario_email ?? true,
         enviar_aniversario_whatsapp: dto.enviar_aniversario_whatsapp ?? false,
@@ -59,8 +63,11 @@ export class ClientesService {
       where: { id },
       data: {
         indicacao_id: dto.indicacao_id ?? undefined,
+
         nome_completo: dto.nome_completo ?? undefined,
         razao_social: dto.razao_social ?? undefined,
+        nome_fantasia: dto.nome_fantasia ?? undefined,
+
         data_nascimento: dto.data_nascimento ? new Date(dto.data_nascimento) : undefined,
 
         cpf: dto.cpf ?? undefined,
@@ -80,6 +87,8 @@ export class ClientesService {
         cidade: dto.cidade ?? undefined,
         estado: dto.estado ?? undefined,
 
+        status: dto.status ?? undefined,
+
         enviar_aniversario_email: dto.enviar_aniversario_email ?? undefined,
         enviar_aniversario_whatsapp: dto.enviar_aniversario_whatsapp ?? undefined,
       },
@@ -92,10 +101,6 @@ export class ClientesService {
     return { ok: true }
   }
 
-  /**
-   * Aniversariantes do dia (MySQL): compara mês-dia.
-   * Se quiser filtrar por canal, use enviar: 'email' | 'whatsapp'
-   */
   async aniversariantesDoDia(data: string, enviar?: 'email' | 'whatsapp') {
     const dt = new Date(data)
     if (Number.isNaN(dt.getTime())) throw new Error('Data inválida')
@@ -122,4 +127,3 @@ export class ClientesService {
     )
   }
 }
-

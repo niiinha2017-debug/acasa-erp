@@ -15,13 +15,5 @@ export class AtualizarUsuarioDto {
 
   @IsString()
   @IsOptional()
-  setor?: string;
-
-  @IsString()
-  @IsOptional()
-  funcao?: string;
-
-  @IsString()
-  @IsOptional()
   status?: string;
 }
