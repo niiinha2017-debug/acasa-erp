@@ -99,13 +99,61 @@
       </header>
 
       <div class="p-4">
-        <Table
-          :columns="columns"
-          :rows="funcionariosFiltrados"
-          :loading="loading"
-          class="!border-none"
-        >
-          </Table>
+<Table
+  :columns="columns"
+  :rows="funcionariosFiltrados"
+  :loading="loading"
+  class="!border-none"
+>
+  <!-- COLUNA NOME + CHECKBOX (seleção pro PDF) -->
+  <template #cell-nome="{ row }">
+    <div class="flex items-center gap-3">
+      <input
+        type="checkbox"
+        class="h-4 w-4 accent-brand-primary"
+        :checked="selectedIds.value.has(row.id)"
+        @change="toggle(row.id)"
+      />
+      <div class="font-black text-[11px] uppercase tracking-widest text-[var(--text-main)]">
+        {{ row.nome }}
+      </div>
+    </div>
+  </template>
+
+  <!-- STATUS -->
+  <template #cell-status="{ row }">
+    <span
+      class="text-[10px] font-black uppercase tracking-widest"
+      :class="String(row.status || '').toUpperCase() === 'ATIVO'
+        ? 'text-emerald-600'
+        : 'text-slate-500'"
+    >
+      {{ row.status || '—' }}
+    </span>
+  </template>
+
+  <!-- AÇÕES -->
+  <template #cell-acoes="{ row }">
+    <div class="flex items-center justify-center gap-2">
+      <button
+        type="button"
+        class="h-9 px-4 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all"
+        @click="router.push(`/funcionarios/${row.id}`)"
+      >
+        Editar
+      </button>
+
+      <button
+        type="button"
+        class="h-9 px-4 rounded-xl bg-red-600 text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all"
+        @click="excluir(row)"
+      >
+        Excluir
+      </button>
+    </div>
+  </template>
+</Table>
+
       </div>
     </Card>
   </div>
@@ -128,7 +176,10 @@ const funcionarios = ref([])
 
 const selectedIds = ref(new Set())
 const selecionados = computed(() => Array.from(selectedIds.value))
-const funcionariosAtivos = computed(() => funcionarios.value.filter(f => !f.demissao).length)
+const funcionariosAtivos = computed(() =>
+  funcionarios.value.filter(f => String(f.status || '').toUpperCase() === 'ATIVO').length
+)
+
 
 const columns = [
   { key: 'nome', label: 'Funcionário' },

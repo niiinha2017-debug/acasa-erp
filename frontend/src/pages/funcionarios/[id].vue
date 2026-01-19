@@ -169,6 +169,8 @@ import { upper, raw } from '@/utils/text'
 const router = useRouter()
 const route = useRoute()
 const salvando = ref(false)
+const loading = ref(false)
+
 
 const paramId = computed(() => String(route.params.id || 'novo'))
 const isEditing = computed(() => paramId.value !== 'novo')
@@ -178,7 +180,6 @@ const fmtDate = (d) => (d ? String(d).split('T')[0] : '')
 
 function novoForm() {
   return {
-    status: 'INATIVO', // <- default (vai ser recalculado)
     nome: '',
     cpf: '',
     rg: '',
@@ -311,41 +312,17 @@ watch(
   }
 )
 
-function recalcularStatus() {
-  const registro = String(form.value.registro || '').trim()
-  const demissao = form.value.demissao ? String(form.value.demissao).trim() : ''
-
-  if (demissao) {
-    form.value.status = 'INATIVO'
-    return
-  }
-
-  if (registro) {
-    form.value.status = 'ATIVO'
-    return
-  }
-
-  // se não tem registro e não tem demissão, você decide:
-  // aqui eu deixo INATIVO pra ficar coerente com a regra que você falou
-  form.value.status = 'INATIVO'
-}
-
-watch(
-  () => [form.value.registro, form.value.demissao],
-  () => recalcularStatus(),
-  { immediate: true }
-)
-
 
 /* ======= carregar ======= */
 async function carregar() {
-  if (!isEditing.value) {
-    form.value = novoForm()
-    recalcularCustoHora()
-    return
-  }
-
+  loading.value = true
   try {
+    if (!isEditing.value) {
+      form.value = novoForm()
+      recalcularCustoHora()
+      return
+    }
+
     const { data } = await FuncionarioService.buscar(id.value)
     form.value = {
       ...novoForm(),
@@ -358,8 +335,11 @@ async function carregar() {
     recalcularCustoHora()
   } catch {
     router.push('/funcionarios')
+  } finally {
+    loading.value = false
   }
 }
+
 
 onMounted(carregar)
 watch(() => paramId.value, () => carregar())
@@ -373,17 +353,18 @@ async function salvar() {
   salvando.value = true
   try {
     recalcularCustoHora()
-    recalcularStatus()
 
-    const payload = {
-      ...form.value,
-      email: emailUi.value,
-      // datas: manda null em vez de ''
-      data_nascimento: form.value.data_nascimento || null,
-      admissao: form.value.admissao || null,
-      demissao: form.value.demissao || null,
-      data_pagamento: form.value.data_pagamento || null,
-    }
+const { status, ...semStatus } = form.value
+
+const payload = {
+  ...semStatus,
+  email: emailUi.value,
+  data_nascimento: form.value.data_nascimento || null,
+  admissao: form.value.admissao || null,
+  demissao: form.value.demissao || null,
+  data_pagamento: form.value.data_pagamento || null,
+}
+
 
     await FuncionarioService.salvar(isEditing.value ? id.value : null, payload)
     router.push('/funcionarios')

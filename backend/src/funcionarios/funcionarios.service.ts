@@ -11,14 +11,21 @@ export class FuncionariosService {
   private readonly STATUS_ATIVO = 'ATIVO'
   private readonly STATUS_INATIVO = 'INATIVO'
 
-  private calcularStatus(input: { registro?: string | null; demissao?: Date | null }) {
-    const registro = input.registro ? String(input.registro).trim() : ''
-    const demissao = input.demissao ?? null
+private calcularStatus(input: {
+  registro?: string | null
+  admissao?: Date | null
+  demissao?: Date | null
+}) {
+  const registro = input.registro ? String(input.registro).trim() : ''
+  const admissao = input.admissao ?? null
+  const demissao = input.demissao ?? null
 
-    if (demissao) return this.STATUS_INATIVO
-    if (registro) return this.STATUS_ATIVO
-    return undefined // não muda
-  }
+  if (demissao) return this.STATUS_INATIVO
+  if (admissao) return this.STATUS_ATIVO
+  if (registro) return this.STATUS_ATIVO
+  return this.STATUS_INATIVO
+}
+
 
   async listar() {
     return this.prisma.funcionarios.findMany({
@@ -110,19 +117,23 @@ export class FuncionariosService {
   }
 
   async criar(dto: CriarFuncionarioDto) {
-    try {
-      const data = this.normalizarDatas(dto)
+  try {
+    const data = this.normalizarDatas(dto)
 
-      // aplica regra do status se o campo existir no schema
-      const status = this.calcularStatus({ registro: data.registro, demissao: data.demissao })
-      if (status) (data as any).status = status
+    // ✅ status baseado na sua regra (demissao inativa, admissao/registro ativa)
+    ;(data as any).status = this.calcularStatus({
+      registro: data.registro,
+      admissao: data.admissao,
+      demissao: data.demissao,
+    })
 
-      return await this.prisma.funcionarios.create({ data })
-    } catch (e: any) {
-      if (e?.code === 'P2002') throw new BadRequestException('CPF já cadastrado.')
-      throw e
-    }
+    return await this.prisma.funcionarios.create({ data })
+  } catch (e: any) {
+    if (e?.code === 'P2002') throw new BadRequestException('CPF já cadastrado.')
+    throw e
   }
+}
+
 
   async atualizar(id: number, dto: AtualizarFuncionarioDto) {
     await this.buscarPorId(id)
@@ -131,16 +142,23 @@ export class FuncionariosService {
       const data = this.normalizarDatas(dto)
 
       // só recalcula se mexeu em registro ou demissao
-      const mexeuEmRegistro = Object.prototype.hasOwnProperty.call(data, 'registro')
-      const mexeuEmDemissao = Object.prototype.hasOwnProperty.call(data, 'demissao')
+const mexeuEmRegistro = Object.prototype.hasOwnProperty.call(data, 'registro')
+const mexeuEmAdmissao = Object.prototype.hasOwnProperty.call(data, 'admissao')
+const mexeuEmDemissao = Object.prototype.hasOwnProperty.call(data, 'demissao')
 
-      if (mexeuEmRegistro || mexeuEmDemissao) {
-        const status = this.calcularStatus({
-          registro: (data as any).registro,
-          demissao: (data as any).demissao,
-        })
-        if (status) (data as any).status = status
-      }
+if (mexeuEmRegistro || mexeuEmAdmissao || mexeuEmDemissao) {
+  const atual = await this.prisma.funcionarios.findUnique({
+    where: { id },
+    select: { registro: true, admissao: true, demissao: true },
+  })
+  if (!atual) throw new NotFoundException('Funcionário não encontrado.')
+
+  ;(data as any).status = this.calcularStatus({
+    registro: mexeuEmRegistro ? (data as any).registro : atual.registro,
+    admissao: mexeuEmAdmissao ? (data as any).admissao : atual.admissao,
+    demissao: mexeuEmDemissao ? (data as any).demissao : atual.demissao,
+  })
+}
 
       return await this.prisma.funcionarios.update({
         where: { id },
