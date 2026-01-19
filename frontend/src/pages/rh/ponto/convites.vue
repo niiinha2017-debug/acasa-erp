@@ -110,17 +110,17 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { FuncionarioService, PontoService } from '@/services/index'
-import { notify } from '@/services/notify' // ajuste se seu notify tiver outro caminho
+import { notify } from '@/services/notify'
 
 const loading = ref(true)
 const loadingGerar = ref(false)
 
-const funcionario = ref([])
+const funcionarios = ref([])          // <- plural
 const funcionario_id = ref(null)
 const convite = ref(null)
 
-const funcionarioOptions = computed(() =>
-  (funcionario.value || []).map((f) => ({
+const funcionariosOptions = computed(() =>
+  (funcionarios.value || []).map((f) => ({
     label: `${String(f.nome || '').toUpperCase()} #${f.id}`,
     value: f.id,
   })),
@@ -128,11 +128,11 @@ const funcionarioOptions = computed(() =>
 
 onMounted(async () => {
   try {
-    // ajuste o método conforme seu service real
-    const res = await FuncionarioService.listar?.() || await FuncionarioService.listarTodos?.()
-    funcionario.value = res?.data || []
+    const res = await FuncionarioService.listar()
+    funcionarios.value = res?.data || []
   } catch (e) {
-    notify?.error?.('Falha ao carregar funcionários.')
+    console.log('[ERRO listar funcionarios]', e) // <- 1 log real
+    notify?.error?.(e?.response?.data?.message || 'Falha ao carregar funcionários.')
   } finally {
     loading.value = false
   }
@@ -166,8 +166,8 @@ async function copiar(texto) {
 function abrirWhats() {
   if (!convite.value?.url) return
 
-  const funcionario = funcionario.value.find((f) => f.id === funcionario_id.value)
-  const nome = funcionario?.nome ? String(funcionario.nome).trim() : 'FUNCIONÁRIO'
+  const f = funcionarios.value.find((x) => x.id === funcionario_id.value)
+  const nome = f?.nome ? String(f.nome).trim() : 'FUNCIONÁRIO'
 
   const msg =
 `Olá ${nome}!
@@ -189,3 +189,4 @@ function formatDate(v) {
   }
 }
 </script>
+
