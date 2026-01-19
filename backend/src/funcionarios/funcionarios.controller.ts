@@ -6,7 +6,6 @@ import {
   Param,
   Put,
   Post,
-  UseGuards,
   Res,
   HttpStatus,
 } from '@nestjs/common'
@@ -14,13 +13,8 @@ import { Response } from 'express'
 import { FuncionariosService } from './funcionarios.service'
 import { CriarFuncionarioDto } from './dto/criar-funcionario.dto'
 import { AtualizarFuncionarioDto } from './dto/atualizar-funcionario.dto'
-import { JwtAuthGuard } from '../auth/jwt-auth.guard'
-import { PermissionsGuard } from '../auth/permissions.guard'
-import { Permissoes } from '../auth/permissoes.decorator'
 import { GerarPdfFuncionariosDto } from './dto/gerar-pdf-funcionarios.dto'
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
-@Permissoes('ADMIN')
 @Controller('funcionarios')
 export class FuncionariosController {
   constructor(private readonly service: FuncionariosService) {}
@@ -30,12 +24,8 @@ export class FuncionariosController {
     return this.service.listar()
   }
 
-  // ✅ PDF ANTES DO :id (evita conflito)
   @Post('pdf')
-  async gerarPdfLote(
-    @Body() dto: GerarPdfFuncionariosDto,
-    @Res() res: Response
-  ) {
+  async gerarPdfLote(@Body() dto: GerarPdfFuncionariosDto, @Res() res: Response) {
     const pdfBuffer = await this.service.gerarPdf(dto.ids)
 
     res.status(HttpStatus.OK)
@@ -45,7 +35,6 @@ export class FuncionariosController {
 
     return res.end(pdfBuffer)
   }
-
 
   @Get(':id')
   buscarPorId(@Param('id') id: string) {
