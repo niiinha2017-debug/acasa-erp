@@ -208,15 +208,5 @@ function formatDate(v) {
     return String(v)
   }
 }
-
-
-function formatDate(v) {
-  if (!v) return '—'
-  try {
-    return new Date(v).toLocaleString('pt-BR')
-  } catch {
-    return String(v)
-  }
-}
 </script>
 
