@@ -279,23 +279,24 @@ const emailUi = computed({
 
 const salarioBaseUi = computed({
   get: () => numeroParaMoeda(form.value.salario_base || 0),
-  set: (v) => (form.value.salario_base = moedaParaNumero(maskMoneyBR(v))),
+  set: (v) => (form.value.salario_base = moedaParaNumero(v)),
 })
 
 const salarioAdicionalUi = computed({
   get: () => numeroParaMoeda(form.value.salario_adicional || 0),
-  set: (v) => (form.value.salario_adicional = moedaParaNumero(maskMoneyBR(v))),
+  set: (v) => (form.value.salario_adicional = moedaParaNumero(v)),
 })
 
 const valeUi = computed({
   get: () => numeroParaMoeda(form.value.vale || 0),
-  set: (v) => (form.value.vale = moedaParaNumero(maskMoneyBR(v))),
+  set: (v) => (form.value.vale = moedaParaNumero(v)),
 })
 
 const valeTransporteUi = computed({
   get: () => numeroParaMoeda(form.value.vale_transporte || 0),
-  set: (v) => (form.value.vale_transporte = moedaParaNumero(maskMoneyBR(v))),
+  set: (v) => (form.value.vale_transporte = moedaParaNumero(v)),
 })
+
 
 /* ======= calculados ======= */
 const custoHoraExibicao = computed(() => numeroParaMoeda(form.value.custo_hora || 0))
