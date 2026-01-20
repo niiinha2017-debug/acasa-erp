@@ -16,11 +16,11 @@ export class PontoService {
   ) {}
 
 
-  private stripCep(cep: any): string | null {
-  const v = String(cep || '').replace(/\D/g, '')
-  if (!v) return null
-  return v.slice(0, 8)
+private normalizeCep(cep: any): string | null {
+  const v = String(cep ?? '').replace(/\D/g, '')
+  return v.length === 8 ? v : null
 }
+
 
 private ufFromState(state: string | null): string | null {
   if (!state) return null
@@ -92,7 +92,7 @@ private async reverseGeocode(lat: number, lng: number): Promise<{
     const data: any = await res.json()
     const a = data?.address || {}
 
-    const cep = this.stripCep(a.postcode)
+    const cep = this.normalizeCep(a.postcode)
 
     const rua = a.road || a.pedestrian || a.footway || a.path || a.highway || null
     const bairro = a.suburb || a.neighbourhood || a.quarter || a.city_district || null
