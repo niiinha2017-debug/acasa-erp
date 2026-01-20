@@ -1,108 +1,90 @@
 <template>
-  <div class="min-h-screen w-full bg-slate-50 relative overflow-hidden font-sans antialiased">
-    <div class="pointer-events-none absolute -top-32 -right-32 h-[520px] w-[520px] rounded-full bg-indigo-500/10 blur-3xl"></div>
-    <div class="pointer-events-none absolute -bottom-32 -left-32 h-[520px] w-[520px] rounded-full bg-slate-900/10 blur-3xl"></div>
+  <div class="min-h-screen w-full bg-[#f8faff] flex items-center justify-center p-4 font-sans antialiased">
+    <div class="w-full max-w-[450px] bg-white rounded-[3rem] shadow-[0_40px_100px_rgba(0,0,0,0.05)] overflow-hidden border border-slate-50">
+      
+      <div class="p-8 sm:p-10 flex flex-col items-center">
+        <div class="mb-8">
+          <img src="/pwa-192.png" alt="ACASA" class="h-16 w-16 object-contain shadow-sm rounded-2xl" />
+        </div>
 
-    <div class="min-h-screen w-full flex items-center justify-center px-4 py-6">
-      <div class="w-full max-w-[980px] bg-white border border-slate-100 rounded-[2.5rem] shadow-xl overflow-hidden">
-        <div class="grid grid-cols-12">
+        <header class="text-center mb-10">
+          <h2 class="text-3xl font-black text-[#1e293b] tracking-tight uppercase">
+            {{ etapa === 'termo' ? 'Privacidade' : etapa === 'ativar' ? 'Vincular' : 'Registro' }}
+          </h2>
+          <p class="text-[#94a3b8] text-[11px] font-bold uppercase tracking-[0.2em] mt-1">
+            {{ etapa === 'app' ? 'Painel de Frequência' : 'Configuração Inicial' }}
+          </p>
+        </header>
+
+        <div class="w-full space-y-4">
           
-          <div class="hidden md:flex md:col-span-5 bg-slate-50 border-r border-slate-100 p-10 items-center justify-center">
-            <div class="text-center">
-              <div class="relative h-24 w-24 mx-auto rounded-3xl bg-white border border-slate-200 shadow-sm flex items-center justify-center mb-6">
-                <img src="/pwa-192.png" alt="ACASA" class="h-14 w-14 object-contain" />
-              </div>
-              <h1 class="text-2xl font-black text-slate-900 tracking-tight uppercase">ACASA PONTO</h1>
-              <p class="mt-4 text-sm text-slate-500 italic px-6">Registro seguro com precisão geográfica e carimbo de tempo digital.</p>
+          <div v-if="etapa === 'termo'" class="space-y-6 animate-in">
+            <div class="bg-indigo-50 border-l-4 border-indigo-600 p-5 rounded-2xl text-sm text-indigo-900 italic leading-relaxed">
+              Declaro estar ciente e de acordo com a coleta e o tratamento de meus dados de geolocalização e metadados, estritamente para fins de execução do contrato de trabalho e cumprimento de obrigações legais, em conformidade com o Art. 7º, inciso V, da Lei Geral de Proteção de Dados (Lei nº 13.709/2018).
             </div>
+            <button @click="confirmarAceite" class="w-full h-16 bg-[#1e293b] text-white rounded-2xl font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all">
+              Eu Aceito os Termos
+            </button>
           </div>
 
-          <div class="col-span-12 md:col-span-7 p-6 sm:p-10 flex flex-col justify-center">
-            
-            <div class="md:hidden flex justify-center mb-6">
-              <img src="/pwa-192.png" alt="ACASA" class="h-12 w-12" />
+          <div v-else-if="etapa === 'ativar'" class="space-y-4 animate-in">
+            <div class="space-y-1">
+              <label class="text-[10px] font-black text-slate-400 uppercase ml-2">Código de Ativação</label>
+              <input v-model="parearCode" type="text" placeholder="EX: A1B2C3" class="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-5 font-black uppercase focus:ring-2 focus:ring-indigo-500 outline-none" />
             </div>
+            <button @click="realizarPareamento" :disabled="loading" class="w-full h-16 bg-[#1e293b] text-white rounded-2xl font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all flex items-center justify-center">
+              <span v-if="!loading">Vincular Agora</span>
+              <div v-else class="animate-spin h-5 w-5 border-2 border-white/20 border-t-white rounded-full"></div>
+            </button>
+          </div>
 
-            <header class="mb-8 text-center md:text-left">
-              <h2 class="text-2xl font-black text-slate-900 uppercase leading-none">
-                {{ etapa === 'termo' ? 'Privacidade' : etapa === 'ativar' ? 'Vincular' : 'Registro' }}
-              </h2>
-              <p class="text-slate-400 mt-2 text-[10px] font-black uppercase tracking-widest">
-                {{ etapa === 'app' ? 'Painel de Frequência' : 'Configuração Inicial' }}
+          <div v-else class="space-y-4 animate-in">
+            <div class="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="h-2.5 w-2.5 rounded-full bg-[#10b981] animate-pulse"></span>
+                <p class="text-[10px] font-black text-[#94a3b8] uppercase tracking-widest">Localização Atual</p>
+              </div>
+              <p class="text-[13px] font-black text-[#1e293b] leading-tight uppercase">
+                {{ enderecoAtual || 'Buscando localização...' }}
               </p>
-            </header>
-
-            <div class="space-y-5">
-              
-              <div v-if="etapa === 'termo'" class="space-y-6 animate-in">
-                <div class="bg-indigo-50 border-l-4 border-indigo-600 p-5 rounded-xl text-sm text-indigo-900 italic">
-                  Autorizo a coleta de geolocalização e metadados para fins de execução de contrato de trabalho (Art. 7º LGPD).
-                </div>
-                <Button variant="primary" fullWidth size="lg" @click="confirmarAceite">Aceitar e Continuar</Button>
-              </div>
-
-              <div v-else-if="etapa === 'ativar'" class="space-y-4 animate-in">
-                <Input v-model="parearCode" label="Código do RH" placeholder="EX: A1B2" :force-upper="true" />
-                <Button variant="primary" fullWidth size="lg" :loading="loading" @click="realizarPareamento">Ativar Dispositivo</Button>
-              </div>
-
-              <div v-else class="space-y-4 animate-in">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div class="bg-white border border-slate-100 rounded-2xl p-4 flex flex-col justify-center shadow-sm">
-                    <div class="flex items-center gap-2 mb-1">
-                      <span class="h-2 w-2 rounded-full animate-pulse" :class="coords ? 'bg-emerald-500' : 'bg-rose-500'"></span>
-                      <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Localização Atual</p>
-                    </div>
-                    <p class="text-[11px] font-bold text-slate-900 uppercase truncate">
-                      {{ enderecoAtual || (coords ? 'Localizando endereço...' : 'GPS Desligado') }}
-                    </p>
-                    <p v-if="cepAtual" class="text-[9px] font-black text-indigo-600 mt-1">CEP: {{ cepAtual }}</p>
-                  </div>
-
-                  <div class="bg-white border border-slate-100 rounded-2xl p-4 flex flex-col justify-center shadow-sm">
-                    <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Data e Hora</p>
-                    <p class="text-lg font-black text-slate-900 leading-none">{{ horaAgora }}</p>
-                    <p class="text-[10px] font-bold text-slate-500 mt-1 uppercase">{{ dataHoje }}</p>
-                  </div>
-                </div>
-
-                <Button
-                  variant="primary"
-                  fullWidth
-                  class="h-28 flex flex-col shadow-2xl rounded-[2rem] transition-all active:scale-95"
-                  :class="proximoStatus === 'SAIDA' ? 'bg-rose-600 shadow-rose-200' : 'bg-slate-900 shadow-slate-200'"
-                  :loading="loading"
-                  @click="baterPonto"
-                >
-                  <template v-if="bloqueioTemporario">
-                    <span class="text-[10px] font-black uppercase">Aguarde {{ contadorBloqueio }}s</span>
-                  </template>
-                  <template v-else>
-                    <span class="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Registrar</span>
-                    <span class="text-3xl font-black">{{ proximoStatus }}</span>
-                  </template>
-                </Button>
-
-                <div v-if="ultimoRegistro" class="bg-slate-50 border border-dashed border-slate-200 rounded-2xl p-4 flex justify-between items-center">
-                  <div>
-                    <p class="text-[8px] font-black text-slate-400 uppercase">Último Evento</p>
-                    <p class="text-sm font-black text-slate-800 uppercase">{{ ultimoRegistro.tipo }}</p>
-                  </div>
-                  <div class="text-right">
-                    <p class="text-[10px] font-bold text-slate-600">{{ ultimoRegistroDataHoraTexto }}</p>
-                  </div>
-                </div>
-              </div>
+              <p v-if="cepAtual" class="text-[11px] font-black text-indigo-600 mt-2">CEP: {{ cepAtual }}</p>
             </div>
 
-            <footer class="mt-8 flex items-center justify-between text-[9px] font-black text-slate-300 uppercase tracking-[0.2em]">
-              <span>ACASA v2.4</span>
-              <span>Conexão Criptografada</span>
-            </footer>
+            <div class="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm">
+              <p class="text-[10px] font-black text-[#94a3b8] uppercase tracking-widest mb-2">Data e Hora</p>
+              <p class="text-3xl font-black text-[#1e293b] leading-none">{{ horaAgora }}</p>
+              <p class="text-[11px] font-bold text-[#64748b] mt-2 uppercase">{{ dataHoje }}</p>
+            </div>
 
-            <p v-if="erro" class="mt-4 text-center text-[10px] font-black text-rose-500 uppercase">{{ erro }}</p>
+            <button @click="baterPonto" :disabled="loading || bloqueioTemporario"
+              class="w-full h-32 rounded-[2.5rem] flex flex-col items-center justify-center transition-all active:scale-95 shadow-2xl relative overflow-hidden"
+              :class="proximoStatus === 'SAIDA' ? 'bg-gradient-to-br from-[#4b79a1] to-[#283e51]' : 'bg-[#1e293b]'"
+            >
+              <template v-if="bloqueioTemporario">
+                <span class="text-[10px] font-black text-white uppercase">Aguarde {{ contadorBloqueio }}s</span>
+              </template>
+              <template v-else>
+                <span class="text-[10px] font-black text-white/60 uppercase tracking-[0.3em] mb-1 italic">Registrar</span>
+                <span class="text-4xl font-black text-white uppercase tracking-wider">{{ proximoStatus }}</span>
+              </template>
+            </button>
+
+            <div v-if="ultimoRegistro" class="bg-slate-50/50 border border-dashed border-slate-200 rounded-3xl p-5 flex justify-between items-center">
+              <div>
+                <p class="text-[9px] font-black text-[#94a3b8] uppercase tracking-widest mb-1">Último Evento</p>
+                <p class="text-sm font-black text-[#1e293b] uppercase">{{ ultimoRegistro.tipo }}</p>
+              </div>
+              <p class="text-[11px] font-bold text-[#64748b]">{{ ultimoRegistroDataHoraTexto }}</p>
+            </div>
           </div>
         </div>
+
+        <footer class="w-full flex justify-between px-2 mt-8">
+          <span class="text-[9px] font-black text-[#cbd5e1] uppercase tracking-widest">ACASA V2.4</span>
+          <span class="text-[9px] font-black text-[#cbd5e1] uppercase tracking-widest italic text-right">Conexão Criptografada</span>
+        </footer>
+
+        <p v-if="erro" class="mt-4 text-[10px] font-black text-rose-500 uppercase bg-rose-50 px-4 py-2 rounded-full">{{ erro }}</p>
       </div>
     </div>
   </div>
@@ -111,137 +93,58 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { PontoService } from './services/ponto.service'
-import Input from './components/ui/Input.vue'
-import Button from './components/ui/Button.vue'
 
-// ESTADO
 const etapa = ref('termo')
 const loading = ref(false)
 const token = ref(localStorage.getItem('acasa_ponto_token') || '')
 const parearCode = ref('')
-const funcionario = ref(null)
 const registrosHoje = ref([])
-const coords = ref(null)
 const enderecoAtual = ref('')
 const cepAtual = ref('')
 const erro = ref('')
 const contadorBloqueio = ref(0)
 const agora = ref(new Date())
+let timerRelogio, timerBloqueio
 
-let timerRelogio = null
-let timerBloqueio = null
+// FULLSCREEN & BACK LOCK
+const lockApp = () => {
+  if (etapa.value !== 'app') return
+  history.pushState(null, '', location.href)
+  window.onpopstate = () => history.pushState(null, '', location.href)
+  if (document.documentElement.requestFullscreen && window.matchMedia('(display-mode: standalone)').matches) {
+    document.documentElement.requestFullscreen().catch(() => {})
+  }
+}
 
-// COMPUTED
-const horaAgora = computed(() => agora.value.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
-const dataHoje = computed(() => agora.value.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' }))
+const horaAgora = computed(() => agora.value.toLocaleTimeString('pt-BR'))
+const dataHoje = computed(() => agora.value.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }))
 const ultimoRegistro = computed(() => registrosHoje.value.at(-1))
 const proximoStatus = computed(() => (!ultimoRegistro.value || ultimoRegistro.value.tipo === 'SAIDA') ? 'ENTRADA' : 'SAIDA')
 const bloqueioTemporario = computed(() => contadorBloqueio.value > 0)
-const ultimoRegistroDataHoraTexto = computed(() => {
-  if (!ultimoRegistro.value?.data_hora) return ''
-  return new Date(ultimoRegistro.value.data_hora).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
-})
+const ultimoRegistroDataHoraTexto = computed(() => ultimoRegistro.value ? new Date(ultimoRegistro.value.data_hora).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '')
 
-// MÉTODOS DE APP (BACK LOCK & FULLSCREEN)
-const setupPWA = async () => {
-  if (etapa.value !== 'app') return
-  // Fullscreen
-  try {
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone
-    if (isStandalone && document.documentElement.requestFullscreen) {
-      await document.documentElement.requestFullscreen()
-    }
-  } catch (e) {}
-  // Back Lock
-  history.pushState(null, '', location.href)
-  window.onpopstate = () => history.pushState(null, '', location.href)
-}
-
-// REVERSO GEO (CEP e ENDEREÇO)
 async function buscarEndereco(lat, lng) {
   try {
-    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&addressdetails=1`)
     const data = await res.json()
     if (data.address) {
-      const r = data.address
-      enderecoAtual.value = `${r.road || ''}, ${r.suburb || r.neighbourhood || ''}`.replace(/^, /, '')
-      cepAtual.value = r.postcode || ''
+      cepAtual.value = data.address.postcode || ''
+      const rua = data.address.road || ''
+      const bairro = data.address.suburb || data.address.neighbourhood || ''
+      enderecoAtual.value = `${rua}${rua && bairro ? ', ' : ''}${bairro}`.toUpperCase()
     }
-  } catch (e) {
-    enderecoAtual.value = "Localização obtida"
-  }
-}
-
-async function capturarGPS() {
-  return new Promise((resolve) => {
-    navigator.geolocation.getCurrentPosition(
-      async (p) => {
-        coords.value = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy }
-        await buscarEndereco(p.coords.latitude, p.coords.longitude)
-        resolve(coords.value)
-      },
-      () => resolve(null),
-      { enableHighAccuracy: true, timeout: 10000 }
-    )
-  })
-}
-
-function verificarBloqueio30s() {
-  if (!ultimoRegistro.value?.data_hora) return
-  const diff = Math.floor((Date.now() - new Date(ultimoRegistro.value.data_hora).getTime()) / 1000)
-  if (diff < 30) {
-    contadorBloqueio.value = 30 - diff
-    clearInterval(timerBloqueio)
-    timerBloqueio = setInterval(() => {
-      if (contadorBloqueio.value > 0) contadorBloqueio.value--
-      else clearInterval(timerBloqueio)
-    }, 1000)
-  }
-}
-
-async function carregarDados() {
-  if (!token.value) return
-  loading.value = true
-  try {
-    const [me, hoje] = await Promise.all([PontoService.me(token.value), PontoService.hoje(token.value)])
-    funcionario.value = me.data
-    registrosHoje.value = hoje.data || []
-    verificarBloqueio30s()
-  } catch (e) {
-    if (e.response?.status === 401) etapa.value = 'ativar'
-  } finally { loading.value = false }
-}
-
-async function realizarPareamento() {
-  if (!parearCode.value) return (erro.value = 'CÓDIGO INVÁLIDO')
-  loading.value = true
-  try {
-    const res = await PontoService.ativar({
-      code: parearCode.value.trim().toUpperCase(),
-      device_uuid: crypto.randomUUID().toUpperCase(),
-      plataforma: 'WEB_PWA'
-    })
-    token.value = res.data.token
-    localStorage.setItem('acasa_ponto_token', token.value)
-    etapa.value = 'app'
-    await carregarDados()
-  } catch (e) { erro.value = 'FALHA NA ATIVAÇÃO' } finally { loading.value = false }
+  } catch (e) { enderecoAtual.value = "GPS ATIVO" }
 }
 
 async function baterPonto() {
   if (bloqueioTemporario.value) return
   loading.value = true
-  const gps = await capturarGPS()
-  if (!gps) { erro.value = 'LIGUE O GPS'; loading.value = false; return }
-  try {
-    await PontoService.registrar({
-      tipo: proximoStatus.value,
-      latitude: gps.lat,
-      longitude: gps.lng,
-      precisao_metros: Math.round(gps.acc)
-    }, token.value)
-    await carregarDados()
-  } catch (e) { erro.value = 'ERRO AO REGISTRAR' } finally { loading.value = false }
+  navigator.geolocation.getCurrentPosition(async (p) => {
+    try {
+      await PontoService.registrar({ tipo: proximoStatus.value, latitude: p.coords.latitude, longitude: p.coords.longitude, precisao_metros: Math.round(p.coords.accuracy) }, token.value)
+      await carregarDados()
+    } catch (e) { erro.value = "ERRO NO REGISTRO" } finally { loading.value = false }
+  }, () => { erro.value = "GPS NECESSÁRIO"; loading.value = false }, { enableHighAccuracy: true })
 }
 
 function confirmarAceite() {
@@ -249,22 +152,41 @@ function confirmarAceite() {
   etapa.value = token.value ? 'app' : 'ativar'
 }
 
-watch(etapa, (val) => { if (val === 'app') setupPWA() })
+async function realizarPareamento() {
+  if (!parearCode.value) return
+  loading.value = true
+  try {
+    const res = await PontoService.ativar({ code: parearCode.value.trim().toUpperCase(), device_uuid: crypto.randomUUID().toUpperCase(), plataforma: 'WEB_PWA' })
+    token.value = res.data.token
+    localStorage.setItem('acasa_ponto_token', token.value)
+    etapa.value = 'app'
+    await carregarDados()
+  } catch (e) { erro.value = "FALHA NA ATIVAÇÃO" } finally { loading.value = false }
+}
+
+async function carregarDados() {
+  if (!token.value) return
+  try {
+    const res = await PontoService.hoje(token.value)
+    registrosHoje.value = res.data || []
+    if (ultimoRegistro.value) {
+      const diff = Math.floor((Date.now() - new Date(ultimoRegistro.value.data_hora).getTime()) / 1000)
+      if (diff < 30) {
+        contadorBloqueio.value = 30 - diff
+        clearInterval(timerBloqueio)
+        timerBloqueio = setInterval(() => { if (contadorBloqueio.value > 0) contadorBloqueio.value--; else clearInterval(timerBloqueio) }, 1000)
+      }
+    }
+  } catch (e) {}
+}
+
+watch(etapa, (val) => { if (val === 'app') lockApp() })
 
 onMounted(() => {
   timerRelogio = setInterval(() => { agora.value = new Date() }, 1000)
-  if (token.value) {
-    etapa.value = 'app'
-    carregarDados()
-    capturarGPS()
-  } else {
-    etapa.value = localStorage.getItem('acasa_ponto_aceite') ? 'ativar' : 'termo'
-  }
-})
-
-onUnmounted(() => {
-  clearInterval(timerRelogio)
-  clearInterval(timerBloqueio)
+  if (!localStorage.getItem('acasa_ponto_aceite')) etapa.value = 'termo'
+  else if (token.value) { etapa.value = 'app'; carregarDados(); navigator.geolocation.getCurrentPosition(p => buscarEndereco(p.coords.latitude, p.coords.longitude)) }
+  else etapa.value = 'ativar'
 })
 </script>
 
