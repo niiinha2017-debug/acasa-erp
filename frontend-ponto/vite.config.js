@@ -1,55 +1,60 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import VueRouter from 'unplugin-vue-router/vite'
 import { VitePWA } from 'vite-plugin-pwa'
-import tailwindcss from '@tailwindcss/vite'
-import { fileURLToPath, URL } from 'node:url' // ✅ ADD
+import path from 'path'
 
 export default defineConfig({
-  // 🔴 ESSENCIAL: app roda em /ponto/
-  base: '/ponto/',
-
-  // ✅ ADD
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
-    },
-  },
+  base: '/',
 
   plugins: [
+    VueRouter({
+      dts: 'src/typed-router.d.ts',
+      routesFolder: 'src/pages',
+    }),
+
     vue(),
-    tailwindcss(),
 
     VitePWA({
       registerType: 'autoUpdate',
+
       devOptions: {
-        enabled: false, // PWA só em build
+        enabled: true,
       },
 
+      // PWA do ponto na raiz do subdomínio
+      scope: '/',
       manifest: {
         name: 'ACASA Ponto',
         short_name: 'Ponto',
-
-        // 🔴 SUBPASTA CORRETA
-        start_url: '/ponto/',
-        scope: '/ponto/',
-
+        start_url: '/',
         display: 'standalone',
         background_color: '#ffffff',
         theme_color: '#111827',
-
-        // 🔴 ÍCONES PRECISAM SER ABSOLUTOS + SUBPASTA
         icons: [
-          { src: '/ponto/pwa-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/ponto/pwa-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/pwa-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/pwa-512.png', sizes: '512x512', type: 'image/png' },
         ],
       },
     }),
   ],
 
-  // 🔧 SOMENTE DEV (não afeta produção)
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+
+  build: {
+    emptyOutDir: true,
+    assetsDir: 'assets',
+    modulePreload: { polyfill: true },
+    sourcemap: true,
+  },
+
   server: {
-    port: 5174,
-    host: true,
+    port: 5173,
+    fs: { allow: ['..'] },
     proxy: {
       '/api': {
         target: 'http://localhost:3000',

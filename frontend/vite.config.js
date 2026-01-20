@@ -5,7 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
 export default defineConfig({
-  base: '/ponto/',
+  base: '/',
 
   plugins: [
     VueRouter({
@@ -15,33 +15,35 @@ export default defineConfig({
 
     vue(),
 
-VitePWA({
-  registerType: 'autoUpdate',
+    VitePWA({
+      registerType: 'autoUpdate',
 
-  workbox: {
-    // impede o SW do ERP de interceptar /ponto/*
-    navigateFallbackDenylist: [/^\/ponto\//],
-  },
+      workbox: {
+        // ERP não intercepta nada do ponto (mesmo que um dia volte pra /ponto)
+        navigateFallbackDenylist: [/^\/ponto\//],
+      },
 
-  manifest: {
-    name: 'ACASA ERP',
-    short_name: 'ERP',
-    start_url: '/',
-    display: 'standalone',
-    background_color: '#ffffff',
-    theme_color: '#111827',
-    icons: [
-      { src: '/pwa-192.png', sizes: '192x192', type: 'image/png' },
-      { src: '/pwa-512.png', sizes: '512x512', type: 'image/png' },
-    ],
-  },
-}),
+      devOptions: {
+        enabled: true,
+      },
+
+      manifest: {
+        name: 'ACASA ERP',
+        short_name: 'ERP',
+        start_url: '/',
+        display: 'standalone',
+        background_color: '#ffffff',
+        theme_color: '#111827',
+        icons: [
+          { src: '/pwa-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/pwa-512.png', sizes: '512x512', type: 'image/png' },
+        ],
+      },
+    }),
   ],
 
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
+    alias: { '@': path.resolve(__dirname, './src') },
   },
 
   build: {
@@ -53,9 +55,7 @@ VitePWA({
 
   server: {
     port: 5173,
-    fs: {
-      allow: ['..'],
-    },
+    fs: { allow: ['..'] },
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
