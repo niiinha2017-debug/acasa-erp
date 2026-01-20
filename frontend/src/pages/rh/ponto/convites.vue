@@ -153,7 +153,7 @@ async function gerar() {
     const code = data.code || data.codigo || data.token || data.convite || null
     
     // 2. Monta a URL usando a variável 'code' que acabamos de criar (e não convite.value)
-    const PONTO_BASE_URL = `https://acasamarcenaria.com.br/ponto`
+    const PONTO_BASE_URL = `https://ponto.acasamarcenaria.com.br`
     const url = `${PONTO_BASE_URL}/ativar?code=${code}`
 
     // 3. Agora sim, salva no estado para aparecer na tela
