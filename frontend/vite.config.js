@@ -15,28 +15,27 @@ export default defineConfig({
 
     vue(),
 
-    VitePWA({
-      registerType: 'autoUpdate',
+VitePWA({
+  registerType: 'autoUpdate',
 
-      devOptions: {
-        enabled: true,
-      },
+  workbox: {
+    // impede o SW do ERP de interceptar /ponto/*
+    navigateFallbackDenylist: [/^\/ponto\//],
+  },
 
-      // ✅ isola o SW e o PWA só dentro de /ponto
-      scope: '/ponto/',
-      manifest: {
-        name: 'ACASA Ponto',
-        short_name: 'Ponto',
-        start_url: '/ponto/',
-        display: 'standalone',
-        background_color: '#ffffff',
-        theme_color: '#111827',
-        icons: [
-          { src: '/ponto/pwa-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/ponto/pwa-512.png', sizes: '512x512', type: 'image/png' },
-        ],
-      },
-    }),
+  manifest: {
+    name: 'ACASA ERP',
+    short_name: 'ERP',
+    start_url: '/',
+    display: 'standalone',
+    background_color: '#ffffff',
+    theme_color: '#111827',
+    icons: [
+      { src: '/pwa-192.png', sizes: '192x192', type: 'image/png' },
+      { src: '/pwa-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+  },
+}),
   ],
 
   resolve: {
