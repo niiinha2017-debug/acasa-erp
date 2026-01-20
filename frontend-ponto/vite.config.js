@@ -1,26 +1,18 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import VueRouter from 'unplugin-vue-router/vite'
+import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
+import VueRouter from 'unplugin-vue-router/vite'
 
 export default defineConfig({
-  base: '/',
-
   plugins: [
-    VueRouter({
-      dts: 'src/typed-router.d.ts',
-      routesFolder: 'src/pages',
-    }),
-
+    VueRouter(),
     vue(),
-
+    tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-
-      devOptions: {
-        enabled: true,
-      },
+      devOptions: { enabled: true },
 
       // PWA do ponto na raiz do subdomínio
       scope: '/',
@@ -28,6 +20,7 @@ export default defineConfig({
         name: 'ACASA Ponto',
         short_name: 'Ponto',
         start_url: '/',
+        scope: '/',
         display: 'standalone',
         background_color: '#ffffff',
         theme_color: '#111827',

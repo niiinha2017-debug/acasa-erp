@@ -14,7 +14,6 @@ import { FornecedorModule } from './fornecedores/fornecedores.module';
 import { ProdutosModule } from './produtos/produtos.module';
 import { PlanoCorteModule } from './plano-corte/plano-corte.module';
 import { FuncionariosModule } from './funcionarios/funcionarios.module';
-import { ConstantesModule } from './constantes/constantes.module';
 import { DespesasModule } from './despesas/despesas.module';
 import { OrcamentosModule } from './orcamentos/orcamentos.module';
 import { VendasService } from './vendas/vendas.service';
@@ -49,7 +48,6 @@ import { PontoModule } from './ponto/ponto.module';
     ProdutosModule,
     PlanoCorteModule,
     FuncionariosModule,
-    ConstantesModule,
     DespesasModule,
     OrcamentosModule,
     ProducaoModule,

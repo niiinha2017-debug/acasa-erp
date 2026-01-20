@@ -21,17 +21,6 @@ export class RegistrarPontoDto {
   @IsInt()
   precisao_metros?: number
 
-  // ✅ Novos campos para localização legível
-  @IsOptional()
-  @IsString()
-  @MaxLength(10)
-  cep?: string
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(150)
-  localidade?: string
-
   @IsOptional()
   @IsString()
   @MaxLength(255)

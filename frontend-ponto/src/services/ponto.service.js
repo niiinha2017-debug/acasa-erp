@@ -2,37 +2,42 @@ import axios from 'axios'
 
 const api = axios.create({
   baseURL: '/api',
+  // withCredentials: true, // só se você usa cookies/sessão (se não usa, pode remover)
 })
 
 function authHeader(token) {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
+function get(url, token) {
+  return api.get(url, { headers: authHeader(token) })
+}
+
+function post(url, data, token) {
+  return api.post(url, data, { headers: authHeader(token) })
+}
+
 export const PontoService = {
-  // 1) Ativar dispositivo (pareamento via CODE + device_uuid) -> retorna { token }
-  ativar: (dados) => api.post('/ponto/ativar', dados),
+  // pareamento via CODE + device_uuid -> { token }
+  ativar(dados) {
+    return post('/ponto/ativar', dados)
+  },
 
-  // 2) Buscar dados do funcionário (nome)
-  me: (token) =>
-    api.get('/ponto/me', {
-      headers: authHeader(token),
-    }),
+  me(token) {
+    return get('/ponto/me', token)
+  },
 
-  // 3) Buscar registros do dia (lista simples)
-  hoje: (token) =>
-    api.get('/ponto/hoje', {
-      headers: authHeader(token),
-    }),
+  hoje(token) {
+    return get('/ponto/hoje', token)
+  },
 
-  // 4) Buscar último registro (opcional, se quiser usar)
-  ultimo: (token) =>
-    api.get('/ponto/ultimo', {
-      headers: authHeader(token),
-    }),
+  ultimo(token) {
+    return get('/ponto/ultimo', token)
+  },
 
-  // 5) Registrar ponto (ENTRADA / SAIDA)
-  registrar: (payload, token) =>
-    api.post('/ponto/registrar', payload, {
-      headers: authHeader(token),
-    }),
+  // payload: { tipo, latitude, longitude, precisao_metros, ... }
+  // OBS: endereço (cep/rua/bairro/cidade/estado) vem do backend via geo, não manda aqui
+  registrar(payload, token) {
+    return post('/ponto/registrar', payload, token)
+  },
 }

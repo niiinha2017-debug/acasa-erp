@@ -545,30 +545,6 @@ model funcionarios {
   @@map("funcionarios")
 }
 
-model constantes {
-  id Int @id @default(autoincrement())
-
-  // Identificadores
-  categoria String // Ex: 'FORMA_PAGAMENTO', 'STATUS_PRODUCAO'
-  chave     String // Ex: 'CARTAO_CREDITO_VISA', 'EM_ABERTO'
-  rotulo    String // Ex: 'Cartão de Crédito (Visa)'
-
-  // Valores (Unificamos para facilitar)
-  valor_texto  String? // Para descrições ou observações extras
-  valor_numero Decimal? @db.Decimal(12, 2) // 👈 PERFEITO para Taxas (Ex: 3.50 para 3.5%)
-
-  // Organização
-  ordem Int     @default(0)
-  ativo Boolean @default(true)
-
-  // Auditoria
-  criado_em     DateTime @default(now())
-  atualizado_em DateTime @updatedAt
-
-  @@index([categoria, ativo, ordem])
-  @@map("constantes")
-}
-
 model despesas {
   id Int @id @default(autoincrement())
 
@@ -969,6 +945,14 @@ model ponto_dispositivos {
   device_nome String? @db.VarChar(120)
   plataforma  String? @db.VarChar(20)
 
+  // ✅ NOVOS (registro do dispositivo)
+  user_agent   String?  @db.VarChar(255)
+  language     String?  @db.VarChar(20)
+  timezone     String?  @db.VarChar(80)
+  screen       String?  @db.VarChar(20)
+  pixel_ratio  Float?
+  standalone   Boolean? @default(false)
+
   token_hash String @unique @db.VarChar(255)
 
   status String @default("ATIVO") @db.VarChar(20)
@@ -986,35 +970,36 @@ model ponto_dispositivos {
 }
 
 
+
 model ponto_registros {
   id Int @id @default(autoincrement())
 
   funcionario_id Int
   funcionario    funcionarios @relation(fields: [funcionario_id], references: [id], onDelete: Cascade)
 
-  // de qual dispositivo veio (opcional mas recomendado)
   dispositivo_id Int?
   dispositivo    ponto_dispositivos? @relation(fields: [dispositivo_id], references: [id], onDelete: SetNull)
 
   tipo   PontoTipoRegistro
   origem PontoOrigem @default(PWA)
 
-  // data/hora SEMPRE do servidor
   data_hora DateTime @default(now())
 
-  // GPS
-  latitude  Decimal? @db.Decimal(10, 7)
-  longitude Decimal? @db.Decimal(10, 7)
+  latitude        Decimal? @db.Decimal(10, 7)
+  longitude       Decimal? @db.Decimal(10, 7)
   precisao_metros Int?
-  cep             String?  @db.VarChar(10) // <--- NOVO CAMPO
-  localidade      String?  @db.VarChar(150) // <--- NOVO CAMPO (Ex: Centro, Ribeirão Preto - SP)
 
-  // evidências
-  ip String? @db.VarChar(45)
+  // ✅ endereço resolvido no BACKEND
+  cep    String? @db.VarChar(10)
+  rua    String? @db.VarChar(150)
+  bairro String? @db.VarChar(120)
+  cidade String? @db.VarChar(120)
+  estado String? @db.VarChar(2) // UF
+
+  ip        String? @db.VarChar(45)
   user_agent String? @db.VarChar(255)
 
-  // controle
-  status String @default("ATIVO") @db.VarChar(20) // ATIVO / INVALIDADO
+  status     String @default("ATIVO") @db.VarChar(20)
   observacao String? @db.VarChar(255)
 
   criado_em DateTime @default(now())
@@ -1070,6 +1055,8 @@ model ponto_justificativas {
 
   @@map("ponto_justificativas")
 }
+
+
 model ponto_justificativas_arquivos {
   id Int @id @default(autoincrement())
 

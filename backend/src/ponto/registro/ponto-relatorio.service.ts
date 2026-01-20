@@ -68,7 +68,11 @@ private fimDia(ymd?: string) {
         longitude: true,
         precisao_metros: true,
         cep: true,
-        localidade: true,
+rua: true,
+bairro: true,
+cidade: true,
+estado: true,
+
         ip: true,
         status: true,
         observacao: true,
