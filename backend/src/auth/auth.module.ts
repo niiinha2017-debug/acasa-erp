@@ -9,12 +9,15 @@ import { JwtStrategy } from './jwt.strategy'
 
 import { PrismaModule } from '../prisma/prisma.module'
 import { PermissoesModule } from '../permissoes/permissoes.module'
+import { MailModule } from '../mail/mail.module'
+
 
 @Module({
   imports: [
     ConfigModule,
     PrismaModule,
     PermissoesModule,
+     MailModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       inject: [ConfigService],

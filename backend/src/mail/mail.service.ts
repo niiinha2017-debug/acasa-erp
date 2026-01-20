@@ -1,32 +1,65 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import * as nodemailer from 'nodemailer'
 
 @Injectable()
 export class MailService {
-  private transporter = nodemailer.createTransport({
-    host: process.env.MAIL_HOST,
-    port: Number(process.env.MAIL_PORT || 587),
-    secure: process.env.MAIL_SECURE === 'true', // false no 587 (STARTTLS)
-    auth: {
-      user: process.env.MAIL_USER,
-      pass: process.env.MAIL_PASS,
-    },
-  })
+  private transporter: nodemailer.Transporter
+
+  constructor(private readonly config: ConfigService) {
+    this.transporter = nodemailer.createTransport({
+      host: this.config.get<string>('MAIL_HOST'),
+      port: Number(this.config.get<string>('MAIL_PORT')),
+      secure: this.config.get<string>('MAIL_SECURE') === 'true', // 465 true / 587 false
+      auth: {
+        user: this.config.get<string>('MAIL_USER'),
+        pass: this.config.get<string>('MAIL_PASS'),
+      },
+    })
+  }
 
   async enviarEmailTeste(para: string) {
+    const from = this.config.get<string>('MAIL_FROM') || this.config.get<string>('MAIL_USER')
+
     try {
-      const from = process.env.MAIL_FROM || process.env.MAIL_USER
       const info = await this.transporter.sendMail({
         from,
         to: para,
-        subject: 'Teste ACASA ERP',
-        text: 'Envio de e-mail funcionando ✅',
-        html: `<p>Envio de e-mail funcionando ✅</p>`,
+        subject: 'ACASA-ERP - Teste de e-mail',
+        text: 'Se você recebeu este e-mail, o SMTP do ACASA-ERP está OK.',
       })
 
       return { ok: true, messageId: info.messageId }
-    } catch (e) {
-      throw new InternalServerErrorException('Falha ao enviar e-mail (SMTP).')
+    } catch (err: any) {
+      throw new InternalServerErrorException(
+        `Falha ao enviar e-mail: ${err?.message || 'erro desconhecido'}`,
+      )
     }
   }
+  async enviarSenhaProvisoria(para: string, senhaProvisoria: string, nome?: string) {
+    const from =
+      this.config.get<string>('MAIL_FROM') || this.config.get<string>('MAIL_USER')
+
+    const text =
+`Olá${nome ? `, ${nome}` : ''}.
+
+Você solicitou recuperação de senha no ACASA-ERP.
+
+Sua senha provisória é: ${senhaProvisoria}
+
+Entre no sistema e altere sua senha imediatamente.
+
+— ACASA ERP`
+
+    await this.transporter.sendMail({
+      from,
+      to: para,
+      subject: 'ACASA-ERP - Senha provisória',
+      text,
+    })
+
+    return { ok: true }
+  }
+
+
 }

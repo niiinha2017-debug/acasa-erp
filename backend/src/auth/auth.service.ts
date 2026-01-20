@@ -9,14 +9,18 @@ import * as bcrypt from 'bcryptjs'; // Alterado para bcryptjs para manter consis
 import { PrismaService } from '../prisma/prisma.service';
 import { CadastroDto } from './dto/cadastro.dto';
 import { PermissoesService } from '../permissoes/permissoes.service';
+import { MailService } from '../mail/mail.service';
+
 
 @Injectable()
 export class AuthService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly jwt: JwtService,
-    private readonly permissoesService: PermissoesService,
-  ) {}
+constructor(
+  private readonly prisma: PrismaService,
+  private readonly jwt: JwtService,
+  private readonly permissoesService: PermissoesService,
+  private readonly mailService: MailService,
+) {}
+
 
   // =========================
   // LOGIN (usuario OU email)
@@ -60,11 +64,19 @@ export class AuthService {
       // Opcional: incluir permissões no payload do JWT se o token não ficar muito grande
       // permissoes, 
     };
+    const recPendente = await this.prisma.recuperacao_senha.findFirst({
+      where: { usuario_id: registro.id, utilizado: false },
+      orderBy: { criado_em: 'desc' },
+      select: { id: true },
+    })
+
+    const precisaTrocarSenha = !!recPendente;
 
     const token = await this.jwt.signAsync(payload);
 
-    return {
+     return {
       token,
+      precisa_trocar_senha: precisaTrocarSenha,
       usuario: {
         id: registro.id,
         nome: registro.nome,
@@ -72,9 +84,10 @@ export class AuthService {
         email: registro.email,
         status: registro.status,
         criado_em: registro.criado_em,
-        permissoes, // Retorna as permissões para o frontend
+        permissoes,
       },
     };
+
   }
 
   // =========================
@@ -137,5 +150,101 @@ export class AuthService {
       criado_em: registro.criado_em,
       permissoes,
     };
+  }
+
+    // =========================
+  // ESQUECI MINHA SENHA
+  // (gera senha provisória e envia por e-mail)
+  // =========================
+  private gerarSenhaProvisoria() {
+    // simples, operacional e fácil de digitar
+    const n = Math.floor(100000 + Math.random() * 900000)
+    return `ACASA-${n}`
+  }
+
+  async esqueciSenha(email: string) {
+    const emailLimpo = String(email || '').trim().toLowerCase()
+
+    const usuario = await this.prisma.usuarios.findUnique({
+      where: { email: emailLimpo },
+    })
+
+    // Segurança: não revela se o e-mail existe
+    if (!usuario) {
+      return { ok: true }
+    }
+
+    const senhaProvisoria = this.gerarSenhaProvisoria()
+    const senhaAntigaHash = usuario.senha
+    const senhaNovaHash = await bcrypt.hash(senhaProvisoria, 10)
+
+    await this.prisma.$transaction([
+      this.prisma.usuarios.update({
+        where: { id: usuario.id },
+        data: { senha: senhaNovaHash },
+      }),
+      this.prisma.recuperacao_senha.create({
+        data: {
+          usuario_id: usuario.id,
+          email: emailLimpo,
+          senha_antiga: senhaAntigaHash,
+          senha_nova: senhaNovaHash,
+          utilizado: false,
+        },
+      }),
+    ])
+
+    await this.mailService.enviarSenhaProvisoria(
+      emailLimpo,
+      senhaProvisoria,
+      usuario.nome,
+    )
+
+    return { ok: true }
+  }
+    // =========================
+  // ALTERAR SENHA (definitiva)
+  // =========================
+  async alterarSenha(usuarioId: number, senhaAtual: string, senhaNova: string) {
+    const usuario = await this.prisma.usuarios.findUnique({
+      where: { id: usuarioId },
+    })
+
+    if (!usuario) {
+      throw new UnauthorizedException('Usuário inválido')
+    }
+
+    const senhaOk = await bcrypt.compare(senhaAtual, usuario.senha)
+    if (!senhaOk) {
+      throw new BadRequestException('Senha atual incorreta')
+    }
+
+    const novaHash = await bcrypt.hash(senhaNova, 10)
+
+    // pega a recuperação pendente mais recente
+    const rec = await this.prisma.recuperacao_senha.findFirst({
+      where: {
+        usuario_id: usuarioId,
+        utilizado: false,
+      },
+      orderBy: { criado_em: 'desc' },
+    })
+
+    await this.prisma.$transaction([
+      this.prisma.usuarios.update({
+        where: { id: usuarioId },
+        data: { senha: novaHash },
+      }),
+      ...(rec
+        ? [
+            this.prisma.recuperacao_senha.update({
+              where: { id: rec.id },
+              data: { utilizado: true },
+            }),
+          ]
+        : []),
+    ])
+
+    return { ok: true }
   }
 }

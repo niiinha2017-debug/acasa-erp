@@ -87,6 +87,35 @@ export function useAuth() {
     }
   }
 
+    async function esqueciSenha(email) {
+    loading.value = true
+    error.value = ''
+    try {
+      const { data } = await api.post('/auth/esqueci-senha', { email })
+      return data
+    } catch (e) {
+      error.value = e?.response?.data?.message || 'Erro ao enviar recuperação'
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function alterarSenha(senha_atual, senha_nova) {
+    loading.value = true
+    error.value = ''
+    try {
+      const { data } = await api.post('/auth/alterar-senha', { senha_atual, senha_nova })
+      return data
+    } catch (e) {
+      error.value = e?.response?.data?.message || 'Erro ao alterar senha'
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
+
   /**
    * Limpa os dados de autenticação e redireciona para o login
    */
@@ -107,6 +136,8 @@ export function useAuth() {
     login,
     logout,
     solicitarCadastro,
+    esqueciSenha,
+    alterarSenha,
     temAcesso,
     permissoes
   }
