@@ -222,7 +222,7 @@
 
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/services/useauth'
 
@@ -281,6 +281,9 @@ else router.push('/')
   } catch (e) {}
 }
 
+watch(lembrarUsuario, (v) => {
+  if (!v) localStorage.removeItem('erp_lembrar_usuario')
+})
 
 async function handleCadastroSubmit() {
   try {
