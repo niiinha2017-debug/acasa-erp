@@ -5,7 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
 export default defineConfig({
-  base: '/',
+  base: '/ponto/',
 
   plugins: [
     VueRouter({
@@ -18,21 +18,22 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
 
-      // ✅ pra você testar como PWA em DEV local
       devOptions: {
         enabled: true,
       },
 
-manifest: {
-        name: 'ACASA ERP',         // Mude de Ponto para ERP
-        short_name: 'ERP',         // Mude de Ponto para ERP
-        start_url: '/',
+      // ✅ isola o SW e o PWA só dentro de /ponto
+      scope: '/ponto/',
+      manifest: {
+        name: 'ACASA Ponto',
+        short_name: 'Ponto',
+        start_url: '/ponto/',
         display: 'standalone',
         background_color: '#ffffff',
         theme_color: '#111827',
         icons: [
-          { src: '/pwa-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/pwa-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/ponto/pwa-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/ponto/pwa-512.png', sizes: '512x512', type: 'image/png' },
         ],
       },
     }),
