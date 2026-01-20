@@ -15,14 +15,14 @@
     "vue-router": "4.6.4",
     "vue-router-layout": "0.4.1"
   },
-  "devDependencies": {
-    "@tailwindcss/postcss": "4.1.18",
-    "@tailwindcss/vite": "4.1.18",
-    "@vitejs/plugin-vue": "5.0.0",
-    "autoprefixer": "10.4.23",
-    "postcss": "8.5.6",
-    "unplugin-vue-router": "0.19.1",
-    "vite": "6.4.1",
-    "vite-plugin-pwa": "0.21.2"
-  }
+"devDependencies": {
+  "@tailwindcss/postcss": "4.1.18",
+  "@tailwindcss/vite": "4.1.18",
+  "@vitejs/plugin-vue": "6.0.3",
+  "autoprefixer": "10.4.23",
+  "postcss": "8.5.6",
+  "unplugin-vue-router": "0.19.1",
+  "vite": "6.4.1",
+  "vite-plugin-pwa": "0.21.2"
+}
 }
