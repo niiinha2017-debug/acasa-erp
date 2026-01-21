@@ -20,7 +20,7 @@
           
           <div v-if="etapa === 'termo'" class="space-y-6 animate-in">
             <div class="bg-indigo-50 border-l-4 border-indigo-600 p-5 rounded-2xl text-sm text-indigo-900 italic leading-relaxed">
-              Declaro estar ciente e de acordo com a coleta e o tratamento de meus dados de geolocalização e metadados, estritamente para fins de execução do contrato de trabalho e cumprimento de obrigações legais, em conformidade com o Art. 7º, inciso V, da Lei Geral de Proteção de Dados (Lei nº 13.709/2018).
+              Declaro estar ciente e de acordo com a coleta e o tratamento de meus dados de geolocalização e metadados, estritamente para fins de execução do contrato de trabalho e cumprimento de obrigações legais, em conformidade com o Art. 7º, inciso V, da LGPD.
             </div>
             <button @click="confirmarAceite" class="w-full h-16 bg-[#1e293b] text-white rounded-2xl font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all">
               Eu Aceito os Termos
@@ -47,8 +47,7 @@
               <p class="text-[13px] font-black text-[#1e293b] leading-tight uppercase">
                 {{ enderecoAtual || 'Buscando localização...' }}
               </p>
-              <p v-if="cepAtual" class="text-[11px] font-black text-indigo-600 mt-2">CEP: {{ cepAtual }}</p>
-            </div>
+              </div>
 
             <div class="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm">
               <p class="text-[10px] font-black text-[#94a3b8] uppercase tracking-widest mb-2">Data e Hora</p>
@@ -84,7 +83,9 @@
           <span class="text-[9px] font-black text-[#cbd5e1] uppercase tracking-widest italic text-right">Conexão Criptografada</span>
         </footer>
 
-        <p v-if="erro" class="mt-4 text-[10px] font-black text-rose-500 uppercase bg-rose-50 px-4 py-2 rounded-full">{{ erro }}</p>
+        <p v-if="erro" class="mt-4 text-[10px] font-black text-rose-500 uppercase bg-rose-50 px-4 py-2 rounded-full text-center">
+          {{ erro }}
+        </p>
       </div>
     </div>
   </div>
@@ -100,14 +101,13 @@ const token = ref(localStorage.getItem('acasa_ponto_token') || '')
 const parearCode = ref('')
 const registrosHoje = ref([])
 const enderecoAtual = ref('')
-const cepAtual = ref('')
-const coords = ref(null) // Adicionado para rastrear coordenadas
+const coords = ref(null) // Rastreador de coordenadas para o mapa/backend
 const erro = ref('')
 const contadorBloqueio = ref(0)
 const agora = ref(new Date())
 let timerRelogio, timerBloqueio
 
-// FULLSCREEN & BACK LOCK
+// BLOQUEIO DE VOLTAR E FULLSCREEN
 const lockApp = () => {
   if (etapa.value !== 'app') return
   history.pushState(null, '', location.href)
@@ -124,35 +124,31 @@ const proximoStatus = computed(() => (!ultimoRegistro.value || ultimoRegistro.va
 const bloqueioTemporario = computed(() => contadorBloqueio.value > 0)
 const ultimoRegistroDataHoraTexto = computed(() => ultimoRegistro.value ? new Date(ultimoRegistro.value.data_hora).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '')
 
-// BUSCA DE ENDEREÇO OTIMIZADA PARA CEP PRECISO
+// BUSCA APENAS RUA E BAIRRO (MAIS CONFIÁVEL)
 async function buscarEndereco(lat, lng) {
   try {
-    // Zoom 18 foca no nível da casa/lote para evitar CEPs genéricos de bairro
-    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`)
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=17&addressdetails=1`)
     const data = await res.json()
     
     if (data.address) {
-      // Prioriza o postcode específico da rua
-      cepAtual.value = data.address.postcode || 'Verificando...'
-      
       const rua = data.address.road || data.address.pedestrian || ''
-      const bairro = data.address.suburb || data.address.neighbourhood || ''
+      const bairro = data.address.suburb || data.address.neighbourhood || data.address.village || ''
       
+      // Formata apenas com Rua e Bairro para ficar limpo no card
       enderecoAtual.value = `${rua}${rua && bairro ? ', ' : ''}${bairro}`.toUpperCase()
     }
   } catch (e) { 
-    enderecoAtual.value = "LOCALIZAÇÃO REGISTRADA" 
+    enderecoAtual.value = "LOCALIZAÇÃO CAPTURADA"
   }
 }
 
-// CAPTURA DE GPS COM DESCARTE DE CACHE (FORÇA HARDWARE)
 async function capturarLocalizacao() {
   if (!navigator.geolocation) return
   
   const options = {
-    enableHighAccuracy: true, // Força uso do GPS real, não apenas Wi-Fi
+    enableHighAccuracy: true,
     timeout: 10000,
-    maximumAge: 0 // Ignora localizações salvas anteriormente no cache
+    maximumAge: 0
   }
 
   navigator.geolocation.getCurrentPosition(
@@ -169,26 +165,44 @@ async function baterPonto() {
   if (bloqueioTemporario.value) return
   loading.value = true
   
-  // No momento do registro, forçamos uma nova leitura de alta precisão
   navigator.geolocation.getCurrentPosition(async (p) => {
     try {
       await PontoService.registrar({ 
         tipo: proximoStatus.value, 
         latitude: p.coords.latitude, 
         longitude: p.coords.longitude, 
-        precisao_metros: Math.round(p.coords.accuracy),
-        cep_capturado: cepAtual.value // Envia o CEP que corrigimos
+        precisao_metros: Math.round(p.coords.accuracy) 
       }, token.value)
       await carregarDados()
     } catch (e) { 
-      erro.value = "ERRO NO REGISTRO" 
+      erro.value = "ERRO NO REGISTRO"
     } finally { 
-      loading.value = false 
+      loading.value = false
     }
   }, () => { 
     erro.value = "GPS NECESSÁRIO"; 
-    loading.value = false 
-  }, { enableHighAccuracy: true, maximumAge: 0 })
+    loading.value = false
+  }, { enableHighAccuracy: true })
+}
+
+async function carregarDados() {
+  if (!token.value) return
+  try {
+    const res = await PontoService.hoje(token.value)
+    registrosHoje.value = res.data || []
+    
+    if (ultimoRegistro.value) {
+      const diff = Math.floor((Date.now() - new Date(ultimoRegistro.value.data_hora).getTime()) / 1000)
+      if (diff < 30) {
+        contadorBloqueio.value = 30 - diff
+        clearInterval(timerBloqueio)
+        timerBloqueio = setInterval(() => { 
+          if (contadorBloqueio.value > 0) contadorBloqueio.value--
+          else clearInterval(timerBloqueio) 
+        }, 1000)
+      }
+    }
+  } catch (e) {}
 }
 
 function confirmarAceite() {
@@ -210,29 +224,10 @@ async function realizarPareamento() {
     etapa.value = 'app'
     await carregarDados()
   } catch (e) { 
-    erro.value = "FALHA NA ATIVAÇÃO" 
+    erro.value = "FALHA NA ATIVAÇÃO"
   } finally { 
-    loading.value = false 
+    loading.value = false
   }
-}
-
-async function carregarDados() {
-  if (!token.value) return
-  try {
-    const res = await PontoService.hoje(token.value)
-    registrosHoje.value = res.data || []
-    if (ultimoRegistro.value) {
-      const diff = Math.floor((Date.now() - new Date(ultimoRegistro.value.data_hora).getTime()) / 1000)
-      if (diff < 30) {
-        contadorBloqueio.value = 30 - diff
-        clearInterval(timerBloqueio)
-        timerBloqueio = setInterval(() => { 
-          if (contadorBloqueio.value > 0) contadorBloqueio.value--
-          else clearInterval(timerBloqueio) 
-        }, 1000)
-      }
-    }
-  } catch (e) {}
 }
 
 watch(etapa, (val) => { if (val === 'app') lockApp() })
@@ -244,7 +239,7 @@ onMounted(() => {
   } else if (token.value) { 
     etapa.value = 'app'
     carregarDados()
-    capturarLocalizacao() // Inicia a captura de alta precisão ao montar
+    capturarLocalizacao()
   } else {
     etapa.value = 'ativar'
   }
