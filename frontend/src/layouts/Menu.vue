@@ -12,6 +12,7 @@
     <NavMenu label="Financeiro" :items="NAV_SCHEMA.financeiro" />
     <NavMenu label="Cadastros" :items="NAV_SCHEMA.cadastros" />
     <NavMenu label="Configurações" :items="NAV_SCHEMA.configuracoes" />
+      <NavMenu label="Dashboard" :items="NAV_SCHEMA.dashboard" />    
 
     <div class="h-6 w-[1px] bg-[var(--border-ui)] mx-2"></div>
 

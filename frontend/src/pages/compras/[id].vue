@@ -1,11 +1,12 @@
 <template>
   <Card :shadow="true">
-<PageHeader
-  :title="isEdit ? `Compra #${compraId}` : 'Nova Compra'"
-  subtitle="Registre uma nova entrada de materiais."
-  icon="pi pi-shopping-cart"
-  :showBack="true" 
-/>
+    <PageHeader
+      :title="isEdit ? `Compra #${compraId}` : 'Nova Compra'"
+      subtitle="Registre uma nova entrada de materiais."
+      icon="pi pi-shopping-cart"
+      :backTo="'/compras'"
+    />
+
     <div class="p-6 relative">
       <div
         v-if="loading"
@@ -15,6 +16,7 @@
       </div>
 
       <form v-else class="space-y-8" @submit.prevent>
+        <!-- 01 -->
         <section class="space-y-4">
           <div class="flex items-center gap-2">
             <span class="text-[10px] font-black uppercase tracking-[0.2em] text-brand-primary">
@@ -76,6 +78,7 @@
 
         <div class="h-px bg-[var(--border-ui)]"></div>
 
+        <!-- 02 -->
         <section v-if="tipoCompra === 'CLIENTE_AMBIENTE'" class="space-y-4">
           <div class="flex items-center gap-2">
             <span class="text-[10px] font-black uppercase tracking-[0.2em] text-brand-primary">
@@ -108,6 +111,7 @@
 
         <div v-if="tipoCompra === 'CLIENTE_AMBIENTE'" class="h-px bg-[var(--border-ui)]"></div>
 
+        <!-- 03 -->
         <section class="space-y-4">
           <div class="flex flex-wrap items-end justify-between gap-3">
             <div class="flex items-center gap-2 flex-1">
@@ -150,40 +154,56 @@
               type="number"
               required
             />
-<Input
-  class="col-span-12 md:col-span-3"
-  v-model="itemNovo.valorUnitarioMask"
-  label="Valor Unitário *"
-  placeholder="0,00"
-  required
-  @input="itemNovo.valorUnitarioMask = maskMoneyBR($event.target.value)"
-/>
 
-<Input
-  class="col-span-12 md:col-span-2"
-  :modelValue="subtotalNovoMask"
-  label="Subtotal"
-  readonly
-/>
+            <Input
+              class="col-span-12 md:col-span-3"
+              v-model="itemNovo.valorUnitarioMask"
+              label="Valor Unitário *"
+              placeholder="0,00"
+              required
+              @input="itemNovo.valorUnitarioMask = maskMoneyBR($event.target.value)"
+            />
+
+            <Input
+              class="col-span-12 md:col-span-2"
+              :modelValue="subtotalNovoMask"
+              label="Subtotal"
+              readonly
+            />
 
             <div class="col-span-12">
-              <Button variant="primary" size="lg" class="w-full shadow-lg shadow-brand-primary/10" type="button" @click="registrarItemNovo">
+              <Button
+                variant="primary"
+                size="lg"
+                class="w-full shadow-lg shadow-brand-primary/10"
+                type="button"
+                @click="registrarItemNovo"
+              >
                 <i class="pi pi-plus-circle mr-2 text-xs"></i>
                 Adicionar Item à Nota
               </Button>
             </div>
           </div>
 
-          <div v-if="itens.length > 0" class="rounded-3xl border border-[var(--border-ui)] overflow-hidden bg-[var(--bg-card)] shadow-sm">
+          <div
+            v-if="itens.length > 0"
+            class="rounded-3xl border border-[var(--border-ui)] overflow-hidden bg-[var(--bg-card)] shadow-sm"
+          >
             <Table :columns="columnsItens" :rows="itens" boxed>
               <template #cell-nome_produto="{ row }">
                 <div class="flex flex-col py-2">
                   <span class="font-black text-[var(--text-main)] uppercase text-xs">{{ row.nome_produto }}</span>
                   <div class="flex gap-1.5 mt-1.5">
-                    <span v-if="row.marca" class="text-[8px] bg-slate-800 text-white px-2 py-0.5 rounded-full uppercase font-black">
+                    <span
+                      v-if="row.marca"
+                      class="text-[8px] bg-slate-800 text-white px-2 py-0.5 rounded-full uppercase font-black"
+                    >
                       {{ row.marca }}
                     </span>
-                    <span v-if="row.unidade" class="text-[8px] bg-[var(--bg-page)] text-slate-500 px-2 py-0.5 rounded-full uppercase font-black border border-[var(--border-ui)]">
+                    <span
+                      v-if="row.unidade"
+                      class="text-[8px] bg-[var(--bg-page)] text-slate-500 px-2 py-0.5 rounded-full uppercase font-black border border-[var(--border-ui)]"
+                    >
                       {{ row.unidade }}
                     </span>
                   </div>
@@ -203,7 +223,13 @@
               </template>
 
               <template #cell-acoes="{ row }">
-                <Button type="button" variant="ghost" size="sm" class="text-danger hover:bg-danger/10" @click="removerItemPorKey(row._key)">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  class="text-danger hover:bg-danger/10"
+                  @click="removerItemPorKey(row._key)"
+                >
                   <i class="pi pi-trash"></i>
                 </Button>
               </template>
@@ -235,7 +261,14 @@
       </template>
 
       <template #right>
-        <Button v-if="isEdit" variant="ghost" type="button" class="text-danger mr-2" :loading="excluindo" @click="excluirCompra">
+        <Button
+          v-if="isEdit"
+          variant="ghost"
+          type="button"
+          class="text-danger mr-2"
+          :loading="excluindo"
+          @click="excluirCompra"
+        >
           Excluir Registro
         </Button>
 
@@ -245,29 +278,86 @@
       </template>
     </FormActions>
 
-    <QuickCreateProduto
-      v-if="modalProdutoOpen"
-      :open="modalProdutoOpen"
-      :textoInicial="textoInicialProduto"
-      :fornecedorId="fornecedorSelecionado"
-      @close="modalProdutoOpen = false"
-      @created="onProdutoCriado"
-    />
+    <!-- MODAL PRODUTO INLINE -->
+    <Transition name="fade">
+      <div
+        v-if="modalProdutoOpen"
+        class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md"
+        @click.self="fecharModalProduto()"
+      >
+        <div class="w-full max-w-3xl bg-[var(--bg-card)] rounded-[2.5rem] border border-[var(--border-ui)] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+          <header class="flex items-start justify-between p-8 border-b border-[var(--border-ui)] bg-slate-500/5">
+            <div>
+              <h3 class="text-xl font-black text-[var(--text-main)] uppercase tracking-tight">Novo Produto</h3>
+              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Cadastro Rápido</p>
+            </div>
+            <button
+              @click="fecharModalProduto()"
+              class="w-10 h-10 flex items-center justify-center rounded-2xl bg-[var(--bg-card)] border border-[var(--border-ui)] text-slate-400 hover:text-red-500 transition-all"
+            >
+              <i class="pi pi-times"></i>
+            </button>
+          </header>
+
+          <div class="p-10">
+            <form class="grid grid-cols-12 gap-5" @submit.prevent="salvarProduto">
+              <div class="col-span-12">
+                <SearchInput
+                  v-model="modalProduto.form.fornecedor_id"
+                  label="Fornecedor *"
+                  mode="select"
+                  :options="fornecedorOptions"
+                  required
+                />
+              </div>
+
+              <div class="col-span-12 md:col-span-8">
+                <Input v-model="modalProduto.form.nome_produto" label="Nome do Produto *" required />
+              </div>
+
+              <div class="col-span-12 md:col-span-4">
+                <SearchInput
+                  v-model="modalProduto.form.unidade"
+                  label="Unidade *"
+                  mode="select"
+                  :options="unidadesOptions"
+                  required
+                />
+              </div>
+
+              <div class="col-span-12 md:col-span-6">
+                <Input v-model="modalProduto.form.marca" label="Marca" />
+              </div>
+              <div class="col-span-12 md:col-span-3">
+                <Input v-model="modalProduto.form.cor" label="Cor" />
+              </div>
+              <div class="col-span-12 md:col-span-3">
+                <Input v-model="modalProduto.form.medida" label="Medida" />
+              </div>
+
+              <div class="col-span-12 flex justify-end gap-3 pt-8 border-t border-[var(--border-ui)] mt-4">
+                <Button variant="secondary" type="button" @click="fecharModalProduto()">Cancelar</Button>
+                <Button variant="primary" type="submit" :loading="modalProduto.salvando" class="!px-8">
+                  Cadastrar e Usar
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </Card>
 </template>
 
 <script setup>
-import { reactive, ref, watch, onMounted, onUnmounted, computed } from 'vue'
+import { ref, reactive, watch, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { CompraService, FornecedorService, VendaService, ProdutosService } from '@/services/index'
-import QuickCreateProduto from '@/components/modals/QuickCreateProduto.vue'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
 import { maskMoneyBR } from '@/utils/masks'
 import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
-
-// ✅ constante direta (sem composable)
 import { UNIDADES } from '@/constantes/unidades'
 
 const route = useRoute()
@@ -285,17 +375,13 @@ const tipoCompra = ref('INSUMOS')
 const fornecedorSelecionado = ref(null)
 const vendaSelecionada = ref(null)
 
-const modalProdutoOpen = ref(false)
-const textoInicialProduto = ref('')
-
 const form = ref({
   data_compra: new Date().toISOString().split('T')[0],
 })
 
 const itens = ref([])
-const itensRemoverIds = ref([]) // ✅ para PUT (itens_remover_ids)
+const itensRemoverIds = ref([])
 
-// options
 const listaFornecedores = ref([])
 const listaVendas = ref([])
 const produtoMap = ref(new Map())
@@ -315,7 +401,6 @@ const vendaOptions = computed(() =>
   })),
 )
 
-// ✅ unidade direto da constante
 const unidadesOptions = computed(() =>
   (Array.isArray(UNIDADES) ? UNIDADES : []).map((u) => ({
     value: u.key,
@@ -339,6 +424,12 @@ const totalCalculado = computed(() => {
   return parseFloat(total.toFixed(2))
 })
 
+const subtotalNovoMask = computed(() => {
+  const vUnit = moedaParaNumero(itemNovo.valorUnitarioMask)
+  const qtd = Number(itemNovo.quantidade || 0)
+  return numeroParaMoeda(vUnit * qtd)
+})
+
 const columnsItens = [
   { key: 'nome_produto', label: 'Produto' },
   { key: 'quantidade', label: 'Qtd', align: 'center' },
@@ -347,29 +438,82 @@ const columnsItens = [
   { key: 'acoes', label: '', width: '80px', align: 'right' },
 ]
 
-// modal
+/* -------------------------
+   MODAL PRODUTO INLINE
+-------------------------- */
+const modalProdutoOpen = ref(false)
+
+const modalProduto = ref({
+  salvando: false,
+  form: {
+    fornecedor_id: null,
+    nome_produto: '',
+    marca: '',
+    cor: '',
+    medida: '',
+    unidade: 'UN',
+    status: 'ATIVO',
+  },
+})
+
 const abrirModalProduto = () => {
   if (!fornecedorSelecionado.value) return notify.warn('Selecione um fornecedor.')
+  modalProduto.value.form.fornecedor_id = fornecedorSelecionado.value
   modalProdutoOpen.value = true
 }
-const onProdutoCriado = async (novoProduto) => {
-  await carregarProdutosPorFornecedor()
-  
-  // Se o modal emitiu o objeto criado, selecionamos ele na hora
-  if (novoProduto && novoProduto.id) {
-    itemNovo.produto_id = novoProduto.id
-    onSelecionarProdutoNovo(novoProduto.id)
+
+const fecharModalProduto = () => {
+  modalProdutoOpen.value = false
+  modalProduto.value.form = {
+    fornecedor_id: null,
+    nome_produto: '',
+    marca: '',
+    cor: '',
+    medida: '',
+    unidade: 'UN',
+    status: 'ATIVO',
   }
 }
 
-// load
+async function salvarProduto() {
+  modalProduto.value.salvando = true
+  try {
+    const payload = {
+      fornecedor_id: modalProduto.value.form.fornecedor_id,
+      nome_produto: modalProduto.value.form.nome_produto,
+      marca: modalProduto.value.form.marca || null,
+      cor: modalProduto.value.form.cor || null,
+      medida: modalProduto.value.form.medida || null,
+      unidade: modalProduto.value.form.unidade,
+      status: modalProduto.value.form.status,
+    }
+
+    const res = await ProdutosService.criar(payload)
+    const data = res?.data ?? res
+
+    await carregarProdutosPorFornecedor()
+
+    if (data?.id) {
+      itemNovo.produto_id = data.id
+      onSelecionarProdutoNovo(data.id)
+    }
+
+    fecharModalProduto()
+    notify.success('Produto cadastrado.')
+  } catch (err) {
+    notify.error(err?.response?.data?.message || 'Erro ao cadastrar produto.')
+  } finally {
+    modalProduto.value.salvando = false
+  }
+}
+
+/* -------------------------
+   LOAD / COMPRA
+-------------------------- */
 const carregarDadosIniciais = async () => {
   loading.value = true
   try {
-    const [fornRes, vendRes] = await Promise.all([
-      FornecedorService.listar(),
-      VendaService.listar(),
-    ])
+    const [fornRes, vendRes] = await Promise.all([FornecedorService.listar(), VendaService.listar()])
 
     const fornData = fornRes?.data ?? fornRes
     const vendData = vendRes?.data ?? vendRes
@@ -410,6 +554,7 @@ const buscarCompra = async () => {
 
 const carregarProdutosPorFornecedor = async () => {
   if (!fornecedorSelecionado.value) return
+
   try {
     const res = await ProdutosService.listar({ fornecedor_id: fornecedorSelecionado.value })
     const data = res?.data ?? res
@@ -428,20 +573,14 @@ const carregarProdutosPorFornecedor = async () => {
   }
 }
 
-// ✅ Ao selecionar o produto, "limpamos" os zeros do banco
 const onSelecionarProdutoNovo = (id) => {
-  const p = produtoMap.value.get(id);
-  if (!p) return;
-  
-  itemNovo.nome_produto = p.nome_produto;
-  itemNovo.unidade = p.unidade || '';
-  
-  // Se o banco trouxer 0.001500, isso vira "0,00"
-  // Se trouxer 150.00, vira "150,00"
-  itemNovo.valorUnitarioMask = numeroParaMoeda(Number(p.valor_unitario || 0));
-};
+  const p = produtoMap.value.get(id)
+  if (!p) return
 
-
+  itemNovo.nome_produto = p.nome_produto
+  itemNovo.unidade = p.unidade || ''
+  itemNovo.valorUnitarioMask = numeroParaMoeda(Number(p.valor_unitario || 0))
+}
 
 const resetItemNovo = () => {
   Object.assign(itemNovo, {
@@ -460,7 +599,6 @@ const resetItemNovo = () => {
 const registrarItemNovo = () => {
   if (!itemNovo.produto_id) return notify.warn('Selecione um produto.')
 
-  // ✅ Converte "150,00" (string) em 150 (number) de forma segura
   const vUnit = moedaParaNumero(itemNovo.valorUnitarioMask)
   const qtd = Number(itemNovo.quantidade)
 
@@ -483,15 +621,12 @@ const removerItemPorKey = async (key) => {
   const ok = await confirm.show('Remover Item', 'Tem certeza que deseja remover este produto da lista?')
   if (!ok) return
 
-  // ✅ se veio do banco e está em edição, manda pro backend remover
   if (isEdit.value && item?.id) itensRemoverIds.value.push(item.id)
 
   itens.value = itens.value.filter((it) => it._key !== key)
   notify.success('Item removido da lista.')
 }
 
-// salvar
-// ✅ 1. Ajuste na função salvar para limpar IDs inexistentes
 const salvar = async () => {
   if (itens.value.length === 0) return notify.warn('Adicione ao menos um item.')
   if (!fornecedorSelecionado.value) return notify.warn('Selecione um fornecedor.')
@@ -512,15 +647,12 @@ const salvar = async () => {
         valor_unitario: Number(it.valor_unitario),
         valor_total: Number(it.valor_total),
       }
-      // Só inclui o ID se ele vier do banco (edição)
       if (it.id) item.id = it.id
       return item
     }),
   }
 
-  if (isEdit.value && itensRemoverIds.value.length) {
-    payload.itens_remover_ids = itensRemoverIds.value
-  }
+  if (isEdit.value && itensRemoverIds.value.length) payload.itens_remover_ids = itensRemoverIds.value
 
   try {
     await CompraService.salvar(compraId.value, payload)
@@ -532,7 +664,6 @@ const salvar = async () => {
     salvando.value = false
   }
 }
-
 
 const excluirCompra = async () => {
   const ok = await confirm.show(
@@ -553,20 +684,9 @@ const excluirCompra = async () => {
   }
 }
 
-// watchers
 watch(tipoCompra, (t) => {
   if (t !== 'CLIENTE_AMBIENTE') vendaSelecionada.value = null
 })
-
-// ✅ O subtotal agora vai ler os números corretamente
-const subtotalNovoMask = computed(() => {
-  const vUnit = moedaParaNumero(itemNovo.valorUnitarioMask); // Transforma "150,00" em 150
-  const qtd = Number(itemNovo.quantidade || 0);
-  return numeroParaMoeda(vUnit * qtd); // Formata 150 * 1 para "150,00"
-});
-
-
-
 
 watch(fornecedorSelecionado, async (id) => {
   if (!id) {
@@ -579,6 +699,5 @@ watch(fornecedorSelecionado, async (id) => {
   await carregarProdutosPorFornecedor()
 })
 
-// init
 onMounted(carregarDadosIniciais)
 </script>

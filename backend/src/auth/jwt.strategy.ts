@@ -3,12 +3,14 @@ import { PassportStrategy } from '@nestjs/passport'
 import { ExtractJwt, Strategy } from 'passport-jwt'
 import { ConfigService } from '@nestjs/config'
 import { PrismaService } from '../prisma/prisma.service'
+import { PermissoesService } from '../permissoes/permissoes.service'
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
-    config: ConfigService,
+    private readonly config: ConfigService,
     private readonly prisma: PrismaService,
+    private readonly permissoesService: PermissoesService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -17,38 +19,25 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     })
   }
 
-async validate(payload: any) {
-  const usuarioId = Number(payload?.sub);
+  async validate(payload: any) {
+    const userId = Number(payload?.sub)
+    if (!userId) throw new UnauthorizedException('Token inválido')
 
-  const user = await this.prisma.usuarios.findUnique({
-    where: { id: usuarioId },
-    select: {
-      id: true,
-      usuario: true,
-      nome: true,
-      status: true,
-      // O nome aqui deve ser 'permissoes', conforme definido no seu model usuarios
-      permissoes: { 
-        select: {
-          permissao: { select: { chave: true } },
-        },
-      },
-    },
-  });
+    const user = await this.prisma.usuarios.findUnique({
+      where: { id: userId },
+      select: { id: true, nome: true, usuario: true, email: true, status: true },
+    })
 
-  if (!user) throw new UnauthorizedException('Usuário não encontrado');
+    if (!user || user.status !== 'ATIVO') {
+      throw new UnauthorizedException('Usuário inválido')
+    }
 
-  // Ajustado aqui também para user.permissoes
-  const listaPermissoes = (user.permissoes || [])
-    .map((up) => up?.permissao?.chave)
-    .filter(Boolean);
+    const permissoes = await this.permissoesService.permissoesDoUsuarioPorId(userId)
 
-  return {
-    id: user.id,
-    usuario: user.usuario,
-    nome: user.nome,
-    status: user.status,
-    permissoes: listaPermissoes, 
-  };
-}
+    // ISSO vira req.user
+    return {
+      ...user,
+      permissoes, // ✅ agora o PermissionsGuard funciona
+    }
+  }
 }

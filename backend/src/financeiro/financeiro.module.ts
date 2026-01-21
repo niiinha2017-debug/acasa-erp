@@ -3,17 +3,19 @@ import { PrismaService } from '../prisma/prisma.service'
 import { FinanceiroService } from './financeiro.service'
 
 import { ContasPagarController } from './contas-pagar.controller'
+import { ContasReceberController } from './contas-receber.controller'
 import { ChequesController } from './cheques.controller'
 import { FechamentoController } from './fechamento.controller'
 // import { ContasReceberController } from './contas-receber.controller' // se existir
 
 @Module({
   controllers: [
-    ContasPagarController,
     ChequesController,
+    ContasPagarController,
+    ContasReceberController,
     FechamentoController,
-    // ContasReceberController,
   ],
-  providers: [FinanceiroService, PrismaService],
+  providers: [FinanceiroService],
 })
 export class FinanceiroModule {}
+

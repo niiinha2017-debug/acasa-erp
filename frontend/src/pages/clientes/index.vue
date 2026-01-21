@@ -50,12 +50,12 @@
         <div class="flex items-center gap-3 w-full md:w-auto">
           <div class="relative flex-1 md:w-80">
             <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-            <input 
-              v-model="busca" 
-              type="text" 
-              placeholder="Buscar por nome ou CPF/CNPJ..."
-              class="w-full pl-10 pr-4 h-11 bg-[var(--bg-card)] border border-[var(--border-ui)] rounded-2xl text-sm focus:ring-2 focus:ring-brand-primary outline-none transition-all"
-            />
+<input 
+  v-model="filtro" 
+  type="text" 
+  placeholder="Buscar por nome ou CPF/CNPJ..."
+  class="w-full pl-10 pr-4 h-11 bg-[var(--bg-card)] border border-[var(--border-ui)] rounded-2xl text-sm focus:ring-2 focus:ring-brand-primary outline-none transition-all"
+/>
           </div>
           
           <Button variant="primary" class="!h-11 !rounded-2xl !px-6 shadow-xl shadow-brand-primary/20" @click="router.push('/clientes/novo')">
@@ -66,7 +66,7 @@
       </header>
 
       <div class="p-4">
-        <Table :columns="columns" :rows="rowsFiltrados" :loading="loading" class="!border-none">
+        <Table :columns="columns" :rows="clientesFiltrados" :loading="carregando" class="!border-none">
           <template #cell-cliente="{ row }">
             <div class="flex flex-col py-1">
               <span class="text-sm font-black text-[var(--text-main)] uppercase tracking-tight">

@@ -44,6 +44,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/analytics/fluxocaixa': RouteRecordInfo<
+      '/analytics/fluxocaixa',
+      '/analytics/fluxocaixa',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/clientes/': RouteRecordInfo<
       '/clientes/',
       '/clientes',
@@ -205,13 +212,6 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/producao/[id]': RouteRecordInfo<
-      '/producao/[id]',
-      '/producao/:id',
-      { id: ParamValue<true> },
-      { id: ParamValue<false> },
-      | never
-    >,
     '/produtos/': RouteRecordInfo<
       '/produtos/',
       '/produtos',
@@ -282,6 +282,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/alterar-senha.vue': {
       routes:
         | '/alterar-senha'
+      views:
+        | never
+    }
+    'src/pages/analytics/fluxocaixa.vue': {
+      routes:
+        | '/analytics/fluxocaixa'
       views:
         | never
     }
@@ -420,12 +426,6 @@ declare module 'vue-router/auto-routes' {
     'src/pages/producao/index.vue': {
       routes:
         | '/producao/'
-      views:
-        | never
-    }
-    'src/pages/producao/[id].vue': {
-      routes:
-        | '/producao/[id]'
       views:
         | never
     }

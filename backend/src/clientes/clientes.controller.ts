@@ -1,36 +1,44 @@
-import { 
-  Body, 
-  Controller, 
-  Delete, 
-  Get, 
-  Param, 
-  Put, // Alterado para Put
-  Post, 
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Put,
+  Post,
   Query,
   HttpCode,
-  HttpStatus
+  HttpStatus,
+  UseGuards,
 } from '@nestjs/common'
 import { ClientesService } from './clientes.service'
 import { CriarClienteDto } from './dto/criar-cliente.dto'
 import { AtualizarClienteDto } from './dto/atualizar-cliente.dto'
 
+import { JwtAuthGuard } from '../auth/jwt-auth.guard'
+import { PermissionsGuard } from '../auth/permissions.guard'
+import { Permissoes } from '../auth/permissoes.decorator'
+
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('clientes')
 export class ClientesController {
   constructor(private readonly service: ClientesService) {}
 
   @Post()
+  @Permissoes('clientes.criar')
   criar(@Body() dto: CriarClienteDto) {
     return this.service.criar(dto)
   }
 
   @Get()
+  @Permissoes('clientes.ver')
   listar() {
     return this.service.listar()
   }
 
-  // IMPORTANTE: Rotas de relatórios devem vir ANTES de rotas com :id
-  // para evitar que o NestJS ache que "relatorios" é um ID numérico.
+  // Rotas de relatórios antes do :id (ok)
   @Get('relatorios/aniversariantes')
+  @Permissoes('clientes.ver') // (ou 'clientes.relatorios' se você tiver essa chave)
   aniversariantes(
     @Query('data') data?: string,
     @Query('enviar') enviar?: 'email' | 'whatsapp',
@@ -40,20 +48,22 @@ export class ClientesController {
   }
 
   @Get(':id')
+  @Permissoes('clientes.ver')
   buscar(@Param('id') id: string) {
-    // Limpeza de ID padronizada
     const cleanId = Number(id.replace(/\D/g, ''))
     return this.service.buscarPorId(cleanId)
   }
 
-  @Put(':id') // Mudou de Patch para Put
+  @Put(':id')
+  @Permissoes('clientes.editar')
   atualizar(@Param('id') id: string, @Body() dto: AtualizarClienteDto) {
     const cleanId = Number(id.replace(/\D/g, ''))
     return this.service.atualizar(cleanId, dto)
   }
 
   @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT) // Retorna 204 após deletar (Padrão REST)
+  @Permissoes('clientes.excluir')
+  @HttpCode(HttpStatus.NO_CONTENT)
   remover(@Param('id') id: string) {
     const cleanId = Number(id.replace(/\D/g, ''))
     return this.service.remover(cleanId)

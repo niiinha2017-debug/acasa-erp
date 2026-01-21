@@ -12,6 +12,5 @@ export class PontoAdminController {
 @Post('convites')
 criarConvite(@Body() dto: CriarConviteDto) {
   return this.service.criarConvite(dto)
-}
-
+ }
 }

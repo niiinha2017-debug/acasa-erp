@@ -1,32 +1,59 @@
 import { ref } from 'vue'
-import api from '@/services/api'
+import {
+  PIPELINE_PLANO_CORTE,
+  UNIDADES,
+  // (se quiser depois: STATUS_FINANCEIRO, FORMAS_PAGAMENTO, etc.)
+} from '@/constantes'
 
-export function useConstantes() {
-  const opcoes = ref([])
-  const carregando = ref(false)
+const opcoes = ref([])
 
-  const carregarCategoria = async (categoria) => {
-    carregando.value = true
-    try {
-      const { data } = await api.get(`/constantes?categoria=${encodeURIComponent(categoria)}`)
+/**
+ * Helper: adiciona opções sem duplicar (categoria + value)
+ */
+function upsertCategoria(categoria, options = []) {
+  // remove opções antigas dessa categoria
+  opcoes.value = opcoes.value.filter(o => o?.metadata?.categoria !== categoria)
 
-      opcoes.value = Array.isArray(data)
-        ? data.map(item => ({
-            label: item.rotulo,         // o que aparece na UI
-            value: item.chave,          // o que identifica (chave)
-            metadata: {
-              taxa: item.valor_numero,
-              info: item.valor_texto
-            }
-          }))
-        : []
-    } catch (err) {
-      console.error('Erro na API constantes:', err)
-      opcoes.value = []
-    } finally {
-      carregando.value = false
-    }
+  // adiciona novas
+  const mapped = (options || []).map(o => ({
+    label: o.label ?? String(o.value ?? ''),
+    value: o.value ?? o.key ?? o.label,
+    metadata: { categoria },
+  }))
+
+  opcoes.value.push(...mapped)
+}
+
+function montarCategoriaLocal(categoria) {
+  // Mapa de categorias locais (mesmo nome que você estava pedindo na API)
+  const MAP = {
+    STATUS_PLANO_CORTE: (PIPELINE_PLANO_CORTE || []).map(s => ({
+      label: s.label,
+      value: s.key,
+    })),
+
+    // ✅ use isso para o select de unidade no modal produto
+    UNIDADES: (UNIDADES || []).map(u => ({
+      label: u.label ?? u,
+      value: u.value ?? u.label ?? u,
+    })),
+
+    // Se você realmente precisa manter MODULO por compatibilidade:
+    // MODULO: [{ label: 'UNIDADE', value: 'UNIDADE' }],
   }
 
-  return { opcoes, carregando, carregarCategoria }
+  return MAP[categoria] || []
+}
+
+async function carregarCategoria(categoria) {
+  const options = montarCategoriaLocal(categoria)
+  upsertCategoria(categoria, options)
+  return options
+}
+
+export function useConstantes() {
+  return {
+    opcoes,
+    carregarCategoria,
+  }
 }

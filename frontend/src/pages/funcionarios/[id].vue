@@ -345,6 +345,18 @@ watch(
     form.value.estado = upper(d.uf)
   }
 )
+async function tratarBuscaCep() {
+  const cep = String(form.value.cep || '')
+  if (cep.length !== 8) return
+
+  const d = await buscarCep(cep)
+  if (!d) return
+
+  form.value.endereco = upper(d.logradouro)
+  form.value.bairro = upper(d.bairro)
+  form.value.cidade = upper(d.localidade)
+  form.value.estado = upper(d.uf)
+}
 
 
 /* ======= carregar ======= */

@@ -24,15 +24,109 @@ async function main() {
     select: { id: true },
   })
 
-  const perms = [
-    { chave: 'permissoes.ver', descricao: 'Acessar tela de permissões' },
-    { chave: 'permissoes.editar', descricao: 'Editar permissões' },
-    { chave: 'usuarios.ver', descricao: 'Listar usuários' },
-    { chave: 'usuarios.criar', descricao: 'Criar usuário' },
-    { chave: 'usuarios.editar', descricao: 'Editar usuário' },
-    { chave: 'usuarios.excluir', descricao: 'Excluir usuário' },
-    { chave: 'PONTO_RELATORIO.ver', descricao: 'Acessar relatório de registros de ponto' },
-  ]
+const perms = [
+  // Configurações
+  { chave: 'usuarios.ver', descricao: 'Visualizar usuários' },
+  { chave: 'usuarios.criar', descricao: 'Criar usuários' },
+  { chave: 'usuarios.editar', descricao: 'Editar usuários' },
+  { chave: 'usuarios.excluir', descricao: 'Excluir usuários' },
+
+  { chave: 'permissoes.ver', descricao: 'Visualizar permissões' },
+  { chave: 'permissoes.gerenciar', descricao: 'Gerenciar permissões' },
+
+  { chave: 'configuracoes.ver', descricao: 'Visualizar configurações' },
+  { chave: 'configuracoes.editar', descricao: 'Editar configurações' },
+
+  // Ponto
+  { chave: 'ponto_relatorio.ver', descricao: 'Visualizar relatório de ponto' },
+  { chave: 'ponto_relatorio.editar', descricao: 'Editar registros de ponto' },
+
+  { chave: 'ponto_convite.criar', descricao: 'Criar convites de ponto' },
+  { chave: 'ponto_convite.excluir', descricao: 'Excluir convites de ponto' },
+
+  // Operacional
+  { chave: 'agendamentos.ver', descricao: 'Visualizar agendamentos' },
+  { chave: 'agendamentos.criar', descricao: 'Criar agendamentos' },
+  { chave: 'agendamentos.editar', descricao: 'Editar agendamentos' },
+  { chave: 'agendamentos.excluir', descricao: 'Excluir agendamentos' },
+
+  { chave: 'vendas.ver', descricao: 'Visualizar vendas' },
+  { chave: 'vendas.criar', descricao: 'Criar vendas' },
+  { chave: 'vendas.editar', descricao: 'Editar vendas' },
+  { chave: 'vendas.excluir', descricao: 'Excluir vendas' },
+
+  { chave: 'orcamentos.ver', descricao: 'Visualizar orçamentos' },
+  { chave: 'orcamentos.criar', descricao: 'Criar orçamentos' },
+  { chave: 'orcamentos.editar', descricao: 'Editar orçamentos' },
+  { chave: 'orcamentos.excluir', descricao: 'Excluir orçamentos' },
+
+  { chave: 'producao.ver', descricao: 'Visualizar produção' },
+  { chave: 'producao.criar', descricao: 'Criar produção' },
+  { chave: 'producao.editar', descricao: 'Editar produção' },
+  { chave: 'producao.excluir', descricao: 'Excluir produção' },
+
+  { chave: 'plano_corte.ver', descricao: 'Visualizar plano de corte' },
+  { chave: 'plano_corte.criar', descricao: 'Criar plano de corte' },
+  { chave: 'plano_corte.editar', descricao: 'Editar plano de corte' },
+  { chave: 'plano_corte.excluir', descricao: 'Excluir plano de corte' },
+  { chave: 'plano-corte.editar', descricao: 'Enviar plano de corte para produção / alterar status' },
+
+
+  // Cadastros
+  { chave: 'clientes.ver', descricao: 'Visualizar clientes' },
+  { chave: 'clientes.criar', descricao: 'Criar clientes' },
+  { chave: 'clientes.editar', descricao: 'Editar clientes' },
+  { chave: 'clientes.excluir', descricao: 'Excluir clientes' },
+
+  { chave: 'fornecedores.ver', descricao: 'Visualizar fornecedores' },
+  { chave: 'fornecedores.criar', descricao: 'Criar fornecedores' },
+  { chave: 'fornecedores.editar', descricao: 'Editar fornecedores' },
+  { chave: 'fornecedores.excluir', descricao: 'Excluir fornecedores' },
+
+  { chave: 'produtos.ver', descricao: 'Visualizar produtos' },
+  { chave: 'produtos.criar', descricao: 'Criar produtos' },
+  { chave: 'produtos.editar', descricao: 'Editar produtos' },
+  { chave: 'produtos.excluir', descricao: 'Excluir produtos' },
+
+  { chave: 'funcionarios.ver', descricao: 'Visualizar funcionários' },
+  { chave: 'funcionarios.criar', descricao: 'Criar funcionários' },
+  { chave: 'funcionarios.editar', descricao: 'Editar funcionários' },
+  { chave: 'funcionarios.excluir', descricao: 'Excluir funcionários' },
+
+  // Financeiro
+  { chave: 'cheques.ver', descricao: 'Visualizar cheques' },
+  { chave: 'cheques.editar', descricao: 'Editar cheques' },
+
+  { chave: 'fechamento_fornecedor.criar', descricao: 'Executar fechamento mensal por fornecedor' },
+
+  { chave: 'contas_pagar.ver', descricao: 'Visualizar contas a pagar' },
+  { chave: 'contas_pagar.criar', descricao: 'Criar contas a pagar' },
+  { chave: 'contas_pagar.editar', descricao: 'Editar contas a pagar' },
+  { chave: 'contas_pagar.excluir', descricao: 'Excluir contas a pagar' },
+
+  { chave: 'contas_receber.ver', descricao: 'Visualizar contas a receber' },
+  { chave: 'contas_receber.criar', descricao: 'Criar contas a receber' },
+  { chave: 'contas_receber.editar', descricao: 'Editar contas a receber' },
+  { chave: 'contas_receber.excluir', descricao: 'Excluir contas a receber' },
+
+  { chave: 'despesas.ver', descricao: 'Visualizar despesas' },
+  { chave: 'despesas.criar', descricao: 'Criar despesas' },
+  { chave: 'despesas.editar', descricao: 'Editar despesas' },
+  { chave: 'despesas.excluir', descricao: 'Excluir despesas' },
+
+  { chave: 'compras.ver', descricao: 'Visualizar compras' },
+  { chave: 'compras.criar', descricao: 'Criar compras' },
+  { chave: 'compras.editar', descricao: 'Editar compras' },
+  { chave: 'compras.excluir', descricao: 'Excluir compras' },
+
+  { chave: 'vendas.ver', descricao: 'Visualizar vendas' },
+  { chave: 'vendas.criar', descricao: 'Criar vendas' },
+  { chave: 'vendas.editar', descricao: 'Editar vendas / enviar para produção' },
+  { chave: 'vendas.excluir', descricao: 'Excluir vendas' },
+
+]
+
+
 
   for (const p of perms) {
     await prisma.permissoes.upsert({

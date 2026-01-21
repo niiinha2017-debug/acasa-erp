@@ -236,6 +236,24 @@ export class VendasService {
       })
     })
   }
+async enviarParaProducao(id: number) {
+  await this.buscarPorId(id)
+
+  return this.prisma.vendas.update({
+    where: { id },
+    data: {
+      status: 'EM_PRODUCAO', // ⚠️ tem que ser uma KEY real do STATUS de vendas
+    },
+    include: {
+      cliente: true,
+      orcamento: true,
+      itens: true,
+      comissoes: true,
+      pagamentos: true,
+      arquivos: true,
+    },
+  })
+}
 
   // ===============================
   // ATUALIZAR

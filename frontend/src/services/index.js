@@ -123,6 +123,11 @@ export const PlanoCorteService = {
     buscar: (id) => api.get(`/plano-corte-consumos/${id}`),
     registrar: (dados) => api.post('/plano-corte-consumos', dados),
     remover: (id) => api.delete(`/plano-corte-consumos/${id}`),
+
+    enviarParaProducao(id) {
+  return api.post(`/plano-corte/${id}/enviar-producao`)
+}
+
   },
 }
 
@@ -187,6 +192,10 @@ export const VendaService = {
   remover: (id) => api.delete(`/vendas/${id}`),
   atualizarStatus: (id, status) =>
     api.put(`/vendas/${id}/status`, { status }),
+
+  enviarParaProducao(id) {
+  return api.post(`/vendas/${id}/enviar-producao`)
+},
 
   uploadArquivos: (id, files = []) => {
     const fd = new FormData()
@@ -269,5 +278,35 @@ export const PontoService = {
 
 export const PontoRelatorioService = {
   listarRegistros: (filtros = {}) =>
-    api.get('/ponto-relatorio/registros', { params: filtros }),
+    api.get('/ponto/relatorio/registros', { params: filtros }),
+
+  pdfMensal: (params) =>
+    api.get('/ponto/relatorio/pdf', {
+      params,
+      responseType: 'blob',
+    }),
+}
+
+export const PontoRegistrosService = {
+  atualizar: (id, payload) => api.put(`/ponto/registros/${id}`, payload),
+}
+
+
+export const PontoJustificativasService = {
+  listar: (params = {}) => api.get('/ponto/justificativas', { params }),
+
+  salvar: (payload) => api.put('/ponto/justificativas', payload),
+
+  remover: (id) => api.delete(`/ponto/justificativas/${id}`),
+
+  anexarArquivo: (justificativaId, file) => {
+    const form = new FormData()
+    form.append('file', file)
+
+    return api.post(`/ponto/justificativas/${justificativaId}/arquivos`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
+  removerArquivo: (arquivoId) => api.delete(`/ponto/justificativas/arquivos/${arquivoId}`),
 }

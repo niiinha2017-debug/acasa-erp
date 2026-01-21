@@ -67,12 +67,13 @@ async definirPermissoesDoUsuario(usuarioId: number, permissoesIds: number[]) {
 
 
   // helper pro login/me
-  async permissoesDoUsuarioPorId(usuarioId: number) {
-const vinculos = await this.prisma.usuarios_permissoes.findMany({
-  where: { usuario_id: usuarioId },
-  select: { permissao: { select: { chave: true } } },
-  orderBy: { permissao: { chave: 'asc' } },
-})
-return vinculos.map((v) => v.permissao.chave)
-  }
+async permissoesDoUsuarioPorId(usuarioId: number): Promise<string[]> {
+  const rows = await this.prisma.usuarios_permissoes.findMany({
+    where: { usuario_id: usuarioId },
+    select: { permissao: { select: { chave: true } } },
+  })
+
+  return rows.map((r) => r.permissao.chave)
+}
+
 }

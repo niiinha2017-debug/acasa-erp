@@ -274,6 +274,9 @@
       >
         Excluir
       </Button>
+<Button v-if="isEdit" variant="secondary" @click="enviarParaProducao">
+  Produção
+</Button>
 
       <Button
         variant="primary"
@@ -511,6 +514,7 @@ watch(
   { immediate: true },
 )
 
+
 // ===== ACTIONS =====
 function addItem() {
   form.itens.push({ nome_ambiente: '', descricao: '', quantidade: 1, valor_unitario: 0 })
@@ -528,6 +532,13 @@ function addComissao() {
 }
 function removerComissao(idx) {
   form.comissoes.splice(idx, 1)
+}
+
+
+async function enviarParaProducao() {
+  if (!isEdit.value) return
+  await VendaService.enviarParaProducao(vendaId.value)
+  await carregar()
 }
 
 function montarPayload() {

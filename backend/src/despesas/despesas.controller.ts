@@ -9,16 +9,23 @@ import {
   Post,
   Put,
   Query,
+  UseGuards,
 } from '@nestjs/common'
 import { DespesasService } from './despesas.service'
 import { CreateDespesaDto } from './dto/create-despesa.dto'
 import { UpdateDespesaDto } from './dto/update-despesa.dto'
 
+import { JwtAuthGuard } from '../auth/jwt-auth.guard'
+import { PermissionsGuard } from '../auth/permissions.guard'
+import { Permissoes } from '../auth/permissoes.decorator'
+
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('despesas')
 export class DespesasController {
   constructor(private readonly service: DespesasService) {}
 
   @Get()
+  @Permissoes('despesas.ver')
   findAll(
     @Query('status') status?: string,
     @Query('unidade') unidade?: string,
@@ -32,17 +39,20 @@ export class DespesasController {
   }
 
   @Get(':id')
+  @Permissoes('despesas.ver')
   findOne(@Param('id') id: string) {
     const cleanId = Number(id.replace(/\D/g, ''))
     return this.service.findOne(cleanId)
   }
 
   @Post()
+  @Permissoes('despesas.criar')
   create(@Body() dto: CreateDespesaDto) {
     return this.service.create(dto)
   }
 
   @Put('recorrencia/:recorrenciaId')
+  @Permissoes('despesas.editar')
   updateRecorrencia(
     @Param('recorrenciaId') recorrenciaId: string,
     @Body() dto: UpdateDespesaDto,
@@ -51,18 +61,21 @@ export class DespesasController {
   }
 
   @Put(':id')
+  @Permissoes('despesas.editar')
   update(@Param('id') id: string, @Body() dto: UpdateDespesaDto) {
     const cleanId = Number(id.replace(/\D/g, ''))
     return this.service.update(cleanId, dto)
   }
 
   @Delete('recorrencia/:recorrenciaId')
+  @Permissoes('despesas.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   removeRecorrencia(@Param('recorrenciaId') recorrenciaId: string) {
     return this.service.removeRecorrencia(recorrenciaId)
   }
 
   @Delete(':id')
+  @Permissoes('despesas.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id') id: string) {
     const cleanId = Number(id.replace(/\D/g, ''))

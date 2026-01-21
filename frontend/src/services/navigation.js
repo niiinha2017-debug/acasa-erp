@@ -35,7 +35,6 @@ export const NAV_SCHEMA = {
   configuracoes: [
     { label: '👤 Usuários', to: '/configuracoes/usuarios', icon: 'pi-user', perm: 'usuarios.ver' },
     { label: '🔐 Permissões', to: '/configuracoes/permissoes', icon: 'pi-lock', perm: 'permissoes.gerenciar' },
-    { label: '🧱 Constantes', to: '/constantes', icon: 'pi-cog', perm: 'constantes.ver' },
 
     { divider: true },
 
@@ -46,5 +45,10 @@ export const NAV_SCHEMA = {
     { divider: true },
 
     { label: '🛠️ Geral', to: '/configuracoes/configuracoes', icon: 'pi-sliders-h', perm: 'configuracoes.ver' },
-  ]
+  ],
+
+  //DASHBOARD
+  dashboard: [
+    { label: '📊 Dashboard', to: '/analytics/fluxocaixa', icon: 'pi-chart-bar', perm: 'dashboard.ver' },
+  ],
 }

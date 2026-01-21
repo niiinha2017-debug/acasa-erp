@@ -32,6 +32,8 @@ class CreatePlanoCorteProdutoDto {
 
   @IsString()
   status: string
+
+  
 }
 
 export class CreatePlanoCorteDto {

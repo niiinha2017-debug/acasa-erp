@@ -178,33 +178,71 @@
     <Transition name="fade">
       <div v-if="modalProduto.aberto" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md" @click.self="fecharModalProduto()">
         <div class="w-full max-w-3xl bg-[var(--bg-card)] rounded-[2.5rem] border border-[var(--border-ui)] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-          <header class="flex items-start justify-between p-8 border-b border-[var(--border-ui)] bg-slate-500/5">
-            <div>
-              <h3 class="text-xl font-black text-[var(--text-main)] uppercase tracking-tight">Novo Produto</h3>
-              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Cadastro Rápido de Insumo</p>
-            </div>
-            <button @click="fecharModalProduto()" class="w-10 h-10 flex items-center justify-center rounded-2xl bg-[var(--bg-card)] border border-[var(--border-ui)] text-slate-400 hover:text-red-500 transition-all">
-              <i class="pi pi-times"></i>
-            </button>
-          </header>
+         <header class="flex items-start justify-between p-8 border-b border-[var(--border-ui)] bg-slate-500/5">
+  <div>
+    <h3 class="text-xl font-black text-[var(--text-main)] uppercase tracking-tight">Novo Produto</h3>
+    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+      Cadastro Rápido de Insumo
+    </p>
+  </div>
 
-          <div class="p-10">
-            <form class="grid grid-cols-12 gap-5" @submit.prevent="salvarProduto">
-              <div class="col-span-12">
-                <SearchInput v-model="modalProduto.form.fornecedor_id" label="Fornecedor *" :options="fornecedorOptions" required />
-              </div>
-              <div class="col-span-12 md:col-span-8">
-                <Input v-model="modalProduto.form.nome_produto" label="Nome do Produto *" required />
-              </div>
-              <div class="col-span-12 md:col-span-4">
-                <SearchInput v-model="modalProduto.form.unidade" label="Unidade *" :options="unidadesOptions" required />
-              </div>
-              <div class="col-span-12 flex justify-end gap-3 pt-8 border-t border-[var(--border-ui)] mt-4">
-                <Button variant="secondary" type="button" @click="fecharModalProduto()">Cancelar</Button>
-                <Button variant="primary" type="submit" :loading="modalProduto.salvando" class="!px-8">Cadastrar e Usar</Button>
-              </div>
-            </form>
-          </div>
+  <button
+    @click="fecharModalProduto()"
+    class="w-10 h-10 flex items-center justify-center rounded-2xl bg-[var(--bg-card)] border border-[var(--border-ui)] text-slate-400 hover:text-red-500 transition-all"
+  >
+    <i class="pi pi-times"></i>
+  </button>
+</header>
+
+
+<div class="p-10">
+  <form class="grid grid-cols-12 gap-5" @submit.prevent="salvarProduto">
+    <div class="col-span-12">
+      <SearchInput
+        v-model="modalProduto.form.fornecedor_id"
+        label="Fornecedor *"
+        :options="fornecedorOptions"
+        required
+      />
+    </div>
+
+    <div class="col-span-12 md:col-span-8">
+      <Input v-model="modalProduto.form.nome_produto" label="Nome do Produto *" required />
+    </div>
+
+<div class="col-span-12 md:col-span-4">
+  <SearchInput
+    v-model="modalProduto.form.unidade"
+    label="Unidade *"
+    mode="select"
+    :options="unidadesOptions"
+    required
+  />
+</div>
+
+
+    <!-- ✅ NOVOS CAMPOS DO plano_corte_item -->
+    <div class="col-span-12 md:col-span-6">
+      <Input v-model="modalProduto.form.marca" label="Marca" />
+    </div>
+
+    <div class="col-span-12 md:col-span-3">
+      <Input v-model="modalProduto.form.cor" label="Cor" />
+    </div>
+
+    <div class="col-span-12 md:col-span-3">
+      <Input v-model="modalProduto.form.medida" label="Medida" />
+    </div>
+
+    <div class="col-span-12 flex justify-end gap-3 pt-8 border-t border-[var(--border-ui)] mt-4">
+      <Button variant="secondary" type="button" @click="fecharModalProduto()">Cancelar</Button>
+      <Button variant="primary" type="submit" :loading="modalProduto.salvando" class="!px-8">
+        Cadastrar e Usar
+      </Button>
+    </div>
+  </form>
+</div>
+
         </div>
       </div>
     </Transition>
@@ -238,7 +276,12 @@ const statusPlanoOptions = computed(() =>
     .map(o => ({ label: o.label, value: o.value })) // value = KEY (EM_ABERTO etc.)
 )
 
-const unidadesOptions = computed(() => constantes.opcoes.value.filter(o => o.metadata?.categoria === 'MODULO' && o.value === 'UNIDADE').map(o => ({ label: o.label, value: o.label })))
+const unidadesOptions = computed(() =>
+  constantes.opcoes.value
+    .filter(o => o.metadata?.categoria === 'UNIDADES')
+    .map(o => ({ label: o.label, value: o.value }))
+)
+
 
 // CABEÇALHO
 const dataVenda = ref('')
@@ -281,7 +324,20 @@ watch(() => itemNovo.value.valorUnitarioMask, (v) => {
 })
 
 // MODAL PRODUTO
-const modalProduto = ref({ aberto: false, salvando: false, form: { fornecedor_id: null, nome_produto: '', unidade: 'UN', status: 'ATIVO' } })
+const modalProduto = ref({
+  aberto: false,
+  salvando: false,
+  form: {
+    fornecedor_id: null,
+    nome_produto: '',
+    marca: '',
+    cor: '',
+    medida: '',
+    unidade: 'UN',
+    status: 'ATIVO',
+  },
+})
+
 
 function abrirModalProduto() {
   modalProduto.value.form.fornecedor_id = fornecedorSelecionado.value
@@ -290,19 +346,50 @@ function abrirModalProduto() {
 
 function fecharModalProduto() {
   modalProduto.value.aberto = false
-  modalProduto.value.form = { fornecedor_id: null, nome_produto: '', unidade: 'UN', status: 'ATIVO' }
+  modalProduto.value.form = {
+    fornecedor_id: null,
+    nome_produto: '',
+    marca: '',
+    cor: '',
+    medida: '',
+    unidade: 'UN',
+    status: 'ATIVO',
+  }
 }
+
 
 async function salvarProduto() {
   modalProduto.value.salvando = true
   try {
-    const { data } = await PlanoCorteService.itens.criar(modalProduto.value.form)
+    const payload = {
+      fornecedor_id: modalProduto.value.form.fornecedor_id,
+      nome_produto: modalProduto.value.form.nome_produto,
+      marca: modalProduto.value.form.marca || null,
+      cor: modalProduto.value.form.cor || null,
+      medida: modalProduto.value.form.medida || null,
+      unidade: modalProduto.value.form.unidade || null,
+      status: modalProduto.value.form.status,
+
+      // ✅ obrigatórios no model plano_corte_item
+      quantidade: 0,
+      valor_unitario: 0,
+      valor_total: 0,
+    }
+
+    const { data } = await PlanoCorteService.itens.criar(payload)
+
     await carregarItensDisponiveis(fornecedorSelecionado.value)
+
+    // ✅ “Cadastrar e usar”
     itemNovo.value.item_id = data.id
-    itemNovo.value.unidade = data.unidade
+    itemNovo.value.unidade = data.unidade || ''
+
     fecharModalProduto()
-  } finally { modalProduto.value.salvando = false }
+  } finally {
+    modalProduto.value.salvando = false
+  }
 }
+
 
 // AÇÕES
 async function onSelecionarFornecedor(v) {
@@ -339,6 +426,20 @@ async function carregarItensDisponiveis(fId) {
   const { data } = await PlanoCorteService.itens.listar(fId)
   itensDisponiveis.value = data || []
 }
+async function encaminharParaProducao() {
+  if (!isEdit.value) return
+  encaminhando.value = true
+  try {
+    await PlanoCorteService.enviarParaProducao(planoId.value)
+    // opcional: atualizar status local
+    statusPlano.value = 'EM_PRODUCAO' // se essa key existir na constante
+    await carregarPlanoAtual() // se você tiver uma função de reload
+  } finally {
+    encaminhando.value = false
+  }
+}
+
+
 
 async function salvar() {
   salvando.value = true
@@ -360,10 +461,11 @@ onMounted(async () => {
     const { data: fData } = await FornecedorService.listar()
     fornecedor.value = fData || []
 
-    await Promise.all([
-      constantes.carregarCategoria('STATUS_PLANO_CORTE'),
-      constantes.carregarCategoria('MODULO'),
-    ])
+await Promise.all([
+  constantes.carregarCategoria('STATUS_PLANO_CORTE'),
+  constantes.carregarCategoria('UNIDADES'),
+])
+
 
     if (isEdit.value) {
       const { data } = await PlanoCorteService.buscar(planoId.value)
