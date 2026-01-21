@@ -101,6 +101,7 @@ const parearCode = ref('')
 const registrosHoje = ref([])
 const enderecoAtual = ref('')
 const cepAtual = ref('')
+const coords = ref(null) // Adicionado para rastrear coordenadas
 const erro = ref('')
 const contadorBloqueio = ref(0)
 const agora = ref(new Date())
@@ -123,28 +124,71 @@ const proximoStatus = computed(() => (!ultimoRegistro.value || ultimoRegistro.va
 const bloqueioTemporario = computed(() => contadorBloqueio.value > 0)
 const ultimoRegistroDataHoraTexto = computed(() => ultimoRegistro.value ? new Date(ultimoRegistro.value.data_hora).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '')
 
+// BUSCA DE ENDEREÇO OTIMIZADA PARA CEP PRECISO
 async function buscarEndereco(lat, lng) {
   try {
-    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&addressdetails=1`)
+    // Zoom 18 foca no nível da casa/lote para evitar CEPs genéricos de bairro
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`)
     const data = await res.json()
+    
     if (data.address) {
-      cepAtual.value = data.address.postcode || ''
-      const rua = data.address.road || ''
+      // Prioriza o postcode específico da rua
+      cepAtual.value = data.address.postcode || 'Verificando...'
+      
+      const rua = data.address.road || data.address.pedestrian || ''
       const bairro = data.address.suburb || data.address.neighbourhood || ''
+      
       enderecoAtual.value = `${rua}${rua && bairro ? ', ' : ''}${bairro}`.toUpperCase()
     }
-  } catch (e) { enderecoAtual.value = "GPS ATIVO" }
+  } catch (e) { 
+    enderecoAtual.value = "LOCALIZAÇÃO REGISTRADA" 
+  }
+}
+
+// CAPTURA DE GPS COM DESCARTE DE CACHE (FORÇA HARDWARE)
+async function capturarLocalizacao() {
+  if (!navigator.geolocation) return
+  
+  const options = {
+    enableHighAccuracy: true, // Força uso do GPS real, não apenas Wi-Fi
+    timeout: 10000,
+    maximumAge: 0 // Ignora localizações salvas anteriormente no cache
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    async (p) => {
+      coords.value = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy }
+      await buscarEndereco(p.coords.latitude, p.coords.longitude)
+    },
+    () => { erro.value = "POR FAVOR, ATIVE O GPS" },
+    options
+  )
 }
 
 async function baterPonto() {
   if (bloqueioTemporario.value) return
   loading.value = true
+  
+  // No momento do registro, forçamos uma nova leitura de alta precisão
   navigator.geolocation.getCurrentPosition(async (p) => {
     try {
-      await PontoService.registrar({ tipo: proximoStatus.value, latitude: p.coords.latitude, longitude: p.coords.longitude, precisao_metros: Math.round(p.coords.accuracy) }, token.value)
+      await PontoService.registrar({ 
+        tipo: proximoStatus.value, 
+        latitude: p.coords.latitude, 
+        longitude: p.coords.longitude, 
+        precisao_metros: Math.round(p.coords.accuracy),
+        cep_capturado: cepAtual.value // Envia o CEP que corrigimos
+      }, token.value)
       await carregarDados()
-    } catch (e) { erro.value = "ERRO NO REGISTRO" } finally { loading.value = false }
-  }, () => { erro.value = "GPS NECESSÁRIO"; loading.value = false }, { enableHighAccuracy: true })
+    } catch (e) { 
+      erro.value = "ERRO NO REGISTRO" 
+    } finally { 
+      loading.value = false 
+    }
+  }, () => { 
+    erro.value = "GPS NECESSÁRIO"; 
+    loading.value = false 
+  }, { enableHighAccuracy: true, maximumAge: 0 })
 }
 
 function confirmarAceite() {
@@ -156,12 +200,20 @@ async function realizarPareamento() {
   if (!parearCode.value) return
   loading.value = true
   try {
-    const res = await PontoService.ativar({ code: parearCode.value.trim().toUpperCase(), device_uuid: crypto.randomUUID().toUpperCase(), plataforma: 'WEB_PWA' })
+    const res = await PontoService.ativar({ 
+      code: parearCode.value.trim().toUpperCase(), 
+      device_uuid: crypto.randomUUID().toUpperCase(), 
+      plataforma: 'WEB_PWA' 
+    })
     token.value = res.data.token
     localStorage.setItem('acasa_ponto_token', token.value)
     etapa.value = 'app'
     await carregarDados()
-  } catch (e) { erro.value = "FALHA NA ATIVAÇÃO" } finally { loading.value = false }
+  } catch (e) { 
+    erro.value = "FALHA NA ATIVAÇÃO" 
+  } finally { 
+    loading.value = false 
+  }
 }
 
 async function carregarDados() {
@@ -174,7 +226,10 @@ async function carregarDados() {
       if (diff < 30) {
         contadorBloqueio.value = 30 - diff
         clearInterval(timerBloqueio)
-        timerBloqueio = setInterval(() => { if (contadorBloqueio.value > 0) contadorBloqueio.value--; else clearInterval(timerBloqueio) }, 1000)
+        timerBloqueio = setInterval(() => { 
+          if (contadorBloqueio.value > 0) contadorBloqueio.value--
+          else clearInterval(timerBloqueio) 
+        }, 1000)
       }
     }
   } catch (e) {}
@@ -184,13 +239,19 @@ watch(etapa, (val) => { if (val === 'app') lockApp() })
 
 onMounted(() => {
   timerRelogio = setInterval(() => { agora.value = new Date() }, 1000)
-  if (!localStorage.getItem('acasa_ponto_aceite')) etapa.value = 'termo'
-  else if (token.value) { etapa.value = 'app'; carregarDados(); navigator.geolocation.getCurrentPosition(p => buscarEndereco(p.coords.latitude, p.coords.longitude)) }
-  else etapa.value = 'ativar'
+  if (!localStorage.getItem('acasa_ponto_aceite')) {
+    etapa.value = 'termo'
+  } else if (token.value) { 
+    etapa.value = 'app'
+    carregarDados()
+    capturarLocalizacao() // Inicia a captura de alta precisão ao montar
+  } else {
+    etapa.value = 'ativar'
+  }
+})
+
+onUnmounted(() => {
+  clearInterval(timerRelogio)
+  clearInterval(timerBloqueio)
 })
 </script>
-
-<style scoped>
-.animate-in { animation: slideUp 0.4s ease-out forwards; }
-@keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-</style>
