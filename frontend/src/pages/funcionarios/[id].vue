@@ -245,31 +245,34 @@
           </div>
 
           <!-- Salários -->
-          <div class="col-span-12 md:col-span-6 grid grid-cols-2 gap-4">
-            <div>
-              <Input
-                :modelValue="salarioBaseInput"
-                @update:modelValue="updateSalarioBase"
-                label="Salário Base (R$)"
-                :forceUpper="false"
-                placeholder="0,00"
-                inputmode="numeric"
-              />
-              <div class="text-xs text-slate-400 mt-1">Remuneração mensal fixa</div>
-            </div>
+<div class="col-span-12 md:col-span-6 grid grid-cols-2 gap-4">
+  <div>
+    <Input
+      type="text"
+      inputmode="numeric"
+      :modelValue="salarioBaseInput"
+      @update:modelValue="updateSalarioBase"
+      label="Salário Base (R$)"
+      :forceUpper="false"
+      placeholder="0,00"
+    />
+    <div class="text-xs text-slate-400 mt-1">Remuneração mensal fixa</div>
+  </div>
 
-            <div>
-              <Input
-                :modelValue="salarioAdicionalInput"
-                @update:modelValue="updateSalarioAdicional"
-                label="Adicional / Gratificação"
-                :forceUpper="false"
-                placeholder="0,00"
-                inputmode="numeric"
-              />
-              <div class="text-xs text-slate-400 mt-1">Bonificações extras</div>
-            </div>
-          </div>
+  <div>
+    <Input
+      type="text"
+      inputmode="numeric"
+      :modelValue="salarioAdicionalInput"
+      @update:modelValue="updateSalarioAdicional"
+      label="Adicional / Gratificação"
+      :forceUpper="false"
+      placeholder="0,00"
+    />
+    <div class="text-xs text-slate-400 mt-1">Bonificações extras</div>
+  </div>
+</div>
+
 
           <!-- Cálculos Automáticos -->
           <div class="col-span-12 md:col-span-6 grid grid-cols-2 gap-4">
@@ -359,25 +362,29 @@
           <div class="col-span-12 md:col-span-8">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div v-if="form.tem_vale" class="animate-in fade-in slide-in-from-top-2">
-                <Input
-                  :modelValue="valeInput"
-                  @update:modelValue="updateVale"
-                  label="Valor do Vale (R$)"
-                  :forceUpper="false"
-                  placeholder="0,00"
-                  inputmode="numeric"
-                />
-              </div>
-              <div v-if="form.tem_vale_transporte" class="animate-in fade-in slide-in-from-top-2">
-                <Input
-                  :modelValue="valeTransporteInput"
-                  @update:modelValue="updateValeTransporte"
-                  label="Valor VT (R$)"
-                  :forceUpper="false"
-                  placeholder="0,00"
-                  inputmode="numeric"
-                />
-              </div>
+  <Input
+    type="text"
+    inputmode="numeric"
+    :modelValue="valeInput"
+    @update:modelValue="updateVale"
+    label="Valor do Vale (R$)"
+    :forceUpper="false"
+    placeholder="0,00"
+  />
+</div>
+
+<div v-if="form.tem_vale_transporte" class="animate-in fade-in slide-in-from-top-2">
+  <Input
+    type="text"
+    inputmode="numeric"
+    :modelValue="valeTransporteInput"
+    @update:modelValue="updateValeTransporte"
+    label="Valor VT (R$)"
+    :forceUpper="false"
+    placeholder="0,00"
+  />
+</div>
+
             </div>
           </div>
         </section>
@@ -547,42 +554,51 @@ const valeTransporteInput = ref('')
 
 // ===== Sincronização dos inputs monetários =====
 watch(() => form.value.salario_base, (val) => {
-  salarioBaseInput.value = maskMoneyBR(val)
+  salarioBaseInput.value = maskMoneyBR(Number(val || 0))
 }, { immediate: true })
 
 watch(() => form.value.salario_adicional, (val) => {
-  salarioAdicionalInput.value = maskMoneyBR(val)
+  salarioAdicionalInput.value = maskMoneyBR(Number(val || 0))
 }, { immediate: true })
 
 watch(() => form.value.vale, (val) => {
-  valeInput.value = maskMoneyBR(val)
+  valeInput.value = maskMoneyBR(Number(val || 0))
 }, { immediate: true })
 
 watch(() => form.value.vale_transporte, (val) => {
-  valeTransporteInput.value = maskMoneyBR(val)
+  valeTransporteInput.value = maskMoneyBR(Number(val || 0))
 }, { immediate: true })
 
+
 // ===== Funções para atualizar valores monetários =====
+
+function toMoneyNumber(v) {
+  const digits = onlyNumbers(v)
+  return digits ? Number(digits) / 100 : 0
+}
 function updateSalarioBase(v) {
-  salarioBaseInput.value = v
-  form.value.salario_base = moedaParaNumero(v)
+  const n = toMoneyNumber(v)
+  form.value.salario_base = n
+  salarioBaseInput.value = maskMoneyBR(n)
   recalcularCustoHora()
 }
 
 function updateSalarioAdicional(v) {
-  salarioAdicionalInput.value = v
-  form.value.salario_adicional = moedaParaNumero(v)
+  const n = toMoneyNumber(v)
+  form.value.salario_adicional = n
+  salarioAdicionalInput.value = maskMoneyBR(n)
   recalcularCustoHora()
 }
 
 function updateVale(v) {
-  valeInput.value = v
-  form.value.vale = moedaParaNumero(v)
+  const n = toMoneyNumber(v)
+  form.value.vale = n
+  valeInput.value = maskMoneyBR(n)
 }
-
 function updateValeTransporte(v) {
-  valeTransporteInput.value = v
-  form.value.vale_transporte = moedaParaNumero(v)
+  const n = toMoneyNumber(v)
+  form.value.vale_transporte = n
+  valeTransporteInput.value = maskMoneyBR(n)
 }
 
 // ===== UI Computed (masks) =====
