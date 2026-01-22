@@ -56,328 +56,331 @@
         <div class="h-px bg-slate-100/50" />
 
         <!-- 03. Contrato e Jornada -->
-<!-- 03. Contrato e Jornada -->
-<section class="grid grid-cols-12 gap-x-6 gap-y-8">
-  <div class="col-span-12 flex items-center gap-3 mb-2">
-    <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
-    <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
-      03. Contrato e Jornada
-    </span>
-  </div>
+        <section class="grid grid-cols-12 gap-x-6 gap-y-8">
+          <div class="col-span-12 flex items-center gap-3 mb-2">
+            <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
+            <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
+              03. Contrato e Jornada
+            </span>
+          </div>
 
-  <!-- Unidade / Setor / Função -->
-  <div class="col-span-12 md:col-span-4">
-    <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
-      Unidade *
-    </label>
-    <select
-      v-model="form.unidade"
-      class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm shadow-sm"
-      required
-    >
-      <option value="">SELECIONE...</option>
-      <option value="FABRICA">FÁBRICA</option>
-      <option value="LOJA">LOJA</option>
-    </select>
-  </div>
+          <!-- Unidade / Setor / Função -->
+          <div class="col-span-12 md:col-span-4">
+            <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
+              Unidade *
+            </label>
+            <select
+              v-model="form.unidade"
+              class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm shadow-sm"
+              required
+            >
+              <option value="">SELECIONE...</option>
+              <option value="FABRICA">FÁBRICA</option>
+              <option value="LOJA">LOJA</option>
+            </select>
+          </div>
 
-  <div class="col-span-12 md:col-span-4">
-    <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
-      Setor *
-    </label>
-    <select
-      v-model="form.setor"
-      class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm shadow-sm"
-      :disabled="!form.unidade"
-      required
-    >
-      <option value="">SELECIONE...</option>
-      <option v-for="o in setorOptions" :key="o.value" :value="o.value">
-        {{ o.label }}
-      </option>
-    </select>
-  </div>
+          <div class="col-span-12 md:col-span-4">
+            <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
+              Setor *
+            </label>
+            <select
+              v-model="form.setor"
+              class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm shadow-sm"
+              :disabled="!form.unidade"
+              required
+            >
+              <option value="">SELECIONE...</option>
+              <option v-for="o in setorOptions" :key="o.value" :value="o.value">
+                {{ o.label }}
+              </option>
+            </select>
+          </div>
 
-  <div class="col-span-12 md:col-span-4">
-    <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
-      Função *
-    </label>
-    <select
-      v-model="form.funcao"
-      class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm shadow-sm"
-      :disabled="!form.unidade || !form.setor"
-      required
-    >
-      <option value="">SELECIONE...</option>
-      <option v-for="o in funcaoOptions" :key="o.value" :value="o.value">
-        {{ o.label }}
-      </option>
-    </select>
-  </div>
+          <div class="col-span-12 md:col-span-4">
+            <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
+              Função *
+            </label>
+            <select
+              v-model="form.funcao"
+              class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm shadow-sm"
+              :disabled="!form.unidade || !form.setor"
+              required
+            >
+              <option value="">SELECIONE...</option>
+              <option v-for="o in funcaoOptions" :key="o.value" :value="o.value">
+                {{ o.label }}
+              </option>
+            </select>
+          </div>
 
-  <!-- Registro e Datas -->
-  <div class="col-span-12 grid grid-cols-1 md:grid-cols-4 gap-4">
-    <Input class="col-span-1" v-model="form.registro" label="Nº Registro" />
-    <Input class="col-span-1" v-model="form.admissao" label="Data de Admissão" type="date" required />
-    <Input class="col-span-1" v-model="form.demissao" label="Data de Demissão" type="date" />
-    
-    <div class="col-span-1">
-      <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
-        Tempo de Casa
-      </label>
-      <div class="h-12 flex items-center px-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-500 font-bold text-sm italic">
-        {{ tempoServico }}
-      </div>
-    </div>
-  </div>
+          <!-- Registro e Datas -->
+          <div class="col-span-12 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Input class="col-span-1" v-model="form.registro" label="Nº Registro" />
+            <Input class="col-span-1" v-model="form.admissao" label="Data de Admissão" type="date" required />
+            <Input class="col-span-1" v-model="form.demissao" label="Data de Demissão" type="date" />
+            
+            <div class="col-span-1">
+              <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
+                Tempo de Casa
+              </label>
+              <div class="h-12 flex items-center px-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-500 font-bold text-sm italic">
+                {{ tempoServico }}
+              </div>
+            </div>
+          </div>
 
-  <!-- CARGA HORÁRIA CALCULADA AUTOMATICAMENTE -->
-  <div class="col-span-12 bg-gradient-to-r from-slate-50 to-blue-50/30 p-6 rounded-[2rem] border border-slate-200">
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <div class="text-sm font-black text-slate-700 mb-1">Carga Horária Calculada</div>
-        <div class="text-xs text-slate-500">Valores atualizados automaticamente conforme os horários</div>
-      </div>
-      <div class="flex gap-3">
-        <div class="bg-blue-50 px-4 py-2 rounded-xl border border-blue-100">
-          <div class="text-[10px] font-black text-blue-600 uppercase mb-1">SEMANAL</div>
-          <div class="text-lg font-black text-slate-800">{{ Number(cargaHorariaSemanal).toFixed(1) }}h</div>
-        </div>
-        <div class="bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100">
-          <div class="text-[10px] font-black text-emerald-600 uppercase mb-1">MENSAL</div>
-          <div class="text-lg font-black text-slate-800">{{ Number(cargaHorariaMensal).toFixed(1) }}h</div>
-        </div>
-      </div>
-    </div>
+          <!-- CARGA HORÁRIA CALCULADA AUTOMATICAMENTE -->
+          <div class="col-span-12 bg-gradient-to-r from-slate-50 to-blue-50/30 p-6 rounded-[2rem] border border-slate-200">
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <div class="text-sm font-black text-slate-700 mb-1">Carga Horária Calculada</div>
+                <div class="text-xs text-slate-500">Valores atualizados automaticamente conforme os horários</div>
+              </div>
+              <div class="flex gap-3">
+                <div class="bg-blue-50 px-4 py-2 rounded-xl border border-blue-100">
+                  <div class="text-[10px] font-black text-blue-600 uppercase mb-1">SEMANAL</div>
+                  <div class="text-lg font-black text-slate-800">{{ Number(cargaHorariaSemanal).toFixed(1) }}h</div>
+                </div>
+                <div class="bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100">
+                  <div class="text-[10px] font-black text-emerald-600 uppercase mb-1">MENSAL</div>
+                  <div class="text-lg font-black text-slate-800">{{ Number(cargaHorariaMensal).toFixed(1) }}h</div>
+                </div>
+              </div>
+            </div>
 
-    <!-- Horários de Segunda a Sexta -->
-    <div class="mb-6">
-      <div class="flex items-center gap-2 mb-4">
-        <div class="w-2 h-2 bg-slate-400 rounded-full"></div>
-        <span class="text-xs font-black uppercase text-slate-500">SEGUNDA A SEXTA</span>
-        <span class="text-xs text-slate-400 ml-auto">{{ Number(calcularHorasDia()).toFixed(1) }}h/dia</span>
-      </div>
-      
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Input 
-          v-model="form.horario_entrada_1" 
-          label="Entrada 1" 
-          type="time" 
-          @change="atualizarCargaHoraria"
-        />
-        <Input 
-          v-model="form.horario_saida_1" 
-          label="Saída 1" 
-          type="time" 
-          @change="atualizarCargaHoraria"
-        />
-        <Input 
-          v-model="form.horario_entrada_2" 
-          label="Entrada 2" 
-          type="time" 
-          @change="atualizarCargaHoraria"
-        />
-        <Input 
-          v-model="form.horario_saida_2" 
-          label="Saída 2" 
-          type="time" 
-          @change="atualizarCargaHoraria"
-        />
-      </div>
-    </div>
+            <!-- Horários de Segunda a Sexta -->
+            <div class="mb-6">
+              <div class="flex items-center gap-2 mb-4">
+                <div class="w-2 h-2 bg-slate-400 rounded-full"></div>
+                <span class="text-xs font-black uppercase text-slate-500">SEGUNDA A SEXTA</span>
+                <span class="text-xs text-slate-400 ml-auto">{{ Number(calcularHorasDia()).toFixed(1) }}h/dia</span>
+              </div>
+              
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Input 
+                  v-model="form.horario_entrada_1" 
+                  label="Entrada 1" 
+                  type="time" 
+                  @update:modelValue="atualizarCargaHoraria"
+                />
+                <Input 
+                  v-model="form.horario_saida_1" 
+                  label="Saída 1" 
+                  type="time" 
+                  @update:modelValue="atualizarCargaHoraria"
+                />
+                <Input 
+                  v-model="form.horario_entrada_2" 
+                  label="Entrada 2" 
+                  type="time" 
+                  @update:modelValue="atualizarCargaHoraria"
+                />
+                <Input 
+                  v-model="form.horario_saida_2" 
+                  label="Saída 2" 
+                  type="time" 
+                  @update:modelValue="atualizarCargaHoraria"
+                />
+              </div>
+            </div>
 
-    <!-- Horário de Sábado -->
-    <div>
-      <div class="flex items-center gap-2 mb-4">
-        <div class="w-2 h-2 bg-amber-400 rounded-full"></div>
-        <span class="text-xs font-black uppercase text-slate-500">SÁBADO</span>
-        <span class="text-xs text-slate-400 ml-auto">{{ Number(calcularHorasSabado()).toFixed(1) }}h</span>
-      </div>
-      
-      <div class="grid grid-cols-2 gap-4">
-        <Input 
-          v-model="form.horario_sabado_entrada_1" 
-          label="Sábado - Entrada" 
-          type="time" 
-          @change="atualizarCargaHoraria"
-        />
-        <Input 
-          v-model="form.horario_sabado_saida_1" 
-          label="Sábado - Saída" 
-          type="time" 
-          @change="atualizarCargaHoraria"
-        />
-      </div>
-    </div>
-  </div>
+            <!-- Horário de Sábado -->
+            <div>
+              <div class="flex items-center gap-2 mb-4">
+                <div class="w-2 h-2 bg-amber-400 rounded-full"></div>
+                <span class="text-xs font-black uppercase text-slate-500">SÁBADO</span>
+                <span class="text-xs text-slate-400 ml-auto">{{ Number(calcularHorasSabado()).toFixed(1) }}h</span>
+              </div>
+              
+              <div class="grid grid-cols-2 gap-4">
+                <Input 
+                  v-model="form.horario_sabado_entrada_1" 
+                  label="Sábado - Entrada" 
+                  type="time" 
+                  @update:modelValue="atualizarCargaHoraria"
+                />
+                <Input 
+                  v-model="form.horario_sabado_saida_1" 
+                  label="Sábado - Saída" 
+                  type="time" 
+                  @update:modelValue="atualizarCargaHoraria"
+                />
+              </div>
+            </div>
+          </div>
 
-  <!-- Resumo da Jornada -->
-  <div class="col-span-12 bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100">
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div class="text-center">
-        <div class="text-[10px] font-black uppercase text-slate-500 mb-1">HORAS/DIA</div>
-        <div class="text-xl font-black text-slate-800">{{ Number(horasDiariasMedias).toFixed(1) }}h</div>
-      </div>
-      <div class="text-center">
-        <div class="text-[10px] font-black uppercase text-slate-500 mb-1">DIAS/SEMANA</div>
-        <div class="text-xl font-black text-slate-800">{{ form.horario_sabado_entrada_1 ? '6' : '5' }}</div>
-      </div>
-      <div class="text-center">
-        <div class="text-[10px] font-black uppercase text-slate-500 mb-1">HORAS/SEMANA</div>
-        <div class="text-xl font-black text-slate-800">{{ Number(cargaHorariaSemanal).toFixed(1) }}h</div>
-      </div>
-      <div class="text-center">
-        <div class="text-[10px] font-black uppercase text-slate-500 mb-1">SEMANAS/MÊS</div>
-        <div class="text-xl font-black text-slate-800">4.5</div>
-      </div>
-    </div>
-  </div>
-</section>
+          <!-- Resumo da Jornada -->
+          <div class="col-span-12 bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div class="text-center">
+                <div class="text-[10px] font-black uppercase text-slate-500 mb-1">HORAS/DIA</div>
+                <div class="text-xl font-black text-slate-800">{{ Number(horasDiariasMedias).toFixed(1) }}h</div>
+              </div>
+              <div class="text-center">
+                <div class="text-[10px] font-black uppercase text-slate-500 mb-1">DIAS/SEMANA</div>
+                <div class="text-xl font-black text-slate-800">{{ form.horario_sabado_entrada_1 ? '6' : '5' }}</div>
+              </div>
+              <div class="text-center">
+                <div class="text-[10px] font-black uppercase text-slate-500 mb-1">HORAS/SEMANA</div>
+                <div class="text-xl font-black text-slate-800">{{ Number(cargaHorariaSemanal).toFixed(1) }}h</div>
+              </div>
+              <div class="text-center">
+                <div class="text-[10px] font-black uppercase text-slate-500 mb-1">SEMANAS/MÊS</div>
+                <div class="text-xl font-black text-slate-800">4.5</div>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <div class="h-px bg-slate-100/50" />
 
-       <!-- 04. Financeiro e Pagamento -->
-<section class="grid grid-cols-12 gap-x-6 gap-y-8">
-  <div class="col-span-12 flex items-center gap-3 mb-2">
-    <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
-    <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
-      04. Financeiro e Pagamento
-    </span>
-  </div>
+        <!-- 04. Financeiro e Pagamento -->
+        <section class="grid grid-cols-12 gap-x-6 gap-y-8">
+          <div class="col-span-12 flex items-center gap-3 mb-2">
+            <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
+            <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
+              04. Financeiro e Pagamento
+            </span>
+          </div>
 
-  <!-- Salários -->
-<div class="col-span-12 md:col-span-6 grid grid-cols-2 gap-4">
-  <div>
-    <Input
-      v-model="salarioBaseUi"
-      label="Salário Base (R$)"
-      :forceUpper="false"
-      placeholder="0,00"
-      inputmode="numeric"
-    />
-    <div class="text-xs text-slate-400 mt-1">Remuneração mensal fixa</div>
-  </div>
+          <!-- Salários -->
+          <div class="col-span-12 md:col-span-6 grid grid-cols-2 gap-4">
+            <div>
+              <Input
+                :modelValue="salarioBaseInput"
+                @update:modelValue="updateSalarioBase"
+                label="Salário Base (R$)"
+                :forceUpper="false"
+                placeholder="0,00"
+                inputmode="numeric"
+              />
+              <div class="text-xs text-slate-400 mt-1">Remuneração mensal fixa</div>
+            </div>
 
-  <div>
-    <Input
-      v-model="salarioAdicionalUi"
-      label="Adicional / Gratificação"
-      :forceUpper="false"
-      placeholder="0,00"
-      inputmode="numeric"
-    />
-    <div class="text-xs text-slate-400 mt-1">Bonificações extras</div>
-  </div>
-</div>
+            <div>
+              <Input
+                :modelValue="salarioAdicionalInput"
+                @update:modelValue="updateSalarioAdicional"
+                label="Adicional / Gratificação"
+                :forceUpper="false"
+                placeholder="0,00"
+                inputmode="numeric"
+              />
+              <div class="text-xs text-slate-400 mt-1">Bonificações extras</div>
+            </div>
+          </div>
 
+          <!-- Cálculos Automáticos -->
+          <div class="col-span-12 md:col-span-6 grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
+                Dia Pagamento
+              </label>
+              <select v-model="form.dia_pagamento" 
+                class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm">
+                <option :value="5">DIA 05</option>
+                <option :value="10">DIA 10</option>
+                <option :value="15">DIA 15</option>
+                <option :value="20">DIA 20</option>
+              </select>
+            </div>
+            
+            <div>
+              <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
+                Custo Hora (DSR)
+              </label>
+              <div class="h-12 flex items-center justify-between px-4 rounded-2xl bg-slate-100 border border-slate-200">
+                <span class="text-slate-900 font-black text-sm">
+                  {{ custoHoraExibicao }}
+                </span>
+                <button 
+                  type="button"
+                  @click="recalcularCustoHora"
+                  class="text-xs font-black text-blue-600 hover:text-blue-800"
+                  title="Recalcular"
+                >
+                  <i class="pi pi-refresh"></i>
+                </button>
+              </div>
+              <div class="text-xs text-slate-400 mt-1">Baseado na carga horária</div>
+            </div>
+          </div>
 
-  <!-- Cálculos Automáticos -->
-  <div class="col-span-12 md:col-span-6 grid grid-cols-2 gap-4">
-    <div>
-      <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
-        Dia Pagamento
-      </label>
-      <select v-model="form.dia_pagamento" 
-        class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm">
-        <option :value="5">DIA 05</option>
-        <option :value="10">DIA 10</option>
-        <option :value="15">DIA 15</option>
-        <option :value="20">DIA 20</option>
-      </select>
-    </div>
-    
-    <div>
-      <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
-        Custo Hora (DSR)
-      </label>
-      <div class="h-12 flex items-center justify-between px-4 rounded-2xl bg-slate-100 border border-slate-200">
-        <span class="text-slate-900 font-black text-sm">
-          {{ custoHoraExibicao }}
-        </span>
-        <button 
-          type="button"
-          @click="recalcularCustoHora"
-          class="text-xs font-black text-blue-600 hover:text-blue-800"
-          title="Recalcular"
-        >
-          <i class="pi pi-refresh"></i>
-        </button>
-      </div>
-      <div class="text-xs text-slate-400 mt-1">Baseado na carga horária</div>
-    </div>
-  </div>
+          <!-- Forma de Pagamento -->
+          <div class="col-span-12 grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+              <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
+                Forma de Pagamento
+              </label>
+              <select v-model="form.forma_pagamento" 
+                class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm">
+                <option value="DINHEIRO">DINHEIRO</option>
+                <option value="PIX">PIX</option>
+                <option value="TRANSFERENCIA">TRANSFERÊNCIA</option>
+                <option value="DEPOSITO">DEPÓSITO</option>
+              </select>
+            </div>
+            
+            <Input class="col-span-2" v-model="form.banco" label="Banco" placeholder="EX: ITAÚ, NUBANK, CAIXA..." />
+          </div>
 
-  <!-- Forma de Pagamento -->
-  <div class="col-span-12 grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-    <div>
-      <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
-        Forma de Pagamento
-      </label>
-      <select v-model="form.forma_pagamento" 
-        class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm">
-        <option value="DINHEIRO">DINHEIRO</option>
-        <option value="PIX">PIX</option>
-        <option value="TRANSFERENCIA">TRANSFERÊNCIA</option>
-        <option value="DEPOSITO">DEPÓSITO</option>
-      </select>
-    </div>
-    
-    <Input class="col-span-2" v-model="form.banco" label="Banco" placeholder="EX: ITAÚ, NUBANK, CAIXA..." />
-  </div>
+          <!-- Dados Bancários (condicional) -->
+          <div v-if="form.forma_pagamento !== 'DINHEIRO'" class="col-span-12 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Input v-model="form.agencia" label="Agência" />
+            <Input v-model="form.conta" label="Conta" />
+            <Input v-model="form.pix_tipo_chave" label="Tipo Chave" placeholder="CPF, EMAIL, CELULAR..." />
+          </div>
+          
+          <!-- Chave PIX (condicional) -->
+          <div v-if="form.forma_pagamento === 'PIX'" class="col-span-12">
+            <Input v-model="form.pix_chave" label="Chave PIX" />
+          </div>
+        </section>
 
-  <!-- Dados Bancários (condicional) -->
-  <div v-if="form.forma_pagamento !== 'DINHEIRO'" class="col-span-12 grid grid-cols-1 md:grid-cols-3 gap-4">
-    <Input v-model="form.agencia" label="Agência" />
-    <Input v-model="form.conta" label="Conta" />
-    <Input v-model="form.pix_tipo_chave" label="Tipo Chave" placeholder="CPF, EMAIL, CELULAR..." />
-  </div>
-  
-  <!-- Chave PIX (condicional) -->
-  <div v-if="form.forma_pagamento === 'PIX'" class="col-span-12">
-    <Input v-model="form.pix_chave" label="Chave PIX" />
-  </div>
-</section>
         <div class="h-px bg-slate-100/50" />
 
         <!-- 05. Benefícios Adicionais -->
-<section class="grid grid-cols-12 gap-x-6 gap-y-8 bg-slate-50/50 p-8 rounded-[2.5rem] border border-slate-100/50">
-  <div class="col-span-12 flex items-center gap-3 mb-2">
-    <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
-    <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
-      05. Benefícios Adicionais
-    </span>
-  </div>
+        <section class="grid grid-cols-12 gap-x-6 gap-y-8 bg-slate-50/50 p-8 rounded-[2.5rem] border border-slate-100/50">
+          <div class="col-span-12 flex items-center gap-3 mb-2">
+            <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
+            <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
+              05. Benefícios Adicionais
+            </span>
+          </div>
 
-  <!-- Checkboxes -->
-  <div class="col-span-12 md:col-span-4 space-y-4 pt-2">
-    <CustomCheckbox v-model="form.tem_vale" label="Habilitar Vale Antecipação" />
-    <CustomCheckbox v-model="form.tem_vale_transporte" label="Habilitar Vale Transporte" />
-  </div>
+          <!-- Checkboxes -->
+          <div class="col-span-12 md:col-span-4 space-y-4 pt-2">
+            <CustomCheckbox v-model="form.tem_vale" label="Habilitar Vale Antecipação" />
+            <CustomCheckbox v-model="form.tem_vale_transporte" label="Habilitar Vale Transporte" />
+          </div>
 
-  <!-- Campos condicionais -->
-  <div class="col-span-12 md:col-span-8">
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div v-if="form.tem_vale" class="animate-in fade-in slide-in-from-top-2">
-<Input
-  v-model="valeUi"
-  label="Valor do Vale (R$)"
-  :forceUpper="false"
-  placeholder="0,00"
-  inputmode="numeric"
-/>
-
-<Input
-  v-model="valeTransporteUi"
-  label="Valor VT (R$)"
-  :forceUpper="false"
-  placeholder="0,00"
-  inputmode="numeric"
-/>
-
-      </div>
-    </div>
-  </div>
-</section>
+          <!-- Campos condicionais -->
+          <div class="col-span-12 md:col-span-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div v-if="form.tem_vale" class="animate-in fade-in slide-in-from-top-2">
+                <Input
+                  :modelValue="valeInput"
+                  @update:modelValue="updateVale"
+                  label="Valor do Vale (R$)"
+                  :forceUpper="false"
+                  placeholder="0,00"
+                  inputmode="numeric"
+                />
+              </div>
+              <div v-if="form.tem_vale_transporte" class="animate-in fade-in slide-in-from-top-2">
+                <Input
+                  :modelValue="valeTransporteInput"
+                  @update:modelValue="updateValeTransporte"
+                  label="Valor VT (R$)"
+                  :forceUpper="false"
+                  placeholder="0,00"
+                  inputmode="numeric"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
 
         <!-- 06. Arquivos -->
         <section class="grid grid-cols-12 gap-x-6 gap-y-6">
@@ -450,7 +453,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { FuncionarioService } from '@/services/index'
 
-import { maskCPF, maskRG, maskTelefone, maskCEP, onlyNumbers } from '@/utils/masks'
+import { maskCPF, maskRG, maskTelefone, maskCEP, onlyNumbers, maskMoneyBR } from '@/utils/masks'
 import { buscarCep, calcularCustoHora } from '@/utils/utils'
 import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
 import { upper, raw } from '@/utils/text'
@@ -536,6 +539,52 @@ function novoForm() {
 
 const form = ref(novoForm())
 
+// ===== Refs para inputs monetários =====
+const salarioBaseInput = ref('')
+const salarioAdicionalInput = ref('')
+const valeInput = ref('')
+const valeTransporteInput = ref('')
+
+// ===== Sincronização dos inputs monetários =====
+watch(() => form.value.salario_base, (val) => {
+  salarioBaseInput.value = maskMoneyBR(val)
+}, { immediate: true })
+
+watch(() => form.value.salario_adicional, (val) => {
+  salarioAdicionalInput.value = maskMoneyBR(val)
+}, { immediate: true })
+
+watch(() => form.value.vale, (val) => {
+  valeInput.value = maskMoneyBR(val)
+}, { immediate: true })
+
+watch(() => form.value.vale_transporte, (val) => {
+  valeTransporteInput.value = maskMoneyBR(val)
+}, { immediate: true })
+
+// ===== Funções para atualizar valores monetários =====
+function updateSalarioBase(v) {
+  salarioBaseInput.value = v
+  form.value.salario_base = moedaParaNumero(v)
+  recalcularCustoHora()
+}
+
+function updateSalarioAdicional(v) {
+  salarioAdicionalInput.value = v
+  form.value.salario_adicional = moedaParaNumero(v)
+  recalcularCustoHora()
+}
+
+function updateVale(v) {
+  valeInput.value = v
+  form.value.vale = moedaParaNumero(v)
+}
+
+function updateValeTransporte(v) {
+  valeTransporteInput.value = v
+  form.value.vale_transporte = moedaParaNumero(v)
+}
+
 // ===== UI Computed (masks) =====
 const cpfUi = computed({
   get: () => (form.value.cpf ? maskCPF(form.value.cpf) : ''),
@@ -599,24 +648,9 @@ const horasDiariasMedias = computed(() => {
   return cargaHorariaSemanal.value / diasTrabalhados
 })
 
-// ===== Moedas (NÚMERO no estado, TEXTO no input) =====
-const createMoneyComputed = (key) =>
-  computed({
-    get: () => maskMoneyBR(Number(form.value[key] || 0)),
-    set: (v) => {
-      const digits = String(v ?? '').replace(/\D/g, '') // só números
-      form.value[key] = digits ? Number(digits) / 100 : 0
-    },
-  })
-
-const salarioBaseUi = createMoneyComputed('salario_base')
-const salarioAdicionalUi = createMoneyComputed('salario_adicional')
-const valeUi = createMoneyComputed('vale')
-const valeTransporteUi = createMoneyComputed('vale_transporte')
-
+// ===== Custo Hora =====
 const custoHoraExibicao = computed(() => numeroParaMoeda(Number(form.value.custo_hora || 0)))
 
-// ===== Custo Hora =====
 function recalcularCustoHora() {
   const base = Number(form.value.salario_base || 0)
   const adicional = Number(form.value.salario_adicional || 0)
@@ -631,10 +665,8 @@ function recalcularCustoHora() {
   form.value.custo_hora = calcularCustoHora(total, cargaHorariaSemanal.value, 4.5)
 }
 
-// ===== Funções de formatação =====
-// Atualiza carga horária (chamada quando horários mudam)
+// ===== Atualiza carga horária =====
 const atualizarCargaHoraria = () => {
-  // Força atualização dos computeds
   recalcularCustoHora()
 }
 
@@ -854,5 +886,5 @@ watch(
     if (next !== prev) carregar()
   },
 )
-</script>
+</script> 
 
