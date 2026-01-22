@@ -246,28 +246,30 @@
   </div>
 
   <!-- Salários -->
-  <div class="col-span-12 md:col-span-6 grid grid-cols-2 gap-4">
-    <div>
-      <Input 
-        v-model="salarioBaseUi" 
-        label="Salário Base (R$)" 
-        :forceUpper="false"
-        @blur="formatarSalarioBase"
-        placeholder="0,00"
-      />
-      <div class="text-xs text-slate-400 mt-1">Remuneração mensal fixa</div>
-    </div>
-    <div>
-      <Input 
-        v-model="salarioAdicionalUi" 
-        label="Adicional / Gratificação" 
-        :forceUpper="false"
-        @blur="formatarSalarioAdicional"
-        placeholder="0,00"
-      />
-      <div class="text-xs text-slate-400 mt-1">Bonificações extras</div>
-    </div>
+<div class="col-span-12 md:col-span-6 grid grid-cols-2 gap-4">
+  <div>
+    <Input
+      v-model="salarioBaseUi"
+      label="Salário Base (R$)"
+      :forceUpper="false"
+      placeholder="0,00"
+      inputmode="numeric"
+    />
+    <div class="text-xs text-slate-400 mt-1">Remuneração mensal fixa</div>
   </div>
+
+  <div>
+    <Input
+      v-model="salarioAdicionalUi"
+      label="Adicional / Gratificação"
+      :forceUpper="false"
+      placeholder="0,00"
+      inputmode="numeric"
+    />
+    <div class="text-xs text-slate-400 mt-1">Bonificações extras</div>
+  </div>
+</div>
+
 
   <!-- Cálculos Automáticos -->
   <div class="col-span-12 md:col-span-6 grid grid-cols-2 gap-4">
@@ -356,22 +358,22 @@
   <div class="col-span-12 md:col-span-8">
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div v-if="form.tem_vale" class="animate-in fade-in slide-in-from-top-2">
-        <Input 
-          v-model="valeUi" 
-          label="Valor do Vale (R$)" 
-          :forceUpper="false"
-          @blur="formatarVale"
-          placeholder="0,00"
-        />
-      </div>
-      <div v-if="form.tem_vale_transporte" class="animate-in fade-in slide-in-from-top-2">
-        <Input 
-          v-model="valeTransporteUi" 
-          label="Valor VT (R$)" 
-          :forceUpper="false"
-          @blur="formatarValeTransporte"
-          placeholder="0,00"
-        />
+<Input
+  v-model="valeUi"
+  label="Valor do Vale (R$)"
+  :forceUpper="false"
+  placeholder="0,00"
+  inputmode="numeric"
+/>
+
+<Input
+  v-model="valeTransporteUi"
+  label="Valor VT (R$)"
+  :forceUpper="false"
+  placeholder="0,00"
+  inputmode="numeric"
+/>
+
       </div>
     </div>
   </div>
@@ -600,9 +602,10 @@ const horasDiariasMedias = computed(() => {
 // ===== Moedas (NÚMERO no estado, TEXTO no input) =====
 const createMoneyComputed = (key) =>
   computed({
-    get: () => numeroParaMoeda(Number(form.value[key] || 0)),
+    get: () => maskMoneyBR(Number(form.value[key] || 0)),
     set: (v) => {
-      form.value[key] = moedaParaNumero(v)
+      const digits = String(v ?? '').replace(/\D/g, '') // só números
+      form.value[key] = digits ? Number(digits) / 100 : 0
     },
   })
 
@@ -629,32 +632,6 @@ function recalcularCustoHora() {
 }
 
 // ===== Funções de formatação =====
-const formatarSalarioBase = () => {
-  const valor = moedaParaNumero(form.value.salario_base)
-  form.value.salario_base = valor
-  salarioBaseUi.value = numeroParaMoeda(valor)
-  recalcularCustoHora()
-}
-
-const formatarSalarioAdicional = () => {
-  const valor = moedaParaNumero(form.value.salario_adicional)
-  form.value.salario_adicional = valor
-  salarioAdicionalUi.value = numeroParaMoeda(valor)
-  recalcularCustoHora()
-}
-
-const formatarVale = () => {
-  const valor = moedaParaNumero(form.value.vale)
-  form.value.vale = valor
-  valeUi.value = numeroParaMoeda(valor)
-}
-
-const formatarValeTransporte = () => {
-  const valor = moedaParaNumero(form.value.vale_transporte)
-  form.value.vale_transporte = valor
-  valeTransporteUi.value = numeroParaMoeda(valor)
-}
-
 // Atualiza carga horária (chamada quando horários mudam)
 const atualizarCargaHoraria = () => {
   // Força atualização dos computeds
