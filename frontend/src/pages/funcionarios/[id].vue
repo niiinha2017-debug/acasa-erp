@@ -12,10 +12,10 @@
       <Loading v-if="loading" />
 
       <form v-else class="space-y-12" @submit.prevent="salvar">
-        <!-- 01 -->
-        <div class="grid grid-cols-12 gap-x-6 gap-y-8">
+        <!-- 01. Informações Pessoais -->
+        <section class="grid grid-cols-12 gap-x-6 gap-y-8">
           <div class="col-span-12 flex items-center gap-3 mb-2">
-            <div class="w-1.5 h-4 bg-slate-900 rounded-full"></div>
+            <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
             <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
               01. Informações Pessoais
             </span>
@@ -31,14 +31,14 @@
 
           <Input class="col-span-12 md:col-span-6" v-model="form.estado_civil" label="Estado Civil" />
           <Input class="col-span-12 md:col-span-6" v-model="form.escolaridade" label="Escolaridade" />
-        </div>
+        </section>
 
-        <div class="h-px bg-slate-100/50"></div>
+        <div class="h-px bg-slate-100/50" />
 
-        <!-- 02 -->
-        <div class="grid grid-cols-12 gap-x-6 gap-y-8">
+        <!-- 02. Localização -->
+        <section class="grid grid-cols-12 gap-x-6 gap-y-8">
           <div class="col-span-12 flex items-center gap-3 mb-2">
-            <div class="w-1.5 h-4 bg-slate-900 rounded-full"></div>
+            <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
             <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
               02. Localização
             </span>
@@ -51,32 +51,26 @@
           <Input class="col-span-12 md:col-span-4" v-model="form.complemento" label="Complemento" />
           <Input class="col-span-12 md:col-span-4" v-model="form.bairro" label="Bairro" />
           <Input class="col-span-12 md:col-span-4" v-model="form.cidade" label="Cidade" />
-        </div>
+        </section>
 
-        <div class="h-px bg-slate-100/50"></div>
+        <div class="h-px bg-slate-100/50" />
 
-        <!-- 03 -->
-        <div class="grid grid-cols-12 gap-x-6 gap-y-8">
-          <!-- HEADER DO 03 COM A CARGA NA MESMA LINHA -->
-          <div class="col-span-12 flex items-center justify-between mb-2">
-            <div class="flex items-center gap-3">
-              <div class="w-1.5 h-4 bg-slate-900 rounded-full"></div>
-              <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
-                03. Contrato e Jornada
-              </span>
-            </div>
-
-            <!-- CARGA AQUI (junto das horas) -->
-            <div class="bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 flex items-center gap-2">
-              <span class="text-[9px] font-black text-emerald-600 uppercase">
-                Carga: {{ cargaHorariaSemanal.toFixed(1) }}h/sem
-              </span>
-            </div>
+        <!-- 03. Contrato e Jornada -->
+        <section class="grid grid-cols-12 gap-x-6 gap-y-8">
+          <div class="col-span-12 flex items-center gap-3 mb-2">
+            <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
+            <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
+              03. Contrato e Jornada
+            </span>
           </div>
 
+          <!-- Unidade / Setor / Função -->
           <div class="col-span-12 md:col-span-4">
             <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">Unidade</label>
-            <select v-model="form.unidade" class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm shadow-sm">
+            <select
+              v-model="form.unidade"
+              class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm shadow-sm"
+            >
               <option value="">SELECIONE...</option>
               <option value="FABRICA">FÁBRICA</option>
               <option value="LOJA">LOJA</option>
@@ -111,6 +105,7 @@
             </select>
           </div>
 
+          <!-- Registro / datas -->
           <Input class="col-span-12 md:col-span-4" v-model="form.registro" label="Nº Registro" />
           <Input class="col-span-12 md:col-span-4" v-model="form.admissao" label="Data de Admissão" type="date" />
           <Input class="col-span-12 md:col-span-4" v-model="form.demissao" label="Data de Demissão" type="date" />
@@ -122,26 +117,38 @@
             </div>
           </div>
 
-          <!-- HORÁRIOS -->
-          <div class="col-span-12 grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100/50">
-            <Input v-model="form.horario_entrada_1" label="Entrada 1" type="time" />
-            <Input v-model="form.horario_saida_1" label="Saída 1" type="time" />
-            <Input v-model="form.horario_entrada_2" label="Entrada 2" type="time" />
-            <Input v-model="form.horario_saida_2" label="Saída 2" type="time" />
+          <!-- Horários (CARGA NA MESMA LINHA DAS HORAS) -->
+          <div class="col-span-12 bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100/50">
+            <div class="flex items-center justify-end mb-4">
+              <div class="bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+                <span class="text-[9px] font-black text-emerald-600 uppercase">
+                  Carga: {{ Number(cargaHorariaSemanal || 0).toFixed(1) }}h/sem
+                </span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Input v-model="form.horario_entrada_1" label="Entrada 1" type="time" />
+              <Input v-model="form.horario_saida_1" label="Saída 1" type="time" />
+              <Input v-model="form.horario_entrada_2" label="Entrada 2" type="time" />
+              <Input v-model="form.horario_saida_2" label="Saída 2" type="time" />
+            </div>
           </div>
 
-          <div class="col-span-12 grid grid-cols-2 gap-4 bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100/50">
-            <Input v-model="form.horario_sabado_entrada_1" label="Sábado - Entrada" type="time" />
-            <Input v-model="form.horario_sabado_saida_1" label="Sábado - Saída" type="time" />
+          <div class="col-span-12 bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100/50">
+            <div class="grid grid-cols-2 gap-4">
+              <Input v-model="form.horario_sabado_entrada_1" label="Sábado - Entrada" type="time" />
+              <Input v-model="form.horario_sabado_saida_1" label="Sábado - Saída" type="time" />
+            </div>
           </div>
-        </div>
+        </section>
 
-        <div class="h-px bg-slate-100/50"></div>
+        <div class="h-px bg-slate-100/50" />
 
-        <!-- 04 -->
-        <div class="grid grid-cols-12 gap-x-6 gap-y-8">
+        <!-- 04. Financeiro e Pagamento -->
+        <section class="grid grid-cols-12 gap-x-6 gap-y-8">
           <div class="col-span-12 flex items-center gap-3 mb-2">
-            <div class="w-1.5 h-4 bg-slate-900 rounded-full"></div>
+            <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
             <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
               04. Financeiro e Pagamento
             </span>
@@ -179,14 +186,14 @@
           <Input class="col-span-12 md:col-span-3" v-model="form.conta" label="Conta" />
           <Input class="col-span-12 md:col-span-3" v-model="form.pix_tipo_chave" label="Tipo PIX" />
           <Input class="col-span-12 md:col-span-3" v-model="form.pix_chave" label="Chave PIX" />
-        </div>
+        </section>
 
-        <div class="h-px bg-slate-100/50"></div>
+        <div class="h-px bg-slate-100/50" />
 
-        <!-- 05 -->
-        <div class="grid grid-cols-12 gap-x-6 gap-y-8 bg-slate-50/50 p-8 rounded-[2.5rem] border border-slate-100/50">
+        <!-- 05. Benefícios -->
+        <section class="grid grid-cols-12 gap-x-6 gap-y-8 bg-slate-50/50 p-8 rounded-[2.5rem] border border-slate-100/50">
           <div class="col-span-12 flex items-center gap-3 mb-2">
-            <div class="w-1.5 h-4 bg-slate-900 rounded-full"></div>
+            <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
             <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
               05. Benefícios Adicionais
             </span>
@@ -205,12 +212,12 @@
               <Input v-model="valeTransporteUi" label="Valor VT (R$)" :forceUpper="false" />
             </div>
           </div>
-        </div>
+        </section>
 
-        <!-- 06 -->
-        <div class="grid grid-cols-12 gap-x-6 gap-y-6">
+        <!-- 06. Arquivos -->
+        <section class="grid grid-cols-12 gap-x-6 gap-y-6">
           <div class="col-span-12 flex items-center gap-3 mb-2">
-            <div class="w-1.5 h-4 bg-slate-900 rounded-full"></div>
+            <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
             <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
               06. Arquivos e Documentos
             </span>
@@ -231,7 +238,7 @@
               type="button"
               class="w-full !rounded-2xl h-12"
               :loading="enviandoArquivo"
-              :disabled="!isEditing || !arquivoSelecionado"
+              :disabled="!isEditing || !arquivoSelecionado.value"
               @click="enviarArquivo"
             >
               Anexar Documento
@@ -244,19 +251,27 @@
                 <div class="font-black text-slate-700 text-sm truncate">{{ a.nome }}</div>
                 <div class="text-xs font-bold text-slate-400 uppercase tracking-tighter">{{ a.mime }}</div>
               </div>
+
               <div class="flex gap-2">
-                <a :href="a.url" target="_blank" class="h-9 px-4 flex items-center rounded-xl bg-slate-50 border border-slate-200 text-[10px] font-black uppercase">Abrir</a>
-                <Button variant="danger" size="sm" class="!rounded-xl h-9" @click="removerArquivo(a.id)">Excluir</Button>
+                <a :href="a.url" target="_blank" class="h-9 px-4 flex items-center rounded-xl bg-slate-50 border border-slate-200 text-[10px] font-black uppercase">
+                  Abrir
+                </a>
+                <Button variant="danger" size="sm" class="!rounded-xl h-9" type="button" @click="removerArquivo(a.id)">
+                  Excluir
+                </Button>
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <!-- FOOTER -->
+        <!-- Footer -->
         <div class="flex items-center justify-between gap-3 pt-8 border-t border-slate-100">
-          <Button variant="secondary" @click="router.push('/funcionarios')" class="!rounded-2xl !px-8">Cancelar</Button>
-          <Button variant="primary" :loading="salvando" @click="salvar" class="!rounded-2xl !px-12 h-14 shadow-xl shadow-brand-primary/20">
-            <i class="pi pi-save mr-2"></i> Salvar Registro
+          <Button variant="secondary" type="button" class="!rounded-2xl !px-8" @click="router.push('/funcionarios')">
+            Cancelar
+          </Button>
+
+          <Button variant="primary" type="submit" class="!rounded-2xl !px-12 h-14 shadow-xl shadow-brand-primary/20" :loading="salvando">
+            <i class="pi pi-save mr-2" /> Salvar Registro
           </Button>
         </div>
       </form>
@@ -421,7 +436,7 @@ const cargaHorariaSemanal = computed(() => {
     timeToDecimal(form.value.horario_sabado_entrada_1)
 
   const totalSemana = totalDia * 5 + (sab > 0 ? sab : 0)
-  return totalSemana > 0 ? totalSemana : 44
+  return totalSemana > 0 ? totalSemana : 0
 })
 
 // ===== Custo Hora =====
