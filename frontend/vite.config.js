@@ -15,13 +15,14 @@ export default defineConfig({
 
     vue(),
 
-    VitePWA({
-      registerType: 'autoUpdate',
-
-      workbox: {
-        // ERP não intercepta nada do ponto (mesmo que um dia volte pra /ponto)
-        navigateFallbackDenylist: [/^\/ponto\//],
-      },
+ VitePWA({
+  registerType: 'autoUpdate',
+  workbox: {
+    navigateFallbackDenylist: [
+      /^\/ponto(\/|$)/,
+      /^\/uploads(\/|$)/,
+    ],
+  },
 
       devOptions: {
         enabled: true,

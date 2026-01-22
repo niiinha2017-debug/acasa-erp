@@ -244,7 +244,11 @@ async function carregar() {
   loading.value = true
   try {
     const { data } = await FuncionarioService.listar()
-    funcionarios.value = Array.isArray(data) ? data : []
+    const lista = Array.isArray(data) ? data : []
+    funcionarios.value = lista.map(f => ({
+      ...f,
+      cargo: f.cargo ?? f.funcao ?? '',
+    }))
   } catch (err) {
     console.log('[FUNCIONARIOS][LISTAR] erro =', err)
     alert(err?.response?.data?.message || 'Erro ao carregar funcionários')
@@ -254,7 +258,12 @@ async function carregar() {
   }
 }
 
-
+function arquivoUrl(arquivo) {
+  const url = arquivo?.url || arquivo?.caminho || arquivo?.path || ''
+  if (!url) return '#'
+  if (/^https?:\/\//i.test(url)) return url
+  return url.startsWith('/') ? url : `/${url}`
+}
 
 
 async function gerarPdf() {

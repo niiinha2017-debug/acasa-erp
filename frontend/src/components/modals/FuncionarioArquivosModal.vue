@@ -97,13 +97,15 @@
               </div>
 
               <div class="flex gap-2">
-                <a
-                  :href="a.url"
-                  target="_blank"
-                  class="h-9 px-4 flex items-center rounded-xl bg-slate-50 border border-slate-200 text-[10px] font-black uppercase"
-                >
-                  Abrir
-                </a>
+<a
+  :href="a.url"
+  target="_blank"
+  rel="noopener noreferrer"
+  class="h-9 px-4 flex items-center rounded-xl bg-slate-50 border border-slate-200 text-[10px] font-black uppercase"
+>
+  Abrir
+</a>
+
 
                 <Button
                   variant="danger"
