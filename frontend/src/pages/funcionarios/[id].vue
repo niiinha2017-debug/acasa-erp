@@ -358,7 +358,7 @@ import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
 import { upper, raw } from '@/utils/text'
 
 // ✅ constantes (ajuste o path conforme seu projeto)
-import { FUNCIONARIOS_LOCAL_SETOR_FUNCAO } from '@/index'
+import { FUNCIONARIOS_LOCAL_SETOR_FUNCAO } from '@/constantes'
 
 const router = useRouter()
 const route = useRoute()
