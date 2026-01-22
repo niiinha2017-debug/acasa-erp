@@ -34,14 +34,18 @@ export async function buscarCnpj(cnpj) {
   }
 }
 
-// app/utils/utils.js (ou src/utils/utils.js)
-export function calcularCustoHora(salarioMensal, diasMes = 22, horasDia = 8) {
+export function calcularCustoHora(salarioMensal, horasSemana = 48, semanasMes = 4.5) {
   const s = Number(salarioMensal || 0)
-  const horasMes = Number(diasMes) * Number(horasDia)
+  const hs = Number(horasSemana || 0)
+  const sm = Number(semanasMes || 0)
+
+  const horasMes = hs * sm
   if (!horasMes) return 0
+
   const v = s / horasMes
   return Math.round(v * 100) / 100
 }
+
 
 export function calcularHorasDiaPorSemana(horasSemana = 48, diasSemana = 6) {
   const hs = Number(horasSemana)

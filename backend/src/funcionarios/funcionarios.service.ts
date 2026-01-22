@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
+import * as fs from 'fs'
 import PDFDocument from 'pdfkit'
 import { CriarFuncionarioDto } from './dto/criar-funcionario.dto'
 import { AtualizarFuncionarioDto } from './dto/atualizar-funcionario.dto'
@@ -178,7 +179,7 @@ if (mexeuEmRegistro || mexeuEmAdmissao || mexeuEmDemissao) {
 
   private normalizarDatas(dto: any) {
     const data = { ...dto }
-    const camposData = ['data_nascimento', 'admissao', 'demissao', 'data_pagamento']
+    const camposData = ['data_nascimento', 'admissao', 'demissao']
 
     for (const campo of camposData) {
       if (Object.prototype.hasOwnProperty.call(data, campo)) {
@@ -188,4 +189,48 @@ if (mexeuEmRegistro || mexeuEmAdmissao || mexeuEmDemissao) {
 
     return data
   }
+
+    async listarArquivos(funcionario_id: number) {
+    return this.prisma.funcionarios_arquivos.findMany({
+      where: { funcionario_id },
+      orderBy: { criado_em: 'desc' },
+      select: { id: true, nome: true, mime: true, tamanho: true, url: true, criado_em: true },
+    })
+  }
+
+  async uploadArquivo(funcionario_id: number, file: Express.Multer.File) {
+    const funcionario = await this.prisma.funcionarios.findUnique({
+      where: { id: funcionario_id },
+      select: { id: true },
+    })
+    if (!funcionario) throw new NotFoundException('Funcionário não encontrado.')
+
+    const url = `/uploads/funcionarios/${file.filename}`
+
+    return this.prisma.funcionarios_arquivos.create({
+      data: {
+        funcionario_id,
+        nome: file.originalname,
+        arquivo_nome: file.filename,
+        mime: file.mimetype,
+        tamanho: file.size,
+        url,
+      },
+      select: { id: true, nome: true, mime: true, tamanho: true, url: true, criado_em: true },
+    })
+  }
+
+  async removerArquivo(id: number) {
+    const arq = await this.prisma.funcionarios_arquivos.findUnique({ where: { id } })
+    if (!arq) throw new NotFoundException('Arquivo não encontrado.')
+
+    const base = process.env.UPLOADS_FUNCIONARIOS_PATH || 'uploads/funcionarios'
+    const filePath = `${base}/${arq.arquivo_nome}`
+
+    try { fs.unlinkSync(filePath) } catch {}
+
+    await this.prisma.funcionarios_arquivos.delete({ where: { id } })
+    return { ok: true }
+  }
+
 }

@@ -11,7 +11,8 @@ export { UNIDADES_OPERACIONAIS } from './unidades-operacionais'
 export {RECEITA_OPERACIONAL} from './receita'
 export {PIPELINE_PLANO_CORTE} from './pipeline-plano-corte'
 export {TAXA_NOTA_FISCAL} from './taxa-nota-fiscal'
-export { COMISSOES } from './comissoes'
+export {COMISSOES} from './comissoes'
+export {FUNCIONARIOS_LOCAL_SETOR_FUNCAO} from './funcionarios'
 
 
 

@@ -53,10 +53,17 @@ export default defineConfig({
     sourcemap: true,
   },
 
-  server: {
+server: {
     port: 5173,
     fs: { allow: ['..'] },
     proxy: {
+      // Direciona para o Python (Analytics)
+      '/api/analytics': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false,
+      },
+      // Direciona para o Node (Geral)
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,

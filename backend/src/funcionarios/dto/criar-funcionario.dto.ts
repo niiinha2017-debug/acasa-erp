@@ -39,6 +39,10 @@ export class CriarFuncionarioDto {
   // Empresa
   @IsOptional()
   @IsString()
+  unidade?: string
+
+  @IsOptional()
+  @IsString()
   setor?: string
 
   @IsOptional()
@@ -138,11 +142,31 @@ export class CriarFuncionarioDto {
   @IsOptional()
   @IsString()
   horario_saida_2?: string
-
-  // Pagamento
+  
   @IsOptional()
   @IsString()
-  data_pagamento?: string
+  horario_sabado_entrada_1?: string
+
+  @IsOptional()
+  @IsString()
+  horario_sabado_saida_1?: string
+
+    // Carga horária
+  @IsOptional()
+  @IsNumber()
+  carga_horaria_dia?: number
+
+  @IsOptional()
+  @IsNumber()
+  carga_horaria_semana?: number
+
+
+
+  // Pagamento
+   @IsOptional()
+  @IsNumber()
+  dia_pagamento?: number
+
 
   @IsOptional()
   @IsString()

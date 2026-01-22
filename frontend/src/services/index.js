@@ -61,10 +61,13 @@ export const FornecedorService = {
 // --- SERVIÇO DE FUNCIONÁRIOS (SOMENTE ADMIN) ---
 export const FuncionarioService = {
   listar: () => api.get('/funcionarios'),
-  buscar: (id) => { if (!id) return Promise.reject(new Error('ID não fornecido'))
-     const cleanId = String(id).replace(/\D/g, '')
+
+  buscar: (id) => {
+    if (!id) return Promise.reject(new Error('ID não fornecido'))
+    const cleanId = String(id).replace(/\D/g, '')
     return api.get(`/funcionarios/${cleanId}`)
   },
+
   salvar: (id, dados) => {
     if (id && id !== 'novo') {
       const cleanId = String(id).replace(/\D/g, '')
@@ -72,11 +75,40 @@ export const FuncionarioService = {
     }
     return api.post('/funcionarios', dados)
   },
+
   remover: (id) => {
     const cleanId = String(id).replace(/\D/g, '')
     return api.delete(`/funcionarios/${cleanId}`)
   },
+
+  // ===== ARQUIVOS DO FUNCIONÁRIO =====
+
+  listarArquivos: (funcionarioId) => {
+    if (!funcionarioId) return Promise.reject(new Error('ID não fornecido'))
+    const cleanId = String(funcionarioId).replace(/\D/g, '')
+    return api.get(`/funcionarios/${cleanId}/arquivos`)
+  },
+
+  uploadArquivo: (funcionarioId, file) => {
+    if (!funcionarioId || !file)
+      return Promise.reject(new Error('Funcionário ou arquivo não informado'))
+
+    const cleanId = String(funcionarioId).replace(/\D/g, '')
+    const formData = new FormData()
+    formData.append('file', file)
+
+    return api.post(`/funcionarios/${cleanId}/arquivos`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
+  removerArquivo: (arquivoId) => {
+    if (!arquivoId) return Promise.reject(new Error('Arquivo não informado'))
+    const cleanId = String(arquivoId).replace(/\D/g, '')
+    return api.delete(`/funcionarios/arquivos/${cleanId}`)
+  },
 }
+
 
 
 export const OrcamentosService = {

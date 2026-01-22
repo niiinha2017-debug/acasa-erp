@@ -467,6 +467,7 @@ model funcionarios {
   // ======================
   // DADOS DA EMPRESA
   // ======================
+  unidade String? // FÁBRICA | LOJA
   setor  String?
   cargo  String?
   funcao String?
@@ -510,11 +511,21 @@ model funcionarios {
   horario_entrada_2 String?
   horario_saida_2   String?
 
+    // SABADO
+  horario_sabado_entrada_1 String?
+  horario_sabado_saida_1   String?
+
+  // ======================
+  // CARGA HORÁRIA
+  // ======================
+  carga_horaria_dia   Decimal? @db.Decimal(5, 2)
+  carga_horaria_semana Decimal? @db.Decimal(5, 2)
+
   // ======================
   // PAGAMENTO
   // ======================
   forma_pagamento String?
-  data_pagamento  DateTime?
+  dia_pagamento   Int?
   banco           String?
   agencia         String?
   conta           String?
@@ -539,11 +550,26 @@ model funcionarios {
   ponto_registros    ponto_registros[]
   ponto_convites ponto_convites[]
   ponto_justificativas ponto_justificativas[]
-
-  
+  funcionarios_arquivos funcionarios_arquivos[]
 
   @@map("funcionarios")
 }
+
+model funcionarios_arquivos {
+  id            Int      @id @default(autoincrement())
+  funcionario_id Int
+  nome          String
+  arquivo_nome  String   // nome salvo no disco (uuid.ext)
+  mime          String?
+  tamanho       Int?
+  url           String   // url pública: /uploads/funcionarios/<arquivo_nome>
+  criado_em     DateTime @default(now())
+
+  funcionario   funcionarios @relation(fields: [funcionario_id], references: [id], onDelete: Cascade)
+
+  @@index([funcionario_id])
+}
+
 
 model despesas {
   id Int @id @default(autoincrement())
