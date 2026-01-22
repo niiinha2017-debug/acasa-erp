@@ -1,18 +1,18 @@
 export const FUNCIONARIOS_LOCAL_SETOR_CARGO = {
-FÁBRICA: [
+  'FÁBRICA': [
     {
       setor: 'PRODUCAO',
-      cargo: ['MARCENEIRO', 'AUXILIAR_DE_MARCENEIRO', 'MONTADOR', 'AUXILIAR_DE_MONTADOR', 'PROJETISTA']
+      cargo: ['MARCENEIRO', 'AUXILIAR_DE_MARCENEIRO', 'MONTADOR', 'AUXILIAR_DE_MONTADOR', 'PROJETISTA'],
     },
     {
       setor: 'ADMINISTRATIVO',
-      cargo: ['ADMINISTRATIVO', 'ESTOQUISTA', 'AUXILIAR_DE_ESCRITORIO']
-    }
+      cargo: ['ADMINISTRATIVO', 'ESTOQUISTA', 'AUXILIAR_DE_ESCRITORIO'],
+    },
   ],
-  LOJA: [
+  'LOJA': [
     {
       setor: 'VENDAS',
-      cargo: ['VENDEDOR', 'AUXILIAR_DE_VENDAS', 'PROJETISTA']
-    }
-  ]
+      cargo: ['VENDEDOR', 'AUXILIAR_DE_VENDAS', 'PROJETISTA'],
+    },
+  ],
 }
