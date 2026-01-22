@@ -389,55 +389,86 @@
           </div>
         </section>
 
-        <!-- 06. Arquivos -->
-        <section class="grid grid-cols-12 gap-x-6 gap-y-6">
-          <div class="col-span-12 flex items-center gap-3 mb-2">
-            <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
-            <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
-              06. Arquivos e Documentos
-            </span>
-          </div>
+<!-- 06. Arquivos -->
+<section class="grid grid-cols-12 gap-x-6 gap-y-6">
+  <div class="col-span-12 flex items-center gap-3 mb-2">
+    <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
+    <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
+      06. Arquivos e Documentos
+    </span>
+  </div>
 
-          <div class="col-span-12 md:col-span-8">
-            <input
-              type="file"
-              class="w-full h-12 px-4 py-2 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 text-sm"
-              @change="(e) => (arquivoSelecionado.value = e.target.files?.[0] || null)"
-              :disabled="!isEditing"
-            />
-          </div>
+  <!-- Seletor bonito -->
+  <div class="col-span-12 md:col-span-8">
+    <!-- input escondido -->
+    <input
+      ref="fileInput"
+      type="file"
+      class="hidden"
+      @change="onFileChange"
+    />
 
-          <div class="col-span-12 md:col-span-4 flex items-end">
-            <Button
-              variant="primary"
-              type="button"
-              class="w-full !rounded-2xl h-12"
-              :loading="enviandoArquivo"
-              :disabled="!isEditing || !arquivoSelecionado.value"
-              @click="enviarArquivo"
-            >
-              Anexar Documento
-            </Button>
-          </div>
+    <div class="flex items-center gap-3">
+      <Button
+        variant="secondary"
+        type="button"
+        class="!rounded-2xl h-12 !px-6"
+        @click="abrirSeletorArquivo"
+      >
+        <i class="pi pi-upload mr-2" /> Escolher arquivo
+      </Button>
 
-          <div class="col-span-12 space-y-2">
-            <div v-for="a in arquivos" :key="a.id" class="flex items-center justify-between p-4 rounded-2xl bg-white border border-slate-100 shadow-sm">
-              <div class="min-w-0">
-                <div class="font-black text-slate-700 text-sm truncate">{{ a.nome }}</div>
-                <div class="text-xs font-bold text-slate-400 uppercase tracking-tighter">{{ a.mime }}</div>
-              </div>
+      <div class="h-12 flex-1 flex items-center px-4 rounded-2xl bg-white border border-slate-200 text-sm">
+        <span class="font-bold text-slate-700 truncate">
+          {{ arquivoSelecionado?.name || 'Nenhum arquivo selecionado' }}
+        </span>
+      </div>
+    </div>
+  </div>
 
-              <div class="flex gap-2">
-                <a :href="a.url" target="_blank" class="h-9 px-4 flex items-center rounded-xl bg-slate-50 border border-slate-200 text-[10px] font-black uppercase">
-                  Abrir
-                </a>
-                <Button variant="danger" size="sm" class="!rounded-xl h-9" type="button" @click="removerArquivo(a.id)">
-                  Excluir
-                </Button>
-              </div>
-            </div>
-          </div>
-        </section>
+  <!-- Botão anexar -->
+  <div class="col-span-12 md:col-span-4 flex items-end">
+    <Button
+      variant="primary"
+      type="button"
+      class="w-full !rounded-2xl h-12"
+      :loading="enviandoArquivo"
+      :disabled="!arquivoSelecionado || enviandoArquivo || salvando || loading"
+      @click="enviarArquivo"
+    >
+      Anexar Documento
+    </Button>
+  </div>
+
+  <!-- Lista -->
+  <div class="col-span-12 space-y-2">
+    <div
+      v-for="a in arquivos"
+      :key="a.id"
+      class="flex items-center justify-between p-4 rounded-2xl bg-white border border-slate-100 shadow-sm"
+    >
+      <div class="min-w-0">
+        <div class="font-black text-slate-700 text-sm truncate">{{ a.nome }}</div>
+        <div class="text-xs font-bold text-slate-400 uppercase tracking-tighter">{{ a.mime }}</div>
+      </div>
+
+      <div class="flex gap-2">
+        <a
+          :href="a.url"
+          target="_blank"
+          class="h-9 px-4 flex items-center rounded-xl bg-slate-50 border border-slate-200 text-[10px] font-black uppercase"
+        >
+          Abrir
+        </a>
+        <Button variant="danger" size="sm" class="!rounded-xl h-9" type="button" @click="removerArquivo(a.id)">
+          Excluir
+        </Button>
+      </div>
+    </div>
+  </div>
+</section>
+
+        <div class="h-px bg-slate-100/50" />
 
         <!-- Footer -->
         <div class="flex items-center justify-between gap-3 pt-8 border-t border-slate-100">
@@ -485,6 +516,8 @@ const arquivos = ref([])
 const arquivosLoading = ref(false)
 const arquivoSelecionado = ref(null)
 const enviandoArquivo = ref(false)
+const fileInput = ref(null)
+
 
 // ===== Form =====
 function novoForm() {
@@ -701,6 +734,43 @@ watch(
   }
 )
 
+async function garantirIdParaUpload() {
+  if (isEditing.value && id.value) return Number(id.value)
+
+  if (!form.value.nome || String(form.value.cpf || '').length < 11) {
+    alert('Preencha Nome e CPF corretamente antes de anexar.')
+    throw new Error('Sem nome/cpf')
+  }
+  if (!form.value.unidade || !form.value.setor || !form.value.funcao) {
+    alert('Preencha Unidade, Setor e Função antes de anexar.')
+    throw new Error('Sem unidade/setor/funcao')
+  }
+
+  recalcularCustoHora()
+  const payload = montarPayload()
+
+  const { data } = await FuncionarioService.salvar(null, payload)
+
+  const newId = data?.id
+  if (!newId) throw new Error('Backend não retornou o id do funcionário.')
+
+  await router.replace(`/funcionarios/${newId}`)
+
+  // ✅ garante estado consistente (vira edição + habilita carregarArquivos)
+  await carregar()
+
+  return Number(newId)
+}
+
+function abrirSeletorArquivo() {
+  fileInput.value?.click()
+}
+
+function onFileChange(e) {
+  arquivoSelecionado.value = e?.target?.files?.[0] || null
+}
+
+
 // ===== Tempo de Serviço =====
 const tempoServico = computed(() => {
   if (!form.value.admissao) return '---'
@@ -779,18 +849,25 @@ async function carregarArquivos() {
 }
 
 async function enviarArquivo() {
-  if (!arquivoSelecionado.value || !id.value) return
+  if (!arquivoSelecionado.value) return
+
   enviandoArquivo.value = true
   try {
-    await FuncionarioService.uploadArquivo(id.value, arquivoSelecionado.value)
-    arquivoSelecionado.value = null
-    await carregarArquivos()
+    const funcionarioId = await garantirIdParaUpload()
+
+    await FuncionarioService.uploadArquivo(funcionarioId, arquivoSelecionado.value)
+
+arquivoSelecionado.value = null
+if (fileInput.value) fileInput.value.value = ''
+await carregarArquivos()
+
   } catch (err) {
-    alert(err?.response?.data?.message || 'Erro no upload')
+    alert(err?.response?.data?.message || err?.message || 'Erro no upload')
   } finally {
     enviandoArquivo.value = false
   }
 }
+
 
 async function removerArquivo(fileId) {
   if (!confirm('Deseja excluir este arquivo?')) return
@@ -874,7 +951,6 @@ async function salvar() {
     return
   }
 
-  // Validação de unidade/setor/função
   if (!form.value.unidade || !form.value.setor || !form.value.funcao) {
     alert('Preencha Unidade, Setor e Função corretamente.')
     return
@@ -884,7 +960,20 @@ async function salvar() {
   try {
     recalcularCustoHora()
     const payload = montarPayload()
-    await FuncionarioService.salvar(isEditing.value ? id.value : null, payload)
+
+    const { data } = await FuncionarioService.salvar(isEditing.value ? id.value : null, payload)
+
+    // ✅ se era novo: vira edição e fica na tela
+    if (!isEditing.value) {
+      const newId = data?.id
+      if (newId) {
+        await router.replace(`/funcionarios/${newId}`)
+        await carregar()
+        return
+      }
+    }
+
+    // edição: mantém seu padrão atual
     router.push('/funcionarios')
   } catch (err) {
     alert(err?.response?.data?.message || 'Erro ao salvar')
@@ -892,6 +981,7 @@ async function salvar() {
     salvando.value = false
   }
 }
+
 
 onMounted(carregar)
 
