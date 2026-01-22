@@ -119,11 +119,6 @@ const perms = [
   { chave: 'compras.editar', descricao: 'Editar compras' },
   { chave: 'compras.excluir', descricao: 'Excluir compras' },
 
-  { chave: 'vendas.ver', descricao: 'Visualizar vendas' },
-  { chave: 'vendas.criar', descricao: 'Criar vendas' },
-  { chave: 'vendas.editar', descricao: 'Editar vendas / enviar para produção' },
-  { chave: 'vendas.excluir', descricao: 'Excluir vendas' },
-
 ]
 
 

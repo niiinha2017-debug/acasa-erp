@@ -468,9 +468,9 @@ model funcionarios {
   // DADOS DA EMPRESA
   // ======================
   unidade String? // FÁBRICA | LOJA
-  setor  String?
-  cargo  String?
-  funcao String?
+  setor   String?
+  cargo   String?
+  funcao  String?
 
   // ======================
   // ENDEREÇO
@@ -511,14 +511,14 @@ model funcionarios {
   horario_entrada_2 String?
   horario_saida_2   String?
 
-    // SABADO
+  // SABADO
   horario_sabado_entrada_1 String?
   horario_sabado_saida_1   String?
 
   // ======================
   // CARGA HORÁRIA
   // ======================
-  carga_horaria_dia   Decimal? @db.Decimal(5, 2)
+  carga_horaria_dia    Decimal? @db.Decimal(5, 2)
   carga_horaria_semana Decimal? @db.Decimal(5, 2)
 
   // ======================
@@ -531,8 +531,7 @@ model funcionarios {
   conta           String?
   pix_tipo_chave  String?
   pix_chave       String?
-  status String @default("ATIVO") @db.VarChar(20)
-
+  status          String  @default("ATIVO") @db.VarChar(20)
 
   // ======================
   // PRODUÇÃO / DESPESAS
@@ -546,30 +545,30 @@ model funcionarios {
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
-  ponto_dispositivos ponto_dispositivos[]
-  ponto_registros    ponto_registros[]
-  ponto_convites ponto_convites[]
-  ponto_justificativas ponto_justificativas[]
+  ponto_dispositivos    ponto_dispositivos[]
+  ponto_registros       ponto_registros[]
+  ponto_convites        ponto_convites[]
+  ponto_justificativas  ponto_justificativas[]
   funcionarios_arquivos funcionarios_arquivos[]
 
   @@map("funcionarios")
 }
 
 model funcionarios_arquivos {
-  id            Int      @id @default(autoincrement())
+  id             Int      @id @default(autoincrement())
   funcionario_id Int
-  nome          String
-  arquivo_nome  String   // nome salvo no disco (uuid.ext)
-  mime          String?
-  tamanho       Int?
-  url           String   // url pública: /uploads/funcionarios/<arquivo_nome>
-  criado_em     DateTime @default(now())
+  nome           String
+  arquivo_nome   String // nome salvo no disco (uuid.ext)
+  mime           String?
+  tamanho        Int?
+  url            String // url pública: /uploads/funcionarios/<arquivo_nome>
+  criado_em      DateTime @default(now())
 
-  funcionario   funcionarios @relation(fields: [funcionario_id], references: [id], onDelete: Cascade)
+  funcionario funcionarios @relation(fields: [funcionario_id], references: [id], onDelete: Cascade)
 
   @@index([funcionario_id])
+  @@map("funcionarios_arquivos")
 }
-
 
 model despesas {
   id Int @id @default(autoincrement())
@@ -623,9 +622,8 @@ model producao_projetos {
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
-  tarefas producao_tarefas[]
+  tarefas  producao_tarefas[]
   arquivos producao_arquivos[]
-
 
   @@unique([origem_tipo, origem_id])
   @@index([origem_tipo])
@@ -672,7 +670,7 @@ model producao_arquivos {
   projeto_id Int
   projeto    producao_projetos @relation(fields: [projeto_id], references: [id], onDelete: Cascade)
 
-  tipo String // PLANTA | PROJETO_TECNICO | PLANO_CORTE | OUTRO
+  tipo          String // PLANTA | PROJETO_TECNICO | PLANO_CORTE | OUTRO
   nome_original String
   nome_arquivo  String
   mime_type     String?
@@ -684,7 +682,6 @@ model producao_arquivos {
   @@index([tipo])
   @@map("producao_arquivos")
 }
-
 
 model contas_pagar {
   id Int @id @default(autoincrement())
@@ -949,7 +946,6 @@ model obras {
   @@map("obras")
 }
 
-
 enum PontoTipoRegistro {
   ENTRADA
   SAIDA
@@ -972,16 +968,16 @@ model ponto_dispositivos {
   plataforma  String? @db.VarChar(20)
 
   // ✅ NOVOS (registro do dispositivo)
-  user_agent   String?  @db.VarChar(255)
-  language     String?  @db.VarChar(20)
-  timezone     String?  @db.VarChar(80)
-  screen       String?  @db.VarChar(20)
-  pixel_ratio  Float?
-  standalone   Boolean? @default(false)
+  user_agent  String?  @db.VarChar(255)
+  language    String?  @db.VarChar(20)
+  timezone    String?  @db.VarChar(80)
+  screen      String?  @db.VarChar(20)
+  pixel_ratio Float?
+  standalone  Boolean? @default(false)
 
   token_hash String @unique @db.VarChar(255)
 
-  status String @default("ATIVO") @db.VarChar(20)
+  status        String    @default("ATIVO") @db.VarChar(20)
   ultimo_uso_em DateTime?
 
   criado_em     DateTime @default(now())
@@ -991,11 +987,8 @@ model ponto_dispositivos {
 
   @@index([funcionario_id])
   @@index([status])
-
   @@map("ponto_dispositivos")
 }
-
-
 
 model ponto_registros {
   id Int @id @default(autoincrement())
@@ -1007,7 +1000,7 @@ model ponto_registros {
   dispositivo    ponto_dispositivos? @relation(fields: [dispositivo_id], references: [id], onDelete: SetNull)
 
   tipo   PontoTipoRegistro
-  origem PontoOrigem @default(PWA)
+  origem PontoOrigem       @default(PWA)
 
   data_hora DateTime @default(now())
 
@@ -1022,10 +1015,10 @@ model ponto_registros {
   cidade String? @db.VarChar(120)
   estado String? @db.VarChar(2) // UF
 
-  ip        String? @db.VarChar(45)
+  ip         String? @db.VarChar(45)
   user_agent String? @db.VarChar(255)
 
-  status     String @default("ATIVO") @db.VarChar(20)
+  status     String  @default("ATIVO") @db.VarChar(20)
   observacao String? @db.VarChar(255)
 
   criado_em DateTime @default(now())
@@ -1034,18 +1027,16 @@ model ponto_registros {
   @@index([data_hora])
   @@index([tipo])
   @@index([dispositivo_id])
-
   @@map("ponto_registros")
 }
 
-
 model ponto_convites {
-  id             Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
   funcionario_id Int
   funcionario    funcionarios @relation(fields: [funcionario_id], references: [id], onDelete: Cascade)
 
-  code      String   @unique
+  code      String    @unique
   expira_em DateTime
   usado_em  DateTime?
 
@@ -1078,10 +1069,8 @@ model ponto_justificativas {
   @@index([funcionario_id])
   @@index([data])
   @@index([tipo])
-
   @@map("ponto_justificativas")
 }
-
 
 model ponto_justificativas_arquivos {
   id Int @id @default(autoincrement())
@@ -1089,7 +1078,7 @@ model ponto_justificativas_arquivos {
   justificativa_id Int
   justificativa    ponto_justificativas @relation(fields: [justificativa_id], references: [id], onDelete: Cascade)
 
-  arquivo_nome String @db.VarChar(180)
+  arquivo_nome String  @db.VarChar(180)
   mime_type    String? @db.VarChar(80)
   tamanho      Int?
 
@@ -1098,8 +1087,5 @@ model ponto_justificativas_arquivos {
   criado_em DateTime @default(now())
 
   @@index([justificativa_id])
-
   @@map("ponto_justificativas_arquivos")
 }
-
-

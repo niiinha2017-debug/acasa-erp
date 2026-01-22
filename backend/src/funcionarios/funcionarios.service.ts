@@ -177,18 +177,24 @@ if (mexeuEmRegistro || mexeuEmAdmissao || mexeuEmDemissao) {
     return { ok: true }
   }
 
-  private normalizarDatas(dto: any) {
-    const data = { ...dto }
-    const camposData = ['data_nascimento', 'admissao', 'demissao']
+private normalizarDatas(dto: any) {
+  const data = { ...dto }
+  const camposData = ['data_nascimento', 'admissao', 'demissao']
 
-    for (const campo of camposData) {
-      if (Object.prototype.hasOwnProperty.call(data, campo)) {
-        data[campo] = data[campo] ? new Date(data[campo]) : null
+  for (const campo of camposData) {
+    if (Object.prototype.hasOwnProperty.call(data, campo)) {
+      const v = data[campo]
+      if (!v) {
+        data[campo] = null
+      } else {
+        const d = new Date(v)
+        data[campo] = isNaN(d.getTime()) ? null : d
       }
     }
-
-    return data
   }
+
+  return data
+}
 
     async listarArquivos(funcionario_id: number) {
     return this.prisma.funcionarios_arquivos.findMany({
@@ -232,5 +238,4 @@ if (mexeuEmRegistro || mexeuEmAdmissao || mexeuEmDemissao) {
     await this.prisma.funcionarios_arquivos.delete({ where: { id } })
     return { ok: true }
   }
-
 }

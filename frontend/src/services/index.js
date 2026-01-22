@@ -60,7 +60,7 @@ export const FornecedorService = {
 
 // --- SERVIÇO DE FUNCIONÁRIOS (SOMENTE ADMIN) ---
 export const FuncionarioService = {
-  listar: () => api.get('/funcionarios'),
+  listar: async () => (await api.get('/funcionarios')).data,
 
   buscar: (id) => {
     if (!id) return Promise.reject(new Error('ID não fornecido'))
@@ -68,13 +68,16 @@ export const FuncionarioService = {
     return api.get(`/funcionarios/${cleanId}`)
   },
 
-  salvar: (id, dados) => {
-    if (id && id !== 'novo') {
-      const cleanId = String(id).replace(/\D/g, '')
-      return api.put(`/funcionarios/${cleanId}`, dados)
-    }
-    return api.post('/funcionarios', dados)
-  },
+salvar: (id, dados) => {
+  if (!dados) return Promise.reject(new Error('Dados não informados'))
+
+  if (id && id !== 'novo') {
+    const cleanId = String(id).replace(/\D/g, '')
+    return api.put(`/funcionarios/${cleanId}`, dados)
+  }
+  return api.post('/funcionarios', dados)
+},
+
 
   remover: (id) => {
     const cleanId = String(id).replace(/\D/g, '')
