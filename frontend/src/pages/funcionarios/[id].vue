@@ -102,13 +102,13 @@
               Função *
             </label>
             <select
-              v-model="form.funcao"
+              v-model="form.cargo"
               class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm shadow-sm"
               :disabled="!form.unidade || !form.setor"
               required
             >
               <option value="">SELECIONE...</option>
-              <option v-for="o in funcaoOptions" :key="o.value" :value="o.value">
+              <option v-for="o in cargoOptions" :key="o.value" :value="o.value">
                 {{ o.label }}
               </option>
             </select>
@@ -496,7 +496,7 @@ import { buscarCep, calcularCustoHora } from '@/utils/utils'
 import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
 import { upper, raw } from '@/utils/text'
 
-import { FUNCIONARIOS_LOCAL_SETOR_FUNCAO } from '@/constantes'
+import { FUNCIONARIOS_LOCAL_SETOR_CARGO } from '@/constantes'
 
 const router = useRouter()
 const route = useRoute()
@@ -535,7 +535,6 @@ function novoForm() {
     unidade: '',
     setor: '',
     cargo: '',
-    funcao: '',
 
     cep: '',
     endereco: '',
@@ -741,9 +740,9 @@ async function garantirIdParaUpload() {
     alert('Preencha Nome e CPF corretamente antes de anexar.')
     throw new Error('Sem nome/cpf')
   }
-  if (!form.value.unidade || !form.value.setor || !form.value.funcao) {
-    alert('Preencha Unidade, Setor e Função antes de anexar.')
-    throw new Error('Sem unidade/setor/funcao')
+  if (!form.value.unidade || !form.value.setor || !form.value.cargo) {
+    alert('Preencha Unidade, Setor e Cargo antes de anexar.')
+    throw new Error('Sem unidade/setor/cargo')
   }
 
   recalcularCustoHora()
@@ -788,20 +787,20 @@ const tempoServico = computed(() => {
   return anos > 0 ? `${anos} anos e ${meses} meses` : `${meses} meses`
 })
 
-// ===== Unidade / Setor / Função =====
+// ===== Unidade / Setor / Cargo =====
 const setorOptions = computed(() => {
-  const grupos = FUNCIONARIOS_LOCAL_SETOR_FUNCAO?.[form.value.unidade] || []
+  const grupos = FUNCIONARIOS_LOCAL_SETOR_CARGO?.[form.value.unidade] || []
   return grupos.map((g) => ({
     label: String(g.setor || '').replaceAll('_', ' '),
     value: g.setor,
   }))
 })
 
-const funcaoOptions = computed(() => {
-  const grupos = FUNCIONARIOS_LOCAL_SETOR_FUNCAO?.[form.value.unidade] || []
+const cargoOptions = computed(() => {
+  const grupos = FUNCIONARIOS_LOCAL_SETOR_CARGO?.[form.value.unidade] || []
   const grupo = grupos.find((g) => g.setor === form.value.setor)
-  const funcoes = grupo?.funcoes || []
-  return funcoes.map((v) => ({
+  const cargos = grupo?.cargo || []
+  return cargos.map((v) => ({
     label: String(v || '').replaceAll('_', ' '),
     value: v,
   }))
@@ -811,14 +810,14 @@ watch(
   () => form.value.unidade,
   () => {
     form.value.setor = ''
-    form.value.funcao = ''
+    form.value.cargo = ''
   },
 )
 
 watch(
   () => form.value.setor,
   () => {
-    form.value.funcao = ''
+    form.value.cargo = ''
   },
 )
 
@@ -951,7 +950,7 @@ async function salvar() {
     return
   }
 
-  if (!form.value.unidade || !form.value.setor || !form.value.funcao) {
+  if (!form.value.unidade || !form.value.setor || !form.value.cargo) {
     alert('Preencha Unidade, Setor e Função corretamente.')
     return
   }

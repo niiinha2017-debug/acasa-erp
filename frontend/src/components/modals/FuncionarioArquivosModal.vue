@@ -97,14 +97,14 @@
               </div>
 
               <div class="flex gap-2">
-<a
-  :href="a.url"
-  target="_blank"
-  rel="noopener noreferrer"
+<button
+  type="button"
   class="h-9 px-4 flex items-center rounded-xl bg-slate-50 border border-slate-200 text-[10px] font-black uppercase"
+  @click="abrirArquivo(a)"
 >
   Abrir
-</a>
+</button>
+
 
 
                 <Button
@@ -182,6 +182,21 @@ async function carregarArquivos() {
     loading.value = false
   }
 }
+
+async function abrirArquivo(a) {
+  const url = a?.url
+  if (!url) return alert('Arquivo sem URL')
+
+  try {
+    const res = await fetch(url, { method: 'HEAD', cache: 'no-store' })
+    if (!res.ok) throw new Error(String(res.status))
+    window.open(url, '_blank', 'noopener,noreferrer')
+  } catch {
+    alert('Arquivo não encontrado (foi removido).')
+    await carregarArquivos()
+  }
+}
+
 
 async function enviarArquivo() {
   if (!props.funcionarioId || !arquivoSelecionado.value) return

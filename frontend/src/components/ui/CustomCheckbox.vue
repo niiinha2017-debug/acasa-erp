@@ -16,12 +16,14 @@
         @change="$emit('update:modelValue', $event.target.checked)"
       />
       
-      <div 
-        class="w-full h-full bg-[var(--bg-page)] border border-[var(--border-ui)] rounded-xl flex items-center justify-center transition-all duration-300
-               peer-checked:bg-brand-primary peer-checked:border-brand-primary 
-               peer-checked:shadow-[0_4px_12px_rgba(58,120,168,0.3)]
-               peer-focus:ring-4 peer-focus:ring-brand-primary/10"
-      >
+<div
+  class="w-full h-full bg-slate-100 border border-slate-300 rounded-xl flex items-center justify-center transition-all duration-300
+         hover:bg-slate-200
+         peer-checked:bg-brand-primary peer-checked:border-brand-primary
+         peer-checked:shadow-[0_4px_12px_rgba(58,120,168,0.3)]
+         peer-focus:ring-4 peer-focus:ring-brand-primary/10"
+>
+
         <svg 
           viewBox="0 0 24 24" 
           class="w-3.5 h-3.5 fill-none stroke-white stroke-[3.5] transition-all duration-300 scale-0 peer-checked:scale-100"
