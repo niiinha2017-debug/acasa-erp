@@ -56,163 +56,326 @@
         <div class="h-px bg-slate-100/50" />
 
         <!-- 03. Contrato e Jornada -->
-        <section class="grid grid-cols-12 gap-x-6 gap-y-8">
-          <div class="col-span-12 flex items-center gap-3 mb-2">
-            <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
-            <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
-              03. Contrato e Jornada
-            </span>
-          </div>
+<!-- 03. Contrato e Jornada -->
+<section class="grid grid-cols-12 gap-x-6 gap-y-8">
+  <div class="col-span-12 flex items-center gap-3 mb-2">
+    <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
+    <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
+      03. Contrato e Jornada
+    </span>
+  </div>
 
-          <!-- Unidade / Setor / Função -->
-          <div class="col-span-12 md:col-span-4">
-            <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">Unidade</label>
-            <select
-              v-model="form.unidade"
-              class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm shadow-sm"
-            >
-              <option value="">SELECIONE...</option>
-              <option value="FABRICA">FÁBRICA</option>
-              <option value="LOJA">LOJA</option>
-            </select>
-          </div>
+  <!-- Unidade / Setor / Função -->
+  <div class="col-span-12 md:col-span-4">
+    <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
+      Unidade *
+    </label>
+    <select
+      v-model="form.unidade"
+      class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm shadow-sm"
+      required
+    >
+      <option value="">SELECIONE...</option>
+      <option value="FABRICA">FÁBRICA</option>
+      <option value="LOJA">LOJA</option>
+    </select>
+  </div>
 
-          <div class="col-span-12 md:col-span-4">
-            <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">Setor</label>
-            <select
-              v-model="form.setor"
-              class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm shadow-sm"
-              :disabled="!form.unidade"
-            >
-              <option value="">SELECIONE...</option>
-              <option v-for="o in setorOptions" :key="o.value" :value="o.value">
-                {{ o.label }}
-              </option>
-            </select>
-          </div>
+  <div class="col-span-12 md:col-span-4">
+    <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
+      Setor *
+    </label>
+    <select
+      v-model="form.setor"
+      class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm shadow-sm"
+      :disabled="!form.unidade"
+      required
+    >
+      <option value="">SELECIONE...</option>
+      <option v-for="o in setorOptions" :key="o.value" :value="o.value">
+        {{ o.label }}
+      </option>
+    </select>
+  </div>
 
-          <div class="col-span-12 md:col-span-4">
-            <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">Função</label>
-            <select
-              v-model="form.funcao"
-              class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm shadow-sm"
-              :disabled="!form.unidade || !form.setor"
-            >
-              <option value="">SELECIONE...</option>
-              <option v-for="o in funcaoOptions" :key="o.value" :value="o.value">
-                {{ o.label }}
-              </option>
-            </select>
-          </div>
+  <div class="col-span-12 md:col-span-4">
+    <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
+      Função *
+    </label>
+    <select
+      v-model="form.funcao"
+      class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm shadow-sm"
+      :disabled="!form.unidade || !form.setor"
+      required
+    >
+      <option value="">SELECIONE...</option>
+      <option v-for="o in funcaoOptions" :key="o.value" :value="o.value">
+        {{ o.label }}
+      </option>
+    </select>
+  </div>
 
-          <!-- Registro / datas -->
-          <Input class="col-span-12 md:col-span-4" v-model="form.registro" label="Nº Registro" />
-          <Input class="col-span-12 md:col-span-4" v-model="form.admissao" label="Data de Admissão" type="date" />
-          <Input class="col-span-12 md:col-span-4" v-model="form.demissao" label="Data de Demissão" type="date" />
+  <!-- Registro e Datas -->
+  <div class="col-span-12 grid grid-cols-1 md:grid-cols-4 gap-4">
+    <Input class="col-span-1" v-model="form.registro" label="Nº Registro" />
+    <Input class="col-span-1" v-model="form.admissao" label="Data de Admissão" type="date" required />
+    <Input class="col-span-1" v-model="form.demissao" label="Data de Demissão" type="date" />
+    
+    <div class="col-span-1">
+      <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
+        Tempo de Casa
+      </label>
+      <div class="h-12 flex items-center px-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-500 font-bold text-sm italic">
+        {{ tempoServico }}
+      </div>
+    </div>
+  </div>
 
-          <div class="col-span-12 md:col-span-4">
-            <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">Tempo de Casa</label>
-            <div class="h-12 flex items-center px-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-500 font-bold text-sm italic">
-              {{ tempoServico }}
-            </div>
-          </div>
+  <!-- CARGA HORÁRIA CALCULADA AUTOMATICAMENTE -->
+  <div class="col-span-12 bg-gradient-to-r from-slate-50 to-blue-50/30 p-6 rounded-[2rem] border border-slate-200">
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <div class="text-sm font-black text-slate-700 mb-1">Carga Horária Calculada</div>
+        <div class="text-xs text-slate-500">Valores atualizados automaticamente conforme os horários</div>
+      </div>
+      <div class="flex gap-3">
+        <div class="bg-blue-50 px-4 py-2 rounded-xl border border-blue-100">
+          <div class="text-[10px] font-black text-blue-600 uppercase mb-1">SEMANAL</div>
+          <div class="text-lg font-black text-slate-800">{{ Number(cargaHorariaSemanal).toFixed(1) }}h</div>
+        </div>
+        <div class="bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100">
+          <div class="text-[10px] font-black text-emerald-600 uppercase mb-1">MENSAL</div>
+          <div class="text-lg font-black text-slate-800">{{ Number(cargaHorariaMensal).toFixed(1) }}h</div>
+        </div>
+      </div>
+    </div>
 
-          <!-- Horários (CARGA NA MESMA LINHA DAS HORAS) -->
-          <div class="col-span-12 bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100/50">
-            <div class="flex items-center justify-end mb-4">
-              <div class="bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
-                <span class="text-[9px] font-black text-emerald-600 uppercase">
-                  Carga: {{ Number(cargaHorariaSemanal || 0).toFixed(1) }}h/sem
-                </span>
-              </div>
-            </div>
+    <!-- Horários de Segunda a Sexta -->
+    <div class="mb-6">
+      <div class="flex items-center gap-2 mb-4">
+        <div class="w-2 h-2 bg-slate-400 rounded-full"></div>
+        <span class="text-xs font-black uppercase text-slate-500">SEGUNDA A SEXTA</span>
+        <span class="text-xs text-slate-400 ml-auto">{{ Number(calcularHorasDia()).toFixed(1) }}h/dia</span>
+      </div>
+      
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Input 
+          v-model="form.horario_entrada_1" 
+          label="Entrada 1" 
+          type="time" 
+          @change="atualizarCargaHoraria"
+        />
+        <Input 
+          v-model="form.horario_saida_1" 
+          label="Saída 1" 
+          type="time" 
+          @change="atualizarCargaHoraria"
+        />
+        <Input 
+          v-model="form.horario_entrada_2" 
+          label="Entrada 2" 
+          type="time" 
+          @change="atualizarCargaHoraria"
+        />
+        <Input 
+          v-model="form.horario_saida_2" 
+          label="Saída 2" 
+          type="time" 
+          @change="atualizarCargaHoraria"
+        />
+      </div>
+    </div>
 
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Input v-model="form.horario_entrada_1" label="Entrada 1" type="time" />
-              <Input v-model="form.horario_saida_1" label="Saída 1" type="time" />
-              <Input v-model="form.horario_entrada_2" label="Entrada 2" type="time" />
-              <Input v-model="form.horario_saida_2" label="Saída 2" type="time" />
-            </div>
-          </div>
+    <!-- Horário de Sábado -->
+    <div>
+      <div class="flex items-center gap-2 mb-4">
+        <div class="w-2 h-2 bg-amber-400 rounded-full"></div>
+        <span class="text-xs font-black uppercase text-slate-500">SÁBADO</span>
+        <span class="text-xs text-slate-400 ml-auto">{{ Number(calcularHorasSabado()).toFixed(1) }}h</span>
+      </div>
+      
+      <div class="grid grid-cols-2 gap-4">
+        <Input 
+          v-model="form.horario_sabado_entrada_1" 
+          label="Sábado - Entrada" 
+          type="time" 
+          @change="atualizarCargaHoraria"
+        />
+        <Input 
+          v-model="form.horario_sabado_saida_1" 
+          label="Sábado - Saída" 
+          type="time" 
+          @change="atualizarCargaHoraria"
+        />
+      </div>
+    </div>
+  </div>
 
-          <div class="col-span-12 bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100/50">
-            <div class="grid grid-cols-2 gap-4">
-              <Input v-model="form.horario_sabado_entrada_1" label="Sábado - Entrada" type="time" />
-              <Input v-model="form.horario_sabado_saida_1" label="Sábado - Saída" type="time" />
-            </div>
-          </div>
-        </section>
+  <!-- Resumo da Jornada -->
+  <div class="col-span-12 bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="text-center">
+        <div class="text-[10px] font-black uppercase text-slate-500 mb-1">HORAS/DIA</div>
+        <div class="text-xl font-black text-slate-800">{{ Number(horasDiariasMedias).toFixed(1) }}h</div>
+      </div>
+      <div class="text-center">
+        <div class="text-[10px] font-black uppercase text-slate-500 mb-1">DIAS/SEMANA</div>
+        <div class="text-xl font-black text-slate-800">{{ form.horario_sabado_entrada_1 ? '6' : '5' }}</div>
+      </div>
+      <div class="text-center">
+        <div class="text-[10px] font-black uppercase text-slate-500 mb-1">HORAS/SEMANA</div>
+        <div class="text-xl font-black text-slate-800">{{ Number(cargaHorariaSemanal).toFixed(1) }}h</div>
+      </div>
+      <div class="text-center">
+        <div class="text-[10px] font-black uppercase text-slate-500 mb-1">SEMANAS/MÊS</div>
+        <div class="text-xl font-black text-slate-800">4.5</div>
+      </div>
+    </div>
+  </div>
+</section>
 
         <div class="h-px bg-slate-100/50" />
 
-        <!-- 04. Financeiro e Pagamento -->
-        <section class="grid grid-cols-12 gap-x-6 gap-y-8">
-          <div class="col-span-12 flex items-center gap-3 mb-2">
-            <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
-            <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
-              04. Financeiro e Pagamento
-            </span>
-          </div>
+       <!-- 04. Financeiro e Pagamento -->
+<section class="grid grid-cols-12 gap-x-6 gap-y-8">
+  <div class="col-span-12 flex items-center gap-3 mb-2">
+    <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
+    <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
+      04. Financeiro e Pagamento
+    </span>
+  </div>
 
-          <Input class="col-span-12 md:col-span-3" v-model="salarioBaseUi" label="Salário Base (R$)" :forceUpper="false" />
-          <Input class="col-span-12 md:col-span-3" v-model="salarioAdicionalUi" label="Adicional / Gratificação" :forceUpper="false" />
+  <!-- Salários -->
+  <div class="col-span-12 md:col-span-6 grid grid-cols-2 gap-4">
+    <div>
+      <Input 
+        v-model="salarioBaseUi" 
+        label="Salário Base (R$)" 
+        :forceUpper="false"
+        @blur="formatarSalarioBase"
+        placeholder="0,00"
+      />
+      <div class="text-xs text-slate-400 mt-1">Remuneração mensal fixa</div>
+    </div>
+    <div>
+      <Input 
+        v-model="salarioAdicionalUi" 
+        label="Adicional / Gratificação" 
+        :forceUpper="false"
+        @blur="formatarSalarioAdicional"
+        placeholder="0,00"
+      />
+      <div class="text-xs text-slate-400 mt-1">Bonificações extras</div>
+    </div>
+  </div>
 
-          <div class="col-span-12 md:col-span-3">
-            <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">Dia Pagto</label>
-            <select v-model="form.dia_pagamento" class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm">
-              <option :value="5">DIA 05</option>
-              <option :value="10">DIA 10</option>
-            </select>
-          </div>
+  <!-- Cálculos Automáticos -->
+  <div class="col-span-12 md:col-span-6 grid grid-cols-2 gap-4">
+    <div>
+      <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
+        Dia Pagamento
+      </label>
+      <select v-model="form.dia_pagamento" 
+        class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm">
+        <option :value="5">DIA 05</option>
+        <option :value="10">DIA 10</option>
+        <option :value="15">DIA 15</option>
+        <option :value="20">DIA 20</option>
+      </select>
+    </div>
+    
+    <div>
+      <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
+        Custo Hora (DSR)
+      </label>
+      <div class="h-12 flex items-center justify-between px-4 rounded-2xl bg-slate-100 border border-slate-200">
+        <span class="text-slate-900 font-black text-sm">
+          {{ custoHoraExibicao }}
+        </span>
+        <button 
+          type="button"
+          @click="recalcularCustoHora"
+          class="text-xs font-black text-blue-600 hover:text-blue-800"
+          title="Recalcular"
+        >
+          <i class="pi pi-refresh"></i>
+        </button>
+      </div>
+      <div class="text-xs text-slate-400 mt-1">Baseado na carga horária</div>
+    </div>
+  </div>
 
-          <div class="col-span-12 md:col-span-3">
-            <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">Custo Hora (DSR)</label>
-            <div class="h-12 flex items-center px-4 rounded-2xl bg-slate-100 border border-slate-200 text-slate-900 font-black text-sm">
-              {{ custoHoraExibicao }}
-            </div>
-          </div>
+  <!-- Forma de Pagamento -->
+  <div class="col-span-12 grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+    <div>
+      <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
+        Forma de Pagamento
+      </label>
+      <select v-model="form.forma_pagamento" 
+        class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm">
+        <option value="DINHEIRO">DINHEIRO</option>
+        <option value="PIX">PIX</option>
+        <option value="TRANSFERENCIA">TRANSFERÊNCIA</option>
+        <option value="DEPOSITO">DEPÓSITO</option>
+      </select>
+    </div>
+    
+    <Input class="col-span-2" v-model="form.banco" label="Banco" placeholder="EX: ITAÚ, NUBANK, CAIXA..." />
+  </div>
 
-          <div class="col-span-12 md:col-span-4">
-            <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">Forma de Pagamento</label>
-            <select v-model="form.forma_pagamento" class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm">
-              <option value="DINHEIRO">DINHEIRO</option>
-              <option value="PIX">PIX</option>
-              <option value="TRANSFERENCIA">TRANSFERÊNCIA</option>
-            </select>
-          </div>
-
-          <Input class="col-span-12 md:col-span-8" v-model="form.banco" label="Banco" placeholder="EX: ITAÚ, NUBANK..." />
-          <Input class="col-span-12 md:col-span-3" v-model="form.agencia" label="Agência" />
-          <Input class="col-span-12 md:col-span-3" v-model="form.conta" label="Conta" />
-          <Input class="col-span-12 md:col-span-3" v-model="form.pix_tipo_chave" label="Tipo PIX" />
-          <Input class="col-span-12 md:col-span-3" v-model="form.pix_chave" label="Chave PIX" />
-        </section>
-
+  <!-- Dados Bancários (condicional) -->
+  <div v-if="form.forma_pagamento !== 'DINHEIRO'" class="col-span-12 grid grid-cols-1 md:grid-cols-3 gap-4">
+    <Input v-model="form.agencia" label="Agência" />
+    <Input v-model="form.conta" label="Conta" />
+    <Input v-model="form.pix_tipo_chave" label="Tipo Chave" placeholder="CPF, EMAIL, CELULAR..." />
+  </div>
+  
+  <!-- Chave PIX (condicional) -->
+  <div v-if="form.forma_pagamento === 'PIX'" class="col-span-12">
+    <Input v-model="form.pix_chave" label="Chave PIX" />
+  </div>
+</section>
         <div class="h-px bg-slate-100/50" />
 
-        <!-- 05. Benefícios -->
-        <section class="grid grid-cols-12 gap-x-6 gap-y-8 bg-slate-50/50 p-8 rounded-[2.5rem] border border-slate-100/50">
-          <div class="col-span-12 flex items-center gap-3 mb-2">
-            <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
-            <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
-              05. Benefícios Adicionais
-            </span>
-          </div>
+        <!-- 05. Benefícios Adicionais -->
+<section class="grid grid-cols-12 gap-x-6 gap-y-8 bg-slate-50/50 p-8 rounded-[2.5rem] border border-slate-100/50">
+  <div class="col-span-12 flex items-center gap-3 mb-2">
+    <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
+    <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
+      05. Benefícios Adicionais
+    </span>
+  </div>
 
-          <div class="col-span-12 md:col-span-4 space-y-4 pt-2">
-            <CustomCheckbox v-model="form.tem_vale" label="Habilitar Vale Antecipação" />
-            <CustomCheckbox v-model="form.tem_vale_transporte" label="Habilitar Vale Transporte" />
-          </div>
+  <!-- Checkboxes -->
+  <div class="col-span-12 md:col-span-4 space-y-4 pt-2">
+    <CustomCheckbox v-model="form.tem_vale" label="Habilitar Vale Antecipação" />
+    <CustomCheckbox v-model="form.tem_vale_transporte" label="Habilitar Vale Transporte" />
+  </div>
 
-          <div class="col-span-12 md:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div v-if="form.tem_vale" class="animate-in fade-in slide-in-from-top-2">
-              <Input v-model="valeUi" label="Valor do Vale (R$)" :forceUpper="false" />
-            </div>
-            <div v-if="form.tem_vale_transporte" class="animate-in fade-in slide-in-from-top-2">
-              <Input v-model="valeTransporteUi" label="Valor VT (R$)" :forceUpper="false" />
-            </div>
-          </div>
-        </section>
+  <!-- Campos condicionais -->
+  <div class="col-span-12 md:col-span-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div v-if="form.tem_vale" class="animate-in fade-in slide-in-from-top-2">
+        <Input 
+          v-model="valeUi" 
+          label="Valor do Vale (R$)" 
+          :forceUpper="false"
+          @blur="formatarVale"
+          placeholder="0,00"
+        />
+      </div>
+      <div v-if="form.tem_vale_transporte" class="animate-in fade-in slide-in-from-top-2">
+        <Input 
+          v-model="valeTransporteUi" 
+          label="Valor VT (R$)" 
+          :forceUpper="false"
+          @blur="formatarValeTransporte"
+          placeholder="0,00"
+        />
+      </div>
+    </div>
+  </div>
+</section>
 
         <!-- 06. Arquivos -->
         <section class="grid grid-cols-12 gap-x-6 gap-y-6">
@@ -286,7 +449,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { FuncionarioService } from '@/services/index'
 
 import { maskCPF, maskRG, maskTelefone, maskCEP, onlyNumbers } from '@/utils/masks'
-import { buscarCep } from '@/utils/utils'
+import { buscarCep, calcularCustoHora } from '@/utils/utils'
 import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
 import { upper, raw } from '@/utils/text'
 
@@ -310,14 +473,6 @@ const arquivos = ref([])
 const arquivosLoading = ref(false)
 const arquivoSelecionado = ref(null)
 const enviandoArquivo = ref(false)
-
-// ===== Tempo (HH:mm -> Decimal) =====
-const timeToDecimal = (t) => {
-  if (!t || !String(t).includes(':')) return 0
-  const [h, m] = String(t).split(':').map((n) => Number(n))
-  if (!Number.isFinite(h) || !Number.isFinite(m)) return 0
-  return h + m / 60
-}
 
 // ===== Form =====
 function novoForm() {
@@ -405,8 +560,44 @@ const emailUi = computed({
   set: (v) => (form.value.email = String(v || '').toLowerCase().trim()),
 })
 
+// ===== Funções para cálculo de horas =====
+const timeToDecimal = (t) => {
+  if (!t || !String(t).includes(':')) return 0
+  const [h, m] = String(t).split(':').map((n) => Number(n))
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return 0
+  return h + m / 60
+}
+
+// Calcular horas trabalhadas por dia (considerando os dois períodos)
+const calcularHorasDia = () => {
+  const periodo1 = timeToDecimal(form.value.horario_saida_1) - timeToDecimal(form.value.horario_entrada_1)
+  const periodo2 = timeToDecimal(form.value.horario_saida_2) - timeToDecimal(form.value.horario_entrada_2)
+  return Math.max(0, periodo1) + Math.max(0, periodo2)
+}
+
+// Calcular horas do sábado
+const calcularHorasSabado = () => {
+  return timeToDecimal(form.value.horario_sabado_saida_1) - timeToDecimal(form.value.horario_sabado_entrada_1)
+}
+
+// ===== Carga Horária Calculada =====
+const cargaHorariaSemanal = computed(() => {
+  const horasDia = calcularHorasDia()
+  const horasSabado = calcularHorasSabado()
+  return (horasDia * 5) + (horasSabado > 0 ? horasSabado : 0)
+})
+
+const cargaHorariaMensal = computed(() => {
+  return cargaHorariaSemanal.value * 4.5
+})
+
+const horasDiariasMedias = computed(() => {
+  if (cargaHorariaSemanal.value <= 0) return 0
+  const diasTrabalhados = form.value.horario_sabado_entrada_1 ? 6 : 5
+  return cargaHorariaSemanal.value / diasTrabalhados
+})
+
 // ===== Moedas (NÚMERO no estado, TEXTO no input) =====
-// -> isso aqui é o que evita o bug do "1,005000" / múltiplos zeros
 const createMoneyComputed = (key) =>
   computed({
     get: () => numeroParaMoeda(Number(form.value[key] || 0)),
@@ -422,23 +613,6 @@ const valeTransporteUi = createMoneyComputed('vale_transporte')
 
 const custoHoraExibicao = computed(() => numeroParaMoeda(Number(form.value.custo_hora || 0)))
 
-// ===== Carga Horária Semanal =====
-const cargaHorariaSemanal = computed(() => {
-  const h1 =
-    timeToDecimal(form.value.horario_saida_1) - timeToDecimal(form.value.horario_entrada_1)
-  const h2 =
-    timeToDecimal(form.value.horario_saida_2) - timeToDecimal(form.value.horario_entrada_2)
-
-  const totalDia = (h1 > 0 ? h1 : 0) + (h2 > 0 ? h2 : 0)
-
-  const sab =
-    timeToDecimal(form.value.horario_sabado_saida_1) -
-    timeToDecimal(form.value.horario_sabado_entrada_1)
-
-  const totalSemana = totalDia * 5 + (sab > 0 ? sab : 0)
-  return totalSemana > 0 ? totalSemana : 0
-})
-
 // ===== Custo Hora =====
 function recalcularCustoHora() {
   const base = Number(form.value.salario_base || 0)
@@ -450,21 +624,56 @@ function recalcularCustoHora() {
     return
   }
 
-  const horasMes = Number(cargaHorariaSemanal.value || 0) * 4.5
-  if (!horasMes || horasMes <= 0) {
-    form.value.custo_hora = 0
-    return
-  }
-
-  // 2 casas, sem explosão de float
-  form.value.custo_hora = Math.round((total / horasMes) * 100) / 100
+  // Usa a função do utils que já calcula corretamente
+  form.value.custo_hora = calcularCustoHora(total, cargaHorariaSemanal.value, 4.5)
 }
 
-// recalcula quando salário ou horários mudarem
+// ===== Funções de formatação =====
+const formatarSalarioBase = () => {
+  const valor = moedaParaNumero(form.value.salario_base)
+  form.value.salario_base = valor
+  salarioBaseUi.value = numeroParaMoeda(valor)
+  recalcularCustoHora()
+}
+
+const formatarSalarioAdicional = () => {
+  const valor = moedaParaNumero(form.value.salario_adicional)
+  form.value.salario_adicional = valor
+  salarioAdicionalUi.value = numeroParaMoeda(valor)
+  recalcularCustoHora()
+}
+
+const formatarVale = () => {
+  const valor = moedaParaNumero(form.value.vale)
+  form.value.vale = valor
+  valeUi.value = numeroParaMoeda(valor)
+}
+
+const formatarValeTransporte = () => {
+  const valor = moedaParaNumero(form.value.vale_transporte)
+  form.value.vale_transporte = valor
+  valeTransporteUi.value = numeroParaMoeda(valor)
+}
+
+// Atualiza carga horária (chamada quando horários mudam)
+const atualizarCargaHoraria = () => {
+  // Força atualização dos computeds
+  recalcularCustoHora()
+}
+
+// Watch para recálculo automático
 watch(
-  () => [form.value.salario_base, form.value.salario_adicional, cargaHorariaSemanal.value],
-  () => recalcularCustoHora(),
-  { immediate: true },
+  () => [
+    form.value.horario_entrada_1,
+    form.value.horario_saida_1,
+    form.value.horario_entrada_2,
+    form.value.horario_saida_2,
+    form.value.horario_sabado_entrada_1,
+    form.value.horario_sabado_saida_1
+  ],
+  () => {
+    recalcularCustoHora()
+  }
 )
 
 // ===== Tempo de Serviço =====
@@ -637,6 +846,12 @@ function montarPayload() {
 async function salvar() {
   if (!form.value.nome || String(form.value.cpf || '').length < 11) {
     alert('Preencha Nome e CPF corretamente.')
+    return
+  }
+
+  // Validação de unidade/setor/função
+  if (!form.value.unidade || !form.value.setor || !form.value.funcao) {
+    alert('Preencha Unidade, Setor e Função corretamente.')
     return
   }
 
