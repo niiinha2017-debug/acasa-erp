@@ -202,26 +202,37 @@ const funcionariosFiltrados = computed(() => {
   const termo = String(filtro.value || '').toLowerCase().trim()
   if (!termo) return funcionarios.value
 
-  return funcionarios.value.filter((f) =>
-    String(f.nome || '').toLowerCase().includes(termo) ||
-    String(f.cpf || '').includes(termo) ||
-    String(f.cargo || '').toLowerCase().includes(termo)
-  )
+return funcionarios.value.filter((f) =>
+  String(f.nome || '').toLowerCase().includes(termo) ||
+  onlyNumbers(String(f.cpf || '')).includes(onlyNumbers(termo)) ||
+  String(f.cargo || '').toLowerCase().includes(termo)
+)
+
 })
 
 async function carregar() {
   loading.value = true
   try {
-    const { data } = await FuncionarioService.listar()
-    funcionarios.value = Array.isArray(data) ? data : []
+    const res = await FuncionarioService.listar()
+    console.log('[FUNCIONARIOS][LISTAR] res.data =', res?.data)
+
+    const payload = res?.data
+    const lista =
+      Array.isArray(payload) ? payload :
+      Array.isArray(payload?.data) ? payload.data :
+      Array.isArray(payload?.items) ? payload.items :
+      []
+
+    funcionarios.value = lista
   } catch (err) {
-    console.log('[FUNCIONARIOS] erro listar:', err)
+    console.log('[FUNCIONARIOS][LISTAR] erro =', err)
     alert(err?.response?.data?.message || 'Erro ao carregar funcionários')
     funcionarios.value = []
   } finally {
     loading.value = false
   }
 }
+
 
 
 async function gerarPdf() {
