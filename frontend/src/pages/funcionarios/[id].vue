@@ -75,7 +75,7 @@
               required
             >
               <option value="">SELECIONE...</option>
-              <option value="FABRICA">FÁBRICA</option>
+              <option value="FÁBRICA">FÁBRICA</option>
               <option value="LOJA">LOJA</option>
             </select>
           </div>
@@ -733,6 +733,8 @@ watch(
   }
 )
 
+
+
 async function garantirIdParaUpload() {
   if (isEditing.value && id.value) return Number(id.value)
 
@@ -788,23 +790,21 @@ const tempoServico = computed(() => {
 })
 
 // ===== Unidade / Setor / Cargo =====
+const unidadeKey = computed(() =>
+  form.value.unidade === 'FABRICA' ? 'FÁBRICA' : form.value.unidade
+)
+
 const setorOptions = computed(() => {
-  const grupos = FUNCIONARIOS_LOCAL_SETOR_CARGO?.[form.value.unidade] || []
-  return grupos.map((g) => ({
-    label: String(g.setor || '').replaceAll('_', ' '),
-    value: g.setor,
-  }))
+  const grupos = FUNCIONARIOS_LOCAL_SETOR_CARGO?.[unidadeKey.value] || []
+  return grupos.map(g => ({ label: String(g.setor).replaceAll('_',' '), value: g.setor }))
 })
 
 const cargoOptions = computed(() => {
-  const grupos = FUNCIONARIOS_LOCAL_SETOR_CARGO?.[form.value.unidade] || []
-  const grupo = grupos.find((g) => g.setor === form.value.setor)
-  const cargos = grupo?.cargo || []
-  return cargos.map((v) => ({
-    label: String(v || '').replaceAll('_', ' '),
-    value: v,
-  }))
+  const grupos = FUNCIONARIOS_LOCAL_SETOR_CARGO?.[unidadeKey.value] || []
+  const grupo = grupos.find(g => g.setor === form.value.setor)
+  return (grupo?.cargo || []).map(v => ({ label: String(v).replaceAll('_',' '), value: v }))
 })
+
 
 watch(
   () => form.value.unidade,
