@@ -60,7 +60,7 @@ export const FornecedorService = {
 
 // --- SERVIÇO DE FUNCIONÁRIOS (SOMENTE ADMIN) ---
 export const FuncionarioService = {
-  listar: async () => (await api.get('/funcionarios')).data,
+  listar: () => api.get('/funcionarios'),
 
   buscar: (id) => {
     if (!id) return Promise.reject(new Error('ID não fornecido'))

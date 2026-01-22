@@ -106,19 +106,21 @@
   class="!border-none"
 >
   <!-- COLUNA NOME + CHECKBOX (seleção pro PDF) -->
-  <template #cell-nome="{ row }">
-    <div class="flex items-center gap-3">
-      <input
-        type="checkbox"
-        class="h-4 w-4 accent-brand-primary"
-        :checked="selectedIds.has(row.id)"
-        @change="toggle(row.id)"
-      />
-      <div class="font-black text-[11px] uppercase tracking-widest text-[var(--text-main)]">
-        {{ row.nome }}
-      </div>
+<template #cell-nome="{ row }">
+  <div class="flex items-center gap-3">
+    <CustomCheckbox
+      :modelValue="selectedIds.has(row.id)"
+      @update:modelValue="() => toggle(row.id)"
+      label=""
+      :disabled="false"
+    />
+
+    <div class="font-black text-[11px] uppercase tracking-widest text-[var(--text-main)]">
+      {{ row.nome }}
     </div>
-  </template>
+  </div>
+</template>
+
 
   <!-- STATUS -->
   <template #cell-status="{ row }">
@@ -135,6 +137,14 @@
   <!-- AÇÕES -->
   <template #cell-acoes="{ row }">
     <div class="flex items-center justify-center gap-2">
+      <button
+  type="button"
+  class="h-9 px-4 rounded-xl bg-slate-600 text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all"
+  @click="abrirArquivos(row)"
+>
+  Arquivos
+</button>
+
       <button
         type="button"
         class="h-9 px-4 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all"
@@ -153,6 +163,12 @@
     </div>
   </template>
 </Table>
+<FuncionarioArquivosModal
+  :open="arquivosModalOpen"
+  :funcionarioId="arquivosFuncionario?.id"
+  :funcionarioNome="arquivosFuncionario?.nome"
+  @close="fecharArquivos"
+/>
 
       </div>
     </Card>
@@ -174,6 +190,9 @@ const gerandoPdf = ref(false)
 const filtro = ref('')
 const funcionarios = ref([])
 
+const arquivosModalOpen = ref(false)
+const arquivosFuncionario = ref(null)
+
 const selectedIds = ref(new Set())
 const selecionados = computed(() => Array.from(selectedIds.value))
 
@@ -188,7 +207,8 @@ const columns = [
   { key: 'setor', label: 'Setor' },
   { key: 'cargo', label: 'Cargo' },
   { key: 'status', label: 'Status', align: 'center', width: '120px' },
-  { key: 'acoes', label: 'Ações', align: 'center', width: '140px' }
+  { key: 'acoes', label: 'Ações', align: 'center', width: '280px' }
+
 ]
 
 function toggle(id) {
@@ -210,20 +230,21 @@ return funcionarios.value.filter((f) =>
 
 })
 
+function abrirArquivos(row) {
+  arquivosFuncionario.value = row
+  arquivosModalOpen.value = true
+}
+
+function fecharArquivos() {
+  arquivosModalOpen.value = false
+  arquivosFuncionario.value = null
+}
+
 async function carregar() {
   loading.value = true
   try {
-    const res = await FuncionarioService.listar()
-    console.log('[FUNCIONARIOS][LISTAR] res.data =', res?.data)
-
-    const payload = res?.data
-    const lista =
-      Array.isArray(payload) ? payload :
-      Array.isArray(payload?.data) ? payload.data :
-      Array.isArray(payload?.items) ? payload.items :
-      []
-
-    funcionarios.value = lista
+    const { data } = await FuncionarioService.listar()
+    funcionarios.value = Array.isArray(data) ? data : []
   } catch (err) {
     console.log('[FUNCIONARIOS][LISTAR] erro =', err)
     alert(err?.response?.data?.message || 'Erro ao carregar funcionários')
@@ -232,6 +253,7 @@ async function carregar() {
     loading.value = false
   }
 }
+
 
 
 
@@ -246,9 +268,27 @@ async function gerarPdf() {
       { responseType: 'blob' }
     )
 
-    const blob = new Blob([res.data], { type: 'application/pdf' })
-    const url = window.URL.createObjectURL(blob)
-    window.open(url, '_blank')
+const blob = new Blob([res.data], { type: 'application/pdf' })
+const url = window.URL.createObjectURL(blob)
+
+// 1) abre em nova aba
+window.open(url, '_blank')
+
+// 2) faz download com nome bonito
+const nomeEmpresa = 'ACASA MOVEIS PLANEJADOS'
+const fileName = `${nomeEmpresa} - Lista de Funcionarios.pdf`
+
+const a = document.createElement('a')
+a.href = url
+a.download = fileName
+document.body.appendChild(a)
+a.click()
+a.remove()
+
+// dá um tempo antes de revogar, pra aba nova não perder o blob
+setTimeout(() => window.URL.revokeObjectURL(url), 60_000)
+
+
 
     selectedIds.value = new Set()
   } catch (err) {

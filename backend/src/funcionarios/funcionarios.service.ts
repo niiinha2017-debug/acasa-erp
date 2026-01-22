@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service'
 import * as fs from 'fs'
 import PDFDocument from 'pdfkit'
+import * as path from 'path'
 import { CriarFuncionarioDto } from './dto/criar-funcionario.dto'
 import { AtualizarFuncionarioDto } from './dto/atualizar-funcionario.dto'
 
@@ -40,56 +41,58 @@ private calcularStatus(input: {
     return funcionario
   }
 
-  async gerarPdf(ids: number[]): Promise<Buffer> {
-    const empresa = await this.prisma.empresa.findUnique({ where: { id: 1 } })
+async gerarPdf(ids: number[]): Promise<Buffer> {
+  // empresa pode ficar (vai servir depois se você quiser escrever dados por cima do PNG)
+  await this.prisma.empresa.findUnique({ where: { id: 1 } })
 
-    const funcionarios = await this.prisma.funcionarios.findMany({
-      where: { id: { in: ids } },
-      select: { id: true, nome: true, cpf: true, rg: true },
-      orderBy: { nome: 'asc' },
-    })
+  const funcionarios = await this.prisma.funcionarios.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, nome: true, cpf: true, rg: true },
+    orderBy: { nome: 'asc' },
+  })
 
-    if (!funcionarios.length) throw new NotFoundException('Nenhum funcionário encontrado.')
+  if (!funcionarios.length) throw new NotFoundException('Nenhum funcionário encontrado.')
 
-    const doc = new PDFDocument({ size: 'A4', margin: 40 })
-    const chunks: Buffer[] = []
+  const doc = new PDFDocument({ size: 'A4', margin: 40 })
+  const chunks: Buffer[] = []
 
-    doc.on('data', (c) => chunks.push(c))
-    const done = new Promise<Buffer>((resolve) => {
-      doc.on('end', () => resolve(Buffer.concat(chunks)))
-    })
+  doc.on('data', (c) => chunks.push(c))
+  const done = new Promise<Buffer>((resolve) => {
+    doc.on('end', () => resolve(Buffer.concat(chunks)))
+  })
 
-    if (empresa) {
-      if (empresa.logo_url?.startsWith('data:image')) {
-        try {
-          const base64 = empresa.logo_url.split(',')[1]
-          const imgBuffer = Buffer.from(base64, 'base64')
-          doc.image(imgBuffer, 40, 30, { width: 60 })
-        } catch (e: any) {
-          console.log('[PDF] Erro ao renderizar logo:', e?.message)
-        }
-      }
+  // ===== CABEÇALHO PNG (A4) =====
+  const headerPath = path.join(process.cwd(), 'assets', 'pdf', 'header-a4.png')
+  doc.image(headerPath, 0, 0, { width: doc.page.width })
 
-      doc
-        .fontSize(10)
-        .font('Helvetica-Bold')
-        .text(empresa.razao_social || '', 110, 35)
-        .font('Helvetica')
-        .text(`CNPJ: ${empresa.cnpj || ''}`, 110, 48)
-        .text(`${empresa.cidade || ''} - ${empresa.uf || ''}`, 110, 61)
-    }
+  // Título + Gerado em
+  doc.fontSize(16).font('Helvetica-Bold').text('Lista de Funcionários', 0, 120, { align: 'center' })
+  doc.fontSize(8).font('Helvetica').text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 0, 140, { align: 'center' })
 
-    doc.moveTo(40, 90).lineTo(555, 90).stroke()
-    doc.moveDown(4)
+  // Linha separadora
+  doc.moveTo(40, 165).lineTo(555, 165).stroke()
 
-    doc.fontSize(16).font('Helvetica-Bold').text('Lista de Funcionários', { align: 'center' })
-    doc
-      .fontSize(8)
-      .font('Helvetica')
-      .text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, { align: 'center' })
-    doc.moveDown(2)
+  // ===== TABELA =====
+  let y = 185
 
-    let y = doc.y
+  doc.fontSize(11).font('Helvetica-Bold')
+  doc.text('NOME', 40, y)
+  doc.text('CPF', 310, y)
+  doc.text('RG', 430, y)
+
+  y += 18
+  doc.moveTo(40, y).lineTo(555, y).stroke()
+  y += 10
+
+  doc.font('Helvetica').fontSize(10)
+
+for (const f of funcionarios) {
+  if (y > 750) {
+    doc.addPage()
+    doc.image(headerPath, 0, 0, { width: doc.page.width })
+    doc.moveTo(40, 165).lineTo(555, 165).stroke()
+    y = 185
+
     doc.fontSize(11).font('Helvetica-Bold')
     doc.text('NOME', 40, y)
     doc.text('CPF', 310, y)
@@ -98,24 +101,21 @@ private calcularStatus(input: {
     y += 18
     doc.moveTo(40, y).lineTo(555, y).stroke()
     y += 10
-
     doc.font('Helvetica').fontSize(10)
-    for (const f of funcionarios) {
-      if (y > 750) {
-        doc.addPage()
-        y = 50
-      }
-
-      doc.text(f.nome?.toUpperCase() || '-', 40, y, { width: 260 })
-      doc.text(f.cpf || '-', 310, y)
-      doc.text(f.rg || '-', 430, y)
-
-      y += 18
-    }
-
-    doc.end()
-    return done
   }
+
+  doc.text(f.nome?.toUpperCase() || '-', 40, y, { width: 260 })
+  doc.text(f.cpf || '-', 310, y)
+  doc.text(f.rg || '-', 430, y)
+
+  y += 18
+}
+
+
+  doc.end()
+  return done
+}
+
 
   async criar(dto: CriarFuncionarioDto) {
   try {
