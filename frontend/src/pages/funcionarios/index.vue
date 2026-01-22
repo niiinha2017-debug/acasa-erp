@@ -164,7 +164,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/services/api'
-import { FuncionarioService } from '@/services/index.js'
+import { FuncionarioService } from '@/services/index'
 
 const router = useRouter()
 
