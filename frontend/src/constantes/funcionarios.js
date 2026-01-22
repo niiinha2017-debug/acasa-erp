@@ -8,6 +8,12 @@ export const FUNCIONARIOS_LOCAL_SETOR_FUNCAO = {
       'AUXILIAR_DE_MONTADOR',
       'PROJETISTA',
     ],
+    setor:'ADMINISTRATIVO',
+    funcoes: [
+      'ADMINISTRATIVO',
+      'ESTOQUISTA',
+      'AUXILIAR_DE_ESCRITORIO',
+    ],
   },
   LOJA: {
     setor: 'VENDAS',
