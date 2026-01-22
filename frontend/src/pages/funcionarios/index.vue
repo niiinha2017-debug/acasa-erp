@@ -164,7 +164,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/services/api'
-import { FuncionarioService } from '@/services'
+import { FuncionarioService } from '@/services/index.js'
 
 const router = useRouter()
 
@@ -214,10 +214,15 @@ async function carregar() {
   try {
     const { data } = await FuncionarioService.listar()
     funcionarios.value = Array.isArray(data) ? data : []
+  } catch (err) {
+    console.log('[FUNCIONARIOS] erro listar:', err)
+    alert(err?.response?.data?.message || 'Erro ao carregar funcionários')
+    funcionarios.value = []
   } finally {
     loading.value = false
   }
 }
+
 
 async function gerarPdf() {
   if (selecionados.value.length === 0) return
