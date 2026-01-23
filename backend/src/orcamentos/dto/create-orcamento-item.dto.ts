@@ -1,5 +1,5 @@
+import { IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator'
 import { Type } from 'class-transformer'
-import { IsNotEmpty, IsNumber, IsString, Min } from 'class-validator'
 
 export class CreateOrcamentoItemDto {
   @IsNotEmpty()
@@ -10,9 +10,9 @@ export class CreateOrcamentoItemDto {
   @IsString()
   descricao: string
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  observacao: string
+  observacao?: string
 
   @Type(() => Number)
   @IsNumber()
@@ -20,8 +20,7 @@ export class CreateOrcamentoItemDto {
   valor_unitario: number
 
   @Type(() => Number)
-@IsNumber()
-@Min(0)
-valor_total: number
-
+  @IsNumber()
+  @Min(0)
+  valor_total: number
 }

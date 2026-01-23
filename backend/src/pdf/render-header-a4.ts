@@ -1,7 +1,10 @@
+//render-header-a4.ts
+
 import * as path from 'path'
 import * as fs from 'fs'
 
-function resolveAsset(rel: string) {
+export function resolveAsset(rel: string) {
+ 
   const candidates = [
     path.join(process.cwd(), rel),          // dev
     path.join(process.cwd(), 'dist', rel),  // prod

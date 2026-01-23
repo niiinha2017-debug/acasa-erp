@@ -6,9 +6,11 @@ import { CreateOrcamentoItemDto } from './dto/create-orcamento-item.dto'
 import { UpdateOrcamentoItemDto } from './dto/update-orcamento-item.dto'
 import { promises as fs } from 'fs'
 import * as path from 'path'
+import { renderHeaderA4 } from 'src/pdf/render-header-a4'
+import { resolveAsset } from 'src/pdf/render-header-a4' // só se você exportou resolveAsset
+
 
 // Fixando o import para evitar conflitos com o DOM
-const { PDFDocument } = require('pdf-lib')
 import PDFKitDoc from 'pdfkit'
 
 @Injectable()
@@ -18,80 +20,72 @@ export class OrcamentosService {
   // =========================================================
   // PDF
   // =========================================================
-  async gerarPdfCompleto(orc: any): Promise<Uint8Array> {
-    const miolo = await this.gerarMioloPdfBuffer(orc)
-    return this.mesclarCapaMioloRodape(miolo)
-  }
+async gerarPdfCompleto(orc: any): Promise<Uint8Array> {
+  const pdf = await this.gerarMioloPdfBuffer(orc)
+  return pdf
+}
 
-  private async gerarMioloPdfBuffer(orc: any): Promise<Buffer> {
-    return new Promise((resolve) => {
-      const doc = new PDFKitDoc({ size: 'A4', margin: 40 })
-      const chunks: Buffer[] = []
+private async gerarMioloPdfBuffer(orc: any): Promise<Buffer> {
+  return new Promise((resolve) => {
+    const doc = new PDFKitDoc({ size: 'A4', margin: 40 })
+    const chunks: Buffer[] = []
 
-      doc.on('data', (c) => chunks.push(c))
-      doc.on('end', () => resolve(Buffer.concat(chunks)))
+    doc.on('data', (c) => chunks.push(c))
+    doc.on('end', () => resolve(Buffer.concat(chunks)))
 
-      doc.fontSize(16).text('ORÇAMENTO', { align: 'center' })
-      doc.moveDown(1)
+    const capaPath = resolveAsset(path.join('assets', 'pdf', 'capa-a4.png'))
 
-      doc.fontSize(11).text(`Cliente: ${orc.cliente_nome_snapshot}`)
-      doc.text(`CPF: ${orc.cliente_cpf_snapshot || '-'}`)
-      doc.text(`Qtd. de ambientes: ${orc.qtd_ambientes ?? (orc.itens?.length || 0)}`)
-      doc.moveDown(1)
+    // 1) CAPA
+    doc.image(capaPath, 0, 0, { width: doc.page.width, height: doc.page.height })
 
-      let total = 0
+    // 2) Conteúdo
+    doc.addPage()
 
-      for (const item of orc.itens || []) {
-        const vt = Number(item.valor_total || 0)
-        total += vt
+    const aplicarHeader = () => {
+      const startY = renderHeaderA4(doc, 'ORÇAMENTO')
+      doc.y = startY
+      doc.moveDown(0.5)
+    }
 
-        doc.fontSize(10).text(`Ambiente: ${item.nome_ambiente}`)
-        doc.text(`Descrição: ${item.descricao}`)
-        doc.text(`Observação: ${item.observacao || '-'}`)
-        doc.text(`Valor unitário: R$ ${Number(item.valor_unitario || 0).toFixed(2)}`)
-        doc.text(`Valor total: R$ ${vt.toFixed(2)}`)
-        doc.moveDown(0.8)
+    aplicarHeader()
+    doc.on('pageAdded', aplicarHeader)
 
-        if (doc.y > 740) doc.addPage()
+    let total = 0
+
+    for (const item of orc.itens || []) {
+      const vt = Number(item.valor_total || 0)
+      total += vt
+
+      doc.fontSize(10).text(`Ambiente: ${item.nome_ambiente}`)
+
+      doc.text('Descrição:')
+      const linhas = String(item.descricao || '')
+        .split(/\r?\n/)
+        .map((l) => l.replace(/^\s*[*•\-\u2013\u2014]+\s*/g, '').trim())
+        .filter(Boolean)
+
+      if (linhas.length) {
+        for (const t of linhas) doc.text(`• ${t}`, { indent: 14 })
+      } else {
+        doc.text('-', { indent: 14 })
       }
 
-      doc.moveDown(1)
-      doc.font('Helvetica-Bold').fontSize(12).text(`Total do orçamento: R$ ${total.toFixed(2)}`)
-      doc.font('Helvetica')
+      doc.text(`Observação: ${item.observacao || '-'}`)
+      doc.text(`Valor unitário: R$ ${Number(item.valor_unitario || 0).toFixed(2)}`)
+      doc.text(`Valor total: R$ ${vt.toFixed(2)}`)
+      doc.moveDown(0.8)
 
-      doc.end()
-    })
-  }
-
-  private async mesclarCapaMioloRodape(miolo: Buffer): Promise<Uint8Array> {
-    const capaPath = path.resolve(process.cwd(), 'assets', 'pdf', 'Logo Orçamento.pdf')
-    const rodapePath = path.resolve(process.cwd(), 'assets', 'pdf', 'Paginas Seguintes.pdf')
-
-    const [capaBytes, rodapeBytes] = await Promise.all([
-      fs.readFile(capaPath).catch(() => null),
-      fs.readFile(rodapePath).catch(() => null),
-    ])
-
-    const pdfFinal = await PDFDocument.create()
-
-    if (capaBytes) {
-      const capaDoc = await PDFDocument.load(capaBytes)
-      const pages = await pdfFinal.copyPages(capaDoc, capaDoc.getPageIndices())
-      pages.forEach((p: any) => pdfFinal.addPage(p))
+      if (doc.y > 700) doc.addPage()
     }
 
-    const mioloDoc = await PDFDocument.load(miolo)
-    const mioloPages = await pdfFinal.copyPages(mioloDoc, mioloDoc.getPageIndices())
-    mioloPages.forEach((p: any) => pdfFinal.addPage(p))
+    doc.moveDown(1)
+    doc.font('Helvetica-Bold').fontSize(12).text(`Total do orçamento: R$ ${total.toFixed(2)}`)
+    doc.font('Helvetica')
 
-    if (rodapeBytes) {
-      const rodapeDoc = await PDFDocument.load(rodapeBytes)
-      const rodapePages = await pdfFinal.copyPages(rodapeDoc, rodapeDoc.getPageIndices())
-      rodapePages.forEach((p: any) => pdfFinal.addPage(p))
-    }
+    doc.end()
+  })
+}
 
-    return pdfFinal.save()
-  }
 
   // =========================================================
   // CRUD - ORÇAMENTOS
