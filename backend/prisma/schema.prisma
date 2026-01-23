@@ -1,11 +1,11 @@
 generator client {
   provider = "prisma-client-js"
-}
+ }
 
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
-}
+ }
 
 model usuarios {
   id            Int      @id @default(autoincrement())
@@ -21,7 +21,7 @@ model usuarios {
   permissoes   usuarios_permissoes[]
 
   @@map("usuarios")
-}
+ }
 
 model recuperacao_senha {
   id           Int      @id @default(autoincrement())
@@ -37,7 +37,7 @@ model recuperacao_senha {
 
   @@index([usuario_id])
   @@map("recuperacao_senha")
-}
+ }
 
 model usuarios_permissoes {
   id Int @id @default(autoincrement())
@@ -52,7 +52,7 @@ model usuarios_permissoes {
   @@index([usuario_id])
   @@index([permissao_id])
   @@map("usuarios_permissoes")
-}
+ }
 
 model permissoes {
   id        Int      @id @default(autoincrement())
@@ -63,7 +63,7 @@ model permissoes {
   usuarios usuarios_permissoes[]
 
   @@map("permissoes")
-}
+ }
 
 model Cliente {
   id Int @id @default(autoincrement())
@@ -82,9 +82,12 @@ model Cliente {
   cnpj String?
   ie   String?
 
+  estado_civil String? // SOLTEIRO | CASADO
+  nome_conjuge String?
+
   telefone String?
   whatsapp String?
-  email    String
+  email    String?
 
   enviar_aniversario_email    Boolean @default(true)
   enviar_aniversario_whatsapp Boolean @default(false)

@@ -26,8 +26,10 @@ export class CriarClienteDto {
   nome_fantasia?: string
 
   // ISO date
-  @IsDateString()
-  data_nascimento!: string
+@IsOptional()
+@IsDateString()
+data_nascimento?: string
+
 
   @IsOptional() @IsString() cpf?: string
   @IsOptional() @IsString() rg?: string
@@ -37,8 +39,19 @@ export class CriarClienteDto {
   @IsOptional() @IsString() telefone?: string
   @IsOptional() @IsString() whatsapp?: string
 
+  @IsOptional()
+  @IsString()
+  estado_civil?: string // SOLTEIRO | CASADO
+
+  @IsOptional()
+  @IsString()
+  nome_conjuge?: string
+
+
+  @IsOptional()
   @IsEmail()
-  email!: string
+  email?: string
+
 
   @IsOptional() @IsString() cep?: string
   @IsOptional() @IsString() endereco?: string

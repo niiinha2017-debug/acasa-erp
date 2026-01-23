@@ -10,37 +10,41 @@ export class ClientesService {
 
   async criar(dto: CriarClienteDto) {
     return this.prisma.cliente.create({
-      data: {
-        indicacao_id: dto.indicacao_id ?? null,
+ data: {
+  indicacao_id: dto.indicacao_id ?? null,
 
-        nome_completo: dto.nome_completo,
-        razao_social: dto.razao_social ?? null,
-        nome_fantasia: dto.nome_fantasia ?? null,
+  nome_completo: dto.nome_completo,
+  razao_social: dto.razao_social ?? null,
+  nome_fantasia: dto.nome_fantasia ?? null,
 
-        data_nascimento: new Date(dto.data_nascimento),
+  data_nascimento: new Date(dto.data_nascimento),
 
-        cpf: dto.cpf ?? null,
-        rg: dto.rg ?? null,
-        cnpj: dto.cnpj ?? null,
-        ie: dto.ie ?? null,
+  cpf: dto.cpf ?? null,
+  rg: dto.rg ?? null,
+  cnpj: dto.cnpj ?? null,
+  ie: dto.ie ?? null,
 
-        telefone: dto.telefone ?? null,
-        whatsapp: dto.whatsapp ?? null,
-        email: dto.email,
+  telefone: dto.telefone ?? null,
+  whatsapp: dto.whatsapp ?? null,
+  email: dto.email ?? null, // <-- email opcional
 
-        cep: dto.cep ?? null,
-        endereco: dto.endereco ?? null,
-        numero: dto.numero ?? null,
-        complemento: dto.complemento ?? null,
-        bairro: dto.bairro ?? null,
-        cidade: dto.cidade ?? null,
-        estado: dto.estado ?? null,
+  estado_civil: dto.estado_civil ?? null,
+  nome_conjuge: dto.estado_civil === 'CASADO' ? (dto.nome_conjuge ?? null) : null,
 
-        status: dto.status, // ✅ obrigatório no banco
+  cep: dto.cep ?? null,
+  endereco: dto.endereco ?? null,
+  numero: dto.numero ?? null,
+  complemento: dto.complemento ?? null,
+  bairro: dto.bairro ?? null,
+  cidade: dto.cidade ?? null,
+  estado: dto.estado ?? null,
 
-        enviar_aniversario_email: dto.enviar_aniversario_email ?? true,
-        enviar_aniversario_whatsapp: dto.enviar_aniversario_whatsapp ?? false,
-      },
+  status: dto.status,
+
+  enviar_aniversario_email: dto.enviar_aniversario_email ?? true,
+  enviar_aniversario_whatsapp: dto.enviar_aniversario_whatsapp ?? false,
+},
+
     })
   }
 
@@ -61,37 +65,46 @@ export class ClientesService {
 
     return this.prisma.cliente.update({
       where: { id },
-      data: {
-        indicacao_id: dto.indicacao_id ?? undefined,
+data: {
+  indicacao_id: dto.indicacao_id ?? undefined,
 
-        nome_completo: dto.nome_completo ?? undefined,
-        razao_social: dto.razao_social ?? undefined,
-        nome_fantasia: dto.nome_fantasia ?? undefined,
+  nome_completo: dto.nome_completo ?? undefined,
+  razao_social: dto.razao_social ?? undefined,
+  nome_fantasia: dto.nome_fantasia ?? undefined,
 
-        data_nascimento: dto.data_nascimento ? new Date(dto.data_nascimento) : undefined,
+  data_nascimento: dto.data_nascimento ? new Date(dto.data_nascimento) : undefined,
 
-        cpf: dto.cpf ?? undefined,
-        rg: dto.rg ?? undefined,
-        cnpj: dto.cnpj ?? undefined,
-        ie: dto.ie ?? undefined,
+  cpf: dto.cpf ?? undefined,
+  rg: dto.rg ?? undefined,
+  cnpj: dto.cnpj ?? undefined,
+  ie: dto.ie ?? undefined,
 
-        telefone: dto.telefone ?? undefined,
-        whatsapp: dto.whatsapp ?? undefined,
-        email: dto.email ?? undefined,
+  telefone: dto.telefone ?? undefined,
+  whatsapp: dto.whatsapp ?? undefined,
+  email: dto.email ?? undefined, // <-- não apaga se não veio
 
-        cep: dto.cep ?? undefined,
-        endereco: dto.endereco ?? undefined,
-        numero: dto.numero ?? undefined,
-        complemento: dto.complemento ?? undefined,
-        bairro: dto.bairro ?? undefined,
-        cidade: dto.cidade ?? undefined,
-        estado: dto.estado ?? undefined,
+  estado_civil: dto.estado_civil ?? undefined,
+  nome_conjuge:
+    dto.estado_civil === undefined
+      ? dto.nome_conjuge ?? undefined
+      : dto.estado_civil === 'CASADO'
+        ? (dto.nome_conjuge ?? null)
+        : null,
 
-        status: dto.status ?? undefined,
+  cep: dto.cep ?? undefined,
+  endereco: dto.endereco ?? undefined,
+  numero: dto.numero ?? undefined,
+  complemento: dto.complemento ?? undefined,
+  bairro: dto.bairro ?? undefined,
+  cidade: dto.cidade ?? undefined,
+  estado: dto.estado ?? undefined,
 
-        enviar_aniversario_email: dto.enviar_aniversario_email ?? undefined,
-        enviar_aniversario_whatsapp: dto.enviar_aniversario_whatsapp ?? undefined,
-      },
+  status: dto.status ?? undefined,
+
+  enviar_aniversario_email: dto.enviar_aniversario_email ?? undefined,
+  enviar_aniversario_whatsapp: dto.enviar_aniversario_whatsapp ?? undefined,
+},
+
     })
   }
 
@@ -109,12 +122,14 @@ export class ClientesService {
     const dd = String(dt.getDate()).padStart(2, '0')
     const mmdd = `${mm}-${dd}`
 
-    const filtro =
-      enviar === 'email'
-        ? Prisma.sql`AND enviar_aniversario_email = 1`
-        : enviar === 'whatsapp'
-          ? Prisma.sql`AND enviar_aniversario_whatsapp = 1`
-          : Prisma.sql``
+const filtro =
+  enviar === 'email'
+    ? Prisma.sql`AND enviar_aniversario_email = 1 AND email IS NOT NULL AND email <> ''`
+: enviar === 'whatsapp'
+  ? Prisma.sql`AND enviar_aniversario_whatsapp = 1 AND whatsapp IS NOT NULL AND whatsapp <> ''`
+  : Prisma.sql``
+
+
 
     return this.prisma.$queryRaw(
       Prisma.sql`
