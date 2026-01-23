@@ -58,11 +58,11 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/clientes/novo': RouteRecordInfo<
-      '/clientes/novo',
-      '/clientes/novo',
-      Record<never, never>,
-      Record<never, never>,
+    '/clientes/[id]': RouteRecordInfo<
+      '/clientes/[id]',
+      '/clientes/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
       | never
     >,
     '/compras/': RouteRecordInfo<
@@ -297,9 +297,9 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/clientes/novo.vue': {
+    'src/pages/clientes/[id].vue': {
       routes:
-        | '/clientes/novo'
+        | '/clientes/[id]'
       views:
         | never
     }

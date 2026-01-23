@@ -135,10 +135,17 @@ export const OrcamentosService = {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
   },
-  // ===== PDF =====
-  abrirPdf: (id) =>
-    window.open(`${getBaseOriginFromApi(api)}/orcamentos/${id}/pdf`, '_blank'),
 }
+  // ===== PDF =====
+// ===== PDF =====
+abrirPdf: async (id) => {
+  const res = await api.get(`/orcamentos/${id}/pdf`, { responseType: 'blob' })
+  const blob = new Blob([res.data], { type: 'application/pdf' })
+  const url = URL.createObjectURL(blob)
+  window.open(url, '_blank')
+  // opcional: liberar depois de um tempo
+  setTimeout(() => URL.revokeObjectURL(url), 60_000)
+},
 
 // --- SERVIÇO ÚNICO: PLANO DE CORTE ---
 export const PlanoCorteService = {
