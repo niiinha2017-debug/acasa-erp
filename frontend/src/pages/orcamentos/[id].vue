@@ -4,40 +4,59 @@
       <h1 class="text-3xl font-black text-slate-800 uppercase tracking-tight">
         {{ isNovo ? 'Novo Orçamento' : `Orçamento #${orcamentoId}` }}
       </h1>
-      <Button variant="outline" size="sm" @click="$router.back()" class="bg-white shadow-sm border-slate-200">
+
+      <Button
+        variant="outline"
+        size="sm"
+        @click="$router.back()"
+        class="bg-white shadow-sm border-slate-200"
+      >
         <i class="pi pi-arrow-left mr-2"></i> VOLTAR
       </Button>
     </div>
 
     <Card class="p-0 border-none shadow-xl overflow-hidden">
-      <CardSection title="Seleção do Cliente" class="bg-slate-50/50 border-b">
+      <!-- SUBSTITUI CardSection (pra não quebrar) -->
+      <div class="bg-slate-50/50 border-b px-8 py-6">
+        <div class="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">
+          Seleção do Cliente
+        </div>
+
         <div class="max-w-2xl">
-          <SearchInput 
-            v-model="draft.cliente_id" 
-            mode="select" 
-            :options="clientesOptions" 
+          <SearchInput
+            v-model="draft.cliente_id"
+            mode="select"
+            :options="clientesOptions"
             placeholder="Buscar cliente..."
           />
         </div>
-      </CardSection>
+      </div>
 
       <div class="p-8 space-y-10">
         <section class="space-y-4">
           <h2 class="text-sm font-bold text-slate-700 uppercase tracking-widest flex items-center gap-2">
             <i class="pi pi-box text-brand-primary"></i> Itens do Orçamento
           </h2>
-          
+
           <div class="p-6 rounded-[2rem] border-2 border-slate-100 bg-white space-y-6 shadow-inner">
             <div class="grid grid-cols-12 gap-6">
               <div class="col-span-8">
                 <Input v-model="ambForm.nome_ambiente" label="ITEM / AMBIENTE" placeholder="Ex: COZINHA" />
               </div>
+
               <div class="col-span-4">
-                <Input v-model="ambForm.valor_unitario" label="VALOR" @input="aplicarMascaraDinheiro" placeholder="R$ 0,00" />
+                <Input
+                  v-model="ambForm.valor_unitario"
+                  label="VALOR"
+                  @input="aplicarMascaraDinheiro"
+                  placeholder="R$ 0,00"
+                />
               </div>
-              
+
               <div class="col-span-6">
-                <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block ml-1">Descritivo (Itens em tópicos)</label>
+                <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block ml-1">
+                  Descritivo (Itens em tópicos)
+                </label>
                 <textarea
                   v-model="ambForm.descricao"
                   rows="4"
@@ -47,7 +66,9 @@
               </div>
 
               <div class="col-span-6">
-                <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block ml-1">Observações Técnicas</label>
+                <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block ml-1">
+                  Observações Técnicas
+                </label>
                 <textarea
                   v-model="ambForm.observacao"
                   rows="4"
@@ -58,12 +79,13 @@
             </div>
 
             <div class="flex justify-end">
-              <Button 
-                variant="primary" 
+              <Button
+                variant="primary"
                 class="px-10 py-4 rounded-xl shadow-lg shadow-brand-primary/20 uppercase font-black text-xs tracking-widest"
                 @click="handleAdicionarOuEditar"
               >
-                <i class="pi pi-plus-circle mr-2"></i> {{ editIdx !== null ? 'Atualizar Item' : 'Adicionar Item' }}
+                <i class="pi pi-plus-circle mr-2"></i>
+                {{ editIdx !== null ? 'Atualizar Item' : 'Adicionar Item' }}
               </Button>
             </div>
           </div>
@@ -75,10 +97,7 @@
               <span class="font-bold text-slate-800">{{ format.currency(row.valor_unitario) }}</span>
             </template>
             <template #cell-acoes="{ row }">
-              <TableActions 
-                @edit="iniciarEdicao(row.__idx)" 
-                @delete="removerDaLista(row.__idx)" 
-              />
+              <TableActions @edit="iniciarEdicao(row.__idx)" @delete="removerDaLista(row.__idx)" />
             </template>
           </Table>
         </section>
@@ -87,19 +106,38 @@
           <div class="col-span-12 lg:col-span-7">
             <div class="p-6 rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50/50">
               <div class="flex items-center justify-between mb-4">
-                <span class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Arquivos do Projeto</span>
+                <span class="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                  Arquivos do Projeto
+                </span>
+
                 <input type="file" ref="fileInput" class="hidden" @change="uploadArquivoInteligente" />
-                <Button size="sm" variant="ghost" @click="fileInput.click()" class="text-brand-primary font-bold">
+
+                <!-- AQUI: não chama fileInput.click() -->
+                <Button size="sm" variant="ghost" @click="abrirFilePicker" class="text-brand-primary font-bold">
                   <i class="pi pi-plus mr-1"></i> ANEXAR
                 </Button>
               </div>
+
               <div class="flex flex-wrap gap-2">
-                <div v-for="file in arquivos" :key="file.id" class="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border shadow-sm group">
-                  <i class="pi pi-image text-brand-primary text-xs"></i>
-                  <span class="text-[10px] font-bold text-slate-600 truncate max-w-[150px]">{{ file.nome_original }}</span>
+                <div
+                  v-for="file in arquivos"
+                  :key="file.id"
+                  class="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border shadow-sm group"
+                >
+                  <i :class="['pi', getFileIcon(file.nome_original), 'text-brand-primary text-xs']"></i>
+                  <span class="text-[10px] font-bold text-slate-600 truncate max-w-[150px]">
+                    {{ file.nome_original }}
+                  </span>
+
                   <button @click="deletarAnexo(file.id)" class="text-red-400 hover:text-red-600">
                     <i class="pi pi-times text-[8px]"></i>
                   </button>
+
+                  <!-- (opcional) abrir ao clicar no nome:
+                  <button @click="abrirArquivo(file.id)" class="text-slate-400 hover:text-slate-700">
+                    <i class="pi pi-external-link text-[10px]"></i>
+                  </button>
+                  -->
                 </div>
               </div>
             </div>
@@ -108,23 +146,29 @@
           <div class="col-span-12 lg:col-span-5 space-y-6">
             <div class="bg-slate-900 rounded-[2rem] p-8 text-white shadow-2xl relative overflow-hidden group">
               <div class="absolute -right-4 -top-4 w-24 h-24 bg-brand-primary/20 rounded-full blur-3xl group-hover:bg-brand-primary/40 transition-all"></div>
-              
+
               <div class="relative z-10">
-                <p class="text-[10px] font-black uppercase opacity-50 tracking-[0.2em] mb-2">Total do Orçamento</p>
+                <p class="text-[10px] font-black uppercase opacity-50 tracking-[0.2em] mb-2">
+                  Total do Orçamento
+                </p>
+
+                <!-- AQUI: era totalOrcamento (não existe), vira total -->
                 <div class="text-4xl font-black tracking-tight tracking-tighter">
-                  {{ format.currency(totalOrcamento) }}
+                  {{ format.currency(total) }}
                 </div>
+
                 <div class="h-px bg-white/10 my-4"></div>
+
                 <p class="text-[9px] opacity-40 leading-relaxed">
                   Condições comerciais e prazos sujeitos a alteração conforme validade do orçamento.
                 </p>
               </div>
             </div>
 
-            <FormActions 
-              :is-edit="!isNovo" 
-              :loading-save="saving" 
-              @save="salvarTudo" 
+            <FormActions
+              :is-edit="!isNovo"
+              :loading-save="saving"
+              @save="salvarTudo"
               @delete="confirmarExclusao"
               class="flex-row-reverse"
             />
@@ -134,6 +178,7 @@
     </Card>
   </div>
 </template>
+
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
