@@ -112,8 +112,6 @@ salvar: (id, dados) => {
   },
 }
 
-
-
 export const OrcamentosService = {
   // ===== ORÇAMENTOS =====
   listar: () => api.get('/orcamentos'),
@@ -122,12 +120,15 @@ export const OrcamentosService = {
   atualizar: (id, dados) => api.put(`/orcamentos/${id}`, dados),
   remover: (id) => api.delete(`/orcamentos/${id}`),
   salvar: (id, dados) => (id ? api.put(`/orcamentos/${id}`, dados) : api.post('/orcamentos', dados)),
+
   adicionarItem: (id, item) => api.post(`/orcamentos/${id}/itens`, item),
   atualizarItem: (id, itemId, item) => api.put(`/orcamentos/${id}/itens/${itemId}`, item),
   removerItem: (id, itemId) => api.delete(`/orcamentos/${id}/itens/${itemId}`),
+
   listarArquivos: (id) => api.get(`/orcamentos/${id}/arquivos`),
   abrirArquivoUrl: (id, arquivoId) => `${getBaseOriginFromApi(api)}/orcamentos/${id}/arquivos/${arquivoId}`,
   removerArquivo: (id, arquivoId) => api.delete(`/orcamentos/${id}/arquivos/${arquivoId}`),
+
   anexarArquivo: (id, arquivo) => {
     const fd = new FormData()
     fd.append('arquivo', arquivo)
@@ -135,17 +136,17 @@ export const OrcamentosService = {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
   },
+
+  // ===== PDF (COM TOKEN) =====
+  abrirPdf: async (id) => {
+    const res = await api.get(`/orcamentos/${id}/pdf`, { responseType: 'blob' })
+    const blob = new Blob([res.data], { type: 'application/pdf' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank')
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  },
 }
-  // ===== PDF =====
-// ===== PDF =====
-abrirPdf: async (id) => {
-  const res = await api.get(`/orcamentos/${id}/pdf`, { responseType: 'blob' })
-  const blob = new Blob([res.data], { type: 'application/pdf' })
-  const url = URL.createObjectURL(blob)
-  window.open(url, '_blank')
-  // opcional: liberar depois de um tempo
-  setTimeout(() => URL.revokeObjectURL(url), 60_000)
-},
+
 
 // --- SERVIÇO ÚNICO: PLANO DE CORTE ---
 export const PlanoCorteService = {
