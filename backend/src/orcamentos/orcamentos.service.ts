@@ -6,9 +6,7 @@ import { CreateOrcamentoItemDto } from './dto/create-orcamento-item.dto'
 import { UpdateOrcamentoItemDto } from './dto/update-orcamento-item.dto'
 import { promises as fs } from 'fs'
 import * as path from 'path'
-import { renderHeaderA4 } from 'src/pdf/render-header-a4'
-import { resolveAsset } from 'src/pdf/render-header-a4' // só se você exportou resolveAsset
-
+import { renderHeaderA4, resolveAsset } from '../pdf/render-header-a4'
 
 // Fixando o import para evitar conflitos com o DOM
 import PDFKitDoc from 'pdfkit'
