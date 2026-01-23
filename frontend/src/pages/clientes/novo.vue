@@ -103,13 +103,17 @@
         <hr class="border-[var(--border-ui)] opacity-50" />
 
         <div class="grid grid-cols-12 gap-5">
-          <Input
-            class="col-span-12 md:col-span-4"
-            v-model="form.email"
-            label="E-mail Principal"
-            type="email"
-            required
-          />
+<Input
+  class="col-span-12 md:col-span-4"
+  v-model="form.email"
+  label="E-mail Principal"
+  type="email"
+  :forceUpper="false"
+  placeholder="email@dominio.com"
+>
+</Input>
+
+
           <Input
             class="col-span-12 md:col-span-4"
             v-model="form.whatsapp"
@@ -123,19 +127,46 @@
             @input="form.telefone = maskTelefone(form.telefone)"
           />
 
-          <div class="col-span-12 grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50/50 dark:bg-slate-800/20 p-4 rounded-2xl border border-[var(--border-ui)]">
-            <CustomCheckbox
-              v-model="form.enviar_aniversario_email"
-              label="Notificar Aniversário via E-mail"
-              description="Disparo automático de felicitações"
-            />
-            <CustomCheckbox
-              v-model="form.enviar_aniversario_whatsapp"
-              label="Notificar Aniversário via WhatsApp"
-              description="Envio manual/automático de mensagens"
-            />
-          </div>
+<div class="col-span-12 grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50/50 dark:bg-slate-800/20 p-4 rounded-2xl border border-[var(--border-ui)]">
+  <CustomCheckbox
+    v-model="form.enviar_aniversario_email"
+    label="Notificar Aniversário via E-mail"
+    description="Disparo automático de felicitações"
+    :disabled="!form.email"
+  />
+  <CustomCheckbox
+    v-model="form.enviar_aniversario_whatsapp"
+    label="Notificar Aniversário via WhatsApp"
+    description="Envio manual/automático de mensagens"
+    :disabled="!form.whatsapp"
+  />
+</div>
+
+<div class="grid grid-cols-12 gap-5">
+  <div class="col-span-12 md:col-span-4">
+    <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
+      Estado Civil
+    </label>
+    <select
+      v-model="form.estado_civil"
+      class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm shadow-sm"
+    >
+      <option value="">SELECIONE...</option>
+      <option value="SOLTEIRO">SOLTEIRO</option>
+      <option value="CASADO">CASADO</option>
+    </select>
+  </div>
+
+  <Input
+    v-if="form.estado_civil === 'CASADO'"
+    class="col-span-12 md:col-span-8"
+    v-model="form.nome_conjuge"
+    label="Nome do Cônjuge"
+    placeholder="NOME COMPLETO"
+  />
+</div>
         </div>
+
 
         <div class="grid grid-cols-12 gap-5">
           <Input
@@ -200,6 +231,8 @@ const form = reactive({
   ie: '',
   telefone: '',
   whatsapp: '',
+  estado_civil: '',
+  nome_conjuge: '',
   email: '',
   enviar_aniversario_email: true,
   enviar_aniversario_whatsapp: false,
@@ -278,10 +311,40 @@ watch(isJuridica, (val) => {
   else { form.cnpj = ''; form.ie = ''; form.nome_fantasia = '' }
 })
 
+watch(() => form.email, (v) => {
+  form.email = String(v || '').toLowerCase().trim()
+  if (!form.email) form.enviar_aniversario_email = false
+})
+
+watch(() => form.whatsapp, (v) => {
+  if (!v) form.enviar_aniversario_whatsapp = false
+})
+
+watch(() => form.estado_civil, (v) => {
+  if (v !== 'CASADO') form.nome_conjuge = ''
+})
+
+
 async function salvar() {
   saving.value = true
   try {
-    const payload = { ...form, razao_social: isJuridica.value ? form.nome_completo : null }
+    const payload = {
+      ...form,
+
+      // PJ: usa nome_completo como razão social
+      razao_social: isJuridica.value ? form.nome_completo : null,
+
+      // email opcional (manda null se vazio)
+      email: form.email ? String(form.email).toLowerCase().trim() : null,
+
+      // cônjuge só se casado
+      nome_conjuge: form.estado_civil === 'CASADO' ? (form.nome_conjuge || null) : null,
+
+      // flags: se não tem contato, não marca
+      enviar_aniversario_email: form.email ? !!form.enviar_aniversario_email : false,
+      enviar_aniversario_whatsapp: form.whatsapp ? !!form.enviar_aniversario_whatsapp : false,
+    }
+
     await ClienteService.salvar(isEdit.value ? clienteId.value : null, payload)
     notify.success('Dados salvos com sucesso!')
     router.push('/clientes')
@@ -291,6 +354,7 @@ async function salvar() {
     saving.value = false
   }
 }
+
 
 async function excluir() {
   const ok = await confirm.show('Atenção', 'Confirmar exclusão definitiva?')
