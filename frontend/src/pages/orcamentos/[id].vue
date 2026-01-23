@@ -198,7 +198,11 @@ function gerarPdf() {
 
 onMounted(async () => {
   const { data: clis } = await ClienteService.listar()
-  clientesOptions.value = clis.map(c => ({ label: c.nome, value: c.id }))
+  clientesOptions.value = (clis || []).map(c => ({
+  label: c.nome_completo || c.razao_social || `ID #${c.id}`,
+  value: c.id,
+}))
+
   if (!isNovo.value) {
     const res = await OrcamentosService.detalhar(orcamentoId.value)
     draft.cliente_id = res.data.cliente_id

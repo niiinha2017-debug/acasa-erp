@@ -81,14 +81,14 @@
             <template #cell-contato="{ row }">
               <div class="flex flex-col">
                 <span class="text-xs font-bold text-slate-400 uppercase tracking-tighter">WhatsApp</span>
-                <span class="text-sm font-black text-[var(--text-main)] italic">{{ row.celular || '---' }}</span>
+                <span class="text-sm font-black text-[var(--text-main)] italic">{{ row.whatsapp || '---' }}</span>
               </div>
             </template>
 
             <template #cell-localizacao="{ row }">
               <div class="flex flex-col">
                 <span class="text-[9px] font-black text-brand-primary uppercase tracking-widest">Cidade/UF</span>
-                <span class="text-sm font-black text-[var(--text-main)] uppercase">{{ row.cidade }} / {{ row.uf }}</span>
+                <span class="text-sm font-black text-[var(--text-main)] uppercase">{{ row.cidade }} / {{ row.estado }}</span>
               </div>
             </template>
 
