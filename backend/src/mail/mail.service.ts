@@ -60,6 +60,25 @@ Entre no sistema e altere sua senha imediatamente.
 
     return { ok: true }
   }
+async enviarAniversarioCliente(para: string, nome?: string) {
+  const from = this.config.get<string>('MAIL_FROM') || this.config.get<string>('MAIL_USER')
+
+  const text =
+`Olá${nome ? `, ${nome}` : ''}!
+
+Passando para te desejar um feliz aniversário! 🎉
+
+— ACASA ERP`
+
+  await this.transporter.sendMail({
+    from,
+    to: para,
+    subject: 'ACASA-ERP - Feliz aniversário!',
+    text,
+  })
+
+  return { ok: true }
+}
 
 
 }
