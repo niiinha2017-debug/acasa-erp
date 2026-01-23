@@ -13,7 +13,7 @@ export class ClientesAniversarioJob {
   ) {}
 
   // todo dia às 08:00 (São Paulo)
-  @Cron('/10 * * *', { timeZone: 'America/Sao_Paulo' })
+  @Cron('0 0 10 * * *', { timeZone: 'America/Sao_Paulo' })
   async executar() {
     const hoje = new Date()
     const dia = hoje.getDate()
