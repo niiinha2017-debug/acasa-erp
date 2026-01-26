@@ -125,7 +125,7 @@
               'px-2 py-1 rounded text-[9px] font-black uppercase',
               getStatusClasses(row.status)
             ]">
-              {{ row.status || 'PENDENTE' }}
+              {{ row.status || 'EM_ABERTO' }}
             </span>
           </div>
         </template>
@@ -200,14 +200,16 @@ function moedaParaNumero(valor) {
 }
 
 function getStatusClasses(status) {
-  const statusMap = {
-    'PAGO': 'bg-emerald-50 text-emerald-600 border border-emerald-100',
-    'PENDENTE': 'bg-amber-50 text-amber-600 border border-amber-100',
-    'CANCELADO': 'bg-slate-100 text-slate-500 border border-slate-200',
-    'AGENDADO': 'bg-blue-50 text-blue-600 border border-blue-100'
+  const s = String(status || '').toUpperCase()
+  const map = {
+    PAGO: 'bg-emerald-50 text-emerald-600 border border-emerald-100',
+    EM_ABERTO: 'bg-amber-50 text-amber-600 border border-amber-100',
+    VENCIDO: 'bg-rose-50 text-rose-600 border border-rose-100',
+    CANCELADO: 'bg-slate-100 text-slate-500 border border-slate-200',
   }
-  return statusMap[status] || statusMap['PENDENTE']
+  return map[s] || map.EM_ABERTO
 }
+
 
 // Filtro reativo
 const despesasFiltradas = computed(() => {

@@ -370,8 +370,8 @@ async function init() {
 }
 
 async function salvar() {
-  if (!form.categoria) return notify.warn('Selecione a categoria')
-  if (!Number(form.valor_total) || Number(form.valor_total) <= 0) return notify.warn('Valor deve ser maior que zero')
+  if (!form.categoria) return notify.info('Selecione a categoria')
+  if (!Number(form.valor_total) || Number(form.valor_total) <= 0) return notify.info('Valor deve ser maior que zero')
 
   loading.value = true
   try {
@@ -392,6 +392,7 @@ async function salvar() {
     loading.value = false
   }
 }
+
 
 
 async function excluir() {

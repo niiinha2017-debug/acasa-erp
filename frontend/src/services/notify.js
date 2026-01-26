@@ -19,6 +19,7 @@ export const notify = {
   success(msg) { this.add(msg, 'success') },
   error(msg) { this.add(msg, 'error', 5000) }, // Erro fica 5 seg na tela
   info(msg) { this.add(msg, 'info') },
+  warn(msg) { this.add(msg, 'info') },
 
   remove(id) {
     const index = notifications.findIndex(n => n.id === id)
