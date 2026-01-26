@@ -67,18 +67,18 @@ export class DespesasController {
     return this.service.update(cleanId, dto)
   }
 
-  @Delete('recorrencia/:recorrenciaId')
-  @Permissoes('despesas.excluir')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  removeRecorrencia(@Param('recorrenciaId') recorrenciaId: string) {
-    return this.service.removeRecorrencia(recorrenciaId)
-  }
+@Delete('recorrencia/:recorrenciaId')
+@Permissoes('despesas.excluir')
+removeRecorrencia(@Param('recorrenciaId') recorrenciaId: string) {
+  return this.service.removeRecorrencia(recorrenciaId)
+}
 
-  @Delete(':id')
-  @Permissoes('despesas.excluir')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id') id: string) {
-    const cleanId = Number(id.replace(/\D/g, ''))
-    return this.service.remove(cleanId)
-  }
+
+@Delete(':id')
+@Permissoes('despesas.excluir')
+remove(@Param('id') id: string) {
+  const cleanId = Number(id.replace(/\D/g, ''))
+  return this.service.remove(cleanId)
+}
+
 }

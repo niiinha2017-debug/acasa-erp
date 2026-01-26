@@ -326,6 +326,7 @@ watch(() => form.categoria, () => {
 })
 
 watch(() => form.tipo_movimento, () => {
+  if (hidratando.value) return
   form.categoria = null
   form.classificacao = null
 })
@@ -335,6 +336,7 @@ watch(() => form.status, (novo) => {
 })
 
 watch(() => form.unidade, () => {
+  if (hidratando.value) return
   form.categoria = null
   form.classificacao = null
 })
@@ -352,6 +354,7 @@ async function init() {
     if (isEdit.value) {
       const { data: despesa } = await DespesaService.buscar(despesaId.value)
 
+      hidratando.value = true
       Object.assign(form, {
         ...despesa,
         valor_total: Number(despesa.valor_total) || 0,
@@ -360,6 +363,7 @@ async function init() {
         data_pagamento: despesa.data_pagamento ? String(despesa.data_pagamento).slice(0, 10) : '',
         data_registro: despesa.data_registro ? String(despesa.data_registro).slice(0, 10) : form.data_registro,
       })
+      hidratando.value = false
     }
   } catch (error) {
     notify.error('Erro ao carregar')
@@ -403,11 +407,12 @@ async function excluir() {
     await DespesaService.remover(despesaId.value)
     notify.success('Excluído!')
     router.push('/despesas')
-  } catch (error) {
-    notify.error('Erro ao excluir')
-    console.error(error)
+  } catch (e) {
+    console.log('ERRO EXCLUIR (CADASTRO)', e?.response?.status, e?.response?.data || e)
+    notify.error(`Erro ao excluir (${e?.response?.status || 'sem status'})`)
   }
 }
+
 
 onMounted(init)
 </script>

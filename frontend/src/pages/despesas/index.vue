@@ -273,18 +273,20 @@ const editar = (id) => router.push(`/despesas/${id}`)
 async function pedirExcluir(id) {
   const row = despesas.value.find((d) => d.id === id)
   if (!row) return
-  
+
   const ok = await confirm.show('Excluir Lançamento', `Deseja remover o lançamento #${row.id}?`)
   if (!ok) return
-  
+
   try {
     await DespesaService.remover(id)
     despesas.value = despesas.value.filter((d) => d.id !== id)
-    notify.success?.('Lançamento removido')
-  } catch {
-    notify.error?.('Erro ao excluir registro')
+    notify.success('Lançamento removido')
+  } catch (e) {
+    console.log('ERRO EXCLUIR', e?.response?.status, e?.response?.data || e)
+    notify.error(`Erro ao excluir (${e?.response?.status || 'sem status'})`)
   }
 }
+
 
 onMounted(carregar)
 </script>
