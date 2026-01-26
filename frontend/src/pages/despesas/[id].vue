@@ -243,6 +243,8 @@ import * as CONST from '@/constantes/index'
 const route = useRoute()
 const router = useRouter()
 
+const hidratando = ref(false) 
+
 const loading = ref(false)
 const funcionariosOptions = ref([])
 
@@ -351,20 +353,20 @@ async function init() {
       value: f.id,
     }))
 
-    if (isEdit.value) {
-      const { data: despesa } = await DespesaService.buscar(despesaId.value)
+if (isEdit.value) {
+  const { data: despesa } = await DespesaService.buscar(despesaId.value)
 
-      hidratando.value = true
-      Object.assign(form, {
-        ...despesa,
-        valor_total: Number(despesa.valor_total) || 0,
-        quantidade_parcelas: Number(despesa.quantidade_parcelas) || 1,
-        data_vencimento: despesa.data_vencimento ? String(despesa.data_vencimento).slice(0, 10) : '',
-        data_pagamento: despesa.data_pagamento ? String(despesa.data_pagamento).slice(0, 10) : '',
-        data_registro: despesa.data_registro ? String(despesa.data_registro).slice(0, 10) : form.data_registro,
-      })
-      hidratando.value = false
-    }
+  hidratando.value = true
+  Object.assign(form, {
+    ...despesa,
+    valor_total: Number(despesa.valor_total) || 0,
+    quantidade_parcelas: Number(despesa.quantidade_parcelas) || 1,
+    data_vencimento: despesa.data_vencimento ? String(despesa.data_vencimento).slice(0, 10) : '',
+    data_pagamento: despesa.data_pagamento ? String(despesa.data_pagamento).slice(0, 10) : '',
+    data_registro: despesa.data_registro ? String(despesa.data_registro).slice(0, 10) : form.data_registro,
+  })
+  hidratando.value = false
+}
   } catch (error) {
     notify.error('Erro ao carregar')
     console.error(error)
