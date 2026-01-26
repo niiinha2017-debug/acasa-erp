@@ -13,7 +13,9 @@
         <Loading v-if="loading" />
 
         <form v-else class="space-y-6" @submit.prevent="salvar">
-          <!-- TIPO MOVIMENTO (curto, estilo “toggle”, sem ocupar a tela inteira) -->
+          <!-- ===================================================== -->
+          <!-- TIPO MOVIMENTO -->
+          <!-- ===================================================== -->
           <section class="space-y-2">
             <div class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
               Tipo de movimento
@@ -50,19 +52,21 @@
 
           <div class="h-px bg-slate-100"></div>
 
-          <!-- DADOS (grid mais “quadrado” e operacional) -->
+          <!-- ===================================================== -->
+          <!-- DADOS -->
+          <!-- ===================================================== -->
           <section class="space-y-5">
             <div class="grid grid-cols-12 gap-4 items-end">
-              <!-- Descrição (linha inteira) -->
+              <!-- Descrição -->
               <Input
                 class="col-span-12"
                 v-model="form.local"
-                label="Descrição *"
+                label="Descrição"
                 placeholder="Ex: Aluguel, Salário, Venda"
                 :forceUpper="false"
               />
 
-              <!-- Categoria / Unidade / Status (mesma linha) -->
+              <!-- Categoria / Classificação / Unidade -->
               <SearchInput
                 class="col-span-12 md:col-span-4"
                 v-model="form.categoria"
@@ -73,6 +77,19 @@
                 labelKey="label"
                 valueKey="value"
               />
+
+              <div class="col-span-12 md:col-span-4">
+                <div class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">
+                  Classificação
+                </div>
+
+                <div
+                  class="h-11 px-4 rounded-2xl border border-slate-200 bg-slate-50
+                         flex items-center text-slate-700 font-black uppercase tracking-[0.15em]"
+                >
+                  {{ classificacaoLabel || '-' }}
+                </div>
+              </div>
 
               <SearchInput
                 class="col-span-12 md:col-span-4"
@@ -85,25 +102,16 @@
                 valueKey="value"
               />
 
-              <SearchInput
-                class="col-span-12 md:col-span-4"
-                v-model="form.status"
-                mode="select"
-                label="Status"
-                placeholder="Selecione"
-                :options="statusOptions"
-                labelKey="label"
-                valueKey="value"
-              />
-
-              <!-- Valor / Forma pagto / Parcelas -->
+              <!-- Valor / Forma / Parcelas -->
               <div class="col-span-12 md:col-span-4">
                 <label class="block text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">
                   Valor *
                 </label>
 
                 <div class="relative">
-                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-black">R$</span>
+                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-black">
+                    R$
+                  </span>
 
                   <input
                     :value="numeroParaMoeda(form.valor_total)"
@@ -140,31 +148,51 @@
                 max="60"
               />
 
-              <!-- Responsável + Datas -->
-              <SearchInput
-                class="col-span-12 md:col-span-6"
-                v-model="form.funcionario_id"
-                mode="select"
-                label="Responsável"
-                placeholder="Selecione"
-                :options="funcionariosOptions"
-                labelKey="label"
-                valueKey="value"
-              />
+<SearchInput
+  class="col-span-12 md:col-span-4"
+  v-model="form.status"
+  mode="select"
+  label="Status"
+  placeholder="Selecione"
+  :options="statusOptions"
+  labelKey="label"
+  valueKey="value"
+/>
 
+<SearchInput
+  class="col-span-12 md:col-span-8"
+  v-model="form.funcionario_id"
+  mode="select"
+  label="Responsável"
+  placeholder="Selecione"
+  :options="funcionariosOptions"
+  labelKey="label"
+  valueKey="value"
+/>
+
+
+              <!-- Datas -->
               <Input
-                class="col-span-12 md:col-span-3"
-                v-model="form.data_vencimento"
+                class="col-span-12 md:col-span-4"
+                v-model="form.data_registro"
                 type="date"
-                label="Vencimento"
+                label="Data do registro"
                 :forceUpper="false"
               />
 
               <Input
-                class="col-span-12 md:col-span-3"
+                class="col-span-12 md:col-span-4"
+                v-model="form.data_vencimento"
+                type="date"
+                label="Data do vencimento"
+                :forceUpper="false"
+              />
+
+              <Input
+                class="col-span-12 md:col-span-4"
                 v-model="form.data_pagamento"
                 type="date"
-                label="Pagamento"
+                label="Data do pagamento"
                 :forceUpper="false"
                 :disabled="form.status !== 'PAGO'"
               />
@@ -173,7 +201,9 @@
 
           <div class="h-px bg-slate-100"></div>
 
+          <!-- ===================================================== -->
           <!-- AÇÕES -->
+          <!-- ===================================================== -->
           <div class="flex items-center justify-end gap-3">
             <Button
               v-if="isEdit"
@@ -183,6 +213,7 @@
               :disabled="loading"
               @click="excluir"
             />
+
             <Button
               class="min-w-[140px]"
               type="submit"
@@ -196,7 +227,6 @@
     </Card>
   </div>
 </template>
-
 
 
 <script setup>
@@ -214,6 +244,8 @@ const router = useRouter()
 const loading = ref(false)
 const funcionariosOptions = ref([])
 
+const today = () => new Date().toISOString().slice(0, 10)
+
 const form = reactive({
   tipo_movimento: 'SAIDA',
   funcionario_id: null,
@@ -224,18 +256,22 @@ const form = reactive({
   valor_total: 0,
   forma_pagamento: null,
   quantidade_parcelas: 1,
-  status: 'PENDENTE',
-  data_vencimento: new Date().toISOString().split('T')[0],
+  status: 'EM_ABERTO', // ✅ alinhado com STATUS_FINANCEIRO
+  data_vencimento: today(),
   data_pagamento: '',
-  data_registro: new Date().toISOString().split('T')[0],
+  data_registro: today(),
 })
 
 const despesaId = computed(() => Number(route.params?.id) || null)
 const isEdit = computed(() => !!despesaId.value)
 
 const mapToOptions = (data) => {
-  const base = Array.isArray(data) ? data : Object.values(data || {}).flat()
-  return base.map(i => ({ label: i.label, value: i.key }))
+  if (Array.isArray(data)) return data.map(i => ({ label: i.label, value: i.key }))
+  if (data && typeof data === 'object') {
+    const flat = Object.values(data).flat()
+    return flat.map(i => ({ label: i.label, value: i.key }))
+  }
+  return []
 }
 
 const unidadesOptions = computed(() => mapToOptions(CONST.UNIDADES_OPERACIONAIS))
@@ -248,30 +284,33 @@ const categoriasOptions = computed(() => {
     return (CONST.RECEITA_OPERACIONAL || []).map(i => ({
       label: i.label,
       value: i.key,
-      classificacaoKey: 'RECEITA',
+      classificacaoKey: 'RECEITA_OPERACIONAL',
     }))
   }
 
-  // DESPESA (com grupo no label)
+  // DESPESA
   const result = []
-
   Object.entries(CONST.FINANCEIRO_CATEGORIAS || {}).forEach(([grupo, itens]) => {
     ;(itens || []).forEach(i => {
       result.push({
-        label: `${String(grupo).replace(/_/g, ' ')} • ${i.label}`,
+        label: i.label,          // ✅ só a categoria
         value: i.key,
-        classificacaoKey: grupo,
+        classificacaoKey: grupo, // ✅ grupo fica “por trás”
       })
     })
   })
-
   return result
 })
+
+const classificacaoLabel = computed(() => {
+  if (!form.classificacao) return ''
+  return String(form.classificacao).replace(/_/g, ' ')
+})
+
 
 const categoriaSelecionada = computed(() =>
   categoriasOptions.value.find(o => o.value === form.categoria)
 )
-
 
 watch(() => form.categoria, () => {
   form.classificacao = categoriaSelecionada.value?.classificacaoKey ?? null
@@ -289,7 +328,7 @@ watch(() => form.status, (novo) => {
 async function init() {
   loading.value = true
   try {
-    const res = await FuncionarioService.listar?.()
+    const res = await FuncionarioService.listar()
     funcionariosOptions.value = (res?.data || []).map(f => ({
       label: f.nome || f.usuario,
       value: f.id,
@@ -302,8 +341,9 @@ async function init() {
         ...despesa,
         valor_total: Number(despesa.valor_total) || 0,
         quantidade_parcelas: Number(despesa.quantidade_parcelas) || 1,
-        data_vencimento: despesa.data_vencimento?.slice(0, 10) || '',
-        data_pagamento: despesa.data_pagamento?.slice(0, 10) || '',
+        data_vencimento: despesa.data_vencimento ? String(despesa.data_vencimento).slice(0, 10) : '',
+        data_pagamento: despesa.data_pagamento ? String(despesa.data_pagamento).slice(0, 10) : '',
+        data_registro: despesa.data_registro ? String(despesa.data_registro).slice(0, 10) : form.data_registro,
       })
     }
   } catch (error) {
@@ -315,7 +355,7 @@ async function init() {
 }
 
 async function salvar() {
-  if (!form.local || !form.categoria) return notify.warn('Preencha os campos obrigatórios')
+  if (!form.categoria) return notify.warn('Selecione a categoria')
   if (!Number(form.valor_total) || Number(form.valor_total) <= 0) return notify.warn('Valor deve ser maior que zero')
 
   loading.value = true
@@ -337,6 +377,7 @@ async function salvar() {
     loading.value = false
   }
 }
+
 
 async function excluir() {
   const confirmado = await confirm.show('Excluir?', 'Não pode desfazer')
