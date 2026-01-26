@@ -79,15 +79,13 @@ export class UpdateDespesaDto {
   @IsNotEmpty()
   unidade?: string
 
-  @IsOptional()
+@IsOptional()
   @IsString()
-  @IsNotEmpty()
-  categoria?: string
+  categoria?: string;
 
   @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  classificacao?: string
+  classificacao?: string;
 
 @IsOptional()
 @IsString()
@@ -96,10 +94,8 @@ local?: string // descrição opcional
 
 
   // manter como string (decimal)
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  valor_total?: string
+@IsOptional()
+  valor_total?: any;
 
   @IsOptional()
   @IsString()

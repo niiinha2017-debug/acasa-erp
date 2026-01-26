@@ -207,14 +207,14 @@
           <!-- AÇÕES -->
           <!-- ===================================================== -->
           <div class="flex items-center justify-end gap-3">
-<Button
+<button
   v-if="isEdit"
   type="button"
-  variant="danger"
-  label="Excluir"
-  :disabled="loading"
-  @click="() => { console.log('[BTN EXCLUIR] clicou', { isEdit, loading, despesaId: despesaId }); excluir() }"
-/>
+  @click.stop.prevent="excluir"
+  class="bg-red-600 text-white h-11 px-6 rounded-2xl font-black uppercase tracking-widest text-[12px] hover:bg-red-700 transition"
+>
+  Excluir
+</button>
 
 
             <Button
@@ -244,8 +244,7 @@ import * as CONST from '@/constantes/index'
 const route = useRoute()
 const router = useRouter()
 
-const hidratando = ref(false) 
-
+const hidratando = ref(false)
 const loading = ref(false)
 const funcionariosOptions = ref([])
 
@@ -261,20 +260,24 @@ const form = reactive({
   valor_total: 0,
   forma_pagamento: null,
   quantidade_parcelas: 1,
-  status: 'EM_ABERTO', // ✅ alinhado com STATUS_FINANCEIRO
+  status: 'EM_ABERTO',
   data_vencimento: today(),
   data_pagamento: '',
   data_registro: today(),
 })
 
-const despesaId = computed(() => Number(route.params?.id) || null)
+const despesaId = computed(() => {
+  const id = route.params?.id
+  return id ? Number(id) : null
+})
+
 const isEdit = computed(() => !!despesaId.value)
 
+// Utilitários
 const mapToOptions = (data) => {
   if (Array.isArray(data)) return data.map(i => ({ label: i.label, value: i.key }))
   if (data && typeof data === 'object') {
-    const flat = Object.values(data).flat()
-    return flat.map(i => ({ label: i.label, value: i.key }))
+    return Object.values(data).flat().map(i => ({ label: i.label, value: i.key }))
   }
   return []
 }
@@ -284,7 +287,6 @@ const formasPagamentoOptions = computed(() => mapToOptions(CONST.FORMAS_PAGAMENT
 const statusOptions = computed(() => mapToOptions(CONST.STATUS_FINANCEIRO))
 
 const categoriasOptions = computed(() => {
-  // RECEITA
   if (form.tipo_movimento === 'ENTRADA') {
     return (CONST.RECEITA_OPERACIONAL || []).map(i => ({
       label: i.label,
@@ -292,43 +294,32 @@ const categoriasOptions = computed(() => {
       classificacaoKey: 'RECEITA_OPERACIONAL',
     }))
   }
-
-  // DESPESA: depende da UNIDADE (FABRICA/LOJA)
   if (!form.unidade) return []
-
   const porUnidade = CONST.FINANCEIRO_CATEGORIAS?.[form.unidade]
   if (!porUnidade) return []
 
   const result = []
-
   Object.entries(porUnidade).forEach(([grupo, itens]) => {
     ;(itens || []).forEach(i => {
-      result.push({
-        label: i.label,          // só a categoria
-        value: i.key,
-        classificacaoKey: grupo, // CUSTO_FIXO / CUSTO_VARIAVEL / ...
-      })
+      result.push({ label: i.label, value: i.key, classificacaoKey: grupo })
     })
   })
-
   return result
 })
 
 const classificacaoLabel = computed(() => {
-  if (!form.classificacao) return ''
+  if (!form.classificacao) return '-'
   return String(form.classificacao).replace(/_/g, ' ')
 })
 
+// Watchers
+watch(() => form.categoria, (newVal) => {
+  if (!newVal) return
+  const selecionada = categoriasOptions.value.find(o => o.value === newVal)
+  if (selecionada) form.classificacao = selecionada.classificacaoKey
+}, { immediate: true })
 
-const categoriaSelecionada = computed(() =>
-  categoriasOptions.value.find(o => o.value === form.categoria)
-)
-
-watch(() => form.categoria, () => {
-  form.classificacao = categoriaSelecionada.value?.classificacaoKey ?? null
-})
-
-watch(() => form.tipo_movimento, () => {
+watch([() => form.tipo_movimento, () => form.unidade], () => {
   if (hidratando.value) return
   form.categoria = null
   form.classificacao = null
@@ -338,13 +329,7 @@ watch(() => form.status, (novo) => {
   if (novo !== 'PAGO') form.data_pagamento = ''
 })
 
-watch(() => form.unidade, () => {
-  if (hidratando.value) return
-  form.categoria = null
-  form.classificacao = null
-})
-
-
+// Ações
 async function init() {
   loading.value = true
   try {
@@ -354,74 +339,72 @@ async function init() {
       value: f.id,
     }))
 
-if (isEdit.value) {
-  const { data: despesa } = await DespesaService.buscar(despesaId.value)
-
-  hidratando.value = true
-  Object.assign(form, {
-    ...despesa,
-    valor_total: Number(despesa.valor_total) || 0,
-    quantidade_parcelas: Number(despesa.quantidade_parcelas) || 1,
-    data_vencimento: despesa.data_vencimento ? String(despesa.data_vencimento).slice(0, 10) : '',
-    data_pagamento: despesa.data_pagamento ? String(despesa.data_pagamento).slice(0, 10) : '',
-    data_registro: despesa.data_registro ? String(despesa.data_registro).slice(0, 10) : form.data_registro,
-  })
-  hidratando.value = false
-}
+    if (isEdit.value) {
+      const { data: despesa } = await DespesaService.buscar(despesaId.value)
+      hidratando.value = true
+      
+      Object.assign(form, {
+        ...despesa,
+        valor_total: Number(despesa.valor_total) || 0,
+        quantidade_parcelas: Number(despesa.quantidade_parcelas) || 1,
+        data_vencimento: despesa.data_vencimento?.slice(0, 10) || '',
+        data_pagamento: despesa.data_pagamento?.slice(0, 10) || '',
+        data_registro: despesa.data_registro?.slice(0, 10) || today(),
+      })
+      
+      setTimeout(() => { hidratando.value = false }, 150)
+    }
   } catch (error) {
-    notify.error('Erro ao carregar')
-    console.error(error)
+    notify.error('Erro ao carregar dados')
   } finally {
     loading.value = false
   }
 }
 
 async function salvar() {
-  console.log('[DESPESAS] CLICK SALVAR', { despesaId: despesaId.value, isEdit: isEdit.value })
   if (!form.categoria) return notify.info('Selecione a categoria')
-  if (!Number(form.valor_total) || Number(form.valor_total) <= 0) return notify.info('Valor deve ser maior que zero')
-
+  
   loading.value = true
   try {
-    const dados = {
-      ...form,
-      valor_total: Number(form.valor_total),
-      quantidade_parcelas: Number(form.quantidade_parcelas) || 1,
+    const payload = { 
+      ...JSON.parse(JSON.stringify(form)),
+      valor_total: String(form.valor_total), // Garante compatibilidade com Decimal/String no DTO
+      quantidade_parcelas: Number(form.quantidade_parcelas)
     }
-
-    console.log('[DESPESAS] REQUEST SALVAR', dados)
-    const res = await DespesaService.salvar(despesaId.value, dados)
-    console.log('[DESPESAS] OK SALVAR', res)
-
-    notify.success(isEdit.value ? 'Salvo!' : 'Criado!')
+    
+    await DespesaService.salvar(despesaId.value, payload)
+    notify.success(isEdit.value ? 'Atualizado com sucesso!' : 'Lançamento criado!')
     router.push('/despesas')
   } catch (e) {
-    console.log('[DESPESAS] ERRO SALVAR', e?.response?.status, e?.response?.data || e)
-    notify.error(`Erro ao salvar (${e?.response?.status || 'sem status'})`)
+    notify.error('Erro ao salvar lançamento')
   } finally {
     loading.value = false
   }
 }
 
-async function excluir() {
-  console.log('[DESPESAS] CLICK EXCLUIR', { despesaId: despesaId.value, isEdit: isEdit.value })
-  const confirmado = await confirm.show('Excluir?', 'Não pode desfazer')
-  console.log('[DESPESAS] CONFIRM EXCLUIR', confirmado)
+async function excluir(event) {
+  if (event) {
+    event.preventDefault()
+    event.stopPropagation()
+  }
+
+  if (!despesaId.value) return
+
+  const confirmado = await confirm.show('Excluir Lançamento?', 'Esta ação não pode ser desfeita.')
   if (!confirmado) return
 
+  loading.value = true
   try {
-    const res = await DespesaService.remover(despesaId.value)
-    console.log('[DESPESAS] OK EXCLUIR', res)
-
-    notify.success('Excluído!')
+    await DespesaService.remover(Number(despesaId.value))
+    notify.success('Registro excluído!')
     router.push('/despesas')
   } catch (e) {
-    console.log('[DESPESAS] ERRO EXCLUIR', e?.response?.status, e?.response?.data || e)
-    notify.error(`Erro ao excluir (${e?.response?.status || 'sem status'})`)
+    const msg = e.response?.data?.message || 'Erro ao excluir'
+    notify.error(msg)
+  } finally {
+    loading.value = false
   }
 }
-
-
 
 onMounted(init)
 </script>

@@ -176,7 +176,8 @@ const columns = [
   { key: 'acoes', label: '', align: 'center', width: '5%' }
 ]
 
-// Auxiliares de Lógica
+// --- AUXILIARES DE LÓGICA ---
+
 function normalizarTipoMovimento(v) {
   const t = String(v || '').toUpperCase().trim()
   return (t === 'SAÍDA' || t === 'SAIDA') ? 'SAIDA' : 'ENTRADA'
@@ -187,21 +188,36 @@ function isSaida(row) {
 }
 
 function isAtrasado(row) {
-  const venc = row?.data_vencimento ? new Date(row.data_vencimento) : null
-  if (!venc) return false
-  const status = String(row?.status || '').toUpperCase()
-  return venc < new Date() && status !== 'PAGO'
+  if (!row?.data_vencimento || row.status === 'PAGO') return false
+  const venc = new Date(row.data_vencimento)
+  const hoje = new Date()
+  hoje.setHours(0, 0, 0, 0)
+  return venc < hoje
 }
 
+/**
+ * CORREÇÃO DO VALOR: Garante que 193.60 não vire 1936.00
+ */
 function moedaParaNumero(valor) {
-  if (!valor) return 0
+  if (valor === null || valor === undefined) return 0
   if (typeof valor === 'number') return valor
-  const str = String(valor).replace('R$', '').replace(/\./g, '').replace(',', '.').trim()
+  
+  // Se for string, limpa formatação brasileira para padrão computacional
+  let str = String(valor).replace('R$', '').trim()
+  
+  // Se a string tem vírgula e ponto, é formato BR (Ex: 1.200,50)
+  if (str.includes(',') && str.includes('.')) {
+    str = str.replace(/\./g, '').replace(',', '.')
+  } else {
+    // Se só tem vírgula, troca por ponto (Ex: 193,60)
+    str = str.replace(',', '.')
+  }
+  
   return parseFloat(str) || 0
 }
 
 function getStatusClasses(status) {
-  const s = String(status || '').toUpperCase()
+  const s = String(status || 'EM_ABERTO').toUpperCase()
   const map = {
     PAGO: 'bg-emerald-50 text-emerald-600 border border-emerald-100',
     EM_ABERTO: 'bg-amber-50 text-amber-600 border border-amber-100',
@@ -211,40 +227,31 @@ function getStatusClasses(status) {
   return map[s] || map.EM_ABERTO
 }
 
+// --- COMPUTED ---
 
-// Filtro reativo
 const despesasFiltradas = computed(() => {
   const t = filtro.value.toLowerCase().trim()
   if (!t) return despesas.value
   
   return despesas.value.filter((d) => {
-    const campos = [
-      d.id,
-      d.tipo_movimento,
+    return [
       d.categoria,
       d.classificacao,
-      d.local,
       d.status,
-      format.currency(d.valor_total),
-      format.date(d.data_vencimento)
-    ]
-    
-    return campos.some((field) => 
-      String(field ?? '').toLowerCase().includes(t)
-    )
+      d.valor_total
+    ].some(v => String(v || '').toLowerCase().includes(t))
   })
 })
 
-// Cálculos de Totais
 const totalSaidas = computed(() => {
   return despesasFiltradas.value
-    .filter((d) => isSaida(d))
+    .filter(isSaida)
     .reduce((acc, curr) => acc + moedaParaNumero(curr.valor_total), 0)
 })
 
 const totalEntradas = computed(() => {
   return despesasFiltradas.value
-    .filter((d) => !isSaida(d))
+    .filter(d => !isSaida(d))
     .reduce((acc, curr) => acc + moedaParaNumero(curr.valor_total), 0)
 })
 
@@ -254,15 +261,17 @@ const totalPendente = computed(() => {
     .reduce((acc, curr) => acc + moedaParaNumero(curr.valor_total), 0)
 })
 
-// Ações de Carregamento e Navegação
+// --- AÇÕES ---
+
 async function carregar() {
   carregando.value = true
   try {
-    const res = await DespesaService.listar?.()
-    const data = res?.data || []
-    despesas.value = data.sort((a, b) => new Date(b.data_vencimento) - new Date(a.data_vencimento))
+    const res = await DespesaService.listar()
+    despesas.value = (res?.data || []).sort((a, b) => 
+      new Date(b.data_vencimento) - new Date(a.data_vencimento)
+    )
   } catch (err) {
-    notify.error?.('Erro ao carregar fluxo financeiro')
+    notify.error('Erro ao carregar dados')
   } finally {
     carregando.value = false
   }
@@ -271,33 +280,31 @@ async function carregar() {
 const novo = () => router.push('/despesas/novo')
 const editar = (id) => router.push(`/despesas/${id}`)
 
+/**
+ * CORREÇÃO DA EXCLUSÃO: Removido logs excessivos e corrigido fluxo de confirmação
+ */
 async function pedirExcluir(id) {
-  console.log('[INDEX] pedirExcluir start', id)
+  const confirmado = await confirm.show(
+    'Excluir Lançamento', 
+    `Tem certeza que deseja remover este registro?`
+  )
 
-  const row = despesas.value.find((d) => d.id === id)
-  console.log('[INDEX] row found?', !!row, row)
-
-  if (!row) return
-
-  const ok = await confirm.show('Excluir Lançamento', `Deseja remover o lançamento #${row.id}?`)
-  console.log('[INDEX] confirm ok?', ok)
-
-  if (!ok) return
+  if (!confirmado) return
 
   try {
-    console.log('[INDEX] calling DELETE /despesas', id)
-    const res = await DespesaService.remover(id)
-    console.log('[INDEX] delete response', res)
-
-    despesas.value = despesas.value.filter((d) => d.id !== id)
-    notify.success('Lançamento removido')
+    loading.value = true // Opcional: se tiver um loading global
+    await DespesaService.remover(Number(id))
+    
+    // Atualiza a lista local removendo o item
+    despesas.value = despesas.value.filter(d => d.id !== id)
+    notify.success('Lançamento removido com sucesso')
   } catch (e) {
-    console.log('[INDEX] ERRO EXCLUIR', e?.response?.status, e?.response?.data || e)
-    notify.error(`Erro ao excluir (${e?.response?.status || 'sem status'})`)
+    console.error('Erro ao excluir:', e)
+    notify.error('Não foi possível excluir o lançamento')
+  } finally {
+    loading.value = false
   }
 }
-
-
 
 onMounted(carregar)
 </script>
