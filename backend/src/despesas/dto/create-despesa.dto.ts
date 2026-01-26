@@ -89,10 +89,11 @@ export class UpdateDespesaDto {
   @IsNotEmpty()
   classificacao?: string
 
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  local?: string
+@IsOptional()
+@IsString()
+local?: string // descrição opcional
+
+
 
   // manter como string (decimal)
   @IsOptional()
