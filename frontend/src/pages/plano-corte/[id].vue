@@ -45,13 +45,14 @@
             </div>
 
             <div class="col-span-12 md:col-span-3">
-              <SearchInput
-                v-model="statusPlano"
-                mode="select"
-                label="Status da Venda"
-                :options="statusPlanoOptions"
-                required
-              />
+<SearchInput
+  v-model="statusPlano"
+  mode="select"
+  label="Status da Venda"
+  :options="statusPlanoOptions"
+  :readonly="isEdit"
+/>
+
             </div>
           </section>
 
@@ -160,9 +161,18 @@
         <div v-else></div>
 
         <div class="flex items-center gap-6">
-          <Button v-if="isEdit" variant="secondary" :loading="encaminhando" class="!rounded-2xl !px-8 !h-14 border-slate-200 font-black text-[10px] uppercase tracking-widest" @click="encaminharParaProducao">
-              Enviar Produção
-          </Button>
+<Button
+  v-if="isEdit"
+  type="button"
+  variant="secondary"
+  :loading="encaminhando"
+  :disabled="statusPlano === 'EM_PRODUCAO'"
+  @click="encaminharParaProducao"
+>
+  Enviar Produção
+</Button>
+
+
           <Button 
             variant="primary" 
             :loading="salvando" 
@@ -228,7 +238,9 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { maskMoneyBR } from '@/utils/masks'
 import { useConstantes } from '@/composables/useConstantes'
-import { PlanoCorteService, FornecedorService } from '@/services/index'
+import { PlanoCorteService, FornecedorService, ProducaoService } from '@/services/index'
+import { PIPELINE_PLANO_CORTE } from '@/constantes'
+
 
 const router = useRouter()
 const route = useRoute()
@@ -373,6 +385,13 @@ async function onSelecionarFornecedor(v) {
   limparItemNovo()
 }
 
+function planoKey(key) {
+  const k = PIPELINE_PLANO_CORTE.find(p => p.key === key)?.key
+  if (!k) throw new Error(`PIPELINE_PLANO_CORTE key não encontrada: ${key}`)
+  return k
+}
+
+
 function onSelecionarProdutoNovo(v) {
   const item = itensDisponiveis.value.find(i => i.id === v)
   itemNovo.value.unidade = item?.unidade || ''
@@ -400,14 +419,35 @@ async function carregarItensDisponiveis(fId) {
   const { data } = await PlanoCorteService.itens.listar(fId)
   itensDisponiveis.value = data || []
 }
+async function excluir() {
+  if (!isEdit.value) return
+
+  const confirmacao = window.confirm('Tem certeza que deseja excluir este Plano de Corte? Esta ação não pode ser desfeita.')
+  if (!confirmacao) return
+
+  salvando.value = true
+  try {
+    await PlanoCorteService.excluir(planoId.value)
+    router.push('/plano-corte')
+  } finally {
+    salvando.value = false
+  }
+}
 async function encaminharParaProducao() {
   if (!isEdit.value) return
+
   encaminhando.value = true
   try {
-    await PlanoCorteService.enviarParaProducao(planoId.value)
-    // opcional: atualizar status local
-    statusPlano.value = 'EM_PRODUCAO' // se essa key existir na constante
-    await carregarPlanoAtual() // se você tiver uma função de reload
+await ProducaoService.encaminhar({
+  origem_tipo: 'PLANO_CORTE',
+  origem_id: planoId.value,
+  status: planoKey('EM_PRODUCAO'), // ✅ vem da constante
+})
+
+    // ✅ não seta status na mão — recarrega do banco
+    const { data } = await PlanoCorteService.buscar(planoId.value)
+statusPlano.value = data.status ?? ''
+
   } finally {
     encaminhando.value = false
   }
@@ -418,12 +458,13 @@ async function encaminharParaProducao() {
 async function salvar() {
   salvando.value = true
   try {
-    const payload = {
-      fornecedor_id: fornecedorSelecionado.value,
-      data_venda: dataVenda.value,
-      status: statusPlano.value,
-      produtos: itens.value
-    }
+const payload = {
+  fornecedor_id: fornecedorSelecionado.value,
+  data_venda: dataVenda.value,
+  produtos: itens.value,
+  ...(isEdit.value ? {} : { status: statusPlano.value }),
+}
+
     await PlanoCorteService.salvar(isEdit.value ? planoId.value : null, payload)
     router.push('/plano-corte')
   } finally { salvando.value = false }
@@ -446,6 +487,7 @@ await Promise.all([
 
       fornecedorSelecionado.value = data.fornecedor_id ?? null
       statusPlano.value = data.status ?? ''
+
       dataVenda.value = data.data_venda?.slice(0, 10) || ''
 
       itens.value = (data.produtos || []).map(p => ({
@@ -458,12 +500,10 @@ await Promise.all([
       if (data.fornecedor_id) await carregarItensDisponiveis(data.fornecedor_id)
     } else {
       dataVenda.value = new Date().toISOString().slice(0, 10)
-      statusPlano.value = 'EM_ABERTO'
+      statusPlano.value = planoKey('EM_ABERTO')
+
     }
   } catch (err) {
-    console.error('[PLANO CORTE] erro no mounted:', err)
-    console.log('[PLANO CORTE] constantes:', constantes)
-    console.log('[PLANO CORTE] opcoes:', constantes?.opcoes?.value)
   } finally {
     loading.value = false
   }

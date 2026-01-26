@@ -107,21 +107,10 @@ export class PlanoCorteService {
     })
   }
 
-  async enviarParaProducao(id: number) {
-  await this.findOne(id)
-
-  return this.prisma.plano_corte.update({
-    where: { id },
-    data: {
-      status: 'EM_PRODUCAO', // use a KEY que EXISTE em STATUS_PLANO_CORTE
-    },
-    include: {
-      fornecedor: true,
-      produtos: { include: { item: true } },
-      consumos: { include: { produto: true } },
-    },
-  })
+async enviarParaProducao(id: number) {
+  throw new BadRequestException('Status do Plano de Corte é controlado pela Agenda, não por esta ação.')
 }
+
 
 
   async remove(id: number) {

@@ -1,204 +1,159 @@
 <template>
-  <div class="w-full max-w-[1400px] mx-auto animate-in fade-in duration-700">
-    <Card :shadow="true" class="!rounded-[2.5rem] border-none shadow-2xl shadow-slate-200/50 bg-white overflow-hidden">
-      
-      <PageHeader
-        title="Controle de Permissões"
-        subtitle="Gestão estratégica de níveis de acesso e segurança por colaborador."
-        icon="pi pi-lock"
-        :showBack="true"
-        iconClass="bg-slate-900 text-white shadow-lg"
-      >
-        <template #actions>
-          <Transition name="fade">
-            <div v-if="usuarioSelecionado" class="flex items-center gap-3 bg-brand-primary/5 px-4 py-2 rounded-2xl border border-brand-primary/10">
-              <div class="w-2 h-2 rounded-full bg-brand-primary animate-pulse"></div>
-              <span class="text-[10px] font-black uppercase tracking-[0.15em] text-brand-primary">
-                Editando: {{ usuarioSelecionado.nome }}
-              </span>
-            </div>
-          </Transition>
-        </template>
-      </PageHeader>
-
-      <div class="grid grid-cols-12">
-        
-        <div class="col-span-12 lg:col-span-4 border-r border-slate-100 bg-slate-50/30 p-8">
-          <div class="space-y-6">
-            <div class="flex items-center gap-3">
-              <div class="h-6 w-1 bg-brand-primary rounded-full"></div>
-              <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-800">Colaboradores</span>
-            </div>
-
-            <div class="relative group">
-              <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-primary transition-colors"></i>
-              <input 
-                v-model="filtroUsuarios"
-                type="text"
-                placeholder="BUSCAR POR NOME OU SETOR..."
-                class="w-full pl-11 pr-4 h-12 bg-white border border-slate-200 rounded-2xl text-[10px] font-bold uppercase tracking-tight focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary outline-none transition-all shadow-sm"
-              />
-            </div>
-
-            <div class="max-h-[600px] overflow-y-auto custom-scroll pr-2 space-y-3">
-              <div v-if="loadingDados" class="p-10 text-center">
-                <i class="pi pi-spin pi-spinner text-brand-primary text-xl mb-3"></i>
-                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Sincronizando Base...</p>
-              </div>
-
-              <template v-else>
-                <button
-                  v-for="row in usuariosFiltrados"
-                  :key="row.id"
-                  @click="selecionarUsuario(row)"
-                  :class="[
-                    'w-full p-5 rounded-[1.5rem] transition-all duration-300 text-left relative overflow-hidden group',
-                    usuarioSelecionado?.id === row.id 
-                      ? 'bg-white border-none shadow-xl shadow-slate-200 ring-1 ring-brand-primary' 
-                      : 'bg-transparent border border-transparent hover:border-slate-200 hover:bg-white/50'
-                  ]"
-                >
-                  <div class="relative z-10 flex items-center justify-between">
-                    <div class="flex flex-col">
-                      <span :class="['text-xs font-black uppercase tracking-tight transition-colors', usuarioSelecionado?.id === row.id ? 'text-brand-primary' : 'text-slate-700']">
-                        {{ row.nome }}
-                      </span>
-                      <div class="flex items-center gap-2 mt-1.5">
-                        <span class="text-[9px] font-bold uppercase text-slate-400 tracking-tighter">
-                          {{ row.setor || 'Geral' }}
-                        </span>
-                        <span class="w-1 h-1 rounded-full bg-slate-300"></span>
-                        <span class="text-[9px] font-black uppercase" :class="row.status === 'Ativo' ? 'text-emerald-500' : 'text-rose-500'">
-                          {{ row.status || 'Ativo' }}
-                        </span>
-                      </div>
-                    </div>
-                    <i v-if="usuarioSelecionado?.id === row.id" class="pi pi-chevron-right text-brand-primary text-xs"></i>
-                  </div>
-                </button>
-              </template>
-            </div>
-          </div>
+  <div class="w-full max-w-[1200px] mx-auto space-y-4 animate-page-in">
+    
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-2">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+          <i class="pi pi-lock text-lg"></i>
         </div>
-
-        <div class="col-span-12 lg:col-span-8 p-8 lg:p-12 bg-white">
-          
-          <div v-if="!usuarioSelecionado" class="h-[600px] flex flex-col items-center justify-center rounded-[3rem] bg-slate-50 border-2 border-dashed border-slate-100 p-20 text-center">
-              <div class="w-20 h-20 rounded-full bg-white shadow-xl flex items-center justify-center mb-6">
-                <i class="pi pi-user-plus text-2xl text-slate-300"></i>
-              </div>
-              <h4 class="text-xs font-black text-slate-800 uppercase tracking-[0.3em] mb-2">Aguardando Seleção</h4>
-              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest max-w-[200px] leading-relaxed">
-                Escolha um colaborador na lista ao lado para gerenciar acessos.
-              </p>
-          </div>
-
-          <div v-else class="space-y-12 animate-in fade-in slide-in-from-right-4 duration-500">
-            
-            <div class="flex items-center justify-between border-b border-slate-100 pb-6">
-              <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg">
-                  <i class="pi pi-shield text-sm"></i>
-                </div>
-                <div>
-                  <h3 class="text-sm font-black uppercase tracking-[0.15em] text-slate-800">Mapa de Acessos</h3>
-                  <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Defina o que este usuário pode ver ou editar</p>
-                </div>
-              </div>
-              
-              <Button
-                variant="primary"
-                :loading="loadingSalvar"
-                @click="salvar"
-                class="!rounded-2xl !h-12 !px-8 shadow-xl shadow-brand-primary/20 font-black text-[11px] uppercase tracking-widest"
-              >
-                Salvar Alterações
-              </Button>
-            </div>
-
-            <div class="space-y-12 h-[600px] overflow-y-auto custom-scroll pr-4">
-              <div v-for="(perms, modulo) in MAPA_PERMISSOES" :key="modulo" class="space-y-6 group">
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-3">
-                    <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-800 group-hover:text-brand-primary transition-colors">{{ modulo }}</span>
-                    <span class="px-2 py-0.5 rounded-md bg-slate-100 text-[8px] font-black text-slate-400 uppercase tracking-tighter">
-                      {{ perms.length }} itens
-                    </span>
-                  </div>
-                  <div class="flex gap-4">
-                    <button @click="marcarTudoModulo(modulo, true)" class="text-[9px] font-black uppercase text-brand-primary hover:tracking-widest transition-all">Selecionar Todos</button>
-                    <div class="w-[1px] h-3 bg-slate-200"></div>
-                    <button @click="marcarTudoModulo(modulo, false)" class="text-[9px] font-black uppercase text-slate-300 hover:text-rose-500 transition-all">Remover</button>
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <label
-                    v-for="p in perms"
-                    :key="p.chave"
-                    :class="[
-                      'flex items-center p-5 rounded-[1.5rem] border transition-all cursor-pointer select-none relative group/item',
-                      temPermissao(p.chave) 
-                        ? 'bg-brand-primary/5 border-brand-primary/20 shadow-sm shadow-brand-primary/5' 
-                        : 'bg-white border-slate-100 hover:border-slate-300 hover:shadow-md'
-                    ]"
-                  >
-                    <div class="relative flex items-center w-full">
-                      <div class="relative flex items-center justify-center h-5 w-5 mr-4">
-                        <input
-                          type="checkbox"
-                          class="peer h-5 w-5 rounded-lg border-slate-200 text-brand-primary focus:ring-brand-primary transition-all cursor-pointer opacity-0 absolute z-20"
-                          :checked="temPermissao(p.chave)"
-                          @change="togglePermissao(p.chave)"
-                        />
-                        <div :class="['h-5 w-5 rounded-lg border-2 flex items-center justify-center transition-all', temPermissao(p.chave) ? 'bg-brand-primary border-brand-primary shadow-lg shadow-brand-primary/30' : 'bg-white border-slate-200']">
-                          <i v-if="temPermissao(p.chave)" class="pi pi-check text-[10px] text-white font-black"></i>
-                        </div>
-                      </div>
-                      
-                      <div class="flex flex-col min-w-0">
-                        <span class="text-[10px] font-black uppercase tracking-tight text-slate-700 group-hover/item:text-brand-primary transition-colors truncate">
-                          {{ p.nome }}
-                        </span>
-                        <span class="text-[8px] font-bold text-slate-400 uppercase mt-0.5 tabular-nums">
-                          ID: {{ p.chave }}
-                        </span>
-                      </div>
-                    </div>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-          </div>
+        <div>
+          <h1 class="text-lg font-black text-slate-800 uppercase tracking-tight">Permissões de Acesso</h1>
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Controle de níveis e segurança por usuário</p>
         </div>
       </div>
-    </Card>
+
+      <Transition name="fade">
+        <div v-if="usuarioSelecionado" class="flex items-center gap-2 bg-brand-primary/5 px-3 py-1.5 rounded-lg border border-brand-primary/10">
+          <span class="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse"></span>
+          <span class="text-[10px] font-black uppercase text-brand-primary tracking-widest">
+            Editando: {{ usuarioSelecionado.nome }}
+          </span>
+        </div>
+      </Transition>
+    </div>
+
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden min-h-[650px] flex flex-col lg:flex-row">
+      
+      <aside class="w-full lg:w-80 border-b lg:border-b-0 lg:border-r border-slate-100 flex flex-col bg-slate-50/30">
+        <div class="p-4 border-b border-slate-100 bg-white">
+          <div class="relative group">
+            <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]"></i>
+            <input 
+              v-model="filtroUsuarios"
+              type="text"
+              placeholder="BUSCAR COLABORADOR..."
+              class="w-full pl-9 pr-3 h-10 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold uppercase focus:bg-white focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary outline-none transition-all"
+            />
+          </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-3 space-y-1 custom-scroll">
+          <button
+            v-for="row in usuariosFiltrados"
+            :key="row.id"
+            @click="selecionarUsuario(row)"
+            :class="[
+              'w-full p-3 rounded-xl transition-all text-left group border',
+              usuarioSelecionado?.id === row.id 
+                ? 'bg-white border-brand-primary/20 shadow-sm ring-1 ring-brand-primary/10' 
+                : 'bg-transparent border-transparent hover:bg-white hover:border-slate-200'
+            ]"
+          >
+            <div class="flex flex-col">
+              <span :class="['text-[11px] font-black uppercase tracking-tight', usuarioSelecionado?.id === row.id ? 'text-brand-primary' : 'text-slate-700']">
+                {{ row.nome }}
+              </span>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="text-[9px] font-bold uppercase text-slate-400 tracking-tighter">{{ row.setor || 'Geral' }}</span>
+                <span :class="['w-1 h-1 rounded-full', row.status === 'Ativo' ? 'bg-emerald-400' : 'bg-rose-400']"></span>
+              </div>
+            </div>
+          </button>
+        </div>
+      </aside>
+
+      <main class="flex-1 flex flex-col bg-white">
+        
+        <div v-if="!usuarioSelecionado" class="flex-1 flex flex-col items-center justify-center p-12 text-center">
+          <div class="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center mb-4 border border-slate-100 text-slate-300">
+            <i class="pi pi-user-plus text-xl"></i>
+          </div>
+          <h4 class="text-[11px] font-black text-slate-800 uppercase tracking-widest">Aguardando Seleção</h4>
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tight mt-1">Escolha um colaborador para gerenciar os acessos.</p>
+        </div>
+
+        <template v-else>
+          <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
+                <i class="pi pi-shield text-xs"></i>
+              </div>
+              <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">Mapa de Acessos</h3>
+            </div>
+            
+            <Button
+              variant="primary"
+              :loading="loadingSalvar"
+              @click="salvar"
+              class="!h-10 !px-6 !rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm"
+            >
+              Salvar Alterações
+            </Button>
+          </div>
+
+          <div class="flex-1 overflow-y-auto p-8 space-y-12 custom-scroll bg-white">
+            <div v-for="(perms, modulo) in MAPA_PERMISSOES" :key="modulo" class="space-y-4">
+              <div class="flex items-center justify-between border-b border-slate-50 pb-2">
+                <h4 class="text-[11px] font-black uppercase tracking-[0.15em] text-slate-400 flex items-center gap-2">
+                  <span class="w-1 h-3 bg-brand-primary rounded-full"></span>
+                  {{ modulo }}
+                </h4>
+                <div class="flex gap-3">
+                  <button @click="marcarTudoModulo(modulo, true)" class="text-[9px] font-black uppercase text-brand-primary/60 hover:text-brand-primary transition-colors">Marcar Todos</button>
+                  <button @click="marcarTudoModulo(modulo, false)" class="text-[9px] font-black uppercase text-slate-300 hover:text-rose-500 transition-colors">Limpar</button>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                <label
+                  v-for="p in perms"
+                  :key="p.chave"
+                  :class="[
+                    'flex items-center p-3 rounded-xl border transition-all cursor-pointer group select-none',
+                    temPermissao(p.chave) 
+                      ? 'bg-brand-primary/5 border-brand-primary/10 shadow-sm shadow-brand-primary/5' 
+                      : 'bg-white border-slate-100 hover:border-slate-200'
+                  ]"
+                >
+                  <div class="relative flex items-center justify-center h-4 w-4 mr-3">
+                    <input
+                      type="checkbox"
+                      class="peer opacity-0 absolute inset-0 cursor-pointer z-10"
+                      :checked="temPermissao(p.chave)"
+                      @change="togglePermissao(p.chave)"
+                    />
+                    <div :class="[
+                      'h-4 w-4 rounded-md border flex items-center justify-center transition-all',
+                      temPermissao(p.chave) ? 'bg-brand-primary border-brand-primary' : 'bg-slate-50 border-slate-200'
+                    ]">
+                      <i v-if="temPermissao(p.chave)" class="pi pi-check text-[8px] text-white font-black"></i>
+                    </div>
+                  </div>
+                  
+                  <div class="flex flex-col min-w-0">
+                    <span :class="['text-[10px] font-black uppercase tracking-tight truncate transition-colors', temPermissao(p.chave) ? 'text-brand-primary' : 'text-slate-600']">
+                      {{ p.nome }}
+                    </span>
+                    <span class="text-[8px] font-bold text-slate-300 uppercase tracking-tighter">ID: {{ p.chave }}</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+        </template>
+      </main>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.custom-scroll::-webkit-scrollbar {
-  width: 4px;
-}
-.custom-scroll::-webkit-scrollbar-track {
-  background: rgba(0,0,0,0.02);
-  border-radius: 10px;
-}
-.custom-scroll::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
-  border-radius: 10px;
-}
-.custom-scroll::-webkit-scrollbar-thumb:hover {
-  background: var(--brand-primary);
-}
+.custom-scroll::-webkit-scrollbar { width: 3px; }
+.custom-scroll::-webkit-scrollbar-track { background: transparent; }
+.custom-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+.custom-scroll::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
 
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-.fade-enter-from, .fade-leave-to {
-  opacity: 0;
-}
+.fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>
 
 <script setup>

@@ -24,9 +24,7 @@ export default defineConfig({
     ],
   },
 
-      devOptions: {
-        enabled: true,
-      },
+     devOptions: { enabled: false },
 
       manifest: {
         name: 'ACASA ERP',

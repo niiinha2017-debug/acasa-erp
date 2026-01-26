@@ -59,25 +59,30 @@ export class VendasService {
     return { tem_nota_fiscal: tem, percentual_aplicado: pct, valor_nota_fiscal: valor }
   }
 
-  private calcularTotais(input: {
-    valor_vendido: number
-    valor_taxa_pagamento: number
-    valor_nota_fiscal: number
-    soma_comissoes: number
-  }) {
-    const base = round2(toNumber(input.valor_vendido))
-    const taxaPag = round2(toNumber(input.valor_taxa_pagamento))
-    const nf = round2(toNumber(input.valor_nota_fiscal))
-    const com = round2(toNumber(input.soma_comissoes))
+private calcularTotais(input: {
+  valor_vendido: number
+  valor_taxa_pagamento: number
+  valor_nota_fiscal: number
+  soma_comissoes: number
+}) {
+  const base = round2(toNumber(input.valor_vendido))
+  const taxaPag = round2(toNumber(input.valor_taxa_pagamento))
+  const nf = round2(toNumber(input.valor_nota_fiscal))
+  const com = round2(toNumber(input.soma_comissoes))
 
-    return {
-      valor_bruto: base,
-      valor_taxa_pagamento: taxaPag,
-      valor_nota_fiscal: nf,
-      soma_comissoes: com,
-      valor_total: round2(base + taxaPag + nf + com),
-    }
+  const totalTaxas = round2(taxaPag + nf)
+  const liquido = round2(base - totalTaxas - com)
+
+  return {
+    valor_bruto: base,
+    valor_taxa_pagamento: taxaPag,
+    valor_nota_fiscal: nf,
+    soma_comissoes: com,
+    valor_total: liquido,
   }
+}
+
+
 
   // ===============================
   // LISTAR / DETALHAR
@@ -232,23 +237,8 @@ await tx.vendas_itens.createMany({
       })
     })
   }
-async enviarParaProducao(id: number) {
-  await this.buscarPorId(id)
-
-  return this.prisma.vendas.update({
-    where: { id },
-    data: {
-      status: 'EM_PRODUCAO', // ⚠️ tem que ser uma KEY real do STATUS de vendas
-    },
-    include: {
-      cliente: true,
-      orcamento: true,
-      itens: true,
-      comissoes: true,
-      pagamentos: true,
-      arquivos: true,
-    },
-  })
+async enviarParaProducao(vendaId: number, dataProducao: string) {
+  throw new BadRequestException('Status do processo é controlado pela Agenda (Produção), não por Vendas.')
 }
 
   // ===============================
@@ -435,7 +425,4 @@ async atualizarItem(vendaId: number, itemId: number, dto: any) {
       valor_total: (dto.quantidade !== undefined || dto.valor_unitario !== undefined) ? valorTotal : undefined,
     },
   })
-}
-
-
-}
+}}

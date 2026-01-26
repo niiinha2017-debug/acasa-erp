@@ -1,129 +1,154 @@
 <template>
-  <div class="w-full max-w-[1400px] mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+  <div class="w-full max-w-[1200px] mx-auto space-y-4 animate-page-in">
     
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <!-- Header Compacto -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-2">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+          <i class="pi pi-chart-line text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-black text-slate-800 uppercase tracking-tight">Fluxo Financeiro</h1>
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Gestão de caixa</p>
+        </div>
+      </div>
       
-      <Card hoverable class="relative overflow-hidden !rounded-[2rem] border-none bg-slate-900 p-7 group">
-        <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-all"></div>
-        <div class="relative z-10 flex items-center gap-5">
-          <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center shadow-2xl shadow-indigo-500/20">
-            <i class="pi pi-wallet text-2xl"></i>
-          </div>
-          <div>
-            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400/80 mb-1">Saldo Previsto</p>
-            <p class="text-2xl font-black text-white leading-none">
-              {{ format.currency(totalEntradas - totalSaidas) }}
-            </p>
-          </div>
+      <div class="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+        <div class="relative w-full sm:w-56">
+          <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+          <input 
+            v-model="filtro" 
+            type="text" 
+            placeholder="Buscar por categoria ou status..."
+            class="w-full pl-9 pr-3 h-10 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary outline-none transition-all"
+          />
         </div>
-      </Card>
-
-      <Card hoverable class="!rounded-[2rem] border-slate-100 shadow-xl shadow-slate-200/40 p-7 group">
-        <div class="flex items-center gap-5">
-          <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <i class="pi pi-arrow-up-right text-2xl font-bold"></i>
-          </div>
-          <div>
-            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Total Entradas</p>
-            <p class="text-2xl font-black text-emerald-600 leading-none">{{ format.currency(totalEntradas) }}</p>
-          </div>
-        </div>
-      </Card>
-
-      <Card hoverable class="!rounded-[2rem] border-slate-100 shadow-xl shadow-slate-200/40 p-7 group">
-        <div class="flex items-center gap-5">
-          <div class="w-14 h-14 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center group-hover:scale-110 transition-transform">
-            <i class="pi pi-arrow-down-right text-2xl font-bold"></i>
-          </div>
-          <div>
-            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Total Saídas</p>
-            <p class="text-2xl font-black text-rose-600 leading-none">{{ format.currency(totalSaidas) }}</p>
-          </div>
-        </div>
-      </Card>
-
-      <Card hoverable class="!rounded-[2rem] border-amber-100 bg-amber-50/20 shadow-xl shadow-amber-200/20 p-7 group">
-        <div class="flex items-center gap-5">
-          <div class="w-14 h-14 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center">
-            <i class="pi pi-clock text-2xl" :class="{ 'animate-pulse': totalPendente > 0 }"></i>
-          </div>
-          <div>
-            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600/70 mb-1">Em Aberto</p>
-            <p class="text-2xl font-black text-amber-700 leading-none">{{ format.currency(totalPendente) }}</p>
-          </div>
-        </div>
-      </Card>
+        
+        <Button 
+          variant="primary" 
+          size="md"
+          class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider"
+          @click="novo"
+        >
+          <i class="pi pi-plus mr-1.5 text-[10px]"></i>
+          Novo
+        </Button>
+      </div>
     </div>
 
-    <Card :shadow="true" class="!rounded-[3rem] overflow-hidden border-none shadow-2xl shadow-slate-200/60 bg-white">
-      <header class="flex flex-col lg:flex-row items-center justify-between gap-6 p-10 border-b border-slate-50 bg-slate-50/30">
-        <div class="flex items-center gap-5">
-          <div class="w-16 h-16 rounded-[1.5rem] bg-white border border-slate-100 shadow-sm flex items-center justify-center text-slate-900 group">
-            <i class="pi pi-chart-line text-2xl group-hover:scale-110 transition-transform"></i>
-          </div>
-          <div>
-            <h2 class="text-2xl font-black tracking-tight text-slate-800 uppercase italic">Fluxo Financeiro</h2>
-            <div class="flex items-center gap-2 mt-1">
-              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gestão de Inteligência de Caixa</p>
-            </div>
-          </div>
-        </div>
+    <!-- Cards Compactos -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">Saldo</p>
+        <p class="text-xl font-black text-slate-800">{{ format.currency(totalEntradas - totalSaidas) }}</p>
+      </div>
+      
+      <div class="p-4 rounded-xl bg-white border border-emerald-200 shadow-sm">
+        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-emerald-600">Entradas</p>
+        <p class="text-xl font-black text-emerald-700">{{ format.currency(totalEntradas) }}</p>
+      </div>
+      
+      <div class="p-4 rounded-xl bg-white border border-rose-200 shadow-sm">
+        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-rose-600">Saídas</p>
+        <p class="text-xl font-black text-rose-700">{{ format.currency(totalSaidas) }}</p>
+      </div>
+      
+      <div class="p-4 rounded-xl bg-white border border-amber-200 shadow-sm">
+        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-amber-600">Em Aberto</p>
+        <p class="text-xl font-black text-amber-700">{{ format.currency(totalPendente) }}</p>
+      </div>
+    </div>
 
-        <div class="flex flex-wrap items-center gap-4 w-full lg:w-auto">
-          <div class="relative flex-1 min-w-[300px]">
-            <i class="pi pi-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"></i>
-            <input 
-              v-model="filtro" 
-              type="text" 
-              placeholder="Pesquisar por categoria, local ou status..."
-              class="w-full pl-14 pr-6 h-14 bg-white border border-slate-100 rounded-[1.25rem] text-sm font-bold focus:ring-4 focus:ring-brand-primary/5 focus:border-brand-primary outline-none transition-all shadow-inner"
-            />
-          </div>
-          
-          <Button 
-            variant="primary" 
-            class="!h-14 !rounded-[1.25rem] !px-8 shadow-2xl shadow-brand-primary/30 active:scale-95 transition-all font-black uppercase tracking-widest text-[11px]" 
-            @click="novo"
-          >
-            <i class="pi pi-plus mr-3 text-xs"></i>
-            Novo Lançamento
-          </Button>
-        </div>
-      </header>
-
-      <div class="p-6">
-        <Table
-          :columns="columns"
-          :rows="despesasFiltradas"
-          :loading="carregando"
-          class="premium-table"
-        >
-          <template #cell-tipo_movimento="{ row }">
+    <!-- Tabela Compacta -->
+    <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+      <Table
+        :columns="columns"
+        :rows="despesasFiltradas"
+        :loading="carregando"
+        empty-text="Nenhum lançamento encontrado."
+        :boxed="false"
+      >
+        <template #cell-tipo="{ row }">
+          <div class="flex items-center justify-center">
             <div :class="[
-              'w-11 h-11 rounded-2xl flex items-center justify-center border-2 transition-all',
+              'w-7 h-7 rounded-lg flex items-center justify-center',
               isSaida(row) 
-                ? 'bg-rose-50 text-rose-500 border-rose-100/50' 
-                : 'bg-emerald-50 text-emerald-600 border-emerald-100/50'
+                ? 'bg-rose-50 text-rose-500' 
+                : 'bg-emerald-50 text-emerald-500'
             ]">
               <i :class="['pi text-xs', isSaida(row) ? 'pi-arrow-down-right' : 'pi-arrow-up-right']"></i>
             </div>
-          </template>
+          </div>
+        </template>
 
-          <template #cell-valor_total="{ row }">
-            <div class="flex flex-col items-end">
-              <span :class="[
-                'text-[15px] font-black tracking-tight', 
-                isSaida(row) ? 'text-slate-800' : 'text-emerald-600'
-              ]">
-                {{ isSaida(row) ? '-' : '+' }} {{ format.currency(moedaParaNumero(row.valor_total)) }}
+        <template #cell-detalhes="{ row }">
+          <div class="py-1">
+            <span class="text-sm font-bold text-slate-800 block">
+              {{ row.categoria || '—' }}
+            </span>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span class="text-[10px] font-medium text-slate-500">
+                {{ row.classificacao || '—' }}
               </span>
-              <span class="text-[9px] font-bold text-slate-300 uppercase">{{ row.forma_pagamento }}</span>
+              <span v-if="isAtrasado(row)" class="text-[8px] font-black text-rose-600 px-1.5 py-0.5 bg-rose-50 rounded border border-rose-100">
+                ATRASADO
+              </span>
             </div>
-          </template>
-        </Table>
-      </div>
-    </Card>
+          </div>
+        </template>
+
+        <template #cell-valor="{ row }">
+          <div class="text-right">
+            <span :class="[
+              'text-sm font-bold', 
+              isSaida(row) ? 'text-rose-600' : 'text-emerald-600'
+            ]">
+              {{ isSaida(row) ? '-' : '+' }} {{ format.currency(moedaParaNumero(row.valor_total)) }}
+            </span>
+            <p class="text-[10px] font-medium text-slate-400 mt-0.5">
+              {{ row.forma_pagamento }}
+            </p>
+          </div>
+        </template>
+
+        <template #cell-vencimento="{ row }">
+          <div class="text-center">
+            <span class="text-sm font-medium text-slate-700">
+              {{ format.date(row.data_vencimento) }}
+            </span>
+          </div>
+        </template>
+
+        <template #cell-status="{ row }">
+          <div class="flex justify-center">
+            <span :class="[
+              'px-2 py-1 rounded text-[9px] font-black uppercase',
+              getStatusClasses(row.status)
+            ]">
+              {{ row.status || 'PENDENTE' }}
+            </span>
+          </div>
+        </template>
+
+        <template #cell-acoes="{ row }">
+          <div class="flex justify-center gap-1">
+            <button 
+              @click="editar(row.id)"
+              class="w-7 h-7 rounded-lg bg-slate-100 text-slate-500 hover:bg-brand-primary hover:text-white transition-all flex items-center justify-center"
+            >
+              <i class="pi pi-pencil text-xs"></i>
+            </button>
+            <button 
+              @click="pedirExcluir(row.id)"
+              class="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
+            >
+              <i class="pi pi-trash text-xs"></i>
+            </button>
+          </div>
+        </template>
+      </Table>
+    </div>
+
   </div>
 </template>
 
@@ -140,13 +165,14 @@ const despesas = ref([])
 const carregando = ref(false)
 const filtro = ref('')
 
+// Configuração das colunas
 const columns = [
-  { key: 'tipo_movimento', label: 'Tipo', width: '80px', align: 'center' },
-  { key: 'detalhes', label: 'Detalhamento' },
-  { key: 'valor_total', label: 'Valor Total', width: '140px', align: 'right' },
-  { key: 'data_vencimento', label: 'Vencimento', width: '120px', align: 'center' },
-  { key: 'status', label: 'Situação', width: '130px', align: 'center' },
-  { key: 'acoes', label: 'Ações', width: '100px', align: 'center' },
+  { key: 'tipo', label: '', width: '5%', align: 'center' },
+  { key: 'detalhes', label: 'Detalhes', width: '40%' },
+  { key: 'valor', label: 'Valor', align: 'right', width: '20%' },
+  { key: 'vencimento', label: 'Vencimento', align: 'center', width: '15%' },
+  { key: 'status', label: 'Status', align: 'center', width: '15%' },
+  { key: 'acoes', label: '', align: 'center', width: '5%' }
 ]
 
 // Auxiliares de Lógica
@@ -159,9 +185,6 @@ function isSaida(row) {
   return normalizarTipoMovimento(row?.tipo_movimento) === 'SAIDA'
 }
 
-function categoriaLabel(row) { return row?.categoria || '—' }
-function classificacaoLabel(row) { return row?.classificacao || '—' }
-
 function isAtrasado(row) {
   const venc = row?.data_vencimento ? new Date(row.data_vencimento) : null
   if (!venc) return false
@@ -169,37 +192,63 @@ function isAtrasado(row) {
   return venc < new Date() && status !== 'PAGO'
 }
 
-// Soma de tudo que ainda não foi pago (independente de ser entrada ou saída)
-const totalPendente = computed(() => {
-  return despesasFiltradas.value
-    .filter(d => d.status !== 'PAGO')
-    .reduce((acc, curr) => acc + Number(curr.valor_total || 0), 0)
-})
+function moedaParaNumero(valor) {
+  if (!valor) return 0
+  if (typeof valor === 'number') return valor
+  const str = String(valor).replace('R$', '').replace(/\./g, '').replace(',', '.').trim()
+  return parseFloat(str) || 0
+}
 
-// O Saldo Real (Entradas - Saídas)
-const saldoTotal = computed(() => totalEntradas.value - totalSaidas.value)
+function getStatusClasses(status) {
+  const statusMap = {
+    'PAGO': 'bg-emerald-50 text-emerald-600 border border-emerald-100',
+    'PENDENTE': 'bg-amber-50 text-amber-600 border border-amber-100',
+    'CANCELADO': 'bg-slate-100 text-slate-500 border border-slate-200',
+    'AGENDADO': 'bg-blue-50 text-blue-600 border border-blue-100'
+  }
+  return statusMap[status] || statusMap['PENDENTE']
+}
 
 // Filtro reativo
 const despesasFiltradas = computed(() => {
   const t = filtro.value.toLowerCase().trim()
   if (!t) return despesas.value
-  return despesas.value.filter((d) =>
-    [d.id, d.tipo_movimento, d.categoria, d.classificacao, d.local, d.status]
-      .some((field) => String(field ?? '').toLowerCase().includes(t))
-  )
+  
+  return despesas.value.filter((d) => {
+    const campos = [
+      d.id,
+      d.tipo_movimento,
+      d.categoria,
+      d.classificacao,
+      d.local,
+      d.status,
+      format.currency(d.valor_total),
+      format.date(d.data_vencimento)
+    ]
+    
+    return campos.some((field) => 
+      String(field ?? '').toLowerCase().includes(t)
+    )
+  })
 })
 
 // Cálculos de Totais
 const totalSaidas = computed(() => {
   return despesasFiltradas.value
     .filter((d) => isSaida(d))
-    .reduce((acc, curr) => acc + Number(curr.valor_total || 0), 0)
+    .reduce((acc, curr) => acc + moedaParaNumero(curr.valor_total), 0)
 })
 
 const totalEntradas = computed(() => {
   return despesasFiltradas.value
     .filter((d) => !isSaida(d))
-    .reduce((acc, curr) => acc + Number(curr.valor_total || 0), 0)
+    .reduce((acc, curr) => acc + moedaParaNumero(curr.valor_total), 0)
+})
+
+const totalPendente = computed(() => {
+  return despesasFiltradas.value
+    .filter(d => d.status !== 'PAGO')
+    .reduce((acc, curr) => acc + moedaParaNumero(curr.valor_total), 0)
 })
 
 // Ações de Carregamento e Navegação
@@ -222,8 +271,10 @@ const editar = (id) => router.push(`/despesas/${id}`)
 async function pedirExcluir(id) {
   const row = despesas.value.find((d) => d.id === id)
   if (!row) return
+  
   const ok = await confirm.show('Excluir Lançamento', `Deseja remover o lançamento #${row.id}?`)
   if (!ok) return
+  
   try {
     await DespesaService.remover(id)
     despesas.value = despesas.value.filter((d) => d.id !== id)

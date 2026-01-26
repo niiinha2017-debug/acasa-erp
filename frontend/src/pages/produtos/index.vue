@@ -1,96 +1,112 @@
 <template>
-  <div class="w-full max-w-[1400px] mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+  <div class="w-full max-w-[1200px] mx-auto space-y-4 animate-page-in">
     
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <Card hoverable class="p-6 flex items-center gap-5 border-none shadow-sm bg-white/80 backdrop-blur">
-        <div class="w-14 h-14 rounded-2xl bg-brand-primary/10 text-brand-primary flex items-center justify-center shadow-inner">
-          <i class="pi pi-box text-2xl"></i>
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-2">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+          <i class="pi pi-shopping-cart text-lg"></i>
         </div>
         <div>
-          <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Total de Itens</p>
-          <p class="text-3xl font-black text-slate-800">{{ produtos.length }}</p>
+          <h1 class="text-lg font-black text-slate-800 uppercase tracking-tight">Insumos & Materiais</h1>
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Base de dados para industrialização</p>
         </div>
-      </Card>
+      </div>
       
+      <div class="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+        <div class="relative w-full sm:w-64">
+          <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+          <input 
+            v-model="filtro" 
+            type="text" 
+            placeholder="BUSCAR MATERIAL OU FORNECEDOR..."
+            class="w-full pl-9 pr-3 h-10 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary outline-none transition-all uppercase"
+          />
+        </div>
+        
+        <Button 
+          variant="primary" 
+          size="md"
+          class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider w-full sm:w-auto"
+          @click="router.push('/produtos/novo')"
+        >
+          <i class="pi pi-plus mr-1.5 text-[10px]"></i>
+          Novo Produto
+        </Button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1">Total de Itens</p>
+        <p class="text-xl font-black text-slate-800">{{ produtos.length }}</p>
       </div>
 
-    <Card :shadow="true" class="!rounded-[2.5rem] overflow-hidden border-border-ui shadow-2xl bg-white">
-      <header class="flex flex-col lg:flex-row items-center justify-between gap-6 p-8 lg:p-10 border-b border-border-ui bg-slate-50/50">
-        <div class="flex items-center gap-5">
-          <div class="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-xl rotate-3">
-            <i class="pi pi-shopping-cart text-xl"></i>
-          </div>
-          <div>
-            <h2 class="text-2xl font-black tracking-tight text-slate-800 uppercase">Insumos & Materiais</h2>
-            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Base de Dados para Industrialização</p>
-          </div>
-        </div>
+      <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1">Valor em Estoque</p>
+        <p class="text-xl font-black text-emerald-600">
+          {{ maskMoneyBR(produtos.reduce((acc, p) => acc + Number(p.valor_total || 0), 0)) }}
+        </p>
+      </div>
 
-        <div class="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
-          <div class="relative w-full sm:w-80 group">
-            <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-primary transition-colors"></i>
-            <input 
-              v-model="filtro" 
-              type="text" 
-              placeholder="BUSCAR MATERIAL, COR OU MARCA..."
-              class="w-full pl-11 pr-4 h-14 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary outline-none transition-all shadow-sm uppercase tracking-widest"
-            />
+      <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1">Produtos Ativos</p>
+        <p class="text-xl font-black text-blue-600">
+          {{ produtos.filter(p => p.status === 'ATIVO').length }}
+        </p>
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+      <Table 
+        :columns="columns" 
+        :rows="rows" 
+        :loading="loading" 
+        :boxed="false"
+      >
+        <template #cell-nome_produto="{ row }">
+          <div class="flex items-center gap-3 py-1">
+            <div class="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center font-black text-slate-400 text-[10px] uppercase">
+              {{ row.nome_produto.substring(0,2) }}
+            </div>
+            <div class="flex flex-col">
+              <span class="text-sm font-bold text-slate-800 uppercase tracking-tight leading-tight">
+                {{ row.nome_produto }}
+              </span>
+              <span class="text-[10px] font-bold text-slate-400 tracking-wider uppercase">
+                Ref: {{ String(row.id || 0).padStart(4, '0') }} • {{ row.marca || 'S/ Marca' }}
+              </span>
+            </div>
           </div>
-          
-          <Button 
-            variant="primary" 
-            class="h-14 !rounded-2xl !px-8 w-full sm:w-auto shadow-lg shadow-brand-primary/20 hover:scale-105 active:scale-95 transition-all" 
-            @click="router.push('/produtos/novo')"
+        </template>
+
+        <template #cell-status="{ row }">
+          <span 
+            class="px-2 py-1 rounded text-[9px] font-black uppercase inline-flex items-center gap-1.5"
+            :class="row.status === 'ATIVO' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-50 text-slate-500 border border-slate-100'"
           >
-            <i class="pi pi-plus mr-2 text-xs"></i>
-            ADICIONAR PRODUTO
-          </Button>
-        </div>
-      </header>
+            <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+            {{ row.status || 'INATIVO' }}
+          </span>
+        </template>
 
-      <div class="p-2">
-        <Table :columns="columns" :rows="rows" :loading="loading" class="!border-none">
-          
-          <template #cell-nome_produto="{ row }">
-            <div class="flex items-center gap-3 py-2">
-              <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-400 text-[10px] shadow-inner uppercase italic">
-                {{ row.nome_produto.substring(0,2) }}
-              </div>
-              <div class="flex flex-col">
-                <span class="text-sm font-black text-slate-700 uppercase leading-none mb-1">
-                  {{ row.nome_produto }}
-                </span>
-                <span class="text-[10px] font-bold text-slate-400 tracking-wider uppercase">
-                   Ref: {{ String(row.id || 0).padStart(4, '0') }} • {{ row.marca || 'S/ Marca' }}
-                </span>
-              </div>
-            </div>
-          </template>
-
-          <template #cell-status="{ row }">
-            <span 
-              class="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest inline-flex items-center gap-1.5"
-              :class="row.status === 'ATIVO' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'"
+        <template #cell-acoes="{ row }">
+          <div class="flex justify-end gap-1 px-2">
+            <button 
+              @click="router.push(`/produtos/${row.id}`)" 
+              class="w-7 h-7 rounded-lg bg-slate-100 text-slate-500 hover:bg-brand-primary hover:text-white transition-all flex items-center justify-center"
             >
-              <span class="w-1.5 h-1.5 rounded-full" :class="row.status === 'ATIVO' ? 'bg-emerald-500' : 'bg-slate-400'"></span>
-              {{ row.status || 'INATIVO' }}
-            </span>
-          </template>
-
-          <template #cell-acoes="{ row }">
-            <div class="flex justify-end gap-3 px-4">
-              <button @click="router.push(`/produtos/${row.id}`)" class="h-10 w-10 rounded-xl bg-slate-100 text-slate-600 hover:bg-brand-primary hover:text-white transition-all shadow-sm flex items-center justify-center group">
-                <i class="pi pi-pencil text-xs group-hover:scale-110 transition-transform"></i>
-              </button>
-              <button @click="excluir(row)" class="h-10 w-10 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm flex items-center justify-center group">
-                <i class="pi pi-trash text-xs group-hover:rotate-12 transition-transform"></i>
-              </button>
-            </div>
-          </template>
-
-        </Table>
-      </div>
-    </Card>
+              <i class="pi pi-pencil text-[10px]"></i>
+            </button>
+            <button 
+              @click="excluir(row)" 
+              class="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
+            >
+              <i class="pi pi-trash text-[10px]"></i>
+            </button>
+          </div>
+        </template>
+      </Table>
+    </div>
   </div>
 </template>
 
@@ -105,17 +121,14 @@ const loading = ref(false)
 const router = useRouter()
 const filtro = ref('')
 
-
-
-
 const columns = [
-  { key: 'nome_produto', label: 'Produto', width: '250px' },
-  { key: 'fornecedor_nome', label: 'Fornecedor' },
-  { key: 'unidade', label: 'Un.', width: '70px', align: 'center' },
-  { key: 'quantidade', label: 'Qtd', width: '80px', align: 'center' },
-  { key: 'valor_total', label: 'Valor Total', width: '130px', align: 'right' },
-  { key: 'status', label: 'Status', width: '110px', align: 'center' },
-  { key: 'acoes', label: 'Ações', width: '160px', align: 'center' },
+  { key: 'nome_produto', label: 'PRODUTO / REF', width: '30%' },
+  { key: 'fornecedor_nome', label: 'FORNECEDOR', width: '20%' },
+  { key: 'unidade', label: 'UN', width: '5%', align: 'center' },
+  { key: 'quantidade', label: 'QTD', width: '10%', align: 'center' },
+  { key: 'valor_total', label: 'VLR TOTAL', width: '15%', align: 'right' },
+  { key: 'status', label: 'STATUS', width: '10%', align: 'center' },
+  { key: 'acoes', label: '', width: '10%', align: 'right' }
 ]
 
 const rows = computed(() => {
@@ -148,7 +161,9 @@ async function buscarDadosDoBanco() {
 }
 
 function excluir(row) {
-  console.log('excluir:', row)
+  if (confirm(`Excluir o produto ${row.nome_produto}?`)) {
+    console.log('excluir:', row)
+  }
 }
 
 onMounted(() => {

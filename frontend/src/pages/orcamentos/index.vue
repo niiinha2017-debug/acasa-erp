@@ -1,153 +1,128 @@
 <template>
-  <div class="w-full max-w-[1400px] mx-auto space-y-8 animate-in fade-in duration-700 pb-20">
+  <div class="w-full max-w-[1200px] mx-auto space-y-4 animate-page-in">
     
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-2">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+          <i class="pi pi-briefcase text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-black text-slate-800 uppercase tracking-tight">Orçamentos</h1>
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Controle de propostas comerciais</p>
+        </div>
+      </div>
       
-      <Card hoverable class="p-6 flex items-center gap-5 bg-white border-none shadow-xl shadow-slate-200/50">
-        <div class="w-14 h-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-lg">
-          <i class="pi pi-briefcase text-xl"></i>
+      <div class="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+        <div class="relative w-full sm:w-64">
+          <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+          <input 
+            v-model="filtro" 
+            type="text" 
+            placeholder="BUSCAR CLIENTE OU TELEFONE..."
+            class="w-full pl-9 pr-3 h-10 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary outline-none transition-all uppercase"
+          />
         </div>
-        <div>
-          <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Geral</p>
-          <div class="flex items-baseline gap-2">
-            <p class="text-3xl font-black text-slate-800 tracking-tighter">{{ rows.length }}</p>
-            <span class="text-[9px] font-bold text-slate-400 uppercase italic">Projetos</span>
-          </div>
-        </div>
-      </Card>
-
-      <Card hoverable class="p-6 flex items-center gap-5 bg-white border-none shadow-xl shadow-slate-200/50">
-        <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
-          <i class="pi pi-users text-xl"></i>
-        </div>
-        <div>
-          <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Carteira Ativa</p>
-          <p class="text-3xl font-black text-blue-600 tracking-tighter">{{ grupos.length }}</p>
-        </div>
-      </Card>
-
-      <Card hoverable class="p-6 flex items-center gap-5 bg-white border-none shadow-xl shadow-slate-200/50">
-        <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100">
-          <i class="pi pi-dollar text-xl"></i>
-        </div>
-        <div>
-          <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Volume Negociado</p>
-          <p class="text-xl font-black text-emerald-600 tracking-tighter">
-            {{ format.currency(rows.reduce((acc, o) => acc + (Number(o.total_itens) || 0), 0)) }}
-          </p>
-        </div>
-      </Card>
-
-      <Card hoverable class="p-6 flex items-center gap-5 bg-white border-none shadow-xl shadow-slate-200/50">
-        <div class="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100">
-          <i class="pi pi-clock text-xl animate-pulse"></i>
-        </div>
-        <div>
-          <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Recentes</p>
-          <p class="text-3xl font-black text-amber-600 tracking-tighter">{{ rows.slice(0, 5).length }}</p>
-        </div>
-      </Card>
+        
+        <Button 
+          variant="primary" 
+          size="md"
+          class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider w-full sm:w-auto shadow-sm"
+          @click="router.push('/orcamentos/novo')"
+        >
+          <i class="pi pi-plus mr-1.5 text-[10px]"></i>
+          Novo Orçamento
+        </Button>
+      </div>
     </div>
 
-    <Card :shadow="true" class="!rounded-[3rem] overflow-hidden border-none shadow-2xl shadow-slate-200/60 bg-white">
-      <header class="flex flex-col md:flex-row items-center justify-between gap-6 p-10 bg-slate-50/50 border-b border-slate-100">
-        <div class="flex items-center gap-5">
-          <div class="w-12 h-12 rounded-[1.2rem] bg-slate-800 flex items-center justify-center text-white shadow-lg">
-            <i class="pi pi-briefcase text-xl"></i>
-          </div>
-          <div>
-            <h2 class="text-xl font-black tracking-tight text-slate-800 uppercase italic">Orçamentos</h2>
-            <div class="flex items-center gap-2 mt-0.5">
-              <span class="w-2 h-2 rounded-full bg-brand-primary animate-pulse"></span>
-              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Controle de propostas comerciais</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="flex items-center gap-4 w-full md:w-auto">
-          <div class="relative flex-1 md:w-96 group">
-            <i class="pi pi-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 text-xs group-focus-within:text-brand-primary transition-colors"></i>
-            <input 
-              v-model="filtro" 
-              type="text" 
-              placeholder="BUSCAR CLIENTE OU CPF..."
-              class="w-full pl-12 pr-4 h-14 bg-white border border-slate-200 rounded-[1.2rem] text-[10px] font-black focus:ring-4 focus:ring-slate-100 focus:border-slate-300 outline-none transition-all uppercase tracking-widest"
-            />
-          </div>
-          
-          <Button variant="primary" class="!h-14 !rounded-[1.2rem] !px-8 shadow-xl shadow-brand-primary/20 font-black text-[10px] uppercase tracking-widest" @click="router.push('/orcamentos/novo')">
-            <i class="pi pi-plus mr-3"></i> Novo Orçamento
-          </Button>
-        </div>
-      </header>
-
-      <div class="p-6">
-        <Table
-          :columns="columns"
-          :rows="grupos"
-          :loading="loading"
-          empty-text="Nenhum orçamento encontrado."
-          class="!border-none"
-        >
-          <template #cell-cliente="{ row }">
-            <div class="flex flex-col py-2">
-              <span class="text-[12px] font-black text-slate-800 leading-tight uppercase tracking-tight">
-                {{ row.cliente_nome || 'CLIENTE NÃO IDENTIFICADO' }}
-              </span>
-              <div class="flex items-center gap-2 mt-1">
-                <i class="pi pi-phone text-[8px] text-slate-300"></i>
-                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                  {{ row.cliente_telefone || 'SEM TELEFONE' }}
-                </span>
-              </div>
-            </div>
-          </template>
-
-          <template #cell-orcamentos="{ row }">
-            <div class="flex flex-wrap gap-2 justify-end">
-              <button
-                v-for="o in row.orcamentos"
-                :key="o.id"
-                class="h-8 px-3 rounded-lg border border-slate-100 text-[9px] font-black text-slate-500
-                       hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all bg-slate-50 shadow-sm flex items-center"
-                @click="router.push(`/orcamentos/${o.id}`)"
-              >
-                #{{ o.id }}
-              </button>
-            </div>
-          </template>
-
-          <template #cell-total="{ row }">
-            <div class="flex flex-col items-end py-1">
-              <span class="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-0.5">Acumulado</span>
-              <span class="text-[13px] font-black text-emerald-600 tabular-nums">
-                {{ format.currency(row.total || 0) }}
-              </span>
-            </div>
-          </template>
-
-          <template #cell-acoes="{ row }">
-            <div class="flex justify-end gap-2">
-              <button 
-                @click="novoParaCliente(row.cliente_id)"
-                class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all border border-emerald-100 flex items-center justify-center shadow-sm"
-                title="Novo Orçamento para este cliente"
-              >
-                <i class="pi pi-plus text-[10px] font-bold"></i>
-              </button>
-              
-              <button 
-                @click="abrirListaDoCliente(row.cliente_id)"
-                class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white transition-all border border-slate-100 flex items-center justify-center shadow-sm"
-                title="Ver histórico"
-              >
-                <i class="pi pi-list text-[10px]"></i>
-              </button>
-            </div>
-          </template>
-        </Table>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1">Total Geral</p>
+        <p class="text-xl font-black text-slate-800">{{ rows.length }}</p>
       </div>
-    </Card>
+      
+      <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1">Carteira Ativa</p>
+        <p class="text-xl font-black text-blue-600">{{ grupos.length }}</p>
+      </div>
+      
+      <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1">Volume Negociado</p>
+        <p class="text-lg font-black text-emerald-600 truncate">
+          {{ format.currency(rows.reduce((acc, o) => acc + (Number(o.total_itens) || 0), 0)) }}
+        </p>
+      </div>
+
+      <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1">Recentes</p>
+        <div class="flex items-center gap-2">
+          <p class="text-xl font-black text-amber-600">{{ rows.slice(0, 5).length }}</p>
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+      <Table
+        :columns="columns"
+        :rows="grupos"
+        :loading="loading"
+        empty-text="Nenhum orçamento encontrado."
+        :boxed="false"
+      >
+        <template #cell-cliente="{ row }">
+          <div class="flex flex-col py-1">
+            <span class="text-sm font-bold text-slate-800 uppercase tracking-tight">
+              {{ row.cliente_nome || 'CLIENTE NÃO IDENTIFICADO' }}
+            </span>
+            <span class="text-[10px] font-bold text-slate-400 tracking-wider">
+               {{ row.cliente_telefone || 'SEM CONTATO' }}
+            </span>
+          </div>
+        </template>
+
+        <template #cell-orcamentos="{ row }">
+          <div class="flex flex-wrap gap-1 justify-end">
+            <button
+              v-for="o in row.orcamentos"
+              :key="o.id"
+              class="h-6 px-2 rounded bg-slate-50 border border-slate-200 text-[9px] font-black text-slate-500 hover:bg-slate-900 hover:text-white transition-all uppercase"
+              @click="router.push(`/orcamentos/${o.id}`)"
+            >
+              #{{ o.id }}
+            </button>
+          </div>
+        </template>
+
+        <template #cell-total="{ row }">
+          <div class="flex flex-col items-end">
+            <span class="text-sm font-black text-slate-800 tabular-nums">
+              {{ format.currency(row.total || 0) }}
+            </span>
+            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Acumulado</span>
+          </div>
+        </template>
+
+        <template #cell-acoes="{ row }">
+          <div class="flex justify-end gap-1.5 px-2">
+            <button 
+              @click="novoParaCliente(row.cliente_id)"
+              class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100 flex items-center justify-center"
+              title="Novo Orçamento"
+            >
+              <i class="pi pi-plus text-[10px]"></i>
+            </button>
+            <button 
+              @click="abrirListaDoCliente(row.cliente_id)"
+              class="w-7 h-7 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-900 hover:text-white transition-all border border-slate-200 flex items-center justify-center"
+              title="Histórico"
+            >
+              <i class="pi pi-list text-[10px]"></i>
+            </button>
+          </div>
+        </template>
+      </Table>
+    </div>
   </div>
 </template>
 
@@ -163,10 +138,10 @@ const filtro = ref('')
 const rows = ref([])
 
 const columns = [
-  { key: 'cliente', label: 'Cliente / Documento', width: '40%' },
-  { key: 'orcamentos', label: 'Projetos Vinculados', width: '26%', align: 'right' },
-  { key: 'total', label: 'Financeiro', width: '18%', align: 'right' },
-  { key: 'acoes', label: 'Ações', width: '16%', align: 'right' },
+  { key: 'cliente', label: 'CLIENTE / CONTATO', width: '40%' },
+  { key: 'orcamentos', label: 'PROJETOS', width: '25%', align: 'right' },
+  { key: 'total', label: 'TOTAL', width: '20%', align: 'right' },
+  { key: 'acoes', label: '', width: '15%', align: 'right' },
 ]
 
 async function carregar() {
@@ -190,32 +165,17 @@ const grupos = computed(() => {
     if (!cid) continue
 
     if (!map.has(cid)) {
-  const cli = o.cliente || {}
+      const cli = o.cliente || {}
+      const nome = cli.nome_completo || cli.razao_social || cli.nome_fantasia || o.cliente_nome_snapshot || 'CLIENTE S/N'
+      const tel = cli.whatsapp || cli.telefone || cli.contato || cli.celular || ''
 
-  const nome = String(
-    cli.nome_completo ||
-    cli.razao_social ||
-    cli.nome_fantasia ||
-    o.cliente_nome_snapshot ||
-    ''
-  )
-
-  const tel = String(
-    cli.whatsapp ||
-    cli.telefone ||
-    cli.contato ||
-    cli.celular ||
-    ''
-  )
-
-  map.set(cid, {
-    cliente_id: cid,
-    cliente_nome: nome,
-    cliente_telefone: tel,
-    orcamentos: [],
-  })
-}
-
+      map.set(cid, {
+        cliente_id: cid,
+        cliente_nome: nome,
+        cliente_telefone: tel,
+        orcamentos: [],
+      })
+    }
     map.get(cid).orcamentos.push(o)
   }
 
@@ -224,14 +184,11 @@ const grupos = computed(() => {
     total: g.orcamentos.reduce((acc, o) => acc + (Number(o.total_itens) || 0), 0),
   }))
 
-lista = lista.filter(g =>
-  String(g.cliente_nome || '').toLowerCase().includes(f) ||
-  String(g.cliente_telefone || '').toLowerCase().includes(f)
-)
-
-  return lista
+  return lista.filter(g =>
+    String(g.cliente_nome).toLowerCase().includes(f) ||
+    String(g.cliente_telefone).toLowerCase().includes(f)
+  )
 })
-
 
 function novoParaCliente(clienteId) {
   router.push({ path: '/orcamentos/novo', query: { cliente_id: String(clienteId) } })

@@ -1,5 +1,5 @@
 <template>
-  <Card class="mt-4 mb-8 mx-2 lg:mx-4 shadow-xl rounded-[2.5rem] overflow-hidden">
+  <Card class="mt-4 mb-8 mx-2 lg:mx-4 shadow-xl rounded-[2.5rem] overflow-hidden animate-page-in">
     <PageHeader
       :title="isEdit ? `Editar Cliente #${clienteId}` : 'Novo Cliente'"
       subtitle="Gerenciamento de dados cadastrais e contato"
@@ -11,9 +11,10 @@
     <div class="p-8 lg:p-12">
       <Loading v-if="loading" />
 
-      <form v-else class="space-y-10" @submit.prevent="salvar" autocomplete="off">
+      <form v-else class="space-y-10" @submit.prevent="testarSalvar" autocomplete="off">
         
-        <div class="grid grid-cols-12 gap-6 items-end">
+        <!-- Seção de Tipo de Cliente e Indicação -->
+        <div class="grid grid-cols-12 gap-6 items-end bg-slate-50/50 dark:bg-slate-800/20 p-6 rounded-2xl">
           <div class="col-span-12 md:col-span-3 pb-2">
             <CustomCheckbox
               v-model="isJuridica"
@@ -34,8 +35,19 @@
           </div>
         </div>
 
-        <hr class="border-border-ui opacity-50" />
+        <!-- Separador estilizado -->
+        <div class="relative">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-border-ui/50"></div>
+          </div>
+          <div class="relative flex justify-center">
+            <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+              Dados Principais
+            </span>
+          </div>
+        </div>
 
+        <!-- Dados Pessoais/Jurídicos -->
         <div class="grid grid-cols-12 gap-6">
           <Input
             :class="isJuridica ? 'col-span-12 md:col-span-6' : 'col-span-12 md:col-span-9'"
@@ -43,6 +55,7 @@
             :label="isJuridica ? 'Razão Social' : 'Nome Completo'"
             placeholder="Digite o nome principal..."
             required
+            force-upper
           />
 
           <Input
@@ -51,6 +64,7 @@
             v-model="form.nome_fantasia"
             label="Nome Fantasia"
             placeholder="Opcional"
+            force-upper
           />
 
           <Input
@@ -62,6 +76,7 @@
           />
         </div>
 
+        <!-- Documentos -->
         <div class="grid grid-cols-12 gap-6">
           <template v-if="!isJuridica">
             <Input class="col-span-12 md:col-span-4" v-model="form.cpf" label="CPF" @input="form.cpf = maskCPF(form.cpf)" />
@@ -73,46 +88,89 @@
             <Input class="col-span-12 md:col-span-4" v-model="form.ie" label="IE" @input="form.ie = maskIE(form.ie)" />
           </template>
 
-          <Input class="col-span-12 md:col-span-4" v-model="form.status" label="Status" placeholder="ATIVO" required />
+          <div class="col-span-12 md:col-span-4">
+            <Select
+              v-model="form.status"
+              label="Status"
+              :options="opcoesStatus"
+              force-upper
+              required
+            />
+          </div>
         </div>
 
-        <hr class="border-border-ui opacity-50" />
+        <!-- Separador estilizado -->
+        <div class="relative">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-border-ui/50"></div>
+          </div>
+          <div class="relative flex justify-center">
+            <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+              Contato
+            </span>
+          </div>
+        </div>
 
-        <div class="grid grid-cols-12 gap-6 items-start">
-          <Input class="col-span-12 md:col-span-4" v-model="form.email" label="E-mail" type="email" :forceUpper="false" />
+        <!-- Contato -->
+        <div class="grid grid-cols-12 gap-6">
+          <Input class="col-span-12 md:col-span-4" v-model="form.email" label="E-mail" type="email" :force-upper="false" />
           <Input class="col-span-12 md:col-span-4" v-model="form.whatsapp" label="WhatsApp" @input="form.whatsapp = maskTelefone(form.whatsapp)" />
           <Input class="col-span-12 md:col-span-4" v-model="form.telefone" label="Fixo" @input="form.telefone = maskTelefone(form.telefone)" />
           
-          <div class="col-span-12 grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-6 rounded-[2rem] border border-border-ui mt-2">
-            <CustomCheckbox v-model="form.enviar_aniversario_email" label="Aviso por E-mail" :disabled="!form.email" />
-            <CustomCheckbox v-model="form.enviar_aniversario_whatsapp" label="Aviso por WhatsApp" :disabled="!form.whatsapp" />
+          <!-- Checkboxes de notificação -->
+          <div class="col-span-12 grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-800/30 p-6 rounded-2xl border border-border-ui">
+            <CustomCheckbox 
+              v-model="form.enviar_aniversario_email" 
+              :label="'Aviso por E-mail'" 
+              :description="form.email ? 'Será enviado para o e-mail cadastrado' : 'Cadastre um e-mail primeiro'"
+              :disabled="!form.email" 
+            />
+            <CustomCheckbox 
+              v-model="form.enviar_aniversario_whatsapp" 
+              :label="'Aviso por WhatsApp'" 
+              :description="form.whatsapp ? 'Será enviado para o WhatsApp cadastrado' : 'Cadastre um WhatsApp primeiro'"
+              :disabled="!form.whatsapp" 
+            />
           </div>
 
-          <div class="col-span-12 md:col-span-4 flex flex-col pt-4">
-            <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">Estado Civil</label>
-            <div class="relative w-full">
-              <select v-model="form.estado_civil" class="w-full h-14 px-5 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm shadow-sm focus:ring-4 focus:ring-brand-primary/10 appearance-none">
-                <option value="">SELECIONE...</option>
-                <option value="SOLTEIRO">SOLTEIRO</option>
-                <option value="CASADO">CASADO</option>
-                <option value="DIVORCIADO">DIVORCIADO</option>
-                <option value="VIUVO">VIÚVO(A)</option>
-              </select>
-              <div class="absolute inset-y-0 right-0 flex items-center pr-5 pointer-events-none text-slate-400">
-                <i class="pi pi-chevron-down text-[10px]"></i>
-              </div>
-            </div>
+          <!-- Estado Civil usando o novo componente Select -->
+          <div class="col-span-12 md:col-span-4">
+            <Select
+              v-model="form.estado_civil"
+              label="Estado Civil"
+              placeholder="SELECIONE..."
+              :options="opcoesEstadoCivil"
+              force-upper
+            />
           </div>
 
-          <div class="col-span-12 md:col-span-8 pt-4">
-            <transition name="fade">
-              <Input v-if="form.estado_civil === 'CASADO'" v-model="form.nome_conjuge" label="Nome do Cônjuge" class="animate-page-in" />
+          <!-- Nome do Cônjuge (ao lado do select, visível apenas se CASADO) -->
+          <div class="col-span-12 md:col-span-8">
+            <transition name="slide-fade">
+              <Input 
+                v-if="form.estado_civil === 'CASADO'"
+                v-model="form.nome_conjuge" 
+                label="Nome do Cônjuge" 
+                placeholder="Digite o nome completo do cônjuge"
+                force-upper
+              />
             </transition>
           </div>
         </div>
 
-<hr class="border-border-ui opacity-50" />
+        <!-- Separador estilizado -->
+        <div class="relative">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-border-ui/50"></div>
+          </div>
+          <div class="relative flex justify-center">
+            <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+              Endereço
+            </span>
+          </div>
+        </div>
 
+        <!-- Endereço -->
         <div class="grid grid-cols-12 gap-6">
           <Input 
             class="col-span-12 md:col-span-3" 
@@ -127,46 +185,94 @@
             v-model="form.endereco" 
             label="Logradouro" 
             placeholder="Rua, Avenida, etc..."
+            force-upper
           />
           <Input 
             class="col-span-12 md:col-span-2" 
             v-model="form.numero" 
             label="Nº" 
             placeholder="123"
+            force-upper
           />
           
           <Input 
             class="col-span-12 md:col-span-4" 
             v-model="form.bairro" 
             label="Bairro" 
+            force-upper
           />
           <Input 
             class="col-span-12 md:col-span-5" 
             v-model="form.cidade" 
             label="Cidade" 
+            force-upper
           />
           <Input 
             class="col-span-12 md:col-span-3" 
             v-model="form.estado" 
             label="UF (Estado)" 
             placeholder="Ex: SP"
+            force-upper
           />
           <Input 
             class="col-span-12" 
             v-model="form.complemento" 
             label="Complemento / Referência" 
             placeholder="Apt, Bloco, Próximo a..."
+            force-upper
           />
         </div>
 
+        <!-- Ações do Formulário - Apenas Salvar e Excluir -->
         <div class="pt-10 mt-6 border-t border-border-ui">
-          <FormActions
-            :isEdit="isEdit"
-            :loadingSave="saving"
-            :loadingDelete="deleting"
-            :showDelete="isEdit"
-            @delete="excluir"
-          />
+          <div class="flex items-center justify-between gap-4">
+            <!-- Espaço vazio à esquerda para balancear -->
+            <div></div>
+
+            <!-- Botão Salvar -->
+            <Button
+              variant="primary"
+              size="lg"
+              type="submit"
+              :loading="saving"
+              class="!rounded-xl px-8 py-3
+                     bg-gradient-to-r from-brand-primary to-brand-primary/90
+                     hover:from-brand-primary hover:to-brand-primary
+                     hover:shadow-2xl hover:shadow-brand-primary/30
+                     active:scale-[0.98]
+                     transition-all duration-300
+                     group relative overflow-hidden"
+            >
+              <!-- Efeito de brilho -->
+              <div class="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent 
+                          translate-x-[-100%] group-hover:translate-x-[100%] 
+                          transition-transform duration-700"></div>
+              
+              <!-- Conteúdo -->
+              <span class="relative flex items-center justify-center gap-2 font-bold tracking-wide text-white">
+                <i class="pi pi-save text-[14px] group-hover:rotate-12 transition-transform"></i>
+                {{ isEdit ? 'ATUALIZAR CLIENTE' : 'CADASTRAR CLIENTE' }}
+              </span>
+            </Button>
+
+            <!-- Botão Excluir (apenas em edição) -->
+            <Button
+              v-if="isEdit"
+              variant="danger"
+              size="lg"
+              :loading="deleting"
+              class="!rounded-xl px-6 py-3
+                     hover:shadow-xl hover:shadow-red-500/20
+                     transition-all duration-200"
+              @click="excluir"
+            >
+              <i class="pi pi-trash mr-2 text-[12px]"></i>
+              EXCLUIR
+            </Button>
+
+            <!-- Espaço vazio à direita para balancear quando não houver botão excluir -->
+            <div v-if="!isEdit"></div>
+          </div>
         </div>
       </form>
     </div>
@@ -194,6 +300,22 @@ const listaClientes = ref([])
 
 const clienteId = computed(() => Number(route.params?.id))
 const isEdit = computed(() => !!clienteId.value)
+
+// Opções para os Selects
+const opcoesEstadoCivil = [
+  { value: '', label: 'SELECIONE...' },
+  { value: 'SOLTEIRO', label: 'SOLTEIRO' },
+  { value: 'CASADO', label: 'CASADO' },
+  { value: 'DIVORCIADO', label: 'DIVORCIADO' },
+  { value: 'VIUVO', label: 'VIÚVO(A)' }
+]
+
+const opcoesStatus = [
+  { value: 'ATIVO', label: 'ATIVO' },
+  { value: 'INATIVO', label: 'INATIVO' },
+  { value: 'PENDENTE', label: 'PENDENTE' },
+  { value: 'BLOQUEADO', label: 'BLOQUEADO' }
+]
 
 const form = reactive({
   indicacao_id: null,
@@ -225,14 +347,14 @@ const form = reactive({
 // -- Computed Filters --
 const clientesOptions = computed(() => {
   return listaClientes.value
-    .filter(c => !isEdit.value || Number(c.id) !== clienteId.value) // Filtra para não indicar a si mesmo
+    .filter(c => !isEdit.value || Number(c.id) !== clienteId.value)
     .map(c => ({
       label: c.nome_completo || c.razao_social || `ID #${c.id}`,
       value: c.id
     }))
 })
 
-// -- Operacional --
+// -- Handlers --
 async function onBlurCep() {
   if (form.cep?.length < 9) return
   const data = await buscarCep(form.cep)
@@ -256,35 +378,72 @@ async function onBlurCnpj() {
   }
 }
 
-// -- Handlers Data --
+// -- Data Loading --
 async function carregarDados() {
   try {
-    const [resClientes, resUnico] = await Promise.all([
-      ClienteService.listar(),
-      isEdit.value ? ClienteService.buscar(clienteId.value) : null
-    ])
-
+    loading.value = true
+    
+    // Carregar lista de clientes para a indicação
+    const resClientes = await ClienteService.listar()
     listaClientes.value = Array.isArray(resClientes?.data) ? resClientes.data : []
 
-    if (resUnico?.data) {
-      const c = resUnico.data
-      Object.assign(form, {
-        ...c,
-        data_nascimento: c.data_nascimento?.split('T')[0] || '',
-        enviar_aniversario_email: !!c.enviar_aniversario_email,
-        enviar_aniversario_whatsapp: !!c.enviar_aniversario_whatsapp
-      })
-      isJuridica.value = !!c.cnpj
+    // Se for edição, carregar os dados do cliente
+    if (isEdit.value) {
+      const resUnico = await ClienteService.buscar(clienteId.value)
+      
+      if (resUnico?.data) {
+        const c = resUnico.data
+        
+        // Mapear TODOS os campos do formulário
+        Object.assign(form, {
+          indicacao_id: c.indicacao_id || null,
+          nome_completo: c.nome_completo || '',
+          razao_social: c.razao_social || '',
+          nome_fantasia: c.nome_fantasia || '',
+          data_nascimento: c.data_nascimento?.split('T')[0] || '',
+          cpf: c.cpf || '',
+          rg: c.rg || '',
+          cnpj: c.cnpj || '',
+          ie: c.ie || '',
+          telefone: c.telefone || '',
+          whatsapp: c.whatsapp || '',
+          estado_civil: c.estado_civil || '',
+          nome_conjuge: c.nome_conjuge || '',
+          email: c.email || '',
+          enviar_aniversario_email: !!c.enviar_aniversario_email,
+          enviar_aniversario_whatsapp: !!c.enviar_aniversario_whatsapp,
+          cep: c.cep || '',
+          endereco: c.endereco || '',
+          numero: c.numero || '',
+          complemento: c.complemento || '',
+          bairro: c.bairro || '',
+          cidade: c.cidade || '',
+          estado: c.estado || '',
+          status: c.status || 'ATIVO',
+        })
+        
+        // Definir se é pessoa jurídica
+        isJuridica.value = !!c.cnpj
+      }
     }
   } catch (err) {
+    console.error('Erro ao carregar dados:', err)
     notify.error('Erro ao carregar dados.')
+  } finally {
+    loading.value = false
   }
 }
 
-// Limpa campos específicos ao trocar tipo de pessoa
+// -- Watchers --
 watch(isJuridica, (val) => {
-  if (val) { form.cpf = ''; form.rg = '' } 
-  else { form.cnpj = ''; form.ie = ''; form.nome_fantasia = '' }
+  if (val) { 
+    form.cpf = ''; 
+    form.rg = '' 
+  } else { 
+    form.cnpj = ''; 
+    form.ie = ''; 
+    form.nome_fantasia = '' 
+  }
 })
 
 watch(() => form.email, (v) => {
@@ -300,52 +459,133 @@ watch(() => form.estado_civil, (v) => {
   if (v !== 'CASADO') form.nome_conjuge = ''
 })
 
-
-async function salvar() {
+// -- TESTE: Função simplificada --
+const testarSalvar = async (event) => {
+  console.log('🔵 FUNÇÃO testarSalvar CHAMADA!')
+  console.log('Evento:', event)
+  console.log('Dados do formulário:', form)
+  
   saving.value = true
+  
   try {
-    const payload = {
-      ...form,
-
-      // PJ: usa nome_completo como razão social
-      razao_social: isJuridica.value ? form.nome_completo : null,
-
-      // email opcional (manda null se vazio)
-      email: form.email ? String(form.email).toLowerCase().trim() : null,
-
-      // cônjuge só se casado
-      nome_conjuge: form.estado_civil === 'CASADO' ? (form.nome_conjuge || null) : null,
-
-      // flags: se não tem contato, não marca
-      enviar_aniversario_email: form.email ? !!form.enviar_aniversario_email : false,
-      enviar_aniversario_whatsapp: form.whatsapp ? !!form.enviar_aniversario_whatsapp : false,
-    }
-
-    await ClienteService.salvar(isEdit.value ? clienteId.value : null, payload)
-    notify.success('Dados salvos com sucesso!')
-    router.push('/clientes')
-  } catch (err) {
-    notify.error(err?.response?.data?.message || 'Erro ao salvar.')
+    // Teste simples: apenas redirecionar
+    console.log('Teste: Redirecionando para /clientes em 2 segundos...')
+    
+    notify.success('Salvamento simulado. Redirecionando...')
+    
+    setTimeout(() => {
+      console.log('🔴 AGORA VAI REDIRECIONAR!')
+      router.push('/clientes').then(() => {
+        console.log('✅ Redirecionamento bem-sucedido!')
+      }).catch(err => {
+        console.error('❌ Erro no redirecionamento:', err)
+        // Fallback
+        window.location.href = '/clientes'
+      })
+    }, 2000)
+    
+  } catch (error) {
+    console.error('Erro no teste:', error)
   } finally {
     saving.value = false
   }
 }
 
+// -- Form Actions Original --
+async function salvar() {
+  console.log('🟢 FUNÇÃO salvar CHAMADA!')
+  saving.value = true
+  
+  try {
+    console.log('Salvando dados...')
+    
+    const payload = {
+      ...form,
+      razao_social: isJuridica.value ? form.nome_completo : null,
+      email: form.email ? String(form.email).toLowerCase().trim() : null,
+      nome_conjuge: form.estado_civil === 'CASADO' ? (form.nome_conjuge || null) : null,
+      enviar_aniversario_email: form.email ? !!form.enviar_aniversario_email : false,
+      enviar_aniversario_whatsapp: form.whatsapp ? !!form.enviar_aniversario_whatsapp : false,
+      indicacao_id: form.indicacao_id ? Number(form.indicacao_id) : null
+    }
+
+    // Remover campos desnecessários
+    if (!isJuridica.value) {
+      delete payload.cnpj
+      delete payload.ie
+      delete payload.razao_social
+    } else {
+      delete payload.cpf
+      delete payload.rg
+    }
+
+    console.log('Payload enviado:', payload)
+
+    // Chamar o serviço
+    const response = await ClienteService.salvar(isEdit.value ? clienteId.value : null, payload)
+    console.log('Resposta da API:', response)
+
+    // Sucesso
+    notify.success(isEdit.value ? 'Cliente atualizado!' : 'Cliente cadastrado!')
+    
+    console.log('🟡 Aguardando 1 segundo antes de redirecionar...')
+    setTimeout(() => {
+      console.log('🔴 Tentando redirecionar para /clientes...')
+      router.push('/clientes').then(() => {
+        console.log('✅ Redirecionamento bem-sucedido!')
+      }).catch(err => {
+        console.error('❌ Erro no router.push:', err)
+        // Fallback
+        window.location.href = '/clientes'
+      })
+    }, 1000)
+    
+  } catch (err) {
+    console.error('Erro ao salvar:', err)
+    notify.error('Erro ao salvar.')
+    
+  } finally {
+    saving.value = false
+  }
+}
 
 async function excluir() {
   const ok = await confirm.show('Atenção', 'Confirmar exclusão definitiva?')
   if (!ok) return
+  
   deleting.value = true
   try {
     await ClienteService.remover(clienteId.value)
-    notify.success('Cliente removido.')
-    router.push('/clientes')
-  } catch {
+    notify.success('Cliente removido!')
+    
+    setTimeout(() => {
+      router.push('/clientes')
+    }, 1000)
+    
+  } catch (err) {
+    console.error('Erro ao excluir:', err)
     notify.error('Erro ao excluir.')
   } finally {
     deleting.value = false
   }
 }
 
-onMounted(carregarDados)
+// Debug: adicionar botão de teste
+onMounted(() => {
+  console.log('Página carregada. isEdit:', isEdit.value, 'clienteId:', clienteId.value)
+  
+  // Adicionar botão de teste no console
+  window.testRedirect = () => {
+    console.log('Testando redirecionamento...')
+    router.push('/clientes').then(() => {
+      console.log('✅ Teste OK!')
+    }).catch(err => {
+      console.error('❌ Teste FALHOU:', err)
+    })
+  }
+  
+  console.log('Para testar redirecionamento, digite no console: testRedirect()')
+  
+  carregarDados()
+})
 </script>

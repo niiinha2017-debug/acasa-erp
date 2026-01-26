@@ -1,132 +1,131 @@
 <template>
-  <div class="w-full max-w-[1400px] mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <Card hoverable class="p-6 flex items-center gap-5 border-none shadow-sm bg-white/80 backdrop-blur">
-        <div class="w-14 h-14 rounded-2xl bg-brand-primary/10 text-brand-primary flex items-center justify-center shadow-inner">
-          <i class="pi pi-list text-2xl"></i>
+  <div class="w-full max-w-[1200px] mx-auto space-y-4 animate-page-in">
+    
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-2">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+          <i class="pi pi-box text-lg"></i>
         </div>
         <div>
-          <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Total de Planos</p>
-          <p class="text-3xl font-black text-slate-800">{{ planos.length }}</p>
+          <h1 class="text-lg font-black text-slate-800 uppercase tracking-tight">Plano de Corte</h1>
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Industrialização por fornecedor</p>
         </div>
-      </Card>
-
-      <Card hoverable class="p-6 flex items-center gap-5 border-none shadow-sm bg-white/80 backdrop-blur">
-        <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shadow-inner">
-          <i class="pi pi-check-circle text-2xl"></i>
+      </div>
+      
+      <div class="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+        <div class="relative w-full sm:w-64">
+          <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+          <input 
+            v-model="busca" 
+            type="text" 
+            placeholder="Buscar fornecedor ou lote..."
+            class="w-full pl-9 pr-3 h-10 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary outline-none transition-all uppercase"
+          />
         </div>
-        <div>
-          <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Finalizados</p>
-          <p class="text-3xl font-black text-slate-800">{{ totalFinalizados }}</p>
-        </div>
-      </Card>
-
-      <Card hoverable class="p-6 flex items-center gap-5 border-none shadow-sm bg-white/80 backdrop-blur">
-        <div class="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center shadow-inner">
-          <i class="pi pi-clock text-2xl animate-pulse"></i>
-        </div>
-        <div>
-          <p class="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600">Em Aberto</p>
-          <p class="text-3xl font-black text-slate-800">{{ totalEmAberto }}</p>
-        </div>
-      </Card>
+        
+        <Button 
+          variant="primary" 
+          size="md"
+          class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider w-full sm:w-auto"
+          @click="router.push('/plano-corte/novo')"
+        >
+          <i class="pi pi-plus mr-1.5 text-[10px]"></i>
+          Novo Plano
+        </Button>
+      </div>
     </div>
 
-    <Card :shadow="true" class="!rounded-[2.5rem] overflow-hidden border-border-ui shadow-2xl bg-white">
-      <header class="flex flex-col lg:flex-row items-center justify-between gap-6 p-8 lg:p-10 border-b border-border-ui bg-slate-50/50">
-        <div class="flex items-center gap-5">
-          <div class="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-xl rotate-3">
-            <i class="pi pi-box text-xl"></i>
-          </div>
-          <div>
-            <h2 class="text-2xl font-black tracking-tight text-slate-800 uppercase">Plano de Corte</h2>
-            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Industrialização por Fornecedor</p>
-          </div>
-        </div>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+  <div class="p-5 rounded-xl bg-white border border-slate-200 shadow-sm flex flex-col justify-center min-h-[100px]">
+    <p class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1">Total de Planos</p>
+    <p class="text-3xl font-black text-slate-800">{{ planos.length }}</p>
+  </div>
+  
+  <div class="p-5 rounded-xl bg-white border border-emerald-100 shadow-sm flex flex-col justify-center min-h-[100px]">
+    <p class="text-[10px] font-black uppercase tracking-[0.15em] text-emerald-600 mb-1">Finalizados</p>
+    <p class="text-3xl font-black text-emerald-700">{{ totalFinalizados }}</p>
+  </div>
+  
+  <div class="p-5 rounded-xl bg-white border border-amber-100 shadow-sm flex flex-col justify-center min-h-[100px]">
+    <p class="text-[10px] font-black uppercase tracking-[0.15em] text-amber-600 mb-1">Em Aberto</p>
+    <div class="flex items-center gap-2">
+      <p class="text-3xl font-black text-amber-700">{{ totalEmAberto }}</p>
+      <span class="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse mt-2"></span>
+    </div>
+  </div>
+</div>
 
-        <div class="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
-          <div class="relative w-full sm:w-80 group">
-            <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-primary transition-colors"></i>
-            <input 
-              v-model="busca" 
-              type="text" 
-              placeholder="Buscar fornecedor ou lote..."
-              class="w-full pl-11 pr-4 h-14 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary outline-none transition-all shadow-sm"
-            />
-          </div>
-          
-          <Button 
-            variant="primary" 
-            class="h-14 !rounded-2xl !px-8 w-full sm:w-auto shadow-lg shadow-brand-primary/20 hover:scale-105 active:scale-95 transition-all" 
-            @click="router.push('/plano-corte/novo')"
-          >
-            <i class="pi pi-plus mr-2 text-xs"></i>
-            NOVO PLANO
-          </Button>
-        </div>
-      </header>
-
-      <div class="p-2">
-        <Table :columns="columns" :rows="rowsFiltrados" :loading="loading" class="!border-none">
-          
-          <template #cell-fornecedor="{ row }">
-            <div class="flex items-center gap-3 py-2">
-              <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-400 text-[10px] shadow-inner uppercase italic">
-                {{ (row.fornecedor?.razao_social || 'F').substring(0,2) }}
-              </div>
-              <div class="flex flex-col">
-                <span class="text-sm font-black text-slate-700 uppercase leading-none mb-1">
-                  {{ row.fornecedor?.razao_social || 'Fornecedor não Identificado' }}
-                </span>
-                <span class="text-[10px] font-bold text-slate-400 tracking-wider">
-                  Pedido #{{ row.numero_pedido || 'S/N' }}
-                </span>
-              </div>
+    <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+      <Table 
+        :columns="columns" 
+        :rows="rowsFiltrados" 
+        :loading="loading" 
+        :boxed="false"
+      >
+        <template #cell-fornecedor="{ row }">
+          <div class="flex items-center gap-3 py-1">
+            <div class="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center font-black text-slate-400 text-[10px] uppercase">
+              {{ (row.fornecedor?.razao_social || 'F').substring(0,2) }}
             </div>
-          </template>
-
-          <template #cell-data="{ row }">
             <div class="flex flex-col">
-              <span class="text-xs font-black text-slate-700">
-                {{ row.data ? new Date(row.data).toLocaleDateString('pt-BR') : '-' }}
+              <span class="text-sm font-bold text-slate-800 uppercase tracking-tight leading-tight">
+                {{ row.fornecedor?.razao_social || 'Fornecedor não Identificado' }}
               </span>
-              <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Data Emissão</span>
-            </div>
-          </template>
-
-          <template #cell-total="{ row }">
-            <div class="flex flex-col">
-              <span class="text-sm font-black text-brand-primary italic">
-                {{ maskMoneyBR(row.valor_total || 0) }}
+              <span class="text-[10px] font-bold text-brand-primary tracking-wider uppercase">
+                Pedido #{{ row.numero_pedido || 'S/N' }}
               </span>
-              <span class="text-[9px] font-bold text-slate-400 uppercase">Valor Total</span>
             </div>
-          </template>
+          </div>
+        </template>
 
-          <template #cell-status="{ row }">
-            <span 
-              class="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest inline-flex items-center gap-1.5"
-              :class="statusClassTailwind(row.status)"
-            >
-              <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
-              {{ row.status }}
+        <template #cell-data="{ row }">
+          <div class="flex flex-col">
+            <span class="text-xs font-bold text-slate-700">
+              {{ row.data ? new Date(row.data).toLocaleDateString('pt-BR') : '-' }}
             </span>
-          </template>
+            <span class="text-[9px] font-bold text-slate-400 uppercase">Emissão</span>
+          </div>
+        </template>
 
-          <template #cell-acoes="{ row }">
-            <div class="flex justify-end gap-3 px-4">
-              <button @click="router.push(`/plano-corte/${row.id}`)" class="h-10 w-10 rounded-xl bg-slate-100 text-slate-600 hover:bg-brand-primary hover:text-white transition-all shadow-sm flex items-center justify-center group">
-                <i class="pi pi-pencil text-xs group-hover:scale-110 transition-transform"></i>
-              </button>
-              <button @click="excluir(row)" class="h-10 w-10 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm flex items-center justify-center group">
-                <i class="pi pi-trash text-xs group-hover:rotate-12 transition-transform"></i>
-              </button>
-            </div>
-          </template>
-        </Table>
-      </div>
-    </Card>
+        <template #cell-total="{ row }">
+          <div class="flex flex-col">
+            <span class="text-sm font-black text-slate-800">
+              {{ maskMoneyBR(row.valor_total || 0) }}
+            </span>
+            <span class="text-[9px] font-bold text-slate-400 uppercase">Total</span>
+          </div>
+        </template>
+
+        <template #cell-status="{ row }">
+          <span 
+            class="px-2 py-1 rounded text-[9px] font-black uppercase inline-flex items-center gap-1.5"
+            :class="statusClassTailwind(row.status)"
+          >
+            <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+            {{ row.status }}
+          </span>
+        </template>
+
+        <template #cell-acoes="{ row }">
+          <div class="flex justify-end gap-1 px-2">
+            <button 
+              @click="router.push(`/plano-corte/${row.id}`)" 
+              class="w-7 h-7 rounded-lg bg-slate-100 text-slate-500 hover:bg-brand-primary hover:text-white transition-all flex items-center justify-center"
+              title="Editar"
+            >
+              <i class="pi pi-pencil text-[10px]"></i>
+            </button>
+            <button 
+              @click="excluir(row)" 
+              class="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
+              title="Excluir"
+            >
+              <i class="pi pi-trash text-[10px]"></i>
+            </button>
+          </div>
+        </template>
+      </Table>
+    </div>
   </div>
 </template>
 
@@ -142,14 +141,13 @@ const loading = ref(false)
 const planos = ref([])
 
 const columns = [
-  { key: 'fornecedor', label: 'Fornecedor / Detalhes' },
-  { key: 'data', label: 'Emissão', width: '150px' },
-  { key: 'total', label: 'Financeiro', width: '160px' },
-  { key: 'status', label: 'Situação', width: '160px', align: 'center' },
-  { key: 'acoes', label: '', width: '120px', align: 'right' }
+  { key: 'fornecedor', label: 'FORNECEDOR / PEDIDO', width: '40%' },
+  { key: 'data', label: 'EMISSÃO', width: '15%' },
+  { key: 'total', label: 'VALOR', width: '15%' },
+  { key: 'status', label: 'SITUAÇÃO', width: '20%' },
+  { key: 'acoes', label: '', width: '10%', align: 'right' }
 ]
 
-// INDICADORES DE DASHBOARD
 const totalFinalizados = computed(() => {
   return planos.value.filter(p => ['CONCLUIDO', 'FINALIZADO'].includes(p.status?.toUpperCase())).length
 })
@@ -171,12 +169,12 @@ const rowsFiltrados = computed(() => {
 function statusClassTailwind(status) {
   const s = String(status || '').toUpperCase()
   if (['CONCLUIDO', 'FINALIZADO'].includes(s)) 
-    return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+    return 'bg-emerald-50 text-emerald-600 border border-emerald-100'
   if (s === 'CANCELADO') 
-    return 'bg-red-500/10 text-red-500 border-red-500/20'
+    return 'bg-red-50 text-red-500 border border-red-100'
   if (['EM_PRODUCAO', 'EM PRODUCAO', 'ABERTO'].includes(s)) 
-    return 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-  return 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+    return 'bg-amber-50 text-amber-600 border border-amber-100'
+  return 'bg-blue-50 text-blue-600 border border-blue-100'
 }
 
 async function carregar() {

@@ -33,6 +33,7 @@ import VendaArquivosModal from '@/components/modals/VendaArquivosModal.vue'
 // Common
 import Loading from '@/components/common/Loading.vue' // Corrigido nome da variável e .vue
 import ProcessoClienteFlow from '@/components/common/ProcessoClienteFlow.vue'
+import Select from '@/components/common/Select.vue'
 
 // Importação da Diretiva de Permissão
 import { can } from '@/services/permissions'
@@ -59,6 +60,7 @@ app.component('CardSection',CardSection)
 // Common
 app.component('Loading', Loading)
 app.component('ProcessoClienteFlow', ProcessoClienteFlow)
+app.component('Select', Select)
 
 // Modals
 app.component('QuickCreateProduto', QuickCreateProduto)

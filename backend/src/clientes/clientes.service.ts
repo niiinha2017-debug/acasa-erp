@@ -48,11 +48,19 @@ export class ClientesService {
     })
   }
 
-  async listar() {
-    return this.prisma.cliente.findMany({
-      orderBy: { nome_completo: 'asc' },
-    })
-  }
+async listar() {
+  return this.prisma.cliente.findMany({
+    orderBy: { nome_completo: 'asc' },
+    include: {
+      obras: {
+        orderBy: { id: 'desc' }, // ou criado_em desc
+        take: 1, // “obra ativa” simplificada
+        select: { id: true, status_processo: true },
+      },
+    },
+  })
+}
+
 
   async buscarPorId(id: number) {
     const cliente = await this.prisma.cliente.findUnique({ where: { id } })

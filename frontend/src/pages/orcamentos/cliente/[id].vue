@@ -1,107 +1,113 @@
 <template>
-  <div class="w-full max-w-[1400px] mx-auto space-y-8 animate-in fade-in duration-700 pb-20">
+  <div class="w-full max-w-[1200px] mx-auto space-y-4 animate-page-in">
     
-    <Card :shadow="true" class="!rounded-[3rem] overflow-hidden border-none shadow-2xl shadow-slate-200/60 bg-white">
-      <header class="flex flex-col md:flex-row items-center justify-between gap-6 p-10 bg-slate-50/50 border-b border-slate-100">
-        <div class="flex items-center gap-5">
-          <div class="w-14 h-14 rounded-2xl bg-brand-primary text-white flex items-center justify-center shadow-xl shadow-brand-primary/20">
-            <i class="pi pi-file-edit text-2xl"></i>
-          </div>
-          <div>
-            <h2 class="text-xl font-black tracking-tight text-slate-800 uppercase italic">Orçamentos do Cliente</h2>
-            <div class="flex items-center gap-2 mt-1">
-              <span class="text-[10px] font-black text-brand-primary uppercase tracking-widest">{{ clienteNome }}</span>
-              <span v-if="clienteTelefone" class="text-[10px] font-bold text-slate-400 tracking-widest">— {{ clienteTelefone }}</span>
-            </div>
-          </div>
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-2">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-sm">
+          <i class="pi pi-file-edit text-lg"></i>
         </div>
-
-        <div class="flex items-center gap-3 w-full md:w-auto">
-          <Button variant="secondary" class="!h-12 !rounded-2xl !px-6 font-black text-[10px] uppercase tracking-widest border-slate-200" @click="router.back()">
-            <i class="pi pi-arrow-left mr-2"></i> Voltar
-          </Button>
-
-          <Button variant="primary" class="!h-12 !rounded-2xl !px-8 shadow-lg shadow-brand-primary/20 font-black text-[10px] uppercase tracking-widest" @click="novoParaCliente">
-            <i class="pi pi-plus mr-2"></i> Novo Orçamento
-          </Button>
-        </div>
-      </header>
-
-      <div class="px-10 pt-8">
-        <div class="relative w-full md:w-96 group">
-          <i class="pi pi-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 text-xs group-focus-within:text-brand-primary transition-colors"></i>
-          <input 
-            v-model="filtro" 
-            type="text" 
-            placeholder="BUSCAR ORÇAMENTO..."
-            class="w-full pl-12 pr-4 h-14 bg-white border border-slate-200 rounded-2xl text-[10px] font-black focus:ring-4 focus:ring-slate-100 focus:border-slate-300 outline-none transition-all uppercase tracking-widest"
-          />
+        <div>
+          <h1 class="text-lg font-black text-slate-800 uppercase tracking-tight">Orçamentos do Cliente</h1>
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-black text-brand-primary uppercase tracking-widest">{{ clienteNome }}</span>
+            <span v-if="clienteTelefone" class="text-[10px] font-bold text-slate-400 tracking-widest">— {{ clienteTelefone }}</span>
+          </div>
         </div>
       </div>
-
-      <div class="p-6">
-        <Table
-          :columns="columns"
-          :rows="filtrados"
-          :loading="loading"
-          emptyText="Nenhum orçamento encontrado para este cliente."
-          class="!border-none"
+      
+      <div class="flex items-center gap-2 w-full sm:w-auto">
+        <Button 
+          variant="secondary" 
+          class="!h-10 !rounded-xl !px-4 text-[10px] font-black uppercase border-slate-200" 
+          @click="router.back()"
         >
-          <template #cell-id="{ row }">
-            <div class="flex items-center gap-2">
-              <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
-              <span class="text-[11px] font-black text-slate-400 tracking-tighter">#{{ row.id }}</span>
-            </div>
-          </template>
+          <i class="pi pi-arrow-left mr-2 text-[8px]"></i> Voltar
+        </Button>
 
-          <template #cell-total="{ row }">
-            <div class="py-1">
-              <span class="text-[13px] font-black text-slate-900 tabular-nums tracking-tight">
-                {{ format.currency(row.total_itens || 0) }}
-              </span>
-            </div>
-          </template>
+        <Button 
+          variant="primary" 
+          class="!h-10 !rounded-xl !px-6 text-[10px] font-black uppercase tracking-widest shadow-sm" 
+          @click="novoParaCliente"
+        >
+          <i class="pi pi-plus mr-2 text-[8px]"></i> Novo Orçamento
+        </Button>
+      </div>
+    </div>
 
-          <template #cell-acoes="{ row }">
-            <div class="flex justify-end items-center gap-2">
+    <div class="flex justify-start px-2">
+      <div class="relative w-full sm:w-80 group">
+        <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+        <input 
+          v-model="filtro" 
+          type="text" 
+          placeholder="BUSCAR PELO ID OU DATA..."
+          class="w-full pl-9 pr-3 h-10 bg-white border border-slate-200 rounded-xl text-[10px] font-black focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary outline-none transition-all uppercase"
+        />
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+      <Table
+        :columns="columns"
+        :rows="filtrados"
+        :loading="loading"
+        emptyText="Nenhum orçamento encontrado para este cliente."
+        :boxed="false"
+      >
+        <template #cell-id="{ row }">
+          <div class="flex items-center gap-2">
+            <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+            <span class="text-xs font-black text-slate-500">#{{ row.id }}</span>
+          </div>
+        </template>
+
+        <template #cell-total="{ row }">
+          <div class="flex flex-col items-end">
+            <span class="text-sm font-black text-slate-800 tabular-nums">
+              {{ format.currency(row.total_itens || 0) }}
+            </span>
+            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Valor do Projeto</span>
+          </div>
+        </template>
+
+        <template #cell-acoes="{ row }">
+          <div class="flex justify-end items-center gap-1.5 px-2">
+            <button
+              class="h-7 px-3 rounded-lg bg-slate-900 text-white text-[9px] font-black uppercase tracking-wider hover:bg-brand-primary transition-all"
+              @click="router.push(`/orcamentos/${row.id}`)"
+            >
+              Abrir
+            </button>
+
+            <div class="flex items-center border-l border-slate-100 ml-1.5 pl-1.5 gap-1.5">
               <button
-                type="button"
-                class="h-9 px-4 rounded-xl bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest hover:brightness-125 transition-all shadow-md shadow-slate-200"
-                @click="router.push(`/orcamentos/${row.id}`)"
-              >
-                Abrir
-              </button>
-
-              <button
-                type="button"
-                title="Arquivos do Orçamento"
-                class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100 hover:bg-brand-primary/10 hover:text-brand-primary transition-all"
+                title="Arquivos"
+                class="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 border border-slate-200 hover:text-brand-primary transition-all"
                 @click="openArquivos(row.id)"
               >
-                <i class="pi pi-paperclip text-xs"></i>
+                <i class="pi pi-paperclip text-[10px]"></i>
               </button>
 
               <button
-                type="button"
-                title="Gerar PDF"
-                class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100 hover:bg-emerald-50 hover:text-emerald-500 transition-all"
+                title="PDF"
+                class="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 border border-slate-200 hover:text-emerald-500 transition-all"
                 @click="abrirPdf(row.id)"
               >
-                <i class="pi pi-file-pdf text-xs"></i>
+                <i class="pi pi-file-pdf text-[10px]"></i>
               </button>
 
               <button
-                type="button"
-                class="w-9 h-9 flex items-center justify-center rounded-xl bg-rose-50 text-rose-400 border border-rose-100 hover:bg-rose-500 hover:text-white transition-all"
+                title="Excluir"
+                class="w-7 h-7 flex items-center justify-center rounded-lg bg-rose-50 text-rose-400 border border-rose-100 hover:bg-rose-500 hover:text-white transition-all"
                 @click="excluir(row.id)"
               >
-                <i class="pi pi-trash text-xs"></i>
+                <i class="pi pi-trash text-[10px]"></i>
               </button>
             </div>
-          </template>
-        </Table>
-      </div>
-    </Card>
+          </div>
+        </template>
+      </Table>
+    </div>
   </div>
 
   <OrcamentoArquivosModal

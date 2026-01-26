@@ -6,7 +6,6 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseIntPipe,
   Post,
   Put,
   UseGuards,
@@ -85,67 +84,62 @@ export class VendasController {
     @Param('itemId') itemId: string,
     @Body() dto: UpdateVendaItemDto,
   ) {
-    return this.service.atualizarItem(
-      this.cleanId(id),
-      this.cleanId(itemId),
-      dto,
-    )
+    return this.service.atualizarItem(this.cleanId(id), this.cleanId(itemId), dto)
   }
-
-
 
 @Post(':id/enviar-producao')
 @Permissoes('vendas.editar')
-enviarProducao(@Param('id') id: string) {
-  return this.service.enviarParaProducao(this.cleanId(id))
-}
-@Post(':id/arquivos')
-@Permissoes('vendas.editar')
-@UseInterceptors(
-  FileInterceptor('arquivo', {
-    limits: { fileSize: 15 * 1024 * 1024 },
-  }),
-)
-anexarArquivo(
-  @Param('id') id: string,
-  @UploadedFile() file: Express.Multer.File,
-) {
-  if (!file) throw new BadRequestException('Arquivo é obrigatório.')
-  return this.service.anexarArquivo(this.cleanId(id), file)
-}
-
-@Get(':id/arquivos')
-@Permissoes('vendas.ver')
-listarArquivos(@Param('id') id: string) {
-  return this.service.listarArquivos(this.cleanId(id))
-}
-
-@Get(':id/arquivos/:arquivoId')
-@Permissoes('vendas.ver')
-async abrirArquivo(
-  @Param('id') id: string,
-  @Param('arquivoId') arquivoId: string,
-  @Res() res: Response,
-) {
-  const vendaId = this.cleanId(id)
-  const arqId = this.cleanId(arquivoId)
-
-  const { arq, abs } = await this.service.obterArquivo(vendaId, arqId)
-
-  res.setHeader('Content-Type', arq.mime_type)
-  res.setHeader('Content-Disposition', `inline; filename="${arq.nome_original}"`)
-  return res.sendFile(abs)
-}
-
-@Delete(':id/arquivos/:arquivoId')
-@Permissoes('vendas.editar')
-@HttpCode(HttpStatus.NO_CONTENT)
-removerArquivo(
-  @Param('id') id: string,
-  @Param('arquivoId') arquivoId: string,
-) {
-  return this.service.removerArquivo(this.cleanId(id), this.cleanId(arquivoId))
+enviarParaProducao() {
+  throw new BadRequestException('Produção é controlada pela Agenda (Produção).')
 }
 
 
+  @Post(':id/arquivos')
+  @Permissoes('vendas.editar')
+  @UseInterceptors(
+    FileInterceptor('arquivo', {
+      limits: { fileSize: 15 * 1024 * 1024 },
+    }),
+  )
+  anexarArquivo(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException('Arquivo é obrigatório.')
+    return this.service.anexarArquivo(this.cleanId(id), file)
+  }
+
+  @Get(':id/arquivos')
+  @Permissoes('vendas.ver')
+  listarArquivos(@Param('id') id: string) {
+    return this.service.listarArquivos(this.cleanId(id))
+  }
+
+  @Get(':id/arquivos/:arquivoId')
+  @Permissoes('vendas.ver')
+  async abrirArquivo(
+    @Param('id') id: string,
+    @Param('arquivoId') arquivoId: string,
+    @Res() res: Response,
+  ) {
+    const vendaId = this.cleanId(id)
+    const arqId = this.cleanId(arquivoId)
+
+    const { arq, abs } = await this.service.obterArquivo(vendaId, arqId)
+
+    res.setHeader('Content-Type', arq.mime_type)
+    res.setHeader('Content-Disposition', `inline; filename="${arq.nome_original}"`)
+    return res.sendFile(abs)
+  }
+
+  @Delete(':id/arquivos/:arquivoId')
+  @Permissoes('vendas.editar')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  removerArquivo(
+    @Param('id') id: string,
+    @Param('arquivoId') arquivoId: string,
+  ) {
+    return this.service.removerArquivo(this.cleanId(id), this.cleanId(arquivoId))
+  }
 }
+

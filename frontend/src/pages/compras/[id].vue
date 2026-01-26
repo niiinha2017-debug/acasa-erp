@@ -16,6 +16,7 @@
       </div>
 
       <form v-else class="space-y-8" @submit.prevent>
+        <!-- Seção 1: Origem e Fornecedor -->
         <section class="space-y-4">
           <div class="flex items-center gap-2">
             <span class="text-[10px] font-black uppercase tracking-[0.2em] text-brand-primary">
@@ -25,6 +26,7 @@
           </div>
 
           <div class="grid grid-cols-12 gap-4 items-end">
+            <!-- Tipo de Compra -->
             <div class="col-span-12 md:col-span-4">
               <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 ml-1">
                 Origem do Gasto
@@ -53,6 +55,7 @@
               </div>
             </div>
 
+            <!-- Fornecedor -->
             <SearchInput
               class="col-span-12 md:col-span-5"
               v-model="fornecedorSelecionado"
@@ -63,6 +66,7 @@
               placeholder="Para quem você está comprando?"
             />
 
+            <!-- Data da Compra -->
             <Input
               class="col-span-12 md:col-span-3"
               v-model="form.data_compra"
@@ -73,6 +77,7 @@
           </div>
         </section>
 
+        <!-- Seção 2: Cliente x Ambiente (condicional) -->
         <section v-if="tipoCompra === 'CLIENTE_AMBIENTE'" class="space-y-4 animate-in fade-in slide-in-from-top-2">
           <div class="flex items-center gap-2">
             <span class="text-[10px] font-black uppercase tracking-[0.2em] text-brand-primary">
@@ -103,6 +108,7 @@
           </div>
         </section>
 
+        <!-- Seção 3: Itens da Nota -->
         <section class="space-y-4">
           <div class="flex flex-wrap items-end justify-between gap-3">
             <div class="flex items-center gap-2 flex-1">
@@ -112,12 +118,12 @@
               <div class="flex-1 h-px bg-[var(--border-ui)]"></div>
             </div>
 
+            <!-- Botão para criar novo produto - AGORA FUNCIONAL -->
             <Button
               variant="ghost"
               size="sm"
               type="button"
               class="text-[10px] font-black uppercase tracking-widest hover:bg-brand-primary/5 text-brand-primary"
-              :disabled="!fornecedorSelecionado"
               @click="abrirModalProduto"
             >
               <i class="pi pi-plus-circle mr-2"></i>
@@ -125,6 +131,7 @@
             </Button>
           </div>
 
+          <!-- Formulário para adicionar novo item -->
           <div class="grid grid-cols-12 gap-4 p-6 rounded-[2rem] border border-[var(--border-ui)] bg-slate-50/50 items-end shadow-inner">
             <SearchInput
               class="col-span-12 md:col-span-5"
@@ -177,6 +184,7 @@
             </div>
           </div>
 
+          <!-- Lista de itens adicionados -->
           <div v-if="itens.length > 0" class="rounded-3xl border border-[var(--border-ui)] overflow-hidden bg-white shadow-sm">
             <Table :columns="columnsItens" :rows="itens" boxed>
               <template #cell-nome_produto="{ row }">
@@ -232,9 +240,12 @@
       </form>
     </div>
 
+    <!-- Ações do formulário -->
     <FormActions class="px-6 pb-8">
       <template #left>
-        <Button variant="secondary" class="!rounded-xl" type="button" @click="router.back()">Descartar</Button>
+        <Button variant="secondary" class="!rounded-xl" type="button" @click="router.back()">
+          Descartar
+        </Button>
       </template>
 
       <template #right>
@@ -249,12 +260,19 @@
           Excluir Registro
         </Button>
 
-        <Button variant="primary" class="!rounded-xl !px-10 shadow-xl shadow-brand-primary/20" type="button" :loading="salvando" @click="salvar">
+        <Button 
+          variant="primary" 
+          class="!rounded-xl !px-10 shadow-xl shadow-brand-primary/20" 
+          type="button" 
+          :loading="salvando" 
+          @click="salvar"
+        >
           {{ isEdit ? 'Atualizar Compra' : 'Confirmar e Salvar' }}
         </Button>
       </template>
     </FormActions>
 
+    <!-- Modal para cadastro de novo produto -->
     <Transition name="fade">
       <div
         v-if="modalProdutoOpen"
@@ -348,30 +366,35 @@ import { UNIDADES } from '@/constantes/unidades'
 const route = useRoute()
 const router = useRouter()
 
+// Estado principal
 const loading = ref(false)
 const salvando = ref(false)
 const excluindo = ref(false)
 const itemNovoKey = ref(0)
 
+// Computed
 const isEdit = computed(() => route.params.id && route.params.id !== 'novo')
 const compraId = computed(() => (isEdit.value ? Number(route.params.id) : null))
 
+// Dados do formulário
 const tipoCompra = ref('INSUMOS')
 const fornecedorSelecionado = ref(null)
 const vendaSelecionada = ref(null)
-
 const form = ref({
   data_compra: new Date().toISOString().split('T')[0],
 })
 
+// Itens da compra
 const itens = ref([])
 const itensRemoverIds = ref([])
 
+// Listas de opções
 const listaFornecedores = ref([])
 const listaVendas = ref([])
 const produtoMap = ref(new Map())
 const produtoOptions = ref([])
 
+// Computed para opções
 const fornecedorOptions = computed(() =>
   listaFornecedores.value.map((f) => ({
     value: f.id,
@@ -393,6 +416,7 @@ const unidadesOptions = computed(() =>
   })),
 )
 
+// Item novo
 const itemNovo = reactive({
   produto_id: null,
   nome_produto: '',
@@ -404,6 +428,7 @@ const itemNovo = reactive({
   valor_total: 0,
 })
 
+// Computed para cálculos
 const totalCalculado = computed(() => {
   const total = itens.value.reduce((acc, it) => acc + Number(it.valor_total || 0), 0)
   return parseFloat(total.toFixed(2))
@@ -415,6 +440,7 @@ const subtotalNovoMask = computed(() => {
   return numeroParaMoeda(vUnit * qtd)
 })
 
+// Colunas da tabela
 const columnsItens = [
   { key: 'nome_produto', label: 'Produto' },
   { key: 'quantidade', label: 'Qtd', align: 'center' },
@@ -423,11 +449,8 @@ const columnsItens = [
   { key: 'acoes', label: '', width: '80px', align: 'right' },
 ]
 
-/* -------------------------
-   MODAL PRODUTO INLINE
--------------------------- */
+// Modal de produto
 const modalProdutoOpen = ref(false)
-
 const modalProduto = ref({
   salvando: false,
   form: {
@@ -441,64 +464,14 @@ const modalProduto = ref({
   },
 })
 
-const abrirModalProduto = () => {
-  if (!fornecedorSelecionado.value) return notify.warn('Selecione um fornecedor.')
-  modalProduto.value.form.fornecedor_id = fornecedorSelecionado.value
-  modalProdutoOpen.value = true
-}
-
-const fecharModalProduto = () => {
-  modalProdutoOpen.value = false
-  modalProduto.value.form = {
-    fornecedor_id: null,
-    nome_produto: '',
-    marca: '',
-    cor: '',
-    medida: '',
-    unidade: 'UN',
-    status: 'ATIVO',
-  }
-}
-
-async function salvarProduto() {
-  modalProduto.value.salvando = true
-  try {
-    const payload = {
-      fornecedor_id: modalProduto.value.form.fornecedor_id,
-      nome_produto: modalProduto.value.form.nome_produto,
-      marca: modalProduto.value.form.marca || null,
-      cor: modalProduto.value.form.cor || null,
-      medida: modalProduto.value.form.medida || null,
-      unidade: modalProduto.value.form.unidade,
-      status: modalProduto.value.form.status,
-    }
-
-    const res = await ProdutosService.criar(payload)
-    const data = res?.data ?? res
-
-    await carregarProdutosPorFornecedor()
-
-    if (data?.id) {
-      itemNovo.produto_id = data.id
-      onSelecionarProdutoNovo(data.id)
-    }
-
-    fecharModalProduto()
-    notify.success('Produto cadastrado.')
-  } catch (err) {
-    notify.error(err?.response?.data?.message || 'Erro ao cadastrar produto.')
-  } finally {
-    modalProduto.value.salvando = false
-  }
-}
-
-/* -------------------------
-   LOAD / COMPRA
--------------------------- */
+// Métodos
 const carregarDadosIniciais = async () => {
   loading.value = true
   try {
-    const [fornRes, vendRes] = await Promise.all([FornecedorService.listar(), VendaService.listar()])
+    const [fornRes, vendRes] = await Promise.all([
+      FornecedorService.listar(),
+      VendaService.listar()
+    ])
 
     const fornData = fornRes?.data ?? fornRes
     const vendData = vendRes?.data ?? vendRes
@@ -558,6 +531,61 @@ const carregarProdutosPorFornecedor = async () => {
   }
 }
 
+const abrirModalProduto = () => {
+  if (!fornecedorSelecionado.value) {
+    notify.warn('Selecione um fornecedor primeiro.')
+    return
+  }
+  modalProduto.value.form.fornecedor_id = fornecedorSelecionado.value
+  modalProdutoOpen.value = true
+}
+
+const fecharModalProduto = () => {
+  modalProdutoOpen.value = false
+  modalProduto.value.form = {
+    fornecedor_id: null,
+    nome_produto: '',
+    marca: '',
+    cor: '',
+    medida: '',
+    unidade: 'UN',
+    status: 'ATIVO',
+  }
+  modalProduto.value.salvando = false
+}
+
+const salvarProduto = async () => {
+  modalProduto.value.salvando = true
+  try {
+    const payload = {
+      fornecedor_id: modalProduto.value.form.fornecedor_id,
+      nome_produto: modalProduto.value.form.nome_produto,
+      marca: modalProduto.value.form.marca || null,
+      cor: modalProduto.value.form.cor || null,
+      medida: modalProduto.value.form.medida || null,
+      unidade: modalProduto.value.form.unidade,
+      status: modalProduto.value.form.status,
+    }
+
+    const res = await ProdutosService.criar(payload)
+    const data = res?.data ?? res
+
+    await carregarProdutosPorFornecedor()
+
+    if (data?.id) {
+      itemNovo.produto_id = data.id
+      onSelecionarProdutoNovo(data.id)
+    }
+
+    fecharModalProduto()
+    notify.success('Produto cadastrado com sucesso!')
+  } catch (err) {
+    notify.error(err?.response?.data?.message || 'Erro ao cadastrar produto.')
+  } finally {
+    modalProduto.value.salvando = false
+  }
+}
+
 const onSelecionarProdutoNovo = (id) => {
   const p = produtoMap.value.get(id)
   if (!p) return
@@ -582,13 +610,23 @@ const resetItemNovo = () => {
 }
 
 const registrarItemNovo = () => {
-  if (!itemNovo.produto_id) return notify.warn('Selecione um produto.')
+  if (!itemNovo.produto_id) {
+    notify.warn('Selecione um produto.')
+    return
+  }
 
   const vUnit = moedaParaNumero(itemNovo.valorUnitarioMask)
   const qtd = Number(itemNovo.quantidade)
 
-  if (qtd <= 0) return notify.warn('Informe a quantidade.')
-  if (vUnit <= 0) return notify.warn('Informe o valor unitário.')
+  if (qtd <= 0) {
+    notify.warn('Informe a quantidade.')
+    return
+  }
+  
+  if (vUnit <= 0) {
+    notify.warn('Informe o valor unitário.')
+    return
+  }
 
   itens.value.push({
     ...itemNovo,
@@ -603,18 +641,31 @@ const registrarItemNovo = () => {
 const removerItemPorKey = async (key) => {
   const item = itens.value.find((it) => it._key === key)
 
-  const ok = await confirm.show('Remover Item', 'Tem certeza que deseja remover este produto da lista?')
+  const ok = await confirm.show(
+    'Remover Item',
+    'Tem certeza que deseja remover este produto da lista?'
+  )
+  
   if (!ok) return
 
-  if (isEdit.value && item?.id) itensRemoverIds.value.push(item.id)
+  if (isEdit.value && item?.id) {
+    itensRemoverIds.value.push(item.id)
+  }
 
   itens.value = itens.value.filter((it) => it._key !== key)
   notify.success('Item removido da lista.')
 }
 
 const salvar = async () => {
-  if (itens.value.length === 0) return notify.warn('Adicione ao menos um item.')
-  if (!fornecedorSelecionado.value) return notify.warn('Selecione um fornecedor.')
+  if (itens.value.length === 0) {
+    notify.warn('Adicione ao menos um item.')
+    return
+  }
+  
+  if (!fornecedorSelecionado.value) {
+    notify.warn('Selecione um fornecedor.')
+    return
+  }
 
   salvando.value = true
 
@@ -637,7 +688,9 @@ const salvar = async () => {
     }),
   }
 
-  if (isEdit.value && itensRemoverIds.value.length) payload.itens_remover_ids = itensRemoverIds.value
+  if (isEdit.value && itensRemoverIds.value.length) {
+    payload.itens_remover_ids = itensRemoverIds.value
+  }
 
   try {
     await CompraService.salvar(compraId.value, payload)
@@ -655,6 +708,7 @@ const excluirCompra = async () => {
     'Excluir Compra',
     `Deseja realmente excluir a Compra #${compraId.value}? Esta ação não pode ser desfeita.`,
   )
+  
   if (!ok) return
 
   excluindo.value = true
@@ -669,8 +723,11 @@ const excluirCompra = async () => {
   }
 }
 
+// Watchers
 watch(tipoCompra, (t) => {
-  if (t !== 'CLIENTE_AMBIENTE') vendaSelecionada.value = null
+  if (t !== 'CLIENTE_AMBIENTE') {
+    vendaSelecionada.value = null
+  }
 })
 
 watch(fornecedorSelecionado, async (id) => {
@@ -684,5 +741,20 @@ watch(fornecedorSelecionado, async (id) => {
   await carregarProdutosPorFornecedor()
 })
 
-onMounted(carregarDadosIniciais)
+// Lifecycle
+onMounted(() => {
+  carregarDadosIniciais()
+})
 </script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>
