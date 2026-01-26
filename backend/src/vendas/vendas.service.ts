@@ -136,12 +136,14 @@ export class VendasService {
     this.validarSomaPagamentos(dto.pagamentos, valorVendido)
 
     // itens congelados do orçamento
-    const itensClonados = orc.itens.map((it) => ({
-      nome_ambiente: it.nome_ambiente,
-      descricao: it.descricao,
-      quantidade: 1,
-      valor_unitario: round2(toNumber(it.valor_unitario ?? 0)),
-    }))
+const itensClonados = orc.itens.map((it) => ({
+  nome_ambiente: it.nome_ambiente,
+  descricao: it.descricao,
+  observacao: '', // ✅ observação é do item (inicial vazia)
+  quantidade: 1,
+  valor_unitario: round2(toNumber(it.valor_unitario ?? 0)),
+}))
+
 
     const comissoesCalc = this.calcularComissoes(valorVendido, dto.comissoes || [])
     const somaComissoes = round2(comissoesCalc.reduce((acc, c) => acc + toNumber(c.valor_comissao), 0))
@@ -164,9 +166,6 @@ export class VendasService {
           status: dto.status,
 
           data_venda: dto.data_venda ? new Date(dto.data_venda) : undefined,
-          data_entrega: dto.data_entrega ? new Date(dto.data_entrega) : undefined,
-          observacao: dto.observacao ?? null,
-
           valor_vendido: valorVendido,
 
           valor_bruto: totais.valor_bruto,
@@ -184,16 +183,18 @@ export class VendasService {
         },
       })
 
-      await tx.vendas_itens.createMany({
-        data: itensClonados.map((it) => ({
-          venda_id: venda.id,
-          nome_ambiente: it.nome_ambiente,
-          descricao: it.descricao,
-          quantidade: it.quantidade,
-          valor_unitario: it.valor_unitario,
-          valor_total: round2(toNumber(it.quantidade) * toNumber(it.valor_unitario)),
-        })),
-      })
+await tx.vendas_itens.createMany({
+  data: itensClonados.map((it) => ({
+    venda_id: venda.id,
+    nome_ambiente: it.nome_ambiente,
+    descricao: it.descricao,
+    observacao: it.observacao, // ✅ agora vai
+    quantidade: it.quantidade,
+    valor_unitario: it.valor_unitario,
+    valor_total: round2(toNumber(it.quantidade) * toNumber(it.valor_unitario)),
+  })),
+})
+
 
       if (comissoesCalc.length) {
         await tx.vendas_comissoes.createMany({
@@ -212,14 +213,9 @@ export class VendasService {
           venda_id: venda.id,
           forma_pagamento_chave: String(p.forma_pagamento_chave),
           valor: round2(toNumber(p.valor)),
-          data_prevista_recebimento: p.data_prevista_recebimento
-            ? new Date(p.data_prevista_recebimento)
-            : dto.data_entrega
-              ? new Date(dto.data_entrega)
-              : null,
+          data_prevista_recebimento: p.data_prevista_recebimento  ? new Date(p.data_prevista_recebimento) : null,
           data_recebimento: p.data_recebimento ? new Date(p.data_recebimento) : null,
           status_financeiro_chave: p.status_financeiro_chave ? String(p.status_financeiro_chave) : 'EM_ABERTO',
-          observacao: (p as any).observacao ?? null,
         })),
       })
 
@@ -291,9 +287,6 @@ async enviarParaProducao(id: number) {
         data: {
           status: dto.status ?? undefined,
           data_venda: dto.data_venda ? new Date(dto.data_venda) : undefined,
-          data_entrega: dto.data_entrega ? new Date(dto.data_entrega) : undefined,
-          observacao: dto.observacao ?? undefined,
-
           valor_vendido: valorVendido,
 
           valor_bruto: totais.valor_bruto,
@@ -305,9 +298,6 @@ async enviarParaProducao(id: number) {
           valor_nota_fiscal: totais.valor_nota_fiscal,
 
           valor_total: totais.valor_total,
-
-          // ⚠️ tem_nota_fiscal só entra aqui se existir no Prisma:
-          // tem_nota_fiscal: nf.tem_nota_fiscal,
         },
       })
 
@@ -333,14 +323,9 @@ async enviarParaProducao(id: number) {
             venda_id: id,
             forma_pagamento_chave: String(p.forma_pagamento_chave),
             valor: round2(toNumber(p.valor)),
-            data_prevista_recebimento: p.data_prevista_recebimento
-              ? new Date(p.data_prevista_recebimento)
-              : dto.data_entrega
-                ? new Date(dto.data_entrega)
-                : null,
+            data_prevista_recebimento: p.data_prevista_recebimento ? new Date(p.data_prevista_recebimento) : null,  
             data_recebimento: p.data_recebimento ? new Date(p.data_recebimento) : null,
             status_financeiro_chave: p.status_financeiro_chave ? String(p.status_financeiro_chave) : 'EM_ABERTO',
-            observacao: (p as any).observacao ?? null,
           })),
         })
       }
@@ -370,4 +355,87 @@ async enviarParaProducao(id: number) {
     await fs.rm(dir, { recursive: true, force: true }).catch(() => null)
     return this.prisma.vendas.delete({ where: { id } })
   }
+
+  async anexarArquivo(vendaId: number, file: any) {
+  if (!file) throw new BadRequestException('Arquivo não enviado.')
+  await this.buscarPorId(vendaId)
+
+  const pasta = path.resolve(process.cwd(), 'uploads', 'vendas', String(vendaId))
+  await fs.mkdir(pasta, { recursive: true })
+
+  const nomeFinal = `${Date.now()}-${file.originalname.replace(/\s/g, '_')}`
+  const caminhoFinal = path.join(pasta, nomeFinal)
+
+  await fs.writeFile(caminhoFinal, file.buffer)
+
+  return this.prisma.vendas_arquivos.create({
+    data: {
+      venda_id: vendaId,
+      nome_original: file.originalname,
+      mime_type: file.mimetype,
+      tamanho: file.size,
+      caminho: `uploads/vendas/${vendaId}/${nomeFinal}`,
+    },
+  })
+}
+
+async obterArquivo(vendaId: number, arquivoId: number) {
+  const arq = await this.prisma.vendas_arquivos.findFirst({
+    where: { id: arquivoId, venda_id: vendaId },
+  })
+  if (!arq) throw new NotFoundException('Arquivo não encontrado.')
+  return { arq, abs: path.resolve(process.cwd(), arq.caminho) }
+}
+
+async listarArquivos(vendaId: number) {
+  await this.buscarPorId(vendaId)
+
+  return this.prisma.vendas_arquivos.findMany({
+    where: { venda_id: vendaId },
+    orderBy: { id: 'desc' },
+  })
+}
+
+async removerArquivo(vendaId: number, arquivoId: number) {
+  const arq = await this.prisma.vendas_arquivos.findFirst({
+    where: { id: arquivoId, venda_id: vendaId },
+  })
+  if (!arq) throw new NotFoundException('Arquivo não encontrado.')
+
+  const abs = path.resolve(process.cwd(), arq.caminho)
+  await fs.unlink(abs).catch(() => null)
+
+  await this.prisma.vendas_arquivos.delete({ where: { id: arquivoId } })
+}
+async atualizarItem(vendaId: number, itemId: number, dto: any) {
+  if (vendaId <= 0) throw new BadRequestException('ID da venda inválido.')
+  if (itemId <= 0) throw new BadRequestException('ID do item inválido.')
+
+  // garante venda existe
+  await this.buscarPorId(vendaId)
+
+  // garante item pertence à venda
+  const item = await this.prisma.vendas_itens.findFirst({
+    where: { id: itemId, venda_id: vendaId },
+  })
+  if (!item) throw new NotFoundException('Item não encontrado para esta venda.')
+
+  const quantidade = dto.quantidade !== undefined ? round2(toNumber(dto.quantidade)) : toNumber(item.quantidade)
+  const valorUnit = dto.valor_unitario !== undefined ? round2(toNumber(dto.valor_unitario)) : toNumber(item.valor_unitario)
+  const valorTotal = round2(quantidade * valorUnit)
+
+  return this.prisma.vendas_itens.update({
+    where: { id: itemId },
+    data: {
+      nome_ambiente: dto.nome_ambiente ?? undefined,
+      descricao: dto.descricao ?? undefined,
+      observacao: dto.observacao ?? undefined,
+      quantidade: dto.quantidade !== undefined ? quantidade : undefined,
+      valor_unitario: dto.valor_unitario !== undefined ? valorUnit : undefined,
+      valor_total: (dto.quantidade !== undefined || dto.valor_unitario !== undefined) ? valorTotal : undefined,
+    },
+  })
+}
+
+
 }

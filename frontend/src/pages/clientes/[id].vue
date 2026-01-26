@@ -1,39 +1,42 @@
 <template>
-  <Card>
+  <Card class="mt-4 mb-8 mx-2 lg:mx-4 shadow-xl rounded-[2.5rem] overflow-hidden">
     <PageHeader
       :title="isEdit ? `Editar Cliente #${clienteId}` : 'Novo Cliente'"
       subtitle="Gerenciamento de dados cadastrais e contato"
       icon="pi pi-user-plus"
       :backTo="'/clientes'"
+      class="border-b border-border-ui"
     />
 
-    <div class="p-6">
+    <div class="p-8 lg:p-12">
       <Loading v-if="loading" />
 
-      <form v-else class="space-y-6" @submit.prevent="salvar">
+      <form v-else class="space-y-10" @submit.prevent="salvar" autocomplete="off">
         
-        <div class="grid grid-cols-12 gap-5 items-end">
-          <CustomCheckbox
-            class="col-span-12 md:col-span-3 pb-2"
-            v-model="isJuridica"
-            label="Pessoa Jurídica"
-          />
+        <div class="grid grid-cols-12 gap-6 items-end">
+          <div class="col-span-12 md:col-span-3 pb-2">
+            <CustomCheckbox
+              v-model="isJuridica"
+              label="Pessoa Jurídica"
+            />
+          </div>
 
-          <SearchInput
-            class="col-span-12 md:col-span-9"
-            v-model="form.indicacao_id"
-            mode="select"
-            label="Quem indicou?"
-            placeholder="Pesquisar cliente existente..."
-            :options="clientesOptions"
-            labelKey="label"
-            valueKey="value"
-          />
+          <div class="col-span-12 md:col-span-9">
+            <SearchInput
+              v-model="form.indicacao_id"
+              mode="select"
+              label="Quem indicou?"
+              placeholder="Pesquisar cliente existente..."
+              :options="clientesOptions"
+              labelKey="label"
+              valueKey="value"
+            />
+          </div>
         </div>
 
-        <hr class="border-[var(--border-ui)] opacity-50" />
+        <hr class="border-border-ui opacity-50" />
 
-        <div class="grid grid-cols-12 gap-5">
+        <div class="grid grid-cols-12 gap-6">
           <Input
             :class="isJuridica ? 'col-span-12 md:col-span-6' : 'col-span-12 md:col-span-9'"
             v-model="form.nome_completo"
@@ -59,139 +62,112 @@
           />
         </div>
 
-        <div class="grid grid-cols-12 gap-5">
+        <div class="grid grid-cols-12 gap-6">
           <template v-if="!isJuridica">
-            <Input
-              class="col-span-12 md:col-span-4"
-              v-model="form.cpf"
-              label="CPF"
-              @input="form.cpf = maskCPF(form.cpf)"
-            />
-            <Input
-              class="col-span-12 md:col-span-4"
-              v-model="form.rg"
-              label="RG"
-              @input="form.rg = maskRG(form.rg)"
-            />
+            <Input class="col-span-12 md:col-span-4" v-model="form.cpf" label="CPF" @input="form.cpf = maskCPF(form.cpf)" />
+            <Input class="col-span-12 md:col-span-4" v-model="form.rg" label="RG" @input="form.rg = maskRG(form.rg)" />
           </template>
 
           <template v-else>
-            <Input
-              class="col-span-12 md:col-span-4"
-              v-model="form.cnpj"
-              label="CNPJ"
-              @input="form.cnpj = maskCNPJ(form.cnpj)"
-              @blur="onBlurCnpj"
-            />
-            <Input
-              class="col-span-12 md:col-span-4"
-              v-model="form.ie"
-              label="Inscrição Estadual"
-              @input="form.ie = maskIE(form.ie)"
-            />
+            <Input class="col-span-12 md:col-span-4" v-model="form.cnpj" label="CNPJ" @input="form.cnpj = maskCNPJ(form.cnpj)" @blur="onBlurCnpj" />
+            <Input class="col-span-12 md:col-span-4" v-model="form.ie" label="IE" @input="form.ie = maskIE(form.ie)" />
           </template>
 
-          <Input
-            class="col-span-12 md:col-span-4"
-            v-model="form.status"
-            label="Status do Cadastro"
-            placeholder="Ex: ATIVO"
-            required
+          <Input class="col-span-12 md:col-span-4" v-model="form.status" label="Status" placeholder="ATIVO" required />
+        </div>
+
+        <hr class="border-border-ui opacity-50" />
+
+        <div class="grid grid-cols-12 gap-6 items-start">
+          <Input class="col-span-12 md:col-span-4" v-model="form.email" label="E-mail" type="email" :forceUpper="false" />
+          <Input class="col-span-12 md:col-span-4" v-model="form.whatsapp" label="WhatsApp" @input="form.whatsapp = maskTelefone(form.whatsapp)" />
+          <Input class="col-span-12 md:col-span-4" v-model="form.telefone" label="Fixo" @input="form.telefone = maskTelefone(form.telefone)" />
+          
+          <div class="col-span-12 grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-6 rounded-[2rem] border border-border-ui mt-2">
+            <CustomCheckbox v-model="form.enviar_aniversario_email" label="Aviso por E-mail" :disabled="!form.email" />
+            <CustomCheckbox v-model="form.enviar_aniversario_whatsapp" label="Aviso por WhatsApp" :disabled="!form.whatsapp" />
+          </div>
+
+          <div class="col-span-12 md:col-span-4 flex flex-col pt-4">
+            <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">Estado Civil</label>
+            <div class="relative w-full">
+              <select v-model="form.estado_civil" class="w-full h-14 px-5 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm shadow-sm focus:ring-4 focus:ring-brand-primary/10 appearance-none">
+                <option value="">SELECIONE...</option>
+                <option value="SOLTEIRO">SOLTEIRO</option>
+                <option value="CASADO">CASADO</option>
+                <option value="DIVORCIADO">DIVORCIADO</option>
+                <option value="VIUVO">VIÚVO(A)</option>
+              </select>
+              <div class="absolute inset-y-0 right-0 flex items-center pr-5 pointer-events-none text-slate-400">
+                <i class="pi pi-chevron-down text-[10px]"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-span-12 md:col-span-8 pt-4">
+            <transition name="fade">
+              <Input v-if="form.estado_civil === 'CASADO'" v-model="form.nome_conjuge" label="Nome do Cônjuge" class="animate-page-in" />
+            </transition>
+          </div>
+        </div>
+
+<hr class="border-border-ui opacity-50" />
+
+        <div class="grid grid-cols-12 gap-6">
+          <Input 
+            class="col-span-12 md:col-span-3" 
+            v-model="form.cep" 
+            label="CEP" 
+            placeholder="00000-000"
+            @input="form.cep = maskCEP(form.cep)" 
+            @blur="onBlurCep" 
+          />
+          <Input 
+            class="col-span-12 md:col-span-7" 
+            v-model="form.endereco" 
+            label="Logradouro" 
+            placeholder="Rua, Avenida, etc..."
+          />
+          <Input 
+            class="col-span-12 md:col-span-2" 
+            v-model="form.numero" 
+            label="Nº" 
+            placeholder="123"
+          />
+          
+          <Input 
+            class="col-span-12 md:col-span-4" 
+            v-model="form.bairro" 
+            label="Bairro" 
+          />
+          <Input 
+            class="col-span-12 md:col-span-5" 
+            v-model="form.cidade" 
+            label="Cidade" 
+          />
+          <Input 
+            class="col-span-12 md:col-span-3" 
+            v-model="form.estado" 
+            label="UF (Estado)" 
+            placeholder="Ex: SP"
+          />
+          <Input 
+            class="col-span-12" 
+            v-model="form.complemento" 
+            label="Complemento / Referência" 
+            placeholder="Apt, Bloco, Próximo a..."
           />
         </div>
 
-        <hr class="border-[var(--border-ui)] opacity-50" />
-
-        <div class="grid grid-cols-12 gap-5">
-<Input
-  class="col-span-12 md:col-span-4"
-  v-model="form.email"
-  label="E-mail Principal"
-  type="email"
-  :forceUpper="false"
-  placeholder="email@dominio.com"
->
-</Input>
-
-
-          <Input
-            class="col-span-12 md:col-span-4"
-            v-model="form.whatsapp"
-            label="WhatsApp"
-            @input="form.whatsapp = maskTelefone(form.whatsapp)"
+        <div class="pt-10 mt-6 border-t border-border-ui">
+          <FormActions
+            :isEdit="isEdit"
+            :loadingSave="saving"
+            :loadingDelete="deleting"
+            :showDelete="isEdit"
+            @delete="excluir"
           />
-          <Input
-            class="col-span-12 md:col-span-4"
-            v-model="form.telefone"
-            label="Telefone Fixo"
-            @input="form.telefone = maskTelefone(form.telefone)"
-          />
-
-<div class="col-span-12 grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50/50 dark:bg-slate-800/20 p-4 rounded-2xl border border-[var(--border-ui)]">
-  <CustomCheckbox
-    v-model="form.enviar_aniversario_email"
-    label="Notificar Aniversário via E-mail"
-    description="Disparo automático de felicitações"
-    :disabled="!form.email"
-  />
-  <CustomCheckbox
-    v-model="form.enviar_aniversario_whatsapp"
-    label="Notificar Aniversário via WhatsApp"
-    description="Envio manual/automático de mensagens"
-    :disabled="!form.whatsapp"
-  />
-</div>
-
-<div class="grid grid-cols-12 gap-5">
-  <div class="col-span-12 md:col-span-4">
-    <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
-      Estado Civil
-    </label>
-    <select
-      v-model="form.estado_civil"
-      class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm shadow-sm"
-    >
-      <option value="">SELECIONE...</option>
-      <option value="SOLTEIRO">SOLTEIRO</option>
-      <option value="CASADO">CASADO</option>
-    </select>
-  </div>
-
-  <Input
-    v-if="form.estado_civil === 'CASADO'"
-    class="col-span-12 md:col-span-8"
-    v-model="form.nome_conjuge"
-    label="Nome do Cônjuge"
-    placeholder="NOME COMPLETO"
-  />
-</div>
         </div>
-
-
-        <div class="grid grid-cols-12 gap-5">
-          <Input
-            class="col-span-12 md:col-span-3"
-            v-model="form.cep"
-            label="CEP"
-            @input="form.cep = maskCEP(form.cep)"
-            @blur="onBlurCep"
-          />
-          <Input class="col-span-12 md:col-span-7" v-model="form.endereco" label="Logradouro" />
-          <Input class="col-span-12 md:col-span-2" v-model="form.numero" label="Nº" />
-
-          <Input class="col-span-12 md:col-span-4" v-model="form.bairro" label="Bairro" />
-          <Input class="col-span-12 md:col-span-5" v-model="form.cidade" label="Cidade" />
-          <Input class="col-span-12 md:col-span-3" v-model="form.estado" label="UF (Estado)" />
-          <Input class="col-span-12" v-model="form.complemento" label="Complemento / Referência" />
-        </div>
-
-        <FormActions
-          :isEdit="isEdit"
-          :loadingSave="saving"
-          :loadingDelete="deleting"
-          :showDelete="isEdit"
-          @delete="excluir"
-        />
       </form>
     </div>
   </Card>

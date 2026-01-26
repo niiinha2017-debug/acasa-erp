@@ -20,6 +20,13 @@ export class CreateVendaPagamentoDto {
   @IsDateString()
   data_prevista_recebimento?: string // data entrega / data que vai receber
 
+@IsOptional()
+@Type(() => Number)
+@IsNumber()
+@Min(1)
+parcelas?: number
+
+
   @IsOptional()
   @IsDateString()
   data_recebimento?: string // quando recebeu de fato

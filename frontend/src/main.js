@@ -27,6 +27,8 @@ import CardSection from '@/components/ui/CardSection.vue'
 // Modals
 import QuickCreateProduto from '@/components/modals/QuickCreateProduto.vue'
 import FuncionarioArquivosModal from '@/components/modals/FuncionarioArquivosModal.vue'
+import OrcamentoArquivosModal from '@/components/modals/OrcamentoArquivosModal.vue'
+import VendaArquivosModal from '@/components/modals/VendaArquivosModal.vue'
 
 // Common
 import Loading from '@/components/common/Loading.vue' // Corrigido nome da variável e .vue
@@ -61,6 +63,9 @@ app.component('ProcessoClienteFlow', ProcessoClienteFlow)
 // Modals
 app.component('QuickCreateProduto', QuickCreateProduto)
 app.component('FuncionarioArquivosModal', FuncionarioArquivosModal)
+app.component('OrcamentoArquivosModal', OrcamentoArquivosModal)
+app.component('VendaArquivosModal', VendaArquivosModal)
+
 
 // Diretiva v-can
 app.directive('can', {

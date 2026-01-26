@@ -2,7 +2,7 @@
   <Card :shadow="true">
     <PageHeader
       title="Agenda de Produção"
-      subtitle="Chão de fábrica: tarefas no intervalo, status e custo por funcionário."
+      subtitle="Chão de fábrica: grade semanal de tarefas."
       icon="pi pi-calendar"
       :backTo="'/'"
     />
@@ -11,23 +11,32 @@
       <Loading v-if="loading" />
 
       <div v-else class="space-y-6">
-        <!-- FILTROS -->
-        <section class="grid grid-cols-12 gap-4">
-          <div class="col-span-12 md:col-span-4">
-            <Input v-model="filtros.inicio" type="date" label="Início *" />
+        <!-- CONTROLES -->
+        <section class="grid grid-cols-12 gap-4 items-end">
+          <div class="col-span-12 md:col-span-3">
+            <Input v-model="semanaInicio" type="date" label="Semana (início) *" />
           </div>
 
-          <div class="col-span-12 md:col-span-4">
-            <Input v-model="filtros.fim" type="date" label="Fim *" />
-          </div>
-
-          <div class="col-span-12 md:col-span-4">
+          <div class="col-span-12 md:col-span-3">
             <SearchInput
               v-model="busca"
               mode="search"
               label="Buscar"
-              placeholder="Buscar por origem, status, funcionário, tarefa..."
+              placeholder="Buscar por título, status, funcionário, origem..."
             />
+          </div>
+
+          <div class="col-span-12 md:col-span-6 flex items-end justify-end gap-2">
+            <Button variant="secondary" size="md" type="button" @click="voltarSemana">◀</Button>
+            <Button variant="secondary" size="md" type="button" @click="avancarSemana">▶</Button>
+
+            <Button variant="secondary" size="md" type="button" :loading="refreshing" @click="carregar">
+              Atualizar
+            </Button>
+
+            <Button variant="primary" size="md" type="button" @click="abrirNovaTarefaSolta">
+              + Nova tarefa
+            </Button>
           </div>
         </section>
 
@@ -36,180 +45,138 @@
         <!-- RESUMO -->
         <section class="grid grid-cols-12 gap-4">
           <div class="col-span-12 md:col-span-3">
-            <div class="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Projetos</div>
-            <div class="text-lg font-black text-gray-900">{{ totalProjetos }}</div>
+            <div class="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Tarefas (semana)</div>
+            <div class="text-lg font-black text-gray-900">{{ tarefasFiltradas.length }}</div>
           </div>
 
           <div class="col-span-12 md:col-span-3">
-            <div class="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Tarefas (intervalo)</div>
-            <div class="text-lg font-black text-gray-900">{{ totalTarefas }}</div>
+            <div class="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Custo (semana)</div>
+            <div class="text-lg font-black text-gray-900">{{ format.currency(totalCustoSemana) }}</div>
           </div>
 
-          <div class="col-span-12 md:col-span-3">
-            <div class="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Custo (intervalo)</div>
-            <div class="text-lg font-black text-gray-900">{{ format.currency(totalCusto) }}</div>
-          </div>
-
-          <div class="col-span-12 md:col-span-3 flex items-end justify-end gap-2">
-            <Button variant="secondary" size="md" type="button" :loading="refreshing" @click="carregar">
-              Atualizar
-            </Button>
-          </div>
+          <div class="col-span-12 md:col-span-6" />
         </section>
 
         <div class="h-px bg-slate-100"></div>
 
-        <!-- LISTA (PROJETOS) -->
+        <!-- GRADE SEMANAL -->
         <section class="space-y-3">
           <div class="text-[11px] font-black uppercase tracking-[0.18em] text-gray-400">
-            Projetos no intervalo
+            Semana: {{ semanaLabel }}
           </div>
 
-          <Table
-            :columns="columnsProjetos"
-            :rows="rowsProjetos"
-            :loading="refreshing"
-            emptyText="Nenhum projeto no intervalo."
-            :boxed="true"
-          >
-            <template #cell-origem="{ row }">
-              <div class="font-black text-gray-900">{{ row.origem_tipo }} #{{ row.origem_id }}</div>
-              <div class="text-xs font-bold text-gray-400">Projeto #{{ row.id }}</div>
-            </template>
-
-            <template #cell-status="{ row }">
-              <StatusBadge :value="row.status" />
-            </template>
-
-            <template #cell-janela="{ row }">
-              <div class="text-xs font-black text-gray-900">
-                {{ format.date(row.janela_intervalo?.inicio_min) }} → {{ format.date(row.janela_intervalo?.fim_max) }}
+          <!-- Cabeçalho dias -->
+          <div class="grid grid-cols-7 gap-2">
+            <div
+              v-for="d in diasSemana"
+              :key="d.key"
+              class="rounded-2xl border border-slate-100 bg-slate-50/50 p-3"
+            >
+              <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                {{ d.label }}
               </div>
-            </template>
-
-            <template #cell-tarefas="{ row }">
-              <div class="text-xs font-black text-gray-900">{{ row.total_tarefas_intervalo || 0 }}</div>
-            </template>
-
-            <template #cell-custo="{ row }">
-              <div class="font-black text-gray-900">{{ format.currency(row.total_custo_intervalo || 0) }}</div>
-            </template>
-
-            <template #cell-acoes="{ row }">
-              <div class="flex justify-end">
-                <Button variant="secondary" size="sm" type="button" @click="abrirDetalhe(row)">
-                  Ver tarefas
-                </Button>
+              <div class="text-sm font-black text-gray-900">
+                {{ format.date(d.date) }}
               </div>
-            </template>
-          </Table>
+            </div>
+          </div>
+
+          <!-- Linhas (slots) -->
+          <div class="space-y-2">
+            <div
+              v-for="slot in SLOTS"
+              :key="slot"
+              class="grid grid-cols-7 gap-2"
+            >
+              <div
+                v-for="d in diasSemana"
+                :key="d.key + '-' + slot"
+                class="min-h-[110px] rounded-2xl border border-slate-100 bg-white p-2"
+                @dblclick="abrirNovaTarefaNoSlot(d.date, slot)"
+              >
+                <!-- topo do slot -->
+                <div class="flex items-center justify-between">
+                  <div class="text-[10px] font-black uppercase tracking-widest text-slate-300">
+                    {{ slot }}
+                  </div>
+
+                  <button
+                    type="button"
+                    class="text-slate-300 hover:text-slate-600"
+                    title="Criar tarefa"
+                    @click.stop="abrirNovaTarefaNoSlot(d.date, slot)"
+                  >
+                    <i class="pi pi-plus text-[10px]"></i>
+                  </button>
+                </div>
+
+                <!-- tarefas dentro do slot -->
+                <div class="mt-2 space-y-2">
+                  <div
+                    v-for="t in tarefasNoSlot(d.date, slot)"
+                    :key="t.id"
+                    class="rounded-xl border border-slate-100 bg-slate-50/50 p-2 cursor-pointer hover:bg-slate-50"
+                    @click.stop="editarTarefa(t)"
+                  >
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="min-w-0">
+                        <div class="text-[11px] font-black text-gray-900 truncate">
+                          {{ t.titulo }}
+                        </div>
+                        <div class="text-[10px] font-bold text-slate-400 truncate">
+                          {{ t.funcionario?.nome || `FUNC #${t.funcionario_id}` }} · {{ t.status }}
+                        </div>
+                      </div>
+
+                      <div class="flex gap-1">
+                        <button
+                          type="button"
+                          class="text-slate-400 hover:text-slate-700"
+                          title="Editar"
+                          @click.stop="editarTarefa(t)"
+                        >
+                          <i class="pi pi-pencil text-[10px]"></i>
+                        </button>
+
+                        <button
+                          type="button"
+                          class="text-red-400 hover:text-red-600"
+                          title="Excluir"
+                          @click.stop="removerTarefa(t)"
+                        >
+                          <i class="pi pi-times text-[10px]"></i>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="mt-1 text-[10px] font-black text-gray-800">
+                      {{ format.date(t.inicio_em) }} → {{ format.date(t.fim_em) }}
+                    </div>
+
+                    <div class="mt-1 text-[10px] font-black text-gray-900">
+                      {{ format.currency(Number(t.custo_total || 0)) }}
+                    </div>
+                  </div>
+
+                  <div
+                    v-if="tarefasNoSlot(d.date, slot).length === 0"
+                    class="text-[10px] font-black uppercase tracking-widest text-slate-200 select-none"
+                  >
+                    —
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            * Clique no “+” (ou duplo clique no slot) para criar tarefa.
+          </div>
         </section>
-
-        <!-- DETALHE (TAREFAS DO PROJETO SELECIONADO) -->
-        <div v-if="selecionado" class="mt-8">
-          <div class="h-px bg-slate-100 mb-6"></div>
-
-          <section class="space-y-4">
-            <div class="flex items-start justify-between gap-4">
-              <div>
-                <div class="text-[11px] font-black uppercase tracking-[0.18em] text-gray-400">
-                  Tarefas do projeto
-                </div>
-                <div class="text-lg font-black text-gray-900">
-                  {{ selecionado.origem_tipo }} #{{ selecionado.origem_id }}
-                  <span class="text-gray-400">·</span>
-                  Projeto #{{ selecionado.id }}
-                </div>
-              </div>
-
-              <div class="flex gap-2">
-                <Button variant="secondary" size="sm" type="button" @click="abrirNovaTarefaGarantia">
-                  + Tarefa (Garantia)
-                </Button>
-
-                <Button variant="ghost" size="sm" type="button" @click="selecionado = null">
-                  Fechar
-                </Button>
-              </div>
-            </div>
-
-            <Table
-              :columns="columnsTarefas"
-              :rows="rowsTarefasSelecionado"
-              :loading="false"
-              emptyText="Nenhuma tarefa no intervalo."
-              :boxed="true"
-            >
-              <template #cell-funcionario="{ row }">
-                <div class="font-black text-gray-900">{{ row.funcionario?.nome || '—' }}</div>
-                <div class="text-xs font-bold text-gray-400">ID: {{ row.funcionario_id }}</div>
-              </template>
-
-              <template #cell-status="{ row }">
-                <StatusBadge :value="row.status" />
-              </template>
-
-              <template #cell-janela="{ row }">
-                <div class="text-xs font-black text-gray-900">
-                  {{ format.date(row.inicio_em) }} → {{ format.date(row.fim_em) }}
-                </div>
-              </template>
-
-              <template #cell-custo="{ row }">
-                <div class="font-black text-gray-900">{{ format.currency(Number(row.custo_total || 0)) }}</div>
-              </template>
-
-              <template #cell-acoes="{ row }">
-                <div class="flex justify-end gap-2">
-                  <Button variant="ghost" size="sm" type="button" @click="editarTarefa(row)">
-                    Editar
-                  </Button>
-                  <Button variant="danger" size="sm" type="button" @click="removerTarefa(row)">
-                    Excluir
-                  </Button>
-                </div>
-              </template>
-            </Table>
-
-            <div class="flex justify-end">
-              <div class="text-sm font-black uppercase tracking-tight text-gray-900">
-                Custo do projeto (intervalo):
-                <span class="text-brand-primary">{{ format.currency(selecionado.total_custo_intervalo || 0) }}</span>
-              </div>
-            </div>
-          </section>
-
-          <!-- ARQUIVOS DO PROJETO (dentro da agenda, como você pediu) -->
-          <div class="h-px bg-slate-100 my-6"></div>
-
-          <section class="space-y-3">
-            <div class="text-[11px] font-black uppercase tracking-[0.18em] text-gray-400">
-              Arquivos do projeto
-            </div>
-
-            <Table
-              :columns="columnsArquivos"
-              :rows="rowsArquivosSelecionado"
-              :loading="false"
-              emptyText="Nenhum arquivo anexado."
-              :boxed="true"
-            >
-              <template #cell-nome="{ row }">
-                <div class="font-black text-gray-900">
-                  {{ row.nome_original || row.nome_arquivo || '—' }}
-                </div>
-              </template>
-
-              <template #cell-criado="{ row }">
-                <div class="text-xs font-black text-gray-900">{{ format.date(row.criado_em) }}</div>
-              </template>
-            </Table>
-          </section>
-        </div>
       </div>
     </div>
 
-    <!-- MODAL: TAREFA -->
+    <!-- MODAL: TAREFA (reaproveitado do seu) -->
     <transition name="fade-slide">
       <div
         v-if="tarefaModal.open"
@@ -217,7 +184,6 @@
         @click.self="fecharModalTarefa"
       >
         <div class="w-full max-w-3xl bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
-          <!-- HEADER -->
           <div class="flex items-start justify-between gap-4 p-6 border-b border-gray-100 bg-gray-50/40">
             <div>
               <div class="text-[11px] font-black uppercase tracking-[0.18em] text-gray-400">Tarefa</div>
@@ -231,10 +197,8 @@
             </Button>
           </div>
 
-          <!-- BODY -->
           <div class="p-6 space-y-6">
             <div class="grid grid-cols-12 gap-4">
-              <!-- FUNCIONÁRIO -->
               <div class="col-span-12 md:col-span-6">
                 <SearchInput
                   v-model="tarefaModal.funcionario_id"
@@ -245,7 +209,6 @@
                 />
               </div>
 
-              <!-- STATUS -->
               <div class="col-span-12 md:col-span-6">
                 <SearchInput
                   v-model="tarefaModal.status"
@@ -256,17 +219,14 @@
                 />
               </div>
 
-              <!-- TÍTULO -->
               <div class="col-span-12">
                 <Input v-model="tarefaModal.titulo" label="Título *" />
               </div>
 
-              <!-- OBS -->
               <div class="col-span-12">
                 <Input v-model="tarefaModal.observacao" label="Observação" />
               </div>
 
-              <!-- INÍCIO -->
               <div class="col-span-12 md:col-span-6">
                 <label class="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400 mb-2 block">
                   Início *
@@ -278,7 +238,6 @@
                 />
               </div>
 
-              <!-- FIM -->
               <div class="col-span-12 md:col-span-6">
                 <label class="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400 mb-2 block">
                   Fim *
@@ -290,17 +249,8 @@
                 />
               </div>
             </div>
-
-            <!-- ALERTA -->
-            <div
-              v-if="!selecionado"
-              class="p-4 rounded-2xl border border-amber-200 bg-amber-50 text-amber-800 text-xs font-black uppercase tracking-widest"
-            >
-              Selecione um projeto antes de criar tarefa.
-            </div>
           </div>
 
-          <!-- FOOTER -->
           <div class="flex items-center justify-end gap-2 p-6 border-t border-gray-100 bg-gray-50/40">
             <Button variant="secondary" size="md" type="button" @click="fecharModalTarefa">
               Cancelar
@@ -329,56 +279,54 @@ import { ProducaoService, FuncionarioService } from '@/services/index'
 import { format } from '@/utils/format'
 
 // ===============================
-// HELPERS (DATA)
+// GRADE FIXA (ajuste aqui)
 // ===============================
-function toISOStartOfDay(dateStr) {
-  if (!dateStr) return null
-  const d = new Date(`${dateStr}T00:00:00`)
-  return d.toISOString()
-}
+const SLOTS = [
+  '07:00', '08:00', '09:00', '10:00', '11:00',
+  '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'
+] // <- você muda aqui
 
-function toISOEndOfDay(dateStr) {
-  if (!dateStr) return null
-  const d = new Date(`${dateStr}T23:59:59`)
-  return d.toISOString()
-}
+const STATUS_TAREFA = [
+  { label: 'PENDENTE', value: 'PENDENTE' },
+  { label: 'EM_ANDAMENTO', value: 'EM_ANDAMENTO' },
+  { label: 'FINALIZADA', value: 'FINALIZADA' },
+  { label: 'CANCELADA', value: 'CANCELADA' },
+]
+
+// ===============================
+// HELPERS DATA
+// ===============================
+function pad(n) { return String(n).padStart(2, '0') }
 
 function todayStr() {
   const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-function addDaysStr(baseYYYYMMDD, days) {
-  const d = new Date(`${baseYYYYMMDD}T00:00:00`)
+function addDays(dateStr, days) {
+  const d = new Date(`${dateStr}T00:00:00`)
   d.setDate(d.getDate() + Number(days || 0))
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+function toISOStartOfDay(dateStr) {
+  const d = new Date(`${dateStr}T00:00:00`)
+  return d.toISOString()
+}
+function toISOEndOfDay(dateStr) {
+  const d = new Date(`${dateStr}T23:59:59`)
+  return d.toISOString()
 }
 
 function texto(x) {
   return String(x ?? '').toLowerCase().trim()
 }
 
-function moedaNum(v) {
-  const n = Number(v)
-  return Number.isFinite(n) ? n : 0
-}
-
 function isoToInputDateTime(iso) {
   if (!iso) return ''
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ''
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  const hh = String(d.getHours()).padStart(2, '0')
-  const mm = String(d.getMinutes()).padStart(2, '0')
-  return `${y}-${m}-${day}T${hh}:${mm}`
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 function inputDateTimeToISO(v) {
@@ -388,27 +336,43 @@ function inputDateTimeToISO(v) {
   return d.toISOString()
 }
 
+function slotToISO(dateStr, slotHHMM) {
+  return new Date(`${dateStr}T${slotHHMM}:00`).toISOString()
+}
+
+function plusHoursISO(iso, h = 2) {
+  const d = new Date(iso)
+  d.setHours(d.getHours() + h)
+  return d.toISOString()
+}
+
+function mesmaData(aISO, dateStr) {
+  const d = new Date(aISO)
+  const y = d.getFullYear()
+  const m = pad(d.getMonth() + 1)
+  const day = pad(d.getDate())
+  return `${y}-${m}-${day}` === dateStr
+}
+
+function horaStr(iso) {
+  const d = new Date(iso)
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 // ===============================
 // STATE
 // ===============================
 const loading = ref(true)
 const refreshing = ref(false)
 
-const filtros = reactive({
-  inicio: todayStr(),
-  fim: addDaysStr(todayStr(), 7),
-})
+const semanaInicio = ref(todayStr()) // você escolhe a data
+const semanaFim = computed(() => addDays(semanaInicio.value, 6))
 
 const busca = ref('')
 
-const projetosRaw = ref([])
-const selecionado = ref(null)
-
-// funcionários p/ modal
+const projetosRaw = ref([]) // vem do endpoint atual
 const funcionariosOptions = ref([])
-const funcionariosLoading = ref(false)
 
-// modal tarefa
 const tarefaModal = reactive({
   open: false,
   isEdit: false,
@@ -425,126 +389,80 @@ const savingTarefa = ref(false)
 const deletingTarefa = ref(false)
 
 // ===============================
-// CONSTANTES
+// DIAS (Seg–Sáb)
 // ===============================
-const STATUS_TAREFA = [
-  { label: 'PENDENTE', value: 'PENDENTE' },
-  { label: 'EM_ANDAMENTO', value: 'EM_ANDAMENTO' },
-  { label: 'FINALIZADA', value: 'FINALIZADA' },
-  { label: 'CANCELADA', value: 'CANCELADA' },
-]
+const diasSemana = computed(() => {
+  const base = semanaInicio.value
+  const labels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'] // se você quiser só Seg–Sáb, removemos Dom no array
+  // aqui vou usar Seg–Sáb conforme você pediu:
+  return [0,1,2,3,4,5].map((i) => ({
+    key: `${base}-${i}`,
+    label: labels[i],
+    date: addDays(base, i),
+  }))
+})
 
-// ===============================
-// COLUNAS
-// ===============================
-const columnsProjetos = [
-  { key: 'origem', label: 'Origem' },
-  { key: 'status', label: 'Status', width: '160px' },
-  { key: 'janela', label: 'Janela', width: '220px' },
-  { key: 'tarefas', label: 'Tarefas', width: '120px', align: 'right' },
-  { key: 'custo', label: 'Custo', width: '160px', align: 'right' },
-  { key: 'acoes', label: 'Ações', width: '140px', align: 'right' },
-]
-
-const columnsTarefas = [
-  { key: 'funcionario', label: 'Funcionário', width: '240px' },
-  { key: 'titulo', label: 'Tarefa' },
-  { key: 'status', label: 'Status', width: '160px' },
-  { key: 'janela', label: 'Janela', width: '220px' },
-  { key: 'custo', label: 'Custo', width: '160px', align: 'right' },
-  { key: 'acoes', label: 'Ações', width: '220px', align: 'right' },
-]
-
-const columnsArquivos = [
-  { key: 'tipo', label: 'Tipo', width: '200px' },
-  { key: 'nome', label: 'Arquivo' },
-  { key: 'criado', label: 'Criado em', width: '160px' },
-]
+const semanaLabel = computed(() => `${format.date(semanaInicio.value)} → ${format.date(semanaFim.value)}`)
 
 // ===============================
-// FILTRO
+// FLATTEN tarefas (do retorno atual)
 // ===============================
-function projetoMatchBusca(p, q) {
-  if (!q) return true
-
-  const base = `${p.id} ${p.origem_tipo} ${p.origem_id} ${p.status}`.toLowerCase()
-  if (base.includes(q)) return true
-
-  const tarefas = p.tarefas || []
-  for (const t of tarefas) {
-    const tStr = `${t.titulo} ${t.status} ${t.funcionario?.nome || ''} ${t.funcionario_id}`.toLowerCase()
-    if (tStr.includes(q)) return true
+const todasTarefas = computed(() => {
+  const out = []
+  for (const p of (projetosRaw.value || [])) {
+    for (const t of (p.tarefas || [])) {
+      out.push({
+        ...t,
+        origem_tipo: p.origem_tipo,
+        origem_id: p.origem_id,
+      })
+    }
   }
+  return out
+})
 
-  return false
-}
-
-const projetosFiltrados = computed(() => {
+const tarefasFiltradas = computed(() => {
   const q = texto(busca.value)
-  return (projetosRaw.value || []).filter((p) => projetoMatchBusca(p, q))
+  if (!q) return todasTarefas.value
+  return todasTarefas.value.filter((t) => {
+    const base =
+      `${t.id} ${t.titulo} ${t.status} ${t.funcionario?.nome || ''} ${t.funcionario_id} ${t.origem_tipo} ${t.origem_id}`.toLowerCase()
+    return base.includes(q)
+  })
 })
 
-const rowsProjetos = computed(() => projetosFiltrados.value || [])
+const totalCustoSemana = computed(() =>
+  tarefasFiltradas.value.reduce((acc, t) => acc + Number(t.custo_total || 0), 0)
+)
 
-const rowsTarefasSelecionado = computed(() => {
-  if (!selecionado.value) return []
-  return selecionado.value?.tarefas || []
-})
-
-const rowsArquivosSelecionado = computed(() => {
-  if (!selecionado.value) return []
-  return selecionado.value?.arquivos || []
-})
-
-// ===============================
-// RESUMOS
-// ===============================
-const totalProjetos = computed(() => rowsProjetos.value.length)
-
-const totalTarefas = computed(() => {
-  return rowsProjetos.value.reduce((acc, p) => acc + Number(p.total_tarefas_intervalo || 0), 0)
-})
-
-const totalCusto = computed(() => {
-  return rowsProjetos.value.reduce((acc, p) => acc + moedaNum(p.total_custo_intervalo), 0)
-})
-
-// ===============================
-// ACTIONS
-// ===============================
-function abrirDetalhe(row) {
-  selecionado.value = row
+// tarefas por slot = mesmas data + inicio dentro do slot (simples e operacional)
+function tarefasNoSlot(dateStr, slotHHMM) {
+  return tarefasFiltradas.value.filter((t) => {
+    if (!t.inicio_em) return false
+    if (!mesmaData(t.inicio_em, dateStr)) return false
+    return horaStr(t.inicio_em).startsWith(slotHHMM)
+  })
 }
 
+// ===============================
+// API
+// ===============================
 async function carregarFuncionarios() {
-  funcionariosLoading.value = true
-  try {
-    const { data } = await FuncionarioService.listar()
-    const arr = Array.isArray(data) ? data : []
-    funcionariosOptions.value = arr.map((f) => ({
-      label: `${f.nome} (#${f.id})`,
-      value: f.id,
-    }))
-  } finally {
-    funcionariosLoading.value = false
-  }
+  const { data } = await FuncionarioService.listar()
+  const arr = Array.isArray(data) ? data : []
+  funcionariosOptions.value = arr.map((f) => ({
+    label: `${f.nome} (#${f.id})`,
+    value: f.id,
+  }))
 }
 
 async function carregar() {
-  if (!filtros.inicio || !filtros.fim) return
-
-  const inicioIso = toISOStartOfDay(filtros.inicio)
-  const fimIso = toISOEndOfDay(filtros.fim)
-
   refreshing.value = true
   try {
+    const inicioIso = toISOStartOfDay(semanaInicio.value)
+    const fimIso = toISOEndOfDay(semanaFim.value)
     const { data } = await ProducaoService.agenda(inicioIso, fimIso)
     projetosRaw.value = Array.isArray(data) ? data : []
-
-    if (selecionado.value) {
-      const still = projetosRaw.value.find((p) => Number(p.id) === Number(selecionado.value.id))
-      selecionado.value = still || null
-    }
   } finally {
     refreshing.value = false
     loading.value = false
@@ -552,28 +470,50 @@ async function carregar() {
 }
 
 // ===============================
-// MODAL TAREFA
+// SEMANA NAV
 // ===============================
-function abrirNovaTarefaGarantia() {
-  if (!selecionado.value) return
+function voltarSemana() {
+  semanaInicio.value = addDays(semanaInicio.value, -7)
+  carregar()
+}
+function avancarSemana() {
+  semanaInicio.value = addDays(semanaInicio.value, 7)
+  carregar()
+}
 
+// ===============================
+// MODAL
+// ===============================
+function abrirNovaTarefaSolta() {
   tarefaModal.open = true
   tarefaModal.isEdit = false
   tarefaModal.tarefaId = null
-
   tarefaModal.funcionario_id = null
-  tarefaModal.titulo = 'GARANTIA'
+  tarefaModal.titulo = ''
   tarefaModal.status = 'PENDENTE'
   tarefaModal.observacao = ''
   tarefaModal.inicio_em = ''
   tarefaModal.fim_em = ''
 }
 
+function abrirNovaTarefaNoSlot(dateStr, slotHHMM) {
+  const inicioIso = slotToISO(dateStr, slotHHMM)
+  const fimIso = plusHoursISO(inicioIso, 2) // padrão 2h (você altera)
+  tarefaModal.open = true
+  tarefaModal.isEdit = false
+  tarefaModal.tarefaId = null
+  tarefaModal.funcionario_id = null
+  tarefaModal.titulo = ''
+  tarefaModal.status = 'PENDENTE'
+  tarefaModal.observacao = ''
+  tarefaModal.inicio_em = isoToInputDateTime(inicioIso)
+  tarefaModal.fim_em = isoToInputDateTime(fimIso)
+}
+
 function editarTarefa(row) {
   tarefaModal.open = true
   tarefaModal.isEdit = true
   tarefaModal.tarefaId = row.id
-
   tarefaModal.funcionario_id = row.funcionario_id ?? null
   tarefaModal.titulo = row.titulo ?? ''
   tarefaModal.status = row.status ?? 'PENDENTE'
@@ -588,7 +528,6 @@ function fecharModalTarefa() {
 
 const podeSalvarTarefa = computed(() => {
   if (savingTarefa.value) return false
-  if (!selecionado.value) return false
   if (!tarefaModal.funcionario_id) return false
   if (!String(tarefaModal.titulo || '').trim()) return false
   if (!String(tarefaModal.inicio_em || '').trim()) return false
@@ -596,11 +535,13 @@ const podeSalvarTarefa = computed(() => {
   return true
 })
 
+// ⚠️ Como o endpoint atual usa origem_tipo/origem_id, aqui você mantém o que você já fazia.
+// Se você quer criar tarefa “solta” sem origem, aí sim é backend/Prisma (a gente faz depois).
 function montarPayloadCriarTarefa() {
-  const p = selecionado.value || {}
   return {
-    origem_tipo: String(p.origem_tipo || '').trim(),
-    origem_id: Number(p.origem_id),
+    // manter o seu padrão atual: origem obrigatória
+    origem_tipo: 'PRODUCAO',
+    origem_id: 0,
 
     funcionario_id: Number(tarefaModal.funcionario_id),
     titulo: String(tarefaModal.titulo || '').trim(),
@@ -632,7 +573,6 @@ async function salvarTarefaModal() {
     } else {
       await ProducaoService.criarTarefa(montarPayloadCriarTarefa())
     }
-
     fecharModalTarefa()
     await carregar()
   } finally {
@@ -642,6 +582,7 @@ async function salvarTarefaModal() {
 
 async function removerTarefa(row) {
   if (!row?.id || deletingTarefa.value) return
+  if (!confirm('Excluir tarefa?')) return
   deletingTarefa.value = true
   try {
     await ProducaoService.removerTarefa(row.id)

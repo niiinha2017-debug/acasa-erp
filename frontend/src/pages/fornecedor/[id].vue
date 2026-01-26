@@ -1,70 +1,111 @@
 <template>
-  <Card :shadow="true">
+  <Card :shadow="true" class="!rounded-[2.5rem] overflow-hidden border-none shadow-2xl shadow-slate-200/50">
     <PageHeader
-      :title="isEdit ? `Editar Fornecedor #${fornecedorId}` : 'Novo Fornecedor'"
-      subtitle="Cadastro / Fornecedor"
+      :title="isEdit ? 'Editar Fornecedor' : 'Novo Fornecedor'"
+      :subtitle="isEdit ? `ID: #${fornecedorId}` : 'Cadastro de parceiros comerciais'"
       icon="pi pi-truck"
       :backTo="'/fornecedor'"
+      class="bg-slate-50/50 border-b border-slate-100"
     />
 
-    <div class="p-8 relative">
+    <div class="p-8 md:p-12 relative">
       <Loading v-if="loading" />
 
-      <form v-else class="space-y-10">
-        <div class="grid grid-cols-12 gap-6">
-          <div class="col-span-12 flex items-center gap-3 mb-2">
-            <div class="w-1.5 h-4 bg-slate-900 rounded-full"></div>
-            <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">01. Identificação</span>
+      <form v-else class="space-y-12">
+        
+        <section class="space-y-8">
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-lg">
+              <i class="pi pi-id-card"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-black uppercase tracking-widest text-slate-800">01. Identificação Jurídica</h3>
+              <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Dados fiscais e registros oficiais</p>
+            </div>
           </div>
 
-          <Input class="col-span-12 md:col-span-4" v-model="cnpjMask" label="CNPJ *" required @blur="tratarBuscaCnpj" />
-          <Input class="col-span-12 md:col-span-8" v-model="form.razao_social" label="Razão Social *" required />
-          <Input class="col-span-12 md:col-span-7" v-model="form.nome_fantasia" label="Nome Fantasia *" required />
-          <Input class="col-span-12 md:col-span-5" v-model="ieMask" label="Inscrição Estadual" />
-        </div>
-
-        <div class="grid grid-cols-12 gap-6">
-          <div class="col-span-12 flex items-center gap-3 mb-2">
-            <div class="w-1.5 h-4 bg-slate-900 rounded-full"></div>
-            <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">02. Contato e Comercial</span>
+          <div class="grid grid-cols-12 gap-x-8 gap-y-6 p-8 rounded-[2rem] bg-slate-50/50 border border-slate-100/50">
+            <Input class="col-span-12 md:col-span-4" v-model="cnpjMask" label="CNPJ *" required @blur="tratarBuscaCnpj" />
+            <Input class="col-span-12 md:col-span-8" v-model="form.razao_social" label="Razão Social *" required />
+            <Input class="col-span-12 md:col-span-7" v-model="form.nome_fantasia" label="Nome Fantasia *" required />
+            <Input class="col-span-12 md:col-span-5" v-model="ieMask" label="Inscrição Estadual" />
           </div>
-          <Input class="col-span-12 md:col-span-4" v-model="form.email" label="E-mail" />
-          <Input class="col-span-12 md:col-span-4" v-model="telefoneMask" label="Telefone" />
-          <Input class="col-span-12 md:col-span-4" v-model="whatsappMask" label="WhatsApp" />
-          <Input class="col-span-12 md:col-span-8" v-model="form.forma_pagamento" label="Forma de Pagamento" />
-          <Input class="col-span-12 md:col-span-4" v-model.number="form.data_vencimento" type="number" label="Dia de Vencimento" />
-        </div>
+        </section>
 
-        <div class="h-px bg-slate-100/50"></div>
-
-        <div class="grid grid-cols-12 gap-6">
-          <div class="col-span-12 flex items-center gap-3 mb-2">
-            <div class="w-1.5 h-4 bg-slate-900 rounded-full"></div>
-            <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">03. Localização</span>
+        <section class="space-y-8">
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-xl bg-brand-primary text-white flex items-center justify-center shadow-lg shadow-brand-primary/20">
+              <i class="pi pi-phone"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-black uppercase tracking-widest text-slate-800">02. Contato e Comercial</h3>
+              <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Canais de comunicação e acordos</p>
+            </div>
           </div>
 
-          <Input class="col-span-12 md:col-span-3" v-model="cepMask" label="CEP" @blur="tratarBuscaCep" />
+          <div class="grid grid-cols-12 gap-x-8 gap-y-6 p-8 rounded-[2rem] border border-slate-100">
+            <Input class="col-span-12 md:col-span-4" v-model="form.email" label="E-mail" placeholder="contato@empresa.com" />
+            <Input class="col-span-12 md:col-span-4" v-model="telefoneMask" label="Telefone" />
+            <Input class="col-span-12 md:col-span-4" v-model="whatsappMask" label="WhatsApp" />
+            
+            <div class="col-span-12 h-px bg-slate-100 my-2"></div>
+            
+            <Input class="col-span-12 md:col-span-8" v-model="form.forma_pagamento" label="Condição de Pagamento Padrão" placeholder="Ex: Boleto 30 dias" />
+            <Input class="col-span-12 md:col-span-4" v-model.number="form.data_vencimento" type="number" label="Melhor Dia Vencimento" />
+          </div>
+        </section>
 
-          <Input class="col-span-12 md:col-span-9" v-model="form.endereco" label="Logradouro (Rua/Av)" />
+        <section class="space-y-8">
+          <div class="flex items-center gap-4">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20">
+              <i class="pi pi-map-marker"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-black uppercase tracking-widest text-slate-800">03. Localização</h3>
+              <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Endereço para faturamento e entregas</p>
+            </div>
+          </div>
 
-          <Input id="numero-input" class="col-span-12 md:col-span-3" v-model="form.numero" label="Nº" />
+          <div class="grid grid-cols-12 gap-x-8 gap-y-6 p-8 rounded-[2rem] bg-slate-50/30 border border-slate-100/50">
+            <Input class="col-span-12 md:col-span-3" v-model="cepMask" label="CEP" @blur="tratarBuscaCep" />
+            <Input class="col-span-12 md:col-span-9" v-model="form.endereco" label="Logradouro (Rua/Av)" />
+            <Input id="numero-input" class="col-span-12 md:col-span-3" v-model="form.numero" label="Nº" />
+            <Input class="col-span-12 md:col-span-9" v-model="form.complemento" label="Complemento" />
+            <Input class="col-span-12 md:col-span-5" v-model="form.bairro" label="Bairro" />
+            <Input class="col-span-12 md:col-span-5" v-model="form.cidade" label="Cidade" />
+            <Input class="col-span-12 md:col-span-2" v-model="form.estado" label="UF" maxlength="2" />
+          </div>
+        </section>
 
-          <Input class="col-span-12 md:col-span-9" v-model="form.complemento" label="Complemento (Apto, Sala, Bloco...)" />
-
-          <Input class="col-span-12 md:col-span-5" v-model="form.bairro" label="Bairro" />
-
-          <Input class="col-span-12 md:col-span-5" v-model="form.cidade" label="Cidade" />
-
-          <Input class="col-span-12 md:col-span-2" v-model="form.estado" label="UF" maxlength="2" />
-        </div>
-
-        <div class="flex items-center justify-between pt-8 border-t border-gray-100">
-          <Button v-if="isEdit" variant="danger" type="button" @click="excluir">Excluir</Button>
+        <div class="pt-10 border-t border-slate-100 flex items-center justify-between">
+          <Button 
+            v-if="isEdit" 
+            variant="danger" 
+            type="button" 
+            @click="excluir"
+            class="!rounded-2xl !px-8 hover:bg-red-600 transition-all font-bold uppercase text-[10px] tracking-widest"
+          >
+            <i class="pi pi-trash mr-2"></i> Excluir Registro
+          </Button>
           <div v-else></div>
-          <div class="flex gap-3">
-            <Button variant="secondary" type="button" @click="router.push('/fornecedor')">Cancelar</Button>
-            <Button variant="primary" type="button" @click="salvar" class="!px-10 shadow-lg shadow-brand-primary/20">
-              <i class="pi pi-save mr-2"></i> {{ isEdit ? 'Salvar Alterações' : 'Cadastrar Fornecedor' }}
+
+          <div class="flex gap-4">
+            <Button 
+              variant="secondary" 
+              type="button" 
+              @click="router.push('/fornecedor')"
+              class="!rounded-2xl !px-8 !bg-white !border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-widest"
+            >
+              Voltar
+            </Button>
+            <Button 
+              variant="primary" 
+              type="button" 
+              @click="salvar" 
+              class="!rounded-2xl !px-12 !h-14 shadow-2xl shadow-brand-primary/30 font-black uppercase text-[11px] tracking-[0.15em]"
+            >
+              <i class="pi pi-save mr-3"></i> 
+              {{ isEdit ? 'Salvar Alterações' : 'Finalizar Cadastro' }}
             </Button>
           </div>
         </div>

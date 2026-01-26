@@ -1,106 +1,175 @@
 <template>
-  <div class="page-container space-y-4">
+  <div class="w-full max-w-[1400px] mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    
     <PageHeader
       title="Relatório de Ponto"
-      subtitle="RH / Gestão de Horas"
+      subtitle="RH / Gestão Estratégica de Horas"
       icon="pi pi-clock"
-      iconClass="bg-slate-900 text-white shadow-lg"
+      class="bg-transparent p-0"
     />
 
-    <div v-if="rows.length" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <MetricCard title="Meta Diária" :value="`${resumo.metaDia.toFixed(2)}h`" icon="pi pi-calendar" />
-      <MetricCard title="Trabalhado" :value="resumo.totalHorasHHMM" icon="pi pi-briefcase" />
-      <MetricCard 
-        title="Saldo do Período" 
-        :value="resumo.totalSaldoHHMM" 
-        :variant="resumo.totalSaldo >= 0 ? 'success' : 'danger'"
-      />
-    </div>
-
-    <Card :shadow="true" class="overflow-visible">
-      <div class="p-6 space-y-6">
-        <div class="grid grid-cols-12 gap-4 items-end bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
-          <SearchInput class="col-span-12 md:col-span-4" mode="select" label="Funcionário" :options="funcionarioOptions" v-model="filtros.funcionario_id" />
-          <Input class="col-span-12 md:col-span-3" label="Início" v-model="filtros.data_ini" type="date" />
-          <Input class="col-span-12 md:col-span-3" label="Fim" v-model="filtros.data_fim" type="date" />
-          <div class="col-span-12 md:col-span-2 flex gap-2">
-            <Button variant="primary" label="Buscar" :loading="loadingTabela" @click="buscar" class="flex-1" />
-            <Button variant="outline" icon="pi pi-file-pdf" :disabled="!canPdf" @click="abrirPdfMensal" />
-          </div>
+    <div v-if="rows.length" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <Card hoverable class="p-6 flex items-center gap-5 border-none shadow-sm bg-white/80 backdrop-blur">
+        <div class="w-14 h-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-lg">
+          <i class="pi pi-calendar text-2xl"></i>
         </div>
-
-        <Table :boxed="true" :columns="columns" :rows="rows" :loading="loadingTabela">
-          <template #cell-data_hora="{ row }">
-            <div class="text-xs font-bold">{{ fmtData(row.data_hora) }}</div>
-            <div class="text-[10px] text-slate-400 font-medium uppercase">{{ fmtHora(row.data_hora) }}</div>
-          </template>
-          <template #cell-tipo="{ row }"><StatusBadge :value="row.tipo" /></template>
-          <template #cell-status="{ row }"><StatusBadge :value="row.status" /></template>
-          <template #cell-acoes="{ row }">
-            <div class="flex justify-end gap-2">
-              <Button variant="ghost" size="sm" label="Editar" @click="abrirModalEditar(row)" />
-              <Button variant="ghost" size="sm" label="Justificar" @click="abrirModalJustificar(row)" />
-            </div>
-          </template>
-        </Table>
-      </div>
-    </Card>
-
-    <div v-if="modalEditar.open" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-      <Card class="w-full max-w-md !p-0 shadow-2xl">
-        <div class="p-6 border-b bg-slate-50/50 flex justify-between items-center">
-          <h3 class="font-bold">Ajustar Registro</h3>
-          <Button variant="ghost" icon="pi pi-times" @click="modalEditar.open = false" />
+        <div>
+          <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Meta Diária</p>
+          <p class="text-3xl font-black text-slate-800">{{ resumo.metaDia.toFixed(2) }}h</p>
         </div>
-        <div class="p-6 space-y-4">
-          <Input label="Data e Hora" type="datetime-local" v-model="modalEditar.form.data_hora_local" />
-          <SearchInput mode="select" label="Tipo" :options="optionsTipo" v-model="modalEditar.form.tipo" />
-          <Input label="Obs." v-model="modalEditar.form.observacao" :forceUpper="true" />
+      </Card>
+
+      <Card hoverable class="p-6 flex items-center gap-5 border-none shadow-sm bg-white/80 backdrop-blur">
+        <div class="w-14 h-14 rounded-2xl bg-brand-primary/10 text-brand-primary flex items-center justify-center shadow-inner">
+          <i class="pi pi-briefcase text-2xl"></i>
         </div>
-        <div class="p-4 bg-slate-50 flex gap-2">
-          <Button variant="secondary" label="Voltar" class="flex-1" @click="modalEditar.open = false" />
-          <Button variant="primary" label="Salvar" class="flex-1" :loading="modalEditar.saving" @click="salvarEdicao" />
+        <div>
+          <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Trabalhado</p>
+          <p class="text-3xl font-black text-slate-800">{{ resumo.totalHorasHHMM }}</p>
+        </div>
+      </Card>
+
+      <Card hoverable class="p-6 flex items-center gap-5 border-none shadow-sm bg-white/80 backdrop-blur">
+        <div 
+          class="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg"
+          :class="resumo.totalSaldo >= 0 ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'"
+        >
+          <i class="pi pi-chart-bar text-2xl"></i>
+        </div>
+        <div>
+          <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Saldo do Período</p>
+          <p class="text-3xl font-black" :class="resumo.totalSaldo >= 0 ? 'text-emerald-600' : 'text-rose-600'">
+            {{ resumo.totalSaldoHHMM }}
+          </p>
         </div>
       </Card>
     </div>
 
-    <div v-if="modalJust.open" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-      <Card class="w-full max-w-2xl !p-0 shadow-2xl flex flex-col max-h-[90vh]">
-        <div class="p-6 border-b flex justify-between items-center">
+    <Card :shadow="true" class="!rounded-[2.5rem] overflow-hidden border-none shadow-2xl bg-white">
+      
+      <header class="p-8 lg:p-10 border-b border-slate-50 bg-slate-50/30">
+        <div class="grid grid-cols-12 gap-6 items-end">
+          <div class="col-span-12 md:col-span-4">
+            <SearchInput mode="select" label="FUNCIONÁRIO" :options="funcionarioOptions" v-model="filtros.funcionario_id" class="premium-input" />
+          </div>
+          <div class="col-span-12 md:col-span-3">
+            <Input label="DATA INÍCIO" v-model="filtros.data_ini" type="date" />
+          </div>
+          <div class="col-span-12 md:col-span-3">
+            <Input label="DATA FIM" v-model="filtros.data_fim" type="date" />
+          </div>
+          <div class="col-span-12 md:col-span-2 flex gap-3">
+            <Button variant="primary" class="flex-1 !h-12 !rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-slate-900/20" @click="buscar" :loading="loadingTabela">
+              BUSCAR
+            </Button>
+            <Button variant="outline" class="!h-12 !w-12 !p-0 !rounded-xl border-slate-200" :disabled="!canPdf" @click="abrirPdfMensal">
+              <i class="pi pi-file-pdf text-rose-500"></i>
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <div class="p-2">
+        <Table :columns="columns" :rows="rows" :loading="loadingTabela" class="!border-none">
+          
+          <template #cell-data_hora="{ row }">
+            <div class="flex flex-col py-1">
+              <span class="text-sm font-black text-slate-700 uppercase italic tracking-tighter">{{ fmtData(row.data_hora) }}</span>
+              <span class="text-[10px] font-bold text-slate-400 tabular-nums">{{ fmtHora(row.data_hora) }}</span>
+            </div>
+          </template>
+
+          <template #cell-tipo="{ row }">
+            <span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-600 border border-slate-200/50">
+              {{ row.tipo }}
+            </span>
+          </template>
+
+          <template #cell-status="{ row }">
+            <StatusBadge :value="row.status" class="scale-90 origin-left" />
+          </template>
+
+          <template #cell-acoes="{ row }">
+            <div class="flex justify-end gap-2 pr-4">
+              <button @click="abrirModalEditar(row)" class="w-9 h-9 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white transition-all flex items-center justify-center">
+                <i class="pi pi-pencil text-[10px]"></i>
+              </button>
+              <button @click="abrirModalJustificar(row)" class="px-3 h-9 rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white transition-all text-[9px] font-black uppercase tracking-widest">
+                Justificar
+              </button>
+            </div>
+          </template>
+
+        </Table>
+      </div>
+    </Card>
+
+    <div v-if="modalEditar.open" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+      <Card class="w-full max-w-md !rounded-[2rem] shadow-2xl overflow-hidden border-none animate-in zoom-in-95">
+        <div class="p-8 border-b bg-slate-50/50 flex justify-between items-center">
+          <h3 class="font-black text-slate-800 uppercase tracking-tighter italic">Ajustar Registro</h3>
+          <button @click="modalEditar.open = false" class="text-slate-400 hover:text-rose-500"><i class="pi pi-times"></i></button>
+        </div>
+        <div class="p-8 space-y-6">
+          <Input label="DATA E HORA" type="datetime-local" v-model="modalEditar.form.data_hora_local" />
+          <SearchInput mode="select" label="TIPO DE REGISTRO" :options="optionsTipo" v-model="modalEditar.form.tipo" />
+          <Input label="OBSERVAÇÃO" v-model="modalEditar.form.observacao" :forceUpper="true" placeholder="Motivo do ajuste..." />
+        </div>
+        <div class="p-6 bg-slate-50 flex gap-3">
+          <Button variant="secondary" class="flex-1 !rounded-xl font-bold uppercase text-[10px]" @click="modalEditar.open = false">Cancelar</Button>
+          <Button variant="primary" class="flex-1 !rounded-xl font-black uppercase text-[10px] tracking-widest" :loading="modalEditar.saving" @click="salvarEdicao">Salvar</Button>
+        </div>
+      </Card>
+    </div>
+
+    <div v-if="modalJust.open" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+      <Card class="w-full max-w-2xl !rounded-[2.5rem] shadow-2xl overflow-hidden border-none flex flex-col max-h-[90vh] animate-in zoom-in-95">
+        <div class="p-8 border-b bg-slate-50/80 flex justify-between items-center">
           <div>
-            <h3 class="font-bold">Justificativa</h3>
-            <p class="text-[10px] text-slate-500 uppercase">Funcionário {{ modalJust.funcionario_id }} • {{ modalJust.dia }}</p>
+            <h3 class="font-black text-slate-800 uppercase italic">Lançar Justificativa</h3>
+            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Ref: {{ modalJust.dia }}</p>
           </div>
-          <Button variant="ghost" icon="pi pi-times" @click="fecharModalJust" />
+          <button @click="fecharModalJust" class="text-slate-400 hover:text-rose-500 transition-colors"><i class="pi pi-times"></i></button>
         </div>
-        <div class="p-6 overflow-y-auto space-y-6">
-          <div class="grid grid-cols-12 gap-4">
-            <Input class="col-span-12 md:col-span-6" label="Tipo" v-model="modalJust.form.tipo" placeholder="Ex: ATESTADO" :forceUpper="true" />
-            <Input class="col-span-12 md:col-span-6" label="Data" type="date" v-model="modalJust.form.data" />
-            <Input class="col-span-12" label="Descrição" v-model="modalJust.form.descricao" />
-            <div class="col-span-12 p-4 border-2 border-dashed rounded-xl border-slate-200">
-              <input type="file" @change="onFileChange" class="text-xs w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:bg-slate-900 file:text-white cursor-pointer" />
+        
+        <div class="p-8 overflow-y-auto space-y-8">
+          <div class="grid grid-cols-12 gap-6">
+            <Input class="col-span-12 md:col-span-6" label="TIPO (EX: ATESTADO)" v-model="modalJust.form.tipo" :forceUpper="true" />
+            <Input class="col-span-12 md:col-span-6" label="DATA" type="date" v-model="modalJust.form.data" />
+            <Input class="col-span-12" label="DESCRIÇÃO DETALHADA" v-model="modalJust.form.descricao" />
+            <div class="col-span-12 p-6 border-2 border-dashed rounded-2xl border-slate-100 bg-slate-50/50 flex flex-col items-center gap-2">
+              <i class="pi pi-upload text-slate-300"></i>
+              <input type="file" @change="onFileChange" class="text-[10px] font-bold text-slate-400 w-full text-center" />
             </div>
           </div>
-          <div class="space-y-3">
-            <p class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Justificativas do mês</p>
-            <div class="border rounded-xl divide-y">
-              <div v-for="j in modalJust.lista" :key="j.id" class="p-3 flex justify-between items-center bg-white">
-                <div class="text-xs">
-                  <span class="font-bold">{{ fmtData(j.data) }}</span> - {{ j.tipo }}
-                  <p class="text-slate-500 italic">{{ j.descricao || 'Sem descrição' }}</p>
+
+          <div class="space-y-4">
+            <p class="text-[10px] font-black uppercase text-slate-800 tracking-[0.2em] flex items-center gap-2">
+              <span class="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
+              Histórico do Mês
+            </p>
+            <div class="bg-slate-50 rounded-2xl divide-y divide-white border border-slate-100 overflow-hidden">
+              <div v-for="j in modalJust.lista" :key="j.id" class="p-4 flex justify-between items-center hover:bg-white transition-colors">
+                <div class="flex flex-col">
+                  <span class="text-[11px] font-black text-slate-700 uppercase italic">{{ fmtData(j.data) }} — {{ j.tipo }}</span>
+                  <span class="text-[10px] text-slate-400 font-medium">{{ j.descricao || 'Sem descrição' }}</span>
                 </div>
-                <div class="flex gap-1">
-                  <Button variant="ghost" icon="pi pi-trash" @click="excluirJustificativa(j)" />
-                </div>
+                <button @click="excluirJustificativa(j)" class="text-slate-300 hover:text-rose-500 transition-colors p-2">
+                  <i class="pi pi-trash text-xs"></i>
+                </button>
               </div>
-              <div v-if="!modalJust.lista.length" class="p-8 text-center text-xs text-slate-400 italic">Nenhum registro no período.</div>
+              <div v-if="!modalJust.lista.length" class="p-10 text-center text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">
+                Nenhuma justificativa registrada.
+              </div>
             </div>
           </div>
         </div>
-        <div class="p-4 bg-slate-50 border-t flex gap-2">
-          <Button variant="secondary" label="Cancelar" @click="fecharModalJust" />
-          <Button variant="primary" label="Salvar Justificativa" :loading="modalJust.saving" @click="salvarJustificativa" class="flex-1" />
+
+        <div class="p-6 bg-slate-100/50 border-t flex gap-3">
+          <Button variant="secondary" class="!rounded-xl px-8 font-bold text-[10px] uppercase" @click="fecharModalJust">Sair</Button>
+          <Button variant="primary" class="flex-1 !rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-slate-900/20" :loading="modalJust.saving" @click="salvarJustificativa">
+            Salvar Justificativa
+          </Button>
         </div>
       </Card>
     </div>

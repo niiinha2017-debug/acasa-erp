@@ -1,40 +1,39 @@
 <template>
-  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-in fade-in duration-700">
+  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
     
-    <Card :shadow="true" class="overflow-visible !rounded-[2.5rem]">
-      <header class="flex flex-col md:flex-row items-center justify-between gap-6 p-8 border-b border-[var(--border-ui)] bg-slate-500/5">
-        <div class="flex items-center gap-5">
-          <div class="w-14 h-14 rounded-2xl bg-slate-900 dark:bg-brand-primary flex items-center justify-center text-white shadow-2xl shadow-brand-primary/20 transition-all">
-            <i class="pi pi-box text-2xl"></i>
+    <Card :shadow="true" class="overflow-visible !rounded-[3rem] border-none shadow-[0_40px_80px_-15px_rgba(0,0,0,0.2)]">
+      <header class="flex flex-col md:flex-row items-center justify-between gap-6 p-10 border-b border-slate-100 bg-slate-50/50">
+        <div class="flex items-center gap-6">
+          <div class="w-16 h-16 rounded-[1.5rem] bg-slate-900 flex items-center justify-center text-white shadow-2xl shadow-slate-900/20 rotate-3 hover:rotate-0 transition-transform duration-500">
+            <i class="pi pi-box text-3xl"></i>
           </div>
           <div>
-            <h2 class="text-2xl font-black tracking-tight text-[var(--text-main)] uppercase leading-tight">
+            <h2 class="text-2xl font-black tracking-tighter text-slate-800 uppercase italic leading-none">
               {{ isEdit ? `Plano de Corte #${planoId}` : 'Novo Plano de Corte' }}
             </h2>
-            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">Gestão de Produção e Industrialização</p>
+            <div class="flex items-center gap-2 mt-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Ordem de Industrialização / Venda</p>
+            </div>
           </div>
         </div>
 
-        <Button variant="secondary" @click="router.back()" class="!rounded-xl !px-6 !h-10 border-[var(--border-ui)]">
-          <i class="pi pi-arrow-left mr-2 text-[10px]"></i>
-          Voltar
-        </Button>
+        <button 
+          @click="router.back()" 
+          class="flex items-center gap-3 px-6 h-12 rounded-2xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-900 hover:text-white transition-all shadow-sm group"
+        >
+          <i class="pi pi-arrow-left text-[10px] group-hover:-translate-x-1 transition-transform"></i>
+          <span class="text-[10px] font-black uppercase tracking-widest">Painel Geral</span>
+        </button>
       </header>
 
-      <div class="p-8">
+      <div class="p-10">
         <template v-if="!loading">
-          <section class="grid grid-cols-12 gap-6 mb-10">
-            <div class="col-span-12">
-              <h3 class="text-[11px] font-black uppercase tracking-[0.25em] text-brand-primary mb-4 flex items-center gap-2">
-                <span class="w-8 h-[2px] bg-brand-primary/20"></span>
-                Dados do Cabeçalho
-              </h3>
-            </div>
-
+          <section class="grid grid-cols-12 gap-8 mb-12">
             <div class="col-span-12 md:col-span-6">
               <SearchInput
                 v-model="fornecedorSelecionado"
-                label="Fornecedor *"
+                label="Fornecedor Destinatário"
                 :options="fornecedorOptions"
                 required
                 @update:modelValue="onSelecionarFornecedor"
@@ -42,108 +41,105 @@
             </div>
 
             <div class="col-span-12 md:col-span-3">
-              <Input v-model="dataVenda" label="Data *" type="date" required />
+              <Input v-model="dataVenda" label="Data do Pedido" type="date" required />
             </div>
 
             <div class="col-span-12 md:col-span-3">
-<SearchInput
-  v-model="statusPlano"
-  mode="select"
-  label="Status *"
-  :options="statusPlanoOptions"
-  labelKey="label"
-  valueKey="value"
-  required
-/>
-
+              <SearchInput
+                v-model="statusPlano"
+                mode="select"
+                label="Status da Venda"
+                :options="statusPlanoOptions"
+                required
+              />
             </div>
           </section>
 
-          <section class="bg-slate-500/5 dark:bg-slate-900/40 rounded-[2rem] p-6 border border-[var(--border-ui)] transition-all">
-            <div class="flex items-center justify-between mb-6">
-              <h3 class="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400">Registrar Item</h3>
+          <section class="bg-slate-50 rounded-[2.5rem] p-8 border border-slate-100 shadow-inner mb-10">
+            <div class="flex items-center justify-between mb-8">
+              <h3 class="text-[11px] font-black uppercase tracking-[0.25em] text-slate-500">Adicionar Insumos ao Plano</h3>
               <button 
                 type="button" 
                 @click="abrirModalProduto()"
-                class="text-[10px] font-black uppercase text-brand-primary hover:tracking-widest transition-all"
+                class="text-[10px] font-black uppercase text-emerald-600 hover:tracking-widest transition-all italic"
               >
-                + Novo Produto
+                + Cadastrar Novo Produto
               </button>
             </div>
 
-            <div class="grid grid-cols-12 gap-5">
-              <div class="col-span-12 md:col-span-3">
+            <div class="grid grid-cols-12 gap-6 items-end">
+              <div class="col-span-12 md:col-span-5">
                 <SearchInput
                   v-model="itemNovo.item_id"
-                  label="Produto *"
+                  label="Produto / Material"
                   :options="produtoOptions"
                   @update:modelValue="onSelecionarProdutoNovo"
                 />
               </div>
-              <div class="col-span-4 md:col-span-1">
-                <Input v-model="itemNovo.unidade" label="Unidade" readonly class="opacity-60" />
+              <div class="col-span-6 md:col-span-2">
+                <Input v-model="itemNovo.quantidade" label="Quantidade" placeholder="0" type="number" />
               </div>
-              <div class="col-span-4 md:col-span-2">
-                <Input v-model="itemNovo.quantidade" label="Qtd *" placeholder="0" type="number" />
-              </div>
-              <div class="col-span-4 md:col-span-2">
-                <Input v-model="itemNovo.valorUnitarioMask" label="Valor Unit. *" />
+              <div class="col-span-6 md:col-span-2">
+                <Input v-model="itemNovo.valorUnitarioMask" label="Vl. Unitário (Custo)" />
               </div>
               
-              <div class="col-span-12 md:col-span-2">
-                <Input :model-value="itemNovoTotalExibicao" label="Valor Total" readonly class="font-bold text-brand-primary" />
-              </div>
-
-              <div class="col-span-12 md:col-span-2 flex items-end">
-                <Button 
-                  variant="primary" 
-                  class="w-full !h-11 !rounded-2xl shadow-xl shadow-brand-primary/20"
-                  :disabled="!podeAdicionarItem" 
-                  @click="registrarItemNovo()"
-                >
-                  <i class="pi pi-plus-circle mr-2"></i>
-                  Adicionar
-                </Button>
+              <div class="col-span-12 md:col-span-3">
+                <div class="flex items-center gap-3">
+                  <div class="flex-1 px-4 h-14 rounded-2xl bg-white border border-slate-200 flex flex-col justify-center">
+                    <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Total Item</span>
+                    <span class="text-sm font-black text-emerald-600">{{ itemNovoTotalExibicao }}</span>
+                  </div>
+                  <Button 
+                    variant="primary" 
+                    class="!h-14 !w-14 !rounded-2xl shadow-xl shadow-slate-900/20"
+                    :disabled="!podeAdicionarItem" 
+                    @click="registrarItemNovo()"
+                  >
+                    <i class="pi pi-plus text-lg"></i>
+                  </Button>
+                </div>
               </div>
             </div>
           </section>
 
-          <div class="mt-10">
-            <Table
-              :columns="columnsItens"
-              :rows="itens"
-              :loading="false"
-              :boxed="true"
-              empty-text="Nenhum item adicionado."
-            >
-              <template #cell-produto="{ row }">
-                <div class="flex flex-col">
-                  <span class="font-black text-[var(--text-main)] uppercase">{{ row.item?.nome_produto || 'Item' }}</span>
-                  <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{{ row.item?.cor || 'COR NÃO INFO.' }}</span>
-                </div>
-              </template>
+          <Table
+            :columns="columnsItens"
+            :rows="itens"
+            class="premium-table"
+            empty-text="Nenhum item adicionado."
+          >
+            <template #cell-produto="{ row }">
+              <div class="flex flex-col">
+                <span class="font-black text-slate-700 uppercase italic tracking-tighter">{{ row.item?.nome_produto }}</span>
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                   {{ row.item?.cor || 'PADRÃO' }} • {{ row.item?.marca || 'MARCA NÃO INFO.' }}
+                </span>
+              </div>
+            </template>
 
-              <template #cell-valor_unitario="{ row }">
-                <span class="font-bold text-slate-500">{{ maskMoneyBR(row.valor_unitario || 0) }}</span>
-              </template>
+            <template #cell-valor_unitario="{ row }">
+              <span class="font-bold text-slate-500 text-xs">{{ maskMoneyBR(row.valor_unitario || 0) }}</span>
+            </template>
 
-              <template #cell-valor_total="{ row }">
-                <span class="font-black text-brand-primary">{{ maskMoneyBR(row.valor_total || 0) }}</span>
-              </template>
+            <template #cell-valor_total="{ row }">
+              <span class="font-black text-slate-800">{{ maskMoneyBR(row.valor_total || 0) }}</span>
+            </template>
 
-              <template #cell-acoes="{ index }">
-                <div class="flex justify-end">
-                  <button @click="removerItem(index)" class="w-9 h-9 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center">
-                    <i class="pi pi-trash text-xs"></i>
-                  </button>
-                </div>
-              </template>
-            </Table>
+            <template #cell-acoes="{ index }">
+              <div class="flex justify-end">
+                <button @click="removerItem(index)" class="w-10 h-10 rounded-xl text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all flex items-center justify-center">
+                  <i class="pi pi-trash text-xs"></i>
+                </button>
+              </div>
+            </template>
+          </Table>
 
-            <div class="flex justify-end mt-6 pr-8">
-              <div class="flex flex-col items-end p-6 rounded-[2rem] bg-slate-500/5 border border-[var(--border-ui)]">
-                <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Total Geral do Plano</span>
-                <span class="text-3xl font-black text-[var(--text-main)] tracking-tighter mt-1">
+          <div class="flex justify-end mt-12">
+            <div class="relative group">
+              <div class="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-slate-900 rounded-[2.5rem] blur opacity-10 group-hover:opacity-20 transition duration-1000"></div>
+              <div class="relative flex flex-col items-end p-8 rounded-[2rem] bg-white border border-slate-100 shadow-xl min-w-[300px]">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Total da Industrialização</span>
+                <span class="text-4xl font-black text-slate-900 tracking-tighter mt-2 italic">
                   {{ maskMoneyBR(totalCalculado) }}
                 </span>
               </div>
@@ -151,101 +147,79 @@
           </div>
         </template>
 
-        <div v-else class="py-32 flex flex-col items-center justify-center gap-4">
-          <div class="w-12 h-12 border-4 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin"></div>
-          <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Sincronizando Base de Dados...</p>
+        <div v-else class="py-40 flex flex-col items-center justify-center gap-6">
+          <div class="w-16 h-16 border-4 border-slate-100 border-t-slate-900 rounded-full animate-spin"></div>
+          <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] animate-pulse">Sincronizando Dados...</p>
         </div>
       </div>
 
-      <footer class="flex items-center justify-between p-8 border-t border-[var(--border-ui)] bg-slate-500/5">
-        <Button v-if="isEdit" variant="danger" @click="excluir" class="!rounded-2xl !px-8">
-          Excluir Registro
+      <footer class="flex items-center justify-between p-10 border-t border-slate-100 bg-slate-50/50">
+        <Button v-if="isEdit" variant="danger" @click="excluir" class="!rounded-2xl !px-8 !h-14 font-black text-[10px] uppercase tracking-widest">
+          Excluir Plano
         </Button>
         <div v-else></div>
 
-        <div class="flex items-center gap-4">
-          <Button v-if="isEdit" variant="secondary" :loading="encaminhando" class="!rounded-2xl !px-8 !h-12 border-[var(--border-ui)]" @click="encaminharParaProducao">
-             Produção
+        <div class="flex items-center gap-6">
+          <Button v-if="isEdit" variant="secondary" :loading="encaminhando" class="!rounded-2xl !px-8 !h-14 border-slate-200 font-black text-[10px] uppercase tracking-widest" @click="encaminharParaProducao">
+              Enviar Produção
           </Button>
-          <Button variant="primary" :loading="salvando" @click="salvar" class="!rounded-2xl !px-10 !h-12 shadow-2xl shadow-brand-primary/30">
-            <i class="pi pi-check-circle mr-2"></i>
-            {{ isEdit ? 'Salvar Alterações' : 'Finalizar Plano' }}
+          <Button 
+            variant="primary" 
+            :loading="salvando" 
+            @click="salvar" 
+            class="!rounded-[1.5rem] !px-12 !h-14 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.2)] font-black text-[10px] uppercase tracking-widest bg-slate-900 hover:bg-black"
+          >
+            <i class="pi pi-check-circle mr-3"></i>
+            {{ isEdit ? 'Atualizar Plano' : 'Confirmar Venda' }}
           </Button>
         </div>
       </footer>
     </Card>
 
-    <Transition name="fade">
-      <div v-if="modalProduto.aberto" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md" @click.self="fecharModalProduto()">
-        <div class="w-full max-w-3xl bg-[var(--bg-card)] rounded-[2.5rem] border border-[var(--border-ui)] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-         <header class="flex items-start justify-between p-8 border-b border-[var(--border-ui)] bg-slate-500/5">
-  <div>
-    <h3 class="text-xl font-black text-[var(--text-main)] uppercase tracking-tight">Novo Produto</h3>
-    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-      Cadastro Rápido de Insumo
-    </p>
-  </div>
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="modalProduto.aberto" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
+          <div class="w-full max-w-2xl bg-white rounded-[3rem] shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+            <header class="p-10 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+              <div>
+                <h3 class="text-xl font-black text-slate-800 uppercase italic">Novo Insumo</h3>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Cadastro rápido para este fornecedor</p>
+              </div>
+              <button @click="fecharModalProduto()" class="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-rose-500 transition-all shadow-sm">
+                <i class="pi pi-times"></i>
+              </button>
+            </header>
 
-  <button
-    @click="fecharModalProduto()"
-    class="w-10 h-10 flex items-center justify-center rounded-2xl bg-[var(--bg-card)] border border-[var(--border-ui)] text-slate-400 hover:text-red-500 transition-all"
-  >
-    <i class="pi pi-times"></i>
-  </button>
-</header>
+            <div class="p-10">
+              <form class="grid grid-cols-12 gap-6" @submit.prevent="salvarProduto">
+                <div class="col-span-12">
+                  <Input v-model="modalProduto.form.nome_produto" label="Nome do Produto" placeholder="Ex: MDF Branco TX" required />
+                </div>
+                <div class="col-span-6">
+                  <Input v-model="modalProduto.form.marca" label="Marca / Fabricante" />
+                </div>
+                <div class="col-span-6">
+                  <SearchInput v-model="modalProduto.form.unidade" label="Unidade" mode="select" :options="unidadesOptions" required />
+                </div>
+                <div class="col-span-6">
+                  <Input v-model="modalProduto.form.cor" label="Cor / Acabamento" />
+                </div>
+                <div class="col-span-6">
+                  <Input v-model="modalProduto.form.medida" label="Espessura/Medida" />
+                </div>
 
-
-<div class="p-10">
-  <form class="grid grid-cols-12 gap-5" @submit.prevent="salvarProduto">
-    <div class="col-span-12">
-      <SearchInput
-        v-model="modalProduto.form.fornecedor_id"
-        label="Fornecedor *"
-        :options="fornecedorOptions"
-        required
-      />
-    </div>
-
-    <div class="col-span-12 md:col-span-8">
-      <Input v-model="modalProduto.form.nome_produto" label="Nome do Produto *" required />
-    </div>
-
-<div class="col-span-12 md:col-span-4">
-  <SearchInput
-    v-model="modalProduto.form.unidade"
-    label="Unidade *"
-    mode="select"
-    :options="unidadesOptions"
-    required
-  />
-</div>
-
-
-    <!-- ✅ NOVOS CAMPOS DO plano_corte_item -->
-    <div class="col-span-12 md:col-span-6">
-      <Input v-model="modalProduto.form.marca" label="Marca" />
-    </div>
-
-    <div class="col-span-12 md:col-span-3">
-      <Input v-model="modalProduto.form.cor" label="Cor" />
-    </div>
-
-    <div class="col-span-12 md:col-span-3">
-      <Input v-model="modalProduto.form.medida" label="Medida" />
-    </div>
-
-    <div class="col-span-12 flex justify-end gap-3 pt-8 border-t border-[var(--border-ui)] mt-4">
-      <Button variant="secondary" type="button" @click="fecharModalProduto()">Cancelar</Button>
-      <Button variant="primary" type="submit" :loading="modalProduto.salvando" class="!px-8">
-        Cadastrar e Usar
-      </Button>
-    </div>
-  </form>
-</div>
-
+                <div class="col-span-12 flex justify-end gap-4 pt-10 border-t border-slate-100 mt-6">
+                  <button type="button" @click="fecharModalProduto()" class="text-[10px] font-black uppercase tracking-widest text-slate-400">Cancelar</button>
+                  <Button variant="primary" type="submit" :loading="modalProduto.salvando" class="!px-10 !h-14 !rounded-2xl shadow-lg shadow-emerald-500/20">
+                    Cadastrar e Usar
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
-      </div>
-    </Transition>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -310,11 +284,11 @@ const podeAdicionarItem = computed(() => !!itemNovo.value.item_id && Number(item
 const totalCalculado = computed(() => itens.value.reduce((acc, it) => acc + (it.valor_total || 0), 0))
 
 const columnsItens = [
-  { key: 'produto', label: 'Produto / Insumo' },
-  { key: 'quantidade', label: 'Qtd', width: '90px', align: 'center' },
-  { key: 'valor_unitario', label: 'Vl. Unitário', width: '150px' },
-  { key: 'valor_total', label: 'Vl. Total', width: '150px' },
-  { key: 'acoes', label: '', width: '80px', align: 'right' },
+  { key: 'produto', label: 'Insumo Selecionado' },
+  { key: 'quantidade', label: 'Qtd', width: '100px', align: 'center' },
+  { key: 'valor_unitario', label: 'Custo Unit.', width: '140px' },
+  { key: 'valor_total', label: 'Total Item', width: '140px' },
+  { key: 'acoes', label: '', width: '60px', align: 'right' },
 ]
 
 // MÁSCARA DINÂMICA

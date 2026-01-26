@@ -1,112 +1,129 @@
-  <template>
-    <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-in fade-in duration-700">
+<template>
+  <div class="w-full max-w-[1400px] mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      
-      <Card hoverable class="p-6 flex items-center gap-4">
-        <div class="w-12 h-12 rounded-2xl bg-brand-primary/10 text-brand-primary flex items-center justify-center">
-          <i class="pi pi-users text-xl"></i>
+      <Card hoverable class="p-6 flex items-center gap-5 border-none shadow-sm bg-white/80 backdrop-blur">
+        <div class="w-14 h-14 rounded-2xl bg-brand-primary/10 text-brand-primary flex items-center justify-center shadow-inner">
+          <i class="pi pi-users text-2xl"></i>
         </div>
         <div>
-          <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Total de Clientes</p>
-          <p class="text-2xl font-black text-[var(--text-main)]">{{ clientes.length }}</p>
+          <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Total de Clientes</p>
+          <p class="text-3xl font-black text-slate-800">{{ clientes.length }}</p>
         </div>
       </Card>
 
-      <Card hoverable class="p-6 flex items-center gap-4">
-        <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
-          <i class="pi pi-user-plus text-xl"></i>
+      <Card hoverable class="p-6 flex items-center gap-5 border-none shadow-sm bg-white/80 backdrop-blur">
+        <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shadow-inner">
+          <i class="pi pi-user-plus text-2xl"></i>
         </div>
         <div>
-          <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Ativos</p>
-          <p class="text-2xl font-black text-[var(--text-main)]">{{ totalAtivos }}</p>
+          <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Ativos</p>
+          <p class="text-3xl font-black text-slate-800">{{ totalAtivos }}</p>
         </div>
       </Card>
 
-      <Card hoverable class="p-6 flex items-center gap-4">
-        <div class="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
-          <i class="pi pi-map-marker text-xl"></i>
+      <Card hoverable class="p-6 flex items-center gap-5 border-none shadow-sm bg-white/80 backdrop-blur">
+        <div class="w-14 h-14 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center shadow-inner">
+          <i class="pi pi-map-marker text-2xl"></i>
         </div>
         <div>
-          <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Cidades Atendidas</p>
-          <p class="text-2xl font-black text-[var(--text-main)]">{{ totalCidades }}</p>
+          <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Cidades</p>
+          <p class="text-3xl font-black text-slate-800">{{ totalCidades }}</p>
         </div>
       </Card>
-
     </div>
 
-      <Card :shadow="true" class="!rounded-[2.5rem] overflow-hidden border-[var(--border-ui)]">
-        <header class="flex flex-col md:flex-row items-center justify-between gap-6 p-8 border-b border-[var(--border-ui)] bg-slate-500/5">
-          <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-lg">
-              <i class="pi pi-id-card"></i>
-            </div>
-            <div>
-              <h2 class="text-xl font-black tracking-tight text-[var(--text-main)] uppercase">Clientes</h2>
-              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Base de dados e contatos comerciais</p>
-            </div>
+    <Card :shadow="true" class="!rounded-[2.5rem] overflow-hidden border-border-ui shadow-2xl bg-white">
+      <header class="flex flex-col lg:flex-row items-center justify-between gap-6 p-8 lg:p-10 border-b border-border-ui bg-slate-50/50">
+        <div class="flex items-center gap-5">
+          <div class="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-xl rotate-3">
+            <i class="pi pi-id-card text-xl"></i>
           </div>
-
-          <div class="flex items-center gap-3 w-full md:w-auto">
-            <div class="relative flex-1 md:w-80">
-              <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-  <input 
-    v-model="filtro" 
-    type="text" 
-    placeholder="Buscar por nome ou CPF/CNPJ..."
-    class="w-full pl-10 pr-4 h-11 bg-[var(--bg-card)] border border-[var(--border-ui)] rounded-2xl text-sm focus:ring-2 focus:ring-brand-primary outline-none transition-all"
-  />
-            </div>
-            
-            <Button variant="primary" class="!h-11 !rounded-2xl !px-6 shadow-xl shadow-brand-primary/20" @click="router.push('/clientes/novo')">
-              <i class="pi pi-plus mr-2 text-xs"></i>
-              Novo Cliente
-            </Button>
+          <div>
+            <h2 class="text-2xl font-black tracking-tight text-slate-800 uppercase">Gestão de Clientes</h2>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Sua base estratégica de contatos</p>
           </div>
-        </header>
+        </div>
 
-        <div class="p-4">
-          <Table :columns="columns" :rows="clientesFiltrados" :loading="carregando" class="!border-none">
-            <template #cell-cliente="{ row }">
-              <div class="flex flex-col py-1">
-                <span class="text-sm font-black text-[var(--text-main)] uppercase tracking-tight">
+        <div class="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
+          <div class="relative w-full sm:w-80 group">
+            <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-primary transition-colors"></i>
+            <input 
+              v-model="filtro" 
+              type="text" 
+              placeholder="Ex: Nome, CPF ou CNPJ..."
+              class="w-full pl-11 pr-4 h-14 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-brand-primary/10 focus:border-brand-primary outline-none transition-all shadow-sm"
+            />
+          </div>
+          
+          <Button 
+            variant="primary" 
+            class="h-14 !rounded-2xl !px-8 w-full sm:w-auto shadow-lg shadow-brand-primary/20 hover:scale-105 active:scale-95 transition-all" 
+            @click="router.push('/clientes/novo')"
+          >
+            <i class="pi pi-plus mr-2 text-xs"></i>
+            ADICIONAR NOVO
+          </Button>
+        </div>
+      </header>
+
+      <div class="p-2">
+        <Table :columns="columns" :rows="clientesFiltrados" :loading="carregando" class="!border-none">
+          
+          <template #cell-cliente="{ row }">
+            <div class="flex items-center gap-3 py-2">
+              <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-black text-slate-400 text-xs shadow-inner">
+                {{ (row.nome_completo || row.razao_social || '?').substring(0,2).toUpperCase() }}
+              </div>
+              <div class="flex flex-col">
+                <span class="text-sm font-black text-slate-700 uppercase leading-none mb-1">
                   {{ row.nome_completo || row.razao_social }}
                 </span>
-                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
-                  {{ row.cpf || row.cnpj || '---' }}
+                <span class="text-[10px] font-bold text-slate-400 tracking-wider">
+                  {{ row.cpf || row.cnpj || 'DOC. NÃO INFORMADO' }}
                 </span>
               </div>
-            </template>
+            </div>
+          </template>
 
-            <template #cell-contato="{ row }">
-              <div class="flex flex-col">
-                <span class="text-xs font-bold text-slate-400 uppercase tracking-tighter">WhatsApp</span>
-                <span class="text-sm font-black text-[var(--text-main)] italic">{{ row.whatsapp || '---' }}</span>
-              </div>
-            </template>
+          <template #cell-status="{ row }">
+            <span 
+              class="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest inline-flex items-center gap-1.5"
+              :class="row.status === 'ATIVO' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'"
+            >
+              <span class="w-1.5 h-1.5 rounded-full" :class="row.status === 'ATIVO' ? 'bg-emerald-500' : 'bg-slate-400'"></span>
+              {{ row.status || 'INATIVO' }}
+            </span>
+          </template>
 
-            <template #cell-localizacao="{ row }">
-              <div class="flex flex-col">
-                <span class="text-[9px] font-black text-brand-primary uppercase tracking-widest">Cidade/UF</span>
-                <span class="text-sm font-black text-[var(--text-main)] uppercase">{{ row.cidade }} / {{ row.estado }}</span>
-              </div>
-            </template>
+          <template #cell-localizacao="{ row }">
+            <div class="flex flex-col">
+              <span class="text-sm font-black text-slate-600 uppercase">{{ row.cidade }}</span>
+              <span class="text-[10px] font-bold text-brand-primary opacity-70 tracking-tighter uppercase">{{ row.estado }}</span>
+            </div>
+          </template>
 
-            <template #cell-acoes="{ row }">
-              <div class="flex justify-end gap-2">
-                <button @click="router.push(`/clientes/${row.id}`)" class="p-2.5 rounded-xl bg-slate-500/10 text-slate-500 hover:bg-brand-primary hover:text-white transition-all shadow-sm">
-                  <i class="pi pi-pencil text-xs"></i>
-                </button>
-                <button @click="excluir(row)" class="p-2.5 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm">
-                  <i class="pi pi-trash text-xs"></i>
-                </button>
-              </div>
-            </template>
-          </Table>
+          <template #cell-acoes="{ row }">
+            <div class="flex justify-end gap-3 px-4">
+              <button @click="router.push(`/clientes/${row.id}`)" class="h-10 w-10 rounded-xl bg-slate-100 text-slate-600 hover:bg-brand-primary hover:text-white transition-all shadow-sm flex items-center justify-center group">
+                <i class="pi pi-pencil text-xs group-hover:scale-110 transition-transform"></i>
+              </button>
+              <button @click="excluir(row)" class="h-10 w-10 rounded-xl bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm flex items-center justify-center group">
+                <i class="pi pi-trash text-xs group-hover:rotate-12 transition-transform"></i>
+              </button>
+            </div>
+          </template>
+
+        </Table>
+
+        <div v-if="clientesFiltrados.length === 0 && !carregando" class="py-20 text-center">
+          <i class="pi pi-search text-4xl text-slate-200 mb-4"></i>
+          <p class="text-slate-400 font-bold uppercase text-xs tracking-[0.2em]">Nenhum cliente encontrado para sua busca</p>
         </div>
-      </Card>
-    </div>
-  </template>
+      </div>
+    </Card>
+  </div>
+</template>
 
   <script setup>
   import { ref, computed, onMounted } from 'vue'

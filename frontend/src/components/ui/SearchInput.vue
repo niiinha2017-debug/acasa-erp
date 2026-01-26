@@ -1,12 +1,12 @@
 <template>
-  <div class="search-container relative flex flex-col gap-2" :class="[colSpan, { 'z-[100]': abrir }]" @click.stop>
-    <label v-if="label" class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">
+  <div class="search-container relative flex flex-col gap-1.5" :class="[colSpan, { 'z-[100]': abrir }]" @click.stop>
+    <label v-if="label" class="text-[11px] font-bold uppercase tracking-wider text-slate-500 ml-0.5">
       {{ label }} <span v-if="required" class="text-red-500 ml-0.5">*</span>
     </label>
 
     <div class="relative group">
-      <span class="absolute left-4 top-1/2 -translate-y-1/2 text-brand-primary group-focus-within:scale-110 transition-all duration-300 pointer-events-none">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <span class="absolute left-4 top-1/2 -translate-y-1/2 text-brand-primary/60 group-focus-within:text-brand-primary transition-all duration-300 pointer-events-none">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
@@ -21,12 +21,11 @@
         :placeholder="placeholder"
         :required="required"
         :readonly="readonly"
-        autocomplete="one-time-code"
-        role="presentation"
-        class="w-full h-12 pl-12 pr-12 transition-all duration-300 outline-none border rounded-2xl text-[13px] font-bold
-               bg-[var(--bg-page)] text-[var(--text-main)] border-[var(--border-ui)]
-               focus:border-brand-primary focus:ring-[6px] focus:ring-brand-primary/10 
-               placeholder:text-slate-600 placeholder:font-black placeholder:uppercase placeholder:text-[10px] placeholder:tracking-widest"
+        autocomplete="off"
+        class="w-full h-10 pl-11 pr-11 transition-all duration-200 outline-none border rounded-lg text-sm font-medium
+               bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700
+               focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 
+               placeholder:text-slate-400 placeholder:font-normal placeholder:text-xs"
         @focus="abrir = true"
         @input="abrir = true"
       />
@@ -35,46 +34,48 @@
         v-if="texto"
         type="button"
         @click.stop="limparBusca"
-        class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-red-400 transition-colors p-1"
+        class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors p-1"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
       </button>
 
-      <transition name="fade-slide">
-        <div
-          v-if="abrir"
-          class="absolute top-[calc(100%+8px)] left-0 w-full z-[9999] 
-                 bg-[var(--bg-card)] backdrop-blur-xl 
-                 border border-[var(--border-ui)] rounded-[1.5rem] 
-                 shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden"
-        >
-          <div v-if="filtrados.length" class="max-h-60 overflow-y-auto p-2 custom-scroll">
-            <div
-              v-for="opt in filtrados"
-              :key="opt.value"
-              class="flex items-center px-4 py-3 text-[11px] font-black uppercase tracking-wide rounded-xl cursor-pointer transition-all 
-                     text-[var(--text-main)] hover:bg-brand-primary hover:text-white group"
-              @click.stop="selecionar(opt)"
-            >
-              <div class="w-1.5 h-1.5 rounded-full bg-brand-primary group-hover:bg-white mr-3 transition-all"></div>
-              {{ opt.label }}
+      <Teleport to="body">
+        <transition name="dropdown">
+          <div
+            v-if="abrir"
+            ref="dropdownRef"
+            :style="floatingStyles"
+            class="fixed z-[10000] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 
+                   rounded-xl shadow-2xl shadow-slate-200/50 dark:shadow-black/40 overflow-hidden pointer-events-auto"
+          >
+            <div v-if="filtrados.length" class="max-h-60 overflow-y-auto p-1.5 custom-scroll">
+              <div
+                v-for="opt in filtrados"
+                :key="opt.value"
+                class="flex items-center px-3 py-2.5 text-xs font-semibold rounded-lg cursor-pointer transition-all 
+                       text-slate-600 dark:text-slate-300 hover:bg-brand-primary hover:text-white group"
+                @click.stop="selecionar(opt)"
+              >
+                <div class="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 group-hover:bg-white/50 mr-3 transition-all"></div>
+                <span class="truncate uppercase tracking-tight">{{ opt.label }}</span>
+              </div>
+            </div>
+
+            <div v-else class="px-6 py-8 text-[10px] font-bold text-slate-400 uppercase italic tracking-widest text-center">
+               Nenhum resultado encontrado
             </div>
           </div>
-
-          <div v-else class="px-6 py-6 text-[9px] font-black text-slate-500 uppercase italic tracking-[0.2em] text-center">
-             Nenhum resultado
-          </div>
-        </div>
-      </transition>
+        </transition>
+      </Teleport>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 
 const props = defineProps({
   modelValue: [String, Number],
@@ -94,11 +95,40 @@ const emit = defineEmits(['update:modelValue'])
 const texto = ref('')
 const abrir = ref(false)
 const inputRef = ref(null)
-
-// Nome aleatório para "enganar" o autofill do Chrome
+const dropdownRef = ref(null)
 const inputName = `search_${Math.random().toString(36).substring(7)}`
 
-// Normalização de opções
+const floatingStyles = ref({
+  width: '0px',
+  top: '0px',
+  left: '0px'
+})
+
+// Cálculos de posição
+const updatePosition = () => {
+  if (abrir.value && inputRef.value) {
+    const rect = inputRef.value.getBoundingClientRect()
+    floatingStyles.value = {
+      width: `${rect.width}px`,
+      top: `${rect.bottom + 8}px`, // 8px abaixo do input
+      left: `${rect.left}px`
+    }
+  }
+}
+
+// Watchers para disparar o reposicionamento
+watch(abrir, async (val) => {
+  if (val) {
+    await nextTick()
+    updatePosition()
+    window.addEventListener('scroll', updatePosition, true)
+    window.addEventListener('resize', updatePosition)
+  } else {
+    window.removeEventListener('scroll', updatePosition, true)
+    window.removeEventListener('resize', updatePosition)
+  }
+})
+
 const normalizados = computed(() =>
   (props.options || []).map((o) => ({
     label: o?.[props.labelKey],
@@ -106,17 +136,14 @@ const normalizados = computed(() =>
   }))
 )
 
-// Filtro de resultados
 const filtrados = computed(() => {
   const termo = String(texto.value || '').toLowerCase().trim()
-  const lista = normalizados.value
-  if (!termo) return lista
-  return lista.filter((opt) =>
+  if (!termo) return normalizados.value
+  return normalizados.value.filter((opt) =>
     String(opt.label || '').toLowerCase().includes(termo)
   )
 })
 
-// Função para limpar o campo e devolver o foco
 function limparBusca() {
   texto.value = ''
   emit('update:modelValue', props.mode === 'select' ? null : '')
@@ -125,65 +152,54 @@ function limparBusca() {
 }
 
 function selecionar(opt) {
-  const label = opt?.label ? String(opt.label) : ''
-  texto.value = label
-  emit('update:modelValue', props.mode === 'select' ? opt.value : label)
+  texto.value = opt?.label ? String(opt.label) : ''
+  emit('update:modelValue', props.mode === 'select' ? opt.value : texto.value)
   abrir.value = false
 }
 
-// Watchers de Sincronização
-watch(texto, (novoTexto) => {
-  if (props.mode === 'search') {
-    emit('update:modelValue', novoTexto)
+watch(() => props.modelValue, (val) => {
+  if (!val && val !== 0) {
+    if (texto.value !== '') texto.value = ''
+    return
   }
-})
+  if (props.mode === 'select') {
+    const encontrada = normalizados.value.find((o) => String(o.value) === String(val))
+    if (encontrada && texto.value !== encontrada.label) texto.value = encontrada.label
+  } else if (texto.value !== String(val)) {
+    texto.value = String(val)
+  }
+}, { immediate: true })
 
-watch(
-  () => props.modelValue,
-  (val) => {
-    if (val === null || val === undefined || val === '') {
-      if (texto.value !== '') texto.value = ''
-      return
-    }
-
-    if (props.mode === 'search') {
-      const nv = String(val)
-      if (texto.value !== nv) texto.value = nv
-    } else {
-      const encontrada = normalizados.value.find((o) => String(o.value) === String(val))
-      const label = encontrada?.label ? String(encontrada.label) : ''
-      if (texto.value !== label) texto.value = label
-    }
-  },
-  { immediate: true }
-)
-
-// Fechar ao clicar fora
 function fecharAoClicarFora(e) {
-  if (!e.target.closest('.search-container')) abrir.value = false
+  if (!e.target.closest('.search-container') && !e.target.closest('[ref="dropdownRef"]')) {
+    abrir.value = false
+  }
 }
 
 onMounted(() => document.addEventListener('click', fecharAoClicarFora))
-onUnmounted(() => document.removeEventListener('click', fecharAoClicarFora))
+onUnmounted(() => {
+  document.removeEventListener('click', fecharAoClicarFora)
+  window.removeEventListener('scroll', updatePosition, true)
+  window.removeEventListener('resize', updatePosition)
+})
 </script>
 
 <style scoped>
-.fade-slide-enter-active, .fade-slide-leave-active {
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+.dropdown-enter-active, .dropdown-leave-active {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.fade-slide-enter-from, .fade-slide-leave-to {
+.dropdown-enter-from, .dropdown-leave-to {
   opacity: 0;
-  transform: translateY(-10px) scale(0.98);
+  transform: translateY(4px);
 }
 
-.max-h-72::-webkit-scrollbar { width: 4px; }
-.max-h-72::-webkit-scrollbar-track { background: transparent; }
-.max-h-72::-webkit-scrollbar-thumb { 
-  background: rgba(255, 255, 255, 0.1); 
+.custom-scroll::-webkit-scrollbar { width: 4px; }
+.custom-scroll::-webkit-scrollbar-track { background: transparent; }
+.custom-scroll::-webkit-scrollbar-thumb { 
+  background: rgba(0,0,0,0.1); 
   border-radius: 10px; 
 }
-.max-h-72::-webkit-scrollbar-thumb { 
-  background: rgba(0, 0, 0, 0.1); /* Cor cinza suave para fundo branco */
-  border-radius: 10px; 
+.dark .custom-scroll::-webkit-scrollbar-thumb { 
+  background: rgba(255,255,255,0.1); 
 }
 </style>

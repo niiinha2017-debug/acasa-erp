@@ -3,42 +3,42 @@
     <button 
       @click.stop="toggleMenu" 
       type="button"
-      class="flex items-center justify-center gap-1.5 px-4 py-2 transition-all duration-300 rounded-xl"
+      class="flex items-center justify-center gap-2 px-4 py-2 transition-all duration-200 rounded-lg group"
       :class="isOpen 
-        ? 'bg-brand-primary text-white shadow-lg shadow-brand-primary/20' 
-        : 'text-[var(--text-main)] hover:bg-slate-500/10'"
+        ? 'bg-brand-primary text-white shadow-md shadow-brand-primary/20' 
+        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'"
     >
-      <span class="text-xs font-black uppercase tracking-widest">{{ label }}</span>
+      <span class="text-[11px] font-bold uppercase tracking-wider">{{ label }}</span>
       <i 
-        class="pi pi-chevron-down text-[9px] opacity-70 transition-transform duration-300" 
+        class="pi pi-chevron-down text-[10px] opacity-50 transition-transform duration-300" 
         :class="{'rotate-180': isOpen}"
       ></i>
     </button>
 
-    <transition name="fade-slide">
+    <transition name="dropdown">
       <div
         v-if="isOpen"
-        class="absolute left-0 top-full mt-2 w-72 bg-[var(--bg-card)] rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-[var(--border-ui)] z-[9999] overflow-hidden py-3 backdrop-blur-xl transition-colors duration-300"
+        class="absolute left-0 top-full mt-2 w-64 bg-white dark:bg-slate-900 rounded-xl shadow-xl shadow-slate-200/50 dark:shadow-slate-950/50 border border-slate-100 dark:border-slate-800 z-[9999] overflow-hidden py-2 transition-all"
       >
-        <div v-if="visibleItems.length === 0" class="px-6 py-4 text-[10px] text-slate-500 italic uppercase font-black">
-          Vazio
+        <div v-if="visibleItems.length === 0" class="px-6 py-4 text-[10px] text-slate-400 italic uppercase font-bold text-center">
+          Nenhum item disponível
         </div>
         
-        <div v-else class="flex flex-col px-2">
+        <div v-else class="flex flex-col px-1.5">
           <template v-for="(item, index) in visibleItems" :key="index">
-            <hr v-if="item.divider" class="my-2 border-[var(--border-ui)] opacity-50">
+            <hr v-if="item.divider" class="my-1.5 border-slate-100 dark:border-slate-800 mx-2">
             
             <a 
               v-else
               @click="handleNav(item.to)" 
-              class="flex items-center px-4 py-3 rounded-xl text-sm font-bold text-[var(--text-main)] hover:bg-brand-primary hover:text-white cursor-pointer transition-all duration-200 group"
+              class="flex items-center px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-brand-primary hover:text-white cursor-pointer transition-all duration-150 group/item"
             >
-              <div class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-500/10 group-hover:bg-white/20 mr-4 transition-all">
-                  <i v-if="item.icon" :class="[item.icon, 'pi text-xs opacity-60 group-hover:opacity-100 group-hover:scale-110']"></i> 
+              <div class="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 dark:bg-slate-800 group-hover/item:bg-white/20 mr-3 transition-colors">
+                  <i v-if="item.icon" :class="[item.icon, 'pi text-xs opacity-60 group-hover/item:opacity-100 group-hover/item:scale-110']"></i> 
               </div>
               
               <div class="flex flex-col">
-                <span class="uppercase text-[11px] tracking-tight">{{ item.label }}</span>
+                <span class="uppercase text-[10px] font-bold tracking-wide">{{ item.label }}</span>
               </div>
             </a>
           </template>
@@ -102,11 +102,11 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.fade-slide-enter-active, .fade-slide-leave-active {
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+.dropdown-enter-active, .dropdown-leave-active {
+  transition: all 0.2s ease-out;
 }
-.fade-slide-enter-from, .fade-slide-leave-to {
+.dropdown-enter-from, .dropdown-leave-to {
   opacity: 0;
-  transform: translateY(8px) scale(0.95);
+  transform: translateY(4px);
 }
 </style>

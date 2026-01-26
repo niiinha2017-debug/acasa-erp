@@ -1,225 +1,130 @@
 <template>
-  <div class="min-h-screen w-full bg-slate-50 relative overflow-hidden">
-    <!-- fundo leve -->
-    <div class="pointer-events-none absolute -top-32 -right-32 h-[520px] w-[520px] rounded-full bg-brand-primary/10 blur-3xl"></div>
-    <div class="pointer-events-none absolute -bottom-32 -left-32 h-[520px] w-[520px] rounded-full bg-brand-dark/10 blur-3xl"></div>
+  <div class="h-screen w-full bg-bg-page relative flex items-center justify-center p-4 overflow-hidden">
+    
+    <div class="pointer-events-none absolute -top-48 -right-48 h-[500px] w-[500px] rounded-full bg-brand-primary/10 blur-[100px]"></div>
+    <div class="pointer-events-none absolute -bottom-48 -left-48 h-[500px] w-[500px] rounded-full bg-brand-dark/10 blur-[100px]"></div>
 
-    <div class="min-h-screen w-full flex items-center justify-center px-4 py-10">
-      <!-- CARD ÚNICO (responsivo) -->
-      <div
-        class="w-full max-w-[980px] bg-white border border-slate-100 rounded-[2.5rem] shadow-[0_20px_60px_rgba(2,6,23,0.08)] overflow-hidden"
-      >
-        <div class="grid grid-cols-12">
-          <!-- ESQUERDA (some no mobile) -->
-          <div class="hidden md:flex md:col-span-5 bg-slate-50 border-r border-slate-100 p-10 items-center justify-center">
-            <div class="text-center">
-              <div class="relative inline-flex items-center justify-center">
-                <div class="absolute inset-0 bg-brand-primary/15 blur-2xl rounded-full"></div>
-                <div class="relative h-24 w-24 rounded-3xl bg-white border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden">
-                  <img src="/pwa-192.png" alt="ACASA" class="h-14 w-14 object-contain" />
-                </div>
-              </div>
-
-              <div class="mt-7">
-                <div class="text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">ACASA</div>
-                <div class="text-2xl font-black tracking-tight text-slate-900 uppercase">ERP</div>
-              </div>
-
-              <div class="mt-6 text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">
-                Painel Administrativo
-              </div>
-
-              <div class="mt-8 h-px w-14 mx-auto bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
-
-              <p class="mt-6 text-sm text-slate-500 leading-relaxed max-w-[260px] mx-auto">
-                Acesso restrito. Use suas credenciais para entrar no sistema.
-              </p>
-            </div>
-          </div>
-
-          <!-- DIREITA (form) -->
-          <div class="col-span-12 md:col-span-7 p-8 sm:p-10">
-            <!-- topo mobile -->
-            <div class="md:hidden flex flex-col items-center mb-8">
-              <div class="relative">
-                <div class="absolute inset-0 bg-brand-primary/15 blur-2xl rounded-full"></div>
-                <div class="relative h-16 w-16 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden">
-                  <img src="/pwa-192.png" alt="ACASA" class="h-10 w-10 object-contain" />
-                </div>
-              </div>
-              <div class="mt-4 text-[10px] font-black uppercase tracking-[0.28em] text-slate-500">ACASA ERP</div>
-              <div class="mt-4 h-px w-12 bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
-            </div>
-
-            <header class="text-center md:text-left">
-              <h2 class="text-3xl font-black text-slate-900 tracking-tight leading-none">
-                Acesso Restrito
-              </h2>
-              <p class="text-slate-400 mt-3 text-[11px] font-black uppercase tracking-[0.2em]">
-                Entre para continuar
-              </p>
-            </header>
-
-            <form class="mt-8 space-y-6" @submit.prevent="handleLoginSubmit">
-              <div class="space-y-5">
-                <Input
-                  v-model="formLogin.usuario"
-                  label="Usuário ou E-mail"
-                  placeholder="Identificação"
-                  :force-upper="false"
-                  required
-                />
-
-                <Input
-                  v-model="formLogin.senha"
-                  label="Senha"
-                  :type="showPassword ? 'text' : 'password'"
-                  :force-upper="false"
-                  required
-                >
-                  <template #suffix>
-                    <button
-                      type="button"
-                      @click="showPassword = !showPassword"
-                      class="pr-2 text-slate-300 hover:text-brand-primary transition-colors"
-                    >
-                      <i :class="showPassword ? 'pi pi-eye-slash' : 'pi pi-eye'" class="text-lg"></i>
-                    </button>
-                  </template>
-                </Input>
-              </div>
-
-              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <CustomCheckbox v-model="lembrarUsuario" label="Lembrar acesso" />
-
-                <button
-                  type="button"
-                  @click="openRecuperacao()"
-                  class="text-[10px] font-black uppercase text-slate-400 hover:text-brand-primary tracking-widest transition-colors text-left sm:text-right"
-                >
-                  Recuperar Senha
-                </button>
-              </div>
-
-              <Button
-                type="submit"
-                variant="primary"
-                fullWidth
-                size="lg"
-                :loading="loading"
-                class="h-14 shadow-2xl shadow-brand-primary/25"
-              >
-                {{ loading ? 'Autenticando...' : 'Entrar no Sistema' }}
-              </Button>
-
-              <div class="pt-2 text-center">
-                <button
-                  type="button"
-                  @click="openCadastro()"
-                  class="text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-slate-600 transition-all"
-                >
-                  Novo por aqui? <span class="text-brand-primary">Solicitar Conta</span>
-                </button>
-              </div>
-
-              <p v-if="error" class="text-center text-xs font-bold text-red-500">
-                {{ error }}
-              </p>
-
-              <div class="pt-6 flex items-center justify-center md:justify-start gap-3 text-[9px] font-black uppercase tracking-[0.3em] text-slate-300">
-                <span>Conexão Segura</span>
-                <span class="w-1 h-1 bg-slate-200 rounded-full"></span>
-                <span>v2.4.0</span>
-              </div>
-            </form>
-          </div>
+    <div
+      class="w-full max-w-[1100px] h-auto max-h-[95vh] lg:max-h-[850px] bg-bg-card border border-border-ui rounded-[2.5rem] shadow-2xl flex flex-col md:grid md:grid-cols-12 overflow-hidden animate-page-in"
+    >
+      
+      <div class="hidden md:flex md:col-span-5 lg:col-span-4 bg-slate-500/5 border-r border-border-ui flex-col items-center justify-center p-8 lg:p-12 text-center">
+        <div class="relative h-20 w-20 lg:h-24 lg:w-24 rounded-[2rem] bg-bg-card border border-border-ui shadow-lg flex items-center justify-center p-4 mb-6">
+           <img src="/pwa-192.png" alt="Logo" class="w-full h-full object-contain" />
         </div>
+        <h1 class="text-2xl lg:text-3xl font-black text-text-main tracking-tighter uppercase">ACASA <span class="text-brand-primary">ERP</span></h1>
+        <div class="mt-6 h-1 w-12 bg-brand-primary rounded-full"></div>
+        
+        <p class="mt-6 text-xs lg:text-sm text-slate-500 font-medium leading-relaxed px-4">
+          Gerenciamento inteligente e controle absoluto. <br/>
+          <span class="text-slate-400 italic">Sua estrutura, simplificada.</span>
+        </p>
       </div>
 
-      <!-- MODAIS: mantém os seus exatamente como estão (não mexi) -->
-      <!-- ========================= MODAL CADASTRO ========================= -->
-      <div
-        v-if="showModalCadastro"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4"
-        @keydown.esc="fecharTudo"
-        tabindex="-1"
-      >
-        <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="fecharTudo"></div>
+      <div class="col-span-12 md:col-span-7 lg:col-span-8 p-8 lg:p-16 flex flex-col justify-center overflow-y-auto custom-scroll">
+        
+        <header class="mb-8 lg:mb-10">
+          <h2 class="text-3xl lg:text-4xl font-black text-text-main tracking-tight">Acesso Restrito</h2>
+          <p class="text-slate-400 text-[10px] font-black uppercase tracking-[0.3em] mt-2">Identifique-se para continuar</p>
+        </header>
 
-        <div class="relative w-full max-w-[520px] bg-white rounded-[2.5rem] border border-slate-100 shadow-[0_30px_80px_rgba(0,0,0,0.18)] overflow-hidden">
-          <header class="p-8 pb-5 text-center border-b border-slate-100">
-            <h3 class="text-2xl font-black text-slate-900 tracking-tight">Solicitar Conta</h3>
-            <p class="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400 mt-2">
-              Preencha seus dados para aprovação
-            </p>
-          </header>
-
-          <div class="p-8">
-            <form class="space-y-5" @submit.prevent="handleCadastroSubmit">
-              <Input v-model="formCadastro.nome" label="Nome" placeholder="Seu nome" :force-upper="true" required />
-              <Input v-model="formCadastro.email" label="E-mail" placeholder="email@dominio.com" :force-upper="false" required />
-              <Input v-model="formCadastro.usuario" label="Usuário" placeholder="Ex: Ana.P" :force-upper="false" required />
-              <Input v-model="formCadastro.senha" label="Senha" type="password" :force-upper="false" required />
-
-              <div class="pt-2 grid grid-cols-2 gap-3">
-                <Button type="button" variant="secondary" fullWidth @click="fecharTudo">Cancelar</Button>
-                <Button type="submit" variant="primary" fullWidth :loading="loading">
-                  {{ loading ? 'Enviando...' : 'Enviar Solicitação' }}
-                </Button>
-              </div>
-
-              <p v-if="error" class="text-center text-xs font-bold text-red-500">
-                {{ error }}
-              </p>
-            </form>
+        <form @submit.prevent="handleLoginSubmit" class="space-y-5 lg:space-y-6" autocomplete="off">
+          <div class="space-y-4">
+            <Input 
+              v-model="formLogin.usuario" 
+              label="Usuário ou E-mail" 
+              class="!h-14"
+              autocomplete="off" 
+            />
+            <Input 
+              v-model="formLogin.senha" 
+              type="password" 
+              label="Senha" 
+              class="!h-14"
+              autocomplete="new-password"
+            />
           </div>
-        </div>
-      </div>
 
-      <!-- ========================= MODAL RECUPERAÇÃO ========================= -->
-      <div
-        v-if="showModalRecuperacao"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4"
-        @keydown.esc="fecharTudo"
-        tabindex="-1"
-      >
-        <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="fecharTudo"></div>
-
-        <div class="relative w-full max-w-[520px] bg-white rounded-[2.5rem] border border-slate-100 shadow-[0_30px_80px_rgba(0,0,0,0.18)] overflow-hidden">
-          <header class="p-8 pb-5 text-center border-b border-slate-100">
-            <h3 class="text-2xl font-black text-slate-900 tracking-tight">Recuperar Senha</h3>
-            <p class="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400 mt-2">
-              Enviaremos instruções para o e-mail
-            </p>
-          </header>
-
-          <div class="p-8">
-            <form class="space-y-5" @submit.prevent="handleRecuperacaoSubmit">
-              <Input v-model="emailRecuperacao" label="E-mail" placeholder="email@dominio.com" :force-upper="false" required />
-
-              <div class="pt-2 grid grid-cols-2 gap-3">
-                <Button type="button" variant="secondary" fullWidth @click="fecharTudo">Cancelar</Button>
-                <Button type="submit" variant="primary" fullWidth :loading="loading">
-                  {{ loading ? 'Enviando...' : 'Enviar' }}
-                </Button>
-              </div>
-
-              <p class="text-center text-[10px] font-black uppercase tracking-widest text-slate-300">
-                (precisa ligar no endpoint de recuperação)
-              </p>
-
-              <p v-if="error" class="text-center text-xs font-bold text-red-500">
-                {{ error }}
-              </p>
-            </form>
+          <div class="flex items-center justify-between text-[11px]">
+            <CustomCheckbox v-model="lembrarUsuario" label="Lembrar acesso" />
+            <button 
+              type="button" 
+              @click="showModalRecuperacao = true"
+              class="font-black uppercase tracking-widest text-slate-400 hover:text-brand-primary transition-colors"
+            >
+              Recuperar Senha
+            </button>
           </div>
-        </div>
+
+          <Button 
+            variant="primary" 
+            type="submit"
+            :loading="loading"
+            fullWidth 
+            class="h-14 lg:h-16 text-md !rounded-2xl shadow-xl shadow-brand-primary/20"
+          >
+            Entrar no Sistema
+          </Button>
+
+          <div class="pt-4 text-center">
+            <button 
+              type="button" 
+              @click="showModalCadastro = true"
+              class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-brand-primary"
+            >
+              Novo por aqui? <span class="text-brand-primary">Solicitar Conta</span>
+            </button>
+          </div>
+
+          <div class="pt-6 border-t border-slate-100 flex items-center gap-4 text-[9px] font-black uppercase tracking-[0.3em] text-slate-300">
+            <span>Ambiente Criptografado</span>
+            <span class="w-1 h-1 bg-slate-200 rounded-full"></span>
+            <span>v2.4.0</span>
+          </div>
+        </form>
       </div>
-      <!-- ================================================================ -->
     </div>
+
+    <Teleport to="body">
+      <div v-if="showModalCadastro || showModalRecuperacao" class="fixed inset-0 z-[1100] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md" @click="fecharTudo"></div>
+        
+        <div class="relative w-full max-w-[500px] bg-bg-card rounded-[2.5rem] shadow-2xl animate-modal-in border border-border-ui overflow-hidden">
+          
+          <div v-if="showModalCadastro" class="p-10">
+             <h3 class="text-3xl font-black text-text-main tracking-tight text-center mb-2">Solicitar Conta</h3>
+             <p class="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400 text-center mb-8 border-b border-border-ui pb-6">Informe seus dados para análise</p>
+             
+             <form class="space-y-5" @submit.prevent="handleCadastroSubmit">
+               <Input v-model="formCadastro.nome" label="Nome Completo" :force-upper="true" required />
+               <Input v-model="formCadastro.email" label="E-mail" type="email" required />
+               <Input v-model="formCadastro.usuario" label="Usuário Desejado" required />
+               <Input v-model="formCadastro.senha" label="Senha" type="password" required />
+
+               <div class="grid grid-cols-2 gap-4 pt-4">
+                 <Button type="button" variant="secondary" @click="fecharTudo">Voltar</Button>
+                 <Button type="submit" variant="primary" :loading="loading">Solicitar</Button>
+               </div>
+             </form>
+          </div>
+
+          <div v-if="showModalRecuperacao" class="p-10">
+             <h3 class="text-3xl font-black text-text-main tracking-tight text-center mb-2">Recuperar</h3>
+             <p class="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400 text-center mb-8 border-b border-border-ui pb-6">Enviaremos um link de redefinição</p>
+             
+             <form class="space-y-6" @submit.prevent="handleRecuperacaoSubmit">
+               <Input v-model="emailRecuperacao" label="E-mail de acesso" placeholder="Ex: ana@exemplo.com" required />
+               <div class="grid grid-cols-2 gap-4">
+                 <Button type="button" variant="secondary" @click="fecharTudo">Cancelar</Button>
+                 <Button type="submit" variant="primary" :loading="loading">Enviar</Button>
+               </div>
+             </form>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
-
 
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'

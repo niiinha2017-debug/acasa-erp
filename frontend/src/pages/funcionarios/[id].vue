@@ -1,488 +1,216 @@
 <template>
-  <Card :shadow="true" class="overflow-visible">
-    <PageHeader
-      :title="isEditing ? `Editar Funcionário: ${form.nome}` : 'Novo Funcionário'"
-      subtitle="Cadastros / Gestão de Pessoas"
-      icon="pi pi-id-card"
-      :backTo="'/funcionarios'"
-      iconClass="bg-slate-900 text-white shadow-lg"
-    />
-
-    <div class="p-8 relative">
-      <Loading v-if="loading" />
-
-      <form v-else class="space-y-12" @submit.prevent="salvar">
-        <!-- 01. Informações Pessoais -->
-        <section class="grid grid-cols-12 gap-x-6 gap-y-8">
-          <div class="col-span-12 flex items-center gap-3 mb-2">
-            <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
-            <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
-              01. Informações Pessoais
-            </span>
+  <div class="w-full max-w-[1400px] mx-auto pb-20 animate-in fade-in duration-700">
+    <Card :shadow="true" class="!rounded-[3rem] overflow-hidden border-none shadow-2xl shadow-slate-200/50 bg-white">
+      
+      <header class="p-10 border-b border-slate-50 bg-slate-50/30 flex flex-col md:flex-row justify-between items-center gap-6">
+        <div class="flex items-center gap-5">
+          <div class="w-16 h-16 rounded-[1.5rem] bg-slate-900 flex items-center justify-center text-white shadow-xl shadow-slate-200">
+            <i class="pi pi-user-plus text-2xl"></i>
           </div>
-
-          <Input class="col-span-12 md:col-span-6" v-model="form.nome" label="Nome Completo *" required placeholder="NOME SEM ABREVIAÇÕES" />
-          <Input class="col-span-12 md:col-span-3" v-model="cpfUi" label="CPF *" required placeholder="000.000.000-00" />
-          <Input class="col-span-12 md:col-span-3" v-model="rgUi" label="RG" placeholder="00.000.000-0" />
-
-          <Input class="col-span-12 md:col-span-4" v-model="emailUi" label="E-mail Pessoal" placeholder="exemplo@email.com" :forceUpper="false" />
-          <Input class="col-span-12 md:col-span-4" v-model="whatsappUi" label="WhatsApp / Celular" placeholder="(00) 0 0000-0000" />
-          <Input class="col-span-12 md:col-span-4" v-model="form.data_nascimento" label="Data de Nascimento" type="date" />
-
-          <Input class="col-span-12 md:col-span-6" v-model="form.estado_civil" label="Estado Civil" />
-          <Input class="col-span-12 md:col-span-6" v-model="form.escolaridade" label="Escolaridade" />
-        </section>
-
-        <div class="h-px bg-slate-100/50" />
-
-        <!-- 02. Localização -->
-        <section class="grid grid-cols-12 gap-x-6 gap-y-8">
-          <div class="col-span-12 flex items-center gap-3 mb-2">
-            <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
-            <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
-              02. Localização
-            </span>
-          </div>
-
-          <Input class="col-span-12 md:col-span-3" v-model="cepUi" label="CEP" placeholder="00000-000" @blur="tratarBuscaCep" />
-          <Input class="col-span-12 md:col-span-7" v-model="form.endereco" label="Rua / Logradouro" />
-          <Input class="col-span-12 md:col-span-2" v-model="form.numero" label="Nº" />
-
-          <Input class="col-span-12 md:col-span-4" v-model="form.complemento" label="Complemento" />
-          <Input class="col-span-12 md:col-span-4" v-model="form.bairro" label="Bairro" />
-          <Input class="col-span-12 md:col-span-4" v-model="form.cidade" label="Cidade" />
-        </section>
-
-        <div class="h-px bg-slate-100/50" />
-
-        <!-- 03. Contrato e Jornada -->
-        <section class="grid grid-cols-12 gap-x-6 gap-y-8">
-          <div class="col-span-12 flex items-center gap-3 mb-2">
-            <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
-            <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
-              03. Contrato e Jornada
-            </span>
-          </div>
-
-          <!-- Unidade / Setor / Função -->
-          <div class="col-span-12 md:col-span-4">
-            <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
-              Unidade *
-            </label>
-            <select
-              v-model="form.unidade"
-              class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm shadow-sm"
-              required
-            >
-              <option value="">SELECIONE...</option>
-              <option value="FÁBRICA">FÁBRICA</option>
-              <option value="LOJA">LOJA</option>
-            </select>
-          </div>
-
-          <div class="col-span-12 md:col-span-4">
-            <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
-              Setor *
-            </label>
-            <select
-              v-model="form.setor"
-              class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm shadow-sm"
-              :disabled="!form.unidade"
-              required
-            >
-              <option value="">SELECIONE...</option>
-              <option v-for="o in setorOptions" :key="o.value" :value="o.value">
-                {{ o.label }}
-              </option>
-            </select>
-          </div>
-
-          <div class="col-span-12 md:col-span-4">
-            <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
-              Função *
-            </label>
-            <select
-              v-model="form.cargo"
-              class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm shadow-sm"
-              :disabled="!form.unidade || !form.setor"
-              required
-            >
-              <option value="">SELECIONE...</option>
-              <option v-for="o in cargoOptions" :key="o.value" :value="o.value">
-                {{ o.label }}
-              </option>
-            </select>
-          </div>
-
-          <!-- Registro e Datas -->
-          <div class="col-span-12 grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Input class="col-span-1" v-model="form.registro" label="Nº Registro" />
-            <Input class="col-span-1" v-model="form.admissao" label="Data de Admissão" type="date" required />
-            <Input class="col-span-1" v-model="form.demissao" label="Data de Demissão" type="date" />
-            
-            <div class="col-span-1">
-              <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
-                Tempo de Casa
-              </label>
-              <div class="h-12 flex items-center px-4 rounded-2xl bg-slate-50 border border-slate-100 text-slate-500 font-bold text-sm italic">
-                {{ tempoServico }}
-              </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-black text-brand-primary uppercase tracking-[0.3em]">Gestão de Pessoas</span>
+              <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ficha de Registro</span>
             </div>
+            <h2 class="text-2xl font-black text-slate-800 uppercase italic tracking-tight">
+              {{ isEditing ? `Editar: ${form.nome}` : 'Novo Colaborador' }}
+            </h2>
           </div>
-
-          <!-- CARGA HORÁRIA CALCULADA AUTOMATICAMENTE -->
-          <div class="col-span-12 bg-gradient-to-r from-slate-50 to-blue-50/30 p-6 rounded-[2rem] border border-slate-200">
-            <div class="flex items-center justify-between mb-6">
-              <div>
-                <div class="text-sm font-black text-slate-700 mb-1">Carga Horária Calculada</div>
-                <div class="text-xs text-slate-500">Valores atualizados automaticamente conforme os horários</div>
-              </div>
-              <div class="flex gap-3">
-                <div class="bg-blue-50 px-4 py-2 rounded-xl border border-blue-100">
-                  <div class="text-[10px] font-black text-blue-600 uppercase mb-1">SEMANAL</div>
-                  <div class="text-lg font-black text-slate-800">{{ Number(cargaHorariaSemanal).toFixed(1) }}h</div>
-                </div>
-                <div class="bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100">
-                  <div class="text-[10px] font-black text-emerald-600 uppercase mb-1">MENSAL</div>
-                  <div class="text-lg font-black text-slate-800">{{ Number(cargaHorariaMensal).toFixed(1) }}h</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Horários de Segunda a Sexta -->
-            <div class="mb-6">
-              <div class="flex items-center gap-2 mb-4">
-                <div class="w-2 h-2 bg-slate-400 rounded-full"></div>
-                <span class="text-xs font-black uppercase text-slate-500">SEGUNDA A SEXTA</span>
-                <span class="text-xs text-slate-400 ml-auto">{{ Number(calcularHorasDia()).toFixed(1) }}h/dia</span>
-              </div>
-              
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Input 
-                  v-model="form.horario_entrada_1" 
-                  label="Entrada 1" 
-                  type="time" 
-                  @update:modelValue="atualizarCargaHoraria"
-                />
-                <Input 
-                  v-model="form.horario_saida_1" 
-                  label="Saída 1" 
-                  type="time" 
-                  @update:modelValue="atualizarCargaHoraria"
-                />
-                <Input 
-                  v-model="form.horario_entrada_2" 
-                  label="Entrada 2" 
-                  type="time" 
-                  @update:modelValue="atualizarCargaHoraria"
-                />
-                <Input 
-                  v-model="form.horario_saida_2" 
-                  label="Saída 2" 
-                  type="time" 
-                  @update:modelValue="atualizarCargaHoraria"
-                />
-              </div>
-            </div>
-
-            <!-- Horário de Sábado -->
-            <div>
-              <div class="flex items-center gap-2 mb-4">
-                <div class="w-2 h-2 bg-amber-400 rounded-full"></div>
-                <span class="text-xs font-black uppercase text-slate-500">SÁBADO</span>
-                <span class="text-xs text-slate-400 ml-auto">{{ Number(calcularHorasSabado()).toFixed(1) }}h</span>
-              </div>
-              
-              <div class="grid grid-cols-2 gap-4">
-                <Input 
-                  v-model="form.horario_sabado_entrada_1" 
-                  label="Sábado - Entrada" 
-                  type="time" 
-                  @update:modelValue="atualizarCargaHoraria"
-                />
-                <Input 
-                  v-model="form.horario_sabado_saida_1" 
-                  label="Sábado - Saída" 
-                  type="time" 
-                  @update:modelValue="atualizarCargaHoraria"
-                />
-              </div>
-            </div>
-          </div>
-
-          <!-- Resumo da Jornada -->
-          <div class="col-span-12 bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100">
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div class="text-center">
-                <div class="text-[10px] font-black uppercase text-slate-500 mb-1">HORAS/DIA</div>
-                <div class="text-xl font-black text-slate-800">{{ Number(horasDiariasMedias).toFixed(1) }}h</div>
-              </div>
-              <div class="text-center">
-                <div class="text-[10px] font-black uppercase text-slate-500 mb-1">DIAS/SEMANA</div>
-                <div class="text-xl font-black text-slate-800">{{ form.horario_sabado_entrada_1 ? '6' : '5' }}</div>
-              </div>
-              <div class="text-center">
-                <div class="text-[10px] font-black uppercase text-slate-500 mb-1">HORAS/SEMANA</div>
-                <div class="text-xl font-black text-slate-800">{{ Number(cargaHorariaSemanal).toFixed(1) }}h</div>
-              </div>
-              <div class="text-center">
-                <div class="text-[10px] font-black uppercase text-slate-500 mb-1">SEMANAS/MÊS</div>
-                <div class="text-xl font-black text-slate-800">4.5</div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <div class="h-px bg-slate-100/50" />
-
-        <!-- 04. Financeiro e Pagamento -->
-        <section class="grid grid-cols-12 gap-x-6 gap-y-8">
-          <div class="col-span-12 flex items-center gap-3 mb-2">
-            <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
-            <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
-              04. Financeiro e Pagamento
-            </span>
-          </div>
-
-          <!-- Salários -->
-<div class="col-span-12 md:col-span-6 grid grid-cols-2 gap-4">
-  <div>
-    <Input
-      type="text"
-      inputmode="numeric"
-      :modelValue="salarioBaseInput"
-      @update:modelValue="updateSalarioBase"
-      label="Salário Base (R$)"
-      :forceUpper="false"
-      placeholder="0,00"
-    />
-    <div class="text-xs text-slate-400 mt-1">Remuneração mensal fixa</div>
-  </div>
-
-  <div>
-    <Input
-      type="text"
-      inputmode="numeric"
-      :modelValue="salarioAdicionalInput"
-      @update:modelValue="updateSalarioAdicional"
-      label="Adicional / Gratificação"
-      :forceUpper="false"
-      placeholder="0,00"
-    />
-    <div class="text-xs text-slate-400 mt-1">Bonificações extras</div>
-  </div>
-</div>
-
-
-          <!-- Cálculos Automáticos -->
-          <div class="col-span-12 md:col-span-6 grid grid-cols-2 gap-4">
-            <div>
-              <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
-                Dia Pagamento
-              </label>
-              <select v-model="form.dia_pagamento" 
-                class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm">
-                <option :value="5">DIA 05</option>
-                <option :value="10">DIA 10</option>
-                <option :value="15">DIA 15</option>
-                <option :value="20">DIA 20</option>
-              </select>
-            </div>
-            
-            <div>
-              <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
-                Custo Hora (DSR)
-              </label>
-              <div class="h-12 flex items-center justify-between px-4 rounded-2xl bg-slate-100 border border-slate-200">
-                <span class="text-slate-900 font-black text-sm">
-                  {{ custoHoraExibicao }}
-                </span>
-                <button 
-                  type="button"
-                  @click="recalcularCustoHora"
-                  class="text-xs font-black text-blue-600 hover:text-blue-800"
-                  title="Recalcular"
-                >
-                  <i class="pi pi-refresh"></i>
-                </button>
-              </div>
-              <div class="text-xs text-slate-400 mt-1">Baseado na carga horária</div>
-            </div>
-          </div>
-
-          <!-- Forma de Pagamento -->
-          <div class="col-span-12 grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest ml-1">
-                Forma de Pagamento
-              </label>
-              <select v-model="form.forma_pagamento" 
-                class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none text-sm">
-                <option value="DINHEIRO">DINHEIRO</option>
-                <option value="PIX">PIX</option>
-                <option value="TRANSFERENCIA">TRANSFERÊNCIA</option>
-                <option value="DEPOSITO">DEPÓSITO</option>
-              </select>
-            </div>
-            
-            <Input class="col-span-2" v-model="form.banco" label="Banco" placeholder="EX: ITAÚ, NUBANK, CAIXA..." />
-          </div>
-
-          <!-- Dados Bancários (condicional) -->
-          <div v-if="form.forma_pagamento !== 'DINHEIRO'" class="col-span-12 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Input v-model="form.agencia" label="Agência" />
-            <Input v-model="form.conta" label="Conta" />
-            <Input v-model="form.pix_tipo_chave" label="Tipo Chave" placeholder="CPF, EMAIL, CELULAR..." />
-          </div>
-          
-          <!-- Chave PIX (condicional) -->
-          <div v-if="form.forma_pagamento === 'PIX'" class="col-span-12">
-            <Input v-model="form.pix_chave" label="Chave PIX" />
-          </div>
-        </section>
-
-        <div class="h-px bg-slate-100/50" />
-
-        <!-- 05. Benefícios Adicionais -->
-        <section class="grid grid-cols-12 gap-x-6 gap-y-8 bg-slate-50/50 p-8 rounded-[2.5rem] border border-slate-100/50">
-          <div class="col-span-12 flex items-center gap-3 mb-2">
-            <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
-            <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
-              05. Benefícios Adicionais
-            </span>
-          </div>
-
-          <!-- Checkboxes -->
-          <div class="col-span-12 md:col-span-4 space-y-4 pt-2">
-            <CustomCheckbox v-model="form.tem_vale" label="Habilitar Vale Antecipação" />
-            <CustomCheckbox v-model="form.tem_vale_transporte" label="Habilitar Vale Transporte" />
-          </div>
-
-          <!-- Campos condicionais -->
-          <div class="col-span-12 md:col-span-8">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div v-if="form.tem_vale" class="animate-in fade-in slide-in-from-top-2">
-  <Input
-    type="text"
-    inputmode="numeric"
-    :modelValue="valeInput"
-    @update:modelValue="updateVale"
-    label="Valor do Vale (R$)"
-    :forceUpper="false"
-    placeholder="0,00"
-  />
-</div>
-
-<div v-if="form.tem_vale_transporte" class="animate-in fade-in slide-in-from-top-2">
-  <Input
-    type="text"
-    inputmode="numeric"
-    :modelValue="valeTransporteInput"
-    @update:modelValue="updateValeTransporte"
-    label="Valor VT (R$)"
-    :forceUpper="false"
-    placeholder="0,00"
-  />
-</div>
-
-            </div>
-          </div>
-        </section>
-
-<!-- 06. Arquivos -->
-<section class="grid grid-cols-12 gap-x-6 gap-y-6">
-  <div class="col-span-12 flex items-center gap-3 mb-2">
-    <div class="w-1.5 h-4 bg-slate-900 rounded-full" />
-    <span class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
-      06. Arquivos e Documentos
-    </span>
-  </div>
-
-  <!-- Seletor bonito -->
-  <div class="col-span-12 md:col-span-8">
-    <!-- input escondido -->
-    <input
-      ref="fileInput"
-      type="file"
-      class="hidden"
-      @change="onFileChange"
-    />
-
-    <div class="flex items-center gap-3">
-      <Button
-        variant="secondary"
-        type="button"
-        class="!rounded-2xl h-12 !px-6"
-        @click="abrirSeletorArquivo"
-      >
-        <i class="pi pi-upload mr-2" /> Escolher arquivo
-      </Button>
-
-      <div class="h-12 flex-1 flex items-center px-4 rounded-2xl bg-white border border-slate-200 text-sm">
-        <span class="font-bold text-slate-700 truncate">
-          {{ arquivoSelecionado?.name || 'Nenhum arquivo selecionado' }}
-        </span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Botão anexar -->
-  <div class="col-span-12 md:col-span-4 flex items-end">
-    <Button
-      variant="primary"
-      type="button"
-      class="w-full !rounded-2xl h-12"
-      :loading="enviandoArquivo"
-      :disabled="!arquivoSelecionado || enviandoArquivo || salvando || loading"
-      @click="enviarArquivo"
-    >
-      Anexar Documento
-    </Button>
-  </div>
-
-  <!-- Lista -->
-  <div class="col-span-12 space-y-2">
-    <div
-      v-for="a in arquivos"
-      :key="a.id"
-      class="flex items-center justify-between p-4 rounded-2xl bg-white border border-slate-100 shadow-sm"
-    >
-      <div class="min-w-0">
-        <div class="font-black text-slate-700 text-sm truncate">{{ a.nome }}</div>
-        <div class="text-xs font-bold text-slate-400 uppercase tracking-tighter">{{ a.mime }}</div>
-      </div>
-
-      <div class="flex gap-2">
-        <a
-          :href="a.url"
-          target="_blank"
-          class="h-9 px-4 flex items-center rounded-xl bg-slate-50 border border-slate-200 text-[10px] font-black uppercase"
-        >
-          Abrir
-        </a>
-        <Button variant="danger" size="sm" class="!rounded-xl h-9" type="button" @click="removerArquivo(a.id)">
-          Excluir
-        </Button>
-      </div>
-    </div>
-  </div>
-</section>
-
-        <div class="h-px bg-slate-100/50" />
-
-        <!-- Footer -->
-        <div class="flex items-center justify-between gap-3 pt-8 border-t border-slate-100">
-          <Button variant="secondary" type="button" class="!rounded-2xl !px-8" @click="router.push('/funcionarios')">
-            Cancelar
-          </Button>
-
-          <Button variant="primary" type="submit" class="!rounded-2xl !px-12 h-14 shadow-xl shadow-brand-primary/20" :loading="salvando">
-            <i class="pi pi-save mr-2" /> Salvar Registro
-          </Button>
         </div>
-      </form>
-    </div>
-  </Card>
+        <Button variant="secondary" class="!rounded-2xl !h-12 !px-6 border-slate-200 text-slate-500 font-black text-[10px] uppercase tracking-widest" @click="router.push('/funcionarios')">
+          <i class="pi pi-arrow-left mr-2"></i> Voltar
+        </Button>
+      </header>
+
+      <div class="p-8 md:p-12">
+        <Loading v-if="loading" />
+
+        <form v-else class="space-y-16" @submit.prevent="salvar">
+          
+          <section class="grid grid-cols-12 gap-8">
+            <div class="col-span-12 lg:col-span-3">
+              <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Seção 01</span>
+              <h3 class="text-lg font-black text-slate-800 uppercase italic">Dados Pessoais</h3>
+            </div>
+            <div class="col-span-12 lg:col-span-9 grid grid-cols-1 md:grid-cols-6 gap-6 bg-slate-50/50 p-8 rounded-[2.5rem] border border-slate-100">
+              <Input class="md:col-span-4" v-model="form.nome" label="Nome Completo *" required />
+              <Input class="md:col-span-2" v-model="cpfUi" label="CPF *" required />
+              <Input class="md:col-span-2" v-model="rgUi" label="RG" />
+              <Input class="md:col-span-2" v-model="form.data_nascimento" label="Data Nascimento" type="date" />
+              <Input class="md:col-span-2" v-model="whatsappUi" label="WhatsApp / Celular" />
+              <Input class="md:col-span-3" v-model="emailUi" label="E-mail Pessoal" :forceUpper="false" />
+              <Input class="md:col-span-3" v-model="form.estado_civil" label="Estado Civil" />
+            </div>
+          </section>
+
+          <section class="grid grid-cols-12 gap-8">
+            <div class="col-span-12 lg:col-span-3">
+              <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Seção 02</span>
+              <h3 class="text-lg font-black text-slate-800 uppercase italic">Endereço</h3>
+            </div>
+            <div class="col-span-12 lg:col-span-9 grid grid-cols-1 md:grid-cols-6 gap-6">
+              <Input class="md:col-span-2" v-model="cepUi" label="CEP" @blur="tratarBuscaCep" />
+              <Input class="md:col-span-3" v-model="form.endereco" label="Logradouro" />
+              <Input class="md:col-span-1" v-model="form.numero" label="Nº" />
+              <Input class="md:col-span-2" v-model="form.complemento" label="Complemento" />
+              <Input class="md:col-span-2" v-model="form.bairro" label="Bairro" />
+              <Input class="md:col-span-2" v-model="form.cidade" label="Cidade" />
+            </div>
+          </section>
+
+          <section class="relative bg-white rounded-[3rem] p-8 md:p-12 border border-slate-200 shadow-xl shadow-slate-100/50">
+            <div class="flex flex-col md:flex-row justify-between items-center border-b border-slate-100 pb-8 mb-10 gap-6">
+              <h3 class="text-xl font-black uppercase italic tracking-tight text-slate-800">Contrato & Alocação</h3>
+              <div class="bg-slate-50 px-8 py-4 rounded-[2rem] border border-slate-100 shadow-inner text-right">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1 block">Custo Hora</span>
+                <span class="text-3xl font-black text-slate-900 tracking-tighter tabular-nums leading-none">{{ custoHoraExibicao }}</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-12 gap-10">
+              <div class="col-span-12 lg:col-span-4 space-y-6">
+                <div class="space-y-2">
+                  <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Unidade *</label>
+                  <select v-model="form.unidade" class="w-full h-14 px-5 rounded-2xl bg-slate-50 border border-slate-200 font-bold text-slate-700 outline-none focus:ring-4 focus:ring-slate-100 transition-all">
+                    <option value="">SELECIONE</option>
+                    <option value="FÁBRICA">FÁBRICA</option>
+                    <option value="LOJA">LOJA</option>
+                  </select>
+                </div>
+
+                <div class="space-y-2">
+                  <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Setor *</label>
+                  <select v-model="form.setor" :disabled="!form.unidade" class="w-full h-14 px-5 rounded-2xl bg-slate-50 border border-slate-200 font-bold text-slate-700 outline-none disabled:opacity-50 transition-all uppercase">
+                    <option value="">SELECIONE</option>
+                    <option v-for="opt in setorOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                  </select>
+                </div>
+
+                <div class="space-y-2">
+                  <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Cargo *</label>
+                  <select v-model="form.cargo" :disabled="!form.setor" class="w-full h-14 px-5 rounded-2xl bg-slate-50 border border-slate-200 font-bold text-slate-700 outline-none disabled:opacity-50 transition-all uppercase">
+                    <option value="">SELECIONE</option>
+                    <option v-for="opt in cargoOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                  </select>
+                </div>
+
+                <Input v-model="form.admissao" label="Data de Admissão" type="date" class="!bg-slate-50" />
+              </div>
+
+              <div class="col-span-12 lg:col-span-8 bg-slate-50/50 rounded-[2.5rem] p-8 border border-slate-100">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+                  <Input v-model="form.horario_entrada_1" label="Entrada 1" type="time" class="!bg-white" @update:modelValue="atualizarCargaHoraria" />
+                  <Input v-model="form.horario_saida_1" label="Saída 1" type="time" class="!bg-white" @update:modelValue="atualizarCargaHoraria" />
+                  <Input v-model="form.horario_entrada_2" label="Entrada 2" type="time" class="!bg-white" @update:modelValue="atualizarCargaHoraria" />
+                  <Input v-model="form.horario_saida_2" label="Saída 2" type="time" class="!bg-white" @update:modelValue="atualizarCargaHoraria" />
+                </div>
+                
+                <div class="flex flex-col md:flex-row items-center justify-between gap-8 pt-8 border-t border-slate-200/60">
+                  <div class="flex gap-10">
+                    <div>
+                      <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Semanal</p>
+                      <p class="text-2xl font-black text-slate-800 italic">{{ Number(cargaHorariaSemanal).toFixed(1) }}h</p>
+                    </div>
+                    <div class="w-px h-10 bg-slate-200"></div>
+                    <div>
+                      <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Mensal</p>
+                      <p class="text-2xl font-black text-slate-900 italic">{{ Number(cargaHorariaMensal).toFixed(1) }}h</p>
+                    </div>
+                  </div>
+
+                  <div class="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm flex items-center gap-4">
+                    <span class="text-[9px] font-black text-slate-400 uppercase px-3 border-r border-slate-100">Sábado</span>
+                    <div class="flex gap-2">
+                      <input v-model="form.horario_sabado_entrada_1" type="time" class="w-20 h-10 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-center outline-none" @change="atualizarCargaHoraria" />
+                      <input v-model="form.horario_sabado_saida_1" type="time" class="w-20 h-10 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-center outline-none" @change="atualizarCargaHoraria" />
+                    </div>
+                  </div>
+                </div>
+                <p class="text-[10px] font-bold text-slate-400 uppercase mt-4 text-center">Tempo de casa: {{ tempoServico }}</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="grid grid-cols-12 gap-8">
+            <div class="col-span-12 lg:col-span-3">
+              <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Seção 04</span>
+              <h3 class="text-lg font-black text-slate-800 uppercase italic">Financeiro</h3>
+            </div>
+            <div class="col-span-12 lg:col-span-9 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Input :modelValue="salarioBaseInput" @update:modelValue="updateSalarioBase" label="Salário Base (R$)" />
+              <Input :modelValue="salarioAdicionalInput" @update:modelValue="updateSalarioAdicional" label="Gratificação (R$)" />
+              <div class="space-y-2">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Dia de Pagamento</label>
+                <select v-model="form.dia_pagamento" class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none">
+                  <option :value="5">DIA 05</option>
+                  <option :value="10">DIA 10</option>
+                  <option :value="20">DIA 20</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          <section class="bg-slate-50 p-10 rounded-[3rem] border border-slate-100">
+            <div class="flex items-center gap-4 mb-8">
+              <div class="w-10 h-10 rounded-xl bg-slate-200 text-slate-600 flex items-center justify-center">
+                <i class="pi pi-paperclip"></i>
+              </div>
+              <h3 class="text-lg font-black text-slate-800 uppercase italic">Documentos Anexos</h3>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div class="md:col-span-3">
+                <div class="flex items-center gap-4 p-4 bg-white rounded-[1.5rem] border border-slate-200">
+                  <Button variant="secondary" type="button" class="!rounded-xl h-11" @click="abrirSeletorArquivo">Escolher Arquivo</Button>
+                  <span class="text-sm font-bold text-slate-500 truncate italic">
+                    {{ arquivoSelecionado?.name || 'Selecione um arquivo...' }}
+                  </span>
+                  <input ref="fileInput" type="file" class="hidden" @change="onFileChange" />
+                </div>
+              </div>
+              <Button variant="primary" type="button" class="!rounded-[1.5rem] h-14 font-black uppercase text-[10px] tracking-widest" :loading="enviandoArquivo" @click="enviarArquivo">
+                Anexar
+              </Button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+              <div v-for="a in arquivos" :key="a.id" class="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all">
+                <div class="flex items-center gap-3 overflow-hidden">
+                   <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center flex-shrink-0">
+                     <i class="pi pi-file"></i>
+                   </div>
+                   <div class="truncate">
+                      <p class="text-sm font-black text-slate-700 truncate">{{ a.nome }}</p>
+                      <p class="text-[9px] font-bold text-slate-400 uppercase">{{ a.mime }}</p>
+                   </div>
+                </div>
+                <div class="flex gap-2">
+                   <a :href="a.url" target="_blank" class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100"><i class="pi pi-eye"></i></a>
+                   <button type="button" @click="removerArquivo(a.id)" class="w-9 h-9 flex items-center justify-center rounded-xl bg-rose-50 text-rose-400 border border-rose-100"><i class="pi pi-trash"></i></button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <footer class="pt-10 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-3">
+              <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Campos com * são obrigatórios</p>
+            </div>
+
+            <div class="flex items-center gap-4 w-full md:w-auto">
+               <Button variant="secondary" type="button" class="!rounded-2xl !px-8 !h-14 font-black" @click="router.push('/funcionarios')">Cancelar</Button>
+               <Button variant="primary" type="submit" class="!rounded-2xl !px-12 !h-16 shadow-2xl shadow-brand-primary/30 font-black uppercase text-[11px] tracking-widest" :loading="salvando">
+                 <i class="pi pi-save mr-3"></i> Salvar Registro
+               </Button>
+            </div>
+          </footer>
+
+        </form>
+      </div>
+    </Card>
+  </div>
 </template>
 
 
@@ -703,14 +431,16 @@ function recalcularCustoHora() {
   const base = Number(form.value.salario_base || 0)
   const adicional = Number(form.value.salario_adicional || 0)
   const total = base + adicional
+  const horasMensais = Number(cargaHorariaMensal.value || 0)
 
-  if (total <= 0) {
+  if (total <= 0 || horasMensais <= 0) {
     form.value.custo_hora = 0
     return
   }
 
-  // Usa a função do utils que já calcula corretamente
-  form.value.custo_hora = calcularCustoHora(total, cargaHorariaSemanal.value, 4.5)
+  // Cálculo direto: Total / Horas Mensais
+  // O 4.5 semanas/mês já está embutido no cargaHorariaMensal.value
+  form.value.custo_hora = total / horasMensais
 }
 
 // ===== Atualiza carga horária =====
@@ -805,6 +535,17 @@ const cargoOptions = computed(() => {
   return (grupo?.cargo || []).map(v => ({ label: String(v).replaceAll('_',' '), value: v }))
 })
 
+watch(
+  () => [
+    form.value.salario_base, 
+    form.value.salario_adicional, 
+    cargaHorariaSemanal.value
+  ],
+  () => {
+    recalcularCustoHora()
+  },
+  { immediate: true }
+)
 
 watch(
   () => form.value.unidade,

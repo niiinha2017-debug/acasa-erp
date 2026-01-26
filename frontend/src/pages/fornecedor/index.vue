@@ -1,148 +1,166 @@
 <template>
-  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-in fade-in duration-700">
+  <div class="w-full max-w-[1400px] mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
     
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-    
-    <Card hoverable class="p-6 flex items-center gap-4">
-      <div class="w-12 h-12 rounded-2xl bg-slate-900/10 text-slate-900 flex items-center justify-center">
-        <i class="pi pi-truck text-xl"></i>
-      </div>
-      <div>
-        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Total de Parceiros</p>
-        <p class="text-xl font-black text-[var(--text-main)]">{{ rows.length }}</p>
-      </div>
-    </Card>
-
-    <Card hoverable class="p-6 flex items-center gap-4">
-      <div class="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
-        <i class="pi pi-envelope text-xl"></i>
-      </div>
-      <div>
-        <p class="text-[10px] font-black uppercase tracking-widest text-blue-500">Com E-mail</p>
-        <p class="text-xl font-black text-[var(--text-main)]">{{ rows.filter(r => r.email).length }}</p>
-      </div>
-    </Card>
-
-    <Card hoverable class="p-6 flex items-center gap-4">
-      <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
-        <i class="pi pi-map text-xl"></i>
-      </div>
-      <div>
-        <p class="text-[10px] font-black uppercase tracking-widest text-emerald-500">Estados Atendidos</p>
-        <p class="text-xl font-black text-[var(--text-main)]">
-          {{ new Set(rows.map(r => r.estado).filter(Boolean)).size }}
-        </p>
-      </div>
-    </Card>
-
-    <Card 
-      hoverable 
-      :active="rows.slice(0, 5).length > 0"
-      class="p-6 flex items-center gap-4"
-    >
-      <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
-        <i class="pi pi-star text-xl animate-pulse"></i>
-      </div>
-      <div>
-        <p class="text-[10px] font-black uppercase tracking-widest text-amber-500">Recentes</p>
-        <p class="text-xl font-black text-[var(--text-main)]">{{ rows.slice(0, 5).length }}</p>
-      </div>
-    </Card>
-
-  </div>
-
-
-    <Card :shadow="true" class="!rounded-[2.5rem] overflow-hidden border-[var(--border-ui)]">
-      <header class="flex flex-col md:flex-row items-center justify-between gap-6 p-8 border-b border-[var(--border-ui)] bg-slate-500/5">
-        <div class="flex items-center gap-4">
-          <div class="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-lg">
-            <i class="pi pi-address-book text-xl"></i>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+      
+      <Card hoverable class="relative overflow-hidden !rounded-[2rem] border-none bg-slate-900 p-7 group">
+        <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-all"></div>
+        <div class="relative z-10 flex items-center gap-5">
+          <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-800 text-white flex items-center justify-center shadow-2xl">
+            <i class="pi pi-truck text-2xl"></i>
           </div>
           <div>
-            <h2 class="text-xl font-black tracking-tight text-[var(--text-main)] uppercase">Fornecedores</h2>
-            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Gestão de parceiros e contratos comerciais</p>
+            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400/80 mb-1">Total de Parceiros</p>
+            <p class="text-3xl font-black text-white leading-none">{{ rows.length }}</p>
+          </div>
+        </div>
+      </Card>
+
+      <Card hoverable class="!rounded-[2rem] border-slate-100 shadow-xl shadow-slate-200/40 p-7 group">
+        <div class="flex items-center gap-5">
+          <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <i class="pi pi-envelope text-2xl font-bold"></i>
+          </div>
+          <div>
+            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Com E-mail</p>
+            <p class="text-3xl font-black text-slate-800 leading-none">{{ rows.filter(r => r.email).length }}</p>
+          </div>
+        </div>
+      </Card>
+
+      <Card hoverable class="!rounded-[2rem] border-slate-100 shadow-xl shadow-slate-200/40 p-7 group">
+        <div class="flex items-center gap-5">
+          <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <i class="pi pi-map text-2xl font-bold"></i>
+          </div>
+          <div>
+            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Estados Atendidos</p>
+            <p class="text-3xl font-black text-emerald-600 leading-none">
+              {{ new Set(rows.map(r => r.estado).filter(Boolean)).size }}
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      <Card hoverable class="!rounded-[2rem] border-amber-100 bg-amber-50/20 shadow-xl shadow-amber-200/20 p-7 group">
+        <div class="flex items-center gap-5">
+          <div class="w-14 h-14 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center">
+            <i class="pi pi-star text-2xl" :class="{ 'animate-pulse': rows.length > 0 }"></i>
+          </div>
+          <div>
+            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-amber-600/70 mb-1">Novos (Mês)</p>
+            <p class="text-3xl font-black text-amber-700 leading-none">{{ rows.slice(0, 5).length }}</p>
+          </div>
+        </div>
+      </Card>
+    </div>
+
+    <Card :shadow="true" class="!rounded-[3rem] overflow-hidden border-none shadow-2xl shadow-slate-200/60 bg-white">
+      
+      <header class="flex flex-col lg:flex-row items-center justify-between gap-6 p-10 border-b border-slate-50 bg-slate-50/30">
+        <div class="flex items-center gap-5">
+          <div class="w-16 h-16 rounded-[1.5rem] bg-white border border-slate-100 shadow-sm flex items-center justify-center text-slate-900">
+            <i class="pi pi-address-book text-2xl"></i>
+          </div>
+          <div>
+            <h2 class="text-2xl font-black tracking-tight text-slate-800 uppercase italic">Fornecedores</h2>
+            <div class="flex items-center gap-2 mt-1">
+              <span class="w-2 h-2 rounded-full bg-brand-primary animate-pulse"></span>
+              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gestão de Parceiros Comerciais</p>
+            </div>
           </div>
         </div>
 
-        <div class="flex items-center gap-3 w-full md:w-auto">
-          <div class="relative flex-1 md:w-96">
-            <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+        <div class="flex flex-wrap items-center gap-4 w-full lg:w-auto">
+          <div class="relative flex-1 min-w-[350px]">
+            <i class="pi pi-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"></i>
             <input 
               v-model="busca" 
               type="text" 
-              placeholder="BUSCAR POR RAZÃO, CNPJ OU CIDADE..."
-              class="w-full pl-10 pr-4 h-11 bg-[var(--bg-card)] border border-[var(--border-ui)] rounded-2xl text-xs font-bold focus:ring-2 focus:ring-brand-primary outline-none transition-all uppercase"
+              placeholder="Pesquisar por razão, cnpj ou cidade..."
+              class="w-full pl-14 pr-6 h-14 bg-white border border-slate-100 rounded-[1.25rem] text-sm font-bold focus:ring-4 focus:ring-brand-primary/5 focus:border-brand-primary outline-none transition-all shadow-inner uppercase"
             />
           </div>
           
-          <Button variant="primary" class="!h-11 !rounded-2xl !px-6 shadow-xl shadow-brand-primary/20" @click="router.push('/fornecedor/novo')">
-            <i class="pi pi-plus mr-2 text-xs"></i>
+          <Button 
+            variant="primary" 
+            class="!h-14 !rounded-[1.25rem] !px-8 shadow-2xl shadow-brand-primary/30 font-black uppercase tracking-widest text-[11px]" 
+            @click="router.push('/fornecedor/novo')"
+          >
+            <i class="pi pi-plus mr-3 text-xs"></i>
             Novo Fornecedor
           </Button>
         </div>
       </header>
 
-      <div class="p-4">
+      <div class="p-6">
         <Table
           :columns="columns"
           :rows="rowsFiltrados"
           :loading="loading"
-          empty-text="Nenhum fornecedor encontrado no sistema."
-          class="!border-none"
+          empty-text="Nenhum parceiro comercial encontrado."
+          class="premium-table"
         >
           <template #cell-razao_social="{ row }">
-            <div class="flex flex-col py-1">
-              <span class="text-[14px] font-black text-gray-900 leading-tight uppercase tracking-tight">
+            <div class="flex flex-col py-2">
+              <span class="text-[15px] font-black text-slate-800 leading-tight uppercase tracking-tight">
                 {{ row.razao_social }}
               </span>
-              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                {{ row.nome_fantasia || '—' }}
-              </span>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="text-[9px] font-black px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md uppercase tracking-tighter">
+                  {{ row.nome_fantasia || 'NOME FANTASIA NÃO DEFINIDO' }}
+                </span>
+              </div>
             </div>
           </template>
 
           <template #cell-cnpj="{ row }">
-            <span class="text-sm font-black text-slate-700">
-              {{ row.cnpj || '—' }}
-            </span>
+            <div class="flex items-center gap-2">
+               <div class="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+               <span class="text-sm font-black text-slate-600 tabular-nums">
+                 {{ row.cnpj || '—' }}
+               </span>
+            </div>
           </template>
 
           <template #cell-contato="{ row }">
-            <div class="flex flex-col py-1">
-              <span class="text-[12px] font-bold text-slate-600 leading-tight">
-                {{ row.email || '—' }}
+            <div class="flex flex-col">
+              <span class="text-[12px] font-bold text-slate-500 italic lowercase">
+                {{ row.email || 'sem e-mail' }}
               </span>
-              <span class="text-[10px] font-black text-brand-primary uppercase mt-1 tracking-tighter">
+              <span class="text-[11px] font-black text-brand-primary uppercase mt-1">
                 {{ row.whatsapp || row.telefone || '—' }}
               </span>
             </div>
           </template>
 
           <template #cell-comercial="{ row }">
-            <div class="flex flex-col py-1">
-              <span class="text-[11px] font-black text-slate-700 uppercase">
-                {{ row.forma_pagamento || '—' }}
+            <div class="flex flex-col bg-slate-50 p-3 rounded-2xl border border-slate-100/50">
+              <span class="text-[10px] font-black text-slate-700 uppercase leading-none mb-2">
+                {{ row.forma_pagamento || 'A COMBINAR' }}
               </span>
-              <div v-if="row.data_vencimento" class="flex items-center gap-1 mt-1">
-                <i class="pi pi-calendar text-[9px] text-amber-500"></i>
-                <span class="text-[10px] font-bold text-slate-400 uppercase">
-                  Dia {{ row.data_vencimento }}
+              <div v-if="row.data_vencimento" class="flex items-center gap-1.5">
+                <i class="pi pi-calendar-plus text-[10px] text-amber-500"></i>
+                <span class="text-[10px] font-black text-amber-600 uppercase">
+                  Vence todo dia {{ row.data_vencimento }}
                 </span>
               </div>
             </div>
           </template>
 
           <template #cell-acoes="{ row }">
-            <div class="flex justify-end gap-2">
+            <div class="flex justify-end gap-3">
               <button 
                 @click="editar(row.id)"
-                class="p-2.5 rounded-xl bg-slate-500/10 text-slate-500 hover:bg-brand-primary hover:text-white transition-all shadow-sm"
+                class="w-11 h-11 rounded-2xl bg-white border border-slate-100 text-slate-400 hover:bg-brand-primary hover:text-white hover:border-brand-primary hover:shadow-lg hover:shadow-brand-primary/30 transition-all flex items-center justify-center"
+                title="Editar Fornecedor"
               >
                 <i class="pi pi-pencil text-xs"></i>
               </button>
               <button 
                 @click="confirmarExclusao(row.id)"
-                class="p-2.5 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                class="w-11 h-11 rounded-2xl bg-white border border-slate-100 text-rose-400 hover:bg-rose-500 hover:text-white hover:border-rose-500 hover:shadow-lg hover:shadow-rose-500/30 transition-all flex items-center justify-center"
+                title="Excluir Registro"
               >
                 <i class="pi pi-trash text-xs"></i>
               </button>
@@ -153,6 +171,34 @@
     </Card>
   </div>
 </template>
+
+<style scoped>
+/* Estilização Premium da Tabela (Igual ao Dashboard Financeiro) */
+:deep(.premium-table) {
+  border-collapse: separate;
+  border-spacing: 0 12px;
+}
+:deep(.premium-table tr) { background: transparent; transition: all 0.3s ease; }
+:deep(.premium-table tr:hover) { transform: scale(1.005); }
+:deep(.premium-table th) {
+  text-transform: uppercase;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  color: #94a3b8;
+  padding: 1rem 1.5rem;
+  border: none;
+}
+:deep(.premium-table td) {
+  padding: 1.25rem 1.5rem;
+  background: white;
+  border-top: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
+}
+:deep(.premium-table td:first-child) { border-left: 1px solid #f1f5f9; border-radius: 1.5rem 0 0 1.5rem; }
+:deep(.premium-table td:last-child) { border-right: 1px solid #f1f5f9; border-radius: 0 1.5rem 1.5rem 0; }
+</style>
+
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'

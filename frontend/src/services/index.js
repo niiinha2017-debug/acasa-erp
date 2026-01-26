@@ -125,8 +125,22 @@ export const OrcamentosService = {
   atualizarItem: (id, itemId, item) => api.put(`/orcamentos/${id}/itens/${itemId}`, item),
   removerItem: (id, itemId) => api.delete(`/orcamentos/${id}/itens/${itemId}`),
 
+  // ===== ARQUIVOS =====
   listarArquivos: (id) => api.get(`/orcamentos/${id}/arquivos`),
-  abrirArquivoUrl: (id, arquivoId) => `${getBaseOriginFromApi(api)}/orcamentos/${id}/arquivos/${arquivoId}`,
+
+  abrirArquivo: async (orcamentoId, arquivoId) => {
+    const res = await api.get(`/orcamentos/${orcamentoId}/arquivos/${arquivoId}`, {
+      responseType: 'blob',
+    })
+
+    const type = res.headers?.['content-type'] || 'application/octet-stream'
+    const blob = new Blob([res.data], { type })
+    const url = URL.createObjectURL(blob)
+
+    window.open(url, '_blank', 'noopener,noreferrer')
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  },
+
   removerArquivo: (id, arquivoId) => api.delete(`/orcamentos/${id}/arquivos/${arquivoId}`),
 
   anexarArquivo: (id, arquivo) => {
@@ -142,37 +156,35 @@ export const OrcamentosService = {
     const res = await api.get(`/orcamentos/${id}/pdf`, { responseType: 'blob' })
     const blob = new Blob([res.data], { type: 'application/pdf' })
     const url = URL.createObjectURL(blob)
-    window.open(url, '_blank')
+    window.open(url, '_blank', 'noopener,noreferrer')
     setTimeout(() => URL.revokeObjectURL(url), 60_000)
   },
 }
 
 
-// --- SERVIÇO ÚNICO: PLANO DE CORTE ---
+
 export const PlanoCorteService = {
   listar: () => api.get('/plano-corte'),
   buscar: (id) => api.get(`/plano-corte/${id}`),
-  salvar: (id, dados) => id ? api.put(`/plano-corte/${id}`, dados) : api.post('/plano-corte', dados),
+  salvar: (id, dados) => (id ? api.put(`/plano-corte/${id}`, dados) : api.post('/plano-corte', dados)),
   remover: (id) => api.delete(`/plano-corte/${id}`),
 
   itens: {
     listar: (fornecedorId) => api.get('/plano-corte-itens', { params: { fornecedor_id: fornecedorId } }),
-    salvar: (id, dados) => id ? api.put(`/plano-corte-itens/${id}`, dados) : api.post('/plano-corte-itens', dados),
+    salvar: (id, dados) => (id ? api.put(`/plano-corte-itens/${id}`, dados) : api.post('/plano-corte-itens', dados)),
     remover: (id) => api.delete(`/plano-corte-itens/${id}`),
   },
-  // --- CONSUMO DE MATERIAIS ---
+
   consumos: {
     listar: () => api.get('/plano-corte-consumos'),
     buscar: (id) => api.get(`/plano-corte-consumos/${id}`),
     registrar: (dados) => api.post('/plano-corte-consumos', dados),
     remover: (id) => api.delete(`/plano-corte-consumos/${id}`),
 
-    enviarParaProducao(id) {
-  return api.post(`/plano-corte/${id}/enviar-producao`)
-}
-
+    enviarParaProducao: (id) => api.post(`/plano-corte/${id}/enviar-producao`),
   },
 }
+
 
 export const ProducaoService = {
   // --- AGENDA / FLUXO ---
@@ -230,32 +242,31 @@ export const UsuariosService = {
 export const VendaService = {
   listar: () => api.get('/vendas'),
   buscar: (id) => api.get(`/vendas/${id}`),
-  salvar: (id, dados) =>
-    id ? api.put(`/vendas/${id}`, dados) : api.post('/vendas', dados),
+  salvar: (id, dados) => (id ? api.put(`/vendas/${id}`, dados) : api.post('/vendas', dados)),
   remover: (id) => api.delete(`/vendas/${id}`),
-  atualizarStatus: (id, status) =>
-    api.put(`/vendas/${id}/status`, { status }),
+  atualizarStatus: (id, status) => api.put(`/vendas/${id}/status`, { status }),
 
-  enviarParaProducao(id) {
-  return api.post(`/vendas/${id}/enviar-producao`)
-},
+  enviarParaProducao: (id) => api.post(`/vendas/${id}/enviar-producao`),
 
-  uploadArquivos: (id, files = []) => {
+  atualizarItem: (vendaId, itemId, dados) =>
+    api.put(`/vendas/${vendaId}/itens/${itemId}`, dados),
+
+  uploadArquivo: (id, file) => {
     const fd = new FormData()
-    ;(files || []).forEach((f) => fd.append('files', f)) // backend pode esperar 'file'
-
-    return api.post(`/vendas/${id}/arquivos`, fd, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
+    fd.append('arquivo', file)
+    return api.post(`/vendas/${id}/arquivos`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
   },
-
   listarArquivos: (id) => api.get(`/vendas/${id}/arquivos`),
-  baixarArquivo: (id, arquivoId) =>
-    api.get(`/vendas/${id}/arquivos/${arquivoId}/download`, {
-      responseType: 'blob',
-    }),
-  removerArquivo: (id, arquivoId) =>
-    api.delete(`/vendas/${id}/arquivos/${arquivoId}`),
+  removerArquivo: (id, arquivoId) => api.delete(`/vendas/${id}/arquivos/${arquivoId}`),
+
+  abrirArquivo: async (vendaId, arquivoId) => {
+    const res = await api.get(`/vendas/${vendaId}/arquivos/${arquivoId}`, { responseType: 'blob' })
+    const type = res.headers?.['content-type'] || 'application/octet-stream'
+    const blob = new Blob([res.data], { type })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener,noreferrer')
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  },
 }
 
 

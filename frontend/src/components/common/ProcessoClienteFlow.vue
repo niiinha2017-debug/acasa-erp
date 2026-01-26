@@ -1,32 +1,41 @@
 <template>
-  <div class="space-y-4">
+  <div class="relative flex flex-col gap-0">
     <div
-      v-for="step in steps"
+      v-for="(step, index) in steps"
       :key="step.key"
-      class="flex items-start gap-4 transition-all duration-300"
+      class="relative flex items-start gap-4 pb-8 last:pb-0 group"
     >
+      <div 
+        v-if="index !== steps.length - 1"
+        class="absolute left-[6px] top-4 w-[2px] h-full bg-slate-100 dark:bg-slate-800 transition-colors duration-500"
+        :class="{ '!bg-brand-primary/30': isDone(step) || isCurrent(step) }"
+      ></div>
+
       <div
-        class="mt-1 h-3.5 w-3.5 rounded-full border-2 transition-colors duration-300"
+        class="relative z-10 mt-1.5 h-3.5 w-3.5 rounded-full border-2 transition-all duration-300"
         :class="dotClass(step)"
       ></div>
 
       <div class="min-w-0 flex-1">
         <div class="flex items-center justify-between gap-3">
-          <div class="text-[11px] font-black uppercase tracking-[0.15em] transition-colors duration-300" :class="textClass(step)">
+          <div 
+            class="text-[11px] font-bold uppercase tracking-wider transition-colors duration-300" 
+            :class="textClass(step)"
+          >
             {{ step.label }}
           </div>
 
           <div
             v-if="step.dataKey && datas?.[step.dataKey]"
-            class="text-[10px] font-bold text-slate-400 dark:text-slate-500 whitespace-nowrap"
+            class="text-[9px] font-semibold text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-2 py-0.5 rounded-md"
           >
             {{ formatDate(datas[step.dataKey]) }}
           </div>
         </div>
 
-        <div class="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-wider mt-0.5">
+        <div class="text-[10px] font-medium text-slate-400 dark:text-slate-600 uppercase tracking-tight mt-0.5">
           {{ step.fase }}
-          <span v-if="step.temTela === false" class="ml-2 opacity-50">• sem página</span>
+          <span v-if="step.temTela === false" class="ml-2 italic opacity-60">• offline</span>
         </div>
       </div>
     </div>
@@ -53,35 +62,20 @@ const idxAtual = computed(() => {
   return i < 0 ? 0 : i
 })
 
-function idxOf(step) {
-  return steps.value.findIndex(s => s.key === step.key)
-}
+const idxOf = (step) => steps.value.findIndex(s => s.key === step.key)
+const isDone = (step) => idxOf(step) < idxAtual.value
+const isCurrent = (step) => step.key === props.statusAtual
 
-function isDone(step) {
-  return idxOf(step) >= 0 && idxOf(step) < idxAtual.value
-}
-
-function isCurrent(step) {
-  return step.key === props.statusAtual
-}
-
-// CORES DOS MARCADORES ADAPTÁVEIS
 function dotClass(step) {
-  // Passo Atual: Azul Brand (Brilha no Dark)
-  if (isCurrent(step)) return 'bg-brand-primary border-brand-primary shadow-[0_0_10px_rgba(58,120,168,0.4)]'
-  
-  // Passo Concluído: Cor do texto principal (Preto no Light / Branco no Dark)
-  if (isDone(step)) return 'bg-[var(--text-main)] border-[var(--text-main)]'
-  
-  // Passo Pendente: Cor da borda do sistema
-  return 'bg-transparent border-[var(--border-ui)]'
+  if (isCurrent(step)) return 'bg-white dark:bg-slate-900 border-brand-primary shadow-[0_0_8px_rgba(var(--brand-primary-rgb),0.4)]'
+  if (isDone(step)) return 'bg-brand-primary border-brand-primary'
+  return 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
 }
 
-// CORES DO TEXTO ADAPTÁVEIS
 function textClass(step) {
-  if (isCurrent(step)) return 'text-brand-primary'
-  if (isDone(step)) return 'text-[var(--text-main)] opacity-90'
-  return 'text-slate-400 dark:text-slate-600'
+  if (isCurrent(step)) return 'text-slate-800 dark:text-slate-100'
+  if (isDone(step)) return 'text-slate-500 dark:text-slate-400'
+  return 'text-slate-300 dark:text-slate-600'
 }
 
 function formatDate(value) {

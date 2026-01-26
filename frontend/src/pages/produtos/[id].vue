@@ -1,96 +1,146 @@
 <template>
-  <Card :shadow="true">
-    <PageHeader
-      :title="isEdit ? 'Editar Produto' : 'Novo Produto'"
-      subtitle="Cadastro de produtos"
-      icon="pi pi-box"
-      :backTo="'/produtos'"
-    />
-
-    <div class="p-6 relative">
-      <Loading v-if="loading" />
-
-      <form v-else class="grid grid-cols-12 gap-4" @submit.prevent="salvar">
-        <!-- FORNECEDOR -->
-        <div class="col-span-12">
-          <SearchInput
-            v-model="form.fornecedor_id"
-            mode="select"
-            label="Fornecedor *"
-            :options="fornecedorOptions"
-            required
-          />
+  <div class="w-full max-w-[1200px] mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    
+    <Card :shadow="true" class="overflow-visible !rounded-[3rem] border-none shadow-[0_40px_80px_-15px_rgba(0,0,0,0.1)]">
+      <header class="flex flex-col md:flex-row items-center justify-between gap-6 p-10 border-b border-slate-50 bg-slate-50/50">
+        <div class="flex items-center gap-6">
+          <div class="w-16 h-16 rounded-[1.5rem] bg-slate-900 flex items-center justify-center text-white shadow-2xl rotate-3 hover:rotate-0 transition-all duration-500">
+            <i class="pi pi-box text-3xl"></i>
+          </div>
+          <div>
+            <h2 class="text-2xl font-black tracking-tighter text-slate-800 uppercase italic leading-none">
+              {{ isEdit ? 'Editar Produto' : 'Novo Produto' }}
+            </h2>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2">Cadastro de Insumos e Materiais</p>
+          </div>
         </div>
 
-        <!-- NOME / STATUS -->
-        <div class="col-span-12 md:col-span-8">
-          <Input v-model="form.nome_produto" label="Nome do Produto *" required />
+        <button 
+          @click="router.push('/produtos')" 
+          class="flex items-center gap-3 px-6 h-12 rounded-2xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-900 hover:text-white transition-all shadow-sm group"
+        >
+          <i class="pi pi-arrow-left text-[10px] group-hover:-translate-x-1 transition-transform"></i>
+          <span class="text-[10px] font-black uppercase tracking-widest">Lista de Produtos</span>
+        </button>
+      </header>
+
+      <div class="p-10 relative">
+        <div v-if="loading" class="py-20 flex flex-col items-center justify-center gap-4">
+          <div class="w-12 h-12 border-4 border-slate-100 border-t-slate-900 rounded-full animate-spin"></div>
+          <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carregando Dados...</p>
         </div>
 
-        <div class="col-span-12 md:col-span-4">
-          <SearchInput
-            v-model="form.status"
-            mode="select"
-            label="Status *"
-            :options="statusOptions"
-            required
-          />
-        </div>
+        <form v-else class="grid grid-cols-12 gap-8" @submit.prevent="salvar">
+          
+          <div class="col-span-12">
+            <h3 class="text-[11px] font-black uppercase tracking-[0.3em] text-emerald-600 mb-6 flex items-center gap-3">
+              <span class="w-10 h-[3px] bg-emerald-600 rounded-full"></span>
+              Identificação Básica
+            </h3>
+          </div>
 
-        <!-- MARCA / COR / MEDIDA -->
-        <div class="col-span-12 md:col-span-4">
-          <Input v-model="form.marca" label="Marca" />
-        </div>
+          <div class="col-span-12 md:col-span-8">
+            <SearchInput
+              v-model="form.fornecedor_id"
+              mode="select"
+              label="Fornecedor Principal *"
+              :options="fornecedorOptions"
+              required
+            />
+          </div>
 
-        <div class="col-span-12 md:col-span-4">
-          <Input v-model="form.cor" label="Cor" />
-        </div>
+          <div class="col-span-12 md:col-span-4">
+            <SearchInput
+              v-model="form.status"
+              mode="select"
+              label="Status do Cadastro *"
+              :options="statusOptions"
+              required
+            />
+          </div>
 
-        <div class="col-span-12 md:col-span-4">
-          <Input v-model="form.medida" label="Medida" />
-        </div>
+          <div class="col-span-12 md:col-span-9">
+            <Input v-model="form.nome_produto" label="Nome Descritivo do Produto *" placeholder="Ex: Chapa de MDF 18mm Branco" required />
+          </div>
 
-        <!-- UNIDADE -->
-        <div class="col-span-12 md:col-span-4">
-<SearchInput
-  v-model="form.unidade"
-  mode="select"
-  label="Unidade *"
-  :options="unidadesOptions"
-  required
-/>
+          <div class="col-span-12 md:col-span-3">
+            <SearchInput
+              v-model="form.unidade"
+              mode="select"
+              label="Unidade de Medida *"
+              :options="unidadesOptions"
+              required
+            />
+          </div>
 
-        </div>
+          <div class="col-span-12 mt-4">
+            <h3 class="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400 mb-6 flex items-center gap-3">
+              <span class="w-10 h-[1px] bg-slate-200 rounded-full"></span>
+              Atributos Técnicos
+            </h3>
+          </div>
 
-        <!-- QTD / VALOR UNIT / TOTAL -->
-        <div class="col-span-12 md:col-span-4">
-          <Input v-model="quantidadeInput" label="Quantidade *" inputmode="numeric" required />
-        </div>
+          <div class="col-span-12 md:col-span-4">
+            <Input v-model="form.marca" label="Marca / Fabricante" placeholder="Marca do material" />
+          </div>
 
-        <div class="col-span-12 md:col-span-4">
-          <Input v-model="valorUnitarioMask" label="Valor Unitário *" inputmode="numeric" required />
-        </div>
+          <div class="col-span-12 md:col-span-4">
+            <Input v-model="form.cor" label="Cor / Acabamento" placeholder="Ex: Carvalho Natural" />
+          </div>
 
-        <div class="col-span-12 md:col-span-4">
-          <Input :model-value="valorTotalMask" label="Valor Total" readonly />
-        </div>
+          <div class="col-span-12 md:col-span-4">
+            <Input v-model="form.medida" label="Dimensões / Espessura" placeholder="Ex: 2750x1840mm" />
+          </div>
 
-        <div class="col-span-12">
-          <div class="h-px w-full bg-gray-100"></div>
-        </div>
+          <div class="col-span-12 mt-8 bg-slate-50 rounded-[2.5rem] p-10 border border-slate-100">
+            <div class="grid grid-cols-12 gap-8">
+              <div class="col-span-12">
+                <h3 class="text-[11px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2">Valores e Quantidades</h3>
+                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic">Dados para controle de custos e saldo inicial</p>
+              </div>
 
-        <div class="col-span-12 flex items-center justify-end gap-3">
-          <Button variant="secondary" type="button" @click="router.push('/produtos')">
-            Cancelar
-          </Button>
+              <div class="col-span-12 md:col-span-4">
+                <Input v-model="quantidadeInput" label="Quantidade em Estoque" inputmode="numeric" required />
+              </div>
 
-          <Button variant="primary" type="submit" :loading="salvando">
-            {{ isEdit ? 'Salvar Alterações' : 'Salvar' }}
-          </Button>
-        </div>
-      </form>
-    </div>
-  </Card>
+              <div class="col-span-12 md:col-span-4">
+                <Input v-model="valorUnitarioMask" label="Valor de Custo (Unit.)" inputmode="numeric" required />
+              </div>
+
+              <div class="col-span-12 md:col-span-4">
+                <div class="flex flex-col justify-end h-full">
+                  <div class="h-14 px-6 bg-white border border-slate-200 rounded-2xl flex flex-col justify-center">
+                    <span class="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">Valor de Inventário Total</span>
+                    <span class="text-lg font-black text-slate-900 tabular-nums italic">{{ valorTotalMask }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-span-12 flex items-center justify-end gap-6 pt-10 mt-6 border-t border-slate-50">
+            <button 
+              type="button" 
+              @click="router.push('/produtos')"
+              class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-rose-500 transition-colors"
+            >
+              Descartar
+            </button>
+
+            <Button 
+              variant="primary" 
+              type="submit" 
+              :loading="salvando"
+              class="!h-16 !px-12 !rounded-2xl shadow-2xl shadow-slate-900/20 bg-slate-900 hover:bg-black font-black text-[11px] uppercase tracking-[0.2em]"
+            >
+              <i class="pi pi-check-circle mr-3"></i>
+              {{ isEdit ? 'Salvar Alterações' : 'Finalizar Cadastro' }}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </Card>
+  </div>
 </template>
 
 <script setup>

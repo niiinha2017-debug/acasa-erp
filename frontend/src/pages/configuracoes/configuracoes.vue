@@ -1,137 +1,217 @@
 <template>
-  <div class="space-y-6 pb-10">
+  <div class="space-y-8 pb-12 animate-in fade-in duration-700">
     <PageHeader
       title="Configurações da Empresa"
-      subtitle="Gestão de dados fiscais, bancários e documentos oficiais."
+      subtitle="Gestão de dados fiscais, bancários e identidade da marca."
       icon="pi pi-building"
       :showBack="false"
-      iconClass="bg-gray-900 text-white shadow-lg"
+      iconClass="bg-slate-900 text-white shadow-2xl shadow-slate-200"
     >
       <template #actions>
-        <div class="flex items-center gap-3">
-          <Button variant="secondary" @click="gerarPdfDados" class="!rounded-2xl shadow-sm">
-            <i class="pi pi-file-pdf mr-2 text-xs"></i>
-            Exportar Dados
+        <div class="flex items-center gap-4">
+          <Button 
+            variant="secondary" 
+            @click="gerarPdfDados" 
+            class="!rounded-2xl !h-12 border-slate-200 hover:bg-slate-50 transition-all font-bold text-[11px] uppercase tracking-widest"
+          >
+            <i class="pi pi-file-pdf mr-2"></i>
+            Exportar
           </Button>
           
-          <Button variant="primary" :loading="salvando" @click="salvar" class="!rounded-2xl !px-8 shadow-xl shadow-gray-900/10">
-            <i class="pi pi-save mr-2 text-xs"></i>
+          <Button 
+            variant="primary" 
+            :loading="salvando" 
+            @click="salvar" 
+            class="!rounded-2xl !h-12 !px-10 shadow-xl shadow-brand-primary/20 font-black text-[11px] uppercase tracking-[0.15em] hover:scale-[1.02] active:scale-95 transition-all"
+          >
+            <i class="pi pi-save mr-2"></i>
             Salvar Alterações
           </Button>
         </div>
       </template>
     </PageHeader>
 
-    <Card :shadow="true" class="mt-8">
-      <div class="p-8 grid grid-cols-12 gap-8">
+    <Card :shadow="true" class="!rounded-[2.5rem] border-none shadow-2xl shadow-slate-200/50 bg-white overflow-hidden">
+      <div class="grid grid-cols-12 gap-0">
         
-        <div class="col-span-12 lg:col-span-3 flex flex-col border-b lg:border-b-0 lg:border-r border-gray-100 dark:border-slate-800 pb-6 lg:pb-0 lg:pr-8">
-          
-          <div class="relative self-center mb-8">
-            <div
-              class="w-40 h-40 rounded-[2rem] flex items-center justify-center overflow-hidden bg-white dark:bg-slate-900 shadow-inner border-2 border-dashed border-gray-200 dark:border-slate-700 hover:border-brand-primary cursor-pointer transition-all"
-              @click="fileInput?.click()"
-            >
-              <img v-if="form.logo_url" :src="form.logo_url" class="object-contain w-full h-full p-4" />
-              <div v-else class="flex flex-col items-center">
-                <i class="pi pi-cloud-upload text-4xl text-gray-300"></i>
-                <span class="text-[10px] font-bold text-gray-400 mt-2 uppercase">Logo</span>
+        <div class="col-span-12 lg:col-span-3 bg-slate-50/50 p-8 border-b lg:border-b-0 lg:border-r border-slate-100">
+          <div class="sticky top-8">
+            <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-8">Identidade Visual</h3>
+            
+            <div class="relative flex flex-col items-center group">
+              <div
+                class="w-48 h-48 rounded-[2.5rem] flex items-center justify-center overflow-hidden bg-white shadow-xl shadow-slate-200/60 border-2 border-dashed border-slate-200 group-hover:border-brand-primary transition-all cursor-pointer relative"
+                @click="fileInput?.click()"
+              >
+                <img v-if="form.logo_url" :src="form.logo_url" class="object-contain w-full h-full p-6 transition-transform group-hover:scale-110" />
+                <div v-else class="flex flex-col items-center gap-3">
+                  <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400">
+                    <i class="pi pi-cloud-upload text-xl"></i>
+                  </div>
+                  <span class="text-[10px] font-black text-slate-400 uppercase">Subir Logo</span>
+                </div>
               </div>
-            </div>
-            <button 
-              v-if="form.logo_url"
-              type="button"
-              @click.stop="removerLogo" 
-              class="absolute -top-2 -right-2 bg-rose-500 text-white shadow-xl rounded-full w-10 h-10 flex items-center justify-center hover:bg-rose-600 transition-all z-[50]"
-            >
-              <i class="pi pi-trash text-sm"></i>
-            </button>
-            <input type="file" ref="fileInput" class="hidden" accept="image/*" @change="handleFileUpload" />
-          </div>
 
-          <div class="space-y-4">
-            <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-between">
-              Documentos
-              <label class="cursor-pointer text-brand-primary hover:underline">
-                Anexar <input type="file" class="hidden" @change="handleDocumentUpload" />
-              </label>
-            </h3>
-            <div v-if="form.documentos.length === 0" class="text-center p-4 border border-dashed border-gray-100 dark:border-slate-800 rounded-xl">
-              <p class="text-[10px] text-slate-400">Nenhum documento anexado.</p>
-            </div>
-            <div v-for="(doc, index) in form.documentos" :key="index" class="flex items-center justify-between p-2 bg-gray-50 dark:bg-slate-900 rounded-lg group">
-              <div class="flex items-center gap-2 overflow-hidden">
-                <i class="pi pi-file-pdf text-rose-500"></i>
-                <span class="text-[10px] font-bold truncate text-slate-600 dark:text-slate-400">{{ doc.nome }}</span>
-              </div>
-              <button @click="removerDocumento(index)" class="opacity-0 group-hover:opacity-100 text-rose-500 transition-opacity">
-                <i class="pi pi-times-circle"></i>
+              <button 
+                v-if="form.logo_url"
+                type="button"
+                @click.stop="removerLogo" 
+                class="absolute -top-2 -right-2 bg-white text-rose-500 shadow-xl rounded-2xl w-11 h-11 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all z-10 border border-rose-100"
+              >
+                <i class="pi pi-trash"></i>
               </button>
+              
+              <p class="mt-4 text-[9px] font-bold text-slate-400 text-center uppercase tracking-tighter">
+                Recomendado: PNG ou SVG <br> (Fundo transparente)
+              </p>
+              <input type="file" ref="fileInput" class="hidden" accept="image/*" @change="handleFileUpload" />
+            </div>
+
+            <div class="mt-12 space-y-4">
+              <div class="flex items-center justify-between">
+                <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Documentos Legais</h3>
+                <label class="cursor-pointer text-[10px] font-black text-brand-primary hover:text-brand-dark uppercase tracking-widest bg-brand-primary/5 px-3 py-1 rounded-full">
+                  Anexar <input type="file" class="hidden" @change="handleDocumentUpload" />
+                </label>
+              </div>
+
+              <div class="space-y-2">
+                <div v-if="form.documentos.length === 0" class="text-center py-8 px-4 border border-dashed border-slate-200 rounded-[1.5rem] bg-white/50">
+                  <i class="pi pi-folder-open text-slate-200 text-2xl mb-2"></i>
+                  <p class="text-[9px] font-bold text-slate-400 uppercase tracking-tight">Nenhum anexo</p>
+                </div>
+
+                <div v-for="(doc, index) in form.documentos" :key="index" class="group flex items-center justify-between p-3 bg-white border border-slate-100 rounded-2xl hover:border-brand-primary/30 hover:shadow-md transition-all">
+                  <div class="flex items-center gap-3 overflow-hidden">
+                    <div class="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center text-rose-500">
+                      <i class="pi pi-file-pdf"></i>
+                    </div>
+                    <span class="text-[10px] font-black truncate text-slate-600 uppercase tracking-tighter">{{ doc.nome }}</span>
+                  </div>
+                  <button @click="removerDocumento(index)" class="text-slate-300 hover:text-rose-500 transition-colors px-2">
+                    <i class="pi pi-times"></i>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="col-span-12 lg:col-span-9 space-y-8">
+        <div class="col-span-12 lg:col-span-9 p-8 lg:p-12 space-y-12">
           
-          <div>
-            <h3 class="text-[11px] font-black text-brand-primary uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-              <span class="w-4 h-[2px] bg-brand-primary"></span>
-              Identificação Jurídica
-            </h3>
-            <div class="grid grid-cols-12 gap-4">
-              <Input v-model="form.razao_social" label="Razão Social" class="col-span-12 md:col-span-8" />
-              <Input v-model="form.nome_fantasia" label="Nome Fantasia" class="col-span-12 md:col-span-4" />
-              <Input v-model="cnpjMask" label="CNPJ" class="col-span-12 md:col-span-6" @blur="onCnpjBlur" />
-              <Input v-model="ieMask" label="Inscrição Estadual" class="col-span-12 md:col-span-6" />
+          <section>
+            <div class="flex items-center gap-3 mb-8">
+              <div class="w-1 h-6 bg-brand-primary rounded-full"></div>
+              <h3 class="text-sm font-black text-slate-800 uppercase tracking-[0.15em]">Dados Jurídicos</h3>
             </div>
-          </div>
+            <div class="grid grid-cols-12 gap-6">
+              <Input v-model="form.razao_social" label="Razão Social" placeholder="Ex: Nome da Empresa LTDA" class="col-span-12 md:col-span-8" />
+              <Input v-model="form.nome_fantasia" label="Nome Fantasia" placeholder="Nome Comercial" class="col-span-12 md:col-span-4" />
+              <Input v-model="cnpjMask" label="CNPJ" placeholder="00.000.000/0000-00" class="col-span-12 md:col-span-6" @blur="onCnpjBlur" />
+              <Input v-model="ieMask" label="Inscrição Estadual" placeholder="Isento ou Número" class="col-span-12 md:col-span-6" />
+            </div>
+          </section>
 
-          <div>
-            <h3 class="text-[11px] font-black text-brand-primary uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-              <span class="w-4 h-[2px] bg-brand-primary"></span>
-              Localização e Contato
-            </h3>
-            <div class="grid grid-cols-12 gap-4">
+          <section>
+            <div class="flex items-center gap-3 mb-8">
+              <div class="w-1 h-6 bg-brand-primary rounded-full"></div>
+              <h3 class="text-sm font-black text-slate-800 uppercase tracking-[0.15em]">Sede Administrativa</h3>
+            </div>
+            <div class="grid grid-cols-12 gap-6">
               <Input v-model="cepMask" label="CEP" class="col-span-12 md:col-span-3" @blur="onCepBlur" />
-              <Input v-model="form.logradouro" label="Endereço Completo" class="col-span-12 md:col-span-7" />
+              <Input v-model="form.logradouro" label="Endereço" class="col-span-12 md:col-span-7" />
               <Input v-model="form.numero" label="Nº" class="col-span-12 md:col-span-2" />
               <Input v-model="form.bairro" label="Bairro" class="col-span-12 md:col-span-5" />
               <Input v-model="form.cidade" label="Cidade" class="col-span-12 md:col-span-5" />
               <Input v-model="form.uf" label="UF" class="col-span-12 md:col-span-2" maxlength="2" />
-              <Input v-model="form.email" label="E-mail Administrativo" class="col-span-12 md:col-span-6" />
-              <Input v-model="telefoneMask" label="WhatsApp / Fone" class="col-span-12 md:col-span-6" />
+              <Input v-model="form.email" label="E-mail de Contato" icon="pi pi-envelope" class="col-span-12 md:col-span-6" />
+              <Input v-model="telefoneMask" label="WhatsApp Business" icon="pi pi-whatsapp" class="col-span-12 md:col-span-6" />
             </div>
-          </div>
+          </section>
 
-<div class="mt-8">
-  <h3 class="text-[11px] font-black text-brand-primary uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-    <span class="w-4 h-[2px] bg-brand-primary"></span>
-    Dados Bancários e Pix
-  </h3>
+<section class="mt-12">
+  <div class="flex items-center gap-3 mb-8">
+    <div class="w-1.5 h-6 bg-brand-primary rounded-full"></div>
+    <h3 class="text-sm font-black text-slate-800 uppercase tracking-[0.2em]">Dados Bancários & Recebimento</h3>
+  </div>
   
-  <div class="grid grid-cols-12 gap-4 bg-slate-900/40 p-6 rounded-2xl border border-slate-800/60 shadow-inner">
-    <Input v-model="form.banco_titular" label="Titular da Conta" class="col-span-12 md:col-span-6" />
-    <Input v-model="form.banco_nome" label="Banco" class="col-span-12 md:col-span-6" />
-    <Input v-model="form.banco_agencia" label="Agência" class="col-span-12 md:col-span-3" />
-    <Input v-model="form.banco_conta" label="Conta Corrente" class="col-span-12 md:col-span-4" />
+  <div class="grid grid-cols-12 gap-x-6 gap-y-8 p-8 rounded-[2rem] border border-slate-100 bg-slate-50/30">
+    
+    <div class="col-span-12 md:col-span-6">
+       <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Titular da Conta</label>
+       <Input v-model="form.banco_titular" placeholder="Nome completo do titular" class="premium-input" />
+    </div>
+
+    <div class="col-span-12 md:col-span-6">
+       <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Instituição Bancária</label>
+       <Input v-model="form.banco_nome" placeholder="Ex: Banco do Brasil, Itaú..." class="premium-input" />
+    </div>
+
+    <div class="col-span-12 md:col-span-3">
+       <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Agência</label>
+       <Input v-model="form.banco_agencia" placeholder="0000" class="premium-input" />
+    </div>
+
+    <div class="col-span-12 md:col-span-4">
+       <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Número da Conta</label>
+       <Input v-model="form.banco_conta" placeholder="00000-0" class="premium-input" />
+    </div>
     
     <div class="col-span-12 md:col-span-5 relative">
-      <Input v-model="form.pix" label="Chave Pix" placeholder="CNPJ, E-mail ou Celular" />
-      <button 
-        v-if="form.pix"
-        type="button"
-        @click="copiarPix"
-        class="absolute right-2 bottom-2 p-2 text-brand-primary hover:bg-brand-primary/10 rounded-lg transition-all"
-      >
-        <i class="pi pi-copy text-xs"></i>
-      </button>
+      <label class="text-[10px] font-black text-brand-primary uppercase tracking-widest mb-2 block ml-1">Chave Pix Principal</label>
+      <div class="relative group">
+        <Input 
+          v-model="form.pix" 
+          placeholder="CNPJ, E-mail ou Celular" 
+          class="premium-input !border-brand-primary/20 focus:!border-brand-primary pr-12" 
+        />
+        <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+           <i class="pi pi-qrcode text-slate-300 group-focus-within:text-brand-primary transition-colors"></i>
+           <button 
+             type="button"
+             @click="copiarPix"
+             class="p-2 text-slate-400 hover:text-brand-primary hover:bg-brand-primary/10 rounded-xl transition-all"
+           >
+             <i class="pi pi-copy text-sm"></i>
+           </button>
+        </div>
+      </div>
     </div>
   </div>
-</div>
+</section>
 
-        </div> </div> </Card>
+        </div>
+      </div>
+    </Card>
   </div>
 </template>
+
+<style scoped>
+/* Estilo para os inputs dentro da área escura */
+:deep(.premium-dark-input) {
+  /* Fundo branco com leve transparência para não "estourar" tanto */
+  background-color: rgba(255, 255, 255, 0.98) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 1rem !important; /* Bordas mais arredondadas */
+  height: 3.5rem !important; /* Um pouco mais alto para parecer mais "luxuoso" */
+  transition: all 0.3s ease;
+  font-weight: 700;
+  color: #1e293b !important;
+}
+
+:deep(.premium-dark-input:focus) {
+  background-color: #ffffff !important;
+  border-color: var(--brand-primary) !important;
+  box-shadow: 0 0 0 4px rgba(var(--brand-primary-rgb), 0.1) !important;
+}
+
+/* Ajuste do placeholder para os inputs dark */
+:deep(.premium-dark-input::placeholder) {
+  color: #94a3b8 !important;
+  font-weight: 500;
+  text-transform: lowercase;
+}
+</style>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
@@ -159,10 +239,10 @@ const form = ref({
   telefone: '',
   logo_url: '',
   // Campos bancários e Pix
-  banco_titular: 'Gustavo Costa de Souza',
+  banco_titular: '',
   banco_nome: '',
-  banco_agencia: '0782',
-  banco_conta: '130012271',
+  banco_agencia: '',
+  banco_conta: '',
   pix: '', 
   documentos: []
 })

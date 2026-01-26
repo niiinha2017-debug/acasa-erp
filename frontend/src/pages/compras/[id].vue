@@ -16,7 +16,6 @@
       </div>
 
       <form v-else class="space-y-8" @submit.prevent>
-        <!-- 01 -->
         <section class="space-y-4">
           <div class="flex items-center gap-2">
             <span class="text-[10px] font-black uppercase tracking-[0.2em] text-brand-primary">
@@ -27,7 +26,7 @@
 
           <div class="grid grid-cols-12 gap-4 items-end">
             <div class="col-span-12 md:col-span-4">
-              <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">
+              <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 ml-1">
                 Origem do Gasto
               </label>
 
@@ -35,23 +34,21 @@
                 <Button
                   type="button"
                   variant="secondary"
-                  size="md"
-                  class="flex-1 justify-center transition-all"
+                  class="flex-1 justify-center transition-all !h-12 !rounded-xl"
                   :class="tipoCompra === 'INSUMOS' ? 'ring-2 ring-brand-primary bg-brand-primary/10' : ''"
                   @click="tipoCompra = 'INSUMOS'"
                 >
-                  <span class="text-xs font-black uppercase">Estoque</span>
+                  <span class="text-[10px] font-black uppercase">Estoque</span>
                 </Button>
 
                 <Button
                   type="button"
                   variant="secondary"
-                  size="md"
-                  class="flex-1 justify-center transition-all"
+                  class="flex-1 justify-center transition-all !h-12 !rounded-xl"
                   :class="tipoCompra === 'CLIENTE_AMBIENTE' ? 'ring-2 ring-brand-primary bg-brand-primary/10' : ''"
                   @click="tipoCompra = 'CLIENTE_AMBIENTE'"
                 >
-                  <span class="text-xs font-black uppercase">Venda</span>
+                  <span class="text-[10px] font-black uppercase">Venda</span>
                 </Button>
               </div>
             </div>
@@ -63,7 +60,7 @@
               label="Fornecedor *"
               :options="fornecedorOptions"
               required
-              placeholder="Selecione o fornecedor..."
+              placeholder="Para quem você está comprando?"
             />
 
             <Input
@@ -76,10 +73,7 @@
           </div>
         </section>
 
-        <div class="h-px bg-[var(--border-ui)]"></div>
-
-        <!-- 02 -->
-        <section v-if="tipoCompra === 'CLIENTE_AMBIENTE'" class="space-y-4">
+        <section v-if="tipoCompra === 'CLIENTE_AMBIENTE'" class="space-y-4 animate-in fade-in slide-in-from-top-2">
           <div class="flex items-center gap-2">
             <span class="text-[10px] font-black uppercase tracking-[0.2em] text-brand-primary">
               02. Cliente x Ambiente
@@ -95,13 +89,13 @@
               label="Venda / Cliente Relacionado *"
               :options="vendaOptions"
               required
-              placeholder="Selecione a venda para rateio..."
+              placeholder="Selecione a venda para descontar do lucro..."
             />
 
             <div class="col-span-12 md:col-span-4">
-              <div class="rounded-2xl border border-brand-primary/20 bg-brand-primary/5 p-4">
-                <p class="text-[9px] font-black uppercase tracking-widest text-brand-primary">Informativo</p>
-                <p class="mt-1 text-xs font-semibold text-[var(--text-main)] opacity-70 leading-relaxed">
+              <div class="rounded-2xl border border-brand-primary/20 bg-brand-primary/5 p-4 flex items-start gap-3">
+                <i class="pi pi-info-circle text-brand-primary mt-0.5"></i>
+                <p class="text-[11px] font-semibold text-slate-600 leading-relaxed">
                   O valor desta compra será debitado diretamente no lucro da venda selecionada.
                 </p>
               </div>
@@ -109,9 +103,6 @@
           </div>
         </section>
 
-        <div v-if="tipoCompra === 'CLIENTE_AMBIENTE'" class="h-px bg-[var(--border-ui)]"></div>
-
-        <!-- 03 -->
         <section class="space-y-4">
           <div class="flex flex-wrap items-end justify-between gap-3">
             <div class="flex items-center gap-2 flex-1">
@@ -125,16 +116,16 @@
               variant="ghost"
               size="sm"
               type="button"
-              class="text-[10px] font-bold uppercase tracking-wider"
+              class="text-[10px] font-black uppercase tracking-widest hover:bg-brand-primary/5 text-brand-primary"
               :disabled="!fornecedorSelecionado"
               @click="abrirModalProduto"
             >
-              <i class="pi pi-plus mr-2"></i>
+              <i class="pi pi-plus-circle mr-2"></i>
               Produto não cadastrado?
             </Button>
           </div>
 
-          <div class="grid grid-cols-12 gap-4 p-5 rounded-3xl border border-[var(--border-ui)] bg-[var(--bg-page)]/50 items-end shadow-inner">
+          <div class="grid grid-cols-12 gap-4 p-6 rounded-[2rem] border border-[var(--border-ui)] bg-slate-50/50 items-end shadow-inner">
             <SearchInput
               class="col-span-12 md:col-span-5"
               :key="itemNovoKey"
@@ -143,15 +134,16 @@
               label="Buscar Produto *"
               :options="produtoOptions"
               @update:modelValue="onSelecionarProdutoNovo"
-              placeholder="Digite e selecione..."
+              placeholder="Pesquise por nome, marca ou código..."
               required
             />
 
             <Input
               class="col-span-12 md:col-span-2"
               v-model="itemNovo.quantidade"
-              label="Quantidade *"
+              label="Qtd *"
               type="number"
+              placeholder="0"
               required
             />
 
@@ -159,51 +151,42 @@
               class="col-span-12 md:col-span-3"
               v-model="itemNovo.valorUnitarioMask"
               label="Valor Unitário *"
-              placeholder="0,00"
+              placeholder="R$ 0,00"
               required
               @input="itemNovo.valorUnitarioMask = maskMoneyBR($event.target.value)"
             />
 
-            <Input
-              class="col-span-12 md:col-span-2"
-              :modelValue="subtotalNovoMask"
-              label="Subtotal"
-              readonly
-            />
+            <div class="col-span-12 md:col-span-2">
+              <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Subtotal</label>
+              <div class="h-14 flex items-center px-4 rounded-2xl bg-white border border-slate-200 font-black text-slate-700 shadow-sm text-sm">
+                {{ subtotalNovoMask }}
+              </div>
+            </div>
 
             <div class="col-span-12">
               <Button
                 variant="primary"
                 size="lg"
-                class="w-full shadow-lg shadow-brand-primary/10"
+                class="w-full h-14 !rounded-2xl shadow-xl shadow-brand-primary/20"
                 type="button"
                 @click="registrarItemNovo"
               >
                 <i class="pi pi-plus-circle mr-2 text-xs"></i>
-                Adicionar Item à Nota
+                ADICIONAR ITEM À NOTA
               </Button>
             </div>
           </div>
 
-          <div
-            v-if="itens.length > 0"
-            class="rounded-3xl border border-[var(--border-ui)] overflow-hidden bg-[var(--bg-card)] shadow-sm"
-          >
+          <div v-if="itens.length > 0" class="rounded-3xl border border-[var(--border-ui)] overflow-hidden bg-white shadow-sm">
             <Table :columns="columnsItens" :rows="itens" boxed>
               <template #cell-nome_produto="{ row }">
                 <div class="flex flex-col py-2">
-                  <span class="font-black text-[var(--text-main)] uppercase text-xs">{{ row.nome_produto }}</span>
+                  <span class="font-black text-slate-700 uppercase text-xs">{{ row.nome_produto }}</span>
                   <div class="flex gap-1.5 mt-1.5">
-                    <span
-                      v-if="row.marca"
-                      class="text-[8px] bg-slate-800 text-white px-2 py-0.5 rounded-full uppercase font-black"
-                    >
+                    <span v-if="row.marca" class="text-[8px] bg-slate-800 text-white px-2 py-0.5 rounded-full uppercase font-black">
                       {{ row.marca }}
                     </span>
-                    <span
-                      v-if="row.unidade"
-                      class="text-[8px] bg-[var(--bg-page)] text-slate-500 px-2 py-0.5 rounded-full uppercase font-black border border-[var(--border-ui)]"
-                    >
+                    <span v-if="row.unidade" class="text-[8px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full uppercase font-black border border-slate-200">
                       {{ row.unidade }}
                     </span>
                   </div>
@@ -217,35 +200,29 @@
               </template>
 
               <template #cell-valor_total="{ value }">
-                <span class="text-sm font-black text-[var(--text-main)]">
+                <span class="text-sm font-black text-slate-800">
                   R$ {{ Number(value).toLocaleString('pt-br', { minimumFractionDigits: 2 }) }}
                 </span>
               </template>
 
               <template #cell-acoes="{ row }">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  class="text-danger hover:bg-danger/10"
-                  @click="removerItemPorKey(row._key)"
-                >
+                <button @click="removerItemPorKey(row._key)" class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all">
                   <i class="pi pi-trash"></i>
-                </Button>
+                </button>
               </template>
             </Table>
 
-            <div class="flex items-center justify-between p-5 bg-slate-950 text-white">
+            <div class="flex items-center justify-between p-6 bg-slate-900 text-white">
               <div class="flex items-center gap-3">
-                <div class="p-2 bg-white/5 rounded-lg text-brand-primary border border-white/10">
-                  <i class="pi pi-calculator"></i>
+                <div class="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-brand-primary border border-white/10">
+                  <i class="pi pi-calculator text-lg"></i>
                 </div>
-                <span class="text-[10px] uppercase font-black tracking-widest text-slate-400">Resumo da Nota</span>
+                <span class="text-[10px] uppercase font-black tracking-[0.2em] text-slate-400">Total da Compra</span>
               </div>
 
               <div class="text-right">
-                <p class="text-[10px] uppercase font-bold text-brand-primary/80">Valor Geral</p>
-                <p class="text-2xl font-black tabular-nums">
+                <p class="text-[10px] uppercase font-bold text-brand-primary/80 mb-1">Valor Geral</p>
+                <p class="text-3xl font-black tabular-nums">
                   R$ {{ totalCalculado.toLocaleString('pt-br', { minimumFractionDigits: 2 }) }}
                 </p>
               </div>
@@ -255,9 +232,9 @@
       </form>
     </div>
 
-    <FormActions class="px-6 pb-6">
+    <FormActions class="px-6 pb-8">
       <template #left>
-        <Button variant="secondary" type="button" @click="router.back()">Descartar</Button>
+        <Button variant="secondary" class="!rounded-xl" type="button" @click="router.back()">Descartar</Button>
       </template>
 
       <template #right>
@@ -265,54 +242,61 @@
           v-if="isEdit"
           variant="ghost"
           type="button"
-          class="text-danger mr-2"
+          class="text-red-500 hover:bg-red-50 !rounded-xl mr-2"
           :loading="excluindo"
           @click="excluirCompra"
         >
           Excluir Registro
         </Button>
 
-        <Button variant="primary" type="button" :loading="salvando" @click="salvar">
+        <Button variant="primary" class="!rounded-xl !px-10 shadow-xl shadow-brand-primary/20" type="button" :loading="salvando" @click="salvar">
           {{ isEdit ? 'Atualizar Compra' : 'Confirmar e Salvar' }}
         </Button>
       </template>
     </FormActions>
 
-    <!-- MODAL PRODUTO INLINE -->
     <Transition name="fade">
       <div
         v-if="modalProdutoOpen"
         class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md"
         @click.self="fecharModalProduto()"
       >
-        <div class="w-full max-w-3xl bg-[var(--bg-card)] rounded-[2.5rem] border border-[var(--border-ui)] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-          <header class="flex items-start justify-between p-8 border-b border-[var(--border-ui)] bg-slate-500/5">
-            <div>
-              <h3 class="text-xl font-black text-[var(--text-main)] uppercase tracking-tight">Novo Produto</h3>
-              <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Cadastro Rápido</p>
+        <div class="w-full max-w-2xl bg-white rounded-[3rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-white/20">
+          <header class="p-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-2xl bg-brand-primary text-white flex items-center justify-center shadow-lg shadow-brand-primary/30 rotate-3">
+                <i class="pi pi-box text-xl"></i>
+              </div>
+              <div>
+                <h3 class="text-xl font-black text-slate-800 uppercase tracking-tight">Novo Produto</h3>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Cadastro Express</p>
+              </div>
             </div>
-            <button
-              @click="fecharModalProduto()"
-              class="w-10 h-10 flex items-center justify-center rounded-2xl bg-[var(--bg-card)] border border-[var(--border-ui)] text-slate-400 hover:text-red-500 transition-all"
-            >
+            <button @click="fecharModalProduto()" class="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 text-slate-400 hover:text-red-500 transition-all">
               <i class="pi pi-times"></i>
             </button>
           </header>
 
           <div class="p-10">
-            <form class="grid grid-cols-12 gap-5" @submit.prevent="salvarProduto">
+            <form class="grid grid-cols-12 gap-6" @submit.prevent="salvarProduto">
               <div class="col-span-12">
                 <SearchInput
                   v-model="modalProduto.form.fornecedor_id"
-                  label="Fornecedor *"
+                  label="Fornecedor Vinculado *"
                   mode="select"
                   :options="fornecedorOptions"
+                  placeholder="Qual fornecedor vende este item?"
                   required
                 />
               </div>
 
               <div class="col-span-12 md:col-span-8">
-                <Input v-model="modalProduto.form.nome_produto" label="Nome do Produto *" required />
+                <Input 
+                    v-model="modalProduto.form.nome_produto" 
+                    label="Nome do Produto *" 
+                    placeholder="Ex: Porcelanato Polido 60x60"
+                    required 
+                />
               </div>
 
               <div class="col-span-12 md:col-span-4">
@@ -321,23 +305,24 @@
                   label="Unidade *"
                   mode="select"
                   :options="unidadesOptions"
+                  placeholder="UN, M2..."
                   required
                 />
               </div>
 
               <div class="col-span-12 md:col-span-6">
-                <Input v-model="modalProduto.form.marca" label="Marca" />
+                <Input v-model="modalProduto.form.marca" label="Marca" placeholder="Ex: Portobello" />
               </div>
               <div class="col-span-12 md:col-span-3">
-                <Input v-model="modalProduto.form.cor" label="Cor" />
+                <Input v-model="modalProduto.form.cor" label="Cor" placeholder="Ex: Gelo" />
               </div>
               <div class="col-span-12 md:col-span-3">
-                <Input v-model="modalProduto.form.medida" label="Medida" />
+                <Input v-model="modalProduto.form.medida" label="Medida" placeholder="Ex: 60x60" />
               </div>
 
-              <div class="col-span-12 flex justify-end gap-3 pt-8 border-t border-[var(--border-ui)] mt-4">
-                <Button variant="secondary" type="button" @click="fecharModalProduto()">Cancelar</Button>
-                <Button variant="primary" type="submit" :loading="modalProduto.salvando" class="!px-8">
+              <div class="col-span-12 flex justify-end gap-3 pt-8 border-t border-slate-100 mt-4">
+                <Button variant="secondary" type="button" @click="fecharModalProduto()" class="!rounded-xl">Cancelar</Button>
+                <Button variant="primary" type="submit" :loading="modalProduto.salvando" class="!px-10 !rounded-xl shadow-xl shadow-brand-primary/20">
                   Cadastrar e Usar
                 </Button>
               </div>

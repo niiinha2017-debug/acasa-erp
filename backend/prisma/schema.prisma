@@ -116,7 +116,7 @@ model Cliente {
   @@unique([email])
   @@index([indicacao_id])
   @@map("clientes")
-}
+ }
 
 model orcamentos {
   id Int @id @default(autoincrement())
@@ -139,7 +139,7 @@ model orcamentos {
 
   @@index([cliente_id])
   @@map("orcamentos")
-}
+ }
 
 model orcamento_itens {
   id           Int        @id @default(autoincrement())
@@ -155,7 +155,7 @@ model orcamento_itens {
   criado_em DateTime @default(now())
 
   @@map("orcamento_itens")
-}
+ }
 
 model orcamento_arquivos {
   id           Int        @id @default(autoincrement())
@@ -170,7 +170,7 @@ model orcamento_arquivos {
   criado_em DateTime @default(now())
 
   @@map("orcamento_arquivos")
-}
+ }
 
 model vendas {
   id Int @id @default(autoincrement())
@@ -184,8 +184,6 @@ model vendas {
   status String
 
   data_venda   DateTime  @default(now())
-  data_entrega DateTime? // ✅ NOVO: data que você recebe/entrega (cobrança)
-  observacao   String?
 
   // ✅ NOVO: base real do pós-venda (não é o orçado)
   valor_vendido Decimal @default(0.00) @db.Decimal(10, 2)
@@ -214,7 +212,7 @@ model vendas {
   @@index([cliente_id])
   @@index([status])
   @@map("vendas")
-}
+ }
 
 model vendas_pagamentos {
   id Int @id @default(autoincrement())
@@ -231,8 +229,6 @@ model vendas_pagamentos {
 
   status_financeiro_chave String @default("EM_ABERTO") // STATUS_FINANCEIRO
 
-  observacao String?
-
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
@@ -240,7 +236,7 @@ model vendas_pagamentos {
   @@index([forma_pagamento_chave])
   @@index([status_financeiro_chave])
   @@map("vendas_pagamentos")
-}
+ }
 
 model vendas_arquivos {
   id Int @id @default(autoincrement())
@@ -257,7 +253,7 @@ model vendas_arquivos {
 
   @@index([venda_id])
   @@map("vendas_arquivos")
-}
+ }
 
 model vendas_itens {
   id Int @id @default(autoincrement())
@@ -268,6 +264,7 @@ model vendas_itens {
   // item “congelado” na venda
   nome_ambiente String
   descricao     String
+  observacao    String
 
   quantidade     Decimal @default(1.00) @db.Decimal(10, 2)
   valor_unitario Decimal @db.Decimal(10, 2)
@@ -279,7 +276,7 @@ model vendas_itens {
 
   @@index([venda_id])
   @@map("vendas_itens")
-}
+ }
 
 model vendas_comissoes {
   id Int @id @default(autoincrement())
@@ -304,7 +301,7 @@ model vendas_comissoes {
   @@index([venda_id])
   @@index([tipo_comissao_chave])
   @@map("vendas_comissoes")
-}
+ }
 
 model Fornecedor {
   id              Int      @id @default(autoincrement())
@@ -339,7 +336,7 @@ model Fornecedor {
   compras                 compras[]
 
   @@map("fornecedor")
-}
+ }
 
 model produtos {
   id Int @id @default(autoincrement())
@@ -367,7 +364,7 @@ model produtos {
 
   @@index([fornecedor_id])
   @@map("produtos")
-}
+ }
 
 model plano_corte {
   id            Int      @id @default(autoincrement())
@@ -386,7 +383,7 @@ model plano_corte {
   consumos plano_corte_consumo[]
 
   @@map("plano_corte")
-}
+ }
 
 model plano_corte_item {
   id            Int @id @default(autoincrement())
@@ -416,7 +413,7 @@ model plano_corte_item {
 
   @@index([fornecedor_id])
   @@map("plano_corte_item")
-}
+ }
 
 model plano_corte_produto {
   id             Int @id @default(autoincrement())
@@ -433,7 +430,7 @@ model plano_corte_produto {
 
   @@unique([plano_corte_id, item_id]) // ✅ não duplica item no mesmo plano
   @@map("plano_corte_produto")
-}
+ }
 
 model plano_corte_consumo {
   id             Int @id @default(autoincrement())
@@ -449,7 +446,7 @@ model plano_corte_consumo {
 
   @@unique([plano_corte_id, produto_id]) // ✅ não duplica consumo no mesmo plano
   @@map("plano_corte_consumo")
-}
+ }
 
 model funcionarios {
   id Int @id @default(autoincrement())
@@ -555,7 +552,7 @@ model funcionarios {
   funcionarios_arquivos funcionarios_arquivos[]
 
   @@map("funcionarios")
-}
+ }
 
 model funcionarios_arquivos {
   id             Int      @id @default(autoincrement())
@@ -571,7 +568,7 @@ model funcionarios_arquivos {
 
   @@index([funcionario_id])
   @@map("funcionarios_arquivos")
-}
+ }
 
 model despesas {
   id Int @id @default(autoincrement())
@@ -610,7 +607,7 @@ model despesas {
   @@index([data_vencimento])
   @@index([funcionario_id])
   @@map("despesas")
-}
+ }
 
 model producao_projetos {
   id Int @id @default(autoincrement())
@@ -634,7 +631,7 @@ model producao_projetos {
   @@index([status])
   @@index([encaminhado_em])
   @@map("producao_projetos")
-}
+ }
 
 model producao_tarefas {
   id Int @id @default(autoincrement())
@@ -665,7 +662,7 @@ model producao_tarefas {
   @@index([inicio_em])
   @@index([fim_em])
   @@map("producao_tarefas")
-}
+ }
 
 model producao_arquivos {
   id Int @id @default(autoincrement())
@@ -684,7 +681,7 @@ model producao_arquivos {
   @@index([projeto_id])
   @@index([tipo])
   @@map("producao_arquivos")
-}
+ }
 
 model contas_pagar {
   id Int @id @default(autoincrement())
@@ -738,7 +735,7 @@ model contas_pagar {
   @@index([origem_tipo])
   @@index([origem_id])
   @@map("contas_pagar")
-}
+ }
 
 model contas_receber {
   id Int @id @default(autoincrement())
@@ -778,7 +775,7 @@ model contas_receber {
   @@index([origem_tipo])
   @@index([origem_id])
   @@map("contas_receber")
-}
+ }
 
 model fornecedor_compensacoes {
   id Int @id @default(autoincrement())
@@ -800,7 +797,7 @@ model fornecedor_compensacoes {
   @@index([conta_pagar_id])
   @@index([conta_receber_id])
   @@map("fornecedor_compensacoes")
-}
+ }
 
 model compras {
   id Int @id @default(autoincrement())
@@ -838,7 +835,7 @@ model compras {
   @@index([status])
   @@index([vencimento_em])
   @@map("compras")
-}
+ }
 
 model compras_itens {
   id        Int     @id @default(autoincrement())
@@ -864,7 +861,7 @@ model compras_itens {
   @@index([compra_id])
   @@index([produto_id])
   @@map("compras_itens")
-}
+ }
 
 model compras_rateio {
   id Int @id @default(autoincrement())
@@ -884,7 +881,7 @@ model compras_rateio {
   @@index([compra_id])
   @@index([nome_ambiente])
   @@map("compras_rateio")
-}
+ }
 
 model cheques {
   id              Int      @id @default(autoincrement())
@@ -906,7 +903,7 @@ model cheques {
   atualizado_em DateTime @updatedAt
 
   @@map("cheques")
-}
+ }
 
 model Empresa {
   id            Int      @id @default(1) // Forçamos o ID 1
@@ -926,7 +923,7 @@ model Empresa {
   updated_at    DateTime @updatedAt
 
   @@map("empresa") // Nome da tabela no banco de dados
-}
+ }
 
 model obras {
   id Int @id @default(autoincrement())
@@ -947,18 +944,18 @@ model obras {
 
   @@index([cliente_id])
   @@map("obras")
-}
+ }
 
 enum PontoTipoRegistro {
   ENTRADA
   SAIDA
-}
+ }
 
 enum PontoOrigem {
   PWA
   WEB
   ADMIN
-}
+ }
 
 model ponto_dispositivos {
   id Int @id @default(autoincrement())
@@ -991,7 +988,7 @@ model ponto_dispositivos {
   @@index([funcionario_id])
   @@index([status])
   @@map("ponto_dispositivos")
-}
+ }
 
 model ponto_registros {
   id Int @id @default(autoincrement())
@@ -1031,7 +1028,7 @@ model ponto_registros {
   @@index([tipo])
   @@index([dispositivo_id])
   @@map("ponto_registros")
-}
+ }
 
 model ponto_convites {
   id Int @id @default(autoincrement())
@@ -1047,7 +1044,7 @@ model ponto_convites {
 
   @@index([funcionario_id])
   @@map("ponto_convites")
-}
+ }
 
 model ponto_justificativas {
   id Int @id @default(autoincrement())
@@ -1073,7 +1070,7 @@ model ponto_justificativas {
   @@index([data])
   @@index([tipo])
   @@map("ponto_justificativas")
-}
+ }
 
 model ponto_justificativas_arquivos {
   id Int @id @default(autoincrement())
@@ -1091,4 +1088,4 @@ model ponto_justificativas_arquivos {
 
   @@index([justificativa_id])
   @@map("ponto_justificativas_arquivos")
-}
+ }

@@ -1,24 +1,24 @@
 <template>
   <div
-    class="transition-all duration-500 ease-out"
+    class="transition-all duration-300 ease-in-out"
     :class="[
-      // ARREDONDAMENTO PADRÃO PREMIUM
-      'rounded-[2rem] border',
+      // ARREDONDAMENTO SOFISTICADO (16px a 24px é o ideal para Desktop Premium)
+      'rounded-2xl border',
       
-      // LÓGICA DE CORES (VARIANTE)
+      // LÓGICA DE CORES REFINADA
       variant === 'default' 
-        ? 'bg-[var(--bg-card)] border-[var(--border-ui)]' 
-        : 'bg-slate-900 border-slate-800 text-white',
+        ? 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800' 
+        : 'bg-slate-900 border-slate-800 text-white shadow-2xl shadow-slate-950/20',
       
       { 
-        // SOMBRA DINÂMICA
-        'shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-none': shadow && !hoverable,
+        // SOMBRA CLEAN (Sutil, baseada em elevação real)
+        'shadow-sm shadow-slate-200/50 dark:shadow-none': shadow && !hoverable,
         
-        // HOVER INTELIGENTE
-        'hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 cursor-pointer': hoverable,
+        // HOVER DE ALTO PADRÃO (Sem exagerar no movimento)
+        'hover:shadow-xl hover:shadow-slate-200/60 dark:hover:shadow-none hover:border-slate-200 dark:hover:border-slate-700 cursor-pointer': hoverable,
         
-        // REAÇÃO À SELEÇÃO (ANEL DE BRILHO)
-        'ring-4 ring-brand-primary/10 border-brand-primary/30': active,
+        // REAÇÃO À SELEÇÃO (Substituímos o ring grosso por uma borda interna elegante)
+        'border-brand-primary/50 ring-1 ring-brand-primary/20': active,
 
         'overflow-hidden': true
       }
@@ -38,15 +38,20 @@ defineProps({
     type: Boolean, 
     default: false 
   },
-  // 'default' para branco/cinza, 'dark' para o estilo do relatório
   variant: {
     type: String,
-    default: 'default'
+    default: 'default' // 'default' ou 'dark'
   },
-  // Para ativar o brilho de seleção automaticamente
   active: {
     type: Boolean,
     default: false
   }
 })
 </script>
+
+<style scoped>
+/* Adiciona uma suavidade extra para o Dark Mode se necessário */
+.dark div {
+  --tw-shadow: 0 0 #0000;
+}
+</style>

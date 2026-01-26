@@ -1,9 +1,9 @@
 <template>
   <div 
-    class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border transition-colors duration-300"
+    class="inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-[0.08em] border transition-all duration-300 select-none"
     :class="statusStyle"
   >
-    <span class="w-1.5 h-1.5 rounded-full mr-2 animate-pulse shadow-[0_0_8px_currentColor]" :class="dotStyle"></span>
+    <span class="w-1.5 h-1.5 rounded-full mr-2 flex-shrink-0" :class="dotStyle"></span>
     {{ label || value }}
   </div>
 </template>
@@ -19,26 +19,27 @@ const props = defineProps({
 const statusStyle = computed(() => {
   const val = String(props.value).toLowerCase()
   
-  // SUCESSO / FINALIZADO
-  if (['ativo', 'pago', 'entregue', 'finalizado'].includes(val)) 
-    return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+  // SUCESSO
+  if (['ativo', 'pago', 'entregue', 'finalizado', 'concluido'].includes(val)) 
+    return 'bg-emerald-50/50 text-emerald-600 border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20'
     
-  // PERIGO / ALERTA
-  if (['inativo', 'atrasado', 'cancelado'].includes(val)) 
-    return 'bg-red-500/10 text-red-500 border-red-500/20'
+  // PERIGO / ERRO
+  if (['inativo', 'atrasado', 'cancelado', 'erro'].includes(val)) 
+    return 'bg-red-50/50 text-red-600 border-red-100 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'
     
-  // AGUARDANDO / PENDENTE (Amarelo)
-  if (['pendente', 'aguardando', 'rascunho'].includes(val)) 
-    return 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+  // AVISO / PENDENTE
+  if (['pendente', 'aguardando', 'rascunho', 'em análise'].includes(val)) 
+    return 'bg-amber-50/50 text-amber-600 border-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20'
     
-  return 'bg-slate-500/10 text-slate-400 border-slate-500/20'
+  // PADRÃO / NEUTRO
+  return 'bg-slate-50/50 text-slate-500 border-slate-100 dark:bg-slate-500/10 dark:text-slate-400 dark:border-slate-500/20'
 })
-
 
 const dotStyle = computed(() => {
   const val = String(props.value).toLowerCase()
-  if (['ativo', 'pago', 'true', '1'].includes(val)) return 'bg-emerald-500'
-  if (['inativo', 'atrasado', 'false', '0'].includes(val)) return 'bg-red-500'
+  if (['ativo', 'pago', 'finalizado'].includes(val)) return 'bg-emerald-500 shadow-[0_0_4px_rgba(16,185,129,0.4)]'
+  if (['inativo', 'atrasado', 'cancelado'].includes(val)) return 'bg-red-500 shadow-[0_0_4px_rgba(239,68,68,0.4)]'
+  if (['pendente', 'aguardando'].includes(val)) return 'bg-amber-500'
   return 'bg-slate-400'
 })
 </script>

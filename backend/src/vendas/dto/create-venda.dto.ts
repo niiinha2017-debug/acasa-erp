@@ -49,6 +49,7 @@ export class CreateVendaComissaoDto {
   responsavel_nome?: string
 }
 
+
 /**
  * 3. DTO Principal de Criação de Venda
  */
@@ -98,10 +99,12 @@ export class CreateVendaDto {
   taxa_nota_fiscal_percentual_aplicado?: number
 
   // RELACIONAMENTOS (Arrays)
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateVendaItemDto)
-  itens: CreateVendaItemDto[]
+  itens?: CreateVendaItemDto[]
+
 
   @IsOptional()
   @IsArray()

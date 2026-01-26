@@ -55,21 +55,20 @@ export default defineConfig({
   },
 
 server: {
-    port: 5173,
-    fs: { allow: ['..'] },
-    proxy: {
-      // Direciona para o Python (Analytics)
-      '/api/analytics': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-        secure: false,
-      },
-      // Direciona para o Node (Geral)
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-        secure: false,
-      },
+  port: 5173,
+  fs: { allow: ['..'] },
+  proxy: {
+    '/api/analytics': {
+      target: 'http://127.0.0.1:8000',
+      changeOrigin: true,
+      secure: false,
+    },
+    '/api': {
+      target: 'http://127.0.0.1:3000',
+      changeOrigin: true,
+      secure: false,
     },
   },
+},
+
 })

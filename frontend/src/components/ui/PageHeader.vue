@@ -1,41 +1,40 @@
 <template>
-  <header 
-    class="flex items-center justify-between gap-6 px-10 py-10 transition-all duration-500"
-    :class="['bg-[var(--bg-page)]/50 backdrop-blur-sm']"
-  >
-    <div class="flex items-center gap-6 min-w-0">
+<header 
+  class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 px-6 py-8 md:px-10 border-b border-slate-100 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md"
+>
+    <div class="flex items-center gap-5 min-w-0">
       <div
         v-if="icon"
-        class="w-16 h-16 rounded-[2rem] flex items-center justify-center flex-shrink-0 shadow-xl border border-[var(--border-ui)] transition-all duration-300"
+        class="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm border border-slate-200 dark:border-slate-700 transition-all duration-300"
         :class="iconClass"
       >
-        <i :class="icon" class="text-2xl"></i>
+        <i :class="icon" class="text-xl"></i>
       </div>
 
-      <div class="min-w-0 flex flex-col gap-2">
-        <h2 class="text-3xl font-black tracking-tighter text-[var(--text-main)] uppercase leading-none transition-colors duration-300">
+      <div class="min-w-0 flex flex-col gap-1">
+        <h2 class="text-xl md:text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100 leading-tight transition-colors">
           {{ title }}
         </h2>
 
-        <p v-if="subtitle" class="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] opacity-80 transition-colors">
+        <p v-if="subtitle" class="text-[10px] md:text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-[0.15em] transition-colors">
           {{ subtitle }}
         </p>
       </div>
     </div>
 
-    <div class="flex items-center gap-4 flex-shrink-0">
+    <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
       <slot name="actions" />
 
       <Button
         v-if="showBack"
         variant="secondary"
-        size="md"
+        size="sm"
         type="button"
-        class="!rounded-2xl !px-6 shadow-sm"
+        class="!rounded-lg !px-4"
         @click="onBack"
       >
-        <i class="pi pi-arrow-left mr-3 text-[10px]"></i>
-        <span class="text-[11px] font-black uppercase tracking-widest">Voltar</span>
+        <i class="pi pi-arrow-left mr-2 text-[9px]"></i>
+        Voltar
       </Button>
     </div>
   </header>
@@ -43,7 +42,7 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
-import Button from './Button.vue' // Garantindo o import do seu botão tunado
+import Button from './Button.vue'
 
 const router = useRouter()
 
@@ -51,8 +50,8 @@ const props = defineProps({
   title: { type: String, required: true },
   subtitle: { type: String, default: '' },
   icon: { type: String, default: '' },
-  // Dica: No Dark Mode, use "bg-slate-800 text-white" ou "bg-brand-primary text-white"
-  iconClass: { type: String, default: 'bg-slate-900 dark:bg-brand-primary text-white' },
+  // Estilo padrão mais "clean"
+  iconClass: { type: String, default: 'bg-white dark:bg-slate-800 text-brand-primary' },
   showBack: { type: Boolean, default: true },
   backTo: { type: [String, Object], default: '' },
 })

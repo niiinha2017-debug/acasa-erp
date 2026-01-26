@@ -2,19 +2,14 @@
   <button
     :type="type"
     :disabled="loading || disabled"
-    class="relative inline-flex items-center justify-center font-black uppercase tracking-[0.15em] transition-all duration-300 active:scale-95 disabled:opacity-50 disabled:pointer-events-none overflow-hidden group rounded-xl shrink-0"
+    class="relative inline-flex items-center justify-center font-bold uppercase tracking-wider transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden rounded-lg shrink-0"
     :class="[
-      variantClasses[variant] || 'btn-primary-tw',
+      variantClasses[variant],
       sizeClasses[size],
-      { 'w-full': fullWidth, 'shadow-lg shadow-black/10': variant !== 'ghost' }
+      { 'w-full': fullWidth }
     ]"
     @click="handleClick"
   >
-    <div v-if="!['ghost', 'outline'].includes(variant)" class="absolute inset-0 z-0 pointer-events-none">
-      <div class="absolute top-0 left-0 right-0 h-[50%] bg-gradient-to-b from-white/20 to-transparent"></div>
-      <div class="absolute -left-[100%] top-0 w-[60%] h-full bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-25deg] group-hover:left-[150%] transition-all duration-700 ease-in-out"></div>
-    </div>
-
     <svg v-if="loading" class="animate-spin h-5 w-5 absolute z-20" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -23,15 +18,13 @@
     <span 
       :class="[
         { 'opacity-0': loading },
-        // Texto adaptativo: No secondary Dark, ele fica branco; no Light, quase preto.
-        variant === 'ghost' ? 'text-slate-500 dark:text-slate-400 group-hover:text-brand-primary' : 
-        variant === 'secondary' ? 'text-slate-700 dark:text-slate-100' :
-        'text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]'
+        'relative z-10 flex items-center gap-2'
       ]" 
-      class="relative z-10 flex items-center gap-2"
     >
       <slot>{{ label }}</slot>
     </span>
+
+    <div class="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors duration-200"></div>
   </button>
 </template>
 
@@ -57,29 +50,33 @@ const props = defineProps({
 const emit = defineEmits(['click'])
 
 const variantClasses = {
-  // Primário: Mantém o azul luxuoso (funciona bem em ambos)
+  // Primário: Azul Profundo, Sólido, com sombra suave
   primary: `
-    bg-gradient-to-b from-[#4A82B0] via-[#3a78a8] to-[#2c5a7d] 
-    border-b-[4px] border-black/30
-    hover:brightness-110 hover:shadow-[#3a78a8]/40
+    bg-brand-primary text-white 
+    shadow-sm shadow-brand-primary/20 
+    hover:bg-[#3a78a8] hover:shadow-md hover:shadow-brand-primary/30
   `,
-  // Secundário: Agora ele escurece no Dark Mode
+  // Secundário: Slate (Cinza azulado) - Muito elegante no Dark e Light
   secondary: `
-    bg-gradient-to-b from-white via-[#f8fafc] to-[#e2e8f0] 
-    dark:from-slate-700 dark:via-slate-800 dark:to-slate-900
-    border-b-[4px] border-[#cbd5e1] dark:border-slate-950/50
-    hover:brightness-105
+    bg-slate-100 text-slate-900 
+    dark:bg-slate-800 dark:text-slate-100 
+    hover:bg-slate-200 dark:hover:bg-slate-700
   `,
-  danger: 'bg-gradient-to-b from-red-400 via-red-500 to-red-700 border-b-[4px] border-red-900/30',
-  success: 'bg-gradient-to-b from-emerald-400 via-emerald-500 to-emerald-700 border-b-[4px] border-emerald-900/30',
-  ghost: 'btn-ghost-tw shadow-none',
-  outline: 'btn-outline-tw'
+  // Outline: Borda fina e texto
+  outline: `
+    bg-transparent border border-slate-200 dark:border-slate-700 
+    text-slate-600 dark:text-slate-300 
+    hover:bg-slate-50 dark:hover:bg-slate-800
+  `,
+  danger: 'bg-red-500 text-white hover:bg-red-600 shadow-sm shadow-red-500/20',
+  success: 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm shadow-emerald-500/20',
+  ghost: 'bg-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-brand-primary'
 }
 
 const sizeClasses = {
-  sm: 'h-9 px-4 text-[10px] tracking-widest',
-  md: 'h-11 px-7 text-[11px] tracking-[0.2em]',
-  lg: 'h-14 px-10 text-[13px] tracking-[0.2em]'
+  sm: 'h-8 px-3 text-[10px] tracking-widest',
+  md: 'h-10 px-5 text-[11px] tracking-widest',
+  lg: 'h-12 px-8 text-[12px] tracking-widest'
 }
 
 const handleClick = (event) => {

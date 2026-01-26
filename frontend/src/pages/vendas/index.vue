@@ -39,7 +39,7 @@
       <template #cell-cliente="{ row }">
   <div class="flex flex-col">
     <strong class="text-sm font-black text-gray-900">
-      {{ row.cliente?.nome || row.cliente?.razao_social || 'Consumidor' }}
+      {{ row.cliente?.nome_completo || row.cliente?.razao_social || row.cliente?.nome_fantasia || row.cliente?.nome || 'Consumidor' }}
     </strong>
     <span class="text-xs font-semibold text-gray-400">
       {{ row.cliente?.cpf || row.cliente?.cnpj || 'Sem documento' }}
@@ -138,10 +138,12 @@ const filtradas = computed(() => {
 
 function pillClassTailwind(status) {
   const s = String(status || '').toUpperCase()
-  if (s === 'FECHADA') return 'bg-emerald-50 text-emerald-700 border-emerald-100'
-  if (s === 'CANCELADA') return 'bg-rose-50 text-rose-700 border-rose-100'
+  if (s.includes('FECH')) return 'bg-emerald-50 text-emerald-700 border-emerald-100'
+  if (s.includes('CANCEL')) return 'bg-rose-50 text-rose-700 border-rose-100'
+  if (s.includes('PRODU')) return 'bg-sky-50 text-sky-700 border-sky-100'
   return 'bg-gray-50 text-gray-700 border-gray-200'
 }
+
 
 // helpers para template
 function moeda(v) {

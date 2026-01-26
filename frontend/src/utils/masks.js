@@ -58,17 +58,25 @@ export const maskCEP = (v = '') => {
 export const maskMoneyBR = (value) => {
   if (value === undefined || value === null || value === '') return '0,00'
 
-  // Se vier número do banco (ex: 150.5), vira "15050" para a lógica de centavos
+  // Se for número (ex: 1500.5), transforma em string de centavos (150050)
   let v = typeof value === 'number' 
-    ? value.toFixed(2).replace(/\D/g, '') 
-    : value.replace(/\D/g, '')
+    ? Math.round(value * 100).toString() 
+    : String(value).replace(/\D/g, '')
 
-  // Transforma em número e formata com padrão brasileiro
-  return (Number(v) / 100).toLocaleString('pt-BR', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  })
+  // Preenchimento de zeros à esquerda se necessário
+  if (v.length < 3) v = v.padStart(3, '0')
+
+  // Transforma "150050" em "1.500,50"
+  const inteiro = v.slice(0, -2).replace(/^0+(?=\d)/, '') // Remove zeros à esquerda do inteiro
+  const centavos = v.slice(-2)
+
+  const resultado = (inteiro || '0') + ',' + centavos
+  
+  // Adiciona o ponto de milhar
+  return resultado.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 }
+
+
 export const maskIE = (value = '') => {
   const v = onlyNumbers(value).slice(0, 12)
 

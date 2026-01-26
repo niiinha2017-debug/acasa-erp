@@ -1,27 +1,25 @@
 <template>
-  <div class="flex items-center justify-end gap-1 px-2">
+  <div class="flex items-center justify-end gap-1 px-1">
     <Button
       v-can="permEdit"
       variant="ghost"
       size="sm"
-      class="!p-2.5 !rounded-xl text-slate-400 dark:text-slate-500 hover:text-brand-primary hover:bg-brand-primary/10 transition-all duration-300 group/btn"
-      title="Editar Registro"
+      class="!p-2 !rounded-lg text-slate-400 dark:text-slate-500 hover:text-brand-primary hover:bg-brand-primary/5 transition-all duration-200 group/btn"
       @click.stop="$emit('edit', id)"
     >
-      <i class="pi pi-pencil text-[12px] group-hover/btn:scale-110 transition-transform"></i>
-      <span v-if="showLabel" class="ml-2 text-[10px] font-black uppercase tracking-[0.15em]">Editar</span>
+      <i class="pi pi-pencil text-[11px] group-hover/btn:rotate-12 transition-transform"></i>
+      <span v-if="showLabel" class="ml-2 text-[10px] font-bold uppercase tracking-wider">Editar</span>
     </Button>
 
     <Button
       v-can="permDelete"
       variant="ghost"
       size="sm"
-      class="!p-2.5 !rounded-xl text-slate-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-500/10 transition-all duration-300 group/btn"
-      title="Excluir Registro"
+      class="!p-2 !rounded-lg text-slate-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-500/5 transition-all duration-200 group/btn"
       @click.stop="$emit('delete', id)"
     >
-      <i class="pi pi-trash text-[12px] group-hover/btn:scale-110 transition-transform"></i>
-      <span v-if="showLabel" class="ml-2 text-[10px] font-black uppercase tracking-[0.15em]">Excluir</span>
+      <i class="pi pi-trash text-[11px] group-hover/btn:scale-110 transition-transform"></i>
+      <span v-if="showLabel" class="ml-2 text-[10px] font-bold uppercase tracking-wider">Excluir</span>
     </Button>
 
     <slot></slot>

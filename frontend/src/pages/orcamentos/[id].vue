@@ -1,50 +1,62 @@
 <template>
-  <div class="max-w-6xl mx-auto pb-20 space-y-6">
-    <div class="flex items-center justify-between">
-      <h1 class="text-3xl font-black text-slate-800 uppercase tracking-tight">
-        {{ isNovo ? 'Novo Orçamento' : `Orçamento #${orcamentoId}` }}
-      </h1>
-
-      <Button
-        variant="outline"
-        size="sm"
-        @click="$router.back()"
-        class="bg-white shadow-sm border-slate-200"
+  <div class="page-container">
+    <Card>
+      <PageHeader
+        :title="isNovo ? 'Novo Orçamento' : `Orçamento #${orcamentoId}`"
+        subtitle="Cadastro operacional do orçamento"
+        icon="pi pi-briefcase"
+        :backTo="'/orcamentos'"
       >
-        <i class="pi pi-arrow-left mr-2"></i> VOLTAR
-      </Button>
-    </div>
+        <template #actions>
+          <Button
+            variant="primary"
+            size="sm"
+            type="button"
+            @click="gerarPdf"
+            :disabled="saving || uploading || isNovo"
+          >
+            <i class="pi pi-file-pdf mr-2"></i> GERAR PDF
+          </Button>
+        </template>
+      </PageHeader>
 
-    <Card class="p-0 border-none shadow-xl overflow-hidden">
-      <!-- SUBSTITUI CardSection (pra não quebrar) -->
-      <div class="bg-slate-50/50 border-b px-8 py-6">
-        <div class="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">
-          Seleção do Cliente
+      <div class="p-6 space-y-8">
+        <!-- CLIENTE -->
+        <div class="space-y-3">
+          <div class="text-xs font-black uppercase tracking-widest text-slate-500">
+            Cliente
+          </div>
+
+          <div class="max-w-2xl">
+            <SearchInput
+              v-model="draft.cliente_id"
+              mode="select"
+              :options="clientesOptions"
+              label="Quem é o cliente?"
+              placeholder="Pesquisar cliente..."
+            />
+          </div>
         </div>
 
-        <div class="max-w-2xl">
-          <SearchInput
-            v-model="draft.cliente_id"
-            mode="select"
-            :options="clientesOptions"
-            placeholder="Buscar cliente..."
-          />
-        </div>
-      </div>
+        <div class="h-px bg-slate-100"></div>
 
-      <div class="p-8 space-y-10">
-        <section class="space-y-4">
-          <h2 class="text-sm font-bold text-slate-700 uppercase tracking-widest flex items-center gap-2">
-            <i class="pi pi-box text-brand-primary"></i> Itens do Orçamento
-          </h2>
+        <!-- ITEM (FORM) -->
+        <div class="space-y-4">
+          <div class="text-xs font-black uppercase tracking-widest text-slate-500">
+            Itens do Orçamento
+          </div>
 
-          <div class="p-6 rounded-[2rem] border-2 border-slate-100 bg-white space-y-6 shadow-inner">
+          <div class="p-6 rounded-3xl border border-slate-100 bg-white space-y-6">
             <div class="grid grid-cols-12 gap-6">
-              <div class="col-span-8">
-                <Input v-model="ambForm.nome_ambiente" label="ITEM / AMBIENTE" placeholder="Ex: COZINHA" />
+              <div class="col-span-12 md:col-span-8">
+                <Input
+                  v-model="ambForm.nome_ambiente"
+                  label="ITEM / AMBIENTE"
+                  placeholder="Ex: COZINHA"
+                />
               </div>
 
-              <div class="col-span-4">
+              <div class="col-span-12 md:col-span-4">
                 <Input
                   v-model="ambForm.valor_unitario"
                   label="VALOR"
@@ -53,118 +65,146 @@
                 />
               </div>
 
-              <div class="col-span-6">
-                <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block ml-1">
-                  Descritivo (Itens em tópicos)
-                </label>
-                <textarea
-                  v-model="ambForm.descricao"
-                  rows="4"
-                  class="w-full p-4 rounded-2xl bg-slate-50 border-none text-sm focus:ring-2 ring-brand-primary/20 outline-none transition-all resize-none"
-                  placeholder="• Armário em U&#10;• Prateleira com LED"
-                ></textarea>
+              <div class="col-span-12">
+<div class="col-span-12">
+  <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block ml-1">
+    ACABAMENTO / DESCRIÇÃO (TÓPICOS)
+  </label>
+  <textarea
+    v-model="ambForm.descricao"
+    rows="4"
+    class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-sm outline-none resize-none"
+    placeholder="* MDF azul&#10;* MDF verde&#10;* puxador perfil"
+  ></textarea>
+</div>
+
               </div>
 
-              <div class="col-span-6">
-                <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block ml-1">
-                  Observações Técnicas
-                </label>
-                <textarea
+              <div class="col-span-12">
+                <Input
                   v-model="ambForm.observacao"
-                  rows="4"
-                  class="w-full p-4 rounded-2xl bg-slate-50 border-none text-sm focus:ring-2 ring-brand-primary/20 outline-none transition-all resize-none italic"
+                  label="OBSERVAÇÕES TÉCNICAS"
                   placeholder="MDF Branco TX, puxador perfil..."
-                ></textarea>
+                />
               </div>
             </div>
 
             <div class="flex justify-end">
-              <Button
-                variant="primary"
-                class="px-10 py-4 rounded-xl shadow-lg shadow-brand-primary/20 uppercase font-black text-xs tracking-widest"
-                @click="handleAdicionarOuEditar"
-              >
+              <Button variant="primary" type="button" @click="handleAdicionarOuEditar">
                 <i class="pi pi-plus-circle mr-2"></i>
                 {{ editIdx !== null ? 'Atualizar Item' : 'Adicionar Item' }}
               </Button>
             </div>
           </div>
-        </section>
 
-        <section v-if="rowsTabela.length > 0" class="space-y-4 animate-in fade-in slide-in-from-bottom-4">
-          <Table :columns="columns" :rows="rowsTabela" class="border rounded-2xl overflow-hidden shadow-sm">
-            <template #cell-valor_unitario="{ row }">
-              <span class="font-bold text-slate-800">{{ format.currency(row.valor_unitario) }}</span>
-            </template>
-            <template #cell-acoes="{ row }">
-              <TableActions @edit="iniciarEdicao(row.__idx)" @delete="removerDaLista(row.__idx)" />
-            </template>
-          </Table>
-        </section>
+          <!-- TABELA ITENS -->
+          <div v-if="rowsTabela.length > 0">
+            <Table :columns="columns" :rows="rowsTabela" boxed>
+              <template #cell-descricao="{ row }">
+                <div class="whitespace-pre-line">
+                  {{ row.descricao || '-' }}
+                </div>
+              </template>
 
-        <div class="grid grid-cols-12 gap-8 pt-6 border-t border-slate-100">
-          <div class="col-span-12 lg:col-span-7">
-            <div class="p-6 rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50/50">
-              <div class="flex items-center justify-between mb-4">
-                <span class="text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                  Arquivos do Projeto
+              <template #cell-observacao="{ row }">
+                <div class="whitespace-pre-line font-bold">
+                  {{ row.observacao || '-' }}
+                </div>
+              </template>
+
+              <template #cell-valor_unitario="{ row }">
+                <span class="font-bold">
+                  {{ format.currency(row.valor_unitario) }}
                 </span>
+              </template>
 
+              <template #cell-acoes="{ row }">
+                <TableActions
+                  :id="row.id ?? row.__idx"
+                  @edit="iniciarEdicao(row.__idx)"
+                  @delete="removerDaLista(row.__idx)"
+                />
+              </template>
+            </Table>
+          </div>
+        </div>
+
+        <div class="h-px bg-slate-100"></div>
+
+        <!-- ARQUIVOS + TOTAL -->
+        <div class="grid grid-cols-12 gap-6">
+          <div class="col-span-12 lg:col-span-7 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="text-xs font-black uppercase tracking-widest text-slate-500">
+                Arquivos
+              </div>
+
+              <div class="flex items-center gap-2">
                 <input type="file" ref="fileInput" class="hidden" @change="uploadArquivoInteligente" />
 
-                <!-- AQUI: não chama fileInput.click() -->
-                <Button size="sm" variant="ghost" @click="abrirFilePicker" class="text-brand-primary font-bold">
+                <Button size="sm" variant="ghost" type="button" @click="abrirFilePicker">
                   <i class="pi pi-plus mr-1"></i> ANEXAR
                 </Button>
               </div>
+            </div>
 
-              <div class="flex flex-wrap gap-2">
+            <div class="p-6 rounded-3xl border border-slate-100 bg-slate-50/50">
+              <div v-if="uploading" class="py-6">
+                <Loading />
+              </div>
+
+              <div v-else-if="arquivos.length === 0" class="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                Nenhum arquivo anexado
+              </div>
+
+              <div v-else class="flex flex-wrap gap-2">
                 <div
                   v-for="file in arquivos"
                   :key="file.id"
-                  class="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border shadow-sm group"
+                  class="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-slate-100"
                 >
                   <i :class="['pi', getFileIcon(file.nome_original), 'text-brand-primary text-xs']"></i>
-                  <span class="text-[10px] font-bold text-slate-600 truncate max-w-[150px]">
+
+                  <span class="text-[10px] font-bold text-slate-700 truncate max-w-[180px]">
                     {{ file.nome_original }}
                   </span>
 
-                  <button @click="deletarAnexo(file.id)" class="text-red-400 hover:text-red-600">
-                    <i class="pi pi-times text-[8px]"></i>
-                  </button>
-
-                  <!-- (opcional) abrir ao clicar no nome:
-                  <button @click="abrirArquivo(file.id)" class="text-slate-400 hover:text-slate-700">
+                  <!-- ABRIR (autenticado) -->
+                  <button
+                    type="button"
+                    @click="abrirArquivo(file.id)"
+                    class="text-slate-400 hover:text-slate-700"
+                    title="Ver arquivo"
+                  >
                     <i class="pi pi-external-link text-[10px]"></i>
                   </button>
-                  -->
+
+                  <!-- EXCLUIR -->
+                  <button
+                    type="button"
+                    @click="deletarAnexo(file.id)"
+                    class="text-red-400 hover:text-red-600"
+                    title="Excluir"
+                  >
+                    <i class="pi pi-times text-[10px]"></i>
+                  </button>
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="col-span-12 lg:col-span-5 space-y-6">
-            <div class="bg-slate-900 rounded-[2rem] p-8 text-white shadow-2xl relative overflow-hidden group">
-              <div class="absolute -right-4 -top-4 w-24 h-24 bg-brand-primary/20 rounded-full blur-3xl group-hover:bg-brand-primary/40 transition-all"></div>
+          <div class="col-span-12 lg:col-span-5 space-y-4">
+            <div class="p-6 rounded-3xl border border-slate-100 bg-white">
+              <div class="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">
+                Total do Orçamento
+              </div>
 
-              <div class="relative z-10">
-                <p class="text-[10px] font-black uppercase opacity-50 tracking-[0.2em] mb-2">
-                  Total do Orçamento
-                </p>
-
-                <!-- AQUI: era totalOrcamento (não existe), vira total -->
-                <div class="text-4xl font-black tracking-tight tracking-tighter">
-                  {{ format.currency(total) }}
-                </div>
-
-                <div class="h-px bg-white/10 my-4"></div>
-
-                <p class="text-[9px] opacity-40 leading-relaxed">
-                  Condições comerciais e prazos sujeitos a alteração conforme validade do orçamento.
-                </p>
+              <div class="text-3xl font-black">
+                {{ format.currency(total) }}
               </div>
             </div>
 
+            <!-- AÇÕES PADRÃO -->
             <FormActions
               :is-edit="!isNovo"
               :loading-save="saving"
@@ -181,7 +221,7 @@
 
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted,nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { OrcamentosService, ClienteService } from '@/services/index'
 import { format } from '@/utils/format'
@@ -208,6 +248,7 @@ const ambForm = reactive({ nome_ambiente: '', descricao: '', valor_unitario: '',
 const columns = [
   { key: 'nome_ambiente', label: 'Item/Ambiente' },
   { key: 'descricao', label: 'Acabamento' },
+  { key: 'observacao', label: 'Observações' },
   { key: 'valor_unitario', label: 'Valor', align: 'right' },
   { key: 'acoes', label: '', align: 'right' }
 ]
@@ -234,6 +275,14 @@ async function handleAdicionarOuEditar() {
   if (!id) return
 
   const base = editIdx.value !== null ? (draft.ambientes[editIdx.value] || {}) : {}
+
+const descricaoFormatada = String(ambForm.descricao || '')
+  .split(/\r?\n/)
+  .map(l => l.trim())
+  .filter(Boolean)
+  .map(l => l.replace(/^\*\s*/, '• '))
+  .join('\n')
+
 
   const payloadItem = {
     nome_ambiente: ambForm.nome_ambiente,
@@ -299,9 +348,22 @@ async function uploadArquivoInteligente(event) {
   }
 }
 
+async function abrirArquivo(arquivoId) {
+  const oid = orcamentoId.value || route.params.id
+  if (!oid) return
+  await OrcamentosService.abrirArquivo(oid, arquivoId)
+}
 
-function abrirArquivo(id) { window.open(OrcamentosService.abrirArquivoUrl(orcamentoId.value || route.params.id, id), '_blank') }
-async function deletarAnexo(id) { if(confirm('Excluir?')) { await OrcamentosService.removerArquivo(orcamentoId.value, id); arquivos.value = arquivos.value.filter(a => a.id !== id) } }
+
+
+async function deletarAnexo(id) {
+  if (!confirm('Excluir?')) return
+  const oid = await ensureOrcamentoId()
+  if (!oid) return
+  await OrcamentosService.removerArquivo(oid, id)
+  arquivos.value = arquivos.value.filter(a => a.id !== id)
+}
+
 function getFileIcon(n) {
   const e = String(n || '').split('.').pop().toLowerCase()
   return e === 'pdf' ? 'pi pi-file-pdf' : (e.includes('doc') ? 'pi pi-file-word' : 'pi pi-image')
@@ -316,39 +378,50 @@ async function salvarTudo() {
   try {
     let id = orcamentoId.value
 
-    // 1) garante orçamento criado
     if (isNovo.value) {
       const res = await OrcamentosService.criar({ cliente_id: draft.cliente_id })
       id = res.data.id
+      orcamentoIdReal.value = id
       router.replace(`/orcamentos/${id}`)
     } else {
-      // 2) se for edição, atualiza cliente (se mudou)
       await OrcamentosService.atualizar(id, { cliente_id: draft.cliente_id })
     }
 
-    // 3) sincroniza itens
     for (const it of draft.ambientes) {
       const payloadItem = {
         nome_ambiente: it.nome_ambiente,
         descricao: it.descricao,
         observacao: it.observacao || '',
         valor_unitario: Number(it.valor_unitario || 0),
-        valor_total: Number(it.valor_unitario || 0), // backend trava igual unitário
+        valor_total: Number(it.valor_unitario || 0),
       }
 
       if (it.id) {
         await OrcamentosService.atualizarItem(id, it.id, payloadItem)
       } else {
         const created = await OrcamentosService.adicionarItem(id, payloadItem)
-        it.id = created.data?.id // ✅ salva o id no objeto local
+        it.id = created.data?.id
       }
     }
 
-    router.push('/orcamentos')
+    await router.push('/orcamentos')
+  } catch (err) {
+    // ✅ DEBUG REAL (mostra tudo)
+    console.group('ERRO salvarTudo()')
+    console.log('err:', err)
+    console.log('message:', err?.message)
+    console.log('response.status:', err?.response?.status)
+    console.log('response.data:', err?.response?.data)
+    console.log('route:', route.fullPath)
+    console.log('orcamentoId:', orcamentoId.value)
+    console.log('draft.cliente_id:', draft.cliente_id)
+    console.log('itens:', JSON.parse(JSON.stringify(draft.ambientes)))
+    console.groupEnd()
   } finally {
     saving.value = false
   }
 }
+
 
 async function confirmarExclusao() {
   if (confirm('Deseja excluir permanentemente este orçamento?')) {
@@ -363,6 +436,9 @@ async function gerarPdf() {
   OrcamentosService.abrirPdf(id)
 }
 
+function abrirFilePicker() {
+  if (fileInput.value) fileInput.value.click()
+}
 
 async function ensureOrcamentoId() {
   if (!draft.cliente_id) {
@@ -393,6 +469,12 @@ onMounted(async () => {
     label: c.nome_completo || c.razao_social || `ID #${c.id}`,
     value: c.id,
   }))
+
+  // ✅ pega cliente_id do query quando for /orcamentos/novo
+  const qCliente = route.query?.cliente_id
+  if (qCliente && String(route.params.id) === 'novo') {
+    draft.cliente_id = Number(String(qCliente).replace(/\D/g, '')) || null
+  }
 
   if (route.params.id && String(route.params.id) !== 'novo') {
     orcamentoIdReal.value = route.params.id
