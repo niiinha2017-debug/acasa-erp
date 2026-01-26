@@ -67,40 +67,42 @@
               />
 
               <!-- Categoria / Classificação / Unidade -->
-              <SearchInput
-                class="col-span-12 md:col-span-4"
-                v-model="form.categoria"
-                mode="select"
-                label="Categoria *"
-                placeholder="Selecione"
-                :options="categoriasOptions"
-                labelKey="label"
-                valueKey="value"
-              />
+<!-- Unidade / Categoria / Classificação -->
+<SearchInput
+  class="col-span-12 md:col-span-4"
+  v-model="form.unidade"
+  mode="select"
+  label="Unidade"
+  placeholder="Selecione"
+  :options="unidadesOptions"
+  labelKey="label"
+  valueKey="value"
+/>
 
-              <div class="col-span-12 md:col-span-4">
-                <div class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">
-                  Classificação
-                </div>
+<SearchInput
+  class="col-span-12 md:col-span-4"
+  v-model="form.categoria"
+  mode="select"
+  label="Categoria *"
+  placeholder="Selecione"
+  :options="categoriasOptions"
+  labelKey="label"
+  valueKey="value"
+/>
 
-                <div
-                  class="h-11 px-4 rounded-2xl border border-slate-200 bg-slate-50
-                         flex items-center text-slate-700 font-black uppercase tracking-[0.15em]"
-                >
-                  {{ classificacaoLabel || '-' }}
-                </div>
-              </div>
+<div class="col-span-12 md:col-span-4">
+  <div class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">
+    Classificação
+  </div>
 
-              <SearchInput
-                class="col-span-12 md:col-span-4"
-                v-model="form.unidade"
-                mode="select"
-                label="Unidade"
-                placeholder="Selecione"
-                :options="unidadesOptions"
-                labelKey="label"
-                valueKey="value"
-              />
+  <div
+    class="h-11 px-4 rounded-2xl border border-slate-200 bg-slate-50
+           flex items-center text-slate-700 font-black uppercase tracking-[0.15em]"
+  >
+    {{ classificacaoLabel || '-' }}
+  </div>
+</div>
+
 
               <!-- Valor / Forma / Parcelas -->
               <div class="col-span-12 md:col-span-4">
@@ -148,6 +150,7 @@
                 max="60"
               />
 
+<!-- Status + Responsável (mesma linha no desktop) -->
 <SearchInput
   class="col-span-12 md:col-span-4"
   v-model="form.status"
@@ -169,7 +172,6 @@
   labelKey="label"
   valueKey="value"
 />
-
 
               <!-- Datas -->
               <Input
@@ -288,17 +290,24 @@ const categoriasOptions = computed(() => {
     }))
   }
 
-  // DESPESA
+  // DESPESA: depende da UNIDADE (FABRICA/LOJA)
+  if (!form.unidade) return []
+
+  const porUnidade = CONST.FINANCEIRO_CATEGORIAS?.[form.unidade]
+  if (!porUnidade) return []
+
   const result = []
-  Object.entries(CONST.FINANCEIRO_CATEGORIAS || {}).forEach(([grupo, itens]) => {
+
+  Object.entries(porUnidade).forEach(([grupo, itens]) => {
     ;(itens || []).forEach(i => {
       result.push({
-        label: i.label,          // ✅ só a categoria
+        label: i.label,          // só a categoria
         value: i.key,
-        classificacaoKey: grupo, // ✅ grupo fica “por trás”
+        classificacaoKey: grupo, // CUSTO_FIXO / CUSTO_VARIAVEL / ...
       })
     })
   })
+
   return result
 })
 
@@ -324,6 +333,12 @@ watch(() => form.tipo_movimento, () => {
 watch(() => form.status, (novo) => {
   if (novo !== 'PAGO') form.data_pagamento = ''
 })
+
+watch(() => form.unidade, () => {
+  form.categoria = null
+  form.classificacao = null
+})
+
 
 async function init() {
   loading.value = true
