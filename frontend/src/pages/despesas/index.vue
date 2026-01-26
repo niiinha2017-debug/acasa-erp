@@ -138,12 +138,13 @@
             >
               <i class="pi pi-pencil text-xs"></i>
             </button>
-            <button 
-              @click="pedirExcluir(row.id)"
-              class="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
-            >
-              <i class="pi pi-trash text-xs"></i>
-            </button>
+<button
+  @click="() => { console.log('[INDEX] click excluir', row.id); pedirExcluir(row.id) }"
+  class="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
+>
+  <i class="pi pi-trash text-xs"></i>
+</button>
+
           </div>
         </template>
       </Table>
@@ -271,21 +272,31 @@ const novo = () => router.push('/despesas/novo')
 const editar = (id) => router.push(`/despesas/${id}`)
 
 async function pedirExcluir(id) {
+  console.log('[INDEX] pedirExcluir start', id)
+
   const row = despesas.value.find((d) => d.id === id)
+  console.log('[INDEX] row found?', !!row, row)
+
   if (!row) return
 
   const ok = await confirm.show('Excluir Lançamento', `Deseja remover o lançamento #${row.id}?`)
+  console.log('[INDEX] confirm ok?', ok)
+
   if (!ok) return
 
   try {
-    await DespesaService.remover(id)
+    console.log('[INDEX] calling DELETE /despesas', id)
+    const res = await DespesaService.remover(id)
+    console.log('[INDEX] delete response', res)
+
     despesas.value = despesas.value.filter((d) => d.id !== id)
     notify.success('Lançamento removido')
   } catch (e) {
-    console.log('ERRO EXCLUIR', e?.response?.status, e?.response?.data || e)
+    console.log('[INDEX] ERRO EXCLUIR', e?.response?.status, e?.response?.data || e)
     notify.error(`Erro ao excluir (${e?.response?.status || 'sem status'})`)
   }
 }
+
 
 
 onMounted(carregar)

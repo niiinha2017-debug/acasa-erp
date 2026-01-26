@@ -207,14 +207,15 @@
           <!-- AÇÕES -->
           <!-- ===================================================== -->
           <div class="flex items-center justify-end gap-3">
-            <Button
-              v-if="isEdit"
-              type="button"
-              variant="danger"
-              label="Excluir"
-              :disabled="loading"
-              @click="excluir"
-            />
+<Button
+  v-if="isEdit"
+  type="button"
+  variant="danger"
+  label="Excluir"
+  :disabled="loading"
+  @click="() => { console.log('[BTN EXCLUIR] clicou', { isEdit, loading, despesaId: despesaId }); excluir() }"
+/>
+
 
             <Button
               class="min-w-[140px]"
@@ -376,6 +377,7 @@ if (isEdit.value) {
 }
 
 async function salvar() {
+  console.log('[DESPESAS] CLICK SALVAR', { despesaId: despesaId.value, isEdit: isEdit.value })
   if (!form.categoria) return notify.info('Selecione a categoria')
   if (!Number(form.valor_total) || Number(form.valor_total) <= 0) return notify.info('Valor deve ser maior que zero')
 
@@ -387,33 +389,38 @@ async function salvar() {
       quantidade_parcelas: Number(form.quantidade_parcelas) || 1,
     }
 
-    await DespesaService.salvar(despesaId.value, dados)
+    console.log('[DESPESAS] REQUEST SALVAR', dados)
+    const res = await DespesaService.salvar(despesaId.value, dados)
+    console.log('[DESPESAS] OK SALVAR', res)
 
     notify.success(isEdit.value ? 'Salvo!' : 'Criado!')
     router.push('/despesas')
-  } catch (error) {
-    notify.error('Erro ao salvar')
-    console.error(error)
+  } catch (e) {
+    console.log('[DESPESAS] ERRO SALVAR', e?.response?.status, e?.response?.data || e)
+    notify.error(`Erro ao salvar (${e?.response?.status || 'sem status'})`)
   } finally {
     loading.value = false
   }
 }
 
-
-
 async function excluir() {
+  console.log('[DESPESAS] CLICK EXCLUIR', { despesaId: despesaId.value, isEdit: isEdit.value })
   const confirmado = await confirm.show('Excluir?', 'Não pode desfazer')
+  console.log('[DESPESAS] CONFIRM EXCLUIR', confirmado)
   if (!confirmado) return
 
   try {
-    await DespesaService.remover(despesaId.value)
+    const res = await DespesaService.remover(despesaId.value)
+    console.log('[DESPESAS] OK EXCLUIR', res)
+
     notify.success('Excluído!')
     router.push('/despesas')
   } catch (e) {
-    console.log('ERRO EXCLUIR (CADASTRO)', e?.response?.status, e?.response?.data || e)
+    console.log('[DESPESAS] ERRO EXCLUIR', e?.response?.status, e?.response?.data || e)
     notify.error(`Erro ao excluir (${e?.response?.status || 'sem status'})`)
   }
 }
+
 
 
 onMounted(init)
