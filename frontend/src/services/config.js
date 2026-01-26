@@ -127,11 +127,14 @@ vendas: [
       { nome: 'Visualizar', chave: 'permissoes.ver' },
       { nome: 'Gerenciar', chave: 'permissoes.gerenciar' },
     ],
+configuracoes: [
+  { nome: 'Visualizar', chave: 'configuracoes.ver' },
+  { nome: 'Editar', chave: 'configuracoes.editar' },
 
-    configuracoes: [
-      { nome: 'Visualizar', chave: 'configuracoes.ver' },
-      { nome: 'Editar', chave: 'configuracoes.editar' },
-    ],
+  { nome: 'Empresa - Visualizar', chave: 'configuracoes.empresa.ver' },
+  { nome: 'Empresa - Editar', chave: 'configuracoes.empresa.editar' },
+],
+
 
     // RH / Ponto
     ponto_relatorio: [
