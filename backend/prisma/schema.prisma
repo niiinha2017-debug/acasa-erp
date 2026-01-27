@@ -589,13 +589,18 @@ model despesas {
   funcionario_id Int?
   funcionario    funcionarios? @relation(fields: [funcionario_id], references: [id])
 
-  // ✅ status financeiro (mesmas constantes do financeiro)
   status String @default("EM_ABERTO")
-
   conta_pagar contas_pagar?
 
   recorrencia_id String? @db.VarChar(36)
   parcela_numero Int?
+
+  // ✅ PIX / Transferência (constantes)
+  conta_bancaria_key      String? @db.VarChar(50)
+  conta_bancaria_tipo_key String? @db.VarChar(50)
+
+  // ✅ Cartão (constantes)
+  cartao_credito_key      String? @db.VarChar(50)
 
   @@index([unidade])
   @@index([recorrencia_id])
@@ -606,8 +611,13 @@ model despesas {
   @@index([status])
   @@index([data_vencimento])
   @@index([funcionario_id])
+
+  @@index([conta_bancaria_key])
+  @@index([conta_bancaria_tipo_key])
+  @@index([cartao_credito_key])
+
   @@map("despesas")
- }
+}
 
 model producao_projetos {
   id Int @id @default(autoincrement())

@@ -63,70 +63,22 @@ recorrencia_id?: string
   @IsInt()
   funcionario_id?: number
 
-  @IsString()
-  @IsNotEmpty()
-  status: string // (constantes do financeiro)
-}
-
-export class UpdateDespesaDto {
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  tipo_movimento?: string
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  unidade?: string
-
-@IsOptional()
-  @IsString()
-  categoria?: string;
-
-  @IsOptional()
-  @IsString()
-  classificacao?: string;
+ @IsOptional()
+@IsString()
+conta_bancaria_key?: string
 
 @IsOptional()
 @IsString()
-local?: string // descrição opcional
+conta_bancaria_tipo_key?: string
 
-
-
-  // manter como string (decimal)
 @IsOptional()
-  valor_total?: any;
+@IsString()
+cartao_credito_key?: string
 
-  @IsOptional()
+
   @IsString()
   @IsNotEmpty()
-  forma_pagamento?: string
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  quantidade_parcelas?: number
-
-  @IsOptional()
-  @IsDateString()
-  data_registro?: string
-
-  @IsOptional()
-  @IsDateString()
-  data_vencimento?: string
-
-  @IsOptional()
-  @IsDateString()
-  data_pagamento?: string
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  funcionario_id?: number
-
-  @IsOptional()
-  @IsString()
-  @IsNotEmpty()
-  status?: string
+  status: string
 }
+
+

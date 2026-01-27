@@ -21,28 +21,33 @@ export class DespesasService {
     return d
   }
 
- async create(dto: CreateDespesaDto): Promise<despesas[]> {
+async create(dto: CreateDespesaDto): Promise<despesas[]> {
   // parcelas
   let parcelas = Number(dto.quantidade_parcelas ?? 1)
   if (!Number.isFinite(parcelas) || parcelas < 1) parcelas = 1
 
   // datas
   const primeiroVenc = new Date(dto.data_vencimento)
-  if (isNaN(primeiroVenc.getTime())) {
-    throw new BadRequestException('data_vencimento inválida')
-  }
+  if (isNaN(primeiroVenc.getTime())) throw new BadRequestException('data_vencimento inválida')
 
   const dataRegistro = dto.data_registro ? new Date(dto.data_registro) : undefined
-  if (dto.data_registro && isNaN(dataRegistro!.getTime())) {
-    throw new BadRequestException('data_registro inválida')
-  }
+  if (dto.data_registro && isNaN(dataRegistro!.getTime())) throw new BadRequestException('data_registro inválida')
 
   const dataPagamento = dto.data_pagamento ? new Date(dto.data_pagamento) : null
-  if (dto.data_pagamento && isNaN(dataPagamento!.getTime())) {
-    throw new BadRequestException('data_pagamento inválida')
+  if (dto.data_pagamento && isNaN(dataPagamento!.getTime())) throw new BadRequestException('data_pagamento inválida')
+
+  // ✅ valida banco/cartão conforme forma_pagamento (ANTES do baseData)
+  if (dto.forma_pagamento === 'PIX' && !dto.conta_bancaria_key) {
+    throw new BadRequestException('Selecione o banco/conta do PIX')
+  }
+  if (dto.forma_pagamento === 'PIX' && !dto.conta_bancaria_tipo_key) {
+    throw new BadRequestException('Selecione o tipo de conta do PIX')
+  }
+  if (dto.forma_pagamento === 'CARTAO_CREDITO' && !dto.cartao_credito_key) {
+    throw new BadRequestException('Selecione o cartão de crédito')
   }
 
-  // recorrência (gerada automaticamente quando parcelado)
+  // recorrência
   const recorrenciaId = parcelas > 1 ? randomUUID() : null
 
   // funcionario opcional
@@ -63,14 +68,27 @@ export class DespesasService {
     forma_pagamento: dto.forma_pagamento,
     quantidade_parcelas: parcelas,
 
+    conta_bancaria_key: dto.conta_bancaria_key ?? null,
+    conta_bancaria_tipo_key: dto.conta_bancaria_tipo_key ?? null,
+    cartao_credito_key: dto.cartao_credito_key ?? null,
+
     data_registro: dataRegistro ?? new Date(),
     data_vencimento: primeiroVenc,
-
     status: dto.status,
     recorrencia_id: recorrenciaId,
 
     ...(funcionarioId ? { funcionario: { connect: { id: funcionarioId } } } : {}),
   }
+
+  // ✅ dividir valor_total em parcelas (centavos)
+  const total = Number(dto.valor_total)
+  if (!Number.isFinite(total) || total <= 0) throw new BadRequestException('valor_total inválido')
+
+  const totalCents = Math.round(total * 100)
+  const base = Math.floor(totalCents / parcelas)
+  const resto = totalCents % parcelas
+
+  const valoresParcelasCents = Array.from({ length: parcelas }, (_, i) => base + (i < resto ? 1 : 0))
 
   // cria parcelas
   const criadas = await this.prisma.$transaction(
@@ -78,6 +96,7 @@ export class DespesasService {
       this.prisma.despesas.create({
         data: {
           ...baseData,
+          valor_total: new Prisma.Decimal((valoresParcelasCents[i] / 100).toFixed(2)),
           parcela_numero: parcelas > 1 ? i + 1 : null,
           data_vencimento: this.addMeses(primeiroVenc, i),
           data_pagamento: i === 0 ? dataPagamento : null,
@@ -88,6 +107,7 @@ export class DespesasService {
 
   return criadas
 }
+
 
 
   async findAll(filtros: FiltrosDespesas = {}): Promise<despesas[]> {
@@ -108,9 +128,17 @@ export class DespesasService {
   }
 
 async update(id: number, dto: UpdateDespesaDto): Promise<despesas> {
-  await this.findOne(id)
+  const atual = await this.findOne(id)
+const formaFinal = dto.forma_pagamento ?? atual.forma_pagamento
+
+const bancoFinal = dto.conta_bancaria_key ?? atual.conta_bancaria_key
+const tipoFinal  = dto.conta_bancaria_tipo_key ?? atual.conta_bancaria_tipo_key
+const cartaoFinal = dto.cartao_credito_key ?? atual.cartao_credito_key
+
 
   const data: Prisma.despesasUpdateInput = {}
+
+  
 
   if (dto.tipo_movimento !== undefined) data.tipo_movimento = dto.tipo_movimento
   if (dto.unidade !== undefined) data.unidade = dto.unidade
@@ -153,7 +181,31 @@ async update(id: number, dto: UpdateDespesaDto): Promise<despesas> {
     data.data_pagamento = dto.data_pagamento ? new Date(dto.data_pagamento) : null
   }
 
-  // ✅ funcionário opcional (blindado)
+  // ✅ PIX / Cartão (chaves de constantes)
+  if (dto.conta_bancaria_key !== undefined) data.conta_bancaria_key = dto.conta_bancaria_key ?? null
+  if (dto.conta_bancaria_tipo_key !== undefined) data.conta_bancaria_tipo_key = dto.conta_bancaria_tipo_key ?? null
+  if (dto.cartao_credito_key !== undefined) data.cartao_credito_key = dto.cartao_credito_key ?? null
+
+  // ✅ valida conforme forma_pagamento (use o valor final: dto.forma_pagamento ou existente)
+
+if (formaFinal === 'PIX') {
+  if (!bancoFinal) throw new BadRequestException('Selecione o banco/conta do PIX')
+  if (!tipoFinal) throw new BadRequestException('Selecione o tipo de conta do PIX')
+  data.cartao_credito_key = null
+} else if (formaFinal === 'CARTAO_CREDITO') {
+  if (!cartaoFinal) throw new BadRequestException('Selecione o cartão de crédito')
+  data.conta_bancaria_key = null
+  data.conta_bancaria_tipo_key = null
+} else {
+  // qualquer outra forma (dinheiro, boleto, débito, etc.)
+  data.conta_bancaria_key = null
+  data.conta_bancaria_tipo_key = null
+  data.cartao_credito_key = null
+}
+
+
+
+  // ✅ funcionário opcional
   if (dto.funcionario_id !== undefined) {
     const funcionarioId =
       dto.funcionario_id === null || dto.funcionario_id === undefined
@@ -167,6 +219,7 @@ async update(id: number, dto: UpdateDespesaDto): Promise<despesas> {
 
   return this.prisma.despesas.update({ where: { id }, data })
 }
+
 
 async updateRecorrencia(recorrenciaId: string, dto: UpdateDespesaDto): Promise<number> {
   const existe = await this.prisma.despesas.findFirst({
@@ -196,6 +249,20 @@ async updateRecorrencia(recorrenciaId: string, dto: UpdateDespesaDto): Promise<n
   if (dto.valor_total !== undefined) {
     data.valor_total = { set: new Prisma.Decimal(dto.valor_total) }
   }
+
+    // ✅ PIX / Cartão (chaves de constantes)
+  if (dto.conta_bancaria_key !== undefined) {
+    data.conta_bancaria_key = { set: dto.conta_bancaria_key ?? null }
+  }
+
+  if (dto.conta_bancaria_tipo_key !== undefined) {
+    data.conta_bancaria_tipo_key = { set: dto.conta_bancaria_tipo_key ?? null }
+  }
+
+  if (dto.cartao_credito_key !== undefined) {
+    data.cartao_credito_key = { set: dto.cartao_credito_key ?? null }
+  }
+
 
   // ✅ funcionario opcional (updateMany: set direto no campo)
   if (dto.funcionario_id !== undefined) {
@@ -228,6 +295,21 @@ async updateRecorrencia(recorrenciaId: string, dto: UpdateDespesaDto): Promise<n
     }
     data.data_pagamento = { set: dto.data_pagamento ? new Date(dto.data_pagamento) : null }
   }
+if (dto.forma_pagamento === 'PIX') {
+  if (!dto.conta_bancaria_key) throw new BadRequestException('Selecione o banco/conta do PIX')
+  if (!dto.conta_bancaria_tipo_key) throw new BadRequestException('Selecione o tipo de conta do PIX')
+  data.cartao_credito_key = { set: null }
+} else if (dto.forma_pagamento === 'CARTAO_CREDITO') {
+  if (!dto.cartao_credito_key) throw new BadRequestException('Selecione o cartão de crédito')
+  data.conta_bancaria_key = { set: null }
+  data.conta_bancaria_tipo_key = { set: null }
+} else if (dto.forma_pagamento) {
+  // qualquer outra forma (dinheiro, boleto, débito, etc.)
+  data.conta_bancaria_key = { set: null }
+  data.conta_bancaria_tipo_key = { set: null }
+  data.cartao_credito_key = { set: null }
+}
+  
 
   const res = await this.prisma.despesas.updateMany({
     where: { recorrencia_id: recorrenciaId },

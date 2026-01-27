@@ -139,6 +139,45 @@
                 valueKey="value"
               />
 
+              <!-- PIX: Banco + Tipo -->
+<SearchInput
+  v-if="form.forma_pagamento === 'PIX'"
+  class="col-span-12 md:col-span-4"
+  v-model="form.conta_bancaria_key"
+  mode="select"
+  label="Banco (PIX) *"
+  placeholder="Selecione"
+  :options="contasBancariasOptions"
+  labelKey="label"
+  valueKey="value"
+/>
+
+<SearchInput
+  v-if="form.forma_pagamento === 'PIX'"
+  class="col-span-12 md:col-span-4"
+  v-model="form.conta_bancaria_tipo_key"
+  mode="select"
+  label="Tipo da conta *"
+  placeholder="Selecione"
+  :options="tiposContasBancariasOptions"
+  labelKey="label"
+  valueKey="value"
+/>
+
+<!-- Cartão: Qual cartão -->
+<SearchInput
+  v-if="form.forma_pagamento === 'CARTAO_CREDITO'"
+  class="col-span-12 md:col-span-4"
+  v-model="form.cartao_credito_key"
+  mode="select"
+  label="Cartão de crédito *"
+  placeholder="Selecione"
+  :options="cartoesCreditoOptions"
+  labelKey="label"
+  valueKey="value"
+/>
+
+
               <Input
                 class="col-span-12 md:col-span-4"
                 v-model.number="form.quantidade_parcelas"
@@ -250,6 +289,7 @@ const hidratando = ref(false)
 const loading = ref(false)
 const funcionariosOptions = ref([])
 
+
 const today = () => new Date().toISOString().slice(0, 10)
 
 const form = reactive({
@@ -266,6 +306,9 @@ const form = reactive({
   data_vencimento: today(),
   data_pagamento: '',
   data_registro: today(),
+ conta_bancaria_key: null,
+ conta_bancaria_tipo_key: null,
+ cartao_credito_key: null,
 })
 
 const despesaId = computed(() => {
@@ -287,6 +330,10 @@ const mapToOptions = (data) => {
 const unidadesOptions = computed(() => mapToOptions(CONST.UNIDADES_OPERACIONAIS))
 const formasPagamentoOptions = computed(() => mapToOptions(CONST.FORMAS_PAGAMENTO))
 const statusOptions = computed(() => mapToOptions(CONST.STATUS_FINANCEIRO))
+const contasBancariasOptions = computed(() => mapToOptions(CONST.CONTAS_BANCARIAS))
+const tiposContasBancariasOptions = computed(() => mapToOptions(CONST.TIPOS_CONTAS_BANCARIAS))
+const cartoesCreditoOptions = computed(() => mapToOptions(CONST.CARTOES_CREDITO))
+
 
 const categoriasOptions = computed(() => {
   if (form.tipo_movimento === 'ENTRADA') {
@@ -331,6 +378,17 @@ watch(() => form.status, (novo) => {
   if (novo !== 'PAGO') form.data_pagamento = ''
 })
 
+watch(() => form.forma_pagamento, (fp) => {
+  if (fp !== 'PIX') {
+    form.conta_bancaria_key = null
+    form.conta_bancaria_tipo_key = null
+  }
+  if (fp !== 'CARTAO_CREDITO') {
+    form.cartao_credito_key = null
+  }
+})
+
+
 // Ações
 async function init() {
   loading.value = true
@@ -365,6 +423,16 @@ async function init() {
 
 async function salvar() {
   if (!form.categoria) return notify.info('Selecione a categoria')
+
+  if (form.forma_pagamento === 'PIX') {
+  if (!form.conta_bancaria_key) return notify.info('Selecione o banco do PIX')
+  if (!form.conta_bancaria_tipo_key) return notify.info('Selecione o tipo da conta')
+}
+
+if (form.forma_pagamento === 'CARTAO_CREDITO') {
+  if (!form.cartao_credito_key) return notify.info('Selecione o cartão de crédito')
+}
+
   
   loading.value = true
   try {

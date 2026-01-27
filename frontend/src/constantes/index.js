@@ -13,6 +13,7 @@ export {PIPELINE_PLANO_CORTE} from './pipeline-plano-corte'
 export {TAXA_NOTA_FISCAL} from './taxa-nota-fiscal'
 export {COMISSOES} from './comissoes'
 export {FUNCIONARIOS_LOCAL_SETOR_CARGO} from './funcionarios'
+export { CONTAS_BANCARIAS, CARTOES_CREDITO, TIPOS_CONTAS_BANCARIAS } from './banco'
 
 
 
