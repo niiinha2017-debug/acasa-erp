@@ -202,3 +202,8 @@ async function handleRecuperacaoSubmit() {
   } catch (e) {}
 }
 </script>
+<script setup>
+definePage({
+  meta: { public: true },
+})
+</script>
