@@ -23,6 +23,7 @@ export const FINANCEIRO_CATEGORIAS = {
       { key: 'EMBALAGEM', label: 'Embalagem / Proteção' },
       { key: 'FRETE_ENTREGA', label: 'Frete / Entrega' },
       { key: 'INSTALACAO_MONTAGEM', label: 'Instalação / Montagem (Custo)' },
+      { key: 'PEDAGIO', label: 'Pedágio' },
     ],
 
     DESPESA_FIXA: [
