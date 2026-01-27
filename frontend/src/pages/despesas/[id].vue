@@ -141,11 +141,11 @@
 
               <!-- PIX: Banco + Tipo -->
 <SearchInput
-  v-if="form.forma_pagamento === 'PIX'"
+  v-if="precisaBanco"
   class="col-span-12 md:col-span-4"
   v-model="form.conta_bancaria_key"
   mode="select"
-  label="Banco (PIX) *"
+  label="Banco/Conta *"
   placeholder="Selecione"
   :options="contasBancariasOptions"
   labelKey="label"
@@ -153,7 +153,8 @@
 />
 
 <SearchInput
-  v-if="form.forma_pagamento === 'PIX'"
+  v-if="precisaBanco"
+
   class="col-span-12 md:col-span-4"
   v-model="form.conta_bancaria_tipo_key"
   mode="select"
@@ -166,7 +167,7 @@
 
 <!-- Cartão: Qual cartão -->
 <SearchInput
-  v-if="form.forma_pagamento === 'CARTAO_CREDITO'"
+  v-if="precisaCartao"
   class="col-span-12 md:col-span-4"
   v-model="form.cartao_credito_key"
   mode="select"
@@ -318,6 +319,11 @@ const despesaId = computed(() => {
 
 const isEdit = computed(() => !!despesaId.value)
 
+const formasQuePrecisamBanco = ['PIX', 'TRANSFERENCIA', 'CHEQUE', 'BOLETO']
+const precisaBanco = computed(() => formasQuePrecisamBanco.includes(form.forma_pagamento))
+const precisaCartao = computed(() => form.forma_pagamento === 'CREDITO')
+
+
 // Utilitários
 const mapToOptions = (data) => {
   if (Array.isArray(data)) return data.map(i => ({ label: i.label, value: i.key }))
@@ -379,14 +385,15 @@ watch(() => form.status, (novo) => {
 })
 
 watch(() => form.forma_pagamento, (fp) => {
-  if (fp !== 'PIX') {
+  if (!formasQuePrecisamBanco.includes(fp)) {
     form.conta_bancaria_key = null
     form.conta_bancaria_tipo_key = null
   }
-  if (fp !== 'CARTAO_CREDITO') {
+  if (fp !== 'CREDITO') {
     form.cartao_credito_key = null
   }
 })
+
 
 
 // Ações
@@ -424,12 +431,12 @@ async function init() {
 async function salvar() {
   if (!form.categoria) return notify.info('Selecione a categoria')
 
-  if (form.forma_pagamento === 'PIX') {
-  if (!form.conta_bancaria_key) return notify.info('Selecione o banco do PIX')
+if (formasQuePrecisamBanco.includes(form.forma_pagamento)) {
+  if (!form.conta_bancaria_key) return notify.info('Selecione o banco/conta')
   if (!form.conta_bancaria_tipo_key) return notify.info('Selecione o tipo da conta')
 }
 
-if (form.forma_pagamento === 'CARTAO_CREDITO') {
+if (form.forma_pagamento === 'CREDITO') {
   if (!form.cartao_credito_key) return notify.info('Selecione o cartão de crédito')
 }
 

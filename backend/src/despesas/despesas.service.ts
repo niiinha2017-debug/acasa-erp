@@ -36,16 +36,21 @@ async create(dto: CreateDespesaDto): Promise<despesas[]> {
   const dataPagamento = dto.data_pagamento ? new Date(dto.data_pagamento) : null
   if (dto.data_pagamento && isNaN(dataPagamento!.getTime())) throw new BadRequestException('data_pagamento inválida')
 
-  // ✅ valida banco/cartão conforme forma_pagamento (ANTES do baseData)
-  if (dto.forma_pagamento === 'PIX' && !dto.conta_bancaria_key) {
-    throw new BadRequestException('Selecione o banco/conta do PIX')
-  }
-  if (dto.forma_pagamento === 'PIX' && !dto.conta_bancaria_tipo_key) {
-    throw new BadRequestException('Selecione o tipo de conta do PIX')
-  }
-  if (dto.forma_pagamento === 'CARTAO_CREDITO' && !dto.cartao_credito_key) {
-    throw new BadRequestException('Selecione o cartão de crédito')
-  }
+ // ✅ valida banco/cartão conforme forma_pagamento (ANTES do baseData)
+// ✅ valida banco/cartão conforme forma_pagamento (ANTES do baseData)
+const precisaBanco = ['PIX', 'TRANSFERENCIA', 'CHEQUE', 'BOLETO'].includes(dto.forma_pagamento)
+const precisaCartao = dto.forma_pagamento === 'CREDITO'
+
+if (precisaBanco) {
+  if (!dto.conta_bancaria_key) throw new BadRequestException('Selecione o banco/conta')
+  if (!dto.conta_bancaria_tipo_key) throw new BadRequestException('Selecione o tipo de conta')
+}
+
+if (precisaCartao) {
+  if (!dto.cartao_credito_key) throw new BadRequestException('Selecione o cartão de crédito')
+}
+
+
 
   // recorrência
   const recorrenciaId = parcelas > 1 ? randomUUID() : null
@@ -187,21 +192,24 @@ const cartaoFinal = dto.cartao_credito_key ?? atual.cartao_credito_key
   if (dto.cartao_credito_key !== undefined) data.cartao_credito_key = dto.cartao_credito_key ?? null
 
   // ✅ valida conforme forma_pagamento (use o valor final: dto.forma_pagamento ou existente)
+const precisaBancoFinal = ['PIX', 'TRANSFERENCIA', 'CHEQUE', 'BOLETO'].includes(formaFinal)
+const precisaCartaoFinal = formaFinal === 'CREDITO'
 
-if (formaFinal === 'PIX') {
-  if (!bancoFinal) throw new BadRequestException('Selecione o banco/conta do PIX')
-  if (!tipoFinal) throw new BadRequestException('Selecione o tipo de conta do PIX')
+if (precisaBancoFinal) {
+  if (!bancoFinal) throw new BadRequestException('Selecione o banco/conta')
+  if (!tipoFinal) throw new BadRequestException('Selecione o tipo de conta')
   data.cartao_credito_key = null
-} else if (formaFinal === 'CARTAO_CREDITO') {
+} else if (precisaCartaoFinal) {
   if (!cartaoFinal) throw new BadRequestException('Selecione o cartão de crédito')
   data.conta_bancaria_key = null
   data.conta_bancaria_tipo_key = null
 } else {
-  // qualquer outra forma (dinheiro, boleto, débito, etc.)
   data.conta_bancaria_key = null
   data.conta_bancaria_tipo_key = null
   data.cartao_credito_key = null
 }
+
+
 
 
 
@@ -295,20 +303,27 @@ async updateRecorrencia(recorrenciaId: string, dto: UpdateDespesaDto): Promise<n
     }
     data.data_pagamento = { set: dto.data_pagamento ? new Date(dto.data_pagamento) : null }
   }
-if (dto.forma_pagamento === 'PIX') {
-  if (!dto.conta_bancaria_key) throw new BadRequestException('Selecione o banco/conta do PIX')
-  if (!dto.conta_bancaria_tipo_key) throw new BadRequestException('Selecione o tipo de conta do PIX')
-  data.cartao_credito_key = { set: null }
-} else if (dto.forma_pagamento === 'CARTAO_CREDITO') {
-  if (!dto.cartao_credito_key) throw new BadRequestException('Selecione o cartão de crédito')
-  data.conta_bancaria_key = { set: null }
-  data.conta_bancaria_tipo_key = { set: null }
-} else if (dto.forma_pagamento) {
-  // qualquer outra forma (dinheiro, boleto, débito, etc.)
-  data.conta_bancaria_key = { set: null }
-  data.conta_bancaria_tipo_key = { set: null }
-  data.cartao_credito_key = { set: null }
+
+if (dto.forma_pagamento) {
+  const precisaBanco = ['PIX', 'TRANSFERENCIA', 'CHEQUE', 'BOLETO'].includes(dto.forma_pagamento)
+  const precisaCartao = dto.forma_pagamento === 'CREDITO'
+
+  if (precisaBanco) {
+    if (!dto.conta_bancaria_key) throw new BadRequestException('Selecione o banco/conta')
+    if (!dto.conta_bancaria_tipo_key) throw new BadRequestException('Selecione o tipo de conta')
+    data.cartao_credito_key = { set: null }
+  } else if (precisaCartao) {
+    if (!dto.cartao_credito_key) throw new BadRequestException('Selecione o cartão de crédito')
+    data.conta_bancaria_key = { set: null }
+    data.conta_bancaria_tipo_key = { set: null }
+  } else {
+    data.conta_bancaria_key = { set: null }
+    data.conta_bancaria_tipo_key = { set: null }
+    data.cartao_credito_key = { set: null }
+  }
 }
+
+
   
 
   const res = await this.prisma.despesas.updateMany({
