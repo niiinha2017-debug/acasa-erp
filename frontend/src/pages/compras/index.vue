@@ -1,6 +1,5 @@
 <template>
   <div class="w-full max-w-[1200px] mx-auto space-y-4 animate-page-in">
-    
     <!-- Header Compacto -->
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-2">
       <div class="flex items-center gap-3">
@@ -12,20 +11,20 @@
           <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Entradas e rateios</p>
         </div>
       </div>
-      
+
       <div class="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
         <div class="relative w-full sm:w-56">
           <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-          <input 
-            v-model="filtro" 
-            type="text" 
+          <input
+            v-model="filtro"
+            type="text"
             placeholder="Buscar..."
             class="w-full pl-9 pr-3 h-10 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary outline-none transition-all"
           />
         </div>
-        
-        <Button 
-          variant="primary" 
+
+        <Button
+          variant="primary"
           size="md"
           class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider"
           @click="router.push('/compras/novo')"
@@ -42,17 +41,17 @@
         <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">Total</p>
         <p class="text-xl font-black text-slate-800">{{ format.currency(totalGeral) }}</p>
       </div>
-      
+
       <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
         <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">Estoque</p>
         <p class="text-xl font-black text-slate-800">{{ format.currency(totalInsumos) }}</p>
       </div>
-      
+
       <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
         <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">Vendas</p>
         <p class="text-xl font-black text-slate-800">{{ format.currency(totalVendas) }}</p>
       </div>
-      
+
       <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 shadow-sm">
         <p class="text-[9px] font-black uppercase tracking-[0.15em] text-emerald-600">Este Mês</p>
         <p class="text-xl font-black text-emerald-700">{{ format.currency(totalMesAtual) }}</p>
@@ -63,23 +62,30 @@
     <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
       <Table
         :columns="columns"
-        :rows="filtradas"
+        :rows="paginadas"
         :loading="loading"
         empty-text="Nenhuma compra encontrada."
         :boxed="false"
+        :expandable="true"
       >
         <template #cell-fornecedor="{ row }">
           <div class="py-1">
             <span class="text-sm font-bold text-slate-800 block truncate">
               {{ nomeFornecedor(row) }}
             </span>
+
             <div class="flex items-center gap-2 mt-0.5">
-              <span 
+              <span
                 class="text-[8px] font-black px-1.5 py-0.5 rounded border"
-                :class="row.tipo_compra === 'INSUMOS' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-amber-50 text-amber-600 border-amber-100'"
+                :class="
+                  row.tipo_compra === 'INSUMOS'
+                    ? 'bg-blue-50 text-blue-600 border-blue-100'
+                    : 'bg-amber-50 text-amber-600 border-amber-100'
+                "
               >
                 {{ row.tipo_compra === 'INSUMOS' ? '📦' : `🎯 #${row.venda_id}` }}
               </span>
+
               <span class="text-[8px] font-bold text-slate-400">
                 #{{ row.id }}
               </span>
@@ -107,29 +113,98 @@
 
         <template #cell-acoes="{ row }">
           <div class="flex justify-end gap-1">
-            <button 
+            <button
               @click="router.push(`/compras/${row.id}`)"
               class="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-brand-primary hover:text-white transition-all flex items-center justify-center"
             >
               <i class="pi pi-pencil text-xs"></i>
             </button>
-<button 
-  @click="confirmarExcluirCompra(row.id)"
-  class="w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
->
-  <i class="pi pi-trash text-xs"></i>
-</button>
 
+            <button
+              @click="confirmarExcluirCompra(row.id)"
+              class="w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
+            >
+              <i class="pi pi-trash text-xs"></i>
+            </button>
+          </div>
+        </template>
+
+        <!-- DETALHES (EXPAND) -->
+        <template #row-expand="{ row }">
+          <div class="grid grid-cols-12 gap-4">
+            <!-- Itens -->
+            <div class="col-span-12 md:col-span-8">
+              <div class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                Itens
+              </div>
+
+              <div v-if="row.itens?.length" class="space-y-2">
+                <div
+                  v-for="it in row.itens"
+                  :key="it.id"
+                  class="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3"
+                >
+                  <div class="min-w-0">
+                    <div class="text-xs font-black uppercase truncate">{{ it.nome_produto }}</div>
+                    <div class="text-[10px] font-bold text-slate-400 uppercase">
+                      {{ Number(it.quantidade) }} {{ it.unidade }} •
+                      R$ {{ Number(it.valor_unitario).toLocaleString('pt-br', { minimumFractionDigits: 2 }) }}
+                    </div>
+                  </div>
+
+                  <div class="text-sm font-black text-slate-800 tabular-nums">
+                    R$ {{ Number(it.valor_total).toLocaleString('pt-br', { minimumFractionDigits: 2 }) }}
+                  </div>
+                </div>
+              </div>
+
+              <div v-else class="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Sem itens.
+              </div>
+            </div>
+
+            <!-- Rateio -->
+            <div class="col-span-12 md:col-span-4">
+              <div class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
+                Rateio
+              </div>
+
+              <div v-if="row.rateios?.length" class="space-y-2">
+                <div
+                  v-for="r in row.rateios"
+                  :key="r.id"
+                  class="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3"
+                >
+                  <div class="text-xs font-black uppercase truncate">{{ r.nome_ambiente }}</div>
+                  <div class="text-sm font-black text-slate-800 tabular-nums">
+                    R$ {{ Number(r.valor_alocado).toLocaleString('pt-br', { minimumFractionDigits: 2 }) }}
+                  </div>
+                </div>
+              </div>
+
+              <div v-else class="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Sem rateio.
+              </div>
+            </div>
           </div>
         </template>
       </Table>
-    </div>
 
+      <!-- Paginação fora da Table -->
+      <div class="border-t border-slate-200">
+        <TablePagination
+          v-model:page="page"
+          :page-size="pageSize"
+          :total="filtradas.length"
+        />
+      </div>
+    </div>
   </div>
 </template>
 
+
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { CompraService } from '@/services/index'
 import { format } from '@/utils/format'
@@ -140,6 +215,8 @@ const router = useRouter()
 const compras = ref([])
 const loading = ref(false)
 const filtro = ref('')
+const page = ref(1)
+const pageSize = ref(10)
 
 const columns = [
   { key: 'fornecedor', label: 'Fornecedor', width: '35%' },
@@ -167,6 +244,11 @@ function nomeFornecedor(row) {
   const f = row?.fornecedor
   return f?.nome_fantasia || f?.razao_social || `Fornecedor #${row.fornecedor_id}`
 }
+
+const paginadas = computed(() => {
+  const start = (page.value - 1) * pageSize.value
+  return filtradas.value.slice(start, start + pageSize.value)
+})
 
 const filtradas = computed(() => {
   const t = filtro.value?.toLowerCase().trim()
@@ -204,16 +286,8 @@ async function confirmarExcluirCompra(id) {
   }
 }
 
+watch(filtro, () => { page.value = 1 })
 
-async function excluir(id) {
-  if (await confirm.show('Excluir Compra', 'Esta ação não pode ser desfeita. Deseja continuar?')) {
-    try {
-      await CompraService.remover(id)
-      compras.value = compras.value.filter(c => c.id !== id)
-      notify.success('Compra removida com sucesso!')
-    } catch (e) { notify.error('Erro ao excluir registro.') }
-  }
-}
 
 onMounted(carregar)
 </script>

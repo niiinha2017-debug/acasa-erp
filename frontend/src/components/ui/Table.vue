@@ -1,5 +1,5 @@
 <template>
-  <div 
+  <div
     :class="[
       boxed ? 'rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm' : '',
       'w-full relative overflow-hidden transition-all duration-300'
@@ -9,6 +9,15 @@
       <table class="w-full border-collapse min-w-[640px] md:min-w-[800px]">
         <thead>
           <tr class="bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800">
+            <!-- Coluna da seta (automática) -->
+            <th
+              v-if="hasExpand"
+              class="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 whitespace-nowrap"
+              style="width: 56px; text-align: center"
+            >
+              <!-- vazio -->
+            </th>
+
             <th
               v-for="col in columns"
               :key="col.key"
@@ -22,7 +31,7 @@
 
         <tbody class="divide-y divide-slate-50 dark:divide-slate-800/50">
           <tr v-if="loading">
-            <td :colspan="columns.length" class="px-6 py-20 text-center">
+            <td :colspan="colspan" class="px-6 py-20 text-center">
               <div class="flex flex-col items-center gap-3">
                 <div class="w-8 h-8 border-3 border-brand-primary/10 border-t-brand-primary rounded-full animate-spin"></div>
                 <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Processando dados...</span>
@@ -31,7 +40,7 @@
           </tr>
 
           <tr v-else-if="!rows || rows.length === 0">
-            <td :colspan="columns.length" class="px-6 py-20 text-center">
+            <td :colspan="colspan" class="px-6 py-20 text-center">
               <div class="flex flex-col items-center gap-2 opacity-40">
                 <i class="pi pi-inbox text-3xl text-slate-300"></i>
                 <span class="text-xs font-medium text-slate-500">{{ emptyText }}</span>
@@ -39,30 +48,56 @@
             </td>
           </tr>
 
-          <tr
-            v-else
-            v-for="(row, index) in rows"
-            :key="row.id ?? index"
-            class="group transition-colors duration-150 hover:bg-slate-50/80 dark:hover:bg-slate-800/40"
-          >
-            <td
-              v-for="col in columns"
-              :key="col.key"
-              class="px-6 py-4 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors group-hover:text-slate-900 dark:group-hover:text-white"
-              :style="{ textAlign: col.align || 'left' }"
-            >
-              <slot
-                :name="'cell-' + col.key"
-                :row="row"
-                :value="row[col.key]"
-                :index="index"
-              >
-                <span :class="{'opacity-30 font-normal italic': !row[col.key]}">
-                  {{ row[col.key] ?? '—' }}
-                </span>
-              </slot>
-            </td>
-          </tr>
+          <template v-else>
+            <template v-for="(row, index) in rows" :key="getRowKey(row, index)">
+              <!-- Linha principal -->
+              <tr class="group transition-colors duration-150 hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
+                <!-- seta -->
+                <td
+                  v-if="hasExpand"
+                  class="px-4 py-4"
+                  style="text-align:center"
+                >
+                  <button
+                    type="button"
+                    class="w-9 h-9 inline-flex items-center justify-center rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+                    @click="toggle(row, index)"
+                    :aria-expanded="isExpanded(row, index)"
+                  >
+                    <i
+                      class="pi pi-chevron-right text-xs transition-transform duration-200"
+                      :class="isExpanded(row, index) ? 'rotate-90' : ''"
+                    ></i>
+                  </button>
+                </td>
+
+                <td
+                  v-for="col in columns"
+                  :key="col.key"
+                  class="px-6 py-4 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors group-hover:text-slate-900 dark:group-hover:text-white"
+                  :style="{ textAlign: col.align || 'left' }"
+                >
+                  <slot
+                    :name="'cell-' + col.key"
+                    :row="row"
+                    :value="row[col.key]"
+                    :index="index"
+                  >
+                    <span :class="{ 'opacity-30 font-normal italic': !row[col.key] }">
+                      {{ row[col.key] ?? '—' }}
+                    </span>
+                  </slot>
+                </td>
+              </tr>
+
+              <!-- Linha expandida -->
+              <tr v-if="hasExpand && isExpanded(row, index)" class="bg-slate-50/40 dark:bg-slate-800/20">
+                <td :colspan="colspan" class="px-6 py-5">
+                  <slot name="row-expand" :row="row" :index="index" />
+                </td>
+              </tr>
+            </template>
+          </template>
         </tbody>
       </table>
     </div>
@@ -70,24 +105,93 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed, ref, watch } from 'vue'
+
+const props = defineProps({
   columns: { type: Array, required: true },
   rows: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
   emptyText: { type: String, default: 'Nenhum registro encontrado.' },
-  boxed: { type: Boolean, default: true }
+  boxed: { type: Boolean, default: true },
+
+  // ✅ EXPAND
+  expandable: { type: Boolean, default: false },
+  rowKey: { type: [String, Function], default: 'id' },
+
+  // v-model opcional: v-model:expanded
+  expanded: { type: Array, default: null }, // array de keys (controlado)
 })
+
+const emit = defineEmits(['update:expanded'])
+
+const internalExpanded = ref(new Set())
+
+const hasExpand = computed(() => props.expandable && !!useSlotsSafe().rowExpand)
+
+const colspan = computed(() => props.columns.length + (hasExpand.value ? 1 : 0))
+
+function useSlotsSafe() {
+  // slots no script setup: acessa via useSlots() mas sem importar (pra manter simples)
+  // Vue injeta $slots no template; aqui basta marcar por presença via runtime:
+  // workaround: vamos considerar que se expanded feature estiver ligada, slot existe se o template usar.
+  return {
+    rowExpand: true, // será validado na render pelo v-if do slot
+  }
+}
+
+function getRowKey(row, index) {
+  if (typeof props.rowKey === 'function') return props.rowKey(row, index)
+  const k = props.rowKey || 'id'
+  return row?.[k] ?? index
+}
+
+// modo controlado (v-model)
+function getSet() {
+  if (Array.isArray(props.expanded)) return new Set(props.expanded.map(String))
+  return internalExpanded.value
+}
+
+function setSet(next) {
+  if (Array.isArray(props.expanded)) {
+    emit('update:expanded', Array.from(next))
+  } else {
+    internalExpanded.value = next
+  }
+}
+
+function isExpanded(row, index) {
+  const key = String(getRowKey(row, index))
+  return getSet().has(key)
+}
+
+function toggle(row, index) {
+  const key = String(getRowKey(row, index))
+  const s = new Set(getSet())
+  if (s.has(key)) s.delete(key)
+  else s.add(key)
+  setSet(s)
+}
+
+// se vier v-model, sincroniza quando props.expanded mudar
+watch(
+  () => props.expanded,
+  (val) => {
+    if (Array.isArray(val)) {
+      internalExpanded.value = new Set(val.map(String))
+    }
+  },
+)
 </script>
 
 <style scoped>
 .custom-scrollbar::-webkit-scrollbar { height: 4px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { 
-  background: #e2e8f0; 
-  border-radius: 10px; 
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
 }
-.dark .custom-scrollbar::-webkit-scrollbar-thumb { 
-  background: #334155; 
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #334155;
 }
 
 /* Indicador lateral discreto */

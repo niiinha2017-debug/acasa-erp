@@ -22,6 +22,7 @@ import Table from '@/components/ui/Table.vue'
 import TableActions from '@/components/ui/TableActions.vue'
 import ToastContainer from '@/components/ui/ToastContainer.vue' // Adicionado .vue
 import CardSection from '@/components/ui/CardSection.vue'
+import TablePagination from '@/components/ui/TablePagination.vue'
 
 
 // Modals
@@ -56,6 +57,7 @@ app.component('Table', Table)
 app.component('TableActions', TableActions)
 app.component('ToastContainer', ToastContainer)
 app.component('CardSection',CardSection)
+app.component('TablePagination', TablePagination)
 
 // Common
 app.component('Loading', Loading)
