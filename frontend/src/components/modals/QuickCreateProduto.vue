@@ -3,21 +3,22 @@
     <Transition name="fade">
       <div
         v-if="open"
-        class="fixed inset-0 flex items-center justify-center p-6 z-[100] bg-slate-900/60 backdrop-blur-sm transition-all duration-300"
+        class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
         @click.self="emit('close')"
       >
-        <div class="w-full max-w-2xl bg-white rounded-[3rem] border-none shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
-          
-          <header class="flex justify-between items-center px-10 py-8 border-b border-slate-100 bg-slate-50/50">
-            <div class="flex items-center gap-5">
-              <div class="w-12 h-12 rounded-[1.2rem] bg-slate-900 flex items-center justify-center text-white shadow-lg">
-                <i class="pi pi-box text-xl"></i>
+        <div class="w-full max-w-2xl max-h-[85vh] bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col">
+          <!-- Header -->
+          <header class="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+            <div class="flex items-center gap-4">
+              <div class="w-11 h-11 rounded-[1.1rem] bg-slate-900 flex items-center justify-center text-white shadow-lg">
+                <i class="pi pi-box text-lg"></i>
               </div>
+
               <div>
-                <h3 class="text-xl font-black text-slate-800 tracking-tight uppercase italic leading-none">
+                <h3 class="text-lg font-black text-slate-800 tracking-tight uppercase leading-none">
                   Cadastrar Produto
                 </h3>
-                <div class="flex items-center gap-2 mt-1.5">
+                <div class="flex items-center gap-2 mt-1">
                   <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
                   <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                     Ficha Técnica do Item
@@ -35,28 +36,27 @@
             </button>
           </header>
 
-          <div class="p-10 space-y-8">
-            <div class="grid grid-cols-12 gap-x-6 gap-y-8">
-              
+          <!-- Body -->
+          <div class="p-6 overflow-y-auto">
+            <div class="grid grid-cols-12 gap-x-6 gap-y-6">
               <div class="col-span-12 md:col-span-7">
-                <Input 
-                  v-model="form.nome_produto" 
-                  label="Nome do Produto" 
-                  placeholder="EX: MDF CRU OU DOBRADIÇA" 
-                  class="premium-input"
-                  required 
+                <Input
+                  v-model="form.nome_produto"
+                  label="Nome do Produto"
+                  placeholder="EX: MDF CRU OU DOBRADIÇA"
+                  required
                 />
               </div>
 
-              <div class="col-span-6 md:col-span-5">
+              <div class="col-span-12 md:col-span-5">
                 <Input v-model="form.marca" label="Marca / Fabricante" placeholder="EX: DURATEX" />
               </div>
 
-              <div class="col-span-6 md:col-span-4">
+              <div class="col-span-12 md:col-span-4">
                 <Input v-model="form.cor" label="Cor / Acabamento" placeholder="EX: BRANCO TX" />
               </div>
 
-              <div class="col-span-6 md:col-span-4">
+              <div class="col-span-12 md:col-span-4">
                 <Input v-model="form.medida" label="Espessura" placeholder="EX: 18MM" />
               </div>
 
@@ -71,32 +71,37 @@
                 />
               </div>
 
-              <div class="col-span-12 md:col-span-5">
+              <div class="col-span-12 md:col-span-6">
                 <div class="relative">
-                  <Input 
-                    v-model="form.valor_unitario_mask" 
-                    label="Valor de Custo (UN)" 
-                    placeholder="0,00" 
+                  <Input
+                    v-model="form.valor_unitario_mask"
+                    label="Valor de Custo (UN)"
+                    placeholder="0,00"
                     @input="form.valor_unitario_mask = maskMoneyBR(form.valor_unitario_mask)"
                   />
                   <span class="absolute right-4 bottom-4 text-[10px] font-black text-slate-300">BRL</span>
                 </div>
               </div>
 
-              <div class="col-span-12 bg-slate-50 p-6 rounded-[1.5rem] border border-slate-100/50">
-                <CustomCheckbox
-                  label="Disponibilidade Ativa"
-                  description="HABILITAR ESTE PRODUTO PARA NOVOS PEDIDOS DE COMPRA"
-                  :model-value="form.status === 'ATIVO'"
-                  @update:model-value="(val) => form.status = val ? 'ATIVO' : 'INATIVO'"
-                />
+              <div class="col-span-12 md:col-span-6">
+                <div class="h-full flex items-end">
+                  <div class="w-full bg-slate-50 p-5 rounded-2xl border border-slate-100/60">
+                    <CustomCheckbox
+                      label="Disponibilidade Ativa"
+                      description="HABILITAR ESTE PRODUTO PARA NOVOS PEDIDOS DE COMPRA"
+                      :model-value="form.status === 'ATIVO'"
+                      @update:model-value="(val) => (form.status = val ? 'ATIVO' : 'INATIVO')"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <footer class="flex justify-end items-center gap-6 px-10 py-8 border-t border-slate-100 bg-slate-50/50">
-            <button 
-              type="button" 
+          <!-- Footer -->
+          <footer class="flex items-center justify-end gap-4 px-6 py-5 border-t border-slate-100 bg-slate-50/50">
+            <button
+              type="button"
               @click="emit('close')"
               class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-slate-800 transition-colors"
             >
@@ -106,7 +111,7 @@
             <Button
               type="button"
               variant="primary"
-              class="!h-14 !rounded-[1.2rem] !px-10 shadow-xl shadow-brand-primary/20 font-black text-[10px] uppercase tracking-widest"
+              class="!h-12 !rounded-[1.2rem] !px-8 shadow-xl shadow-brand-primary/20 font-black text-[10px] uppercase tracking-widest"
               :loading="salvando"
               @click="salvar"
             >
