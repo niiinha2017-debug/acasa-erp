@@ -127,6 +127,10 @@
 </template>
 
 <script setup>
+definePage({
+  meta: { public: true },
+})
+
 import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/services/useauth'
@@ -202,8 +206,4 @@ async function handleRecuperacaoSubmit() {
   } catch (e) {}
 }
 </script>
-<script setup>
-definePage({
-  meta: { public: true },
-})
-</script>
+
