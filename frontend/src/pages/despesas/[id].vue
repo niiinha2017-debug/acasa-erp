@@ -58,13 +58,13 @@
           <section class="space-y-5">
             <div class="grid grid-cols-12 gap-4 items-end">
               <!-- Descrição -->
-              <Input
-                class="col-span-12"
-                v-model="form.local"
-                label="Descrição"
-                placeholder="Ex: Aluguel, Salário, Venda"
-                :forceUpper="false"
-              />
+<Input
+  class="col-span-12"
+  v-model="form.local"
+  label="Descrição"
+  placeholder="Ex: ALUGUEL, SALÁRIO, VENDA"
+/>
+
 
               <!-- Categoria / Classificação / Unidade -->
 <!-- Unidade / Categoria / Classificação -->
@@ -240,6 +240,8 @@ import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
 import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
 import * as CONST from '@/constantes/index'
+import { upper } from '@/utils/text'
+
 
 const route = useRoute()
 const router = useRouter()
@@ -366,11 +368,12 @@ async function salvar() {
   
   loading.value = true
   try {
-    const payload = { 
-      ...JSON.parse(JSON.stringify(form)),
-      valor_total: String(form.valor_total), // Garante compatibilidade com Decimal/String no DTO
-      quantidade_parcelas: Number(form.quantidade_parcelas)
-    }
+const payload = {
+  ...JSON.parse(JSON.stringify(form)),
+  local: upper(form.local),
+  valor_total: String(form.valor_total),
+  quantidade_parcelas: Number(form.quantidade_parcelas),
+}
     
     await DespesaService.salvar(despesaId.value, payload)
     notify.success(isEdit.value ? 'Atualizado com sucesso!' : 'Lançamento criado!')

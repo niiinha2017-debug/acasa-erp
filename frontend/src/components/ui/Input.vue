@@ -85,7 +85,7 @@ const props = defineProps({
   required: Boolean,
   autocomplete: String,
   id: String,
-  forceUpper: { type: Boolean, default: false } // Desativado por padrão para inputs mais limpos
+  forceUpper: { type: Boolean, default: true }
 })
 
 const emit = defineEmits(['update:modelValue', 'input', 'blur', 'focus'])
