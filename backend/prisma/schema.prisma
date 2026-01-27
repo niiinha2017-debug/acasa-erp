@@ -617,7 +617,7 @@ model despesas {
   @@index([cartao_credito_key])
 
   @@map("despesas")
-}
+ }
 
 model producao_projetos {
   id Int @id @default(autoincrement())

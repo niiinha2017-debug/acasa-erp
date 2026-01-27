@@ -251,6 +251,9 @@ export const VendaService = {
   atualizarItem: (vendaId, itemId, dados) =>
     api.put(`/vendas/${vendaId}/itens/${itemId}`, dados),
 
+  // ✅ NOVO
+  listarAmbientes: (id) => api.get(`/vendas/${id}/ambientes`),
+
   uploadArquivo: (id, file) => {
     const fd = new FormData()
     fd.append('arquivo', file)

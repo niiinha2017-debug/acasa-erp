@@ -141,5 +141,12 @@ enviarParaProducao() {
   ) {
     return this.service.removerArquivo(this.cleanId(id), this.cleanId(arquivoId))
   }
+@Get(':id/ambientes')
+@Permissoes('vendas.ver')
+listarAmbientes(@Param('id') id: string) {
+  return this.service.listarAmbientes(this.cleanId(id))
+}
+
+
 }
 

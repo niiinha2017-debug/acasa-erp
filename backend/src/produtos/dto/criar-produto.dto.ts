@@ -6,7 +6,6 @@ import {
   IsString,
   IsEnum,
   Min,
-  IsPositive,
 } from 'class-validator'
 
 export enum StatusProduto {
@@ -38,21 +37,25 @@ export class CreateProdutoDto {
   @IsString()
   unidade?: string
 
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(0)
-  quantidade: number
+  quantidade?: number
 
-  @Type(() => Number)
-  @IsNumber()
-  @IsPositive()
-  valor_unitario: number
-
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  valor_total: number
+  valor_unitario?: number
 
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  valor_total?: number
+
+  @IsOptional()
   @IsEnum(StatusProduto)
-  status: StatusProduto
+  status?: StatusProduto
 }

@@ -386,6 +386,25 @@ async listarArquivos(vendaId: number) {
   })
 }
 
+async listarAmbientes(vendaId: number) {
+  await this.buscarPorId(vendaId) // garante que existe e respeita o NotFound
+
+  const itens = await this.prisma.vendas_itens.findMany({
+    where: { venda_id: vendaId },
+    select: { nome_ambiente: true },
+    orderBy: { nome_ambiente: 'asc' },
+  })
+
+  const set = new Set<string>()
+  for (const it of itens) {
+    const nome = String(it.nome_ambiente || '').trim()
+    if (nome) set.add(nome)
+  }
+
+  return Array.from(set).map((nome) => ({ nome }))
+}
+
+
 async removerArquivo(vendaId: number, arquivoId: number) {
   const arq = await this.prisma.vendas_arquivos.findFirst({
     where: { id: arquivoId, venda_id: vendaId },

@@ -185,33 +185,49 @@ watch(() => props.open, (isOpen) => {
 })
 
 async function salvar() {
-  if (!props.fornecedorId) return notify.warn('Selecione um fornecedor antes.')
-  if (!form.nome_produto?.trim()) return notify.warn('Informe o nome do produto.')
+  console.log('[MODAL PRODUTO] fornecedorId:', props.fornecedorId)
+  console.log('[MODAL PRODUTO] form:', JSON.parse(JSON.stringify(form)))
+
+  if (!props.fornecedorId) {
+    notify.warn('Selecione um fornecedor antes.')
+    return
+  }
+  if (!form.nome_produto?.trim()) {
+    notify.warn('Informe o nome do produto.')
+    return
+  }
 
   const valorRaw = String(form.valor_unitario_mask || '').replace(/\D/g, '')
   const valorNum = Number(valorRaw) / 100
 
+  const payload = {
+    fornecedor_id: props.fornecedorId,
+    nome_produto: form.nome_produto.trim(),
+    cor: form.cor || null,
+    medida: form.medida || null,
+    unidade: form.unidade || 'METRO',
+    marca: form.marca || null,
+    valor_unitario: isNaN(valorNum) ? 0 : valorNum,
+    status: form.status,
+  }
+
+  console.log('[MODAL PRODUTO] payload:', payload)
+
   salvando.value = true
   try {
-    const payload = {
-      fornecedor_id: props.fornecedorId,
-      nome_produto: form.nome_produto.trim(),
-      cor: form.cor || null,
-      medida: form.medida || null,
-      unidade: form.unidade || 'METRO',
-      marca: form.marca || null,
-      valor_unitario: isNaN(valorNum) ? 0 : valorNum,
-      status: form.status,
-    }
+    const res = await ProdutosService.salvar(null, payload) // ou undefined
 
-    const res = await ProdutosService.criar(payload)
+    console.log('[MODAL PRODUTO] res:', res)
+
     emit('created', res?.data || res)
     emit('close')
     notify.success('Produto cadastrado!')
   } catch (error) {
+    console.log('[MODAL PRODUTO] erro:', error)
     notify.error(error?.response?.data?.message || 'Erro ao salvar produto.')
   } finally {
     salvando.value = false
   }
 }
+
 </script>
