@@ -1,6 +1,7 @@
 <script setup>
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
+import ConfirmModal from '@/components/ui/ConfirmModal.vue'
 </script>
 
 <template>
@@ -9,4 +10,6 @@ import DefaultLayout from '@/layouts/DefaultLayout.vue'
       <component :is="Component" />
     </component>
   </RouterView>
+
+  <ConfirmModal />
 </template>

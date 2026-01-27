@@ -122,7 +122,7 @@
                 <TableActions
                   :id="row.id ?? row.__idx"
                   @edit="iniciarEdicao(row.__idx)"
-                  @delete="removerDaLista(row.__idx)"
+                  @delete="confirmarRemoverItem(row.__idx)"
                 />
               </template>
             </Table>
@@ -182,7 +182,7 @@
                   <!-- EXCLUIR -->
                   <button
                     type="button"
-                    @click="deletarAnexo(file.id)"
+                    @click="confirmarDeletarAnexo(file.id)"
                     class="text-red-400 hover:text-red-600"
                     title="Excluir"
                   >
@@ -209,7 +209,7 @@
               :is-edit="!isNovo"
               :loading-save="saving"
               @save="salvarTudo"
-              @delete="confirmarExclusao"
+              @delete="confirmarExcluirOrcamento"
               class="flex-row-reverse"
             />
           </div>
@@ -225,6 +225,7 @@ import { ref, reactive, computed, onMounted,nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { OrcamentosService, ClienteService } from '@/services/index'
 import { format } from '@/utils/format'
+import { confirm } from '@/services/confirm'
 
 const route = useRoute()
 const router = useRouter()
@@ -320,13 +321,46 @@ function iniciarEdicao(idx) {
 
 async function removerDaLista(idx) {
   const item = draft.ambientes[idx]
-  if (!confirm('Remover este item?')) return
 
   if (item?.id && orcamentoId.value && String(orcamentoId.value) !== 'novo') {
     await OrcamentosService.removerItem(orcamentoId.value, item.id)
   }
 
   draft.ambientes.splice(idx, 1)
+}
+
+
+// remover item (confirm)
+async function confirmarRemoverItem(idx) {
+  const item = draft.ambientes[idx]
+  const ok = await confirm.show(
+    'Remover Item',
+    `Deseja remover "${item?.nome_ambiente || 'ITEM'}"?`,
+  )
+  if (!ok) return
+  await removerDaLista(idx)
+}
+
+// deletar anexo (confirm)
+async function confirmarDeletarAnexo(arquivoId) {
+  const arq = arquivos.value?.find(a => a.id === arquivoId)
+  const ok = await confirm.show(
+    'Excluir Anexo',
+    `Deseja excluir "${arq?.nome_original || 'ARQUIVO'}"?`,
+  )
+  if (!ok) return
+  await deletarAnexo(arquivoId)
+}
+
+// excluir orçamento (confirm)
+async function confirmarExcluirOrcamento() {
+  const ok = await confirm.show(
+    'Excluir Orçamento',
+    `Deseja excluir permanentemente o Orçamento #${orcamentoId.value}?`,
+  )
+  if (!ok) return
+  await OrcamentosService.remover(orcamentoId.value)
+  router.push('/orcamentos')
 }
 
 // --- ARQUIVOS ---
@@ -357,12 +391,13 @@ async function abrirArquivo(arquivoId) {
 
 
 async function deletarAnexo(id) {
-  if (!confirm('Excluir?')) return
   const oid = await ensureOrcamentoId()
   if (!oid) return
+
   await OrcamentosService.removerArquivo(oid, id)
   arquivos.value = arquivos.value.filter(a => a.id !== id)
 }
+
 
 function getFileIcon(n) {
   const e = String(n || '').split('.').pop().toLowerCase()
@@ -406,29 +441,12 @@ async function salvarTudo() {
 
     await router.push('/orcamentos')
   } catch (err) {
-    // ✅ DEBUG REAL (mostra tudo)
-    console.group('ERRO salvarTudo()')
-    console.log('err:', err)
-    console.log('message:', err?.message)
-    console.log('response.status:', err?.response?.status)
-    console.log('response.data:', err?.response?.data)
-    console.log('route:', route.fullPath)
-    console.log('orcamentoId:', orcamentoId.value)
-    console.log('draft.cliente_id:', draft.cliente_id)
-    console.log('itens:', JSON.parse(JSON.stringify(draft.ambientes)))
-    console.groupEnd()
+    console.error('Erro ao salvar orçamento:', err)
   } finally {
     saving.value = false
   }
 }
 
-
-async function confirmarExclusao() {
-  if (confirm('Deseja excluir permanentemente este orçamento?')) {
-    await OrcamentosService.remover(orcamentoId.value)
-    router.push('/orcamentos')
-  }
-}
 
 async function gerarPdf() {
   const id = await ensureOrcamentoId()

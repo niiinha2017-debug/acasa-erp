@@ -116,7 +116,7 @@
               <i class="pi pi-pencil text-[10px]"></i>
             </button>
             <button 
-              @click="excluir(row)" 
+              @click="confirmarExcluirPlanoIndex(row)" 
               class="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
               title="Excluir"
             >
@@ -134,6 +134,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/services/api'
 import { maskMoneyBR } from '@/utils/masks'
+import { confirm } from '@/services/confirm'
 
 const router = useRouter()
 const busca = ref('')
@@ -188,9 +189,7 @@ async function carregar() {
     loading.value = false
   }
 }
-
 async function excluir(plano) {
-  if (!confirm(`Excluir plano #${plano.numero_pedido}?`)) return
   try {
     await api.delete(`/plano-corte/${plano.id}`)
     planos.value = planos.value.filter(p => p.id !== plano.id)
@@ -199,5 +198,14 @@ async function excluir(plano) {
   }
 }
 
+
+async function confirmarExcluirPlanoIndex(plano) {
+  const ok = await confirm.show(
+    'Excluir Plano de Corte',
+    `Deseja excluir o Plano #${plano?.numero_pedido || plano?.id}? Esta ação não pode ser desfeita.`,
+  )
+  if (!ok) return
+  await excluir(plano)
+}
 onMounted(carregar)
 </script>

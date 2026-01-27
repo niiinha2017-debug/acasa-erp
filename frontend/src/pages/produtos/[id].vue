@@ -16,7 +16,7 @@
         </div>
 
         <button 
-          @click="router.push('/produtos')" 
+          @click="confirmarDescartarProduto"
           class="flex items-center gap-3 px-6 h-12 rounded-2xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-900 hover:text-white transition-all shadow-sm group"
         >
           <i class="pi pi-arrow-left text-[10px] group-hover:-translate-x-1 transition-transform"></i>
@@ -30,7 +30,7 @@
           <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carregando Dados...</p>
         </div>
 
-        <form v-else class="grid grid-cols-12 gap-8" @submit.prevent="salvar">
+        <form v-else class="grid grid-cols-12 gap-8" @submit.prevent="confirmarSalvarProduto">
           
           <div class="col-span-12">
             <h3 class="text-[11px] font-black uppercase tracking-[0.3em] text-emerald-600 mb-6 flex items-center gap-3">
@@ -149,6 +149,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { maskMoneyBR } from '@/utils/masks'
 import { UNIDADES } from '@/constantes'
 import { ProdutosService, FornecedorService } from '@/services/index'
+import { confirm } from '@/services/confirm'
 
 const route = useRoute()
 const router = useRouter()
@@ -269,6 +270,26 @@ async function carregarProduto() {
 
   quantidadeInput.value = form.value.quantidade ? String(form.value.quantidade) : ''
   valorUnitarioMask.value = maskMoneyBR(form.value.valor_unitario || 0)
+}
+
+async function confirmarSalvarProduto() {
+  const ok = await confirm.show(
+    isEdit.value ? 'Salvar Alterações' : 'Finalizar Cadastro',
+    isEdit.value
+      ? `Deseja salvar as alterações do Produto #${produtoId.value}?`
+      : 'Deseja finalizar o cadastro deste produto?',
+  )
+  if (!ok) return
+  await salvar()
+}
+
+async function confirmarDescartarProduto() {
+  const ok = await confirm.show(
+    'Descartar',
+    'Deseja sair sem salvar? As alterações serão perdidas.',
+  )
+  if (!ok) return
+  router.push('/produtos')
 }
 
 async function salvar() {

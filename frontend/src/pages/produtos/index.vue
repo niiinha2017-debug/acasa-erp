@@ -98,7 +98,7 @@
               <i class="pi pi-pencil text-[10px]"></i>
             </button>
             <button 
-              @click="excluir(row)" 
+              @click="confirmarExcluirProduto(row)" 
               class="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
             >
               <i class="pi pi-trash text-[10px]"></i>
@@ -115,6 +115,7 @@ import { ref, computed, onMounted } from 'vue'
 import api from '@/services/api'
 import { maskMoneyBR } from '@/utils/masks'
 import { useRouter } from 'vue-router'
+import { confirm } from '@/services/confirm'
 
 const produtos = ref([])
 const loading = ref(false)
@@ -160,9 +161,20 @@ async function buscarDadosDoBanco() {
   }
 }
 
-function excluir(row) {
-  if (confirm(`Excluir o produto ${row.nome_produto}?`)) {
-    console.log('excluir:', row)
+async function confirmarExcluirProduto(row) {
+  const ok = await confirm.show(
+    'Excluir Produto',
+    `Deseja excluir o produto "${row?.nome_produto}"? Esta ação não pode ser desfeita.`,
+  )
+  if (!ok) return
+  await excluir(row)
+}
+async function excluir(row) {
+  try {
+    await api.delete(`/produtos/${row.id}`)
+    produtos.value = produtos.value.filter(p => p.id !== row.id)
+  } catch (err) {
+    alert('Erro ao excluir.')
   }
 }
 

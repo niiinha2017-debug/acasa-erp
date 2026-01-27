@@ -158,13 +158,18 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { DespesaService } from '@/services/index'
 import { notify } from '@/services/notify'
-import { confirm } from '@/services/confirm'
 import { format } from '@/utils/format'
+import { confirm } from '@/services/confirm'
+
+
 
 const router = useRouter()
 const despesas = ref([])
 const carregando = ref(false)
 const filtro = ref('')
+
+const loading = ref(false)
+
 
 // Configuração das colunas
 const columns = [
@@ -285,26 +290,32 @@ const editar = (id) => router.push(`/despesas/${id}`)
  */
 async function pedirExcluir(id) {
   const confirmado = await confirm.show(
-    'Excluir Lançamento', 
-    `Tem certeza que deseja remover este registro?`
+    'Excluir Lançamento?',
+    'Esta ação não pode ser desfeita.'
   )
-
   if (!confirmado) return
 
+  const cleanId = Number(id)
+
   try {
-    loading.value = true // Opcional: se tiver um loading global
-    await DespesaService.remover(Number(id))
-    
-    // Atualiza a lista local removendo o item
-    despesas.value = despesas.value.filter(d => d.id !== id)
+    loading.value = true
+    await DespesaService.remover(cleanId)
+
+    // melhor: recarregar (parcelas/recorrência)
+    await carregar()
+
     notify.success('Lançamento removido com sucesso')
   } catch (e) {
     console.error('Erro ao excluir:', e)
-    notify.error('Não foi possível excluir o lançamento')
+    const apiMsg = e?.response?.data?.message
+    const msg = Array.isArray(apiMsg) ? apiMsg.join(' | ') : (apiMsg || 'Não foi possível excluir')
+    notify.error(msg)
   } finally {
     loading.value = false
   }
 }
+
+
 
 onMounted(carregar)
 </script>

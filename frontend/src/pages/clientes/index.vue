@@ -148,6 +148,7 @@
 import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ClienteService } from '@/services/index'
+import { confirm } from '@/services/confirm'
 
 const router = useRouter()
 
@@ -218,16 +219,26 @@ const editarCliente = (id) => {
   router.push(`/clientes/${id}`)
 }
 
-const excluirCliente = async (id) => {
-  if (confirm('Tem certeza que deseja excluir este cliente?')) {
-    try {
-      await ClienteService.remover(id)
-      await carregarClientes()
-    } catch (error) {
-      console.error('Erro ao excluir cliente:', error)
-    }
+async function excluirCliente(id) {
+  const ok = await confirm.show('Excluir Cliente?', 'Esta ação não pode ser desfeita.')
+  if (!ok) return
+
+  const cleanId = Number(id)
+
+  try {
+    await ClienteService.remover(cleanId)
+
+    // atualiza lista local
+    clientes.value = clientes.value.filter(c => Number(c.id) !== cleanId)
+
+    notify.success('Cliente removido com sucesso')
+  } catch (e) {
+    console.error('Erro ao excluir cliente:', e)
+    const apiMsg = e?.response?.data?.message
+    notify.error(Array.isArray(apiMsg) ? apiMsg.join(' | ') : (apiMsg || 'Não foi possível excluir o cliente'))
   }
 }
+
 
 const exportarClientes = () => {
   const dadosParaExportar = clientesFiltrados.value.map(c => ({

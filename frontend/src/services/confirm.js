@@ -4,28 +4,43 @@ export const confirmState = reactive({
   isOpen: false,
   title: '',
   message: '',
-  resolve: null
+  resolve: null,
 })
+
+function closeWith(result) {
+  const resolver = confirmState.resolve
+
+  // fecha e limpa antes de resolver (evita reentrância)
+  confirmState.isOpen = false
+  confirmState.resolve = null
+
+  // só resolve se for function
+  if (typeof resolver === 'function') {
+    resolver(result)
+  }
+}
 
 export const confirm = {
   show(title, message) {
-    confirmState.title = title
-    confirmState.message = message
+    // se já tinha um confirm aberto, cancela o anterior
+    if (confirmState.isOpen) {
+      closeWith(false)
+    }
+
+    confirmState.title = title ?? ''
+    confirmState.message = message ?? ''
     confirmState.isOpen = true
-    
-    // Cria uma promessa que será resolvida quando o usuário clicar nos botões
+
     return new Promise((resolve) => {
       confirmState.resolve = resolve
     })
   },
-  
+
   cancel() {
-    confirmState.isOpen = false
-    confirmState.resolve(false)
+    closeWith(false)
   },
-  
+
   confirm() {
-    confirmState.isOpen = false
-    confirmState.resolve(true)
-  }
+    closeWith(true)
+  },
 }

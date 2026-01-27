@@ -77,6 +77,8 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/services/useauth'
+import { confirm } from '@/services/confirm'
+
 
 const router = useRouter()
 const { alterarSenha, loading, error, logout } = useAuth()
@@ -99,11 +101,18 @@ async function handleSubmit() {
     return
   }
 
+  const ok = await confirm.show(
+    'Alterar Senha',
+    'Deseja confirmar a alteração da sua senha de acesso?',
+  )
+  if (!ok) return
+
   try {
     await alterarSenha(senhaAtual.value, senhaNova.value)
     router.push('/')
   } catch (e) {}
 }
+
 </script>
 
 <route lang="json">

@@ -255,7 +255,7 @@
           type="button"
           class="text-red-500 hover:bg-red-50 !rounded-xl mr-2"
           :loading="excluindo"
-          @click="excluirCompra"
+          @click="confirmarExcluirCompra"
         >
           Excluir Registro
         </Button>
@@ -655,6 +655,31 @@ const removerItemPorKey = async (key) => {
   itens.value = itens.value.filter((it) => it._key !== key)
   notify.success('Item removido da lista.')
 }
+
+// SALVAR (com confirmação)
+async function confirmarSalvarCompra() {
+  const ok = await confirm.show(
+    isEdit.value ? 'Atualizar Compra' : 'Salvar Compra',
+    isEdit.value
+      ? `Deseja atualizar a Compra #${compraId.value}?`
+      : 'Deseja confirmar e salvar esta compra?',
+  )
+
+  if (!ok) return
+  await salvar()
+}
+
+// DESCARTAR (com confirmação)
+async function confirmarDescartarCompra() {
+  const ok = await confirm.show(
+    'Descartar Alterações',
+    'Deseja sair sem salvar? As alterações desta tela serão perdidas.',
+  )
+
+  if (!ok) return
+  router.back()
+}
+
 
 const salvar = async () => {
   if (itens.value.length === 0) {

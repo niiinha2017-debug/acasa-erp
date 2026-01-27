@@ -6,7 +6,7 @@
     ]"
   >
     <div class="w-full overflow-x-auto custom-scrollbar">
-      <table class="w-full border-collapse min-w-[800px]">
+      <table class="w-full border-collapse min-w-[640px] md:min-w-[800px]">
         <thead>
           <tr class="bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800">
             <th

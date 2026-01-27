@@ -99,7 +99,7 @@
               <button
                 title="Excluir"
                 class="w-7 h-7 flex items-center justify-center rounded-lg bg-rose-50 text-rose-400 border border-rose-100 hover:bg-rose-500 hover:text-white transition-all"
-                @click="excluir(row.id)"
+                @click="confirmarExcluirOrcamento(row.id)"
               >
                 <i class="pi pi-trash text-[10px]"></i>
               </button>
@@ -124,6 +124,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 import { OrcamentosService } from '@/services/index'
 import { format } from '@/utils/format'
+import { confirm } from '@/services/confirm'
 
 const route = useRoute()
 const router = useRouter()
@@ -182,6 +183,15 @@ const filtrados = computed(() => {
   })
 })
 
+// EXCLUIR (com confirmação)
+async function confirmarExcluirOrcamento(id) {
+  const ok = await confirm.show(
+    'Excluir Orçamento',
+    `Deseja excluir o Orçamento #${id}? Esta ação não pode ser desfeita.`,
+  )
+  if (!ok) return
+  await excluir(id)
+}
 
 function novoParaCliente() {
   router.push({ path: '/orcamentos/novo', query: { cliente_id: String(clienteId.value) } })

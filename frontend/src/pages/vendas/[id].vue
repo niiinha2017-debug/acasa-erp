@@ -127,7 +127,7 @@
                     variant="danger"
                     size="sm"
                     type="button"
-                    @click="removerItem(row)"
+                    @click="confirmarRemoverItemVenda(row)"
                   >
                     Remover
                   </Button>
@@ -234,7 +234,7 @@
                   size="sm"
                   type="button"
                   :disabled="form.pagamentos.length === 1"
-                  @click="removerPagamento(row.__idx)"
+                  @click="confirmarRemoverPagamento(row.__idx)"
                 >
                   Remover
                 </Button>
@@ -300,7 +300,7 @@
 
             <template #cell-acoes="{ row }">
               <div class="flex justify-end">
-                <Button variant="danger" size="sm" type="button" @click="removerComissao(row.__idx)">
+                <Button variant="danger" size="sm" type="button" @click="confirmarRemoverComissao(row.__idx)">
                   Remover
                 </Button>
               </div>
@@ -424,7 +424,7 @@
 
                   <button
                     type="button"
-                    @click="deletarArquivo(file.id)"
+                    @click="confirmarDeletarArquivoVenda(file.id)"
                     class="text-red-400 hover:text-red-600"
                     title="Excluir"
                   >
@@ -451,7 +451,7 @@
         size="md"
         type="button"
         :disabled="!isEdit || saving"
-        @click="enviarParaProducao"
+        @click="confirmarEnviarParaProducao"
       >
         Enviar para produção
       </Button>
@@ -461,7 +461,7 @@
   type="button"
   :loading="saving"
   :disabled="saving"
-  @click="salvar"
+  @click="confirmarSalvarVenda"
 >
   Salvar Venda
 </Button>
@@ -561,6 +561,7 @@
 <script setup>
 import { reactive, ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { confirm } from '@/services/confirm'
 
 import { notify } from '@/services/notify'
 import { ClienteService, OrcamentosService, VendaService, ProducaoService } from '@/services/index'
@@ -721,6 +722,73 @@ function editarItemLocal(row) {
 
   modalItemOpen.value = true
 }
+
+
+// SALVAR VENDA
+async function confirmarSalvarVenda() {
+  const ok = await confirm.show(
+    isEdit.value ? 'Salvar Venda' : 'Criar Venda',
+    isEdit.value
+      ? `Deseja salvar as alterações da Venda #${vendaId.value}?`
+      : 'Deseja criar esta venda agora?',
+  )
+  if (!ok) return
+  await salvar()
+}
+
+// ENVIAR PARA PRODUÇÃO
+async function confirmarEnviarParaProducao() {
+  if (!isEdit.value) return
+
+  const ok = await confirm.show(
+    'Enviar para Produção',
+    `Deseja enviar a Venda #${vendaId.value} para Produção?`,
+  )
+  if (!ok) return
+
+  await enviarParaProducao()
+}
+
+// REMOVER ITEM (apenas itens locais, já que itens com id não removem)
+async function confirmarRemoverItemVenda(row) {
+  const ok = await confirm.show(
+    'Remover Item',
+    `Deseja remover "${row?.nome_ambiente || 'ITEM'}" desta venda?`,
+  )
+  if (!ok) return
+  removerItem(row)
+}
+
+// REMOVER PAGAMENTO
+async function confirmarRemoverPagamento(idx) {
+  const ok = await confirm.show(
+    'Remover Pagamento',
+    'Deseja remover este pagamento do rateio?',
+  )
+  if (!ok) return
+  removerPagamento(idx)
+}
+
+// REMOVER COMISSÃO
+async function confirmarRemoverComissao(idx) {
+  const ok = await confirm.show(
+    'Remover Comissão',
+    'Deseja remover esta comissão?',
+  )
+  if (!ok) return
+  removerComissao(idx)
+}
+
+// REMOVER ARQUIVO
+async function confirmarDeletarArquivoVenda(arquivoId) {
+  const ok = await confirm.show(
+    'Excluir Arquivo',
+    'Deseja excluir este arquivo?',
+  )
+  if (!ok) return
+  await deletarArquivo(arquivoId)
+}
+
 
 function salvarItemDoModal() {
   if (!String(itemDraft.nome_ambiente || '').trim()) {
@@ -1135,7 +1203,6 @@ async function abrirArquivo(arquivoId) {
 
 async function deletarArquivo(arquivoId) {
   if (!isEdit.value) return
-  if (!confirm('Excluir arquivo?')) return
   try {
     await VendaService.removerArquivo(vendaId.value, arquivoId)
     notify.success('Excluído!')
@@ -1145,6 +1212,7 @@ async function deletarArquivo(arquivoId) {
     notify.error('Erro ao excluir arquivo')
   }
 }
+
 
 // =======================
 // WATCHERS

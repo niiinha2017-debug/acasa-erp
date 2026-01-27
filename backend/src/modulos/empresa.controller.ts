@@ -11,16 +11,15 @@ import { Permissoes } from '../auth/permissoes.decorator'
 export class EmpresaController {
   constructor(private readonly empresaService: EmpresaService) {}
 
-@Get()
-@Permissoes('configuracoes.ver')
-buscar() {
-  return this.empresaService.buscar()
-}
+  @Get()
+  @Permissoes('configuracoes.empresa.ver')
+  buscar() {
+    return this.empresaService.buscar()
+  }
 
-@Put()
-@Permissoes('configuracoes.editar')
-salvar(@Body() dados: any) {
-  return this.empresaService.salvar(dados)
-}
-
+  @Put()
+  @Permissoes('configuracoes.empresa.editar')
+  salvar(@Body() dados: any) {
+    return this.empresaService.salvar(dados)
+  }
 }

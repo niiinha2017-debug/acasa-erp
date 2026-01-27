@@ -277,10 +277,11 @@ import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { FuncionarioService, DespesaService } from '@/services/index'
 import { notify } from '@/services/notify'
-import { confirm } from '@/services/confirm'
 import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
 import * as CONST from '@/constantes/index'
 import { upper } from '@/utils/text'
+import { confirm } from '@/services/confirm'
+
 
 
 const route = useRoute()
@@ -468,18 +469,24 @@ async function excluir(event) {
 
   if (!despesaId.value) return
 
-  const confirmado = await confirm.show('Excluir Lançamento?', 'Esta ação não pode ser desfeita.')
-  if (!confirmado) return
+const confirmado = await confirm.show('Excluir Lançamento?', 'Esta ação não pode ser desfeita.')
+if (!confirmado) return
+
+
 
   loading.value = true
   try {
     await DespesaService.remover(Number(despesaId.value))
     notify.success('Registro excluído!')
     router.push('/despesas')
-  } catch (e) {
-    const msg = e.response?.data?.message || 'Erro ao excluir'
-    notify.error(msg)
-  } finally {
+} catch (e) {
+  console.log('[DELETE] erro bruto:', e)
+  const apiMsg = e?.response?.data?.message
+  const msg = Array.isArray(apiMsg) ? apiMsg.join(' | ') : (apiMsg || e?.message || 'Erro ao excluir')
+  notify.error(msg)
+} finally {
+
+
     loading.value = false
   }
 }

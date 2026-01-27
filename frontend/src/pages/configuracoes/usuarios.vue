@@ -68,7 +68,8 @@
             <template #cell-status="{ row }">
               <button
                 :disabled="row.id === usuarioLogado?.id"
-                @click="toggleStatus(row)"
+                @click="confirmarAlterarStatus(row)"
+
                 :class="[
                   'px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest border transition-all',
                   row.status === 'ATIVO' 
@@ -101,7 +102,7 @@
     </div>
 
     <div v-if="exibirModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" @click="fecharModal"></div>
+      <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" @click="confirmarFecharModal"></div>
       
       <div class="relative w-full max-w-lg animate-in zoom-in-95 duration-200">
         <div class="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
@@ -109,12 +110,12 @@
             <h3 class="text-[11px] font-black text-slate-800 uppercase tracking-widest">
               {{ modoEdicao ? 'Editar Colaborador' : 'Novo Colaborador' }}
             </h3>
-            <button @click="fecharModal" class="text-slate-400 hover:text-rose-500 transition-colors">
+            <button @click="confirmarFecharModal" class="text-slate-400 hover:text-rose-500 transition-colors">
               <i class="pi pi-times"></i>
             </button>
           </header>
 
-          <form class="p-8 space-y-5" @submit.prevent="salvar">
+          <form class="p-8 space-y-5" @submit.prevent="confirmarSalvarUsuario">
             <div class="grid grid-cols-2 gap-4">
               <Input v-model="formUsuario.nome" label="Nome Completo" class="col-span-2" />
               <Input v-model="formUsuario.usuario" label="Usuário Login" />
@@ -139,7 +140,7 @@
             </div>
 
             <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
-              <button type="button" @click="fecharModal" class="text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 px-4">Cancelar</button>
+              <button type="button" @click="confirmarFecharModal" class="text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 px-4">Cancelar</button>
               <Button 
                 variant="primary" 
                 type="submit" 
@@ -215,6 +216,40 @@ const abrirModal = (user = null) => {
 }
 
 const fecharModal = () => { exibirModal.value = false }
+
+async function confirmarSalvarUsuario() {
+  const titulo = modoEdicao.value ? 'Salvar Alterações' : 'Criar Colaborador'
+  const mensagem = modoEdicao.value
+    ? `Deseja salvar as alterações do colaborador "${formUsuario.value.nome}"?`
+    : `Deseja criar o colaborador "${formUsuario.value.nome}"?`
+
+  const ok = await confirm.show(titulo, mensagem)
+  if (!ok) return
+
+  await salvar()
+}
+
+async function confirmarAlterarStatus(row) {
+  const novoStatus = row.status === 'ATIVO' ? 'INATIVO' : 'ATIVO'
+  const ok = await confirm.show(
+    'Alterar Status',
+    `Deseja ${novoStatus === 'ATIVO' ? 'ativar' : 'inativar'} o colaborador "${row.nome}"?`,
+  )
+  if (!ok) return
+
+  await toggleStatus(row)
+}
+
+async function confirmarFecharModal() {
+  const ok = await confirm.show(
+    'Cancelar',
+    'Deseja fechar sem salvar as alterações deste formulário?',
+  )
+  if (!ok) return
+
+  fecharModal()
+}
+
 
 const salvar = async () => {
   loadingSalvar.value = true

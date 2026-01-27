@@ -117,7 +117,7 @@
         </div>
         <div class="p-6 bg-slate-50 flex gap-3">
           <Button variant="secondary" class="flex-1 !rounded-xl font-bold uppercase text-[10px]" @click="modalEditar.open = false">Cancelar</Button>
-          <Button variant="primary" class="flex-1 !rounded-xl font-black uppercase text-[10px] tracking-widest" :loading="modalEditar.saving" @click="salvarEdicao">Salvar</Button>
+          <Button variant="primary" class="flex-1 !rounded-xl font-black uppercase text-[10px] tracking-widest" :loading="modalEditar.saving" @click="confirmarSalvarEdicao">Salvar</Button>
         </div>
       </Card>
     </div>
@@ -154,7 +154,7 @@
                   <span class="text-[11px] font-black text-slate-700 uppercase italic">{{ fmtData(j.data) }} — {{ j.tipo }}</span>
                   <span class="text-[10px] text-slate-400 font-medium">{{ j.descricao || 'Sem descrição' }}</span>
                 </div>
-                <button @click="excluirJustificativa(j)" class="text-slate-300 hover:text-rose-500 transition-colors p-2">
+                <button @click="confirmarExcluirJustificativa(j)" class="text-slate-300 hover:text-rose-500 transition-colors p-2">
                   <i class="pi pi-trash text-xs"></i>
                 </button>
               </div>
@@ -166,10 +166,15 @@
         </div>
 
         <div class="p-6 bg-slate-100/50 border-t flex gap-3">
-          <Button variant="secondary" class="!rounded-xl px-8 font-bold text-[10px] uppercase" @click="fecharModalJust">Sair</Button>
-          <Button variant="primary" class="flex-1 !rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-slate-900/20" :loading="modalJust.saving" @click="salvarJustificativa">
-            Salvar Justificativa
-          </Button>
+<Button
+  variant="primary"
+  class="flex-1 !rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-slate-900/20"
+  :loading="modalJust.saving"
+  @click="confirmarSalvarJustificativa"
+>
+  Salvar Justificativa
+</Button>
+          <Button variant="secondary" class="flex-1 !rounded-xl font-bold uppercase text-[10px]" @click="fecharModalJust">Cancelar</Button>
         </div>
       </Card>
     </div>
@@ -181,6 +186,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { PontoRelatorioService, PontoJustificativasService, PontoRegistrosService, FuncionarioService } from '@/services/index'
 import { notify } from '@/services/notify'
 import { consolidarSaldoPeriodo } from '@/utils/utils'
+import { confirm } from '@/services/confirm'
 
 // DATA & STATES
 const loadingTabela = ref(false), rows = ref([]), funcionarioOptions = ref([])
@@ -240,6 +246,36 @@ async function abrirModalJustificar(row) {
 }
 const fecharModalJust = () => modalJust.open = false
 const onFileChange = (e) => modalJust.file = e.target.files[0]
+
+// EXCLUIR JUSTIFICATIVA (confirm)
+async function confirmarExcluirJustificativa(j) {
+  const ok = await confirm.show(
+    'Excluir Justificativa',
+    `Deseja remover a justificativa "${j?.tipo || 'JUSTIFICATIVA'}" do dia ${fmtData(j?.data)}?`,
+  )
+  if (!ok) return
+  await excluirJustificativa(j)
+}
+
+// SALVAR EDIÇÃO DO REGISTRO (confirm)
+async function confirmarSalvarEdicao() {
+  const ok = await confirm.show(
+    'Salvar Ajuste',
+    'Deseja salvar o ajuste deste registro de ponto?',
+  )
+  if (!ok) return
+  await salvarEdicao()
+}
+
+// SALVAR JUSTIFICATIVA (confirm)
+async function confirmarSalvarJustificativa() {
+  const ok = await confirm.show(
+    'Salvar Justificativa',
+    'Deseja salvar esta justificativa?',
+  )
+  if (!ok) return
+  await salvarJustificativa()
+}
 
 async function salvarJustificativa() {
   try {

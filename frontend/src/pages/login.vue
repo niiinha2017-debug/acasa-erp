@@ -49,7 +49,7 @@
             <CustomCheckbox v-model="lembrarUsuario" label="Lembrar acesso" />
             <button 
               type="button" 
-              @click="showModalRecuperacao = true"
+              @click="openRecuperacao"
               class="font-black uppercase tracking-widest text-slate-400 hover:text-brand-primary transition-colors"
             >
               Recuperar Senha
@@ -69,7 +69,7 @@
           <div class="pt-4 text-center">
             <button 
               type="button" 
-              @click="showModalCadastro = true"
+              @click="openCadastro"
               class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-brand-primary"
             >
               Novo por aqui? <span class="text-brand-primary">Solicitar Conta</span>
@@ -132,12 +132,10 @@ import { useRouter } from 'vue-router'
 import { useAuth } from '@/services/useauth'
 
 const router = useRouter()
-const { login, solicitarCadastro, esqueciSenha, loading, error } = useAuth()
+const { login, solicitarCadastro, esqueciSenha, loading } = useAuth()
 
-const showPassword = ref(false)
 const showModalCadastro = ref(false)
 const showModalRecuperacao = ref(false)
-
 const lembrarUsuario = ref(false)
 
 const formLogin = reactive({ usuario: '', senha: '' })
@@ -169,20 +167,13 @@ function fecharTudo() {
 
 async function handleLoginSubmit() {
   try {
-    const resp = await login({ usuario: formLogin.usuario, senha: formLogin.senha })
+    const data = await login({ usuario: formLogin.usuario, senha: formLogin.senha })
 
     if (lembrarUsuario.value) localStorage.setItem('erp_lembrar_usuario', formLogin.usuario)
     else localStorage.removeItem('erp_lembrar_usuario')
 
-    // resp pode ser (data) ou (axios response). Blindagem:
-const data = await login({ usuario: formLogin.usuario, senha: formLogin.senha })
-
-if (lembrarUsuario.value) localStorage.setItem('erp_lembrar_usuario', formLogin.usuario)
-else localStorage.removeItem('erp_lembrar_usuario')
-
-if (data?.precisa_trocar_senha) router.push('/alterar-senha')
-else router.push('/')
-
+    if (data?.precisa_trocar_senha) router.push('/alterar-senha')
+    else router.push('/')
   } catch (e) {}
 }
 
@@ -202,22 +193,12 @@ async function handleCadastroSubmit() {
     alert('Solicitação enviada com sucesso!')
   } catch (e) {}
 }
+
 async function handleRecuperacaoSubmit() {
   try {
-await esqueciSenha(emailRecuperacao.value)
-alert('Enviamos uma senha provisória para seu e-mail.')
-fecharTudo()
+    await esqueciSenha(emailRecuperacao.value)
+    alert('Enviamos uma senha provisória para seu e-mail.')
+    fecharTudo()
   } catch (e) {}
 }
-
 </script>
-
-
-<route lang="json">
-{
-  "meta": {
-    "layout": "auth",
-    "public": true
-  }
-}
-</route>

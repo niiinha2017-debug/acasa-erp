@@ -4,6 +4,8 @@ import { PrismaService } from '../prisma/prisma.service'
 import { CreateDespesaDto } from './dto/create-despesa.dto'
 import { UpdateDespesaDto } from './dto/update-despesa.dto'
 import { randomUUID } from 'crypto'
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
+
 
 type FiltrosDespesas = {
   status?: string
@@ -22,6 +24,8 @@ export class DespesasService {
   }
 
 async create(dto: CreateDespesaDto): Promise<despesas[]> {
+  console.log('[DESPESAS][CREATE] dto:', dto)
+
   // parcelas
   let parcelas = Number(dto.quantidade_parcelas ?? 1)
   if (!Number.isFinite(parcelas) || parcelas < 1) parcelas = 1
@@ -109,6 +113,7 @@ if (precisaCartao) {
       }),
     ),
   )
+console.log('[DESPESAS][CREATE] criadas:', criadas.length, 'parcelas:', parcelas)
 
   return criadas
 }
@@ -336,16 +341,34 @@ if (dto.forma_pagamento) {
 
 
 
-  async remove(id: number): Promise<despesas> {
-    await this.findOne(id)
-    return this.prisma.despesas.delete({ where: { id } })
-  }
+async remove(id: number): Promise<despesas> {
+  await this.findOne(id)
 
-  async removeRecorrencia(recorrenciaId: string): Promise<number> {
+  try {
+    const res = await this.prisma.despesas.delete({ where: { id } })
+    console.log('[DESPESAS][DELETE] OK id=', id)
+    return res
+  } catch (e: any) {
+    console.log('[DESPESAS][DELETE] ERRO id=', id, 'code=', e?.code, 'msg=', e?.message)
+    throw e
+  }
+}
+
+
+
+async removeRecorrencia(recorrenciaId: string): Promise<number> {
+  try {
     const res = await this.prisma.despesas.deleteMany({
       where: { recorrencia_id: recorrenciaId },
     })
     if (res.count === 0) throw new NotFoundException('Recorrência não encontrada')
     return res.count
+  } catch (e: any) {
+    if (e instanceof PrismaClientKnownRequestError && (e.code === 'P2003' || e.code === 'P2014')) {
+      throw new BadRequestException('Não é possível excluir: existe vínculo com outro registro (ex.: contas a pagar/financeiro).')
+    }
+    throw e
   }
+}
+
 }

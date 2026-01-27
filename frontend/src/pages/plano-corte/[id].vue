@@ -128,7 +128,7 @@
 
             <template #cell-acoes="{ index }">
               <div class="flex justify-end">
-                <button @click="removerItem(index)" class="w-10 h-10 rounded-xl text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all flex items-center justify-center">
+                <button @click="confirmarRemoverItemPlano(index)" class="w-10 h-10 rounded-xl text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all flex items-center justify-center">
                   <i class="pi pi-trash text-xs"></i>
                 </button>
               </div>
@@ -155,7 +155,7 @@
       </div>
 
       <footer class="flex items-center justify-between p-10 border-t border-slate-100 bg-slate-50/50">
-        <Button v-if="isEdit" variant="danger" @click="excluir" class="!rounded-2xl !px-8 !h-14 font-black text-[10px] uppercase tracking-widest">
+        <Button v-if="isEdit" variant="danger" @click="confirmarExcluirPlano" class="!rounded-2xl !px-8 !h-14 font-black text-[10px] uppercase tracking-widest">
           Excluir Plano
         </Button>
         <div v-else></div>
@@ -167,7 +167,7 @@
   variant="secondary"
   :loading="encaminhando"
   :disabled="statusPlano === 'EM_PRODUCAO'"
-  @click="encaminharParaProducao"
+  @click="confirmarEncaminharParaProducao"
 >
   Enviar Produção
 </Button>
@@ -240,6 +240,7 @@ import { maskMoneyBR } from '@/utils/masks'
 import { useConstantes } from '@/composables/useConstantes'
 import { PlanoCorteService, FornecedorService, ProducaoService } from '@/services/index'
 import { PIPELINE_PLANO_CORTE } from '@/constantes'
+import { confirm } from '@/services/confirm'
 
 
 const router = useRouter()
@@ -376,6 +377,51 @@ async function salvarProduto() {
   }
 }
 
+// excluir plano (confirm)
+async function confirmarExcluirPlano() {
+  if (!isEdit.value) return
+
+  const ok = await confirm.show(
+    'Excluir Plano de Corte',
+    `Deseja excluir permanentemente o Plano de Corte #${planoId.value}? Esta ação não pode ser desfeita.`,
+  )
+  if (!ok) return
+
+  salvando.value = true
+  try {
+    await PlanoCorteService.excluir(planoId.value)
+    router.push('/plano-corte')
+  } finally {
+    salvando.value = false
+  }
+}
+
+// remover item (confirm)
+async function confirmarRemoverItemPlano(index) {
+  const row = itens.value?.[index]
+  const nome = row?.item?.nome_produto || 'ITEM'
+
+  const ok = await confirm.show(
+    'Remover Item',
+    `Deseja remover "${nome}" deste plano?`,
+  )
+  if (!ok) return
+
+  removerItem(index)
+}
+
+// enviar produção (confirm)
+async function confirmarEncaminharParaProducao() {
+  if (!isEdit.value) return
+
+  const ok = await confirm.show(
+    'Enviar para Produção',
+    `Deseja enviar o Plano de Corte #${planoId.value} para Produção agora?`,
+  )
+  if (!ok) return
+
+  await encaminharParaProducao()
+}
 
 // AÇÕES
 async function onSelecionarFornecedor(v) {
@@ -419,20 +465,9 @@ async function carregarItensDisponiveis(fId) {
   const { data } = await PlanoCorteService.itens.listar(fId)
   itensDisponiveis.value = data || []
 }
-async function excluir() {
-  if (!isEdit.value) return
 
-  const confirmacao = window.confirm('Tem certeza que deseja excluir este Plano de Corte? Esta ação não pode ser desfeita.')
-  if (!confirmacao) return
 
-  salvando.value = true
-  try {
-    await PlanoCorteService.excluir(planoId.value)
-    router.push('/plano-corte')
-  } finally {
-    salvando.value = false
-  }
-}
+
 async function encaminharParaProducao() {
   if (!isEdit.value) return
 

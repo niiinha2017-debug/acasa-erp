@@ -142,7 +142,7 @@
                           type="button"
                           class="text-red-400 hover:text-red-600"
                           title="Excluir"
-                          @click.stop="removerTarefa(t)"
+                          @click.stop="confirmarRemoverTarefa(t)"
                         >
                           <i class="pi pi-times text-[10px]"></i>
                         </button>
@@ -181,7 +181,7 @@
       <div
         v-if="tarefaModal.open"
         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm"
-        @click.self="fecharModalTarefa"
+        @click.self="confirmarFecharModalTarefa"
       >
         <div class="w-full max-w-3xl bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
           <div class="flex items-start justify-between gap-4 p-6 border-b border-gray-100 bg-gray-50/40">
@@ -192,7 +192,7 @@
               </div>
             </div>
 
-            <Button variant="secondary" size="sm" type="button" @click="fecharModalTarefa">
+            <Button variant="secondary" size="sm" type="button" @click="confirmarFecharModalTarefa">
               Fechar
             </Button>
           </div>
@@ -252,7 +252,7 @@
           </div>
 
           <div class="flex items-center justify-end gap-2 p-6 border-t border-gray-100 bg-gray-50/40">
-            <Button variant="secondary" size="md" type="button" @click="fecharModalTarefa">
+            <Button variant="secondary" size="md" type="button" @click="confirmarFecharModalTarefa">
               Cancelar
             </Button>
 
@@ -262,7 +262,7 @@
               type="button"
               :loading="savingTarefa"
               :disabled="!podeSalvarTarefa"
-              @click="salvarTarefaModal"
+              @click="confirmarSalvarTarefa"
             >
               Salvar
             </Button>
@@ -277,6 +277,8 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ProducaoService, FuncionarioService } from '@/services/index'
 import { format } from '@/utils/format'
+import { confirm } from '@/services/confirm'
+
 
 // ===============================
 // GRADE FIXA (ajuste aqui)
@@ -440,7 +442,7 @@ function tarefasNoSlot(dateStr, slotHHMM) {
   return tarefasFiltradas.value.filter((t) => {
     if (!t.inicio_em) return false
     if (!mesmaData(t.inicio_em, dateStr)) return false
-    return horaStr(t.inicio_em).startsWith(slotHHMM)
+    return horaStr(t.inicio_em).slice(0, 2) === slotHHMM.slice(0, 2)
   })
 }
 
@@ -461,7 +463,9 @@ async function carregar() {
   try {
     const inicioIso = toISOStartOfDay(semanaInicio.value)
     const fimIso = toISOEndOfDay(semanaFim.value)
-    const { data } = await ProducaoService.agenda(inicioIso, fimIso)
+
+    const { data } = await ProducaoService.getAgenda(inicioIso, fimIso)
+
     projetosRaw.value = Array.isArray(data) ? data : []
   } finally {
     refreshing.value = false
@@ -469,6 +473,49 @@ async function carregar() {
   }
 }
 
+// salvar (wrapper) - chama sua salvarTarefaModal real
+async function confirmarSalvarTarefa() {
+  if (!podeSalvarTarefa.value) return
+
+  const ok = await confirm.show(
+    tarefaModal.isEdit ? 'Salvar Alterações' : 'Criar Tarefa',
+    tarefaModal.isEdit
+      ? `Deseja salvar as alterações da tarefa "${tarefaModal.titulo}"?`
+      : `Deseja criar a tarefa "${tarefaModal.titulo}"?`,
+  )
+  if (!ok) return
+
+  await salvarTarefaModal()
+}
+
+// excluir (wrapper)
+async function confirmarRemoverTarefa(row) {
+  if (!row?.id || deletingTarefa.value) return
+
+  const ok = await confirm.show(
+    'Excluir Tarefa',
+    `Deseja excluir a tarefa "${row.titulo}"? Esta ação não pode ser desfeita.`,
+  )
+  if (!ok) return
+
+  deletingTarefa.value = true
+  try {
+    await ProducaoService.tarefas.remover(row.id)
+    await carregar()
+  } finally {
+    deletingTarefa.value = false
+  }
+}
+
+// fechar modal (wrapper)
+async function confirmarFecharModalTarefa() {
+  const ok = await confirm.show(
+    'Fechar',
+    'Deseja fechar o formulário da tarefa?',
+  )
+  if (!ok) return
+  fecharModalTarefa()
+}
 // ===============================
 // SEMANA NAV
 // ===============================
@@ -569,9 +616,9 @@ async function salvarTarefaModal() {
   savingTarefa.value = true
   try {
     if (tarefaModal.isEdit && tarefaModal.tarefaId) {
-      await ProducaoService.atualizarTarefa(tarefaModal.tarefaId, montarPayloadAtualizarTarefa())
+      await ProducaoService.tarefas.atualizar(tarefaModal.tarefaId, montarPayloadAtualizarTarefa())
     } else {
-      await ProducaoService.criarTarefa(montarPayloadCriarTarefa())
+      await ProducaoService.tarefas.criar(montarPayloadCriarTarefa())
     }
     fecharModalTarefa()
     await carregar()
@@ -580,17 +627,7 @@ async function salvarTarefaModal() {
   }
 }
 
-async function removerTarefa(row) {
-  if (!row?.id || deletingTarefa.value) return
-  if (!confirm('Excluir tarefa?')) return
-  deletingTarefa.value = true
-  try {
-    await ProducaoService.removerTarefa(row.id)
-    await carregar()
-  } finally {
-    deletingTarefa.value = false
-  }
-}
+
 
 // ===============================
 // INIT

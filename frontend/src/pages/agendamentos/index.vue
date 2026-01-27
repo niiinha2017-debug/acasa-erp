@@ -12,7 +12,7 @@
         </div>
       </div>
 
-      <Button variant="secondary" @click="limpar" class="!h-10 !rounded-xl !px-4 text-[10px] font-black uppercase border-slate-200">
+      <Button variant="secondary" @click="confirmarLimpar"class="!h-10 !rounded-xl !px-4 text-[10px] font-black uppercase border-slate-200">
         <i class="pi pi-filter-slash mr-2"></i> Limpar Filtro
       </Button>
     </div>
@@ -62,7 +62,7 @@
             </div>
             <h3 class="text-xs font-black uppercase text-slate-800 tracking-widest">Processo não iniciado</h3>
             <p class="text-[10px] font-bold text-slate-400 uppercase mt-2 mb-6 leading-relaxed">Este cliente não possui um fluxo de obra ativo.</p>
-            <Button variant="primary" class="!h-11 !rounded-xl !px-8 shadow-lg shadow-brand-primary/20" :loading="creating" @click="criarObra">
+            <Button variant="primary" class="!h-11 !rounded-xl !px-8 shadow-lg shadow-brand-primary/20" :loading="creating" @click="confirmarCriarObra">
               Iniciar Obra Agora
             </Button>
           </div>
@@ -122,7 +122,7 @@
         
         <Button 
           variant="primary" 
-          @click="salvar"
+         @click="confirmarSalvar"
           :loading="saving"
           class="!h-12 !px-10 !rounded-xl shadow-xl shadow-brand-primary/20 text-[10px] font-black uppercase tracking-widest"
         >
@@ -136,6 +136,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ClienteService, ObrasService } from '@/services/index'
+import { confirm } from '@/services/confirm' 
 
 // Mapeamento de labels para facilitar o v-for e manter o código limpo
 const fieldLabels = {
@@ -234,6 +235,48 @@ async function salvar() {
     saving.value = false
   }
 }
+
+// LIMPAR
+async function confirmarLimpar() {
+  const ok = await confirm({
+    title: 'LIMPAR FILTRO',
+    message: 'Isso vai remover o cliente selecionado e limpar os dados exibidos na tela.',
+    confirmText: 'LIMPAR',
+    cancelText: 'CANCELAR',
+    danger: true,
+  })
+  if (!ok) return
+  limpar()
+}
+
+// CRIAR OBRA
+async function confirmarCriarObra() {
+  const id = Number(clienteSelecionadoId.value)
+  if (!id) return
+
+  const ok = await confirm({
+    title: 'INICIAR OBRA',
+    message: 'Deseja iniciar o fluxo de obra para este cliente agora?',
+    confirmText: 'INICIAR',
+    cancelText: 'CANCELAR',
+  })
+  if (!ok) return
+  await criarObra()
+}
+
+
+// SALVAR
+async function confirmarSalvar() {
+  const ok = await confirm({
+    title: 'SALVAR AGENDAMENTOS',
+    message: 'Deseja salvar as datas informadas para este cliente?',
+    confirmText: 'SALVAR',
+    cancelText: 'CANCELAR',
+  })
+  if (!ok) return
+  await salvar()
+}
+
 
 function limpar() {
   clienteSelecionadoId.value = null

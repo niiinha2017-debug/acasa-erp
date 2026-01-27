@@ -82,7 +82,7 @@
             v-if="isEdit" 
             variant="danger" 
             type="button" 
-            @click="excluir"
+            @click="confirmarExcluirFornecedor"
             class="!rounded-2xl !px-8 hover:bg-red-600 transition-all font-bold uppercase text-[10px] tracking-widest"
           >
             <i class="pi pi-trash mr-2"></i> Excluir Registro
@@ -101,7 +101,7 @@
             <Button 
               variant="primary" 
               type="button" 
-              @click="salvar" 
+              @click="confirmarSalvarFornecedor"
               class="!rounded-2xl !px-12 !h-14 shadow-2xl shadow-brand-primary/30 font-black uppercase text-[11px] tracking-[0.15em]"
             >
               <i class="pi pi-save mr-3"></i> 
@@ -121,6 +121,7 @@ import { FornecedorService } from '@/services/index'
 import { notify } from '@/services/notify'
 import { maskCNPJ, maskTelefone, maskCEP, maskIE } from '@/utils/masks'
 import { buscarCep, buscarCnpj } from '@/utils/utils'
+import { confirm } from '@/services/confirm'
 
 const route = useRoute()
 const router = useRouter()
@@ -192,6 +193,42 @@ async function tratarBuscaCep() {
     document.getElementById('numero-input')?.focus()
   }
 }
+
+// SALVAR
+async function confirmarSalvarFornecedor() {
+  const ok = await confirm.show(
+    isEdit.value ? 'Salvar Alterações' : 'Finalizar Cadastro',
+    isEdit.value
+      ? `Deseja salvar as alterações do Fornecedor #${fornecedorId.value}?`
+      : 'Deseja finalizar o cadastro deste fornecedor?',
+  )
+  if (!ok) return
+  await salvar()
+}
+
+// EXCLUIR
+async function confirmarExcluirFornecedor() {
+  const ok = await confirm.show(
+    'Excluir Fornecedor',
+    `Deseja realmente excluir o Fornecedor #${fornecedorId.value}? Esta ação não pode ser desfeita.`,
+  )
+  if (!ok) return
+  await excluir()
+}
+
+async function excluir() {
+  salvando.value = true
+  try {
+    await FornecedorService.remover(fornecedorId.value)
+    notify.success('Fornecedor removido.')
+    router.push('/fornecedor')
+  } catch (e) {
+    notify.error('Erro ao excluir.')
+  } finally {
+    salvando.value = false
+  }
+}
+
 
 function payloadParaApi() {
   return {

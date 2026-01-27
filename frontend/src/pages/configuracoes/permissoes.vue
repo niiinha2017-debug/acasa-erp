@@ -84,7 +84,7 @@
             <Button
               variant="primary"
               :loading="loadingSalvar"
-              @click="salvar"
+              @click="confirmarSalvarPermissoes"
               class="!h-10 !px-6 !rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm"
             >
               Salvar Alterações
@@ -99,8 +99,8 @@
                   {{ modulo }}
                 </h4>
                 <div class="flex gap-3">
-                  <button @click="marcarTudoModulo(modulo, true)" class="text-[9px] font-black uppercase text-brand-primary/60 hover:text-brand-primary transition-colors">Marcar Todos</button>
-                  <button @click="marcarTudoModulo(modulo, false)" class="text-[9px] font-black uppercase text-slate-300 hover:text-rose-500 transition-colors">Limpar</button>
+                  <button @click="confirmarMarcarTudoModulo(modulo, true)"class="text-[9px] font-black uppercase text-brand-primary/60 hover:text-brand-primary transition-colors">Marcar Todos</button>
+                  <button @click="confirmarMarcarTudoModulo(modulo, false)" class="text-[9px] font-black uppercase text-slate-300 hover:text-rose-500 transition-colors">Limpar</button>
                 </div>
               </div>
 
@@ -163,6 +163,7 @@ import { UsuariosService, PermissoesService } from '@/services/index'
 import { AppConfig } from '@/services/config'
 import { useAuth } from '@/services/useauth' 
 import { notify } from '@/services/notify'
+import { confirm } from '@/services/confirm'
 
 const router = useRouter()
 const { temAcesso } = useAuth()
@@ -240,6 +241,30 @@ const marcarTudoModulo = (modulo, marcar) => {
   const set = new Set(permissoesAtivas.value)
   chavesModulo.forEach(k => marcar ? set.add(k) : set.delete(k))
   permissoesAtivas.value = Array.from(set)
+}
+
+// confirmar antes de salvar permissões
+async function confirmarSalvarPermissoes() {
+  if (!usuarioSelecionado.value?.id) return
+
+  const ok = await confirm.show(
+    'Salvar Permissões',
+    `Deseja salvar as permissões do usuário "${usuarioSelecionado.value.nome}"?`,
+  )
+  if (!ok) return
+  await salvar()
+}
+
+// confirmar marcar/limpar módulo
+async function confirmarMarcarTudoModulo(modulo, marcar) {
+  const ok = await confirm.show(
+    marcar ? 'Marcar Permissões' : 'Limpar Permissões',
+    marcar
+      ? `Deseja marcar todas as permissões do módulo "${modulo}"?`
+      : `Deseja limpar todas as permissões do módulo "${modulo}"?`,
+  )
+  if (!ok) return
+  marcarTudoModulo(modulo, marcar)
 }
 
 const salvar = async () => {

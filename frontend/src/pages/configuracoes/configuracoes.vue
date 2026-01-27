@@ -13,22 +13,20 @@
       </div>
       
       <div class="flex items-center gap-2">
-        <Button 
-          variant="secondary" 
-          class="!h-10 !rounded-xl !px-4 text-[10px] font-black uppercase border-slate-200" 
-          @click="gerarPdfDados"
-        >
-          <i class="pi pi-file-pdf mr-2"></i> Exportar
-        </Button>
+<Button
+  variant="secondary"
+  @click="confirmarExportarDadosEmpresa"
+>
+  <i class="pi pi-file-pdf mr-2"></i> Exportar
+</Button>
 
-        <Button 
-          variant="primary" 
-          class="!h-10 !rounded-xl !px-6 text-[10px] font-black uppercase tracking-widest shadow-sm" 
-          :loading="salvando"
-          @click="salvar"
-        >
-          <i class="pi pi-save mr-2"></i> Salvar
-        </Button>
+<Button
+  variant="primary"
+  :loading="salvando"
+  @click="confirmarSalvarDadosEmpresa"
+>
+  <i class="pi pi-save mr-2"></i> Salvar
+</Button>
       </div>
     </div>
 
@@ -60,17 +58,29 @@
                     <i class="pi pi-file-pdf text-rose-400"></i>
                     <span class="text-[10px] font-bold text-slate-600 truncate uppercase">{{ doc.nome }}</span>
                   </div>
-                  <button @click="removerDocumento(index)" class="text-slate-300 hover:text-rose-500">
+                  <button @click="confirmarRemoverDocumento(index)" class="text-slate-300 hover:text-rose-500">
                     <i class="pi pi-times text-xs"></i>
                   </button>
                 </div>
-                <button 
-                  class="w-full py-3 rounded-xl border-2 border-dashed border-slate-100 text-[10px] font-black text-slate-400 uppercase hover:bg-white hover:border-slate-200 transition-all"
-                  @click="triggerDocumentUpload"
-                >
-                  <i class="pi pi-plus mr-1"></i> Anexar Documento
-                </button>
+<Button
+  variant="ghost"
+  class="w-full !h-11 !rounded-xl text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-slate-200 text-slate-500 hover:bg-slate-50"
+  type="button"
+  @click="triggerDocumentUpload"
+>
+  <i class="pi pi-paperclip mr-2"></i>
+  Anexar Documento
+</Button>
+
+
               </div>
+              <input
+  type="file"
+  ref="documentInput"
+  class="hidden"
+  @change="handleDocumentUpload"
+/>
+
             </section>
           </div>
         </div>
@@ -164,6 +174,13 @@ import { buscarCep, buscarCnpj } from '@/utils/utils'
 
 const fileInput = ref(null)
 const salvando = ref(false)
+
+const documentInput = ref(null)
+
+function triggerDocumentUpload() {
+  documentInput.value?.click()
+}
+
 
 const form = ref({
   razao_social: '',
@@ -282,6 +299,45 @@ const salvar = async () => {
   } catch (err) { notify.error('Erro ao salvar.') }
   finally { salvando.value = false }
 }
+
+async function confirmarSalvarDadosEmpresa() {
+  const ok = await confirm.show(
+    'Salvar Dados da Empresa',
+    'Deseja salvar as configurações fiscais e de recebimento?',
+  )
+  if (!ok) return
+  await salvar()
+}
+
+async function confirmarExportarDadosEmpresa() {
+  const ok = await confirm.show(
+    'Exportar Dados da Empresa',
+    'Deseja exportar os dados cadastrais para impressão/PDF?',
+  )
+  if (!ok) return
+  gerarPdfDados()
+}
+
+async function confirmarRemoverLogo() {
+  const ok = await confirm.show(
+    'Remover Logo',
+    'Deseja realmente remover a logomarca?',
+  )
+  if (!ok) return
+  form.value.logo_url = ''
+}
+
+async function confirmarRemoverDocumento(index) {
+  const doc = form.value.documentos?.[index]
+  const ok = await confirm.show(
+    'Remover Documento',
+    `Deseja remover o documento "${doc?.nome || 'SEM NOME'}"?`,
+  )
+  if (!ok) return
+  removerDocumento(index)
+}
+
+
 
 const gerarPdfDados = () => {
   const win = window.open('', '_blank')

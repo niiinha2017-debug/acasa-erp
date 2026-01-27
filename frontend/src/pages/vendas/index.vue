@@ -127,7 +127,7 @@
               <i class="pi pi-pencil text-[10px]"></i>
             </button>
             <button 
-              @click="excluir(row.id)" 
+              @click="confirmarExcluirVenda(row.id)" 
               class="w-7 h-7 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all border border-rose-100 flex items-center justify-center"
             >
               <i class="pi pi-trash text-[10px]"></i>
@@ -142,8 +142,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import Table from '@/components/ui/Table.vue'
-import Button from '@/components/ui/Button.vue'
+import { confirm } from '@/services/confirm'
 import api from '@/services/api'
 import { format } from '@/utils/format'
 
@@ -198,8 +197,16 @@ async function carregar() {
   }
 }
 
+async function confirmarExcluirVenda(id) {
+  const ok = await confirm.show(
+    'Excluir Venda',
+    `Deseja excluir a Venda #${id}? Esta ação não pode ser desfeita.`,
+  )
+  if (!ok) return
+  await excluir(id)
+}
+
 async function excluir(id) {
-  if (!confirm('Deseja excluir esta venda?')) return
   deletandoId.value = id
   try {
     await api.delete(`/vendas/${id}`)

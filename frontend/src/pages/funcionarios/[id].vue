@@ -26,7 +26,7 @@
       <div class="p-8 md:p-12">
         <Loading v-if="loading" />
 
-        <form v-else class="space-y-16" @submit.prevent="salvar">
+        <form v-else class="space-y-16" @submit.prevent="confirmarSalvarFuncionario">
           
           <section class="grid grid-cols-12 gap-8">
             <div class="col-span-12 lg:col-span-3">
@@ -137,18 +137,22 @@
               <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2 block">Seção 04</span>
               <h3 class="text-lg font-black text-slate-800 uppercase italic">Financeiro</h3>
             </div>
-            <div class="col-span-12 lg:col-span-9 grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Input :modelValue="salarioBaseInput" @update:modelValue="updateSalarioBase" label="Salário Base (R$)" />
-              <Input :modelValue="salarioAdicionalInput" @update:modelValue="updateSalarioAdicional" label="Gratificação (R$)" />
-              <div class="space-y-2">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Dia de Pagamento</label>
-                <select v-model="form.dia_pagamento" class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none">
-                  <option :value="5">DIA 05</option>
-                  <option :value="10">DIA 10</option>
-                  <option :value="20">DIA 20</option>
-                </select>
-              </div>
-            </div>
+<div class="col-span-12 lg:col-span-9 grid grid-cols-1 md:grid-cols-4 gap-6">
+  <Input :modelValue="salarioBaseInput" @update:modelValue="updateSalarioBase" label="Salário Base (R$)" />
+  <Input :modelValue="salarioAdicionalInput" @update:modelValue="updateSalarioAdicional" label="Gratificação (R$)" />
+  <Input :modelValue="valeInput" @update:modelValue="updateVale" label="Vale (R$)" />
+  <Input :modelValue="valeTransporteInput" @update:modelValue="updateValeTransporte" label="Vale Transporte (R$)" />
+
+  <div class="space-y-2 md:col-span-1">
+    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Dia de Pagamento</label>
+    <select v-model="form.dia_pagamento" class="w-full h-12 px-4 rounded-2xl bg-white border border-slate-200 font-bold text-slate-700 outline-none">
+      <option :value="5">DIA 05</option>
+      <option :value="10">DIA 10</option>
+      <option :value="20">DIA 20</option>
+    </select>
+  </div>
+</div>
+
           </section>
 
           <section class="bg-slate-50 p-10 rounded-[3rem] border border-slate-100">
@@ -169,7 +173,7 @@
                   <input ref="fileInput" type="file" class="hidden" @change="onFileChange" />
                 </div>
               </div>
-              <Button variant="primary" type="button" class="!rounded-[1.5rem] h-14 font-black uppercase text-[10px] tracking-widest" :loading="enviandoArquivo" @click="enviarArquivo">
+              <Button variant="primary" type="button" class="!rounded-[1.5rem] h-14 font-black uppercase text-[10px] tracking-widest" :loading="enviandoArquivo" @click="confirmarEnviarArquivo">
                 Anexar
               </Button>
             </div>
@@ -187,7 +191,7 @@
                 </div>
                 <div class="flex gap-2">
                    <a :href="a.url" target="_blank" class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 border border-slate-100"><i class="pi pi-eye"></i></a>
-                   <button type="button" @click="removerArquivo(a.id)" class="w-9 h-9 flex items-center justify-center rounded-xl bg-rose-50 text-rose-400 border border-rose-100"><i class="pi pi-trash"></i></button>
+                   <button type="button" @click="confirmarRemoverArquivo(a.id)" class="w-9 h-9 flex items-center justify-center rounded-xl bg-rose-50 text-rose-400 border border-rose-100"><i class="pi pi-trash"></i></button>
                 </div>
               </div>
             </div>
@@ -220,11 +224,13 @@ import { useRouter, useRoute } from 'vue-router'
 import { FuncionarioService } from '@/services/index'
 
 import { maskCPF, maskRG, maskTelefone, maskCEP, onlyNumbers, maskMoneyBR } from '@/utils/masks'
-import { buscarCep, calcularCustoHora } from '@/utils/utils'
-import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
+import { buscarCep } from '@/utils/utils'
+import { numeroParaMoeda } from '@/utils/number'
+
 import { upper, raw } from '@/utils/text'
 
 import { FUNCIONARIOS_LOCAL_SETOR_CARGO } from '@/constantes'
+import { confirm } from '@/services/confirm'
 
 const router = useRouter()
 const route = useRoute()
@@ -355,6 +361,7 @@ function updateVale(v) {
   form.value.vale = n
   valeInput.value = maskMoneyBR(n)
 }
+
 function updateValeTransporte(v) {
   const n = toMoneyNumber(v)
   form.value.vale_transporte = n
@@ -463,7 +470,46 @@ watch(
   }
 )
 
+// SALVAR (confirm)
+async function confirmarSalvarFuncionario() {
+  const ok = await confirm.show(
+    'Salvar Registro',
+    `Deseja salvar o registro de "${form.value.nome}"?`,
+  )
+  if (!ok) return
+  await salvar()
+}
 
+// ANEXAR ARQUIVO (confirm)
+async function confirmarEnviarArquivo() {
+  if (!arquivoSelecionado.value) return
+
+  const ok = await confirm.show(
+    'Anexar Arquivo',
+    `Deseja anexar o arquivo "${arquivoSelecionado.value.name}"?`,
+  )
+  if (!ok) return
+
+  await enviarArquivo()
+}
+
+// REMOVER ARQUIVO (confirm)
+async function confirmarRemoverArquivo(fileId) {
+  const arq = arquivos.value?.find(a => a.id === fileId)
+
+  const ok = await confirm.show(
+    'Excluir Arquivo',
+    `Deseja excluir o arquivo "${arq?.nome || 'SEM NOME'}"?`,
+  )
+  if (!ok) return
+
+  try {
+    await FuncionarioService.removerArquivo(fileId)
+    await carregarArquivos()
+  } catch {
+    alert('Erro ao remover')
+  }
+}
 
 async function garantirIdParaUpload() {
   if (isEditing.value && id.value) return Number(id.value)
@@ -608,16 +654,6 @@ await carregarArquivos()
   }
 }
 
-
-async function removerArquivo(fileId) {
-  if (!confirm('Deseja excluir este arquivo?')) return
-  try {
-    await FuncionarioService.removerArquivo(fileId)
-    await carregarArquivos()
-  } catch {
-    alert('Erro ao remover')
-  }
-}
 
 // ===== Load / Save =====
 function normalizarNumero(v) {

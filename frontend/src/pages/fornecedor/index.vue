@@ -175,7 +175,11 @@ function editar(id) {
 }
 
 async function confirmarExclusao(id) {
-  const ok = await confirm.show('Excluir Fornecedor', 'Isso removerá o fornecedor permanentemente. Deseja continuar?')
+  const fornecedor = rows.value.find(r => r.id === id)
+  const ok = await confirm.show(
+    'Excluir Fornecedor',
+    `Deseja excluir "${fornecedor?.razao_social || `Fornecedor #${id}`}"? Esta ação é permanente.`
+  )
   if (!ok) return
 
   try {

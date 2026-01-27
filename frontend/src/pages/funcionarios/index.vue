@@ -56,7 +56,7 @@
         </div>
         <button 
           v-if="selecionados.length > 0"
-          @click="gerarPdf"
+          @click="confirmarGerarPdfFuncionarios"
           class="px-3 py-1.5 rounded-lg bg-brand-primary text-white text-[9px] font-black uppercase tracking-wider flex items-center gap-2 hover:brightness-110"
         >
           <i class="pi pi-file-pdf"></i> PDF
@@ -123,7 +123,7 @@
               <i class="pi pi-pencil text-xs"></i>
             </button>
             <button 
-              @click="excluir(row)"
+              @click="confirmarExcluirFuncionario(row)"
               class="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
               title="Excluir"
             >
@@ -148,6 +148,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/services/api'
 import { FuncionarioService } from '@/services/index'
+import { confirm } from '@/services/confirm'
 
 const router = useRouter()
 const loading = ref(true)
@@ -232,16 +233,40 @@ async function gerarPdf() {
   }
 }
 
+async function confirmarExcluirFuncionario(row) {
+  const ok = await confirm.show(
+    'Excluir Funcionário',
+    `Deseja remover "${row?.nome}"? Esta ação não pode ser desfeita.`,
+  )
+  if (!ok) return
+  await excluir(row)
+}
+
+async function confirmarGerarPdfFuncionarios() {
+  if (selecionados.value.length === 0) return
+
+  const ok = await confirm.show(
+    'Gerar PDF',
+    `Deseja gerar o PDF com ${selecionados.value.length} funcionário(s) selecionado(s)?`,
+  )
+  if (!ok) return
+  await gerarPdf()
+}
+
 async function excluir(row) {
-  if (!confirm(`Deseja remover ${row.nome}?`)) return
   try {
     await FuncionarioService.remover(row.id)
     funcionarios.value = funcionarios.value.filter((f) => f.id !== row.id)
-    selectedIds.value.delete(row.id)
+
+    // remove da seleção também
+    const set = new Set(selectedIds.value)
+    set.delete(row.id)
+    selectedIds.value = set
   } catch (err) {
     alert('Erro ao excluir.')
   }
 }
+
 
 onMounted(carregar)
 </script>

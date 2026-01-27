@@ -11,7 +11,8 @@
     <div class="p-8 lg:p-12">
       <Loading v-if="loading" />
 
-      <form v-else class="space-y-10" @submit.prevent="testarSalvar" autocomplete="off">
+      <form v-else class="space-y-10" @submit.prevent="salvar" autocomplete="off">
+
         
         <!-- Seção de Tipo de Cliente e Indicação -->
         <div class="grid grid-cols-12 gap-6 items-end bg-slate-50/50 dark:bg-slate-800/20 p-6 rounded-2xl">
@@ -256,19 +257,18 @@
             </Button>
 
             <!-- Botão Excluir (apenas em edição) -->
-            <Button
-              v-if="isEdit"
-              variant="danger"
-              size="lg"
-              :loading="deleting"
-              class="!rounded-xl px-6 py-3
-                     hover:shadow-xl hover:shadow-red-500/20
-                     transition-all duration-200"
-              @click="excluir"
-            >
-              <i class="pi pi-trash mr-2 text-[12px]"></i>
-              EXCLUIR
-            </Button>
+<Button
+  v-if="isEdit"
+  type="button"
+  variant="danger"
+  size="lg"
+  :loading="deleting"
+  @click="excluir"
+>
+  <i class="pi pi-trash mr-2 text-[12px]"></i>
+  EXCLUIR
+</Button>
+
 
             <!-- Espaço vazio à direita para balancear quando não houver botão excluir -->
             <div v-if="!isEdit"></div>
@@ -459,46 +459,13 @@ watch(() => form.estado_civil, (v) => {
   if (v !== 'CASADO') form.nome_conjuge = ''
 })
 
-// -- TESTE: Função simplificada --
-const testarSalvar = async (event) => {
-  console.log('🔵 FUNÇÃO testarSalvar CHAMADA!')
-  console.log('Evento:', event)
-  console.log('Dados do formulário:', form)
-  
-  saving.value = true
-  
-  try {
-    // Teste simples: apenas redirecionar
-    console.log('Teste: Redirecionando para /clientes em 2 segundos...')
-    
-    notify.success('Salvamento simulado. Redirecionando...')
-    
-    setTimeout(() => {
-      console.log('🔴 AGORA VAI REDIRECIONAR!')
-      router.push('/clientes').then(() => {
-        console.log('✅ Redirecionamento bem-sucedido!')
-      }).catch(err => {
-        console.error('❌ Erro no redirecionamento:', err)
-        // Fallback
-        window.location.href = '/clientes'
-      })
-    }, 2000)
-    
-  } catch (error) {
-    console.error('Erro no teste:', error)
-  } finally {
-    saving.value = false
-  }
-}
 
 // -- Form Actions Original --
 async function salvar() {
-  console.log('🟢 FUNÇÃO salvar CHAMADA!')
+  if (saving.value) return
   saving.value = true
-  
+
   try {
-    console.log('Salvando dados...')
-    
     const payload = {
       ...form,
       razao_social: isJuridica.value ? form.nome_completo : null,
@@ -506,10 +473,9 @@ async function salvar() {
       nome_conjuge: form.estado_civil === 'CASADO' ? (form.nome_conjuge || null) : null,
       enviar_aniversario_email: form.email ? !!form.enviar_aniversario_email : false,
       enviar_aniversario_whatsapp: form.whatsapp ? !!form.enviar_aniversario_whatsapp : false,
-      indicacao_id: form.indicacao_id ? Number(form.indicacao_id) : null
+      indicacao_id: form.indicacao_id ? Number(form.indicacao_id) : null,
     }
 
-    // Remover campos desnecessários
     if (!isJuridica.value) {
       delete payload.cnpj
       delete payload.ie
@@ -519,52 +485,33 @@ async function salvar() {
       delete payload.rg
     }
 
-    console.log('Payload enviado:', payload)
+    await ClienteService.salvar(isEdit.value ? Number(clienteId.value) : null, payload)
 
-    // Chamar o serviço
-    const response = await ClienteService.salvar(isEdit.value ? clienteId.value : null, payload)
-    console.log('Resposta da API:', response)
-
-    // Sucesso
     notify.success(isEdit.value ? 'Cliente atualizado!' : 'Cliente cadastrado!')
-    
-    console.log('🟡 Aguardando 1 segundo antes de redirecionar...')
-    setTimeout(() => {
-      console.log('🔴 Tentando redirecionar para /clientes...')
-      router.push('/clientes').then(() => {
-        console.log('✅ Redirecionamento bem-sucedido!')
-      }).catch(err => {
-        console.error('❌ Erro no router.push:', err)
-        // Fallback
-        window.location.href = '/clientes'
-      })
-    }, 1000)
-    
+    await router.push('/clientes')
   } catch (err) {
     console.error('Erro ao salvar:', err)
-    notify.error('Erro ao salvar.')
-    
+    const apiMsg = err?.response?.data?.message
+    notify.error(Array.isArray(apiMsg) ? apiMsg.join(' | ') : (apiMsg || 'Erro ao salvar.'))
   } finally {
     saving.value = false
   }
 }
 
+
 async function excluir() {
-  const ok = await confirm.show('Atenção', 'Confirmar exclusão definitiva?')
+  const ok = await confirm.show('Excluir Cliente?', 'Esta ação não pode ser desfeita.')
   if (!ok) return
-  
+
   deleting.value = true
   try {
-    await ClienteService.remover(clienteId.value)
+    await ClienteService.remover(Number(clienteId.value))
     notify.success('Cliente removido!')
-    
-    setTimeout(() => {
-      router.push('/clientes')
-    }, 1000)
-    
+    router.push('/clientes')
   } catch (err) {
     console.error('Erro ao excluir:', err)
-    notify.error('Erro ao excluir.')
+    const apiMsg = err?.response?.data?.message
+    notify.error(Array.isArray(apiMsg) ? apiMsg.join(' | ') : (apiMsg || 'Erro ao excluir.'))
   } finally {
     deleting.value = false
   }

@@ -113,12 +113,13 @@
             >
               <i class="pi pi-pencil text-xs"></i>
             </button>
-            <button 
-              @click="excluir(row.id)"
-              class="w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
-            >
-              <i class="pi pi-trash text-xs"></i>
-            </button>
+<button 
+  @click="confirmarExcluirCompra(row.id)"
+  class="w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
+>
+  <i class="pi pi-trash text-xs"></i>
+</button>
+
           </div>
         </template>
       </Table>
@@ -186,6 +187,23 @@ const totalMesAtual = computed(() => {
     return d.getMonth() === mes && d.getFullYear() === ano
   }).reduce((acc, c) => acc + Number(c.valor_total || 0), 0)
 })
+
+async function confirmarExcluirCompra(id) {
+  const ok = await confirm.show(
+    'Excluir Compra',
+    'Esta ação não pode ser desfeita. Deseja continuar?',
+  )
+  if (!ok) return
+
+  try {
+    await CompraService.remover(id)
+    compras.value = compras.value.filter(c => c.id !== id)
+    notify.success('Compra removida com sucesso!')
+  } catch (e) {
+    notify.error('Erro ao excluir registro.')
+  }
+}
+
 
 async function excluir(id) {
   if (await confirm.show('Excluir Compra', 'Esta ação não pode ser desfeita. Deseja continuar?')) {

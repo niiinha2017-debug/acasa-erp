@@ -51,7 +51,7 @@
                 class="w-full h-14 !rounded-2xl shadow-xl shadow-brand-primary/20 hover:scale-105 active:scale-95 transition-all font-black text-[11px] uppercase tracking-widest"
                 :loading="loadingGerar"
                 :disabled="!funcionario_id"
-                @click="gerar"
+                @click="confirmarGerarConvite"
               >
                 <i class="pi pi-bolt mr-2"></i>
                 Gerar Novo Convite
@@ -124,12 +124,15 @@
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router'
 import { computed, onMounted, ref } from 'vue'
 import { FuncionarioService, PontoService } from '@/services/index'
 import { notify } from '@/services/notify'
+import { confirm } from '@/services/confirm'
 
 const loading = ref(true)
 const loadingGerar = ref(false)
+const router = useRouter()
 
 const funcionarios = ref([])          // <- plural
 const funcionario_id = ref(null)
@@ -145,8 +148,9 @@ const funcionariosOptions = computed(() =>
 onMounted(async () => {
   try {
 const res = await FuncionarioService.listar()
-funcionarios.value = res?.data || []
-console.log('[FUNCIONARIOS] qtd:', funcionarios.value.length)
+const data = res?.data?.data ?? res?.data ?? res
+funcionarios.value = Array.isArray(data) ? data : []
+
 
   } catch (e) {
     console.log('[ERRO listar funcionarios]', e) // <- 1 log real
@@ -155,6 +159,13 @@ console.log('[FUNCIONARIOS] qtd:', funcionarios.value.length)
     loading.value = false
   }
 })
+
+async function confirmarGerarConvite() {
+  if (!funcionario_id.value) return
+  const ok = await confirm.show('Gerar Convite', 'Deseja gerar um novo convite para este colaborador?')
+  if (!ok) return
+  await gerar()
+}
 
 async function gerar() {
   if (!funcionario_id.value) return
