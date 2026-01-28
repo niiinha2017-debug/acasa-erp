@@ -84,6 +84,32 @@
                 />
               </div>
 
+              <!-- ✅ IMAGEM (URL) + PREVIEW -->
+              <div class="col-span-12 md:col-span-8">
+                <Input
+                  v-model="form.imagem_url"
+                  label="Imagem do Produto (URL)"
+                  placeholder="Cole a URL da imagem (opcional)"
+                  :forceUpper="false"
+                />
+              </div>
+
+              <div class="col-span-12 md:col-span-4">
+                <div class="h-full flex flex-col justify-end">
+                  <div class="h-10 rounded-xl border border-slate-200 bg-white flex items-center justify-center overflow-hidden">
+                    <img
+                      v-if="previewImagem"
+                      :src="previewImagem"
+                      class="h-full w-full object-cover"
+                      alt="Imagem do produto"
+                    />
+                    <span v-else class="text-[9px] font-black uppercase tracking-widest text-slate-300">
+                      Sem imagem
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               <div class="col-span-12 md:col-span-6">
                 <div class="relative">
                   <Input
@@ -91,6 +117,7 @@
                     label="Valor de Custo (UN)"
                     placeholder="0,00"
                     @input="form.valor_unitario_mask = maskMoneyBR($event.target.value)"
+                    :forceUpper="false"
                   />
                   <span class="absolute right-4 bottom-4 text-[10px] font-black text-slate-300">BRL</span>
                 </div>
@@ -174,6 +201,14 @@ const form = reactive({
   marca: '',
   valor_unitario_mask: '0,00',
   status: 'ATIVO',
+
+  // ✅ novo
+  imagem_url: '',
+})
+
+const previewImagem = computed(() => {
+  const url = String(form.imagem_url || '').trim()
+  return url.length ? url : ''
 })
 
 const unidadesOptions = computed(() =>
@@ -183,9 +218,7 @@ const unidadesOptions = computed(() =>
   })),
 )
 
-// ---------------------
 // helpers
-// ---------------------
 function norm(v) {
   const s = String(v ?? '').trim().toUpperCase()
   return s || null
@@ -201,6 +234,7 @@ function resetForm() {
     marca: '',
     valor_unitario_mask: '0,00',
     status: 'ATIVO',
+    imagem_url: '',
   })
 }
 
@@ -221,9 +255,7 @@ async function existeDuplicadoNoFornecedor(payloadCheck) {
   })
 }
 
-// ---------------------
 // lifecycle
-// ---------------------
 const handleEsc = (e) => {
   if (e.key === 'Escape' && props.open) emit('close')
 }
@@ -237,16 +269,13 @@ watch(
     if (!isOpen) return
     resetForm()
     await nextTick()
-    // tenta focar no primeiro campo (depende se seu Input expõe ref pro input interno)
     try {
       nomeRef.value?.$el?.querySelector?.('input')?.focus?.()
     } catch {}
   },
 )
 
-// ---------------------
 // actions
-// ---------------------
 async function salvar() {
   erroLocal.value = ''
 
@@ -274,6 +303,9 @@ async function salvar() {
     marca: form.marca?.trim() ? form.marca.trim() : null,
     valor_unitario: Number(valorNum || 0),
     status: form.status,
+
+    // ✅ imagem opcional
+    imagem_url: String(form.imagem_url || '').trim() || null,
   }
 
   // check duplicado no front (backend ainda valida)
@@ -292,7 +324,6 @@ async function salvar() {
       return
     }
   } catch (e) {
-    // se der erro no check, não trava salvar — backend valida
     console.log('[MODAL PRODUTO] erro check duplicado:', e?.response?.data || e)
   }
 
