@@ -251,13 +251,49 @@ const paginadas = computed(() => {
 })
 
 const filtradas = computed(() => {
-  const t = filtro.value?.toLowerCase().trim()
+  const t = String(filtro.value || '').toLowerCase().trim()
   if (!t) return compras.value
-  return compras.value.filter(c => {
-    const campos = [c.id, c.venda_id, nomeFornecedor(c), c.status, c.tipo_compra, format.date(c.data_compra)]
-    return campos.some(campo => String(campo ?? '').toLowerCase().includes(t))
+
+  return compras.value.filter((c) => {
+    // --- DATA: gera várias strings pra bater com qualquer jeito que você digitar
+    const d = c?.data_compra ? new Date(c.data_compra) : null
+    const dataISO = d && !isNaN(d) ? d.toISOString().slice(0, 10) : ''              // 2026-01-28
+    const dataBR  = d && !isNaN(d) ? d.toLocaleDateString('pt-BR') : ''            // 28/01/2026
+    const dataFmt = format.date(c.data_compra) || ''                               // o seu format.date
+
+    // --- VALOR: tenta bater com "1200", "1200.50", "1.200,50", etc
+    const valorNum = Number(c?.valor_total || 0)
+    const valorFix = isFinite(valorNum) ? valorNum.toFixed(2) : ''                 // 1200.50
+    const valorBR  = isFinite(valorNum)
+      ? valorNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 })             // 1.200,50
+      : ''
+    const valorCur = isFinite(valorNum) ? format.currency(valorNum) : ''           // R$ 1.200,50 (seu helper)
+
+    const campos = [
+      c.id,
+      c.venda_id,
+      nomeFornecedor(c),
+      c.status,
+      c.tipo_compra,
+
+      // datas
+      dataFmt,
+      dataBR,
+      dataISO,
+
+      // valores
+      valorNum,      // 1200.5
+      valorFix,      // 1200.50
+      valorBR,       // 1.200,50
+      valorCur,      // R$ 1.200,50
+    ]
+
+    return campos.some((campo) =>
+      String(campo ?? '').toLowerCase().includes(t)
+    )
   })
 })
+
 
 const totalGeral = computed(() => filtradas.value.reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
 const totalInsumos = computed(() => filtradas.value.filter(c => c.tipo_compra === 'INSUMOS').reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
