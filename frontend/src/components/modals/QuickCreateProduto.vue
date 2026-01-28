@@ -41,6 +41,7 @@
             <div class="grid grid-cols-12 gap-x-6 gap-y-6">
               <div class="col-span-12 md:col-span-7">
                 <Input
+                  ref="nomeRef"
                   v-model="form.nome_produto"
                   label="Nome do Produto"
                   placeholder="EX: MDF CRU OU DOBRADIÇA"
@@ -49,15 +50,27 @@
               </div>
 
               <div class="col-span-12 md:col-span-5">
-                <Input v-model="form.marca" label="Marca / Fabricante" placeholder="EX: DURATEX" />
+                <Input
+                  v-model="form.marca"
+                  label="Marca / Fabricante"
+                  placeholder="EX: DURATEX"
+                />
               </div>
 
               <div class="col-span-12 md:col-span-4">
-                <Input v-model="form.cor" label="Cor / Acabamento" placeholder="EX: BRANCO TX" />
+                <Input
+                  v-model="form.cor"
+                  label="Cor / Acabamento"
+                  placeholder="EX: BRANCO TX"
+                />
               </div>
 
               <div class="col-span-12 md:col-span-4">
-                <Input v-model="form.medida" label="Espessura" placeholder="EX: 18MM" />
+                <Input
+                  v-model="form.medida"
+                  label="Espessura"
+                  placeholder="EX: 18MM"
+                />
               </div>
 
               <div class="col-span-12 md:col-span-4">
@@ -77,7 +90,7 @@
                     v-model="form.valor_unitario_mask"
                     label="Valor de Custo (UN)"
                     placeholder="0,00"
-                    @input="form.valor_unitario_mask = maskMoneyBR(form.valor_unitario_mask)"
+                    @input="form.valor_unitario_mask = maskMoneyBR($event.target.value)"
                   />
                   <span class="absolute right-4 bottom-4 text-[10px] font-black text-slate-300">BRL</span>
                 </div>
@@ -93,6 +106,14 @@
                       @update:model-value="(val) => (form.status = val ? 'ATIVO' : 'INATIVO')"
                     />
                   </div>
+                </div>
+              </div>
+
+              <div v-if="erroLocal" class="col-span-12">
+                <div class="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3">
+                  <p class="text-[10px] font-black uppercase tracking-widest text-rose-600">
+                    {{ erroLocal }}
+                  </p>
                 </div>
               </div>
             </div>
@@ -124,24 +145,12 @@
   </Teleport>
 </template>
 
-<style scoped>
-/* Estilização extra para manter o padrão uppercase nos inputs caso os componentes base permitam */
-:deep(input) {
-  text-transform: uppercase;
-}
-:deep(input::placeholder) {
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-size: 9px;
-  font-weight: 700;
-}
-</style>
-
 <script setup>
-import { reactive, ref, watch, onMounted, onUnmounted, computed } from 'vue' // Adicionado computed
+import { reactive, ref, watch, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import { ProdutosService } from '@/services/index'
 import { notify } from '@/services/notify'
 import { maskMoneyBR } from '@/utils/masks'
+import { moedaParaNumero } from '@/utils/number'
 import { UNIDADES } from '@/constantes/unidades'
 
 const props = defineProps({
@@ -151,7 +160,11 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close', 'created'])
+
 const salvando = ref(false)
+const erroLocal = ref('')
+
+const nomeRef = ref(null)
 
 const form = reactive({
   nome_produto: '',
@@ -163,21 +176,23 @@ const form = reactive({
   status: 'ATIVO',
 })
 
-// Corrigido: Estava faltando o import do computed e a lógica está protegida contra arrays nulos
 const unidadesOptions = computed(() =>
-  (Array.isArray(UNIDADES) ? UNIDADES : []).map((u) => ({ value: u.key, label: u.label })),
+  (Array.isArray(UNIDADES) ? UNIDADES : []).map((u) => ({
+    value: u.key,
+    label: u.label,
+  })),
 )
 
-const handleEsc = (e) => {
-  if (e.key === 'Escape' && props.open) emit('close')
+// ---------------------
+// helpers
+// ---------------------
+function norm(v) {
+  const s = String(v ?? '').trim().toUpperCase()
+  return s || null
 }
 
-onMounted(() => window.addEventListener('keydown', handleEsc))
-onUnmounted(() => window.removeEventListener('keydown', handleEsc))
-
-watch(() => props.open, (isOpen) => {
-  if (!isOpen) return
-  
+function resetForm() {
+  erroLocal.value = ''
   Object.assign(form, {
     nome_produto: props.textoInicial || '',
     cor: '',
@@ -187,11 +202,53 @@ watch(() => props.open, (isOpen) => {
     valor_unitario_mask: '0,00',
     status: 'ATIVO',
   })
-})
+}
 
+async function existeDuplicadoNoFornecedor(payloadCheck) {
+  if (!props.fornecedorId) return false
+
+  const res = await ProdutosService.listar({ fornecedor_id: props.fornecedorId })
+  const data = res?.data ?? res
+  const lista = Array.isArray(data) ? data : []
+
+  return lista.some((p) => {
+    return (
+      norm(p.nome_produto) === payloadCheck.nome_produto &&
+      norm(p.marca) === payloadCheck.marca &&
+      norm(p.cor) === payloadCheck.cor &&
+      norm(p.medida) === payloadCheck.medida
+    )
+  })
+}
+
+// ---------------------
+// lifecycle
+// ---------------------
+const handleEsc = (e) => {
+  if (e.key === 'Escape' && props.open) emit('close')
+}
+
+onMounted(() => window.addEventListener('keydown', handleEsc))
+onUnmounted(() => window.removeEventListener('keydown', handleEsc))
+
+watch(
+  () => props.open,
+  async (isOpen) => {
+    if (!isOpen) return
+    resetForm()
+    await nextTick()
+    // tenta focar no primeiro campo (depende se seu Input expõe ref pro input interno)
+    try {
+      nomeRef.value?.$el?.querySelector?.('input')?.focus?.()
+    } catch {}
+  },
+)
+
+// ---------------------
+// actions
+// ---------------------
 async function salvar() {
-  console.log('[MODAL PRODUTO] fornecedorId:', props.fornecedorId)
-  console.log('[MODAL PRODUTO] form:', JSON.parse(JSON.stringify(form)))
+  erroLocal.value = ''
 
   if (!props.fornecedorId) {
     notify.warn('Selecione um fornecedor antes.')
@@ -201,38 +258,68 @@ async function salvar() {
     notify.warn('Informe o nome do produto.')
     return
   }
+  if (!form.unidade) {
+    notify.warn('Selecione a unidade.')
+    return
+  }
 
-  const valorRaw = String(form.valor_unitario_mask || '').replace(/\D/g, '')
-  const valorNum = Number(valorRaw) / 100
+  const valorNum = moedaParaNumero(form.valor_unitario_mask)
 
   const payload = {
     fornecedor_id: props.fornecedorId,
     nome_produto: form.nome_produto.trim(),
-    cor: form.cor || null,
-    medida: form.medida || null,
+    cor: form.cor?.trim() ? form.cor.trim() : null,
+    medida: form.medida?.trim() ? form.medida.trim() : null,
     unidade: form.unidade || 'METRO',
-    marca: form.marca || null,
-    valor_unitario: isNaN(valorNum) ? 0 : valorNum,
+    marca: form.marca?.trim() ? form.marca.trim() : null,
+    valor_unitario: Number(valorNum || 0),
     status: form.status,
   }
 
-  console.log('[MODAL PRODUTO] payload:', payload)
+  // check duplicado no front (backend ainda valida)
+  try {
+    const check = {
+      nome_produto: norm(payload.nome_produto),
+      marca: norm(payload.marca),
+      cor: norm(payload.cor),
+      medida: norm(payload.medida),
+    }
+
+    const dup = await existeDuplicadoNoFornecedor(check)
+    if (dup) {
+      erroLocal.value = 'Produto duplicado para este fornecedor (mesmo nome/marca/cor/medida).'
+      notify.warn('Produto duplicado.')
+      return
+    }
+  } catch (e) {
+    // se der erro no check, não trava salvar — backend valida
+    console.log('[MODAL PRODUTO] erro check duplicado:', e?.response?.data || e)
+  }
 
   salvando.value = true
   try {
-    const res = await ProdutosService.salvar(null, payload) // ou undefined
+    const res = await ProdutosService.salvar(null, payload)
+    const produtoCriado = res?.data ?? res
 
-    console.log('[MODAL PRODUTO] res:', res)
-
-    emit('created', res?.data || res)
+    emit('created', produtoCriado)
     emit('close')
     notify.success('Produto cadastrado!')
   } catch (error) {
-    console.log('[MODAL PRODUTO] erro:', error)
+    console.log('[MODAL PRODUTO] erro:', error?.response?.data || error)
     notify.error(error?.response?.data?.message || 'Erro ao salvar produto.')
   } finally {
     salvando.value = false
   }
 }
-
 </script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>
