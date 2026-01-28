@@ -250,48 +250,64 @@ const paginadas = computed(() => {
   return filtradas.value.slice(start, start + pageSize.value)
 })
 
+function datePart(value) {
+  if (!value) return ''
+  const s = String(value)
+  return s.includes('T') ? s.split('T')[0] : s // YYYY-MM-DD
+}
+
+function dateBRFromPart(part) {
+  const m = String(part || '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m) return ''
+  const [, y, mo, d] = m
+  return `${d}/${mo}/${y}`
+}
+
+function parseDateOnly(value) {
+  const part = datePart(value)
+  const m = part.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m) return null
+  const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3])
+  return new Date(y, mo - 1, d) // local, sem UTC
+}
+
+
 const filtradas = computed(() => {
   const t = String(filtro.value || '').toLowerCase().trim()
   if (!t) return compras.value
 
-  return compras.value.filter((c) => {
-    // --- DATA: gera várias strings pra bater com qualquer jeito que você digitar
-    const d = c?.data_compra ? new Date(c.data_compra) : null
-    const dataISO = d && !isNaN(d) ? d.toISOString().slice(0, 10) : ''              // 2026-01-28
-    const dataBR  = d && !isNaN(d) ? d.toLocaleDateString('pt-BR') : ''            // 28/01/2026
-    const dataFmt = format.date(c.data_compra) || ''                               // o seu format.date
+return compras.value.filter((c) => {
+  const part = datePart(c.data_compra)
+  const dataISO = part
+  const dataBR  = dateBRFromPart(part)
+  const dataFmt = format.date(c.data_compra) || ''
 
-    // --- VALOR: tenta bater com "1200", "1200.50", "1.200,50", etc
-    const valorNum = Number(c?.valor_total || 0)
-    const valorFix = isFinite(valorNum) ? valorNum.toFixed(2) : ''                 // 1200.50
-    const valorBR  = isFinite(valorNum)
-      ? valorNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 })             // 1.200,50
-      : ''
-    const valorCur = isFinite(valorNum) ? format.currency(valorNum) : ''           // R$ 1.200,50 (seu helper)
+  const valorNum = Number(c?.valor_total || 0)
+  const valorFix = isFinite(valorNum) ? valorNum.toFixed(2) : ''
+  const valorBR  = isFinite(valorNum)
+    ? valorNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+    : ''
+  const valorCur = isFinite(valorNum) ? format.currency(valorNum) : ''
 
-    const campos = [
-      c.id,
-      c.venda_id,
-      nomeFornecedor(c),
-      c.status,
-      c.tipo_compra,
+  const campos = [
+    c.id,
+    c.venda_id,
+    nomeFornecedor(c),
+    c.status,
+    c.tipo_compra,
+    dataFmt,
+    dataBR,
+    dataISO,
+    valorNum,
+    valorFix,
+    valorBR,
+    valorCur,
+  ]
 
-      // datas
-      dataFmt,
-      dataBR,
-      dataISO,
-
-      // valores
-      valorNum,      // 1200.5
-      valorFix,      // 1200.50
-      valorBR,       // 1.200,50
-      valorCur,      // R$ 1.200,50
-    ]
-
-    return campos.some((campo) =>
-      String(campo ?? '').toLowerCase().includes(t)
-    )
-  })
+  return campos.some((campo) =>
+    String(campo ?? '').toLowerCase().includes(t)
+  )
+})
 })
 
 
@@ -301,8 +317,9 @@ const totalVendas = computed(() => filtradas.value.filter(c => c.tipo_compra !==
 const totalMesAtual = computed(() => {
   const mes = new Date().getMonth(), ano = new Date().getFullYear()
   return filtradas.value.filter(c => {
-    const d = new Date(c.data_compra)
-    return d.getMonth() === mes && d.getFullYear() === ano
+const d = parseDateOnly(c.data_compra)
+return d && d.getMonth() === mes && d.getFullYear() === ano
+
   }).reduce((acc, c) => acc + Number(c.valor_total || 0), 0)
 })
 
