@@ -340,12 +340,11 @@ model Fornecedor {
 
 model produtos {
   id Int @id @default(autoincrement())
-
   fornecedor_id Int
   fornecedor    Fornecedor @relation(fields: [fornecedor_id], references: [id])
 
   nome_produto String
-  marca        String? // ✅ NOVO
+  marca        String?
   cor          String?
   medida       String?
   unidade      String?
@@ -353,6 +352,9 @@ model produtos {
   quantidade     Int?     @default(0)
   valor_unitario Decimal? @db.Decimal(10, 2)
   valor_total    Decimal? @db.Decimal(10, 2)
+
+  // ✅ novo campo (1 imagem)
+  imagem_url String?
 
   status String @default("ATIVO")
 

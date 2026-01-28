@@ -33,9 +33,14 @@ export class CreateProdutoDto {
   @IsString()
   medida?: string
 
-  @IsOptional()
+   @IsOptional()
   @IsString()
   unidade?: string
+
+  @IsOptional()
+  @IsString()
+  imagem_url?: string
+
 
   @IsOptional()
   @Type(() => Number)

@@ -219,8 +219,14 @@ export const ProducaoService = {
 export const ProdutosService = {
   listar: (filtros = {}) => api.get('/produtos', { params: filtros }),
   buscar: (id) => api.get(`/produtos/${id}`),
-  salvar: (id, dados) =>
-    id ? api.put(`/produtos/${id}`, dados) : api.post('/produtos', dados),
+salvar: (id, dados) => {
+  const payload = {
+    ...dados,
+    imagem_url: (dados?.imagem_url ?? '').trim() || null,
+  }
+  return id ? api.put(`/produtos/${id}`, payload) : api.post('/produtos', payload)
+},
+
   remover: (id) => api.delete(`/produtos/${id}`),
 }
 

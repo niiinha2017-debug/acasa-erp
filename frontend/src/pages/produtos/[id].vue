@@ -1,6 +1,5 @@
 <template>
   <div class="w-full max-w-[1200px] mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-    
     <Card :shadow="true" class="overflow-visible !rounded-[3rem] border-none shadow-[0_40px_80px_-15px_rgba(0,0,0,0.1)]">
       <header class="flex flex-col md:flex-row items-center justify-between gap-6 p-10 border-b border-slate-50 bg-slate-50/50">
         <div class="flex items-center gap-6">
@@ -11,11 +10,14 @@
             <h2 class="text-2xl font-black tracking-tighter text-slate-800 uppercase italic leading-none">
               {{ isEdit ? 'Editar Produto' : 'Novo Produto' }}
             </h2>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2">Cadastro de Insumos e Materiais</p>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2">
+              Cadastro de Insumos e Materiais
+            </p>
           </div>
         </div>
 
-        <button 
+        <button
+          type="button"
           @click="confirmarDescartarProduto"
           class="flex items-center gap-3 px-6 h-12 rounded-2xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-900 hover:text-white transition-all shadow-sm group"
         >
@@ -31,7 +33,7 @@
         </div>
 
         <form v-else class="grid grid-cols-12 gap-8" @submit.prevent="confirmarSalvarProduto">
-          
+          <!-- Identificação -->
           <div class="col-span-12">
             <h3 class="text-[11px] font-black uppercase tracking-[0.3em] text-emerald-600 mb-6 flex items-center gap-3">
               <span class="w-10 h-[3px] bg-emerald-600 rounded-full"></span>
@@ -60,7 +62,12 @@
           </div>
 
           <div class="col-span-12 md:col-span-9">
-            <Input v-model="form.nome_produto" label="Nome Descritivo do Produto *" placeholder="Ex: Chapa de MDF 18mm Branco" required />
+            <Input
+              v-model="form.nome_produto"
+              label="Nome Descritivo do Produto *"
+              placeholder="Ex: Chapa de MDF 18mm Branco"
+              required
+            />
           </div>
 
           <div class="col-span-12 md:col-span-3">
@@ -73,6 +80,33 @@
             />
           </div>
 
+          <!-- ✅ IMAGEM (apenas 1, opcional) -->
+          <div class="col-span-12 md:col-span-8">
+            <Input
+              v-model="form.imagem_url"
+              label="Imagem do Produto (URL)"
+              placeholder="Cole a URL da imagem (opcional)"
+              :forceUpper="false"
+            />
+          </div>
+
+          <div class="col-span-12 md:col-span-4">
+            <div class="h-full flex flex-col justify-end">
+              <div class="h-10 rounded-xl border border-slate-200 bg-white flex items-center justify-center overflow-hidden">
+                <img
+                  v-if="previewImagem"
+                  :src="previewImagem"
+                  class="h-full w-full object-cover"
+                  alt="Imagem do produto"
+                />
+                <span v-else class="text-[9px] font-black uppercase tracking-widest text-slate-300">
+                  Sem imagem
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Atributos -->
           <div class="col-span-12 mt-4">
             <h3 class="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400 mb-6 flex items-center gap-3">
               <span class="w-10 h-[1px] bg-slate-200 rounded-full"></span>
@@ -92,44 +126,62 @@
             <Input v-model="form.medida" label="Dimensões / Espessura" placeholder="Ex: 2750x1840mm" />
           </div>
 
+          <!-- Valores e Quantidades (lógica original mantida) -->
           <div class="col-span-12 mt-8 bg-slate-50 rounded-[2.5rem] p-10 border border-slate-100">
             <div class="grid grid-cols-12 gap-8">
               <div class="col-span-12">
                 <h3 class="text-[11px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2">Valores e Quantidades</h3>
-                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic">Dados para controle de custos e saldo inicial</p>
+                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic">
+                  Dados para controle de custos e saldo inicial
+                </p>
               </div>
 
               <div class="col-span-12 md:col-span-4">
-                <Input v-model="quantidadeInput" label="Quantidade em Estoque" inputmode="numeric" required />
+                <Input
+                  v-model="quantidadeInput"
+                  label="Quantidade em Estoque"
+                  inputmode="numeric"
+                  required
+                />
               </div>
 
               <div class="col-span-12 md:col-span-4">
-                <Input v-model="valorUnitarioMask" label="Valor de Custo (Unit.)" inputmode="numeric" required />
+                <Input
+                  v-model="valorUnitarioMask"
+                  label="Valor de Custo (Unit.)"
+                  inputmode="numeric"
+                  required
+                />
               </div>
 
               <div class="col-span-12 md:col-span-4">
                 <div class="flex flex-col justify-end h-full">
                   <div class="h-14 px-6 bg-white border border-slate-200 rounded-2xl flex flex-col justify-center">
-                    <span class="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">Valor de Inventário Total</span>
-                    <span class="text-lg font-black text-slate-900 tabular-nums italic">{{ valorTotalMask }}</span>
+                    <span class="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                      Valor de Inventário Total
+                    </span>
+                    <span class="text-lg font-black text-slate-900 tabular-nums italic">
+                      {{ valorTotalMask }}
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
+          <!-- Ações -->
           <div class="col-span-12 flex items-center justify-end gap-6 pt-10 mt-6 border-t border-slate-50">
-            <button 
-              type="button" 
+            <button
+              type="button"
               @click="router.push('/produtos')"
               class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-rose-500 transition-colors"
             >
               Descartar
             </button>
 
-            <Button 
-              variant="primary" 
-              type="submit" 
+            <Button
+              variant="primary"
+              type="submit"
               :loading="salvando"
               class="!h-16 !px-12 !rounded-2xl shadow-2xl shadow-slate-900/20 bg-slate-900 hover:bg-black font-black text-[11px] uppercase tracking-[0.2em]"
             >
@@ -156,14 +208,16 @@ const router = useRouter()
 
 const rawId = computed(() => String(route.params.id || 'novo'))
 const isEdit = computed(() => rawId.value !== 'novo')
-const produtoId = computed(() => (isEdit.value ? Number(String(rawId.value).replace(/\D/g, '')) : null))
+const produtoId = computed(() =>
+  isEdit.value ? Number(String(rawId.value).replace(/\D/g, '')) : null,
+)
 
 const loading = ref(false)
 const salvando = ref(false)
 
 const fornecedor = ref([])
 const fornecedorOptions = computed(() =>
-  (fornecedor.value || []).map(f => ({ label: f.razao_social, value: f.id }))
+  (fornecedor.value || []).map((f) => ({ label: f.razao_social, value: f.id })),
 )
 
 const statusOptions = [
@@ -183,6 +237,15 @@ const form = ref({
   valor_unitario: 0,
   valor_total: 0,
   status: 'ATIVO',
+
+  // ✅ novo campo
+  imagem_url: '',
+})
+
+// preview simples (não altera lógica)
+const previewImagem = computed(() => {
+  const url = String(form.value.imagem_url || '').trim()
+  return url.length ? url : ''
 })
 
 // ======= Inputs auxiliares (máscaras) =======
@@ -217,11 +280,7 @@ watch(valorUnitarioMask, (v) => {
 })
 
 // ======= UNIDADES (constantes) =======
-// robusto: tenta achar opções que representem unidades dentro da categoria MODULO
-const unidadesOptions = computed(() =>
-  UNIDADES.map(u => ({ label: u.label, value: u.key }))
-)
-
+const unidadesOptions = computed(() => UNIDADES.map((u) => ({ label: u.label, value: u.key })))
 
 // ======= CRUD =======
 function validar() {
@@ -246,18 +305,22 @@ function resetForm() {
     valor_unitario: 0,
     valor_total: 0,
     status: 'ATIVO',
+    imagem_url: '',
   }
   quantidadeInput.value = ''
   valorUnitarioMask.value = 'R$ 0,00'
 }
 
 async function carregarFornecedor() {
-  const { data } = await FornecedorService.listar()
-  fornecedor.value = data || []
+  const res = await FornecedorService.listar()
+  const data = res?.data ?? res
+  fornecedor.value = Array.isArray(data) ? data : []
 }
 
 async function carregarProduto() {
-  const { data } = await ProdutosService.buscar(produtoId.value)
+  const res = await ProdutosService.buscar(produtoId.value)
+  const data = res?.data ?? res
+
   form.value = {
     ...form.value,
     ...data,
@@ -266,6 +329,7 @@ async function carregarProduto() {
     valor_unitario: Number(data.valor_unitario || 0),
     valor_total: Number(data.valor_total || 0),
     status: data.status || 'ATIVO',
+    imagem_url: data.imagem_url || '',
   }
 
   quantidadeInput.value = form.value.quantidade ? String(form.value.quantidade) : ''
@@ -284,10 +348,7 @@ async function confirmarSalvarProduto() {
 }
 
 async function confirmarDescartarProduto() {
-  const ok = await confirm.show(
-    'Descartar',
-    'Deseja sair sem salvar? As alterações serão perdidas.',
-  )
+  const ok = await confirm.show('Descartar', 'Deseja sair sem salvar? As alterações serão perdidas.')
   if (!ok) return
   router.push('/produtos')
 }
@@ -308,6 +369,9 @@ async function salvar() {
       marca: form.value.marca ? String(form.value.marca) : null,
       cor: form.value.cor ? String(form.value.cor) : null,
       medida: form.value.medida ? String(form.value.medida) : null,
+
+      // ✅ imagem opcional
+      imagem_url: String(form.value.imagem_url || '').trim() || null,
     }
 
     await ProdutosService.salvar(isEdit.value ? produtoId.value : null, payload)
@@ -324,12 +388,8 @@ onMounted(async () => {
   loading.value = true
   try {
     await carregarFornecedor()
-
-    if (isEdit.value) {
-      await carregarProduto()
-    } else {
-      resetForm()
-    }
+    if (isEdit.value) await carregarProduto()
+    else resetForm()
   } catch (err) {
     console.error('[PRODUTOS] erro no mounted:', err)
     alert('Erro ao carregar dados iniciais.')
@@ -338,5 +398,4 @@ onMounted(async () => {
     loading.value = false
   }
 })
-
 </script>

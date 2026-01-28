@@ -55,20 +55,24 @@ const medida = this.normStr(dto.medida)
 await this.checarDuplicado({ fornecedor_id, nome_produto, marca, cor, medida })
 
 
-  return this.prisma.produtos.create({
+ return this.prisma.produtos.create({
   data: {
     fornecedor_id,
     nome_produto,
     marca,
     cor,
     unidade: this.normStr(dto.unidade),
-    medida, // ✅ usa a mesma medida
+    medida,
     quantidade: Number(dto.quantidade ?? 0),
     valor_unitario: Number(dto.valor_unitario ?? 0),
     valor_total: Number(dto.valor_total ?? 0),
+
+    // ✅ novo
+    imagem_url: this.normStr((dto as any).imagem_url),
+
     status: dto.status ?? 'ATIVO',
   },
-})
+  })
 }
 
   async listar(filtro?: { fornecedor_id?: number }) {
@@ -133,15 +137,23 @@ return this.prisma.produtos.update({
     marca,
     cor,
     unidade: dto.unidade === undefined ? atual.unidade : this.normStr(dto.unidade),
-    medida, // ✅ usa a mesma medida validada
+    medida,
     quantidade: dto.quantidade === undefined ? atual.quantidade : Number(dto.quantidade),
     valor_unitario:
       dto.valor_unitario === undefined ? Number(atual.valor_unitario) : Number(dto.valor_unitario),
     valor_total:
       dto.valor_total === undefined ? Number(atual.valor_total) : Number(dto.valor_total),
+
+    // ✅ novo
+    imagem_url:
+      (dto as any).imagem_url === undefined
+        ? (atual as any).imagem_url
+        : this.normStr((dto as any).imagem_url),
+
     status: dto.status === undefined ? atual.status : dto.status,
   },
 })
+
 
 }
 
