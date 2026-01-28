@@ -181,11 +181,18 @@
 
           <div v-if="itens.length" class="border border-border-ui rounded-2xl overflow-hidden">
             <Table :columns="columnsItens" :rows="itens" boxed>
-              <template #cell-nome_produto="{ row }">
-                <div class="py-2">
-                  <span class="font-black text-slate-700 uppercase text-xs">{{ row.nome_produto }}</span>
-                </div>
-              </template>
+<template #cell-nome_produto="{ row }">
+  <div class="py-2">
+    <div class="font-black text-slate-700 uppercase text-xs">
+      {{ row.nome_produto }}
+    </div>
+
+    <div v-if="descDoItem(row)" class="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+      {{ descDoItem(row) }}
+    </div>
+  </div>
+</template>
+
 
               <template #cell-valor_unitario="{ value }">
                 <span class="text-xs font-bold text-slate-500">
@@ -740,6 +747,20 @@ const carregarCompra = async () => {
     }
   }
 }
+
+function descDoItem(row) {
+  const partes = [
+    row?.marca,
+    row?.cor,
+    row?.medida,
+    row?.unidade,
+  ]
+    .map((v) => String(v || '').trim())
+    .filter(Boolean)
+
+  return partes.join(' • ')
+}
+
 
 const carregarDadosIniciais = async () => {
   loading.value = true

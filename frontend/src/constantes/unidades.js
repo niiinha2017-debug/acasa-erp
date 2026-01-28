@@ -2,6 +2,7 @@
 export const UNIDADES = [
   { key: 'UN', label: 'Unidade (un)' },
   { key: 'PC', label: 'Peça (pc)' },
+  { key: 'PAR', label: 'Par (par)' },
 
   { key: 'M', label: 'Metro (m)' },
   { key: 'M2', label: 'Metro² (m²)' },
