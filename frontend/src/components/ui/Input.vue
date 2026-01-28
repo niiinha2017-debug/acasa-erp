@@ -1,313 +1,93 @@
 <template>
-  <div
-    ref="rootRef"
-    class="search-container relative flex flex-col gap-1.5"
-    :class="[colSpan, { 'z-[100]': open }]"
-    @click.stop
-  >
-    <label v-if="label" class="text-[11px] font-bold uppercase tracking-wider text-slate-500 ml-0.5">
-      {{ label }} <span v-if="required" class="text-red-500 ml-0.5">*</span>
+  <div class="w-full flex flex-col gap-1.5" :class="{ 'opacity-60 pointer-events-none': disabled }">
+    <label
+      v-if="label"
+      :for="inputId"
+      class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 ml-0.5"
+    >
+      {{ label }}
+      <span v-if="required" class="text-red-500 ml-0.5">*</span>
     </label>
 
     <div class="relative group">
-      <span
-        class="absolute left-4 top-1/2 -translate-y-1/2 text-brand-primary/60 group-focus-within:text-brand-primary transition-all duration-300 pointer-events-none"
+      <div
+        v-if="$slots.prefix"
+        class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-primary transition-colors duration-200"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-      </span>
+        <slot name="prefix" />
+      </div>
 
       <input
-        ref="inputRef"
-        :id="inputName"
-        :name="inputName"
-        v-model="texto"
-        type="text"
+        :id="inputId"
+        :type="type"
+        :value="modelValue"
         :placeholder="placeholder"
-        :required="required"
-        :readonly="readonly"
         :disabled="disabled"
-        autocomplete="off"
-        class="w-full h-10 pl-11 pr-11 transition-all duration-200 outline-none border rounded-lg text-sm font-medium
-               bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700
-               focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10
-               placeholder:text-slate-400 placeholder:font-normal placeholder:text-xs"
-        @focus="onFocus"
-        @input="onInput"
-        @keydown="onKeydown"
-        @blur="onBlur"
+        :readonly="readonly"
+        :required="required"
+        :autocomplete="autocomplete"
+        :class="[
+          'w-full h-10 transition-all duration-200 border rounded-lg text-sm font-medium outline-none',
+          'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700',
+          'placeholder:text-slate-400 dark:placeholder:text-slate-500 placeholder:font-normal placeholder:lowercase placeholder:text-xs',
+          error
+            ? 'border-red-500 ring-2 ring-red-500/10'
+            : 'focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 hover:border-slate-300 dark:hover:border-slate-600',
+          $slots.prefix ? 'pl-11' : 'pl-4',
+          $slots.suffix ? 'pr-11' : 'pr-4',
+          { 'uppercase font-bold tracking-wide': forceUpper && type !== 'password' }
+        ]"
+        @input="handleInput"
+        @blur="e => emit('blur', e)"
+        @focus="e => emit('focus', e)"
       />
 
-      <button
-        v-if="texto"
-        type="button"
-        @pointerdown.prevent.stop="limparBusca"
-        class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors p-1"
-        :disabled="disabled"
+      <div
+        v-if="$slots.suffix"
+        class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-primary transition-colors duration-200"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
-
-      <Teleport to="body">
-        <transition name="dropdown">
-          <div
-            v-if="open"
-            ref="dropdownRef"
-            :style="floatingStyles"
-            :data-searchinput-id="uid"
-            class="fixed z-[10000] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800
-                   rounded-xl shadow-2xl shadow-slate-200/50 dark:shadow-black/40 overflow-hidden pointer-events-auto"
-            @pointerdown.prevent
-          >
-            <div v-if="filtrados.length" class="max-h-60 overflow-y-auto p-1.5 custom-scroll">
-              <div
-                v-for="opt in filtrados"
-                :key="opt.value"
-                class="flex items-center px-3 py-2.5 text-xs font-semibold rounded-lg cursor-pointer transition-all
-                       text-slate-600 dark:text-slate-300 hover:bg-brand-primary hover:text-white group"
-                @pointerdown.prevent.stop="selecionar(opt)"
-              >
-                <div class="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 group-hover:bg-white/50 mr-3 transition-all"></div>
-                <span class="truncate uppercase tracking-tight">{{ opt.label }}</span>
-              </div>
-            </div>
-
-            <div v-else class="px-6 py-8 text-[10px] font-bold text-slate-400 uppercase italic tracking-widest text-center">
-              Nenhum resultado encontrado
-            </div>
-          </div>
-        </transition>
-      </Teleport>
+        <slot name="suffix" />
+      </div>
     </div>
+
+    <Transition name="slide-up">
+      <span v-if="error" class="text-[10px] font-bold text-red-500 ml-0.5 tracking-wide">
+        {{ error }}
+      </span>
+    </Transition>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref } from 'vue'
+import { upper } from '@/utils/text'
 
 const props = defineProps({
   modelValue: [String, Number],
+  type: { type: String, default: 'text' },
   label: String,
-  options: { type: Array, default: () => [] },
-  placeholder: { type: String, default: 'Pesquisar...' },
-  required: Boolean,
-  readonly: Boolean,
+  placeholder: String,
+  error: String,
   disabled: Boolean,
-  colSpan: { type: String, default: 'col-span-4' },
-  mode: { type: String, default: 'search' }, // 'search' | 'select'
-  labelKey: { type: String, default: 'label' },
-  valueKey: { type: String, default: 'value' },
+  readonly: Boolean,
+  required: Boolean,
+  autocomplete: String,
+  id: String,
+  forceUpper: { type: Boolean, default: true }
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'input', 'blur', 'focus'])
+const inputId = ref(props.id || `input-${Math.random().toString(36).slice(2)}`)
 
-const uid = `si_${Math.random().toString(36).slice(2)}`
-const inputName = `search_${Math.random().toString(36).slice(2)}`
-
-const rootRef = ref(null)
-const inputRef = ref(null)
-const dropdownRef = ref(null)
-
-const texto = ref('')
-const open = ref(false)
-const typing = ref(false)
-
-const floatingStyles = ref({ width: '0px', top: '0px', left: '0px' })
-
-const normalizados = computed(() =>
-  (props.options || []).map((o) => ({
-    label: o?.[props.labelKey],
-    value: o?.[props.valueKey],
-  })),
-)
-
-const filtrados = computed(() => {
-  const termo = String(texto.value || '').toLowerCase().trim()
-  if (!termo) return normalizados.value
-  return normalizados.value.filter((opt) =>
-    String(opt.label || '').toLowerCase().includes(termo),
-  )
-})
-
-function isDisabled() {
-  return !!props.disabled || !!props.readonly
+const handleInput = (e) => {
+  let value = e.target.value
+  if (props.forceUpper && props.type !== 'password') value = upper(value)
+  emit('update:modelValue', value)
+  emit('input', e)
 }
-
-function updatePosition() {
-  if (!open.value || !inputRef.value) return
-  const rect = inputRef.value.getBoundingClientRect()
-  floatingStyles.value = {
-    width: `${rect.width}px`,
-    top: `${rect.bottom + 8}px`,
-    left: `${rect.left}px`,
-  }
-}
-
-function abrirDropdown() {
-  if (isDisabled()) return
-  if (!open.value) {
-    // fecha outros SearchInput abertos
-    window.dispatchEvent(new CustomEvent('searchinput:open', { detail: { uid } }))
-  }
-  open.value = true
-  nextTick(() => updatePosition())
-}
-
-function fecharDropdown() {
-  if (!open.value) return
-  open.value = false
-  typing.value = false
-}
-
-function limparBusca() {
-  texto.value = ''
-  emit('update:modelValue', props.mode === 'select' ? null : '')
-  fecharDropdown()
-  inputRef.value?.focus()
-}
-
-function selecionar(opt) {
-  const label = opt?.label ? String(opt.label) : ''
-  texto.value = label
-  emit('update:modelValue', props.mode === 'select' ? opt.value : label)
-  typing.value = false
-  fecharDropdown()
-}
-
-function onFocus() {
-  abrirDropdown()
-}
-
-function onInput() {
-  if (isDisabled()) return
-  typing.value = true
-  abrirDropdown()
-  if (props.mode === 'search') {
-    emit('update:modelValue', texto.value)
-  }
-}
-
-function onKeydown(e) {
-  if (e.key === 'Escape') {
-    fecharDropdown()
-    return
-  }
-  if (e.key === 'Tab') {
-    // deixa o tab seguir normal, só fecha
-    fecharDropdown()
-  }
-}
-
-function onBlur() {
-  // fecha quando sai para outro input (TAB/click), mas sem matar seleção (seleção é no pointerdown)
-  setTimeout(() => {
-    const active = document.activeElement
-    const insideRoot = rootRef.value?.contains(active)
-    const insideDrop = dropdownRef.value?.contains(active)
-    if (!insideRoot && !insideDrop) fecharDropdown()
-
-    // em select: se estava digitando e saiu, volta a mostrar o label do modelValue
-    if (props.mode === 'select') syncTextoFromModel()
-  }, 0)
-}
-
-function onDocPointerDown(e) {
-  const el = e.target
-  const insideRoot = rootRef.value?.contains(el)
-  const insideDrop = dropdownRef.value?.contains(el)
-  if (!insideRoot && !insideDrop) fecharDropdown()
-}
-
-function onDocFocusIn(e) {
-  // ao focar em outro input, fecha (resolve "um fica aberto e outro abre")
-  const el = e.target
-  const insideRoot = rootRef.value?.contains(el)
-  const insideDrop = dropdownRef.value?.contains(el)
-  if (!insideRoot && !insideDrop) fecharDropdown()
-}
-
-function onOtherOpen(ev) {
-  if (ev?.detail?.uid && ev.detail.uid !== uid) fecharDropdown()
-}
-
-watch(open, async (val) => {
-  if (val) {
-    await nextTick()
-    updatePosition()
-    window.addEventListener('scroll', updatePosition, true)
-    window.addEventListener('resize', updatePosition)
-  } else {
-    window.removeEventListener('scroll', updatePosition, true)
-    window.removeEventListener('resize', updatePosition)
-  }
-})
-
-function syncTextoFromModel() {
-  const val = props.modelValue
-  if (props.mode !== 'select') return
-
-  if (!val && val !== 0) {
-    if (texto.value !== '') texto.value = ''
-    return
-  }
-
-  const encontrada = normalizados.value.find((o) => String(o.value) === String(val))
-  const label = encontrada?.label ?? ''
-  if (!typing.value && texto.value !== label) texto.value = label
-}
-
-watch(
-  () => props.modelValue,
-  (val) => {
-    if (props.mode === 'select') {
-      // se estiver digitando com dropdown aberto, não briga com a digitação
-      if (open.value && typing.value) return
-      syncTextoFromModel()
-      return
-    }
-
-    const str = val == null ? '' : String(val)
-    if (!typing.value && texto.value !== str) texto.value = str
-  },
-  { immediate: true },
-)
-
-onMounted(() => {
-  document.addEventListener('pointerdown', onDocPointerDown, true)
-  document.addEventListener('focusin', onDocFocusIn, true)
-  window.addEventListener('searchinput:open', onOtherOpen)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('pointerdown', onDocPointerDown, true)
-  document.removeEventListener('focusin', onDocFocusIn, true)
-  window.removeEventListener('searchinput:open', onOtherOpen)
-  window.removeEventListener('scroll', updatePosition, true)
-  window.removeEventListener('resize', updatePosition)
-})
 </script>
 
 <style scoped>
-.dropdown-enter-active, .dropdown-leave-active {
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.dropdown-enter-from, .dropdown-leave-to {
-  opacity: 0;
-  transform: translateY(4px);
-}
-
-.custom-scroll::-webkit-scrollbar { width: 4px; }
-.custom-scroll::-webkit-scrollbar-track { background: transparent; }
-.custom-scroll::-webkit-scrollbar-thumb {
-  background: rgba(0,0,0,0.1);
-  border-radius: 10px;
-}
-.dark .custom-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.1);
-}
+.slide-up-enter-active { transition: all 0.2s ease-out; }
+.slide-up-enter-from { opacity: 0; transform: translateY(-4px); }
 </style>

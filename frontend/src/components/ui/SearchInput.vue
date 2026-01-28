@@ -1,11 +1,18 @@
 <template>
-  <div class="search-container relative flex flex-col gap-1.5" :class="[colSpan, { 'z-[100]': abrir }]" @click.stop>
+  <div
+    ref="rootRef"
+    class="search-container relative flex flex-col gap-1.5"
+    :class="[colSpan, { 'z-[100]': open }]"
+    @click.stop
+  >
     <label v-if="label" class="text-[11px] font-bold uppercase tracking-wider text-slate-500 ml-0.5">
       {{ label }} <span v-if="required" class="text-red-500 ml-0.5">*</span>
     </label>
 
     <div class="relative group">
-      <span class="absolute left-4 top-1/2 -translate-y-1/2 text-brand-primary/60 group-focus-within:text-brand-primary transition-all duration-300 pointer-events-none">
+      <span
+        class="absolute left-4 top-1/2 -translate-y-1/2 text-brand-primary/60 group-focus-within:text-brand-primary transition-all duration-300 pointer-events-none"
+      >
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -21,20 +28,24 @@
         :placeholder="placeholder"
         :required="required"
         :readonly="readonly"
+        :disabled="disabled"
         autocomplete="off"
         class="w-full h-10 pl-11 pr-11 transition-all duration-200 outline-none border rounded-lg text-sm font-medium
                bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700
-               focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 
+               focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10
                placeholder:text-slate-400 placeholder:font-normal placeholder:text-xs"
-        @focus="abrir = true"
-        @input="abrir = true"
+        @focus="onFocus"
+        @input="onInput"
+        @keydown="onKeydown"
+        @blur="onBlur"
       />
 
       <button
         v-if="texto"
         type="button"
-        @click.stop="limparBusca"
+        @pointerdown.prevent.stop="limparBusca"
         class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors p-1"
+        :disabled="disabled"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -45,19 +56,20 @@
       <Teleport to="body">
         <transition name="dropdown">
           <div
-            v-if="abrir"
+            v-if="open"
             ref="dropdownRef"
             :style="floatingStyles"
-            class="fixed z-[10000] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 
+            class="fixed z-[10000] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800
                    rounded-xl shadow-2xl shadow-slate-200/50 dark:shadow-black/40 overflow-hidden pointer-events-auto"
+            @pointerdown.prevent
           >
             <div v-if="filtrados.length" class="max-h-60 overflow-y-auto p-1.5 custom-scroll">
               <div
                 v-for="opt in filtrados"
                 :key="opt.value"
-                class="flex items-center px-3 py-2.5 text-xs font-semibold rounded-lg cursor-pointer transition-all 
+                class="flex items-center px-3 py-2.5 text-xs font-semibold rounded-lg cursor-pointer transition-all
                        text-slate-600 dark:text-slate-300 hover:bg-brand-primary hover:text-white group"
-                @click.stop="selecionar(opt)"
+                @pointerdown.prevent.stop="selecionar(opt)"
               >
                 <div class="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 group-hover:bg-white/50 mr-3 transition-all"></div>
                 <span class="truncate uppercase tracking-tight">{{ opt.label }}</span>
@@ -65,7 +77,7 @@
             </div>
 
             <div v-else class="px-6 py-8 text-[10px] font-bold text-slate-400 uppercase italic tracking-widest text-center">
-               Nenhum resultado encontrado
+              Nenhum resultado encontrado
             </div>
           </div>
         </transition>
@@ -84,40 +96,144 @@ const props = defineProps({
   placeholder: { type: String, default: 'Pesquisar...' },
   required: Boolean,
   readonly: Boolean,
+  disabled: Boolean,
   colSpan: { type: String, default: 'col-span-4' },
-  mode: { type: String, default: 'search' }, 
+  mode: { type: String, default: 'search' }, // 'search' | 'select'
   labelKey: { type: String, default: 'label' },
   valueKey: { type: String, default: 'value' },
 })
 
 const emit = defineEmits(['update:modelValue'])
 
-const texto = ref('')
-const abrir = ref(false)
+const uid = `si_${Math.random().toString(36).slice(2)}`
+const inputName = `search_${Math.random().toString(36).slice(2)}`
+
+const rootRef = ref(null)
 const inputRef = ref(null)
 const dropdownRef = ref(null)
-const inputName = `search_${Math.random().toString(36).substring(7)}`
 
-const floatingStyles = ref({
-  width: '0px',
-  top: '0px',
-  left: '0px'
+const texto = ref('')
+const open = ref(false)
+const typing = ref(false)
+
+const floatingStyles = ref({ width: '0px', top: '0px', left: '0px' })
+
+const normalizados = computed(() =>
+  (props.options || []).map((o) => ({
+    label: o?.[props.labelKey],
+    value: o?.[props.valueKey],
+  })),
+)
+
+const filtrados = computed(() => {
+  const termo = String(texto.value || '').toLowerCase().trim()
+  if (!termo) return normalizados.value
+  return normalizados.value.filter((opt) =>
+    String(opt.label || '').toLowerCase().includes(termo),
+  )
 })
 
-// Cálculos de posição
-const updatePosition = () => {
-  if (abrir.value && inputRef.value) {
-    const rect = inputRef.value.getBoundingClientRect()
-    floatingStyles.value = {
-      width: `${rect.width}px`,
-      top: `${rect.bottom + 8}px`, // 8px abaixo do input
-      left: `${rect.left}px`
-    }
+function isDisabled() {
+  return !!props.disabled || !!props.readonly
+}
+
+function updatePosition() {
+  if (!open.value || !inputRef.value) return
+  const rect = inputRef.value.getBoundingClientRect()
+  floatingStyles.value = {
+    width: `${rect.width}px`,
+    top: `${rect.bottom + 8}px`,
+    left: `${rect.left}px`,
   }
 }
 
-// Watchers para disparar o reposicionamento
-watch(abrir, async (val) => {
+function abrirDropdown() {
+  if (isDisabled()) return
+
+  // garante 1 aberto por vez
+  window.dispatchEvent(new CustomEvent('searchinput:open', { detail: { uid } }))
+
+  open.value = true
+  nextTick(updatePosition)
+}
+
+function fecharDropdown() {
+  if (!open.value) return
+  open.value = false
+  typing.value = false
+}
+
+function onFocus() {
+  abrirDropdown()
+}
+
+function onInput() {
+  if (isDisabled()) return
+  typing.value = true
+  abrirDropdown()
+  if (props.mode === 'search') emit('update:modelValue', texto.value)
+}
+
+function onKeydown(e) {
+  if (e.key === 'Escape') return fecharDropdown()
+  if (e.key === 'Tab') fecharDropdown() // deixa tab normal, só fecha
+}
+
+function onBlur() {
+  // fecha ao ir para outro input; seleção usa pointerdown, então não perde clique
+  setTimeout(() => {
+    const active = document.activeElement
+    const insideRoot = rootRef.value?.contains(active)
+    const insideDrop = dropdownRef.value?.contains(active)
+    if (!insideRoot && !insideDrop) fecharDropdown()
+    if (props.mode === 'select') syncTextoFromModel()
+  }, 0)
+}
+
+function limparBusca() {
+  texto.value = ''
+  emit('update:modelValue', props.mode === 'select' ? null : '')
+  fecharDropdown()
+  inputRef.value?.focus()
+}
+
+function selecionar(opt) {
+  const label = opt?.label ? String(opt.label) : ''
+  texto.value = label
+  emit('update:modelValue', props.mode === 'select' ? opt.value : label)
+  typing.value = false
+  fecharDropdown()
+}
+
+function syncTextoFromModel() {
+  if (props.mode !== 'select') return
+  const val = props.modelValue
+
+  if (!val && val !== 0) {
+    if (texto.value !== '') texto.value = ''
+    return
+  }
+
+  const encontrada = normalizados.value.find((o) => String(o.value) === String(val))
+  const label = encontrada?.label ?? ''
+  if (!typing.value && texto.value !== label) texto.value = label
+}
+
+watch(
+  () => props.modelValue,
+  () => {
+    if (props.mode === 'select') {
+      if (open.value && typing.value) return
+      syncTextoFromModel()
+      return
+    }
+    const str = props.modelValue == null ? '' : String(props.modelValue)
+    if (!typing.value && texto.value !== str) texto.value = str
+  },
+  { immediate: true },
+)
+
+watch(open, async (val) => {
   if (val) {
     await nextTick()
     updatePosition()
@@ -129,56 +245,34 @@ watch(abrir, async (val) => {
   }
 })
 
-const normalizados = computed(() =>
-  (props.options || []).map((o) => ({
-    label: o?.[props.labelKey],
-    value: o?.[props.valueKey],
-  }))
-)
+function onDocPointerDown(e) {
+  const el = e.target
+  const insideRoot = rootRef.value?.contains(el)
+  const insideDrop = dropdownRef.value?.contains(el)
+  if (!insideRoot && !insideDrop) fecharDropdown()
+}
 
-const filtrados = computed(() => {
-  const termo = String(texto.value || '').toLowerCase().trim()
-  if (!termo) return normalizados.value
-  return normalizados.value.filter((opt) =>
-    String(opt.label || '').toLowerCase().includes(termo)
-  )
+function onDocFocusIn(e) {
+  const el = e.target
+  const insideRoot = rootRef.value?.contains(el)
+  const insideDrop = dropdownRef.value?.contains(el)
+  if (!insideRoot && !insideDrop) fecharDropdown()
+}
+
+function onOtherOpen(ev) {
+  if (ev?.detail?.uid && ev.detail.uid !== uid) fecharDropdown()
+}
+
+onMounted(() => {
+  document.addEventListener('pointerdown', onDocPointerDown, true)
+  document.addEventListener('focusin', onDocFocusIn, true)
+  window.addEventListener('searchinput:open', onOtherOpen)
 })
 
-function limparBusca() {
-  texto.value = ''
-  emit('update:modelValue', props.mode === 'select' ? null : '')
-  abrir.value = false
-  inputRef.value?.focus()
-}
-
-function selecionar(opt) {
-  texto.value = opt?.label ? String(opt.label) : ''
-  emit('update:modelValue', props.mode === 'select' ? opt.value : texto.value)
-  abrir.value = false
-}
-
-watch(() => props.modelValue, (val) => {
-  if (!val && val !== 0) {
-    if (texto.value !== '') texto.value = ''
-    return
-  }
-  if (props.mode === 'select') {
-    const encontrada = normalizados.value.find((o) => String(o.value) === String(val))
-    if (encontrada && texto.value !== encontrada.label) texto.value = encontrada.label
-  } else if (texto.value !== String(val)) {
-    texto.value = String(val)
-  }
-}, { immediate: true })
-
-function fecharAoClicarFora(e) {
-  if (!e.target.closest('.search-container') && !e.target.closest('[ref="dropdownRef"]')) {
-    abrir.value = false
-  }
-}
-
-onMounted(() => document.addEventListener('click', fecharAoClicarFora))
 onUnmounted(() => {
-  document.removeEventListener('click', fecharAoClicarFora)
+  document.removeEventListener('pointerdown', onDocPointerDown, true)
+  document.removeEventListener('focusin', onDocFocusIn, true)
+  window.removeEventListener('searchinput:open', onOtherOpen)
   window.removeEventListener('scroll', updatePosition, true)
   window.removeEventListener('resize', updatePosition)
 })
@@ -195,11 +289,11 @@ onUnmounted(() => {
 
 .custom-scroll::-webkit-scrollbar { width: 4px; }
 .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-.custom-scroll::-webkit-scrollbar-thumb { 
-  background: rgba(0,0,0,0.1); 
-  border-radius: 10px; 
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.1);
+  border-radius: 10px;
 }
-.dark .custom-scroll::-webkit-scrollbar-thumb { 
-  background: rgba(255,255,255,0.1); 
+.dark .custom-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
 }
 </style>
