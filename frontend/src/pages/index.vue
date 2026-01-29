@@ -35,7 +35,7 @@
 </template>
 
 <script setup>
-import { useAuth } from '@/composables/useAuth' 
+import { useAuth } from '@/services/useauth' 
 import { useRouter } from 'vue-router'
 
 // Adicionei o definePage para garantir que a rota seja reconhecida corretamente
