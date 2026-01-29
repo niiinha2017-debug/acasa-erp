@@ -5,6 +5,7 @@ import { JwtAuthGuard } from './jwt-auth.guard'
 import { LoginDto } from './dto/login.dto'
 import { AlterarSenhaDto } from './dto/alterar-senha.dto'
 import { EsqueciSenhaDto } from './dto/esqueci-senha.dto'
+import { CadastroDto } from './dto/cadastro.dto' // ✅ ADD
 
 @Controller('auth')
 export class AuthController {
@@ -14,6 +15,11 @@ export class AuthController {
   login(@Body() dto: LoginDto) {
     console.log('Tentativa de login recebida para:', dto.usuario)
     return this.authService.login(dto.usuario, dto.senha)
+  }
+
+  @Post('cadastro') // ✅ ADD
+  cadastro(@Body() dto: CadastroDto) {
+    return this.authService.cadastro(dto)
   }
 
   @Post('esqueci-senha')
