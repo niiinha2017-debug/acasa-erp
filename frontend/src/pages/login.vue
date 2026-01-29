@@ -55,22 +55,25 @@
         <div class="px-7 py-6">
           <form @submit.prevent="handleLoginSubmit" class="space-y-5">
             <div class="grid gap-4">
-              <Input
-                v-model="formLogin.usuario"
-                label="Usuário ou E-mail"
-                autocomplete="username"
-                class="h-11"
-                :disabled="loading"
-              />
+<Input
+  v-model="formLogin.usuario"
+  label="Usuário ou E-mail"
+  autocomplete="username"
+  class="h-11"
+  :forceUpper="false"
+  :disabled="loading"
+/>
 
-              <Input
-                v-model="formLogin.senha"
-                :type="showPassword ? 'text' : 'password'"
-                label="Senha"
-                autocomplete="current-password"
-                class="h-11"
-                :disabled="loading"
-              >
+<Input
+  v-model="formLogin.senha"
+  :type="showPassword ? 'text' : 'password'"
+  label="Senha"
+  autocomplete="current-password"
+  class="h-11"
+  :forceUpper="false"
+  :disabled="loading"
+>
+
                 <template #suffix>
                   <button
                     type="button"
@@ -172,9 +175,32 @@
                 >
                   <div v-if="showModalCadastro" class="space-y-4">
                     <Input v-model="formCadastro.nome" label="Nome Completo" required :disabled="loading" />
-                    <Input v-model="formCadastro.email" label="E-mail" type="email" required :disabled="loading" />
-                    <Input v-model="formCadastro.usuario" label="Usuário Desejado" required :disabled="loading" />
-                    <Input v-model="formCadastro.senha" label="Senha" type="password" required :disabled="loading" />
+<Input
+  v-model="formCadastro.email"
+  label="E-mail"
+  type="email"
+  required
+  :forceUpper="false"
+  :disabled="loading"
+/>
+
+<Input
+  v-model="formCadastro.usuario"
+  label="Usuário Desejado"
+  required
+  :forceUpper="false"
+  :disabled="loading"
+/>
+
+<Input
+  v-model="formCadastro.senha"
+  label="Senha"
+  type="password"
+  required
+  :forceUpper="false"
+  :disabled="loading"
+/>
+
                   </div>
 
                   <div v-else class="space-y-4">
