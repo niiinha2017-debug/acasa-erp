@@ -1,16 +1,20 @@
 // src/services/navigation.js
 export const NAV_SCHEMA = {
   // 🏭 Operação do dia a dia
-  operacional: [
-    { label: '🗓️ Agendamentos', to: '/agendamentos', icon: 'pi-calendar', perm: 'agendamentos.ver' },
-    { divider: true },
+operacional: [
+  { label: '🗓️ Agendamentos', to: '/agendamentos', icon: 'pi-calendar', perm: 'agendamentos.ver' },
+  { divider: true },
 
-    { label: '🚀 Vendas', to: '/vendas', icon: 'pi-cart-plus', perm: 'vendas.ver' },
-    { label: '📝 Orçamentos', to: '/orcamentos', icon: 'pi-file-edit', perm: 'orcamentos.ver' },
-    { divider: true },
-    { label: '⚙️ Produção', to: '/producao', icon: 'pi-cogs', perm: 'producao.ver' },
-    { label: '📏 Plano de Corte', to: '/plano-corte', icon: 'pi-sitemap', perm: 'plano-corte.ver' },
-  ],
+  { label: '🚀 Vendas', to: '/vendas', icon: 'pi-cart-plus', perm: 'vendas.ver' },
+  { label: '📝 Orçamentos', to: '/orcamentos', icon: 'pi-file-edit', perm: 'orcamentos.ver' },
+  { divider: true },
+
+  { label: '⚙️ Produção', to: '/producao', icon: 'pi-cogs', perm: 'producao.ver' },
+  { label: '📏 Plano de Corte', to: '/plano-corte', icon: 'pi-sitemap', perm: 'plano-corte.ver' },
+
+  // ✅ novo
+  { label: '📦 Itens do Plano de Corte', to: '/plano-corte/itens', icon: 'pi-box', perm: 'plano-corte.ver' },
+],
 
   // 💰 Parte da grana
   financeiro: [

@@ -396,9 +396,13 @@ model plano_corte_produto {
   plano_corte plano_corte      @relation(fields: [plano_corte_id], references: [id])
   item        plano_corte_item @relation(fields: [item_id], references: [id])
 
-  @@unique([plano_corte_id, item_id]) // ✅ não duplica item no mesmo plano
+  @@index([plano_corte_id])
+  @@index([item_id])
+
   @@map("plano_corte_produto")
- }
+}
+
+
 
 model plano_corte_consumo {
   id             Int @id @default(autoincrement())
