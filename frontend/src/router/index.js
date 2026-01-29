@@ -17,17 +17,30 @@ router.beforeEach((to) => {
   const isPublic = to.meta?.public === true
   const isLogin = to.path === '/login'
 
+  const HOME_PUBLICA = '/'
+  const HOME_SISTEMA = '/producao'
+  const PERM_ADMIN = 'ADMIN'
+
+  // 1) SEM TOKEN: só entra em public/login
   if (!token && !isPublic && !isLogin) return { path: '/login' }
 
-  if (token && isLogin) return { path: '/producao' }
+  // 2) COM TOKEN: não deixa ficar em / ou /login
+  if (token && (to.path === HOME_PUBLICA || isLogin)) return { path: HOME_SISTEMA }
 
+  // 3) COM TOKEN: valida permissão (só se rota não for public)
   if (token && !isPublic) {
+    // admin passa direto
+    if (can(PERM_ADMIN)) return true
+
     const requiredPerm = getRequiredPerm(to.path, routePermMap)
-    if (requiredPerm && !can(requiredPerm)) return { path: '/producao' }
+
+    // se precisar perm e não tiver → joga pra página pública (pendente)
+    if (requiredPerm && !can(requiredPerm)) return { path: HOME_PUBLICA }
   }
 
   return true
 })
+
 
 
 export default router

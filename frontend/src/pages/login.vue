@@ -28,67 +28,76 @@
           <p class="text-slate-400 text-[10px] font-black uppercase tracking-[0.3em] mt-2">Identifique-se para continuar</p>
         </header>
 
-        <form @submit.prevent="handleLoginSubmit" class="space-y-5 lg:space-y-6" autocomplete="off">
-          <div class="space-y-4">
-<!-- LOGIN -->
-<Input
-  v-model="formLogin.usuario"
-  label="Usuário ou E-mail"
-  class="!h-14"
-  autocomplete="off"
-  :force-upper="false"
-/>
+<form @submit.prevent="handleLoginSubmit" class="space-y-5 lg:space-y-6" autocomplete="off">
+  <div class="space-y-4">
+    <Input
+      v-model="formLogin.usuario"
+      label="Usuário ou E-mail"
+      class="!h-14"
+      autocomplete="off"
+      :force-upper="false"
+    />
 
-<Input
-  v-model="formLogin.senha"
-  type="password"
-  label="Senha"
-  class="!h-14"
-  autocomplete="new-password"
-  :force-upper="false"
-/>
+    <Input
+      v-model="formLogin.senha"
+      :type="showPassword ? 'text' : 'password'"
+      label="Senha"
+      class="!h-14"
+      autocomplete="new-password"
+      :force-upper="false"
+    >
+      <template #suffix>
+        <button 
+          type="button" 
+          @click="showPassword = !showPassword"
+          class="flex items-center justify-center text-slate-400 hover:text-brand-primary p-2 focus:outline-none"
+        >
+          <span v-if="!showPassword" class="material-icons text-[20px]">visibility</span>
+          <span v-else class="material-icons text-[20px]">visibility_off</span>
+        </button>
+      </template>
+    </Input>
+  </div>
 
-          </div>
+  <div class="flex items-center justify-between text-[11px]">
+    <CustomCheckbox v-model="lembrarUsuario" label="Lembrar acesso" />
+    <button 
+      type="button" 
+      @click="openRecuperacao"
+      class="font-black uppercase tracking-widest text-slate-400 hover:text-brand-primary transition-colors"
+    >
+      Recuperar Senha
+    </button>
+  </div>
 
-          <div class="flex items-center justify-between text-[11px]">
-            <CustomCheckbox v-model="lembrarUsuario" label="Lembrar acesso" />
-            <button 
-              type="button" 
-              @click="openRecuperacao"
-              class="font-black uppercase tracking-widest text-slate-400 hover:text-brand-primary transition-colors"
-            >
-              Recuperar Senha
-            </button>
-          </div>
+  <Button 
+    variant="primary" 
+    type="submit"
+    :loading="loading"
+    fullWidth 
+    class="h-14 lg:h-16 text-md !rounded-2xl shadow-xl shadow-brand-primary/20"
+  >
+    Entrar no Sistema
+  </Button>
 
-          <Button 
-            variant="primary" 
-            type="submit"
-            :loading="loading"
-            fullWidth 
-            class="h-14 lg:h-16 text-md !rounded-2xl shadow-xl shadow-brand-primary/20"
-          >
-            Entrar no Sistema
-          </Button>
+  <div class="pt-4 text-center">
+    <button 
+      type="button" 
+      @click="openCadastro"
+      class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-brand-primary"
+    >
+      Novo por aqui? <span class="text-brand-primary">Solicitar Conta</span>
+    </button>
+  </div>
 
-          <div class="pt-4 text-center">
-            <button 
-              type="button" 
-              @click="openCadastro"
-              class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-brand-primary"
-            >
-              Novo por aqui? <span class="text-brand-primary">Solicitar Conta</span>
-            </button>
-          </div>
-
-          <div class="pt-6 border-t border-slate-100 flex items-center gap-4 text-[9px] font-black uppercase tracking-[0.3em] text-slate-300">
-            <span>Ambiente Criptografado</span>
-            <span class="w-1 h-1 bg-slate-200 rounded-full"></span>
-            <span>v2.4.0</span>
-          </div>
-        </form>
+  <div class="pt-6 border-t border-slate-100 flex items-center gap-4 text-[9px] font-black uppercase tracking-[0.3em] text-slate-300">
+    <span>Ambiente Criptografado</span>
+    <span class="w-1 h-1 bg-slate-200 rounded-full"></span>
+    <span>v2.4.0</span>
+  </div>
+</form>
+        </div>
       </div>
-    </div>
 
     <Teleport to="body">
       <div v-if="showModalCadastro || showModalRecuperacao" class="fixed inset-0 z-[1100] flex items-center justify-center p-4">
@@ -182,6 +191,13 @@ const lembrarUsuario = ref(false)
 const formLogin = reactive({ usuario: '', senha: '' })
 const formCadastro = reactive({ nome: '', email: '', usuario: '', senha: '' })
 const emailRecuperacao = ref('')
+
+const showPassword = ref(false);
+
+// Função para alternar
+const togglePassword = () => {
+  showPassword.value = !showPassword.value;
+};
 
 onMounted(() => {
   const salvo = localStorage.getItem('erp_lembrar_usuario')
