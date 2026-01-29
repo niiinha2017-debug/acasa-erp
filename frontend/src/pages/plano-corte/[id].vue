@@ -445,7 +445,7 @@ async function salvarProduto() {
       valor_total: 0,
     }
 
-    const { data } = await PlanoCorteService.itens.criar(payload)
+    const { data } = await PlanoCorteService.itens.salvar(null, payload)
 
     await carregarItensDisponiveis(fornecedorSelecionado.value)
 

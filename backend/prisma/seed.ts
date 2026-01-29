@@ -122,7 +122,6 @@ const perms = [
   { chave: 'compras.criar', descricao: 'Criar compras' },
   { chave: 'compras.editar', descricao: 'Editar compras' },
   { chave: 'compras.excluir', descricao: 'Excluir compras' },
-
 ]
 
 
