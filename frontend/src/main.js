@@ -27,9 +27,7 @@ import TablePagination from '@/components/ui/TablePagination.vue'
 
 // Modals
 import QuickCreateProduto from '@/components/modals/QuickCreateProduto.vue'
-import FuncionarioArquivosModal from '@/components/modals/FuncionarioArquivosModal.vue'
-import OrcamentoArquivosModal from '@/components/modals/OrcamentoArquivosModal.vue'
-import VendaArquivosModal from '@/components/modals/VendaArquivosModal.vue'
+import ArquivosModal from '@/components/modals/ArquivosModal.vue'
 
 // Common
 import Loading from '@/components/common/Loading.vue' // Corrigido nome da variável e .vue
@@ -66,9 +64,7 @@ app.component('Select', Select)
 
 // Modals
 app.component('QuickCreateProduto', QuickCreateProduto)
-app.component('FuncionarioArquivosModal', FuncionarioArquivosModal)
-app.component('OrcamentoArquivosModal', OrcamentoArquivosModal)
-app.component('VendaArquivosModal', VendaArquivosModal)
+app.component('ArquivosModal', ArquivosModal)
 
 
 // Diretiva v-can

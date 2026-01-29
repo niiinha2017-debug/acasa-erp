@@ -30,19 +30,24 @@
 
         <form @submit.prevent="handleLoginSubmit" class="space-y-5 lg:space-y-6" autocomplete="off">
           <div class="space-y-4">
-            <Input 
-              v-model="formLogin.usuario" 
-              label="Usuário ou E-mail" 
-              class="!h-14"
-              autocomplete="off" 
-            />
-            <Input 
-              v-model="formLogin.senha" 
-              type="password" 
-              label="Senha" 
-              class="!h-14"
-              autocomplete="new-password"
-            />
+<!-- LOGIN -->
+<Input
+  v-model="formLogin.usuario"
+  label="Usuário ou E-mail"
+  class="!h-14"
+  autocomplete="off"
+  :force-upper="false"
+/>
+
+<Input
+  v-model="formLogin.senha"
+  type="password"
+  label="Senha"
+  class="!h-14"
+  autocomplete="new-password"
+  :force-upper="false"
+/>
+
           </div>
 
           <div class="flex items-center justify-between text-[11px]">
@@ -95,17 +100,51 @@
              <h3 class="text-3xl font-black text-text-main tracking-tight text-center mb-2">Solicitar Conta</h3>
              <p class="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400 text-center mb-8 border-b border-border-ui pb-6">Informe seus dados para análise</p>
              
-             <form class="space-y-5" @submit.prevent="handleCadastroSubmit">
-               <Input v-model="formCadastro.nome" label="Nome Completo" :force-upper="true" required />
-               <Input v-model="formCadastro.email" label="E-mail" type="email" required />
-               <Input v-model="formCadastro.usuario" label="Usuário Desejado" required />
-               <Input v-model="formCadastro.senha" label="Senha" type="password" required />
+<form
+  class="space-y-5"
+  @submit.prevent="handleCadastroSubmit"
+  autocomplete="off"
+>
+  <Input
+    v-model="formCadastro.nome"
+    label="Nome Completo"
+    :force-upper="true"
+    required
+    autocomplete="off"
+  />
 
-               <div class="grid grid-cols-2 gap-4 pt-4">
-                 <Button type="button" variant="secondary" @click="fecharTudo">Voltar</Button>
-                 <Button type="submit" variant="primary" :loading="loading">Solicitar</Button>
-               </div>
-             </form>
+  <Input
+    v-model="formCadastro.email"
+    label="E-mail"
+    type="email"
+    required
+    :force-upper="false"
+    autocomplete="off"
+  />
+
+  <Input
+    v-model="formCadastro.usuario"
+    label="Usuário Desejado"
+    required
+    :force-upper="false"
+    autocomplete="off"
+  />
+
+  <Input
+    v-model="formCadastro.senha"
+    label="Senha"
+    type="password"
+    required
+    :force-upper="false"
+    autocomplete="new-password"
+  />
+
+  <div class="grid grid-cols-2 gap-4 pt-4">
+    <Button type="button" variant="secondary" @click="fecharTudo">Voltar</Button>
+    <Button type="submit" variant="primary" :loading="loading">Solicitar</Button>
+  </div>
+</form>
+
           </div>
 
           <div v-if="showModalRecuperacao" class="p-10">

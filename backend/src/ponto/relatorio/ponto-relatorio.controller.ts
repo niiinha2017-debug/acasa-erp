@@ -9,7 +9,7 @@ import { PontoRelatorioService } from './ponto-relatorio.service'
 
 @Controller('ponto/relatorio')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@Permissoes('PONTO_RELATORIO.ver')
+@Permissoes('ponto_relatorio.ver')
 export class PontoRelatorioController {
   constructor(private readonly service: PontoRelatorioService) {}
 
@@ -62,8 +62,9 @@ export class PontoRelatorioController {
 
     registros.forEach((r) => {
       const d = new Date(r.data_hora)
-      const dia = d.toISOString().slice(0, 10)
-      const hora = d.toISOString().slice(11, 16)
+      const dia = d.toLocaleDateString('pt-BR')
+      const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+
       doc.text(`${dia}  ${hora}  |  ${r.tipo}  |  ${r.origem}  |  ${r.status}`)
     })
 
@@ -72,7 +73,7 @@ export class PontoRelatorioController {
     doc.moveDown(0.5)
 
     justificativas.forEach((j) => {
-      const dia = new Date(j.data).toISOString().slice(0, 10)
+      const dia = new Date(j.data).toLocaleDateString('pt-BR')
       doc.text(`${dia}  |  ${j.tipo}${j.descricao ? '  |  ' + j.descricao : ''}`)
     })
 

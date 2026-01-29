@@ -31,13 +31,15 @@
         <template v-if="!loading">
           <section class="grid grid-cols-12 gap-8 mb-12">
             <div class="col-span-12 md:col-span-6">
-              <SearchInput
-                v-model="fornecedorSelecionado"
-                label="Fornecedor Destinatário"
-                :options="fornecedorOptions"
-                required
-                @update:modelValue="onSelecionarFornecedor"
-              />
+<SearchInput
+  v-model="fornecedorSelecionado"
+  mode="select"
+  label="Fornecedor Destinatário"
+  :options="fornecedorOptions"
+  required
+  @update:modelValue="onSelecionarFornecedor"
+/>
+
             </div>
 
             <div class="col-span-12 md:col-span-3">
@@ -70,12 +72,14 @@
 
             <div class="grid grid-cols-12 gap-6 items-end">
               <div class="col-span-12 md:col-span-5">
-                <SearchInput
-                  v-model="itemNovo.item_id"
-                  label="Produto / Material"
-                  :options="produtoOptions"
-                  @update:modelValue="onSelecionarProdutoNovo"
-                />
+<SearchInput
+  v-model="itemNovo.item_id"
+  mode="select"
+  label="Produto / Material"
+  :options="produtoOptions"
+  @update:modelValue="onSelecionarProdutoNovo"
+/>
+
               </div>
               <div class="col-span-6 md:col-span-2">
                 <Input v-model="itemNovo.quantidade" label="Quantidade" placeholder="0" type="number" />
@@ -187,49 +191,116 @@
     </Card>
 
     <Teleport to="body">
-      <Transition name="fade">
-        <div v-if="modalProduto.aberto" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
-          <div class="w-full max-w-2xl bg-white rounded-[3rem] shadow-2xl overflow-hidden animate-in zoom-in duration-300">
-            <header class="p-10 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-              <div>
-                <h3 class="text-xl font-black text-slate-800 uppercase italic">Novo Insumo</h3>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Cadastro rápido para este fornecedor</p>
+  <Transition name="fade">
+    <div
+      v-if="modalProduto.aberto"
+      class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+      @click.self="fecharModalProduto()"
+    >
+      <div class="w-full max-w-2xl max-h-[85vh] bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col">
+        <!-- Header (PADRÃO) -->
+        <header class="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+          <div class="flex items-center gap-4">
+            <div class="w-11 h-11 rounded-[1.1rem] bg-slate-900 flex items-center justify-center text-white shadow-lg">
+              <i class="pi pi-box text-lg"></i>
+            </div>
+
+            <div>
+              <h3 class="text-lg font-black text-slate-800 tracking-tight uppercase leading-none">
+                Novo Insumo
+              </h3>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  Cadastro rápido para este fornecedor
+                </p>
               </div>
-              <button @click="fecharModalProduto()" class="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-rose-500 transition-all shadow-sm">
-                <i class="pi pi-times"></i>
-              </button>
-            </header>
-
-            <div class="p-10">
-              <form class="grid grid-cols-12 gap-6" @submit.prevent="salvarProduto">
-                <div class="col-span-12">
-                  <Input v-model="modalProduto.form.nome_produto" label="Nome do Produto" placeholder="Ex: MDF Branco TX" required />
-                </div>
-                <div class="col-span-6">
-                  <Input v-model="modalProduto.form.marca" label="Marca / Fabricante" />
-                </div>
-                <div class="col-span-6">
-                  <SearchInput v-model="modalProduto.form.unidade" label="Unidade" mode="select" :options="unidadesOptions" required />
-                </div>
-                <div class="col-span-6">
-                  <Input v-model="modalProduto.form.cor" label="Cor / Acabamento" />
-                </div>
-                <div class="col-span-6">
-                  <Input v-model="modalProduto.form.medida" label="Espessura/Medida" />
-                </div>
-
-                <div class="col-span-12 flex justify-end gap-4 pt-10 border-t border-slate-100 mt-6">
-                  <button type="button" @click="fecharModalProduto()" class="text-[10px] font-black uppercase tracking-widest text-slate-400">Cancelar</button>
-                  <Button variant="primary" type="submit" :loading="modalProduto.salvando" class="!px-10 !h-14 !rounded-2xl shadow-lg shadow-emerald-500/20">
-                    Cadastrar e Usar
-                  </Button>
-                </div>
-              </form>
             </div>
           </div>
+
+          <button
+            class="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-rose-500 hover:border-rose-200 transition-all shadow-sm"
+            @click="fecharModalProduto()"
+            type="button"
+          >
+            <i class="pi pi-times text-xs"></i>
+          </button>
+        </header>
+
+        <!-- Body (PADRÃO) -->
+        <div class="p-6 overflow-y-auto">
+          <form class="grid grid-cols-12 gap-x-6 gap-y-6" @submit.prevent="salvarProduto">
+            <div class="col-span-12">
+              <Input
+                v-model="modalProduto.form.nome_produto"
+                label="Nome do Produto"
+                placeholder="EX: MDF BRANCO TX"
+                required
+              />
+            </div>
+
+            <div class="col-span-12 md:col-span-6">
+              <Input
+                v-model="modalProduto.form.marca"
+                label="Marca / Fabricante"
+                placeholder="EX: DURATEX"
+              />
+            </div>
+
+            <div class="col-span-12 md:col-span-6">
+              <SearchInput
+                v-model="modalProduto.form.unidade"
+                mode="select"
+                label="Unidade Medida"
+                :options="unidadesOptions"
+                placeholder="SELECIONE..."
+                required
+              />
+            </div>
+
+            <div class="col-span-12 md:col-span-6">
+              <Input
+                v-model="modalProduto.form.cor"
+                label="Cor / Acabamento"
+                placeholder="EX: BRANCO TX"
+              />
+            </div>
+
+            <div class="col-span-12 md:col-span-6">
+              <Input
+                v-model="modalProduto.form.medida"
+                label="Espessura/Medida"
+                placeholder="EX: 18MM"
+              />
+            </div>
+
+            <!-- Footer (PADRÃO) -->
+            <div class="col-span-12 flex items-center justify-end gap-4 pt-6 border-t border-slate-100 mt-2">
+              <button
+                type="button"
+                @click="fecharModalProduto()"
+                class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-slate-800 transition-colors"
+              >
+                Cancelar
+              </button>
+
+              <Button
+                variant="primary"
+                type="submit"
+                :loading="modalProduto.salvando"
+                class="!h-12 !rounded-[1.2rem] !px-8 shadow-xl shadow-brand-primary/20 font-black text-[10px] uppercase tracking-widest"
+              >
+                <i class="pi pi-check-circle mr-3"></i>
+                Cadastrar e Usar
+              </Button>
+            </div>
+          </form>
         </div>
-      </Transition>
-    </Teleport>
+      </div>
+    </div>
+  </Transition>
+</Teleport>
+
   </div>
 </template>
 
@@ -327,9 +398,11 @@ const modalProduto = ref({
 
 
 function abrirModalProduto() {
-  modalProduto.value.form.fornecedor_id = fornecedorSelecionado.value
+  if (!fornecedorSelecionado.value) return
+  modalProduto.value.form.fornecedor_id = Number(fornecedorSelecionado.value)
   modalProduto.value.aberto = true
 }
+
 
 function fecharModalProduto() {
   modalProduto.value.aberto = false
@@ -345,19 +418,28 @@ function fecharModalProduto() {
 }
 
 
+async function carregarItensDisponiveis(fId) {
+  const { data } = await PlanoCorteService.itens.listar(Number(fId))
+  itensDisponiveis.value = data || []
+}
+
+
 async function salvarProduto() {
+  if (!modalProduto.value.form.nome_produto?.trim()) return
+  if (!modalProduto.value.form.fornecedor_id) return
+
   modalProduto.value.salvando = true
   try {
     const payload = {
       fornecedor_id: modalProduto.value.form.fornecedor_id,
-      nome_produto: modalProduto.value.form.nome_produto,
-      marca: modalProduto.value.form.marca || null,
-      cor: modalProduto.value.form.cor || null,
-      medida: modalProduto.value.form.medida || null,
+      nome_produto: modalProduto.value.form.nome_produto.trim(),
+      marca: modalProduto.value.form.marca?.trim() || null,
+      cor: modalProduto.value.form.cor?.trim() || null,
+      medida: modalProduto.value.form.medida?.trim() || null,
       unidade: modalProduto.value.form.unidade || null,
       status: modalProduto.value.form.status,
 
-      // ✅ obrigatórios no model plano_corte_item
+      // obrigatórios do plano_corte_item
       quantidade: 0,
       valor_unitario: 0,
       valor_total: 0,
@@ -367,7 +449,7 @@ async function salvarProduto() {
 
     await carregarItensDisponiveis(fornecedorSelecionado.value)
 
-    // ✅ “Cadastrar e usar”
+    // “Cadastrar e usar”
     itemNovo.value.item_id = data.id
     itemNovo.value.unidade = data.unidade || ''
 
@@ -376,6 +458,7 @@ async function salvarProduto() {
     modalProduto.value.salvando = false
   }
 }
+
 
 // excluir plano (confirm)
 async function confirmarExcluirPlano() {
@@ -439,32 +522,32 @@ function planoKey(key) {
 
 
 function onSelecionarProdutoNovo(v) {
-  const item = itensDisponiveis.value.find(i => i.id === v)
+  const itemId = Number(v)
+  const item = itensDisponiveis.value.find(i => Number(i.id) === itemId)
   itemNovo.value.unidade = item?.unidade || ''
 }
+
 
 function limparItemNovo() { itemNovo.value = { item_id: null, unidade: '', quantidade: '', valorUnitarioMask: 'R$ 0,00' } }
 
 function registrarItemNovo() {
-  const item = itensDisponiveis.value.find(i => i.id === itemNovo.value.item_id)
-  
+  const itemId = Number(itemNovo.value.item_id)
+  const item = itensDisponiveis.value.find(i => Number(i.id) === itemId)
+  if (!item) return
+
   itens.value.push({
     item_id: item.id,
-    item: { nome_produto: item.nome_produto, cor: item.cor },
+    item: { nome_produto: item.nome_produto, cor: item.cor, marca: item.marca },
     quantidade: Number(itemNovo.value.quantidade),
     valor_unitario: Number(String(itemNovo.value.valorUnitarioMask).replace(/\D/g, '')) / 100,
     valor_total: itemNovoValorTotalNumerico.value,
     status: 'ATIVO'
   })
+
   limparItemNovo()
 }
 
 function removerItem(index) { itens.value.splice(index, 1) }
-
-async function carregarItensDisponiveis(fId) {
-  const { data } = await PlanoCorteService.itens.listar(fId)
-  itensDisponiveis.value = data || []
-}
 
 
 

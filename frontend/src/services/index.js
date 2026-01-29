@@ -2,12 +2,19 @@ import api from './api'
 import { getBaseOriginFromApi } from '@/utils/url'
 
 
+const base = getBaseOriginFromApi(api)
+
+
+// ✅ GLOBAL: ARQUIVOS
+export { ArquivosService } from './arquivos.service'
+
 // --- AUTH ---
 export const AuthService = {
   login: (payload) => api.post('/auth/login', payload),
   me: () => api.get('/auth/me'),
   esqueciSenha: (email) => api.post('/auth/esqueci-senha', { email }),
-  alterarSenha: (senha_atual, senha_nova) => api.post('/auth/alterar-senha', { senha_atual, senha_nova }),
+  alterarSenha: (senha_atual, senha_nova) =>
+    api.post('/auth/alterar-senha', { senha_atual, senha_nova }),
 }
 
 // --- SERVIÇO DE E-MAIL (TESTES E NOTIFICAÇÕES) ---
@@ -15,47 +22,41 @@ export const MailService = {
   enviarTeste: (email) => api.get('/mail/teste', { params: { para: email } }),
 }
 
-
-
 // --- SERVIÇO DE CLIENTES ---
 export const ClienteService = {
   listar: () => api.get('/clientes'),
   buscar: (id) => api.get(`/clientes/${id}`),
-  salvar: (id, dados) => id ? api.put(`/clientes/${id}`, dados) : api.post('/clientes', dados),
+  salvar: (id, dados) => (id ? api.put(`/clientes/${id}`, dados) : api.post('/clientes', dados)),
   remover: (id) => api.delete(`/clientes/${id}`),
-  getAniversariantes: (data, enviar) => api.get('/clientes/relatorios/aniversariantes', { params: { data, enviar },    }),
+  getAniversariantes: (data, enviar) =>
+    api.get('/clientes/relatorios/aniversariantes', { params: { data, enviar } }),
 }
-
 
 // --- SERVIÇO DE COMPRAS ---
 export const CompraService = {
-  // Passamos os filtros como objeto que o Axios transforma em Query Params
   listar: (filtros = {}) => api.get('/compras', { params: filtros }),
   buscar: (id) => api.get(`/compras/${id}`),
-  salvar: (id, dados) => id ? api.put(`/compras/${id}`, dados) : api.post('/compras', dados),
-  remover: (id) => api.delete(`/compras/${id}`)
+  salvar: (id, dados) => (id ? api.put(`/compras/${id}`, dados) : api.post('/compras', dados)),
+  remover: (id) => api.delete(`/compras/${id}`),
 }
-
 
 // --- SERVIÇO DE DESPESAS ---
 export const DespesaService = {
   listar: (filtros = {}) => api.get('/despesas', { params: filtros }),
   buscar: (id) => api.get(`/despesas/${id}`),
   salvar: (id, dados) => (id ? api.put(`/despesas/${id}`, dados) : api.post('/despesas', dados)),
-  atualizarRecorrencia: (recorrenciaId, dados) => api.put(`/despesas/recorrencia/${recorrenciaId}`, dados),
+  atualizarRecorrencia: (recorrenciaId, dados) =>
+    api.put(`/despesas/recorrencia/${recorrenciaId}`, dados),
   remover: (id) => api.delete(`/despesas/${id}`),
-  removerRecorrencia: (recorrenciaId) =>
-    api.delete(`/despesas/recorrencia/${recorrenciaId}`),
+  removerRecorrencia: (recorrenciaId) => api.delete(`/despesas/recorrencia/${recorrenciaId}`),
 }
-
-
 
 // --- SERVIÇO DE FORNECEDOR ---
 export const FornecedorService = {
   listar: () => api.get('/fornecedor'),
   buscar: (id) => api.get(`/fornecedor/${id}`),
-  salvar: (id, dados) => id ? api.put(`/fornecedor/${id}`, dados) : api.post('/fornecedor', dados),
-  remover: (id) => api.delete(`/fornecedor/${id}`)
+  salvar: (id, dados) => (id ? api.put(`/fornecedor/${id}`, dados) : api.post('/fornecedor', dados)),
+  remover: (id) => api.delete(`/fornecedor/${id}`),
 }
 
 // --- SERVIÇO DE FUNCIONÁRIOS (SOMENTE ADMIN) ---
@@ -68,52 +69,24 @@ export const FuncionarioService = {
     return api.get(`/funcionarios/${cleanId}`)
   },
 
-salvar: (id, dados) => {
-  if (!dados) return Promise.reject(new Error('Dados não informados'))
+  salvar: (id, dados) => {
+    if (!dados) return Promise.reject(new Error('Dados não informados'))
 
-  if (id && id !== 'novo') {
-    const cleanId = String(id).replace(/\D/g, '')
-    return api.put(`/funcionarios/${cleanId}`, dados)
-  }
-  return api.post('/funcionarios', dados)
-},
-
+    if (id && id !== 'novo') {
+      const cleanId = String(id).replace(/\D/g, '')
+      return api.put(`/funcionarios/${cleanId}`, dados)
+    }
+    return api.post('/funcionarios', dados)
+  },
 
   remover: (id) => {
     const cleanId = String(id).replace(/\D/g, '')
     return api.delete(`/funcionarios/${cleanId}`)
   },
-
-  // ===== ARQUIVOS DO FUNCIONÁRIO =====
-
-  listarArquivos: (funcionarioId) => {
-    if (!funcionarioId) return Promise.reject(new Error('ID não fornecido'))
-    const cleanId = String(funcionarioId).replace(/\D/g, '')
-    return api.get(`/funcionarios/${cleanId}/arquivos`)
-  },
-
-  uploadArquivo: (funcionarioId, file) => {
-    if (!funcionarioId || !file)
-      return Promise.reject(new Error('Funcionário ou arquivo não informado'))
-
-    const cleanId = String(funcionarioId).replace(/\D/g, '')
-    const formData = new FormData()
-    formData.append('file', file)
-
-    return api.post(`/funcionarios/${cleanId}/arquivos`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
-  },
-
-  removerArquivo: (arquivoId) => {
-    if (!arquivoId) return Promise.reject(new Error('Arquivo não informado'))
-    const cleanId = String(arquivoId).replace(/\D/g, '')
-    return api.delete(`/funcionarios/arquivos/${cleanId}`)
-  },
 }
 
+// --- ORÇAMENTOS ---
 export const OrcamentosService = {
-  // ===== ORÇAMENTOS =====
   listar: () => api.get('/orcamentos'),
   detalhar: (id) => api.get(`/orcamentos/${id}`),
   criar: (dados) => api.post('/orcamentos', dados),
@@ -125,33 +98,7 @@ export const OrcamentosService = {
   atualizarItem: (id, itemId, item) => api.put(`/orcamentos/${id}/itens/${itemId}`, item),
   removerItem: (id, itemId) => api.delete(`/orcamentos/${id}/itens/${itemId}`),
 
-  // ===== ARQUIVOS =====
-  listarArquivos: (id) => api.get(`/orcamentos/${id}/arquivos`),
-
-  abrirArquivo: async (orcamentoId, arquivoId) => {
-    const res = await api.get(`/orcamentos/${orcamentoId}/arquivos/${arquivoId}`, {
-      responseType: 'blob',
-    })
-
-    const type = res.headers?.['content-type'] || 'application/octet-stream'
-    const blob = new Blob([res.data], { type })
-    const url = URL.createObjectURL(blob)
-
-    window.open(url, '_blank', 'noopener,noreferrer')
-    setTimeout(() => URL.revokeObjectURL(url), 60_000)
-  },
-
-  removerArquivo: (id, arquivoId) => api.delete(`/orcamentos/${id}/arquivos/${arquivoId}`),
-
-  anexarArquivo: (id, arquivo) => {
-    const fd = new FormData()
-    fd.append('arquivo', arquivo)
-    return api.post(`/orcamentos/${id}/arquivos`, fd, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
-  },
-
-  // ===== PDF (COM TOKEN) =====
+  // PDF (continua existindo)
   abrirPdf: async (id) => {
     const res = await api.get(`/orcamentos/${id}/pdf`, { responseType: 'blob' })
     const blob = new Blob([res.data], { type: 'application/pdf' })
@@ -161,8 +108,7 @@ export const OrcamentosService = {
   },
 }
 
-
-
+// --- PLANO DE CORTE ---
 export const PlanoCorteService = {
   listar: () => api.get('/plano-corte'),
   buscar: (id) => api.get(`/plano-corte/${id}`),
@@ -180,71 +126,44 @@ export const PlanoCorteService = {
     buscar: (id) => api.get(`/plano-corte-consumos/${id}`),
     registrar: (dados) => api.post('/plano-corte-consumos', dados),
     remover: (id) => api.delete(`/plano-corte-consumos/${id}`),
-
-    enviarParaProducao: (id) => api.post(`/plano-corte/${id}/enviar-producao`),
+    enviarParaProducao: (id) => api.post(`/plano-corte/${id}/enviar_producao`),
   },
 }
 
-
+// --- PRODUÇÃO ---
 export const ProducaoService = {
-  // --- AGENDA / FLUXO ---
   getAgenda: (inicio, fim) => api.get('/producao/agenda', { params: { inicio, fim } }),
   encaminhar: (dados) => api.post('/producao/encaminhar', dados),
 
-  // --- PROJETOS ---
-  projetos: { buscar: (id) => api.get(`/producao/projetos/${id}`) },
+  projetos: {
+    buscar: (id) => api.get(`/producao/projetos/${id}`),
+  },
 
-  // --- TAREFAS (CRUD) ---
   tarefas: {
     criar: (dados) => api.post('/producao/tarefas', dados),
     atualizar: (id, dados) => api.put(`/producao/tarefas/${id}`, dados),
     remover: (id) => api.delete(`/producao/tarefas/${id}`),
   },
-
-  // --- ARQUIVOS DA PRODUÇÃO ---
-  arquivos: {
-    upload: (projetoId, tipo, files = []) => {
-      const fd = new FormData()
-      fd.append('tipo', tipo)
-      ;(files || []).forEach((file) => fd.append('files', file))
-      return api.post(`/producao/projetos/${projetoId}/arquivos`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
-    },
-    listar: (projetoId) => api.get(`/producao/projetos/${projetoId}/arquivos`),
-    baixar: (projetoId, arquivoId) => api.get(`/producao/projetos/${projetoId}/arquivos/${arquivoId}/download`, { responseType: 'blob' }),
-    remover: (projetoId, arquivoId) => api.delete(`/producao/projetos/${projetoId}/arquivos/${arquivoId}`),
-  },
 }
 
-// --- SERVIÇO DE PRODUTOS (ESTOQUE E MATERIAIS) ---
+// --- PRODUTOS ---
 export const ProdutosService = {
   listar: (filtros = {}) => api.get('/produtos', { params: filtros }),
   buscar: (id) => api.get(`/produtos/${id}`),
-salvar: (id, dados) => {
-  const payload = {
-    ...dados,
-    imagem_url: (dados?.imagem_url ?? '').trim() || null,
-  }
-  return id ? api.put(`/produtos/${id}`, payload) : api.post('/produtos', payload)
-},
-
+  salvar: (id, dados) => (id ? api.put(`/produtos/${id}`, dados) : api.post('/produtos', dados)),
   remover: (id) => api.delete(`/produtos/${id}`),
 }
 
-
-
-
-// --- SERVIÇO DE USUÁRIOS DO SISTEMA (CONTROLE DE ACESSO ADMIN) ---
+// --- USUÁRIOS ---
 export const UsuariosService = {
   listar: () => api.get('/usuarios'),
   buscar: (id) => api.get(`/usuarios/${id}`),
   salvar: (id, dados) => (id ? api.put(`/usuarios/${id}`, dados) : api.post('/usuarios', dados)),
   remover: (id) => api.delete(`/usuarios/${id}`),
-
-  // Ações específicas de status (Ativar/Desativar)
   atualizarStatus: (id, status) => api.put(`/usuarios/${id}/status`, { status }),
 }
 
-
+// --- VENDAS ---
 export const VendaService = {
   listar: () => api.get('/vendas'),
   buscar: (id) => api.get(`/vendas/${id}`),
@@ -254,43 +173,21 @@ export const VendaService = {
 
   enviarParaProducao: (id) => api.post(`/vendas/${id}/enviar-producao`),
 
-  atualizarItem: (vendaId, itemId, dados) =>
-    api.put(`/vendas/${vendaId}/itens/${itemId}`, dados),
+  atualizarItem: (vendaId, itemId, dados) => api.put(`/vendas/${vendaId}/itens/${itemId}`, dados),
 
-  // ✅ NOVO
   listarAmbientes: (id) => api.get(`/vendas/${id}/ambientes`),
-
-  uploadArquivo: (id, file) => {
-    const fd = new FormData()
-    fd.append('arquivo', file)
-    return api.post(`/vendas/${id}/arquivos`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
-  },
-  listarArquivos: (id) => api.get(`/vendas/${id}/arquivos`),
-  removerArquivo: (id, arquivoId) => api.delete(`/vendas/${id}/arquivos/${arquivoId}`),
-
-  abrirArquivo: async (vendaId, arquivoId) => {
-    const res = await api.get(`/vendas/${vendaId}/arquivos/${arquivoId}`, { responseType: 'blob' })
-    const type = res.headers?.['content-type'] || 'application/octet-stream'
-    const blob = new Blob([res.data], { type })
-    const url = URL.createObjectURL(blob)
-    window.open(url, '_blank', 'noopener,noreferrer')
-    setTimeout(() => URL.revokeObjectURL(url), 60_000)
-  },
 }
 
-
-// --- SERVIÇO DE PERMISSÕES (RBAC) ---
+// --- PERMISSÕES ---
 export const PermissoesService = {
   listar: () => api.get('/permissoes'),
   listarDoUsuario: (id) => api.get(`/usuarios/${id}/permissoes`),
-  definirParaUsuario: (id, permissoesIds = []) =>
-    api.put(`/usuarios/${id}/permissoes`, { permissoes: permissoesIds }),
+  definirParaUsuario: (id, permissoesIds = []) => api.put(`/usuarios/${id}/permissoes`, { permissoes: permissoesIds }),
 }
 
-
+// --- FINANCEIRO ---
 export const FinanceiroService = {
   listarPagar: (filtros = {}) => api.get('/financeiro/contas-pagar', { params: filtros }),
-
   buscarContaPagar: (id) => api.get(`/financeiro/contas-pagar/${id}`),
   criarContaPagar: (dados) => api.post('/financeiro/contas-pagar', dados),
   atualizarContaPagar: (id, dados) => api.put(`/financeiro/contas-pagar/${id}`, dados),
@@ -309,67 +206,42 @@ export const FinanceiroService = {
   atualizarStatusCheque: (id, dados) => api.put(`/financeiro/cheques/${id}/status`, dados),
 }
 
-
+// --- CONFIGURAÇÃO ---
 export const ConfiguracaoService = {
   async carregar() {
     const { data } = await api.get('/configuracoes/empresa')
     return data
   },
-
   async salvar(dados) {
     const { data } = await api.put('/configuracoes/empresa', dados)
     return data
   },
 }
 
-
+// --- OBRAS ---
 export const ObrasService = {
   criar: (dados) => api.post('/obras', dados),
-
   buscar: (id) => api.get(`/obras/${id}`),
-
   listarPorCliente: (clienteId) => api.get(`/obras/cliente/${clienteId}`),
-
   salvar: (id, dados) => api.put(`/obras/${id}`, dados),
 }
 
-
+// --- PONTO ---
 export const PontoService = {
-  gerarConvite: (funcionario_id) =>
-    api.post('/ponto/convites', { funcionario_id }),
+  gerarConvite: (funcionario_id) => api.post('/ponto/convites', { funcionario_id }),
 }
 
 export const PontoRelatorioService = {
-  listarRegistros: (filtros = {}) =>
-    api.get('/ponto/relatorio/registros', { params: filtros }),
-
-  pdfMensal: (params) =>
-    api.get('/ponto/relatorio/pdf', {
-      params,
-      responseType: 'blob',
-    }),
+  listarRegistros: (filtros = {}) => api.get('/ponto/relatorio/registros', { params: filtros }),
+  pdfMensal: (params) => api.get('/ponto/relatorio/pdf', { params, responseType: 'blob' }),
 }
 
 export const PontoRegistrosService = {
   atualizar: (id, payload) => api.put(`/ponto/registros/${id}`, payload),
 }
 
-
 export const PontoJustificativasService = {
   listar: (params = {}) => api.get('/ponto/justificativas', { params }),
-
   salvar: (payload) => api.put('/ponto/justificativas', payload),
-
   remover: (id) => api.delete(`/ponto/justificativas/${id}`),
-
-  anexarArquivo: (justificativaId, file) => {
-    const form = new FormData()
-    form.append('file', file)
-
-    return api.post(`/ponto/justificativas/${justificativaId}/arquivos`, form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
-  },
-
-  removerArquivo: (arquivoId) => api.delete(`/ponto/justificativas/arquivos/${arquivoId}`),
 }

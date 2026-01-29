@@ -147,20 +147,6 @@ async agenda(inicioIso: string, fimIso: string) {
           funcionario: { select: { id: true, nome: true } },
         },
       },
-
-      // ✅ arquivos dentro da agenda (como você pediu)
-      arquivos: {
-        orderBy: [{ criado_em: 'desc' }],
-        select: {
-          id: true,
-          tipo: true,
-          nome_original: true,
-          nome_arquivo: true,
-          mime_type: true,
-          tamanho_bytes: true,
-          criado_em: true,
-        },
-      },
     },
   })
 
@@ -249,19 +235,6 @@ async buscarProjeto(id: number) {
         },
       },
 
-      // ✅ agora vem também
-      arquivos: {
-        orderBy: [{ criado_em: 'desc' }],
-        select: {
-          id: true,
-          tipo: true,
-          nome_original: true,
-          nome_arquivo: true,
-          mime_type: true,
-          tamanho_bytes: true,
-          criado_em: true,
-        },
-      },
     },
   })
 

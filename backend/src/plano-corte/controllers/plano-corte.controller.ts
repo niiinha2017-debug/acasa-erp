@@ -28,8 +28,8 @@ export class PlanoCorteController {
     return Number(String(id).replace(/\D/g, ''))
   }
 
-@Post(':id/enviar-producao')
-@Permissoes('plano-corte.editar') // ou a perm que você decidir usar
+@Post(':id/enviar_producao')
+@Permissoes('plano_corte.enviar_producao') // ou a perm que você decidir usar
 enviarProducao(@Param('id', ParseIntPipe) id: number) {
   return this.service.enviarParaProducao(id)
 }

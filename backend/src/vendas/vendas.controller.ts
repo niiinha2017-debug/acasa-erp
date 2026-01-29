@@ -9,26 +9,18 @@ import {
   Post,
   Put,
   UseGuards,
-  BadRequestException, 
-  Res,
-  UploadedFile,
-  UseInterceptors
+  BadRequestException,
 } from '@nestjs/common'
-import { FileInterceptor } from '@nestjs/platform-express'
-import { Response } from 'express'
-
 
 import { VendasService } from './vendas.service'
 import { CreateVendaDto } from './dto/create-venda.dto'
 import { UpdateVendaDto } from './dto/update-venda.dto'
 import { UpdateVendaStatusDto } from './dto/update-venda-status.dto'
+import { UpdateVendaItemDto } from './dto/update-venda-item.dto'
 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { PermissionsGuard } from '../auth/permissions.guard'
 import { Permissoes } from '../auth/permissoes.decorator'
-
-import { UpdateVendaItemDto } from './dto/update-venda-item.dto'
-
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('vendas')
@@ -87,66 +79,15 @@ export class VendasController {
     return this.service.atualizarItem(this.cleanId(id), this.cleanId(itemId), dto)
   }
 
-@Post(':id/enviar-producao')
-@Permissoes('vendas.editar')
-enviarParaProducao() {
-  throw new BadRequestException('Produção é controlada pela Agenda (Produção).')
-}
-
-
-  @Post(':id/arquivos')
+  @Post(':id/enviar-producao')
   @Permissoes('vendas.editar')
-  @UseInterceptors(
-    FileInterceptor('arquivo', {
-      limits: { fileSize: 15 * 1024 * 1024 },
-    }),
-  )
-  anexarArquivo(
-    @Param('id') id: string,
-    @UploadedFile() file: Express.Multer.File,
-  ) {
-    if (!file) throw new BadRequestException('Arquivo é obrigatório.')
-    return this.service.anexarArquivo(this.cleanId(id), file)
+  enviarParaProducao(@Param('id') _id: string) {
+    throw new BadRequestException('Produção é controlada pela Agenda (Produção).')
   }
 
-  @Get(':id/arquivos')
+  @Get(':id/ambientes')
   @Permissoes('vendas.ver')
-  listarArquivos(@Param('id') id: string) {
-    return this.service.listarArquivos(this.cleanId(id))
+  listarAmbientes(@Param('id') id: string) {
+    return this.service.listarAmbientes(this.cleanId(id))
   }
-
-  @Get(':id/arquivos/:arquivoId')
-  @Permissoes('vendas.ver')
-  async abrirArquivo(
-    @Param('id') id: string,
-    @Param('arquivoId') arquivoId: string,
-    @Res() res: Response,
-  ) {
-    const vendaId = this.cleanId(id)
-    const arqId = this.cleanId(arquivoId)
-
-    const { arq, abs } = await this.service.obterArquivo(vendaId, arqId)
-
-    res.setHeader('Content-Type', arq.mime_type)
-    res.setHeader('Content-Disposition', `inline; filename="${arq.nome_original}"`)
-    return res.sendFile(abs)
-  }
-
-  @Delete(':id/arquivos/:arquivoId')
-  @Permissoes('vendas.editar')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  removerArquivo(
-    @Param('id') id: string,
-    @Param('arquivoId') arquivoId: string,
-  ) {
-    return this.service.removerArquivo(this.cleanId(id), this.cleanId(arquivoId))
-  }
-@Get(':id/ambientes')
-@Permissoes('vendas.ver')
-listarAmbientes(@Param('id') id: string) {
-  return this.service.listarAmbientes(this.cleanId(id))
 }
-
-
-}
-

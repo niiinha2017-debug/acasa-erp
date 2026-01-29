@@ -9,12 +9,8 @@ import {
   Post,
   Put,
   Res,
-  UploadedFile,
-  UseInterceptors,
-  BadRequestException,
   UseGuards,
 } from '@nestjs/common'
-import { FileInterceptor } from '@nestjs/platform-express'
 import { Response } from 'express'
 
 import { OrcamentosService } from './orcamentos.service'
@@ -93,55 +89,6 @@ export class OrcamentosController {
   @HttpCode(HttpStatus.NO_CONTENT)
   removerItem(@Param('id') id: string, @Param('itemId') itemId: string) {
     return this.service.removerItem(this.cleanId(id), this.cleanId(itemId))
-  }
-
-  // =========================
-  // ARQUIVOS
-  // =========================
-
-  @Post(':id/arquivos')
-  @Permissoes('orcamentos.editar')
-  @UseInterceptors(
-    FileInterceptor('arquivo', {
-      limits: { fileSize: 15 * 1024 * 1024 },
-    }),
-  )
-  anexarArquivo(
-    @Param('id') id: string,
-    @UploadedFile() file: Express.Multer.File,
-  ) {
-    if (!file) throw new BadRequestException('Arquivo é obrigatório.')
-    return this.service.anexarArquivo(this.cleanId(id), file)
-  }
-
-  @Get(':id/arquivos')
-  @Permissoes('orcamentos.ver')
-  listarArquivos(@Param('id') id: string) {
-    return this.service.listarArquivos(this.cleanId(id))
-  }
-
-  @Get(':id/arquivos/:arquivoId')
-  @Permissoes('orcamentos.ver')
-  async abrirArquivo(
-    @Param('id') id: string,
-    @Param('arquivoId') arquivoId: string,
-    @Res() res: Response,
-  ) {
-    const orcId = this.cleanId(id)
-    const arqId = this.cleanId(arquivoId)
-
-    const { arq, abs } = await this.service.obterArquivo(orcId, arqId)
-
-    res.setHeader('Content-Type', arq.mime_type)
-    res.setHeader('Content-Disposition', `inline; filename="${arq.nome_original}"`)
-    return res.sendFile(abs)
-  }
-
-  @Delete(':id/arquivos/:arquivoId')
-  @Permissoes('orcamentos.editar')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  removerArquivo(@Param('id') id: string, @Param('arquivoId') arquivoId: string) {
-    return this.service.removerArquivo(this.cleanId(id), this.cleanId(arquivoId))
   }
 
   // =========================

@@ -3,8 +3,6 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateVendaDto } from './dto/create-venda.dto'
 import { UpdateVendaDto } from './dto/update-venda.dto'
-import { promises as fs } from 'fs'
-import * as path from 'path'
 
 function round2(n: number) {
   return Math.round((Number(n) + Number.EPSILON) * 100) / 100
@@ -96,7 +94,6 @@ private calcularTotais(input: {
         itens: true,
         comissoes: true,
         pagamentos: true,
-        arquivos: true,
       },
     })
   }
@@ -110,7 +107,6 @@ private calcularTotais(input: {
         itens: true,
         comissoes: true,
         pagamentos: true,
-        arquivos: true,
       },
     })
     if (!venda) throw new NotFoundException('Venda não encontrada')
@@ -232,7 +228,6 @@ await tx.vendas_itens.createMany({
           itens: true,
           comissoes: true,
           pagamentos: true,
-          arquivos: true,
         },
       })
     })
@@ -328,7 +323,6 @@ async enviarParaProducao(vendaId: number, dataProducao: string) {
           itens: true,
           comissoes: true,
           pagamentos: true,
-          arquivos: true,
         },
       })
     })
@@ -339,83 +333,11 @@ async enviarParaProducao(vendaId: number, dataProducao: string) {
     return this.prisma.vendas.update({ where: { id }, data: { status } })
   }
 
-  async remover(id: number) {
-    await this.buscarPorId(id)
-    const dir = path.resolve(process.cwd(), 'uploads', 'vendas', String(id))
-    await fs.rm(dir, { recursive: true, force: true }).catch(() => null)
-    return this.prisma.vendas.delete({ where: { id } })
-  }
-
-  async anexarArquivo(vendaId: number, file: any) {
-  if (!file) throw new BadRequestException('Arquivo não enviado.')
-  await this.buscarPorId(vendaId)
-
-  const pasta = path.resolve(process.cwd(), 'uploads', 'vendas', String(vendaId))
-  await fs.mkdir(pasta, { recursive: true })
-
-  const nomeFinal = `${Date.now()}-${file.originalname.replace(/\s/g, '_')}`
-  const caminhoFinal = path.join(pasta, nomeFinal)
-
-  await fs.writeFile(caminhoFinal, file.buffer)
-
-  return this.prisma.vendas_arquivos.create({
-    data: {
-      venda_id: vendaId,
-      nome_original: file.originalname,
-      mime_type: file.mimetype,
-      tamanho: file.size,
-      caminho: `uploads/vendas/${vendaId}/${nomeFinal}`,
-    },
-  })
+async remover(id: number) {
+  await this.buscarPorId(id)
+  return this.prisma.vendas.delete({ where: { id } })
 }
 
-async obterArquivo(vendaId: number, arquivoId: number) {
-  const arq = await this.prisma.vendas_arquivos.findFirst({
-    where: { id: arquivoId, venda_id: vendaId },
-  })
-  if (!arq) throw new NotFoundException('Arquivo não encontrado.')
-  return { arq, abs: path.resolve(process.cwd(), arq.caminho) }
-}
-
-async listarArquivos(vendaId: number) {
-  await this.buscarPorId(vendaId)
-
-  return this.prisma.vendas_arquivos.findMany({
-    where: { venda_id: vendaId },
-    orderBy: { id: 'desc' },
-  })
-}
-
-async listarAmbientes(vendaId: number) {
-  await this.buscarPorId(vendaId) // garante que existe e respeita o NotFound
-
-  const itens = await this.prisma.vendas_itens.findMany({
-    where: { venda_id: vendaId },
-    select: { nome_ambiente: true },
-    orderBy: { nome_ambiente: 'asc' },
-  })
-
-  const set = new Set<string>()
-  for (const it of itens) {
-    const nome = String(it.nome_ambiente || '').trim()
-    if (nome) set.add(nome)
-  }
-
-  return Array.from(set).map((nome) => ({ nome }))
-}
-
-
-async removerArquivo(vendaId: number, arquivoId: number) {
-  const arq = await this.prisma.vendas_arquivos.findFirst({
-    where: { id: arquivoId, venda_id: vendaId },
-  })
-  if (!arq) throw new NotFoundException('Arquivo não encontrado.')
-
-  const abs = path.resolve(process.cwd(), arq.caminho)
-  await fs.unlink(abs).catch(() => null)
-
-  await this.prisma.vendas_arquivos.delete({ where: { id: arquivoId } })
-}
 async atualizarItem(vendaId: number, itemId: number, dto: any) {
   if (vendaId <= 0) throw new BadRequestException('ID da venda inválido.')
   if (itemId <= 0) throw new BadRequestException('ID do item inválido.')
@@ -444,4 +366,24 @@ async atualizarItem(vendaId: number, itemId: number, dto: any) {
       valor_total: (dto.quantidade !== undefined || dto.valor_unitario !== undefined) ? valorTotal : undefined,
     },
   })
-}}
+}
+
+
+async listarAmbientes(vendaId: number) {
+  await this.buscarPorId(vendaId) // garante que existe e respeita o NotFound
+
+  const itens = await this.prisma.vendas_itens.findMany({
+    where: { venda_id: vendaId },
+    select: { nome_ambiente: true },
+    orderBy: { nome_ambiente: 'asc' },
+  })
+
+  const set = new Set<string>()
+  for (const it of itens) {
+    const nome = String(it.nome_ambiente || '').trim()
+    if (nome) set.add(nome)
+  }
+
+  return Array.from(set).map((nome) => ({ nome }))
+}
+}

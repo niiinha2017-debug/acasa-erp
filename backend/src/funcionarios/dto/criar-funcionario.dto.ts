@@ -1,4 +1,6 @@
 import { IsEmail, IsOptional, IsString, IsNumber, IsBoolean } from 'class-validator'
+import { Type } from 'class-transformer'
+
 
 export class CriarFuncionarioDto {
   // Dados pessoais
@@ -97,6 +99,7 @@ export class CriarFuncionarioDto {
 
   // Financeiro
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   salario_base?: number
 
@@ -110,8 +113,9 @@ export class CriarFuncionarioDto {
 
   // Vale Alimentação / Refeição
   @IsOptional()
+  @Type(() => Boolean)
   @IsBoolean()
-  tem_vale?: boolean // <--- ADICIONADO PARA O CHECKBOX
+  tem_vale?: boolean
 
   @IsOptional()
   @IsNumber()

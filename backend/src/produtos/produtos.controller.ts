@@ -11,6 +11,8 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common'
+
+
 import { ProdutosService } from './produtos.service'
 import { CreateProdutoDto } from './dto/criar-produto.dto'
 import { UpdateProdutoDto } from './dto/atualizar-produto.dto'
@@ -59,4 +61,5 @@ export class ProdutosController {
     const cleanId = Number(String(id).replace(/\D/g, ''))
     return this.produtosService.remover(cleanId)
   }
+
 }

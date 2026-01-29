@@ -15,26 +15,27 @@ type Filtros = {
 export class PontoRelatorioService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private parseYmd(ymd?: string) {
-    if (!ymd) return undefined
-    const [y, m, d] = String(ymd).split('-').map((n) => Number(n))
-    if (!y || !m || !d) return undefined
-    return new Date(Date.UTC(y, m - 1, d))
-  }
+private parseYmdLocal(ymd?: string) {
+  if (!ymd) return undefined
+  const [y, m, d] = String(ymd).split('-').map((n) => Number(n))
+  if (!y || !m || !d) return undefined
+  return new Date(y, m - 1, d) // local
+}
 
-  private inicioDia(ymd?: string) {
-    const d = this.parseYmd(ymd)
-    if (!d) return undefined
-    d.setUTCHours(0, 0, 0, 0)
-    return d
-  }
+private inicioDia(ymd?: string) {
+  const d = this.parseYmdLocal(ymd)
+  if (!d) return undefined
+  d.setHours(0, 0, 0, 0)
+  return d
+}
 
-  private fimDia(ymd?: string) {
-    const d = this.parseYmd(ymd)
-    if (!d) return undefined
-    d.setUTCHours(23, 59, 59, 999)
-    return d
-  }
+private fimDia(ymd?: string) {
+  const d = this.parseYmdLocal(ymd)
+  if (!d) return undefined
+  d.setHours(23, 59, 59, 999)
+  return d
+}
+
 
   private cleanId(v?: string) {
     if (!v) return undefined

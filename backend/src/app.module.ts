@@ -26,6 +26,7 @@ import { EmpresaModule } from './modulos/empresa.module'
 import { UtilsModule } from './utils/utils.module'
 import { ObrasModule } from './obras/obras.module'
 import { PontoModule } from './ponto/ponto.module'
+import { ArquivosModule } from './arquivos/arquivos.module'
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { PontoModule } from './ponto/ponto.module'
     ScheduleModule.forRoot(), // ✅ AQUI
 
     PrismaModule,
+    ArquivosModule,
     AuthModule,
     UsuariosModule,
     RecuperacaoSenhaModule,

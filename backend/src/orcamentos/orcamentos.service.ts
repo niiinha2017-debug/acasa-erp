@@ -1,14 +1,13 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateOrcamentoDto } from './dto/create-orcamento.dto';
-import { UpdateOrcamentoDto } from './dto/update-orcamento.dto';
-import { CreateOrcamentoItemDto } from './dto/create-orcamento-item.dto';
-import { UpdateOrcamentoItemDto } from './dto/update-orcamento-item.dto';
-import { promises as fs } from 'fs';
-import * as path from 'path';
-import { renderHeaderA4Png, resolveAsset } from '../pdf/render-header-a4';
+import { Injectable, NotFoundException } from '@nestjs/common'
+import { PrismaService } from '../prisma/prisma.service'
+import { CreateOrcamentoDto } from './dto/create-orcamento.dto'
+import { UpdateOrcamentoDto } from './dto/update-orcamento.dto'
+import { CreateOrcamentoItemDto } from './dto/create-orcamento-item.dto'
+import { UpdateOrcamentoItemDto } from './dto/update-orcamento-item.dto'
+import * as path from 'path'
+import { renderHeaderA4Png, resolveAsset } from '../pdf/render-header-a4'
+import PDFKitDoc from 'pdfkit'
 
-import PDFKitDoc from 'pdfkit';
 
 @Injectable()
 export class OrcamentosService {
@@ -204,7 +203,7 @@ export class OrcamentosService {
         cliente_cpf_snapshot: cliente.cpf || '',
         qtd_ambientes: 0,
       },
-      include: { cliente: true, itens: true, arquivos: true },
+      include: { cliente: true, itens: true},
     });
   }
 
@@ -220,18 +219,18 @@ export class OrcamentosService {
     }));
   }
 
-  async detalhar(id: number) {
-    const orc = await this.prisma.orcamentos.findUnique({
-      where: { id },
-      include: {
-        cliente: true,
-        itens: { orderBy: { id: 'asc' } },
-        arquivos: { orderBy: { id: 'desc' } },
-      },
-    });
-    if (!orc) throw new NotFoundException('Orçamento não encontrado.');
-    return orc;
-  }
+async detalhar(id: number) {
+  const orc = await this.prisma.orcamentos.findUnique({
+    where: { id },
+    include: {
+      cliente: true,
+      itens: { orderBy: { id: 'asc' } },
+    },
+  })
+  if (!orc) throw new NotFoundException('Orçamento não encontrado.')
+  return orc
+}
+
 
   async atualizar(id: number, dto: UpdateOrcamentoDto) {
     await this.detalhar(id);
@@ -249,7 +248,7 @@ export class OrcamentosService {
           cliente_nome_snapshot: cliente.nome_completo,
           cliente_cpf_snapshot: cliente.cpf || '',
         },
-        include: { cliente: true, itens: true, arquivos: true },
+        include: { cliente: true, itens: true },
       });
     }
 
@@ -259,16 +258,15 @@ export class OrcamentosService {
         cliente_nome_snapshot: dto.cliente_nome_snapshot,
         cliente_cpf_snapshot: dto.cliente_cpf_snapshot,
       },
-      include: { cliente: true, itens: true, arquivos: true },
+      include: { cliente: true, itens: true},
     });
   }
 
-  async remover(id: number) {
-    await this.detalhar(id);
-    const dir = path.resolve(process.cwd(), 'uploads', 'orcamentos', String(id));
-    await fs.rm(dir, { recursive: true, force: true }).catch(() => null);
-    return this.prisma.orcamentos.delete({ where: { id } });
-  }
+async remover(id: number) {
+  await this.detalhar(id)
+  return this.prisma.orcamentos.delete({ where: { id } })
+}
+
 
   // =========================================================
   // ITENS
@@ -333,57 +331,5 @@ export class OrcamentosService {
       where: { id: orcamentoId },
       data: { qtd_ambientes: count },
     });
-  }
-
-  // =========================================================
-  // ARQUIVOS
-  // =========================================================
-  async anexarArquivo(orcId: number, file: any) {
-    if (!file) throw new BadRequestException('Arquivo não enviado.');
-    await this.detalhar(orcId);
-
-    const pasta = path.resolve(process.cwd(), 'uploads', 'orcamentos', String(orcId));
-    await fs.mkdir(pasta, { recursive: true });
-
-    const nomeFinal = `${Date.now()}-${file.originalname.replace(/\s/g, '_')}`;
-    const caminhoFinal = path.join(pasta, nomeFinal);
-    await fs.writeFile(caminhoFinal, file.buffer);
-
-    return this.prisma.orcamento_arquivos.create({
-      data: {
-        orcamento_id: orcId,
-        nome_original: file.originalname,
-        mime_type: file.mimetype,
-        tamanho: file.size,
-        caminho: `uploads/orcamentos/${orcId}/${nomeFinal}`,
-      },
-    });
-  }
-
-  async obterArquivo(orcId: number, arquivoId: number) {
-    const arq = await this.prisma.orcamento_arquivos.findFirst({
-      where: { id: arquivoId, orcamento_id: orcId },
-    });
-    if (!arq) throw new NotFoundException('Arquivo não encontrado.');
-    return { arq, abs: path.resolve(process.cwd(), arq.caminho) };
-  }
-
-  async listarArquivos(orcId: number) {
-    await this.detalhar(orcId);
-    return this.prisma.orcamento_arquivos.findMany({
-      where: { orcamento_id: orcId },
-      orderBy: { id: 'desc' },
-    });
-  }
-
-async removerArquivo(orcId: number, arquivoId: number) {
-    const arq = await this.prisma.orcamento_arquivos.findFirst({
-      where: { id: arquivoId, orcamento_id: orcId },
-    });
-    if (!arq) throw new NotFoundException('Arquivo não encontrado.');
-    const abs = path.resolve(process.cwd(), arq.caminho);
-    
-    await fs.unlink(abs).catch(() => null);
-    await this.prisma.orcamento_arquivos.delete({ where: { id: arquivoId } });
   }
 }

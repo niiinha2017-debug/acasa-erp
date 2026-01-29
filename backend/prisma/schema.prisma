@@ -132,7 +132,6 @@ model orcamentos {
   atualizado_em DateTime @updatedAt
 
   itens    orcamento_itens[]
-  arquivos orcamento_arquivos[]
 
   // ✅ agora é 0..1 venda por orçamento
   venda vendas?
@@ -155,21 +154,6 @@ model orcamento_itens {
   criado_em DateTime @default(now())
 
   @@map("orcamento_itens")
- }
-
-model orcamento_arquivos {
-  id           Int        @id @default(autoincrement())
-  orcamento_id Int
-  orcamento    orcamentos @relation(fields: [orcamento_id], references: [id], onDelete: Cascade)
-
-  nome_original String
-  mime_type     String
-  tamanho       Int
-  caminho       String // ex: uploads/orcamentos/123/arquivo.pdf
-
-  criado_em DateTime @default(now())
-
-  @@map("orcamento_arquivos")
  }
 
 model vendas {
@@ -205,7 +189,6 @@ model vendas {
   itens      vendas_itens[]
   comissoes  vendas_comissoes[]
   pagamentos vendas_pagamentos[] // ✅ NOVO
-  arquivos   vendas_arquivos[] // ✅ NOVO
 
   compras compras[]
 
@@ -236,23 +219,6 @@ model vendas_pagamentos {
   @@index([forma_pagamento_chave])
   @@index([status_financeiro_chave])
   @@map("vendas_pagamentos")
- }
-
-model vendas_arquivos {
-  id Int @id @default(autoincrement())
-
-  venda_id Int
-  venda    vendas @relation(fields: [venda_id], references: [id], onDelete: Cascade)
-
-  nome_original String
-  mime_type     String
-  tamanho       Int
-  caminho       String // uploads/vendas/123/arquivo.pdf
-
-  criado_em DateTime @default(now())
-
-  @@index([venda_id])
-  @@map("vendas_arquivos")
  }
 
 model vendas_itens {
@@ -551,25 +517,8 @@ model funcionarios {
   ponto_registros       ponto_registros[]
   ponto_convites        ponto_convites[]
   ponto_justificativas  ponto_justificativas[]
-  funcionarios_arquivos funcionarios_arquivos[]
 
   @@map("funcionarios")
- }
-
-model funcionarios_arquivos {
-  id             Int      @id @default(autoincrement())
-  funcionario_id Int
-  nome           String
-  arquivo_nome   String // nome salvo no disco (uuid.ext)
-  mime           String?
-  tamanho        Int?
-  url            String // url pública: /uploads/funcionarios/<arquivo_nome>
-  criado_em      DateTime @default(now())
-
-  funcionario funcionarios @relation(fields: [funcionario_id], references: [id], onDelete: Cascade)
-
-  @@index([funcionario_id])
-  @@map("funcionarios_arquivos")
  }
 
 model despesas {
@@ -635,7 +584,6 @@ model producao_projetos {
   atualizado_em DateTime @updatedAt
 
   tarefas  producao_tarefas[]
-  arquivos producao_arquivos[]
 
   @@unique([origem_tipo, origem_id])
   @@index([origem_tipo])
@@ -674,25 +622,6 @@ model producao_tarefas {
   @@index([inicio_em])
   @@index([fim_em])
   @@map("producao_tarefas")
- }
-
-model producao_arquivos {
-  id Int @id @default(autoincrement())
-
-  projeto_id Int
-  projeto    producao_projetos @relation(fields: [projeto_id], references: [id], onDelete: Cascade)
-
-  tipo          String // PLANTA | PROJETO_TECNICO | PLANO_CORTE | OUTRO
-  nome_original String
-  nome_arquivo  String
-  mime_type     String?
-  tamanho_bytes Int?
-
-  criado_em DateTime @default(now())
-
-  @@index([projeto_id])
-  @@index([tipo])
-  @@map("producao_arquivos")
  }
 
 model contas_pagar {
@@ -931,7 +860,6 @@ model Empresa {
   cep           String?
   email         String?
   telefone      String?
-  logo_url      String?  @db.Text // Para salvar o caminho da imagem ou base64
   updated_at    DateTime @updatedAt
 
   @@map("empresa") // Nome da tabela no banco de dados
@@ -1075,7 +1003,6 @@ model ponto_justificativas {
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
-  arquivos ponto_justificativas_arquivos[]
 
   @@unique([funcionario_id, data])
   @@index([funcionario_id])
@@ -1084,20 +1011,26 @@ model ponto_justificativas {
   @@map("ponto_justificativas")
  }
 
-model ponto_justificativas_arquivos {
-  id Int @id @default(autoincrement())
+model arquivos {
+  id         Int      @id @default(autoincrement())
 
-  justificativa_id Int
-  justificativa    ponto_justificativas @relation(fields: [justificativa_id], references: [id], onDelete: Cascade)
+  owner_type String
+  owner_id   Int
+  categoria  String?
+  slot_key   String?
 
-  arquivo_nome String  @db.VarChar(180)
-  mime_type    String? @db.VarChar(80)
-  tamanho      Int?
+  url        String
+  filename   String
+  nome       String?
+  mime_type  String?
+  tamanho    Int?
 
-  arquivo_path String @db.VarChar(255)
+  criado_em  DateTime @default(now())
 
-  criado_em DateTime @default(now())
-
-  @@index([justificativa_id])
-  @@map("ponto_justificativas_arquivos")
+  @@index([owner_type, owner_id])
+  @@index([owner_type, owner_id, categoria])
+  @@unique([owner_type, owner_id, slot_key])
+  @@map("arquivos")
  }
+
+

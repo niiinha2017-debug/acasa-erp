@@ -156,6 +156,13 @@ return this.prisma.produtos.update({
 
 
 }
+async atualizarImagem(id: number, imagem_url: string) {
+  await this.buscarPorId(id)
+  return this.prisma.produtos.update({
+    where: { id },
+    data: { imagem_url },
+  })
+}
 
 
 
@@ -167,5 +174,4 @@ async remover(id: number) {
     throw new BadRequestException('Não é possível excluir: produto está em uso (compras/plano de corte).')
   }
 }
-
 }

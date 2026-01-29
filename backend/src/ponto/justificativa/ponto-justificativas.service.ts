@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, Injectable } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { SalvarPontoJustificativaDto } from '../justificativa/salvar-ponto-justificativa.dto'
 
@@ -27,14 +27,14 @@ export class PontoJustificativasService {
       dataFim = new Date(ano, mes, 1, 0, 0, 0, 0) // exclusivo
     }
 
-    return this.prisma.ponto_justificativas.findMany({
-      where: {
-        funcionario_id,
-        ...(dataIni && dataFim ? { data: { gte: dataIni, lt: dataFim } } : {}),
-      },
-      include: { arquivos: true },
-      orderBy: [{ data: 'asc' }],
-    })
+return this.prisma.ponto_justificativas.findMany({
+  where: {
+    funcionario_id,
+    ...(dataIni && dataFim ? { data: { gte: dataIni, lt: dataFim } } : {}),
+  },
+  orderBy: [{ data: 'asc' }],
+})
+
   }
 
 async salvar(dto: SalvarPontoJustificativaDto) {
@@ -67,33 +67,6 @@ async salvar(dto: SalvarPontoJustificativaDto) {
 
 
   async remover(id: number) {
-    // arquivos deletam por cascade
     return this.prisma.ponto_justificativas.delete({ where: { id } })
-  }
-  async anexarArquivo(justificativa_id: number, file: Express.Multer.File) {
-    if (!justificativa_id) throw new BadRequestException('ID inválido')
-    if (!file) throw new BadRequestException('Arquivo é obrigatório')
-
-    const existe = await this.prisma.ponto_justificativas.findUnique({
-      where: { id: justificativa_id },
-      select: { id: true },
-    })
-    if (!existe) throw new NotFoundException('Justificativa não encontrada')
-
-    return this.prisma.ponto_justificativas_arquivos.create({
-      data: {
-        justificativa_id,
-        arquivo_nome: file.originalname,
-        mime_type: file.mimetype,
-        tamanho: file.size,
-        arquivo_path: file.path.replace(/\\/g, '/'),
-      },
-    })
-  }
-
-  async removerArquivo(id: number) {
-    if (!id) throw new BadRequestException('ID inválido')
-    // aqui remove só do banco; depois, se você quiser, a gente apaga o arquivo físico também
-    return this.prisma.ponto_justificativas_arquivos.delete({ where: { id } })
   }
 }
