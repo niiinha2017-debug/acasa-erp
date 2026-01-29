@@ -204,14 +204,16 @@
                   </div>
 
                   <div v-else class="space-y-4">
-                    <Input
-                      v-model="emailRecuperacao"
-                      label="E-mail de acesso"
-                      type="email"
-                      required
-                      placeholder="Digite seu e-mail cadastrado"
-                      :disabled="loading"
-                    />
+<Input
+  v-model="emailRecuperacao"
+  label="E-mail de acesso"
+  type="email"
+  required
+  placeholder="Digite seu e-mail cadastrado"
+  :forceUpper="false"
+  :disabled="loading"
+/>
+
                     <p class="text-sm text-slate-600 dark:text-slate-400">
                       Enviaremos uma senha provisória para seu e-mail.
                     </p>
@@ -337,14 +339,3 @@ async function handleRecuperacaoSubmit() {
 }
 </script>
 
-<style scoped>
-.fade-scale-enter-active,
-.fade-scale-leave-active {
-  transition: opacity 160ms ease, transform 160ms ease;
-}
-.fade-scale-enter-from,
-.fade-scale-leave-to {
-  opacity: 0;
-  transform: scale(0.98);
-}
-</style>

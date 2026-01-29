@@ -55,7 +55,16 @@
               </span>
               <div class="flex items-center gap-2 mt-1">
                 <span class="text-[9px] font-bold uppercase text-slate-400 tracking-tighter">{{ row.setor || 'Geral' }}</span>
-                <span :class="['w-1 h-1 rounded-full', row.status === 'Ativo' ? 'bg-emerald-400' : 'bg-rose-400']"></span>
+<span :class="[
+  'w-1 h-1 rounded-full',
+  String(row.status || '').toUpperCase() === 'ATIVO'
+    ? 'bg-emerald-400'
+    : String(row.status || '').toUpperCase() === 'PENDENTE'
+      ? 'bg-amber-400'
+      : 'bg-rose-400'
+]"></span>
+
+
               </div>
             </div>
           </button>
@@ -246,6 +255,16 @@ const carregarUsuarios = async () => {
     loadingDados.value = false
   }
 }
+
+const normalizarPerms = (data) => {
+  if (!Array.isArray(data)) return []
+  if (typeof data[0] === 'string') return data
+  return data.map(x => x?.chave).filter(Boolean)
+}
+
+const { data } = await PermissoesService.listarDoUsuario(u.id)
+permissoesAtivas.value = normalizarPerms(data)
+
 
 // selecionar usuário e buscar permissões atuais (chaves)
 const selecionarUsuario = async (u) => {

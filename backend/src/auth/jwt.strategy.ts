@@ -28,9 +28,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       select: { id: true, nome: true, usuario: true, email: true, status: true },
     })
 
-    if (!user || user.status !== 'ATIVO') {
-      throw new UnauthorizedException('Usuário inválido')
-    }
+if (!user) {
+  throw new UnauthorizedException('Usuário inválido')
+}
+
 
     const permissoes = await this.permissoesService.permissoesDoUsuarioPorId(userId)
 

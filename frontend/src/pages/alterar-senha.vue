@@ -17,14 +17,16 @@
 
       <form class="space-y-5" @submit.prevent="handleSubmit" autocomplete="off">
         <div class="space-y-4">
-          <Input
-            v-model="senhaAtual"
-            type="password"
-            label="Senha Atual"
-            placeholder="Digite a senha atual"
-            autocomplete="current-password"
-            required
-          />
+<Input
+  v-model="senhaAtual"
+  type="password"
+  label="Senha Atual"
+  placeholder="Digite a senha atual"
+  autocomplete="current-password"
+  required
+  :forceUpper="false"
+/>
+
 
           <div class="h-px w-full bg-gradient-to-r from-transparent via-border-ui to-transparent my-2"></div>
 
@@ -118,7 +120,9 @@ async function handleSubmit() {
 <route lang="json">
 {
   "meta": {
-    "public": false
+    "public": false,
+    "layout": "auth"
   }
 }
+
 </route>

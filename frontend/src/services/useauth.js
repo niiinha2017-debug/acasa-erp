@@ -33,10 +33,10 @@ export function useAuth() {
      * Como não existem mais os campos 'setor' ou 'funcao', identificamos o 
      * privilégio administrativo pelo nome de usuário ou pela flag 'admin' nas permissões.
      */
-    const ehAdmin = 
-      user.usuario === 'Ana.P' || 
-      permissoes.value.includes('admin') || 
-      permissoes.value.includes('ADMIN')
+const ehAdmin =
+  user.usuario === 'Ana.P' ||
+  permissoes.value.includes('ADMIN')
+
 
     if (ehAdmin) return true
 
@@ -115,6 +115,15 @@ export function useAuth() {
     }
   }
 
+async function syncMe() {
+  const tokenLocal = storage.getToken()
+  if (!tokenLocal) return null
+
+  const { data } = await api.get('/auth/me')
+  storage.setUser(data)
+  usuarioLogado.value = data // ✅ atualiza reativo
+  return data
+}
 
   /**
    * Limpa os dados de autenticação e redireciona para o login
@@ -127,18 +136,20 @@ export function useAuth() {
     window.location.href = '/login'
   }
 
-  return {
-    token,
-    usuarioLogado,
-    isAuthenticated,
-    loading,
-    error,
-    login,
-    logout,
-    solicitarCadastro,
-    esqueciSenha,
-    alterarSenha,
-    temAcesso,
-    permissoes
-  }
+return {
+  token,
+  usuarioLogado,
+  isAuthenticated,
+  loading,
+  error,
+  login,
+  logout,
+  solicitarCadastro,
+  esqueciSenha,
+  alterarSenha,
+  temAcesso,
+  permissoes,
+  syncMe, // ✅ add
+}
+
 }

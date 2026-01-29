@@ -1,7 +1,7 @@
 <template>
   <template v-if="isAuthenticated && usuarioLogado">
     <div class="w-full max-w-[1200px] mx-auto space-y-6 animate-page-in pb-20">
-      
+      <!-- HEADER -->
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-2">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
@@ -15,24 +15,24 @@
             </p>
           </div>
         </div>
-        
-        <Button 
-          variant="primary" 
-          class="!h-11 !rounded-xl !px-6 text-[10px] font-black uppercase tracking-widest shadow-sm" 
+
+        <Button
+          variant="primary"
+          class="!h-11 !rounded-xl !px-6 text-[10px] font-black uppercase tracking-widest shadow-sm"
           @click="abrirModal()"
         >
           <i class="pi pi-user-plus mr-2 text-[10px]"></i> Novo Colaborador
         </Button>
       </div>
 
+      <!-- CARD LISTA -->
       <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        
         <div class="p-6 border-b border-slate-100 bg-slate-50/30">
           <div class="max-w-md relative group">
             <i class="pi pi-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-            <input 
-              v-model="filtro" 
-              placeholder="BUSCAR POR NOME, E-MAIL OU USUÁRIO..." 
+            <input
+              v-model="filtro"
+              placeholder="BUSCAR POR NOME, E-MAIL OU USUÁRIO..."
               class="w-full h-11 pl-11 pr-4 bg-white border border-slate-200 rounded-xl text-[10px] font-bold uppercase focus:ring-4 focus:ring-brand-primary/5 focus:border-brand-primary outline-none transition-all"
             />
           </div>
@@ -40,19 +40,28 @@
 
         <div class="overflow-x-auto">
           <Table :columns="columns" :rows="usuariosFiltrados" :loading="loadingTabela">
-            
             <template #cell-nome="{ row }">
               <div class="flex items-center gap-3 py-1">
-                <div :class="[
-                  'w-9 h-9 rounded-lg flex items-center justify-center text-[10px] font-black border transition-colors',
-                  row.nivel_acesso === 'ADMIN' ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-400 border-slate-100'
-                ]">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center text-[10px] font-black border bg-slate-50 text-slate-500 border-slate-100">
                   {{ row.nome?.charAt(0).toUpperCase() }}
                 </div>
+
                 <div class="flex flex-col">
-                  <span class="font-black text-slate-700 uppercase text-[10px] tracking-tight leading-none">{{ row.nome }}</span>
-                  <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-1">
-                    {{ row.nivel_acesso || 'Nível Pendente' }}
+                  <span class="font-black text-slate-700 uppercase text-[10px] tracking-tight leading-none">
+                    {{ row.nome }}
+                  </span>
+
+                  <span
+                    class="text-[9px] font-bold uppercase tracking-tighter mt-1"
+                    :class="
+                      row.status === 'ATIVO'
+                        ? 'text-emerald-600'
+                        : row.status === 'PENDENTE'
+                          ? 'text-amber-600'
+                          : 'text-rose-600'
+                    "
+                  >
+                    {{ row.status }}
                   </span>
                 </div>
               </div>
@@ -65,33 +74,36 @@
               </div>
             </template>
 
-<template #cell-status="{ row }">
-  <button
-    :disabled="row.id === usuarioLogado?.id"
-    @click="confirmarAlterarStatus(row)"
-    :class="[
-      'px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest border transition-all',
-      row.status === 'ATIVO'
-        ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-600 hover:text-white'
-        : row.status === 'PENDENTE'
-          ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-600 hover:text-white'
-          : 'bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-600 hover:text-white',
-      row.id === usuarioLogado?.id ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'
-    ]"
-  >
-    {{ row.status }}
-  </button>
-</template>
-
+            <template #cell-status="{ row }">
+              <button
+                :disabled="row.id === usuarioLogado?.id"
+                @click="confirmarAlterarStatus(row)"
+                :class="[
+                  'px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest border transition-all',
+                  row.status === 'ATIVO'
+                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-600 hover:text-white'
+                    : row.status === 'PENDENTE'
+                      ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-600 hover:text-white'
+                      : 'bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-600 hover:text-white',
+                  row.id === usuarioLogado?.id ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer',
+                ]"
+              >
+                {{ row.status }}
+              </button>
+            </template>
 
             <template #cell-acoes="{ row }">
               <div class="flex gap-1 justify-end">
-                <button @click="abrirModal(row)" class="w-8 h-8 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-800 transition-colors flex items-center justify-center">
+                <button
+                  @click="abrirModal(row)"
+                  class="w-8 h-8 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-800 transition-colors flex items-center justify-center"
+                >
                   <i class="pi pi-pencil text-[10px]"></i>
                 </button>
-                <button 
-                  v-if="row.id !== usuarioLogado?.id" 
-                  @click="confirmarExclusao(row)" 
+
+                <button
+                  v-if="row.id !== usuarioLogado?.id"
+                  @click="confirmarExclusao(row)"
                   class="w-8 h-8 rounded-lg text-slate-300 hover:bg-rose-50 hover:text-rose-600 transition-colors flex items-center justify-center"
                 >
                   <i class="pi pi-trash text-[10px]"></i>
@@ -103,9 +115,10 @@
       </div>
     </div>
 
+    <!-- MODAL -->
     <div v-if="exibirModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" @click="confirmarFecharModal"></div>
-      
+
       <div class="relative w-full max-w-lg animate-in zoom-in-95 duration-200">
         <div class="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
           <header class="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
@@ -120,32 +133,31 @@
           <form class="p-8 space-y-5" @submit.prevent="confirmarSalvarUsuario">
             <div class="grid grid-cols-2 gap-4">
               <Input v-model="formUsuario.nome" label="Nome Completo" class="col-span-2" />
-              <Input v-model="formUsuario.usuario" label="Usuário Login" />
-              <Input v-model="formUsuario.email" label="E-mail" />
+              <Input v-model="formUsuario.usuario" label="Usuário Login" :forceUpper="false" />
+              <Input v-model="formUsuario.email" label="E-mail" type="email" :forceUpper="false" />
 
-              <div class="col-span-2">
-                <label class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1.5 block ml-1">Nível de Acesso</label>
-                <select v-model="formUsuario.nivel_acesso" class="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-4 text-[11px] font-bold text-slate-700 outline-none focus:border-brand-primary transition-all">
-                  <option value="ADMIN">Admin</option>
-                  <option value="ATIVO">Ativo</option>
-                  <option value="INATIVO">Inativo</option>
-                </select>
-              </div>
-
-              <Input 
-                v-model="formUsuario.senha" 
-                :label="modoEdicao ? 'Nova Senha (deixe vazio para manter)' : 'Senha Inicial'" 
-                type="password" 
-                class="col-span-2" 
+              <Input
+                v-model="formUsuario.senha"
+                :label="modoEdicao ? 'Nova Senha (deixe vazio para manter)' : 'Senha Inicial'"
+                type="password"
+                class="col-span-2"
+                :forceUpper="false"
               />
             </div>
 
             <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
-              <button type="button" @click="confirmarFecharModal" class="text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 px-4">Cancelar</button>
-              <Button 
-                variant="primary" 
-                type="submit" 
-                :loading="loadingSalvar" 
+              <button
+                type="button"
+                @click="confirmarFecharModal"
+                class="text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 px-4"
+              >
+                Cancelar
+              </button>
+
+              <Button
+                variant="primary"
+                type="submit"
+                :loading="loadingSalvar"
                 class="!h-10 !rounded-xl !px-8 text-[10px] font-black uppercase tracking-widest"
               >
                 {{ modoEdicao ? 'Salvar Alterações' : 'Criar Conta' }}
@@ -157,6 +169,7 @@
     </div>
   </template>
 
+  <!-- LOADING -->
   <div v-else class="h-[60vh] flex flex-col items-center justify-center gap-3">
     <div class="w-12 h-12 border-4 border-slate-100 border-t-brand-primary rounded-full animate-spin"></div>
     <span class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Sincronizando...</span>
@@ -170,7 +183,7 @@ import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
 import { UsuariosService } from '@/services/index'
 
-const { usuarioLogado, isAuthenticated, logout } = useAuth()
+const { usuarioLogado, isAuthenticated } = useAuth()
 
 // --- ESTADOS ---
 const usuarios = ref([])
@@ -188,7 +201,12 @@ const columns = [
 ]
 
 const formUsuario = ref({
-  id: null, nome: '', usuario: '', email: '', senha: '', status: 'PENDENTE', nivel_acesso: 'OPERADOR'
+  id: null,
+  nome: '',
+  usuario: '',
+  email: '',
+  senha: '',
+  status: 'PENDENTE',
 })
 
 // --- MÉTODOS ---
@@ -206,17 +224,33 @@ const carregar = async () => {
 
 const abrirModal = (user = null) => {
   modoEdicao.value = !!user
+
   if (user) {
-    formUsuario.value = { ...user, senha: '' }
-    // Garante que o nível não fique vazio
-    if(!formUsuario.value.nivel_acesso) formUsuario.value.nivel_acesso = 'OPERADOR'
+    formUsuario.value = {
+      id: user.id,
+      nome: user.nome || '',
+      usuario: user.usuario || '',
+      email: user.email || '',
+      senha: '',
+      status: user.status || 'PENDENTE',
+    }
   } else {
-formUsuario.value = { id: null, nome: '', usuario: '', email: '', senha: '', status: 'PENDENTE', nivel_acesso: 'OPERADOR' }
+    formUsuario.value = {
+      id: null,
+      nome: '',
+      usuario: '',
+      email: '',
+      senha: '',
+      status: 'PENDENTE',
+    }
   }
+
   exibirModal.value = true
 }
 
-const fecharModal = () => { exibirModal.value = false }
+const fecharModal = () => {
+  exibirModal.value = false
+}
 
 async function confirmarSalvarUsuario() {
   const titulo = modoEdicao.value ? 'Salvar Alterações' : 'Criar Colaborador'
@@ -238,26 +272,18 @@ async function confirmarAlterarStatus(row) {
     ? (statusAtual === 'PENDENTE' ? 'aprovar' : 'ativar')
     : 'inativar'
 
-  const ok = await confirm.show(
-    'Alterar Status',
-    `Deseja ${verbo} o colaborador "${row.nome}"?`,
-  )
+  const ok = await confirm.show('Alterar Status', `Deseja ${verbo} o colaborador "${row.nome}"?`)
   if (!ok) return
 
   await toggleStatus(row)
 }
 
-
 async function confirmarFecharModal() {
-  const ok = await confirm.show(
-    'Cancelar',
-    'Deseja fechar sem salvar as alterações deste formulário?',
-  )
+  const ok = await confirm.show('Cancelar', 'Deseja fechar sem salvar as alterações deste formulário?')
   if (!ok) return
 
   fecharModal()
 }
-
 
 const salvar = async () => {
   loadingSalvar.value = true
@@ -286,13 +312,12 @@ const toggleStatus = async (row) => {
   }
 }
 
-
 const confirmarExclusao = async (user) => {
   const ok = await confirm.show('Excluir', `Remover ${user.nome}?`)
   if (!ok) return
   try {
     await UsuariosService.remover(user.id)
-    usuarios.value = usuarios.value.filter(u => u.id !== user.id)
+    usuarios.value = usuarios.value.filter((u) => u.id !== user.id)
     notify.success('Removido com sucesso')
   } catch (err) {
     notify.error('Erro ao excluir')
@@ -302,19 +327,19 @@ const confirmarExclusao = async (user) => {
 const usuariosFiltrados = computed(() => {
   const t = String(filtro.value || '').toLowerCase().trim()
   if (!t) return usuarios.value
-  return usuarios.value.filter(u =>
-    String(u?.nome || '').toLowerCase().includes(t) ||
-    String(u?.email || '').toLowerCase().includes(t) ||
-    String(u?.usuario || '').toLowerCase().includes(t)
+  return usuarios.value.filter(
+    (u) =>
+      String(u?.nome || '').toLowerCase().includes(t) ||
+      String(u?.email || '').toLowerCase().includes(t) ||
+      String(u?.usuario || '').toLowerCase().includes(t),
   )
 })
-
 
 onMounted(carregar)
 </script>
 
 <style scoped>
 .premium-table :deep(tr:hover) {
-  background-color: rgba(0,0,0,0.01);
+  background-color: rgba(0, 0, 0, 0.01);
 }
 </style>
