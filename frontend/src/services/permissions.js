@@ -4,12 +4,18 @@ export function can(permission) {
   const user = storage.getUser()
   if (!user) return false
 
-  // 1. REGRA DE OURO: Se for Admin, tem acesso a TUDO
+  // DEBUG LOG
+  console.log('DEBUG CAN:', { 
+    usuario: user.usuario, 
+    isAdmin: user.isAdmin, 
+    buscandoPermissao: permission 
+  })
+
   if (user.isAdmin || user.usuario === 'Ana.P') {
     return true
   }
 
-  // 2. Caso contrário, verifica a lista de permissões dele
-  const permissions = user.permissões || []
+  // Corrigi aqui para bater com o padrão de banco de dados (sem til)
+  const permissions = user.permissoes || user.permissões || []
   return permissions.includes(permission)
 }

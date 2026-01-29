@@ -1,9 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router/auto'
 import { routes } from 'vue-router/auto-routes'
-
 import api from '@/services/api'
 import storage from '@/utils/storage'
-
 import { can } from '@/services/permissions'
 import { buildRoutePermMap, getRequiredPerm } from '@/services/navigation-perms'
 
@@ -16,10 +14,6 @@ const router = createRouter({
 
 let syncingMe = null
 
-/**
- * Garante que temos os dados do usuário.
- * Se o usuário for PENDENTE ou não tiver ID, ele SEMPRE vai ao servidor buscar a verdade.
- */
 async function ensureMe() {
   const token = storage.getToken()
   if (!token) return null
@@ -30,16 +24,17 @@ async function ensureMe() {
   // Se já for ATIVO e tiver dados, não precisa de nova chamada
   if (u?.id && status === 'ATIVO') return u
 
-  // Se não tiver syncingMe em curso, cria uma nova request
   if (!syncingMe) {
+    console.log('🔄 [ensureMe] Buscando dados frescos no servidor...')
     syncingMe = api
       .get('/auth/me')
       .then(({ data }) => {
-        storage.setUser(data) // Atualiza o localStorage com os dados frescos (Status, Permissões)
+        console.log('✅ [ensureMe] Dados recebidos:', data)
+        storage.setUser(data)
         return data
       })
-      .catch(() => {
-        // Em caso de erro (token expirado, etc), remove o token
+      .catch((err) => {
+        console.error('❌ [ensureMe] Falha na sincronização:', err)
         storage.removeToken()
         storage.removeUser()
         return null
@@ -48,54 +43,72 @@ async function ensureMe() {
         syncingMe = null
       })
   }
-
   return syncingMe
 }
 
 router.beforeEach(async (to) => {
   const token = storage.getToken()
+  
+  // LOG 1: Entrada na rota
+  console.group(`🧭 Navegação: ${to.path}`)
+  console.log('Meta da rota:', to.meta)
 
-  // 1) Tratamento de Rotas Públicas (ex: /login)
+  // 1) Rotas Públicas
   if (to.meta?.public) {
-    if (token) {
+    console.log('🔓 Rota pública detectada.')
+    if (token && to.path === '/login') {
       await ensureMe()
       const user = storage.getUser()
       const status = String(user?.status || '').toUpperCase()
-
-      if (to.path === '/login') {
-        return status === 'ATIVO' ? { path: '/' } : { path: '/pendente' }
-      }
+      console.groupEnd()
+      return status === 'ATIVO' ? { path: '/' } : { path: '/pendente' }
     }
+    console.groupEnd()
     return true
   }
 
-  // 2) Se não tem token e a rota não é pública, vai para o Login
-  if (!token) return { path: '/login' }
+  // 2) Sem Token
+  if (!token) {
+    console.warn('🚫 Sem token! Redirecionando para Login.')
+    console.groupEnd()
+    return { path: '/login' }
+  }
 
-  // 3) Sincroniza dados (Fundamental para quem acabou de ser ativado)
+  // 3) Sincronização
   await ensureMe()
   const user = storage.getUser()
   const status = String(user?.status || '').toUpperCase()
+  
+  console.log(`👤 Usuário: ${user?.usuario} | Status: ${status}`)
 
-  // 4) Prioridade: ATIVO não pode ficar na tela de pendente
-  // Se o usuário é ATIVO e está tentando ir para /pendente, manda para a Home
-  if (status === 'ATIVO' && to.path === '/pendente') {
-    return { path: '/' }
-  }
-
-  // 5) Bloqueio: PENDENTE ou INATIVO são obrigados a ficar na tela de pendente
-  if (status === 'PENDENTE' || status === 'INATIVO') {
-    if (to.path === '/pendente') return true
+  // 4) Bloqueio por Status
+  if (status !== 'ATIVO') {
+    if (to.path === '/pendente') {
+      console.groupEnd()
+      return true
+    }
+    console.warn(`⛔ Status ${status} não permitido aqui. Indo para /pendente`)
+    console.groupEnd()
     return { path: '/pendente' }
   }
 
-  // 6) Verificação de Permissões (Somente para usuários ATIVOS)
+  // 5) Verificação de Permissões
   const required = getRequiredPerm(to, routePermMap)
-  if (required && !can(required)) {
-    // Se não tem permissão, manda para a Home em vez de criar um possível loop em /producao
-    return { path: '/' }
+  if (required) {
+    console.log(`🔑 Permissão exigida: "${required}"`)
+    const temPermissao = can(required)
+    
+    if (!temPermissao) {
+      console.error('❌ Acesso negado pelo "can()". Redirecionando para Home.')
+      console.groupEnd()
+      return { path: '/' }
+    }
+    console.log('✅ Acesso autorizado.')
+  } else {
+    console.log('ℹ️ Rota sem restrição de permissão específica.')
   }
 
+  console.groupEnd()
   return true
 })
 
