@@ -121,7 +121,6 @@
                       variant="secondary"
                       size="sm"
                       class="!h-8 !rounded-xl !px-3 text-[10px] font-black uppercase tracking-widest"
-                      :loading="previewingId === a.id"
                       @click="visualizar(a)"
                     >
                       Visualizar
@@ -138,43 +137,6 @@
                       Excluir
                     </Button>
                   </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Preview interno -->
-            <div v-if="previewOpen" class="rounded-2xl border border-slate-200 overflow-hidden">
-              <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                <div class="text-[10px] font-black uppercase tracking-widest text-slate-600 truncate">
-                  {{ previewNome }}
-                </div>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  class="!h-8 !rounded-xl !px-3 text-[10px] font-black uppercase tracking-widest"
-                  @click="fecharPreview"
-                >
-                  Fechar
-                </Button>
-              </div>
-
-              <div class="p-4 bg-white">
-                <img
-                  v-if="previewTipo === 'image'"
-                  :src="previewUrl"
-                  class="w-full max-h-[55vh] object-contain rounded-xl"
-                  alt="Preview"
-                />
-
-                <iframe
-                  v-else-if="previewTipo === 'pdf'"
-                  :src="previewUrl"
-                  class="w-full h-[55vh] rounded-xl border border-slate-200"
-                />
-
-                <div v-else class="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Pré-visualização não disponível.
                 </div>
               </div>
             </div>
@@ -203,8 +165,10 @@
   </Teleport>
 </template>
 
+
 <script setup>
 import { ref, watch, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
 import { ArquivosService } from '@/services/arquivos.service'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
@@ -219,6 +183,8 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'updated'])
 
+const router = useRouter()
+
 const arquivos = ref([])
 const loading = ref(false)
 const uploading = ref(false)
@@ -229,32 +195,10 @@ const fileRef = ref(null)
 const fileToUpload = ref(null)
 const arquivoSelecionadoNome = ref('')
 
-// preview interno
-const previewOpen = ref(false)
-const previewUrl = ref('')
-const previewTipo = ref('') // 'image' | 'pdf' | 'other'
-const previewNome = ref('')
-const previewingId = ref(null)
-
-function limparPreviewUrl() {
-  if (previewUrl.value && previewUrl.value.startsWith('blob:')) {
-    try { URL.revokeObjectURL(previewUrl.value) } catch {}
-  }
-  previewUrl.value = ''
-}
-
-function fecharPreview() {
-  previewOpen.value = false
-  previewTipo.value = ''
-  previewNome.value = ''
-  previewingId.value = null
-  limparPreviewUrl()
-}
-
 function fechar() {
-  fecharPreview()
   emit('close')
 }
+
 
 onBeforeUnmount(() => {
   fecharPreview()
@@ -312,33 +256,12 @@ async function enviar() {
   }
 }
 
-async function visualizar(arq) {
+function visualizar(arq) {
   if (!arq?.id) return
-  previewingId.value = arq.id
-  erro.value = ''
-  try {
-    const res = await ArquivosService.baixarBlob(arq.id)
-    const type = arq?.mime_type || res?.headers?.['content-type'] || 'application/octet-stream'
-    const blob = new Blob([res.data], { type })
-
-    limparPreviewUrl()
-    const url = URL.createObjectURL(blob)
-
-    previewUrl.value = url
-    previewNome.value = arq.nome || arq.filename || `ARQUIVO #${arq.id}`
-
-    const low = String(type).toLowerCase()
-    if (low.startsWith('image/')) previewTipo.value = 'image'
-    else if (low.includes('pdf')) previewTipo.value = 'pdf'
-    else previewTipo.value = 'other'
-
-    previewOpen.value = true
-  } catch (e) {
-    erro.value = e?.response?.data?.message || 'Erro ao visualizar.'
-  } finally {
-    previewingId.value = null
-  }
+  fechar() // fecha modal e limpa preview
+  router.push(`/arquivos/viewer/${arq.id}`)
 }
+
 
 async function remover(arq) {
   const ok = await confirm.show('Excluir Arquivo', 'Deseja excluir este arquivo?')
@@ -359,13 +282,10 @@ async function remover(arq) {
   }
 }
 
-watch(
-  () => props.open,
-  (v) => {
-    if (v) carregar()
-    else fecharPreview()
-  },
-)
+watch(() => props.open, (v) => {
+  if (v) carregar()
+})
+
 </script>
 
 <style scoped>

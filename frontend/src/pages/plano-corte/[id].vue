@@ -308,15 +308,13 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { maskMoneyBR } from '@/utils/masks'
-import { useConstantes } from '@/composables/useConstantes'
 import { PlanoCorteService, FornecedorService, ProducaoService } from '@/services/index'
-import { PIPELINE_PLANO_CORTE } from '@/constantes'
+import { PIPELINE_PLANO_CORTE, UNIDADES } from '@/constantes'
 import { confirm } from '@/services/confirm'
 
 
 const router = useRouter()
 const route = useRoute()
-const constantes = useConstantes()
 
 // ID & ESTADO
 const rawId = computed(() => String(route.params.id || 'novo'))
@@ -329,16 +327,19 @@ const encaminhando = ref(false)
 
 // OPÇÕES (CUIDADO: CERTIFIQUE-SE QUE constantes ESTÁ CARREGADO)
 const statusPlanoOptions = computed(() =>
-  constantes.opcoes.value
-    .filter(o => o.metadata?.categoria === 'STATUS_PLANO_CORTE')
-    .map(o => ({ label: o.label, value: o.value })) // value = KEY (EM_ABERTO etc.)
+  (PIPELINE_PLANO_CORTE || []).map(s => ({
+    label: s.label,
+    value: s.key,
+  }))
 )
 
+
 const unidadesOptions = computed(() =>
-  constantes.opcoes.value
-    .filter(o => o.metadata?.categoria === 'UNIDADES')
-    .map(o => ({ label: o.label, value: o.value }))
+  (UNIDADES || []).map(u => ({ label: u.label, value: u.key }))
 )
+
+
+
 
 
 // CABEÇALHO
@@ -577,11 +578,12 @@ async function salvar() {
   salvando.value = true
   try {
 const payload = {
-  fornecedor_id: fornecedorSelecionado.value,
+  fornecedor_id: Number(fornecedorSelecionado.value),
   data_venda: dataVenda.value,
   produtos: itens.value,
   ...(isEdit.value ? {} : { status: statusPlano.value }),
 }
+
 
     await PlanoCorteService.salvar(isEdit.value ? planoId.value : null, payload)
     router.push('/plano-corte')
@@ -593,11 +595,6 @@ onMounted(async () => {
   try {
     const { data: fData } = await FornecedorService.listar()
     fornecedor.value = fData || []
-
-await Promise.all([
-  constantes.carregarCategoria('STATUS_PLANO_CORTE'),
-  constantes.carregarCategoria('UNIDADES'),
-])
 
 
     if (isEdit.value) {
