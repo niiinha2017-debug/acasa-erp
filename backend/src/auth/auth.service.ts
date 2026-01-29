@@ -38,15 +38,18 @@ constructor(
       throw new UnauthorizedException('Usuário ou senha inválidos');
     }
 
-    // Validação da senha
-    const senhaOk = await bcrypt.compare(senha, registro.senha);
-    if (!senhaOk) {
-      throw new UnauthorizedException('Usuário ou senha inválidos');
-    }
+// DENTRO DO MÉTODO login NO auth.service.ts
+const senhaOk = await bcrypt.compare(senha, registro.senha);
+if (!senhaOk) {
+  throw new UnauthorizedException('Usuário ou senha inválidos');
+}
 
-    if (registro.status !== 'ATIVO') {
-      throw new UnauthorizedException('Aguarde a aprovação do administrador')
-    }
+// ALTERE ESTE BLOCO:
+if (registro.status === 'INATIVO') {
+  throw new UnauthorizedException('Sua conta está desativada. Entre em contato com o suporte.');
+}
+// Remova a trava do "PENDENTE", deixe o Vue Router cuidar disso!
+
 
     // Busca as permissões na tabela pivô através do serviço dedicado
     let permissoes: string[] = [];

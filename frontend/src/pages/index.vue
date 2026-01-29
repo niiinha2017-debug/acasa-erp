@@ -27,10 +27,7 @@
 
         <div class="flex items-center justify-end gap-2 pt-2">
           <Button variant="secondary" label="Recarregar" @click="reload" />
-<RouterLink to="/">
-  <Button label="Entrar" />
-</RouterLink>
-
+          <Button label="Entrar" @click="verificarAcesso" :loading="loading" />
         </div>
       </div>
     </div>
@@ -38,10 +35,37 @@
 </template>
 
 <script setup>
-definePage({ meta: { public: false, layout: 'auth' } })
+import { useAuth } from '@/composables/useAuth' 
+import { useRouter } from 'vue-router'
+
+// Adicionei o definePage para garantir que a rota seja reconhecida corretamente
+definePage({ 
+  meta: { 
+    public: true, // Permitir que o router processe essa página mesmo sem o status ATIVO
+    layout: 'auth' 
+  } 
+})
+
+const { syncMe, loading } = useAuth()
+const router = useRouter()
+
+async function verificarAcesso() {
+  try {
+    const user = await syncMe() // Vai no servidor e atualiza o estado reativo global
+    
+    if (user && user.status === 'ATIVO') {
+      // Se agora é ativo, o router.beforeEach vai permitir a entrada na Home
+      router.push('/') 
+    } else {
+      alert('Seu cadastro ainda está sob análise ou sua conta está inativa.')
+    }
+  } catch (e) {
+    console.error('Erro ao sincronizar', e)
+    alert('Não foi possível verificar seu status. Tente novamente.')
+  }
+}
 
 function reload() {
   window.location.reload()
 }
 </script>
-
