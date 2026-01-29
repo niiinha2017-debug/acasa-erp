@@ -65,22 +65,24 @@
               </div>
             </template>
 
-            <template #cell-status="{ row }">
-              <button
-                :disabled="row.id === usuarioLogado?.id"
-                @click="confirmarAlterarStatus(row)"
+<template #cell-status="{ row }">
+  <button
+    :disabled="row.id === usuarioLogado?.id"
+    @click="confirmarAlterarStatus(row)"
+    :class="[
+      'px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest border transition-all',
+      row.status === 'ATIVO'
+        ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-600 hover:text-white'
+        : row.status === 'PENDENTE'
+          ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-600 hover:text-white'
+          : 'bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-600 hover:text-white',
+      row.id === usuarioLogado?.id ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'
+    ]"
+  >
+    {{ row.status }}
+  </button>
+</template>
 
-                :class="[
-                  'px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest border transition-all',
-                  row.status === 'ATIVO' 
-                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-600 hover:text-white' 
-                    : 'bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-600 hover:text-white',
-                  row.id === usuarioLogado?.id ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'
-                ]"
-              >
-                {{ row.status }}
-              </button>
-            </template>
 
             <template #cell-acoes="{ row }">
               <div class="flex gap-1 justify-end">
@@ -187,7 +189,7 @@ const columns = [
 ]
 
 const formUsuario = ref({
-  id: null, nome: '', usuario: '', email: '', senha: '', status: 'ATIVO', nivel_acesso: 'OPERADOR'
+  id: null, nome: '', usuario: '', email: '', senha: '', status: 'PENDENTE', nivel_acesso: 'OPERADOR'
 })
 
 // --- MÉTODOS ---
@@ -210,7 +212,7 @@ const abrirModal = (user = null) => {
     // Garante que o nível não fique vazio
     if(!formUsuario.value.nivel_acesso) formUsuario.value.nivel_acesso = 'OPERADOR'
   } else {
-    formUsuario.value = { id: null, nome: '', usuario: '', email: '', senha: '', status: 'ATIVO', nivel_acesso: 'OPERADOR' }
+formUsuario.value = { id: null, nome: '', usuario: '', email: '', senha: '', status: 'PENDENTE', nivel_acesso: 'OPERADOR' }
   }
   exibirModal.value = true
 }
@@ -230,15 +232,22 @@ async function confirmarSalvarUsuario() {
 }
 
 async function confirmarAlterarStatus(row) {
-  const novoStatus = row.status === 'ATIVO' ? 'INATIVO' : 'ATIVO'
+  const statusAtual = String(row.status || '').toUpperCase()
+  const novoStatus = statusAtual === 'ATIVO' ? 'INATIVO' : 'ATIVO'
+
+  const verbo = novoStatus === 'ATIVO'
+    ? (statusAtual === 'PENDENTE' ? 'aprovar' : 'ativar')
+    : 'inativar'
+
   const ok = await confirm.show(
     'Alterar Status',
-    `Deseja ${novoStatus === 'ATIVO' ? 'ativar' : 'inativar'} o colaborador "${row.nome}"?`,
+    `Deseja ${verbo} o colaborador "${row.nome}"?`,
   )
   if (!ok) return
 
   await toggleStatus(row)
 }
+
 
 async function confirmarFecharModal() {
   const ok = await confirm.show(
@@ -266,7 +275,9 @@ const salvar = async () => {
 }
 
 const toggleStatus = async (row) => {
-  const novoStatus = row.status === 'ATIVO' ? 'INATIVO' : 'ATIVO'
+  const statusAtual = String(row.status || '').toUpperCase()
+  const novoStatus = statusAtual === 'ATIVO' ? 'INATIVO' : 'ATIVO'
+
   try {
     await UsuariosService.atualizarStatus(row.id, novoStatus)
     row.status = novoStatus
@@ -275,6 +286,7 @@ const toggleStatus = async (row) => {
     notify.error('Erro ao alterar status')
   }
 }
+
 
 const confirmarExclusao = async (user) => {
   const ok = await confirm.show('Excluir', `Remover ${user.nome}?`)
@@ -289,9 +301,15 @@ const confirmarExclusao = async (user) => {
 }
 
 const usuariosFiltrados = computed(() => {
-  const t = filtro.value.toLowerCase()
-  return usuarios.value.filter(u => u.nome?.toLowerCase().includes(t) || u.email?.toLowerCase().includes(t))
+  const t = String(filtro.value || '').toLowerCase().trim()
+  if (!t) return usuarios.value
+  return usuarios.value.filter(u =>
+    String(u?.nome || '').toLowerCase().includes(t) ||
+    String(u?.email || '').toLowerCase().includes(t) ||
+    String(u?.usuario || '').toLowerCase().includes(t)
+  )
 })
+
 
 onMounted(carregar)
 </script>

@@ -27,9 +27,10 @@
 
         <div class="flex items-center justify-end gap-2 pt-2">
           <Button variant="secondary" label="Recarregar" @click="reload" />
-          <RouterLink to="/login">
-            <Button label="Entrar" />
-          </RouterLink>
+<RouterLink to="/">
+  <Button label="Entrar" />
+</RouterLink>
+
         </div>
       </div>
     </div>
@@ -37,11 +38,10 @@
 </template>
 
 <script setup>
-definePage({
-  meta: { public: true },
-})
+definePage({ meta: { public: false } })
 
 function reload() {
   window.location.reload()
 }
 </script>
+

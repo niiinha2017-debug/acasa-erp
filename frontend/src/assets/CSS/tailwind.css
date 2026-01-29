@@ -113,3 +113,7 @@ main > div {
   @apply fixed inset-0 bg-slate-900/60 backdrop-blur-md;
   z-index: var(--z-index-modal);
 }
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}

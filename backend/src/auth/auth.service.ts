@@ -45,7 +45,7 @@ constructor(
     }
 
     if (registro.status !== 'ATIVO') {
-      throw new UnauthorizedException('Este usuário está inativo');
+      throw new UnauthorizedException('Aguarde a aprovação do administrador')
     }
 
     // Busca as permissões na tabela pivô através do serviço dedicado
@@ -104,7 +104,7 @@ constructor(
           usuario: dto.usuario.toLowerCase().trim(),
           email: dto.email.toLowerCase().trim(),
           senha: senhaHash,
-          status: dto.status || 'ATIVO',
+          status: 'PENDENTE',
         },
       });
 

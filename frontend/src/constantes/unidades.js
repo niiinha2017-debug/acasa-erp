@@ -16,6 +16,6 @@ export const UNIDADES = [
 
   { key: 'CX', label: 'Caixa (cx)' },
   { key: 'PCT', label: 'Pacote (pct)' },
-  { key: 'ROLO', label: 'Rolo' },
-  { key: 'CHAPA', label: 'Chapa' },
+  { key: 'ROLO', label: 'Rolo (rl)' },
+  { key: 'CHAPA', label: 'Chapa (cp)' },
 ]

@@ -205,6 +205,13 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
+    '/plano-corte/itens/': RouteRecordInfo<
+      '/plano-corte/itens/',
+      '/plano-corte/itens',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/producao/': RouteRecordInfo<
       '/producao/',
       '/producao',
@@ -420,6 +427,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/plano-corte/[id].vue': {
       routes:
         | '/plano-corte/[id]'
+      views:
+        | never
+    }
+    'src/pages/plano-corte/itens/index.vue': {
+      routes:
+        | '/plano-corte/itens/'
       views:
         | never
     }

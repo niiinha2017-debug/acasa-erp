@@ -32,7 +32,7 @@ export class PermissoesController {
   }
 
   @Put('usuarios/:id/permissoes')
-  @Permissoes('permissoes.editar')
+  @Permissoes('permissoes.gerenciar')
   definirPermissoesDoUsuario(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: DefinirPermissoesUsuarioDto,

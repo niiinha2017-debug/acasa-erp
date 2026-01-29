@@ -1,6 +1,4 @@
 // src/constantes/index.js
-
-export { PERMISSOES_BASE } from './permissoes'
 export { PIPELINE_CLIENTE } from './pipeline-cliente'
 export { FINANCEIRO_CATEGORIAS } from './financeiro'
 export { FORMAS_PAGAMENTO } from './formas-pagamento'

@@ -12,35 +12,40 @@ const router = createRouter({
   routes,
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const token = storage.getToken()
-  const isPublic = to.meta?.public === true
-  const isLogin = to.path === '/login'
+  const user = storage.getUser()
+  const status = String(user?.status || '').toUpperCase()
 
-  const HOME_PUBLICA = '/'
-  const HOME_SISTEMA = '/producao'
-  const PERM_ADMIN = 'ADMIN'
-
-  // 1) SEM TOKEN: só entra em public/login
-  if (!token && !isPublic && !isLogin) return { path: '/login' }
-
-  // 2) COM TOKEN: não deixa ficar em / ou /login
-  if (token && (to.path === HOME_PUBLICA || isLogin)) return { path: HOME_SISTEMA }
-
-  // 3) COM TOKEN: valida permissão (só se rota não for public)
-  if (token && !isPublic) {
-    // admin passa direto
-    if (can(PERM_ADMIN)) return true
-
-    const requiredPerm = getRequiredPerm(to.path, routePermMap)
-
-    // se precisar perm e não tiver → joga pra página pública (pendente)
-    if (requiredPerm && !can(requiredPerm)) return { path: HOME_PUBLICA }
+  // 1) Rotas públicas
+  if (to.meta?.public) {
+    // se já estiver logado:
+    if (token) {
+      // login: redireciona conforme status
+      if (to.path === '/login') {
+        return status === 'ATIVO' ? { path: '/' } : { path: '/pendente' }
+      }
+    }
+    return true
   }
+
+  // 2) Precisa estar logado
+  if (!token) return { path: '/login' }
+
+  // 3) Status: pendente/inativo fica preso no /pendente
+  if (status !== 'ATIVO') {
+    return to.path === '/pendente' ? true : { path: '/pendente' }
+  }
+
+  // 4) Se ATIVO e tentar /pendente, manda pro index
+  if (to.path === '/pendente') return { path: '/' }
+
+  // 5) Permissões por rota (só para ATIVO)
+  const required = getRequiredPerm(to, routePermMap) // do seu navigation-perms
+  if (required && !can(required)) return { path: '/' }
 
   return true
 })
-
 
 
 export default router

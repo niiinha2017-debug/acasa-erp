@@ -7,7 +7,7 @@ export class PermissoesService {
 
   async listarPermissoes() {
     return this.prisma.permissoes.findMany({
-      orderBy: { chave: 'asc' },
+      orderBy: { id: 'asc' },
       select: { id: true, chave: true, descricao: true },
     })
   }

@@ -25,6 +25,10 @@ async function main() {
   })
 
 const perms = [
+
+  { chave: 'ADMIN', descricao: 'Acesso total' },
+
+  
   // Configurações
   { chave: 'usuarios.ver', descricao: 'Visualizar usuários' },
   { chave: 'usuarios.criar', descricao: 'Criar usuários' },
