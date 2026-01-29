@@ -191,6 +191,13 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
+    '/pendente': RouteRecordInfo<
+      '/pendente',
+      '/pendente',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/plano-corte/': RouteRecordInfo<
       '/plano-corte/',
       '/plano-corte',
@@ -415,6 +422,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/orcamentos/cliente/[id].vue': {
       routes:
         | '/orcamentos/cliente/[id]'
+      views:
+        | never
+    }
+    'src/pages/pendente.vue': {
+      routes:
+        | '/pendente'
       views:
         | never
     }
