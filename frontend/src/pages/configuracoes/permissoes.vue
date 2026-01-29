@@ -173,23 +173,27 @@ import { useAuth } from '@/services/useauth'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
 
-const router = useRouter()
-const { temAcesso } = useAuth()
+// 1. DEFINE PAGE (Deve ficar no topo ou antes das funções)
+definePage({
+  meta: { 
+    perm: 'permissoes.ver' 
+  }
+})
 
-// estados
+const router = useRouter()
+const { temAcesso, usuarioLogado } = useAuth()
+
+// Estados
 const usuarios = ref([])
 const filtroUsuarios = ref('')
 const usuarioSelecionado = ref(null)
 const permissoesAtivas = ref([])
-
 const loadingSalvar = ref(false)
 const loadingDados = ref(false)
 const loadingPermissoes = ref(false)
+const catalogoPermissoes = ref([])
 
-// catálogo do backend
-const catalogoPermissoes = ref([]) // [{id,chave,descricao}]
-
-// chave -> id (derivado do catálogo)
+// Chave -> ID
 const mapaChaveParaId = computed(() => {
   const acc = {}
   for (const p of catalogoPermissoes.value) {
@@ -198,44 +202,37 @@ const mapaChaveParaId = computed(() => {
   return acc
 })
 
-// agrupa permissões por módulo (prefixo da chave)
+// Agrupa permissões por módulo
 const MAPA_PERMISSOES = computed(() => {
   const grupos = {}
-
   for (const p of catalogoPermissoes.value) {
     const chave = String(p?.chave || '')
     if (!chave) continue
-
     const modulo = chave.includes('.') ? chave.split('.')[0] : 'geral'
     if (!grupos[modulo]) grupos[modulo] = []
-
     grupos[modulo].push({
       id: p.id,
       chave: p.chave,
       nome: p.descricao || p.chave,
     })
   }
-
   for (const m of Object.keys(grupos)) {
     grupos[m].sort((a, b) => String(a.chave).localeCompare(String(b.chave)))
   }
-
   return grupos
 })
 
-// computed: filtro usuários
+// Filtro usuários
 const usuariosFiltrados = computed(() => {
   const termo = String(filtroUsuarios.value || '').toLowerCase().trim()
   if (!termo) return usuarios.value
-
   return usuarios.value.filter(u =>
     String(u?.nome || '').toLowerCase().includes(termo) ||
-    String(u?.usuario || '').toLowerCase().includes(termo) ||
-    String(u?.email || '').toLowerCase().includes(termo)
+    String(u?.usuario || '').toLowerCase().includes(termo)
   )
 })
 
-// api: carregar catálogo
+// Funções de API
 const carregarCatalogo = async () => {
   try {
     const { data } = await PermissoesService.listar()
@@ -245,7 +242,6 @@ const carregarCatalogo = async () => {
   }
 }
 
-// api: carregar usuários
 const carregarUsuarios = async () => {
   loadingDados.value = true
   try {
@@ -256,29 +252,31 @@ const carregarUsuarios = async () => {
   }
 }
 
+// Normaliza o que vem do banco
 const normalizarPerms = (data) => {
   if (!Array.isArray(data)) return []
-  if (typeof data[0] === 'string') return data
-  return data.map(x => x?.chave).filter(Boolean)
+  // Se vier um array de objetos [{chave: '...'}], extrai só a string da chave
+  if (data.length > 0 && typeof data[0] === 'object') {
+    return data.map(x => x.chave || x.permission?.chave).filter(Boolean)
+  }
+  return data
 }
 
-const { data } = await PermissoesService.listarDoUsuario(u.id)
-permissoesAtivas.value = normalizarPerms(data)
-
-
-// selecionar usuário e buscar permissões atuais (chaves)
+// Selecionar usuário
 const selecionarUsuario = async (u) => {
   usuarioSelecionado.value = u
   loadingPermissoes.value = true
   try {
     const { data } = await PermissoesService.listarDoUsuario(u.id)
-    permissoesAtivas.value = Array.isArray(data) ? data : []
+    permissoesAtivas.value = normalizarPerms(data)
+  } catch (e) {
+    notify.error('Erro ao carregar permissões do usuário')
   } finally {
     loadingPermissoes.value = false
   }
 }
 
-// helpers
+// Helpers de tela
 const temPermissao = (chave) => permissoesAtivas.value.includes(chave)
 
 const togglePermissao = (chave) => {
@@ -290,57 +288,45 @@ const togglePermissao = (chave) => {
 const marcarTudoModulo = (modulo, marcar) => {
   const perms = MAPA_PERMISSOES.value?.[modulo] || []
   const chavesModulo = perms.map(p => p.chave)
-
   const set = new Set(permissoesAtivas.value)
   chavesModulo.forEach(k => (marcar ? set.add(k) : set.delete(k)))
   permissoesAtivas.value = Array.from(set)
 }
 
-// confirmações
+// Ações
 async function confirmarSalvarPermissoes() {
   if (!usuarioSelecionado.value?.id) return
-
-  const ok = await confirm.show(
-    'Salvar Permissões',
-    `Deseja salvar as permissões do usuário "${usuarioSelecionado.value.nome}"?`,
-  )
-  if (!ok) return
-
-  await salvar()
+  const ok = await confirm.show('Salvar', `Deseja salvar as permissões de ${usuarioSelecionado.value.nome}?`)
+  if (ok) await salvar()
 }
 
 async function confirmarMarcarTudoModulo(modulo, marcar) {
-  const ok = await confirm.show(
-    marcar ? 'Marcar Permissões' : 'Limpar Permissões',
-    marcar
-      ? `Deseja marcar todas as permissões do módulo "${modulo}"?`
-      : `Deseja limpar todas as permissões do módulo "${modulo}"?`,
-  )
-  if (!ok) return
-
-  marcarTudoModulo(modulo, marcar)
+  const ok = await confirm.show(marcar ? 'Marcar' : 'Limpar', `Deseja alterar o módulo ${modulo}?`)
+  if (ok) marcarTudoModulo(modulo, marcar)
 }
 
-// salvar (envia IDs)
 const salvar = async () => {
   loadingSalvar.value = true
   try {
     const ids = permissoesAtivas.value
       .map(chave => mapaChaveParaId.value[chave])
       .filter(Boolean)
-
     await PermissoesService.definirParaUsuario(usuarioSelecionado.value.id, ids)
-    notify.success('Permissões atualizadas com sucesso!')
+    notify.success('Permissões atualizadas!')
   } catch (e) {
-    notify.error('Erro ao salvar permissões')
+    notify.error('Erro ao salvar')
   } finally {
     loadingSalvar.value = false
   }
 }
 
 onMounted(async () => {
-  if (!temAcesso('permissoes.ver')) {
-    notify.error('Você não tem acesso a esta tela.')
+  const user = usuarioLogado.value
+  const ehAdmin = user?.usuario === 'Ana.P' || user?.isAdmin
+
+  // Se não for admin e não tiver a permissão no token, expulsa
+  if (!ehAdmin && !temAcesso('permissoes.ver')) {
+    notify.error('Acesso negado.')
     router.push('/')
     return
   }

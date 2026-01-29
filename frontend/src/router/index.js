@@ -2,10 +2,6 @@ import { createRouter, createWebHistory } from 'vue-router/auto'
 import { routes } from 'vue-router/auto-routes'
 import api from '@/services/api'
 import storage from '@/utils/storage'
-import { can } from '@/services/permissions'
-import { buildRoutePermMap, getRequiredPerm } from '@/services/navigation-perms'
-
-const routePermMap = buildRoutePermMap()
 
 const router = createRouter({
   history: createWebHistory('/'),
@@ -19,96 +15,49 @@ async function ensureMe() {
   if (!token) return null
 
   const u = storage.getUser()
-  const status = String(u?.status || '').toUpperCase()
-
-  // Se já for ATIVO e tiver dados, não precisa de nova chamada
-  if (u?.id && status === 'ATIVO') return u
+  if (u?.id && u?.status === 'ATIVO') return u
 
   if (!syncingMe) {
-    console.log('🔄 [ensureMe] Buscando dados frescos no servidor...')
-    syncingMe = api
-      .get('/auth/me')
+    syncingMe = api.get('/auth/me')
       .then(({ data }) => {
-        console.log('✅ [ensureMe] Dados recebidos:', data)
         storage.setUser(data)
         return data
       })
-      .catch((err) => {
-        console.error('❌ [ensureMe] Falha na sincronização:', err)
+      .catch(() => {
         storage.removeToken()
         storage.removeUser()
         return null
       })
-      .finally(() => {
-        syncingMe = null
-      })
+      .finally(() => { syncingMe = null })
   }
   return syncingMe
 }
 
 router.beforeEach(async (to) => {
   const token = storage.getToken()
-  
-  // LOG 1: Entrada na rota
-  console.group(`🧭 Navegação: ${to.path}`)
-  console.log('Meta da rota:', to.meta)
 
-  // 1) Rotas Públicas
-  if (to.meta?.public) {
-    console.log('🔓 Rota pública detectada.')
-    if (token && to.path === '/login') {
-      await ensureMe()
-      const user = storage.getUser()
-      const status = String(user?.status || '').toUpperCase()
-      console.groupEnd()
-      return status === 'ATIVO' ? { path: '/' } : { path: '/pendente' }
-    }
-    console.groupEnd()
-    return true
-  }
+  // 1. Rota Pública? Deixa passar.
+  if (to.meta?.public) return true
 
-  // 2) Sem Token
-  if (!token) {
-    console.warn('🚫 Sem token! Redirecionando para Login.')
-    console.groupEnd()
-    return { path: '/login' }
-  }
+  // 2. Não tá logado? Login.
+  if (!token) return { path: '/login' }
 
-  // 3) Sincronização
+  // 3. Busca a verdade no servidor (Sincroniza Status/Permissões)
   await ensureMe()
   const user = storage.getUser()
   const status = String(user?.status || '').toUpperCase()
-  
-  console.log(`👤 Usuário: ${user?.usuario} | Status: ${status}`)
 
-  // 4) Bloqueio por Status
+  // 4. Se for ATIVO e tentar ir pro pendente, volta pra home
+  if (status === 'ATIVO' && to.path === '/pendente') return { path: '/' }
+
+  // 5. Se for PENDENTE, só vê a tela de pendente
   if (status !== 'ATIVO') {
-    if (to.path === '/pendente') {
-      console.groupEnd()
-      return true
-    }
-    console.warn(`⛔ Status ${status} não permitido aqui. Indo para /pendente`)
-    console.groupEnd()
+    if (to.path === '/pendente') return true
     return { path: '/pendente' }
   }
 
-  // 5) Verificação de Permissões
-  const required = getRequiredPerm(to, routePermMap)
-  if (required) {
-    console.log(`🔑 Permissão exigida: "${required}"`)
-    const temPermissao = can(required)
-    
-    if (!temPermissao) {
-      console.error('❌ Acesso negado pelo "can()". Redirecionando para Home.')
-      console.groupEnd()
-      return { path: '/' }
-    }
-    console.log('✅ Acesso autorizado.')
-  } else {
-    console.log('ℹ️ Rota sem restrição de permissão específica.')
-  }
-
-  console.groupEnd()
+  // PRONTO: Sem mapa, sem "requiredPerm", sem complicação. 
+  // O acesso aos dados quem vai barrar é o Backend se o token não tiver a permissão.
   return true
 })
 
