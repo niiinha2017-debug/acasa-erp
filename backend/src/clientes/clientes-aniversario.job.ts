@@ -19,21 +19,25 @@ export class ClientesAniversarioJob {
     const dia = hoje.getDate()
     const mes = hoje.getMonth() + 1
 
-    const clientes = await this.prisma.cliente.findMany({
-      where: {
-        status: 'ATIVO',
-        enviar_aniversario_email: true,
-        email: { not: null },
-        data_nascimento: { not: null },
-      },
-      select: {
-        id: true,
-        nome_completo: true,
-        razao_social: true,
-        email: true,
-        data_nascimento: true,
-      },
-    })
+const clientes = await this.prisma.cliente.findMany({
+  where: {
+    status: 'ATIVO',
+    enviar_aniversario_email: true,
+    email: { not: null },
+
+    // ✅ em vez de data_nascimento: { not: null }
+    NOT: { data_nascimento: null },
+  },
+  select: {
+    id: true,
+    nome_completo: true,
+    razao_social: true,
+    email: true,
+    data_nascimento: true,
+  },
+})
+
+
 
     const aniversariantes = clientes.filter((c) => {
       const d = new Date(c.data_nascimento as any)

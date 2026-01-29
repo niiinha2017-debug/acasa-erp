@@ -81,7 +81,7 @@
         <template #cell-data="{ row }">
           <div class="flex flex-col">
             <span class="text-xs font-bold text-slate-700">
-              {{ row.data ? new Date(row.data).toLocaleDateString('pt-BR') : '-' }}
+              {{ row.data_venda ? new Date(row.data_venda).toLocaleDateString('pt-BR') : '-' }}
             </span>
             <span class="text-[9px] font-bold text-slate-400 uppercase">Emissão</span>
           </div>
@@ -160,11 +160,11 @@ const totalEmAberto = computed(() => {
 const rowsFiltrados = computed(() => {
   const termo = (busca.value || '').toLowerCase().trim()
   if (!termo) return planos.value
-  return planos.value.filter(p => {
-    return (p.fornecedor?.razao_social?.toLowerCase().includes(termo)) || 
-           (p.status?.toLowerCase().includes(termo)) || 
-           (String(p.numero_pedido).includes(termo))
-  })
+return planos.value.filter(p => {
+  return (p.fornecedor?.razao_social?.toLowerCase().includes(termo)) ||
+         (p.status?.toLowerCase().includes(termo)) ||
+         (String(p.id).includes(termo))
+})
 })
 
 function statusClassTailwind(status) {
