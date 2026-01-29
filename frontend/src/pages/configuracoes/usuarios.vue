@@ -126,10 +126,9 @@
               <div class="col-span-2">
                 <label class="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1.5 block ml-1">Nível de Acesso</label>
                 <select v-model="formUsuario.nivel_acesso" class="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-4 text-[11px] font-bold text-slate-700 outline-none focus:border-brand-primary transition-all">
-                  <option value="ADMIN">ADMINISTRADOR TOTAL</option>
-                  <option value="GERENTE">GERENTE DE PRODUÇÃO</option>
-                  <option value="VENDEDOR">VENDEDOR / COMERCIAL</option>
-                  <option value="OPERADOR">OPERADOR DE FÁBRICA</option>
+                  <option value="ADMIN">Admin</option>
+                  <option value="ATIVO">Ativo</option>
+                  <option value="INATIVO">Inativo</option>
                 </select>
               </div>
 

@@ -14,34 +14,30 @@ const router = createRouter({
 
 router.beforeEach(async (to) => {
   const token = storage.getToken()
+  if (!token && !to.meta?.public) return { path: '/login' }
+
+  // garante user atualizado quando estiver logado
+  if (token) await ensureMe()
+
   const user = storage.getUser()
   const status = String(user?.status || '').toUpperCase()
 
-  // 1) Rotas públicas
+  // públicas
   if (to.meta?.public) {
-    // se já estiver logado:
-    if (token) {
-      // login: redireciona conforme status
-      if (to.path === '/login') {
-        return status === 'ATIVO' ? { path: '/' } : { path: '/pendente' }
-      }
+    if (token && to.path === '/login') {
+      return status === 'ATIVO' ? { path: '/' } : { path: '/pendente' }
     }
     return true
   }
 
-  // 2) Precisa estar logado
-  if (!token) return { path: '/login' }
-
-  // 3) Status: pendente/inativo fica preso no /pendente
+  // pendente/inativo preso
   if (status !== 'ATIVO') {
     return to.path === '/pendente' ? true : { path: '/pendente' }
   }
 
-  // 4) Se ATIVO e tentar /pendente, manda pro index
   if (to.path === '/pendente') return { path: '/' }
 
-  // 5) Permissões por rota (só para ATIVO)
-  const required = getRequiredPerm(to, routePermMap) // do seu navigation-perms
+  const required = getRequiredPerm(to, routePermMap)
   if (required && !can(required)) return { path: '/' }
 
   return true

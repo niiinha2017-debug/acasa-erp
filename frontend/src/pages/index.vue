@@ -38,7 +38,7 @@
 </template>
 
 <script setup>
-definePage({ meta: { public: false } })
+definePage({ meta: { public: false, layout: 'auth' } })
 
 function reload() {
   window.location.reload()
