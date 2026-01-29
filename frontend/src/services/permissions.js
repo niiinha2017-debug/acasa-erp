@@ -1,15 +1,15 @@
 import storage from '@/utils/storage'
 
-export function isAdmin() {
-  const u = storage.getUser()
-  const perms = Array.isArray(u?.permissoes) ? u.permissoes : []
-  return u?.usuario === 'Ana.P' || perms.includes('ADMIN')
-}
+export function can(permission) {
+  const user = storage.getUser()
+  if (!user) return false
 
-export function can(chave) {
-  if (isAdmin()) return true
+  // 1. REGRA DE OURO: Se for Admin, tem acesso a TUDO
+  if (user.isAdmin || user.usuario === 'Ana.P') {
+    return true
+  }
 
-  const u = storage.getUser()
-  const perms = Array.isArray(u?.permissoes) ? u.permissoes : []
-  return perms.includes(chave)
+  // 2. Caso contrário, verifica a lista de permissões dele
+  const permissions = user.permissões || []
+  return permissions.includes(permission)
 }
