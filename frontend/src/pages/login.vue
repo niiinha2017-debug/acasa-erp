@@ -166,9 +166,7 @@
 </template>
 
 <script setup>
-definePage({
-  meta: { public: true },
-})
+definePage({ meta: { public: true, layout: 'auth' } })
 
 import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'

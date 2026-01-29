@@ -6,10 +6,21 @@ import ConfirmModal from '@/components/ui/ConfirmModal.vue'
 
 <template>
   <RouterView v-slot="{ Component, route }">
-    <component :is="route.meta?.public ? AuthLayout : DefaultLayout">
+    <component
+      :is="
+        route.meta?.layout === 'auth'
+          ? AuthLayout
+          : route.meta?.layout === 'public'
+          ? DefaultLayout
+          : route.meta?.public
+          ? AuthLayout
+          : DefaultLayout
+      "
+    >
       <component :is="Component" />
     </component>
   </RouterView>
 
   <ConfirmModal />
 </template>
+

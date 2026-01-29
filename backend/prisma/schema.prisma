@@ -400,9 +400,7 @@ model plano_corte_produto {
   @@index([item_id])
 
   @@map("plano_corte_produto")
-}
-
-
+ }
 
 model plano_corte_consumo {
   id             Int @id @default(autoincrement())
