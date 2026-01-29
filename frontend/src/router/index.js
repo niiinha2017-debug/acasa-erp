@@ -66,17 +66,19 @@ router.beforeEach(async (to) => {
   const user = storage.getUser()
   const status = String(user?.status || '').toUpperCase()
 
-  // 4) PENDENTE/INATIVO preso no /pendente
-  if (status !== 'ATIVO') {
-    return to.path === '/pendente' ? true : { path: '/pendente' }
-  }
+// 4) Só prende quem é PENDENTE ou INATIVO
+if (status === 'PENDENTE' || status === 'INATIVO') {
+  return to.path === '/pendente' ? true : { path: '/pendente' }
+}
 
-  // 5) ATIVO não entra no pendente
-  if (to.path === '/pendente') return { path: '/' }
+
+// 5) ATIVO não entra no pendente
+if (to.path === '/pendente') return { path: '/' }
+
 
   // 6) Permissões por rota (somente ATIVO)
   const required = getRequiredPerm(to, routePermMap)
-  if (required && !can(required)) return { path: '/' }
+  if (required && !can(required)) return { path: '/producao' }
 
   return true
 })
