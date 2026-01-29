@@ -202,7 +202,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ConfiguracaoService } from '@/services/index'
-import { ArquivosService } from '@/services/arquivos.services'
+import { ArquivosService } from '@/services/arquivos.service'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
 import { maskCNPJ, maskCEP, maskTelefone, maskIE, onlyNumbers } from '@/utils/masks'
