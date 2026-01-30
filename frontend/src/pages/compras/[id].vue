@@ -246,25 +246,28 @@
           <div class="flex items-center justify-between gap-4">
             <div></div>
 
-            <Button
-              variant="primary"
-              size="lg"
-              type="submit"
-              :loading="salvando"
-              :disabled="!podeSalvar"
-            >
+    
+<Button
+  v-if="can(isEdit ? 'compras.editar' : 'compras.criar')"
+  variant="primary"
+  size="lg"
+  type="submit"
+  :loading="salvando"
+  :disabled="!podeSalvar"
+>
+
               <i class="pi pi-save mr-2 text-[12px]"></i>
               {{ isEdit ? 'ATUALIZAR COMPRA' : 'SALVAR COMPRA' }}
             </Button>
 
-            <Button
-              v-if="isEdit"
-              type="button"
-              variant="danger"
-              size="lg"
-              :loading="excluindo"
-              @click="confirmarExcluirCompra"
-            >
+<Button
+  v-if="isEdit && can('compras.excluir')"
+  type="button"
+  variant="danger"
+  size="lg"
+  :loading="excluindo"
+  @click="confirmarExcluirCompra"
+>
               <i class="pi pi-trash mr-2 text-[12px]"></i>
               EXCLUIR
             </Button>
@@ -293,6 +296,10 @@ import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
 import { maskMoneyBR } from '@/utils/masks'
 import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
+import { can } from '@/services/permissions'
+
+definePage({ meta: { perm: 'compras.ver' } })
+
 
 // =======================
 // STATE
@@ -603,6 +610,10 @@ const validarFormulario = () => {
 
 
 const confirmarSalvarCompra = async () => {
+  const perm = isEdit.value ? 'compras.editar' : 'compras.criar'
+  if (!can(perm)) return notify.error('Acesso negado.')
+
+
   if (!validarFormulario()) return
 
   const ok = await confirm.show(
@@ -615,6 +626,9 @@ const confirmarSalvarCompra = async () => {
 }
 
 const salvarCompra = async () => {
+  const perm = isEdit.value ? 'compras.editar' : 'compras.criar'
+  if (!can(perm)) return notify.error('Acesso negado.')
+  
   salvando.value = true
   try {
     const total = round2(Number(totalCalculado.value || 0))
@@ -655,6 +669,8 @@ if (tipoCompra.value === 'CLIENTE_AMBIENTE') {
 }
 
 const confirmarExcluirCompra = async () => {
+  if (!can('compras.excluir')) return notify.error('Acesso negado.')
+
   const ok = await confirm.show(
     'Excluir Compra',
     `Deseja realmente excluir a Compra #${compraId.value}?`,
@@ -844,8 +860,15 @@ watch(fornecedorSelecionado, async (id) => {
 // =======================
 // INIT
 // =======================
-onMounted(() => {
-  carregarDadosIniciais()
+onMounted(async () => {
+  const perm = isEdit.value ? 'compras.editar' : 'compras.criar'
+  if (!can(perm)) {
+    notify.error('Acesso negado.')
+    router.push('/compras')
+    return
+  }
+  await carregarDadosIniciais()
 })
+
 </script>
 

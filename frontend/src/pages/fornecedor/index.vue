@@ -23,12 +23,13 @@
           />
         </div>
         
-        <Button 
-          variant="primary" 
-          size="md"
-          class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider w-full sm:w-auto"
-          @click="router.push('/fornecedor/novo')"
-        >
+<Button
+  v-if="can('fornecedores.criar')"
+  variant="primary"
+  size="md"
+  class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider w-full sm:w-auto"
+  @click="router.push('/fornecedor/novo')"
+>
           <i class="pi pi-plus mr-1.5 text-[10px]"></i>
           Novo
         </Button>
@@ -107,14 +108,17 @@
 
         <template #cell-acoes="{ row }">
           <div class="flex justify-end gap-1">
-            <button 
-              @click="editar(row.id)"
+<button
+  v-if="can('fornecedores.editar')"
+  @click="editar(row.id)"
               class="w-7 h-7 rounded-lg bg-slate-100 text-slate-500 hover:bg-brand-primary hover:text-white transition-all flex items-center justify-center"
             >
               <i class="pi pi-pencil text-xs"></i>
             </button>
-            <button 
-              @click="confirmarExclusao(row.id)"
+
+<button
+  v-if="can('fornecedores.excluir')"
+  @click="confirmarExclusao(row.id)"
               class="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
             >
               <i class="pi pi-trash text-xs"></i>
@@ -133,6 +137,11 @@ import { useRouter } from 'vue-router'
 import { FornecedorService } from '@/services/index'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
+
+import { can } from '@/services/permissions'
+
+definePage({ meta: { perm: 'fornecedores.ver' } })
+
 
 const router = useRouter()
 const loading = ref(false)
@@ -171,10 +180,15 @@ const rowsFiltrados = computed(() => {
 })
 
 function editar(id) {
+  if (!can('fornecedores.editar')) return notify.error('Acesso negado.')
   router.push(`/fornecedor/${id}`)
 }
 
+
+
 async function confirmarExclusao(id) {
+  if (!can('fornecedores.excluir')) return notify.error('Acesso negado.')
+  
   const fornecedor = rows.value.find(r => r.id === id)
   const ok = await confirm.show(
     'Excluir Fornecedor',

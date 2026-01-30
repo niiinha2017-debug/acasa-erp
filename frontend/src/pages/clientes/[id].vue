@@ -258,7 +258,7 @@
 
             <!-- Botão Excluir (apenas em edição) -->
 <Button
-  v-if="isEdit"
+  v-if="isEdit && can('clientes.excluir')"
   type="button"
   variant="danger"
   size="lg"
@@ -268,6 +268,7 @@
   <i class="pi pi-trash mr-2 text-[12px]"></i>
   EXCLUIR
 </Button>
+
 
 
             <!-- Espaço vazio à direita para balancear quando não houver botão excluir -->
@@ -287,6 +288,7 @@ import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
 import { maskCPF, maskCNPJ, maskCEP, maskTelefone, maskRG, maskIE } from '@/utils/masks'
 import { buscarCep, buscarCnpj } from '@/utils/utils'
+import { can } from '@/services/permissions'
 
 const route = useRoute()
 const router = useRouter()
@@ -463,6 +465,13 @@ watch(() => form.estado_civil, (v) => {
 // -- Form Actions Original --
 async function salvar() {
   if (saving.value) return
+
+  const perm = isEdit.value ? 'clientes.editar' : 'clientes.criar'
+  if (!can(perm)) {
+    notify.error('Acesso negado.')
+    return
+  }
+
   saving.value = true
 
   try {
@@ -490,13 +499,13 @@ async function salvar() {
     notify.success(isEdit.value ? 'Cliente atualizado!' : 'Cliente cadastrado!')
     await router.push('/clientes')
   } catch (err) {
-    console.error('Erro ao salvar:', err)
     const apiMsg = err?.response?.data?.message
     notify.error(Array.isArray(apiMsg) ? apiMsg.join(' | ') : (apiMsg || 'Erro ao salvar.'))
   } finally {
     saving.value = false
   }
 }
+
 
 
 async function excluir() {
@@ -518,21 +527,13 @@ async function excluir() {
 }
 
 // Debug: adicionar botão de teste
-onMounted(() => {
-  console.log('Página carregada. isEdit:', isEdit.value, 'clienteId:', clienteId.value)
-  
-  // Adicionar botão de teste no console
-  window.testRedirect = () => {
-    console.log('Testando redirecionamento...')
-    router.push('/clientes').then(() => {
-      console.log('✅ Teste OK!')
-    }).catch(err => {
-      console.error('❌ Teste FALHOU:', err)
-    })
+onMounted(async () => {
+  const perm = isEdit.value ? 'clientes.editar' : 'clientes.criar'
+  if (!can(perm)) {
+    notify.error('Acesso negado.')
+    router.push('/clientes')
+    return
   }
-  
-  console.log('Para testar redirecionamento, digite no console: testRedirect()')
-  
-  carregarDados()
+  await carregarDados()
 })
 </script>

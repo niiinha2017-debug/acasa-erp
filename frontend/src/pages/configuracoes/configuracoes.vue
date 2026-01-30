@@ -14,11 +14,21 @@
       </div>
 
       <div class="flex items-center gap-2">
-        <Button variant="secondary" @click="confirmarExportarDadosEmpresa">
+        <Button
+  v-if="can('configuracoes.empresa.ver')"
+  variant="secondary"
+  @click="confirmarExportarDadosEmpresa"
+>
           <i class="pi pi-file-pdf mr-2"></i> Exportar
         </Button>
 
-        <Button variant="primary" :loading="salvando" @click="confirmarSalvarDadosEmpresa">
+        <Button
+  v-if="can('configuracoes.empresa.editar')"
+  variant="primary"
+  :loading="salvando"
+  @click="confirmarSalvarDadosEmpresa"
+>
+
           <i class="pi pi-save mr-2"></i> Salvar
         </Button>
       </div>
@@ -207,6 +217,11 @@ import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
 import { maskCNPJ, maskCEP, maskTelefone, maskIE, onlyNumbers } from '@/utils/masks'
 import { buscarCep, buscarCnpj } from '@/utils/utils'
+import { can } from '@/services/permissions'
+
+definePage({ meta: { perm: 'configuracoes.empresa.ver' } })
+
+
 
 const fileInput = ref(null)
 const documentInput = ref(null)
@@ -417,7 +432,9 @@ const copiarPix = () => {
 
 // --- AÇÕES FINAIS ---
 const salvar = async () => {
+  if (!can('configuracoes.empresa.editar')) return notify.error('Acesso negado.')
   salvando.value = true
+
   try {
     await ConfiguracaoService.salvar(form.value)
     notify.success('Configurações salvas!')
@@ -429,13 +446,12 @@ const salvar = async () => {
 }
 
 async function confirmarSalvarDadosEmpresa() {
-  const ok = await confirm.show(
-    'Salvar Dados da Empresa',
-    'Deseja salvar as configurações fiscais e de recebimento?',
-  )
+  if (!can('configuracoes.empresa.editar')) return notify.error('Acesso negado.')
+  const ok = await confirm.show('Salvar Dados da Empresa', 'Deseja salvar as configurações fiscais e de recebimento?')
   if (!ok) return
   await salvar()
 }
+
 
 async function confirmarExportarDadosEmpresa() {
   const ok = await confirm.show(

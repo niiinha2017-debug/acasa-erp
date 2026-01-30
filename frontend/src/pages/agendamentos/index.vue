@@ -62,7 +62,10 @@
             </div>
             <h3 class="text-xs font-black uppercase text-slate-800 tracking-widest">Processo não iniciado</h3>
             <p class="text-[10px] font-bold text-slate-400 uppercase mt-2 mb-6 leading-relaxed">Este cliente não possui um fluxo de obra ativo.</p>
-            <Button variant="primary" class="!h-11 !rounded-xl !px-8 shadow-lg shadow-brand-primary/20" :loading="creating" @click="confirmarCriarObra">
+            <Button
+            v-if="!obraAtiva && can('agendamentos.criar')" 
+            variant="primary" class="!h-11 !rounded-xl !px-8 shadow-lg shadow-brand-primary/20" :loading="creating" @click="confirmarCriarObra">
+              
               Iniciar Obra Agora
             </Button>
           </div>
@@ -121,6 +124,7 @@
         </div>
         
         <Button 
+         v-if="obraAtiva && can('agendamentos.editar')"
           variant="primary" 
          @click="confirmarSalvar"
           :loading="saving"
@@ -137,6 +141,12 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ClienteService, ObrasService } from '@/services/index'
 import { confirm } from '@/services/confirm' 
+import { can } from '@/services/permissions'
+import { notify } from '@/services/notify'
+
+
+definePage({ meta: { perm: 'agendamentos.ver' } })
+
 
 // Mapeamento de labels para facilitar o v-for e manter o código limpo
 const fieldLabels = {
@@ -214,6 +224,10 @@ function aplicarObraNoForm() {
 
 async function criarObra() {
   const id = Number(clienteSelecionadoId.value)
+  if (!id) return
+
+  if (!can('agendamentos.criar')) return notify.error('Acesso negado.')
+
   creating.value = true
   try {
     await ObrasService.criar({ cliente_id: id, status_processo: 'MEDIDA_PENDENTE' })
@@ -223,7 +237,9 @@ async function criarObra() {
   }
 }
 
+
 async function salvar() {
+   if (!can('agendamentos.editar')) return notify.error('Acesso negado.')
   const o = obraAtiva.value
   if (!o?.id) return
   saving.value = true

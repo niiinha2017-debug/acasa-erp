@@ -49,7 +49,7 @@
               </div>
 
               <div class="flex items-center gap-2">
-                <Button
+                <Button v-if="canManage"
                   type="button"
                   variant="secondary"
                   size="sm"
@@ -59,7 +59,7 @@
                   Selecionar
                 </Button>
 
-                <Button
+                <Button v-if="canManage"
                   type="button"
                   variant="primary"
                   size="sm"
@@ -102,7 +102,7 @@
 
               <div v-else class="divide-y divide-slate-200">
                 <div
-                  v-for="a in arquivos"
+                  v-for="a in arquivosOrdenados"
                   :key="a.id"
                   class="px-4 py-3 flex items-center justify-between gap-3"
                 >
@@ -126,7 +126,7 @@
                       Visualizar
                     </Button>
 
-                    <Button
+                    <Button v-if="canManage"
                       type="button"
                       variant="danger"
                       size="sm"
@@ -165,9 +165,8 @@
   </Teleport>
 </template>
 
-
 <script setup>
-import { ref, watch, onBeforeUnmount } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArquivosService } from '@/services/arquivos.service'
 import { notify } from '@/services/notify'
@@ -178,11 +177,11 @@ const props = defineProps({
   ownerType: { type: String, required: true },
   ownerId: { type: [String, Number], required: true },
   categoria: { type: String, default: null },
-  slotKey: { type: String, default: null }, // opcional (imagem principal)
+  slotKey: { type: String, default: null },
+  canManage: { type: Boolean, default: true }, // ✅ aqui, no único defineProps
 })
 
 const emit = defineEmits(['close', 'updated'])
-
 const router = useRouter()
 
 const arquivos = ref([])
@@ -195,16 +194,20 @@ const fileRef = ref(null)
 const fileToUpload = ref(null)
 const arquivoSelecionadoNome = ref('')
 
+const arquivosOrdenados = computed(() => {
+  const arr = Array.isArray(arquivos.value) ? arquivos.value : []
+  return [...arr].sort((a, b) => Number(b?.id || 0) - Number(a?.id || 0))
+})
+
 function fechar() {
+  fileToUpload.value = null
+  arquivoSelecionadoNome.value = ''
+  if (fileRef.value) fileRef.value.value = ''
   emit('close')
 }
 
-
-onBeforeUnmount(() => {
-  fecharPreview()
-})
-
 async function carregar() {
+  if (!props.ownerType || !props.ownerId) return
   erro.value = ''
   loading.value = true
   try {
@@ -223,6 +226,7 @@ async function carregar() {
 }
 
 function onPickFile(e) {
+  if (!props.canManage) return
   const file = e.target.files?.[0]
   if (!file) return
   fileToUpload.value = file
@@ -230,7 +234,9 @@ function onPickFile(e) {
 }
 
 async function enviar() {
+  if (!props.canManage) return notify.error('Acesso negado.')
   if (!fileToUpload.value) return
+
   erro.value = ''
   uploading.value = true
   try {
@@ -258,12 +264,19 @@ async function enviar() {
 
 function visualizar(arq) {
   if (!arq?.id) return
-  fechar() // fecha modal e limpa preview
-  router.push(`/arquivos/viewer/${arq.id}`)
+  fechar()
+  router.push({
+    path: `/arquivos/${arq.id}`,
+    query: {
+      name: arq.nome || arq.filename || `ARQUIVO_${arq.id}`,
+      type: arq.mime_type || '',
+    },
+  })
 }
 
-
 async function remover(arq) {
+  if (!props.canManage) return notify.error('Acesso negado.')
+
   const ok = await confirm.show('Excluir Arquivo', 'Deseja excluir este arquivo?')
   if (!ok) return
 
@@ -272,7 +285,6 @@ async function remover(arq) {
   try {
     await ArquivosService.remover(arq.id)
     notify.success('Arquivo removido!')
-    if (previewOpen.value) fecharPreview()
     await carregar()
     emit('updated')
   } catch (e) {
@@ -282,11 +294,12 @@ async function remover(arq) {
   }
 }
 
-watch(() => props.open, (v) => {
-  if (v) carregar()
+watch(() => props.open, (v) => { if (v) carregar() })
+watch(() => [props.ownerType, props.ownerId, props.categoria, props.slotKey], () => {
+  if (props.open) carregar()
 })
-
 </script>
+
 
 <style scoped>
 .fade-enter-active,

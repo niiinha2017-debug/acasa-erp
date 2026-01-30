@@ -77,17 +77,19 @@
                 Cancelar
               </Button>
 
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                class="!h-10 !rounded-xl !px-4 text-[10px] font-black uppercase tracking-widest"
-                :loading="salvando"
-                :disabled="!podeSalvar"
-                @click="salvarItem"
-              >
-                {{ form.id ? 'Salvar alterações' : 'Cadastrar' }}
-              </Button>
+<Button
+  v-if="can(permSalvarItem())"
+  type="button"
+  variant="primary"
+  size="sm"
+  class="!h-10 !rounded-xl !px-4 text-[10px] font-black uppercase tracking-widest"
+  :loading="salvando"
+  :disabled="!podeSalvar"
+  @click="salvarItem"
+>
+  {{ form.id ? 'Salvar alterações' : 'Cadastrar' }}
+</Button>
+
             </div>
           </div>
 
@@ -172,26 +174,29 @@
 
             <template #cell-acoes="{ row }">
               <div class="flex justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  class="!h-8 !rounded-xl !px-3 text-[10px] font-black uppercase tracking-widest"
-                  @click="editar(row)"
-                >
-                  Editar
-                </Button>
+<Button
+  v-if="can('plano_corte.editar')"
+  type="button"
+  variant="ghost"
+  size="sm"
+  class="!h-8 !rounded-xl !px-3 text-[10px] font-black uppercase tracking-widest"
+  @click="editar(row)"
+>
+  Editar
+</Button>
 
-                <Button
-                  type="button"
-                  variant="danger"
-                  size="sm"
-                  class="!h-8 !rounded-xl !px-3 text-[10px] font-black uppercase tracking-widest"
-                  :loading="deletingId === row.id"
-                  @click="excluir(row)"
-                >
-                  Excluir
-                </Button>
+<Button
+  v-if="can('plano_corte.excluir')"
+  type="button"
+  variant="danger"
+  size="sm"
+  class="!h-8 !rounded-xl !px-3 text-[10px] font-black uppercase tracking-widest"
+  :loading="deletingId === row.id"
+  @click="excluir(row)"
+>
+  Excluir
+</Button>
+
               </div>
             </template>
           </Table>
@@ -205,9 +210,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { PlanoCorteService, FornecedorService } from '@/services/index'
-import { PIPELINE_PLANO_CORTE, UNIDADES } from '@/constantes'
+import { UNIDADES } from '@/constantes'
 import { confirm } from '@/services/confirm'
 import { notify } from '@/services/notify'
+import { can } from '@/services/permissions'
+
+definePage({ meta: { perm: 'plano_corte.ver' } })
+
 
 const router = useRouter()
 
@@ -225,6 +234,7 @@ const unidadesOptions = computed(() => (UNIDADES || []).map(u => ({ label: u.lab
 // listagem
 const loading = ref(false)
 const itens = ref([])
+const permSalvarItem = () => (form.value.id ? 'plano_corte.editar' : 'plano_corte.criar')
 
 // form
 const salvando = ref(false)
@@ -289,6 +299,8 @@ async function onSelecionarFornecedor(v) {
 }
 
 async function carregarItens() {
+  if (!can('plano_corte.ver')) return notify.error('Acesso negado.')
+
   if (!fornecedorSelecionado.value) return
   loading.value = true
   erro.value = ''
@@ -302,7 +314,9 @@ async function carregarItens() {
   }
 }
 
+
 function editar(row) {
+  if (!can('plano_corte.editar')) return notify.error('Acesso negado.')
   erro.value = ''
   form.value = {
     id: row.id,
@@ -322,6 +336,8 @@ function cancelarEdicao() {
 }
 
 async function salvarItem() {
+  const perm = permSalvarItem()
+  if (!can(perm)) return notify.error('Acesso negado.')
   if (!podeSalvar.value) return
 
   salvando.value = true
@@ -354,6 +370,8 @@ async function salvarItem() {
 }
 
 async function excluir(row) {
+  if (!can('plano_corte.excluir')) return notify.error('Acesso negado.')
+
   const ok = await confirm.show('Excluir Item', 'Deseja excluir este item?')
   if (!ok) return
 

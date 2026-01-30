@@ -23,14 +23,15 @@
         >
           <i class="pi pi-arrow-left mr-2 text-[8px]"></i> Voltar
         </Button>
+<Button
+  v-if="can('orcamentos.criar')"
+  variant="primary"
+  class="!h-10 !rounded-xl !px-6 text-[10px] font-black uppercase tracking-widest shadow-sm"
+  @click="novoParaCliente"
+>
+  <i class="pi pi-plus mr-2 text-[8px]"></i> Novo Orçamento
+</Button>
 
-        <Button 
-          variant="primary" 
-          class="!h-10 !rounded-xl !px-6 text-[10px] font-black uppercase tracking-widest shadow-sm" 
-          @click="novoParaCliente"
-        >
-          <i class="pi pi-plus mr-2 text-[8px]"></i> Novo Orçamento
-        </Button>
       </div>
     </div>
 
@@ -72,37 +73,45 @@
 
         <template #cell-acoes="{ row }">
           <div class="flex justify-end items-center gap-1.5 px-2">
-            <button
-              class="h-7 px-3 rounded-lg bg-slate-900 text-white text-[9px] font-black uppercase tracking-wider hover:bg-brand-primary transition-all"
-              @click="router.push(`/orcamentos/${row.id}`)"
-            >
-              Abrir
-            </button>
+<button
+  v-if="can('orcamentos.editar')"
+  class="h-7 px-3 rounded-lg bg-slate-900 text-white text-[9px] font-black uppercase tracking-wider hover:bg-brand-primary transition-all"
+  @click="abrir(row.id)"
+>
+  Abrir
+</button>
+
 
             <div class="flex items-center border-l border-slate-100 ml-1.5 pl-1.5 gap-1.5">
-              <button
-                title="Arquivos"
-                class="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 border border-slate-200 hover:text-brand-primary transition-all"
-                @click="openArquivos(row.id)"
-              >
-                <i class="pi pi-paperclip text-[10px]"></i>
-              </button>
+<button
+  v-if="can('orcamentos.ver')"
+  title="Arquivos"
+  class="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 border border-slate-200 hover:text-brand-primary transition-all"
+  @click="openArquivos(row.id)"
+>
+  <i class="pi pi-paperclip text-[10px]"></i>
+</button>
 
-              <button
-                title="PDF"
-                class="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 border border-slate-200 hover:text-emerald-500 transition-all"
-                @click="abrirPdf(row.id)"
-              >
-                <i class="pi pi-file-pdf text-[10px]"></i>
-              </button>
 
-              <button
-                title="Excluir"
-                class="w-7 h-7 flex items-center justify-center rounded-lg bg-rose-50 text-rose-400 border border-rose-100 hover:bg-rose-500 hover:text-white transition-all"
-                @click="confirmarExcluirOrcamento(row.id)"
-              >
-                <i class="pi pi-trash text-[10px]"></i>
-              </button>
+<button
+  v-if="can('orcamentos.ver')"
+  title="PDF"
+  class="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 border border-slate-200 hover:text-emerald-500 transition-all"
+  @click="abrirPdf(row.id)"
+>
+  <i class="pi pi-file-pdf text-[10px]"></i>
+</button>
+
+
+<button
+  v-if="can('orcamentos.excluir')"
+  title="Excluir"
+  class="w-7 h-7 flex items-center justify-center rounded-lg bg-rose-50 text-rose-400 border border-rose-100 hover:bg-rose-500 hover:text-white transition-all"
+  @click="confirmarExcluirOrcamento(row.id)"
+>
+  <i class="pi pi-trash text-[10px]"></i>
+</button>
+
             </div>
           </div>
         </template>
@@ -110,21 +119,30 @@
     </div>
   </div>
 
-  <OrcamentoArquivosModal
-    :open="arquivosOpen"
-    :orcamento-id="orcamentoSelecionado"
-    :orcamento-titulo="`ORÇAMENTO #${orcamentoSelecionado || ''}`"
-    @close="arquivosOpen = false"
-  />
+<ArquivosModal
+  v-if="arquivosOpen && orcamentoSelecionado"
+  :open="arquivosOpen"
+  owner-type="ORCAMENTO"
+  :owner-id="orcamentoSelecionado"
+  categoria="ANEXO"
+  :can-manage="can('orcamentos.editar')"
+  view-perm="orcamentos.ver"
+  @close="arquivosOpen = false"
+/>
+
 </template>
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-
 import { OrcamentosService } from '@/services/index'
 import { format } from '@/utils/format'
 import { confirm } from '@/services/confirm'
+import { can } from '@/services/permissions'
+import { notify } from '@/services/notify'
+
+definePage({ meta: { perm: 'orcamentos.ver' } })
+
 
 const route = useRoute()
 const router = useRouter()
@@ -165,7 +183,14 @@ async function carregar() {
   }
 }
 
+function abrir(id) {
+  if (!can('orcamentos.editar')) return notify.error('Acesso negado.')
+  router.push(`/orcamentos/${id}`)
+}
+
+
 function openArquivos(id) {
+  if (!can('orcamentos.ver')) return notify.error('Acesso negado.')
   orcamentoSelecionado.value = id
   arquivosOpen.value = true
 }
@@ -185,6 +210,8 @@ const filtrados = computed(() => {
 
 // EXCLUIR (com confirmação)
 async function confirmarExcluirOrcamento(id) {
+  if (!can('orcamentos.excluir')) return notify.error('Acesso negado.')
+
   const ok = await confirm.show(
     'Excluir Orçamento',
     `Deseja excluir o Orçamento #${id}? Esta ação não pode ser desfeita.`,
@@ -194,6 +221,7 @@ async function confirmarExcluirOrcamento(id) {
 }
 
 function novoParaCliente() {
+  if (!can('orcamentos.criar')) return notify.error('Acesso negado.')
   router.push({ path: '/orcamentos/novo', query: { cliente_id: String(clienteId.value) } })
 }
 
@@ -211,10 +239,13 @@ const clienteTelefone = computed(() => {
 
 
 function abrirPdf(id) {
+  if (!can('orcamentos.ver')) return notify.error('Acesso negado.')
   OrcamentosService.abrirPdf(id)
 }
 
+
 async function excluir(id) {
+  if (!can('orcamentos.excluir')) return notify.error('Acesso negado.')
   await OrcamentosService.remover(id)
   await carregar()
 }

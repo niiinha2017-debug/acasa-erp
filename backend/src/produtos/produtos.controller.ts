@@ -61,5 +61,4 @@ export class ProdutosController {
     const cleanId = Number(String(id).replace(/\D/g, ''))
     return this.produtosService.remover(cleanId)
   }
-
 }

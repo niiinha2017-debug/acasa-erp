@@ -23,12 +23,14 @@
           />
         </div>
         
-        <Button 
-          variant="primary" 
-          size="md"
-          class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider w-full sm:w-auto"
-          @click="router.push('/funcionarios/novo')"
-        >
+<Button
+  v-if="can('funcionarios.criar')"
+  variant="primary"
+  size="md"
+  class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider w-full sm:w-auto"
+  @click="novo()"
+>
+
           <i class="pi pi-plus mr-1.5 text-[10px]"></i>
           Novo
         </Button>
@@ -54,9 +56,9 @@
           <p class="text-[9px] font-black uppercase tracking-[0.15em]" :class="selecionados.length > 0 ? 'text-slate-400' : 'text-slate-400'">Selecionados</p>
           <p class="text-xl font-black" :class="selecionados.length > 0 ? 'text-white' : 'text-slate-800'">{{ selecionados.length }}</p>
         </div>
-        <button 
-          v-if="selecionados.length > 0"
-          @click="confirmarGerarPdfFuncionarios"
+<button
+  v-if="selecionados.length > 0 && can('funcionarios.ver')"
+  @click="confirmarGerarPdfFuncionarios"
           class="px-3 py-1.5 rounded-lg bg-brand-primary text-white text-[9px] font-black uppercase tracking-wider flex items-center gap-2 hover:brightness-110"
         >
           <i class="pi pi-file-pdf"></i> PDF
@@ -108,22 +110,25 @@
 
         <template #cell-acoes="{ row }">
           <div class="flex justify-end gap-1">
-            <button 
-              @click="abrirArquivos(row)"
+<button
+  v-if="can('funcionarios.ver')"
+  @click="abrirArquivos(row)"
               class="w-7 h-7 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white transition-all flex items-center justify-center border border-slate-100"
               title="Documentos"
             >
               <i class="pi pi-paperclip text-xs"></i>
             </button>
-            <button 
-              @click="router.push(`/funcionarios/${row.id}`)"
+<button
+  v-if="can('funcionarios.editar')"
+  @click="editar(row.id)"
               class="w-7 h-7 rounded-lg bg-slate-100 text-slate-500 hover:bg-brand-primary hover:text-white transition-all flex items-center justify-center"
               title="Editar"
             >
               <i class="pi pi-pencil text-xs"></i>
             </button>
-            <button 
-              @click="confirmarExcluirFuncionario(row)"
+<button
+  v-if="can('funcionarios.excluir')"
+  @click="confirmarExcluirFuncionario(row)"
               class="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
               title="Excluir"
             >
@@ -133,13 +138,16 @@
         </template>
       </Table>
     </div>
+<ArquivosModal
+  v-if="arquivosModalOpen && arquivosFuncionario?.id"
+  :open="arquivosModalOpen"
+  owner-type="FUNCIONARIO"
+  :owner-id="arquivosFuncionario.id"
+  categoria="ANEXO"
+  :can-manage="can('funcionarios.editar')"
+  @close="fecharArquivos"
+/>
 
-    <FuncionarioArquivosModal
-      :open="arquivosModalOpen"
-      :funcionarioId="arquivosFuncionario?.id"
-      :funcionarioNome="arquivosFuncionario?.nome"
-      @close="fecharArquivos"
-    />
   </div>
 </template>
 
@@ -149,6 +157,11 @@ import { useRouter } from 'vue-router'
 import api from '@/services/api'
 import { FuncionarioService } from '@/services/index'
 import { confirm } from '@/services/confirm'
+import { can } from '@/services/permissions'
+import { notify } from '@/services/notify'
+
+definePage({ meta: { perm: 'funcionarios.ver' } })
+
 
 const router = useRouter()
 const loading = ref(true)
@@ -189,14 +202,22 @@ const funcionariosFiltrados = computed(() => {
 })
 
 function abrirArquivos(row) {
+  if (!can('funcionarios.ver')) return notify.error('Acesso negado.')
   arquivosFuncionario.value = row
   arquivosModalOpen.value = true
 }
+
 
 function fecharArquivos() {
   arquivosModalOpen.value = false
   arquivosFuncionario.value = null
 }
+
+const editar = (id) => {
+  if (!can('funcionarios.editar')) return notify.error('Acesso negado.')
+  router.push(`/funcionarios/${id}`)
+}
+
 
 async function carregar() {
   loading.value = true
@@ -214,26 +235,41 @@ async function carregar() {
 }
 
 async function gerarPdf() {
+  if (!can('funcionarios.ver')) return notify.error('Acesso negado.')
   if (selecionados.value.length === 0) return
+
   gerandoPdf.value = true
   try {
-    const res = await api.post('/funcionarios/pdf', { ids: selecionados.value }, { responseType: 'blob' })
-    const blob = new Blob([res.data], { type: 'application/pdf' })
-    const url = window.URL.createObjectURL(blob)
-    window.open(url, '_blank')
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `Relatorio_Funcionarios_${new Date().getTime()}.pdf`
-    link.click()
+    // ✅ backend agora retorna { arquivoId }
+    const { data } = await api.post('/funcionarios/pdf', { ids: selecionados.value })
+    const arquivoId = data?.arquivoId
+
+    if (!arquivoId) {
+      notify.error('PDF gerado, mas não retornou arquivoId.')
+      return
+    }
+
+    // ✅ abre dentro do PWA no viewer que você já tem
+    router.push(`/arquivos/${String(arquivoId).replace(/\D/g, '')}`)
+
     selectedIds.value = new Set()
   } catch (err) {
-    alert('Erro ao gerar o documento.')
+    notify.error('Erro ao gerar o documento.')
   } finally {
     gerandoPdf.value = false
   }
 }
 
+
+const novo = () => {
+  if (!can('funcionarios.criar')) return notify.error('Acesso negado.')
+  router.push('/funcionarios/novo')
+}
+
+
 async function confirmarExcluirFuncionario(row) {
+  if (!can('funcionarios.excluir')) return notify.error('Acesso negado.')
+
   const ok = await confirm.show(
     'Excluir Funcionário',
     `Deseja remover "${row?.nome}"? Esta ação não pode ser desfeita.`,
@@ -243,6 +279,8 @@ async function confirmarExcluirFuncionario(row) {
 }
 
 async function confirmarGerarPdfFuncionarios() {
+  if (!can('funcionarios.ver')) return notify.error('Acesso negado.')
+
   if (selecionados.value.length === 0) return
 
   const ok = await confirm.show(
@@ -253,7 +291,10 @@ async function confirmarGerarPdfFuncionarios() {
   await gerarPdf()
 }
 
+
 async function excluir(row) {
+  if (!can('funcionarios.excluir')) return notify.error('Acesso negado.')
+
   try {
     await FuncionarioService.remover(row.id)
     funcionarios.value = funcionarios.value.filter((f) => f.id !== row.id)

@@ -30,13 +30,28 @@
             <Button variant="secondary" size="md" type="button" @click="voltarSemana">◀</Button>
             <Button variant="secondary" size="md" type="button" @click="avancarSemana">▶</Button>
 
-            <Button variant="secondary" size="md" type="button" :loading="refreshing" @click="carregar">
-              Atualizar
-            </Button>
+<Button
+  v-if="can('producao.ver')"
+  variant="secondary"
+  size="md"
+  type="button"
+  :loading="refreshing"
+  @click="carregar"
+>
+  Atualizar
+</Button>
 
-            <Button variant="primary" size="md" type="button" @click="abrirNovaTarefaSolta">
-              + Nova tarefa
-            </Button>
+
+<Button
+  v-if="can('producao.criar')"
+  variant="primary"
+  size="md"
+  type="button"
+  @click="abrirNovaTarefaSolta"
+>
+  + Nova tarefa
+</Button>
+
           </div>
         </section>
 
@@ -92,7 +107,7 @@
                 v-for="d in diasSemana"
                 :key="d.key + '-' + slot"
                 class="min-h-[110px] rounded-2xl border border-slate-100 bg-white p-2"
-                @dblclick="abrirNovaTarefaNoSlot(d.date, slot)"
+                @dblclick="can('producao.criar') && abrirNovaTarefaNoSlot(d.date, slot)"
               >
                 <!-- topo do slot -->
                 <div class="flex items-center justify-between">
@@ -100,14 +115,16 @@
                     {{ slot }}
                   </div>
 
-                  <button
-                    type="button"
-                    class="text-slate-300 hover:text-slate-600"
-                    title="Criar tarefa"
-                    @click.stop="abrirNovaTarefaNoSlot(d.date, slot)"
-                  >
-                    <i class="pi pi-plus text-[10px]"></i>
-                  </button>
+<button
+  v-if="can('producao.criar')"
+  type="button"
+  class="text-slate-300 hover:text-slate-600"
+  title="Criar tarefa"
+  @click.stop="abrirNovaTarefaNoSlot(d.date, slot)"
+>
+  <i class="pi pi-plus text-[10px]"></i>
+</button>
+
                 </div>
 
                 <!-- tarefas dentro do slot -->
@@ -115,8 +132,13 @@
                   <div
                     v-for="t in tarefasNoSlot(d.date, slot)"
                     :key="t.id"
-                    class="rounded-xl border border-slate-100 bg-slate-50/50 p-2 cursor-pointer hover:bg-slate-50"
-                    @click.stop="editarTarefa(t)"
+                    :class="[
+  'rounded-xl border border-slate-100 bg-slate-50/50 p-2 hover:bg-slate-50',
+  can('producao.editar') ? 'cursor-pointer' : 'cursor-default'
+]"
+
+                    @click.stop="can('producao.editar') && editarTarefa(t)"
+
                   >
                     <div class="flex items-start justify-between gap-2">
                       <div class="min-w-0">
@@ -129,23 +151,27 @@
                       </div>
 
                       <div class="flex gap-1">
-                        <button
-                          type="button"
-                          class="text-slate-400 hover:text-slate-700"
-                          title="Editar"
-                          @click.stop="editarTarefa(t)"
-                        >
-                          <i class="pi pi-pencil text-[10px]"></i>
-                        </button>
+<button
+  v-if="can('producao.editar')"
+  type="button"
+  class="text-slate-400 hover:text-slate-700"
+  title="Editar"
+  @click.stop="editarTarefa(t)"
+>
+  <i class="pi pi-pencil text-[10px]"></i>
+</button>
 
-                        <button
-                          type="button"
-                          class="text-red-400 hover:text-red-600"
-                          title="Excluir"
-                          @click.stop="confirmarRemoverTarefa(t)"
-                        >
-                          <i class="pi pi-times text-[10px]"></i>
-                        </button>
+
+<button
+  v-if="can('producao.excluir')"
+  type="button"
+  class="text-red-400 hover:text-red-600"
+  title="Excluir"
+  @click.stop="confirmarRemoverTarefa(t)"
+>
+  <i class="pi pi-times text-[10px]"></i>
+</button>
+
                       </div>
                     </div>
 
@@ -256,16 +282,18 @@
               Cancelar
             </Button>
 
-            <Button
-              variant="primary"
-              size="md"
-              type="button"
-              :loading="savingTarefa"
-              :disabled="!podeSalvarTarefa"
-              @click="confirmarSalvarTarefa"
-            >
-              Salvar
-            </Button>
+<Button
+  v-if="can(tarefaModal.isEdit ? 'producao.editar' : 'producao.criar')"
+  variant="primary"
+  size="md"
+  type="button"
+  :loading="savingTarefa"
+  :disabled="!podeSalvarTarefa"
+  @click="confirmarSalvarTarefa"
+>
+  Salvar
+</Button>
+
           </div>
         </div>
       </div>
@@ -274,10 +302,15 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ProducaoService, FuncionarioService } from '@/services/index'
 import { format } from '@/utils/format'
 import { confirm } from '@/services/confirm'
+import { can } from '@/services/permissions'
+import { notify } from '@/services/notify'
+
+
+definePage({ meta: { perm: 'producao.ver' } })
 
 
 // ===============================
@@ -450,6 +483,7 @@ function tarefasNoSlot(dateStr, slotHHMM) {
 // API
 // ===============================
 async function carregarFuncionarios() {
+  if (!can('funcionarios.ver')) return
   const { data } = await FuncionarioService.listar()
   const arr = Array.isArray(data) ? data : []
   funcionariosOptions.value = arr.map((f) => ({
@@ -458,7 +492,9 @@ async function carregarFuncionarios() {
   }))
 }
 
+
 async function carregar() {
+  if (!can('producao.ver')) return  
   refreshing.value = true
   try {
     const inicioIso = toISOStartOfDay(semanaInicio.value)
@@ -475,6 +511,9 @@ async function carregar() {
 
 // salvar (wrapper) - chama sua salvarTarefaModal real
 async function confirmarSalvarTarefa() {
+  const perm = tarefaModal.isEdit ? 'producao.editar' : 'producao.criar'
+  if (!can(perm)) return notify.error('Acesso negado.')
+
   if (!podeSalvarTarefa.value) return
 
   const ok = await confirm.show(
@@ -490,6 +529,8 @@ async function confirmarSalvarTarefa() {
 
 // excluir (wrapper)
 async function confirmarRemoverTarefa(row) {
+  if (!can('producao.excluir')) return notify.error('Acesso negado.')
+
   if (!row?.id || deletingTarefa.value) return
 
   const ok = await confirm.show(
@@ -532,6 +573,8 @@ function avancarSemana() {
 // MODAL
 // ===============================
 function abrirNovaTarefaSolta() {
+  if (!can('producao.criar')) return notify.error('Acesso negado.')
+
   tarefaModal.open = true
   tarefaModal.isEdit = false
   tarefaModal.tarefaId = null
@@ -544,6 +587,8 @@ function abrirNovaTarefaSolta() {
 }
 
 function abrirNovaTarefaNoSlot(dateStr, slotHHMM) {
+  if (!can('producao.criar')) return notify.error('Acesso negado.')
+
   const inicioIso = slotToISO(dateStr, slotHHMM)
   const fimIso = plusHoursISO(inicioIso, 2) // padrão 2h (você altera)
   tarefaModal.open = true
@@ -558,6 +603,8 @@ function abrirNovaTarefaNoSlot(dateStr, slotHHMM) {
 }
 
 function editarTarefa(row) {
+  if (!can('producao.editar')) return notify.error('Acesso negado.')
+
   tarefaModal.open = true
   tarefaModal.isEdit = true
   tarefaModal.tarefaId = row.id
@@ -626,6 +673,14 @@ async function salvarTarefaModal() {
     savingTarefa.value = false
   }
 }
+
+watch(
+  () => semanaInicio.value,
+  async () => {
+    if (loading.value) return // evita rodar durante o primeiro load
+    await carregar()
+  }
+)
 
 
 

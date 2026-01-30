@@ -32,19 +32,15 @@ export class FuncionariosController {
     return this.service.listar()
   }
 
-  @Post('pdf')
-  @Permissoes('funcionarios.ver')
-  @HttpCode(HttpStatus.OK)
-  async gerarPdfLote(@Body() dto: GerarPdfFuncionariosDto, @Res() res: Response) {
-    const pdfBuffer = await this.service.gerarPdf(dto.ids)
+@Post('pdf')
+@Permissoes('funcionarios.ver')
+@HttpCode(HttpStatus.OK)
+async gerarPdfLote(@Body() dto: GerarPdfFuncionariosDto) {
+  return this.service.gerarPdfESalvar(dto.ids) // retorna { arquivoId }
+}
 
-    res.status(HttpStatus.OK)
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'inline; filename="relatorio_funcionarios.pdf"')
-    res.setHeader('Content-Length', pdfBuffer.length)
 
-    return res.end(pdfBuffer)
-  }
+
 
   @Get(':id')
   @Permissoes('funcionarios.ver')

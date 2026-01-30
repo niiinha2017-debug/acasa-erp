@@ -26,6 +26,7 @@
         </div>
 
         <Button
+          v-if="can('produtos.criar')"
           variant="primary"
           size="md"
           class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider w-full sm:w-auto"
@@ -108,14 +109,16 @@
         <template #cell-acoes="{ row }">
           <div class="flex justify-end gap-1 px-2">
             <button
-              @click="router.push(`/produtos/${row.id}`)"
+  v-if="can('produtos.editar')"
+  @click="router.push(`/produtos/${row.id}`)"
               class="w-7 h-7 rounded-lg bg-slate-100 text-slate-500 hover:bg-brand-primary hover:text-white transition-all flex items-center justify-center"
             >
               <i class="pi pi-pencil text-[10px]"></i>
             </button>
 
             <button
-              @click="confirmarExcluirProduto(row)"
+  v-if="can('produtos.excluir')"
+  @click="confirmarExcluirProduto(row)"
               class="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
             >
               <i class="pi pi-trash text-[10px]"></i>
@@ -135,6 +138,11 @@ import { useRouter } from 'vue-router'
 import { confirm } from '@/services/confirm'
 import { notify } from '@/services/notify'
 import { format } from '@/utils/format'
+import { can } from '@/services/permissions'
+
+
+definePage({ meta: { perm: 'produtos.ver' } })
+
 
 const produtos = ref([])
 const loading = ref(false)
@@ -155,14 +163,22 @@ const columns = [
 
 const filtrados = computed(() => {
   const f = String(filtro.value || '').trim().toUpperCase()
+  if (!f) return produtos.value || []
+
   return (produtos.value || []).filter((p) => {
-    if (!f) return true
     const nome = String(p.nome_produto || '').toUpperCase()
-    const forn = String(p.fornecedor?.razao_social || p.fornecedor?.nome_fantasia || '').toUpperCase()
+    const fornecedor = String(p.fornecedor?.razao_social || p.fornecedor?.nome_fantasia || '').toUpperCase()
+    const cor = String(p.cor || '').toUpperCase()
+    const medida = String(p.medida || '').toUpperCase() // “metragem”/medida
+    const marca = String(p.marca || '').toUpperCase()   // opcional, mas ajuda
     const id = String(p.id || '').toUpperCase()
-    return nome.includes(f) || forn.includes(f) || id.includes(f)
+
+    const alvo = `${nome} ${fornecedor} ${cor} ${medida} ${marca} ${id}`
+
+    return alvo.includes(f)
   })
 })
+
 
 const rows = computed(() => {
   return filtrados.value.map((p) => ({
@@ -189,6 +205,7 @@ async function buscarDadosDoBanco() {
 }
 
 async function confirmarExcluirProduto(row) {
+  if (!can('produtos.excluir')) return notify.error('Acesso negado.')
   const ok = await confirm.show(
     'Excluir Produto',
     `Deseja excluir o produto "${row?.nome_produto}"? Esta ação não pode ser desfeita.`,
@@ -204,5 +221,14 @@ async function confirmarExcluirProduto(row) {
   }
 }
 
-onMounted(buscarDadosDoBanco)
+onMounted(async () => {
+  if (!can('produtos.ver')) {
+    notify.error('Acesso negado.')
+    router.push('/') // ou '/produtos' se preferir voltar pra lista, mas aqui é a própria
+    return
+  }
+
+  await buscarDadosDoBanco()
+})
+
 </script>

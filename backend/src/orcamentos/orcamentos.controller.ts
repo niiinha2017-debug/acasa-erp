@@ -8,9 +8,9 @@ import {
   Param,
   Post,
   Put,
-  Res,
   UseGuards,
 } from '@nestjs/common'
+
 import { Response } from 'express'
 
 import { OrcamentosService } from './orcamentos.service'
@@ -95,16 +95,12 @@ export class OrcamentosController {
   // PDF
   // =========================
 
-  @Get(':id/pdf')
-  @Permissoes('orcamentos.ver')
-  async gerarPdf(@Param('id') id: string, @Res() res: Response) {
-    const orcId = this.cleanId(id)
-    const orc = await this.service.detalhar(orcId)
+@Post(':id/pdf')
+@Permissoes('orcamentos.ver')
+@HttpCode(HttpStatus.OK)
+async gerarPdfSalvar(@Param('id') id: string) {
+  const orcId = this.cleanId(id)
+  return this.service.gerarPdfESalvar(orcId) // { arquivoId }
+}
 
-    const pdfFinal = await this.service.gerarPdfCompleto(orc)
-
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', `inline; filename="orcamento-${orcId}.pdf"`)
-    return res.end(Buffer.from(pdfFinal))
-  }
 }

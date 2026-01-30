@@ -51,6 +51,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/arquivos/[id]': RouteRecordInfo<
+      '/arquivos/[id]',
+      '/arquivos/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
     '/clientes/': RouteRecordInfo<
       '/clientes/',
       '/clientes',
@@ -302,6 +309,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/analytics/fluxocaixa.vue': {
       routes:
         | '/analytics/fluxocaixa'
+      views:
+        | never
+    }
+    'src/pages/arquivos/[id].vue': {
+      routes:
+        | '/arquivos/[id]'
       views:
         | never
     }

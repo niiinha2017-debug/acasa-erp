@@ -23,12 +23,14 @@
           />
         </div>
 
-        <Button
-          variant="primary"
-          size="md"
-          class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider"
-          @click="router.push('/compras/novo')"
-        >
+<Button
+  v-if="can('compras.criar')"
+  variant="primary"
+  size="md"
+  class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider"
+  @click="router.push('/compras/novo')"
+>
+
           <i class="pi pi-plus mr-1.5 text-[10px]"></i>
           Nova
         </Button>
@@ -114,14 +116,16 @@
         <template #cell-acoes="{ row }">
           <div class="flex justify-end gap-1">
             <button
-              @click="router.push(`/compras/${row.id}`)"
+  v-if="can('compras.editar')"
+  @click="router.push(`/compras/${row.id}`)"
               class="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-brand-primary hover:text-white transition-all flex items-center justify-center"
             >
               <i class="pi pi-pencil text-xs"></i>
             </button>
 
             <button
-              @click="confirmarExcluirCompra(row.id)"
+  v-if="can('compras.excluir')"
+  @click="confirmarExcluirCompra(row.id)"
               class="w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
             >
               <i class="pi pi-trash text-xs"></i>
@@ -210,6 +214,10 @@ import { CompraService } from '@/services/index'
 import { format } from '@/utils/format'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
+import { can } from '@/services/permissions'
+
+definePage({ meta: { perm: 'compras.ver' } })
+
 
 const router = useRouter()
 const compras = ref([])
@@ -324,10 +332,9 @@ return d && d.getMonth() === mes && d.getFullYear() === ano
 })
 
 async function confirmarExcluirCompra(id) {
-  const ok = await confirm.show(
-    'Excluir Compra',
-    'Esta ação não pode ser desfeita. Deseja continuar?',
-  )
+  if (!can('compras.excluir')) return notify.error('Acesso negado.')
+
+  const ok = await confirm.show('Excluir Compra', 'Esta ação não pode ser desfeita. Deseja continuar?')
   if (!ok) return
 
   try {

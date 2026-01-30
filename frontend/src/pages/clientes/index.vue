@@ -24,12 +24,14 @@
           />
         </div>
         
-        <Button 
-          variant="primary" 
-          size="md"
-          class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider"
-          @click="router.push('/clientes/novo')"
-        >
+<Button
+  v-if="can('clientes.criar')"
+  variant="primary"
+  size="md"
+  class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider"
+  @click="router.push('/clientes/novo')"
+>
+
           <i class="pi pi-plus mr-1.5 text-[10px]"></i>
           Novo
         </Button>
@@ -101,13 +103,15 @@
         <template #cell-acoes="{ row }">
           <div class="flex justify-end gap-1">
             <button 
-              @click="editarCliente(row.id)"
+                v-if="can('clientes.editar')"
+                @click="editarCliente(row.id)"
               class="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-brand-primary hover:text-white transition-all flex items-center justify-center"
             >
               <i class="pi pi-pencil text-xs"></i>
             </button>
             <button 
-              @click="excluirCliente(row.id)"
+  v-if="can('clientes.excluir')"
+  @click="excluirCliente(row.id)"
               class="w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
             >
               <i class="pi pi-trash text-xs"></i>
@@ -149,6 +153,12 @@ import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ClienteService } from '@/services/index'
 import { confirm } from '@/services/confirm'
+import { can } from '@/services/permissions'
+import { notify } from '@/services/notify'
+
+definePage({ meta: { perm: 'clientes.ver' } })
+
+
 
 const router = useRouter()
 
@@ -216,10 +226,12 @@ const getStatusDotClasses = (status) => {
 
 // Métodos de ação
 const editarCliente = (id) => {
+  if (!can('clientes.editar')) return notify.error('Acesso negado.')
   router.push(`/clientes/${id}`)
 }
 
 async function excluirCliente(id) {
+    if (!can('clientes.excluir')) return notify.error('Acesso negado.')
   const ok = await confirm.show('Excluir Cliente?', 'Esta ação não pode ser desfeita.')
   if (!ok) return
 

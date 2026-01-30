@@ -1,9 +1,13 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
-import PDFDocument from 'pdfkit'
+import { promises as fs } from 'fs'
+import { randomBytes } from 'crypto'
 import * as path from 'path'
+import PDFDocument from 'pdfkit'
 import { CriarFuncionarioDto } from './dto/criar-funcionario.dto'
 import { AtualizarFuncionarioDto } from './dto/atualizar-funcionario.dto'
+import { renderHeaderA4Png } from '../pdf/render-header-a4'
+
 
 @Injectable()
 export class FuncionariosService {
@@ -40,13 +44,11 @@ private calcularStatus(input: {
     return funcionario
   }
 
-async gerarPdf(ids: number[]): Promise<Buffer> {
-  // empresa pode ficar (vai servir depois se você quiser escrever dados por cima do PNG)
-  await this.prisma.empresa.findUnique({ where: { id: 1 } })
 
+async gerarPdf(ids: number[]): Promise<Buffer> {
   const funcionarios = await this.prisma.funcionarios.findMany({
     where: { id: { in: ids } },
-    select: { id: true, nome: true, cpf: true, rg: true },
+    select: { nome: true, cpf: true, rg: true },
     orderBy: { nome: 'asc' },
   })
 
@@ -60,38 +62,10 @@ async gerarPdf(ids: number[]): Promise<Buffer> {
     doc.on('end', () => resolve(Buffer.concat(chunks)))
   })
 
-  // ===== CABEÇALHO PNG (A4) =====
-  const headerPath = path.join(process.cwd(), 'assets', 'pdf', 'header-a4.png')
-  doc.image(headerPath, 0, 0, { width: doc.page.width })
+  const startY = renderHeaderA4Png(doc) // retorna 120 (ou o que você definir)
+  let y = startY + 40
 
-  // Título + Gerado em
-  doc.fontSize(16).font('Helvetica-Bold').text('Lista de Funcionários', 0, 120, { align: 'center' })
-  doc.fontSize(8).font('Helvetica').text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 0, 140, { align: 'center' })
-
-  // Linha separadora
-  doc.moveTo(40, 165).lineTo(555, 165).stroke()
-
-  // ===== TABELA =====
-  let y = 185
-
-  doc.fontSize(11).font('Helvetica-Bold')
-  doc.text('NOME', 40, y)
-  doc.text('CPF', 310, y)
-  doc.text('RG', 430, y)
-
-  y += 18
-  doc.moveTo(40, y).lineTo(555, y).stroke()
-  y += 10
-
-  doc.font('Helvetica').fontSize(10)
-
-for (const f of funcionarios) {
-  if (y > 750) {
-    doc.addPage()
-    doc.image(headerPath, 0, 0, { width: doc.page.width })
-    doc.moveTo(40, 165).lineTo(555, 165).stroke()
-    y = 185
-
+  const renderHeaderTabela = () => {
     doc.fontSize(11).font('Helvetica-Bold')
     doc.text('NOME', 40, y)
     doc.text('CPF', 310, y)
@@ -103,16 +77,58 @@ for (const f of funcionarios) {
     doc.font('Helvetica').fontSize(10)
   }
 
-  doc.text(f.nome?.toUpperCase() || '-', 40, y, { width: 260 })
-  doc.text(f.cpf || '-', 310, y)
-  doc.text(f.rg || '-', 430, y)
+  renderHeaderTabela()
 
-  y += 18
-}
+  for (const f of funcionarios) {
+    if (y > 750) {
+      doc.addPage()
+      const startY2 = renderHeaderA4Png(doc)
+      y = startY2 + 40
+      renderHeaderTabela()
+    }
 
+    doc.text((f.nome || '-').toUpperCase(), 40, y, { width: 260 })
+    doc.text(f.cpf || '-', 310, y)
+    doc.text(f.rg || '-', 430, y)
+    y += 18
+  }
 
   doc.end()
   return done
+}
+
+
+
+async gerarPdfESalvar(ids: number[]) {
+  const pdfBuffer = await this.gerarPdf(ids)
+
+  const dir = path.join(process.cwd(), 'uploads', 'relatorios')
+  await fs.mkdir(dir, { recursive: true })
+
+  const stamp = new Date().toISOString().replace(/[-:.TZ]/g, '')
+  const rand = randomBytes(6).toString('hex')
+  const filename = `relatorio_funcionarios_${stamp}_${rand}.pdf`
+
+  await fs.writeFile(path.join(dir, filename), pdfBuffer)
+
+  const url = `/uploads/relatorios/${filename}`
+
+  const arquivo = await this.prisma.arquivos.create({
+    data: {
+      owner_type: 'EMPRESA',
+      owner_id: 1,
+      categoria: 'RELATORIO',
+      slot_key: null, // ✅ importante pra não bater no unique
+      url,
+      filename,
+      nome: `RELATORIO FUNCIONARIOS ${stamp}`,
+      mime_type: 'application/pdf',
+      tamanho: pdfBuffer.length,
+    },
+    select: { id: true },
+  })
+
+  return { arquivoId: arquivo.id }
 }
 
 

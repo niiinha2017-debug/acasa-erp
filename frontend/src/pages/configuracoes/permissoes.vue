@@ -90,14 +90,17 @@
               <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">Mapa de Acessos</h3>
             </div>
             
-            <Button
-              variant="primary"
-              :loading="loadingSalvar"
-              @click="confirmarSalvarPermissoes"
-              class="!h-10 !px-6 !rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm"
-            >
-              Salvar Alterações
-            </Button>
+
+<Button
+  v-if="temAcesso('permissoes.gerenciar')"
+  variant="primary"
+  :loading="loadingSalvar"
+  @click="confirmarSalvarPermissoes"
+  class="!h-10 !px-6 !rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm"
+>
+  Salvar Alterações
+</Button>
+
           </div>
 
           <div class="flex-1 overflow-y-auto p-8 space-y-12 custom-scroll bg-white">
@@ -173,12 +176,8 @@ import { useAuth } from '@/services/useauth'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
 
-// 1. DEFINE PAGE (Deve ficar no topo ou antes das funções)
-definePage({
-  meta: { 
-    perm: 'permissoes.ver' 
-  }
-})
+definePage({ meta: { perm: 'permissoes.ver' } })
+
 
 const router = useRouter()
 const { temAcesso, usuarioLogado } = useAuth()
@@ -295,17 +294,20 @@ const marcarTudoModulo = (modulo, marcar) => {
 
 // Ações
 async function confirmarSalvarPermissoes() {
+  if (!temAcesso('permissoes.gerenciar')) return notify.error('Acesso negado.')
   if (!usuarioSelecionado.value?.id) return
   const ok = await confirm.show('Salvar', `Deseja salvar as permissões de ${usuarioSelecionado.value.nome}?`)
   if (ok) await salvar()
 }
 
 async function confirmarMarcarTudoModulo(modulo, marcar) {
+  if (!temAcesso('permissoes.gerenciar')) return notify.error('Acesso negado.')
   const ok = await confirm.show(marcar ? 'Marcar' : 'Limpar', `Deseja alterar o módulo ${modulo}?`)
   if (ok) marcarTudoModulo(modulo, marcar)
 }
 
 const salvar = async () => {
+  if (!temAcesso('permissoes.gerenciar')) return notify.error('Acesso negado.')
   loadingSalvar.value = true
   try {
     const ids = permissoesAtivas.value

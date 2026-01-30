@@ -61,13 +61,15 @@
           <section class="bg-slate-50 rounded-[2.5rem] p-8 border border-slate-100 shadow-inner mb-10">
             <div class="flex items-center justify-between mb-8">
               <h3 class="text-[11px] font-black uppercase tracking-[0.25em] text-slate-500">Adicionar Insumos ao Plano</h3>
-              <button 
-                type="button" 
-                @click="abrirModalProduto()"
-                class="text-[10px] font-black uppercase text-emerald-600 hover:tracking-widest transition-all italic"
-              >
-                + Cadastrar Novo Produto
-              </button>
+<button
+  v-if="can(permSalvarPlano())"
+  type="button"
+  @click="abrirModalProduto()"
+  class="text-[10px] font-black uppercase text-emerald-600 hover:tracking-widest transition-all italic"
+>
+  + Cadastrar Novo Produto
+</button>
+
             </div>
 
             <div class="grid grid-cols-12 gap-6 items-end">
@@ -94,14 +96,16 @@
                     <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Total Item</span>
                     <span class="text-sm font-black text-emerald-600">{{ itemNovoTotalExibicao }}</span>
                   </div>
-                  <Button 
-                    variant="primary" 
-                    class="!h-14 !w-14 !rounded-2xl shadow-xl shadow-slate-900/20"
-                    :disabled="!podeAdicionarItem" 
-                    @click="registrarItemNovo()"
-                  >
-                    <i class="pi pi-plus text-lg"></i>
-                  </Button>
+<Button
+  v-if="can(permSalvarPlano())"
+  variant="primary"
+  class="!h-14 !w-14 !rounded-2xl shadow-xl shadow-slate-900/20"
+  :disabled="!podeAdicionarItem"
+  @click="registrarItemNovo()"
+>
+  <i class="pi pi-plus text-lg"></i>
+</Button>
+
                 </div>
               </div>
             </div>
@@ -132,9 +136,14 @@
 
             <template #cell-acoes="{ index }">
               <div class="flex justify-end">
-                <button @click="confirmarRemoverItemPlano(index)" class="w-10 h-10 rounded-xl text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all flex items-center justify-center">
-                  <i class="pi pi-trash text-xs"></i>
-                </button>
+<button
+  v-if="can(permSalvarPlano())"
+  @click="confirmarRemoverItemPlano(index)"
+  class="w-10 h-10 rounded-xl text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all flex items-center justify-center"
+>
+  <i class="pi pi-trash text-xs"></i>
+</button>
+
               </div>
             </template>
           </Table>
@@ -159,14 +168,20 @@
       </div>
 
       <footer class="flex items-center justify-between p-10 border-t border-slate-100 bg-slate-50/50">
-        <Button v-if="isEdit" variant="danger" @click="confirmarExcluirPlano" class="!rounded-2xl !px-8 !h-14 font-black text-[10px] uppercase tracking-widest">
-          Excluir Plano
-        </Button>
+<Button
+  v-if="isEdit && can('plano_corte.excluir')"
+  variant="danger"
+  @click="confirmarExcluirPlano"
+  class="!rounded-2xl !px-8 !h-14 font-black text-[10px] uppercase tracking-widest"
+>
+  Excluir Plano
+</Button>
+
         <div v-else></div>
 
         <div class="flex items-center gap-6">
 <Button
-  v-if="isEdit"
+  v-if="isEdit && can('plano_corte.enviar_producao')"
   type="button"
   variant="secondary"
   :loading="encaminhando"
@@ -177,15 +192,18 @@
 </Button>
 
 
-          <Button 
-            variant="primary" 
-            :loading="salvando" 
-            @click="salvar" 
-            class="!rounded-[1.5rem] !px-12 !h-14 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.2)] font-black text-[10px] uppercase tracking-widest bg-slate-900 hover:bg-black"
-          >
-            <i class="pi pi-check-circle mr-3"></i>
-            {{ isEdit ? 'Atualizar Plano' : 'Confirmar Venda' }}
-          </Button>
+
+<Button
+  v-if="can(permSalvarPlano())"
+  variant="primary"
+  :loading="salvando"
+  @click="salvar"
+  class="!rounded-[1.5rem] !px-12 !h-14 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.2)] font-black text-[10px] uppercase tracking-widest bg-slate-900 hover:bg-black"
+>
+  <i class="pi pi-check-circle mr-3"></i>
+  {{ isEdit ? 'Atualizar Plano' : 'Confirmar Venda' }}
+</Button>
+
         </div>
       </footer>
     </Card>
@@ -312,6 +330,12 @@ import { PlanoCorteService, FornecedorService, ProducaoService } from '@/service
 import { PIPELINE_PLANO_CORTE, UNIDADES } from '@/constantes'
 import { confirm } from '@/services/confirm'
 
+import { can } from '@/services/permissions'
+import { notify } from '@/services/notify'
+
+definePage({ meta: { perm: 'plano_corte.ver' } })
+
+
 
 const router = useRouter()
 const route = useRoute()
@@ -321,7 +345,10 @@ const rawId = computed(() => String(route.params.id || 'novo'))
 const isEdit = computed(() => rawId.value !== 'novo')
 const planoId = computed(() => (isEdit.value ? Number(String(rawId.value).replace(/\D/g, '')) : null))
 
-const loading = ref(false)
+const permSalvarPlano = () => (isEdit.value ? 'plano_corte.editar' : 'plano_corte.criar')
+
+
+const loading = ref(true)
 const salvando = ref(false)
 const encaminhando = ref(false)
 
@@ -337,9 +364,6 @@ const statusPlanoOptions = computed(() =>
 const unidadesOptions = computed(() =>
   (UNIDADES || []).map(u => ({ label: u.label, value: u.key }))
 )
-
-
-
 
 
 // CABEÇALHO
@@ -399,6 +423,8 @@ const modalProduto = ref({
 
 
 function abrirModalProduto() {
+  if (!can(permSalvarPlano())) return notify.error('Acesso negado.')
+
   if (!fornecedorSelecionado.value) return
   modalProduto.value.form.fornecedor_id = Number(fornecedorSelecionado.value)
   modalProduto.value.aberto = true
@@ -426,6 +452,8 @@ async function carregarItensDisponiveis(fId) {
 
 
 async function salvarProduto() {
+  if (!can(permSalvarPlano())) return notify.error('Acesso negado.')
+
   if (!modalProduto.value.form.nome_produto?.trim()) return
   if (!modalProduto.value.form.fornecedor_id) return
 
@@ -463,6 +491,8 @@ async function salvarProduto() {
 
 // excluir plano (confirm)
 async function confirmarExcluirPlano() {
+  if (!can('plano_corte.excluir')) return notify.error('Acesso negado.')
+
   if (!isEdit.value) return
 
   const ok = await confirm.show(
@@ -480,22 +510,11 @@ async function confirmarExcluirPlano() {
   }
 }
 
-// remover item (confirm)
-async function confirmarRemoverItemPlano(index) {
-  const row = itens.value?.[index]
-  const nome = row?.item?.nome_produto || 'ITEM'
-
-  const ok = await confirm.show(
-    'Remover Item',
-    `Deseja remover "${nome}" deste plano?`,
-  )
-  if (!ok) return
-
-  removerItem(index)
-}
 
 // enviar produção (confirm)
 async function confirmarEncaminharParaProducao() {
+  if (!can('plano_corte.enviar_producao')) return notify.error('Acesso negado.')
+
   if (!isEdit.value) return
 
   const ok = await confirm.show(
@@ -531,7 +550,28 @@ function onSelecionarProdutoNovo(v) {
 
 function limparItemNovo() { itemNovo.value = { item_id: null, unidade: '', quantidade: '', valorUnitarioMask: 'R$ 0,00' } }
 
+// remover item (confirm)
+async function confirmarRemoverItemPlano(index) {
+  if (!can(permSalvarPlano())) return notify.error('Acesso negado.')
+
+  const row = itens.value?.[index]
+  const nome = row?.item?.nome_produto || 'ITEM'
+
+  const ok = await confirm.show('Remover Item', `Deseja remover "${nome}" deste plano?`)
+  if (!ok) return
+
+  removerItem(index)
+}
+
+function removerItem(index) {
+  if (!can(permSalvarPlano())) return notify.error('Acesso negado.')
+  itens.value.splice(index, 1)
+}
+
+// adicionar item
 function registrarItemNovo() {
+  if (!can(permSalvarPlano())) return notify.error('Acesso negado.')
+
   const itemId = Number(itemNovo.value.item_id)
   const item = itensDisponiveis.value.find(i => Number(i.id) === itemId)
   if (!item) return
@@ -548,11 +588,11 @@ function registrarItemNovo() {
   limparItemNovo()
 }
 
-function removerItem(index) { itens.value.splice(index, 1) }
-
 
 
 async function encaminharParaProducao() {
+  if (!can('plano_corte.enviar_producao')) return notify.error('Acesso negado.')
+
   if (!isEdit.value) return
 
   encaminhando.value = true
@@ -575,6 +615,9 @@ statusPlano.value = data.status ?? ''
 
 
 async function salvar() {
+  const perm = permSalvarPlano()
+  if (!can(perm)) return notify.error('Acesso negado.')
+
   salvando.value = true
   try {
 const payload = {

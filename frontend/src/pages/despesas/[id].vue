@@ -248,7 +248,7 @@
           <!-- ===================================================== -->
           <div class="flex items-center justify-end gap-3">
 <button
-  v-if="isEdit"
+  v-if="isEdit && can('despesas.excluir')"
   type="button"
   @click.stop.prevent="excluir"
   class="bg-red-600 text-white h-11 px-6 rounded-2xl font-black uppercase tracking-widest text-[12px] hover:bg-red-700 transition"
@@ -257,13 +257,16 @@
 </button>
 
 
-            <Button
-              class="min-w-[140px]"
-              type="submit"
-              variant="primary"
-              :loading="loading"
-              :label="isEdit ? 'Salvar' : 'Criar'"
-            />
+
+<Button
+  v-if="can(isEdit ? 'despesas.editar' : 'despesas.criar')"
+  class="min-w-[140px]"
+  type="submit"
+  variant="primary"
+  :loading="loading"
+  :label="isEdit ? 'Salvar' : 'Criar'"
+/>
+
           </div>
         </form>
       </div>
@@ -281,6 +284,9 @@ import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
 import * as CONST from '@/constantes/index'
 import { upper } from '@/utils/text'
 import { confirm } from '@/services/confirm'
+import { can } from '@/services/permissions'
+
+definePage({ meta: { perm: 'despesas.ver' } })
 
 
 
@@ -430,6 +436,9 @@ async function init() {
 }
 
 async function salvar() {
+  const perm = isEdit.value ? 'despesas.editar' : 'despesas.criar'
+  if (!can(perm)) return notify.error('Acesso negado.')
+
   if (!form.categoria) return notify.info('Selecione a categoria')
 
 if (formasQuePrecisamBanco.includes(form.forma_pagamento)) {
@@ -462,6 +471,8 @@ const payload = {
 }
 
 async function excluir(event) {
+  if (!can('despesas.excluir')) return notify.error('Acesso negado.')
+  
   if (event) {
     event.preventDefault()
     event.stopPropagation()
@@ -491,5 +502,14 @@ if (!confirmado) return
   }
 }
 
-onMounted(init)
+onMounted(async () => {
+  const perm = isEdit.value ? 'despesas.editar' : 'despesas.criar'
+  if (!can(perm)) {
+    notify.error('Acesso negado.')
+    router.push('/despesas')
+    return
+  }
+  await init()
+})
+
 </script>

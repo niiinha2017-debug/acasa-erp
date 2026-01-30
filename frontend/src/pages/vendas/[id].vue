@@ -69,11 +69,11 @@
         <section class="space-y-4">
           <div class="flex items-center justify-between gap-4">
             <div class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
-              Itens do Orçamento
+              Itens da Venda
             </div>
 
             <Button
-              v-if="isEdit"
+              v-if="isEdit && can('vendas.editar')"
               variant="secondary"
               size="sm"
               type="button"
@@ -95,7 +95,7 @@
 
               <template #cell-quantidade="{ row }">
                 <Input
-                  v-if="isEdit"
+                  v-if="isEdit && can('vendas.editar')"
                   v-model.number="form.itens[row.__idx].quantidade"
                   type="number"
                   min="1"
@@ -113,7 +113,7 @@
               </template>
 
               <template #cell-acoes="{ row }">
-                <div v-if="isEdit" class="flex justify-end gap-2">
+                <div v-if="isEdit && can('vendas.editar')" class="flex justify-end gap-2">
                   <Button
                     variant="secondary"
                     size="sm"
@@ -133,10 +133,7 @@
                   </Button>
                 </div>
 
-                <span
-                  v-else
-                  class="text-[10px] font-black uppercase tracking-widest text-slate-300"
-                >
+                <span v-else class="text-[10px] font-black uppercase tracking-widest text-slate-300">
                   —
                 </span>
               </template>
@@ -163,7 +160,13 @@
               Pagamentos (Rateio)
             </div>
 
-            <Button variant="secondary" size="sm" type="button" @click="addPagamento">
+            <Button
+              v-if="can(permSalvarVenda())"
+              variant="secondary"
+              size="sm"
+              type="button"
+              @click="addPagamento"
+            >
               + Adicionar pagamento
             </Button>
           </div>
@@ -175,6 +178,7 @@
                 type="number"
                 label="Valor total vendido (cobrado) *"
                 :forceUpper="false"
+                :readonly="!can(permSalvarVenda())"
               />
             </div>
           </div>
@@ -186,26 +190,27 @@
                 mode="select"
                 placeholder="Selecione..."
                 :options="FORMAS_PAGAMENTO_OPTIONS"
+                :readonly="!can(permSalvarVenda())"
               />
             </template>
 
-<template #cell-data_prevista="{ row }">
-  <Input
-    v-model="form.pagamentos[row.__idx].data_prevista_recebimento"
-    type="date"
-    :forceUpper="false"
-  />
-</template>
+            <template #cell-data_prevista="{ row }">
+              <Input
+                v-model="form.pagamentos[row.__idx].data_prevista_recebimento"
+                type="date"
+                :forceUpper="false"
+                :readonly="!can(permSalvarVenda())"
+              />
+            </template>
 
-<template #cell-data_recebimento="{ row }">
-  <Input
-    v-model="form.pagamentos[row.__idx].data_recebimento"
-    type="date"
-    :forceUpper="false"
-  />
-</template>
-
-
+            <template #cell-data_recebimento="{ row }">
+              <Input
+                v-model="form.pagamentos[row.__idx].data_recebimento"
+                type="date"
+                :forceUpper="false"
+                :readonly="!can(permSalvarVenda())"
+              />
+            </template>
 
             <template #cell-parcelas="{ row }">
               <Input
@@ -215,6 +220,7 @@
                 min="1"
                 max="12"
                 :forceUpper="false"
+                :readonly="!can(permSalvarVenda())"
               />
               <span v-else class="text-slate-300">—</span>
             </template>
@@ -224,12 +230,14 @@
                 v-model.number="form.pagamentos[row.__idx].valor"
                 type="number"
                 :forceUpper="false"
+                :readonly="!can(permSalvarVenda())"
               />
             </template>
 
             <template #cell-acoes="{ row }">
               <div class="flex justify-end">
                 <Button
+                  v-if="can(permSalvarVenda())"
                   variant="danger"
                   size="sm"
                   type="button"
@@ -238,6 +246,12 @@
                 >
                   Remover
                 </Button>
+                <span
+                  v-else
+                  class="text-[10px] font-black uppercase tracking-widest text-slate-300"
+                >
+                  —
+                </span>
               </div>
             </template>
           </Table>
@@ -268,7 +282,13 @@
               Comissões
             </div>
 
-            <Button variant="secondary" size="sm" type="button" @click="addComissao">
+            <Button
+              v-if="can(permSalvarVenda())"
+              variant="secondary"
+              size="sm"
+              type="button"
+              @click="addComissao"
+            >
               + Adicionar comissão
             </Button>
           </div>
@@ -279,6 +299,7 @@
                 v-model="form.comissoes[row.__idx].tipo_comissao_chave"
                 mode="select"
                 :options="COMISSOES_OPTIONS"
+                :readonly="!can(permSalvarVenda())"
               />
             </template>
 
@@ -287,6 +308,7 @@
                 v-model="form.comissoes[row.__idx].responsavel_nome"
                 placeholder="Nome do responsável"
                 :forceUpper="false"
+                :readonly="!can(permSalvarVenda())"
               />
             </template>
 
@@ -300,9 +322,21 @@
 
             <template #cell-acoes="{ row }">
               <div class="flex justify-end">
-                <Button variant="danger" size="sm" type="button" @click="confirmarRemoverComissao(row.__idx)">
+                <Button
+                  v-if="can(permSalvarVenda())"
+                  variant="danger"
+                  size="sm"
+                  type="button"
+                  @click="confirmarRemoverComissao(row.__idx)"
+                >
                   Remover
                 </Button>
+                <span
+                  v-else
+                  class="text-[10px] font-black uppercase tracking-widest text-slate-300"
+                >
+                  —
+                </span>
               </div>
             </template>
           </Table>
@@ -332,7 +366,11 @@
             </div>
 
             <div class="col-span-12 md:col-span-3">
-              <CustomCheckbox v-model="form.tem_nota_fiscal" label="Emitir Nota Fiscal" />
+              <CustomCheckbox
+                v-model="form.tem_nota_fiscal"
+                label="Emitir Nota Fiscal"
+                :disabled="!can(permSalvarVenda())"
+              />
             </div>
 
             <div class="col-span-12 md:col-span-3">
@@ -357,11 +395,7 @@
 
             <div class="col-span-12 md:col-span-3">
               <div class="rounded-2xl border border-slate-100 bg-slate-50/60 p-3">
-                <Input
-                  :modelValue="format.currency(lucro_bruto)"
-                  label="Resultado Líquido"
-                  readonly
-                />
+                <Input :modelValue="format.currency(lucro_bruto)" label="Resultado Líquido" readonly />
               </div>
             </div>
           </div>
@@ -370,7 +404,7 @@
         <div class="h-px bg-slate-100" />
 
         <!-- ===================== -->
-        <!-- ARQUIVOS -->
+        <!-- ARQUIVOS (PWA) -->
         <!-- ===================== -->
         <section class="space-y-4">
           <div class="flex items-center justify-between gap-4">
@@ -378,60 +412,20 @@
               Arquivos e Comprovantes
             </div>
 
-            <div class="flex items-center gap-2">
-              <input type="file" ref="fileInput" class="hidden" @change="uploadArquivo" />
-              <Button
-                variant="secondary"
-                size="sm"
-                type="button"
-                :disabled="!isEdit"
-                @click="abrirFilePicker"
-              >
-                + Anexar Arquivo
-              </Button>
-            </div>
+            <Button
+              v-if="isEdit && can('vendas.editar')"
+              variant="secondary"
+              size="sm"
+              type="button"
+              @click="arquivosOpen = true"
+            >
+              Abrir Arquivos
+            </Button>
           </div>
 
           <div class="p-6 rounded-3xl border border-slate-100 bg-slate-50/50">
-            <Loading v-if="uploading" class="py-6" />
-
-            <div
-              v-else-if="(arquivos || []).length === 0"
-              class="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center py-4"
-            >
-              Nenhum arquivo anexado até o momento.
-            </div>
-
-            <div v-else class="flex flex-wrap gap-2">
-              <div
-                v-for="file in arquivos"
-                :key="file.id"
-                class="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-slate-100 hover:shadow-sm transition-shadow"
-              >
-                <span class="text-[10px] font-bold text-slate-700 truncate max-w-[200px]">
-                  {{ file.nome_original || 'ARQUIVO' }}
-                </span>
-
-                <div class="flex items-center gap-2 ml-2">
-                  <button
-                    type="button"
-                    @click="abrirArquivo(file.id)"
-                    class="text-slate-400 hover:text-brand-primary"
-                    title="Visualizar"
-                  >
-                    <i class="pi pi-external-link text-[10px]"></i>
-                  </button>
-
-                  <button
-                    type="button"
-                    @click="confirmarDeletarArquivoVenda(file.id)"
-                    class="text-red-400 hover:text-red-600"
-                    title="Excluir"
-                  >
-                    <i class="pi pi-times text-[10px]"></i>
-                  </button>
-                </div>
-              </div>
+            <div class="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center py-2">
+              Use “Abrir Arquivos” para anexar / visualizar dentro do PWA.
             </div>
           </div>
 
@@ -447,25 +441,27 @@
     <!-- ===================== -->
     <footer class="flex items-center justify-end gap-3 p-6 border-t border-slate-100 bg-slate-50/30">
       <Button
+        v-if="isEdit && can('vendas.editar')"
         variant="secondary"
         size="md"
         type="button"
-        :disabled="!isEdit || saving"
+        :disabled="saving"
         @click="confirmarEnviarParaProducao"
       >
         Enviar para produção
       </Button>
-<Button
-  variant="primary"
-  size="md"
-  type="button"
-  :loading="saving"
-  :disabled="saving"
-  @click="confirmarSalvarVenda"
->
-  Salvar Venda
-</Button>
 
+      <Button
+        v-if="can(permSalvarVenda())"
+        variant="primary"
+        size="md"
+        type="button"
+        :loading="saving"
+        :disabled="saving"
+        @click="confirmarSalvarVenda"
+      >
+        Salvar Venda
+      </Button>
     </footer>
 
     <!-- ===================== -->
@@ -556,17 +552,32 @@
       </Card>
     </div>
   </Card>
+
+  <!-- ARQUIVOS MODAL GLOBAL (PWA) -->
+  <ArquivosModal
+    v-if="arquivosOpen && vendaId"
+    :open="arquivosOpen"
+    owner-type="VENDA"
+    :owner-id="vendaId"
+    categoria="ANEXO"
+    :can-manage="can('vendas.editar')"
+    view-perm="vendas.ver"
+    @close="arquivosOpen = false"
+  />
 </template>
+
 
 <script setup>
 import { reactive, ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { confirm } from '@/services/confirm'
-
 import { notify } from '@/services/notify'
 import { ClienteService, OrcamentosService, VendaService, ProducaoService } from '@/services/index'
 import { format } from '@/utils/format'
 import { FORMAS_PAGAMENTO, COMISSOES, TAXAS_CARTAO, TAXA_NOTA_FISCAL, PIPELINE_CLIENTE } from '@/constantes'
+import { can } from '@/services/permissions'
+
+definePage({ meta: { perm: 'vendas.ver' } })
 
 // =======================
 // ROUTE
@@ -574,25 +585,26 @@ import { FORMAS_PAGAMENTO, COMISSOES, TAXAS_CARTAO, TAXA_NOTA_FISCAL, PIPELINE_C
 const route = useRoute()
 const router = useRouter()
 
+const arquivosOpen = ref(false)
+
 const vendaId = computed(() => {
   const n = Number(String(route.params.id || '').replace(/\D/g, ''))
   return Number.isFinite(n) && n > 0 ? n : null
 })
 const isEdit = computed(() => !!vendaId.value)
 
+// ✅ perm salvar (criar/editar)
+const permSalvarVenda = () => (isEdit.value ? 'vendas.editar' : 'vendas.criar')
+
 // =======================
 // UI STATE
 // =======================
 const loading = ref(false)
 const saving = ref(false)
-const uploading = ref(false)
 
 const clientesOptions = ref([])
 const orcamentosOptions = ref([])
 const clienteFiltroId = ref('')
-
-const arquivos = ref([])
-const fileInput = ref(null)
 
 // =======================
 // CONSTANTS / OPTIONS
@@ -646,27 +658,25 @@ const form = reactive({
   itens: [],
 
   pagamentos: [
-  {
-    forma_pagamento_chave: '',
-    valor: 0,
-    parcelas: 1,
-    data_prevista_recebimento: '',
-    data_recebimento: '',
-    status_financeiro_chave: 'EM_ABERTO',
-  },
-],
-
+    {
+      forma_pagamento_chave: '',
+      valor: 0,
+      parcelas: 1,
+      data_prevista_recebimento: '',
+      data_recebimento: '',
+      status_financeiro_chave: 'EM_ABERTO',
+    },
+  ],
 
   comissoes: [],
 
-  // backend
   taxa_pagamento_percentual_aplicado: 0,
   tem_nota_fiscal: false,
   taxa_nota_fiscal_percentual_aplicado: Number(TAXA_NOTA_FISCAL?.taxa || 0),
 })
 
 // =======================
-// ROWS (somente p/ render, edição é feita direto no form pelo __idx no template)
+// ROWS (somente p/ render)
 // =======================
 const rowsItens = computed(() => (form.itens || []).map((it, idx) => ({ ...it, __idx: idx })))
 const rowsPagamentos = computed(() => (form.pagamentos || []).map((p, idx) => ({ ...p, __idx: idx })))
@@ -698,6 +708,7 @@ function resetItemDraft() {
 }
 
 function abrirModalNovoItem() {
+  if (!isEdit.value || !can('vendas.editar')) return notify.error('Acesso negado.')
   resetItemDraft()
   modalItemOpen.value = true
 }
@@ -707,6 +718,7 @@ function fecharModalItem() {
 }
 
 function editarItemLocal(row) {
+  if (!isEdit.value || !can('vendas.editar')) return notify.error('Acesso negado.')
   if (!row) return
   const base = form.itens?.[row.__idx]
   if (!base) return
@@ -723,74 +735,9 @@ function editarItemLocal(row) {
   modalItemOpen.value = true
 }
 
-
-// SALVAR VENDA
-async function confirmarSalvarVenda() {
-  const ok = await confirm.show(
-    isEdit.value ? 'Salvar Venda' : 'Criar Venda',
-    isEdit.value
-      ? `Deseja salvar as alterações da Venda #${vendaId.value}?`
-      : 'Deseja criar esta venda agora?',
-  )
-  if (!ok) return
-  await salvar()
-}
-
-// ENVIAR PARA PRODUÇÃO
-async function confirmarEnviarParaProducao() {
-  if (!isEdit.value) return
-
-  const ok = await confirm.show(
-    'Enviar para Produção',
-    `Deseja enviar a Venda #${vendaId.value} para Produção?`,
-  )
-  if (!ok) return
-
-  await enviarParaProducao()
-}
-
-// REMOVER ITEM (apenas itens locais, já que itens com id não removem)
-async function confirmarRemoverItemVenda(row) {
-  const ok = await confirm.show(
-    'Remover Item',
-    `Deseja remover "${row?.nome_ambiente || 'ITEM'}" desta venda?`,
-  )
-  if (!ok) return
-  removerItem(row)
-}
-
-// REMOVER PAGAMENTO
-async function confirmarRemoverPagamento(idx) {
-  const ok = await confirm.show(
-    'Remover Pagamento',
-    'Deseja remover este pagamento do rateio?',
-  )
-  if (!ok) return
-  removerPagamento(idx)
-}
-
-// REMOVER COMISSÃO
-async function confirmarRemoverComissao(idx) {
-  const ok = await confirm.show(
-    'Remover Comissão',
-    'Deseja remover esta comissão?',
-  )
-  if (!ok) return
-  removerComissao(idx)
-}
-
-// REMOVER ARQUIVO
-async function confirmarDeletarArquivoVenda(arquivoId) {
-  const ok = await confirm.show(
-    'Excluir Arquivo',
-    'Deseja excluir este arquivo?',
-  )
-  if (!ok) return
-  await deletarArquivo(arquivoId)
-}
-
-
 function salvarItemDoModal() {
+  if (!isEdit.value || !can('vendas.editar')) return notify.error('Acesso negado.')
+
   if (!String(itemDraft.nome_ambiente || '').trim()) {
     notify.warn('Preencha Item/Ambiente')
     return
@@ -815,7 +762,7 @@ function salvarItemDoModal() {
 }
 
 function removerItem(row) {
-  // item com id = backend (não temos endpoint de delete)
+  if (!isEdit.value || !can('vendas.editar')) return notify.error('Acesso negado.')
   if (row?.id) {
     notify.warn('Remoção de item do orçamento não disponível (sem endpoint).')
     return
@@ -826,7 +773,63 @@ function removerItem(row) {
 }
 
 // =======================
-// TABELAS (itens)
+// CONFIRMS
+// =======================
+async function confirmarSalvarVenda() {
+  const perm = permSalvarVenda()
+  if (!can(perm)) return notify.error('Acesso negado.')
+
+  const ok = await confirm.show(
+    isEdit.value ? 'Salvar Venda' : 'Criar Venda',
+    isEdit.value
+      ? `Deseja salvar as alterações da Venda #${vendaId.value}?`
+      : 'Deseja criar esta venda agora?',
+  )
+  if (!ok) return
+  await salvar()
+}
+
+async function confirmarEnviarParaProducao() {
+  if (!isEdit.value) return
+  if (!can('vendas.editar')) return notify.error('Acesso negado.')
+
+  const ok = await confirm.show(
+    'Enviar para Produção',
+    `Deseja enviar a Venda #${vendaId.value} para Produção?`,
+  )
+  if (!ok) return
+  await enviarParaProducao()
+}
+
+async function confirmarRemoverItemVenda(row) {
+  if (!isEdit.value || !can('vendas.editar')) return notify.error('Acesso negado.')
+
+  const ok = await confirm.show(
+    'Remover Item',
+    `Deseja remover "${row?.nome_ambiente || 'ITEM'}" desta venda?`,
+  )
+  if (!ok) return
+  removerItem(row)
+}
+
+async function confirmarRemoverPagamento(idx) {
+  if (!can(permSalvarVenda())) return notify.error('Acesso negado.')
+
+  const ok = await confirm.show('Remover Pagamento', 'Deseja remover este pagamento do rateio?')
+  if (!ok) return
+  removerPagamento(idx)
+}
+
+async function confirmarRemoverComissao(idx) {
+  if (!can(permSalvarVenda())) return notify.error('Acesso negado.')
+
+  const ok = await confirm.show('Remover Comissão', 'Deseja remover esta comissão?')
+  if (!ok) return
+  removerComissao(idx)
+}
+
+// =======================
+// TABLE DEFINITIONS
 // =======================
 const columnsItens = [
   { key: 'nome_ambiente', label: 'Item/Ambiente' },
@@ -847,7 +850,6 @@ const columnsPagamentos = [
   { key: 'acoes', label: 'Ações', width: '140px', align: 'right' },
 ]
 
-
 const columnsComissoes = [
   { key: 'tipo', label: 'Tipo', width: '220px' },
   { key: 'responsavel', label: 'Responsável' },
@@ -860,6 +862,7 @@ const columnsComissoes = [
 // PAGAMENTOS / RATEIO
 // =======================
 function addPagamento() {
+  if (!can(permSalvarVenda())) return notify.error('Acesso negado.')
   form.pagamentos.push({
     forma_pagamento_chave: '',
     valor: 0,
@@ -871,6 +874,7 @@ function addPagamento() {
 }
 
 function removerPagamento(idx) {
+  if (!can(permSalvarVenda())) return notify.error('Acesso negado.')
   if (form.pagamentos.length === 1) return
   form.pagamentos.splice(idx, 1)
 }
@@ -885,9 +889,11 @@ const pagamentosBatendo = computed(() => diferencaRateio.value === 0)
 // COMISSÕES
 // =======================
 function addComissao() {
+  if (!can(permSalvarVenda())) return notify.error('Acesso negado.')
   form.comissoes.push({ tipo_comissao_chave: 'VENDEDOR', responsavel_nome: '' })
 }
 function removerComissao(idx) {
+  if (!can(permSalvarVenda())) return notify.error('Acesso negado.')
   form.comissoes.splice(idx, 1)
 }
 
@@ -939,20 +945,6 @@ const valor_taxa_nf = computed(() => {
 
 const total_taxas = computed(() => round2(valor_taxa_pagamento.value + valor_taxa_nf.value))
 const lucro_bruto = computed(() => round2(valor_bruto.value - total_taxas.value - valor_comissoes.value))
-
-// =======================
-// VALIDAÇÃO
-// =======================
-const podeSalvar = computed(() => {
-  if (!clienteFiltroId.value && !isEdit.value) return false
-  if (!form.orcamento_id) return false
-  if (!form.data_venda) return false
-  if (valor_bruto.value <= 0) return false
-  if (!form.itens?.length) return false
-  if (!form.pagamentos?.length) return false
-  if (!pagamentosBatendo.value) return false
-  return true
-})
 
 // =======================
 // LOADERS
@@ -1027,34 +1019,32 @@ async function carregarVenda() {
       valor_unitario: Number(it.valor_unitario || 0),
     }))
 
-form.pagamentos = (data?.pagamentos || []).map((p) => ({
-  id: p.id,
-  forma_pagamento_chave: p.forma_pagamento_chave || '',
-  valor: round2(num(p.valor || 0)),
-  parcelas: 1,
-  data_prevista_recebimento: p.data_prevista_recebimento ? String(p.data_prevista_recebimento).slice(0, 10) : '',
-  data_recebimento: p.data_recebimento ? String(p.data_recebimento).slice(0, 10) : '',
-  status_financeiro_chave: p.status_financeiro_chave || 'EM_ABERTO',
-}))
+    form.pagamentos = (data?.pagamentos || []).map((p) => ({
+      id: p.id,
+      forma_pagamento_chave: p.forma_pagamento_chave || '',
+      valor: round2(num(p.valor || 0)),
+      parcelas: 1,
+      data_prevista_recebimento: p.data_prevista_recebimento ? String(p.data_prevista_recebimento).slice(0, 10) : '',
+      data_recebimento: p.data_recebimento ? String(p.data_recebimento).slice(0, 10) : '',
+      status_financeiro_chave: p.status_financeiro_chave || 'EM_ABERTO',
+    }))
 
-if (!form.pagamentos.length) {
-  form.pagamentos = [{
-    forma_pagamento_chave: '',
-    valor: round2(form.valor_vendido),
-    parcelas: 1,
-    data_prevista_recebimento: '',
-    data_recebimento: '',
-    status_financeiro_chave: 'EM_ABERTO',
-  }]
-}
+    if (!form.pagamentos.length) {
+      form.pagamentos = [{
+        forma_pagamento_chave: '',
+        valor: round2(form.valor_vendido),
+        parcelas: 1,
+        data_prevista_recebimento: '',
+        data_recebimento: '',
+        status_financeiro_chave: 'EM_ABERTO',
+      }]
+    }
 
     form.comissoes = (data?.comissoes || []).map((c) => ({
       id: c.id,
       tipo_comissao_chave: c.tipo_comissao_chave || 'VENDEDOR',
       responsavel_nome: c.responsavel_nome || '',
     }))
-
-    await listarArquivos()
   } catch (e) {
     console.error(e)
     notify.error('Erro ao carregar venda')
@@ -1064,10 +1054,12 @@ if (!form.pagamentos.length) {
 }
 
 // =======================
-// ITENS (EDIT): endpoint PUT item (backend)
+// ITENS (EDIT): endpoint PUT item
 // =======================
 async function iniciarEdicaoItem(row) {
   if (!isEdit.value || !row?.id) return
+  if (!can('vendas.editar')) return notify.error('Acesso negado.')
+
   try {
     await VendaService.atualizarItem(vendaId.value, row.id, {
       nome_ambiente: row.nome_ambiente,
@@ -1097,14 +1089,13 @@ function montarPayload() {
     tem_nota_fiscal: Boolean(form.tem_nota_fiscal),
     taxa_nota_fiscal_percentual_aplicado: round2(num(form.taxa_nota_fiscal_percentual_aplicado || 0)),
 
-pagamentos: (form.pagamentos || []).map((p) => ({
-  forma_pagamento_chave: String(p.forma_pagamento_chave || ''),
-  valor: round2(num(p.valor || 0)),
-  data_prevista_recebimento: p.data_prevista_recebimento || null,
-  data_recebimento: p.data_recebimento || null,
-  status_financeiro_chave: p.status_financeiro_chave || 'EM_ABERTO',
-})),
-
+    pagamentos: (form.pagamentos || []).map((p) => ({
+      forma_pagamento_chave: String(p.forma_pagamento_chave || ''),
+      valor: round2(num(p.valor || 0)),
+      data_prevista_recebimento: p.data_prevista_recebimento || null,
+      data_recebimento: p.data_recebimento || null,
+      status_financeiro_chave: p.status_financeiro_chave || 'EM_ABERTO',
+    })),
 
     comissoes: (form.comissoes || []).map((c) => ({
       tipo_comissao_chave: String(c.tipo_comissao_chave || ''),
@@ -1118,7 +1109,10 @@ pagamentos: (form.pagamentos || []).map((p) => ({
 // ACTIONS
 // =======================
 async function salvar() {
+  const perm = permSalvarVenda()
+  if (!can(perm)) return notify.error('Acesso negado.')
   if (saving.value) return
+
   saving.value = true
   try {
     const payload = montarPayload()
@@ -1141,9 +1135,10 @@ async function salvar() {
   }
 }
 
-
 async function enviarParaProducao() {
   if (!isEdit.value) return
+  if (!can('vendas.editar')) return notify.error('Acesso negado.')
+
   try {
     await ProducaoService.encaminhar({
       origem_tipo: 'VENDA_CLIENTE',
@@ -1157,62 +1152,6 @@ async function enviarParaProducao() {
     notify.error('Erro ao enviar para produção')
   }
 }
-
-// =======================
-// ARQUIVOS
-// =======================
-async function listarArquivos() {
-  if (!isEdit.value) return
-  const { data } = await VendaService.listarArquivos(vendaId.value)
-  arquivos.value = Array.isArray(data) ? data : (data?.rows || data?.data || [])
-}
-
-function abrirFilePicker() {
-  if (!isEdit.value) return
-  fileInput.value?.click?.()
-}
-
-async function uploadArquivo(event) {
-  if (!isEdit.value) return
-  const file = event?.target?.files?.[0]
-  if (!file) return
-
-  uploading.value = true
-  try {
-    await VendaService.uploadArquivo(vendaId.value, file)
-    notify.success('Arquivo anexado!')
-    await listarArquivos()
-  } catch (e) {
-    console.error(e)
-    notify.error('Erro ao anexar arquivo')
-  } finally {
-    uploading.value = false
-    if (event?.target) event.target.value = ''
-  }
-}
-
-async function abrirArquivo(arquivoId) {
-  if (!isEdit.value) return
-  try {
-    await VendaService.abrirArquivo(vendaId.value, arquivoId)
-  } catch (e) {
-    console.error(e)
-    notify.error('Erro ao abrir arquivo')
-  }
-}
-
-async function deletarArquivo(arquivoId) {
-  if (!isEdit.value) return
-  try {
-    await VendaService.removerArquivo(vendaId.value, arquivoId)
-    notify.success('Excluído!')
-    await listarArquivos()
-  } catch (e) {
-    console.error(e)
-    notify.error('Erro ao excluir arquivo')
-  }
-}
-
 
 // =======================
 // WATCHERS
@@ -1257,6 +1196,27 @@ watch(
 // INIT
 // =======================
 onMounted(async () => {
+  // ✅ bloqueio base: ver
+  if (!can('vendas.ver')) {
+    notify.error('Acesso negado.')
+    router.push('/vendas')
+    return
+  }
+
+  // ✅ se for edição, precisa poder editar
+  if (isEdit.value && !can('vendas.editar')) {
+    notify.error('Acesso negado.')
+    router.push('/vendas')
+    return
+  }
+
+  // ✅ se for novo, precisa poder criar
+  if (!isEdit.value && !can('vendas.criar')) {
+    notify.error('Acesso negado.')
+    router.push('/vendas')
+    return
+  }
+
   loading.value = true
   try {
     await carregarClientesOptions()
@@ -1269,6 +1229,5 @@ onMounted(async () => {
   }
 })
 </script>
-
 
 

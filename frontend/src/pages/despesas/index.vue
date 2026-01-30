@@ -24,12 +24,13 @@
           />
         </div>
         
-        <Button 
-          variant="primary" 
-          size="md"
-          class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider"
-          @click="novo"
-        >
+<Button
+  v-if="can('despesas.criar')"
+  variant="primary"
+  size="md"
+  class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider"
+  @click="novo"
+>
           <i class="pi pi-plus mr-1.5 text-[10px]"></i>
           Novo
         </Button>
@@ -132,14 +133,17 @@
 
         <template #cell-acoes="{ row }">
           <div class="flex justify-center gap-1">
-            <button 
-              @click="editar(row.id)"
-              class="w-7 h-7 rounded-lg bg-slate-100 text-slate-500 hover:bg-brand-primary hover:text-white transition-all flex items-center justify-center"
-            >
-              <i class="pi pi-pencil text-xs"></i>
-            </button>
 <button
-  @click="() => { console.log('[INDEX] click excluir', row.id); pedirExcluir(row.id) }"
+  v-if="can('despesas.editar')"
+  @click="editar(row.id)"
+  class="w-7 h-7 rounded-lg bg-slate-100 text-slate-500 hover:bg-brand-primary hover:text-white transition-all flex items-center justify-center"
+>
+  <i class="pi pi-pencil text-xs"></i>
+</button>
+
+<button
+  v-if="can('despesas.excluir')"
+  @click="pedirExcluir(row.id)"
   class="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
 >
   <i class="pi pi-trash text-xs"></i>
@@ -161,6 +165,9 @@ import { notify } from '@/services/notify'
 import { format } from '@/utils/format'
 import { confirm } from '@/services/confirm'
 
+import { can } from '@/services/permissions'
+
+definePage({ meta: { perm: 'despesas.ver' } })
 
 
 const router = useRouter()
@@ -282,13 +289,22 @@ async function carregar() {
   }
 }
 
-const novo = () => router.push('/despesas/novo')
-const editar = (id) => router.push(`/despesas/${id}`)
+const novo = () => {
+  if (!can('despesas.criar')) return notify.error('Acesso negado.')
+  router.push('/despesas/novo')
+}
+
+const editar = (id) => {
+  if (!can('despesas.editar')) return notify.error('Acesso negado.')
+  router.push(`/despesas/${id}`)
+}
 
 /**
  * CORREÇÃO DA EXCLUSÃO: Removido logs excessivos e corrigido fluxo de confirmação
  */
 async function pedirExcluir(id) {
+  if (!can('despesas.excluir')) return notify.error('Acesso negado.')
+  
   const confirmado = await confirm.show(
     'Excluir Lançamento?',
     'Esta ação não pode ser desfeita.'

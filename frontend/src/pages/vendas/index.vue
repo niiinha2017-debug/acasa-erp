@@ -24,6 +24,7 @@
         </div>
         
         <Button 
+        v-if="can('vendas.criar')"
           variant="primary" 
           size="md"
           class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider w-full sm:w-auto"
@@ -53,10 +54,9 @@
         <p class="text-xl font-black text-blue-600">
 {{ format.currency(
   vendas.length
-    ? (vendas.reduce((acc, v) => acc + Number(v.valor_total || 0), 0) / vendas.length)
+    ? (vendas.reduce((acc, v) => acc + Number(v.valor_vendido || 0), 0) / vendas.length)
     : 0
 ) }}
-
 
         </p>
       </div>
@@ -121,12 +121,14 @@
         <template #cell-acoes="{ row }">
           <div class="flex justify-end gap-1.5 px-2">
             <button 
+            v-if="can('vendas.editar')"
               @click="router.push(`/vendas/${row.id}`)" 
               class="w-7 h-7 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-900 hover:text-white transition-all border border-slate-200 flex items-center justify-center"
             >
               <i class="pi pi-pencil text-[10px]"></i>
             </button>
             <button 
+            v-if="can('vendas.excluir')"
               @click="confirmarExcluirVenda(row.id)" 
               class="w-7 h-7 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all border border-rose-100 flex items-center justify-center"
             >
@@ -143,8 +145,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { confirm } from '@/services/confirm'
+import { notify } from '@/services/notify'
+import { can } from '@/services/permissions'
 import api from '@/services/api'
 import { format } from '@/utils/format'
+
+definePage({ meta: { perm: 'vendas.ver' } })
 
 const router = useRouter()
 const loading = ref(false)
@@ -163,13 +169,14 @@ const columns = [
 ]
 
 const filtradas = computed(() => {
-  const f = (filtro.value || '').toLowerCase().trim()
+  const f = String(filtro.value || '').toLowerCase().trim()
   if (!f) return vendas.value
 
   return vendas.value.filter((v) => {
-    const cliente = (v?.cliente?.nome || v?.cliente?.razao_social || '').toLowerCase()
-    const status = (v?.status || '').toLowerCase()
-    const pag = (v?.forma_pagamento_chave || '').toLowerCase()
+    const cli = v?.cliente || {}
+    const cliente = String(cli.nome_completo || cli.razao_social || cli.nome || '').toLowerCase()
+    const status = String(v?.status || '').toLowerCase()
+    const pag = String(v?.forma_pagamento_chave || '').toLowerCase()
     const id = String(v?.id || '').toLowerCase()
 
     return cliente.includes(f) || status.includes(f) || pag.includes(f) || id.includes(f)
@@ -178,26 +185,38 @@ const filtradas = computed(() => {
 
 function pillClassTailwind(status) {
   const s = String(status || '').toUpperCase()
-  if (s.includes('FECH')) return 'bg-emerald-50 text-emerald-600 border-emerald-100'
-  if (s.includes('CANCEL')) return 'bg-rose-50 text-rose-500 border-rose-100'
-  if (s.includes('PRODU')) return 'bg-sky-50 text-sky-600 border-sky-100'
-  return 'bg-slate-50 text-slate-500 border-slate-200'
+  if (s.includes('FECH')) return 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+  if (s.includes('CANCEL')) return 'bg-rose-50 text-rose-500 border border-rose-100'
+  if (s.includes('PRODU')) return 'bg-sky-50 text-sky-600 border border-sky-100'
+  return 'bg-slate-50 text-slate-500 border border-slate-200'
 }
 
 async function carregar() {
+  if (!can('vendas.ver')) return notify.error('Acesso negado.')
   loading.value = true
   try {
     const { data } = await api.get('/vendas')
-    vendas.value = (data || []).map((v) => ({
-      ...v,
-      cliente: v.cliente || null,
-    }))
+    vendas.value = Array.isArray(data) ? data : []
+  } catch (e) {
+    notify.error('Erro ao carregar vendas.')
   } finally {
     loading.value = false
   }
 }
 
+function novaVenda() {
+  if (!can('vendas.criar')) return notify.error('Acesso negado.')
+  router.push('/vendas/novo')
+}
+
+function editarVenda(id) {
+  if (!can('vendas.editar')) return notify.error('Acesso negado.')
+  router.push(`/vendas/${id}`)
+}
+
 async function confirmarExcluirVenda(id) {
+  if (!can('vendas.excluir')) return notify.error('Acesso negado.')
+
   const ok = await confirm.show(
     'Excluir Venda',
     `Deseja excluir a Venda #${id}? Esta ação não pode ser desfeita.`,
@@ -207,14 +226,25 @@ async function confirmarExcluirVenda(id) {
 }
 
 async function excluir(id) {
+  if (!can('vendas.excluir')) return notify.error('Acesso negado.')
   deletandoId.value = id
   try {
     await api.delete(`/vendas/${id}`)
     await carregar()
+    notify.success('Venda removida.')
+  } catch (e) {
+    notify.error('Erro ao excluir.')
   } finally {
     deletandoId.value = null
   }
 }
 
-onMounted(carregar)
+onMounted(async () => {
+  if (!can('vendas.ver')) {
+    notify.error('Acesso negado.')
+    router.push('/')
+    return
+  }
+  await carregar()
+})
 </script>

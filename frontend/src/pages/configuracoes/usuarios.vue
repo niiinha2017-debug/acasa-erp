@@ -17,11 +17,13 @@
         </div>
 
         <Button
+          v-if="can('usuarios.criar')"
           variant="primary"
           class="!h-11 !rounded-xl !px-6 text-[10px] font-black uppercase tracking-widest shadow-sm"
           @click="abrirModal()"
         >
-          <i class="pi pi-user-plus mr-2 text-[10px]"></i> Novo Colaborador
+          <i class="pi pi-user-plus mr-2 text-[10px]"></i>
+          Novo Colaborador
         </Button>
       </div>
 
@@ -76,6 +78,7 @@
 
             <template #cell-status="{ row }">
               <button
+                v-if="can('usuarios.editar')"
                 :disabled="row.id === usuarioLogado?.id"
                 @click="confirmarAlterarStatus(row)"
                 :class="[
@@ -90,11 +93,16 @@
               >
                 {{ row.status }}
               </button>
+
+              <span v-else class="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                {{ row.status }}
+              </span>
             </template>
 
             <template #cell-acoes="{ row }">
               <div class="flex gap-1 justify-end">
                 <button
+                  v-if="can('usuarios.editar')"
                   @click="abrirModal(row)"
                   class="w-8 h-8 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-800 transition-colors flex items-center justify-center"
                 >
@@ -102,7 +110,7 @@
                 </button>
 
                 <button
-                  v-if="row.id !== usuarioLogado?.id"
+                  v-if="can('usuarios.excluir') && row.id !== usuarioLogado?.id"
                   @click="confirmarExclusao(row)"
                   class="w-8 h-8 rounded-lg text-slate-300 hover:bg-rose-50 hover:text-rose-600 transition-colors flex items-center justify-center"
                 >
@@ -155,6 +163,7 @@
               </button>
 
               <Button
+                v-if="can(modoEdicao ? 'usuarios.editar' : 'usuarios.criar')"
                 variant="primary"
                 type="submit"
                 :loading="loadingSalvar"
@@ -176,12 +185,16 @@
   </div>
 </template>
 
+
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useAuth } from '@/services/useauth'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
 import { UsuariosService } from '@/services/index'
+import { can } from '@/services/permissions'
+
+definePage({ meta: { perm: 'usuarios.ver' } })
 
 const { usuarioLogado, isAuthenticated } = useAuth()
 
@@ -209,7 +222,7 @@ const formUsuario = ref({
   status: 'PENDENTE',
 })
 
-// --- MÉTODOS ---
+// --- LOAD ---
 const carregar = async () => {
   loadingTabela.value = true
   try {
@@ -222,7 +235,15 @@ const carregar = async () => {
   }
 }
 
+// --- MODAL ---
 const abrirModal = (user = null) => {
+  // permissão por ação
+  if (user) {
+    if (!can('usuarios.editar')) return notify.error('Acesso negado.')
+  } else {
+    if (!can('usuarios.criar')) return notify.error('Acesso negado.')
+  }
+
   modoEdicao.value = !!user
 
   if (user) {
@@ -252,7 +273,17 @@ const fecharModal = () => {
   exibirModal.value = false
 }
 
+async function confirmarFecharModal() {
+  const ok = await confirm.show('Cancelar', 'Deseja fechar sem salvar as alterações deste formulário?')
+  if (!ok) return
+  fecharModal()
+}
+
+// --- SALVAR (CRIAR/EDITAR) ---
 async function confirmarSalvarUsuario() {
+  const perm = modoEdicao.value ? 'usuarios.editar' : 'usuarios.criar'
+  if (!can(perm)) return notify.error('Acesso negado.')
+
   const titulo = modoEdicao.value ? 'Salvar Alterações' : 'Criar Colaborador'
   const mensagem = modoEdicao.value
     ? `Deseja salvar as alterações do colaborador "${formUsuario.value.nome}"?`
@@ -264,34 +295,16 @@ async function confirmarSalvarUsuario() {
   await salvar()
 }
 
-async function confirmarAlterarStatus(row) {
-  const statusAtual = String(row.status || '').toUpperCase()
-  const novoStatus = statusAtual === 'ATIVO' ? 'INATIVO' : 'ATIVO'
-
-  const verbo = novoStatus === 'ATIVO'
-    ? (statusAtual === 'PENDENTE' ? 'aprovar' : 'ativar')
-    : 'inativar'
-
-  const ok = await confirm.show('Alterar Status', `Deseja ${verbo} o colaborador "${row.nome}"?`)
-  if (!ok) return
-
-  await toggleStatus(row)
-}
-
-async function confirmarFecharModal() {
-  const ok = await confirm.show('Cancelar', 'Deseja fechar sem salvar as alterações deste formulário?')
-  if (!ok) return
-
-  fecharModal()
-}
-
 const salvar = async () => {
+  const perm = modoEdicao.value ? 'usuarios.editar' : 'usuarios.criar'
+  if (!can(perm)) return notify.error('Acesso negado.')
+
   loadingSalvar.value = true
   try {
     await UsuariosService.salvar(formUsuario.value.id, formUsuario.value)
     notify.success('Operação realizada com sucesso!')
     exibirModal.value = false
-    carregar()
+    await carregar()
   } catch (err) {
     notify.error('Erro ao salvar dados')
   } finally {
@@ -299,7 +312,29 @@ const salvar = async () => {
   }
 }
 
+// --- STATUS ---
+async function confirmarAlterarStatus(row) {
+  if (!can('usuarios.editar')) return notify.error('Acesso negado.')
+  if (row.id === usuarioLogado?.id) return
+
+  const statusAtual = String(row.status || '').toUpperCase()
+  const novoStatus = statusAtual === 'ATIVO' ? 'INATIVO' : 'ATIVO'
+
+  const verbo =
+    novoStatus === 'ATIVO'
+      ? (statusAtual === 'PENDENTE' ? 'aprovar' : 'ativar')
+      : 'inativar'
+
+  const ok = await confirm.show('Alterar Status', `Deseja ${verbo} o colaborador "${row.nome}"?`)
+  if (!ok) return
+
+  await toggleStatus(row)
+}
+
 const toggleStatus = async (row) => {
+  if (!can('usuarios.editar')) return notify.error('Acesso negado.')
+  if (row.id === usuarioLogado?.id) return
+
   const statusAtual = String(row.status || '').toUpperCase()
   const novoStatus = statusAtual === 'ATIVO' ? 'INATIVO' : 'ATIVO'
 
@@ -312,9 +347,14 @@ const toggleStatus = async (row) => {
   }
 }
 
+// --- EXCLUIR ---
 const confirmarExclusao = async (user) => {
+  if (!can('usuarios.excluir')) return notify.error('Acesso negado.')
+  if (user.id === usuarioLogado?.id) return
+
   const ok = await confirm.show('Excluir', `Remover ${user.nome}?`)
   if (!ok) return
+
   try {
     await UsuariosService.remover(user.id)
     usuarios.value = usuarios.value.filter((u) => u.id !== user.id)
@@ -324,6 +364,7 @@ const confirmarExclusao = async (user) => {
   }
 }
 
+// --- FILTRO ---
 const usuariosFiltrados = computed(() => {
   const t = String(filtro.value || '').toLowerCase().trim()
   if (!t) return usuarios.value
@@ -337,6 +378,7 @@ const usuariosFiltrados = computed(() => {
 
 onMounted(carregar)
 </script>
+
 
 <style scoped>
 .premium-table :deep(tr:hover) {

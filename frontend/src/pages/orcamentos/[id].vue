@@ -9,11 +9,12 @@
       >
         <template #actions>
           <Button
+            v-if="can('orcamentos.ver')"
             variant="primary"
             size="sm"
             type="button"
             @click="gerarPdf"
-            :disabled="saving || uploading || isNovo"
+            :disabled="saving || isNovo"
           >
             <i class="pi pi-file-pdf mr-2"></i> GERAR PDF
           </Button>
@@ -66,18 +67,15 @@
               </div>
 
               <div class="col-span-12">
-<div class="col-span-12">
-  <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block ml-1">
-    ACABAMENTO / DESCRIÇÃO (TÓPICOS)
-  </label>
-  <textarea
-    v-model="ambForm.descricao"
-    rows="4"
-    class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-sm outline-none resize-none"
-    placeholder="* MDF azul&#10;* MDF verde&#10;* puxador perfil"
-  ></textarea>
-</div>
-
+                <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block ml-1">
+                  ACABAMENTO / DESCRIÇÃO (TÓPICOS)
+                </label>
+                <textarea
+                  v-model="ambForm.descricao"
+                  rows="4"
+                  class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-sm outline-none resize-none"
+                  placeholder="* MDF azul&#10;* MDF verde&#10;* puxador perfil"
+                ></textarea>
               </div>
 
               <div class="col-span-12">
@@ -139,56 +137,20 @@
                 Arquivos
               </div>
 
-              <div class="flex items-center gap-2">
-                <input type="file" ref="fileInput" class="hidden" @change="uploadArquivoInteligente" />
-
-                <Button size="sm" variant="ghost" type="button" @click="abrirFilePicker">
-                  <i class="pi pi-plus mr-1"></i> ANEXAR
-                </Button>
-              </div>
+              <Button
+                v-if="can(permSalvarOrc())"
+                size="sm"
+                variant="ghost"
+                type="button"
+                @click="abrirArquivosOrcamento"
+              >
+                <i class="pi pi-folder-open mr-1"></i> ABRIR
+              </Button>
             </div>
 
             <div class="p-6 rounded-3xl border border-slate-100 bg-slate-50/50">
-              <div v-if="uploading" class="py-6">
-                <Loading />
-              </div>
-
-              <div v-else-if="arquivos.length === 0" class="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                Nenhum arquivo anexado
-              </div>
-
-              <div v-else class="flex flex-wrap gap-2">
-                <div
-                  v-for="file in arquivos"
-                  :key="file.id"
-                  class="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-slate-100"
-                >
-                  <i :class="['pi', getFileIcon(file.nome_original), 'text-brand-primary text-xs']"></i>
-
-                  <span class="text-[10px] font-bold text-slate-700 truncate max-w-[180px]">
-                    {{ file.nome_original }}
-                  </span>
-
-                  <!-- ABRIR (autenticado) -->
-                  <button
-                    type="button"
-                    @click="abrirArquivo(file.id)"
-                    class="text-slate-400 hover:text-slate-700"
-                    title="Ver arquivo"
-                  >
-                    <i class="pi pi-external-link text-[10px]"></i>
-                  </button>
-
-                  <!-- EXCLUIR -->
-                  <button
-                    type="button"
-                    @click="confirmarDeletarAnexo(file.id)"
-                    class="text-red-400 hover:text-red-600"
-                    title="Excluir"
-                  >
-                    <i class="pi pi-times text-[10px]"></i>
-                  </button>
-                </div>
+              <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                Use “ABRIR” para anexar / visualizar (PWA)
               </div>
             </div>
           </div>
@@ -204,7 +166,6 @@
               </div>
             </div>
 
-            <!-- AÇÕES PADRÃO -->
             <FormActions
               :is-edit="!isNovo"
               :loading-save="saving"
@@ -216,30 +177,47 @@
         </div>
       </div>
     </Card>
+
+    <ArquivosModal
+      v-if="arquivosOpen && orcamentoIdReal"
+      :open="arquivosOpen"
+      owner-type="ORCAMENTO"
+      :owner-id="orcamentoIdReal"
+      categoria="ANEXO"
+      :can-manage="can(permSalvarOrc())"
+      view-perm="orcamentos.ver"
+      @close="arquivosOpen = false"
+    />
   </div>
 </template>
 
 
+
 <script setup>
-import { ref, reactive, computed, onMounted,nextTick } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { OrcamentosService, ClienteService } from '@/services/index'
 import { format } from '@/utils/format'
 import { confirm } from '@/services/confirm'
+import { can } from '@/services/permissions'
+import { notify } from '@/services/notify'
+
+definePage({ meta: { perm: 'orcamentos.ver' } })
 
 const route = useRoute()
 const router = useRouter()
-const fileInput = ref(null)
+
+const arquivosOpen = ref(false)
 
 const orcamentoIdReal = ref(null)
 const orcamentoId = computed(() => orcamentoIdReal.value || route.params.id)
 const isNovo = computed(() => String(orcamentoId.value) === 'novo' || !orcamentoId.value)
 
+// ✅ perm salvar (criar/editar)
+const permSalvarOrc = () => (isNovo.value ? 'orcamentos.criar' : 'orcamentos.editar')
 
-// ESTADO
+// estado
 const clientesOptions = ref([])
-const arquivos = ref([])
-const uploading = ref(false)
 const saving = ref(false)
 const editIdx = ref(null)
 
@@ -254,7 +232,6 @@ const columns = [
   { key: 'acoes', label: '', align: 'right' }
 ]
 
-// --- FUNÇÕES DA TABELA ---
 function aplicarMascaraDinheiro(e) {
   let v = e.target.value.replace(/\D/g, '')
   if (!v) { ambForm.valor_unitario = ''; return }
@@ -263,7 +240,7 @@ function aplicarMascaraDinheiro(e) {
 
 function parseMoney(v) {
   if (typeof v === 'number') return v
-  return Number(v.replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0
+  return Number(String(v).replace('R$', '').replace(/\./g, '').replace(',', '.').trim()) || 0
 }
 
 const rowsTabela = computed(() => draft.ambientes.map((a, idx) => ({ ...a, __idx: idx })))
@@ -271,40 +248,24 @@ const total = computed(() => draft.ambientes.reduce((acc, a) => acc + parseMoney
 
 async function handleAdicionarOuEditar() {
   if (!ambForm.nome_ambiente) return
-
   const id = await ensureOrcamentoId()
   if (!id) return
 
   const base = editIdx.value !== null ? (draft.ambientes[editIdx.value] || {}) : {}
-
-const descricaoFormatada = String(ambForm.descricao || '')
-  .split(/\r?\n/)
-  .map(l => l.trim())
-  .filter(Boolean)
-  .map(l => l.replace(/^\*\s*/, '• '))
-  .join('\n')
-
 
   const payloadItem = {
     nome_ambiente: ambForm.nome_ambiente,
     descricao: ambForm.descricao,
     observacao: ambForm.observacao || '',
     valor_unitario: parseMoney(ambForm.valor_unitario),
-    valor_total: parseMoney(ambForm.valor_unitario), // seu backend trava igual unitário
+    valor_total: parseMoney(ambForm.valor_unitario),
   }
 
-  // EDITAR item existente
   if (base.id) {
     await OrcamentosService.atualizarItem(id, base.id, payloadItem)
-
-    // atualiza lista local
     draft.ambientes.splice(editIdx.value, 1, { ...base, ...payloadItem })
-  }
-  // ADICIONAR novo item
-  else {
+  } else {
     const created = await OrcamentosService.adicionarItem(id, payloadItem)
-
-    // grava o item com ID vindo do banco
     draft.ambientes.push({ id: created.data.id, ...payloadItem })
   }
 
@@ -312,100 +273,42 @@ const descricaoFormatada = String(ambForm.descricao || '')
   editIdx.value = null
 }
 
-
 function iniciarEdicao(idx) {
   const a = draft.ambientes[idx]
-  Object.assign(ambForm, { ...a, valor_unitario: a.valor_unitario.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) })
+  Object.assign(ambForm, {
+    ...a,
+    valor_unitario: Number(a.valor_unitario || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+  })
   editIdx.value = idx
 }
 
-async function removerDaLista(idx) {
-  const item = draft.ambientes[idx]
-
-  if (item?.id && orcamentoId.value && String(orcamentoId.value) !== 'novo') {
-    await OrcamentosService.removerItem(orcamentoId.value, item.id)
-  }
-
-  draft.ambientes.splice(idx, 1)
-}
-
-
-// remover item (confirm)
 async function confirmarRemoverItem(idx) {
   const item = draft.ambientes[idx]
-  const ok = await confirm.show(
-    'Remover Item',
-    `Deseja remover "${item?.nome_ambiente || 'ITEM'}"?`,
-  )
+  const ok = await confirm.show('Remover Item', `Deseja remover "${item?.nome_ambiente || 'ITEM'}"?`)
   if (!ok) return
   await removerDaLista(idx)
 }
 
-// deletar anexo (confirm)
-async function confirmarDeletarAnexo(arquivoId) {
-  const arq = arquivos.value?.find(a => a.id === arquivoId)
-  const ok = await confirm.show(
-    'Excluir Anexo',
-    `Deseja excluir "${arq?.nome_original || 'ARQUIVO'}"?`,
-  )
-  if (!ok) return
-  await deletarAnexo(arquivoId)
+async function removerDaLista(idx) {
+  const item = draft.ambientes[idx]
+  if (item?.id && orcamentoId.value && String(orcamentoId.value) !== 'novo') {
+    await OrcamentosService.removerItem(orcamentoId.value, item.id)
+  }
+  draft.ambientes.splice(idx, 1)
 }
 
-// excluir orçamento (confirm)
 async function confirmarExcluirOrcamento() {
-  const ok = await confirm.show(
-    'Excluir Orçamento',
-    `Deseja excluir permanentemente o Orçamento #${orcamentoId.value}?`,
-  )
+  if (!can('orcamentos.excluir')) return notify.error('Acesso negado.')
+  const ok = await confirm.show('Excluir Orçamento', `Deseja excluir permanentemente o Orçamento #${orcamentoId.value}?`)
   if (!ok) return
   await OrcamentosService.remover(orcamentoId.value)
   router.push('/orcamentos')
 }
 
-// --- ARQUIVOS ---
-async function uploadArquivoInteligente(event) {
-  const file = event.target.files[0]
-  if (!file) return
-
-  const id = await ensureOrcamentoId()
-  if (!id) return
-
-  uploading.value = true
-  try {
-    await OrcamentosService.anexarArquivo(id, file)
-    const resArqs = await OrcamentosService.listarArquivos(id)
-    arquivos.value = resArqs.data
-  } finally {
-    uploading.value = false
-    event.target.value = ''
-  }
-}
-
-async function abrirArquivo(arquivoId) {
-  const oid = orcamentoId.value || route.params.id
-  if (!oid) return
-  await OrcamentosService.abrirArquivo(oid, arquivoId)
-}
-
-
-
-async function deletarAnexo(id) {
-  const oid = await ensureOrcamentoId()
-  if (!oid) return
-
-  await OrcamentosService.removerArquivo(oid, id)
-  arquivos.value = arquivos.value.filter(a => a.id !== id)
-}
-
-
-function getFileIcon(n) {
-  const e = String(n || '').split('.').pop().toLowerCase()
-  return e === 'pdf' ? 'pi pi-file-pdf' : (e.includes('doc') ? 'pi pi-file-word' : 'pi pi-image')
-}
-
-// --- SALVAMENTO E PDF (RESOLVENDO OS ERROS DO CONSOLE) ---
 async function salvarTudo() {
+  const perm = permSalvarOrc()
+  if (!can(perm)) return notify.error('Acesso negado.')
+
   if (!draft.cliente_id) return alert('Selecione um cliente.')
   if (!draft.ambientes.length) return alert('Adicione ao menos 1 item.')
 
@@ -431,32 +334,38 @@ async function salvarTudo() {
         valor_total: Number(it.valor_unitario || 0),
       }
 
-      if (it.id) {
-        await OrcamentosService.atualizarItem(id, it.id, payloadItem)
-      } else {
+      if (it.id) await OrcamentosService.atualizarItem(id, it.id, payloadItem)
+      else {
         const created = await OrcamentosService.adicionarItem(id, payloadItem)
         it.id = created.data?.id
       }
     }
 
     await router.push('/orcamentos')
-  } catch (err) {
-    console.error('Erro ao salvar orçamento:', err)
   } finally {
     saving.value = false
   }
 }
 
-
 async function gerarPdf() {
+  if (!can('orcamentos.ver')) return notify.error('Acesso negado.')
+
   const id = await ensureOrcamentoId()
   if (!id) return
-  OrcamentosService.abrirPdf(id)
+
+  try {
+    const { data } = await OrcamentosService.abrirPdf(id)
+    const arquivoId = data?.arquivoId
+    if (!arquivoId) return notify.error('Não retornou arquivoId.')
+
+    router.push(`/arquivos/${String(arquivoId).replace(/\D/g, '')}`)
+  } catch (e) {
+    notify.error('Erro ao gerar PDF.')
+  }
 }
 
-function abrirFilePicker() {
-  if (fileInput.value) fileInput.value.click()
-}
+
+
 
 async function ensureOrcamentoId() {
   if (!draft.cliente_id) {
@@ -464,21 +373,26 @@ async function ensureOrcamentoId() {
     return null
   }
 
-  // 1) se já temos id guardado, usa
   if (orcamentoIdReal.value) return orcamentoIdReal.value
 
-  // 2) se a rota já tem um id (não é "novo"), guarda e usa
   const rid = route.params?.id
   if (rid && String(rid) !== 'novo') {
     orcamentoIdReal.value = rid
     return orcamentoIdReal.value
   }
 
-  // 3) senão, cria agora
   const res = await OrcamentosService.criar({ cliente_id: draft.cliente_id })
   orcamentoIdReal.value = res.data.id
   router.replace(`/orcamentos/${orcamentoIdReal.value}`)
   return orcamentoIdReal.value
+}
+
+async function abrirArquivosOrcamento() {
+  if (!can(permSalvarOrc())) return notify.error('Acesso negado.')
+  const id = await ensureOrcamentoId()
+  if (!id) return
+  orcamentoIdReal.value = id
+  arquivosOpen.value = true
 }
 
 onMounted(async () => {
@@ -488,7 +402,6 @@ onMounted(async () => {
     value: c.id,
   }))
 
-  // ✅ pega cliente_id do query quando for /orcamentos/novo
   const qCliente = route.query?.cliente_id
   if (qCliente && String(route.params.id) === 'novo') {
     draft.cliente_id = Number(String(qCliente).replace(/\D/g, '')) || null
@@ -496,14 +409,9 @@ onMounted(async () => {
 
   if (route.params.id && String(route.params.id) !== 'novo') {
     orcamentoIdReal.value = route.params.id
-
     const res = await OrcamentosService.detalhar(orcamentoIdReal.value)
     draft.cliente_id = res.data.cliente_id
     draft.ambientes = res.data.itens || []
-
-    const resArqs = await OrcamentosService.listarArquivos(orcamentoIdReal.value)
-    arquivos.value = resArqs.data
   }
 })
-
 </script>

@@ -23,15 +23,17 @@
           />
         </div>
         
-        <Button 
-          variant="primary" 
-          size="md"
-          class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider w-full sm:w-auto"
-          @click="router.push('/plano-corte/novo')"
-        >
-          <i class="pi pi-plus mr-1.5 text-[10px]"></i>
-          Novo Plano
-        </Button>
+<Button 
+  v-if="can('plano_corte.criar')"
+  variant="primary"
+  size="md"
+  class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider w-full sm:w-auto"
+  @click="novo()"
+>
+  <i class="pi pi-plus mr-1.5 text-[10px]"></i>
+  Novo Plano
+</Button>
+
       </div>
     </div>
 
@@ -102,26 +104,28 @@
             :class="statusClassTailwind(row.status)"
           >
             <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
-            {{ row.status }}
+            {{ row.status || '—' }}
           </span>
         </template>
 
         <template #cell-acoes="{ row }">
           <div class="flex justify-end gap-1 px-2">
-            <button 
-              @click="router.push(`/plano-corte/${row.id}`)" 
-              class="w-7 h-7 rounded-lg bg-slate-100 text-slate-500 hover:bg-brand-primary hover:text-white transition-all flex items-center justify-center"
-              title="Editar"
-            >
-              <i class="pi pi-pencil text-[10px]"></i>
-            </button>
-            <button 
-              @click="confirmarExcluirPlanoIndex(row)" 
-              class="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
-              title="Excluir"
-            >
-              <i class="pi pi-trash text-[10px]"></i>
-            </button>
+<button
+  v-if="can('plano_corte.editar')"
+  @click="editar(row.id)"
+  class="w-7 h-7 rounded-lg bg-slate-100 text-slate-500 hover:bg-brand-primary hover:text-white transition-all flex items-center justify-center"
+  title="Editar"
+>
+  <i class="pi pi-pencil text-[10px]"></i>
+</button>
+<button
+  v-if="can('plano_corte.excluir')"
+  @click="confirmarExcluirPlanoIndex(row)"
+  class="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
+  title="Excluir"
+>
+  <i class="pi pi-trash text-[10px]"></i>
+</button>
           </div>
         </template>
       </Table>
@@ -135,6 +139,10 @@ import { useRouter } from 'vue-router'
 import api from '@/services/api'
 import { maskMoneyBR } from '@/utils/masks'
 import { confirm } from '@/services/confirm'
+import { can } from '@/services/permissions'
+import { notify } from '@/services/notify'
+
+definePage({ meta: { perm: 'plano_corte.ver' } })
 
 const router = useRouter()
 const busca = ref('')
@@ -149,57 +157,68 @@ const columns = [
   { key: 'acoes', label: '', width: '10%', align: 'right' }
 ]
 
-const totalFinalizados = computed(() => {
-  return planos.value.filter(p => ['CONCLUIDO', 'FINALIZADO'].includes(p.status?.toUpperCase())).length
-})
+const totalFinalizados = computed(() =>
+  planos.value.filter(p => ['CONCLUIDO', 'FINALIZADO'].includes(String(p.status || '').toUpperCase())).length
+)
 
-const totalEmAberto = computed(() => {
-  return planos.value.length - totalFinalizados.value
-})
+const totalEmAberto = computed(() => planos.value.length - totalFinalizados.value)
 
 const rowsFiltrados = computed(() => {
   const termo = (busca.value || '').toLowerCase().trim()
   if (!termo) return planos.value
-return planos.value.filter(p => {
-  return (p.fornecedor?.razao_social?.toLowerCase().includes(termo)) ||
-         (p.status?.toLowerCase().includes(termo)) ||
-         (String(p.id).includes(termo))
-})
+  return planos.value.filter(p =>
+    String(p.fornecedor?.razao_social || '').toLowerCase().includes(termo) ||
+    String(p.status || '').toLowerCase().includes(termo) ||
+    String(p.id || '').includes(termo) ||
+    String(p.numero_pedido || '').includes(termo)
+  )
 })
 
 function statusClassTailwind(status) {
   const s = String(status || '').toUpperCase()
-  if (['CONCLUIDO', 'FINALIZADO'].includes(s)) 
-    return 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-  if (s === 'CANCELADO') 
-    return 'bg-red-50 text-red-500 border border-red-100'
-  if (['EM_PRODUCAO', 'EM PRODUCAO', 'ABERTO'].includes(s)) 
-    return 'bg-amber-50 text-amber-600 border border-amber-100'
+  if (['CONCLUIDO', 'FINALIZADO'].includes(s)) return 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+  if (s === 'CANCELADO') return 'bg-red-50 text-red-500 border border-red-100'
+  if (['EM_PRODUCAO', 'EM PRODUCAO', 'ABERTO', 'EM_ABERTO'].includes(s)) return 'bg-amber-50 text-amber-600 border border-amber-100'
   return 'bg-blue-50 text-blue-600 border border-blue-100'
 }
 
+function novo() {
+  if (!can('plano_corte.criar')) return notify.error('Acesso negado.')
+  router.push('/plano-corte/novo')
+}
+
+function editar(id) {
+  if (!can('plano_corte.editar')) return notify.error('Acesso negado.')
+  router.push(`/plano-corte/${id}`)
+}
+
 async function carregar() {
+  if (!can('plano_corte.ver')) return notify.error('Acesso negado.')
   loading.value = true
   try {
     const { data } = await api.get('/plano-corte')
     planos.value = Array.isArray(data) ? data : []
   } catch (err) {
     console.error(err)
+    notify.error('Erro ao carregar planos.')
   } finally {
     loading.value = false
   }
 }
+
 async function excluir(plano) {
+  if (!can('plano_corte.excluir')) return notify.error('Acesso negado.')
   try {
     await api.delete(`/plano-corte/${plano.id}`)
     planos.value = planos.value.filter(p => p.id !== plano.id)
+    notify.success('Plano removido.')
   } catch (err) {
-    alert('Erro ao excluir.')
+    notify.error('Erro ao excluir.')
   }
 }
 
-
 async function confirmarExcluirPlanoIndex(plano) {
+  if (!can('plano_corte.excluir')) return notify.error('Acesso negado.')
   const ok = await confirm.show(
     'Excluir Plano de Corte',
     `Deseja excluir o Plano #${plano?.numero_pedido || plano?.id}? Esta ação não pode ser desfeita.`,
@@ -207,5 +226,6 @@ async function confirmarExcluirPlanoIndex(plano) {
   if (!ok) return
   await excluir(plano)
 }
+
 onMounted(carregar)
 </script>

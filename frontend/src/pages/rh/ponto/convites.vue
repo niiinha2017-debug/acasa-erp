@@ -47,6 +47,7 @@
             </div>
             <div class="md:col-span-4">
               <Button
+                v-if="podeGerar"
                 variant="primary"
                 class="w-full h-14 !rounded-2xl shadow-xl shadow-brand-primary/20 hover:scale-105 active:scale-95 transition-all font-black text-[11px] uppercase tracking-widest"
                 :loading="loadingGerar"
@@ -74,6 +75,7 @@
                       readonly
                     />
                     <button 
+                     v-if="podeGerar"
                       @click="copiar(convite.url)"
                       class="w-full sm:w-auto h-12 px-8 rounded-xl bg-slate-900 text-white text-[11px] font-black uppercase tracking-widest hover:bg-black transition-all flex items-center justify-center gap-2"
                     >
@@ -96,6 +98,7 @@
 
                 <div class="pt-4 max-w-md mx-auto">
                   <button
+                   v-if="podeGerar"
                     @click="abrirWhats()"
                     class="w-full h-16 rounded-[1.2rem] bg-[#25D366] text-white hover:bg-[#128C7E] shadow-xl shadow-green-500/20 transition-all flex items-center justify-center gap-4 text-xs font-black uppercase tracking-widest"
                   >
@@ -129,14 +132,27 @@ import { computed, onMounted, ref } from 'vue'
 import { FuncionarioService, PontoService } from '@/services/index'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
+import { can } from '@/services/permissions'
+
+definePage({ meta: { perm: 'ponto_relatorio.ver' } })
+
+const router = useRouter()
 
 const loading = ref(true)
 const loadingGerar = ref(false)
-const router = useRouter()
 
-const funcionarios = ref([])          // <- plural
+const funcionarios = ref([])
 const funcionario_id = ref(null)
 const convite = ref(null)
+
+// ✅ perms (reaproveitando as que você já tem)
+const permTelaVer = 'ponto_relatorio.ver'
+const permConviteGerenciar = 'ponto_relatorio.editar'
+const permFuncionariosVer = 'funcionarios.ver'
+
+const podeVerTela = computed(() => can(permTelaVer))
+const podeGerar = computed(() => can(permConviteGerenciar))
+const podeListarFuncionarios = computed(() => can(permFuncionariosVer))
 
 const funcionariosOptions = computed(() =>
   (funcionarios.value || []).map((f) => ({
@@ -146,70 +162,85 @@ const funcionariosOptions = computed(() =>
 )
 
 onMounted(async () => {
+  // ✅ bloqueio de rota (padrão)
+if (!podeVerTela.value) {
+  notify.error('Acesso negado.')
+  loading.value = false
+  router.push('/')
+  return
+}
+
+if (!podeListarFuncionarios.value) {
+  notify.error('Acesso negado (funcionários).')
+  loading.value = false
+  router.push('/rh')
+  return
+}
+
+
   try {
-const res = await FuncionarioService.listar()
-const data = res?.data?.data ?? res?.data ?? res
-funcionarios.value = Array.isArray(data) ? data : []
-
-
+    const res = await FuncionarioService.listar()
+    const data = res?.data?.data ?? res?.data ?? res
+    funcionarios.value = Array.isArray(data) ? data : []
   } catch (e) {
-    console.log('[ERRO listar funcionarios]', e) // <- 1 log real
-    notify?.error?.(e?.response?.data?.message || 'Falha ao carregar funcionários.')
+    console.log('[ERRO listar funcionarios]', e)
+    notify.error(e?.response?.data?.message || 'Falha ao carregar funcionários.')
   } finally {
     loading.value = false
   }
 })
 
 async function confirmarGerarConvite() {
+  if (!podeGerar.value) return notify.error('Acesso negado.')
   if (!funcionario_id.value) return
+
   const ok = await confirm.show('Gerar Convite', 'Deseja gerar um novo convite para este colaborador?')
   if (!ok) return
   await gerar()
 }
 
 async function gerar() {
+  if (!podeGerar.value) return notify.error('Acesso negado.')
   if (!funcionario_id.value) return
+
   loadingGerar.value = true
   convite.value = null
 
   try {
     const res = await PontoService.gerarConvite(Number(funcionario_id.value))
-    const data = res.data || {}
+    const data = res?.data || {}
 
-    // 1. Pega o código que veio da API
     const code = data.code || data.codigo || data.token || data.convite || null
-    
-    // 2. Monta a URL usando a variável 'code' que acabamos de criar (e não convite.value)
-    const PONTO_BASE_URL = `https://ponto.acasamarcenaria.com.br`
-    const url = `${PONTO_BASE_URL}/ativar?code=${code}`
-
-    // 3. Agora sim, salva no estado para aparecer na tela
-    convite.value = {
-      ...data,
-      code,
-      url,
+    if (!code) {
+      notify.error('Convite gerado, mas não retornou o código.')
+      return
     }
 
-    notify?.success?.('Convite gerado.')
+    const PONTO_BASE_URL = 'https://ponto.acasamarcenaria.com.br'
+    const url = `${PONTO_BASE_URL}/ativar?code=${encodeURIComponent(code)}`
+
+    convite.value = { ...data, code, url }
+    notify.success('Convite gerado.')
   } catch (e) {
     console.error(e)
-    notify?.error?.(e?.response?.data?.message || 'Não foi possível gerar o convite.')
+    notify.error(e?.response?.data?.message || 'Não foi possível gerar o convite.')
   } finally {
     loadingGerar.value = false
   }
 }
 
 async function copiar(texto) {
+  if (!podeGerar.value) return notify.error('Acesso negado.')
   try {
     await navigator.clipboard.writeText(texto)
-    notify?.success?.('Link copiado.')
+    notify.success('Link copiado.')
   } catch {
-    notify?.error?.('Não foi possível copiar.')
+    notify.error('Não foi possível copiar.')
   }
 }
 
-
 function abrirWhats() {
+  if (!podeGerar.value) return notify.error('Acesso negado.')
   if (!convite.value?.url) return
 
   const id = Number(funcionario_id.value)
@@ -225,15 +256,11 @@ Se expirar, me avise que eu gero outro.`
 
   const url = `https://wa.me/?text=${encodeURIComponent(msg)}`
   window.open(url, '_blank', 'noopener,noreferrer')
-} // ✅ FECHA A FUNÇÃO AQUI
+}
 
 function formatDate(v) {
   if (!v) return '—'
-  try {
-    return new Date(v).toLocaleString('pt-BR')
-  } catch {
-    return String(v)
-  }
+  try { return new Date(v).toLocaleString('pt-BR') } catch { return String(v) }
 }
 </script>
 

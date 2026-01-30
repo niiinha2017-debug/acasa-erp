@@ -45,23 +45,34 @@ export class ArquivosService {
     })
   }
 
-  async remover(id: number) {
-    const cleanId = Number(id)
-    if (!cleanId) throw new BadRequestException('ID inválido.')
+async remover(id: number) {
+  const cleanId = Number(id)
+  if (!cleanId) throw new BadRequestException('ID inválido.')
 
-    const arquivo = await this.prisma.arquivos.findUnique({ where: { id: cleanId } })
-    if (!arquivo) throw new NotFoundException('Arquivo não encontrado.')
+  const arquivo = await this.prisma.arquivos.findUnique({ where: { id: cleanId } })
+  if (!arquivo) throw new NotFoundException('Arquivo não encontrado.')
 
-    // tenta apagar o arquivo físico (best effort)
+  // ✅ se for imagem principal do produto, limpa o "atalho"
+  if (arquivo.owner_type === 'PRODUTO' && arquivo.slot_key === 'IMAGEM_PRINCIPAL') {
     try {
-      const rel = arquivo.url.replace(/^\//, '') // "/uploads/.." -> "uploads/.."
-      const abs = path.join(process.cwd(), rel)
-      if (fs.existsSync(abs)) fs.unlinkSync(abs)
+      await this.prisma.produtos.update({
+        where: { id: arquivo.owner_id },
+        data: { imagem_url: null },
+      })
     } catch {}
-
-    await this.prisma.arquivos.delete({ where: { id: cleanId } })
-    return { ok: true }
   }
+
+  // tenta apagar o arquivo físico (best effort)
+  try {
+    const rel = arquivo.url.replace(/^\//, '')
+    const abs = path.join(process.cwd(), rel)
+    if (fs.existsSync(abs)) fs.unlinkSync(abs)
+  } catch {}
+
+  await this.prisma.arquivos.delete({ where: { id: cleanId } })
+  return { ok: true }
+}
+
 
   async salvarUpload(params: {
   owner_type: string

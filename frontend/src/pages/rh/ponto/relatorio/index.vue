@@ -59,9 +59,16 @@
             <Input label="DATA FIM" v-model="filtros.data_fim" type="date" />
           </div>
           <div class="col-span-12 md:col-span-2 flex gap-3">
-            <Button variant="primary" class="flex-1 !h-12 !rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-slate-900/20" @click="buscar" :loading="loadingTabela">
-              BUSCAR
-            </Button>
+<Button
+  v-if="can('ponto_relatorio.ver')"
+  variant="primary"
+  class="flex-1 ..."
+  @click="buscar"
+  :loading="loadingTabela"
+>
+  BUSCAR
+</Button>
+
             <Button variant="outline" class="!h-12 !w-12 !p-0 !rounded-xl border-slate-200" :disabled="!canPdf" @click="abrirPdfMensal">
               <i class="pi pi-file-pdf text-rose-500"></i>
             </Button>
@@ -89,16 +96,33 @@
             <StatusBadge :value="row.status" class="scale-90 origin-left" />
           </template>
 
-          <template #cell-acoes="{ row }">
-            <div class="flex justify-end gap-2 pr-4">
-              <button @click="abrirModalEditar(row)" class="w-9 h-9 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white transition-all flex items-center justify-center">
-                <i class="pi pi-pencil text-[10px]"></i>
-              </button>
-              <button @click="abrirModalJustificar(row)" class="px-3 h-9 rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white transition-all text-[9px] font-black uppercase tracking-widest">
-                Justificar
-              </button>
-            </div>
-          </template>
+<template #cell-acoes="{ row }">
+  <div class="flex justify-end gap-2 pr-4">
+    <button
+      v-if="can('ponto_relatorio.editar')"
+      @click="abrirModalEditar(row)"
+      class="w-9 h-9 rounded-lg ..."
+    >
+      <i class="pi pi-pencil text-[10px]"></i>
+    </button>
+
+    <button
+      v-if="can('ponto_relatorio.editar')"
+      @click="abrirModalJustificar(row)"
+      class="px-3 h-9 rounded-lg ..."
+    >
+      Justificar
+    </button>
+
+    <span
+      v-if="!can('ponto_relatorio.editar')"
+      class="text-[10px] font-black uppercase tracking-widest text-slate-300"
+    >
+      —
+    </span>
+  </div>
+</template>
+
 
         </Table>
       </div>
@@ -117,7 +141,16 @@
         </div>
         <div class="p-6 bg-slate-50 flex gap-3">
           <Button variant="secondary" class="flex-1 !rounded-xl font-bold uppercase text-[10px]" @click="modalEditar.open = false">Cancelar</Button>
-          <Button variant="primary" class="flex-1 !rounded-xl font-black uppercase text-[10px] tracking-widest" :loading="modalEditar.saving" @click="confirmarSalvarEdicao">Salvar</Button>
+          <Button
+  v-if="can('ponto_relatorio.editar')"
+  variant="primary"
+  class="flex-1 ..."
+  :loading="modalEditar.saving"
+  @click="confirmarSalvarEdicao"
+>
+  Salvar
+</Button>
+
         </div>
       </Card>
     </div>
@@ -167,13 +200,15 @@
 
         <div class="p-6 bg-slate-100/50 border-t flex gap-3">
 <Button
+  v-if="can('ponto_relatorio.editar')"
   variant="primary"
-  class="flex-1 !rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-slate-900/20"
+  class="flex-1 ..."
   :loading="modalJust.saving"
   @click="confirmarSalvarJustificativa"
 >
   Salvar Justificativa
 </Button>
+
           <Button variant="secondary" class="flex-1 !rounded-xl font-bold uppercase text-[10px]" @click="fecharModalJust">Cancelar</Button>
         </div>
       </Card>
@@ -183,72 +218,262 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { PontoRelatorioService, PontoJustificativasService, PontoRegistrosService, FuncionarioService } from '@/services/index'
+import { useRouter } from 'vue-router'
+
+import {
+  PontoRelatorioService,
+  PontoJustificativasService,
+  PontoRegistrosService,
+  FuncionarioService,
+} from '@/services/index'
+
 import { notify } from '@/services/notify'
 import { consolidarSaldoPeriodo } from '@/utils/utils'
 import { confirm } from '@/services/confirm'
+import { can } from '@/services/permissions'
 
-// DATA & STATES
-const loadingTabela = ref(false), rows = ref([]), funcionarioOptions = ref([])
-const filtros = reactive({ funcionario_id: '', data_ini: '', data_fim: '', tipo: null })
+definePage({ meta: { perm: 'ponto_relatorio.ver' } })
+
+const router = useRouter()
+
+// =======================
+// STATE
+// =======================
+const loadingTabela = ref(false)
+const rows = ref([])
+const funcionarioOptions = ref([])
+
+const filtros = reactive({
+  funcionario_id: '',
+  data_ini: '',
+  data_fim: '',
+  tipo: null,
+})
 
 const columns = [
   { key: 'data_hora', label: 'Data/Hora', width: '130px' },
   { key: 'funcionario', label: 'Funcionário' },
   { key: 'tipo', label: 'Tipo', width: '100px' },
   { key: 'status', label: 'Status', width: '100px' },
-  { key: 'acoes', label: '', width: '200px', align: 'right' }
+  { key: 'acoes', label: '', width: '200px', align: 'right' },
 ]
 
-const optionsTipo = [{ label: 'ENTRADA', value: 'ENTRADA' }, { label: 'SAIDA', value: 'SAIDA' }]
+const optionsTipo = [
+  { label: 'ENTRADA', value: 'ENTRADA' },
+  { label: 'SAIDA', value: 'SAIDA' },
+]
 
-// COMPUTED LOGIC
-const canPdf = computed(() => filtros.funcionario_id && filtros.data_ini)
-const resumo = computed(() => consolidarSaldoPeriodo({ registros: rows.value, horasSemana: 48, diasSemana: 6 }))
+// =======================
+// COMPUTED
+// =======================
+const canPdf = computed(() => can('ponto_relatorio.ver') && !!filtros.funcionario_id && !!filtros.data_ini)
 
-// FORMATTERS
-const fmtData = (v) => v ? new Date(v).toLocaleDateString('pt-BR') : '-'
-const fmtHora = (v) => v ? new Date(v).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''
+const resumo = computed(() =>
+  consolidarSaldoPeriodo({
+    registros: rows.value,
+    horasSemana: 48,
+    diasSemana: 6,
+  }),
+)
+
+// =======================
+// HELPERS
+// =======================
+const fmtData = (v) => (v ? new Date(v).toLocaleDateString('pt-BR') : '-')
+const fmtHora = (v) => (v ? new Date(v).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '')
 const toIsoShort = (date) => new Date(date).toISOString().slice(0, 10)
 
-// ACTIONS
+// =======================
+// AÇÕES (VER)
+// =======================
 async function buscar() {
+  if (!can('ponto_relatorio.ver')) return notify.error('Acesso negado.')
+
   try {
     loadingTabela.value = true
-    const { data } = await PontoRelatorioService.listarRegistros({ ...filtros, funcionario_id: filtros.funcionario_id || undefined })
+    const { data } = await PontoRelatorioService.listarRegistros({
+      ...filtros,
+      funcionario_id: filtros.funcionario_id || undefined,
+    })
     rows.value = data || []
-  } catch (e) { notify?.error?.('Erro ao buscar registros') } finally { loadingTabela.value = false }
+  } catch (e) {
+    notify.error('Erro ao buscar registros')
+  } finally {
+    loadingTabela.value = false
+  }
 }
 
-function limpar() { Object.assign(filtros, { funcionario_id: '', data_ini: '', data_fim: '', tipo: null }); rows.value = [] }
+function limpar() {
+  Object.assign(filtros, { funcionario_id: '', data_ini: '', data_fim: '', tipo: null })
+  rows.value = []
+}
 
-// EDIT LOGIC
-const modalEditar = reactive({ open: false, saving: false, id: null, form: { data_hora_local: '', tipo: null, observacao: '' }})
+async function abrirPdfMensal() {
+  if (!can('ponto_relatorio.ver')) return notify.error('Acesso negado.')
+  if (!canPdf.value) return
+
+  const d = new Date(filtros.data_ini)
+  const resp = await PontoRelatorioService.pdfMensal({
+    funcionario_id: filtros.funcionario_id,
+    mes: d.getMonth() + 1,
+    ano: d.getFullYear(),
+  })
+
+  window.open(URL.createObjectURL(new Blob([resp.data], { type: 'application/pdf' })), '_blank')
+}
+
+// =======================
+// MODAL EDITAR (EDITAR)
+// =======================
+const modalEditar = reactive({
+  open: false,
+  saving: false,
+  id: null,
+  form: {
+    data_hora_local: '',
+    tipo: null,
+    observacao: '',
+  },
+})
+
 function abrirModalEditar(row) {
-  Object.assign(modalEditar, { open: true, id: row.id, form: { data_hora_local: row.data_hora?.slice(0, 16), tipo: row.tipo, observacao: row.observacao }})
+  if (!can('ponto_relatorio.editar')) return notify.error('Acesso negado.')
+
+  Object.assign(modalEditar, {
+    open: true,
+    id: row.id,
+    form: {
+      data_hora_local: row.data_hora?.slice(0, 16) || '',
+      tipo: row.tipo || null,
+      observacao: row.observacao || '',
+    },
+  })
 }
+
 async function salvarEdicao() {
+  if (!can('ponto_relatorio.editar')) return notify.error('Acesso negado.')
+  if (!modalEditar.id) return
+
   try {
     modalEditar.saving = true
-    await PontoRegistrosService.atualizar(modalEditar.id, { ...modalEditar.form, data_hora: new Date(modalEditar.form.data_hora_local).toISOString() })
-    notify?.success?.('Sucesso'); modalEditar.open = false; buscar()
-  } catch (e) { notify?.error?.('Erro') } finally { modalEditar.saving = false }
+    await PontoRegistrosService.atualizar(modalEditar.id, {
+      ...modalEditar.form,
+      data_hora: new Date(modalEditar.form.data_hora_local).toISOString(),
+    })
+    notify.success('Sucesso')
+    modalEditar.open = false
+    await buscar()
+  } catch (e) {
+    notify.error('Erro')
+  } finally {
+    modalEditar.saving = false
+  }
 }
 
-// JUSTIFICATION LOGIC (ORIGINAL)
-const modalJust = reactive({ open: false, saving: false, funcionario_id: null, dia: '', lista: [], file: null, form: { funcionario_id: null, data: '', tipo: '', descricao: '' }})
+async function confirmarSalvarEdicao() {
+  if (!can('ponto_relatorio.editar')) return notify.error('Acesso negado.')
+  const ok = await confirm.show('Salvar Ajuste', 'Deseja salvar o ajuste deste registro de ponto?')
+  if (!ok) return
+  await salvarEdicao()
+}
+
+// =======================
+// MODAL JUSTIFICATIVA (EDITAR)
+// =======================
+const modalJust = reactive({
+  open: false,
+  saving: false,
+  funcionario_id: null,
+  dia: '',
+  lista: [],
+  file: null,
+  form: {
+    funcionario_id: null,
+    data: '',
+    tipo: '',
+    descricao: '',
+  },
+})
+
 async function abrirModalJustificar(row) {
+  if (!can('ponto_relatorio.editar')) return notify.error('Acesso negado.')
+
   const fid = row.funcionario?.id || row.funcionario_id
   const dataRef = new Date(row.data_hora)
-  Object.assign(modalJust, { open: true, funcionario_id: fid, dia: toIsoShort(dataRef), form: { funcionario_id: fid, data: toIsoShort(dataRef), tipo: '', descricao: '' }})
-  const { data } = await PontoJustificativasService.listar({ funcionario_id: fid, mes: dataRef.getMonth() + 1, ano: dataRef.getFullYear() })
+
+  Object.assign(modalJust, {
+    open: true,
+    funcionario_id: fid,
+    dia: toIsoShort(dataRef),
+    file: null,
+    form: {
+      funcionario_id: fid,
+      data: toIsoShort(dataRef),
+      tipo: '',
+      descricao: '',
+    },
+  })
+
+  const { data } = await PontoJustificativasService.listar({
+    funcionario_id: fid,
+    mes: dataRef.getMonth() + 1,
+    ano: dataRef.getFullYear(),
+  })
   modalJust.lista = data || []
 }
-const fecharModalJust = () => modalJust.open = false
-const onFileChange = (e) => modalJust.file = e.target.files[0]
 
-// EXCLUIR JUSTIFICATIVA (confirm)
+function fecharModalJust() {
+  modalJust.open = false
+}
+
+function onFileChange(e) {
+  modalJust.file = e?.target?.files?.[0] || null
+}
+
+async function salvarJustificativa() {
+  if (!can('ponto_relatorio.editar')) return notify.error('Acesso negado.')
+
+  try {
+    modalJust.saving = true
+    const resp = await PontoJustificativasService.salvar(modalJust.form)
+
+    if (modalJust.file && resp.data?.id) {
+      await PontoJustificativasService.anexarArquivo(resp.data.id, modalJust.file)
+    }
+
+    notify.success('Salvo')
+    fecharModalJust()
+    await buscar()
+  } catch (e) {
+    notify.error('Erro')
+  } finally {
+    modalJust.saving = false
+  }
+}
+
+async function confirmarSalvarJustificativa() {
+  if (!can('ponto_relatorio.editar')) return notify.error('Acesso negado.')
+  const ok = await confirm.show('Salvar Justificativa', 'Deseja salvar esta justificativa?')
+  if (!ok) return
+  await salvarJustificativa()
+}
+
+async function excluirJustificativa(j) {
+  if (!can('ponto_relatorio.editar')) return notify.error('Acesso negado.')
+
+  try {
+    await PontoJustificativasService.remover(j.id)
+    notify.success('Removido')
+
+    // recarrega o modal do mês
+    await abrirModalJustificar({ data_hora: j.data, funcionario_id: j.funcionario_id })
+  } catch (e) {
+    notify.error('Erro')
+  }
+}
+
 async function confirmarExcluirJustificativa(j) {
+  if (!can('ponto_relatorio.editar')) return notify.error('Acesso negado.')
   const ok = await confirm.show(
     'Excluir Justificativa',
     `Deseja remover a justificativa "${j?.tipo || 'JUSTIFICATIVA'}" do dia ${fmtData(j?.data)}?`,
@@ -257,51 +482,21 @@ async function confirmarExcluirJustificativa(j) {
   await excluirJustificativa(j)
 }
 
-// SALVAR EDIÇÃO DO REGISTRO (confirm)
-async function confirmarSalvarEdicao() {
-  const ok = await confirm.show(
-    'Salvar Ajuste',
-    'Deseja salvar o ajuste deste registro de ponto?',
-  )
-  if (!ok) return
-  await salvarEdicao()
-}
-
-// SALVAR JUSTIFICATIVA (confirm)
-async function confirmarSalvarJustificativa() {
-  const ok = await confirm.show(
-    'Salvar Justificativa',
-    'Deseja salvar esta justificativa?',
-  )
-  if (!ok) return
-  await salvarJustificativa()
-}
-
-async function salvarJustificativa() {
-  try {
-    modalJust.saving = true
-    const resp = await PontoJustificativasService.salvar(modalJust.form)
-    if (modalJust.file && resp.data?.id) await PontoJustificativasService.anexarArquivo(resp.data.id, modalJust.file)
-    notify?.success?.('Salvo'); fecharModalJust(); buscar()
-  } catch (e) { notify?.error?.('Erro') } finally { modalJust.saving = false }
-}
-
-async function excluirJustificativa(j) {
-  try {
-    await PontoJustificativasService.remover(j.id)
-    notify?.success?.('Removido'); abrirModalJustificar({ data_hora: j.data, funcionario_id: j.funcionario_id })
-  } catch (e) { notify?.error?.('Erro') }
-}
-
-async function abrirPdfMensal() {
-  const d = new Date(filtros.data_ini)
-  const resp = await PontoRelatorioService.pdfMensal({ funcionario_id: filtros.funcionario_id, mes: d.getMonth() + 1, ano: d.getFullYear() })
-  window.open(URL.createObjectURL(new Blob([resp.data], { type: 'application/pdf' })), '_blank')
-}
-
+// =======================
+// INIT (protege rota)
+// =======================
 onMounted(async () => {
+  if (!can('ponto_relatorio.ver')) {
+    notify.error('Acesso negado.')
+    router.push('/')
+    return
+  }
+
   const { data } = await FuncionarioService.listar()
-  funcionarioOptions.value = (data?.data || data || []).filter(f => f.status === 'ATIVO').map(f => ({ label: f.nome, value: f.id }))
+  funcionarioOptions.value = (data?.data || data || [])
+    .filter((f) => f.status === 'ATIVO')
+    .map((f) => ({ label: f.nome, value: f.id }))
+
   filtros.data_ini = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10)
   filtros.data_fim = new Date().toISOString().slice(0, 10)
 })

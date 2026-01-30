@@ -78,11 +78,11 @@
         </section>
 
         <div class="pt-10 border-t border-slate-100 flex items-center justify-between">
-          <Button 
-            v-if="isEdit" 
-            variant="danger" 
-            type="button" 
-            @click="confirmarExcluirFornecedor"
+<Button
+  v-if="isEdit && can('fornecedores.excluir')"
+  variant="danger"
+  type="button"
+  @click="confirmarExcluirFornecedor"
             class="!rounded-2xl !px-8 hover:bg-red-600 transition-all font-bold uppercase text-[10px] tracking-widest"
           >
             <i class="pi pi-trash mr-2"></i> Excluir Registro
@@ -98,10 +98,12 @@
             >
               Voltar
             </Button>
-            <Button 
-              variant="primary" 
-              type="button" 
-              @click="confirmarSalvarFornecedor"
+
+<Button
+  v-if="can(isEdit ? 'fornecedores.editar' : 'fornecedores.criar')"
+  variant="primary"
+  type="button"
+  @click="confirmarSalvarFornecedor"
               class="!rounded-2xl !px-12 !h-14 shadow-2xl shadow-brand-primary/30 font-black uppercase text-[11px] tracking-[0.15em]"
             >
               <i class="pi pi-save mr-3"></i> 
@@ -122,6 +124,10 @@ import { notify } from '@/services/notify'
 import { maskCNPJ, maskTelefone, maskCEP, maskIE } from '@/utils/masks'
 import { buscarCep, buscarCnpj } from '@/utils/utils'
 import { confirm } from '@/services/confirm'
+
+import { can } from '@/services/permissions'
+definePage({ meta: { perm: 'fornecedores.ver' } })
+
 
 const route = useRoute()
 const router = useRouter()
@@ -196,6 +202,9 @@ async function tratarBuscaCep() {
 
 // SALVAR
 async function confirmarSalvarFornecedor() {
+  const perm = isEdit.value ? 'fornecedores.editar' : 'fornecedores.criar'
+  if (!can(perm)) return notify.error('Acesso negado.')
+
   const ok = await confirm.show(
     isEdit.value ? 'Salvar Alterações' : 'Finalizar Cadastro',
     isEdit.value
@@ -208,6 +217,8 @@ async function confirmarSalvarFornecedor() {
 
 // EXCLUIR
 async function confirmarExcluirFornecedor() {
+  if (!can('fornecedores.excluir')) return notify.error('Acesso negado.')
+
   const ok = await confirm.show(
     'Excluir Fornecedor',
     `Deseja realmente excluir o Fornecedor #${fornecedorId.value}? Esta ação não pode ser desfeita.`,
@@ -216,7 +227,10 @@ async function confirmarExcluirFornecedor() {
   await excluir()
 }
 
+
 async function excluir() {
+  if (!can('fornecedores.excluir')) return notify.error('Acesso negado.')
+  
   salvando.value = true
   try {
     await FornecedorService.remover(fornecedorId.value)
@@ -238,6 +252,9 @@ function payloadParaApi() {
 }
 
 async function salvar() {
+  const perm = isEdit.value ? 'fornecedores.editar' : 'fornecedores.criar'
+  if (!can(perm)) return notify.error('Acesso negado.')
+
   salvando.value = true
   try {
     const payload = payloadParaApi()
@@ -250,12 +267,22 @@ async function salvar() {
 }
 
 onMounted(async () => {
+  const perm = isEdit.value ? 'fornecedores.editar' : 'fornecedores.criar'
+  if (!can(perm)) {
+    notify.error('Acesso negado.')
+    router.push('/fornecedor')
+    return
+  }
+
   if (isEdit.value) {
     loading.value = true
     try {
       const { data } = await FornecedorService.buscar(fornecedorId.value)
       form.value = { ...form.value, ...data }
-    } finally { loading.value = false }
+    } finally {
+      loading.value = false
+    }
   }
 })
+
 </script>

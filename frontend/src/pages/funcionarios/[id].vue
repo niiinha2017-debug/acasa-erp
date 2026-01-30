@@ -211,9 +211,10 @@
               <h2 class="text-[11px] font-black uppercase tracking-widest text-slate-500">
                 Documentos anexos
               </h2>
-              <Button
-                variant="primary"
-                type="button"
+<Button
+  v-if="can(isEditing ? 'funcionarios.editar' : 'funcionarios.criar')"
+  variant="primary"
+  type="button"
                 class="!h-10 !rounded-xl !px-4 text-[10px] font-black uppercase tracking-widest"
                 @click="abrirArquivosFuncionario"
               >
@@ -243,12 +244,14 @@
                 Cancelar
               </Button>
 
-              <Button
-                variant="primary"
-                type="submit"
-                class="!h-12 !rounded-2xl !px-8 text-[10px] font-black uppercase tracking-widest"
-                :loading="salvando"
-              >
+<Button
+  v-if="can(isEditing ? 'funcionarios.editar' : 'funcionarios.criar')"
+  variant="primary"
+  type="submit"
+  class="!h-12 !rounded-2xl !px-8 text-[10px] font-black uppercase tracking-widest"
+  :loading="salvando"
+>
+
                 <i class="pi pi-save mr-2 text-[10px]"></i>
                 Salvar
               </Button>
@@ -260,14 +263,16 @@
     </Card>
 
     <!-- Modal Global -->
-    <ArquivosModal
-      v-if="modalArquivosOpen && ownerIdArquivos"
-      :open="modalArquivosOpen"
-      owner-type="FUNCIONARIO"
-      :owner-id="ownerIdArquivos"
-      categoria="ANEXO"
-      @close="modalArquivosOpen = false"
-    />
+<ArquivosModal
+  v-if="modalArquivosOpen && ownerIdArquivos"
+  :open="modalArquivosOpen"
+  owner-type="FUNCIONARIO"
+  :owner-id="ownerIdArquivos"
+  categoria="ANEXO"
+  :can-manage="can(permSalvar())"
+  @close="modalArquivosOpen = false"
+/>
+
   </div>
 </template>
 
@@ -284,6 +289,13 @@ import { numeroParaMoeda } from '@/utils/number'
 import { upper, raw } from '@/utils/text'
 import { FUNCIONARIOS_LOCAL_SETOR_CARGO } from '@/constantes'
 import { confirm } from '@/services/confirm'
+import { notify } from '@/services/notify'
+
+
+import { can } from '@/services/permissions'
+
+definePage({ meta: { perm: 'funcionarios.ver' } })
+
 
 const router = useRouter()
 const route = useRoute()
@@ -298,6 +310,7 @@ const ownerIdArquivos = ref(null)
 // ===== id / modo =====
 const paramId = computed(() => String(route.params.id || 'novo'))
 const isEditing = computed(() => paramId.value !== 'novo')
+const permSalvar = () => (isEditing.value ? 'funcionarios.editar' : 'funcionarios.criar')
 const id = computed(() => (isEditing.value ? paramId.value.replace(/\D/g, '') : null))
 
 const fmtDate = (d) => (d ? String(d).split('T')[0] : '')
@@ -574,7 +587,10 @@ function montarPayload() {
   }
 }
 
+
 async function confirmarSalvarFuncionario() {
+  if (!can(permSalvar())) return notify.error('Acesso negado.')
+
   const ok = await confirm.show(
     'Salvar Registro',
     `Deseja salvar o registro de "${form.value.nome}"?`,
@@ -583,7 +599,10 @@ async function confirmarSalvarFuncionario() {
   await salvar()
 }
 
+
 async function salvar() {
+  if (!can(permSalvar())) return notify.error('Acesso negado.')
+
   if (!form.value.nome || String(form.value.cpf || '').length < 11) {
     alert('Preencha Nome e CPF corretamente.')
     return
@@ -621,6 +640,8 @@ async function salvar() {
 
 // ===== abrir modal arquivos (global) =====
 async function garantirIdParaUpload() {
+  if (!can(permSalvar())) return notify.error('Acesso negado.')
+
   if (isEditing.value && id.value) return Number(id.value)
 
   if (!form.value.nome || String(form.value.cpf || '').length < 11) {
@@ -645,6 +666,8 @@ async function garantirIdParaUpload() {
 }
 
 async function abrirArquivosFuncionario() {
+  if (!can(permSalvar())) return notify.error('Acesso negado.')
+
   const funcionarioId = await garantirIdParaUpload()
   ownerIdArquivos.value = funcionarioId
   modalArquivosOpen.value = true
@@ -691,15 +714,32 @@ async function carregar() {
   }
 }
 
-onMounted(carregar)
+onMounted(async () => {
+  const perm = isEditing.value ? 'funcionarios.editar' : 'funcionarios.criar'
+  if (!can(perm)) {
+    notify.error('Acesso negado.')
+    router.push('/funcionarios')
+    return
+  }
+  await carregar()
+})
 
-// reage quando id muda
 watch(
   () => String(route.params.id || 'novo'),
-  (next, prev) => {
-    if (next !== prev) carregar()
+  async (next, prev) => {
+    if (next === prev) return
+
+    const perm = next !== 'novo' ? 'funcionarios.editar' : 'funcionarios.criar'
+    if (!can(perm)) {
+      notify.error('Acesso negado.')
+      router.push('/funcionarios')
+      return
+    }
+
+    await carregar()
   },
 )
+
 </script>
 
 

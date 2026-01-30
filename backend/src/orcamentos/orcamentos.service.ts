@@ -7,6 +7,9 @@ import { UpdateOrcamentoItemDto } from './dto/update-orcamento-item.dto'
 import * as path from 'path'
 import { renderHeaderA4Png, resolveAsset } from '../pdf/render-header-a4'
 import PDFKitDoc from 'pdfkit'
+import { promises as fs } from 'fs'
+import { randomBytes } from 'crypto'
+
 
 
 @Injectable()
@@ -185,6 +188,42 @@ export class OrcamentosService {
       reject(e)
     }
   })
+}
+
+
+async gerarPdfESalvar(orcId: number) {
+  const orc = await this.detalhar(orcId)
+
+  // você já tem isso pronto:
+  const pdfBuffer = await this.gerarMioloPdfBuffer(orc) // Buffer
+
+  const dir = path.join(process.cwd(), 'uploads', 'relatorios')
+  await fs.mkdir(dir, { recursive: true })
+
+  const stamp = new Date().toISOString().replace(/[-:.TZ]/g, '')
+  const rand = randomBytes(6).toString('hex')
+  const filename = `orcamento_${orcId}_${stamp}_${rand}.pdf`
+
+  await fs.writeFile(path.join(dir, filename), pdfBuffer)
+
+  const url = `/uploads/relatorios/${filename}`
+
+  const arquivo = await this.prisma.arquivos.create({
+    data: {
+      owner_type: 'ORCAMENTO',
+      owner_id: orcId,
+      categoria: 'RELATORIO',
+      slot_key: null,                 // ✅ IMPORTANTÍSSIMO (senão bate no @@unique)
+      url,
+      filename,
+      nome: `ORÇAMENTO #${orcId}`,
+      mime_type: 'application/pdf',
+      tamanho: pdfBuffer.length,
+    },
+    select: { id: true },
+  })
+
+  return { arquivoId: arquivo.id }
 }
 
   // =========================================================

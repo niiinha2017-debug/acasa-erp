@@ -83,7 +83,17 @@ export const FuncionarioService = {
     const cleanId = String(id).replace(/\D/g, '')
     return api.delete(`/funcionarios/${cleanId}`)
   },
+
+  // ✅ novo: gera + salva PDF (backend devolve PDF + header X-Arquivo-Id)
+gerarPdf: (ids) => {
+  if (!Array.isArray(ids) || !ids.length) {
+    return Promise.reject(new Error('IDs não informados'))
+  }
+  // ✅ agora retorna JSON { arquivoId }
+  return api.post('/funcionarios/pdf', { ids })
+},
 }
+
 
 // --- ORÇAMENTOS ---
 export const OrcamentosService = {
@@ -99,13 +109,12 @@ export const OrcamentosService = {
   removerItem: (id, itemId) => api.delete(`/orcamentos/${id}/itens/${itemId}`),
 
   // PDF (continua existindo)
-  abrirPdf: async (id) => {
-    const res = await api.get(`/orcamentos/${id}/pdf`, { responseType: 'blob' })
-    const blob = new Blob([res.data], { type: 'application/pdf' })
-    const url = URL.createObjectURL(blob)
-    window.open(url, '_blank', 'noopener,noreferrer')
-    setTimeout(() => URL.revokeObjectURL(url), 60_000)
-  },
+abrirPdf: (id) => {
+  const cleanId = String(id || '').replace(/\D/g, '')
+  return api.post(`/orcamentos/${cleanId}/pdf`) // retorna { arquivoId }
+},
+
+
 }
 
 // --- PLANO DE CORTE ---

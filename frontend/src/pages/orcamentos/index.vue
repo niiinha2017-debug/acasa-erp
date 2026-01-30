@@ -1,9 +1,8 @@
 <template>
   <div class="w-full max-w-[1200px] mx-auto space-y-4 animate-page-in">
-    
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-2">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+        <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-sm">
           <i class="pi pi-briefcase text-lg"></i>
         </div>
         <div>
@@ -11,23 +10,24 @@
           <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Controle de propostas comerciais</p>
         </div>
       </div>
-      
+
       <div class="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
         <div class="relative w-full sm:w-64">
           <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-          <input 
-            v-model="filtro" 
-            type="text" 
+          <input
+            v-model="filtro"
+            type="text"
             placeholder="BUSCAR CLIENTE OU TELEFONE..."
             class="w-full pl-9 pr-3 h-10 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary outline-none transition-all uppercase"
           />
         </div>
-        
-        <Button 
-          variant="primary" 
+
+        <Button
+          v-if="can('orcamentos.criar')"
+          variant="primary"
           size="md"
           class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider w-full sm:w-auto shadow-sm"
-          @click="router.push('/orcamentos/novo')"
+          @click="novoGeral"
         >
           <i class="pi pi-plus mr-1.5 text-[10px]"></i>
           Novo Orçamento
@@ -40,12 +40,12 @@
         <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1">Total Geral</p>
         <p class="text-xl font-black text-slate-800">{{ rows.length }}</p>
       </div>
-      
+
       <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
         <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1">Carteira Ativa</p>
         <p class="text-xl font-black text-blue-600">{{ grupos.length }}</p>
       </div>
-      
+
       <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
         <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1">Volume Negociado</p>
         <p class="text-lg font-black text-emerald-600 truncate">
@@ -76,7 +76,7 @@
               {{ row.cliente_nome || 'CLIENTE NÃO IDENTIFICADO' }}
             </span>
             <span class="text-[10px] font-bold text-slate-400 tracking-wider">
-               {{ row.cliente_telefone || 'SEM CONTATO' }}
+              {{ row.cliente_telefone || 'SEM CONTATO' }}
             </span>
           </div>
         </template>
@@ -86,11 +86,19 @@
             <button
               v-for="o in row.orcamentos"
               :key="o.id"
+              v-if="can('orcamentos.editar')"
               class="h-6 px-2 rounded bg-slate-50 border border-slate-200 text-[9px] font-black text-slate-500 hover:bg-slate-900 hover:text-white transition-all uppercase"
-              @click="router.push(`/orcamentos/${o.id}`)"
+              @click="abrirOrcamento(o.id)"
             >
               #{{ o.id }}
             </button>
+
+            <span
+              v-if="!can('orcamentos.editar')"
+              class="text-[10px] font-black uppercase tracking-widest text-slate-300"
+            >
+              —
+            </span>
           </div>
         </template>
 
@@ -105,14 +113,17 @@
 
         <template #cell-acoes="{ row }">
           <div class="flex justify-end gap-1.5 px-2">
-            <button 
+            <button
+              v-if="can('orcamentos.criar')"
               @click="novoParaCliente(row.cliente_id)"
               class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100 flex items-center justify-center"
               title="Novo Orçamento"
             >
               <i class="pi pi-plus text-[10px]"></i>
             </button>
-            <button 
+
+            <button
+              v-if="can('orcamentos.ver')"
               @click="abrirListaDoCliente(row.cliente_id)"
               class="w-7 h-7 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-900 hover:text-white transition-all border border-slate-200 flex items-center justify-center"
               title="Histórico"
@@ -131,6 +142,10 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/services/api'
 import { format } from '@/utils/format'
+import { can } from '@/services/permissions'
+import { notify } from '@/services/notify'
+
+definePage({ meta: { perm: 'orcamentos.ver' } })
 
 const router = useRouter()
 const loading = ref(false)
@@ -190,12 +205,24 @@ const grupos = computed(() => {
   )
 })
 
+function novoGeral() {
+  if (!can('orcamentos.criar')) return notify.error('Acesso negado.')
+  router.push('/orcamentos/novo')
+}
+
 function novoParaCliente(clienteId) {
+  if (!can('orcamentos.criar')) return notify.error('Acesso negado.')
   router.push({ path: '/orcamentos/novo', query: { cliente_id: String(clienteId) } })
 }
 
 function abrirListaDoCliente(clienteId) {
+  if (!can('orcamentos.ver')) return notify.error('Acesso negado.')
   router.push(`/orcamentos/cliente/${clienteId}`)
+}
+
+function abrirOrcamento(id) {
+  if (!can('orcamentos.editar')) return notify.error('Acesso negado.')
+  router.push(`/orcamentos/${id}`)
 }
 
 onMounted(carregar)

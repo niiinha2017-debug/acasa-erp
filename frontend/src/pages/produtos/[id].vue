@@ -81,30 +81,61 @@
           </div>
 
           <!-- ✅ IMAGEM (apenas 1, opcional) -->
-          <div class="col-span-12 md:col-span-8">
-            <Input
-              v-model="form.imagem_url"
-              label="Imagem do Produto (URL)"
-              placeholder="Cole a URL da imagem (opcional)"
-              :forceUpper="false"
-            />
-          </div>
+<!-- IMAGEM (upload) -->
+<div class="col-span-12 md:col-span-8">
+  <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block ml-1">
+    Imagem do Produto
+  </label>
 
-          <div class="col-span-12 md:col-span-4">
-            <div class="h-full flex flex-col justify-end">
-              <div class="h-10 rounded-xl border border-slate-200 bg-white flex items-center justify-center overflow-hidden">
-                <img
-                  v-if="previewImagem"
-                  :src="previewImagem"
-                  class="h-full w-full object-cover"
-                  alt="Imagem do produto"
-                />
-                <span v-else class="text-[9px] font-black uppercase tracking-widest text-slate-300">
-                  Sem imagem
-                </span>
-              </div>
-            </div>
-          </div>
+  <div class="flex items-center gap-3">
+    <input ref="imagemInput" type="file" class="hidden" accept="image/*" @change="onImagemPick" />
+
+    <Button
+      v-if="can('produtos.editar') && isEdit"
+      variant="secondary"
+      type="button"
+      class="!h-11 !rounded-xl !px-4 text-[10px] font-black uppercase tracking-widest"
+      :loading="uploadingImagem"
+      @click="imagemInput?.click()"
+    >
+      <i class="pi pi-upload mr-2 text-[10px]"></i>
+      Enviar imagem
+    </Button>
+
+    <span v-if="!isEdit" class="text-[10px] font-black uppercase tracking-widest text-slate-300">
+      Salve o produto primeiro para anexar imagem
+    </span>
+
+    <Button
+      v-if="isEdit && can('produtos.editar') && previewImagem"
+      variant="ghost"
+      type="button"
+      class="!h-11 !rounded-xl !px-4 text-[10px] font-black uppercase tracking-widest border border-slate-200 text-rose-500 hover:bg-rose-50"
+      :loading="removendoImagem"
+      @click="confirmarRemoverImagem"
+    >
+      <i class="pi pi-trash mr-2 text-[10px]"></i>
+      Remover
+    </Button>
+  </div>
+</div>
+
+<div class="col-span-12 md:col-span-4">
+  <div class="h-full flex flex-col justify-end">
+    <div class="h-20 rounded-xl border border-slate-200 bg-white flex items-center justify-center overflow-hidden">
+      <img
+        v-if="previewImagem"
+        :src="previewImagem"
+        class="h-full w-full object-cover"
+        alt="Imagem do produto"
+      />
+      <span v-else class="text-[9px] font-black uppercase tracking-widest text-slate-300">
+        Sem imagem
+      </span>
+    </div>
+  </div>
+</div>
+
 
           <!-- Atributos -->
           <div class="col-span-12 mt-4">
@@ -179,15 +210,16 @@
               Descartar
             </button>
 
-            <Button
-              variant="primary"
-              type="submit"
-              :loading="salvando"
-              class="!h-16 !px-12 !rounded-2xl shadow-2xl shadow-slate-900/20 bg-slate-900 hover:bg-black font-black text-[11px] uppercase tracking-[0.2em]"
-            >
-              <i class="pi pi-check-circle mr-3"></i>
-              {{ isEdit ? 'Salvar Alterações' : 'Finalizar Cadastro' }}
-            </Button>
+<Button
+  v-if="can(isEdit ? 'produtos.editar' : 'produtos.criar')"
+  variant="primary"
+  type="submit"
+  :loading="salvando"
+  class="!h-16 !px-12 !rounded-2xl shadow-2xl shadow-slate-900/20 bg-slate-900 hover:bg-black font-black text-[11px] uppercase tracking-[0.2em]"
+>
+  {{ isEdit ? 'Salvar Alterações' : 'Finalizar Cadastro' }}
+</Button>
+
           </div>
         </form>
       </div>
@@ -202,6 +234,12 @@ import { maskMoneyBR } from '@/utils/masks'
 import { UNIDADES } from '@/constantes'
 import { ProdutosService, FornecedorService } from '@/services/index'
 import { confirm } from '@/services/confirm'
+import { ArquivosService } from '@/services/arquivos.service' 
+
+import { can } from '@/services/permissions'
+import { notify } from '@/services/notify'
+
+definePage({ meta: { perm: 'produtos.ver' } })
 
 const route = useRoute()
 const router = useRouter()
@@ -211,6 +249,11 @@ const isEdit = computed(() => rawId.value !== 'novo')
 const produtoId = computed(() =>
   isEdit.value ? Number(String(rawId.value).replace(/\D/g, '')) : null,
 )
+
+
+const imagemInput = ref(null)
+const uploadingImagem = ref(false)
+const removendoImagem = ref(false)
 
 const loading = ref(false)
 const salvando = ref(false)
@@ -336,7 +379,86 @@ async function carregarProduto() {
   valorUnitarioMask.value = maskMoneyBR(form.value.valor_unitario || 0)
 }
 
+async function onImagemPick(e) {
+  if (!isEdit.value) {
+    notify.warn('Salve o produto primeiro para anexar imagem.')
+    if (imagemInput.value) imagemInput.value.value = ''
+    return
+  }
+  if (!can('produtos.editar')) {
+    notify.error('Acesso negado.')
+    if (imagemInput.value) imagemInput.value.value = ''
+    return
+  }
+
+if (!file.type.startsWith('image/')) {
+  notify.error('Selecione um arquivo de imagem.')
+  if (imagemInput.value) imagemInput.value.value = ''
+  return
+}
+
+
+  const file = e.target.files?.[0]
+  if (!file) return
+
+  uploadingImagem.value = true
+  try {
+    const res = await ArquivosService.upload({
+      ownerType: 'PRODUTO',
+      ownerId: produtoId.value,
+      categoria: 'IMAGEM',
+      slotKey: 'IMAGEM_PRINCIPAL',
+      file,
+    })
+
+    // o upload normalmente retorna o registro (ou res.data)
+    const arq = res?.data ?? res
+    const url = arq?.url
+    if (!url) {
+      notify.error('Upload ok, mas não retornou URL.')
+      return
+    }
+
+    // salva "atalho" no produto (pra index mostrar sem consulta extra)
+    form.value.imagem_url = url
+
+    // atualiza no banco imediatamente
+    await ProdutosService.salvar(produtoId.value, { imagem_url: url })
+
+    notify.success('Imagem atualizada!')
+  } catch (err) {
+    notify.error(err?.response?.data?.message || 'Erro ao enviar imagem.')
+  } finally {
+    uploadingImagem.value = false
+    if (imagemInput.value) imagemInput.value.value = ''
+  }
+}
+
+async function confirmarRemoverImagem() {
+  if (!isEdit.value) return
+  if (!can('produtos.editar')) return notify.error('Acesso negado.')
+
+  const ok = await confirm.show('Remover imagem', 'Deseja remover a imagem deste produto?')
+  if (!ok) return
+
+  removendoImagem.value = true
+  try {
+    // opcional: remover arquivo do slot (se seu backend tiver listagem por slot/categoria)
+    // se não tiver, só limpa o campo do produto mesmo:
+    await ProdutosService.salvar(produtoId.value, { imagem_url: null })
+    form.value.imagem_url = ''
+    notify.success('Imagem removida!')
+  } catch (err) {
+    notify.error(err?.response?.data?.message || 'Erro ao remover imagem.')
+  } finally {
+    removendoImagem.value = false
+  }
+}
+
 async function confirmarSalvarProduto() {
+  const perm = isEdit.value ? 'produtos.editar' : 'produtos.criar'
+  if (!can(perm)) return notify.error('Acesso negado.')
+
   const ok = await confirm.show(
     isEdit.value ? 'Salvar Alterações' : 'Finalizar Cadastro',
     isEdit.value
@@ -347,6 +469,7 @@ async function confirmarSalvarProduto() {
   await salvar()
 }
 
+
 async function confirmarDescartarProduto() {
   const ok = await confirm.show('Descartar', 'Deseja sair sem salvar? As alterações serão perdidas.')
   if (!ok) return
@@ -354,6 +477,9 @@ async function confirmarDescartarProduto() {
 }
 
 async function salvar() {
+  const perm = isEdit.value ? 'produtos.editar' : 'produtos.criar'
+  if (!can(perm)) return notify.error('Acesso negado.')
+
   const erro = validar()
   if (erro) return alert(erro)
 
@@ -385,17 +511,26 @@ async function salvar() {
 }
 
 onMounted(async () => {
+  const perm = isEdit.value ? 'produtos.editar' : 'produtos.criar'
+  if (!can(perm)) {
+    notify.error('Acesso negado.')
+    router.push('/produtos')
+    return
+  }
+
   loading.value = true
   try {
     await carregarFornecedor()
     if (isEdit.value) await carregarProduto()
     else resetForm()
-  } catch (err) {
-    console.error('[PRODUTOS] erro no mounted:', err)
-    alert('Erro ao carregar dados iniciais.')
-    router.push('/produtos')
-  } finally {
+} catch (err) {
+  console.error('[PRODUTOS] erro no mounted:', err)
+  notify.error('Erro ao carregar dados iniciais.')
+  router.push('/produtos')
+} finally {
+
     loading.value = false
   }
 })
+
 </script>

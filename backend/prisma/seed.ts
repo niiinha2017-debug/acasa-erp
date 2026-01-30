@@ -38,8 +38,8 @@ const perms = [
   { chave: 'permissoes.ver', descricao: 'Visualizar permissões' },
   { chave: 'permissoes.gerenciar', descricao: 'Gerenciar permissões' },
 
-  { chave: 'configuracoes.empresa.ver', descricao: 'Visualizar empresa' },
-  { chave: 'configuracoes.empresa.editar', descricao: 'Editar empresa' },
+    { chave: 'configuracoes.empresa.ver', descricao: 'Visualizar empresa' },
+    { chave: 'configuracoes.empresa.editar', descricao: 'Editar empresa' },
 
   { chave: 'arquivos.ver', descricao: 'Visualizar arquivos' },
   { chave: 'arquivos.criar', descricao: 'Criar arquivos' },

@@ -50,30 +50,29 @@ async criar(dto: CreateProdutoDto) {
 
   const marca = this.normStr(dto.marca)
   const cor = this.normStr(dto.cor)
+  const medida = this.normStr(dto.medida)
 
-const medida = this.normStr(dto.medida)
-await this.checarDuplicado({ fornecedor_id, nome_produto, marca, cor, medida })
+  await this.checarDuplicado({ fornecedor_id, nome_produto, marca, cor, medida })
 
+  return this.prisma.produtos.create({
+    data: {
+      fornecedor_id,
+      nome_produto,
+      marca,
+      cor,
+      unidade: this.normStr(dto.unidade),
+      medida,
+      quantidade: Number(dto.quantidade ?? 0),
+      valor_unitario: Number(dto.valor_unitario ?? 0),
+      valor_total: Number(dto.valor_total ?? 0),
 
- return this.prisma.produtos.create({
-  data: {
-    fornecedor_id,
-    nome_produto,
-    marca,
-    cor,
-    unidade: this.normStr(dto.unidade),
-    medida,
-    quantidade: Number(dto.quantidade ?? 0),
-    valor_unitario: Number(dto.valor_unitario ?? 0),
-    valor_total: Number(dto.valor_total ?? 0),
+      imagem_url: this.normStr(dto.imagem_url),
 
-    // ✅ novo
-    imagem_url: this.normStr((dto as any).imagem_url),
-
-    status: dto.status ?? 'ATIVO',
-  },
+      status: dto.status ?? 'ATIVO',
+    },
   })
 }
+
 
   async listar(filtro?: { fornecedor_id?: number }) {
     const where: any = {}
@@ -145,25 +144,16 @@ return this.prisma.produtos.update({
       dto.valor_total === undefined ? Number(atual.valor_total) : Number(dto.valor_total),
 
     // ✅ novo
-    imagem_url:
-      (dto as any).imagem_url === undefined
-        ? (atual as any).imagem_url
-        : this.normStr((dto as any).imagem_url),
+imagem_url:
+  dto.imagem_url === undefined
+    ? atual.imagem_url
+    : this.normStr(dto.imagem_url),
+
 
     status: dto.status === undefined ? atual.status : dto.status,
   },
 })
-
-
 }
-async atualizarImagem(id: number, imagem_url: string) {
-  await this.buscarPorId(id)
-  return this.prisma.produtos.update({
-    where: { id },
-    data: { imagem_url },
-  })
-}
-
 
 
 async remover(id: number) {
