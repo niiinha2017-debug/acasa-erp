@@ -297,10 +297,18 @@ async function remover(arq) {
   }
 }
 
-watch(() => props.open, (v) => { if (v) carregar() })
-watch(() => [props.ownerType, props.ownerId, props.categoria, props.slotKey], () => {
-  if (props.open) carregar()
-})
+watch(
+  () => props.open,
+  (v) => { if (v) carregar() },
+  { immediate: true }
+)
+
+watch(
+  () => [props.ownerType, props.ownerId, props.categoria, props.slotKey],
+  () => { if (props.open) carregar() },
+  { immediate: true }
+)
+
 </script>
 
 
