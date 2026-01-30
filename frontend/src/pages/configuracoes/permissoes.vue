@@ -311,16 +311,27 @@ const salvar = async () => {
   loadingSalvar.value = true
   try {
     const ids = permissoesAtivas.value
-      .map(chave => mapaChaveParaId.value[chave])
-      .filter(Boolean)
+      .map(chave => Number(mapaChaveParaId.value[chave]))
+      .filter(n => Number.isFinite(n))
+
+    console.log('[PERMS] chaves:', permissoesAtivas.value)
+    console.log('[PERMS] ids:', ids)
+
     await PermissoesService.definirParaUsuario(usuarioSelecionado.value.id, ids)
+
+    // confere na hora o que ficou no banco
+    const { data } = await PermissoesService.listarDoUsuario(usuarioSelecionado.value.id)
+    permissoesAtivas.value = normalizarPerms(data)
+
     notify.success('Permissões atualizadas!')
   } catch (e) {
+    console.error(e)
     notify.error('Erro ao salvar')
   } finally {
     loadingSalvar.value = false
   }
 }
+
 
 onMounted(async () => {
   const user = usuarioLogado.value
