@@ -238,10 +238,26 @@ const clienteTelefone = computed(() => {
 })
 
 
-function abrirPdf(id) {
+async function abrirPdf(id) {
   if (!can('orcamentos.ver')) return notify.error('Acesso negado.')
-  OrcamentosService.abrirPdf(id)
+
+  try {
+    const { data } = await OrcamentosService.abrirPdf(id)
+    const arquivoId = data?.arquivoId
+    if (!arquivoId) return notify.error('Não retornou arquivoId.')
+
+    await router.push({
+      path: `/arquivos/${String(arquivoId).replace(/\D/g, '')}`,
+      query: {
+        name: `ORCAMENTO_${String(id).replace(/\D/g, '')}.pdf`,
+        type: 'application/pdf',
+      },
+    })
+  } catch (e) {
+    notify.error('Erro ao abrir PDF.')
+  }
 }
+
 
 
 async function excluir(id) {

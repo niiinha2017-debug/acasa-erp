@@ -229,7 +229,7 @@ const columns = [
   { key: 'descricao', label: 'Acabamento' },
   { key: 'observacao', label: 'Observações' },
   { key: 'valor_unitario', label: 'Valor', align: 'right' },
-  { key: 'acoes', label: '', align: 'right' }
+  { key: 'acoes', label: '', width: '140px', align: 'right' },
 ]
 
 function aplicarMascaraDinheiro(e) {
@@ -358,7 +358,14 @@ async function gerarPdf() {
     const arquivoId = data?.arquivoId
     if (!arquivoId) return notify.error('Não retornou arquivoId.')
 
-    router.push(`/arquivos/${String(arquivoId).replace(/\D/g, '')}`)
+await router.push({
+  path: `/arquivos/${String(arquivoId).replace(/\D/g, '')}`,
+  query: {
+    name: `ORCAMENTO_${String(id).replace(/\D/g, '')}.pdf`,
+    type: 'application/pdf',
+  },
+})
+
   } catch (e) {
     notify.error('Erro ao gerar PDF.')
   }

@@ -216,14 +216,17 @@ async function carregar() {
       ownerId: props.ownerId,
       categoria: props.categoria,
     })
-    const data = res?.data ?? res
-    arquivos.value = Array.isArray(data) ? data : []
+
+    const payload = res?.data
+    arquivos.value = Array.isArray(payload) ? payload : (payload?.data || [])
   } catch (e) {
     erro.value = e?.response?.data?.message || 'Erro ao carregar arquivos.'
+    arquivos.value = []
   } finally {
     loading.value = false
   }
 }
+
 
 function onPickFile(e) {
   if (!props.canManage) return

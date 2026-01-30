@@ -11,7 +11,7 @@ export class PontoRegistrosController {
   constructor(private readonly service: PontoRegistrosService) {}
 
   @Put(':id')
-  @Permissoes('PONTO_RELATORIO.editar')
+  @Permissoes('ponto_relatorio.editar')
   atualizar(@Param('id') id: string, @Body() dto: AtualizarPontoRegistroDto) {
     const cleanId = Number(String(id).replace(/\D/g, ''))
     return this.service.atualizar(cleanId, dto)

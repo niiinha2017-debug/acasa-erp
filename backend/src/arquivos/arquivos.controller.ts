@@ -109,13 +109,14 @@ filename: (req, file, cb) => {
 
     if (!file) throw new BadRequestException('Arquivo não enviado.')
 
-    return this.arquivosService.salvarUpload({
-      owner_type: body.owner_type,
-      owner_id: body.owner_id,
-      categoria: body.categoria ?? null,
-      slot_key: body.slot_key ?? null,
-      file,
-    })
+return this.arquivosService.salvarUpload({
+  owner_type: body.owner_type,
+  owner_id: body.owner_id, // <- aqui não converte pra número nem valida
+  categoria: body.categoria ?? null,
+  slot_key: body.slot_key ?? null,
+  file,
+})
+
   }
 
   // BAIXAR COMO BLOB (PWA-friendly)

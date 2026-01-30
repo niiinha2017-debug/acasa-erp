@@ -38,12 +38,17 @@ const perms = [
   { chave: 'permissoes.ver', descricao: 'Visualizar permissões' },
   { chave: 'permissoes.gerenciar', descricao: 'Gerenciar permissões' },
 
+  { chave: 'obras.ver', descricao: 'Visualizar obras' },
+{ chave: 'obras.criar', descricao: 'Criar obras' },
+{ chave: 'obras.editar', descricao: 'Editar obras' },
+
+
     { chave: 'configuracoes.empresa.ver', descricao: 'Visualizar empresa' },
     { chave: 'configuracoes.empresa.editar', descricao: 'Editar empresa' },
 
-  { chave: 'arquivos.ver', descricao: 'Visualizar arquivos' },
-  { chave: 'arquivos.criar', descricao: 'Criar arquivos' },
-  { chave: 'arquivos.excluir', descricao: 'Excluir arquivos' },
+    { chave: 'arquivos.ver', descricao: 'Visualizar arquivos' },
+    { chave: 'arquivos.criar', descricao: 'Criar arquivos' },
+    { chave: 'arquivos.excluir', descricao: 'Excluir arquivos' },
 
   // Ponto
   { chave: 'ponto_relatorio.ver', descricao: 'Visualizar relatório de ponto' },
