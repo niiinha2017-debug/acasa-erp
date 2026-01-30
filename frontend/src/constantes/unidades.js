@@ -1,1 +1,2 @@
-export { UNIDADES } from '../../../backend/src/shared/constantes/unidades'
+export { UNIDADES } from '../../../backend/shared/constantes/unidades'
+
