@@ -214,6 +214,11 @@ async listarContasPagarConsolidado(filtros: { fornecedor_id?: number; status?: s
     return this.prisma.contas_pagar.update({ where: { id }, data: dto })
   }
 
+  async removerContaPagar(id: number) {
+  return this.prisma.contas_pagar.delete({ where: { id } })
+}
+
+
   async pagarContaPagar(id: number, dto: any) {
     return this.prisma.$transaction(async (tx) => {
       const conta = await tx.contas_pagar.findUnique({
@@ -265,16 +270,31 @@ async listarContasPagarConsolidado(filtros: { fornecedor_id?: number; status?: s
   // =========================================================
   // CONTAS A RECEBER
   // =========================================================
-  async listarContasReceber(filtros: { fornecedor_id?: number; cliente_id?: number; status?: string }) {
-    return this.prisma.contas_receber.findMany({
-      where: {
-        fornecedor_id: filtros.fornecedor_id || undefined,
-        cliente_id: filtros.cliente_id || undefined,
-        status: filtros.status || undefined,
-      },
-      orderBy: [{ vencimento_em: 'asc' }, { id: 'desc' }],
-    })
+async listarContasReceber(filtros: {
+  fornecedor_id?: number
+  cliente_id?: number
+  status?: string
+  data_ini?: string
+  data_fim?: string
+}) {
+  const where: any = {
+    fornecedor_id: filtros.fornecedor_id || undefined,
+    cliente_id: filtros.cliente_id || undefined,
+    status: filtros.status || undefined,
   }
+
+  if (filtros.data_ini || filtros.data_fim) {
+    where.vencimento_em = {}
+    if (filtros.data_ini) where.vencimento_em.gte = new Date(filtros.data_ini)
+    if (filtros.data_fim) where.vencimento_em.lte = new Date(filtros.data_fim)
+  }
+
+  return this.prisma.contas_receber.findMany({
+    where,
+    orderBy: [{ vencimento_em: 'asc' }, { id: 'desc' }],
+  })
+}
+
 
   async buscarContaReceber(id: number) {
     return this.prisma.contas_receber.findUnique({
@@ -286,6 +306,11 @@ async listarContasPagarConsolidado(filtros: { fornecedor_id?: number; status?: s
   async criarContaReceber(dto: any) {
     return this.prisma.contas_receber.create({ data: dto })
   }
+
+  async removerContaReceber(id: number) {
+  return this.prisma.contas_receber.delete({ where: { id } })
+}
+
 
   async atualizarContaReceber(id: number, dto: any) {
     return this.prisma.contas_receber.update({ where: { id }, data: dto })
@@ -306,15 +331,24 @@ async listarContasPagarConsolidado(filtros: { fornecedor_id?: number; status?: s
   // =========================================================
   // CHEQUES
   // =========================================================
-  async listarCheques(filtros: { status?: string; banco?: string }) {
-    return this.prisma.cheques.findMany({
-      where: {
-        status: filtros.status || undefined,
-        banco: filtros.banco ? { contains: filtros.banco } : undefined,
-      },
-      orderBy: { data_vencimento: 'asc' },
-    })
+async listarCheques(filtros: { status?: string; banco?: string; data_ini?: string; data_fim?: string }) {
+  const where: any = {
+    status: filtros.status || undefined,
+    banco: filtros.banco ? { contains: filtros.banco } : undefined,
   }
+
+  if (filtros.data_ini || filtros.data_fim) {
+    where.data_vencimento = {}
+    if (filtros.data_ini) where.data_vencimento.gte = new Date(filtros.data_ini)
+    if (filtros.data_fim) where.data_vencimento.lte = new Date(filtros.data_fim)
+  }
+
+  return this.prisma.cheques.findMany({
+    where,
+    orderBy: { data_vencimento: 'asc' },
+  })
+}
+
 
   async buscarChequePorId(id: number) {
     return this.prisma.cheques.findUnique({
@@ -377,10 +411,13 @@ async listarContasPagarConsolidado(filtros: { fornecedor_id?: number; status?: s
       })
       const totalPlanos = this.round2(planos.reduce((s, p) => s + Number(p.valor_total || 0), 0))
 
-      // 4) saldo do mês
-      const saldo = this.round2(totalCompras - totalPlanos)
-      const valorAPagar = saldo > 0 ? saldo : 0
-      const valorCredito = saldo < 0 ? Math.abs(saldo) : 0
+
+// 4) saldo do mês (✅ compensação correta)
+const compensado = this.round2(Math.min(totalCompras, totalPlanos))
+const valorAPagar = this.round2(Math.max(totalCompras - totalPlanos, 0))
+const valorCredito = this.round2(Math.max(totalPlanos - totalCompras, 0))
+const saldo = this.round2(totalCompras - totalPlanos) // se você quiser continuar retornando
+
 
       // 5) vencimento padrão
       const vencPadrao = body?.vencimento_em
@@ -394,9 +431,9 @@ async listarContasPagarConsolidado(filtros: { fornecedor_id?: number; status?: s
           mes_referencia: mes,
           ano_referencia: ano,
           descricao: `Fechamento ${String(mes).padStart(2, '0')}/${ano}`,
-          observacao: `Compras: ${totalCompras} | PlanoCorte: ${totalPlanos} | Saldo: ${saldo}`,
+          observacao: `Compras: ${totalCompras} | PlanoCorte: ${totalPlanos} | Compensado: ${compensado} | Saldo: ${saldo}`,
           valor_original: valorAPagar,
-          valor_compensado: totalPlanos,
+          valor_compensado: compensado,
           status: valorAPagar > 0 ? 'EM_ABERTO' : 'PAGO',
           forma_pagamento_chave: forma,
           vencimento_em: vencPadrao,
@@ -507,4 +544,33 @@ async listarContasPagarConsolidado(filtros: { fornecedor_id?: number; status?: s
       },
     })
   }
+  async listarContasPagarFechamentos(filtros: {
+  fornecedor_id?: number
+  status?: string
+  data_ini?: string
+  data_fim?: string
+}) {
+  const where: any = {
+    fornecedor_id: filtros.fornecedor_id || undefined,
+    status: filtros.status?.trim() || undefined,
+  }
+
+  // filtro por vencimento
+  if (filtros.data_ini || filtros.data_fim) {
+    where.vencimento_em = {}
+    if (filtros.data_ini) where.vencimento_em.gte = new Date(filtros.data_ini)
+    if (filtros.data_fim) where.vencimento_em.lte = new Date(filtros.data_fim)
+  }
+
+  return this.prisma.contas_pagar.findMany({
+    where,
+    include: {
+      fornecedor: true,
+      fornecedor_cobrador: true,
+      cheques: true,
+    },
+    orderBy: [{ vencimento_em: 'asc' }, { id: 'desc' }],
+  })
+}
+
 }

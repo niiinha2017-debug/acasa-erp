@@ -54,7 +54,7 @@ export default defineConfig({
 
 server: {
   port: 5173,
-  fs: { allow: ['..'] },
+  fs: { allow: [path.resolve(__dirname, '..')] },
   proxy: {
     '/api/analytics': {
       target: 'http://127.0.0.1:8000',

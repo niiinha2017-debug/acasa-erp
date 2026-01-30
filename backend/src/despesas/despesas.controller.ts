@@ -51,15 +51,6 @@ export class DespesasController {
     return this.service.create(dto)
   }
 
-  @Put('recorrencia/:recorrenciaId')
-  @Permissoes('despesas.editar')
-  updateRecorrencia(
-    @Param('recorrenciaId') recorrenciaId: string,
-    @Body() dto: UpdateDespesaDto,
-  ) {
-    return this.service.updateRecorrencia(recorrenciaId, dto)
-  }
-
 @Put(':id')
 @Permissoes('despesas.editar')
 update(@Param('id') id: any, @Body() dto: UpdateDespesaDto) {
@@ -67,18 +58,9 @@ update(@Param('id') id: any, @Body() dto: UpdateDespesaDto) {
   return this.service.update(cleanId, dto);
 }
 
-@Delete('recorrencia/:recorrenciaId')
-@Permissoes('despesas.excluir')
-removeRecorrencia(@Param('recorrenciaId') recorrenciaId: string) {
-  return this.service.removeRecorrencia(recorrenciaId)
-}
-
-
 @Delete(':id')
 @Permissoes('despesas.excluir')
 remove(@Param('id') id: any) { // Mude para any para evitar erro de string/number
   const cleanId = typeof id === 'string' ? Number(id.replace(/\D/g, '')) : Number(id);
   return this.service.remove(cleanId);
-}
-
-}
+}}

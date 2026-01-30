@@ -196,7 +196,11 @@ export const PermissoesService = {
 
 // --- FINANCEIRO ---
 export const FinanceiroService = {
-  listarPagar: (filtros = {}) => api.get('/financeiro/contas-pagar', { params: filtros }),
+  listarPagar: (filtros = {}) =>
+    api.get('/financeiro/contas-pagar/fechamentos', { params: filtros }),
+  listarPagarConsolidado: (filtros = {}) =>
+    api.get('/financeiro/contas-pagar', { params: filtros }),
+
   buscarContaPagar: (id) => api.get(`/financeiro/contas-pagar/${id}`),
   criarContaPagar: (dados) => api.post('/financeiro/contas-pagar', dados),
   atualizarContaPagar: (id, dados) => api.put(`/financeiro/contas-pagar/${id}`, dados),
@@ -214,6 +218,7 @@ export const FinanceiroService = {
   buscarCheque: (id) => api.get(`/financeiro/cheques/${id}`),
   atualizarStatusCheque: (id, dados) => api.put(`/financeiro/cheques/${id}/status`, dados),
 }
+
 
 // --- CONFIGURAÇÃO ---
 export const ConfiguracaoService = {

@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common'
+import { Body, Controller, Post, UseGuards, HttpCode, HttpStatus } from '@nestjs/common'
 import { FinanceiroService } from './financeiro.service'
 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
@@ -12,6 +12,7 @@ export class FechamentoController {
 
   @Post('fornecedor')
   @Permissoes('fechamento_fornecedor.criar')
+  @HttpCode(HttpStatus.OK)
   async fecharMesFornecedor(@Body() body: any) {
     return this.service.fecharMesFornecedor(body)
   }

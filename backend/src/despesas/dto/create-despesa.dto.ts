@@ -1,55 +1,44 @@
 import { Type } from 'class-transformer'
-import {
-  IsDateString,
-  IsInt,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  Min,
-} from 'class-validator'
+import { IsDateString, IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator'
 
 export class CreateDespesaDto {
   @IsString()
   @IsNotEmpty()
-  tipo_movimento: string // ENTRADA | SAIDA (constantes)
+  tipo_movimento: string
 
   @IsString()
   @IsNotEmpty()
-  unidade: string // (constantes) FABRICA | LOJA
+  unidade: string
 
   @IsString()
   @IsNotEmpty()
-  categoria: string // (constantes)
+  categoria: string
 
   @IsString()
   @IsNotEmpty()
-  classificacao: string // (constantes)
+  classificacao: string
 
   @IsString()
   @IsNotEmpty()
-  local: string // (constantes)
-
-  // aceitar como string pra manter decimal certinho (ex: "123.45")
-  @IsString()
-  @IsNotEmpty()
-  valor_total: string
+  local: string
 
   @IsString()
   @IsNotEmpty()
-  forma_pagamento: string // (constantes)
+  valor_total: string // ex: "1234.56"
+
+  @IsString()
+  @IsNotEmpty()
+  forma_pagamento: string
 
   @IsOptional()
-@IsString()
-recorrencia_id?: string
-
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  quantidade_parcelas: number
+  quantidade_parcelas?: number // default 1 no service
 
   @IsOptional()
   @IsDateString()
-  data_registro?: string // opcional (se não mandar, Prisma usa now())
+  data_registro?: string
 
   @IsDateString()
   data_vencimento: string
@@ -63,22 +52,19 @@ recorrencia_id?: string
   @IsInt()
   funcionario_id?: number
 
- @IsOptional()
-@IsString()
-conta_bancaria_key?: string
-
-@IsOptional()
-@IsString()
-conta_bancaria_tipo_key?: string
-
-@IsOptional()
-@IsString()
-cartao_credito_key?: string
-
-
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  status: string
+  conta_bancaria_key?: string
+
+  @IsOptional()
+  @IsString()
+  conta_bancaria_tipo_key?: string
+
+  @IsOptional()
+  @IsString()
+  cartao_credito_key?: string
+
+  @IsOptional()
+  @IsString()
+  status?: string // backend decide quando é prazo
 }
-
-

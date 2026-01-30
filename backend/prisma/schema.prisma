@@ -555,6 +555,9 @@ model despesas {
   // ✅ Cartão (constantes)
   cartao_credito_key      String? @db.VarChar(50)
 
+  titulos titulos_financeiros[]
+
+
   @@index([unidade])
   @@index([recorrencia_id])
   @@index([tipo_movimento])
@@ -665,11 +668,13 @@ model contas_pagar {
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
-  cheques    cheques[]
   despesa_id Int?      @unique
   despesa    despesas? @relation(fields: [despesa_id], references: [id])
 
   compensacoes fornecedor_compensacoes[] @relation("compensacoes_pagar")
+
+  titulos titulos_financeiros[]
+
 
   @@index([fornecedor_id])
   @@index([fornecedor_cobrador_id])
@@ -679,6 +684,48 @@ model contas_pagar {
   @@index([origem_id])
   @@map("contas_pagar")
  }
+
+model titulos_financeiros {
+  id Int @id @default(autoincrement())
+
+  // origem/vinculo (opcionais)
+  despesa_id       Int?
+  despesa          despesas?      @relation(fields: [despesa_id], references: [id], onDelete: SetNull)
+
+  conta_pagar_id   Int?
+  conta_pagar      contas_pagar?  @relation(fields: [conta_pagar_id], references: [id], onDelete: SetNull)
+
+  conta_receber_id Int?
+  conta_receber    contas_receber? @relation(fields: [conta_receber_id], references: [id], onDelete: SetNull)
+
+  // tipo do titulo
+  tipo String // CHEQUE | CARTAO | BOLETO | PARCELA_FORNECEDOR | etc.
+
+  // dados principais
+  valor         Decimal  @default(0.00) @db.Decimal(12,2)
+  status        String   // EM_ABERTO | VENCIDO | PAGO | CANCELADO
+  vencimento_em DateTime
+  pago_em       DateTime?
+
+  // parcelamento
+  parcelas_total Int?
+  parcela_numero Int?
+
+  // metadados
+  meta Json?
+
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+
+  @@index([status])
+  @@index([vencimento_em])
+  @@index([despesa_id])
+  @@index([conta_pagar_id])
+  @@index([conta_receber_id])
+  @@map("titulos_financeiros")
+ }
+
 
 model contas_receber {
   id Int @id @default(autoincrement())
@@ -710,6 +757,9 @@ model contas_receber {
   atualizado_em DateTime @updatedAt
 
   compensacoes fornecedor_compensacoes[] @relation("compensacoes_receber")
+
+  titulos titulos_financeiros[]
+
 
   @@index([fornecedor_id])
   @@index([cliente_id])
@@ -824,28 +874,6 @@ model compras_rateio {
   @@index([compra_id])
   @@index([nome_ambiente])
   @@map("compras_rateio")
- }
-
-model cheques {
-  id              Int      @id @default(autoincrement())
-  numero          String   @unique
-  banco           String
-  valor           Decimal  @db.Decimal(12, 2)
-  data_emissao    DateTime @default(now())
-  data_vencimento DateTime // O "Bom para"
-  status          String   @default("EM_MAO") // EM_MAO, COMPENSADO, DEVOLVIDO, REPASSADO
-
-  // Se for cheque de cliente, guardamos o nome aqui
-  emitente_nome String?
-
-  // Vínculo com a parcela que ele está pagando
-  conta_pagar_id Int?
-  conta_pagar    contas_pagar? @relation(fields: [conta_pagar_id], references: [id])
-
-  criado_em     DateTime @default(now())
-  atualizado_em DateTime @updatedAt
-
-  @@map("cheques")
  }
 
 model Empresa {
