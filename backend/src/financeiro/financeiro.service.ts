@@ -24,136 +24,138 @@ export class FinanceiroService {
     return Math.round((n + Number.EPSILON) * 100) / 100
   }
 
-// =========================================================
-// ✅ CONSOLIDADO (CONTAS A PAGAR) = DESPESAS + COMPRAS + FECHAMENTOS
-// =========================================================
-async listarContasPagarConsolidado(filtros: { fornecedor_id?: number; status?: string }) {
-  const status = filtros.status || undefined
-  const fornecedorId = filtros.fornecedor_id || undefined
+  // =========================================================
+  // ✅ CONSOLIDADO (CONTAS A PAGAR) = DESPESAS + COMPRAS + FECHAMENTOS
+  // =========================================================
+  async listarContasPagarConsolidado(filtros: { fornecedor_id?: number; status?: string }) {
+    const status = filtros.status || undefined
+    const fornecedorId = filtros.fornecedor_id || undefined
 
-  const [despesas, compras, fechamentos] = await Promise.all([
-    // DESPESAS
-    this.prisma.despesas.findMany({
-      where: {
-        status: status,
-      },
-      orderBy: { data_vencimento: 'asc' },
-    }),
+    const [despesas, compras, fechamentos] = await Promise.all([
+      // DESPESAS
+      this.prisma.despesas.findMany({
+        where: {
+          status: status,
+        },
+        orderBy: { data_vencimento: 'asc' },
+      }),
 
-    // COMPRAS
-    this.prisma.compras.findMany({
-      where: {
-        fornecedor_id: fornecedorId,
-        status: status,
-      },
-      include: { fornecedor: true },
-      orderBy: { vencimento_em: 'asc' },
-    }),
+      // COMPRAS
+      this.prisma.compras.findMany({
+        where: {
+          fornecedor_id: fornecedorId,
+          status: status,
+        },
+        include: { fornecedor: true },
+        orderBy: { vencimento_em: 'asc' },
+      }),
 
-    // CONTAS_PAGAR (FECHAMENTO MENSAL)
-    this.prisma.contas_pagar.findMany({
-      where: {
-        fornecedor_id: fornecedorId,
-        status: status,
-      },
-      include: {
-        fornecedor: true,
-        fornecedor_cobrador: true,
-        cheques: true,
-      },
-      orderBy: { vencimento_em: 'asc' },
-    }),
-  ])
+      // CONTAS_PAGAR (FECHAMENTO MENSAL)
+      this.prisma.contas_pagar.findMany({
+        where: {
+          fornecedor_id: fornecedorId,
+          status: status,
+        },
+        include: {
+          fornecedor: true,
+          fornecedor_cobrador: true,
+          // cheques: true, // ❌ removido (não existe no Prisma atual)
+        },
+        orderBy: { vencimento_em: 'asc' },
+      }),
+    ])
 
-  // Padroniza tudo em uma lista única
-  return [
-    // =====================
-    // DESPESAS (origem = DESPESA)
-    // =====================
-    ...despesas.map((d) => ({
-      id: d.id,
-      origem: 'DESPESA',
+    // Padroniza tudo em uma lista única
+    return [
+      // =====================
+      // DESPESAS (origem = DESPESA)
+      // =====================
+      ...despesas.map((d) => ({
+        id: d.id,
+        origem: 'DESPESA',
 
-      // “centro” (não tem fornecedor)
-      fornecedor_id: null,
-      fornecedor_nome: null,
+        // “centro” (não tem fornecedor)
+        fornecedor_id: null,
+        fornecedor_nome: null,
 
-      // dados principais
-      descricao: d.categoria,
-      observacao: d.classificacao,
+        // dados principais
+        descricao: d.categoria,
+        observacao: d.classificacao,
 
-      // valores
-      valor: d.valor_total,
-      valor_compensado: 0,
+        // valores
+        valor: d.valor_total,
+        valor_compensado: 0,
 
-      // datas/status
-      vencimento_em: d.data_vencimento,
-      pago_em: d.data_pagamento,
-      status: d.status,
+        // datas/status
+        vencimento_em: d.data_vencimento,
+        pago_em: d.data_pagamento,
+        status: d.status,
 
-      // extras (para tela)
-      mes_referencia: null,
-      ano_referencia: null,
-      cheques_total: 0,
-    })),
+        // extras (para tela)
+        mes_referencia: null,
+        ano_referencia: null,
+        cheques_total: 0,
+      })),
 
-    // =====================
-    // COMPRAS (origem = COMPRA)
-    // =====================
-    ...compras.map((c) => ({
-      id: c.id,
-      origem: 'COMPRA',
+      // =====================
+      // COMPRAS (origem = COMPRA)
+      // =====================
+      ...compras.map((c) => ({
+        id: c.id,
+        origem: 'COMPRA',
 
-      fornecedor_id: c.fornecedor_id,
-      fornecedor_nome: c.fornecedor?.nome_fantasia || null,
+        fornecedor_id: c.fornecedor_id,
+        fornecedor_nome: c.fornecedor?.nome_fantasia || null,
 
-      descricao: 'COMPRA',
-      observacao: c.tipo_compra,
+        descricao: 'COMPRA',
+        observacao: c.tipo_compra,
 
-      valor: c.valor_total,
-      valor_compensado: 0,
+        valor: c.valor_total,
+        valor_compensado: 0,
 
-      vencimento_em: c.vencimento_em,
-      pago_em: null,
-      status: c.status,
+        vencimento_em: c.vencimento_em,
+        pago_em: null,
+        status: c.status,
 
-      mes_referencia: null,
-      ano_referencia: null,
-      cheques_total: 0,
-    })),
+        mes_referencia: null,
+        ano_referencia: null,
+        cheques_total: 0,
+      })),
 
-    // =====================
-    // FECHAMENTOS (origem = FECHAMENTO)
-    // =====================
-    ...fechamentos.map((cp) => ({
-      id: cp.id,
-      origem: 'FECHAMENTO',
+      // =====================
+      // FECHAMENTOS (origem = FECHAMENTO)
+      // =====================
+      ...fechamentos.map((cp) => ({
+        id: cp.id,
+        origem: 'FECHAMENTO',
 
-      fornecedor_id: cp.fornecedor_id,
-      fornecedor_nome: cp.fornecedor?.nome_fantasia || null,
+        fornecedor_id: cp.fornecedor_id,
+        fornecedor_nome: cp.fornecedor?.nome_fantasia || null,
 
-      descricao: cp.descricao || `Fechamento ${String(cp.mes_referencia).padStart(2, '0')}/${cp.ano_referencia}`,
-      observacao: cp.observacao || null,
+        descricao:
+          cp.descricao ||
+          `Fechamento ${String(cp.mes_referencia).padStart(2, '0')}/${cp.ano_referencia}`,
+        observacao: cp.observacao || null,
 
-      // ✅ aqui está a compensação do plano de corte
-      valor: cp.valor_original,
-      valor_compensado: cp.valor_compensado,
+        // ✅ compensação do plano de corte
+        valor: cp.valor_original,
+        valor_compensado: cp.valor_compensado,
 
-      vencimento_em: cp.vencimento_em,
-      pago_em: cp.pago_em,
-      status: cp.status,
+        vencimento_em: cp.vencimento_em,
+        pago_em: cp.pago_em,
+        status: cp.status,
 
-      mes_referencia: cp.mes_referencia,
-      ano_referencia: cp.ano_referencia,
+        mes_referencia: cp.mes_referencia,
+        ano_referencia: cp.ano_referencia,
 
-      cheques_total: Array.isArray(cp.cheques) ? cp.cheques.length : 0,
+        // ❌ cheques removido do Prisma: manter campo pra tela não quebrar
+        cheques_total: 0,
 
-      // opcional (se quiser usar na tela depois)
-      fornecedor_cobrador_nome: cp.fornecedor_cobrador?.nome_fantasia || null,
-      forma_pagamento_chave: cp.forma_pagamento_chave || null,
-    })),
-  ]
-}
+        fornecedor_cobrador_nome: cp.fornecedor_cobrador?.nome_fantasia || null,
+        forma_pagamento_chave: cp.forma_pagamento_chave || null,
+      })),
+    ]
+  }
 
   // =========================================================
   // ✅ ATUALIZA VENCIDOS (FINANCEIRO)
@@ -202,7 +204,7 @@ async listarContasPagarConsolidado(filtros: { fornecedor_id?: number; status?: s
   async buscarContaPagar(id: number) {
     return this.prisma.contas_pagar.findUnique({
       where: { id },
-      include: { fornecedor: true, fornecedor_cobrador: true, cheques: true, despesa: true },
+      include: { fornecedor: true, fornecedor_cobrador: true, despesa: true },
     })
   }
 
@@ -215,9 +217,8 @@ async listarContasPagarConsolidado(filtros: { fornecedor_id?: number; status?: s
   }
 
   async removerContaPagar(id: number) {
-  return this.prisma.contas_pagar.delete({ where: { id } })
-}
-
+    return this.prisma.contas_pagar.delete({ where: { id } })
+  }
 
   async pagarContaPagar(id: number, dto: any) {
     return this.prisma.$transaction(async (tx) => {
@@ -241,7 +242,7 @@ async listarContasPagarConsolidado(filtros: { fornecedor_id?: number; status?: s
         data: { status: 'PAGO', pago_em: pagoEm },
       })
 
-      // ✅ gera despesa vinculada (usa seu model real: data_pagamento existe)
+      // ✅ gera despesa vinculada (data_pagamento existe no seu model)
       await tx.despesas.create({
         data: {
           tipo_movimento: 'SAIDA',
@@ -270,31 +271,30 @@ async listarContasPagarConsolidado(filtros: { fornecedor_id?: number; status?: s
   // =========================================================
   // CONTAS A RECEBER
   // =========================================================
-async listarContasReceber(filtros: {
-  fornecedor_id?: number
-  cliente_id?: number
-  status?: string
-  data_ini?: string
-  data_fim?: string
-}) {
-  const where: any = {
-    fornecedor_id: filtros.fornecedor_id || undefined,
-    cliente_id: filtros.cliente_id || undefined,
-    status: filtros.status || undefined,
+  async listarContasReceber(filtros: {
+    fornecedor_id?: number
+    cliente_id?: number
+    status?: string
+    data_ini?: string
+    data_fim?: string
+  }) {
+    const where: any = {
+      fornecedor_id: filtros.fornecedor_id || undefined,
+      cliente_id: filtros.cliente_id || undefined,
+      status: filtros.status || undefined,
+    }
+
+    if (filtros.data_ini || filtros.data_fim) {
+      where.vencimento_em = {}
+      if (filtros.data_ini) where.vencimento_em.gte = new Date(filtros.data_ini)
+      if (filtros.data_fim) where.vencimento_em.lte = new Date(filtros.data_fim)
+    }
+
+    return this.prisma.contas_receber.findMany({
+      where,
+      orderBy: [{ vencimento_em: 'asc' }, { id: 'desc' }],
+    })
   }
-
-  if (filtros.data_ini || filtros.data_fim) {
-    where.vencimento_em = {}
-    if (filtros.data_ini) where.vencimento_em.gte = new Date(filtros.data_ini)
-    if (filtros.data_fim) where.vencimento_em.lte = new Date(filtros.data_fim)
-  }
-
-  return this.prisma.contas_receber.findMany({
-    where,
-    orderBy: [{ vencimento_em: 'asc' }, { id: 'desc' }],
-  })
-}
-
 
   async buscarContaReceber(id: number) {
     return this.prisma.contas_receber.findUnique({
@@ -308,9 +308,8 @@ async listarContasReceber(filtros: {
   }
 
   async removerContaReceber(id: number) {
-  return this.prisma.contas_receber.delete({ where: { id } })
-}
-
+    return this.prisma.contas_receber.delete({ where: { id } })
+  }
 
   async atualizarContaReceber(id: number, dto: any) {
     return this.prisma.contas_receber.update({ where: { id }, data: dto })
@@ -329,45 +328,6 @@ async listarContasReceber(filtros: {
   }
 
   // =========================================================
-  // CHEQUES
-  // =========================================================
-async listarCheques(filtros: { status?: string; banco?: string; data_ini?: string; data_fim?: string }) {
-  const where: any = {
-    status: filtros.status || undefined,
-    banco: filtros.banco ? { contains: filtros.banco } : undefined,
-  }
-
-  if (filtros.data_ini || filtros.data_fim) {
-    where.data_vencimento = {}
-    if (filtros.data_ini) where.data_vencimento.gte = new Date(filtros.data_ini)
-    if (filtros.data_fim) where.data_vencimento.lte = new Date(filtros.data_fim)
-  }
-
-  return this.prisma.cheques.findMany({
-    where,
-    orderBy: { data_vencimento: 'asc' },
-  })
-}
-
-
-  async buscarChequePorId(id: number) {
-    return this.prisma.cheques.findUnique({
-      where: { id },
-      include: { conta_pagar: { include: { fornecedor: true } } },
-    })
-  }
-
-  async atualizarStatusCheque(id: number, status: string) {
-    const st = String(status || '').trim()
-    if (!st) throw new BadRequestException('status é obrigatório')
-
-    return this.prisma.cheques.update({
-      where: { id },
-      data: { status: st },
-    })
-  }
-
-  // =========================================================
   // ✅ FECHAMENTO MENSAL POR FORNECEDOR
   // =========================================================
   async fecharMesFornecedor(body: {
@@ -376,7 +336,6 @@ async listarCheques(filtros: { status?: string; banco?: string; data_ini?: strin
     ano: number
     forma_pagamento_chave: string
     vencimento_em?: string
-    cheques?: { numero: string; banco: string; valor: number; data_vencimento: string }[]
   }) {
     const fornecedor_id = this.toNumber(body?.fornecedor_id, 'fornecedor_id')
     const mes = this.toNumber(body?.mes, 'mes')
@@ -398,7 +357,9 @@ async listarCheques(filtros: { status?: string; banco?: string; data_ini?: strin
         },
         select: { id: true, valor_total: true },
       })
-      const totalCompras = this.round2(compras.reduce((s, c) => s + Number(c.valor_total || 0), 0))
+      const totalCompras = this.round2(
+        compras.reduce((s, c) => s + Number((c as any).valor_total || 0), 0),
+      )
 
       // 3) plano de corte (crédito) do mês
       const planos = await tx.plano_corte.findMany({
@@ -409,15 +370,15 @@ async listarCheques(filtros: { status?: string; banco?: string; data_ini?: strin
         },
         select: { id: true, valor_total: true },
       })
-      const totalPlanos = this.round2(planos.reduce((s, p) => s + Number(p.valor_total || 0), 0))
+      const totalPlanos = this.round2(
+        planos.reduce((s, p) => s + Number((p as any).valor_total || 0), 0),
+      )
 
-
-// 4) saldo do mês (✅ compensação correta)
-const compensado = this.round2(Math.min(totalCompras, totalPlanos))
-const valorAPagar = this.round2(Math.max(totalCompras - totalPlanos, 0))
-const valorCredito = this.round2(Math.max(totalPlanos - totalCompras, 0))
-const saldo = this.round2(totalCompras - totalPlanos) // se você quiser continuar retornando
-
+      // 4) saldo do mês (✅ compensação correta)
+      const compensado = this.round2(Math.min(totalCompras, totalPlanos))
+      const valorAPagar = this.round2(Math.max(totalCompras - totalPlanos, 0))
+      const valorCredito = this.round2(Math.max(totalPlanos - totalCompras, 0))
+      const saldo = this.round2(totalCompras - totalPlanos)
 
       // 5) vencimento padrão
       const vencPadrao = body?.vencimento_em
@@ -442,27 +403,7 @@ const saldo = this.round2(totalCompras - totalPlanos) // se você quiser continu
         select: { id: true },
       })
 
-      // 7) cria cheques (se vier)
-      if (body?.cheques?.length) {
-        for (const ch of body.cheques) {
-          const numero = String(ch?.numero || '').trim()
-          const banco = String(ch?.banco || '').trim()
-          const valor = Number(ch?.valor || 0)
-          if (!numero) throw new BadRequestException('Cheque: numero é obrigatório')
-          if (!banco) throw new BadRequestException('Cheque: banco é obrigatório')
-          if (!Number.isFinite(valor) || valor <= 0) throw new BadRequestException('Cheque: valor inválido')
-
-          await tx.cheques.create({
-            data: {
-              numero,
-              banco,
-              valor,
-              data_vencimento: this.toDate(ch.data_vencimento, 'Cheque.data_vencimento'),
-              conta_pagar_id: contaPagar.id,
-            },
-          })
-        }
-      }
+      // 7) (CHEQUES removido) ✅ aqui futuramente entra titulos_financeiros
 
       // 8) baixa o mês
       if (compras.length) {
@@ -544,33 +485,33 @@ const saldo = this.round2(totalCompras - totalPlanos) // se você quiser continu
       },
     })
   }
+
   async listarContasPagarFechamentos(filtros: {
-  fornecedor_id?: number
-  status?: string
-  data_ini?: string
-  data_fim?: string
-}) {
-  const where: any = {
-    fornecedor_id: filtros.fornecedor_id || undefined,
-    status: filtros.status?.trim() || undefined,
+    fornecedor_id?: number
+    status?: string
+    data_ini?: string
+    data_fim?: string
+  }) {
+    const where: any = {
+      fornecedor_id: filtros.fornecedor_id || undefined,
+      status: filtros.status?.trim() || undefined,
+    }
+
+    // filtro por vencimento
+    if (filtros.data_ini || filtros.data_fim) {
+      where.vencimento_em = {}
+      if (filtros.data_ini) where.vencimento_em.gte = new Date(filtros.data_ini)
+      if (filtros.data_fim) where.vencimento_em.lte = new Date(filtros.data_fim)
+    }
+
+    return this.prisma.contas_pagar.findMany({
+      where,
+      include: {
+        fornecedor: true,
+        fornecedor_cobrador: true,
+        // cheques: true, // ❌ removido
+      },
+      orderBy: [{ vencimento_em: 'asc' }, { id: 'desc' }],
+    })
   }
-
-  // filtro por vencimento
-  if (filtros.data_ini || filtros.data_fim) {
-    where.vencimento_em = {}
-    if (filtros.data_ini) where.vencimento_em.gte = new Date(filtros.data_ini)
-    if (filtros.data_fim) where.vencimento_em.lte = new Date(filtros.data_fim)
-  }
-
-  return this.prisma.contas_pagar.findMany({
-    where,
-    include: {
-      fornecedor: true,
-      fornecedor_cobrador: true,
-      cheques: true,
-    },
-    orderBy: [{ vencimento_em: 'asc' }, { id: 'desc' }],
-  })
-}
-
 }
