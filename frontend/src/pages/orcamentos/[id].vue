@@ -115,14 +115,16 @@
                   {{ format.currency(row.valor_unitario) }}
                 </span>
               </template>
+<template #cell-acoes="{ row }">
+  <TableActions
+    :id="row.id ?? row.__idx"
+    perm-edit="orcamentos.editar"
+    perm-delete="orcamentos.editar"
+    @edit="iniciarEdicao(row.__idx)"
+    @delete="confirmarRemoverItem(row.__idx)"
+  />
+</template>
 
-              <template #cell-acoes="{ row }">
-                <TableActions
-                  :id="row.id ?? row.__idx"
-                  @edit="iniciarEdicao(row.__idx)"
-                  @delete="confirmarRemoverItem(row.__idx)"
-                />
-              </template>
             </Table>
           </div>
         </div>

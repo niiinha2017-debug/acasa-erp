@@ -95,7 +95,7 @@ filename: (req, file, cb) => {
 },
 
       }),
-      limits: { fileSize: 25 * 1024 * 1024 }, // 25MB (ajuste se quiser)
+      limits: { fileSize: 50 * 1024 * 1024 }, // 25MB (ajuste se quiser)
     }),
   )
   async upload(
