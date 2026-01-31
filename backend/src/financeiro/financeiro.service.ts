@@ -1,6 +1,9 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 
+// ✅ Fonte da verdade dos status (shared)
+import { STATUS_FINANCEIRO_KEYS as SF } from '../../shared/constantes/status-financeiro'
+
 @Injectable()
 export class FinanceiroService {
   constructor(private readonly prisma: PrismaService) {}
@@ -59,13 +62,11 @@ export class FinanceiroService {
         include: {
           fornecedor: true,
           fornecedor_cobrador: true,
-          // cheques: true, // ❌ removido (não existe no Prisma atual)
         },
         orderBy: { vencimento_em: 'asc' },
       }),
     ])
 
-    // Padroniza tudo em uma lista única
     return [
       // =====================
       // DESPESAS (origem = DESPESA)
@@ -74,24 +75,19 @@ export class FinanceiroService {
         id: d.id,
         origem: 'DESPESA',
 
-        // “centro” (não tem fornecedor)
         fornecedor_id: null,
         fornecedor_nome: null,
 
-        // dados principais
         descricao: d.categoria,
         observacao: d.classificacao,
 
-        // valores
         valor: d.valor_total,
         valor_compensado: 0,
 
-        // datas/status
         vencimento_em: d.data_vencimento,
         pago_em: d.data_pagamento,
         status: d.status,
 
-        // extras (para tela)
         mes_referencia: null,
         ano_referencia: null,
         cheques_total: 0,
@@ -137,7 +133,6 @@ export class FinanceiroService {
           `Fechamento ${String(cp.mes_referencia).padStart(2, '0')}/${cp.ano_referencia}`,
         observacao: cp.observacao || null,
 
-        // ✅ compensação do plano de corte
         valor: cp.valor_original,
         valor_compensado: cp.valor_compensado,
 
@@ -148,7 +143,6 @@ export class FinanceiroService {
         mes_referencia: cp.mes_referencia,
         ano_referencia: cp.ano_referencia,
 
-        // ❌ cheques removido do Prisma: manter campo pra tela não quebrar
         cheques_total: 0,
 
         fornecedor_cobrador_nome: cp.fornecedor_cobrador?.nome_fantasia || null,
@@ -166,35 +160,35 @@ export class FinanceiroService {
     await this.prisma.despesas.updateMany({
       where: {
         data_vencimento: { lt: hoje },
-        status: 'EM_ABERTO',
+        status: SF.EM_ABERTO,
       },
-      data: { status: 'VENCIDO' },
+      data: { status: SF.VENCIDO },
     })
 
     await this.prisma.compras.updateMany({
       where: {
         vencimento_em: { lt: hoje },
-        status: 'EM_ABERTO',
+        status: SF.EM_ABERTO,
       },
-      data: { status: 'VENCIDO' },
+      data: { status: SF.VENCIDO },
     })
 
     await this.prisma.contas_pagar.updateMany({
       where: {
         vencimento_em: { lt: hoje },
-        status: 'EM_ABERTO',
+        status: SF.EM_ABERTO,
         pago_em: null,
       },
-      data: { status: 'VENCIDO' },
+      data: { status: SF.VENCIDO },
     })
 
     await this.prisma.contas_receber.updateMany({
       where: {
         vencimento_em: { lt: hoje },
-        status: 'EM_ABERTO',
+        status: SF.EM_ABERTO,
         recebido_em: null,
       },
-      data: { status: 'VENCIDO' },
+      data: { status: SF.VENCIDO },
     })
   }
 
@@ -239,7 +233,7 @@ export class FinanceiroService {
 
       const contaAtualizada = await tx.contas_pagar.update({
         where: { id },
-        data: { status: 'PAGO', pago_em: pagoEm },
+        data: { status: SF.PAGO, pago_em: pagoEm },
       })
 
       // ✅ gera despesa vinculada (data_pagamento existe no seu model)
@@ -258,7 +252,7 @@ export class FinanceiroService {
           data_vencimento: conta.vencimento_em,
           data_pagamento: pagoEm,
 
-          status: 'PAGO',
+          status: SF.PAGO,
 
           recorrencia_id: `CP-${conta.id}`,
         },
@@ -316,11 +310,10 @@ export class FinanceiroService {
   }
 
   async receberContaReceber(id: number, dto: any) {
-    // ✅ ALINHADO AO MODEL: recebido_em existe e é usado no atualizarVencidos
     return this.prisma.contas_receber.update({
       where: { id },
       data: {
-        status: 'PAGO', // se seu padrão é "RECEBIDO", troca aqui e nos relatórios
+        status: SF.PAGO,
         recebido_em: new Date(),
         ...dto,
       },
@@ -344,15 +337,13 @@ export class FinanceiroService {
     if (!forma) throw new BadRequestException('forma_pagamento_chave é obrigatório')
 
     return this.prisma.$transaction(async (tx) => {
-      // 1) período do mês
       const inicio = new Date(ano, mes - 1, 1, 0, 0, 0)
       const fim = new Date(ano, mes, 0, 23, 59, 59)
 
-      // 2) compras EM_ABERTO do mês
       const compras = await tx.compras.findMany({
         where: {
           fornecedor_id,
-          status: 'EM_ABERTO',
+          status: SF.EM_ABERTO,
           data_compra: { gte: inicio, lte: fim },
         },
         select: { id: true, valor_total: true },
@@ -361,11 +352,10 @@ export class FinanceiroService {
         compras.reduce((s, c) => s + Number((c as any).valor_total || 0), 0),
       )
 
-      // 3) plano de corte (crédito) do mês
       const planos = await tx.plano_corte.findMany({
         where: {
           fornecedor_id,
-          status: 'EM_ABERTO',
+          status: SF.EM_ABERTO,
           data_venda: { gte: inicio, lte: fim },
         },
         select: { id: true, valor_total: true },
@@ -374,18 +364,15 @@ export class FinanceiroService {
         planos.reduce((s, p) => s + Number((p as any).valor_total || 0), 0),
       )
 
-      // 4) saldo do mês (✅ compensação correta)
       const compensado = this.round2(Math.min(totalCompras, totalPlanos))
       const valorAPagar = this.round2(Math.max(totalCompras - totalPlanos, 0))
       const valorCredito = this.round2(Math.max(totalPlanos - totalCompras, 0))
       const saldo = this.round2(totalCompras - totalPlanos)
 
-      // 5) vencimento padrão
       const vencPadrao = body?.vencimento_em
         ? this.toDate(body.vencimento_em, 'vencimento_em')
-        : new Date(ano, mes, 5) // dia 5 do próximo mês
+        : new Date(ano, mes, 5)
 
-      // 6) cria contas_pagar
       const contaPagar = await tx.contas_pagar.create({
         data: {
           fornecedor_id,
@@ -395,7 +382,7 @@ export class FinanceiroService {
           observacao: `Compras: ${totalCompras} | PlanoCorte: ${totalPlanos} | Compensado: ${compensado} | Saldo: ${saldo}`,
           valor_original: valorAPagar,
           valor_compensado: compensado,
-          status: valorAPagar > 0 ? 'EM_ABERTO' : 'PAGO',
+          status: valorAPagar > 0 ? SF.EM_ABERTO : SF.PAGO,
           forma_pagamento_chave: forma,
           vencimento_em: vencPadrao,
           pago_em: valorAPagar > 0 ? null : new Date(),
@@ -403,24 +390,22 @@ export class FinanceiroService {
         select: { id: true },
       })
 
-      // 7) (CHEQUES removido) ✅ aqui futuramente entra titulos_financeiros
+      // 7) (CHEQUES removido) ✅ futuramente entra titulos_financeiros
 
-      // 8) baixa o mês
       if (compras.length) {
         await tx.compras.updateMany({
           where: { id: { in: compras.map((c) => c.id) } },
-          data: { status: 'PAGO' },
+          data: { status: SF.PAGO },
         })
       }
 
       if (planos.length) {
         await tx.plano_corte.updateMany({
           where: { id: { in: planos.map((p) => p.id) } },
-          data: { status: 'PAGO' },
+          data: { status: SF.PAGO },
         })
       }
 
-      // 9) crédito para próximo mês
       let contaReceber: { id: number } | null = null
 
       if (valorCredito > 0) {
@@ -432,7 +417,7 @@ export class FinanceiroService {
             descricao: `Crédito fechamento ${String(mes).padStart(2, '0')}/${ano}`,
             valor_original: valorCredito,
             valor_compensado: 0,
-            status: 'EM_ABERTO',
+            status: SF.EM_ABERTO,
             vencimento_em: null,
             recebido_em: null,
           },
@@ -497,7 +482,6 @@ export class FinanceiroService {
       status: filtros.status?.trim() || undefined,
     }
 
-    // filtro por vencimento
     if (filtros.data_ini || filtros.data_fim) {
       where.vencimento_em = {}
       if (filtros.data_ini) where.vencimento_em.gte = new Date(filtros.data_ini)
@@ -509,7 +493,6 @@ export class FinanceiroService {
       include: {
         fornecedor: true,
         fornecedor_cobrador: true,
-        // cheques: true, // ❌ removido
       },
       orderBy: [{ vencimento_em: 'asc' }, { id: 'desc' }],
     })
