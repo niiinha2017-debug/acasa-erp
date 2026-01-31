@@ -1,4 +1,5 @@
 <template>
+  <!-- MODAL PRINCIPAL -->
   <Teleport to="body">
     <Transition name="fade">
       <div
@@ -39,6 +40,7 @@
           <!-- Body -->
           <div class="p-6 overflow-y-auto">
             <div class="grid grid-cols-12 gap-x-6 gap-y-6">
+              <!-- Nome -->
               <div class="col-span-12 md:col-span-7">
                 <Input
                   ref="nomeRef"
@@ -49,6 +51,7 @@
                 />
               </div>
 
+              <!-- Marca -->
               <div class="col-span-12 md:col-span-5">
                 <Input
                   v-model="form.marca"
@@ -57,6 +60,7 @@
                 />
               </div>
 
+              <!-- Cor -->
               <div class="col-span-12 md:col-span-4">
                 <Input
                   v-model="form.cor"
@@ -65,6 +69,7 @@
                 />
               </div>
 
+              <!-- Medida -->
               <div class="col-span-12 md:col-span-4">
                 <Input
                   v-model="form.medida"
@@ -73,6 +78,7 @@
                 />
               </div>
 
+              <!-- Unidade -->
               <div class="col-span-12 md:col-span-4">
                 <SearchInput
                   v-model="form.unidade"
@@ -84,32 +90,7 @@
                 />
               </div>
 
-              <!-- ✅ IMAGEM (URL) + PREVIEW -->
-              <div class="col-span-12 md:col-span-8">
-                <Input
-                  v-model="form.imagem_url"
-                  label="Imagem do Produto (URL)"
-                  placeholder="Cole a URL da imagem (opcional)"
-                  :forceUpper="false"
-                />
-              </div>
-
-              <div class="col-span-12 md:col-span-4">
-                <div class="h-full flex flex-col justify-end">
-                  <div class="h-10 rounded-xl border border-slate-200 bg-white flex items-center justify-center overflow-hidden">
-                    <img
-                      v-if="previewImagem"
-                      :src="previewImagem"
-                      class="h-full w-full object-cover"
-                      alt="Imagem do produto"
-                    />
-                    <span v-else class="text-[9px] font-black uppercase tracking-widest text-slate-300">
-                      Sem imagem
-                    </span>
-                  </div>
-                </div>
-              </div>
-
+              <!-- Valor unitário -->
               <div class="col-span-12 md:col-span-6">
                 <div class="relative">
                   <Input
@@ -123,6 +104,83 @@
                 </div>
               </div>
 
+              <!-- alinhamento -->
+              <div class="hidden md:block md:col-span-6"></div>
+
+              <!-- IMAGEM (embaixo do valor) -->
+              <div class="col-span-12 md:col-span-8">
+                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block ml-1">
+                  Imagem do Produto (opcional)
+                </label>
+
+                <div class="flex items-center gap-3">
+                  <input
+                    ref="imagemInput"
+                    type="file"
+                    class="hidden"
+                    accept="image/*"
+                    @change="onImagemPick"
+                  />
+
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    class="!h-11 !rounded-xl !px-4 text-[10px] font-black uppercase tracking-widest"
+                    :loading="salvando"
+                    @click="imagemInput?.click()"
+                  >
+                    <i class="pi pi-upload mr-2 text-[10px]"></i>
+                    Selecionar imagem
+                  </Button>
+
+                  <span
+                    v-if="nomeArquivoImagem"
+                    class="text-[10px] font-black uppercase tracking-widest text-slate-400"
+                  >
+                    {{ nomeArquivoImagem }}
+                  </span>
+
+                  <Button
+                    v-if="previewImagem"
+                    type="button"
+                    variant="ghost"
+                    class="!h-11 !rounded-xl !px-4 text-[10px] font-black uppercase tracking-widest border border-slate-200 text-rose-500 hover:bg-rose-50"
+                    :loading="salvando"
+                    @click="removerImagemLocal"
+                  >
+                    <i class="pi pi-trash mr-2 text-[10px]"></i>
+                    Remover
+                  </Button>
+                </div>
+
+                <p class="mt-2 text-[9px] font-bold text-slate-300 uppercase tracking-widest">
+                  A imagem será enviada automaticamente ao salvar o produto.
+                </p>
+              </div>
+
+              <!-- Preview -->
+              <div class="col-span-12 md:col-span-4">
+                <div class="h-full flex flex-col justify-end">
+                  <div
+                    class="h-32 md:h-40 rounded-xl border border-slate-200 bg-white flex items-center justify-center overflow-hidden"
+                    :class="previewImagem ? 'cursor-zoom-in' : ''"
+                    @click="abrirPreviewImagem"
+                    title="Clique para visualizar"
+                  >
+                    <img
+                      v-if="previewImagem"
+                      :src="previewImagem"
+                      class="h-full w-full object-contain p-2"
+                      alt="Imagem do produto"
+                    />
+                    <span v-else class="text-[9px] font-black uppercase tracking-widest text-slate-300">
+                      Sem imagem
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Status -->
               <div class="col-span-12 md:col-span-6">
                 <div class="h-full flex items-end">
                   <div class="w-full bg-slate-50 p-5 rounded-2xl border border-slate-100/60">
@@ -136,6 +194,9 @@
                 </div>
               </div>
 
+              <div class="hidden md:block md:col-span-6"></div>
+
+              <!-- Erro -->
               <div v-if="erroLocal" class="col-span-12">
                 <div class="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3">
                   <p class="text-[10px] font-black uppercase tracking-widest text-rose-600">
@@ -170,7 +231,45 @@
       </div>
     </Transition>
   </Teleport>
+
+  <!-- VIEWER DENTRO DO PWA -->
+  <Teleport to="body">
+    <Transition name="fade">
+      <div
+        v-if="modalImagemOpen"
+        class="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+        @click.self="modalImagemOpen = false"
+      >
+        <div class="w-full max-w-5xl max-h-[85vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+          <header class="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/50">
+            <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">
+              Visualização da imagem
+            </span>
+
+            <button
+              type="button"
+              class="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-rose-500 hover:border-rose-200 transition-all shadow-sm"
+              @click="modalImagemOpen = false"
+            >
+              <i class="pi pi-times text-xs"></i>
+            </button>
+          </header>
+
+          <div class="p-4">
+            <div class="w-full h-[70vh] bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center overflow-hidden">
+              <img
+                :src="previewImagem"
+                class="max-h-full max-w-full object-contain"
+                alt="Imagem do produto"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
+
 
 <script setup>
 import { reactive, ref, watch, onMounted, onUnmounted, computed, nextTick } from 'vue'
@@ -179,6 +278,7 @@ import { notify } from '@/services/notify'
 import { maskMoneyBR } from '@/utils/masks'
 import { moedaParaNumero } from '@/utils/number'
 import { UNIDADES } from '@/constantes/unidades'
+import { ArquivosService } from '@/services/arquivos.service'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -190,8 +290,17 @@ const emit = defineEmits(['close', 'created'])
 
 const salvando = ref(false)
 const erroLocal = ref('')
-
 const nomeRef = ref(null)
+
+// ===== imagem upload local =====
+const imagemInput = ref(null)
+const uploadingImagem = ref(false)
+const removendoImagem = ref(false)
+const modalImagemOpen = ref(false)
+
+const imagemFile = ref(null)          // File selecionado
+const imagemTempUrl = ref('')         // preview local (URL.createObjectURL)
+const nomeArquivoImagem = computed(() => imagemFile.value?.name || '')
 
 const form = reactive({
   nome_produto: '',
@@ -201,12 +310,11 @@ const form = reactive({
   marca: '',
   valor_unitario_mask: '0,00',
   status: 'ATIVO',
-
-  // ✅ novo
   imagem_url: '',
 })
 
 const previewImagem = computed(() => {
+  if (imagemTempUrl.value) return imagemTempUrl.value
   const url = String(form.imagem_url || '').trim()
   return url.length ? url : ''
 })
@@ -218,10 +326,28 @@ const unidadesOptions = computed(() =>
   })),
 )
 
-// helpers
 function norm(v) {
   const s = String(v ?? '').trim().toUpperCase()
   return s || null
+}
+
+function limparImagemLocal() {
+  if (imagemTempUrl.value) {
+    try { URL.revokeObjectURL(imagemTempUrl.value) } catch {}
+  }
+  imagemTempUrl.value = ''
+  imagemFile.value = null
+  if (imagemInput.value) imagemInput.value.value = ''
+}
+
+function removerImagemLocal() {
+  removendoImagem.value = true
+  try {
+    limparImagemLocal()
+    form.imagem_url = ''
+  } finally {
+    removendoImagem.value = false
+  }
 }
 
 function resetForm() {
@@ -236,6 +362,7 @@ function resetForm() {
     status: 'ATIVO',
     imagem_url: '',
   })
+  limparImagemLocal()
 }
 
 async function existeDuplicadoNoFornecedor(payloadCheck) {
@@ -255,13 +382,47 @@ async function existeDuplicadoNoFornecedor(payloadCheck) {
   })
 }
 
-// lifecycle
+function abrirPreviewImagem() {
+  if (!previewImagem.value) return
+  modalImagemOpen.value = true
+}
+
+async function onImagemPick(e) {
+  const file = e?.target?.files?.[0]
+  if (!file) return
+
+  if (!file.type?.startsWith('image/')) {
+    notify.error('Selecione um arquivo de imagem.')
+    if (imagemInput.value) imagemInput.value.value = ''
+    return
+  }
+
+  // troca preview temporário
+  if (imagemTempUrl.value) {
+    try { URL.revokeObjectURL(imagemTempUrl.value) } catch {}
+  }
+
+  imagemFile.value = file
+  imagemTempUrl.value = URL.createObjectURL(file)
+}
+
 const handleEsc = (e) => {
-  if (e.key === 'Escape' && props.open) emit('close')
+  if (e.key === 'Escape') {
+    if (modalImagemOpen.value) {
+      modalImagemOpen.value = false
+      return
+    }
+    if (props.open) emit('close')
+  }
 }
 
 onMounted(() => window.addEventListener('keydown', handleEsc))
-onUnmounted(() => window.removeEventListener('keydown', handleEsc))
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleEsc)
+  if (imagemTempUrl.value) {
+    try { URL.revokeObjectURL(imagemTempUrl.value) } catch {}
+  }
+})
 
 watch(
   () => props.open,
@@ -275,7 +436,6 @@ watch(
   },
 )
 
-// actions
 async function salvar() {
   erroLocal.value = ''
 
@@ -293,6 +453,10 @@ async function salvar() {
   }
 
   const valorNum = moedaParaNumero(form.valor_unitario_mask)
+if (!Number(valorNum || 0)) {
+  notify.warn('Informe o valor unitário.')
+  return
+}
 
   const payload = {
     fornecedor_id: props.fornecedorId,
@@ -303,12 +467,10 @@ async function salvar() {
     marca: form.marca?.trim() ? form.marca.trim() : null,
     valor_unitario: Number(valorNum || 0),
     status: form.status,
-
-    // ✅ imagem opcional
-    imagem_url: String(form.imagem_url || '').trim() || null,
+    imagem_url: null,
   }
 
-  // check duplicado no front (backend ainda valida)
+  // check duplicado no front
   try {
     const check = {
       nome_produto: norm(payload.nome_produto),
@@ -329,8 +491,42 @@ async function salvar() {
 
   salvando.value = true
   try {
+    // 1) cria produto
     const res = await ProdutosService.salvar(null, payload)
     const produtoCriado = res?.data ?? res
+    const id = produtoCriado?.id
+
+    // 2) se tiver imagem selecionada, sobe e grava imagem_url
+    if (id && imagemFile.value) {
+      uploadingImagem.value = true
+      try {
+        const up = await ArquivosService.upload({
+          ownerType: 'PRODUTO',
+          ownerId: id,
+          categoria: 'IMAGEM',
+          slotKey: 'IMAGEM_PRINCIPAL',
+          file: imagemFile.value,
+        })
+
+        const arq = up?.data ?? up
+        const url = arq?.url
+
+        if (url) {
+          form.imagem_url = url
+          await ProdutosService.salvar(id, { imagem_url: url })
+          produtoCriado.imagem_url = url
+
+          // ✅ troca o preview do blob pela url real
+          limparImagemLocal()
+        } else {
+          notify.error('Upload ok, mas não retornou URL.')
+        }
+      } catch (err) {
+        notify.error(err?.response?.data?.message || 'Erro ao enviar imagem.')
+      } finally {
+        uploadingImagem.value = false
+      }
+    }
 
     emit('created', produtoCriado)
     emit('close')
@@ -343,6 +539,7 @@ async function salvar() {
   }
 }
 </script>
+
 
 <style scoped>
 .fade-enter-active,

@@ -30,20 +30,27 @@ export class ArquivosService {
     return ownerType.toLowerCase() + 's'
   }
 
-  async listar(params: { owner_type: string; owner_id: number; categoria?: string }) {
-    const owner_type = this.ownerType(params.owner_type)
-    const owner_id = this.ownerId(params.owner_id)
-    const categoria = this.normUpper(params.categoria)
+async listar(params: { owner_type?: string; owner_id?: any; categoria?: string }) {
+  const owner_type_raw = this.normUpper(params.owner_type)
+  const owner_id_raw = String(params.owner_id ?? '').replace(/\D/g, '')
 
-    return this.prisma.arquivos.findMany({
-      where: {
-        owner_type,
-        owner_id,
-        ...(categoria ? { categoria } : {}),
-      },
-      orderBy: { criado_em: 'desc' },
-    })
-  }
+  // se não vier filtro, retorna vazio (sem quebrar tela)
+  if (!owner_type_raw || !owner_id_raw) return []
+
+  const owner_type = this.ownerType(owner_type_raw)
+  const owner_id = this.ownerId(owner_id_raw)
+  const categoria = this.normUpper(params.categoria)
+
+  return this.prisma.arquivos.findMany({
+    where: {
+      owner_type,
+      owner_id,
+      ...(categoria ? { categoria } : {}),
+    },
+    orderBy: { criado_em: 'desc' },
+  })
+}
+
 
 async remover(id: number) {
   const cleanId = Number(id)
