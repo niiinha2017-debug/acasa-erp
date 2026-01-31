@@ -120,11 +120,16 @@
 
 <div class="col-span-12 md:col-span-4">
   <div class="h-full flex flex-col justify-end">
-    <div class="h-20 rounded-xl border border-slate-200 bg-white flex items-center justify-center overflow-hidden">
+<div
+  class="h-40 md:h-56 rounded-xl border border-slate-200 bg-white flex items-center justify-center overflow-hidden cursor-zoom-in"
+  @click="abrirImagem"
+  title="Clique para abrir"
+>
+
       <img
         v-if="previewImagem"
         :src="previewImagem"
-        class="h-full w-full object-cover"
+        class="h-full w-full object-contain p-2"
         alt="Imagem do produto"
       />
       <span v-else class="text-[9px] font-black uppercase tracking-widest text-slate-300">
@@ -133,6 +138,7 @@
     </div>
   </div>
 </div>
+
 
 
           <!-- Atributos -->
@@ -462,6 +468,10 @@ async function confirmarSalvarProduto() {
   )
   if (!ok) return
   await salvar()
+}
+function abrirImagem() {
+  if (!previewImagem.value) return
+  window.open(previewImagem.value, '_blank')
 }
 
 
