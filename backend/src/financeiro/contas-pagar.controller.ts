@@ -13,7 +13,6 @@ import {
   BadRequestException,
 } from '@nestjs/common'
 import { FinanceiroService } from './financeiro.service'
-
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { PermissionsGuard } from '../auth/permissions.guard'
 import { Permissoes } from '../auth/permissoes.decorator'
@@ -44,7 +43,7 @@ export class ContasPagarController {
     })
   }
 
-  // ✅ FECHAMENTOS (TEM QUE VIR ANTES DO :id)
+  // ✅ FECHAMENTOS
   @Get('fechamentos')
   @Permissoes('contas_pagar.ver')
   async listarFechamentos(
@@ -63,7 +62,30 @@ export class ContasPagarController {
     })
   }
 
-  // ✅ DETALHE
+  // ✅ PREVIEW DO FECHAMENTO (Etapa 1 do modal — não salva)
+  @Get('preview-fechamento')
+  @Permissoes('contas_pagar.ver')
+  async previewFechamento(
+    @Query('fornecedor_id') fornecedor_id: string,
+    @Query('mes') mes: string,
+    @Query('ano') ano: string,
+  ) {
+    return this.service.previewFechamentoFornecedor({
+      fornecedor_id: this.cleanIdOrFail(fornecedor_id),
+      mes: Number(mes),
+      ano: Number(ano),
+    })
+  }
+
+  // ✅ FECHAR MÊS (Etapa 2 do modal — cria contas_pagar + titulos_financeiros)
+  @Post('fechar-mes')
+  @Permissoes('contas_pagar.criar')
+  @HttpCode(HttpStatus.OK)
+  async fecharMes(@Body() body: any) {
+    return this.service.fecharMesFornecedorComTitulos(body)
+  }
+
+  // ✅ DETALHE (sempre depois das rotas fixas)
   @Get(':id')
   @Permissoes('contas_pagar.ver')
   buscar(@Param('id') id: string) {
@@ -86,6 +108,7 @@ export class ContasPagarController {
   @Permissoes('contas_pagar.editar')
   @HttpCode(HttpStatus.OK)
   pagar(@Param('id') id: string, @Body() dto: any) {
+    // (mantém por enquanto; o fluxo novo usa títulos)
     return this.service.pagarContaPagar(this.cleanIdOrFail(id), dto)
   }
 

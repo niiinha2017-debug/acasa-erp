@@ -152,7 +152,7 @@ export class FinanceiroService {
   }
 
   // =========================================================
-  // ✅ ATUALIZA VENCIDOS (FINANCEIRO)
+  // ✅ ATUALIZA VENCIDOS (FINANCEIRO) — INCLUI TÍTULOS
   // =========================================================
   async atualizarVencidos() {
     const hoje = new Date()
@@ -190,6 +190,16 @@ export class FinanceiroService {
       },
       data: { status: SF.VENCIDO },
     })
+
+    // ✅ CRUCIAL: títulos vencem de verdade
+    await this.prisma.titulos_financeiros.updateMany({
+      where: {
+        vencimento_em: { lt: hoje },
+        status: SF.EM_ABERTO,
+        pago_em: null,
+      },
+      data: { status: SF.VENCIDO },
+    })
   }
 
   // =========================================================
@@ -198,7 +208,7 @@ export class FinanceiroService {
   async buscarContaPagar(id: number) {
     return this.prisma.contas_pagar.findUnique({
       where: { id },
-      include: { fornecedor: true, fornecedor_cobrador: true, despesa: true },
+      include: { fornecedor: true, fornecedor_cobrador: true, despesa: true, titulos: true },
     })
   }
 
@@ -214,6 +224,11 @@ export class FinanceiroService {
     return this.prisma.contas_pagar.delete({ where: { id } })
   }
 
+  /**
+   * ✅ LEGADO (não usar no fluxo novo):
+   * Marca conta como PAGO e cria uma despesa. Mantido para não quebrar telas antigas.
+   * O fluxo novo de baixa/parcelamento é via titulos_financeiros.
+   */
   async pagarContaPagar(id: number, dto: any) {
     return this.prisma.$transaction(async (tx) => {
       const conta = await tx.contas_pagar.findUnique({
@@ -221,7 +236,6 @@ export class FinanceiroService {
         select: {
           id: true,
           valor_original: true,
-          valor_compensado: true,
           forma_pagamento_chave: true,
           vencimento_em: true,
           status: true,
@@ -236,7 +250,6 @@ export class FinanceiroService {
         data: { status: SF.PAGO, pago_em: pagoEm },
       })
 
-      // ✅ gera despesa vinculada (data_pagamento existe no seu model)
       await tx.despesas.create({
         data: {
           tipo_movimento: 'SAIDA',
@@ -253,7 +266,6 @@ export class FinanceiroService {
           data_pagamento: pagoEm,
 
           status: SF.PAGO,
-
           recorrencia_id: `CP-${conta.id}`,
         },
       })
@@ -263,7 +275,242 @@ export class FinanceiroService {
   }
 
   // =========================================================
-  // CONTAS A RECEBER
+  // ✅ PREVIEW DO FECHAMENTO (ETAPA 1 DO MODAL)
+  // Plano de corte é VENDA pro fornecedor => CRÉDITO/ABATIMENTO
+  // =========================================================
+  async previewFechamentoFornecedor(body: { fornecedor_id: number; mes: number; ano: number }) {
+    const fornecedor_id = this.toNumber(body?.fornecedor_id, 'fornecedor_id')
+    const mes = this.toNumber(body?.mes, 'mes')
+    const ano = this.toNumber(body?.ano, 'ano')
+
+    const inicio = new Date(ano, mes - 1, 1, 0, 0, 0)
+    const fim = new Date(ano, mes, 0, 23, 59, 59)
+
+    const compras = await this.prisma.compras.findMany({
+      where: {
+        fornecedor_id,
+        status: SF.EM_ABERTO,
+        data_compra: { gte: inicio, lte: fim },
+      },
+      select: { id: true, valor_total: true },
+    })
+
+    const totalCompras = this.round2(
+      compras.reduce((s, c) => s + Number((c as any).valor_total || 0), 0),
+    )
+
+    const planos = await this.prisma.plano_corte.findMany({
+      where: {
+        fornecedor_id,
+        status: SF.EM_ABERTO,
+        data_venda: { gte: inicio, lte: fim },
+      },
+      select: { id: true, valor_total: true },
+    })
+
+    const totalPlanos = this.round2(
+      planos.reduce((s, p) => s + Number((p as any).valor_total || 0), 0),
+    )
+
+    const compensado_auto = this.round2(Math.min(totalCompras, totalPlanos))
+    const saldo_a_pagar_auto = this.round2(Math.max(totalCompras - totalPlanos, 0))
+    const credito_sobra_auto = this.round2(Math.max(totalPlanos - totalCompras, 0))
+
+    return {
+      fornecedor_id,
+      mes,
+      ano,
+      total_compras: totalCompras,
+      total_planos: totalPlanos,
+      compensado_auto,
+      saldo_a_pagar_auto,
+      credito_sobra_auto,
+    }
+  }
+
+  // =========================================================
+  // ✅ FECHAR MÊS (ETAPA 2 DO MODAL) — CRIA contas_pagar + titulos_financeiros
+  // Plano de corte ABATE compras (venda pro fornecedor)
+  // =========================================================
+  async fecharMesFornecedorComTitulos(body: any) {
+    const fornecedor_id = this.toNumber(body?.fornecedor_id, 'fornecedor_id')
+    const mes = this.toNumber(body?.mes, 'mes')
+    const ano = this.toNumber(body?.ano, 'ano')
+
+    const tipo = String(body?.forma_pagamento_chave || '').trim() // CHEQUE | CARTAO
+    if (!tipo) throw new BadRequestException('forma_pagamento_chave é obrigatório')
+
+    // opcional: Rimad cobrador (se quiser usar)
+    const fornecedor_cobrador_id = body?.fornecedor_cobrador_id
+      ? this.toNumber(body.fornecedor_cobrador_id, 'fornecedor_cobrador_id')
+      : null
+
+    // ✅ campos livres (podem ser 0)
+    const valorDever = Number(body?.valor_dever || 0)        // soma no débito
+    const valorCreditar = Number(body?.valor_creditar || 0) // soma no crédito
+
+    const pctLiberado = Math.max(0, Math.min(100, Number(body?.percentual_liberado ?? 100)))
+    const descontoPct = Math.max(0, Math.min(100, Number(body?.desconto_percentual ?? 0)))
+
+    const parcelas = Array.isArray(body?.parcelas) ? body.parcelas : []
+    if (!parcelas.length) throw new BadRequestException('parcelas é obrigatório')
+
+    for (const p of parcelas) {
+      const parcelaNum = Number(p?.parcela || 0)
+      const valor = Number(p?.valor || 0)
+      const venc = String(p?.vencimento_em || '').trim()
+
+      if (!Number.isFinite(parcelaNum) || parcelaNum <= 0) throw new BadRequestException('parcela inválida')
+      if (!Number.isFinite(valor) || valor <= 0) throw new BadRequestException('valor de parcela inválido')
+      this.toDate(venc, 'vencimento_em')
+    }
+
+    const vencPadrao = body?.vencimento_em
+      ? this.toDate(body.vencimento_em, 'vencimento_em')
+      : new Date(ano, mes, 5)
+
+    return this.prisma.$transaction(async (tx) => {
+      // 0) não duplicar fechamento
+      const jaExiste = await tx.contas_pagar.findFirst({
+        where: { fornecedor_id, mes_referencia: mes, ano_referencia: ano },
+        select: { id: true },
+      })
+      if (jaExiste) throw new BadRequestException('Já existe fechamento deste fornecedor para o mês/ano.')
+
+      // 1) automático
+      const inicio = new Date(ano, mes - 1, 1, 0, 0, 0)
+      const fim = new Date(ano, mes, 0, 23, 59, 59)
+
+      const compras = await tx.compras.findMany({
+        where: { fornecedor_id, status: SF.EM_ABERTO, data_compra: { gte: inicio, lte: fim } },
+        select: { id: true, valor_total: true },
+      })
+      const totalCompras = this.round2(
+        compras.reduce((s, c) => s + Number((c as any).valor_total || 0), 0),
+      )
+
+      const planos = await tx.plano_corte.findMany({
+        where: { fornecedor_id, status: SF.EM_ABERTO, data_venda: { gte: inicio, lte: fim } },
+        select: { id: true, valor_total: true },
+      })
+      const totalPlanos = this.round2(
+        planos.reduce((s, p) => s + Number((p as any).valor_total || 0), 0),
+      )
+
+      const compensado_auto = this.round2(Math.min(totalCompras, totalPlanos))
+
+      // 2) cálculo final (correto: plano ABATE)
+      const debito_base = this.round2(totalCompras + Math.max(valorDever, 0))
+      const credito_auto = this.round2(Math.max(totalPlanos, 0))
+      const credito_extra = this.round2((Math.max(valorCreditar, 0) * pctLiberado) / 100)
+
+      const subtotal = this.round2(Math.max(debito_base - (credito_auto + credito_extra), 0))
+      const desconto_valor = this.round2((subtotal * descontoPct) / 100)
+      const total_final = this.round2(Math.max(subtotal - desconto_valor, 0))
+
+      const compensado_total = this.round2(Math.min(debito_base, credito_auto + credito_extra))
+
+      // 3) cria FECHAMENTO (contas_pagar)
+      const contaPagar = await tx.contas_pagar.create({
+        data: {
+          fornecedor_id,
+          fornecedor_cobrador_id: fornecedor_cobrador_id || null,
+
+          mes_referencia: mes,
+          ano_referencia: ano,
+
+          descricao: `Fechamento ${String(mes).padStart(2, '0')}/${ano}`,
+          observacao: [
+            `AUTO compras=${totalCompras} planos=${totalPlanos} comp_auto=${compensado_auto}`,
+            `MANUAL dever=${valorDever} creditar=${valorCreditar} pct=${pctLiberado}% desc=${descontoPct}%`,
+            `CALC debito=${debito_base} cred_auto=${credito_auto} cred_extra=${credito_extra} comp_total=${compensado_total} subtotal=${subtotal} desc_val=${desconto_valor} total=${total_final}`,
+            `PAGTO tipo=${tipo} parcelas=${parcelas.length}`,
+          ].join(' | '),
+
+          valor_original: total_final,
+          valor_compensado: compensado_total,
+
+          status: total_final > 0 ? SF.EM_ABERTO : SF.PAGO,
+          forma_pagamento_chave: tipo,
+
+          parcelas_total: parcelas.length,
+          parcela_numero: null,
+
+          vencimento_em: vencPadrao,
+          pago_em: total_final > 0 ? null : new Date(),
+        },
+        select: { id: true },
+      })
+
+      // 4) cria TITULOS FINANCEIROS (status usando SF)
+      await tx.titulos_financeiros.createMany({
+        data: parcelas.map((p: any) => ({
+          conta_pagar_id: contaPagar.id,
+
+          tipo, // CHEQUE | CARTAO
+          valor: Number(p.valor),
+
+          status: SF.EM_ABERTO,
+          vencimento_em: this.toDate(p.vencimento_em, 'vencimento_em'),
+          pago_em: null,
+
+          parcelas_total: parcelas.length,
+          parcela_numero: Number(p.parcela),
+
+          meta: {
+            fornecedor_id,
+            fornecedor_cobrador_id,
+            mes,
+            ano,
+
+            total_compras: totalCompras,
+            total_planos: totalPlanos,
+
+            valor_dever: valorDever,
+            valor_creditar: valorCreditar,
+            percentual_liberado: pctLiberado,
+            desconto_percentual: descontoPct,
+
+            debito_base,
+            credito_auto,
+            credito_extra,
+            compensado_total,
+            total_final,
+          },
+        })),
+      })
+
+      // 5) atualiza origens (mantém seu padrão atual)
+      if (compras.length) {
+        await tx.compras.updateMany({
+          where: { id: { in: compras.map((c) => c.id) } },
+          data: { status: SF.PAGO },
+        })
+      }
+
+      if (planos.length) {
+        await tx.plano_corte.updateMany({
+          where: { id: { in: planos.map((p) => p.id) } },
+          data: { status: SF.PAGO },
+        })
+      }
+
+      return {
+        fornecedor_id,
+        mes,
+        ano,
+        total_compras: totalCompras,
+        total_planos: totalPlanos,
+        compensado_auto,
+        compensado_total,
+        total_final,
+        conta_pagar_id: contaPagar.id,
+      }
+    })
+  }
+
+  // =========================================================
+  // CONTAS A RECEBER (mantido)
   // =========================================================
   async listarContasReceber(filtros: {
     fornecedor_id?: number
@@ -293,7 +540,7 @@ export class FinanceiroService {
   async buscarContaReceber(id: number) {
     return this.prisma.contas_receber.findUnique({
       where: { id },
-      include: { fornecedor: true, cliente: true, compensacoes: true },
+      include: { fornecedor: true, cliente: true, compensacoes: true, titulos: true },
     })
   }
 
@@ -321,7 +568,56 @@ export class FinanceiroService {
   }
 
   // =========================================================
-  // ✅ FECHAMENTO MENSAL POR FORNECEDOR
+  // ✅ COMPENSAÇÃO (mantido)
+  // =========================================================
+  async compensarFornecedor(fornecedorId: number, dto: any) {
+    const fornecedor_id = this.toNumber(fornecedorId, 'fornecedorId')
+    const conta_pagar_id = this.toNumber(dto?.conta_pagar_id, 'conta_pagar_id')
+    const conta_receber_id = this.toNumber(dto?.conta_receber_id, 'conta_receber_id')
+    const valor = Number(dto?.valor || 0)
+    if (!Number.isFinite(valor) || valor <= 0) throw new BadRequestException('valor inválido')
+
+    return this.prisma.fornecedor_compensacoes.create({
+      data: {
+        fornecedor_id,
+        conta_pagar_id,
+        conta_receber_id,
+        valor,
+        observacao: dto?.observacao ? String(dto.observacao).trim() : null,
+      },
+    })
+  }
+
+  async listarContasPagarFechamentos(filtros: {
+    fornecedor_id?: number
+    status?: string
+    data_ini?: string
+    data_fim?: string
+  }) {
+    const where: any = {
+      fornecedor_id: filtros.fornecedor_id || undefined,
+      status: filtros.status?.trim() || undefined,
+    }
+
+    if (filtros.data_ini || filtros.data_fim) {
+      where.vencimento_em = {}
+      if (filtros.data_ini) where.vencimento_em.gte = new Date(filtros.data_ini)
+      if (filtros.data_fim) where.vencimento_em.lte = new Date(filtros.data_fim)
+    }
+
+    return this.prisma.contas_pagar.findMany({
+      where,
+      include: {
+        fornecedor: true,
+        fornecedor_cobrador: true,
+      },
+      orderBy: [{ vencimento_em: 'asc' }, { id: 'desc' }],
+    })
+  }
+
+  // =========================================================
+  // ✅ FECHAMENTO ANTIGO (MANTIDO PARA NÃO QUEBRAR)
+  // (você pode remover quando o novo fluxo estiver em produção)
   // =========================================================
   async fecharMesFornecedor(body: {
     fornecedor_id: number
@@ -366,7 +662,6 @@ export class FinanceiroService {
 
       const compensado = this.round2(Math.min(totalCompras, totalPlanos))
       const valorAPagar = this.round2(Math.max(totalCompras - totalPlanos, 0))
-      const valorCredito = this.round2(Math.max(totalPlanos - totalCompras, 0))
       const saldo = this.round2(totalCompras - totalPlanos)
 
       const vencPadrao = body?.vencimento_em
@@ -390,8 +685,6 @@ export class FinanceiroService {
         select: { id: true },
       })
 
-      // 7) (CHEQUES removido) ✅ futuramente entra titulos_financeiros
-
       if (compras.length) {
         await tx.compras.updateMany({
           where: { id: { in: compras.map((c) => c.id) } },
@@ -406,35 +699,6 @@ export class FinanceiroService {
         })
       }
 
-      let contaReceber: { id: number } | null = null
-
-      if (valorCredito > 0) {
-        contaReceber = await tx.contas_receber.create({
-          data: {
-            fornecedor_id,
-            origem_tipo: 'CREDITO_FECHAMENTO',
-            origem_id: contaPagar.id,
-            descricao: `Crédito fechamento ${String(mes).padStart(2, '0')}/${ano}`,
-            valor_original: valorCredito,
-            valor_compensado: 0,
-            status: SF.EM_ABERTO,
-            vencimento_em: null,
-            recebido_em: null,
-          },
-          select: { id: true },
-        })
-
-        await tx.fornecedor_compensacoes.create({
-          data: {
-            fornecedor_id,
-            conta_pagar_id: contaPagar.id,
-            conta_receber_id: contaReceber.id,
-            valor: valorCredito,
-            observacao: `Crédito para abater no próximo mês (${String(mes).padStart(2, '0')}/${ano})`,
-          },
-        })
-      }
-
       return {
         fornecedor_id,
         mes,
@@ -443,58 +707,8 @@ export class FinanceiroService {
         total_planos: totalPlanos,
         saldo_final: saldo,
         valor_a_pagar: valorAPagar,
-        credito_para_proximo: valorCredito,
         conta_pagar_id: contaPagar.id,
-        conta_receber_id: contaReceber?.id || null,
       }
-    })
-  }
-
-  // =========================================================
-  // ✅ COMPENSAÇÃO (IDs obrigatórios)
-  // =========================================================
-  async compensarFornecedor(fornecedorId: number, dto: any) {
-    const fornecedor_id = this.toNumber(fornecedorId, 'fornecedorId')
-    const conta_pagar_id = this.toNumber(dto?.conta_pagar_id, 'conta_pagar_id')
-    const conta_receber_id = this.toNumber(dto?.conta_receber_id, 'conta_receber_id')
-    const valor = Number(dto?.valor || 0)
-    if (!Number.isFinite(valor) || valor <= 0) throw new BadRequestException('valor inválido')
-
-    return this.prisma.fornecedor_compensacoes.create({
-      data: {
-        fornecedor_id,
-        conta_pagar_id,
-        conta_receber_id,
-        valor,
-        observacao: dto?.observacao ? String(dto.observacao).trim() : null,
-      },
-    })
-  }
-
-  async listarContasPagarFechamentos(filtros: {
-    fornecedor_id?: number
-    status?: string
-    data_ini?: string
-    data_fim?: string
-  }) {
-    const where: any = {
-      fornecedor_id: filtros.fornecedor_id || undefined,
-      status: filtros.status?.trim() || undefined,
-    }
-
-    if (filtros.data_ini || filtros.data_fim) {
-      where.vencimento_em = {}
-      if (filtros.data_ini) where.vencimento_em.gte = new Date(filtros.data_ini)
-      if (filtros.data_fim) where.vencimento_em.lte = new Date(filtros.data_fim)
-    }
-
-    return this.prisma.contas_pagar.findMany({
-      where,
-      include: {
-        fornecedor: true,
-        fornecedor_cobrador: true,
-      },
-      orderBy: [{ vencimento_em: 'asc' }, { id: 'desc' }],
     })
   }
 }

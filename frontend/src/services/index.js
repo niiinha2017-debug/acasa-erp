@@ -198,26 +198,33 @@ export const PermissoesService = {
 export const FinanceiroService = {
   listarPagar: (filtros = {}) =>
     api.get('/financeiro/contas-pagar/fechamentos', { params: filtros }),
+
   listarPagarConsolidado: (filtros = {}) =>
     api.get('/financeiro/contas-pagar', { params: filtros }),
 
   buscarContaPagar: (id) => api.get(`/financeiro/contas-pagar/${id}`),
   criarContaPagar: (dados) => api.post('/financeiro/contas-pagar', dados),
   atualizarContaPagar: (id, dados) => api.put(`/financeiro/contas-pagar/${id}`, dados),
+
+  // legado (mantém por enquanto)
   pagarContaPagar: (id, dados) => api.post(`/financeiro/contas-pagar/${id}/pagar`, dados),
 
-  fecharMesFornecedor: (dados) => api.post('/financeiro/fechamento/fornecedor', dados),
+  // ✅ NOVO: etapa 1 do modal (preview)
+  previewFechamentoFornecedor: (params) =>
+    api.get('/financeiro/contas-pagar/preview-fechamento', { params }),
 
+  // ✅ NOVO: etapa 2 do modal (fecha mês + cria títulos)
+  fecharMesFornecedor: (dados) =>
+    api.post('/financeiro/contas-pagar/fechar-mes', dados),
+
+  // --- RECEBER (mantém) ---
   listarReceber: (filtros = {}) => api.get('/financeiro/contas-receber', { params: filtros }),
   buscarReceber: (id) => api.get(`/financeiro/contas-receber/${id}`),
   criarReceber: (dados) => api.post('/financeiro/contas-receber', dados),
   atualizarReceber: (id, dados) => api.put(`/financeiro/contas-receber/${id}`, dados),
   receber: (id, dados) => api.post(`/financeiro/contas-receber/${id}/receber`, dados),
-
-  listarCheques: (filtros = {}) => api.get('/financeiro/cheques', { params: filtros }),
-  buscarCheque: (id) => api.get(`/financeiro/cheques/${id}`),
-  atualizarStatusCheque: (id, dados) => api.put(`/financeiro/cheques/${id}/status`, dados),
 }
+
 
 
 // --- CONFIGURAÇÃO ---
