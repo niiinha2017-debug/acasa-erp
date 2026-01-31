@@ -79,8 +79,6 @@
               required
             />
           </div>
-
-          <!-- ✅ IMAGEM (apenas 1, opcional) -->
 <!-- IMAGEM (upload) -->
 <div class="col-span-12 md:col-span-8">
   <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block ml-1">
