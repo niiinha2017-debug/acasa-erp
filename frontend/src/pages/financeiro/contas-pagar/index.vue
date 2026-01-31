@@ -165,7 +165,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { FinanceiroService, FornecedoresService } from '@/services/index'
 import { format } from '@/utils/format'
-import FechamentoFornecedorModal from '@/components/modals/FechamentoFornecedorModal.vue'
 
 const STATUS_OPTIONS = [
   { label: 'Em aberto', value: 'EM_ABERTO' },
