@@ -121,13 +121,6 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
-    '/financeiro/cheques/': RouteRecordInfo<
-      '/financeiro/cheques/',
-      '/financeiro/cheques',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
     '/financeiro/contas-pagar/': RouteRecordInfo<
       '/financeiro/contas-pagar/',
       '/financeiro/contas-pagar',
@@ -369,12 +362,6 @@ declare module 'vue-router/auto-routes' {
     'src/pages/despesas/[id].vue': {
       routes:
         | '/despesas/[id]'
-      views:
-        | never
-    }
-    'src/pages/financeiro/cheques/index.vue': {
-      routes:
-        | '/financeiro/cheques/'
       views:
         | never
     }
