@@ -385,21 +385,21 @@ async function onImagemPick(e) {
     if (imagemInput.value) imagemInput.value.value = ''
     return
   }
+
   if (!can('produtos.editar')) {
     notify.error('Acesso negado.')
     if (imagemInput.value) imagemInput.value.value = ''
     return
   }
 
-if (!file.type.startsWith('image/')) {
-  notify.error('Selecione um arquivo de imagem.')
-  if (imagemInput.value) imagemInput.value.value = ''
-  return
-}
-
-
-  const file = e.target.files?.[0]
+  const file = e?.target?.files?.[0]
   if (!file) return
+
+  if (!file.type?.startsWith('image/')) {
+    notify.error('Selecione um arquivo de imagem.')
+    if (imagemInput.value) imagemInput.value.value = ''
+    return
+  }
 
   uploadingImagem.value = true
   try {
@@ -411,7 +411,6 @@ if (!file.type.startsWith('image/')) {
       file,
     })
 
-    // o upload normalmente retorna o registro (ou res.data)
     const arq = res?.data ?? res
     const url = arq?.url
     if (!url) {
@@ -419,10 +418,7 @@ if (!file.type.startsWith('image/')) {
       return
     }
 
-    // salva "atalho" no produto (pra index mostrar sem consulta extra)
     form.value.imagem_url = url
-
-    // atualiza no banco imediatamente
     await ProdutosService.salvar(produtoId.value, { imagem_url: url })
 
     notify.success('Imagem atualizada!')
@@ -433,6 +429,7 @@ if (!file.type.startsWith('image/')) {
     if (imagemInput.value) imagemInput.value.value = ''
   }
 }
+
 
 async function confirmarRemoverImagem() {
   if (!isEdit.value) return
