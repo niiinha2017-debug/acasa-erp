@@ -120,12 +120,12 @@
 
 <div class="col-span-12 md:col-span-4">
   <div class="h-full flex flex-col justify-end">
-<div
-  class="h-40 md:h-56 rounded-xl border border-slate-200 bg-white flex items-center justify-center overflow-hidden cursor-zoom-in"
-  @click="abrirImagem"
-  title="Clique para abrir"
->
-
+    <div
+      class="h-40 md:h-56 rounded-xl border border-slate-200 bg-white flex items-center justify-center overflow-hidden"
+      :class="previewImagem ? 'cursor-zoom-in' : ''"
+      @click="abrirPreviewImagem"
+      title="Clique para visualizar"
+    >
       <img
         v-if="previewImagem"
         :src="previewImagem"
@@ -138,8 +138,6 @@
     </div>
   </div>
 </div>
-
-
 
           <!-- Atributos -->
           <div class="col-span-12 mt-4">
@@ -229,6 +227,43 @@
       </div>
     </Card>
   </div>
+  <Teleport to="body">
+  <Transition name="fade">
+    <div
+      v-if="modalImagemOpen"
+      class="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+      @click.self="modalImagemOpen = false"
+    >
+      <div class="w-full max-w-5xl bg-white rounded-2xl overflow-hidden border border-slate-200">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+          <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">
+            Visualização da imagem
+          </span>
+
+          <Button
+            type="button"
+            variant="ghost"
+            class="!h-9 !px-3 !rounded-xl text-[10px] font-black uppercase tracking-widest"
+            @click="modalImagemOpen = false"
+          >
+            Fechar
+          </Button>
+        </div>
+
+        <div class="p-3 bg-white">
+          <div class="w-full h-[70vh] flex items-center justify-center bg-slate-50 rounded-xl overflow-hidden border border-slate-100">
+            <img
+              :src="previewImagem"
+              class="max-h-full max-w-full object-contain"
+              alt="Imagem do produto"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  </Transition>
+</Teleport>
+
 </template>
 
 <script setup>
@@ -253,6 +288,12 @@ const isEdit = computed(() => rawId.value !== 'novo')
 const produtoId = computed(() =>
   isEdit.value ? Number(String(rawId.value).replace(/\D/g, '')) : null,
 )
+const modalImagemOpen = ref(false)
+
+function abrirPreviewImagem() {
+  if (!previewImagem.value) return
+  modalImagemOpen.value = true
+}
 
 
 const imagemInput = ref(null)
