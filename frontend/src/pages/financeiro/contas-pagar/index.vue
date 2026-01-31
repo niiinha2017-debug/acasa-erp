@@ -163,7 +163,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { FinanceiroService, } from '@/services/index'
+import { FinanceiroService, FornecedorService } from '@/services/index'
 import { format } from '@/utils/format'
 
 const STATUS_OPTIONS = [
@@ -268,7 +268,7 @@ async function carregar() {
 
 async function carregarFornecedores() {
   try {
-    const { data } = await FornecedoresService.listar({})
+    const { data } = await FornecedorService.listar({})
     const list = Array.isArray(data) ? data : []
     fornecedoresOptions.value = list.map((f) => ({
       label: f.nome_fantasia || f.nome || `#${f.id}`,
