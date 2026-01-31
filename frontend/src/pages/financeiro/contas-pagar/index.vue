@@ -163,7 +163,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { FinanceiroService, FornecedoresService } from '@/services/index'
+import { FinanceiroService, } from '@/services/index'
 import { format } from '@/utils/format'
 
 const STATUS_OPTIONS = [
