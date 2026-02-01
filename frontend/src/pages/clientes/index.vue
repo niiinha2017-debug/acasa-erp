@@ -301,17 +301,19 @@ const columns = [
 
 // Carregar dados da API
 const carregarClientes = async () => {
+  carregando.value = true
   try {
-    carregando.value = true
-    const response = await ClienteService.listar()
-    clientes.value = response.data || []
+    const res = await ClienteService.listar() // ou o nome real do seu service de listagem
+    clientes.value = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : [])
   } catch (error) {
     console.error('Erro ao carregar clientes:', error)
+    notify.error('Falha ao carregar clientes.')
     clientes.value = []
   } finally {
     carregando.value = false
   }
 }
+
 
 // Carregar dados ao montar componente
 onMounted(carregarClientes)
