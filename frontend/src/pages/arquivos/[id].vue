@@ -36,9 +36,9 @@
         <span v-if="ownerType && ownerId">
           CONTEXTO: {{ ownerType }} #{{ ownerId }} <span v-if="categoria">| {{ categoria }}</span>
         </span>
-        <span v-else class="text-rose-500">
-          owner_type e owner_id são obrigatórios para listar.
-        </span>
+<span v-else class="text-slate-400 italic">
+  Selecione um contexto para listar os arquivos.
+</span>
       </div>
 
       <Table
@@ -109,13 +109,15 @@ function q1(v) {
 }
 
 const ownerType = computed(() => {
-  const raw = q1(route.query.owner_type ?? route.query.ownerType)
-  return String(raw || '').trim().toUpperCase()
+  // Tenta pegar de qualquer variante de nome de query
+  const raw = route.query.owner_type || route.query.ownerType || route.query.owner_type_raw
+  return raw ? String(raw).trim().toUpperCase() : null
 })
 
 const ownerId = computed(() => {
-  const raw = q1(route.query.owner_id ?? route.query.ownerId)
-  return String(raw || '').replace(/\D/g, '')
+  const raw = route.query.owner_id || route.query.ownerId
+  if (!raw) return null
+  return String(raw).replace(/\D/g, '')
 })
 
 const categoria = computed(() => {

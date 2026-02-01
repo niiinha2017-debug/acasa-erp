@@ -267,14 +267,22 @@ async function enviar() {
   }
 }
 
+
 function visualizar(arq) {
   if (!arq?.id) return
+  
+  // Primeiro fechamos o modal para evitar conflito de Teleport
   fechar()
+  
+  // Agora mandamos pro visualizar com TODO o contexto necessário
   router.push({
     path: `/arquivos/${arq.id}`,
     query: {
       name: arq.nome || arq.filename || `ARQUIVO_${arq.id}`,
       type: arq.mime_type || '',
+      // Passamos o "pai" do arquivo para o visualizador não dar erro de listagem
+      owner_type: String(props.ownerType).toUpperCase(),
+      owner_id: String(props.ownerId)
     },
   })
 }
