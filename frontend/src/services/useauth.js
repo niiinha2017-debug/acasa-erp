@@ -2,63 +2,57 @@ import { ref, computed } from 'vue'
 import api from '@/services/api'
 import storage from '@/utils/storage'
 
-// Estado Global (Singleton) - Mantém o estado sincronizado entre diferentes componentes
+const SESSION_KEY = 'ACASA_SESSION_ALIVE'
+
+// Estado Global (Singleton)
 const token = ref(storage.getToken())
 const usuarioLogado = ref(storage.getUser())
 const loading = ref(false)
 const error = ref('')
 
+// ✅ boot check: roda UMA vez quando o arquivo é importado
+if (token.value && !sessionStorage.getItem(SESSION_KEY)) {
+  // best-effort: limpa cookie HttpOnly do refresh
+  fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {})
+
+  storage.removeToken()
+  storage.removeUser()
+  token.value = null
+  usuarioLogado.value = null
+} else if (token.value) {
+  sessionStorage.setItem(SESSION_KEY, '1')
+}
+
 export function useAuth() {
-  // Retorna true se houver um token válido
   const isAuthenticated = computed(() => !!token.value)
 
-  // ✅ Obtém as permissões vindas do backend de forma segura
   const permissoes = computed(() => {
     const user = usuarioLogado.value
     return Array.isArray(user?.permissoes) ? user.permissoes : []
   })
 
-  /**
-   * ✅ Valida acesso por chave (ex: 'usuarios.ver')
-   * Implementa liberação total para o administrador.
-   */
   const temAcesso = (chave) => {
     const user = usuarioLogado.value
-    
-    // 1. Se não houver usuário logado, nega qualquer acesso
     if (!user) return false
 
-    /**
-     * 2. REGRA DE ADMIN (Liberação Total)
-     * Como não existem mais os campos 'setor' ou 'funcao', identificamos o 
-     * privilégio administrativo pelo nome de usuário ou pela flag 'admin' nas permissões.
-     */
-const ehAdmin =
-  user.usuario === 'Ana.P' ||
-  permissoes.value.includes('ADMIN')
-
-
+    const ehAdmin = user.usuario === 'Ana.P' || permissoes.value.includes('ADMIN')
     if (ehAdmin) return true
 
-    // 3. Caso contrário, verifica se a chave específica está no array de permissões
     return permissoes.value.includes(chave)
   }
 
-  /**
-   * Realiza o login e armazena os dados no storage e no estado reativo
-   */
   async function login({ usuario, senha }) {
     loading.value = true
     error.value = ''
     try {
-      // O backend agora retorna { token, usuario: { id, nome, permissoes... } }
       const { data } = await api.post('/auth/login', { usuario, senha })
 
-      // Persistência local
       storage.setToken(data.token)
       storage.setUser(data.usuario)
 
-      // Atualização do estado reativo global
+      // ✅ marca sessão viva
+      sessionStorage.setItem(SESSION_KEY, '1')
+
       token.value = data.token
       usuarioLogado.value = data.usuario
 
@@ -71,9 +65,6 @@ const ehAdmin =
     }
   }
 
-  /**
-   * Envia os dados para criação de um novo usuário
-   */
   async function solicitarCadastro(dados) {
     loading.value = true
     try {
@@ -87,7 +78,7 @@ const ehAdmin =
     }
   }
 
-    async function esqueciSenha(email) {
+  async function esqueciSenha(email) {
     loading.value = true
     error.value = ''
     try {
@@ -115,20 +106,24 @@ const ehAdmin =
     }
   }
 
-async function syncMe() {
-  const tokenLocal = storage.getToken()
-  if (!tokenLocal) return null
+  async function syncMe() {
+    const tokenLocal = storage.getToken()
+    if (!tokenLocal) return null
 
-  const { data } = await api.get('/auth/me')
-  storage.setUser(data)
-  usuarioLogado.value = data // ✅ atualiza reativo
-  return data
-}
+    const { data } = await api.get('/auth/me')
+    storage.setUser(data)
+    usuarioLogado.value = data
+    return data
+  }
 
-  /**
-   * Limpa os dados de autenticação e redireciona para o login
-   */
-  function logout() {
+  // ✅ único logout (async)
+  async function logout() {
+    try {
+      await api.post('/auth/logout')
+    } catch {}
+
+    sessionStorage.removeItem(SESSION_KEY)
+
     storage.removeToken()
     storage.removeUser()
     token.value = null
@@ -136,20 +131,19 @@ async function syncMe() {
     window.location.href = '/login'
   }
 
-return {
-  token,
-  usuarioLogado,
-  isAuthenticated,
-  loading,
-  error,
-  login,
-  logout,
-  solicitarCadastro,
-  esqueciSenha,
-  alterarSenha,
-  temAcesso,
-  permissoes,
-  syncMe, // ✅ add
-}
-
+  return {
+    token,
+    usuarioLogado,
+    isAuthenticated,
+    loading,
+    error,
+    login,
+    logout,
+    solicitarCadastro,
+    esqueciSenha,
+    alterarSenha,
+    temAcesso,
+    permissoes,
+    syncMe,
+  }
 }
