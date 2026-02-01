@@ -23,21 +23,20 @@
           />
         </div>
         
-<Button
-  v-if="can('funcionarios.criar')"
-  variant="primary"
-  size="md"
-  class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider w-full sm:w-auto"
-  @click="novo()"
->
-
+        <Button
+          v-if="can('funcionarios.criar')"
+          variant="primary"
+          size="md"
+          class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider w-full sm:w-auto"
+          @click="novo()"
+        >
           <i class="pi pi-plus mr-1.5 text-[10px]"></i>
           Novo
         </Button>
       </div>
     </div>
 
-    <div class="grid grid-cols-2 lg:grid-cols-3 gap-3">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
       <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
         <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">Equipe Total</p>
         <p class="text-xl font-black text-slate-800">{{ funcionarios.length }}</p>
@@ -48,18 +47,23 @@
         <p class="text-xl font-black text-emerald-700">{{ funcionariosAtivos }}</p>
       </div>
       
-      <div 
+      <div
         class="p-4 rounded-xl border transition-all flex items-center justify-between"
-        :class="selecionados.length > 0 ? 'bg-slate-900 border-slate-900 shadow-lg shadow-slate-200' : 'bg-white border-slate-200 shadow-sm'"
+        :class="selecionadosCount > 0 ? 'bg-slate-900 border-slate-900 shadow-lg shadow-slate-200' : 'bg-white border-slate-200 shadow-sm'"
       >
         <div>
-          <p class="text-[9px] font-black uppercase tracking-[0.15em]" :class="selecionados.length > 0 ? 'text-slate-400' : 'text-slate-400'">Selecionados</p>
-          <p class="text-xl font-black" :class="selecionados.length > 0 ? 'text-white' : 'text-slate-800'">{{ selecionados.length }}</p>
+          <p class="text-[9px] font-black uppercase tracking-[0.15em]" :class="selecionadosCount > 0 ? 'text-slate-400' : 'text-slate-400'">
+            Selecionados
+          </p>
+          <p class="text-xl font-black" :class="selecionadosCount > 0 ? 'text-white' : 'text-slate-800'">
+            {{ selecionadosCount }}
+          </p>
         </div>
-<button
-  v-if="selecionados.length > 0 && can('funcionarios.ver')"
-  @click="confirmarGerarPdfFuncionarios"
-          class="px-3 py-1.5 rounded-lg bg-brand-primary text-white text-[9px] font-black uppercase tracking-wider flex items-center gap-2 hover:brightness-110"
+
+        <button
+          v-if="selecionadosCount > 0 && can('funcionarios.ver')"
+          @click="confirmarGerarPdfFuncionarios"
+          class="px-3 py-1.5 rounded-lg bg-brand-primary text-white text-[9px] font-black uppercase tracking-wider flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all"
         >
           <i class="pi pi-file-pdf"></i> PDF
         </button>
@@ -76,13 +80,12 @@
       >
         <template #cell-nome="{ row }">
           <div class="flex items-center gap-3 py-1">
-<CustomCheckbox
-  :modelValue="selectedIds.has(row.id)"
-  @update:modelValue="toggle(row.id)"
-  label=""
-  class="scale-90"
-/>
-
+            <CustomCheckbox
+              :modelValue="selectedIds.has(row.id)"
+              @update:modelValue="toggle(row.id)"
+              label=""
+              class="scale-90"
+            />
             <div class="flex flex-col">
               <span class="text-sm font-bold text-slate-800 uppercase tracking-tight">{{ row.nome }}</span>
               <span class="text-[10px] font-medium text-slate-500">{{ row.cpf || '000.000.000-00' }}</span>
@@ -111,25 +114,25 @@
 
         <template #cell-acoes="{ row }">
           <div class="flex justify-end gap-1">
-<button
-  v-if="can('funcionarios.ver')"
-  @click="abrirArquivos(row)"
+            <button
+              v-if="can('funcionarios.ver')"
+              @click="abrirArquivos(row)"
               class="w-7 h-7 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white transition-all flex items-center justify-center border border-slate-100"
               title="Documentos"
             >
               <i class="pi pi-paperclip text-xs"></i>
             </button>
-<button
-  v-if="can('funcionarios.editar')"
-  @click="editar(row.id)"
+            <button
+              v-if="can('funcionarios.editar')"
+              @click="editar(row.id)"
               class="w-7 h-7 rounded-lg bg-slate-100 text-slate-500 hover:bg-brand-primary hover:text-white transition-all flex items-center justify-center"
               title="Editar"
             >
               <i class="pi pi-pencil text-xs"></i>
             </button>
-<button
-  v-if="can('funcionarios.excluir')"
-  @click="confirmarExcluirFuncionario(row)"
+            <button
+              v-if="can('funcionarios.excluir')"
+              @click="confirmarExcluirFuncionario(row)"
               class="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
               title="Excluir"
             >
@@ -139,15 +142,16 @@
         </template>
       </Table>
     </div>
-<ArquivosModal
-  v-if="arquivosModalOpen && arquivosFuncionario?.id"
-  :open="arquivosModalOpen"
-  owner-type="FUNCIONARIO"
-  :owner-id="arquivosFuncionario.id"
-  categoria="ANEXO"
-  :can-manage="can('arquivos.criar') || can('arquivos.excluir')"
-  @close="fecharArquivos"
-/>
+
+    <ArquivosModal
+      v-if="arquivosModalOpen && arquivosFuncionario?.id"
+      :open="arquivosModalOpen"
+      ownerType="FUNCIONARIO"
+      :ownerId="arquivosFuncionario.id"
+      categoria="ANEXO"
+      :canManage="can('arquivos.criar') || can('arquivos.excluir')"
+      @close="fecharArquivos"
+    />
 
   </div>
 </template>
@@ -163,7 +167,6 @@ import { notify } from '@/services/notify'
 
 definePage({ meta: { perm: 'funcionarios.ver' } })
 
-
 const router = useRouter()
 const loading = ref(true)
 const gerandoPdf = ref(false)
@@ -171,9 +174,12 @@ const filtro = ref('')
 const funcionarios = ref([])
 const arquivosModalOpen = ref(false)
 const arquivosFuncionario = ref(null)
+
+// Reatividade direta no Set é mais performática no Vue 3
 const selectedIds = ref(new Set())
 
-const selecionados = computed(() => Array.from(selectedIds.value))
+const selecionadosCount = computed(() => selectedIds.value.size)
+
 const funcionariosAtivos = computed(() =>
   funcionarios.value.filter(f => String(f.status || '').toUpperCase() === 'ATIVO').length
 )
@@ -185,11 +191,13 @@ const columns = [
   { key: 'acoes', label: '', align: 'right', width: '20%' }
 ]
 
+// Simplificado: não precisa recriar o Set toda vez
 function toggle(id) {
-  const set = new Set(selectedIds.value)
-  if (set.has(id)) set.delete(id)
-  else set.add(id)
-  selectedIds.value = set
+  if (selectedIds.value.has(id)) {
+    selectedIds.value.delete(id)
+  } else {
+    selectedIds.value.add(id)
+  }
 }
 
 const funcionariosFiltrados = computed(() => {
@@ -202,24 +210,6 @@ const funcionariosFiltrados = computed(() => {
   )
 })
 
-function abrirArquivos(row) {
-  if (!can('funcionarios.ver')) return notify.error('Acesso negado.')
-  arquivosFuncionario.value = row
-  arquivosModalOpen.value = true
-}
-
-
-function fecharArquivos() {
-  arquivosModalOpen.value = false
-  arquivosFuncionario.value = null
-}
-
-const editar = (id) => {
-  if (!can('funcionarios.editar')) return notify.error('Acesso negado.')
-  router.push(`/funcionarios/${id}`)
-}
-
-
 async function carregar() {
   loading.value = true
   try {
@@ -229,44 +219,66 @@ async function carregar() {
       cargo: f.cargo ?? f.funcao ?? '',
     }))
   } catch (err) {
-    console.error('Erro ao carregar funcionários:', err)
+    notify.error('Erro ao carregar lista de funcionários.')
   } finally {
     loading.value = false
   }
 }
 
+// PDF LOGIC
 async function gerarPdf() {
-  if (!can('funcionarios.ver')) return notify.error('Acesso negado.')
-  if (selecionados.value.length === 0) return
-
+  if (selectedIds.value.size === 0) return
+  
   gerandoPdf.value = true
   try {
-    // ✅ backend agora retorna { arquivoId }
-    const { data } = await api.post('/funcionarios/pdf', { ids: selecionados.value })
+    const ids = Array.from(selectedIds.value)
+    const { data } = await api.post('/funcionarios/pdf', { ids })
     const arquivoId = data?.arquivoId
+    
+    if (!arquivoId) throw new Error()
 
-    if (!arquivoId) {
-      notify.error('PDF gerado, mas não retornou arquivoId.')
-      return
-    }
-
-    // ✅ abre dentro do PWA no viewer que você já tem
+    notify.success('PDF gerado com sucesso!')
     router.push(`/arquivos/${String(arquivoId).replace(/\D/g, '')}`)
-
-    selectedIds.value = new Set()
-  } catch (err) {
-    notify.error('Erro ao gerar o documento.')
+    selectedIds.value.clear() // Limpa seleção após gerar
+  } catch (e) {
+    notify.error('Falha ao gerar documento PDF.')
   } finally {
     gerandoPdf.value = false
   }
 }
 
+async function confirmarGerarPdfFuncionarios() {
+  if (!can('funcionarios.ver')) return notify.error('Acesso negado.')
+  if (selectedIds.value.size === 0) return
+
+  const ok = await confirm.show(
+    'Gerar PDF',
+    `Deseja gerar o PDF com ${selectedIds.value.size} funcionário(s) selecionado(s)?`,
+  )
+  if (ok) await gerarPdf()
+}
+
+// ACTIONS
+function abrirArquivos(row) {
+  if (!can('funcionarios.ver')) return notify.error('Acesso negado.')
+  arquivosFuncionario.value = row
+  arquivosModalOpen.value = true
+}
+
+function fecharArquivos() {
+  arquivosModalOpen.value = false
+  arquivosFuncionario.value = null
+}
 
 const novo = () => {
   if (!can('funcionarios.criar')) return notify.error('Acesso negado.')
   router.push('/funcionarios/novo')
 }
 
+const editar = (id) => {
+  if (!can('funcionarios.editar')) return notify.error('Acesso negado.')
+  router.push(`/funcionarios/${id}`)
+}
 
 async function confirmarExcluirFuncionario(row) {
   if (!can('funcionarios.excluir')) return notify.error('Acesso negado.')
@@ -275,40 +287,19 @@ async function confirmarExcluirFuncionario(row) {
     'Excluir Funcionário',
     `Deseja remover "${row?.nome}"? Esta ação não pode ser desfeita.`,
   )
-  if (!ok) return
-  await excluir(row)
+  if (ok) await excluir(row)
 }
-
-async function confirmarGerarPdfFuncionarios() {
-  if (!can('funcionarios.ver')) return notify.error('Acesso negado.')
-
-  if (selecionados.value.length === 0) return
-
-  const ok = await confirm.show(
-    'Gerar PDF',
-    `Deseja gerar o PDF com ${selecionados.value.length} funcionário(s) selecionado(s)?`,
-  )
-  if (!ok) return
-  await gerarPdf()
-}
-
 
 async function excluir(row) {
-  if (!can('funcionarios.excluir')) return notify.error('Acesso negado.')
-
   try {
     await FuncionarioService.remover(row.id)
     funcionarios.value = funcionarios.value.filter((f) => f.id !== row.id)
-
-    // remove da seleção também
-    const set = new Set(selectedIds.value)
-    set.delete(row.id)
-    selectedIds.value = set
+    selectedIds.value.delete(row.id)
+    notify.success('Funcionário removido.')
   } catch (err) {
-    alert('Erro ao excluir.')
+    notify.error('Erro ao tentar excluir funcionário.')
   }
 }
-
 
 onMounted(carregar)
 </script>

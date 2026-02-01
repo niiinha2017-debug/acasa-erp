@@ -760,17 +760,15 @@ async function excluirArquivo(arquivoId) {
 async function clicarAdicionarArquivo() {
   if (!can(permSalvar())) return notify.error('Acesso negado.')
 
-  // garante ID (se for novo, cria e vira edição)
-  const funcionarioId = await garantirIdParaUpload()
+  await garantirIdParaUpload()
+  await Promise.resolve()
 
-  // abre seletor
-  fileInput.value?.click()
-
-  // garante carregar lista (caso já tenha arquivos)
-  await carregarArquivos()
-
-  return funcionarioId
+  if (!fileInput.value) return notify.error('Input de arquivo não montado.')
+  fileInput.value.click()
 }
+
+
+
 
 async function onPickArquivo(e) {
   const file = e.target.files?.[0]
@@ -963,8 +961,6 @@ watch(
     await carregarArquivos()
   },
 )
-
-
 </script>
 
 
