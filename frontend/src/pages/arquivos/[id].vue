@@ -1,117 +1,123 @@
 <template>
-  <div class="h-dvh w-full bg-slate-100 dark:bg-slate-950">
-    <!-- TOPBAR (estilo Drive) -->
-    <div class="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80">
-      <div class="h-14 px-3 flex items-center justify-between gap-3">
-        <div class="flex items-center gap-2 min-w-0">
-          <button
-            type="button"
-            @click="voltar"
-            class="h-9 w-9 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center"
-            aria-label="Voltar"
-          >
-            <i class="pi pi-times"></i>
-          </button>
+  <div class="h-dvh w-full bg-slate-900 overflow-hidden flex flex-col selection:bg-brand-primary/30">
+    
+    <header class="h-16 z-50 border-b border-white/5 bg-slate-900/80 backdrop-blur-xl px-4 flex items-center justify-between gap-4">
+      
+      <div class="flex items-center gap-4 min-w-0">
+        <button
+          type="button"
+          @click="voltar"
+          class="h-10 w-10 rounded-full hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center transition-all active:scale-90"
+        >
+          <i class="pi pi-arrow-left"></i>
+        </button>
 
-          <div class="flex items-center gap-2 min-w-0">
-            <span class="h-8 w-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-              <i :class="fileIcon" class="text-sm"></i>
-            </span>
+        <div class="flex items-center gap-3 min-w-0 border-l border-white/10 pl-4">
+          <div class="h-10 w-10 rounded-xl bg-brand-primary/20 flex items-center justify-center border border-brand-primary/30 shadow-inner">
+            <i :class="fileIcon" class="text-brand-primary text-lg"></i>
+          </div>
 
-            <div class="min-w-0">
-              <div class="text-xs font-black text-slate-800 dark:text-slate-100 truncate">
-                {{ nomeExibicao }}
-              </div>
-              <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
-                {{ mimeQuery || 'ARQUIVO' }}
-              </div>
-            </div>
+          <div class="min-w-0">
+            <h1 class="text-xs font-black text-white truncate tracking-tight">
+              {{ nomeExibicao }}
+            </h1>
+            <p class="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] truncate mt-0.5">
+              {{ mimeQuery || 'Documento Digital' }}
+            </p>
           </div>
         </div>
+      </div>
 
-        <!-- ações -->
-        <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 bg-white/5 p-1 rounded-2xl border border-white/5">
+        <template v-if="isImagem">
           <button
-            v-if="isImagem"
-            type="button"
             @click="zoomOut"
-            class="h-9 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[10px] font-black uppercase dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
+            class="h-9 w-9 rounded-xl hover:bg-white/10 text-white text-sm font-black transition-colors"
+            title="Diminuir"
           >
-            -
+            <i class="pi pi-minus text-[10px]"></i>
           </button>
+          
+          <div class="px-2 text-[10px] font-black text-slate-400 w-12 text-center tabular-nums">
+            {{ Math.round(zoom * 100) }}%
+          </div>
 
           <button
-            v-if="isImagem"
-            type="button"
             @click="zoomIn"
-            class="h-9 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-[10px] font-black uppercase dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
+            class="h-9 w-9 rounded-xl hover:bg-white/10 text-white text-sm font-black transition-colors"
+            title="Aumentar"
           >
-            +
+            <i class="pi pi-plus text-[10px]"></i>
           </button>
 
-          <a
-            v-if="blobUrl"
-            :href="blobUrl"
-            :download="downloadName"
-            class="h-9 px-4 rounded-xl bg-slate-900 text-white hover:bg-slate-800 flex items-center gap-2 text-[10px] font-black uppercase tracking-wider"
-          >
-            <i class="pi pi-download text-[11px]"></i>
-            Baixar
-          </a>
-        </div>
-      </div>
-    </div>
+          <div class="w-px h-4 bg-white/10 mx-1"></div>
+        </template>
 
-    <!-- BODY -->
-    <div class="h-[calc(100dvh-56px)]">
-      <div v-if="loading" class="h-full flex items-center justify-center">
-        <Loading />
+        <a
+          v-if="blobUrl"
+          :href="blobUrl"
+          :download="downloadName"
+          class="h-9 px-5 rounded-xl bg-brand-primary text-white hover:brightness-110 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-brand-primary/20"
+        >
+          <i class="pi pi-download text-[10px]"></i>
+          Download
+        </a>
+      </div>
+    </header>
+
+    <main class="flex-1 relative overflow-hidden bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-800 to-slate-950">
+      
+      <div v-if="loading" class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-950/50 backdrop-blur-sm">
+        <div class="w-12 h-12 border-4 border-white/10 border-t-brand-primary rounded-full animate-spin mb-4"></div>
+        <span class="text-[10px] font-black text-white uppercase tracking-[0.3em] animate-pulse">Processando Buffer...</span>
       </div>
 
-      <div v-else-if="erro" class="p-6">
-        <div class="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3">
-          <p class="text-[10px] font-black uppercase tracking-widest text-rose-600">
+      <div v-else-if="erro" class="h-full flex items-center justify-center p-6 text-center">
+        <div class="max-w-xs">
+          <div class="w-16 h-16 bg-rose-500/20 text-rose-500 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-rose-500/20">
+            <i class="pi pi-exclamation-circle text-2xl"></i>
+          </div>
+          <h3 class="text-xs font-black text-white uppercase tracking-widest mb-2">Falha na Visualização</h3>
+          <p class="text-[10px] font-bold text-slate-500 uppercase leading-relaxed">
             {{ erro }}
           </p>
         </div>
       </div>
 
-      <div v-else class="h-full">
-        <!-- PDF -->
-        <iframe v-if="isPdf && blobUrl" :src="blobUrl"
-          class="w-full h-full bg-slate-100 dark:bg-slate-950"
+      <div class="h-full w-full">
+        <iframe 
+          v-if="isPdf && blobUrl" 
+          :src="blobUrl"
+          class="w-full h-full border-none"
         />
 
-        <!-- IMAGEM -->
         <div
           v-else-if="isImagem"
-          class="h-full w-full overflow-auto bg-slate-100 dark:bg-slate-950 p-6"
+          class="h-full w-full overflow-auto flex items-start justify-center p-12 scrollbar-hide"
         >
-<div class="w-full flex justify-center">
-  <img
-    v-if="isImagem && blobUrl"
-    :src="blobUrl"
-    :style="{ transform: `scale(${zoom})` }"
-    class="origin-top rounded-2xl bg-white shadow-lg max-w-none"
-    alt="Arquivo"
-  />
-</div>
-
-        </div>
-
-        <!-- OUTROS -->
-        <div v-else class="h-full flex items-center justify-center p-6">
-          <div class="text-center">
-            <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">
-              Este tipo de arquivo não tem pré-visualização.
-            </p>
-            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-2">
-              Use o botão “Baixar”.
-            </p>
+          <div class="relative transition-transform duration-300 ease-out" :style="{ transform: `scale(${zoom})` }">
+            <img
+              v-if="blobUrl"
+              :src="blobUrl"
+              class="rounded-lg shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-white max-w-none"
+              alt="Preview"
+            />
           </div>
         </div>
+
+        <div v-else class="h-full flex flex-col items-center justify-center text-center p-10">
+          <div class="w-20 h-20 bg-white/5 rounded-[2rem] flex items-center justify-center mb-6 border border-white/5">
+            <i :class="fileIcon" class="text-4xl text-slate-600"></i>
+          </div>
+          <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 max-w-[200px] leading-relaxed">
+            Visualização indisponível para este formato.
+          </p>
+          <a :href="blobUrl" :download="downloadName" class="mt-6 text-[9px] font-black text-brand-primary uppercase underline tracking-widest">
+            Baixar arquivo original
+          </a>
+        </div>
       </div>
-    </div>
+    </main>
   </div>
 </template>
 
