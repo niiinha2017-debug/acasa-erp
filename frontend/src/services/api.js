@@ -4,7 +4,7 @@ import storage from '@/utils/storage'
 const api = axios.create({
   baseURL: '/api',
   headers: { 'Content-Type': 'application/json' },
-  withCredentials: true, // ✅ necessário pro cookie HttpOnly ir junto no refresh/logout
+  withCredentials: true,
 })
 
 api.interceptors.request.use((config) => {
@@ -22,10 +22,19 @@ api.interceptors.response.use(
     const status = error?.response?.status
     const original = error?.config
 
-    // ✅ tenta renovar token 1x antes de deslogar
-    if (status === 401 && original && !original._retry) {
-      original._retry = true
+    // ✅ se não tem token, não tenta refresh (evita relogar após logout)
+    const hasToken = !!storage.getToken()
 
+    // ✅ não tenta refresh em rotas de auth
+    const url = String(original?.url || '')
+    const isAuthRoute =
+      url.includes('/auth/login') ||
+      url.includes('/auth/refresh') ||
+      url.includes('/auth/logout')
+
+    // ✅ tenta renovar token 1x apenas se a sessão estava ativa (tem token)
+    if (status === 401 && hasToken && !isAuthRoute && original && !original._retry) {
+      original._retry = true
       try {
         const { data } = await api.post('/auth/refresh')
         if (data?.token) {
@@ -39,8 +48,10 @@ api.interceptors.response.use(
       } catch (e) {
         // cai pro logout abaixo
       }
+    }
 
-      // refresh falhou -> encerra sessão
+    // ✅ 401 sem token / refresh falhou -> encerra sessão
+    if (status === 401) {
       try { await api.post('/auth/logout') } catch {}
       storage.removeToken()
       storage.removeUser()

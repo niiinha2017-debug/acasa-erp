@@ -28,20 +28,14 @@ const isStandalone = () =>
   window.navigator?.standalone === true
 
 
-// ✅ evita múltiplos listeners em dev/HMR
-if (!window.__ACASA_VIS_LOGOUT_BOUND__) {
-  window.__ACASA_VIS_LOGOUT_BOUND__ = true
+if (!window.__ACASA_HIDE_LOGOUT_BOUND__) {
+  window.__ACASA_HIDE_LOGOUT_BOUND__ = true
 
-  document.addEventListener('visibilitychange', () => {
+  window.addEventListener('pagehide', () => {
     if (!isStandalone()) return
-    if (document.visibilityState !== 'hidden') return
     if (!token.value) return
-    
 
-    // best-effort: limpa cookie HttpOnly mesmo quando "fecha"
-    try {
-      navigator.sendBeacon('/api/auth/logout')
-    } catch {}
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'include', keepalive: true }).catch(() => {})
 
     sessionStorage.removeItem(SESSION_KEY)
     storage.removeToken()
@@ -50,6 +44,7 @@ if (!window.__ACASA_VIS_LOGOUT_BOUND__) {
     usuarioLogado.value = null
   })
 }
+
 
 
 export function useAuth() {
