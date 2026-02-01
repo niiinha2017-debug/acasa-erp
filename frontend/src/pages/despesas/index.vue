@@ -269,9 +269,10 @@ const totalEntradas = computed(() => {
 
 const totalPendente = computed(() => {
   return despesasFiltradas.value
-    .filter(d => d.status !== 'PAGO')
+    .filter(d => isSaida(d) && d.status !== 'PAGO')
     .reduce((acc, curr) => acc + moedaParaNumero(curr.valor_total), 0)
 })
+
 
 // --- AÇÕES ---
 

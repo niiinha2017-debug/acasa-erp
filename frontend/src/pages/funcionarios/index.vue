@@ -76,12 +76,13 @@
       >
         <template #cell-nome="{ row }">
           <div class="flex items-center gap-3 py-1">
-            <CustomCheckbox
-              :modelValue="selectedIds.has(row.id)"
-              @update:modelValue="() => toggle(row.id)"
-              label=""
-              class="scale-90"
-            />
+<CustomCheckbox
+  :modelValue="selectedIds.has(row.id)"
+  @update:modelValue="toggle(row.id)"
+  label=""
+  class="scale-90"
+/>
+
             <div class="flex flex-col">
               <span class="text-sm font-bold text-slate-800 uppercase tracking-tight">{{ row.nome }}</span>
               <span class="text-[10px] font-medium text-slate-500">{{ row.cpf || '000.000.000-00' }}</span>
@@ -144,7 +145,7 @@
   owner-type="FUNCIONARIO"
   :owner-id="arquivosFuncionario.id"
   categoria="ANEXO"
-  :can-manage="can('funcionarios.editar')"
+  :can-manage="can('arquivos.criar') || can('arquivos.excluir')"
   @close="fecharArquivos"
 />
 

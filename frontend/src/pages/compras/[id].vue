@@ -359,12 +359,8 @@ const totalCalculado = computed(() => {
   return round2(total)
 })
 
-const fornecedorOptions = computed(() =>
-  (Array.isArray(listaFornecedores.value) ? listaFornecedores.value : []).map((f) => ({
-    value: f.id,
-    label: f.razao_social || f.nome_fantasia,
-  })),
-)
+const fornecedorOptions = computed(() => Array.isArray(listaFornecedores.value) ? listaFornecedores.value : [])
+
 
 const vendaOptions = computed(() =>
   (Array.isArray(listaVendas.value) ? listaVendas.value : []).map((v) => ({
@@ -781,17 +777,18 @@ function descDoItem(row) {
 const carregarDadosIniciais = async () => {
   loading.value = true
   try {
-    const [fornRes, vendRes] = await Promise.all([FornecedorService.listar(), VendaService.listar()])
+const [fornRes, vendRes] = await Promise.all([
+  FornecedorService.select(),
+  VendaService.listar(),
+])
 
-    const fornData = fornRes?.data ?? fornRes
-    const vendData = vendRes?.data ?? vendRes
+listaFornecedores.value = Array.isArray(fornRes?.data) ? fornRes.data : []
+listaVendas.value = Array.isArray(vendRes?.data) ? vendRes.data : []
 
-    listaFornecedores.value = Array.isArray(fornData) ? fornData : []
-    listaVendas.value = Array.isArray(vendData) ? vendData : []
+if (isEdit.value) {
+  await carregarCompra()
+}
 
-    if (isEdit.value) {
-      await carregarCompra()
-    }
   } catch (e) {
     console.log('[COMPRA] erro carregarDadosIniciais:', e)
     notify.error('Erro ao carregar dados.')

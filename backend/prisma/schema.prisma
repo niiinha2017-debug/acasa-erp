@@ -75,7 +75,7 @@ model Cliente {
   nome_completo   String
   razao_social    String?
   nome_fantasia   String?
-  data_nascimento DateTime
+  data_nascimento DateTime?
 
   cpf  String?
   rg   String?

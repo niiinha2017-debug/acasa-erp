@@ -19,27 +19,28 @@ import { Permissoes } from '../auth/permissoes.decorator'
 export class ObrasController {
   constructor(private readonly obrasService: ObrasService) {}
 
-  @Post()
-  @Permissoes('obras.criar')
-  async criar(@Body() body: any) {
-    return this.obrasService.criarObra(body)
-  }
+@Post()
+@Permissoes('obras.criar')
+async criar(@Body() body: any) {
+  return this.obrasService.criarObra(body)
+}
 
-  @Get(':id')
-  @Permissoes('obras.ver')
-  async buscarPorId(@Param('id', ParseIntPipe) id: number) {
-    return this.obrasService.buscarPorId(id)
-  }
+@Get('cliente/:clienteId')
+@Permissoes('obras.ver')
+async listarPorCliente(@Param('clienteId', ParseIntPipe) clienteId: number) {
+  return this.obrasService.buscarPorCliente(clienteId)
+}
 
-  @Get('cliente/:clienteId')
-  @Permissoes('obras.ver')
-  async listarPorCliente(@Param('clienteId', ParseIntPipe) clienteId: number) {
-    return this.obrasService.buscarPorCliente(clienteId)
-  }
+@Get(':id')
+@Permissoes('obras.ver')
+async buscarPorId(@Param('id', ParseIntPipe) id: number) {
+  return this.obrasService.buscarPorId(id)
+}
 
-  @Put(':id')
-  @Permissoes('obras.editar')
-  async atualizar(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
-    return this.obrasService.atualizar(id, body)
-  }
+@Put(':id')
+@Permissoes('obras.editar')
+async atualizar(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
+  return this.obrasService.atualizar(id, body)
+}
+
 }

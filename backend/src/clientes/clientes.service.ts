@@ -17,7 +17,7 @@ export class ClientesService {
   razao_social: dto.razao_social ?? null,
   nome_fantasia: dto.nome_fantasia ?? null,
 
-  data_nascimento: new Date(dto.data_nascimento),
+  data_nascimento: dto.data_nascimento ? new Date(dto.data_nascimento) : null,
 
   cpf: dto.cpf ?? null,
   rg: dto.rg ?? null,
@@ -49,12 +49,12 @@ export class ClientesService {
   }
 
 async listar() {
-  return this.prisma.cliente.findMany({
+  const rows = await this.prisma.cliente.findMany({
     orderBy: { nome_completo: 'asc' },
     include: {
       obras: {
-        orderBy: { id: 'desc' }, // ou criado_em desc
-        take: 1, // “obra ativa” simplificada
+        orderBy: { id: 'desc' },
+        take: 1,
         select: { id: true, status_processo: true },
       },
     },
@@ -122,6 +122,39 @@ data: {
     return { ok: true }
   }
 
+  async select(q?: string) {
+  const termo = String(q || '').trim()
+
+  const rows = await this.prisma.cliente.findMany({
+    where: {
+      status: 'ATIVO',
+      ...(termo
+        ? {
+            OR: [
+              { nome_completo: { contains: termo } },
+              { razao_social: { contains: termo } },
+              { cpf: { contains: termo } },
+              { cnpj: { contains: termo } },
+            ],
+          }
+        : {}),
+    },
+    select: {
+      id: true,
+      nome_completo: true,
+      razao_social: true,
+    },
+    orderBy: { nome_completo: 'asc' },
+    take: 50,
+  })
+
+  return rows.map((c) => ({
+    value: c.id,
+    label: c.nome_completo || c.razao_social || `ID #${c.id}`,
+  }))
+}
+
+
   async aniversariantesDoDia(data: string, enviar?: 'email' | 'whatsapp') {
     const dt = new Date(data)
     if (Number.isNaN(dt.getTime())) throw new Error('Data inválida')
@@ -138,15 +171,16 @@ const filtro =
   : Prisma.sql``
 
 
+return this.prisma.$queryRaw(
+  Prisma.sql`
+    SELECT *
+    FROM clientes
+    WHERE data_nascimento IS NOT NULL
+      AND DATE_FORMAT(data_nascimento, '%m-%d') = ${mmdd}
+    ${filtro}
+    ORDER BY nome_completo ASC
+  `,
+)
 
-    return this.prisma.$queryRaw(
-      Prisma.sql`
-        SELECT *
-        FROM clientes
-        WHERE DATE_FORMAT(data_nascimento, '%m-%d') = ${mmdd}
-        ${filtro}
-        ORDER BY nome_completo ASC
-      `,
-    )
   }
 }

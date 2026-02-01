@@ -97,6 +97,34 @@ async gerarPdf(ids: number[]): Promise<Buffer> {
   return done
 }
 
+async select(q?: string) {
+  const termo = String(q || '').trim()
+
+  const rows = await this.prisma.funcionarios.findMany({
+    where: {
+      status: 'ATIVO',
+      ...(termo
+        ? {
+            OR: [
+              { nome: { contains: termo } },
+              { cpf: { contains: termo } },
+            ],
+          }
+        : {}),
+    },
+    select: {
+      id: true,
+      nome: true,
+    },
+    orderBy: { nome: 'asc' },
+    take: 50,
+  })
+
+  return rows.map((f) => ({
+    value: f.id,
+    label: f.nome,
+  }))
+}
 
 
 async gerarPdfESalvar(ids: number[]) {

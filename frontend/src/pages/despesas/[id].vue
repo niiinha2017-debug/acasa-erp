@@ -407,11 +407,8 @@ watch(() => form.forma_pagamento, (fp) => {
 async function init() {
   loading.value = true
   try {
-    const res = await FuncionarioService.listar()
-    funcionariosOptions.value = (res?.data || []).map(f => ({
-      label: f.nome || f.usuario,
-      value: f.id,
-    }))
+const res = await FuncionarioService.select()
+funcionariosOptions.value = Array.isArray(res?.data) ? res.data : []
 
     if (isEdit.value) {
       const { data: despesa } = await DespesaService.buscar(despesaId.value)

@@ -25,6 +25,6 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false
   },
-  "include": ["src/**/*", "src/prisma/prisma.service.ts", "src/prisma/prisma.module.ts"],
+  "include": ["src/**/*", "src/prisma/prisma.service.ts", "src/prisma/prisma.module.ts", "src/vendas"],
   "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
 }

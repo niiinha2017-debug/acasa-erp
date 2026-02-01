@@ -90,11 +90,15 @@ const perms = [
   { chave: 'clientes.criar', descricao: 'Criar clientes' },
   { chave: 'clientes.editar', descricao: 'Editar clientes' },
   { chave: 'clientes.excluir', descricao: 'Excluir clientes' },
+  { chave: 'clientes.select', descricao: 'Listar clientes (select)' },
+
 
   { chave: 'fornecedores.ver', descricao: 'Visualizar fornecedores' },
   { chave: 'fornecedores.criar', descricao: 'Criar fornecedores' },
   { chave: 'fornecedores.editar', descricao: 'Editar fornecedores' },
   { chave: 'fornecedores.excluir', descricao: 'Excluir fornecedores' },
+  { chave: 'fornecedores.select', descricao: 'Listar fornecedores (select)' },
+
 
   { chave: 'produtos.ver', descricao: 'Visualizar produtos' },
   { chave: 'produtos.criar', descricao: 'Criar produtos' },
@@ -105,11 +109,11 @@ const perms = [
   { chave: 'funcionarios.criar', descricao: 'Criar funcionários' },
   { chave: 'funcionarios.editar', descricao: 'Editar funcionários' },
   { chave: 'funcionarios.excluir', descricao: 'Excluir funcionários' },
+  { chave: 'funcionarios.select', descricao: 'Listar funcionários (select)' },
+
+
 
   // Financeiro
-  { chave: 'cheques.ver', descricao: 'Visualizar cheques' },
-  { chave: 'cheques.editar', descricao: 'Editar cheques' },
-
   { chave: 'fechamento_fornecedor.criar', descricao: 'Executar fechamento mensal por fornecedor' },
 
   { chave: 'contas_pagar.ver', descricao: 'Visualizar contas a pagar' },

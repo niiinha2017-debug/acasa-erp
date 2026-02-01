@@ -44,18 +44,61 @@
                 Seção 01
               </span>
             </div>
+<div class="grid grid-cols-12 gap-4">
+  <Input
+    class="col-span-12 md:col-span-8"
+    v-model="form.nome"
+    label="Nome Completo *"
+    placeholder="Ex: JOÃO DA SILVA"
+    required
+  />
 
-            <div class="grid grid-cols-12 gap-4">
-              <Input class="col-span-12 md:col-span-8" v-model="form.nome" label="Nome Completo *" required />
-              <Input class="col-span-12 md:col-span-4" v-model="cpfUi" label="CPF *" required />
+  <Input
+    class="col-span-12 md:col-span-4"
+    v-model="cpfUi"
+    label="CPF *"
+    placeholder="000.000.000-00"
+    required
+  />
 
-              <Input class="col-span-12 md:col-span-4" v-model="rgUi" label="RG" />
-              <Input class="col-span-12 md:col-span-4" v-model="form.data_nascimento" label="Data Nascimento" type="date" />
-              <Input class="col-span-12 md:col-span-4" v-model="whatsappUi" label="WhatsApp" />
+  <Input
+    class="col-span-12 md:col-span-4"
+    v-model="rgUi"
+    label="RG"
+    placeholder="00.000.000-0"
+  />
 
-              <Input class="col-span-12 md:col-span-6" v-model="emailUi" label="E-mail" :forceUpper="false" />
-              <Input class="col-span-12 md:col-span-6" v-model="form.estado_civil" label="Estado Civil" />
-            </div>
+  <Input
+    class="col-span-12 md:col-span-4"
+    v-model="form.data_nascimento"
+    label="Data Nascimento"
+    type="date"
+    placeholder="AAAA-MM-DD"
+  />
+
+  <Input
+    class="col-span-12 md:col-span-4"
+    v-model="whatsappUi"
+    label="WhatsApp"
+    placeholder="(00) 00000-0000"
+  />
+
+  <Input
+    class="col-span-12 md:col-span-6"
+    v-model="emailUi"
+    label="E-mail"
+    placeholder="nome@dominio.com"
+    :forceUpper="false"
+  />
+
+  <Input
+    class="col-span-12 md:col-span-6"
+    v-model="form.estado_civil"
+    label="Estado Civil"
+    placeholder="Ex: SOLTEIRO"
+  />
+</div>
+
           </section>
 
           <div class="h-px bg-slate-100"></div>
@@ -71,15 +114,51 @@
               </span>
             </div>
 
-            <div class="grid grid-cols-12 gap-4">
-              <Input class="col-span-12 md:col-span-3" v-model="cepUi" label="CEP" @blur="tratarBuscaCep" />
-              <Input class="col-span-12 md:col-span-7" v-model="form.endereco" label="Logradouro" />
-              <Input class="col-span-12 md:col-span-2" v-model="form.numero" label="Nº" />
+<div class="grid grid-cols-12 gap-4">
+  <Input
+    class="col-span-12 md:col-span-3"
+    v-model="cepUi"
+    label="CEP"
+    placeholder="00000-000"
+    @blur="tratarBuscaCep"
+  />
 
-              <Input class="col-span-12 md:col-span-4" v-model="form.complemento" label="Complemento" />
-              <Input class="col-span-12 md:col-span-4" v-model="form.bairro" label="Bairro" />
-              <Input class="col-span-12 md:col-span-4" v-model="form.cidade" label="Cidade" />
-            </div>
+  <Input
+    class="col-span-12 md:col-span-7"
+    v-model="form.endereco"
+    label="Logradouro"
+    placeholder="Ex: RUA DAS FLORES"
+  />
+
+  <Input
+    class="col-span-12 md:col-span-2"
+    v-model="form.numero"
+    label="Nº"
+    placeholder="123"
+  />
+
+  <Input
+    class="col-span-12 md:col-span-4"
+    v-model="form.complemento"
+    label="Complemento"
+    placeholder="Ex: AP 12 / BLOCO B"
+  />
+
+  <Input
+    class="col-span-12 md:col-span-4"
+    v-model="form.bairro"
+    label="Bairro"
+    placeholder="Ex: CENTRO"
+  />
+
+  <Input
+    class="col-span-12 md:col-span-4"
+    v-model="form.cidade"
+    label="Cidade"
+    placeholder="Ex: SÃO PAULO"
+  />
+</div>
+
           </section>
 
           <div class="h-px bg-slate-100"></div>
@@ -187,10 +266,38 @@
             </div>
 
             <div class="grid grid-cols-12 gap-4">
-              <Input class="col-span-12 md:col-span-3" :modelValue="salarioBaseInput" @update:modelValue="updateSalarioBase" label="Salário Base (R$)" />
-              <Input class="col-span-12 md:col-span-3" :modelValue="salarioAdicionalInput" @update:modelValue="updateSalarioAdicional" label="Gratificação (R$)" />
-              <Input class="col-span-12 md:col-span-3" :modelValue="valeInput" @update:modelValue="updateVale" label="Vale (R$)" />
-              <Input class="col-span-12 md:col-span-3" :modelValue="valeTransporteInput" @update:modelValue="updateValeTransporte" label="Vale Transporte (R$)" />
+<Input
+  class="col-span-12 md:col-span-3"
+  :modelValue="salarioBaseInput"
+  @update:modelValue="updateSalarioBase"
+  label="Salário Base (R$)"
+  placeholder="0,00"
+/>
+
+<Input
+  class="col-span-12 md:col-span-3"
+  :modelValue="salarioAdicionalInput"
+  @update:modelValue="updateSalarioAdicional"
+  label="Gratificação (R$)"
+  placeholder="0,00"
+/>
+
+<Input
+  class="col-span-12 md:col-span-3"
+  :modelValue="valeInput"
+  @update:modelValue="updateVale"
+  label="Vale (R$)"
+  placeholder="0,00"
+/>
+
+<Input
+  class="col-span-12 md:col-span-3"
+  :modelValue="valeTransporteInput"
+  @update:modelValue="updateValeTransporte"
+  label="Vale Transporte (R$)"
+  placeholder="0,00"
+/>
+
 
               <div class="col-span-12 md:col-span-3 space-y-2">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Dia de Pagamento</label>
@@ -206,27 +313,72 @@
           <div class="h-px bg-slate-100"></div>
 
           <!-- Arquivos -->
-          <section class="space-y-4">
-            <div class="flex items-center justify-between">
-              <h2 class="text-[11px] font-black uppercase tracking-widest text-slate-500">
-                Documentos anexos
-              </h2>
-<Button
-  v-if="can(isEditing ? 'funcionarios.editar' : 'funcionarios.criar')"
-  variant="primary"
-  type="button"
-                class="!h-10 !rounded-xl !px-4 text-[10px] font-black uppercase tracking-widest"
-                @click="abrirArquivosFuncionario"
-              >
-                <i class="pi pi-folder-open mr-2 text-[10px]"></i>
-                Abrir Arquivos
-              </Button>
-            </div>
+         <!-- Arquivos -->
+<section class="space-y-4">
+  <div class="flex items-center justify-between">
+    <h2 class="text-[11px] font-black uppercase tracking-widest text-slate-500">
+      Documentos anexos
+    </h2>
 
-            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              Upload / visualização dentro do sistema (PWA)
-            </p>
-          </section>
+    <div class="flex items-center gap-2">
+      <input ref="fileInput" type="file" class="hidden" @change="onPickArquivo" />
+
+      <Button
+        v-if="can(permSalvar()) && can('arquivos.criar')"
+        variant="primary"
+        type="button"
+        class="!h-10 !rounded-xl !px-4 text-[10px] font-black uppercase tracking-widest"
+        @click="clicarAdicionarArquivo"
+      >
+        <i class="pi pi-upload mr-2 text-[10px]"></i>
+        Adicionar
+      </Button>
+    </div>
+  </div>
+
+  <p v-if="!isEditing" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+    Salve o funcionário para anexar arquivos.
+  </p>
+
+  <div v-else class="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+    <Table
+      :columns="colArquivos"
+      :rows="arquivos"
+      :loading="loadingArquivos"
+      empty-text="Nenhum arquivo anexado."
+      :boxed="false"
+    >
+      <template #cell-nome="{ row }">
+        <div class="flex flex-col">
+          <span class="text-xs font-black text-slate-800">
+            {{ row.nome || row.filename }}
+          </span>
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            {{ row.mime_type || 'ARQUIVO' }}
+          </span>
+        </div>
+      </template>
+
+      <template #cell-acoes="{ row }">
+        <div class="flex justify-end gap-2">
+          <Button variant="secondary" size="sm" type="button" @click="abrirArquivo(row)">
+            Ver
+          </Button>
+
+          <Button
+            v-if="can('arquivos.excluir')"
+            variant="danger"
+            size="sm"
+            type="button"
+            @click="excluirArquivo(row.id)"
+          >
+            Excluir
+          </Button>
+        </div>
+      </template>
+    </Table>
+  </div>
+</section>
 
           <!-- Footer -->
           <footer class="pt-2 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -262,17 +414,6 @@
       </div>
     </Card>
 
-    <!-- Modal Global -->
-<ArquivosModal
-  v-if="modalArquivosOpen && ownerIdArquivos"
-  :open="modalArquivosOpen"
-  owner-type="FUNCIONARIO"
-  :owner-id="ownerIdArquivos"
-  categoria="ANEXO"
-  :can-manage="can(permSalvar())"
-  @close="modalArquivosOpen = false"
-/>
-
   </div>
 </template>
 
@@ -290,6 +431,7 @@ import { upper, raw } from '@/utils/text'
 import { FUNCIONARIOS_LOCAL_SETOR_CARGO } from '@/constantes'
 import { confirm } from '@/services/confirm'
 import { notify } from '@/services/notify'
+import { ArquivosService } from '@/services/arquivos.service'
 
 
 import { can } from '@/services/permissions'
@@ -303,9 +445,15 @@ const route = useRoute()
 const salvando = ref(false)
 const loading = ref(false)
 
-// ===== modal arquivos global =====
-const modalArquivosOpen = ref(false)
-const ownerIdArquivos = ref(null)
+const arquivos = ref([])
+const loadingArquivos = ref(false)
+const fileInput = ref(null)
+
+const colArquivos = [
+  { key: 'nome', label: 'ARQUIVO' },
+  { key: 'acoes', label: '', align: 'right', width: '220px' },
+]
+
 
 // ===== id / modo =====
 const paramId = computed(() => String(route.params.id || 'novo'))
@@ -570,6 +718,84 @@ async function tratarBuscaCep() {
   form.value.estado = upper(d.uf)
 }
 
+async function carregarArquivos() {
+  if (!isEditing.value || !id.value) {
+    arquivos.value = []
+    return
+  }
+
+  loadingArquivos.value = true
+  try {
+    const res = await ArquivosService.listar({
+      ownerType: 'FUNCIONARIO',
+      ownerId: Number(id.value),
+      categoria: 'ANEXO',
+    })
+    arquivos.value = Array.isArray(res?.data) ? res.data : []
+  } finally {
+    loadingArquivos.value = false
+  }
+}
+function abrirArquivo(row) {
+  const backTo = encodeURIComponent(`/funcionarios/${id.value}`)
+  const name = encodeURIComponent(row?.nome || row?.filename || 'ARQUIVO')
+  const type = encodeURIComponent(row?.mime_type || '')
+
+  router.push(`/arquivos/${row.id}?name=${name}&type=${type}&backTo=${backTo}`)
+}
+async function excluirArquivo(arquivoId) {
+  if (!can('arquivos.excluir')) return notify.error('Acesso negado.')
+
+  const ok = await confirm.show('Excluir arquivo?', 'Esta ação não pode ser desfeita.')
+  if (!ok) return
+
+  try {
+    await ArquivosService.remover(Number(arquivoId))
+    notify.success('Arquivo removido.')
+    await carregarArquivos()
+  } catch (err) {
+    notify.error(err?.response?.data?.message || 'Erro ao excluir arquivo.')
+  }
+}
+async function clicarAdicionarArquivo() {
+  if (!can(permSalvar())) return notify.error('Acesso negado.')
+
+  // garante ID (se for novo, cria e vira edição)
+  const funcionarioId = await garantirIdParaUpload()
+
+  // abre seletor
+  fileInput.value?.click()
+
+  // garante carregar lista (caso já tenha arquivos)
+  await carregarArquivos()
+
+  return funcionarioId
+}
+
+async function onPickArquivo(e) {
+  const file = e.target.files?.[0]
+  e.target.value = ''
+  if (!file) return
+
+  if (!can('arquivos.criar')) return notify.error('Acesso negado.')
+
+  // se por algum motivo não tiver id, garante novamente
+  const funcionarioId = await garantirIdParaUpload()
+
+  try {
+    await ArquivosService.upload({
+      ownerType: 'FUNCIONARIO',
+      ownerId: Number(funcionarioId),
+      categoria: 'ANEXO',
+      file,
+    })
+    notify.success('Arquivo anexado.')
+    await carregarArquivos()
+  } catch (err) {
+    notify.error(err?.response?.data?.message || 'Erro ao anexar arquivo.')
+  }
+}
+
 // ===== salvar =====
 function montarPayload() {
   return {
@@ -585,6 +811,10 @@ function montarPayload() {
 
     dia_pagamento: form.value.dia_pagamento ? Number(form.value.dia_pagamento) : null,
   }
+}
+function normalizarNumero(v) {
+  const n = Number(v)
+  return Number.isFinite(n) ? n : 0
 }
 
 
@@ -665,19 +895,11 @@ async function garantirIdParaUpload() {
   return Number(newId)
 }
 
-async function abrirArquivosFuncionario() {
-  if (!can(permSalvar())) return notify.error('Acesso negado.')
 
-  const funcionarioId = await garantirIdParaUpload()
-  ownerIdArquivos.value = funcionarioId
-  modalArquivosOpen.value = true
-}
-
-// ===== Load =====
 async function carregar() {
   if (!isEditing.value) {
     form.value = novoForm()
-    ownerIdArquivos.value = null
+    arquivos.value = [] // ✅ limpa anexos na tela de novo
     return
   }
 
@@ -721,8 +943,12 @@ onMounted(async () => {
     router.push('/funcionarios')
     return
   }
+
   await carregar()
+  await carregarArquivos()
 })
+
+
 
 watch(
   () => String(route.params.id || 'novo'),
@@ -737,8 +963,10 @@ watch(
     }
 
     await carregar()
+    await carregarArquivos()
   },
 )
+
 
 </script>
 

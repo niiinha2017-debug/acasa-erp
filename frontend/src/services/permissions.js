@@ -4,10 +4,17 @@ export function can(permission) {
   const user = storage.getUser()
   if (!user) return false
 
-  if (user.isAdmin || user.usuario === 'Ana.P') {
-    return true
-  }
+  const permissions = Array.isArray(user?.permissoes)
+    ? user.permissoes
+    : Array.isArray(user?.permissões)
+      ? user.permissões
+      : []
 
-  const permissions = user.permissoes || user.permissões || []
+  // ✅ ADMIN geral via permissão (painel)
+  if (permissions.includes('ADMIN')) return true
+
+  // (opcional) manter a exceção da Ana.P enquanto você quiser
+  if (user.usuario === 'Ana.P') return true
+
   return permissions.includes(permission)
 }

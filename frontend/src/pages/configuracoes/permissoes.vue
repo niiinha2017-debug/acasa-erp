@@ -335,9 +335,9 @@ const salvar = async () => {
 
 onMounted(async () => {
   const user = usuarioLogado.value
-  const ehAdmin = user?.usuario === 'Ana.P' || user?.isAdmin
+  const perms = Array.isArray(user?.permissoes) ? user.permissoes : (Array.isArray(user?.permissões) ? user.permissões : [])
+  const ehAdmin = perms.includes('ADMIN')
 
-  // Se não for admin e não tiver a permissão no token, expulsa
   if (!ehAdmin && !temAcesso('permissoes.ver')) {
     notify.error('Acesso negado.')
     router.push('/')
@@ -346,4 +346,5 @@ onMounted(async () => {
 
   await Promise.all([carregarUsuarios(), carregarCatalogo()])
 })
+
 </script>

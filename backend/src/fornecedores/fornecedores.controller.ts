@@ -8,6 +8,7 @@ import {
   Post,
   HttpCode,
   HttpStatus,
+  Query,
   UseGuards,
 } from '@nestjs/common'
 import { CreateFornecedorDto } from './dto/criar-fornecedor.dto'
@@ -28,6 +29,12 @@ export class FornecedorController {
   listar() {
     return this.service.listar()
   }
+
+@Get('select')
+@Permissoes('fornecedores.select')
+select(@Query('q') q?: string) {
+  return this.service.select(q)
+}
 
   @Get(':id')
   @Permissoes('fornecedores.ver')

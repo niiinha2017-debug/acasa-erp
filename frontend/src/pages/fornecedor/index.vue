@@ -71,9 +71,10 @@
             <span class="text-sm font-bold text-slate-800 block uppercase tracking-tight">
               {{ row.razao_social }}
             </span>
-            <span class="text-[10px] font-medium text-slate-500 uppercase">
-              {{ row.nome_fantasia || 'NOME FANTASIA NÃO DEFINIDO' }}
-            </span>
+<span class="text-sm font-medium text-slate-600 tabular-nums">
+  {{ row.cnpj ? maskCNPJ(row.cnpj) : '—' }}
+</span>
+
           </div>
         </template>
 
@@ -88,9 +89,10 @@
             <span class="text-[11px] font-bold text-slate-500 lowercase">
               {{ row.email || 'sem e-mail' }}
             </span>
-            <span class="text-[10px] font-black text-brand-primary uppercase mt-0.5">
-              {{ row.whatsapp || row.telefone || '—' }}
-            </span>
+<span class="text-[10px] font-black text-brand-primary uppercase mt-0.5">
+  {{ row.whatsapp ? maskTelefone(row.whatsapp) : (row.telefone ? maskTelefone(row.telefone) : '—') }}
+</span>
+
           </div>
         </template>
 

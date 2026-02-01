@@ -81,15 +81,16 @@
           </div>
         </template>
 
-        <template #cell-status="{ row }">
-          <span 
-            class="px-2 py-1 rounded text-[9px] font-black uppercase inline-flex items-center gap-1"
-            :class="getStatusClasses(row.status)"
-          >
-            <span class="w-1.5 h-1.5 rounded-full" :class="getStatusDotClasses(row.status)"></span>
-            {{ row.status || 'INATIVO' }}
-          </span>
-        </template>
+<template #cell-status="{ row }">
+  <span
+    class="px-2 py-1 rounded text-[9px] font-black uppercase inline-flex items-center gap-1"
+    :class="getPipelineClasses(row.pipeline_status)"
+  >
+    <span class="w-1.5 h-1.5 rounded-full" :class="getPipelineDot(row.pipeline_status)"></span>
+    {{ getPipelineLabel(row.pipeline_status) }}
+  </span>
+</template>
+
 
         <template #cell-localizacao="{ row }">
           <div class="flex flex-col">
@@ -204,25 +205,38 @@ const totalCidades = computed(() =>
 )
 
 // Métodos utilitários
-const getStatusClasses = (status) => {
-  const statusMap = {
-    'ATIVO': 'bg-emerald-50 text-emerald-600 border border-emerald-100',
-    'INATIVO': 'bg-slate-100 text-slate-500 border border-slate-200',
-    'PENDENTE': 'bg-amber-50 text-amber-600 border border-amber-100',
-    'BLOQUEADO': 'bg-red-50 text-red-600 border border-red-100'
-  }
-  return statusMap[status] || statusMap['INATIVO']
+const getPipelineLabel = (key) => {
+  if (!key) return 'SEM OBRA'
+  return String(key).replaceAll('_', ' ')
 }
 
-const getStatusDotClasses = (status) => {
-  const dotMap = {
-    'ATIVO': 'bg-emerald-500',
-    'INATIVO': 'bg-slate-400',
-    'PENDENTE': 'bg-amber-500',
-    'BLOQUEADO': 'bg-red-500'
-  }
-  return dotMap[status] || dotMap['INATIVO']
+const getPipelineClasses = (key) => {
+  if (!key) return 'bg-slate-100 text-slate-500 border border-slate-200'
+
+  const k = String(key)
+  if (k.includes('MEDIDA')) return 'bg-indigo-50 text-indigo-600 border border-indigo-100'
+  if (k.includes('ORCAMENTO')) return 'bg-amber-50 text-amber-700 border border-amber-100'
+  if (k.includes('PRODUCAO')) return 'bg-blue-50 text-blue-700 border border-blue-100'
+  if (k.includes('MONTAGEM')) return 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+  if (k.includes('ENCERR')) return 'bg-slate-200 text-slate-700 border border-slate-300'
+
+  return 'bg-slate-100 text-slate-600 border border-slate-200'
 }
+
+const getPipelineDot = (key) => {
+  if (!key) return 'bg-slate-400'
+
+  const k = String(key)
+  if (k.includes('MEDIDA')) return 'bg-indigo-500'
+  if (k.includes('ORCAMENTO')) return 'bg-amber-500'
+  if (k.includes('PRODUCAO')) return 'bg-blue-500'
+  if (k.includes('MONTAGEM')) return 'bg-emerald-500'
+  if (k.includes('ENCERR')) return 'bg-slate-600'
+
+  return 'bg-slate-400'
+}
+
+
 
 // Métodos de ação
 const editarCliente = (id) => {
@@ -257,7 +271,7 @@ const exportarClientes = () => {
     'ID': c.id,
     'Nome/Razão Social': c.nome_completo || c.razao_social,
     'CPF/CNPJ': c.cpf || c.cnpj,
-    'Status': c.status,
+    'Status': (c.pipeline_status || 'SEM_OBRA').replaceAll('_', ' '),
     'Cidade': c.cidade,
     'Estado': c.estado,
     'E-mail': c.email,

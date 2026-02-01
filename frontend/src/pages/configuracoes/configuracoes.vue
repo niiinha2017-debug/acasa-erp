@@ -13,129 +13,139 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
-        <Button
-  v-if="can('configuracoes.empresa.ver')"
-  variant="secondary"
-  @click="confirmarExportarDadosEmpresa"
->
-          <i class="pi pi-file-pdf mr-2"></i> Exportar
+      <div class="flex items-center gap-2 w-full sm:w-auto">
+        <Button 
+         v-if="can('configuracoes.empresa.ver')"
+          variant="ghost" 
+          class="flex-1 sm:flex-none !rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200"
+          @click="confirmarExportarDadosEmpresa"
+        >
+          <i class="pi pi-external-link mr-2"></i> Exportar
         </Button>
-
-        <Button
+        <Button 
+        
   v-if="can('configuracoes.empresa.editar')"
-  variant="primary"
-  :loading="salvando"
-  @click="confirmarSalvarDadosEmpresa"
->
-
-          <i class="pi pi-save mr-2"></i> Salvar
+          class="flex-1 sm:flex-none !rounded-xl text-[10px] font-black uppercase tracking-widest bg-brand-primary hover:bg-brand-primary/90"
+          :loading="salvando"
+          @click="confirmarSalvarDadosEmpresa"
+        >
+          <i class="pi pi-check-circle mr-2"></i> Salvar Alterações
         </Button>
       </div>
     </div>
 
     <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
       <div class="grid grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
-        <!-- LADO ESQUERDO -->
-        <div class="col-span-12 lg:col-span-4 p-8 bg-slate-50/30">
-          <div class="sticky top-8 space-y-8">
-            <!-- LOGO -->
-            <section>
-              <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 text-center lg:text-left">
-                Logo da Marca
-              </h3>
+        
+        <div class="col-span-12 lg:col-span-4 p-8 bg-slate-50/30 space-y-10">
+          
+          <section>
+            <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 text-center lg:text-left">
+              Logo da Marca
+            </h3>
 
-              <div
-                class="relative aspect-square w-48 mx-auto lg:ml-0 rounded-2xl border-2 border-dashed border-slate-200 bg-white flex items-center justify-center overflow-hidden group cursor-pointer hover:border-brand-primary transition-all"
-                @click="fileInput?.click()"
+            <div
+              class="relative aspect-square w-48 mx-auto lg:ml-0 rounded-2xl border-2 border-dashed border-slate-200 bg-white flex items-center justify-center overflow-hidden group cursor-pointer hover:border-brand-primary transition-all"
+              @click="fileInput?.click()"
+            >
+              <img
+                v-if="logoPreview"
+                :src="logoPreview"
+                class="object-contain w-full h-full p-6 transition-transform group-hover:scale-105"
+                alt="Logo"
+              />
+              <div v-else class="flex flex-col items-center text-slate-300">
+                <i class="pi pi-images text-3xl mb-2"></i>
+                <span class="text-[9px] font-black uppercase text-center px-4">Clique para fazer upload</span>
+              </div>
+
+              <input
+                type="file"
+                ref="fileInput"
+                class="hidden"
+                accept="image/*"
+                @change="handleLogoUpload"
+              />
+            </div>
+
+            <div class="mt-3 flex justify-center lg:justify-start">
+              <Button
+                v-if="logoPreview"
+                variant="ghost"
+                size="sm"
+                class="!h-9 !rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-white hover:text-rose-500"
+                type="button"
+                :loading="removendoLogo"
+                @click="confirmarRemoverLogo"
               >
-                <img
-                  v-if="logoPreview"
-                  :src="logoPreview"
-                  class="object-contain w-full h-full p-6 transition-transform group-hover:scale-105"
-                  alt="Logo"
-                />
-                <div v-else class="flex flex-col items-center text-slate-300">
-                  <i class="pi pi-images text-3xl mb-2"></i>
-                  <span class="text-[9px] font-black uppercase">Clique para subir</span>
+                <i class="pi pi-trash mr-2"></i> Remover logo
+              </Button>
+            </div>
+          </section>
+
+          <section>
+            <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
+              Arquivos e Documentos
+            </h3>
+
+            <div class="space-y-2 mb-4">
+              <div
+                v-for="doc in documentos"
+                :key="doc.id"
+                class="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl shadow-sm"
+              >
+                <div class="flex items-center gap-2 overflow-hidden">
+                  <i class="pi pi-file text-slate-400"></i>
+                  <span class="text-[10px] font-bold text-slate-600 truncate uppercase">
+                    {{ doc.nome || doc.filename }}
+                  </span>
                 </div>
 
-                <input
-                  type="file"
-                  ref="fileInput"
-                  class="hidden"
-                  accept="image/*"
-                  @change="handleLogoUpload"
-                />
-              </div>
-
-              <div class="mt-3 flex justify-center lg:justify-start">
-                <Button
-                  v-if="logoPreview"
-                  variant="ghost"
-                  size="sm"
-                  class="!h-9 !rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-white"
-                  type="button"
-                  :loading="removendoLogo"
-                  @click="confirmarRemoverLogo"
-                >
-                  <i class="pi pi-trash mr-2"></i> Remover logo
-                </Button>
-              </div>
-            </section>
-
-            <!-- DOCUMENTOS -->
-            <section>
-              <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
-                Arquivos e Documentos
-              </h3>
-
-              <div class="space-y-2">
-                <div
-                  v-for="doc in documentos"
-                  :key="doc.id"
-                  class="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl"
-                >
-                  <div class="flex items-center gap-2 overflow-hidden">
-                    <i class="pi pi-file text-slate-400"></i>
-                    <span class="text-[10px] font-bold text-slate-600 truncate uppercase">
-                      {{ doc.nome || doc.filename }}
-                    </span>
-                  </div>
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    @click="abrirArquivo(doc)"
+                    class="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:text-brand-primary transition-colors"
+                  >
+                    <i class="pi pi-eye text-xs"></i>
+                  </button>
 
                   <button
                     type="button"
                     @click="confirmarRemoverDocumento(doc)"
-                    class="text-slate-300 hover:text-rose-500"
+                    class="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-50 text-slate-300 hover:text-rose-500 transition-colors"
                   >
                     <i class="pi pi-times text-xs"></i>
                   </button>
                 </div>
-
-                <Button
-                  variant="ghost"
-                  class="w-full !h-11 !rounded-xl text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-slate-200 text-slate-500 hover:bg-slate-50"
-                  type="button"
-                  :loading="anexandoDoc"
-                  @click="triggerDocumentUpload"
-                >
-                  <i class="pi pi-paperclip mr-2"></i>
-                  Anexar Documento
-                </Button>
-
-                <input
-                  type="file"
-                  ref="documentInput"
-                  class="hidden"
-                  @change="handleDocumentUpload"
-                />
               </div>
-            </section>
-          </div>
+
+              <div v-if="!documentos.length" class="text-center py-6 border-2 border-dashed border-slate-100 rounded-2xl">
+                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Nenhum documento anexado</p>
+              </div>
+            </div>
+
+            <Button
+              variant="ghost"
+              class="w-full !h-11 !rounded-xl text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-slate-200 text-slate-500 hover:bg-slate-50"
+              type="button"
+              :loading="anexandoDoc"
+              @click="triggerDocumentUpload"
+            >
+              <i class="pi pi-paperclip mr-2"></i> Anexar Documento
+            </Button>
+
+            <input
+              type="file"
+              ref="documentInput"
+              class="hidden"
+              @change="handleDocumentUpload"
+            />
+          </section>
         </div>
 
-        <!-- LADO DIREITO -->
         <div class="col-span-12 lg:col-span-8 p-8 lg:p-12 space-y-10">
+          
           <section>
             <div class="flex items-center gap-3 mb-6">
               <span class="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
@@ -190,7 +200,7 @@
                   <button
                     type="button"
                     @click="copiarPix"
-                    class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-brand-primary transition-colors"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-400 hover:text-brand-primary transition-colors"
                   >
                     <i class="pi pi-copy text-sm"></i>
                   </button>
@@ -218,6 +228,9 @@ import { confirm } from '@/services/confirm'
 import { maskCNPJ, maskCEP, maskTelefone, maskIE, onlyNumbers } from '@/utils/masks'
 import { buscarCep, buscarCnpj } from '@/utils/utils'
 import { can } from '@/services/permissions'
+
+import { useRouter } from 'vue-router'
+const router = useRouter()
 
 definePage({ meta: { perm: 'configuracoes.empresa.ver' } })
 
@@ -420,6 +433,13 @@ async function confirmarRemoverDocumento(doc) {
   } catch (err) {
     notify.error(err?.response?.data?.message || 'Erro ao remover documento.')
   }
+}
+
+function abrirArquivo(doc) {
+  const name = encodeURIComponent(doc?.nome || doc?.filename || 'ARQUIVO')
+  const type = encodeURIComponent(doc?.mime_type || '')
+  const backTo = encodeURIComponent('/configuracoes/empresa') // ajusta se sua rota for outra
+  router.push(`/arquivos/${doc.id}?name=${name}&type=${type}&backTo=${backTo}`)
 }
 
 // --- UTILITÁRIOS ---

@@ -28,6 +28,7 @@ export const ClienteService = {
   buscar: (id) => api.get(`/clientes/${id}`),
   salvar: (id, dados) => (id ? api.put(`/clientes/${id}`, dados) : api.post('/clientes', dados)),
   remover: (id) => api.delete(`/clientes/${id}`),
+  select: (q) => api.get('/clientes/select', { params: q ? { q } : {} }),
   getAniversariantes: (data, enviar) =>
     api.get('/clientes/relatorios/aniversariantes', { params: { data, enviar } }),
 }
@@ -57,6 +58,8 @@ export const FornecedorService = {
   buscar: (id) => api.get(`/fornecedor/${id}`),
   salvar: (id, dados) => (id ? api.put(`/fornecedor/${id}`, dados) : api.post('/fornecedor', dados)),
   remover: (id) => api.delete(`/fornecedor/${id}`),
+  select: (q) => api.get('/fornecedor/select', { params: q ? { q } : {} }),
+
 }
 
 // --- SERVIÇO DE FUNCIONÁRIOS (SOMENTE ADMIN) ---
@@ -92,6 +95,8 @@ gerarPdf: (ids) => {
   // ✅ agora retorna JSON { arquivoId }
   return api.post('/funcionarios/pdf', { ids })
 },
+select: (q) => api.get('/funcionarios/select', { params: q ? { q } : {} }),
+
 }
 
 

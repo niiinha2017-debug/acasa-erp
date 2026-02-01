@@ -7,6 +7,7 @@ import {
   Put,
   Post,
   Res,
+  Query ,
   HttpStatus,
   UseGuards,
   HttpCode,
@@ -26,12 +27,6 @@ import { Permissoes } from '../auth/permissoes.decorator'
 export class FuncionariosController {
   constructor(private readonly service: FuncionariosService) {}
 
-  @Get()
-  @Permissoes('funcionarios.ver')
-  listar() {
-    return this.service.listar()
-  }
-
 @Post('pdf')
 @Permissoes('funcionarios.ver')
 @HttpCode(HttpStatus.OK)
@@ -40,7 +35,17 @@ async gerarPdfLote(@Body() dto: GerarPdfFuncionariosDto) {
 }
 
 
+@Get('select')
+@Permissoes('funcionarios.select')
+select(@Query('q') q?: string) {
+  return this.service.select(q)
+}
 
+  @Get()
+  @Permissoes('funcionarios.ver')
+  listar() {
+    return this.service.listar()
+  }
 
   @Get(':id')
   @Permissoes('funcionarios.ver')

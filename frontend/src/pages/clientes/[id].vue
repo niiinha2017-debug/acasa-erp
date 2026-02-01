@@ -68,25 +68,52 @@
             force-upper
           />
 
-          <Input
-            class="col-span-12 md:col-span-3"
-            v-model="form.data_nascimento"
-            :label="isJuridica ? 'Data de Abertura' : 'Data de Nascimento'"
-            type="date"
-            required
-          />
+<Input
+  class="col-span-12 md:col-span-3"
+  v-model="form.data_nascimento"
+  :label="isJuridica ? 'Data de Abertura' : 'Data de Nascimento'"
+  type="date"
+/>
         </div>
 
         <!-- Documentos -->
         <div class="grid grid-cols-12 gap-6">
           <template v-if="!isJuridica">
-            <Input class="col-span-12 md:col-span-4" v-model="form.cpf" label="CPF" @input="form.cpf = maskCPF(form.cpf)" />
-            <Input class="col-span-12 md:col-span-4" v-model="form.rg" label="RG" @input="form.rg = maskRG(form.rg)" />
+            <Input
+  class="col-span-12 md:col-span-4"
+  v-model="form.cpf"
+  label="CPF"
+  placeholder="000.000.000-00"
+  @input="form.cpf = maskCPF(form.cpf)"
+/>
+
+            <Input
+  class="col-span-12 md:col-span-4"
+  v-model="form.rg"
+  label="RG"
+  placeholder="00.000.000-0"
+  @input="form.rg = maskRG(form.rg)"
+/>
           </template>
 
           <template v-else>
-            <Input class="col-span-12 md:col-span-4" v-model="form.cnpj" label="CNPJ" @input="form.cnpj = maskCNPJ(form.cnpj)" @blur="onBlurCnpj" />
-            <Input class="col-span-12 md:col-span-4" v-model="form.ie" label="IE" @input="form.ie = maskIE(form.ie)" />
+<Input
+  class="col-span-12 md:col-span-4"
+  v-model="form.cnpj"
+  label="CNPJ"
+  placeholder="00.000.000/0000-00"
+  @input="form.cnpj = maskCNPJ(form.cnpj)"
+  @blur="onBlurCnpj"
+/>
+
+<Input
+  class="col-span-12 md:col-span-4"
+  v-model="form.ie"
+  label="IE"
+  placeholder="Inscrição Estadual"
+  @input="form.ie = maskIE(form.ie)"
+/>
+
           </template>
 
           <div class="col-span-12 md:col-span-4">
@@ -114,9 +141,31 @@
 
         <!-- Contato -->
         <div class="grid grid-cols-12 gap-6">
-          <Input class="col-span-12 md:col-span-4" v-model="form.email" label="E-mail" type="email" :force-upper="false" />
-          <Input class="col-span-12 md:col-span-4" v-model="form.whatsapp" label="WhatsApp" @input="form.whatsapp = maskTelefone(form.whatsapp)" />
-          <Input class="col-span-12 md:col-span-4" v-model="form.telefone" label="Fixo" @input="form.telefone = maskTelefone(form.telefone)" />
+<Input
+  class="col-span-12 md:col-span-4"
+  v-model="form.email"
+  label="E-mail"
+  type="email"
+  placeholder="ex: nome@dominio.com"
+  :force-upper="false"
+/>
+
+<Input
+  class="col-span-12 md:col-span-4"
+  v-model="form.whatsapp"
+  label="WhatsApp"
+  placeholder="(00) 00000-0000"
+  @input="form.whatsapp = maskTelefone(form.whatsapp)"
+/>
+
+<Input
+  class="col-span-12 md:col-span-4"
+  v-model="form.telefone"
+  label="Fixo"
+  placeholder="(00) 0000-0000"
+  @input="form.telefone = maskTelefone(form.telefone)"
+/>
+
           
           <!-- Checkboxes de notificação -->
           <div class="col-span-12 grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-800/30 p-6 rounded-2xl border border-border-ui">
@@ -139,7 +188,6 @@
             <Select
               v-model="form.estado_civil"
               label="Estado Civil"
-              placeholder="SELECIONE..."
               :options="opcoesEstadoCivil"
               force-upper
             />
@@ -196,25 +244,30 @@
             force-upper
           />
           
-          <Input 
-            class="col-span-12 md:col-span-4" 
-            v-model="form.bairro" 
-            label="Bairro" 
-            force-upper
-          />
-          <Input 
-            class="col-span-12 md:col-span-5" 
-            v-model="form.cidade" 
-            label="Cidade" 
-            force-upper
-          />
-          <Input 
-            class="col-span-12 md:col-span-3" 
-            v-model="form.estado" 
-            label="UF (Estado)" 
-            placeholder="Ex: SP"
-            force-upper
-          />
+<Input
+  class="col-span-12 md:col-span-4"
+  v-model="form.bairro"
+  label="Bairro"
+  placeholder="Ex: Centro"
+  force-upper
+/>
+
+<Input
+  class="col-span-12 md:col-span-5"
+  v-model="form.cidade"
+  label="Cidade"
+  placeholder="Ex: São Paulo"
+  force-upper
+/>
+
+<Input
+  class="col-span-12 md:col-span-3"
+  v-model="form.estado"
+  label="UF (Estado)"
+  placeholder="Ex: SP"
+  force-upper
+/>
+
           <Input 
             class="col-span-12" 
             v-model="form.complemento" 
@@ -349,11 +402,7 @@ const form = reactive({
 // -- Computed Filters --
 const clientesOptions = computed(() => {
   return listaClientes.value
-    .filter(c => !isEdit.value || Number(c.id) !== clienteId.value)
-    .map(c => ({
-      label: c.nome_completo || c.razao_social || `ID #${c.id}`,
-      value: c.id
-    }))
+    .filter(o => !isEdit.value || Number(o.value) !== clienteId.value)
 })
 
 // -- Handlers --
@@ -386,8 +435,9 @@ async function carregarDados() {
     loading.value = true
     
     // Carregar lista de clientes para a indicação
-    const resClientes = await ClienteService.listar()
-    listaClientes.value = Array.isArray(resClientes?.data) ? resClientes.data : []
+const resClientes = await ClienteService.select()
+listaClientes.value = Array.isArray(resClientes?.data) ? resClientes.data : []
+
 
     // Se for edição, carregar os dados do cliente
     if (isEdit.value) {
@@ -475,15 +525,17 @@ async function salvar() {
   saving.value = true
 
   try {
-    const payload = {
-      ...form,
-      razao_social: isJuridica.value ? form.nome_completo : null,
-      email: form.email ? String(form.email).toLowerCase().trim() : null,
-      nome_conjuge: form.estado_civil === 'CASADO' ? (form.nome_conjuge || null) : null,
-      enviar_aniversario_email: form.email ? !!form.enviar_aniversario_email : false,
-      enviar_aniversario_whatsapp: form.whatsapp ? !!form.enviar_aniversario_whatsapp : false,
-      indicacao_id: form.indicacao_id ? Number(form.indicacao_id) : null,
-    }
+const payload = {
+  ...form,
+  data_nascimento: form.data_nascimento ? form.data_nascimento : null,
+
+  razao_social: isJuridica.value ? form.nome_completo : null,
+  email: form.email ? String(form.email).toLowerCase().trim() : null,
+  nome_conjuge: form.estado_civil === 'CASADO' ? (form.nome_conjuge || null) : null,
+  enviar_aniversario_email: form.email ? !!form.enviar_aniversario_email : false,
+  enviar_aniversario_whatsapp: form.whatsapp ? !!form.enviar_aniversario_whatsapp : false,
+  indicacao_id: form.indicacao_id ? Number(form.indicacao_id) : null,
+}
 
     if (!isJuridica.value) {
       delete payload.cnpj

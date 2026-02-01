@@ -112,6 +112,31 @@ export class FornecedorService {
     }
   }
 
+  async select(q?: string) {
+  const termo = String(q || '').trim()
+
+  const rows = await this.prisma.fornecedor.findMany({
+    where: termo
+      ? {
+          OR: [
+            { razao_social: { contains: termo } },
+            { nome_fantasia: { contains: termo } },
+            { cnpj: { contains: termo } },
+          ],
+        }
+      : undefined,
+    select: { id: true, razao_social: true, nome_fantasia: true, cnpj: true },
+    orderBy: { razao_social: 'asc' },
+    take: 50,
+  })
+
+  return rows.map((f) => ({
+    value: f.id,
+    label: f.nome_fantasia || f.razao_social || `ID #${f.id}`,
+  }))
+}
+
+
   async atualizar(id: number, dto: UpdateFornecedorDto) {
     await this.buscarPorId(id)
 

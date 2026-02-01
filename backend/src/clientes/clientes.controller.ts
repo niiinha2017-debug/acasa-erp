@@ -47,6 +47,13 @@ export class ClientesController {
     return this.service.aniversariantesDoDia(data ?? hoje, enviar)
   }
 
+  @Get('select')
+@Permissoes('clientes.select')
+select(@Query('q') q?: string) {
+  return this.service.select(q)
+}
+
+
   @Get(':id')
   @Permissoes('clientes.ver')
   buscar(@Param('id') id: string) {

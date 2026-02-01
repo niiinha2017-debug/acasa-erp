@@ -79,7 +79,7 @@
             <template #cell-status="{ row }">
               <button
                 v-if="can('usuarios.editar')"
-                :disabled="row.id === usuarioLogado?.id"
+                :disabled="row.id === usuarioLogado.value?.id"
                 @click="confirmarAlterarStatus(row)"
                 :class="[
                   'px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest border transition-all',
@@ -88,7 +88,7 @@
                     : row.status === 'PENDENTE'
                       ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-600 hover:text-white'
                       : 'bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-600 hover:text-white',
-                  row.id === usuarioLogado?.id ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer',
+                  row.id === usuarioLogado.value?.id? 'opacity-30 cursor-not-allowed' : 'cursor-pointer',
                 ]"
               >
                 {{ row.status }}
@@ -110,7 +110,7 @@
                 </button>
 
                 <button
-                  v-if="can('usuarios.excluir') && row.id !== usuarioLogado?.id"
+                  v-if="can('usuarios.excluir') && row.id !== usuarioLogado.value?.id"
                   @click="confirmarExclusao(row)"
                   class="w-8 h-8 rounded-lg text-slate-300 hover:bg-rose-50 hover:text-rose-600 transition-colors flex items-center justify-center"
                 >
@@ -315,7 +315,7 @@ const salvar = async () => {
 // --- STATUS ---
 async function confirmarAlterarStatus(row) {
   if (!can('usuarios.editar')) return notify.error('Acesso negado.')
-  if (row.id === usuarioLogado?.id) return
+  if (row.id === usuarioLogado.value?.id) return
 
   const statusAtual = String(row.status || '').toUpperCase()
   const novoStatus = statusAtual === 'ATIVO' ? 'INATIVO' : 'ATIVO'
@@ -333,7 +333,7 @@ async function confirmarAlterarStatus(row) {
 
 const toggleStatus = async (row) => {
   if (!can('usuarios.editar')) return notify.error('Acesso negado.')
-  if (row.id === usuarioLogado?.id) return
+  if (row.id === usuarioLogado.value?.id) return
 
   const statusAtual = String(row.status || '').toUpperCase()
   const novoStatus = statusAtual === 'ATIVO' ? 'INATIVO' : 'ATIVO'
@@ -350,7 +350,7 @@ const toggleStatus = async (row) => {
 // --- EXCLUIR ---
 const confirmarExclusao = async (user) => {
   if (!can('usuarios.excluir')) return notify.error('Acesso negado.')
-  if (user.id === usuarioLogado?.id) return
+  if (user.id === usuarioLogado.value?.id) return
 
   const ok = await confirm.show('Excluir', `Remover ${user.nome}?`)
   if (!ok) return
@@ -363,6 +363,7 @@ const confirmarExclusao = async (user) => {
     notify.error('Erro ao excluir')
   }
 }
+
 
 // --- FILTRO ---
 const usuariosFiltrados = computed(() => {
