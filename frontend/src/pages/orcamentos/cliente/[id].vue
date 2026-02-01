@@ -161,7 +161,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { OrcamentosService, ClientesService } from '@/services/index' // Adicionei ClientesService como fallback
+import { OrcamentosService, ClienteService } from '@/services/index' // Adicionei ClientesService como fallback
 import { format } from '@/utils/format'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
@@ -196,7 +196,7 @@ async function carregar() {
     // Busca orçamentos e dados do cliente em paralelo para ganhar tempo
     const [{ data }, resCliente] = await Promise.allSettled([
       OrcamentosService.listar(),
-      ClientesService.obter(clienteId.value).catch(() => null) 
+      ClienteService.obter(clienteId.value).catch(() => null) 
     ])
 
     // Processa Orçamentos
