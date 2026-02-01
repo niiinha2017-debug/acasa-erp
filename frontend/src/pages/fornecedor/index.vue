@@ -139,6 +139,8 @@ import { useRouter } from 'vue-router'
 import { FornecedorService } from '@/services/index'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
+import { maskCNPJ, maskTelefone } from '@/utils/masks'
+
 
 import { can } from '@/services/permissions'
 
