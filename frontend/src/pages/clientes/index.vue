@@ -173,10 +173,6 @@ const clientes = ref([])
 const clientesFiltrados = computed(() => {
   let filtrados = clientes.value
   
-  // Filtrar inativos se necessário
-  if (!mostrarInativos.value) {
-    filtrados = filtrados.filter(c => c.status === 'ATIVO')
-  }
   
   // Aplicar filtro de busca
   if (filtro.value) {
@@ -196,9 +192,7 @@ const clientesFiltrados = computed(() => {
   return filtrados
 })
 
-const totalAtivos = computed(() => 
-  clientes.value.filter(c => c.status === 'ATIVO').length
-)
+
 
 const totalCidades = computed(() => 
   new Set(clientes.value.map(c => c.cidade).filter(Boolean)).size
@@ -303,16 +297,30 @@ const columns = [
 const carregarClientes = async () => {
   carregando.value = true
   try {
-    const res = await ClienteService.listar() // ou o nome real do seu service de listagem
-    clientes.value = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : [])
+    console.log('[CLIENTES] chamando listar...')
+    const res = await ClienteService.listar()
+    console.log('[CLIENTES] response:', res)
+
+    const data =
+      Array.isArray(res) ? res :
+      Array.isArray(res?.data) ? res.data :
+      []
+
+    console.log('[CLIENTES] data length:', data.length)
+    console.log('[CLIENTES] first:', data[0])
+
+    clientes.value = data
   } catch (error) {
-    console.error('Erro ao carregar clientes:', error)
+    console.error('[CLIENTES] erro:', error)
+    console.error('[CLIENTES] status:', error?.response?.status)
+    console.error('[CLIENTES] body:', error?.response?.data)
     notify.error('Falha ao carregar clientes.')
     clientes.value = []
   } finally {
     carregando.value = false
   }
 }
+
 
 
 // Carregar dados ao montar componente

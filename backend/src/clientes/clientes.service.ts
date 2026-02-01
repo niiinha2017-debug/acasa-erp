@@ -59,7 +59,14 @@ async listar() {
       },
     },
   })
+
+  // você quer o status do pipeline: vem da última obra (status_processo)
+  return rows.map((c) => ({
+    ...c,
+    pipeline_status: c.obras?.[0]?.status_processo ?? null,
+  }))
 }
+
 
 
   async buscarPorId(id: number) {
