@@ -330,7 +330,7 @@
 
 <script setup>
 import { ref, reactive, computed, watch } from 'vue'
-import { FinanceiroService, FornecedoreService } from '@/services/index'
+import { FinanceiroService, FornecedorService } from '@/services/index'
 import { format } from '@/utils/format'
 import { notify } from '@/services/notify'
 
@@ -440,11 +440,11 @@ function toggleTrocarFornecedor() {
   if (showTrocarFornecedor.value) carregarFornecedoresLazy()
 }
 
-async function carregarFornecedoresLazy() {
+async function carregarFornecedorLazy() {
   if (fornecedoresOptions.value.length) return
   loading.value = true
   try {
-    const resp = await FornecedoreService.listar({})
+    const resp = await FornecedorService.listar({})
     const list = Array.isArray(resp?.data) ? resp.data : Array.isArray(resp) ? resp : []
     fornecedoresOptions.value = (list || []).map((f) => ({
       label: f.nome_fantasia || f.nome || `#${f.id}`,
