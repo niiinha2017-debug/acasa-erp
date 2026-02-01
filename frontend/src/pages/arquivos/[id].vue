@@ -1,268 +1,132 @@
 <template>
-  <div class="w-full max-w-[1200px] mx-auto space-y-4 animate-page-in">
-    <PageHeader title="Arquivos" subtitle="Gestão de anexos" icon="pi pi-folder" />
+  <div class="w-full min-h-[70vh] animate-page-in">
+    <div class="w-full max-w-[1200px] mx-auto p-4 space-y-3">
+      <div class="flex items-center justify-between gap-3">
+        <Button variant="secondary" size="md" class="!h-10" @click="voltar">
+          <i class="pi pi-arrow-left mr-2 text-xs"></i> Voltar
+        </Button>
 
-    <Card>
-      <div class="p-4 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        <div class="w-full sm:w-80">
-          <SearchInput v-model="q" mode="search" placeholder="Buscar arquivo..." />
-        </div>
+        <div class="flex items-center gap-2">
+          <Button variant="secondary" size="md" class="!h-10" @click="zoomOut">-</Button>
+          <div class="px-3 h-10 flex items-center rounded-xl border border-slate-200 text-xs font-black">
+            {{ Math.round(zoom * 100) }}%
+          </div>
+          <Button variant="secondary" size="md" class="!h-10" @click="zoomIn">+</Button>
 
-        <div class="flex gap-2 w-full sm:w-auto">
-          <Button variant="secondary" size="md" class="!h-10" @click="recarregar">
-            Recarregar
+          <Button variant="primary" size="md" class="!h-10" @click="download" :disabled="!blobUrl">
+            <i class="pi pi-download mr-2 text-xs"></i> Download
           </Button>
-
-          <Button
-            v-if="can('arquivos.criar')"
-            variant="primary"
-            size="md"
-            class="!h-10"
-            @click="abrirPicker"
-          >
-            Enviar
-          </Button>
-
-          <input
-            ref="fileInput"
-            type="file"
-            class="hidden"
-            @change="onPickFile"
-          />
         </div>
       </div>
 
-      <div class="px-4 pb-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-        <span v-if="ownerType && ownerId">
-          CONTEXTO: {{ ownerType }} #{{ ownerId }} <span v-if="categoria">| {{ categoria }}</span>
-        </span>
-<span v-else class="text-slate-400 italic">
-  Selecione um contexto para listar os arquivos.
-</span>
-      </div>
+      <Card>
+        <div class="p-4 border-b border-slate-100">
+          <div class="text-sm font-black text-slate-800 truncate">{{ nomeArquivo }}</div>
+          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            {{ mimeType || 'ARQUIVO' }}
+          </div>
+        </div>
 
-      <Table
-        :columns="columns"
-        :rows="rowsFiltradas"
-        :loading="loading"
-        :empty-text="ownerType && ownerId ? 'Nenhum arquivo encontrado' : 'Informe o contexto (owner_type/owner_id)'"
-        :boxed="false"
-      >
-        <template #cell-arquivo="{ row }">
-          <div class="flex items-center gap-3 py-2">
-            <div class="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
-              <i class="pi pi-file"></i>
-            </div>
-            <div class="min-w-0 flex flex-col">
-              <span class="text-sm font-bold text-slate-800 truncate">
-                {{ row.filename || row.nome || 'Arquivo' }}
-              </span>
-              <span class="text-[10px] font-medium text-slate-500 truncate">
-                {{ row.mime_type || '—' }} <span v-if="row.tamanho">· {{ formatBytes(row.tamanho) }}</span>
-              </span>
+        <div class="p-4 overflow-auto">
+          <div v-if="loading" class="p-10 text-center text-slate-400 text-[10px] font-black uppercase tracking-widest">
+            Carregando...
+          </div>
+
+          <div v-else-if="erro" class="p-6 rounded-xl border border-rose-100 bg-rose-50 text-rose-600 text-[10px] font-black uppercase tracking-widest">
+            {{ erro }}
+          </div>
+
+          <div v-else class="flex justify-center">
+            <img
+              v-if="isImage"
+              :src="blobUrl"
+              :style="{ transform: `scale(${zoom})` }"
+              class="origin-top"
+              alt="arquivo"
+            />
+
+            <iframe
+              v-else-if="isPdf"
+              :src="blobUrl"
+              class="w-full"
+              style="height: 75vh;"
+            />
+
+            <div v-else class="p-10 text-center text-slate-500 text-[10px] font-black uppercase tracking-widest">
+              Visualização não suportada. Use Download.
             </div>
           </div>
-        </template>
-
-        <template #cell-acoes="{ row }">
-          <div class="flex justify-end gap-1">
-            <Button variant="ghost" size="sm" class="!h-9" @click="ver(row)">
-              Ver
-            </Button>
-
-            <Button variant="ghost" size="sm" class="!h-9" @click="baixar(row.id, row.filename)">
-              Baixar
-            </Button>
-
-            <Button
-              v-if="can('arquivos.excluir')"
-              variant="danger"
-              size="sm"
-              class="!h-9"
-              @click="excluir(row.id)"
-            >
-              Excluir
-            </Button>
-          </div>
-        </template>
-      </Table>
-    </Card>
+        </div>
+      </Card>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArquivosService } from '@/services/index'
-import { confirm } from '@/services/confirm'
 import { notify } from '@/services/notify'
-import { can } from '@/services/permissions'
 
 definePage({ meta: { perm: 'arquivos.ver' } })
 
 const route = useRoute()
 const router = useRouter()
 
-// aceita query no formato owner_type/owner_id (backend) ou ownerType/ownerId (frontend)
-function q1(v) {
-  return Array.isArray(v) ? v[0] : v
-}
+const id = computed(() => String(route.params.id || '').replace(/\D/g, ''))
 
-const ownerType = computed(() => {
-  // Tenta pegar de qualquer variante de nome de query
-  const raw = route.query.owner_type || route.query.ownerType || route.query.owner_type_raw
-  return raw ? String(raw).trim().toUpperCase() : null
-})
+const nomeArquivo = computed(() => String(route.query.name || `ARQUIVO_${id.value}`))
+const mimeType = computed(() => String(route.query.type || ''))
 
-const ownerId = computed(() => {
-  const raw = route.query.owner_id || route.query.ownerId
-  if (!raw) return null
-  return String(raw).replace(/\D/g, '')
-})
+const isImage = computed(() => mimeType.value.startsWith('image/'))
+const isPdf = computed(() => mimeType.value === 'application/pdf' || mimeType.value.includes('pdf'))
 
-const categoria = computed(() => {
-  const raw = q1(route.query.categoria)
-  const v = String(raw || '').trim()
-  return v ? v.toUpperCase() : null
-})
-
-
-
-const q = ref('')
 const loading = ref(false)
-const rows = ref([])
+const erro = ref('')
+const blobUrl = ref('')
+const zoom = ref(1)
 
-const fileInput = ref(null)
+function zoomIn() { zoom.value = Math.min(3, zoom.value + 0.1) }
+function zoomOut() { zoom.value = Math.max(0.3, zoom.value - 0.1) }
 
-const columns = [
-  { key: 'arquivo', label: 'ARQUIVO', width: '70%' },
-  { key: 'acoes', label: '', align: 'right', width: '30%' },
-]
-
-const rowsFiltradas = computed(() => {
-  const termo = q.value.trim().toLowerCase()
-  if (!termo) return rows.value
-  return rows.value.filter(r => String(r.filename || r.nome || '').toLowerCase().includes(termo))
-})
-
-function formatBytes(n) {
-  const v = Number(n || 0)
-  if (!v) return ''
-  const units = ['B','KB','MB','GB']
-  let i = 0, x = v
-  while (x >= 1024 && i < units.length - 1) { x /= 1024; i++ }
-  return `${x.toFixed(i === 0 ? 0 : 1)} ${units[i]}`
+function voltar() {
+  router.back()
 }
 
-async function carregar() {
-  if (!ownerType.value || !ownerId.value) {
-    rows.value = []
+async function carregarBlob() {
+  if (!id.value) {
+    erro.value = 'ID inválido.'
     return
   }
 
   loading.value = true
+  erro.value = ''
   try {
-    const res = await ArquivosService.listar({
-      ownerType: ownerType.value,
-      ownerId: ownerId.value,
-      categoria: categoria.value || undefined,
-    })
-
-    rows.value = Array.isArray(res?.data) ? res.data : []
+    const res = await ArquivosService.baixarBlob(id.value)
+    const contentType = res?.headers?.['content-type'] || mimeType.value || 'application/octet-stream'
+    const blob = new Blob([res.data], { type: contentType })
+    blobUrl.value = URL.createObjectURL(blob)
   } catch (e) {
     console.error(e)
-    notify.error('Falha ao carregar arquivos.')
-    rows.value = []
+    erro.value = 'Falha ao abrir arquivo.'
+    notify.error('Falha ao abrir arquivo.')
   } finally {
     loading.value = false
   }
 }
 
-function recarregar() {
-  carregar()
+function download() {
+  if (!blobUrl.value) return
+  const a = document.createElement('a')
+  a.href = blobUrl.value
+  a.download = nomeArquivo.value || 'arquivo'
+  a.click()
 }
 
-function ver(row) {
-  if (!row?.id) return
+onMounted(carregarBlob)
 
-  router.push({
-    path: `/arquivos/${row.id}`,
-    query: {
-      name: row.nome || row.filename || `ARQUIVO_${row.id}`,
-      type: row.mime_type || '',
-    },
-  })
-}
-
-
-async function baixar(id, filename) {
-  try {
-    const res = await ArquivosService.baixarBlob(id)
-    const blob = new Blob([res.data], { type: res.headers?.['content-type'] || 'application/octet-stream' })
-    const url = URL.createObjectURL(blob)
-
-    const a = document.createElement('a')
-    a.href = url
-    a.download = filename || 'arquivo'
-    a.click()
-
-    URL.revokeObjectURL(url)
-  } catch (e) {
-    console.error(e)
-    notify.error('Não foi possível baixar o arquivo.')
-  }
-}
-
-async function excluir(id) {
-  const ok = await confirm.show('EXCLUIR ARQUIVO', 'Deseja excluir este arquivo?')
-  if (!ok) return
-
-  try {
-    await ArquivosService.remover(id)
-    rows.value = rows.value.filter(r => String(r.id) !== String(id))
-    notify.success('Arquivo removido.')
-  } catch (e) {
-    console.error(e)
-    notify.error('Não foi possível excluir.')
-  }
-}
-
-watch(
-  () => [ownerType.value, ownerId.value, categoria.value],
-  () => carregar(),
-  { immediate: true }
-)
-watch(
-  () => route.fullPath,
-  () => console.log('[ARQUIVOS] query =', route.query),
-  { immediate: true }
-)
-
-
-function abrirPicker() {
-  if (!ownerType.value || !ownerId.value) return notify.error('Informe owner_type e owner_id.')
-  fileInput.value?.click()
-}
-
-async function onPickFile(ev) {
-  const file = ev?.target?.files?.[0]
-  ev.target.value = '' // permite selecionar o mesmo arquivo de novo
-  if (!file) return
-
-  try {
-    await ArquivosService.upload({
-      ownerType: ownerType.value,
-      ownerId: ownerId.value,
-      file,
-      categoria: categoria.value || undefined,
-      // prefixo/nomeBase opcionais (se quiser depois)
-    })
-    notify.success('Upload concluído.')
-    await carregar()
-  } catch (e) {
-    console.error(e)
-    notify.error(e?.message || e?.response?.data?.message || 'Falha no upload.')
-  }
-}
-
+onBeforeUnmount(() => {
+  if (blobUrl.value) URL.revokeObjectURL(blobUrl.value)
+})
 </script>
+  

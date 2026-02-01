@@ -270,22 +270,26 @@ async function enviar() {
 
 function visualizar(arq) {
   if (!arq?.id) return
-  
-  // Primeiro fechamos o modal para evitar conflito de Teleport
+
+  // monta o "from" com o contexto completo (pra voltar certo)
+  const ot = String(props.ownerType || '').trim().toUpperCase()
+  const oid = String(props.ownerId || '').replace(/\D/g, '')
+  const cat = props.categoria ? String(props.categoria || '').trim().toUpperCase() : ''
+
+  const from = `/arquivos?owner_type=${encodeURIComponent(ot)}&owner_id=${encodeURIComponent(oid)}${cat ? `&categoria=${encodeURIComponent(cat)}` : ''}`
+
   fechar()
-  
-  // Agora mandamos pro visualizar com TODO o contexto necessário
+
   router.push({
     path: `/arquivos/${arq.id}`,
     query: {
       name: arq.nome || arq.filename || `ARQUIVO_${arq.id}`,
       type: arq.mime_type || '',
-      // Passamos o "pai" do arquivo para o visualizador não dar erro de listagem
-      owner_type: String(props.ownerType).toUpperCase(),
-      owner_id: String(props.ownerId)
+      from, // ✅ isso é o que o botão VOLTAR do viewer vai usar
     },
   })
 }
+
 
 async function remover(arq) {
   if (!props.canManage) return notify.error('Acesso negado.')
