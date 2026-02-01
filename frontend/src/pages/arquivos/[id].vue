@@ -66,7 +66,7 @@
 
         <template #cell-acoes="{ row }">
           <div class="flex justify-end gap-1">
-            <Button variant="ghost" size="sm" class="!h-9" @click="ver(row.id)">
+            <Button variant="ghost" size="sm" class="!h-9" @click="ver(row)">
               Ver
             </Button>
 
@@ -182,9 +182,18 @@ function recarregar() {
   carregar()
 }
 
-function ver(id) {
-  router.push(`/arquivos/${id}`)
+function ver(row) {
+  if (!row?.id) return
+
+  router.push({
+    path: `/arquivos/${row.id}`,
+    query: {
+      name: row.nome || row.filename || `ARQUIVO_${row.id}`,
+      type: row.mime_type || '',
+    },
+  })
 }
+
 
 async function baixar(id, filename) {
   try {
