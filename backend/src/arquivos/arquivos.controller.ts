@@ -63,8 +63,8 @@ export class ArquivosController {
   }
 
   // UPLOAD GLOBAL
-  @Post('upload')
-  @Permissoes('arquivos.criar')
+@Post('upload')
+@Permissoes('arquivos.criar')
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
@@ -98,46 +98,58 @@ filename: (req, file, cb) => {
       limits: { fileSize: 500 * 1024 * 1024 }, // 500MB (ajuste se quiser)
     }),
   )
-  async upload(
-    @UploadedFile() file: Express.Multer.File,
-    @Query('owner_type') _owner_type_q: string, // não usado (só pra não confundir)
-    @Res({ passthrough: true }) res: Response,
-    @Query() _q: any,
-  ) {
-    // owner_type/owner_id/categoria/slot_key vêm no body do multipart
-    const body: any = (res.req as any)?.body || {}
 
-    if (!file) throw new BadRequestException('Arquivo não enviado.')
 
-return this.arquivosService.salvarUpload({
-  owner_type: body.owner_type,
-  owner_id: body.owner_id, // <- aqui não converte pra número nem valida
-  categoria: body.categoria ?? null,
-  slot_key: body.slot_key ?? null,
-  file,
-})
+async upload(
+  @UploadedFile() file: Express.Multer.File,
+  @Query('owner_type') _owner_type_q: string, // não usado (só pra não confundir)
+  @Res({ passthrough: true }) res: Response,
+  @Query() _q: any,
+) {
+  // owner_type/owner_id/categoria/slot_key vêm no body do multipart
+  const body: any = (res.req as any)?.body || {}
 
+  if (!file) throw new BadRequestException('Arquivo não enviado.')
+
+  const oid = Number(String(body.owner_id || '').replace(/\D/g, ''))
+  if (!body.owner_type || !oid) {
+    throw new BadRequestException('owner_type e owner_id são obrigatórios.')
   }
+
+  return this.arquivosService.salvarUpload({
+    owner_type: String(body.owner_type || '').trim().toUpperCase(),
+    owner_id: oid,
+    categoria: body.categoria ?? null,
+    slot_key: body.slot_key ?? null,
+    file,
+  })
+}
+
 
   // BAIXAR COMO BLOB (PWA-friendly)
-  @Get(':id/blob')
-  @Permissoes('arquivos.ver')
-  async baixarBlob(@Param('id') id: string, @Res() res: Response) {
-    const cleanId = Number(String(id).replace(/\D/g, ''))
-    if (!cleanId) throw new BadRequestException('ID inválido.')
+// BAIXAR COMO BLOB (PWA-friendly)
+@Get(':id/blob')
+@Permissoes('arquivos.ver')
+async baixarBlob(@Param('id') id: string, @Res() res: Response) {
+  const cleanId = Number(String(id).replace(/\D/g, ''))
+  if (!cleanId) throw new BadRequestException('ID inválido.')
 
-    const arquivo = await this.arquivosService.buscarPorId(cleanId)
+  const arquivo = await this.arquivosService.buscarPorId(cleanId)
 
-    // arquivo.url: "/uploads/xxx/arquivo.ext"
-    const rel = String(arquivo.url || '').replace(/^\//, '') // "uploads/.."
-    const abs = join(process.cwd(), rel)
+  const rel = String(arquivo.url || '').replace(/^\//, '') // "uploads/..."
+  const relNoUploads = rel.replace(/^uploads[\/\\]/, '')   // ".../arquivo.ext"
 
-    if (!fs.existsSync(abs)) throw new BadRequestException('Arquivo físico não encontrado.')
+  const abs = join(process.cwd(), 'uploads', relNoUploads)
 
-    res.setHeader('Content-Type', arquivo.mime_type || 'application/octet-stream')
-    res.setHeader('Content-Disposition', `inline; filename="${arquivo.filename}"`)
-    return res.sendFile(abs)
+  if (!fs.existsSync(abs)) {
+    throw new BadRequestException(`Arquivo físico não encontrado: ${rel}`)
   }
+
+  res.setHeader('Content-Type', arquivo.mime_type || 'application/octet-stream')
+  res.setHeader('Content-Disposition', `inline; filename="${arquivo.filename}"`)
+  return res.sendFile(abs)
+}
+
 
   // REMOVER
   @Delete(':id')
