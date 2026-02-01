@@ -173,169 +173,173 @@
   </div>
 </template>
 
-<script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { ClienteService, ObrasService } from '@/services/index'
-import { confirm } from '@/services/confirm' 
-import { can } from '@/services/permissions'
-import { notify } from '@/services/notify'
+  <script setup>
+  import { computed, onMounted, reactive, ref, watch } from 'vue'
+  import { ClienteService, ObrasService } from '@/services/index'
+  import { confirm } from '@/services/confirm' 
+  import { can } from '@/services/permissions'
+  import { notify } from '@/services/notify'
 
 
-definePage({ meta: { perm: 'agendamentos.ver' } })
+  definePage({ meta: { perm: 'agendamentos.ver' } })
 
 
-// Mapeamento de labels para facilitar o v-for e manter o código limpo
-const fieldLabels = {
-  data_medida: 'Data da Medida',
-  data_orcamento: 'Data do Orçamento',
-  data_medida_fina: 'Data da Medida Fina',
-  data_producao: 'Data da Produção',
-  data_montagem: 'Data da Montagem'
-}
-
-const loadingClientes = ref(false)
-const loadingObra = ref(false)
-const saving = ref(false)
-const creating = ref(false)
-const clientes = ref([])
-const clienteSelecionadoId = ref(null)
-const obrasDoCliente = ref([])
-
-const obraAtiva = computed(() => (obrasDoCliente.value?.length ? obrasDoCliente.value[0] : null))
-
-const clienteNome = computed(() => {
-  const id = Number(clienteSelecionadoId.value)
-const opt = clientes.value.find(o => Number(o.value) === id)
-return opt?.label || 'Desconhecido'
-
-})
-
-const clientesOptions = computed(() => clientes.value || [])
-
-
-const form = reactive({
-  data_medida: '',
-  data_orcamento: '',
-  data_medida_fina: '',
-  data_producao: '',
-  data_montagem: '',
-})
-
-// Helper para converter ISO para YYYY-MM-DD (Input Date)
-function toInputDate(value) {
-  if (!value) return ''
-  return value.split('T')[0]
-}
-
-async function carregarClientes() {
-  loadingClientes.value = true
-  try {
-const res = await ClienteService.select()
-clientes.value = Array.isArray(res?.data) ? res.data : []
-  } finally {
-    loadingClientes.value = false
+  // Mapeamento de labels para facilitar o v-for e manter o código limpo
+  const fieldLabels = {
+    data_medida: 'Data da Medida',
+    data_orcamento: 'Data do Orçamento',
+    data_medida_fina: 'Data da Medida Fina',
+    data_producao: 'Data da Produção',
+    data_montagem: 'Data da Montagem'
   }
-}
 
-async function carregarObras(clienteId) {
-  loadingObra.value = true
-  try {
-    const res = await ObrasService.listarPorCliente(clienteId)
-    obrasDoCliente.value = res?.data || []
-    aplicarObraNoForm()
-  } finally {
-    loadingObra.value = false
+  const loadingClientes = ref(false)
+  const loadingObra = ref(false)
+  const saving = ref(false)
+  const creating = ref(false)
+  const clientes = ref([])
+  const clienteSelecionadoId = ref(null)
+  const obrasDoCliente = ref([])
+
+  const obraAtiva = computed(() => (obrasDoCliente.value?.length ? obrasDoCliente.value[0] : null))
+
+  const clienteNome = computed(() => {
+    const id = Number(clienteSelecionadoId.value)
+  const opt = clientes.value.find(o => Number(o.value) === id)
+  return opt?.label || 'Desconhecido'
+
+  })
+
+  const clientesOptions = computed(() => clientes.value || [])
+
+
+  const form = reactive({
+    data_medida: '',
+    data_orcamento: '',
+    data_medida_fina: '',
+    data_producao: '',
+    data_montagem: '',
+  })
+
+  // Helper para converter ISO para YYYY-MM-DD (Input Date)
+  function toInputDate(value) {
+    if (!value) return ''
+    return value.split('T')[0]
   }
-}
 
-function aplicarObraNoForm() {
-  const o = obraAtiva.value
-  Object.keys(fieldLabels).forEach(key => {
-    form[key] = o ? toInputDate(o[key]) : ''
-  })
-}
-
-async function criarObra() {
-  const id = Number(clienteSelecionadoId.value)
-  if (!id) return
-
-  if (!can('agendamentos.criar')) return notify.error('Acesso negado.')
-
-  creating.value = true
-  try {
-    await ObrasService.criar({ cliente_id: id, status_processo: 'MEDIDA_PENDENTE' })
-    await carregarObras(id)
-  } finally {
-    creating.value = false
+  async function carregarClientes() {
+    loadingClientes.value = true
+    try {
+  const res = await ClienteService.select()
+  clientes.value = Array.isArray(res?.data) ? res.data : []
+    } finally {
+      loadingClientes.value = false
+    }
   }
-}
 
-
-async function salvar() {
-   if (!can('agendamentos.editar')) return notify.error('Acesso negado.')
-  const o = obraAtiva.value
-  if (!o?.id) return
-  saving.value = true
-  try {
-    // Envia as datas; o backend se encarrega de converter para ISO
-    await ObrasService.salvar(o.id, { ...form })
-    await carregarObras(Number(clienteSelecionadoId.value))
-  } finally {
-    saving.value = false
+  async function carregarObras(clienteId) {
+    loadingObra.value = true
+    try {
+      const res = await ObrasService.listarPorCliente(clienteId)
+      obrasDoCliente.value = res?.data || []
+      aplicarObraNoForm()
+    } finally {
+      loadingObra.value = false
+    }
   }
-}
 
-// LIMPAR
-async function confirmarLimpar() {
-  const ok = await confirm({
-    title: 'LIMPAR FILTRO',
-    message: 'Isso vai remover o cliente selecionado e limpar os dados exibidos na tela.',
-    confirmText: 'LIMPAR',
-    cancelText: 'CANCELAR',
-    danger: true,
-  })
-  if (!ok) return
-  limpar()
-}
+  function aplicarObraNoForm() {
+    const o = obraAtiva.value
+    Object.keys(fieldLabels).forEach(key => {
+      form[key] = o ? toInputDate(o[key]) : ''
+    })
+  }
 
-// CRIAR OBRA
-async function confirmarCriarObra() {
-  const id = Number(clienteSelecionadoId.value)
-  if (!id) return
+  async function criarObra() {
+    const id = Number(clienteSelecionadoId.value)
+    if (!id) return
 
-  const ok = await confirm({
-    title: 'INICIAR OBRA',
-    message: 'Deseja iniciar o fluxo de obra para este cliente agora?',
-    confirmText: 'INICIAR',
-    cancelText: 'CANCELAR',
-  })
-  if (!ok) return
-  await criarObra()
-}
+    if (!can('agendamentos.criar')) return notify.error('Acesso negado.')
+
+    creating.value = true
+    try {
+      await ObrasService.criar({ cliente_id: id, status_processo: 'MEDIDA_PENDENTE' })
+      await carregarObras(id)
+    } finally {
+      creating.value = false
+    }
+  }
 
 
-// SALVAR
-async function confirmarSalvar() {
-  const ok = await confirm({
-    title: 'SALVAR AGENDAMENTOS',
-    message: 'Deseja salvar as datas informadas para este cliente?',
-    confirmText: 'SALVAR',
-    cancelText: 'CANCELAR',
-  })
-  if (!ok) return
-  await salvar()
-}
+  async function salvar() {
+    if (!can('agendamentos.editar')) return notify.error('Acesso negado.')
+    const o = obraAtiva.value
+    if (!o?.id) return
+    saving.value = true
+    try {
+      // Envia as datas; o backend se encarrega de converter para ISO
+      await ObrasService.salvar(o.id, { ...form })
+      await carregarObras(Number(clienteSelecionadoId.value))
+    } finally {
+      saving.value = false
+    }
+  }
+
+  // LIMPAR
+  async function confirmarLimpar() {
+    const ok = await confirm.show(
+      'LIMPAR FILTRO',
+      'Isso vai remover o cliente selecionado e limpar os dados exibidos na tela.'
+    )
+
+    if (!ok) return
+    limpar()
+  }
 
 
-function limpar() {
-  clienteSelecionadoId.value = null
-  obrasDoCliente.value = []
-}
+  // CRIAR OBRA
+  async function confirmarCriarObra() {
+    const id = Number(clienteSelecionadoId.value)
+    if (!id) return
 
-onMounted(carregarClientes)
+    const ok = await confirm.show(
+      'INICIAR OBRA',
+      'Deseja iniciar o fluxo de obra para este cliente agora?'
+    )
+
+    if (!ok) return
+    await criarObra()
+  }
+
+
+
+
+  // SALVAR
+  async function confirmarSalvar() {
+    const ok = await confirm.show(
+      'SALVAR AGENDAMENTOS',
+      'Deseja salvar as datas informadas para este cliente?'
+    )
+
+    if (!ok) return
+    await salvar()
+  }
+
+
+  function limpar() {
+    clienteSelecionadoId.value = null
+    obrasDoCliente.value = []
+  }
+
+  onMounted(carregarClientes)
 
 watch(clienteSelecionadoId, async (val) => {
-  if (val) await carregarObras(Number(val))
-  else aplicarObraNoForm()
+  const id = Number(val)
+  if (id) await carregarObras(id)
+  else {
+    obrasDoCliente.value = []
+    aplicarObraNoForm()
+  }
 })
-</script>
+
+  </script>
