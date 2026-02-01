@@ -13,7 +13,7 @@ const error = ref('')
 // ✅ boot check: roda UMA vez quando o arquivo é importado
 if (token.value && !sessionStorage.getItem(SESSION_KEY)) {
   // best-effort: limpa cookie HttpOnly do refresh
-  fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {})
+  fetch('/api/auth/logout', { method: 'POST', credentials: 'include', keepalive: true }).catch(() => {})
 
   storage.removeToken()
   storage.removeUser()
@@ -22,6 +22,35 @@ if (token.value && !sessionStorage.getItem(SESSION_KEY)) {
 } else if (token.value) {
   sessionStorage.setItem(SESSION_KEY, '1')
 }
+
+const isStandalone = () =>
+  window.matchMedia?.('(display-mode: standalone)')?.matches ||
+  window.navigator?.standalone === true
+
+
+// ✅ evita múltiplos listeners em dev/HMR
+if (!window.__ACASA_VIS_LOGOUT_BOUND__) {
+  window.__ACASA_VIS_LOGOUT_BOUND__ = true
+
+  document.addEventListener('visibilitychange', () => {
+    if (!isStandalone()) return
+    if (document.visibilityState !== 'hidden') return
+    if (!token.value) return
+    
+
+    // best-effort: limpa cookie HttpOnly mesmo quando "fecha"
+    try {
+      navigator.sendBeacon('/api/auth/logout')
+    } catch {}
+
+    sessionStorage.removeItem(SESSION_KEY)
+    storage.removeToken()
+    storage.removeUser()
+    token.value = null
+    usuarioLogado.value = null
+  })
+}
+
 
 export function useAuth() {
   const isAuthenticated = computed(() => !!token.value)
@@ -147,3 +176,6 @@ export function useAuth() {
     syncMe,
   }
 }
+
+
+
