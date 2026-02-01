@@ -426,7 +426,7 @@ import { FuncionarioService } from '@/services/index'
 
 import { maskCPF, maskRG, maskTelefone, maskCEP, onlyNumbers, maskMoneyBR } from '@/utils/masks'
 import { buscarCep } from '@/utils/utils'
-import { numeroParaMoeda } from '@/utils/number'
+import { numeroParaMoeda,moedaParaNumero } from '@/utils/number'
 import { upper, raw } from '@/utils/text'
 import { FUNCIONARIOS_LOCAL_SETOR_CARGO } from '@/constantes'
 import { confirm } from '@/services/confirm'
