@@ -1,26 +1,28 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import cookieParser from 'cookie-parser'; // ✅ ADD
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.setGlobalPrefix('api');
 
-app.enableCors({
-  origin: [
-    'http://localhost:3001',
-    'http://127.0.0.1:3001',
-    'http://192.168.15.155:3001', // ✅ seu Nuxt via rede
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'https://acasamarcenaria.com.br',
-    'https://www.acasamarcenaria.com.br',
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-});
+  app.use(cookieParser()); // ✅ ADD (tem que ser antes das rotas)
 
+  app.enableCors({
+    origin: [
+      'http://localhost:3001',
+      'http://127.0.0.1:3001',
+      'http://192.168.15.155:3001',
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'https://acasamarcenaria.com.br',
+      'https://www.acasamarcenaria.com.br',
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
 
   await app.listen(3000, '0.0.0.0');
   console.log('🚀 Backend rodando na porta 3000');

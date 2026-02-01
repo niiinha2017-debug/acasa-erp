@@ -21,6 +21,38 @@ constructor(
   private readonly mailService: MailService,
 ) {}
 
+async refresh(refreshToken: string) {
+  try {
+    const decoded = await this.jwt.verifyAsync(refreshToken, {
+      secret: process.env.JWT_REFRESH_SECRET,
+    })
+
+    const userId = Number(decoded?.sub)
+    if (!userId) throw new UnauthorizedException('Sessão inválida')
+
+    const user = await this.prisma.usuarios.findUnique({
+      where: { id: userId },
+      select: { id: true, usuario: true, email: true, status: true },
+    })
+
+    if (!user) throw new UnauthorizedException('Sessão inválida')
+    if (user.status === 'INATIVO') {
+      throw new UnauthorizedException('Sua conta está desativada.')
+    }
+
+    const payload = {
+      sub: user.id,
+      usuario: user.usuario,
+      email: user.email,
+      status: user.status,
+    }
+
+    const token = await this.jwt.signAsync(payload, { expiresIn: '15m' })
+    return { token }
+  } catch {
+    throw new UnauthorizedException('Sessão expirada')
+  }
+}
 
   // =========================
   // LOGIN (usuario OU email)
@@ -75,21 +107,34 @@ if (registro.status === 'INATIVO') {
 
     const precisaTrocarSenha = !!recPendente;
 
-    const token = await this.jwt.signAsync(payload);
+const token = await this.jwt.signAsync(payload, {
+  expiresIn: '15m',
+})
 
-     return {
-      token,
-      precisa_trocar_senha: precisaTrocarSenha,
-      usuario: {
-        id: registro.id,
-        nome: registro.nome,
-        usuario: registro.usuario,
-        email: registro.email,
-        status: registro.status,
-        criado_em: registro.criado_em,
-        permissoes,
-      },
-    };
+// refresh token só com o sub (menos dados = melhor)
+const refresh_token = await this.jwt.signAsync(
+  { sub: registro.id },
+  {
+    expiresIn: '30d',
+    secret: process.env.JWT_REFRESH_SECRET,
+  },
+)
+
+return {
+  token,
+  refresh_token, // ✅ o controller vai setar no cookie e remover do JSON
+  precisa_trocar_senha: precisaTrocarSenha,
+  usuario: {
+    id: registro.id,
+    nome: registro.nome,
+    usuario: registro.usuario,
+    email: registro.email,
+    status: registro.status,
+    criado_em: registro.criado_em,
+    permissoes,
+  },
+};
+
 
   }
 

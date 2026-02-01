@@ -1,5 +1,6 @@
 {
   "devDependencies": {
+    "@types/cookie-parser": "^1.4.10",
     "@types/jest": "^30.0.0",
     "@types/multer": "^2.0.0",
     "@types/nodemailer": "^7.0.5",
@@ -14,6 +15,7 @@
     "@nestjs/schedule": "^6.1.0",
     "@prisma/client": "^7.3.0",
     "@vueuse/core": "^14.1.0",
+    "cookie-parser": "^1.4.7",
     "nodemailer": "^7.0.12",
     "pdf-lib": "^1.17.1",
     "primeicons": "^7.0.0"

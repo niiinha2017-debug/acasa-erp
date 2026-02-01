@@ -6,17 +6,23 @@ export class PermissionsGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const permissoesRequeridas =
-      this.reflector.get<string[]>('permissoes', context.getHandler()) ||
-      this.reflector.get<string[]>('permissoes', context.getClass())
+    // ✅ Pega permissões do handler ou da classe e normaliza para array
+    const permissoesRequeridasRaw =
+      this.reflector.get<any>('permissoes', context.getHandler()) ||
+      this.reflector.get<any>('permissoes', context.getClass())
+
+    const permissoesRequeridas: string[] = Array.isArray(permissoesRequeridasRaw)
+      ? permissoesRequeridasRaw
+      : permissoesRequeridasRaw
+        ? [String(permissoesRequeridasRaw)]
+        : []
 
     // Se a rota não exige permissão, libera
-    if (!permissoesRequeridas || permissoesRequeridas.length === 0) return true
+    if (permissoesRequeridas.length === 0) return true
 
     const { user } = context.switchToHttp().getRequest()
 
-    // 🔴 ADIÇÃO DE SEGURANÇA: 
-    // Se o usuário não estiver ATIVO, ele não pode ter permissão NENHUMA no sistema interno
+    // 🔒 Segurança: só usuário ATIVO pode acessar rotas internas com permissão
     if (!user || user.status !== 'ATIVO') {
       throw new ForbiddenException('Acesso negado: Sua conta ainda não está ativa ou foi bloqueada.')
     }
