@@ -426,7 +426,7 @@ import { FuncionarioService } from '@/services/index'
 
 import { maskCPF, maskRG, maskTelefone, maskCEP, onlyNumbers, maskMoneyBR } from '@/utils/masks'
 import { buscarCep } from '@/utils/utils'
-import { numeroParaMoeda,moedaParaNumero } from '@/utils/number'
+import { numeroParaMoeda } from '@/utils/number'
 import { upper, raw } from '@/utils/text'
 import { FUNCIONARIOS_LOCAL_SETOR_CARGO } from '@/constantes'
 import { confirm } from '@/services/confirm'
@@ -812,10 +812,7 @@ function montarPayload() {
     dia_pagamento: form.value.dia_pagamento ? Number(form.value.dia_pagamento) : null,
   }
 }
-function normalizarNumero(v) {
-  const n = Number(v)
-  return Number.isFinite(n) ? n : 0
-}
+
 
 
 async function confirmarSalvarFuncionario() {
