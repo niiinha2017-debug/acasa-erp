@@ -110,15 +110,16 @@
               {{ error }}
             </div>
 
-            <Button
-              type="submit"
-              :loading="loading"
-              fullWidth
-              class="h-11 rounded-2xl font-black uppercase tracking-[0.25em]"
-              :disabled="loading"
-            >
-              Entrar
-            </Button>
+<Button
+  type="submit"
+  :loading="loading"
+  fullWidth
+  class="h-11 rounded-2xl font-black uppercase tracking-[0.25em]"
+  :disabled="loading || !canSubmit"
+>
+  Entrar
+</Button>
+
 
             <div class="pt-4 border-t border-slate-200/70 dark:border-slate-800/70 text-center">
               <button
@@ -281,22 +282,48 @@ onMounted(() => {
   }
 })
 
+function resetLogin() {
+  // ✅ sempre limpa senha
+  formLogin.senha = ''
+  // ✅ limpa usuário se NÃO estiver lembrando
+  if (!lembrarUsuario.value) formLogin.usuario = ''
+  showPassword.value = false
+}
+
+function resetCadastro() {
+  formCadastro.nome = ''
+  formCadastro.email = ''
+  formCadastro.usuario = ''
+  formCadastro.senha = ''
+}
+
+function resetRecuperacao() {
+  emailRecuperacao.value = ''
+}
+
+
 function openCadastro() {
   error.value = ''
+  resetCadastro() // ✅
   showModalCadastro.value = true
   showModalRecuperacao.value = false
 }
 
 function openRecuperacao() {
   error.value = ''
+  resetRecuperacao() // ✅
   showModalRecuperacao.value = true
   showModalCadastro.value = false
 }
 
+
 function fecharTudo() {
   showModalCadastro.value = false
   showModalRecuperacao.value = false
+  resetCadastro()     // ✅
+  resetRecuperacao()  // ✅
 }
+
 
 async function handleLoginSubmit() {
   error.value = ''
@@ -306,12 +333,15 @@ async function handleLoginSubmit() {
     if (lembrarUsuario.value) localStorage.setItem('erp_lembrar_usuario', formLogin.usuario)
     else localStorage.removeItem('erp_lembrar_usuario')
 
+    resetLogin() // ✅ AQUI
+
     if (data?.precisa_trocar_senha) router.push('/alterar-senha')
     else router.push('/')
   } catch (e) {
     error.value = 'Usuário ou senha inválidos.'
   }
 }
+
 
 watch(lembrarUsuario, (v) => {
   if (!v) localStorage.removeItem('erp_lembrar_usuario')
@@ -325,17 +355,22 @@ async function handleCadastroSubmit() {
       usuario: formCadastro.usuario,
       senha: formCadastro.senha,
     })
-    fecharTudo()
+
+    fecharTudo() // ✅ já limpa tudo
     alert('Solicitação enviada com sucesso!')
   } catch (e) {}
 }
 
+
+
 async function handleRecuperacaoSubmit() {
   try {
     await esqueciSenha(emailRecuperacao.value)
+    fecharTudo() // ✅ já limpa tudo
     alert('Enviamos uma senha provisória para seu e-mail.')
-    fecharTudo()
   } catch (e) {}
 }
+
+
 </script>
 
