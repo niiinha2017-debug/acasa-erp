@@ -91,7 +91,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArquivosService } from '@/services/index'
 import { confirm } from '@/services/confirm'
@@ -106,7 +106,11 @@ const router = useRouter()
 // aceita query no formato owner_type/owner_id (backend) ou ownerType/ownerId (frontend)
 const ownerType = computed(() => String(route.query.owner_type || route.query.ownerType || '').trim().toUpperCase())
 const ownerId = computed(() => String(route.query.owner_id || route.query.ownerId || '').replace(/\D/g, ''))
-const categoria = computed(() => String(route.query.categoria || '').trim().toUpperCase())
+const categoria = computed(() => {
+  const v = String(route.query.categoria || '').trim()
+  return v ? v.toUpperCase() : null
+})
+
 
 const q = ref('')
 const loading = ref(false)
@@ -198,6 +202,13 @@ async function excluir(id) {
   }
 }
 
+watch(
+  () => [ownerType.value, ownerId.value, categoria.value],
+  () => carregar(),
+  { immediate: true }
+)
+
+
 function abrirPicker() {
   if (!ownerType.value || !ownerId.value) return notify.error('Informe owner_type e owner_id.')
   fileInput.value?.click()
@@ -224,5 +235,4 @@ async function onPickFile(ev) {
   }
 }
 
-onMounted(carregar)
 </script>

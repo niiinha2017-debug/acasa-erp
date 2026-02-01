@@ -206,17 +206,26 @@ function onPickFile(e) {
 
 function abrirEmArquivos() {
   fechar()
+
+  const ot = String(props.ownerType || '').trim().toUpperCase()
+  const oid = String(props.ownerId || '').replace(/\D/g, '')
+  const cat = props.categoria ? String(props.categoria || '').trim().toUpperCase() : ''
+
   router.push({
     path: '/arquivos',
     query: {
-      owner_type: String(props.ownerType || '').toUpperCase(),
-      owner_id: String(props.ownerId || ''),
-      categoria: props.categoria ? String(props.categoria || '').toUpperCase() : '',
-      // slot_key se você quiser no futuro:
-      // slot_key: props.slotKey ? String(props.slotKey || '').toUpperCase() : '',
+      // snake_case (backend)
+      owner_type: ot,
+      owner_id: oid,
+      categoria: cat,
+
+      // camelCase (se sua página estiver usando isso)
+      ownerType: ot,
+      ownerId: oid,
     },
   })
 }
+
 
 function getFileIcon(mime) {
   if (mime?.includes('pdf')) return 'pi pi-file-pdf'
