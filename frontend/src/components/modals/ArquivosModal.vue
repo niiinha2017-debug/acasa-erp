@@ -205,8 +205,6 @@ function onPickFile(e) {
 }
 
 function abrirEmArquivos() {
-  fechar()
-
   const ot = String(props.ownerType || '').trim().toUpperCase()
   const oid = String(props.ownerId || '').replace(/\D/g, '')
   const cat = props.categoria ? String(props.categoria || '').trim().toUpperCase() : ''
@@ -214,16 +212,17 @@ function abrirEmArquivos() {
   router.push({
     path: '/arquivos',
     query: {
-      // snake_case (backend)
+      // manda nos 2 formatos pra não ter erro nunca
       owner_type: ot,
       owner_id: oid,
       categoria: cat,
 
-      // camelCase (se sua página estiver usando isso)
       ownerType: ot,
       ownerId: oid,
     },
   })
+
+  fechar()
 }
 
 

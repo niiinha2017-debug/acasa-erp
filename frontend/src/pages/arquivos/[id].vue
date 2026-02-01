@@ -104,12 +104,26 @@ const route = useRoute()
 const router = useRouter()
 
 // aceita query no formato owner_type/owner_id (backend) ou ownerType/ownerId (frontend)
-const ownerType = computed(() => String(route.query.owner_type || route.query.ownerType || '').trim().toUpperCase())
-const ownerId = computed(() => String(route.query.owner_id || route.query.ownerId || '').replace(/\D/g, ''))
+function q1(v) {
+  return Array.isArray(v) ? v[0] : v
+}
+
+const ownerType = computed(() => {
+  const raw = q1(route.query.owner_type ?? route.query.ownerType)
+  return String(raw || '').trim().toUpperCase()
+})
+
+const ownerId = computed(() => {
+  const raw = q1(route.query.owner_id ?? route.query.ownerId)
+  return String(raw || '').replace(/\D/g, '')
+})
+
 const categoria = computed(() => {
-  const v = String(route.query.categoria || '').trim()
+  const raw = q1(route.query.categoria)
+  const v = String(raw || '').trim()
   return v ? v.toUpperCase() : null
 })
+
 
 
 const q = ref('')
@@ -205,6 +219,11 @@ async function excluir(id) {
 watch(
   () => [ownerType.value, ownerId.value, categoria.value],
   () => carregar(),
+  { immediate: true }
+)
+watch(
+  () => route.fullPath,
+  () => console.log('[ARQUIVOS] query =', route.query),
   { immediate: true }
 )
 
