@@ -18,14 +18,15 @@
       </div>
 
       <input
-        :id="inputId"
-        :type="type"
-        :value="modelValue"
-        :placeholder="placeholder"
-        :disabled="disabled"
-        :readonly="readonly"
-        :required="required"
-        :autocomplete="autocomplete"
+  :id="inputId"
+  :name="name || undefined"               
+  :type="type"
+  :value="modelValue"
+  :placeholder="placeholder"
+  :disabled="disabled"
+  :readonly="readonly"
+  :required="required"
+  :autocomplete="autocomplete || undefined"
         :class="[
           'w-full h-10 transition-all duration-200 border rounded-lg text-sm font-medium outline-none',
           'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700',
@@ -72,9 +73,11 @@ const props = defineProps({
   readonly: Boolean,
   required: Boolean,
   autocomplete: String,
+  name: String, // ✅ ADD
   id: String,
   forceUpper: { type: Boolean, default: true }
 })
+
 
 const emit = defineEmits(['update:modelValue', 'input', 'blur', 'focus'])
 const inputId = ref(props.id || `input-${Math.random().toString(36).slice(2)}`)

@@ -53,26 +53,30 @@
 
         <!-- BODY: largura do form controlada -->
         <div class="px-7 py-6">
-          <form @submit.prevent="handleLoginSubmit" class="space-y-5">
+          <form autocomplete="off" @submit.prevent="handleLoginSubmit" class="space-y-5">
             <div class="grid gap-4">
 <Input
   v-model="formLogin.usuario"
+  name="acasa_login_user"
+  autocomplete="off"
   label="Usuário ou E-mail"
-  autocomplete="username"
   class="h-11"
   :forceUpper="false"
   :disabled="loading"
 />
 
+
 <Input
   v-model="formLogin.senha"
+  name="acasa_login_pass"
+  autocomplete="new-password"
   :type="showPassword ? 'text' : 'password'"
   label="Senha"
-  autocomplete="current-password"
   class="h-11"
   :forceUpper="false"
   :disabled="loading"
 >
+
 
                 <template #suffix>
                   <button
@@ -150,10 +154,12 @@
           >
             <div class="absolute inset-0 bg-black/55 backdrop-blur-sm" @click="fecharTudo"></div>
 
-            <div
-              class="relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl
-                     dark:border-slate-800 dark:bg-slate-950"
-            >
+<div
+  :key="modalKey"
+  class="relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl
+         dark:border-slate-800 dark:bg-slate-950"
+>
+
               <div class="px-6 py-5 border-b border-slate-200/70 dark:border-slate-800/70 flex items-center justify-between">
                 <div>
                   <p class="text-[10px] font-black uppercase tracking-[0.35em] text-slate-500 dark:text-slate-400">
@@ -170,14 +176,19 @@
               </div>
 
               <div class="px-6 py-6">
-                <form
-                  @submit.prevent="showModalCadastro ? handleCadastroSubmit() : handleRecuperacaoSubmit()"
-                  class="space-y-4"
-                >
+<form
+  autocomplete="off"
+  @submit.prevent="showModalCadastro ? handleCadastroSubmit() : handleRecuperacaoSubmit()"
+  class="space-y-4"
+>
+
                   <div v-if="showModalCadastro" class="space-y-4">
-                    <Input v-model="formCadastro.nome" label="Nome Completo" required :disabled="loading" />
+<Input v-model="formCadastro.nome" name="acasa_cad_nome" autocomplete="off" label="Nome Completo" required :disabled="loading" />
+
 <Input
   v-model="formCadastro.email"
+  name="acasa_cad_email"
+  autocomplete="off"
   label="E-mail"
   type="email"
   required
@@ -187,6 +198,8 @@
 
 <Input
   v-model="formCadastro.usuario"
+  name="acasa_cad_user"
+  autocomplete="off"
   label="Usuário Desejado"
   required
   :forceUpper="false"
@@ -195,6 +208,8 @@
 
 <Input
   v-model="formCadastro.senha"
+  name="acasa_cad_pass"
+  autocomplete="new-password"
   label="Senha"
   type="password"
   required
@@ -202,11 +217,14 @@
   :disabled="loading"
 />
 
+
                   </div>
 
                   <div v-else class="space-y-4">
 <Input
   v-model="emailRecuperacao"
+  name="acasa_rec_email"
+  autocomplete="off"
   label="E-mail de acesso"
   type="email"
   required
@@ -214,6 +232,7 @@
   :forceUpper="false"
   :disabled="loading"
 />
+
 
                     <p class="text-sm text-slate-600 dark:text-slate-400">
                       Enviaremos uma senha provisória para seu e-mail.
@@ -256,6 +275,7 @@ definePage({ meta: { public: true, layout: 'auth' } })
 
 const router = useRouter()
 const { login, solicitarCadastro, esqueciSenha, loading } = useAuth()
+const modalKey = ref(0)
 
 const showModalCadastro = ref(false)
 const showModalRecuperacao = ref(false)
@@ -304,14 +324,16 @@ function resetRecuperacao() {
 
 function openCadastro() {
   error.value = ''
-  resetCadastro() // ✅
+  resetCadastro()
+  modalKey.value++
   showModalCadastro.value = true
   showModalRecuperacao.value = false
 }
 
 function openRecuperacao() {
   error.value = ''
-  resetRecuperacao() // ✅
+  resetRecuperacao()
+  modalKey.value++
   showModalRecuperacao.value = true
   showModalCadastro.value = false
 }
