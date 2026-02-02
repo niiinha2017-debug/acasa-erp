@@ -223,11 +223,9 @@ model vendas_pagamentos {
 
 model vendas_itens {
   id Int @id @default(autoincrement())
-
   venda_id Int
   venda    vendas @relation(fields: [venda_id], references: [id], onDelete: Cascade)
 
-  // item “congelado” na venda
   nome_ambiente String
   descricao     String
   observacao    String
@@ -236,7 +234,10 @@ model vendas_itens {
   valor_unitario Decimal @db.Decimal(10, 2)
   valor_total    Decimal @db.Decimal(10, 2)
 
-  compras compras[] // ✅ NOVO (oposto, se usar venda_item_id)
+  compras compras[]
+
+  // ✅ NOVO
+  producao_projetos producao_projetos[] @relation("ProducaoProjetoVendaItem")
 
   criado_em DateTime @default(now())
 
@@ -349,6 +350,9 @@ model plano_corte {
 
   produtos plano_corte_produto[]
   consumos plano_corte_consumo[]
+
+  // ✅ NOVO
+  producao_projetos producao_projetos[] @relation("ProducaoProjetoPlanoCorte")
 
   @@map("plano_corte")
  }
@@ -578,23 +582,38 @@ model despesas {
 model producao_projetos {
   id Int @id @default(autoincrement())
 
+  // ✅ ID Produção: "PROD-b4d94b90-..."
+  codigo String @unique @db.VarChar(60)
+
+  // ✅ mantém seu controle de origem (para regra/unique)
   origem_tipo String
   origem_id   Int
 
+  // ✅ vínculos reais (pra include/join)
+  venda_item_id  Int? @unique
+  venda_item     vendas_itens? @relation("ProducaoProjetoVendaItem", fields: [venda_item_id], references: [id], onDelete: Restrict)
+
+  plano_corte_id Int? @unique
+  plano_corte    plano_corte? @relation("ProducaoProjetoPlanoCorte", fields: [plano_corte_id], references: [id], onDelete: Restrict)
+
   status String @default("ABERTO")
 
-  encaminhado_em DateTime? // <<< novo (data que foi enviado pra produção)
+  encaminhado_em DateTime?
 
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
-  tarefas  producao_tarefas[]
+  tarefas producao_tarefas[]
 
+  // ✅ continua existindo (mas agora você consegue relacionar também)
   @@unique([origem_tipo, origem_id])
+
   @@index([origem_tipo])
   @@index([origem_id])
   @@index([status])
   @@index([encaminhado_em])
+  @@index([venda_item_id])
+  @@index([plano_corte_id])
   @@map("producao_projetos")
  }
 
@@ -604,9 +623,10 @@ model producao_tarefas {
   projeto_id Int
   projeto    producao_projetos @relation(fields: [projeto_id], references: [id], onDelete: Cascade)
 
-  funcionario_id Int?               // ✅ agora pode ser null
+  funcionario_id Int?
   funcionario    funcionarios? @relation(fields: [funcionario_id], references: [id])
 
+  // ✅ pipeline (Fabricação, Projeto técnico, Medida fina, etc.)
   titulo     String
   status     String  @default("PENDENTE")
   observacao String?
@@ -614,8 +634,11 @@ model producao_tarefas {
   inicio_em DateTime
   fim_em    DateTime
 
-  custo_hora_aplicado Decimal @default(0.00) @db.Decimal(12, 2)
-  custo_total         Decimal @default(0.00) @db.Decimal(12, 2)
+  // ✅ snapshot da linha
+  funcao_aplicada     String?  @db.VarChar(80)
+  horas_total         Decimal  @default(0.00) @db.Decimal(10, 2)
+  custo_hora_aplicado Decimal  @default(0.00) @db.Decimal(12, 2)
+  custo_total         Decimal  @default(0.00) @db.Decimal(12, 2)
 
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt

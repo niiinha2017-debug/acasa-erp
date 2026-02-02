@@ -83,7 +83,7 @@
         <template #cell-nome="{ row }">
           <div class="flex items-center gap-3 py-1">
             <CustomCheckbox
-              :modelValue="selectedIds.value.has(row.id)"
+              :modelValue="isSelected(row.id)"
               @update:modelValue="toggle(row.id)"
               label=""
               class="scale-90"

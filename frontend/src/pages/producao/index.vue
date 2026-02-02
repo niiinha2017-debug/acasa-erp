@@ -1,303 +1,203 @@
 <template>
-  <Card :shadow="true">
-    <PageHeader
-      title="Agenda de Produção"
-      subtitle="Chão de fábrica: grade semanal de tarefas."
-      icon="pi pi-calendar"
-      :backTo="'/'"
+  <Card :shadow="true" class="overflow-visible">
+    <PageHeader 
+      title="Agenda de Produção" 
+      subtitle="Chão de fábrica: grade semanal de tarefas." 
+      icon="pi pi-calendar" 
+      backTo="/" 
     />
 
     <div class="p-6 relative">
       <Loading v-if="loading" />
 
-      <div v-else class="space-y-6">
-        <!-- CONTROLES -->
-        <section class="grid grid-cols-12 gap-4 items-end">
-          <div class="col-span-12 md:col-span-3">
+      <div v-else class="space-y-8">
+        <section class="flex flex-col md:flex-row gap-4 items-end justify-between bg-slate-50/50 p-4 rounded-3xl border border-slate-100">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full md:w-2/3">
             <Input v-model="semanaInicio" type="date" label="Semana (início) *" />
-          </div>
-
-          <div class="col-span-12 md:col-span-3">
-            <SearchInput
-              v-model="busca"
-              mode="search"
-              label="Buscar"
-              placeholder="Buscar por título, status, funcionário, origem..."
+            <SearchInput 
+              v-model="busca" 
+              mode="search" 
+              label="Buscar" 
+              placeholder="Título, status, funcionário..." 
             />
           </div>
 
-          <div class="col-span-12 md:col-span-6 flex items-end justify-end gap-2">
-            <Button variant="secondary" size="md" type="button" @click="voltarSemana">◀</Button>
-            <Button variant="secondary" size="md" type="button" @click="avancarSemana">▶</Button>
-
-<Button
-  v-if="can('producao.ver')"
-  variant="secondary"
-  size="md"
-  type="button"
-  :loading="refreshing"
-  @click="carregar"
->
-  Atualizar
-</Button>
-
-
-<Button
-  v-if="can('producao.criar')"
-  variant="primary"
-  size="md"
-  type="button"
-  @click="abrirNovaTarefaSolta"
->
-  + Nova tarefa
-</Button>
-
-          </div>
-        </section>
-
-        <div class="h-px bg-slate-100"></div>
-
-        <!-- RESUMO -->
-        <section class="grid grid-cols-12 gap-4">
-          <div class="col-span-12 md:col-span-3">
-            <div class="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Tarefas (semana)</div>
-            <div class="text-lg font-black text-gray-900">{{ tarefasFiltradas.length }}</div>
-          </div>
-
-          <div class="col-span-12 md:col-span-3">
-            <div class="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Custo (semana)</div>
-            <div class="text-lg font-black text-gray-900">{{ format.currency(totalCustoSemana) }}</div>
-          </div>
-
-          <div class="col-span-12 md:col-span-6" />
-        </section>
-
-        <div class="h-px bg-slate-100"></div>
-
-        <!-- GRADE SEMANAL -->
-        <section class="space-y-3">
-          <div class="text-[11px] font-black uppercase tracking-[0.18em] text-gray-400">
-            Semana: {{ semanaLabel }}
-          </div>
-
-          <!-- Cabeçalho dias -->
-          <div class="grid grid-cols-7 gap-2">
-            <div
-              v-for="d in diasSemana"
-              :key="d.key"
-              class="rounded-2xl border border-slate-100 bg-slate-50/50 p-3"
-            >
-              <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                {{ d.label }}
-              </div>
-              <div class="text-sm font-black text-gray-900">
-                {{ format.date(d.date) }}
-              </div>
+          <div class="flex items-center gap-2">
+            <div class="flex bg-white rounded-2xl border border-slate-200 p-1 shadow-sm">
+              <button @click="voltarSemana" class="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-600">◀</button>
+              <button @click="avancarSemana" class="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-600">▶</button>
             </div>
+            
+            <Button v-if="can('producao.ver')" variant="secondary" :loading="refreshing" @click="carregar">
+              <i class="pi pi-refresh"></i>
+            </Button>
+            
+            <Button v-if="can('producao.criar')" variant="primary" @click="abrirNovaTarefaSolta">
+              + Nova Tarefa
+            </Button>
           </div>
+        </section>
 
-          <!-- Linhas (slots) -->
-          <div class="space-y-2">
-            <div
-              v-for="slot in SLOTS"
-              :key="slot"
-              class="grid grid-cols-7 gap-2"
+        <section class="grid grid-cols-2 md:grid-cols-4 gap-6 px-2">
+          <header>
+            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Tarefas (Filtro)</p>
+            <p class="text-2xl font-black text-slate-800 tracking-tighter italic">{{ tarefasFiltradas.length }}</p>
+          </header>
+          <header>
+            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Custo Total</p>
+            <p class="text-2xl font-black text-emerald-600 tracking-tighter italic">{{ format.currency(totalCustoSemana) }}</p>
+          </header>
+        </section>
+
+        <section v-if="projetosPendentes.length" class="bg-amber-50/40 p-6 rounded-[2.5rem] border border-amber-100">
+          <h3 class="text-[11px] font-black uppercase tracking-widest text-amber-600 mb-4 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+            Projetos Encaminhados (Sem Tarefas)
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            <button 
+              v-for="p in projetosPendentes" :key="p.id" 
+              @click="abrirNovaTarefaDeProjeto(p)"
+              class="group bg-white p-4 rounded-2xl border border-slate-200 hover:border-amber-400 hover:shadow-lg transition-all text-left"
             >
-              <div
-                v-for="d in diasSemana"
-                :key="d.key + '-' + slot"
-                class="min-h-[110px] rounded-2xl border border-slate-100 bg-white p-2"
-                @dblclick="can('producao.criar') && abrirNovaTarefaNoSlot(d.date, slot)"
-              >
-                <!-- topo do slot -->
-                <div class="flex items-center justify-between">
-                  <div class="text-[10px] font-black uppercase tracking-widest text-slate-300">
-                    {{ slot }}
-                  </div>
+              <p class="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{{ p.origem_tipo }} #{{ p.origem_id }}</p>
+              <p class="text-xs font-bold text-slate-700 mt-1 group-hover:text-amber-700">Agendar 1ª Tarefa</p>
+              <p class="text-[9px] text-slate-400 mt-2 italic italic">Encaminhado em: {{ format.date(p.encaminhado_em) }}</p>
+            </button>
+          </div>
+        </section>
 
-<button
-  v-if="can('producao.criar')"
-  type="button"
-  class="text-slate-300 hover:text-slate-600"
-  title="Criar tarefa"
-  @click.stop="abrirNovaTarefaNoSlot(d.date, slot)"
->
-  <i class="pi pi-plus text-[10px]"></i>
-</button>
-
+        <section class="space-y-4">
+          <div class="flex items-center justify-between px-2">
+            <h3 class="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400">Semana: {{ semanaLabel }}</h3>
+          </div>
+          
+          <div class="overflow-x-auto pb-4 custom-scrollbar">
+            <div class="min-w-[1100px] space-y-3">
+              <div class="grid grid-cols-7 gap-3">
+                <div v-for="d in diasSemana" :key="d.key" class="p-4 bg-slate-900 rounded-3xl text-white shadow-xl shadow-slate-200 relative overflow-hidden">
+                  <p class="text-[9px] font-black uppercase opacity-50 tracking-[0.2em] mb-1">{{ d.label }}</p>
+                  <p class="text-sm font-black italic tracking-tight">{{ format.date(d.date) }}</p>
+                  <div class="absolute -right-2 -bottom-2 opacity-10 text-4xl font-black italic select-none">{{ d.label[0] }}</div>
                 </div>
+              </div>
 
-                <!-- tarefas dentro do slot -->
-                <div class="mt-2 space-y-2">
-                  <div
-                    v-for="t in tarefasNoSlot(d.date, slot)"
-                    :key="t.id"
-                    :class="[
-  'rounded-xl border border-slate-100 bg-slate-50/50 p-2 hover:bg-slate-50',
-  can('producao.editar') ? 'cursor-pointer' : 'cursor-default'
-]"
+              <div v-for="slot in SLOTS" :key="slot" class="grid grid-cols-7 gap-3">
+                <div 
+                  v-for="d in diasSemana" :key="d.key + '-' + slot"
+                  @dblclick="can('producao.criar') && abrirNovaTarefaNoSlot(d.date, slot)"
+                  class="group min-h-[140px] rounded-[2rem] border border-slate-100 bg-white p-3 hover:border-brand-primary/40 transition-all hover:shadow-md relative"
+                >
+                  <header class="flex justify-between items-center mb-2 px-1">
+                    <span class="text-[10px] font-black text-slate-300 uppercase italic tracking-widest">{{ slot }}</span>
+                    <button v-if="can('producao.criar')" @click.stop="abrirNovaTarefaNoSlot(d.date, slot)" class="opacity-0 group-hover:opacity-100 text-brand-primary hover:scale-110 transition-all">
+                      <i class="pi pi-plus-circle text-sm"></i>
+                    </button>
+                  </header>
 
-                    @click.stop="can('producao.editar') && editarTarefa(t)"
-
-                  >
-                    <div class="flex items-start justify-between gap-2">
-                      <div class="min-w-0">
-                        <div class="text-[11px] font-black text-gray-900 truncate">
-                          {{ t.titulo }}
-                        </div>
-                        <div class="text-[10px] font-bold text-slate-400 truncate">
-                          {{ t.funcionario?.nome || `FUNC #${t.funcionario_id}` }} · {{ t.status }}
-                        </div>
+                  <div class="space-y-2">
+                    <div 
+                      v-for="t in tarefasNoSlot(d.date, slot)" :key="t.id"
+                      @click.stop="can('producao.editar') && editarTarefa(t)"
+                      class="p-2.5 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-lg transition-all cursor-pointer group/task relative"
+                    >
+                      <div class="flex justify-between items-start mb-1">
+                        <p class="text-[10px] font-black text-slate-800 leading-tight uppercase truncate pr-4">{{ t.titulo }}</p>
+                        <button v-if="can('producao.excluir')" @click.stop="confirmarRemoverTarefa(t)" class="opacity-0 group-hover/task:opacity-100 text-rose-400 hover:text-rose-600 transition-opacity absolute top-2 right-2">
+                          <i class="pi pi-times-circle text-[12px]"></i>
+                        </button>
                       </div>
 
-                      <div class="flex gap-1">
-<button
-  v-if="can('producao.editar')"
-  type="button"
-  class="text-slate-400 hover:text-slate-700"
-  title="Editar"
-  @click.stop="editarTarefa(t)"
->
-  <i class="pi pi-pencil text-[10px]"></i>
-</button>
-
-
-<button
-  v-if="can('producao.excluir')"
-  type="button"
-  class="text-red-400 hover:text-red-600"
-  title="Excluir"
-  @click.stop="confirmarRemoverTarefa(t)"
->
-  <i class="pi pi-times text-[10px]"></i>
-</button>
-
+                      <div class="flex flex-col gap-1 text-[9px] font-bold">
+                        <span class="text-slate-400 flex items-center gap-1">
+                          <i class="pi pi-clock text-[8px]"></i> {{ Number(t.horas_total || 0).toFixed(1) }}h
+                        </span>
+                        <span class="text-emerald-600 font-black tracking-tight">
+                          {{ format.currency(Number(t.custo_total || 0)) }}
+                        </span>
+                        <div class="mt-1 flex items-center gap-1">
+                           <span class="px-1.5 py-0.5 rounded-md bg-slate-200 text-slate-600 text-[8px] uppercase font-black">
+                             {{ t.status }}
+                           </span>
+                        </div>
                       </div>
                     </div>
-
-                    <div class="mt-1 text-[10px] font-black text-gray-800">
-                      {{ format.date(t.inicio_em) }} → {{ format.date(t.fim_em) }}
-                    </div>
-
-                    <div class="mt-1 text-[10px] font-black text-gray-900">
-                      {{ format.currency(Number(t.custo_total || 0)) }}
-                    </div>
-                  </div>
-
-                  <div
-                    v-if="tarefasNoSlot(d.date, slot).length === 0"
-                    class="text-[10px] font-black uppercase tracking-widest text-slate-200 select-none"
-                  >
-                    —
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-
-          <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">
-            * Clique no “+” (ou duplo clique no slot) para criar tarefa.
           </div>
         </section>
       </div>
     </div>
 
-    <!-- MODAL: TAREFA (reaproveitado do seu) -->
-    <transition name="fade-slide">
-      <div
-        v-if="tarefaModal.open"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm"
-        @click.self="confirmarFecharModalTarefa"
-      >
-        <div class="w-full max-w-3xl bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
-          <div class="flex items-start justify-between gap-4 p-6 border-b border-gray-100 bg-gray-50/40">
-            <div>
-              <div class="text-[11px] font-black uppercase tracking-[0.18em] text-gray-400">Tarefa</div>
-              <div class="text-lg font-black uppercase tracking-tight text-gray-900">
-                {{ tarefaModal.isEdit ? 'Editar tarefa' : 'Nova tarefa' }}
+    <Teleport to="body">
+      <transition name="fade">
+        <div v-if="tarefaModal.open" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" @click.self="confirmarFecharModalTarefa">
+          <div class="w-full max-w-2xl bg-white rounded-[3rem] shadow-2xl overflow-hidden border border-white/20">
+            <header class="p-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+              <div>
+                <p class="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 mb-1">Gestão de Fábrica</p>
+                <h3 class="text-xl font-black italic uppercase text-slate-800 tracking-tight">
+                  {{ tarefaModal.isEdit ? 'Editar Detalhes' : 'Agendar Nova Tarefa' }}
+                </h3>
               </div>
-            </div>
+              <button @click="confirmarFecharModalTarefa" class="w-12 h-12 rounded-full bg-white border border-slate-200 flex items-center justify-center hover:bg-rose-50 hover:text-rose-500 transition-all shadow-sm">
+                <i class="pi pi-times"></i>
+              </button>
+            </header>
 
-            <Button variant="secondary" size="sm" type="button" @click="confirmarFecharModalTarefa">
-              Fechar
-            </Button>
-          </div>
-
-          <div class="p-6 space-y-6">
-            <div class="grid grid-cols-12 gap-4">
-              <div class="col-span-12 md:col-span-6">
-                <SearchInput
-                  v-model="tarefaModal.funcionario_id"
-                  mode="select"
-                  label="Funcionário *"
-                  placeholder="Selecione..."
-                  :options="funcionariosOptions"
+            <form class="p-8 grid grid-cols-12 gap-5" @submit.prevent="confirmarSalvarTarefa">
+              <div v-if="!tarefaModal.isEdit" class="col-span-12">
+                <SearchInput 
+                   v-model="tarefaModal._origem_key" 
+                   mode="select" 
+                   label="Vincular ao Projeto/Origem *" 
+                   placeholder="Selecione o projeto de origem..."
+                   :options="projetosOptions" 
+                   @update:modelValue="setOrigemFromKey" 
                 />
               </div>
 
               <div class="col-span-12 md:col-span-6">
-                <SearchInput
-                  v-model="tarefaModal.status"
-                  mode="select"
-                  label="Status *"
-                  placeholder="Selecione..."
-                  :options="STATUS_TAREFA"
-                />
+                <SearchInput v-model="tarefaModal.funcionario_id" mode="select" label="Responsável" placeholder="Quem vai executar?" :options="funcionariosOptions" />
+              </div>
+              <div class="col-span-12 md:col-span-6">
+                <SearchInput v-model="tarefaModal.status" mode="select" label="Status Atual *" :options="STATUS_TAREFA" />
+              </div>
+              
+              <div class="col-span-12">
+                <Input v-model="tarefaModal.titulo" label="Título da Tarefa *" placeholder="Ex: Montagem da Estrutura" />
               </div>
 
               <div class="col-span-12">
-                <Input v-model="tarefaModal.titulo" label="Título *" />
-              </div>
-
-              <div class="col-span-12">
-                <Input v-model="tarefaModal.observacao" label="Observação" />
+                <Input v-model="tarefaModal.observacao" label="Observações / Instruções" placeholder="Detalhes técnicos..." />
               </div>
 
               <div class="col-span-12 md:col-span-6">
-                <label class="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400 mb-2 block">
-                  Início *
-                </label>
-                <input
-                  v-model="tarefaModal.inicio_em"
-                  type="datetime-local"
-                  class="w-full h-12 px-4 rounded-2xl bg-gray-100 border-none font-bold text-gray-700 focus:ring-2 focus:ring-brand-primary/20 transition-all"
-                />
+                <Input v-model="tarefaModal.inicio_em" type="datetime-local" label="Início Previsto *" />
               </div>
-
               <div class="col-span-12 md:col-span-6">
-                <label class="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400 mb-2 block">
-                  Fim *
-                </label>
-                <input
-                  v-model="tarefaModal.fim_em"
-                  type="datetime-local"
-                  class="w-full h-12 px-4 rounded-2xl bg-gray-100 border-none font-bold text-gray-700 focus:ring-2 focus:ring-brand-primary/20 transition-all"
-                />
+                <Input v-model="tarefaModal.fim_em" type="datetime-local" label="Finalização Prevista *" />
               </div>
-            </div>
-          </div>
 
-          <div class="flex items-center justify-end gap-2 p-6 border-t border-gray-100 bg-gray-50/40">
-            <Button variant="secondary" size="md" type="button" @click="confirmarFecharModalTarefa">
-              Cancelar
-            </Button>
-
-<Button
-  v-if="can(tarefaModal.isEdit ? 'producao.editar' : 'producao.criar')"
-  variant="primary"
-  size="md"
-  type="button"
-  :loading="savingTarefa"
-  :disabled="!podeSalvarTarefa"
-  @click="confirmarSalvarTarefa"
->
-  Salvar
-</Button>
-
+              <footer class="col-span-12 flex justify-end gap-3 mt-6">
+                <Button variant="secondary" type="button" @click="confirmarFecharModalTarefa">Descartar</Button>
+                <Button 
+                   variant="primary" 
+                   type="submit" 
+                   :loading="savingTarefa" 
+                   :disabled="!podeSalvarTarefa"
+                >
+                  <i class="pi pi-check mr-2"></i>
+                  {{ tarefaModal.isEdit ? 'Salvar Alterações' : 'Confirmar Agendamento' }}
+                </Button>
+              </footer>
+            </form>
           </div>
         </div>
-      </div>
-    </transition>
+      </transition>
+    </Teleport>
   </Card>
 </template>
 
@@ -408,10 +308,20 @@ const busca = ref('')
 const projetosRaw = ref([]) // vem do endpoint atual
 const funcionariosOptions = ref([])
 
+const projetosPendentes = computed(() =>
+  (projetosRaw.value || []).filter((p) => p.encaminhado_em && (!p.tarefas || p.tarefas.length === 0))
+)
+
+
 const tarefaModal = reactive({
   open: false,
   isEdit: false,
   tarefaId: null,
+
+  // ✅ origem do projeto (obrigatório no create)
+  origem_tipo: '',
+  origem_id: 0,
+
   funcionario_id: null,
   titulo: '',
   status: 'PENDENTE',
@@ -419,6 +329,7 @@ const tarefaModal = reactive({
   inicio_em: '',
   fim_em: '',
 })
+
 
 const savingTarefa = ref(false)
 const deletingTarefa = ref(false)
@@ -438,6 +349,20 @@ const diasSemana = computed(() => {
 })
 
 const semanaLabel = computed(() => `${format.date(semanaInicio.value)} → ${format.date(semanaFim.value)}`)
+const projetosOptions = computed(() => {
+  return (projetosRaw.value || []).map((p) => ({
+    label: `${p.codigo ? p.codigo + ' · ' : ''}${p.origem_tipo} #${p.origem_id}`,
+    value: `${p.origem_tipo}::${p.origem_id}`,
+  }))
+})
+
+
+function setOrigemFromKey(v) {
+  const s = String(v || '')
+  const [tipo, idStr] = s.split('::')
+  tarefaModal.origem_tipo = String(tipo || '').trim()
+  tarefaModal.origem_id = Number(idStr || 0)
+}
 
 // ===============================
 // FLATTEN tarefas (do retorno atual)
@@ -455,6 +380,26 @@ const todasTarefas = computed(() => {
   }
   return out
 })
+
+function abrirNovaTarefaDeProjeto(p) {
+  if (!can('producao.criar')) return notify.error('Acesso negado.')
+
+  tarefaModal.open = true
+  tarefaModal.isEdit = false
+  tarefaModal.tarefaId = null
+
+  tarefaModal.origem_tipo = p.origem_tipo
+  tarefaModal.origem_id = p.origem_id
+  tarefaModal._origem_key = `${p.origem_tipo}::${p.origem_id}`
+
+  tarefaModal.funcionario_id = null
+  tarefaModal.titulo = ''
+  tarefaModal.status = 'PENDENTE'
+  tarefaModal.observacao = ''
+  tarefaModal.inicio_em = ''
+  tarefaModal.fim_em = ''
+}
+
 
 const tarefasFiltradas = computed(() => {
   const q = texto(busca.value)
@@ -575,6 +520,11 @@ function abrirNovaTarefaSolta() {
   tarefaModal.open = true
   tarefaModal.isEdit = false
   tarefaModal.tarefaId = null
+
+  tarefaModal.origem_tipo = ''
+  tarefaModal.origem_id = 0
+  tarefaModal._origem_key = ''
+
   tarefaModal.funcionario_id = null
   tarefaModal.titulo = ''
   tarefaModal.status = 'PENDENTE'
@@ -583,14 +533,21 @@ function abrirNovaTarefaSolta() {
   tarefaModal.fim_em = ''
 }
 
+
 function abrirNovaTarefaNoSlot(dateStr, slotHHMM) {
   if (!can('producao.criar')) return notify.error('Acesso negado.')
 
   const inicioIso = slotToISO(dateStr, slotHHMM)
-  const fimIso = plusHoursISO(inicioIso, 2) // padrão 2h (você altera)
+  const fimIso = plusHoursISO(inicioIso, 2)
+
   tarefaModal.open = true
   tarefaModal.isEdit = false
   tarefaModal.tarefaId = null
+
+  tarefaModal.origem_tipo = ''
+  tarefaModal.origem_id = 0
+  tarefaModal._origem_key = ''
+
   tarefaModal.funcionario_id = null
   tarefaModal.titulo = ''
   tarefaModal.status = 'PENDENTE'
@@ -598,6 +555,7 @@ function abrirNovaTarefaNoSlot(dateStr, slotHHMM) {
   tarefaModal.inicio_em = isoToInputDateTime(inicioIso)
   tarefaModal.fim_em = isoToInputDateTime(fimIso)
 }
+
 
 function editarTarefa(row) {
   if (!can('producao.editar')) return notify.error('Acesso negado.')
@@ -619,30 +577,36 @@ function fecharModalTarefa() {
 
 const podeSalvarTarefa = computed(() => {
   if (savingTarefa.value) return false
-  if (!tarefaModal.funcionario_id) return false
+
+  // ✅ origem obrigatória no create (e também no edit se você quiser)
+  if (!String(tarefaModal.origem_tipo || '').trim()) return false
+  if (!Number(tarefaModal.origem_id || 0)) return false
+
   if (!String(tarefaModal.titulo || '').trim()) return false
   if (!String(tarefaModal.inicio_em || '').trim()) return false
   if (!String(tarefaModal.fim_em || '').trim()) return false
+
   return true
 })
+
 
 // ⚠️ Como o endpoint atual usa origem_tipo/origem_id, aqui você mantém o que você já fazia.
 // Se você quer criar tarefa “solta” sem origem, aí sim é backend/Prisma (a gente faz depois).
 function montarPayloadCriarTarefa() {
   return {
-    // manter o seu padrão atual: origem obrigatória
-    origem_tipo: 'PRODUCAO',
-    origem_id: 0,
+    origem_tipo: String(tarefaModal.origem_tipo || '').trim(),
+    origem_id: Number(tarefaModal.origem_id || 0),
 
-    funcionario_id: Number(tarefaModal.funcionario_id),
+    funcionario_id: tarefaModal.funcionario_id ? Number(tarefaModal.funcionario_id) : null,
     titulo: String(tarefaModal.titulo || '').trim(),
     status: String(tarefaModal.status || 'PENDENTE').trim(),
     observacao: tarefaModal.observacao ? String(tarefaModal.observacao).trim() : null,
-
     inicio_em: inputDateTimeToISO(tarefaModal.inicio_em),
     fim_em: inputDateTimeToISO(tarefaModal.fim_em),
   }
 }
+
+
 
 function montarPayloadAtualizarTarefa() {
   return {
