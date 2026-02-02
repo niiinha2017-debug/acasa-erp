@@ -133,29 +133,78 @@
 
         <!-- ARQUIVOS + TOTAL -->
         <div class="grid grid-cols-12 gap-6">
-          <div class="col-span-12 lg:col-span-7 space-y-3">
-            <div class="flex items-center justify-between">
-              <div class="text-xs font-black uppercase tracking-widest text-slate-500">
-                Arquivos
-              </div>
+<div class="col-span-12 lg:col-span-7 space-y-3">
+  <div class="flex items-center justify-between">
+    <div class="text-xs font-black uppercase tracking-widest text-slate-500">
+      Arquivos
+    </div>
 
-              <Button
-                v-if="can(permSalvarOrc())"
-                size="sm"
-                variant="ghost"
-                type="button"
-                @click="abrirArquivosOrcamento"
-              >
-                <i class="pi pi-folder-open mr-1"></i> ABRIR
-              </Button>
-            </div>
+    <div class="flex items-center gap-2">
+      <input ref="fileInput" type="file" class="hidden" @change="onPickArquivo" />
 
-            <div class="p-6 rounded-3xl border border-slate-100 bg-slate-50/50">
-              <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                Use “ABRIR” para anexar / visualizar (PWA)
-              </div>
-            </div>
-          </div>
+      <Button
+        v-if="can(permSalvarOrc()) && can('arquivos.criar')"
+        size="sm"
+        variant="ghost"
+        type="button"
+        @click="clicarAdicionarArquivo"
+      >
+        <i class="pi pi-upload mr-1"></i> ADICIONAR
+      </Button>
+    </div>
+  </div>
+
+  <p v-if="isNovo" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+    Se necessário, o orçamento será criado automaticamente ao anexar (cliente obrigatório).
+  </p>
+
+  <div class="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+    <Table
+      :columns="colArquivos"
+      :rows="arquivos"
+      :loading="loadingArquivos"
+      empty-text="Nenhum arquivo anexado."
+      :boxed="false"
+    >
+      <template #cell-nome="{ row }">
+        <div class="flex flex-col">
+          <span class="text-xs font-black text-slate-800">
+            {{ row.nome || row.filename }}
+          </span>
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+            {{ row.mime_type || 'ARQUIVO' }}
+          </span>
+        </div>
+      </template>
+
+      <template #cell-acoes="{ row }">
+        <div class="flex justify-end gap-2">
+<Button
+  v-if="can('arquivos.ver') || can('orcamentos.ver')"
+  variant="secondary"
+  size="sm"
+  type="button"
+  @click="abrirArquivo(row)"
+>
+  Ver
+</Button>
+
+
+          <Button
+            v-if="can('arquivos.excluir') && can(permSalvarOrc())"
+            variant="danger"
+            size="sm"
+            type="button"
+            @click="excluirArquivo(row.id)"
+          >
+            Excluir
+          </Button>
+        </div>
+      </template>
+    </Table>
+  </div>
+</div>
+
 
           <div class="col-span-12 lg:col-span-5 space-y-4">
             <div class="p-6 rounded-3xl border border-slate-100 bg-white">
@@ -179,17 +228,6 @@
         </div>
       </div>
     </Card>
-
-    <ArquivosModal
-      v-if="arquivosOpen && orcamentoIdReal"
-      :open="arquivosOpen"
-      owner-type="ORCAMENTO"
-      :owner-id="orcamentoIdReal"
-      categoria="ANEXO"
-      :can-manage="can(permSalvarOrc())"
-      view-perm="orcamentos.ver"
-      @close="arquivosOpen = false"
-    />
   </div>
 </template>
 
@@ -203,6 +241,8 @@ import { format } from '@/utils/format'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
+import { ArquivosService } from '@/services/arquivos.service'
+
 
 definePage({ meta: { perm: 'orcamentos.ver' } })
 
@@ -215,7 +255,6 @@ const orcamentoIdReal = ref(null)
 const orcamentoId = computed(() => orcamentoIdReal.value || route.params.id)
 const isNovo = computed(() => String(orcamentoId.value) === 'novo' || !orcamentoId.value)
 
-// ✅ perm salvar (criar/editar)
 const permSalvarOrc = () => (isNovo.value ? 'orcamentos.criar' : 'orcamentos.editar')
 
 // estado
@@ -225,6 +264,16 @@ const editIdx = ref(null)
 
 const draft = reactive({ cliente_id: null, ambientes: [] })
 const ambForm = reactive({ nome_ambiente: '', descricao: '', valor_unitario: '', observacao: '' })
+
+const arquivos = ref([])
+const loadingArquivos = ref(false)
+const fileInput = ref(null)
+
+const colArquivos = [
+  { key: 'nome', label: 'ARQUIVO' },
+  { key: 'acoes', label: '', align: 'right', width: '220px' },
+]
+
 
 const columns = [
   { key: 'nome_ambiente', label: 'Item/Ambiente' },
@@ -349,6 +398,85 @@ async function salvarTudo() {
   }
 }
 
+async function carregarArquivos() {
+  const id = orcamentoIdReal.value
+  if (!id || String(id) === 'novo') {
+    arquivos.value = []
+    return
+  }
+
+  loadingArquivos.value = true
+  try {
+    const res = await ArquivosService.listar({
+      ownerType: 'ORCAMENTO',
+      ownerId: Number(String(id).replace(/\D/g, '')),
+      categoria: 'ANEXO',
+    })
+    arquivos.value = Array.isArray(res?.data) ? res.data : []
+  } finally {
+    loadingArquivos.value = false
+  }
+}
+
+function abrirArquivo(row) {
+  const oid = String(orcamentoIdReal.value || '').replace(/\D/g, '')
+  const backTo = encodeURIComponent(`/orcamentos/${oid || 'novo'}`)
+  const name = encodeURIComponent(row?.nome || row?.filename || 'ARQUIVO')
+  const type = encodeURIComponent(row?.mime_type || '')
+
+  router.push(`/arquivos/${row.id}?name=${name}&type=${type}&backTo=${backTo}`)
+}
+
+async function excluirArquivo(arquivoId) {
+  if (!can('arquivos.excluir') || !can(permSalvarOrc())) return notify.error('Acesso negado.')
+
+  const ok = await confirm.show('Excluir arquivo?', 'Esta ação não pode ser desfeita.')
+  if (!ok) return
+
+  try {
+    await ArquivosService.remover(Number(arquivoId))
+    notify.success('Arquivo removido.')
+    await carregarArquivos()
+  } catch (err) {
+    notify.error(err?.response?.data?.message || 'Erro ao excluir arquivo.')
+  }
+}
+
+async function clicarAdicionarArquivo() {
+  if (!can(permSalvarOrc()) || !can('arquivos.criar')) return notify.error('Acesso negado.')
+
+  await ensureOrcamentoId() // cria se for novo (cliente obrigatório)
+  await Promise.resolve()
+
+  if (!fileInput.value) return notify.error('Input de arquivo não montado.')
+  fileInput.value.click()
+}
+
+async function onPickArquivo(e) {
+  const file = e.target.files?.[0]
+  e.target.value = ''
+  if (!file) return
+
+  if (!can('arquivos.criar') || !can(permSalvarOrc())) return notify.error('Acesso negado.')
+
+  const id = await ensureOrcamentoId()
+  if (!id) return
+
+  try {
+    await ArquivosService.upload({
+      ownerType: 'ORCAMENTO',
+      ownerId: Number(String(id).replace(/\D/g, '')),
+      categoria: 'ANEXO',
+      file,
+    })
+    notify.success('Arquivo anexado.')
+    await carregarArquivos()
+  } catch (err) {
+    notify.error(err?.response?.data?.message || 'Erro ao anexar arquivo.')
+  }
+}
+
+
 async function gerarPdf() {
   if (!can('orcamentos.ver')) return notify.error('Acesso negado.')
 
@@ -374,8 +502,6 @@ await router.push({
 }
 
 
-
-
 async function ensureOrcamentoId() {
   if (!draft.cliente_id) {
     alert('Selecione um cliente.')
@@ -390,18 +516,16 @@ async function ensureOrcamentoId() {
     return orcamentoIdReal.value
   }
 
+  // ✅ cria primeiro
   const res = await OrcamentosService.criar({ cliente_id: draft.cliente_id })
   orcamentoIdReal.value = res.data.id
-  router.replace(`/orcamentos/${orcamentoIdReal.value}`)
-  return orcamentoIdReal.value
-}
 
-async function abrirArquivosOrcamento() {
-  if (!can(permSalvarOrc())) return notify.error('Acesso negado.')
-  const id = await ensureOrcamentoId()
-  if (!id) return
-  orcamentoIdReal.value = id
-  arquivosOpen.value = true
+  await router.replace(`/orcamentos/${orcamentoIdReal.value}`)
+
+  // ✅ agora sim (opcional)
+  await carregarArquivos()
+
+  return orcamentoIdReal.value
 }
 
 onMounted(async () => {
@@ -416,11 +540,16 @@ onMounted(async () => {
     draft.cliente_id = Number(String(qCliente).replace(/\D/g, '')) || null
   }
 
+  // ✅ edição: carrega tudo e só depois busca anexos
   if (route.params.id && String(route.params.id) !== 'novo') {
     orcamentoIdReal.value = route.params.id
+
     const res = await OrcamentosService.detalhar(orcamentoIdReal.value)
     draft.cliente_id = res.data.cliente_id
     draft.ambientes = res.data.itens || []
+
+    await carregarArquivos()
   }
 })
+
 </script>

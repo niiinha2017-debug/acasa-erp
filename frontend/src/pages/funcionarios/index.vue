@@ -60,11 +60,13 @@
           </p>
         </div>
 
-        <button
-          v-if="selecionadosCount > 0 && can('funcionarios.ver')"
-          @click="confirmarGerarPdfFuncionarios"
-          class="px-3 py-1.5 rounded-lg bg-brand-primary text-white text-[9px] font-black uppercase tracking-wider flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all"
-        >
+<button
+  v-if="selecionadosCount > 0 && can('funcionarios.ver')"
+  @click="confirmarGerarPdfFuncionarios"
+  :disabled="gerandoPdf"
+  class="px-3 py-1.5 rounded-lg bg-brand-primary text-white text-[9px] font-black uppercase tracking-wider flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all disabled:opacity-60 disabled:pointer-events-none"
+>
+
           <i class="pi pi-file-pdf"></i> PDF
         </button>
       </div>
@@ -81,7 +83,7 @@
         <template #cell-nome="{ row }">
           <div class="flex items-center gap-3 py-1">
             <CustomCheckbox
-              :modelValue="selectedIds.has(row.id)"
+              :modelValue="selectedIds.value.has(row.id)"
               @update:modelValue="toggle(row.id)"
               label=""
               class="scale-90"

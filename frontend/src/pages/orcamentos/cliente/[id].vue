@@ -145,16 +145,16 @@
       </Table>
     </div>
 
-    <ArquivosModal
-      v-if="arquivosOpen"
-      :open="arquivosOpen"
-      owner-type="ORCAMENTO"
-      :owner-id="orcamentoSelecionado"
-      categoria="ANEXO"
-      :can-manage="can('orcamentos.editar')"
-      view-perm="orcamentos.ver"
-      @close="arquivosOpen = false"
-    />
+<ArquivosModal
+  v-if="arquivosOpen && orcamentoSelecionado"
+  :open="arquivosOpen"
+  ownerType="ORCAMENTO"
+  :ownerId="orcamentoSelecionado"
+  categoria="ANEXO"
+  :canManage="can('orcamentos.editar')"
+  @close="arquivosOpen = false"
+/>
+
   </div>
 </template>
 

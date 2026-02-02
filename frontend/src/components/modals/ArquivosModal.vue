@@ -44,10 +44,10 @@
 
           <div class="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
             
-            <div v-if="canManage" class="group relative">
+            <div v-if="props.canManage" class="group relative">
               <input ref="fileRef" type="file" class="hidden" @change="onPickFile" />
               <div 
-                @click="fileRef?.click()"
+                @click="fileRef?.value?.click()"
                 class="border-2 border-dashed border-slate-200 rounded-[2rem] p-8 transition-all cursor-pointer hover:border-brand-primary hover:bg-brand-primary/5 flex flex-col items-center justify-center text-center group"
               >
                 <div class="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-white transition-all duration-500 shadow-sm">
@@ -107,7 +107,7 @@
                     <button @click="visualizar(a)" class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-900 text-white shadow-lg active:scale-90 transition-all">
                       <i class="pi pi-eye text-[10px]"></i>
                     </button>
-                    <button v-if="canManage" @click="remover(a)" class="w-9 h-9 flex items-center justify-center rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white active:scale-90 transition-all">
+                    <button v-if="props.canManage" @click="remover(a)" class="w-9 h-9 flex items-center justify-center rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white active:scale-90 transition-all">
                       <i class="pi pi-trash text-[10px]"></i>
                     </button>
                   </div>
