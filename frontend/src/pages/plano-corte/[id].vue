@@ -584,12 +584,22 @@ function registrarItemNovo() {
   const item = itensDisponiveis.value.find(i => Number(i.id) === itemId)
   if (!item) return
 
+  // 1. Calcule os valores ANTES de limpar o formulário
+  const qtd = Number(itemNovo.value.quantidade) || 0
+  const vUnit = Number(String(itemNovo.value.valorUnitarioMask).replace(/\D/g, '')) / 100 || 0
+  const vTotal = Number((qtd * vUnit).toFixed(2)) // Força 2 casas decimais
+
+  // 2. Adicione ao array com os valores calculados manualmente
   itens.value.push({
     item_id: item.id,
-    item: { nome_produto: item.nome_produto, cor: item.cor, marca: item.marca },
-    quantidade: Number(itemNovo.value.quantidade),
-    valor_unitario: Number(String(itemNovo.value.valorUnitarioMask).replace(/\D/g, '')) / 100,
-    valor_total: itemNovoValorTotalNumerico.value,
+    item: { 
+      nome_produto: item.nome_produto, 
+      cor: item.cor, 
+      marca: item.marca 
+    },
+    quantidade: qtd,
+    valor_unitario: vUnit,
+    valor_total: vTotal, // <--- Valor estático e seguro
     status: 'ATIVO'
   })
 
