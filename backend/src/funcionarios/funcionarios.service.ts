@@ -43,6 +43,25 @@ private calcularStatus(input: {
     if (!funcionario) throw new NotFoundException('Funcionário não encontrado.')
     return funcionario
   }
+private onlyDigits(v: any) {
+  return String(v ?? '').replace(/\D/g, '')
+}
+
+private formatCPF(v: any) {
+  const d = this.onlyDigits(v).padStart(11, '0')
+  if (d.length !== 11) return String(v ?? '-')
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9, 11)}`
+}
+
+private formatRG(v: any) {
+  // RG no seu print já está ok, mas isso garante consistência se vier sem máscara.
+  const d = this.onlyDigits(v)
+  if (!d) return String(v ?? '-')
+
+  // Se vier com 9 dígitos (ex: 191646374), formata 00.000.000-0
+  if (d.length === 9) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}-${d.slice(8)}`
+  return String(v ?? '-') // se já vier formatado, mantém
+}
 
 
 async gerarPdf(ids: number[]): Promise<Buffer> {
@@ -52,7 +71,9 @@ async gerarPdf(ids: number[]): Promise<Buffer> {
     orderBy: { nome: 'asc' },
   })
 
-  if (!funcionarios.length) throw new NotFoundException('Nenhum funcionário encontrado.')
+  if (!funcionarios.length) {
+    throw new NotFoundException('Nenhum funcionário encontrado.')
+  }
 
   const doc = new PDFDocument({ size: 'A4', margin: 40 })
   const chunks: Buffer[] = []
@@ -62,7 +83,7 @@ async gerarPdf(ids: number[]): Promise<Buffer> {
     doc.on('end', () => resolve(Buffer.concat(chunks)))
   })
 
-  const startY = renderHeaderA4Png(doc) // retorna 120 (ou o que você definir)
+  const startY = renderHeaderA4Png(doc)
   let y = startY + 40
 
   const renderHeaderTabela = () => {
@@ -88,8 +109,8 @@ async gerarPdf(ids: number[]): Promise<Buffer> {
     }
 
     doc.text((f.nome || '-').toUpperCase(), 40, y, { width: 260 })
-    doc.text(f.cpf || '-', 310, y)
-    doc.text(f.rg || '-', 430, y)
+    doc.text(this.formatCPF(f.cpf), 310, y)
+    doc.text(this.formatRG(f.rg), 430, y)
     y += 18
   }
 

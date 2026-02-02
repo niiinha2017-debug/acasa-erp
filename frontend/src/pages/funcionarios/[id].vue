@@ -422,7 +422,7 @@
 
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { FuncionarioService } from '@/services/index'
 
@@ -450,6 +450,7 @@ const loading = ref(false)
 const arquivos = ref([])
 const loadingArquivos = ref(false)
 const fileInput = ref(null)
+const syncingForm = ref(false)
 
 const colArquivos = [
   { key: 'nome', label: 'ARQUIVO' },
@@ -706,14 +707,27 @@ const normalizarUnidade = (u) => {
 }
 
 
-watch(() => form.value.unidade, () => {
-  form.value.setor = ''
-  form.value.cargo = ''
-})
+watch(
+  () => form.value.unidade,
+  (next, prev) => {
+    if (syncingForm.value) return
+    if (!prev) return // evita limpar no primeiro set
+    if (next === prev) return
+    form.value.setor = ''
+    form.value.cargo = ''
+  },
+)
 
-watch(() => form.value.setor, () => {
-  form.value.cargo = ''
-})
+watch(
+  () => form.value.setor,
+  (next, prev) => {
+    if (syncingForm.value) return
+    if (!prev) return
+    if (next === prev) return
+    form.value.cargo = ''
+  },
+)
+
 
 // ===== CEP =====
 async function tratarBuscaCep() {
@@ -811,6 +825,9 @@ function montarPayload() {
     ...form.value,
     email: emailUi.value,
 
+    // ✅ se backend usa funcao:
+    funcao: form.value.cargo,
+
     salario_base: normalizarNumero(form.value.salario_base),
     salario_adicional: normalizarNumero(form.value.salario_adicional),
     custo_hora: normalizarNumero(form.value.custo_hora),
@@ -821,6 +838,7 @@ function montarPayload() {
     dia_pagamento: form.value.dia_pagamento ? Number(form.value.dia_pagamento) : null,
   }
 }
+
 
 
 
@@ -914,33 +932,38 @@ async function carregar() {
     return
   }
 
-  loading.value = true
-  try {
-    const { data } = await FuncionarioService.buscar(id.value)
+loading.value = true
+try {
+  const { data } = await FuncionarioService.buscar(id.value)
 
-    form.value = {
-      ...novoForm(),
-      ...data,
+  syncingForm.value = true
 
-        unidade: normalizarUnidade(data.unidade),
-      data_nascimento: fmtDate(data.data_nascimento),
-      admissao: fmtDate(data.admissao),
-      demissao: fmtDate(data.demissao),
+  form.value = {
+    ...novoForm(),
+    ...data,
+    unidade: normalizarUnidade(data.unidade),
 
-      salario_base: normalizarNumero(data.salario_base),
-      salario_adicional: normalizarNumero(data.salario_adicional),
-      custo_hora: normalizarNumero(data.custo_hora),
+    data_nascimento: fmtDate(data.data_nascimento),
+    admissao: fmtDate(data.admissao),
+    demissao: fmtDate(data.demissao),
 
-      vale: normalizarNumero(data.vale),
-      vale_transporte: normalizarNumero(data.vale_transporte),
+    salario_base: normalizarNumero(data.salario_base),
+    salario_adicional: normalizarNumero(data.salario_adicional),
+    custo_hora: normalizarNumero(data.custo_hora),
 
-      dia_pagamento: Number(data.dia_pagamento ?? 5),
-    }
-  } catch {
-    router.push('/funcionarios')
-  } finally {
-    loading.value = false
+    vale: normalizarNumero(data.vale),
+    vale_transporte: normalizarNumero(data.vale_transporte),
+
+    dia_pagamento: Number(data.dia_pagamento ?? 5),
   }
+
+  await nextTick()
+} catch {
+  router.push('/funcionarios')
+} finally {
+  syncingForm.value = false
+  loading.value = false
+}
 }
 
 onMounted(async () => {
