@@ -85,16 +85,20 @@ export class PlanoCorteService {
   }
 
 async update(id: number, dto: UpdatePlanoCorteDto) {
-  await this.findOne(id); // Garante que existe
+  await this.findOne(id);
 
   return this.prisma.$transaction(async (tx) => {
-    // 1. Se vierem produtos, limpamos e inserimos os novos
+    // 1. Se houver produtos no DTO, atualizamos a lista
     if (dto.produtos) {
+      // Remove os itens antigos para evitar duplicidade ou lixo
       await tx.plano_corte_produto.deleteMany({ where: { plano_corte_id: id } });
 
       for (const p of dto.produtos) {
-        // Cálculo forçado no servidor para evitar erro de casa decimal do front
-        const valorTotalItem = new Prisma.Decimal(p.quantidade).mul(new Prisma.Decimal(p.valor_unitario));
+        // FORÇAMOS O CÁLCULO AQUI: Quantidade * Valor Unitário
+        // Isso ignora se o frontend mandou o p.valor_total errado
+        const qtd = new Prisma.Decimal(p.quantidade || 0);
+        const vUnit = new Prisma.Decimal(p.valor_unitario || 0);
+        const totalItem = qtd.mul(vUnit);
 
         await tx.plano_corte_produto.create({
           data: {
@@ -102,12 +106,12 @@ async update(id: number, dto: UpdatePlanoCorteDto) {
             item_id: p.item_id,
             quantidade: p.quantidade,
             valor_unitario: p.valor_unitario,
-            valor_total: valorTotalItem, // Gravamos o cálculo exato
+            valor_total: totalItem, // Salva o cálculo feito pelo servidor
             status: p.status,
           },
         });
 
-        // Atualiza histórico do item
+        // Atualiza o histórico do item
         await tx.plano_corte_item.update({
           where: { id: p.item_id },
           data: {
@@ -118,28 +122,29 @@ async update(id: number, dto: UpdatePlanoCorteDto) {
       }
     }
 
-    // 2. BUSCA AS LINHAS REAIS (gravadas ou já existentes) para somar o cabeçalho
-    const todasAsLinhas = await tx.plano_corte_produto.findMany({
-      where: { plano_corte_id: id }
+    // 2. RECALCULO DO CABEÇALHO (O PONTO CHAVE)
+    // Buscamos o que está no banco agora para somar o total real
+    const itensNoBanco = await tx.plano_corte_produto.findMany({
+      where: { plano_corte_id: id },
     });
 
-    const totalIncontestavel = todasAsLinhas.reduce(
-      (acc, curr) => acc.plus(new Prisma.Decimal(curr.valor_total || 0)),
-      new Prisma.Decimal(0)
+    const totalGeral = itensNoBanco.reduce(
+      (acc, item) => acc.plus(new Prisma.Decimal(item.valor_total || 0)),
+      new Prisma.Decimal(0),
     );
 
-    // 3. Atualiza o cabeçalho SEMPRE com o total recalculado
+    // 3. ATUALIZA O CABEÇALHO SEMPRE
     await tx.plano_corte.update({
       where: { id },
       data: {
         fornecedor_id: dto.fornecedor_id,
         data_venda: dto.data_venda ? new Date(dto.data_venda) : undefined,
         status: dto.status,
-        valor_total: totalIncontestavel, // Aqui o banco se auto-corrige
+        valor_total: totalGeral, // Aqui o valor 1,74 vira 17,40 automaticamente
       },
     });
 
-    // Retorna o objeto completo para o front
+    // Retorna o plano atualizado com todas as relações
     return tx.plano_corte.findUnique({
       where: { id },
       include: {

@@ -27,6 +27,7 @@ import { UtilsModule } from './utils/utils.module'
 import { ObrasModule } from './obras/obras.module'
 import { PontoModule } from './ponto/ponto.module'
 import { ArquivosModule } from './arquivos/arquivos.module'
+import {ProducaoEncaminhamentoModule,} from './producao-encaminhamento/producao-encaminhamento.module'
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { ArquivosModule } from './arquivos/arquivos.module'
     UtilsModule,
     ObrasModule,
     PontoModule,
+    ProducaoEncaminhamentoModule,
   ],
   controllers: [VendasController],
   providers: [VendasService],
