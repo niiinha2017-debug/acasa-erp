@@ -152,10 +152,102 @@ async update(id: number, dto: UpdatePlanoCorteDto) {
   })
 }
 
+async enviarParaProducao(
+  id: number,
+  payload: {
+    inicio_em: string
+    fim_em: string
+    funcionario_ids: number[]
+    titulo: string
+    observacao?: string | null
+  },
+) {
+  const planoId = Number(id)
+  if (!planoId) throw new BadRequestException('ID inválido.')
 
-async enviarParaProducao(id: number) {
-  throw new BadRequestException('Status do Plano de Corte é controlado pela Agenda, não por esta ação.')
+  // valida datas do clique (EXATAS)
+  const inicio = new Date(payload.inicio_em)
+  const fim = new Date(payload.fim_em)
+  if (Number.isNaN(inicio.getTime()) || Number.isNaN(fim.getTime())) {
+    throw new BadRequestException('inicio_em/fim_em inválidos.')
+  }
+if (fim.getTime() <= inicio.getTime()) {
+  throw new BadRequestException('fim_em deve ser maior que inicio_em.')
 }
+
+
+  const funcIds = (payload.funcionario_ids || []).map(Number).filter((n) => n > 0)
+  if (!funcIds.length) throw new BadRequestException('Selecione ao menos 1 funcionário.')
+  const titulo = String(payload.titulo || '').trim()
+  if (!titulo) throw new BadRequestException('titulo é obrigatório.')
+
+  // garante plano existe
+  const plano = await this.prisma.plano_corte.findUnique({
+    where: { id: planoId },
+    select: { id: true, status: true },
+  })
+  if (!plano) throw new NotFoundException(`Plano de Corte #${planoId} não encontrado.`)
+
+  // custo total por funcionário (snapshot)
+  const funcionarios = await this.prisma.funcionarios.findMany({
+    where: { id: { in: funcIds } },
+    select: { id: true, custo_hora: true },
+  })
+  if (!funcionarios.length) throw new BadRequestException('Funcionários inválidos.')
+
+  const horas = (fim.getTime() - inicio.getTime()) / 36e5
+
+  return this.prisma.$transaction(async (tx) => {
+    // 1) muda o pipeline do plano de corte (imediato)
+    await tx.plano_corte.update({
+      where: { id: planoId },
+      data: { status: 'EM_PRODUCAO' },
+    })
+
+    // 2) garante producao_projetos (idempotente sem depender do nome do @@unique)
+    const origem_tipo = 'PLANO_CORTE'
+    const origem_id = planoId
+
+    const existente = await tx.producao_projetos.findFirst({
+      where: { origem_tipo, origem_id },
+      select: { id: true },
+    })
+
+    const projeto = existente
+      ? await tx.producao_projetos.update({
+          where: { id: existente.id },
+          data: { status: 'ABERTO', encaminhado_em: new Date() },
+          select: { id: true },
+        })
+      : await tx.producao_projetos.create({
+          data: { origem_tipo, origem_id, status: 'ABERTO', encaminhado_em: new Date() },
+          select: { id: true },
+        })
+
+    // 3) cria tarefas com horário EXATO do clique (uma por funcionário)
+    await tx.producao_tarefas.createMany({
+      data: funcionarios.map((f) => {
+        const custoHora = Number(f.custo_hora || 0)
+        const custoTotal = Number((custoHora * horas).toFixed(2))
+
+        return {
+          projeto_id: projeto.id,
+          funcionario_id: f.id,
+          titulo,
+          status: 'PENDENTE',
+          observacao: payload.observacao ? String(payload.observacao) : null,
+          inicio_em: inicio, // ✅ EXATO do clique
+          fim_em: fim,       // ✅ EXATO do clique
+          custo_hora_aplicado: custoHora,
+          custo_total: custoTotal,
+        }
+      }),
+    })
+
+    return { ok: true, projeto_id: projeto.id }
+  })
+}
+
 
 
 

@@ -726,7 +726,6 @@ model titulos_financeiros {
   @@map("titulos_financeiros")
  }
 
-
 model contas_receber {
   id Int @id @default(autoincrement())
 

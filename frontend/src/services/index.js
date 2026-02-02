@@ -22,6 +22,12 @@ export const MailService = {
   enviarTeste: (email) => api.get('/mail/teste', { params: { para: email } }),
 }
 
+export const ProducaoEncaminhamentoService = {
+  encaminhar(payload) {
+    return api.post('/producao/encaminhar', payload)
+  },
+}
+
 // --- SERVIÇO DE CLIENTES ---
 export const ClienteService = {
   listar: () => api.get('/clientes'),

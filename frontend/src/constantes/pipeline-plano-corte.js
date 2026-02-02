@@ -1,1 +1,1 @@
-export { PIPELINE_PLANO_CORTE } from '../../../backend/shared/constantes/piéline-plano-corte'
+export { PIPELINE_PLANO_CORTE } from '../../../backend/shared/constantes/pipeline-plano-corte'
