@@ -158,7 +158,7 @@
     Se necessário, o orçamento será criado automaticamente ao anexar (cliente obrigatório).
   </p>
 
-  <div class="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+  <div class="rounded-3xl border border-slate-200 bg-white overflow-hidden min-h-[220px]">
     <Table
       :columns="colArquivos"
       :rows="arquivos"
