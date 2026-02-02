@@ -1,4 +1,3 @@
-// src/producao/dto/criar-tarefa.dto.ts
 import { IsInt, IsOptional, IsString, Min } from 'class-validator'
 
 export class CriarTarefaDto {
@@ -9,9 +8,10 @@ export class CriarTarefaDto {
   @Min(1)
   origem_id: number
 
+  @IsOptional()
   @IsInt()
   @Min(1)
-  funcionario_id: number
+  funcionario_id?: number
 
   @IsString()
   titulo: string

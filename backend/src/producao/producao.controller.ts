@@ -14,7 +14,6 @@ import {
 import { ProducaoService } from './producao.service'
 import { CriarTarefaDto } from './dto/criar-tarefa.dto'
 import { AtualizarTarefaDto } from './dto/atualizar-tarefa.dto'
-import { EncaminharProducaoDto } from './dto/encaminhar-producao.dto'
 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'
 import { PermissionsGuard } from '../auth/permissions.guard'
@@ -40,12 +39,6 @@ export class ProducaoController {
   @Permissoes('producao.ver')
   agenda(@Query('inicio') inicio: string, @Query('fim') fim: string) {
     return this.service.agenda(inicio, fim)
-  }
-
-  @Post('encaminhar')
-  @Permissoes('producao.criar')
-  encaminhar(@Body() dto: EncaminharProducaoDto) {
-    return this.service.encaminhar(dto)
   }
 
   @Post('tarefas')

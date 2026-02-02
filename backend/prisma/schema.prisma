@@ -604,8 +604,8 @@ model producao_tarefas {
   projeto_id Int
   projeto    producao_projetos @relation(fields: [projeto_id], references: [id], onDelete: Cascade)
 
-  funcionario_id Int
-  funcionario    funcionarios @relation(fields: [funcionario_id], references: [id])
+  funcionario_id Int?               // ✅ agora pode ser null
+  funcionario    funcionarios? @relation(fields: [funcionario_id], references: [id])
 
   titulo     String
   status     String  @default("PENDENTE")
@@ -614,7 +614,6 @@ model producao_tarefas {
   inicio_em DateTime
   fim_em    DateTime
 
-  // CPV (snapshot)
   custo_hora_aplicado Decimal @default(0.00) @db.Decimal(12, 2)
   custo_total         Decimal @default(0.00) @db.Decimal(12, 2)
 

@@ -23,39 +23,38 @@
           />
         </div>
         
-<Button 
-  v-if="can('plano_corte.criar')"
-  variant="primary"
-  size="md"
-  class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider w-full sm:w-auto"
-  @click="novo()"
->
-  <i class="pi pi-plus mr-1.5 text-[10px]"></i>
-  Novo Plano
-</Button>
-
+        <Button 
+          v-if="can('plano_corte.criar')"
+          variant="primary"
+          size="md"
+          class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider w-full sm:w-auto"
+          @click="novo()"
+        >
+          <i class="pi pi-plus mr-1.5 text-[10px]"></i>
+          Novo Plano
+        </Button>
       </div>
     </div>
 
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-  <div class="p-5 rounded-xl bg-white border border-slate-200 shadow-sm flex flex-col justify-center min-h-[100px]">
-    <p class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1">Total de Planos</p>
-    <p class="text-3xl font-black text-slate-800">{{ planos.length }}</p>
-  </div>
-  
-  <div class="p-5 rounded-xl bg-white border border-emerald-100 shadow-sm flex flex-col justify-center min-h-[100px]">
-    <p class="text-[10px] font-black uppercase tracking-[0.15em] text-emerald-600 mb-1">Finalizados</p>
-    <p class="text-3xl font-black text-emerald-700">{{ totalFinalizados }}</p>
-  </div>
-  
-  <div class="p-5 rounded-xl bg-white border border-amber-100 shadow-sm flex flex-col justify-center min-h-[100px]">
-    <p class="text-[10px] font-black uppercase tracking-[0.15em] text-amber-600 mb-1">Em Aberto</p>
-    <div class="flex items-center gap-2">
-      <p class="text-3xl font-black text-amber-700">{{ totalEmAberto }}</p>
-      <span class="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse mt-2"></span>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div class="p-5 rounded-xl bg-white border border-slate-200 shadow-sm flex flex-col justify-center min-h-[100px]">
+        <p class="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1">Total Geral (Financeiro)</p>
+        <p class="text-2xl font-black text-slate-800">{{ maskMoneyBR(valorTotalGeral) }}</p>
+      </div>
+      
+      <div class="p-5 rounded-xl bg-white border border-emerald-100 shadow-sm flex flex-col justify-center min-h-[100px]">
+        <p class="text-[10px] font-black uppercase tracking-[0.15em] text-emerald-600 mb-1">Finalizados</p>
+        <p class="text-3xl font-black text-emerald-700">{{ totalFinalizados }}</p>
+      </div>
+      
+      <div class="p-5 rounded-xl bg-white border border-amber-100 shadow-sm flex flex-col justify-center min-h-[100px]">
+        <p class="text-[10px] font-black uppercase tracking-[0.15em] text-amber-600 mb-1">Em Aberto</p>
+        <div class="flex items-center gap-2">
+          <p class="text-3xl font-black text-amber-700">{{ totalEmAberto }}</p>
+          <span class="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse mt-2"></span>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
 
     <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
       <Table 
@@ -74,7 +73,7 @@
                 {{ row.fornecedor?.razao_social || 'Fornecedor não Identificado' }}
               </span>
               <span class="text-[10px] font-bold text-brand-primary tracking-wider uppercase">
-                Pedido #{{ row.numero_pedido || 'S/N' }}
+                Pedido #{{ row.numero_pedido || row.id }}
               </span>
             </div>
           </div>
@@ -94,7 +93,7 @@
             <span class="text-sm font-black text-slate-800">
               {{ maskMoneyBR(row.valor_total || 0) }}
             </span>
-            <span class="text-[9px] font-bold text-slate-400 uppercase">Total</span>
+            <span class="text-[9px] font-bold text-slate-400 uppercase italic">Total Plano</span>
           </div>
         </template>
 
@@ -110,22 +109,22 @@
 
         <template #cell-acoes="{ row }">
           <div class="flex justify-end gap-1 px-2">
-<button
-  v-if="can('plano_corte.editar')"
-  @click="editar(row.id)"
-  class="w-7 h-7 rounded-lg bg-slate-100 text-slate-500 hover:bg-brand-primary hover:text-white transition-all flex items-center justify-center"
-  title="Editar"
->
-  <i class="pi pi-pencil text-[10px]"></i>
-</button>
-<button
-  v-if="can('plano_corte.excluir')"
-  @click="confirmarExcluirPlanoIndex(row)"
-  class="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
-  title="Excluir"
->
-  <i class="pi pi-trash text-[10px]"></i>
-</button>
+            <button
+              v-if="can('plano_corte.editar')"
+              @click="editar(row.id)"
+              class="w-7 h-7 rounded-lg bg-slate-100 text-slate-500 hover:bg-brand-primary hover:text-white transition-all flex items-center justify-center"
+              title="Editar"
+            >
+              <i class="pi pi-pencil text-[10px]"></i>
+            </button>
+            <button
+              v-if="can('plano_corte.excluir')"
+              @click="confirmarExcluirPlanoIndex(row)"
+              class="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
+              title="Excluir"
+            >
+              <i class="pi pi-trash text-[10px]"></i>
+            </button>
           </div>
         </template>
       </Table>
@@ -150,18 +149,25 @@ const loading = ref(false)
 const planos = ref([])
 
 const columns = [
-  { key: 'fornecedor', label: 'FORNECEDOR / PEDIDO', width: '40%' },
+  { key: 'fornecedor', label: 'FORNECEDOR / PEDIDO', width: '35%' },
   { key: 'data', label: 'EMISSÃO', width: '15%' },
-  { key: 'total', label: 'VALOR', width: '15%' },
+  { key: 'total', label: 'VALOR TOTAL', width: '20%' }, // Aumentei um pouco a largura
   { key: 'status', label: 'SITUAÇÃO', width: '20%' },
   { key: 'acoes', label: '', width: '10%', align: 'right' }
 ]
 
+// CÁLCULOS DOS CARDS DE TOPO
 const totalFinalizados = computed(() =>
-  planos.value.filter(p => ['CONCLUIDO', 'FINALIZADO'].includes(String(p.status || '').toUpperCase())).length
+  planos.value.filter(p => ['CONCLUIDO', 'FINALIZADO', 'ENTREGUE'].includes(String(p.status || '').toUpperCase())).length
 )
 
-const totalEmAberto = computed(() => planos.value.length - totalFinalizados.value)
+const totalEmAberto = computed(() => 
+  planos.value.filter(p => !['CONCLUIDO', 'FINALIZADO', 'CANCELADO'].includes(String(p.status || '').toUpperCase())).length
+)
+
+const valorTotalGeral = computed(() => 
+  planos.value.reduce((acc, p) => acc + (Number(p.valor_total) || 0), 0)
+)
 
 const rowsFiltrados = computed(() => {
   const termo = (busca.value || '').toLowerCase().trim()
@@ -169,7 +175,6 @@ const rowsFiltrados = computed(() => {
   return planos.value.filter(p =>
     String(p.fornecedor?.razao_social || '').toLowerCase().includes(termo) ||
     String(p.status || '').toLowerCase().includes(termo) ||
-    String(p.id || '').includes(termo) ||
     String(p.numero_pedido || '').includes(termo)
   )
 })
@@ -178,28 +183,27 @@ function statusClassTailwind(status) {
   const s = String(status || '').toUpperCase()
   if (['CONCLUIDO', 'FINALIZADO'].includes(s)) return 'bg-emerald-50 text-emerald-600 border border-emerald-100'
   if (s === 'CANCELADO') return 'bg-red-50 text-red-500 border border-red-100'
-  if (['EM_PRODUCAO', 'EM PRODUCAO', 'ABERTO', 'EM_ABERTO'].includes(s)) return 'bg-amber-50 text-amber-600 border border-amber-100'
-  return 'bg-blue-50 text-blue-600 border border-blue-100'
+  if (['EM_PRODUCAO', 'EM PRODUCAO', 'PRODUZINDO'].includes(s)) return 'bg-blue-50 text-blue-600 border border-blue-100'
+  // ABERTO / EM ABERTO
+  return 'bg-amber-50 text-amber-600 border border-amber-100'
 }
 
 function novo() {
-  if (!can('plano_corte.criar')) return notify.error('Acesso negado.')
   router.push('/plano-corte/novo')
 }
 
 function editar(id) {
-  if (!can('plano_corte.editar')) return notify.error('Acesso negado.')
   router.push(`/plano-corte/${id}`)
 }
 
 async function carregar() {
-  if (!can('plano_corte.ver')) return notify.error('Acesso negado.')
   loading.value = true
   try {
     const { data } = await api.get('/plano-corte')
+    // IMPORTANTE: Se o backend não somar os itens no GET /, 
+    // você precisará fazer um map aqui ou garantir que o campo 'valor_total' exista no banco.
     planos.value = Array.isArray(data) ? data : []
   } catch (err) {
-    console.error(err)
     notify.error('Erro ao carregar planos.')
   } finally {
     loading.value = false
@@ -207,24 +211,21 @@ async function carregar() {
 }
 
 async function excluir(plano) {
-  if (!can('plano_corte.excluir')) return notify.error('Acesso negado.')
   try {
     await api.delete(`/plano-corte/${plano.id}`)
     planos.value = planos.value.filter(p => p.id !== plano.id)
-    notify.success('Plano removido.')
+    notify.success('Plano removido com sucesso.')
   } catch (err) {
-    notify.error('Erro ao excluir.')
+    notify.error('Erro ao excluir plano.')
   }
 }
 
 async function confirmarExcluirPlanoIndex(plano) {
-  if (!can('plano_corte.excluir')) return notify.error('Acesso negado.')
   const ok = await confirm.show(
     'Excluir Plano de Corte',
-    `Deseja excluir o Plano #${plano?.numero_pedido || plano?.id}? Esta ação não pode ser desfeita.`,
+    `Deseja excluir o Plano de ${plano.fornecedor?.razao_social || 'Marcenaria'}?`
   )
-  if (!ok) return
-  await excluir(plano)
+  if (ok) await excluir(plano)
 }
 
 onMounted(carregar)

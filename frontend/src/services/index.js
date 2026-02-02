@@ -146,7 +146,6 @@ export const PlanoCorteService = {
     buscar: (id) => api.get(`/plano-corte-consumos/${id}`),
     registrar: (dados) => api.post('/plano-corte-consumos', dados),
     remover: (id) => api.delete(`/plano-corte-consumos/${id}`),
-    enviarParaProducao: (id) => api.post(`/plano-corte/${id}/enviar_producao`),
   },
 }
 

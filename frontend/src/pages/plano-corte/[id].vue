@@ -186,7 +186,7 @@
   variant="secondary"
   :loading="encaminhando"
   :disabled="statusPlano === 'EM_PRODUCAO'"
-  @click="confirmarEncaminharParaProducao"
+  @click="encaminharParaProducao"
 >
   Enviar Produção
 </Button>
@@ -510,29 +510,19 @@ async function confirmarExcluirPlano() {
   }
 }
 
-
-const FUNCIONARIO_PADRAO_PRODUCAO = 1 // <-- você define (id real)
-
 async function encaminharParaProducao() {
   if (!can('plano_corte.enviar_producao')) return notify.error('Acesso negado.')
   if (!isEdit.value) return
 
   encaminhando.value = true
   try {
-    const inicio = new Date() // ✅ exatamente no clique
-    const fim = new Date(inicio.getTime() + 2 * 60 * 60 * 1000) // +2h
-
     await ProducaoService.encaminhar({
-      origem_tipo: 'PLANO_CORTE',
-      origem_id: planoId.value,
+  origem_tipo: 'PLANO_CORTE',
+  origem_id: planoId.value,
+  // status opcional: se não mandar, backend usa 'ABERTO'
+  // status: 'ABERTO',
+})
 
-      inicio_em: inicio.toISOString(),
-      fim_em: fim.toISOString(),
-
-      funcionario_ids: [FUNCIONARIO_PADRAO_PRODUCAO],
-      titulo: `PLANO DE CORTE #${planoId.value}`,
-      observacao: null,
-    })
 
     const { data } = await PlanoCorteService.buscar(planoId.value)
     statusPlano.value = data.status ?? ''
@@ -604,37 +594,6 @@ function registrarItemNovo() {
   })
 
   limparItemNovo()
-}
-
-
-
-async function encaminharParaProducao() {
-  if (!can('plano_corte.enviar_producao')) return notify.error('Acesso negado.')
-
-  if (!isEdit.value) return
-
-  encaminhando.value = true
-  try {
-await ProducaoService.encaminhar({
-  origem_tipo: 'PLANO_CORTE',
-  origem_id: planoId.value,
-
-  inicio_em: inicioISO,
-  fim_em: fimISO,
-
-  funcionario_ids: [1, 7], // 1+ funcionários
-  titulo: `PLANO DE CORTE #${planoId.value}`,
-  observacao: null,
-})
-
-
-    // ✅ não seta status na mão — recarrega do banco
-    const { data } = await PlanoCorteService.buscar(planoId.value)
-statusPlano.value = data.status ?? ''
-
-  } finally {
-    encaminhando.value = false
-  }
 }
 
 

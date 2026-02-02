@@ -2,7 +2,6 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service'
 import { CriarTarefaDto } from './dto/criar-tarefa.dto'
 import { AtualizarTarefaDto } from './dto/atualizar-tarefa.dto'
-import { EncaminharProducaoDto } from './dto/encaminhar-producao.dto'
 
 @Injectable()
 export class ProducaoService {
@@ -55,40 +54,6 @@ private normalizarId(valor: any, field: string) {
     })
   }
 
-async encaminhar(dto: EncaminharProducaoDto) {
-  const tipo = this.normalizarOrigemTipo(dto.origem_tipo)
-  const oid = this.normalizarId(dto.origem_id, 'origem_id')
-  const status = String(dto.status || 'ENCAMINHADO_PRODUCAO').trim()
-  const agora = new Date()
-
-  const projeto = await this.prisma.producao_projetos.upsert({
-    where: {
-      origem_tipo_origem_id: { origem_tipo: tipo, origem_id: oid },
-    },
-    create: {
-      origem_tipo: tipo,
-      origem_id: oid,
-      status,
-      encaminhado_em: agora,
-    },
-    update: {
-      status,
-      encaminhado_em: agora,
-    },
-    select: {
-      id: true,
-      origem_tipo: true,
-      origem_id: true,
-      status: true,
-      encaminhado_em: true,
-      atualizado_em: true,
-    },
-  })
-
-  await this.refletirStatusNaOrigem(projeto.id)
-
-  return projeto
-}
 
 async agenda(inicioIso: string, fimIso: string) {
   if (!inicioIso || !fimIso) throw new BadRequestException('inicio e fim são obrigatórios')
@@ -166,8 +131,9 @@ async agenda(inicioIso: string, fimIso: string) {
     let maxFim: Date | null = null
 
     for (const t of tarefas) {
-      const fid = Number(t.funcionario_id)
-      const nome = t.funcionario?.nome || '—'
+const fid = t.funcionario_id ? Number(t.funcionario_id) : 0
+const nome = t.funcionario?.nome || (fid ? '—' : 'SEM FUNCIONÁRIO')
+
 
       if (!mapFunc[String(fid)]) {
         mapFunc[String(fid)] = {
@@ -249,34 +215,35 @@ async criarTarefa(dto: CriarTarefaDto) {
   const fim = this.toDate(dto.fim_em, 'fim_em')
   const horas = this.calcHoras(inicio, fim)
 
-  const funcionarioId = this.normalizarId(dto.funcionario_id, 'funcionario_id')
-
-  const funcionario = await this.prisma.funcionarios.findUnique({
-    where: { id: funcionarioId },
-    select: { custo_hora: true },
-  })
-
-  if (!funcionario) {
-    throw new BadRequestException('Funcionário não encontrado')
-  }
-
-  const custoHoraAplicado = Number(funcionario.custo_hora || 0)
-  const custoTotal = this.round2(horas * custoHoraAplicado)
-
   const titulo = String(dto.titulo || '').trim()
   if (!titulo) throw new BadRequestException('titulo é obrigatório')
+
+  let funcionarioId: number | null = null
+  let custoHoraAplicado = 0
+
+  if (dto.funcionario_id !== undefined && dto.funcionario_id !== null) {
+    funcionarioId = this.normalizarId(dto.funcionario_id, 'funcionario_id')
+
+    const funcionario = await this.prisma.funcionarios.findUnique({
+      where: { id: funcionarioId },
+      select: { custo_hora: true },
+    })
+    if (!funcionario) throw new BadRequestException('Funcionário não encontrado')
+
+    custoHoraAplicado = Number(funcionario.custo_hora || 0)
+  }
+
+  const custoTotal = this.round2(horas * custoHoraAplicado)
 
   return this.prisma.producao_tarefas.create({
     data: {
       projeto_id: projeto.id,
-      funcionario_id: funcionarioId,
+      funcionario_id: funcionarioId, // ✅ null permitido
       titulo,
       status: String(dto.status || 'PENDENTE').trim(),
       observacao: dto.observacao ? String(dto.observacao).trim() : null,
       inicio_em: inicio,
       fim_em: fim,
-
-      // ✅ SNAPSHOT
       custo_hora_aplicado: custoHoraAplicado,
       custo_total: custoTotal,
     },
@@ -296,6 +263,7 @@ async criarTarefa(dto: CriarTarefaDto) {
     },
   })
 }
+
 
 async atualizarTarefa(id: number, dto: AtualizarTarefaDto) {
   const atual = await this.prisma.producao_tarefas.findUnique({
@@ -330,22 +298,25 @@ if (dto.origem_tipo !== undefined || dto.origem_id !== undefined) {
   // ============================
   let custoHoraAplicado = Number(atual.custo_hora_aplicado || 0)
 
-  if (dto.funcionario_id !== undefined) {
+if (dto.funcionario_id !== undefined) {
+  if (dto.funcionario_id === null) {
+    data.funcionario_id = null
+    data.custo_hora_aplicado = 0
+    custoHoraAplicado = 0
+  } else {
     const funcionarioId = this.normalizarId(dto.funcionario_id, 'funcionario_id')
-
     const funcionario = await this.prisma.funcionarios.findUnique({
       where: { id: funcionarioId },
       select: { custo_hora: true },
     })
-
-    if (!funcionario) {
-      throw new BadRequestException('Funcionário não encontrado')
-    }
+    if (!funcionario) throw new BadRequestException('Funcionário não encontrado')
 
     custoHoraAplicado = Number(funcionario.custo_hora || 0)
     data.funcionario_id = funcionarioId
     data.custo_hora_aplicado = custoHoraAplicado
   }
+}
+
 
   // ============================
   // CAMPOS SIMPLES
@@ -406,44 +377,4 @@ if (dto.origem_tipo !== undefined || dto.origem_id !== undefined) {
       throw new NotFoundException('Tarefa não encontrada')
     }
   }
-
-private async refletirStatusNaOrigem(projetoId: number) {
-  const proj = await this.prisma.producao_projetos.findUnique({
-    where: { id: projetoId },
-    select: { origem_tipo: true, origem_id: true, status: true },
-  })
-  if (!proj) return
-
-  const tipo = String(proj.origem_tipo || '').trim().toUpperCase()
-  const status = String(proj.status || '').trim()
-
-  if (tipo === 'PLANO_CORTE') {
-    await this.prisma.plano_corte.update({
-      where: { id: proj.origem_id },
-      data: { status },
-    })
-    return
-  }
-
-  if (tipo === 'VENDA_CLIENTE') {
-    const venda = await this.prisma.vendas.findUnique({
-      where: { id: proj.origem_id },
-      select: { cliente_id: true },
-    })
-    if (!venda) return
-
-    const obra = await this.prisma.obras.findFirst({
-      where: { cliente_id: venda.cliente_id },
-      orderBy: { id: 'desc' },
-      select: { id: true },
-    })
-    if (!obra) return
-
-    await this.prisma.obras.update({
-      where: { id: obra.id },
-      data: { status_processo: status },
-    })
-    return
-  }
-}
 }
