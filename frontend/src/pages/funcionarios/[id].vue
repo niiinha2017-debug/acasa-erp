@@ -857,12 +857,25 @@ async function confirmarSalvarFuncionario() {
 async function salvar() {
   if (!can(permSalvar())) return notify.error('Acesso negado.')
 
+  // ✅ debug do estado atual
+  console.group('[FUNCIONARIO] salvar()')
+  console.log('isEditing:', isEditing.value, 'id:', id.value)
+  console.log('form.unidade/setor/cargo:', form.value.unidade, form.value.setor, form.value.cargo)
+
   if (!form.value.nome || String(form.value.cpf || '').length < 11) {
+    console.warn('VALIDACAO FALHOU: nome/cpf', { nome: form.value.nome, cpf: form.value.cpf })
+    console.groupEnd()
     alert('Preencha Nome e CPF corretamente.')
     return
   }
 
   if (!form.value.unidade || !form.value.setor || !form.value.cargo) {
+    console.warn('VALIDACAO FALHOU: unidade/setor/cargo', {
+      unidade: form.value.unidade,
+      setor: form.value.setor,
+      cargo: form.value.cargo,
+    })
+    console.groupEnd()
     alert('Preencha Unidade, Setor e Cargo corretamente.')
     return
   }
@@ -872,9 +885,16 @@ async function salvar() {
     recalcularCustoHora()
     const payload = montarPayload()
 
-    const { data } = await FuncionarioService.salvar(isEditing.value ? id.value : null, payload)
+    console.log('payload enviado:', payload)
 
-    // se era novo: vira edição e fica na tela
+    const targetId = isEditing.value ? id.value : null
+    console.log('targetId:', targetId)
+
+    const { data } = await FuncionarioService.salvar(targetId, payload)
+
+    console.log('response data:', data)
+    console.groupEnd()
+
     if (!isEditing.value) {
       const newId = data?.id
       if (newId) {
@@ -886,6 +906,8 @@ async function salvar() {
 
     router.push('/funcionarios')
   } catch (err) {
+    console.error('ERRO salvar funcionario:', err?.response?.status, err?.response?.data || err)
+    console.groupEnd()
     alert(err?.response?.data?.message || 'Erro ao salvar')
   } finally {
     salvando.value = false
