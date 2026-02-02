@@ -1,12 +1,14 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { EncaminharProducaoDto } from './dto/encaminhar-producao.dto'
+import { randomUUID } from 'crypto'
+
 
 @Injectable()
 export class ProducaoEncaminhamentoService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async encaminhar(dto: EncaminharProducaoDto) {
+async encaminhar(dto: EncaminharProducaoDto) {
   const origem_tipo = String(dto.origem_tipo || '').trim().toUpperCase()
   const origem_id = Number(dto.origem_id)
 
@@ -17,24 +19,22 @@ export class ProducaoEncaminhamentoService {
   const agora = new Date()
 
   return this.prisma.$transaction(async (tx) => {
-    // 1) cria/atualiza producao_projetos (hora exata do clique)
-    const existente = await tx.producao_projetos.findFirst({
-      where: { origem_tipo, origem_id },
+    const projeto = await tx.producao_projetos.upsert({
+      where: { origem_tipo_origem_id: { origem_tipo, origem_id } },
+      create: {
+        codigo: `PROD-${randomUUID()}`,
+        origem_tipo,
+        origem_id,
+        status,
+        encaminhado_em: agora,
+      },
+      update: {
+        status,
+        encaminhado_em: agora,
+      },
       select: { id: true },
     })
 
-    const projeto = existente
-      ? await tx.producao_projetos.update({
-          where: { id: existente.id },
-          data: { status, encaminhado_em: agora },
-          select: { id: true },
-        })
-      : await tx.producao_projetos.create({
-          data: { origem_tipo, origem_id, status, encaminhado_em: agora },
-          select: { id: true },
-        })
-
-    // 2) pipeline da origem (somente o que você definiu)
     if (origem_tipo === 'PLANO_CORTE') {
       await tx.plano_corte.update({
         where: { id: origem_id },
@@ -42,11 +42,9 @@ export class ProducaoEncaminhamentoService {
       })
     }
 
-    // VENDA: aqui NÃO cria tarefa e NÃO seta data_producao.
-    // Venda/Obra seguem pipeline por datas/agendamento, como você alinhou.
-
     return { ok: true, projeto_id: projeto.id }
   })
 }
+
 
 }

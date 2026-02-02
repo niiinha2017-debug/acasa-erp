@@ -3,6 +3,8 @@ import { Prisma } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
 import { CreatePlanoCorteDto } from '../dto/create-plano-corte.dto'
 import { UpdatePlanoCorteDto } from '../dto/update-plano-corte.dto'
+import { randomUUID } from 'crypto'
+
 
 @Injectable()
 export class PlanoCorteService {
@@ -169,28 +171,30 @@ async enviarParaProducao(id: number) {
       data: { status: 'EM_PRODUCAO' },
     })
 
-    // 2) encaminhamento (projeto de produção)
-    const origem_tipo = 'PLANO_CORTE'
-    const origem_id = planoId
-    const agora = new Date()
+const origem_tipo = 'PLANO_CORTE'
+const origem_id = planoId
+const agora = new Date()
 
-    const existente = await tx.producao_projetos.findFirst({
-      where: { origem_tipo, origem_id },
-      select: { id: true },
-    })
+const projeto = await tx.producao_projetos.upsert({
+  where: {
+    origem_tipo_origem_id: { origem_tipo, origem_id },
+  },
+  create: {
+    codigo: `PROD-${randomUUID()}`,
+    origem_tipo,
+    origem_id,
+    status: 'ABERTO',
+    encaminhado_em: agora,
+  },
+  update: {
+    status: 'ABERTO',
+    encaminhado_em: agora,
+  },
+  select: { id: true, status: true, encaminhado_em: true },
+})
 
-    const projeto = existente
-      ? await tx.producao_projetos.update({
-          where: { id: existente.id },
-          data: { status: 'ABERTO', encaminhado_em: agora },
-          select: { id: true, status: true, encaminhado_em: true },
-        })
-      : await tx.producao_projetos.create({
-          data: { origem_tipo, origem_id, status: 'ABERTO', encaminhado_em: agora },
-          select: { id: true, status: true, encaminhado_em: true },
-        })
+return { ok: true, projeto_id: projeto.id }
 
-    return { ok: true, projeto_id: projeto.id }
   })
 }
 
