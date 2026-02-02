@@ -201,12 +201,16 @@ const columns = [
 
 // Simplificado: não precisa recriar o Set toda vez
 function toggle(id) {
-  if (selectedIds.value.has(id)) {
-    selectedIds.value.delete(id)
-  } else {
-    selectedIds.value.add(id)
-  }
+  const s = new Set(selectedIds.value)
+  s.has(id) ? s.delete(id) : s.add(id)
+  selectedIds.value = s
 }
+
+
+function isSelected(id) {
+  return selectedIds.value.has(id)
+}
+
 
 const funcionariosFiltrados = computed(() => {
   const termo = String(filtro.value || '').toLowerCase().trim()
@@ -240,19 +244,33 @@ const funcionariosFiltrados = computed(() => {
 async function carregar() {
   loading.value = true
   try {
-    const { data } = await FuncionarioService.listar()
-funcionarios.value = (Array.isArray(data) ? data : []).map(f => ({
-  ...f,
-  cargo: f.cargo ?? f.funcao ?? '',
-  rg: f.rg ?? '',
-}))
+    const resp = await FuncionarioService.listar()
 
+    // 🔥 log do retorno real (pra matar a dúvida)
+    console.log('[FUNCIONARIOS] resp:', resp)
+
+    const raw =
+      (Array.isArray(resp?.data) && resp.data) ||
+      (Array.isArray(resp) && resp) ||
+      (Array.isArray(resp?.data?.data) && resp.data.data) ||
+      (Array.isArray(resp?.data?.items) && resp.data.items) ||
+      (Array.isArray(resp?.data?.rows) && resp.data.rows) ||
+      []
+
+    funcionarios.value = raw.map(f => ({
+      ...f,
+      nome: f.nome ?? f.nome_completo ?? '',
+      cargo: f.cargo ?? f.funcao ?? '',
+      rg: f.rg ?? '',
+    }))
   } catch (err) {
-    notify.error('Erro ao carregar lista de funcionários.')
+    console.log('[FUNCIONARIOS] erro:', err)
+    notify.error(err?.response?.data?.message || 'Erro ao carregar lista de funcionários.')
   } finally {
     loading.value = false
   }
 }
+
 
 // PDF LOGIC
 async function gerarPdf() {
