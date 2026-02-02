@@ -88,7 +88,11 @@
             />
             <div class="flex flex-col">
               <span class="text-sm font-bold text-slate-800 uppercase tracking-tight">{{ row.nome }}</span>
-              <span class="text-[10px] font-medium text-slate-500">{{ row.cpf || '000.000.000-00' }}</span>
+              <span class="text-[10px] font-medium text-slate-500">
+  {{ row.cpf ? maskCPF(row.cpf) : '000.000.000-00' }}
+  <span v-if="row.rg" class="ml-2 text-slate-400">RG: {{ maskRG(row.rg) }}</span>
+</span>
+
             </div>
           </div>
         </template>
@@ -164,6 +168,8 @@ import { FuncionarioService } from '@/services/index'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
+import { onlyNumbers, maskCPF, maskRG } from '@/utils/masks'
+
 
 definePage({ meta: { perm: 'funcionarios.ver' } })
 
@@ -203,21 +209,42 @@ function toggle(id) {
 const funcionariosFiltrados = computed(() => {
   const termo = String(filtro.value || '').toLowerCase().trim()
   if (!termo) return funcionarios.value
-  return funcionarios.value.filter((f) =>
-    String(f.nome || '').toLowerCase().includes(termo) ||
-    String(f.cpf || '').includes(termo) ||
-    String(f.cargo || '').toLowerCase().includes(termo)
-  )
+
+  const termoDigits = onlyNumbers(termo)
+
+  return funcionarios.value.filter((f) => {
+    const nome = String(f.nome || '').toLowerCase()
+    const cargo = String(f.cargo || '').toLowerCase()
+    const setor = String(f.setor || '').toLowerCase()
+
+    const cpfDigits = onlyNumbers(String(f.cpf || ''))
+    const rgDigits = onlyNumbers(String(f.rg || ''))
+
+    const bateTexto =
+      nome.includes(termo) ||
+      cargo.includes(termo) ||
+      setor.includes(termo)
+
+    // se o usuário digitou número, procura no CPF/RG por dígitos
+    const bateDocs = termoDigits
+      ? (cpfDigits.includes(termoDigits) || rgDigits.includes(termoDigits))
+      : false
+
+    return bateTexto || bateDocs
+  })
 })
+
 
 async function carregar() {
   loading.value = true
   try {
     const { data } = await FuncionarioService.listar()
-    funcionarios.value = (Array.isArray(data) ? data : []).map(f => ({
-      ...f,
-      cargo: f.cargo ?? f.funcao ?? '',
-    }))
+funcionarios.value = (Array.isArray(data) ? data : []).map(f => ({
+  ...f,
+  cargo: f.cargo ?? f.funcao ?? '',
+  rg: f.rg ?? '',
+}))
+
   } catch (err) {
     notify.error('Erro ao carregar lista de funcionários.')
   } finally {
