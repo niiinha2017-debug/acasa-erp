@@ -175,17 +175,19 @@
             </div>
 
             <div class="grid grid-cols-12 gap-4">
-              <div class="col-span-12 md:col-span-4 space-y-2">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidade *</label>
-                <select
-                  v-model="form.unidade"
-                  class="w-full h-12 px-4 rounded-xl bg-white border border-slate-200 font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary transition-all"
-                >
-                  <option value="">SELECIONE</option>
-                  <option value="FÁBRICA">FÁBRICA</option>
-                  <option value="LOJA">LOJA</option>
-                </select>
-              </div>
+<div class="col-span-12 md:col-span-4 space-y-2">
+  <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidade *</label>
+  <select
+    v-model="form.unidade"
+    class="w-full h-12 px-4 rounded-xl bg-white border border-slate-200 font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary transition-all uppercase"
+  >
+    <option value="">SELECIONE</option>
+    <option v-for="opt in unidadeOptions" :key="opt.value" :value="opt.value">
+      {{ opt.label }}
+    </option>
+  </select>
+</div>
+
 
               <div class="col-span-12 md:col-span-4 space-y-2">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Setor *</label>
@@ -680,20 +682,29 @@ const tempoServico = computed(() => {
 })
 
 // ===== Unidade / Setor / Cargo =====
-const unidadeKey = computed(() =>
-  form.value.unidade === 'FABRICA' ? 'FÁBRICA' : form.value.unidade
-)
+const unidadeOptions = computed(() => {
+  const src = FUNCIONARIOS_LOCAL_SETOR_CARGO || {}
+  return Object.keys(src).map((k) => ({ label: k, value: k }))
+})
+
 
 const setorOptions = computed(() => {
-  const grupos = FUNCIONARIOS_LOCAL_SETOR_CARGO?.[unidadeKey.value] || []
+  const grupos = FUNCIONARIOS_LOCAL_SETOR_CARGO?.[form.value.unidade] || []
   return grupos.map(g => ({ label: String(g.setor).replaceAll('_', ' '), value: g.setor }))
 })
 
 const cargoOptions = computed(() => {
-  const grupos = FUNCIONARIOS_LOCAL_SETOR_CARGO?.[unidadeKey.value] || []
+  const grupos = FUNCIONARIOS_LOCAL_SETOR_CARGO?.[form.value.unidade] || []
   const grupo = grupos.find(g => g.setor === form.value.setor)
   return (grupo?.cargo || []).map(v => ({ label: String(v).replaceAll('_', ' '), value: v }))
 })
+
+const normalizarUnidade = (u) => {
+  const s = String(u || '').toUpperCase().trim()
+  if (s === 'FABRICA') return 'FÁBRICA'
+  return u
+}
+
 
 watch(() => form.value.unidade, () => {
   form.value.setor = ''
@@ -911,6 +922,7 @@ async function carregar() {
       ...novoForm(),
       ...data,
 
+        unidade: normalizarUnidade(data.unidade),
       data_nascimento: fmtDate(data.data_nascimento),
       admissao: fmtDate(data.admissao),
       demissao: fmtDate(data.demissao),

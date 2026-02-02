@@ -23,7 +23,7 @@
         <div class="p-4 border-b border-slate-100">
           <div class="text-sm font-black text-slate-800 truncate">{{ nomeArquivo }}</div>
           <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-            {{ mimeType || 'ARQUIVO' }}
+            {{ mimeFinal || 'ARQUIVO' }}
           </div>
         </div>
 
@@ -72,14 +72,19 @@ definePage({ meta: { perm: 'arquivos.ver' } })
 
 const route = useRoute()
 const router = useRouter()
+const mimeDetectado = ref('')
+
 
 const id = computed(() => String(route.params.id || '').replace(/\D/g, ''))
 
 const nomeArquivo = computed(() => String(route.query.name || `ARQUIVO_${id.value}`))
 const mimeType = computed(() => String(route.query.type || ''))
 
-const isImage = computed(() => mimeType.value.startsWith('image/'))
-const isPdf = computed(() => mimeType.value === 'application/pdf' || mimeType.value.includes('pdf'))
+const mimeFinal = computed(() => (mimeDetectado.value || mimeType.value || '').toLowerCase())
+
+const isImage = computed(() => mimeFinal.value.startsWith('image/'))
+const isPdf = computed(() => mimeFinal.value.includes('pdf'))
+
 
 const loading = ref(false)
 const erro = ref('')
@@ -103,7 +108,9 @@ async function carregarBlob() {
   erro.value = ''
   try {
     const res = await ArquivosService.baixarBlob(id.value)
-    const contentType = res?.headers?.['content-type'] || mimeType.value || 'application/octet-stream'
+const contentType = String(res?.headers?.['content-type'] || mimeType.value || 'application/octet-stream')
+mimeDetectado.value = contentType
+
     const blob = new Blob([res.data], { type: contentType })
     blobUrl.value = URL.createObjectURL(blob)
   } catch (e) {
