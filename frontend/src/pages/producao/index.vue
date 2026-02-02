@@ -482,15 +482,12 @@ function tarefasNoSlot(dateStr, slotHHMM) {
 // ===============================
 // API
 // ===============================
-async function carregarFuncionarios() {
-  if (!can('funcionarios.ver')) return
-  const { data } = await FuncionarioService.listar()
-  const arr = Array.isArray(data) ? data : []
-  funcionariosOptions.value = arr.map((f) => ({
-    label: `${f.nome} (#${f.id})`,
-    value: f.id,
-  }))
+async function carregarFuncionariosSelect(q = '') {
+  if (!can('funcionarios.select')) return
+  const { data } = await FuncionarioService.select(q)
+  funcionariosOptions.value = Array.isArray(data) ? data : []
 }
+
 
 
 async function carregar() {
@@ -688,7 +685,7 @@ watch(
 // INIT
 // ===============================
 onMounted(async () => {
-  await carregarFuncionarios()
+  await carregarFuncionariosSelect()
   await carregar()
 })
 </script>
