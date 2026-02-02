@@ -193,15 +193,13 @@ async function carregar() {
   if (!clienteId.value) return
   loading.value = true
   try {
-    // Busca orçamentos e dados do cliente em paralelo para ganhar tempo
-    const [{ data }, resCliente] = await Promise.allSettled([
+    const [resOrcs, resCliente] = await Promise.allSettled([
       OrcamentosService.listar(),
-      ClienteService.obter(clienteId.value).catch(() => null) 
+      ClienteService.buscar(clienteId.value),
     ])
 
-    // Processa Orçamentos
-    const all = data?.value || data || []
-    rows.value = all
+    const all = resOrcs.status === 'fulfilled' ? resOrcs.value.data : []
+    rows.value = (Array.isArray(all) ? all : [])
       .filter((o) => Number(o.cliente_id) === clienteId.value)
       .sort((a, b) => {
         const da = new Date(a.criado_em || a.data || 0).getTime()
@@ -209,8 +207,7 @@ async function carregar() {
         return db - da
       })
 
-    // Guarda dados do cliente para o header (fallback)
-    if (resCliente?.value?.data) {
+    if (resCliente.status === 'fulfilled') {
       dadosClienteExtra.value = resCliente.value.data
     }
   } catch (e) {
@@ -220,6 +217,7 @@ async function carregar() {
     loading.value = false
   }
 }
+
 
 // Filtro Inteligente
 const filtrados = computed(() => {
