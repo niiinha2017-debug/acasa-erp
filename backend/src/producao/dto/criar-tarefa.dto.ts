@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsString, Min } from 'class-validator'
+import { IsArray, IsInt, IsOptional, IsString, Min, ArrayUnique } from 'class-validator'
 
 export class CriarTarefaDto {
   @IsString()
@@ -6,15 +6,19 @@ export class CriarTarefaDto {
 
   @IsInt()
   @Min(1)
-  origem_id: number // se VENDA_ITEM -> vendas_itens.id ; se PLANO_CORTE -> plano_corte.id
+  origem_id: number
 
+  // ✅ multi-funcionários (opcional)
   @IsOptional()
-  @IsInt()
-  @Min(1)
-  funcionario_id?: number
+  @IsArray()
+  @ArrayUnique()
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  funcionario_ids?: number[]
 
+  // ✅ pipeline (obrigatório)
   @IsString()
-  titulo: string // fase do pipeline
+  etapa: string // ex: FABRICACAO | GARANTIA | MANUTENCAO ...
 
   @IsOptional()
   @IsString()
@@ -24,9 +28,12 @@ export class CriarTarefaDto {
   @IsString()
   observacao?: string
 
+  // ✅ datas opcionais
+  @IsOptional()
   @IsString()
-  inicio_em: string // ISO
+  inicio_em?: string // ISO
 
+  @IsOptional()
   @IsString()
-  fim_em: string // ISO
+  fim_em?: string // ISO
 }

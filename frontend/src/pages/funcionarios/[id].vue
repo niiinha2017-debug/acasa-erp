@@ -873,25 +873,16 @@ async function salvar() {
     const payload = montarPayload()
     const targetId = isEditing.value ? id.value : null
 
-    const { data } = await FuncionarioService.salvar(targetId, payload)
+    await FuncionarioService.salvar(targetId, payload)
 
-    // se era novo: vira edição e fica na tela
-    if (!isEditing.value) {
-      const newId = data?.id
-      if (newId) {
-        await router.replace(`/funcionarios/${newId}`)
-        await carregar()
-        return
-      }
-    }
-
-    router.push('/funcionarios')
+    router.push('/funcionarios') // ✅ SEMPRE VOLTA PRO INDEX
   } catch (err) {
     alert(err?.response?.data?.message || 'Erro ao salvar')
   } finally {
     salvando.value = false
   }
 }
+
 
 
 // ===== abrir modal arquivos (global) =====

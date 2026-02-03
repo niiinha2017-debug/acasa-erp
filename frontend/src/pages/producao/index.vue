@@ -102,7 +102,8 @@
                       class="p-2.5 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:shadow-lg transition-all cursor-pointer group/task relative"
                     >
                       <div class="flex justify-between items-start mb-1">
-                        <p class="text-[10px] font-black text-slate-800 leading-tight uppercase truncate pr-4">{{ t.titulo }}</p>
+                        <p class="text-[10px] font-black text-slate-800 leading-tight uppercase truncate pr-4">{{ t.titulo_auto }}</p>
+                        <span class="text-[9px] font-black text-slate-400 uppercase"> {{ t.etapa }}</span>
                         <button v-if="can('producao.excluir')" @click.stop="confirmarRemoverTarefa(t)" class="opacity-0 group-hover/task:opacity-100 text-rose-400 hover:text-rose-600 transition-opacity absolute top-2 right-2">
                           <i class="pi pi-times-circle text-[12px]"></i>
                         </button>
@@ -165,11 +166,6 @@
               <div class="col-span-12 md:col-span-6">
                 <SearchInput v-model="tarefaModal.status" mode="select" label="Status Atual *" :options="STATUS_TAREFA" />
               </div>
-              
-              <div class="col-span-12">
-                <Input v-model="tarefaModal.titulo" label="Título da Tarefa *" placeholder="Ex: Montagem da Estrutura" />
-              </div>
-
               <div class="col-span-12">
                 <Input v-model="tarefaModal.observacao" label="Observações / Instruções" placeholder="Detalhes técnicos..." />
               </div>
@@ -370,16 +366,47 @@ function setOrigemFromKey(v) {
 const todasTarefas = computed(() => {
   const out = []
   for (const p of (projetosRaw.value || [])) {
+    const tituloAuto = montarTituloProjeto(p)
+
     for (const t of (p.tarefas || [])) {
       out.push({
         ...t,
         origem_tipo: p.origem_tipo,
         origem_id: p.origem_id,
+        codigo: p.codigo,
+        titulo_auto: tituloAuto,
       })
     }
   }
   return out
 })
+
+function montarTituloProjeto(p) {
+  // VENDA_ITEM -> Cliente + Ambiente
+  const cliente =
+    p?.venda_item?.venda?.cliente?.nome_fantasia ||
+    p?.venda_item?.venda?.cliente?.nome_completo ||
+    p?.venda_item?.venda?.cliente?.razao_social ||
+    ''
+
+  const ambiente = p?.venda_item?.nome_ambiente || ''
+
+  if (cliente || ambiente) {
+    return [cliente, ambiente].filter(Boolean).join(' · ')
+  }
+
+  // PLANO_CORTE -> fornecedor (ou código)
+  const forn =
+    p?.plano_corte?.fornecedor?.nome_fantasia ||
+    p?.plano_corte?.fornecedor?.razao_social ||
+    ''
+
+  if (forn) return `PLANO DE CORTE · ${forn}`
+
+  // fallback
+  return `${p.codigo || ''} ${p.origem_tipo} #${p.origem_id}`.trim()
+}
+
 
 function abrirNovaTarefaDeProjeto(p) {
   if (!can('producao.criar')) return notify.error('Acesso negado.')

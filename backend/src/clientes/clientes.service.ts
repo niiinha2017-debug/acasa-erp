@@ -8,45 +8,56 @@ import { Prisma } from '@prisma/client'
 export class ClientesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async criar(dto: CriarClienteDto) {
-    return this.prisma.cliente.create({
- data: {
-  indicacao_id: dto.indicacao_id ?? null,
+async criar(dto: CriarClienteDto) {
+  return this.prisma.$transaction(async (tx) => {
+    const cliente = await tx.cliente.create({
+      data: {
+        indicacao_id: dto.indicacao_id ?? null,
 
-  nome_completo: dto.nome_completo,
-  razao_social: dto.razao_social ?? null,
-  nome_fantasia: dto.nome_fantasia ?? null,
+        nome_completo: dto.nome_completo,
+        razao_social: dto.razao_social ?? null,
+        nome_fantasia: dto.nome_fantasia ?? null,
 
-  data_nascimento: dto.data_nascimento ? new Date(dto.data_nascimento) : null,
+        data_nascimento: dto.data_nascimento ? new Date(dto.data_nascimento) : null,
 
-  cpf: dto.cpf ?? null,
-  rg: dto.rg ?? null,
-  cnpj: dto.cnpj ?? null,
-  ie: dto.ie ?? null,
+        cpf: dto.cpf ?? null,
+        rg: dto.rg ?? null,
+        cnpj: dto.cnpj ?? null,
+        ie: dto.ie ?? null,
 
-  telefone: dto.telefone ?? null,
-  whatsapp: dto.whatsapp ?? null,
-  email: dto.email ?? null, // <-- email opcional
+        telefone: dto.telefone ?? null,
+        whatsapp: dto.whatsapp ?? null,
+        email: dto.email ?? null,
 
-  estado_civil: dto.estado_civil ?? null,
-  nome_conjuge: dto.estado_civil === 'CASADO' ? (dto.nome_conjuge ?? null) : null,
+        estado_civil: dto.estado_civil ?? null,
+        nome_conjuge: dto.estado_civil === 'CASADO' ? (dto.nome_conjuge ?? null) : null,
 
-  cep: dto.cep ?? null,
-  endereco: dto.endereco ?? null,
-  numero: dto.numero ?? null,
-  complemento: dto.complemento ?? null,
-  bairro: dto.bairro ?? null,
-  cidade: dto.cidade ?? null,
-  estado: dto.estado ?? null,
+        cep: dto.cep ?? null,
+        endereco: dto.endereco ?? null,
+        numero: dto.numero ?? null,
+        complemento: dto.complemento ?? null,
+        bairro: dto.bairro ?? null,
+        cidade: dto.cidade ?? null,
+        estado: dto.estado ?? null,
 
-  status: dto.status,
+        status: dto.status,
 
-  enviar_aniversario_email: dto.enviar_aniversario_email ?? true,
-  enviar_aniversario_whatsapp: dto.enviar_aniversario_whatsapp ?? false,
-},
-
+        enviar_aniversario_email: dto.enviar_aniversario_email ?? true,
+        enviar_aniversario_whatsapp: dto.enviar_aniversario_whatsapp ?? false,
+      },
     })
-  }
+
+    await tx.obras.create({
+      data: {
+        cliente_id: cliente.id,
+        status_processo: 'CLIENTE_CADASTRADO',
+        // ⚠️ se obras tiver campos obrigatórios além desses, precisa preencher aqui
+      },
+    })
+
+    return cliente
+  })
+}
 
 async listar() {
   const rows = await this.prisma.cliente.findMany({

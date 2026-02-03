@@ -109,7 +109,6 @@ model Cliente {
 
   orcamentos orcamentos[]
   vendas     vendas[]
-  obras      obras[]
 
   @@unique([cpf])
   @@unique([cnpj])
@@ -423,6 +422,7 @@ model plano_corte_consumo {
  }
 
 model funcionarios {
+
   id Int @id @default(autoincrement())
 
   // ======================
@@ -510,8 +510,11 @@ model funcionarios {
   // ======================
   // PRODUÇÃO / DESPESAS
   // ======================
-  despesas         despesas[]
-  producao_tarefas producao_tarefas[]
+  despesas despesas[]
+
+  // ✅ vínculo correto (many-to-many via pivot)
+   producao_tarefa_funcionarios producao_tarefa_funcionarios[]
+
 
   // ======================
   // CONTROLE
@@ -525,7 +528,7 @@ model funcionarios {
   ponto_justificativas  ponto_justificativas[]
 
   @@map("funcionarios")
- }
+  }
 
 model despesas {
   id Int @id @default(autoincrement())
@@ -623,32 +626,46 @@ model producao_tarefas {
   projeto_id Int
   projeto    producao_projetos @relation(fields: [projeto_id], references: [id], onDelete: Cascade)
 
-  funcionario_id Int?
-  funcionario    funcionarios? @relation(fields: [funcionario_id], references: [id])
+  etapa String
 
-  // ✅ pipeline (Fabricação, Projeto técnico, Medida fina, etc.)
-  titulo     String
   status     String  @default("PENDENTE")
   observacao String?
 
-  inicio_em DateTime
-  fim_em    DateTime
+  inicio_em DateTime?
+  fim_em    DateTime?
 
-  // ✅ snapshot da linha
-  funcao_aplicada     String?  @db.VarChar(80)
-  horas_total         Decimal  @default(0.00) @db.Decimal(10, 2)
-  custo_hora_aplicado Decimal  @default(0.00) @db.Decimal(12, 2)
-  custo_total         Decimal  @default(0.00) @db.Decimal(12, 2)
+  horas_total Decimal @default(0.00) @db.Decimal(10, 2)
+  custo_total Decimal @default(0.00) @db.Decimal(12, 2)
 
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
+  funcionarios producao_tarefa_funcionarios[]
+
   @@index([projeto_id])
-  @@index([funcionario_id])
   @@index([status])
+  @@index([etapa])
   @@index([inicio_em])
   @@index([fim_em])
   @@map("producao_tarefas")
+ }
+
+model producao_tarefa_funcionarios {
+  id Int @id @default(autoincrement())
+
+  tarefa_id Int
+  tarefa    producao_tarefas @relation(fields: [tarefa_id], references: [id], onDelete: Cascade)
+
+  funcionario_id Int
+  funcionario    funcionarios @relation(fields: [funcionario_id], references: [id])
+
+  // snapshot por funcionário
+  funcao_aplicada     String?  @db.VarChar(80)
+  custo_hora_aplicado Decimal  @default(0.00) @db.Decimal(12, 2)
+
+  @@unique([tarefa_id, funcionario_id])
+  @@index([funcionario_id])
+  @@map("producao_tarefa_funcionarios")
  }
 
 model contas_pagar {
@@ -914,27 +931,6 @@ model Empresa {
   updated_at    DateTime @updatedAt
 
   @@map("empresa") // Nome da tabela no banco de dados
- }
-
-model obras {
-  id Int @id @default(autoincrement())
-
-  cliente_id Int
-  cliente    Cliente @relation(fields: [cliente_id], references: [id], onDelete: Cascade)
-
-  status_processo String
-
-  data_medida      DateTime?
-  data_orcamento   DateTime?
-  data_medida_fina DateTime?
-  data_producao    DateTime?
-  data_montagem    DateTime?
-
-  criado_em     DateTime @default(now())
-  atualizado_em DateTime @updatedAt
-
-  @@index([cliente_id])
-  @@map("obras")
  }
 
 enum PontoTipoRegistro {
