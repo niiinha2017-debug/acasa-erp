@@ -6,7 +6,6 @@ import { CriarConviteDto } from './dto/criar-convite.dto'
 import { AtivarDto } from './dto/ativar.dto'
 import { RegistrarPontoDto } from './dto/registrar-ponto.dto'
 import { createHash, randomBytes } from 'crypto'
-// Importe os Enums do Prisma para evitar erro de tipo
 import { PontoTipoRegistro, PontoOrigem } from '@prisma/client'
 
 @Injectable()
@@ -69,6 +68,8 @@ export class PontoService {
     if (new Date() > convite.expira_em) throw new BadRequestException('Código expirado.')
     this.assertFuncionarioAtivo(convite.funcionario?.status)
   }
+
+  // --- MÉTODOS PÚBLICOS ---
 
   async criarConvite(dto: CriarConviteDto) {
     let funcionario = dto.funcionario_id
@@ -210,12 +211,11 @@ export class PontoService {
         funcionario_id,
         dispositivo_id,
         tipo,
-        origem: PontoOrigem.PWA, // Forçando a origem conforme seu schema
+        origem: PontoOrigem.PWA,
         ip,
         user_agent: user_agent || null,
         status: 'ATIVO',
         observacao: dto.observacao ?? null,
-        // GPS explicitamente nulo por enquanto
         latitude: null,
         longitude: null,
         precisao_metros: null,
@@ -248,6 +248,26 @@ export class PontoService {
         data_hora: { gte: inicio, lte: fim },
       },
       orderBy: { data_hora: 'asc' },
+    })
+  }
+
+  async ultimo(req: any) {
+    const funcionario_id = this.getFuncionarioId(req)
+    const { inicio, fim } = this.rangeHoje()
+
+    return this.prisma.ponto_registros.findFirst({
+      where: {
+        funcionario_id,
+        status: 'ATIVO',
+        data_hora: { gte: inicio, lte: fim },
+      },
+      orderBy: { data_hora: 'desc' },
+      select: {
+        id: true,
+        tipo: true,
+        data_hora: true,
+        observacao: true,
+      },
     })
   }
 
