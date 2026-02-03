@@ -2,7 +2,6 @@ import axios from 'axios'
 
 const api = axios.create({
   baseURL: '/api',
-  // withCredentials: true, // só se você usa cookies/sessão (se não usa, pode remover)
 })
 
 function authHeader(token) {
@@ -18,7 +17,6 @@ function post(url, data, token) {
 }
 
 export const PontoService = {
-  // pareamento via CODE + device_uuid -> { token }
   ativar(dados) {
     return post('/ponto/ativar', dados)
   },
@@ -35,8 +33,8 @@ export const PontoService = {
     return get('/ponto/ultimo', token)
   },
 
-  // payload: { tipo, latitude, longitude, precisao_metros, ... }
-  // OBS: endereço (cep/rua/bairro/cidade/estado) vem do backend via geo, não manda aqui
+  // Agora o payload só precisa basicamente do { tipo: 'ENTRADA' | 'SAIDA' }
+  // A observação também pode ser enviada se houver um campo de texto.
   registrar(payload, token) {
     return post('/ponto/registrar', payload, token)
   },

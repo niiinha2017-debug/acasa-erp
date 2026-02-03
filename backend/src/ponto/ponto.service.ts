@@ -6,6 +6,8 @@ import { CriarConviteDto } from './dto/criar-convite.dto'
 import { AtivarDto } from './dto/ativar.dto'
 import { RegistrarPontoDto } from './dto/registrar-ponto.dto'
 import { createHash, randomBytes } from 'crypto'
+// Importe os Enums do Prisma para evitar erro de tipo
+import { PontoTipoRegistro, PontoOrigem } from '@prisma/client'
 
 @Injectable()
 export class PontoService {
@@ -15,104 +17,8 @@ export class PontoService {
     private readonly config: ConfigService,
   ) {}
 
-
-private normalizeCep(cep: any): string | null {
-  const v = String(cep ?? '').replace(/\D/g, '')
-  return v.length === 8 ? v : null
-}
-
-
-private ufFromState(state: string | null): string | null {
-  if (!state) return null
-
-  const map: Record<string, string> = {
-    'ACRE': 'AC',
-    'ALAGOAS': 'AL',
-    'AMAPA': 'AP',
-    'AMAZONAS': 'AM',
-    'BAHIA': 'BA',
-    'CEARA': 'CE',
-    'DISTRITO FEDERAL': 'DF',
-    'ESPIRITO SANTO': 'ES',
-    'GOIAS': 'GO',
-    'MARANHAO': 'MA',
-    'MATO GROSSO': 'MT',
-    'MATO GROSSO DO SUL': 'MS',
-    'MINAS GERAIS': 'MG',
-    'PARA': 'PA',
-    'PARAIBA': 'PB',
-    'PARANA': 'PR',
-    'PERNAMBUCO': 'PE',
-    'PIAUI': 'PI',
-    'RIO DE JANEIRO': 'RJ',
-    'RIO GRANDE DO NORTE': 'RN',
-    'RIO GRANDE DO SUL': 'RS',
-    'RONDONIA': 'RO',
-    'RORAIMA': 'RR',
-    'SANTA CATARINA': 'SC',
-    'SAO PAULO': 'SP',
-    'SERGIPE': 'SE',
-    'TOCANTINS': 'TO',
-  }
-
-  const key = String(state)
-    .toUpperCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim()
-
-  return map[key] || null
-}
-
-private async reverseGeocode(lat: number, lng: number): Promise<{
-  cep: string | null
-  rua: string | null
-  bairro: string | null
-  cidade: string | null
-  estado: string | null
-}> {
-  try {
-    const url = new URL('https://nominatim.openstreetmap.org/reverse')
-    url.searchParams.set('format', 'jsonv2')
-    url.searchParams.set('lat', String(lat))
-    url.searchParams.set('lon', String(lng))
-    url.searchParams.set('zoom', '18')
-    url.searchParams.set('addressdetails', '1')
-    url.searchParams.set('accept-language', 'pt-BR')
-
-    const res = await fetch(url.toString(), {
-      headers: {
-        // obrigatório no Nominatim: identificar o app
-        'User-Agent': 'ACASA-PONTO/1.0 (suporte@acasamarcenaria.com.br)',
-      },
-    })
-
-    if (!res.ok) return { cep: null, rua: null, bairro: null, cidade: null, estado: null }
-
-    const data: any = await res.json()
-    const a = data?.address || {}
-
-    const cep = this.normalizeCep(a.postcode)
-
-    const rua = a.road || a.pedestrian || a.footway || a.path || a.highway || null
-    const bairro = a.suburb || a.neighbourhood || a.quarter || a.city_district || null
-    const cidade = a.city || a.town || a.village || a.municipality || a.county || null
-    const uf = a.state_code || this.ufFromState(a.state) || null
-
-    return {
-      cep,
-      rua: rua ? String(rua).slice(0, 150) : null,
-      bairro: bairro ? String(bairro).slice(0, 120) : null,
-      cidade: cidade ? String(cidade).slice(0, 120) : null,
-      estado: uf ? String(uf).slice(0, 2).toUpperCase() : null,
-    }
-  } catch {
-    return { cep: null, rua: null, bairro: null, cidade: null, estado: null }
-  }
-}
-
   private gerarCode(): string {
-    return randomBytes(6).toString('hex').toUpperCase() // 12 chars
+    return randomBytes(6).toString('hex').toUpperCase()
   }
 
   private hashToken(token: string): string {
@@ -140,14 +46,9 @@ private async reverseGeocode(lat: number, lng: number): Promise<{
     return { inicio, fim }
   }
 
-  private normalizarTipo(raw: any): 'ENTRADA' | 'SAIDA' {
-    const tipoNorm = String(raw || '')
-      .toUpperCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .trim()
-
-    return tipoNorm === 'SAIDA' ? 'SAIDA' : 'ENTRADA'
+  private normalizarTipo(raw: any): PontoTipoRegistro {
+    const tipoNorm = String(raw || '').toUpperCase().trim()
+    return tipoNorm === 'SAIDA' ? PontoTipoRegistro.SAIDA : PontoTipoRegistro.ENTRADA
   }
 
   private buildConviteUrl(code: string): string {
@@ -167,44 +68,6 @@ private async reverseGeocode(lat: number, lng: number): Promise<{
     if (convite.usado_em) throw new BadRequestException('Código já utilizado.')
     if (new Date() > convite.expira_em) throw new BadRequestException('Código expirado.')
     this.assertFuncionarioAtivo(convite.funcionario?.status)
-  }
-
-  private mapDeviceCreate(dto: AtivarDto, funcionario_id: number) {
-    return {
-      funcionario_id,
-      device_uuid: dto.device_uuid,
-      device_nome: dto.device_nome ?? null,
-      plataforma: dto.plataforma ?? null,
-
-      user_agent: dto.user_agent ?? null,
-      language: dto.language ?? null,
-      timezone: dto.timezone ?? null,
-      screen: dto.screen ?? null,
-      pixel_ratio: dto.pixel_ratio ?? null,
-      standalone: dto.standalone ?? false,
-
-      token_hash: 'TEMP', // será substituído logo após gerar o JWT
-      status: 'ATIVO',
-      ultimo_uso_em: new Date(),
-    }
-  }
-
-  private mapDeviceUpdate(dto: AtivarDto, funcionario_id: number) {
-    return {
-      funcionario_id,
-      device_nome: dto.device_nome ?? undefined,
-      plataforma: dto.plataforma ?? undefined,
-
-      user_agent: dto.user_agent ?? undefined,
-      language: dto.language ?? undefined,
-      timezone: dto.timezone ?? undefined,
-      screen: dto.screen ?? undefined,
-      pixel_ratio: dto.pixel_ratio ?? undefined,
-      standalone: dto.standalone ?? undefined,
-
-      status: 'ATIVO',
-      ultimo_uso_em: new Date(),
-    }
   }
 
   async criarConvite(dto: CriarConviteDto) {
@@ -267,8 +130,21 @@ private async reverseGeocode(lat: number, lng: number): Promise<{
     const { token } = await this.prisma.$transaction(async (tx) => {
       const dispositivo = await tx.ponto_dispositivos.upsert({
         where: { device_uuid: dto.device_uuid },
-        create: this.mapDeviceCreate(dto, convite.funcionario_id),
-        update: this.mapDeviceUpdate(dto, convite.funcionario_id),
+        create: {
+          funcionario_id: convite.funcionario_id,
+          device_uuid: dto.device_uuid,
+          device_nome: dto.device_nome ?? null,
+          plataforma: dto.plataforma ?? null,
+          user_agent: dto.user_agent ?? null,
+          token_hash: 'TEMP',
+          status: 'ATIVO',
+          ultimo_uso_em: new Date(),
+        },
+        update: {
+          funcionario_id: convite.funcionario_id,
+          status: 'ATIVO',
+          ultimo_uso_em: new Date(),
+        },
         select: { id: true, funcionario_id: true, device_uuid: true },
       })
 
@@ -298,37 +174,6 @@ private async reverseGeocode(lat: number, lng: number): Promise<{
     return { token }
   }
 
-async hoje(req: any) {
-  const funcionario_id = this.getFuncionarioId(req)
-  const { inicio, fim } = this.rangeHoje()
-
-  return this.prisma.ponto_registros.findMany({
-    where: {
-      funcionario_id,
-      status: 'ATIVO',
-      data_hora: { gte: inicio, lte: fim },
-    },
-    orderBy: { data_hora: 'asc' },
-    select: {
-      id: true,
-      tipo: true,
-      origem: true,
-      data_hora: true,
-      latitude: true,
-      longitude: true,
-      precisao_metros: true,
-cep: true,
-rua: true,
-bairro: true,
-cidade: true,
-estado: true,
-
-      observacao: true,
-    },
-  })
-}
-
-
   async registrar(dto: RegistrarPontoDto, req: any) {
     const funcionario_id = this.getFuncionarioId(req)
     const dispositivo_id = this.getDispositivoId(req)
@@ -344,7 +189,7 @@ estado: true,
       select: { tipo: true, data_hora: true },
     })
 
-    const tipo = this.normalizarTipo((dto as any)?.tipo)
+    const tipo = this.normalizarTipo(dto.tipo)
 
     if (ultimoHoje?.tipo === tipo) {
       throw new BadRequestException(`O último registro já foi uma ${tipo}.`)
@@ -357,57 +202,30 @@ estado: true,
       }
     }
 
-    const ip =
-      (req.headers?.['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || null
+    const ip = (req.headers?.['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || null
     const user_agent = String(req.headers?.['user-agent'] || '')
 
-  let geo = { cep: null, rua: null, bairro: null, cidade: null, estado: null }
-
-if (dto.latitude != null && dto.longitude != null) {
-  geo = await this.reverseGeocode(Number(dto.latitude), Number(dto.longitude))
-}
-
-
-const registro = await this.prisma.ponto_registros.create({
-  data: {
-    funcionario_id,
-    dispositivo_id,
-    tipo,
-    latitude: dto.latitude ?? null,
-    longitude: dto.longitude ?? null,
-    precisao_metros: dto.precisao_metros ?? null,
-
-    // ✅ endereço resolvido no backend
-    cep: geo.cep,
-    rua: geo.rua,
-    bairro: geo.bairro,
-    cidade: geo.cidade,
-    estado: geo.estado,
-
-    ip,
-    user_agent: user_agent || null,
-    status: 'ATIVO',
-    observacao: dto.observacao ?? null,
-  },
-  select: {
-    id: true,
-    funcionario_id: true,
-    tipo: true,
-    data_hora: true,
-    latitude: true,
-    longitude: true,
-    precisao_metros: true,
-
-    cep: true,
-    rua: true,
-    bairro: true,
-    cidade: true,
-    estado: true,
-
-    status: true,
-  },
-})
-
+    const registro = await this.prisma.ponto_registros.create({
+      data: {
+        funcionario_id,
+        dispositivo_id,
+        tipo,
+        origem: PontoOrigem.PWA, // Forçando a origem conforme seu schema
+        ip,
+        user_agent: user_agent || null,
+        status: 'ATIVO',
+        observacao: dto.observacao ?? null,
+        // GPS explicitamente nulo por enquanto
+        latitude: null,
+        longitude: null,
+        precisao_metros: null,
+        cep: null,
+        rua: null,
+        bairro: null,
+        cidade: null,
+        estado: null,
+      },
+    })
 
     if (dispositivo_id) {
       await this.prisma.ponto_dispositivos.update({
@@ -419,53 +237,28 @@ const registro = await this.prisma.ponto_registros.create({
     return registro
   }
 
-  async ultimo(req: any) {
+  async hoje(req: any) {
     const funcionario_id = this.getFuncionarioId(req)
+    const { inicio, fim } = this.rangeHoje()
 
-    return this.prisma.ponto_registros.findFirst({
-      where: { funcionario_id, status: 'ATIVO' },
-      orderBy: { data_hora: 'desc' },
-      select: {
-        id: true,
-        funcionario_id: true,
-        dispositivo_id: true,
-        tipo: true,
-        origem: true,
-        data_hora: true,
-        latitude: true,
-        longitude: true,
-        precisao_metros: true,
-        ip: true,
-        user_agent: true,
-        status: true,
-        observacao: true,
-        criado_em: true,
-        cep: true,
-rua: true,
-bairro: true,
-cidade: true,
-estado: true,
-
+    return this.prisma.ponto_registros.findMany({
+      where: {
+        funcionario_id,
+        status: 'ATIVO',
+        data_hora: { gte: inicio, lte: fim },
       },
+      orderBy: { data_hora: 'asc' },
     })
   }
 
   async me(req: any) {
     const funcionario_id = this.getFuncionarioId(req)
-
     const funcionario = await this.prisma.funcionarios.findUnique({
       where: { id: funcionario_id },
-      select: {
-        id: true,
-        nome: true,
-        status: true,
-      },
+      select: { id: true, nome: true, status: true },
     })
 
-    if (!funcionario) {
-      throw new BadRequestException('Funcionário não encontrado.')
-    }
-
+    if (!funcionario) throw new BadRequestException('Funcionário não encontrado.')
     return funcionario
   }
 }

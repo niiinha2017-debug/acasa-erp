@@ -1,4 +1,4 @@
-import api from '@/services/api'
+import { PontoService } from '@/services/pontoService' // Use o serviço que criamos
 import { pontoStorage } from './pontoStorage'
 
 export function usePontoAuth() {
@@ -9,12 +9,11 @@ export function usePontoAuth() {
     if (!t) return false
 
     try {
-      // endpoint simples só pra validar guard
-      await api.get('/ponto/me', {
-        headers: { Authorization: `Bearer ${t}` },
-      })
+      // Usando o PontoService para manter o padrão
+      await PontoService.me(t)
       return true
     } catch (e) {
+      // Se der 401 ou erro de rede, limpa o lixo do storage
       pontoStorage.clear()
       return false
     }
