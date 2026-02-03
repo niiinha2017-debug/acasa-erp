@@ -13,9 +13,7 @@
       </div>
 
       <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
-        <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner font-black italic">
-          HH
-        </div>
+        <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner font-black italic">HH</div>
         <div>
           <p class="text-[10px] font-black uppercase text-slate-400">Trabalhado</p>
           <p class="text-2xl font-black text-slate-800 tracking-tighter">{{ resumo.totalHorasHHMM }}</p>
@@ -36,7 +34,6 @@
     </div>
 
     <div class="bg-white rounded-[2rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
-      
       <header class="p-6 bg-slate-50/50 border-b border-slate-100 grid grid-cols-12 gap-4 items-end">
         <div class="col-span-12 md:col-span-4">
           <label class="text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 block italic">Funcionário</label>
@@ -54,8 +51,9 @@
           <input v-model="filtros.data_fim" type="date" class="w-full h-11 bg-white border border-slate-200 rounded-2xl px-4 text-xs font-bold outline-none focus:ring-2 focus:ring-slate-900" />
         </div>
         <div class="col-span-2 md:col-span-2">
-          <button @click="buscar" class="w-full h-11 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase italic tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
-            <i class="pi pi-search"></i>
+          <button @click="buscar" :disabled="loadingTabela" class="w-full h-11 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase italic tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
+            <i class="pi pi-search" v-if="!loadingTabela"></i>
+            <i class="pi pi-spin pi-spinner" v-else></i>
             <span class="hidden md:block">Buscar</span>
           </button>
         </div>
@@ -75,7 +73,6 @@
           </thead>
           <tbody>
             <tr v-for="row in rowsAgrupadas" :key="row.data" class="group bg-white hover:bg-slate-50 transition-all shadow-sm">
-              
               <td class="px-6 py-4 rounded-l-3xl border-y border-l border-slate-50">
                 <div class="flex flex-col">
                   <span class="text-sm font-black text-slate-800 uppercase italic leading-none">{{ fmtData(row.data) }}</span>
@@ -85,23 +82,12 @@
 
               <td v-for="col in ['ent1', 'sai1', 'ent2', 'sai2']" :key="col" class="px-2 py-4 border-y border-slate-50 text-center">
                 <div class="flex items-center justify-center gap-2 group/btn">
-                  <span 
-                    class="tabular-nums font-black text-sm transition-all"
-                    :class="[
-                      row[col]?.hora ? (col.startsWith('ent') ? 'text-blue-600' : 'text-slate-600') : 'text-slate-200',
-                      isFimDeSemanaErro(row.data, row[col]?.hora) ? 'text-rose-500' : ''
-                    ]"
-                  >
+                  <span class="tabular-nums font-black text-sm" :class="[row[col]?.hora ? (col.startsWith('ent') ? 'text-blue-600' : 'text-slate-600') : 'text-slate-200', isFimDeSemanaErro(row.data, row[col]?.hora) ? 'text-rose-500' : '']">
                     {{ row[col]?.hora || '--:--' }}
                   </span>
-
                   <div v-if="row[col]?.id" class="flex items-center opacity-0 group-hover/btn:opacity-100 transition-opacity">
-                    <button @click="abrirModalEditar(row[col])" class="text-slate-300 hover:text-blue-500 p-1">
-                      <i class="pi pi-pencil text-[9px]"></i>
-                    </button>
-                    <button @click="confirmarExcluirDireto(row[col].id)" class="text-slate-300 hover:text-rose-500 p-1">
-                      <i class="pi pi-trash text-[9px]"></i>
-                    </button>
+                    <button @click="abrirModalEditar(row[col])" class="text-slate-300 hover:text-blue-500 p-1"><i class="pi pi-pencil text-[9px]"></i></button>
+                    <button @click="confirmarExcluirDireto(row[col].id)" class="text-slate-300 hover:text-rose-500 p-1"><i class="pi pi-trash text-[9px]"></i></button>
                   </div>
                   <button v-else @click="abrirModalNovoNaPosicao(row, col)" class="opacity-0 group-hover/btn:opacity-100 text-slate-200 hover:text-slate-900 transition-opacity p-1">
                     <i class="pi pi-plus text-[9px]"></i>
@@ -109,18 +95,75 @@
                 </div>
               </td>
 
-              <td class="px-6 py-4 rounded-r-3xl border-y border-r border-slate-50 text-right space-x-2">
-                 <button @click="abrirModalJustificar(row)" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-500 text-[9px] font-black uppercase hover:bg-slate-900 hover:text-white transition-all">
-                  Justificar
-                </button>
+              <td class="px-6 py-4 rounded-r-3xl border-y border-r border-slate-50 text-right">
+                 <button @click="abrirModalJustificar(row)" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-500 text-[9px] font-black uppercase hover:bg-slate-900 hover:text-white transition-all">Justificar</button>
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
 
-        <div v-if="!loadingTabela && rowsAgrupadas.length === 0" class="p-20 text-center">
-          <i class="pi pi-clock text-slate-100 text-6xl mb-4 block"></i>
-          <p class="text-slate-400 font-black uppercase italic text-xs tracking-widest">Nenhum registro para exibir</p>
+    <div v-if="modalEditar.open" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+      <div class="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95">
+        <div class="p-8 border-b flex justify-between items-center bg-slate-50/50">
+          <h3 class="font-black text-slate-800 uppercase italic">{{ modalEditar.id ? 'Ajustar Horário' : 'Novo Horário' }}</h3>
+          <button @click="modalEditar.open = false" class="text-slate-400 hover:text-rose-500"><i class="pi pi-times"></i></button>
+        </div>
+        <div class="p-8 space-y-4">
+          <div class="space-y-1">
+            <label class="text-[10px] font-black text-slate-400 uppercase italic">Data e Hora</label>
+            <input type="datetime-local" v-model="modalEditar.form.data_hora_local" class="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold text-slate-700 outline-none focus:ring-2 focus:ring-slate-900" />
+          </div>
+          <div class="space-y-1">
+            <label class="text-[10px] font-black text-slate-400 uppercase italic">Tipo</label>
+            <select v-model="modalEditar.form.tipo" class="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold text-slate-700 outline-none">
+              <option value="ENTRADA">ENTRADA</option>
+              <option value="SAIDA">SAÍDA</option>
+            </select>
+          </div>
+          <div class="space-y-1">
+            <label class="text-[10px] font-black text-slate-400 uppercase italic">Observação</label>
+            <input v-model="modalEditar.form.observacao" class="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold text-slate-700 outline-none" placeholder="Motivo do ajuste..." />
+          </div>
+        </div>
+        <div class="p-6 bg-slate-50 flex gap-3">
+          <button @click="modalEditar.open = false" class="flex-1 h-12 rounded-2xl font-black text-[10px] uppercase bg-white border border-slate-200 text-slate-400">Cancelar</button>
+          <button @click="confirmarSalvarEdicao" :disabled="modalEditar.saving" class="flex-1 h-12 rounded-2xl font-black text-[10px] uppercase bg-slate-900 text-white shadow-lg shadow-slate-200">
+            {{ modalEditar.saving ? 'Gravando...' : 'Salvar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="modalJust.open" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+      <div class="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="p-8 border-b flex justify-between items-center bg-slate-50/50">
+          <div>
+            <h3 class="font-black text-slate-800 uppercase italic text-xl leading-none">Justificativa</h3>
+            <p class="text-[10px] font-bold text-slate-400 uppercase mt-2 tracking-widest italic">Data: {{ fmtData(modalJust.dia) }}</p>
+          </div>
+          <button @click="modalJust.open = false" class="text-slate-400 hover:text-rose-500"><i class="pi pi-times"></i></button>
+        </div>
+        <div class="p-8 space-y-6 overflow-y-auto">
+          <div class="grid grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <label class="text-[10px] font-black text-slate-400 uppercase italic">Tipo (Ex: Atestado)</label>
+              <input v-model="modalJust.form.tipo" class="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold outline-none" />
+            </div>
+            <div class="space-y-1">
+              <label class="text-[10px] font-black text-slate-400 uppercase italic">Data</label>
+              <input type="date" v-model="modalJust.form.data" class="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold outline-none" />
+            </div>
+          </div>
+          <div class="space-y-1">
+            <label class="text-[10px] font-black text-slate-400 uppercase italic">Descrição</label>
+            <textarea v-model="modalJust.form.descricao" class="w-full h-24 bg-slate-50 border border-slate-100 rounded-2xl p-4 font-bold outline-none resize-none"></textarea>
+          </div>
+        </div>
+        <div class="p-6 bg-slate-50 border-t flex gap-3">
+          <button @click="modalJust.open = false" class="flex-1 h-12 rounded-2xl font-black text-[10px] uppercase bg-white border border-slate-200 text-slate-400">Fechar</button>
+          <button @click="confirmarSalvarJustificativa" :disabled="modalJust.saving" class="flex-1 h-12 rounded-2xl font-black text-[10px] uppercase bg-slate-900 text-white shadow-lg">Lançar Justificativa</button>
         </div>
       </div>
     </div>
@@ -141,64 +184,49 @@ import { consolidarSaldoPeriodo } from '@/utils/utils'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
 
-// ==========================================
-// ESTADO E FILTROS
-// ==========================================
 const loadingTabela = ref(false)
 const rows = ref([])
 const funcionarioOptions = ref([])
+const filtros = reactive({ funcionario_id: '', data_ini: '', data_fim: '' })
 
-const filtros = reactive({
-  funcionario_id: '',
-  data_ini: '',
-  data_fim: '',
+// STATES DOS MODAIS
+const modalEditar = reactive({
+  open: false,
+  saving: false,
+  id: null,
+  form: { funcionario_id: null, data_hora_local: '', tipo: 'ENTRADA', observacao: '' },
 })
 
-// Opções para o modal que você já tem integrado
-const optionsTipo = [
-  { label: 'ENTRADA', value: 'ENTRADA' },
-  { label: 'SAIDA', value: 'SAIDA' },
-]
+const modalJust = reactive({
+  open: false,
+  saving: false,
+  dia: '',
+  lista: [],
+  form: { funcionario_id: null, data: '', tipo: '', descricao: '' },
+})
 
-// ==========================================
-// HELPERS DE FORMATAÇÃO (O toque do Designer)
-// ==========================================
+// HELPERS
 const fmtData = (v) => v ? v.split('-').reverse().join('/') : '-'
-
 const getDiaSemana = (dataStr) => {
   const dias = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
   const data = new Date(dataStr + 'T12:00:00')
   return dias[data.getDay()]
 }
-
-// Alerta visual para Sábados após as 12:00
 const isFimDeSemanaErro = (dataStr, horaStr) => {
   if (!horaStr) return false
   const data = new Date(dataStr + 'T12:00:00')
   const [h, m] = horaStr.split(':').map(Number)
-  // 6 = Sábado. Se for sábado e hora > 12 ou (hora == 12 e min > 0)
   return data.getDay() === 6 && (h > 12 || (h === 12 && m > 0))
 }
 
-// ==========================================
-// LÓGICA DE AGRUPAMENTO (Resolve as duplicadas)
-// ==========================================
 const rowsAgrupadas = computed(() => {
   const grupos = {}
-  
   rows.value.filter(r => r.status === 'ATIVO').forEach(reg => {
     const dataKey = reg.data_hora.split('T')[0]
-    const key = dataKey
-
-    if (!grupos[key]) {
-      grupos[key] = {
-        data: dataKey,
-        funcionario_id: reg.funcionario.id,
-        batidas: []
-      }
+    if (!grupos[dataKey]) {
+      grupos[dataKey] = { data: dataKey, funcionario_id: reg.funcionario_id, batidas: [] }
     }
-
-    grupos[key].batidas.push({
+    grupos[dataKey].batidas.push({
       id: reg.id,
       hora: reg.data_hora.split('T')[1].substring(0, 5),
       tipo: reg.tipo,
@@ -206,94 +234,94 @@ const rowsAgrupadas = computed(() => {
       observacao: reg.observacao
     })
   })
-
   return Object.values(grupos).map(g => {
-    // Ordena por horário para distribuir nas colunas corretamente
     const ordenadas = g.batidas.sort((a, b) => a.hora.localeCompare(b.hora))
     const entradas = ordenadas.filter(b => b.tipo === 'ENTRADA')
     const saidas = ordenadas.filter(b => b.tipo === 'SAIDA')
-
-    return {
-      ...g,
-      ent1: entradas[0] || null,
-      sai1: saidas[0] || null,
-      ent2: entradas[1] || null,
-      sai2: saidas[1] || null
-    }
-  }).sort((a, b) => b.data.localeCompare(a.data)) // Mais recentes primeiro
+    return { ...g, ent1: entradas[0], sai1: saidas[0], ent2: entradas[1], sai2: saidas[1] }
+  }).sort((a, b) => b.data.localeCompare(a.data))
 })
 
 const resumo = computed(() => consolidarSaldoPeriodo({ registros: rows.value }))
 
-// ==========================================
-// AÇÕES DE CRIAÇÃO, EDIÇÃO E EXCLUSÃO
-// ==========================================
-
+// AÇÕES
 async function buscar() {
   if (!filtros.funcionario_id) return notify.warn('Selecione um funcionário')
   try {
     loadingTabela.value = true
     const { data } = await PontoRelatorioService.listarRegistros({ ...filtros })
     rows.value = data || []
-  } catch (e) {
-    notify.error('Erro ao buscar registros')
-  } finally {
-    loadingTabela.value = false
-  }
+  } catch (e) { notify.error('Erro ao buscar') } 
+  finally { loadingTabela.value = false }
 }
 
-// EXCLUIR DIRETO (A lixeira da tabela)
 async function confirmarExcluirDireto(id) {
-  if (!(await confirm.show('Excluir Batida', 'Deseja realmente apagar este registro?'))) return
+  if (!(await confirm.show('Excluir', 'Deseja apagar este registro?'))) return
   try {
     await PontoRegistrosService.remover(id)
-    notify.success('Registro apagado')
-    await buscar() // Recarrega para limpar a tela
-  } catch (e) {
-    notify.error('Erro ao excluir')
-  }
+    notify.success('Apagado!')
+    await buscar()
+  } catch (e) { notify.error('Erro ao excluir') }
 }
 
-// CRIAR DIRETO NA CÉLULA VAZIA
 function abrirModalNovoNaPosicao(row, coluna) {
-  const sugestaoHorario = { ent1: '08:00', sai1: '12:00', ent2: '13:00', sai2: '18:00' }
-  
-  // Aqui você usa o seu estado do modal já existente
+  const h = { ent1: '08:00', sai1: '12:00', ent2: '13:00', sai2: '18:00' }
   Object.assign(modalEditar, {
     open: true,
     id: null,
-    form: {
-      funcionario_id: row.funcionario_id,
-      data_hora_local: `${row.data}T${sugestaoHorario[coluna]}`,
-      tipo: coluna.startsWith('ent') ? 'ENTRADA' : 'SAIDA',
-      observacao: 'LANÇAMENTO MANUAL'
+    form: { 
+      funcionario_id: filtros.funcionario_id, 
+      data_hora_local: `${row.data}T${h[coluna]}`, 
+      tipo: coluna.startsWith('ent') ? 'ENTRADA' : 'SAIDA', 
+      observacao: 'AJUSTE MANUAL' 
     }
   })
 }
 
-// EDITAR (Abre o modal com os dados da batida)
 function abrirModalEditar(batida) {
   Object.assign(modalEditar, {
     open: true,
     id: batida.id,
-    form: {
-      data_hora_local: batida.data_hora.slice(0, 16),
-      tipo: batida.tipo,
-      observacao: batida.observacao || ''
+    form: { 
+      funcionario_id: filtros.funcionario_id,
+      data_hora_local: batida.data_hora.slice(0, 16).replace(' ', 'T'), 
+      tipo: batida.tipo, 
+      observacao: batida.observacao || '' 
     }
   })
 }
 
-// ==========================================
-// CICLO DE VIDA
-// ==========================================
+async function confirmarSalvarEdicao() {
+  try {
+    modalEditar.saving = true
+    const payload = { ...modalEditar.form, data_hora: modalEditar.form.data_hora_local.replace('T', ' ') + ':00' }
+    if (modalEditar.id) await PontoRegistrosService.atualizar(modalEditar.id, payload)
+    else await PontoRegistrosService.salvar(payload)
+    notify.success('Sucesso!')
+    modalEditar.open = false
+    await buscar()
+  } catch (e) { notify.error('Erro ao salvar') }
+  finally { modalEditar.saving = false }
+}
+
+async function abrirModalJustificar(row) {
+  Object.assign(modalJust, { open: true, dia: row.data, form: { funcionario_id: filtros.funcionario_id, data: row.data, tipo: '', descricao: '' } })
+}
+
+async function confirmarSalvarJustificativa() {
+  try {
+    modalJust.saving = true
+    await PontoJustificativasService.salvar(modalJust.form)
+    notify.success('Justificativa salva!')
+    modalJust.open = false
+    await buscar()
+  } catch (e) { notify.error('Erro ao salvar') }
+  finally { modalJust.saving = false }
+}
+
 onMounted(async () => {
   const { data } = await FuncionarioService.listar()
-  funcionarioOptions.value = (data?.data || data || [])
-    .filter(f => f.status === 'ATIVO')
-    .map(f => ({ label: f.nome, value: f.id }))
-
-  // Setup de datas iniciais (Mês atual)
+  funcionarioOptions.value = (data?.data || data || []).filter(f => f.status === 'ATIVO').map(f => ({ label: f.nome, value: f.id }))
   const hoje = new Date()
   filtros.data_ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10)
   filtros.data_fim = hoje.toISOString().slice(0, 10)
