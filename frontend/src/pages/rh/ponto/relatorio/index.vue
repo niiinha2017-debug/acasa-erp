@@ -172,7 +172,6 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import {
   PontoRelatorioService,
   PontoJustificativasService,
@@ -182,19 +181,26 @@ import {
 import { notify } from '@/services/notify'
 import { consolidarSaldoPeriodo } from '@/utils/utils'
 import { confirm } from '@/services/confirm'
-import { can } from '@/services/permissions'
-import {
-  listDays,
-  groupRegistrosByDia,
-  groupJustificativasByDia
-} from '@/utils/ponto'
-
+import { listDays, groupRegistrosByDia } from '@/utils/ponto'
 
 const loadingTabela = ref(false)
 const rows = ref([])
 const funcionarioOptions = ref([])
+const funcionarios = ref([])
+
 const filtros = reactive({ funcionario_id: '', data_ini: '', data_fim: '' })
-const registrosPorDia = computed(() => groupRegistrosByDia(rows.value))
+
+// ✅ remove domingo dos REGISTROS (pra não contar no resumo)
+const rowsFiltrados = computed(() => {
+  return (rows.value || []).filter((r) => {
+    const dia = new Date(r.data_hora).getDay()
+    return dia !== 0 // 0 = Domingo
+  })
+})
+
+// ✅ agora pode usar rowsFiltrados
+const registrosPorDia = computed(() => groupRegistrosByDia(rowsFiltrados.value))
+const resumo = computed(() => consolidarSaldoPeriodo({ registros: rowsFiltrados.value }))
 
 // STATES DOS MODAIS
 const modalEditar = reactive({
@@ -213,12 +219,14 @@ const modalJust = reactive({
 })
 
 // HELPERS
-const fmtData = (v) => v ? v.split('-').reverse().join('/') : '-'
+const fmtData = (v) => (v ? v.split('-').reverse().join('/') : '-')
+
 const getDiaSemana = (dataStr) => {
   const dias = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
   const data = new Date(dataStr + 'T12:00:00')
   return dias[data.getDay()]
 }
+
 const isFimDeSemanaErro = (dataStr, horaStr) => {
   if (!horaStr) return false
   const data = new Date(dataStr + 'T12:00:00')
@@ -226,60 +234,66 @@ const isFimDeSemanaErro = (dataStr, horaStr) => {
   return data.getDay() === 6 && (h > 12 || (h === 12 && m > 0))
 }
 
-const funcionarios = ref([])
-
 const funcionarioSelecionado = computed(() => {
   const id = Number(filtros.funcionario_id || 0)
-  return funcionarios.value.find(f => Number(f.id) === id) || null
+  return funcionarios.value.find((f) => Number(f.id) === id) || null
 })
-
 
 const rowsAgrupadas = computed(() => {
   if (!filtros.data_ini || !filtros.data_fim) return []
 
-  const dias = listDays(filtros.data_ini, filtros.data_fim)
+  // ✅ lista dias e REMOVE domingo (pra não aparecer na tabela)
+  const dias = listDays(filtros.data_ini, filtros.data_fim).filter((dia) => {
+    const d = new Date(dia + 'T12:00:00')
+    return d.getDay() !== 0
+  })
+
   const map = registrosPorDia.value
 
-  return dias.map((dia) => {
-    const regsDia = (map.get(dia) || [])
-      .filter(r => r.status === 'ATIVO')
-      .slice()
-      .sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora))
+  return dias
+    .map((dia) => {
+      const regsDia = (map.get(dia) || [])
+        .filter((r) => r.status === 'ATIVO')
+        .slice()
+        .sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora))
 
-    const batidas = regsDia.map(reg => ({
-      id: reg.id,
-      hora: reg.data_hora.split('T')[1].substring(0, 5),
-      tipo: reg.tipo,
-      data_hora: reg.data_hora,
-      observacao: reg.observacao
-    }))
+      const batidas = regsDia.map((reg) => ({
+        id: reg.id,
+        hora: reg.data_hora.split('T')[1].substring(0, 5),
+        tipo: reg.tipo,
+        data_hora: reg.data_hora,
+        observacao: reg.observacao,
+      }))
 
-    const entradas = batidas.filter(b => b.tipo === 'ENTRADA')
-    const saidas = batidas.filter(b => b.tipo === 'SAIDA')
+      const entradas = batidas.filter((b) => b.tipo === 'ENTRADA')
+      const saidas = batidas.filter((b) => b.tipo === 'SAIDA')
 
-    return {
-      data: dia,
-      funcionario_id: filtros.funcionario_id,
-      ent1: entradas[0],
-      sai1: saidas[0],
-      ent2: entradas[1],
-      sai2: saidas[1],
-    }
-  }).sort((a, b) => b.data.localeCompare(a.data))
+      return {
+        data: dia,
+        funcionario_id: filtros.funcionario_id,
+        ent1: entradas[0],
+        sai1: saidas[0],
+        ent2: entradas[1],
+        sai2: saidas[1],
+      }
+    })
+    .sort((a, b) => b.data.localeCompare(a.data))
 })
-
-
-const resumo = computed(() => consolidarSaldoPeriodo({ registros: rows.value }))
 
 // AÇÕES
 async function buscar() {
   if (!filtros.funcionario_id) return notify.warn('Selecione um funcionário')
+
   try {
     loadingTabela.value = true
     const { data } = await PontoRelatorioService.listarRegistros({ ...filtros })
     rows.value = data || []
-  } catch (e) { notify.error('Erro ao buscar') } 
-  finally { loadingTabela.value = false }
+  } catch (e) {
+    console.log('[PONTO] ERRO buscar:', e?.response?.status, e?.response?.data)
+    notify.error(e?.response?.data?.message || 'Erro ao buscar')
+  } finally {
+    loadingTabela.value = false
+  }
 }
 
 async function confirmarExcluirDireto(id) {
@@ -295,17 +309,14 @@ async function confirmarExcluirDireto(id) {
   }
 }
 
-
-
 function abrirModalNovoNaPosicao(row, coluna) {
   const f = funcionarioSelecionado.value
 
-  // pega horários do cadastro se existirem
   const h = {
     ent1: f?.horario_entrada_1 || '07:30',
-    sai1: f?.horario_saida_1   || '12:00',
+    sai1: f?.horario_saida_1 || '12:00',
     ent2: f?.horario_entrada_2 || '13:30',
-    sai2: f?.horario_saida_2   || '17:30',
+    sai2: f?.horario_saida_2 || '17:30',
   }
 
   Object.assign(modalEditar, {
@@ -315,22 +326,21 @@ function abrirModalNovoNaPosicao(row, coluna) {
       funcionario_id: filtros.funcionario_id,
       data_hora_local: `${row.data}T${h[coluna]}`,
       tipo: coluna.startsWith('ent') ? 'ENTRADA' : 'SAIDA',
-      observacao: 'AJUSTE MANUAL'
-    }
+      observacao: 'AJUSTE MANUAL',
+    },
   })
 }
-
 
 function abrirModalEditar(batida) {
   Object.assign(modalEditar, {
     open: true,
     id: batida.id,
-    form: { 
+    form: {
       funcionario_id: filtros.funcionario_id,
-      data_hora_local: batida.data_hora.slice(0, 16).replace(' ', 'T'), 
-      tipo: batida.tipo, 
-      observacao: batida.observacao || '' 
-    }
+      data_hora_local: batida.data_hora.slice(0, 16).replace(' ', 'T'),
+      tipo: batida.tipo,
+      observacao: batida.observacao || '',
+    },
   })
 }
 
@@ -342,7 +352,7 @@ async function confirmarSalvarEdicao() {
       funcionario_id: Number(modalEditar.form.funcionario_id),
       tipo: modalEditar.form.tipo,
       observacao: modalEditar.form.observacao || null,
-      data_hora: `${modalEditar.form.data_hora_local}:00`, // ✅ ISO estável
+      data_hora: `${modalEditar.form.data_hora_local}:00`,
     }
 
     if (modalEditar.id) {
@@ -362,9 +372,12 @@ async function confirmarSalvarEdicao() {
   }
 }
 
-
 async function abrirModalJustificar(row) {
-  Object.assign(modalJust, { open: true, dia: row.data, form: { funcionario_id: filtros.funcionario_id, data: row.data, tipo: '', descricao: '' } })
+  Object.assign(modalJust, {
+    open: true,
+    dia: row.data,
+    form: { funcionario_id: filtros.funcionario_id, data: row.data, tipo: '', descricao: '' },
+  })
 }
 
 async function confirmarSalvarJustificativa() {
@@ -374,21 +387,23 @@ async function confirmarSalvarJustificativa() {
     notify.success('Justificativa salva!')
     modalJust.open = false
     await buscar()
-  } catch (e) { notify.error('Erro ao salvar') }
-  finally { modalJust.saving = false }
+  } catch (e) {
+    console.log('[PONTO] ERRO justificar:', e?.response?.status, e?.response?.data)
+    notify.error(e?.response?.data?.message || 'Erro ao salvar')
+  } finally {
+    modalJust.saving = false
+  }
 }
 
 onMounted(async () => {
   const { data } = await FuncionarioService.listar()
-  const lista = (data?.data || data || []).filter(f => f.status === 'ATIVO')
+  const lista = (data?.data || data || []).filter((f) => f.status === 'ATIVO')
 
   funcionarios.value = lista
-
-  funcionarioOptions.value = lista.map(f => ({ label: f.nome, value: f.id }))
+  funcionarioOptions.value = lista.map((f) => ({ label: f.nome, value: f.id }))
 
   const hoje = new Date()
   filtros.data_ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10)
   filtros.data_fim = hoje.toISOString().slice(0, 10)
 })
-
 </script>
