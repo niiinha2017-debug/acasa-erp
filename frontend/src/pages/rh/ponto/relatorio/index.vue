@@ -432,8 +432,8 @@ async function confirmarSalvarEdicao() {
 async function confirmarExcluir() {
   if (!(await confirm.show('Excluir Registro', 'Deseja realmente apagar esta batida?'))) return
   try {
-    await PontoRegistrosService.atualizar(modalEditar.id, { status: 'EXCLUIDO' })
-    notify.success('Registro removido')
+    await PontoRegistrosService.remover(modalEditar.id)
+    notify.success('Registro apagado')
     modalEditar.open = false
     await buscar()
   } catch (e) {

@@ -265,6 +265,9 @@ export const PontoService = {
 export const PontoRelatorioService = {
   listarRegistros: (filtros = {}) => api.get('/ponto/relatorio/registros', { params: filtros }),
   pdfMensal: (params) => api.get('/ponto/relatorio/pdf', { params, responseType: 'blob' }),
+  remover(id) {
+  return api.delete(`/ponto/registros/${id}`)
+}
 }
 
 export const PontoRegistrosService = {
