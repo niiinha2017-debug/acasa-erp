@@ -110,7 +110,6 @@ async function carregarDados() {
     localStorage.setItem('acasa_funcionario_nome', resMe.data.nome)
     registrosHoje.value = resHoje.data || []
     
-    // Trava de 30 segundos
     if (ultimoRegistro.value) {
       const diff = Math.floor((Date.now() - new Date(ultimoRegistro.value.data_hora).getTime()) / 1000)
       if (diff < 30) {
@@ -155,6 +154,9 @@ async function realizarPareamento() {
     localStorage.setItem('acasa_ponto_token', token.value)
     etapa.value = 'app'
     await carregarDados()
+    
+    // Limpa o código da URL para ficar elegante
+    window.history.replaceState({}, document.title, window.location.pathname);
   } catch (e) {
     erro.value = "CÓDIGO INVÁLIDO OU EXPIRADO"
   } finally {
@@ -172,6 +174,20 @@ function startTimerBloqueio() {
 
 onMounted(() => {
   timerRelogio = setInterval(() => { agora.value = new Date() }, 1000)
+
+  // --- CAPTURA O CÓDIGO DA URL ---
+  const params = new URLSearchParams(window.location.search)
+  const code = params.get('code')
+
+  if (code && !token.value) {
+    parearCode.value = code.toUpperCase()
+    // Tenta ativar automático após 500ms
+    setTimeout(() => {
+      realizarPareamento()
+    }, 500)
+  }
+  // -------------------------------
+
   if (token.value) {
     etapa.value = 'app'
     carregarDados()
