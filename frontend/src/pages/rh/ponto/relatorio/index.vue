@@ -1,232 +1,128 @@
 <template>
-  <div class="w-full max-w-[1400px] mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-in fade-in duration-500">
     
-    <PageHeader
-      title="Relatório de Ponto"
-      subtitle="RH / Gestão Estratégica de Horas"
-      icon="pi pi-clock"
-      class="bg-transparent p-0"
-    />
-
-    <div v-if="rows.length" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <Card hoverable class="p-6 flex items-center gap-5 border-none shadow-sm bg-white/80 backdrop-blur">
-        <div class="w-14 h-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-lg">
-          <i class="pi pi-calendar text-2xl"></i>
+    <div v-if="rows.length" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-lg">
+          <i class="pi pi-calendar text-xl"></i>
         </div>
         <div>
-          <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Meta Diária</p>
-          <p class="text-3xl font-black text-slate-800">{{ resumo.metaDia.toFixed(2) }}h</p>
+          <p class="text-[10px] font-black uppercase text-slate-400">Meta Diária</p>
+          <p class="text-2xl font-black text-slate-800 tracking-tighter">{{ resumo.metaDia.toFixed(2) }}h</p>
         </div>
-      </Card>
+      </div>
 
-      <Card hoverable class="p-6 flex items-center gap-5 border-none shadow-sm bg-white/80 backdrop-blur">
-        <div class="w-14 h-14 rounded-2xl bg-brand-primary/10 text-brand-primary flex items-center justify-center shadow-inner">
-          <i class="pi pi-briefcase text-2xl"></i>
+      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner font-black italic">
+          HH
         </div>
         <div>
-          <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Trabalhado</p>
-          <p class="text-3xl font-black text-slate-800">{{ resumo.totalHorasHHMM }}</p>
+          <p class="text-[10px] font-black uppercase text-slate-400">Trabalhado</p>
+          <p class="text-2xl font-black text-slate-800 tracking-tighter">{{ resumo.totalHorasHHMM }}</p>
         </div>
-      </Card>
+      </div>
 
-      <Card hoverable class="p-6 flex items-center gap-5 border-none shadow-sm bg-white/80 backdrop-blur">
-        <div 
-          class="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg"
-          :class="resumo.totalSaldo >= 0 ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'"
-        >
-          <i class="pi pi-chart-bar text-2xl"></i>
+      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
+        <div :class="resumo.totalSaldo >= 0 ? 'bg-emerald-500' : 'bg-rose-500'" class="w-12 h-12 rounded-2xl text-white flex items-center justify-center shadow-lg transition-colors">
+          <i class="pi pi-chart-bar text-xl"></i>
         </div>
         <div>
-          <p class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Saldo do Período</p>
-          <p class="text-3xl font-black" :class="resumo.totalSaldo >= 0 ? 'text-emerald-600' : 'text-rose-600'">
+          <p class="text-[10px] font-black uppercase text-slate-400">Saldo Período</p>
+          <p :class="resumo.totalSaldo >= 0 ? 'text-emerald-600' : 'text-rose-600'" class="text-2xl font-black tracking-tighter italic">
             {{ resumo.totalSaldoHHMM }}
           </p>
         </div>
-      </Card>
+      </div>
     </div>
 
-    <Card :shadow="true" class="!rounded-[2.5rem] overflow-hidden border-none shadow-2xl bg-white">
+    <div class="bg-white rounded-[2rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
       
-      <header class="p-8 lg:p-10 border-b border-slate-50 bg-slate-50/30">
-        <div class="grid grid-cols-12 gap-6 items-end">
-          <div class="col-span-12 md:col-span-4">
-            <SearchInput mode="select" label="FUNCIONÁRIO" :options="funcionarioOptions" v-model="filtros.funcionario_id" class="premium-input" />
-          </div>
-          <div class="col-span-12 md:col-span-3">
-            <Input label="DATA INÍCIO" v-model="filtros.data_ini" type="date" />
-          </div>
-          <div class="col-span-12 md:col-span-3">
-            <Input label="DATA FIM" v-model="filtros.data_fim" type="date" />
-          </div>
-          <div class="col-span-12 md:col-span-2 flex gap-3">
-            <Button v-if="can('ponto_relatorio.ver')" variant="primary" class="flex-1" @click="buscar" :loading="loadingTabela">
-              BUSCAR
-            </Button>
-            <Button variant="outline" class="!h-12 !w-12 !p-0 !rounded-xl border-slate-200" :disabled="!canPdf" @click="abrirPdfMensal">
-              <i class="pi pi-file-pdf text-rose-500"></i>
-            </Button>
-          </div>
+      <header class="p-6 bg-slate-50/50 border-b border-slate-100 grid grid-cols-12 gap-4 items-end">
+        <div class="col-span-12 md:col-span-4">
+          <label class="text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 block italic">Funcionário</label>
+          <select v-model="filtros.funcionario_id" class="w-full h-11 bg-white border border-slate-200 rounded-2xl px-4 text-xs font-bold uppercase outline-none focus:ring-2 focus:ring-slate-900 transition-all">
+            <option value="">Selecione...</option>
+            <option v-for="o in funcionarioOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+          </select>
+        </div>
+        <div class="col-span-5 md:col-span-3">
+          <label class="text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 block italic">Início</label>
+          <input v-model="filtros.data_ini" type="date" class="w-full h-11 bg-white border border-slate-200 rounded-2xl px-4 text-xs font-bold outline-none focus:ring-2 focus:ring-slate-900" />
+        </div>
+        <div class="col-span-5 md:col-span-3">
+          <label class="text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 block italic">Fim</label>
+          <input v-model="filtros.data_fim" type="date" class="w-full h-11 bg-white border border-slate-200 rounded-2xl px-4 text-xs font-bold outline-none focus:ring-2 focus:ring-slate-900" />
+        </div>
+        <div class="col-span-2 md:col-span-2">
+          <button @click="buscar" class="w-full h-11 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase italic tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
+            <i class="pi pi-search"></i>
+            <span class="hidden md:block">Buscar</span>
+          </button>
         </div>
       </header>
 
-      <div class="p-2">
-        <Table :columns="columns" :rows="rowsAgrupadas" :loading="loadingTabela" class="!border-none">
-          
-          <template #cell-data="{ row }">
-            <span class="text-sm font-black text-slate-700 uppercase italic">{{ fmtData(row.data) }}</span>
-          </template>
-
-          <template #cell-funcionario="{ row }">
-            <span class="text-xs font-bold text-slate-600">{{ row.funcionario_nome }}</span>
-          </template>
-
-          <template v-for="col in ['ent1', 'sai1', 'ent2', 'sai2']" #[`cell-${col}`]="{ row }">
-            <div class="flex items-center gap-2 group min-h-[32px]">
-              <span 
-                class="tabular-nums font-bold"
-                :class="col.startsWith('ent') ? 'text-blue-600' : 'text-slate-500'"
-              >
-                {{ row[col]?.hora || '--:--' }}
-              </span>
-              <button 
-                v-if="row[col]?.id && can('ponto_relatorio.editar')" 
-                @click="abrirModalEditar(row[col])" 
-                class="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-blue-500 transition-all p-1"
-                title="Editar batida"
-              >
-                <i class="pi pi-pencil text-[9px]"></i>
-              </button>
-            </div>
-          </template>
-
-          <template #cell-status="{ row }">
-            <StatusBadge :value="row.status" class="scale-90 origin-left" />
-          </template>
-
-          <template #cell-acoes="{ row }">
-            <div class="flex justify-end gap-2 pr-4">
-              <button 
-                v-if="can('ponto_relatorio.editar')" 
-                @click="abrirModalNovo(row)" 
-                title="Incluir batida esquecida"
-                class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center"
-              >
-                <i class="pi pi-plus text-[10px]"></i>
-              </button>
+      <div class="overflow-x-auto p-2">
+        <table class="w-full border-separate border-spacing-y-2">
+          <thead>
+            <tr class="text-[10px] font-black text-slate-400 uppercase italic tracking-widest">
+              <th class="px-6 py-2 text-left">Data</th>
+              <th class="px-2 py-2">Ent 1</th>
+              <th class="px-2 py-2">Sai 1</th>
+              <th class="px-2 py-2">Ent 2</th>
+              <th class="px-2 py-2">Sai 2</th>
+              <th class="px-6 py-2 text-right">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in rowsAgrupadas" :key="row.data" class="group bg-white hover:bg-slate-50 transition-all shadow-sm">
               
-              <button 
-                v-if="can('ponto_relatorio.editar')" 
-                @click="abrirModalJustificar(row)" 
-                class="px-3 h-8 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-black uppercase hover:bg-brand-primary hover:text-white transition-all"
-              >
-                Justificar
-              </button>
-            </div>
-          </template>
-        </Table>
-      </div>
-    </Card>
-
-    <div v-if="modalEditar.open" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
-      <Card class="w-full max-w-md !rounded-[2rem] shadow-2xl overflow-hidden border-none animate-in zoom-in-95">
-        <div class="p-8 border-b bg-slate-50/50 flex justify-between items-center">
-          <h3 class="font-black text-slate-800 uppercase tracking-tighter italic">
-            {{ modalEditar.id ? 'Ajustar Registro' : 'Novo Registro' }}
-          </h3>
-          <button @click="modalEditar.open = false" class="text-slate-400 hover:text-rose-500 transition-colors">
-            <i class="pi pi-times"></i>
-          </button>
-        </div>
-        
-        <div class="p-8 space-y-6">
-          <Input label="DATA E HORA" type="datetime-local" v-model="modalEditar.form.data_hora_local" />
-          <SearchInput mode="select" label="TIPO DE REGISTRO" :options="optionsTipo" v-model="modalEditar.form.tipo" />
-          <Input label="OBSERVAÇÃO" v-model="modalEditar.form.observacao" :forceUpper="true" placeholder="Motivo do ajuste..." />
-        </div>
-
-        <div class="p-6 bg-slate-50 flex gap-3">
-          <Button 
-            v-if="modalEditar.id && can('ponto_relatorio.editar')" 
-            variant="outline" 
-            class="!border-rose-100 !text-rose-500 hover:!bg-rose-500 hover:!text-white"
-            @click="confirmarExcluir"
-          >
-            EXCLUIR
-          </Button>
-
-          <Button variant="secondary" class="flex-1 !rounded-xl font-bold uppercase text-[10px]" @click="modalEditar.open = false">
-            Cancelar
-          </Button>
-
-          <Button
-            v-if="can('ponto_relatorio.editar')"
-            variant="primary"
-            class="flex-1"
-            :loading="modalEditar.saving"
-            @click="confirmarSalvarEdicao"
-          >
-            {{ modalEditar.id ? 'Salvar Ajuste' : 'Gravar Ponto' }}
-          </Button>
-        </div>
-      </Card>
-    </div>
-
-    <div v-if="modalJust.open" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
-      <Card class="w-full max-w-2xl !rounded-[2.5rem] shadow-2xl overflow-hidden border-none flex flex-col max-h-[90vh] animate-in zoom-in-95">
-        <div class="p-8 border-b bg-slate-50/80 flex justify-between items-center">
-          <div>
-            <h3 class="font-black text-slate-800 uppercase italic">Lançar Justificativa</h3>
-            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Ref: {{ modalJust.dia }}</p>
-          </div>
-          <button @click="fecharModalJust" class="text-slate-400 hover:text-rose-500 transition-colors"><i class="pi pi-times"></i></button>
-        </div>
-        
-        <div class="p-8 overflow-y-auto space-y-8">
-          <div class="grid grid-cols-12 gap-6">
-            <Input class="col-span-12 md:col-span-6" label="TIPO (EX: ATESTADO)" v-model="modalJust.form.tipo" :forceUpper="true" />
-            <Input class="col-span-12 md:col-span-6" label="DATA" type="date" v-model="modalJust.form.data" />
-            <Input class="col-span-12" label="DESCRIÇÃO DETALHADA" v-model="modalJust.form.descricao" />
-            <div class="col-span-12 p-6 border-2 border-dashed rounded-2xl border-slate-100 bg-slate-50/50 flex flex-col items-center gap-2">
-              <i class="pi pi-upload text-slate-300"></i>
-              <input type="file" @change="onFileChange" class="text-[10px] font-bold text-slate-400 w-full text-center" />
-            </div>
-          </div>
-
-          <div class="space-y-4">
-            <p class="text-[10px] font-black uppercase text-slate-800 tracking-[0.2em] flex items-center gap-2">
-              <span class="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
-              Histórico do Mês
-            </p>
-            <div class="bg-slate-50 rounded-2xl divide-y divide-white border border-slate-100 overflow-hidden">
-              <div v-for="j in modalJust.lista" :key="j.id" class="p-4 flex justify-between items-center hover:bg-white transition-colors">
+              <td class="px-6 py-4 rounded-l-3xl border-y border-l border-slate-50">
                 <div class="flex flex-col">
-                  <span class="text-[11px] font-black text-slate-700 uppercase italic">{{ fmtData(j.data) }} — {{ j.tipo }}</span>
-                  <span class="text-[10px] text-slate-400 font-medium">{{ j.descricao || 'Sem descrição' }}</span>
+                  <span class="text-sm font-black text-slate-800 uppercase italic leading-none">{{ fmtData(row.data) }}</span>
+                  <span class="text-[9px] font-bold text-slate-400 uppercase mt-1 italic">{{ getDiaSemana(row.data) }}</span>
                 </div>
-                <button @click="confirmarExcluirJustificativa(j)" class="text-slate-300 hover:text-rose-500 transition-colors p-2">
-                  <i class="pi pi-trash text-xs"></i>
-                </button>
-              </div>
-              <div v-if="!modalJust.lista.length" class="p-10 text-center text-[10px] font-bold text-slate-300 uppercase tracking-widest italic">
-                Nenhuma justificativa registrada.
-              </div>
-            </div>
-          </div>
-        </div>
+              </td>
 
-        <div class="p-6 bg-slate-100/50 border-t flex gap-3">
-          <Button
-            v-if="can('ponto_relatorio.editar')"
-            variant="primary"
-            class="flex-1"
-            :loading="modalJust.saving"
-            @click="confirmarSalvarJustificativa"
-          >
-            Salvar Justificativa
-          </Button>
-          <Button variant="secondary" class="flex-1 !rounded-xl font-bold uppercase text-[10px]" @click="fecharModalJust">Cancelar</Button>
+              <td v-for="col in ['ent1', 'sai1', 'ent2', 'sai2']" :key="col" class="px-2 py-4 border-y border-slate-50 text-center">
+                <div class="flex items-center justify-center gap-2 group/btn">
+                  <span 
+                    class="tabular-nums font-black text-sm transition-all"
+                    :class="[
+                      row[col]?.hora ? (col.startsWith('ent') ? 'text-blue-600' : 'text-slate-600') : 'text-slate-200',
+                      isFimDeSemanaErro(row.data, row[col]?.hora) ? 'text-rose-500' : ''
+                    ]"
+                  >
+                    {{ row[col]?.hora || '--:--' }}
+                  </span>
+
+                  <div v-if="row[col]?.id" class="flex items-center opacity-0 group-hover/btn:opacity-100 transition-opacity">
+                    <button @click="abrirModalEditar(row[col])" class="text-slate-300 hover:text-blue-500 p-1">
+                      <i class="pi pi-pencil text-[9px]"></i>
+                    </button>
+                    <button @click="confirmarExcluirDireto(row[col].id)" class="text-slate-300 hover:text-rose-500 p-1">
+                      <i class="pi pi-trash text-[9px]"></i>
+                    </button>
+                  </div>
+                  <button v-else @click="abrirModalNovoNaPosicao(row, col)" class="opacity-0 group-hover/btn:opacity-100 text-slate-200 hover:text-slate-900 transition-opacity p-1">
+                    <i class="pi pi-plus text-[9px]"></i>
+                  </button>
+                </div>
+              </td>
+
+              <td class="px-6 py-4 rounded-r-3xl border-y border-r border-slate-50 text-right space-x-2">
+                 <button @click="abrirModalJustificar(row)" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-500 text-[9px] font-black uppercase hover:bg-slate-900 hover:text-white transition-all">
+                  Justificar
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div v-if="!loadingTabela && rowsAgrupadas.length === 0" class="p-20 text-center">
+          <i class="pi pi-clock text-slate-100 text-6xl mb-4 block"></i>
+          <p class="text-slate-400 font-black uppercase italic text-xs tracking-widest">Nenhum registro para exibir</p>
         </div>
-      </Card>
+      </div>
     </div>
   </div>
 </template>
@@ -245,12 +141,9 @@ import { consolidarSaldoPeriodo } from '@/utils/utils'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
 
-definePage({ meta: { perm: 'ponto_relatorio.ver' } })
-
 // ==========================================
-// STATE & CONFIG
+// ESTADO E FILTROS
 // ==========================================
-const router = useRouter()
 const loadingTabela = ref(false)
 const rows = ref([])
 const funcionarioOptions = ref([])
@@ -261,55 +154,46 @@ const filtros = reactive({
   data_fim: '',
 })
 
-const columns = [
-  { key: 'data', label: 'DATA', width: '110px' },
-  { key: 'funcionario', label: 'FUNCIONÁRIO' },
-  { key: 'ent1', label: 'ENT 1', width: '80px' },
-  { key: 'sai1', label: 'SAI 1', width: '80px' },
-  { key: 'ent2', label: 'ENT 2', width: '80px' },
-  { key: 'sai2', label: 'SAI 2', width: '80px' },
-  { key: 'status', label: 'STATUS', width: '100px' },
-  { key: 'acoes', label: '', width: '120px', align: 'right' },
-]
-
+// Opções para o modal que você já tem integrado
 const optionsTipo = [
   { label: 'ENTRADA', value: 'ENTRADA' },
   { label: 'SAIDA', value: 'SAIDA' },
 ]
 
 // ==========================================
-// HELPERS (Date & Time)
+// HELPERS DE FORMATAÇÃO (O toque do Designer)
 // ==========================================
-const fmtData = (v) => v ? v.split('T')[0].split('-').reverse().join('/') : '-'
-const toIsoShort = (date) => new Date(date).toISOString().slice(0, 10)
+const fmtData = (v) => v ? v.split('-').reverse().join('/') : '-'
+
+const getDiaSemana = (dataStr) => {
+  const dias = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
+  const data = new Date(dataStr + 'T12:00:00')
+  return dias[data.getDay()]
+}
+
+// Alerta visual para Sábados após as 12:00
+const isFimDeSemanaErro = (dataStr, horaStr) => {
+  if (!horaStr) return false
+  const data = new Date(dataStr + 'T12:00:00')
+  const [h, m] = horaStr.split(':').map(Number)
+  // 6 = Sábado. Se for sábado e hora > 12 ou (hora == 12 e min > 0)
+  return data.getDay() === 6 && (h > 12 || (h === 12 && m > 0))
+}
 
 // ==========================================
-// COMPUTED (Agrupamento e Cálculos)
+// LÓGICA DE AGRUPAMENTO (Resolve as duplicadas)
 // ==========================================
-const canPdf = computed(() => can('ponto_relatorio.ver') && !!filtros.funcionario_id && !!filtros.data_ini)
-
-const resumo = computed(() =>
-  consolidarSaldoPeriodo({
-    registros: rows.value,
-    horasSemana: 44, // Ajustado para padrão comum, mude se necessário
-    diasSemana: 5,
-  })
-)
-
 const rowsAgrupadas = computed(() => {
   const grupos = {}
   
-  // Filtra apenas registros ativos para o agrupamento da tabela
   rows.value.filter(r => r.status === 'ATIVO').forEach(reg => {
     const dataKey = reg.data_hora.split('T')[0]
-    const funcId = reg.funcionario.id
-    const key = `${dataKey}_${funcId}`
+    const key = dataKey
 
     if (!grupos[key]) {
       grupos[key] = {
         data: dataKey,
-        funcionario_id: funcId,
-        funcionario_nome: reg.funcionario.nome,
+        funcionario_id: reg.funcionario.id,
         batidas: []
       }
     }
@@ -324,6 +208,7 @@ const rowsAgrupadas = computed(() => {
   })
 
   return Object.values(grupos).map(g => {
+    // Ordena por horário para distribuir nas colunas corretamente
     const ordenadas = g.batidas.sort((a, b) => a.hora.localeCompare(b.hora))
     const entradas = ordenadas.filter(b => b.tipo === 'ENTRADA')
     const saidas = ordenadas.filter(b => b.tipo === 'SAIDA')
@@ -335,14 +220,17 @@ const rowsAgrupadas = computed(() => {
       ent2: entradas[1] || null,
       sai2: saidas[1] || null
     }
-  })
+  }).sort((a, b) => b.data.localeCompare(a.data)) // Mais recentes primeiro
 })
 
+const resumo = computed(() => consolidarSaldoPeriodo({ registros: rows.value }))
+
 // ==========================================
-// MÉTODOS DE BUSCA E RELATÓRIO
+// AÇÕES DE CRIAÇÃO, EDIÇÃO E EXCLUSÃO
 // ==========================================
+
 async function buscar() {
-  if (!can('ponto_relatorio.ver')) return
+  if (!filtros.funcionario_id) return notify.warn('Selecione um funcionário')
   try {
     loadingTabela.value = true
     const { data } = await PontoRelatorioService.listarRegistros({ ...filtros })
@@ -354,165 +242,58 @@ async function buscar() {
   }
 }
 
-async function abrirPdfMensal() {
-  if (!canPdf.value) return
-  const d = new Date(filtros.data_ini)
-  const resp = await PontoRelatorioService.pdfMensal({
-    funcionario_id: filtros.funcionario_id,
-    mes: d.getMonth() + 1,
-    ano: d.getFullYear(),
-  })
-  window.open(URL.createObjectURL(new Blob([resp.data], { type: 'application/pdf' })), '_blank')
+// EXCLUIR DIRETO (A lixeira da tabela)
+async function confirmarExcluirDireto(id) {
+  if (!(await confirm.show('Excluir Batida', 'Deseja realmente apagar este registro?'))) return
+  try {
+    await PontoRegistrosService.remover(id)
+    notify.success('Registro apagado')
+    await buscar() // Recarrega para limpar a tela
+  } catch (e) {
+    notify.error('Erro ao excluir')
+  }
 }
 
-// ==========================================
-// LÓGICA DO MODAL EDITAR / NOVO
-// ==========================================
-const modalEditar = reactive({
-  open: false,
-  saving: false,
-  id: null,
-  form: { funcionario_id: null, data_hora_local: '', tipo: 'ENTRADA', observacao: '' },
-})
+// CRIAR DIRETO NA CÉLULA VAZIA
+function abrirModalNovoNaPosicao(row, coluna) {
+  const sugestaoHorario = { ent1: '08:00', sai1: '12:00', ent2: '13:00', sai2: '18:00' }
+  
+  // Aqui você usa o seu estado do modal já existente
+  Object.assign(modalEditar, {
+    open: true,
+    id: null,
+    form: {
+      funcionario_id: row.funcionario_id,
+      data_hora_local: `${row.data}T${sugestaoHorario[coluna]}`,
+      tipo: coluna.startsWith('ent') ? 'ENTRADA' : 'SAIDA',
+      observacao: 'LANÇAMENTO MANUAL'
+    }
+  })
+}
 
+// EDITAR (Abre o modal com os dados da batida)
 function abrirModalEditar(batida) {
-  if (!can('ponto_relatorio.editar')) return
   Object.assign(modalEditar, {
     open: true,
     id: batida.id,
     form: {
       data_hora_local: batida.data_hora.slice(0, 16),
       tipo: batida.tipo,
-      observacao: batida.observacao || '',
+      observacao: batida.observacao || ''
     }
   })
-}
-
-function abrirModalNovo(row) {
-  Object.assign(modalEditar, {
-    open: true,
-    id: null,
-    form: {
-      funcionario_id: row.funcionario_id,
-      data_hora_local: `${row.data}T08:00`,
-      tipo: 'ENTRADA',
-      observacao: 'INCLUSÃO MANUAL',
-    }
-  })
-}
-
-async function confirmarSalvarEdicao() {
-  const msg = modalEditar.id ? 'Deseja salvar o ajuste?' : 'Deseja gravar este novo ponto?'
-  if (!(await confirm.show('Confirmar', msg))) return
-
-  try {
-    modalEditar.saving = true
-    const payload = {
-  ...modalEditar.form,
-  data_hora: modalEditar.form.data_hora_local.replace('T', ' ') + ':00',
-}
-
-
-    if (modalEditar.id) {
-      await PontoRegistrosService.atualizar(modalEditar.id, payload)
-    } else {
-      await PontoRegistrosService.salvar(payload)
-    }
-
-    notify.success('Operação realizada com sucesso')
-    modalEditar.open = false
-    await buscar()
-  } catch (e) {
-    notify.error('Erro ao salvar registro')
-  } finally {
-    modalEditar.saving = false
-  }
-}
-
-async function confirmarExcluir() {
-  if (!(await confirm.show('Excluir Registro', 'Deseja realmente apagar esta batida?'))) return
-  try {
-    await PontoRegistrosService.remover(modalEditar.id)
-    notify.success('Registro apagado')
-    modalEditar.open = false
-    await buscar()
-  } catch (e) {
-    notify.error('Erro ao excluir')
-  }
-}
-
-// ==========================================
-// LÓGICA DO MODAL JUSTIFICATIVA
-// ==========================================
-const modalJust = reactive({
-  open: false,
-  saving: false,
-  dia: '',
-  lista: [],
-  file: null,
-  form: { funcionario_id: null, data: '', tipo: '', descricao: '' },
-})
-
-async function abrirModalJustificar(row) {
-  const dataRef = new Date(row.data + 'T12:00:00') // evita problemas de timezone na virada do dia
-  Object.assign(modalJust, {
-    open: true,
-    dia: row.data,
-    file: null,
-    form: { funcionario_id: row.funcionario_id, data: row.data, tipo: '', descricao: '' }
-  })
-  
-  const { data } = await PontoJustificativasService.listar({
-    funcionario_id: row.funcionario_id,
-    mes: dataRef.getMonth() + 1,
-    ano: dataRef.getFullYear(),
-  })
-  modalJust.lista = data || []
-}
-
-async function confirmarSalvarJustificativa() {
-  if (!(await confirm.show('Salvar', 'Deseja salvar esta justificativa?'))) return
-  try {
-    modalJust.saving = true
-    const resp = await PontoJustificativasService.salvar(modalJust.form)
-    if (modalJust.file && resp.data?.id) {
-      await PontoJustificativasService.anexarArquivo(resp.data.id, modalJust.file)
-    }
-    notify.success('Justificativa salva')
-    modalJust.open = false
-    await buscar()
-  } catch (e) {
-    notify.error('Erro ao salvar justificativa')
-  } finally {
-    modalJust.saving = false
-  }
-}
-
-function fecharModalJust() { modalJust.open = false }
-function onFileChange(e) { modalJust.file = e.target.files[0] || null }
-
-async function confirmarExcluirJustificativa(j) {
-  if (!(await confirm.show('Excluir', 'Remover esta justificativa?'))) return
-  try {
-    await PontoJustificativasService.remover(j.id)
-    notify.success('Removido')
-    modalJust.open = false
-    await buscar()
-  } catch (e) { notify.error('Erro ao remover') }
 }
 
 // ==========================================
 // CICLO DE VIDA
 // ==========================================
 onMounted(async () => {
-  if (!can('ponto_relatorio.ver')) return router.push('/')
-
   const { data } = await FuncionarioService.listar()
   funcionarioOptions.value = (data?.data || data || [])
     .filter(f => f.status === 'ATIVO')
     .map(f => ({ label: f.nome, value: f.id }))
 
-  // Inicializa datas com o mês atual
+  // Setup de datas iniciais (Mês atual)
   const hoje = new Date()
   filtros.data_ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10)
   filtros.data_fim = hoje.toISOString().slice(0, 10)
