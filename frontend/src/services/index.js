@@ -258,24 +258,34 @@ export const ObrasService = {
 }
 
 // --- PONTO ---
-export const PontoService = {
-  gerarConvite: (funcionario_id) => api.post('/ponto/convites', { funcionario_id }),
-}
-
 export const PontoRelatorioService = {
-  listarRegistros: (filtros = {}) => api.get('/ponto/relatorio/registros', { params: filtros }),
-  pdfMensal: (params) => api.get('/ponto/relatorio/pdf', { params, responseType: 'blob' }),
-  remover(id) {
-  return api.delete(`/ponto/registros/${id}`)
-}
+  listarRegistros: (filtros = {}) =>
+    api.get('/ponto/relatorio/registros', { params: filtros }),
+
+  // ✅ é mensal (mes/ano)
+  pdfMensal: (params) =>
+    api.get('/ponto/relatorio/pdf', { params, responseType: 'blob' }),
 }
 
 export const PontoRegistrosService = {
-  atualizar: (id, payload) => api.put(`/ponto/registros/${id}`, payload),
+  salvar: (payload) =>
+    api.post('/ponto/registros', payload),
+
+  atualizar: (id, payload) =>
+    api.put(`/ponto/registros/${id}`, payload),
+
+  remover: (id) =>
+    api.delete(`/ponto/registros/${id}`),
 }
 
 export const PontoJustificativasService = {
-  listar: (params = {}) => api.get('/ponto/justificativas', { params }),
-  salvar: (payload) => api.put('/ponto/justificativas', payload),
-  remover: (id) => api.delete(`/ponto/justificativas/${id}`),
+  listar: (params = {}) =>
+    api.get('/ponto/justificativas', { params }),
+
+  salvar: (payload) =>
+    api.put('/ponto/justificativas', payload),
+
+  remover: (id) =>
+    api.delete(`/ponto/justificativas/${id}`),
 }
+

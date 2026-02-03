@@ -183,11 +183,18 @@ import { notify } from '@/services/notify'
 import { consolidarSaldoPeriodo } from '@/utils/utils'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
+import {
+  listDays,
+  groupRegistrosByDia,
+  groupJustificativasByDia
+} from '@/utils/ponto'
+
 
 const loadingTabela = ref(false)
 const rows = ref([])
 const funcionarioOptions = ref([])
 const filtros = reactive({ funcionario_id: '', data_ini: '', data_fim: '' })
+const registrosPorDia = computed(() => groupRegistrosByDia(rows.value))
 
 // STATES DOS MODAIS
 const modalEditar = reactive({
@@ -219,28 +226,48 @@ const isFimDeSemanaErro = (dataStr, horaStr) => {
   return data.getDay() === 6 && (h > 12 || (h === 12 && m > 0))
 }
 
+const funcionarios = ref([])
+
+const funcionarioSelecionado = computed(() => {
+  const id = Number(filtros.funcionario_id || 0)
+  return funcionarios.value.find(f => Number(f.id) === id) || null
+})
+
+
 const rowsAgrupadas = computed(() => {
-  const grupos = {}
-  rows.value.filter(r => r.status === 'ATIVO').forEach(reg => {
-    const dataKey = reg.data_hora.split('T')[0]
-    if (!grupos[dataKey]) {
-      grupos[dataKey] = { data: dataKey, funcionario_id: reg.funcionario_id, batidas: [] }
-    }
-    grupos[dataKey].batidas.push({
+  if (!filtros.data_ini || !filtros.data_fim) return []
+
+  const dias = listDays(filtros.data_ini, filtros.data_fim)
+  const map = registrosPorDia.value
+
+  return dias.map((dia) => {
+    const regsDia = (map.get(dia) || [])
+      .filter(r => r.status === 'ATIVO')
+      .slice()
+      .sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora))
+
+    const batidas = regsDia.map(reg => ({
       id: reg.id,
       hora: reg.data_hora.split('T')[1].substring(0, 5),
       tipo: reg.tipo,
       data_hora: reg.data_hora,
       observacao: reg.observacao
-    })
-  })
-  return Object.values(grupos).map(g => {
-    const ordenadas = g.batidas.sort((a, b) => a.hora.localeCompare(b.hora))
-    const entradas = ordenadas.filter(b => b.tipo === 'ENTRADA')
-    const saidas = ordenadas.filter(b => b.tipo === 'SAIDA')
-    return { ...g, ent1: entradas[0], sai1: saidas[0], ent2: entradas[1], sai2: saidas[1] }
+    }))
+
+    const entradas = batidas.filter(b => b.tipo === 'ENTRADA')
+    const saidas = batidas.filter(b => b.tipo === 'SAIDA')
+
+    return {
+      data: dia,
+      funcionario_id: filtros.funcionario_id,
+      ent1: entradas[0],
+      sai1: saidas[0],
+      ent2: entradas[1],
+      sai2: saidas[1],
+    }
   }).sort((a, b) => b.data.localeCompare(a.data))
 })
+
 
 const resumo = computed(() => consolidarSaldoPeriodo({ registros: rows.value }))
 
@@ -257,26 +284,42 @@ async function buscar() {
 
 async function confirmarExcluirDireto(id) {
   if (!(await confirm.show('Excluir', 'Deseja apagar este registro?'))) return
+
   try {
     await PontoRegistrosService.remover(id)
     notify.success('Apagado!')
     await buscar()
-  } catch (e) { notify.error('Erro ao excluir') }
+  } catch (e) {
+    console.log('[PONTO] ERRO excluir:', e?.response?.status, e?.response?.data)
+    notify.error(e?.response?.data?.message || 'Erro ao excluir')
+  }
 }
 
+
+
 function abrirModalNovoNaPosicao(row, coluna) {
-  const h = { ent1: '08:00', sai1: '12:00', ent2: '13:00', sai2: '18:00' }
+  const f = funcionarioSelecionado.value
+
+  // pega horários do cadastro se existirem
+  const h = {
+    ent1: f?.horario_entrada_1 || '07:30',
+    sai1: f?.horario_saida_1   || '12:00',
+    ent2: f?.horario_entrada_2 || '13:30',
+    sai2: f?.horario_saida_2   || '17:30',
+  }
+
   Object.assign(modalEditar, {
     open: true,
     id: null,
-    form: { 
-      funcionario_id: filtros.funcionario_id, 
-      data_hora_local: `${row.data}T${h[coluna]}`, 
-      tipo: coluna.startsWith('ent') ? 'ENTRADA' : 'SAIDA', 
-      observacao: 'AJUSTE MANUAL' 
+    form: {
+      funcionario_id: filtros.funcionario_id,
+      data_hora_local: `${row.data}T${h[coluna]}`,
+      tipo: coluna.startsWith('ent') ? 'ENTRADA' : 'SAIDA',
+      observacao: 'AJUSTE MANUAL'
     }
   })
 }
+
 
 function abrirModalEditar(batida) {
   Object.assign(modalEditar, {
@@ -294,15 +337,31 @@ function abrirModalEditar(batida) {
 async function confirmarSalvarEdicao() {
   try {
     modalEditar.saving = true
-    const payload = { ...modalEditar.form, data_hora: modalEditar.form.data_hora_local.replace('T', ' ') + ':00' }
-    if (modalEditar.id) await PontoRegistrosService.atualizar(modalEditar.id, payload)
-    else await PontoRegistrosService.salvar(payload)
+
+    const payload = {
+      funcionario_id: Number(modalEditar.form.funcionario_id),
+      tipo: modalEditar.form.tipo,
+      observacao: modalEditar.form.observacao || null,
+      data_hora: `${modalEditar.form.data_hora_local}:00`, // ✅ ISO estável
+    }
+
+    if (modalEditar.id) {
+      await PontoRegistrosService.atualizar(modalEditar.id, payload)
+    } else {
+      await PontoRegistrosService.salvar(payload)
+    }
+
     notify.success('Sucesso!')
     modalEditar.open = false
     await buscar()
-  } catch (e) { notify.error('Erro ao salvar') }
-  finally { modalEditar.saving = false }
+  } catch (e) {
+    console.log('[PONTO] ERRO salvar/editar:', e?.response?.status, e?.response?.data)
+    notify.error(e?.response?.data?.message || 'Erro ao salvar')
+  } finally {
+    modalEditar.saving = false
+  }
 }
+
 
 async function abrirModalJustificar(row) {
   Object.assign(modalJust, { open: true, dia: row.data, form: { funcionario_id: filtros.funcionario_id, data: row.data, tipo: '', descricao: '' } })
@@ -321,9 +380,15 @@ async function confirmarSalvarJustificativa() {
 
 onMounted(async () => {
   const { data } = await FuncionarioService.listar()
-  funcionarioOptions.value = (data?.data || data || []).filter(f => f.status === 'ATIVO').map(f => ({ label: f.nome, value: f.id }))
+  const lista = (data?.data || data || []).filter(f => f.status === 'ATIVO')
+
+  funcionarios.value = lista
+
+  funcionarioOptions.value = lista.map(f => ({ label: f.nome, value: f.id }))
+
   const hoje = new Date()
   filtros.data_ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10)
   filtros.data_fim = hoje.toISOString().slice(0, 10)
 })
+
 </script>
