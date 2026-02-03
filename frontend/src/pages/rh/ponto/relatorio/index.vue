@@ -407,7 +407,11 @@ async function confirmarSalvarEdicao() {
 
   try {
     modalEditar.saving = true
-    const payload = { ...modalEditar.form, data_hora: new Date(modalEditar.form.data_hora_local).toISOString() }
+    const payload = {
+  ...modalEditar.form,
+  data_hora: modalEditar.form.data_hora_local.replace('T', ' ') + ':00',
+}
+
 
     if (modalEditar.id) {
       await PontoRegistrosService.atualizar(modalEditar.id, payload)

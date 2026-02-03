@@ -1,301 +1,175 @@
 <template>
-  <Card :shadow="true">
-    <PageHeader
-      title="Contas a Pagar"
-      subtitle="Consolidado: despesas, compras e fechamentos (plano de corte abate compras)."
-      icon="pi pi-arrow-down-right"
-      :backTo="null"
-    />
+  <div class="p-6 bg-slate-50 min-h-screen">
+    
+    <header class="flex justify-between items-end mb-8">
+      <div>
+        <h1 class="text-2xl font-black text-slate-800 uppercase italic tracking-tighter">Contas a Pagar</h1>
+        <p class="text-xs text-slate-500 font-bold uppercase">Gestão Consolidada de Saídas</p>
+      </div>
+      
+      <div class="flex gap-3">
+        <button @click="abrirModalFechamento" class="bg-slate-900 text-white px-4 py-2 rounded-lg font-black text-[10px] uppercase italic hover:bg-slate-800 transition-all shadow-lg">
+          Novo Fechamento Mensal
+        </button>
+      </div>
+    </header>
 
-    <div class="p-6 relative space-y-6">
-      <Loading v-if="loading" />
+    <section class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex gap-4 items-end">
+      <div class="flex-1 max-w-sm">
+        <label class="text-[10px] font-black text-slate-400 uppercase mb-1 block">Fornecedor</label>
+        <select v-model="filtros.fornecedor_id" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-bold uppercase outline-none focus:border-blue-500">
+          <option value="">TODOS OS FORNECEDORES</option>
+          <option v-for="o in fornecedorOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+        </select>
+      </div>
 
-      <template v-else>
-        <!-- FILTROS -->
-        <div class="grid grid-cols-12 gap-4">
-          <Input
-            class="col-span-12 md:col-span-3"
-            label="Mês"
-            type="number"
-            :forceUpper="false"
-            v-model="filtroMes"
-            placeholder="1-12"
-          />
-          <Input
-            class="col-span-12 md:col-span-3"
-            label="Ano"
-            type="number"
-            :forceUpper="false"
-            v-model="filtroAno"
-            placeholder="2026"
-          />
+      <div class="w-48">
+        <label class="text-[10px] font-black text-slate-400 uppercase mb-1 block">Status</label>
+        <select v-model="filtros.status" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-bold uppercase outline-none focus:border-blue-500">
+          <option value="EM_ABERTO">EM ABERTO</option>
+          <option value="VENCIDO">VENCIDOS</option>
+          <option value="PAGO">PAGOS</option>
+        </select>
+      </div>
 
-          <SearchInput
-            class="col-span-12 md:col-span-6"
-            v-model="filtroTexto"
-            mode="search"
-            label="Buscar"
-            placeholder="Buscar por fornecedor, origem, status..."
-          />
+      <button @click="buscar" class="bg-blue-600 text-white p-2.5 rounded-lg hover:bg-blue-700 transition-all">
+        <i class="pi pi-search text-sm"></i>
+      </button>
+    </section>
 
-          <SearchInput
-            class="col-span-12 md:col-span-4"
-            v-model="filtroStatus"
-            mode="select"
-            label="Status"
-            placeholder="Selecione..."
-            :options="STATUS_OPTIONS"
-          />
+    <div class="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+      <table class="w-full text-left border-collapse">
+        <thead class="bg-slate-800 text-white">
+          <tr>
+            <th v-for="col in columns" :key="col.key" :style="{ width: col.width, textAlign: col.align }" class="p-4 text-[10px] font-black uppercase tracking-widest">
+              {{ col.label }}
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr v-for="row in rows" :key="`${row.origem}-${row.id}`" class="hover:bg-slate-50 transition-colors group">
+            
+            <td class="p-4">
+              <span :class="getOrigemClass(row.origem)" class="text-[9px] font-black px-2 py-1 rounded border uppercase italic">
+                {{ row.origem }}
+              </span>
+            </td>
 
-          <SearchInput
-            class="col-span-12 md:col-span-8"
-            v-model="filtroFornecedorId"
-            mode="select"
-            label="Fornecedor (opcional)"
-            placeholder="Selecione..."
-            :options="fornecedoresOptions"
-          />
-        </div>
-
-        <!-- RESUMO STATUS -->
-        <div class="grid grid-cols-12 gap-4">
-          <div class="col-span-12 md:col-span-4 px-4 py-3 rounded-2xl bg-red-50 border border-red-100">
-            <div class="text-[9px] font-black uppercase tracking-[0.22em] text-red-400">Vencidos</div>
-            <div class="text-lg font-black text-red-700">{{ format.currency(totais.vencido) }}</div>
-            <div class="text-xs font-bold text-red-500">{{ contagens.vencido }} itens</div>
-          </div>
-
-          <div class="col-span-12 md:col-span-4 px-4 py-3 rounded-2xl bg-amber-50 border border-amber-100">
-            <div class="text-[9px] font-black uppercase tracking-[0.22em] text-amber-500">Em aberto</div>
-            <div class="text-lg font-black text-amber-700">{{ format.currency(totais.em_aberto) }}</div>
-            <div class="text-xs font-bold text-amber-600">{{ contagens.em_aberto }} itens</div>
-          </div>
-
-          <div class="col-span-12 md:col-span-4 px-4 py-3 rounded-2xl bg-green-50 border border-green-100">
-            <div class="text-[9px] font-black uppercase tracking-[0.22em] text-green-500">Pagos</div>
-            <div class="text-lg font-black text-green-700">{{ format.currency(totais.pago) }}</div>
-            <div class="text-xs font-bold text-green-600">{{ contagens.pago }} itens</div>
-          </div>
-        </div>
-
-        <!-- TABELA -->
-        <Table
-          :columns="columns"
-          :rows="rowsFiltrados"
-          :loading="false"
-          emptyText="Nenhum lançamento encontrado."
-          :boxed="true"
-        >
-          <template #cell-origem="{ row }">
-            <div class="font-black text-gray-900">{{ row.origem }}</div>
-            <div class="text-xs font-bold text-gray-400">#{{ row.id }}</div>
-          </template>
-
-          <template #cell-fornecedor="{ row }">
-            <button
-              type="button"
-              class="text-left w-full"
-              :disabled="!row.fornecedor_id"
-              @click="abrirModalFechamento(row)"
-            >
-              <div class="font-black text-gray-900">
-                {{ row.fornecedor_nome || '—' }}
-                <span v-if="!row.fornecedor_id" class="text-xs font-bold text-gray-400">(sem fornecedor)</span>
+            <td class="p-4">
+              <div class="flex flex-col">
+                <span class="text-sm font-black text-slate-700">{{ formatarData(row.vencimento_em) }}</span>
+                <span v-if="row.status === 'VENCIDO'" class="text-[9px] text-rose-500 font-bold uppercase italic">Atrasado</span>
               </div>
-              <div class="text-xs font-bold text-gray-400">
-                {{ row.descricao || '—' }}
+            </td>
+
+            <td class="p-4">
+              <div class="flex flex-col">
+                <span class="text-sm font-black text-slate-800 uppercase italic">{{ row.fornecedor_nome || 'DESPESA OPERACIONAL' }}</span>
+                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{{ row.descricao }}</span>
               </div>
-            </button>
-          </template>
+            </td>
 
-          <template #cell-vencimento="{ row }">
-            <div class="text-xs font-black text-gray-900">{{ format.date(row.vencimento_em) }}</div>
-          </template>
+            <td class="p-4 text-right">
+              <div class="flex flex-col items-end">
+                <span class="text-sm font-black text-slate-800 italic">{{ formatarMoeda(row.valor) }}</span>
+                <span v-if="row.valor_compensado > 0" class="text-[9px] text-emerald-500 font-bold uppercase tracking-tighter">
+                  Compensado: {{ formatarMoeda(row.valor_compensado) }}
+                </span>
+              </div>
+            </td>
 
-          <template #cell-compensado="{ row }">
-            <div class="font-black text-gray-900 text-right">
-              {{ format.currency(Number(row.valor_compensado || 0)) }}
-            </div>
-            <div v-if="Number(row.valor_compensado || 0) > 0" class="text-[10px] font-black text-gray-400 uppercase text-right">
-              abatimento (plano/extra)
-            </div>
-          </template>
+            <td class="p-4">
+              <span :class="getStatusClass(row.status)" class="text-[10px] font-black px-3 py-1 rounded-full border uppercase tracking-tighter">
+                {{ row.status }}
+              </span>
+            </td>
 
-          <template #cell-valor="{ row }">
-            <div class="font-black text-gray-900 text-right">
-              {{ format.currency(Number(row.valor || 0)) }}
-            </div>
-          </template>
+            <td class="p-4 text-right">
+              <button class="w-8 h-8 rounded-lg bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all flex items-center justify-center">
+                <i class="pi pi-eye"></i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
-          <template #cell-status="{ row }">
-            <StatusBadge :value="row.status" />
-          </template>
-
-          <template #cell-acoes="{ row }">
-            <div class="flex justify-end gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                label="Fechar mês"
-                v-if="row.fornecedor_id"
-                @click="abrirModalFechamento(row)"
-              />
-            </div>
-          </template>
-        </Table>
-      </template>
+      <div v-if="!loading && rows.length === 0" class="p-20 text-center">
+        <i class="pi pi-inbox text-4xl text-slate-200 mb-4"></i>
+        <p class="text-slate-400 font-bold uppercase italic text-sm italic">Nenhum registro encontrado para estes filtros</p>
+      </div>
     </div>
-
-    <!-- ✅ AQUI: modal importado (sem duplicar HTML) -->
-    <FechamentoFornecedorModal
-      :open="modalOpen"
-      :fornecedorId="modalFornecedorId"
-      :fornecedorNome="modalFornecedorNome"
-      :mes="Number(filtroMes)"
-      :ano="Number(filtroAno)"
-      @close="modalOpen = false"
-      @saved="onModalSaved"
-    />
-  </Card>
+  </div>
 </template>
 
 
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { FinanceiroService, FornecedorService } from '@/services/index'
-import { format } from '@/utils/format'
+import { notify } from '@/services/notify'
+import { confirm } from '@/services/confirm'
 
-const STATUS_OPTIONS = [
-  { label: 'Em aberto', value: 'EM_ABERTO' },
-  { label: 'Vencido', value: 'VENCIDO' },
-  { label: 'Pago', value: 'PAGO' },
-  { label: 'Cancelado', value: 'CANCELADO' },
-]
-
-const loading = ref(true)
+// =======================
+// STATE
+// =======================
+const loading = ref(false)
 const rows = ref([])
+const fornecedorOptions = ref([])
 
-const filtroMes = ref(new Date().getMonth() + 1)
-const filtroAno = ref(new Date().getFullYear())
-const filtroTexto = ref('')
-const filtroStatus = ref(null)
-const filtroFornecedorId = ref(null)
-
-const fornecedoresOptions = ref([])
+const filtros = reactive({
+  fornecedor_id: '',
+  status: 'EM_ABERTO', // Padrão para não poluir
+})
 
 const columns = [
-  { key: 'origem', label: 'Origem', width: '160px' },
-  { key: 'fornecedor', label: 'Fornecedor / Descrição' },
-  { key: 'vencimento', label: 'Vencimento', width: '160px' },
-  { key: 'compensado', label: 'Compensado', width: '180px', align: 'right' },
-  { key: 'valor', label: 'Valor', width: '160px', align: 'right' },
-  { key: 'status', label: 'Status', width: '160px' },
-  { key: 'acoes', label: '', width: '160px', align: 'right' },
+  { key: 'origem', label: 'ORIGEM', width: '100px' },
+  { key: 'vencimento', label: 'VENCIMENTO', width: '120px' },
+  { key: 'fornecedor', label: 'FORNECEDOR/DESCRIÇÃO' },
+  { key: 'valor', label: 'VALOR TOTAL', width: '140px', align: 'right' },
+  { key: 'status', label: 'STATUS', width: '100px' },
+  { key: 'acoes', label: '', width: '80px', align: 'right' },
 ]
 
-// ⚠️ igual você já tinha: compras filtrando por vencimento_em por enquanto
-function matchMesAno(row, mes, ano) {
-  const m = Number(mes)
-  const a = Number(ano)
-  if (!m || !a) return true
-
-  if (row.origem === 'FECHAMENTO') {
-    return Number(row.mes_referencia) === m && Number(row.ano_referencia) === a
-  }
-
-  const d = row.vencimento_em ? new Date(row.vencimento_em) : null
-  if (!d || Number.isNaN(d.getTime())) return false
-  return d.getMonth() + 1 === m && d.getFullYear() === a
-}
-
-const rowsFiltrados = computed(() => {
-  const txt = String(filtroTexto.value || '').trim().toLowerCase()
-  const st = filtroStatus.value ? String(filtroStatus.value).trim() : null
-  const fornecedorId = filtroFornecedorId.value ? Number(filtroFornecedorId.value) : null
-
-  return (rows.value || []).filter((r) => {
-    if (!matchMesAno(r, filtroMes.value, filtroAno.value)) return false
-    if (st && String(r.status || '').trim() !== st) return false
-    if (fornecedorId && Number(r.fornecedor_id || 0) !== fornecedorId) return false
-
-    if (!txt) return true
-    const hay = [r.origem, r.status, r.fornecedor_nome, r.descricao, r.observacao]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase()
-    return hay.includes(txt)
-  })
-})
-
-const contagens = computed(() => {
-  const base = rowsFiltrados.value || []
-  const c = { vencido: 0, em_aberto: 0, pago: 0 }
-  for (const r of base) {
-    const s = String(r.status || '').toUpperCase()
-    if (s === 'VENCIDO') c.vencido++
-    else if (s === 'EM_ABERTO') c.em_aberto++
-    else if (s === 'PAGO') c.pago++
-  }
-  return c
-})
-
-const totais = computed(() => {
-  const base = rowsFiltrados.value || []
-  const t = { vencido: 0, em_aberto: 0, pago: 0 }
-  for (const r of base) {
-    const s = String(r.status || '').toUpperCase()
-    const v = Number(r.valor || 0)
-    if (s === 'VENCIDO') t.vencido += v
-    else if (s === 'EM_ABERTO') t.em_aberto += v
-    else if (s === 'PAGO') t.pago += v
-  }
-  return t
-})
-
-async function carregar() {
-  loading.value = true
+// =======================
+// MÉTODOS
+// =======================
+async function buscar() {
   try {
-    const { data } = await FinanceiroService.listarPagarConsolidado({
-      fornecedor_id: filtroFornecedorId.value || undefined,
-      status: filtroStatus.value || undefined,
-    })
-    rows.value = Array.isArray(data) ? data : []
+    loading.value = true
+    const data = await FinanceiroService.listarContasPagarConsolidado(filtros)
+    rows.value = data || []
+  } catch (e) {
+    notify.error('Erro ao carregar contas a pagar')
   } finally {
     loading.value = false
   }
 }
 
-async function carregarFornecedores() {
-  try {
-    const { data } = await FornecedorService.listar({})
-    const list = Array.isArray(data) ? data : []
-    fornecedoresOptions.value = list.map((f) => ({
-      label: f.nome_fantasia || f.nome || `#${f.id}`,
-      value: f.id,
-    }))
-  } catch {}
+const formatarMoeda = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+const formatarData = (v) => v ? new Date(v).toLocaleDateString('pt-BR') : '-'
+
+// Estilização dinâmica de badges
+const getStatusClass = (status) => {
+  const map = {
+    'EM_ABERTO': 'bg-blue-100 text-blue-700 border-blue-200',
+    'VENCIDO': 'bg-rose-100 text-rose-700 border-rose-200 animate-pulse',
+    'PAGO': 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  }
+  return map[status] || 'bg-slate-100 text-slate-700'
+}
+
+const getOrigemClass = (origem) => {
+  const map = {
+    'DESPESA': 'text-purple-600 bg-purple-50 border-purple-100',
+    'COMPRA': 'text-orange-600 bg-orange-50 border-orange-100',
+    'FECHAMENTO': 'text-blue-600 bg-blue-50 border-blue-100',
+  }
+  return map[origem] || 'text-slate-600 bg-slate-50'
 }
 
 onMounted(async () => {
-  await carregarFornecedores()
-  await carregar()
+  const forns = await FornecedorService.listarAtivos()
+  fornecedorOptions.value = forns.map(f => ({ label: f.nome_fantasia, value: f.id }))
+  buscar()
 })
-
-// ===== modal (importado) =====
-const modalOpen = ref(false)
-const modalFornecedorId = ref(null)
-const modalFornecedorNome = ref('')
-
-function abrirModalFechamento(row) {
-  if (!row?.fornecedor_id) return
-  modalFornecedorId.value = Number(row.fornecedor_id)
-  modalFornecedorNome.value = row.fornecedor_nome || ''
-  modalOpen.value = true
-}
-
-async function onModalSaved() {
-  modalOpen.value = false
-  await carregar()
-}
 </script>
