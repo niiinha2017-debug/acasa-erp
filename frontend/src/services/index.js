@@ -267,6 +267,10 @@ export const PontoRelatorioService = {
     api.get('/ponto/relatorio/pdf', { params, responseType: 'blob' }),
 }
 
+export const PontoService = { gerarConvite: (funcionario_id) => 
+  api.post('/ponto/convites', { funcionario_id }),
+ }
+
 export const PontoRegistrosService = {
   salvar: (payload) =>
     api.post('/ponto/registros', payload),
