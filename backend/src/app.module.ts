@@ -24,7 +24,6 @@ import { ComprasModule } from './compras/compras.module'
 import { PermissoesModule } from './permissoes/permissoes.module'
 import { EmpresaModule } from './modulos/empresa.module'
 import { UtilsModule } from './utils/utils.module'
-import { ObrasModule } from './obras/obras.module'
 import { PontoModule } from './ponto/ponto.module'
 import { ArquivosModule } from './arquivos/arquivos.module'
 import {ProducaoEncaminhamentoModule,} from './producao-encaminhamento/producao-encaminhamento.module'
@@ -60,7 +59,6 @@ import {ProducaoEncaminhamentoModule,} from './producao-encaminhamento/producao-
     PermissoesModule,
     EmpresaModule,
     UtilsModule,
-    ObrasModule,
     PontoModule,
     ProducaoEncaminhamentoModule,
   ],

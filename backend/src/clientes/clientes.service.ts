@@ -46,15 +46,6 @@ async criar(dto: CriarClienteDto) {
         enviar_aniversario_whatsapp: dto.enviar_aniversario_whatsapp ?? false,
       },
     })
-
-    await tx.obras.create({
-      data: {
-        cliente_id: cliente.id,
-        status_processo: 'CLIENTE_CADASTRADO',
-        // ⚠️ se obras tiver campos obrigatórios além desses, precisa preencher aqui
-      },
-    })
-
     return cliente
   })
 }
@@ -63,19 +54,8 @@ async listar() {
   const rows = await this.prisma.cliente.findMany({
     orderBy: { nome_completo: 'asc' },
     include: {
-      obras: {
-        orderBy: { id: 'desc' },
-        take: 1,
-        select: { id: true, status_processo: true },
-      },
     },
   })
-
-  // você quer o status do pipeline: vem da última obra (status_processo)
-  return rows.map((c) => ({
-    ...c,
-    pipeline_status: c.obras?.[0]?.status_processo ?? null,
-  }))
 }
 
 
