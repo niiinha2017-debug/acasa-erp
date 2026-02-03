@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'acasa-backend',
       cwd: './backend',
-      script: 'dist/src/main.js',
+      script: 'src/main.js',
 
       exec_mode: 'fork',
       instances: 1,
