@@ -23,19 +23,14 @@ private parseYmdLocal(ymd?: string) {
 }
 
 private inicioDia(ymd?: string) {
-  const d = this.parseYmdLocal(ymd)
-  if (!d) return undefined
-  d.setHours(0, 0, 0, 0)
-  return d
+  if (!ymd) return undefined
+  return new Date(`${ymd}T00:00:00.000Z`) // Força UTC zero
 }
 
 private fimDia(ymd?: string) {
-  const d = this.parseYmdLocal(ymd)
-  if (!d) return undefined
-  d.setHours(23, 59, 59, 999)
-  return d
+  if (!ymd) return undefined
+  return new Date(`${ymd}T23:59:59.999Z`) // Força UTC zero
 }
-
 
   private cleanId(v?: string) {
     if (!v) return undefined
