@@ -87,17 +87,48 @@
     <span class="text-xs font-bold text-slate-600">{{ row.funcionario_nome }}</span>
   </template>
 
-  <template #cell-ent1="{ row }"><span class="tabular-nums text-blue-600 font-bold">{{ row.ent1 || '--:--' }}</span></template>
-  <template #cell-sai1="{ row }"><span class="tabular-nums text-slate-500">{{ row.sai1 || '--:--' }}</span></template>
-  <template #cell-ent2="{ row }"><span class="tabular-nums text-blue-600 font-bold">{{ row.ent2 || '--:--' }}</span></template>
-  <template #cell-sai2="{ row }"><span class="tabular-nums text-slate-500">{{ row.sai2 || '--:--' }}</span></template>
+  <template #cell-ent1="{ row }">
+    <div class="flex items-center gap-2 group">
+      <span class="tabular-nums text-blue-600 font-bold">{{ row.ent1?.hora || '--:--' }}</span>
+      <button v-if="row.ent1?.id && can('ponto_relatorio.editar')" @click="abrirModalEditar(row.ent1)" class="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-blue-500 transition-all">
+        <i class="pi pi-pencil text-[9px]"></i>
+      </button>
+    </div>
+  </template>
+
+  <template #cell-sai1="{ row }">
+    <div class="flex items-center gap-2 group">
+      <span class="tabular-nums text-slate-500">{{ row.sai1?.hora || '--:--' }}</span>
+      <button v-if="row.sai1?.id && can('ponto_relatorio.editar')" @click="abrirModalEditar(row.sai1)" class="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-blue-500 transition-all">
+        <i class="pi pi-pencil text-[9px]"></i>
+      </button>
+    </div>
+  </template>
+
+  <template #cell-ent2="{ row }">
+    <div class="flex items-center gap-2 group">
+      <span class="tabular-nums text-blue-600 font-bold">{{ row.ent2?.hora || '--:--' }}</span>
+      <button v-if="row.ent2?.id && can('ponto_relatorio.editar')" @click="abrirModalEditar(row.ent2)" class="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-blue-500 transition-all">
+        <i class="pi pi-pencil text-[9px]"></i>
+      </button>
+    </div>
+  </template>
+
+  <template #cell-sai2="{ row }">
+    <div class="flex items-center gap-2 group">
+      <span class="tabular-nums text-slate-500">{{ row.sai2?.hora || '--:--' }}</span>
+      <button v-if="row.sai2?.id && can('ponto_relatorio.editar')" @click="abrirModalEditar(row.sai2)" class="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-blue-500 transition-all">
+        <i class="pi pi-pencil text-[9px]"></i>
+      </button>
+    </div>
+  </template>
 
   <template #cell-status="{ row }">
     <StatusBadge :value="row.status" class="scale-90 origin-left" />
   </template>
 
   <template #cell-acoes="{ row }">
-    <div class="flex justify-end gap-2 pr-4">
+    <div class="flex justify-end pr-4">
       <button v-if="can('ponto_relatorio.editar')" @click="abrirModalJustificar(row)" 
         class="px-3 h-8 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-black uppercase hover:bg-brand-primary hover:text-white transition-all">
         Justificar
@@ -243,6 +274,19 @@ const columns = [
 ]
 
 // Adicione esta Computed logo abaixo da 'resumo':
+// 1. Funções de formatação ignorando fuso horário
+const fmtData = (v) => {
+  if (!v) return '-'
+  const parts = v.split('T')[0].split('-')
+  return `${parts[2]}/${parts[1]}/${parts[0]}`
+}
+
+const fmtHora = (v) => {
+  if (!v) return ''
+  return v.split('T')[1].substring(0, 5)
+}
+
+// 2. Computed de agrupamento corrigida
 const rowsAgrupadas = computed(() => {
   const grupos = {}
 
@@ -257,30 +301,32 @@ const rowsAgrupadas = computed(() => {
         funcionario_id: funcId,
         funcionario_nome: reg.funcionario?.nome || 'Não identificado',
         status: reg.status,
-        batidas: [],
-        ent1: '', sai1: '', ent2: '', sai2: ''
+        batidas: []
       }
     }
-
-    const hora = new Date(reg.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-    grupos[key].batidas.push({ hora, tipo: reg.tipo })
+    
+    // Guardamos o objeto completo para o modal de editar conseguir usar o ID
+    grupos[key].batidas.push({
+      id: reg.id,
+      hora: reg.data_hora.split('T')[1].substring(0, 5),
+      tipo: reg.tipo,
+      data_hora: reg.data_hora,
+      observacao: reg.observacao
+    })
   })
 
-  // Organiza as batidas nas colunas certas
   return Object.values(grupos).map(g => {
-    // Ordena as batidas por horário para garantir a sequência
     const ordenadas = g.batidas.sort((a, b) => a.hora.localeCompare(b.hora))
-    
-    // Distribui nas colunas (Simples: 1ª entrada, 1ª saída, etc)
     const entradas = ordenadas.filter(b => b.tipo === 'ENTRADA')
     const saidas = ordenadas.filter(b => b.tipo === 'SAIDA')
 
-    g.ent1 = entradas[0]?.hora || ''
-    g.sai1 = saidas[0]?.hora || ''
-    g.ent2 = entradas[1]?.hora || ''
-    g.sai2 = saidas[1]?.hora || ''
-    
-    return g
+    return {
+      ...g,
+      ent1: entradas[0] || null,
+      sai1: saidas[0] || null,
+      ent2: entradas[1] || null,
+      sai2: saidas[1] || null
+    }
   })
 })
 const optionsTipo = [
@@ -304,8 +350,8 @@ const resumo = computed(() =>
 // =======================
 // HELPERS
 // =======================
-const fmtData = (v) => (v ? new Date(v).toLocaleDateString('pt-BR') : '-')
-const fmtHora = (v) => (v ? new Date(v).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '')
+// Onde você tem fmtData e fmtHora, troque por:
+
 const toIsoShort = (date) => new Date(date).toISOString().slice(0, 10)
 
 // =======================
