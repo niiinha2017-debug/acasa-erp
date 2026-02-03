@@ -77,54 +77,34 @@
       </header>
 
       <div class="p-2">
-        <Table :columns="columns" :rows="rows" :loading="loadingTabela" class="!border-none">
-          
-          <template #cell-data_hora="{ row }">
-            <div class="flex flex-col py-1">
-              <span class="text-sm font-black text-slate-700 uppercase italic tracking-tighter">{{ fmtData(row.data_hora) }}</span>
-              <span class="text-[10px] font-bold text-slate-400 tabular-nums">{{ fmtHora(row.data_hora) }}</span>
-            </div>
-          </template>
+<Table :columns="columns" :rows="rowsAgrupadas" :loading="loadingTabela" class="!border-none">
+  
+  <template #cell-data="{ row }">
+    <span class="text-sm font-black text-slate-700 uppercase italic">{{ fmtData(row.data) }}</span>
+  </template>
 
-          <template #cell-tipo="{ row }">
-            <span class="px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-600 border border-slate-200/50">
-              {{ row.tipo }}
-            </span>
-          </template>
+  <template #cell-funcionario="{ row }">
+    <span class="text-xs font-bold text-slate-600">{{ row.funcionario_nome }}</span>
+  </template>
 
-          <template #cell-status="{ row }">
-            <StatusBadge :value="row.status" class="scale-90 origin-left" />
-          </template>
+  <template #cell-ent1="{ row }"><span class="tabular-nums text-blue-600 font-bold">{{ row.ent1 || '--:--' }}</span></template>
+  <template #cell-sai1="{ row }"><span class="tabular-nums text-slate-500">{{ row.sai1 || '--:--' }}</span></template>
+  <template #cell-ent2="{ row }"><span class="tabular-nums text-blue-600 font-bold">{{ row.ent2 || '--:--' }}</span></template>
+  <template #cell-sai2="{ row }"><span class="tabular-nums text-slate-500">{{ row.sai2 || '--:--' }}</span></template>
 
-<template #cell-acoes="{ row }">
-  <div class="flex justify-end gap-2 pr-4">
-    <button
-      v-if="can('ponto_relatorio.editar')"
-      @click="abrirModalEditar(row)"
-      class="w-9 h-9 rounded-lg ..."
-    >
-      <i class="pi pi-pencil text-[10px]"></i>
-    </button>
+  <template #cell-status="{ row }">
+    <StatusBadge :value="row.status" class="scale-90 origin-left" />
+  </template>
 
-    <button
-      v-if="can('ponto_relatorio.editar')"
-      @click="abrirModalJustificar(row)"
-      class="px-3 h-9 rounded-lg ..."
-    >
-      Justificar
-    </button>
-
-    <span
-      v-if="!can('ponto_relatorio.editar')"
-      class="text-[10px] font-black uppercase tracking-widest text-slate-300"
-    >
-      —
-    </span>
-  </div>
-</template>
-
-
-        </Table>
+  <template #cell-acoes="{ row }">
+    <div class="flex justify-end gap-2 pr-4">
+      <button v-if="can('ponto_relatorio.editar')" @click="abrirModalJustificar(row)" 
+        class="px-3 h-8 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-black uppercase hover:bg-brand-primary hover:text-white transition-all">
+        Justificar
+      </button>
+    </div>
+  </template>
+</Table>
       </div>
     </Card>
 
@@ -250,14 +230,59 @@ const filtros = reactive({
   tipo: null,
 })
 
+// Substitua a antiga columns por esta:
 const columns = [
-  { key: 'data_hora', label: 'Data/Hora', width: '130px' },
-  { key: 'funcionario', label: 'Funcionário' },
-  { key: 'tipo', label: 'Tipo', width: '100px' },
-  { key: 'status', label: 'Status', width: '100px' },
-  { key: 'acoes', label: '', width: '200px', align: 'right' },
+  { key: 'data', label: 'DATA', width: '110px' },
+  { key: 'funcionario', label: 'FUNCIONÁRIO' },
+  { key: 'ent1', label: 'ENT 1', width: '80px' },
+  { key: 'sai1', label: 'SAI 1', width: '80px' },
+  { key: 'ent2', label: 'ENT 2', width: '80px' },
+  { key: 'sai2', label: 'SAI 2', width: '80px' },
+  { key: 'status', label: 'STATUS', width: '100px' },
+  { key: 'acoes', label: '', width: '120px', align: 'right' },
 ]
 
+// Adicione esta Computed logo abaixo da 'resumo':
+const rowsAgrupadas = computed(() => {
+  const grupos = {}
+
+  rows.value.forEach(reg => {
+    const dataKey = reg.data_hora.split('T')[0]
+    const funcId = reg.funcionario_id
+    const key = `${dataKey}_${funcId}`
+
+    if (!grupos[key]) {
+      grupos[key] = {
+        data: dataKey,
+        funcionario_id: funcId,
+        funcionario_nome: reg.funcionario?.nome || 'Não identificado',
+        status: reg.status,
+        batidas: [],
+        ent1: '', sai1: '', ent2: '', sai2: ''
+      }
+    }
+
+    const hora = new Date(reg.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    grupos[key].batidas.push({ hora, tipo: reg.tipo })
+  })
+
+  // Organiza as batidas nas colunas certas
+  return Object.values(grupos).map(g => {
+    // Ordena as batidas por horário para garantir a sequência
+    const ordenadas = g.batidas.sort((a, b) => a.hora.localeCompare(b.hora))
+    
+    // Distribui nas colunas (Simples: 1ª entrada, 1ª saída, etc)
+    const entradas = ordenadas.filter(b => b.tipo === 'ENTRADA')
+    const saidas = ordenadas.filter(b => b.tipo === 'SAIDA')
+
+    g.ent1 = entradas[0]?.hora || ''
+    g.sai1 = saidas[0]?.hora || ''
+    g.ent2 = entradas[1]?.hora || ''
+    g.sai2 = saidas[1]?.hora || ''
+    
+    return g
+  })
+})
 const optionsTipo = [
   { label: 'ENTRADA', value: 'ENTRADA' },
   { label: 'SAIDA', value: 'SAIDA' },
