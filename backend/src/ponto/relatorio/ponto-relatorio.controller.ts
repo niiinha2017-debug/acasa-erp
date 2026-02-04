@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Res, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Post, Query, Res, UseGuards, HttpCode, HttpStatus } from '@nestjs/common'
 import { Response } from 'express'
 import PDFDocument from 'pdfkit'
 
@@ -25,6 +25,7 @@ export class PontoRelatorioController {
     return this.service.listar({ funcionario_id, data_ini, data_fim, tipo, origem, status })
   }
 
+  // ✅ MANTÉM O SEU GET ATUAL (não mexe)
   @Get('pdf')
   async pdfMensal(
     @Res() res: Response,
@@ -64,7 +65,6 @@ export class PontoRelatorioController {
       const d = new Date(r.data_hora)
       const dia = d.toLocaleDateString('pt-BR')
       const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-
       doc.text(`${dia}  ${hora}  |  ${r.tipo}  |  ${r.origem}  |  ${r.status}`)
     })
 
@@ -79,4 +79,17 @@ export class PontoRelatorioController {
 
     doc.end()
   }
+
+  // ✅ NOVO: PDF + SALVAR (PWA)
+@Post('pdf')
+@Permissoes('ponto_relatorio.ver')
+@HttpCode(HttpStatus.OK)
+async pdfMensalSalvar(@Body() body: { funcionario_id: any; mes: any; ano: any }) {
+  const funcId = Number(String(body.funcionario_id ?? '').replace(/\D/g, ''))
+  const m = Number(String(body.mes ?? '').replace(/\D/g, ''))
+  const a = Number(String(body.ano ?? '').replace(/\D/g, ''))
+
+  return this.service.gerarPdfMensalESalvar({ funcionario_id: funcId, mes: m, ano: a })
+}
+
 }

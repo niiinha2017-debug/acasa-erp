@@ -50,13 +50,28 @@
           <label class="text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 block italic">Fim</label>
           <input v-model="filtros.data_fim" type="date" class="w-full h-11 bg-white border border-slate-200 rounded-2xl px-4 text-xs font-bold outline-none focus:ring-2 focus:ring-slate-900" />
         </div>
-        <div class="col-span-2 md:col-span-2">
-          <button @click="buscar" :disabled="loadingTabela" class="w-full h-11 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase italic tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
-            <i class="pi pi-search" v-if="!loadingTabela"></i>
-            <i class="pi pi-spin pi-spinner" v-else></i>
-            <span class="hidden md:block">Buscar</span>
-          </button>
-        </div>
+<div class="col-span-12 md:col-span-2 grid grid-cols-2 gap-2">
+  <button
+    @click="buscar"
+    :disabled="loadingTabela"
+    class="w-full h-11 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase italic tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+  >
+    <i class="pi pi-search" v-if="!loadingTabela"></i>
+    <i class="pi pi-spin pi-spinner" v-else></i>
+    <span class="hidden md:block">Buscar</span>
+  </button>
+
+  <button
+    @click="gerarPdfMensalPwa"
+    :disabled="loadingPdf || !filtros.funcionario_id"
+    class="w-full h-11 bg-white border border-slate-200 text-slate-700 rounded-2xl font-black text-[10px] uppercase italic tracking-widest hover:bg-slate-900 hover:text-white transition-all flex items-center justify-center gap-2"
+  >
+    <i class="pi pi-file-pdf" v-if="!loadingPdf"></i>
+    <i class="pi pi-spin pi-spinner" v-else></i>
+    <span class="hidden md:block">PDF</span>
+  </button>
+</div>
+
       </header>
 
       <div class="overflow-x-auto p-2">
@@ -182,11 +197,47 @@ import { notify } from '@/services/notify'
 import { consolidarSaldoPeriodo } from '@/utils/utils'
 import { confirm } from '@/services/confirm'
 import { listDays, groupRegistrosByDia } from '@/utils/ponto'
+import api from '@/services/api'
+import { useRouter } from 'vue-router'
+
 
 const loadingTabela = ref(false)
 const rows = ref([])
 const funcionarioOptions = ref([])
 const funcionarios = ref([])
+const router = useRouter()
+
+const loadingPdf = ref(false)
+
+async function gerarPdfMensalPwa() {
+  if (!filtros.funcionario_id) return notify.warn('Selecione um funcionário')
+
+  const { mes, ano } = getMesAnoReferencia()
+
+  try {
+    loadingPdf.value = true
+
+    const { data } = await api.post('/ponto/relatorio/pdf', {
+      funcionario_id: filtros.funcionario_id,
+      mes,
+      ano,
+    })
+
+    const arquivoId = data?.arquivoId
+    if (!arquivoId) {
+      console.log('[PONTO] pdfMensalPwa retorno:', data)
+      return notify.error('Não veio arquivoId do servidor.')
+    }
+
+    // ✅ abre dentro do PWA (viewer)
+    router.push(`/arquivos/${arquivoId}`)
+  } catch (e) {
+    console.log('[PONTO] ERRO pdfMensalPwa:', e?.response?.status, e?.response?.data)
+    notify.error(e?.response?.data?.message || 'Erro ao gerar PDF')
+  } finally {
+    loadingPdf.value = false
+  }
+}
 
 const filtros = reactive({ funcionario_id: '', data_ini: '', data_fim: '' })
 
@@ -226,6 +277,14 @@ const getDiaSemana = (dataStr) => {
   const data = new Date(dataStr + 'T12:00:00')
   return dias[data.getDay()]
 }
+
+function getMesAnoReferencia() {
+  // pega do filtro INICIO (ex.: 2026-02-01)
+  const base = filtros.data_ini || new Date().toISOString().slice(0, 10)
+  const [y, m] = String(base).split('-').map((n) => Number(n))
+  return { mes: m, ano: y }
+}
+
 
 const isFimDeSemanaErro = (dataStr, horaStr) => {
   if (!horaStr) return false
