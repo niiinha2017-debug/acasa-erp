@@ -145,16 +145,14 @@ private msToHHMM(ms: number): string {
 }
 
 private async gerarPdfPontoBuffer(payload: {
-  funcionarioNome: string
-  funcionarioId: number
+  funcionario: any // Objeto completo do funcionário vindo do banco
   mes: number
   ano: number
-  registros: Array<{ data_hora: Date; tipo: string }>
-  justificativas: Array<{ data: Date; tipo: string; descricao?: string | null }>
+  registros: any[]
+  justificativas: any[]
 }): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     try {
-      // Margens reduzidas para caber tudo (Top: 20, Bottom: 20)
       const doc = new PDFDocument({ margin: 30, size: 'A4' })
       const chunks: Buffer[] = []
       doc.on('data', (c) => chunks.push(c))
@@ -162,16 +160,34 @@ private async gerarPdfPontoBuffer(payload: {
 
       const headerBottomY = renderHeaderA4Png(doc)
       
-      // --- CÁLCULO DE HORAS ---
+      // --- LÓGICA DE CÁLCULO BASEADA NO CADASTRO ---
       let totalTrabalhadoMs = 0;
+      let totalMetaMs = 0;
       const diasNoMes = new Date(payload.ano, payload.mes, 0).getDate();
-      let diasUteis = 0;
 
-      // Cálculo prévio para o resumo
+      // Pegamos a carga horária do banco (ex: 8.8 ou 8.0)
+      const cargaPadraoMs = Number(payload.funcionario.carga_horaria_dia || 0) * 3600000;
+
+      // Percorre os dias para calcular Totais e Meta
       for (let d = 1; d <= diasNoMes; d++) {
         const dataRef = new Date(payload.ano, payload.mes - 1, d);
-        if (dataRef.getDay() !== 0) diasUteis++; // Ignora domingos na meta
+        const diaSemana = dataRef.getDay(); // 0=Dom, 6=Sab
 
+        // Calcula Meta do Dia
+        if (diaSemana === 0) {
+          // Domingo meta zero
+        } else if (diaSemana === 6) {
+          // Se tiver horário de sábado cadastrado, calcula a meta do sábado
+          if (payload.funcionario.horario_sabado_entrada_1 && payload.funcionario.horario_sabado_saida_1) {
+             // Exemplo simplificado: se tem horário de sábado, a meta é o tempo entre eles
+             // Mas geralmente usa-se uma carga fixa se cadastrada.
+             // Aqui vou usar 0 para sábado a menos que você defina carga_sabado
+          }
+        } else {
+          totalMetaMs += cargaPadraoMs;
+        }
+
+        // Calcula Trabalho do Dia
         const regs = payload.registros
           .filter(r => new Date(r.data_hora).getUTCDate() === d)
           .sort((a,b) => a.data_hora.getTime() - b.data_hora.getTime());
@@ -183,112 +199,82 @@ private async gerarPdfPontoBuffer(payload: {
         }
       }
 
-      const metaHorasDia = 8.8; // Ajuste conforme sua empresa (8h48min = 8.8)
-      const totalMetaMs = diasUteis * metaHorasDia * 3600000;
       const saldoMs = totalTrabalhadoMs - totalMetaMs;
 
-      // --- BLOCO DE RESUMO (TOP) ---
+      // --- RENDERIZAÇÃO DO CABEÇALHO DO RELATÓRIO ---
       const resumoY = headerBottomY + 10;
-      doc.rect(30, resumoY, 535, 45).fill('#f8fafc');
-      
+      doc.rect(30, resumoY, 535, 50).fill('#f8fafc');
       doc.fillColor('#1e293b').fontSize(11).font('Helvetica-Bold').text('ESPELHO DE PONTO MENSAL', 35, resumoY + 10);
-      doc.fontSize(9).font('Helvetica').text(`Funcionário: ${payload.funcionarioNome.toUpperCase()}`, 35, resumoY + 25);
       
-      // Cards de Horas (lado direito)
-      const cardX = 350;
-      doc.fontSize(8).fillColor('#64748b').text('TRABALHADO', cardX, resumoY + 10);
-      doc.fontSize(10).fillColor('#0f172a').font('Helvetica-Bold').text(this.msToHHMM(totalTrabalhadoMs), cardX, resumoY + 20);
+      doc.fontSize(8).font('Helvetica').fillColor('#64748b').text(`Funcionário:`, 35, resumoY + 25, {continued: true})
+         .fillColor('#1e293b').font('Helvetica-Bold').text(` ${payload.funcionario.nome.toUpperCase()}`);
       
-      doc.fontSize(8).fillColor('#64748b').text('SALDO PERÍODO', cardX + 80, resumoY + 10);
-      doc.fontSize(10).fillColor(saldoMs >= 0 ? '#10b981' : '#ef4444').text(this.msToHHMM(saldoMs), cardX + 80, resumoY + 20);
+      doc.fontSize(8).font('Helvetica').fillColor('#64748b').text(`Carga Diária:`, 35, resumoY + 35, {continued: true})
+         .fillColor('#1e293b').font('Helvetica-Bold').text(` ${payload.funcionario.carga_horaria_dia}h`);
 
-      // --- TABELA ---
-      const tableTop = resumoY + 55;
-      const rowHeight = 14.5; // Altura compacta para caber 31 linhas + assinaturas
-      const col = { data: 30, ent1: 85, sai1: 135, ent2: 185, sai2: 235, total: 285, obs: 345 };
+      // Painel de Saldos
+      doc.fontSize(7).fillColor('#64748b').text('TRABALHADO', 380, resumoY + 12);
+      doc.fontSize(10).fillColor('#0f172a').font('Helvetica-Bold').text(this.msToHHMM(totalTrabalhadoMs), 380, resumoY + 22);
+      
+      doc.fontSize(7).fillColor('#64748b').text('SALDO MÊS', 460, resumoY + 12);
+      doc.fontSize(10).fillColor(saldoMs >= 0 ? '#10b981' : '#ef4444').text(this.msToHHMM(saldoMs), 460, resumoY + 22);
 
-      // Header Tabela
-      doc.rect(30, tableTop, 535, rowHeight).fill('#1e293b');
-      doc.fillColor('#ffffff').fontSize(7).font('Helvetica-Bold');
-      doc.text('DATA', col.data + 5, tableTop + 4);
-      doc.text('ENT 1', col.ent1, tableTop + 4);
-      doc.text('SAI 1', col.sai1, tableTop + 4);
-      doc.text('ENT 2', col.ent2, tableTop + 4);
-      doc.text('SAI 2', col.sai2, tableTop + 4);
-      doc.text('TOTAL', col.total, tableTop + 4);
-      doc.text('OBSERVAÇÕES', col.obs, tableTop + 4);
+      // --- TABELA (Compacta para caber tudo) ---
+      const tableTop = resumoY + 60;
+      const rowH = 14.5; 
+      const col = { d: 30, e1: 85, s1: 130, e2: 175, s2: 220, t: 265, obs: 320 };
 
-      let currentY = tableTop + rowHeight;
+      doc.rect(30, tableTop, 535, rowH).fill('#1e293b');
+      doc.fillColor('#fff').fontSize(7).text('DATA', col.d + 5, tableTop + 4);
+      doc.text('ENT 1', col.e1, tableTop + 4); doc.text('SAI 1', col.s1, tableTop + 4);
+      doc.text('ENT 2', col.e2, tableTop + 4); doc.text('SAI 2', col.s2, tableTop + 4);
+      doc.text('TOTAL', col.t, tableTop + 4); doc.text('OBSERVAÇÕES', col.obs, tableTop + 4);
 
+      let currentY = tableTop + rowH;
       for (let d = 1; d <= diasNoMes; d++) {
         const dataLoop = new Date(payload.ano, payload.mes - 1, d);
-        const isDomingo = dataLoop.getDay() === 0;
-        const isSabado = dataLoop.getDay() === 6;
+        const isFimSemana = dataLoop.getDay() === 0 || dataLoop.getDay() === 6;
 
-        const regsDia = payload.registros
-          .filter(r => new Date(r.data_hora).getUTCDate() === d)
-          .sort((a,b) => a.data_hora.getTime() - b.data_hora.getTime());
-        
-        const just = payload.justificativas.find(j => new Date(j.data).getUTCDate() === d);
+        if (isFimSemana) doc.rect(30, currentY, 535, rowH).fill('#f1f5f9');
+        else if (d % 2 === 0) doc.rect(30, currentY, 535, rowH).fill('#fafafa');
 
-        // Cor de fundo para finais de semana ou linhas alternadas
-        if (isDomingo) doc.rect(30, currentY, 535, rowHeight).fill('#f1f5f9');
-        else if (d % 2 === 0) doc.rect(30, currentY, 535, rowHeight).fill('#fafafa');
+        doc.fillColor(isFimSemana ? '#64748b' : '#1e293b').font('Helvetica').fontSize(7);
+        const dataFmt = `${String(d).padStart(2, '0')}/${String(payload.mes).padStart(2, '0')} (${['Dom','Seg','Ter','Qua','Qui','Sex','Sab'][dataLoop.getDay()]})`;
+        doc.text(dataFmt, col.d + 5, currentY + 4);
 
-        doc.fillColor(isDomingo ? '#94a3b8' : '#1e293b').font('Helvetica').fontSize(7.5);
-        
-        const dataFmt = `${String(d).padStart(2, '0')}/${String(payload.mes).padStart(2, '0')}`;
-        const diaSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'][dataLoop.getDay()];
-        
-        doc.text(`${dataFmt} (${diaSemana})`, col.data + 5, currentY + 4);
-
-        // Horários
+        const regsDia = payload.registros.filter(r => new Date(r.data_hora).getUTCDate() === d).sort((a,b) => a.data_hora.getTime() - b.data_hora.getTime());
         const e1 = regsDia.filter(r => r.tipo === 'ENTRADA')[0];
         const s1 = regsDia.filter(r => r.tipo === 'SAIDA')[0];
         const e2 = regsDia.filter(r => r.tipo === 'ENTRADA')[1];
         const s2 = regsDia.filter(r => r.tipo === 'SAIDA')[1];
 
-        doc.text(e1 ? this.formatHora(e1.data_hora) : '--:--', col.ent1, currentY + 4);
-        doc.text(s1 ? this.formatHora(s1.data_hora) : '--:--', col.sai1, currentY + 4);
-        doc.text(e2 ? this.formatHora(e2.data_hora) : '--:--', col.ent2, currentY + 4);
-        doc.text(s2 ? this.formatHora(s2.data_hora) : '--:--', col.sai2, currentY + 4);
+        doc.text(e1 ? this.formatHora(e1.data_hora) : '--:--', col.e1, currentY + 4);
+        doc.text(s1 ? this.formatHora(s1.data_hora) : '--:--', col.s1, currentY + 4);
+        doc.text(e2 ? this.formatHora(e2.data_hora) : '--:--', col.e2, currentY + 4);
+        doc.text(s2 ? this.formatHora(s2.data_hora) : '--:--', col.s2, currentY + 4);
 
-        // Cálculo do dia
         let diaMs = 0;
         if (e1 && s1) diaMs += (s1.data_hora.getTime() - e1.data_hora.getTime());
         if (e2 && s2) diaMs += (s2.data_hora.getTime() - e2.data_hora.getTime());
         
-        if (diaMs > 0) {
-          doc.font('Helvetica-Bold').text(this.msToHHMM(diaMs), col.total, currentY + 4).font('Helvetica');
-        }
+        if (diaMs > 0) doc.font('Helvetica-Bold').text(this.msToHHMM(diaMs), col.t, currentY + 4).font('Helvetica');
 
-        // Observações / Justificativas
-        if (just) {
-          doc.fillColor('#e11d48').fontSize(6.5).text(just.tipo.toUpperCase(), col.obs, currentY + 4);
-        } else if (isDomingo) {
-          doc.text('DOMINGO', col.obs, currentY + 4);
-        }
+        const just = payload.justificativas.find(j => new Date(j.data).getUTCDate() === d);
+        if (just) doc.fillColor('#e11d48').fontSize(6).text(just.tipo.toUpperCase(), col.obs, currentY + 4);
+        else if (dataLoop.getDay() === 0) doc.text('REPOUSO SEMANAL', col.obs, currentY + 4);
 
-        currentY += rowHeight;
+        currentY += rowH;
       }
 
-      // --- ASSINATURAS (FIXADAS NO FUNDO) ---
-      const bottomY = 740;
-      doc.strokeColor('#cbd5e1').lineWidth(0.5);
-      doc.moveTo(50, bottomY).lineTo(250, bottomY).stroke();
-      doc.moveTo(345, bottomY).lineTo(545, bottomY).stroke();
-      
-      doc.fontSize(7).fillColor('#475569');
-      doc.text('ASSINATURA DO FUNCIONÁRIO', 50, bottomY + 5, { width: 200, align: 'center' });
-      doc.text('RESPONSÁVEL / EMPRESA', 345, bottomY + 5, { width: 200, align: 'center' });
-
-      // Dados da Empresa (Rodapé bem pequeno)
-      doc.fontSize(6).text('A CASA MÓVEIS PLANEJADOS - CNPJ: 28.638.791/0001-07 - Ribeirão Preto - SP', 30, 800, { align: 'center' });
+      // --- ASSINATURAS ---
+      const sigY = 750;
+      doc.strokeColor('#cbd5e1').lineWidth(0.5).moveTo(50, sigY).lineTo(230, sigY).stroke();
+      doc.moveTo(350, sigY).lineTo(530, sigY).stroke();
+      doc.fontSize(7).fillColor('#475569').text('ASSINATURA DO FUNCIONÁRIO', 50, sigY + 5, { width: 180, align: 'center' });
+      doc.text('RESPONSÁVEL / EMPRESA', 350, sigY + 5, { width: 180, align: 'center' });
 
       doc.end()
-    } catch (err) {
-      reject(err)
-    }
+    } catch (err) { reject(err) }
   })
 }
 
@@ -314,13 +300,12 @@ async gerarPdfMensalESalvar(params: { funcionario_id: number; mes: number; ano: 
   })
 
   const pdfBuffer = await this.gerarPdfPontoBuffer({
-    funcionarioNome: funcionario?.nome || '',
-    funcionarioId: funcId,
-    mes,
-    ano,
-    registros,
-    justificativas,
-  })
+  funcionario, // o objeto que veio do prisma
+  mes,
+  ano,
+  registros,
+  justificativas,
+})
 
   // ✅ padrão: /uploads/<ownerType>s/
   const dir = path.join(process.cwd(), 'uploads', 'funcionarios')
