@@ -136,59 +136,101 @@ private async gerarPdfPontoBuffer(payload: {
   funcionarioId: number
   mes: number
   ano: number
-  registros: Array<{ data_hora: Date; tipo: string; origem?: string; status?: string }>
+  registros: Array<{ data_hora: Date; tipo: string; origem?: string }>
   justificativas: Array<{ data: Date; tipo: string; descricao?: string | null }>
 }): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({ margin: 40 })
+      const doc = new PDFDocument({ margin: 40, size: 'A4' })
       const chunks: Buffer[] = []
-
-      doc.on('data', (c) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)))
+      doc.on('data', (c) => chunks.push(c))
       doc.on('end', () => resolve(Buffer.concat(chunks)))
-      doc.on('error', reject)
 
-      // ✅ HEADER PADRÃO DA EMPRESA
       const headerBottomY = renderHeaderA4Png(doc)
-      doc.y = headerBottomY + 10
+      
+      // --- CABEÇALHO DE IDENTIFICAÇÃO ---
+      doc.fillColor('#1e293b').fontSize(14).font('Helvetica-Bold').text('ESPELHO DE PONTO MENSAL', 40, headerBottomY + 20)
+      
+      doc.fontSize(10).font('Helvetica').fillColor('#64748b')
+      doc.text(`Funcionário: `, 40, doc.y + 5, { continued: true }).fillColor('#000').font('Helvetica-Bold').text(payload.funcionarioNome.toUpperCase())
+      doc.fillColor('#64748b').font('Helvetica').text(`Competência: `, { continued: true }).fillColor('#000').font('Helvetica-Bold').text(`${String(payload.mes).padStart(2, '0')}/${payload.ano}`)
+      
+      doc.moveDown(2)
 
-      // ✅ TÍTULO / IDENTIFICAÇÃO
-      doc.fontSize(12).text('RELATÓRIO DE HORAS (PONTO)', { align: 'left' })
-      doc.moveDown(0.3)
-      doc.fontSize(10).text(`Funcionário: ${payload.funcionarioNome || payload.funcionarioId}`)
-      doc.text(`Referência: ${String(payload.mes).padStart(2, '0')}/${payload.ano}`)
-      doc.moveDown(0.8)
+      // --- TABELA DE REGISTROS ---
+      const tableTop = doc.y
+      const colData = 40, colEnt1 = 120, colSai1 = 180, colEnt2 = 240, colSai2 = 300, colObs = 360
 
-      // ✅ LISTA SIMPLES (sem origem)
-      doc.fontSize(9).text('REGISTROS:', { underline: true })
-      doc.moveDown(0.4)
+      // Header da Tabela
+      doc.rect(40, tableTop, 515, 20).fill('#f1f5f9')
+      doc.fillColor('#475569').fontSize(8).font('Helvetica-Bold')
+      doc.text('DATA', colData + 5, tableTop + 6)
+      doc.text('ENT 1', colEnt1, tableTop + 6)
+      doc.text('SAI 1', colSai1, tableTop + 6)
+      doc.text('ENT 2', colEnt2, tableTop + 6)
+      doc.text('SAI 2', colSai2, tableTop + 6)
+      doc.text('OBSERVAÇÕES', colObs, tableTop + 6)
 
-      payload.registros.forEach((r) => {
-        const d = new Date(r.data_hora)
-        const dia = d.toLocaleDateString('pt-BR')
-        const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+      // Agrupar registros por dia para a tabela
+      const diasNoMes = new Date(payload.ano, payload.mes, 0).getDate()
+      let currentY = tableTop + 20
 
-        // ✅ sem origem/status no texto (se quiser, mantém status)
-        doc.text(`${dia}  ${hora}  |  ${r.tipo}`)
-      })
+      for (let dia = 1; dia <= diasNoMes; dia++) {
+        const dataLoop = new Date(payload.ano, payload.mes - 1, dia)
+        if (dataLoop.getDay() === 0) continue // Pula domingos se desejar, ou estilize diferente
 
-      // ✅ JUSTIFICATIVAS (se existirem)
-      if (payload.justificativas?.length) {
-        doc.moveDown(0.8)
-        doc.fontSize(9).text('JUSTIFICATIVAS:', { underline: true })
-        doc.moveDown(0.4)
+        const regsDia = payload.registros.filter(r => new Date(r.data_hora).getDate() === dia)
+        const ents = regsDia.filter(r => r.tipo === 'ENTRADA').sort((a,b) => a.data_hora.getTime() - b.data_hora.getTime())
+        const sais = regsDia.filter(r => r.tipo === 'SAIDA').sort((a,b) => a.data_hora.getTime() - b.data_hora.getTime())
+        const just = payload.justificativas.find(j => new Date(j.data).getDate() === dia)
 
-        payload.justificativas.forEach((j) => {
-          const dia = new Date(j.data).toLocaleDateString('pt-BR')
-          doc.text(`${dia}  |  ${j.tipo}${j.descricao ? '  |  ' + j.descricao : ''}`)
-        })
+        // Linha zebrada
+        if (dia % 2 === 0) doc.rect(40, currentY, 515, 18).fill('#fafafa')
+        
+        doc.fillColor('#1e293b').font('Helvetica').fontSize(8)
+        const dataFmt = `${String(dia).padStart(2, '0')}/${String(payload.mes).padStart(2, '0')}`
+        
+        doc.text(dataFmt, colData + 5, currentY + 5)
+        doc.text(ents[0] ? this.formatHora(ents[0].data_hora) : '--:--', colEnt1, currentY + 5)
+        doc.text(sais[0] ? this.formatHora(sais[0].data_hora) : '--:--', colSai1, currentY + 5)
+        doc.text(ents[1] ? this.formatHora(ents[1].data_hora) : '--:--', colEnt2, currentY + 5)
+        doc.text(sais[1] ? this.formatHora(sais[1].data_hora) : '--:--', colSai2, currentY + 5)
+        
+        if (just) {
+          doc.fillColor('#e11d48').fontSize(7).text(just.tipo.substring(0, 25), colObs, currentY + 5)
+        }
+
+        currentY += 18
+
+        // Quebra de página se necessário
+        if (currentY > 750) {
+          doc.addPage()
+          currentY = 50
+        }
       }
+
+      // --- ASSINATURAS ---
+      doc.moveDown(4)
+      const sigY = doc.y > 700 ? (doc.addPage(), 100) : doc.y + 50
+      
+      doc.strokeColor('#cbd5e1').lineWidth(0.5)
+      doc.moveTo(40, sigY).lineTo(240, sigY).stroke()
+      doc.moveTo(315, sigY).lineTo(515, sigY).stroke()
+      
+      doc.fontSize(8).fillColor('#475569')
+      doc.text('ASSINATURA DO FUNCIONÁRIO', 40, sigY + 5, { width: 200, align: 'center' })
+      doc.text('RESPONSÁVEL / EMPRESA', 315, sigY + 5, { width: 200, align: 'center' })
 
       doc.end()
     } catch (err) {
       reject(err)
     }
   })
+}
+
+// Helper dentro da classe
+private formatHora(date: Date) {
+  return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })
 }
 
 async gerarPdfMensalESalvar(params: { funcionario_id: number; mes: number; ano: number }) {
