@@ -62,8 +62,8 @@
   </button>
 
   <button
-    @click="gerarPdfMensalPwa"
-    :disabled="loadingPdf || !filtros.funcionario_id"
+    @click="gerarRelatorioMensal"
+    :disabled="loadingPdf || !filtros.funcionario_id || !filtros.data_ini"
     class="w-full h-11 bg-white border border-slate-200 text-slate-700 rounded-2xl font-black text-[10px] uppercase italic tracking-widest hover:bg-slate-900 hover:text-white transition-all flex items-center justify-center gap-2"
   >
     <i class="pi pi-file-pdf" v-if="!loadingPdf"></i>
@@ -197,7 +197,6 @@ import { notify } from '@/services/notify'
 import { consolidarSaldoPeriodo } from '@/utils/utils'
 import { confirm } from '@/services/confirm'
 import { listDays, groupRegistrosByDia } from '@/utils/ponto'
-import api from '@/services/api'
 import { useRouter } from 'vue-router'
 
 
@@ -209,35 +208,28 @@ const router = useRouter()
 
 const loadingPdf = ref(false)
 
-async function gerarPdfMensalPwa() {
+async function gerarRelatorioMensal() {
   if (!filtros.funcionario_id) return notify.warn('Selecione um funcionário')
 
   const { mes, ano } = getMesAnoReferencia()
+  const funcionario_id = Number(String(filtros.funcionario_id).replace(/\D/g, ''))
 
   try {
     loadingPdf.value = true
 
-    const { data } = await api.post('/ponto/relatorio/pdf', {
-      funcionario_id: filtros.funcionario_id,
-      mes,
-      ano,
-    })
+    const { data } = await PontoRelatorioService.pdfMensalSalvar({ funcionario_id, mes, ano })
 
-    const arquivoId = data?.arquivoId
-    if (!arquivoId) {
-      console.log('[PONTO] pdfMensalPwa retorno:', data)
-      return notify.error('Não veio arquivoId do servidor.')
-    }
-
-    // ✅ abre dentro do PWA (viewer)
-    router.push(`/arquivos/${arquivoId}`)
+    router.push(
+      `/arquivos/${data.arquivoId}?name=RELATORIO_PONTO_${String(mes).padStart(2,'0')}_${ano}&type=application/pdf`
+    )
   } catch (e) {
-    console.log('[PONTO] ERRO pdfMensalPwa:', e?.response?.status, e?.response?.data)
+    console.log('[PONTO] ERRO PDF:', e?.response?.status, e?.response?.data)
     notify.error(e?.response?.data?.message || 'Erro ao gerar PDF')
   } finally {
     loadingPdf.value = false
   }
 }
+
 
 const filtros = reactive({ funcionario_id: '', data_ini: '', data_fim: '' })
 

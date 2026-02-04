@@ -5,6 +5,7 @@ import * as path from 'path'
 import { promises as fs } from 'fs'
 import { randomBytes } from 'crypto'
 import PDFDocument from 'pdfkit'
+import { renderHeaderA4Png } from '../../pdf/render-header-a4'
 
 
 type Filtros = {
@@ -147,30 +148,41 @@ private async gerarPdfPontoBuffer(payload: {
       doc.on('end', () => resolve(Buffer.concat(chunks)))
       doc.on('error', reject)
 
-      doc.fontSize(14).text('RELATÓRIO DE PONTO (MENSAL)', { align: 'center' })
-      doc.moveDown(0.5)
+      // ✅ HEADER PADRÃO DA EMPRESA
+      const headerBottomY = renderHeaderA4Png(doc)
+      doc.y = headerBottomY + 10
+
+      // ✅ TÍTULO / IDENTIFICAÇÃO
+      doc.fontSize(12).text('RELATÓRIO DE HORAS (PONTO)', { align: 'left' })
+      doc.moveDown(0.3)
       doc.fontSize(10).text(`Funcionário: ${payload.funcionarioNome || payload.funcionarioId}`)
       doc.text(`Referência: ${String(payload.mes).padStart(2, '0')}/${payload.ano}`)
-      doc.moveDown(1)
+      doc.moveDown(0.8)
 
-      doc.fontSize(9).text('REGISTROS:')
-      doc.moveDown(0.5)
+      // ✅ LISTA SIMPLES (sem origem)
+      doc.fontSize(9).text('REGISTROS:', { underline: true })
+      doc.moveDown(0.4)
 
       payload.registros.forEach((r) => {
         const d = new Date(r.data_hora)
         const dia = d.toLocaleDateString('pt-BR')
         const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-        doc.text(`${dia}  ${hora}  |  ${r.tipo}  |  ${r.origem}  |  ${r.status}`)
+
+        // ✅ sem origem/status no texto (se quiser, mantém status)
+        doc.text(`${dia}  ${hora}  |  ${r.tipo}`)
       })
 
-      doc.moveDown(1)
-      doc.fontSize(9).text('JUSTIFICATIVAS:')
-      doc.moveDown(0.5)
+      // ✅ JUSTIFICATIVAS (se existirem)
+      if (payload.justificativas?.length) {
+        doc.moveDown(0.8)
+        doc.fontSize(9).text('JUSTIFICATIVAS:', { underline: true })
+        doc.moveDown(0.4)
 
-      payload.justificativas.forEach((j) => {
-        const dia = new Date(j.data).toLocaleDateString('pt-BR')
-        doc.text(`${dia}  |  ${j.tipo}${j.descricao ? '  |  ' + j.descricao : ''}`)
-      })
+        payload.justificativas.forEach((j) => {
+          const dia = new Date(j.data).toLocaleDateString('pt-BR')
+          doc.text(`${dia}  |  ${j.tipo}${j.descricao ? '  |  ' + j.descricao : ''}`)
+        })
+      }
 
       doc.end()
     } catch (err) {
@@ -184,10 +196,9 @@ async gerarPdfMensalESalvar(params: { funcionario_id: number; mes: number; ano: 
   const mes = Number(params.mes)
   const ano = Number(params.ano)
 
-if (!funcId) throw new BadRequestException('funcionario_id inválido')
-if (!mes || mes < 1 || mes > 12) throw new BadRequestException('mes inválido')
-if (!ano || ano < 2000) throw new BadRequestException('ano inválido')
-
+  if (!funcId) throw new BadRequestException('funcionario_id inválido')
+  if (!mes || mes < 1 || mes > 12) throw new BadRequestException('mes inválido')
+  if (!ano || ano < 2000) throw new BadRequestException('ano inválido')
 
   const { funcionario, registros, justificativas } = await this.relatorioMensalPdfData({
     funcionario_id: funcId,
@@ -204,7 +215,8 @@ if (!ano || ano < 2000) throw new BadRequestException('ano inválido')
     justificativas,
   })
 
-  const dir = path.join(process.cwd(), 'uploads', 'relatorios')
+  // ✅ padrão: /uploads/<ownerType>s/
+  const dir = path.join(process.cwd(), 'uploads', 'funcionarios')
   await fs.mkdir(dir, { recursive: true })
 
   const stamp = new Date().toISOString().replace(/[-:.TZ]/g, '')
@@ -213,14 +225,15 @@ if (!ano || ano < 2000) throw new BadRequestException('ano inválido')
 
   await fs.writeFile(path.join(dir, filename), pdfBuffer)
 
-  const url = `/uploads/relatorios/${filename}`
+  // ✅ URL tem que bater com a pasta real
+  const url = `/uploads/funcionarios/${filename}`
 
   const arquivo = await this.prisma.arquivos.create({
     data: {
       owner_type: 'FUNCIONARIO',
       owner_id: funcId,
       categoria: 'RELATORIO',
-      slot_key: null, // ✅ histórico (não colide no unique)
+      slot_key: null,
       url,
       filename,
       nome: `RELATÓRIO PONTO ${String(mes).padStart(2, '0')}/${ano} - ${funcionario?.nome || ''}`,
@@ -232,4 +245,5 @@ if (!ano || ano < 2000) throw new BadRequestException('ano inválido')
 
   return { arquivoId: arquivo.id }
 }
+
 }

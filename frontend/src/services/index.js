@@ -262,10 +262,14 @@ export const PontoRelatorioService = {
   listarRegistros: (filtros = {}) =>
     api.get('/ponto/relatorio/registros', { params: filtros }),
 
-  // ✅ igual orçamento: gera + salva e retorna { arquivoId }
-  gerarPdfMensal: (payload) =>
-    api.post('/ponto/relatorio/pdf', payload), // { funcionario_id, mes, ano }
+  pdfMensal: (params) =>
+    api.get('/ponto/relatorio/pdf', { params, responseType: 'blob' }),
+
+  // ✅ padrão do sistema: gera+salva e retorna { arquivoId }
+  pdfMensalSalvar: (payload) =>
+    api.post('/ponto/relatorio/pdf', payload),
 }
+
 
 
 export const PontoService = { gerarConvite: (funcionario_id) => 
