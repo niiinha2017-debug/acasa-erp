@@ -1,11 +1,11 @@
 generator client {
   provider = "prisma-client-js"
- }
+}
 
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
- }
+}
 
 model usuarios {
   id            Int      @id @default(autoincrement())
@@ -21,7 +21,7 @@ model usuarios {
   permissoes   usuarios_permissoes[]
 
   @@map("usuarios")
- }
+}
 
 model recuperacao_senha {
   id           Int      @id @default(autoincrement())
@@ -37,7 +37,7 @@ model recuperacao_senha {
 
   @@index([usuario_id])
   @@map("recuperacao_senha")
- }
+}
 
 model usuarios_permissoes {
   id Int @id @default(autoincrement())
@@ -52,7 +52,7 @@ model usuarios_permissoes {
   @@index([usuario_id])
   @@index([permissao_id])
   @@map("usuarios_permissoes")
- }
+}
 
 model permissoes {
   id        Int      @id @default(autoincrement())
@@ -63,7 +63,7 @@ model permissoes {
   usuarios usuarios_permissoes[]
 
   @@map("permissoes")
- }
+}
 
 model Cliente {
   id Int @id @default(autoincrement())
@@ -107,16 +107,18 @@ model Cliente {
 
   contas_receber contas_receber[] @relation("contas_receber_cliente")
 
-  orcamentos orcamentos[]
-  vendas     vendas[]
+  orcamentos   orcamentos[]
+  vendas       vendas[]
   agendamentos agenda_global[]
+  // Adicione projetos[] aqui
+  projetos     projetos[]
 
   @@unique([cpf])
   @@unique([cnpj])
   @@unique([email])
   @@index([indicacao_id])
   @@map("clientes")
- }
+}
 
 model orcamentos {
   id Int @id @default(autoincrement())
@@ -131,15 +133,17 @@ model orcamentos {
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
-  itens    orcamento_itens[]
-  agendamentos agenda_global[]
+  itens       orcamento_itens[]
+  agendamento agenda_global?
 
   // ✅ agora é 0..1 venda por orçamento
-  venda vendas?
+  venda    vendas?
+  // Adicione projetos[] aqui
+  projetos projetos[]
 
   @@index([cliente_id])
   @@map("orcamentos")
- }
+}
 
 model orcamento_itens {
   id           Int        @id @default(autoincrement())
@@ -155,7 +159,7 @@ model orcamento_itens {
   criado_em DateTime @default(now())
 
   @@map("orcamento_itens")
- }
+}
 
 model vendas {
   id Int @id @default(autoincrement())
@@ -168,7 +172,7 @@ model vendas {
 
   status String
 
-  data_venda   DateTime  @default(now())
+  data_venda DateTime @default(now())
 
   // ✅ NOVO: base real do pós-venda (não é o orçado)
   valor_vendido Decimal @default(0.00) @db.Decimal(10, 2)
@@ -187,17 +191,19 @@ model vendas {
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
-  itens      vendas_itens[]
-  comissoes  vendas_comissoes[]
-  pagamentos vendas_pagamentos[] // ✅ NOVO
+  itens        vendas_itens[]
+  comissoes    vendas_comissoes[]
+  pagamentos   vendas_pagamentos[] // ✅ NOVO
   agendamentos agenda_global[]
+  // Adicione projetos[] aqui
+  projetos     projetos[]
 
   compras compras[]
 
   @@index([cliente_id])
   @@index([status])
   @@map("vendas")
- }
+}
 
 model vendas_pagamentos {
   id Int @id @default(autoincrement())
@@ -221,10 +227,10 @@ model vendas_pagamentos {
   @@index([forma_pagamento_chave])
   @@index([status_financeiro_chave])
   @@map("vendas_pagamentos")
- }
+}
 
 model vendas_itens {
-  id Int @id @default(autoincrement())
+  id       Int    @id @default(autoincrement())
   venda_id Int
   venda    vendas @relation(fields: [venda_id], references: [id], onDelete: Cascade)
 
@@ -242,7 +248,7 @@ model vendas_itens {
 
   @@index([venda_id])
   @@map("vendas_itens")
- }
+}
 
 model vendas_comissoes {
   id Int @id @default(autoincrement())
@@ -267,7 +273,7 @@ model vendas_comissoes {
   @@index([venda_id])
   @@index([tipo_comissao_chave])
   @@map("vendas_comissoes")
- }
+}
 
 model Fornecedor {
   id              Int      @id @default(autoincrement())
@@ -302,10 +308,10 @@ model Fornecedor {
   compras                 compras[]
 
   @@map("fornecedor")
- }
+}
 
 model produtos {
-  id Int @id @default(autoincrement())
+  id            Int        @id @default(autoincrement())
   fornecedor_id Int
   fornecedor    Fornecedor @relation(fields: [fornecedor_id], references: [id])
 
@@ -332,7 +338,7 @@ model produtos {
 
   @@index([fornecedor_id])
   @@map("produtos")
- }
+}
 
 model plano_corte {
   id            Int      @id @default(autoincrement())
@@ -347,13 +353,12 @@ model plano_corte {
 
   fornecedor Fornecedor @relation(fields: [fornecedor_id], references: [id])
 
-  produtos plano_corte_produto[]
-  consumos plano_corte_consumo[]
+  produtos     plano_corte_produto[]
+  consumos     plano_corte_consumo[]
   agendamentos agenda_global[]
 
-
   @@map("plano_corte")
- }
+}
 
 model plano_corte_item {
   id            Int @id @default(autoincrement())
@@ -383,7 +388,7 @@ model plano_corte_item {
 
   @@index([fornecedor_id])
   @@map("plano_corte_item")
- }
+}
 
 model plano_corte_produto {
   id             Int @id @default(autoincrement())
@@ -398,12 +403,10 @@ model plano_corte_produto {
   plano_corte plano_corte      @relation(fields: [plano_corte_id], references: [id])
   item        plano_corte_item @relation(fields: [item_id], references: [id])
 
-
   @@index([plano_corte_id])
   @@index([item_id])
-
   @@map("plano_corte_produto")
- }
+}
 
 model plano_corte_consumo {
   id             Int @id @default(autoincrement())
@@ -419,10 +422,9 @@ model plano_corte_consumo {
 
   @@unique([plano_corte_id, produto_id]) // ✅ não duplica consumo no mesmo plano
   @@map("plano_corte_consumo")
- }
+}
 
 model funcionarios {
-
   id Int @id @default(autoincrement())
 
   // ======================
@@ -518,14 +520,14 @@ model funcionarios {
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
-  ponto_dispositivos    ponto_dispositivos[]
-  ponto_registros       ponto_registros[]
-  ponto_convites        ponto_convites[]
-  ponto_justificativas  ponto_justificativas[]
-  agendamentos agenda_global[]
+  ponto_dispositivos   ponto_dispositivos[]
+  ponto_registros      ponto_registros[]
+  ponto_convites       ponto_convites[]
+  ponto_justificativas ponto_justificativas[]
+  equipe               agenda_funcionarios[]
 
   @@map("funcionarios")
-  }
+}
 
 model despesas {
   id Int @id @default(autoincrement())
@@ -546,7 +548,7 @@ model despesas {
   funcionario_id Int?
   funcionario    funcionarios? @relation(fields: [funcionario_id], references: [id])
 
-  status String @default("EM_ABERTO")
+  status      String        @default("EM_ABERTO")
   conta_pagar contas_pagar?
 
   recorrencia_id String? @db.VarChar(36)
@@ -557,10 +559,9 @@ model despesas {
   conta_bancaria_tipo_key String? @db.VarChar(50)
 
   // ✅ Cartão (constantes)
-  cartao_credito_key      String? @db.VarChar(50)
+  cartao_credito_key String? @db.VarChar(50)
 
   titulos titulos_financeiros[]
-
 
   @@index([unidade])
   @@index([recorrencia_id])
@@ -571,61 +572,82 @@ model despesas {
   @@index([status])
   @@index([data_vencimento])
   @@index([funcionario_id])
-
   @@index([conta_bancaria_key])
   @@index([conta_bancaria_tipo_key])
   @@index([cartao_credito_key])
-
   @@map("despesas")
- }
+}
 
 model projetos {
-  id            Int      @id @default(autoincrement())
-  codigo        String   @unique @db.VarChar(60)
-  cliente_id    Int
-  cliente       Cliente  @relation(fields: [cliente_id], references: [id]) // Adicione esta linha
+  id         Int     @id @default(autoincrement())
+  codigo     String  @unique @db.VarChar(60)
+  cliente_id Int
+  cliente    Cliente @relation(fields: [cliente_id], references: [id]) // Adicione esta linha
 
   // Vínculos com a origem
-  orcamento_id  Int?     @unique
-  orcamento     orcamentos? @relation(fields: [orcamento_id], references: [id])
-  
-  venda_id      Int?     @unique
-  venda         vendas?     @relation(fields: [venda_id], references: [id])
+  orcamento_id Int?        @unique
+  orcamento    orcamentos? @relation(fields: [orcamento_id], references: [id])
 
-  status_atual  String   @default("CLIENTE_CADASTRADO")
+  venda_id Int?    @unique
+  venda    vendas? @relation(fields: [venda_id], references: [id])
 
-  agendamentos  agenda_global[]
+  status_atual String @default("CLIENTE_CADASTRADO")
+
+  agendamentos agenda_global[]
 
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
   @@map("projetos")
- }
+}
 
 model agenda_global {
-  id              Int            @id @default(autoincrement())
-  
-  // Vínculos que já tínhamos
-  cliente_id      Int?           // Opcional, pois no plano de corte o "dono" é o Fornecedor
-  funcionario_id  Int?
-  orcamento_id    Int?           @unique
-  venda_id        Int?           @unique
+  id Int @id @default(autoincrement())
 
-  // ✅ NOVO VÍNCULO: Para serviços de terceiros
-  plano_corte_id  Int?           @unique
-  plano_corte     plano_corte?   @relation(fields: [plano_corte_id], references: [id])
+  cliente_id Int
+  cliente    Cliente @relation(fields: [cliente_id], references: [id])
 
-  // Identificador visual para o Vue
-  origem_tipo     String         // 'VENDA_INTERNA' ou 'SERVICO_FORNECEDOR'
-  
-  titulo          String         // Ex: "Corte MDF - Fornecedor Leo Madeiras"
-  inicio_em       DateTime
-  fim_em          DateTime
-  status          String         
+  // Vínculos Opcionais
+  orcamento_id Int?        @unique
+  orcamento    orcamentos? @relation(fields: [orcamento_id], references: [id])
+
+  venda_id Int?    @unique
+  venda    vendas? @relation(fields: [venda_id], references: [id])
+
+  projeto_id Int?
+  projeto    projetos? @relation(fields: [projeto_id], references: [id])
+
+  plano_corte_id Int?         @unique
+  plano_corte    plano_corte? @relation(fields: [plano_corte_id], references: [id])
+
+  // Dados do evento
+  titulo    String
+  inicio_em DateTime
+  fim_em    DateTime
+  status    String   @default("PENDENTE")
+
+  // ✅ RELAÇÃO MUITOS-PARA-MUITOS (Múltiplos funcionários na mesma tarefa)
+  equipe agenda_funcionarios[]
+
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
 
   @@map("agenda_global")
- }
- 
+}
+
+model agenda_funcionarios {
+  id             Int @id @default(autoincrement())
+  agenda_id      Int
+  funcionario_id Int
+
+  agenda      agenda_global @relation(fields: [agenda_id], references: [id], onDelete: Cascade)
+  funcionario funcionarios  @relation(fields: [funcionario_id], references: [id], onDelete: Cascade)
+
+  @@index([agenda_id])
+  @@index([funcionario_id])
+  @@map("agenda_funcionarios")
+}
+
 model contas_pagar {
   id Int @id @default(autoincrement())
 
@@ -672,7 +694,6 @@ model contas_pagar {
 
   titulos titulos_financeiros[]
 
-
   @@index([fornecedor_id])
   @@index([fornecedor_cobrador_id])
   @@index([status])
@@ -680,17 +701,17 @@ model contas_pagar {
   @@index([origem_tipo])
   @@index([origem_id])
   @@map("contas_pagar")
- }
+}
 
 model titulos_financeiros {
   id Int @id @default(autoincrement())
 
   // origem/vinculo (opcionais)
-  despesa_id       Int?
-  despesa          despesas?      @relation(fields: [despesa_id], references: [id], onDelete: SetNull)
+  despesa_id Int?
+  despesa    despesas? @relation(fields: [despesa_id], references: [id], onDelete: SetNull)
 
-  conta_pagar_id   Int?
-  conta_pagar      contas_pagar?  @relation(fields: [conta_pagar_id], references: [id], onDelete: SetNull)
+  conta_pagar_id Int?
+  conta_pagar    contas_pagar? @relation(fields: [conta_pagar_id], references: [id], onDelete: SetNull)
 
   conta_receber_id Int?
   conta_receber    contas_receber? @relation(fields: [conta_receber_id], references: [id], onDelete: SetNull)
@@ -699,8 +720,8 @@ model titulos_financeiros {
   tipo String // CHEQUE | CARTAO | BOLETO | PARCELA_FORNECEDOR | etc.
 
   // dados principais
-  valor         Decimal  @default(0.00) @db.Decimal(12,2)
-  status        String   // EM_ABERTO | VENCIDO | PAGO | CANCELADO
+  valor         Decimal   @default(0.00) @db.Decimal(12, 2)
+  status        String // EM_ABERTO | VENCIDO | PAGO | CANCELADO
   vencimento_em DateTime
   pago_em       DateTime?
 
@@ -714,14 +735,13 @@ model titulos_financeiros {
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
-
   @@index([status])
   @@index([vencimento_em])
   @@index([despesa_id])
   @@index([conta_pagar_id])
   @@index([conta_receber_id])
   @@map("titulos_financeiros")
- }
+}
 
 model contas_receber {
   id Int @id @default(autoincrement())
@@ -756,7 +776,6 @@ model contas_receber {
 
   titulos titulos_financeiros[]
 
-
   @@index([fornecedor_id])
   @@index([cliente_id])
   @@index([status])
@@ -764,7 +783,7 @@ model contas_receber {
   @@index([origem_tipo])
   @@index([origem_id])
   @@map("contas_receber")
- }
+}
 
 model fornecedor_compensacoes {
   id Int @id @default(autoincrement())
@@ -786,7 +805,7 @@ model fornecedor_compensacoes {
   @@index([conta_pagar_id])
   @@index([conta_receber_id])
   @@map("fornecedor_compensacoes")
- }
+}
 
 model compras {
   id Int @id @default(autoincrement())
@@ -824,7 +843,7 @@ model compras {
   @@index([status])
   @@index([vencimento_em])
   @@map("compras")
- }
+}
 
 model compras_itens {
   id        Int     @id @default(autoincrement())
@@ -850,7 +869,7 @@ model compras_itens {
   @@index([compra_id])
   @@index([produto_id])
   @@map("compras_itens")
- }
+}
 
 model compras_rateio {
   id Int @id @default(autoincrement())
@@ -870,7 +889,7 @@ model compras_rateio {
   @@index([compra_id])
   @@index([nome_ambiente])
   @@map("compras_rateio")
- }
+}
 
 model Empresa {
   id            Int      @id @default(1) // Forçamos o ID 1
@@ -889,18 +908,18 @@ model Empresa {
   updated_at    DateTime @updatedAt
 
   @@map("empresa") // Nome da tabela no banco de dados
- }
+}
 
 enum PontoTipoRegistro {
   ENTRADA
   SAIDA
- }
+}
 
 enum PontoOrigem {
   PWA
   WEB
   ADMIN
- }
+}
 
 model ponto_dispositivos {
   id Int @id @default(autoincrement())
@@ -933,7 +952,7 @@ model ponto_dispositivos {
   @@index([funcionario_id])
   @@index([status])
   @@map("ponto_dispositivos")
- }
+}
 
 model ponto_registros {
   id Int @id @default(autoincrement())
@@ -973,7 +992,7 @@ model ponto_registros {
   @@index([tipo])
   @@index([dispositivo_id])
   @@map("ponto_registros")
- }
+}
 
 model ponto_convites {
   id Int @id @default(autoincrement())
@@ -989,7 +1008,7 @@ model ponto_convites {
 
   @@index([funcionario_id])
   @@map("ponto_convites")
- }
+}
 
 model ponto_justificativas {
   id Int @id @default(autoincrement())
@@ -1008,32 +1027,31 @@ model ponto_justificativas {
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
-
   @@unique([funcionario_id, data])
   @@index([funcionario_id])
   @@index([data])
   @@index([tipo])
   @@map("ponto_justificativas")
- }
+}
 
 model arquivos {
-  id         Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
   owner_type String
   owner_id   Int
   categoria  String?
   slot_key   String?
 
-  url        String
-  filename   String
-  nome       String?
-  mime_type  String?
-  tamanho    Int?
+  url       String
+  filename  String
+  nome      String?
+  mime_type String?
+  tamanho   Int?
 
-  criado_em  DateTime @default(now())
+  criado_em DateTime @default(now())
 
+  @@unique([owner_type, owner_id, slot_key])
   @@index([owner_type, owner_id])
   @@index([owner_type, owner_id, categoria])
-  @@unique([owner_type, owner_id, slot_key])
   @@map("arquivos")
- }
+}
