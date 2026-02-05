@@ -25,8 +25,7 @@ import { EmpresaModule } from './modulos/empresa.module'
 import { UtilsModule } from './utils/utils.module'
 import { PontoModule } from './ponto/ponto.module'
 import { ArquivosModule } from './arquivos/arquivos.module'
-import { AgendaService } from './agenda/agenda.service'
-import { AgendaModule } from './agenda/agenda.module';
+import { AgendaModule } from './agenda/agenda.module'
 
 @Module({
   imports: [
@@ -57,7 +56,6 @@ import { AgendaModule } from './agenda/agenda.module';
     ComprasModule,
     PermissoesModule,
     EmpresaModule,
-    AgendaService,
     UtilsModule,
     PontoModule,
     AgendaModule,
