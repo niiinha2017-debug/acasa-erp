@@ -582,90 +582,50 @@ model despesas {
   @@map("despesas")
  }
 
-model producao_projetos {
-  id Int @id @default(autoincrement())
+model projetos {
+  id            Int      @id @default(autoincrement())
+  codigo        String   @unique @db.VarChar(60)
+  cliente_id    Int
+  cliente       Cliente  @relation(fields: [cliente_id], references: [id]) // Adicione esta linha
 
-  // ✅ ID Produção: "PROD-b4d94b90-..."
-  codigo String @unique @db.VarChar(60)
+  // Vínculos com a origem
+  orcamento_id  Int?     @unique
+  orcamento     orcamentos? @relation(fields: [orcamento_id], references: [id])
+  
+  venda_id      Int?     @unique
+  venda         vendas?     @relation(fields: [venda_id], references: [id])
 
-  // ✅ mantém seu controle de origem (para regra/unique)
-  origem_tipo String
-  origem_id   Int
-
-  // ✅ vínculos reais (pra include/join)
-  venda_item_id  Int? @unique
-  venda_item     vendas_itens? @relation("ProducaoProjetoVendaItem", fields: [venda_item_id], references: [id], onDelete: Restrict)
-
-  plano_corte_id Int? @unique
-  plano_corte    plano_corte? @relation("ProducaoProjetoPlanoCorte", fields: [plano_corte_id], references: [id], onDelete: Restrict)
-
-  status String @default("ABERTO")
-
-  encaminhado_em DateTime?
+  status_atual  String   @default("CLIENTE_CADASTRADO")
+  
+  producao      producao_projetos?
+  agendamentos  agenda_global[]
 
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
-  tarefas producao_tarefas[]
-
-  // ✅ continua existindo (mas agora você consegue relacionar também)
-  @@unique([origem_tipo, origem_id])
-
-  @@index([origem_tipo])
-  @@index([origem_id])
-  @@index([status])
-  @@index([encaminhado_em])
-  @@index([venda_item_id])
-  @@index([plano_corte_id])
-  @@map("producao_projetos")
+  @@map("projetos")
  }
 
-model producao_tarefas {
-  id Int @id @default(autoincrement())
+model agenda_global {
+  id             Int      @id @default(autoincrement())
+  projeto_id     Int
+  projeto        projetos @relation(fields: [projeto_id], references: [id], onDelete: Cascade)
+  
+  // Para saber de onde veio esse agendamento
+  // Ex: 'PIPELINE_VENDA', 'TAREFA_PRODUCAO', 'MONTAGEM'
+  origem_tipo    String   
+  origem_id      Int?     // ID da tarefa de produção ou ID da etapa
 
-  projeto_id Int
-  projeto    producao_projetos @relation(fields: [projeto_id], references: [id], onDelete: Cascade)
+  titulo         String   
+  inicio_em      DateTime
+  fim_em         DateTime
+  
+  // Funcionário designado para este compromisso global
+  funcionario_id Int?
+  funcionario    funcionarios? @relation(fields: [funcionario_id], references: [id])
 
-  etapa String
-
-  status     String  @default("PENDENTE")
-  observacao String?
-
-  inicio_em DateTime?
-  fim_em    DateTime?
-
-  horas_total Decimal @default(0.00) @db.Decimal(10, 2)
-  custo_total Decimal @default(0.00) @db.Decimal(12, 2)
-
-  criado_em     DateTime @default(now())
-  atualizado_em DateTime @updatedAt
-
-  funcionarios producao_tarefa_funcionarios[]
-
-  @@index([projeto_id])
-  @@index([status])
-  @@index([etapa])
-  @@index([inicio_em])
-  @@index([fim_em])
-  @@map("producao_tarefas")
- }
-
-model producao_tarefa_funcionarios {
-  id Int @id @default(autoincrement())
-
-  tarefa_id Int
-  tarefa    producao_tarefas @relation(fields: [tarefa_id], references: [id], onDelete: Cascade)
-
-  funcionario_id Int
-  funcionario    funcionarios @relation(fields: [funcionario_id], references: [id])
-
-  // snapshot por funcionário
-  funcao_aplicada     String?  @db.VarChar(80)
-  custo_hora_aplicado Decimal  @default(0.00) @db.Decimal(12, 2)
-
-  @@unique([tarefa_id, funcionario_id])
-  @@index([funcionario_id])
-  @@map("producao_tarefa_funcionarios")
+  @@index([inicio_em, fim_em])
+  @@map("agenda_global")
  }
 
 model contas_pagar {

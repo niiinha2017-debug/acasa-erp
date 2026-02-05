@@ -53,10 +53,11 @@ async criar(dto: CriarClienteDto) {
 async listar() {
   const rows = await this.prisma.cliente.findMany({
     orderBy: { nome_completo: 'asc' },
-    include: {
-    },
   })
+
+  return rows
 }
+
 
 
 

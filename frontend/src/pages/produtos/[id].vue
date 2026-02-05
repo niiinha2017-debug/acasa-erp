@@ -1,270 +1,197 @@
 <template>
-  <div class="w-full max-w-[1200px] mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-    <Card :shadow="true" class="overflow-visible !rounded-[3rem] border-none shadow-[0_40px_80px_-15px_rgba(0,0,0,0.1)]">
-      <header class="flex flex-col md:flex-row items-center justify-between gap-6 p-10 border-b border-slate-50 bg-slate-50/50">
-        <div class="flex items-center gap-6">
-          <div class="w-16 h-16 rounded-[1.5rem] bg-slate-900 flex items-center justify-center text-white shadow-2xl rotate-3 hover:rotate-0 transition-all duration-500">
-            <i class="pi pi-box text-3xl"></i>
+  <div class="w-full max-w-5xl mx-auto py-8 px-4 animate-in fade-in duration-500">
+    <header class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+      <div>
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white">
+            <i class="pi pi-box text-xl"></i>
           </div>
-          <div>
-            <h2 class="text-2xl font-black tracking-tighter text-slate-800 uppercase italic leading-none">
-              {{ isEdit ? 'Editar Produto' : 'Novo Produto' }}
-            </h2>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2">
-              Cadastro de Insumos e Materiais
-            </p>
-          </div>
+          <h1 class="text-2xl font-semibold tracking-tight text-slate-900">
+            {{ isEdit ? 'Editar Produto' : 'Novo Produto' }}
+          </h1>
         </div>
+        <p class="text-sm text-slate-500">Gestão de insumos e controle de materiais de estoque.</p>
+      </div>
 
-        <button
-          type="button"
-          @click="confirmarDescartarProduto"
-          class="flex items-center gap-3 px-6 h-12 rounded-2xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-900 hover:text-white transition-all shadow-sm group"
-        >
-          <i class="pi pi-arrow-left text-[10px] group-hover:-translate-x-1 transition-transform"></i>
-          <span class="text-[10px] font-black uppercase tracking-widest">Lista de Produtos</span>
-        </button>
-      </header>
+      <button
+        type="button"
+        @click="confirmarDescartarProduto"
+        class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-all text-sm font-medium"
+      >
+        <i class="pi pi-arrow-left text-xs"></i>
+        <span>Voltar para lista</span>
+      </button>
+    </header>
 
-      <div class="p-10 relative">
-        <div v-if="loading" class="py-20 flex flex-col items-center justify-center gap-4">
-          <div class="w-12 h-12 border-4 border-slate-100 border-t-slate-900 rounded-full animate-spin"></div>
-          <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carregando Dados...</p>
-        </div>
+    <Card class="border-none shadow-sm ring-1 ring-slate-200 overflow-hidden !rounded-2xl">
+      <div v-if="loading" class="py-24 flex flex-col items-center justify-center gap-4">
+        <div class="w-10 h-10 border-2 border-slate-200 border-t-slate-900 rounded-full animate-spin"></div>
+        <p class="text-xs font-medium text-slate-400 uppercase tracking-widest">Carregando...</p>
+      </div>
 
-        <form v-else class="grid grid-cols-12 gap-8" @submit.prevent="confirmarSalvarProduto">
-          <!-- Identificação -->
-          <div class="col-span-12">
-            <h3 class="text-[11px] font-black uppercase tracking-[0.3em] text-emerald-600 mb-6 flex items-center gap-3">
-              <span class="w-10 h-[3px] bg-emerald-600 rounded-full"></span>
-              Identificação Básica
-            </h3>
-          </div>
-
-          <div class="col-span-12 md:col-span-8">
-            <SearchInput
-              v-model="form.fornecedor_id"
-              mode="select"
-              label="Fornecedor Principal *"
-              :options="fornecedorOptions"
-              required
-            />
-          </div>
-
-          <div class="col-span-12 md:col-span-4">
-            <SearchInput
-              v-model="form.status"
-              mode="select"
-              label="Status do Cadastro *"
-              :options="statusOptions"
-              required
-            />
-          </div>
-
-          <div class="col-span-12 md:col-span-9">
-            <Input
-              v-model="form.nome_produto"
-              label="Nome Descritivo do Produto *"
-              placeholder="Ex: Chapa de MDF 18mm Branco"
-              required
-            />
-          </div>
-
-          <div class="col-span-12 md:col-span-3">
-            <SearchInput
-              v-model="form.unidade"
-              mode="select"
-              label="Unidade de Medida *"
-              :options="unidadesOptions"
-              required
-            />
-          </div>
-<!-- IMAGEM (upload) -->
-<div class="col-span-12 md:col-span-8">
-  <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block ml-1">
-    Imagem do Produto
-  </label>
-
-  <div class="flex items-center gap-3">
-    <input ref="imagemInput" type="file" class="hidden" accept="image/*" @change="onImagemPick" />
-
-    <Button
-      v-if="can('produtos.editar') && isEdit"
-      variant="secondary"
-      type="button"
-      class="!h-11 !rounded-xl !px-4 text-[10px] font-black uppercase tracking-widest"
-      :loading="uploadingImagem"
-      @click="imagemInput?.click()"
-    >
-      <i class="pi pi-upload mr-2 text-[10px]"></i>
-      Enviar imagem
-    </Button>
-
-    <span v-if="!isEdit" class="text-[10px] font-black uppercase tracking-widest text-slate-300">
-      Salve o produto primeiro para anexar imagem
-    </span>
-
-    <Button
-      v-if="isEdit && can('produtos.editar') && previewImagem"
-      variant="ghost"
-      type="button"
-      class="!h-11 !rounded-xl !px-4 text-[10px] font-black uppercase tracking-widest border border-slate-200 text-rose-500 hover:bg-rose-50"
-      :loading="removendoImagem"
-      @click="confirmarRemoverImagem"
-    >
-      <i class="pi pi-trash mr-2 text-[10px]"></i>
-      Remover
-    </Button>
-  </div>
-</div>
-
-<div class="col-span-12 md:col-span-4">
-  <div class="h-full flex flex-col justify-end">
-    <div
-      class="h-40 md:h-56 rounded-xl border border-slate-200 bg-white flex items-center justify-center overflow-hidden"
-      :class="previewImagem ? 'cursor-zoom-in' : ''"
-      @click="abrirPreviewImagem"
-      title="Clique para visualizar"
-    >
-      <img
-        v-if="previewImagem"
-        :src="previewImagem"
-        class="h-full w-full object-contain p-2"
-        alt="Imagem do produto"
-      />
-      <span v-else class="text-[9px] font-black uppercase tracking-widest text-slate-300">
-        Sem imagem
-      </span>
-    </div>
-  </div>
-</div>
-
-          <!-- Atributos -->
-          <div class="col-span-12 mt-4">
-            <h3 class="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400 mb-6 flex items-center gap-3">
-              <span class="w-10 h-[1px] bg-slate-200 rounded-full"></span>
-              Atributos Técnicos
-            </h3>
-          </div>
-
-          <div class="col-span-12 md:col-span-4">
-            <Input v-model="form.marca" label="Marca / Fabricante" placeholder="Marca do material" />
-          </div>
-
-          <div class="col-span-12 md:col-span-4">
-            <Input v-model="form.cor" label="Cor / Acabamento" placeholder="Ex: Carvalho Natural" />
-          </div>
-
-          <div class="col-span-12 md:col-span-4">
-            <Input v-model="form.medida" label="Dimensões / Espessura" placeholder="Ex: 2750x1840mm" />
-          </div>
-
-          <!-- Valores e Quantidades (lógica original mantida) -->
-          <div class="col-span-12 mt-8 bg-slate-50 rounded-[2.5rem] p-10 border border-slate-100">
-            <div class="grid grid-cols-12 gap-8">
-              <div class="col-span-12">
-                <h3 class="text-[11px] font-black uppercase tracking-[0.3em] text-slate-500 mb-2">Valores e Quantidades</h3>
-                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic">
-                  Dados para controle de custos e saldo inicial
-                </p>
+      <form v-else @submit.prevent="confirmarSalvarProduto" class="divide-y divide-slate-100">
+        <div class="p-8">
+          <div class="grid grid-cols-12 gap-8">
+            <div class="col-span-12 lg:col-span-8 space-y-6">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Identificação Geral</h3>
               </div>
 
-              <div class="col-span-12 md:col-span-4">
-                <Input
-                  v-model="quantidadeInput"
-                  label="Quantidade em Estoque"
-                  inputmode="numeric"
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <SearchInput
+                  v-model="form.fornecedor_id"
+                  mode="select"
+                  label="Fornecedor Principal"
+                  :options="fornecedorOptions"
+                  required
+                />
+                <SearchInput
+                  v-model="form.status"
+                  mode="select"
+                  label="Status do Cadastro"
+                  :options="statusOptions"
                   required
                 />
               </div>
 
-              <div class="col-span-12 md:col-span-4">
-                <Input
-                  v-model="valorUnitarioMask"
-                  label="Valor de Custo (Unit.)"
-                  inputmode="numeric"
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="md:col-span-2">
+                  <Input
+                    v-model="form.nome_produto"
+                    label="Nome do Produto"
+                    placeholder="Ex: Chapa de MDF 18mm"
+                    required
+                  />
+                </div>
+                <SearchInput
+                  v-model="form.unidade"
+                  mode="select"
+                  label="Unidade"
+                  :options="unidadesOptions"
                   required
                 />
               </div>
+            </div>
 
-              <div class="col-span-12 md:col-span-4">
-                <div class="flex flex-col justify-end h-full">
-                  <div class="h-14 px-6 bg-white border border-slate-200 rounded-2xl flex flex-col justify-center">
-                    <span class="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                      Valor de Inventário Total
-                    </span>
-                    <span class="text-lg font-black text-slate-900 tabular-nums italic">
-                      {{ valorTotalMask }}
-                    </span>
+            <div class="col-span-12 lg:col-span-4">
+              <div class="flex flex-col h-full">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 ml-1">Imagem do Produto</span>
+                
+                <div 
+                  class="relative group aspect-square rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center overflow-hidden transition-all hover:border-slate-300"
+                  :class="{'cursor-pointer': previewImagem}"
+                  @click="previewImagem ? abrirPreviewImagem() : null"
+                >
+                  <img v-if="previewImagem" :src="previewImagem" class="w-full h-full object-contain p-4" />
+                  <div v-else class="text-center p-6">
+                    <i class="pi pi-image text-slate-300 text-3xl mb-2"></i>
+                    <p class="text-[10px] text-slate-400 font-medium uppercase tracking-tighter leading-tight">
+                      {{ isEdit ? 'Sem imagem anexada' : 'Salve para anexar' }}
+                    </p>
+                  </div>
+
+                  <div v-if="isEdit && can('produtos.editar')" class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <button type="button" @click.stop="imagemInput?.click()" class="p-2 bg-white rounded-lg text-slate-900 hover:scale-110 transition-transform">
+                      <i class="pi pi-upload"></i>
+                    </button>
+                    <button v-if="previewImagem" type="button" @click.stop="confirmarRemoverImagem" class="p-2 bg-white rounded-lg text-rose-600 hover:scale-110 transition-transform">
+                      <i class="pi pi-trash"></i>
+                    </button>
                   </div>
                 </div>
+                <input ref="imagemInput" type="file" class="hidden" accept="image/*" @change="onImagemPick" />
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- Ações -->
-          <div class="col-span-12 flex items-center justify-end gap-6 pt-10 mt-6 border-t border-slate-50">
-            <button
-              type="button"
-              @click="router.push('/produtos')"
-              class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-rose-500 transition-colors"
-            >
-              Descartar
-            </button>
-
-<Button
-  v-if="can(isEdit ? 'produtos.editar' : 'produtos.criar')"
-  variant="primary"
-  type="submit"
-  :loading="salvando"
-  class="!h-16 !px-12 !rounded-2xl shadow-2xl shadow-slate-900/20 bg-slate-900 hover:bg-black font-black text-[11px] uppercase tracking-[0.2em]"
->
-  {{ isEdit ? 'Salvar Alterações' : 'Finalizar Cadastro' }}
-</Button>
-
+        <div class="p-8 bg-slate-50/30">
+          <div class="flex items-center gap-2 mb-6">
+            <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Atributos Técnicos</h3>
           </div>
-        </form>
-      </div>
-    </Card>
-  </div>
-  <Teleport to="body">
-  <Transition name="fade">
-    <div
-      v-if="modalImagemOpen"
-      class="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
-      @click.self="modalImagemOpen = false"
-    >
-      <div class="w-full max-w-5xl bg-white rounded-2xl overflow-hidden border border-slate-200">
-        <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-          <span class="text-[10px] font-black uppercase tracking-widest text-slate-500">
-            Visualização da imagem
-          </span>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Input v-model="form.marca" label="Marca / Fabricante" placeholder="Ex: Duratex" />
+            <Input v-model="form.cor" label="Cor / Acabamento" placeholder="Ex: Branco Texturizado" />
+            <Input v-model="form.medida" label="Dimensões" placeholder="Ex: 2750x1840mm" />
+          </div>
+        </div>
+
+        <div class="p-8">
+          <div class="grid grid-cols-12 gap-6 items-end">
+            <div class="col-span-12 md:col-span-4">
+              <Input
+                v-model="quantidadeInput"
+                label="Qtd. em Estoque"
+                type="number"
+                required
+              />
+            </div>
+            <div class="col-span-12 md:col-span-4">
+              <Input
+                v-model="valorUnitarioMask"
+                label="Custo Unitário (R$)"
+                required
+              />
+            </div>
+            <div class="col-span-12 md:col-span-4">
+              <div class="p-4 bg-slate-900 rounded-xl text-white flex flex-col justify-center">
+                <span class="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 mb-1">Total em Inventário</span>
+                <span class="text-xl font-semibold tabular-nums">{{ valorTotalMask }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-8 flex items-center justify-end gap-4 bg-slate-50/50">
+          <button
+            type="button"
+            @click="router.push('/produtos')"
+            class="px-6 py-3 text-sm font-semibold text-slate-500 hover:text-rose-600 transition-colors"
+          >
+            Cancelar
+          </button>
 
           <Button
-            type="button"
-            variant="ghost"
-            class="!h-9 !px-3 !rounded-xl text-[10px] font-black uppercase tracking-widest"
-            @click="modalImagemOpen = false"
+            v-if="can(isEdit ? 'produtos.editar' : 'produtos.criar')"
+            type="submit"
+            :loading="salvando"
+            variant="primary"
+            class="!h-12 !px-8 !rounded-xl bg-slate-900 text-white font-bold text-sm shadow-lg shadow-slate-200 active:scale-95 transition-all"
           >
-            Fechar
+            {{ isEdit ? 'Atualizar Produto' : 'Confirmar Cadastro' }}
           </Button>
         </div>
+      </form>
+    </Card>
 
-        <div class="p-3 bg-white">
-          <div class="w-full h-[70vh] flex items-center justify-center bg-slate-50 rounded-xl overflow-hidden border border-slate-100">
-            <img
-              :src="previewImagem"
-              class="max-h-full max-w-full object-contain"
-              alt="Imagem do produto"
-            />
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="modalImagemOpen"
+          class="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-8"
+          @click.self="modalImagemOpen = false"
+        >
+          <div class="relative max-w-4xl w-full bg-white rounded-3xl overflow-hidden shadow-2xl">
+            <button @click="modalImagemOpen = false" class="absolute top-4 right-4 z-10 w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center">
+              <i class="pi pi-times"></i>
+            </button>
+            <div class="p-4 flex items-center justify-center bg-white min-h-[400px]">
+              <img :src="previewImagem" class="max-h-[80vh] w-auto object-contain" />
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-  </Transition>
-</Teleport>
-
+      </Transition>
+    </Teleport>
+  </div>
 </template>
+
+<style scoped>
+.fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+</style>
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'

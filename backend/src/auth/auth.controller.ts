@@ -1,58 +1,58 @@
-import { Body, Controller, Get, Post, Req, Res, UseGuards, HttpCode, HttpStatus, UnauthorizedException } from '@nestjs/common'
-import { Request, Response } from 'express'
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Req,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+  UnauthorizedException,
+} from '@nestjs/common'
+import { Request } from 'express'
 import { AuthService } from './auth.service'
 import { JwtAuthGuard } from './jwt-auth.guard'
 import { LoginDto } from './dto/login.dto'
 import { AlterarSenhaDto } from './dto/alterar-senha.dto'
 import { EsqueciSenhaDto } from './dto/esqueci-senha.dto'
-import { CadastroDto } from './dto/cadastro.dto'
+import { CreateUsuarioDto } from './dto/cadastro.dto'
+import { RefreshDto } from './dto/refresh.dto'
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('login')
-  @HttpCode(HttpStatus.CREATED)
-  async login(
-    @Body() dto: LoginDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    console.log('Tentativa de login recebida para:', dto.usuario)
+@Post('login')
+@HttpCode(HttpStatus.CREATED)
+async login(@Body() dto: LoginDto) {
+  console.log('AUTH LOGIN HIT:', {
+    usuario: dto?.usuario,
+    hasSenha: !!dto?.senha,
+    ts: new Date().toISOString(),
+  })
 
-    const data: any = await this.authService.login(dto.usuario, dto.senha)
+  const r = await this.authService.login(dto.usuario, dto.senha)
 
-    // ✅ Se o service já devolver refresh_token, seta cookie HttpOnly
-    if (data?.refresh_token) {
-      const isProd = process.env.NODE_ENV === 'production'
+  console.log('AUTH LOGIN OK:', {
+    userId: r?.usuario?.id,
+    status: r?.usuario?.status,
+    precisaTrocarSenha: r?.precisa_trocar_senha,
+    ts: new Date().toISOString(),
+  })
 
-      res.cookie('ACASA_REFRESH', data.refresh_token, {
-        httpOnly: true,
-        secure: isProd,     // prod: true (HTTPS). dev: false
-        sameSite: 'lax',    // mesmo domínio => perfeito
-        path: '/api/auth',  // só vai junto nos endpoints /api/auth/*
-        maxAge: 1000 * 60 * 60 * 24 * 30, // 30 dias
-      })
-
-      // ✅ não devolve refresh_token no JSON
-      const { refresh_token, ...rest } = data
-      return rest
-    }
-
-    // ✅ enquanto não existir refresh_token no service, retorna como estava
-    return data
-  }
-
-@Post('refresh')
-@HttpCode(HttpStatus.OK)
-async refresh(@Req() req: Request) {
-  const refresh = (req as any).cookies?.ACASA_REFRESH
-  if (!refresh) throw new UnauthorizedException('Sessão expirada')
-  return this.authService.refresh(refresh)
+  return r
 }
 
 
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refresh(@Body() dto: RefreshDto) {
+    if (!dto?.refresh_token) throw new UnauthorizedException('Sessão expirada')
+    return this.authService.refresh(dto.refresh_token)
+  }
+
   @Post('cadastro')
-  cadastro(@Body() dto: CadastroDto) {
+  cadastro(@Body() dto: CreateUsuarioDto) {
     return this.authService.cadastro(dto)
   }
 
@@ -78,19 +78,11 @@ async refresh(@Req() req: Request) {
     const user: any = (req as any).user
     return this.authService.me(Number(user.id))
   }
-@Post('logout')
-@HttpCode(HttpStatus.OK)
-async logout(@Res({ passthrough: true }) res: Response) {
-  const isProd = process.env.NODE_ENV === 'production'
 
-  res.clearCookie('ACASA_REFRESH', {
-    path: '/api/auth',
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: isProd,
-  })
-
-  return { message: 'Sessão encerrada' }
-}
-
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  async logout() {
+    // ✅ no app, logout é só apagar token/refresh no Flutter
+    return { ok: true }
+  }
 }

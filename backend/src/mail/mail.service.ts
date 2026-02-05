@@ -7,15 +7,20 @@ export class MailService {
   private transporter: nodemailer.Transporter
 
   constructor(private readonly config: ConfigService) {
-    this.transporter = nodemailer.createTransport({
-      host: this.config.get<string>('MAIL_HOST'),
-      port: Number(this.config.get<string>('MAIL_PORT')),
-      secure: this.config.get<string>('MAIL_SECURE') === 'true', // 465 true / 587 false
-      auth: {
-        user: this.config.get<string>('MAIL_USER'),
-        pass: this.config.get<string>('MAIL_PASS'),
-      },
-    })
+this.transporter = nodemailer.createTransport({
+  host: this.config.get<string>('MAIL_HOST'),
+  port: Number(this.config.get<string>('MAIL_PORT')),
+  secure: this.config.get<string>('MAIL_SECURE') === 'true',
+  auth: {
+    user: this.config.get<string>('MAIL_USER'),
+    pass: this.config.get<string>('MAIL_PASS'),
+  },
+  requireTLS: this.config.get<string>('MAIL_SECURE') !== 'true', // só pra 587
+  connectionTimeout: 10_000,
+  greetingTimeout: 10_000,
+  socketTimeout: 20_000,
+})
+
   }
 
   async enviarEmailTeste(para: string) {
@@ -43,7 +48,7 @@ export class MailService {
     const text =
 `Olá${nome ? `, ${nome}` : ''}.
 
-Você solicitou recuperação de senha no ACASA-ERP.
+Seu acesso ao ACASA ERP foi criado.
 
 Sua senha provisória é: ${senhaProvisoria}
 

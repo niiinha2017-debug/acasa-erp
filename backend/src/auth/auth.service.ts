@@ -7,7 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs'; // Alterado para bcryptjs para manter consistência com o seu seed
 import { PrismaService } from '../prisma/prisma.service';
-import { CadastroDto } from './dto/cadastro.dto';
+import { CreateUsuarioDto } from './dto/cadastro.dto';
 import { PermissoesService } from '../permissoes/permissoes.service';
 import { MailService } from '../mail/mail.service';
 
@@ -122,7 +122,7 @@ const refresh_token = await this.jwt.signAsync(
 
 return {
   token,
-  refresh_token, // ✅ o controller vai setar no cookie e remover do JSON
+  refresh_token, // ✅ app (Flutter) salva no secure storage
   precisa_trocar_senha: precisaTrocarSenha,
   usuario: {
     id: registro.id,
@@ -138,37 +138,67 @@ return {
 
   }
 
-  // =========================
-  // CADASTRO
-  // =========================
-  async cadastro(dto: CadastroDto) {
-    // Garanta que o DTO não envie 'setor' ou 'funcao'
-    const senhaHash = await bcrypt.hash(dto.senha, 10);
+ // =========================
+// CADASTRO ADMIN (cria usuário + senha provisória + email)
+// =========================
+async cadastro(dto: CreateUsuarioDto) {
+  const emailLimpo = String(dto.email || '').trim().toLowerCase()
+  const usuarioLimpo = String(dto.usuario || '').trim().toLowerCase()
 
-    try {
-      const criado = await this.prisma.usuarios.create({
-        data: {
-          nome: dto.nome,
-          usuario: dto.usuario.toLowerCase().trim(),
-          email: dto.email.toLowerCase().trim(),
-          senha: senhaHash,
-          status: 'PENDENTE',
-        },
-      });
+  // 1) gera senha provisória
+  const senhaProvisoria = this.gerarSenhaProvisoria()
+  const senhaHash = await bcrypt.hash(senhaProvisoria, 10)
 
-      // Retorno formatado sem a senha
-      const { senha, ...result } = criado;
-      return result;
-      
-    } catch (e: any) {
-      // P2002 é o erro de restrição de unicidade do Prisma (@unique)
-      if (e?.code === 'P2002') {
-        const alvo = e?.meta?.target;
-        throw new BadRequestException(`Já existe um cadastro com este ${alvo}`);
-      }
-      throw e;
+  try {
+    // 2) cria usuário já com senha provisória
+    const criado = await this.prisma.usuarios.create({
+      data: {
+        nome: dto.nome,
+        usuario: usuarioLimpo,
+        email: emailLimpo,
+        senha: senhaHash,
+        status: 'PENDENTE', // ou ATIVO, conforme sua regra
+      },
+      select: {
+        id: true,
+        nome: true,
+        usuario: true,
+        email: true,
+        status: true,
+        criado_em: true,
+      },
+    })
+
+    // 3) registra recuperação pendente (pra forçar troca)
+    await this.prisma.recuperacao_senha.create({
+      data: {
+        usuario_id: criado.id,
+        email: emailLimpo,
+        senha_antiga: senhaHash, // aqui pode ficar igual (não tinha outra)
+        senha_nova: senhaHash,
+        utilizado: false,
+      },
+    })
+
+    // 4) envia e-mail com a senha provisória (via Gmail/SMTP no MailService)
+    await this.mailService.enviarSenhaProvisoria(
+      emailLimpo,
+      senhaProvisoria,
+      criado.nome,
+    )
+
+    return {
+      ...criado,
+      email_enviado: true,
     }
+  } catch (e: any) {
+    if (e?.code === 'P2002') {
+      const alvo = e?.meta?.target
+      throw new BadRequestException(`Já existe um cadastro com este ${alvo}`)
+    }
+    throw e
   }
+}
 
   // =========================
   // AUTH / ME (Verificar perfil logado)

@@ -28,17 +28,20 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       select: { id: true, nome: true, usuario: true, email: true, status: true },
     })
 
-if (!user) {
-  throw new UnauthorizedException('Usuário inválido')
-}
+    if (!user) throw new UnauthorizedException('Usuário inválido')
 
-
-    const permissoes = await this.permissoesService.permissoesDoUsuarioPorId(userId)
-
-    // ISSO vira req.user
-    return {
-      ...user,
-      permissoes, // ✅ agora o PermissionsGuard funciona
+    if (user.status === 'INATIVO') {
+      throw new UnauthorizedException('Sua conta está desativada.')
     }
+
+    let permissoes: string[] = []
+    try {
+      permissoes = await this.permissoesService.permissoesDoUsuarioPorId(userId)
+    } catch {
+      permissoes = []
+    }
+
+    // vira req.user
+    return { ...user, permissoes }
   }
 }

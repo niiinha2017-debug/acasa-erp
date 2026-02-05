@@ -1,0 +1,65 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+buildscript {
+    
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.7.2'
+        classpath 'com.google.gms:google-services:4.4.2'
+
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle files
+    }
+}
+
+apply from: "variables.gradle"
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
+subprojects { sub ->
+
+    // ✅ Força Kotlin único (evita duplicadas 1.6 vs 1.8)
+    sub.configurations.all {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == "org.jetbrains.kotlin") {
+                details.useVersion "1.8.22"
+            }
+        }
+    }
+
+    // ✅ Força Java 17 em módulos Android (app + libs), incluindo capacitor-android
+    sub.afterEvaluate {
+        def isAndroidApp = sub.plugins.hasPlugin("com.android.application")
+        def isAndroidLib = sub.plugins.hasPlugin("com.android.library")
+
+        if (isAndroidApp || isAndroidLib) {
+            sub.android {
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+            }
+        }
+
+        // Kotlin jvmTarget 17 quando existir
+        sub.tasks.matching { it.name.startsWith("compile") && it.name.endsWith("Kotlin") }.configureEach { t ->
+            if (t.hasProperty("kotlinOptions")) {
+                t.kotlinOptions.jvmTarget = "17"
+            }
+        }
+    }
+}
+
+
+

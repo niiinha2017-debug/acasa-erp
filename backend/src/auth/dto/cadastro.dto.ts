@@ -1,24 +1,19 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString } from 'class-validator'
+import { Transform } from 'class-transformer'
 
-export class CadastroDto {
+export class CreateUsuarioDto {
   @IsString()
   @IsNotEmpty()
-  nome: string;
+  @Transform(({ value }) => String(value ?? '').trim())
+  nome: string
 
   @IsString()
   @IsNotEmpty()
-  usuario: string;
+  @Transform(({ value }) => String(value ?? '').trim().toLowerCase())
+  usuario: string
 
   @IsEmail()
   @IsNotEmpty()
-  email: string;
-
-@IsString()
-@IsNotEmpty()
-@MinLength(6)
-senha: string;
-
-  @IsString()
-  @IsNotEmpty()
-  status: string;
+  @Transform(({ value }) => String(value ?? '').trim().toLowerCase())
+  email: string
 }

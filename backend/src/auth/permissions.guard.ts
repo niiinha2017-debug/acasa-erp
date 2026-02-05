@@ -1,4 +1,10 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common'
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
 
 @Injectable()
@@ -6,35 +12,41 @@ export class PermissionsGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    // ✅ Pega permissões do handler ou da classe e normaliza para array
-    const permissoesRequeridasRaw =
+    const raw =
       this.reflector.get<any>('permissoes', context.getHandler()) ||
       this.reflector.get<any>('permissoes', context.getClass())
 
-    const permissoesRequeridas: string[] = Array.isArray(permissoesRequeridasRaw)
-      ? permissoesRequeridasRaw
-      : permissoesRequeridasRaw
-        ? [String(permissoesRequeridasRaw)]
+    const required: string[] = Array.isArray(raw)
+      ? raw
+      : raw
+        ? [String(raw)]
         : []
 
-    // Se a rota não exige permissão, libera
-    if (permissoesRequeridas.length === 0) return true
+    // rota sem permissão -> libera
+    if (required.length === 0) return true
 
-    const { user } = context.switchToHttp().getRequest()
+    const req = context.switchToHttp().getRequest()
+    const user = req.user
 
-    // 🔒 Segurança: só usuário ATIVO pode acessar rotas internas com permissão
-    if (!user || user.status !== 'ATIVO') {
-      throw new ForbiddenException('Acesso negado: Sua conta ainda não está ativa ou foi bloqueada.')
+    // ✅ sem user (token ausente/invalidado) -> 401
+    if (!user) {
+      throw new UnauthorizedException('Sessão inválida')
     }
 
-    const permissoesUsuario: string[] = Array.isArray(user?.permissoes) ? user.permissoes : []
-
-    // Verifica se o usuário tem pelo menos uma das permissões exigidas
-    const temPermissao = permissoesRequeridas.some((p) => permissoesUsuario.includes(p))
-
-    if (!temPermissao) {
-      throw new ForbiddenException('Você não tem permissão para realizar esta ação.')
+    // 🔒 status
+    if (user.status !== 'ATIVO') {
+      throw new ForbiddenException('Acesso negado: sua conta não está ativa.')
     }
+
+    // ✅ override (se você quiser manter igual no Vue)
+    if (user?.usuario === 'Ana.P') return true
+    // ou se existir no model:
+    // if (user?.isAdmin) return true
+
+    const userPerms: string[] = Array.isArray(user?.permissoes) ? user.permissoes : []
+    const ok = required.some((p) => userPerms.includes(p))
+
+    if (!ok) throw new ForbiddenException('Você não tem permissão para realizar esta ação.')
 
     return true
   }
