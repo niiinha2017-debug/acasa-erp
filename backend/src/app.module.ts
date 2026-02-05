@@ -26,6 +26,7 @@ import { UtilsModule } from './utils/utils.module'
 import { PontoModule } from './ponto/ponto.module'
 import { ArquivosModule } from './arquivos/arquivos.module'
 import { AgendaService } from './agenda/agenda.service'
+import { AgendaModule } from './agenda/agenda.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { AgendaService } from './agenda/agenda.service'
     AgendaService,
     UtilsModule,
     PontoModule,
+    AgendaModule,
   ],
   controllers: [VendasController],
   providers: [VendasService],
