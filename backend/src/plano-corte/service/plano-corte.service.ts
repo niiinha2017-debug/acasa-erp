@@ -158,47 +158,6 @@ async update(id: number, dto: UpdatePlanoCorteDto) {
   });
 }
 
-async enviarParaProducao(id: number) {
-  const planoId = Number(id)
-  if (!planoId) throw new BadRequestException('ID inválido.')
-
-  await this.findOne(planoId)
-
-  return this.prisma.$transaction(async (tx) => {
-    // 1) pipeline do plano
-    await tx.plano_corte.update({
-      where: { id: planoId },
-      data: { status: 'EM_PRODUCAO' },
-    })
-
-const origem_tipo = 'PLANO_CORTE'
-const origem_id = planoId
-const agora = new Date()
-
-const projeto = await tx.producao_projetos.upsert({
-  where: {
-    origem_tipo_origem_id: { origem_tipo, origem_id },
-  },
-  create: {
-    codigo: `PROD-${randomUUID()}`,
-    origem_tipo,
-    origem_id,
-    status: 'ABERTO',
-    encaminhado_em: agora,
-  },
-  update: {
-    status: 'ABERTO',
-    encaminhado_em: agora,
-  },
-  select: { id: true, status: true, encaminhado_em: true },
-})
-
-return { ok: true, projeto_id: projeto.id }
-
-  })
-}
-
-
   async remove(id: number) {
     await this.findOne(id)
 

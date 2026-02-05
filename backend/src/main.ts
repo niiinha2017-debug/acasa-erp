@@ -1,13 +1,21 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import cookieParser from 'cookie-parser'; // ✅ ADD
+import { ValidationPipe } from '@nestjs/common'; // ✅ ADICIONE ISSO
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.setGlobalPrefix('api');
 
-  app.use(cookieParser()); // ✅ ADD (tem que ser antes das rotas)
+  // ✅ ADICIONE O VALIDATION PIPE AQUI
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,        // Remove campos que não estão no DTO
+    forbidNonWhitelisted: true, // Dá erro se mandarem campos extras
+    transform: true,        // Converte tipos (ex: string para number) automaticamente
+  }));
+
+  app.use(cookieParser());
 
   app.enableCors({
     origin: [
@@ -25,7 +33,7 @@ async function bootstrap() {
   });
 
   await app.listen(3000, '0.0.0.0');
-  console.log('🚀 Backend rodando na porta 3000');
+  console.log('🚀 Backend rodando na porta 3000 com Validações Ativas');
 }
 
 bootstrap();

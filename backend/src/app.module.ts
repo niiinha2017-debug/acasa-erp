@@ -18,7 +18,6 @@ import { DespesasModule } from './despesas/despesas.module'
 import { OrcamentosModule } from './orcamentos/orcamentos.module'
 import { VendasService } from './vendas/vendas.service'
 import { VendasController } from './vendas/vendas.controller'
-import { ProducaoModule } from './producao/producao.module'
 import { FinanceiroModule } from './financeiro/financeiro.module'
 import { ComprasModule } from './compras/compras.module'
 import { PermissoesModule } from './permissoes/permissoes.module'
@@ -26,7 +25,7 @@ import { EmpresaModule } from './modulos/empresa.module'
 import { UtilsModule } from './utils/utils.module'
 import { PontoModule } from './ponto/ponto.module'
 import { ArquivosModule } from './arquivos/arquivos.module'
-import {ProducaoEncaminhamentoModule,} from './producao-encaminhamento/producao-encaminhamento.module'
+import { AgendaService } from './agenda/agenda.service'
 
 @Module({
   imports: [
@@ -53,14 +52,13 @@ import {ProducaoEncaminhamentoModule,} from './producao-encaminhamento/producao-
     FuncionariosModule,
     DespesasModule,
     OrcamentosModule,
-    ProducaoModule,
     FinanceiroModule,
     ComprasModule,
     PermissoesModule,
     EmpresaModule,
+    AgendaService,
     UtilsModule,
     PontoModule,
-    ProducaoEncaminhamentoModule,
   ],
   controllers: [VendasController],
   providers: [VendasService],
