@@ -109,6 +109,7 @@ model Cliente {
 
   orcamentos orcamentos[]
   vendas     vendas[]
+  agendamentos agenda_global[]
 
   @@unique([cpf])
   @@unique([cnpj])
@@ -131,6 +132,7 @@ model orcamentos {
   atualizado_em DateTime @updatedAt
 
   itens    orcamento_itens[]
+  agendamentos agenda_global[]
 
   // ✅ agora é 0..1 venda por orçamento
   venda vendas?
@@ -188,6 +190,7 @@ model vendas {
   itens      vendas_itens[]
   comissoes  vendas_comissoes[]
   pagamentos vendas_pagamentos[] // ✅ NOVO
+  agendamentos agenda_global[]
 
   compras compras[]
 
@@ -234,9 +237,6 @@ model vendas_itens {
   valor_total    Decimal @db.Decimal(10, 2)
 
   compras compras[]
-
-  // ✅ NOVO
-  producao_projetos producao_projetos[] @relation("ProducaoProjetoVendaItem")
 
   criado_em DateTime @default(now())
 
@@ -349,9 +349,8 @@ model plano_corte {
 
   produtos plano_corte_produto[]
   consumos plano_corte_consumo[]
+  agendamentos agenda_global[]
 
-  // ✅ NOVO
-  producao_projetos producao_projetos[] @relation("ProducaoProjetoPlanoCorte")
 
   @@map("plano_corte")
  }
@@ -398,6 +397,7 @@ model plano_corte_produto {
 
   plano_corte plano_corte      @relation(fields: [plano_corte_id], references: [id])
   item        plano_corte_item @relation(fields: [item_id], references: [id])
+
 
   @@index([plano_corte_id])
   @@index([item_id])
@@ -512,10 +512,6 @@ model funcionarios {
   // ======================
   despesas despesas[]
 
-  // ✅ vínculo correto (many-to-many via pivot)
-   producao_tarefa_funcionarios producao_tarefa_funcionarios[]
-
-
   // ======================
   // CONTROLE
   // ======================
@@ -526,6 +522,7 @@ model funcionarios {
   ponto_registros       ponto_registros[]
   ponto_convites        ponto_convites[]
   ponto_justificativas  ponto_justificativas[]
+  agendamentos agenda_global[]
 
   @@map("funcionarios")
   }
@@ -596,8 +593,7 @@ model projetos {
   venda         vendas?     @relation(fields: [venda_id], references: [id])
 
   status_atual  String   @default("CLIENTE_CADASTRADO")
-  
-  producao      producao_projetos?
+
   agendamentos  agenda_global[]
 
   criado_em     DateTime @default(now())
@@ -607,27 +603,29 @@ model projetos {
  }
 
 model agenda_global {
-  id             Int      @id @default(autoincrement())
-  projeto_id     Int
-  projeto        projetos @relation(fields: [projeto_id], references: [id], onDelete: Cascade)
+  id              Int            @id @default(autoincrement())
   
-  // Para saber de onde veio esse agendamento
-  // Ex: 'PIPELINE_VENDA', 'TAREFA_PRODUCAO', 'MONTAGEM'
-  origem_tipo    String   
-  origem_id      Int?     // ID da tarefa de produção ou ID da etapa
+  // Vínculos que já tínhamos
+  cliente_id      Int?           // Opcional, pois no plano de corte o "dono" é o Fornecedor
+  funcionario_id  Int?
+  orcamento_id    Int?           @unique
+  venda_id        Int?           @unique
 
-  titulo         String   
-  inicio_em      DateTime
-  fim_em         DateTime
+  // ✅ NOVO VÍNCULO: Para serviços de terceiros
+  plano_corte_id  Int?           @unique
+  plano_corte     plano_corte?   @relation(fields: [plano_corte_id], references: [id])
+
+  // Identificador visual para o Vue
+  origem_tipo     String         // 'VENDA_INTERNA' ou 'SERVICO_FORNECEDOR'
   
-  // Funcionário designado para este compromisso global
-  funcionario_id Int?
-  funcionario    funcionarios? @relation(fields: [funcionario_id], references: [id])
+  titulo          String         // Ex: "Corte MDF - Fornecedor Leo Madeiras"
+  inicio_em       DateTime
+  fim_em          DateTime
+  status          String         
 
-  @@index([inicio_em, fim_em])
   @@map("agenda_global")
  }
-
+ 
 model contas_pagar {
   id Int @id @default(autoincrement())
 
