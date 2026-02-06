@@ -440,16 +440,6 @@
     <!-- FOOTER AÇÕES -->
     <!-- ===================== -->
     <footer class="flex items-center justify-end gap-3 p-6 border-t border-slate-100 bg-slate-50/30">
-      <Button
-        v-if="isEdit && can('vendas.editar')"
-        variant="secondary"
-        size="md"
-        type="button"
-        :disabled="saving"
-        @click="confirmarEnviarParaProducao"
-      >
-        Enviar para produção
-      </Button>
 
       <Button
         v-if="can(permSalvarVenda())"
@@ -572,7 +562,7 @@ import { reactive, ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { confirm } from '@/services/confirm'
 import { notify } from '@/services/notify'
-import { ClienteService, OrcamentosService, VendaService, ProducaoService } from '@/services/index'
+import { ClienteService, OrcamentosService, VendaService} from '@/services/index'
 import { format } from '@/utils/format'
 import { FORMAS_PAGAMENTO, COMISSOES, TAXAS_CARTAO, TAXA_NOTA_FISCAL, PIPELINE_CLIENTE } from '@/constantes'
 import { can } from '@/services/permissions'
@@ -789,17 +779,6 @@ async function confirmarSalvarVenda() {
   await salvar()
 }
 
-async function confirmarEnviarParaProducao() {
-  if (!isEdit.value) return
-  if (!can('vendas.editar')) return notify.error('Acesso negado.')
-
-  const ok = await confirm.show(
-    'Enviar para Produção',
-    `Deseja enviar a Venda #${vendaId.value} para Produção?`,
-  )
-  if (!ok) return
-  await enviarParaProducao()
-}
 
 async function confirmarRemoverItemVenda(row) {
   if (!isEdit.value || !can('vendas.editar')) return notify.error('Acesso negado.')
@@ -1132,24 +1111,6 @@ async function salvar() {
     notify.error('Erro ao salvar venda')
   } finally {
     saving.value = false
-  }
-}
-
-async function enviarParaProducao() {
-  if (!isEdit.value) return
-  if (!can('vendas.editar')) return notify.error('Acesso negado.')
-
-  try {
-    await ProducaoService.encaminhar({
-      origem_tipo: 'VENDA_CLIENTE',
-      origem_id: vendaId.value,
-      status: pipelineKey('EM_PRODUCAO'),
-    })
-    notify.success('Enviado para produção!')
-    await carregarVenda()
-  } catch (e) {
-    console.error(e)
-    notify.error('Erro ao enviar para produção')
   }
 }
 
