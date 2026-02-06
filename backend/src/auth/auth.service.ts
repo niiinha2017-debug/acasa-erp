@@ -5,63 +5,59 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcryptjs'; // Alterado para bcryptjs para manter consistência com o seu seed
+import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUsuarioDto } from './dto/cadastro.dto';
 import { PermissoesService } from '../permissoes/permissoes.service';
 import { MailService } from '../mail/mail.service';
 
-
 @Injectable()
 export class AuthService {
-constructor(
-  private readonly prisma: PrismaService,
-  private readonly jwt: JwtService,
-  private readonly permissoesService: PermissoesService,
-  private readonly mailService: MailService,
-) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jwt: JwtService,
+    private readonly permissoesService: PermissoesService,
+    private readonly mailService: MailService,
+  ) {}
 
-async refresh(refreshToken: string) {
-  try {
-    const decoded = await this.jwt.verifyAsync(refreshToken, {
-      secret: process.env.JWT_REFRESH_SECRET,
-    })
+  // 1. REFRESH TOKEN (Necessário para o build)
+  async refresh(refreshToken: string) {
+    try {
+      const decoded = await this.jwt.verifyAsync(refreshToken, {
+        secret: process.env.JWT_REFRESH_SECRET,
+      });
 
-    const userId = Number(decoded?.sub)
-    if (!userId) throw new UnauthorizedException('Sessão inválida')
+      const userId = Number(decoded?.sub);
+      if (!userId) throw new UnauthorizedException('Sessão inválida');
 
-    const user = await this.prisma.usuarios.findUnique({
-      where: { id: userId },
-      select: { id: true, usuario: true, email: true, status: true },
-    })
+      const user = await this.prisma.usuarios.findUnique({
+        where: { id: userId },
+        select: { id: true, usuario: true, email: true, status: true },
+      });
 
-    if (!user) throw new UnauthorizedException('Sessão inválida')
-    if (user.status === 'INATIVO') {
-      throw new UnauthorizedException('Sua conta está desativada.')
+      if (!user || user.status === 'INATIVO') {
+        throw new UnauthorizedException('Sessão inválida ou conta desativada');
+      }
+
+      const payload = {
+        sub: user.id,
+        usuario: user.usuario,
+        email: user.email,
+        status: user.status,
+      };
+
+      const token = await this.jwt.signAsync(payload, { expiresIn: '15m' });
+      return { token };
+    } catch {
+      throw new UnauthorizedException('Sessão expirada');
     }
-
-    const payload = {
-      sub: user.id,
-      usuario: user.usuario,
-      email: user.email,
-      status: user.status,
-    }
-
-    const token = await this.jwt.signAsync(payload, { expiresIn: '15m' })
-    return { token }
-  } catch {
-    throw new UnauthorizedException('Sessão expirada')
   }
-}
 
-  // =========================
-  // LOGIN (usuario OU email)
-  // =========================
+  // 2. LOGIN
   async login(usuario: string, senha: string) {
     const loginLimpo = String(usuario || '').trim().toLowerCase();
     const isEmail = loginLimpo.includes('@');
 
-    // Busca o usuário apenas pelos campos que restaram no seu model
     const registro = await this.prisma.usuarios.findFirst({
       where: isEmail ? { email: loginLimpo } : { usuario: loginLimpo },
     });
@@ -70,152 +66,103 @@ async refresh(refreshToken: string) {
       throw new UnauthorizedException('Usuário ou senha inválidos');
     }
 
-// DENTRO DO MÉTODO login NO auth.service.ts
-const senhaOk = await bcrypt.compare(senha, registro.senha);
-if (!senhaOk) {
-  throw new UnauthorizedException('Usuário ou senha inválidos');
-}
+    const senhaOk = await bcrypt.compare(senha, registro.senha);
+    if (!senhaOk) {
+      throw new UnauthorizedException('Usuário ou senha inválidos');
+    }
 
-// ALTERE ESTE BLOCO:
-if (registro.status === 'INATIVO') {
-  throw new UnauthorizedException('Sua conta está desativada. Entre em contato com o suporte.');
-}
-// Remova a trava do "PENDENTE", deixe o Vue Router cuidar disso!
+    if (registro.status === 'INATIVO') {
+      throw new UnauthorizedException('Sua conta está desativada.');
+    }
 
-
-    // Busca as permissões na tabela pivô através do serviço dedicado
     let permissoes: string[] = [];
     try {
       permissoes = await this.permissoesService.permissoesDoUsuarioPorId(registro.id);
-    } catch (e) {
+    } catch {
       permissoes = [];
     }
+
+    const recPendente = await this.prisma.recuperacao_senha.findFirst({
+      where: { usuario_id: registro.id, utilizado: false },
+      orderBy: { criado_em: 'desc' },
+    });
 
     const payload = {
       sub: registro.id,
       usuario: registro.usuario,
       email: registro.email,
       status: registro.status,
-      // Opcional: incluir permissões no payload do JWT se o token não ficar muito grande
-      // permissoes, 
     };
-    const recPendente = await this.prisma.recuperacao_senha.findFirst({
-      where: { usuario_id: registro.id, utilizado: false },
-      orderBy: { criado_em: 'desc' },
-      select: { id: true },
-    })
 
-    const precisaTrocarSenha = !!recPendente;
-
-const token = await this.jwt.signAsync(payload, {
-  expiresIn: '15m',
-})
-
-// refresh token só com o sub (menos dados = melhor)
-const refresh_token = await this.jwt.signAsync(
-  { sub: registro.id },
-  {
-    expiresIn: '30d',
-    secret: process.env.JWT_REFRESH_SECRET,
-  },
-)
-
-return {
-  token,
-  refresh_token, // ✅ app (Flutter) salva no secure storage
-  precisa_trocar_senha: precisaTrocarSenha,
-  usuario: {
-    id: registro.id,
-    nome: registro.nome,
-    usuario: registro.usuario,
-    email: registro.email,
-    status: registro.status,
-    criado_em: registro.criado_em,
-    permissoes,
-  },
-};
-
-
-  }
-
- // =========================
-// CADASTRO ADMIN (cria usuário + senha provisória + email)
-// =========================
-async cadastro(dto: CreateUsuarioDto) {
-  const emailLimpo = String(dto.email || '').trim().toLowerCase()
-  const usuarioLimpo = String(dto.usuario || '').trim().toLowerCase()
-
-  // 1) gera senha provisória
-  const senhaProvisoria = this.gerarSenhaProvisoria()
-  const senhaHash = await bcrypt.hash(senhaProvisoria, 10)
-
-  try {
-    // 2) cria usuário já com senha provisória
-    const criado = await this.prisma.usuarios.create({
-      data: {
-        nome: dto.nome,
-        usuario: usuarioLimpo,
-        email: emailLimpo,
-        senha: senhaHash,
-        status: 'PENDENTE', // ou ATIVO, conforme sua regra
-      },
-      select: {
-        id: true,
-        nome: true,
-        usuario: true,
-        email: true,
-        status: true,
-        criado_em: true,
-      },
-    })
-
-    // 3) registra recuperação pendente (pra forçar troca)
-    await this.prisma.recuperacao_senha.create({
-      data: {
-        usuario_id: criado.id,
-        email: emailLimpo,
-        senha_antiga: senhaHash, // aqui pode ficar igual (não tinha outra)
-        senha_nova: senhaHash,
-        utilizado: false,
-      },
-    })
-
-    // 4) envia e-mail com a senha provisória (via Gmail/SMTP no MailService)
-    await this.mailService.enviarSenhaProvisoria(
-      emailLimpo,
-      senhaProvisoria,
-      criado.nome,
-    )
+    const token = await this.jwt.signAsync(payload, { expiresIn: '15m' });
+    const refresh_token = await this.jwt.signAsync(
+      { sub: registro.id },
+      { expiresIn: '30d', secret: process.env.JWT_REFRESH_SECRET },
+    );
 
     return {
-      ...criado,
-      email_enviado: true,
-    }
-  } catch (e: any) {
-    if (e?.code === 'P2002') {
-      const alvo = e?.meta?.target
-      throw new BadRequestException(`Já existe um cadastro com este ${alvo}`)
-    }
-    throw e
+      token,
+      refresh_token,
+      precisa_trocar_senha: !!recPendente,
+      usuario: {
+        id: registro.id,
+        nome: registro.nome,
+        usuario: registro.usuario,
+        email: registro.email,
+        status: registro.status,
+        permissoes,
+      },
+    };
   }
-}
 
-  // =========================
-  // AUTH / ME (Verificar perfil logado)
-  // =========================
-  async me(usuarioId: number) {
-    const registro = await this.prisma.usuarios.findUnique({
-      where: { id: usuarioId },
-    });
+  // 3. CADASTRO (Admin cria funcionário)
+  async cadastro(dto: CreateUsuarioDto) {
+    const emailLimpo = String(dto.email || '').trim().toLowerCase();
+    const usuarioLimpo = String(dto.usuario || '').trim().toLowerCase();
+    const senhaProvisoria = this.gerarSenhaProvisoria();
+    const senhaHash = await bcrypt.hash(senhaProvisoria, 10);
 
-    if (!registro) {
-      throw new NotFoundException('Usuário não encontrado');
+    try {
+      const criado = await this.prisma.usuarios.create({
+        data: {
+          nome: dto.nome,
+          usuario: usuarioLimpo,
+          email: emailLimpo,
+          senha: senhaHash,
+          status: 'PENDENTE',
+        },
+      });
+
+      await this.prisma.recuperacao_senha.create({
+        data: {
+          usuario_id: criado.id,
+          email: emailLimpo,
+          senha_antiga: senhaHash,
+          senha_nova: senhaHash,
+          utilizado: false,
+        },
+      });
+
+      await this.mailService.enviarSenhaProvisoria(emailLimpo, senhaProvisoria, criado.nome);
+
+      return { ...criado, email_enviado: true };
+    } catch (e: any) {
+      if (e?.code === 'P2002') {
+        throw new BadRequestException(`Já existe um cadastro com este dado.`);
+      }
+      throw e;
     }
+  }
+
+  // 4. ME (Necessário para o build)
+  async me(usuarioId: number) {
+    const registro = await this.prisma.usuarios.findUnique({ where: { id: usuarioId } });
+    if (!registro) throw new NotFoundException('Usuário não encontrado');
 
     let permissoes: string[] = [];
     try {
       permissoes = await this.permissoesService.permissoesDoUsuarioPorId(usuarioId);
-    } catch (e) {
+    } catch {
       permissoes = [];
     }
 
@@ -225,104 +172,64 @@ async cadastro(dto: CreateUsuarioDto) {
       usuario: registro.usuario,
       email: registro.email,
       status: registro.status,
-      criado_em: registro.criado_em,
       permissoes,
     };
   }
 
-    // =========================
-  // ESQUECI MINHA SENHA
-  // (gera senha provisória e envia por e-mail)
-  // =========================
-  private gerarSenhaProvisoria() {
-    // simples, operacional e fácil de digitar
-    const n = Math.floor(100000 + Math.random() * 900000)
-    return `ACASA-${n}`
-  }
-
+  // 5. ESQUECI SENHA (Necessário para o build)
   async esqueciSenha(email: string) {
-    const emailLimpo = String(email || '').trim().toLowerCase()
+    const emailLimpo = String(email || '').trim().toLowerCase();
+    const usuario = await this.prisma.usuarios.findUnique({ where: { email: emailLimpo } });
 
-    const usuario = await this.prisma.usuarios.findUnique({
-      where: { email: emailLimpo },
-    })
+    if (!usuario) return { ok: true };
 
-    // Segurança: não revela se o e-mail existe
-    if (!usuario) {
-      return { ok: true }
-    }
-
-    const senhaProvisoria = this.gerarSenhaProvisoria()
-    const senhaAntigaHash = usuario.senha
-    const senhaNovaHash = await bcrypt.hash(senhaProvisoria, 10)
+    const senhaProvisoria = this.gerarSenhaProvisoria();
+    const senhaNovaHash = await bcrypt.hash(senhaProvisoria, 10);
 
     await this.prisma.$transaction([
-      this.prisma.usuarios.update({
-        where: { id: usuario.id },
-        data: { senha: senhaNovaHash },
-      }),
+      this.prisma.usuarios.update({ where: { id: usuario.id }, data: { senha: senhaNovaHash } }),
       this.prisma.recuperacao_senha.create({
         data: {
           usuario_id: usuario.id,
           email: emailLimpo,
-          senha_antiga: senhaAntigaHash,
+          senha_antiga: usuario.senha,
           senha_nova: senhaNovaHash,
           utilizado: false,
         },
       }),
-    ])
+    ]);
 
-    await this.mailService.enviarSenhaProvisoria(
-      emailLimpo,
-      senhaProvisoria,
-      usuario.nome,
-    )
-
-    return { ok: true }
+    await this.mailService.enviarSenhaProvisoria(emailLimpo, senhaProvisoria, usuario.nome);
+    return { ok: true };
   }
-    // =========================
-  // ALTERAR SENHA (definitiva)
-  // =========================
+
+  // 6. ALTERAR SENHA (Ativa a conta)
   async alterarSenha(usuarioId: number, senhaAtual: string, senhaNova: string) {
-    const usuario = await this.prisma.usuarios.findUnique({
-      where: { id: usuarioId },
-    })
+    const usuario = await this.prisma.usuarios.findUnique({ where: { id: usuarioId } });
+    if (!usuario) throw new UnauthorizedException('Usuário inválido');
 
-    if (!usuario) {
-      throw new UnauthorizedException('Usuário inválido')
-    }
+    const senhaOk = await bcrypt.compare(senhaAtual, usuario.senha);
+    if (!senhaOk) throw new BadRequestException('Senha atual incorreta');
 
-    const senhaOk = await bcrypt.compare(senhaAtual, usuario.senha)
-    if (!senhaOk) {
-      throw new BadRequestException('Senha atual incorreta')
-    }
-
-    const novaHash = await bcrypt.hash(senhaNova, 10)
-
-    // pega a recuperação pendente mais recente
+    const novaHash = await bcrypt.hash(senhaNova, 10);
     const rec = await this.prisma.recuperacao_senha.findFirst({
-      where: {
-        usuario_id: usuarioId,
-        utilizado: false,
-      },
+      where: { usuario_id: usuarioId, utilizado: false },
       orderBy: { criado_em: 'desc' },
-    })
+    });
 
     await this.prisma.$transaction([
       this.prisma.usuarios.update({
         where: { id: usuarioId },
-        data: { senha: novaHash },
+        data: { senha: novaHash, status: 'ATIVO' }, // Ativa aqui!
       }),
-      ...(rec
-        ? [
-            this.prisma.recuperacao_senha.update({
-              where: { id: rec.id },
-              data: { utilizado: true },
-            }),
-          ]
-        : []),
-    ])
+      ...(rec ? [this.prisma.recuperacao_senha.update({ where: { id: rec.id }, data: { utilizado: true } })] : []),
+    ]);
 
-    return { ok: true }
+    return { ok: true };
+  }
+
+  private gerarSenhaProvisoria() {
+    const n = Math.floor(100000 + Math.random() * 900000);
+    return `ACASA-${n}`;
   }
 }
