@@ -11,7 +11,7 @@
         <div class="px-7 py-6 border-b border-slate-200/70 dark:border-slate-800/70">
           <div class="flex items-center gap-4">
             <div class="grid size-12 place-items-center rounded-2xl bg-white/80 ring-1 ring-slate-200 shadow-sm backdrop-blur dark:bg-slate-900/50 dark:ring-slate-800">
-              <img src="/pwa-192.png" alt="Logo" class="size-8 object-contain" />
+              <img src="/logo.png" alt="Logo" class="size-8 object-contain" />
             </div>
             <div class="flex-1">
               <p class="text-[10px] font-black uppercase tracking-[0.32em] text-slate-500 dark:text-slate-400">sistema</p>
