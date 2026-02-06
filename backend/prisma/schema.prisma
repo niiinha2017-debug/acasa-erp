@@ -1,11 +1,11 @@
 generator client {
   provider = "prisma-client-js"
-}
+ }
 
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
-}
+ }
 
 model usuarios {
   id            Int      @id @default(autoincrement())
@@ -21,7 +21,7 @@ model usuarios {
   permissoes   usuarios_permissoes[]
 
   @@map("usuarios")
-}
+ }
 
 model recuperacao_senha {
   id           Int      @id @default(autoincrement())
@@ -37,7 +37,7 @@ model recuperacao_senha {
 
   @@index([usuario_id])
   @@map("recuperacao_senha")
-}
+ }
 
 model usuarios_permissoes {
   id Int @id @default(autoincrement())
@@ -52,7 +52,7 @@ model usuarios_permissoes {
   @@index([usuario_id])
   @@index([permissao_id])
   @@map("usuarios_permissoes")
-}
+ }
 
 model permissoes {
   id        Int      @id @default(autoincrement())
@@ -63,7 +63,7 @@ model permissoes {
   usuarios usuarios_permissoes[]
 
   @@map("permissoes")
-}
+ }
 
 model Cliente {
   id Int @id @default(autoincrement())
@@ -118,7 +118,7 @@ model Cliente {
   @@unique([email])
   @@index([indicacao_id])
   @@map("clientes")
-}
+ }
 
 model orcamentos {
   id Int @id @default(autoincrement())
@@ -143,7 +143,7 @@ model orcamentos {
 
   @@index([cliente_id])
   @@map("orcamentos")
-}
+ }
 
 model orcamento_itens {
   id           Int        @id @default(autoincrement())
@@ -159,7 +159,7 @@ model orcamento_itens {
   criado_em DateTime @default(now())
 
   @@map("orcamento_itens")
-}
+ }
 
 model vendas {
   id Int @id @default(autoincrement())
@@ -203,7 +203,7 @@ model vendas {
   @@index([cliente_id])
   @@index([status])
   @@map("vendas")
-}
+ }
 
 model vendas_pagamentos {
   id Int @id @default(autoincrement())
@@ -227,7 +227,7 @@ model vendas_pagamentos {
   @@index([forma_pagamento_chave])
   @@index([status_financeiro_chave])
   @@map("vendas_pagamentos")
-}
+ }
 
 model vendas_itens {
   id       Int    @id @default(autoincrement())
@@ -248,7 +248,7 @@ model vendas_itens {
 
   @@index([venda_id])
   @@map("vendas_itens")
-}
+ }
 
 model vendas_comissoes {
   id Int @id @default(autoincrement())
@@ -273,7 +273,7 @@ model vendas_comissoes {
   @@index([venda_id])
   @@index([tipo_comissao_chave])
   @@map("vendas_comissoes")
-}
+ }
 
 model Fornecedor {
   id              Int      @id @default(autoincrement())
@@ -308,7 +308,7 @@ model Fornecedor {
   compras                 compras[]
 
   @@map("fornecedor")
-}
+ }
 
 model produtos {
   id            Int        @id @default(autoincrement())
@@ -338,7 +338,7 @@ model produtos {
 
   @@index([fornecedor_id])
   @@map("produtos")
-}
+ }
 
 model plano_corte {
   id            Int      @id @default(autoincrement())
@@ -358,7 +358,7 @@ model plano_corte {
   agendamentos agenda_global[]
 
   @@map("plano_corte")
-}
+ }
 
 model plano_corte_item {
   id            Int @id @default(autoincrement())
@@ -388,7 +388,7 @@ model plano_corte_item {
 
   @@index([fornecedor_id])
   @@map("plano_corte_item")
-}
+ }
 
 model plano_corte_produto {
   id             Int @id @default(autoincrement())
@@ -406,7 +406,7 @@ model plano_corte_produto {
   @@index([plano_corte_id])
   @@index([item_id])
   @@map("plano_corte_produto")
-}
+ }
 
 model plano_corte_consumo {
   id             Int @id @default(autoincrement())
@@ -422,7 +422,7 @@ model plano_corte_consumo {
 
   @@unique([plano_corte_id, produto_id]) // ✅ não duplica consumo no mesmo plano
   @@map("plano_corte_consumo")
-}
+ }
 
 model funcionarios {
   id Int @id @default(autoincrement())
@@ -527,7 +527,7 @@ model funcionarios {
   equipe               agenda_funcionarios[]
 
   @@map("funcionarios")
-}
+ }
 
 model despesas {
   id Int @id @default(autoincrement())

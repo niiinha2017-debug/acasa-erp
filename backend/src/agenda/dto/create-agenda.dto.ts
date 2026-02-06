@@ -48,5 +48,9 @@ export class CreateAgendaDto {
 
   @IsOptional()
   @IsString()
+  categoria?: string; // Agora não barra mais o 400 se não for enviado
+
+  @IsOptional()
+  @IsString()
   status?: string; // Ex: PENDENTE, EM_ANDAMENTO
 }

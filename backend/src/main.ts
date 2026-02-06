@@ -17,20 +17,18 @@ async function bootstrap() {
 
   app.use(cookieParser());
 
-  app.enableCors({
-    origin: [
-      'http://localhost:3001',
-      'http://127.0.0.1:3001',
-      'http://192.168.15.155:3001',
-      'http://localhost:5173',
-      'http://127.0.0.1:5173',
-      'https://acasamarcenaria.com.br',
-      'https://www.acasamarcenaria.com.br',
-    ],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  });
+app.enableCors({
+  origin: [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'tauri://localhost',      // ✅ Importante para Tauri v1 (Windows)
+    'http://tauri.localhost', // ✅ Importante para Tauri v2
+    'https://acasamarcenaria.com.br',
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+});
 
   await app.listen(3000, '0.0.0.0');
   console.log('🚀 Backend rodando na porta 3000 com Validações Ativas');

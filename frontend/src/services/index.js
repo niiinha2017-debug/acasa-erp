@@ -22,12 +22,6 @@ export const MailService = {
   enviarTeste: (email) => api.get('/mail/teste', { params: { para: email } }),
 }
 
-export const ProducaoEncaminhamentoService = {
-  encaminhar(payload) {
-    return api.post('/producao/encaminhar', payload)
-  },
-}
-
 // --- SERVIÇO DE CLIENTES ---
 export const ClienteService = {
   listar: () => api.get('/clientes'),
@@ -146,22 +140,6 @@ export const PlanoCorteService = {
     buscar: (id) => api.get(`/plano-corte-consumos/${id}`),
     registrar: (dados) => api.post('/plano-corte-consumos', dados),
     remover: (id) => api.delete(`/plano-corte-consumos/${id}`),
-  },
-}
-
-// --- PRODUÇÃO ---
-export const ProducaoService = {
-  getAgenda: (inicio, fim) => api.get('/producao/agenda', { params: { inicio, fim } }),
-  encaminhar: (dados) => api.post('/producao/encaminhar', dados),
-
-  projetos: {
-    buscar: (id) => api.get(`/producao/projetos/${id}`),
-  },
-
-  tarefas: {
-    criar: (dados) => api.post('/producao/tarefas', dados),
-    atualizar: (id, dados) => api.put(`/producao/tarefas/${id}`, dados),
-    remover: (id) => api.delete(`/producao/tarefas/${id}`),
   },
 }
 
@@ -298,3 +276,29 @@ export const PontoJustificativasService = {
     api.delete(`/ponto/justificativas/${id}`),
 }
 
+export const agendaService = {
+  // Buscar todos (com filtro opcional de data)
+  listarTodos(inicio, fim) {
+    return api.get('/agenda', { params: { inicio, fim } });
+  },
+
+  // Criar novo agendamento
+  criar(dados) {
+    return api.post('/agenda', dados);
+  },
+
+  // Buscar agenda do marceneiro
+  buscarPorFuncionario(id) {
+    return api.get(`/agenda/funcionario/${id}`);
+  },
+
+  // Atualizar status (Finalizar)
+  atualizarStatus(id, status) {
+    return api.patch(`/agenda/${id}/status`, { status });
+  },
+
+  // Deletar
+  excluir(id) {
+    return api.delete(`/agenda/${id}`);
+  }
+};
