@@ -216,10 +216,16 @@ async function gerar() {
       return
     }
 
-    const PONTO_BASE_URL = 'https://ponto.acasamarcenaria.com.br'
-    const url = `${PONTO_BASE_URL}/ativar?code=${encodeURIComponent(code)}`
+    const codeEnc = encodeURIComponent(code)
 
-    convite.value = { ...data, code, url }
+    // ✅ abre o APP (se estiver instalado e configurado)
+    const appUrl = `acasa-ponto://ativar?code=${codeEnc}`
+
+    // ✅ fallback web (sempre funciona)
+    const PONTO_BASE_URL = 'https://ponto.acasamarcenaria.com.br'
+    const webUrl = `${PONTO_BASE_URL}/ativar?code=${codeEnc}`
+
+    convite.value = { ...data, code, appUrl, webUrl }
     notify.success('Convite gerado.')
   } catch (e) {
     console.error(e)
@@ -228,6 +234,7 @@ async function gerar() {
     loadingGerar.value = false
   }
 }
+
 
 async function copiar(texto) {
   if (!podeGerar.value) return notify.error('Acesso negado.')
@@ -241,7 +248,7 @@ async function copiar(texto) {
 
 function abrirWhats() {
   if (!podeGerar.value) return notify.error('Acesso negado.')
-  if (!convite.value?.url) return
+  if (!convite.value?.appUrl && !convite.value?.webUrl) return
 
   const id = Number(funcionario_id.value)
   const f = funcionarios.value.find((x) => x.id === id)
@@ -250,7 +257,12 @@ function abrirWhats() {
   const msg =
 `Olá ${nome}!
 Segue seu link privado para ativar o APP do Ponto:
-${convite.value.url}
+
+✅ Abrir no APP (se já estiver instalado):
+${convite.value.appUrl}
+
+🌐 Se não abrir, use no navegador:
+${convite.value.webUrl}
 
 Se expirar, me avise que eu gero outro.`
 
