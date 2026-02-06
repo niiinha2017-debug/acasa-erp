@@ -180,16 +180,6 @@
         <div v-else></div>
 
         <div class="flex items-center gap-6">
-<Button
-  v-if="isEdit && can('plano_corte.enviar_producao')"
-  type="button"
-  variant="secondary"
-  :loading="encaminhando"
-  :disabled="statusPlano === 'EM_PRODUCAO'"
-  @click="encaminharParaProducao"
->
-  Enviar Produção
-</Button>
 
 
 
@@ -326,7 +316,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { maskMoneyBR } from '@/utils/masks'
-import { PlanoCorteService, FornecedorService, ProducaoService } from '@/services/index'
+import { PlanoCorteService, FornecedorService } from '@/services/index'
 import { PIPELINE_PLANO_CORTE, UNIDADES } from '@/constantes'
 import { confirm } from '@/services/confirm'
 
@@ -507,30 +497,6 @@ async function confirmarExcluirPlano() {
     router.push('/plano-corte')
   } finally {
     salvando.value = false
-  }
-}
-
-async function encaminharParaProducao() {
-  if (!can('plano_corte.enviar_producao')) return notify.error('Acesso negado.')
-  if (!isEdit.value) return
-
-  encaminhando.value = true
-  try {
-    await ProducaoService.encaminhar({
-  origem_tipo: 'PLANO_CORTE',
-  origem_id: planoId.value,
-  // status opcional: se não mandar, backend usa 'ABERTO'
-  // status: 'ABERTO',
-})
-
-
-    const { data } = await PlanoCorteService.buscar(planoId.value)
-    statusPlano.value = data.status ?? ''
-    notify.success('Enviado para produção.')
-  } catch (err) {
-    notify.error(err?.response?.data?.message || 'Erro ao enviar para produção.')
-  } finally {
-    encaminhando.value = false
   }
 }
 
