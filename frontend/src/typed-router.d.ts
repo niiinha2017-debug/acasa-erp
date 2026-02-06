@@ -212,13 +212,6 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/producao/': RouteRecordInfo<
-      '/producao/',
-      '/producao',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
     '/produtos/': RouteRecordInfo<
       '/produtos/',
       '/produtos',
@@ -433,12 +426,6 @@ declare module 'vue-router/auto-routes' {
     'src/pages/plano-corte/itens/index.vue': {
       routes:
         | '/plano-corte/itens/'
-      views:
-        | never
-    }
-    'src/pages/producao/index.vue': {
-      routes:
-        | '/producao/'
       views:
         | never
     }

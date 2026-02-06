@@ -10,20 +10,24 @@
     "beforeBuildCommand": "npm run build"
   },
 "app": {
-"windows": [
-  {
-    "title": "A Casa Marcenaria",
-    "width": 1280,
-    "height": 720,
-    "resizable": true,
-    "devtools": true  
-  }
-],
   "security": {
-    "csp": null
+    "csp": "default-src 'self'; connect-src 'self' https://acasamarcenaria.com.br"
+  },
+  "windows": [
+    {
+      "title": "A Casa Marcenaria",
+      "width": 1280,
+      "height": 720,
+      "resizable": true,
+      "devtools": true
+    }
+  ]
+},
+"plugins": {
+  "http": {
+    "scope": ["https://acasamarcenaria.com.br/**"]
   }
 },
-
   "bundle": {
     "active": true,
     "targets": "all",
