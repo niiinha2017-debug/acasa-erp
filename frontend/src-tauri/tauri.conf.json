@@ -10,15 +10,15 @@
     "beforeBuildCommand": "npm run build"
   },
 "app": {
-  "windows": [
-    {
-      "title": "A Casa Móveis Planejados.",
-      "width": 1280,
-      "height": 720,
-      "resizable": true,
-      "fullscreen": false
-    }
-  ],
+"windows": [
+  {
+    "title": "A Casa Marcenaria",
+    "width": 1280,
+    "height": 720,
+    "resizable": true,
+    "devtools": true  
+  }
+],
   "security": {
     "csp": null
   }
