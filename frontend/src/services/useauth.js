@@ -116,19 +116,22 @@ export function useAuth() {
     }
   }
 
-  async function alterarSenha(senha_atual, senha_nova) {
-    loading.value = true
-    error.value = ''
-    try {
-      const { data } = await api.post('/auth/alterar-senha', { senha_atual, senha_nova })
-      return data
-    } catch (e) {
-      error.value = e?.response?.data?.message || 'Erro ao alterar senha'
-      throw e
-    } finally {
-      loading.value = false
-    }
+// Mude de: async function alterarSenha(senha_atual, senha_nova)
+// Para:
+async function alterarSenha(dados) { // dados = { senha_atual, senha_nova }
+  loading.value = true
+  error.value = ''
+  try {
+    // Passamos o objeto 'dados' direto para o axios
+    const { data } = await api.post('/auth/alterar-senha', dados)
+    return data
+  } catch (e) {
+    error.value = e?.response?.data?.message || 'Erro ao alterar senha'
+    throw e
+  } finally {
+    loading.value = false
   }
+}
 
   async function syncMe() {
     const tokenLocal = storage.getToken()

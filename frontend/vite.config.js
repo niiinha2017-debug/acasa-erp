@@ -4,7 +4,7 @@ import VueRouter from 'unplugin-vue-router/vite'
 import path from 'path'
 
 export default defineConfig({
-  base: '/',
+  base: './',
 
   plugins: [
     VueRouter({

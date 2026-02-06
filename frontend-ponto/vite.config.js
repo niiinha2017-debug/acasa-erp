@@ -6,22 +6,25 @@ import path from 'path'
 import VueRouter from 'unplugin-vue-router/vite'
 
 export default defineConfig(({ mode }) => {
-  const isCapacitor = mode === 'capacitor'
+  // ✅ modos "app" (ajuste se você usa outro nome)
+  const isNative = mode === 'capacitor' || mode === 'tauri'
 
   return {
+    // ✅ no app precisa ser relativo (senão dá tela branca)
+    base: isNative ? './' : '/',
+
     plugins: [
       VueRouter(),
       vue(),
       tailwindcss(),
 
       VitePWA({
-        // ✅ No APK (Capacitor) DESLIGA SW/PWA
-        disable: isCapacitor,
+        // ✅ no app DESLIGA PWA/SW
+        disable: isNative,
 
         registerType: 'autoUpdate',
-        devOptions: { enabled: true },
+        devOptions: { enabled: !isNative },
 
-        // PWA do ponto na raiz do subdomínio (web)
         scope: '/',
         manifest: {
           name: 'ACASA Ponto',
@@ -40,9 +43,7 @@ export default defineConfig(({ mode }) => {
     ],
 
     resolve: {
-      alias: {
-        '@': path.resolve(__dirname, './src'),
-      },
+      alias: { '@': path.resolve(__dirname, './src') },
     },
 
     build: {
