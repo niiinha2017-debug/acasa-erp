@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Downloads ACASA ERP</title>
+    <style>
+        :root {
+            --primary: #2ecc71;
+            --blue: #3498db;
+            --dark: #121212;
+            --card: #1e1e1e;
+            --text: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--dark);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 { color: var(--primary); margin-bottom: 0.5rem; }
+        .subtitle { color: #888; margin-bottom: 3rem; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .section-title {
+            grid-column: 1 / -1;
+            text-align: left;
+            border-bottom: 1px solid #333;
+            padding-bottom: 0.5rem;
+            margin-top: 1rem;
+            color: #aaa;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card {
+            background: var(--card);
+            padding: 2rem;
+            border-radius: 12px;
+            transition: transform 0.2s;
+            border: 1px solid #222;
+        }
+
+        .card:hover { transform: translateY(-5px); border-color: #444; }
+
+        .btn {
+            display: block;
+            padding: 12px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: bold;
+            margin-top: 10px;
+            transition: filter 0.3s;
+        }
+
+        .btn-win { background-color: var(--blue); color: white; }
+        .btn-apk { background-color: var(--primary); color: #000; }
+        .btn:hover { filter: brightness(1.2); }
+
+        .file-info { font-size: 0.75rem; color: #666; margin-top: 8px; }
+        footer { margin-top: 4rem; color: #444; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>A CASA ERP</h1>
+    <p class="subtitle">Central de Instalação e Downloads</p>
+
+    <div class="grid">
+        <div class="section-title">Computador (Windows)</div>
+        
+<div class="card">
+            <h3>ERP Desktop</h3>
+            <p style="font-size: 0.9rem; color: #bbb; margin-bottom: 15px;">Instalador padrão para Windows</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <a href="erp/Acasa.exe" class="btn btn-win" download>
+                    Baixar Instalador (.exe)
+                </a>
+                
+                <a href="erp/Acasa.msi" class="btn btn-win" style="background-color: #2c3e50;" download>
+                    Baixar Pacote (.msi)
+                </a>
+            </div>
+
+            <div class="file-info" style="margin-top: 15px;">Versão 0.1.0 (x64)</div>
+        </div>
+
+        <div class="section-title">Dispositivos Móveis (Android)</div>
+
+        <div class="card">
+            <h3>ERP Mobile</h3>
+            <a href="./erp/Acasa.apk" class="btn btn-apk">Baixar APK</a>
+            <div class="file-info">Versão Debug</div>
+        </div>
+
+        <div class="card">
+            <h3>Ponto Digital</h3>
+            <a href="./ponto/ponto.apk" class="btn btn-apk">Baixar APK</a>
+            <div class="file-info">Versão Debug</div>
+        </div>
+    </div>
+
+    <footer>
+        &copy; 2026 A CASA Marcenaria - Sistema Interno
+    </footer>
+</div>
+
+</body>
+</html>

@@ -11,15 +11,22 @@ const loading = ref(false)
 const error = ref('')
 
 // ✅ boot check: roda UMA vez quando o arquivo é importado
-if (token.value && !sessionStorage.getItem(SESSION_KEY)) {
-  // best-effort: limpa cookie HttpOnly do refresh
-  fetch('/api/auth/logout', { method: 'POST', credentials: 'include', keepalive: true }).catch(() => {})
+// useAuth.js
 
+// ✅ Boot Check: Se abriu o site e não tem a marcação de sessão ativa, DESTROI TUDO.
+if (token.value && !sessionStorage.getItem(SESSION_KEY)) {
+  // Limpa storage físico imediatamente
   storage.removeToken()
   storage.removeUser()
+  
+  // Limpa estado reativo
   token.value = null
   usuarioLogado.value = null
+
+  // Força o navegador a ir para o login antes mesmo de carregar o resto
+  window.location.href = '/login'
 } else if (token.value) {
+  // Se tem token e a sessão já estava marcada, mantém viva
   sessionStorage.setItem(SESSION_KEY, '1')
 }
 

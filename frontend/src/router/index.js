@@ -39,25 +39,29 @@ router.beforeEach(async (to) => {
   // 1. Rota Pública? Deixa passar.
   if (to.meta?.public) return true
 
-  // 2. Não tá logado? Login.
+  // 2. Não tem token? Login direto.
   if (!token) return { path: '/login' }
 
-  // 3. Busca a verdade no servidor (Sincroniza Status/Permissões)
-  await ensureMe()
-  const user = storage.getUser()
+  // 3. Sincroniza com o servidor. 
+  // Se ensureMe falhar, ele já limpa o storage e retorna null.
+  const user = await ensureMe()
+  
+  // ❌ AQUI ESTAVA O ERRO: Se o servidor não validou o usuário, bloqueia!
+  if (!user) {
+    return { path: '/login' }
+  }
+
   const status = String(user?.status || '').toUpperCase()
 
-  // 4. Se for ATIVO e tentar ir pro pendente, volta pra home
-  if (status === 'ATIVO' && to.path === '/pendente') return { path: '/' }
-
-  // 5. Se for PENDENTE, só vê a tela de pendente
+  // 4. Lógica de PENDENTE (Troca de senha)
   if (status !== 'ATIVO') {
     if (to.path === '/pendente') return true
     return { path: '/pendente' }
   }
 
-  // PRONTO: Sem mapa, sem "requiredPerm", sem complicação. 
-  // O acesso aos dados quem vai barrar é o Backend se o token não tiver a permissão.
+  // 5. Se já é ATIVO e está na tela de pendente, manda pra home
+  if (status === 'ATIVO' && to.path === '/pendente') return { path: '/' }
+
   return true
 })
 
