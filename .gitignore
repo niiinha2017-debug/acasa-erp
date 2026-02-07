@@ -57,3 +57,22 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 node_modules
 backend/.env.production
 frontend/.env.production
+
+# --- Android/Capacitor generated (NUNCA versionar) ---
+frontend/android/.gradle/
+frontend/android/build/
+frontend/android/app/build/
+frontend/android/app/src/main/assets/
+frontend/android/app/src/main/res/xml/config.xml
+frontend/android/capacitor-cordova-android-plugins/
+frontend/android/local.properties
+
+# Android signing (NUNCA versionar)
+frontend/android/keystore.properties
+*.jks
+*.keystore
+
+# random local files
+.db
+s
+tore.properties
