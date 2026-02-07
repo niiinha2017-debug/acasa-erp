@@ -1,5 +1,15 @@
 apply plugin: 'com.android.application'
 
+import java.util.Properties
+import java.io.FileInputStream
+
+// ---- KEYS (release signing) ----
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace "com.acasa.erp"
     compileSdk rootProject.ext.compileSdkVersion
@@ -24,8 +34,27 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 
-    buildTypes {
+    signingConfigs {
         release {
+            // Só configura se existir o arquivo (não quebra o build do dev/CI)
+            if (keystorePropertiesFile.exists()) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            // debug continua assinando com debug padrão (normal)
+        }
+
+        release {
+            // ✅ Assina o release (para de sair -unsigned.apk)
+            signingConfig signingConfigs.release
+
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
