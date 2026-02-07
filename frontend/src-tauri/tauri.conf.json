@@ -3,31 +3,38 @@
   "productName": "Acasa",
   "version": "0.1.0",
   "identifier": "com.acasa.erp",
+
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build"
   },
-"app": {
-  "security": {
-    "csp": "default-src 'self'; connect-src 'self' https://acasamarcenaria.com.br"
-  },
-  "windows": [
-    {
-      "title": "A Casa Marcenaria",
-      "width": 1280,
-      "height": 720,
-      "resizable": true,
-      "devtools": true
+
+  "app": {
+    "windows": [
+      {
+        "title": "A Casa Marcenaria",
+        "width": 1280,
+        "height": 720,
+        "resizable": true,
+        "devtools": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; connect-src 'self' https://acasamarcenaria.com.br https://aplicativo.acasamarcenaria.com.br;"
     }
-  ]
-},
-"plugins": {
-  "http": {
-    "scope": ["https://acasamarcenaria.com.br/**"]
-  }
-},
+  },
+
+  "plugins": {
+    "http": {
+      "scope": [
+        "https://acasamarcenaria.com.br/**",
+        "https://aplicativo.acasamarcenaria.com.br/**"
+      ]
+    }
+  },
+
   "bundle": {
     "active": true,
     "targets": "all",
