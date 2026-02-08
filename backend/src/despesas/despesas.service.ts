@@ -20,20 +20,60 @@ export class DespesasService {
     return d
   }
 
+private parseBRDate(input?: string): Date | null {
+  if (!input) return null
+
+  // aceita ISO também
+  if (/^\d{4}-\d{2}-\d{2}/.test(input)) {
+    const d = new Date(input)
+    return isNaN(d.getTime()) ? null : d
+  }
+
+  // dd/mm/aaaa
+  const m = String(input).trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+  if (!m) return null
+
+  const dd = Number(m[1])
+  const mm = Number(m[2])
+  const yyyy = Number(m[3])
+
+  const d = new Date(yyyy, mm - 1, dd)
+  if (d.getFullYear() !== yyyy || d.getMonth() !== mm - 1 || d.getDate() !== dd) return null
+  return d
+}
+
+private parseMoney(input: any): number {
+  const s = String(input ?? '').trim()
+  if (!s) return NaN
+
+  const cleaned = s.replace(/[^\d,.-]/g, '')
+  const normalized = cleaned.includes(',')
+    ? cleaned.replace(/\./g, '').replace(',', '.')
+    : cleaned
+
+  return Number(normalized)
+}
+
+private toDecimalString(n: number): string {
+  return (Math.round(n * 100) / 100).toFixed(2)
+}
+
+
   async create(dto: CreateDespesaDto): Promise<despesas[]> {
     // parcelas
     let parcelas = Number(dto.quantidade_parcelas ?? 1)
     if (!Number.isFinite(parcelas) || parcelas < 1) parcelas = 1
 
     // datas
-    const primeiroVenc = new Date(dto.data_vencimento)
-    if (isNaN(primeiroVenc.getTime())) throw new BadRequestException('data_vencimento inválida')
+     const primeiroVenc = this.parseBRDate(dto.data_vencimento)
+     if (!primeiroVenc) throw new BadRequestException('data_vencimento inválida')
 
-    const dataRegistro = dto.data_registro ? new Date(dto.data_registro) : undefined
-    if (dto.data_registro && isNaN(dataRegistro!.getTime())) throw new BadRequestException('data_registro inválida')
+     const dataRegistro = dto.data_registro ? this.parseBRDate(dto.data_registro) : null
+     if (dto.data_registro && !dataRegistro) throw new BadRequestException('data_registro inválida')
 
-    const dataPagamento = dto.data_pagamento ? new Date(dto.data_pagamento) : null
-    if (dto.data_pagamento && isNaN(dataPagamento!.getTime())) throw new BadRequestException('data_pagamento inválida')
+     const dataPagamento = dto.data_pagamento ? this.parseBRDate(dto.data_pagamento) : null
+     if (dto.data_pagamento && !dataPagamento) throw new BadRequestException('data_pagamento inválida')
+
 
     // valida banco/cartão
     const precisaBanco = ['PIX', 'TRANSFERENCIA', 'CHEQUE', 'BOLETO'].includes(dto.forma_pagamento)
@@ -55,17 +95,22 @@ export class DespesasService {
     const funcionarioIdNum = Number(dto.funcionario_id)
     const temFuncionario = Number.isFinite(funcionarioIdNum) && funcionarioIdNum > 0
 
-    // base (uma despesa só)
-    const baseData: Prisma.despesasCreateInput = {
-      tipo_movimento: dto.tipo_movimento,
-      unidade: dto.unidade,
-      categoria: dto.categoria,
-      classificacao: dto.classificacao,
-      local: dto.local ?? '',
+    const totalNum = this.parseMoney(dto.valor_total)
+if (!Number.isFinite(totalNum) || totalNum <= 0) throw new BadRequestException('valor_total inválido')
 
-      valor_total: new Prisma.Decimal(dto.valor_total),
-      forma_pagamento: dto.forma_pagamento,
-      quantidade_parcelas: parcelas,
+
+// base (uma despesa só)
+const baseData: Prisma.despesasCreateInput = {
+  tipo_movimento: dto.tipo_movimento,
+  unidade: dto.unidade,
+  categoria: dto.categoria,
+  classificacao: dto.classificacao,
+  local: dto.local ?? '',
+
+  valor_total: new Prisma.Decimal(this.toDecimalString(totalNum)),
+
+  forma_pagamento: dto.forma_pagamento,
+  quantidade_parcelas: parcelas,
 
       conta_bancaria_key: dto.conta_bancaria_key ?? null,
       conta_bancaria_tipo_key: dto.conta_bancaria_tipo_key ?? null,
@@ -83,10 +128,9 @@ export class DespesasService {
     }
 
     // calcula parcelas (centavos)
-    const total = Number(dto.valor_total)
-    if (!Number.isFinite(total) || total <= 0) throw new BadRequestException('valor_total inválido')
 
-    const totalCents = Math.round(total * 100)
+    const totalCents = Math.round(totalNum * 100)
+
     const baseCents = Math.floor(totalCents / parcelas)
     const resto = totalCents % parcelas
     const valoresParcelasCents = Array.from(
@@ -191,16 +235,25 @@ export class DespesasService {
     }
 
     // vencimento base (primeiro vencimento)
-    const primeiroVenc = dto.data_vencimento ? new Date(dto.data_vencimento) : new Date(atual.data_vencimento)
-    if (isNaN(primeiroVenc.getTime())) throw new BadRequestException('data_vencimento inválida')
+const primeiroVenc = dto.data_vencimento
+  ? this.parseBRDate(dto.data_vencimento)
+  : new Date(atual.data_vencimento)
+
+if (!primeiroVenc || isNaN(primeiroVenc.getTime())) {
+  throw new BadRequestException('data_vencimento inválida')
+}
+
 
     // total final
-    const totalFinalNum =
-      dto.valor_total !== undefined ? Number(dto.valor_total) : Number(String((atual as any).valor_total))
+const totalFinalNum =
+  dto.valor_total !== undefined
+    ? this.parseMoney(dto.valor_total)
+    : Number(String((atual as any).valor_total))
 
-    if (!Number.isFinite(totalFinalNum) || totalFinalNum <= 0) {
-      throw new BadRequestException('valor_total inválido')
-    }
+if (!Number.isFinite(totalFinalNum) || totalFinalNum <= 0) {
+  throw new BadRequestException('valor_total inválido')
+}
+
 
     // detecta se precisa recriar títulos
     const ehPrazoAtual =
@@ -241,29 +294,30 @@ export class DespesasService {
       }
 
       // valor
-      if (dto.valor_total !== undefined) data.valor_total = new Prisma.Decimal(dto.valor_total)
+      if (dto.valor_total !== undefined) {
+  data.valor_total = new Prisma.Decimal(this.toDecimalString(totalFinalNum))
+}
+
 
       // datas
-      if (dto.data_registro !== undefined) {
-        const dr = dto.data_registro ? new Date(dto.data_registro) : null
-        if (dto.data_registro && isNaN(dr!.getTime())) throw new BadRequestException('data_registro inválida')
-        if (dr) data.data_registro = dr
-      }
+const dr = dto.data_registro ? this.parseBRDate(dto.data_registro) : null
+if (dto.data_registro && !dr) throw new BadRequestException('data_registro inválida')
+if (dr) data.data_registro = dr
 
-      if (dto.data_vencimento !== undefined) {
-        const dv = dto.data_vencimento ? new Date(dto.data_vencimento) : null
-        if (dto.data_vencimento && isNaN(dv!.getTime())) throw new BadRequestException('data_vencimento inválida')
-        if (dv) data.data_vencimento = dv
-      }
+      
+const dv = dto.data_vencimento ? this.parseBRDate(dto.data_vencimento) : null
+if (dto.data_vencimento && !dv) throw new BadRequestException('data_vencimento inválida')
+if (dv) data.data_vencimento = dv
+
 
       // data_pagamento: prazo sempre null; à vista permite
       if (ehPrazoFinal) {
         data.data_pagamento = null
       } else if (dto.data_pagamento !== undefined) {
-        const dp = dto.data_pagamento ? new Date(dto.data_pagamento) : null
-        if (dto.data_pagamento && isNaN(dp!.getTime())) throw new BadRequestException('data_pagamento inválida')
-        data.data_pagamento = dp
-      }
+const dp = dto.data_pagamento ? this.parseBRDate(dto.data_pagamento) : null
+if (dto.data_pagamento && !dp) throw new BadRequestException('data_pagamento inválida')
+data.data_pagamento = dp
+}
 
       // chaves banco/cartão (salva o que veio, mas normaliza conforme formaFinal)
       if (dto.conta_bancaria_key !== undefined) data.conta_bancaria_key = dto.conta_bancaria_key ?? null
