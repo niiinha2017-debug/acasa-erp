@@ -1,11 +1,11 @@
-import { 
-  IsString, 
-  IsNotEmpty, 
-  IsDateString, 
-  IsOptional, 
-  IsInt, 
-  IsArray, 
-  ArrayMinSize 
+import {
+  IsString,
+  IsNotEmpty,
+  IsDateString,
+  IsOptional,
+  IsInt,
+  IsArray,
+  ArrayMinSize,
 } from 'class-validator';
 
 export class CreateAgendaDto {
@@ -43,7 +43,9 @@ export class CreateAgendaDto {
   // Validação da Equipe
   @IsArray()
   @IsInt({ each: true })
-  @ArrayMinSize(1, { message: 'Selecione pelo menos um funcionário para a equipe' })
+  @ArrayMinSize(1, {
+    message: 'Selecione pelo menos um funcionário para a equipe',
+  })
   equipe_ids: number[];
 
   @IsOptional()

@@ -1,5 +1,14 @@
 // src/agenda/agenda.controller.ts
-import { Controller, Get, Post, Body, Param, Query, Patch, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  Patch,
+  Delete,
+} from '@nestjs/common';
 import { AgendaService } from './agenda.service';
 import { CreateAgendaDto } from './dto/create-agenda.dto';
 
@@ -16,10 +25,7 @@ export class AgendaController {
   // 2. Buscar TODOS os agendamentos (Visão do Administrador/Escritório)
   // Aceita filtros por data: /agenda?inicio=2024-05-01&fim=2024-05-31
   @Get()
-  async findAll(
-    @Query('inicio') inicio?: string,
-    @Query('fim') fim?: string,
-  ) {
+  async findAll(@Query('inicio') inicio?: string, @Query('fim') fim?: string) {
     return this.agendaService.findAll(inicio, fim);
   }
 
@@ -31,10 +37,7 @@ export class AgendaController {
 
   // 4. Atualizar Status (Para o marceneiro marcar como "FINALIZADO")
   @Patch(':id/status')
-  async updateStatus(
-    @Param('id') id: string,
-    @Body('status') status: string
-  ) {
+  async updateStatus(@Param('id') id: string, @Body('status') status: string) {
     return this.agendaService.updateStatus(+id, status);
   }
 
