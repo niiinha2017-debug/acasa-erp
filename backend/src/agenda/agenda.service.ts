@@ -7,7 +7,7 @@ export class AgendaService {
   constructor(private prisma: PrismaService) {}
 
   async create(dto: CreateAgendaDto) {
-    const { equipe_ids, ...dadosAgenda } = dto;
+    const { equipe_ids, categoria, ...dadosAgenda } = dto;
 
     // ✅ Transação Real: Garante a integridade dos dados
     return this.prisma.$transaction(async (tx) => {
@@ -41,7 +41,7 @@ export class AgendaService {
         let novoStatus = '';
 
         // Mapeando a categoria da agenda para a KEY do PIPELINE_CLIENTE
-        switch (dto.categoria) {
+        switch (categoria) {
           case 'MEDIDA':
             novoStatus = 'MEDIDA_AGENDADA'; // Ordem 3 do seu pipeline
             break;
