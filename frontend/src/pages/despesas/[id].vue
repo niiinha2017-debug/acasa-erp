@@ -401,19 +401,26 @@ watch(() => form.forma_pagamento, (fp) => {
   }
 })
 
+function isoToBR(iso) {
+  if (!iso) return ''
+  // iso esperado: YYYY-MM-DD
+  const [y, m, d] = String(iso).split('-')
+  if (!y || !m || !d) return ''
+  return `${d}/${m}/${y}`
+}
 
 
 // Ações
 async function init() {
   loading.value = true
   try {
-const res = await FuncionarioService.select()
-funcionariosOptions.value = Array.isArray(res?.data) ? res.data : []
+    const res = await FuncionarioService.select()
+    funcionariosOptions.value = Array.isArray(res?.data) ? res.data : []
 
     if (isEdit.value) {
       const { data: despesa } = await DespesaService.buscar(despesaId.value)
       hidratando.value = true
-      
+
       Object.assign(form, {
         ...despesa,
         valor_total: Number(despesa.valor_total) || 0,
@@ -422,15 +429,19 @@ funcionariosOptions.value = Array.isArray(res?.data) ? res.data : []
         data_pagamento: despesa.data_pagamento?.slice(0, 10) || '',
         data_registro: despesa.data_registro?.slice(0, 10) || today(),
       })
-      
+
       setTimeout(() => { hidratando.value = false }, 150)
     }
-  } catch (error) {
-    notify.error('Erro ao carregar dados')
+  } catch (e) {
+    console.log('[DESPESAS] erro init:', e)
+    const apiMsg = e?.response?.data?.message
+    const msg = Array.isArray(apiMsg) ? apiMsg.join(' | ') : (apiMsg || 'Erro ao carregar dados')
+    notify.error(msg)
   } finally {
     loading.value = false
   }
 }
+
 
 async function salvar() {
   const perm = isEdit.value ? 'despesas.editar' : 'despesas.criar'
@@ -455,16 +466,24 @@ const payload = {
   local: upper(form.local),
   valor_total: String(form.valor_total),
   quantidade_parcelas: Number(form.quantidade_parcelas),
+
+  // ✅ datas em BR para bater com o DTO
+  data_registro: form.data_registro ? isoToBR(form.data_registro) : undefined,
+  data_vencimento: form.data_vencimento ? isoToBR(form.data_vencimento) : undefined,
+  data_pagamento: form.data_pagamento ? isoToBR(form.data_pagamento) : undefined,
 }
+
     
     await DespesaService.salvar(despesaId.value, payload)
     notify.success(isEdit.value ? 'Atualizado com sucesso!' : 'Lançamento criado!')
     router.push('/despesas')
-  } catch (e) {
-    notify.error('Erro ao salvar lançamento')
-  } finally {
-    loading.value = false
-  }
+} catch (e) {
+  console.log('[DESPESAS] erro salvar:', e)
+  const apiMsg = e?.response?.data?.message
+  const msg = Array.isArray(apiMsg) ? apiMsg.join(' | ') : (apiMsg || 'Erro ao salvar lançamento')
+  notify.error(msg)
+}
+
 }
 
 async function excluir(event) {
