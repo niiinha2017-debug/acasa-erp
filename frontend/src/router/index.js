@@ -19,7 +19,8 @@ async function ensureMe() {
   if (!token) return null
 
   const u = storage.getUser()
-  if (u?.id && u?.status === 'ATIVO') return u
+  // ✅ Verificação mais tolerante e Case Insensitive
+  if (u?.id && String(u?.status || '').toUpperCase() === 'ATIVO') return u
 
   if (!syncingMe) {
     syncingMe = api.get('/auth/me')
@@ -27,9 +28,20 @@ async function ensureMe() {
         storage.setUser(data)
         return data
       })
-      .catch(() => {
-        storage.removeToken()
-        storage.removeUser()
+      .catch((err) => {
+        console.error('[Router] Erro ao validar usuário:', err)
+        
+        // ✅ Correção Crítica: Só desloga se for erro REAL de autenticação (401)
+        // Se for erro de rede/timeout, mantemos o usuário logado com o cache local
+        if (err.response && err.response.status === 401) {
+          storage.removeToken()
+          storage.removeUser()
+          return null
+        }
+
+        // Se tiver usuario em cache, usa ele mesmo sem validar no server (Offline First)
+        if (u) return u
+        
         return null
       })
       .finally(() => { syncingMe = null })

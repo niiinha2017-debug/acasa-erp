@@ -44,6 +44,25 @@ import { can } from '@/services/permissions'
 
 const app = createApp(App)
 
+// ✅ GLOBAL ERROR HANDLER (DEBUG MOBILE)
+app.config.errorHandler = (err, instance, info) => {
+  console.error('[ACASA_VUE_ERROR]', err)
+  // Mostra erro na tela para o usuário ver no celular
+  alert(`Erro Inesperado: ${err.message}\nInfo: ${info}`)
+}
+
+// ✅ Captura erros globais e promessas rejeitadas
+window.onerror = (message, source, lineno, colno) => {
+  console.error('[ACASA_WINDOW_ERROR]', message, source, lineno, colno)
+  alert(`Erro JS: ${message}\n${source}:${lineno}:${colno}`)
+}
+
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event?.reason?.message || event?.reason || 'Unknown'
+  console.error('[ACASA_UNHANDLED_REJECTION]', event?.reason)
+  alert(`Promise rejeitada: ${reason}`)
+})
+
 // Registro Global - UI
 app.component('Button', Button)
 app.component('Card', Card)
@@ -91,6 +110,13 @@ app.directive('can', {
 })
 
 app.use(router)
+
+// ✅ evita hard reload em logout por erro 401
+window.addEventListener('acasa-auth-logout', () => {
+  if (router.currentRoute.value?.path !== '/login') {
+    router.push('/login')
+  }
+})
 
 // ✅ chama aqui (antes do mount)
 autoOpenDevtools()

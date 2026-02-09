@@ -31,6 +31,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         usuario: true,
         email: true,
         status: true,
+        is_admin: true,
       },
     });
 

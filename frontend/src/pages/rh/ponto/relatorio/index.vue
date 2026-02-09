@@ -265,6 +265,12 @@ const modalJust = reactive({
 
 // HELPERS
 const fmtData = (v) => (v ? v.split('-').reverse().join('/') : '-')
+const fmtHoraLocal = (iso) => {
+  if (!iso) return '--:--'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '--:--'
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+}
 
 const getDiaSemana = (dataStr) => {
   const dias = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
@@ -312,7 +318,7 @@ const rowsAgrupadas = computed(() => {
 
       const batidas = regsDia.map((reg) => ({
         id: reg.id,
-        hora: reg.data_hora.split('T')[1].substring(0, 5),
+        hora: fmtHoraLocal(reg.data_hora),
         tipo: reg.tipo,
         data_hora: reg.data_hora,
         observacao: reg.observacao,

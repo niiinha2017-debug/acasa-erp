@@ -38,6 +38,8 @@ export class PermissionsGuard implements CanActivate {
       throw new ForbiddenException('Acesso negado: sua conta não está ativa.');
     }
 
+    if (user?.is_admin) return true;
+
     const userPerms: string[] = Array.isArray(user?.permissoes)
       ? user.permissoes
       : [];

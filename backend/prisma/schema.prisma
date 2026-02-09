@@ -14,6 +14,7 @@ model usuarios {
   email         String   @unique
   senha         String
   status        String
+  is_admin      Boolean  @default(false)
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 

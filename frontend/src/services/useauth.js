@@ -13,44 +13,16 @@ const error = ref('')
 // ✅ boot check: roda UMA vez quando o arquivo é importado
 // useAuth.js
 
-// ✅ Boot Check: Se abriu o site e não tem a marcação de sessão ativa, DESTROI TUDO.
-if (token.value && !sessionStorage.getItem(SESSION_KEY)) {
-  // Limpa storage físico imediatamente
-  storage.removeToken()
-  storage.removeUser()
-  
-  // Limpa estado reativo
-  token.value = null
-  usuarioLogado.value = null
-
-  // Força o navegador a ir para o login antes mesmo de carregar o resto
-  window.location.href = '/login'
-} else if (token.value) {
-  // Se tem token e a sessão já estava marcada, mantém viva
-  sessionStorage.setItem(SESSION_KEY, '1')
+// ✅ useAuth: Lógica simplificada e persistente para Mobile/PWA
+if (token.value) {
+  // Apenas garante que o estado reativo esteja sincronizado com o storage no boot
+  if (!usuarioLogado.value) {
+    usuarioLogado.value = storage.getUser()
+  }
 }
 
-const isStandalone = () =>
-  window.matchMedia?.('(display-mode: standalone)')?.matches ||
-  window.navigator?.standalone === true
-
-
-if (!window.__ACASA_HIDE_LOGOUT_BOUND__) {
-  window.__ACASA_HIDE_LOGOUT_BOUND__ = true
-
-  window.addEventListener('pagehide', () => {
-    if (!isStandalone()) return
-    if (!token.value) return
-
-    fetch('/api/auth/logout', { method: 'POST', credentials: 'include', keepalive: true }).catch(() => {})
-
-    sessionStorage.removeItem(SESSION_KEY)
-    storage.removeToken()
-    storage.removeUser()
-    token.value = null
-    usuarioLogado.value = null
-  })
-}
+// REMOVIDO: Lógica 'SESSION_KEY' e 'pagehide' que forçavam logout indevido no Android.
+// O usuário deve permanecer logado até clicar explicitamente em Sair.
 
 
 
@@ -80,6 +52,9 @@ export function useAuth() {
 
       storage.setToken(data.token)
       storage.setUser(data.usuario)
+      if (data.refresh_token) {
+        storage.setRefreshToken(data.refresh_token)
+      }
 
       // ✅ marca sessão viva
       sessionStorage.setItem(SESSION_KEY, '1')
@@ -160,6 +135,7 @@ async function alterarSenha(dados) { // dados = { senha_atual, senha_nova }
 
     storage.removeToken()
     storage.removeUser()
+    storage.removeRefreshToken()
     token.value = null
     usuarioLogado.value = null
     window.location.href = '/login'

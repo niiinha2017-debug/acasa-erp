@@ -1,6 +1,7 @@
 <template>
   <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-primary/10 via-white to-brand-secondary/10 dark:from-brand-primary/20 dark:via-slate-950 dark:to-brand-secondary/20 text-slate-900 dark:text-slate-50">
-    <div class="w-full max-w-md mx-auto rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-950/90 backdrop-blur-xl p-0 overflow-hidden">
+    <!-- Removido backdrop-blur-xl e ajustado bg para solid/opaque para performance no Android -->
+    <div class="w-full max-w-md mx-auto rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950 p-0 overflow-hidden">
       <div class="flex flex-col items-center gap-2 px-8 pt-8 pb-4">
         <img src="/logo.png" alt="Logo" class="w-14 h-14 rounded-2xl shadow-md bg-white dark:bg-slate-900 object-contain" />
         <h1 class="text-2xl font-black tracking-tight text-center">

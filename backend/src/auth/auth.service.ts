@@ -32,7 +32,7 @@ export class AuthService {
 
       const user = await this.prisma.usuarios.findUnique({
         where: { id: userId },
-        select: { id: true, usuario: true, email: true, status: true },
+        select: { id: true, usuario: true, email: true, status: true, is_admin: true },
       });
 
       if (!user || user.status === 'INATIVO') {
@@ -44,6 +44,7 @@ export class AuthService {
         usuario: user.usuario,
         email: user.email,
         status: user.status,
+        is_admin: user.is_admin,
       };
 
       const token = await this.jwt.signAsync(payload, { expiresIn: '15m' });
@@ -96,6 +97,7 @@ export class AuthService {
       usuario: registro.usuario,
       email: registro.email,
       status: registro.status,
+      is_admin: registro.is_admin,
     };
 
     const token = await this.jwt.signAsync(payload, { expiresIn: '15m' });
@@ -114,6 +116,7 @@ export class AuthService {
         usuario: registro.usuario,
         email: registro.email,
         status: registro.status,
+        is_admin: registro.is_admin,
         permissoes,
       },
     };
@@ -216,6 +219,7 @@ export class AuthService {
       usuario: registro.usuario,
       email: registro.email,
       status: registro.status,
+      is_admin: registro.is_admin,
       funcionario_id: registro.funcionario_id,
       permissoes,
     };

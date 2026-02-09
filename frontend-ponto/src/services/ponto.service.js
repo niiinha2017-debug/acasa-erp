@@ -1,7 +1,14 @@
 import axios from 'axios'
 
+// Usa URL absoluta no Android/Capacitor para evitar requests em localhost
+const VITE_URL = import.meta.env.VITE_API_URL
+const BASE_URL = VITE_URL
+  ? VITE_URL.replace(/\/+$/, '')
+  : 'https://acasamarcenaria.com.br/api'
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: BASE_URL,
+  timeout: 15000,
 })
 
 function authHeader(token) {

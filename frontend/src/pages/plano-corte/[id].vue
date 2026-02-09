@@ -622,11 +622,18 @@ async function salvar() {
 
   salvando.value = true
   try {
-const payload = {
-  fornecedor_id: Number(fornecedorSelecionado.value),
-  data_venda: dataVenda.value,
-  produtos: itens.value,
-  ...(isEdit.value ? {} : { status: statusPlano.value }),
+    const payload = {
+      fornecedor_id: Number(fornecedorSelecionado.value),
+      data_venda: dataVenda.value,
+      produtos: itens.value,
+      ...(isEdit.value ? {} : { status: statusPlano.value }),
+    }
+
+    await PlanoCorteService.salvar(isEdit.value ? planoId.value : null, payload)
+    router.push('/plano-corte')
+  } finally {
+    salvando.value = false
+  }
 }
 
 async function gerarPdf() {
@@ -648,12 +655,6 @@ async function gerarPdf() {
   } finally {
     gerandoPdf.value = false
   }
-}
-
-
-    await PlanoCorteService.salvar(isEdit.value ? planoId.value : null, payload)
-    router.push('/plano-corte')
-  } finally { salvando.value = false }
 }
 
 onMounted(async () => {

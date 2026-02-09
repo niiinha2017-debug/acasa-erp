@@ -3,27 +3,37 @@ import { AppConfig } from '@/services/config'
 
 const TOKEN_KEY = AppConfig?.STORAGE_KEYS?.TOKEN || 'ACASA_TOKEN'
 const USER_KEY = AppConfig?.STORAGE_KEYS?.USER || 'ACASA_USER'
+const REFRESH_KEY = AppConfig?.STORAGE_KEYS?.REFRESH || 'ACASA_REFRESH_TOKEN'
 
 // utils/storage.js
 const storage = {
   getToken() {
-    return sessionStorage.getItem(TOKEN_KEY) // Mudado para session
+    return localStorage.getItem(TOKEN_KEY) // ✅ LocalStorage para Mobile
   },
   setToken(token) {
-    sessionStorage.setItem(TOKEN_KEY, token) // Mudado para session
+    localStorage.setItem(TOKEN_KEY, token) // ✅ LocalStorage para Mobile
   },
   getUser() {
-    const raw = sessionStorage.getItem(USER_KEY)
+    const raw = localStorage.getItem(USER_KEY)
     return raw ? JSON.parse(raw) : null
   },
   setUser(user) {
-    sessionStorage.setItem(USER_KEY, JSON.stringify(user))
+    localStorage.setItem(USER_KEY, JSON.stringify(user))
+  },
+  getRefreshToken() {
+    return localStorage.getItem(REFRESH_KEY)
+  },
+  setRefreshToken(token) {
+    localStorage.setItem(REFRESH_KEY, token)
   },
   removeToken() {
-    sessionStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(TOKEN_KEY)
   },
   removeUser() {
-    sessionStorage.removeItem(USER_KEY)
+    localStorage.removeItem(USER_KEY)
+  },
+  removeRefreshToken() {
+    localStorage.removeItem(REFRESH_KEY)
   }
 }
 

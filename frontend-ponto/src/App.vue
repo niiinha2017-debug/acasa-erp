@@ -4,7 +4,7 @@
       
       <div class="p-8 sm:p-10 flex flex-col items-center">
         <div class="mb-8">
-          <img src="/pwa-192.png" alt="ACASA" class="h-14 w-14 object-contain" />
+          <img src="/logo.png" alt="ACASA" class="h-14 w-14 object-contain" />
         </div>
 
         <div v-if="etapa === 'ativar'" class="w-full space-y-6 animate-in">
@@ -93,10 +93,18 @@ let timerRelogio, timerBloqueio
 
 const horaAgora = computed(() => agora.value.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
 const dataHoje = computed(() => agora.value.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }))
-const ultimoRegistro = computed(() => registrosHoje.value.at(-1))
+const ultimoRegistro = computed(() => {
+  const lista = Array.isArray(registrosHoje.value) ? registrosHoje.value : []
+  return lista.length ? lista[lista.length - 1] : null
+})
 const proximoStatus = computed(() => (!ultimoRegistro.value || ultimoRegistro.value.tipo === 'SAIDA') ? 'ENTRADA' : 'SAIDA')
 const bloqueioTemporario = computed(() => contadorBloqueio.value > 0)
-const ultimoRegistroHoraTexto = computed(() => ultimoRegistro.value ? new Date(ultimoRegistro.value.data_hora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '')
+const ultimoRegistroHoraTexto = computed(() => {
+  if (!ultimoRegistro.value?.data_hora) return ''
+  const d = new Date(ultimoRegistro.value.data_hora)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+})
 
 async function carregarDados() {
   if (!token.value) return
@@ -106,9 +114,22 @@ async function carregarDados() {
       PontoService.hoje(token.value)
     ])
     
-    funcionarioNome.value = resMe.data.nome
-    localStorage.setItem('acasa_funcionario_nome', resMe.data.nome)
-    registrosHoje.value = resHoje.data || []
+    const nome =
+      resMe?.data?.nome ||
+      resMe?.data?.data?.nome ||
+      resMe?.data?.funcionario?.nome ||
+      funcionarioNome.value
+
+    funcionarioNome.value = nome
+    localStorage.setItem('acasa_funcionario_nome', nome)
+
+    const hojeData = Array.isArray(resHoje?.data)
+      ? resHoje.data
+      : Array.isArray(resHoje?.data?.data)
+        ? resHoje.data.data
+        : []
+
+    registrosHoje.value = hojeData
     
     if (ultimoRegistro.value) {
       const diff = Math.floor((Date.now() - new Date(ultimoRegistro.value.data_hora).getTime()) / 1000)

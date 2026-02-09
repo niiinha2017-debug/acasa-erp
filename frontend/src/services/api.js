@@ -30,9 +30,9 @@ api.interceptors.request.use(
   (config) => {
     const token = storage.getToken()
 
-    // loga url final (baseURL + url)
-    const url = (config.baseURL || '') + (config.url || '')
-    console.log('[API] ->', (config.method || 'GET').toUpperCase(), url)
+    // REMOVIDO LOG DE DEBUG PARA PERFORMANCE NO ANDROID
+    // const url = (config.baseURL || '') + (config.url || '')
+    // console.log('[API] ->', (config.method || 'GET').toUpperCase(), url)
 
     if (token) {
       config.headers = config.headers || {}
@@ -61,6 +61,7 @@ api.interceptors.response.use(
 
     // ✅ se não tem token, não tenta refresh
     const hasToken = !!storage.getToken()
+    const refreshToken = storage.getRefreshToken()
 
     // ✅ não tenta refresh em rotas de auth
     const url = String(original?.url || '')
@@ -70,10 +71,10 @@ api.interceptors.response.use(
       url.includes('/auth/logout')
 
     // ✅ tenta renovar token 1x apenas se a sessão estava ativa
-    if (status === 401 && hasToken && !isAuthRoute && original && !original._retry) {
+    if (status === 401 && hasToken && refreshToken && !isAuthRoute && original && !original._retry) {
       original._retry = true
       try {
-        const { data } = await api.post('/auth/refresh')
+        const { data } = await api.post('/auth/refresh', { refresh_token: refreshToken })
         if (data?.token) {
           storage.setToken(data.token)
 
@@ -88,11 +89,15 @@ api.interceptors.response.use(
     }
 
     // ✅ 401 sem token / refresh falhou -> encerra sessão
+    // Evita hard reload no Android (causa loop/lag). O router vai redirecionar.
     if (status === 401) {
       try { await api.post('/auth/logout') } catch {}
       storage.removeToken()
       storage.removeUser()
-      window.location.href = '/login'
+      storage.removeRefreshToken()
+      window.dispatchEvent(new CustomEvent('acasa-auth-logout', {
+        detail: { reason: '401', url }
+      }))
     }
 
     return Promise.reject(error)
