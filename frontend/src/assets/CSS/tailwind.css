@@ -72,32 +72,89 @@
 }
 
 @layer components {
-  /* Botões */
+  /* ===== BOTÕES MINIMALISTAS COM LINHAS ===== */
   .btn-primary-tw {
-    @apply bg-brand-primary text-white hover:bg-brand-dark shadow-lg shadow-brand-primary/20 
+    @apply px-4 py-2.5 text-sm font-medium rounded-md
+           border border-brand-primary bg-brand-primary text-white
+           hover:bg-brand-dark hover:border-brand-dark
            active:scale-[0.98] transition-all duration-200 disabled:opacity-50;
   }
 
   .btn-secondary-tw {
-    @apply bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 
-           hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-[0.98] transition-all;
+    @apply px-4 py-2.5 text-sm font-medium rounded-md
+           border border-slate-300 dark:border-slate-600 bg-transparent text-slate-700 dark:text-slate-200
+           hover:border-slate-400 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800
+           active:scale-[0.98] transition-all duration-200;
   }
 
-  /* Navegação */
+  .btn-outline-tw {
+    @apply px-4 py-2.5 text-sm font-medium rounded-md
+           border border-slate-300 dark:border-slate-600 
+           text-slate-600 dark:text-slate-300 bg-transparent
+           hover:bg-slate-50 dark:hover:bg-slate-900
+           active:scale-[0.98] transition-all duration-200;
+  }
+
+  .btn-ghost-tw {
+    @apply px-4 py-2.5 text-sm font-medium rounded-md
+           bg-transparent text-slate-600 dark:text-slate-300
+           hover:bg-slate-100 dark:hover:bg-slate-800
+           active:scale-[0.98] transition-all duration-200;
+  }
+
+  /* Botão pequeno e detalhado */
+  .btn-sm-tw {
+    @apply px-3 py-1.5 text-xs font-medium rounded-md
+           border border-slate-300 dark:border-slate-600
+           hover:bg-slate-50 dark:hover:bg-slate-800
+           transition-all duration-200;
+  }
+
+  /* Navegação com linhas */
   .nav-link-tw {
-    @apply h-10 px-5 flex items-center justify-center text-sm font-bold rounded-lg transition-all
-           text-slate-500 hover:bg-bg-card hover:text-brand-primary hover:shadow-sm;
+    @apply h-10 px-5 flex items-center justify-center text-sm font-medium rounded-none
+           border-b-2 border-transparent transition-all
+           text-slate-600 dark:text-slate-400 hover:text-brand-primary hover:border-brand-primary;
   }
 
   .nav-link-active-tw {
-    @apply bg-bg-card text-brand-primary shadow-sm ring-1 ring-slate-100 dark:ring-slate-800;
+    @apply text-brand-primary border-b-2 border-brand-primary;
   }
 
-  /* Dropdown */
+  /* Dropdown com linhas */
   .dropdown-container-tw {
     @apply absolute top-[calc(100%+8px)] left-1/2 w-64 p-2
-           bg-bg-card rounded-2xl border border-border-ui shadow-2xl animate-dropdown-in;
+           bg-bg-card rounded-md border border-border-ui shadow-lg animate-dropdown-in;
     z-index: var(--z-index-dropdown);
+  }
+
+  /* ===== CARDS MINIMALISTAS COM BORDAS ===== */
+  .card-minimal-tw {
+    @apply bg-bg-card border border-border-ui rounded-md
+           transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600;
+  }
+
+  .card-header-tw {
+    @apply px-6 py-4 border-b border-border-ui
+           flex items-center justify-between;
+  }
+
+  .card-body-tw {
+    @apply px-6 py-4;
+  }
+
+  .card-footer-tw {
+    @apply px-6 py-4 border-t border-border-ui
+           flex items-center justify-between;
+  }
+
+  /* ===== LINHAS ESTRUTURAIS ===== */
+  .line-separator {
+    @apply border-t border-border-ui my-4;
+  }
+
+  .line-vertical {
+    @apply border-l border-border-ui;
   }
 }
 

@@ -58,9 +58,14 @@ export class PontoService {
   }
 
   private buildConviteUrl(code: string): string {
-    const base = String(this.config.get('PONTO_APP_URL') ?? '').trim();
-    if (!base) return '';
-    return `${base.replace(/\/$/, '')}/ativar?code=${encodeURIComponent(code)}`;
+    const rawBase = String(this.config.get('PONTO_APP_URL') ?? '').trim();
+    const fallback = 'https://ponto.acasamarcenaria.com.br';
+    const base = rawBase || fallback;
+    const normalized =
+      base.startsWith('http://') || base.startsWith('https://')
+        ? base
+        : `https://${base}`;
+    return `${normalized.replace(/\/+$/, '')}/ativar?code=${encodeURIComponent(code)}`;
   }
 
   private assertFuncionarioAtivo(status: any) {

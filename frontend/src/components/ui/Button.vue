@@ -2,7 +2,7 @@
   <button
     :type="type"
     :disabled="loading || disabled"
-    class="relative inline-flex items-center justify-center font-medium transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden rounded-lg shrink-0 outline-none"
+    class="relative inline-flex items-center justify-center font-medium transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden rounded-md outline-none border"
     :class="[
       variantClasses[variant],
       sizeClasses[size],
@@ -23,8 +23,6 @@
     >
       <slot>{{ label }}</slot>
     </span>
-
-    <div class="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors duration-200"></div>
   </button>
 </template>
 
@@ -51,30 +49,33 @@ const emit = defineEmits(['click'])
 
 const variantClasses = {
   primary: `
-    bg-brand-primary text-white shadow-sm
-    hover:bg-brand-primary/90 hover:shadow-md
-    focus:ring-2 focus:ring-brand-primary/20 focus:ring-offset-1
-    border border-transparent
-    dark:bg-brand-primary dark:text-white dark:hover:bg-brand-primary/80
-    transition-all
+    bg-brand-primary text-white border border-brand-primary
+    hover:bg-brand-dark hover:border-brand-dark
+    dark:bg-brand-primary dark:hover:bg-brand-dark
   `,
   secondary: `
-    bg-white text-slate-700 border border-slate-200 shadow-sm
-    hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300
-    focus:ring-2 focus:ring-slate-200
-    dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-slate-700
-    transition-all
+    bg-transparent text-slate-700 border border-slate-300
+    hover:bg-slate-50 hover:border-slate-400
+    dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-800 dark:hover:border-slate-500
   `,
   outline: `
     bg-transparent border border-brand-primary text-brand-primary
-    hover:bg-brand-primary/5
-    focus:ring-2 focus:ring-brand-primary/10
+    hover:bg-brand-primary/5 hover:border-brand-primary
     dark:border-brand-primary/70 dark:text-brand-primary/90 dark:hover:bg-brand-primary/10
-    transition-colors
   `,
-  danger: 'bg-red-500 text-white hover:bg-red-600 shadow-sm hover:shadow-red-500/20',
-  success: 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm hover:shadow-emerald-500/20',
-  ghost: 'bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
+  danger: `
+    bg-red-500 text-white border border-red-500
+    hover:bg-red-600 hover:border-red-600
+  `,
+  success: `
+    bg-emerald-500 text-white border border-emerald-500
+    hover:bg-emerald-600 hover:border-emerald-600
+  `,
+  ghost: `
+    bg-transparent text-slate-600 border border-transparent
+    hover:bg-slate-100 hover:border-slate-200
+    dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:border-slate-700
+  `
 }
 
 const sizeClasses = {
