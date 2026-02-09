@@ -379,6 +379,11 @@ model plano_corte_item {
   medida       String?
   unidade      String?
 
+  largura_mm     Int?
+  comprimento_mm Int?
+  espessura_mm   Int?
+  preco_m2       Decimal? @db.Decimal(10, 2)
+
   quantidade     Int
   valor_unitario Decimal @db.Decimal(10, 2)
   valor_total    Decimal @db.Decimal(10, 2)
