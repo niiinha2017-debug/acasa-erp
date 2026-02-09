@@ -9,7 +9,7 @@
       <template #actions>
         <div class="flex gap-2">
             <Button
-            v-if="can('plano_corte.criar')" // Ajuste a permissão se necessário
+            v-if="can('plano_corte.criar')"
             variant="secondary"
             @click="router.push('/plano-corte/venda')"
             >
