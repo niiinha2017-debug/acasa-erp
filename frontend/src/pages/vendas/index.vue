@@ -1,142 +1,113 @@
 <template>
-  <div class="w-full max-w-[1200px] mx-auto space-y-4 animate-page-in">
+  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-page-in">
     
-    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-2">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
-          <i class="pi pi-dollar text-lg"></i>
-        </div>
-        <div>
-          <h1 class="text-lg font-black text-slate-800 uppercase tracking-tight">Vendas</h1>
-          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Gestão comercial e pós-venda</p>
-        </div>
-      </div>
-      
-      <div class="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-        <div class="relative w-full sm:w-64">
-          <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-          <input 
-            v-model="filtro" 
-            type="text" 
-            placeholder="BUSCAR CLIENTE, STATUS OU ID..."
-            class="w-full pl-9 pr-3 h-10 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary outline-none transition-all uppercase"
-          />
-        </div>
-        
+    <PageHeader 
+      title="Vendas"
+      subtitle="Gestão comercial e acompanhamento de pedidos"
+      icon="pi pi-shopping-cart"
+    >
+      <template #actions>
         <Button 
-        v-if="can('vendas.criar')"
+          v-if="can('vendas.criar')"
           variant="primary" 
-          size="md"
-          class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider w-full sm:w-auto"
           @click="router.push('/vendas/novo')"
         >
-          <i class="pi pi-plus mr-1.5 text-[10px]"></i>
+          <i class="pi pi-plus mr-2"></i>
           Nova Venda
         </Button>
-      </div>
+      </template>
+    </PageHeader>
+
+    <!-- Métricas -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <MetricCard
+        label="Total de Vendas"
+        :value="vendas.length"
+        icon="pi pi-shopping-bag"
+        color="slate"
+      />
+      
+      <MetricCard
+        label="Faturamento Total"
+        :value="format.currency(vendas.reduce((acc, v) => acc + Number(v.valor_vendido || 0), 0))"
+        icon="pi pi-dollar"
+        color="emerald"
+      />
+
+      <MetricCard
+        label="Ticket Médio"
+        :value="format.currency(vendas.length ? (vendas.reduce((acc, v) => acc + Number(v.valor_vendido || 0), 0) / vendas.length) : 0)"
+        icon="pi pi-chart-line"
+        color="blue"
+      />
+
+      <MetricCard
+        label="Em Produção"
+        :value="vendas.filter(v => String(v.status).toUpperCase().includes('PRODU')).length"
+        icon="pi pi-cog"
+        color="amber"
+      />
     </div>
 
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-      <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1">Total de Vendas</p>
-        <p class="text-xl font-black text-slate-800">{{ vendas.length }}</p>
+    <!-- Filtros e Tabela -->
+    <div class="space-y-4">
+      <div class="w-full md:w-96">
+        <SearchInput
+          v-model="filtro"
+          placeholder="Buscar cliente, status ou ID..."
+        />
       </div>
 
-      <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1">Faturamento Total</p>
-        <p class="text-xl font-black text-emerald-600">
-          {{ format.currency(vendas.reduce((acc, v) => acc + Number(v.valor_vendido || 0), 0)) }}
-        </p>
+      <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+        <Table 
+          :columns="columns" 
+          :rows="filtradas" 
+          :loading="loading" 
+          :boxed="false"
+        >
+          <template #cell-cliente="{ row }">
+            <div class="flex flex-col py-1">
+              <span class="text-sm font-bold text-slate-800 uppercase tracking-tight leading-tight">
+                {{ row.cliente?.nome_completo || row.cliente?.razao_social || row.cliente?.nome || 'Consumidor' }}
+              </span>
+              <span class="text-[10px] font-bold text-slate-400 tracking-wider uppercase">
+                {{ row.cliente?.cpf || row.cliente?.cnpj || 'Sem documento' }}
+              </span>
+            </div>
+          </template>
+
+          <template #cell-status="{ row }">
+            <StatusBadge :value="row.status" />
+          </template>
+
+          <template #cell-valor_total="{ row }">
+            <div class="flex flex-col items-end">
+              <span class="text-sm font-black text-slate-800 tabular-nums">
+                {{ format.currency(row.valor_total) }}
+              </span>
+              <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Valor Final</span>
+            </div>
+          </template>
+
+          <template #cell-data_venda="{ row }">
+            <div class="flex flex-col">
+              <span class="text-xs font-bold text-slate-700">
+                {{ format.date(row.data_venda) }}
+              </span>
+              <span class="text-[9px] font-bold text-slate-400 uppercase">Data Venda</span>
+            </div>
+          </template>
+
+          <template #cell-acoes="{ row }">
+            <TableActions
+              :can-edit="can('vendas.editar')"
+              :can-delete="can('vendas.excluir')"
+              @edit="router.push(`/vendas/${row.id}`)"
+              @delete="confirmarExcluirVenda(row.id)"
+            />
+          </template>
+        </Table>
       </div>
-
-      <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1">Ticket Médio</p>
-        <p class="text-xl font-black text-blue-600">
-{{ format.currency(
-  vendas.length
-    ? (vendas.reduce((acc, v) => acc + Number(v.valor_vendido || 0), 0) / vendas.length)
-    : 0
-) }}
-
-        </p>
-      </div>
-
-      <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1">Em Produção</p>
-        <div class="flex items-center gap-2">
-          <p class="text-xl font-black text-amber-600">
-            {{ vendas.filter(v => String(v.status).toUpperCase().includes('PRODU')).length }}
-          </p>
-          <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
-        </div>
-      </div>
-    </div>
-
-    <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-      <Table 
-        :columns="columns" 
-        :rows="filtradas" 
-        :loading="loading" 
-        :boxed="false"
-      >
-        <template #cell-cliente="{ row }">
-          <div class="flex flex-col py-1">
-            <span class="text-sm font-bold text-slate-800 uppercase tracking-tight leading-tight">
-              {{ row.cliente?.nome_completo || row.cliente?.razao_social || row.cliente?.nome || 'Consumidor' }}
-            </span>
-            <span class="text-[10px] font-bold text-slate-400 tracking-wider uppercase">
-              {{ row.cliente?.cpf || row.cliente?.cnpj || 'Sem documento' }}
-            </span>
-          </div>
-        </template>
-
-        <template #cell-status="{ row }">
-          <span 
-            class="px-2 py-1 rounded text-[9px] font-black uppercase inline-flex items-center gap-1.5"
-            :class="pillClassTailwind(row.status)"
-          >
-            <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
-            {{ row.status }}
-          </span>
-        </template>
-
-        <template #cell-valor_total="{ row }">
-          <div class="flex flex-col items-end">
-            <span class="text-sm font-black text-slate-800 tabular-nums">
-              {{ format.currency(row.valor_total) }}
-            </span>
-            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Valor Final</span>
-          </div>
-        </template>
-
-        <template #cell-data_venda="{ row }">
-          <div class="flex flex-col">
-            <span class="text-xs font-bold text-slate-700">
-              {{ format.date(row.data_venda) }}
-            </span>
-            <span class="text-[9px] font-bold text-slate-400 uppercase">Data Venda</span>
-          </div>
-        </template>
-
-        <template #cell-acoes="{ row }">
-          <div class="flex justify-end gap-1.5 px-2">
-            <button 
-            v-if="can('vendas.editar')"
-              @click="router.push(`/vendas/${row.id}`)" 
-              class="w-7 h-7 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-900 hover:text-white transition-all border border-slate-200 flex items-center justify-center"
-            >
-              <i class="pi pi-pencil text-[10px]"></i>
-            </button>
-            <button 
-            v-if="can('vendas.excluir')"
-              @click="confirmarExcluirVenda(row.id)" 
-              class="w-7 h-7 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all border border-rose-100 flex items-center justify-center"
-            >
-              <i class="pi pi-trash text-[10px]"></i>
-            </button>
-          </div>
-        </template>
-      </Table>
     </div>
   </div>
 </template>
@@ -165,7 +136,7 @@ const columns = [
   { key: 'forma_pagamento_chave', label: 'PAGAMENTO', width: '15%' },
   { key: 'data_venda', label: 'DATA', width: '15%' },
   { key: 'valor_total', label: 'TOTAL', align: 'right', width: '15%' },
-  { key: 'acoes', label: '', width: '120px', align: 'right' },
+  { key: 'acoes', label: '', width: '100px', align: 'right' },
 ]
 
 const filtradas = computed(() => {
@@ -183,14 +154,6 @@ const filtradas = computed(() => {
   })
 })
 
-function pillClassTailwind(status) {
-  const s = String(status || '').toUpperCase()
-  if (s.includes('FECH')) return 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-  if (s.includes('CANCEL')) return 'bg-rose-50 text-rose-500 border border-rose-100'
-  if (s.includes('PRODU')) return 'bg-sky-50 text-sky-600 border border-sky-100'
-  return 'bg-slate-50 text-slate-500 border border-slate-200'
-}
-
 async function carregar() {
   if (!can('vendas.ver')) return notify.error('Acesso negado.')
   loading.value = true
@@ -202,16 +165,6 @@ async function carregar() {
   } finally {
     loading.value = false
   }
-}
-
-function novaVenda() {
-  if (!can('vendas.criar')) return notify.error('Acesso negado.')
-  router.push('/vendas/novo')
-}
-
-function editarVenda(id) {
-  if (!can('vendas.editar')) return notify.error('Acesso negado.')
-  router.push(`/vendas/${id}`)
 }
 
 async function confirmarExcluirVenda(id) {

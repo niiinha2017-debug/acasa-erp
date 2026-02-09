@@ -1,7 +1,7 @@
 <template>
-  <footer class="flex flex-col sm:flex-row items-center justify-between mt-10 pt-8 border-t border-slate-100 dark:border-slate-800 transition-colors duration-300 gap-6">
+  <footer class="flex flex-col sm:flex-row items-center justify-between mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 transition-colors duration-300 gap-4">
     
-    <div class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.15em]">
+    <div class="text-xs font-medium text-slate-400 dark:text-slate-500">
       <slot name="left"></slot>
     </div>
 
@@ -11,12 +11,12 @@
         v-if="showDelete && isEdit && canDelete"
         v-can="permDelete"
         variant="ghost" 
-        class="!text-slate-400 hover:!text-red-500 dark:hover:bg-red-500/5 px-4 !rounded-lg"
+        class="!text-slate-500 hover:!text-red-600 dark:hover:bg-red-500/10 !px-3 !rounded-lg"
         type="button"
         @click="$emit('delete')"
         :loading="loadingDelete"
       >
-        <i class="pi pi-trash text-[10px] mr-2"></i>
+        <i class="pi pi-trash text-xs mr-2"></i>
         Excluir
       </Button>
 
@@ -26,9 +26,9 @@
         variant="secondary"
         type="button"
         @click="$emit('production')"
-        class="!rounded-lg px-5"
+        class="!rounded-lg px-4"
       >
-        <i class="pi pi-cog text-[10px] mr-2"></i> 
+        <i class="pi pi-cog text-xs mr-2"></i> 
         Produção
       </Button>
 
@@ -38,12 +38,12 @@
   variant="primary"
   type="button"
   :loading="loadingSave"
-  class="min-w-[180px] !rounded-lg shadow-sm font-bold"
+  class="min-w-[140px] !rounded-lg shadow-sm font-medium"
   @click="emit('save')"
 >
 
-        <i class="pi pi-check text-[10px] mr-2"></i>
-        {{ isEdit ? 'Salvar Alterações' : labelCreate || 'Cadastrar' }}
+        <i class="pi pi-check text-xs mr-2"></i>
+        {{ isEdit ? 'Salvar' : labelCreate || 'Cadastrar' }}
       </Button>
     </div>
   </footer>

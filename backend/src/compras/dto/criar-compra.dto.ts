@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer'
+import { Type } from 'class-transformer';
 import {
   IsArray,
   IsInt,
@@ -7,105 +7,105 @@ import {
   IsString,
   Min,
   ValidateNested,
-} from 'class-validator'
+} from 'class-validator';
 
 export class CriarCompraItemDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  produto_id?: number | null
+  produto_id?: number | null;
 
   // ✅ NOVOS CAMPOS PARA O RELATÓRIO (Snapshot)
   @IsOptional()
   @IsString()
-  nome_produto?: string
+  nome_produto?: string;
 
   @IsOptional()
   @IsString()
-  marca?: string
+  marca?: string;
 
   @IsOptional()
   @IsString()
-  cor?: string
+  cor?: string;
 
   @IsOptional()
   @IsString()
-  medida?: string
+  medida?: string;
 
   @IsOptional()
   @IsString()
-  unidade?: string
+  unidade?: string;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  quantidade?: number
+  quantidade?: number;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  valor_unitario?: number
+  valor_unitario?: number;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  valor_total?: number
+  valor_total?: number;
 }
 
 export class CriarCompraRateioDto {
   @IsString()
-  nome_ambiente: string
+  nome_ambiente: string;
 
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  valor_alocado: number
+  valor_alocado: number;
 }
 
 export class CriarCompraDto {
   @IsString()
-  tipo_compra: string // INSUMOS | CLIENTE_AMBIENTE
+  tipo_compra: string; // INSUMOS | CLIENTE_AMBIENTE
 
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  venda_id?: number | null
+  venda_id?: number | null;
 
   @Type(() => Number)
   @IsInt()
-  fornecedor_id: number
+  fornecedor_id: number;
 
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  venda_item_id?: number | null
+  venda_item_id?: number | null;
 
   @IsOptional()
   @IsString()
-  data_compra?: string // Adicionado para suportar a data no Service
+  data_compra?: string; // Adicionado para suportar a data no Service
 
   @IsOptional()
   @IsString()
-  status?: string
+  status?: string;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  valor_total?: number
+  valor_total?: number;
 
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CriarCompraItemDto)
-  itens?: CriarCompraItemDto[]
+  itens?: CriarCompraItemDto[];
 
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CriarCompraRateioDto)
-  rateios?: CriarCompraRateioDto[]
+  rateios?: CriarCompraRateioDto[];
 }

@@ -32,11 +32,11 @@
       </div>
     </div>
     
-    <div v-if="label || $slots.default" class="flex flex-col pt-px">
-      <span class="text-sm font-semibold text-slate-700 dark:text-slate-200 transition-colors">
+    <div v-if="label || $slots.default" class="flex flex-col pt-0.5 pointer-events-none">
+      <span class="text-sm font-medium text-slate-700 dark:text-slate-300 transition-colors">
         <slot>{{ label }}</slot>
       </span>
-      <span v-if="description" class="text-[11px] font-medium text-slate-400 dark:text-slate-500 leading-tight tracking-wide transition-colors">
+      <span v-if="description" class="text-xs font-normal text-slate-500 dark:text-slate-400 mt-0.5 transition-colors">
         {{ description }}
       </span>
     </div>

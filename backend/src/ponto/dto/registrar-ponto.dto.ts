@@ -1,4 +1,11 @@
-import { IsEnum, IsInt, IsNumber, IsOptional, IsString, MaxLength } from 'class-validator'
+import {
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export enum PontoTipoRegistroDto {
   ENTRADA = 'ENTRADA',
@@ -7,22 +14,22 @@ export enum PontoTipoRegistroDto {
 
 export class RegistrarPontoDto {
   @IsEnum(PontoTipoRegistroDto)
-  tipo: PontoTipoRegistroDto
+  tipo: PontoTipoRegistroDto;
 
   @IsOptional()
   @IsNumber()
-  latitude?: number
+  latitude?: number;
 
   @IsOptional()
   @IsNumber()
-  longitude?: number
+  longitude?: number;
 
   @IsOptional()
   @IsInt()
-  precisao_metros?: number
+  precisao_metros?: number;
 
   @IsOptional()
   @IsString()
   @MaxLength(255)
-  observacao?: string
+  observacao?: string;
 }

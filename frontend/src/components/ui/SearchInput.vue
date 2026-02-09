@@ -5,15 +5,15 @@
     :class="[colSpan, { 'z-[100]': open }]"
     @click.stop
   >
-    <label v-if="label" class="text-[11px] font-bold uppercase tracking-wider text-slate-500 ml-0.5">
-      {{ label }} <span v-if="required" class="text-red-500 ml-0.5">*</span>
+    <label v-if="label" class="text-sm font-medium text-slate-700 dark:text-slate-300 ml-0.5 mb-0.5">
+      {{ label }} <span v-if="required" class="text-rose-500 ml-0.5">*</span>
     </label>
 
     <div class="relative group">
       <span
-        class="absolute left-4 top-1/2 -translate-y-1/2 text-brand-primary/60 group-focus-within:text-brand-primary transition-all duration-300 pointer-events-none"
+        class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-primary transition-all duration-300 pointer-events-none"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
@@ -30,15 +30,28 @@
         :readonly="readonly"
         :disabled="disabled"
         autocomplete="off"
-        class="w-full h-10 pl-11 pr-11 transition-all duration-200 outline-none border rounded-lg text-sm font-medium
+        class="w-full h-10 pl-10 pr-16 transition-all duration-200 outline-none border rounded-lg text-sm
                bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700
-               focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10
-               placeholder:text-slate-400 placeholder:font-normal placeholder:text-xs"
+               focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 hover:border-slate-300 dark:hover:border-slate-600
+               placeholder:text-slate-400 placeholder:font-normal"
         @focus="onFocus"
         @input="onInput"
         @keydown="onKeydown"
         @blur="onBlur"
       />
+
+      <button
+        v-if="props.mode === 'select'"
+        type="button"
+        @pointerdown.prevent.stop="toggleDropdown"
+        class="absolute right-8 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors p-1"
+        :disabled="disabled"
+        aria-label="Abrir opções"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </button>
 
       <button
         v-if="texto"
@@ -60,23 +73,23 @@
             ref="dropdownRef"
             :style="floatingStyles"
             class="fixed z-[10000] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800
-                   rounded-xl shadow-2xl shadow-slate-200/50 dark:shadow-black/40 overflow-hidden pointer-events-auto"
+                   rounded-lg shadow-xl shadow-slate-200/50 dark:shadow-black/40 overflow-hidden pointer-events-auto"
             @pointerdown.prevent
           >
-            <div v-if="filtrados.length" class="max-h-60 overflow-y-auto p-1.5 custom-scroll">
+            <div v-if="filtrados.length" class="max-h-60 overflow-y-auto p-1 custom-scroll">
               <div
                 v-for="opt in filtrados"
                 :key="opt.value"
-                class="flex items-center px-3 py-2.5 text-xs font-semibold rounded-lg cursor-pointer transition-all
-                       text-slate-600 dark:text-slate-300 hover:bg-brand-primary hover:text-white group"
+                class="flex items-center px-3 py-2 text-sm rounded-md cursor-pointer transition-all
+                       text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-brand-primary"
                 @pointerdown.prevent.stop="selecionar(opt)"
               >
-                <div class="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 group-hover:bg-white/50 mr-3 transition-all"></div>
-                <span class="truncate uppercase tracking-tight">{{ opt.label }}</span>
+                <div class="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 mr-3 transition-all shrink-0"></div>
+                <span class="truncate font-medium">{{ opt.label }}</span>
               </div>
             </div>
 
-            <div v-else class="px-6 py-8 text-[10px] font-bold text-slate-400 uppercase italic tracking-widest text-center">
+            <div v-else class="px-4 py-6 text-xs font-medium text-slate-400 text-center">
               Nenhum resultado encontrado
             </div>
           </div>
@@ -155,6 +168,16 @@ function abrirDropdown() {
 
   open.value = true
   nextTick(updatePosition)
+}
+
+function toggleDropdown() {
+  if (isDisabled()) return
+  if (open.value) {
+    fecharDropdown()
+  } else {
+    abrirDropdown()
+    inputRef.value?.focus()
+  }
 }
 
 function fecharDropdown() {

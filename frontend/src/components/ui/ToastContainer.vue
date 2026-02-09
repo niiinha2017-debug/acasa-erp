@@ -26,11 +26,11 @@
             <i :class="[n.type === 'error' ? 'pi pi-times-circle' : 'pi pi-check-circle', 'text-lg']"></i>
           </div>
 
-          <div class="flex flex-col min-w-0 pr-4">
-            <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+          <div class="flex flex-col min-w-0 pr-4 gap-0.5">
+            <span class="text-xs font-semibold" :class="n.type === 'error' ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'">
               {{ n.type === 'error' ? 'Atenção' : 'Sucesso' }}
             </span>
-            <p class="text-sm font-semibold text-slate-700 dark:text-slate-200 leading-snug truncate">
+            <p class="text-sm font-medium text-slate-600 dark:text-slate-300 leading-snug truncate">
               {{ n.message }}
             </p>
           </div>

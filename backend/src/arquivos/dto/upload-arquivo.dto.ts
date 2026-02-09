@@ -1,19 +1,19 @@
-import { Type } from 'class-transformer'
-import { IsInt, IsOptional, IsString } from 'class-validator'
+import { Type } from 'class-transformer';
+import { IsInt, IsOptional, IsString } from 'class-validator';
 
 export class UploadArquivoDto {
   @IsString()
-  owner_type: string
+  owner_type: string;
 
   @Type(() => Number)
   @IsInt()
-  owner_id: number
+  owner_id: number;
 
   @IsOptional()
   @IsString()
-  categoria?: string
+  categoria?: string;
 
   @IsOptional()
   @IsString()
-  slot_key?: string
+  slot_key?: string;
 }

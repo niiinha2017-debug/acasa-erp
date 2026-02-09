@@ -1,52 +1,58 @@
-import { Type } from 'class-transformer'
-import { IsBoolean, IsNumber, IsOptional, IsString, MaxLength } from 'class-validator'
+import { Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class AtivarDto {
   @IsString()
   @MaxLength(40)
-  code: string
+  code: string;
 
   @IsString()
   @MaxLength(80)
-  device_uuid: string
+  device_uuid: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(120)
-  device_nome?: string
+  device_nome?: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(20)
-  plataforma?: string
+  plataforma?: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(255)
-  user_agent?: string
+  user_agent?: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(20)
-  language?: string
+  language?: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(80)
-  timezone?: string
+  timezone?: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(20)
-  screen?: string
+  screen?: string;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
-  pixel_ratio?: number
+  pixel_ratio?: number;
 
   @IsOptional()
   @Type(() => Boolean)
   @IsBoolean()
-  standalone?: boolean
+  standalone?: boolean;
 }

@@ -199,6 +199,8 @@ import { confirm } from '@/services/confirm'
 import { listDays, groupRegistrosByDia } from '@/utils/ponto'
 import { useRouter } from 'vue-router'
 
+definePage({ meta: { perm: 'ponto_relatorio.ver' } })
+
 
 const loadingTabela = ref(false)
 const rows = ref([])

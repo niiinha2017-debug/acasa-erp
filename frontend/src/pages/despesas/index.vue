@@ -1,338 +1,184 @@
 <template>
-  <div class="w-full max-w-[1200px] mx-auto space-y-4 animate-page-in">
+  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-page-in">
     
-    <!-- Header Compacto -->
-    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-2">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
-          <i class="pi pi-chart-line text-lg"></i>
-        </div>
-        <div>
-          <h1 class="text-lg font-black text-slate-800 uppercase tracking-tight">Fluxo Financeiro</h1>
-          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Gestão de caixa</p>
-        </div>
-      </div>
-      
-      <div class="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-        <div class="relative w-full sm:w-56">
-          <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-          <input 
-            v-model="filtro" 
-            type="text" 
-            placeholder="Buscar por categoria ou status..."
-            class="w-full pl-9 pr-3 h-10 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary outline-none transition-all"
-          />
-        </div>
-        
-<Button
-  v-if="can('despesas.criar')"
-  variant="primary"
-  size="md"
-  class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider"
-  @click="novo"
->
-          <i class="pi pi-plus mr-1.5 text-[10px]"></i>
-          Novo
+    <PageHeader 
+      title="Fluxo Financeiro"
+      subtitle="Registro de despesas e movimentações"
+      icon="pi pi-chart-line"
+    >
+      <template #actions>
+        <Button
+          v-if="can('despesas.criar')"
+          variant="primary"
+          @click="novo"
+        >
+          <i class="pi pi-plus mr-2"></i>
+          Nova
         </Button>
-      </div>
+      </template>
+    </PageHeader>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <MetricCard
+        label="Saldo"
+        :value="format.currency(totalEntradas - totalSaidas)"
+        icon="pi pi-wallet"
+        color="slate"
+      />
+      
+      <MetricCard
+        label="Entradas"
+        :value="format.currency(totalEntradas)"
+        icon="pi pi-arrow-up"
+        color="emerald"
+      />
+      
+      <MetricCard
+        label="Saídas"
+        :value="format.currency(totalSaidas)"
+        icon="pi pi-arrow-down"
+        color="rose"
+      />
+
+       <MetricCard
+        label="Média Mensal"
+        :value="format.currency((totalEntradas - totalSaidas) / 12)"
+        icon="pi pi-calendar"
+        color="blue"
+      />
     </div>
 
-    <!-- Cards Compactos -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-      <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">Saldo</p>
-        <p class="text-xl font-black text-slate-800">{{ format.currency(totalEntradas - totalSaidas) }}</p>
+    <div class="space-y-4">
+      <div class="w-full md:w-96">
+        <SearchInput
+          v-model="filtro"
+          placeholder="Buscar descrição ou categoria..."
+        />
       </div>
-      
-      <div class="p-4 rounded-xl bg-white border border-emerald-200 shadow-sm">
-        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-emerald-600">Entradas</p>
-        <p class="text-xl font-black text-emerald-700">{{ format.currency(totalEntradas) }}</p>
-      </div>
-      
-      <div class="p-4 rounded-xl bg-white border border-rose-200 shadow-sm">
-        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-rose-600">Saídas</p>
-        <p class="text-xl font-black text-rose-700">{{ format.currency(totalSaidas) }}</p>
-      </div>
-      
-      <div class="p-4 rounded-xl bg-white border border-amber-200 shadow-sm">
-        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-amber-600">Em Aberto</p>
-        <p class="text-xl font-black text-amber-700">{{ format.currency(totalPendente) }}</p>
+
+      <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+        <Table
+          :columns="columns"
+          :rows="filtradas"
+          :loading="loading"
+          empty-text="Nenhuma movimentação registrada."
+          :boxed="false"
+        >
+          <template #cell-descricao="{ row }">
+             <div class="flex flex-col py-1">
+               <span class="text-sm font-bold text-slate-800 uppercase tracking-tight">{{ row.descricao }}</span>
+               <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{{ row.categoria || 'Geral' }}</span>
+             </div>
+          </template>
+
+          <template #cell-tipo="{ row }">
+             <span 
+               class="text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-lg border"
+               :class="row.tipo === 'ENTRADA' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'"
+             >
+               {{ row.tipo }}
+             </span>
+          </template>
+
+          <template #cell-data="{ row }">
+            <span class="text-xs font-bold text-slate-700">{{ format.date(row.data) }}</span>
+          </template>
+
+          <template #cell-valor="{ row }">
+             <span 
+               class="text-sm font-black tabular-nums"
+               :class="row.tipo === 'ENTRADA' ? 'text-emerald-600' : 'text-rose-600'"
+             >
+               {{ row.tipo === 'SAIDA' ? '-' : '' }}{{ format.currency(row.valor) }}
+             </span>
+          </template>
+
+          <template #cell-acoes="{ row }">
+             <TableActions
+                :can-edit="can('despesas.editar')"
+                :can-delete="can('despesas.excluir')"
+                @edit="editar(row)"
+                @delete="confirmarExcluir(row)"
+              />
+          </template>
+        </Table>
       </div>
     </div>
-
-    <!-- Tabela Compacta -->
-    <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-      <Table
-        :columns="columns"
-        :rows="despesasFiltradas"
-        :loading="carregando"
-        empty-text="Nenhum lançamento encontrado."
-        :boxed="false"
-      >
-        <template #cell-tipo="{ row }">
-          <div class="flex items-center justify-center">
-            <div :class="[
-              'w-7 h-7 rounded-lg flex items-center justify-center',
-              isSaida(row) 
-                ? 'bg-rose-50 text-rose-500' 
-                : 'bg-emerald-50 text-emerald-500'
-            ]">
-              <i :class="['pi text-xs', isSaida(row) ? 'pi-arrow-down-right' : 'pi-arrow-up-right']"></i>
-            </div>
-          </div>
-        </template>
-
-        <template #cell-detalhes="{ row }">
-          <div class="py-1">
-            <span class="text-sm font-bold text-slate-800 block">
-              {{ row.categoria || '—' }}
-            </span>
-            <div class="flex items-center gap-2 mt-0.5">
-              <span class="text-[10px] font-medium text-slate-500">
-                {{ row.classificacao || '—' }}
-              </span>
-              <span v-if="isAtrasado(row)" class="text-[8px] font-black text-rose-600 px-1.5 py-0.5 bg-rose-50 rounded border border-rose-100">
-                ATRASADO
-              </span>
-            </div>
-          </div>
-        </template>
-
-        <template #cell-valor="{ row }">
-          <div class="text-right">
-            <span :class="[
-              'text-sm font-bold', 
-              isSaida(row) ? 'text-rose-600' : 'text-emerald-600'
-            ]">
-              {{ isSaida(row) ? '-' : '+' }} {{ format.currency(moedaParaNumero(row.valor_total)) }}
-            </span>
-            <p class="text-[10px] font-medium text-slate-400 mt-0.5">
-              {{ row.forma_pagamento }}
-            </p>
-          </div>
-        </template>
-
-        <template #cell-vencimento="{ row }">
-          <div class="text-center">
-            <span class="text-sm font-medium text-slate-700">
-              {{ format.date(row.data_vencimento) }}
-            </span>
-          </div>
-        </template>
-
-        <template #cell-status="{ row }">
-          <div class="flex justify-center">
-            <span :class="[
-              'px-2 py-1 rounded text-[9px] font-black uppercase',
-              getStatusClasses(row.status)
-            ]">
-              {{ row.status || 'EM_ABERTO' }}
-            </span>
-          </div>
-        </template>
-
-        <template #cell-acoes="{ row }">
-          <div class="flex justify-center gap-1">
-<button
-  v-if="can('despesas.editar')"
-  @click="editar(row.id)"
-  class="w-7 h-7 rounded-lg bg-slate-100 text-slate-500 hover:bg-brand-primary hover:text-white transition-all flex items-center justify-center"
->
-  <i class="pi pi-pencil text-xs"></i>
-</button>
-
-<button
-  v-if="can('despesas.excluir')"
-  @click="pedirExcluir(row.id)"
-  class="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
->
-  <i class="pi pi-trash text-xs"></i>
-</button>
-
-          </div>
-        </template>
-      </Table>
-    </div>
-
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { DespesaService } from '@/services/index'
-import { notify } from '@/services/notify'
-import { format } from '@/utils/format'
 import { confirm } from '@/services/confirm'
-
+import { notify } from '@/services/notify'
 import { can } from '@/services/permissions'
+import api from '@/services/api' // Ajuste se usar Service específico
+import { format } from '@/utils/format'
 
 definePage({ meta: { perm: 'despesas.ver' } })
 
-
 const router = useRouter()
+const loading = ref(false)
 const despesas = ref([])
-const carregando = ref(false)
 const filtro = ref('')
 
-const loading = ref(false)
-
-
-// Configuração das colunas
 const columns = [
-  { key: 'tipo', label: '', width: '5%', align: 'center' },
-  { key: 'detalhes', label: 'Detalhes', width: '40%' },
-  { key: 'valor', label: 'Valor', align: 'right', width: '20%' },
-  { key: 'vencimento', label: 'Vencimento', align: 'center', width: '15%' },
-  { key: 'status', label: 'Status', align: 'center', width: '15%' },
-  { key: 'acoes', label: '', align: 'center', width: '5%' }
+  { key: 'descricao', label: 'DESCRIÇÃO', width: '40%' },
+  { key: 'tipo', label: 'TIPO', width: '15%' },
+  { key: 'data', label: 'DATA', width: '15%' },
+  { key: 'valor', label: 'VALOR', width: '15%', align: 'right' },
+  { key: 'acoes', label: '', align: 'right', width: '15%' }
 ]
 
-// --- AUXILIARES DE LÓGICA ---
-
-function normalizarTipoMovimento(v) {
-  const t = String(v || '').toUpperCase().trim()
-  return (t === 'SAÍDA' || t === 'SAIDA') ? 'SAIDA' : 'ENTRADA'
-}
-
-function isSaida(row) {
-  return normalizarTipoMovimento(row?.tipo_movimento) === 'SAIDA'
-}
-
-function isAtrasado(row) {
-  if (!row?.data_vencimento || row.status === 'PAGO') return false
-  const venc = new Date(row.data_vencimento)
-  const hoje = new Date()
-  hoje.setHours(0, 0, 0, 0)
-  return venc < hoje
-}
-
-/**
- * CORREÇÃO DO VALOR: Garante que 193.60 não vire 1936.00
- */
-function moedaParaNumero(valor) {
-  if (valor === null || valor === undefined) return 0
-  if (typeof valor === 'number') return valor
-  
-  // Se for string, limpa formatação brasileira para padrão computacional
-  let str = String(valor).replace('R$', '').trim()
-  
-  // Se a string tem vírgula e ponto, é formato BR (Ex: 1.200,50)
-  if (str.includes(',') && str.includes('.')) {
-    str = str.replace(/\./g, '').replace(',', '.')
-  } else {
-    // Se só tem vírgula, troca por ponto (Ex: 193,60)
-    str = str.replace(',', '.')
-  }
-  
-  return parseFloat(str) || 0
-}
-
-function getStatusClasses(status) {
-  const s = String(status || 'EM_ABERTO').toUpperCase()
-  const map = {
-    PAGO: 'bg-emerald-50 text-emerald-600 border border-emerald-100',
-    EM_ABERTO: 'bg-amber-50 text-amber-600 border border-amber-100',
-    VENCIDO: 'bg-rose-50 text-rose-600 border border-rose-100',
-    CANCELADO: 'bg-slate-100 text-slate-500 border border-slate-200',
-  }
-  return map[s] || map.EM_ABERTO
-}
-
-// --- COMPUTED ---
-
-const despesasFiltradas = computed(() => {
-  const t = filtro.value.toLowerCase().trim()
-  if (!t) return despesas.value
-  
-  return despesas.value.filter((d) => {
-    return [
-      d.categoria,
-      d.classificacao,
-      d.status,
-      d.valor_total
-    ].some(v => String(v || '').toLowerCase().includes(t))
+const filtradas = computed(() => {
+  const f = String(filtro.value || '').toLowerCase().trim()
+  if (!f) return despesas.value
+  return despesas.value.filter(d => {
+    const desc = String(d.descricao || '').toLowerCase()
+    const cat = String(d.categoria || '').toLowerCase()
+    return desc.includes(f) || cat.includes(f)
   })
 })
 
-const totalSaidas = computed(() => {
-  return despesasFiltradas.value
-    .filter(isSaida)
-    .reduce((acc, curr) => acc + moedaParaNumero(curr.valor_total), 0)
-})
-
-const totalEntradas = computed(() => {
-  return despesasFiltradas.value
-    .filter(d => !isSaida(d))
-    .reduce((acc, curr) => acc + moedaParaNumero(curr.valor_total), 0)
-})
-
-const totalPendente = computed(() => {
-  return despesasFiltradas.value
-    .filter(d => isSaida(d) && d.status !== 'PAGO')
-    .reduce((acc, curr) => acc + moedaParaNumero(curr.valor_total), 0)
-})
-
-
-// --- AÇÕES ---
+const totalEntradas = computed(() => despesas.value.filter(d => d.tipo === 'ENTRADA').reduce((a, b) => a + Number(b.valor || 0), 0))
+const totalSaidas = computed(() => despesas.value.filter(d => d.tipo === 'SAIDA').reduce((a, b) => a + Number(b.valor || 0), 0))
 
 async function carregar() {
-  carregando.value = true
+  if (!can('despesas.ver')) return notify.error('Acesso negado.')
+  loading.value = true
   try {
-    const res = await DespesaService.listar()
-    despesas.value = (res?.data || []).sort((a, b) => 
-      new Date(b.data_vencimento) - new Date(a.data_vencimento)
-    )
-  } catch (err) {
-    notify.error('Erro ao carregar dados')
-  } finally {
-    carregando.value = false
-  }
-}
-
-const novo = () => {
-  if (!can('despesas.criar')) return notify.error('Acesso negado.')
-  router.push('/despesas/novo')
-}
-
-const editar = (id) => {
-  if (!can('despesas.editar')) return notify.error('Acesso negado.')
-  router.push(`/despesas/${id}`)
-}
-
-/**
- * CORREÇÃO DA EXCLUSÃO: Removido logs excessivos e corrigido fluxo de confirmação
- */
-async function pedirExcluir(id) {
-  if (!can('despesas.excluir')) return notify.error('Acesso negado.')
-  
-  const confirmado = await confirm.show(
-    'Excluir Lançamento?',
-    'Esta ação não pode ser desfeita.'
-  )
-  if (!confirmado) return
-
-  const cleanId = Number(id)
-
-  try {
-    loading.value = true
-    await DespesaService.remover(cleanId)
-
-    // melhor: recarregar (parcelas/recorrência)
-    await carregar()
-
-    notify.success('Lançamento removido com sucesso')
+    const { data } = await api.get('/despesas')
+    despesas.value = Array.isArray(data) ? data : []
   } catch (e) {
-    console.error('Erro ao excluir:', e)
-    const apiMsg = e?.response?.data?.message
-    const msg = Array.isArray(apiMsg) ? apiMsg.join(' | ') : (apiMsg || 'Não foi possível excluir')
-    notify.error(msg)
+    notify.error('Erro ao carregar despesas.')
   } finally {
     loading.value = false
   }
 }
 
+function novo() {
+  // Ajuste a rota conforme seu router
+  router.push('/despesas/novo')
+}
 
+function editar(row) {
+  router.push(`/despesas/${row.id}`)
+}
+
+async function confirmarExcluir(row) {
+  if (!can('despesas.excluir')) return notify.error('Acesso negado.')
+  const ok = await confirm.show('Excluir Registro', `Deseja remover "${row.descricao}"?`)
+  if (!ok) return
+
+  try {
+    await api.delete(`/despesas/${row.id}`)
+    notify.success('Registro removido.')
+    await carregar()
+  } catch {
+    notify.error('Erro ao excluir.')
+  }
+}
 
 onMounted(carregar)
 </script>

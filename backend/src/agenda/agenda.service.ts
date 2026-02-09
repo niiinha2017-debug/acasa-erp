@@ -8,6 +8,14 @@ export class AgendaService {
 
   async create(dto: CreateAgendaDto) {
     const { equipe_ids, categoria, ...dadosAgenda } = dto;
+    const categoriaKey = String(categoria || '').toUpperCase();
+    const categoriaToStatus: Record<string, string> = {
+      MEDIDA: 'MEDIDA_AGENDADA',
+      ORCAMENTO: 'ORCAMENTO_EM_ANDAMENTO',
+      MEDIDA_FINA: 'MEDIDA_FINA_AGENDADA',
+      PRODUCAO: 'PRODUCAO_AGENDADA',
+      MONTAGEM: 'MONTAGEM_AGENDADA',
+    };
 
     // ✅ Transação Real: Garante a integridade dos dados
     return this.prisma.$transaction(async (tx) => {
@@ -41,7 +49,7 @@ export class AgendaService {
         let novoStatus = '';
 
         // Mapeando a categoria da agenda para a KEY do PIPELINE_CLIENTE
-        switch (categoria) {
+        switch (categoriaKey) {
           case 'MEDIDA':
             novoStatus = 'MEDIDA_AGENDADA'; // Ordem 3 do seu pipeline
             break;
@@ -64,17 +72,27 @@ export class AgendaService {
         }
       }
 
+      const clienteStatus = categoriaToStatus[categoriaKey];
+      if (dto.cliente_id && clienteStatus) {
+        await tx.cliente.update({
+          where: { id: dto.cliente_id },
+          data: { status: clienteStatus },
+        });
+      }
+
       // Retorna o agendamento criado para finalizar a transação
       return agendamento;
     }); // <--- Chave e parênteses da transação fechados aqui
   }
-  async findAll(inicio?: string, fim?: string) {
+  async findAll(inicio?: string, fim?: string, opts?: { includePlanoCorte?: boolean }) {
+    const includePlanoCorte = opts?.includePlanoCorte !== false
     return this.prisma.agenda_global.findMany({
       where: {
         inicio_em: {
           gte: inicio ? new Date(inicio) : undefined,
           lte: fim ? new Date(fim) : undefined,
         },
+        ...(includePlanoCorte ? {} : { plano_corte_id: null }),
       },
       include: {
         cliente: true,

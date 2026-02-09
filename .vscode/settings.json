@@ -16,6 +16,7 @@
             "password": "gmgt33APCS!"
 
         }
-    ]
+    ],
+    "java.configuration.updateBuildConfiguration": "interactive"
 }
 

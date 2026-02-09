@@ -1,7 +1,7 @@
 <template>
   <div
     :class="[
-      boxed ? 'rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm' : '',
+      boxed ? 'rounded-xl border border-brand-secondary dark:border-slate-700 bg-white dark:bg-slate-900' : '',
       'w-full relative overflow-hidden transition-all duration-300'
     ]"
   >
@@ -12,7 +12,7 @@
             <!-- Coluna da seta (automática) -->
             <th
               v-if="hasExpand"
-              class="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 whitespace-nowrap"
+              class="px-4 py-3 text-xs font-medium text-slate-400 dark:text-slate-500 whitespace-nowrap"
               style="width: 56px; text-align: center"
             >
               <!-- vazio -->
@@ -21,7 +21,7 @@
             <th
               v-for="col in columns"
               :key="col.key"
-              class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 whitespace-nowrap"
+              class="px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap first:pl-6"
               :style="{ width: col.width || 'auto', textAlign: col.align || 'left' }"
             >
               {{ col.label }}
@@ -29,12 +29,12 @@
           </tr>
         </thead>
 
-        <tbody class="divide-y divide-slate-50 dark:divide-slate-800/50">
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
           <tr v-if="loading">
             <td :colspan="colspan" class="px-6 py-20 text-center">
               <div class="flex flex-col items-center gap-3">
-                <div class="w-8 h-8 border-3 border-brand-primary/10 border-t-brand-primary rounded-full animate-spin"></div>
-                <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Processando dados...</span>
+                <div class="w-8 h-8 border-2 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin"></div>
+                <span class="text-xs font-medium text-slate-400">Carregando...</span>
               </div>
             </td>
           </tr>
@@ -51,21 +51,21 @@
           <template v-else>
             <template v-for="(row, index) in rows" :key="getRowKey(row, index)">
               <!-- Linha principal -->
-              <tr class="group transition-colors duration-150 hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
+              <tr class="group transition-colors duration-150 hover:bg-slate-50 dark:hover:bg-slate-800/40">
                 <!-- seta -->
                 <td
                   v-if="hasExpand"
-                  class="px-4 py-4"
+                  class="px-4 py-3"
                   style="text-align:center"
                 >
                   <button
                     type="button"
-                    class="w-9 h-9 inline-flex items-center justify-center rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+                    class="w-7 h-7 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-brand-primary hover:bg-brand-primary/10 transition"
                     @click="toggle(row, index)"
                     :aria-expanded="isExpanded(row, index)"
                   >
                     <i
-                      class="pi pi-chevron-right text-xs transition-transform duration-200"
+                      class="pi pi-chevron-right text-[10px] transition-transform duration-200"
                       :class="isExpanded(row, index) ? 'rotate-90' : ''"
                     ></i>
                   </button>
@@ -74,7 +74,7 @@
                 <td
                   v-for="col in columns"
                   :key="col.key"
-                  class="px-6 py-4 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors group-hover:text-slate-900 dark:group-hover:text-white"
+                  class="px-6 py-3 text-sm text-slate-600 dark:text-slate-300 transition-colors group-hover:text-slate-900 dark:group-hover:text-white first:pl-6"
                   :style="{ textAlign: col.align || 'left' }"
                 >
                   <slot
@@ -83,7 +83,7 @@
                     :value="row[col.key]"
                     :index="index"
                   >
-                    <span :class="{ 'opacity-30 font-normal italic': !row[col.key] }">
+                    <span :class="{ 'opacity-30 italic font-normal': !row[col.key] }">
                       {{ row[col.key] ?? '—' }}
                     </span>
                   </slot>

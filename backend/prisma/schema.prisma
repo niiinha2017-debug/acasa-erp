@@ -17,6 +17,9 @@ model usuarios {
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
+  funcionario_id Int?      @unique  // FK para funcionarios
+  funcionario    funcionarios? @relation(fields: [funcionario_id], references: [id], onDelete: SetNull)
+
   recuperacoes recuperacao_senha[] // ✅ lado oposto da relação
   permissoes   usuarios_permissoes[]
 
@@ -287,6 +290,7 @@ model Fornecedor {
   cep             String?
   endereco        String?
   numero          String?
+  complemento     String?
   bairro          String?
   cidade          String?
   estado          String?
@@ -320,6 +324,11 @@ model produtos {
   cor          String?
   medida       String?
   unidade      String?
+
+  largura_mm    Int?
+  comprimento_mm Int?
+  espessura_mm  Int?
+  preco_m2      Decimal? @db.Decimal(10, 2)
 
   quantidade     Int?     @default(0)
   valor_unitario Decimal? @db.Decimal(10, 2)
@@ -400,6 +409,11 @@ model plano_corte_produto {
   valor_total    Decimal @db.Decimal(10, 2)
   status         String
 
+  largura_mm    Int?
+  comprimento_mm Int?
+  espessura_mm  Int?
+  preco_m2      Decimal? @db.Decimal(10, 2)
+
   plano_corte plano_corte      @relation(fields: [plano_corte_id], references: [id])
   item        plano_corte_item @relation(fields: [item_id], references: [id])
 
@@ -426,6 +440,9 @@ model plano_corte_consumo {
 
 model funcionarios {
   id Int @id @default(autoincrement())
+
+  usuario_id Int?      @unique  // FK para usuarios
+  usuario    usuarios? @relation
 
   // ======================
   // DADOS PESSOAIS
@@ -905,6 +922,11 @@ model Empresa {
   cep           String?
   email         String?
   telefone      String?
+  banco_titular String?
+  banco_nome    String?
+  banco_agencia String?
+  banco_conta   String?
+  pix           String?
   updated_at    DateTime @updatedAt
 
   @@map("empresa") // Nome da tabela no banco de dados

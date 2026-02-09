@@ -5,18 +5,18 @@
     <div class="flex items-center gap-5 min-w-0">
       <div
         v-if="icon"
-        class="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm border border-slate-200 dark:border-slate-700 transition-all duration-300"
+        class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
         :class="iconClass"
       >
         <i :class="icon" class="text-xl"></i>
       </div>
 
-      <div class="min-w-0 flex flex-col gap-1">
-        <h2 class="text-xl md:text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100 leading-tight transition-colors">
+      <div class="min-w-0 flex flex-col gap-0.5">
+        <h2 class="text-lg md:text-xl font-semibold text-slate-900 dark:text-white leading-tight">
           {{ title }}
         </h2>
 
-        <p v-if="subtitle" class="text-[10px] md:text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-[0.15em] transition-colors">
+        <p v-if="subtitle" class="text-sm text-slate-500 dark:text-slate-400 font-normal">
           {{ subtitle }}
         </p>
       </div>

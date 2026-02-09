@@ -1,353 +1,191 @@
 <template>
-  <div class="w-full max-w-[1200px] mx-auto space-y-4 animate-page-in">
-    <!-- Header Compacto -->
-    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-2">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
-          <i class="pi pi-shopping-cart text-lg"></i>
-        </div>
-        <div>
-          <h1 class="text-lg font-black text-slate-800 uppercase tracking-tight">Compras</h1>
-          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Entradas e rateios</p>
-        </div>
-      </div>
-
-      <div class="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-        <div class="relative w-full sm:w-56">
-          <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-          <input
-            v-model="filtro"
-            type="text"
-            placeholder="Buscar..."
-            class="w-full pl-9 pr-3 h-10 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary outline-none transition-all"
-          />
-        </div>
-
-<Button
-  v-if="can('compras.criar')"
-  variant="primary"
-  size="md"
-  class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider"
-  @click="router.push('/compras/novo')"
->
-
-          <i class="pi pi-plus mr-1.5 text-[10px]"></i>
-          Nova
+  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-page-in">
+    
+    <PageHeader 
+      title="Compras"
+      subtitle="Registro de entradas, insumos e rateios de custo"
+      icon="pi pi-shopping-cart"
+    >
+      <template #actions>
+        <Button
+          v-if="can('compras.criar')"
+          variant="primary"
+          @click="router.push('/compras/novo')"
+        >
+          <i class="pi pi-plus mr-2"></i>
+          Nova Compra
         </Button>
-      </div>
+      </template>
+    </PageHeader>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <MetricCard
+        label="Total Geral"
+        :value="format.currency(totalGeral)"
+        icon="pi pi-dollar"
+        color="slate"
+      />
+      
+      <MetricCard
+        label="Estoque/Insumos"
+        :value="format.currency(totalInsumos)"
+        icon="pi pi-box"
+        color="blue"
+      />
+
+       <MetricCard
+        label="Despesas Fixas"
+        :value="format.currency(totalDespesas)"
+        icon="pi pi-wallet"
+        color="rose"
+      />
+
+       <MetricCard
+        label="Investimentos"
+        :value="format.currency(totalInvestimentos)"
+        icon="pi pi-chart-line"
+        color="emerald"
+      />
     </div>
 
-    <!-- Cards Compactos -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-      <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">Total</p>
-        <p class="text-xl font-black text-slate-800">{{ format.currency(totalGeral) }}</p>
-      </div>
-
-      <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">Estoque</p>
-        <p class="text-xl font-black text-slate-800">{{ format.currency(totalInsumos) }}</p>
-      </div>
-
-      <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">Vendas</p>
-        <p class="text-xl font-black text-slate-800">{{ format.currency(totalVendas) }}</p>
-      </div>
-
-      <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 shadow-sm">
-        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-emerald-600">Este Mês</p>
-        <p class="text-xl font-black text-emerald-700">{{ format.currency(totalMesAtual) }}</p>
-      </div>
-    </div>
-
-    <!-- Tabela Compacta -->
-    <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-      <Table
-        :columns="columns"
-        :rows="paginadas"
-        :loading="loading"
-        empty-text="Nenhuma compra encontrada."
-        :boxed="false"
-        :expandable="true"
-      >
-        <template #cell-fornecedor="{ row }">
-          <div class="py-1">
-            <span class="text-sm font-bold text-slate-800 block truncate">
-              {{ nomeFornecedor(row) }}
-            </span>
-
-            <div class="flex items-center gap-2 mt-0.5">
-              <span
-                class="text-[8px] font-black px-1.5 py-0.5 rounded border"
-                :class="
-                  row.tipo_compra === 'INSUMOS'
-                    ? 'bg-blue-50 text-blue-600 border-blue-100'
-                    : 'bg-amber-50 text-amber-600 border-amber-100'
-                "
-              >
-                {{ row.tipo_compra === 'INSUMOS' ? '📦' : `🎯 #${row.venda_id}` }}
-              </span>
-
-              <span class="text-[8px] font-bold text-slate-400">
-                #{{ row.id }}
-              </span>
-            </div>
-          </div>
-        </template>
-
-        <template #cell-status="{ row }">
-          <div class="scale-90">
-            <StatusBadge :value="row.status || 'RASCUNHO'" />
-          </div>
-        </template>
-
-        <template #cell-valor_total="{ row }">
-          <span class="text-sm font-bold text-slate-800 tabular-nums">
-            {{ format.currency(row.valor_total) }}
-          </span>
-        </template>
-
-        <template #cell-data_compra="{ row }">
-          <span class="text-xs font-bold text-slate-600">
-            {{ format.date(row.data_compra) }}
-          </span>
-        </template>
-
-        <template #cell-acoes="{ row }">
-          <div class="flex justify-end gap-1">
-            <button
-  v-if="can('compras.editar')"
-  @click="router.push(`/compras/${row.id}`)"
-              class="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-brand-primary hover:text-white transition-all flex items-center justify-center"
-            >
-              <i class="pi pi-pencil text-xs"></i>
-            </button>
-
-            <button
-  v-if="can('compras.excluir')"
-  @click="confirmarExcluirCompra(row.id)"
-              class="w-8 h-8 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
-            >
-              <i class="pi pi-trash text-xs"></i>
-            </button>
-          </div>
-        </template>
-
-        <!-- DETALHES (EXPAND) -->
-        <template #row-expand="{ row }">
-          <div class="grid grid-cols-12 gap-4">
-            <!-- Itens -->
-            <div class="col-span-12 md:col-span-8">
-              <div class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
-                Itens
-              </div>
-
-              <div v-if="row.itens?.length" class="space-y-2">
-                <div
-                  v-for="it in row.itens"
-                  :key="it.id"
-                  class="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3"
-                >
-                  <div class="min-w-0">
-                    <div class="text-xs font-black uppercase truncate">{{ it.nome_produto }}</div>
-                    <div class="text-[10px] font-bold text-slate-400 uppercase">
-                      {{ Number(it.quantidade) }} {{ it.unidade }} •
-                      R$ {{ Number(it.valor_unitario).toLocaleString('pt-br', { minimumFractionDigits: 2 }) }}
-                    </div>
-                  </div>
-
-                  <div class="text-sm font-black text-slate-800 tabular-nums">
-                    R$ {{ Number(it.valor_total).toLocaleString('pt-br', { minimumFractionDigits: 2 }) }}
-                  </div>
-                </div>
-              </div>
-
-              <div v-else class="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Sem itens.
-              </div>
-            </div>
-
-            <!-- Rateio -->
-            <div class="col-span-12 md:col-span-4">
-              <div class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">
-                Rateio
-              </div>
-
-              <div v-if="row.rateios?.length" class="space-y-2">
-                <div
-                  v-for="r in row.rateios"
-                  :key="r.id"
-                  class="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3"
-                >
-                  <div class="text-xs font-black uppercase truncate">{{ r.nome_ambiente }}</div>
-                  <div class="text-sm font-black text-slate-800 tabular-nums">
-                    R$ {{ Number(r.valor_alocado).toLocaleString('pt-br', { minimumFractionDigits: 2 }) }}
-                  </div>
-                </div>
-              </div>
-
-              <div v-else class="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Sem rateio.
-              </div>
-            </div>
-          </div>
-        </template>
-      </Table>
-
-      <!-- Paginação fora da Table -->
-      <div class="border-t border-slate-200">
-        <TablePagination
-          v-model:page="page"
-          :page-size="pageSize"
-          :total="filtradas.length"
+    <div class="space-y-4">
+      <div class="w-full md:w-96">
+        <SearchInput
+          v-model="filtro"
+          placeholder="Buscar descrição, categoria ou valor..."
         />
+      </div>
+
+      <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+        <Table
+          :columns="columns"
+          :rows="filtradas"
+          :loading="loading"
+          empty-text="Nenhuma compra registrada."
+          :boxed="false"
+        >
+          <template #cell-descricao="{ row }">
+            <div class="flex flex-col py-1">
+              <span class="text-sm font-bold text-slate-800 uppercase tracking-tight leading-tight">
+                {{ row.descricao }}
+              </span>
+              <span class="text-[10px] font-bold text-slate-400 tracking-wider uppercase">
+                {{ row.fornecedor?.nome_fantasia || 'Fornecedor não informado' }}
+              </span>
+            </div>
+          </template>
+
+          <template #cell-categoria="{ row }">
+             <span class="text-[10px] font-black uppercase text-slate-500 tracking-wider border border-slate-100 bg-slate-50 px-2 py-1 rounded-lg">
+               {{ row.categoria }}
+             </span>
+          </template>
+
+          <template #cell-data="{ row }">
+            <div class="flex flex-col">
+              <span class="text-xs font-bold text-slate-700">{{ format.date(row.data_compra) }}</span>
+            </div>
+          </template>
+
+          <template #cell-valor="{ row }">
+             <span class="text-sm font-black text-slate-800 tabular-nums">
+               {{ format.currency(row.valor_total) }}
+             </span>
+          </template>
+
+          <template #cell-status="{ row }">
+            <StatusBadge :value="row.status || 'CONCLUIDO'" />
+          </template>
+
+          <template #cell-acoes="{ row }">
+             <TableActions
+                :can-edit="can('compras.editar')"
+                :can-delete="can('compras.excluir')"
+                @edit="router.push(`/compras/${row.id}`)"
+                @delete="confirmarExcluir(row.id)"
+              />
+          </template>
+        </Table>
       </div>
     </div>
   </div>
 </template>
 
-
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { CompraService } from '@/services/index'
-import { format } from '@/utils/format'
-import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
+import { notify } from '@/services/notify'
 import { can } from '@/services/permissions'
+import api from '@/services/api'
+import { format } from '@/utils/format'
 
 definePage({ meta: { perm: 'compras.ver' } })
 
-
 const router = useRouter()
-const compras = ref([])
 const loading = ref(false)
+const compras = ref([])
 const filtro = ref('')
-const page = ref(1)
-const pageSize = ref(10)
 
 const columns = [
-  { key: 'fornecedor', label: 'Fornecedor', width: '35%' },
-  { key: 'tipo_compra', label: 'Tipo', width: '12%' },
-  { key: 'status', label: 'Status', align: 'center', width: '10%' },
-  { key: 'valor_total', label: 'Valor', align: 'right', width: '18%' },
-  { key: 'data_compra', label: 'Data', align: 'center', width: '15%' },
-  { key: 'acoes', label: '', align: 'right', width: '10%' },
+  { key: 'descricao', label: 'DESCRIÇÃO / FORNECEDOR', width: '35%' },
+  { key: 'categoria', label: 'CATEGORIA', width: '15%' },
+  { key: 'data', label: 'DATA', width: '15%' },
+  { key: 'valor', label: 'VALOR', width: '15%', align: 'right' },
+  { key: 'status', label: 'STATUS', width: '10%' },
+  { key: 'acoes', label: '', align: 'right', width: '10%' }
 ]
 
+const filtradas = computed(() => {
+  const f = String(filtro.value || '').toLowerCase().trim()
+  if (!f) return compras.value
+
+  return compras.value.filter(c => {
+    const desc = String(c.descricao || '').toLowerCase()
+    const cat = String(c.categoria || '').toLowerCase()
+    const forn = String(c.fornecedor?.nome_fantasia || '').toLowerCase()
+    return desc.includes(f) || cat.includes(f) || forn.includes(f)
+  })
+})
+
+// Metrics
+const totalGeral = computed(() => compras.value.reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
+const totalInsumos = computed(() => compras.value.filter(c => c.categoria === 'INSUMO').reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
+const totalDespesas = computed(() => compras.value.filter(c => c.categoria === 'DESPESA').reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
+const totalInvestimentos = computed(() => compras.value.filter(c => c.categoria === 'INVESTIMENTO').reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
+
 async function carregar() {
+  if (!can('compras.ver')) return notify.error('Acesso negado.')
   loading.value = true
   try {
-    const res = await CompraService.listar()
-    const data = res?.data ?? res
-    compras.value = (Array.isArray(data) ? data : []).sort((a, b) => b.id - a.id)
-  } catch (error) {
+    // Ajuste endpoint conforme backend
+    const { data } = await api.get('/compras')
+    compras.value = Array.isArray(data) ? data : []
+  } catch (e) {
     notify.error('Erro ao carregar compras.')
   } finally {
     loading.value = false
   }
 }
 
-function nomeFornecedor(row) {
-  const f = row?.fornecedor
-  return f?.nome_fantasia || f?.razao_social || `Fornecedor #${row.fornecedor_id}`
-}
-
-const paginadas = computed(() => {
-  const start = (page.value - 1) * pageSize.value
-  return filtradas.value.slice(start, start + pageSize.value)
-})
-
-function datePart(value) {
-  if (!value) return ''
-  const s = String(value)
-  return s.includes('T') ? s.split('T')[0] : s // YYYY-MM-DD
-}
-
-function dateBRFromPart(part) {
-  const m = String(part || '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
-  if (!m) return ''
-  const [, y, mo, d] = m
-  return `${d}/${mo}/${y}`
-}
-
-function parseDateOnly(value) {
-  const part = datePart(value)
-  const m = part.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-  if (!m) return null
-  const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3])
-  return new Date(y, mo - 1, d) // local, sem UTC
-}
-
-
-const filtradas = computed(() => {
-  const t = String(filtro.value || '').toLowerCase().trim()
-  if (!t) return compras.value
-
-return compras.value.filter((c) => {
-  const part = datePart(c.data_compra)
-  const dataISO = part
-  const dataBR  = dateBRFromPart(part)
-  const dataFmt = format.date(c.data_compra) || ''
-
-  const valorNum = Number(c?.valor_total || 0)
-  const valorFix = isFinite(valorNum) ? valorNum.toFixed(2) : ''
-  const valorBR  = isFinite(valorNum)
-    ? valorNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 })
-    : ''
-  const valorCur = isFinite(valorNum) ? format.currency(valorNum) : ''
-
-  const campos = [
-    c.id,
-    c.venda_id,
-    nomeFornecedor(c),
-    c.status,
-    c.tipo_compra,
-    dataFmt,
-    dataBR,
-    dataISO,
-    valorNum,
-    valorFix,
-    valorBR,
-    valorCur,
-  ]
-
-  return campos.some((campo) =>
-    String(campo ?? '').toLowerCase().includes(t)
-  )
-})
-})
-
-
-const totalGeral = computed(() => filtradas.value.reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
-const totalInsumos = computed(() => filtradas.value.filter(c => c.tipo_compra === 'INSUMOS').reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
-const totalVendas = computed(() => filtradas.value.filter(c => c.tipo_compra !== 'INSUMOS').reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
-const totalMesAtual = computed(() => {
-  const mes = new Date().getMonth(), ano = new Date().getFullYear()
-  return filtradas.value.filter(c => {
-const d = parseDateOnly(c.data_compra)
-return d && d.getMonth() === mes && d.getFullYear() === ano
-
-  }).reduce((acc, c) => acc + Number(c.valor_total || 0), 0)
-})
-
-async function confirmarExcluirCompra(id) {
+async function confirmarExcluir(id) {
   if (!can('compras.excluir')) return notify.error('Acesso negado.')
-
-  const ok = await confirm.show('Excluir Compra', 'Esta ação não pode ser desfeita. Deseja continuar?')
+  const ok = await confirm.show(
+    'Excluir Compra',
+    `Deseja excluir permanentemente a compra #${id}?`,
+  )
   if (!ok) return
 
   try {
-    await CompraService.remover(id)
-    compras.value = compras.value.filter(c => c.id !== id)
-    notify.success('Compra removida com sucesso!')
+    await api.delete(`/compras/${id}`)
+    notify.success('Compra removida.')
+    await carregar()
   } catch (e) {
-    notify.error('Erro ao excluir registro.')
+    notify.error('Erro ao excluir.')
   }
 }
 
-watch(filtro, () => { page.value = 1 })
-
-
-onMounted(carregar)
+onMounted(async () => {
+  if (can('compras.ver')) await carregar()
+})
 </script>

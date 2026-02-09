@@ -2,13 +2,13 @@
   <div 
     class="w-full bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden transition-all duration-300 shadow-sm"
   >
-    <div v-if="title || $slots.header" class="px-6 py-5 border-b border-slate-50 dark:border-slate-800">
+    <div v-if="title || $slots.header" class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">
       <div class="flex items-center justify-between gap-4">
         <div class="flex flex-col gap-0.5">
-          <h3 v-if="title" class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-100">
+          <h3 v-if="title" class="text-base font-semibold text-slate-900 dark:text-slate-50">
             {{ title }}
           </h3>
-          <p v-if="description" class="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.1em]">
+          <p v-if="description" class="text-sm font-normal text-slate-500 dark:text-slate-400">
             {{ description }}
           </p>
         </div>

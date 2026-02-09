@@ -1,28 +1,28 @@
-import { IsNumber, IsOptional, IsString, Min } from 'class-validator'
-import { Type } from 'class-transformer'
+import { IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class UpdateVendaItemDto {
   @IsOptional()
   @IsString()
-  nome_ambiente?: string
+  nome_ambiente?: string;
 
   @IsOptional()
   @IsString()
-  descricao?: string
+  descricao?: string;
 
   @IsOptional()
   @IsString()
-  observacao?: string
+  observacao?: string;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  quantidade?: number
+  quantidade?: number;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  valor_unitario?: number
+  valor_unitario?: number;
 }

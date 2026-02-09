@@ -31,6 +31,7 @@ export const ClienteService = {
   select: (q) => api.get('/clientes/select', { params: q ? { q } : {} }),
   getAniversariantes: (data, enviar) =>
     api.get('/clientes/relatorios/aniversariantes', { params: { data, enviar } }),
+  getPipeline: () => api.get('/clientes/pipeline'),
 }
 
 // --- SERVIÇO DE COMPRAS ---
@@ -128,6 +129,7 @@ export const PlanoCorteService = {
   buscar: (id) => api.get(`/plano-corte/${id}`),
   salvar: (id, dados) => (id ? api.put(`/plano-corte/${id}`, dados) : api.post('/plano-corte', dados)),
   remover: (id) => api.delete(`/plano-corte/${id}`),
+  abrirPdf: (id) => api.post(`/plano-corte/${id}/pdf`),
 
   itens: {
     listar: (fornecedorId) => api.get('/plano-corte-itens', { params: { fornecedor_id: fornecedorId } }),
@@ -180,6 +182,7 @@ export const PermissoesService = {
   listar: () => api.get('/permissoes'),
   listarDoUsuario: (id) => api.get(`/usuarios/${id}/permissoes`),
   definirParaUsuario: (id, permissoesIds = []) => api.put(`/usuarios/${id}/permissoes`, { permissoes: permissoesIds }),
+  menu: () => api.get('/permissoes/menu'),
 }
 
 // --- FINANCEIRO ---
@@ -276,7 +279,7 @@ export const PontoJustificativasService = {
     api.delete(`/ponto/justificativas/${id}`),
 }
 
-export const agendaService = {
+export const AgendaService = {
   // Buscar todos (com filtro opcional de data)
   listarTodos(inicio, fim) {
     return api.get('/agenda', { params: { inicio, fim } });

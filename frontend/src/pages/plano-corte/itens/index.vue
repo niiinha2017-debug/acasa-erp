@@ -121,6 +121,22 @@
               />
             </div>
 
+            <div class="col-span-12 md:col-span-4">
+              <Input v-model="form.largura_mm" label="Largura (mm)" type="number" />
+            </div>
+
+            <div class="col-span-12 md:col-span-4">
+              <Input v-model="form.comprimento_mm" label="Comprimento (mm)" type="number" />
+            </div>
+
+            <div class="col-span-12 md:col-span-4">
+              <Input v-model="form.espessura_mm" label="Espessura (mm)" type="number" />
+            </div>
+
+            <div class="col-span-12 md:col-span-4">
+              <Input v-model="form.precoM2Mask" label="Preco por m2" placeholder="0,00" />
+            </div>
+
             <div class="col-span-12">
               <div class="rounded-2xl border border-slate-100 bg-slate-50/50 p-4">
                 <CustomCheckbox
@@ -207,13 +223,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { PlanoCorteService, FornecedorService } from '@/services/index'
 import { UNIDADES } from '@/constantes'
 import { confirm } from '@/services/confirm'
 import { notify } from '@/services/notify'
 import { can } from '@/services/permissions'
+import { maskMoneyBR } from '@/utils/masks'
 
 definePage({ meta: { perm: 'plano_corte.ver' } })
 
@@ -249,6 +266,10 @@ const form = ref({
   cor: '',
   medida: '',
   unidade: 'UN',
+  largura_mm: '',
+  comprimento_mm: '',
+  espessura_mm: '',
+  precoM2Mask: 'R$ 0,00',
   status: 'ATIVO',
 })
 
@@ -256,6 +277,14 @@ const podeSalvar = computed(() =>
   !!fornecedorSelecionado.value &&
   !!String(form.value.nome_produto || '').trim() &&
   !!form.value.unidade
+)
+
+watch(
+  () => form.value.precoM2Mask,
+  (v) => {
+    const n = String(v || '').replace(/\D/g, '')
+    form.value.precoM2Mask = maskMoneyBR(n ? Number(n) / 100 : 0)
+  },
 )
 
 const columns = [
@@ -287,6 +316,10 @@ function resetForm(keepFornecedor = true) {
     cor: '',
     medida: '',
     unidade: 'UN',
+    largura_mm: '',
+    comprimento_mm: '',
+    espessura_mm: '',
+    precoM2Mask: 'R$ 0,00',
     status: 'ATIVO',
   }
 }
@@ -326,6 +359,10 @@ function editar(row) {
     cor: row.cor || '',
     medida: row.medida || '',
     unidade: row.unidade || 'UN',
+    largura_mm: row.largura_mm || '',
+    comprimento_mm: row.comprimento_mm || '',
+    espessura_mm: row.espessura_mm || '',
+    precoM2Mask: maskMoneyBR(Number(row.preco_m2 || 0)),
     status: row.status || 'ATIVO',
   }
   window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -343,6 +380,7 @@ async function salvarItem() {
   salvando.value = true
   erro.value = ''
   try {
+    const precoM2 = Number(String(form.value.precoM2Mask || '').replace(/\D/g, '')) / 100 || 0
     const payload = {
       fornecedor_id: Number(fornecedorSelecionado.value),
       nome_produto: String(form.value.nome_produto || '').trim(),
@@ -350,6 +388,10 @@ async function salvarItem() {
       cor: String(form.value.cor || '').trim() || null,
       medida: String(form.value.medida || '').trim() || null,
       unidade: form.value.unidade || null,
+      largura_mm: form.value.largura_mm ? Number(form.value.largura_mm) : null,
+      comprimento_mm: form.value.comprimento_mm ? Number(form.value.comprimento_mm) : null,
+      espessura_mm: form.value.espessura_mm ? Number(form.value.espessura_mm) : null,
+      preco_m2: precoM2 || null,
       status: form.value.status || 'ATIVO',
 
       // obrigatórios do model (se o DTO exigir no create)

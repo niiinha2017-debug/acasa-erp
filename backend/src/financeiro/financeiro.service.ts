@@ -1,8 +1,12 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
-import { PrismaService } from '../prisma/prisma.service'
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 
 // ✅ Fonte da verdade dos status (shared)
-import { STATUS_FINANCEIRO_KEYS as SF } from '../../shared/constantes/status-financeiro'
+import { STATUS_FINANCEIRO_KEYS as SF } from '../../shared/constantes/status-financeiro';
 
 @Injectable()
 export class FinanceiroService {
@@ -12,27 +16,32 @@ export class FinanceiroService {
   // HELPERS
   // =========================================================
   private toNumber(value: any, field: string) {
-    const n = Number(value)
-    if (!Number.isFinite(n) || n <= 0) throw new BadRequestException(`${field} inválido`)
-    return n
+    const n = Number(value);
+    if (!Number.isFinite(n) || n <= 0)
+      throw new BadRequestException(`${field} inválido`);
+    return n;
   }
 
   private toDate(value: any, field: string) {
-    const d = new Date(value)
-    if (Number.isNaN(d.getTime())) throw new BadRequestException(`${field} inválida`)
-    return d
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime()))
+      throw new BadRequestException(`${field} inválida`);
+    return d;
   }
 
   private round2(n: number) {
-    return Math.round((n + Number.EPSILON) * 100) / 100
+    return Math.round((n + Number.EPSILON) * 100) / 100;
   }
 
   // =========================================================
   // ✅ CONSOLIDADO (CONTAS A PAGAR) = DESPESAS + COMPRAS + FECHAMENTOS
   // =========================================================
-  async listarContasPagarConsolidado(filtros: { fornecedor_id?: number; status?: string }) {
-    const status = filtros.status || undefined
-    const fornecedorId = filtros.fornecedor_id || undefined
+  async listarContasPagarConsolidado(filtros: {
+    fornecedor_id?: number;
+    status?: string;
+  }) {
+    const status = filtros.status || undefined;
+    const fornecedorId = filtros.fornecedor_id || undefined;
 
     const [despesas, compras, fechamentos] = await Promise.all([
       // DESPESAS
@@ -65,7 +74,7 @@ export class FinanceiroService {
         },
         orderBy: { vencimento_em: 'asc' },
       }),
-    ])
+    ]);
 
     return [
       // =====================
@@ -148,14 +157,14 @@ export class FinanceiroService {
         fornecedor_cobrador_nome: cp.fornecedor_cobrador?.nome_fantasia || null,
         forma_pagamento_chave: cp.forma_pagamento_chave || null,
       })),
-    ]
+    ];
   }
 
   // =========================================================
   // ✅ ATUALIZA VENCIDOS (FINANCEIRO) — INCLUI TÍTULOS
   // =========================================================
   async atualizarVencidos() {
-    const hoje = new Date()
+    const hoje = new Date();
 
     await this.prisma.despesas.updateMany({
       where: {
@@ -163,7 +172,7 @@ export class FinanceiroService {
         status: SF.EM_ABERTO,
       },
       data: { status: SF.VENCIDO },
-    })
+    });
 
     await this.prisma.compras.updateMany({
       where: {
@@ -171,7 +180,7 @@ export class FinanceiroService {
         status: SF.EM_ABERTO,
       },
       data: { status: SF.VENCIDO },
-    })
+    });
 
     await this.prisma.contas_pagar.updateMany({
       where: {
@@ -180,7 +189,7 @@ export class FinanceiroService {
         pago_em: null,
       },
       data: { status: SF.VENCIDO },
-    })
+    });
 
     await this.prisma.contas_receber.updateMany({
       where: {
@@ -189,7 +198,7 @@ export class FinanceiroService {
         recebido_em: null,
       },
       data: { status: SF.VENCIDO },
-    })
+    });
 
     // ✅ CRUCIAL: títulos vencem de verdade
     await this.prisma.titulos_financeiros.updateMany({
@@ -199,7 +208,7 @@ export class FinanceiroService {
         pago_em: null,
       },
       data: { status: SF.VENCIDO },
-    })
+    });
   }
 
   // =========================================================
@@ -208,20 +217,25 @@ export class FinanceiroService {
   async buscarContaPagar(id: number) {
     return this.prisma.contas_pagar.findUnique({
       where: { id },
-      include: { fornecedor: true, fornecedor_cobrador: true, despesa: true, titulos: true },
-    })
+      include: {
+        fornecedor: true,
+        fornecedor_cobrador: true,
+        despesa: true,
+        titulos: true,
+      },
+    });
   }
 
   async criarContaPagar(dto: any) {
-    return this.prisma.contas_pagar.create({ data: dto })
+    return this.prisma.contas_pagar.create({ data: dto });
   }
 
   async atualizarContaPagar(id: number, dto: any) {
-    return this.prisma.contas_pagar.update({ where: { id }, data: dto })
+    return this.prisma.contas_pagar.update({ where: { id }, data: dto });
   }
 
   async removerContaPagar(id: number) {
-    return this.prisma.contas_pagar.delete({ where: { id } })
+    return this.prisma.contas_pagar.delete({ where: { id } });
   }
 
   /**
@@ -240,15 +254,15 @@ export class FinanceiroService {
           vencimento_em: true,
           status: true,
         },
-      })
-      if (!conta) throw new NotFoundException('Conta a pagar não encontrada')
+      });
+      if (!conta) throw new NotFoundException('Conta a pagar não encontrada');
 
-      const pagoEm = new Date()
+      const pagoEm = new Date();
 
       const contaAtualizada = await tx.contas_pagar.update({
         where: { id },
         data: { status: SF.PAGO, pago_em: pagoEm },
-      })
+      });
 
       await tx.despesas.create({
         data: {
@@ -268,23 +282,27 @@ export class FinanceiroService {
           status: SF.PAGO,
           recorrencia_id: `CP-${conta.id}`,
         },
-      })
+      });
 
-      return contaAtualizada
-    })
+      return contaAtualizada;
+    });
   }
 
   // =========================================================
   // ✅ PREVIEW DO FECHAMENTO (ETAPA 1 DO MODAL)
   // Plano de corte é VENDA pro fornecedor => CRÉDITO/ABATIMENTO
   // =========================================================
-  async previewFechamentoFornecedor(body: { fornecedor_id: number; mes: number; ano: number }) {
-    const fornecedor_id = this.toNumber(body?.fornecedor_id, 'fornecedor_id')
-    const mes = this.toNumber(body?.mes, 'mes')
-    const ano = this.toNumber(body?.ano, 'ano')
+  async previewFechamentoFornecedor(body: {
+    fornecedor_id: number;
+    mes: number;
+    ano: number;
+  }) {
+    const fornecedor_id = this.toNumber(body?.fornecedor_id, 'fornecedor_id');
+    const mes = this.toNumber(body?.mes, 'mes');
+    const ano = this.toNumber(body?.ano, 'ano');
 
-    const inicio = new Date(ano, mes - 1, 1, 0, 0, 0)
-    const fim = new Date(ano, mes, 0, 23, 59, 59)
+    const inicio = new Date(ano, mes - 1, 1, 0, 0, 0);
+    const fim = new Date(ano, mes, 0, 23, 59, 59);
 
     const compras = await this.prisma.compras.findMany({
       where: {
@@ -293,11 +311,11 @@ export class FinanceiroService {
         data_compra: { gte: inicio, lte: fim },
       },
       select: { id: true, valor_total: true },
-    })
+    });
 
     const totalCompras = this.round2(
       compras.reduce((s, c) => s + Number((c as any).valor_total || 0), 0),
-    )
+    );
 
     const planos = await this.prisma.plano_corte.findMany({
       where: {
@@ -306,15 +324,19 @@ export class FinanceiroService {
         data_venda: { gte: inicio, lte: fim },
       },
       select: { id: true, valor_total: true },
-    })
+    });
 
     const totalPlanos = this.round2(
       planos.reduce((s, p) => s + Number((p as any).valor_total || 0), 0),
-    )
+    );
 
-    const compensado_auto = this.round2(Math.min(totalCompras, totalPlanos))
-    const saldo_a_pagar_auto = this.round2(Math.max(totalCompras - totalPlanos, 0))
-    const credito_sobra_auto = this.round2(Math.max(totalPlanos - totalCompras, 0))
+    const compensado_auto = this.round2(Math.min(totalCompras, totalPlanos));
+    const saldo_a_pagar_auto = this.round2(
+      Math.max(totalCompras - totalPlanos, 0),
+    );
+    const credito_sobra_auto = this.round2(
+      Math.max(totalPlanos - totalCompras, 0),
+    );
 
     return {
       fornecedor_id,
@@ -325,7 +347,7 @@ export class FinanceiroService {
       compensado_auto,
       saldo_a_pagar_auto,
       credito_sobra_auto,
-    }
+    };
   }
 
   // =========================================================
@@ -333,82 +355,109 @@ export class FinanceiroService {
   // Plano de corte ABATE compras (venda pro fornecedor)
   // =========================================================
   async fecharMesFornecedorComTitulos(body: any) {
-    const fornecedor_id = this.toNumber(body?.fornecedor_id, 'fornecedor_id')
-    const mes = this.toNumber(body?.mes, 'mes')
-    const ano = this.toNumber(body?.ano, 'ano')
+    const fornecedor_id = this.toNumber(body?.fornecedor_id, 'fornecedor_id');
+    const mes = this.toNumber(body?.mes, 'mes');
+    const ano = this.toNumber(body?.ano, 'ano');
 
-    const tipo = String(body?.forma_pagamento_chave || '').trim() // CHEQUE | CARTAO
-    if (!tipo) throw new BadRequestException('forma_pagamento_chave é obrigatório')
+    const tipo = String(body?.forma_pagamento_chave || '').trim(); // CHEQUE | CARTAO
+    if (!tipo)
+      throw new BadRequestException('forma_pagamento_chave é obrigatório');
 
     // opcional: Rimad cobrador (se quiser usar)
     const fornecedor_cobrador_id = body?.fornecedor_cobrador_id
       ? this.toNumber(body.fornecedor_cobrador_id, 'fornecedor_cobrador_id')
-      : null
+      : null;
 
     // ✅ campos livres (podem ser 0)
-    const valorDever = Number(body?.valor_dever || 0)        // soma no débito
-    const valorCreditar = Number(body?.valor_creditar || 0) // soma no crédito
+    const valorDever = Number(body?.valor_dever || 0); // soma no débito
+    const valorCreditar = Number(body?.valor_creditar || 0); // soma no crédito
 
-    const pctLiberado = Math.max(0, Math.min(100, Number(body?.percentual_liberado ?? 100)))
-    const descontoPct = Math.max(0, Math.min(100, Number(body?.desconto_percentual ?? 0)))
+    const pctLiberado = Math.max(
+      0,
+      Math.min(100, Number(body?.percentual_liberado ?? 100)),
+    );
+    const descontoPct = Math.max(
+      0,
+      Math.min(100, Number(body?.desconto_percentual ?? 0)),
+    );
 
-    const parcelas = Array.isArray(body?.parcelas) ? body.parcelas : []
-    if (!parcelas.length) throw new BadRequestException('parcelas é obrigatório')
+    const parcelas = Array.isArray(body?.parcelas) ? body.parcelas : [];
+    if (!parcelas.length)
+      throw new BadRequestException('parcelas é obrigatório');
 
     for (const p of parcelas) {
-      const parcelaNum = Number(p?.parcela || 0)
-      const valor = Number(p?.valor || 0)
-      const venc = String(p?.vencimento_em || '').trim()
+      const parcelaNum = Number(p?.parcela || 0);
+      const valor = Number(p?.valor || 0);
+      const venc = String(p?.vencimento_em || '').trim();
 
-      if (!Number.isFinite(parcelaNum) || parcelaNum <= 0) throw new BadRequestException('parcela inválida')
-      if (!Number.isFinite(valor) || valor <= 0) throw new BadRequestException('valor de parcela inválido')
-      this.toDate(venc, 'vencimento_em')
+      if (!Number.isFinite(parcelaNum) || parcelaNum <= 0)
+        throw new BadRequestException('parcela inválida');
+      if (!Number.isFinite(valor) || valor <= 0)
+        throw new BadRequestException('valor de parcela inválido');
+      this.toDate(venc, 'vencimento_em');
     }
 
     const vencPadrao = body?.vencimento_em
       ? this.toDate(body.vencimento_em, 'vencimento_em')
-      : new Date(ano, mes, 5)
+      : new Date(ano, mes, 5);
 
     return this.prisma.$transaction(async (tx) => {
       // 0) não duplicar fechamento
       const jaExiste = await tx.contas_pagar.findFirst({
         where: { fornecedor_id, mes_referencia: mes, ano_referencia: ano },
         select: { id: true },
-      })
-      if (jaExiste) throw new BadRequestException('Já existe fechamento deste fornecedor para o mês/ano.')
+      });
+      if (jaExiste)
+        throw new BadRequestException(
+          'Já existe fechamento deste fornecedor para o mês/ano.',
+        );
 
       // 1) automático
-      const inicio = new Date(ano, mes - 1, 1, 0, 0, 0)
-      const fim = new Date(ano, mes, 0, 23, 59, 59)
+      const inicio = new Date(ano, mes - 1, 1, 0, 0, 0);
+      const fim = new Date(ano, mes, 0, 23, 59, 59);
 
       const compras = await tx.compras.findMany({
-        where: { fornecedor_id, status: SF.EM_ABERTO, data_compra: { gte: inicio, lte: fim } },
+        where: {
+          fornecedor_id,
+          status: SF.EM_ABERTO,
+          data_compra: { gte: inicio, lte: fim },
+        },
         select: { id: true, valor_total: true },
-      })
+      });
       const totalCompras = this.round2(
         compras.reduce((s, c) => s + Number((c as any).valor_total || 0), 0),
-      )
+      );
 
       const planos = await tx.plano_corte.findMany({
-        where: { fornecedor_id, status: SF.EM_ABERTO, data_venda: { gte: inicio, lte: fim } },
+        where: {
+          fornecedor_id,
+          status: SF.EM_ABERTO,
+          data_venda: { gte: inicio, lte: fim },
+        },
         select: { id: true, valor_total: true },
-      })
+      });
       const totalPlanos = this.round2(
         planos.reduce((s, p) => s + Number((p as any).valor_total || 0), 0),
-      )
+      );
 
-      const compensado_auto = this.round2(Math.min(totalCompras, totalPlanos))
+      const compensado_auto = this.round2(Math.min(totalCompras, totalPlanos));
 
       // 2) cálculo final (correto: plano ABATE)
-      const debito_base = this.round2(totalCompras + Math.max(valorDever, 0))
-      const credito_auto = this.round2(Math.max(totalPlanos, 0))
-      const credito_extra = this.round2((Math.max(valorCreditar, 0) * pctLiberado) / 100)
+      const debito_base = this.round2(totalCompras + Math.max(valorDever, 0));
+      const credito_auto = this.round2(Math.max(totalPlanos, 0));
+      const credito_extra = this.round2(
+        (Math.max(valorCreditar, 0) * pctLiberado) / 100,
+      );
 
-      const subtotal = this.round2(Math.max(debito_base - (credito_auto + credito_extra), 0))
-      const desconto_valor = this.round2((subtotal * descontoPct) / 100)
-      const total_final = this.round2(Math.max(subtotal - desconto_valor, 0))
+      const subtotal = this.round2(
+        Math.max(debito_base - (credito_auto + credito_extra), 0),
+      );
+      const desconto_valor = this.round2((subtotal * descontoPct) / 100);
+      const total_final = this.round2(Math.max(subtotal - desconto_valor, 0));
 
-      const compensado_total = this.round2(Math.min(debito_base, credito_auto + credito_extra))
+      const compensado_total = this.round2(
+        Math.min(debito_base, credito_auto + credito_extra),
+      );
 
       // 3) cria FECHAMENTO (contas_pagar)
       const contaPagar = await tx.contas_pagar.create({
@@ -440,7 +489,7 @@ export class FinanceiroService {
           pago_em: total_final > 0 ? null : new Date(),
         },
         select: { id: true },
-      })
+      });
 
       // 4) cria TITULOS FINANCEIROS (status usando SF)
       await tx.titulos_financeiros.createMany({
@@ -478,21 +527,21 @@ export class FinanceiroService {
             total_final,
           },
         })),
-      })
+      });
 
       // 5) atualiza origens (mantém seu padrão atual)
       if (compras.length) {
         await tx.compras.updateMany({
           where: { id: { in: compras.map((c) => c.id) } },
           data: { status: SF.PAGO },
-        })
+        });
       }
 
       if (planos.length) {
         await tx.plano_corte.updateMany({
           where: { id: { in: planos.map((p) => p.id) } },
           data: { status: SF.PAGO },
-        })
+        });
       }
 
       return {
@@ -505,55 +554,62 @@ export class FinanceiroService {
         compensado_total,
         total_final,
         conta_pagar_id: contaPagar.id,
-      }
-    })
+      };
+    });
   }
 
   // =========================================================
   // CONTAS A RECEBER (mantido)
   // =========================================================
   async listarContasReceber(filtros: {
-    fornecedor_id?: number
-    cliente_id?: number
-    status?: string
-    data_ini?: string
-    data_fim?: string
+    fornecedor_id?: number;
+    cliente_id?: number;
+    status?: string;
+    data_ini?: string;
+    data_fim?: string;
   }) {
     const where: any = {
       fornecedor_id: filtros.fornecedor_id || undefined,
       cliente_id: filtros.cliente_id || undefined,
       status: filtros.status || undefined,
-    }
+    };
 
     if (filtros.data_ini || filtros.data_fim) {
-      where.vencimento_em = {}
-      if (filtros.data_ini) where.vencimento_em.gte = new Date(filtros.data_ini)
-      if (filtros.data_fim) where.vencimento_em.lte = new Date(filtros.data_fim)
+      where.vencimento_em = {};
+      if (filtros.data_ini)
+        where.vencimento_em.gte = new Date(filtros.data_ini);
+      if (filtros.data_fim)
+        where.vencimento_em.lte = new Date(filtros.data_fim);
     }
 
     return this.prisma.contas_receber.findMany({
       where,
       orderBy: [{ vencimento_em: 'asc' }, { id: 'desc' }],
-    })
+    });
   }
 
   async buscarContaReceber(id: number) {
     return this.prisma.contas_receber.findUnique({
       where: { id },
-      include: { fornecedor: true, cliente: true, compensacoes: true, titulos: true },
-    })
+      include: {
+        fornecedor: true,
+        cliente: true,
+        compensacoes: true,
+        titulos: true,
+      },
+    });
   }
 
   async criarContaReceber(dto: any) {
-    return this.prisma.contas_receber.create({ data: dto })
+    return this.prisma.contas_receber.create({ data: dto });
   }
 
   async removerContaReceber(id: number) {
-    return this.prisma.contas_receber.delete({ where: { id } })
+    return this.prisma.contas_receber.delete({ where: { id } });
   }
 
   async atualizarContaReceber(id: number, dto: any) {
-    return this.prisma.contas_receber.update({ where: { id }, data: dto })
+    return this.prisma.contas_receber.update({ where: { id }, data: dto });
   }
 
   async receberContaReceber(id: number, dto: any) {
@@ -564,18 +620,22 @@ export class FinanceiroService {
         recebido_em: new Date(),
         ...dto,
       },
-    })
+    });
   }
 
   // =========================================================
   // ✅ COMPENSAÇÃO (mantido)
   // =========================================================
   async compensarFornecedor(fornecedorId: number, dto: any) {
-    const fornecedor_id = this.toNumber(fornecedorId, 'fornecedorId')
-    const conta_pagar_id = this.toNumber(dto?.conta_pagar_id, 'conta_pagar_id')
-    const conta_receber_id = this.toNumber(dto?.conta_receber_id, 'conta_receber_id')
-    const valor = Number(dto?.valor || 0)
-    if (!Number.isFinite(valor) || valor <= 0) throw new BadRequestException('valor inválido')
+    const fornecedor_id = this.toNumber(fornecedorId, 'fornecedorId');
+    const conta_pagar_id = this.toNumber(dto?.conta_pagar_id, 'conta_pagar_id');
+    const conta_receber_id = this.toNumber(
+      dto?.conta_receber_id,
+      'conta_receber_id',
+    );
+    const valor = Number(dto?.valor || 0);
+    if (!Number.isFinite(valor) || valor <= 0)
+      throw new BadRequestException('valor inválido');
 
     return this.prisma.fornecedor_compensacoes.create({
       data: {
@@ -585,24 +645,26 @@ export class FinanceiroService {
         valor,
         observacao: dto?.observacao ? String(dto.observacao).trim() : null,
       },
-    })
+    });
   }
 
   async listarContasPagarFechamentos(filtros: {
-    fornecedor_id?: number
-    status?: string
-    data_ini?: string
-    data_fim?: string
+    fornecedor_id?: number;
+    status?: string;
+    data_ini?: string;
+    data_fim?: string;
   }) {
     const where: any = {
       fornecedor_id: filtros.fornecedor_id || undefined,
       status: filtros.status?.trim() || undefined,
-    }
+    };
 
     if (filtros.data_ini || filtros.data_fim) {
-      where.vencimento_em = {}
-      if (filtros.data_ini) where.vencimento_em.gte = new Date(filtros.data_ini)
-      if (filtros.data_fim) where.vencimento_em.lte = new Date(filtros.data_fim)
+      where.vencimento_em = {};
+      if (filtros.data_ini)
+        where.vencimento_em.gte = new Date(filtros.data_ini);
+      if (filtros.data_fim)
+        where.vencimento_em.lte = new Date(filtros.data_fim);
     }
 
     return this.prisma.contas_pagar.findMany({
@@ -612,7 +674,7 @@ export class FinanceiroService {
         fornecedor_cobrador: true,
       },
       orderBy: [{ vencimento_em: 'asc' }, { id: 'desc' }],
-    })
+    });
   }
 
   // =========================================================
@@ -620,21 +682,22 @@ export class FinanceiroService {
   // (você pode remover quando o novo fluxo estiver em produção)
   // =========================================================
   async fecharMesFornecedor(body: {
-    fornecedor_id: number
-    mes: number
-    ano: number
-    forma_pagamento_chave: string
-    vencimento_em?: string
+    fornecedor_id: number;
+    mes: number;
+    ano: number;
+    forma_pagamento_chave: string;
+    vencimento_em?: string;
   }) {
-    const fornecedor_id = this.toNumber(body?.fornecedor_id, 'fornecedor_id')
-    const mes = this.toNumber(body?.mes, 'mes')
-    const ano = this.toNumber(body?.ano, 'ano')
-    const forma = String(body?.forma_pagamento_chave || '').trim()
-    if (!forma) throw new BadRequestException('forma_pagamento_chave é obrigatório')
+    const fornecedor_id = this.toNumber(body?.fornecedor_id, 'fornecedor_id');
+    const mes = this.toNumber(body?.mes, 'mes');
+    const ano = this.toNumber(body?.ano, 'ano');
+    const forma = String(body?.forma_pagamento_chave || '').trim();
+    if (!forma)
+      throw new BadRequestException('forma_pagamento_chave é obrigatório');
 
     return this.prisma.$transaction(async (tx) => {
-      const inicio = new Date(ano, mes - 1, 1, 0, 0, 0)
-      const fim = new Date(ano, mes, 0, 23, 59, 59)
+      const inicio = new Date(ano, mes - 1, 1, 0, 0, 0);
+      const fim = new Date(ano, mes, 0, 23, 59, 59);
 
       const compras = await tx.compras.findMany({
         where: {
@@ -643,10 +706,10 @@ export class FinanceiroService {
           data_compra: { gte: inicio, lte: fim },
         },
         select: { id: true, valor_total: true },
-      })
+      });
       const totalCompras = this.round2(
         compras.reduce((s, c) => s + Number((c as any).valor_total || 0), 0),
-      )
+      );
 
       const planos = await tx.plano_corte.findMany({
         where: {
@@ -655,18 +718,18 @@ export class FinanceiroService {
           data_venda: { gte: inicio, lte: fim },
         },
         select: { id: true, valor_total: true },
-      })
+      });
       const totalPlanos = this.round2(
         planos.reduce((s, p) => s + Number((p as any).valor_total || 0), 0),
-      )
+      );
 
-      const compensado = this.round2(Math.min(totalCompras, totalPlanos))
-      const valorAPagar = this.round2(Math.max(totalCompras - totalPlanos, 0))
-      const saldo = this.round2(totalCompras - totalPlanos)
+      const compensado = this.round2(Math.min(totalCompras, totalPlanos));
+      const valorAPagar = this.round2(Math.max(totalCompras - totalPlanos, 0));
+      const saldo = this.round2(totalCompras - totalPlanos);
 
       const vencPadrao = body?.vencimento_em
         ? this.toDate(body.vencimento_em, 'vencimento_em')
-        : new Date(ano, mes, 5)
+        : new Date(ano, mes, 5);
 
       const contaPagar = await tx.contas_pagar.create({
         data: {
@@ -683,20 +746,20 @@ export class FinanceiroService {
           pago_em: valorAPagar > 0 ? null : new Date(),
         },
         select: { id: true },
-      })
+      });
 
       if (compras.length) {
         await tx.compras.updateMany({
           where: { id: { in: compras.map((c) => c.id) } },
           data: { status: SF.PAGO },
-        })
+        });
       }
 
       if (planos.length) {
         await tx.plano_corte.updateMany({
           where: { id: { in: planos.map((p) => p.id) } },
           data: { status: SF.PAGO },
-        })
+        });
       }
 
       return {
@@ -708,7 +771,7 @@ export class FinanceiroService {
         saldo_final: saldo,
         valor_a_pagar: valorAPagar,
         conta_pagar_id: contaPagar.id,
-      }
-    })
+      };
+    });
   }
 }

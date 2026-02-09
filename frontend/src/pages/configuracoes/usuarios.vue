@@ -143,15 +143,11 @@
               <Input v-model="formUsuario.nome" label="Nome Completo" class="col-span-2" />
               <Input v-model="formUsuario.usuario" label="Usuário Login" :forceUpper="false" />
               <Input v-model="formUsuario.email" label="E-mail" type="email" :forceUpper="false" />
-
-              <Input
-                v-model="formUsuario.senha"
-                :label="modoEdicao ? 'Nova Senha (deixe vazio para manter)' : 'Senha Inicial'"
-                type="password"
-                class="col-span-2"
-                :forceUpper="false"
-              />
             </div>
+
+            <p v-if="!modoEdicao" class="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              A senha provisória será enviada por e-mail.
+            </p>
 
             <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
               <button
@@ -196,7 +192,7 @@ import { can } from '@/services/permissions'
 
 definePage({ meta: { perm: 'usuarios.ver' } })
 
-const { usuarioLogado, isAuthenticated } = useAuth()
+const { usuarioLogado, isAuthenticated, solicitarCadastro } = useAuth()
 
 // --- ESTADOS ---
 const usuarios = ref([])
@@ -218,7 +214,6 @@ const formUsuario = ref({
   nome: '',
   usuario: '',
   email: '',
-  senha: '',
   status: 'PENDENTE',
 })
 
@@ -252,7 +247,6 @@ const abrirModal = (user = null) => {
       nome: user.nome || '',
       usuario: user.usuario || '',
       email: user.email || '',
-      senha: '',
       status: user.status || 'PENDENTE',
     }
   } else {
@@ -261,7 +255,6 @@ const abrirModal = (user = null) => {
       nome: '',
       usuario: '',
       email: '',
-      senha: '',
       status: 'PENDENTE',
     }
   }
@@ -301,7 +294,15 @@ const salvar = async () => {
 
   loadingSalvar.value = true
   try {
-    await UsuariosService.salvar(formUsuario.value.id, formUsuario.value)
+    if (modoEdicao.value) {
+      await UsuariosService.salvar(formUsuario.value.id, formUsuario.value)
+    } else {
+      await solicitarCadastro({
+        nome: formUsuario.value.nome,
+        usuario: formUsuario.value.usuario,
+        email: formUsuario.value.email,
+      })
+    }
     notify.success('Operação realizada com sucesso!')
     exibirModal.value = false
     await carregar()

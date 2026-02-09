@@ -4,22 +4,24 @@
       v-can="permEdit"
       variant="ghost"
       size="sm"
-      class="!p-2 !rounded-lg text-slate-400 dark:text-slate-500 hover:text-brand-primary hover:bg-brand-primary/5 transition-all duration-200 group/btn"
+      class="!p-2 !rounded-md text-slate-400 dark:text-slate-500 hover:text-brand-primary hover:bg-brand-primary/5 transition-all duration-200 group/btn"
       @click.stop="$emit('edit', id)"
+      title="Editar"
     >
-      <i class="pi pi-pencil text-[11px] group-hover/btn:rotate-12 transition-transform"></i>
-      <span v-if="showLabel" class="ml-2 text-[10px] font-bold uppercase tracking-wider">Editar</span>
+      <i class="pi pi-pencil text-xs group-hover/btn:rotate-12 transition-transform"></i>
+      <span v-if="showLabel" class="ml-2 text-xs font-medium">Editar</span>
     </Button>
 
     <Button
       v-can="permDelete"
       variant="ghost"
       size="sm"
-      class="!p-2 !rounded-lg text-slate-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-500/5 transition-all duration-200 group/btn"
+      class="!p-2 !rounded-md text-slate-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-500/5 transition-all duration-200 group/btn"
       @click.stop="$emit('delete', id)"
+      title="Excluir"
     >
-      <i class="pi pi-trash text-[11px] group-hover/btn:scale-110 transition-transform"></i>
-      <span v-if="showLabel" class="ml-2 text-[10px] font-bold uppercase tracking-wider">Excluir</span>
+      <i class="pi pi-trash text-xs group-hover/btn:scale-110 transition-transform"></i>
+      <span v-if="showLabel" class="ml-2 text-xs font-medium">Excluir</span>
     </Button>
 
     <slot></slot>

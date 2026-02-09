@@ -5,25 +5,25 @@
     :active="active"
     class="group p-5"
   >
-    <div class="flex items-center gap-5">
+    <div class="flex items-center gap-4">
       <div 
-        class="w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:shadow-lg"
+        class="w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-300 group-hover:shadow-md"
         :class="iconBackground"
       >
-        <i :class="['pi text-xl transition-transform duration-500 group-hover:rotate-12', icon]"></i>
+        <i :class="['pi text-lg transition-transform duration-500 group-hover:rotate-12', icon]"></i>
       </div>
 
-      <div class="flex flex-col gap-0.5">
+      <div class="flex flex-col">
         <p 
-          class="text-[11px] font-bold uppercase tracking-widest"
-          :class="variant === 'dark' ? 'text-slate-400' : 'text-slate-400'"
+          class="text-sm font-medium"
+          :class="variant === 'dark' ? 'text-slate-400' : 'text-slate-500'"
         >
           {{ label }}
         </p>
         
         <p 
-          class="text-2xl font-bold tracking-tight leading-none"
-          :class="variant === 'dark' ? 'text-white' : 'text-slate-800 dark:text-slate-100'"
+          class="text-2xl font-semibold tracking-tight leading-none mt-0.5"
+          :class="variant === 'dark' ? 'text-white' : 'text-slate-900 dark:text-slate-100'"
         >
           {{ value }}
         </p>

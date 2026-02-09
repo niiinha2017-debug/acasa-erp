@@ -330,7 +330,7 @@ const onCepBlur = async () => {
 async function carregarLogo() {
   try {
     const res = await ArquivosService.listar({ ownerType: 'EMPRESA', ownerId: 1, categoria: 'LOGO' })
-    const arr = res?.data ?? res
+    const arr = res?.data?.data ?? res?.data ?? res
     const lista = Array.isArray(arr) ? arr : []
     const logo = lista.find(a => String(a.slot_key || '') === 'LOGO_PRINCIPAL') || lista[0]
     logoPreview.value = logo?.url || ''
@@ -342,7 +342,7 @@ async function carregarLogo() {
 async function carregarDocumentos() {
   try {
     const res = await ArquivosService.listar({ ownerType: 'EMPRESA', ownerId: 1, categoria: 'ANEXO' })
-    const arr = res?.data ?? res
+    const arr = res?.data?.data ?? res?.data ?? res
     documentos.value = Array.isArray(arr) ? arr : []
   } catch {
     documentos.value = []

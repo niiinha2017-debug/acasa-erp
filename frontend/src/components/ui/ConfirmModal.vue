@@ -12,27 +12,27 @@
             <i class="pi pi-exclamation-circle text-2xl"></i>
           </div>
           
-          <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2">
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">
             {{ confirmState.title }}
           </h3>
           
-          <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-8">
+          <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
             {{ confirmState.message }}
           </p>
         </div>
         
-        <div class="flex flex-col gap-2">
+        <div class="flex flex-col gap-3">
           <Button 
             variant="danger" 
-            class="w-full h-11 !rounded-xl font-bold uppercase tracking-wider shadow-sm" 
+            class="w-full h-10 !rounded-lg font-medium shadow-sm" 
             @click="confirm.confirm()"
           >
-            Confirmar Ação
+            Confirmar
           </Button>
           
           <Button 
-            variant="ghost" 
-            class="w-full h-11 !rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" 
+            variant="secondary" 
+            class="w-full h-10 !rounded-lg text-slate-700 hover:text-slate-900 dark:hover:text-slate-200" 
             @click="confirm.cancel()"
           >
             Cancelar

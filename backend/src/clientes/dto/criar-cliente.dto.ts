@@ -5,72 +5,70 @@ import {
   IsString,
   IsDateString,
   MaxLength,
-} from 'class-validator'
+} from 'class-validator';
 
 export class CriarClienteDto {
   @IsOptional()
-  indicacao_id?: number
+  indicacao_id?: number;
 
   @IsString()
   @MaxLength(255)
-  nome_completo!: string
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(255)
-  razao_social?: string
+  nome_completo!: string;
 
   @IsOptional()
   @IsString()
   @MaxLength(255)
-  nome_fantasia?: string
+  razao_social?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  nome_fantasia?: string;
 
   // ISO date
-@IsOptional()
-@IsDateString()
-data_nascimento?: string
+  @IsOptional()
+  @IsDateString()
+  data_nascimento?: string;
 
+  @IsOptional() @IsString() cpf?: string;
+  @IsOptional() @IsString() rg?: string;
+  @IsOptional() @IsString() cnpj?: string;
+  @IsOptional() @IsString() ie?: string;
 
-  @IsOptional() @IsString() cpf?: string
-  @IsOptional() @IsString() rg?: string
-  @IsOptional() @IsString() cnpj?: string
-  @IsOptional() @IsString() ie?: string
-
-  @IsOptional() @IsString() telefone?: string
-  @IsOptional() @IsString() whatsapp?: string
+  @IsOptional() @IsString() telefone?: string;
+  @IsOptional() @IsString() whatsapp?: string;
 
   @IsOptional()
   @IsString()
-  estado_civil?: string // SOLTEIRO | CASADO
+  estado_civil?: string; // SOLTEIRO | CASADO
 
   @IsOptional()
   @IsString()
-  nome_conjuge?: string
-
+  nome_conjuge?: string;
 
   @IsOptional()
   @IsEmail()
-  email?: string
+  email?: string;
 
+  @IsOptional() @IsString() cep?: string;
+  @IsOptional() @IsString() endereco?: string;
+  @IsOptional() @IsString() numero?: string;
+  @IsOptional() @IsString() complemento?: string;
+  @IsOptional() @IsString() bairro?: string;
+  @IsOptional() @IsString() cidade?: string;
+  @IsOptional() @IsString() estado?: string;
 
-  @IsOptional() @IsString() cep?: string
-  @IsOptional() @IsString() endereco?: string
-  @IsOptional() @IsString() numero?: string
-  @IsOptional() @IsString() complemento?: string
-  @IsOptional() @IsString() bairro?: string
-  @IsOptional() @IsString() cidade?: string
-  @IsOptional() @IsString() estado?: string
-
-  // ✅ status vem das constantes
+  // ✅ status vem das constantes; opcional no create — será preenchido pelo backend se não enviado
+  @IsOptional()
   @IsString()
-  status!: string
+  status?: string;
 
   // preferências
   @IsOptional()
   @IsBoolean()
-  enviar_aniversario_email?: boolean
+  enviar_aniversario_email?: boolean;
 
   @IsOptional()
   @IsBoolean()
-  enviar_aniversario_whatsapp?: boolean
+  enviar_aniversario_whatsapp?: boolean;
 }

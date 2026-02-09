@@ -1,15 +1,15 @@
 <template>
-  <div class="flex items-center justify-between gap-3 pt-3">
-    <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">
+  <div class="flex items-center justify-between gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+    <div class="text-xs font-medium text-slate-500">
       {{ from }}-{{ to }} de {{ total }}
     </div>
 
     <div class="flex items-center gap-2">
       <Button
-        variant="ghost"
+        variant="secondary"
         size="sm"
         type="button"
-        class="!h-9 !rounded-xl"
+        class="!h-8 !px-2 !rounded-lg"
         :disabled="page <= 1"
         @click="$emit('update:page', page - 1)"
       >
@@ -21,10 +21,10 @@
           v-for="p in pagesToShow"
           :key="p.key"
           type="button"
-          class="min-w-[36px] h-9 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition"
+          class="min-w-[32px] h-8 px-2 rounded-lg text-xs font-medium border transition-colors"
           :class="p.num === page
-            ? 'bg-slate-900 text-white border-slate-900'
-            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
+            ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300'"
           :disabled="p.disabled"
           @click="p.num && $emit('update:page', p.num)"
         >
@@ -33,10 +33,10 @@
       </div>
 
       <Button
-        variant="ghost"
+        variant="secondary"
         size="sm"
         type="button"
-        class="!h-9 !rounded-xl"
+        class="!h-8 !px-2 !rounded-lg"
         :disabled="page >= totalPages"
         @click="$emit('update:page', page + 1)"
       >

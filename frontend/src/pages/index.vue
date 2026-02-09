@@ -54,6 +54,5 @@ import { useAuth } from '@/services/useauth.js' // Ajustado para o nome real do 
 
 const { usuarioLogado } = useAuth()
 
-// Não precisa de definePage meta public aqui, 
-// pois queremos que o Router proteja esta página!
+definePage({ meta: { perm: 'index.visualizar' } })
 </script>

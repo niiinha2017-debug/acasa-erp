@@ -1,81 +1,60 @@
 <template>
-  <div class="h-dvh overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50">
-    <div class="fixed inset-0 pointer-events-none">
-      <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.10),transparent_55%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.16),transparent_55%)]" />
-      <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(236,72,153,0.08),transparent_60%)] dark:bg-[radial-gradient(ellipse_at_bottom,rgba(236,72,153,0.12),transparent_60%)]" />
-    </div>
-
-    <div class="relative h-dvh grid place-items-center p-4">
-      <div class="w-full max-w-[520px] overflow-hidden rounded-3xl border border-slate-200/80 bg-white/85 shadow-[0_26px_70px_-40px_rgba(2,6,23,0.55)] backdrop-blur dark:border-slate-800/70 dark:bg-slate-950/60">
-        
-        <div class="px-7 py-6 border-b border-slate-200/70 dark:border-slate-800/70">
-          <div class="flex items-center gap-4">
-            <div class="grid size-12 place-items-center rounded-2xl bg-white/80 ring-1 ring-slate-200 shadow-sm backdrop-blur dark:bg-slate-900/50 dark:ring-slate-800">
-              <img src="/logo.png" alt="Logo" class="size-8 object-contain" />
-            </div>
-            <div class="flex-1">
-              <p class="text-[10px] font-black uppercase tracking-[0.32em] text-slate-500 dark:text-slate-400">sistema</p>
-              <h1 class="text-xl md:text-2xl font-black tracking-tight">
-                A Casa <span class="text-indigo-600 dark:text-indigo-400">Móveis Planejados.</span>
-              </h1>
-            </div>
-          </div>
-        </div>
-
-        <div class="px-7 py-6">
-          <form autocomplete="off" @submit.prevent="handleLoginSubmit" class="space-y-5">
-            <div class="grid gap-4">
-              <Input
-                v-model="formLogin.usuario"
-                name="acasa_login_user"
-                label="Usuário ou E-mail"
-                class="h-11"
-                :forceUpper="false"
-                :disabled="loading"
-              />
-
-              <Input
-                v-model="formLogin.senha"
-                name="acasa_login_pass"
-                autocomplete="current-password"
-                :type="showPassword ? 'text' : 'password'"
-                label="Senha"
-                class="h-11"
-                :forceUpper="false"
-                :disabled="loading"
-              >
-                <template #suffix>
-                  <button type="button" @click="togglePassword" class="rounded-xl px-2 py-2 text-slate-500 hover:text-indigo-600 dark:text-slate-400">
-                    <i :class="showPassword ? 'pi pi-eye-slash' : 'pi pi-eye'" class="text-base" />
-                  </button>
-                </template>
-              </Input>
-            </div>
-
-            <div class="flex items-center justify-between gap-4">
-              <CustomCheckbox v-model="lembrarUsuario" label="Lembrar" />
-              <button type="button" @click="openRecuperacao" class="text-xs font-black uppercase text-indigo-600 dark:text-indigo-400">
-                Esqueci a senha
-              </button>
-            </div>
-
-            <div v-if="error" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200">
-              {{ error }}
-            </div>
-
-            <Button type="submit" :loading="loading" fullWidth class="h-11 rounded-2xl font-black uppercase tracking-[0.25em]" :disabled="loading || !canSubmit">
-              Entrar
-            </Button>
-
-            <div class="pt-4 border-t border-slate-200/70 dark:border-slate-800/70 text-center">
-              <p class="text-xs text-slate-400 dark:text-slate-500">
-                © {{ new Date().getFullYear() }} A Casa Móveis Planejados.
-              </p>
-            </div>
-          </form>
-        </div>
+  <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-primary/10 via-white to-brand-secondary/10 dark:from-brand-primary/20 dark:via-slate-950 dark:to-brand-secondary/20 text-slate-900 dark:text-slate-50">
+    <div class="w-full max-w-md mx-auto rounded-3xl shadow-xl border border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-950/90 backdrop-blur-xl p-0 overflow-hidden">
+      <div class="flex flex-col items-center gap-2 px-8 pt-8 pb-4">
+        <img src="/logo.png" alt="Logo" class="w-14 h-14 rounded-2xl shadow-md bg-white dark:bg-slate-900 object-contain" />
+        <h1 class="text-2xl font-black tracking-tight text-center">
+          <span class="text-slate-900 dark:text-white">A Casa</span> <span class="text-brand-primary">Móveis Planejados.</span>
+        </h1>
+        <p class="text-xs font-bold uppercase tracking-[0.25em] text-slate-400 mt-1">Acesso ao sistema</p>
       </div>
-
+      <div class="px-8 pb-8">
+        <form autocomplete="off" @submit.prevent="handleLoginSubmit" class="space-y-5">
+          <div class="grid gap-4">
+            <Input
+              v-model="formLogin.usuario"
+              name="acasa_login_user"
+              label="Usuário ou E-mail"
+              class="h-12 text-base"
+              :forceUpper="false"
+              :disabled="loading"
+            />
+            <Input
+              v-model="formLogin.senha"
+              name="acasa_login_pass"
+              autocomplete="current-password"
+              :type="showPassword ? 'text' : 'password'"
+              label="Senha"
+              class="h-12 text-base"
+              :forceUpper="false"
+              :disabled="loading"
+            >
+              <template #suffix>
+                <button type="button" @click="togglePassword" class="rounded-xl px-2 py-2 text-slate-500 hover:text-brand-primary dark:text-slate-400">
+                  <i :class="showPassword ? 'pi pi-eye-slash' : 'pi pi-eye'" class="text-base" />
+                </button>
+              </template>
+            </Input>
+          </div>
+          <div class="flex items-center justify-between gap-4 mt-2">
+            <CustomCheckbox v-model="lembrarUsuario" label="Lembrar" />
+            <button type="button" @click="openRecuperacao" class="text-xs font-bold uppercase text-brand-primary hover:underline focus:outline-none">
+              Esqueci a senha
+            </button>
+          </div>
+          <div v-if="error" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200">
+            {{ error }}
+          </div>
+          <Button type="submit" :loading="loading" fullWidth class="h-12 rounded-xl font-black uppercase tracking-[0.18em] bg-brand-primary text-white hover:bg-brand-primary/90 transition-all text-base shadow-md" :disabled="loading || !canSubmit">
+            Entrar
+          </Button>
+          <div class="pt-4 text-center">
+            <p class="text-xs text-slate-400 dark:text-slate-500">
+              © {{ new Date().getFullYear() }} A Casa Móveis Planejados.
+            </p>
+          </div>
+        </form>
+      </div>
       <Teleport to="body">
         <Transition name="fade-scale">
           <div v-if="showModalRecuperacao" class="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -145,7 +124,7 @@ async function handleLoginSubmit() {
 
     // Lógica crucial: Se a senha for provisória, manda trocar
     if (data?.precisa_trocar_senha) {
-      router.push('/alterar-senha')
+      router.push('/pendente')
     } else {
       router.push('/')
     }

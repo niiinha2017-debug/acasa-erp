@@ -756,7 +756,8 @@ async function carregarArquivos() {
       ownerId: Number(id.value),
       categoria: 'ANEXO',
     })
-    arquivos.value = Array.isArray(res?.data) ? res.data : []
+    const arr = res?.data?.data ?? res?.data ?? res
+    arquivos.value = Array.isArray(arr) ? arr : []
   } finally {
     loadingArquivos.value = false
   }

@@ -30,6 +30,8 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 
+definePage({ meta: { perm: 'dashboard.visualizar' } })
+
 const loading = ref(true);
 const series = ref([{ name: 'Saldo Projetado', data: [] }]);
 

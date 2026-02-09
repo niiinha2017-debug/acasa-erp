@@ -1,8 +1,12 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
-import { Prisma } from '@prisma/client'
-import { PrismaService } from '../prisma/prisma.service'
-import { CreateFornecedorDto } from './dto/criar-fornecedor.dto'
-import { UpdateFornecedorDto } from './dto/atualizar-fornecedor.dto'
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateFornecedorDto } from './dto/criar-fornecedor.dto';
+import { UpdateFornecedorDto } from './dto/atualizar-fornecedor.dto';
 
 @Injectable()
 export class FornecedorService {
@@ -23,6 +27,7 @@ export class FornecedorService {
         cep: true,
         endereco: true,
         numero: true,
+        complemento: true,
         bairro: true,
         cidade: true,
         estado: true,
@@ -31,7 +36,7 @@ export class FornecedorService {
         criado_em: true,
         atualizado_em: true,
       },
-    })
+    });
   }
 
   async buscarPorId(id: number) {
@@ -49,6 +54,7 @@ export class FornecedorService {
         cep: true,
         endereco: true,
         numero: true,
+        complemento: true,
         bairro: true,
         cidade: true,
         estado: true,
@@ -57,10 +63,10 @@ export class FornecedorService {
         criado_em: true,
         atualizado_em: true,
       },
-    })
+    });
 
-    if (!fornecedor) throw new NotFoundException('Fornecedor não encontrado.')
-    return fornecedor
+    if (!fornecedor) throw new NotFoundException('Fornecedor não encontrado.');
+    return fornecedor;
   }
 
   async criar(dto: CreateFornecedorDto) {
@@ -77,6 +83,7 @@ export class FornecedorService {
           cep: dto.cep ?? null,
           endereco: dto.endereco ?? null,
           numero: dto.numero ?? null,
+          complemento: dto.complemento ?? null,
           bairro: dto.bairro ?? null,
           cidade: dto.cidade ?? null,
           estado: dto.estado ?? null,
@@ -95,6 +102,7 @@ export class FornecedorService {
           cep: true,
           endereco: true,
           numero: true,
+          complemento: true,
           bairro: true,
           cidade: true,
           estado: true,
@@ -103,42 +111,44 @@ export class FornecedorService {
           criado_em: true,
           atualizado_em: true,
         },
-      })
+      });
     } catch (e: any) {
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-        throw new BadRequestException('CNPJ já cadastrado.')
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new BadRequestException('CNPJ já cadastrado.');
       }
-      throw e
+      throw e;
     }
   }
 
   async select(q?: string) {
-  const termo = String(q || '').trim()
+    const termo = String(q || '').trim();
 
-  const rows = await this.prisma.fornecedor.findMany({
-    where: termo
-      ? {
-          OR: [
-            { razao_social: { contains: termo } },
-            { nome_fantasia: { contains: termo } },
-            { cnpj: { contains: termo } },
-          ],
-        }
-      : undefined,
-    select: { id: true, razao_social: true, nome_fantasia: true, cnpj: true },
-    orderBy: { razao_social: 'asc' },
-    take: 50,
-  })
+    const rows = await this.prisma.fornecedor.findMany({
+      where: termo
+        ? {
+            OR: [
+              { razao_social: { contains: termo } },
+              { nome_fantasia: { contains: termo } },
+              { cnpj: { contains: termo } },
+            ],
+          }
+        : undefined,
+      select: { id: true, razao_social: true, nome_fantasia: true, cnpj: true },
+      orderBy: { razao_social: 'asc' },
+      take: 50,
+    });
 
-  return rows.map((f) => ({
-    value: f.id,
-    label: f.nome_fantasia || f.razao_social || `ID #${f.id}`,
-  }))
-}
-
+    return rows.map((f) => ({
+      value: f.id,
+      label: f.nome_fantasia || f.razao_social || `ID #${f.id}`,
+    }));
+  }
 
   async atualizar(id: number, dto: UpdateFornecedorDto) {
-    await this.buscarPorId(id)
+    await this.buscarPorId(id);
 
     try {
       return await this.prisma.fornecedor.update({
@@ -154,6 +164,7 @@ export class FornecedorService {
           cep: dto.cep,
           endereco: dto.endereco,
           numero: dto.numero,
+          complemento: dto.complemento,
           bairro: dto.bairro,
           cidade: dto.cidade,
           estado: dto.estado,
@@ -172,6 +183,7 @@ export class FornecedorService {
           cep: true,
           endereco: true,
           numero: true,
+          complemento: true,
           bairro: true,
           cidade: true,
           estado: true,
@@ -180,18 +192,21 @@ export class FornecedorService {
           criado_em: true,
           atualizado_em: true,
         },
-      })
+      });
     } catch (e: any) {
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-        throw new BadRequestException('CNPJ já cadastrado.')
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new BadRequestException('CNPJ já cadastrado.');
       }
-      throw e
+      throw e;
     }
   }
 
   async remover(id: number) {
-    await this.buscarPorId(id)
-    await this.prisma.fornecedor.delete({ where: { id } })
-    return { ok: true }
+    await this.buscarPorId(id);
+    await this.prisma.fornecedor.delete({ where: { id } });
+    return { ok: true };
   }
 }

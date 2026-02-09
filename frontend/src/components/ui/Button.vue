@@ -2,7 +2,7 @@
   <button
     :type="type"
     :disabled="loading || disabled"
-    class="relative inline-flex items-center justify-center font-bold uppercase tracking-wider transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden rounded-lg shrink-0"
+    class="relative inline-flex items-center justify-center font-medium transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden rounded-lg shrink-0 outline-none"
     :class="[
       variantClasses[variant],
       sizeClasses[size],
@@ -50,33 +50,37 @@ const props = defineProps({
 const emit = defineEmits(['click'])
 
 const variantClasses = {
-  // Primário: Azul Profundo, Sólido, com sombra suave
   primary: `
-    bg-brand-primary text-white 
-    shadow-sm shadow-brand-primary/20 
-    hover:bg-[#3a78a8] hover:shadow-md hover:shadow-brand-primary/30
+    bg-brand-primary text-white shadow-sm
+    hover:bg-brand-primary/90 hover:shadow-md
+    focus:ring-2 focus:ring-brand-primary/20 focus:ring-offset-1
+    border border-transparent
+    dark:bg-brand-primary dark:text-white dark:hover:bg-brand-primary/80
+    transition-all
   `,
-  // Secundário: Slate (Cinza azulado) - Muito elegante no Dark e Light
   secondary: `
-    bg-slate-100 text-slate-900 
-    dark:bg-slate-800 dark:text-slate-100 
-    hover:bg-slate-200 dark:hover:bg-slate-700
+    bg-white text-slate-700 border border-slate-200 shadow-sm
+    hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300
+    focus:ring-2 focus:ring-slate-200
+    dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-slate-700
+    transition-all
   `,
-  // Outline: Borda fina e texto
   outline: `
-    bg-transparent border border-slate-200 dark:border-slate-700 
-    text-slate-600 dark:text-slate-300 
-    hover:bg-slate-50 dark:hover:bg-slate-800
+    bg-transparent border border-brand-primary text-brand-primary
+    hover:bg-brand-primary/5
+    focus:ring-2 focus:ring-brand-primary/10
+    dark:border-brand-primary/70 dark:text-brand-primary/90 dark:hover:bg-brand-primary/10
+    transition-colors
   `,
-  danger: 'bg-red-500 text-white hover:bg-red-600 shadow-sm shadow-red-500/20',
-  success: 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm shadow-emerald-500/20',
-  ghost: 'bg-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-brand-primary'
+  danger: 'bg-red-500 text-white hover:bg-red-600 shadow-sm hover:shadow-red-500/20',
+  success: 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm hover:shadow-emerald-500/20',
+  ghost: 'bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
 }
 
 const sizeClasses = {
-  sm: 'h-8 px-3 text-[10px] tracking-widest',
-  md: 'h-10 px-5 text-[11px] tracking-widest',
-  lg: 'h-12 px-8 text-[12px] tracking-widest'
+  sm: 'h-8 px-3 text-xs',
+  md: 'h-10 px-4 text-sm',
+  lg: 'h-12 px-6 text-base'
 }
 
 const handleClick = (event) => {

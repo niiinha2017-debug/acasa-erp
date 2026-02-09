@@ -1,62 +1,66 @@
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator'
+import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class CreateFornecedorDto {
   @IsString()
-  razao_social: string
+  razao_social: string;
 
   @IsString()
-  nome_fantasia: string
+  nome_fantasia: string;
 
   @IsString()
-  cnpj: string
-
-  @IsOptional()
-  @IsString()
-  ie?: string
+  cnpj: string;
 
   @IsOptional()
   @IsString()
-  telefone?: string
+  ie?: string;
 
   @IsOptional()
   @IsString()
-  whatsapp?: string
+  telefone?: string;
 
   @IsOptional()
   @IsString()
-  email?: string
+  whatsapp?: string;
 
   @IsOptional()
   @IsString()
-  cep?: string
+  email?: string;
 
   @IsOptional()
   @IsString()
-  endereco?: string
+  cep?: string;
 
   @IsOptional()
   @IsString()
-  numero?: string
+  endereco?: string;
 
   @IsOptional()
   @IsString()
-  bairro?: string
+  numero?: string;
 
   @IsOptional()
   @IsString()
-  cidade?: string
+  complemento?: string;
 
   @IsOptional()
   @IsString()
-  estado?: string
+  bairro?: string;
 
   @IsOptional()
   @IsString()
-  forma_pagamento?: string
+  cidade?: string;
+
+  @IsOptional()
+  @IsString()
+  estado?: string;
+
+  @IsOptional()
+  @IsString()
+  forma_pagamento?: string;
 
   @IsOptional()
   @IsInt()
   @Min(1)
   @Max(31)
-  data_vencimento?: number
+  data_vencimento?: number;
 }

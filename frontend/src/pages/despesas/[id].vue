@@ -12,7 +12,8 @@
       <div class="p-6 relative">
         <Loading v-if="loading" />
 
-        <form v-else class="space-y-6" @submit.prevent="salvar">
+        <template v-else>
+          <form class="space-y-6" @submit.prevent="salvar">
           <!-- ===================================================== -->
           <!-- TIPO MOVIMENTO -->
           <!-- ===================================================== -->
@@ -77,6 +78,7 @@
   :options="unidadesOptions"
   labelKey="label"
   valueKey="value"
+  :readonly="isEdit"
 />
 
 <SearchInput
@@ -269,6 +271,7 @@
 
           </div>
         </form>
+        </template>
       </div>
     </Card>
   </div>
@@ -285,6 +288,8 @@ import * as CONST from '@/constantes/index'
 import { upper } from '@/utils/text'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
+
+console.log('[DESPESAS] ⭐ ARQUIVO CARREGADO')
 
 definePage({ meta: { perm: 'despesas.ver' } })
 
@@ -412,13 +417,18 @@ function isoToBR(iso) {
 
 // Ações
 async function init() {
+  console.log('[DESPESAS] === INICIANDO INIT ===')
   loading.value = true
   try {
+    console.log('[DESPESAS] Carregando funcionários...')
     const res = await FuncionarioService.select()
     funcionariosOptions.value = Array.isArray(res?.data) ? res.data : []
+    console.log('[DESPESAS] Funcionários carregados:', funcionariosOptions.value.length)
 
     if (isEdit.value) {
+      console.log('[DESPESAS] Modo EDITAR, buscando despesa ID =', despesaId.value)
       const { data: despesa } = await DespesaService.buscar(despesaId.value)
+      console.log('[DESPESAS] Despesa encontrada:', despesa)
       hidratando.value = true
 
       Object.assign(form, {
@@ -430,61 +440,122 @@ async function init() {
         data_registro: despesa.data_registro?.slice(0, 10) || today(),
       })
 
+      console.log('[DESPESAS] Form hidratado:', form)
       setTimeout(() => { hidratando.value = false }, 150)
+    } else {
+      console.log('[DESPESAS] Modo CRIAR')
     }
   } catch (e) {
-    console.log('[DESPESAS] erro init:', e)
+    console.log('[DESPESAS] ❌ ERRO init:', e)
     const apiMsg = e?.response?.data?.message
     const msg = Array.isArray(apiMsg) ? apiMsg.join(' | ') : (apiMsg || 'Erro ao carregar dados')
+    notify.error(msg)
+  } finally {
+    loading.value = false
+    console.log('[DESPESAS] === INIT CONCLUÍDO ===')
+  }
+}
+
+
+async function salvar() {
+  console.log('[DESPESAS] === INICIANDO SALVAR ===')
+  console.log('[DESPESAS] isEdit =', isEdit.value)
+  console.log('[DESPESAS] form =', JSON.stringify(form, null, 2))
+  
+  const perm = isEdit.value ? 'despesas.editar' : 'despesas.criar'
+  console.log('[DESPESAS] permissão necessária =', perm)
+  console.log('[DESPESAS] can(perm) =', can(perm))
+  
+  if (!can(perm)) {
+    console.log('[DESPESAS] BLOQUEADO: Acesso negado')
+    return notify.error('Acesso negado.')
+  }
+
+  // ✅ valida descrição ANTES de ligar loading
+  const localFinal = upper(String(form.local || '').trim())
+  console.log('[DESPESAS] localFinal =', localFinal)
+  
+  if (!form.categoria) {
+    console.log('[DESPESAS] BLOQUEADO: Categoria vazia')
+    return notify.info('Selecione a categoria')
+  }
+
+  if (!form.data_vencimento) {
+    console.log('[DESPESAS] BLOQUEADO: Data vencimento vazia')
+    return notify.info('Preencha a data de vencimento')
+  }
+
+  if (formasQuePrecisamBanco.includes(form.forma_pagamento)) {
+    if (!form.conta_bancaria_key) {
+      console.log('[DESPESAS] BLOQUEADO: Banco vazio')
+      return notify.info('Selecione o banco/conta')
+    }
+    if (!form.conta_bancaria_tipo_key) {
+      console.log('[DESPESAS] BLOQUEADO: Tipo conta vazio')
+      return notify.info('Selecione o tipo da conta')
+    }
+  }
+
+  if (form.forma_pagamento === 'CREDITO') {
+    if (!form.cartao_credito_key) {
+      console.log('[DESPESAS] BLOQUEADO: Cartão vazio')
+      return notify.info('Selecione o cartão de crédito')
+    }
+  }
+
+  console.log('[DESPESAS] ✅ PASSOU TODAS VALIDAÇÕES')
+  loading.value = true
+  try {
+    const payload = {
+      ...JSON.parse(JSON.stringify(form)),
+      local: localFinal || 'SEM DESCRIÇÃO',
+      valor_total: String(form.valor_total),
+      quantidade_parcelas: Number(form.quantidade_parcelas || 1),
+
+      data_registro: form.data_registro ? isoToBR(form.data_registro) : undefined,
+      data_vencimento: form.data_vencimento ? isoToBR(form.data_vencimento) : undefined,
+      data_pagamento:
+        form.status === 'PAGO' && form.data_pagamento
+          ? isoToBR(form.data_pagamento)
+          : undefined,
+    }
+
+    // ✅ loga ANTES do request
+    console.log('[DESPESAS] PAYLOAD COMPLETO =>', JSON.stringify(payload, null, 2))
+    console.log('[DESPESAS] ENVIANDO POST/PUT para ID:', despesaId.value)
+
+    await DespesaService.salvar(despesaId.value, payload)
+
+    console.log('[DESPESAS] ✅✅✅ SALVO COM SUCESSO!')
+    notify.success(isEdit.value ? 'Atualizado com sucesso!' : 'Lançamento criado!')
+    router.push('/despesas')
+  } catch (e) {
+    console.log('[DESPESAS] ❌ ERRO CAPTURADO NO CATCH')
+    console.log('[DESPESAS] status =>', e?.response?.status)
+    console.log('[DESPESAS] data =>', e?.response?.data)
+
+    const apiMsg = e?.response?.data?.message
+    console.log('[DESPESAS] message[] =>', apiMsg)
+    
+    // Se é array, loga cada item
+    if (Array.isArray(apiMsg)) {
+      apiMsg.forEach((msg, idx) => {
+        console.log(`[DESPESAS] message[${idx}] = ${msg}`)
+      })
+    } else {
+      console.log('[DESPESAS] message (string) =>', apiMsg)
+    }
+
+    const msg = Array.isArray(apiMsg)
+      ? apiMsg.join(' | ')
+      : (apiMsg || e?.message || 'Erro ao salvar lançamento')
+
     notify.error(msg)
   } finally {
     loading.value = false
   }
 }
 
-
-async function salvar() {
-  const perm = isEdit.value ? 'despesas.editar' : 'despesas.criar'
-  if (!can(perm)) return notify.error('Acesso negado.')
-
-  if (!form.categoria) return notify.info('Selecione a categoria')
-
-if (formasQuePrecisamBanco.includes(form.forma_pagamento)) {
-  if (!form.conta_bancaria_key) return notify.info('Selecione o banco/conta')
-  if (!form.conta_bancaria_tipo_key) return notify.info('Selecione o tipo da conta')
-}
-
-if (form.forma_pagamento === 'CREDITO') {
-  if (!form.cartao_credito_key) return notify.info('Selecione o cartão de crédito')
-}
-
-  
-  loading.value = true
-  try {
-const payload = {
-  ...JSON.parse(JSON.stringify(form)),
-  local: upper(form.local),
-  valor_total: String(form.valor_total),
-  quantidade_parcelas: Number(form.quantidade_parcelas),
-
-  // ✅ datas em BR para bater com o DTO
-  data_registro: form.data_registro ? isoToBR(form.data_registro) : undefined,
-  data_vencimento: form.data_vencimento ? isoToBR(form.data_vencimento) : undefined,
-  data_pagamento: form.data_pagamento ? isoToBR(form.data_pagamento) : undefined,
-}
-
-    
-    await DespesaService.salvar(despesaId.value, payload)
-    notify.success(isEdit.value ? 'Atualizado com sucesso!' : 'Lançamento criado!')
-    router.push('/despesas')
-} catch (e) {
-  console.log('[DESPESAS] erro salvar:', e)
-  const apiMsg = e?.response?.data?.message
-  const msg = Array.isArray(apiMsg) ? apiMsg.join(' | ') : (apiMsg || 'Erro ao salvar lançamento')
-  notify.error(msg)
-}
-
-}
 
 async function excluir(event) {
   if (!can('despesas.excluir')) return notify.error('Acesso negado.')
@@ -519,13 +590,20 @@ if (!confirmado) return
 }
 
 onMounted(async () => {
+  console.log('[DESPESAS] === onMounted DISPARADO ===')
   const perm = isEdit.value ? 'despesas.editar' : 'despesas.criar'
+  console.log('[DESPESAS] onMounted - perm:', perm)
+  console.log('[DESPESAS] onMounted - can(perm):', can(perm))
+  
   if (!can(perm)) {
+    console.log('[DESPESAS] onMounted - ACESSO NEGADO')
     notify.error('Acesso negado.')
     router.push('/despesas')
     return
   }
+  console.log('[DESPESAS] onMounted - INICIANDO init()')
   await init()
+  console.log('[DESPESAS] === onMounted CONCLUÍDO ===')
 })
 
 </script>

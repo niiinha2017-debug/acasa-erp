@@ -1,0 +1,35 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefix backend
+
+      - name: Generate Prisma client
+        run: npx prisma generate --schema=backend/prisma/schema.prisma
+
+      - name: Lint
+        run: npm --prefix backend run lint
+
+      - name: Build
+        run: npm --prefix backend run build
+
+      - name: Run tests
+        run: npm --prefix backend run test --if-present

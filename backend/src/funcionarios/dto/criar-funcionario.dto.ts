@@ -1,198 +1,200 @@
-import { IsEmail, IsOptional, IsString, IsNumber, IsBoolean } from 'class-validator'
-import { Type } from 'class-transformer'
-
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  IsNumber,
+  IsBoolean,
+} from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CriarFuncionarioDto {
   // Dados pessoais
   @IsString()
-  nome: string
+  nome: string;
 
   @IsString()
-  cpf: string
-
-  @IsOptional()
-  @IsString()
-  rg?: string
+  cpf: string;
 
   @IsOptional()
   @IsString()
-  data_nascimento?: string
+  rg?: string;
 
   @IsOptional()
   @IsString()
-  telefone?: string
+  data_nascimento?: string;
 
   @IsOptional()
   @IsString()
-  whatsapp?: string
+  telefone?: string;
+
+  @IsOptional()
+  @IsString()
+  whatsapp?: string;
 
   @IsOptional()
   @IsEmail()
-  email?: string
+  email?: string;
 
   @IsOptional()
   @IsString()
-  estado_civil?: string
+  estado_civil?: string;
 
   @IsOptional()
   @IsString()
-  escolaridade?: string
+  escolaridade?: string;
 
   // Empresa
   @IsOptional()
   @IsString()
-  unidade?: string
+  unidade?: string;
 
   @IsOptional()
   @IsString()
-  setor?: string
+  setor?: string;
 
   @IsOptional()
   @IsString()
-  cargo?: string
+  cargo?: string;
 
   @IsOptional()
   @IsString()
-  funcao?: string
+  funcao?: string;
 
   // Endereço
   @IsOptional()
   @IsString()
-  cep?: string
+  cep?: string;
 
   @IsOptional()
   @IsString()
-  endereco?: string
+  endereco?: string;
 
   @IsOptional()
   @IsString()
-  numero?: string
+  numero?: string;
 
   @IsOptional()
   @IsString()
-  complemento?: string // <--- ADICIONADO PARA O NOVO CAMPO
+  complemento?: string; // <--- ADICIONADO PARA O NOVO CAMPO
 
   @IsOptional()
   @IsString()
-  bairro?: string
+  bairro?: string;
 
   @IsOptional()
   @IsString()
-  cidade?: string
+  cidade?: string;
 
   @IsOptional()
   @IsString()
-  estado?: string
+  estado?: string;
 
   // Registro / vínculo
   @IsOptional()
   @IsString()
-  registro?: string
+  registro?: string;
 
   @IsOptional()
   @IsString()
-  admissao?: string
+  admissao?: string;
 
   @IsOptional()
   @IsString()
-  demissao?: string
+  demissao?: string;
 
   // Financeiro
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
-  salario_base?: number
+  salario_base?: number;
 
   @IsOptional()
   @IsNumber()
-  salario_adicional?: number
+  salario_adicional?: number;
 
   @IsOptional()
   @IsNumber()
-  custo_hora?: number
+  custo_hora?: number;
 
   // Vale Alimentação / Refeição
   @IsOptional()
   @Type(() => Boolean)
   @IsBoolean()
-  tem_vale?: boolean
+  tem_vale?: boolean;
 
   @IsOptional()
   @IsNumber()
-  vale?: number
+  vale?: number;
 
   // Vale Transporte
   @IsOptional()
   @IsBoolean()
-  tem_vale_transporte?: boolean // <--- ADICIONADO PARA O CHECKBOX
+  tem_vale_transporte?: boolean; // <--- ADICIONADO PARA O CHECKBOX
 
   @IsOptional()
   @IsNumber()
-  vale_transporte?: number // <--- ADICIONADO PARA O VALOR DO VT
+  vale_transporte?: number; // <--- ADICIONADO PARA O VALOR DO VT
 
   // Horários (4 horários)
   @IsOptional()
   @IsString()
-  horario_entrada_1?: string
+  horario_entrada_1?: string;
 
   @IsOptional()
   @IsString()
-  horario_saida_1?: string
+  horario_saida_1?: string;
 
   @IsOptional()
   @IsString()
-  horario_entrada_2?: string
+  horario_entrada_2?: string;
 
   @IsOptional()
   @IsString()
-  horario_saida_2?: string
-  
-  @IsOptional()
-  @IsString()
-  horario_sabado_entrada_1?: string
+  horario_saida_2?: string;
 
   @IsOptional()
   @IsString()
-  horario_sabado_saida_1?: string
+  horario_sabado_entrada_1?: string;
 
-    // Carga horária
+  @IsOptional()
+  @IsString()
+  horario_sabado_saida_1?: string;
+
+  // Carga horária
   @IsOptional()
   @IsNumber()
-  carga_horaria_dia?: number
+  carga_horaria_dia?: number;
 
   @IsOptional()
   @IsNumber()
-  carga_horaria_semana?: number
-
-
+  carga_horaria_semana?: number;
 
   // Pagamento
-   @IsOptional()
+  @IsOptional()
   @IsNumber()
-  dia_pagamento?: number
-
-
-  @IsOptional()
-  @IsString()
-  forma_pagamento?: string
+  dia_pagamento?: number;
 
   @IsOptional()
   @IsString()
-  banco?: string
+  forma_pagamento?: string;
 
   @IsOptional()
   @IsString()
-  agencia?: string
+  banco?: string;
 
   @IsOptional()
   @IsString()
-  conta?: string
+  agencia?: string;
 
   @IsOptional()
   @IsString()
-  pix_tipo_chave?: string
+  conta?: string;
 
   @IsOptional()
   @IsString()
-  pix_chave?: string
+  pix_tipo_chave?: string;
+
+  @IsOptional()
+  @IsString()
+  pix_chave?: string;
 }

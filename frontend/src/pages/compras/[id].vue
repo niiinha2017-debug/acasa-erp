@@ -359,6 +359,7 @@ const totalCalculado = computed(() => {
   return round2(total)
 })
 
+
 const fornecedorOptions = computed(() => Array.isArray(listaFornecedores.value) ? listaFornecedores.value : [])
 
 
@@ -384,7 +385,7 @@ const podeSalvar = computed(() => {
   if (tipoCompra.value === 'CLIENTE_AMBIENTE') {
     if (!vendaSelecionada.value) return false
     if (!todosAmbientesMes.value && !ambienteSelecionado.value) return false
-    // ✅ não exige itens
+    if (!itens.value.length) return false
     return true
   }
 
@@ -597,6 +598,10 @@ const validarFormulario = () => {
     }
     if (!todosAmbientesMes.value && !ambienteSelecionado.value) {
       notify.error('Selecione o ambiente (ou marque todos).')
+      return false
+    }
+    if (!itens.value.length) {
+      notify.error('Adicione ao menos um item.')
       return false
     }
   }

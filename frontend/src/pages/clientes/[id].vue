@@ -343,6 +343,8 @@ import { maskCPF, maskCNPJ, maskCEP, maskTelefone, maskRG, maskIE } from '@/util
 import { buscarCep, buscarCnpj } from '@/utils/utils'
 import { can } from '@/services/permissions'
 
+definePage({ meta: { perm: 'clientes.ver' } })
+
 const route = useRoute()
 const router = useRouter()
 

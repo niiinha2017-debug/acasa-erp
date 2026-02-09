@@ -44,8 +44,9 @@ subprojects { sub ->
         def isAndroidLib = sub.plugins.hasPlugin("com.android.library")
 
         if (isAndroidApp || isAndroidLib) {
-            sub.android {
-                compileOptions {
+            def androidExt = sub.extensions.findByName("android")
+            if (androidExt != null) {
+                androidExt.compileOptions {
                     sourceCompatibility JavaVersion.VERSION_17
                     targetCompatibility JavaVersion.VERSION_17
                 }

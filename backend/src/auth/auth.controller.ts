@@ -32,7 +32,8 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(@Body() dto: RefreshDto) {
-    if (!dto?.refresh_token) throw new UnauthorizedException('Refresh token ausente');
+    if (!dto?.refresh_token)
+      throw new UnauthorizedException('Refresh token ausente');
     return this.authService.refresh(dto.refresh_token);
   }
 
@@ -53,10 +54,10 @@ export class AuthController {
   @Post('alterar-senha')
   @HttpCode(HttpStatus.OK)
   async alterarSenha(@Req() req: Request, @Body() dto: AlterarSenhaDto) {
-    // IMPORTANTE: No JWT o ID costuma estar no 'sub'. 
+    // IMPORTANTE: No JWT o ID costuma estar no 'sub'.
     // Ajustado para pegar de 'sub' caso o 'id' não exista no objeto user.
     const user = (req as any).user;
-    const userId = user.id || user.sub; 
+    const userId = user.id || user.sub;
 
     return await this.authService.alterarSenha(
       Number(userId),

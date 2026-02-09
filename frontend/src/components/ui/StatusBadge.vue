@@ -1,9 +1,9 @@
 <template>
   <div 
-    class="inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-[0.08em] border transition-all duration-300 select-none"
+    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border transition-all duration-300 select-none shadow-sm"
     :class="statusStyle"
   >
-    <span class="w-1.5 h-1.5 rounded-full mr-2 flex-shrink-0" :class="dotStyle"></span>
+    <span class="w-1.5 h-1.5 rounded-full mr-1.5 flex-shrink-0" :class="dotStyle"></span>
     {{ label || value }}
   </div>
 </template>

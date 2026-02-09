@@ -2,11 +2,15 @@ import { createRouter, createWebHistory } from 'vue-router/auto'
 import { routes } from 'vue-router/auto-routes'
 import api from '@/services/api'
 import storage from '@/utils/storage'
+import { can } from '@/services/permissions'
+import { buildRoutePermMap, getRequiredPerm } from '@/services/navigation-perms'
 
 const router = createRouter({
   history: createWebHistory('/'),
   routes,
 })
+
+const routePermMap = buildRoutePermMap()
 
 let syncingMe = null
 
@@ -61,6 +65,11 @@ router.beforeEach(async (to) => {
 
   // 5. Se já é ATIVO e está na tela de pendente, manda pra home
   if (status === 'ATIVO' && to.path === '/pendente') return { path: '/' }
+
+  const requiredPerm = getRequiredPerm(to, routePermMap)
+  if (requiredPerm && !can(requiredPerm)) {
+    return { path: '/' }
+  }
 
   return true
 })

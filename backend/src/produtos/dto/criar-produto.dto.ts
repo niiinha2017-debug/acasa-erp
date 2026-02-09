@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer'
+import { Type } from 'class-transformer';
 import {
   IsInt,
   IsNumber,
@@ -6,7 +6,7 @@ import {
   IsString,
   IsEnum,
   Min,
-} from 'class-validator'
+} from 'class-validator';
 
 export enum StatusProduto {
   ATIVO = 'ATIVO',
@@ -16,51 +16,74 @@ export enum StatusProduto {
 export class CreateProdutoDto {
   @Type(() => Number)
   @IsInt()
-  fornecedor_id: number
+  fornecedor_id: number;
 
   @IsString()
-  nome_produto: string
+  nome_produto: string;
 
   @IsOptional()
   @IsString()
-  marca?: string
+  marca?: string;
 
   @IsOptional()
   @IsString()
-  cor?: string
+  cor?: string;
 
   @IsOptional()
   @IsString()
-  medida?: string
-
-   @IsOptional()
-  @IsString()
-  unidade?: string
+  medida?: string;
 
   @IsOptional()
   @IsString()
-  imagem_url?: string
+  unidade?: string;
 
+  @IsOptional()
+  @IsString()
+  imagem_url?: string;
 
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(0)
-  quantidade?: number
+  largura_mm?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  comprimento_mm?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  espessura_mm?: number;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  valor_unitario?: number
+  preco_m2?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  quantidade?: number;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  valor_total?: number
+  valor_unitario?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  valor_total?: number;
 
   @IsOptional()
   @IsEnum(StatusProduto)
-  status?: StatusProduto
+  status?: StatusProduto;
 }

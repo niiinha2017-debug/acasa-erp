@@ -10,14 +10,15 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
-} from '@nestjs/common'
-import { ClientesService } from './clientes.service'
-import { CriarClienteDto } from './dto/criar-cliente.dto'
-import { AtualizarClienteDto } from './dto/atualizar-cliente.dto'
+} from '@nestjs/common';
+import { ClientesService } from './clientes.service';
+import { CriarClienteDto } from './dto/criar-cliente.dto';
+import { AtualizarClienteDto } from './dto/atualizar-cliente.dto';
 
-import { JwtAuthGuard } from '../auth/jwt-auth.guard'
-import { PermissionsGuard } from '../auth/permissions.guard'
-import { Permissoes } from '../auth/permissoes.decorator'
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/permissions.guard';
+import { Permissoes } from '../auth/permissoes.decorator';
+import { PIPELINE_CLIENTE } from '../../shared/constantes/pipeline-cliente';
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('clientes')
@@ -27,13 +28,13 @@ export class ClientesController {
   @Post()
   @Permissoes('clientes.criar')
   criar(@Body() dto: CriarClienteDto) {
-    return this.service.criar(dto)
+    return this.service.criar(dto);
   }
 
   @Get()
   @Permissoes('clientes.ver')
   listar() {
-    return this.service.listar()
+    return this.service.listar();
   }
 
   // Rotas de relatórios antes do :id (ok)
@@ -43,36 +44,41 @@ export class ClientesController {
     @Query('data') data?: string,
     @Query('enviar') enviar?: 'email' | 'whatsapp',
   ) {
-    const hoje = new Date().toISOString().slice(0, 10)
-    return this.service.aniversariantesDoDia(data ?? hoje, enviar)
+    const hoje = new Date().toISOString().slice(0, 10);
+    return this.service.aniversariantesDoDia(data ?? hoje, enviar);
+  }
+
+  @Get('pipeline')
+  @Permissoes('clientes.ver')
+  pipeline() {
+    return PIPELINE_CLIENTE;
   }
 
   @Get('select')
-@Permissoes('clientes.select')
-select(@Query('q') q?: string) {
-  return this.service.select(q)
-}
-
+  @Permissoes('clientes.select')
+  select(@Query('q') q?: string) {
+    return this.service.select(q);
+  }
 
   @Get(':id')
   @Permissoes('clientes.ver')
   buscar(@Param('id') id: string) {
-    const cleanId = Number(id.replace(/\D/g, ''))
-    return this.service.buscarPorId(cleanId)
+    const cleanId = Number(id.replace(/\D/g, ''));
+    return this.service.buscarPorId(cleanId);
   }
 
   @Put(':id')
   @Permissoes('clientes.editar')
   atualizar(@Param('id') id: string, @Body() dto: AtualizarClienteDto) {
-    const cleanId = Number(id.replace(/\D/g, ''))
-    return this.service.atualizar(cleanId, dto)
+    const cleanId = Number(id.replace(/\D/g, ''));
+    return this.service.atualizar(cleanId, dto);
   }
 
   @Delete(':id')
   @Permissoes('clientes.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   remover(@Param('id') id: string) {
-    const cleanId = Number(id.replace(/\D/g, ''))
-    return this.service.remover(cleanId)
+    const cleanId = Number(id.replace(/\D/g, ''));
+    return this.service.remover(cleanId);
   }
 }

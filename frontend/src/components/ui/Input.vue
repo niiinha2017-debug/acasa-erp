@@ -3,10 +3,10 @@
     <label
       v-if="label"
       :for="inputId"
-      class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 ml-0.5"
+      class="text-sm font-medium text-slate-700 dark:text-slate-300 ml-0.5 mb-0.5"
     >
       {{ label }}
-      <span v-if="required" class="text-red-500 ml-0.5">*</span>
+      <span v-if="required" class="text-rose-500 ml-0.5">*</span>
     </label>
 
     <div class="relative group">
@@ -18,25 +18,25 @@
       </div>
 
       <input
-  :id="inputId"
-  :name="name || undefined"               
-  :type="type"
-  :value="modelValue"
-  :placeholder="placeholder"
-  :disabled="disabled"
-  :readonly="readonly"
-  :required="required"
-  :autocomplete="autocomplete || undefined"
+        :id="inputId"
+        :name="name || undefined"
+        :type="type"
+        :value="modelValue"
+        :placeholder="placeholder"
+        :disabled="disabled"
+        :readonly="readonly"
+        :required="required"
+        :autocomplete="autocomplete || undefined"
         :class="[
-          'w-full h-10 transition-all duration-200 border rounded-lg text-sm font-medium outline-none',
-          'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700',
-          'placeholder:text-slate-400 dark:placeholder:text-slate-500 placeholder:font-normal placeholder:lowercase placeholder:text-xs',
+          'w-full h-10 border rounded-lg text-sm transition-all duration-200 shadow-sm',
+          'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100',
+          'placeholder:text-slate-400 dark:placeholder:text-slate-500 placeholder:font-normal',
           error
-            ? 'border-red-500 ring-2 ring-red-500/10'
-            : 'focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 hover:border-slate-300 dark:hover:border-slate-600',
-          $slots.prefix ? 'pl-11' : 'pl-4',
-          $slots.suffix ? 'pr-11' : 'pr-4',
-          { 'uppercase font-bold tracking-wide': forceUpper && type !== 'password' }
+            ? 'border-rose-300 ring-2 ring-rose-100 dark:border-rose-800 dark:ring-rose-900/30'
+            : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10',
+          $slots.prefix ? 'pl-10' : 'pl-3',
+          $slots.suffix ? 'pr-10' : 'pr-3',
+          { 'uppercase': forceUpper && type !== 'password', 'opacity-50 bg-slate-50 dark:bg-slate-800': disabled }
         ]"
         @input="handleInput"
         @blur="e => emit('blur', e)"

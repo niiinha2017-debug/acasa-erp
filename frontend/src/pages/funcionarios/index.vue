@@ -1,51 +1,37 @@
 <template>
-  <div class="w-full max-w-[1200px] mx-auto space-y-4 animate-page-in">
+  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-page-in">
     
-    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-2">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
-          <i class="pi pi-users text-lg"></i>
-        </div>
-        <div>
-          <h1 class="text-lg font-black text-slate-800 uppercase tracking-tight">Equipe</h1>
-          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Gestão de capital humano</p>
-        </div>
-      </div>
-      
-      <div class="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-        <div class="relative w-full sm:w-64">
-          <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-          <input 
-            v-model="filtro" 
-            type="text" 
-            placeholder="BUSCAR NOME, CPF OU CARGO..."
-            class="w-full pl-9 pr-3 h-10 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary outline-none transition-all uppercase"
-          />
-        </div>
-        
+    <PageHeader 
+      title="Equipe"
+      subtitle="Gestão de capital humano e colaboradores"
+      icon="pi pi-users"
+    >
+      <template #actions>
         <Button
           v-if="can('funcionarios.criar')"
           variant="primary"
-          size="md"
-          class="!h-10 !rounded-xl !px-4 text-xs font-black uppercase tracking-wider w-full sm:w-auto"
           @click="novo()"
         >
-          <i class="pi pi-plus mr-1.5 text-[10px]"></i>
-          Novo
+          <i class="pi pi-plus mr-2"></i>
+          Novo Colaborador
         </Button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-      <div class="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
-        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">Equipe Total</p>
-        <p class="text-xl font-black text-slate-800">{{ funcionarios.length }}</p>
-      </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <MetricCard
+        label="Equipe Total"
+        :value="funcionarios.length"
+        icon="pi pi-users"
+        color="slate"
+      />
       
-      <div class="p-4 rounded-xl bg-white border border-emerald-200 shadow-sm">
-        <p class="text-[9px] font-black uppercase tracking-[0.15em] text-emerald-600">Ativos</p>
-        <p class="text-xl font-black text-emerald-700">{{ funcionariosAtivos }}</p>
-      </div>
+      <MetricCard
+        label="Ativos"
+        :value="funcionariosAtivos"
+        icon="pi pi-check-circle"
+        color="emerald"
+      />
       
       <div
         class="p-4 rounded-xl border transition-all flex items-center justify-between"
@@ -60,105 +46,94 @@
           </p>
         </div>
 
-<button
-  v-if="selecionadosCount > 0 && can('funcionarios.ver')"
-  @click="confirmarGerarPdfFuncionarios"
-  :disabled="gerandoPdf"
-  class="px-3 py-1.5 rounded-lg bg-brand-primary text-white text-[9px] font-black uppercase tracking-wider flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all disabled:opacity-60 disabled:pointer-events-none"
->
-
+        <button
+          v-if="selecionadosCount > 0 && can('funcionarios.ver')"
+          @click="confirmarGerarPdfFuncionarios"
+          :disabled="gerandoPdf"
+          class="px-3 py-1.5 rounded-lg bg-brand-primary text-white text-[9px] font-black uppercase tracking-wider flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all disabled:opacity-60 disabled:pointer-events-none"
+        >
           <i class="pi pi-file-pdf"></i> PDF
         </button>
       </div>
     </div>
 
-    <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-      <Table
-        :columns="columns"
-        :rows="funcionariosFiltrados"
-        :loading="loading"
-        empty-text="Nenhum colaborador encontrado."
-        :boxed="false"
-      >
-        <template #cell-nome="{ row }">
-          <div class="flex items-center gap-3 py-1">
-            <CustomCheckbox
-              :modelValue="isSelected(row.id)"
-              @update:modelValue="toggle(row.id)"
-              label=""
-              class="scale-90"
-            />
-            <div class="flex flex-col">
-              <span class="text-sm font-bold text-slate-800 uppercase tracking-tight">{{ row.nome }}</span>
-              <span class="text-[10px] font-medium text-slate-500">
-  {{ row.cpf ? maskCPF(row.cpf) : '000.000.000-00' }}
-  <span v-if="row.rg" class="ml-2 text-slate-400">RG: {{ maskRG(row.rg) }}</span>
-</span>
+    <div class="space-y-4">
+      <div class="w-full md:w-96">
+        <SearchInput
+          v-model="filtro"
+          placeholder="Buscar nome, cpf ou cargo..."
+        />
+      </div>
 
+      <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+        <Table
+          :columns="columns"
+          :rows="funcionariosFiltrados"
+          :loading="loading"
+          empty-text="Nenhum colaborador encontrado."
+          :boxed="false"
+        >
+          <template #cell-nome="{ row }">
+            <div class="flex items-center gap-3 py-1">
+              <CustomCheckbox
+                :modelValue="isSelected(row.id)"
+                @update:modelValue="toggle(row.id)"
+                label=""
+                class="scale-90"
+              />
+              <div class="flex flex-col">
+                <span class="text-sm font-bold text-slate-800 uppercase tracking-tight">{{ row.nome }}</span>
+                <span class="text-[10px] font-medium text-slate-500">
+                  {{ row.cpf ? maskCPF(row.cpf) : '000.000.000-00' }}
+                  <span v-if="row.rg" class="ml-2 text-slate-400">RG: {{ maskRG(row.rg) }}</span>
+                </span>
+              </div>
             </div>
-          </div>
-        </template>
+          </template>
 
-        <template #cell-cargo="{ row }">
-          <div class="flex flex-col">
-            <span class="text-sm font-medium text-slate-700 uppercase">{{ row.cargo }}</span>
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{{ row.setor }}</span>
-          </div>
-        </template>
+          <template #cell-cargo="{ row }">
+            <div class="flex flex-col">
+              <span class="text-sm font-medium text-slate-700 uppercase">{{ row.cargo }}</span>
+              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{{ row.setor }}</span>
+            </div>
+          </template>
 
-        <template #cell-status="{ row }">
-          <span 
-            class="px-2 py-1 rounded text-[9px] font-black uppercase inline-flex items-center gap-1.5"
-            :class="String(row.status || '').toUpperCase() === 'ATIVO' 
-              ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' 
-              : 'bg-slate-100 text-slate-500 border border-slate-200'"
-          >
-            <span class="w-1.5 h-1.5 rounded-full" :class="String(row.status || '').toUpperCase() === 'ATIVO' ? 'bg-emerald-500' : 'bg-slate-400'"></span>
-            {{ row.status || 'INATIVO' }}
-          </span>
-        </template>
+          <template #cell-status="{ row }">
+             <StatusBadge :value="row.status || 'INATIVO'" />
+          </template>
 
-        <template #cell-acoes="{ row }">
-          <div class="flex justify-end gap-1">
-            <button
-              v-if="can('funcionarios.ver')"
-              @click="abrirArquivos(row)"
-              class="w-7 h-7 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white transition-all flex items-center justify-center border border-slate-100"
-              title="Documentos"
-            >
-              <i class="pi pi-paperclip text-xs"></i>
-            </button>
-            <button
-              v-if="can('funcionarios.editar')"
-              @click="editar(row.id)"
-              class="w-7 h-7 rounded-lg bg-slate-100 text-slate-500 hover:bg-brand-primary hover:text-white transition-all flex items-center justify-center"
-              title="Editar"
-            >
-              <i class="pi pi-pencil text-xs"></i>
-            </button>
-            <button
-              v-if="can('funcionarios.excluir')"
-              @click="confirmarExcluirFuncionario(row)"
-              class="w-7 h-7 rounded-lg bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
-              title="Excluir"
-            >
-              <i class="pi pi-trash text-xs"></i>
-            </button>
-          </div>
-        </template>
-      </Table>
+          <template #cell-acoes="{ row }">
+             <div class="flex justify-end gap-1">
+                <button
+                v-if="can('funcionarios.ver')"
+                @click="abrirArquivos(row)"
+                class="w-7 h-7 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white transition-all flex items-center justify-center border border-slate-100"
+                title="Documentos"
+              >
+                <i class="pi pi-paperclip text-xs"></i>
+              </button>
+              
+              <TableActions
+                :can-edit="can('funcionarios.editar')"
+                :can-delete="can('funcionarios.excluir')"
+                @edit="editar(row.id)"
+                @delete="confirmarExcluirFuncionario(row)"
+              />
+             </div>
+          </template>
+        </Table>
+      </div>
+
+      <ArquivosModal
+        v-if="arquivosModalOpen && arquivosFuncionario?.id"
+        :open="arquivosModalOpen"
+        ownerType="FUNCIONARIO"
+        :ownerId="arquivosFuncionario.id"
+        categoria="ANEXO"
+        :canManage="can('arquivos.criar') || can('arquivos.excluir')"
+        @close="fecharArquivos"
+      />
     </div>
-
-    <ArquivosModal
-      v-if="arquivosModalOpen && arquivosFuncionario?.id"
-      :open="arquivosModalOpen"
-      ownerType="FUNCIONARIO"
-      :ownerId="arquivosFuncionario.id"
-      categoria="ANEXO"
-      :canManage="can('arquivos.criar') || can('arquivos.excluir')"
-      @close="fecharArquivos"
-    />
-
   </div>
 </template>
 
@@ -245,10 +220,6 @@ async function carregar() {
   loading.value = true
   try {
     const resp = await FuncionarioService.listar()
-
-    // 🔥 log do retorno real (pra matar a dúvida)
-    console.log('[FUNCIONARIOS] resp:', resp)
-
     const raw =
       (Array.isArray(resp?.data) && resp.data) ||
       (Array.isArray(resp) && resp) ||
@@ -264,7 +235,6 @@ async function carregar() {
       rg: f.rg ?? '',
     }))
   } catch (err) {
-    console.log('[FUNCIONARIOS] erro:', err)
     notify.error(err?.response?.data?.message || 'Erro ao carregar lista de funcionários.')
   } finally {
     loading.value = false

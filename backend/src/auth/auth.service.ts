@@ -55,7 +55,9 @@ export class AuthService {
 
   // 2. LOGIN
   async login(usuario: string, senha: string) {
-    const loginLimpo = String(usuario || '').trim().toLowerCase();
+    const loginLimpo = String(usuario || '')
+      .trim()
+      .toLowerCase();
     const isEmail = loginLimpo.includes('@');
 
     const registro = await this.prisma.usuarios.findFirst({
@@ -77,7 +79,9 @@ export class AuthService {
 
     let permissoes: string[] = [];
     try {
-      permissoes = await this.permissoesService.permissoesDoUsuarioPorId(registro.id);
+      permissoes = await this.permissoesService.permissoesDoUsuarioPorId(
+        registro.id,
+      );
     } catch {
       permissoes = [];
     }
@@ -96,9 +100,9 @@ export class AuthService {
 
     const token = await this.jwt.signAsync(payload, { expiresIn: '15m' });
     const refresh_token = await this.jwt.signAsync(
-  { sub: registro.id },
-  { expiresIn: '8h', secret: process.env.JWT_REFRESH_SECRET }, // Mude de 30d para 8h
-   );
+      { sub: registro.id },
+      { expiresIn: '8h', secret: process.env.JWT_REFRESH_SECRET }, // Mude de 30d para 8h
+    );
 
     return {
       token,
@@ -117,8 +121,12 @@ export class AuthService {
 
   // 3. CADASTRO (Admin cria funcionário)
   async cadastro(dto: CreateUsuarioDto) {
-    const emailLimpo = String(dto.email || '').trim().toLowerCase();
-    const usuarioLimpo = String(dto.usuario || '').trim().toLowerCase();
+    const emailLimpo = String(dto.email || '')
+      .trim()
+      .toLowerCase();
+    const usuarioLimpo = String(dto.usuario || '')
+      .trim()
+      .toLowerCase();
     const senhaProvisoria = this.gerarSenhaProvisoria();
     const senhaHash = await bcrypt.hash(senhaProvisoria, 10);
 
@@ -133,6 +141,35 @@ export class AuthService {
         },
       });
 
+      // 🔐 Atribuir permissões padrão: INDEX e DASHBOARD
+      // Estas são as telas que o novo usuário terá acesso ANTES de receber outras permissões
+      try {
+        const permissoesDefault = await this.prisma.permissoes.findMany({
+          where: {
+            chave: {
+              in: [
+                'index.visualizar',
+                'dashboard.visualizar',
+                'pendente.visualizar',
+              ],
+            },
+          },
+        });
+
+        for (const perm of permissoesDefault) {
+          await this.prisma.usuarios_permissoes
+            .create({
+              data: { usuario_id: criado.id, permissao_id: perm.id },
+            })
+            .catch(() => {}); // Ignora duplicadas
+        }
+      } catch (e) {
+        // Se falhar, apenas loga. O usuário pode ter permissões atribuídas manualmente depois.
+        console.warn(
+          `[AUTH] Erro ao atribuir permissões padrão para usuário ${criado.id}: ${e}`,
+        );
+      }
+
       await this.prisma.recuperacao_senha.create({
         data: {
           usuario_id: criado.id,
@@ -143,7 +180,11 @@ export class AuthService {
         },
       });
 
-      await this.mailService.enviarSenhaProvisoria(emailLimpo, senhaProvisoria, criado.nome);
+      await this.mailService.enviarSenhaProvisoria(
+        emailLimpo,
+        senhaProvisoria,
+        criado.nome,
+      );
 
       return { ...criado, email_enviado: true };
     } catch (e: any) {
@@ -156,12 +197,15 @@ export class AuthService {
 
   // 4. ME (Necessário para o build)
   async me(usuarioId: number) {
-    const registro = await this.prisma.usuarios.findUnique({ where: { id: usuarioId } });
+    const registro = await this.prisma.usuarios.findUnique({
+      where: { id: usuarioId },
+    });
     if (!registro) throw new NotFoundException('Usuário não encontrado');
 
     let permissoes: string[] = [];
     try {
-      permissoes = await this.permissoesService.permissoesDoUsuarioPorId(usuarioId);
+      permissoes =
+        await this.permissoesService.permissoesDoUsuarioPorId(usuarioId);
     } catch {
       permissoes = [];
     }
@@ -172,14 +216,19 @@ export class AuthService {
       usuario: registro.usuario,
       email: registro.email,
       status: registro.status,
+      funcionario_id: registro.funcionario_id,
       permissoes,
     };
   }
 
   // 5. ESQUECI SENHA (Necessário para o build)
   async esqueciSenha(email: string) {
-    const emailLimpo = String(email || '').trim().toLowerCase();
-    const usuario = await this.prisma.usuarios.findUnique({ where: { email: emailLimpo } });
+    const emailLimpo = String(email || '')
+      .trim()
+      .toLowerCase();
+    const usuario = await this.prisma.usuarios.findUnique({
+      where: { email: emailLimpo },
+    });
 
     if (!usuario) return { ok: true };
 
@@ -187,7 +236,10 @@ export class AuthService {
     const senhaNovaHash = await bcrypt.hash(senhaProvisoria, 10);
 
     await this.prisma.$transaction([
-      this.prisma.usuarios.update({ where: { id: usuario.id }, data: { senha: senhaNovaHash } }),
+      this.prisma.usuarios.update({
+        where: { id: usuario.id },
+        data: { senha: senhaNovaHash },
+      }),
       this.prisma.recuperacao_senha.create({
         data: {
           usuario_id: usuario.id,
@@ -199,13 +251,19 @@ export class AuthService {
       }),
     ]);
 
-    await this.mailService.enviarSenhaProvisoria(emailLimpo, senhaProvisoria, usuario.nome);
+    await this.mailService.enviarSenhaProvisoria(
+      emailLimpo,
+      senhaProvisoria,
+      usuario.nome,
+    );
     return { ok: true };
   }
 
   // 6. ALTERAR SENHA (Ativa a conta)
   async alterarSenha(usuarioId: number, senhaAtual: string, senhaNova: string) {
-    const usuario = await this.prisma.usuarios.findUnique({ where: { id: usuarioId } });
+    const usuario = await this.prisma.usuarios.findUnique({
+      where: { id: usuarioId },
+    });
     if (!usuario) throw new UnauthorizedException('Usuário inválido');
 
     const senhaOk = await bcrypt.compare(senhaAtual, usuario.senha);
@@ -222,7 +280,14 @@ export class AuthService {
         where: { id: usuarioId },
         data: { senha: novaHash, status: 'ATIVO' }, // Ativa aqui!
       }),
-      ...(rec ? [this.prisma.recuperacao_senha.update({ where: { id: rec.id }, data: { utilizado: true } })] : []),
+      ...(rec
+        ? [
+            this.prisma.recuperacao_senha.update({
+              where: { id: rec.id },
+              data: { utilizado: true },
+            }),
+          ]
+        : []),
     ]);
 
     return { ok: true };

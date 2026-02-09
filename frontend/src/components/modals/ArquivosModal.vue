@@ -3,14 +3,14 @@
     <Transition name="modal-bounce">
       <div
         v-if="open"
-        class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-md"
+        class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-brand-secondary/60 dark:bg-slate-900/80 backdrop-blur-md"
         @click.self="fechar"
       >
-        <div class="w-full max-w-4xl max-h-[90vh] bg-white rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.2)] overflow-hidden flex flex-col border border-white/20">
+        <div class="w-full max-w-4xl max-h-[90vh] bg-white dark:bg-slate-900 rounded-3xl shadow-none border border-brand-secondary/40 dark:border-slate-700 overflow-hidden flex flex-col">
           
-          <header class="flex items-center justify-between px-8 py-6 border-b border-slate-100 bg-white">
+          <header class="flex items-center justify-between px-8 py-6 border-b border-brand-secondary/40 bg-white dark:bg-slate-900">
             <div class="flex items-center gap-5">
-              <div class="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center text-white shadow-xl shadow-slate-200 rotate-2">
+              <div class="w-14 h-14 rounded-2xl bg-brand-primary flex items-center justify-center text-white rotate-2">
                 <i class="pi pi-folder-open text-xl"></i>
               </div>
 
@@ -19,8 +19,8 @@
                    <h3 class="text-xl font-black text-slate-900 tracking-tight uppercase leading-none">Arquivos</h3>
                    <span class="px-2 py-0.5 rounded-md bg-brand-primary/10 text-brand-primary text-[9px] font-black uppercase tracking-widest">Digital Assets</span>
                 </div>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2 flex items-center gap-2">
-                  <span class="w-1.5 h-1.5 rounded-full bg-slate-200"></span>
+                <p class="text-[10px] font-bold text-brand-primary/60 uppercase tracking-[0.2em] mt-2 flex items-center gap-2">
+                  <span class="w-1.5 h-1.5 rounded-full bg-brand-secondary"></span>
                   {{ ownerType }} • ID #{{ ownerId }}
                 </p>
               </div>
@@ -29,12 +29,12 @@
             <div class="flex items-center gap-3">
               <button 
                 @click="abrirEmArquivos"
-                class="h-11 px-5 rounded-2xl bg-slate-50 text-slate-600 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all flex items-center gap-2"
+                class="h-11 px-5 rounded-xl bg-brand-secondary text-brand-primary text-[10px] font-black uppercase tracking-widest hover:bg-brand-secondary/80 transition-all flex items-center gap-2"
               >
                 Gerenciador Full
               </button>
               <button
-                class="w-11 h-11 flex items-center justify-center rounded-2xl bg-white border border-slate-100 text-slate-400 hover:text-rose-500 hover:border-rose-100 transition-all active:scale-90"
+                class="w-11 h-11 flex items-center justify-center rounded-xl bg-white dark:bg-slate-900 border border-brand-secondary/40 dark:border-slate-700 text-slate-400 hover:text-rose-500 hover:border-rose-400 transition-all"
                 @click="fechar"
               >
                 <i class="pi pi-times text-xs"></i>

@@ -1,8 +1,12 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
-import { Prisma } from '@prisma/client'
-import { PrismaService } from '../../prisma/prisma.service'
-import { CreatePlanoCorteItemDto } from '../dto/create-plano-corte-iten.dto'
-import { UpdatePlanoCorteItemDto } from '../dto/update-plano-corte-iten.dto'
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
+import { CreatePlanoCorteItemDto } from '../dto/create-plano-corte-iten.dto';
+import { UpdatePlanoCorteItemDto } from '../dto/update-plano-corte-iten.dto';
 
 @Injectable()
 export class PlanoCorteItensService {
@@ -12,13 +16,15 @@ export class PlanoCorteItensService {
     return this.prisma.plano_corte_item.findMany({
       where: fornecedor_id ? { fornecedor_id } : {},
       orderBy: { nome_produto: 'asc' },
-    })
+    });
   }
 
   async buscar(id: number) {
-    const item = await this.prisma.plano_corte_item.findUnique({ where: { id } })
-    if (!item) throw new NotFoundException(`Item #${id} não encontrado.`)
-    return item
+    const item = await this.prisma.plano_corte_item.findUnique({
+      where: { id },
+    });
+    if (!item) throw new NotFoundException(`Item #${id} não encontrado.`);
+    return item;
   }
 
   async criar(dto: CreatePlanoCorteItemDto) {
@@ -31,23 +37,30 @@ export class PlanoCorteItensService {
           cor: dto.cor ?? null,
           medida: dto.medida ?? null,
           unidade: dto.unidade ?? null,
+          largura_mm: dto.largura_mm ?? null,
+          comprimento_mm: dto.comprimento_mm ?? null,
+          espessura_mm: dto.espessura_mm ?? null,
+          preco_m2: dto.preco_m2 ?? null,
           quantidade: dto.quantidade,
           valor_unitario: dto.valor_unitario,
           valor_total: dto.valor_total,
           status: dto.status,
         },
-      })
+      });
     } catch (e: any) {
       // se você tiver algum unique no futuro
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-        throw new BadRequestException('Item já cadastrado.')
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new BadRequestException('Item já cadastrado.');
       }
-      throw e
+      throw e;
     }
   }
 
   async atualizar(id: number, dto: UpdatePlanoCorteItemDto) {
-    await this.buscar(id)
+    await this.buscar(id);
 
     try {
       return await this.prisma.plano_corte_item.update({
@@ -59,23 +72,30 @@ export class PlanoCorteItensService {
           cor: dto.cor,
           medida: dto.medida,
           unidade: dto.unidade,
+          largura_mm: dto.largura_mm,
+          comprimento_mm: dto.comprimento_mm,
+          espessura_mm: dto.espessura_mm,
+          preco_m2: dto.preco_m2,
           quantidade: dto.quantidade,
           valor_unitario: dto.valor_unitario,
           valor_total: dto.valor_total,
           status: dto.status,
         },
-      })
+      });
     } catch (e: any) {
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-        throw new BadRequestException('Item já cadastrado.')
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new BadRequestException('Item já cadastrado.');
       }
-      throw e
+      throw e;
     }
   }
 
   async remover(id: number) {
-    await this.buscar(id)
-    await this.prisma.plano_corte_item.delete({ where: { id } })
-    return { ok: true }
+    await this.buscar(id);
+    await this.prisma.plano_corte_item.delete({ where: { id } });
+    return { ok: true };
   }
 }

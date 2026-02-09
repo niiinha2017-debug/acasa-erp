@@ -7,7 +7,8 @@ export default {
   theme: {
     extend: {
       colors: {
-        'brand-primary': '#3a78a8', // Sua cor principal
+        'brand-primary': '#357CB0', // Azul principal da marca
+        'brand-secondary': '#D9D9D9', // Cinza claro da marca
         'brand-dark': '#2c5a7d',
         'danger': '#ef4444',
       },

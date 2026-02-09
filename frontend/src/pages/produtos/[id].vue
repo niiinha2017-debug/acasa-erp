@@ -117,6 +117,13 @@
             <Input v-model="form.cor" label="Cor / Acabamento" placeholder="Ex: Branco Texturizado" />
             <Input v-model="form.medida" label="Dimensões" placeholder="Ex: 2750x1840mm" />
           </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
+            <Input v-model="form.largura_mm" label="Largura (mm)" type="number" />
+            <Input v-model="form.comprimento_mm" label="Comprimento (mm)" type="number" />
+            <Input v-model="form.espessura_mm" label="Espessura (mm)" type="number" />
+            <Input v-model="precoM2Mask" label="Preco m2 (R$)" />
+          </div>
         </div>
 
         <div class="p-8">
@@ -248,6 +255,10 @@ const form = ref({
   cor: '',
   medida: '',
   unidade: '',
+  largura_mm: null,
+  comprimento_mm: null,
+  espessura_mm: null,
+  preco_m2: 0,
   quantidade: 0,
   valor_unitario: 0,
   valor_total: 0,
@@ -266,6 +277,7 @@ const previewImagem = computed(() => {
 // ======= Inputs auxiliares (máscaras) =======
 const quantidadeInput = ref('')
 const valorUnitarioMask = ref('R$ 0,00')
+const precoM2Mask = ref('R$ 0,00')
 
 const valorTotalNumerico = computed(() => {
   const qtd = Number(form.value.quantidade || 0)
@@ -294,6 +306,15 @@ watch(valorUnitarioMask, (v) => {
   if (v !== formatado) valorUnitarioMask.value = formatado
 })
 
+watch(precoM2Mask, (v) => {
+  const n = String(v || '').replace(/\D/g, '')
+  const valor = n ? Number(n) / 100 : 0
+  form.value.preco_m2 = valor
+
+  const formatado = maskMoneyBR(valor)
+  if (v !== formatado) precoM2Mask.value = formatado
+})
+
 // ======= UNIDADES (constantes) =======
 const unidadesOptions = computed(() => UNIDADES.map((u) => ({ label: u.label, value: u.key })))
 
@@ -316,6 +337,10 @@ function resetForm() {
     cor: '',
     medida: '',
     unidade: '',
+    largura_mm: null,
+    comprimento_mm: null,
+    espessura_mm: null,
+    preco_m2: 0,
     quantidade: 0,
     valor_unitario: 0,
     valor_total: 0,
@@ -324,6 +349,7 @@ function resetForm() {
   }
   quantidadeInput.value = ''
   valorUnitarioMask.value = 'R$ 0,00'
+  precoM2Mask.value = 'R$ 0,00'
 }
 
 async function carregarFornecedor() {
@@ -340,6 +366,10 @@ async function carregarProduto() {
     ...form.value,
     ...data,
     fornecedor_id: data.fornecedor_id ?? null,
+    largura_mm: data.largura_mm ?? null,
+    comprimento_mm: data.comprimento_mm ?? null,
+    espessura_mm: data.espessura_mm ?? null,
+    preco_m2: Number(data.preco_m2 || 0),
     quantidade: Number(data.quantidade || 0),
     valor_unitario: Number(data.valor_unitario || 0),
     valor_total: Number(data.valor_total || 0),
@@ -349,6 +379,7 @@ async function carregarProduto() {
 
   quantidadeInput.value = form.value.quantidade ? String(form.value.quantidade) : ''
   valorUnitarioMask.value = maskMoneyBR(form.value.valor_unitario || 0)
+  precoM2Mask.value = maskMoneyBR(form.value.preco_m2 || 0)
 }
 
 async function onImagemPick(e) {
@@ -461,6 +492,19 @@ async function salvar() {
     const payload = {
       ...form.value,
       fornecedor_id: Number(form.value.fornecedor_id),
+      largura_mm:
+        form.value.largura_mm === null || form.value.largura_mm === ''
+          ? null
+          : Number(form.value.largura_mm),
+      comprimento_mm:
+        form.value.comprimento_mm === null || form.value.comprimento_mm === ''
+          ? null
+          : Number(form.value.comprimento_mm),
+      espessura_mm:
+        form.value.espessura_mm === null || form.value.espessura_mm === ''
+          ? null
+          : Number(form.value.espessura_mm),
+      preco_m2: Number(form.value.preco_m2 || 0),
       quantidade: Number(form.value.quantidade || 0),
       valor_unitario: Number(form.value.valor_unitario || 0),
       valor_total: Number(form.value.valor_total || 0),

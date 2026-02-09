@@ -4,6 +4,17 @@
     <Card :shadow="true" class="overflow-visible !rounded-[3rem] border-none shadow-[0_40px_80px_-15px_rgba(0,0,0,0.2)]">
       <header class="flex flex-col md:flex-row items-center justify-between gap-6 p-10 border-b border-slate-100 bg-slate-50/50">
         <div class="flex items-center gap-6">
+
+          <Button
+            v-if="isEdit"
+            variant="secondary"
+            :loading="gerandoPdf"
+            @click="gerarPdf"
+            class="!rounded-[1.5rem] !px-8 !h-14 font-black text-[10px] uppercase tracking-widest"
+          >
+            <i class="pi pi-file-pdf mr-2"></i>
+            Gerar PDF
+          </Button>
           <div class="w-16 h-16 rounded-[1.5rem] bg-slate-900 flex items-center justify-center text-white shadow-2xl shadow-slate-900/20 rotate-3 hover:rotate-0 transition-transform duration-500">
             <i class="pi pi-box text-3xl"></i>
           </div>
@@ -54,6 +65,16 @@
   :options="statusPlanoOptions"
   :readonly="isEdit"
 />
+
+              <div class="mt-2">
+                <span
+                  class="px-2 py-1 rounded text-[9px] font-black uppercase inline-flex items-center gap-1.5"
+                  :class="statusPlanoBadgeClass"
+                >
+                  <span class="w-1.5 h-1.5 rounded-full" :class="statusPlanoDotClass"></span>
+                  {{ statusPlanoLabel }}
+                </span>
+              </div>
 
             </div>
           </section>
@@ -341,6 +362,7 @@ const permSalvarPlano = () => (isEdit.value ? 'plano_corte.editar' : 'plano_cort
 const loading = ref(true)
 const salvando = ref(false)
 const encaminhando = ref(false)
+const gerandoPdf = ref(false)
 
 // OPÇÕES (CUIDADO: CERTIFIQUE-SE QUE constantes ESTÁ CARREGADO)
 const statusPlanoOptions = computed(() =>
@@ -348,6 +370,26 @@ const statusPlanoOptions = computed(() =>
     label: s.label,
     value: s.key,
   }))
+)
+
+function normalizeStatusKey(status) {
+  return String(status || '').trim().toUpperCase().replace(/\s+/g, '_')
+}
+
+const statusPlanoPipeline = computed(() =>
+  (PIPELINE_PLANO_CORTE || []).find(p => p.key === normalizeStatusKey(statusPlano.value))
+)
+
+const statusPlanoBadgeClass = computed(() =>
+  statusPlanoPipeline.value?.badgeClass || 'bg-slate-50 text-slate-600 border border-slate-200'
+)
+
+const statusPlanoDotClass = computed(() =>
+  statusPlanoPipeline.value?.dotClass || 'bg-slate-400'
+)
+
+const statusPlanoLabel = computed(() =>
+  statusPlanoPipeline.value?.label || statusPlano.value || '—'
 )
 
 
@@ -585,6 +627,27 @@ const payload = {
   data_venda: dataVenda.value,
   produtos: itens.value,
   ...(isEdit.value ? {} : { status: statusPlano.value }),
+}
+
+async function gerarPdf() {
+  if (!isEdit.value) return
+  if (!can('plano_corte.ver')) return notify.error('Acesso negado.')
+
+  gerandoPdf.value = true
+  try {
+    const { data } = await PlanoCorteService.abrirPdf(planoId.value)
+    await router.push({
+      path: `/arquivos/${data.arquivoId}`,
+      query: {
+        name: `PLANO_CORTE_${String(planoId.value).replace(/\D/g, '')}.pdf`,
+        type: 'application/pdf',
+      },
+    })
+  } catch (e) {
+    notify.error('Erro ao gerar PDF.')
+  } finally {
+    gerandoPdf.value = false
+  }
 }
 
 

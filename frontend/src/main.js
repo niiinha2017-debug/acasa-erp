@@ -5,6 +5,7 @@ import router from './router'
 // Estilos
 import '@/assets/CSS/tailwind.css'
 import 'primeicons/primeicons.css'
+import '@/assets/hide-password-eye.css'
 
 // ✅ DevTools auto (Tauri)
 import { autoOpenDevtools } from './devtools-auto'
@@ -31,6 +32,7 @@ import TablePagination from '@/components/ui/TablePagination.vue'
 import QuickCreateProduto from '@/components/modals/QuickCreateProduto.vue'
 import ArquivosModal from '@/components/modals/ArquivosModal.vue'
 import FinanceiroModal from '@/components/modals/FinanceiroModal.vue'
+import AgendamentosModal from '@/components/modals/AgendamentosModal.vue'
 
 // Common
 import Loading from '@/components/common/Loading.vue'
@@ -69,6 +71,7 @@ app.component('Select', Select)
 app.component('QuickCreateProduto', QuickCreateProduto)
 app.component('ArquivosModal', ArquivosModal)
 app.component('FinanceiroModal', FinanceiroModal)
+app.component('AgendamentosModal', AgendamentosModal)
 
 // Diretiva v-can
 app.directive('can', {

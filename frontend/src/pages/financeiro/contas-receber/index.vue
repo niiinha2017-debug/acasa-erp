@@ -210,6 +210,8 @@ import { ref, computed, reactive, onMounted } from 'vue'
 import { FinanceiroService } from '@/services/index'
 import { format } from '@/utils/format'
 
+definePage({ meta: { perm: 'contas_receber.ver' } })
+
 // ✅ sem importar componentes (já estão no main.js)
 
 const loading = ref(true)
