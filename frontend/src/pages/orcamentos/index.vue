@@ -1,6 +1,4 @@
 <template>
-  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-page-in">
-    
     <PageHeader 
       title="Orçamentos"
       subtitle="Controle de propostas comerciais e negociações"
@@ -139,7 +137,6 @@
        </div>
 
     </div>
-  </div>
 </template>
 
 <script setup>

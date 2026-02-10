@@ -13,6 +13,7 @@ import {
 import { PlanoCorteService } from '../service/plano-corte.service';
 import { CreatePlanoCorteDto } from '../dto/create-plano-corte.dto';
 import { UpdatePlanoCorteDto } from '../dto/update-plano-corte.dto';
+import { PIPELINE_PLANO_CORTE } from '../../shared/constantes/pipeline-plano-corte';
 
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../auth/permissions.guard';
@@ -37,6 +38,12 @@ export class PlanoCorteController {
   @Permissoes('plano_corte.ver')
   findAll() {
     return this.service.findAll();
+  }
+
+  @Get('pipeline')
+  @Permissoes('plano_corte.ver')
+  pipeline() {
+    return PIPELINE_PLANO_CORTE;
   }
 
   @Get(':id')

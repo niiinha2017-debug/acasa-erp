@@ -86,6 +86,52 @@ export class ArquivosService {
     };
   }
 
+  async listarTodos(params: {
+    owner_type?: string;
+    categoria?: string;
+    q?: string;
+    page?: number;
+    pageSize?: number;
+  }) {
+    const owner_type = this.normUpper(params.owner_type);
+    const categoria = this.normUpper(params.categoria);
+    const termo = String(params.q || '').trim();
+
+    const where: any = {};
+    if (owner_type) where.owner_type = owner_type;
+    if (categoria) where.categoria = categoria;
+    if (termo) {
+      where.OR = [
+        { nome: { contains: termo } },
+        { filename: { contains: termo } },
+      ];
+    }
+
+    if (!params.page) {
+      const rows = await this.prisma.arquivos.findMany({
+        where,
+        orderBy: { criado_em: 'desc' },
+      });
+      return rows;
+    }
+
+    const page = Math.max(1, Number(params.page || 1));
+    const pageSize = Math.max(1, Number(params.pageSize || 50));
+
+    const total = await this.prisma.arquivos.count({ where });
+    const data = await this.prisma.arquivos.findMany({
+      where,
+      orderBy: { criado_em: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    });
+
+    return {
+      data,
+      meta: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+    };
+  }
+
   async remover(id: number) {
     const cleanId = Number(id);
     if (!cleanId) throw new BadRequestException('ID inválido.');

@@ -176,7 +176,7 @@ import { useAuth } from '@/services/useauth'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
 
-definePage({ meta: { perm: 'permissoes.ver' } })
+definePage({ meta: { perm: 'permissoes.gerenciar' } })
 
 
 const router = useRouter()

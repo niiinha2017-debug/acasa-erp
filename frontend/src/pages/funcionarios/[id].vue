@@ -1,8 +1,7 @@
 <template>
-  <div class="w-full max-w-[1200px] mx-auto px-2 sm:px-4 pb-16 space-y-4 animate-page-in">
+  <div class="w-full min-h-screen pb-0 space-y-4 animate-page-in">
 
-    <!-- Header -->
-    <Card :shadow="true" class="!rounded-3xl overflow-hidden">
+    <div class="w-full bg-white">
       <div class="p-6 sm:p-8 border-b border-slate-100 bg-slate-50/50 flex items-start justify-between gap-4">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
@@ -78,13 +77,20 @@
 
   <Input
     class="col-span-12 md:col-span-4"
+    v-model="telefoneUi"
+    label="Telefone"
+    placeholder="(00) 0000-0000"
+  />
+
+  <Input
+    class="col-span-12 md:col-span-4"
     v-model="whatsappUi"
     label="WhatsApp"
     placeholder="(00) 00000-0000"
   />
 
   <Input
-    class="col-span-12 md:col-span-6"
+    class="col-span-12 md:col-span-4"
     v-model="emailUi"
     label="E-mail"
     placeholder="nome@dominio.com"
@@ -92,10 +98,24 @@
   />
 
   <Input
-    class="col-span-12 md:col-span-6"
+    class="col-span-12 md:col-span-4"
     v-model="form.estado_civil"
     label="Estado Civil"
     placeholder="Ex: SOLTEIRO"
+  />
+
+  <Input
+    class="col-span-12 md:col-span-6"
+    v-model="form.contato_referencia_nome"
+    label="Contato de Referência - Nome"
+    placeholder="Ex: MARIA SILVA"
+  />
+
+  <Input
+    class="col-span-12 md:col-span-6"
+    v-model="contatoReferenciaTelefoneUi"
+    label="Contato de Referência - Telefone"
+    placeholder="(00) 0000-0000"
   />
 </div>
 
@@ -175,64 +195,140 @@
             </div>
 
             <div class="grid grid-cols-12 gap-4">
-<div class="col-span-12 md:col-span-4 space-y-2">
-  <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidade *</label>
-  <select
-    v-model="form.unidade"
-    class="w-full h-12 px-4 rounded-xl bg-white border border-slate-200 font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary transition-all uppercase"
-  >
-    <option value="">SELECIONE</option>
-    <option v-for="opt in unidadeOptions" :key="opt.value" :value="opt.value">
-      {{ opt.label }}
-    </option>
-  </select>
+  <div class="col-span-12 md:col-span-4 space-y-2">
+    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidade *</label>
+    <select
+      v-model="form.unidade"
+      class="w-full h-12 px-4 rounded-xl bg-white border border-slate-200 font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary transition-all uppercase"
+    >
+      <option value="">SELECIONE</option>
+      <option v-for="opt in unidadeOptions" :key="opt.value" :value="opt.value">
+        {{ opt.label }}
+      </option>
+    </select>
+  </div>
+
+  <div class="col-span-12 md:col-span-4 space-y-2">
+    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Setor *</label>
+    <select
+      v-model="form.setor"
+      :disabled="!form.unidade"
+      class="w-full h-12 px-4 rounded-xl bg-white border border-slate-200 font-bold text-slate-700 outline-none disabled:opacity-50 transition-all uppercase"
+    >
+      <option value="">SELECIONE</option>
+      <option v-for="opt in setorOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+    </select>
+  </div>
+
+  <div class="col-span-12 md:col-span-4 space-y-2">
+    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cargo *</label>
+    <select
+      v-model="form.cargo"
+      :disabled="!form.setor"
+      class="w-full h-12 px-4 rounded-xl bg-white border border-slate-200 font-bold text-slate-700 outline-none disabled:opacity-50 transition-all uppercase"
+    >
+      <option value="">SELECIONE</option>
+      <option v-for="opt in cargoOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+    </select>
+  </div>
+
+  <Input class="col-span-12 md:col-span-4" v-model="form.data_inicio" label="Data de Inicio" type="date" />
+  <Input class="col-span-12 md:col-span-4" v-model="form.admissao" label="Data de Admissao" type="date" />
+  <Input class="col-span-12 md:col-span-4" v-model="form.demissao" label="Data de Demissao" type="date" />
 </div>
 
+<div class="h-px bg-slate-100"></div>
 
-              <div class="col-span-12 md:col-span-4 space-y-2">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Setor *</label>
-                <select
-                  v-model="form.setor"
-                  :disabled="!form.unidade"
-                  class="w-full h-12 px-4 rounded-xl bg-white border border-slate-200 font-bold text-slate-700 outline-none disabled:opacity-50 transition-all uppercase"
-                >
-                  <option value="">SELECIONE</option>
-                  <option v-for="opt in setorOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-                </select>
-              </div>
+<!-- Financeiro -->
+<section class="space-y-4">
+  <div class="flex items-center justify-between">
+    <h2 class="text-[11px] font-black uppercase tracking-widest text-slate-500">
+      Financeiro
+    </h2>
+    <span class="text-[10px] font-black uppercase tracking-widest text-slate-300">
+      Secao 04
+    </span>
+  </div>
 
-              <div class="col-span-12 md:col-span-4 space-y-2">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cargo *</label>
-                <select
-                  v-model="form.cargo"
-                  :disabled="!form.setor"
-                  class="w-full h-12 px-4 rounded-xl bg-white border border-slate-200 font-bold text-slate-700 outline-none disabled:opacity-50 transition-all uppercase"
-                >
-                  <option value="">SELECIONE</option>
-                  <option v-for="opt in cargoOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-                </select>
-              </div>
+  <div class="grid grid-cols-12 gap-4">
+    <Input
+      class="col-span-12 md:col-span-3"
+      :modelValue="salarioBaseInput"
+      @update:modelValue="updateSalarioBase"
+      label="Salario Base (R$)"
+      placeholder="0,00"
+    />
 
-              <Input class="col-span-12 md:col-span-4" v-model="form.admissao" label="Admissão" type="date" />
-              <Input class="col-span-12 md:col-span-4" v-model="form.demissao" label="Demissão" type="date" />
-              <Input class="col-span-12 md:col-span-4" v-model="form.registro" label="Registro" />
+    <Input
+      class="col-span-12 md:col-span-3"
+      :modelValue="salarioAdicionalInput"
+      @update:modelValue="updateSalarioAdicional"
+      label="Gratificacao (%)"
+      placeholder="0"
+      type="number"
+    />
 
-              <div class="col-span-12 md:col-span-6">
-                <div class="rounded-2xl border border-slate-200 bg-slate-50/50 p-4">
-                  <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Custo hora</p>
-                  <p class="text-2xl font-black text-slate-900 tabular-nums italic">{{ custoHoraExibicao }}</p>
-                </div>
-              </div>
+    <div class="col-span-12 md:col-span-3">
+      <div class="w-full bg-slate-50/60 p-3 rounded-2xl border border-slate-100/60">
+        <CustomCheckbox
+          label="Vale"
+          :model-value="form.tem_vale"
+          @update:model-value="(val) => { form.tem_vale = !!val; if (!val) updateVale('0') }"
+        />
+      </div>
+    </div>
 
-              <div class="col-span-12 md:col-span-6">
-                <div class="rounded-2xl border border-slate-200 bg-slate-50/50 p-4">
-                  <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Tempo de casa</p>
-                  <p class="text-lg font-black text-slate-800 italic">{{ tempoServico }}</p>
-                </div>
-              </div>
-            </div>
+    <div class="col-span-12 md:col-span-3">
+      <div class="w-full bg-slate-50/60 p-3 rounded-2xl border border-slate-100/60">
+        <CustomCheckbox
+          label="Vale Transporte"
+          :model-value="form.tem_vale_transporte"
+          @update:model-value="(val) => { form.tem_vale_transporte = !!val; if (!val) updateValeTransporte('0') }"
+        />
+      </div>
+    </div>
 
-            <div class="grid grid-cols-12 gap-4">
+    <Input
+      v-if="form.tem_vale"
+      class="col-span-12 md:col-span-3"
+      :modelValue="valeInput"
+      @update:modelValue="updateVale"
+      label="Valor do Vale (R$)"
+      placeholder="0,00"
+    />
+
+    <Input
+      v-if="form.tem_vale_transporte"
+      class="col-span-12 md:col-span-3"
+      :modelValue="valeTransporteInput"
+      @update:modelValue="updateValeTransporte"
+      label="Valor do Vale Transporte (R$)"
+      placeholder="0,00"
+    />
+
+  </div>
+</section>
+
+<div class="h-px bg-slate-100"></div>
+
+<div class="grid grid-cols-12 gap-4">
+  <div class="col-span-12 md:col-span-6">
+    <div class="rounded-2xl border border-slate-200 bg-slate-50/50 p-4">
+      <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Custo hora</p>
+      <p class="text-2xl font-black text-slate-900 tabular-nums italic">{{ custoHoraExibicao }}</p>
+    </div>
+  </div>
+
+  <div class="col-span-12 md:col-span-6">
+    <div class="rounded-2xl border border-slate-200 bg-slate-50/50 p-4">
+      <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Tempo de casa</p>
+      <p class="text-lg font-black text-slate-800 italic">{{ tempoServico }}</p>
+    </div>
+  </div>
+</div>
+
+<div class="h-px bg-slate-100"></div>
+<div class="grid grid-cols-12 gap-4">
               <Input class="col-span-6 md:col-span-3" v-model="form.horario_entrada_1" label="Entrada 1" type="time" @update:modelValue="atualizarCargaHoraria" />
               <Input class="col-span-6 md:col-span-3" v-model="form.horario_saida_1" label="Saída 1" type="time" @update:modelValue="atualizarCargaHoraria" />
               <Input class="col-span-6 md:col-span-3" v-model="form.horario_entrada_2" label="Entrada 2" type="time" @update:modelValue="atualizarCargaHoraria" />
@@ -256,66 +352,7 @@
 
           <div class="h-px bg-slate-100"></div>
 
-          <!-- Financeiro -->
-          <section class="space-y-4">
-            <div class="flex items-center justify-between">
-              <h2 class="text-[11px] font-black uppercase tracking-widest text-slate-500">
-                Financeiro
-              </h2>
-              <span class="text-[10px] font-black uppercase tracking-widest text-slate-300">
-                Seção 04
-              </span>
-            </div>
-
-            <div class="grid grid-cols-12 gap-4">
-<Input
-  class="col-span-12 md:col-span-3"
-  :modelValue="salarioBaseInput"
-  @update:modelValue="updateSalarioBase"
-  label="Salário Base (R$)"
-  placeholder="0,00"
-/>
-
-<Input
-  class="col-span-12 md:col-span-3"
-  :modelValue="salarioAdicionalInput"
-  @update:modelValue="updateSalarioAdicional"
-  label="Gratificação (R$)"
-  placeholder="0,00"
-/>
-
-<Input
-  class="col-span-12 md:col-span-3"
-  :modelValue="valeInput"
-  @update:modelValue="updateVale"
-  label="Vale (R$)"
-  placeholder="0,00"
-/>
-
-<Input
-  class="col-span-12 md:col-span-3"
-  :modelValue="valeTransporteInput"
-  @update:modelValue="updateValeTransporte"
-  label="Vale Transporte (R$)"
-  placeholder="0,00"
-/>
-
-
-              <div class="col-span-12 md:col-span-3 space-y-2">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Dia de Pagamento</label>
-                <select v-model="form.dia_pagamento" class="w-full h-12 px-4 rounded-xl bg-white border border-slate-200 font-bold text-slate-700 outline-none">
-                  <option :value="5">DIA 05</option>
-                  <option :value="10">DIA 10</option>
-                  <option :value="20">DIA 20</option>
-                </select>
-              </div>
-            </div>
-          </section>
-
-          <div class="h-px bg-slate-100"></div>
-
           <!-- Arquivos -->
-         <!-- Arquivos -->
 <section class="space-y-4">
   <div class="flex items-center justify-between">
     <h2 class="text-[11px] font-black uppercase tracking-widest text-slate-500">
@@ -338,11 +375,8 @@
     </div>
   </div>
 
-  <p v-if="!isEditing" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-    Salve o funcionário para anexar arquivos.
-  </p>
 
-  <div v-else class="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+  <div v-if="isEditing" class="rounded-2xl border border-slate-200 bg-white overflow-hidden">
     <Table
       :columns="colArquivos"
       :rows="arquivos"
@@ -414,7 +448,7 @@
 
         </form>
       </div>
-    </Card>
+    </div>
 
   </div>
 </template>
@@ -438,7 +472,7 @@ import { ArquivosService } from '@/services/arquivos.service'
 
 import { can } from '@/services/permissions'
 
-definePage({ meta: { perm: 'funcionarios.ver' } })
+definePage({ meta: { perm: 'funcionarios.ver', fullWidth: true } })
 
 
 const router = useRouter()
@@ -451,6 +485,7 @@ const arquivos = ref([])
 const loadingArquivos = ref(false)
 const fileInput = ref(null)
 const syncingForm = ref(false)
+const pendingFileOpen = ref(false)
 
 const colArquivos = [
   { key: 'nome', label: 'ARQUIVO' },
@@ -478,6 +513,8 @@ function novoForm() {
     email: '',
     estado_civil: '',
     escolaridade: '',
+    contato_referencia_nome: '',
+    contato_referencia_telefone: '',
 
     unidade: '',
     setor: '',
@@ -491,7 +528,7 @@ function novoForm() {
     cidade: '',
     estado: '',
 
-    registro: '',
+    data_inicio: '',
     admissao: '',
     demissao: '',
 
@@ -547,7 +584,7 @@ watch(() => form.value.salario_base, (val) => {
 }, { immediate: true })
 
 watch(() => form.value.salario_adicional, (val) => {
-  salarioAdicionalInput.value = maskMoneyBR(Number(val || 0))
+  salarioAdicionalInput.value = String(val ?? 0)
 }, { immediate: true })
 
 watch(() => form.value.vale, (val) => {
@@ -565,9 +602,9 @@ function updateSalarioBase(v) {
   recalcularCustoHora()
 }
 function updateSalarioAdicional(v) {
-  const n = toMoneyNumber(v)
-  form.value.salario_adicional = n
-  salarioAdicionalInput.value = maskMoneyBR(n)
+  const n = Number(String(v || '').replace(',', '.'))
+  form.value.salario_adicional = Number.isFinite(n) ? n : 0
+  salarioAdicionalInput.value = String(form.value.salario_adicional ?? 0)
   recalcularCustoHora()
 }
 function updateVale(v) {
@@ -595,6 +632,20 @@ const rgUi = computed({
 const whatsappUi = computed({
   get: () => (form.value.whatsapp ? maskTelefone(form.value.whatsapp) : ''),
   set: (v) => (form.value.whatsapp = onlyNumbers(v)),
+})
+
+const telefoneUi = computed({
+  get: () => (form.value.telefone ? maskTelefone(form.value.telefone) : ''),
+  set: (v) => (form.value.telefone = onlyNumbers(v)),
+})
+
+const contatoReferenciaTelefoneUi = computed({
+  get: () =>
+    (form.value.contato_referencia_telefone
+      ? maskTelefone(form.value.contato_referencia_telefone)
+      : ''),
+  set: (v) =>
+    (form.value.contato_referencia_telefone = onlyNumbers(v)),
 })
 
 const cepUi = computed({
@@ -640,7 +691,7 @@ const custoHoraExibicao = computed(() => numeroParaMoeda(Number(form.value.custo
 function recalcularCustoHora() {
   const base = Number(form.value.salario_base || 0)
   const adicional = Number(form.value.salario_adicional || 0)
-  const total = base + adicional
+  const total = base + (base * (Number(adicional || 0) / 100))
   const horasMensais = Number(cargaHorariaMensal.value || 0)
 
   if (total <= 0 || horasMensais <= 0) {
@@ -786,15 +837,17 @@ async function excluirArquivo(arquivoId) {
 async function clicarAdicionarArquivo() {
   if (!can(permSalvar())) return notify.error('Acesso negado.')
 
+  pendingFileOpen.value = true
   await garantirIdParaUpload()
-  await Promise.resolve()
+  await nextTick()
 
-  if (!fileInput.value) return notify.error('Input de arquivo não montado.')
-  fileInput.value.click()
+  if (pendingFileOpen.value && fileInput.value) {
+    fileInput.value.click()
+    pendingFileOpen.value = false
+  } else if (!fileInput.value) {
+    return notify.error('Input de arquivo n??o montado.')
+  }
 }
-
-
-
 
 async function onPickArquivo(e) {
   const file = e.target.files?.[0]
@@ -938,6 +991,7 @@ try {
     unidade: normalizarUnidade(data.unidade),
 
     data_nascimento: fmtDate(data.data_nascimento),
+    data_inicio: fmtDate(data.data_inicio),
     admissao: fmtDate(data.admissao),
     demissao: fmtDate(data.demissao),
 

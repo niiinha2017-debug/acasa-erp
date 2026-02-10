@@ -1,63 +1,35 @@
 <template>
-  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-page-in">
-    
-    <PageHeader 
+    <PageHeader
       title="Fornecedores"
       subtitle="Gestão de parceiros comerciais e suprimentos"
       icon="pi pi-truck"
+      :show-back="false"
+      minimal
     >
       <template #actions>
-        <Button
-          v-if="can('fornecedores.criar')"
-          variant="primary"
-          @click="router.push('/fornecedor/novo')"
-        >
-          <i class="pi pi-plus mr-2"></i>
-          Novo Fornecedor
-        </Button>
+        <div class="flex items-center gap-3 w-full sm:w-auto">
+          <div class="w-full sm:w-64">
+            <SearchInput
+              v-model="busca"
+              placeholder="Buscar por razão, CNPJ ou cidade..."
+              :bordered="true"
+            />
+          </div>
+          <Button
+            v-if="can('fornecedores.criar')"
+            variant="primary"
+            class="flex-shrink-0"
+            @click="router.push('/fornecedor/novo')"
+          >
+            <i class="pi pi-plus mr-2 text-xs"></i>
+            Novo Fornecedor
+          </Button>
+        </div>
       </template>
     </PageHeader>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <MetricCard
-        label="Total Parceiros"
-        :value="rows.length"
-        icon="pi pi-building"
-        color="slate"
-      />
-      
-      <MetricCard
-        label="Com E-mail"
-        :value="rows.filter(r => r.email).length"
-        icon="pi pi-envelope"
-        color="blue"
-      />
-      
-      <MetricCard
-        label="Com Telefone"
-        :value="rows.filter(r => r.telefone || r.whatsapp).length"
-        icon="pi pi-phone"
-        color="emerald"
-      />
-
-       <MetricCard
-        label="Ativos"
-        :value="rows.filter(r => !r.inativo).length"
-        icon="pi pi-check-circle"
-        color="amber"
-      />
-    </div>
-
-    <div class="space-y-4">
-      <div class="w-full md:w-96">
-        <SearchInput
-          v-model="busca"
-          placeholder="Buscar por razão, cnpj ou cidade..."
-        />
-      </div>
-
-      <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-        <Table
+    <div class="page-section overflow-hidden bg-bg-card">
+      <Table
           :columns="columns"
           :rows="rowsFiltrados"
           :loading="loading"
@@ -103,16 +75,15 @@
 
           <template #cell-acoes="{ row }">
              <TableActions
-                :can-edit="can('fornecedores.editar')"
-                :can-delete="can('fornecedores.excluir')"
+                :id="row.id"
+                perm-edit="fornecedores.editar"
+                perm-delete="fornecedores.excluir"
                 @edit="router.push(`/fornecedor/${row.id}`)"
                 @delete="confirmarExcluir(row)"
               />
           </template>
         </Table>
-      </div>
     </div>
-  </div>
 </template>
 
 <script setup>

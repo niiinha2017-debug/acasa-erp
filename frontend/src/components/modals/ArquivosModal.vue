@@ -6,9 +6,9 @@
         class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-brand-secondary/60 dark:bg-slate-900/80 backdrop-blur-md"
         @click.self="fechar"
       >
-        <div class="w-full max-w-4xl max-h-[90vh] bg-white dark:bg-slate-900 rounded-3xl shadow-none border border-brand-secondary/40 dark:border-slate-700 overflow-hidden flex flex-col">
+        <div class="w-full max-w-4xl max-h-[90vh] bg-white dark:bg-slate-900 rounded-3xl shadow-none border border-slate-200/60 dark:border-slate-700/60 overflow-hidden flex flex-col">
           
-          <header class="flex items-center justify-between px-8 py-6 border-b border-brand-secondary/40 bg-white dark:bg-slate-900">
+          <header class="flex items-center justify-between px-8 py-6 border-b border-slate-200/50 bg-white dark:bg-slate-900">
             <div class="flex items-center gap-5">
               <div class="w-14 h-14 rounded-2xl bg-brand-primary flex items-center justify-center text-white rotate-2">
                 <i class="pi pi-folder-open text-xl"></i>
@@ -34,7 +34,7 @@
                 Gerenciador Full
               </button>
               <button
-                class="w-11 h-11 flex items-center justify-center rounded-xl bg-white dark:bg-slate-900 border border-brand-secondary/40 dark:border-slate-700 text-slate-400 hover:text-rose-500 hover:border-rose-400 transition-all"
+                class="w-11 h-11 flex items-center justify-center rounded-xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-700/60 text-slate-400 hover:text-rose-500 hover:border-rose-400 transition-all"
                 @click="fechar"
               >
                 <i class="pi pi-times text-xs"></i>
@@ -116,7 +116,7 @@
             </div>
           </div>
 
-          <footer class="px-8 py-5 border-t border-slate-50 bg-slate-50/30 flex items-center justify-between">
+          <footer class="px-8 py-5 border-t border-slate-100/60 bg-slate-50/30 flex items-center justify-between">
             <div v-if="erro" class="flex items-center gap-2 text-rose-500 animate-pulse">
                <i class="pi pi-exclamation-triangle text-xs"></i>
                <span class="text-[9px] font-black uppercase tracking-widest">{{ erro }}</span>

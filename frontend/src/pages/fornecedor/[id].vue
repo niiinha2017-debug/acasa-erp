@@ -1,30 +1,21 @@
-  <template>
-    <Card :shadow="true" class="!rounded-[2.5rem] overflow-hidden border-none shadow-2xl shadow-slate-200/50">
+<template>
+    <Card minimal class="overflow-hidden">
       <PageHeader
         :title="isEdit ? 'Editar Fornecedor' : 'Novo Fornecedor'"
         :subtitle="isEdit ? `ID: #${fornecedorId}` : 'Cadastro de parceiros comerciais'"
         icon="pi pi-truck"
         :backTo="'/fornecedor'"
-        class="bg-slate-50/50 border-b border-slate-100"
+        minimal
       />
 
-      <div class="p-8 md:p-12 relative">
+      <div class="p-6 md:p-8 relative">
         <Loading v-if="loading" />
 
         <form v-else class="space-y-12" @submit.prevent="confirmarSalvarFornecedor">
           
-          <section class="space-y-8">
-            <div class="flex items-center gap-4">
-              <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-lg">
-                <i class="pi pi-id-card"></i>
-              </div>
-              <div>
-                <h3 class="text-sm font-black uppercase tracking-widest text-slate-800">01. Identificação Jurídica</h3>
-                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Dados fiscais e registros oficiais</p>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-12 gap-x-8 gap-y-6 p-8 rounded-[2rem] bg-slate-50/50 border border-slate-100/50">
+          <section class="page-section space-y-4">
+            <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300">01. Identificação Jurídica</h3>
+            <div class="grid grid-cols-12 gap-x-6 gap-y-4">
               <Input
                 class="col-span-12 md:col-span-4"
                 v-model="cnpjMask"
@@ -56,18 +47,9 @@
             </div>
           </section>
 
-          <section class="space-y-8">
-            <div class="flex items-center gap-4">
-              <div class="w-10 h-10 rounded-xl bg-brand-primary text-white flex items-center justify-center shadow-lg shadow-brand-primary/20">
-                <i class="pi pi-phone"></i>
-              </div>
-              <div>
-                <h3 class="text-sm font-black uppercase tracking-widest text-slate-800">02. Contato e Comercial</h3>
-                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Canais de comunicação e acordos</p>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-12 gap-x-8 gap-y-6 p-8 rounded-[2rem] border border-slate-100">
+          <section class="page-section space-y-4">
+            <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300">02. Contato e Comercial</h3>
+            <div class="grid grid-cols-12 gap-x-6 gap-y-4">
               <Input
                 class="col-span-12 md:col-span-4"
                 v-model="form.email"
@@ -88,7 +70,7 @@
                 placeholder="(00) 00000-0000"
               />
 
-              <div class="col-span-12 h-px bg-slate-100 my-2"></div>
+              <div class="col-span-12 line-separator"></div>
 
               <Input
                 class="col-span-12 md:col-span-8"
@@ -106,18 +88,9 @@
             </div>  
           </section>
 
-          <section class="space-y-8">
-            <div class="flex items-center gap-4">
-              <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                <i class="pi pi-map-marker"></i>
-              </div>
-              <div>
-                <h3 class="text-sm font-black uppercase tracking-widest text-slate-800">03. Localização</h3>
-                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Endereço para faturamento e entregas</p>
-              </div>
-            </div>
-
-           <div class="grid grid-cols-12 gap-x-8 gap-y-6 p-8 rounded-[2rem] border border-slate-100">
+          <section class="page-section space-y-4">
+            <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300">03. Localização</h3>
+            <div class="grid grid-cols-12 gap-x-6 gap-y-4">
   <Input
     class="col-span-12 md:col-span-3"
     v-model="cepMask"
@@ -173,56 +146,45 @@
 
           </section>
 
-          <div class="pt-10 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div class="page-actions">
             <Button
               v-if="isEdit && can('fornecedores.excluir')"
               variant="danger"
               type="button"
               @click="confirmarExcluirFornecedor"
-              class="!rounded-2xl !px-8 hover:bg-red-600 transition-all font-bold uppercase text-[10px] tracking-widest w-full md:w-auto"
             >
-              <i class="pi pi-trash mr-2"></i> Excluir Registro
+              <i class="pi pi-trash mr-2 text-xs"></i>
+              Excluir
             </Button>
-            <div v-else class="hidden md:block"></div>
-
-            <div class="flex gap-4 w-full md:w-auto">
-              <Button 
-                variant="secondary" 
-                type="button" 
-                @click="router.push('/fornecedor')"
-                class="flex-1 md:flex-none !rounded-2xl !px-8 !bg-white !border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-widest"
-              >
-                Voltar
-              </Button>
-
-              <Button
-                v-if="can(isEdit ? 'fornecedores.editar' : 'fornecedores.criar')"
-                variant="primary"
-                type="button"
-                @click="confirmarSalvarFornecedor"
-                class="flex-1 md:flex-none !rounded-2xl !px-12 !h-14 shadow-2xl shadow-brand-primary/30 font-black uppercase text-[11px] tracking-[0.15em]"
-              >
-                <i class="pi pi-save mr-3"></i> 
-                {{ isEdit ? 'Salvar Alterações' : 'Finalizar Cadastro' }}
-              </Button>
-            </div>
+            <div class="flex-1"></div>
+            <Button variant="outline" type="button" @click="router.push('/fornecedor')">
+              Voltar
+            </Button>
+            <Button
+              v-if="can(isEdit ? 'fornecedores.editar' : 'fornecedores.criar')"
+              variant="primary"
+              type="submit"
+            >
+              <i class="pi pi-save mr-2 text-xs"></i>
+              {{ isEdit ? 'Salvar' : 'Cadastrar' }}
+            </Button>
           </div>
         </form>
       </div>
     </Card>
-  </template>
+</template>
 
-  <script setup>
-  import { ref, computed, onMounted } from 'vue'
-  import { useRoute, useRouter } from 'vue-router'
-  import { FornecedorService } from '@/services/index'
-  import { notify } from '@/services/notify'
-  import { maskCNPJ, maskTelefone, maskCEP, maskIE } from '@/utils/masks'
-  import { buscarCep, buscarCnpj } from '@/utils/utils'
-  import { confirm } from '@/services/confirm'
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { FornecedorService } from '@/services/index'
+import { notify } from '@/services/notify'
+import { maskCNPJ, maskTelefone, maskCEP, maskIE } from '@/utils/masks'
+import { buscarCep, buscarCnpj } from '@/utils/utils'
+import { confirm } from '@/services/confirm'
+import { can } from '@/services/permissions'
 
-  import { can } from '@/services/permissions'
-  definePage({ meta: { perm: 'fornecedores.ver' } })
+definePage({ meta: { perm: 'fornecedores.ver' } })
 
 
   const route = useRoute()

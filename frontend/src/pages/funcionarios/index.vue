@@ -1,171 +1,119 @@
 <template>
-  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-page-in">
-    
-    <PageHeader 
-      title="Equipe"
-      subtitle="Gestão de capital humano e colaboradores"
+    <PageHeader
+      title="Funcionarios"
+      subtitle="Gestao de equipe e cadastro"
       icon="pi pi-users"
+      :show-back="false"
+      minimal
     >
       <template #actions>
-        <Button
-          v-if="can('funcionarios.criar')"
-          variant="primary"
-          @click="novo()"
-        >
-          <i class="pi pi-plus mr-2"></i>
-          Novo Colaborador
-        </Button>
+        <div class="flex items-center gap-3 w-full sm:w-auto">
+          <div class="w-full sm:w-64">
+            <SearchInput
+              v-model="filtro"
+              placeholder="Buscar nome, CPF ou cargo..."
+              :bordered="true"
+            />
+          </div>
+          <Button
+            v-if="can('funcionarios.criar')"
+            variant="primary"
+            class="flex-shrink-0"
+            @click="novo()"
+          >
+            <i class="pi pi-plus mr-2 text-xs"></i>
+            Novo Funcionario
+          </Button>
+        </div>
       </template>
     </PageHeader>
 
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <MetricCard
-        label="Equipe Total"
-        :value="funcionarios.length"
-        icon="pi pi-users"
-        color="slate"
-      />
-      
-      <MetricCard
-        label="Ativos"
-        :value="funcionariosAtivos"
-        icon="pi pi-check-circle"
-        color="emerald"
-      />
-      
-      <div
-        class="p-4 rounded-xl border transition-all flex items-center justify-between"
-        :class="selecionadosCount > 0 ? 'bg-slate-900 border-slate-900 shadow-lg shadow-slate-200' : 'bg-white border-slate-200 shadow-sm'"
+    <div class="page-section overflow-hidden bg-bg-card">
+      <Table
+        :columns="columns"
+        :rows="funcionariosFiltrados"
+        :loading="loading"
+        :empty-text="filtro ? 'Nenhum funcionario encontrado para sua busca' : 'Nenhum funcionario cadastrado'"
+        :boxed="false"
       >
-        <div>
-          <p class="text-[9px] font-black uppercase tracking-[0.15em]" :class="selecionadosCount > 0 ? 'text-slate-400' : 'text-slate-400'">
-            Selecionados
-          </p>
-          <p class="text-xl font-black" :class="selecionadosCount > 0 ? 'text-white' : 'text-slate-800'">
-            {{ selecionadosCount }}
-          </p>
-        </div>
+        <template #cell-nome="{ row }">
+          <div class="flex flex-col">
+            <span class="text-sm font-bold text-slate-800 uppercase tracking-tight">{{ row.nome }}</span>
+            <span class="text-[10px] font-medium text-slate-500">
+              {{ row.cpf ? maskCPF(row.cpf) : '000.000.000-00' }}
+              <span v-if="row.rg" class="ml-2 text-slate-400">RG: {{ maskRG(row.rg) }}</span>
+            </span>
+          </div>
+        </template>
 
-        <button
-          v-if="selecionadosCount > 0 && can('funcionarios.ver')"
-          @click="confirmarGerarPdfFuncionarios"
-          :disabled="gerandoPdf"
-          class="px-3 py-1.5 rounded-lg bg-brand-primary text-white text-[9px] font-black uppercase tracking-wider flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all disabled:opacity-60 disabled:pointer-events-none"
-        >
-          <i class="pi pi-file-pdf"></i> PDF
-        </button>
-      </div>
+        <template #cell-cargo="{ row }">
+          <div class="flex flex-col">
+            <span class="text-sm font-medium text-slate-700 uppercase">{{ row.cargo }}</span>
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{{ row.setor }}</span>
+          </div>
+        </template>
+
+        <template #cell-status="{ row }">
+           <StatusBadge :value="row.status || 'INATIVO'" />
+        </template>
+
+        <template #cell-acoes="{ row }">
+          <div class="flex justify-end gap-1">
+            <button
+              v-if="can('funcionarios.ver')"
+              @click="abrirArquivos(row)"
+              class="w-7 h-7 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white transition-all flex items-center justify-center border border-slate-100"
+              title="Documentos"
+            >
+              <i class="pi pi-paperclip text-xs"></i>
+            </button>
+
+            <TableActions
+              :can-edit="can('funcionarios.editar')"
+              :can-delete="can('funcionarios.excluir')"
+              @edit="editar(row.id)"
+              @delete="confirmarExcluirFuncionario(row)"
+            />
+          </div>
+        </template>
+      </Table>
     </div>
 
-    <div class="space-y-4">
-      <div class="w-full md:w-96">
-        <SearchInput
-          v-model="filtro"
-          placeholder="Buscar nome, cpf ou cargo..."
-        />
-      </div>
-
-      <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-        <Table
-          :columns="columns"
-          :rows="funcionariosFiltrados"
-          :loading="loading"
-          empty-text="Nenhum colaborador encontrado."
-          :boxed="false"
-        >
-          <template #cell-nome="{ row }">
-            <div class="flex items-center gap-3 py-1">
-              <CustomCheckbox
-                :modelValue="isSelected(row.id)"
-                @update:modelValue="toggle(row.id)"
-                label=""
-                class="scale-90"
-              />
-              <div class="flex flex-col">
-                <span class="text-sm font-bold text-slate-800 uppercase tracking-tight">{{ row.nome }}</span>
-                <span class="text-[10px] font-medium text-slate-500">
-                  {{ row.cpf ? maskCPF(row.cpf) : '000.000.000-00' }}
-                  <span v-if="row.rg" class="ml-2 text-slate-400">RG: {{ maskRG(row.rg) }}</span>
-                </span>
-              </div>
-            </div>
-          </template>
-
-          <template #cell-cargo="{ row }">
-            <div class="flex flex-col">
-              <span class="text-sm font-medium text-slate-700 uppercase">{{ row.cargo }}</span>
-              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{{ row.setor }}</span>
-            </div>
-          </template>
-
-          <template #cell-status="{ row }">
-             <StatusBadge :value="row.status || 'INATIVO'" />
-          </template>
-
-          <template #cell-acoes="{ row }">
-             <div class="flex justify-end gap-1">
-                <button
-                v-if="can('funcionarios.ver')"
-                @click="abrirArquivos(row)"
-                class="w-7 h-7 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white transition-all flex items-center justify-center border border-slate-100"
-                title="Documentos"
-              >
-                <i class="pi pi-paperclip text-xs"></i>
-              </button>
-              
-              <TableActions
-                :can-edit="can('funcionarios.editar')"
-                :can-delete="can('funcionarios.excluir')"
-                @edit="editar(row.id)"
-                @delete="confirmarExcluirFuncionario(row)"
-              />
-             </div>
-          </template>
-        </Table>
-      </div>
-
-      <ArquivosModal
-        v-if="arquivosModalOpen && arquivosFuncionario?.id"
-        :open="arquivosModalOpen"
-        ownerType="FUNCIONARIO"
-        :ownerId="arquivosFuncionario.id"
-        categoria="ANEXO"
-        :canManage="can('arquivos.criar') || can('arquivos.excluir')"
-        @close="fecharArquivos"
-      />
-    </div>
-  </div>
+    <ArquivosModal
+      v-if="arquivosModalOpen && arquivosFuncionario?.id"
+      :open="arquivosModalOpen"
+      ownerType="FUNCIONARIO"
+      :ownerId="arquivosFuncionario.id"
+      categoria="ANEXO"
+      :canManage="can('arquivos.criar') || can('arquivos.excluir')"
+      @close="fecharArquivos"
+    />
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import api from '@/services/api'
 import { FuncionarioService } from '@/services/index'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
 import { onlyNumbers, maskCPF, maskRG } from '@/utils/masks'
 
+// UI Components
+import PageHeader from '@/components/ui/PageHeader.vue'
+import SearchInput from '@/components/ui/SearchInput.vue'
+import TableActions from '@/components/ui/TableActions.vue'
+import StatusBadge from '@/components/ui/StatusBadge.vue'
+
 
 definePage({ meta: { perm: 'funcionarios.ver' } })
 
 const router = useRouter()
 const loading = ref(true)
-const gerandoPdf = ref(false)
 const filtro = ref('')
 const funcionarios = ref([])
 const arquivosModalOpen = ref(false)
 const arquivosFuncionario = ref(null)
-
-// Reatividade direta no Set é mais performática no Vue 3
-const selectedIds = ref(new Set())
-
-const selecionadosCount = computed(() => selectedIds.value.size)
-
-const funcionariosAtivos = computed(() =>
-  funcionarios.value.filter(f => String(f.status || '').toUpperCase() === 'ATIVO').length
-)
 
 const columns = [
   { key: 'nome', label: 'FUNCIONÁRIO', width: '40%' },
@@ -173,20 +121,6 @@ const columns = [
   { key: 'status', label: 'STATUS', width: '15%' },
   { key: 'acoes', label: '', align: 'right', width: '20%' }
 ]
-
-// Simplificado: não precisa recriar o Set toda vez
-function toggle(id) {
-  const s = new Set(selectedIds.value)
-  s.has(id) ? s.delete(id) : s.add(id)
-  selectedIds.value = s
-}
-
-
-function isSelected(id) {
-  return selectedIds.value.has(id)
-}
-
-
 const funcionariosFiltrados = computed(() => {
   const termo = String(filtro.value || '').toLowerCase().trim()
   if (!termo) return funcionarios.value
@@ -242,39 +176,6 @@ async function carregar() {
 }
 
 
-// PDF LOGIC
-async function gerarPdf() {
-  if (selectedIds.value.size === 0) return
-  
-  gerandoPdf.value = true
-  try {
-    const ids = Array.from(selectedIds.value)
-    const { data } = await api.post('/funcionarios/pdf', { ids })
-    const arquivoId = data?.arquivoId
-    
-    if (!arquivoId) throw new Error()
-
-    notify.success('PDF gerado com sucesso!')
-    router.push(`/arquivos/${String(arquivoId).replace(/\D/g, '')}`)
-    selectedIds.value.clear() // Limpa seleção após gerar
-  } catch (e) {
-    notify.error('Falha ao gerar documento PDF.')
-  } finally {
-    gerandoPdf.value = false
-  }
-}
-
-async function confirmarGerarPdfFuncionarios() {
-  if (!can('funcionarios.ver')) return notify.error('Acesso negado.')
-  if (selectedIds.value.size === 0) return
-
-  const ok = await confirm.show(
-    'Gerar PDF',
-    `Deseja gerar o PDF com ${selectedIds.value.size} funcionário(s) selecionado(s)?`,
-  )
-  if (ok) await gerarPdf()
-}
-
 // ACTIONS
 function abrirArquivos(row) {
   if (!can('funcionarios.ver')) return notify.error('Acesso negado.')
@@ -311,7 +212,6 @@ async function excluir(row) {
   try {
     await FuncionarioService.remover(row.id)
     funcionarios.value = funcionarios.value.filter((f) => f.id !== row.id)
-    selectedIds.value.delete(row.id)
     notify.success('Funcionário removido.')
   } catch (err) {
     notify.error('Erro ao tentar excluir funcionário.')

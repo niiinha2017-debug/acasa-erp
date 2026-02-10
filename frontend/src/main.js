@@ -32,7 +32,6 @@ import TablePagination from '@/components/ui/TablePagination.vue'
 import QuickCreateProduto from '@/components/modals/QuickCreateProduto.vue'
 import ArquivosModal from '@/components/modals/ArquivosModal.vue'
 import FinanceiroModal from '@/components/modals/FinanceiroModal.vue'
-import AgendamentosModal from '@/components/modals/AgendamentosModal.vue'
 
 // Common
 import Loading from '@/components/common/Loading.vue'
@@ -90,7 +89,6 @@ app.component('Select', Select)
 app.component('QuickCreateProduto', QuickCreateProduto)
 app.component('ArquivosModal', ArquivosModal)
 app.component('FinanceiroModal', FinanceiroModal)
-app.component('AgendamentosModal', AgendamentosModal)
 
 // Diretiva v-can
 app.directive('can', {
@@ -120,5 +118,25 @@ window.addEventListener('acasa-auth-logout', () => {
 
 // ✅ chama aqui (antes do mount)
 autoOpenDevtools()
+
+const maybeRunUpdater = async () => {
+  if (!window.__TAURI__ && !window.__TAURI_INTERNALS__) return
+  if (import.meta.env?.DEV) return
+  if (import.meta.env?.VITE_TAURI_UPDATER === 'false') return
+
+  try {
+    const { check } = await import('@tauri-apps/plugin-updater')
+    const update = await check()
+
+    if (update?.available) {
+      await update.downloadAndInstall()
+      window.location.reload()
+    }
+  } catch (err) {
+    console.error('[ACASA_UPDATER]', err)
+  }
+}
+
+maybeRunUpdater()
 
 app.mount('#app')

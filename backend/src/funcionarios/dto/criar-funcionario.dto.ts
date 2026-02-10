@@ -43,6 +43,15 @@ export class CriarFuncionarioDto {
   @IsString()
   escolaridade?: string;
 
+  // Contato de referência
+  @IsOptional()
+  @IsString()
+  contato_referencia_nome?: string;
+
+  @IsOptional()
+  @IsString()
+  contato_referencia_telefone?: string;
+
   // Empresa
   @IsOptional()
   @IsString()
@@ -92,7 +101,7 @@ export class CriarFuncionarioDto {
   // Registro / vínculo
   @IsOptional()
   @IsString()
-  registro?: string;
+  data_inicio?: string;
 
   @IsOptional()
   @IsString()

@@ -1,6 +1,4 @@
 <template>
-  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-page-in">
-    
     <PageHeader 
       title="Fluxo Financeiro"
       subtitle="Registro de despesas e movimentações"
@@ -104,7 +102,6 @@
         </Table>
       </div>
     </div>
-  </div>
 </template>
 
 <script setup>

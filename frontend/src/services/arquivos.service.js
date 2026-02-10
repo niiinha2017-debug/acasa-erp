@@ -17,6 +17,16 @@ export const ArquivosService = {
     return api.get('/arquivos', { params })
   },
 
+  listarTodos: ({ ownerType, categoria, q, page, pageSize } = {}) => {
+    const params = {}
+    if (ownerType) params.owner_type = normUpper(ownerType)
+    if (categoria) params.categoria = normUpper(categoria)
+    if (q) params.q = String(q)
+    if (page) params.page = Number(page)
+    if (pageSize) params.pageSize = Number(pageSize)
+    return api.get('/arquivos/todos', { params })
+  },
+
   upload: ({ ownerType, ownerId, file, categoria, slotKey, prefixo, nomeBase } = {}) => {
     if (!file) return Promise.reject(new Error('Arquivo não informado'))
 

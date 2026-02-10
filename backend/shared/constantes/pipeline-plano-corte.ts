@@ -49,3 +49,6 @@ export const PIPELINE_PLANO_CORTE = [
     dotClass: 'bg-slate-500',
   },
 ]
+
+/** Chaves válidas do pipeline (para validação no backend) */
+export const PIPELINE_PLANO_CORTE_KEYS: string[] = PIPELINE_PLANO_CORTE.map((p) => p.key)

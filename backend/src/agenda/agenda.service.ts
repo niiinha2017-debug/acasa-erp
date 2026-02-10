@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAgendaDto } from './dto/create-agenda.dto';
 
@@ -17,12 +17,35 @@ export class AgendaService {
       MONTAGEM: 'MONTAGEM_AGENDADA',
     };
 
+    // Regra: cliente_id OU (plano_corte_id com fornecedor)
+    let clienteId = dto.cliente_id ?? null;
+    let fornecedorId = dto.fornecedor_id ?? null;
+
+    if (dto.plano_corte_id) {
+      const plano = await this.prisma.plano_corte.findUnique({
+        where: { id: dto.plano_corte_id },
+        select: { fornecedor_id: true },
+      });
+      if (!plano) throw new BadRequestException('Plano de Corte não encontrado');
+      fornecedorId = plano.fornecedor_id;
+    }
+    if (!clienteId && !fornecedorId) {
+      throw new BadRequestException('Informe cliente_id ou plano_corte_id');
+    }
+
+    const { categoria: _cat, ...rest } = dadosAgenda;
+    const dataAgenda = {
+      ...rest,
+      cliente_id: clienteId,
+      fornecedor_id: fornecedorId,
+    };
+
     // ✅ Transação Real: Garante a integridade dos dados
     return this.prisma.$transaction(async (tx) => {
       // 1. Cria o evento na agenda com a equipe vinculada
       const agendamento = await tx.agenda_global.create({
         data: {
-          ...dadosAgenda,
+          ...dataAgenda,
           equipe: {
             create: equipe_ids.map((id) => ({
               funcionario_id: id,
@@ -32,6 +55,9 @@ export class AgendaService {
         include: {
           equipe: { include: { funcionario: true } },
           cliente: true,
+          fornecedor: true,
+          plano_corte: true,
+          venda: true,
         },
       });
 
@@ -73,9 +99,9 @@ export class AgendaService {
       }
 
       const clienteStatus = categoriaToStatus[categoriaKey];
-      if (dto.cliente_id && clienteStatus) {
+      if (clienteId && clienteStatus) {
         await tx.cliente.update({
-          where: { id: dto.cliente_id },
+          where: { id: clienteId },
           data: { status: clienteStatus },
         });
       }
@@ -96,8 +122,9 @@ export class AgendaService {
       },
       include: {
         cliente: true,
+        fornecedor: true,
         equipe: { include: { funcionario: true } },
-        plano_corte: true, // Adicionado para você saber o que está sendo cortado
+        plano_corte: true,
         venda: true,
       },
       orderBy: { inicio_em: 'asc' },
@@ -113,6 +140,7 @@ export class AgendaService {
       },
       include: {
         cliente: true,
+        fornecedor: true,
         plano_corte: true,
       },
       orderBy: { inicio_em: 'asc' },

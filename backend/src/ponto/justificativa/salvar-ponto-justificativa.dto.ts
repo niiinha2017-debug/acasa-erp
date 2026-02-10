@@ -22,4 +22,8 @@ export class SalvarPontoJustificativaDto {
   @IsString()
   @MaxLength(255)
   descricao?: string;
+
+  @IsOptional()
+  @IsInt()
+  arquivo_id?: number;
 }

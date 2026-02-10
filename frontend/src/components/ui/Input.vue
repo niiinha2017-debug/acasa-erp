@@ -1,14 +1,5 @@
 <template>
   <div class="w-full flex flex-col gap-1.5" :class="{ 'opacity-60 pointer-events-none': disabled }">
-    <label
-      v-if="label"
-      :for="inputId"
-      class="text-sm font-medium text-slate-700 dark:text-slate-300 ml-0.5 mb-0.5"
-    >
-      {{ label }}
-      <span v-if="required" class="text-rose-500 ml-0.5">*</span>
-    </label>
-
     <div class="relative group">
       <div
         v-if="$slots.prefix"
@@ -22,26 +13,40 @@
         :name="name || undefined"
         :type="type"
         :value="modelValue"
-        :placeholder="placeholder"
+        :placeholder="placeholder || ' '"
         :disabled="disabled"
         :readonly="readonly"
         :required="required"
         :autocomplete="autocomplete || undefined"
         :class="[
-          'w-full h-10 border rounded-lg text-sm transition-all duration-200 shadow-sm',
-          'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100',
-          'placeholder:text-slate-400 dark:placeholder:text-slate-500 placeholder:font-normal',
+          'peer w-full h-10 pt-4 pb-1 border-b text-sm transition-all duration-200 bg-transparent',
+          'text-slate-900 dark:text-slate-100',
+          'placeholder:text-transparent focus:placeholder:text-slate-400 dark:focus:placeholder:text-slate-500',
           error
-            ? 'border-rose-300 ring-2 ring-rose-100 dark:border-rose-800 dark:ring-rose-900/30'
-            : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10',
-          $slots.prefix ? 'pl-10' : 'pl-3',
-          $slots.suffix ? 'pr-10' : 'pr-3',
-          { 'uppercase': forceUpper && type !== 'password', 'opacity-50 bg-slate-50 dark:bg-slate-800': disabled }
+            ? 'border-rose-400'
+            : 'border-slate-300 dark:border-slate-600 hover:border-slate-400 dark:hover:border-slate-500 focus:border-brand-primary',
+          $slots.prefix ? 'pl-10' : 'pl-1',
+          $slots.suffix ? 'pr-10' : 'pr-1',
+          { 'uppercase': forceUpper && type !== 'password', 'opacity-50': disabled }
         ]"
         @input="handleInput"
         @blur="e => emit('blur', e)"
         @focus="e => emit('focus', e)"
       />
+
+      <label
+        v-if="label"
+        :for="inputId"
+        :class="[
+          'absolute left-0 top-1/2 -translate-y-1/2 text-sm text-slate-500 dark:text-slate-400 transition-all duration-200 cursor-text px-1 bg-bg-page',
+          $slots.prefix ? 'pl-10' : 'pl-1',
+          'peer-focus:top-0 peer-focus:text-xs peer-focus:text-brand-primary peer-focus:-translate-y-1/2',
+          'peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-translate-y-1/2'
+        ]"
+      >
+        {{ label }}
+        <span v-if="required" class="text-rose-500 ml-0.5">*</span>
+      </label>
 
       <div
         v-if="$slots.suffix"

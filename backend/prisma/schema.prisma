@@ -162,6 +162,7 @@ model orcamento_itens {
 
   criado_em DateTime @default(now())
 
+  @@index([orcamento_id])
   @@map("orcamento_itens")
  }
 
@@ -311,6 +312,7 @@ model Fornecedor {
 
   compensacoes_fornecedor fornecedor_compensacoes[]
   compras                 compras[]
+  agendamentos            agenda_global[]
 
   @@map("fornecedor")
  }
@@ -462,6 +464,11 @@ model funcionarios {
   email           String?
   estado_civil    String?
   escolaridade    String?
+  // ======================
+  // CONTATO DE REFERÊNCIA
+  // ======================
+  contato_referencia_nome     String?
+  contato_referencia_telefone String?
 
   // ======================
   // DADOS DA EMPRESA
@@ -485,9 +492,9 @@ model funcionarios {
   // ======================
   // REGISTRO / VÍNCULO (Essencial para cálculo de Férias)
   // ======================
-  registro String?
-  admissao DateTime?
-  demissao DateTime?
+  data_inicio DateTime?
+  admissao    DateTime?
+  demissao    DateTime?
 
   // ======================
   // FINANCEIRO
@@ -621,14 +628,21 @@ model projetos {
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
+  @@index([cliente_id])
+  @@index([status_atual])
   @@map("projetos")
 }
 
 model agenda_global {
   id Int @id @default(autoincrement())
 
-  cliente_id Int
-  cliente    Cliente @relation(fields: [cliente_id], references: [id])
+  // Cliente (obrigatório para venda/orçamento/projeto; opcional para plano de corte)
+  cliente_id Int?
+  cliente    Cliente? @relation(fields: [cliente_id], references: [id])
+
+  // Fornecedor (obrigatório para plano de corte - venda de metros de corte ao fornecedor)
+  fornecedor_id Int?
+  fornecedor    Fornecedor? @relation(fields: [fornecedor_id], references: [id])
 
   // Vínculos Opcionais
   orcamento_id Int?        @unique
@@ -655,6 +669,10 @@ model agenda_global {
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
+  @@index([cliente_id])
+  @@index([fornecedor_id])
+  @@index([inicio_em])
+  @@index([status])
   @@map("agenda_global")
 }
 
@@ -1052,6 +1070,9 @@ model ponto_justificativas {
 
   descricao String? @db.VarChar(255)
 
+  arquivo_id Int?
+  arquivo    arquivos? @relation(fields: [arquivo_id], references: [id], onDelete: SetNull)
+
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
@@ -1077,6 +1098,8 @@ model arquivos {
   tamanho   Int?
 
   criado_em DateTime @default(now())
+
+  ponto_justificativas ponto_justificativas[]
 
   @@unique([owner_type, owner_id, slot_key])
   @@index([owner_type, owner_id])

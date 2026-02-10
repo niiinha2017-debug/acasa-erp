@@ -1,40 +1,82 @@
 <template>
-  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-page-in">
-    
     <PageHeader 
       title="Compras"
       subtitle="Registro de entradas, insumos e rateios de custo"
       icon="pi pi-shopping-cart"
+      :showBack="false"
     >
       <template #actions>
-        <Button
-          v-if="can('compras.criar')"
-          variant="primary"
-          @click="router.push('/compras/novo')"
-        >
-          <i class="pi pi-plus mr-2"></i>
-          Nova Compra
-        </Button>
+        <div class="flex flex-col gap-3 w-full sm:w-auto sm:flex-row sm:items-center">
+          <div class="w-full sm:w-80">
+            <SearchInput
+              v-model="filtro"
+              placeholder="Buscar descrição, categoria ou valor..."
+            />
+          </div>
+
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <div class="flex flex-col gap-1.5 w-full sm:w-40">
+              <label class="text-xs font-semibold text-slate-600 ml-0.5">De</label>
+              <input
+                v-model="dataInicio"
+                type="date"
+                class="w-full h-10 px-3 transition-all duration-200 outline-none border rounded-lg text-sm
+                       bg-white text-slate-700 border-slate-300
+                       focus:border-brand-primary focus:border-2 hover:border-slate-400"
+              />
+            </div>
+
+            <div class="flex flex-col gap-1.5 w-full sm:w-40">
+              <label class="text-xs font-semibold text-slate-600 ml-0.5">Até</label>
+              <input
+                v-model="dataFim"
+                type="date"
+                class="w-full h-10 px-3 transition-all duration-200 outline-none border rounded-lg text-sm
+                       bg-white text-slate-700 border-slate-300
+                       focus:border-brand-primary focus:border-2 hover:border-slate-400"
+              />
+            </div>
+
+            <Button
+              v-if="dataInicio || dataFim"
+              variant="outline"
+              size="sm"
+              class="mt-5 sm:mt-0"
+              @click="dataInicio = ''; dataFim = ''"
+            >
+              Limpar
+            </Button>
+          </div>
+
+          <Button
+            v-if="can('compras.criar')"
+            variant="primary"
+            @click="router.push('/compras/novo')"
+          >
+            <i class="pi pi-plus mr-2"></i>
+            Nova Compra
+          </Button>
+        </div>
       </template>
     </PageHeader>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <MetricCard
-        label="Total Geral"
+        label="Total Filtrado"
         :value="format.currency(totalGeral)"
         icon="pi pi-dollar"
         color="slate"
       />
       
       <MetricCard
-        label="Estoque/Insumos"
+        label="Insumos"
         :value="format.currency(totalInsumos)"
         icon="pi pi-box"
         color="blue"
       />
 
        <MetricCard
-        label="Despesas Fixas"
+        label="Despesas"
         :value="format.currency(totalDespesas)"
         icon="pi pi-wallet"
         color="rose"
@@ -49,13 +91,6 @@
     </div>
 
     <div class="space-y-4">
-      <div class="w-full md:w-96">
-        <SearchInput
-          v-model="filtro"
-          placeholder="Buscar descrição, categoria ou valor..."
-        />
-      </div>
-
       <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
         <Table
           :columns="columns"
@@ -70,7 +105,7 @@
                 {{ row.descricao }}
               </span>
               <span class="text-[10px] font-bold text-slate-400 tracking-wider uppercase">
-                {{ row.fornecedor?.nome_fantasia || 'Fornecedor não informado' }}
+                {{ row.fornecedor?.razao_social || row.fornecedor?.nome_fantasia || 'Fornecedor não informado' }}
               </span>
             </div>
           </template>
@@ -108,7 +143,6 @@
         </Table>
       </div>
     </div>
-  </div>
 </template>
 
 <script setup>
@@ -126,6 +160,8 @@ const router = useRouter()
 const loading = ref(false)
 const compras = ref([])
 const filtro = ref('')
+const dataInicio = ref('')
+const dataFim = ref('')
 
 const columns = [
   { key: 'descricao', label: 'DESCRIÇÃO / FORNECEDOR', width: '35%' },
@@ -138,21 +174,35 @@ const columns = [
 
 const filtradas = computed(() => {
   const f = String(filtro.value || '').toLowerCase().trim()
-  if (!f) return compras.value
+  const di = dataInicio.value
+  const df = dataFim.value
 
   return compras.value.filter(c => {
     const desc = String(c.descricao || '').toLowerCase()
     const cat = String(c.categoria || '').toLowerCase()
-    const forn = String(c.fornecedor?.nome_fantasia || '').toLowerCase()
-    return desc.includes(f) || cat.includes(f) || forn.includes(f)
+    const forn = String(c.fornecedor?.razao_social || c.fornecedor?.nome_fantasia || '').toLowerCase()
+    const matchText = !f || desc.includes(f) || cat.includes(f) || forn.includes(f)
+    if (!matchText) return false
+
+    const dc = toDateOnly(c.data_compra)
+    if (di && (!dc || dc < di)) return false
+    if (df && (!dc || dc > df)) return false
+    return true
   })
 })
 
-// Metrics
-const totalGeral = computed(() => compras.value.reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
-const totalInsumos = computed(() => compras.value.filter(c => c.categoria === 'INSUMO').reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
-const totalDespesas = computed(() => compras.value.filter(c => c.categoria === 'DESPESA').reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
-const totalInvestimentos = computed(() => compras.value.filter(c => c.categoria === 'INVESTIMENTO').reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
+function toDateOnly(value) {
+  if (!value) return ''
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toISOString().split('T')[0]
+}
+
+// Metrics (baseadas no filtro atual)
+const totalGeral = computed(() => filtradas.value.reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
+const totalInsumos = computed(() => filtradas.value.filter(c => c.categoria === 'INSUMO').reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
+const totalDespesas = computed(() => filtradas.value.filter(c => c.categoria === 'DESPESA').reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
+const totalInvestimentos = computed(() => filtradas.value.filter(c => c.categoria === 'INVESTIMENTO').reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
 
 async function carregar() {
   if (!can('compras.ver')) return notify.error('Acesso negado.')

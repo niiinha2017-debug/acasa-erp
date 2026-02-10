@@ -125,7 +125,7 @@
 
     <!-- MODAL -->
     <div v-if="exibirModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" @click="confirmarFecharModal"></div>
+      <div class="absolute inset-0 bg-transparent" @click="confirmarFecharModal"></div>
 
       <div class="relative w-full max-w-lg animate-in zoom-in-95 duration-200">
         <div class="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">

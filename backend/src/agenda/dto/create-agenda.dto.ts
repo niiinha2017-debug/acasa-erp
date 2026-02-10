@@ -6,6 +6,7 @@ import {
   IsInt,
   IsArray,
   ArrayMinSize,
+  ValidateIf,
 } from 'class-validator';
 
 export class CreateAgendaDto {
@@ -19,9 +20,16 @@ export class CreateAgendaDto {
   @IsDateString({}, { message: 'Data de término inválida' })
   fim_em: Date;
 
+  /** Cliente (obrigatório para venda/orçamento/projeto; opcional para plano de corte) */
+  @ValidateIf((o) => !o.plano_corte_id)
   @IsInt()
-  @IsNotEmpty({ message: 'O cliente é obrigatório' })
-  cliente_id: number;
+  @IsNotEmpty({ message: 'Cliente ou Plano de Corte é obrigatório' })
+  cliente_id?: number;
+
+  /** Fornecedor (preenchido automaticamente quando plano_corte_id é informado) */
+  @IsOptional()
+  @IsInt()
+  fornecedor_id?: number;
 
   // IDs de Vínculo (Opcionais)
   @IsOptional()
@@ -32,6 +40,7 @@ export class CreateAgendaDto {
   @IsInt()
   venda_id?: number;
 
+  /** Plano de Corte (venda de metros de corte ao fornecedor) */
   @IsOptional()
   @IsInt()
   plano_corte_id?: number;

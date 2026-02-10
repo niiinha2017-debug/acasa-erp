@@ -1,6 +1,4 @@
 <template>
-  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-page-in">
-    
     <PageHeader 
       title="Contas a Pagar"
       subtitle="Gestão consolidada de saídas financeiras"
@@ -129,7 +127,6 @@
       @confirm="executarFechamentoFinal"
     />
 
-  </div>
 </template>
 
 <script setup>

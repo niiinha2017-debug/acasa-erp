@@ -249,6 +249,10 @@ export const PontoRelatorioService = {
   // ✅ padrão do sistema: gera+salva e retorna { arquivoId }
   pdfMensalSalvar: (payload) =>
     api.post('/ponto/relatorio/pdf', payload),
+
+  // ✅ equipe: gera+salva e retorna { total, arquivos: [{ arquivoId, funcionario_id, funcionario_nome }] }
+  pdfMensalEquipeSalvar: (payload) =>
+    api.post('/ponto/relatorio/pdf/lote', payload),
 }
 
 

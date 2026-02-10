@@ -34,16 +34,18 @@
       ]
     },
     "updater": {
-      "endpoints": [
-        "https://acasamarcenaria.com.br/updates/tauri/latest.json"
-      ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ3QkQ0MzU5NzVCMzVEQkMKUldTOFhiTjFXVU85MTE2bTladXFoSDlmWFVwci9RTjBQN2JweW0wSHdaM3lTd2MxbVlPNVlDWjQK"
+"endpoints": [
+  "https://aplicativo.acasamarcenaria.com.br/updates/tauri/latest.json"
+],
+
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDRFQTAzQUE0RjdFQUQwNzIKUldSeTBPcjNwRHFnVHJJeDhyMkNMYTdCcXdqc1o1RjVJZWNjc0hoSWpzTEc1NWlOWUJ3KzhWLzYK"
     }
   },
 
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

@@ -25,7 +25,7 @@ export class AgendaController {
 
   // 1. Criar agendamento (Venda, Orçamento ou Plano de Corte)
   @Post()
-  @Permissoes('agendamentos.editar')
+  @Permissoes('agendamentos.criar')
   async create(@Body() createAgendaDto: CreateAgendaDto) {
     return this.agendaService.create(createAgendaDto);
   }
@@ -61,7 +61,7 @@ export class AgendaController {
     return this.agendaService.findByFuncionario(+id);
   }
 
-  // 4. Atualizar Status (Para o marceneiro marcar como "FINALIZADO")
+  // 4. Atualizar Status (Para o marceneiro marcar como "CONCLUIDO" / pipeline plano corte "FINALIZADO")
   @Patch(':id/status')
   @Permissoes('agendamentos.editar')
   async updateStatus(@Param('id') id: string, @Body('status') status: string) {
@@ -70,7 +70,7 @@ export class AgendaController {
 
   // 5. Deletar agendamento
   @Delete(':id')
-  @Permissoes('agendamentos.editar')
+  @Permissoes('agendamentos.excluir')
   async remove(@Param('id') id: string) {
     return this.agendaService.remove(+id);
   }

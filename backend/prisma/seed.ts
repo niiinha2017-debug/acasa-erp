@@ -109,7 +109,13 @@ async function main() {
     { chave: 'plano_corte.criar', descricao: 'Criar plano de corte' },
     { chave: 'plano_corte.editar', descricao: 'Editar plano de corte' },
     { chave: 'plano_corte.excluir', descricao: 'Excluir plano de corte' },
-    { chave: 'plano_corte.enviar_producao', descricao: 'Enviar plano de corte para producao' },
+    { chave: 'plano_corte.enviar_producao', descricao: 'Enviar plano de corte para producao (agenda)' },
+
+    // Projetos
+    { chave: 'projetos.ver', descricao: 'Visualizar projetos' },
+    { chave: 'projetos.criar', descricao: 'Criar projetos' },
+    { chave: 'projetos.editar', descricao: 'Editar projetos' },
+    { chave: 'projetos.excluir', descricao: 'Excluir projetos' },
 
     // Cadastros
     { chave: 'clientes.ver', descricao: 'Visualizar clientes' },

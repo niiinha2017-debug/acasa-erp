@@ -1,5 +1,5 @@
 <template>
-  <div class="flex items-center justify-between gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+  <div class="flex items-center justify-between gap-3 pt-4 border-t border-brand-secondary/40 dark:border-slate-800">
     <div class="text-xs font-medium text-slate-500">
       {{ from }}-{{ to }} de {{ total }}
     </div>
@@ -23,8 +23,8 @@
           type="button"
           class="min-w-[32px] h-8 px-2 rounded-lg text-xs font-medium border transition-colors"
           :class="p.num === page
-            ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
-            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300'"
+            ? 'bg-brand-primary text-white border-brand-primary shadow-sm'
+            : 'bg-white text-slate-600 border-brand-secondary/60 hover:bg-brand-secondary/30 hover:text-brand-primary hover:border-brand-primary/40'"
           :disabled="p.disabled"
           @click="p.num && $emit('update:page', p.num)"
         >

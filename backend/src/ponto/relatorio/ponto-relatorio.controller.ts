@@ -120,4 +120,29 @@ export class PontoRelatorioController {
       ano: a,
     });
   }
+
+  // ✅ NOVO: PDF EQUIPE (cada funcionário em sua própria folha)
+  @Post('pdf/lote')
+  @Permissoes('ponto_relatorio.ver')
+  @HttpCode(HttpStatus.OK)
+  async pdfMensalEquipeSalvar(
+    @Body()
+    body: {
+      funcionario_ids?: any[];
+      mes: any;
+      ano: any;
+    },
+  ) {
+    const ids = Array.isArray(body.funcionario_ids)
+      ? body.funcionario_ids
+      : [];
+    const m = Number(String(body.mes ?? '').replace(/\D/g, ''));
+    const a = Number(String(body.ano ?? '').replace(/\D/g, ''));
+
+    return this.service.gerarPdfMensalEquipeESalvar({
+      funcionario_ids: ids,
+      mes: m,
+      ano: a,
+    });
+  }
 }

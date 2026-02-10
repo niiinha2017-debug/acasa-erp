@@ -74,6 +74,9 @@
                 <form @submit.prevent="handleRecuperacaoSubmit" class="space-y-4">
                   <Input v-model="emailRecuperacao" label="E-mail de acesso" type="email" required :forceUpper="false" :disabled="loading" />
                   <p class="text-sm text-slate-600 dark:text-slate-400">Enviaremos uma senha provisória para seu e-mail.</p>
+                  <div v-if="recuperacaoError" class="text-xs font-bold text-rose-500">
+                    {{ recuperacaoError }}
+                  </div>
                   <div class="flex gap-3 pt-2">
                     <Button type="button" variant="secondary" @click="fecharTudo" class="flex-1 h-11 rounded-2xl">Cancelar</Button>
                     <Button type="submit" :loading="loading" class="flex-1 h-11 rounded-2xl font-black uppercase tracking-[0.25em]">Enviar</Button>
@@ -92,6 +95,7 @@
 import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/services/useauth'
+import { notify } from '@/services/notify'
 
 definePage({ meta: { public: true, layout: 'auth' } })
 
@@ -102,6 +106,7 @@ const showModalRecuperacao = ref(false)
 const lembrarUsuario = ref(false)
 const formLogin = reactive({ usuario: '', senha: '' })
 const emailRecuperacao = ref('')
+const recuperacaoError = ref('')
 const showPassword = ref(false)
 const error = ref('')
 
@@ -113,8 +118,8 @@ onMounted(() => {
   if (salvo) { formLogin.usuario = salvo; lembrarUsuario.value = true }
 })
 
-function fecharTudo() { showModalRecuperacao.value = false; emailRecuperacao.value = '' }
-function openRecuperacao() { error.value = ''; showModalRecuperacao.value = true }
+function fecharTudo() { showModalRecuperacao.value = false; emailRecuperacao.value = ''; recuperacaoError.value = '' }
+function openRecuperacao() { error.value = ''; recuperacaoError.value = ''; showModalRecuperacao.value = true }
 
 async function handleLoginSubmit() {
   error.value = ''
@@ -130,17 +135,30 @@ async function handleLoginSubmit() {
       router.push('/')
     }
   } catch (e) {
-    error.value = 'Usuário ou senha inválidos.'
+    const msg = e?.response?.data?.message
+    error.value = msg ? (Array.isArray(msg) ? msg.join(' | ') : msg) : 'Usuário ou senha inválidos.'
   }
 }
 
 async function handleRecuperacaoSubmit() {
   try {
-    await esqueciSenha(emailRecuperacao.value)
+    recuperacaoError.value = ''
+    const email = String(emailRecuperacao.value || '').trim().toLowerCase()
+    if (!email || !email.includes('@')) {
+      recuperacaoError.value = 'Informe um e-mail valido.'
+      return
+    }
+
+    await esqueciSenha(email)
     fecharTudo()
-    alert('Enviamos uma senha provisória para seu e-mail.')
-  } catch (e) {}
+    notify.success('Enviamos uma senha provisoria para seu e-mail.')
+  } catch (e) {
+    const msg = e?.response?.data?.message || 'Erro ao enviar recuperacao.'
+    recuperacaoError.value = Array.isArray(msg) ? msg.join(' | ') : msg
+  }
 }
 
 watch(lembrarUsuario, (v) => { if (!v) localStorage.removeItem('erp_lembrar_usuario') })
 </script>
+
+

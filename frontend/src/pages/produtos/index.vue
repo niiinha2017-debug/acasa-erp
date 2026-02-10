@@ -1,6 +1,4 @@
 <template>
-  <div class="w-full max-w-[1700px] mx-auto space-y-6">
-
     <PageHeader 
       title="Insumos & Materiais" 
       subtitle="Catálogo de materiais e controle de insumos"
@@ -99,7 +97,6 @@
       </template>
     </Table>
 
-  </div>
 </template>
 
 <script setup>

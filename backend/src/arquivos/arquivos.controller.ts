@@ -83,6 +83,26 @@ export class ArquivosController {
     });
   }
 
+  @Get('todos')
+  @Permissoes('arquivos.ver')
+  listarTodos(
+    @Query('owner_type') owner_type?: string,
+    @Query('categoria') categoria?: string,
+    @Query('q') q?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    const p = page ? Number(page) : undefined;
+    const ps = pageSize ? Number(pageSize) : undefined;
+    return this.arquivosService.listarTodos({
+      owner_type,
+      categoria,
+      q,
+      page: p,
+      pageSize: ps,
+    });
+  }
+
   // 2. UPLOAD (Fixo: Adicionado decorador @Post e limpeza de arquivo em caso de erro)
   @Post('upload')
   @Permissoes('arquivos.criar')

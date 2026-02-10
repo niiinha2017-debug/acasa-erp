@@ -66,9 +66,17 @@ frontend/android/app/src/main/assets/
 frontend/android/app/src/main/res/xml/config.xml
 frontend/android/capacitor-cordova-android-plugins/
 frontend/android/local.properties
+frontend-ponto/android/.gradle/
+frontend-ponto/android/build/
+frontend-ponto/android/app/build/
+frontend-ponto/android/app/src/main/assets/
+frontend-ponto/android/app/src/main/res/xml/config.xml
+frontend-ponto/android/capacitor-cordova-android-plugins/
+frontend-ponto/android/local.properties
 
 # Android signing (NUNCA versionar)
 frontend/android/keystore.properties
+frontend-ponto/android/keystore.properties
 *.jks
 *.keystore
 

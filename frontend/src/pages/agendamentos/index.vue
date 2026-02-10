@@ -1,5 +1,4 @@
 <template>
-  <div class="w-full max-w-[1200px] mx-auto space-y-6 animate-page-in pb-10">
     <header class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-2">
       <div class="flex items-center gap-4">
         <div class="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-xl shadow-slate-200 rotate-2 hover:rotate-0 transition-all duration-300">
@@ -217,7 +216,6 @@
         </div>
       </div>
     </div>
-  </div>
 </template>
 
 <script setup>

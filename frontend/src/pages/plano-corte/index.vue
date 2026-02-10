@@ -1,6 +1,4 @@
 <template>
-  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-page-in">
-    
     <PageHeader 
       title="Plano de Corte"
       subtitle="Industrialização e controle de produção"
@@ -118,7 +116,6 @@
         </Table>
       </div>
     </div>
-  </div>
 </template>
 
 <script setup>

@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { PIPELINE_PLANO_CORTE_KEYS } from '../../shared/constantes/pipeline-plano-corte';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePlanoCorteDto } from '../dto/create-plano-corte.dto';
 import { UpdatePlanoCorteDto } from '../dto/update-plano-corte.dto';
@@ -166,6 +167,11 @@ export class PlanoCorteService {
   }
 
   async create(dto: CreatePlanoCorteDto) {
+    if (!PIPELINE_PLANO_CORTE_KEYS.includes(dto.status)) {
+      throw new BadRequestException(
+        `Status inválido. Use: ${PIPELINE_PLANO_CORTE_KEYS.join(', ')}`,
+      );
+    }
     return this.prisma.$transaction(async (tx) => {
       // soma com Decimal (evita ruído de float)
       const total = dto.produtos.reduce(
@@ -248,7 +254,11 @@ export class PlanoCorteService {
 
   async update(id: number, dto: UpdatePlanoCorteDto) {
     await this.findOne(id);
-
+    if (dto.status && !PIPELINE_PLANO_CORTE_KEYS.includes(dto.status)) {
+      throw new BadRequestException(
+        `Status inválido. Use: ${PIPELINE_PLANO_CORTE_KEYS.join(', ')}`,
+      );
+    }
     return this.prisma.$transaction(async (tx) => {
       // 1. Se houver produtos no DTO, atualizamos a lista
       if (dto.produtos) {
