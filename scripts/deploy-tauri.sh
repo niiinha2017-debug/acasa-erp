@@ -3,13 +3,35 @@ set -euo pipefail
 
 KEY_PATH="/c/Users/Julyana Duarte/.ssh/acasa_key"
 EC2_HOST="ec2-user@54.164.55.32"
-REMOTE_DIR="/var/www/acasamarcenaria/updates/tauri"
+REMOTE_DIR="/var/www/aplicativo/updates/tauri"
 REMOTE_APP_DIR="/var/www/aplicativo/erp"
 BASE_URL="https://aplicativo.acasamarcenaria.com.br/erp"
 
 PROJECT_DIR="/d/Sistema ERP/acasa-erp/frontend"
 BUNDLE_DIR="$PROJECT_DIR/src-tauri/target/release/bundle/nsis"
-EXE_FILE="$BUNDLE_DIR/Acasa_0.1.0_x64-setup.exe"
+VERSION_JSON="$PROJECT_DIR/src-tauri/tauri.conf.json"
+VERSION=$(python - <<'PY'
+import json,sys
+from pathlib import Path
+p=Path(r"d:/Sistema ERP/acasa-erp/frontend/src-tauri/tauri.conf.json")
+data=json.loads(p.read_text(encoding="utf-8"))
+ver=str(data.get("version","0.1.0"))
+parts=ver.split(".")
+if len(parts)!=3:
+  parts=(ver+".0.0").split(".")[:3]
+try:
+  major,minor,patch=[int(x) for x in parts]
+except:
+  major,minor,patch=0,1,0
+patch+=1
+new=f"{major}.{minor}.{patch}"
+data["version"]=new
+p.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+print(new)
+PY
+)
+
+EXE_FILE="$BUNDLE_DIR/Acasa_${VERSION}_x64-setup.exe"
 REMOTE_EXE_NAME="AcasaSetup.exe"
 SIG_FILE="$EXE_FILE.sig"
 LATEST_JSON="$BUNDLE_DIR/latest.json"
@@ -49,9 +71,9 @@ SIG_VALUE=$(cat "$SIG_FILE")
 
 cat > "$LATEST_JSON" <<EOF
 {
-  "version": "0.1.0",
+  "version": "${VERSION}",
   "notes": "Atualizacao do aplicativo",
-  "pub_date": "2026-02-09T00:00:00Z",
+  "pub_date": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
   "platforms": {
     "windows-x86_64": {
       "url": "${BASE_URL}/${REMOTE_EXE_NAME}",
