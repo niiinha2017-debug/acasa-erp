@@ -33,9 +33,8 @@ export class AgendaService {
       throw new BadRequestException('Informe cliente_id ou plano_corte_id');
     }
 
-    const { categoria: _cat, ...rest } = dadosAgenda;
     const dataAgenda = {
-      ...rest,
+      ...dadosAgenda,
       cliente_id: clienteId,
       fornecedor_id: fornecedorId,
     };
