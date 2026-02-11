@@ -73,24 +73,28 @@ jobs:
       - name: Trust EC2 host
         run: ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
 
-      - name: Upload downloads page
+      - name: Upload downloads page (root + /downloads)
         run: |
           scp aplicativo-site/index.html "$SSH_USER@$SSH_HOST:/tmp/acasa-downloads-index.html"
           ssh "$SSH_USER@$SSH_HOST" "
             set -euo pipefail
-            sudo mkdir -p '$REMOTE_WEB/downloads'
-            sudo mv /tmp/acasa-downloads-index.html '$REMOTE_WEB/downloads/index.html'
-            sudo chown -R nginx:nginx '$REMOTE_WEB/downloads'
+            sudo mkdir -p '$REMOTE_WEB/downloads' '$REMOTE_WEB'
+            sudo cp /tmp/acasa-downloads-index.html '$REMOTE_WEB/downloads/index.html'
+            sudo cp /tmp/acasa-downloads-index.html '$REMOTE_WEB/index.html'
+            sudo rm -f /tmp/acasa-downloads-index.html
+            sudo chown -R nginx:nginx '$REMOTE_WEB/downloads' '$REMOTE_WEB/index.html'
             sudo find '$REMOTE_WEB/downloads' -type d -exec chmod 755 {} \;
             sudo find '$REMOTE_WEB/downloads' -type f -exec chmod 644 {} \;
+            sudo chmod 644 '$REMOTE_WEB/index.html'
           "
 
-      - name: Upload frontend dist (preserve erp/ponto/downloads)
+      - name: Upload frontend dist (preserve erp/ponto/downloads/root index)
         run: |
           rsync -az --delete \
             --exclude 'erp' \
             --exclude 'ponto' \
             --exclude 'downloads' \
+            --exclude 'index.html' \
             -e ssh \
             frontend/dist/ "$SSH_USER@$SSH_HOST:/tmp/acasa-frontend-dist/"
           ssh "$SSH_USER@$SSH_HOST" "
@@ -100,6 +104,7 @@ jobs:
               --exclude 'erp' \
               --exclude 'ponto' \
               --exclude 'downloads' \
+              --exclude 'index.html' \
               /tmp/acasa-frontend-dist/ '$REMOTE_WEB/'
             sudo rm -rf /tmp/acasa-frontend-dist
             sudo chown -R nginx:nginx '$REMOTE_WEB'
