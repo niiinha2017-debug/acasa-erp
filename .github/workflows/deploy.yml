@@ -220,3 +220,54 @@ jobs:
             sudo find '$REMOTE_WEB/ponto' -type d -exec chmod 755 {} \;
             sudo find '$REMOTE_WEB/ponto' -type f -exec chmod 644 {} \;
           "
+
+  deploy-windows-installer:
+    runs-on: windows-latest
+    needs: deploy-backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Windows installer (NSIS)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd frontend
+          npm ci
+          npm run tauri -- build --bundles nsis
+          EXE_PATH="$(ls -t src-tauri/target/release/bundle/nsis/*_x64-setup.exe | head -n 1)"
+          cp "$EXE_PATH" ../AcasaSetup.exe
+          ls -lh ../AcasaSetup.exe
+
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Trust EC2 host
+        shell: bash
+        run: ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload installer to EC2
+        shell: bash
+        run: |
+          set -euo pipefail
+          scp AcasaSetup.exe "$SSH_USER@$SSH_HOST:/tmp/AcasaSetup.exe"
+          ssh "$SSH_USER@$SSH_HOST" "
+            set -euo pipefail
+            sudo mkdir -p '$REMOTE_WEB/erp'
+            sudo mv /tmp/AcasaSetup.exe '$REMOTE_WEB/erp/AcasaSetup.exe'
+            sudo chown nginx:nginx '$REMOTE_WEB/erp/AcasaSetup.exe'
+            sudo chmod 644 '$REMOTE_WEB/erp/AcasaSetup.exe'
+            ls -lh '$REMOTE_WEB/erp/AcasaSetup.exe'
+          "
