@@ -23,7 +23,7 @@ jobs:
         run: npm ci --prefix backend
 
       - name: Generate Prisma client
-        run: npm --prefix backend exec -- prisma generate --schema=prisma/schema.prisma
+        run: cd backend && npx prisma generate --schema=prisma/schema.prisma
 
       - name: Lint (non-blocking)
         continue-on-error: true
