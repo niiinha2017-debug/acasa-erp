@@ -33,7 +33,9 @@ jobs:
             cd '$REMOTE_ROOT/backend'
             git fetch --all
             git reset --hard origin/main
-            rm -rf node_modules
+            if [ -d node_modules ]; then
+              rm -rf node_modules || sudo rm -rf node_modules
+            fi
             npm ci
             npx prisma generate
             npx prisma migrate deploy
