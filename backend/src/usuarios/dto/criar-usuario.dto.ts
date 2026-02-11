@@ -1,4 +1,11 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
 export class CriarUsuarioDto {
   @IsString()
@@ -15,9 +22,15 @@ export class CriarUsuarioDto {
 
   @IsString()
   @MinLength(6)
+  @IsOptional()
   senha: string;
 
   @IsString()
   @IsNotEmpty()
+  @IsOptional()
   status: string;
+
+  @IsBoolean()
+  @IsOptional()
+  enviar_senha_provisoria?: boolean;
 }

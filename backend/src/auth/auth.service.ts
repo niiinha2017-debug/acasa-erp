@@ -212,7 +212,7 @@ export class AuthService {
         );
       }
 
-      return { ...criado, email_enviado: true };
+      return { ...criado, email_enviado: true, email_destino: emailLimpo };
     } catch (e: any) {
       if (e?.code === 'P2002') {
         throw new BadRequestException(`Já existe um cadastro com este dado.`);

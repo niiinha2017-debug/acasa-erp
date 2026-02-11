@@ -1,4 +1,4 @@
-import { createApp } from 'vue'
+﻿import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 
@@ -7,7 +7,7 @@ import '@/assets/CSS/tailwind.css'
 import 'primeicons/primeicons.css'
 import '@/assets/hide-password-eye.css'
 
-// ✅ DevTools auto (Tauri)
+// âœ… DevTools auto (Tauri)
 import { autoOpenDevtools } from './devtools-auto'
 
 // UI Components
@@ -38,19 +38,19 @@ import Loading from '@/components/common/Loading.vue'
 import ProcessoClienteFlow from '@/components/common/ProcessoClienteFlow.vue'
 import Select from '@/components/common/Select.vue'
 
-// Importação da Diretiva de Permissão
+// ImportaÃ§Ã£o da Diretiva de PermissÃ£o
 import { can } from '@/services/permissions'
 
 const app = createApp(App)
 
-// ✅ GLOBAL ERROR HANDLER (DEBUG MOBILE)
+// âœ… GLOBAL ERROR HANDLER (DEBUG MOBILE)
 app.config.errorHandler = (err, instance, info) => {
   console.error('[ACASA_VUE_ERROR]', err)
-  // Mostra erro na tela para o usuário ver no celular
+  // Mostra erro na tela para o usuÃ¡rio ver no celular
   alert(`Erro Inesperado: ${err.message}\nInfo: ${info}`)
 }
 
-// ✅ Captura erros globais e promessas rejeitadas
+// âœ… Captura erros globais e promessas rejeitadas
 window.onerror = (message, source, lineno, colno) => {
   console.error('[ACASA_WINDOW_ERROR]', message, source, lineno, colno)
   alert(`Erro JS: ${message}\n${source}:${lineno}:${colno}`)
@@ -109,19 +109,17 @@ app.directive('can', {
 
 app.use(router)
 
-// ✅ evita hard reload em logout por erro 401
+// âœ… evita hard reload em logout por erro 401
 window.addEventListener('acasa-auth-logout', () => {
   if (router.currentRoute.value?.path !== '/login') {
     router.push('/login')
   }
 })
 
-// ✅ chama aqui (antes do mount)
+// âœ… chama aqui (antes do mount)
 autoOpenDevtools()
 
 const setNativeWindowTitleWithVersion = async () => {
-  if (!window.__TAURI__ && !window.__TAURI_INTERNALS__) return
-
   try {
     const [{ getCurrentWindow }, { getVersion }] = await Promise.all([
       import('@tauri-apps/api/window'),
@@ -130,9 +128,16 @@ const setNativeWindowTitleWithVersion = async () => {
     const version = await getVersion()
     await getCurrentWindow().setTitle(`A Casa Marcenaria | ERP v${version}`)
   } catch (err) {
-    // Permissão opcional no Tauri; não deve poluir console nem afetar login.
+    // Sem contexto Tauri (web/mobile) ou sem permissao de janela: ignora.
     const msg = String(err?.message || err || '')
-    if (msg.includes('allow-set-title') || msg.includes('not allowed')) return
+    const lower = msg.toLowerCase()
+    if (
+      msg.includes('allow-set-title') ||
+      msg.includes('not allowed') ||
+      lower.includes('tauri') ||
+      lower.includes('window') ||
+      lower.includes('context')
+    ) return
     console.warn('[ACASA_TITLEBAR]', err)
   }
 }
@@ -159,3 +164,4 @@ setNativeWindowTitleWithVersion()
 maybeRunUpdater()
 
 app.mount('#app')
+

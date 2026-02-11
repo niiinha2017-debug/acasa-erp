@@ -1,9 +1,14 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class MailService {
+  private readonly logger = new Logger(MailService.name);
   private transporter: nodemailer.Transporter;
 
   constructor(private readonly config: ConfigService) {
@@ -15,7 +20,7 @@ export class MailService {
         user: this.config.get<string>('MAIL_USER'),
         pass: this.config.get<string>('MAIL_PASS'),
       },
-      requireTLS: this.config.get<string>('MAIL_SECURE') !== 'true', // só pra 587
+      requireTLS: this.config.get<string>('MAIL_SECURE') !== 'true',
       connectionTimeout: 10_000,
       greetingTimeout: 10_000,
       socketTimeout: 20_000,
@@ -32,7 +37,7 @@ export class MailService {
         from,
         to: para,
         subject: 'ACASA-ERP - Teste de e-mail',
-        text: 'Se você recebeu este e-mail, o SMTP do ACASA-ERP está OK.',
+        text: 'Se voce recebeu este e-mail, o SMTP do ACASA-ERP esta OK.',
       });
 
       return { ok: true, messageId: info.messageId };
@@ -42,49 +47,59 @@ export class MailService {
       );
     }
   }
+
   async enviarSenhaProvisoria(
     para: string,
     senhaProvisoria: string,
     nome?: string,
   ) {
+    const destino = String(para || '').trim().toLowerCase();
+    if (!destino || !destino.includes('@')) {
+      throw new InternalServerErrorException(
+        'Destinatario de senha provisoria invalido',
+      );
+    }
+
     const from =
       this.config.get<string>('MAIL_FROM') ||
       this.config.get<string>('MAIL_USER');
 
-    const text = `Olá${nome ? `, ${nome}` : ''}.
+    const text = `Ola${nome ? `, ${nome}` : ''}.
 
 Seu acesso ao ACASA ERP foi criado.
 
-Sua senha provisória é: ${senhaProvisoria}
+Sua senha provisoria e: ${senhaProvisoria}
 
 Entre no sistema e altere sua senha imediatamente.
 
-— ACASA ERP`;
+- ACASA ERP`;
 
     await this.transporter.sendMail({
       from,
-      to: para,
-      subject: 'ACASA-ERP - Senha provisória',
+      to: destino,
+      subject: 'ACASA-ERP - Senha provisoria',
       text,
     });
 
+    this.logger.log(`Senha provisoria enviada para: ${destino}`);
     return { ok: true };
   }
+
   async enviarAniversarioCliente(para: string, nome?: string) {
     const from =
       this.config.get<string>('MAIL_FROM') ||
       this.config.get<string>('MAIL_USER');
 
-    const text = `Olá${nome ? `, ${nome}` : ''}!
+    const text = `Ola${nome ? `, ${nome}` : ''}!
 
-Passando para te desejar um feliz aniversário! 🎉
+Passando para te desejar um feliz aniversario!
 
-— ACASA ERP`;
+- ACASA ERP`;
 
     await this.transporter.sendMail({
       from,
       to: para,
-      subject: 'ACASA-ERP - Feliz aniversário!',
+      subject: 'ACASA-ERP - Feliz aniversario!',
       text,
     });
 

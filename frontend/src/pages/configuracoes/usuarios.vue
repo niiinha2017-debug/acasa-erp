@@ -296,6 +296,8 @@ const salvar = async () => {
       })
       if (resp?.email_enviado === false) {
         notify.warn('Usuário criado, mas o e-mail não foi enviado. Verifique o SMTP.')
+      } else if (resp?.email_destino) {
+        notify.success(`Senha provisória enviada para: ${resp.email_destino}`)
       }
     }
     notify.success('Operação realizada com sucesso!')
