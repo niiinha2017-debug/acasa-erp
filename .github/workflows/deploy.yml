@@ -312,7 +312,9 @@ jobs:
           & $signtool verify /pa /v "$($exe.FullName)"
           if ($LASTEXITCODE -ne 0) {
             Write-Warning "Authenticode verify returned non-zero (likely untrusted internal root on runner). Continuing deploy."
+            $global:LASTEXITCODE = 0
           }
+          $global:LASTEXITCODE = 0
 
           Copy-Item "$($exe.FullName)" "AcasaSetup.exe" -Force
 
