@@ -3,6 +3,7 @@ import api from '@/services/api'
 import storage from '@/utils/storage'
 
 const SESSION_KEY = 'ACASA_SESSION_ALIVE'
+const FORCE_PENDING_KEY = 'ACASA_FORCE_PENDING'
 
 // Estado Global (Singleton)
 const token = ref(storage.getToken())
@@ -62,6 +63,13 @@ export function useAuth() {
       token.value = data.token
       usuarioLogado.value = data.usuario
 
+      // Força fluxo de troca de senha quando backend sinaliza senha provisória.
+      if (data?.precisa_trocar_senha) {
+        sessionStorage.setItem(FORCE_PENDING_KEY, '1')
+      } else {
+        sessionStorage.removeItem(FORCE_PENDING_KEY)
+      }
+
       return data
     } catch (e) {
       error.value = e?.response?.data?.message || 'Credenciais inválidas'
@@ -106,6 +114,7 @@ async function alterarSenha(dados) { // dados = { senha_atual, senha_nova }
   try {
     // Passamos o objeto 'dados' direto para o axios
     const { data } = await api.post('/auth/alterar-senha', dados)
+    sessionStorage.removeItem(FORCE_PENDING_KEY)
     return data
   } catch (e) {
     error.value = e?.response?.data?.message || 'Erro ao alterar senha'
@@ -122,6 +131,9 @@ async function alterarSenha(dados) { // dados = { senha_atual, senha_nova }
     const { data } = await api.get('/auth/me')
     storage.setUser(data)
     usuarioLogado.value = data
+    if (String(data?.status || '').toUpperCase() === 'ATIVO') {
+      sessionStorage.removeItem(FORCE_PENDING_KEY)
+    }
     return data
   }
 
@@ -132,6 +144,7 @@ async function alterarSenha(dados) { // dados = { senha_atual, senha_nova }
     } catch {}
 
     sessionStorage.removeItem(SESSION_KEY)
+    sessionStorage.removeItem(FORCE_PENDING_KEY)
 
     storage.removeToken()
     storage.removeUser()

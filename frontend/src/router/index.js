@@ -13,6 +13,7 @@ const router = createRouter({
 const routePermMap = buildRoutePermMap()
 
 let syncingMe = null
+const FORCE_PENDING_KEY = 'ACASA_FORCE_PENDING'
 
 async function ensureMe() {
   const token = storage.getToken()
@@ -65,6 +66,12 @@ router.beforeEach(async (to) => {
   // ❌ AQUI ESTAVA O ERRO: Se o servidor não validou o usuário, bloqueia!
   if (!user) {
     return { path: '/login' }
+  }
+
+  const forcePending = sessionStorage.getItem(FORCE_PENDING_KEY) === '1'
+  if (forcePending) {
+    if (to.path === '/pendente') return true
+    return { path: '/pendente' }
   }
 
   const status = String(user?.status || '').toUpperCase()
