@@ -119,6 +119,24 @@ window.addEventListener('acasa-auth-logout', () => {
 // ✅ chama aqui (antes do mount)
 autoOpenDevtools()
 
+const setNativeWindowTitleWithVersion = async () => {
+  if (!window.__TAURI__ && !window.__TAURI_INTERNALS__) return
+
+  try {
+    const [{ getCurrentWindow }, { getVersion }] = await Promise.all([
+      import('@tauri-apps/api/window'),
+      import('@tauri-apps/api/app'),
+    ])
+    const version = await getVersion()
+    await getCurrentWindow().setTitle(`A Casa Marcenaria | ERP v${version}`)
+  } catch (err) {
+    // Permissão opcional no Tauri; não deve poluir console nem afetar login.
+    const msg = String(err?.message || err || '')
+    if (msg.includes('allow-set-title') || msg.includes('not allowed')) return
+    console.warn('[ACASA_TITLEBAR]', err)
+  }
+}
+
 const maybeRunUpdater = async () => {
   if (!window.__TAURI__ && !window.__TAURI_INTERNALS__) return
   if (import.meta.env?.DEV) return
@@ -137,6 +155,7 @@ const maybeRunUpdater = async () => {
   }
 }
 
+setNativeWindowTitleWithVersion()
 maybeRunUpdater()
 
 app.mount('#app')

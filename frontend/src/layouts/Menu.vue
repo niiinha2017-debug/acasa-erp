@@ -228,7 +228,9 @@ const carregarMenu = async () => {
   }
 }
 
-onMounted(carregarMenu)
+onMounted(() => {
+  carregarMenu()
+})
 </script>
 
 <style scoped>

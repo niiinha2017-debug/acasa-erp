@@ -24,7 +24,7 @@
           </div>
 
           <button 
-            @click="n.remove()" 
+            @click="notify.remove(n.id)" 
             class="ml-auto opacity-70 hover:opacity-100 transition"
           >
             <i class="pi pi-times text-[10px]"></i>
@@ -36,6 +36,8 @@
 </template>
 
 <script setup>
+import { notifications, notify } from '@/services/notify'
+
 const typeConfig = {
   success: {
     bg: 'bg-emerald-100 dark:bg-emerald-900',

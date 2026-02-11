@@ -276,15 +276,7 @@ async function confirmarFecharModal() {
 async function confirmarSalvarUsuario() {
   const perm = modoEdicao.value ? 'usuarios.editar' : 'usuarios.criar'
   if (!can(perm)) return notify.error('Acesso negado.')
-
-  const titulo = modoEdicao.value ? 'Salvar Alterações' : 'Criar Colaborador'
-  const mensagem = modoEdicao.value
-    ? `Deseja salvar as alterações do colaborador "${formUsuario.value.nome}"?`
-    : `Deseja criar o colaborador "${formUsuario.value.nome}"?`
-
-  const ok = await confirm.show(titulo, mensagem)
-  if (!ok) return
-
+  if (loadingSalvar.value) return
   await salvar()
 }
 
@@ -297,17 +289,25 @@ const salvar = async () => {
     if (modoEdicao.value) {
       await UsuariosService.salvar(formUsuario.value.id, formUsuario.value)
     } else {
-      await solicitarCadastro({
+      const resp = await solicitarCadastro({
         nome: formUsuario.value.nome,
         usuario: formUsuario.value.usuario,
         email: formUsuario.value.email,
       })
+      if (resp?.email_enviado === false) {
+        notify.warn('Usuário criado, mas o e-mail não foi enviado. Verifique o SMTP.')
+      }
     }
     notify.success('Operação realizada com sucesso!')
     exibirModal.value = false
     await carregar()
   } catch (err) {
-    notify.error('Erro ao salvar dados')
+    const apiMsg = err?.response?.data?.message
+    notify.error(
+      Array.isArray(apiMsg)
+        ? apiMsg.join(' | ')
+        : (apiMsg || 'Erro ao salvar dados')
+    )
   } finally {
     loadingSalvar.value = false
   }

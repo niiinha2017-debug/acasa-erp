@@ -183,11 +183,34 @@ export class AuthService {
         },
       });
 
-      await this.mailService.enviarSenhaProvisoria(
-        emailLimpo,
-        senhaProvisoria,
-        criado.nome,
-      );
+      try {
+        await this.mailService.enviarSenhaProvisoria(
+          emailLimpo,
+          senhaProvisoria,
+          criado.nome,
+        );
+      } catch (e) {
+        // Sem envio da senha provisória, o cadastro é revertido.
+        await this.prisma.$transaction([
+          this.prisma.usuarios_permissoes.deleteMany({
+            where: { usuario_id: criado.id },
+          }),
+          this.prisma.recuperacao_senha.deleteMany({
+            where: { usuario_id: criado.id },
+          }),
+          this.prisma.usuarios.delete({
+            where: { id: criado.id },
+          }),
+        ]);
+
+        console.warn(
+          `[AUTH] Cadastro revertido por falha no envio de senha provisória para ${emailLimpo}: ${e}`,
+        );
+
+        throw new BadRequestException(
+          'Não foi possível enviar a senha provisória. Verifique o SMTP e tente novamente.',
+        );
+      }
 
       return { ...criado, email_enviado: true };
     } catch (e: any) {
