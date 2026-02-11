@@ -29,6 +29,41 @@ export class FinanceiroService {
     return d;
   }
 
+  private parseFiltroDate(value: any, field: string, fimDoDia = false) {
+    const raw = String(value || '').trim();
+    if (!raw) return undefined;
+
+    let d: Date | null = null;
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      d = new Date(`${raw}T00:00:00`);
+    } else {
+      const m = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (m) {
+        const dd = Number(m[1]);
+        const mm = Number(m[2]);
+        const yyyy = Number(m[3]);
+        const parsed = new Date(yyyy, mm - 1, dd, 0, 0, 0, 0);
+        if (
+          parsed.getFullYear() === yyyy &&
+          parsed.getMonth() === mm - 1 &&
+          parsed.getDate() === dd
+        ) {
+          d = parsed;
+        }
+      }
+    }
+
+    if (!d || Number.isNaN(d.getTime())) {
+      throw new BadRequestException(
+        `${field} invÃ¡lida. Use YYYY-MM-DD ou DD/MM/AAAA.`,
+      );
+    }
+
+    if (fimDoDia) d.setHours(23, 59, 59, 999);
+    return d;
+  }
+
   private round2(n: number) {
     return Math.round((n + Number.EPSILON) * 100) / 100;
   }
@@ -39,35 +74,62 @@ export class FinanceiroService {
   async listarContasPagarConsolidado(filtros: {
     fornecedor_id?: number;
     status?: string;
+    data_ini?: string;
+    data_fim?: string;
   }) {
     const status = filtros.status || undefined;
     const fornecedorId = filtros.fornecedor_id || undefined;
+    const dataIni = this.parseFiltroDate(filtros.data_ini, 'data_ini');
+    const dataFim = this.parseFiltroDate(filtros.data_fim, 'data_fim', true);
+    if (dataIni && dataFim && dataIni.getTime() > dataFim.getTime()) {
+      throw new BadRequestException('data_ini nÃ£o pode ser maior que data_fim');
+    }
+
+    const whereDespesas: any = { status };
+    const whereCompras: any = { fornecedor_id: fornecedorId, status };
+    const whereFechamentos: any = { fornecedor_id: fornecedorId, status };
+
+    if (dataIni || dataFim) {
+      whereDespesas.data_vencimento = {};
+      whereCompras.data_compra = {};
+      whereFechamentos.vencimento_em = {};
+
+      if (dataIni) {
+        whereDespesas.data_vencimento.gte = dataIni;
+        whereCompras.data_compra.gte = dataIni;
+        whereFechamentos.vencimento_em.gte = dataIni;
+      }
+      if (dataFim) {
+        whereDespesas.data_vencimento.lte = dataFim;
+        whereCompras.data_compra.lte = dataFim;
+        whereFechamentos.vencimento_em.lte = dataFim;
+      }
+    }
 
     const [despesas, compras, fechamentos] = await Promise.all([
       // DESPESAS
       this.prisma.despesas.findMany({
-        where: {
-          status: status,
-        },
+        where: whereDespesas,
         orderBy: { data_vencimento: 'asc' },
       }),
 
       // COMPRAS
       this.prisma.compras.findMany({
-        where: {
-          fornecedor_id: fornecedorId,
-          status: status,
+        where: whereCompras,
+        include: {
+          fornecedor: true,
+          itens: {
+            select: {
+              nome_produto: true,
+            },
+          },
         },
-        include: { fornecedor: true },
-        orderBy: { vencimento_em: 'asc' },
+        orderBy: { data_compra: 'asc' },
       }),
 
       // CONTAS_PAGAR (FECHAMENTO MENSAL)
       this.prisma.contas_pagar.findMany({
-        where: {
-          fornecedor_id: fornecedorId,
-          status: status,
-        },
+        where: whereFechamentos,
         include: {
           fornecedor: true,
           fornecedor_cobrador: true,
@@ -105,19 +167,44 @@ export class FinanceiroService {
       // =====================
       // COMPRAS (origem = COMPRA)
       // =====================
-      ...compras.map((c) => ({
+      ...compras.map((c) => {
+        const itensNomes = Array.isArray((c as any).itens)
+          ? (c as any).itens
+              .map((it: any) => String(it?.nome_produto || '').trim())
+              .filter(Boolean)
+          : [];
+
+        const resumoBase = itensNomes.slice(0, 3).join(' + ');
+        const sufixo =
+          itensNomes.length > 3
+            ? ` +${itensNomes.length - 3} item(ns)`
+            : '';
+
+        const descricaoCompra = resumoBase
+          ? `COMPRA: ${resumoBase}${sufixo}`
+          : 'COMPRA';
+
+        const observacaoCompra = [
+          c.tipo_compra ? String(c.tipo_compra) : null,
+          itensNomes.length ? `${itensNomes.length} item(ns)` : null,
+        ]
+          .filter(Boolean)
+          .join(' | ');
+
+        return {
         id: c.id,
         origem: 'COMPRA',
 
         fornecedor_id: c.fornecedor_id,
         fornecedor_nome: c.fornecedor?.nome_fantasia || null,
 
-        descricao: 'COMPRA',
-        observacao: c.tipo_compra,
+        descricao: descricaoCompra,
+        observacao: observacaoCompra || c.tipo_compra || null,
 
         valor: c.valor_total,
         valor_compensado: 0,
 
+        data_compra: c.data_compra,
         vencimento_em: c.vencimento_em,
         pago_em: null,
         status: c.status,
@@ -125,7 +212,8 @@ export class FinanceiroService {
         mes_referencia: null,
         ano_referencia: null,
         cheques_total: 0,
-      })),
+        };
+      }),
 
       // =====================
       // FECHAMENTOS (origem = FECHAMENTO)
@@ -288,6 +376,97 @@ export class FinanceiroService {
     });
   }
 
+  async listarTitulosContaPagar(contaPagarId: number) {
+    const conta = await this.prisma.contas_pagar.findUnique({
+      where: { id: contaPagarId },
+      select: { id: true },
+    });
+    if (!conta) throw new NotFoundException('Conta a pagar não encontrada');
+
+    return this.prisma.titulos_financeiros.findMany({
+      where: { conta_pagar_id: contaPagarId },
+      orderBy: [
+        { parcela_numero: 'asc' },
+        { vencimento_em: 'asc' },
+        { id: 'asc' },
+      ],
+    });
+  }
+
+  async pagarTituloContaPagar(contaPagarId: number, tituloId: number, dto: any) {
+    return this.prisma.$transaction(async (tx) => {
+      const conta = await tx.contas_pagar.findUnique({
+        where: { id: contaPagarId },
+        select: { id: true, status: true },
+      });
+      if (!conta) throw new NotFoundException('Conta a pagar não encontrada');
+
+      const titulo = await tx.titulos_financeiros.findFirst({
+        where: { id: tituloId, conta_pagar_id: contaPagarId },
+        select: { id: true, status: true, meta: true },
+      });
+      if (!titulo) throw new NotFoundException('Título financeiro não encontrado');
+      if (titulo.status === SF.PAGO)
+        throw new BadRequestException('Título já está pago');
+      if (titulo.status === SF.CANCELADO)
+        throw new BadRequestException('Título cancelado não pode ser pago');
+
+      const pagoEm = dto?.pago_em ? this.toDate(dto.pago_em, 'pago_em') : new Date();
+
+      const metaAtual =
+        titulo.meta && typeof titulo.meta === 'object' && !Array.isArray(titulo.meta)
+          ? (titulo.meta as Record<string, any>)
+          : {};
+      const metaInput =
+        dto?.meta && typeof dto.meta === 'object' && !Array.isArray(dto.meta)
+          ? (dto.meta as Record<string, any>)
+          : {};
+
+      const tituloPago = await tx.titulos_financeiros.update({
+        where: { id: titulo.id },
+        data: {
+          status: SF.PAGO,
+          pago_em: pagoEm,
+          meta: {
+            ...metaAtual,
+            ...metaInput,
+            baixa_manual_em: pagoEm.toISOString(),
+            baixa_manual_obs: dto?.observacao ? String(dto.observacao) : null,
+          },
+        },
+      });
+
+      const pendentes = await tx.titulos_financeiros.count({
+        where: {
+          conta_pagar_id: contaPagarId,
+          status: { in: [SF.EM_ABERTO, SF.VENCIDO] },
+        },
+      });
+
+      if (pendentes === 0) {
+        await tx.contas_pagar.update({
+          where: { id: contaPagarId },
+          data: { status: SF.PAGO, pago_em: pagoEm },
+        });
+      } else {
+        const existeVencido = await tx.titulos_financeiros.findFirst({
+          where: { conta_pagar_id: contaPagarId, status: SF.VENCIDO },
+          select: { id: true },
+        });
+
+        await tx.contas_pagar.update({
+          where: { id: contaPagarId },
+          data: {
+            status: existeVencido ? SF.VENCIDO : SF.EM_ABERTO,
+            pago_em: null,
+          },
+        });
+      }
+
+      return tituloPago;
+    });
+  }
+
   // =========================================================
   // ✅ PREVIEW DO FECHAMENTO (ETAPA 1 DO MODAL)
   // Plano de corte é VENDA pro fornecedor => CRÉDITO/ABATIMENTO
@@ -382,20 +561,6 @@ export class FinanceiroService {
     );
 
     const parcelas = Array.isArray(body?.parcelas) ? body.parcelas : [];
-    if (!parcelas.length)
-      throw new BadRequestException('parcelas é obrigatório');
-
-    for (const p of parcelas) {
-      const parcelaNum = Number(p?.parcela || 0);
-      const valor = Number(p?.valor || 0);
-      const venc = String(p?.vencimento_em || '').trim();
-
-      if (!Number.isFinite(parcelaNum) || parcelaNum <= 0)
-        throw new BadRequestException('parcela inválida');
-      if (!Number.isFinite(valor) || valor <= 0)
-        throw new BadRequestException('valor de parcela inválido');
-      this.toDate(venc, 'vencimento_em');
-    }
 
     const vencPadrao = body?.vencimento_em
       ? this.toDate(body.vencimento_em, 'vencimento_em')
@@ -459,6 +624,43 @@ export class FinanceiroService {
         Math.min(debito_base, credito_auto + credito_extra),
       );
 
+      const parcelasValidas: Array<{
+        parcela: number;
+        valor: number;
+        vencimento_em: Date;
+      }> = [];
+
+      if (total_final > 0) {
+        if (!parcelas.length)
+          throw new BadRequestException('parcelas é obrigatório');
+
+        for (const p of parcelas) {
+          const parcelaNum = Number(p?.parcela || 0);
+          const valor = Number(p?.valor || 0);
+          const venc = String(p?.vencimento_em || '').trim();
+
+          if (!Number.isFinite(parcelaNum) || parcelaNum <= 0)
+            throw new BadRequestException('parcela inválida');
+          if (!Number.isFinite(valor) || valor <= 0)
+            throw new BadRequestException('valor de parcela inválido');
+
+          parcelasValidas.push({
+            parcela: parcelaNum,
+            valor: this.round2(valor),
+            vencimento_em: this.toDate(venc, 'vencimento_em'),
+          });
+        }
+
+        const somaParcelas = this.round2(
+          parcelasValidas.reduce((s, p) => s + p.valor, 0),
+        );
+        if (somaParcelas !== total_final) {
+          throw new BadRequestException(
+            `Soma das parcelas (${somaParcelas}) deve ser igual ao total final (${total_final}).`,
+          );
+        }
+      }
+
       // 3) cria FECHAMENTO (contas_pagar)
       const contaPagar = await tx.contas_pagar.create({
         data: {
@@ -473,7 +675,7 @@ export class FinanceiroService {
             `AUTO compras=${totalCompras} planos=${totalPlanos} comp_auto=${compensado_auto}`,
             `MANUAL dever=${valorDever} creditar=${valorCreditar} pct=${pctLiberado}% desc=${descontoPct}%`,
             `CALC debito=${debito_base} cred_auto=${credito_auto} cred_extra=${credito_extra} comp_total=${compensado_total} subtotal=${subtotal} desc_val=${desconto_valor} total=${total_final}`,
-            `PAGTO tipo=${tipo} parcelas=${parcelas.length}`,
+            `PAGTO tipo=${tipo} parcelas=${parcelasValidas.length}`,
           ].join(' | '),
 
           valor_original: total_final,
@@ -482,7 +684,7 @@ export class FinanceiroService {
           status: total_final > 0 ? SF.EM_ABERTO : SF.PAGO,
           forma_pagamento_chave: tipo,
 
-          parcelas_total: parcelas.length,
+          parcelas_total: parcelasValidas.length || null,
           parcela_numero: null,
 
           vencimento_em: vencPadrao,
@@ -492,42 +694,44 @@ export class FinanceiroService {
       });
 
       // 4) cria TITULOS FINANCEIROS (status usando SF)
-      await tx.titulos_financeiros.createMany({
-        data: parcelas.map((p: any) => ({
-          conta_pagar_id: contaPagar.id,
+      if (parcelasValidas.length) {
+        await tx.titulos_financeiros.createMany({
+          data: parcelasValidas.map((p) => ({
+            conta_pagar_id: contaPagar.id,
 
-          tipo, // CHEQUE | CARTAO
-          valor: Number(p.valor),
+            tipo, // CHEQUE | CARTAO
+            valor: p.valor,
 
-          status: SF.EM_ABERTO,
-          vencimento_em: this.toDate(p.vencimento_em, 'vencimento_em'),
-          pago_em: null,
+            status: SF.EM_ABERTO,
+            vencimento_em: p.vencimento_em,
+            pago_em: null,
 
-          parcelas_total: parcelas.length,
-          parcela_numero: Number(p.parcela),
+            parcelas_total: parcelasValidas.length,
+            parcela_numero: p.parcela,
 
-          meta: {
-            fornecedor_id,
-            fornecedor_cobrador_id,
-            mes,
-            ano,
+            meta: {
+              fornecedor_id,
+              fornecedor_cobrador_id,
+              mes,
+              ano,
 
-            total_compras: totalCompras,
-            total_planos: totalPlanos,
+              total_compras: totalCompras,
+              total_planos: totalPlanos,
 
-            valor_dever: valorDever,
-            valor_creditar: valorCreditar,
-            percentual_liberado: pctLiberado,
-            desconto_percentual: descontoPct,
+              valor_dever: valorDever,
+              valor_creditar: valorCreditar,
+              percentual_liberado: pctLiberado,
+              desconto_percentual: descontoPct,
 
-            debito_base,
-            credito_auto,
-            credito_extra,
-            compensado_total,
-            total_final,
-          },
-        })),
-      });
+              debito_base,
+              credito_auto,
+              credito_extra,
+              compensado_total,
+              total_final,
+            },
+          })),
+        });
+      }
 
       // 5) atualiza origens (mantém seu padrão atual)
       if (compras.length) {

@@ -219,6 +219,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/plano-corte/kanban': RouteRecordInfo<
+      '/plano-corte/kanban',
+      '/plano-corte/kanban',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/plano-corte/venda': RouteRecordInfo<
       '/plano-corte/venda',
       '/plano-corte/venda',
@@ -266,6 +273,13 @@ declare module 'vue-router/auto-routes' {
       '/vendas/:id',
       { id: ParamValue<true> },
       { id: ParamValue<false> },
+      | never
+    >,
+    '/vendas/kanban': RouteRecordInfo<
+      '/vendas/kanban',
+      '/vendas/kanban',
+      Record<never, never>,
+      Record<never, never>,
       | never
     >,
   }
@@ -449,6 +463,12 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/plano-corte/kanban.vue': {
+      routes:
+        | '/plano-corte/kanban'
+      views:
+        | never
+    }
     'src/pages/plano-corte/venda.vue': {
       routes:
         | '/plano-corte/venda'
@@ -488,6 +508,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/vendas/[id].vue': {
       routes:
         | '/vendas/[id]'
+      views:
+        | never
+    }
+    'src/pages/vendas/kanban.vue': {
+      routes:
+        | '/vendas/kanban'
       views:
         | never
     }

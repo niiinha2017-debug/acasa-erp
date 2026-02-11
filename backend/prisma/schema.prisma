@@ -659,6 +659,8 @@ model agenda_global {
 
   // Dados do evento
   titulo    String
+  categoria String? @db.VarChar(40) // MEDIDA | MEDIDA_FINA | PRODUCAO | MONTAGEM | ORCAMENTO
+  origem_fluxo String? @db.VarChar(30) // CLIENTE | FORNECEDOR
   inicio_em DateTime
   fim_em    DateTime
   status    String   @default("PENDENTE")
@@ -673,6 +675,8 @@ model agenda_global {
   @@index([fornecedor_id])
   @@index([inicio_em])
   @@index([status])
+  @@index([categoria])
+  @@index([origem_fluxo])
   @@map("agenda_global")
 }
 

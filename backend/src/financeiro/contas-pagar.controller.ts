@@ -35,6 +35,8 @@ export class ContasPagarController {
   async listar(
     @Query('fornecedor_id') fornecedor_id?: string,
     @Query('status') status?: string,
+    @Query('data_ini') data_ini?: string,
+    @Query('data_fim') data_fim?: string,
   ) {
     await this.service.atualizarVencidos();
 
@@ -43,6 +45,8 @@ export class ContasPagarController {
         ? this.cleanIdOrFail(fornecedor_id)
         : undefined,
       status: status?.trim() || undefined,
+      data_ini: data_ini?.trim() || undefined,
+      data_fim: data_fim?.trim() || undefined,
     });
   }
 
@@ -88,6 +92,27 @@ export class ContasPagarController {
   @HttpCode(HttpStatus.OK)
   async fecharMes(@Body() body: any) {
     return this.service.fecharMesFornecedorComTitulos(body);
+  }
+
+  @Get(':id/titulos')
+  @Permissoes('contas_pagar.ver')
+  listarTitulos(@Param('id') id: string) {
+    return this.service.listarTitulosContaPagar(this.cleanIdOrFail(id));
+  }
+
+  @Post(':id/titulos/:tituloId/pagar')
+  @Permissoes('contas_pagar.editar')
+  @HttpCode(HttpStatus.OK)
+  pagarTitulo(
+    @Param('id') id: string,
+    @Param('tituloId') tituloId: string,
+    @Body() dto: any,
+  ) {
+    return this.service.pagarTituloContaPagar(
+      this.cleanIdOrFail(id),
+      this.cleanIdOrFail(tituloId),
+      dto,
+    );
   }
 
   // ✅ DETALHE (sempre depois das rotas fixas)

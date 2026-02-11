@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <PageHeader 
       title="Vendas"
       subtitle="Gestão comercial e acompanhamento de pedidos"
@@ -198,3 +198,4 @@ onMounted(async () => {
   await carregar()
 })
 </script>
+

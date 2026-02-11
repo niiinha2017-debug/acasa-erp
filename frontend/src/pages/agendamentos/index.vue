@@ -26,6 +26,57 @@
       </div>
     </header>
 
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-4 md:p-5">
+      <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div class="space-y-2">
+          <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Fluxo</div>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="item in fluxoOptions"
+              :key="item.key"
+              type="button"
+              class="h-9 px-3 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all"
+              :class="filtroFluxo === item.key ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'"
+              @click="filtroFluxo = item.key"
+            >
+              {{ item.label }}
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Etapa</div>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="item in categoriaOptions"
+              :key="item.key"
+              type="button"
+              class="h-9 px-3 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all"
+              :class="filtroCategoria === item.key ? 'bg-brand-primary text-white border-brand-primary' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'"
+              @click="filtroCategoria = item.key"
+            >
+              {{ item.label }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mt-4">
+        <div class="h-14 rounded-xl border border-slate-200 px-3 flex items-center justify-between bg-slate-50">
+          <span class="text-[10px] font-black uppercase tracking-wider text-slate-500">Eventos no mes</span>
+          <span class="text-sm font-black text-slate-800">{{ totalEventosNoMes }}</span>
+        </div>
+        <div class="h-14 rounded-xl border border-emerald-200 px-3 flex items-center justify-between bg-emerald-50">
+          <span class="text-[10px] font-black uppercase tracking-wider text-emerald-700">Fluxo cliente</span>
+          <span class="text-sm font-black text-emerald-800">{{ totalEventosCliente }}</span>
+        </div>
+        <div class="h-14 rounded-xl border border-amber-200 px-3 flex items-center justify-between bg-amber-50">
+          <span class="text-[10px] font-black uppercase tracking-wider text-amber-700">Fluxo fornecedor</span>
+          <span class="text-sm font-black text-amber-800">{{ totalEventosFornecedor }}</span>
+        </div>
+      </div>
+    </div>
+
     <div class="bg-white border border-slate-200 rounded-[2rem] shadow-sm overflow-hidden">
       <div class="grid grid-cols-7 gap-px bg-slate-100">
         <div v-for="d in weekDays" :key="d" class="bg-white p-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -48,7 +99,8 @@
             <div
               v-for="event in dayEvents(day.date).slice(0, 3)"
               :key="event.id"
-              class="text-[9px] font-bold truncate px-2 py-0.5 rounded bg-slate-900 text-white"
+              class="text-[9px] font-bold truncate px-2 py-0.5 rounded"
+              :class="eventMiniClass(event)"
               :title="eventTitle(event)"
             >
               {{ eventTitle(event) }}
@@ -70,7 +122,15 @@
 
         <div v-if="selectedEvents.length" class="space-y-2">
           <div v-for="event in selectedEvents" :key="event.id" class="p-3 rounded-xl border border-slate-200">
-            <div class="text-xs font-black text-slate-800">{{ eventTitle(event) }}</div>
+            <div class="flex flex-wrap items-center gap-2 mb-1">
+              <span class="text-xs font-black text-slate-800">{{ eventTitle(event) }}</span>
+              <span class="px-2 py-0.5 rounded text-[9px] font-black uppercase" :class="eventOrigemClass(event)">
+                {{ eventOrigemLabel(event) }}
+              </span>
+              <span class="px-2 py-0.5 rounded text-[9px] font-black uppercase" :class="eventCategoriaClass(event)">
+                {{ eventCategoriaLabel(event) }}
+              </span>
+            </div>
             <div class="text-[10px] font-semibold text-slate-500">
               {{ timeLabel(event.inicio_em) }} - {{ timeLabel(event.fim_em) }}
             </div>
@@ -132,6 +192,21 @@
             <div class="col-span-12 md:col-span-6">
               <label class="block text-xs font-bold mb-1">Termino</label>
               <input type="datetime-local" v-model="taskForm.fim" class="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 font-bold text-slate-700" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-12 gap-3">
+            <div class="col-span-12 md:col-span-6">
+              <label class="block text-xs font-bold mb-1">Fluxo</label>
+              <select v-model="taskForm.origemFluxo" class="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 font-bold text-slate-700">
+                <option v-for="item in fluxoFormOptions" :key="item.key" :value="item.key">{{ item.label }}</option>
+              </select>
+            </div>
+            <div class="col-span-12 md:col-span-6">
+              <label class="block text-xs font-bold mb-1">Categoria</label>
+              <select v-model="taskForm.categoria" class="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 font-bold text-slate-700">
+                <option v-for="item in categoriaFormOptions" :key="item.key" :value="item.key">{{ item.label }}</option>
+              </select>
             </div>
           </div>
 
@@ -220,6 +295,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { AgendaService, ClienteService, FuncionarioService, PlanoCorteService } from '@/services/index'
 import { PIPELINE_CLIENTE, PIPELINE_PLANO_CORTE } from '@/constantes'
 import { can } from '@/services/permissions'
@@ -242,6 +318,9 @@ const funcionariosOptions = ref([])
 const usuarioLogado = computed(() => storage.getUser())
 const funcionarioNome = computed(() => usuarioLogado.value?.nome || '')
 const isAdmin = computed(() => can('ADMIN'))
+const route = useRoute()
+const filtroFluxo = ref('TODOS')
+const filtroCategoria = ref('TODAS')
 
 const funcionarioSelecionado = ref('')
 const taskForm = reactive({
@@ -250,6 +329,8 @@ const taskForm = reactive({
   fim: '',
   clienteId: '',
   funcionarioIds: [],
+  origemFluxo: 'CLIENTE',
+  categoria: 'PRODUCAO',
 })
 
 const weekDays = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB']
@@ -310,9 +391,32 @@ const selectedLabel = computed(() =>
 
 const canVendas = computed(() => can('agendamentos.vendas'))
 const canProducao = computed(() => can('agendamentos.producao'))
+const fluxoOptions = computed(() => {
+  const itens = [{ key: 'TODOS', label: 'Tudo' }]
+  if (canVendas.value) itens.push({ key: 'CLIENTE', label: 'Loja / Cliente' })
+  if (canProducao.value) itens.push({ key: 'FORNECEDOR', label: 'Fornecedor / Corte' })
+  return itens
+})
+const fluxoFormOptions = computed(() => fluxoOptions.value.filter((item) => item.key !== 'TODOS'))
+const categoriaOptions = [
+  { key: 'TODAS', label: 'Todas' },
+  { key: 'MEDIDA', label: 'Medida' },
+  { key: 'ORCAMENTO', label: 'Orcamento' },
+  { key: 'MEDIDA_FINA', label: 'Medida fina' },
+  { key: 'PRODUCAO', label: 'Producao' },
+  { key: 'MONTAGEM', label: 'Montagem' },
+]
+const categoriaFormOptions = categoriaOptions.filter((item) => item.key !== 'TODAS')
 
 const planosEmProducao = computed(() =>
   planosProducao.value.filter((p) => normalizePlanoStatus(p?.status) === 'EM_PRODUCAO')
+)
+const totalEventosNoMes = computed(() => events.value.length)
+const totalEventosCliente = computed(() =>
+  events.value.filter((ev) => eventOrigemKey(ev) === 'CLIENTE').length
+)
+const totalEventosFornecedor = computed(() =>
+  events.value.filter((ev) => eventOrigemKey(ev) === 'FORNECEDOR').length
 )
 
 function isSameDay(a, b) {
@@ -325,12 +429,11 @@ function selectDay(day) {
 }
 
 function eventTitle(event) {
-  const nome = event?.cliente?.nome_completo || event?.cliente?.razao_social || 'Cliente'
-  const origem = event?.orcamento_id
-    ? 'Orcamento'
-    : event?.venda_id
-      ? 'Venda'
-      : 'Cliente'
+  const nome = event?.cliente?.nome_completo
+    || event?.cliente?.razao_social
+    || event?.fornecedor?.razao_social
+    || 'Cadastro'
+  const origem = eventOrigemKey(event) === 'FORNECEDOR' ? 'Fornecedor' : 'Cliente'
   return `${event.titulo} - ${nome} (${origem})`
 }
 
@@ -346,6 +449,53 @@ function dayEvents(day) {
 
 function normalizePlanoStatus(status) {
   return String(status || '').trim().toUpperCase().replace(/\s+/g, '_')
+}
+
+function normalizeAgendaKey(value) {
+  return String(value || '').trim().toUpperCase().replace(/\s+/g, '_')
+}
+
+function eventOrigemKey(event) {
+  const key = normalizeAgendaKey(event?.origem_fluxo)
+  if (key === 'CLIENTE' || key === 'FORNECEDOR') return key
+  if (event?.plano_corte_id || event?.fornecedor_id) return 'FORNECEDOR'
+  return 'CLIENTE'
+}
+
+function eventOrigemLabel(event) {
+  return eventOrigemKey(event) === 'FORNECEDOR' ? 'Fornecedor' : 'Cliente'
+}
+
+function eventOrigemClass(event) {
+  return eventOrigemKey(event) === 'FORNECEDOR'
+    ? 'bg-amber-100 text-amber-800'
+    : 'bg-emerald-100 text-emerald-800'
+}
+
+function eventCategoriaKey(event) {
+  return normalizeAgendaKey(event?.categoria) || 'SEM_CATEGORIA'
+}
+
+function eventCategoriaLabel(event) {
+  const key = eventCategoriaKey(event)
+  const item = categoriaFormOptions.find((opt) => opt.key === key)
+  return item?.label || 'Sem categoria'
+}
+
+function eventCategoriaClass(event) {
+  const key = eventCategoriaKey(event)
+  if (key === 'PRODUCAO') return 'bg-sky-100 text-sky-800'
+  if (key === 'MONTAGEM') return 'bg-indigo-100 text-indigo-800'
+  if (key === 'MEDIDA_FINA') return 'bg-violet-100 text-violet-800'
+  if (key === 'MEDIDA') return 'bg-cyan-100 text-cyan-800'
+  if (key === 'ORCAMENTO') return 'bg-orange-100 text-orange-800'
+  return 'bg-slate-100 text-slate-700'
+}
+
+function eventMiniClass(event) {
+  return eventOrigemKey(event) === 'FORNECEDOR'
+    ? 'bg-amber-900 text-white'
+    : 'bg-slate-900 text-white'
 }
 
 function getPlanoPipeline(status) {
@@ -395,6 +545,8 @@ function openModal() {
   taskForm.clienteId = ''
   taskForm.funcionarioIds = []
   funcionarioSelecionado.value = ''
+  taskForm.origemFluxo = resolveDefaultFluxo()
+  taskForm.categoria = resolveDefaultCategoria()
   const inicio = toDateTimeLocal(selectedDay.value)
   taskForm.inicio = inicio
   taskForm.fim = toDateTimeLocal(addHours(selectedDay.value, 1))
@@ -408,6 +560,8 @@ function closeModal() {
 function clearEdit() {
   editingEvent.value = null
   taskForm.titulo = ''
+  taskForm.origemFluxo = resolveDefaultFluxo()
+  taskForm.categoria = resolveDefaultCategoria()
   const inicio = toDateTimeLocal(selectedDay.value)
   taskForm.inicio = inicio
   taskForm.fim = toDateTimeLocal(addHours(selectedDay.value, 1))
@@ -428,7 +582,45 @@ function editTask(event) {
   taskForm.fim = toDateTimeLocal(event.fim_em || event.inicio_em)
   taskForm.clienteId = event?.cliente_id || event?.cliente?.id || ''
   taskForm.funcionarioIds = (event?.equipe || []).map((e) => e.funcionario_id).filter(Boolean)
+  taskForm.origemFluxo = eventOrigemKey(event)
+  taskForm.categoria = eventCategoriaKey(event) === 'SEM_CATEGORIA' ? resolveDefaultCategoria() : eventCategoriaKey(event)
   funcionarioSelecionado.value = ''
+}
+
+function resolveDefaultFluxo() {
+  if (filtroFluxo.value !== 'TODOS') return filtroFluxo.value
+  if (canVendas.value && !canProducao.value) return 'CLIENTE'
+  if (!canVendas.value && canProducao.value) return 'FORNECEDOR'
+  return 'CLIENTE'
+}
+
+function resolveDefaultCategoria() {
+  if (filtroCategoria.value !== 'TODAS') return filtroCategoria.value
+  return 'PRODUCAO'
+}
+
+function applyViewPresetFromRoute() {
+  const rawVisao = String(route.query?.visao || route.query?.fluxo || '').trim().toUpperCase()
+  if (!rawVisao) return false
+
+  if (rawVisao === 'LOJA' || rawVisao === 'CLIENTE' || rawVisao === 'VENDAS' || rawVisao === 'VENDA') {
+    filtroFluxo.value = 'CLIENTE'
+    return true
+  }
+  if (
+    rawVisao === 'FABRICA'
+    || rawVisao === 'FÁBRICA'
+    || rawVisao === 'FORNECEDOR'
+    || rawVisao === 'FORNECEDORES'
+  ) {
+    filtroFluxo.value = 'FORNECEDOR'
+    return true
+  }
+  if (rawVisao === 'TODOS' || rawVisao === 'TUDO' || rawVisao === 'GERAL') {
+    filtroFluxo.value = 'TODOS'
+    return true
+  }
+  return false
 }
 
 function funcionarioNomeById(id) {
@@ -493,6 +685,8 @@ async function saveTask() {
       fim_em: fim.toISOString(),
       cliente_id: Number(taskForm.clienteId),
       equipe_ids: equipeIds,
+      origem_fluxo: taskForm.origemFluxo || undefined,
+      categoria: taskForm.categoria || undefined,
       ...origemPayload,
     })
     await loadAgenda()
@@ -508,12 +702,11 @@ async function loadAgenda() {
   try {
     const inicio = dateKey(startOfMonth(currentMonth.value))
     const fim = dateKey(endOfMonth(currentMonth.value))
-    const res = await AgendaService.listarTodos(inicio, fim)
-    let data = Array.isArray(res?.data) ? res.data : []
-    if (canVendas.value && !canProducao.value) {
-      data = data.filter((ev) => !ev?.plano_corte_id)
-    }
-    events.value = data
+    const filtros = {}
+    if (filtroFluxo.value !== 'TODOS') filtros.origem_fluxo = filtroFluxo.value
+    if (filtroCategoria.value !== 'TODAS') filtros.categoria = filtroCategoria.value
+    const res = await AgendaService.listarTodos(inicio, fim, filtros)
+    events.value = Array.isArray(res?.data) ? res.data : []
   } catch (e) {
     notify.error('Falha ao carregar agenda.')
     events.value = []
@@ -567,10 +760,22 @@ async function loadFuncionarios() {
 }
 
 onMounted(() => {
+  const fromRoute = applyViewPresetFromRoute()
+  if (!fromRoute) {
+    if (canVendas.value && !canProducao.value) filtroFluxo.value = 'CLIENTE'
+    if (!canVendas.value && canProducao.value) filtroFluxo.value = 'FORNECEDOR'
+  }
   loadAgenda()
   loadPlanosProducao()
   loadClientes()
   loadFuncionarios()
 })
 watch(currentMonth, loadAgenda)
+watch([filtroFluxo, filtroCategoria], loadAgenda)
+watch(
+  () => [route.query?.visao, route.query?.fluxo],
+  () => {
+    applyViewPresetFromRoute()
+  },
+)
 </script>

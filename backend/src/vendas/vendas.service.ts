@@ -20,6 +20,74 @@ function toNumber(v: any): number {
 export class VendasService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private normalizeKey(value?: string | null) {
+    return String(value || '')
+      .trim()
+      .toUpperCase()
+      .replace(/\s+/g, '_');
+  }
+
+  private resolveAgendaCategoriaFromVendaStatus(status?: string | null) {
+    const key = this.normalizeKey(status);
+    if (key.startsWith('MEDIDA_FINA')) return 'MEDIDA_FINA';
+    if (key.startsWith('MEDIDA')) return 'MEDIDA';
+    if (key.includes('PRODUCAO') || key === 'PLANO_DE_CORTE') return 'PRODUCAO';
+    if (key.includes('MONTAGEM')) return 'MONTAGEM';
+    if (key.includes('ORCAMENTO') || key.includes('VENDA')) return 'ORCAMENTO';
+    return 'ORCAMENTO';
+  }
+
+  private resolveAgendaStatusFromVendaStatus(status?: string | null) {
+    const key = this.normalizeKey(status);
+    if (
+      key === 'MEDIDA_REALIZADA' ||
+      key === 'MEDIDA_FINA_REALIZADA' ||
+      key === 'PRODUCAO_FINALIZADA' ||
+      key === 'MONTAGEM_FINALIZADA' ||
+      key === 'ENCERRADO'
+    ) {
+      return 'CONCLUIDO';
+    }
+    if (key === 'EM_PRODUCAO' || key === 'EM_MONTAGEM') {
+      return 'EM_ANDAMENTO';
+    }
+    return 'PENDENTE';
+  }
+
+  private async syncAgendaFromVenda(
+    tx: any,
+    venda: { id: number; cliente_id: number; status: string },
+  ) {
+    const now = new Date();
+    const end = new Date(now.getTime() + 60 * 60 * 1000);
+    const categoria = this.resolveAgendaCategoriaFromVendaStatus(venda.status);
+    const agendaStatus = this.resolveAgendaStatusFromVendaStatus(venda.status);
+    const statusLabel = String(venda.status || '')
+      .replace(/_/g, ' ')
+      .toLowerCase();
+
+    await tx.agenda_global.upsert({
+      where: { venda_id: venda.id },
+      create: {
+        titulo: `Venda #${venda.id} - ${statusLabel}`,
+        cliente_id: venda.cliente_id,
+        venda_id: venda.id,
+        categoria,
+        origem_fluxo: 'CLIENTE',
+        inicio_em: now,
+        fim_em: end,
+        status: agendaStatus,
+      },
+      update: {
+        titulo: `Venda #${venda.id} - ${statusLabel}`,
+        cliente_id: venda.cliente_id,
+        categoria,
+        origem_fluxo: 'CLIENTE',
+        status: agendaStatus,
+      },
+    });
+  }
+
   // ===============================
   // VALIDACOES
   // ===============================
@@ -250,6 +318,12 @@ export class VendasService {
         })),
       });
 
+      await this.syncAgendaFromVenda(tx, {
+        id: venda.id,
+        cliente_id: orc.cliente_id,
+        status: dto.status,
+      });
+
       return tx.vendas.findUnique({
         where: { id: venda.id },
         include: {
@@ -358,6 +432,13 @@ export class VendasService {
         });
       }
 
+      const statusAtualizado = dto.status ?? atual.status;
+      await this.syncAgendaFromVenda(tx, {
+        id,
+        cliente_id: atual.cliente_id,
+        status: statusAtualizado,
+      });
+
       return tx.vendas.findUnique({
         where: { id },
         include: {
@@ -372,8 +453,16 @@ export class VendasService {
   }
 
   async atualizarStatus(id: number, status: string) {
-    await this.buscarPorId(id);
-    return this.prisma.vendas.update({ where: { id }, data: { status } });
+    const atual = await this.buscarPorId(id);
+    return this.prisma.$transaction(async (tx) => {
+      const venda = await tx.vendas.update({ where: { id }, data: { status } });
+      await this.syncAgendaFromVenda(tx, {
+        id: venda.id,
+        cliente_id: atual.cliente_id,
+        status: venda.status,
+      });
+      return venda;
+    });
   }
 
   async remover(id: number) {

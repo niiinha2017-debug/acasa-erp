@@ -24,6 +24,34 @@ export class ComprasService {
     return Math.round((n + Number.EPSILON) * 100) / 100;
   }
 
+  private parseDateOnly(value: any, field: string) {
+    if (value === undefined || value === null || value === '') return undefined;
+    const raw = String(value).trim();
+    if (!raw) return undefined;
+
+    // YYYY-MM-DD => cria data local, evitando deslocamento de fuso.
+    const m = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) {
+      const yyyy = Number(m[1]);
+      const mm = Number(m[2]);
+      const dd = Number(m[3]);
+      const d = new Date(yyyy, mm - 1, dd, 0, 0, 0, 0);
+      if (
+        d.getFullYear() === yyyy &&
+        d.getMonth() === mm - 1 &&
+        d.getDate() === dd
+      ) {
+        return d;
+      }
+      throw new BadRequestException(`${field} invÃ¡lida.`);
+    }
+
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime()))
+      throw new BadRequestException(`${field} invÃ¡lida.`);
+    return d;
+  }
+
   private calcTotalItens(
     itens?: Array<{
       valor_total?: any;
@@ -382,9 +410,7 @@ export class ComprasService {
       data: {
         tipo_compra: tipo,
         venda_id: tipo === 'CLIENTE_AMBIENTE' ? (dto as any).venda_id : null,
-        data_compra: (dto as any).data_compra
-          ? new Date((dto as any).data_compra)
-          : undefined,
+        data_compra: this.parseDateOnly((dto as any).data_compra, 'data_compra'),
         fornecedor_id: (dto as any).fornecedor_id,
         venda_item_id: (dto as any).venda_item_id ?? null,
         status: String((dto as any).status || '').trim() || 'EM_ABERTO',
@@ -554,9 +580,7 @@ export class ComprasService {
           (dto as any).status !== undefined
             ? String((dto as any).status || '').trim() || 'EM_ABERTO'
             : undefined,
-        data_compra: (dto as any).data_compra
-          ? new Date((dto as any).data_compra)
-          : undefined,
+        data_compra: this.parseDateOnly((dto as any).data_compra, 'data_compra'),
         valor_total: total,
         venda_id:
           tipoAtual === 'CLIENTE_AMBIENTE'

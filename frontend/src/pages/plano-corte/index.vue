@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <PageHeader 
       title="Plano de Corte"
       subtitle="Industrialização e controle de produção"
@@ -204,3 +204,4 @@ async function confirmarExcluir(row) {
 
 onMounted(carregar)
 </script>
+
