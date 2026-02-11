@@ -126,24 +126,29 @@ jobs:
 
       - name: Prepare Android signing files
         shell: bash
+        env:
+          ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          echo "${{ secrets.ANDROID_KEYSTORE_B64 }}" | base64 -d > frontend/android/acasa-release.jks
-          echo "${{ secrets.ANDROID_KEYSTORE_B64 }}" | base64 -d > frontend-ponto/android/acasa-release.jks
+          printf '%s' "$ANDROID_KEYSTORE_B64" | base64 --decode > frontend/android/acasa-release.jks
+          printf '%s' "$ANDROID_KEYSTORE_B64" | base64 --decode > frontend-ponto/android/acasa-release.jks
 
-          cat > frontend/android/keystore.properties <<EOF
-          storeFile=acasa-release.jks
-          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
-          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
-          EOF
+          {
+            echo "storeFile=acasa-release.jks"
+            printf 'storePassword=%s\n' "$ANDROID_KEYSTORE_PASSWORD"
+            printf 'keyAlias=%s\n' "$ANDROID_KEY_ALIAS"
+            printf 'keyPassword=%s\n' "$ANDROID_KEY_PASSWORD"
+          } > frontend/android/keystore.properties
 
-          cat > frontend-ponto/android/keystore.properties <<EOF
-          storeFile=acasa-release.jks
-          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
-          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
-          EOF
+          {
+            echo "storeFile=acasa-release.jks"
+            printf 'storePassword=%s\n' "$ANDROID_KEYSTORE_PASSWORD"
+            printf 'keyAlias=%s\n' "$ANDROID_KEY_ALIAS"
+            printf 'keyPassword=%s\n' "$ANDROID_KEY_PASSWORD"
+          } > frontend-ponto/android/keystore.properties
 
       - name: Build ERP APK (release)
         run: |
