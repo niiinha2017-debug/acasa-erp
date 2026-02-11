@@ -135,22 +135,42 @@ jobs:
         run: |
           set -euo pipefail
           KEYSTORE_B64_CLEAN="$(printf '%s' "$ANDROID_KEYSTORE_B64" | tr -d '\r\n\t ')"
+          STORE_PASSWORD_CLEAN="$(printf '%s' "$ANDROID_KEYSTORE_PASSWORD" | tr -d '\r\n')"
+          KEY_ALIAS_CLEAN="$(printf '%s' "$ANDROID_KEY_ALIAS" | tr -d '\r\n')"
+          KEY_PASSWORD_CLEAN="$(printf '%s' "$ANDROID_KEY_PASSWORD" | tr -d '\r\n')"
           printf '%s' "$KEYSTORE_B64_CLEAN" | base64 --decode > frontend/android/app/acasa-release.jks
           printf '%s' "$KEYSTORE_B64_CLEAN" | base64 --decode > frontend-ponto/android/app/acasa-release.jks
 
           {
             echo "storeFile=acasa-release.jks"
-            printf 'storePassword=%s\n' "$ANDROID_KEYSTORE_PASSWORD"
-            printf 'keyAlias=%s\n' "$ANDROID_KEY_ALIAS"
-            printf 'keyPassword=%s\n' "$ANDROID_KEY_PASSWORD"
+            printf 'storePassword=%s\n' "$STORE_PASSWORD_CLEAN"
+            printf 'keyAlias=%s\n' "$KEY_ALIAS_CLEAN"
+            printf 'keyPassword=%s\n' "$KEY_PASSWORD_CLEAN"
           } > frontend/android/keystore.properties
 
           {
             echo "storeFile=acasa-release.jks"
-            printf 'storePassword=%s\n' "$ANDROID_KEYSTORE_PASSWORD"
-            printf 'keyAlias=%s\n' "$ANDROID_KEY_ALIAS"
-            printf 'keyPassword=%s\n' "$ANDROID_KEY_PASSWORD"
+            printf 'storePassword=%s\n' "$STORE_PASSWORD_CLEAN"
+            printf 'keyAlias=%s\n' "$KEY_ALIAS_CLEAN"
+            printf 'keyPassword=%s\n' "$KEY_PASSWORD_CLEAN"
           } > frontend-ponto/android/keystore.properties
+
+      - name: Validate Android keystore secrets
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          STORE_PASSWORD_CLEAN="$(printf '%s' "$ANDROID_KEYSTORE_PASSWORD" | tr -d '\r\n')"
+          KEY_ALIAS_CLEAN="$(printf '%s' "$ANDROID_KEY_ALIAS" | tr -d '\r\n')"
+          KEY_PASSWORD_CLEAN="$(printf '%s' "$ANDROID_KEY_PASSWORD" | tr -d '\r\n')"
+          keytool -list \
+            -keystore frontend/android/app/acasa-release.jks \
+            -storepass "$STORE_PASSWORD_CLEAN" \
+            -alias "$KEY_ALIAS_CLEAN" \
+            -keypass "$KEY_PASSWORD_CLEAN" > /dev/null
 
       - name: Build ERP APK (release)
         run: |
