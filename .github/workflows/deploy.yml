@@ -281,16 +281,29 @@ jobs:
           $exe = Get-ChildItem "frontend/src-tauri/target/release/bundle/nsis/*_x64-setup.exe" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
           if (-not $exe) { throw "Installer .exe not found" }
 
-          $signtoolCandidates = @(
-            "$env:ProgramFiles(x86)\Windows Kits\10\bin\x64\signtool.exe",
-            "$env:ProgramFiles(x86)\Windows Kits\10\App Certification Kit\signtool.exe"
-          )
-          $signtool = $signtoolCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          $signtool = $null
+          $sdkBinRoot = Join-Path ${env:ProgramFiles(x86)} "Windows Kits\10\bin"
+          if (Test-Path $sdkBinRoot) {
+            $sdkCandidates = Get-ChildItem -Path $sdkBinRoot -Filter "signtool.exe" -Recurse -ErrorAction SilentlyContinue |
+              Where-Object { $_.FullName -match "\\x64\\signtool\.exe$" } |
+              Sort-Object FullName -Descending
+            if ($sdkCandidates) {
+              $signtool = $sdkCandidates[0].FullName
+            }
+          }
+          if (-not $signtool) {
+            $signtoolCandidates = @(
+              "$env:ProgramFiles(x86)\Windows Kits\10\bin\x64\signtool.exe",
+              "$env:ProgramFiles(x86)\Windows Kits\10\App Certification Kit\signtool.exe"
+            )
+            $signtool = $signtoolCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          }
           if (-not $signtool) {
             $signtoolCmd = Get-Command signtool.exe -ErrorAction SilentlyContinue
             if ($signtoolCmd) { $signtool = $signtoolCmd.Path }
           }
           if (-not $signtool) { throw "signtool.exe not found on runner" }
+          Write-Host "Using signtool: $signtool"
 
           & $signtool sign /fd SHA256 /f "windows-signing.pfx" /p "$env:WINDOWS_CERT_PASSWORD" /tr "http://timestamp.digicert.com" /td SHA256 "$($exe.FullName)"
           & $signtool verify /pa /v "$($exe.FullName)"
