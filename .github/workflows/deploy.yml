@@ -133,8 +133,9 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          printf '%s' "$ANDROID_KEYSTORE_B64" | base64 --decode > frontend/android/acasa-release.jks
-          printf '%s' "$ANDROID_KEYSTORE_B64" | base64 --decode > frontend-ponto/android/acasa-release.jks
+          KEYSTORE_B64_CLEAN="$(printf '%s' "$ANDROID_KEYSTORE_B64" | tr -d '\r\n\t ')"
+          printf '%s' "$KEYSTORE_B64_CLEAN" | base64 --decode > frontend/android/acasa-release.jks
+          printf '%s' "$KEYSTORE_B64_CLEAN" | base64 --decode > frontend-ponto/android/acasa-release.jks
 
           {
             echo "storeFile=acasa-release.jks"
