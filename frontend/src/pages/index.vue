@@ -1,4 +1,5 @@
 <template>
+  <div class="space-y-6">
     <div class="flex flex-col gap-2">
       <h1 class="text-3xl font-black tracking-tight text-slate-800 dark:text-white">
         Olá, {{ usuarioLogado?.nome || 'Usuário' }}! 👋
@@ -45,6 +46,7 @@
         </div>
       </div>
     </div>
+  </div>
 </template>
 
 <script setup>

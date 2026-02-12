@@ -134,7 +134,7 @@ import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
 
-definePage({ meta: { perm: 'ponto_convite.criar' } })
+definePage({ meta: { perm: 'ponto_relatorio.ver' } })
 
 const router = useRouter()
 

@@ -156,23 +156,6 @@
   .line-vertical {
     @apply border-l border-border-ui;
   }
-
-  /* ===== PÁGINA PADRÃO (MINIMALISTA) ===== */
-  .page-container {
-    @apply w-full max-w-7xl mx-auto;
-  }
-
-  .page-content {
-    @apply space-y-6;
-  }
-
-  .page-section {
-    @apply border-b border-border-ui pb-6 last:border-b-0 last:pb-0;
-  }
-
-  .page-actions {
-    @apply flex items-center justify-end gap-3 pt-4 border-t border-border-ui;
-  }
 }
 
 /* Força o container do slot a ocupar 100% da largura disponível */

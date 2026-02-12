@@ -464,11 +464,6 @@ model funcionarios {
   email           String?
   estado_civil    String?
   escolaridade    String?
-  // ======================
-  // CONTATO DE REFERÊNCIA
-  // ======================
-  contato_referencia_nome     String?
-  contato_referencia_telefone String?
 
   // ======================
   // DADOS DA EMPRESA
@@ -492,9 +487,9 @@ model funcionarios {
   // ======================
   // REGISTRO / VÍNCULO (Essencial para cálculo de Férias)
   // ======================
-  data_inicio DateTime?
-  admissao    DateTime?
-  demissao    DateTime?
+  registro String?
+  admissao DateTime?
+  demissao DateTime?
 
   // ======================
   // FINANCEIRO
@@ -659,8 +654,6 @@ model agenda_global {
 
   // Dados do evento
   titulo    String
-  categoria String? @db.VarChar(40) // MEDIDA | MEDIDA_FINA | PRODUCAO | MONTAGEM | ORCAMENTO
-  origem_fluxo String? @db.VarChar(30) // CLIENTE | FORNECEDOR
   inicio_em DateTime
   fim_em    DateTime
   status    String   @default("PENDENTE")
@@ -675,8 +668,6 @@ model agenda_global {
   @@index([fornecedor_id])
   @@index([inicio_em])
   @@index([status])
-  @@index([categoria])
-  @@index([origem_fluxo])
   @@map("agenda_global")
 }
 

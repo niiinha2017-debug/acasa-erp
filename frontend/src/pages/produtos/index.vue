@@ -1,9 +1,10 @@
 <template>
+  <div class="w-full max-w-[1700px] mx-auto space-y-6">
+
     <PageHeader 
       title="Insumos & Materiais" 
       subtitle="Catálogo de materiais e controle de insumos"
       icon="pi pi-box"
-      :show-back="false"
     >
       <template #actions>
         <div class="flex items-center gap-3 w-full sm:w-auto">
@@ -28,20 +29,28 @@
       </template>
     </PageHeader>
 
-    <div class="page-section overflow-hidden bg-bg-card">
-      <Table
-        :columns="columns"
-        :rows="rows"
-        :loading="loading"
-        empty-text="Nenhum produto encontrado."
-      >
-      <template #cell-fornecedor="{ row }">
-        <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">
-          {{ row.fornecedor_nome || '—' }}
-        </span>
-      </template>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <MetricCard
+        label="Total de Itens"
+        :value="totalItens"
+        icon="pi pi-list"
+        color="slate"
+      />
+      <MetricCard
+        label="Produtos Ativos"
+        :value="totalAtivos"
+        icon="pi pi-check-circle"
+        color="blue"
+      />
+    </div>
 
-      <template #cell-produto="{ row }">
+    <Table
+      :columns="columns"
+      :rows="rows"
+      :loading="loading"
+      empty-text="Nenhum produto encontrado."
+    >
+      <template #cell-nome_produto="{ row }">
         <div class="flex items-center gap-3 py-0.5">
           <div class="w-10 h-10 rounded-lg border border-slate-100 bg-slate-50 dark:bg-slate-800 overflow-hidden flex items-center justify-center flex-shrink-0">
             <img
@@ -57,10 +66,10 @@
 
           <div class="flex flex-col min-w-0">
             <span class="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
-              {{ row.nome_produto }} • {{ row.ref }}
+              {{ row.nome_produto }}
             </span>
             <span class="text-xs font-medium text-slate-500 truncate mt-0.5">
-              {{ row.marca || 'S/ Marca' }}
+              Ref: {{ String(row.id || 0).padStart(4, '0') }} • {{ row.marca || 'S/ Marca' }}
             </span>
           </div>
         </div>
@@ -88,9 +97,9 @@
           @delete="() => confirmarExcluirProduto(row)"
         />
       </template>
-      </Table>
-    </div>
+    </Table>
 
+  </div>
 </template>
 
 <script setup>
@@ -104,6 +113,7 @@ import { can } from '@/services/permissions'
 
 // UI Components
 import PageHeader from '@/components/ui/PageHeader.vue'
+import MetricCard from '@/components/ui/MetricCard.vue'
 import SearchInput from '@/components/ui/SearchInput.vue'
 import TableActions from '@/components/ui/TableActions.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
@@ -118,11 +128,15 @@ const router = useRouter()
 const filtro = ref('')
 
 const columns = [
-  { key: 'fornecedor', label: 'FORNECEDOR', width: '22%' },
-  { key: 'produto', label: 'PRODUTO / REF', width: '34%' },
-  { key: 'valor_unitario', label: 'VALOR UNITÁRIO', width: '18%', align: 'right' },
-  { key: 'status', label: 'STATUS', width: '12%', align: 'center' },
-  { key: 'acoes', label: '', width: '14%', align: 'right' }
+  { key: 'nome_produto', label: 'PRODUTO / REF', width: '34%' },
+  { key: 'fornecedor_nome', label: 'FORNECEDOR', width: '24%' },
+  { key: 'unidade', label: 'UN', width: '8%', align: 'center' },
+
+  // ✅ só valor unitário
+  { key: 'valor_unitario', label: 'VLR UNIT', width: '14%', align: 'right' },
+
+  { key: 'status', label: 'STATUS', width: '10%', align: 'center' },
+  { key: 'acoes', label: '', width: '10%', align: 'right' }
 ]
 
 const filtrados = computed(() => {
@@ -148,10 +162,12 @@ const rows = computed(() => {
   return filtrados.value.map((p) => ({
     ...p,
     fornecedor_nome: p.fornecedor?.razao_social || p.fornecedor?.nome_fantasia || '-',
-    ref: String(p.id || 0).padStart(4, '0'),
     valor_unitario: Number(p.valor_unitario || 0),
   }))
 })
+
+const totalItens = computed(() => filtrados.value.length)
+const totalAtivos = computed(() => filtrados.value.filter(p => p.status === 'ATIVO').length)
 
 async function buscarDadosDoBanco(page = 1) {
   loading.value = true

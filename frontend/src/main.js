@@ -1,4 +1,4 @@
-﻿import { createApp } from 'vue'
+import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 
@@ -7,7 +7,7 @@ import '@/assets/CSS/tailwind.css'
 import 'primeicons/primeicons.css'
 import '@/assets/hide-password-eye.css'
 
-// âœ… DevTools auto (Tauri)
+// ✅ DevTools auto (Tauri)
 import { autoOpenDevtools } from './devtools-auto'
 
 // UI Components
@@ -32,25 +32,26 @@ import TablePagination from '@/components/ui/TablePagination.vue'
 import QuickCreateProduto from '@/components/modals/QuickCreateProduto.vue'
 import ArquivosModal from '@/components/modals/ArquivosModal.vue'
 import FinanceiroModal from '@/components/modals/FinanceiroModal.vue'
+import AgendamentosModal from '@/components/modals/AgendamentosModal.vue'
 
 // Common
 import Loading from '@/components/common/Loading.vue'
 import ProcessoClienteFlow from '@/components/common/ProcessoClienteFlow.vue'
 import Select from '@/components/common/Select.vue'
 
-// ImportaÃ§Ã£o da Diretiva de PermissÃ£o
+// Importação da Diretiva de Permissão
 import { can } from '@/services/permissions'
 
 const app = createApp(App)
 
-// âœ… GLOBAL ERROR HANDLER (DEBUG MOBILE)
+// ✅ GLOBAL ERROR HANDLER (DEBUG MOBILE)
 app.config.errorHandler = (err, instance, info) => {
   console.error('[ACASA_VUE_ERROR]', err)
-  // Mostra erro na tela para o usuÃ¡rio ver no celular
+  // Mostra erro na tela para o usuário ver no celular
   alert(`Erro Inesperado: ${err.message}\nInfo: ${info}`)
 }
 
-// âœ… Captura erros globais e promessas rejeitadas
+// ✅ Captura erros globais e promessas rejeitadas
 window.onerror = (message, source, lineno, colno) => {
   console.error('[ACASA_WINDOW_ERROR]', message, source, lineno, colno)
   alert(`Erro JS: ${message}\n${source}:${lineno}:${colno}`)
@@ -89,6 +90,7 @@ app.component('Select', Select)
 app.component('QuickCreateProduto', QuickCreateProduto)
 app.component('ArquivosModal', ArquivosModal)
 app.component('FinanceiroModal', FinanceiroModal)
+app.component('AgendamentosModal', AgendamentosModal)
 
 // Diretiva v-can
 app.directive('can', {
@@ -109,43 +111,18 @@ app.directive('can', {
 
 app.use(router)
 
-// âœ… evita hard reload em logout por erro 401
+// ✅ evita hard reload em logout por erro 401
 window.addEventListener('acasa-auth-logout', () => {
   if (router.currentRoute.value?.path !== '/login') {
     router.push('/login')
   }
 })
 
-// âœ… chama aqui (antes do mount)
+// ✅ chama aqui (antes do mount)
 autoOpenDevtools()
-
-const setNativeWindowTitleWithVersion = async () => {
-  try {
-    const [{ getCurrentWindow }, { getVersion }] = await Promise.all([
-      import('@tauri-apps/api/window'),
-      import('@tauri-apps/api/app'),
-    ])
-    const version = await getVersion()
-    await getCurrentWindow().setTitle(`A Casa Marcenaria | ERP v${version}`)
-  } catch (err) {
-    // Sem contexto Tauri (web/mobile) ou sem permissao de janela: ignora.
-    const msg = String(err?.message || err || '')
-    const lower = msg.toLowerCase()
-    if (
-      msg.includes('allow-set-title') ||
-      msg.includes('not allowed') ||
-      lower.includes('tauri') ||
-      lower.includes('window') ||
-      lower.includes('context')
-    ) return
-    console.warn('[ACASA_TITLEBAR]', err)
-  }
-}
 
 const maybeRunUpdater = async () => {
   if (!window.__TAURI__ && !window.__TAURI_INTERNALS__) return
-  if (import.meta.env?.DEV) return
-  if (import.meta.env?.VITE_TAURI_UPDATER === 'false') return
 
   try {
     const { check } = await import('@tauri-apps/plugin-updater')
@@ -160,8 +137,6 @@ const maybeRunUpdater = async () => {
   }
 }
 
-setNativeWindowTitleWithVersion()
 maybeRunUpdater()
 
 app.mount('#app')
-

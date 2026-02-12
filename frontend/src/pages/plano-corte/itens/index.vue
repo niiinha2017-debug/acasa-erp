@@ -1,4 +1,5 @@
 <template>
+  <div class="w-full max-w-[1400px] mx-auto space-y-6">
     <Card :shadow="true" class="overflow-hidden">
       <!-- Header -->
       <div class="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
@@ -218,6 +219,7 @@
         </div>
       </div>
     </Card>
+  </div>
 </template>
 
 <script setup>
