@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   Injectable,
   NotFoundException,
@@ -20,17 +20,17 @@ export class FuncionariosService {
   private readonly STATUS_INATIVO = 'INATIVO';
 
   private calcularStatus(input: {
-    registro?: string | null;
+    data_inicio?: Date | null;
     admissao?: Date | null;
     demissao?: Date | null;
   }) {
-    const registro = input.registro ? String(input.registro).trim() : '';
+    const dataInicio = input.data_inicio ?? null;
     const admissao = input.admissao ?? null;
     const demissao = input.demissao ?? null;
 
     if (demissao) return this.STATUS_INATIVO;
     if (admissao) return this.STATUS_ATIVO;
-    if (registro) return this.STATUS_ATIVO;
+    if (dataInicio) return this.STATUS_ATIVO;
     return this.STATUS_INATIVO;
   }
 
@@ -45,7 +45,7 @@ export class FuncionariosService {
       where: { id },
     });
     if (!funcionario)
-      throw new NotFoundException('Funcionário não encontrado.');
+      throw new NotFoundException('FuncionÃ¡rio nÃ£o encontrado.');
     return funcionario;
   }
   private onlyDigits(v: any) {
@@ -59,14 +59,14 @@ export class FuncionariosService {
   }
 
   private formatRG(v: any) {
-    // RG no seu print já está ok, mas isso garante consistência se vier sem máscara.
+    // RG no seu print jÃ¡ estÃ¡ ok, mas isso garante consistÃªncia se vier sem mÃ¡scara.
     const d = this.onlyDigits(v);
     if (!d) return String(v ?? '-');
 
-    // Se vier com 9 dígitos (ex: 191646374), formata 00.000.000-0
+    // Se vier com 9 dÃ­gitos (ex: 191646374), formata 00.000.000-0
     if (d.length === 9)
       return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}-${d.slice(8)}`;
-    return String(v ?? '-'); // se já vier formatado, mantém
+    return String(v ?? '-'); // se jÃ¡ vier formatado, mantÃ©m
   }
 
   async gerarPdf(ids: number[]): Promise<Buffer> {
@@ -77,7 +77,7 @@ export class FuncionariosService {
     });
 
     if (!funcionarios.length) {
-      throw new NotFoundException('Nenhum funcionário encontrado.');
+      throw new NotFoundException('Nenhum funcionÃ¡rio encontrado.');
     }
 
     const doc = new PDFDocument({ size: 'A4', margin: 40 });
@@ -168,7 +168,7 @@ export class FuncionariosService {
         owner_type: 'EMPRESA',
         owner_id: 1,
         categoria: 'RELATORIO',
-        slot_key: null, // ✅ importante pra não bater no unique
+        slot_key: null, // âœ… importante pra nÃ£o bater no unique
         url,
         filename,
         nome: `RELATORIO FUNCIONARIOS ${stamp}`,
@@ -185,9 +185,9 @@ export class FuncionariosService {
     try {
       const data = this.normalizarDatas(dto);
 
-      // ✅ status baseado na sua regra (demissao inativa, admissao/registro ativa)
+      // âœ… status baseado na sua regra (demissao inativa, admissao/registro ativa)
       data.status = this.calcularStatus({
-        registro: data.registro,
+        data_inicio: data.data_inicio,
         admissao: data.admissao,
         demissao: data.demissao,
       });
@@ -195,7 +195,7 @@ export class FuncionariosService {
       return await this.prisma.funcionarios.create({ data });
     } catch (e: any) {
       if (e?.code === 'P2002')
-        throw new BadRequestException('CPF já cadastrado.');
+        throw new BadRequestException('CPF jÃ¡ cadastrado.');
       throw e;
     }
   }
@@ -206,10 +206,10 @@ export class FuncionariosService {
     try {
       const data = this.normalizarDatas(dto);
 
-      // só recalcula se mexeu em registro ou demissao
-      const mexeuEmRegistro = Object.prototype.hasOwnProperty.call(
+      // sÃ³ recalcula se mexeu em registro ou demissao
+      const mexeuEmInicio = Object.prototype.hasOwnProperty.call(
         data,
-        'registro',
+        'data_inicio',
       );
       const mexeuEmAdmissao = Object.prototype.hasOwnProperty.call(
         data,
@@ -220,14 +220,14 @@ export class FuncionariosService {
         'demissao',
       );
 
-      if (mexeuEmRegistro || mexeuEmAdmissao || mexeuEmDemissao) {
+      if (mexeuEmInicio || mexeuEmAdmissao || mexeuEmDemissao) {
         const atual = await this.prisma.funcionarios.findUnique({
           where: { id },
-          select: { registro: true, admissao: true, demissao: true },
+          select: { data_inicio: true, admissao: true, demissao: true },
         });
-        if (!atual) throw new NotFoundException('Funcionário não encontrado.');
+        if (!atual) throw new NotFoundException('FuncionÃ¡rio nÃ£o encontrado.');
         data.status = this.calcularStatus({
-          registro: mexeuEmRegistro ? data.registro : atual.registro,
+          data_inicio: mexeuEmInicio ? data.data_inicio : atual.data_inicio,
           admissao: mexeuEmAdmissao ? data.admissao : atual.admissao,
           demissao: mexeuEmDemissao ? data.demissao : atual.demissao,
         });
@@ -239,7 +239,7 @@ export class FuncionariosService {
       });
     } catch (e: any) {
       if (e?.code === 'P2002')
-        throw new BadRequestException('CPF já cadastrado.');
+        throw new BadRequestException('CPF jÃ¡ cadastrado.');
       throw e;
     }
   }
@@ -252,7 +252,7 @@ export class FuncionariosService {
 
   private normalizarDatas(dto: any) {
     const data = { ...dto };
-    const camposData = ['data_nascimento', 'admissao', 'demissao'];
+    const camposData = ['data_nascimento', 'admissao', 'demissao', 'data_inicio'];
 
     for (const campo of camposData) {
       if (Object.prototype.hasOwnProperty.call(data, campo)) {
@@ -266,6 +266,18 @@ export class FuncionariosService {
       }
     }
 
-    return data;
+
+    // Compatibilidade com payload antigo: "registro" passa a preencher "data_inicio"
+    if (Object.prototype.hasOwnProperty.call(data, 'registro')) {
+      const v = data.registro;
+      if (!v) {
+        data.data_inicio = null;
+      } else {
+        const d = new Date(v);
+        data.data_inicio = isNaN(d.getTime()) ? null : d;
+      }
+      delete data.registro;
+    }    return data;
   }
 }
+
