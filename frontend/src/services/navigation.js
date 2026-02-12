@@ -2,13 +2,10 @@
 export const NAV_SCHEMA = {
   // 🏭 Operação do dia a dia
 operacional: [
-  { label: '🚀 Vendas', to: '/vendas', icon: 'pi-cart-plus', perm: 'vendas.ver' },
-  { label: '🧩 Vendas Trello', to: '/vendas/kanban', icon: 'pi-th-large', perm: 'vendas.ver' },
-  { label: '📏 Plano de Corte', to: '/plano-corte', icon: 'pi-sitemap', perm: 'plano_corte.ver' },
-  { label: '🧩 Plano Trello', to: '/plano-corte/kanban', icon: 'pi-th-large', perm: 'plano_corte.ver' },
-  { label: '🗓️ Agenda Geral', to: '/agendamentos?visao=geral', icon: 'pi-calendar', perm: 'agendamentos.ver' },
+  { label: '🗓️ Agendamentos', to: '/agendamentos', icon: 'pi-calendar', perm: 'agendamentos.ver' },
   { divider: true },
 
+  { label: '🚀 Vendas', to: '/vendas', icon: 'pi-cart-plus', perm: 'vendas.ver' },
   { label: '📝 Orçamentos', to: '/orcamentos', icon: 'pi-file-edit', perm: 'orcamentos.ver' },
   { divider: true },
 

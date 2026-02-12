@@ -1,10 +1,10 @@
 <template>
-    <PageHeader
-      title="Clientes"
+  <div class="w-full max-w-[1700px] mx-auto space-y-6">
+    
+    <PageHeader 
+      title="Clientes" 
       subtitle="Base de contatos e gestão estratégica"
       icon="pi pi-users"
-      :show-back="false"
-      minimal
     >
       <template #actions>
         <div class="flex items-center gap-3 w-full sm:w-auto">
@@ -15,6 +15,7 @@
               :bordered="true"
             />
           </div>
+          
           <Button
             v-if="can('clientes.criar')"
             variant="primary"
@@ -28,15 +29,51 @@
       </template>
     </PageHeader>
 
-    <div class="page-section overflow-hidden bg-bg-card">
-      <Table
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <MetricCard
+        label="Total de Clientes"
+        :value="clientes.length"
+        icon="pi pi-users"
+        color="slate"
+      />
+      <MetricCard
+        label="Clientes Ativos"
+        :value="totalAtivos"
+        icon="pi pi-check-circle"
+        color="emerald"
+      />
+      <MetricCard
+        label="Cidades Atendidas"
+        :value="totalCidades"
+        icon="pi pi-map"
+        color="blue"
+      />
+    </div>
+
+    <div class="flex items-center justify-between px-1">
+      <CustomCheckbox 
+        v-model="mostrarInativos" 
+        label="Mostrar registros inativos" 
+      />
+      
+      <Button 
+        variant="ghost" 
+        size="sm"
+        @click="exportarClientes"
+        class="text-slate-500 hover:text-brand-primary"
+      >
+        <i class="pi pi-download mr-2 text-xs"></i>
+        Exportar CSV
+      </Button>
+    </div>
+
+    <Table
       :columns="columns"
       :rows="clientesFiltrados"
       :loading="carregando"
-      :boxed="false"
       :empty-text="filtro ? 'Nenhum cliente encontrado para sua busca' : 'Nenhum cliente cadastrado'"
     >
-      <template #cell-nome="{ row }">
+      <template #cell-cliente="{ row }">
         <div class="flex items-center gap-3 py-0.5">
           <div class="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-500 text-xs">
             {{ (row.nome_completo || row.razao_social || '?').substring(0,2).toUpperCase() }}
@@ -52,28 +89,20 @@
         </div>
       </template>
 
-      <template #cell-whatsapp="{ row }">
-        <span class="text-sm text-slate-700 dark:text-slate-300">
-          {{ row.whatsapp || '—' }}
-        </span>
-      </template>
-
       <template #cell-status="{ row }">
         <StatusBadge
-          v-if="row.pipeline_status || row.status"
-          :value="getPipelineLabel(row.pipeline_status || row.status)"
-          :color="getPipelineColor(row.pipeline_status || row.status)"
+          v-if="row.pipeline_status"
+          :value="getPipelineLabel(row.pipeline_status)"
+          :color="getPipelineColor(row.pipeline_status)"
         />
         <span v-else class="text-xs text-slate-400 italic">Sem status</span>
       </template>
 
       <template #cell-localizacao="{ row }">
         <div class="flex flex-col">
-          <span class="text-sm text-slate-700 dark:text-slate-300">
-            {{ row.endereco || '—' }}
-          </span>
+          <span class="text-sm text-slate-700 dark:text-slate-300">{{ row.cidade || '—' }}</span>
           <span class="text-xs text-slate-400 font-medium">
-            {{ row.numero || '—' }} • {{ row.bairro || '—' }}
+            {{ row.estado || '—' }}
           </span>
         </div>
       </template>
@@ -86,26 +115,51 @@
           @edit="editarCliente"
           @delete="excluirCliente"
         >
+          <Button
+            v-if="can('clientes.ver')"
+            variant="ghost"
+            size="sm"
+            class="!p-2 !rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+            @click.stop="abrirModalAgendamento(row)"
+            title="Agendar"
+          >
+            <i class="pi pi-calendar text-xs"></i>
+          </Button>
         </TableActions>
       </template>
     </Table>
-    </div>
+
+    <AgendamentosModal
+      :open="modalAgendamentoOpen"
+      :cliente="clienteSelecionado"
+      :pipeline="pipeline"
+      :is-admin="isAdmin"
+      :funcionarios="funcionarios"
+      :funcionario-nome="funcionarioNome"
+      @close="fecharModalAgendamento"
+      @salvar="salvarAgendamento"
+    />
+
+  </div>
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { ClienteService } from '@/services/index'
+import { ClienteService, FuncionarioService, AgendaService } from '@/services/index'
 import { PIPELINE_CLIENTE } from '@/constantes'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
+import storage from '@/utils/storage'
 
 // UI Components
 import PageHeader from '@/components/ui/PageHeader.vue'
+import MetricCard from '@/components/ui/MetricCard.vue'
 import SearchInput from '@/components/ui/SearchInput.vue'
 import TableActions from '@/components/ui/TableActions.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
+import CustomCheckbox from '@/components/ui/CustomCheckbox.vue'
 
 definePage({ meta: { perm: 'clientes.ver' } })
 
@@ -116,16 +170,30 @@ const router = useRouter()
 // Estado
 const filtro = ref('')
 const carregando = ref(false)
+const mostrarInativos = ref(false)
 const clientes = ref([])
 
 const pipeline = ref([])
 const pipelineLoaded = ref(false)
 const pipelineErro = ref('')
+const usuarioLogado = computed(() => storage.getUser())
+
+// Modal de agendamento
+const modalAgendamentoOpen = ref(false)
+const clienteSelecionado = ref(null)
+const funcionarios = ref([])
+const isAdmin = computed(() => can('ADMIN'))
+const funcionarioNome = computed(() => usuarioLogado.value?.nome || '')
 
 // Computed
 const clientesFiltrados = computed(() => {
   let filtrados = clientes.value
 
+  if (!mostrarInativos.value) {
+    filtrados = filtrados.filter(c => String(c?.status || 'ATIVO').toUpperCase() === 'ATIVO')
+  }
+  
+  
   // Aplicar filtro de busca
   if (filtro.value) {
     const termo = filtro.value.toLowerCase().trim()
@@ -143,6 +211,16 @@ const clientesFiltrados = computed(() => {
   
   return filtrados
 })
+
+const totalAtivos = computed(() =>
+  clientes.value.filter(c => String(c?.status || 'ATIVO').toUpperCase() === 'ATIVO').length
+)
+
+
+
+const totalCidades = computed(() => 
+  new Set(clientes.value.map(c => c.cidade).filter(Boolean)).size
+)
 
 
 // Métodos utilitários usando pipeline dinâmico
@@ -198,13 +276,122 @@ async function excluirCliente(id) {
 }
 
 
+const exportarClientes = () => {
+  const dadosParaExportar = clientesFiltrados.value.map(c => ({
+    'ID': c.id,
+    'Nome/Razão Social': c.nome_completo || c.razao_social,
+    'CPF/CNPJ': c.cpf || c.cnpj,
+    'Status': (c.pipeline_status || 'SEM_OBRA').replaceAll('_', ' '),
+    'Cidade': c.cidade,
+    'Estado': c.estado,
+    'E-mail': c.email,
+    'WhatsApp': c.whatsapp,
+    'Telefone': c.telefone
+  }))
+  
+  const csvContent = [
+    Object.keys(dadosParaExportar[0] || {}).join(','),
+    ...dadosParaExportar.map(row => Object.values(row).join(','))
+  ].join('\n')
+  
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = `clientes_${new Date().toISOString().split('T')[0]}.csv`
+  link.click()
+}
+
+async function abrirModalAgendamento(cliente) {
+  clienteSelecionado.value = cliente
+  if (isAdmin.value) {
+    try {
+      const res = await FuncionarioService.listar()
+      const lista = Array.isArray(res?.data) ? res.data : []
+      funcionarios.value = lista.filter((f) => String(f?.status || 'ATIVO').toUpperCase() === 'ATIVO')
+    } catch (e) {
+      funcionarios.value = []
+    }
+  } else {
+    funcionarios.value = []
+  }
+  await nextTick()
+  modalAgendamentoOpen.value = true
+}
+
+function fecharModalAgendamento() {
+  modalAgendamentoOpen.value = false
+  clienteSelecionado.value = null
+}
+
+function getNextStage(currentKey) {
+  const arr = [...(pipeline.value || [])].sort((a, b) => (a.ordem || 0) - (b.ordem || 0))
+  const idx = arr.findIndex((p) => p.key === currentKey)
+  return idx >= 0 ? arr[idx + 1] : arr.find((p) => p.temTela) || arr[0]
+}
+
+function getStatusFromCategoria(categoria) {
+  const map = {
+    MEDIDA: 'MEDIDA_AGENDADA',
+    ORCAMENTO: 'ORCAMENTO_EM_ANDAMENTO',
+    MEDIDA_FINA: 'MEDIDA_FINA_AGENDADA',
+    PRODUCAO: 'PRODUCAO_AGENDADA',
+    MONTAGEM: 'MONTAGEM_AGENDADA',
+  }
+  return map[String(categoria || '').toUpperCase()] || ''
+}
+
+function salvarAgendamento(payload) {
+  const clienteId = Number(clienteSelecionado.value?.id)
+  const dataHora = payload?.dataHora
+  const funcionarioId = isAdmin.value
+    ? Number(payload?.funcionarioId)
+    : Number(usuarioLogado.value?.funcionario_id)
+
+  if (!clienteId) return notify.error('Cliente invalido.')
+  if (!funcionarioId) return notify.error('Funcionario nao encontrado.')
+  if (!dataHora) return notify.error('Informe a data e horario.')
+
+  const nextStage = getNextStage(clienteSelecionado.value?.pipeline_status)
+  if (!nextStage) return notify.error('Nao foi possivel definir a proxima etapa.')
+
+  const inicio = new Date(dataHora)
+  if (Number.isNaN(inicio.getTime())) return notify.error('Data invalida.')
+  const fim = new Date(inicio)
+  fim.setHours(fim.getHours() + 1)
+
+  const categoria = String(nextStage.fase || '').toUpperCase()
+  const statusKey = payload?.statusKey || getStatusFromCategoria(categoria) || nextStage.key
+
+  AgendaService.criar({
+    titulo: nextStage.label,
+    inicio_em: inicio.toISOString(),
+    fim_em: fim.toISOString(),
+    cliente_id: clienteId,
+    equipe_ids: [funcionarioId],
+    categoria,
+  })
+    .then(() => {
+      const idx = clientes.value.findIndex((c) => Number(c.id) === clienteId)
+      if (idx >= 0) {
+        clientes.value[idx] = { ...clientes.value[idx], pipeline_status: statusKey }
+      }
+      if (clienteSelecionado.value) {
+        clienteSelecionado.value = { ...clienteSelecionado.value, pipeline_status: statusKey }
+      }
+      notify.success('Agendamento salvo!')
+      fecharModalAgendamento()
+    })
+    .catch((e) => {
+      const apiMsg = e?.response?.data?.message
+      notify.error(Array.isArray(apiMsg) ? apiMsg.join(' | ') : (apiMsg || 'Nao foi possivel salvar.'))
+    })
+}
 
 // Colunas da tabela
 const columns = [
-  { key: 'nome', label: 'NOME', width: '30%' },
-  { key: 'whatsapp', label: 'WHATSAPP', width: '15%' },
-  { key: 'localizacao', label: 'LOCALIZAÇÃO', width: '20%' },
+  { key: 'cliente', label: 'CLIENTE', width: '40%' },
   { key: 'status', label: 'STATUS', width: '15%' },
+  { key: 'localizacao', label: 'LOCALIZAÇÃO', width: '25%' },
   { key: 'acoes', label: '', align: 'right', width: '20%' }
 ]
 
@@ -227,11 +414,7 @@ const carregarClientes = async () => {
     const res = await ClienteService.listar()
 
     // PADRÃO ACASA ERP
-    const lista = Array.isArray(res?.data) ? res.data : []
-    clientes.value = lista.map((c) => ({
-      ...c,
-      pipeline_status: c.pipeline_status ?? c.status ?? null,
-    }))
+    clientes.value = Array.isArray(res?.data) ? res.data : []
 
   } catch (error) {
     console.error('Erro ao carregar clientes:', error)

@@ -2,11 +2,11 @@
   <button
     :type="type"
     :disabled="loading || disabled"
-    class="relative inline-flex items-center justify-center gap-2 font-medium transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed outline-none rounded-md border focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-page"
+    class="relative inline-flex items-center justify-center font-medium transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden rounded-md outline-none border"
     :class="[
       variantClasses[variant],
       sizeClasses[size],
-      { 'w-full': fullWidth, 'btn-primary-hero': variant === 'primary' }
+      { 'w-full': fullWidth }
     ]"
     @click="handleClick"
   >
@@ -15,7 +15,12 @@
       <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
     </svg>
 
-    <span :class="[{ 'opacity-0': loading }, 'relative z-10 flex items-center gap-2']">
+    <span 
+      :class="[
+        { 'opacity-0': loading },
+        'relative z-10 flex items-center gap-2'
+      ]" 
+    >
       <slot>{{ label }}</slot>
     </span>
   </button>
@@ -44,16 +49,18 @@ const emit = defineEmits(['click'])
 
 const variantClasses = {
   primary: `
-    text-white border border-transparent
+    bg-brand-primary text-white border border-brand-primary
+    hover:bg-brand-dark hover:border-brand-dark
+    dark:bg-brand-primary dark:hover:bg-brand-dark
   `,
   secondary: `
-    bg-bg-card text-slate-700 border border-border-ui
-    hover:bg-slate-50 hover:border-slate-300
-    dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:border-slate-600
+    bg-transparent text-slate-700 border border-slate-300
+    hover:bg-slate-50 hover:border-slate-400
+    dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-800 dark:hover:border-slate-500
   `,
   outline: `
-    bg-transparent border border-brand-primary/70 text-brand-primary
-    hover:bg-brand-primary/10 hover:border-brand-primary
+    bg-transparent border border-brand-primary text-brand-primary
+    hover:bg-brand-primary/5 hover:border-brand-primary
     dark:border-brand-primary/70 dark:text-brand-primary/90 dark:hover:bg-brand-primary/10
   `,
   danger: `
@@ -66,8 +73,8 @@ const variantClasses = {
   `,
   ghost: `
     bg-transparent text-slate-600 border border-transparent
-    hover:bg-slate-100
-    dark:text-slate-400 dark:hover:bg-slate-800
+    hover:bg-slate-100 hover:border-slate-200
+    dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:border-slate-700
   `
 }
 
@@ -81,23 +88,3 @@ const handleClick = (event) => {
   if (!props.loading && !props.disabled) emit('click', event)
 }
 </script>
-
-<style scoped>
-.btn-primary-hero {
-  background: linear-gradient(
-    135deg,
-    var(--color-brand-dark),
-    color-mix(in srgb, var(--color-brand-dark) 55%, var(--color-brand-primary)),
-    var(--color-brand-primary)
-  );
-  box-shadow: 0 2px 8px rgba(2, 6, 23, 0.18);
-}
-
-.btn-primary-hero:hover {
-  filter: brightness(1.05);
-}
-
-.btn-primary-hero:active {
-  filter: brightness(0.98);
-}
-</style>

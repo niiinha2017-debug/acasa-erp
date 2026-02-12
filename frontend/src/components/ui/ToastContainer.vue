@@ -7,25 +7,37 @@
         class="pointer-events-auto group"
       >
         <div 
-          class="relative flex items-center gap-3 p-3 rounded-lg border-l-4 transition duration-300 ease-in-out hover:scale-[1.02]"
-          :class="[cfg(n.type).bg, cfg(n.type).border, cfg(n.type).text]"
+          class="relative flex items-center gap-4 p-4 rounded-xl border bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-lg shadow-slate-200/50 dark:shadow-black/20 transition-all duration-300"
+          :class="[
+            n.type === 'error' 
+              ? 'border-red-100 dark:border-red-900/30' 
+              : 'border-emerald-100 dark:border-emerald-900/30'
+          ]"
         >
-          <div class="flex-shrink-0">
-            <i :class="[cfg(n.type).icon, cfg(n.type).iconColor, 'text-lg']"></i>
+          <div 
+            class="absolute left-0 top-3 bottom-3 w-1 rounded-r-full"
+            :class="n.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'"
+          ></div>
+
+          <div 
+            class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
+            :class="n.type === 'error' ? 'bg-red-50 text-red-500 dark:bg-red-500/10' : 'bg-emerald-50 text-emerald-500 dark:bg-emerald-500/10'"
+          >
+            <i :class="[n.type === 'error' ? 'pi pi-times-circle' : 'pi pi-check-circle', 'text-lg']"></i>
           </div>
 
           <div class="flex flex-col min-w-0 pr-4 gap-0.5">
-            <span class="text-xs font-semibold">
-              {{ cfg(n.type).label }}
+            <span class="text-xs font-semibold" :class="n.type === 'error' ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'">
+              {{ n.type === 'error' ? 'Atenção' : 'Sucesso' }}
             </span>
-            <p class="text-xs font-semibold leading-snug truncate">
+            <p class="text-sm font-medium text-slate-600 dark:text-slate-300 leading-snug truncate">
               {{ n.message }}
             </p>
           </div>
 
           <button 
-            @click="notify.remove(n.id)" 
-            class="ml-auto opacity-70 hover:opacity-100 transition"
+            @click="n.remove()" 
+            class="ml-auto text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
           >
             <i class="pi pi-times text-[10px]"></i>
           </button>
@@ -34,47 +46,6 @@
     </TransitionGroup>
   </div>
 </template>
-
-<script setup>
-import { notifications, notify } from '@/services/notify'
-
-const typeConfig = {
-  success: {
-    bg: 'bg-emerald-100 dark:bg-emerald-900',
-    border: 'border-emerald-500 dark:border-emerald-700',
-    text: 'text-emerald-900 dark:text-emerald-100',
-    icon: 'pi pi-check-circle',
-    iconColor: 'text-emerald-600 dark:text-emerald-300',
-    label: 'Sucesso',
-  },
-  info: {
-    bg: 'bg-blue-100 dark:bg-blue-900',
-    border: 'border-blue-500 dark:border-blue-700',
-    text: 'text-blue-900 dark:text-blue-100',
-    icon: 'pi pi-info-circle',
-    iconColor: 'text-blue-600 dark:text-blue-300',
-    label: 'Info',
-  },
-  warning: {
-    bg: 'bg-yellow-100 dark:bg-yellow-900',
-    border: 'border-yellow-500 dark:border-yellow-700',
-    text: 'text-yellow-900 dark:text-yellow-100',
-    icon: 'pi pi-exclamation-triangle',
-    iconColor: 'text-yellow-600 dark:text-yellow-300',
-    label: 'Atenção',
-  },
-  error: {
-    bg: 'bg-red-100 dark:bg-red-900',
-    border: 'border-red-500 dark:border-red-700',
-    text: 'text-red-900 dark:text-red-100',
-    icon: 'pi pi-times-circle',
-    iconColor: 'text-red-600 dark:text-red-300',
-    label: 'Erro',
-  },
-}
-
-const cfg = (type) => typeConfig[type] || typeConfig.success
-</script>
 
 <style scoped>
 .toast-enter-active, .toast-leave-active { 

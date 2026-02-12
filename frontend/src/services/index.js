@@ -200,11 +200,6 @@ export const FinanceiroService = {
   // legado (mantém por enquanto)
   pagarContaPagar: (id, dados) => api.post(`/financeiro/contas-pagar/${id}/pagar`, dados),
 
-  // novo fluxo de baixa por títulos
-  listarTitulosContaPagar: (id) => api.get(`/financeiro/contas-pagar/${id}/titulos`),
-  pagarTituloContaPagar: (id, tituloId, dados = {}) =>
-    api.post(`/financeiro/contas-pagar/${id}/titulos/${tituloId}/pagar`, dados),
-
   // ✅ NOVO: etapa 1 do modal (preview)
   previewFechamentoFornecedor: (params) =>
     api.get('/financeiro/contas-pagar/preview-fechamento', { params }),
@@ -254,10 +249,6 @@ export const PontoRelatorioService = {
   // ✅ padrão do sistema: gera+salva e retorna { arquivoId }
   pdfMensalSalvar: (payload) =>
     api.post('/ponto/relatorio/pdf', payload),
-
-  // ✅ equipe: gera+salva e retorna { total, arquivos: [{ arquivoId, funcionario_id, funcionario_nome }] }
-  pdfMensalEquipeSalvar: (payload) =>
-    api.post('/ponto/relatorio/pdf/lote', payload),
 }
 
 
@@ -290,15 +281,8 @@ export const PontoJustificativasService = {
 
 export const AgendaService = {
   // Buscar todos (com filtro opcional de data)
-  listarTodos(inicio, fim, filtros = {}) {
-    return api.get('/agenda', {
-      params: {
-        inicio,
-        fim,
-        origem_fluxo: filtros.origem_fluxo,
-        categoria: filtros.categoria,
-      },
-    });
+  listarTodos(inicio, fim) {
+    return api.get('/agenda', { params: { inicio, fim } });
   },
 
   // Criar novo agendamento

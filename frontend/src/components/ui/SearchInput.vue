@@ -1,7 +1,7 @@
 <template>
   <div
     ref="rootRef"
-    class="search-container relative flex flex-col gap-1.5 w-full min-w-[240px] flex-1"
+    class="search-container relative flex flex-col gap-1.5"
     :class="[colSpan, { 'z-[100]': open }]"
     @click.stop
   >
@@ -11,7 +11,7 @@
 
     <div class="relative group">
       <span
-        class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-primary transition-all duration-300 pointer-events-none"
+        class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-primary transition-all duration-300 pointer-events-none"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8"></circle>
@@ -30,9 +30,9 @@
         :readonly="readonly"
         :disabled="disabled"
         autocomplete="off"
-        class="w-full h-12 pl-11 pr-16 transition-all duration-200 outline-none border rounded-xl text-sm
-               bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700
-               focus:border-brand-primary focus:border-2 hover:border-slate-400 dark:hover:border-slate-600
+        class="w-full h-10 pl-10 pr-16 transition-all duration-200 outline-none border rounded-lg text-sm
+               bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700
+               focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 hover:border-slate-300 dark:hover:border-slate-600
                placeholder:text-slate-400 placeholder:font-normal"
         @focus="onFocus"
         @input="onInput"

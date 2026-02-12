@@ -1,4 +1,6 @@
-﻿<template>
+<template>
+  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-page-in">
+    
     <PageHeader 
       title="Vendas"
       subtitle="Gestão comercial e acompanhamento de pedidos"
@@ -107,6 +109,7 @@
         </Table>
       </div>
     </div>
+  </div>
 </template>
 
 <script setup>
@@ -198,4 +201,3 @@ onMounted(async () => {
   await carregar()
 })
 </script>
-

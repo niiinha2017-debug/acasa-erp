@@ -37,8 +37,6 @@ export class AgendaController {
   async findAll(
     @Query('inicio') inicio?: string,
     @Query('fim') fim?: string,
-    @Query('origem_fluxo') origemFluxo?: string,
-    @Query('categoria') categoria?: string,
     @Req() req?: any,
   ) {
     const perms: string[] = Array.isArray(req?.user?.permissoes)
@@ -53,8 +51,6 @@ export class AgendaController {
 
     return this.agendaService.findAll(inicio, fim, {
       includePlanoCorte: canProducao,
-      origemFluxo,
-      categoria,
     });
   }
 
