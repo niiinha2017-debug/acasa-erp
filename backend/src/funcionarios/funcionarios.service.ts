@@ -20,17 +20,17 @@ export class FuncionariosService {
   private readonly STATUS_INATIVO = 'INATIVO';
 
   private calcularStatus(input: {
-    data_inicio?: Date | null;
+    registro?: string | null;
     admissao?: Date | null;
     demissao?: Date | null;
   }) {
-    const dataInicio = input.data_inicio ?? null;
+    const registro = input.registro ? String(input.registro).trim() : '';
     const admissao = input.admissao ?? null;
     const demissao = input.demissao ?? null;
 
     if (demissao) return this.STATUS_INATIVO;
     if (admissao) return this.STATUS_ATIVO;
-    if (dataInicio) return this.STATUS_ATIVO;
+    if (registro) return this.STATUS_ATIVO;
     return this.STATUS_INATIVO;
   }
 
@@ -187,7 +187,7 @@ export class FuncionariosService {
 
       // ✅ status baseado na sua regra (demissao inativa, admissao/registro ativa)
       data.status = this.calcularStatus({
-        data_inicio: data.data_inicio,
+        registro: data.registro,
         admissao: data.admissao,
         demissao: data.demissao,
       });
@@ -206,10 +206,10 @@ export class FuncionariosService {
     try {
       const data = this.normalizarDatas(dto);
 
-      // só recalcula se mexeu em data_inicio/admissao/demissao
-      const mexeuEmDataInicio = Object.prototype.hasOwnProperty.call(
+      // só recalcula se mexeu em registro ou demissao
+      const mexeuEmRegistro = Object.prototype.hasOwnProperty.call(
         data,
-        'data_inicio',
+        'registro',
       );
       const mexeuEmAdmissao = Object.prototype.hasOwnProperty.call(
         data,
@@ -220,14 +220,14 @@ export class FuncionariosService {
         'demissao',
       );
 
-      if (mexeuEmDataInicio || mexeuEmAdmissao || mexeuEmDemissao) {
+      if (mexeuEmRegistro || mexeuEmAdmissao || mexeuEmDemissao) {
         const atual = await this.prisma.funcionarios.findUnique({
           where: { id },
-          select: { data_inicio: true, admissao: true, demissao: true },
+          select: { registro: true, admissao: true, demissao: true },
         });
         if (!atual) throw new NotFoundException('Funcionário não encontrado.');
         data.status = this.calcularStatus({
-          data_inicio: mexeuEmDataInicio ? data.data_inicio : atual.data_inicio,
+          registro: mexeuEmRegistro ? data.registro : atual.registro,
           admissao: mexeuEmAdmissao ? data.admissao : atual.admissao,
           demissao: mexeuEmDemissao ? data.demissao : atual.demissao,
         });
@@ -252,7 +252,7 @@ export class FuncionariosService {
 
   private normalizarDatas(dto: any) {
     const data = { ...dto };
-    const camposData = ['data_nascimento', 'data_inicio', 'admissao', 'demissao'];
+    const camposData = ['data_nascimento', 'admissao', 'demissao'];
 
     for (const campo of camposData) {
       if (Object.prototype.hasOwnProperty.call(data, campo)) {

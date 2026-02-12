@@ -315,16 +315,8 @@ const tipoCompra = ref('INSUMOS')
 const fornecedorSelecionado = ref(null)
 const vendaSelecionada = ref(null)
 
-function hojeLocalISO() {
-  const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
 const form = reactive({
-  data_compra: hojeLocalISO(),
+  data_compra: new Date().toISOString().split('T')[0],
 })
 
 const itens = ref([])

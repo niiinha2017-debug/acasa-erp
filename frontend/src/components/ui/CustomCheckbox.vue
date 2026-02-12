@@ -7,18 +7,28 @@
         : 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50', 
     ]"
   >
-    <div class="relative flex-shrink-0 mt-0.5">
-      <input
-        type="checkbox"
-        class="peer sr-only"
-        :checked="modelValue"
+    <div class="relative w-5 h-5 flex-shrink-0 mt-0.5">
+      <input 
+        type="checkbox" 
+        class="absolute opacity-0 w-0 h-0 peer"
+        :checked="modelValue" 
         :disabled="disabled"
         @change="$emit('update:modelValue', $event.target.checked)"
       />
-      <div class="checkbox-orbit">
-        <div class="checkbox-core"></div>
-        <div class="checkbox-tick checkbox-tick-long"></div>
-        <div class="checkbox-tick checkbox-tick-short"></div>
+      
+      <div
+        class="w-full h-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 rounded-lg flex items-center justify-center transition-all duration-200
+               group-hover:border-slate-300 dark:group-hover:border-slate-600
+               peer-checked:bg-brand-primary peer-checked:border-brand-primary
+               peer-focus:ring-4 peer-focus:ring-brand-primary/10"
+      >
+        <svg 
+          viewBox="0 0 24 24" 
+          class="w-3 h-3 fill-none stroke-white stroke-[4] transition-all duration-200 scale-0 peer-checked:scale-100"
+          style="stroke-linecap: round; stroke-linejoin: round;"
+        >
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
       </div>
     </div>
     
@@ -42,71 +52,3 @@ defineProps({
 })
 defineEmits(['update:modelValue'])
 </script>
-
-<style scoped>
-.checkbox-orbit {
-  --cb-size: 32px;
-  width: var(--cb-size);
-  height: var(--cb-size);
-  border-radius: 9999px;
-  padding: 3px;
-  background: linear-gradient(
-    135deg,
-    var(--color-brand-dark),
-    color-mix(in srgb, var(--color-brand-dark) 55%, var(--color-brand-primary)),
-    var(--color-brand-primary)
-  );
-  position: relative;
-  transition: padding 0.15s ease;
-}
-
-.checkbox-core {
-  width: 100%;
-  height: 100%;
-  border-radius: 9999px;
-  background: var(--bg-card);
-  transition: transform 0.2s ease;
-}
-
-.checkbox-tick {
-  position: absolute;
-  height: 4px;
-  border-radius: 2px;
-  background: #fff;
-  transition: transform 0.25s ease;
-}
-
-.checkbox-tick-long {
-  width: 22px;
-  left: 12px;
-  top: 50%;
-  transform: translate(18px, -16px) rotate(-41deg);
-}
-
-.checkbox-tick-short {
-  width: 14px;
-  left: 8px;
-  top: 55%;
-  transform: translate(-18px, -16px) rotate(45deg);
-}
-
-input:checked + .checkbox-orbit .checkbox-core {
-  transform: scale(0);
-}
-
-input:checked + .checkbox-orbit .checkbox-tick-long,
-input:checked + .checkbox-orbit .checkbox-tick-short {
-  transform: translate(0, 0) rotate(var(--tick-rotate, 0));
-}
-
-.checkbox-tick-long { --tick-rotate: -41deg; }
-.checkbox-tick-short { --tick-rotate: 45deg; }
-
-label:hover .checkbox-orbit {
-  padding: 3.5px;
-}
-
-input:disabled + .checkbox-orbit {
-  opacity: 0.5;
-}
-</style>

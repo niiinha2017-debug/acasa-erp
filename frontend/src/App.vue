@@ -4,7 +4,6 @@ import { useRoute } from 'vue-router' // Precisa importar o useRoute
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import ConfirmModal from '@/components/ui/ConfirmModal.vue'
-import ToastContainer from '@/components/ui/ToastContainer.vue'
 
 const route = useRoute()
 
@@ -32,5 +31,4 @@ const layout = computed(() => {
   </RouterView>
 
   <ConfirmModal />
-  <ToastContainer />
 </template>

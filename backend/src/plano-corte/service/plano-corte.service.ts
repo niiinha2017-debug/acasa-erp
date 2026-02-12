@@ -17,56 +17,6 @@ import * as path from 'path';
 export class PlanoCorteService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private normalizeKey(value?: string | null) {
-    return String(value || '')
-      .trim()
-      .toUpperCase()
-      .replace(/\s+/g, '_');
-  }
-
-  private resolveAgendaStatusFromPlanoStatus(status?: string | null) {
-    const key = this.normalizeKey(status);
-    if (key === 'FINALIZADO' || key === 'COMPENSADO') return 'CONCLUIDO';
-    if (key === 'EM_PRODUCAO') return 'EM_ANDAMENTO';
-    return 'PENDENTE';
-  }
-
-  private async syncAgendaFromPlanoCorte(
-    tx: any,
-    plano: {
-      id: number;
-      status: string;
-      fornecedor_id: number;
-      data_venda?: Date | string | null;
-    },
-  ) {
-    const inicio = plano.data_venda ? new Date(plano.data_venda) : new Date();
-    const fim = new Date(inicio.getTime() + 60 * 60 * 1000);
-    const statusKey = this.normalizeKey(plano.status);
-    const statusLabel = statusKey.replace(/_/g, ' ').toLowerCase();
-
-    await tx.agenda_global.upsert({
-      where: { plano_corte_id: plano.id },
-      create: {
-        titulo: `Plano de Corte #${plano.id} - ${statusLabel}`,
-        fornecedor_id: plano.fornecedor_id,
-        plano_corte_id: plano.id,
-        categoria: 'PRODUCAO',
-        origem_fluxo: 'FORNECEDOR',
-        inicio_em: inicio,
-        fim_em: fim,
-        status: this.resolveAgendaStatusFromPlanoStatus(plano.status),
-      },
-      update: {
-        titulo: `Plano de Corte #${plano.id} - ${statusLabel}`,
-        fornecedor_id: plano.fornecedor_id,
-        categoria: 'PRODUCAO',
-        origem_fluxo: 'FORNECEDOR',
-        status: this.resolveAgendaStatusFromPlanoStatus(plano.status),
-      },
-    });
-  }
-
   private brl(value: number) {
     return Number(value || 0).toLocaleString('pt-BR', {
       style: 'currency',
@@ -151,7 +101,7 @@ export class PlanoCorteService {
         precoM2Txt,
       ]
         .filter(Boolean)
-        .join(' � ');
+        .join(' • ');
       const linha = complemento ? `${nome} (${complemento})` : nome;
 
       doc.text(linha, colProduto, doc.y, { width: 260 });
@@ -219,10 +169,11 @@ export class PlanoCorteService {
   async create(dto: CreatePlanoCorteDto) {
     if (!PIPELINE_PLANO_CORTE_KEYS.includes(dto.status)) {
       throw new BadRequestException(
-        `Status invalido. Use: ${PIPELINE_PLANO_CORTE_KEYS.join(', ')}`,
+        `Status inválido. Use: ${PIPELINE_PLANO_CORTE_KEYS.join(', ')}`,
       );
     }
     return this.prisma.$transaction(async (tx) => {
+      // soma com Decimal (evita ruído de float)
       const total = dto.produtos.reduce(
         (acc, p) => acc.plus(new Prisma.Decimal(p.valor_total || 0)),
         new Prisma.Decimal(0),
@@ -253,6 +204,7 @@ export class PlanoCorteService {
           },
         });
 
+        // atualiza histórico do item vendido (campos já existem no schema)
         await tx.plano_corte_item.update({
           where: { id: p.item_id },
           data: {
@@ -262,13 +214,7 @@ export class PlanoCorteService {
         });
       }
 
-      await this.syncAgendaFromPlanoCorte(tx, {
-        id: plano.id,
-        status: plano.status,
-        fornecedor_id: plano.fornecedor_id,
-        data_venda: plano.data_venda,
-      });
-
+      // opcional: devolver já completo (pra front não ter que refetch)
       return tx.plano_corte.findUnique({
         where: { id: plano.id },
         include: {
@@ -302,7 +248,7 @@ export class PlanoCorteService {
     });
 
     if (!plano)
-      throw new NotFoundException(`Plano de Corte #${id} nao encontrado.`);
+      throw new NotFoundException(`Plano de Corte #${id} não encontrado.`);
     return plano;
   }
 
@@ -310,14 +256,20 @@ export class PlanoCorteService {
     await this.findOne(id);
     if (dto.status && !PIPELINE_PLANO_CORTE_KEYS.includes(dto.status)) {
       throw new BadRequestException(
-        `Status invalido. Use: ${PIPELINE_PLANO_CORTE_KEYS.join(', ')}`,
+        `Status inválido. Use: ${PIPELINE_PLANO_CORTE_KEYS.join(', ')}`,
       );
     }
     return this.prisma.$transaction(async (tx) => {
+      // 1. Se houver produtos no DTO, atualizamos a lista
       if (dto.produtos) {
-        await tx.plano_corte_produto.deleteMany({ where: { plano_corte_id: id } });
+        // Remove os itens antigos para evitar duplicidade ou lixo
+        await tx.plano_corte_produto.deleteMany({
+          where: { plano_corte_id: id },
+        });
 
         for (const p of dto.produtos) {
+          // FORÇAMOS O CÁLCULO AQUI: Quantidade * Valor Unitário
+          // Isso ignora se o frontend mandou o p.valor_total errado
           const qtd = new Prisma.Decimal(p.quantidade || 0);
           const vUnit = new Prisma.Decimal(p.valor_unitario || 0);
           const totalItem = qtd.mul(vUnit);
@@ -328,7 +280,7 @@ export class PlanoCorteService {
               item_id: p.item_id,
               quantidade: p.quantidade,
               valor_unitario: p.valor_unitario,
-              valor_total: totalItem,
+              valor_total: totalItem, // Salva o cálculo feito pelo servidor
               status: p.status,
               largura_mm: p.largura_mm ?? null,
               comprimento_mm: p.comprimento_mm ?? null,
@@ -337,16 +289,21 @@ export class PlanoCorteService {
             },
           });
 
+          // Atualiza o histórico do item
           await tx.plano_corte_item.update({
             where: { id: p.item_id },
             data: {
               ultimo_valor_vendido: p.valor_unitario,
-              ultimo_vendido_em: dto.data_venda ? new Date(dto.data_venda) : new Date(),
+              ultimo_vendido_em: dto.data_venda
+                ? new Date(dto.data_venda)
+                : new Date(),
             },
           });
         }
       }
 
+      // 2. RECALCULO DO CABEÇALHO (O PONTO CHAVE)
+      // Buscamos o que está no banco agora para somar o total real
       const itensNoBanco = await tx.plano_corte_produto.findMany({
         where: { plano_corte_id: id },
       });
@@ -356,30 +313,18 @@ export class PlanoCorteService {
         new Prisma.Decimal(0),
       );
 
+      // 3. ATUALIZA O CABEÇALHO SEMPRE
       await tx.plano_corte.update({
         where: { id },
         data: {
           fornecedor_id: dto.fornecedor_id,
           data_venda: dto.data_venda ? new Date(dto.data_venda) : undefined,
           status: dto.status,
-          valor_total: totalGeral,
+          valor_total: totalGeral, // Aqui o valor 1,74 vira 17,40 automaticamente
         },
       });
 
-      const planoAtualizado = await tx.plano_corte.findUnique({
-        where: { id },
-        select: {
-          id: true,
-          status: true,
-          fornecedor_id: true,
-          data_venda: true,
-        },
-      });
-
-      if (planoAtualizado) {
-        await this.syncAgendaFromPlanoCorte(tx, planoAtualizado);
-      }
-
+      // Retorna o plano atualizado com todas as relações
       return tx.plano_corte.findUnique({
         where: { id },
         include: {
@@ -395,8 +340,13 @@ export class PlanoCorteService {
     await this.findOne(id);
 
     return this.prisma.$transaction(async (tx) => {
-      await tx.plano_corte_consumo.deleteMany({ where: { plano_corte_id: id } });
-      await tx.plano_corte_produto.deleteMany({ where: { plano_corte_id: id } });
+      // garante remoção sem depender de cascata
+      await tx.plano_corte_consumo.deleteMany({
+        where: { plano_corte_id: id },
+      });
+      await tx.plano_corte_produto.deleteMany({
+        where: { plano_corte_id: id },
+      });
       await tx.plano_corte.delete({ where: { id } });
       return { ok: true };
     });

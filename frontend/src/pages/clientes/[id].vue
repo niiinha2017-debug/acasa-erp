@@ -277,65 +277,6 @@
           />
         </div>
 
-        <!-- Separador estilizado -->
-        <div v-if="can('arquivos.ver')" class="relative">
-          <div class="absolute inset-0 flex items-center">
-            <div class="w-full border-t border-border-ui/50"></div>
-          </div>
-          <div class="relative flex justify-center">
-            <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
-              Arquivos (Global)
-            </span>
-          </div>
-        </div>
-
-        <!-- Arquivos globais -->
-        <div v-if="can('arquivos.ver')" class="rounded-3xl border border-slate-200 bg-white overflow-hidden min-h-[220px]">
-          <Table
-            :columns="colArquivosGlobal"
-            :rows="arquivosGlobal"
-            :loading="loadingArquivosGlobal"
-            empty-text="Nenhum arquivo encontrado."
-            :boxed="false"
-          >
-            <template #cell-nome="{ row }">
-              <div class="flex flex-col">
-                <span class="text-xs font-black text-slate-800">
-                  {{ row.nome || row.filename }}
-                </span>
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  {{ row.mime_type || 'ARQUIVO' }}
-                </span>
-              </div>
-            </template>
-
-            <template #cell-origem="{ row }">
-              <div class="text-xs font-bold text-slate-500 uppercase">
-                {{ row.owner_type || '—' }} #{{ row.owner_id || '—' }}
-              </div>
-            </template>
-
-            <template #cell-criado_em="{ row }">
-              <span class="text-xs text-slate-500">
-                {{ formatData(row.criado_em) }}
-              </span>
-            </template>
-
-            <template #cell-acoes="{ row }">
-              <div class="flex justify-end">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  type="button"
-                  @click="abrirArquivoGlobal(row)"
-                >
-                  Ver
-                </Button>
-              </div>
-            </template>
-          </Table>
-        </div>
-
         <!-- Ações do Formulário - Apenas Salvar e Excluir -->
         <div class="pt-10 mt-6 border-t border-border-ui">
           <div class="flex items-center justify-between gap-4">
@@ -396,7 +337,6 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ClienteService } from '@/services/index'
-import { ArquivosService } from '@/services/arquivos.service'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
 import { maskCPF, maskCNPJ, maskCEP, maskTelefone, maskRG, maskIE } from '@/utils/masks'
@@ -414,18 +354,9 @@ const saving = ref(false)
 const deleting = ref(false)
 const isJuridica = ref(false)
 const listaClientes = ref([])
-const arquivosGlobal = ref([])
-const loadingArquivosGlobal = ref(false)
 
 const clienteId = computed(() => Number(route.params?.id))
 const isEdit = computed(() => !!clienteId.value)
-
-const colArquivosGlobal = [
-  { key: 'nome', label: 'ARQUIVO', width: '40%' },
-  { key: 'origem', label: 'ORIGEM', width: '25%' },
-  { key: 'criado_em', label: 'DATA', width: '20%' },
-  { key: 'acoes', label: '', align: 'right', width: '15%' },
-]
 
 // Opções para os Selects
 const opcoesEstadoCivil = [
@@ -557,38 +488,6 @@ listaClientes.value = Array.isArray(resClientes?.data) ? resClientes.data : []
   }
 }
 
-function formatData(v) {
-  if (!v) return '—'
-  const d = new Date(v)
-  if (Number.isNaN(d.getTime())) return '—'
-  return d.toLocaleDateString('pt-BR')
-}
-
-function abrirArquivoGlobal(row) {
-  const id = Number(row?.id)
-  if (!id) return
-  const name = encodeURIComponent(row.nome || row.filename || `ARQUIVO_${id}`)
-  const type = encodeURIComponent(row.mime_type || 'application/octet-stream')
-  const backTo = encodeURIComponent(`/clientes/${clienteId.value}`)
-  router.push(`/arquivos/${id}?name=${name}&type=${type}&backTo=${backTo}`)
-}
-
-async function carregarArquivosGlobal() {
-  if (!can('arquivos.ver')) return
-  loadingArquivosGlobal.value = true
-  try {
-    const res = await ArquivosService.listarTodos({ page: 1, pageSize: 200 })
-    const payload = res?.data?.data ?? res?.data ?? []
-    arquivosGlobal.value = Array.isArray(payload) ? payload : []
-  } catch (err) {
-    console.error('Erro ao carregar arquivos globais:', err)
-    arquivosGlobal.value = []
-    notify.error('Erro ao carregar arquivos globais.')
-  } finally {
-    loadingArquivosGlobal.value = false
-  }
-}
-
 // -- Watchers --
 watch(isJuridica, (val) => {
   if (val) { 
@@ -690,6 +589,5 @@ onMounted(async () => {
     return
   }
   await carregarDados()
-  await carregarArquivosGlobal()
 })
 </script>

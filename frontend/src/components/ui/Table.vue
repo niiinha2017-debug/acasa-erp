@@ -1,14 +1,14 @@
 <template>
   <div
     :class="[
-      boxed ? 'rounded-xl bg-white dark:bg-slate-900' : '',
+      boxed ? 'rounded-xl border border-brand-secondary dark:border-slate-700 bg-white dark:bg-slate-900' : '',
       'w-full relative overflow-hidden transition-all duration-300'
     ]"
   >
     <div class="w-full overflow-x-auto custom-scrollbar">
       <table class="w-full border-collapse min-w-[640px] md:min-w-[800px]">
         <thead>
-          <tr class="bg-slate-50/50 dark:bg-slate-800/30">
+          <tr class="bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800">
             <!-- Coluna da seta (automática) -->
             <th
               v-if="hasExpand"
@@ -29,7 +29,7 @@
           </tr>
         </thead>
 
-        <tbody class="divide-y divide-slate-200/70 dark:divide-slate-700/60">
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
           <tr v-if="loading">
             <td :colspan="colspan" class="px-6 py-20 text-center">
               <div class="flex flex-col items-center gap-3">
@@ -74,7 +74,7 @@
                 <td
                   v-for="col in columns"
                   :key="col.key"
-                  class="px-6 py-3 text-sm text-slate-600 dark:text-slate-300 transition-colors group-hover:text-slate-700 dark:group-hover:text-white first:pl-6"
+                  class="px-6 py-3 text-sm text-slate-600 dark:text-slate-300 transition-colors group-hover:text-slate-900 dark:group-hover:text-white first:pl-6"
                   :style="{ textAlign: col.align || 'left' }"
                 >
                   <slot
@@ -112,7 +112,7 @@ const props = defineProps({
   rows: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
   emptyText: { type: String, default: 'Nenhum registro encontrado.' },
-  boxed: { type: Boolean, default: false },
+  boxed: { type: Boolean, default: true },
 
   // ✅ EXPAND
   expandable: { type: Boolean, default: false },
@@ -194,4 +194,8 @@ watch(
   background: #334155;
 }
 
+/* Indicador lateral discreto */
+tr:hover td:first-child {
+  box-shadow: inset 3px 0 0 0 var(--color-brand-primary, #3b82f6);
+}
 </style>
