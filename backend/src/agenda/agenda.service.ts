@@ -180,6 +180,17 @@ export class AgendaService {
     });
   }
 
+  async findByVenda(vendaId: number) {
+    return this.prisma.agenda_global.findFirst({
+      where: { venda_id: vendaId },
+      include: {
+        cliente: true,
+        equipe: { include: { funcionario: true } },
+        venda: true,
+      },
+    });
+  }
+
   async updateStatus(id: number, status: string) {
     const statusKey = this.normalizeKey(status);
 
@@ -232,5 +243,66 @@ export class AgendaService {
 
   async remove(id: number) {
     return this.prisma.agenda_global.delete({ where: { id } });
+  }
+
+  async upsertByVendaData(
+    vendaId: number,
+    payload: {
+      inicio_em?: string;
+      fim_em?: string;
+      titulo?: string;
+      categoria?: string;
+      status?: string;
+    },
+  ) {
+    const venda = await this.prisma.vendas.findUnique({
+      where: { id: vendaId },
+      select: { id: true, cliente_id: true, status: true },
+    });
+    if (!venda) {
+      throw new BadRequestException('Venda nao encontrada');
+    }
+
+    const inicio = payload?.inicio_em ? new Date(payload.inicio_em) : new Date();
+    if (Number.isNaN(inicio.getTime())) {
+      throw new BadRequestException('inicio_em invalido');
+    }
+    const fim = payload?.fim_em
+      ? new Date(payload.fim_em)
+      : new Date(inicio.getTime() + 60 * 60 * 1000);
+    if (Number.isNaN(fim.getTime())) {
+      throw new BadRequestException('fim_em invalido');
+    }
+    if (fim <= inicio) {
+      throw new BadRequestException('fim_em deve ser maior que inicio_em');
+    }
+
+    const categoria = this.normalizeKey(payload?.categoria) || 'MEDIDA_FINA';
+    const status = this.normalizeKey(payload?.status) || 'PENDENTE';
+    const titulo =
+      String(payload?.titulo || '').trim() ||
+      `Venda #${venda.id} - ${String(venda.status || '').toLowerCase().replace(/_/g, ' ')}`;
+
+    return this.prisma.agenda_global.upsert({
+      where: { venda_id: venda.id },
+      create: {
+        venda_id: venda.id,
+        cliente_id: venda.cliente_id,
+        titulo,
+        categoria,
+        origem_fluxo: 'CLIENTE',
+        inicio_em: inicio,
+        fim_em: fim,
+        status,
+      } as any,
+      update: {
+        titulo,
+        categoria,
+        origem_fluxo: 'CLIENTE',
+        inicio_em: inicio,
+        fim_em: fim,
+        status,
+      } as any,
+    });
   }
 }

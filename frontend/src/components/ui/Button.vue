@@ -2,7 +2,7 @@
   <button
     :type="type"
     :disabled="loading || disabled"
-    class="relative inline-flex items-center justify-center gap-2 font-medium transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed outline-none rounded-md border focus-visible:ring-2 focus-visible:ring-brand-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-page"
+    class="relative inline-flex items-center justify-center gap-2 font-semibold transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed outline-none rounded-md border focus-visible:ring-2 focus-visible:ring-brand-primary/20 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-page"
     :class="[
       variantClasses[variant],
       sizeClasses[size],
@@ -47,14 +47,12 @@ const variantClasses = {
     text-white border border-transparent
   `,
   secondary: `
-    bg-bg-card text-slate-700 border border-border-ui
-    hover:bg-slate-50 hover:border-slate-300
-    dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:border-slate-600
+    bg-bg-card text-text-main border border-border-ui
+    hover:bg-bg-page hover:border-slate-300 dark:hover:border-slate-600
   `,
   outline: `
     bg-transparent border border-brand-primary/70 text-brand-primary
     hover:bg-brand-primary/10 hover:border-brand-primary
-    dark:border-brand-primary/70 dark:text-brand-primary/90 dark:hover:bg-brand-primary/10
   `,
   danger: `
     bg-red-500 text-white border border-red-500
@@ -65,9 +63,8 @@ const variantClasses = {
     hover:bg-emerald-600 hover:border-emerald-600
   `,
   ghost: `
-    bg-transparent text-slate-600 border border-transparent
-    hover:bg-slate-100
-    dark:text-slate-400 dark:hover:bg-slate-800
+    bg-transparent text-text-muted border border-transparent
+    hover:bg-bg-page hover:text-text-main
   `
 }
 

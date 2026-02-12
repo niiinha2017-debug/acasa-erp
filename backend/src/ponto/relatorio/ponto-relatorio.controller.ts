@@ -145,4 +145,22 @@ export class PontoRelatorioController {
       ano: a,
     });
   }
+
+  @Post('fechamento')
+  @Permissoes('ponto_relatorio.ver')
+  @HttpCode(HttpStatus.OK)
+  async fecharFolha(
+    @Body()
+    body: {
+      data_ini: string;
+      data_fim: string;
+      apenas_ativos?: boolean;
+    },
+  ) {
+    return this.service.fecharFolhaPeriodo({
+      data_ini: String(body?.data_ini || ''),
+      data_fim: String(body?.data_fim || ''),
+      apenas_ativos: body?.apenas_ativos !== false,
+    });
+  }
 }

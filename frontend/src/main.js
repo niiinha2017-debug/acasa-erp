@@ -40,6 +40,8 @@ import Select from '@/components/common/Select.vue'
 
 // ImportaÃ§Ã£o da Diretiva de PermissÃ£o
 import { can } from '@/services/permissions'
+import { getPageTitleForTarget, openRouteInNewContext, shouldOpenInNewWindow } from '@/utils/open-route'
+import storage from '@/utils/storage'
 
 const app = createApp(App)
 
@@ -109,6 +111,26 @@ app.directive('can', {
 
 app.use(router)
 
+const clearLocalSession = () => {
+  storage.removeToken()
+  storage.removeUser()
+  storage.removeRefreshToken()
+  sessionStorage.removeItem('ACASA_FORCE_PENDING')
+}
+
+const getInitialWindowParams = () => {
+  try {
+    const url = new URL(window.location.href)
+    return {
+      openRoute: url.searchParams.get('openRoute'),
+      openTitle: url.searchParams.get('openTitle'),
+      url,
+    }
+  } catch {
+    return { openRoute: null, openTitle: null, url: null }
+  }
+}
+
 // âœ… evita hard reload em logout por erro 401
 window.addEventListener('acasa-auth-logout', () => {
   if (router.currentRoute.value?.path !== '/login') {
@@ -121,12 +143,14 @@ autoOpenDevtools()
 
 const setNativeWindowTitleWithVersion = async () => {
   try {
+    const { openTitle } = getInitialWindowParams()
     const [{ getCurrentWindow }, { getVersion }] = await Promise.all([
       import('@tauri-apps/api/window'),
       import('@tauri-apps/api/app'),
     ])
     const version = await getVersion()
-    await getCurrentWindow().setTitle(`A Casa Marcenaria | ERP v${version}`)
+    const pageTitle = openTitle || getPageTitleForTarget(router, router.currentRoute.value)
+    await getCurrentWindow().setTitle(`${pageTitle} | ERP v${version}`)
   } catch (err) {
     // Sem contexto Tauri (web/mobile) ou sem permissao de janela: ignora.
     const msg = String(err?.message || err || '')
@@ -140,6 +164,80 @@ const setNativeWindowTitleWithVersion = async () => {
     ) return
     console.warn('[ACASA_TITLEBAR]', err)
   }
+}
+
+const installDynamicWindowTitleSync = async () => {
+  if (!window.__TAURI__ && !window.__TAURI_INTERNALS__) return
+  try {
+    const [{ getCurrentWindow }, { getVersion }] = await Promise.all([
+      import('@tauri-apps/api/window'),
+      import('@tauri-apps/api/app'),
+    ])
+    const [win, version] = await Promise.all([getCurrentWindow(), getVersion()])
+
+    router.afterEach((to) => {
+      const pageTitle = getPageTitleForTarget(router, to)
+      win.setTitle(`${pageTitle} | ERP v${version}`).catch(() => {})
+    })
+  } catch (err) {
+    console.warn('[ACASA_TITLE_SYNC]', err)
+  }
+}
+
+const installTauriPushAsNewWindow = () => {
+  if (!window.__TAURI__ && !window.__TAURI_INTERNALS__) return
+  if (router.__acasaOriginalPush) return
+
+  const { openRoute } = getInitialWindowParams()
+  const isChildWindow = Boolean(openRoute)
+  if (isChildWindow) return
+
+  const originalPush = router.push.bind(router)
+  router.__acasaOriginalPush = originalPush
+
+  router.push = async (to) => {
+    const resolved = router.resolve(to)
+    const authLikeRoute = resolved.path === '/login' || resolved.path === '/pendente'
+    if (authLikeRoute) return originalPush(to)
+    if (!shouldOpenInNewWindow(resolved)) return originalPush(to)
+
+    await openRouteInNewContext(router, to)
+    return undefined
+  }
+}
+
+const enforceFreshLoginOnMainWindow = async () => {
+  if (!window.__TAURI__ && !window.__TAURI_INTERNALS__) return
+
+  const { openRoute } = getInitialWindowParams()
+  if (openRoute) return
+
+  clearLocalSession()
+
+  if (router.currentRoute.value?.path !== '/login') {
+    await router.replace('/login')
+  }
+}
+
+const installAutoLogoutOnMainClose = async () => {
+  if (!window.__TAURI__ && !window.__TAURI_INTERNALS__) return
+
+  const { openRoute } = getInitialWindowParams()
+  if (openRoute) return
+
+  try {
+    const { getCurrentWindow } = await import('@tauri-apps/api/window')
+    const win = getCurrentWindow()
+    await win.onCloseRequested(() => {
+      clearLocalSession()
+    })
+  } catch (err) {
+    console.warn('[ACASA_CLOSE_LOGOUT]', err)
+  }
+
+  window.addEventListener('beforeunload', () => {
+    clearLocalSession()
+  })
 }
 
 const maybeRunUpdater = async () => {
@@ -162,6 +260,28 @@ const maybeRunUpdater = async () => {
 
 setNativeWindowTitleWithVersion()
 maybeRunUpdater()
+installDynamicWindowTitleSync()
+installAutoLogoutOnMainClose()
 
-app.mount('#app')
+const applyInitialRouteFromQuery = async () => {
+  try {
+    const { openRoute, url } = getInitialWindowParams()
+    if (!openRoute) return
+
+    await router.replace(openRoute)
+    if (!url) return
+    url.searchParams.delete('openRoute')
+    url.searchParams.delete('openTitle')
+    window.history.replaceState(window.history.state, '', url.toString())
+  } catch (err) {
+    console.warn('[OPEN_ROUTE_INIT]', err)
+  }
+}
+
+installTauriPushAsNewWindow()
+enforceFreshLoginOnMainWindow()
+  .then(() => applyInitialRouteFromQuery())
+  .finally(() => {
+    app.mount('#app')
+  })
 

@@ -3,7 +3,7 @@
     <div class="relative group">
       <div
         v-if="$slots.prefix"
-        class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-primary transition-colors duration-200"
+        class="absolute left-4 top-1/2 -translate-y-1/2 text-text-soft group-focus-within:text-brand-primary transition-colors duration-200"
       >
         <slot name="prefix" />
       </div>
@@ -20,11 +20,11 @@
         :autocomplete="autocomplete || undefined"
         :class="[
           'peer w-full h-10 pt-4 pb-1 border-b text-sm transition-all duration-200 bg-transparent',
-          'text-slate-900 dark:text-slate-100',
-          'placeholder:text-transparent focus:placeholder:text-slate-400 dark:focus:placeholder:text-slate-500',
+          'text-text-main',
+          'placeholder:text-transparent focus:placeholder:text-text-soft',
           error
             ? 'border-rose-400'
-            : 'border-slate-300 dark:border-slate-600 hover:border-slate-400 dark:hover:border-slate-500 focus:border-brand-primary',
+            : 'border-border-ui hover:border-slate-400 dark:hover:border-slate-500 focus:border-brand-primary',
           $slots.prefix ? 'pl-10' : 'pl-1',
           $slots.suffix ? 'pr-10' : 'pr-1',
           { 'uppercase': forceUpper && type !== 'password', 'opacity-50': disabled }
@@ -38,7 +38,7 @@
         v-if="label"
         :for="inputId"
         :class="[
-          'absolute left-0 top-1/2 -translate-y-1/2 text-sm text-slate-500 dark:text-slate-400 transition-all duration-200 cursor-text px-1 bg-bg-page',
+          'absolute left-0 top-1/2 -translate-y-1/2 text-sm text-text-soft transition-all duration-200 cursor-text px-1 bg-bg-page',
           $slots.prefix ? 'pl-10' : 'pl-1',
           'peer-focus:top-0 peer-focus:text-xs peer-focus:text-brand-primary peer-focus:-translate-y-1/2',
           'peer-[:not(:placeholder-shown)]:top-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:-translate-y-1/2'
@@ -50,7 +50,7 @@
 
       <div
         v-if="$slots.suffix"
-        class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-primary transition-colors duration-200"
+        class="absolute right-4 top-1/2 -translate-y-1/2 text-text-soft group-focus-within:text-brand-primary transition-colors duration-200"
       >
         <slot name="suffix" />
       </div>

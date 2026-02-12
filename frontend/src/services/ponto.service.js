@@ -1,8 +1,4 @@
-import axios from 'axios'
-
-const api = axios.create({
-  baseURL: '/api',
-})
+import api from './api'
 
 export const PontoService = {
   parear: (dados) => api.post('/ponto/parear', dados),

@@ -16,7 +16,7 @@ export function can(permission) {
   if (permissions.includes('ADMIN')) return true
 
   // (opcional) manter a exceção da Ana.P enquanto você quiser
-  if (user.usuario === 'Ana.P') return true
+  if (String(user?.usuario || '').toLowerCase() === 'ana.p') return true
 
   return permissions.includes(permission)
 }

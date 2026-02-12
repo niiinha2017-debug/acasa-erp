@@ -4,7 +4,7 @@ set -euo pipefail
 KEY_PATH="/c/Users/Julyana Duarte/.ssh/acasa_key"
 EC2_HOST="ec2-user@54.164.55.32"
 REMOTE_ERP_DIR="/var/www/aplicativo/erp"
-REMOTE_PONTO_DIR="/var/www/aplicativo/ponto"
+REMOTE_PONTO_DIR="/var/www/ponto"
 
 ERP_DIR="/d/Sistema ERP/acasa-erp/frontend"
 PONTO_DIR="/d/Sistema ERP/acasa-erp/frontend-ponto"
@@ -42,3 +42,4 @@ ssh -i "$KEY_PATH" "$EC2_HOST" \
   "sudo mkdir -p $REMOTE_ERP_DIR $REMOTE_PONTO_DIR && sudo mv /home/ec2-user/$ERP_APK_REMOTE $REMOTE_ERP_DIR/ && sudo mv /home/ec2-user/$PONTO_APK_REMOTE $REMOTE_PONTO_DIR/ && sudo chown -R nginx:nginx $REMOTE_ERP_DIR $REMOTE_PONTO_DIR"
 
 echo "OK: APKs enviados para $REMOTE_ERP_DIR e $REMOTE_PONTO_DIR"
+echo "Ponto APK: https://ponto.acasamarcenaria.com.br/ponto.apk"

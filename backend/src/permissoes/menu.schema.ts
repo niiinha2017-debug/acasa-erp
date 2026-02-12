@@ -18,9 +18,10 @@ export const MENU_SECTIONS: MenuSection[] = [
     label: 'Operacional',
     items: [
       { label: 'Vendas', to: '/vendas', icon: 'pi-cart-plus', perm: 'vendas.ver' },
-      { label: 'Vendas Trello', to: '/vendas/kanban', icon: 'pi-th-large', perm: 'vendas.ver' },
+      { label: 'Fluxo de Vendas', to: '/vendas/kanban', icon: 'pi-th-large', perm: 'vendas.ver' },
+      { label: 'Processo de Orcamento', to: '/orcamentos/processo', icon: 'pi-calculator', perm: 'orcamentos.ver' },
       { label: 'Plano de Corte', to: '/plano-corte', icon: 'pi-sitemap', perm: 'plano_corte.ver' },
-      { label: 'Plano Trello', to: '/plano-corte/kanban', icon: 'pi-th-large', perm: 'plano_corte.ver' },
+      { label: 'Fluxo do Plano de Corte', to: '/plano-corte/kanban', icon: 'pi-th-large', perm: 'plano_corte.ver' },
       { label: 'Agenda Geral', to: '/agendamentos?visao=geral', icon: 'pi-calendar', perm: 'agendamentos.ver' },
       { divider: true, label: '', to: '' },
       { label: 'Orcamentos', to: '/orcamentos', icon: 'pi-file-edit', perm: 'orcamentos.ver' },

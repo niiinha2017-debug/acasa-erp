@@ -12,13 +12,17 @@ export class MailService {
   private transporter: nodemailer.Transporter;
 
   constructor(private readonly config: ConfigService) {
+    const rawPass = this.config.get<string>('MAIL_PASS') ?? '';
+    // Gmail app password is often copied with spaces every 4 chars.
+    const normalizedPass = rawPass.replace(/\s+/g, '');
+
     this.transporter = nodemailer.createTransport({
       host: this.config.get<string>('MAIL_HOST'),
       port: Number(this.config.get<string>('MAIL_PORT')),
       secure: this.config.get<string>('MAIL_SECURE') === 'true',
       auth: {
         user: this.config.get<string>('MAIL_USER'),
-        pass: this.config.get<string>('MAIL_PASS'),
+        pass: normalizedPass,
       },
       requireTLS: this.config.get<string>('MAIL_SECURE') !== 'true',
       connectionTimeout: 10_000,

@@ -65,11 +65,23 @@ export class AgendaController {
     return this.agendaService.findByFuncionario(+id);
   }
 
+  @Get('venda/:vendaId')
+  @Permissoes('vendas.ver', 'agendamentos.ver')
+  async findByVenda(@Param('vendaId') vendaId: string) {
+    return this.agendaService.findByVenda(+vendaId);
+  }
+
   // 4. Atualizar Status (Para o marceneiro marcar como "CONCLUIDO" / pipeline plano corte "FINALIZADO")
   @Patch(':id/status')
   @Permissoes('agendamentos.editar')
   async updateStatus(@Param('id') id: string, @Body('status') status: string) {
     return this.agendaService.updateStatus(+id, status);
+  }
+
+  @Patch('venda/:vendaId/data')
+  @Permissoes('vendas.editar', 'agendamentos.editar')
+  async upsertByVendaData(@Param('vendaId') vendaId: string, @Body() body: any) {
+    return this.agendaService.upsertByVendaData(+vendaId, body);
   }
 
   // 5. Deletar agendamento
