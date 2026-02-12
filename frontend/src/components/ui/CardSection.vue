@@ -1,14 +1,14 @@
 <template>
   <div 
-    class="w-full bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden transition-all duration-300 shadow-sm"
+    class="w-full bg-bg-card border border-border-ui rounded-2xl overflow-hidden transition-all duration-300 shadow-sm"
   >
-    <div v-if="title || $slots.header" class="px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+    <div v-if="title || $slots.header" class="px-6 py-4 border-b border-border-ui">
       <div class="flex items-center justify-between gap-4">
         <div class="flex flex-col gap-0.5">
-          <h3 v-if="title" class="text-base font-semibold text-slate-900 dark:text-slate-50">
+          <h3 v-if="title" class="text-base font-semibold text-text-main">
             {{ title }}
           </h3>
-          <p v-if="description" class="text-sm font-normal text-slate-500 dark:text-slate-400">
+          <p v-if="description" class="text-sm font-normal text-text-soft">
             {{ description }}
           </p>
         </div>
@@ -22,7 +22,7 @@
       <slot />
     </div>
 
-    <div v-if="$slots.footer" class="px-6 py-4 bg-slate-50/50 dark:bg-slate-950/20 border-t border-slate-50 dark:border-slate-800">
+    <div v-if="$slots.footer" class="px-6 py-4 bg-slate-50/60 dark:bg-slate-900/50 border-t border-border-ui">
       <slot name="footer" />
     </div>
   </div>

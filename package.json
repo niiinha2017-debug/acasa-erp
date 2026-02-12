@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "version:desktop:bump": "node scripts/bump-desktop-version.mjs",
+    "version:desktop:sync": "node scripts/bump-desktop-version.mjs --sync"
+  },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
     "@types/jest": "^30.0.0",

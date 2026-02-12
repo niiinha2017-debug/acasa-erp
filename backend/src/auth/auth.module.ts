@@ -21,7 +21,10 @@ import { MailModule } from '../mail/mail.module';
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET'),
+        secret:
+          config.get<string>('JWT_SECRET') ||
+          process.env.JWT_SECRET ||
+          'acasa_dev_secret',
         signOptions: { expiresIn: '8h' },
       }),
     }),

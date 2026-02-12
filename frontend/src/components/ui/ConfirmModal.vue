@@ -5,18 +5,18 @@
       class="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
       @click.self="confirm.cancel()"
     >
-      <div class="bg-white dark:bg-slate-900 rounded-2xl p-8 w-full max-w-[360px] shadow-2xl border border-slate-100 dark:border-slate-800 scale-in overflow-hidden">
+      <div class="bg-bg-card rounded-2xl p-8 w-full max-w-[360px] shadow-2xl border border-border-ui scale-in overflow-hidden">
         
         <div class="flex flex-col items-center text-center">
           <div class="w-16 h-16 bg-red-50 dark:bg-red-950/30 text-red-500 rounded-full flex items-center justify-center mb-5">
             <i class="pi pi-exclamation-circle text-2xl"></i>
           </div>
           
-          <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">
+          <h3 class="text-lg font-semibold text-text-main mb-2">
             {{ confirmState.title }}
           </h3>
           
-          <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
+          <p class="text-sm text-text-soft leading-relaxed mb-6">
             {{ confirmState.message }}
           </p>
         </div>
@@ -32,7 +32,7 @@
           
           <Button 
             variant="secondary" 
-            class="w-full h-10 !rounded-lg text-slate-700 hover:text-slate-900 dark:hover:text-slate-200" 
+            class="w-full h-10 !rounded-lg" 
             @click="confirm.cancel()"
           >
             Cancelar

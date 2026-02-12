@@ -5,7 +5,7 @@
     :class="[colSpan, { 'z-[100]': open }]"
     @click.stop
   >
-    <label v-if="label" class="text-sm font-medium text-slate-700 dark:text-slate-300 ml-0.5 mb-0.5">
+    <label v-if="label" class="text-xs font-semibold tracking-wide text-text-soft ml-0.5 mb-0.5">
       {{ label }} <span v-if="required" class="text-rose-500 ml-0.5">*</span>
     </label>
 
@@ -30,8 +30,8 @@
         :readonly="readonly"
         :disabled="disabled"
         autocomplete="off"
-        class="w-full h-10 pl-10 pr-16 transition-all duration-200 outline-none border rounded-lg text-sm
-               bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700
+        class="w-full h-10 pl-10 pr-16 transition-all duration-200 outline-none border rounded-xl text-sm
+               bg-bg-card text-text-main border-border-ui
                focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 hover:border-slate-300 dark:hover:border-slate-600
                placeholder:text-slate-400 placeholder:font-normal"
         @focus="onFocus"
@@ -72,7 +72,7 @@
             v-if="open"
             ref="dropdownRef"
             :style="floatingStyles"
-            class="fixed z-[10000] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800
+            class="fixed z-[10000] bg-bg-card border border-border-ui
                    rounded-lg shadow-xl shadow-slate-200/50 dark:shadow-black/40 overflow-hidden pointer-events-auto"
             @pointerdown.prevent
           >

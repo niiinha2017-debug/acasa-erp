@@ -36,15 +36,15 @@ import { AgendaModule } from './agenda/agenda.module';
         process.env.NODE_ENV === 'production'
           ? [
               join(__dirname, '..', '.env.production'),
-              join(process.cwd(), '.env.production'),
+              join(process.cwd(), 'backend', '.env.production'),
               join(__dirname, '..', '.env'),
-              join(process.cwd(), '.env'),
+              join(process.cwd(), 'backend', '.env'),
             ]
           : [
               join(__dirname, '..', '.env'),
-              join(process.cwd(), '.env'),
+              join(process.cwd(), 'backend', '.env'),
               join(__dirname, '..', '.env.production'),
-              join(process.cwd(), '.env.production'),
+              join(process.cwd(), 'backend', '.env.production'),
             ],
     }),
 

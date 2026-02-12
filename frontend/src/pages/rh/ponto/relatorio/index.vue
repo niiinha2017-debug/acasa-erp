@@ -1,31 +1,37 @@
-<template>
+﻿<template>
   <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-in fade-in duration-500">
+    <PageHeader
+      title="Relatório de Ponto"
+      subtitle="Horas e custo com base no cadastro do funcionário"
+      icon="pi pi-clock"
+      :showBack="false"
+    />
     
     <div v-if="rows.length" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
-        <div class="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-lg">
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-brand-primary text-white flex items-center justify-center shadow-lg">
           <i class="pi pi-calendar text-xl"></i>
         </div>
         <div>
-          <p class="text-[10px] font-black uppercase text-slate-400">Meta Diária</p>
+          <p class="text-[10px] font-black uppercase text-slate-400">Meta Diaria</p>
           <p class="text-2xl font-black text-slate-800 tracking-tighter">{{ resumo.metaDia.toFixed(2) }}h</p>
         </div>
       </div>
 
-      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
-        <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner font-black italic">HH</div>
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner font-black">HH</div>
         <div>
           <p class="text-[10px] font-black uppercase text-slate-400">Trabalhado</p>
           <p class="text-2xl font-black text-slate-800 tracking-tighter">{{ resumo.totalHorasHHMM }}</p>
         </div>
       </div>
 
-      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4">
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
         <div :class="resumo.totalSaldo >= 0 ? 'bg-emerald-500' : 'bg-rose-500'" class="w-12 h-12 rounded-2xl text-white flex items-center justify-center shadow-lg transition-colors">
           <i class="pi pi-chart-bar text-xl"></i>
         </div>
         <div>
-          <p class="text-[10px] font-black uppercase text-slate-400">Saldo Período</p>
+          <p class="text-[10px] font-black uppercase text-slate-400">Saldo Periodo</p>
           <p :class="resumo.totalSaldo >= 0 ? 'text-emerald-600' : 'text-rose-600'" class="text-2xl font-black tracking-tighter italic">
             {{ resumo.totalSaldoHHMM }}
           </p>
@@ -33,28 +39,39 @@
       </div>
     </div>
 
-    <div class="bg-white rounded-[2rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+    <div v-if="rows.length" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
+        <span class="text-[11px] font-black uppercase tracking-wider text-slate-500">Custo hora (funcionário)</span>
+        <span class="text-lg font-black text-slate-800">{{ formatCurrency(resumo.custoHora) }}</span>
+      </div>
+      <div class="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
+        <span class="text-[11px] font-black uppercase tracking-wider text-slate-500">Custo total no período</span>
+        <span class="text-lg font-black text-slate-800">{{ formatCurrency(resumo.custoTotal) }}</span>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       <header class="p-6 bg-slate-50/50 border-b border-slate-100 grid grid-cols-12 gap-4 items-end">
         <div class="col-span-12 md:col-span-4">
-          <label class="text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 block italic">Funcionário</label>
-          <select v-model="filtros.funcionario_id" class="w-full h-11 bg-white border border-slate-200 rounded-2xl px-4 text-xs font-bold uppercase outline-none focus:ring-2 focus:ring-slate-900 transition-all">
+          <label class="text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 block italic">Funcionario</label>
+          <select v-model="filtros.funcionario_id" class="w-full h-11 bg-white border border-slate-200 rounded-2xl px-4 text-xs font-bold uppercase outline-none focus:ring-2 focus:ring-brand-primary/40 transition-all">
             <option value="">Selecione...</option>
             <option v-for="o in funcionarioOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
           </select>
         </div>
         <div class="col-span-5 md:col-span-3">
-          <label class="text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 block italic">Início</label>
-          <input v-model="filtros.data_ini" type="date" class="w-full h-11 bg-white border border-slate-200 rounded-2xl px-4 text-xs font-bold outline-none focus:ring-2 focus:ring-slate-900" />
+          <label class="text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 block italic">Inicio</label>
+          <input v-model="filtros.data_ini" type="date" class="w-full h-11 bg-white border border-slate-200 rounded-2xl px-4 text-xs font-bold outline-none focus:ring-2 focus:ring-brand-primary/40" />
         </div>
         <div class="col-span-5 md:col-span-3">
           <label class="text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 block italic">Fim</label>
-          <input v-model="filtros.data_fim" type="date" class="w-full h-11 bg-white border border-slate-200 rounded-2xl px-4 text-xs font-bold outline-none focus:ring-2 focus:ring-slate-900" />
+          <input v-model="filtros.data_fim" type="date" class="w-full h-11 bg-white border border-slate-200 rounded-2xl px-4 text-xs font-bold outline-none focus:ring-2 focus:ring-brand-primary/40" />
         </div>
 <div class="col-span-12 md:col-span-2 grid grid-cols-2 gap-2">
   <button
     @click="buscar"
     :disabled="loadingTabela"
-    class="w-full h-11 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase italic tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+    class="w-full h-11 bg-brand-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-wide hover:opacity-90 transition-all flex items-center justify-center gap-2"
   >
     <i class="pi pi-search" v-if="!loadingTabela"></i>
     <i class="pi pi-spin pi-spinner" v-else></i>
@@ -64,7 +81,7 @@
   <button
     @click="gerarRelatorioMensal"
     :disabled="loadingPdf || !filtros.funcionario_id || !filtros.data_ini"
-    class="w-full h-11 bg-white border border-slate-200 text-slate-700 rounded-2xl font-black text-[10px] uppercase italic tracking-widest hover:bg-slate-900 hover:text-white transition-all flex items-center justify-center gap-2"
+    class="w-full h-11 bg-white border border-slate-200 text-slate-700 rounded-2xl font-black text-[10px] uppercase tracking-wide hover:bg-brand-primary hover:text-white hover:border-brand-primary transition-all flex items-center justify-center gap-2"
   >
     <i class="pi pi-file-pdf" v-if="!loadingPdf"></i>
     <i class="pi pi-spin pi-spinner" v-else></i>
@@ -77,20 +94,20 @@
       <div class="overflow-x-auto p-2">
         <table class="w-full border-separate border-spacing-y-2">
           <thead>
-            <tr class="text-[10px] font-black text-slate-400 uppercase italic tracking-widest">
+            <tr class="text-[10px] font-black text-slate-400 uppercase tracking-wide">
               <th class="px-6 py-2 text-left">Data</th>
               <th class="px-2 py-2">Ent 1</th>
               <th class="px-2 py-2">Sai 1</th>
               <th class="px-2 py-2">Ent 2</th>
               <th class="px-2 py-2">Sai 2</th>
-              <th class="px-6 py-2 text-right">Ações</th>
+              <th class="px-6 py-2 text-right">Acoes</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="row in rowsAgrupadas" :key="row.data" class="group bg-white hover:bg-slate-50 transition-all shadow-sm">
               <td class="px-6 py-4 rounded-l-3xl border-y border-l border-slate-50">
                 <div class="flex flex-col">
-                  <span class="text-sm font-black text-slate-800 uppercase italic leading-none">{{ fmtData(row.data) }}</span>
+                  <span class="text-sm font-black text-slate-800 uppercase leading-none">{{ fmtData(row.data) }}</span>
                   <span class="text-[9px] font-bold text-slate-400 uppercase mt-1 italic">{{ getDiaSemana(row.data) }}</span>
                 </div>
               </td>
@@ -104,14 +121,14 @@
                     <button @click="abrirModalEditar(row[col])" class="text-slate-300 hover:text-blue-500 p-1"><i class="pi pi-pencil text-[9px]"></i></button>
                     <button @click="confirmarExcluirDireto(row[col].id)" class="text-slate-300 hover:text-rose-500 p-1"><i class="pi pi-trash text-[9px]"></i></button>
                   </div>
-                  <button v-else @click="abrirModalNovoNaPosicao(row, col)" class="opacity-0 group-hover/btn:opacity-100 text-slate-200 hover:text-slate-900 transition-opacity p-1">
+                  <button v-else @click="abrirModalNovoNaPosicao(row, col)" class="opacity-0 group-hover/btn:opacity-100 text-slate-200 hover:text-brand-primary transition-opacity p-1">
                     <i class="pi pi-plus text-[9px]"></i>
                   </button>
                 </div>
               </td>
 
               <td class="px-6 py-4 rounded-r-3xl border-y border-r border-slate-50 text-right">
-                 <button @click="abrirModalJustificar(row)" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-500 text-[9px] font-black uppercase hover:bg-slate-900 hover:text-white transition-all">Justificar</button>
+                 <button @click="abrirModalJustificar(row)" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-500 text-[9px] font-black uppercase hover:bg-brand-primary hover:text-white hover:border-brand-primary transition-all">Justificar</button>
               </td>
             </tr>
           </tbody>
@@ -122,29 +139,29 @@
     <div v-if="modalEditar.open" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
       <div class="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95">
         <div class="p-8 border-b flex justify-between items-center bg-slate-50/50">
-          <h3 class="font-black text-slate-800 uppercase italic">{{ modalEditar.id ? 'Ajustar Horário' : 'Novo Horário' }}</h3>
+          <h3 class="font-black text-slate-800 uppercase">{{ modalEditar.id ? 'Ajustar Horario' : 'Novo Horario' }}</h3>
           <button @click="modalEditar.open = false" class="text-slate-400 hover:text-rose-500"><i class="pi pi-times"></i></button>
         </div>
         <div class="p-8 space-y-4">
           <div class="space-y-1">
-            <label class="text-[10px] font-black text-slate-400 uppercase italic">Data e Hora</label>
-            <input type="datetime-local" v-model="modalEditar.form.data_hora_local" class="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold text-slate-700 outline-none focus:ring-2 focus:ring-slate-900" />
+            <label class="text-[10px] font-black text-slate-400 uppercase">Data e Hora</label>
+            <input type="datetime-local" v-model="modalEditar.form.data_hora_local" class="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-primary/40" />
           </div>
           <div class="space-y-1">
-            <label class="text-[10px] font-black text-slate-400 uppercase italic">Tipo</label>
+            <label class="text-[10px] font-black text-slate-400 uppercase">Tipo</label>
             <select v-model="modalEditar.form.tipo" class="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold text-slate-700 outline-none">
               <option value="ENTRADA">ENTRADA</option>
-              <option value="SAIDA">SAÍDA</option>
+              <option value="SAIDA">SAIDA</option>
             </select>
           </div>
           <div class="space-y-1">
-            <label class="text-[10px] font-black text-slate-400 uppercase italic">Observação</label>
+            <label class="text-[10px] font-black text-slate-400 uppercase">Observacao</label>
             <input v-model="modalEditar.form.observacao" class="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold text-slate-700 outline-none" placeholder="Motivo do ajuste..." />
           </div>
         </div>
         <div class="p-6 bg-slate-50 flex gap-3">
           <button @click="modalEditar.open = false" class="flex-1 h-12 rounded-2xl font-black text-[10px] uppercase bg-white border border-slate-200 text-slate-400">Cancelar</button>
-          <button @click="confirmarSalvarEdicao" :disabled="modalEditar.saving" class="flex-1 h-12 rounded-2xl font-black text-[10px] uppercase bg-slate-900 text-white shadow-lg shadow-slate-200">
+          <button @click="confirmarSalvarEdicao" :disabled="modalEditar.saving" class="flex-1 h-12 rounded-2xl font-black text-[10px] uppercase bg-brand-primary text-white shadow-lg shadow-brand-primary/20">
             {{ modalEditar.saving ? 'Gravando...' : 'Salvar' }}
           </button>
         </div>
@@ -155,32 +172,32 @@
       <div class="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         <div class="p-8 border-b flex justify-between items-center bg-slate-50/50">
           <div>
-            <h3 class="font-black text-slate-800 uppercase italic text-xl leading-none">Justificativa</h3>
-            <p class="text-[10px] font-bold text-slate-400 uppercase mt-2 tracking-widest italic">Data: {{ fmtData(modalJust.dia) }}</p>
+            <h3 class="font-black text-slate-800 uppercase text-xl leading-none">Justificativa</h3>
+            <p class="text-[10px] font-bold text-slate-400 uppercase mt-2 tracking-wide italic">Data: {{ fmtData(modalJust.dia) }}</p>
           </div>
           <button @click="modalJust.open = false" class="text-slate-400 hover:text-rose-500"><i class="pi pi-times"></i></button>
         </div>
         <div class="p-8 space-y-6 overflow-y-auto">
           <div class="grid grid-cols-2 gap-4">
             <div class="space-y-1">
-              <label class="text-[10px] font-black text-slate-400 uppercase italic">Tipo (Ex: Atestado)</label>
+              <label class="text-[10px] font-black text-slate-400 uppercase">Tipo (Ex: Atestado)</label>
               <input v-model="modalJust.form.tipo" class="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold outline-none" />
             </div>
             <div class="space-y-1">
-              <label class="text-[10px] font-black text-slate-400 uppercase italic">Data</label>
+              <label class="text-[10px] font-black text-slate-400 uppercase">Data</label>
               <input type="date" v-model="modalJust.form.data" class="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold outline-none" />
             </div>
           </div>
           <div class="space-y-1">
-            <label class="text-[10px] font-black text-slate-400 uppercase italic">Descrição</label>
+            <label class="text-[10px] font-black text-slate-400 uppercase">Descricao</label>
             <textarea v-model="modalJust.form.descricao" class="w-full h-24 bg-slate-50 border border-slate-100 rounded-2xl p-4 font-bold outline-none resize-none"></textarea>
           </div>
           <div class="space-y-1">
-            <label class="text-[10px] font-black text-slate-400 uppercase italic">Anexo</label>
+            <label class="text-[10px] font-black text-slate-400 uppercase">Anexo</label>
             <input ref="justificativaFileRef" type="file" class="hidden" accept="image/*,.pdf,.doc,.docx" @change="onJustificativaFilePick" />
             <div
               @click="justificativaFileRef?.click()"
-              class="border-2 border-dashed border-slate-200 rounded-2xl p-4 transition-all cursor-pointer hover:border-slate-900 hover:bg-slate-50 flex items-center justify-between gap-3"
+              class="border-2 border-dashed border-slate-200 rounded-2xl p-4 transition-all cursor-pointer hover:border-brand-primary hover:bg-slate-50 flex items-center justify-between gap-3"
             >
               <div class="flex items-center gap-3 min-w-0">
                 <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 shrink-0">
@@ -204,7 +221,7 @@
         </div>
         <div class="p-6 bg-slate-50 border-t flex gap-3">
           <button @click="modalJust.open = false" class="flex-1 h-12 rounded-2xl font-black text-[10px] uppercase bg-white border border-slate-200 text-slate-400">Fechar</button>
-          <button @click="confirmarSalvarJustificativa" :disabled="modalJust.saving" class="flex-1 h-12 rounded-2xl font-black text-[10px] uppercase bg-slate-900 text-white shadow-lg">Lançar Justificativa</button>
+          <button @click="confirmarSalvarJustificativa" :disabled="modalJust.saving" class="flex-1 h-12 rounded-2xl font-black text-[10px] uppercase bg-brand-primary text-white shadow-lg shadow-brand-primary/20">Lancar Justificativa</button>
         </div>
       </div>
     </div>
@@ -238,7 +255,7 @@ const router = useRouter()
 const loadingPdf = ref(false)
 
 async function gerarRelatorioMensal() {
-  if (!filtros.funcionario_id) return notify.warn('Selecione um funcionário')
+  if (!filtros.funcionario_id) return notify.warn('Selecione um funcionario')
 
   const { mes, ano } = getMesAnoReferencia()
   const funcionario_id = Number(String(filtros.funcionario_id).replace(/\D/g, ''))
@@ -262,7 +279,7 @@ async function gerarRelatorioMensal() {
 
 const filtros = reactive({ funcionario_id: '', data_ini: '', data_fim: '' })
 
-// ✅ remove domingo dos REGISTROS (pra não contar no resumo)
+//  remove domingo dos REGISTROS (para nao contar no resumo)
 const rowsFiltrados = computed(() => {
   return (rows.value || []).filter((r) => {
     const dia = new Date(r.data_hora).getDay()
@@ -270,9 +287,41 @@ const rowsFiltrados = computed(() => {
   })
 })
 
-// ✅ agora pode usar rowsFiltrados
+//  agora pode usar rowsFiltrados
 const registrosPorDia = computed(() => groupRegistrosByDia(rowsFiltrados.value))
-const resumo = computed(() => consolidarSaldoPeriodo({ registros: rowsFiltrados.value }))
+const funcionarioSelecionado = computed(() => {
+  const id = Number(filtros.funcionario_id || 0)
+  return funcionarios.value.find((f) => Number(f.id) === id) || null
+})
+
+const metricasFuncionario = computed(() => {
+  const f = funcionarioSelecionado.value || {}
+  const custoHora = Number(f?.custo_hora || 0)
+  const cargaDia = Number(f?.carga_horaria_dia || 0)
+  const cargaSemana = Number(f?.carga_horaria_semana || 0)
+  const diasSemana = 6
+
+  const horasSemana = cargaSemana > 0
+    ? cargaSemana
+    : (cargaDia > 0 ? cargaDia * diasSemana : 48)
+
+  return { custoHora, horasSemana, diasSemana }
+})
+
+const resumo = computed(() => {
+  const m = metricasFuncionario.value
+  const base = consolidarSaldoPeriodo({
+    registros: rowsFiltrados.value,
+    horasSemana: m.horasSemana,
+    diasSemana: m.diasSemana,
+  })
+  const custoTotal = Number((base.totalHoras * m.custoHora).toFixed(2))
+  return {
+    ...base,
+    custoHora: m.custoHora,
+    custoTotal,
+  }
+})
 
 // STATES DOS MODAIS
 const modalEditar = reactive({
@@ -304,7 +353,7 @@ const fmtHoraLocal = (iso) => {
 }
 
 const getDiaSemana = (dataStr) => {
-  const dias = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
+  const dias = ['Domingo', 'Segunda-feira', 'Terca-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sabado']
   const data = new Date(dataStr + 'T12:00:00')
   return dias[data.getDay()]
 }
@@ -324,15 +373,13 @@ const isFimDeSemanaErro = (dataStr, horaStr) => {
   return data.getDay() === 6 && (h > 12 || (h === 12 && m > 0))
 }
 
-const funcionarioSelecionado = computed(() => {
-  const id = Number(filtros.funcionario_id || 0)
-  return funcionarios.value.find((f) => Number(f.id) === id) || null
-})
+const formatCurrency = (v) =>
+  Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 const rowsAgrupadas = computed(() => {
   if (!filtros.data_ini || !filtros.data_fim) return []
 
-  // ✅ lista dias e REMOVE domingo (pra não aparecer na tabela)
+  //  lista dias e REMOVE domingo (para nao aparecer na tabela)
   const dias = listDays(filtros.data_ini, filtros.data_fim).filter((dia) => {
     const d = new Date(dia + 'T12:00:00')
     return d.getDay() !== 0
@@ -370,9 +417,9 @@ const rowsAgrupadas = computed(() => {
     .sort((a, b) => b.data.localeCompare(a.data))
 })
 
-// AÇÕES
+// ACOES
 async function buscar() {
-  if (!filtros.funcionario_id) return notify.warn('Selecione um funcionário')
+  if (!filtros.funcionario_id) return notify.warn('Selecione um funcionario')
 
   try {
     loadingTabela.value = true
@@ -517,14 +564,25 @@ async function confirmarSalvarJustificativa() {
 }
 
 onMounted(async () => {
-  const { data } = await FuncionarioService.listar()
-  const lista = (data?.data || data || []).filter((f) => f.status === 'ATIVO')
-
-  funcionarios.value = lista
-  funcionarioOptions.value = lista.map((f) => ({ label: f.nome, value: f.id }))
-
   const hoje = new Date()
   filtros.data_ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10)
   filtros.data_fim = hoje.toISOString().slice(0, 10)
+
+  try {
+    const { data } = await FuncionarioService.listar()
+    const lista = (data?.data || data || []).filter((f) => f.status === 'ATIVO')
+
+    funcionarios.value = lista
+    funcionarioOptions.value = lista.map((f) => ({ label: f.nome, value: f.id }))
+  } catch (e) {
+    console.log('[PONTO][RELATORIO] erro ao carregar funcionarios:', e?.response?.status, e?.response?.data)
+    funcionarios.value = []
+    funcionarioOptions.value = []
+    notify.error('Nao foi possivel carregar funcionarios agora.')
+  }
 })
 </script>
+
+
+
+

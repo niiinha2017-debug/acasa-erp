@@ -20,11 +20,15 @@ export class AuthService {
     private readonly mailService: MailService,
   ) {}
 
+  private getRefreshSecret() {
+    return process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || 'acasa_dev_secret';
+  }
+
   // 1. REFRESH TOKEN (Necessário para o build)
   async refresh(refreshToken: string) {
     try {
       const decoded = await this.jwt.verifyAsync(refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET,
+        secret: this.getRefreshSecret(),
       });
 
       const userId = Number(decoded?.sub);
@@ -103,7 +107,7 @@ export class AuthService {
     const token = await this.jwt.signAsync(payload, { expiresIn: '15m' });
     const refresh_token = await this.jwt.signAsync(
       { sub: registro.id },
-      { expiresIn: '8h', secret: process.env.JWT_REFRESH_SECRET }, // Mude de 30d para 8h
+      { expiresIn: '8h', secret: this.getRefreshSecret() }, // Mude de 30d para 8h
     );
 
     return {

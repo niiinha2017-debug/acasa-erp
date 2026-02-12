@@ -1,27 +1,24 @@
-<template>
+﻿<template>
   <div
     :class="[
-      boxed ? 'rounded-xl border border-brand-secondary dark:border-slate-700 bg-white dark:bg-slate-900' : '',
+      boxed ? 'rounded-2xl border border-border-ui bg-bg-card' : '',
       'w-full relative overflow-hidden transition-all duration-300'
     ]"
   >
     <div class="w-full overflow-x-auto custom-scrollbar">
       <table class="w-full border-collapse min-w-[640px] md:min-w-[800px]">
         <thead>
-          <tr class="bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800">
-            <!-- Coluna da seta (automática) -->
+          <tr class="bg-slate-50/70 dark:bg-slate-800/40 border-b border-border-ui">
             <th
               v-if="hasExpand"
-              class="px-4 py-3 text-xs font-medium text-slate-400 dark:text-slate-500 whitespace-nowrap"
+              class="px-4 py-3 text-[11px] font-semibold text-text-soft whitespace-nowrap uppercase tracking-wide"
               style="width: 56px; text-align: center"
-            >
-              <!-- vazio -->
-            </th>
+            ></th>
 
             <th
               v-for="col in columns"
               :key="col.key"
-              class="px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap first:pl-6"
+              class="px-6 py-3 text-[11px] font-semibold text-text-soft whitespace-nowrap first:pl-6 uppercase tracking-wide"
               :style="{ width: col.width || 'auto', textAlign: col.align || 'left' }"
             >
               {{ col.label }}
@@ -29,12 +26,12 @@
           </tr>
         </thead>
 
-        <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+        <tbody class="divide-y divide-border-ui/70">
           <tr v-if="loading">
             <td :colspan="colspan" class="px-6 py-20 text-center">
               <div class="flex flex-col items-center gap-3">
                 <div class="w-8 h-8 border-2 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin"></div>
-                <span class="text-xs font-medium text-slate-400">Carregando...</span>
+                <span class="text-xs font-medium text-text-soft">Carregando...</span>
               </div>
             </td>
           </tr>
@@ -43,16 +40,14 @@
             <td :colspan="colspan" class="px-6 py-20 text-center">
               <div class="flex flex-col items-center gap-2 opacity-40">
                 <i class="pi pi-inbox text-3xl text-slate-300"></i>
-                <span class="text-xs font-medium text-slate-500">{{ emptyText }}</span>
+                <span class="text-xs font-medium text-text-soft">{{ emptyText }}</span>
               </div>
             </td>
           </tr>
 
           <template v-else>
             <template v-for="(row, index) in rows" :key="getRowKey(row, index)">
-              <!-- Linha principal -->
-              <tr class="group transition-colors duration-150 hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                <!-- seta -->
+              <tr class="group transition-colors duration-150 hover:bg-slate-50/80 dark:hover:bg-slate-800/45">
                 <td
                   v-if="hasExpand"
                   class="px-4 py-3"
@@ -74,7 +69,7 @@
                 <td
                   v-for="col in columns"
                   :key="col.key"
-                  class="px-6 py-3 text-sm text-slate-600 dark:text-slate-300 transition-colors group-hover:text-slate-900 dark:group-hover:text-white first:pl-6"
+                  class="px-6 py-3 text-sm text-text-main transition-colors first:pl-6"
                   :style="{ textAlign: col.align || 'left' }"
                 >
                   <slot
@@ -84,14 +79,13 @@
                     :index="index"
                   >
                     <span :class="{ 'opacity-30 italic font-normal': !row[col.key] }">
-                      {{ row[col.key] ?? '—' }}
+                      {{ row[col.key] ?? '-' }}
                     </span>
                   </slot>
                 </td>
               </tr>
 
-              <!-- Linha expandida -->
-              <tr v-if="hasExpand && isExpanded(row, index)" class="bg-slate-50/40 dark:bg-slate-800/20">
+              <tr v-if="hasExpand && isExpanded(row, index)" class="bg-slate-50/50 dark:bg-slate-800/30">
                 <td :colspan="colspan" class="px-6 py-5">
                   <slot name="row-expand" :row="row" :index="index" />
                 </td>
@@ -105,7 +99,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, useSlots } from 'vue'
 
 const props = defineProps({
   columns: { type: Array, required: true },
@@ -113,31 +107,17 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
   emptyText: { type: String, default: 'Nenhum registro encontrado.' },
   boxed: { type: Boolean, default: true },
-
-  // ✅ EXPAND
   expandable: { type: Boolean, default: false },
   rowKey: { type: [String, Function], default: 'id' },
-
-  // v-model opcional: v-model:expanded
-  expanded: { type: Array, default: null }, // array de keys (controlado)
+  expanded: { type: Array, default: null },
 })
 
 const emit = defineEmits(['update:expanded'])
-
+const slots = useSlots()
 const internalExpanded = ref(new Set())
 
-const hasExpand = computed(() => props.expandable && !!useSlotsSafe().rowExpand)
-
+const hasExpand = computed(() => props.expandable && !!slots['row-expand'])
 const colspan = computed(() => props.columns.length + (hasExpand.value ? 1 : 0))
-
-function useSlotsSafe() {
-  // slots no script setup: acessa via useSlots() mas sem importar (pra manter simples)
-  // Vue injeta $slots no template; aqui basta marcar por presença via runtime:
-  // workaround: vamos considerar que se expanded feature estiver ligada, slot existe se o template usar.
-  return {
-    rowExpand: true, // será validado na render pelo v-if do slot
-  }
-}
 
 function getRowKey(row, index) {
   if (typeof props.rowKey === 'function') return props.rowKey(row, index)
@@ -145,7 +125,6 @@ function getRowKey(row, index) {
   return row?.[k] ?? index
 }
 
-// modo controlado (v-model)
 function getSet() {
   if (Array.isArray(props.expanded)) return new Set(props.expanded.map(String))
   return internalExpanded.value
@@ -172,7 +151,6 @@ function toggle(row, index) {
   setSet(s)
 }
 
-// se vier v-model, sincroniza quando props.expanded mudar
 watch(
   () => props.expanded,
   (val) => {
@@ -194,7 +172,6 @@ watch(
   background: #334155;
 }
 
-/* Indicador lateral discreto */
 tr:hover td:first-child {
   box-shadow: inset 3px 0 0 0 var(--color-brand-primary, #3b82f6);
 }

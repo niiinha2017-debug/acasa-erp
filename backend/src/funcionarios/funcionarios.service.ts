@@ -20,17 +20,17 @@ export class FuncionariosService {
   private readonly STATUS_INATIVO = 'INATIVO';
 
   private calcularStatus(input: {
-    data_inicio?: Date | null;
+    registro?: string | null;
     admissao?: Date | null;
     demissao?: Date | null;
   }) {
-    const dataInicio = input.data_inicio ?? null;
+    const registro = String(input.registro ?? '').trim();
     const admissao = input.admissao ?? null;
     const demissao = input.demissao ?? null;
 
     if (demissao) return this.STATUS_INATIVO;
     if (admissao) return this.STATUS_ATIVO;
-    if (dataInicio) return this.STATUS_ATIVO;
+    if (registro) return this.STATUS_ATIVO;
     return this.STATUS_INATIVO;
   }
 
@@ -187,7 +187,7 @@ export class FuncionariosService {
 
       // âœ… status baseado na sua regra (demissao inativa, admissao/registro ativa)
       data.status = this.calcularStatus({
-        data_inicio: data.data_inicio,
+        registro: data.registro,
         admissao: data.admissao,
         demissao: data.demissao,
       });
@@ -207,10 +207,7 @@ export class FuncionariosService {
       const data = this.normalizarDatas(dto);
 
       // sÃ³ recalcula se mexeu em registro ou demissao
-      const mexeuEmInicio = Object.prototype.hasOwnProperty.call(
-        data,
-        'data_inicio',
-      );
+      const mexeuEmRegistro = Object.prototype.hasOwnProperty.call(data, 'registro');
       const mexeuEmAdmissao = Object.prototype.hasOwnProperty.call(
         data,
         'admissao',
@@ -220,14 +217,14 @@ export class FuncionariosService {
         'demissao',
       );
 
-      if (mexeuEmInicio || mexeuEmAdmissao || mexeuEmDemissao) {
+      if (mexeuEmRegistro || mexeuEmAdmissao || mexeuEmDemissao) {
         const atual = await this.prisma.funcionarios.findUnique({
           where: { id },
-          select: { data_inicio: true, admissao: true, demissao: true },
         });
         if (!atual) throw new NotFoundException('FuncionÃ¡rio nÃ£o encontrado.');
+        const atualRegistro = (atual as any).registro ?? (atual as any).data_inicio;
         data.status = this.calcularStatus({
-          data_inicio: mexeuEmInicio ? data.data_inicio : atual.data_inicio,
+          registro: mexeuEmRegistro ? data.registro : atualRegistro,
           admissao: mexeuEmAdmissao ? data.admissao : atual.admissao,
           demissao: mexeuEmDemissao ? data.demissao : atual.demissao,
         });
@@ -252,7 +249,7 @@ export class FuncionariosService {
 
   private normalizarDatas(dto: any) {
     const data = { ...dto };
-    const camposData = ['data_nascimento', 'admissao', 'demissao', 'data_inicio'];
+    const camposData = ['data_nascimento', 'admissao', 'demissao'];
 
     for (const campo of camposData) {
       if (Object.prototype.hasOwnProperty.call(data, campo)) {
@@ -267,17 +264,19 @@ export class FuncionariosService {
     }
 
 
-    // Compatibilidade com payload antigo: "registro" passa a preencher "data_inicio"
     if (Object.prototype.hasOwnProperty.call(data, 'registro')) {
       const v = data.registro;
-      if (!v) {
-        data.data_inicio = null;
-      } else {
-        const d = new Date(v);
-        data.data_inicio = isNaN(d.getTime()) ? null : d;
-      }
-      delete data.registro;
-    }    return data;
+      data.registro = v == null || v === '' ? null : String(v).trim();
+    }
+
+    // Compatibilidade com payload antigo: "data_inicio" agora preenche "registro"
+    if (Object.prototype.hasOwnProperty.call(data, 'data_inicio')) {
+      const v = data.data_inicio;
+      data.registro = v == null || v === '' ? null : String(v).trim();
+      delete data.data_inicio;
+    }
+
+    return data;
   }
 }
 

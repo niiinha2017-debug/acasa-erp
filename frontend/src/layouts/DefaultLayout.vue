@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="min-h-screen bg-bg-page text-text-main transition-colors duration-300">
     <Menu />
     <div class="border-b border-border-ui bg-[var(--bg-card)]">
@@ -50,6 +50,7 @@ const router = useRouter()
 const openTabs = ref([])
 const tabSeq = ref(0)
 const activeTabId = ref('')
+const TAB_STORAGE_KEY = 'acasa:tabs:v1'
 
 const navItems = Object.values(NAV_SCHEMA).flat().filter((item) => item?.to && !item?.divider)
 
@@ -60,9 +61,58 @@ function makeTabKey(routeKey) {
   return `${routeKey}::${Date.now()}::${tabSeq.value}`
 }
 
+function persistTabs() {
+  try {
+    localStorage.setItem(
+      TAB_STORAGE_KEY,
+      JSON.stringify({
+        openTabs: openTabs.value,
+        activeTabId: activeTabId.value,
+      }),
+    )
+  } catch (_) {
+    // ignore storage write errors (private mode/quota)
+  }
+}
+
+function restoreTabs() {
+  try {
+    const raw = localStorage.getItem(TAB_STORAGE_KEY)
+    if (!raw) return
+
+    const parsed = JSON.parse(raw)
+    const list = Array.isArray(parsed?.openTabs) ? parsed.openTabs : []
+
+    openTabs.value = list
+      .filter((tab) => tab && typeof tab === 'object')
+      .map((tab) => ({
+        key: String(tab.key || makeTabKey(String(tab.routeKey || tab.to || '/'))),
+        routeKey: String(tab.routeKey || tab.to || '/'),
+        title: cleanLabel(tab.title || tab.routeKey || 'Pagina'),
+        to: String(tab.to || tab.routeKey || '/'),
+      }))
+      .slice(-15)
+
+    activeTabId.value = String(parsed?.activeTabId || '')
+  } catch (_) {
+    // ignore storage parse errors
+  }
+}
+
 function cleanLabel(label) {
-  const raw = String(label || '').trim()
-  return raw.replace(/^[^0-9A-Za-zÀ-ÖØ-öø-ÿ]+/u, '').trim() || 'Pagina'
+  const raw = repairLegacyMojibake(String(label || '').trim())
+  return raw.replace(/^[^\p{L}\p{N}]+/u, '').trim() || 'Pagina'
+}
+
+function repairLegacyMojibake(text) {
+  const value = String(text || '')
+  if (!/[Ãâð]/.test(value)) return value
+  try {
+    // Corrige strings salvas no passado em latin1 exibidas como UTF-8 (ex.: JoÃ£o -> João)
+    return decodeURIComponent(escape(value))
+  } catch (_) {
+    return value
+  }
 }
 
 function splitRouteTo(to) {
@@ -108,6 +158,7 @@ function upsertTab(currentRoute) {
     ))
     const lastMatching = openTabs.value[matchingIndexes[matchingIndexes.length - 1]]
     activeTabId.value = lastMatching?.key || activeTabId.value
+    persistTabs()
     return
   }
 
@@ -117,6 +168,7 @@ function upsertTab(currentRoute) {
   if (openTabs.value.length > 15) {
     openTabs.value.shift()
   }
+  persistTabs()
 }
 
 function goToTab(tab) {
@@ -131,6 +183,7 @@ function closeTab(tab, index) {
 
   const isActive = tab.key === activeTabId.value
   openTabs.value.splice(index, 1)
+  persistTabs()
 
   if (!isActive) return
 
@@ -139,6 +192,7 @@ function closeTab(tab, index) {
 
   activeTabId.value = fallback.key
   if (fallback.to !== route.fullPath) router.push(fallback.to)
+  persistTabs()
 }
 
 function duplicateTab(to) {
@@ -166,6 +220,7 @@ function duplicateTab(to) {
   if (route.fullPath !== routeKey) {
     router.push(routeKey)
   }
+  persistTabs()
 }
 
 function handleDuplicateTabEvent(event) {
@@ -174,11 +229,26 @@ function handleDuplicateTabEvent(event) {
 
 watch(
   () => route.fullPath,
-  () => upsertTab(route),
+  () => {
+    upsertTab(route)
+    persistTabs()
+  },
   { immediate: true },
 )
 
 onMounted(() => {
+  restoreTabs()
+  if (openTabs.value.length) {
+    const current = openTabs.value.find((tab) => tab.routeKey === route.fullPath)
+    if (current) {
+      activeTabId.value = current.key
+    } else {
+      upsertTab(route)
+    }
+  } else {
+    upsertTab(route)
+  }
+
   window.addEventListener('acasa-tabs-duplicate-current', handleDuplicateTabEvent)
 })
 
@@ -186,3 +256,5 @@ onUnmounted(() => {
   window.removeEventListener('acasa-tabs-duplicate-current', handleDuplicateTabEvent)
 })
 </script>
+
+

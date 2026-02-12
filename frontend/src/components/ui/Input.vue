@@ -3,7 +3,7 @@
     <label
       v-if="label"
       :for="inputId"
-      class="text-sm font-medium text-slate-700 dark:text-slate-300 ml-0.5 mb-0.5"
+      class="text-xs font-semibold tracking-wide text-text-soft ml-0.5 mb-0.5"
     >
       {{ label }}
       <span v-if="required" class="text-rose-500 ml-0.5">*</span>
@@ -28,12 +28,12 @@
         :required="required"
         :autocomplete="autocomplete || undefined"
         :class="[
-          'w-full h-10 border rounded-lg text-sm transition-all duration-200 shadow-sm',
-          'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100',
+          'w-full h-10 border rounded-xl text-sm transition-all duration-200',
+          'bg-bg-card text-text-main',
           'placeholder:text-slate-400 dark:placeholder:text-slate-500 placeholder:font-normal',
           error
             ? 'border-rose-300 ring-2 ring-rose-100 dark:border-rose-800 dark:ring-rose-900/30'
-            : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10',
+            : 'border-border-ui hover:border-slate-300 dark:hover:border-slate-600 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10',
           $slots.prefix ? 'pl-10' : 'pl-3',
           $slots.suffix ? 'pr-10' : 'pr-3',
           { 'uppercase': forceUpper && type !== 'password', 'opacity-50 bg-slate-50 dark:bg-slate-800': disabled }

@@ -12,10 +12,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly prisma: PrismaService,
     private readonly permissoesService: PermissoesService,
   ) {
+    const jwtSecret =
+      config.get<string>('JWT_SECRET') ||
+      process.env.JWT_SECRET ||
+      'acasa_dev_secret';
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: config.get<string>('JWT_SECRET'),
+      secretOrKey: jwtSecret,
     });
   }
 

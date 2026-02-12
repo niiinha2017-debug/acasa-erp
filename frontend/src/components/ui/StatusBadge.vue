@@ -1,6 +1,6 @@
-<template>
-  <div 
-    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border transition-all duration-300 select-none shadow-sm"
+﻿<template>
+  <div
+    class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide border transition-all duration-300 select-none"
     :class="statusStyle"
   >
     <span class="w-1.5 h-1.5 rounded-full mr-1.5 flex-shrink-0" :class="dotStyle"></span>
@@ -13,32 +13,31 @@ import { computed } from 'vue'
 
 const props = defineProps({
   value: [String, Number, Boolean],
-  label: String
+  label: String,
 })
 
 const statusStyle = computed(() => {
-  const val = String(props.value).toLowerCase()
-  
-  // SUCESSO
-  if (['ativo', 'pago', 'entregue', 'finalizado', 'concluido'].includes(val)) 
-    return 'bg-emerald-50/50 text-emerald-600 border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20'
-    
-  // PERIGO / ERRO
-  if (['inativo', 'atrasado', 'cancelado', 'erro'].includes(val)) 
-    return 'bg-red-50/50 text-red-600 border-red-100 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'
-    
-  // AVISO / PENDENTE
-  if (['pendente', 'aguardando', 'rascunho', 'em análise'].includes(val)) 
-    return 'bg-amber-50/50 text-amber-600 border-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20'
-    
-  // PADRÃO / NEUTRO
-  return 'bg-slate-50/50 text-slate-500 border-slate-100 dark:bg-slate-500/10 dark:text-slate-400 dark:border-slate-500/20'
+  const val = String(props.value ?? '').toLowerCase()
+
+  if (['ativo', 'pago', 'entregue', 'finalizado', 'concluido'].includes(val)) {
+    return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30'
+  }
+
+  if (['inativo', 'atrasado', 'cancelado', 'erro'].includes(val)) {
+    return 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/30'
+  }
+
+  if (['pendente', 'aguardando', 'rascunho', 'em analise', 'em análise'].includes(val)) {
+    return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30'
+  }
+
+  return 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-500/15 dark:text-slate-300 dark:border-slate-500/30'
 })
 
 const dotStyle = computed(() => {
-  const val = String(props.value).toLowerCase()
-  if (['ativo', 'pago', 'finalizado'].includes(val)) return 'bg-emerald-500 shadow-[0_0_4px_rgba(16,185,129,0.4)]'
-  if (['inativo', 'atrasado', 'cancelado'].includes(val)) return 'bg-red-500 shadow-[0_0_4px_rgba(239,68,68,0.4)]'
+  const val = String(props.value ?? '').toLowerCase()
+  if (['ativo', 'pago', 'finalizado', 'entregue', 'concluido'].includes(val)) return 'bg-emerald-500'
+  if (['inativo', 'atrasado', 'cancelado', 'erro'].includes(val)) return 'bg-rose-500'
   if (['pendente', 'aguardando'].includes(val)) return 'bg-amber-500'
   return 'bg-slate-400'
 })
