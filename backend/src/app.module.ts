@@ -28,15 +28,24 @@ import { AgendaModule } from './agenda/agenda.module';
 
 @Module({
   imports: [
+    // Local: usa .env
+    // EC2/produção: usa .env.production (se existir)
     ConfigModule.forRoot({
       isGlobal: true,
-      // Garante leitura do .env do backend mesmo se o processo subir fora da pasta backend.
-      envFilePath: [
-        join(__dirname, '..', '.env.production'),
-        join(__dirname, '..', '.env'),
-        join(process.cwd(), '.env.production'),
-        join(process.cwd(), '.env'),
-      ],
+      envFilePath:
+        process.env.NODE_ENV === 'production'
+          ? [
+              join(__dirname, '..', '.env.production'),
+              join(process.cwd(), '.env.production'),
+              join(__dirname, '..', '.env'),
+              join(process.cwd(), '.env'),
+            ]
+          : [
+              join(__dirname, '..', '.env'),
+              join(process.cwd(), '.env'),
+              join(__dirname, '..', '.env.production'),
+              join(process.cwd(), '.env.production'),
+            ],
     }),
 
     ScheduleModule.forRoot(), // ✅ AQUI

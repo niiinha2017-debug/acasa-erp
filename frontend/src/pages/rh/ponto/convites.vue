@@ -145,9 +145,9 @@ const funcionarios = ref([])
 const funcionario_id = ref(null)
 const convite = ref(null)
 
-// ✅ perms (reaproveitando as que você já tem)
-const permTelaVer = 'ponto_relatorio.ver'
-const permConviteGerenciar = 'ponto_relatorio.editar'
+// ✅ permissões corretas para convites
+const permTelaVer = 'ponto_convite.criar'
+const permConviteGerenciar = 'ponto_convite.criar'
 const permFuncionariosVer = 'funcionarios.ver'
 
 const podeVerTela = computed(() => can(permTelaVer))
@@ -218,14 +218,11 @@ async function gerar() {
 
     const codeEnc = encodeURIComponent(code)
 
-    // ✅ abre o APP (se estiver instalado e configurado)
-    const appUrl = `acasa-ponto://ativar?code=${codeEnc}`
-
-    // ✅ fallback web (sempre funciona)
     const PONTO_BASE_URL = 'https://ponto.acasamarcenaria.com.br'
     const webUrl = `${PONTO_BASE_URL}/ativar?code=${codeEnc}`
+    const apkUrl = data.apk_url || `${PONTO_BASE_URL}/acasa-ponto.apk`
 
-    convite.value = { ...data, code, appUrl, webUrl }
+    convite.value = { ...data, code, apkUrl, webUrl }
     notify.success('Convite gerado.')
   } catch (e) {
     console.error(e)
@@ -248,7 +245,7 @@ async function copiar(texto) {
 
 function abrirWhats() {
   if (!podeGerar.value) return notify.error('Acesso negado.')
-  if (!convite.value?.appUrl && !convite.value?.webUrl) return
+  if (!convite.value?.apkUrl || !convite.value?.webUrl) return
 
   const id = Number(funcionario_id.value)
   const f = funcionarios.value.find((x) => x.id === id)
@@ -256,18 +253,36 @@ function abrirWhats() {
 
   const msg =
 `Olá ${nome}!
-Segue seu link privado para ativar o APP do Ponto:
+Segue seu acesso ao APP do Ponto:
 
-✅ Abrir no APP (se já estiver instalado):
-${convite.value.appUrl}
+📲 Baixar/instalar o APK:
+${convite.value.apkUrl}
 
-🌐 Se não abrir, use no navegador:
+🔐 Link de ativação:
 ${convite.value.webUrl}
 
 Se expirar, me avise que eu gero outro.`
 
   const url = `https://wa.me/?text=${encodeURIComponent(msg)}`
-  window.open(url, '_blank', 'noopener,noreferrer')
+  try {
+    const opened = window.open(url, '_blank', 'noopener,noreferrer')
+    if (opened) return
+  } catch {}
+
+  try {
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.target = '_blank'
+    anchor.rel = 'noopener noreferrer'
+    anchor.style.display = 'none'
+    document.body.appendChild(anchor)
+    anchor.click()
+    document.body.removeChild(anchor)
+    return
+  } catch {}
+
+  // Fallback final para ambientes que bloqueiam popup/new tab (ex.: alguns WebViews)
+  window.location.href = url
 }
 
 function formatDate(v) {

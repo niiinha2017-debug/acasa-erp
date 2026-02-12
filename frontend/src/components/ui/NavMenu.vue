@@ -50,7 +50,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { can } from '@/services/permissions'
 
 const props = defineProps({
@@ -59,6 +59,7 @@ const props = defineProps({
 })
 
 const router = useRouter()
+const route = useRoute()
 const isOpen = ref(false)
 const menuRef = ref(null)
 
@@ -83,7 +84,12 @@ const visibleItems = computed(() => {
 
 const handleNav = (to) => {
   isOpen.value = false
-  router.push(to)
+  const target = router.resolve(to).fullPath
+  if (target === route.fullPath) {
+    window.dispatchEvent(new CustomEvent('acasa-tabs-duplicate-current', { detail: { to: target } }))
+    return
+  }
+  router.push(target)
 }
 
 const closeOutside = (e) => {

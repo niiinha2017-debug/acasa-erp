@@ -68,6 +68,21 @@ export class PontoService {
     return `${normalized.replace(/\/+$/, '')}/ativar?code=${encodeURIComponent(code)}`;
   }
 
+  private buildApkUrl(): string {
+    const rawApk = String(this.config.get('PONTO_APK_URL') ?? '').trim();
+    if (rawApk) return rawApk;
+
+    const rawBase = String(this.config.get('PONTO_APP_URL') ?? '').trim();
+    const fallbackBase = 'https://ponto.acasamarcenaria.com.br';
+    const base = rawBase || fallbackBase;
+    const normalized =
+      base.startsWith('http://') || base.startsWith('https://')
+        ? base
+        : `https://${base}`;
+
+    return `${normalized.replace(/\/+$/, '')}/acasa-ponto.apk`;
+  }
+
   private assertFuncionarioAtivo(status: any) {
     if (String(status || '').toUpperCase() !== 'ATIVO') {
       throw new BadRequestException('Funcionário inativo.');
@@ -121,6 +136,7 @@ export class PontoService {
 
     return {
       url: this.buildConviteUrl(convite.code),
+      apk_url: this.buildApkUrl(),
       code: convite.code,
       expira_em: convite.expira_em,
       funcionario_id: convite.funcionario_id,

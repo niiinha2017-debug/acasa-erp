@@ -3,7 +3,7 @@
     <div class="max-w-7xl mx-auto h-full px-4 md:px-6 flex items-center justify-between">
       
       <!-- LOGO E MARCA -->
-      <RouterLink to="/" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
+      <RouterLink to="/agendamentos?visao=geral" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
         <div class="w-8 h-8 bg-brand-primary flex items-center justify-center text-white rounded-md">
           <i class="pi pi-box text-xs"></i>
         </div>
@@ -214,7 +214,12 @@ const NAV_VISIVEL = computed(() => {
 
 const handleMobileNav = (to) => {
   isMobileMenuOpen.value = false
-  router.push(to)
+  const target = router.resolve(to).fullPath
+  if (target === route.fullPath) {
+    window.dispatchEvent(new CustomEvent('acasa-tabs-duplicate-current', { detail: { to: target } }))
+    return
+  }
+  router.push(target)
 }
 
 const carregarMenu = async () => {
