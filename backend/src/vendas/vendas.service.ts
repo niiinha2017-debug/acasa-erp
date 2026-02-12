@@ -29,7 +29,6 @@ export class VendasService {
 
   private resolveAgendaCategoriaFromVendaStatus(status?: string | null) {
     const key = this.normalizeKey(status);
-    if (key === 'MEDIDA_FINA_REALIZADA') return 'PRODUCAO';
     if (key.startsWith('MEDIDA_FINA')) return 'MEDIDA_FINA';
     if (key.startsWith('MEDIDA')) return 'MEDIDA';
     if (key.includes('PRODUCAO') || key === 'PLANO_DE_CORTE') return 'PRODUCAO';
@@ -40,9 +39,6 @@ export class VendasService {
 
   private resolveAgendaStatusFromVendaStatus(status?: string | null) {
     const key = this.normalizeKey(status);
-    if (key === 'MEDIDA_FINA_REALIZADA') {
-      return 'PENDENTE';
-    }
     if (
       key === 'MEDIDA_REALIZADA' ||
       key === 'MEDIDA_FINA_REALIZADA' ||

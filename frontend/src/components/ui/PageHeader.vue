@@ -1,21 +1,21 @@
 <template>
   <div
     class="flex flex-col"
-    :class="minimal ? 'border-b border-border-ui pb-4' : 'border-b border-border-ui'"
+    :class="minimal ? 'border-b border-border-ui pb-4' : 'border-b border-slate-200 dark:border-slate-700'"
   >
     <header
       class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
       :class="minimal ? 'px-0 py-0' : 'px-6 py-6 md:px-8 gap-6'"
     >
       <div class="flex items-center gap-3 min-w-0">
-        <div v-if="icon" class="flex-shrink-0 text-text-soft" :class="minimal ? 'text-lg' : 'text-2xl'">
+        <div v-if="icon" class="flex-shrink-0 text-slate-400 dark:text-slate-500" :class="minimal ? 'text-lg' : 'text-2xl'">
           <i :class="icon"></i>
         </div>
         <div class="min-w-0 flex flex-col gap-0.5">
-          <h1 class="font-semibold text-text-main" :class="minimal ? 'text-xl' : 'text-2xl'">
+          <h1 class="font-semibold text-slate-900 dark:text-white" :class="minimal ? 'text-xl' : 'text-2xl'">
             {{ title }}
           </h1>
-          <p v-if="subtitle" class="text-sm text-text-soft">
+          <p v-if="subtitle" class="text-sm text-slate-500 dark:text-slate-400">
             {{ subtitle }}
           </p>
         </div>

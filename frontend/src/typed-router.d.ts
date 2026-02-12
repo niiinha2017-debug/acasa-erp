@@ -58,13 +58,6 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
-    '/arquivos/pdf/[id]': RouteRecordInfo<
-      '/arquivos/pdf/[id]',
-      '/arquivos/pdf/:id',
-      { id: ParamValue<true> },
-      { id: ParamValue<false> },
-      | never
-    >,
     '/clientes/': RouteRecordInfo<
       '/clientes/',
       '/clientes',
@@ -198,13 +191,6 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
-    '/orcamentos/processo': RouteRecordInfo<
-      '/orcamentos/processo',
-      '/orcamentos/processo',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
     '/pendente': RouteRecordInfo<
       '/pendente',
       '/pendente',
@@ -247,13 +233,6 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/producao/': RouteRecordInfo<
-      '/producao/',
-      '/producao',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
     '/produtos/': RouteRecordInfo<
       '/produtos/',
       '/produtos',
@@ -271,13 +250,6 @@ declare module 'vue-router/auto-routes' {
     '/rh/ponto/convites': RouteRecordInfo<
       '/rh/ponto/convites',
       '/rh/ponto/convites',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/rh/ponto/fechamento': RouteRecordInfo<
-      '/rh/ponto/fechamento',
-      '/rh/ponto/fechamento',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -350,12 +322,6 @@ declare module 'vue-router/auto-routes' {
     'src/pages/arquivos/[id].vue': {
       routes:
         | '/arquivos/[id]'
-      views:
-        | never
-    }
-    'src/pages/arquivos/pdf/[id].vue': {
-      routes:
-        | '/arquivos/pdf/[id]'
       views:
         | never
     }
@@ -473,12 +439,6 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/orcamentos/processo.vue': {
-      routes:
-        | '/orcamentos/processo'
-      views:
-        | never
-    }
     'src/pages/pendente.vue': {
       routes:
         | '/pendente'
@@ -515,12 +475,6 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/producao/index.vue': {
-      routes:
-        | '/producao/'
-      views:
-        | never
-    }
     'src/pages/produtos/index.vue': {
       routes:
         | '/produtos/'
@@ -536,12 +490,6 @@ declare module 'vue-router/auto-routes' {
     'src/pages/rh/ponto/convites.vue': {
       routes:
         | '/rh/ponto/convites'
-      views:
-        | never
-    }
-    'src/pages/rh/ponto/fechamento.vue': {
-      routes:
-        | '/rh/ponto/fechamento'
       views:
         | never
     }

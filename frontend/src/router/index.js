@@ -4,7 +4,6 @@ import api from '@/services/api'
 import storage from '@/utils/storage'
 import { can } from '@/services/permissions'
 import { buildRoutePermMap, getRequiredPerm } from '@/services/navigation-perms'
-import { NAV_SCHEMA } from '@/services/navigation'
 
 const router = createRouter({
   history: createWebHistory('/'),
@@ -15,23 +14,6 @@ const routePermMap = buildRoutePermMap()
 
 let syncingMe = null
 const FORCE_PENDING_KEY = 'ACASA_FORCE_PENDING'
-
-const NAV_FALLBACK_PATHS = Object.values(NAV_SCHEMA || {})
-  .flatMap((items) => (items || []))
-  .filter((item) => item?.to && !item?.divider)
-  .map((item) => String(item.to).split('?')[0])
-  .filter(Boolean)
-
-function firstAllowedPath() {
-  if (can('index.visualizar')) return '/'
-
-  for (const path of NAV_FALLBACK_PATHS) {
-    const requiredPerm = getRequiredPerm({ path }, routePermMap)
-    if (!requiredPerm || can(requiredPerm)) return path
-  }
-
-  return null
-}
 
 async function ensureMe() {
   const token = storage.getToken()
@@ -105,13 +87,7 @@ router.beforeEach(async (to) => {
 
   const requiredPerm = getRequiredPerm(to, routePermMap)
   if (requiredPerm && !can(requiredPerm)) {
-    const fallback = firstAllowedPath()
-    if (fallback && fallback !== to.path) {
-      return { path: fallback }
-    }
-
-    // Evita loop infinito quando o usuario tem token, mas nenhuma permissao valida.
-    return false
+    return { path: '/' }
   }
 
   return true

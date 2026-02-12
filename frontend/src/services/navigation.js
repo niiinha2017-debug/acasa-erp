@@ -3,10 +3,9 @@ export const NAV_SCHEMA = {
   // 🏭 Operação do dia a dia
 operacional: [
   { label: '🚀 Vendas', to: '/vendas', icon: 'pi-cart-plus', perm: 'vendas.ver' },
-  { label: '🧩 Fluxo de Vendas', to: '/vendas/kanban', icon: 'pi-th-large', perm: 'vendas.ver' },
-  { label: '🧮 Processo de Orcamento', to: '/orcamentos/processo', icon: 'pi-calculator', perm: 'orcamentos.ver' },
+  { label: '🧩 Vendas Trello', to: '/vendas/kanban', icon: 'pi-th-large', perm: 'vendas.ver' },
   { label: '📏 Plano de Corte', to: '/plano-corte', icon: 'pi-sitemap', perm: 'plano_corte.ver' },
-  { label: '🧩 Fluxo do Plano de Corte', to: '/plano-corte/kanban', icon: 'pi-th-large', perm: 'plano_corte.ver' },
+  { label: '🧩 Plano Trello', to: '/plano-corte/kanban', icon: 'pi-th-large', perm: 'plano_corte.ver' },
   { label: '🗓️ Agenda Geral', to: '/agendamentos?visao=geral', icon: 'pi-calendar', perm: 'agendamentos.ver' },
   { divider: true },
 
@@ -47,7 +46,6 @@ operacional: [
 
     // ✅ PONTO (ERP)
     { label: '🕒 Ponto (Registros)', to: '/rh/ponto/relatorio', icon: 'pi-clock', perm: 'ponto_relatorio.ver' },
-    { label: '🧮 Fechamento da Folha', to: '/rh/ponto/fechamento', icon: 'pi-calculator', perm: 'ponto_relatorio.ver' },
     { label: '🔗 Convites de Ponto', to: '/rh/ponto/convites', icon: 'pi-link', perm: 'ponto_convite.criar' },
 
     { divider: true },
@@ -60,4 +58,3 @@ operacional: [
     { label: '📊 Dashboard', to: '/analytics/fluxocaixa', icon: 'pi-chart-bar', perm: 'dashboard.visualizar' },
   ],
 }
-

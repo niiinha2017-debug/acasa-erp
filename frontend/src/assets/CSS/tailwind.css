@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   /* Cores de Marca */
@@ -13,8 +12,6 @@
   --color-bg-page: var(--bg-page);
   --color-bg-card: var(--bg-card);
   --color-text-main: var(--text-main);
-  --color-text-muted: var(--text-muted);
-  --color-text-soft: var(--text-soft);
   --color-border-ui: var(--border-ui);
 
   /* Z-Index */
@@ -44,8 +41,6 @@
   --bg-page: #f8fafc;
   --bg-card: #ffffff;
   --text-main: #0f172a;
-  --text-muted: #475569;
-  --text-soft: #64748b;
   --border-ui: #f1f5f9;
 }
 
@@ -53,24 +48,12 @@
   --bg-page: #0f172a;
   --bg-card: #1e293b;
   --text-main: #f8fafc;
-  --text-muted: #cbd5e1;
-  --text-soft: #94a3b8;
   --border-ui: #334155;
 }
 
 @layer base {
   body {
-    font-family: "Manrope", "Segoe UI", "Trebuchet MS", sans-serif;
     @apply bg-bg-page text-text-main transition-colors duration-300 antialiased;
-  }
-
-  h1, h2, h3 {
-    letter-spacing: -0.01em;
-    color: var(--text-main);
-  }
-
-  p, span, label {
-    color: inherit;
   }
 
   /* Padding interno do Card reduzido para dar escala ao conteúdo */

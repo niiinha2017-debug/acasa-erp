@@ -1,17 +1,17 @@
 <template>
   <div
     ref="rootRef"
-    class="search-container relative flex flex-col gap-1.5 w-full min-w-0 flex-1"
+    class="search-container relative flex flex-col gap-1.5 w-full min-w-[240px] flex-1"
     :class="[colSpan, { 'z-[100]': open }]"
     @click.stop
   >
-    <label v-if="label" class="text-[11px] font-black uppercase tracking-[0.15em] text-text-soft ml-0.5 mb-0.5">
+    <label v-if="label" class="text-sm font-medium text-slate-700 dark:text-slate-300 ml-0.5 mb-0.5">
       {{ label }} <span v-if="required" class="text-rose-500 ml-0.5">*</span>
     </label>
 
     <div class="relative group">
       <span
-        class="absolute left-4 top-1/2 -translate-y-1/2 text-text-soft group-focus-within:text-brand-primary transition-all duration-300 pointer-events-none"
+        class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-primary transition-all duration-300 pointer-events-none"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8"></circle>
@@ -31,9 +31,9 @@
         :disabled="disabled"
         autocomplete="off"
         class="w-full h-12 pl-11 pr-16 transition-all duration-200 outline-none border rounded-xl text-sm
-               bg-bg-card text-text-main border-border-ui
+               bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700
                focus:border-brand-primary focus:border-2 hover:border-slate-400 dark:hover:border-slate-600
-               placeholder:text-text-soft placeholder:font-normal"
+               placeholder:text-slate-400 placeholder:font-normal"
         @focus="onFocus"
         @input="onInput"
         @keydown="onKeydown"
@@ -44,7 +44,7 @@
         v-if="props.mode === 'select'"
         type="button"
         @pointerdown.prevent.stop="toggleDropdown"
-        class="absolute right-8 top-1/2 -translate-y-1/2 text-text-soft hover:text-text-main transition-colors p-1"
+        class="absolute right-8 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors p-1"
         :disabled="disabled"
         aria-label="Abrir opções"
       >
@@ -57,7 +57,7 @@
         v-if="texto"
         type="button"
         @pointerdown.prevent.stop="limparBusca"
-        class="absolute right-3 top-1/2 -translate-y-1/2 text-text-soft hover:text-red-500 transition-colors p-1"
+        class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors p-1"
         :disabled="disabled"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -72,8 +72,8 @@
             v-if="open"
             ref="dropdownRef"
             :style="floatingStyles"
-            class="fixed z-[10000] bg-bg-card border border-border-ui
-                   rounded-lg shadow-sm overflow-hidden pointer-events-auto"
+            class="fixed z-[10000] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800
+                   rounded-lg shadow-xl shadow-slate-200/50 dark:shadow-black/40 overflow-hidden pointer-events-auto"
             @pointerdown.prevent
           >
             <div v-if="filtrados.length" class="max-h-60 overflow-y-auto p-1 custom-scroll">
@@ -81,15 +81,15 @@
                 v-for="opt in filtrados"
                 :key="opt.value"
                 class="flex items-center px-3 py-2 text-sm rounded-md cursor-pointer transition-all
-                       text-text-muted hover:bg-bg-page hover:text-brand-primary"
+                       text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-brand-primary"
                 @pointerdown.prevent.stop="selecionar(opt)"
               >
-                <div class="w-1.5 h-1.5 rounded-full bg-border-ui mr-3 transition-all shrink-0"></div>
+                <div class="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 mr-3 transition-all shrink-0"></div>
                 <span class="truncate font-medium">{{ opt.label }}</span>
               </div>
             </div>
 
-            <div v-else class="px-4 py-6 text-xs font-medium text-text-soft text-center">
+            <div v-else class="px-4 py-6 text-xs font-medium text-slate-400 text-center">
               Nenhum resultado encontrado
             </div>
           </div>

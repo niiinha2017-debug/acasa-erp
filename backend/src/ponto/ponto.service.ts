@@ -68,10 +68,6 @@ export class PontoService {
     return `${normalized.replace(/\/+$/, '')}/ativar?code=${encodeURIComponent(code)}`;
   }
 
-  private buildConviteAppUrl(code: string): string {
-    return `acasa-ponto://ativar?code=${encodeURIComponent(code)}`;
-  }
-
   private assertFuncionarioAtivo(status: any) {
     if (String(status || '').toUpperCase() !== 'ATIVO') {
       throw new BadRequestException('Funcionário inativo.');
@@ -123,12 +119,8 @@ export class PontoService {
       select: { code: true, expira_em: true, funcionario_id: true },
     });
 
-    const url = this.buildConviteUrl(convite.code);
-    const appUrl = this.buildConviteAppUrl(convite.code);
-
     return {
-      url,
-      app_url: appUrl,
+      url: this.buildConviteUrl(convite.code),
       code: convite.code,
       expira_em: convite.expira_em,
       funcionario_id: convite.funcionario_id,

@@ -258,9 +258,6 @@ export const PontoRelatorioService = {
   // ✅ equipe: gera+salva e retorna { total, arquivos: [{ arquivoId, funcionario_id, funcionario_nome }] }
   pdfMensalEquipeSalvar: (payload) =>
     api.post('/ponto/relatorio/pdf/lote', payload),
-
-  fechamentoFolha: (payload) =>
-    api.post('/ponto/relatorio/fechamento', payload),
 }
 
 
@@ -314,18 +311,9 @@ export const AgendaService = {
     return api.get(`/agenda/funcionario/${id}`);
   },
 
-  buscarPorVenda(vendaId) {
-    return api.get(`/agenda/venda/${vendaId}`);
-  },
-
   // Atualizar status (Finalizar)
   atualizarStatus(id, status) {
     return api.patch(`/agenda/${id}/status`, { status });
-  },
-
-  // Atualizar/criar agenda vinculada a uma venda (data e horario)
-  atualizarPorVenda(vendaId, dados) {
-    return api.patch(`/agenda/venda/${vendaId}/data`, dados);
   },
 
   // Deletar

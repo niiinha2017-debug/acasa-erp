@@ -56,39 +56,20 @@ export class AuthService {
 
   // 2. LOGIN
   async login(usuario: string, senha: string) {
-    const loginOriginal = String(usuario || '').trim();
     const loginLimpo = String(usuario || '')
       .trim()
       .toLowerCase();
     const isEmail = loginLimpo.includes('@');
 
     const registro = await this.prisma.usuarios.findFirst({
-      where: isEmail
-        ? { OR: [{ email: loginLimpo }, { email: loginOriginal }] }
-        : { OR: [{ usuario: loginLimpo }, { usuario: loginOriginal }] },
+      where: isEmail ? { email: loginLimpo } : { usuario: loginLimpo },
     });
 
     if (!registro) {
       throw new UnauthorizedException('Usuário ou senha inválidos');
     }
 
-    const recPendente = await this.prisma.recuperacao_senha.findFirst({
-      where: { usuario_id: registro.id, utilizado: false },
-      orderBy: { criado_em: 'desc' },
-    });
-
-    let senhaOk = await bcrypt.compare(senha, registro.senha);
-    if (!senhaOk && recPendente) {
-      const senhaProvisoriaNormalizada =
-        this.normalizarSenhaProvisoriaDigitada(senha);
-      if (senhaProvisoriaNormalizada) {
-        senhaOk = await bcrypt.compare(
-          senhaProvisoriaNormalizada,
-          registro.senha,
-        );
-      }
-    }
-
+    const senhaOk = await bcrypt.compare(senha, registro.senha);
     if (!senhaOk) {
       throw new UnauthorizedException('Usuário ou senha inválidos');
     }
@@ -105,6 +86,11 @@ export class AuthService {
     } catch {
       permissoes = [];
     }
+
+    const recPendente = await this.prisma.recuperacao_senha.findFirst({
+      where: { usuario_id: registro.id, utilizado: false },
+      orderBy: { criado_em: 'desc' },
+    });
 
     const payload = {
       sub: registro.id,
@@ -307,26 +293,14 @@ export class AuthService {
     });
     if (!usuario) throw new UnauthorizedException('Usuário inválido');
 
+    const senhaOk = await bcrypt.compare(senhaAtual, usuario.senha);
+    if (!senhaOk) throw new BadRequestException('Senha atual incorreta');
+
+    const novaHash = await bcrypt.hash(senhaNova, 10);
     const rec = await this.prisma.recuperacao_senha.findFirst({
       where: { usuario_id: usuarioId, utilizado: false },
       orderBy: { criado_em: 'desc' },
     });
-
-    let senhaOk = await bcrypt.compare(senhaAtual, usuario.senha);
-    if (!senhaOk && rec) {
-      const senhaProvisoriaNormalizada =
-        this.normalizarSenhaProvisoriaDigitada(senhaAtual);
-      if (senhaProvisoriaNormalizada) {
-        senhaOk = await bcrypt.compare(
-          senhaProvisoriaNormalizada,
-          usuario.senha,
-        );
-      }
-    }
-
-    if (!senhaOk) throw new BadRequestException('Senha atual incorreta');
-
-    const novaHash = await bcrypt.hash(senhaNova, 10);
 
     await this.prisma.$transaction([
       this.prisma.usuarios.update({
@@ -349,11 +323,5 @@ export class AuthService {
   private gerarSenhaProvisoria() {
     const n = Math.floor(100000 + Math.random() * 900000);
     return `ACASA-${n}`;
-  }
-
-  private normalizarSenhaProvisoriaDigitada(senha: string) {
-    const limpa = String(senha || '').trim();
-    if (!/^acasa-\d{6}$/i.test(limpa)) return null;
-    return limpa.toUpperCase();
   }
 }
