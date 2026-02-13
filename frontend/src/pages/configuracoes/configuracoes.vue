@@ -29,8 +29,6 @@
         </div>
       </template>
     </PageHeader>
-
-    <div class="p-8 lg:p-12">
       <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden clientes-line-form">
       <div class="grid grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
         
@@ -212,7 +210,7 @@
           </section>
         </div>
       </div>
-    </div>
+          </div>
   </Card>
 </template>
 
