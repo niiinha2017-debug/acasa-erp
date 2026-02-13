@@ -5,16 +5,46 @@
 
       <PageHeader
         title="Equipe"
+
         subtitle="Gestão de capital humano e colaboradores"
         icon="pi pi-users"
         :showBack="false"
       >
         <template #actions>
           <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+            <div
+              v-if="selectedCount"
+              class="flex items-center gap-2 w-full sm:w-auto order-2 sm:order-0 justify-start sm:justify-end"
+            >
+              <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                {{ selectedCount }} selecionado(s)
+              </span>
+
+              <Button
+                variant="secondary"
+                class="flex-shrink-0 h-11 rounded-xl font-black uppercase tracking-[0.16em] text-[11px]"
+                :loading="pdfLoading"
+                @click="gerarPdfSelecionados"
+              >
+                <i class="pi pi-file-pdf mr-2"></i>
+                Gerar PDF
+              </Button>
+
+              <Button
+                variant="danger"
+                class="flex-shrink-0 h-11 rounded-xl font-black uppercase tracking-[0.16em] text-[11px]"
+                :loading="bulkDeleting"
+                @click="confirmarExcluirSelecionados"
+              >
+                <i class="pi pi-trash mr-2"></i>
+                Excluir
+              </Button>
+            </div>
+
             <div class="w-full sm:w-64 order-1 sm:order-0">
               <SearchInput
                 v-model="filtro"
-                placeholder="Buscar nome, cpf ou cargo..."
+                placeholder="Buscar nome, cpf, rg, cargo, horario ou salario..."
               />
             </div>
 
@@ -31,6 +61,7 @@
         </template>
       </PageHeader>
 
+
       <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4">
         <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
           <Table
@@ -42,6 +73,7 @@
           >
             <template #cell-nome="{ row }">
               <div class="flex items-center gap-3 py-1">
+
                 <CustomCheckbox
                   :modelValue="isSelected(row.id)"
                   @update:modelValue="toggle(row.id)"
@@ -65,8 +97,14 @@
               </div>
             </template>
 
+            <template #cell-unidade="{ row }">
+              <span class="text-[11px] font-black text-slate-600 uppercase tracking-wider">
+                {{ row.unidade || '-' }}
+              </span>
+            </template>
+
             <template #cell-status="{ row }">
-              <StatusBadge :value="row.status || 'INATIVO'" />
+              <StatusBadge :value="getStatus(row)" />
             </template>
 
             <template #cell-acoes="{ row }">
@@ -101,18 +139,28 @@
         </div>
       </div>
     </div>
+
+    <ArquivosModal
+      v-if="arquivosModalOpen"
+      :open="arquivosModalOpen"
+      ownerType="FUNCIONARIO"
+      :ownerId="arquivosFuncionario?.id"
+      :canManage="can('funcionarios.editar')"
+      @close="arquivosModalOpen = false"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import api from '@/services/api'
 import { FuncionarioService } from '@/services/index'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
 import { onlyNumbers, maskCPF, maskRG } from '@/utils/masks'
+import ArquivosModal from '@/components/modals/ArquivosModal.vue'
+
 
 definePage({ meta: { perm: 'funcionarios.ver' } })
 
@@ -121,17 +169,17 @@ const loading = ref(true)
 const filtro = ref('')
 const funcionarios = ref([])
 const selectedIds = ref(new Set())
-
-const selecionadosCount = computed(() => selectedIds.value.size)
-
-const funcionariosAtivos = computed(() =>
-  funcionarios.value.filter(f => String(f.status || '').toUpperCase() === 'ATIVO').length
-)
+const arquivosModalOpen = ref(false)
+const arquivosFuncionario = ref(null)
+const pdfLoading = ref(false)
+const bulkDeleting = ref(false)
 
 const columns = [
+
   { key: 'nome', label: 'FUNCIONÁRIO', width: '40%' },
   { key: 'cargo', label: 'CARGO / SETOR', width: '25%' },
-  { key: 'status', label: 'STATUS', width: '15%' },
+  { key: 'unidade', label: 'UNIDADE', width: '15%' },
+  { key: 'status', label: 'STATUS', width: '10%' },
   { key: 'acoes', label: '', align: 'right', width: '20%' }
 ]
 
@@ -145,30 +193,63 @@ function isSelected(id) {
   return selectedIds.value.has(id)
 }
 
+const selectedCount = computed(() => selectedIds.value.size)
+
+function normUpper(v) {
+  return String(v || '').trim().toUpperCase()
+}
+
+function getStatus(row) {
+  const s = normUpper(row?.status)
+  if (s === 'ATIVO' || s === 'INATIVO') return s
+  return 'INATIVO'
+}
+
 const funcionariosFiltrados = computed(() => {
   const termo = String(filtro.value || '').toLowerCase().trim()
-  if (!termo) return funcionarios.value
-
   const termoDigits = onlyNumbers(termo)
 
-  return funcionarios.value.filter((f) => {
+  return (funcionarios.value || []).filter((f) => {
+    if (!termo) return true
+
     const nome = String(f.nome || '').toLowerCase()
-    const cargo = String(f.cargo || '').toLowerCase()
-    const setor = String(f.setor || '').toLowerCase()
+    const cargoTxt = String(f.cargo || '').toLowerCase()
+    const setorTxt = String(f.setor || '').toLowerCase()
+    const unidadeTxt = String(f.unidade || '').toLowerCase()
 
     const cpfDigits = onlyNumbers(String(f.cpf || ''))
     const rgDigits = onlyNumbers(String(f.rg || ''))
 
     const bateTexto =
       nome.includes(termo) ||
-      cargo.includes(termo) ||
-      setor.includes(termo)
+      cargoTxt.includes(termo) ||
+      setorTxt.includes(termo) ||
+      unidadeTxt.includes(termo)
 
     const bateDocs = termoDigits
       ? (cpfDigits.includes(termoDigits) || rgDigits.includes(termoDigits))
       : false
 
-    return bateTexto || bateDocs
+    const bateHorario = [
+      f.horario_entrada_1,
+      f.horario_saida_1,
+      f.horario_entrada_2,
+      f.horario_saida_2,
+      f.horario_sabado_entrada_1,
+      f.horario_sabado_saida_1,
+    ].some((v) => String(v || '').toLowerCase().includes(termo))
+
+    const bateSalario = termoDigits
+      ? [
+          f.salario_base,
+          f.salario_adicional,
+          f.custo_hora,
+          f.vale,
+          f.vale_transporte,
+        ].some((v) => onlyNumbers(String(v ?? '')).includes(termoDigits))
+      : false
+
+    return bateTexto || bateDocs || bateHorario || bateSalario
   })
 })
 
@@ -188,6 +269,8 @@ async function carregar() {
       ...f,
       nome: f.nome ?? f.nome_completo ?? '',
       cargo: f.cargo ?? f.funcao ?? '',
+      setor: f.setor ?? '',
+      unidade: f.unidade ?? '',
       rg: f.rg ?? '',
     }))
   } catch (err) {
@@ -208,12 +291,8 @@ function abrirArquivos(row) {
   arquivosModalOpen.value = true
 }
 
-function fecharArquivos() {
-  arquivosModalOpen.value = false
-  arquivosFuncionario.value = null
-}
-
 const editar = (id) => {
+
   if (!can('funcionarios.editar')) return notify.error('Acesso negado.')
   router.push(`/funcionarios/${id}`)
 }
@@ -242,13 +321,62 @@ async function excluir(row) {
 async function reenviarSenhaProvisoria(row) {
   if (!can('funcionarios.editar')) return notify.error('Acesso negado.')
 
-  try {
-    await FuncionarioService.renviarSenhaProvisoria(row.id)
+    try {
+    await FuncionarioService.reenviarSenhaProvisoria(row.id)
     notify.success('Senha provisória reenviada com sucesso.')
   } catch (err) {
+
     notify.error('Erro ao reenviar senha provisória.')
   }
 }
 
 onMounted(carregar)
+
+async function gerarPdfSelecionados() {
+  if (!selectedCount.value) return notify.warn('Selecione pelo menos 1 funcionÇ­rio.')
+  if (!can('funcionarios.ver')) return notify.error('Acesso negado.')
+
+  pdfLoading.value = true
+  try {
+    const ids = Array.from(selectedIds.value)
+    const resp = await FuncionarioService.gerarPdf(ids)
+    const data = resp?.data || resp
+    const arquivoId = data?.arquivoId || data?.arquivo_id
+
+    if (!arquivoId) {
+      notify.error('NÇœo foi possÇðvel gerar o PDF agora.')
+      return
+    }
+
+    router.push(`/arquivos/pdf/${arquivoId}`)
+  } catch (e) {
+    notify.error(e?.response?.data?.message || 'Erro ao gerar PDF.')
+  } finally {
+    pdfLoading.value = false
+  }
+}
+
+async function confirmarExcluirSelecionados() {
+  if (!selectedCount.value) return notify.warn('Selecione pelo menos 1 funcionÇ­rio.')
+  if (!can('funcionarios.excluir')) return notify.error('Acesso negado.')
+
+  const ok = await confirm.show(
+    'Excluir selecionados',
+    `Deseja remover ${selectedCount.value} funcionÇ­rio(s)? Esta aÇõÇœo nÇœo pode ser desfeita.`,
+  )
+  if (!ok) return
+
+  bulkDeleting.value = true
+  try {
+    const ids = Array.from(selectedIds.value)
+    await Promise.all(ids.map((id) => FuncionarioService.remover(id)))
+    funcionarios.value = (funcionarios.value || []).filter((f) => !selectedIds.value.has(f.id))
+    selectedIds.value = new Set()
+    notify.success('Registros removidos.')
+  } catch (e) {
+    notify.error(e?.response?.data?.message || 'Erro ao excluir selecionados.')
+  } finally {
+    bulkDeleting.value = false
+  }
+}
 </script>

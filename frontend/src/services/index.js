@@ -66,41 +66,105 @@ export const FornecedorService = {
 }
 
 // --- SERVIÇO DE FUNCIONÁRIOS (SOMENTE ADMIN) ---
-export const FuncionarioService = {
+const sanitizeFuncionarioId = (id) => {
+  const clean = String(id ?? '').replace(/\D/g, '')
+  return clean || null
+}
+
+export const FuncionariosService = {
   listar: () => api.get('/funcionarios'),
 
-  buscar: (id) => {
-    if (!id) return Promise.reject(new Error('ID não fornecido'))
-    const cleanId = String(id).replace(/\D/g, '')
+  buscarPorId(id) {
+    const cleanId = sanitizeFuncionarioId(id)
+    if (!cleanId) return Promise.reject(new Error('ID não fornecido'))
     return api.get(`/funcionarios/${cleanId}`)
   },
 
-  salvar: (id, dados) => {
-    if (!dados) return Promise.reject(new Error('Dados não informados'))
+  buscar(id) {
+    return FuncionariosService.buscarPorId(id)
+  },
 
-    if (id && id !== 'novo') {
-      const cleanId = String(id).replace(/\D/g, '')
-      return api.put(`/funcionarios/${cleanId}`, dados)
+  criar(dados) {
+    if (!dados || typeof dados !== 'object') {
+      return Promise.reject(new Error('Dados não informados'))
     }
     return api.post('/funcionarios', dados)
   },
 
-  remover: (id) => {
-    const cleanId = String(id).replace(/\D/g, '')
+  atualizar(id, dados) {
+    if (!dados || typeof dados !== 'object') {
+      return Promise.reject(new Error('Dados não informados'))
+    }
+    const cleanId = sanitizeFuncionarioId(id)
+    if (!cleanId) return Promise.reject(new Error('ID inválido'))
+    return api.put(`/funcionarios/${cleanId}`, dados)
+  },
+
+  salvar(id, dados) {
+    return id && id !== 'novo'
+      ? FuncionariosService.atualizar(id, dados)
+      : FuncionariosService.criar(dados)
+  },
+
+  remover(id) {
+    const cleanId = sanitizeFuncionarioId(id)
+    if (!cleanId) return Promise.reject(new Error('ID inválido'))
     return api.delete(`/funcionarios/${cleanId}`)
   },
 
-  // ✅ novo: gera + salva PDF (backend devolve PDF + header X-Arquivo-Id)
-gerarPdf: (ids) => {
-  if (!Array.isArray(ids) || !ids.length) {
-    return Promise.reject(new Error('IDs não informados'))
-  }
-  // ✅ agora retorna JSON { arquivoId }
-  return api.post('/funcionarios/pdf', { ids })
-},
-select: (q) => api.get('/funcionarios/select', { params: q ? { q } : {} }),
+  gerarPdf(ids) {
+    if (!Array.isArray(ids) || !ids.length) {
+      return Promise.reject(new Error('IDs não informados'))
+    }
+    return api.post('/funcionarios/pdf', { ids })
+  },
 
+  gerarPdfESalvar(ids) {
+    return FuncionariosService.gerarPdf(ids)
+  },
+
+  select: (q) => api.get('/funcionarios/select', { params: q ? { q } : {} }),
+
+  async reenviarSenhaProvisoria(alvo) {
+    const candidate =
+      typeof alvo === 'object' && alvo !== null ? alvo.email ?? alvo?.usuario?.email : alvo
+
+    if (typeof candidate === 'string' && candidate.includes('@')) {
+      return AuthService.reenviarSenhaProvisoria(candidate)
+    }
+
+    const cleanId = sanitizeFuncionarioId(alvo)
+    if (!cleanId) {
+      return Promise.reject(new Error('Identificador inválido para reenviar senha provisória'))
+    }
+
+    const resposta = await FuncionariosService.buscarPorId(cleanId)
+    const dados = resposta?.data ?? resposta
+    const email = dados?.email ?? dados?.usuario?.email
+
+    if (!email) {
+      return Promise.reject(new Error('E-mail do funcionário não encontrado'))
+    }
+
+    return AuthService.reenviarSenhaProvisoria(email)
+  },
+
+  renviarSenhaProvisoria(alvo) {
+    return FuncionariosService.reenviarSenhaProvisoria(alvo)
+  },
 }
+
+export const FuncionarioService = FuncionariosService
+
+
+
+
+
+
+
+
+
+
 
 
 // --- ORÇAMENTOS ---

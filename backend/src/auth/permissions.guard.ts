@@ -33,12 +33,11 @@ export class PermissionsGuard implements CanActivate {
       throw new UnauthorizedException('Sessão inválida');
     }
 
-    // 🔒 status
+    // 🔒 status (admin pode operar mesmo pendente)
+    if (user?.is_admin) return true;
     if (user.status !== 'ATIVO') {
       throw new ForbiddenException('Acesso negado: sua conta não está ativa.');
     }
-
-    if (user?.is_admin) return true;
 
     const userPerms: string[] = Array.isArray(user?.permissoes)
       ? user.permissoes

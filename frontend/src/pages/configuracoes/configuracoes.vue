@@ -478,8 +478,24 @@ async function confirmarExportarDadosEmpresa() {
 }
 
 const gerarPdfDados = () => {
-  const win = window.open('', '_blank')
-  win.document.write(`
+  const iframe = document.createElement('iframe')
+  iframe.style.position = 'fixed'
+  iframe.style.right = '0'
+  iframe.style.bottom = '0'
+  iframe.style.width = '0'
+  iframe.style.height = '0'
+  iframe.style.border = '0'
+  document.body.appendChild(iframe)
+
+  const doc = iframe.contentWindow?.document
+  if (!doc) {
+    notify.error('Não foi possível gerar o relatório agora.')
+    iframe.remove()
+    return
+  }
+
+  doc.open()
+  doc.write(`
     <html>
       <head>
         <title>Dados Cadastrais - ${form.value.nome_fantasia}</title>
@@ -512,21 +528,29 @@ const gerarPdfDados = () => {
         <div class="data-row"><span class="label">Agência:</span> ${form.value.banco_agencia} | <span class="label" style="min-width:auto">Conta:</span> ${form.value.banco_conta}</div>
         <div class="data-row"><span class="label">Chave PIX:</span> <strong>${form.value.pix || 'Não informada'}</strong></div>
 
-        <div style="margin-top: 50px; font-size: 10px; color: #999; text-align: center; border-top: 1px solid #EEE; padding-top: 10px;">
-          Documento gerado em ${new Date().toLocaleDateString('pt-BR')} via Sistema ERP ACASA
-        </div>
+        <div style="margin-top: 50px;"></div>
       </body>
     </html>
   `)
-  win.document.close()
-  setTimeout(() => { win.print() }, 500)
+  doc.close()
+
+  setTimeout(() => {
+    iframe.contentWindow?.focus()
+    iframe.contentWindow?.print()
+    setTimeout(() => iframe.remove(), 1000)
+  }, 300)
 }
 
 onMounted(async () => {
-  const data = await ConfiguracaoService.carregar()
-  if (data) Object.assign(form.value, data)
-  await carregarLogo()
-  await carregarDocumentos()
+  try {
+    const data = await ConfiguracaoService.carregar()
+    if (data) Object.assign(form.value, data)
+    await carregarLogo()
+    await carregarDocumentos()
+  } catch (err) {
+    console.error('[CONFIGURACOES_EMPRESA_LOAD]', err)
+    notify.error('Nao foi possivel carregar os dados da empresa.')
+  }
 })
 </script>
 

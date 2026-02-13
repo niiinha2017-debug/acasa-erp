@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "A Casa Marcenaria",
+        "title": "ERP",
         "width": 1280,
         "height": 720,
         "resizable": true,

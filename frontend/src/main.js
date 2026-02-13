@@ -143,7 +143,7 @@ const maybeRunUpdater = async () => {
 maybeRunUpdater()
 
 const setAppTitleWithVersion = async () => {
-  const baseTitle = 'A Casa Marcenaria | ERP'
+  const baseTitle = 'ERP'
 
   // Web fallback: mantém título base.
   if (!window.__TAURI__ && !window.__TAURI_INTERNALS__) {
@@ -152,15 +152,11 @@ const setAppTitleWithVersion = async () => {
   }
 
   try {
-    const [{ getVersion }, { getCurrentWindow }] = await Promise.all([
-      import('@tauri-apps/api/app'),
+    const [{ getCurrentWindow }] = await Promise.all([
       import('@tauri-apps/api/window')
     ])
-
-    const version = await getVersion()
-    const fullTitle = `${baseTitle} v${version}`
-    document.title = fullTitle
-    await getCurrentWindow().setTitle(fullTitle)
+    document.title = baseTitle
+    await getCurrentWindow().setTitle(baseTitle)
   } catch (err) {
     console.error('[ACASA_TITLE_VERSION]', err)
     document.title = baseTitle

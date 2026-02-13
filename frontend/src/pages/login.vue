@@ -111,8 +111,8 @@
                   <p class="text-sm text-text-soft">Enviaremos uma senha provisoria para seu e-mail.</p>
 
                   <div class="flex flex-col sm:flex-row gap-3 pt-2">
-                    <Button type="button" variant="secondary" @click="fecharTudo" class="flex-1 h-11 rounded-2xl">Cancelar</Button>
-                    <Button type="submit" :loading="loading" class="flex-1 h-11 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px]">Enviar</Button>
+                    <Button type="button" variant="secondary" @click="fecharTudo" class="flex-1 h-11 rounded-2xl" :disabled="recuperacaoLoading">Cancelar</Button>
+                    <Button type="submit" :loading="recuperacaoLoading" class="flex-1 h-11 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px]" :disabled="recuperacaoLoading || !emailRecuperacao">Enviar</Button>
                   </div>
                 </form>
               </div>
@@ -136,6 +136,7 @@ const { login, esqueciSenha, loading } = useAuth()
 const AGENDA_GERAL_PATH = '/agendamentos?visao=geral'
 
 const showModalRecuperacao = ref(false)
+const recuperacaoLoading = ref(false)
 const lembrarUsuario = ref(false)
 const formLogin = reactive({ usuario: '', senha: '' })
 const emailRecuperacao = ref('')
@@ -188,10 +189,15 @@ async function handleLoginSubmit() {
 
 async function handleRecuperacaoSubmit() {
   try {
+    if (recuperacaoLoading.value) return
+    recuperacaoLoading.value = true
     await esqueciSenha(emailRecuperacao.value)
     fecharTudo()
     alert('Enviamos uma senha provisoria para seu e-mail.')
   } catch (e) {}
+  finally {
+    recuperacaoLoading.value = false
+  }
 }
 
 watch(lembrarUsuario, (v) => {

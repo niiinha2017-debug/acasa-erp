@@ -60,7 +60,7 @@ export async function openRouteInNewContext(router, to, options = {}) {
   const href = resolved.href
   const pushFallback = router.__acasaOriginalPush?.bind(router) || router.push.bind(router)
   const pageTitle = getPageTitleForTarget(router, to, options)
-  const windowTitle = `A Casa ERP | ${pageTitle}`
+  const windowTitle = pageTitle
   const routeExists = Array.isArray(resolved.matched) && resolved.matched.length > 0
 
   if (!routeExists) {
