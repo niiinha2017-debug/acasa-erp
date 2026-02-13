@@ -80,7 +80,7 @@ export class PontoService {
         ? base
         : `https://${base}`;
 
-    return `${normalized.replace(/\/+$/, '')}/acasa-ponto.apk`;
+    return `${normalized.replace(/\/+$/, '')}/ponto/ponto.apk`;
   }
 
   private assertFuncionarioAtivo(status: any) {

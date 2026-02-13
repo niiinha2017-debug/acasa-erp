@@ -2,6 +2,11 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common'; // ✅ ADICIONE ISSO
 import cookieParser from 'cookie-parser';
+import { config as loadEnv } from 'dotenv';
+import { join } from 'path';
+
+loadEnv({ path: join(process.cwd(), 'backend', '.env'), override: true });
+loadEnv({ path: join(__dirname, '..', '.env'), override: true });
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);

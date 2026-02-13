@@ -8,6 +8,7 @@ export const NAV_SCHEMA = {
     { label: 'Orcamentos', to: '/orcamentos', icon: 'pi-file-edit', perm: 'orcamentos.ver' },
     { divider: true },
 
+    { label: 'Producao', to: '/producao', icon: 'pi-cogs', perm: 'producao.ver' },
     { label: 'Plano de Corte', to: '/plano-corte', icon: 'pi-sitemap', perm: 'plano_corte.ver' },
     { label: 'Itens do Plano de Corte', to: '/plano-corte/itens', icon: 'pi-box', perm: 'plano_corte.ver' },
     { label: 'Plano de Corte (Metragem)', to: '/plano-corte/venda', icon: 'pi-ruler', perm: 'plano_corte.criar' },
@@ -35,7 +36,7 @@ export const NAV_SCHEMA = {
     { label: 'Ponto (Registros)', to: '/rh/ponto/relatorio', icon: 'pi-clock', perm: 'ponto_relatorio.ver' },
     { label: 'Convites de Ponto', to: '/rh/ponto/convites', icon: 'pi-link', perm: 'ponto_convite.criar' },
     { divider: true },
-    { label: 'Geral', to: '/configuracoes/configuracoes', icon: 'pi-sliders-h', perm: 'configuracoes.empresa.ver' },
+    { label: 'Cadastro da Empresa', to: '/configuracoes/configuracoes', icon: 'pi-sliders-h', perm: 'configuracoes.empresa.ver' },
   ],
 
   dashboard: [

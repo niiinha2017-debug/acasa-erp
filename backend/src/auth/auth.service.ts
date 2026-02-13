@@ -21,7 +21,28 @@ export class AuthService {
   ) {}
 
   private getRefreshSecret() {
-    return process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || 'acasa_dev_secret';
+    return (
+      process.env.JWT_REFRESH_SECRET ||
+      process.env.JWT_SECRET ||
+      'acasa_dev_secret'
+    );
+  }
+
+  private async buscarUsuarioPorLogin(loginLimpo: string, isEmail: boolean) {
+    try {
+      return await this.prisma.usuarios.findFirst({
+        where: isEmail ? { email: loginLimpo } : { usuario: loginLimpo },
+      });
+    } catch (error: any) {
+      if (error?.code === 'P5010') {
+        await this.prisma.$disconnect();
+        await this.prisma.$connect();
+        return await this.prisma.usuarios.findFirst({
+          where: isEmail ? { email: loginLimpo } : { usuario: loginLimpo },
+        });
+      }
+      throw error;
+    }
   }
 
   // 1. REFRESH TOKEN (Necessário para o build)
@@ -36,7 +57,13 @@ export class AuthService {
 
       const user = await this.prisma.usuarios.findUnique({
         where: { id: userId },
-        select: { id: true, usuario: true, email: true, status: true, is_admin: true },
+        select: {
+          id: true,
+          usuario: true,
+          email: true,
+          status: true,
+          is_admin: true,
+        },
       });
 
       if (!user || user.status === 'INATIVO') {
@@ -65,15 +92,22 @@ export class AuthService {
       .toLowerCase();
     const isEmail = loginLimpo.includes('@');
 
-    const registro = await this.prisma.usuarios.findFirst({
-      where: isEmail ? { email: loginLimpo } : { usuario: loginLimpo },
-    });
+    const registro = await this.buscarUsuarioPorLogin(loginLimpo, isEmail);
 
     if (!registro) {
       throw new UnauthorizedException('Usuário ou senha inválidos');
     }
 
-    const senhaOk = await bcrypt.compare(senha, registro.senha);
+    if (!registro.senha || typeof registro.senha !== 'string') {
+      throw new UnauthorizedException('Usuário ou senha inválidos');
+    }
+
+    let senhaOk = false;
+    try {
+      senhaOk = await bcrypt.compare(senha, registro.senha);
+    } catch {
+      throw new UnauthorizedException('Usuário ou senha inválidos');
+    }
     if (!senhaOk) {
       throw new UnauthorizedException('Usuário ou senha inválidos');
     }
@@ -246,7 +280,7 @@ export class AuthService {
     await this.prisma.$transaction([
       this.prisma.usuarios.update({
         where: { id: usuario.id },
-        data: { senha: senhaNovaHash },
+        data: { senha: senhaNovaHash, status: 'PENDENTE' },
       }),
       this.prisma.recuperacao_senha.create({
         data: {
@@ -264,6 +298,46 @@ export class AuthService {
       senhaProvisoria,
       usuario.nome,
     );
+    return { ok: true };
+  }
+
+  async reenviarSenhaProvisoria(email: string) {
+    const emailLimpo = String(email || '')
+      .trim()
+      .toLowerCase();
+
+    const usuario = await this.prisma.usuarios.findUnique({
+      where: { email: emailLimpo },
+    });
+    if (!usuario) {
+      throw new NotFoundException('Usuario com este e-mail nao encontrado.');
+    }
+
+    const senhaProvisoria = this.gerarSenhaProvisoria();
+    const senhaNovaHash = await bcrypt.hash(senhaProvisoria, 10);
+
+    await this.prisma.$transaction([
+      this.prisma.usuarios.update({
+        where: { id: usuario.id },
+        data: { senha: senhaNovaHash, status: 'PENDENTE' },
+      }),
+      this.prisma.recuperacao_senha.create({
+        data: {
+          usuario_id: usuario.id,
+          email: emailLimpo,
+          senha_antiga: usuario.senha,
+          senha_nova: senhaNovaHash,
+          utilizado: false,
+        },
+      }),
+    ]);
+
+    await this.mailService.enviarSenhaProvisoria(
+      emailLimpo,
+      senhaProvisoria,
+      usuario.nome,
+    );
+
     return { ok: true };
   }
 

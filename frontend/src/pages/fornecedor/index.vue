@@ -1,113 +1,83 @@
-<template>
-  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-page-in">
-    
-    <PageHeader 
-      title="Fornecedores"
-      subtitle="Gestão de parceiros comerciais e suprimentos"
-      icon="pi pi-truck"
-    >
-      <template #actions>
-        <Button
-          v-if="can('fornecedores.criar')"
-          variant="primary"
-          @click="router.push('/fornecedor/novo')"
-        >
-          <i class="pi pi-plus mr-2"></i>
-          Novo Fornecedor
-        </Button>
-      </template>
-    </PageHeader>
+﻿<template>
+  <div class="login-font clientes-line-list w-full max-w-[1700px] mx-auto">
+    <div class="relative overflow-hidden rounded-3xl border border-border-ui bg-bg-card shadow-2xl">
+      <div class="h-1.5 w-full bg-[linear-gradient(90deg,#2f7fb3_0%,#255a82_100%)]"></div>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <MetricCard
-        label="Total Parceiros"
-        :value="rows.length"
-        icon="pi pi-building"
-        color="slate"
-      />
-      
-      <MetricCard
-        label="Com E-mail"
-        :value="rows.filter(r => r.email).length"
-        icon="pi pi-envelope"
-        color="blue"
-      />
-      
-      <MetricCard
-        label="Com Telefone"
-        :value="rows.filter(r => r.telefone || r.whatsapp).length"
-        icon="pi pi-phone"
-        color="emerald"
-      />
+      <PageHeader
+        title="Fornecedores"
+        subtitle="Base de parceiros comerciais"
+        icon="pi pi-truck"
+        :showBack="false"
+      >
+        <template #actions>
+          <div class="flex items-center gap-3 w-full sm:w-auto">
+            <div class="w-full sm:w-64">
+              <SearchInput
+                v-model="busca"
+                placeholder="Buscar fornecedor, cidade, endereco ou bairro..."
+                :bordered="true"
+              />
+            </div>
 
-       <MetricCard
-        label="Ativos"
-        :value="rows.filter(r => !r.inativo).length"
-        icon="pi pi-check-circle"
-        color="amber"
-      />
-    </div>
+            <Button
+              v-if="can('fornecedores.criar')"
+              variant="primary"
+              class="flex-shrink-0 h-11 rounded-xl font-black uppercase tracking-[0.16em] text-[11px]"
+              @click="router.push('/fornecedor/novo')"
+            >
+              <i class="pi pi-plus mr-2 text-xs"></i>
+              Novo Fornecedor
+            </Button>
+          </div>
+        </template>
+      </PageHeader>
 
-    <div class="space-y-4">
-      <div class="w-full md:w-96">
-        <SearchInput
-          v-model="busca"
-          placeholder="Buscar por razão, cnpj ou cidade..."
-        />
-      </div>
-
-      <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4">
         <Table
           :columns="columns"
           :rows="rowsFiltrados"
           :loading="loading"
-          empty-text="Nenhum fornecedor encontrado."
-          :boxed="false"
+          :empty-text="busca ? 'Nenhum fornecedor encontrado para sua busca' : 'Nenhum fornecedor cadastrado'"
         >
           <template #cell-razao_social="{ row }">
-            <div class="flex flex-col py-1">
-              <span class="text-sm font-bold text-slate-800 uppercase tracking-tight leading-tight">
-                {{ row.nome_fantasia || row.razao_social }}
-              </span>
-              <span class="text-[10px] font-bold text-slate-400 tracking-wider uppercase">
-                {{ row.razao_social }}
-              </span>
-            </div>
-          </template>
-
-          <template #cell-documento="{ row }">
-             <span class="text-xs font-medium text-slate-600">
-               {{ formatDoc(row.cnpj || row.cpf) }}
-             </span>
-          </template>
-
-          <template #cell-contato="{ row }">
-            <div class="flex flex-col">
-              <div v-if="row.email" class="flex items-center gap-1.5 text-slate-600 mb-0.5">
-                <i class="pi pi-envelope text-[9px]"></i>
-                <span class="text-[10px] font-medium lowercase">{{ row.email }}</span>
+            <div class="flex items-center gap-3 py-0.5">
+              <div class="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-500 text-xs">
+                {{ (row.nome_fantasia || row.razao_social || '?').substring(0,2).toUpperCase() }}
               </div>
-              <div v-if="row.telefone || row.whatsapp" class="flex items-center gap-1.5 text-slate-600">
-                <i class="pi pi-phone text-[9px]"></i>
-                <span class="text-[10px] font-medium">{{ row.whatsapp || row.telefone }}</span>
+              <div class="flex flex-col min-w-0">
+                <span class="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                  {{ row.nome_fantasia || row.razao_social || '-' }}
+                </span>
+                <span class="text-xs font-normal text-slate-500 truncate mt-0.5">
+                  {{ row.razao_social || '-' }}
+                </span>
               </div>
             </div>
           </template>
 
           <template #cell-localizacao="{ row }">
-            <span class="text-xs font-bold text-slate-700 uppercase" v-if="row.cidade">
-              {{ row.cidade }}<span v-if="row.estado">/{{ row.estado }}</span>
+            <span class="text-sm text-slate-700 dark:text-slate-300">
+              {{ [row.endereco, row.numero, row.bairro].filter(Boolean).join(', ') || '-' }}
             </span>
-            <span v-else class="text-slate-400 text-xs italic">Não informado</span>
+          </template>
+
+          <template #cell-contato="{ row }">
+            <span class="text-sm text-slate-700 dark:text-slate-300">
+              {{ row.whatsapp || row.telefone || row.email || '-' }}
+            </span>
           </template>
 
           <template #cell-acoes="{ row }">
-             <TableActions
-                :can-edit="can('fornecedores.editar')"
-                :can-delete="can('fornecedores.excluir')"
-                @edit="router.push(`/fornecedor/${row.id}`)"
-                @delete="confirmarExcluir(row)"
+            <div class="w-full flex justify-center">
+              <TableActions
+                class="!justify-center !px-0"
+                :id="row.id"
+                perm-edit="fornecedores.editar"
+                perm-delete="fornecedores.excluir"
+                @edit="editarFornecedor"
+                @delete="excluirFornecedor"
               />
+            </div>
           </template>
         </Table>
       </div>
@@ -116,78 +86,113 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { FornecedorService } from '@/services/index'
 import { confirm } from '@/services/confirm'
-import { notify } from '@/services/notify'
 import { can } from '@/services/permissions'
-import { maskCNPJ, maskCPF } from '@/utils/masks'
+import { notify } from '@/services/notify'
+
+import PageHeader from '@/components/ui/PageHeader.vue'
+import SearchInput from '@/components/ui/SearchInput.vue'
+import TableActions from '@/components/ui/TableActions.vue'
 
 definePage({ meta: { perm: 'fornecedores.ver' } })
 
 const router = useRouter()
-const loading = ref(true)
-const busca = ref('')
-const rows = ref([])
 
-const columns = [
-  { key: 'razao_social', label: 'FORNECEDOR', width: '30%' },
-  { key: 'documento', label: 'DOCUMENTO', width: '20%' },
-  { key: 'contato', label: 'CONTATO', width: '25%' },
-  { key: 'localizacao', label: 'LOCALIZAÇÃO', width: '15%' },
-  { key: 'acoes', label: '', align: 'right', width: '10%' }
-]
+const busca = ref('')
+const loading = ref(false)
+const fornecedores = ref([])
 
 const rowsFiltrados = computed(() => {
-  const termo = String(busca.value || '').toLowerCase().trim()
-  if (!termo) return rows.value
+  let filtrados = fornecedores.value
 
-  return rows.value.filter((f) => {
-    const razao = String(f.razao_social || '').toLowerCase()
-    const fantasia = String(f.nome_fantasia || '').toLowerCase()
-    const doc = String(f.cnpj || f.cpf || '').toLowerCase()
-    const cidade = String(f.cidade || '').toLowerCase()
+  if (busca.value) {
+    const termo = busca.value.toLowerCase().trim()
+    filtrados = filtrados.filter((f) =>
+      (f.razao_social && f.razao_social.toLowerCase().includes(termo)) ||
+      (f.nome_fantasia && f.nome_fantasia.toLowerCase().includes(termo)) ||
+      (f.email && f.email.toLowerCase().includes(termo)) ||
+      (f.whatsapp && f.whatsapp.includes(termo)) ||
+      (f.telefone && f.telefone.includes(termo)) ||
+      (f.endereco && f.endereco.toLowerCase().includes(termo)) ||
+      (f.numero && String(f.numero).toLowerCase().includes(termo)) ||
+      (f.bairro && f.bairro.toLowerCase().includes(termo)) ||
+      (f.cidade && f.cidade.toLowerCase().includes(termo))
+    )
+  }
 
-    return razao.includes(termo) || fantasia.includes(termo) || doc.includes(termo) || cidade.includes(termo)
-  })
+  return filtrados
 })
 
-function formatDoc(v) {
-  if (!v) return '—'
-  const s = String(v).replace(/\D/g, '')
-  return s.length > 11 ? maskCNPJ(s) : maskCPF(s)
+function editarFornecedor(id) {
+  if (!can('fornecedores.editar')) return notify.error('Acesso negado.')
+  router.push(`/fornecedor/${id}`)
 }
 
-async function carregar() {
-  loading.value = true
+async function excluirFornecedor(id) {
+  if (!can('fornecedores.excluir')) return notify.error('Acesso negado.')
+
+  const ok = await confirm.show('Excluir Fornecedor?', 'Esta acao nao pode ser desfeita.')
+  if (!ok) return
+
+  const cleanId = Number(id)
+
   try {
-    // Ajuste conforme o retorno real do seu service
-    const data = await FornecedorService.listar()
-    rows.value = Array.isArray(data) ? data : (data.data || [])
-  } catch (err) {
-    notify.error('Erro ao listar fornecedores.')
+    await FornecedorService.remover(cleanId)
+    fornecedores.value = fornecedores.value.filter((f) => Number(f.id) !== cleanId)
+    notify.success('Fornecedor removido com sucesso')
+  } catch (e) {
+    console.error('Erro ao excluir fornecedor:', e)
+    const apiMsg = e?.response?.data?.message
+    notify.error(Array.isArray(apiMsg) ? apiMsg.join(' | ') : (apiMsg || 'Nao foi possivel excluir o fornecedor'))
+  }
+}
+
+const columns = [
+  { key: 'razao_social', label: 'FORNECEDOR', width: '35%' },
+  { key: 'localizacao', label: 'LOCALIZACAO', width: '35%' },
+  { key: 'contato', label: 'CONTATO', width: '15%' },
+  { key: 'acoes', label: 'ACOES', align: 'center', width: '15%' }
+]
+
+const carregarFornecedores = async () => {
+  loading.value = true
+
+  try {
+    const res = await FornecedorService.listar()
+    fornecedores.value = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : [])
+  } catch (error) {
+    console.error('Erro ao carregar fornecedores:', error)
+    notify.error('Falha ao carregar fornecedores.')
+    fornecedores.value = []
   } finally {
     loading.value = false
   }
 }
 
-async function confirmarExcluir(row) {
-  if (!can('fornecedores.excluir')) return notify.error('Acesso negado.')
-  const ok = await confirm.show(
-    'Remover Fornecedor',
-    `Deseja excluir "${row.nome_fantasia || row.razao_social}"?`,
-  )
-  if (ok) {
-    try {
-      await FornecedorService.remover(row.id)
-      rows.value = rows.value.filter(r => r.id !== row.id)
-      notify.success('Fornecedor removido.')
-    } catch (e) {
-      notify.error('Não foi possível remover.')
-    }
-  }
+onMounted(carregarFornecedores)
+</script>
+
+<style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
+.login-font {
+  font-family: 'Manrope', 'Segoe UI', sans-serif;
 }
 
-onMounted(carregar)
-</script>
+.clientes-line-list :deep(.search-container input.w-full) {
+  border-top: 0;
+  border-left: 0;
+  border-right: 0;
+  border-bottom-width: 2px;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.clientes-line-list :deep(.search-container input.w-full:focus) {
+  box-shadow: none;
+}
+</style>

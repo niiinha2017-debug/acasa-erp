@@ -9,6 +9,14 @@ import { PrismaService } from '../prisma/prisma.service';
 export class PermissoesService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async listarTodasAsChaves(): Promise<string[]> {
+    const rows = await this.prisma.permissoes.findMany({
+      select: { chave: true },
+      orderBy: { id: 'asc' },
+    });
+    return rows.map((r) => r.chave);
+  }
+
   async listarPermissoes() {
     return this.prisma.permissoes.findMany({
       orderBy: { id: 'asc' },
@@ -19,17 +27,24 @@ export class PermissoesService {
   async listarPermissoesDoUsuario(usuarioId: number) {
     const usuario = await this.prisma.usuarios.findUnique({
       where: { id: usuarioId },
-      select: { id: true },
+      select: { id: true, is_admin: true },
     });
-    if (!usuario) throw new NotFoundException('Usuário não encontrado');
+    if (!usuario) throw new NotFoundException('Usuario nao encontrado');
+
+    if (usuario.is_admin) {
+      return this.listarTodasAsChaves();
+    }
 
     const vinculos = await this.prisma.usuarios_permissoes.findMany({
       where: { usuario_id: usuarioId },
       select: { permissao: { select: { chave: true } } },
       orderBy: { id: 'asc' },
     });
-
-    return vinculos.map((v) => v.permissao.chave);
+    const chaves = vinculos.map((v) => v.permissao.chave);
+    if (chaves.includes('ADMIN')) {
+      return this.listarTodasAsChaves();
+    }
+    return chaves;
   }
 
   async definirPermissoesDoUsuario(usuarioId: number, permissoesIds: number[]) {
@@ -37,7 +52,7 @@ export class PermissoesService {
       where: { id: usuarioId },
       select: { id: true },
     });
-    if (!usuario) throw new NotFoundException('Usuário não encontrado');
+    if (!usuario) throw new NotFoundException('Usuario nao encontrado');
 
     const ids = [...new Set((permissoesIds || []).map(Number).filter(Boolean))];
 
@@ -50,7 +65,7 @@ export class PermissoesService {
       const encontradas = new Set(permissoes.map((p) => p.id));
       const faltando = ids.filter((id) => !encontradas.has(id));
       throw new BadRequestException(
-        `Permissões inválidas: ${faltando.join(', ')}`,
+        `Permissoes invalidas: ${faltando.join(', ')}`,
       );
     }
 
@@ -73,13 +88,25 @@ export class PermissoesService {
     return { ok: true };
   }
 
-  // helper pro login/me
+  // helper para login/me
   async permissoesDoUsuarioPorId(usuarioId: number): Promise<string[]> {
+    const usuario = await this.prisma.usuarios.findUnique({
+      where: { id: usuarioId },
+      select: { is_admin: true },
+    });
+
+    if (usuario?.is_admin) {
+      return this.listarTodasAsChaves();
+    }
+
     const rows = await this.prisma.usuarios_permissoes.findMany({
       where: { usuario_id: usuarioId },
       select: { permissao: { select: { chave: true } } },
     });
-
-    return rows.map((r) => r.permissao.chave);
+    const chaves = rows.map((r) => r.permissao.chave);
+    if (chaves.includes('ADMIN')) {
+      return this.listarTodasAsChaves();
+    }
+    return chaves;
   }
 }

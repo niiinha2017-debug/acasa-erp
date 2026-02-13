@@ -1,5 +1,5 @@
 ﻿<template>
-  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-in fade-in duration-500">
+  <div class="page-content space-y-6 animate-in fade-in duration-500">
     <PageHeader
       title="Relatório de Ponto"
       subtitle="Horas e custo com base no cadastro do funcionário"
@@ -8,25 +8,25 @@
     />
     
     <div v-if="rows.length" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
+      <div class="bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex items-center gap-4">
         <div class="w-12 h-12 rounded-2xl bg-brand-primary text-white flex items-center justify-center shadow-lg">
           <i class="pi pi-calendar text-xl"></i>
         </div>
         <div>
           <p class="text-[10px] font-black uppercase text-slate-400">Meta Diaria</p>
-          <p class="text-2xl font-black text-slate-800 tracking-tighter">{{ resumo.metaDia.toFixed(2) }}h</p>
+          <p class="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tighter">{{ resumo.metaDia.toFixed(2) }}h</p>
         </div>
       </div>
 
-      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
+      <div class="bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex items-center gap-4">
         <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner font-black">HH</div>
         <div>
           <p class="text-[10px] font-black uppercase text-slate-400">Trabalhado</p>
-          <p class="text-2xl font-black text-slate-800 tracking-tighter">{{ resumo.totalHorasHHMM }}</p>
+          <p class="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tighter">{{ resumo.totalHorasHHMM }}</p>
         </div>
       </div>
 
-      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
+      <div class="bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex items-center gap-4">
         <div :class="resumo.totalSaldo >= 0 ? 'bg-emerald-500' : 'bg-rose-500'" class="w-12 h-12 rounded-2xl text-white flex items-center justify-center shadow-lg transition-colors">
           <i class="pi pi-chart-bar text-xl"></i>
         </div>
@@ -40,32 +40,32 @@
     </div>
 
     <div v-if="rows.length" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div class="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
+      <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 flex items-center justify-between">
         <span class="text-[11px] font-black uppercase tracking-wider text-slate-500">Custo hora (funcionário)</span>
-        <span class="text-lg font-black text-slate-800">{{ formatCurrency(resumo.custoHora) }}</span>
+        <span class="text-lg font-black text-slate-800 dark:text-slate-100">{{ formatCurrency(resumo.custoHora) }}</span>
       </div>
-      <div class="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
+      <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 flex items-center justify-between">
         <span class="text-[11px] font-black uppercase tracking-wider text-slate-500">Custo total no período</span>
-        <span class="text-lg font-black text-slate-800">{{ formatCurrency(resumo.custoTotal) }}</span>
+        <span class="text-lg font-black text-slate-800 dark:text-slate-100">{{ formatCurrency(resumo.custoTotal) }}</span>
       </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      <header class="p-6 bg-slate-50/50 border-b border-slate-100 grid grid-cols-12 gap-4 items-end">
+    <div class="page-section overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+      <header class="p-6 bg-slate-50/50 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-700 grid grid-cols-12 gap-4 items-end">
         <div class="col-span-12 md:col-span-4">
           <label class="text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 block italic">Funcionario</label>
-          <select v-model="filtros.funcionario_id" class="w-full h-11 bg-white border border-slate-200 rounded-2xl px-4 text-xs font-bold uppercase outline-none focus:ring-2 focus:ring-brand-primary/40 transition-all">
+          <select v-model="filtros.funcionario_id" class="w-full h-11 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 text-xs font-bold uppercase outline-none focus:ring-2 focus:ring-brand-primary/40 transition-all text-slate-700 dark:text-slate-200">
             <option value="">Selecione...</option>
             <option v-for="o in funcionarioOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
           </select>
         </div>
         <div class="col-span-5 md:col-span-3">
           <label class="text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 block italic">Inicio</label>
-          <input v-model="filtros.data_ini" type="date" class="w-full h-11 bg-white border border-slate-200 rounded-2xl px-4 text-xs font-bold outline-none focus:ring-2 focus:ring-brand-primary/40" />
+          <input v-model="filtros.data_ini" type="date" class="w-full h-11 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 text-xs font-bold outline-none focus:ring-2 focus:ring-brand-primary/40 text-slate-700 dark:text-slate-200" />
         </div>
         <div class="col-span-5 md:col-span-3">
           <label class="text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 block italic">Fim</label>
-          <input v-model="filtros.data_fim" type="date" class="w-full h-11 bg-white border border-slate-200 rounded-2xl px-4 text-xs font-bold outline-none focus:ring-2 focus:ring-brand-primary/40" />
+          <input v-model="filtros.data_fim" type="date" class="w-full h-11 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 text-xs font-bold outline-none focus:ring-2 focus:ring-brand-primary/40 text-slate-700 dark:text-slate-200" />
         </div>
 <div class="col-span-12 md:col-span-2 grid grid-cols-2 gap-2">
   <button
@@ -92,9 +92,9 @@
       </header>
 
       <div class="overflow-x-auto p-2">
-        <table class="w-full border-separate border-spacing-y-2">
+        <table class="w-full min-w-[860px] border-separate border-spacing-y-2">
           <thead>
-            <tr class="text-[10px] font-black text-slate-400 uppercase tracking-wide">
+            <tr class="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wide">
               <th class="px-6 py-2 text-left">Data</th>
               <th class="px-2 py-2">Ent 1</th>
               <th class="px-2 py-2">Sai 1</th>
@@ -104,31 +104,47 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in rowsAgrupadas" :key="row.data" class="group bg-white hover:bg-slate-50 transition-all shadow-sm">
-              <td class="px-6 py-4 rounded-l-3xl border-y border-l border-slate-50">
+            <tr
+              v-for="row in rowsAgrupadas"
+              :key="row.data"
+              class="group bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-all shadow-sm ring-1 ring-slate-100 dark:ring-slate-700"
+            >
+              <td class="px-6 py-4 rounded-l-3xl">
                 <div class="flex flex-col">
-                  <span class="text-sm font-black text-slate-800 uppercase leading-none">{{ fmtData(row.data) }}</span>
-                  <span class="text-[9px] font-bold text-slate-400 uppercase mt-1 italic">{{ getDiaSemana(row.data) }}</span>
+                  <span class="text-sm font-black text-slate-800 dark:text-slate-100 uppercase leading-none">{{ fmtData(row.data) }}</span>
+                  <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase mt-1 italic">{{ getDiaSemana(row.data) }}</span>
                 </div>
               </td>
 
-              <td v-for="col in ['ent1', 'sai1', 'ent2', 'sai2']" :key="col" class="px-2 py-4 border-y border-slate-50 text-center">
+              <td
+                v-for="col in ['ent1', 'sai1', 'ent2', 'sai2']"
+                :key="col"
+                class="px-2 py-4 text-center"
+              >
                 <div class="flex items-center justify-center gap-2 group/btn">
-                  <span class="tabular-nums font-black text-sm" :class="[row[col]?.hora ? (col.startsWith('ent') ? 'text-blue-600' : 'text-slate-600') : 'text-slate-200', isFimDeSemanaErro(row.data, row[col]?.hora) ? 'text-rose-500' : '']">
+                  <span
+                    class="tabular-nums font-black text-sm"
+                    :class="[
+                      row[col]?.hora
+                        ? (col.startsWith('ent') ? 'text-blue-600' : 'text-slate-600 dark:text-slate-300')
+                        : 'text-slate-200 dark:text-slate-700',
+                      isFimDeSemanaErro(row.data, row[col]?.hora) ? 'text-rose-500' : ''
+                    ]"
+                  >
                     {{ row[col]?.hora || '--:--' }}
                   </span>
                   <div v-if="row[col]?.id" class="flex items-center opacity-0 group-hover/btn:opacity-100 transition-opacity">
-                    <button @click="abrirModalEditar(row[col])" class="text-slate-300 hover:text-blue-500 p-1"><i class="pi pi-pencil text-[9px]"></i></button>
-                    <button @click="confirmarExcluirDireto(row[col].id)" class="text-slate-300 hover:text-rose-500 p-1"><i class="pi pi-trash text-[9px]"></i></button>
+                    <button @click="abrirModalEditar(row[col])" class="text-slate-300 dark:text-slate-500 hover:text-blue-500 p-1"><i class="pi pi-pencil text-[9px]"></i></button>
+                    <button @click="confirmarExcluirDireto(row[col].id)" class="text-slate-300 dark:text-slate-500 hover:text-rose-500 p-1"><i class="pi pi-trash text-[9px]"></i></button>
                   </div>
-                  <button v-else @click="abrirModalNovoNaPosicao(row, col)" class="opacity-0 group-hover/btn:opacity-100 text-slate-200 hover:text-brand-primary transition-opacity p-1">
+                  <button v-else @click="abrirModalNovoNaPosicao(row, col)" class="opacity-0 group-hover/btn:opacity-100 text-slate-200 dark:text-slate-700 hover:text-brand-primary transition-opacity p-1">
                     <i class="pi pi-plus text-[9px]"></i>
                   </button>
                 </div>
               </td>
 
-              <td class="px-6 py-4 rounded-r-3xl border-y border-r border-slate-50 text-right">
-                 <button @click="abrirModalJustificar(row)" class="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-500 text-[9px] font-black uppercase hover:bg-brand-primary hover:text-white hover:border-brand-primary transition-all">Justificar</button>
+              <td class="px-6 py-4 rounded-r-3xl text-right">
+                 <button @click="abrirModalJustificar(row)" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 text-[9px] font-black uppercase hover:bg-brand-primary hover:text-white hover:border-brand-primary transition-all">Justificar</button>
               </td>
             </tr>
           </tbody>
@@ -137,31 +153,31 @@
     </div>
 
     <div v-if="modalEditar.open" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
-      <div class="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95">
-        <div class="p-8 border-b flex justify-between items-center bg-slate-50/50">
-          <h3 class="font-black text-slate-800 uppercase">{{ modalEditar.id ? 'Ajustar Horario' : 'Novo Horario' }}</h3>
+      <div class="bg-bg-card w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 border border-border-ui">
+        <div class="p-6 border-b border-border-ui flex justify-between items-center bg-slate-50/60 dark:bg-slate-900/40">
+          <h3 class="font-black text-text-main uppercase">{{ modalEditar.id ? 'Ajustar Horario' : 'Novo Horario' }}</h3>
           <button @click="modalEditar.open = false" class="text-slate-400 hover:text-rose-500"><i class="pi pi-times"></i></button>
         </div>
-        <div class="p-8 space-y-4">
+        <div class="p-6 space-y-4">
           <div class="space-y-1">
-            <label class="text-[10px] font-black text-slate-400 uppercase">Data e Hora</label>
-            <input type="datetime-local" v-model="modalEditar.form.data_hora_local" class="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-primary/40" />
+            <label class="text-[10px] font-black text-text-soft uppercase">Data e Hora</label>
+            <input type="datetime-local" v-model="modalEditar.form.data_hora_local" class="w-full h-11 rounded-xl px-3 text-sm font-semibold bg-bg-card text-text-main border border-border-ui outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 dark:[color-scheme:dark]" />
           </div>
           <div class="space-y-1">
-            <label class="text-[10px] font-black text-slate-400 uppercase">Tipo</label>
-            <select v-model="modalEditar.form.tipo" class="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold text-slate-700 outline-none">
+            <label class="text-[10px] font-black text-text-soft uppercase">Tipo</label>
+            <select v-model="modalEditar.form.tipo" class="w-full h-11 rounded-xl px-3 text-sm font-semibold bg-bg-card text-text-main border border-border-ui outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10">
               <option value="ENTRADA">ENTRADA</option>
               <option value="SAIDA">SAIDA</option>
             </select>
           </div>
           <div class="space-y-1">
-            <label class="text-[10px] font-black text-slate-400 uppercase">Observacao</label>
-            <input v-model="modalEditar.form.observacao" class="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold text-slate-700 outline-none" placeholder="Motivo do ajuste..." />
+            <label class="text-[10px] font-black text-text-soft uppercase">Observacao</label>
+            <input v-model="modalEditar.form.observacao" class="w-full h-11 rounded-xl px-3 text-sm font-semibold bg-bg-card text-text-main border border-border-ui outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 placeholder:text-slate-400 dark:placeholder:text-slate-500" placeholder="Motivo do ajuste..." />
           </div>
         </div>
-        <div class="p-6 bg-slate-50 flex gap-3">
-          <button @click="modalEditar.open = false" class="flex-1 h-12 rounded-2xl font-black text-[10px] uppercase bg-white border border-slate-200 text-slate-400">Cancelar</button>
-          <button @click="confirmarSalvarEdicao" :disabled="modalEditar.saving" class="flex-1 h-12 rounded-2xl font-black text-[10px] uppercase bg-brand-primary text-white shadow-lg shadow-brand-primary/20">
+        <div class="p-6 bg-slate-50/60 dark:bg-slate-900/40 border-t border-border-ui flex gap-3">
+          <button @click="modalEditar.open = false" class="flex-1 h-10 rounded-xl font-black text-[10px] uppercase bg-bg-card border border-border-ui text-text-soft">Cancelar</button>
+          <button @click="confirmarSalvarEdicao" :disabled="modalEditar.saving" class="flex-1 h-10 rounded-xl font-black text-[10px] uppercase bg-brand-primary text-white shadow-lg shadow-brand-primary/20">
             {{ modalEditar.saving ? 'Gravando...' : 'Salvar' }}
           </button>
         </div>
@@ -169,28 +185,28 @@
     </div>
 
     <div v-if="modalJust.open" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
-      <div class="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div class="p-8 border-b flex justify-between items-center bg-slate-50/50">
+      <div class="bg-bg-card w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] border border-border-ui">
+        <div class="p-6 border-b border-border-ui flex justify-between items-center bg-slate-50/60 dark:bg-slate-900/40">
           <div>
-            <h3 class="font-black text-slate-800 uppercase text-xl leading-none">Justificativa</h3>
-            <p class="text-[10px] font-bold text-slate-400 uppercase mt-2 tracking-wide italic">Data: {{ fmtData(modalJust.dia) }}</p>
+            <h3 class="font-black text-text-main uppercase text-xl leading-none">Justificativa</h3>
+            <p class="text-[10px] font-bold text-text-soft uppercase mt-2 tracking-wide italic">Data: {{ fmtData(modalJust.dia) }}</p>
           </div>
           <button @click="modalJust.open = false" class="text-slate-400 hover:text-rose-500"><i class="pi pi-times"></i></button>
         </div>
-        <div class="p-8 space-y-6 overflow-y-auto">
-          <div class="grid grid-cols-2 gap-4">
+        <div class="p-6 space-y-6 overflow-y-auto">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="space-y-1">
-              <label class="text-[10px] font-black text-slate-400 uppercase">Tipo (Ex: Atestado)</label>
-              <input v-model="modalJust.form.tipo" class="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold outline-none" />
+              <label class="text-[10px] font-black text-text-soft uppercase">Tipo (Ex: Atestado)</label>
+              <input v-model="modalJust.form.tipo" class="w-full h-11 rounded-xl px-3 text-sm font-semibold bg-bg-card text-text-main border border-border-ui outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10" />
             </div>
             <div class="space-y-1">
-              <label class="text-[10px] font-black text-slate-400 uppercase">Data</label>
-              <input type="date" v-model="modalJust.form.data" class="w-full h-12 bg-slate-50 border border-slate-100 rounded-2xl px-4 font-bold outline-none" />
+              <label class="text-[10px] font-black text-text-soft uppercase">Data</label>
+              <input type="date" v-model="modalJust.form.data" class="w-full h-11 rounded-xl px-3 text-sm font-semibold bg-bg-card text-text-main border border-border-ui outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 dark:[color-scheme:dark]" />
             </div>
           </div>
           <div class="space-y-1">
-            <label class="text-[10px] font-black text-slate-400 uppercase">Descricao</label>
-            <textarea v-model="modalJust.form.descricao" class="w-full h-24 bg-slate-50 border border-slate-100 rounded-2xl p-4 font-bold outline-none resize-none"></textarea>
+            <label class="text-[10px] font-black text-text-soft uppercase">Descricao</label>
+            <textarea v-model="modalJust.form.descricao" class="w-full h-24 rounded-xl p-3 text-sm font-semibold bg-bg-card text-text-main border border-border-ui outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 resize-none"></textarea>
           </div>
           <div class="space-y-1">
             <label class="text-[10px] font-black text-slate-400 uppercase">Anexo</label>
@@ -219,9 +235,9 @@
             </div>
           </div>
         </div>
-        <div class="p-6 bg-slate-50 border-t flex gap-3">
-          <button @click="modalJust.open = false" class="flex-1 h-12 rounded-2xl font-black text-[10px] uppercase bg-white border border-slate-200 text-slate-400">Fechar</button>
-          <button @click="confirmarSalvarJustificativa" :disabled="modalJust.saving" class="flex-1 h-12 rounded-2xl font-black text-[10px] uppercase bg-brand-primary text-white shadow-lg shadow-brand-primary/20">Lancar Justificativa</button>
+        <div class="p-6 bg-slate-50/60 dark:bg-slate-900/40 border-t border-border-ui flex gap-3">
+          <button @click="modalJust.open = false" class="flex-1 h-10 rounded-xl font-black text-[10px] uppercase bg-bg-card border border-border-ui text-text-soft">Fechar</button>
+          <button @click="confirmarSalvarJustificativa" :disabled="modalJust.saving" class="flex-1 h-10 rounded-xl font-black text-[10px] uppercase bg-brand-primary text-white shadow-lg shadow-brand-primary/20">Lancar Justificativa</button>
         </div>
       </div>
     </div>
@@ -234,7 +250,6 @@ import {
   PontoRelatorioService,
   PontoJustificativasService,
   PontoRegistrosService,
-  FuncionarioService,
 } from '@/services/index'
 import { ArquivosService } from '@/services/arquivos.service'
 import { notify } from '@/services/notify'
@@ -303,7 +318,7 @@ const metricasFuncionario = computed(() => {
 
   const horasSemana = cargaSemana > 0
     ? cargaSemana
-    : (cargaDia > 0 ? cargaDia * diasSemana : 48)
+    : (cargaDia > 0 ? cargaDia * diasSemana : 0)
 
   return { custoHora, horasSemana, diasSemana }
 })
@@ -569,8 +584,8 @@ onMounted(async () => {
   filtros.data_fim = hoje.toISOString().slice(0, 10)
 
   try {
-    const { data } = await FuncionarioService.listar()
-    const lista = (data?.data || data || []).filter((f) => f.status === 'ATIVO')
+    const { data } = await PontoRelatorioService.listarFuncionariosAtivos()
+    const lista = (data?.data || data || [])
 
     funcionarios.value = lista
     funcionarioOptions.value = lista.map((f) => ({ label: f.nome, value: f.id }))

@@ -122,6 +122,9 @@ window.addEventListener('acasa-auth-logout', () => {
 autoOpenDevtools()
 
 const maybeRunUpdater = async () => {
+  const updaterEnabled = String(import.meta.env.VITE_TAURI_UPDATER || 'false') === 'true'
+  if (!updaterEnabled) return
+
   if (!window.__TAURI__ && !window.__TAURI_INTERNALS__) return
 
   try {

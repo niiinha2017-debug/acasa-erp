@@ -23,6 +23,11 @@ import { PontoRelatorioService } from './ponto-relatorio.service';
 export class PontoRelatorioController {
   constructor(private readonly service: PontoRelatorioService) {}
 
+  @Get('funcionarios')
+  listarFuncionariosAtivos() {
+    return this.service.listarFuncionariosAtivos();
+  }
+
   @Get('registros')
   listar(
     @Query('funcionario_id') funcionario_id?: string,

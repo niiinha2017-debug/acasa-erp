@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ponto ACASA | Ativacao</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --line: #e2e8f0;
+      --text: #0f172a;
+      --muted: #475569;
+      --brand: #0ea5e9;
+      --brand-2: #2563eb;
+      --ok: #16a34a;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+      background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 680px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      box-shadow: 0 24px 50px rgba(15, 23, 42, 0.08);
+      padding: 28px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      letter-spacing: -0.02em;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .stack { display: grid; gap: 12px; margin-top: 20px; }
+
+    label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      height: 44px;
+      padding: 0 12px;
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--brand);
+      box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.14);
+    }
+
+    .row {
+      margin-top: 14px;
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 12px;
+      height: 44px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 14px;
+      font-size: 14px;
+    }
+
+    .btn-primary { background: var(--brand-2); color: #fff; }
+    .btn-ok { background: var(--ok); color: #fff; }
+    .btn-soft { background: #e2e8f0; color: #0f172a; }
+
+    .mono {
+      margin-top: 12px;
+      background: #f1f5f9;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      color: #1e293b;
+      word-break: break-all;
+    }
+
+    .muted { margin-top: 14px; font-size: 12px; color: #64748b; }
+
+    @media (max-width: 640px) {
+      .row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Ponto ACASA</h1>
+    <p>Pagina rapida para ativacao e instalacao do app de ponto.</p>
+
+    <div class="stack">
+      <label for="code">Codigo de ativacao</label>
+      <input id="code" placeholder="Ex.: A1B2C3D4" />
+    </div>
+
+    <div class="row">
+      <a id="btnAtivar" class="btn btn-primary" href="#" target="_blank" rel="noopener noreferrer">Abrir ativacao</a>
+      <a id="btnApk" class="btn btn-soft" href="https://ponto.acasamarcenaria.com.br/ponto/ponto.apk" target="_blank" rel="noopener noreferrer">Baixar APK</a>
+      <button id="btnWhats" class="btn btn-ok" type="button">Enviar no WhatsApp</button>
+      <button id="btnCopiar" class="btn btn-soft" type="button">Copiar links</button>
+    </div>
+
+    <div id="ativacaoUrl" class="mono"></div>
+    <p class="muted">Se no ambiente local nao abrir popup, copie os links e cole no WhatsApp manualmente.</p>
+  </main>
+
+  <script>
+    const base = "https://ponto.acasamarcenaria.com.br";
+    const codeInput = document.getElementById("code");
+    const btnAtivar = document.getElementById("btnAtivar");
+    const btnWhats = document.getElementById("btnWhats");
+    const btnCopiar = document.getElementById("btnCopiar");
+    const ativacaoUrlView = document.getElementById("ativacaoUrl");
+
+    const params = new URLSearchParams(window.location.search);
+    const preCode = (params.get("code") || "").trim();
+    if (preCode) codeInput.value = preCode;
+
+    function getLinks() {
+      const code = (codeInput.value || "").trim();
+      const ativacao = code
+        ? `${base}/ativar?code=${encodeURIComponent(code)}`
+        : `${base}/ativar`;
+      const apk = `${base}/ponto/ponto.apk`;
+      return { code, ativacao, apk };
+    }
+
+    function render() {
+      const { ativacao } = getLinks();
+      btnAtivar.href = ativacao;
+      ativacaoUrlView.textContent = ativacao;
+    }
+
+    codeInput.addEventListener("input", render);
+    render();
+
+    btnWhats.addEventListener("click", () => {
+      const { ativacao, apk } = getLinks();
+      const msg = `Segue acesso ao Ponto:%0A%0AAPK:%0A${encodeURIComponent(apk)}%0A%0AAtivacao:%0A${encodeURIComponent(ativacao)}`;
+      const wa = `https://wa.me/?text=${msg}`;
+      window.open(wa, "_blank", "noopener,noreferrer");
+    });
+
+    btnCopiar.addEventListener("click", async () => {
+      const { ativacao, apk } = getLinks();
+      const texto = `APK: ${apk}\nAtivacao: ${ativacao}`;
+      try {
+        await navigator.clipboard.writeText(texto);
+        btnCopiar.textContent = "Copiado";
+        setTimeout(() => (btnCopiar.textContent = "Copiar links"), 1200);
+      } catch {
+        alert(texto);
+      }
+    });
+  </script>
+</body>
+</html>

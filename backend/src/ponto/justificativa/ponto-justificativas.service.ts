@@ -66,7 +66,10 @@ export class PontoJustificativasService {
       });
     }
 
-    const updateData: any = { tipo: dto.tipo, descricao: dto.descricao ?? null };
+    const updateData: any = {
+      tipo: dto.tipo,
+      descricao: dto.descricao ?? null,
+    };
     if (dto.arquivo_id !== undefined) updateData.arquivo_id = dto.arquivo_id;
 
     return this.prisma.ponto_justificativas.update({

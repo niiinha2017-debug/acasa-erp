@@ -1,38 +1,18 @@
 <template>
-  <div class="w-full max-w-[1200px] mx-auto px-2 sm:px-4 pb-16 space-y-4 animate-page-in">
+  <Card class="login-font mt-4 mb-8 mx-2 lg:mx-4 rounded-3xl border border-border-ui bg-bg-card shadow-2xl overflow-hidden animate-page-in">
+    <div class="h-1.5 w-full bg-[linear-gradient(90deg,#2f7fb3_0%,#255a82_100%)]"></div>
+    <PageHeader
+      :title="isEditing ? `Editar Funcionário #${id}` : 'Novo Funcionário'"
+      subtitle="Cadastro e gestão de colaboradores"
+      icon="pi pi-users"
+      :showBack="false"
+      class="border-b border-border-ui"
+    />
 
-    <!-- Header -->
-    <Card :shadow="true" class="!rounded-3xl overflow-hidden">
-      <div class="p-6 sm:p-8 border-b border-slate-100 bg-slate-50/50 flex items-start justify-between gap-4">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
-            <i class="pi pi-user text-lg"></i>
-          </div>
-          <div>
-            <h1 class="text-lg font-black text-slate-800 uppercase tracking-tight">
-              {{ isEditing ? `Editar Funcionário` : 'Novo Funcionário' }}
-            </h1>
-            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              Cadastro operacional
-            </p>
-          </div>
-        </div>
+    <div class="p-8 lg:p-12">
+      <Loading v-if="loading" />
 
-        <Button
-          variant="secondary"
-          class="!h-10 !rounded-xl !px-4 text-[10px] font-black uppercase tracking-widest"
-          type="button"
-          @click="router.push('/funcionarios')"
-        >
-          <i class="pi pi-arrow-left mr-2 text-[10px]"></i>
-          Voltar
-        </Button>
-      </div>
-
-      <div class="p-6 sm:p-8">
-        <Loading v-if="loading" />
-
-        <form v-else class="space-y-8" @submit.prevent="confirmarSalvarFuncionario">
+      <form v-else class="space-y-10 clientes-line-form" @submit.prevent="confirmarSalvarFuncionario" autocomplete="off">
 
           <!-- Dados pessoais -->
           <section class="space-y-4">
@@ -44,61 +24,60 @@
                 Seção 01
               </span>
             </div>
-<div class="grid grid-cols-12 gap-4">
-  <Input
-    class="col-span-12 md:col-span-8"
-    v-model="form.nome"
-    label="Nome Completo *"
-    placeholder="Ex: JOÃO DA SILVA"
-    required
-  />
+            <div class="grid grid-cols-12 gap-4">
+              <Input
+                class="col-span-12 md:col-span-8"
+                v-model="form.nome"
+                label="Nome Completo *"
+                placeholder="Ex: JOÃO DA SILVA"
+                required
+              />
 
-  <Input
-    class="col-span-12 md:col-span-4"
-    v-model="cpfUi"
-    label="CPF *"
-    placeholder="000.000.000-00"
-    required
-  />
+              <Input
+                class="col-span-12 md:col-span-4"
+                v-model="cpfUi"
+                label="CPF *"
+                placeholder="000.000.000-00"
+                required
+              />
 
-  <Input
-    class="col-span-12 md:col-span-4"
-    v-model="rgUi"
-    label="RG"
-    placeholder="00.000.000-0"
-  />
+              <Input
+                class="col-span-12 md:col-span-4"
+                v-model="rgUi"
+                label="RG"
+                placeholder="00.000.000-0"
+              />
 
-  <Input
-    class="col-span-12 md:col-span-4"
-    v-model="form.data_nascimento"
-    label="Data Nascimento"
-    type="date"
-    placeholder="AAAA-MM-DD"
-  />
+              <Input
+                class="col-span-12 md:col-span-4"
+                v-model="form.data_nascimento"
+                label="Data Nascimento"
+                type="date"
+                placeholder="AAAA-MM-DD"
+              />
 
-  <Input
-    class="col-span-12 md:col-span-4"
-    v-model="whatsappUi"
-    label="WhatsApp"
-    placeholder="(00) 00000-0000"
-  />
+              <Input
+                class="col-span-12 md:col-span-4"
+                v-model="whatsappUi"
+                label="WhatsApp"
+                placeholder="(00) 00000-0000"
+              />
 
-  <Input
-    class="col-span-12 md:col-span-6"
-    v-model="emailUi"
-    label="E-mail"
-    placeholder="nome@dominio.com"
-    :forceUpper="false"
-  />
+              <Input
+                class="col-span-12 md:col-span-6"
+                v-model="emailUi"
+                label="E-mail"
+                placeholder="nome@dominio.com"
+                :forceUpper="false"
+              />
 
-  <Input
-    class="col-span-12 md:col-span-6"
-    v-model="form.estado_civil"
-    label="Estado Civil"
-    placeholder="Ex: SOLTEIRO"
-  />
-</div>
-
+              <Input
+                class="col-span-12 md:col-span-6"
+                v-model="form.estado_civil"
+                label="Estado Civil"
+                placeholder="Ex: SOLTEIRO"
+              />
+            </div>
           </section>
 
           <div class="h-px bg-slate-100"></div>
@@ -114,51 +93,50 @@
               </span>
             </div>
 
-<div class="grid grid-cols-12 gap-4">
-  <Input
-    class="col-span-12 md:col-span-3"
-    v-model="cepUi"
-    label="CEP"
-    placeholder="00000-000"
-    @blur="tratarBuscaCep"
-  />
+            <div class="grid grid-cols-12 gap-4">
+              <Input
+                class="col-span-12 md:col-span-3"
+                v-model="cepUi"
+                label="CEP"
+                placeholder="00000-000"
+                @blur="tratarBuscaCep"
+              />
 
-  <Input
-    class="col-span-12 md:col-span-7"
-    v-model="form.endereco"
-    label="Logradouro"
-    placeholder="Ex: RUA DAS FLORES"
-  />
+              <Input
+                class="col-span-12 md:col-span-7"
+                v-model="form.endereco"
+                label="Logradouro"
+                placeholder="Ex: RUA DAS FLORES"
+              />
 
-  <Input
-    class="col-span-12 md:col-span-2"
-    v-model="form.numero"
-    label="Nº"
-    placeholder="123"
-  />
+              <Input
+                class="col-span-12 md:col-span-2"
+                v-model="form.numero"
+                label="Nº"
+                placeholder="123"
+              />
 
-  <Input
-    class="col-span-12 md:col-span-4"
-    v-model="form.complemento"
-    label="Complemento"
-    placeholder="Ex: AP 12 / BLOCO B"
-  />
+              <Input
+                class="col-span-12 md:col-span-4"
+                v-model="form.complemento"
+                label="Complemento"
+                placeholder="Ex: AP 12 / BLOCO B"
+              />
 
-  <Input
-    class="col-span-12 md:col-span-4"
-    v-model="form.bairro"
-    label="Bairro"
-    placeholder="Ex: CENTRO"
-  />
+              <Input
+                class="col-span-12 md:col-span-4"
+                v-model="form.bairro"
+                label="Bairro"
+                placeholder="Ex: CENTRO"
+              />
 
-  <Input
-    class="col-span-12 md:col-span-4"
-    v-model="form.cidade"
-    label="Cidade"
-    placeholder="Ex: SÃO PAULO"
-  />
-</div>
-
+              <Input
+                class="col-span-12 md:col-span-4"
+                v-model="form.cidade"
+                label="Cidade"
+                placeholder="Ex: SÃO PAULO"
+              />
+            </div>
           </section>
 
           <div class="h-px bg-slate-100"></div>
@@ -175,19 +153,18 @@
             </div>
 
             <div class="grid grid-cols-12 gap-4">
-<div class="col-span-12 md:col-span-4 space-y-2">
-  <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidade *</label>
-  <select
-    v-model="form.unidade"
-    class="w-full h-12 px-4 rounded-xl bg-white border border-slate-200 font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary transition-all uppercase"
-  >
-    <option value="">SELECIONE</option>
-    <option v-for="opt in unidadeOptions" :key="opt.value" :value="opt.value">
-      {{ opt.label }}
-    </option>
-  </select>
-</div>
-
+              <div class="col-span-12 md:col-span-4 space-y-2">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidade *</label>
+                <select
+                  v-model="form.unidade"
+                  class="w-full h-12 px-4 rounded-xl bg-white border border-slate-200 font-bold text-slate-700 outline-none focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary transition-all uppercase"
+                >
+                  <option value="">SELECIONE</option>
+                  <option v-for="opt in unidadeOptions" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </option>
+                </select>
+              </div>
 
               <div class="col-span-12 md:col-span-4 space-y-2">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Setor *</label>
@@ -390,6 +367,19 @@
 
             <div class="flex items-center gap-3 w-full md:w-auto">
               <Button
+                v-if="can('usuarios.editar') && !!String(form.email || '').trim()"
+                variant="secondary"
+                type="button"
+                class="!h-12 !rounded-2xl !px-6 text-[10px] font-black uppercase tracking-widest"
+                :loading="reenviandoSenha"
+                :disabled="salvando"
+                @click="confirmarReenviarSenhaProvisoria"
+              >
+                <i class="pi pi-envelope mr-2 text-[10px]"></i>
+                Reenviar Senha
+              </Button>
+
+              <Button
                 variant="secondary"
                 type="button"
                 class="!h-12 !rounded-2xl !px-6 text-[10px] font-black uppercase tracking-widest"
@@ -398,14 +388,13 @@
                 Cancelar
               </Button>
 
-<Button
-  v-if="can(isEditing ? 'funcionarios.editar' : 'funcionarios.criar')"
-  variant="primary"
-  type="submit"
-  class="!h-12 !rounded-2xl !px-8 text-[10px] font-black uppercase tracking-widest"
-  :loading="salvando"
->
-
+              <Button
+                v-if="can(isEditing ? 'funcionarios.editar' : 'funcionarios.criar')"
+                variant="primary"
+                type="submit"
+                class="!h-12 !rounded-2xl !px-8 text-[10px] font-black uppercase tracking-widest"
+                :loading="salvando"
+              >
                 <i class="pi pi-save mr-2 text-[10px]"></i>
                 Salvar
               </Button>
@@ -413,18 +402,14 @@
           </footer>
 
         </form>
-      </div>
-    </Card>
-
-  </div>
+    </div>
+  </Card>
 </template>
-
-
 
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { FuncionarioService } from '@/services/index'
+import { FuncionarioService, AuthService } from '@/services/index'
 
 import { maskCPF, maskRG, maskTelefone, maskCEP, onlyNumbers, maskMoneyBR } from '@/utils/masks'
 import { buscarCep } from '@/utils/utils'
@@ -445,6 +430,7 @@ const router = useRouter()
 const route = useRoute()
 
 const salvando = ref(false)
+const reenviandoSenha = ref(false)
 const loading = ref(false)
 
 const arquivos = ref([])
@@ -796,32 +782,35 @@ async function clicarAdicionarArquivo() {
 
 
 
-async function onPickArquivo(e) {
-  const file = e.target.files?.[0]
-  e.target.value = ''
-  if (!file) return
 
-  if (!can('arquivos.criar')) return notify.error('Acesso negado.')
+async function confirmarReenviarSenhaProvisoria() {
+  if (!can('usuarios.editar')) return notify.error('Acesso negado.')
 
-  // se por algum motivo não tiver id, garante novamente
-  const funcionarioId = await garantirIdParaUpload()
+  const email = String(form.value.email || '').trim().toLowerCase()
+  if (!email) return notify.error('Informe um e-mail valido para reenviar a senha.')
+
+  const ok = await confirm.show(
+    'Reenviar Senha Provisoria',
+    `Deseja reenviar uma senha provisoria para "${email}"?`,
+  )
+  if (!ok) return
 
   try {
-    await ArquivosService.upload({
-      ownerType: 'FUNCIONARIO',
-      ownerId: Number(funcionarioId),
-      categoria: 'ANEXO',
-      file,
-    })
-    notify.success('Arquivo anexado.')
-    await carregarArquivos()
+    reenviandoSenha.value = true
+    await AuthService.reenviarSenhaProvisoria(email)
+    notify.success('Senha provisoria reenviada com sucesso.')
   } catch (err) {
-    notify.error(err?.response?.data?.message || 'Erro ao anexar arquivo.')
+    notify.error(err?.response?.data?.message || 'Erro ao reenviar senha provisoria.')
+  } finally {
+    reenviandoSenha.value = false
   }
 }
 
 // ===== salvar =====
 function montarPayload() {
+  const cargaDia = Number(calcularHorasDia().toFixed(2))
+  const cargaSemana = Number(cargaHorariaSemanal.value.toFixed(2))
+
   return {
     ...form.value,
     email: emailUi.value,
@@ -832,6 +821,8 @@ function montarPayload() {
     salario_base: normalizarNumero(form.value.salario_base),
     salario_adicional: normalizarNumero(form.value.salario_adicional),
     custo_hora: normalizarNumero(form.value.custo_hora),
+    carga_horaria_dia: normalizarNumero(cargaDia),
+    carga_horaria_semana: normalizarNumero(cargaSemana),
 
     vale: normalizarNumero(form.value.vale),
     vale_transporte: normalizarNumero(form.value.vale_transporte),
@@ -839,6 +830,7 @@ function montarPayload() {
     dia_pagamento: form.value.dia_pagamento ? Number(form.value.dia_pagamento) : null,
   }
 }
+
 
 
 
@@ -972,8 +964,6 @@ onMounted(async () => {
   await carregarArquivos()
 })
 
-
-
 watch(
   () => String(route.params.id || 'novo'),
   async (next, prev) => {
@@ -991,5 +981,3 @@ watch(
   },
 )
 </script>
-
-

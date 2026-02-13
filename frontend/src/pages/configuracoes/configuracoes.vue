@@ -1,40 +1,37 @@
 <template>
-  <div class="w-full max-w-[1200px] mx-auto space-y-6 animate-page-in pb-20">
-    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-2">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
-          <i class="pi pi-building text-lg"></i>
+  <Card class="login-font mt-4 mb-8 mx-2 lg:mx-4 rounded-3xl border border-border-ui bg-bg-card shadow-2xl overflow-hidden animate-page-in">
+    <div class="h-1.5 w-full bg-[linear-gradient(90deg,#2f7fb3_0%,#255a82_100%)]"></div>
+    <PageHeader
+      title="Cadastro da Empresa"
+      subtitle="Registro da empresa, dados fiscais e de recebimento"
+      icon="pi pi-building"
+      :showBack="false"
+      class="border-b border-border-ui"
+    >
+      <template #actions>
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <Button
+            v-if="can('configuracoes.empresa.ver')"
+            variant="ghost"
+            class="flex-1 sm:flex-none !rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200"
+            @click="confirmarExportarDadosEmpresa"
+          >
+            <i class="pi pi-external-link mr-2"></i> Exportar
+          </Button>
+          <Button
+            v-if="can('configuracoes.empresa.editar')"
+            class="flex-1 sm:flex-none !rounded-xl text-[10px] font-black uppercase tracking-widest bg-brand-primary hover:bg-brand-primary/90"
+            :loading="salvando"
+            @click="confirmarSalvarDadosEmpresa"
+          >
+            <i class="pi pi-check-circle mr-2"></i> Salvar Alterações
+          </Button>
         </div>
-        <div>
-          <h1 class="text-lg font-black text-slate-800 uppercase tracking-tight">Dados da Empresa</h1>
-          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-            Configurações fiscais e de recebimento
-          </p>
-        </div>
-      </div>
+      </template>
+    </PageHeader>
 
-      <div class="flex items-center gap-2 w-full sm:w-auto">
-        <Button 
-         v-if="can('configuracoes.empresa.ver')"
-          variant="ghost" 
-          class="flex-1 sm:flex-none !rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200"
-          @click="confirmarExportarDadosEmpresa"
-        >
-          <i class="pi pi-external-link mr-2"></i> Exportar
-        </Button>
-        <Button 
-        
-  v-if="can('configuracoes.empresa.editar')"
-          class="flex-1 sm:flex-none !rounded-xl text-[10px] font-black uppercase tracking-widest bg-brand-primary hover:bg-brand-primary/90"
-          :loading="salvando"
-          @click="confirmarSalvarDadosEmpresa"
-        >
-          <i class="pi pi-check-circle mr-2"></i> Salvar Alterações
-        </Button>
-      </div>
-    </div>
-
-    <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+    <div class="p-8 lg:p-12">
+      <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden clientes-line-form">
       <div class="grid grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
         
         <div class="col-span-12 lg:col-span-4 p-8 bg-slate-50/30 space-y-10">
@@ -216,7 +213,7 @@
         </div>
       </div>
     </div>
-  </div>
+  </Card>
 </template>
 
 <script setup>
@@ -534,3 +531,35 @@ onMounted(async () => {
   await carregarDocumentos()
 })
 </script>
+
+<style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
+.login-font {
+  font-family: 'Manrope', 'Segoe UI', sans-serif;
+}
+
+.clientes-line-form :deep(.w-full.flex.flex-col.gap-1\.5 > label),
+.clientes-line-form :deep(.search-container > label) {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgb(100 116 139);
+}
+
+.clientes-line-form :deep(input.w-full),
+.clientes-line-form :deep(select.w-full) {
+  border-top: 0;
+  border-left: 0;
+  border-right: 0;
+  border-bottom-width: 2px;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.clientes-line-form :deep(input.w-full:focus),
+.clientes-line-form :deep(select.w-full:focus) {
+  box-shadow: none;
+}
+</style>

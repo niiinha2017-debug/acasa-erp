@@ -13,6 +13,7 @@ const router = createRouter({
 const routePermMap = buildRoutePermMap()
 
 let syncingMe = null
+const AGENDA_HOME = { path: '/agendamentos', query: { visao: 'geral' } }
 
 async function ensureMe() {
   const token = storage.getToken()
@@ -76,11 +77,13 @@ router.beforeEach(async (to) => {
   }
 
   // 5. Se já é ATIVO e está na tela de pendente, manda pra home
-  if (status === 'ATIVO' && to.path === '/pendente') return { path: '/' }
+  if (status === 'ATIVO' && to.path === '/pendente') {
+    return can('agendamentos.ver') ? AGENDA_HOME : { path: '/' }
+  }
 
   const requiredPerm = getRequiredPerm(to, routePermMap)
   if (requiredPerm && !can(requiredPerm)) {
-    return { path: '/' }
+    return can('agendamentos.ver') ? AGENDA_HOME : { path: '/' }
   }
 
   return true

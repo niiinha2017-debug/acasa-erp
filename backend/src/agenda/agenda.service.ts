@@ -18,7 +18,7 @@ export class AgendaService {
     };
 
     // Regra: cliente_id OU (plano_corte_id com fornecedor)
-    let clienteId = dto.cliente_id ?? null;
+    const clienteId = dto.cliente_id ?? null;
     let fornecedorId = dto.fornecedor_id ?? null;
 
     if (dto.plano_corte_id) {
@@ -26,7 +26,8 @@ export class AgendaService {
         where: { id: dto.plano_corte_id },
         select: { fornecedor_id: true },
       });
-      if (!plano) throw new BadRequestException('Plano de Corte não encontrado');
+      if (!plano)
+        throw new BadRequestException('Plano de Corte não encontrado');
       fornecedorId = plano.fornecedor_id;
     }
     if (!clienteId && !fornecedorId) {
@@ -109,8 +110,12 @@ export class AgendaService {
       return agendamento;
     }); // <--- Chave e parênteses da transação fechados aqui
   }
-  async findAll(inicio?: string, fim?: string, opts?: { includePlanoCorte?: boolean }) {
-    const includePlanoCorte = opts?.includePlanoCorte !== false
+  async findAll(
+    inicio?: string,
+    fim?: string,
+    opts?: { includePlanoCorte?: boolean },
+  ) {
+    const includePlanoCorte = opts?.includePlanoCorte !== false;
     return this.prisma.agenda_global.findMany({
       where: {
         inicio_em: {

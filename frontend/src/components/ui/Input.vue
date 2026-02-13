@@ -93,4 +93,21 @@ const handleInput = (e) => {
 <style scoped>
 .slide-up-enter-active { transition: all 0.2s ease-out; }
 .slide-up-enter-from { opacity: 0; transform: translateY(-4px); }
+
+/* Evita controles duplicados/feios em inputs de data/hora (Edge/Chrome/WebKit) */
+input[type='date']::-webkit-clear-button,
+input[type='date']::-webkit-inner-spin-button,
+input[type='time']::-webkit-clear-button,
+input[type='time']::-webkit-inner-spin-button,
+input[type='datetime-local']::-webkit-clear-button,
+input[type='datetime-local']::-webkit-inner-spin-button {
+  display: none;
+}
+
+input[type='date']::-webkit-calendar-picker-indicator,
+input[type='time']::-webkit-calendar-picker-indicator,
+input[type='datetime-local']::-webkit-calendar-picker-indicator {
+  opacity: 0.65;
+  cursor: pointer;
+}
 </style>

@@ -13,6 +13,8 @@ export const AuthService = {
   login: (payload) => api.post('/auth/login', payload),
   me: () => api.get('/auth/me'),
   esqueciSenha: (email) => api.post('/auth/esqueci-senha', { email }),
+  reenviarSenhaProvisoria: (email) =>
+    api.post('/auth/reenviar-senha-provisoria', { email }),
   alterarSenha: (senha_atual, senha_nova) =>
     api.post('/auth/alterar-senha', { senha_atual, senha_nova }),
 }
@@ -240,6 +242,9 @@ export const ObrasService = {
 
 // --- PONTO ---
 export const PontoRelatorioService = {
+  listarFuncionariosAtivos: () =>
+    api.get('/ponto/relatorio/funcionarios'),
+
   listarRegistros: (filtros = {}) =>
     api.get('/ponto/relatorio/registros', { params: filtros }),
 

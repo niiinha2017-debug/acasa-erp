@@ -17,6 +17,8 @@ import { AlterarSenhaDto } from './dto/alterar-senha.dto';
 import { EsqueciSenhaDto } from './dto/esqueci-senha.dto';
 import { CreateUsuarioDto } from './dto/cadastro.dto';
 import { RefreshDto } from './dto/refresh.dto';
+import { PermissionsGuard } from './permissions.guard';
+import { Permissoes } from './permissoes.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -48,6 +50,14 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   esqueciSenha(@Body() dto: EsqueciSenhaDto) {
     return this.authService.esqueciSenha(dto.email);
+  }
+
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Post('reenviar-senha-provisoria')
+  @Permissoes('usuarios.editar')
+  @HttpCode(HttpStatus.OK)
+  reenviarSenhaProvisoria(@Body() dto: EsqueciSenhaDto) {
+    return this.authService.reenviarSenhaProvisoria(dto.email);
   }
 
   @UseGuards(JwtAuthGuard)

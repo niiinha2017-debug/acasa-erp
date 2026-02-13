@@ -103,6 +103,16 @@
               <div class="flex gap-1 justify-end">
                 <button
                   v-if="can('usuarios.editar')"
+                  :disabled="reenviandoIds.has(row.id)"
+                  @click="confirmarReenviarSenha(row)"
+                  class="w-8 h-8 rounded-lg text-slate-400 hover:bg-indigo-50 hover:text-indigo-700 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Reenviar senha provisoria"
+                >
+                  <i class="pi pi-envelope text-[10px]"></i>
+                </button>
+
+                <button
+                  v-if="can('usuarios.editar')"
                   @click="abrirModal(row)"
                   class="w-8 h-8 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-800 transition-colors flex items-center justify-center"
                 >
@@ -187,7 +197,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useAuth } from '@/services/useauth'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
-import { UsuariosService } from '@/services/index'
+import { UsuariosService, AuthService } from '@/services/index'
 import { can } from '@/services/permissions'
 
 definePage({ meta: { perm: 'usuarios.ver' } })
@@ -201,6 +211,7 @@ const exibirModal = ref(false)
 const modoEdicao = ref(false)
 const loadingTabela = ref(false)
 const loadingSalvar = ref(false)
+const reenviandoIds = ref(new Set())
 
 const columns = [
   { key: 'nome', label: 'Colaborador' },
@@ -362,6 +373,32 @@ const confirmarExclusao = async (user) => {
     notify.success('Removido com sucesso')
   } catch (err) {
     notify.error('Erro ao excluir')
+  }
+}
+
+async function confirmarReenviarSenha(row) {
+  if (!can('usuarios.editar')) return notify.error('Acesso negado.')
+  if (!row?.email) return notify.error('Usuario sem e-mail cadastrado.')
+
+  const ok = await confirm.show(
+    'Reenviar Senha Provisoria',
+    `Deseja reenviar uma senha provisoria para "${row.email}"?`,
+  )
+  if (!ok) return
+
+  await reenviarSenha(row)
+}
+
+async function reenviarSenha(row) {
+  try {
+    reenviandoIds.value.add(row.id)
+    await AuthService.reenviarSenhaProvisoria(row.email)
+    row.status = 'PENDENTE'
+    notify.success('Senha provisoria reenviada com sucesso.')
+  } catch (err) {
+    notify.error(err?.response?.data?.message || 'Erro ao reenviar senha provisoria.')
+  } finally {
+    reenviandoIds.value.delete(row.id)
   }
 }
 

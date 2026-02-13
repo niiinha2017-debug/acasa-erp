@@ -1,17 +1,20 @@
 <template>
-  <nav class="w-full h-16 bg-[var(--bg-card)] border-b border-border-ui sticky top-0 z-[100] transition-colors duration-300">
-    <div class="max-w-7xl mx-auto h-full px-4 md:px-6 flex items-center justify-between">
+  <nav class="w-full h-16 bg-bg-card/90 backdrop-blur-xl border-b border-border-ui sticky top-0 z-[100] transition-colors duration-300">
+    <div class="h-full px-4 md:px-6 flex items-center justify-between">
       
       <!-- LOGO E MARCA -->
-      <RouterLink to="/agendamentos?visao=geral" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
-        <div class="w-8 h-8 bg-brand-primary flex items-center justify-center text-white rounded-md">
+      <RouterLink to="/agendamentos?visao=geral" class="flex items-center gap-3 transition-opacity hover:opacity-90">
+        <div class="w-9 h-9 bg-gradient-to-br from-[#2f7fb3] to-[#255a82] flex items-center justify-center text-white rounded-xl shadow-sm">
           <i class="pi pi-box text-xs"></i>
         </div>
-        <span class="font-semibold text-base text-slate-900 dark:text-white hidden sm:inline">A CASA ERP</span>
+        <div class="hidden sm:flex flex-col leading-none">
+          <span class="font-extrabold text-[13px] tracking-[0.14em] text-slate-900 dark:text-white">A CASA ERP</span>
+          <span class="text-[9px] uppercase tracking-[0.22em] text-slate-400">gestao integrada</span>
+        </div>
       </RouterLink>
 
       <!-- MENU DESKTOP -->
-      <div class="hidden md:flex items-center gap-6">
+      <div class="hidden md:flex items-center gap-2 rounded-2xl border border-border-ui bg-slate-50/70 dark:bg-slate-900/40 px-2 py-1.5">
         <NavMenu
           v-for="section in NAV_VISIVEL"
           :key="section.key"
@@ -23,27 +26,27 @@
       <!-- AÇÕES DIREITA -->
       <div class="flex items-center gap-3">
         <!-- TOGGLE TEMA -->
-        <button 
+        <button
           @click="toggleDark()" 
-          class="w-9 h-9 flex items-center justify-center text-slate-500 dark:text-slate-400 border border-border-ui rounded-md hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+          class="w-9 h-9 flex items-center justify-center text-slate-500 dark:text-slate-300 border border-border-ui rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
           title="Alternar tema"
         >
           <i :class="isDark ? 'pi pi-sun' : 'pi pi-moon'" class="text-sm"></i>
         </button>
 
         <!-- LOGOUT DESKTOP -->
-        <button 
+        <button
           @click="handleLogout" 
-          class="hidden md:flex items-center justify-center w-9 h-9 text-red-500 border border-border-ui rounded-md hover:bg-red-50 dark:hover:bg-red-950/20 transition-all"
+          class="hidden md:flex items-center justify-center w-9 h-9 text-red-500 border border-border-ui rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 transition-all"
           title="Sair"
         >
           <i class="pi pi-power-off text-sm"></i>
         </button>
 
         <!-- MENU MOBILE -->
-        <button 
+        <button
           @click="isMobileMenuOpen = true" 
-          class="md:hidden w-9 h-9 flex items-center justify-center border border-border-ui rounded-md text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+          class="md:hidden w-9 h-9 flex items-center justify-center border border-border-ui rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
         >
           <i class="pi pi-bars text-sm"></i>
         </button>
@@ -55,10 +58,10 @@
       <div v-if="isMobileMenuOpen" class="fixed inset-0 z-[1000] md:hidden">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="isMobileMenuOpen = false"></div>
         
-        <div class="absolute right-0 top-0 bottom-0 w-[280px] bg-[var(--bg-card)] border-l border-border-ui flex flex-col">
+        <div class="absolute right-0 top-0 bottom-0 w-[300px] bg-bg-card border-l border-border-ui flex flex-col">
           <!-- HEADER DO DRAWER -->
           <div class="h-16 px-6 border-b border-border-ui flex items-center justify-between">
-            <span class="font-semibold text-sm text-slate-600 dark:text-slate-400">Menu</span>
+            <span class="font-bold text-xs uppercase tracking-[0.2em] text-slate-600 dark:text-slate-400">Menu</span>
             <button @click="isMobileMenuOpen = false" class="p-2 text-slate-400 hover:text-slate-600">
               <i class="pi pi-times text-sm"></i>
             </button>
@@ -67,13 +70,13 @@
           <!-- ITENS DO MENU -->
           <div class="flex-1 overflow-y-auto p-4 space-y-2">
             <div v-for="section in NAV_VISIVEL" :key="section.key" class="space-y-2">
-              <p class="text-xs font-semibold text-slate-400 px-3 mt-4 mb-2">{{ section.label }}</p>
+              <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 px-3 mt-4 mb-2">{{ section.label }}</p>
 
               <a
                 v-for="item in section.items.filter(i => !i.divider)"
                 :key="item.to"
                 @click="handleMobileNav(item.to)"
-                class="flex items-center gap-3 px-3 py-2 rounded-md text-slate-600 dark:text-slate-300 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 <i :class="item.icon" class="text-xs opacity-70 w-4"></i>
                 <span>{{ item.label }}</span>

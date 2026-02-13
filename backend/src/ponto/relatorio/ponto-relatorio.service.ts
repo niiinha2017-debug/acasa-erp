@@ -20,6 +20,27 @@ type Filtros = {
 export class PontoRelatorioService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async listarFuncionariosAtivos() {
+    return this.prisma.funcionarios.findMany({
+      where: { status: 'ATIVO' },
+      select: {
+        id: true,
+        nome: true,
+        status: true,
+        custo_hora: true,
+        carga_horaria_dia: true,
+        carga_horaria_semana: true,
+        horario_entrada_1: true,
+        horario_saida_1: true,
+        horario_entrada_2: true,
+        horario_saida_2: true,
+        horario_sabado_entrada_1: true,
+        horario_sabado_saida_1: true,
+      },
+      orderBy: { nome: 'asc' },
+    });
+  }
+
   // --- MÉTODOS AUXILIARES QUE O SEU CONTROLLER USA ---
   private inicioDia(ymd?: string) {
     if (!ymd) return undefined;
@@ -39,10 +60,30 @@ export class PontoRelatorioService {
 
   private formatHora(date: any) {
     const d = new Date(date);
-    return (
-      d.getUTCHours().toString().padStart(2, '0') +
-      ':' +
-      d.getUTCMinutes().toString().padStart(2, '0')
+    return d.toLocaleTimeString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+  }
+
+  private dateKeySP(date: any): string {
+    const d = new Date(date);
+    return d.toLocaleDateString('en-CA', {
+      timeZone: 'America/Sao_Paulo',
+    });
+  }
+
+  private cargaDiaHoras(funcionario: any): number {
+    const cargaDia = Number(funcionario?.carga_horaria_dia || 0);
+    if (cargaDia > 0) return cargaDia;
+
+    const cargaSemana = Number(funcionario?.carga_horaria_semana || 0);
+    if (cargaSemana > 0) return Number((cargaSemana / 6).toFixed(2));
+
+    throw new BadRequestException(
+      'Funcionário sem carga horária cadastrada (dia/semana).',
     );
   }
 
@@ -100,7 +141,12 @@ export class PontoRelatorioService {
 
     const funcionario = await this.prisma.funcionarios.findUnique({
       where: { id: funcionario_id },
-      select: { id: true, nome: true, carga_horaria_dia: true },
+      select: {
+        id: true,
+        nome: true,
+        carga_horaria_dia: true,
+        carga_horaria_semana: true,
+      },
     });
 
     const registros = await this.prisma.ponto_registros.findMany({
@@ -141,16 +187,14 @@ export class PontoRelatorioService {
 
         let totalTrabalhadoMs = 0;
         let totalMetaMs = 0;
-        const cargaDecimal = Number(
-          payload.funcionario?.carga_horaria_dia || 0,
-        );
+        const cargaDecimal = this.cargaDiaHoras(payload.funcionario);
         const cargaMs = cargaDecimal * 3600000;
         const diasNoMes = new Date(payload.ano, payload.mes, 0).getDate();
 
         // 1. Cálculos de Totais
         for (let d = 1; d <= diasNoMes; d++) {
           const dt = new Date(payload.ano, payload.mes - 1, d);
-          if (dt.getDay() > 0 && dt.getDay() < 6) totalMetaMs += cargaMs;
+          if (dt.getDay() !== 0) totalMetaMs += cargaMs;
 
           const diaRegs = payload.registros.filter(
             (r) => new Date(r.data_hora).getUTCDate() === d,
@@ -245,8 +289,9 @@ export class PontoRelatorioService {
           const dataLabel = `${String(d).padStart(2, '0')}/${String(payload.mes).padStart(2, '0')} (${['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'][diaSem]})`;
           doc.text(dataLabel, col.d, curY + 4);
 
+          const diaKey = `${payload.ano}-${String(payload.mes).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
           const dRegs = payload.registros
-            .filter((r) => new Date(r.data_hora).getUTCDate() === d)
+            .filter((r) => this.dateKeySP(r.data_hora) === diaKey)
             .sort(
               (a, b) =>
                 new Date(a.data_hora).getTime() -
@@ -295,7 +340,7 @@ export class PontoRelatorioService {
               .font('Helvetica');
 
           const j = payload.justificativas.find(
-            (j) => new Date(j.data).getUTCDate() === d,
+            (j) => this.dateKeySP(j.data) === diaKey,
           );
           if (j)
             doc

@@ -87,10 +87,13 @@ export class PlanoCorteService {
       const esp = item.espessura_mm ? `${item.espessura_mm}mm` : null;
       const areaM2 =
         item.largura_mm && item.comprimento_mm
-          ? (Number(item.largura_mm) / 1000) * (Number(item.comprimento_mm) / 1000)
+          ? (Number(item.largura_mm) / 1000) *
+            (Number(item.comprimento_mm) / 1000)
           : null;
       const areaTxt = areaM2 ? `${areaM2.toFixed(3)} m2` : null;
-      const precoM2Txt = item.preco_m2 ? `${this.brl(Number(item.preco_m2))}/m2` : null;
+      const precoM2Txt = item.preco_m2
+        ? `${this.brl(Number(item.preco_m2))}/m2`
+        : null;
       const complemento = [
         item.item?.marca,
         item.item?.cor,
@@ -105,9 +108,18 @@ export class PlanoCorteService {
       const linha = complemento ? `${nome} (${complemento})` : nome;
 
       doc.text(linha, colProduto, doc.y, { width: 260 });
-      doc.text(String(item.quantidade ?? 0), colQtd, doc.y, { width: 70, align: 'right' });
-      doc.text(this.brl(Number(item.valor_unitario || 0)), colUnit, doc.y, { width: 70, align: 'right' });
-      doc.text(this.brl(Number(item.valor_total || 0)), colTotal, doc.y, { width: 70, align: 'right' });
+      doc.text(String(item.quantidade ?? 0), colQtd, doc.y, {
+        width: 70,
+        align: 'right',
+      });
+      doc.text(this.brl(Number(item.valor_unitario || 0)), colUnit, doc.y, {
+        width: 70,
+        align: 'right',
+      });
+      doc.text(this.brl(Number(item.valor_total || 0)), colTotal, doc.y, {
+        width: 70,
+        align: 'right',
+      });
       doc.moveDown(0.6);
       if (doc.y > doc.page.height - 80) {
         doc.addPage();
@@ -124,10 +136,15 @@ export class PlanoCorteService {
     doc.moveDown(0.6);
 
     doc.font('Helvetica-Bold').fontSize(11).fillColor('#111');
-    doc.text(`TOTAL: ${this.brl(Number(plano.valor_total || 0))}`, left, doc.y, {
-      width: right - left,
-      align: 'right',
-    });
+    doc.text(
+      `TOTAL: ${this.brl(Number(plano.valor_total || 0))}`,
+      left,
+      doc.y,
+      {
+        width: right - left,
+        align: 'right',
+      },
+    );
 
     doc.end();
     return done;

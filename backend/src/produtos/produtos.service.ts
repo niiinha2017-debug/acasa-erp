@@ -55,13 +55,13 @@ export class ProdutosService {
     const marca = this.normStr(dto.marca);
     const cor = this.normStr(dto.cor);
     const medida = this.normStr(dto.medida);
-    const largura_mm = dto.largura_mm === undefined ? null : Number(dto.largura_mm);
+    const largura_mm =
+      dto.largura_mm === undefined ? null : Number(dto.largura_mm);
     const comprimento_mm =
       dto.comprimento_mm === undefined ? null : Number(dto.comprimento_mm);
     const espessura_mm =
       dto.espessura_mm === undefined ? null : Number(dto.espessura_mm);
-    const preco_m2 =
-      dto.preco_m2 === undefined ? null : Number(dto.preco_m2);
+    const preco_m2 = dto.preco_m2 === undefined ? null : Number(dto.preco_m2);
 
     await this.checarDuplicado({
       fornecedor_id,

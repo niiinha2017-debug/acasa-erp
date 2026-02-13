@@ -69,10 +69,7 @@ function limparDivisores(items: MenuItem[]) {
   return out;
 }
 
-function filtrarMenuPorPermissoes(
-  sections: MenuSection[],
-  perms: string[],
-) {
+function filtrarMenuPorPermissoes(sections: MenuSection[], perms: string[]) {
   const admin = perms.includes('ADMIN');
 
   const result: MenuSection[] = [];

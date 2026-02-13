@@ -12,6 +12,7 @@ async function main() {
       nome: 'Ana Paula Costa de Souza',
       email: 'ana.paulacosta01@hotmail.com',
       status: 'ATIVO',
+      is_admin: true,
       senha: senhaHash,
     },
     create: {
@@ -19,6 +20,7 @@ async function main() {
       usuario: 'Ana.P',
       email: 'ana.paulacosta01@hotmail.com',
       status: 'ATIVO',
+      is_admin: true,
       senha: senhaHash,
     },
     select: { id: true },
