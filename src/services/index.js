@@ -1,0 +1,1 @@
+export { default as FuncionariosService } from './FuncionariosService';
