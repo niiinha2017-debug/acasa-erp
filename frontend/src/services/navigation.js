@@ -1,17 +1,15 @@
-﻿// src/services/navigation.js
+// src/services/navigation.js
 export const NAV_SCHEMA = {
-  operacional: [
-    { label: 'Agendamentos', to: '/agendamentos', icon: 'pi-calendar', perm: 'agendamentos.ver' },
-    { divider: true },
+  comercial: [
+    { label: 'Orçamento', to: '/orcamentos', icon: 'pi-file-edit', perm: 'orcamentos.ver' },
+    { label: 'Venda', to: '/vendas', icon: 'pi-cart-plus', perm: 'vendas.ver' },
+    { label: 'Contrato', to: '/contratos', icon: 'pi-file', perm: 'contratos.ver' },
+  ],
 
-    { label: 'Vendas', to: '/vendas', icon: 'pi-cart-plus', perm: 'vendas.ver' },
-    { label: 'Orcamentos', to: '/orcamentos', icon: 'pi-file-edit', perm: 'orcamentos.ver' },
-    { divider: true },
-
-    { label: 'Producao', to: '/producao', icon: 'pi-cogs', perm: 'producao.ver' },
-    { label: 'Plano de Corte', to: '/plano-corte', icon: 'pi-sitemap', perm: 'plano_corte.ver' },
-    { label: 'Itens do Plano de Corte', to: '/plano-corte/itens', icon: 'pi-box', perm: 'plano_corte.ver' },
-    { label: 'Plano de Corte (Metragem)', to: '/plano-corte/venda', icon: 'pi-ruler', perm: 'plano_corte.criar' },
+  producao: [
+    { label: 'Plano de corte', to: '/plano-corte', icon: 'pi-sitemap', perm: 'plano_corte.ver' },
+    { label: 'Produtos plano de corte', to: '/plano-corte/itens', icon: 'pi-box', perm: 'plano_corte.ver' },
+    { label: 'Venda plano de corte', to: '/plano-corte/venda', icon: 'pi-dollar', perm: 'plano_corte.criar' },
   ],
 
   financeiro: [

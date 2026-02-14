@@ -113,6 +113,7 @@ model Cliente {
 
   orcamentos   orcamentos[]
   vendas       vendas[]
+  contratos   contratos[]
   agendamentos agenda_global[]
   // Adicione projetos[] aqui
   projetos     projetos[]
@@ -203,11 +204,37 @@ model vendas {
   // Adicione projetos[] aqui
   projetos     projetos[]
 
-  compras compras[]
+  compras   compras[]
+  contratos contratos[]
 
   @@index([cliente_id])
   @@index([status])
   @@map("vendas")
+ }
+
+model contratos {
+  id Int @id @default(autoincrement())
+
+  cliente_id Int
+  cliente    Cliente @relation(fields: [cliente_id], references: [id], onDelete: Restrict)
+
+  venda_id Int?
+  venda    vendas? @relation(fields: [venda_id], references: [id], onDelete: SetNull)
+
+  numero     String   // ex: CONT-2025-001
+  descricao  String?
+  status     String   // RASCUNHO | VIGENTE | ENCERRADO | CANCELADO
+  valor      Decimal  @default(0.00) @db.Decimal(10, 2)
+  data_inicio DateTime?
+  data_fim   DateTime?
+
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  @@index([cliente_id])
+  @@index([venda_id])
+  @@index([status])
+  @@map("contratos")
  }
 
 model vendas_pagamentos {
@@ -396,8 +423,10 @@ model plano_corte_item {
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
-  ultimo_valor_vendido Decimal   @default(0.00) @db.Decimal(10, 2)
-  ultimo_vendido_em    DateTime?
+  ultimo_valor_vendido  Decimal   @default(0.00) @db.Decimal(10, 2)
+  ultimo_vendido_em     DateTime?
+  ultimo_valor_comprado Decimal   @default(0.00) @db.Decimal(10, 2)
+  ultimo_comprado_em    DateTime?
 
   fornecedor Fornecedor @relation(fields: [fornecedor_id], references: [id])
 

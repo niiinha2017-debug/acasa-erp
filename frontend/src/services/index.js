@@ -198,7 +198,11 @@ export const PlanoCorteService = {
   abrirPdf: (id) => api.post(`/plano-corte/${id}/pdf`),
 
   itens: {
-    listar: (fornecedorId) => api.get('/plano-corte-itens', { params: { fornecedor_id: fornecedorId } }),
+    listar: (fornecedorId) =>
+      api.get('/plano-corte-itens', {
+        params: fornecedorId != null ? { fornecedor_id: fornecedorId } : {},
+      }),
+    buscar: (id) => api.get(`/plano-corte-itens/${id}`),
     salvar: (id, dados) => (id ? api.put(`/plano-corte-itens/${id}`, dados) : api.post('/plano-corte-itens', dados)),
     remover: (id) => api.delete(`/plano-corte-itens/${id}`),
   },
@@ -243,6 +247,14 @@ export const VendaService = {
   listarAmbientes: (id) => api.get(`/vendas/${id}/ambientes`),
 }
 
+// --- CONTRATOS ---
+export const ContratosService = {
+  listar: () => api.get('/contratos'),
+  buscar: (id) => api.get(`/contratos/${id}`),
+  salvar: (id, dados) => (id ? api.put(`/contratos/${id}`, dados) : api.post('/contratos', dados)),
+  remover: (id) => api.delete(`/contratos/${id}`),
+}
+
 // --- PERMISSÕES ---
 export const PermissoesService = {
   listar: () => api.get('/permissoes'),
@@ -258,13 +270,16 @@ export const FinanceiroService = {
 
   listarPagarConsolidado: (filtros = {}) =>
     api.get('/financeiro/contas-pagar', { params: filtros }),
+  listarContasPagarConsolidado: (filtros = {}) =>
+    api.get('/financeiro/contas-pagar', { params: filtros }),
 
   buscarContaPagar: (id) => api.get(`/financeiro/contas-pagar/${id}`),
   criarContaPagar: (dados) => api.post('/financeiro/contas-pagar', dados),
   atualizarContaPagar: (id, dados) => api.put(`/financeiro/contas-pagar/${id}`, dados),
 
-  // legado (mantém por enquanto)
   pagarContaPagar: (id, dados) => api.post(`/financeiro/contas-pagar/${id}/pagar`, dados),
+  pagarTitulo: (tituloId) => api.post(`/financeiro/contas-pagar/titulo/${tituloId}/pagar`),
+  pagarDespesa: (despesaId) => api.post(`/financeiro/contas-pagar/despesa/${despesaId}/pagar`),
 
   // ✅ NOVO: etapa 1 do modal (preview)
   previewFechamentoFornecedor: (params) =>
@@ -301,7 +316,7 @@ export const ObrasService = {
   criar: (dados) => api.post('/obras', dados),
   buscar: (id) => api.get(`/obras/${id}`),
   listarPorCliente: (clienteId) => api.get(`/obras/cliente/${clienteId}`),
-  salvar: (id, dados) => api.put(`/obras/${id}`, dados),
+  salvar: (id, dados) => (id ? api.put(`/obras/${id}`, dados) : api.post('/obras', dados)),
 }
 
 // --- PONTO ---
