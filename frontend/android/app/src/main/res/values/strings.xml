@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">ACASA ERP</string>
-    <string name="title_activity_main">ACASA ERP</string>
+    <string name="app_name">A Casa Marcenaria</string>
+    <string name="title_activity_main">A Casa Marcenaria</string>
     <string name="package_name">com.acasa.erp</string>
     <string name="custom_url_scheme">com.acasa.erp</string>
 </resources>

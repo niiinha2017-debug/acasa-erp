@@ -38,7 +38,7 @@ export class ProdutosService {
 
     if (dup) {
       throw new BadRequestException(
-        `Produto já cadastrado para este fornecedor (duplicado). ID: ${dup.id}`,
+        'Já existe um produto com o mesmo fornecedor, nome do produto, marca, cor e medida. Não é permitido duplicar.',
       );
     }
   }

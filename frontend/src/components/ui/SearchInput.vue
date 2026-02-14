@@ -72,7 +72,7 @@
             v-if="open"
             ref="dropdownRef"
             :style="floatingStyles"
-            class="fixed z-[10000] bg-bg-card border border-border-ui
+            class="fixed z-[100000] bg-bg-card border border-border-ui
                    rounded-lg shadow-xl shadow-slate-200/50 dark:shadow-black/40 overflow-hidden pointer-events-auto"
             @pointerdown.prevent
           >

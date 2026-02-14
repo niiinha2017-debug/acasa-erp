@@ -1,0 +1,2 @@
+-- Migration restaurada (arquivo estava ausente).
+-- No-op: nenhuma alteração no banco para evitar inconsistência com o schema atual.

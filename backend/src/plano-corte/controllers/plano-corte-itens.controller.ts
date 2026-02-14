@@ -41,6 +41,12 @@ export class PlanoCorteItensController {
     return this.service.listar(fId);
   }
 
+  @Get(':id')
+  @Permissoes('plano_corte.ver')
+  findOne(@Param('id') id: string) {
+    return this.service.buscar(this.cleanId(id));
+  }
+
   @Put(':id')
   @Permissoes('plano_corte.editar')
   update(@Param('id') id: string, @Body() dto: UpdatePlanoCorteItemDto) {

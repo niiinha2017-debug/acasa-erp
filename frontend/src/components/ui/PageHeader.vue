@@ -18,40 +18,15 @@
 
       <div class="flex items-center gap-3 w-full sm:w-auto justify-start sm:justify-end">
         <slot name="actions" />
-
-        <Button
-          v-if="showBack"
-          variant="outline"
-          size="sm"
-          @click="onBack"
-        >
-          <i class="pi pi-arrow-left text-xs mr-2"></i>
-          Voltar
-        </Button>
       </div>
     </header>
   </div>
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
-import Button from './Button.vue'
-
-const router = useRouter()
-
-const props = defineProps({
+defineProps({
   title: { type: String, required: true },
   subtitle: { type: String, default: '' },
   icon: { type: String, default: '' },
-  showBack: { type: Boolean, default: true },
-  backTo: { type: [String, Object], default: '' },
 })
-
-const emit = defineEmits(['back'])
-
-function onBack() {
-  emit('back')
-  if (props.backTo) return router.push(props.backTo)
-  router.back()
-}
 </script>

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="min-h-screen bg-bg-page text-text-main transition-colors duration-300">
     <Menu />
     <div class="border-b border-border-ui bg-[var(--bg-card)]">

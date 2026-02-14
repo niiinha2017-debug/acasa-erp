@@ -7,11 +7,14 @@ import { Prisma, despesas } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDespesaDto } from './dto/create-despesa.dto';
 import { UpdateDespesaDto } from './dto/update-despesa.dto';
+import { STATUS_FINANCEIRO_KEYS as SF } from '../../shared/constantes/status-financeiro';
 
 type FiltrosDespesas = {
   status?: string;
   unidade?: string;
   tipo_movimento?: string;
+  data_ini?: string;
+  data_fim?: string;
 };
 
 @Injectable()
@@ -142,7 +145,7 @@ export class DespesasService {
 
       data_registro: dataRegistro ?? new Date(),
       data_vencimento: primeiroVenc,
-      status: ehPrazo ? 'EM_ABERTO' : dto.status || 'EM_ABERTO',
+      status: ehPrazo ? SF.EM_ABERTO : (dto.status || SF.EM_ABERTO),
 
       // ✅ não vamos mais usar recorrencia/parcela na despesa
       recorrencia_id: null,
@@ -198,7 +201,7 @@ export class DespesasService {
             despesa_id: despesa.id,
             tipo: tipoTitulo,
             valor: new Prisma.Decimal((cents / 100).toFixed(2)),
-            status: 'EM_ABERTO',
+            status: SF.EM_ABERTO,
             vencimento_em: this.addMeses(primeiroVenc, i),
             pago_em: null,
             parcelas_total: parcelas,
@@ -212,15 +215,95 @@ export class DespesasService {
     });
   }
 
-  async findAll(filtros: FiltrosDespesas = {}): Promise<despesas[]> {
-    return this.prisma.despesas.findMany({
-      where: {
-        status: filtros.status || undefined,
-        unidade: filtros.unidade || undefined,
-        tipo_movimento: filtros.tipo_movimento || undefined,
+  /**
+   * Retorna despesas expandidas: parceladas viram uma linha por parcela (mês).
+   * Despesas à vista continuam uma linha.
+   */
+  async findAll(
+    filtros: FiltrosDespesas = {},
+  ): Promise<(despesas & { parcela_numero?: number; parcelas_total?: number })[]> {
+    const dataIni = filtros.data_ini
+      ? this.parseBRDate(filtros.data_ini)
+      : null;
+    const dataFim = filtros.data_fim
+      ? this.parseBRDate(filtros.data_fim)
+      : null;
+    const rangeFim = dataFim
+      ? (() => {
+          const d = new Date(dataFim);
+          d.setHours(23, 59, 59, 999);
+          return d;
+        })()
+      : null;
+
+    const where: Prisma.despesasWhereInput = {
+      status: filtros.status || undefined,
+      unidade: filtros.unidade || undefined,
+      tipo_movimento: filtros.tipo_movimento || undefined,
+    };
+
+    if (dataIni || rangeFim) {
+      const vencRange: any = {};
+      if (dataIni) vencRange.gte = dataIni;
+      if (rangeFim) vencRange.lte = rangeFim;
+      where.OR = [
+        { titulos: { some: { vencimento_em: vencRange } } },
+        { titulos: { none: {} }, data_vencimento: vencRange },
+      ];
+    }
+
+    const despesasList = await this.prisma.despesas.findMany({
+      where,
+      include: {
+        titulos: { orderBy: { vencimento_em: 'asc' } },
+        conta_pagar: { include: { titulos: { orderBy: { vencimento_em: 'asc' } } } },
       },
       orderBy: { data_registro: 'desc' },
     });
+
+    const rows: (despesas & { parcela_numero?: number; parcelas_total?: number })[] = [];
+
+    for (const d of despesasList) {
+      const { titulos: _titulos, conta_pagar: _contaPagar, ...despesaBase } = d as typeof d & {
+        titulos?: any[];
+        conta_pagar?: { titulos?: any[] } | null;
+      };
+      // Despesa de fechamento: parcelas vêm de conta_pagar.titulos (não de despesa.titulos)
+      const titulosParaExpandir =
+        _titulos && _titulos.length > 0
+          ? _titulos
+          : _contaPagar?.titulos && _contaPagar.titulos.length > 0
+            ? _contaPagar.titulos
+            : [];
+
+      if (titulosParaExpandir.length > 0) {
+        for (const t of titulosParaExpandir) {
+          const venc = new Date(t.vencimento_em);
+          if (dataIni && venc < dataIni) continue;
+          if (rangeFim && venc > rangeFim) continue;
+
+          rows.push({
+            ...despesaBase,
+            data_vencimento: t.vencimento_em,
+            valor_total: t.valor as any,
+            status: t.status,
+            data_pagamento: t.pago_em,
+            parcela_numero: t.parcela_numero ?? undefined,
+            parcelas_total: t.parcelas_total ?? undefined,
+          } as any);
+        }
+      } else {
+        rows.push(despesaBase as any);
+      }
+    }
+
+    rows.sort(
+      (a, b) =>
+        new Date(b.data_vencimento).getTime() -
+        new Date(a.data_vencimento).getTime(),
+    );
+
+    return rows;
   }
 
   async findOne(id: number): Promise<despesas> {
@@ -328,7 +411,7 @@ export class DespesasService {
 
       // status: prazo trava em aberto; à vista respeita dto
       if (ehPrazoFinal) {
-        data.status = 'EM_ABERTO';
+        data.status = SF.EM_ABERTO;
       } else if (dto.status !== undefined) {
         data.status = dto.status;
       }
@@ -404,7 +487,7 @@ export class DespesasService {
       // 2) sincroniza títulos (se mexeu em algo de prazo)
       if (mexeuNoPrazo) {
         const existePago = await tx.titulos_financeiros.findFirst({
-          where: { despesa_id: id, status: 'PAGO' },
+          where: { despesa_id: id, status: SF.PAGO },
           select: { id: true },
         });
 
@@ -447,7 +530,7 @@ export class DespesasService {
               despesa_id: id,
               tipo: tipoTitulo,
               valor: new Prisma.Decimal((cents / 100).toFixed(2)),
-              status: 'EM_ABERTO',
+              status: SF.EM_ABERTO,
               vencimento_em: this.addMeses(primeiroVenc, i),
               pago_em: null,
               parcelas_total: parcelasFinal,

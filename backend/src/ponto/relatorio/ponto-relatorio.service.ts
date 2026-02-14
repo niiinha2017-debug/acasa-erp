@@ -75,7 +75,65 @@ export class PontoRelatorioService {
     });
   }
 
+  private parseHHMMToDecimal(str: string | null | undefined): number {
+    if (!str || typeof str !== 'string') return 0;
+    const parts = str.trim().split(/[:\s]/).map(Number);
+    const h = Number(parts[0]) || 0;
+    const m = Number(parts[1]) || 0;
+    const s = Number(parts[2]) || 0;
+    return h + m / 60 + s / 3600;
+  }
+
+  private derivarCargaDosHorarios(f: any): {
+    cargaSegSex: number;
+    cargaSabado: number;
+    cargaSemana: number;
+  } {
+    if (!f) return { cargaSegSex: 0, cargaSabado: 0, cargaSemana: 0 };
+
+    let cargaSegSex = 0;
+    const e1 = this.parseHHMMToDecimal(f.horario_entrada_1);
+    const s1 = this.parseHHMMToDecimal(f.horario_saida_1);
+    const e2 = this.parseHHMMToDecimal(f.horario_entrada_2);
+    const s2 = this.parseHHMMToDecimal(f.horario_saida_2);
+    if (s1 > e1) cargaSegSex += s1 - e1;
+    if (s2 > e2) cargaSegSex += s2 - e2;
+
+    let cargaSabado = 0;
+    const es = this.parseHHMMToDecimal(f.horario_sabado_entrada_1);
+    const ss = this.parseHHMMToDecimal(f.horario_sabado_saida_1);
+    if (ss > es) cargaSabado = ss - es;
+
+    return {
+      cargaSegSex,
+      cargaSabado,
+      cargaSemana: 5 * cargaSegSex + cargaSabado,
+    };
+  }
+
+  /** Meta diária para uma data (0=Dom, 1-5=Seg-Sex, 6=Sáb) */
+  private metaDiaParaData(dataStr: string, funcionario: any): number {
+    const d = new Date(dataStr + 'T12:00:00').getDay();
+    if (d === 0) return 0;
+
+    const cargaDia = Number(funcionario?.carga_horaria_dia || 0);
+    const cargaSemana = Number(funcionario?.carga_horaria_semana || 0);
+    const derivado = this.derivarCargaDosHorarios(funcionario);
+
+    if (derivado.cargaSegSex > 0 || derivado.cargaSabado > 0) {
+      return d === 6 ? derivado.cargaSabado : derivado.cargaSegSex;
+    }
+    if (cargaDia > 0) return cargaDia;
+    if (cargaSemana > 0) return Number((cargaSemana / 6).toFixed(2));
+    return 0;
+  }
+
+  /** Retorna carga diária fixa (para compatibilidade). Prefira metaDiaParaData. */
   private cargaDiaHoras(funcionario: any): number {
+    const derivado = this.derivarCargaDosHorarios(funcionario);
+    if (derivado.cargaSegSex > 0) return derivado.cargaSegSex;
+    if (derivado.cargaSabado > 0) return derivado.cargaSabado;
+
     const cargaDia = Number(funcionario?.carga_horaria_dia || 0);
     if (cargaDia > 0) return cargaDia;
 
@@ -83,7 +141,7 @@ export class PontoRelatorioService {
     if (cargaSemana > 0) return Number((cargaSemana / 6).toFixed(2));
 
     throw new BadRequestException(
-      'Funcionário sem carga horária cadastrada (dia/semana).',
+      'Funcionário sem carga horária cadastrada (dia/semana ou horários).',
     );
   }
 
@@ -93,6 +151,142 @@ export class PontoRelatorioService {
     const h = Math.floor(absMs / 3600000);
     const m = Math.floor((absMs % 3600000) / 60000);
     return `${isNegative ? '-' : ''}${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+
+  private horasParaDecimal(ms: number): number {
+    return Math.round((ms / 3600000) * 100) / 100;
+  }
+
+  private calcularHorasTrabalhadasDia(registrosDia: any[]): number {
+    const regs = [...registrosDia]
+      .filter((r) => r?.status === 'ATIVO')
+      .sort((a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime());
+    let totalMs = 0;
+    let entrada: Date | null = null;
+    for (const r of regs) {
+      if (r.tipo === 'ENTRADA') {
+        entrada = new Date(r.data_hora);
+        continue;
+      }
+      if (r.tipo === 'SAIDA' && entrada) {
+        const saida = new Date(r.data_hora);
+        if (saida.getTime() > entrada.getTime())
+          totalMs += saida.getTime() - entrada.getTime();
+        entrada = null;
+      }
+    }
+    return this.horasParaDecimal(totalMs);
+  }
+
+  // --- FECHAMENTO FOLHA ---
+  async fechamentoFolha(params: {
+    data_ini: string;
+    data_fim: string;
+    apenas_ativos?: boolean;
+  }) {
+    const ini = this.inicioDia(params.data_ini);
+    const fim = this.fimDia(params.data_fim);
+    if (!ini || !fim) {
+      throw new BadRequestException('Período (data_ini e data_fim) obrigatório.');
+    }
+
+    const funcionarios = await this.prisma.funcionarios.findMany({
+      where: params.apenas_ativos !== false ? { status: 'ATIVO' } : {},
+      select: {
+        id: true,
+        nome: true,
+        carga_horaria_dia: true,
+        carga_horaria_semana: true,
+        horario_entrada_1: true,
+        horario_saida_1: true,
+        horario_entrada_2: true,
+        horario_saida_2: true,
+        horario_sabado_entrada_1: true,
+        horario_sabado_saida_1: true,
+        custo_hora: true,
+        salario_base: true,
+        salario_adicional: true,
+      },
+      orderBy: { nome: 'asc' },
+    });
+
+    const registros = await this.prisma.ponto_registros.findMany({
+      where: {
+        status: 'ATIVO',
+        data_hora: { gte: ini, lte: fim },
+      },
+      orderBy: { data_hora: 'asc' },
+    });
+
+    const porFuncionario = new Map<number, any[]>();
+    for (const r of registros) {
+      if (!porFuncionario.has(r.funcionario_id))
+        porFuncionario.set(r.funcionario_id, []);
+      porFuncionario.get(r.funcionario_id)!.push(r);
+    }
+
+    const porDia = new Map<string, any[]>();
+    for (const r of registros) {
+      const key = new Date(r.data_hora).toISOString().slice(0, 10);
+      if (!porDia.has(key)) porDia.set(key, []);
+      porDia.get(key)!.push(r);
+    }
+
+    const diasNoPeriodo = Math.ceil((fim.getTime() - ini.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+    const diasUteis = Math.floor(diasNoPeriodo * (6 / 7));
+
+    const linhas = funcionarios.map((f) => {
+      const regs = porFuncionario.get(f.id) || [];
+      const porDiaF = new Map<string, any[]>();
+      for (const r of regs) {
+        const key = new Date(r.data_hora).toISOString().slice(0, 10);
+        const d = new Date(key + 'T12:00:00').getDay();
+        if (d === 0) continue;
+        if (!porDiaF.has(key)) porDiaF.set(key, []);
+        porDiaF.get(key)!.push(r);
+      }
+
+      let horasTrabalhadas = 0;
+      let metaTotal = 0;
+      for (const [key, arr] of porDiaF) {
+        horasTrabalhadas += this.calcularHorasTrabalhadasDia(arr);
+        metaTotal += this.metaDiaParaData(key, f);
+      }
+      const saldo = horasTrabalhadas - metaTotal;
+      const horasExtras = saldo > 0 ? saldo : 0;
+      const saldoDevedorHoras = saldo < 0 ? Math.abs(saldo) : 0;
+
+      const custoHora = Number(f.custo_hora || 0) || 0;
+      const salarioBase = Number(f.salario_base || 0) || 0;
+      const salarioAdicional = Number(f.salario_adicional || 0) || 0;
+      const salarioContratado = salarioBase + salarioAdicional;
+
+      const salarioApurado =
+        horasTrabalhadas * custoHora + horasExtras * custoHora * 0.5;
+
+      const hToHHMM = (h: number) => {
+        const m = Math.round((h || 0) * 60);
+        const hh = Math.floor(m / 60);
+        const mm = m % 60;
+        return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+      };
+
+      return {
+        funcionario_id: f.id,
+        nome: f.nome || '',
+        horas_trabalhadas: Math.round(horasTrabalhadas * 100) / 100,
+        horas_extras: Math.round(horasExtras * 100) / 100,
+        saldo_devedor_horas: Math.round(saldoDevedorHoras * 100) / 100,
+        custo_hora: custoHora,
+        salario_contratado: Math.round(salarioContratado * 100) / 100,
+        salario_apurado: Math.round(salarioApurado * 100) / 100,
+        horas_trabalhadas_hhmm: hToHHMM(horasTrabalhadas),
+        horas_extras_hhmm: hToHHMM(horasExtras),
+        saldo_devedor_hhmm: hToHHMM(saldoDevedorHoras),
+      };
+    });
+
+    return { linhas };
   }
 
   // --- LISTAGEM (O QUE ALIMENTA A TELA) ---
@@ -146,6 +340,12 @@ export class PontoRelatorioService {
         nome: true,
         carga_horaria_dia: true,
         carga_horaria_semana: true,
+        horario_entrada_1: true,
+        horario_saida_1: true,
+        horario_entrada_2: true,
+        horario_saida_2: true,
+        horario_sabado_entrada_1: true,
+        horario_sabado_saida_1: true,
       },
     });
 
@@ -188,13 +388,14 @@ export class PontoRelatorioService {
         let totalTrabalhadoMs = 0;
         let totalMetaMs = 0;
         const cargaDecimal = this.cargaDiaHoras(payload.funcionario);
-        const cargaMs = cargaDecimal * 3600000;
         const diasNoMes = new Date(payload.ano, payload.mes, 0).getDate();
 
-        // 1. Cálculos de Totais
+        // 1. Cálculos de Totais (meta variável: Seg-Sex vs Sábado)
         for (let d = 1; d <= diasNoMes; d++) {
           const dt = new Date(payload.ano, payload.mes - 1, d);
-          if (dt.getDay() !== 0) totalMetaMs += cargaMs;
+          const diaKey = `${payload.ano}-${String(payload.mes).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          const metaDia = this.metaDiaParaData(diaKey, payload.funcionario);
+          totalMetaMs += metaDia * 3600000;
 
           const diaRegs = payload.registros.filter(
             (r) => new Date(r.data_hora).getUTCDate() === d,

@@ -1,6 +1,6 @@
 <template>
-  <Card :shadow="false" class="login-font mt-4 mb-8 mx-2 lg:mx-4 rounded-3xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
-    <div class="h-1.5 w-full bg-[linear-gradient(90deg,#2f7fb3_0%,#255a82_100%)]"></div>
+  <div class="login-font w-full h-full mt-4 mb-8 mx-2 lg:mx-4 rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
+    <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
     <PageHeader
       title="Cadastro da Empresa"
       subtitle="Registro da empresa, dados fiscais e de recebimento"
@@ -29,7 +29,7 @@
         </div>
       </template>
     </PageHeader>
-      <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden clientes-line-form">
+      <div class="bg-bg-card border border-border-ui rounded-2xl overflow-hidden clientes-line-form">
       <div class="grid grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
         
         <div class="col-span-12 lg:col-span-4 p-8 bg-slate-50/30 space-y-10">
@@ -211,7 +211,7 @@
         </div>
       </div>
           </div>
-  </Card>
+  </div>
 </template>
 
 <script setup>

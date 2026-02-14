@@ -28,6 +28,19 @@ export class PontoRelatorioController {
     return this.service.listarFuncionariosAtivos();
   }
 
+  @Get('fechamento')
+  fechamentoFolha(
+    @Query('data_ini') data_ini: string,
+    @Query('data_fim') data_fim: string,
+    @Query('apenas_ativos') apenas_ativos?: string,
+  ) {
+    return this.service.fechamentoFolha({
+      data_ini,
+      data_fim,
+      apenas_ativos: apenas_ativos !== 'false' && apenas_ativos !== '0',
+    });
+  }
+
   @Get('registros')
   listar(
     @Query('funcionario_id') funcionario_id?: string,

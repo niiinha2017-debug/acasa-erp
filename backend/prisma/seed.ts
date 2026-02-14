@@ -102,6 +102,11 @@ async function main() {
     { chave: 'orcamentos.editar', descricao: 'Editar orcamentos' },
     { chave: 'orcamentos.excluir', descricao: 'Excluir orcamentos' },
 
+    { chave: 'contratos.ver', descricao: 'Visualizar contratos' },
+    { chave: 'contratos.criar', descricao: 'Criar contratos' },
+    { chave: 'contratos.editar', descricao: 'Editar contratos' },
+    { chave: 'contratos.excluir', descricao: 'Excluir contratos' },
+
     { chave: 'producao.ver', descricao: 'Visualizar producao' },
     { chave: 'producao.criar', descricao: 'Criar producao' },
     { chave: 'producao.editar', descricao: 'Editar producao' },

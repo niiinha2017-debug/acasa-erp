@@ -14,53 +14,21 @@ export type MenuSection = {
 
 export const MENU_SECTIONS: MenuSection[] = [
   {
-    key: 'operacional',
-    label: 'Operacional',
+    key: 'comercial',
+    label: 'Comercial',
     items: [
-      {
-        label: 'Agendamentos',
-        to: '/agendamentos',
-        icon: 'pi-calendar',
-        perm: 'agendamentos.ver',
-      },
-      { divider: true, label: '', to: '' },
-      {
-        label: 'Vendas',
-        to: '/vendas',
-        icon: 'pi-cart-plus',
-        perm: 'vendas.ver',
-      },
-      {
-        label: 'Orcamentos',
-        to: '/orcamentos',
-        icon: 'pi-file-edit',
-        perm: 'orcamentos.ver',
-      },
-      { divider: true, label: '', to: '' },
-      {
-        label: 'Producao',
-        to: '/producao',
-        icon: 'pi-cogs',
-        perm: 'producao.ver',
-      },
-      {
-        label: 'Plano de Corte',
-        to: '/plano-corte',
-        icon: 'pi-sitemap',
-        perm: 'plano_corte.ver',
-      },
-      {
-        label: 'Itens do Plano de Corte',
-        to: '/plano-corte/itens',
-        icon: 'pi-box',
-        perm: 'plano_corte.ver',
-      },
-      {
-        label: 'Plano de Corte (Metragem)',
-        to: '/plano-corte/venda',
-        icon: 'pi-ruler',
-        perm: 'plano_corte.criar',
-      },
+      { label: 'Orçamento', to: '/orcamentos', icon: 'pi-file-edit', perm: 'orcamentos.ver' },
+      { label: 'Venda', to: '/vendas', icon: 'pi-cart-plus', perm: 'vendas.ver' },
+      { label: 'Contrato', to: '/contratos', icon: 'pi-file', perm: 'contratos.ver' },
+    ],
+  },
+  {
+    key: 'producao',
+    label: 'Produção',
+    items: [
+      { label: 'Plano de corte', to: '/plano-corte', icon: 'pi-sitemap', perm: 'plano_corte.ver' },
+      { label: 'Produtos plano de corte', to: '/plano-corte/itens', icon: 'pi-box', perm: 'plano_corte.ver' },
+      { label: 'Venda plano de corte', to: '/plano-corte/venda', icon: 'pi-ruler', perm: 'plano_corte.criar' },
     ],
   },
   {

@@ -1,6 +1,6 @@
 <template>
-  <Card :shadow="false" class="login-font mt-4 mb-8 mx-2 lg:mx-4 rounded-3xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
-    <div class="h-1.5 w-full bg-[linear-gradient(90deg,#2f7fb3_0%,#255a82_100%)]"></div>
+  <div class="login-font w-full h-full mt-4 mb-8 mx-2 lg:mx-4 rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
+    <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
 
     <PageHeader
       :title="isEdit ? `Editar Cliente #${clienteId}` : 'Novo Cliente'"
@@ -300,7 +300,7 @@
         </div>
       </form>
     </div>
-  </Card>
+  </div>
 </template>
 
 <style scoped>

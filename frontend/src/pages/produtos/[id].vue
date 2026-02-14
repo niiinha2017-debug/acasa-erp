@@ -1,6 +1,6 @@
 <template>
-  <Card class="login-font mt-4 mb-8 mx-2 lg:mx-4 rounded-3xl border border-border-ui bg-bg-card shadow-2xl overflow-hidden animate-page-in">
-    <div class="h-1.5 w-full bg-[linear-gradient(90deg,#2f7fb3_0%,#255a82_100%)]"></div>
+  <div class="login-font w-full h-full mt-4 mb-8 mx-2 lg:mx-4 rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
+    <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
     <PageHeader
       :title="isEdit ? `Editar Produto #${produtoId}` : 'Novo Produto'"
       subtitle="Gerenciamento de insumos e controle de materiais"
@@ -11,22 +11,29 @@
 
     <div class="p-8 lg:p-12">
       <div v-if="loading" class="py-24 flex flex-col items-center justify-center gap-4">
-        <div class="w-10 h-10 border-2 border-slate-200 border-t-slate-900 rounded-full animate-spin"></div>
-        <p class="text-xs font-medium text-slate-400 uppercase tracking-widest">Carregando...</p>
+        <div class="w-10 h-10 border-2 border-border-ui border-t-brand-primary rounded-full animate-spin"></div>
+        <p class="text-xs font-medium text-text-muted uppercase tracking-widest">Carregando...</p>
       </div>
 
       <form v-else class="space-y-10 produtos-line-form" @submit.prevent="confirmarSalvarProduto" autocomplete="off">
+        <!-- Trava: só habilita o restante do cadastro após selecionar o fornecedor (igual Produtos Plano de Corte) -->
         <div class="grid grid-cols-12 gap-6 items-end bg-slate-50/50 dark:bg-slate-800/20 p-6 rounded-2xl">
           <div class="col-span-12 md:col-span-6">
             <SearchInput
               v-model="form.fornecedor_id"
               mode="select"
-              label="Fornecedor Principal"
+              label="Fornecedor Principal *"
               :options="fornecedorOptions"
               required
+              placeholder="Selecione o fornecedor para habilitar o cadastro"
             />
           </div>
 
+          <p v-if="!camposDesbloqueados" class="col-span-12 text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+            Selecione o fornecedor principal para habilitar o cadastro do produto.
+          </p>
+
+          <template v-if="camposDesbloqueados">
           <div class="col-span-12 md:col-span-3">
             <SearchInput
               v-model="form.unidade"
@@ -46,8 +53,10 @@
               required
             />
           </div>
+          </template>
         </div>
 
+        <div v-if="camposDesbloqueados" class="space-y-10">
         <div class="relative">
           <div class="absolute inset-0 flex items-center">
             <div class="w-full border-t border-border-ui/50"></div>
@@ -176,6 +185,7 @@
             </div>
           </div>
         </div>
+        </div>
 
         <div class="pt-10 mt-6 border-t border-border-ui">
           <div class="flex items-center justify-between gap-4">
@@ -189,6 +199,7 @@
               size="lg"
               type="submit"
               :loading="salvando"
+              :disabled="!camposDesbloqueados"
               class="!rounded-xl px-8 py-3 bg-gradient-to-r from-brand-primary to-brand-primary/90 hover:from-brand-primary hover:to-brand-primary hover:shadow-2xl hover:shadow-brand-primary/30 active:scale-[0.98] transition-all duration-300 group relative overflow-hidden"
             >
               <div class="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
@@ -220,7 +231,7 @@
         </div>
       </Transition>
     </Teleport>
-  </Card>
+  </div>
 </template>
 
 <style scoped>
@@ -305,6 +316,9 @@ const statusOptions = [
   { label: 'ATIVO', value: 'ATIVO' },
   { label: 'INATIVO', value: 'INATIVO' },
 ]
+
+// ======= Trava: só cadastra com fornecedor selecionado =======
+const camposDesbloqueados = computed(() => isEdit.value || !!form.value.fornecedor_id)
 
 // ======= FORM (estado numérico) =======
 const form = ref({
@@ -598,8 +612,12 @@ onMounted(async () => {
   try {
     await carregarFornecedor()
     if (isEdit.value) await carregarProduto()
-    else resetForm()
-} catch (err) {
+    else {
+      resetForm()
+      const idFornecedor = route.query.fornecedor
+      if (idFornecedor) form.value.fornecedor_id = Number(idFornecedor)
+    }
+  } catch (err) {
   console.error('[PRODUTOS] erro no mounted:', err)
   notify.error('Erro ao carregar dados iniciais.')
   router.push('/produtos')

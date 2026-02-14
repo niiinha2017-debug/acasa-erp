@@ -1,6 +1,20 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
+import storage from '@/utils/storage'
+
+// ✅ Ao reabrir o app (após fechar): logout + limpar abas → tela de login e página inicial sem abas
+const SESSION_KEY = 'acasa:session'
+const TAB_STORAGE_KEY = 'acasa:tabs:v1'
+if (!sessionStorage.getItem(SESSION_KEY)) {
+  storage.removeToken()
+  storage.removeUser()
+  storage.removeRefreshToken()
+  try {
+    localStorage.removeItem(TAB_STORAGE_KEY)
+  } catch (_) {}
+  sessionStorage.setItem(SESSION_KEY, '1')
+}
 
 // Estilos
 import '@/assets/CSS/tailwind.css'
@@ -121,6 +135,12 @@ window.addEventListener('acasa-auth-logout', () => {
 // ✅ chama aqui (antes do mount)
 autoOpenDevtools()
 
+// ✅ Android: ao abrir o app, verifica se há nova versão no subdomínio e avisa
+import { checkAndroidUpdate } from '@/utils/check-android-update'
+router.isReady().then(() => {
+  setTimeout(() => checkAndroidUpdate(), 2000)
+})
+
 const maybeRunUpdater = async () => {
   const updaterEnabled = String(import.meta.env.VITE_TAURI_UPDATER || 'false') === 'true'
   if (!updaterEnabled) return
@@ -143,7 +163,7 @@ const maybeRunUpdater = async () => {
 maybeRunUpdater()
 
 const setAppTitleWithVersion = async () => {
-  const baseTitle = 'ERP'
+  const baseTitle = 'A Casa Marcenaria'
 
   // Web fallback: mantém título base.
   if (!window.__TAURI__ && !window.__TAURI_INTERNALS__) {

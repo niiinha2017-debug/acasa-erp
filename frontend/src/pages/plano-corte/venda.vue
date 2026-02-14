@@ -1,80 +1,60 @@
 <template>
-  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-    <Card :shadow="true" class="overflow-visible !rounded-[3rem] border-none shadow-[0_40px_80px_-15px_rgba(0,0,0,0.2)]">
-      <header class="flex flex-col md:flex-row items-center justify-between gap-6 p-10 border-b border-slate-100 bg-slate-50/50">
-        <div class="flex items-center gap-6">
-          <div class="w-16 h-16 rounded-[1.5rem] bg-slate-900 flex items-center justify-center text-white shadow-2xl shadow-slate-900/20 rotate-3 hover:rotate-0 transition-transform duration-500">
-            <i class="pi pi-box text-3xl"></i>
-          </div>
-          <div>
-            <h2 class="text-2xl font-black tracking-tighter text-slate-800 uppercase italic leading-none">
-              Novo Plano de Corte (Metragem)
-            </h2>
-            <div class="flex items-center gap-2 mt-2">
-              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                Pedido do fornecedor por metragem
-              </p>
-            </div>
-          </div>
-        </div>
+  <div class="w-full h-full">
+    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
+      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
 
-        <button
-          @click="router.back()"
-          class="flex items-center gap-3 px-6 h-12 rounded-2xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-900 hover:text-white transition-all shadow-sm group"
-        >
-          <i class="pi pi-arrow-left text-[10px] group-hover:-translate-x-1 transition-transform"></i>
-          <span class="text-[10px] font-black uppercase tracking-widest">Voltar</span>
-        </button>
-      </header>
+      <PageHeader
+        title="Venda Plano de Corte"
+        subtitle="Cortes internos — cadastre os produtos na hora e venda por metragem"
+        icon="pi pi-ruler"
+        :backTo="'/plano-corte'"
+        class="border-b border-border-ui"
+      />
 
-      <div class="p-10">
-        <section class="grid grid-cols-12 gap-8 mb-12">
-          <div class="col-span-12 md:col-span-6">
-            <SearchInput
-              v-model="fornecedorSelecionado"
-              mode="select"
-              label="Fornecedor"
-              :options="fornecedorOptions"
-              required
-              @update:modelValue="onSelecionarFornecedor"
-            />
+      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui">
+        <p v-if="!fornecedorSelecionado && fornecedorCarregado" class="mb-4 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs font-bold text-amber-800 dark:text-amber-200">
+          Cadastre um fornecedor (próprio) em <strong>Produtos plano de corte</strong> para usar cortes internos.
+        </p>
+
+        <section class="grid grid-cols-12 gap-6 mb-8">
+          <div class="col-span-12 md:col-span-4">
+            <Input v-model="dataVenda" label="Data do Pedido *" type="date" required />
           </div>
 
-          <div class="col-span-12 md:col-span-3">
-            <Input v-model="dataVenda" label="Data do Pedido" type="date" required />
-          </div>
-
-          <div class="col-span-12 md:col-span-3">
+          <div class="col-span-12 md:col-span-4">
             <SearchInput
               v-model="statusPlano"
               mode="select"
               label="Status"
               :options="statusPlanoOptions"
             />
-            <div class="mt-2">
-              <span
-                class="px-2 py-1 rounded text-[9px] font-black uppercase inline-flex items-center gap-1.5"
-                :class="statusPlanoBadgeClass"
-              >
-                <span class="w-1.5 h-1.5 rounded-full" :class="statusPlanoDotClass"></span>
-                {{ statusPlanoLabel }}
-              </span>
-            </div>
           </div>
         </section>
 
-        <section class="bg-slate-50 rounded-[2.5rem] p-8 border border-slate-100 shadow-inner mb-10">
-          <div class="flex items-center justify-between mb-8">
-            <h3 class="text-[11px] font-black uppercase tracking-[0.25em] text-slate-500">Adicionar Itens por Metragem</h3>
-            <button
+        <div class="relative mb-6">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-border-ui/50"></div>
+          </div>
+          <div class="relative flex justify-center">
+            <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+              Adicionar Itens por Metragem
+            </span>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-border-ui bg-slate-50/50 dark:bg-slate-800/20 p-6 mb-8">
+          <div class="flex items-center justify-between mb-6">
+            <span class="text-xs font-bold text-text-muted uppercase tracking-wider">Itens do pedido</span>
+            <Button
               v-if="can('plano_corte.criar')"
-              type="button"
+              variant="ghost"
+              size="sm"
+              class="text-[10px] font-bold uppercase"
               @click="abrirModalProduto"
-              class="text-[10px] font-black uppercase text-emerald-600 hover:tracking-widest transition-all italic"
             >
-              + Cadastrar Novo Produto
-            </button>
+              <i class="pi pi-plus mr-2"></i>
+              Cadastrar Novo Produto
+            </Button>
           </div>
 
           <div class="grid grid-cols-12 gap-6 items-end">
@@ -108,62 +88,61 @@
               <Input v-model="itemNovo.precoM2Mask" label="Preco por m2" placeholder="0,00" />
             </div>
 
-            <div class="col-span-12 md:col-span-9">
-              <div class="flex items-center gap-3">
-                <div class="flex-1 px-4 h-14 rounded-2xl bg-white border border-slate-200 flex flex-col justify-center">
-                  <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Area por peca</span>
-                  <span class="text-sm font-black text-emerald-600">{{ areaPecaExibicao }}</span>
-                </div>
-                <div class="flex-1 px-4 h-14 rounded-2xl bg-white border border-slate-200 flex flex-col justify-center">
-                  <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Total item</span>
-                  <span class="text-sm font-black text-emerald-600">{{ itemNovoTotalExibicao }}</span>
-                </div>
-                <Button
-                  v-if="can('plano_corte.criar')"
-                  variant="primary"
-                  class="!h-14 !w-14 !rounded-2xl shadow-xl shadow-slate-900/20"
-                  :disabled="!podeAdicionarItem"
-                  @click="registrarItemNovo"
-                >
-                  <i class="pi pi-plus text-lg"></i>
-                </Button>
+            <div class="col-span-12 md:col-span-9 flex flex-wrap items-end gap-3">
+              <div class="flex-1 min-w-[140px] px-4 py-3 rounded-xl border border-border-ui bg-bg-card flex flex-col justify-center">
+                <span class="text-[10px] font-bold text-text-muted uppercase tracking-wider">Área por peça</span>
+                <span class="text-sm font-bold text-text-main">{{ areaPecaExibicao }}</span>
               </div>
+              <div class="flex-1 min-w-[140px] px-4 py-3 rounded-xl border border-border-ui bg-bg-card flex flex-col justify-center">
+                <span class="text-[10px] font-bold text-text-muted uppercase tracking-wider">Total item</span>
+                <span class="text-sm font-bold text-text-main">{{ itemNovoTotalExibicao }}</span>
+              </div>
+              <Button
+                v-if="can('plano_corte.criar')"
+                variant="primary"
+                class="h-11 min-w-[44px]"
+                :disabled="!podeAdicionarItem"
+                @click="registrarItemNovo"
+              >
+                <i class="pi pi-plus"></i>
+              </Button>
             </div>
           </div>
-        </section>
+        </div>
 
         <Table
           :columns="columnsItens"
           :rows="itens"
-          class="premium-table"
+          :boxed="false"
           empty-text="Nenhum item adicionado."
         >
           <template #cell-produto="{ row }">
-            <div class="flex flex-col">
-              <span class="font-black text-slate-700 uppercase italic tracking-tighter">{{ row.item?.nome_produto }}</span>
-              <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                {{ row.item?.cor || 'PADRAO' }} • {{ row.item?.marca || 'SEM MARCA' }}
+            <div class="flex flex-col py-1">
+              <span class="text-sm font-bold text-text-main uppercase tracking-tight">{{ row.item?.nome_produto }}</span>
+              <span class="text-[10px] font-medium text-text-muted uppercase tracking-wider mt-0.5">
+                {{ row.item?.cor || 'Padrão' }} • {{ row.item?.marca || 'Sem marca' }}
               </span>
-              <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                {{ row.largura_mm }}x{{ row.comprimento_mm }}mm • {{ row.espessura_mm || '-' }}mm
+              <span class="text-[10px] font-medium text-text-muted uppercase tracking-wider mt-0.5">
+                {{ row.largura_mm }}×{{ row.comprimento_mm }}mm • {{ row.espessura_mm || '-' }}mm
               </span>
             </div>
           </template>
 
           <template #cell-valor_unitario="{ row }">
-            <span class="font-bold text-slate-500 text-xs">{{ maskMoneyBR(row.valor_unitario || 0) }}</span>
+            <span class="text-sm text-text-main tabular-nums">{{ maskMoneyBR(row.valor_unitario || 0) }}</span>
           </template>
 
           <template #cell-valor_total="{ row }">
-            <span class="font-black text-slate-800">{{ maskMoneyBR(row.valor_total || 0) }}</span>
+            <span class="text-sm font-bold text-text-main tabular-nums">{{ maskMoneyBR(row.valor_total || 0) }}</span>
           </template>
 
           <template #cell-acoes="{ index }">
-            <div class="flex justify-end">
+            <div class="flex justify-center">
               <button
                 v-if="can('plano_corte.criar')"
+                type="button"
                 @click="confirmarRemoverItemPlano(index)"
-                class="w-10 h-10 rounded-xl text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all flex items-center justify-center"
+                class="w-9 h-9 rounded-lg text-text-muted hover:bg-rose-500/10 hover:text-rose-500 transition-all flex items-center justify-center"
               >
                 <i class="pi pi-trash text-xs"></i>
               </button>
@@ -171,34 +150,141 @@
           </template>
         </Table>
 
-        <div class="flex justify-end mt-12">
-          <div class="relative group">
-            <div class="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-slate-900 rounded-[2.5rem] blur opacity-10 group-hover:opacity-20 transition duration-1000"></div>
-            <div class="relative flex flex-col items-end p-8 rounded-[2rem] bg-white border border-slate-100 shadow-xl min-w-[300px]">
-              <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Total do Pedido</span>
-              <span class="text-4xl font-black text-slate-900 tracking-tighter mt-2 italic">
-                {{ maskMoneyBR(totalCalculado) }}
-              </span>
-            </div>
+        <div class="flex justify-end mt-8">
+          <div class="rounded-2xl border border-border-ui bg-slate-50/50 dark:bg-slate-800/30 px-6 py-4 min-w-[240px] text-right">
+            <span class="text-[10px] font-bold text-text-muted uppercase tracking-wider">Total do Pedido</span>
+            <span class="text-2xl font-bold text-text-main tabular-nums block mt-1">
+              {{ maskMoneyBR(totalCalculado) }}
+            </span>
+          </div>
+        </div>
+
+        <div class="pt-10 mt-6 border-t border-border-ui flex flex-wrap items-center justify-between gap-4">
+          <Button type="button" variant="ghost" @click="router.push('/plano-corte')">
+            Cancelar
+          </Button>
+          <div class="flex flex-wrap items-center gap-3">
+            <Button
+              v-if="can('plano_corte.criar')"
+              variant="secondary"
+              size="lg"
+              :loading="salvando"
+              @click="salvarApenas"
+            >
+              <i class="pi pi-save mr-2"></i>
+              Salvar
+            </Button>
+            <Button
+              v-if="can('plano_corte.criar')"
+              variant="secondary"
+              size="lg"
+              :loading="salvando"
+              @click="salvarEGerarPdf"
+            >
+              <i class="pi pi-file-pdf mr-2"></i>
+              Gerar PDF
+            </Button>
+            <Button
+              v-if="can('plano_corte.criar')"
+              variant="primary"
+              size="lg"
+              :loading="enviandoProducao"
+              @click="abrirModalEnviarProducao"
+            >
+              <i class="pi pi-send mr-2"></i>
+              Enviar para Produção
+            </Button>
           </div>
         </div>
       </div>
+    </div>
 
-      <footer class="flex items-center justify-between p-10 border-t border-slate-100 bg-slate-50/50">
-        <div></div>
-
-        <Button
-          v-if="can('plano_corte.criar')"
-          variant="primary"
-          :loading="salvando"
-          @click="salvarEGerarPdf"
-          class="!rounded-[1.5rem] !px-12 !h-14 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.2)] font-black text-[10px] uppercase tracking-widest bg-slate-900 hover:bg-black"
+    <!-- Modal Enviar para Produção -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div
+          v-if="modalEnviarProducao.aberto"
+          class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+          @click.self="fecharModalEnviarProducao"
         >
-          <i class="pi pi-check-circle mr-3"></i>
-          Salvar e Gerar PDF
-        </Button>
-      </footer>
-    </Card>
+          <div class="w-full max-w-md rounded-2xl border border-border-ui bg-bg-card shadow-xl overflow-hidden flex flex-col">
+            <div class="h-1 w-full bg-brand-primary" />
+            <header class="flex items-center justify-between px-6 py-4 border-b border-border-ui">
+              <div class="flex items-center gap-3">
+                <i class="pi pi-send text-2xl text-text-soft"></i>
+                <div>
+                  <h3 class="text-lg font-semibold text-text-main">Enviar para Produção</h3>
+                  <p class="text-[10px] font-medium text-text-muted uppercase tracking-wider">
+                    Cria agendamento na agenda com este plano
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                class="w-9 h-9 flex items-center justify-center rounded-lg border border-border-ui text-text-muted hover:text-rose-500 hover:border-rose-200 transition-all"
+                @click="fecharModalEnviarProducao"
+              >
+                <i class="pi pi-times text-sm"></i>
+              </button>
+            </header>
+            <form class="p-6 space-y-4" @submit.prevent="confirmarEnviarProducao">
+              <Input
+                v-model="modalEnviarProducao.titulo"
+                label="Título do agendamento *"
+                placeholder="Ex: Plano de Corte - Cortes internos"
+                required
+              />
+              <div class="grid grid-cols-2 gap-4">
+                <Input
+                  v-model="modalEnviarProducao.inicio_em"
+                  label="Início *"
+                  type="datetime-local"
+                  required
+                />
+                <Input
+                  v-model="modalEnviarProducao.fim_em"
+                  label="Término *"
+                  type="datetime-local"
+                  required
+                />
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-text-muted mb-2">Equipe (mín. 1) *</label>
+                <div class="flex flex-wrap gap-2">
+                  <SearchInput
+                    v-model="modalEnviarProducao.funcionarioSelecionado"
+                    mode="select"
+                    class="flex-1 min-w-[200px]"
+                    :options="funcionariosOptions"
+                    placeholder="Selecione funcionário..."
+                    @update:modelValue="adicionarEquipe"
+                  />
+                  <div v-if="modalEnviarProducao.equipe_ids.length" class="flex flex-wrap gap-2 mt-2">
+                    <span
+                      v-for="id in modalEnviarProducao.equipe_ids"
+                      :key="id"
+                      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 text-xs font-medium"
+                    >
+                      {{ funcionarioNomeById(id) }}
+                      <button type="button" class="hover:text-rose-500" @click="removerEquipe(id)">&times;</button>
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div class="flex justify-end gap-3 pt-4 border-t border-border-ui">
+                <Button type="button" variant="ghost" @click="fecharModalEnviarProducao">
+                  Cancelar
+                </Button>
+                <Button type="submit" variant="primary" :loading="modalEnviarProducao.salvando">
+                  <i class="pi pi-send mr-2"></i>
+                  Enviar para Produção
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
 
     <Teleport to="body">
       <Transition name="fade">
@@ -207,32 +293,24 @@
           class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
           @click.self="fecharModalProduto"
         >
-          <div class="w-full max-w-2xl max-h-[85vh] bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col">
-            <header class="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-slate-50/50">
-              <div class="flex items-center gap-4">
-                <div class="w-11 h-11 rounded-[1.1rem] bg-slate-900 flex items-center justify-center text-white shadow-lg">
-                  <i class="pi pi-box text-lg"></i>
-                </div>
-
+          <div class="w-full max-w-2xl max-h-[85vh] rounded-2xl border border-border-ui bg-bg-card shadow-xl overflow-hidden flex flex-col">
+            <div class="h-1 w-full bg-brand-primary" />
+            <header class="flex items-center justify-between px-6 py-4 border-b border-border-ui">
+              <div class="flex items-center gap-3">
+                <i class="pi pi-box text-2xl text-text-soft"></i>
                 <div>
-                  <h3 class="text-lg font-black text-slate-800 tracking-tight uppercase leading-none">
-                    Novo Insumo
-                  </h3>
-                  <div class="flex items-center gap-2 mt-1">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                      Cadastro rapido para este fornecedor
-                    </p>
-                  </div>
+                  <h3 class="text-lg font-semibold text-text-main">Novo Insumo</h3>
+                  <p class="text-[10px] font-medium text-text-muted uppercase tracking-wider">
+                    Cadastre o produto na hora (cortes internos)
+                  </p>
                 </div>
               </div>
-
               <button
-                class="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-rose-500 hover:border-rose-200 transition-all shadow-sm"
-                @click="fecharModalProduto"
                 type="button"
+                class="w-9 h-9 flex items-center justify-center rounded-lg border border-border-ui text-text-muted hover:text-rose-500 hover:border-rose-200 transition-all"
+                @click="fecharModalProduto"
               >
-                <i class="pi pi-times text-xs"></i>
+                <i class="pi pi-times text-sm"></i>
               </button>
             </header>
 
@@ -286,22 +364,16 @@
                   <Input v-model="modalProduto.form.precoM2Mask" label="Preco por m2" placeholder="0,00" />
                 </div>
 
-                <div class="col-span-12 flex items-center justify-end gap-4 pt-6 border-t border-slate-100 mt-2">
-                  <button
-                    type="button"
-                    @click="fecharModalProduto"
-                    class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-slate-800 transition-colors"
-                  >
+                <div class="col-span-12 flex items-center justify-end gap-4 pt-6 border-t border-border-ui mt-2">
+                  <Button type="button" variant="ghost" @click="fecharModalProduto">
                     Cancelar
-                  </button>
-
+                  </Button>
                   <Button
                     variant="primary"
                     type="submit"
                     :loading="modalProduto.salvando"
-                    class="!h-12 !rounded-[1.2rem] !px-8 shadow-xl shadow-brand-primary/20 font-black text-[10px] uppercase tracking-widest"
                   >
-                    <i class="pi pi-check-circle mr-3"></i>
+                    <i class="pi pi-check-circle mr-2"></i>
                     Cadastrar e Usar
                   </Button>
                 </div>
@@ -318,7 +390,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { maskMoneyBR } from '@/utils/masks'
-import { PlanoCorteService, FornecedorService } from '@/services/index'
+import { PlanoCorteService, FornecedorService, AgendaService, FuncionarioService } from '@/services/index'
 import { PIPELINE_PLANO_CORTE, UNIDADES } from '@/constantes'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
@@ -339,24 +411,10 @@ const statusPlanoOptions = computed(() =>
 const statusPlano = ref('')
 const dataVenda = ref(new Date().toISOString().slice(0, 10))
 
-const statusPlanoPipeline = computed(() =>
-  (PIPELINE_PLANO_CORTE || []).find((p) => p.key === statusPlano.value),
-)
-
-const statusPlanoBadgeClass = computed(() =>
-  statusPlanoPipeline.value?.badgeClass || 'bg-slate-50 text-slate-600 border border-slate-200',
-)
-
-const statusPlanoDotClass = computed(() =>
-  statusPlanoPipeline.value?.dotClass || 'bg-slate-400',
-)
-
-const statusPlanoLabel = computed(() =>
-  statusPlanoPipeline.value?.label || statusPlano.value || '—',
-)
-
 const fornecedor = ref([])
+/** Cortes internos: o fornecedor é você mesmo; usamos o primeiro cadastrado como "interno". */
 const fornecedorSelecionado = ref(null)
+const fornecedorCarregado = ref(false)
 const fornecedorOptions = computed(() => fornecedor.value.map((f) => ({ label: f.razao_social, value: f.id })))
 
 const itensDisponiveis = ref([])
@@ -443,7 +501,10 @@ const modalProduto = ref({
 })
 
 function abrirModalProduto() {
-  if (!fornecedorSelecionado.value) return
+  if (!fornecedorSelecionado.value) {
+    notify.warn('Cadastre um fornecedor (próprio) em Produtos plano de corte primeiro.')
+    return
+  }
   modalProduto.value.form.fornecedor_id = Number(fornecedorSelecionado.value)
   modalProduto.value.aberto = true
 }
@@ -553,12 +614,6 @@ function registrarItemNovo() {
   }
 }
 
-async function onSelecionarFornecedor(v) {
-  fornecedorSelecionado.value = v
-  itens.value = []
-  if (v) await carregarItensDisponiveis(v)
-}
-
 function onSelecionarProdutoNovo(v) {
   const itemId = Number(v)
   const item = itensDisponiveis.value.find((i) => Number(i.id) === itemId)
@@ -570,45 +625,200 @@ function onSelecionarProdutoNovo(v) {
   itemNovo.value.precoM2Mask = maskMoneyBR(Number(item.preco_m2 || 0))
 }
 
-async function salvarEGerarPdf() {
-  if (!fornecedorSelecionado.value) return notify.error('Selecione um fornecedor.')
-  if (!itens.value.length) return notify.error('Adicione ao menos um item.')
+function buildPayload() {
+  const dataStr = (dataVenda.value || '').trim()
+  const dataVendaIso = dataStr.includes('T') ? dataStr : `${dataStr}T12:00:00.000Z`
+  return {
+    fornecedor_id: Number(fornecedorSelecionado.value),
+    data_venda: dataVendaIso,
+    status: statusPlano.value || (PIPELINE_PLANO_CORTE?.[0]?.key || 'EM_ABERTO'),
+    produtos: itens.value.map((p) => ({
+      item_id: Number(p.item_id),
+      quantidade: Number(p.quantidade) || 0,
+      valor_unitario: Number(p.valor_unitario) || 0,
+      valor_total: Number(p.valor_total) || 0,
+      status: p.status || 'ATIVO',
+    })),
+  }
+}
 
-  salvando.value = true
+/** Salva o plano e retorna o ID (ou null). */
+async function salvarPlano() {
+  if (!fornecedorSelecionado.value) return null
+  if (!itens.value.length) return null
   try {
-    const payload = {
-      fornecedor_id: Number(fornecedorSelecionado.value),
-      data_venda: dataVenda.value,
-      status: statusPlano.value || (PIPELINE_PLANO_CORTE?.[0]?.key || 'EM_ABERTO'),
-      produtos: itens.value,
-    }
-
-    const { data } = await PlanoCorteService.salvar(null, payload)
-    const planoId = data?.id
-
-    if (planoId) {
-      const pdfRes = await PlanoCorteService.abrirPdf(planoId)
-      await router.push({
-        path: `/arquivos/${pdfRes?.data?.arquivoId}`,
-        query: {
-          name: `PLANO_CORTE_${String(planoId).replace(/\D/g, '')}.pdf`,
-          type: 'application/pdf',
-        },
-      })
-    } else {
-      notify.success('Plano criado!')
-      router.push('/plano-corte')
-    }
+    const { data } = await PlanoCorteService.salvar(null, buildPayload())
+    return data?.id ?? null
   } catch (e) {
     notify.error('Erro ao salvar plano.')
+    return null
+  }
+}
+
+async function salvarApenas() {
+  if (!fornecedorSelecionado.value) return notify.error('Cadastre um fornecedor (próprio) em Produtos plano de corte para usar cortes internos.')
+  if (!itens.value.length) return notify.error('Adicione ao menos um item.')
+  salvando.value = true
+  try {
+    const planoId = await salvarPlano()
+    if (planoId) {
+      notify.success('Plano salvo!')
+      router.push('/plano-corte')
+    }
   } finally {
     salvando.value = false
   }
 }
 
+async function salvarEGerarPdf() {
+  if (!fornecedorSelecionado.value) return notify.error('Cadastre um fornecedor (próprio) em Produtos plano de corte para usar cortes internos.')
+  if (!itens.value.length) return notify.error('Adicione ao menos um item.')
+
+  salvando.value = true
+  try {
+    let planoId = await salvarPlano()
+    if (!planoId) return
+
+    const pdfRes = await PlanoCorteService.abrirPdf(planoId)
+    await router.push({
+      path: `/arquivos/${pdfRes?.data?.arquivoId}`,
+      query: {
+        name: `PLANO_CORTE_${String(planoId).replace(/\D/g, '')}.pdf`,
+        type: 'application/pdf',
+      },
+    })
+  } catch (e) {
+    notify.error('Erro ao gerar PDF.')
+  } finally {
+    salvando.value = false
+  }
+}
+
+const enviandoProducao = ref(false)
+const planoIdParaProducao = ref(null)
+const modalEnviarProducao = ref({
+  aberto: false,
+  salvando: false,
+  titulo: '',
+  inicio_em: '',
+  fim_em: '',
+  funcionarioSelecionado: null,
+  equipe_ids: [],
+})
+const funcionariosOptions = ref([])
+
+function funcionarioNomeById(id) {
+  const opt = funcionariosOptions.value.find((f) => String(f.value) === String(id))
+  return opt?.label || `#${id}`
+}
+
+function adicionarEquipe(id) {
+  if (!id) return
+  if (!modalEnviarProducao.value.equipe_ids.includes(id)) {
+    modalEnviarProducao.value.equipe_ids.push(id)
+  }
+  modalEnviarProducao.value.funcionarioSelecionado = null
+}
+
+function removerEquipe(id) {
+  modalEnviarProducao.value.equipe_ids = modalEnviarProducao.value.equipe_ids.filter((f) => String(f) !== String(id))
+}
+
+function fecharModalEnviarProducao() {
+  modalEnviarProducao.value.aberto = false
+  planoIdParaProducao.value = null
+  modalEnviarProducao.value.titulo = ''
+  modalEnviarProducao.value.inicio_em = ''
+  modalEnviarProducao.value.fim_em = ''
+  modalEnviarProducao.value.funcionarioSelecionado = null
+  modalEnviarProducao.value.equipe_ids = []
+}
+
+async function abrirModalEnviarProducao() {
+  if (!fornecedorSelecionado.value) return notify.error('Cadastre um fornecedor (próprio) em Produtos plano de corte para usar cortes internos.')
+  if (!itens.value.length) return notify.error('Adicione ao menos um item.')
+
+  salvando.value = true
+  try {
+    const planoId = await salvarPlano()
+    if (!planoId) return
+
+    planoIdParaProducao.value = planoId
+    const hoje = new Date()
+    const inicio = new Date(hoje)
+    inicio.setHours(8, 0, 0, 0)
+    const fim = new Date(hoje)
+    fim.setHours(18, 0, 0, 0)
+
+    modalEnviarProducao.value.titulo = `Plano de Corte #${planoId} - Cortes internos`
+    modalEnviarProducao.value.inicio_em = inicio.toISOString().slice(0, 16)
+    modalEnviarProducao.value.fim_em = fim.toISOString().slice(0, 16)
+    modalEnviarProducao.value.equipe_ids = []
+    modalEnviarProducao.value.aberto = true
+  } finally {
+    salvando.value = false
+  }
+}
+
+async function confirmarEnviarProducao() {
+  if (!modalEnviarProducao.value.equipe_ids.length) return notify.error('Selecione pelo menos um funcionário na equipe.')
+
+  const inicio = new Date(modalEnviarProducao.value.inicio_em)
+  const fim = new Date(modalEnviarProducao.value.fim_em)
+  if (Number.isNaN(inicio.getTime()) || Number.isNaN(fim.getTime())) return notify.error('Data de início e término inválidas.')
+  if (fim <= inicio) return notify.error('Término deve ser depois do início.')
+
+  const planoId = planoIdParaProducao.value
+  if (!planoId) return notify.error('Plano não encontrado. Salve o plano antes.')
+
+  modalEnviarProducao.value.salvando = true
+  try {
+    await AgendaService.criar({
+      titulo: modalEnviarProducao.value.titulo,
+      inicio_em: inicio.toISOString(),
+      fim_em: fim.toISOString(),
+      plano_corte_id: planoId,
+      equipe_ids: modalEnviarProducao.value.equipe_ids.map((id) => Number(id)),
+      categoria: 'PRODUCAO',
+    })
+    notify.success('Plano enviado para produção!')
+    fecharModalEnviarProducao()
+    router.push('/plano-corte')
+  } catch (e) {
+    notify.error(e?.response?.data?.message || 'Erro ao enviar para produção.')
+  } finally {
+    modalEnviarProducao.value.salvando = false
+  }
+}
+
+async function loadFuncionarios() {
+  try {
+    const res = await FuncionarioService.select()
+    const lista = Array.isArray(res?.data) ? res.data : []
+    funcionariosOptions.value = lista
+      .map((item) => ({
+        label: item?.label || item?.nome || '',
+        value: item?.value ?? item?.id ?? null,
+      }))
+      .filter((opt) => opt.value != null)
+  } catch (e) {
+    funcionariosOptions.value = []
+  }
+}
+
 onMounted(async () => {
-  const { data: fData } = await FornecedorService.listar()
-  fornecedor.value = fData || []
   statusPlano.value = PIPELINE_PLANO_CORTE?.[0]?.key || 'EM_ABERTO'
+  loadFuncionarios()
+  try {
+    const { data: fData } = await FornecedorService.listar()
+    fornecedor.value = Array.isArray(fData) ? fData : []
+    const primeiro = fornecedor.value[0]
+    if (primeiro?.id) {
+      fornecedorSelecionado.value = primeiro.id
+      await carregarItensDisponiveis(primeiro.id)
+    }
+  } finally {
+    fornecedorCarregado.value = true
+  }
 })
 </script>

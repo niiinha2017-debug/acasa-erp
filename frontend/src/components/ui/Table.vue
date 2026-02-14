@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div
     :class="[
       boxed ? 'rounded-2xl border border-border-ui bg-bg-card' : '',

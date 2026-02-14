@@ -4,7 +4,7 @@
     <Transition name="fade">
       <div
         v-if="open"
-        class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+        class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
         @click.self="emit('close')"
       >
         <div class="w-full max-w-2xl max-h-[85vh] bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col">
@@ -237,7 +237,7 @@
     <Transition name="fade">
       <div
         v-if="modalImagemOpen"
-        class="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+        class="fixed inset-0 z-[100000] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
         @click.self="modalImagemOpen = false"
       >
         <div class="w-full max-w-5xl max-h-[85vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col">
@@ -306,7 +306,7 @@ const form = reactive({
   nome_produto: '',
   cor: '',
   medida: '',
-  unidade: 'METRO',
+  unidade: 'M',
   marca: '',
   valor_unitario_mask: '0,00',
   status: 'ATIVO',
@@ -356,7 +356,7 @@ function resetForm() {
     nome_produto: props.textoInicial || '',
     cor: '',
     medida: '',
-    unidade: 'METRO',
+    unidade: 'M',
     marca: '',
     valor_unitario_mask: '0,00',
     status: 'ATIVO',
@@ -463,7 +463,7 @@ if (!Number(valorNum || 0)) {
     nome_produto: form.nome_produto.trim(),
     cor: form.cor?.trim() ? form.cor.trim() : null,
     medida: form.medida?.trim() ? form.medida.trim() : null,
-    unidade: form.unidade || 'METRO',
+    unidade: form.unidade || 'M',
     marca: form.marca?.trim() ? form.marca.trim() : null,
     valor_unitario: Number(valorNum || 0),
     status: form.status,

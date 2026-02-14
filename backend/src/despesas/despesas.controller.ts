@@ -30,11 +30,15 @@ export class DespesasController {
     @Query('status') status?: string,
     @Query('unidade') unidade?: string,
     @Query('tipo_movimento') tipo_movimento?: string,
+    @Query('data_ini') data_ini?: string,
+    @Query('data_fim') data_fim?: string,
   ) {
     return this.service.findAll({
       status: status?.trim() || undefined,
       unidade: unidade?.trim() || undefined,
       tipo_movimento: tipo_movimento?.trim() || undefined,
+      data_ini: data_ini?.trim() || undefined,
+      data_fim: data_fim?.trim() || undefined,
     });
   }
 

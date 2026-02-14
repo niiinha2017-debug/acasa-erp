@@ -10,6 +10,7 @@
         { key: 'LIMPEZA', label: 'Limpeza' },
         { key: 'DEPRECIACAO_MAQUINAS', label: 'Depreciação de Máquinas' },
         { key: 'SEGURO_MAQUINAS', label: 'Seguro de Máquinas' },
+        { key: 'ALUGUEL', label: 'Aluguel' },
       ],
 
       CUSTO_VARIAVEL: [
@@ -45,7 +46,6 @@
         { key: 'MATERIAL_ESCRITORIO', label: 'Material de Escritório' },
         { key: 'MANUTENCAO_PREDIAL', label: 'Manutenção Predial' },
         { key: 'MULTAS_JUROS', label: 'Multas / Juros' },
-        { key: 'OUTROS', label: 'Outros' },
       ],
     },
 
@@ -56,6 +56,7 @@
         { key: 'INTERNET', label: 'Internet' },
         { key: 'SEGURANCA', label: 'Segurança / Monitoramento' },
         { key: 'LIMPEZA', label: 'Limpeza' },
+        { key: 'ALUGUEL', label: 'Aluguel' },
       ],
 
       CUSTO_VARIAVEL: [

@@ -15,8 +15,8 @@ import { PlanoCorteModule } from './plano-corte/plano-corte.module';
 import { FuncionariosModule } from './funcionarios/funcionarios.module';
 import { DespesasModule } from './despesas/despesas.module';
 import { OrcamentosModule } from './orcamentos/orcamentos.module';
-import { VendasService } from './vendas/vendas.service';
-import { VendasController } from './vendas/vendas.controller';
+import { VendasModule } from './vendas/vendas.module';
+import { ContratosModule } from './contratos/contratos.module';
 import { FinanceiroModule } from './financeiro/financeiro.module';
 import { ComprasModule } from './compras/compras.module';
 import { PermissoesModule } from './permissoes/permissoes.module';
@@ -62,6 +62,7 @@ import { AgendaModule } from './agenda/agenda.module';
     FuncionariosModule,
     DespesasModule,
     OrcamentosModule,
+    ContratosModule,
     FinanceiroModule,
     ComprasModule,
     PermissoesModule,
@@ -69,8 +70,7 @@ import { AgendaModule } from './agenda/agenda.module';
     UtilsModule,
     PontoModule,
     AgendaModule,
+    VendasModule,
   ],
-  controllers: [VendasController],
-  providers: [VendasService],
 })
 export class AppModule {}

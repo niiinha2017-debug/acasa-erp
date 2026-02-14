@@ -1,5 +1,6 @@
 <template>
-  <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+  <Teleport to="body">
+    <div v-if="open" class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md" @click.self="close">
     <div class="bg-white rounded-xl shadow-lg w-full max-w-lg p-6 relative">
       <button @click="close" class="absolute top-3 right-3 text-slate-400 hover:text-rose-500"><i class="pi pi-times"></i></button>
       <h2 class="text-lg font-black mb-1">Agendar etapa</h2>
@@ -44,6 +45,7 @@
       <button @click="salvar" class="w-full mt-4 h-12 rounded-xl font-black text-[10px] uppercase bg-blue-700 text-white shadow">Salvar agendamento</button>
     </div>
   </div>
+  </Teleport>
 </template>
 
 <script setup>

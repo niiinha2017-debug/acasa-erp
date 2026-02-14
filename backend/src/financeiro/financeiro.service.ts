@@ -35,39 +35,60 @@ export class FinanceiroService {
 
   // =========================================================
   // ✅ CONSOLIDADO (CONTAS A PAGAR) = DESPESAS + COMPRAS + FECHAMENTOS
+  // Despesas parceladas: uma linha por parcela (titulo), dar baixa em cada
   // =========================================================
   async listarContasPagarConsolidado(filtros: {
-    fornecedor_id?: number;
     status?: string;
+    data_ini?: string;
+    data_fim?: string;
   }) {
     const status = filtros.status || undefined;
-    const fornecedorId = filtros.fornecedor_id || undefined;
+    let dataIni = filtros.data_ini ? new Date(filtros.data_ini + 'T00:00:00') : undefined;
+    let dataFim = filtros.data_fim ? new Date(filtros.data_fim + 'T23:59:59') : undefined;
+
+    // Compras: sempre período do mês (1º ao último dia). Se só data_ini veio, fecha no último dia do mês.
+    if (dataIni && !dataFim) {
+      dataFim = new Date(dataIni.getFullYear(), dataIni.getMonth() + 1, 0, 23, 59, 59);
+    }
+    if (dataFim && !dataIni) {
+      dataIni = new Date(dataFim.getFullYear(), dataFim.getMonth(), 1, 0, 0, 0);
+    }
+
+    const whereDespesas: any = {};
+    const whereCompras: any = status ? { status } : {};
+    const whereContasPagar: any = status ? { status } : {};
+
+    // Compras: período do mês (data de compra, 1º ao último dia). Despesas/Fechamentos: período de vencimento.
+    if (dataIni || dataFim) {
+      const range: any = {};
+      if (dataIni) range.gte = dataIni;
+      if (dataFim) range.lte = dataFim;
+      whereCompras.data_compra = range;
+      whereContasPagar.vencimento_em = range;
+      whereDespesas.OR = [
+        { titulos: { some: { vencimento_em: range } } },
+        { titulos: { none: {} }, data_vencimento: range },
+      ];
+    }
 
     const [despesas, compras, fechamentos] = await Promise.all([
-      // DESPESAS
       this.prisma.despesas.findMany({
-        where: {
-          status: status,
-        },
+        where: Object.keys(whereDespesas).length ? whereDespesas : {},
+        include: { titulos: { orderBy: { vencimento_em: 'asc' } } },
         orderBy: { data_vencimento: 'asc' },
       }),
 
-      // COMPRAS
       this.prisma.compras.findMany({
-        where: {
-          fornecedor_id: fornecedorId,
-          status: status,
+        where: whereCompras,
+        include: {
+          fornecedor: true,
+          itens: { select: { nome_produto: true } },
         },
-        include: { fornecedor: true },
-        orderBy: { vencimento_em: 'asc' },
+        orderBy: { data_compra: 'asc' },
       }),
 
-      // CONTAS_PAGAR (FECHAMENTO MENSAL)
       this.prisma.contas_pagar.findMany({
-        where: {
-          fornecedor_id: fornecedorId,
-          status: status,
-        },
+        where: whereContasPagar,
         include: {
           fornecedor: true,
           fornecedor_cobrador: true,
@@ -76,31 +97,93 @@ export class FinanceiroService {
       }),
     ]);
 
+    const rowsDespesas: any[] = [];
+    for (const d of despesas) {
+      if (d.titulos && d.titulos.length > 0) {
+        for (const t of d.titulos) {
+          if (status && t.status !== status) continue;
+          const venc = new Date(t.vencimento_em);
+          venc.setHours(0, 0, 0, 0);
+          if (dataIni) {
+            const ini = new Date(dataIni);
+            ini.setHours(0, 0, 0, 0);
+            if (venc < ini) continue;
+          }
+          if (dataFim) {
+            const fim = new Date(dataFim);
+            fim.setHours(23, 59, 59, 999);
+            if (venc > fim) continue;
+          }
+          const totalParcelas = Number(t.parcelas_total) || d.titulos.length;
+          const numParcela = Number(t.parcela_numero) || 0;
+          rowsDespesas.push({
+            id: t.id,
+            id_despesa: d.id,
+            titulo_id: t.id,
+            origem: 'DESPESA',
+
+            fornecedor_id: null,
+            fornecedor_nome: null,
+
+            descricao: d.local || d.categoria,
+            observacao: d.classificacao,
+            parcela_info: totalParcelas > 1 ? `Parcela ${numParcela}/${totalParcelas}` : null,
+
+            valor: t.valor,
+            valor_compensado: 0,
+
+            vencimento_em: t.vencimento_em,
+            pago_em: t.pago_em,
+            status: t.status,
+
+            mes_referencia: null,
+            ano_referencia: null,
+            cheques_total: 0,
+          });
+        }
+      } else {
+        if (status && d.status !== status) continue;
+        const vencDesp = new Date(d.data_vencimento);
+        vencDesp.setHours(0, 0, 0, 0);
+        if (dataIni) {
+          const ini = new Date(dataIni);
+          ini.setHours(0, 0, 0, 0);
+          if (vencDesp < ini) continue;
+        }
+        if (dataFim) {
+          const fim = new Date(dataFim);
+          fim.setHours(23, 59, 59, 999);
+          if (vencDesp > fim) continue;
+        }
+        rowsDespesas.push({
+          id: d.id,
+          id_despesa: d.id,
+          titulo_id: null,
+          origem: 'DESPESA',
+
+          fornecedor_id: null,
+          fornecedor_nome: null,
+
+          descricao: d.local || d.categoria,
+          observacao: d.classificacao,
+          parcela_info: null,
+
+          valor: d.valor_total,
+          valor_compensado: 0,
+
+          vencimento_em: d.data_vencimento,
+          pago_em: d.data_pagamento,
+          status: d.status,
+
+          mes_referencia: null,
+          ano_referencia: null,
+          cheques_total: 0,
+        });
+      }
+    }
+
     return [
-      // =====================
-      // DESPESAS (origem = DESPESA)
-      // =====================
-      ...despesas.map((d) => ({
-        id: d.id,
-        origem: 'DESPESA',
-
-        fornecedor_id: null,
-        fornecedor_nome: null,
-
-        descricao: d.categoria,
-        observacao: d.classificacao,
-
-        valor: d.valor_total,
-        valor_compensado: 0,
-
-        vencimento_em: d.data_vencimento,
-        pago_em: d.data_pagamento,
-        status: d.status,
-
-        mes_referencia: null,
-        ano_referencia: null,
-        cheques_total: 0,
-      })),
+      ...rowsDespesas,
 
       // =====================
       // COMPRAS (origem = COMPRA)
@@ -114,6 +197,7 @@ export class FinanceiroService {
 
         descricao: 'COMPRA',
         observacao: c.tipo_compra,
+        detalhe_produtos: ((c as any).itens || []).map((i: any) => i.nome_produto || '').filter(Boolean),
 
         valor: c.valor_total,
         valor_compensado: 0,
@@ -239,6 +323,70 @@ export class FinanceiroService {
   }
 
   /**
+   * ✅ Dar baixa em um título (parcela de despesa).
+   * Usado quando o usuário paga uma parcela no Contas a Pagar.
+   */
+  async pagarTitulo(tituloId: number) {
+    const titulo = await this.prisma.titulos_financeiros.findUnique({
+      where: { id: tituloId },
+      include: { despesa: true },
+    });
+    if (!titulo) throw new NotFoundException('Título não encontrado');
+    if (titulo.status === SF.PAGO) {
+      throw new BadRequestException('Este título já está pago.');
+    }
+
+    const pagoEm = new Date();
+    await this.prisma.titulos_financeiros.update({
+      where: { id: tituloId },
+      data: { status: SF.PAGO, pago_em: pagoEm },
+    });
+
+    if (titulo.despesa_id && titulo.despesa) {
+      const totalTitulos = await this.prisma.titulos_financeiros.count({
+        where: { despesa_id: titulo.despesa_id },
+      });
+      const titulosPagos = await this.prisma.titulos_financeiros.count({
+        where: { despesa_id: titulo.despesa_id, status: SF.PAGO },
+      });
+      if (totalTitulos === titulosPagos) {
+        await this.prisma.despesas.update({
+          where: { id: titulo.despesa_id },
+          data: { status: SF.PAGO, data_pagamento: pagoEm },
+        });
+      }
+    }
+
+    return { success: true };
+  }
+
+  /**
+   * Dar baixa em despesa à vista (sem parcelas).
+   */
+  async pagarDespesa(despesaId: number) {
+    const despesa = await this.prisma.despesas.findUnique({
+      where: { id: despesaId },
+      include: { titulos: true },
+    });
+    if (!despesa) throw new NotFoundException('Despesa não encontrada');
+    if (despesa.titulos?.length > 0) {
+      throw new BadRequestException(
+        'Despesa parcelada: use Contas a Pagar para dar baixa em cada parcela.',
+      );
+    }
+    if (despesa.status === SF.PAGO) {
+      throw new BadRequestException('Esta despesa já está paga.');
+    }
+
+    const pagoEm = new Date();
+    await this.prisma.despesas.update({
+      where: { id: despesaId },
+      data: { status: SF.PAGO, data_pagamento: pagoEm },
+    });
+    return { success: true };
+  }
+
+  /**
    * ✅ LEGADO (não usar no fluxo novo):
    * Marca conta como PAGO e cria uma despesa. Mantido para não quebrar telas antigas.
    * O fluxo novo de baixa/parcelamento é via titulos_financeiros.
@@ -310,7 +458,14 @@ export class FinanceiroService {
         status: SF.EM_ABERTO,
         data_compra: { gte: inicio, lte: fim },
       },
-      select: { id: true, valor_total: true },
+      orderBy: { data_compra: 'asc' },
+      select: {
+        id: true,
+        data_compra: true,
+        valor_total: true,
+        tipo_compra: true,
+        vencimento_em: true,
+      },
     });
 
     const totalCompras = this.round2(
@@ -323,7 +478,13 @@ export class FinanceiroService {
         status: SF.EM_ABERTO,
         data_venda: { gte: inicio, lte: fim },
       },
-      select: { id: true, valor_total: true },
+      orderBy: { data_venda: 'asc' },
+      select: {
+        id: true,
+        data_venda: true,
+        valor_total: true,
+        status: true,
+      },
     });
 
     const totalPlanos = this.round2(
@@ -338,15 +499,33 @@ export class FinanceiroService {
       Math.max(totalPlanos - totalCompras, 0),
     );
 
+    const periodo_inicio = inicio.toISOString().slice(0, 10);
+    const periodo_fim = fim.toISOString().slice(0, 10);
+
     return {
       fornecedor_id,
       mes,
       ano,
+      periodo_inicio,
+      periodo_fim,
       total_compras: totalCompras,
       total_planos: totalPlanos,
       compensado_auto,
       saldo_a_pagar_auto,
       credito_sobra_auto,
+      historico_compras: compras.map((c) => ({
+        id: c.id,
+        data_compra: c.data_compra,
+        valor_total: Number((c as any).valor_total || 0),
+        tipo_compra: (c as any).tipo_compra,
+        vencimento_em: (c as any).vencimento_em,
+      })),
+      historico_planos: planos.map((p) => ({
+        id: p.id,
+        data_venda: p.data_venda,
+        valor_total: Number((p as any).valor_total || 0),
+        status: (p as any).status,
+      })),
     };
   }
 
@@ -385,6 +564,10 @@ export class FinanceiroService {
     if (!parcelas.length)
       throw new BadRequestException('parcelas é obrigatório');
 
+    const vencPadraoBody = body?.vencimento_em
+      ? this.toDate(body.vencimento_em, 'vencimento_em')
+      : new Date(ano, mes, 5);
+
     for (const p of parcelas) {
       const parcelaNum = Number(p?.parcela || 0);
       const valor = Number(p?.valor || 0);
@@ -392,14 +575,15 @@ export class FinanceiroService {
 
       if (!Number.isFinite(parcelaNum) || parcelaNum <= 0)
         throw new BadRequestException('parcela inválida');
-      if (!Number.isFinite(valor) || valor <= 0)
+      if (!Number.isFinite(valor) || valor < 0)
         throw new BadRequestException('valor de parcela inválido');
-      this.toDate(venc, 'vencimento_em');
+      if (valor > 0 && !venc)
+        throw new BadRequestException('vencimento_em obrigatório quando parcela tem valor');
+      if (valor === 0 && !venc)
+        (p as any).vencimento_em = vencPadraoBody.toISOString().slice(0, 10);
     }
 
-    const vencPadrao = body?.vencimento_em
-      ? this.toDate(body.vencimento_em, 'vencimento_em')
-      : new Date(ano, mes, 5);
+    const vencPadrao = vencPadraoBody;
 
     return this.prisma.$transaction(async (tx) => {
       // 0) não duplicar fechamento
@@ -411,6 +595,14 @@ export class FinanceiroService {
         throw new BadRequestException(
           'Já existe fechamento deste fornecedor para o mês/ano.',
         );
+
+      const fornecedor = await tx.fornecedor.findUnique({
+        where: { id: fornecedor_id },
+        select: { nome_fantasia: true, razao_social: true },
+      });
+      const fornecedorNome =
+        (fornecedor?.nome_fantasia || fornecedor?.razao_social || '') ||
+        `Fornecedor #${fornecedor_id}`;
 
       // 1) automático
       const inicio = new Date(ano, mes - 1, 1, 0, 0, 0);
@@ -459,9 +651,40 @@ export class FinanceiroService {
         Math.min(debito_base, credito_auto + credito_extra),
       );
 
-      // 3) cria FECHAMENTO (contas_pagar)
+      const parcelasComValor = parcelas.filter((p: any) => Number(p?.valor || 0) > 0);
+      const qtdParcelas = parcelasComValor.length || 1;
+      const primeiroVenc =
+        parcelasComValor.length > 0 && parcelasComValor[0]?.vencimento_em
+          ? this.toDate(parcelasComValor[0].vencimento_em, 'vencimento_em')
+          : vencPadrao;
+      const statusFinal = total_final > 0 ? SF.EM_ABERTO : SF.PAGO;
+
+      // 3a) Cria DESPESA só quando há saldo a pagar (total_final > 0). Crédito/abatimento zerando = não gera despesa.
+      let despesaId: number | null = null;
+      if (total_final > 0) {
+        const despesa = await tx.despesas.create({
+          data: {
+            tipo_movimento: 'SAIDA',
+            unidade: 'FÁBRICA',
+            categoria: 'PAGAMENTO_FORNECEDOR',
+            classificacao: 'FECHAMENTO',
+            local: `Fechamento ${String(mes).padStart(2, '0')}/${ano} - ${fornecedorNome}`,
+            valor_total: total_final,
+            forma_pagamento: tipo,
+            quantidade_parcelas: qtdParcelas,
+            data_vencimento: primeiroVenc,
+            data_pagamento: null,
+            status: statusFinal,
+          },
+          select: { id: true },
+        });
+        despesaId = despesa.id;
+      }
+
+      // 3b) Cria FECHAMENTO (contas_pagar), vinculado à despesa apenas se foi criada
       const contaPagar = await tx.contas_pagar.create({
         data: {
+          despesa_id: despesaId,
           fornecedor_id,
           fornecedor_cobrador_id: fornecedor_cobrador_id || null,
 
@@ -479,7 +702,7 @@ export class FinanceiroService {
           valor_original: total_final,
           valor_compensado: compensado_total,
 
-          status: total_final > 0 ? SF.EM_ABERTO : SF.PAGO,
+          status: statusFinal,
           forma_pagamento_chave: tipo,
 
           parcelas_total: parcelas.length,
@@ -491,20 +714,21 @@ export class FinanceiroService {
         select: { id: true },
       });
 
-      // 4) cria TITULOS FINANCEIROS (status usando SF)
-      await tx.titulos_financeiros.createMany({
-        data: parcelas.map((p: any) => ({
-          conta_pagar_id: contaPagar.id,
+      // 4) cria TITULOS FINANCEIROS (apenas parcelas com valor > 0; saldo 0 = nenhum título)
+      if (parcelasComValor.length > 0) {
+        await tx.titulos_financeiros.createMany({
+          data: parcelasComValor.map((p: any) => ({
+            conta_pagar_id: contaPagar.id,
 
-          tipo, // CHEQUE | CARTAO
-          valor: Number(p.valor),
+            tipo, // CHEQUE | CARTAO
+            valor: Number(p.valor),
 
-          status: SF.EM_ABERTO,
-          vencimento_em: this.toDate(p.vencimento_em, 'vencimento_em'),
-          pago_em: null,
+            status: SF.EM_ABERTO,
+            vencimento_em: this.toDate(p.vencimento_em, 'vencimento_em'),
+            pago_em: null,
 
-          parcelas_total: parcelas.length,
-          parcela_numero: Number(p.parcela),
+            parcelas_total: parcelas.length,
+            parcela_numero: Number(p.parcela),
 
           meta: {
             fornecedor_id,
@@ -527,7 +751,8 @@ export class FinanceiroService {
             total_final,
           },
         })),
-      });
+        });
+      }
 
       // 5) atualiza origens (mantém seu padrão atual)
       if (compras.length) {

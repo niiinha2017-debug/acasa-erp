@@ -1,17 +1,17 @@
 <template>
-  <div class="login-font clientes-line-list w-full max-w-[1700px] mx-auto">
-    <div class="relative overflow-hidden rounded-3xl border border-border-ui bg-bg-card shadow-2xl">
-      <div class="h-1.5 w-full bg-[linear-gradient(90deg,#2f7fb3_0%,#255a82_100%)]"></div>
+  <div class="w-full h-full">
+    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
+      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
 
       <PageHeader
         title="Convites do Ponto"
-        subtitle="Geracao de acesso para colaboradores"
+        subtitle="Geração de acesso para colaboradores"
         icon="pi pi-link"
-        :showBack="false"
+        :show-back="false"
       >
         <template #actions>
-          <div class="flex items-center gap-3 w-full sm:w-auto">
-            <div class="w-full sm:w-80">
+          <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+            <div class="w-full sm:w-80 order-1 sm:order-0">
               <SearchInput
                 v-model="funcionario_id"
                 mode="select"
@@ -37,7 +37,7 @@
         </template>
       </PageHeader>
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4">
+      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui">
         <Loading v-if="loading" />
 
         <div v-else class="space-y-4">

@@ -1,216 +1,456 @@
 <template>
-  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-page-in">
-    
-    <PageHeader 
-      title="Contas a Pagar"
-      subtitle="Gestão consolidada de saídas financeiras"
-      icon="pi pi-arrow-down-right"
-    >
-      <template #actions>
-        <Button 
-          @click="abrirModalFechamento" 
-          variant="secondary"
-          size="sm"
-        >
-          <i class="pi pi-calendar-times mr-2"></i>
-          Novo Fechamento Mensal
-        </Button>
-      </template>
-    </PageHeader>
+  <div class="w-full h-full">
+    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
+      <div class="w-full h-2 rounded-t-2xl shrink-0 bg-brand-primary"></div>
 
-    <div class="space-y-4">
-      <!-- Filtros -->
-      <div class="flex flex-col sm:flex-row gap-4 items-end">
-        <div class="w-full sm:max-w-xs">
-          <label class="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-wider">Fornecedor</label>
-          <select 
-            v-model="filtros.fornecedor_id" 
-            class="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs font-bold uppercase outline-none focus:ring-2 focus:ring-brand-primary/10 transition-all text-slate-700"
-          >
-            <option value="">TODOS OS FORNECEDORES</option>
-            <option v-for="o in fornecedorOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
-          </select>
+      <PageHeader
+        title="Contas a Pagar"
+        subtitle="Soma das compras e despesas do período, com detalhamento por data"
+        icon="pi pi-arrow-down-right"
+      />
+
+      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-6">
+        <div class="flex flex-col sm:flex-row flex-wrap gap-4 items-end">
+          <div class="flex-1 min-w-0 sm:min-w-[220px]">
+            <label class="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-wider">Buscar</label>
+            <input 
+              v-model="filtroBusca" 
+              type="text"
+              placeholder="Fornecedor, descrição, origem..."
+              class="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-brand-primary/10 transition-all text-slate-700 placeholder:text-slate-400"
+            />
+          </div>
+            <div class="w-full sm:max-w-[160px]">
+              <label class="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-wider">Período (início)</label>
+              <input 
+                v-model="filtros.data_ini" 
+                type="date"
+                class="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-brand-primary/10 transition-all text-slate-700"
+                @change="ajustarFimAoInicio"
+              />
+            </div>
+            <div class="w-full sm:max-w-[160px]">
+              <label class="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-wider">Período (fim)</label>
+              <input 
+                v-model="filtros.data_fim" 
+                type="date"
+                class="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-brand-primary/10 transition-all text-slate-700"
+                @change="ajustarInicioAoFim"
+              />
+            </div>
+          <Button @click="buscar" variant="primary" class="!h-10">
+            <i class="pi pi-search mr-2"></i>
+            Buscar
+          </Button>
         </div>
 
-        <div class="w-full sm:max-w-[180px]">
-          <label class="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-wider">Status</label>
-          <select 
-            v-model="filtros.status" 
-            class="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs font-bold uppercase outline-none focus:ring-2 focus:ring-brand-primary/10 transition-all text-slate-700"
-          >
-            <option value="EM_ABERTO">EM ABERTO</option>
-            <option value="VENCIDO">VENCIDOS</option>
-            <option value="PAGO">PAGOS</option>
-          </select>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="rounded-xl border border-orange-200 bg-orange-50/50 p-4">
+          <p class="text-[10px] font-black text-orange-600 uppercase tracking-wider mb-1">Compras do período</p>
+          <p class="text-xl font-black text-slate-800 tabular-nums">{{ formatarMoeda(totais.compras) }}</p>
+        </div>
+        <div class="rounded-xl border border-purple-200 bg-purple-50/50 p-4">
+          <p class="text-[10px] font-black text-purple-600 uppercase tracking-wider mb-1">Despesas do período</p>
+          <p class="text-xl font-black text-slate-800 tabular-nums">{{ formatarMoeda(totais.despesas) }}</p>
+        </div>
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <p class="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Total período</p>
+          <p class="text-xl font-black text-slate-800 tabular-nums">{{ formatarMoeda(totais.total) }}</p>
+        </div>
         </div>
 
-        <Button 
-          @click="buscar" 
-          variant="primary"
-          class="!h-10 !w-10 !flex items-center justify-center !p-0"
-        >
-          <i class="pi pi-search"></i>
-        </Button>
-      </div>
+        <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+          <div class="flex border-b border-slate-200">
+          <button
+            v-for="tab in tabs"
+            :key="tab.id"
+            type="button"
+            class="flex-1 px-4 py-3 text-xs font-black uppercase tracking-wider transition-colors"
+            :class="abaAtiva === tab.id
+              ? tab.activeClass
+              : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'"
+            @click="abaAtiva = tab.id"
+          >
+            {{ tab.label }}
+            <span class="ml-1 opacity-80">({{ tab.count }})</span>
+          </button>
+          </div>
 
-      <!-- Tabela -->
-      <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-        <Table 
-          :columns="columns" 
-          :rows="rows" 
-          :loading="loading" 
-          empty-text="Nenhum registro encontrado."
-          :boxed="false"
-        >
-          <template #cell-origem="{ row }">
-            <span 
-              :class="getOrigemClass(row.origem)" 
-              class="px-2 py-1 rounded-lg border text-[9px] font-black uppercase tracking-wider inline-block"
-            >
-              {{ row.origem }}
-            </span>
-          </template>
-
-          <template #cell-vencimento="{ row }">
-            <span class="text-sm font-bold text-slate-700 tabular-nums">
-              {{ formatarData(row.vencimento_em) }}
-            </span>
-          </template>
-
-          <template #cell-fornecedor="{ row }">
-            <div class="flex flex-col">
-              <span class="text-sm font-bold text-slate-800 uppercase tracking-tight">
-                {{ row.fornecedor_nome || 'DESPESA OPERACIONAL' }}
-              </span>
-              <span class="text-[10px] font-medium text-slate-400 uppercase tracking-wide">
-                {{ row.descricao }}
-              </span>
+          <div class="p-0">
+          <div v-if="loading" class="p-8 text-center text-slate-500 font-bold">Carregando...</div>
+          <template v-else>
+            <!-- Conteúdo agrupado por data, compras separadas por fornecedor -->
+            <div v-for="(itens, dataStr) in rowsPorData" :key="dataStr" class="border-t-2 border-slate-200 first:border-t-0">
+              <div class="bg-slate-50 px-4 py-2.5 border-b border-slate-200 flex items-center justify-between gap-2 flex-wrap">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-xs font-black text-slate-600 uppercase tracking-wider">{{ dataStr }}</span>
+                  <span class="text-xs font-bold text-slate-500">— {{ itens.length }} item(ns) · {{ formatarMoeda(somaGrupo(itens)) }}</span>
+                </div>
+                <button
+                  type="button"
+                  @click="toggleGrupo(dataStr)"
+                  class="h-8 px-3 rounded-lg border border-slate-300 bg-white text-slate-600 text-[10px] font-bold uppercase hover:bg-slate-100 inline-flex items-center gap-1.5"
+                  :title="estaExpandido(dataStr) ? 'Ocultar detalhes' : 'Exibir detalhes'"
+                >
+                  <i :class="estaExpandido(dataStr) ? 'pi pi-chevron-up' : 'pi pi-chevron-down'" class="text-xs"></i>
+                  {{ estaExpandido(dataStr) ? 'Ocultar' : 'Exibir' }}
+                </button>
+              </div>
+              <!-- Vista resumida: nome do fornecedor + valor total -->
+              <div v-if="!estaExpandido(dataStr)" class="px-4 py-3 bg-white border-b border-slate-100">
+                <div class="flex flex-wrap gap-x-6 gap-y-2 text-xs">
+                  <span v-for="(r, idx) in resumoPorFornecedor(itens)" :key="idx" class="inline-flex items-baseline gap-1.5">
+                    <span class="font-bold text-slate-700">{{ r.nome }}</span>
+                    <span class="font-black text-slate-800 tabular-nums">— {{ formatarMoeda(r.valor) }}</span>
+                  </span>
+                </div>
+              </div>
+              <!-- Vista expandida: um bloco por fornecedor (separador + tabela) -->
+              <template v-else>
+                <div
+                  v-for="(bloco, idx) in (rowsPorDataPorFornecedor[dataStr] || [])"
+                  :key="bloco.fornecedor + idx"
+                  class="border-b border-slate-100 last:border-b-0"
+                >
+                  <div class="bg-slate-100/80 px-4 py-2 border-b border-slate-200">
+                    <span class="text-[10px] font-black text-slate-600 uppercase tracking-wider">{{ bloco.fornecedor }}</span>
+                    <span class="ml-2 text-[10px] font-bold text-slate-500">— {{ bloco.itens.length }} item(ns) · {{ formatarMoeda(bloco.total) }}</span>
+                  </div>
+                  <Table 
+                    :columns="columns" 
+                    :rows="bloco.itens" 
+                    :loading="false"
+                    empty-text="Nenhum item."
+                    :boxed="false"
+                  >
+                <template #cell-origem="{ row }">
+                  <span 
+                    :class="getOrigemClass(row.origem)" 
+                    class="px-2 py-1 rounded-lg border text-[9px] font-black uppercase tracking-wider inline-block"
+                  >
+                    {{ row.origem }}
+                  </span>
+                </template>
+                <template #cell-vencimento="{ row }">
+                  <span class="text-sm font-bold text-slate-700 tabular-nums">
+                    {{ formatarData(row.vencimento_em) }}
+                  </span>
+                </template>
+                <template #cell-fornecedor="{ row }">
+                  <div class="flex flex-col gap-0.5">
+                    <span class="text-sm font-bold text-slate-800 uppercase tracking-tight">
+                      {{ row.fornecedor_nome || 'DESPESA OPERACIONAL' }}
+                    </span>
+                    <span class="text-[10px] font-medium text-slate-400 uppercase tracking-wide">
+                      {{ row.descricao || row.observacao }}
+                      <span v-if="row.parcela_info" class="text-slate-500"> · {{ row.parcela_info }}</span>
+                    </span>
+                    <span v-if="row.origem === 'COMPRA' && row.detalhe_produtos?.length" class="text-[10px] text-slate-500 mt-1">
+                      Produtos: {{ row.detalhe_produtos.join(', ') }}
+                    </span>
+                  </div>
+                </template>
+                <template #cell-valor="{ row }">
+                  <span class="text-sm font-black text-slate-800 tabular-nums">
+                    {{ formatarMoeda(row.valor) }}
+                  </span>
+                </template>
+                <template #cell-status="{ row }">
+                  <StatusBadge :value="row.status" />
+                </template>
+                <template #cell-acoes="{ row }">
+                  <div class="flex justify-end items-center gap-2 flex-nowrap">
+                    <button 
+                      v-if="row.fornecedor_id && row.status !== 'PAGO'"
+                      @click="abrirModalFechamento(row.fornecedor_id)"
+                      type="button"
+                      class="h-8 px-3 rounded-lg bg-indigo-500 text-white text-[10px] font-bold uppercase tracking-wide hover:bg-indigo-600 active:scale-[0.98] transition-all inline-flex items-center gap-1.5 shrink-0"
+                      title="Fechamento mensal deste fornecedor"
+                    >
+                      <i class="pi pi-calendar-times text-xs"></i>
+                      <span>Fechamento</span>
+                    </button>
+                    <button 
+                      v-if="row.status !== 'PAGO'"
+                      @click="darBaixa(row)"
+                      type="button"
+                      class="h-8 px-3 rounded-lg bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-wide hover:bg-emerald-600 active:scale-[0.98] transition-all inline-flex items-center gap-1.5 shrink-0"
+                      title="Dar baixa no pagamento"
+                    >
+                      <i class="pi pi-check text-xs"></i>
+                      <span>Pagar</span>
+                    </button>
+                    <button 
+                      type="button"
+                      class="h-8 w-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 border border-slate-200 inline-flex items-center justify-center shrink-0 transition-all"
+                      title="Ver detalhes"
+                    >
+                      <i class="pi pi-eye text-xs"></i>
+                    </button>
+                  </div>
+                </template>
+                  </Table>
+                </div>
+              </template>
+            </div>
+            <div v-if="Object.keys(rowsPorData).length === 0" class="p-8 text-center text-slate-500 text-sm font-bold">
+              Nenhum registro nesta aba para o período selecionado.
             </div>
           </template>
-
-          <template #cell-valor="{ row }">
-             <span class="text-sm font-black text-slate-800 tabular-nums">
-               {{ formatarMoeda(row.valor) }}
-             </span>
-          </template>
-
-          <template #cell-status="{ row }">
-            <StatusBadge :value="row.status" />
-          </template>
-
-          <template #cell-acoes="{ row }">
-            <div class="flex justify-end gap-2">
-              <button 
-                v-if="row.status !== 'PAGO'"
-                @click="darBaixa(row)"
-                class="h-7 px-3 rounded-lg bg-emerald-500 text-white text-[9px] font-black uppercase hover:bg-emerald-600 shadow-sm transition-all"
-              >
-                Pagar
-              </button>
-              
-              <!-- Placeholder actions that mimic TableActions simplicity for custom buttons -->
-               <button 
-                class="w-7 h-7 rounded-lg bg-slate-100 text-slate-400 hover:bg-slate-900 hover:text-white transition-all border border-slate-200 flex items-center justify-center"
-              >
-                <i class="pi pi-eye text-[10px]"></i>
-              </button>
-            </div>
-          </template>
-        </Table>
+          </div>
+        </div>
       </div>
     </div>
 
-    <ModalFechamento 
+    <FinanceiroModal 
       v-if="modalFechamentoOpen"
       :open="modalFechamentoOpen"
       :preview="fornecedorSelecionadoParaFechamento"
       :fornecedorNome="nomeFornecedorFechamento"
-      @close="modalFechamentoOpen = false"
+      :fornecedorOptions="fornecedorOptions"
+      @close="fecharModalFechamento()"
       @confirm="executarFechamentoFinal"
     />
-
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { FinanceiroService, FornecedorService } from '@/services/index'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
-import { useRouter } from 'vue-router'
 
 definePage({ meta: { perm: 'contas_pagar.ver' } })
 
 const loading = ref(false)
-const rows = ref([])
+const listaCompleta = ref([])
+const filtroBusca = ref('')
+const abaAtiva = ref('A_PAGAR') // VENCIDOS | A_PAGAR | PAGOS
 const fornecedorOptions = ref([])
-const router = useRouter()
+const fornecedorIdFechamentoRef = ref(null)
+const modalFechamentoOpen = ref(false)
+const fornecedorSelecionadoParaFechamento = ref(null)
+const nomeFornecedorFechamento = computed(() => {
+  const id = fornecedorIdFechamentoRef.value
+  if (!id) return ''
+  const o = fornecedorOptions.value.find((x) => String(x.value) === String(id))
+  return o?.label || 'Fornecedor'
+})
+
+// Lista filtrada pela busca (fornecedor, descrição, origem)
+const listaFiltrada = computed(() => {
+  const q = (filtroBusca.value || '').trim().toLowerCase()
+  if (!q) return listaCompleta.value
+  return listaCompleta.value.filter((r) => {
+    const fornecedor = (r.fornecedor_nome || '').toLowerCase()
+    const descricao = (r.descricao || '').toLowerCase()
+    const origem = (r.origem || '').toLowerCase()
+    const observacao = (r.observacao || '').toLowerCase()
+    return fornecedor.includes(q) || descricao.includes(q) || origem.includes(q) || observacao.includes(q)
+  })
+})
+
+// Período = sempre um mês completo (1º ao último dia)
+const periodoPadrao = () => {
+  const hoje = new Date()
+  const ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+  const fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0)
+  return {
+    data_ini: ini.toISOString().slice(0, 10),
+    data_fim: fim.toISOString().slice(0, 10),
+  }
+}
 
 const filtros = reactive({
-  fornecedor_id: '',
-  status: 'EM_ABERTO', 
+  data_ini: periodoPadrao().data_ini,
+  data_fim: periodoPadrao().data_fim,
 })
+
+// Ao mudar início: fim = último dia do mesmo mês. Ao mudar fim: início = 1º dia do mesmo mês.
+function ajustarFimAoInicio() {
+  if (!filtros.data_ini) return
+  const d = new Date(filtros.data_ini + 'T12:00:00')
+  const fim = new Date(d.getFullYear(), d.getMonth() + 1, 0)
+  filtros.data_fim = fim.toISOString().slice(0, 10)
+}
+function ajustarInicioAoFim() {
+  if (!filtros.data_fim) return
+  const d = new Date(filtros.data_fim + 'T12:00:00')
+  const ini = new Date(d.getFullYear(), d.getMonth(), 1)
+  filtros.data_ini = ini.toISOString().slice(0, 10)
+}
 
 const columns = [
   { key: 'origem', label: 'ORIGEM', width: '100px' },
   { key: 'vencimento', label: 'VENCIMENTO', width: '120px' },
   { key: 'fornecedor', label: 'FORNECEDOR/DESCRIÇÃO' },
-  { key: 'valor', label: 'VALOR TOTAL', width: '140px', align: 'right' },
+  { key: 'valor', label: 'VALOR', width: '140px', align: 'right' },
   { key: 'status', label: 'STATUS', width: '100px' },
-  { key: 'acoes', label: '', width: '140px', align: 'right' },
+  { key: 'acoes', label: '', width: '220px', align: 'right' },
 ]
 
-const modalFechamentoOpen = ref(false)
-const fornecedorSelecionadoParaFechamento = ref(null)
+const tabs = computed(() => [
+  { id: 'VENCIDOS', label: 'Vencidos', count: rowsVencidos.value.length, activeClass: 'bg-rose-100 text-rose-700 border-b-2 border-rose-500' },
+  { id: 'A_PAGAR', label: 'A pagar', count: rowsAPagar.value.length, activeClass: 'bg-amber-100 text-amber-800 border-b-2 border-amber-500' },
+  { id: 'PAGOS', label: 'Pagos', count: rowsPagos.value.length, activeClass: 'bg-emerald-100 text-emerald-700 border-b-2 border-emerald-500' },
+])
 
-// Nome computado para o modal de fechamento (adicionado pois estava faltando no original)
-const nomeFornecedorFechamento = computed(() => {
-    if(!fornecedorSelecionadoParaFechamento.value) return ''
-    return fornecedorSelecionadoParaFechamento.value.nome_fantasia || 'Desconhecido'
+// Separa por status a partir da lista já filtrada pela busca
+const rowsVencidos = computed(() => listaFiltrada.value.filter(r => r.status === 'VENCIDO'))
+const rowsAPagar = computed(() => listaFiltrada.value.filter(r => r.status === 'EM_ABERTO'))
+const rowsPagos = computed(() => listaFiltrada.value.filter(r => r.status === 'PAGO'))
+
+const rowsAbaAtiva = computed(() => {
+  if (abaAtiva.value === 'VENCIDOS') return rowsVencidos.value
+  if (abaAtiva.value === 'A_PAGAR') return rowsAPagar.value
+  return rowsPagos.value
 })
 
-async function abrirModalFechamento() {
-  if (!filtros.fornecedor_id) {
-    return notify.warn('Selecione um fornecedor para iniciar o fechamento')
+// Agrupar por data de vencimento
+const rowsPorData = computed(() => {
+  const list = rowsAbaAtiva.value
+  const map = {}
+  for (const row of list) {
+    const dataStr = formatarData(row.vencimento_em)
+    if (!map[dataStr]) map[dataStr] = []
+    map[dataStr].push(row)
   }
-  
+  const entries = Object.entries(map)
+  entries.sort(([, a], [, b]) => {
+    const t1 = a[0]?.vencimento_em ? new Date(a[0].vencimento_em).getTime() : 0
+    const t2 = b[0]?.vencimento_em ? new Date(b[0].vencimento_em).getTime() : 0
+    return t1 - t2
+  })
+  const sorted = {}
+  entries.forEach(([k, v]) => { sorted[k] = v })
+  return sorted
+})
+
+// Nome do grupo: compras/fechamento = fornecedor; despesas = categoria (descricao)
+function nomeGrupo(row) {
+  if (row.origem === 'DESPESA') return row.descricao || row.observacao || 'Despesa'
+  return row.fornecedor_nome || 'Outros'
+}
+
+// Dentro de cada data: compras por fornecedor, despesas por categoria
+const rowsPorDataPorFornecedor = computed(() => {
+  const result = {}
+  for (const [dataStr, itens] of Object.entries(rowsPorData.value)) {
+    const porGrupo = {}
+    for (const row of itens) {
+      const nome = nomeGrupo(row)
+      if (!porGrupo[nome]) porGrupo[nome] = []
+      porGrupo[nome].push(row)
+    }
+    result[dataStr] = Object.entries(porGrupo).map(([fornecedor, rows]) => ({
+      fornecedor,
+      itens: rows,
+      total: rows.reduce((s, r) => s + Number(r.valor || 0), 0),
+    }))
+  }
+  return result
+})
+
+// Totais: consideram a lista filtrada pela busca (para refletir o que está na tela)
+const totais = computed(() => {
+  const list = listaFiltrada.value
+  let compras = 0
+  let despesas = 0
+  for (const r of list) {
+    if (r.origem === 'COMPRA' || r.origem === 'FECHAMENTO') compras += Number(r.valor || 0)
+    else if (r.origem === 'DESPESA') despesas += Number(r.valor || 0)
+  }
+  return {
+    compras: compras,
+    despesas: despesas,
+    total: compras + despesas,
+  }
+})
+
+function somaGrupo(itens) {
+  return itens.reduce((s, r) => s + Number(r.valor || 0), 0)
+}
+
+// Resumo do grupo (fornecedor ou categoria + total) para vista oculta
+function resumoPorFornecedor(itens) {
+  const map = {}
+  for (const r of itens) {
+    const nome = nomeGrupo(r)
+    if (!map[nome]) map[nome] = 0
+    map[nome] += Number(r.valor || 0)
+  }
+  return Object.entries(map).map(([nome, valor]) => ({ nome, valor }))
+}
+
+const gruposExpandidos = ref({})
+function toggleGrupo(dataStr) {
+  gruposExpandidos.value[dataStr] = !gruposExpandidos.value[dataStr]
+}
+function estaExpandido(dataStr) {
+  return gruposExpandidos.value[dataStr] !== false
+}
+
+function fecharModalFechamento() {
+  modalFechamentoOpen.value = false
+  fornecedorSelecionadoParaFechamento.value = null
+  fornecedorIdFechamentoRef.value = null
+}
+
+async function abrirModalFechamento(fornecedorId) {
+  const id = fornecedorId ?? fornecedorIdFechamentoRef.value
+  if (!id) {
+    return notify.warn('Fornecedor não informado')
+  }
   try {
     loading.value = true
-    const previewData = await FinanceiroService.previewFechamentoFornecedor({
-      fornecedor_id: filtros.fornecedor_id,
+    fornecedorIdFechamentoRef.value = id
+    const res = await FinanceiroService.previewFechamentoFornecedor({
+      fornecedor_id: id,
       mes: new Date().getMonth() + 1,
-      ano: new Date().getFullYear()
+      ano: new Date().getFullYear(),
     })
-    
-    fornecedorSelecionadoParaFechamento.value = previewData
+    const data = res?.data ?? res
+    fornecedorSelecionadoParaFechamento.value = data
     modalFechamentoOpen.value = true
   } catch (e) {
-    notify.error('Não foi possível gerar o preview de fechamento')
+    notify.error('Não foi possível carregar o preview do fechamento')
   } finally {
     loading.value = false
   }
 }
 
-// Apenas placeholder: executarFechamentoFinal não estava no script original, mas é chamado no template
-async function executarFechamentoFinal() {
-    modalFechamentoOpen.value = false
-    notify.success('Fechamento realizado (simulado)')
+async function executarFechamentoFinal(payload) {
+  try {
+    loading.value = true
+    await FinanceiroService.fecharMesFornecedor(payload)
+    fecharModalFechamento()
+    notify.success('Fechamento realizado com sucesso')
     buscar()
+  } catch (e) {
+    notify.error(e?.response?.data?.message || 'Erro ao confirmar fechamento')
+  } finally {
+    loading.value = false
+  }
 }
 
 async function darBaixa(item) {
   const confirmacao = await confirm.show('Confirmar Pagamento', `Deseja confirmar o pagamento de ${formatarMoeda(item.valor)}?`)
-  
   if (confirmacao) {
     try {
-      await FinanceiroService.pagarContaPagar(item.id, {
-        unidade: 'FÁBRICA',
-        categoria: 'PAGAMENTO_FORNECEDOR'
-      })
+      if (item.titulo_id) {
+        await FinanceiroService.pagarTitulo(item.titulo_id)
+      } else if (item.origem === 'DESPESA') {
+        await FinanceiroService.pagarDespesa(item.id)
+      } else {
+        await FinanceiroService.pagarContaPagar(item.id, {
+          unidade: 'FÁBRICA',
+          categoria: 'PAGAMENTO_FORNECEDOR'
+        })
+      }
       notify.success('Pagamento registrado com sucesso!')
-      buscar() 
+      buscar()
     } catch (e) {
-      notify.error('Erro ao registrar pagamento')
+      notify.error(e?.response?.data?.message || 'Erro ao registrar pagamento')
     }
   }
 }
@@ -218,16 +458,21 @@ async function darBaixa(item) {
 async function buscar() {
   try {
     loading.value = true
-    const data = await FinanceiroService.listarContasPagarConsolidado(filtros)
-    rows.value = data || []
+    const res = await FinanceiroService.listarContasPagarConsolidado({
+      data_ini: filtros.data_ini,
+      data_fim: filtros.data_fim,
+    })
+    const data = res?.data ?? res
+    listaCompleta.value = Array.isArray(data) ? data : []
   } catch (e) {
     notify.error('Erro ao carregar contas a pagar')
+    listaCompleta.value = []
   } finally {
     loading.value = false
   }
 }
 
-const formatarMoeda = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+const formatarMoeda = (v) => (v != null && v !== '') ? Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00'
 const formatarData = (v) => v ? new Date(v).toLocaleDateString('pt-BR') : '-'
 
 const getOrigemClass = (origem) => {
@@ -239,9 +484,25 @@ const getOrigemClass = (origem) => {
   return map[origem] || 'text-slate-600 bg-slate-50 border-slate-200'
 }
 
+// Ao alterar as datas, atualiza os dados da página automaticamente
+watch(
+  () => [filtros.data_ini, filtros.data_fim],
+  () => { buscar() },
+  { deep: true }
+)
+
 onMounted(async () => {
-  const forns = await FornecedorService.listarAtivos()
-  fornecedorOptions.value = forns.map(f => ({ label: f.nome_fantasia, value: f.id }))
+  try {
+    const res = await FornecedorService.listar()
+    const lista = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : [])
+    fornecedorOptions.value = (lista || []).map((f) => ({
+      label: f.nome_fantasia || f.razao_social || String(f.id),
+      value: f.id,
+    }))
+  } catch (e) {
+    console.error('Erro ao carregar fornecedores:', e)
+    fornecedorOptions.value = []
+  }
   buscar()
 })
 </script>

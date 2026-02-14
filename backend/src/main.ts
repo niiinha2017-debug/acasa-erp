@@ -13,11 +13,12 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
-  // ✅ ADICIONE O VALIDATION PIPE AQUI
+  // ✅ ValidationPipe: whitelist remove campos extras; forbidNonWhitelisted desativado
+  // para evitar 400 em rotas GET (ex: /despesas) quando o client envia body/params extras
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true, // Remove campos que não estão no DTO
-      forbidNonWhitelisted: true, // Dá erro se mandarem campos extras
+      forbidNonWhitelisted: false, // Evita 400 em GET/rotas sem DTO
       transform: true, // Converte tipos (ex: string para number) automaticamente
     }),
   );

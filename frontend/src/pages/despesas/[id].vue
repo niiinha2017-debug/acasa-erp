@@ -1,131 +1,118 @@
 <template>
   <div class="page-container">
-    <Card :shadow="true" class="overflow-hidden border-none">
+    <div class="rounded-2xl border border-border-ui bg-bg-card overflow-hidden">
+      <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
       <PageHeader
-        :title="isEdit ? `Editar Lançamento #${despesaId}` : 'Novo Lançamento'"
-        subtitle="Despesa / Receita operacional"
+        :title="isEdit ? `Editar lançamento #${despesaId}` : 'Novo lançamento'"
+        subtitle="Despesa ou receita operacional"
         icon="pi pi-wallet"
-        :backTo="'/despesas'"
-        class="bg-slate-50/50 border-b border-slate-100"
+        :show-back="false"
+        class="border-b border-border-ui"
       />
 
-      <div class="p-6 relative">
+      <div class="p-6 md:p-8 relative">
         <Loading v-if="loading" />
 
         <template v-else>
-          <form class="space-y-6" @submit.prevent="salvar">
-          <!-- ===================================================== -->
-          <!-- TIPO MOVIMENTO -->
-          <!-- ===================================================== -->
-          <section class="space-y-2">
-            <div class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
-              Tipo de movimento
+          <form class="space-y-8" @submit.prevent="salvar">
+            <div class="relative">
+              <div class="absolute inset-0 flex items-center">
+                <div class="w-full border-t border-border-ui/50" />
+              </div>
+              <div class="relative flex justify-center">
+                <span class="bg-bg-card px-3 text-xs font-medium text-text-soft">Tipo</span>
+              </div>
             </div>
 
-            <div class="inline-flex w-full md:w-[420px] rounded-2xl border border-slate-200 bg-white p-1">
-              <button
-                type="button"
-                @click="form.tipo_movimento = 'SAIDA'"
-                :class="[
-                  'flex-1 h-9 rounded-xl text-[12px] font-black uppercase tracking-[0.2em] transition',
-                  form.tipo_movimento === 'SAIDA'
-                    ? 'bg-red-600 text-white'
-                    : 'text-slate-600 hover:bg-slate-50'
-                ]"
-              >
-                Despesa
-              </button>
-
-              <button
-                type="button"
-                @click="form.tipo_movimento = 'ENTRADA'"
-                :class="[
-                  'flex-1 h-9 rounded-xl text-[12px] font-black uppercase tracking-[0.2em] transition',
-                  form.tipo_movimento === 'ENTRADA'
-                    ? 'bg-emerald-600 text-white'
-                    : 'text-slate-600 hover:bg-slate-50'
-                ]"
-              >
-                Receita
-              </button>
+            <div class="flex justify-center">
+              <div class="inline-flex p-0.5 rounded-2xl bg-slate-100/80 dark:bg-slate-800/50 w-full max-w-[280px]">
+                <button
+                  type="button"
+                  @click="form.tipo_movimento = 'SAIDA'"
+                  :class="[
+                    'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[14px] text-sm font-medium transition-all duration-200',
+                    form.tipo_movimento === 'SAIDA'
+                      ? 'bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-400 shadow-sm'
+                      : 'text-text-soft hover:text-text-main hover:bg-white/50 dark:hover:bg-slate-700/50'
+                  ]"
+                >
+                  <i class="pi pi-arrow-down text-[10px] opacity-70" />
+                  Despesa
+                </button>
+                <button
+                  type="button"
+                  @click="form.tipo_movimento = 'ENTRADA'"
+                  :class="[
+                    'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[14px] text-sm font-medium transition-all duration-200',
+                    form.tipo_movimento === 'ENTRADA'
+                      ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                      : 'text-text-soft hover:text-text-main hover:bg-white/50 dark:hover:bg-slate-700/50'
+                  ]"
+                >
+                  <i class="pi pi-arrow-up text-[10px] opacity-70" />
+                  Receita
+                </button>
+              </div>
             </div>
-          </section>
 
-          <div class="h-px bg-slate-100"></div>
+            <div class="relative">
+              <div class="absolute inset-0 flex items-center">
+                <div class="w-full border-t border-border-ui/50" />
+              </div>
+              <div class="relative flex justify-center">
+                <span class="bg-bg-card px-3 text-xs font-medium text-text-soft">Dados do lançamento</span>
+              </div>
+            </div>
 
-          <!-- ===================================================== -->
-          <!-- DADOS -->
-          <!-- ===================================================== -->
-          <section class="space-y-5">
-            <div class="grid grid-cols-12 gap-4 items-end">
-              <!-- Descrição -->
-<Input
-  class="col-span-12"
-  v-model="form.local"
-  label="Descrição"
-  placeholder="Ex: ALUGUEL, SALÁRIO, VENDA"
-/>
+            <div class="grid grid-cols-12 gap-4">
+              <Input
+                class="col-span-12"
+                v-model="form.local"
+                label="Descrição"
+                placeholder="Ex: Aluguel, Salário, Venda"
+              />
 
+              <SearchInput
+                class="col-span-12 md:col-span-4"
+                v-model="form.unidade"
+                mode="select"
+                label="Unidade"
+                placeholder="Selecione"
+                :options="unidadesOptions"
+                labelKey="label"
+                valueKey="value"
+                :readonly="isEdit"
+              />
 
-              <!-- Categoria / Classificação / Unidade -->
-<!-- Unidade / Categoria / Classificação -->
-<SearchInput
-  class="col-span-12 md:col-span-4"
-  v-model="form.unidade"
-  mode="select"
-  label="Unidade"
-  placeholder="Selecione"
-  :options="unidadesOptions"
-  labelKey="label"
-  valueKey="value"
-  :readonly="isEdit"
-/>
+              <SearchInput
+                class="col-span-12 md:col-span-4"
+                v-model="form.categoria"
+                mode="select"
+                label="Categoria"
+                placeholder="Selecione"
+                :options="categoriasOptions"
+                labelKey="label"
+                valueKey="value"
+              />
 
-<SearchInput
-  class="col-span-12 md:col-span-4"
-  v-model="form.categoria"
-  mode="select"
-  label="Categoria *"
-  placeholder="Selecione"
-  :options="categoriasOptions"
-  labelKey="label"
-  valueKey="value"
-/>
-
-<div class="col-span-12 md:col-span-4">
-  <div class="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">
-    Classificação
-  </div>
-
-  <div
-    class="h-11 px-4 rounded-2xl border border-slate-200 bg-slate-50
-           flex items-center text-slate-700 font-black uppercase tracking-[0.15em]"
-  >
-    {{ classificacaoLabel || '-' }}
-  </div>
-</div>
-
-
-              <!-- Valor / Forma / Parcelas -->
               <div class="col-span-12 md:col-span-4">
-                <label class="block text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">
-                  Valor *
-                </label>
+                <label class="block text-xs font-semibold tracking-wide text-text-soft ml-0.5 mb-1.5">Classificação</label>
+                <div class="h-10 px-3 rounded-xl border border-border-ui bg-bg-card flex items-center text-sm text-text-main">
+                  {{ classificacaoLabel || '–' }}
+                </div>
+              </div>
 
+              <div class="col-span-12 md:col-span-4">
+                <label class="block text-xs font-semibold tracking-wide text-text-soft ml-0.5 mb-1.5">Valor</label>
                 <div class="relative">
-                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-black">
-                    R$
-                  </span>
-
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-soft">R$</span>
                   <input
                     :value="numeroParaMoeda(form.valor_total)"
                     @input="form.valor_total = moedaParaNumero($event.target.value)"
                     type="text"
                     inputmode="numeric"
                     placeholder="0,00"
-                    class="w-full h-11 pl-12 pr-4 rounded-2xl border border-slate-200 bg-white
-                           text-base font-black text-slate-800
-                           focus:outline-none focus:ring-2 focus:ring-brand-primary/40 focus:border-brand-primary/60"
+                    class="w-full h-10 pl-9 pr-3 rounded-xl border border-border-ui bg-bg-card text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
                   />
                 </div>
               </div>
@@ -141,45 +128,41 @@
                 valueKey="value"
               />
 
-              <!-- PIX: Banco + Tipo -->
-<SearchInput
-  v-if="precisaBanco"
-  class="col-span-12 md:col-span-4"
-  v-model="form.conta_bancaria_key"
-  mode="select"
-  label="Banco/Conta *"
-  placeholder="Selecione"
-  :options="contasBancariasOptions"
-  labelKey="label"
-  valueKey="value"
-/>
+              <SearchInput
+                v-if="precisaBanco"
+                class="col-span-12 md:col-span-4"
+                v-model="form.conta_bancaria_key"
+                mode="select"
+                label="Banco/Conta"
+                placeholder="Selecione"
+                :options="contasBancariasOptions"
+                labelKey="label"
+                valueKey="value"
+              />
 
-<SearchInput
-  v-if="precisaBanco"
+              <SearchInput
+                v-if="precisaBanco"
+                class="col-span-12 md:col-span-4"
+                v-model="form.conta_bancaria_tipo_key"
+                mode="select"
+                label="Tipo da conta"
+                placeholder="Selecione"
+                :options="tiposContasBancariasOptions"
+                labelKey="label"
+                valueKey="value"
+              />
 
-  class="col-span-12 md:col-span-4"
-  v-model="form.conta_bancaria_tipo_key"
-  mode="select"
-  label="Tipo da conta *"
-  placeholder="Selecione"
-  :options="tiposContasBancariasOptions"
-  labelKey="label"
-  valueKey="value"
-/>
-
-<!-- Cartão: Qual cartão -->
-<SearchInput
-  v-if="precisaCartao"
-  class="col-span-12 md:col-span-4"
-  v-model="form.cartao_credito_key"
-  mode="select"
-  label="Cartão de crédito *"
-  placeholder="Selecione"
-  :options="cartoesCreditoOptions"
-  labelKey="label"
-  valueKey="value"
-/>
-
+              <SearchInput
+                v-if="precisaCartao"
+                class="col-span-12 md:col-span-4"
+                v-model="form.cartao_credito_key"
+                mode="select"
+                label="Cartão de crédito"
+                placeholder="Selecione"
+                :options="cartoesCreditoOptions"
+                labelKey="label"
+                valueKey="value"
+              />
 
               <Input
                 class="col-span-12 md:col-span-4"
@@ -192,30 +175,39 @@
                 max="60"
               />
 
-<!-- Status + Responsável (mesma linha no desktop) -->
-<SearchInput
-  class="col-span-12 md:col-span-4"
-  v-model="form.status"
-  mode="select"
-  label="Status"
-  placeholder="Selecione"
-  :options="statusOptions"
-  labelKey="label"
-  valueKey="value"
-/>
+              <SearchInput
+                class="col-span-12 md:col-span-4"
+                v-model="form.status"
+                mode="select"
+                label="Status"
+                placeholder="Selecione"
+                :options="statusOptions"
+                labelKey="label"
+                valueKey="value"
+              />
 
-<SearchInput
-  class="col-span-12 md:col-span-8"
-  v-model="form.funcionario_id"
-  mode="select"
-  label="Responsável"
-  placeholder="Selecione"
-  :options="funcionariosOptions"
-  labelKey="label"
-  valueKey="value"
-/>
+              <SearchInput
+                class="col-span-12 md:col-span-8"
+                v-model="form.funcionario_id"
+                mode="select"
+                label="Responsável"
+                placeholder="Selecione"
+                :options="funcionariosOptions"
+                labelKey="label"
+                valueKey="value"
+              />
+            </div>
 
-              <!-- Datas -->
+            <div class="relative">
+              <div class="absolute inset-0 flex items-center">
+                <div class="w-full border-t border-border-ui/50" />
+              </div>
+              <div class="relative flex justify-center">
+                <span class="bg-bg-card px-3 text-xs font-medium text-text-soft">Datas</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-12 gap-4">
               <Input
                 class="col-span-12 md:col-span-4"
                 v-model="form.data_registro"
@@ -223,60 +215,41 @@
                 label="Data do registro"
                 :forceUpper="false"
               />
-
               <Input
                 class="col-span-12 md:col-span-4"
                 v-model="form.data_vencimento"
                 type="date"
-                label="Data do vencimento"
+                label="Vencimento"
                 :forceUpper="false"
               />
-
               <Input
                 class="col-span-12 md:col-span-4"
                 v-model="form.data_pagamento"
                 type="date"
-                label="Data do pagamento"
+                label="Pagamento"
                 :forceUpper="false"
                 :disabled="form.status !== 'PAGO'"
               />
             </div>
-          </section>
 
-          <div class="h-px bg-slate-100"></div>
-
-          <!-- ===================================================== -->
-          <!-- AÇÕES -->
-          <!-- ===================================================== -->
-          <div class="flex items-center justify-end gap-3">
-<button
-  v-if="isEdit && can('despesas.excluir')"
-  type="button"
-  @click.stop.prevent="excluir"
-  class="bg-red-600 text-white h-11 px-6 rounded-2xl font-black uppercase tracking-widest text-[12px] hover:bg-red-700 transition"
->
-  Excluir
-</button>
-
-
-
-<Button
-  v-if="can(isEdit ? 'despesas.editar' : 'despesas.criar')"
-  class="min-w-[140px]"
-  type="submit"
-  variant="primary"
-  :loading="loading"
-  :label="isEdit ? 'Salvar' : 'Criar'"
-/>
-
-          </div>
-        </form>
+            <FormActions
+              :is-edit="isEdit"
+              :loading-save="actionLoading"
+              :loading-delete="actionLoading"
+              :show-delete="isEdit"
+              perm-create="despesas.criar"
+              perm-edit="despesas.editar"
+              perm-delete="despesas.excluir"
+              label-create="Criar"
+              @save="salvar"
+              @delete="excluir"
+            />
+          </form>
         </template>
       </div>
-    </Card>
+    </div>
   </div>
 </template>
-
 
 <script setup>
 import { ref, reactive, computed, watch, onMounted } from 'vue'
@@ -288,20 +261,16 @@ import * as CONST from '@/constantes/index'
 import { upper } from '@/utils/text'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
-
-console.log('[DESPESAS] ⭐ ARQUIVO CARREGADO')
+import FormActions from '@/components/ui/FormActions.vue'
 
 definePage({ meta: { perm: 'despesas.ver' } })
 
-
-
 const route = useRoute()
 const router = useRouter()
-
-const hidratando = ref(false)
 const loading = ref(false)
+const actionLoading = ref(false)
+const hidratando = ref(false)
 const funcionariosOptions = ref([])
-
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -319,9 +288,9 @@ const form = reactive({
   data_vencimento: today(),
   data_pagamento: '',
   data_registro: today(),
- conta_bancaria_key: null,
- conta_bancaria_tipo_key: null,
- cartao_credito_key: null,
+  conta_bancaria_key: null,
+  conta_bancaria_tipo_key: null,
+  cartao_credito_key: null,
 })
 
 const despesaId = computed(() => {
@@ -335,8 +304,6 @@ const formasQuePrecisamBanco = ['PIX', 'TRANSFERENCIA', 'CHEQUE', 'BOLETO']
 const precisaBanco = computed(() => formasQuePrecisamBanco.includes(form.forma_pagamento))
 const precisaCartao = computed(() => form.forma_pagamento === 'CREDITO')
 
-
-// Utilitários
 const mapToOptions = (data) => {
   if (Array.isArray(data)) return data.map(i => ({ label: i.label, value: i.key }))
   if (data && typeof data === 'object') {
@@ -352,7 +319,6 @@ const contasBancariasOptions = computed(() => mapToOptions(CONST.CONTAS_BANCARIA
 const tiposContasBancariasOptions = computed(() => mapToOptions(CONST.TIPOS_CONTAS_BANCARIAS))
 const cartoesCreditoOptions = computed(() => mapToOptions(CONST.CARTOES_CREDITO))
 
-
 const categoriasOptions = computed(() => {
   if (form.tipo_movimento === 'ENTRADA') {
     return (CONST.RECEITA_OPERACIONAL || []).map(i => ({
@@ -364,7 +330,6 @@ const categoriasOptions = computed(() => {
   if (!form.unidade) return []
   const porUnidade = CONST.FINANCEIRO_CATEGORIAS?.[form.unidade]
   if (!porUnidade) return []
-
   const result = []
   Object.entries(porUnidade).forEach(([grupo, itens]) => {
     ;(itens || []).forEach(i => {
@@ -375,11 +340,10 @@ const categoriasOptions = computed(() => {
 })
 
 const classificacaoLabel = computed(() => {
-  if (!form.classificacao) return '-'
+  if (!form.classificacao) return '–'
   return String(form.classificacao).replace(/_/g, ' ')
 })
 
-// Watchers
 watch(() => form.categoria, (newVal) => {
   if (!newVal) return
   const selecionada = categoriasOptions.value.find(o => o.value === newVal)
@@ -401,36 +365,25 @@ watch(() => form.forma_pagamento, (fp) => {
     form.conta_bancaria_key = null
     form.conta_bancaria_tipo_key = null
   }
-  if (fp !== 'CREDITO') {
-    form.cartao_credito_key = null
-  }
+  if (fp !== 'CREDITO') form.cartao_credito_key = null
 })
 
 function isoToBR(iso) {
   if (!iso) return ''
-  // iso esperado: YYYY-MM-DD
   const [y, m, d] = String(iso).split('-')
   if (!y || !m || !d) return ''
   return `${d}/${m}/${y}`
 }
 
-
-// Ações
 async function init() {
-  console.log('[DESPESAS] === INICIANDO INIT ===')
   loading.value = true
   try {
-    console.log('[DESPESAS] Carregando funcionários...')
     const res = await FuncionarioService.select()
     funcionariosOptions.value = Array.isArray(res?.data) ? res.data : []
-    console.log('[DESPESAS] Funcionários carregados:', funcionariosOptions.value.length)
 
     if (isEdit.value) {
-      console.log('[DESPESAS] Modo EDITAR, buscando despesa ID =', despesaId.value)
       const { data: despesa } = await DespesaService.buscar(despesaId.value)
-      console.log('[DESPESAS] Despesa encontrada:', despesa)
       hidratando.value = true
-
       Object.assign(form, {
         ...despesa,
         valor_total: Number(despesa.valor_total) || 0,
@@ -439,79 +392,40 @@ async function init() {
         data_pagamento: despesa.data_pagamento?.slice(0, 10) || '',
         data_registro: despesa.data_registro?.slice(0, 10) || today(),
       })
-
-      console.log('[DESPESAS] Form hidratado:', form)
       setTimeout(() => { hidratando.value = false }, 150)
-    } else {
-      console.log('[DESPESAS] Modo CRIAR')
     }
   } catch (e) {
-    console.log('[DESPESAS] ❌ ERRO init:', e)
     const apiMsg = e?.response?.data?.message
     const msg = Array.isArray(apiMsg) ? apiMsg.join(' | ') : (apiMsg || 'Erro ao carregar dados')
     notify.error(msg)
   } finally {
     loading.value = false
-    console.log('[DESPESAS] === INIT CONCLUÍDO ===')
   }
 }
 
-
 async function salvar() {
-  console.log('[DESPESAS] === INICIANDO SALVAR ===')
-  console.log('[DESPESAS] isEdit =', isEdit.value)
-  console.log('[DESPESAS] form =', JSON.stringify(form, null, 2))
-  
-  const perm = isEdit.value ? 'despesas.editar' : 'despesas.criar'
-  console.log('[DESPESAS] permissão necessária =', perm)
-  console.log('[DESPESAS] can(perm) =', can(perm))
-  
-  if (!can(perm)) {
-    console.log('[DESPESAS] BLOQUEADO: Acesso negado')
+  if (!can(isEdit.value ? 'despesas.editar' : 'despesas.criar')) {
     return notify.error('Acesso negado.')
   }
 
-  // ✅ valida descrição ANTES de ligar loading
   const localFinal = upper(String(form.local || '').trim())
-  console.log('[DESPESAS] localFinal =', localFinal)
-  
-  if (!form.categoria) {
-    console.log('[DESPESAS] BLOQUEADO: Categoria vazia')
-    return notify.info('Selecione a categoria')
-  }
-
-  if (!form.data_vencimento) {
-    console.log('[DESPESAS] BLOQUEADO: Data vencimento vazia')
-    return notify.info('Preencha a data de vencimento')
-  }
-
+  if (!form.categoria) return notify.info('Selecione a categoria')
+  if (!form.data_vencimento) return notify.info('Preencha a data de vencimento')
   if (formasQuePrecisamBanco.includes(form.forma_pagamento)) {
-    if (!form.conta_bancaria_key) {
-      console.log('[DESPESAS] BLOQUEADO: Banco vazio')
-      return notify.info('Selecione o banco/conta')
-    }
-    if (!form.conta_bancaria_tipo_key) {
-      console.log('[DESPESAS] BLOQUEADO: Tipo conta vazio')
-      return notify.info('Selecione o tipo da conta')
-    }
+    if (!form.conta_bancaria_key) return notify.info('Selecione o banco/conta')
+    if (!form.conta_bancaria_tipo_key) return notify.info('Selecione o tipo da conta')
+  }
+  if (form.forma_pagamento === 'CREDITO' && !form.cartao_credito_key) {
+    return notify.info('Selecione o cartão de crédito')
   }
 
-  if (form.forma_pagamento === 'CREDITO') {
-    if (!form.cartao_credito_key) {
-      console.log('[DESPESAS] BLOQUEADO: Cartão vazio')
-      return notify.info('Selecione o cartão de crédito')
-    }
-  }
-
-  console.log('[DESPESAS] ✅ PASSOU TODAS VALIDAÇÕES')
-  loading.value = true
+  actionLoading.value = true
   try {
     const payload = {
       ...JSON.parse(JSON.stringify(form)),
       local: localFinal || 'SEM DESCRIÇÃO',
       valor_total: String(form.valor_total),
       quantidade_parcelas: Number(form.quantidade_parcelas || 1),
-
       data_registro: form.data_registro ? isoToBR(form.data_registro) : undefined,
       data_vencimento: form.data_vencimento ? isoToBR(form.data_vencimento) : undefined,
       data_pagamento:
@@ -519,91 +433,46 @@ async function salvar() {
           ? isoToBR(form.data_pagamento)
           : undefined,
     }
-
-    // ✅ loga ANTES do request
-    console.log('[DESPESAS] PAYLOAD COMPLETO =>', JSON.stringify(payload, null, 2))
-    console.log('[DESPESAS] ENVIANDO POST/PUT para ID:', despesaId.value)
-
     await DespesaService.salvar(despesaId.value, payload)
-
-    console.log('[DESPESAS] ✅✅✅ SALVO COM SUCESSO!')
-    notify.success(isEdit.value ? 'Atualizado com sucesso!' : 'Lançamento criado!')
+    notify.success(isEdit.value ? 'Atualizado com sucesso.' : 'Lançamento criado.')
     router.push('/despesas')
   } catch (e) {
-    console.log('[DESPESAS] ❌ ERRO CAPTURADO NO CATCH')
-    console.log('[DESPESAS] status =>', e?.response?.status)
-    console.log('[DESPESAS] data =>', e?.response?.data)
-
     const apiMsg = e?.response?.data?.message
-    console.log('[DESPESAS] message[] =>', apiMsg)
-    
-    // Se é array, loga cada item
-    if (Array.isArray(apiMsg)) {
-      apiMsg.forEach((msg, idx) => {
-        console.log(`[DESPESAS] message[${idx}] = ${msg}`)
-      })
-    } else {
-      console.log('[DESPESAS] message (string) =>', apiMsg)
-    }
-
     const msg = Array.isArray(apiMsg)
       ? apiMsg.join(' | ')
       : (apiMsg || e?.message || 'Erro ao salvar lançamento')
-
     notify.error(msg)
   } finally {
-    loading.value = false
+    actionLoading.value = false
   }
 }
 
-
-async function excluir(event) {
+async function excluir() {
   if (!can('despesas.excluir')) return notify.error('Acesso negado.')
-  
-  if (event) {
-    event.preventDefault()
-    event.stopPropagation()
-  }
-
   if (!despesaId.value) return
+  const confirmado = await confirm.show('Excluir lançamento?', 'Esta ação não pode ser desfeita.')
+  if (!confirmado) return
 
-const confirmado = await confirm.show('Excluir Lançamento?', 'Esta ação não pode ser desfeita.')
-if (!confirmado) return
-
-
-
-  loading.value = true
+  actionLoading.value = true
   try {
     await DespesaService.remover(Number(despesaId.value))
-    notify.success('Registro excluído!')
+    notify.success('Registro excluído.')
     router.push('/despesas')
-} catch (e) {
-  console.log('[DELETE] erro bruto:', e)
-  const apiMsg = e?.response?.data?.message
-  const msg = Array.isArray(apiMsg) ? apiMsg.join(' | ') : (apiMsg || e?.message || 'Erro ao excluir')
-  notify.error(msg)
-} finally {
-
-
-    loading.value = false
+  } catch (e) {
+    const apiMsg = e?.response?.data?.message
+    const msg = Array.isArray(apiMsg) ? apiMsg.join(' | ') : (apiMsg || e?.message || 'Erro ao excluir')
+    notify.error(msg)
+  } finally {
+    actionLoading.value = false
   }
 }
 
 onMounted(async () => {
-  console.log('[DESPESAS] === onMounted DISPARADO ===')
-  const perm = isEdit.value ? 'despesas.editar' : 'despesas.criar'
-  console.log('[DESPESAS] onMounted - perm:', perm)
-  console.log('[DESPESAS] onMounted - can(perm):', can(perm))
-  
-  if (!can(perm)) {
-    console.log('[DESPESAS] onMounted - ACESSO NEGADO')
+  if (!can(isEdit.value ? 'despesas.editar' : 'despesas.criar')) {
     notify.error('Acesso negado.')
     router.push('/despesas')
     return
   }
-  console.log('[DESPESAS] onMounted - INICIANDO init()')
   await init()
-  console.log('[DESPESAS] === onMounted CONCLUÍDO ===')
 })
-
 </script>

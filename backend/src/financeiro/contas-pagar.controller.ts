@@ -11,6 +11,7 @@ import {
   HttpStatus,
   UseGuards,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { FinanceiroService } from './financeiro.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -20,6 +21,8 @@ import { Permissoes } from '../auth/permissoes.decorator';
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('financeiro/contas-pagar')
 export class ContasPagarController {
+  private readonly logger = new Logger(ContasPagarController.name);
+
   constructor(private readonly service: FinanceiroService) {}
 
   private cleanIdOrFail(id: string | number): number {
@@ -33,16 +36,16 @@ export class ContasPagarController {
   @Get()
   @Permissoes('contas_pagar.ver')
   async listar(
-    @Query('fornecedor_id') fornecedor_id?: string,
     @Query('status') status?: string,
+    @Query('data_ini') data_ini?: string,
+    @Query('data_fim') data_fim?: string,
   ) {
     await this.service.atualizarVencidos();
 
     return this.service.listarContasPagarConsolidado({
-      fornecedor_id: fornecedor_id
-        ? this.cleanIdOrFail(fornecedor_id)
-        : undefined,
       status: status?.trim() || undefined,
+      data_ini: data_ini?.trim() || undefined,
+      data_fim: data_fim?.trim() || undefined,
     });
   }
 
@@ -87,7 +90,29 @@ export class ContasPagarController {
   @Permissoes('contas_pagar.criar')
   @HttpCode(HttpStatus.OK)
   async fecharMes(@Body() body: any) {
-    return this.service.fecharMesFornecedorComTitulos(body);
+    try {
+      return await this.service.fecharMesFornecedorComTitulos(body);
+    } catch (err: any) {
+      if (err?.statusCode >= 400 && err?.statusCode < 500) throw err;
+      this.logger.error('fechar-mes 500', err?.message || err);
+      throw err;
+    }
+  }
+
+  // ✅ Dar baixa em parcela (título) de despesa
+  @Post('titulo/:id/pagar')
+  @Permissoes('contas_pagar.editar')
+  @HttpCode(HttpStatus.OK)
+  pagarTitulo(@Param('id') id: string) {
+    return this.service.pagarTitulo(this.cleanIdOrFail(id));
+  }
+
+  // ✅ Dar baixa em despesa à vista (sem parcelas)
+  @Post('despesa/:id/pagar')
+  @Permissoes('contas_pagar.editar')
+  @HttpCode(HttpStatus.OK)
+  pagarDespesa(@Param('id') id: string) {
+    return this.service.pagarDespesa(this.cleanIdOrFail(id));
   }
 
   // ✅ DETALHE (sempre depois das rotas fixas)

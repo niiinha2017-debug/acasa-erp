@@ -2,7 +2,7 @@
   <template v-if="isAuthenticated && usuarioLogado">
     <div class="w-full h-full">
       <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-        <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
+        <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
 
         <PageHeader
           title="Equipe"
@@ -124,18 +124,17 @@
       </div>
     </div>
 
-    <!-- MODAL -->
-    <div v-if="exibirModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px]" @click="fecharModal"></div>
-
-      <div class="relative w-full max-w-lg animate-in zoom-in-95 duration-200">
-        <div class="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
-          <header class="px-8 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-            <h3 class="text-[11px] font-black text-slate-800 uppercase tracking-widest">
+    <!-- MODAL (Teleport para body = abre no Tauri e no app/APK) -->
+    <Teleport to="body">
+      <div v-if="exibirModal" class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/50 backdrop-blur-[2px]" @click.self="fecharModal">
+        <div class="relative z-10 w-full max-w-lg animate-in zoom-in-95 duration-200">
+        <div class="rounded-2xl overflow-hidden border border-border-ui bg-bg-card shadow-xl dark:shadow-none">
+          <header class="px-8 py-5 border-b border-border-ui flex justify-between items-center bg-bg-page">
+            <h3 class="text-[11px] font-black text-text-main uppercase tracking-widest">
               {{ modoEdicao ? 'Editar Colaborador' : 'Novo Colaborador' }}
             </h3>
-            <button @click="fecharModal" class="text-slate-400 hover:text-rose-500 transition-colors">
-              <i class="pi pi-times"></i>
+            <button @click="fecharModal" class="w-8 h-8 flex items-center justify-center rounded-lg text-text-muted hover:text-rose-500 hover:bg-rose-500/10 transition-colors">
+              <i class="pi pi-times text-sm"></i>
             </button>
           </header>
 
@@ -146,15 +145,15 @@
               <Input v-model="formUsuario.email" label="E-mail" type="email" :forceUpper="false" />
             </div>
 
-            <p v-if="!modoEdicao" class="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <p v-if="!modoEdicao" class="text-[10px] font-bold uppercase tracking-wider text-text-muted">
               A senha provisória será enviada por e-mail.
             </p>
 
-            <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <div class="flex justify-end gap-3 pt-4 border-t border-border-ui">
               <button
                 type="button"
                 @click="fecharModal"
-                class="text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 px-4"
+                class="text-[10px] font-black uppercase text-text-muted hover:text-text-main px-4 py-2 rounded-lg hover:bg-bg-page transition-colors"
               >
                 Cancelar
               </button>
@@ -171,14 +170,15 @@
             </div>
           </form>
         </div>
+        </div>
       </div>
-    </div>
+    </Teleport>
   </template>
 
   <!-- LOADING -->
   <div v-else class="h-[60vh] flex flex-col items-center justify-center gap-3">
-    <div class="w-12 h-12 border-4 border-slate-100 border-t-brand-primary rounded-full animate-spin"></div>
-    <span class="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Sincronizando...</span>
+    <div class="w-12 h-12 border-4 border-border-ui border-t-brand-primary rounded-full animate-spin"></div>
+    <span class="text-[10px] font-black uppercase tracking-[0.3em] text-text-muted">Sincronizando...</span>
   </div>
 </template>
 

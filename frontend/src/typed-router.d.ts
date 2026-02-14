@@ -79,6 +79,13 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
+    '/comercial/': RouteRecordInfo<
+      '/comercial/',
+      '/comercial',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/compras/': RouteRecordInfo<
       '/compras/',
       '/compras',
@@ -112,6 +119,20 @@ declare module 'vue-router/auto-routes' {
       '/configuracoes/usuarios',
       Record<never, never>,
       Record<never, never>,
+      | never
+    >,
+    '/contratos/': RouteRecordInfo<
+      '/contratos/',
+      '/contratos',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/contratos/[id]': RouteRecordInfo<
+      '/contratos/[id]',
+      '/contratos/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
       | never
     >,
     '/despesas/': RouteRecordInfo<
@@ -231,6 +252,13 @@ declare module 'vue-router/auto-routes' {
       '/plano-corte/itens',
       Record<never, never>,
       Record<never, never>,
+      | never
+    >,
+    '/plano-corte/itens/[id]': RouteRecordInfo<
+      '/plano-corte/itens/[id]',
+      '/plano-corte/itens/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
       | never
     >,
     '/plano-corte/kanban': RouteRecordInfo<
@@ -371,6 +399,12 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/comercial/index.vue': {
+      routes:
+        | '/comercial/'
+      views:
+        | never
+    }
     'src/pages/compras/index.vue': {
       routes:
         | '/compras/'
@@ -398,6 +432,18 @@ declare module 'vue-router/auto-routes' {
     'src/pages/configuracoes/usuarios.vue': {
       routes:
         | '/configuracoes/usuarios'
+      views:
+        | never
+    }
+    'src/pages/contratos/index.vue': {
+      routes:
+        | '/contratos/'
+      views:
+        | never
+    }
+    'src/pages/contratos/[id].vue': {
+      routes:
+        | '/contratos/[id]'
       views:
         | never
     }
@@ -500,6 +546,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/plano-corte/itens/index.vue': {
       routes:
         | '/plano-corte/itens/'
+      views:
+        | never
+    }
+    'src/pages/plano-corte/itens/[id].vue': {
+      routes:
+        | '/plano-corte/itens/[id]'
       views:
         | never
     }

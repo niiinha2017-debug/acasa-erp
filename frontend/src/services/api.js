@@ -54,10 +54,11 @@ api.interceptors.response.use(
     const status = error?.response?.status
     const original = error?.config
 
-    // DEBUG erro
+    // DEBUG erro (mostra mensagem completa do backend)
+    const errData = error?.response?.data
     console.log('[API] ERROR status =', status)
     console.log('[API] ERROR url =', (original?.baseURL || '') + (original?.url || ''))
-    console.log('[API] ERROR data =', error?.response?.data)
+    console.log('[API] ERROR data =', typeof errData === 'object' ? JSON.stringify(errData, null, 2) : errData)
 
     // ✅ se não tem token, não tenta refresh
     const hasToken = !!storage.getToken()

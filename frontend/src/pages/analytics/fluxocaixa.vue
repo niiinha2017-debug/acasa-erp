@@ -46,10 +46,12 @@ const chartOptions = {
   tooltip: { theme: 'dark' }
 };
 
+const analyticsBase = import.meta.env.VITE_ANALYTICS_URL || 'http://localhost:8000';
+
 const buscarDados = async () => {
   loading.value = true;
   try {
-    const response = await fetch('http://localhost:8000/api/analytics/fluxo-caixa');
+    const response = await fetch(`${analyticsBase}/api/analytics/fluxo-caixa`);
     const data = await response.json();
     series.value[0].data = data.map(i => ({ x: i.Data, y: i.Saldo_Caixa }));
   } catch (e) {

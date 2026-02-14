@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="login-font min-h-screen flex items-center justify-center bg-bg-page text-text-main px-3 sm:px-4 md:px-6">
     <div class="pointer-events-none fixed inset-0 opacity-70">
       <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(47,127,179,0.15),transparent_55%)]"></div>
@@ -110,6 +110,10 @@
 
                   <p class="text-sm text-text-soft">Enviaremos uma senha provisoria para seu e-mail.</p>
 
+                  <div v-if="recuperacaoError" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200">
+                    {{ recuperacaoError }}
+                  </div>
+
                   <div class="flex flex-col sm:flex-row gap-3 pt-2">
                     <Button type="button" variant="secondary" @click="fecharTudo" class="flex-1 h-11 rounded-2xl" :disabled="recuperacaoLoading">Cancelar</Button>
                     <Button type="submit" :loading="recuperacaoLoading" class="flex-1 h-11 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px]" :disabled="recuperacaoLoading || !emailRecuperacao">Enviar</Button>
@@ -137,6 +141,7 @@ const AGENDA_GERAL_PATH = '/agendamentos?visao=geral'
 
 const showModalRecuperacao = ref(false)
 const recuperacaoLoading = ref(false)
+const recuperacaoError = ref('')
 const lembrarUsuario = ref(false)
 const formLogin = reactive({ usuario: '', senha: '' })
 const emailRecuperacao = ref('')
@@ -162,6 +167,7 @@ onMounted(() => {
 function fecharTudo() {
   showModalRecuperacao.value = false
   emailRecuperacao.value = ''
+  recuperacaoError.value = ''
 }
 
 function openRecuperacao() {
@@ -188,14 +194,19 @@ async function handleLoginSubmit() {
 }
 
 async function handleRecuperacaoSubmit() {
+  recuperacaoError.value = ''
+  if (recuperacaoLoading.value) return
+  recuperacaoLoading.value = true
   try {
-    if (recuperacaoLoading.value) return
-    recuperacaoLoading.value = true
     await esqueciSenha(emailRecuperacao.value)
     fecharTudo()
     alert('Enviamos uma senha provisoria para seu e-mail.')
-  } catch (e) {}
-  finally {
+  } catch (e) {
+    const msg = e?.response?.data?.message
+    recuperacaoError.value = msg
+      ? (Array.isArray(msg) ? msg.join(' | ') : msg)
+      : 'Nao foi possivel enviar. Verifique o e-mail ou tente novamente.'
+  } finally {
     recuperacaoLoading.value = false
   }
 }

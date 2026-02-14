@@ -113,4 +113,4 @@ async function handleSalvar() {
     error.value = e?.response?.data?.message || 'Erro ao alterar senha.'
   }
 }
-</script>
+</script>

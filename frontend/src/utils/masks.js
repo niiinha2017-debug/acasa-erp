@@ -85,3 +85,19 @@ export const maskIE = (value = '') => {
     .replace(/(\d{3})(\d)/, '$1.$2')
     .replace(/(\d{3})(\d)/, '$1.$2')
 }
+
+/** Máscara HH:MM — formata enquanto digita (ex: 0808 → 08:08) */
+export const maskHora = (value = '') => {
+  const n = onlyNumbers(value).slice(0, 4)
+  if (n.length <= 2) return n
+  return n.replace(/(\d{2})(\d)/, '$1:$2')
+}
+
+/**
+ * Máscara valor em reais (dígitos = reais inteiros).
+ * Ex: "2000" → "2.000,00". Não use em valor já formatado (use numeroParaMoeda(moedaParaNumero(v))).
+ */
+export const maskReais = (value = '') => {
+  const n = Number(onlyNumbers(value)) || 0
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}

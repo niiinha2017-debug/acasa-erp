@@ -3,7 +3,7 @@
     <Transition name="modal-bounce">
       <div
         v-if="open"
-        class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-brand-secondary/60 dark:bg-slate-900/80 backdrop-blur-md"
+        class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-brand-secondary/60 dark:bg-slate-900/80 backdrop-blur-md"
         @click.self="fechar"
       >
         <div class="w-full max-w-4xl max-h-[90vh] bg-white dark:bg-slate-900 rounded-3xl shadow-none border border-brand-secondary/40 dark:border-slate-700 overflow-hidden flex flex-col">

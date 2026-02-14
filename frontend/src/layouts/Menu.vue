@@ -8,19 +8,25 @@
           <i class="pi pi-box text-xs"></i>
         </div>
         <div class="hidden sm:flex flex-col leading-none">
-          <span class="font-extrabold text-[13px] tracking-[0.14em] text-slate-900 dark:text-white">A CASA ERP</span>
-          <span class="text-[9px] uppercase tracking-[0.22em] text-slate-400">gestao integrada</span>
+          <span class="font-extrabold text-[13px] tracking-[0.14em] text-slate-900 dark:text-white">A Casa Marcenaria</span>
+          <span class="text-[9px] font-medium text-slate-500 dark:text-slate-400">v{{ appVersion }}</span>
         </div>
       </RouterLink>
 
-      <!-- MENU DESKTOP -->
+      <!-- MENU DESKTOP: Comercial | Produção separados, depois demais seções -->
       <div class="hidden md:flex items-center gap-2 rounded-2xl border border-border-ui bg-slate-50/70 dark:bg-slate-900/40 px-2 py-1.5">
-        <NavMenu
-          v-for="section in NAV_VISIVEL"
-          :key="section.key"
-          :label="section.label"
-          :items="section.items"
-        />
+        <template v-for="(section, index) in NAV_VISIVEL" :key="section.key">
+          <NavMenu
+            :label="section.label"
+            :items="section.items"
+          />
+          <!-- Separador entre Comercial e Produção -->
+          <div
+            v-if="section.key === 'comercial'"
+            class="w-px h-6 bg-slate-300 dark:bg-slate-600 rounded-full flex-shrink-0"
+            aria-hidden="true"
+          />
+        </template>
       </div>
 
       <!-- AÇÕES DIREITA -->
@@ -70,6 +76,11 @@
           <!-- ITENS DO MENU -->
           <div class="flex-1 overflow-y-auto p-4 space-y-2">
             <div v-for="section in NAV_VISIVEL" :key="section.key" class="space-y-2">
+              <!-- Separador visual entre Comercial e Produção no mobile -->
+              <div
+                v-if="section.key === 'producao'"
+                class="my-4 border-t border-border-ui"
+              />
               <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 px-3 mt-4 mb-2">{{ section.label }}</p>
 
               <a
@@ -106,8 +117,10 @@ import { can } from '@/services/permissions'
 import { useRoute, useRouter } from 'vue-router'
 import { NAV_SCHEMA } from '@/services/navigation'
 import { PermissoesService } from '@/services/index'
-import storage from '@/utils/storage' 
+import storage from '@/utils/storage'
 import { useDark, useToggle } from '@vueuse/core'
+
+const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '?'
 
 const route = useRoute()
 const router = useRouter()
@@ -118,7 +131,8 @@ const isMobileMenuOpen = ref(false)
 const menuSections = ref([])
 
 const SECTION_LABELS = {
-  operacional: 'Operacional',
+  comercial: 'Comercial',
+  producao: 'Produção',
   financeiro: 'Financeiro',
   cadastros: 'Cadastros',
   configuracoes: 'Configurações',
@@ -169,9 +183,8 @@ const fallbackSections = computed(() =>
 )
 
 const NAV_VISIVEL = computed(() => {
-  const source = menuSections.value.length
-    ? menuSections.value
-    : fallbackSections.value
+  // Usar sempre o menu local (Comercial / Produção); ignora API para evitar cache/Operacional
+  const source = fallbackSections.value
 
   return source
     .map((section) => ({

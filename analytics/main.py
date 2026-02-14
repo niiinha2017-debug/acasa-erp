@@ -62,7 +62,7 @@ def get_fluxo():
         return {"erro": str(e)}
 
 # -----------------------------------------------------------
-# ROTA 2: STATUS DE OBRAS (Novo Relatório)
+# ROTA 2: STATUS DE OBRAS
 # -----------------------------------------------------------
 @app.get("/api/analytics/status-obras")
 def get_status_obras():
@@ -72,12 +72,48 @@ def get_status_obras():
             df = pd.read_sql(query, conn)
             
             if df.empty:
-                # Dados simulados para você ver o gráfico se o banco estiver vazio
                 return [
                     {"status": "Medição", "total": 2},
                     {"status": "Corte", "total": 5},
                     {"status": "Montagem", "total": 3}
                 ]
             return df.to_dict(orient='records')
+    except Exception as e:
+        return {"erro": str(e)}
+
+# -----------------------------------------------------------
+# DASHBOARD: Resumo / KPIs (Python alimentando o dashboard)
+# -----------------------------------------------------------
+@app.get("/api/analytics/dashboard/resumo")
+def get_dashboard_resumo():
+    """KPIs gerais para o dashboard: contas a pagar/receber, totais do mês."""
+    try:
+        with engine.connect() as conn:
+            # Contas a pagar (pendentes)
+            r_pagar = pd.read_sql(text("""
+                SELECT COALESCE(SUM(valor_original), 0) as total
+                FROM contas_pagar WHERE pago_em IS NULL
+            """), conn)
+            total_a_pagar = float(r_pagar.iloc[0]["total"] or 0)
+
+            # Contas a receber (pendentes)
+            r_receber = pd.read_sql(text("""
+                SELECT COALESCE(SUM(valor_original), 0) as total
+                FROM contas_receber WHERE recebido_em IS NULL
+            """), conn)
+            total_a_receber = float(r_receber.iloc[0]["total"] or 0)
+
+            # Contagem de clientes ativos (exemplo)
+            try:
+                r_clientes = pd.read_sql(text("SELECT COUNT(*) as total FROM clientes WHERE status = 'ATIVO'"), conn)
+                clientes_ativos = int(r_clientes.iloc[0]["total"] or 0)
+            except Exception:
+                clientes_ativos = 0
+
+        return {
+            "total_a_pagar": round(total_a_pagar, 2),
+            "total_a_receber": round(total_a_receber, 2),
+            "clientes_ativos": clientes_ativos,
+        }
     except Exception as e:
         return {"erro": str(e)}

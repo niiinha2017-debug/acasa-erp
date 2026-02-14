@@ -1,6 +1,6 @@
 <template>
-  <Card class="login-font mt-4 mb-8 mx-2 lg:mx-4 rounded-3xl border border-border-ui bg-bg-card shadow-2xl overflow-hidden animate-page-in">
-    <div class="h-1.5 w-full bg-[linear-gradient(90deg,#2f7fb3_0%,#255a82_100%)]"></div>
+  <div class="login-font w-full h-full mt-4 mb-8 mx-2 lg:mx-4 rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
+    <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
     <PageHeader
       :title="isEdit ? `Editar Funcionário #${funcionarioId}` : 'Novo Funcionário'"
       subtitle="Gerenciamento de dados pessoais e contratuais"
@@ -190,13 +190,6 @@
             required
             forceUpper
           />
-          <Input
-            class="col-span-12 md:col-span-3"
-            v-model="form.funcao"
-            label="Função"
-            placeholder="EX: MONTADOR"
-            force-upper
-          />
         </div>
 
         <div class="relative">
@@ -211,9 +204,8 @@
         </div>
 
         <div class="grid grid-cols-12 gap-6">
-          <Input class="col-span-12 md:col-span-4" v-model="form.salario_base" label="Salário Base" type="number" step="0.01" placeholder="0,00" />
-          <Input class="col-span-12 md:col-span-4" v-model="form.salario_adicional" label="Complementos" type="number" step="0.01" placeholder="0,00" />
-          <Input class="col-span-12 md:col-span-4" v-model="form.custo_hora" label="Custo Hora" type="number" step="0.01" placeholder="0,00" />
+          <Input class="col-span-12 md:col-span-4" v-model="salarioBaseMask" label="Salário Base" placeholder="0,00" />
+          <Input class="col-span-12 md:col-span-4" v-model="salarioAdicionalMask" label="Complementos" placeholder="0,00" />
 
           <div class="col-span-12 md:col-span-6 space-y-4">
             <CustomCheckbox
@@ -223,10 +215,8 @@
             />
             <Input
               v-if="form.tem_vale"
-              v-model="form.vale"
+              v-model="valeMask"
               label="Valor do Vale"
-              type="number"
-              step="0.01"
               placeholder="0,00"
             />
           </div>
@@ -239,34 +229,11 @@
             />
             <Input
               v-if="form.tem_vale_transporte"
-              v-model="form.vale_transporte"
+              v-model="valeTransporteMask"
               label="Valor do Vale Transporte"
-              type="number"
-              step="0.01"
               placeholder="0,00"
             />
           </div>
-
-          <div class="col-span-12">
-            <div class="relative my-2">
-              <div class="absolute inset-0 flex items-center">
-                <div class="w-full border-t border-border-ui/50"></div>
-              </div>
-              <div class="relative flex justify-center">
-                <span class="bg-bg-page dark:bg-slate-900 px-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Forma de Pagamento
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <Input class="col-span-12 md:col-span-4" v-model="form.forma_pagamento" label="Forma de Pagamento" placeholder="EX: PIX" force-upper />
-          <Input class="col-span-12 md:col-span-4" v-model="form.dia_pagamento" label="Dia do Pagamento" type="number" min="1" max="31" />
-          <Input class="col-span-12 md:col-span-4" v-model="form.banco" label="Banco" placeholder="EX: ITAÚ" force-upper />
-          <Input class="col-span-12 md:col-span-4" v-model="form.agencia" label="Agência" force-upper />
-          <Input class="col-span-12 md:col-span-4" v-model="form.conta" label="Conta" force-upper />
-          <Input class="col-span-12 md:col-span-4" v-model="form.pix_tipo_chave" label="Tipo da Chave PIX" placeholder="EX: CPF" force-upper />
-          <Input class="col-span-12 md:col-span-4" v-model="form.pix_chave" label="Chave PIX" />
         </div>
 
         <div class="relative">
@@ -281,14 +248,36 @@
         </div>
 
         <div class="grid grid-cols-12 gap-6">
-          <Input class="col-span-12 md:col-span-3" v-model="form.horario_entrada_1" label="Entrada 1" placeholder="08:00" />
-          <Input class="col-span-12 md:col-span-3" v-model="form.horario_saida_1" label="Saída 1" placeholder="12:00" />
-          <Input class="col-span-12 md:col-span-3" v-model="form.horario_entrada_2" label="Entrada 2" placeholder="13:00" />
-          <Input class="col-span-12 md:col-span-3" v-model="form.horario_saida_2" label="Saída 2" placeholder="17:00" />
-          <Input class="col-span-12 md:col-span-3" v-model="form.horario_sabado_entrada_1" label="Entrada (Sábado)" placeholder="08:00" />
-          <Input class="col-span-12 md:col-span-3" v-model="form.horario_sabado_saida_1" label="Saída (Sábado)" placeholder="12:00" />
+          <Input class="col-span-12 md:col-span-3" v-model="horarioEntrada1Mask" label="Entrada 1" placeholder="08:00" />
+          <Input class="col-span-12 md:col-span-3" v-model="horarioSaida1Mask" label="Saída 1" placeholder="12:00" />
+          <Input class="col-span-12 md:col-span-3" v-model="horarioEntrada2Mask" label="Entrada 2" placeholder="13:00" />
+          <Input class="col-span-12 md:col-span-3" v-model="horarioSaida2Mask" label="Saída 2" placeholder="17:00" />
+          <Input class="col-span-12 md:col-span-3" v-model="horarioSabadoEntrada1Mask" label="Entrada (Sábado)" placeholder="08:00" />
+          <Input class="col-span-12 md:col-span-3" v-model="horarioSabadoSaida1Mask" label="Saída (Sábado)" placeholder="12:00" />
           <Input class="col-span-12 md:col-span-3" v-model="form.carga_horaria_dia" label="Carga Diária (h)" type="number" step="0.01" />
           <Input class="col-span-12 md:col-span-3" v-model="form.carga_horaria_semana" label="Carga Semanal (h)" type="number" step="0.01" />
+          <Input class="col-span-12 md:col-span-3" v-model="custoHoraMask" label="Custo Hora" placeholder="0,00" />
+        </div>
+
+        <div class="relative">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-border-ui/50"></div>
+          </div>
+          <div class="relative flex justify-center">
+            <span class="bg-bg-page dark:bg-slate-900 px-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Forma de Pagamento
+            </span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-6">
+          <Input class="col-span-12 md:col-span-4" v-model="form.forma_pagamento" label="Forma de Pagamento" placeholder="EX: PIX" force-upper />
+          <Input class="col-span-12 md:col-span-4" v-model="form.dia_pagamento" label="Dia do Pagamento" type="number" min="1" max="31" />
+          <Input class="col-span-12 md:col-span-4" v-model="form.banco" label="Banco" placeholder="EX: ITAÚ" force-upper />
+          <Input class="col-span-12 md:col-span-4" v-model="form.agencia" label="Agência" force-upper />
+          <Input class="col-span-12 md:col-span-4" v-model="form.conta" label="Conta" force-upper />
+          <Input class="col-span-12 md:col-span-4" v-model="form.pix_tipo_chave" label="Tipo da Chave PIX" placeholder="EX: CPF" force-upper />
+          <Input class="col-span-12 md:col-span-4" v-model="form.pix_chave" label="Chave PIX" />
         </div>
 
                 <div class="pt-10 mt-6 border-t border-border-ui">
@@ -336,7 +325,7 @@
 
       </form>
     </div>
-  </Card>
+  </div>
 </template>
 
 <script setup>
@@ -347,7 +336,8 @@ import { FuncionariosService } from '@/services/index'
 
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
-import { maskCEP, maskCPF, maskTelefone } from '@/utils/masks'
+import { maskCEP, maskCPF, maskTelefone, maskReais, maskHora } from '@/utils/masks'
+import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
 import { buscarCep, calcularCustoHora } from '@/utils/utils'
 import { can } from '@/services/permissions'
 import { FUNCIONARIOS_LOCAL_SETOR_CARGO } from '@/constantes/funcionarios'
@@ -385,7 +375,6 @@ const form = ref({
   unidade: '',
   setor: '',
   cargo: '',
-  funcao: '',
   cep: '',
   endereco: '',
   numero: '',
@@ -437,6 +426,60 @@ const whatsappMask = computed({
 const cepMask = computed({
   get: () => form.value.cep,
   set: (v) => { form.value.cep = maskCEP(v) }
+})
+
+// Valor já formatado (com vírgula) não é re-interpretado — evita 2.000,00 virar 200.000,00
+function aplicarMaskValor(v) {
+  if (v === '' || v == null) return ''
+  const s = String(v)
+  if (s.includes(',')) return numeroParaMoeda(moedaParaNumero(s))
+  return maskReais(s)
+}
+
+const salarioBaseMask = computed({
+  get: () => form.value.salario_base,
+  set: (v) => { form.value.salario_base = aplicarMaskValor(v) }
+})
+const salarioAdicionalMask = computed({
+  get: () => form.value.salario_adicional,
+  set: (v) => { form.value.salario_adicional = aplicarMaskValor(v) }
+})
+const custoHoraMask = computed({
+  get: () => form.value.custo_hora,
+  set: (v) => { form.value.custo_hora = aplicarMaskValor(v) }
+})
+const valeMask = computed({
+  get: () => form.value.vale,
+  set: (v) => { form.value.vale = aplicarMaskValor(v) }
+})
+const valeTransporteMask = computed({
+  get: () => form.value.vale_transporte,
+  set: (v) => { form.value.vale_transporte = aplicarMaskValor(v) }
+})
+
+const horarioEntrada1Mask = computed({
+  get: () => form.value.horario_entrada_1,
+  set: (v) => { form.value.horario_entrada_1 = maskHora(v) }
+})
+const horarioSaida1Mask = computed({
+  get: () => form.value.horario_saida_1,
+  set: (v) => { form.value.horario_saida_1 = maskHora(v) }
+})
+const horarioEntrada2Mask = computed({
+  get: () => form.value.horario_entrada_2,
+  set: (v) => { form.value.horario_entrada_2 = maskHora(v) }
+})
+const horarioSaida2Mask = computed({
+  get: () => form.value.horario_saida_2,
+  set: (v) => { form.value.horario_saida_2 = maskHora(v) }
+})
+const horarioSabadoEntrada1Mask = computed({
+  get: () => form.value.horario_sabado_entrada_1,
+  set: (v) => { form.value.horario_sabado_entrada_1 = maskHora(v) }
+})
+const horarioSabadoSaida1Mask = computed({
+  get: () => form.value.horario_sabado_saida_1,
+  set: (v) => { form.value.horario_sabado_saida_1 = maskHora(v) }
 })
 
 const toStringOrEmpty = (value) => (value === null || value === undefined ? '' : String(value))
@@ -527,10 +570,10 @@ watch(() => form.value.setor, () => {
 watch(
   () => [form.value.salario_base, form.value.carga_horaria_semana],
   () => {
-    const salario = Number(String(form.value.salario_base || '').replace(',', '.'))
+    const salario = moedaParaNumero(form.value.salario_base)
     const horas = Number(String(form.value.carga_horaria_semana || '').replace(',', '.'))
     if (!salario || !horas) return
-    form.value.custo_hora = String(calcularCustoHora(salario, horas))
+    form.value.custo_hora = numeroParaMoeda(calcularCustoHora(salario, horas))
   }
 )
 
@@ -588,7 +631,6 @@ async function carregarDados() {
       unidade: unidadeNormalizada || (data.unidade ?? ''),
       setor: setorNormalizado || (data.setor ?? ''),
       cargo: cargoNormalizado || (data.cargo ?? ''),
-      funcao: data.funcao ?? '',
       cep: data.cep ?? '',
       endereco: data.endereco ?? '',
       numero: data.numero ?? '',
@@ -596,13 +638,13 @@ async function carregarDados() {
       bairro: data.bairro ?? '',
       cidade: data.cidade ?? '',
       estado: data.estado ?? '',
-      salario_base: toStringOrEmpty(data.salario_base),
-      salario_adicional: toStringOrEmpty(data.salario_adicional),
-      custo_hora: toStringOrEmpty(data.custo_hora),
+      salario_base: data.salario_base != null && data.salario_base !== '' ? numeroParaMoeda(data.salario_base) : '',
+      salario_adicional: data.salario_adicional != null && data.salario_adicional !== '' ? numeroParaMoeda(data.salario_adicional) : '',
+      custo_hora: data.custo_hora != null && data.custo_hora !== '' ? numeroParaMoeda(data.custo_hora) : '',
       tem_vale: !!data.tem_vale,
-      vale: toStringOrEmpty(data.vale),
+      vale: data.vale != null && data.vale !== '' ? numeroParaMoeda(data.vale) : '',
       tem_vale_transporte: !!data.tem_vale_transporte,
-      vale_transporte: toStringOrEmpty(data.vale_transporte),
+      vale_transporte: data.vale_transporte != null && data.vale_transporte !== '' ? numeroParaMoeda(data.vale_transporte) : '',
       forma_pagamento: data.forma_pagamento ?? '',
       dia_pagamento: toStringOrEmpty(data.dia_pagamento),
       banco: data.banco ?? '',
@@ -654,7 +696,6 @@ async function confirmarSalvar() {
       unidade: normalizeString(form.value.unidade),
       setor: normalizeString(form.value.setor),
       cargo: normalizeString(form.value.cargo),
-      funcao: normalizeString(form.value.funcao),
       cep: normalizeString(form.value.cep),
       endereco: normalizeString(form.value.endereco),
       numero: normalizeString(form.value.numero),
@@ -678,24 +719,11 @@ async function confirmarSalvar() {
       tem_vale_transporte: !!form.value.tem_vale_transporte,
     }
 
-    const salarioBase = normalizeNumber(form.value.salario_base)
-    if (salarioBase !== undefined) payload.salario_base = salarioBase
-
-    const salarioAdicional = normalizeNumber(form.value.salario_adicional)
-    if (salarioAdicional !== undefined) payload.salario_adicional = salarioAdicional
-
-    const custoHora = normalizeNumber(form.value.custo_hora)
-    if (custoHora !== undefined) payload.custo_hora = custoHora
-
-    if (form.value.tem_vale) {
-      const vale = normalizeNumber(form.value.vale)
-      if (vale !== undefined) payload.vale = vale
-    }
-
-    if (form.value.tem_vale_transporte) {
-      const valeTransporte = normalizeNumber(form.value.vale_transporte)
-      if (valeTransporte !== undefined) payload.vale_transporte = valeTransporte
-    }
+    if (form.value.salario_base !== '') payload.salario_base = moedaParaNumero(form.value.salario_base)
+    if (form.value.salario_adicional !== '') payload.salario_adicional = moedaParaNumero(form.value.salario_adicional)
+    if (form.value.custo_hora !== '') payload.custo_hora = moedaParaNumero(form.value.custo_hora)
+    if (form.value.tem_vale && form.value.vale !== '') payload.vale = moedaParaNumero(form.value.vale)
+    if (form.value.tem_vale_transporte && form.value.vale_transporte !== '') payload.vale_transporte = moedaParaNumero(form.value.vale_transporte)
 
     const cargaDia = normalizeNumber(form.value.carga_horaria_dia)
     if (cargaDia !== undefined) payload.carga_horaria_dia = cargaDia

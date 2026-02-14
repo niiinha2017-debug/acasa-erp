@@ -1,5 +1,13 @@
 {
   "appId": "com.acasa.erp",
-  "appName": "ACASA ERP",
-  "webDir": "dist"
+  "appName": "A Casa Marcenaria",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": true
+  },
+  "plugins": {
+    "App": {
+      "disableBackButtonHandler": true
+    }
+  }
 }
