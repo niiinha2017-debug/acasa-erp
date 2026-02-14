@@ -1,14 +1,13 @@
 <template>
-  <div class="login-font clientes-line-list w-full max-w-[1700px] mx-auto">
-    <div class="relative overflow-hidden rounded-3xl border border-border-ui bg-bg-card shadow-2xl">
-      <div class="h-1.5 w-full bg-[linear-gradient(90deg,#2f7fb3_0%,#255a82_100%)]"></div>
+  <div class="w-full h-full">
+    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
+      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
 
       <PageHeader
         title="Equipe"
-
         subtitle="Gestão de capital humano e colaboradores"
         icon="pi pi-users"
-        :showBack="false"
+        :show-back="false"
       >
         <template #actions>
           <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
@@ -22,7 +21,6 @@
 
               <Button
                 variant="secondary"
-                class="flex-shrink-0 h-11 rounded-xl font-black uppercase tracking-[0.16em] text-[11px]"
                 :loading="pdfLoading"
                 @click="gerarPdfSelecionados"
               >
@@ -32,7 +30,6 @@
 
               <Button
                 variant="danger"
-                class="flex-shrink-0 h-11 rounded-xl font-black uppercase tracking-[0.16em] text-[11px]"
                 :loading="bulkDeleting"
                 @click="confirmarExcluirSelecionados"
               >
@@ -44,14 +41,13 @@
             <div class="w-full sm:w-64 order-1 sm:order-0">
               <SearchInput
                 v-model="filtro"
-                placeholder="Buscar nome, cpf, rg, cargo, horario ou salario..."
+                placeholder="Buscar nome, cpf, rg, cargo, horário ou salário..."
               />
             </div>
 
             <Button
               v-if="can('funcionarios.criar')"
               variant="primary"
-              class="flex-shrink-0 h-11 rounded-xl font-black uppercase tracking-[0.16em] text-[11px]"
               @click="novo"
             >
               <i class="pi pi-plus mr-2"></i>
@@ -61,10 +57,8 @@
         </template>
       </PageHeader>
 
-
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4">
-        <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-          <Table
+      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui">
+        <Table
             :columns="columns"
             :rows="funcionariosFiltrados"
             :loading="loading"
@@ -135,8 +129,7 @@
                 />
               </div>
             </template>
-          </Table>
-        </div>
+        </Table>
       </div>
     </div>
 
@@ -148,13 +141,61 @@
       :canManage="can('funcionarios.editar')"
       @close="arquivosModalOpen = false"
     />
+
+    <!-- Modal PDF no mesmo template (evita quebrar navegação no Tauri) -->
+    <Teleport to="body">
+      <Transition name="modal-bounce">
+        <div
+          v-if="pdfModalOpen"
+          class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md"
+          @click.self="fecharPdfModal"
+        >
+          <div class="w-full max-w-5xl h-[90vh] bg-white dark:bg-slate-900 rounded-3xl border border-border-ui overflow-hidden flex flex-col shadow-2xl">
+            <header class="flex items-center justify-between px-6 py-4 border-b border-border-ui bg-slate-50 dark:bg-slate-800/50 flex-shrink-0">
+              <h3 class="text-sm font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                <i class="pi pi-file-pdf text-rose-500"></i>
+                Relatório PDF – Funcionários
+              </h3>
+              <button
+                type="button"
+                class="w-10 h-10 flex items-center justify-center rounded-xl border border-border-ui text-slate-500 hover:text-rose-500 hover:border-rose-400 transition-all"
+                @click="fecharPdfModal"
+                aria-label="Fechar"
+              >
+                <i class="pi pi-times text-sm"></i>
+              </button>
+            </header>
+            <div class="flex-1 min-h-0 flex flex-col bg-slate-100 dark:bg-slate-900">
+              <div
+                v-if="pdfModalLoading"
+                class="flex-1 flex items-center justify-center text-[11px] font-black uppercase tracking-widest text-slate-400"
+              >
+                Carregando PDF...
+              </div>
+              <div
+                v-else-if="pdfModalError"
+                class="flex-1 flex items-center justify-center px-6 text-center text-[11px] font-black uppercase tracking-widest text-rose-600"
+              >
+                {{ pdfModalError }}
+              </div>
+              <iframe
+                v-else-if="pdfBlobUrl"
+                :src="pdfBlobUrl"
+                class="w-full h-full border-0 flex-1 min-h-0"
+                title="PDF Funcionários"
+              />
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import { FuncionarioService } from '@/services/index'
+import { FuncionarioService, ArquivosService } from '@/services/index'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
@@ -173,6 +214,10 @@ const arquivosModalOpen = ref(false)
 const arquivosFuncionario = ref(null)
 const pdfLoading = ref(false)
 const bulkDeleting = ref(false)
+const pdfModalOpen = ref(false)
+const pdfBlobUrl = ref('')
+const pdfModalLoading = ref(false)
+const pdfModalError = ref('')
 
 const columns = [
 
@@ -332,11 +377,25 @@ async function reenviarSenhaProvisoria(row) {
 
 onMounted(carregar)
 
+onBeforeUnmount(() => {
+  if (pdfBlobUrl.value) URL.revokeObjectURL(pdfBlobUrl.value)
+})
+
+function fecharPdfModal() {
+  if (pdfBlobUrl.value) {
+    URL.revokeObjectURL(pdfBlobUrl.value)
+    pdfBlobUrl.value = ''
+  }
+  pdfModalError.value = ''
+  pdfModalOpen.value = false
+}
+
 async function gerarPdfSelecionados() {
-  if (!selectedCount.value) return notify.warn('Selecione pelo menos 1 funcionÇ­rio.')
+  if (!selectedCount.value) return notify.warn('Selecione pelo menos 1 funcionário.')
   if (!can('funcionarios.ver')) return notify.error('Acesso negado.')
 
   pdfLoading.value = true
+  pdfModalError.value = ''
   try {
     const ids = Array.from(selectedIds.value)
     const resp = await FuncionarioService.gerarPdf(ids)
@@ -344,11 +403,28 @@ async function gerarPdfSelecionados() {
     const arquivoId = data?.arquivoId || data?.arquivo_id
 
     if (!arquivoId) {
-      notify.error('NÇœo foi possÇðvel gerar o PDF agora.')
+      notify.error('Não foi possível gerar o PDF agora.')
       return
     }
 
-    router.push(`/arquivos/pdf/${arquivoId}`)
+    pdfModalOpen.value = true
+    pdfModalLoading.value = true
+    if (pdfBlobUrl.value) {
+      URL.revokeObjectURL(pdfBlobUrl.value)
+      pdfBlobUrl.value = ''
+    }
+    try {
+      const res = await ArquivosService.baixarBlob(arquivoId)
+      const contentType = String(res?.headers?.['content-type'] || 'application/pdf')
+      const blob = new Blob([res.data], { type: contentType })
+      pdfBlobUrl.value = URL.createObjectURL(blob)
+    } catch (e) {
+      console.error(e)
+      pdfModalError.value = 'Falha ao carregar o PDF.'
+      notify.error('Falha ao carregar o PDF.')
+    } finally {
+      pdfModalLoading.value = false
+    }
   } catch (e) {
     notify.error(e?.response?.data?.message || 'Erro ao gerar PDF.')
   } finally {
@@ -357,12 +433,12 @@ async function gerarPdfSelecionados() {
 }
 
 async function confirmarExcluirSelecionados() {
-  if (!selectedCount.value) return notify.warn('Selecione pelo menos 1 funcionÇ­rio.')
+  if (!selectedCount.value) return notify.warn('Selecione pelo menos 1 funcionário.')
   if (!can('funcionarios.excluir')) return notify.error('Acesso negado.')
 
   const ok = await confirm.show(
     'Excluir selecionados',
-    `Deseja remover ${selectedCount.value} funcionÇ­rio(s)? Esta aÇõÇœo nÇœo pode ser desfeita.`,
+    `Deseja remover ${selectedCount.value} funcionário(s)? Esta ação não pode ser desfeita.`,
   )
   if (!ok) return
 

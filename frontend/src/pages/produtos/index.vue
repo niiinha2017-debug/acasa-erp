@@ -1,47 +1,46 @@
 <template>
-  <div class="login-font produtos-line-list w-full max-w-[1700px] mx-auto">
-    <div class="relative overflow-hidden rounded-3xl border border-border-ui bg-bg-card shadow-2xl">
-      <div class="h-1.5 w-full bg-[linear-gradient(90deg,#2f7fb3_0%,#255a82_100%)]"></div>
+  <div class="w-full h-full">
+    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
+      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
 
       <PageHeader
         title="Insumos e Materiais"
-        subtitle="Catalogo de materiais e controle de insumos"
+        subtitle="Catálogo de materiais e controle de insumos"
         icon="pi pi-box"
-        :showBack="false"
+        :show-back="false"
       >
         <template #actions>
-          <div class="flex items-center gap-3 w-full sm:w-auto">
-            <div class="w-full sm:w-64">
+          <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+            <div class="w-full sm:w-64 order-1 sm:order-0">
               <SearchInput
                 v-model="filtro"
-                placeholder="Buscar material, referencia, marca ou fornecedor..."
-                :bordered="true"
+                placeholder="Buscar material, referência, marca ou fornecedor..."
               />
             </div>
 
             <Button
               v-if="can('produtos.criar')"
               variant="primary"
-              class="flex-shrink-0 h-11 rounded-xl font-black uppercase tracking-[0.16em] text-[11px]"
               @click="router.push('/produtos/novo')"
             >
-              <i class="pi pi-plus mr-2 text-xs"></i>
+              <i class="pi pi-plus mr-2"></i>
               Novo Produto
             </Button>
           </div>
         </template>
       </PageHeader>
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4">
+      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui">
         <Table
           :columns="columns"
           :rows="rows"
           :loading="loading"
           empty-text="Nenhum produto encontrado."
+          :boxed="false"
         >
           <template #cell-nome_produto="{ row }">
-            <div class="flex items-center gap-3 py-0.5">
-              <div class="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden flex items-center justify-center font-bold text-slate-500 text-xs">
+            <div class="flex items-center gap-3 py-1">
+              <div class="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-text-muted text-xs bg-bg-page border border-border-ui overflow-hidden">
                 <img
                   v-if="String(row.imagem_url || '').trim()"
                   :src="row.imagem_url"
@@ -51,10 +50,10 @@
                 <span v-else>{{ String(row.nome_produto || '').substring(0, 2).toUpperCase() }}</span>
               </div>
               <div class="flex flex-col min-w-0">
-                <span class="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                <span class="text-sm font-bold text-text-main uppercase tracking-tight truncate">
                   {{ row.nome_produto || '-' }}
                 </span>
-                <span class="text-xs font-normal text-slate-500 truncate mt-0.5">
+                <span class="text-[10px] font-medium text-text-muted truncate">
                   Ref {{ String(row.id || 0).padStart(4, '0') }} • {{ row.marca || 'Sem marca' }}
                 </span>
               </div>
@@ -62,7 +61,7 @@
           </template>
 
           <template #cell-valor_unitario="{ row }">
-            <span class="text-sm text-slate-700 dark:text-slate-300 tabular-nums">
+            <span class="text-sm text-text-main tabular-nums">
               {{ format.currency(row.valor_unitario) }}
             </span>
           </template>
@@ -72,7 +71,7 @@
           </template>
 
           <template #cell-acoes="{ row }">
-            <div class="w-full flex justify-center">
+            <div class="flex justify-center">
               <TableActions
                 :id="row.id"
                 perm-edit="produtos.editar"
@@ -97,11 +96,6 @@ import { notify } from '@/services/notify'
 import { format } from '@/utils/format'
 import { can } from '@/services/permissions'
 
-import PageHeader from '@/components/ui/PageHeader.vue'
-import SearchInput from '@/components/ui/SearchInput.vue'
-import TableActions from '@/components/ui/TableActions.vue'
-import StatusBadge from '@/components/ui/StatusBadge.vue'
-
 definePage({ meta: { perm: 'produtos.ver' } })
 
 const produtos = ref([])
@@ -116,13 +110,12 @@ const columns = [
   { key: 'unidade', label: 'UN', width: '8%', align: 'center' },
   { key: 'valor_unitario', label: 'VLR UNIT', width: '14%', align: 'right' },
   { key: 'status', label: 'STATUS', width: '10%', align: 'center' },
-  { key: 'acoes', label: 'ACOES', align: 'center', width: '220px' },
+  { key: 'acoes', label: 'Ações', align: 'center', width: '220px' },
 ]
 
 const filtrados = computed(() => {
   const f = String(filtro.value || '').trim().toUpperCase()
   if (!f) return produtos.value || []
-
   return (produtos.value || []).filter((p) => {
     const alvo = [
       p.nome_produto,
@@ -136,7 +129,6 @@ const filtrados = computed(() => {
       .filter(Boolean)
       .join(' ')
       .toUpperCase()
-
     return alvo.includes(f)
   })
 })
@@ -174,17 +166,15 @@ async function buscarDadosDoBanco(page = 1) {
 
 async function confirmarExcluirProduto(row) {
   if (!can('produtos.excluir')) return notify.error('Acesso negado.')
-
   const ok = await confirm.show(
     'Excluir Produto',
-    `Deseja excluir o produto "${row?.nome_produto}"? Esta acao nao pode ser desfeita.`,
+    `Deseja excluir o produto "${row?.nome_produto}"? Esta ação não pode ser desfeita.`,
   )
   if (!ok) return
-
   try {
     await api.delete(`/produtos/${row.id}`)
     produtos.value = produtos.value.filter((p) => p.id !== row.id)
-    notify.success('Produto excluido!')
+    notify.success('Produto excluído!')
   } catch (err) {
     notify.error('Erro ao excluir.')
   }
@@ -196,29 +186,6 @@ onMounted(async () => {
     router.push('/')
     return
   }
-
   await buscarDadosDoBanco(meta.value.page)
 })
 </script>
-
-<style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
-
-.login-font {
-  font-family: 'Manrope', 'Segoe UI', sans-serif;
-}
-
-.produtos-line-list :deep(.search-container input.w-full) {
-  border-top: 0;
-  border-left: 0;
-  border-right: 0;
-  border-bottom-width: 2px;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.produtos-line-list :deep(.search-container input.w-full:focus) {
-  box-shadow: none;
-}
-</style>

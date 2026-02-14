@@ -1,13 +1,13 @@
 <template>
-  <div class="login-font clientes-line-list w-full max-w-[1700px] mx-auto">
-    <div class="relative overflow-hidden rounded-3xl border border-border-ui bg-bg-card shadow-2xl">
-      <div class="h-1.5 w-full bg-[linear-gradient(90deg,#2f7fb3_0%,#255a82_100%)]"></div>
+  <div class="w-full h-full">
+    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
+      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
 
       <PageHeader
         title="Compras"
         subtitle="Registro de entradas, insumos e rateios de custo"
         icon="pi pi-shopping-cart"
-        :showBack="false"
+        :show-back="false"
       >
         <template #actions>
           <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
@@ -21,7 +21,6 @@
             <Button
               v-if="can('compras.criar')"
               variant="primary"
-              class="flex-shrink-0 h-11 rounded-xl font-black uppercase tracking-[0.16em] text-[11px]"
               @click="router.push('/compras/novo')"
             >
               <i class="pi pi-plus mr-2"></i>
@@ -31,7 +30,7 @@
         </template>
       </PageHeader>
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4">
+      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <MetricCard
             label="Total Geral"
@@ -64,33 +63,31 @@
           :rows="filtradas"
           :loading="loading"
           empty-text="Nenhuma compra registrada."
-          :boxed="true"
+          :boxed="false"
         >
           <template #cell-descricao="{ row }">
             <div class="flex flex-col py-1">
-              <span class="text-sm font-bold text-slate-800 uppercase tracking-tight leading-tight">
+              <span class="text-sm font-bold text-text-main uppercase tracking-tight leading-tight">
                 {{ row.descricao }}
               </span>
-              <span class="text-[10px] font-bold text-slate-400 tracking-wider uppercase">
+              <span class="text-[10px] font-medium text-text-muted truncate">
                 {{ row.fornecedor?.nome_fantasia || 'Fornecedor não informado' }}
               </span>
             </div>
           </template>
 
           <template #cell-categoria="{ row }">
-            <span class="text-[10px] font-black uppercase text-slate-500 tracking-wider border border-slate-100 bg-slate-50 px-2 py-1 rounded-lg">
+            <span class="text-[10px] font-black uppercase text-text-muted tracking-wider border border-border-ui bg-bg-page px-2 py-1 rounded-lg">
               {{ row.categoria }}
             </span>
           </template>
 
           <template #cell-data="{ row }">
-            <div class="flex flex-col">
-              <span class="text-xs font-bold text-slate-700">{{ format.date(row.data_compra) }}</span>
-            </div>
+            <span class="text-xs font-bold text-text-main">{{ format.date(row.data_compra) }}</span>
           </template>
 
           <template #cell-valor="{ row }">
-            <span class="text-sm font-black text-slate-800 tabular-nums">
+            <span class="text-sm font-bold text-text-main tabular-nums">
               {{ format.currency(row.valor_total) }}
             </span>
           </template>
@@ -100,10 +97,8 @@
           </template>
 
           <template #cell-acoes="{ row }">
-            <div class="w-full flex justify-center">
+            <div class="flex justify-center">
               <TableActions
-                class="!justify-center !px-0"
-                :show-label="false"
                 :id="row.id"
                 perm-edit="compras.editar"
                 perm-delete="compras.excluir"
@@ -127,14 +122,6 @@ import { can } from '@/services/permissions'
 import api from '@/services/api'
 import { format } from '@/utils/format'
 
-import PageHeader from '@/components/ui/PageHeader.vue'
-import SearchInput from '@/components/ui/SearchInput.vue'
-import Table from '@/components/ui/Table.vue'
-import TableActions from '@/components/ui/TableActions.vue'
-import Button from '@/components/ui/Button.vue'
-import StatusBadge from '@/components/ui/StatusBadge.vue'
-import MetricCard from '@/components/ui/MetricCard.vue'
-
 definePage({ meta: { perm: 'compras.ver' } })
 
 const router = useRouter()
@@ -154,7 +141,6 @@ const columns = [
 const filtradas = computed(() => {
   const f = String(filtro.value || '').toLowerCase().trim()
   if (!f) return compras.value
-
   return compras.value.filter(c => {
     const desc = String(c.descricao || '').toLowerCase()
     const cat = String(c.categoria || '').toLowerCase()
@@ -188,7 +174,6 @@ async function confirmarExcluir(id) {
     `Deseja excluir permanentemente a compra #${id}?`,
   )
   if (!ok) return
-
   try {
     await api.delete(`/compras/${id}`)
     notify.success('Compra removida.')
@@ -202,25 +187,3 @@ onMounted(async () => {
   if (can('compras.ver')) await carregar()
 })
 </script>
-
-<style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
-
-.login-font {
-  font-family: 'Manrope', 'Segoe UI', sans-serif;
-}
-
-.clientes-line-list :deep(.search-container input.w-full) {
-  border-top: 0;
-  border-left: 0;
-  border-right: 0;
-  border-bottom-width: 2px;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.clientes-line-list :deep(.search-container input.w-full:focus) {
-  box-shadow: none;
-}
-</style>

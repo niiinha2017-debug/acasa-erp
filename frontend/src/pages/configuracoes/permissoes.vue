@@ -1,28 +1,27 @@
 <template>
-  <div class="w-full max-w-[1200px] mx-auto space-y-4 animate-page-in">
-    
-    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-2">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center">
-          <i class="pi pi-lock text-lg"></i>
-        </div>
-        <div>
-          <h1 class="text-lg font-black text-slate-800 uppercase tracking-tight">Permissões de Acesso</h1>
-          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Controle de níveis e segurança por usuário</p>
-        </div>
-      </div>
+  <div class="w-full h-full">
+    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
+      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
 
-      <Transition name="fade">
-        <div v-if="usuarioSelecionado" class="flex items-center gap-2 bg-brand-primary/5 px-3 py-1.5 rounded-lg border border-brand-primary/10">
-          <span class="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse"></span>
-          <span class="text-[10px] font-black uppercase text-brand-primary tracking-widest">
-            Editando: {{ usuarioSelecionado.nome }}
-          </span>
-        </div>
-      </Transition>
-    </div>
+      <PageHeader
+        title="Permissões de Acesso"
+        subtitle="Controle de níveis e segurança por usuário"
+        icon="pi pi-lock"
+        :show-back="false"
+      >
+        <template #actions>
+          <Transition name="fade">
+            <div v-if="usuarioSelecionado" class="flex items-center gap-2 bg-brand-primary/5 px-3 py-1.5 rounded-lg border border-brand-primary/10">
+              <span class="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse"></span>
+              <span class="text-[10px] font-black uppercase text-brand-primary tracking-widest">
+                Editando: {{ usuarioSelecionado.nome }}
+              </span>
+            </div>
+          </Transition>
+        </template>
+      </PageHeader>
 
-    <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden min-h-[650px] flex flex-col lg:flex-row">
+      <div class="bg-white border-t border-border-ui overflow-hidden min-h-[650px] flex flex-col lg:flex-row">
       
       <aside class="w-full lg:w-80 border-b lg:border-b-0 lg:border-r border-slate-100 flex flex-col bg-slate-50/30">
         <div class="p-4 border-b border-slate-100 bg-white">
@@ -154,6 +153,7 @@
           </div>
         </template>
       </main>
+      </div>
     </div>
   </div>
 </template>

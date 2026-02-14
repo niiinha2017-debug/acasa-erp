@@ -1,14 +1,14 @@
 <template>
   <template v-if="isAuthenticated && usuarioLogado">
-    <div class="login-font clientes-line-list w-full max-w-[1700px] mx-auto">
-      <div class="relative overflow-hidden rounded-3xl border border-border-ui bg-bg-card shadow-2xl">
-        <div class="h-1.5 w-full bg-[linear-gradient(90deg,#2f7fb3_0%,#255a82_100%)]"></div>
+    <div class="w-full h-full">
+      <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
+        <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
 
         <PageHeader
           title="Equipe"
           subtitle="Gestão de usuários e permissões"
           icon="pi pi-users"
-          :showBack="false"
+          :show-back="false"
         >
           <template #actions>
             <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
@@ -22,27 +22,31 @@
               <Button
                 v-if="can('usuarios.criar')"
                 variant="primary"
-                class="flex-shrink-0 h-11 rounded-xl font-black uppercase tracking-[0.16em] text-[11px]"
                 @click="abrirModal()"
               >
-                <i class="pi pi-user-plus mr-2 text-xs"></i>
+                <i class="pi pi-user-plus mr-2"></i>
                 Novo Colaborador
               </Button>
             </div>
           </template>
         </PageHeader>
 
-        <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4">
-          <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-            <Table :columns="columns" :rows="usuariosFiltrados" :loading="loadingTabela">
+        <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui">
+          <Table
+            :columns="columns"
+            :rows="usuariosFiltrados"
+            :loading="loadingTabela"
+            empty-text="Nenhum colaborador encontrado."
+            :boxed="false"
+          >
             <template #cell-nome="{ row }">
               <div class="flex items-center gap-3 py-2">
-                <div class="w-9 h-9 rounded-lg flex items-center justify-center text-[10px] font-black border bg-slate-50 text-slate-500 border-slate-100">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center text-[10px] font-bold border bg-bg-page text-text-muted border-border-ui">
                   {{ row.nome?.charAt(0).toUpperCase() }}
                 </div>
 
                 <div class="flex flex-col">
-                  <span class="font-black text-slate-700 uppercase text-[10px] tracking-tight leading-none">
+                  <span class="font-semibold text-text-main uppercase text-[10px] tracking-tight leading-none">
                     {{ row.nome }}
                   </span>
 
@@ -50,10 +54,10 @@
                     class="text-[9px] font-bold uppercase tracking-tighter mt-1"
                     :class="
                       row.status === 'ATIVO'
-                        ? 'text-emerald-600'
+                        ? 'text-emerald-600 dark:text-emerald-400'
                         : row.status === 'PENDENTE'
-                          ? 'text-amber-600'
-                          : 'text-rose-600'
+                          ? 'text-amber-600 dark:text-amber-400'
+                          : 'text-rose-600 dark:text-rose-400'
                     "
                   >
                     {{ row.status }}
@@ -64,8 +68,8 @@
 
             <template #cell-acesso="{ row }">
               <div class="flex flex-col">
-                <span class="text-[10px] font-black text-slate-600 tracking-tight">@{{ row.usuario }}</span>
-                <span class="text-[9px] font-medium text-slate-400 lowercase">{{ row.email }}</span>
+                <span class="text-[10px] font-semibold text-text-main tracking-tight">@{{ row.usuario }}</span>
+                <span class="text-[9px] font-medium text-text-muted lowercase">{{ row.email }}</span>
               </div>
             </template>
 
@@ -75,54 +79,47 @@
                 :disabled="row.id === usuarioLogado.value?.id"
                 @click="confirmarAlterarStatus(row)"
                 :class="[
-                  'px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest border transition-all',
+                  'px-3 py-1 rounded-lg text-[8px] font-bold uppercase tracking-widest border transition-all',
                   row.status === 'ATIVO'
-                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-600 hover:text-white'
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-500'
                     : row.status === 'PENDENTE'
-                      ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-600 hover:text-white'
-                      : 'bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-600 hover:text-white',
-                  row.id === usuarioLogado.value?.id? 'opacity-30 cursor-not-allowed' : 'cursor-pointer',
+                      ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20 hover:bg-amber-600 hover:text-white dark:hover:bg-amber-500'
+                      : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 hover:bg-rose-600 hover:text-white dark:hover:bg-rose-500',
+                  row.id === usuarioLogado.value?.id ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer',
                 ]"
               >
                 {{ row.status }}
               </button>
 
-              <span v-else class="text-[9px] font-black uppercase tracking-widest text-slate-400">
+              <span v-else class="text-[9px] font-bold uppercase tracking-widest text-text-muted">
                 {{ row.status }}
               </span>
             </template>
 
             <template #cell-acoes="{ row }">
-              <div class="flex gap-2 items-center justify-center py-1.5">
+              <div class="flex justify-center">
+                <div class="inline-flex items-center gap-2">
                 <button
                   v-if="can('usuarios.editar')"
+                  v-can="'usuarios.editar'"
                   :disabled="reenviandoIds.has(row.id)"
-                  @click="confirmarReenviarSenha(row)"
-                  class="w-8 h-8 rounded-xl bg-amber-400 text-white hover:bg-amber-500 transition-all flex items-center justify-center shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Reenviar senha provisoria"
+                  @click.stop="confirmarReenviarSenha(row)"
+                  class="h-10 w-10 flex-shrink-0 rounded-lg flex items-center justify-center text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 dark:hover:bg-amber-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-border-ui bg-bg-card"
+                  title="Reenviar senha provisória"
                 >
-                  <i class="pi pi-envelope text-[10px]"></i>
+                  <i class="pi pi-envelope text-xs" />
                 </button>
-
-                <button
-                  v-if="can('usuarios.editar')"
-                  @click="abrirModal(row)"
-                  class="w-8 h-8 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-all flex items-center justify-center border border-slate-100 shadow-sm"
-                >
-                  <i class="pi pi-pencil text-[10px]"></i>
-                </button>
-
-                <button
-                  v-if="can('usuarios.excluir') && row.id !== usuarioLogado.value?.id"
-                  @click="confirmarExclusao(row)"
-                  class="w-8 h-8 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-all flex items-center justify-center border border-slate-100 shadow-sm"
-                >
-                  <i class="pi pi-trash text-[10px]"></i>
-                </button>
+                <TableActions
+                    :id="row.id"
+                    perm-edit="usuarios.editar"
+                    :perm-delete="row.id === usuarioLogado?.id ? '' : 'usuarios.excluir'"
+                    @edit="abrirModal(row)"
+                    @delete="(id) => { const r = usuariosFiltrados.find(u => u.id === id); if (r && r.id !== usuarioLogado?.id) confirmarExclusao(r); }"
+                />
+                </div>
               </div>
             </template>
           </Table>
-          </div>
         </div>
       </div>
     </div>
@@ -193,8 +190,6 @@ import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
 import { UsuariosService, AuthService } from '@/services/index'
 import { can } from '@/services/permissions'
-import PageHeader from '@/components/ui/PageHeader.vue'
-import SearchInput from '@/components/ui/SearchInput.vue'
 
 definePage({ meta: { perm: 'usuarios.ver' } })
 

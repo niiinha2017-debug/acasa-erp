@@ -1,243 +1,406 @@
-﻿<template>
-  <div class="page-content space-y-6 animate-in fade-in duration-500">
-    <PageHeader
-      title="Relatório de Ponto"
-      subtitle="Horas e custo com base no cadastro do funcionário"
-      icon="pi pi-clock"
-      :showBack="false"
-    />
-    
-    <div v-if="rows.length" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex items-center gap-4">
-        <div class="w-12 h-12 rounded-2xl bg-brand-primary text-white flex items-center justify-center shadow-lg">
-          <i class="pi pi-calendar text-xl"></i>
-        </div>
-        <div>
-          <p class="text-[10px] font-black uppercase text-slate-400">Meta Diaria</p>
-          <p class="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tighter">{{ resumo.metaDia.toFixed(2) }}h</p>
-        </div>
-      </div>
+<template>
+  <div class="w-full h-full animate-page-in">
+    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
+      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
 
-      <div class="bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex items-center gap-4">
-        <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner font-black">HH</div>
-        <div>
-          <p class="text-[10px] font-black uppercase text-slate-400">Trabalhado</p>
-          <p class="text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tighter">{{ resumo.totalHorasHHMM }}</p>
-        </div>
-      </div>
-
-      <div class="bg-white dark:bg-slate-900 p-5 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex items-center gap-4">
-        <div :class="resumo.totalSaldo >= 0 ? 'bg-emerald-500' : 'bg-rose-500'" class="w-12 h-12 rounded-2xl text-white flex items-center justify-center shadow-lg transition-colors">
-          <i class="pi pi-chart-bar text-xl"></i>
-        </div>
-        <div>
-          <p class="text-[10px] font-black uppercase text-slate-400">Saldo Periodo</p>
-          <p :class="resumo.totalSaldo >= 0 ? 'text-emerald-600' : 'text-rose-600'" class="text-2xl font-black tracking-tighter italic">
-            {{ resumo.totalSaldoHHMM }}
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="rows.length" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 flex items-center justify-between">
-        <span class="text-[11px] font-black uppercase tracking-wider text-slate-500">Custo hora (funcionário)</span>
-        <span class="text-lg font-black text-slate-800 dark:text-slate-100">{{ formatCurrency(resumo.custoHora) }}</span>
-      </div>
-      <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 flex items-center justify-between">
-        <span class="text-[11px] font-black uppercase tracking-wider text-slate-500">Custo total no período</span>
-        <span class="text-lg font-black text-slate-800 dark:text-slate-100">{{ formatCurrency(resumo.custoTotal) }}</span>
-      </div>
-    </div>
-
-    <div class="page-section overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-      <header class="p-6 bg-slate-50/50 dark:bg-slate-800/40 border-b border-slate-100 dark:border-slate-700 grid grid-cols-12 gap-4 items-end">
-        <div class="col-span-12 md:col-span-4">
-          <label class="text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 block italic">Funcionario</label>
-          <select v-model="filtros.funcionario_id" class="w-full h-11 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 text-xs font-bold uppercase outline-none focus:ring-2 focus:ring-brand-primary/40 transition-all text-slate-700 dark:text-slate-200">
-            <option value="">Selecione...</option>
-            <option v-for="o in funcionarioOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
-          </select>
-        </div>
-        <div class="col-span-5 md:col-span-3">
-          <label class="text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 block italic">Inicio</label>
-          <input v-model="filtros.data_ini" type="date" class="w-full h-11 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 text-xs font-bold outline-none focus:ring-2 focus:ring-brand-primary/40 text-slate-700 dark:text-slate-200" />
-        </div>
-        <div class="col-span-5 md:col-span-3">
-          <label class="text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 block italic">Fim</label>
-          <input v-model="filtros.data_fim" type="date" class="w-full h-11 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 text-xs font-bold outline-none focus:ring-2 focus:ring-brand-primary/40 text-slate-700 dark:text-slate-200" />
-        </div>
-<div class="col-span-12 md:col-span-2 grid grid-cols-2 gap-2">
-  <button
-    @click="buscar"
-    :disabled="loadingTabela"
-    class="w-full h-11 bg-brand-primary text-white rounded-2xl font-black text-[10px] uppercase tracking-wide hover:opacity-90 transition-all flex items-center justify-center gap-2"
-  >
-    <i class="pi pi-search" v-if="!loadingTabela"></i>
-    <i class="pi pi-spin pi-spinner" v-else></i>
-    <span class="hidden md:block">Buscar</span>
-  </button>
-
-  <button
-    @click="gerarRelatorioMensal"
-    :disabled="loadingPdf || !filtros.funcionario_id || !filtros.data_ini"
-    class="w-full h-11 bg-white border border-slate-200 text-slate-700 rounded-2xl font-black text-[10px] uppercase tracking-wide hover:bg-brand-primary hover:text-white hover:border-brand-primary transition-all flex items-center justify-center gap-2"
-  >
-    <i class="pi pi-file-pdf" v-if="!loadingPdf"></i>
-    <i class="pi pi-spin pi-spinner" v-else></i>
-    <span class="hidden md:block">PDF</span>
-  </button>
-</div>
-
-      </header>
-
-      <div class="overflow-x-auto p-2">
-        <table class="w-full min-w-[860px] border-separate border-spacing-y-2">
-          <thead>
-            <tr class="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-              <th class="px-6 py-2 text-left">Data</th>
-              <th class="px-2 py-2">Ent 1</th>
-              <th class="px-2 py-2">Sai 1</th>
-              <th class="px-2 py-2">Ent 2</th>
-              <th class="px-2 py-2">Sai 2</th>
-              <th class="px-6 py-2 text-right">Acoes</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="row in rowsAgrupadas"
-              :key="row.data"
-              class="group bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-all shadow-sm ring-1 ring-slate-100 dark:ring-slate-700"
+      <PageHeader
+        title="Relatório de Ponto"
+        subtitle="Espelho de ponto e horas com base no cadastro do funcionário"
+        icon="pi pi-clock"
+        :show-back="false"
+      >
+        <template #actions>
+          <div class="flex items-center gap-2">
+            <Button
+              v-if="can('ponto_convite.criar')"
+              variant="outline"
+              @click="router.push('/rh/ponto/convites')"
             >
-              <td class="px-6 py-4 rounded-l-3xl">
-                <div class="flex flex-col">
-                  <span class="text-sm font-black text-slate-800 dark:text-slate-100 uppercase leading-none">{{ fmtData(row.data) }}</span>
-                  <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase mt-1 italic">{{ getDiaSemana(row.data) }}</span>
-                </div>
-              </td>
+              <i class="pi pi-link mr-2"></i>
+              Convites
+            </Button>
+          </div>
+        </template>
+      </PageHeader>
 
-              <td
-                v-for="col in ['ent1', 'sai1', 'ent2', 'sai2']"
-                :key="col"
-                class="px-2 py-4 text-center"
+      <div class="px-4 md:px-6 pb-6 pt-4 border-t border-border-ui">
+        <!-- Filtros -->
+        <div class="rounded-2xl border border-border-ui bg-bg-page/40 p-5 mb-6">
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+            <div class="md:col-span-4">
+              <label class="text-[10px] font-black text-text-soft uppercase ml-2 mb-1 block">Funcionário</label>
+              <SearchInput
+                v-model="filtros.funcionario_id"
+                mode="select"
+                placeholder="Selecione o funcionário..."
+                :options="funcionarioOptions"
+                labelKey="label"
+                valueKey="value"
+                @update:modelValue="buscar"
+              />
+            </div>
+            <div class="md:col-span-2">
+              <label class="text-[10px] font-black text-text-soft uppercase ml-2 mb-1 block">Início</label>
+              <input
+                v-model="filtros.data_ini"
+                type="date"
+                @change="buscar"
+                class="w-full h-11 bg-bg-card border border-border-ui rounded-xl px-4 text-xs font-bold text-text-main outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary transition-all"
+              />
+            </div>
+            <div class="md:col-span-2">
+              <label class="text-[10px] font-black text-text-soft uppercase ml-2 mb-1 block">Fim</label>
+              <input
+                v-model="filtros.data_fim"
+                type="date"
+                @change="buscar"
+                class="w-full h-11 bg-bg-card border border-border-ui rounded-xl px-4 text-xs font-bold text-text-main outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary transition-all"
+              />
+            </div>
+            <div class="md:col-span-4 flex gap-2 justify-end">
+              <Button
+                variant="secondary"
+                class="h-11 px-5 rounded-xl font-black text-[10px] uppercase"
+                :loading="loadingPdf"
+                :disabled="!filtros.funcionario_id || !filtros.data_ini"
+                @click="gerarRelatorioMensal"
               >
-                <div class="flex items-center justify-center gap-2 group/btn">
-                  <span
-                    class="tabular-nums font-black text-sm"
-                    :class="[
-                      row[col]?.hora
-                        ? (col.startsWith('ent') ? 'text-blue-600' : 'text-slate-600 dark:text-slate-300')
-                        : 'text-slate-200 dark:text-slate-700',
-                      isFimDeSemanaErro(row.data, row[col]?.hora) ? 'text-rose-500' : ''
-                    ]"
-                  >
-                    {{ row[col]?.hora || '--:--' }}
-                  </span>
-                  <div v-if="row[col]?.id" class="flex items-center opacity-0 group-hover/btn:opacity-100 transition-opacity">
-                    <button @click="abrirModalEditar(row[col])" class="text-slate-300 dark:text-slate-500 hover:text-blue-500 p-1"><i class="pi pi-pencil text-[9px]"></i></button>
-                    <button @click="confirmarExcluirDireto(row[col].id)" class="text-slate-300 dark:text-slate-500 hover:text-rose-500 p-1"><i class="pi pi-trash text-[9px]"></i></button>
-                  </div>
-                  <button v-else @click="abrirModalNovoNaPosicao(row, col)" class="opacity-0 group-hover/btn:opacity-100 text-slate-200 dark:text-slate-700 hover:text-brand-primary transition-opacity p-1">
-                    <i class="pi pi-plus text-[9px]"></i>
-                  </button>
-                </div>
-              </td>
+                <i class="pi pi-file-pdf mr-2 text-xs"></i>
+                PDF
+              </Button>
+            </div>
+          </div>
+        </div>
 
-              <td class="px-6 py-4 rounded-r-3xl text-right">
-                 <button @click="abrirModalJustificar(row)" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300 text-[9px] font-black uppercase hover:bg-brand-primary hover:text-white hover:border-brand-primary transition-all">Justificar</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <Loading v-if="loadingTabela && !rows.length" />
+
+        <template v-else>
+          <!-- Horário cadastrado do funcionário -->
+          <div v-if="funcionarioSelecionado" class="mb-6">
+            <div class="relative mb-4">
+              <div class="absolute inset-0 flex items-center">
+                <div class="w-full border-t border-border-ui/50"></div>
+              </div>
+              <div class="relative flex justify-center">
+                <span class="bg-bg-page px-4 text-[10px] font-black uppercase tracking-wider text-text-soft">
+                  Horário do cadastro
+                </span>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div class="rounded-xl border border-border-ui bg-bg-card p-4">
+                <p class="text-[10px] font-black uppercase tracking-wider text-text-soft mb-2">Segunda a Sexta</p>
+                <div class="flex flex-wrap gap-3">
+                  <span v-if="horarioSegSex" class="text-sm font-bold text-text-main tabular-nums">
+                    {{ horarioSegSex }}
+                  </span>
+                  <span v-else class="text-sm text-text-soft italic">Não definido</span>
+                </div>
+              </div>
+              <div class="rounded-xl border border-border-ui bg-bg-card p-4">
+                <p class="text-[10px] font-black uppercase tracking-wider text-text-soft mb-2">Sábado</p>
+                <div class="flex flex-wrap gap-3">
+                  <span v-if="horarioSabado" class="text-sm font-bold text-text-main tabular-nums">
+                    {{ horarioSabado }}
+                  </span>
+                  <span v-else class="text-sm text-text-soft italic">Não definido</span>
+                </div>
+              </div>
+              <div class="rounded-xl border border-border-ui bg-bg-card p-4">
+                <p class="text-[10px] font-black uppercase tracking-wider text-text-soft mb-2">Carga horária</p>
+                <span class="text-sm font-bold text-text-main tabular-nums">{{ cargaHorariaLabel }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cards de resumo -->
+          <div v-if="rows.length" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            <div class="rounded-xl border border-border-ui bg-bg-card p-4 flex items-center gap-4">
+              <div class="w-11 h-11 rounded-xl bg-brand-primary/10 flex items-center justify-center">
+                <i class="pi pi-calendar text-brand-primary text-lg"></i>
+              </div>
+              <div>
+                <p class="text-[10px] font-black uppercase text-text-soft">Meta diária</p>
+                <p class="text-lg font-black text-text-main tabular-nums">{{ resumo.metaDia.toFixed(2) }}h</p>
+              </div>
+            </div>
+            <div class="rounded-xl border border-border-ui bg-bg-card p-4 flex items-center gap-4">
+              <div class="w-11 h-11 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                <i class="pi pi-clock text-blue-600 text-lg"></i>
+              </div>
+              <div>
+                <p class="text-[10px] font-black uppercase text-text-soft">Trabalhado</p>
+                <p class="text-lg font-black text-text-main tabular-nums">{{ resumo.totalHorasHHMM }}</p>
+              </div>
+            </div>
+            <div class="rounded-xl border border-border-ui bg-bg-card p-4 flex items-center gap-4">
+              <div :class="resumo.totalSaldo >= 0 ? 'bg-emerald-500/10' : 'bg-rose-500/10'" class="w-11 h-11 rounded-xl flex items-center justify-center">
+                <i :class="resumo.totalSaldo >= 0 ? 'pi pi-arrow-up text-emerald-600' : 'pi pi-arrow-down text-rose-600'" class="text-lg"></i>
+              </div>
+              <div>
+                <p class="text-[10px] font-black uppercase text-text-soft">Saldo</p>
+                <p :class="resumo.totalSaldo >= 0 ? 'text-emerald-600' : 'text-rose-600'" class="text-lg font-black tabular-nums italic">
+                  {{ resumo.totalSaldoHHMM }}
+                </p>
+              </div>
+            </div>
+            <div class="rounded-xl border border-border-ui bg-bg-card p-4 flex items-center gap-4">
+              <div class="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center">
+                <i class="pi pi-dollar text-slate-600 text-lg"></i>
+              </div>
+              <div>
+                <p class="text-[10px] font-black uppercase text-text-soft">Custo/hora</p>
+                <p class="text-sm font-black text-text-main tabular-nums">{{ formatCurrency(resumo.custoHora) }}</p>
+              </div>
+            </div>
+            <div class="rounded-xl border border-border-ui bg-bg-card p-4 flex items-center gap-4">
+              <div class="w-11 h-11 rounded-xl bg-brand-primary/10 flex items-center justify-center">
+                <i class="pi pi-wallet text-brand-primary text-lg"></i>
+              </div>
+              <div>
+                <p class="text-[10px] font-black uppercase text-text-soft">Custo período</p>
+                <p class="text-sm font-black text-text-main tabular-nums">{{ formatCurrency(resumo.custoTotal) }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabela espelho de ponto -->
+          <div class="rounded-xl border border-border-ui bg-bg-card overflow-hidden">
+            <div class="relative">
+              <div class="absolute inset-0 flex items-center">
+                <div class="w-full border-t border-border-ui/50"></div>
+              </div>
+              <div class="relative flex justify-center py-2">
+                <span class="bg-bg-page px-4 text-[10px] font-black uppercase tracking-wider text-text-soft">
+                  Espelho de ponto
+                </span>
+              </div>
+            </div>
+
+            <div v-if="!rows.length" class="p-12 text-center">
+              <i class="pi pi-inbox text-4xl text-slate-300 mb-4"></i>
+              <p class="text-sm font-bold text-text-soft uppercase">Selecione um funcionário e clique em Buscar</p>
+              <p class="text-xs text-text-soft mt-1">Os registros serão exibidos conforme o horário cadastrado</p>
+            </div>
+
+            <div v-else class="overflow-x-auto">
+              <table class="w-full min-w-[780px] border-collapse">
+                <thead>
+                  <tr class="bg-slate-50 dark:bg-slate-800/50">
+                    <th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-wider text-text-soft">Data</th>
+                    <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-text-soft">
+                      Ent 1
+                      <span v-if="funcionarioSelecionado?.horario_entrada_1" class="block text-[9px] font-normal text-slate-400 mt-0.5">({{ funcionarioSelecionado.horario_entrada_1 }})</span>
+                    </th>
+                    <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-text-soft">
+                      Sai 1
+                      <span v-if="funcionarioSelecionado?.horario_saida_1" class="block text-[9px] font-normal text-slate-400 mt-0.5">({{ funcionarioSelecionado.horario_saida_1 }})</span>
+                    </th>
+                    <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-text-soft">
+                      Ent 2
+                      <span v-if="funcionarioSelecionado?.horario_entrada_2" class="block text-[9px] font-normal text-slate-400 mt-0.5">({{ funcionarioSelecionado.horario_entrada_2 }})</span>
+                    </th>
+                    <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-text-soft">
+                      Sai 2
+                      <span v-if="funcionarioSelecionado?.horario_saida_2" class="block text-[9px] font-normal text-slate-400 mt-0.5">({{ funcionarioSelecionado.horario_saida_2 }})</span>
+                    </th>
+                    <th class="px-5 py-3 text-right text-[10px] font-black uppercase tracking-wider text-text-soft">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="row in rowsAgrupadas"
+                    :key="row.data"
+                    class="group border-t border-border-ui/60 hover:bg-bg-page/60 transition-colors"
+                  >
+                    <td class="px-5 py-3">
+                      <div class="flex flex-col">
+                        <span class="text-sm font-bold text-text-main">{{ fmtData(row.data) }}</span>
+                        <span class="text-[10px] font-medium text-text-soft uppercase">{{ getDiaSemana(row.data) }}</span>
+                      </div>
+                    </td>
+                    <td
+                      v-for="col in ['ent1', 'sai1', 'ent2', 'sai2']"
+                      :key="col"
+                      class="px-4 py-3 text-center"
+                    >
+                      <div class="flex items-center justify-center gap-2 group/btn">
+                        <span
+                          class="tabular-nums font-bold text-sm min-w-[2.5rem]"
+                          :class="[
+                            row[col]?.hora
+                              ? (col.startsWith('ent') ? 'text-blue-600' : 'text-slate-700')
+                              : 'text-slate-300',
+                            isFimDeSemanaErro(row.data, row[col]?.hora) ? 'text-rose-500' : ''
+                          ]"
+                        >
+                          {{ row[col]?.hora || '--:--' }}
+                        </span>
+                        <div v-if="row[col]?.id" class="flex items-center opacity-0 group-hover/btn:opacity-100 transition-opacity gap-0.5">
+                          <button
+                            type="button"
+                            @click="abrirModalEditar(row[col])"
+                            class="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                            title="Editar"
+                          >
+                            <i class="pi pi-pencil text-xs"></i>
+                          </button>
+                          <button
+                            type="button"
+                            @click="confirmarExcluirDireto(row[col].id)"
+                            class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                            title="Excluir"
+                          >
+                            <i class="pi pi-trash text-xs"></i>
+                          </button>
+                        </div>
+                        <button
+                          v-else
+                          type="button"
+                          @click="abrirModalNovoNaPosicao(row, col)"
+                          class="opacity-0 group-hover/btn:opacity-100 p-1.5 rounded-lg text-slate-300 hover:text-brand-primary hover:bg-brand-primary/10 transition-all"
+                          title="Adicionar"
+                        >
+                          <i class="pi pi-plus text-xs"></i>
+                        </button>
+                      </div>
+                    </td>
+                    <td class="px-5 py-3 text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        class="h-8 px-3 rounded-lg text-[10px] font-bold uppercase"
+                        @click="abrirModalJustificar(row)"
+                      >
+                        Justificar
+                      </Button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </template>
       </div>
     </div>
 
-    <div v-if="modalEditar.open" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
-      <div class="bg-bg-card w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 border border-border-ui">
-        <div class="p-6 border-b border-border-ui flex justify-between items-center bg-slate-50/60 dark:bg-slate-900/40">
-          <h3 class="font-black text-text-main uppercase">{{ modalEditar.id ? 'Ajustar Horario' : 'Novo Horario' }}</h3>
-          <button @click="modalEditar.open = false" class="text-slate-400 hover:text-rose-500"><i class="pi pi-times"></i></button>
-        </div>
-        <div class="p-6 space-y-4">
-          <div class="space-y-1">
-            <label class="text-[10px] font-black text-text-soft uppercase">Data e Hora</label>
-            <input type="datetime-local" v-model="modalEditar.form.data_hora_local" class="w-full h-11 rounded-xl px-3 text-sm font-semibold bg-bg-card text-text-main border border-border-ui outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 dark:[color-scheme:dark]" />
-          </div>
-          <div class="space-y-1">
-            <label class="text-[10px] font-black text-text-soft uppercase">Tipo</label>
-            <select v-model="modalEditar.form.tipo" class="w-full h-11 rounded-xl px-3 text-sm font-semibold bg-bg-card text-text-main border border-border-ui outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10">
-              <option value="ENTRADA">ENTRADA</option>
-              <option value="SAIDA">SAIDA</option>
-            </select>
-          </div>
-          <div class="space-y-1">
-            <label class="text-[10px] font-black text-text-soft uppercase">Observacao</label>
-            <input v-model="modalEditar.form.observacao" class="w-full h-11 rounded-xl px-3 text-sm font-semibold bg-bg-card text-text-main border border-border-ui outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 placeholder:text-slate-400 dark:placeholder:text-slate-500" placeholder="Motivo do ajuste..." />
-          </div>
-        </div>
-        <div class="p-6 bg-slate-50/60 dark:bg-slate-900/40 border-t border-border-ui flex gap-3">
-          <button @click="modalEditar.open = false" class="flex-1 h-10 rounded-xl font-black text-[10px] uppercase bg-bg-card border border-border-ui text-text-soft">Cancelar</button>
-          <button @click="confirmarSalvarEdicao" :disabled="modalEditar.saving" class="flex-1 h-10 rounded-xl font-black text-[10px] uppercase bg-brand-primary text-white shadow-lg shadow-brand-primary/20">
-            {{ modalEditar.saving ? 'Gravando...' : 'Salvar' }}
+    <!-- Modal Editar / Novo -->
+    <div v-if="modalEditar.open" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <div class="bg-bg-card w-full max-w-md rounded-2xl overflow-hidden border border-border-ui">
+        <div class="p-6 border-b border-border-ui flex justify-between items-center bg-bg-page/60">
+          <h3 class="font-black text-text-main uppercase text-lg">{{ modalEditar.id ? 'Ajustar horário' : 'Novo horário' }}</h3>
+          <button type="button" @click="modalEditar.open = false" class="p-2 text-text-soft hover:text-rose-500 rounded-lg transition-colors">
+            <i class="pi pi-times"></i>
           </button>
         </div>
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="text-[10px] font-black text-text-soft uppercase block mb-1">Data e hora</label>
+            <input
+              v-model="modalEditar.form.data_hora_local"
+              type="datetime-local"
+              class="w-full h-11 rounded-xl px-4 text-sm font-semibold bg-bg-card text-text-main border border-border-ui outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary"
+            />
+          </div>
+          <div>
+            <label class="text-[10px] font-black text-text-soft uppercase block mb-1">Tipo</label>
+            <select
+              v-model="modalEditar.form.tipo"
+              class="w-full h-11 rounded-xl px-4 text-sm font-semibold bg-bg-card text-text-main border border-border-ui outline-none focus:ring-2 focus:ring-brand-primary/30"
+            >
+              <option value="ENTRADA">Entrada</option>
+              <option value="SAIDA">Saída</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] font-black text-text-soft uppercase block mb-1">Observação</label>
+            <input
+              v-model="modalEditar.form.observacao"
+              type="text"
+              placeholder="Motivo do ajuste..."
+              class="w-full h-11 rounded-xl px-4 text-sm font-medium bg-bg-card text-text-main border border-border-ui outline-none focus:ring-2 focus:ring-brand-primary/30 placeholder:text-slate-400"
+            />
+          </div>
+        </div>
+        <div class="p-6 bg-bg-page/60 border-t border-border-ui flex gap-3">
+          <Button variant="outline" class="flex-1" @click="modalEditar.open = false">Cancelar</Button>
+          <Button variant="primary" class="flex-1" :loading="modalEditar.saving" @click="confirmarSalvarEdicao">
+            Salvar
+          </Button>
+        </div>
       </div>
     </div>
 
-    <div v-if="modalJust.open" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
-      <div class="bg-bg-card w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] border border-border-ui">
-        <div class="p-6 border-b border-border-ui flex justify-between items-center bg-slate-50/60 dark:bg-slate-900/40">
+    <!-- Modal Justificativa -->
+    <div v-if="modalJust.open" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <div class="bg-bg-card w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col max-h-[90vh] border border-border-ui">
+        <div class="p-6 border-b border-border-ui flex justify-between items-center bg-bg-page/60">
           <div>
-            <h3 class="font-black text-text-main uppercase text-xl leading-none">Justificativa</h3>
-            <p class="text-[10px] font-bold text-text-soft uppercase mt-2 tracking-wide italic">Data: {{ fmtData(modalJust.dia) }}</p>
+            <h3 class="font-black text-text-main uppercase text-lg">Justificativa</h3>
+            <p class="text-[10px] font-bold text-text-soft uppercase mt-1">Data: {{ fmtData(modalJust.dia) }}</p>
           </div>
-          <button @click="modalJust.open = false" class="text-slate-400 hover:text-rose-500"><i class="pi pi-times"></i></button>
+          <button type="button" @click="modalJust.open = false" class="p-2 text-text-soft hover:text-rose-500 rounded-lg transition-colors">
+            <i class="pi pi-times"></i>
+          </button>
         </div>
-        <div class="p-6 space-y-6 overflow-y-auto">
+        <div class="p-6 space-y-5 overflow-y-auto">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div class="space-y-1">
-              <label class="text-[10px] font-black text-text-soft uppercase">Tipo (Ex: Atestado)</label>
-              <input v-model="modalJust.form.tipo" class="w-full h-11 rounded-xl px-3 text-sm font-semibold bg-bg-card text-text-main border border-border-ui outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10" />
+            <div>
+              <label class="text-[10px] font-black text-text-soft uppercase block mb-1">Tipo (ex: Atestado)</label>
+              <input
+                v-model="modalJust.form.tipo"
+                type="text"
+                class="w-full h-11 rounded-xl px-4 text-sm font-semibold bg-bg-card text-text-main border border-border-ui outline-none focus:ring-2 focus:ring-brand-primary/30"
+              />
             </div>
-            <div class="space-y-1">
-              <label class="text-[10px] font-black text-text-soft uppercase">Data</label>
-              <input type="date" v-model="modalJust.form.data" class="w-full h-11 rounded-xl px-3 text-sm font-semibold bg-bg-card text-text-main border border-border-ui outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 dark:[color-scheme:dark]" />
+            <div>
+              <label class="text-[10px] font-black text-text-soft uppercase block mb-1">Data</label>
+              <input
+                v-model="modalJust.form.data"
+                type="date"
+                class="w-full h-11 rounded-xl px-4 text-sm font-semibold bg-bg-card text-text-main border border-border-ui outline-none focus:ring-2 focus:ring-brand-primary/30"
+              />
             </div>
           </div>
-          <div class="space-y-1">
-            <label class="text-[10px] font-black text-text-soft uppercase">Descricao</label>
-            <textarea v-model="modalJust.form.descricao" class="w-full h-24 rounded-xl p-3 text-sm font-semibold bg-bg-card text-text-main border border-border-ui outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 resize-none"></textarea>
+          <div>
+            <label class="text-[10px] font-black text-text-soft uppercase block mb-1">Descrição</label>
+            <textarea
+              v-model="modalJust.form.descricao"
+              rows="3"
+              class="w-full rounded-xl p-4 text-sm font-medium bg-bg-card text-text-main border border-border-ui outline-none focus:ring-2 focus:ring-brand-primary/30 resize-none"
+            ></textarea>
           </div>
-          <div class="space-y-1">
-            <label class="text-[10px] font-black text-slate-400 uppercase">Anexo</label>
+          <div>
+            <label class="text-[10px] font-black text-text-soft uppercase block mb-2">Anexo</label>
             <input ref="justificativaFileRef" type="file" class="hidden" accept="image/*,.pdf,.doc,.docx" @change="onJustificativaFilePick" />
             <div
               @click="justificativaFileRef?.click()"
-              class="border-2 border-dashed border-slate-200 rounded-2xl p-4 transition-all cursor-pointer hover:border-brand-primary hover:bg-slate-50 flex items-center justify-between gap-3"
+              class="border-2 border-dashed border-border-ui rounded-xl p-4 cursor-pointer hover:border-brand-primary/50 hover:bg-brand-primary/5 transition-all flex items-center justify-between gap-3"
             >
               <div class="flex items-center gap-3 min-w-0">
                 <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 shrink-0">
                   <i class="pi pi-cloud-upload"></i>
                 </div>
                 <div class="min-w-0">
-                  <p class="text-[10px] font-black text-slate-800 uppercase truncate">{{ justificativaArquivoNome || 'Clique para selecionar arquivo (PDF, imagem, doc)' }}</p>
-                  <p class="text-[9px] font-bold text-slate-400 uppercase mt-0.5">Atestado, comprovante, etc.</p>
+                  <p class="text-xs font-bold text-text-main truncate">{{ justificativaArquivoNome || 'Clique para selecionar (PDF, imagem, doc)' }}</p>
                 </div>
               </div>
               <button
                 v-if="justificativaArquivoNome"
                 type="button"
                 @click.stop="limparJustificativaArquivo"
-                class="shrink-0 w-9 h-9 rounded-xl border border-slate-200 text-slate-400 hover:text-rose-500 hover:border-rose-300 flex items-center justify-center"
+                class="shrink-0 w-9 h-9 rounded-xl border border-border-ui text-text-soft hover:text-rose-500 flex items-center justify-center"
               >
                 <i class="pi pi-times text-xs"></i>
               </button>
             </div>
           </div>
         </div>
-        <div class="p-6 bg-slate-50/60 dark:bg-slate-900/40 border-t border-border-ui flex gap-3">
-          <button @click="modalJust.open = false" class="flex-1 h-10 rounded-xl font-black text-[10px] uppercase bg-bg-card border border-border-ui text-text-soft">Fechar</button>
-          <button @click="confirmarSalvarJustificativa" :disabled="modalJust.saving" class="flex-1 h-10 rounded-xl font-black text-[10px] uppercase bg-brand-primary text-white shadow-lg shadow-brand-primary/20">Lancar Justificativa</button>
+        <div class="p-6 bg-bg-page/60 border-t border-border-ui flex gap-3">
+          <Button variant="outline" class="flex-1" @click="modalJust.open = false">Fechar</Button>
+          <Button variant="primary" class="flex-1" :loading="modalJust.saving" @click="confirmarSalvarJustificativa">
+            Lançar justificativa
+          </Button>
         </div>
       </div>
     </div>
@@ -246,6 +409,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   PontoRelatorioService,
   PontoJustificativasService,
@@ -253,92 +417,93 @@ import {
 } from '@/services/index'
 import { ArquivosService } from '@/services/arquivos.service'
 import { notify } from '@/services/notify'
-import { consolidarSaldoPeriodo } from '@/utils/utils'
+import { consolidarSaldoPeriodo, derivarCargaDosHorarios } from '@/utils/utils'
 import { confirm } from '@/services/confirm'
+import { can } from '@/services/permissions'
 import { listDays, groupRegistrosByDia } from '@/utils/ponto'
-import { useRouter } from 'vue-router'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import Button from '@/components/ui/Button.vue'
+import SearchInput from '@/components/ui/SearchInput.vue'
 
 definePage({ meta: { perm: 'ponto_relatorio.ver' } })
 
-
+const router = useRouter()
 const loadingTabela = ref(false)
+const loadingPdf = ref(false)
 const rows = ref([])
 const funcionarioOptions = ref([])
 const funcionarios = ref([])
-const router = useRouter()
-
-const loadingPdf = ref(false)
-
-async function gerarRelatorioMensal() {
-  if (!filtros.funcionario_id) return notify.warn('Selecione um funcionario')
-
-  const { mes, ano } = getMesAnoReferencia()
-  const funcionario_id = Number(String(filtros.funcionario_id).replace(/\D/g, ''))
-
-  try {
-    loadingPdf.value = true
-
-    const { data } = await PontoRelatorioService.pdfMensalSalvar({ funcionario_id, mes, ano })
-
-    router.push(
-      `/arquivos/${data.arquivoId}?name=RELATORIO_PONTO_${String(mes).padStart(2,'0')}_${ano}&type=application/pdf`
-    )
-  } catch (e) {
-    console.log('[PONTO] ERRO PDF:', e?.response?.status, e?.response?.data)
-    notify.error(e?.response?.data?.message || 'Erro ao gerar PDF')
-  } finally {
-    loadingPdf.value = false
-  }
-}
-
 
 const filtros = reactive({ funcionario_id: '', data_ini: '', data_fim: '' })
 
-//  remove domingo dos REGISTROS (para nao contar no resumo)
 const rowsFiltrados = computed(() => {
   return (rows.value || []).filter((r) => {
     const dia = new Date(r.data_hora).getDay()
-    return dia !== 0 // 0 = Domingo
+    return dia !== 0
   })
 })
 
-//  agora pode usar rowsFiltrados
 const registrosPorDia = computed(() => groupRegistrosByDia(rowsFiltrados.value))
+
 const funcionarioSelecionado = computed(() => {
   const id = Number(filtros.funcionario_id || 0)
   return funcionarios.value.find((f) => Number(f.id) === id) || null
 })
 
+const horarioSegSex = computed(() => {
+  const f = funcionarioSelecionado.value
+  if (!f) return ''
+  const e1 = f.horario_entrada_1 || '--:--'
+  const s1 = f.horario_saida_1 || '--:--'
+  const e2 = f.horario_entrada_2 || '--:--'
+  const s2 = f.horario_saida_2 || '--:--'
+  const turno1 = `${e1} - ${s1}`
+  const turno2 = e2 || s2 ? `${e2} - ${s2}` : null
+  return turno2 ? `${turno1} / ${turno2}` : turno1
+})
+
+const horarioSabado = computed(() => {
+  const f = funcionarioSelecionado.value
+  if (!f?.horario_sabado_entrada_1 && !f?.horario_sabado_saida_1) return ''
+  const e = f.horario_sabado_entrada_1 || '--:--'
+  const s = f.horario_sabado_saida_1 || '--:--'
+  return `${e} - ${s}`
+})
+
+const cargaHorariaLabel = computed(() => {
+  const f = funcionarioSelecionado.value
+  if (!f) return '-'
+  const derivado = derivarCargaDosHorarios(f)
+  const dia = Number(f.carga_horaria_dia || 0)
+  const sem = Number(f.carga_horaria_semana || 0)
+  if (derivado.cargaSegSex > 0 || derivado.cargaSabado > 0) {
+    const parts = []
+    if (derivado.cargaSegSex > 0) parts.push(`${derivado.cargaSegSex.toFixed(1)}h (Seg–Sex)`)
+    if (derivado.cargaSabado > 0) parts.push(`${derivado.cargaSabado.toFixed(1)}h (Sáb)`)
+    return parts.join(' / ')
+  }
+  if (dia > 0) return `${dia}h/dia`
+  if (sem > 0) return `${sem}h/semana`
+  return 'Não definido'
+})
+
 const metricasFuncionario = computed(() => {
   const f = funcionarioSelecionado.value || {}
-  const custoHora = Number(f?.custo_hora || 0)
-  const cargaDia = Number(f?.carga_horaria_dia || 0)
-  const cargaSemana = Number(f?.carga_horaria_semana || 0)
-  const diasSemana = 6
-
-  const horasSemana = cargaSemana > 0
-    ? cargaSemana
-    : (cargaDia > 0 ? cargaDia * diasSemana : 0)
-
-  return { custoHora, horasSemana, diasSemana }
+  return { custoHora: Number(f?.custo_hora || 0), funcionario: f }
 })
 
 const resumo = computed(() => {
   const m = metricasFuncionario.value
   const base = consolidarSaldoPeriodo({
     registros: rowsFiltrados.value,
-    horasSemana: m.horasSemana,
-    diasSemana: m.diasSemana,
+    funcionario: m.funcionario || undefined,
+    horasSemana: 48,
+    diasSemana: 6,
   })
   const custoTotal = Number((base.totalHoras * m.custoHora).toFixed(2))
-  return {
-    ...base,
-    custoHora: m.custoHora,
-    custoTotal,
-  }
+  return { ...base, custoHora: m.custoHora, custoTotal }
 })
 
-// STATES DOS MODAIS
 const modalEditar = reactive({
   open: false,
   saving: false,
@@ -350,7 +515,6 @@ const modalJust = reactive({
   open: false,
   saving: false,
   dia: '',
-  lista: [],
   form: { funcionario_id: null, data: '', tipo: '', descricao: '', arquivo_id: null },
 })
 
@@ -358,7 +522,6 @@ const justificativaFileRef = ref(null)
 const justificativaFileToUpload = ref(null)
 const justificativaArquivoNome = ref('')
 
-// HELPERS
 const fmtData = (v) => (v ? v.split('-').reverse().join('/') : '-')
 const fmtHoraLocal = (iso) => {
   if (!iso) return '--:--'
@@ -366,49 +529,37 @@ const fmtHoraLocal = (iso) => {
   if (Number.isNaN(d.getTime())) return '--:--'
   return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 }
-
 const getDiaSemana = (dataStr) => {
-  const dias = ['Domingo', 'Segunda-feira', 'Terca-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sabado']
+  const dias = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
   const data = new Date(dataStr + 'T12:00:00')
   return dias[data.getDay()]
 }
-
-function getMesAnoReferencia() {
-  // pega do filtro INICIO (ex.: 2026-02-01)
+const getMesAnoReferencia = () => {
   const base = filtros.data_ini || new Date().toISOString().slice(0, 10)
-  const [y, m] = String(base).split('-').map((n) => Number(n))
+  const [y, m] = String(base).split('-').map(Number)
   return { mes: m, ano: y }
 }
-
-
 const isFimDeSemanaErro = (dataStr, horaStr) => {
   if (!horaStr) return false
   const data = new Date(dataStr + 'T12:00:00')
   const [h, m] = horaStr.split(':').map(Number)
   return data.getDay() === 6 && (h > 12 || (h === 12 && m > 0))
 }
-
-const formatCurrency = (v) =>
-  Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+const formatCurrency = (v) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 const rowsAgrupadas = computed(() => {
   if (!filtros.data_ini || !filtros.data_fim) return []
-
-  //  lista dias e REMOVE domingo (para nao aparecer na tabela)
   const dias = listDays(filtros.data_ini, filtros.data_fim).filter((dia) => {
     const d = new Date(dia + 'T12:00:00')
     return d.getDay() !== 0
   })
-
   const map = registrosPorDia.value
-
   return dias
     .map((dia) => {
       const regsDia = (map.get(dia) || [])
         .filter((r) => r.status === 'ATIVO')
         .slice()
         .sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora))
-
       const batidas = regsDia.map((reg) => ({
         id: reg.id,
         hora: fmtHoraLocal(reg.data_hora),
@@ -416,10 +567,8 @@ const rowsAgrupadas = computed(() => {
         data_hora: reg.data_hora,
         observacao: reg.observacao,
       }))
-
       const entradas = batidas.filter((b) => b.tipo === 'ENTRADA')
       const saidas = batidas.filter((b) => b.tipo === 'SAIDA')
-
       return {
         data: dia,
         funcionario_id: filtros.funcionario_id,
@@ -432,45 +581,78 @@ const rowsAgrupadas = computed(() => {
     .sort((a, b) => b.data.localeCompare(a.data))
 })
 
-// ACOES
 async function buscar() {
-  if (!filtros.funcionario_id) return notify.warn('Selecione um funcionario')
-
+  if (!filtros.funcionario_id) {
+    rows.value = []
+    return
+  }
   try {
     loadingTabela.value = true
     const { data } = await PontoRelatorioService.listarRegistros({ ...filtros })
     rows.value = data || []
   } catch (e) {
-    console.log('[PONTO] ERRO buscar:', e?.response?.status, e?.response?.data)
     notify.error(e?.response?.data?.message || 'Erro ao buscar')
   } finally {
     loadingTabela.value = false
   }
 }
 
+async function gerarRelatorioMensal() {
+  if (!filtros.funcionario_id) return notify.warn('Selecione um funcionário')
+  const { mes, ano } = getMesAnoReferencia()
+  const funcionario_id = Number(String(filtros.funcionario_id).replace(/\D/g, ''))
+  try {
+    loadingPdf.value = true
+    const res = await PontoRelatorioService.pdfMensalSalvar({ funcionario_id, mes, ano })
+    const data = res?.data ?? res
+    const arquivoId = data?.arquivoId ?? data?.data?.arquivoId
+    if (arquivoId) {
+      router.push(`/arquivos/${arquivoId}?name=RELATORIO_PONTO_${String(mes).padStart(2, '0')}_${ano}&type=application/pdf`)
+      notify.success('PDF gerado.')
+    } else {
+      await abrirPdfViaBlob(funcionario_id, mes, ano)
+    }
+  } catch (e) {
+    console.error('[PONTO PDF]', e?.response?.data || e)
+    notify.warn(e?.response?.data?.message || 'Erro ao gerar PDF. Abrindo via stream...')
+    await abrirPdfViaBlob(funcionario_id, mes, ano)
+  } finally {
+    loadingPdf.value = false
+  }
+}
+
+async function abrirPdfViaBlob(funcionario_id, mes, ano) {
+  try {
+    const res = await PontoRelatorioService.pdfMensal({ funcionario_id, mes, ano })
+    const blob = new Blob([res.data], { type: 'application/pdf' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+    setTimeout(() => URL.revokeObjectURL(url), 60000)
+  } catch (e) {
+    console.error('[PONTO PDF blob]', e)
+    notify.error(e?.response?.data?.message || 'Não foi possível abrir o PDF.')
+  }
+}
+
 async function confirmarExcluirDireto(id) {
   if (!(await confirm.show('Excluir', 'Deseja apagar este registro?'))) return
-
   try {
     await PontoRegistrosService.remover(id)
     notify.success('Apagado!')
     await buscar()
   } catch (e) {
-    console.log('[PONTO] ERRO excluir:', e?.response?.status, e?.response?.data)
     notify.error(e?.response?.data?.message || 'Erro ao excluir')
   }
 }
 
 function abrirModalNovoNaPosicao(row, coluna) {
   const f = funcionarioSelecionado.value
-
   const h = {
     ent1: f?.horario_entrada_1 || '07:30',
     sai1: f?.horario_saida_1 || '12:00',
     ent2: f?.horario_entrada_2 || '13:30',
     sai2: f?.horario_saida_2 || '17:30',
   }
-
   Object.assign(modalEditar, {
     open: true,
     id: null,
@@ -499,25 +681,21 @@ function abrirModalEditar(batida) {
 async function confirmarSalvarEdicao() {
   try {
     modalEditar.saving = true
-
     const payload = {
       funcionario_id: Number(modalEditar.form.funcionario_id),
       tipo: modalEditar.form.tipo,
       observacao: modalEditar.form.observacao || null,
       data_hora: `${modalEditar.form.data_hora_local}:00`,
     }
-
     if (modalEditar.id) {
       await PontoRegistrosService.atualizar(modalEditar.id, payload)
     } else {
       await PontoRegistrosService.salvar(payload)
     }
-
     notify.success('Sucesso!')
     modalEditar.open = false
     await buscar()
   } catch (e) {
-    console.log('[PONTO] ERRO salvar/editar:', e?.response?.status, e?.response?.data)
     notify.error(e?.response?.data?.message || 'Erro ao salvar')
   } finally {
     modalEditar.saving = false
@@ -538,7 +716,7 @@ function limparJustificativaArquivo() {
   modalJust.form.arquivo_id = null
 }
 
-async function abrirModalJustificar(row) {
+function abrirModalJustificar(row) {
   limparJustificativaArquivo()
   Object.assign(modalJust, {
     open: true,
@@ -550,10 +728,8 @@ async function abrirModalJustificar(row) {
 async function confirmarSalvarJustificativa() {
   try {
     modalJust.saving = true
-
     const form = { ...modalJust.form }
     const funcionario_id = Number(String(form.funcionario_id || '').replace(/\D/g, ''))
-
     if (justificativaFileToUpload.value && funcionario_id) {
       const { data } = await ArquivosService.upload({
         ownerType: 'FUNCIONARIO',
@@ -564,14 +740,12 @@ async function confirmarSalvarJustificativa() {
       })
       if (data?.id) form.arquivo_id = data.id
     }
-
     await PontoJustificativasService.salvar(form)
     notify.success('Justificativa salva!')
     modalJust.open = false
     limparJustificativaArquivo()
     await buscar()
   } catch (e) {
-    console.log('[PONTO] ERRO justificar:', e?.response?.status, e?.response?.data)
     notify.error(e?.response?.data?.message || 'Erro ao salvar')
   } finally {
     modalJust.saving = false
@@ -582,22 +756,18 @@ onMounted(async () => {
   const hoje = new Date()
   filtros.data_ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10)
   filtros.data_fim = hoje.toISOString().slice(0, 10)
-
   try {
     const { data } = await PontoRelatorioService.listarFuncionariosAtivos()
-    const lista = (data?.data || data || [])
-
-    funcionarios.value = lista
-    funcionarioOptions.value = lista.map((f) => ({ label: f.nome, value: f.id }))
+    const lista = data?.data || data || []
+    funcionarios.value = Array.isArray(lista) ? lista : []
+    funcionarioOptions.value = funcionarios.value.map((f) => ({
+      label: `${String(f.nome || '').toUpperCase()} #${f.id}`,
+      value: f.id,
+    }))
   } catch (e) {
-    console.log('[PONTO][RELATORIO] erro ao carregar funcionarios:', e?.response?.status, e?.response?.data)
     funcionarios.value = []
     funcionarioOptions.value = []
-    notify.error('Nao foi possivel carregar funcionarios agora.')
+    notify.error('Não foi possível carregar funcionários.')
   }
 })
 </script>
-
-
-
-

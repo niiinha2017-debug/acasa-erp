@@ -1,5 +1,5 @@
 <template>
-  <Card class="login-font mt-4 mb-8 mx-2 lg:mx-4 rounded-3xl border border-border-ui bg-bg-card shadow-2xl overflow-hidden animate-page-in">
+  <Card :shadow="false" class="login-font mt-4 mb-8 mx-2 lg:mx-4 rounded-3xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
     <div class="h-1.5 w-full bg-[linear-gradient(90deg,#2f7fb3_0%,#255a82_100%)]"></div>
 
     <PageHeader

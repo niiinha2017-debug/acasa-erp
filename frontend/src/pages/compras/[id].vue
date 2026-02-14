@@ -1,5 +1,5 @@
 <template>
-  <Card class="login-font mt-4 mb-8 mx-2 lg:mx-4 rounded-3xl border border-border-ui bg-bg-card shadow-2xl overflow-hidden animate-page-in">
+  <Card :shadow="false" class="login-font mt-4 mb-8 mx-2 lg:mx-4 rounded-3xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
     <div class="h-1.5 w-full bg-[linear-gradient(90deg,#2f7fb3_0%,#255a82_100%)]"></div>
     <PageHeader
       :title="isEdit ? `Editar Compra #${compraId}` : 'Nova Compra'"
@@ -296,15 +296,6 @@ import { confirm } from '@/services/confirm'
 import { maskMoneyBR } from '@/utils/masks'
 import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
 import { can } from '@/services/permissions'
-
-import Card from '@/components/ui/Card.vue'
-import PageHeader from '@/components/ui/PageHeader.vue'
-import Button from '@/components/ui/Button.vue'
-import Input from '@/components/ui/Input.vue'
-import Table from '@/components/ui/Table.vue'
-import SearchInput from '@/components/ui/SearchInput.vue'
-import CustomCheckbox from '@/components/ui/CustomCheckbox.vue'
-import Loading from '@/components/common/Loading.vue'
 
 definePage({ meta: { perm: 'compras.ver' } })
 

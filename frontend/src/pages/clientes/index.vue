@@ -1,20 +1,20 @@
-﻿a<template>
-  <div class="login-font clientes-line-list w-full max-w-[1700px] mx-auto">
-    <div class="relative overflow-hidden rounded-3xl border border-border-ui bg-bg-card shadow-2xl">
-      <div class="h-1.5 w-full bg-[linear-gradient(90deg,#2f7fb3_0%,#255a82_100%)]"></div>
+<template>
+  <div class="w-full h-full">
+    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
+      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
 
       <PageHeader
         title="Clientes"
-        subtitle="Gestao de relacionamento e base de contatos"
+        subtitle="Gestão de relacionamento e base de contatos"
         icon="pi pi-users"
-        :showBack="false"
+        :show-back="false"
       >
         <template #actions>
           <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
             <div class="w-full sm:w-64 order-1 sm:order-0">
               <SearchInput
                 v-model="filtro"
-                placeholder="Buscar cliente, documento, email ou endereco..."
+                placeholder="Buscar cliente, documento, email ou endereço..."
               />
             </div>
 
@@ -31,57 +31,56 @@
         </template>
       </PageHeader>
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4">
-        <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-          <Table
-            :columns="columns"
-            :rows="rows"
-            :loading="loading"
-            empty-text="Nenhum cliente encontrado."
-            :boxed="false"
-          >
-            <template #cell-nome_completo="{ row }">
-              <div class="flex items-center gap-3 py-1">
-                <div class="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-500 text-xs">
-                  {{ String(row.nome_exibicao || '?').substring(0, 2).toUpperCase() }}
-                </div>
-                <div class="flex flex-col min-w-0">
-                  <span class="text-sm font-bold text-slate-800 uppercase tracking-tight truncate">
-                    {{ row.nome_exibicao }}
-                  </span>
-                  <span class="text-[10px] font-medium text-slate-500 truncate">
-                    {{ row.documento || 'Sem documento' }}
-                    <span v-if="row.email" class="ml-2 text-slate-400">{{ row.email }}</span>
-                  </span>
-                </div>
+      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui">
+        <Table
+          :columns="columns"
+          :rows="rows"
+          :loading="loading"
+          empty-text="Nenhum cliente encontrado."
+          :boxed="false"
+        >
+          <template #cell-nome_completo="{ row }">
+            <div class="flex items-center gap-3 py-1">
+              <div class="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-text-muted text-xs bg-bg-page border border-border-ui">
+                {{ String(row.nome_exibicao || '?').substring(0, 2).toUpperCase() }}
               </div>
-            </template>
-
-            <template #cell-endereco="{ row }">
-              <div class="flex flex-col">
-                <span class="text-sm font-medium text-slate-700 uppercase">{{ row.endereco_resumo }}</span>
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                  {{ [row.cidade, row.estado].filter(Boolean).join(' / ') || '-' }}
+              <div class="flex flex-col min-w-0">
+                <span class="text-sm font-bold text-text-main uppercase tracking-tight truncate">
+                  {{ row.nome_exibicao }}
+                </span>
+                <span class="text-[10px] font-medium text-text-muted truncate">
+                  {{ row.documento || 'Sem documento' }}
+                  <span v-if="row.email" class="ml-2 text-text-muted">{{ row.email }}</span>
                 </span>
               </div>
-            </template>
+            </div>
+          </template>
 
-            <template #cell-status="{ row }">
-              <StatusBadge :value="row.status || 'INATIVO'" />
-            </template>
+          <template #cell-endereco="{ row }">
+            <div class="flex flex-col">
+              <span class="text-sm font-medium text-text-main uppercase">{{ row.endereco_resumo }}</span>
+              <span class="text-[10px] font-bold text-text-muted uppercase tracking-tighter">
+                {{ [row.cidade, row.estado].filter(Boolean).join(' / ') || '-' }}
+              </span>
+            </div>
+          </template>
 
-            <template #cell-acoes="{ row }">
-              <div class="flex justify-end gap-1">
-                <TableActions
-                  :can-edit="can('clientes.editar')"
-                  :can-delete="can('clientes.excluir')"
-                  @edit="editarCliente(row.id)"
-                  @delete="excluirCliente(row)"
-                />
-              </div>
-            </template>
-          </Table>
-        </div>
+          <template #cell-status="{ row }">
+            <StatusBadge :value="row.status || 'INATIVO'" />
+          </template>
+
+          <template #cell-acoes="{ row }">
+            <div class="flex justify-center">
+              <TableActions
+                :id="row.id"
+                perm-edit="clientes.editar"
+                perm-delete="clientes.excluir"
+                @edit="(id) => editarCliente(id)"
+                @delete="() => excluirCliente(row)"
+              />
+            </div>
+          </template>
+        </Table>
       </div>
     </div>
   </div>
@@ -105,9 +104,9 @@ const clientes = ref([])
 
 const columns = [
   { key: 'nome_completo', label: 'CLIENTE', width: '40%' },
-  { key: 'endereco', label: 'ENDERECO', width: '25%' },
+  { key: 'endereco', label: 'ENDEREÇO', width: '25%' },
   { key: 'status', label: 'STATUS', width: '15%' },
-  { key: 'acoes', label: '', align: 'right', width: '20%' },
+  { key: 'acoes', label: 'Ações', align: 'center', width: '20%' },
 ]
 
 const filtrados = computed(() => {

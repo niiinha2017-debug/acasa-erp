@@ -1,54 +1,53 @@
-﻿<template>
-  <div class="login-font clientes-line-list w-full max-w-[1700px] mx-auto">
-    <div class="relative overflow-hidden rounded-3xl border border-border-ui bg-bg-card shadow-2xl">
-      <div class="h-1.5 w-full bg-[linear-gradient(90deg,#2f7fb3_0%,#255a82_100%)]"></div>
+<template>
+  <div class="w-full h-full">
+    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
+      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
 
       <PageHeader
         title="Fornecedores"
         subtitle="Base de parceiros comerciais"
         icon="pi pi-truck"
-        :showBack="false"
+        :show-back="false"
       >
         <template #actions>
-          <div class="flex items-center gap-3 w-full sm:w-auto">
-            <div class="w-full sm:w-64">
+          <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+            <div class="w-full sm:w-64 order-1 sm:order-0">
               <SearchInput
                 v-model="busca"
-                placeholder="Buscar fornecedor, cidade, endereco ou bairro..."
-                :bordered="true"
+                placeholder="Buscar fornecedor, cidade, endereço ou bairro..."
               />
             </div>
 
             <Button
               v-if="can('fornecedores.criar')"
               variant="primary"
-              class="flex-shrink-0 h-11 rounded-xl font-black uppercase tracking-[0.16em] text-[11px]"
               @click="router.push('/fornecedor/novo')"
             >
-              <i class="pi pi-plus mr-2 text-xs"></i>
+              <i class="pi pi-plus mr-2"></i>
               Novo Fornecedor
             </Button>
           </div>
         </template>
       </PageHeader>
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4">
+      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui">
         <Table
           :columns="columns"
           :rows="rowsFiltrados"
           :loading="loading"
-          :empty-text="busca ? 'Nenhum fornecedor encontrado para sua busca' : 'Nenhum fornecedor cadastrado'"
+          empty-text="Nenhum fornecedor encontrado."
+          :boxed="false"
         >
           <template #cell-razao_social="{ row }">
-            <div class="flex items-center gap-3 py-0.5">
-              <div class="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-500 text-xs">
-                {{ (row.nome_fantasia || row.razao_social || '?').substring(0,2).toUpperCase() }}
+            <div class="flex items-center gap-3 py-1">
+              <div class="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-text-muted text-xs bg-bg-page border border-border-ui">
+                {{ (row.nome_fantasia || row.razao_social || '?').substring(0, 2).toUpperCase() }}
               </div>
               <div class="flex flex-col min-w-0">
-                <span class="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                <span class="text-sm font-bold text-text-main uppercase tracking-tight truncate">
                   {{ row.nome_fantasia || row.razao_social || '-' }}
                 </span>
-                <span class="text-xs font-normal text-slate-500 truncate mt-0.5">
+                <span class="text-[10px] font-medium text-text-muted truncate">
                   {{ row.razao_social || '-' }}
                 </span>
               </div>
@@ -56,21 +55,21 @@
           </template>
 
           <template #cell-localizacao="{ row }">
-            <span class="text-sm text-slate-700 dark:text-slate-300">
-              {{ [row.endereco, row.numero, row.bairro].filter(Boolean).join(', ') || '-' }}
-            </span>
+            <div class="flex flex-col">
+              <span class="text-sm font-medium text-text-main uppercase">{{ [row.endereco, row.numero, row.bairro].filter(Boolean).join(', ') || '-' }}</span>
+              <span class="text-[10px] font-bold text-text-muted uppercase tracking-tighter">
+                {{ row.cidade || '-' }}
+              </span>
+            </div>
           </template>
 
           <template #cell-contato="{ row }">
-            <span class="text-sm text-slate-700 dark:text-slate-300">
-              {{ row.whatsapp || row.telefone || row.email || '-' }}
-            </span>
+            <span class="text-sm text-text-main">{{ row.whatsapp || row.telefone || row.email || '-' }}</span>
           </template>
 
           <template #cell-acoes="{ row }">
-            <div class="w-full flex justify-center">
+            <div class="flex justify-center">
               <TableActions
-                class="!justify-center !px-0"
                 :id="row.id"
                 perm-edit="fornecedores.editar"
                 perm-delete="fornecedores.excluir"
@@ -93,21 +92,15 @@ import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
 
-import PageHeader from '@/components/ui/PageHeader.vue'
-import SearchInput from '@/components/ui/SearchInput.vue'
-import TableActions from '@/components/ui/TableActions.vue'
-
 definePage({ meta: { perm: 'fornecedores.ver' } })
 
 const router = useRouter()
-
 const busca = ref('')
 const loading = ref(false)
 const fornecedores = ref([])
 
 const rowsFiltrados = computed(() => {
   let filtrados = fornecedores.value
-
   if (busca.value) {
     const termo = busca.value.toLowerCase().trim()
     filtrados = filtrados.filter((f) =>
@@ -122,7 +115,6 @@ const rowsFiltrados = computed(() => {
       (f.cidade && f.cidade.toLowerCase().includes(termo))
     )
   }
-
   return filtrados
 })
 
@@ -133,12 +125,9 @@ function editarFornecedor(id) {
 
 async function excluirFornecedor(id) {
   if (!can('fornecedores.excluir')) return notify.error('Acesso negado.')
-
-  const ok = await confirm.show('Excluir Fornecedor?', 'Esta acao nao pode ser desfeita.')
+  const ok = await confirm.show('Excluir Fornecedor?', 'Esta ação não pode ser desfeita.')
   if (!ok) return
-
   const cleanId = Number(id)
-
   try {
     await FornecedorService.remover(cleanId)
     fornecedores.value = fornecedores.value.filter((f) => Number(f.id) !== cleanId)
@@ -146,20 +135,19 @@ async function excluirFornecedor(id) {
   } catch (e) {
     console.error('Erro ao excluir fornecedor:', e)
     const apiMsg = e?.response?.data?.message
-    notify.error(Array.isArray(apiMsg) ? apiMsg.join(' | ') : (apiMsg || 'Nao foi possivel excluir o fornecedor'))
+    notify.error(Array.isArray(apiMsg) ? apiMsg.join(' | ') : (apiMsg || 'Não foi possível excluir o fornecedor'))
   }
 }
 
 const columns = [
   { key: 'razao_social', label: 'FORNECEDOR', width: '35%' },
-  { key: 'localizacao', label: 'LOCALIZACAO', width: '35%' },
+  { key: 'localizacao', label: 'LOCALIZAÇÃO', width: '35%' },
   { key: 'contato', label: 'CONTATO', width: '15%' },
-  { key: 'acoes', label: 'ACOES', align: 'center', width: '15%' }
+  { key: 'acoes', label: 'Ações', align: 'center', width: '15%' }
 ]
 
 const carregarFornecedores = async () => {
   loading.value = true
-
   try {
     const res = await FornecedorService.listar()
     fornecedores.value = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : [])
@@ -174,25 +162,3 @@ const carregarFornecedores = async () => {
 
 onMounted(carregarFornecedores)
 </script>
-
-<style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
-
-.login-font {
-  font-family: 'Manrope', 'Segoe UI', sans-serif;
-}
-
-.clientes-line-list :deep(.search-container input.w-full) {
-  border-top: 0;
-  border-left: 0;
-  border-right: 0;
-  border-bottom-width: 2px;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.clientes-line-list :deep(.search-container input.w-full:focus) {
-  box-shadow: none;
-}
-</style>
