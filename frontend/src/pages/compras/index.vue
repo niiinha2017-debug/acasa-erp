@@ -1,68 +1,70 @@
 <template>
-  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-page-in">
-    
-    <PageHeader 
-      title="Compras"
-      subtitle="Registro de entradas, insumos e rateios de custo"
-      icon="pi pi-shopping-cart"
-    >
-      <template #actions>
-        <Button
-          v-if="can('compras.criar')"
-          variant="primary"
-          @click="router.push('/compras/novo')"
-        >
-          <i class="pi pi-plus mr-2"></i>
-          Nova Compra
-        </Button>
-      </template>
-    </PageHeader>
+  <div class="login-font clientes-line-list w-full max-w-[1700px] mx-auto">
+    <div class="relative overflow-hidden rounded-3xl border border-border-ui bg-bg-card shadow-2xl">
+      <div class="h-1.5 w-full bg-[linear-gradient(90deg,#2f7fb3_0%,#255a82_100%)]"></div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      <MetricCard
-        label="Total Geral"
-        :value="format.currency(totalGeral)"
-        icon="pi pi-dollar"
-        color="slate"
-      />
-      
-      <MetricCard
-        label="Estoque/Insumos"
-        :value="format.currency(totalInsumos)"
-        icon="pi pi-box"
-        color="blue"
-      />
+      <PageHeader
+        title="Compras"
+        subtitle="Registro de entradas, insumos e rateios de custo"
+        icon="pi pi-shopping-cart"
+        :showBack="false"
+      >
+        <template #actions>
+          <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+            <div class="w-full sm:w-64 order-1 sm:order-0">
+              <SearchInput
+                v-model="filtro"
+                placeholder="Buscar descrição, categoria ou valor..."
+              />
+            </div>
 
-       <MetricCard
-        label="Despesas Fixas"
-        :value="format.currency(totalDespesas)"
-        icon="pi pi-wallet"
-        color="rose"
-      />
+            <Button
+              v-if="can('compras.criar')"
+              variant="primary"
+              class="flex-shrink-0 h-11 rounded-xl font-black uppercase tracking-[0.16em] text-[11px]"
+              @click="router.push('/compras/novo')"
+            >
+              <i class="pi pi-plus mr-2"></i>
+              Nova Compra
+            </Button>
+          </div>
+        </template>
+      </PageHeader>
 
-       <MetricCard
-        label="Investimentos"
-        :value="format.currency(totalInvestimentos)"
-        icon="pi pi-chart-line"
-        color="emerald"
-      />
-    </div>
+      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <MetricCard
+            label="Total Geral"
+            :value="format.currency(totalGeral)"
+            icon="pi pi-dollar"
+            color="slate"
+          />
+          <MetricCard
+            label="Estoque/Insumos"
+            :value="format.currency(totalInsumos)"
+            icon="pi pi-box"
+            color="blue"
+          />
+          <MetricCard
+            label="Despesas Fixas"
+            :value="format.currency(totalDespesas)"
+            icon="pi pi-wallet"
+            color="rose"
+          />
+          <MetricCard
+            label="Investimentos"
+            :value="format.currency(totalInvestimentos)"
+            icon="pi pi-chart-line"
+            color="emerald"
+          />
+        </div>
 
-    <div class="space-y-4">
-      <div class="w-full md:w-96">
-        <SearchInput
-          v-model="filtro"
-          placeholder="Buscar descrição, categoria ou valor..."
-        />
-      </div>
-
-      <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
         <Table
           :columns="columns"
           :rows="filtradas"
           :loading="loading"
           empty-text="Nenhuma compra registrada."
-          :boxed="false"
+          :boxed="true"
         >
           <template #cell-descricao="{ row }">
             <div class="flex flex-col py-1">
@@ -76,9 +78,9 @@
           </template>
 
           <template #cell-categoria="{ row }">
-             <span class="text-[10px] font-black uppercase text-slate-500 tracking-wider border border-slate-100 bg-slate-50 px-2 py-1 rounded-lg">
-               {{ row.categoria }}
-             </span>
+            <span class="text-[10px] font-black uppercase text-slate-500 tracking-wider border border-slate-100 bg-slate-50 px-2 py-1 rounded-lg">
+              {{ row.categoria }}
+            </span>
           </template>
 
           <template #cell-data="{ row }">
@@ -88,9 +90,9 @@
           </template>
 
           <template #cell-valor="{ row }">
-             <span class="text-sm font-black text-slate-800 tabular-nums">
-               {{ format.currency(row.valor_total) }}
-             </span>
+            <span class="text-sm font-black text-slate-800 tabular-nums">
+              {{ format.currency(row.valor_total) }}
+            </span>
           </template>
 
           <template #cell-status="{ row }">
@@ -98,12 +100,17 @@
           </template>
 
           <template #cell-acoes="{ row }">
-             <TableActions
-                :can-edit="can('compras.editar')"
-                :can-delete="can('compras.excluir')"
-                @edit="router.push(`/compras/${row.id}`)"
-                @delete="confirmarExcluir(row.id)"
+            <div class="w-full flex justify-center">
+              <TableActions
+                class="!justify-center !px-0"
+                :show-label="false"
+                :id="row.id"
+                perm-edit="compras.editar"
+                perm-delete="compras.excluir"
+                @edit="(id) => router.push(`/compras/${id}`)"
+                @delete="(id) => confirmarExcluir(id)"
               />
+            </div>
           </template>
         </Table>
       </div>
@@ -120,6 +127,14 @@ import { can } from '@/services/permissions'
 import api from '@/services/api'
 import { format } from '@/utils/format'
 
+import PageHeader from '@/components/ui/PageHeader.vue'
+import SearchInput from '@/components/ui/SearchInput.vue'
+import Table from '@/components/ui/Table.vue'
+import TableActions from '@/components/ui/TableActions.vue'
+import Button from '@/components/ui/Button.vue'
+import StatusBadge from '@/components/ui/StatusBadge.vue'
+import MetricCard from '@/components/ui/MetricCard.vue'
+
 definePage({ meta: { perm: 'compras.ver' } })
 
 const router = useRouter()
@@ -133,7 +148,7 @@ const columns = [
   { key: 'data', label: 'DATA', width: '15%' },
   { key: 'valor', label: 'VALOR', width: '15%', align: 'right' },
   { key: 'status', label: 'STATUS', width: '10%' },
-  { key: 'acoes', label: '', align: 'right', width: '10%' }
+  { key: 'acoes', label: 'Ações', align: 'center', width: '10%' }
 ]
 
 const filtradas = computed(() => {
@@ -148,7 +163,6 @@ const filtradas = computed(() => {
   })
 })
 
-// Metrics
 const totalGeral = computed(() => compras.value.reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
 const totalInsumos = computed(() => compras.value.filter(c => c.categoria === 'INSUMO').reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
 const totalDespesas = computed(() => compras.value.filter(c => c.categoria === 'DESPESA').reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
@@ -158,7 +172,6 @@ async function carregar() {
   if (!can('compras.ver')) return notify.error('Acesso negado.')
   loading.value = true
   try {
-    // Ajuste endpoint conforme backend
     const { data } = await api.get('/compras')
     compras.value = Array.isArray(data) ? data : []
   } catch (e) {
@@ -189,3 +202,25 @@ onMounted(async () => {
   if (can('compras.ver')) await carregar()
 })
 </script>
+
+<style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
+.login-font {
+  font-family: 'Manrope', 'Segoe UI', sans-serif;
+}
+
+.clientes-line-list :deep(.search-container input.w-full) {
+  border-top: 0;
+  border-left: 0;
+  border-right: 0;
+  border-bottom-width: 2px;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.clientes-line-list :deep(.search-container input.w-full:focus) {
+  box-shadow: none;
+}
+</style>

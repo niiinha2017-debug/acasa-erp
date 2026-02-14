@@ -1,7 +1,8 @@
 <template>
-  <Card class="mt-4 mb-8 mx-2 lg:mx-4 shadow-xl rounded-[2.5rem] overflow-hidden animate-page-in">
+  <Card class="login-font mt-4 mb-8 mx-2 lg:mx-4 rounded-3xl border border-border-ui bg-bg-card shadow-2xl overflow-hidden animate-page-in">
+    <div class="h-1.5 w-full bg-[linear-gradient(90deg,#2f7fb3_0%,#255a82_100%)]"></div>
     <PageHeader
-      :title="isEdit ? `Compra #${compraId}` : 'Nova Compra'"
+      :title="isEdit ? `Editar Compra #${compraId}` : 'Nova Compra'"
       subtitle="Registre uma nova entrada de materiais."
       icon="pi pi-shopping-cart"
       :backTo="'/compras'"
@@ -207,25 +208,23 @@
               </template>
 
 <template #cell-acoes="{ row }">
-  <div class="flex justify-end gap-2">
-    <Button
-      variant="ghost"
-      size="sm"
+  <div class="flex justify-center gap-2">
+    <button
       type="button"
+      class="h-9 px-3 rounded-lg flex items-center gap-1.5 text-text-muted hover:text-brand-primary hover:bg-brand-primary/10 text-xs font-semibold transition-colors"
       @click="editarItemPorKey(row._key)"
     >
-      <i class="pi pi-pencil text-[12px]"></i>
-    </Button>
-
-    <Button
-      variant="ghost"
-      size="sm"
+      <i class="pi pi-pencil text-sm"></i>
+      <span>Editar</span>
+    </button>
+    <button
       type="button"
-      class="text-red-500 hover:bg-red-50"
+      class="h-9 px-3 rounded-lg flex items-center gap-1.5 text-text-muted hover:text-rose-500 hover:bg-rose-500/10 text-xs font-semibold transition-colors"
       @click="removerItem(row._key)"
     >
-      <i class="pi pi-trash text-[12px]"></i>
-    </Button>
+      <i class="pi pi-trash text-sm"></i>
+      <span>Excluir</span>
+    </button>
   </div>
 </template>
 
@@ -297,6 +296,15 @@ import { confirm } from '@/services/confirm'
 import { maskMoneyBR } from '@/utils/masks'
 import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
 import { can } from '@/services/permissions'
+
+import Card from '@/components/ui/Card.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import Button from '@/components/ui/Button.vue'
+import Input from '@/components/ui/Input.vue'
+import Table from '@/components/ui/Table.vue'
+import SearchInput from '@/components/ui/SearchInput.vue'
+import CustomCheckbox from '@/components/ui/CustomCheckbox.vue'
+import Loading from '@/components/common/Loading.vue'
 
 definePage({ meta: { perm: 'compras.ver' } })
 
@@ -399,7 +407,7 @@ const columnsItens = [
   { key: 'quantidade', label: 'Qtd', align: 'center' },
   { key: 'valor_unitario', label: 'V. Unit.' },
   { key: 'valor_total', label: 'Subtotal' },
-  { key: 'acoes', label: '', width: '120px', align: 'right' },
+  { key: 'acoes', label: 'Ações', width: '120px', align: 'center' },
 ]
 
 // =======================
@@ -874,3 +882,10 @@ onMounted(async () => {
 
 </script>
 
+<style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
+.login-font {
+  font-family: 'Manrope', 'Segoe UI', sans-serif;
+}
+</style>
