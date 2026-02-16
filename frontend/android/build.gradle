@@ -35,6 +35,11 @@ subprojects { sub ->
             if (details.requested.group == "org.jetbrains.kotlin") {
                 details.useVersion "1.8.22"
             }
+            // @capacitor/browser puxa androidx.browser:1.9.0 que exige compileSdk 36; forçar 1.8.x
+            if (details.requested.group == "androidx.browser" && details.requested.name == "browser") {
+                details.useVersion "1.8.0"
+                details.because "compatível com compileSdk 35 e AGP 8.7"
+            }
         }
     }
 
