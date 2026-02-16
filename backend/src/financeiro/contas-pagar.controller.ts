@@ -11,6 +11,7 @@ import {
   HttpStatus,
   UseGuards,
   BadRequestException,
+  InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
 import { FinanceiroService } from './financeiro.service';
@@ -94,8 +95,12 @@ export class ContasPagarController {
       return await this.service.fecharMesFornecedorComTitulos(body);
     } catch (err: any) {
       if (err?.statusCode >= 400 && err?.statusCode < 500) throw err;
-      this.logger.error('fechar-mes 500', err?.message || err);
-      throw err;
+      const msg = err?.message || String(err);
+      const stack = err?.stack;
+      this.logger.error(`fechar-mes 500: ${msg}`, stack);
+      throw new InternalServerErrorException(
+        msg || 'Erro ao fechar mês. Verifique os logs do servidor.',
+      );
     }
   }
 

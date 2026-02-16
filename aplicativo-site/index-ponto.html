@@ -133,7 +133,7 @@
 
     <div class="row">
       <a id="btnAtivar" class="btn btn-primary" href="#" target="_blank" rel="noopener noreferrer">Abrir ativacao</a>
-      <a id="btnApk" class="btn btn-soft" href="https://ponto.acasamarcenaria.com.br/ponto/ponto.apk" target="_blank" rel="noopener noreferrer">Baixar APK</a>
+      <a id="btnApk" class="btn btn-soft" href="https://ponto.acasamarcenaria.com.br/ponto.apk" target="_blank" rel="noopener noreferrer">Baixar APK</a>
       <button id="btnWhats" class="btn btn-ok" type="button">Enviar no WhatsApp</button>
       <button id="btnCopiar" class="btn btn-soft" type="button">Copiar links</button>
     </div>
@@ -159,7 +159,8 @@
       const ativacao = code
         ? `${base}/ativar?code=${encodeURIComponent(code)}`
         : `${base}/ativar`;
-      const apk = `${base}/ponto/ponto.apk`;
+      // APK fica em /ponto.apk na raiz do subdomínio
+      const apk = `${base}/ponto.apk`;
       return { code, ativacao, apk };
     }
 

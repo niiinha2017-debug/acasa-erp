@@ -7,8 +7,9 @@ import { UpdateOrcamentoItemDto } from './dto/update-orcamento-item.dto';
 import * as path from 'path';
 import { renderHeaderA4Png, resolveAsset } from '../pdf/render-header-a4';
 import PDFKitDoc from 'pdfkit';
-import { promises as fs } from 'fs';
+import { existsSync, promises as fs } from 'fs';
 import { randomBytes } from 'crypto';
+import sizeOf from 'image-size';
 
 @Injectable()
 export class OrcamentosService {
@@ -22,7 +23,10 @@ export class OrcamentosService {
     return pdf;
   }
 
-  private async gerarMioloPdfBuffer(orc: any): Promise<Buffer> {
+  private async gerarMioloPdfBuffer(
+    orc: any,
+    anexos: { url: string; nome: string | null; mime_type: string | null }[] = [],
+  ): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       const doc = new PDFKitDoc({ size: 'A4', margin: 40 });
       const chunks: Buffer[] = [];
@@ -151,8 +155,9 @@ export class OrcamentosService {
           height: doc.page.height,
         });
 
-        // quando quebra página, reaplica header/tabela
-        doc.on('pageAdded', () => aplicarLayoutPagina());
+        // quando quebra página no orçamento, reaplica header/tabela (só nas páginas de itens)
+        const handlerPageAdded = () => aplicarLayoutPagina();
+        doc.on('pageAdded', handlerPageAdded);
 
         // Página 2
         doc.addPage();
@@ -255,6 +260,85 @@ export class OrcamentosService {
           align: 'right',
         });
 
+        // Remove o listener para as próximas páginas serem só de anexos (sem repetir layout do orçamento)
+        doc.removeListener('pageAdded', handlerPageAdded);
+
+        // ANEXOS (imagens somente nas páginas seguintes, nunca no meio do orçamento)
+        const extImg = /\.(jpe?g|png|gif|webp|bmp)$/i;
+        const isImage = (a: {
+          url?: string;
+          mime_type?: string | null;
+        }) => {
+          if (!a?.url) return false;
+          const mt = String(a.mime_type || '').toLowerCase();
+          if (mt.startsWith('image/')) return true;
+          const nome = a.url;
+          return extImg.test(nome);
+        };
+        const imagens =
+          Array.isArray(anexos) && anexos.filter((a) => isImage(a));
+        // A4: duas imagens por página; margem lateral menor para não cortar a largura
+        const MARGEM_LATERAL = 16; // mínima para a imagem usar quase toda a largura da página
+        const MARGEM_VERTICAL = 36;
+        const GAP_IMAGENS = 12;
+        const larguraA4 = doc.page.width;
+        const alturaA4 = doc.page.height;
+        const imgWidth = larguraA4 - MARGEM_LATERAL * 2;
+        const areaUtilH = alturaA4 - MARGEM_VERTICAL * 2 - GAP_IMAGENS;
+        const captionHeight = 14; // espaço para o texto de dimensões
+        const imgHeight = areaUtilH / 2 - captionHeight; // reserva espaço para o descritivo
+        const imgTop = MARGEM_VERTICAL;
+        const marginImg = MARGEM_LATERAL;
+        const gapEntreImagens = GAP_IMAGENS;
+
+        // Força nova página antes de qualquer anexo (imagens só nas páginas seguintes)
+        if (imagens.length > 0) doc.addPage();
+
+        for (let i = 0; i < imagens.length; i++) {
+          const arq = imagens[i];
+          const rel = String(arq.url || '').replace(/^\//, '');
+          const relNoUploads = rel.replace(/^uploads[/\\]+/, '');
+          const filePath = path.join(process.cwd(), 'uploads', relNoUploads);
+          const filePathAlt = path.join(process.cwd(), rel);
+          const absPath = existsSync(filePath) ? filePath : filePathAlt;
+
+          try {
+            if (existsSync(absPath)) {
+              // Nova página a cada duas imagens (2ª página de anexos, 4ª imagem, etc.)
+              if (i > 0 && i % 2 === 0) doc.addPage();
+              const y =
+                i % 2 === 0
+                  ? imgTop
+                  : imgTop + imgHeight + captionHeight + gapEntreImagens;
+              doc.y = y;
+              doc.image(absPath, marginImg, doc.y, {
+                fit: [imgWidth, imgHeight],
+                align: 'left',
+                valign: 'top',
+              });
+              // Descritivo com dimensões da imagem (onde faz o download)
+              let dimensoesTexto = '';
+              try {
+                const dims = sizeOf(absPath);
+                if (dims?.width && dims?.height) {
+                  dimensoesTexto = `Dimensões: Largura ${dims.width} px × Altura ${dims.height} px`;
+                }
+              } catch {}
+              if (dimensoesTexto) {
+                doc
+                  .font('Helvetica')
+                  .fontSize(8)
+                  .fillColor('#555')
+                  .text(dimensoesTexto, marginImg, y + imgHeight + 4, {
+                    width: imgWidth,
+                  });
+              }
+            }
+          } catch (err) {
+            console.warn('[Orcamento PDF] Imagem ignorada:', absPath, err);
+          }
+        }
+
         doc.end();
       } catch (e) {
         reject(e);
@@ -265,8 +349,17 @@ export class OrcamentosService {
   async gerarPdfESalvar(orcId: number) {
     const orc = await this.detalhar(orcId);
 
-    // você já tem isso pronto:
-    const pdfBuffer = await this.gerarMioloPdfBuffer(orc); // Buffer
+    // Só imagens marcadas como "para o PDF" (categoria IMAGEM_PDF) entram no arquivo gerado
+    const anexos = await this.prisma.arquivos.findMany({
+      where: {
+        owner_type: 'ORCAMENTO',
+        owner_id: orcId,
+        categoria: 'IMAGEM_PDF',
+      },
+      orderBy: { criado_em: 'asc' },
+    });
+
+    const pdfBuffer = await this.gerarMioloPdfBuffer(orc, anexos);
 
     const dir = path.join(process.cwd(), 'uploads', 'relatorios');
     await fs.mkdir(dir, { recursive: true });
@@ -320,16 +413,37 @@ export class OrcamentosService {
   async listar() {
     const lista = await this.prisma.orcamentos.findMany({
       orderBy: { id: 'desc' },
-      include: { cliente: true, itens: { select: { valor_total: true } } },
+      include: {
+        cliente: true,
+        itens: {
+          select: { valor_total: true, nome_ambiente: true, descricao: true },
+          orderBy: { id: 'asc' },
+        },
+      },
     });
 
-    return lista.map((o) => ({
-      ...o,
-      total_itens: o.itens.reduce(
+    return lista.map((o) => {
+      const totalItens = o.itens.reduce(
         (acc, i) => acc + Number(i.valor_total || 0),
         0,
-      ),
-    }));
+      );
+      const primeirosItens = o.itens.slice(0, 3);
+      const descricaoResumo = primeirosItens.length
+        ? primeirosItens
+            .map(
+              (i) =>
+                `${(i.nome_ambiente || '').trim()}${(i.descricao || '').trim() ? ': ' + String(i.descricao).trim().slice(0, 50) : ''}`,
+            )
+            .filter(Boolean)
+            .join(' · ') || null
+        : null;
+      const { itens, ...rest } = o;
+      return {
+        ...rest,
+        total_itens: totalItens,
+        descricao_resumo: descricaoResumo,
+      };
+    });
   }
 
   async detalhar(id: number) {

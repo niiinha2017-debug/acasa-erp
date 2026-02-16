@@ -1,14 +1,15 @@
 <template>
-  <Card :shadow="true" class="overflow-hidden border-none">
-    <PageHeader
-      :title="isEdit ? `Venda #${vendaId}` : 'Nova Venda'"
-      subtitle="Pós-venda: venda líquida, rateio, taxas e comissões."
-      icon="pi pi-shopping-cart"
-      :backTo="'/vendas'"
-      class="bg-slate-50/50 border-b border-slate-100"
-    />
+  <div class="w-full h-full">
+    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
+      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
 
-    <div class="p-6 relative">
+      <PageHeader
+        :title="isEdit ? `Venda #${vendaId}` : 'Nova Venda'"
+        subtitle="Pós-venda: venda líquida, rateio, taxas e comissões."
+        icon="pi pi-shopping-cart"
+      />
+
+      <div class="p-6 md:p-8 border-t border-border-ui relative">
       <Loading v-if="loading" />
 
       <div v-else class="space-y-8">
@@ -16,7 +17,7 @@
         <!-- DADOS GERAIS -->
         <!-- ===================== -->
         <section class="space-y-4">
-          <div class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+          <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
             Dados Gerais
           </div>
 
@@ -45,7 +46,7 @@
               />
               <p
                 v-if="isEdit"
-                class="mt-1 text-[10px] font-black uppercase tracking-widest text-slate-400"
+                class="mt-1 text-[10px] font-black uppercase tracking-widest text-text-soft"
               >
                 * Orçamento não altera após salvar a venda.
               </p>
@@ -61,14 +62,14 @@
           </div>
         </section>
 
-        <div class="h-px bg-slate-100" />
+        <div class="h-px bg-border-ui" />
 
         <!-- ===================== -->
         <!-- ITENS -->
         <!-- ===================== -->
         <section class="space-y-4">
           <div class="flex items-center justify-between gap-4">
-            <div class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+            <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
               Itens da Venda
             </div>
 
@@ -133,30 +134,30 @@
                   </Button>
                 </div>
 
-                <span v-else class="text-[10px] font-black uppercase tracking-widest text-slate-300">
+                <span v-else class="text-[10px] font-black uppercase tracking-widest text-text-soft">
                   —
                 </span>
               </template>
             </Table>
           </div>
 
-          <div v-else class="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">
+          <div v-else class="text-[10px] font-black uppercase tracking-widest text-text-soft italic">
             Selecione um orçamento para carregar os itens.
           </div>
 
-          <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">
+          <div class="text-[10px] font-black uppercase tracking-widest text-text-soft">
             * Itens são clonados do orçamento ao salvar. Em edição, as alterações afetam apenas a venda.
           </div>
         </section>
 
-        <div class="h-px bg-slate-100" />
+        <div class="h-px bg-border-ui" />
 
         <!-- ===================== -->
         <!-- PAGAMENTOS / RATEIO -->
         <!-- ===================== -->
         <section class="space-y-4">
           <div class="flex items-center justify-between gap-4">
-            <div class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+            <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
               Pagamentos (Rateio)
             </div>
 
@@ -222,7 +223,7 @@
                 :forceUpper="false"
                 :readonly="!can(permSalvarVenda())"
               />
-              <span v-else class="text-slate-300">—</span>
+              <span v-else class="text-text-soft">—</span>
             </template>
 
             <template #cell-valor="{ row }">
@@ -248,7 +249,7 @@
                 </Button>
                 <span
                   v-else
-                  class="text-[10px] font-black uppercase tracking-widest text-slate-300"
+                  class="text-[10px] font-black uppercase tracking-widest text-text-soft"
                 >
                   —
                 </span>
@@ -271,14 +272,14 @@
           </div>
         </section>
 
-        <div class="h-px bg-slate-100" />
+        <div class="h-px bg-border-ui" />
 
         <!-- ===================== -->
         <!-- COMISSÕES -->
         <!-- ===================== -->
         <section class="space-y-4">
           <div class="flex items-center justify-between gap-4">
-            <div class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+            <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
               Comissões
             </div>
 
@@ -317,7 +318,7 @@
             </template>
 
             <template #cell-valor="{ row }">
-              <span class="font-black text-slate-900">{{ format.currency(valorComissao(row)) }}</span>
+              <span class="font-black text-text-main">{{ format.currency(valorComissao(row)) }}</span>
             </template>
 
             <template #cell-acoes="{ row }">
@@ -333,7 +334,7 @@
                 </Button>
                 <span
                   v-else
-                  class="text-[10px] font-black uppercase tracking-widest text-slate-300"
+                  class="text-[10px] font-black uppercase tracking-widest text-text-soft"
                 >
                   —
                 </span>
@@ -341,18 +342,18 @@
             </template>
           </Table>
 
-          <div class="text-[10px] font-black uppercase tracking-widest text-slate-400 italic">
+          <div class="text-[10px] font-black uppercase tracking-widest text-text-soft italic">
             * O percentual de comissão é fixo conforme configurações do sistema.
           </div>
         </section>
 
-        <div class="h-px bg-slate-100" />
+        <div class="h-px bg-border-ui" />
 
         <!-- ===================== -->
         <!-- RESUMO -->
         <!-- ===================== -->
         <section class="space-y-4">
-          <div class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+          <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
             Taxas e Resumo Líquido
           </div>
 
@@ -394,21 +395,21 @@
             </div>
 
             <div class="col-span-12 md:col-span-3">
-              <div class="rounded-2xl border border-slate-100 bg-slate-50/60 p-3">
+              <div class="rounded-2xl border border-border-ui bg-bg-page/60 p-3">
                 <Input :modelValue="format.currency(lucro_bruto)" label="Resultado Líquido" readonly />
               </div>
             </div>
           </div>
         </section>
 
-        <div class="h-px bg-slate-100" />
+        <div class="h-px bg-border-ui" />
 
         <!-- ===================== -->
         <!-- ARQUIVOS (PWA) -->
         <!-- ===================== -->
         <section class="space-y-4">
           <div class="flex items-center justify-between gap-4">
-            <div class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+            <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
               Arquivos e Comprovantes
             </div>
 
@@ -423,57 +424,58 @@
             </Button>
           </div>
 
-          <div class="p-6 rounded-3xl border border-slate-100 bg-slate-50/50">
-            <div class="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center py-2">
+          <div class="p-6 rounded-3xl border border-border-ui bg-bg-page/50">
+            <div class="text-[10px] font-black uppercase tracking-widest text-text-soft text-center py-2">
               Use “Abrir Arquivos” para anexar / visualizar dentro do PWA.
             </div>
           </div>
 
-          <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">
+          <div class="text-[10px] font-black uppercase tracking-widest text-text-soft">
             * O upload fica disponível apenas após a criação da venda no sistema.
           </div>
         </section>
       </div>
+      </div>
+
+      <!-- ===================== -->
+      <!-- FOOTER AÇÕES -->
+      <!-- ===================== -->
+      <footer class="flex items-center justify-end gap-3 p-6 border-t border-border-ui bg-bg-page/50">
+        <Button
+          v-if="can(permSalvarVenda())"
+          variant="primary"
+          size="md"
+          type="button"
+          :loading="saving"
+          :disabled="saving"
+          @click="confirmarSalvarVenda"
+        >
+          Salvar Venda
+        </Button>
+      </footer>
     </div>
+  </div>
 
-    <!-- ===================== -->
-    <!-- FOOTER AÇÕES -->
-    <!-- ===================== -->
-    <footer class="flex items-center justify-end gap-3 p-6 border-t border-slate-100 bg-slate-50/30">
-
-      <Button
-        v-if="can(permSalvarVenda())"
-        variant="primary"
-        size="md"
-        type="button"
-        :loading="saving"
-        :disabled="saving"
-        @click="confirmarSalvarVenda"
-      >
-        Salvar Venda
-      </Button>
-    </footer>
-
-    <!-- ===================== -->
-    <!-- MODAL ITEM EXTRA -->
-    <!-- ===================== -->
-    <div
-      v-if="modalItemOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-      @click.self="fecharModalItem"
-    >
-      <Card :shadow="true" class="w-full max-w-[780px] overflow-hidden border-none">
-        <div class="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-          <div class="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
-            {{ modalItemEditando ? 'Editar item' : 'Novo item (extra na venda)' }}
-          </div>
-
-          <Button variant="secondary" size="sm" type="button" @click="fecharModalItem">
-            Fechar
-          </Button>
+  <!-- ===================== -->
+  <!-- MODAL ITEM EXTRA -->
+  <!-- ===================== -->
+  <div
+    v-if="modalItemOpen"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+    @click.self="fecharModalItem"
+  >
+    <div class="w-full max-w-[780px] overflow-hidden rounded-2xl border border-border-ui bg-bg-card shadow-xl">
+      <div class="p-5 border-b border-border-ui bg-bg-page/50 flex items-center justify-between">
+        <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
+          {{ modalItemEditando ? 'Editar item' : 'Novo item (extra na venda)' }}
         </div>
 
-        <div class="p-6 space-y-5">
+        <Button variant="secondary" size="sm" type="button" @click="fecharModalItem">
+          Fechar
+        </Button>
+      </div>
+
+      <div class="p-6 space-y-5">
           <div class="grid grid-cols-12 gap-4 items-end">
             <Input
               class="col-span-12 md:col-span-6"
@@ -526,22 +528,21 @@
             />
           </div>
 
-          <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">
+          <div class="text-[10px] font-black uppercase tracking-widest text-text-soft">
             * Esse item é extra na venda (não altera o orçamento).
           </div>
         </div>
 
-        <div class="p-5 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3">
-          <Button variant="secondary" type="button" @click="fecharModalItem">
-            Cancelar
-          </Button>
-          <Button variant="primary" type="button" @click="salvarItemDoModal">
-            Salvar item
-          </Button>
-        </div>
-      </Card>
+      <div class="p-5 border-t border-border-ui bg-bg-page/50 flex justify-end gap-3">
+        <Button variant="secondary" type="button" @click="fecharModalItem">
+          Cancelar
+        </Button>
+        <Button variant="primary" type="button" @click="salvarItemDoModal">
+          Salvar item
+        </Button>
+      </div>
     </div>
-  </Card>
+  </div>
 
   <!-- ARQUIVOS MODAL GLOBAL (PWA) -->
   <ArquivosModal

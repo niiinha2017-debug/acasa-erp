@@ -80,7 +80,8 @@ export class PontoService {
         ? base
         : `https://${base}`;
 
-    return `${normalized.replace(/\/+$/, '')}/ponto/ponto.apk`;
+    // APK fica em /ponto.apk na raiz do subdomínio
+    return `${normalized.replace(/\/+$/, '')}/ponto.apk`;
   }
 
   private assertFuncionarioAtivo(status: any) {

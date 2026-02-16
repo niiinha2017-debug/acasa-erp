@@ -229,7 +229,8 @@ async function gerar() {
     const pontoBaseUrl = 'https://ponto.acasamarcenaria.com.br'
     const codeEnc = encodeURIComponent(code)
     const fallbackAtivacaoUrl = `${pontoBaseUrl}/ativar?code=${codeEnc}`
-    const fallbackApkUrl = `${pontoBaseUrl}/ponto/ponto.apk`
+    // APK fica em /ponto.apk na raiz do subdomínio
+    const fallbackApkUrl = `${pontoBaseUrl}/ponto.apk`
 
     let ativacaoUrl = String(data.url || '').trim() || fallbackAtivacaoUrl
     try {
@@ -264,7 +265,7 @@ async function copiar(texto) {
   }
 }
 
-function abrirWhats() {
+async function abrirWhats() {
   if (!podeGerar.value) return notify.error('Acesso negado.')
   if (!convite.value?.apkUrl || !convite.value?.webUrl) {
     notify.error('Convite sem links validos para envio.')
@@ -295,6 +296,25 @@ ${ativacaoUrl}
 Se expirar, me avise que eu gero outro.`
 
   const url = `https://wa.me/?text=${encodeURIComponent(msg)}`
+
+  // Se estiver rodando dentro do Tauri, tenta usar a API global para abrir no navegador padrão.
+  const isTauri = typeof window !== 'undefined' && (window.__TAURI__ || window.__TAURI_INTERNALS__)
+
+  if (isTauri) {
+    try {
+      // @ts-ignore - objeto global injetado pelo Tauri
+      const tauriShell = window.__TAURI__?.shell
+      if (tauriShell && typeof tauriShell.open === 'function') {
+        await tauriShell.open(url)
+        return
+      }
+    } catch (e) {
+      console.error('[PONTO_WHATS_TAURI]', e)
+      // se der erro, cai para o fluxo web abaixo
+    }
+  }
+
+  // Fallback: comportamento padrão web
   try {
     const opened = window.open(url, '_blank', 'noopener,noreferrer')
     if (opened) return

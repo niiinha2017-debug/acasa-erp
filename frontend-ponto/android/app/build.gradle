@@ -7,8 +7,13 @@ import java.io.FileInputStream
 // ---- KEYS (release signing) ----
 def keystorePropertiesFile = rootProject.file("keystore.properties")
 def keystoreProperties = new Properties()
+def hasKeystoreProps = false
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    hasKeystoreProps = keystoreProperties['storeFile'] &&
+            keystoreProperties['storePassword'] &&
+            keystoreProperties['keyAlias'] &&
+            keystoreProperties['keyPassword']
 }
 
 android {
@@ -19,7 +24,7 @@ android {
         applicationId "br.com.acasa.ponto"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-    versionCode 11
+    versionCode 17
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -43,8 +48,8 @@ android {
 
     signingConfigs {
         release {
-            // Só configura se existir o arquivo (não quebra o build do dev/CI)
-            if (keystorePropertiesFile.exists()) {
+            // Só configura se existir o arquivo COMPLETO de keystore
+            if (hasKeystoreProps) {
                 storeFile file(keystoreProperties['storeFile'])
                 storePassword keystoreProperties['storePassword']
                 keyAlias keystoreProperties['keyAlias']
@@ -55,8 +60,10 @@ android {
 
     buildTypes {
         release {
-            // ✅ Assina o release (para de sair -unsigned.apk)
-            signingConfig signingConfigs.release
+            // ✅ Assina o release (para de sair -unsigned.apk) SE a keystore estiver configurada
+            if (hasKeystoreProps) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }

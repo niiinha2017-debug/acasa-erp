@@ -142,9 +142,7 @@ router.isReady().then(() => {
 })
 
 const maybeRunUpdater = async () => {
-  const updaterEnabled = String(import.meta.env.VITE_TAURI_UPDATER || 'false') === 'true'
-  if (!updaterEnabled) return
-
+  // Só roda quando estiver dentro do Tauri (desktop).
   if (!window.__TAURI__ && !window.__TAURI_INTERNALS__) return
 
   try {
@@ -160,6 +158,7 @@ const maybeRunUpdater = async () => {
   }
 }
 
+// Desktop (Tauri): checa atualização automaticamente ao iniciar o app.
 maybeRunUpdater()
 
 const setAppTitleWithVersion = async () => {

@@ -5,7 +5,7 @@
 
       <PageHeader
         title="Contas a Pagar"
-        subtitle="Soma das compras e despesas do período, com detalhamento por data"
+        subtitle="Soma de todas as compras do período e relatório descritivo por item"
         icon="pi pi-arrow-down-right"
       />
 
@@ -44,10 +44,14 @@
           </Button>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="rounded-xl border border-orange-200 bg-orange-50/50 p-4">
-          <p class="text-[10px] font-black text-orange-600 uppercase tracking-wider mb-1">Compras do período</p>
+          <p class="text-[10px] font-black text-orange-600 uppercase tracking-wider mb-1">Soma de todas as compras do período</p>
           <p class="text-xl font-black text-slate-800 tabular-nums">{{ formatarMoeda(totais.compras) }}</p>
+        </div>
+        <div class="rounded-xl border border-blue-200 bg-blue-50/50 p-4">
+          <p class="text-[10px] font-black text-blue-600 uppercase tracking-wider mb-1">Fechamentos</p>
+          <p class="text-xl font-black text-slate-800 tabular-nums">{{ formatarMoeda(totais.fechamentos) }}</p>
         </div>
         <div class="rounded-xl border border-purple-200 bg-purple-50/50 p-4">
           <p class="text-[10px] font-black text-purple-600 uppercase tracking-wider mb-1">Despesas do período</p>
@@ -112,9 +116,31 @@
                   :key="bloco.fornecedor + idx"
                   class="border-b border-slate-100 last:border-b-0"
                 >
-                  <div class="bg-slate-100/80 px-4 py-2 border-b border-slate-200">
+                  <div class="bg-slate-100/80 px-4 py-2 border-b border-slate-200 flex items-center justify-between gap-2 flex-wrap">
                     <span class="text-[10px] font-black text-slate-600 uppercase tracking-wider">{{ bloco.fornecedor }}</span>
                     <span class="ml-2 text-[10px] font-bold text-slate-500">— {{ bloco.itens.length }} item(ns) · {{ formatarMoeda(bloco.total) }}</span>
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <button
+                        v-if="fornecedorIdDoBloco(bloco) && blocoItensComPendentes(bloco)"
+                        type="button"
+                        @click="abrirModalFechamento(fornecedorIdDoBloco(bloco))"
+                        class="h-8 px-3 rounded-lg bg-indigo-500 text-white text-[10px] font-bold uppercase tracking-wide hover:bg-indigo-600 active:scale-[0.98] transition-all inline-flex items-center gap-1.5 shrink-0"
+                        title="Fechamento único do mês deste fornecedor"
+                      >
+                        <i class="pi pi-calendar-times text-xs"></i>
+                        <span>Fechamento do mês</span>
+                      </button>
+                      <button
+                        v-if="getFechamentoAbertoDoBloco(bloco)"
+                        type="button"
+                        @click="darBaixa(getFechamentoAbertoDoBloco(bloco))"
+                        class="h-8 px-3 rounded-lg bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-wide hover:bg-emerald-600 active:scale-[0.98] transition-all inline-flex items-center gap-1.5 shrink-0"
+                        title="Pagar a conta do mês (fechamento)"
+                      >
+                        <i class="pi pi-check text-xs"></i>
+                        <span>Pagar conta do mês</span>
+                      </button>
+                    </div>
                   </div>
                   <Table 
                     :columns="columns" 
@@ -141,12 +167,8 @@
                     <span class="text-sm font-bold text-slate-800 uppercase tracking-tight">
                       {{ row.fornecedor_nome || 'DESPESA OPERACIONAL' }}
                     </span>
-                    <span class="text-[10px] font-medium text-slate-400 uppercase tracking-wide">
-                      {{ row.descricao || row.observacao }}
-                      <span v-if="row.parcela_info" class="text-slate-500"> · {{ row.parcela_info }}</span>
-                    </span>
-                    <span v-if="row.origem === 'COMPRA' && row.detalhe_produtos?.length" class="text-[10px] text-slate-500 mt-1">
-                      Produtos: {{ row.detalhe_produtos.join(', ') }}
+                    <span class="text-[10px] font-medium text-slate-600 tracking-wide">
+                      {{ relatorioDescritivo(row) }}
                     </span>
                   </div>
                 </template>
@@ -237,7 +259,7 @@ const nomeFornecedorFechamento = computed(() => {
   return o?.label || 'Fornecedor'
 })
 
-// Lista filtrada pela busca (fornecedor, descrição, origem)
+// Lista filtrada pela busca (fornecedor, descrição, origem, relatório descritivo, produtos)
 const listaFiltrada = computed(() => {
   const q = (filtroBusca.value || '').trim().toLowerCase()
   if (!q) return listaCompleta.value
@@ -246,7 +268,9 @@ const listaFiltrada = computed(() => {
     const descricao = (r.descricao || '').toLowerCase()
     const origem = (r.origem || '').toLowerCase()
     const observacao = (r.observacao || '').toLowerCase()
-    return fornecedor.includes(q) || descricao.includes(q) || origem.includes(q) || observacao.includes(q)
+    const relatorio = (r.relatorio_descritivo || '').toLowerCase()
+    const produtos = (r.detalhe_produtos || []).join(' ').toLowerCase()
+    return fornecedor.includes(q) || descricao.includes(q) || origem.includes(q) || observacao.includes(q) || relatorio.includes(q) || produtos.includes(q)
   })
 })
 
@@ -351,24 +375,51 @@ const rowsPorDataPorFornecedor = computed(() => {
   return result
 })
 
-// Totais: consideram a lista filtrada pela busca (para refletir o que está na tela)
+// Totais: soma de todas as compras do período (só COMPRA), fechamentos, despesas e total
 const totais = computed(() => {
   const list = listaFiltrada.value
   let compras = 0
+  let fechamentos = 0
   let despesas = 0
   for (const r of list) {
-    if (r.origem === 'COMPRA' || r.origem === 'FECHAMENTO') compras += Number(r.valor || 0)
+    if (r.origem === 'COMPRA') compras += Number(r.valor || 0)
+    else if (r.origem === 'FECHAMENTO') fechamentos += Number(r.valor || 0)
     else if (r.origem === 'DESPESA') despesas += Number(r.valor || 0)
   }
   return {
-    compras: compras,
-    despesas: despesas,
-    total: compras + despesas,
+    compras,
+    fechamentos,
+    despesas,
+    total: compras + fechamentos + despesas,
   }
 })
 
 function somaGrupo(itens) {
   return itens.reduce((s, r) => s + Number(r.valor || 0), 0)
+}
+
+// Relatório descritivo: usa o texto vindo do backend (COMPRA/FECHAMENTO) ou monta para DESPESA
+function relatorioDescritivo(row) {
+  if (row.relatorio_descritivo) return row.relatorio_descritivo
+  const partes = [row.descricao || row.observacao].filter(Boolean)
+  if (row.parcela_info) partes.push(row.parcela_info)
+  return partes.join(' · ') || '—'
+}
+
+// Fechamento único do mês: id do fornecedor do bloco (primeiro item com fornecedor_id)
+function fornecedorIdDoBloco(bloco) {
+  const item = (bloco?.itens || []).find((i) => i.fornecedor_id)
+  return item ? item.fornecedor_id : null
+}
+
+// Bloco tem itens pendentes (fornecedor + não pagos) para mostrar botão Fechamento do mês
+function blocoItensComPendentes(bloco) {
+  return (bloco?.itens || []).some((i) => i.fornecedor_id && i.status !== 'PAGO')
+}
+
+// Fechamento (conta do mês) em aberto no bloco — para mostrar botão "Pagar conta do mês"
+function getFechamentoAbertoDoBloco(bloco) {
+  return (bloco?.itens || []).find((i) => i.origem === 'FECHAMENTO' && i.status !== 'PAGO') || null
 }
 
 // Resumo do grupo (fornecedor ou categoria + total) para vista oculta

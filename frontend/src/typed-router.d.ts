@@ -219,6 +219,13 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
+    '/orcamentos/lista': RouteRecordInfo<
+      '/orcamentos/lista',
+      '/orcamentos/lista',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/orcamentos/processo': RouteRecordInfo<
       '/orcamentos/processo',
       '/orcamentos/processo',
@@ -516,6 +523,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/orcamentos/cliente/[id].vue': {
       routes:
         | '/orcamentos/cliente/[id]'
+      views:
+        | never
+    }
+    'src/pages/orcamentos/lista.vue': {
+      routes:
+        | '/orcamentos/lista'
       views:
         | never
     }

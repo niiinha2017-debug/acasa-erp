@@ -4,7 +4,9 @@ set -euo pipefail
 KEY_PATH="/c/Users/Julyana Duarte/.ssh/acasa_key"
 EC2_HOST="ec2-user@54.164.55.32"
 REMOTE_ERP_DIR="/var/www/aplicativo/erp"
-REMOTE_PONTO_DIR="/var/www/aplicativo/ponto"
+# Relógio de ponto será servido em um vhost/subdomínio próprio (ponto.acasamarcenaria.com.br).
+# Mantemos o APK em /var/www/ponto para ficar simples no nginx.
+REMOTE_PONTO_DIR="/var/www/ponto"
 
 ERP_DIR="/d/Sistema ERP/acasa-erp/frontend"
 PONTO_DIR="/d/Sistema ERP/acasa-erp/frontend-ponto"

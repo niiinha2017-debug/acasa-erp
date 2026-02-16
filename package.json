@@ -4,7 +4,9 @@
     "version:desktop:sync": "node scripts/bump-desktop-version.mjs --sync",
     "build:frontend:all": "cd frontend && npm run build:all",
     "tauri:dev": "cd frontend && npm run tauri:dev",
-    "tauri:build": "cd frontend && npm run tauri:build"
+    "tauri:build": "cd frontend && npm run tauri:build",
+    "deploy:all": "bash scripts/deploy-all.sh",
+    "deploy:apps": "bash scripts/deploy-apps.sh"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",

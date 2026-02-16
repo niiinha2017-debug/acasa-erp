@@ -1,13 +1,21 @@
 <template>
-  <div class="page-container">
-    <Card>
+  <div class="w-full h-full">
+    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
+      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
+
       <PageHeader
         :title="isNovo ? 'Novo Orçamento' : `Orçamento #${orcamentoId}`"
         subtitle="Cadastro operacional do orçamento"
         icon="pi pi-briefcase"
-        :backTo="'/orcamentos'"
       >
         <template #actions>
+          <RouterLink
+            to="/orcamentos"
+            class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-text-soft hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"
+          >
+            <i class="pi pi-arrow-left text-xs"></i>
+            Voltar
+          </RouterLink>
           <Button
             v-if="can('orcamentos.ver')"
             variant="primary"
@@ -21,10 +29,10 @@
         </template>
       </PageHeader>
 
-      <div class="p-6 space-y-8">
+      <div class="p-6 md:p-8 border-t border-border-ui space-y-8">
         <!-- CLIENTE -->
         <div class="space-y-3">
-          <div class="text-xs font-black uppercase tracking-widest text-slate-500">
+          <div class="text-xs font-black uppercase tracking-widest text-text-soft">
             Cliente
           </div>
 
@@ -39,15 +47,15 @@
           </div>
         </div>
 
-        <div class="h-px bg-slate-100"></div>
+        <div class="h-px bg-border-ui"></div>
 
         <!-- ITEM (FORM) -->
         <div class="space-y-4">
-          <div class="text-xs font-black uppercase tracking-widest text-slate-500">
+          <div class="text-xs font-black uppercase tracking-widest text-text-soft">
             Itens do Orçamento
           </div>
 
-          <div class="p-6 rounded-3xl border border-slate-100 bg-white space-y-6">
+          <div class="p-6 rounded-2xl border border-border-ui bg-bg-page space-y-6">
             <div class="grid grid-cols-12 gap-6">
               <div class="col-span-12 md:col-span-8">
                 <Input
@@ -67,13 +75,13 @@
               </div>
 
               <div class="col-span-12">
-                <label class="text-[10px] font-black uppercase text-slate-400 mb-2 block ml-1">
+                <label class="text-[10px] font-black uppercase text-text-soft mb-2 block ml-1">
                   ACABAMENTO / DESCRIÇÃO (TÓPICOS)
                 </label>
                 <textarea
                   v-model="ambForm.descricao"
                   rows="4"
-                  class="w-full p-4 rounded-2xl bg-slate-50 border border-slate-100 text-sm outline-none resize-none"
+                  class="w-full p-4 rounded-2xl bg-bg-page border border-border-ui text-sm text-text-main outline-none resize-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
                   placeholder="* MDF azul&#10;* MDF verde&#10;* puxador perfil"
                 ></textarea>
               </div>
@@ -115,119 +123,132 @@
                   {{ format.currency(row.valor_unitario) }}
                 </span>
               </template>
-<template #cell-acoes="{ row }">
-  <TableActions
-    :id="row.id ?? row.__idx"
-    perm-edit="orcamentos.editar"
-    perm-delete="orcamentos.editar"
-    @edit="iniciarEdicao(row.__idx)"
-    @delete="confirmarRemoverItem(row.__idx)"
-  />
-</template>
-
+              <template #cell-acoes="{ row }">
+                <TableActions
+                  :id="row.id ?? row.__idx"
+                  perm-edit="orcamentos.editar"
+                  perm-delete="orcamentos.editar"
+                  @edit="iniciarEdicao(row.__idx)"
+                  @delete="confirmarRemoverItem(row.__idx)"
+                />
+              </template>
             </Table>
           </div>
         </div>
 
-        <div class="h-px bg-slate-100"></div>
+        <div class="h-px bg-border-ui"></div>
 
-        <!-- ARQUIVOS + TOTAL -->
-        <div class="grid grid-cols-12 gap-6">
-<div class="col-span-12 lg:col-span-7 space-y-3">
-  <div class="flex items-center justify-between">
-    <div class="text-xs font-black uppercase tracking-widest text-slate-500">
-      Arquivos
-    </div>
-
-    <div class="flex items-center gap-2">
-      <input ref="fileInput" type="file" class="hidden" @change="onPickArquivo" />
-
-      <Button
-        v-if="can(permSalvarOrc()) && can('arquivos.criar')"
-        size="sm"
-        variant="ghost"
-        type="button"
-        @click="clicarAdicionarArquivo"
-      >
-        <i class="pi pi-upload mr-1"></i> ADICIONAR
-      </Button>
-    </div>
-  </div>
-
-  <p v-if="isNovo" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-    Se necessário, o orçamento será criado automaticamente ao anexar (cliente obrigatório).
-  </p>
-
-  <div class="rounded-3xl border border-slate-200 bg-white overflow-hidden min-h-[220px]">
-    <Table
-      :columns="colArquivos"
-      :rows="arquivos"
-      :loading="loadingArquivos"
-      empty-text="Nenhum arquivo anexado."
-      :boxed="false"
-    >
-      <template #cell-nome="{ row }">
-        <div class="flex flex-col">
-          <span class="text-xs font-black text-slate-800">
-            {{ row.nome || row.filename }}
-          </span>
-          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-            {{ row.mime_type || 'ARQUIVO' }}
-          </span>
-        </div>
-      </template>
-
-      <template #cell-acoes="{ row }">
-        <div class="flex justify-end gap-2">
-<Button
-  v-if="can('arquivos.ver') || can('orcamentos.ver')"
-  variant="secondary"
-  size="sm"
-  type="button"
-  @click="abrirArquivo(row)"
->
-  Ver
-</Button>
-
-
-          <Button
-            v-if="can('arquivos.excluir') && can(permSalvarOrc())"
-            variant="danger"
-            size="sm"
-            type="button"
-            @click="excluirArquivo(row.id)"
-          >
-            Excluir
-          </Button>
-        </div>
-      </template>
-    </Table>
-  </div>
-</div>
-
-
-          <div class="col-span-12 lg:col-span-5 space-y-4">
-            <div class="p-6 rounded-3xl border border-slate-100 bg-white">
-              <div class="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">
-                Total do Orçamento
+        <!-- 1. IMAGENS PARA O PDF + 2. ANEXOS/DOCUMENTOS -->
+        <div class="space-y-6">
+            <!-- 1. Imagens para o PDF do orçamento -->
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <div class="text-xs font-black uppercase tracking-widest text-text-soft">
+                  Imagens para o PDF do orçamento
+                </div>
+                <div class="flex items-center gap-2">
+                  <input ref="fileInputImagemPdf" type="file" class="hidden" accept="image/*" @change="(e) => onPickArquivo(e, 'IMAGEM_PDF')" />
+                  <Button
+                    v-if="can(permSalvarOrc()) && can('arquivos.criar')"
+                    size="sm"
+                    variant="ghost"
+                    type="button"
+                    @click="clicarAdicionarArquivo('IMAGEM_PDF')"
+                  >
+                    <i class="pi pi-upload mr-1"></i> ADICIONAR IMAGEM
+                  </Button>
+                </div>
               </div>
-
-              <div class="text-3xl font-black">
-                {{ format.currency(total) }}
+              <p class="text-[10px] font-bold text-text-soft uppercase tracking-wider">
+                Estas imagens serão incluídas no PDF ao clicar em &quot;Gerar PDF&quot;. Cada imagem é redimensionada para caber na folha A4: até 2 imagens por página, com área útil de aproximadamente 199 mm (largura) × 131 mm (altura) por imagem. O PDF exibe ainda as dimensões em pixels abaixo de cada imagem.
+              </p>
+              <div class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden max-h-[200px] overflow-y-auto">
+                <Table
+                  :columns="colArquivos"
+                  :rows="imagensParaPdf"
+                  :loading="loadingImagensPdf"
+                  empty-text="Nenhuma imagem para o PDF."
+                  :boxed="false"
+                >
+                  <template #cell-nome="{ row }">
+                    <div class="flex flex-col">
+                      <span class="text-xs font-black text-text-main">{{ row.nome || row.filename }}</span>
+                      <span class="text-[10px] font-bold text-text-soft uppercase tracking-wider">{{ row.mime_type || 'IMAGEM' }}</span>
+                    </div>
+                  </template>
+                  <template #cell-acoes="{ row }">
+                    <div class="flex justify-end gap-2">
+                      <Button v-if="can('arquivos.ver') || can('orcamentos.ver')" variant="secondary" size="sm" type="button" @click="abrirArquivo(row)">Ver</Button>
+                      <Button v-if="can('arquivos.excluir') && can(permSalvarOrc())" variant="danger" size="sm" type="button" @click="excluirArquivo(row.id, 'IMAGEM_PDF')">Excluir</Button>
+                    </div>
+                  </template>
+                </Table>
               </div>
             </div>
 
-            <FormActions
-              :is-edit="!isNovo"
-              :loading-save="saving"
-              @save="salvarTudo"
-              @delete="confirmarExcluirOrcamento"
-              class="flex-row-reverse"
-            />
+            <!-- 2. Anexos e documentos (PDF etc) -->
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <div class="text-xs font-black uppercase tracking-widest text-text-soft">
+                  Anexos e documentos
+                </div>
+                <div class="flex items-center gap-2">
+                  <input ref="fileInputAnexos" type="file" class="hidden" @change="(e) => onPickArquivo(e, 'ANEXO')" />
+                  <Button
+                    v-if="can(permSalvarOrc()) && can('arquivos.criar')"
+                    size="sm"
+                    variant="ghost"
+                    type="button"
+                    @click="clicarAdicionarArquivo('ANEXO')"
+                  >
+                    <i class="pi pi-upload mr-1"></i> ADICIONAR ARQUIVO
+                  </Button>
+                </div>
+              </div>
+              <p class="text-[10px] font-bold text-text-soft uppercase tracking-wider">
+                PDFs e outros arquivos anexados ao orçamento. Não são inseridos no PDF gerado; ficam apenas vinculados ao orçamento.
+              </p>
+              <div class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden max-h-[200px] overflow-y-auto">
+                <Table
+                  :columns="colArquivos"
+                  :rows="anexosDocumentos"
+                  :loading="loadingAnexos"
+                  empty-text="Nenhum anexo ou documento."
+                  :boxed="false"
+                >
+                  <template #cell-nome="{ row }">
+                    <div class="flex flex-col">
+                      <span class="text-xs font-black text-text-main">{{ row.nome || row.filename }}</span>
+                      <span class="text-[10px] font-bold text-text-soft uppercase tracking-wider">{{ row.mime_type || 'ARQUIVO' }}</span>
+                    </div>
+                  </template>
+                  <template #cell-acoes="{ row }">
+                    <div class="flex justify-end gap-2">
+                      <Button v-if="can('arquivos.ver') || can('orcamentos.ver')" variant="secondary" size="sm" type="button" @click="abrirArquivo(row)">Ver</Button>
+                      <Button v-if="can('arquivos.excluir') && can(permSalvarOrc())" variant="danger" size="sm" type="button" @click="excluirArquivo(row.id, 'ANEXO')">Excluir</Button>
+                    </div>
+                  </template>
+                </Table>
+              </div>
+            </div>
+        </div>
+
+        <!-- Barra de finalização fixa embaixo -->
+        <div class="sticky bottom-0 left-0 right-0 border-t border-border-ui bg-bg-card -mx-6 md:-mx-8 px-6 md:px-8 py-4 mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-black uppercase text-text-soft tracking-widest">Total do orçamento</span>
+            <span class="text-xl font-black text-text-main">{{ format.currency(total) }}</span>
           </div>
+          <FormActions
+            :is-edit="!isNovo"
+            :loading-save="saving"
+            @save="salvarTudo"
+            @delete="confirmarExcluirOrcamento"
+            class="flex-row-reverse gap-2 w-full sm:w-auto"
+          />
         </div>
       </div>
-    </Card>
+    </div>
   </div>
 </template>
 
@@ -265,9 +286,12 @@ const editIdx = ref(null)
 const draft = reactive({ cliente_id: null, ambientes: [] })
 const ambForm = reactive({ nome_ambiente: '', descricao: '', valor_unitario: '', observacao: '' })
 
-const arquivos = ref([])
-const loadingArquivos = ref(false)
-const fileInput = ref(null)
+const imagensParaPdf = ref([])
+const anexosDocumentos = ref([])
+const loadingImagensPdf = ref(false)
+const loadingAnexos = ref(false)
+const fileInputImagemPdf = ref(null)
+const fileInputAnexos = ref(null)
 
 const colArquivos = [
   { key: 'nome', label: 'ARQUIVO' },
@@ -398,14 +422,33 @@ async function salvarTudo() {
   }
 }
 
-async function carregarArquivos() {
+async function carregarImagensParaPdf() {
   const id = orcamentoIdReal.value
   if (!id || String(id) === 'novo') {
-    arquivos.value = []
+    imagensParaPdf.value = []
     return
   }
+  loadingImagensPdf.value = true
+  try {
+    const res = await ArquivosService.listar({
+      ownerType: 'ORCAMENTO',
+      ownerId: Number(String(id).replace(/\D/g, '')),
+      categoria: 'IMAGEM_PDF',
+    })
+    const arr = res?.data?.data ?? res?.data ?? res
+    imagensParaPdf.value = Array.isArray(arr) ? arr : []
+  } finally {
+    loadingImagensPdf.value = false
+  }
+}
 
-  loadingArquivos.value = true
+async function carregarAnexosDocumentos() {
+  const id = orcamentoIdReal.value
+  if (!id || String(id) === 'novo') {
+    anexosDocumentos.value = []
+    return
+  }
+  loadingAnexos.value = true
   try {
     const res = await ArquivosService.listar({
       ownerType: 'ORCAMENTO',
@@ -413,10 +456,15 @@ async function carregarArquivos() {
       categoria: 'ANEXO',
     })
     const arr = res?.data?.data ?? res?.data ?? res
-    arquivos.value = Array.isArray(arr) ? arr : []
+    anexosDocumentos.value = Array.isArray(arr) ? arr : []
   } finally {
-    loadingArquivos.value = false
+    loadingAnexos.value = false
   }
+}
+
+function carregarArquivos() {
+  carregarImagensParaPdf()
+  carregarAnexosDocumentos()
 }
 
 function abrirArquivo(row) {
@@ -428,7 +476,7 @@ function abrirArquivo(row) {
   router.push(`/arquivos/${row.id}?name=${name}&type=${type}&backTo=${backTo}`)
 }
 
-async function excluirArquivo(arquivoId) {
+async function excluirArquivo(arquivoId, _categoria) {
   if (!can('arquivos.excluir') || !can(permSalvarOrc())) return notify.error('Acesso negado.')
 
   const ok = await confirm.show('Excluir arquivo?', 'Esta ação não pode ser desfeita.')
@@ -443,17 +491,18 @@ async function excluirArquivo(arquivoId) {
   }
 }
 
-async function clicarAdicionarArquivo() {
+async function clicarAdicionarArquivo(categoria) {
   if (!can(permSalvarOrc()) || !can('arquivos.criar')) return notify.error('Acesso negado.')
 
-  await ensureOrcamentoId() // cria se for novo (cliente obrigatório)
+  await ensureOrcamentoId()
   await Promise.resolve()
 
-  if (!fileInput.value) return notify.error('Input de arquivo não montado.')
-  fileInput.value.click()
+  const input = categoria === 'IMAGEM_PDF' ? fileInputImagemPdf.value : fileInputAnexos.value
+  if (!input) return notify.error('Input de arquivo não montado.')
+  input.click()
 }
 
-async function onPickArquivo(e) {
+async function onPickArquivo(e, categoria) {
   const file = e.target.files?.[0]
   e.target.value = ''
   if (!file) return
@@ -467,10 +516,10 @@ async function onPickArquivo(e) {
     await ArquivosService.upload({
       ownerType: 'ORCAMENTO',
       ownerId: Number(String(id).replace(/\D/g, '')),
-      categoria: 'ANEXO',
+      categoria: categoria || 'ANEXO',
       file,
     })
-    notify.success('Arquivo anexado.')
+    notify.success(categoria === 'IMAGEM_PDF' ? 'Imagem adicionada ao PDF.' : 'Arquivo anexado.')
     await carregarArquivos()
   } catch (err) {
     notify.error(err?.response?.data?.message || 'Erro ao anexar arquivo.')

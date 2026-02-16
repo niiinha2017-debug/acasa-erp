@@ -188,59 +188,89 @@ export class FinanceiroService {
       // =====================
       // COMPRAS (origem = COMPRA)
       // =====================
-      ...compras.map((c) => ({
-        id: c.id,
-        origem: 'COMPRA',
+      ...compras.map((c) => {
+        const itens = (c as any).itens || [];
+        const nomesProdutos = itens.map((i: any) => i.nome_produto || '').filter(Boolean);
+        // Data da compra: usar UTC para evitar dia errado por fuso (ex: 13/02 00:00 UTC → 12/02 no BR)
+        let dataCompraStr = '';
+        if (c.data_compra) {
+          const d = new Date(c.data_compra);
+          const day = String(d.getUTCDate()).padStart(2, '0');
+          const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+          const year = d.getUTCFullYear();
+          dataCompraStr = `${day}/${month}/${year}`;
+        }
+        const parteProdutos = nomesProdutos.length > 0
+          ? `Produtos: ${nomesProdutos.join(', ')}`
+          : (c.tipo_compra || 'COMPRA');
+        const relatorioDescritivo = dataCompraStr
+          ? `COMPRA em ${dataCompraStr} — ${parteProdutos}`
+          : `COMPRA — ${parteProdutos}`;
 
-        fornecedor_id: c.fornecedor_id,
-        fornecedor_nome: c.fornecedor?.nome_fantasia || null,
+        return {
+          id: c.id,
+          origem: 'COMPRA',
 
-        descricao: 'COMPRA',
-        observacao: c.tipo_compra,
-        detalhe_produtos: ((c as any).itens || []).map((i: any) => i.nome_produto || '').filter(Boolean),
+          fornecedor_id: c.fornecedor_id,
+          fornecedor_nome: c.fornecedor?.nome_fantasia || null,
 
-        valor: c.valor_total,
-        valor_compensado: 0,
+          descricao: 'COMPRA',
+          observacao: c.tipo_compra,
+          detalhe_produtos: nomesProdutos,
+          data_compra: c.data_compra,
+          relatorio_descritivo: relatorioDescritivo,
 
-        vencimento_em: c.vencimento_em,
-        pago_em: null,
-        status: c.status,
+          valor: c.valor_total,
+          valor_compensado: 0,
 
-        mes_referencia: null,
-        ano_referencia: null,
-        cheques_total: 0,
-      })),
+          vencimento_em: c.vencimento_em,
+          pago_em: null,
+          status: c.status,
+
+          mes_referencia: null,
+          ano_referencia: null,
+          cheques_total: 0,
+        };
+      }),
 
       // =====================
       // FECHAMENTOS (origem = FECHAMENTO)
       // =====================
-      ...fechamentos.map((cp) => ({
-        id: cp.id,
-        origem: 'FECHAMENTO',
-
-        fornecedor_id: cp.fornecedor_id,
-        fornecedor_nome: cp.fornecedor?.nome_fantasia || null,
-
-        descricao:
+      ...fechamentos.map((cp) => {
+        const desc =
           cp.descricao ||
-          `Fechamento ${String(cp.mes_referencia).padStart(2, '0')}/${cp.ano_referencia}`,
-        observacao: cp.observacao || null,
+          `Fechamento ${String(cp.mes_referencia).padStart(2, '0')}/${cp.ano_referencia}`;
+        const relatorioDescritivo = cp.observacao
+          ? `${desc} — ${cp.observacao}`
+          : desc;
 
-        valor: cp.valor_original,
-        valor_compensado: cp.valor_compensado,
+        return {
+          id: cp.id,
+          origem: 'FECHAMENTO',
 
-        vencimento_em: cp.vencimento_em,
-        pago_em: cp.pago_em,
-        status: cp.status,
+          fornecedor_id: cp.fornecedor_id,
+          fornecedor_nome: cp.fornecedor?.nome_fantasia || null,
 
-        mes_referencia: cp.mes_referencia,
-        ano_referencia: cp.ano_referencia,
+          descricao: desc,
+          observacao: cp.observacao || null,
+          relatorio_descritivo: relatorioDescritivo,
 
-        cheques_total: 0,
+          valor: cp.valor_original,
+          valor_compensado: cp.valor_compensado,
 
-        fornecedor_cobrador_nome: cp.fornecedor_cobrador?.nome_fantasia || null,
-        forma_pagamento_chave: cp.forma_pagamento_chave || null,
-      })),
+          vencimento_em: cp.vencimento_em,
+          pago_em: cp.pago_em,
+          status: cp.status,
+
+          mes_referencia: cp.mes_referencia,
+          ano_referencia: cp.ano_referencia,
+
+          cheques_total: 0,
+
+          fornecedor_cobrador_nome: cp.fornecedor_cobrador?.nome_fantasia || null,
+          forma_pagamento_chave: cp.forma_pagamento_chave || null,
+        };
+      }),
     ];
   }
 
@@ -692,12 +722,16 @@ export class FinanceiroService {
           ano_referencia: ano,
 
           descricao: `Fechamento ${String(mes).padStart(2, '0')}/${ano}`,
-          observacao: [
-            `AUTO compras=${totalCompras} planos=${totalPlanos} comp_auto=${compensado_auto}`,
-            `MANUAL dever=${valorDever} creditar=${valorCreditar} pct=${pctLiberado}% desc=${descontoPct}%`,
-            `CALC debito=${debito_base} cred_auto=${credito_auto} cred_extra=${credito_extra} comp_total=${compensado_total} subtotal=${subtotal} desc_val=${desconto_valor} total=${total_final}`,
-            `PAGTO tipo=${tipo} parcelas=${parcelas.length}`,
-          ].join(' | '),
+          observacao: (() => {
+            const txt = [
+              `AUTO compras=${totalCompras} planos=${totalPlanos} comp_auto=${compensado_auto}`,
+              `MANUAL dever=${valorDever} creditar=${valorCreditar} pct=${pctLiberado}% desc=${descontoPct}%`,
+              `CALC debito=${debito_base} cred_auto=${credito_auto} cred_extra=${credito_extra} comp_total=${compensado_total} subtotal=${subtotal} desc_val=${desconto_valor} total=${total_final}`,
+              `PAGTO tipo=${tipo} parcelas=${parcelas.length}`,
+            ].join(' | ');
+            const maxLen = 191; // VARCHAR(191) na tabela contas_pagar
+            return txt.length <= maxLen ? txt : txt.slice(0, maxLen - 3) + '...';
+          })(),
 
           valor_original: total_final,
           valor_compensado: compensado_total,
@@ -716,41 +750,40 @@ export class FinanceiroService {
 
       // 4) cria TITULOS FINANCEIROS (apenas parcelas com valor > 0; saldo 0 = nenhum título)
       if (parcelasComValor.length > 0) {
+        const metaJson = {
+          fornecedor_id: fornecedor_id ?? null,
+          fornecedor_cobrador_id: fornecedor_cobrador_id ?? null,
+          mes,
+          ano,
+          total_compras: totalCompras,
+          total_planos: totalPlanos,
+          valor_dever: valorDever,
+          valor_creditar: valorCreditar,
+          percentual_liberado: pctLiberado,
+          desconto_percentual: descontoPct,
+          debito_base,
+          credito_auto,
+          credito_extra,
+          compensado_total,
+          total_final,
+        };
         await tx.titulos_financeiros.createMany({
-          data: parcelasComValor.map((p: any) => ({
-            conta_pagar_id: contaPagar.id,
-
-            tipo, // CHEQUE | CARTAO
-            valor: Number(p.valor),
-
-            status: SF.EM_ABERTO,
-            vencimento_em: this.toDate(p.vencimento_em, 'vencimento_em'),
-            pago_em: null,
-
-            parcelas_total: parcelas.length,
-            parcela_numero: Number(p.parcela),
-
-          meta: {
-            fornecedor_id,
-            fornecedor_cobrador_id,
-            mes,
-            ano,
-
-            total_compras: totalCompras,
-            total_planos: totalPlanos,
-
-            valor_dever: valorDever,
-            valor_creditar: valorCreditar,
-            percentual_liberado: pctLiberado,
-            desconto_percentual: descontoPct,
-
-            debito_base,
-            credito_auto,
-            credito_extra,
-            compensado_total,
-            total_final,
-          },
-        })),
+          data: parcelasComValor.map((p: any) => {
+            const venc = p.vencimento_em
+              ? this.toDate(p.vencimento_em, 'vencimento_em')
+              : vencPadrao;
+            return {
+              conta_pagar_id: contaPagar.id,
+              tipo,
+              valor: Number(p.valor),
+              status: SF.EM_ABERTO,
+              vencimento_em: venc,
+              pago_em: null,
+              parcelas_total: parcelas.length,
+              parcela_numero: Number(p.parcela),
+              meta: metaJson,
+            };
+          }),
         });
       }
 

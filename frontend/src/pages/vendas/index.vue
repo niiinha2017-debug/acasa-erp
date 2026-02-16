@@ -1,112 +1,119 @@
 <template>
-  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-page-in">
-    
-    <PageHeader 
-      title="Vendas"
-      subtitle="Gestão comercial e acompanhamento de pedidos"
-      icon="pi pi-shopping-cart"
-    >
-      <template #actions>
-        <Button 
-          v-if="can('vendas.criar')"
-          variant="primary" 
-          @click="router.push('/vendas/novo')"
-        >
-          <i class="pi pi-plus mr-2"></i>
-          Nova Venda
-        </Button>
-      </template>
-    </PageHeader>
+  <div class="w-full h-full">
+    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
+      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
 
-    <!-- Métricas -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <MetricCard
-        label="Total de Vendas"
-        :value="vendas.length"
-        icon="pi pi-shopping-bag"
-        color="slate"
-      />
-      
-      <MetricCard
-        label="Faturamento Total"
-        :value="format.currency(vendas.reduce((acc, v) => acc + Number(v.valor_vendido || 0), 0))"
-        icon="pi pi-dollar"
-        color="emerald"
-      />
-
-      <MetricCard
-        label="Ticket Médio"
-        :value="format.currency(vendas.length ? (vendas.reduce((acc, v) => acc + Number(v.valor_vendido || 0), 0) / vendas.length) : 0)"
-        icon="pi pi-chart-line"
-        color="blue"
-      />
-
-      <MetricCard
-        label="Em Produção"
-        :value="vendas.filter(v => String(v.status).toUpperCase().includes('PRODU')).length"
-        icon="pi pi-cog"
-        color="amber"
-      />
-    </div>
-
-    <!-- Filtros e Tabela -->
-    <div class="space-y-4">
-      <div class="w-full md:w-96">
-        <SearchInput
-          v-model="filtro"
-          placeholder="Buscar cliente, status ou ID..."
-        />
-      </div>
-
-      <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-        <Table 
-          :columns="columns" 
-          :rows="filtradas" 
-          :loading="loading" 
-          :boxed="false"
-        >
-          <template #cell-cliente="{ row }">
-            <div class="flex flex-col py-1">
-              <span class="text-sm font-bold text-slate-800 uppercase tracking-tight leading-tight">
-                {{ row.cliente?.nome_completo || row.cliente?.razao_social || row.cliente?.nome || 'Consumidor' }}
-              </span>
-              <span class="text-[10px] font-bold text-slate-400 tracking-wider uppercase">
-                {{ row.cliente?.cpf || row.cliente?.cnpj || 'Sem documento' }}
-              </span>
+      <PageHeader
+        title="Vendas"
+        subtitle="Gestão comercial e acompanhamento de pedidos"
+        icon="pi pi-shopping-cart"
+      >
+        <template #actions>
+          <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+            <div class="w-full sm:w-80 order-1 sm:order-0">
+              <SearchInput
+                v-model="filtro"
+                placeholder="Buscar cliente, status ou ID..."
+              />
             </div>
-          </template>
+            <Button
+              v-if="can('vendas.criar')"
+              variant="primary"
+              class="flex-shrink-0 h-11 rounded-xl font-black uppercase tracking-[0.16em] text-[11px]"
+              @click="router.push('/vendas/novo')"
+            >
+              <i class="pi pi-plus mr-2"></i>
+              Nova Venda
+            </Button>
+          </div>
+        </template>
+      </PageHeader>
 
-          <template #cell-status="{ row }">
-            <StatusBadge :value="row.status" />
-          </template>
+      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-6">
+        <div v-if="loading" class="text-center py-10">
+          <i class="pi pi-spin pi-spinner text-2xl text-text-soft"></i>
+        </div>
 
-          <template #cell-valor_total="{ row }">
-            <div class="flex flex-col items-end">
-              <span class="text-sm font-black text-slate-800 tabular-nums">
-                {{ format.currency(row.valor_total) }}
-              </span>
-              <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Valor Final</span>
-            </div>
-          </template>
-
-          <template #cell-data_venda="{ row }">
-            <div class="flex flex-col">
-              <span class="text-xs font-bold text-slate-700">
-                {{ format.date(row.data_venda) }}
-              </span>
-              <span class="text-[9px] font-bold text-slate-400 uppercase">Data Venda</span>
-            </div>
-          </template>
-
-          <template #cell-acoes="{ row }">
-            <TableActions
-              :can-edit="can('vendas.editar')"
-              :can-delete="can('vendas.excluir')"
-              @edit="router.push(`/vendas/${row.id}`)"
-              @delete="confirmarExcluirVenda(row.id)"
+        <template v-else>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <MetricCard
+              label="Total de Vendas"
+              :value="vendas.length"
+              icon="pi pi-shopping-bag"
+              color="slate"
             />
-          </template>
-        </Table>
+            <MetricCard
+              label="Faturamento Total"
+              :value="format.currency(vendas.reduce((acc, v) => acc + Number(v.valor_vendido ?? v.valor_total ?? 0), 0))"
+              icon="pi pi-dollar"
+              color="emerald"
+            />
+            <MetricCard
+              label="Ticket Médio"
+              :value="format.currency(vendas.length ? (vendas.reduce((acc, v) => acc + Number(v.valor_vendido ?? v.valor_total ?? 0), 0) / vendas.length) : 0)"
+              icon="pi pi-chart-line"
+              color="blue"
+            />
+            <MetricCard
+              label="Em Produção"
+              :value="vendas.filter(v => String(v.status).toUpperCase().includes('PRODU')).length"
+              icon="pi pi-cog"
+              color="amber"
+            />
+          </div>
+
+          <div class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden">
+            <Table
+              :columns="columns"
+              :rows="filtradas"
+              :loading="loading"
+              empty-text="Nenhuma venda encontrada."
+              :boxed="false"
+            >
+              <template #cell-cliente="{ row }">
+                <div class="flex flex-col py-1">
+                  <span class="text-sm font-bold text-text-main uppercase tracking-tight leading-tight">
+                    {{ row.cliente?.nome_completo || row.cliente?.razao_social || row.cliente?.nome || 'Consumidor' }}
+                  </span>
+                  <span class="text-[10px] font-bold text-text-soft tracking-wider uppercase">
+                    {{ row.cliente?.cpf || row.cliente?.cnpj || 'Sem documento' }}
+                  </span>
+                </div>
+              </template>
+
+              <template #cell-status="{ row }">
+                <StatusBadge :value="row.status" />
+              </template>
+
+              <template #cell-valor_total="{ row }">
+                <div class="flex flex-col items-end">
+                  <span class="text-sm font-black text-text-main tabular-nums">
+                    {{ format.currency(row.valor_total ?? row.valor_vendido ?? 0) }}
+                  </span>
+                  <span class="text-[9px] font-bold text-text-soft uppercase tracking-tighter">Valor Final</span>
+                </div>
+              </template>
+
+              <template #cell-data_venda="{ row }">
+                <div class="flex flex-col">
+                  <span class="text-xs font-bold text-text-main">
+                    {{ format.date(row.data_venda) }}
+                  </span>
+                  <span class="text-[9px] font-bold text-text-soft uppercase">Data Venda</span>
+                </div>
+              </template>
+
+              <template #cell-acoes="{ row }">
+                <TableActions
+                  :can-edit="can('vendas.editar')"
+                  :can-delete="can('vendas.excluir')"
+                  @edit="router.push(`/vendas/${row.id}`)"
+                  @delete="confirmarExcluirVenda(row.id)"
+                />
+              </template>
+            </Table>
+          </div>
+        </template>
       </div>
     </div>
   </div>
