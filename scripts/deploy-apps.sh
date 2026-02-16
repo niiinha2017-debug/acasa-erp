@@ -38,7 +38,7 @@ ssh -i "$KEY_PATH" "$EC2_HOST" \
 echo "==> Publicando landing do Ponto (ponto.acasamarcenaria.com.br)"
 scp -i "$KEY_PATH" "$ROOT_DIR/aplicativo-site/index-ponto.html" "$EC2_HOST:/home/ec2-user/index-ponto.html"
 ssh -i "$KEY_PATH" "$EC2_HOST" \
-  "sudo mkdir -p $REMOTE_PONTO_DIR && sudo mv /home/ec2-user/index-ponto.html $REMOTE_PONTO_DIR/index.html && sudo chown nginx:nginx $REMOTE_PONTO_DIR/index.html && sudo chmod 644 $REMOTE_PONTO_DIR/index.html"
+  "sudo mkdir -p $REMOTE_PONTO_DIR && sudo find $REMOTE_PONTO_DIR -mindepth 1 -maxdepth 1 ! -name 'ponto.apk' -exec rm -rf {} \; 2>/dev/null || true && sudo mv /home/ec2-user/index-ponto.html $REMOTE_PONTO_DIR/index.html && sudo chown nginx:nginx $REMOTE_PONTO_DIR && sudo chmod 644 $REMOTE_PONTO_DIR/index.html"
 
 echo "OK: Android (ERP + Ponto) + Desktop (Tauri) + version.json + landing Ponto atualizados."
 

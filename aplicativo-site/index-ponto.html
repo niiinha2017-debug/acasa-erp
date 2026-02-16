@@ -127,22 +127,27 @@
 <body>
   <main class="card">
     <h1>Ponto ACASA</h1>
-    <p>Pagina rapida para ativacao e instalacao do app de ponto.</p>
+    <p>1) Baixe o app. 2) Depois ative com o codigo.</p>
 
     <div class="stack">
-      <label for="code">Codigo de ativacao</label>
-      <input id="code" placeholder="Ex.: A1B2C3D4" />
+      <label>1. Baixar o app (Android)</label>
+      <div class="row">
+        <a id="btnApk" class="btn btn-primary" href="https://ponto.acasamarcenaria.com.br/ponto.apk" download="ponto.apk" target="_blank" rel="noopener noreferrer">Baixar APK</a>
+        <button id="btnWhats" class="btn btn-ok" type="button">Enviar no WhatsApp</button>
+      </div>
     </div>
 
-    <div class="row">
-      <a id="btnAtivar" class="btn btn-primary" href="#" target="_blank" rel="noopener noreferrer">Abrir ativacao</a>
-      <a id="btnApk" class="btn btn-soft" href="https://ponto.acasamarcenaria.com.br/ponto.apk" download="ponto.apk" target="_blank" rel="noopener noreferrer">Baixar APK</a>
-      <button id="btnWhats" class="btn btn-ok" type="button">Enviar no WhatsApp</button>
-      <button id="btnCopiar" class="btn btn-soft" type="button">Copiar links</button>
+    <div class="stack" style="margin-top: 24px;">
+      <label for="code">2. Depois: codigo de ativacao</label>
+      <input id="code" placeholder="Ex.: A1B2C3D4" />
+      <div class="row">
+        <a id="btnAtivar" class="btn btn-primary" href="#" target="_blank" rel="noopener noreferrer">Abrir ativacao</a>
+        <button id="btnCopiar" class="btn btn-soft" type="button">Copiar links</button>
+      </div>
     </div>
 
     <div id="ativacaoUrl" class="mono"></div>
-    <p class="muted">Se no ambiente local nao abrir popup, copie os links e cole no WhatsApp manualmente.</p>
+    <p class="muted">Copie os links e envie no WhatsApp se precisar.</p>
   </main>
 
   <script>

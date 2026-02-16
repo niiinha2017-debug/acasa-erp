@@ -227,8 +227,10 @@ jobs:
             set -euo pipefail
             sudo mkdir -p '$REMOTE_WEB/erp' '$REMOTE_WEB/updates/android' '$REMOTE_PONTO'
             sudo mv /tmp/Acasa.apk '$REMOTE_WEB/erp/Acasa.apk'
-            sudo mv /tmp/ponto.apk '$REMOTE_PONTO/ponto.apk'
             sudo mv /tmp/version.json '$REMOTE_WEB/updates/android/version.json'
+            # Ponto: remover tudo exceto ponto.apk (tira build antigo do Vue), depois colocar landing
+            sudo find '$REMOTE_PONTO' -mindepth 1 -maxdepth 1 ! -name 'ponto.apk' -exec rm -rf {} \; 2>/dev/null || true
+            sudo mv /tmp/ponto.apk '$REMOTE_PONTO/ponto.apk'
             sudo mv /tmp/index-ponto.html '$REMOTE_PONTO/index.html'
             sudo chown -R nginx:nginx '$REMOTE_WEB/erp' '$REMOTE_WEB/updates' '$REMOTE_PONTO'
             sudo chmod 644 '$REMOTE_WEB/erp/Acasa.apk' '$REMOTE_WEB/updates/android/version.json' '$REMOTE_PONTO/ponto.apk' '$REMOTE_PONTO/index.html'

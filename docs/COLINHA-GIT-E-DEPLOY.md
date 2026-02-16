@@ -35,7 +35,7 @@ Quando quiser rodar o deploy na sua máquina em vez do CI:
 ```bash
 cd "d:\Sistema ERP\acasa-erp"
 git add .
-git commit -m "atualização"
+git commit -m "2.0"
 git push
 ```
 

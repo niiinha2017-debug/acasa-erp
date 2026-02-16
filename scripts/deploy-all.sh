@@ -23,7 +23,7 @@ SKIP_BUMP=1 bash "$ROOT_DIR/scripts/deploy-tauri.sh"
 echo "==> Publicando landing do Ponto (index no subdominio ponto)"
 scp -i "$KEY_PATH" "$ROOT_DIR/aplicativo-site/index-ponto.html" "$EC2_HOST:/home/ec2-user/index-ponto.html"
 ssh -i "$KEY_PATH" "$EC2_HOST" \
-  "sudo mkdir -p $REMOTE_PONTO_DIR && sudo mv /home/ec2-user/index-ponto.html $REMOTE_PONTO_DIR/index.html && sudo chown nginx:nginx $REMOTE_PONTO_DIR/index.html && sudo chmod 644 $REMOTE_PONTO_DIR/index.html"
+  "sudo mkdir -p $REMOTE_PONTO_DIR && sudo find $REMOTE_PONTO_DIR -mindepth 1 -maxdepth 1 ! -name 'ponto.apk' -exec rm -rf {} \; 2>/dev/null || true && sudo mv /home/ec2-user/index-ponto.html $REMOTE_PONTO_DIR/index.html && sudo chown nginx:nginx $REMOTE_PONTO_DIR && sudo chmod 644 $REMOTE_PONTO_DIR/index.html"
 
 echo "==> Publicando version.json (Android: botão 'Verificar atualização')"
 mkdir -p "$ROOT_DIR/aplicativo-site/updates/android"
