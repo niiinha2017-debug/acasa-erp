@@ -17,7 +17,7 @@
 
         }
     ],
-    "java.configuration.updateBuildConfiguration": "interactive",
+    "java.configuration.updateBuildConfiguration": "automatic",
     "CodeGPT.apiKey": "CodeGPT Plus Beta"
 }
 

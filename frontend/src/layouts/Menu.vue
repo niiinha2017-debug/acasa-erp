@@ -13,8 +13,8 @@
         </div>
       </RouterLink>
 
-      <!-- MENU DESKTOP: Comercial | Produção separados, depois demais seções -->
-      <div class="hidden md:flex items-center gap-2 rounded-2xl border border-border-ui bg-slate-50/70 dark:bg-slate-900/40 px-2 py-1.5">
+      <!-- MENU DESKTOP: a partir de lg (1024px); tablet em paisagem continua com hambúrguer -->
+      <div class="hidden lg:flex items-center gap-2 rounded-2xl border border-border-ui bg-slate-50/70 dark:bg-slate-900/40 px-2 py-1.5">
         <template v-for="(section, index) in NAV_VISIVEL" :key="section.key">
           <NavMenu
             :label="section.label"
@@ -55,25 +55,25 @@
         <!-- LOGOUT DESKTOP -->
         <button
           @click="handleLogout" 
-          class="hidden md:flex items-center justify-center w-9 h-9 text-red-500 border border-border-ui rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 transition-all"
+          class="hidden lg:flex items-center justify-center w-9 h-9 text-red-500 border border-border-ui rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 transition-all"
           title="Sair"
         >
           <i class="pi pi-power-off text-sm"></i>
         </button>
 
-        <!-- MENU MOBILE -->
+        <!-- MENU MOBILE / TABLET (hambúrguer até lg) -->
         <button
           @click="isMobileMenuOpen = true" 
-          class="md:hidden w-9 h-9 flex items-center justify-center border border-border-ui rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+          class="lg:hidden w-9 h-9 flex items-center justify-center border border-border-ui rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
         >
           <i class="pi pi-bars text-sm"></i>
         </button>
       </div>
     </div>
 
-    <!-- MENU MOBILE DRAWER -->
+    <!-- MENU MOBILE / TABLET DRAWER (visível até lg) -->
     <transition name="slide-right">
-      <div v-if="isMobileMenuOpen" class="fixed inset-0 z-[1000] md:hidden">
+      <div v-if="isMobileMenuOpen" class="fixed inset-0 z-[1000] lg:hidden">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="isMobileMenuOpen = false"></div>
         
         <div class="absolute right-0 top-0 bottom-0 w-[300px] bg-bg-card border-l border-border-ui flex flex-col">

@@ -1,5 +1,17 @@
 # Colinha — Git + Deploy (A CASA ERP)
 
+## Plataformas (quem usa o quê)
+
+| Dispositivo | Tecnologia | Arquivo / como instalar |
+|-------------|------------|--------------------------|
+| **PC/notebook (Windows)** | Tauri | `AcasaSetup.exe` — instalador desktop |
+| **Celular e tablet Android** | Capacitor (APK) | **ERP:** `Acasa.apk` · **Ponto:** `ponto.apk` |
+| **Navegador (web)** | Vue + backend | Site ERP em aplicativo.acasamarcenaria.com.br |
+
+**Tauri não roda no Android.** No tablet (e no celular) usa o mesmo APK do ERP ou do Ponto; não tem instalador Tauri para Android.
+
+---
+
 ## Git (antes de fazer deploy)
 
 ```bash
@@ -34,7 +46,7 @@ bash scripts/deploy-android.sh
 ### Só Desktop (Tauri)
 
 ```bash
-export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="sua_senha_da_tauri_private_key"
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="acasa3358"
 bash scripts/deploy-tauri.sh
 ```
 
