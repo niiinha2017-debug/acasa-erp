@@ -40,6 +40,18 @@
           <i :class="isDark ? 'pi pi-sun' : 'pi pi-moon'" class="text-sm"></i>
         </button>
 
+        <!-- VERIFICAR ATUALIZAÇÃO (Tauri desktop ou Capacitor Android) -->
+        <button
+          v-if="showUpdateButton"
+          type="button"
+          :disabled="checkingUpdate"
+          @click="verificarAtualizacao"
+          class="w-9 h-9 flex items-center justify-center text-slate-500 dark:text-slate-300 border border-border-ui rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all disabled:opacity-50"
+          title="Verificar atualização"
+        >
+          <i class="pi pi-download text-sm" :class="{ 'pi-spin': checkingUpdate }"></i>
+        </button>
+
         <!-- LOGOUT DESKTOP -->
         <button
           @click="handleLogout" 
@@ -118,9 +130,51 @@ import { useRoute, useRouter } from 'vue-router'
 import { NAV_SCHEMA } from '@/services/navigation'
 import { PermissoesService } from '@/services/index'
 import storage from '@/utils/storage'
+import { notify } from '@/services/notify'
+import { checkAndroidUpdate } from '@/utils/check-android-update'
 import { useDark, useToggle } from '@vueuse/core'
 
 const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '?'
+
+const isTauri = computed(() => typeof window !== 'undefined' && (!!window.__TAURI__ || !!window.__TAURI_INTERNALS__))
+const isCapacitorAndroid = ref(false)
+const showUpdateButton = computed(() => isTauri.value || isCapacitorAndroid.value)
+const checkingUpdate = ref(false)
+
+async function verificarAtualizacao() {
+  if (!showUpdateButton.value || checkingUpdate.value) return
+  checkingUpdate.value = true
+  try {
+    if (isTauri.value) {
+      const tauri = window.__TAURI__ ?? window.__TAURI_INTERNALS__
+      const updater = tauri?.plugin?.('updater') ?? tauri?.updater
+      if (!updater?.check) {
+        notify.info('Verificação de atualização não disponível neste ambiente.')
+        return
+      }
+      const update = await updater.check()
+      if (update?.available) {
+        notify.success(`Atualização ${update.version} disponível. Baixando e instalando...`)
+        await update.downloadAndInstall()
+        notify.success('Instalação concluída. Reiniciando o app...')
+        window.location.reload()
+      } else {
+        notify.success('Você está na versão mais recente.')
+      }
+    } else {
+      // Capacitor Android
+      const result = await checkAndroidUpdate()
+      if (!result.updateAvailable) {
+        notify.success('Você está na versão mais recente.')
+      }
+    }
+  } catch (err) {
+    console.error('[Menu verificarAtualizacao]', err)
+    notify.error(err?.message || 'Não foi possível verificar atualização.')
+  } finally {
+    checkingUpdate.value = false
+  }
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -215,7 +269,20 @@ const carregarMenu = async () => {
   }
 }
 
-onMounted(carregarMenu)
+async function detectarCapacitorAndroid() {
+  if (typeof window === 'undefined' || window.__TAURI__) return
+  try {
+    const { Capacitor } = await import('@capacitor/core')
+    if (Capacitor.getPlatform() === 'android') isCapacitorAndroid.value = true
+  } catch {
+    // não é ambiente Capacitor
+  }
+}
+
+onMounted(() => {
+  carregarMenu()
+  detectarCapacitorAndroid()
+})
 </script>
 
 <style scoped>

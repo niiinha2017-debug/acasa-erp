@@ -22,24 +22,30 @@ function isNewer (serverVersion, currentVersion) {
   return false
 }
 
+/**
+ * @returns {Promise<{ updateAvailable: boolean, serverVersion?: string, url?: string }>}
+ */
 export async function checkAndroidUpdate () {
-  if (typeof window === 'undefined' || window.__TAURI__) return
+  const noUpdate = { updateAvailable: false }
+  if (typeof window === 'undefined' || window.__TAURI__) return noUpdate
   const currentVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0'
   try {
     const { Capacitor } = await import('@capacitor/core')
-    if (Capacitor.getPlatform() !== 'android') return
+    if (Capacitor.getPlatform() !== 'android') return noUpdate
     const res = await fetch(VERSION_JSON_URL, { cache: 'no-store' })
-    if (!res.ok) return
+    if (!res.ok) return noUpdate
     const data = await res.json()
     const serverVersion = data?.version
     const url = data?.url
-    if (!serverVersion || !url) return
-    if (!isNewer(serverVersion, currentVersion)) return
+    if (!serverVersion || !url) return noUpdate
+    if (!isNewer(serverVersion, currentVersion)) return noUpdate
     const msg = `Há uma nova versão de A Casa Marcenaria (${serverVersion}) disponível.\n\nDeseja abrir a página para baixar e instalar?`
     if (window.confirm(msg)) {
       window.open(url, '_blank')
     }
+    return { updateAvailable: true, serverVersion, url }
   } catch (err) {
     console.warn('[checkAndroidUpdate]', err)
+    return noUpdate
   }
 }

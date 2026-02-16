@@ -7,7 +7,7 @@ import { UpdateOrcamentoItemDto } from './dto/update-orcamento-item.dto';
 import * as path from 'path';
 import { renderHeaderA4Png, resolveAsset } from '../pdf/render-header-a4';
 import PDFKitDoc from 'pdfkit';
-import { existsSync, promises as fs } from 'fs';
+import { existsSync, readFileSync, promises as fs } from 'fs';
 import { randomBytes } from 'crypto';
 import sizeOf from 'image-size';
 
@@ -313,13 +313,13 @@ export class OrcamentosService {
               doc.y = y;
               doc.image(absPath, marginImg, doc.y, {
                 fit: [imgWidth, imgHeight],
-                align: 'left',
-                valign: 'top',
+                align: 'left' as 'left' | 'center' | 'right',
+                valign: 'top' as 'top' | 'center' | 'bottom',
               });
               // Descritivo com dimensões da imagem (onde faz o download)
               let dimensoesTexto = '';
               try {
-                const dims = sizeOf(absPath);
+                const dims = sizeOf(readFileSync(absPath));
                 if (dims?.width && dims?.height) {
                   dimensoesTexto = `Dimensões: Largura ${dims.width} px × Altura ${dims.height} px`;
                 }
