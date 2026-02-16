@@ -8,8 +8,11 @@ REMOTE_ERP_DIR="/var/www/aplicativo/erp"
 # Mantemos o APK em /var/www/ponto para ficar simples no nginx.
 REMOTE_PONTO_DIR="/var/www/ponto"
 
-ERP_DIR="/d/Sistema ERP/acasa-erp/frontend"
-PONTO_DIR="/d/Sistema ERP/acasa-erp/frontend-ponto"
+ROOT_DIR="/d/Sistema ERP/acasa-erp"
+ERP_DIR="$ROOT_DIR/frontend"
+PONTO_DIR="$ROOT_DIR/frontend-ponto"
+
+cd "$ROOT_DIR" || exit 1
 
 ERP_APK_LOCAL="$ERP_DIR/android/app/build/outputs/apk/release/app-release.apk"
 PONTO_APK_LOCAL="$PONTO_DIR/android/app/build/outputs/apk/release/app-release.apk"
@@ -28,6 +31,9 @@ npx cap sync android
 cd android
 ./gradlew assembleRelease
 
+ERP_VERSION=$(node -e "const j=require('../../package.json'); process.stdout.write(j.version||'')")
+echo "    ERP APK version: $ERP_VERSION (versionCode subiu no bump-android-version.py)"
+
 echo "==> Build Ponto (Capacitor)"
 cd "$PONTO_DIR"
 npm install
@@ -43,4 +49,4 @@ scp -i "$KEY_PATH" "$PONTO_APK_LOCAL" "$EC2_HOST:/home/ec2-user/$PONTO_APK_REMOT
 ssh -i "$KEY_PATH" "$EC2_HOST" \
   "sudo mkdir -p $REMOTE_ERP_DIR $REMOTE_PONTO_DIR && sudo mv /home/ec2-user/$ERP_APK_REMOTE $REMOTE_ERP_DIR/ && sudo mv /home/ec2-user/$PONTO_APK_REMOTE $REMOTE_PONTO_DIR/ && sudo chown -R nginx:nginx $REMOTE_ERP_DIR $REMOTE_PONTO_DIR"
 
-echo "OK: APKs enviados para $REMOTE_ERP_DIR e $REMOTE_PONTO_DIR"
+echo "OK: APKs enviados. ERP: https://aplicativo.acasamarcenaria.com.br/erp/Acasa.apk (sobrescreve o anterior)"

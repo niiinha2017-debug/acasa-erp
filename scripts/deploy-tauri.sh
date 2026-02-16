@@ -73,4 +73,4 @@ scp -i "$KEY_PATH" "$LATEST_JSON" "$EC2_HOST:/home/ec2-user/"
 ssh -i "$KEY_PATH" "$EC2_HOST" \
   "sudo mkdir -p $REMOTE_DIR $REMOTE_APP_DIR && sudo mv /home/ec2-user/$REMOTE_EXE_NAME $REMOTE_APP_DIR/ && sudo mv /home/ec2-user/latest.json $REMOTE_DIR/ && sudo chown -R nginx:nginx $REMOTE_DIR $REMOTE_APP_DIR"
 
-echo "OK: Atualizacao enviada para $BASE_URL/latest.json"
+echo "OK: Atualizacao enviada. Desktop: $BASE_URL (exe) | updates: https://aplicativo.acasamarcenaria.com.br/updates/tauri/latest.json"

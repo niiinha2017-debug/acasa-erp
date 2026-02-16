@@ -3,6 +3,14 @@ apply plugin: 'com.android.application'
 import java.util.Properties
 import java.io.FileInputStream
 
+// Versão do app = frontend/package.json (mesma do desktop)
+def packageJson = file("${project.projectDir}/../../package.json")
+def versionNameFromPkg = "1.0"
+if (packageJson.exists()) {
+    def pkg = new groovy.json.JsonSlurper().parseText(packageJson.text)
+    if (pkg.version) versionNameFromPkg = pkg.version
+}
+
 // ---- KEYS (release signing) ----
 def keystorePropertiesFile = rootProject.file("keystore.properties")
 def keystoreProperties = new Properties()
@@ -18,8 +26,8 @@ android {
         applicationId "com.acasa.erp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-    versionCode 20
-        versionName "1.0"
+    versionCode 21
+        versionName versionNameFromPkg
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         aaptOptions {
