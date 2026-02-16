@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Acasa",
-  "version": "0.1.15",
+  "version": "0.1.17",
   "identifier": "com.acasa.erp",
   "build": {
     "frontendDist": "../dist",

@@ -297,20 +297,28 @@ Se expirar, me avise que eu gero outro.`
 
   const url = `https://wa.me/?text=${encodeURIComponent(msg)}`
 
-  // Se estiver rodando dentro do Tauri, tenta usar a API global para abrir no navegador padrão.
+  // No Tauri: abre no navegador padrão via plugin Opener (ou Shell).
   const isTauri = typeof window !== 'undefined' && (window.__TAURI__ || window.__TAURI_INTERNALS__)
 
   if (isTauri) {
     try {
-      // @ts-ignore - objeto global injetado pelo Tauri
-      const tauriShell = window.__TAURI__?.shell
-      if (tauriShell && typeof tauriShell.open === 'function') {
-        await tauriShell.open(url)
+      const tauri = window.__TAURI__ ?? window.__TAURI_INTERNALS__
+      // Opener (Tauri 2) – abre URL no app padrão
+      if (tauri?.opener?.open) {
+        await tauri.opener.open(url)
+        return
+      }
+      if (typeof tauri?.opener?.openUrl === 'function') {
+        await tauri.opener.openUrl(url)
+        return
+      }
+      // Fallback: Shell (open)
+      if (tauri?.shell?.open) {
+        await tauri.shell.open(url)
         return
       }
     } catch (e) {
       console.error('[PONTO_WHATS_TAURI]', e)
-      // se der erro, cai para o fluxo web abaixo
     }
   }
 
