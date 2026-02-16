@@ -13,7 +13,12 @@ VERSION_JSON="$PROJECT_DIR/src-tauri/tauri.conf.json"
 cd "/d/Sistema ERP/acasa-erp"
 START_TAURI=$(date +%s)
 echo "[$(date +%H:%M:%S)] Início deploy Tauri (Rust + NSIS — pode levar vários minutos)"
-node scripts/bump-desktop-version.mjs
+
+# Só dá bump quando roda sozinho; deploy-all já fez o bump antes
+if [[ -z "${SKIP_BUMP:-}" ]]; then
+  node scripts/bump-desktop-version.mjs
+fi
+
 VERSION=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync('frontend/src-tauri/tauri.conf.json','utf8'));process.stdout.write(j.version)")
 echo "[$(date +%H:%M:%S)] Versão: $VERSION"
 

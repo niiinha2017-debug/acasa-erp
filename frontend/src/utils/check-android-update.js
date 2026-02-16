@@ -39,9 +39,14 @@ export async function checkAndroidUpdate () {
     const url = data?.url
     if (!serverVersion || !url) return noUpdate
     if (!isNewer(serverVersion, currentVersion)) return noUpdate
-    const msg = `Há uma nova versão de A Casa Marcenaria (${serverVersion}) disponível.\n\nDeseja abrir a página para baixar e instalar?`
+    const msg = `Há uma nova versão (${serverVersion}) disponível.\n\nAbrir no navegador para baixar e instalar o APK?`
     if (window.confirm(msg)) {
-      window.open(url, '_blank')
+      try {
+        const { Browser } = await import('@capacitor/browser')
+        await Browser.open({ url })
+      } catch {
+        window.open(url, '_blank')
+      }
     }
     return { updateAvailable: true, serverVersion, url }
   } catch (err) {

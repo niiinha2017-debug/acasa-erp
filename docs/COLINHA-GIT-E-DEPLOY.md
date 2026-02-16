@@ -8,18 +8,34 @@
 | **2. Desktop** | Instalador Windows (Tauri) | `AcasaSetup.exe` + updater (erp/ + updates/tauri/) |
 | **3. Web** | Site ERP + página de downloads | aplicativo.acasamarcenaria.com.br |
 
-Para **atualizar sempre os 3 pontos**, use um comando só (veja abaixo).
+Para **atualizar sempre os 3 pontos**, use **GitHub Actions** (recomendado) ou o script local abaixo.
 
 ---
 
-## Ritual: Git → Deploy dos 3 pontos
+## Opção 1: GitHub Actions (deploy automático)
+
+**Basta dar push na branch `main`.** O workflow faz:
+
+- Backend (EC2)
+- Frontend web + página de downloads
+- APKs (ERP + Ponto) → `erp/Acasa.apk` e subdomínio Ponto (`ponto.apk` + landing)
+- `version.json` (Android “Verificar atualização”)
+- Instalador Windows (Tauri) + `latest.json` (updater no desktop)
+
+Você **não precisa** rodar `deploy:all` na sua máquina. Confira os jobs em **Actions** no repositório. Os secrets (SSH, Android keystore, Tauri, certificado Windows) precisam estar configurados no GitHub.
+
+---
+
+## Opção 2: Deploy local (script)
+
+Quando quiser rodar o deploy na sua máquina em vez do CI:
 
 **1. Git (sempre antes do deploy)**
 
 ```bash
 cd "d:\Sistema ERP\acasa-erp"
 git add .
-git commit -m "sua mensagem"
+git commit -m "atualização"
 git push
 ```
 
@@ -28,7 +44,7 @@ git push
 Defina a senha do Tauri (só para o instalador Windows). No **Git Bash**:
 
 ```bash
-export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="sua_senha"
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="acasa3358"
 npm run deploy:all
 ```
 
@@ -39,7 +55,7 @@ $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = "sua_senha"
 npm run deploy:all
 ```
 
-O `deploy:all` atualiza, nesta ordem: **Android (ERP + Ponto)** → **Desktop (Tauri)** → **página de downloads** → **ERP Web** no servidor.
+O `deploy:all` atualiza, nesta ordem: **Android (ERP + Ponto)** → **Desktop (Tauri)** → **landing Ponto** → **página de downloads** → **ERP Web** no servidor.
 
 ---
 

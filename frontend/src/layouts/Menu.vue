@@ -155,9 +155,20 @@ async function verificarAtualizacao() {
       const update = await updater.check()
       if (update?.available) {
         notify.success(`Atualização ${update.version} disponível. Baixando e instalando...`)
-        await update.downloadAndInstall()
-        notify.success('Instalação concluída. Reiniciando o app...')
-        window.location.reload()
+        try {
+          await update.downloadAndInstall()
+          notify.success('Instalação concluída. Reiniciando o app...')
+          window.location.reload()
+        } catch (e) {
+          console.error('[Menu downloadAndInstall]', e)
+          notify.error('Download automático falhou. Abrindo a página para baixar manualmente.')
+          const tauri = window.__TAURI__ ?? window.__TAURI_INTERNALS__
+          const url = 'https://aplicativo.acasamarcenaria.com.br'
+          if (tauri?.opener?.open) await tauri.opener.open(url)
+          else if (typeof tauri?.opener?.openUrl === 'function') await tauri.opener.openUrl(url)
+          else if (tauri?.shell?.open) await tauri.shell.open(url)
+          else window.open(url, '_blank')
+        }
       } else {
         notify.success('Você está na versão mais recente.')
       }
@@ -170,7 +181,11 @@ async function verificarAtualizacao() {
     }
   } catch (err) {
     console.error('[Menu verificarAtualizacao]', err)
-    notify.error(err?.message || 'Não foi possível verificar atualização.')
+    const msg = err?.message || 'Não foi possível verificar atualização.'
+    notify.error(msg)
+    if (isTauri.value) {
+      notify.info('Baixe a versão mais recente em aplicativo.acasamarcenaria.com.br')
+    }
   } finally {
     checkingUpdate.value = false
   }

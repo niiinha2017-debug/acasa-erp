@@ -1,7 +1,7 @@
 {
   "name": "frontend-vue",
   "private": true,
-  "version": "0.1.19",
+  "version": "0.1.21",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -17,6 +17,7 @@
   "dependencies": {
     "@capacitor/android": "^8.0.2",
     "@capacitor/app": "^8.0.1",
+    "@capacitor/browser": "^6.0.2",
     "@capacitor/cli": "^7.4.5",
     "@capacitor/core": "^8.0.2",
     "@capacitor/ios": "^8.0.2",

@@ -10,6 +10,7 @@ env:
   SSH_USER: ${{ secrets.EC2_USER }}
   REMOTE_ROOT: /home/ec2-user/acasa-erp
   REMOTE_WEB: /var/www/aplicativo
+  REMOTE_PONTO: /var/www/ponto
 
 jobs:
   deploy-backend:
@@ -207,20 +208,30 @@ jobs:
       - name: Trust EC2 host
         run: ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
 
-      - name: Upload APKs to EC2
+      - name: Generate version.json (Android "Verificar atualização")
+        run: |
+          mkdir -p aplicativo-site/updates/android
+          node -e "
+          const p = require('./frontend/package.json');
+          const o = { version: p.version, url: 'https://aplicativo.acasamarcenaria.com.br/erp/Acasa.apk' };
+          require('fs').writeFileSync('aplicativo-site/updates/android/version.json', JSON.stringify(o, null, 2));
+          "
+
+      - name: Upload APKs + version.json + landing Ponto to EC2
         run: |
           scp frontend/android/app/build/outputs/apk/release/app-release.apk "$SSH_USER@$SSH_HOST:/tmp/Acasa.apk"
           scp frontend-ponto/android/app/build/outputs/apk/release/app-release.apk "$SSH_USER@$SSH_HOST:/tmp/ponto.apk"
+          scp aplicativo-site/updates/android/version.json "$SSH_USER@$SSH_HOST:/tmp/version.json"
+          scp aplicativo-site/index-ponto.html "$SSH_USER@$SSH_HOST:/tmp/index-ponto.html"
           ssh "$SSH_USER@$SSH_HOST" "
             set -euo pipefail
-            sudo mkdir -p '$REMOTE_WEB/erp' '$REMOTE_WEB/ponto'
+            sudo mkdir -p '$REMOTE_WEB/erp' '$REMOTE_WEB/updates/android' '$REMOTE_PONTO'
             sudo mv /tmp/Acasa.apk '$REMOTE_WEB/erp/Acasa.apk'
-            sudo mv /tmp/ponto.apk '$REMOTE_WEB/ponto/ponto.apk'
-            sudo chown -R nginx:nginx '$REMOTE_WEB/erp' '$REMOTE_WEB/ponto'
-            sudo find '$REMOTE_WEB/erp' -type d -exec chmod 755 {} \;
-            sudo find '$REMOTE_WEB/erp' -type f -exec chmod 644 {} \;
-            sudo find '$REMOTE_WEB/ponto' -type d -exec chmod 755 {} \;
-            sudo find '$REMOTE_WEB/ponto' -type f -exec chmod 644 {} \;
+            sudo mv /tmp/ponto.apk '$REMOTE_PONTO/ponto.apk'
+            sudo mv /tmp/version.json '$REMOTE_WEB/updates/android/version.json'
+            sudo mv /tmp/index-ponto.html '$REMOTE_PONTO/index.html'
+            sudo chown -R nginx:nginx '$REMOTE_WEB/erp' '$REMOTE_WEB/updates' '$REMOTE_PONTO'
+            sudo chmod 644 '$REMOTE_WEB/erp/Acasa.apk' '$REMOTE_WEB/updates/android/version.json' '$REMOTE_PONTO/ponto.apk' '$REMOTE_PONTO/index.html'
           "
 
   build-windows-installer:
@@ -317,12 +328,24 @@ jobs:
           $global:LASTEXITCODE = 0
 
           Copy-Item "$($exe.FullName)" "AcasaSetup.exe" -Force
+          $sigFile = $exe.FullName + ".sig"
+          if (Test-Path $sigFile) { Copy-Item $sigFile "installer.sig" -Force }
+
+      - name: Prepare updater latest.json data
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(node -e "console.log(require('./frontend/src-tauri/tauri.conf.json').version)")
+          echo "$VERSION" > version.txt
 
       - name: Upload signed installer artifact
         uses: actions/upload-artifact@v4
         with:
           name: acasa-windows-installer
-          path: AcasaSetup.exe
+          path: |
+            AcasaSetup.exe
+            installer.sig
+            version.txt
           if-no-files-found: error
 
   publish-windows-installer:
@@ -335,6 +358,31 @@ jobs:
           name: acasa-windows-installer
           path: .
 
+      - name: Generate latest.json (Tauri updater)
+        run: |
+          set -euo pipefail
+          VERSION=$(cat version.txt)
+          SIZE=$(stat -c %s AcasaSetup.exe)
+          SIG=$(cat installer.sig 2>/dev/null || echo "" | tr -d '\n')
+          PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          export VERSION SIZE SIG PUB_DATE
+          node -e "
+          const fs = require('fs');
+          const o = {
+            version: process.env.VERSION || '',
+            notes: 'Atualizacao do aplicativo',
+            pub_date: process.env.PUB_DATE || '',
+            platforms: {
+              'windows-x86_64': {
+                url: 'https://aplicativo.acasamarcenaria.com.br/erp/AcasaSetup.exe',
+                signature: (process.env.SIG || '').trim(),
+                size: parseInt(process.env.SIZE || '0', 10)
+              }
+            }
+          };
+          fs.writeFileSync('latest.json', JSON.stringify(o, null, 2));
+          "
+
       - name: Start SSH agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -343,15 +391,17 @@ jobs:
       - name: Trust EC2 host
         run: ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
 
-      - name: Upload installer to EC2
+      - name: Upload installer + latest.json to EC2
         run: |
           set -euo pipefail
           scp AcasaSetup.exe "$SSH_USER@$SSH_HOST:/tmp/AcasaSetup.exe"
+          scp latest.json "$SSH_USER@$SSH_HOST:/tmp/latest.json"
           ssh "$SSH_USER@$SSH_HOST" "
             set -euo pipefail
-            sudo mkdir -p '$REMOTE_WEB/erp'
+            sudo mkdir -p '$REMOTE_WEB/erp' '$REMOTE_WEB/updates/tauri'
             sudo mv /tmp/AcasaSetup.exe '$REMOTE_WEB/erp/AcasaSetup.exe'
-            sudo chown nginx:nginx '$REMOTE_WEB/erp/AcasaSetup.exe'
-            sudo chmod 644 '$REMOTE_WEB/erp/AcasaSetup.exe'
-            ls -lh '$REMOTE_WEB/erp/AcasaSetup.exe'
+            sudo mv /tmp/latest.json '$REMOTE_WEB/updates/tauri/latest.json'
+            sudo chown nginx:nginx '$REMOTE_WEB/erp/AcasaSetup.exe' '$REMOTE_WEB/updates/tauri/latest.json'
+            sudo chmod 644 '$REMOTE_WEB/erp/AcasaSetup.exe' '$REMOTE_WEB/updates/tauri/latest.json'
+            ls -lh '$REMOTE_WEB/erp/AcasaSetup.exe' '$REMOTE_WEB/updates/tauri/latest.json'
           "
