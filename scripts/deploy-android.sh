@@ -20,33 +20,37 @@ PONTO_APK_LOCAL="$PONTO_DIR/android/app/build/outputs/apk/release/app-release.ap
 ERP_APK_REMOTE="Acasa.apk"
 PONTO_APK_REMOTE="ponto.apk"
 
-echo "==> Bump Android versionCode + cache buster"
+START_TOTAL=$(date +%s)
+echo "[$(date +%H:%M:%S)] Início do deploy Android (ERP + Ponto)"
+
+echo "[$(date +%H:%M:%S)] ==> Bump Android versionCode + cache buster"
 python scripts/bump-android-version.py
 
-echo "==> Build ERP (Capacitor)"
+echo "[$(date +%H:%M:%S)] ==> Build ERP (Capacitor) — npm install + build + Gradle..."
 cd "$ERP_DIR"
-npm install
+npm install --prefer-offline --no-audit
 npm run build
 npx cap sync android
 cd android
 ./gradlew assembleRelease
 
 ERP_VERSION=$(node -e "const j=require('../../package.json'); process.stdout.write(j.version||'')")
-echo "    ERP APK version: $ERP_VERSION (versionCode subiu no bump-android-version.py)"
+echo "[$(date +%H:%M:%S)]     ERP APK version: $ERP_VERSION"
 
-echo "==> Build Ponto (Capacitor)"
+echo "[$(date +%H:%M:%S)] ==> Build Ponto (Capacitor) — npm install + build + Gradle..."
 cd "$PONTO_DIR"
-npm install
+npm install --prefer-offline --no-audit
 npm run build
 npx cap sync android
 cd android
 ./gradlew assembleRelease
 
-echo "==> Upload APKs"
+echo "[$(date +%H:%M:%S)] ==> Upload APKs"
 scp -i "$KEY_PATH" "$ERP_APK_LOCAL" "$EC2_HOST:/home/ec2-user/$ERP_APK_REMOTE"
 scp -i "$KEY_PATH" "$PONTO_APK_LOCAL" "$EC2_HOST:/home/ec2-user/$PONTO_APK_REMOTE"
 
 ssh -i "$KEY_PATH" "$EC2_HOST" \
   "sudo mkdir -p $REMOTE_ERP_DIR $REMOTE_PONTO_DIR && sudo mv /home/ec2-user/$ERP_APK_REMOTE $REMOTE_ERP_DIR/ && sudo mv /home/ec2-user/$PONTO_APK_REMOTE $REMOTE_PONTO_DIR/ && sudo chown -R nginx:nginx $REMOTE_ERP_DIR $REMOTE_PONTO_DIR"
 
-echo "OK: APKs enviados. ERP: https://aplicativo.acasamarcenaria.com.br/erp/Acasa.apk (sobrescreve o anterior)"
+ELAPSED=$(($(date +%s) - START_TOTAL))
+echo "[$(date +%H:%M:%S)] OK: APKs enviados em ${ELAPSED}s. ERP: https://aplicativo.acasamarcenaria.com.br/erp/Acasa.apk"

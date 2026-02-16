@@ -19,7 +19,7 @@ cd "d:\Sistema ERP\acasa-erp"
 
 git status
 git add .
-git commit -m "Descrição do que mudou"
+git commit -m "atualização 18"
 git push
 ```
 
@@ -81,3 +81,11 @@ bash scripts/deploy-tauri.sh
    `npm run deploy:all`.
 3. **Só APKs:**  
    `bash scripts/deploy-android.sh`.
+
+---
+
+## Deploy demorando?
+
+- **Android (ERP + Ponto):** dois builds Gradle + dois `npm run build` — costuma levar 5–15 min. Os scripts agora mostram `[HH:MM:SS]` e o tempo total no final.
+- **Tauri (desktop):** compilação Rust + NSIS — pode levar 5–15 min (mais na primeira vez).
+- **Dica:** se só mudou o frontend/APK, rode só `bash scripts/deploy-android.sh`. Se só mudou o instalador Windows, rode só `bash scripts/deploy-tauri.sh` (com a senha definida). Assim você não espera o que não precisa.

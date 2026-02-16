@@ -11,8 +11,11 @@ PROJECT_DIR="/d/Sistema ERP/acasa-erp/frontend"
 BUNDLE_DIR="$PROJECT_DIR/src-tauri/target/release/bundle/nsis"
 VERSION_JSON="$PROJECT_DIR/src-tauri/tauri.conf.json"
 cd "/d/Sistema ERP/acasa-erp"
+START_TAURI=$(date +%s)
+echo "[$(date +%H:%M:%S)] Início deploy Tauri (Rust + NSIS — pode levar vários minutos)"
 node scripts/bump-desktop-version.mjs
 VERSION=$(node -e "const fs=require('fs');const j=JSON.parse(fs.readFileSync('frontend/src-tauri/tauri.conf.json','utf8'));process.stdout.write(j.version)")
+echo "[$(date +%H:%M:%S)] Versão: $VERSION"
 
 EXE_FILE="$BUNDLE_DIR/Acasa_${VERSION}_x64-setup.exe"
 REMOTE_EXE_NAME="AcasaSetup.exe"
@@ -39,8 +42,10 @@ export TAURI_SIGNING_PRIVATE_KEY="$(cat "$TAURI_SIGNING_PRIVATE_KEY_PATH")"
 
 cd "$PROJECT_DIR"
 
-npm install
+echo "[$(date +%H:%M:%S)] npm install..."
+npm install --prefer-offline --no-audit
 
+echo "[$(date +%H:%M:%S)] Tauri build (Rust + NSIS) — aguarde..."
 npm run tauri -- build --bundles "nsis"
 
 unset TAURI_SIGNING_PRIVATE_KEY
@@ -73,4 +78,5 @@ scp -i "$KEY_PATH" "$LATEST_JSON" "$EC2_HOST:/home/ec2-user/"
 ssh -i "$KEY_PATH" "$EC2_HOST" \
   "sudo mkdir -p $REMOTE_DIR $REMOTE_APP_DIR && sudo mv /home/ec2-user/$REMOTE_EXE_NAME $REMOTE_APP_DIR/ && sudo mv /home/ec2-user/latest.json $REMOTE_DIR/ && sudo chown -R nginx:nginx $REMOTE_DIR $REMOTE_APP_DIR"
 
-echo "OK: Atualizacao enviada. Desktop: $BASE_URL (exe) | updates: https://aplicativo.acasamarcenaria.com.br/updates/tauri/latest.json"
+ELAPSED=$(($(date +%s) - START_TAURI))
+echo "[$(date +%H:%M:%S)] OK: Desktop enviado em ${ELAPSED}s. $BASE_URL | updates/tauri/latest.json"
