@@ -313,13 +313,13 @@ export class OrcamentosService {
               doc.y = y;
               doc.image(absPath, marginImg, doc.y, {
                 fit: [imgWidth, imgHeight],
-                align: 'left' as 'left' | 'center' | 'right',
-                valign: 'top' as 'top' | 'center' | 'bottom',
-              });
+                align: 'left',
+                valign: 'top',
+              } as any);
               // Descritivo com dimensões da imagem (onde faz o download)
               let dimensoesTexto = '';
               try {
-                const dims = sizeOf(readFileSync(absPath));
+                const dims = sizeOf(new Uint8Array(readFileSync(absPath)));
                 if (dims?.width && dims?.height) {
                   dimensoesTexto = `Dimensões: Largura ${dims.width} px × Altura ${dims.height} px`;
                 }
