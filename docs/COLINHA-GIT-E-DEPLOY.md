@@ -1,91 +1,66 @@
 # Colinha — Git + Deploy (A CASA ERP)
 
-## Plataformas (quem usa o quê)
+## Os 3 pontos do sistema
 
-| Dispositivo | Tecnologia | Arquivo / como instalar |
-|-------------|------------|--------------------------|
-| **PC/notebook (Windows)** | Tauri | `AcasaSetup.exe` — instalador desktop |
-| **Celular e tablet Android** | Capacitor (APK) | **ERP:** `Acasa.apk` · **Ponto:** `ponto.apk` |
-| **Navegador (web)** | Vue + backend | Site ERP em aplicativo.acasamarcenaria.com.br |
+| Ponto | O que é | Onde fica no servidor |
+|-------|---------|------------------------|
+| **1. Android** | APK do ERP + APK do Ponto | `Acasa.apk` (erp/) · `ponto.apk` (subdomínio ponto) |
+| **2. Desktop** | Instalador Windows (Tauri) | `AcasaSetup.exe` + updater (erp/ + updates/tauri/) |
+| **3. Web** | Site ERP + página de downloads | aplicativo.acasamarcenaria.com.br |
 
-**Tauri não roda no Android.** No tablet (e no celular) usa o mesmo APK do ERP ou do Ponto; não tem instalador Tauri para Android.
+Para **atualizar sempre os 3 pontos**, use um comando só (veja abaixo).
 
 ---
 
-## Git (antes de fazer deploy)
+## Ritual: Git → Deploy dos 3 pontos
+
+**1. Git (sempre antes do deploy)**
 
 ```bash
 cd "d:\Sistema ERP\acasa-erp"
-
-git status
 git add .
-git commit -m "atualização 18"
+git commit -m "sua mensagem"
 git push
 ```
 
-**Ordem:** sempre **commit + push** primeiro; depois rode o script de deploy.
+**2. Deploy dos 3 pontos**
 
----
-
-## Scripts de deploy (raiz do projeto)
-
-| Comando | O que faz |
-|--------|------------|
-| `npm run deploy:apps` | **Só apps:** APKs (ERP + Ponto) + instalador Windows (Tauri). Não mexe no site web. |
-| `npm run deploy:all` | **Tudo:** o mesmo que acima + publica `index.html` (página de downloads) + atualiza o **ERP Web** no servidor (git pull no EC2, build, rsync). |
-
-### Só Android (APKs)
+Defina a senha do Tauri (só para o instalador Windows). No **Git Bash**:
 
 ```bash
-bash scripts/deploy-android.sh
+export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="sua_senha"
+npm run deploy:all
 ```
 
-- Sobe `versionCode` nos dois projetos Android.
-- Gera e envia: `Acasa.apk` → `/erp/`, `ponto.apk` → subdomínio Ponto.
+No **PowerShell**:
 
-### Só Desktop (Tauri)
-
-```bash
-export TAURI_SIGNING_PRIVATE_KEY_PASSWORD="acasa3358"
-bash scripts/deploy-tauri.sh
+```powershell
+$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = "sua_senha"
+npm run deploy:all
 ```
 
-- Sobe a versão em `frontend/package.json` e `tauri.conf.json`.
-- Gera o `.exe`, assina e envia para o servidor (updater).
+O `deploy:all` atualiza, nesta ordem: **Android (ERP + Ponto)** → **Desktop (Tauri)** → **página de downloads** → **ERP Web** no servidor.
 
 ---
 
-## Variáveis / requisitos
+## O que você precisa ter
 
-| Deploy | O que precisa |
-|--------|----------------|
-| **Tauri** | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (senha do arquivo `tauri_private.key`). Chave em: `C:\Users\Julyana Duarte\.ssh\tauri_private.key` |
-| **SSH** | Chave: `C:\Users\Julyana Duarte\.ssh\acasa_key` (já usada nos scripts) |
-| **Android** | `keystore.properties` em `frontend/android/` e `frontend-ponto/android/` (já configurado) |
+- **SSH:** chave `acasa_key` (já usada nos scripts).
+- **Tauri:** senha do arquivo `tauri_private.key` (só para publicar o .exe).
+- **Android:** `keystore.properties` em cada pasta android (já configurado).
 
 ---
 
-## Onde fica a versão
+## Versão do app
 
-- **Número que o usuário vê (ex.: 0.1.17):** `frontend/package.json` e `frontend/src-tauri/tauri.conf.json`.
-- **Desktop:** sobe automaticamente no `deploy-tauri.sh` (bump antes do build).
-- **Android:** `versionCode` sobe no `deploy-android.sh`; o `versionName` é lido do `package.json` no build.
+O número que o usuário vê (ex.: 0.1.17) está em `frontend/package.json` e `frontend/src-tauri/tauri.conf.json`. Sobe automático no deploy (Tauri faz o bump; Android usa o mesmo número).
 
 ---
 
-## Resumo rápido
+## Se quiser atualizar só 1 ou 2 pontos
 
-1. **Só publicar app (celular + desktop):**  
-   `npm run deploy:apps` (definir senha do Tauri antes, se for rodar o Tauri).
-2. **Publicar app + site web + página de downloads:**  
-   `npm run deploy:all`.
-3. **Só APKs:**  
-   `bash scripts/deploy-android.sh`.
+- **Só Android (os 2 APKs):** `bash scripts/deploy-android.sh`
+- **Só Desktop (.exe):** defina a senha do Tauri e rode `bash scripts/deploy-tauri.sh`
+- **Só apps (Android + Desktop), sem web:** `npm run deploy:apps` (com senha do Tauri definida)
 
----
-
-## Deploy demorando?
-
-- **Android (ERP + Ponto):** dois builds Gradle + dois `npm run build` — costuma levar 5–15 min. Os scripts agora mostram `[HH:MM:SS]` e o tempo total no final.
-- **Tauri (desktop):** compilação Rust + NSIS — pode levar 5–15 min (mais na primeira vez).
-- **Dica:** se só mudou o frontend/APK, rode só `bash scripts/deploy-android.sh`. Se só mudou o instalador Windows, rode só `bash scripts/deploy-tauri.sh` (com a senha definida). Assim você não espera o que não precisa.
+O deploy completo leva vários minutos (Gradle + Rust); os scripts mostram `[HH:MM:SS]` e o tempo total no final.
