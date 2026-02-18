@@ -37,6 +37,9 @@ export const NAV_SCHEMA = {
     { label: 'Convites de Ponto', to: '/rh/ponto/convites', icon: 'pi-link', perm: 'ponto_convite.criar' },
     { divider: true },
     { label: 'Cadastro da Empresa', to: '/configuracoes/configuracoes', icon: 'pi-sliders-h', perm: 'configuracoes.empresa.ver' },
+    { divider: true },
+    // Apenas para debug interno; não usa permissão específica.
+    { label: 'Debug Atualização', to: '/debug/update', icon: 'pi-info-circle' },
   ],
 
   relatorios: [

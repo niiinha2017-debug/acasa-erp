@@ -1,138 +1,167 @@
 <template>
-  <div class="w-full max-w-[1200px] mx-auto space-y-6 animate-page-in pb-10">
-    <header class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-2">
-      <div class="flex items-center gap-4">
-        <div class="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-xl shadow-slate-200 rotate-2 hover:rotate-0 transition-all duration-300">
-          <i class="pi pi-calendar-clock text-xl"></i>
-        </div>
-        <div>
-          <h1 class="text-2xl font-black text-slate-800 uppercase tracking-tight leading-none">Agenda</h1>
-          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1.5">Visao mensal de agendamentos</p>
-        </div>
-      </div>
+  <div class="w-full h-full">
+    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
+      <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
 
-      <div class="flex items-center gap-2">
-        <button @click="openGarantia" class="h-10 px-4 rounded-xl bg-brand-primary text-white text-[10px] font-black uppercase tracking-widest">
-          Garantia
-        </button>
-        <button @click="prevMonth" class="h-10 w-10 rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-slate-800">
-          <i class="pi pi-angle-left"></i>
-        </button>
-        <div class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest">
-          {{ monthLabel }}
-        </div>
-        <button @click="nextMonth" class="h-10 w-10 rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-slate-800">
-          <i class="pi pi-angle-right"></i>
-        </button>
-      </div>
-    </header>
-
-    <div class="bg-white border border-slate-200 rounded-[2rem] shadow-sm overflow-hidden">
-      <div class="grid grid-cols-7 gap-px bg-slate-100">
-        <div v-for="d in weekDays" :key="d" class="bg-white p-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
-          {{ d }}
-        </div>
-        <button
-          v-for="day in days"
-          :key="day.key"
-          @click="selectDay(day.date)"
-          class="bg-white p-3 h-28 flex flex-col items-start text-left border border-transparent hover:border-brand-primary/30 transition-all"
-          :class="{
-            'bg-slate-50': !day.inMonth,
-            'ring-2 ring-brand-primary/30': isSameDay(day.date, selectedDay)
-          }"
-        >
-          <div class="text-xs font-black" :class="day.inMonth ? 'text-slate-800' : 'text-slate-300'">
-            {{ day.date.getDate() }}
-          </div>
-          <div class="mt-2 w-full space-y-1">
-            <div
-              v-for="event in dayEvents(day.date).slice(0, 3)"
-              :key="event.id"
-              class="text-[9px] font-bold truncate px-2 py-0.5 rounded bg-slate-900 text-white"
-              :title="eventTitle(event)"
+      <PageHeader
+        title="Agenda"
+        subtitle="Visão mensal de agendamentos e produção"
+        icon="pi pi-calendar-clock"
+      >
+        <template #actions>
+          <div class="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              type="button"
+              @click="openGarantia"
             >
-              {{ eventTitle(event) }}
+              Garantia
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              type="button"
+              class="w-10 h-10 !p-0 flex items-center justify-center"
+              @click="prevMonth"
+            >
+              <i class="pi pi-angle-left"></i>
+            </Button>
+            <div
+              class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest"
+            >
+              {{ monthLabel }}
             </div>
-            <div v-if="dayEvents(day.date).length > 3" class="text-[9px] font-black text-slate-400">
-              +{{ dayEvents(day.date).length - 3 }}
-            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              type="button"
+              class="w-10 h-10 !p-0 flex items-center justify-center"
+              @click="nextMonth"
+            >
+              <i class="pi pi-angle-right"></i>
+            </Button>
           </div>
-        </button>
-      </div>
+        </template>
+      </PageHeader>
 
-      <div class="border-t border-slate-100 p-6">
-        <div class="flex items-center justify-between mb-3">
-          <div class="text-[11px] font-black uppercase tracking-widest text-slate-500">
-            {{ selectedLabel }}
+      <div class="p-4 md:p-6 border-t border-border-ui space-y-6 bg-bg-page">
+        <!-- Calendário -->
+        <div class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
+          <div class="grid grid-cols-7 gap-px bg-slate-100">
+            <div
+              v-for="d in weekDays"
+              :key="d"
+              class="bg-white p-3 text-[10px] font-black uppercase tracking-widest text-slate-400"
+            >
+              {{ d }}
+            </div>
+            <button
+              v-for="day in days"
+              :key="day.key"
+              @click="selectDay(day.date)"
+              class="bg-white p-3 h-28 flex flex-col items-start text-left border border-transparent hover:border-brand-primary/30 transition-all"
+              :class="{
+                'bg-slate-50': !day.inMonth,
+                'ring-2 ring-brand-primary/30': isSameDay(day.date, selectedDay),
+              }"
+            >
+              <div
+                class="text-xs font-black"
+                :class="day.inMonth ? 'text-slate-800' : 'text-slate-300'"
+              >
+                {{ day.date.getDate() }}
+              </div>
+              <div class="mt-2 w-full space-y-1">
+                <div
+                  v-for="event in dayEvents(day.date).slice(0, 3)"
+                  :key="event.id"
+                  class="text-[9px] font-bold truncate px-2 py-0.5 rounded bg-slate-900 text-white"
+                  :title="eventTitle(event)"
+                >
+                  {{ eventTitle(event) }}
+                </div>
+                <div
+                  v-if="dayEvents(day.date).length > 3"
+                  class="text-[9px] font-black text-slate-400"
+                >
+                  +{{ dayEvents(day.date).length - 3 }}
+                </div>
+              </div>
+            </button>
           </div>
-          <div v-if="loading" class="text-[10px] font-bold text-slate-400">Carregando...</div>
+
+          <div class="border-t border-slate-100 p-6">
+            <div class="flex items-center justify-between mb-3">
+              <div class="text-[11px] font-black uppercase tracking-widest text-slate-500">
+                {{ selectedLabel }}
+              </div>
+              <div v-if="loading" class="text-[10px] font-bold text-slate-400">
+                Carregando...
+              </div>
+            </div>
+
+            <div v-if="selectedEvents.length" class="space-y-2">
+              <div
+                v-for="event in selectedEvents"
+                :key="event.id"
+                class="p-3 rounded-xl border border-slate-200"
+              >
+                <div class="text-xs font-black text-slate-800">
+                  {{ eventTitle(event) }}
+                </div>
+                <div class="text-[10px] font-semibold text-slate-500">
+                  {{ timeLabel(event.inicio_em) }} - {{ timeLabel(event.fim_em) }}
+                </div>
+              </div>
+            </div>
+            <div v-else class="text-[10px] font-bold text-slate-400">
+              Nenhum agendamento para este dia.
+            </div>
+          </div>
         </div>
 
-        <div v-if="selectedEvents.length" class="space-y-2">
-          <div v-for="event in selectedEvents" :key="event.id" class="p-3 rounded-xl border border-slate-200">
-            <div class="text-xs font-black text-slate-800">{{ eventTitle(event) }}</div>
-            <div class="text-[10px] font-semibold text-slate-500">
-              {{ timeLabel(event.inicio_em) }} - {{ timeLabel(event.fim_em) }}
-            </div>
-          </div>
-        </div>
-        <div v-else class="text-[10px] font-bold text-slate-400">Nenhum agendamento para este dia.</div>
       </div>
     </div>
 
-    <div v-if="canProducao" class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
-      <div class="flex items-center justify-between mb-3">
-        <div class="text-[11px] font-black uppercase tracking-widest text-slate-500">
-          Planos de corte em producao
-        </div>
-        <div v-if="loadingProducao" class="text-[10px] font-bold text-slate-400">Carregando...</div>
-      </div>
-
-      <div v-if="planosEmProducao.length" class="space-y-2">
-        <div v-for="plano in planosEmProducao" :key="plano.id" class="p-3 rounded-xl border border-slate-200 flex items-center justify-between gap-3">
-          <div class="min-w-0">
-            <div class="text-xs font-black text-slate-800 truncate">
-              Pedido #{{ plano.numero_pedido || plano.id }} - {{ plano.fornecedor?.razao_social || 'Fornecedor' }}
-            </div>
-            <div class="text-[10px] font-semibold text-slate-500">
-              {{ plano.data_venda ? new Date(plano.data_venda).toLocaleDateString('pt-BR') : '-' }}
-            </div>
-          </div>
-          <span
-            class="px-2 py-1 rounded text-[9px] font-black uppercase inline-flex items-center gap-1.5"
-            :class="planoBadgeClass(plano.status)"
-          >
-            <span class="w-1.5 h-1.5 rounded-full" :class="planoDotClass(plano.status)"></span>
-            {{ planoBadgeLabel(plano.status) }}
-          </span>
-        </div>
-      </div>
-      <div v-else class="text-[10px] font-bold text-slate-400">Nenhum plano em producao.</div>
-    </div>
-
-    <div v-if="modalOpen" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md" @click.self="closeModal">
-      <div class="bg-white rounded-xl shadow-lg w-full max-w-lg p-6 relative max-h-[85vh] overflow-y-auto">
-        <button @click="closeModal" class="absolute top-3 right-3 text-slate-400 hover:text-rose-500" aria-label="Fechar">
+    <!-- Modal de agendamento -->
+    <div
+      v-if="modalOpen"
+      class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md"
+      @click.self="closeModal"
+    >
+      <div
+        class="bg-white rounded-xl shadow-lg w-full max-w-lg p-6 relative max-h-[85vh] overflow-y-auto"
+      >
+        <button
+          @click="closeModal"
+          class="absolute top-3 right-3 text-slate-400 hover:text-rose-500"
+          aria-label="Fechar"
+        >
           <i class="pi pi-times"></i>
         </button>
         <h2 class="text-lg font-black mb-1">Agendar tarefa</h2>
-        <p class="text-xs font-semibold text-slate-500 mb-4">{{ selectedLabel }}</p>
+        <p class="text-xs font-semibold text-slate-500 mb-4">
+          {{ selectedLabel }}
+        </p>
 
         <div class="space-y-3">
-          <div>
-            <label class="block text-xs font-bold mb-1">Titulo</label>
-            <input v-model="taskForm.titulo" class="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 font-bold text-slate-700" />
-          </div>
-
           <div class="grid grid-cols-12 gap-3">
             <div class="col-span-12 md:col-span-6">
               <label class="block text-xs font-bold mb-1">Inicio</label>
-              <input type="datetime-local" v-model="taskForm.inicio" class="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 font-bold text-slate-700" />
+              <input
+                type="datetime-local"
+                v-model="taskForm.inicio"
+                class="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 font-bold text-slate-700"
+              />
             </div>
             <div class="col-span-12 md:col-span-6">
               <label class="block text-xs font-bold mb-1">Termino</label>
-              <input type="datetime-local" v-model="taskForm.fim" class="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 font-bold text-slate-700" />
+              <input
+                type="datetime-local"
+                v-model="taskForm.fim"
+                class="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 font-bold text-slate-700"
+              />
             </div>
           </div>
 
@@ -171,7 +200,11 @@
                   class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[9px] font-black uppercase bg-slate-100 text-slate-600"
                 >
                   {{ funcionarioNomeById(fid) || 'Funcionario' }}
-                  <button type="button" class="text-slate-400 hover:text-rose-500" @click="removerFuncionario(fid)">
+                  <button
+                    type="button"
+                    class="text-slate-400 hover:text-rose-500"
+                    @click="removerFuncionario(fid)"
+                  >
                     <i class="pi pi-times text-[10px]"></i>
                   </button>
                 </span>
@@ -179,7 +212,9 @@
             </div>
             <div v-else>
               <label class="block text-xs font-bold mb-1">Funcionario</label>
-              <div class="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 flex items-center text-sm font-bold text-slate-700">
+              <div
+                class="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 flex items-center text-sm font-bold text-slate-700"
+              >
                 {{ funcionarioNome || 'Nao informado' }}
               </div>
             </div>
@@ -187,33 +222,58 @@
         </div>
 
         <div class="mt-4 flex items-center gap-2">
-          <button @click="saveTask" class="flex-1 h-11 rounded-xl font-black text-[10px] uppercase bg-blue-700 text-white shadow">
+          <button
+            @click="saveTask"
+            class="flex-1 h-11 rounded-xl font-black text-[10px] uppercase bg-blue-700 text-white shadow"
+          >
             {{ editingEvent ? 'Salvar edicao' : 'Salvar tarefa' }}
           </button>
-          <button v-if="editingEvent" @click="clearEdit" class="h-11 px-3 rounded-xl border border-slate-200 text-slate-500 text-[10px] font-black uppercase">
+          <button
+            v-if="editingEvent"
+            @click="clearEdit"
+            class="h-11 px-3 rounded-xl border border-slate-200 text-slate-500 text-[10px] font-black uppercase"
+          >
             Cancelar
           </button>
         </div>
 
         <div class="mt-5 border-t border-slate-100 pt-4">
-          <div class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Tarefas do dia</div>
+          <div
+            class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2"
+          >
+            Tarefas do dia
+          </div>
           <div v-if="selectedEvents.length" class="space-y-2">
-            <div v-for="event in selectedEvents" :key="event.id" class="p-3 rounded-xl border border-slate-200">
-              <div class="text-xs font-black text-slate-800">{{ eventTitle(event) }}</div>
+            <div
+              v-for="event in selectedEvents"
+              :key="event.id"
+              class="p-3 rounded-xl border border-slate-200"
+            >
+              <div class="text-xs font-black text-slate-800">
+                {{ eventTitle(event) }}
+              </div>
               <div class="text-[10px] font-semibold text-slate-500">
                 {{ timeLabel(event.inicio_em) }} - {{ timeLabel(event.fim_em) }}
               </div>
               <div class="mt-2 flex items-center gap-2">
-                <button @click="editTask(event)" class="h-8 px-3 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-black uppercase">
+                <button
+                  @click="editTask(event)"
+                  class="h-8 px-3 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-black uppercase"
+                >
                   Editar
                 </button>
-                <button @click="removeTask(event)" class="h-8 px-3 rounded-lg bg-rose-50 text-rose-600 text-[10px] font-black uppercase">
+                <button
+                  @click="removeTask(event)"
+                  class="h-8 px-3 rounded-lg bg-rose-50 text-rose-600 text-[10px] font-black uppercase"
+                >
                   Excluir
                 </button>
               </div>
             </div>
           </div>
-          <div v-else class="text-[10px] font-bold text-slate-400">Nenhuma tarefa neste dia.</div>
+          <div v-else class="text-[10px] font-bold text-slate-400">
+            Nenhuma tarefa neste dia.
+          </div>
         </div>
       </div>
     </div>
@@ -222,8 +282,8 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { AgendaService, ClienteService, FuncionarioService, PlanoCorteService } from '@/services/index'
-import { PIPELINE_CLIENTE, PIPELINE_PLANO_CORTE } from '@/constantes'
+import { AgendaService, ClienteService, FuncionarioService } from '@/services/index'
+import { PIPELINE_CLIENTE } from '@/constantes'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
 import storage from '@/utils/storage'
@@ -237,8 +297,6 @@ const loading = ref(false)
 const events = ref([])
 const modalOpen = ref(false)
 const editingEvent = ref(null)
-const planosProducao = ref([])
-const loadingProducao = ref(false)
 const clientesOptions = ref([])
 const funcionariosOptions = ref([])
 const usuarioLogado = computed(() => storage.getUser())
@@ -313,10 +371,6 @@ const selectedLabel = computed(() =>
 const canVendas = computed(() => can('agendamentos.vendas'))
 const canProducao = computed(() => can('agendamentos.producao'))
 
-const planosEmProducao = computed(() =>
-  planosProducao.value.filter((p) => normalizePlanoStatus(p?.status) === 'EM_PRODUCAO')
-)
-
 function isSameDay(a, b) {
   return dateKey(a) === dateKey(b)
 }
@@ -328,11 +382,13 @@ function selectDay(day) {
 
 function eventTitle(event) {
   const nome = event?.cliente?.nome_completo || event?.cliente?.razao_social || 'Cliente'
-  const origem = event?.orcamento_id
-    ? 'Orcamento'
-    : event?.venda_id
-      ? 'Venda'
-      : 'Cliente'
+  const origem = event?.plano_corte_id
+    ? 'Plano de corte'
+    : event?.orcamento_id
+        ? 'Orcamento'
+        : event?.venda_id
+            ? 'Venda'
+            : 'Cliente'
   return `${event.titulo} - ${nome} (${origem})`
 }
 
@@ -344,27 +400,6 @@ function timeLabel(value) {
 
 function dayEvents(day) {
   return eventsByDay.value[dateKey(day)] || []
-}
-
-function normalizePlanoStatus(status) {
-  return String(status || '').trim().toUpperCase().replace(/\s+/g, '_')
-}
-
-function getPlanoPipeline(status) {
-  const key = normalizePlanoStatus(status)
-  return (PIPELINE_PLANO_CORTE || []).find((p) => p.key === key)
-}
-
-function planoBadgeClass(status) {
-  return getPlanoPipeline(status)?.badgeClass || 'bg-slate-50 text-slate-600 border border-slate-200'
-}
-
-function planoDotClass(status) {
-  return getPlanoPipeline(status)?.dotClass || 'bg-slate-400'
-}
-
-function planoBadgeLabel(status) {
-  return getPlanoPipeline(status)?.label || status || '—'
 }
 
 function prevMonth() {
@@ -459,7 +494,6 @@ async function removeTask(event) {
 }
 
 async function saveTask() {
-  if (!taskForm.titulo) return notify.error('Informe o titulo.')
   if (!taskForm.inicio) return notify.error('Informe a data de inicio.')
   if (!taskForm.fim) return notify.error('Informe a data de termino.')
   if (!taskForm.clienteId) return notify.error('Selecione o cliente.')
@@ -476,6 +510,8 @@ async function saveTask() {
   if (Number.isNaN(fim.getTime())) return notify.error('Data invalida.')
   if (fim <= inicio) return notify.error('Termino deve ser depois do inicio.')
 
+  const titulo = taskForm.titulo || 'Tarefa de agenda'
+
   try {
     const origemPayload = editingEvent.value
       ? {
@@ -490,7 +526,7 @@ async function saveTask() {
       await AgendaService.excluir(editingEvent.value.id)
     }
     await AgendaService.criar({
-      titulo: taskForm.titulo,
+      titulo,
       inicio_em: inicio.toISOString(),
       fim_em: fim.toISOString(),
       cliente_id: Number(taskForm.clienteId),
@@ -521,19 +557,6 @@ async function loadAgenda() {
     events.value = []
   } finally {
     loading.value = false
-  }
-}
-
-async function loadPlanosProducao() {
-  if (!canProducao.value) return
-  loadingProducao.value = true
-  try {
-    const res = await PlanoCorteService.listar()
-    planosProducao.value = Array.isArray(res?.data) ? res.data : []
-  } catch (e) {
-    planosProducao.value = []
-  } finally {
-    loadingProducao.value = false
   }
 }
 
@@ -570,7 +593,6 @@ async function loadFuncionarios() {
 
 onMounted(() => {
   loadAgenda()
-  loadPlanosProducao()
   loadClientes()
   loadFuncionarios()
 })

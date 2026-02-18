@@ -142,6 +142,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/debug/update': RouteRecordInfo<
+      '/debug/update',
+      '/debug/update',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/despesas/': RouteRecordInfo<
       '/despesas/',
       '/despesas',
@@ -506,6 +513,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/contratos/clausulas.vue': {
       routes:
         | '/contratos/clausulas'
+      views:
+        | never
+    }
+    'src/pages/debug/update.vue': {
+      routes:
+        | '/debug/update'
       views:
         | never
     }
