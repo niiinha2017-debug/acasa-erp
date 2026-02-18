@@ -265,15 +265,21 @@ const fallbackSections = computed(() =>
 )
 
 const NAV_VISIVEL = computed(() => {
-  // Usar sempre o menu local (Comercial / Produção); ignora API para evitar cache/Operacional
+  // Usa sempre o menu local (Comercial / Produção)
   const source = fallbackSections.value
 
-  return source
+  const filtrado = source
     .map((section) => ({
       ...section,
       items: filtrarItens(section.items || []),
     }))
     .filter((section) => section.items.some((i) => !i.divider))
+
+  // Fallback: se por algum motivo todas as permissões falharem (ex: bug no mobile),
+  // exibe pelo menos o menu base completo.
+  if (!filtrado.length) return source
+
+  return filtrado
 })
 
 const handleMobileNav = (to) => {
