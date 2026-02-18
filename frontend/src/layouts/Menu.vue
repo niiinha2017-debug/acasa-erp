@@ -1,9 +1,9 @@
 <template>
-  <nav class="w-full h-16 bg-bg-card/90 backdrop-blur-xl border-b border-border-ui fixed top-0 left-0 right-0 z-[2000] transition-colors duration-300">
-    <div class="h-full px-4 md:px-6 flex items-center justify-between">
+  <nav class="w-full min-h-[4rem] h-16 bg-bg-card/90 backdrop-blur-xl border-b border-border-ui fixed top-0 left-0 right-0 z-[2000] transition-colors duration-300 overflow-hidden">
+    <div class="h-full min-w-0 px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2">
       
       <!-- LOGO E MARCA -->
-      <RouterLink to="/agendamentos?visao=geral" class="flex items-center gap-3 transition-opacity hover:opacity-90">
+      <RouterLink to="/agendamentos?visao=geral" class="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink transition-opacity hover:opacity-90">
         <div class="w-9 h-9 bg-gradient-to-br from-[#2f7fb3] to-[#255a82] flex items-center justify-center text-white rounded-xl shadow-sm">
           <i class="pi pi-box text-xs"></i>
         </div>
@@ -30,7 +30,7 @@
       </div>
 
       <!-- AÇÕES DIREITA -->
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
         <!-- TOGGLE TEMA -->
         <button
           @click="toggleDark()" 
@@ -82,7 +82,7 @@
           aria-label="Menu de navegação"
         >
           <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="isMobileMenuOpen = false" aria-hidden="true"></div>
-          <div class="absolute right-0 top-0 bottom-0 w-[min(300px,85vw)] max-w-[300px] bg-bg-card border-l border-border-ui flex flex-col shadow-2xl">
+          <div class="absolute right-0 top-0 bottom-0 w-[min(300px,calc(100vw-2rem))] max-w-[300px] min-w-0 bg-bg-card border-l border-border-ui flex flex-col shadow-2xl">
             <!-- HEADER DO DRAWER -->
             <div class="h-16 px-4 sm:px-6 border-b border-border-ui flex items-center justify-between flex-shrink-0">
               <span class="font-bold text-xs uppercase tracking-[0.2em] text-slate-600 dark:text-slate-400">Menu</span>
@@ -100,11 +100,11 @@
                   v-for="item in section.items.filter(i => !i.divider)"
                   :key="item.to"
                   href="#"
-                  class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-200 dark:active:bg-slate-700 transition-colors cursor-pointer touch-manipulation"
+                  class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-200 dark:active:bg-slate-700 transition-colors cursor-pointer touch-manipulation min-w-0"
                   @click.prevent="handleMobileNav(item.to)"
                 >
                   <i :class="item.icon" class="text-xs opacity-70 w-4 flex-shrink-0"></i>
-                  <span>{{ item.label }}</span>
+                  <span class="break-words line-clamp-2">{{ item.label }}</span>
                 </a>
               </div>
             </div>

@@ -42,8 +42,8 @@ export async function checkAndroidUpdate () {
       addDebugEntry('android', 'ignorado (platform !== android)', { platform: Capacitor.getPlatform() })
       return noUpdate
     }
-    addDebugEntry('android', 'fetch version.json', { url: VERSION_JSON_URL })
-    // Usar CapacitorHttp no Android para evitar CORS (WebView bloqueia fetch cross-origin)
+    addDebugEntry('android', 'fetch version.json (via CapacitorHttp)', { url: VERSION_JSON_URL })
+    // CapacitorHttp = requisição nativa, evita CORS do WebView
     const { CapacitorHttp } = await import('@capacitor/core')
     const res = await CapacitorHttp.get({ url: VERSION_JSON_URL })
     const status = res.status ?? 0
