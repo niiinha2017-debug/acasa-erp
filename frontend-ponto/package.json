@@ -12,7 +12,6 @@
     "@capacitor/android": "^8.0.2",
     "@capacitor/cli": "^7.4.5",
     "@capacitor/core": "^8.0.2",
-    "@capgo/capacitor-updater": "^8.0.0",
     "@vueuse/core": "^14.1.0",
     "axios": "^1.13.2",
     "vue": "^3.5.24",
