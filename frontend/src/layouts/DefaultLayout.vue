@@ -1,40 +1,43 @@
 <template>
   <div class="pt-16 min-h-screen bg-bg-page text-text-main transition-colors duration-300">
     <Menu />
-    <div class="border-b border-border-ui bg-[var(--bg-card)]">
-      <div class="px-4 md:px-6 overflow-x-auto">
-        <div class="flex items-center gap-2 py-2 min-w-max">
-          <div
-            v-for="(tab, index) in openTabs"
-            :key="tab.key"
-            class="group flex items-center gap-1 rounded-md border text-xs font-semibold transition-colors"
-            :class="activeTabId === tab.key
-              ? 'border-brand-primary bg-brand-primary/10 text-brand-primary'
-              : 'border-border-ui bg-white/80 text-slate-600 hover:bg-slate-100 dark:bg-slate-900/40 dark:text-slate-300 dark:hover:bg-slate-800'"
-          >
-            <button
-              type="button"
-              class="px-3 py-1.5"
-              @click="goToTab(tab)"
+    <!-- Área de conteúdo com stacking context explícito para o menu fixo ficar sempre por cima (Android/WebView) -->
+    <div class="relative z-0">
+      <div class="border-b border-border-ui bg-[var(--bg-card)]">
+        <div class="px-4 md:px-6 overflow-x-auto">
+          <div class="flex items-center gap-2 py-2 min-w-max">
+            <div
+              v-for="(tab, index) in openTabs"
+              :key="tab.key"
+              class="group flex items-center gap-1 rounded-md border text-xs font-semibold transition-colors"
+              :class="activeTabId === tab.key
+                ? 'border-brand-primary bg-brand-primary/10 text-brand-primary'
+                : 'border-border-ui bg-white/80 text-slate-600 hover:bg-slate-100 dark:bg-slate-900/40 dark:text-slate-300 dark:hover:bg-slate-800'"
             >
-              {{ tab.title }}
-            </button>
-            <button
-              type="button"
-              class="px-2 py-1.5 text-slate-400 hover:text-rose-500 disabled:opacity-40 disabled:cursor-not-allowed"
-              :disabled="openTabs.length <= 1"
-              aria-label="Fechar aba"
-              @click="closeTab(tab, index)"
-            >
-              <i class="pi pi-times text-[10px]"></i>
-            </button>
+              <button
+                type="button"
+                class="px-3 py-1.5"
+                @click="goToTab(tab)"
+              >
+                {{ tab.title }}
+              </button>
+              <button
+                type="button"
+                class="px-2 py-1.5 text-slate-400 hover:text-rose-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                :disabled="openTabs.length <= 1"
+                aria-label="Fechar aba"
+                @click="closeTab(tab, index)"
+              >
+                <i class="pi pi-times text-[10px]"></i>
+              </button>
+            </div>
           </div>
         </div>
       </div>
+      <PageShell :contained="false" :padded="true">
+        <slot />
+      </PageShell>
     </div>
-    <PageShell :contained="false" :padded="true">
-      <slot />
-    </PageShell>
   </div>
 </template>
 

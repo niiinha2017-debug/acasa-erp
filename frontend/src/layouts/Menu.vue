@@ -71,55 +71,59 @@
       </div>
     </div>
 
-    <!-- MENU MOBILE DRAWER (visível até md) -->
-    <transition name="slide-right">
-      <div v-if="isMobileMenuOpen" class="fixed inset-0 z-[3000] md:hidden">
-        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="isMobileMenuOpen = false"></div>
-        
-        <div class="absolute right-0 top-0 bottom-0 w-[300px] bg-bg-card border-l border-border-ui flex flex-col">
-          <!-- HEADER DO DRAWER -->
-          <div class="h-16 px-6 border-b border-border-ui flex items-center justify-between">
-            <span class="font-bold text-xs uppercase tracking-[0.2em] text-slate-600 dark:text-slate-400">Menu</span>
-            <button @click="isMobileMenuOpen = false" class="p-2 text-slate-400 hover:text-slate-600">
-              <i class="pi pi-times text-sm"></i>
-            </button>
-          </div>
+    <!-- MENU MOBILE DRAWER: Teleport no body para nunca ficar atrás de formulários (Android/WebView) -->
+    <Teleport to="body">
+      <transition name="slide-right">
+        <div
+          v-if="isMobileMenuOpen"
+          class="menu-drawer-overlay fixed inset-0 z-[99998] md:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Menu de navegação"
+        >
+          <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="isMobileMenuOpen = false" aria-hidden="true"></div>
+          <div class="absolute right-0 top-0 bottom-0 w-[min(300px,85vw)] max-w-[300px] bg-bg-card border-l border-border-ui flex flex-col shadow-2xl">
+            <!-- HEADER DO DRAWER -->
+            <div class="h-16 px-4 sm:px-6 border-b border-border-ui flex items-center justify-between flex-shrink-0">
+              <span class="font-bold text-xs uppercase tracking-[0.2em] text-slate-600 dark:text-slate-400">Menu</span>
+              <button type="button" @click="isMobileMenuOpen = false" class="p-2 -mr-2 text-slate-400 hover:text-slate-600 touch-manipulation" aria-label="Fechar menu">
+                <i class="pi pi-times text-sm"></i>
+              </button>
+            </div>
 
-          <!-- ITENS DO MENU -->
-          <div class="flex-1 overflow-y-auto p-4 space-y-2">
-            <div v-for="section in NAV_VISIVEL" :key="section.key" class="space-y-2">
-              <!-- Separador visual entre Comercial e Produção no mobile -->
-              <div
-                v-if="section.key === 'producao'"
-                class="my-4 border-t border-border-ui"
-              />
-              <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 px-3 mt-4 mb-2">{{ section.label }}</p>
+            <!-- ITENS DO MENU -->
+            <div class="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 overscroll-contain">
+              <div v-for="section in NAV_VISIVEL" :key="section.key" class="space-y-2">
+                <div v-if="section.key === 'producao'" class="my-4 border-t border-border-ui" />
+                <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 px-3 mt-4 mb-2">{{ section.label }}</p>
+                <a
+                  v-for="item in section.items.filter(i => !i.divider)"
+                  :key="item.to"
+                  href="#"
+                  class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-200 dark:active:bg-slate-700 transition-colors cursor-pointer touch-manipulation"
+                  @click.prevent="handleMobileNav(item.to)"
+                >
+                  <i :class="item.icon" class="text-xs opacity-70 w-4 flex-shrink-0"></i>
+                  <span>{{ item.label }}</span>
+                </a>
+              </div>
+            </div>
 
-              <a
-                v-for="item in section.items.filter(i => !i.divider)"
-                :key="item.to"
-                @click="handleMobileNav(item.to)"
-                class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            <!-- FOOTER DO DRAWER -->
+            <div class="p-4 border-t border-border-ui flex-shrink-0">
+              <button
+                type="button"
+                @click="handleLogout"
+                class="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-red-500 text-xs font-medium border border-red-300 dark:border-red-800 rounded-md hover:bg-red-50 dark:hover:bg-red-950/20 active:opacity-90 transition-colors touch-manipulation"
               >
-                <i :class="item.icon" class="text-xs opacity-70 w-4"></i>
-                <span>{{ item.label }}</span>
-              </a>
+                <i class="pi pi-power-off text-xs"></i>
+                Sair
+              </button>
             </div>
           </div>
-
-          <!-- FOOTER DO DRAWER -->
-          <div class="p-4 border-t border-border-ui">
-            <button 
-              @click="handleLogout" 
-              class="w-full flex items-center justify-center gap-2 px-3 py-2 text-red-500 text-xs font-medium border border-red-300 dark:border-red-800 rounded-md hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
-            >
-              <i class="pi pi-power-off text-xs"></i>
-              Sair
-            </button>
-          </div>
         </div>
-      </div>
-    </transition>
+      </transition>
+    </Teleport>
   </nav>
 </template>
 
