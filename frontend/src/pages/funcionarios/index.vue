@@ -10,42 +10,45 @@
         :show-back="false"
       >
         <template #actions>
-          <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+          <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:ml-auto">
             <div
               v-if="selectedCount"
-              class="flex items-center gap-2 w-full sm:w-auto order-2 sm:order-0 justify-start sm:justify-end"
+              class="flex items-center gap-2 w-full sm:w-auto order-3 justify-start sm:justify-end"
             >
-              <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">
+              <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
                 {{ selectedCount }} selecionado(s)
               </span>
-
               <Button
-                variant="secondary"
+                variant="ghost"
+                size="sm"
                 :loading="pdfLoading"
                 @click="gerarPdfSelecionados"
+                class="text-text-soft hover:text-rose-600 hover:bg-rose-500/10"
               >
-                <i class="pi pi-file-pdf mr-2"></i>
-                Gerar PDF
+                <i class="pi pi-file-pdf"></i>
+                PDF
               </Button>
-
               <Button
-                variant="danger"
+                variant="ghost"
+                size="sm"
                 :loading="bulkDeleting"
                 @click="confirmarExcluirSelecionados"
+                class="text-text-soft hover:text-rose-500 hover:bg-rose-500/10"
               >
-                <i class="pi pi-trash mr-2"></i>
+                <i class="pi pi-trash"></i>
                 Excluir
               </Button>
             </div>
 
-            <div class="w-full sm:w-64 order-1 sm:order-0">
+            <div class="flex-1 sm:flex-initial sm:w-56 min-w-0 order-1 sm:order-1">
               <SearchInput
                 v-model="filtro"
-                placeholder="Buscar nome, cpf, rg, cargo, horário ou salário..."
+                placeholder="Buscar..."
               />
             </div>
 
             <Button
+              class="order-2 sm:order-2"
               v-if="can('funcionarios.criar')"
               variant="primary"
               @click="novo"
@@ -102,31 +105,42 @@
             </template>
 
             <template #cell-acoes="{ row }">
-              <div class="flex justify-end gap-1 items-center">
+              <div class="flex flex-row justify-end gap-1.5 flex-nowrap items-center min-h-[36px] w-full">
                 <button
                   v-if="can('funcionarios.ver')"
                   @click="abrirArquivos(row)"
-                  class="w-7 h-7 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-900 hover:text-white transition-all flex items-center justify-center border border-slate-100"
-                  title="Documentos"
+                  class="h-8 px-2.5 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-200 flex items-center gap-1.5 transition-colors text-[11px] font-medium whitespace-nowrap shrink-0"
                 >
-                  <i class="pi pi-paperclip text-xs"></i>
+                  <i class="pi pi-paperclip text-[12px]"></i>
+                  Documentos
                 </button>
 
                 <button
                   v-if="can('funcionarios.editar')"
                   @click="reenviarSenhaProvisoria(row)"
-                  class="w-7 h-7 rounded-lg bg-yellow-400 text-white hover:bg-yellow-500 transition-all flex items-center justify-center border border-yellow-500"
-                  title="Reenviar Senha Provisória"
+                  class="h-8 px-2.5 rounded-lg text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/20 flex items-center gap-1.5 transition-colors text-[11px] font-medium whitespace-nowrap shrink-0"
                 >
-                  <i class="pi pi-envelope text-xs"></i>
+                  <i class="pi pi-envelope text-[12px]"></i>
+                  Reenviar senha
                 </button>
 
-                <TableActions
-                  :can-edit="can('funcionarios.editar')"
-                  :can-delete="can('funcionarios.excluir')"
-                  @edit="editar(row.id)"
-                  @delete="confirmarExcluirFuncionario(row)"
-                />
+                <button
+                  v-if="can('funcionarios.editar')"
+                  @click="editar(row.id)"
+                  class="h-8 px-2.5 rounded-lg text-slate-500 hover:text-brand-primary hover:bg-brand-primary/10 flex items-center gap-1.5 transition-colors text-[11px] font-medium whitespace-nowrap shrink-0"
+                >
+                  <i class="pi pi-pencil text-[12px]"></i>
+                  Editar
+                </button>
+
+                <button
+                  v-if="can('funcionarios.excluir')"
+                  @click="confirmarExcluirFuncionario(row)"
+                  class="h-8 px-2.5 rounded-lg text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 flex items-center gap-1.5 transition-colors text-[11px] font-medium whitespace-nowrap shrink-0"
+                >
+                  <i class="pi pi-trash text-[12px]"></i>
+                  Excluir
+                </button>
               </div>
             </template>
         </Table>
@@ -225,7 +239,7 @@ const columns = [
   { key: 'cargo', label: 'CARGO / SETOR', width: '25%' },
   { key: 'unidade', label: 'UNIDADE', width: '15%' },
   { key: 'status', label: 'STATUS', width: '10%' },
-  { key: 'acoes', label: '', align: 'right', width: '20%' }
+  { key: 'acoes', label: '', align: 'right', width: '28%' }
 ]
 
 function toggle(id) {

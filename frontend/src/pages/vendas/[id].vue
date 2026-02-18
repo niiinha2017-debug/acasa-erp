@@ -173,13 +173,20 @@
           </div>
 
           <div class="grid grid-cols-12 gap-4 items-end">
-            <div class="col-span-12 md:col-span-4">
+            <div class="col-span-12 md:col-span-4 flex items-center gap-2">
               <Input
-                v-model.number="form.valor_vendido"
-                type="number"
+                :modelValue="format.currency(form.valor_vendido || 0)"
+                type="text"
+                inputmode="numeric"
                 label="Valor total vendido (cobrado) *"
                 :forceUpper="false"
                 :readonly="!can(permSalvarVenda())"
+                @update:modelValue="form.valor_vendido = moedaParaNumero($event)"
+              />
+              <i
+                v-if="num(form.valor_vendido) > 0 && pagamentosBatendo"
+                class="pi pi-check-circle text-green-600 text-2xl flex-shrink-0"
+                title="Valor conferido com o rateio"
               />
             </div>
           </div>
@@ -195,17 +202,27 @@
               />
             </template>
 
-            <template #cell-data_prevista="{ row }">
-              <Input
-                v-model="form.pagamentos[row.__idx].data_prevista_recebimento"
-                type="date"
-                :forceUpper="false"
-                :readonly="!can(permSalvarVenda())"
-              />
-            </template>
-
             <template #cell-data_recebimento="{ row }">
+              <template v-if="mostrarDataPorParcela(form.pagamentos[row.__idx])">
+                <div class="space-y-1.5">
+                  <div
+                    v-for="(d, i) in (form.pagamentos[row.__idx].datas_parcelas || [])"
+                    :key="i"
+                    class="flex items-center gap-2"
+                  >
+                    <span class="text-[10px] font-bold text-text-soft w-5">{{ i + 1 }} —</span>
+                    <Input
+                      v-model="form.pagamentos[row.__idx].datas_parcelas[i]"
+                      type="date"
+                      :forceUpper="false"
+                      :readonly="!can(permSalvarVenda())"
+                      class="flex-1 min-w-0"
+                    />
+                  </div>
+                </div>
+              </template>
               <Input
+                v-else
                 v-model="form.pagamentos[row.__idx].data_recebimento"
                 type="date"
                 :forceUpper="false"
@@ -215,7 +232,7 @@
 
             <template #cell-parcelas="{ row }">
               <Input
-                v-if="form.pagamentos[row.__idx].forma_pagamento_chave === 'CREDITO'"
+                v-if="['CREDITO', 'PIX', 'CHEQUE', 'TRANSFERENCIA', 'DINHEIRO'].includes(form.pagamentos[row.__idx].forma_pagamento_chave)"
                 v-model.number="form.pagamentos[row.__idx].parcelas"
                 type="number"
                 min="1"
@@ -228,10 +245,12 @@
 
             <template #cell-valor="{ row }">
               <Input
-                v-model.number="form.pagamentos[row.__idx].valor"
-                type="number"
+                :modelValue="format.currency(form.pagamentos[row.__idx].valor || 0)"
+                type="text"
+                inputmode="numeric"
                 :forceUpper="false"
                 :readonly="!can(permSalvarVenda())"
+                @update:modelValue="form.pagamentos[row.__idx].valor = moedaParaNumero($event)"
               />
             </template>
 
@@ -405,34 +424,110 @@
         <div class="h-px bg-border-ui" />
 
         <!-- ===================== -->
-        <!-- ARQUIVOS (PWA) -->
+        <!-- ARQUIVOS (igual orçamentos) -->
         <!-- ===================== -->
-        <section class="space-y-4">
-          <div class="flex items-center justify-between gap-4">
-            <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
-              Arquivos e Comprovantes
+        <section v-if="isEdit" class="space-y-6">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="text-xs font-black uppercase tracking-widest text-text-soft">
+                Imagens para o PDF da venda
+              </div>
+              <div class="flex items-center gap-2">
+                <input ref="fileInputImagemPdf" type="file" class="hidden" accept="image/*" @change="(e) => onPickArquivo(e, 'IMAGEM_PDF')" />
+                <Button
+                  v-if="can(permSalvarVenda()) && can('arquivos.criar')"
+                  size="sm"
+                  variant="ghost"
+                  type="button"
+                  @click="clicarAdicionarArquivo('IMAGEM_PDF')"
+                >
+                  <i class="pi pi-upload mr-1"></i> ADICIONAR IMAGEM
+                </Button>
+              </div>
             </div>
-
-            <Button
-              v-if="isEdit && can('vendas.editar')"
-              variant="secondary"
-              size="sm"
-              type="button"
-              @click="arquivosOpen = true"
-            >
-              Abrir Arquivos
-            </Button>
+            <p class="text-[10px] font-bold text-text-soft uppercase tracking-wider">
+              Imagens vinculadas à venda. Podem ser usadas em documentos ou PDFs.
+            </p>
+            <div class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden max-h-[200px] overflow-y-auto">
+              <Table
+                :columns="colArquivos"
+                :rows="imagensParaPdf"
+                :loading="loadingImagensPdf"
+                empty-text="Nenhuma imagem."
+                :boxed="false"
+              >
+                <template #cell-nome="{ row }">
+                  <div class="flex flex-col">
+                    <span class="text-xs font-black text-text-main">{{ row.nome || row.filename }}</span>
+                    <span class="text-[10px] font-bold text-text-soft uppercase tracking-wider">{{ row.mime_type || 'IMAGEM' }}</span>
+                  </div>
+                </template>
+                <template #cell-acoes="{ row }">
+                  <div class="flex justify-end gap-2">
+                    <Button v-if="can('arquivos.ver') || can('vendas.ver')" variant="secondary" size="sm" type="button" @click="abrirArquivo(row)">Ver</Button>
+                    <Button v-if="can('arquivos.excluir') && can(permSalvarVenda())" variant="danger" size="sm" type="button" @click="excluirArquivo(row.id, 'IMAGEM_PDF')">Excluir</Button>
+                  </div>
+                </template>
+              </Table>
+            </div>
           </div>
 
-          <div class="p-6 rounded-3xl border border-border-ui bg-bg-page/50">
-            <div class="text-[10px] font-black uppercase tracking-widest text-text-soft text-center py-2">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="text-xs font-black uppercase tracking-widest text-text-soft">
+                Anexos e documentos
+              </div>
+              <div class="flex items-center gap-2">
+                <input ref="fileInputAnexos" type="file" class="hidden" @change="(e) => onPickArquivo(e, 'ANEXO')" />
+                <Button
+                  v-if="can(permSalvarVenda()) && can('arquivos.criar')"
+                  size="sm"
+                  variant="ghost"
+                  type="button"
+                  @click="clicarAdicionarArquivo('ANEXO')"
+                >
+                  <i class="pi pi-upload mr-1"></i> ADICIONAR ARQUIVO
+                </Button>
+              </div>
+            </div>
+            <p class="text-[10px] font-bold text-text-soft uppercase tracking-wider">
+              PDFs e outros arquivos anexados à venda (comprovantes, contratos, etc.).
+            </p>
+            <div class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden max-h-[200px] overflow-y-auto">
+              <Table
+                :columns="colArquivos"
+                :rows="anexosDocumentos"
+                :loading="loadingAnexos"
+                empty-text="Nenhum anexo ou documento."
+                :boxed="false"
+              >
+                <template #cell-nome="{ row }">
+                  <div class="flex flex-col">
+                    <span class="text-xs font-black text-text-main">{{ row.nome || row.filename }}</span>
+                    <span class="text-[10px] font-bold text-text-soft uppercase tracking-wider">{{ row.mime_type || 'ARQUIVO' }}</span>
+                  </div>
+                </template>
+                <template #cell-acoes="{ row }">
+                  <div class="flex justify-end gap-2">
+                    <Button v-if="can('arquivos.ver') || can('vendas.ver')" variant="secondary" size="sm" type="button" @click="abrirArquivo(row)">Ver</Button>
+                    <Button v-if="can('arquivos.excluir') && can(permSalvarVenda())" variant="danger" size="sm" type="button" @click="excluirArquivo(row.id, 'ANEXO')">Excluir</Button>
+                  </div>
+                </template>
+              </Table>
+            </div>
+          </div>
+        </section>
+        <section v-else class="space-y-4">
+          <div class="text-[10px] font-black uppercase tracking-widest text-text-soft">
+            * Os arquivos ficam disponíveis após salvar a venda.
+          </div>
+
+          <div v-if="false" class="oculto-antigo">
+            <div class="text-[10px]">
               Use “Abrir Arquivos” para anexar / visualizar dentro do PWA.
             </div>
           </div>
 
-          <div class="text-[10px] font-black uppercase tracking-widest text-text-soft">
-            * O upload fica disponível apenas após a criação da venda no sistema.
-          </div>
         </section>
       </div>
       </div>
@@ -544,17 +639,6 @@
     </div>
   </div>
 
-  <!-- ARQUIVOS MODAL GLOBAL (PWA) -->
-  <ArquivosModal
-    v-if="arquivosOpen && vendaId"
-    :open="arquivosOpen"
-    owner-type="VENDA"
-    :owner-id="vendaId"
-    categoria="ANEXO"
-    :can-manage="can('vendas.editar')"
-    view-perm="vendas.ver"
-    @close="arquivosOpen = false"
-  />
 </template>
 
 
@@ -563,8 +647,10 @@ import { reactive, ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { confirm } from '@/services/confirm'
 import { notify } from '@/services/notify'
-import { ClienteService, OrcamentosService, VendaService} from '@/services/index'
+import { ClienteService, OrcamentosService, VendaService } from '@/services/index'
+import { ArquivosService } from '@/services/arquivos.service'
 import { format } from '@/utils/format'
+import { moedaParaNumero } from '@/utils/number'
 import { FORMAS_PAGAMENTO, COMISSOES, TAXAS_CARTAO, TAXA_NOTA_FISCAL, PIPELINE_CLIENTE } from '@/constantes'
 import { can } from '@/services/permissions'
 
@@ -576,7 +662,17 @@ definePage({ meta: { perm: 'vendas.ver' } })
 const route = useRoute()
 const router = useRouter()
 
-const arquivosOpen = ref(false)
+const imagensParaPdf = ref([])
+const anexosDocumentos = ref([])
+const loadingImagensPdf = ref(false)
+const loadingAnexos = ref(false)
+const fileInputImagemPdf = ref(null)
+const fileInputAnexos = ref(null)
+
+const colArquivos = [
+  { key: 'nome', label: 'ARQUIVO' },
+  { key: 'acoes', label: '', align: 'right', width: '220px' },
+]
 
 const vendaId = computed(() => {
   const n = Number(String(route.params.id || '').replace(/\D/g, ''))
@@ -655,6 +751,7 @@ const form = reactive({
       parcelas: 1,
       data_prevista_recebimento: '',
       data_recebimento: '',
+      datas_parcelas: [], // uma data por parcela (PIX/Dinheiro/Cheque/Transferência)
       status_financeiro_chave: 'EM_ABERTO',
     },
   ],
@@ -825,7 +922,6 @@ const columnsPagamentos = [
   { key: 'forma', label: 'Forma', width: '220px' },
   { key: 'parcelas', label: 'Parcelas', width: '120px', align: 'right' },
   { key: 'valor', label: 'Valor', width: '160px', align: 'right' },
-  { key: 'data_prevista', label: 'Previsto', width: '150px' },
   { key: 'data_recebimento', label: 'Recebido', width: '150px' },
   { key: 'acoes', label: 'Ações', width: '140px', align: 'right' },
 ]
@@ -841,6 +937,8 @@ const columnsComissoes = [
 // =======================
 // PAGAMENTOS / RATEIO
 // =======================
+const FORMAS_COM_DATA_POR_PARCELA = ['PIX', 'DINHEIRO', 'CHEQUE', 'TRANSFERENCIA']
+
 function addPagamento() {
   if (!can(permSalvarVenda())) return notify.error('Acesso negado.')
   form.pagamentos.push({
@@ -849,8 +947,25 @@ function addPagamento() {
     parcelas: 1,
     data_prevista_recebimento: '',
     data_recebimento: '',
+    datas_parcelas: [],
     status_financeiro_chave: 'EM_ABERTO',
   })
+}
+
+function ensureDatasParcelas(p) {
+  if (!FORMAS_COM_DATA_POR_PARCELA.includes(p.forma_pagamento_chave)) return
+  const n = Math.max(1, Math.min(12, Number(p.parcelas || 1)))
+  if (!Array.isArray(p.datas_parcelas)) p.datas_parcelas = []
+  while (p.datas_parcelas.length < n) p.datas_parcelas.push('')
+  if (p.datas_parcelas.length > n) p.datas_parcelas = p.datas_parcelas.slice(0, n)
+}
+
+function mostrarDataPorParcela(p) {
+  if (!p || !FORMAS_COM_DATA_POR_PARCELA.includes(p.forma_pagamento_chave)) return false
+  const n = Math.max(1, Math.min(12, Number(p.parcelas || 1)))
+  if (n <= 1) return false
+  ensureDatasParcelas(p)
+  return true
 }
 
 function removerPagamento(idx) {
@@ -875,6 +990,103 @@ function addComissao() {
 function removerComissao(idx) {
   if (!can(permSalvarVenda())) return notify.error('Acesso negado.')
   form.comissoes.splice(idx, 1)
+}
+
+// =======================
+// ARQUIVOS (igual orçamentos)
+// =======================
+async function carregarImagensParaPdf() {
+  const id = vendaId.value
+  if (!id) {
+    imagensParaPdf.value = []
+    return
+  }
+  loadingImagensPdf.value = true
+  try {
+    const res = await ArquivosService.listar({
+      ownerType: 'VENDA',
+      ownerId: Number(id),
+      categoria: 'IMAGEM_PDF',
+    })
+    const arr = res?.data?.data ?? res?.data ?? res
+    imagensParaPdf.value = Array.isArray(arr) ? arr : []
+  } finally {
+    loadingImagensPdf.value = false
+  }
+}
+
+async function carregarAnexosDocumentos() {
+  const id = vendaId.value
+  if (!id) {
+    anexosDocumentos.value = []
+    return
+  }
+  loadingAnexos.value = true
+  try {
+    const res = await ArquivosService.listar({
+      ownerType: 'VENDA',
+      ownerId: Number(id),
+      categoria: 'ANEXO',
+    })
+    const arr = res?.data?.data ?? res?.data ?? res
+    anexosDocumentos.value = Array.isArray(arr) ? arr : []
+  } finally {
+    loadingAnexos.value = false
+  }
+}
+
+function carregarArquivos() {
+  carregarImagensParaPdf()
+  carregarAnexosDocumentos()
+}
+
+function abrirArquivo(row) {
+  const vid = String(vendaId.value || '').replace(/\D/g, '')
+  const backTo = encodeURIComponent(`/vendas/${vid}`)
+  const name = encodeURIComponent(row?.nome || row?.filename || 'ARQUIVO')
+  const type = encodeURIComponent(row?.mime_type || '')
+  router.push(`/arquivos/${row.id}?name=${name}&type=${type}&backTo=${backTo}`)
+}
+
+async function excluirArquivo(arquivoId, _categoria) {
+  if (!can('arquivos.excluir') || !can(permSalvarVenda())) return notify.error('Acesso negado.')
+  const ok = await confirm.show('Excluir arquivo?', 'Esta ação não pode ser desfeita.')
+  if (!ok) return
+  try {
+    await ArquivosService.remover(Number(arquivoId))
+    notify.success('Arquivo removido.')
+    await carregarArquivos()
+  } catch (err) {
+    notify.error(err?.response?.data?.message || 'Erro ao excluir arquivo.')
+  }
+}
+
+function clicarAdicionarArquivo(categoria) {
+  if (!can(permSalvarVenda()) || !can('arquivos.criar')) return notify.error('Acesso negado.')
+  if (!vendaId.value) return notify.error('Salve a venda antes de anexar arquivos.')
+  const input = categoria === 'IMAGEM_PDF' ? fileInputImagemPdf.value : fileInputAnexos.value
+  if (!input) return notify.error('Input de arquivo não montado.')
+  input.click()
+}
+
+async function onPickArquivo(e, categoria) {
+  const file = e.target.files?.[0]
+  e.target.value = ''
+  if (!file) return
+  if (!can('arquivos.criar') || !can(permSalvarVenda())) return notify.error('Acesso negado.')
+  if (!vendaId.value) return notify.error('Salve a venda antes de anexar arquivos.')
+  try {
+    await ArquivosService.upload({
+      ownerType: 'VENDA',
+      ownerId: Number(vendaId.value),
+      categoria: categoria || 'ANEXO',
+      file,
+    })
+    notify.success(categoria === 'IMAGEM_PDF' ? 'Imagem adicionada.' : 'Arquivo anexado.')
+    await carregarArquivos()
+  } catch (err) {
+    notify.error(err?.response?.data?.message || 'Erro ao anexar arquivo.')
+  }
 }
 
 const valor_bruto = computed(() => round2(num(form.valor_vendido || 0)))
@@ -999,32 +1211,51 @@ async function carregarVenda() {
       valor_unitario: Number(it.valor_unitario || 0),
     }))
 
-    form.pagamentos = (data?.pagamentos || []).map((p) => ({
-      id: p.id,
+    const rawPagamentos = (data?.pagamentos || []).map((p) => ({
       forma_pagamento_chave: p.forma_pagamento_chave || '',
       valor: round2(num(p.valor || 0)),
-      parcelas: 1,
-      data_prevista_recebimento: p.data_prevista_recebimento ? String(p.data_prevista_recebimento).slice(0, 10) : '',
       data_recebimento: p.data_recebimento ? String(p.data_recebimento).slice(0, 10) : '',
-      status_financeiro_chave: p.status_financeiro_chave || 'EM_ABERTO',
     }))
-
-    if (!form.pagamentos.length) {
-      form.pagamentos = [{
-        forma_pagamento_chave: '',
-        valor: round2(form.valor_vendido),
-        parcelas: 1,
+    const grupos = []
+    for (let i = 0; i < rawPagamentos.length; i++) {
+      const p = rawPagamentos[i]
+      const forma = p.forma_pagamento_chave
+      const valorUnit = p.valor
+      const datas = [p.data_recebimento].filter(Boolean)
+      let j = i + 1
+      while (j < rawPagamentos.length && rawPagamentos[j].forma_pagamento_chave === forma && round2(num(rawPagamentos[j].valor)) === valorUnit) {
+        if (rawPagamentos[j].data_recebimento) datas.push(rawPagamentos[j].data_recebimento)
+        j++
+      }
+      const n = j - i
+      grupos.push({
+        forma_pagamento_chave: forma,
+        valor: round2(valorUnit * n),
+        parcelas: n,
         data_prevista_recebimento: '',
-        data_recebimento: '',
-        status_financeiro_chave: 'EM_ABERTO',
-      }]
+        data_recebimento: n === 1 ? (rawPagamentos[i].data_recebimento || '') : '',
+        datas_parcelas: FORMAS_COM_DATA_POR_PARCELA.includes(forma) && n > 1 ? (rawPagamentos.slice(i, j).map((x) => x.data_recebimento || '')) : [],
+        status_financeiro_chave: data?.pagamentos?.[i]?.status_financeiro_chave || 'EM_ABERTO',
+      })
+      i = j - 1
     }
+    form.pagamentos = grupos.length ? grupos : [{
+      forma_pagamento_chave: '',
+      valor: round2(form.valor_vendido),
+      parcelas: 1,
+      data_prevista_recebimento: '',
+      data_recebimento: '',
+      datas_parcelas: [],
+      status_financeiro_chave: 'EM_ABERTO',
+    }]
 
     form.comissoes = (data?.comissoes || []).map((c) => ({
       id: c.id,
       tipo_comissao_chave: c.tipo_comissao_chave || 'VENDEDOR',
       responsavel_nome: c.responsavel_nome || '',
     }))
+
+    await carregarArquivos()
   } catch (e) {
     console.error(e)
     notify.error('Erro ao carregar venda')
@@ -1069,13 +1300,36 @@ function montarPayload() {
     tem_nota_fiscal: Boolean(form.tem_nota_fiscal),
     taxa_nota_fiscal_percentual_aplicado: round2(num(form.taxa_nota_fiscal_percentual_aplicado || 0)),
 
-    pagamentos: (form.pagamentos || []).map((p) => ({
-      forma_pagamento_chave: String(p.forma_pagamento_chave || ''),
-      valor: round2(num(p.valor || 0)),
-      data_prevista_recebimento: p.data_prevista_recebimento || null,
-      data_recebimento: p.data_recebimento || null,
-      status_financeiro_chave: p.status_financeiro_chave || 'EM_ABERTO',
-    })),
+    pagamentos: (function () {
+      const list = []
+      for (const p of form.pagamentos || []) {
+        const forma = String(p.forma_pagamento_chave || '')
+        const valorTotal = round2(num(p.valor || 0))
+        const n = Math.max(1, Math.min(12, Number(p.parcelas || 1)))
+        const comDataPorParcela = FORMAS_COM_DATA_POR_PARCELA.includes(forma) && n > 1 && Array.isArray(p.datas_parcelas) && p.datas_parcelas.length >= n
+        if (comDataPorParcela) {
+          const valorParcela = round2(valorTotal / n)
+          for (let i = 0; i < n; i++) {
+            list.push({
+              forma_pagamento_chave: forma,
+              valor: valorParcela,
+              data_prevista_recebimento: null,
+              data_recebimento: (p.datas_parcelas[i] && String(p.datas_parcelas[i]).trim()) ? String(p.datas_parcelas[i]).slice(0, 10) : null,
+              status_financeiro_chave: p.status_financeiro_chave || 'EM_ABERTO',
+            })
+          }
+        } else {
+          list.push({
+            forma_pagamento_chave: forma,
+            valor: valorTotal,
+            data_prevista_recebimento: p.data_prevista_recebimento || null,
+            data_recebimento: (p.data_recebimento && String(p.data_recebimento).trim()) ? String(p.data_recebimento).slice(0, 10) : null,
+            status_financeiro_chave: p.status_financeiro_chave || 'EM_ABERTO',
+          })
+        }
+      }
+      return list
+    })(),
 
     comissoes: (form.comissoes || []).map((c) => ({
       tipo_comissao_chave: String(c.tipo_comissao_chave || ''),

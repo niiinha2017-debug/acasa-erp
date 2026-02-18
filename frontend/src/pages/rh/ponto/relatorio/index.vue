@@ -6,7 +6,7 @@
       <PageHeader
         title="Relatório de Ponto"
         subtitle="Espelho de ponto e horas com base no cadastro do funcionário"
-        icon="pi pi-clock"
+        icon="pi pi-stopwatch"
         :show-back="false"
       >
         <template #actions>
@@ -57,7 +57,7 @@
                 class="w-full h-11 bg-bg-card border border-border-ui rounded-xl px-4 text-xs font-bold text-text-main outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary transition-all"
               />
             </div>
-            <div class="md:col-span-4 flex gap-2 justify-end">
+            <div class="md:col-span-4 flex gap-2 justify-end flex-wrap">
               <Button
                 variant="secondary"
                 class="h-11 px-5 rounded-xl font-black text-[10px] uppercase"
@@ -68,6 +68,16 @@
                 <i class="pi pi-file-pdf mr-2 text-xs"></i>
                 PDF
               </Button>
+              <button
+                v-if="funcionarioSelecionado?.whatsapp"
+                type="button"
+                class="h-11 px-5 rounded-xl font-black text-[10px] uppercase bg-[#25D366] text-white hover:bg-[#128C7E] transition-colors inline-flex items-center justify-center gap-2 disabled:opacity-50"
+                :disabled="!filtros.funcionario_id || !filtros.data_ini"
+                @click="abrirWhatsComprovante"
+              >
+                <i class="pi pi-whatsapp text-xs"></i>
+                Enviar comprovante WhatsApp
+              </button>
             </div>
           </div>
         </div>
@@ -126,7 +136,7 @@
             </div>
             <div class="rounded-xl border border-border-ui bg-bg-card p-4 flex items-center gap-4">
               <div class="w-11 h-11 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                <i class="pi pi-clock text-blue-600 text-lg"></i>
+                <i class="pi pi-stopwatch text-blue-600 text-lg"></i>
               </div>
               <div>
                 <p class="text-[10px] font-black uppercase text-text-soft">Trabalhado</p>
@@ -421,6 +431,7 @@ import { consolidarSaldoPeriodo, derivarCargaDosHorarios } from '@/utils/utils'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
 import { listDays, groupRegistrosByDia } from '@/utils/ponto'
+import { onlyNumbers } from '@/utils/masks'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import Button from '@/components/ui/Button.vue'
 import SearchInput from '@/components/ui/SearchInput.vue'
@@ -632,6 +643,70 @@ async function abrirPdfViaBlob(funcionario_id, mes, ano) {
     console.error('[PONTO PDF blob]', e)
     notify.error(e?.response?.data?.message || 'Não foi possível abrir o PDF.')
   }
+}
+
+function abrirWhatsComprovante() {
+  const f = funcionarioSelecionado.value
+  if (!f?.whatsapp) {
+    notify.warn('Funcionário sem WhatsApp cadastrado.')
+    return
+  }
+  const num = onlyNumbers(String(f.whatsapp))
+  if (num.length < 10) {
+    notify.warn('Número de WhatsApp inválido.')
+    return
+  }
+  const numeroWa = num.startsWith('55') ? num : `55${num}`
+  const dataIni = filtros.data_ini ? fmtData(filtros.data_ini) : '-'
+  const dataFim = filtros.data_fim ? fmtData(filtros.data_fim) : '-'
+  const nome = String(f.nome || '').trim() || 'Colaborador'
+  const msg =
+`Olá ${nome}!
+
+Resumo do seu ponto:
+Período: ${dataIni} a ${dataFim}
+Horas trabalhadas: ${resumo.value.totalHorasHHMM}
+Saldo: ${resumo.value.totalSaldoHHMM}
+
+Acesse o sistema para o espelho completo.`
+  const url = `https://wa.me/${numeroWa}?text=${encodeURIComponent(msg)}`
+
+  const isTauri = typeof window !== 'undefined' && (window.__TAURI__ ?? window.__TAURI_INTERNALS__)
+  if (isTauri) {
+    try {
+      const tauri = window.__TAURI__ ?? window.__TAURI_INTERNALS__
+      if (tauri?.opener?.open) {
+        tauri.opener.open(url)
+        return
+      }
+      if (typeof tauri?.opener?.openUrl === 'function') {
+        tauri.opener.openUrl(url)
+        return
+      }
+      if (tauri?.shell?.open) {
+        tauri.shell.open(url)
+        return
+      }
+    } catch (e) {
+      console.error('[PONTO_WHATS_TAURI]', e)
+    }
+  }
+  try {
+    const opened = window.open(url, '_blank', 'noopener,noreferrer')
+    if (opened) return
+  } catch {}
+  try {
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.target = '_blank'
+    anchor.rel = 'noopener noreferrer'
+    anchor.style.display = 'none'
+    document.body.appendChild(anchor)
+    anchor.click()
+    document.body.removeChild(anchor)
+    return
+  } catch {}
+  window.location.href = url
 }
 
 async function confirmarExcluirDireto(id) {

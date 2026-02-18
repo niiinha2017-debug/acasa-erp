@@ -14,15 +14,34 @@ Para **atualizar sempre os 3 pontos**, use **GitHub Actions** (recomendado) ou o
 
 ## Opção 1: GitHub Actions (deploy automático)
 
-**Basta dar push na branch `main`.** O workflow faz:
+**Dê push na branch `main`** (ou `master`). O workflow faz:
 
 - Backend (EC2)
 - Frontend web + página de downloads
-- APKs (ERP + Ponto) → `erp/Acasa.apk` e subdomínio Ponto (`ponto.apk` + landing)
+- **APKs (ERP + Ponto)** → `erp/Acasa.apk` e subdomínio Ponto (`ponto.apk` + landing)
 - `version.json` (Android “Verificar atualização”)
 - Instalador Windows (Tauri) + `latest.json` (updater no desktop)
 
-Você **não precisa** rodar `deploy:all` na sua máquina. Confira os jobs em **Actions** no repositório. Os secrets (SSH, Android keystore, Tauri, certificado Windows) precisam estar configurados no GitHub.
+Você **não precisa** rodar `deploy:all` na sua máquina. Os secrets (SSH, Android keystore, Tauri, certificado Windows) precisam estar configurados no GitHub.
+
+### APK não atualiza no push?
+
+1. **Confirme a branch**  
+   O workflow só roda em push para `main` ou `master`. Se você usa outra branch, faça merge ou push para `main`.
+
+2. **Veja se o job rodou**  
+   No GitHub: **Actions** → último workflow “Deploy ACASA (EC2)” → confira se o job **deploy-android-apks** está verde. Se estiver vermelho, abra o job e veja o passo que falhou.
+
+3. **Secrets do Android**  
+   Se aparecer “Secrets faltando”, vá em **Settings** → **Secrets and variables** → **Actions** e confira:
+   - `EC2_SSH_KEY`, `EC2_HOST`, `EC2_USER`
+   - `ANDROID_KEYSTORE_B64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`
+
+4. **Rodar manualmente**  
+   Em **Actions** → “Deploy ACASA (EC2)” → **Run workflow** → Run. Assim você dispara o deploy (incluindo APKs) sem dar push.
+
+5. **Versão para o app avisar “nova versão”**  
+   O app Android compara com `version.json`. Para o usuário ver “Há uma nova versão”, aumente a versão em `frontend/package.json` (ex.: `0.1.21` → `0.1.22`) antes do push. O ERP abre e, em ~2s, verifica; no menu também há “Verificar atualização”.
 
 ---
 
@@ -35,7 +54,7 @@ Quando quiser rodar o deploy na sua máquina em vez do CI:
 ```bash
 cd "d:\Sistema ERP\acasa-erp"
 git add .
-git commit -m "3.0"
+git commit -m "4.0"
 git push
 ```
 

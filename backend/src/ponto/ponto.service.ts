@@ -90,6 +90,23 @@ export class PontoService {
     }
   }
 
+  private async assertFuncionarioAtivoParaPonto(funcionario_id: number) {
+    const funcionario = await this.prisma.funcionarios.findUnique({
+      where: { id: funcionario_id },
+      select: { status: true, demissao: true },
+    });
+    if (!funcionario)
+      throw new BadRequestException('Funcionário não encontrado.');
+
+    if (String(funcionario.status || '').toUpperCase() !== 'ATIVO') {
+      throw new BadRequestException('Funcionário inativo.');
+    }
+
+    if (funcionario.demissao && funcionario.demissao <= new Date()) {
+      throw new BadRequestException('Funcionário desligado.');
+    }
+  }
+
   private assertConviteValido(convite: any) {
     if (!convite) throw new BadRequestException('Código inválido.');
     if (convite.usado_em) throw new BadRequestException('Código já utilizado.');
@@ -186,7 +203,13 @@ export class PontoService {
         device_uuid: dispositivo.device_uuid,
       };
 
-      const token = await this.jwt.signAsync(payload);
+      // Token do app de Ponto: pensado para ser de longa duração.
+      // Usa PONTO_JWT_EXPIRES (ex: "365d", "3650d") ou cai no padrão de 10 anos.
+      const pontoExpires =
+        this.config.get<string>('PONTO_JWT_EXPIRES')?.trim() || '3650d';
+      const token = await this.jwt.signAsync(payload, {
+        expiresIn: pontoExpires as any,
+      });
       const token_hash = this.hashToken(token);
 
       await tx.ponto_dispositivos.update({
@@ -207,6 +230,7 @@ export class PontoService {
 
   async registrar(dto: RegistrarPontoDto, req: any) {
     const funcionario_id = this.getFuncionarioId(req);
+    await this.assertFuncionarioAtivoParaPonto(funcionario_id);
     const dispositivo_id = this.getDispositivoId(req);
     const { inicio, fim } = this.rangeHoje();
 
@@ -274,6 +298,7 @@ export class PontoService {
 
   async hoje(req: any) {
     const funcionario_id = this.getFuncionarioId(req);
+    await this.assertFuncionarioAtivoParaPonto(funcionario_id);
     const { inicio, fim } = this.rangeHoje();
 
     return this.prisma.ponto_registros.findMany({
@@ -288,6 +313,7 @@ export class PontoService {
 
   async ultimo(req: any) {
     const funcionario_id = this.getFuncionarioId(req);
+    await this.assertFuncionarioAtivoParaPonto(funcionario_id);
     const { inicio, fim } = this.rangeHoje();
 
     return this.prisma.ponto_registros.findFirst({
@@ -310,11 +336,20 @@ export class PontoService {
     const funcionario_id = this.getFuncionarioId(req);
     const funcionario = await this.prisma.funcionarios.findUnique({
       where: { id: funcionario_id },
-      select: { id: true, nome: true, status: true },
+      select: { id: true, nome: true, status: true, demissao: true },
     });
 
     if (!funcionario)
       throw new BadRequestException('Funcionário não encontrado.');
+
+    if (String(funcionario.status || '').toUpperCase() !== 'ATIVO') {
+      throw new BadRequestException('Funcionário inativo.');
+    }
+
+    if (funcionario.demissao && funcionario.demissao <= new Date()) {
+      throw new BadRequestException('Funcionário desligado.');
+    }
+
     return funcionario;
   }
 }

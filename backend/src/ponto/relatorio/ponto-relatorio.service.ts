@@ -27,6 +27,7 @@ export class PontoRelatorioService {
         id: true,
         nome: true,
         status: true,
+        whatsapp: true,
         custo_hora: true,
         carga_horaria_dia: true,
         carga_horaria_semana: true,

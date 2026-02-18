@@ -1,32 +1,43 @@
 <template>
-  <div class="p-6">
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-lg">
-      <div class="flex justify-between items-center mb-6">
-        <div>
-          <h2 class="text-xl font-bold text-white">Relatório de Despesas por Categoria</h2>
-          <p class="text-sm text-slate-400">Distribuição das despesas por categoria</p>
+  <div class="w-full h-full">
+    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
+      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
+
+      <PageHeader
+        title="Despesas por Categoria"
+        subtitle="Distribuição das despesas (SAÍDA) por categoria"
+        icon="pi pi-wallet"
+      >
+        <template #actions>
+          <NuxtLink to="/relatorios" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-border-ui text-sm font-medium text-text-muted hover:bg-bg-page">
+            <i class="pi pi-arrow-left"></i>
+            Voltar
+          </NuxtLink>
+          <Button variant="outline" size="sm" @click="buscarDados">
+            <i class="pi pi-refresh mr-2"></i>
+            Atualizar
+          </Button>
+        </template>
+      </PageHeader>
+
+      <div class="px-4 md:px-6 pb-6 pt-4 border-t border-border-ui">
+        <div v-if="loading" class="h-80 flex items-center justify-center text-brand-primary animate-pulse font-mono text-sm">
+          Carregando dados...
         </div>
-        <button @click="buscarDados" class="p-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors">
-          <span class="text-emerald-400">🔄 Atualizar</span>
-        </button>
-      </div>
 
-      <div v-if="loading" class="h-80 flex items-center justify-center text-emerald-500 animate-pulse font-mono">
-        CARREGANDO DADOS DA DRE...
-      </div>
+        <div v-else-if="!(listaCategorias && listaCategorias.length)" class="h-80 flex items-center justify-center text-text-muted text-center px-4">
+          Nenhuma despesa (SAÍDA) no período. Verifique se o servidor Python está em <code class="text-slate-600 bg-slate-100 px-1 rounded">localhost:8001</code>.
+        </div>
 
-      <div v-else-if="!(listaCategorias && listaCategorias.length)" class="h-80 flex items-center justify-center text-slate-400">
-        Nenhuma despesa (SAÍDA) no período. Verifique o período ou se o servidor Python está em <code class="text-slate-300">localhost:8001</code>.
-      </div>
-
-      <div v-else class="h-80">
-        <apexchart
-          v-if="listaCategorias && listaCategorias.length"
-          type="bar"
-          height="100%"
-          :options="chartOptions"
-          :series="series"
-        />
+        <div v-else class="h-80">
+          <apexchart
+            v-if="listaCategorias && listaCategorias.length"
+            type="bar"
+            height="100%"
+            :options="chartOptions"
+            :series="series"
+          />
+        </div>
       </div>
     </div>
   </div>

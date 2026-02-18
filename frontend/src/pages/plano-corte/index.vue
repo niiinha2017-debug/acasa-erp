@@ -10,25 +10,27 @@
         :show-back="false"
       >
         <template #actions>
-          <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
-            <div class="w-full sm:w-64 order-1 sm:order-0">
+          <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:ml-auto">
+            <div class="flex-1 sm:flex-initial sm:w-48 min-w-0 order-2 sm:order-1">
               <SearchInput
                 v-model="busca"
-                placeholder="Buscar fornecedor ou lote..."
+                placeholder="Buscar..."
               />
             </div>
             <input
               v-model="mesFiltro"
               type="month"
-              class="h-10 px-3 bg-bg-card border border-border-ui rounded-xl text-xs font-bold focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary outline-none transition-all text-text-main"
+              class="h-9 px-3 rounded-lg text-xs font-medium text-text-main bg-bg-card border border-border-ui focus:ring-1 focus:ring-brand-primary/20 focus:border-brand-primary/50 outline-none transition-colors order-1 sm:order-2"
             />
             <Button
               v-if="can('plano_corte.criar')"
-              variant="primary"
+              variant="ghost"
+              size="sm"
               @click="novo()"
+              class="order-3 text-text-soft hover:text-brand-primary"
             >
-              <i class="pi pi-plus mr-2"></i>
-              Novo Plano
+              <i class="pi pi-plus"></i>
+              Novo
             </Button>
           </div>
         </template>
@@ -49,9 +51,9 @@
             color="blue"
           />
           <MetricCard
-            label="Média Chapas/Plano"
-            :value="mediaChapas"
-            icon="pi pi-th-large"
+            label="Total Vendido"
+            :value="format.currency(totalVendido)"
+            icon="pi pi-dollar"
             color="emerald"
           />
           <MetricCard
@@ -80,8 +82,8 @@
             </div>
           </template>
 
-          <template #cell-chapas="{ row }">
-            <span class="text-sm font-bold text-text-main tabular-nums">{{ row.chapas_qtd || 0 }}</span>
+          <template #cell-valor_total="{ row }">
+            <span class="text-sm font-bold text-text-main tabular-nums">{{ format.currency(row.valor_total ?? 0) }}</span>
           </template>
 
           <template #cell-data="{ row }">
@@ -133,8 +135,8 @@ mesFiltro.value = `${ano}-${mes}`
 
 const columns = [
   { key: 'fornecedor', label: 'FORNECEDOR / ORIGEM', width: '35%' },
-  { key: 'chapas', label: 'CHAPAS', width: '15%', align: 'center' },
   { key: 'data', label: 'DATA', width: '15%' },
+  { key: 'valor_total', label: 'VALOR TOTAL', width: '15%', align: 'right' },
   { key: 'status', label: 'STATUS', width: '15%' },
   { key: 'acoes', label: 'Ações', align: 'center', width: '15%' },
 ]
@@ -153,10 +155,8 @@ const filtradas = computed(() => {
   })
 })
 
-const mediaChapas = computed(() => {
-  if (rows.value.length === 0) return 0
-  const total = rows.value.reduce((a, b) => a + Number(b.chapas_qtd || 0), 0)
-  return Math.round(total / rows.value.length)
+const totalVendido = computed(() => {
+  return filtradas.value.reduce((a, b) => a + Number(b.valor_total ?? 0), 0)
 })
 
 async function carregar() {

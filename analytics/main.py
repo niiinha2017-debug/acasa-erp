@@ -23,45 +23,6 @@ DB_URL = os.getenv(
 engine = create_engine(DB_URL)
 
 # -----------------------------------------------------------
-# ROTA 1: FLUXO DE CAIXA (O que você já tem)
-# -----------------------------------------------------------
-@app.get("/api/analytics/fluxo-caixa")
-def get_fluxo():
-    try:
-        df_pagar = pd.read_sql("SELECT vencimento_em AS data, valor_original AS valor, descricao FROM contas_pagar", engine)
-        df_receber = pd.read_sql("SELECT vencimento_em AS data, valor_original AS valor FROM contas_receber", engine)
-        
-        fluxo_total = []
-        if df_pagar.empty and df_receber.empty:
-            hoje = pd.Timestamp.now()
-            fluxo_total.append({'Data': hoje, 'Valor': 0, 'Tipo': 'Início'})
-        else:
-            for _, item in df_pagar.iterrows():
-                desc = str(item['descricao']).upper()
-                if 'MDF' in desc or 'COMPRA' in desc:
-                    data_primeira = pd.to_datetime(item['data']) + pd.DateOffset(months=2)
-                    valor_parcela = float(item['valor']) / 6
-                    for i in range(6):
-                        fluxo_total.append({
-                            'Data': data_primeira + pd.DateOffset(months=i),
-                            'Valor': -(valor_parcela),
-                            'Tipo': 'Saída MDF 6x'
-                        })
-                else:
-                    fluxo_total.append({'Data': pd.to_datetime(item['data']), 'Valor': -float(item['valor']), 'Tipo': 'Fixo'})
-
-            for _, item in df_receber.iterrows():
-                fluxo_total.append({'Data': pd.to_datetime(item['data']), 'Valor': float(item['valor']), 'Tipo': 'Entrada'})
-
-        df_final = pd.DataFrame(fluxo_total).sort_values('Data')
-        df_final['Saldo_Caixa'] = df_final['Valor'].cumsum()
-        df_final['Data'] = df_final['Data'].dt.strftime('%Y-%m-%d')
-        
-        return df_final.to_dict(orient='records')
-    except Exception as e:
-        return {"erro": str(e)}
-
-# -----------------------------------------------------------
 # ROTA 2: STATUS DE OBRAS
 # -----------------------------------------------------------
 @app.get("/api/analytics/status-obras")
@@ -115,5 +76,47 @@ def get_dashboard_resumo():
             "total_a_receber": round(total_a_receber, 2),
             "clientes_ativos": clientes_ativos,
         }
+    except Exception as e:
+        return {"erro": str(e)}
+
+
+# -----------------------------------------------------------
+# DRE DE DESPESAS (por mês e categoria)
+# -----------------------------------------------------------
+@app.get("/api/analytics/dre-despesas")
+def get_dre_despesas(inicio: str | None = None, fim: str | None = None):
+    """Despesas (SAÍDA) por mês e categoria. Parâmetros: inicio, fim (YYYY-MM-DD)."""
+    try:
+        hoje = pd.Timestamp.now().normalize()
+        dt_inicio = pd.to_datetime(inicio) if inicio else pd.Timestamp(year=hoje.year, month=1, day=1)
+        dt_fim = pd.to_datetime(fim) if fim else hoje
+
+        with engine.connect() as conn:
+            query = text("""
+                (
+                    SELECT d.categoria, t.vencimento_em AS data, t.valor AS valor
+                    FROM despesas d
+                    INNER JOIN titulos_financeiros t ON t.despesa_id = d.id
+                    WHERE t.vencimento_em BETWEEN :inicio AND :fim AND d.tipo_movimento = 'SAIDA'
+                )
+                UNION ALL
+                (
+                    SELECT d.categoria, d.data_vencimento AS data, d.valor_total AS valor
+                    FROM despesas d
+                    LEFT JOIN titulos_financeiros t ON t.despesa_id = d.id
+                    WHERE t.id IS NULL AND d.data_vencimento BETWEEN :inicio AND :fim AND d.tipo_movimento = 'SAIDA'
+                )
+            """)
+            df = pd.read_sql(query, conn, params={"inicio": dt_inicio, "fim": dt_fim})
+
+        if df.empty:
+            return []
+
+        df["data"] = pd.to_datetime(df["data"])
+        df["mes"] = df["data"].dt.to_period("M").astype(str)
+        df["categoria"] = df["categoria"].astype(str).str.upper()
+        agrupado = df.groupby(["mes", "categoria"], as_index=False)["valor"].sum().rename(columns={"valor": "total"})
+        agrupado = agrupado.sort_values(["mes", "categoria"])
+        return agrupado.to_dict(orient="records")
     except Exception as e:
         return {"erro": str(e)}

@@ -980,6 +980,24 @@ model Empresa {
   @@map("empresa") // Nome da tabela no banco de dados
 }
 
+model clausulas_modelos {
+  id Int @id @default(autoincrement())
+
+  // ORCAMENTO | CONTRATO (controlado pela aplicação)
+  tipo       String
+  modulo_key String   // ex: OBJETO, PRECO_PAGAMENTO, PRAZO_ENTREGA...
+  titulo     String
+  texto      String
+  ordem      Int      @default(0)
+
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  @@unique([tipo, modulo_key])
+  @@index([tipo, ordem])
+  @@map("clausulas_modelos")
+}
+
 enum PontoTipoRegistro {
   ENTRADA
   SAIDA

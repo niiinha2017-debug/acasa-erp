@@ -205,7 +205,7 @@ const SECTION_LABELS = {
   financeiro: 'Financeiro',
   cadastros: 'Cadastros',
   configuracoes: 'Configurações',
-  dashboard: 'Dashboard',
+  relatorios: 'Relatórios',
 }
 
 const handleLogout = () => {

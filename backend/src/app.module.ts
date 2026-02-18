@@ -25,6 +25,7 @@ import { UtilsModule } from './utils/utils.module';
 import { PontoModule } from './ponto/ponto.module';
 import { ArquivosModule } from './arquivos/arquivos.module';
 import { AgendaModule } from './agenda/agenda.module';
+import { ClausulasModule } from './clausulas/clausulas.module';
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { AgendaModule } from './agenda/agenda.module';
     PontoModule,
     AgendaModule,
     VendasModule,
+    ClausulasModule,
   ],
 })
 export class AppModule {}

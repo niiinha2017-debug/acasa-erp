@@ -4,6 +4,7 @@ export const NAV_SCHEMA = {
     { label: 'Orçamento', to: '/orcamentos', icon: 'pi-file-edit', perm: 'orcamentos.ver' },
     { label: 'Venda', to: '/vendas', icon: 'pi-cart-plus', perm: 'vendas.ver' },
     { label: 'Contrato', to: '/contratos', icon: 'pi-file', perm: 'contratos.ver' },
+    { label: 'Cláusulas (Orç./Contrato)', to: '/contratos/clausulas', icon: 'pi-file-edit', perm: 'orcamentos.editar' },
   ],
 
   producao: [
@@ -31,13 +32,13 @@ export const NAV_SCHEMA = {
     { label: 'Usuarios', to: '/configuracoes/usuarios', icon: 'pi-user', perm: 'usuarios.ver' },
     { label: 'Permissoes', to: '/configuracoes/permissoes', icon: 'pi-lock', perm: 'permissoes.gerenciar' },
     { divider: true },
-    { label: 'Ponto (Registros)', to: '/rh/ponto/relatorio', icon: 'pi-clock', perm: 'ponto_relatorio.ver' },
+    { label: 'Ponto (Registros)', to: '/rh/ponto/relatorio', icon: 'pi-stopwatch', perm: 'ponto_relatorio.ver' },
     { label: 'Convites de Ponto', to: '/rh/ponto/convites', icon: 'pi-link', perm: 'ponto_convite.criar' },
     { divider: true },
     { label: 'Cadastro da Empresa', to: '/configuracoes/configuracoes', icon: 'pi-sliders-h', perm: 'configuracoes.empresa.ver' },
   ],
 
-  dashboard: [
-    { label: 'Dashboard', to: '/analytics/fluxocaixa', icon: 'pi-chart-bar', perm: 'dashboard.visualizar' },
+  relatorios: [
+    { label: 'Relatórios', to: '/relatorios', icon: 'pi-chart-bar', perm: 'dashboard.visualizar' },
   ],
 }

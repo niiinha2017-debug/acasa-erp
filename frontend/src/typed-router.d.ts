@@ -135,6 +135,13 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
+    '/contratos/clausulas': RouteRecordInfo<
+      '/contratos/clausulas',
+      '/contratos/clausulas',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/despesas/': RouteRecordInfo<
       '/despesas/',
       '/despesas',
@@ -303,6 +310,34 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
+    '/relatorios/': RouteRecordInfo<
+      '/relatorios/',
+      '/relatorios',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/relatorios/dashboard-resumo': RouteRecordInfo<
+      '/relatorios/dashboard-resumo',
+      '/relatorios/dashboard-resumo',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/relatorios/despesas-categoria': RouteRecordInfo<
+      '/relatorios/despesas-categoria',
+      '/relatorios/despesas-categoria',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/relatorios/status-obras': RouteRecordInfo<
+      '/relatorios/status-obras',
+      '/relatorios/status-obras',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/rh/ponto/convites': RouteRecordInfo<
       '/rh/ponto/convites',
       '/rh/ponto/convites',
@@ -454,6 +489,12 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/contratos/clausulas.vue': {
+      routes:
+        | '/contratos/clausulas'
+      views:
+        | never
+    }
     'src/pages/despesas/index.vue': {
       routes:
         | '/despesas/'
@@ -595,6 +636,30 @@ declare module 'vue-router/auto-routes' {
     'src/pages/produtos/[id].vue': {
       routes:
         | '/produtos/[id]'
+      views:
+        | never
+    }
+    'src/pages/relatorios/index.vue': {
+      routes:
+        | '/relatorios/'
+      views:
+        | never
+    }
+    'src/pages/relatorios/dashboard-resumo.vue': {
+      routes:
+        | '/relatorios/dashboard-resumo'
+      views:
+        | never
+    }
+    'src/pages/relatorios/despesas-categoria.vue': {
+      routes:
+        | '/relatorios/despesas-categoria'
+      views:
+        | never
+    }
+    'src/pages/relatorios/status-obras.vue': {
+      routes:
+        | '/relatorios/status-obras'
       views:
         | never
     }

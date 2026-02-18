@@ -2,7 +2,7 @@ name: Deploy ACASA (EC2)
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   workflow_dispatch:
 
 env:
@@ -121,6 +121,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Require Android + SSH secrets (evitar falha silenciosa)
+        env:
+          K: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          P: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          A: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KP: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          SSH: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          missing=""
+          [ -n "${K:-}" ] || missing="$missing ANDROID_KEYSTORE_B64"
+          [ -n "${P:-}" ] || missing="$missing ANDROID_KEYSTORE_PASSWORD"
+          [ -n "${A:-}" ] || missing="$missing ANDROID_KEY_ALIAS"
+          [ -n "${KP:-}" ] || missing="$missing ANDROID_KEY_PASSWORD"
+          [ -n "${SSH:-}" ] || missing="$missing EC2_SSH_KEY"
+          [ -z "$missing" ] || { echo "Secrets faltando no GitHub (Settings > Secrets and variables > Actions):$missing"; exit 1; }
+          echo "Secrets OK. APKs serao gerados e enviados ao servidor."
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

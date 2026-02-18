@@ -20,6 +20,7 @@ export const MENU_SECTIONS: MenuSection[] = [
       { label: 'Orçamento', to: '/orcamentos', icon: 'pi-file-edit', perm: 'orcamentos.ver' },
       { label: 'Venda', to: '/vendas', icon: 'pi-cart-plus', perm: 'vendas.ver' },
       { label: 'Contrato', to: '/contratos', icon: 'pi-file', perm: 'contratos.ver' },
+      { label: 'Cláusulas (Orç./Contrato)', to: '/contratos/clausulas', icon: 'pi-file-edit', perm: 'orcamentos.editar' },
     ],
   },
   {
@@ -112,7 +113,7 @@ export const MENU_SECTIONS: MenuSection[] = [
       {
         label: 'Ponto (Relatorio)',
         to: '/rh/ponto/relatorio',
-        icon: 'pi-clock',
+        icon: 'pi-stopwatch',
         perm: 'ponto_relatorio.ver',
       },
       {
@@ -122,21 +123,21 @@ export const MENU_SECTIONS: MenuSection[] = [
         perm: 'ponto_convite.criar',
       },
       { divider: true, label: '', to: '' },
-{
-  label: 'Cadastro da Empresa',
-  to: '/configuracoes/configuracoes',
-  icon: 'pi-sliders-h',
-  perm: 'configuracoes.empresa.ver',
-},
+      {
+        label: 'Cadastro da Empresa',
+        to: '/configuracoes/configuracoes',
+        icon: 'pi-sliders-h',
+        perm: 'configuracoes.empresa.ver',
+      },
     ],
   },
   {
-    key: 'dashboard',
-    label: 'Dashboard',
+    key: 'relatorios',
+    label: 'Relatórios',
     items: [
       {
-        label: 'Dashboard',
-        to: '/analytics/fluxocaixa',
+        label: 'Relatórios',
+        to: '/relatorios',
         icon: 'pi-chart-bar',
         perm: 'dashboard.visualizar',
       },
