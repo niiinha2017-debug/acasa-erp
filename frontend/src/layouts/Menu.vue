@@ -146,13 +146,8 @@ async function verificarAtualizacao() {
   checkingUpdate.value = true
   try {
     if (isTauri.value) {
-      const tauri = window.__TAURI__ ?? window.__TAURI_INTERNALS__
-      const updater = tauri?.plugin?.('updater') ?? tauri?.updater
-      if (!updater?.check) {
-        notify.info('Verificação de atualização não disponível neste ambiente.')
-        return
-      }
-      const update = await updater.check()
+      const { check } = await import('@tauri-apps/plugin-updater')
+      const update = await check()
       if (update?.available) {
         notify.success(`Atualização ${update.version} disponível. Baixando e instalando...`)
         try {
