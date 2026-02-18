@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 import storage from '@/utils/storage'
+import { notify } from '@/services/notify'
 
 // ✅ Ao reabrir o app (após fechar): logout + limpar abas → tela de login e página inicial sem abas
 const SESSION_KEY = 'acasa:session'
@@ -146,15 +147,23 @@ const maybeRunUpdater = async () => {
   if (!window.__TAURI__ && !window.__TAURI_INTERNALS__) return
 
   try {
+    notify.info('Tauri: verificando atualização...')
+
     const { check } = await import('@tauri-apps/plugin-updater')
     const update = await check()
 
     if (update?.available) {
+      notify.info(`Tauri: atualização ${update.version} encontrada. Baixando...`)
       await update.downloadAndInstall()
+      notify.success('Tauri: atualização instalada. Reiniciando o app...')
       window.location.reload()
+    } else {
+      notify.info('Tauri: nenhuma atualização disponível.')
     }
   } catch (err) {
     console.error('[ACASA_UPDATER]', err)
+    const msg = err?.message || String(err)
+    notify.error(`Tauri updater erro: ${msg}`)
   }
 }
 

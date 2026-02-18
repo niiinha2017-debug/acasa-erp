@@ -113,6 +113,17 @@
                 <div class="text-[10px] font-semibold text-slate-500">
                   {{ timeLabel(event.inicio_em) }} - {{ timeLabel(event.fim_em) }}
                 </div>
+                <div
+                  v-if="event.plano_corte_id"
+                  class="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase"
+                  :class="planoBadgeClass(planoStatusForEvent(event))"
+                >
+                  <span
+                    class="w-1.5 h-1.5 rounded-full"
+                    :class="planoDotClass(planoStatusForEvent(event))"
+                  ></span>
+                  {{ planoBadgeLabel(planoStatusForEvent(event)) }}
+                </div>
               </div>
             </div>
             <div v-else class="text-[10px] font-bold text-slate-400">
@@ -146,6 +157,21 @@
         </p>
 
         <div class="space-y-3">
+          <!-- Tipo de agendamento / etapa -->
+          <div>
+            <label class="block text-xs font-bold mb-1">Tipo de agendamento</label>
+            <select
+              v-model="taskForm.categoria"
+              class="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs font-bold text-slate-700"
+            >
+              <option value="LIVRE">Tarefa livre</option>
+              <option value="MEDIDA">Medida</option>
+              <option value="MEDIDA_FINA">Medida fina</option>
+              <option value="PRODUCAO">Produção da venda</option>
+              <option value="MONTAGEM">Montagem</option>
+            </select>
+          </div>
+
           <div class="grid grid-cols-12 gap-3">
             <div class="col-span-12 md:col-span-6">
               <label class="block text-xs font-bold mb-1">Inicio</label>
@@ -219,6 +245,63 @@
               </div>
             </div>
           </div>
+
+          <!-- Apontamentos por funcionário (opcional, para rateio de horas) -->
+          <div v-if="taskForm.funcionarioIds.length" class="mt-2 space-y-2">
+            <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">
+              Apontamentos por funcionario
+            </div>
+            <div
+              v-for="fid in taskForm.funcionarioIds"
+              :key="`apont-${fid}`"
+              class="border border-slate-200 rounded-xl p-3 space-y-2"
+            >
+              <div class="text-[11px] font-black text-slate-700">
+                {{ funcionarioNomeById(fid) || 'Funcionario' }}
+              </div>
+              <div class="space-y-2">
+                <div
+                  v-for="(periodo, idx) in getApontamentosPorFuncionario(fid)"
+                  :key="`per-${fid}-${idx}`"
+                  class="grid grid-cols-12 gap-2 items-end"
+                >
+                  <div class="col-span-12 md:col-span-5">
+                    <label class="block text-[10px] font-bold mb-1">Inicio</label>
+                    <input
+                      type="datetime-local"
+                      v-model="periodo.inicio"
+                      class="w-full h-9 bg-slate-50 border border-slate-200 rounded-lg px-2 text-[11px] font-semibold text-slate-700"
+                    />
+                  </div>
+                  <div class="col-span-12 md:col-span-5">
+                    <label class="block text-[10px] font-bold mb-1">Termino</label>
+                    <input
+                      type="datetime-local"
+                      v-model="periodo.fim"
+                      class="w-full h-9 bg-slate-50 border border-slate-200 rounded-lg px-2 text-[11px] font-semibold text-slate-700"
+                    />
+                  </div>
+                  <div class="col-span-12 md:col-span-2 flex gap-1">
+                    <button
+                      type="button"
+                      class="flex-1 h-9 rounded-lg bg-slate-100 text-slate-600 text-[9px] font-black uppercase"
+                      @click="adicionarPeriodo(fid)"
+                    >
+                      +
+                    </button>
+                    <button
+                      v-if="getApontamentosPorFuncionario(fid).length > 1"
+                      type="button"
+                      class="flex-1 h-9 rounded-lg bg-rose-50 text-rose-600 text-[9px] font-black uppercase"
+                      @click="removerPeriodo(fid, idx)"
+                    >
+                      -
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="mt-4 flex items-center gap-2">
@@ -282,8 +365,8 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { AgendaService, ClienteService, FuncionarioService } from '@/services/index'
-import { PIPELINE_CLIENTE } from '@/constantes'
+import { AgendaService, ClienteService, FuncionarioService, PlanoCorteService } from '@/services/index'
+import { PIPELINE_CLIENTE, PIPELINE_PLANO_CORTE } from '@/constantes'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
 import storage from '@/utils/storage'
@@ -297,6 +380,7 @@ const loading = ref(false)
 const events = ref([])
 const modalOpen = ref(false)
 const editingEvent = ref(null)
+const planosProducao = ref([])
 const clientesOptions = ref([])
 const funcionariosOptions = ref([])
 const usuarioLogado = computed(() => storage.getUser())
@@ -310,6 +394,8 @@ const taskForm = reactive({
   fim: '',
   clienteId: '',
   funcionarioIds: [],
+  categoria: 'LIVRE',
+  apontamentos: [],
 })
 
 const weekDays = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB']
@@ -402,6 +488,34 @@ function dayEvents(day) {
   return eventsByDay.value[dateKey(day)] || []
 }
 
+function normalizePlanoStatus(status) {
+  return String(status || '').trim().toUpperCase().replace(/\s+/g, '_')
+}
+
+function getPlanoPipeline(status) {
+  const key = normalizePlanoStatus(status)
+  return (PIPELINE_PLANO_CORTE || []).find((p) => p.key === key)
+}
+
+function planoBadgeClass(status) {
+  return getPlanoPipeline(status)?.badgeClass || 'bg-slate-50 text-slate-600 border border-slate-200'
+}
+
+function planoDotClass(status) {
+  return getPlanoPipeline(status)?.dotClass || 'bg-slate-400'
+}
+
+function planoBadgeLabel(status) {
+  return getPlanoPipeline(status)?.label || status || '—'
+}
+
+function planoStatusForEvent(event) {
+  const id = event?.plano_corte_id
+  if (!id) return null
+  const plano = planosProducao.value.find((p) => String(p.id) === String(id))
+  return plano?.status || null
+}
+
 function prevMonth() {
   currentMonth.value = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth() - 1, 1)
 }
@@ -431,6 +545,8 @@ function openModal() {
   taskForm.titulo = ''
   taskForm.clienteId = ''
   taskForm.funcionarioIds = []
+  taskForm.categoria = 'LIVRE'
+  taskForm.apontamentos = []
   funcionarioSelecionado.value = ''
   const inicio = toDateTimeLocal(selectedDay.value)
   taskForm.inicio = inicio
@@ -448,6 +564,7 @@ function clearEdit() {
   const inicio = toDateTimeLocal(selectedDay.value)
   taskForm.inicio = inicio
   taskForm.fim = toDateTimeLocal(addHours(selectedDay.value, 1))
+  taskForm.apontamentos = []
 }
 
 function openGarantia() {
@@ -465,7 +582,82 @@ function editTask(event) {
   taskForm.fim = toDateTimeLocal(event.fim_em || event.inicio_em)
   taskForm.clienteId = event?.cliente_id || event?.cliente?.id || ''
   taskForm.funcionarioIds = (event?.equipe || []).map((e) => e.funcionario_id).filter(Boolean)
+  taskForm.categoria = event?.categoria || 'LIVRE'
+  // Monta apontamentos existentes ou padrão baseado no próprio evento
+  if (Array.isArray(event.apontamentos) && event.apontamentos.length) {
+    const map = {}
+    for (const a of event.apontamentos) {
+      const fid = String(a.funcionario_id)
+      if (!map[fid]) map[fid] = []
+      map[fid].push({
+        inicio: toDateTimeLocal(a.inicio_em),
+        fim: toDateTimeLocal(a.fim_em || a.inicio_em),
+      })
+    }
+    taskForm.apontamentos = Object.entries(map).map(([fid, periodos]) => ({
+      funcionarioId: fid,
+      periodos,
+    }))
+  } else {
+    taskForm.apontamentos = []
+  }
   funcionarioSelecionado.value = ''
+}
+
+function ensureApontamentoParaFuncionario(id) {
+  const fid = String(id)
+  if (!fid) return
+  const existente = taskForm.apontamentos.find((a) => String(a.funcionarioId) === fid)
+  if (!existente) {
+    taskForm.apontamentos.push({
+      funcionarioId: fid,
+      periodos: [
+        {
+          inicio: taskForm.inicio || toDateTimeLocal(selectedDay.value),
+          fim: taskForm.fim || toDateTimeLocal(addHours(selectedDay.value, 1)),
+        },
+      ],
+    })
+  }
+}
+
+function getApontamentosPorFuncionario(id) {
+  const fid = String(id)
+  let registro = taskForm.apontamentos.find((a) => String(a.funcionarioId) === fid)
+  if (!registro) {
+    ensureApontamentoParaFuncionario(fid)
+    registro = taskForm.apontamentos.find((a) => String(a.funcionarioId) === fid)
+  }
+  if (!Array.isArray(registro.periodos) || !registro.periodos.length) {
+    registro.periodos = [
+      {
+        inicio: taskForm.inicio || toDateTimeLocal(selectedDay.value),
+        fim: taskForm.fim || toDateTimeLocal(addHours(selectedDay.value, 1)),
+      },
+    ]
+  }
+  return registro.periodos
+}
+
+function adicionarPeriodo(id) {
+  const periodos = getApontamentosPorFuncionario(id)
+  const base =
+    periodos[periodos.length - 1] || {
+      inicio: taskForm.inicio || toDateTimeLocal(selectedDay.value),
+      fim: taskForm.fim || toDateTimeLocal(addHours(selectedDay.value, 1)),
+    }
+  periodos.push({
+    inicio: base.inicio,
+    fim: base.fim,
+  })
+}
+
+function removerPeriodo(id, idx) {
+  const fid = String(id)
+  const registro = taskForm.apontamentos.find((a) => String(a.funcionarioId) === fid)
+  if (!registro || !Array.isArray(registro.periodos)) return
+  if (registro.periodos.length <= 1) return
+  registro.periodos.splice(idx, 1)
 }
 
 function funcionarioNomeById(id) {
@@ -477,11 +669,15 @@ function adicionarFuncionario() {
   const id = funcionarioSelecionado.value
   if (!id) return
   if (!taskForm.funcionarioIds.includes(id)) taskForm.funcionarioIds.push(id)
+  ensureApontamentoParaFuncionario(id)
   funcionarioSelecionado.value = ''
 }
 
 function removerFuncionario(id) {
   taskForm.funcionarioIds = taskForm.funcionarioIds.filter((f) => String(f) !== String(id))
+  taskForm.apontamentos = taskForm.apontamentos.filter(
+    (a) => String(a.funcionarioId) !== String(id),
+  )
 }
 
 async function removeTask(event) {
@@ -512,6 +708,25 @@ async function saveTask() {
 
   const titulo = taskForm.titulo || 'Tarefa de agenda'
 
+  // Monta apontamentos individuais (flatten)
+  const apontamentosPayload = []
+  for (const registro of taskForm.apontamentos || []) {
+    const fid = Number(registro.funcionarioId)
+    if (!fid) continue
+    for (const periodo of registro.periodos || []) {
+      if (!periodo.inicio || !periodo.fim) continue
+      const apInicio = new Date(periodo.inicio)
+      const apFim = new Date(periodo.fim)
+      if (Number.isNaN(apInicio.getTime()) || Number.isNaN(apFim.getTime())) continue
+      if (apFim <= apInicio) continue
+      apontamentosPayload.push({
+        funcionario_id: fid,
+        inicio_em: apInicio.toISOString(),
+        fim_em: apFim.toISOString(),
+      })
+    }
+  }
+
   try {
     const origemPayload = editingEvent.value
       ? {
@@ -531,6 +746,8 @@ async function saveTask() {
       fim_em: fim.toISOString(),
       cliente_id: Number(taskForm.clienteId),
       equipe_ids: equipeIds,
+       categoria: taskForm.categoria || 'LIVRE',
+       apontamentos: apontamentosPayload,
       ...origemPayload,
     })
     await loadAgenda()
@@ -557,6 +774,16 @@ async function loadAgenda() {
     events.value = []
   } finally {
     loading.value = false
+  }
+}
+
+async function loadPlanosProducao() {
+  if (!canProducao.value) return
+  try {
+    const res = await PlanoCorteService.listar()
+    planosProducao.value = Array.isArray(res?.data) ? res.data : []
+  } catch (e) {
+    planosProducao.value = []
   }
 }
 
@@ -593,6 +820,7 @@ async function loadFuncionarios() {
 
 onMounted(() => {
   loadAgenda()
+  loadPlanosProducao()
   loadClientes()
   loadFuncionarios()
 })

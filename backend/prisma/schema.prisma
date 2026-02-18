@@ -579,6 +579,7 @@ model funcionarios {
   ponto_convites       ponto_convites[]
   ponto_justificativas ponto_justificativas[]
   equipe               agenda_funcionarios[]
+  apontamentos         agenda_apontamentos[]
 
   @@map("funcionarios")
  }
@@ -690,6 +691,9 @@ model agenda_global {
   // ✅ RELAÇÃO MUITOS-PARA-MUITOS (Múltiplos funcionários na mesma tarefa)
   equipe agenda_funcionarios[]
 
+  // ✅ Apontamentos de horas por funcionário dentro da tarefa
+  apontamentos agenda_apontamentos[]
+
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
@@ -711,6 +715,24 @@ model agenda_funcionarios {
   @@index([agenda_id])
   @@index([funcionario_id])
   @@map("agenda_funcionarios")
+}
+
+model agenda_apontamentos {
+  id             Int @id @default(autoincrement())
+  agenda_id      Int
+  funcionario_id Int
+
+  inicio_em DateTime
+  fim_em    DateTime
+
+  criado_em DateTime @default(now())
+
+  agenda      agenda_global @relation(fields: [agenda_id], references: [id], onDelete: Cascade)
+  funcionario funcionarios  @relation(fields: [funcionario_id], references: [id], onDelete: Cascade)
+
+  @@index([agenda_id])
+  @@index([funcionario_id])
+  @@map("agenda_apontamentos")
 }
 
 model contas_pagar {

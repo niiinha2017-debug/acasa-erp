@@ -7,7 +7,20 @@ import {
   IsArray,
   ArrayMinSize,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class FuncionarioApontamentoDto {
+  @IsInt()
+  funcionario_id: number;
+
+  @IsDateString({}, { message: 'Data/hora de início do apontamento é inválida' })
+  inicio_em: Date;
+
+  @IsDateString({}, { message: 'Data/hora de término do apontamento é inválida' })
+  fim_em: Date;
+}
 
 export class CreateAgendaDto {
   @IsString()
@@ -64,4 +77,11 @@ export class CreateAgendaDto {
   @IsOptional()
   @IsString()
   status?: string; // Ex: PENDENTE, EM_ANDAMENTO
+
+  /** Apontamentos individuais de horas por funcionário dentro da tarefa */
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => FuncionarioApontamentoDto)
+  apontamentos?: FuncionarioApontamentoDto[];
 }

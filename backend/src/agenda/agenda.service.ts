@@ -7,7 +7,7 @@ export class AgendaService {
   constructor(private prisma: PrismaService) {}
 
   async create(dto: CreateAgendaDto) {
-    const { equipe_ids, categoria, ...dadosAgenda } = dto;
+    const { equipe_ids, categoria, apontamentos, ...dadosAgenda } = dto;
     const categoriaKey = String(categoria || '').toUpperCase();
     const categoriaToStatus: Record<string, string> = {
       MEDIDA: 'MEDIDA_AGENDADA',
@@ -54,12 +54,25 @@ export class AgendaService {
         },
         include: {
           equipe: { include: { funcionario: true } },
+          apontamentos: true,
           cliente: true,
           fornecedor: true,
           plano_corte: true,
           venda: true,
         },
       });
+
+      // 1.1. Cria apontamentos de horas, se enviados
+      if (Array.isArray(apontamentos) && apontamentos.length) {
+        await tx.agenda_apontamentos.createMany({
+          data: apontamentos.map((item) => ({
+            agenda_id: agendamento.id,
+            funcionario_id: item.funcionario_id,
+            inicio_em: new Date(item.inicio_em),
+            fim_em: new Date(item.fim_em),
+          })),
+        });
+      }
 
       // 2. Atualiza status do Plano de Corte se houver ID
       if (dto.plano_corte_id) {
@@ -130,6 +143,7 @@ export class AgendaService {
         equipe: { include: { funcionario: true } },
         plano_corte: true,
         venda: true,
+        apontamentos: true,
       },
       orderBy: { inicio_em: 'asc' },
     });
@@ -146,6 +160,7 @@ export class AgendaService {
         cliente: true,
         fornecedor: true,
         plano_corte: true,
+        apontamentos: true,
       },
       orderBy: { inicio_em: 'asc' },
     });
