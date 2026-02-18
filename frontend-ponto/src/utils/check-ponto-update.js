@@ -3,7 +3,7 @@
  * Se existir, mostra aviso e abre o link para baixar o APK.
  */
 
-const VERSION_JSON_URL = 'https://aplicativo.acasamarcenaria.com.br/ponto/version.json'
+const VERSION_JSON_URL = 'https://ponto.acasamarcenaria.com.br/version.json'
 
 function parseVersion (v) {
   if (!v || typeof v !== 'string') return [0, 0, 0]
@@ -23,22 +23,32 @@ function isNewer (serverVersion, currentVersion) {
 /**
  * @returns {Promise<{ updateAvailable: boolean, serverVersion?: string, url?: string }>}
  */
-export async function checkPontoUpdate () {
-  const noUpdate = { updateAvailable: false }
+export async function checkPontoUpdate (opts = {}) {
+  const interactive = !!opts.interactive
+  const noUpdate = (reason) => ({ updateAvailable: false, reason })
   if (typeof window === 'undefined') return noUpdate
   const currentVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0'
   try {
     const { Capacitor, CapacitorHttp } = await import('@capacitor/core')
-    if (Capacitor.getPlatform() !== 'android') return noUpdate
+    if (Capacitor.getPlatform() !== 'android') return noUpdate('not-android')
     // CapacitorHttp evita CORS no WebView Android
     const res = await CapacitorHttp.get({ url: VERSION_JSON_URL })
     const status = res.status ?? 0
-    if (status < 200 || status >= 300) return noUpdate
+    if (status < 200 || status >= 300) {
+      if (interactive) window.alert('Não foi possível consultar a versão no servidor.')
+      return noUpdate('http-status')
+    }
     const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data
     const serverVersion = data?.version
     const url = data?.url
-    if (!serverVersion || !url) return noUpdate
-    if (!isNewer(serverVersion, currentVersion)) return noUpdate
+    if (!serverVersion || !url) {
+      if (interactive) window.alert('Versão/URL não encontradas no servidor.')
+      return noUpdate('missing-fields')
+    }
+    if (!isNewer(serverVersion, currentVersion)) {
+      if (interactive) window.alert(`Você já está na última versão (${currentVersion}).`)
+      return noUpdate('up-to-date')
+    }
     const msg = `Há uma nova versão (${serverVersion}) disponível.\n\nAbrir no navegador para baixar e instalar o APK?`
     if (window.confirm(msg)) {
       try {
@@ -51,6 +61,7 @@ export async function checkPontoUpdate () {
     return { updateAvailable: true, serverVersion, url }
   } catch (err) {
     console.warn('[checkPontoUpdate]', err)
-    return noUpdate
+    if (interactive) window.alert('Não foi possível consultar a versão no servidor.')
+    return noUpdate('exception')
   }
 }

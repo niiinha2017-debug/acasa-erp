@@ -305,7 +305,7 @@ onMounted(() => {
 })
 
 async function verificarAtualizacao() {
-  await checkPontoUpdate()
+  await checkPontoUpdate({ interactive: true })
 }
 
 onUnmounted(() => {

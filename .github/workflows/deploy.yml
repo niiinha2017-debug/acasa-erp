@@ -122,6 +122,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check changed paths (Ponto só atualiza se frontend-ponto mudar)
+        id: paths
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            ponto:
+              - 'frontend-ponto/**'
+              - 'aplicativo-site/index-ponto.html'
+
       - name: Require Android + SSH secrets (evitar falha silenciosa)
         env:
           K: ${{ secrets.ANDROID_KEYSTORE_B64 }}
@@ -209,6 +218,7 @@ jobs:
           ./gradlew assembleRelease --no-daemon
 
       - name: Build Ponto APK (release)
+        if: steps.paths.outputs.ponto == 'true'
         run: |
           cd frontend-ponto
           npm ci
@@ -235,32 +245,42 @@ jobs:
           require('fs').writeFileSync('aplicativo-site/updates/android/version.json', JSON.stringify(o, null, 2));
           "
       - name: Generate version.json Ponto (Android "Verificar atualização")
+        if: steps.paths.outputs.ponto == 'true'
         run: |
           node -e "
           const p = require('./frontend-ponto/package.json');
-          const o = { version: p.version || '0.0.0', url: 'https://aplicativo.acasamarcenaria.com.br/ponto/ponto.apk' };
+          const o = { version: p.version || '0.0.0', url: 'https://ponto.acasamarcenaria.com.br/ponto.apk' };
           require('fs').writeFileSync('aplicativo-site/version-ponto.json', JSON.stringify(o, null, 2));
           "
 
-      - name: Upload APKs + version.json + landing Ponto to EC2
+      - name: Upload ERP APK + version.json to EC2
         run: |
           scp frontend/android/app/build/outputs/apk/release/app-release.apk "$SSH_USER@$SSH_HOST:/tmp/Acasa.apk"
-          scp frontend-ponto/android/app/build/outputs/apk/release/app-release.apk "$SSH_USER@$SSH_HOST:/tmp/ponto.apk"
           scp aplicativo-site/updates/android/version.json "$SSH_USER@$SSH_HOST:/tmp/version.json"
+          ssh "$SSH_USER@$SSH_HOST" "
+            set -euo pipefail
+            sudo mkdir -p '$REMOTE_WEB/erp' '$REMOTE_WEB/updates/android'
+            sudo mv /tmp/Acasa.apk '$REMOTE_WEB/erp/Acasa.apk'
+            sudo mv /tmp/version.json '$REMOTE_WEB/updates/android/version.json'
+            sudo chown -R nginx:nginx '$REMOTE_WEB/erp' '$REMOTE_WEB/updates'
+            sudo chmod 644 '$REMOTE_WEB/erp/Acasa.apk' '$REMOTE_WEB/updates/android/version.json'
+          "
+
+      - name: Upload Ponto APK + version.json + landing to EC2
+        if: steps.paths.outputs.ponto == 'true'
+        run: |
+          scp frontend-ponto/android/app/build/outputs/apk/release/app-release.apk "$SSH_USER@$SSH_HOST:/tmp/ponto.apk"
           scp aplicativo-site/version-ponto.json "$SSH_USER@$SSH_HOST:/tmp/version-ponto.json"
           scp aplicativo-site/index-ponto.html "$SSH_USER@$SSH_HOST:/tmp/index-ponto.html"
           ssh "$SSH_USER@$SSH_HOST" "
             set -euo pipefail
-            sudo mkdir -p '$REMOTE_WEB/erp' '$REMOTE_WEB/updates/android' '$REMOTE_PONTO'
-            sudo mv /tmp/Acasa.apk '$REMOTE_WEB/erp/Acasa.apk'
-            sudo mv /tmp/version.json '$REMOTE_WEB/updates/android/version.json'
-            # Ponto: remover tudo exceto ponto.apk (tira build antigo do Vue), depois colocar landing + version.json
+            sudo mkdir -p '$REMOTE_PONTO'
             sudo find '$REMOTE_PONTO' -mindepth 1 -maxdepth 1 ! -name 'ponto.apk' -exec rm -rf {} \; 2>/dev/null || true
             sudo mv /tmp/ponto.apk '$REMOTE_PONTO/ponto.apk'
             sudo mv /tmp/version-ponto.json '$REMOTE_PONTO/version.json'
             sudo mv /tmp/index-ponto.html '$REMOTE_PONTO/index.html'
-            sudo chown -R nginx:nginx '$REMOTE_WEB/erp' '$REMOTE_WEB/updates' '$REMOTE_PONTO'
-            sudo chmod 644 '$REMOTE_WEB/erp/Acasa.apk' '$REMOTE_WEB/updates/android/version.json' '$REMOTE_PONTO/ponto.apk' '$REMOTE_PONTO/version.json' '$REMOTE_PONTO/index.html'
+            sudo chown -R nginx:nginx '$REMOTE_PONTO'
+            sudo chmod 644 '$REMOTE_PONTO/ponto.apk' '$REMOTE_PONTO/version.json' '$REMOTE_PONTO/index.html'
           "
 
   build-windows-installer:
