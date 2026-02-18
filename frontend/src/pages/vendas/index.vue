@@ -4,8 +4,8 @@
       <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
 
       <PageHeader
-        title="Vendas"
-        subtitle="Gestão comercial e acompanhamento de pedidos"
+        title="Pós-venda"
+        subtitle="Acompanhamento de vendas fechadas, recebimentos e produção"
         icon="pi pi-shopping-cart"
       >
         <template #actions>
@@ -23,7 +23,7 @@
               @click="router.push('/vendas/novo')"
             >
               <i class="pi pi-plus mr-2"></i>
-              Nova Venda
+              Novo Pós-venda
             </Button>
           </div>
         </template>

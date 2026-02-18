@@ -373,9 +373,23 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
+    '/vendas/fechamento': RouteRecordInfo<
+      '/vendas/fechamento',
+      '/vendas/fechamento',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/vendas/kanban': RouteRecordInfo<
       '/vendas/kanban',
       '/vendas/kanban',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/vendas/nova-venda': RouteRecordInfo<
+      '/vendas/nova-venda',
+      '/vendas/nova-venda',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -693,9 +707,21 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/vendas/fechamento.vue': {
+      routes:
+        | '/vendas/fechamento'
+      views:
+        | never
+    }
     'src/pages/vendas/kanban.vue': {
       routes:
         | '/vendas/kanban'
+      views:
+        | never
+    }
+    'src/pages/vendas/nova-venda.vue': {
+      routes:
+        | '/vendas/nova-venda'
       views:
         | never
     }

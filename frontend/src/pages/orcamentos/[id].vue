@@ -17,6 +17,17 @@
             Voltar
           </RouterLink>
           <Button
+            v-if="!isNovo && can('vendas.criar')"
+            variant="secondary"
+            size="sm"
+            type="button"
+            class="mr-2"
+            @click="irParaFechamentoVenda"
+          >
+            <i class="pi pi-dollar mr-2"></i>
+            Fechar venda
+          </Button>
+          <Button
             v-if="can('orcamentos.ver')"
             variant="primary"
             size="sm"
@@ -549,6 +560,14 @@ await router.push({
   } catch (e) {
     notify.error('Erro ao gerar PDF.')
   }
+}
+
+function irParaFechamentoVenda() {
+  if (!orcamentoId.value || String(orcamentoId.value) === 'novo') return
+  router.push({
+    path: '/vendas/nova-venda',
+    query: { orcamentoId: String(orcamentoId.value) },
+  })
 }
 
 

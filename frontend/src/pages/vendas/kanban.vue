@@ -1,7 +1,7 @@
-﻿<template>
+<template>
   <PageHeader
-    title="Vendas"
-    subtitle="Kanban comercial com etapas do processo"
+    title="Pós-venda"
+    subtitle="Kanban do fluxo após fechamento da venda"
     icon="pi pi-shopping-cart"
   >
     <template #actions>
@@ -9,14 +9,6 @@
         <Button variant="secondary" @click="carregar">
           <i class="pi pi-refresh mr-2"></i>
           Atualizar
-        </Button>
-        <Button
-          v-if="can('vendas.criar')"
-          variant="primary"
-          @click="router.push('/vendas/novo')"
-        >
-          <i class="pi pi-plus mr-2"></i>
-          Nova Venda
         </Button>
       </div>
     </template>
