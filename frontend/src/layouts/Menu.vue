@@ -187,7 +187,9 @@ async function verificarAtualizacao() {
       }
     } else {
       // Capacitor Android
+      addDebugEntry('android:botao', 'clique em Verificar atualização', null)
       const result = await checkAndroidUpdate()
+      addDebugEntry('android:botao', 'resultado checkAndroidUpdate', result)
       if (!result.updateAvailable) {
         notify.success('Você está na versão mais recente.')
       }
