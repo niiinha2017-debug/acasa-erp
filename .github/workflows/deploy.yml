@@ -348,8 +348,21 @@ jobs:
           $global:LASTEXITCODE = 0
 
           Copy-Item "$($exe.FullName)" "AcasaSetup.exe" -Force
-          $sigFile = $exe.FullName + ".sig"
-          if (Test-Path $sigFile) { Copy-Item $sigFile "installer.sig" -Force }
+
+      - name: Re-sign for Tauri updater (after Authenticode)
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          # O signtool alterou o .exe; a .sig antiga ficou inválida. Regenerar .sig em cima do .exe final.
+          printf '%s' "$TAURI_SIGNING_PRIVATE_KEY" > tauri_private.key
+          cd frontend
+          npx tauri signer sign --private-key-path ../tauri_private.key --password "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" ../AcasaSetup.exe
+          cd ..
+          cp AcasaSetup.exe.sig installer.sig
+          rm -f tauri_private.key
 
       - name: Prepare updater latest.json data
         shell: bash
