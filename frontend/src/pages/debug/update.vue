@@ -23,14 +23,43 @@
       </div>
     </div>
 
-    <div class="text-xs text-slate-500">
-      <p>Use esta tela só para debug. Os dados são lidos diretamente dos JSON do servidor.</p>
+    <div class="space-y-2">
+      <h2 class="font-semibold">Log em tempo real (Tauri / Android)</h2>
+      <div class="border rounded-lg p-2 max-h-80 overflow-y-auto text-xs font-mono bg-slate-950/90 text-slate-100">
+        <div
+          v-if="log.length === 0"
+          class="text-slate-400 italic"
+        >
+          Nenhum evento de atualização registrado ainda.
+        </div>
+        <div
+          v-for="entry in log"
+          :key="entry.id"
+          class="border-b border-slate-800 last:border-0 py-1.5"
+        >
+          <div class="flex justify-between gap-2">
+            <span class="text-[10px] text-slate-400">{{ entry.ts }}</span>
+            <span class="text-[10px] text-emerald-300">{{ entry.source }}</span>
+          </div>
+          <div class="text-[11px] whitespace-pre-wrap">
+            {{ entry.message }}
+          </div>
+          <pre
+            v-if="entry.details"
+            class="mt-1 text-[10px] whitespace-pre-wrap text-slate-400"
+          >{{ entry.details }}</pre>
+        </div>
+      </div>
+      <p class="text-xs text-slate-500">
+        Esta tela captura mensagens internas do updater (Tauri e Android) para ajudar a entender por que o app não está se atualizando.
+      </p>
     </div>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { debugLog } from '@/services/debug-log'
 
 const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '?'
 
@@ -68,6 +97,8 @@ const androidHasUpdateLabel = computed(() => {
   if (!android.value?.version) return 'não dá para determinar'
   return isNewer(android.value.version, appVersion) ? 'SIM' : 'NÃO'
 })
+
+const log = debugLog
 
 onMounted(async () => {
   try {

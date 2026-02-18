@@ -3,6 +3,7 @@ import App from './App.vue'
 import router from './router'
 import storage from '@/utils/storage'
 import { notify } from '@/services/notify'
+import { addDebugEntry } from '@/services/debug-log'
 
 // ✅ Ao reabrir o app (após fechar): logout + limpar abas → tela de login e página inicial sem abas
 const SESSION_KEY = 'acasa:session'
@@ -147,23 +148,29 @@ const maybeRunUpdater = async () => {
   if (!window.__TAURI__ && !window.__TAURI_INTERNALS__) return
 
   try {
+    const currentVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '?'
     notify.info('Tauri: verificando atualização...')
+    addDebugEntry('tauri:auto', 'iniciando check()', { currentVersion })
 
     const { check } = await import('@tauri-apps/plugin-updater')
     const update = await check()
 
     if (update?.available) {
       notify.info(`Tauri: atualização ${update.version} encontrada. Baixando...`)
+      addDebugEntry('tauri:auto', 'update disponível', update)
       await update.downloadAndInstall()
       notify.success('Tauri: atualização instalada. Reiniciando o app...')
+      addDebugEntry('tauri:auto', 'downloadAndInstall concluído', null)
       window.location.reload()
     } else {
       notify.info('Tauri: nenhuma atualização disponível.')
+      addDebugEntry('tauri:auto', 'nenhuma atualização disponível', update)
     }
   } catch (err) {
     console.error('[ACASA_UPDATER]', err)
     const msg = err?.message || String(err)
     notify.error(`Tauri updater erro: ${msg}`)
+    addDebugEntry('tauri:auto', 'erro no updater', { message: msg })
   }
 }
 

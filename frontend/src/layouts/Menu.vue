@@ -131,6 +131,7 @@ import { NAV_SCHEMA } from '@/services/navigation'
 import { PermissoesService } from '@/services/index'
 import storage from '@/utils/storage'
 import { notify } from '@/services/notify'
+import { addDebugEntry } from '@/services/debug-log'
 import { checkAndroidUpdate } from '@/utils/check-android-update'
 import { useDark, useToggle } from '@vueuse/core'
 
@@ -146,6 +147,7 @@ async function verificarAtualizacao() {
   checkingUpdate.value = true
   try {
     if (isTauri.value) {
+      addDebugEntry('tauri:botao', 'clique no botão de atualização', null)
       const currentVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '?'
       try {
         const res = await fetch('https://aplicativo.acasamarcenaria.com.br/updates/tauri/latest.json', { cache: 'no-store' })
@@ -153,6 +155,7 @@ async function verificarAtualizacao() {
           const data = await res.json()
           const serverVersion = data?.version || '?'
           notify.info(`Desktop: versão atual ${currentVersion} | servidor ${serverVersion}`)
+          addDebugEntry('tauri:botao', 'latest.json carregado', { currentVersion, serverVersion, raw: data })
         }
       } catch (_) {
         // ignore erro de debug de versão
@@ -162,9 +165,11 @@ async function verificarAtualizacao() {
       const update = await check()
       if (update?.available) {
         notify.success(`Atualização ${update.version} disponível. Baixando e instalando...`)
+        addDebugEntry('tauri:botao', 'update disponível pelo plugin', update)
         try {
           await update.downloadAndInstall()
           notify.success('Instalação concluída. Reiniciando o app...')
+          addDebugEntry('tauri:botao', 'downloadAndInstall concluído', null)
           window.location.reload()
         } catch (e) {
           console.error('[Menu downloadAndInstall]', e)
@@ -178,6 +183,7 @@ async function verificarAtualizacao() {
         }
       } else {
         notify.success('Você está na versão mais recente.')
+        addDebugEntry('tauri:botao', 'nenhuma atualização disponível pelo plugin', update)
       }
     } else {
       // Capacitor Android
