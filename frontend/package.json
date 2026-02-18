@@ -21,6 +21,7 @@
     "@capacitor/cli": "^7.4.5",
     "@capacitor/core": "^8.0.2",
     "@capacitor/ios": "^8.0.2",
+    "@capgo/capacitor-updater": "^8.0.0",
     "@tauri-apps/api": "^2.10.1",
     "@tauri-apps/plugin-updater": "^2.0.0",
     "@vueuse/core": "^12.8.2",

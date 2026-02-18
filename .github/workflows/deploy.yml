@@ -358,6 +358,7 @@ jobs:
           set -euo pipefail
           # O signtool alterou o .exe; a .sig antiga ficou inválida. Regenerar .sig em cima do .exe final.
           printf '%s' "$TAURI_SIGNING_PRIVATE_KEY" > tauri_private.key
+          unset TAURI_SIGNING_PRIVATE_KEY
           cd frontend
           npx tauri signer sign --private-key-path ../tauri_private.key --password "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" ../AcasaSetup.exe
           cd ..
