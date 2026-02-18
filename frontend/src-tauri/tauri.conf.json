@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Acasa",
-  "version": "0.1.26",
+  "version": "0.1.27",
   "identifier": "com.acasa.erp",
   "build": {
     "frontendDist": "../dist",
@@ -34,7 +34,7 @@
       "endpoints": [
         "https://aplicativo.acasamarcenaria.com.br/updates/tauri/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDRFQTAzQUE0RjdFQUQwNzIKUldSeTBPcjNwRHFnVHJJeDhyMkNMYTdCcXdqc1o1RjVJZWNjc0hoSWpzTEc1NWlOWUJ3KzhWLzYK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDZCQkNCRkQ2ODVBNjA5NzAKUldSd0NhYUYxcis4YTR5Wi9GcFhiNjlUbmtkMkVLZTB4WG4xellDdFU2dWZja09VYjNQNFcwTVAK",
       "dialog": true
     }
   },
