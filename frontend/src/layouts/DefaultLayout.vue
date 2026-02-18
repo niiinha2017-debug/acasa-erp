@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-bg-page text-text-main transition-colors duration-300">
+  <div class="pt-16 min-h-screen bg-bg-page text-text-main transition-colors duration-300">
     <Menu />
     <div class="border-b border-border-ui bg-[var(--bg-card)]">
       <div class="px-4 md:px-6 overflow-x-auto">

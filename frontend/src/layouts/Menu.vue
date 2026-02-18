@@ -1,5 +1,5 @@
 <template>
-  <nav class="w-full h-16 bg-bg-card/90 backdrop-blur-xl border-b border-border-ui sticky top-0 z-[2000] transition-colors duration-300">
+  <nav class="w-full h-16 bg-bg-card/90 backdrop-blur-xl border-b border-border-ui fixed top-0 left-0 right-0 z-[2000] transition-colors duration-300">
     <div class="h-full px-4 md:px-6 flex items-center justify-between">
       
       <!-- LOGO E MARCA -->
