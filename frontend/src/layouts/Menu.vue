@@ -146,6 +146,18 @@ async function verificarAtualizacao() {
   checkingUpdate.value = true
   try {
     if (isTauri.value) {
+      const currentVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '?'
+      try {
+        const res = await fetch('https://aplicativo.acasamarcenaria.com.br/updates/tauri/latest.json', { cache: 'no-store' })
+        if (res.ok) {
+          const data = await res.json()
+          const serverVersion = data?.version || '?'
+          notify.info(`Desktop: versão atual ${currentVersion} | servidor ${serverVersion}`)
+        }
+      } catch (_) {
+        // ignore erro de debug de versão
+      }
+
       const { check } = await import('@tauri-apps/plugin-updater')
       const update = await check()
       if (update?.available) {
