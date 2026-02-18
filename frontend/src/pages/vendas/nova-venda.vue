@@ -105,8 +105,7 @@
             </div>
 
             <p class="text-[11px] text-text-soft">
-              O sistema usa o valor final para criar a venda no pós-venda (Pós-venda). As taxas internas,
-              comissões e outros detalhes continuam sendo configurados lá.
+              O valor final informado será utilizado como base da venda e dos recebimentos.
             </p>
           </section>
 
@@ -204,7 +203,7 @@
             </Table>
 
             <p class="text-[11px] text-text-soft">
-              Essas formas de pagamento serão usadas para registrar os recebimentos da venda.
+              Essas formas de pagamento serão usadas para registrar como a venda será recebida.
             </p>
           </section>
 
@@ -263,7 +262,7 @@
             </Table>
 
             <p class="text-[11px] text-text-soft">
-              As taxas e valores das comissões são calculados automaticamente no pós-venda, a partir do tipo.
+              As taxas e valores das comissões serão calculados automaticamente a partir do tipo configurado no sistema.
             </p>
           </section>
 
@@ -418,7 +417,7 @@
               @click="criarVenda"
             >
               <i class="pi pi-check mr-2" />
-              Criar venda e ir para Pós-venda
+              Criar venda
             </Button>
           </section>
         </div>

@@ -576,3 +576,4 @@ onMounted(() => {
 })
 watch(currentMonth, loadAgenda)
 </script>
+
