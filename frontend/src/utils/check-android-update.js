@@ -43,12 +43,15 @@ export async function checkAndroidUpdate () {
       return noUpdate
     }
     addDebugEntry('android', 'fetch version.json', { url: VERSION_JSON_URL })
-    const res = await fetch(VERSION_JSON_URL, { cache: 'no-store' })
-    if (!res.ok) {
-      addDebugEntry('android', 'version.json falhou', { status: res.status })
+    // Usar CapacitorHttp no Android para evitar CORS (WebView bloqueia fetch cross-origin)
+    const { CapacitorHttp } = await import('@capacitor/core')
+    const res = await CapacitorHttp.get({ url: VERSION_JSON_URL })
+    const status = res.status ?? 0
+    if (status < 200 || status >= 300) {
+      addDebugEntry('android', 'version.json falhou', { status })
       return noUpdate
     }
-    const data = await res.json()
+    const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data
     const serverVersion = data?.version
     const url = data?.url
     addDebugEntry('android', 'version.json ok', { serverVersion, url, currentVersion })

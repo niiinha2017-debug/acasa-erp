@@ -534,11 +534,30 @@ const justificativaFileToUpload = ref(null)
 const justificativaArquivoNome = ref('')
 
 const fmtData = (v) => (v ? v.split('-').reverse().join('/') : '-')
+/** Formato para input datetime-local em America/Sao_Paulo (YYYY-MM-DDTHH:mm) */
+const toDateTimeLocalBR = (iso) => {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const dateStr = d.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+  const timeStr = d.toLocaleTimeString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+  return `${dateStr}T${timeStr}`
+}
 const fmtHoraLocal = (iso) => {
   if (!iso) return '--:--'
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return '--:--'
-  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleTimeString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
 }
 const getDiaSemana = (dataStr) => {
   const dias = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
@@ -746,7 +765,7 @@ function abrirModalEditar(batida) {
     id: batida.id,
     form: {
       funcionario_id: filtros.funcionario_id,
-      data_hora_local: batida.data_hora.slice(0, 16).replace(' ', 'T'),
+      data_hora_local: toDateTimeLocalBR(batida.data_hora),
       tipo: batida.tipo,
       observacao: batida.observacao || '',
     },
@@ -757,11 +776,11 @@ async function confirmarSalvarEdicao() {
   try {
     modalEditar.saving = true
     const payload = {
-      funcionario_id: Number(modalEditar.form.funcionario_id),
-      tipo: modalEditar.form.tipo,
-      observacao: modalEditar.form.observacao || null,
-      data_hora: `${modalEditar.form.data_hora_local}:00`,
-    }
+        funcionario_id: Number(modalEditar.form.funcionario_id),
+        tipo: modalEditar.form.tipo,
+        observacao: modalEditar.form.observacao || null,
+        data_hora: `${modalEditar.form.data_hora_local}:00-03:00`,
+      }
     if (modalEditar.id) {
       await PontoRegistrosService.atualizar(modalEditar.id, payload)
     } else {

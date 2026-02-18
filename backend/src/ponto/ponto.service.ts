@@ -40,12 +40,16 @@ export class PontoService {
     return dispositivo_id || null;
   }
 
+  /** Range do dia atual em America/Sao_Paulo (BRT) para registrar/listar ponto */
   private rangeHoje() {
-    const inicio = new Date();
-    inicio.setHours(0, 0, 0, 0);
-    const fim = new Date();
-    fim.setHours(23, 59, 59, 999);
-    return { inicio, fim };
+    const now = new Date();
+    const ymd = now.toLocaleDateString('en-CA', {
+      timeZone: 'America/Sao_Paulo',
+    });
+    return {
+      inicio: new Date(`${ymd}T00:00:00.000-03:00`),
+      fim: new Date(`${ymd}T23:59:59.999-03:00`),
+    };
   }
 
   private normalizarTipo(raw: any): PontoTipoRegistro {

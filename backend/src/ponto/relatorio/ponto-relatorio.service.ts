@@ -43,14 +43,16 @@ export class PontoRelatorioService {
   }
 
   // --- MÉTODOS AUXILIARES QUE O SEU CONTROLLER USA ---
+  /** Início do dia em America/Sao_Paulo (BRT = UTC-3) para filtrar registros corretamente */
   private inicioDia(ymd?: string) {
     if (!ymd) return undefined;
-    return new Date(`${ymd}T00:00:00.000Z`);
+    return new Date(`${ymd}T00:00:00.000-03:00`);
   }
 
+  /** Fim do dia em America/Sao_Paulo para filtrar registros corretamente */
   private fimDia(ymd?: string) {
     if (!ymd) return undefined;
-    return new Date(`${ymd}T23:59:59.999Z`);
+    return new Date(`${ymd}T23:59:59.999-03:00`);
   }
 
   private cleanId(v?: string) {
@@ -228,7 +230,7 @@ export class PontoRelatorioService {
 
     const porDia = new Map<string, any[]>();
     for (const r of registros) {
-      const key = new Date(r.data_hora).toISOString().slice(0, 10);
+      const key = this.dateKeySP(r.data_hora);
       if (!porDia.has(key)) porDia.set(key, []);
       porDia.get(key)!.push(r);
     }
@@ -240,7 +242,7 @@ export class PontoRelatorioService {
       const regs = porFuncionario.get(f.id) || [];
       const porDiaF = new Map<string, any[]>();
       for (const r of regs) {
-        const key = new Date(r.data_hora).toISOString().slice(0, 10);
+        const key = this.dateKeySP(r.data_hora);
         const d = new Date(key + 'T12:00:00').getDay();
         if (d === 0) continue;
         if (!porDiaF.has(key)) porDiaF.set(key, []);
@@ -399,7 +401,7 @@ export class PontoRelatorioService {
           totalMetaMs += metaDia * 3600000;
 
           const diaRegs = payload.registros.filter(
-            (r) => new Date(r.data_hora).getUTCDate() === d,
+            (r) => this.dateKeySP(r.data_hora) === diaKey,
           );
           for (let i = 0; i < diaRegs.length; i += 2) {
             if (

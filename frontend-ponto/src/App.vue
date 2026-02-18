@@ -86,6 +86,14 @@
           <div v-if="erro" class="w-full text-[10px] font-black text-rose-500 uppercase bg-rose-50 px-4 py-2 rounded-full text-center mb-4">
             {{ erro }}
           </div>
+          <button
+            v-if="isAndroid"
+            type="button"
+            @click="verificarAtualizacao"
+            class="text-[10px] font-black text-[#94a3b8] uppercase tracking-widest hover:text-[#1e293b] active:scale-95 transition-all"
+          >
+            Verificar atualização
+          </button>
           <span class="text-[9px] font-black text-[#cbd5e1] uppercase tracking-[0.3em]">ACASA • REGISTRO DIGITAL</span>
         </footer>
       </div>
@@ -96,6 +104,9 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { PontoService } from './services/ponto.service'
+import { checkPontoUpdate } from './utils/check-ponto-update'
+
+const isAndroid = ref(false)
 
 const etapa = ref('ativar')
 const loading = ref(false)
@@ -124,14 +135,24 @@ const ultimoRegistroHoraTexto = computed(() => {
   if (!ultimoRegistro.value?.data_hora) return ''
   const d = new Date(ultimoRegistro.value.data_hora)
   if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleTimeString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
 })
 
 const ultimoRegistroDataTexto = computed(() => {
   if (!ultimoRegistro.value?.data_hora) return ''
   const d = new Date(ultimoRegistro.value.data_hora)
   if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return d.toLocaleDateString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
 })
 
 const SEGUNDOS_BLOQUEIO = 180
@@ -140,7 +161,12 @@ function formatarHoraRegistro(dataHora) {
   if (!dataHora) return '--:--'
   const d = new Date(dataHora)
   if (Number.isNaN(d.getTime())) return '--:--'
-  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleTimeString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
 }
 
 function enviarComprovanteWhatsApp() {
@@ -268,7 +294,19 @@ onMounted(() => {
     etapa.value = 'app'
     carregarDados()
   }
+
+  // Android: detectar plataforma e checar atualização após 2s
+  import('@capacitor/core').then(({ Capacitor }) => {
+    if (Capacitor.getPlatform() === 'android') {
+      isAndroid.value = true
+      setTimeout(() => checkPontoUpdate(), 2000)
+    }
+  }).catch(() => {})
 })
+
+async function verificarAtualizacao() {
+  await checkPontoUpdate()
+}
 
 onUnmounted(() => {
   clearInterval(timerRelogio)

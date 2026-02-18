@@ -19,10 +19,16 @@ export function listDays(inicioISO, fimISO) {
   return days
 }
 
+/** Data no fuso America/Sao_Paulo (YYYY-MM-DD) para agrupar registros corretamente */
+function dateKeyBR(dateOrIso) {
+  const d = new Date(dateOrIso)
+  return d.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+}
+
 export function groupRegistrosByDia(registros = []) {
   const map = new Map()
   for (const r of registros) {
-    const dia = new Date(r.data_hora).toISOString().slice(0, 10)
+    const dia = dateKeyBR(r.data_hora)
     if (!map.has(dia)) map.set(dia, [])
     map.get(dia).push(r)
   }
