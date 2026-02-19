@@ -5,8 +5,6 @@
  * Formato: { "version": "0.1.11", "url": "https://aplicativo.acasamarcenaria.com.br/erp/Acasa.apk" }
  */
 
-import { addDebugEntry } from '@/services/debug-log'
-
 const VERSION_JSON_URL = 'https://aplicativo.acasamarcenaria.com.br/updates/android/version.json'
 
 function parseVersion (v) {
@@ -30,55 +28,43 @@ function isNewer (serverVersion, currentVersion) {
 export async function checkAndroidUpdate () {
   const noUpdate = { updateAvailable: false }
   const currentVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0'
-  addDebugEntry('android', 'checkAndroidUpdate iniciado', { currentVersion })
 
   if (typeof window === 'undefined' || window.__TAURI__) {
-    addDebugEntry('android', 'ignorado (não é Android)', null)
     return noUpdate
   }
   try {
     const { Capacitor } = await import('@capacitor/core')
     if (Capacitor.getPlatform() !== 'android') {
-      addDebugEntry('android', 'ignorado (platform !== android)', { platform: Capacitor.getPlatform() })
       return noUpdate
     }
-    addDebugEntry('android', 'fetch version.json (via CapacitorHttp)', { url: VERSION_JSON_URL })
     // CapacitorHttp = requisição nativa, evita CORS do WebView
     const { CapacitorHttp } = await import('@capacitor/core')
     const res = await CapacitorHttp.get({ url: VERSION_JSON_URL })
     const status = res.status ?? 0
     if (status < 200 || status >= 300) {
-      addDebugEntry('android', 'version.json falhou', { status })
       return noUpdate
     }
     const data = typeof res.data === 'string' ? JSON.parse(res.data) : res.data
     const serverVersion = data?.version
     const url = data?.url
-    addDebugEntry('android', 'version.json ok', { serverVersion, url, currentVersion })
     if (!serverVersion || !url) {
-      addDebugEntry('android', 'version ou url ausente', data)
       return noUpdate
     }
     const hasNewer = isNewer(serverVersion, currentVersion)
-    addDebugEntry('android', 'comparação', { serverVersion, currentVersion, hasNewer })
     if (!hasNewer) return noUpdate
     const msg = `Há uma nova versão (${serverVersion}) disponível.\n\nAbrir no navegador para baixar e instalar o APK?`
     if (window.confirm(msg)) {
-      addDebugEntry('android', 'usuário confirmou, abrindo navegador', { url })
       try {
         const { Browser } = await import('@capacitor/browser')
         await Browser.open({ url })
       } catch (e) {
-        addDebugEntry('android', 'Browser.open falhou, fallback window.open', { error: String(e) })
         window.open(url, '_blank')
       }
     } else {
-      addDebugEntry('android', 'usuário cancelou', null)
     }
     return { updateAvailable: true, serverVersion, url }
   } catch (err) {
     console.warn('[checkAndroidUpdate]', err)
-    addDebugEntry('android', 'erro', { message: err?.message, stack: err?.stack })
     return noUpdate
   }
 }

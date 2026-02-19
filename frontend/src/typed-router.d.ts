@@ -44,13 +44,6 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/analytics/fluxocaixa': RouteRecordInfo<
-      '/analytics/fluxocaixa',
-      '/analytics/fluxocaixa',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
     '/arquivos/[id]': RouteRecordInfo<
       '/arquivos/[id]',
       '/arquivos/:id',
@@ -429,12 +422,6 @@ declare module 'vue-router/auto-routes' {
     'src/pages/alterar-senha.vue': {
       routes:
         | '/alterar-senha'
-      views:
-        | never
-    }
-    'src/pages/analytics/fluxocaixa.vue': {
-      routes:
-        | '/analytics/fluxocaixa'
       views:
         | never
     }

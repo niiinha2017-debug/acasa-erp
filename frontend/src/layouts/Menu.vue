@@ -1,5 +1,5 @@
 <template>
-  <nav class="menu-bar w-full min-h-[4rem] h-16 bg-bg-card/90 backdrop-blur-xl border-b border-border-ui fixed top-0 left-0 right-0 z-[9990] transition-colors duration-300 overflow-hidden">
+  <nav class="menu-bar w-full min-h-[4rem] h-16 bg-bg-card/90 backdrop-blur-xl border-b border-border-ui fixed top-0 left-0 right-0 z-[9990] transition-colors duration-300 overflow-visible">
     <div class="h-full min-w-0 px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2">
       
       <!-- LOGO E MARCA -->
@@ -135,7 +135,6 @@ import { NAV_SCHEMA } from '@/services/navigation'
 import { PermissoesService } from '@/services/index'
 import storage from '@/utils/storage'
 import { notify } from '@/services/notify'
-import { addDebugEntry } from '@/services/debug-log'
 import { checkAndroidUpdate } from '@/utils/check-android-update'
 import { useDark, useToggle } from '@vueuse/core'
 
@@ -150,8 +149,7 @@ async function verificarAtualizacao() {
   if (!showUpdateButton.value || checkingUpdate.value) return
   checkingUpdate.value = true
   try {
-    if (isTauri.value) {
-      addDebugEntry('tauri:botao', 'clique no botão de atualização', null)
+      if (isTauri.value) {
       const currentVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '?'
       try {
         const res = await fetch('https://aplicativo.acasamarcenaria.com.br/updates/tauri/latest.json', { cache: 'no-store' })
@@ -159,7 +157,6 @@ async function verificarAtualizacao() {
           const data = await res.json()
           const serverVersion = data?.version || '?'
           notify.info(`Desktop: versão atual ${currentVersion} | servidor ${serverVersion}`)
-          addDebugEntry('tauri:botao', 'latest.json carregado', { currentVersion, serverVersion, raw: data })
         }
       } catch (_) {
         // ignore erro de debug de versão
@@ -169,11 +166,9 @@ async function verificarAtualizacao() {
       const update = await check()
       if (update?.available) {
         notify.success(`Atualização ${update.version} disponível. Baixando e instalando...`)
-        addDebugEntry('tauri:botao', 'update disponível pelo plugin', update)
         try {
           await update.downloadAndInstall()
           notify.success('Instalação concluída. Reiniciando o app...')
-          addDebugEntry('tauri:botao', 'downloadAndInstall concluído', null)
           window.location.reload()
         } catch (e) {
           console.error('[Menu downloadAndInstall]', e)
@@ -187,13 +182,10 @@ async function verificarAtualizacao() {
         }
       } else {
         notify.success('Você está na versão mais recente.')
-        addDebugEntry('tauri:botao', 'nenhuma atualização disponível pelo plugin', update)
       }
     } else {
       // Capacitor Android
-      addDebugEntry('android:botao', 'clique em Verificar atualização', null)
       const result = await checkAndroidUpdate()
-      addDebugEntry('android:botao', 'resultado checkAndroidUpdate', result)
       if (!result.updateAvailable) {
         notify.success('Você está na versão mais recente.')
       }

@@ -832,6 +832,10 @@ export class FinanceiroService {
       status: filtros.status || undefined,
     };
 
+    // 🚫 Não exibir lançamentos cuja origem seja PLANO_DE_CORTE no Contas a Receber
+    // Mantém o módulo focado em vendas / relacionamento com cliente.
+    where.origem_tipo = { not: 'PLANO_CORTE' };
+
     if (filtros.data_ini || filtros.data_fim) {
       where.vencimento_em = {};
       if (filtros.data_ini)
