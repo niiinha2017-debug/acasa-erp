@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ClausulasService } from '../clausulas/clausulas.service';
 import { CreateOrcamentoDto } from './dto/create-orcamento.dto';
 import { UpdateOrcamentoDto } from './dto/update-orcamento.dto';
 import { CreateOrcamentoItemDto } from './dto/create-orcamento-item.dto';
@@ -13,7 +14,10 @@ import sizeOf from 'image-size';
 
 @Injectable()
 export class OrcamentosService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly clausulasService: ClausulasService,
+  ) {}
 
   // =========================================================
   // PDF
@@ -26,6 +30,7 @@ export class OrcamentosService {
   private async gerarMioloPdfBuffer(
     orc: any,
     anexos: { url: string; nome: string | null; mime_type: string | null }[] = [],
+    clausulas: { titulo: string; texto: string }[] = [],
   ): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       const doc = new PDFKitDoc({ size: 'A4', margin: 40 });
@@ -263,6 +268,69 @@ export class OrcamentosService {
         // Remove o listener para as próximas páginas serem só de anexos (sem repetir layout do orçamento)
         doc.removeListener('pageAdded', handlerPageAdded);
 
+        // CLÁUSULAS DO ORÇAMENTO (contratos) — antes das imagens
+        const clausulasFiltradas = Array.isArray(clausulas)
+          ? clausulas.filter((c) => c?.titulo != null || String(c?.texto || '').trim())
+          : [];
+        if (clausulasFiltradas.length > 0) {
+          const margemClausula = 40;
+          const larguraTexto = right - left;
+          const rodapeReservado = 50;
+
+          doc.addPage();
+          doc
+            .font('Helvetica-Bold')
+            .fontSize(12)
+            .fillColor('#000')
+            .text('Cláusulas do Orçamento', left, doc.y + 10, {
+              width: larguraTexto,
+              align: 'center',
+            });
+          doc.y += 22;
+          doc
+            .lineWidth(0.5)
+            .strokeColor('#D6D6D6')
+            .moveTo(left, doc.y)
+            .lineTo(right, doc.y)
+            .stroke();
+          doc.y += 12;
+
+          for (const cl of clausulasFiltradas) {
+            const titulo = String(cl.titulo || '').trim();
+            const texto = String(cl.texto || '').trim();
+            if (!titulo && !texto) continue;
+
+            if (doc.y + 60 > doc.page.height - rodapeReservado) {
+              doc.addPage();
+              doc.y = margemClausula;
+            }
+            if (titulo) {
+              doc
+                .font('Helvetica-Bold')
+                .fontSize(10)
+                .fillColor('#000')
+                .text(titulo, left, doc.y, { width: larguraTexto });
+              doc.y += doc.currentLineHeight() + 4;
+            }
+            if (texto) {
+              if (doc.y + 40 > doc.page.height - rodapeReservado) {
+                doc.addPage();
+                doc.y = margemClausula;
+              }
+              doc
+                .font('Helvetica')
+                .fontSize(9)
+                .fillColor('#333')
+                .text(texto, left, doc.y, {
+                  width: larguraTexto,
+                  align: 'justify',
+                });
+              doc.y += 8;
+            }
+            doc.y += 6;
+          }
+        }
+
         // ANEXOS (imagens somente nas páginas seguintes, nunca no meio do orçamento)
         const extImg = /\.(jpe?g|png|gif|webp|bmp)$/i;
         const isImage = (a: {
@@ -349,6 +417,15 @@ export class OrcamentosService {
   async gerarPdfESalvar(orcId: number) {
     const orc = await this.detalhar(orcId);
 
+    // Cláusulas do orçamento (contratos) para incluir no PDF antes das imagens
+    const clausulasModelos = await this.clausulasService.buscarOuCriarPorTipo(
+      'ORCAMENTO',
+    );
+    const clausulas = (clausulasModelos || []).map((c) => ({
+      titulo: c.titulo || '',
+      texto: c.texto || '',
+    }));
+
     // Só imagens marcadas como "para o PDF" (categoria IMAGEM_PDF) entram no arquivo gerado
     const anexos = await this.prisma.arquivos.findMany({
       where: {
@@ -359,7 +436,7 @@ export class OrcamentosService {
       orderBy: { criado_em: 'asc' },
     });
 
-    const pdfBuffer = await this.gerarMioloPdfBuffer(orc, anexos);
+    const pdfBuffer = await this.gerarMioloPdfBuffer(orc, anexos, clausulas);
 
     const dir = path.join(process.cwd(), 'uploads', 'relatorios');
     await fs.mkdir(dir, { recursive: true });

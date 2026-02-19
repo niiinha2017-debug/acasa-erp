@@ -558,7 +558,9 @@ await router.push({
 })
 
   } catch (e) {
-    notify.error('Erro ao gerar PDF.')
+    const msg = e?.response?.data?.message || e?.message || 'Erro ao gerar PDF.'
+    notify.error(msg)
+    console.error('[Orcamento PDF]', e?.response?.data || e)
   }
 }
 

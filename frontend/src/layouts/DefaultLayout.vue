@@ -1,8 +1,8 @@
 <template>
   <div class="pt-16 min-h-screen bg-bg-page text-text-main transition-colors duration-300">
     <Menu />
-    <!-- Área de conteúdo com stacking context explícito para o menu fixo ficar sempre por cima (Android/WebView) -->
-    <div class="relative z-0">
+    <!-- Área de conteúdo com stacking context explícito para o menu fixo ficar sempre por cima (Android/WebView/landscape) -->
+    <div class="relative z-0 isolation-isolate">
       <div class="border-b border-border-ui bg-[var(--bg-card)]">
         <div class="px-4 md:px-6 overflow-x-auto">
           <div class="flex items-center gap-2 py-2 min-w-max">

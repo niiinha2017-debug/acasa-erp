@@ -39,11 +39,6 @@ export default defineConfig({
     strictPort: true,  // falha se 5173 estiver em uso (evita porta errada no Tauri)
     fs: { allow: [path.resolve(__dirname, '..')] },
     proxy: {
-      '/api/analytics': {
-        target: 'http://127.0.0.1:8000',
-        changeOrigin: true,
-        secure: false,
-      },
       '/api': {
         target: 'http://127.0.0.1:3000',
         changeOrigin: true,

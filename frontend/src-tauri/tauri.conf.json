@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Acasa",
-  "version": "0.1.31",
+  "version": "0.1.32",
   "identifier": "com.acasa.erp",
   "build": {
     "frontendDist": "../dist",
@@ -20,7 +20,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' asset: http://asset.localhost http://tauri.localhost; img-src 'self' data: https: asset: http://asset.localhost; style-src 'self' 'unsafe-inline' asset: http://asset.localhost http://tauri.localhost; font-src 'self' data:; script-src 'self'; connect-src 'self' https://acasamarcenaria.com.br https://aplicativo.acasamarcenaria.com.br;"
+      "csp": "default-src 'self' asset: http://asset.localhost http://tauri.localhost; frame-src 'self' blob:; img-src 'self' data: https: asset: http://asset.localhost blob:; style-src 'self' 'unsafe-inline' asset: http://asset.localhost http://tauri.localhost; font-src 'self' data:; script-src 'self'; connect-src 'self' https://acasamarcenaria.com.br https://aplicativo.acasamarcenaria.com.br;"
     }
   },
   "plugins": {

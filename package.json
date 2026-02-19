@@ -6,7 +6,8 @@
     "tauri:dev": "cd frontend && npm run tauri:dev",
     "tauri:build": "cd frontend && npm run tauri:build",
     "deploy:all": "bash scripts/deploy-all.sh",
-    "deploy:apps": "bash scripts/deploy-apps.sh"
+    "deploy:apps": "bash scripts/deploy-apps.sh",
+    "ec2:listar": "bash scripts/clean-ec2.sh"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",

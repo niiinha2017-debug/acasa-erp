@@ -8,6 +8,7 @@ const paths = {
   cargoToml: path.join(root, 'frontend', 'src-tauri', 'Cargo.toml'),
   frontendPkg: path.join(root, 'frontend', 'package.json'),
   frontendLock: path.join(root, 'frontend', 'package-lock.json'),
+  androidBuildGradle: path.join(root, 'frontend', 'android', 'app', 'build.gradle'),
 }
 
 function readJson(file) {
@@ -83,4 +84,17 @@ if (fs.existsSync(paths.frontendLock)) {
 
 setCargoVersion(paths.cargoToml, version)
 
-console.log(`Desktop version: ${current.major}.${current.minor}.${current.patch} -> ${version}`)
+// Android: incrementa versionCode (obrigatório para nova versão na Play Store) — só no bump, não no --sync
+if (!syncOnly && fs.existsSync(paths.androidBuildGradle)) {
+  const gradleSrc = fs.readFileSync(paths.androidBuildGradle, 'utf8')
+  const versionCodeMatch = gradleSrc.match(/versionCode\s+(\d+)/)
+  if (versionCodeMatch) {
+    const prevCode = Number(versionCodeMatch[1])
+    const nextCode = prevCode + 1
+    const gradleUpdated = gradleSrc.replace(/versionCode\s+\d+/, `versionCode ${nextCode}`)
+    fs.writeFileSync(paths.androidBuildGradle, gradleUpdated, 'utf8')
+    console.log(`Android versionCode: ${prevCode} -> ${nextCode}`)
+  }
+}
+
+console.log(`Versão unificada (Desktop + Android): ${current.major}.${current.minor}.${current.patch} -> ${version}`)

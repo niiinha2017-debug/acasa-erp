@@ -46,7 +46,7 @@ definePage({ meta: { perm: 'dashboard.visualizar' } });
 const loading = ref(true);
 const erro = ref('');
 const resumo = ref({ total_a_pagar: 0, total_a_receber: 0, clientes_ativos: 0 });
-const base = import.meta.env.VITE_ANALYTICS_URL || 'http://localhost:8001';
+import api from '@/services/api';
 
 const total_a_pagar = computed(() => Number(resumo.value?.total_a_pagar ?? 0));
 const total_a_receber = computed(() => Number(resumo.value?.total_a_receber ?? 0));
@@ -59,12 +59,11 @@ const buscarDados = async () => {
   loading.value = true;
   erro.value = '';
   try {
-    const r = await fetch(`${base}/api/analytics/dashboard/resumo`);
-    const json = await r.json();
-    if (json.erro) { erro.value = json.erro; return; }
-    resumo.value = json;
+    const { data } = await api.get('/analytics/dashboard/resumo');
+    if (data.erro) { erro.value = data.erro; return; }
+    resumo.value = data;
   } catch (e) {
-    erro.value = 'Falha ao conectar no servidor (porta 8001).';
+    erro.value = e?.response?.data?.message || 'Falha ao carregar dados do dashboard.';
   } finally {
     loading.value = false;
   }

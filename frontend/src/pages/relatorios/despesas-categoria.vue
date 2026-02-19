@@ -26,7 +26,7 @@
         </div>
 
         <div v-else-if="!(listaCategorias && listaCategorias.length)" class="h-80 flex items-center justify-center text-text-muted text-center px-4">
-          Nenhuma despesa (SAÍDA) no período. Verifique se o servidor Python está em <code class="text-slate-600 bg-slate-100 px-1 rounded">localhost:8001</code>.
+          Nenhuma despesa (SAÍDA) no período.
         </div>
 
         <div v-else class="h-80">
@@ -82,13 +82,12 @@ const chartOptions = computed(() => ({
   },
 }));
 
-const analyticsBase = import.meta.env.VITE_ANALYTICS_URL || 'http://localhost:8001';
+import api from '@/services/api';
 
 const buscarDados = async () => {
   loading.value = true;
   try {
-    const response = await fetch(`${analyticsBase}/api/analytics/dre-despesas`);
-    const data = await response.json();
+    const { data } = await api.get('/analytics/dre-despesas');
 
     if (!Array.isArray(data)) {
       console.error('Resposta da API não é lista:', data?.erro || data);

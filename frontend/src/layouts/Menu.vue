@@ -1,5 +1,5 @@
 <template>
-  <nav class="w-full min-h-[4rem] h-16 bg-bg-card/90 backdrop-blur-xl border-b border-border-ui fixed top-0 left-0 right-0 z-[2000] transition-colors duration-300 overflow-hidden">
+  <nav class="menu-bar w-full min-h-[4rem] h-16 bg-bg-card/90 backdrop-blur-xl border-b border-border-ui fixed top-0 left-0 right-0 z-[9990] transition-colors duration-300 overflow-hidden">
     <div class="h-full min-w-0 px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2">
       
       <!-- LOGO E MARCA -->

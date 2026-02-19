@@ -35,21 +35,21 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 definePage({ meta: { perm: 'dashboard.visualizar' } });
+import api from '@/services/api';
+
 const loading = ref(true);
 const erro = ref('');
 const dados = ref([]);
-const base = import.meta.env.VITE_ANALYTICS_URL || 'http://localhost:8001';
 
 const buscarDados = async () => {
   loading.value = true;
   erro.value = '';
   try {
-    const r = await fetch(`${base}/api/analytics/status-obras`);
-    const json = await r.json();
-    if (json.erro) { erro.value = json.erro; dados.value = []; return; }
-    dados.value = Array.isArray(json) ? json : [];
+    const { data } = await api.get('/analytics/status-obras');
+    if (data?.erro) { erro.value = data.erro; dados.value = []; return; }
+    dados.value = Array.isArray(data) ? data : [];
   } catch (e) {
-    erro.value = 'Falha ao conectar no servidor (porta 8001).';
+    erro.value = e?.response?.data?.message || 'Falha ao carregar status.';
     dados.value = [];
   } finally {
     loading.value = false;

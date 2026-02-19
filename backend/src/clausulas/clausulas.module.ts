@@ -7,6 +7,7 @@ import { ClausulasController } from './clausulas.controller';
   imports: [PrismaModule],
   providers: [ClausulasService],
   controllers: [ClausulasController],
+  exports: [ClausulasService],
 })
 export class ClausulasModule {}
 

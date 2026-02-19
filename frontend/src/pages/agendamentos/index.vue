@@ -156,80 +156,129 @@
           {{ selectedLabel }}
         </p>
 
-        <div class="space-y-3">
-          <!-- Tipo de agendamento / etapa -->
-          <div>
-            <label class="block text-xs font-bold mb-1">Tipo de agendamento</label>
-            <select
-              v-model="taskForm.categoria"
-              class="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs font-bold text-slate-700"
-            >
-              <option value="LIVRE">Tarefa livre</option>
-              <option value="MEDIDA">Medida</option>
-              <option value="MEDIDA_FINA">Medida fina</option>
-              <option value="PRODUCAO">Produção da venda</option>
-              <option value="MONTAGEM">Montagem</option>
-            </select>
-          </div>
-
-          <div class="grid grid-cols-12 gap-3">
-            <div class="col-span-12 md:col-span-6">
-              <label class="block text-xs font-bold mb-1">Inicio</label>
-              <input
-                type="datetime-local"
-                v-model="taskForm.inicio"
-                class="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 font-bold text-slate-700"
-              />
+        <div class="space-y-5">
+          <!-- 1. Tipo e período da tarefa -->
+          <section class="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-3">
+            <div class="text-[10px] font-black uppercase tracking-widest text-slate-500">
+              1. Tipo e período da tarefa
             </div>
-            <div class="col-span-12 md:col-span-6">
-              <label class="block text-xs font-bold mb-1">Termino</label>
-              <input
-                type="datetime-local"
-                v-model="taskForm.fim"
-                class="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 font-bold text-slate-700"
-              />
+            <div>
+              <label class="block text-xs font-bold mb-1">Tipo</label>
+              <p v-if="!opcoesTipoAgendamento.unico" class="text-[10px] text-slate-500 mb-1">
+                Venda = pipeline do cliente. Plano de corte = produção para fornecedor.
+              </p>
+              <select
+                v-model="taskForm.categoria"
+                class="w-full h-10 bg-white border border-slate-200 rounded-xl px-3 text-xs font-bold text-slate-700"
+              >
+                <template v-if="opcoesTipoAgendamento.unico">
+                  <option
+                    v-for="opt in opcoesTipoAgendamento.opcoes"
+                    :key="opt.value"
+                    :value="opt.value"
+                  >
+                    {{ opt.label }}
+                  </option>
+                </template>
+                <template v-else>
+                  <optgroup label="Venda (cliente)">
+                    <option
+                      v-for="opt in opcoesTipoAgendamento.venda"
+                      :key="'v-' + opt.value"
+                      :value="opt.value"
+                    >
+                      {{ opt.label }}
+                    </option>
+                  </optgroup>
+                  <optgroup label="Plano de corte">
+                    <option
+                      v-for="opt in opcoesTipoAgendamento.planoCorte"
+                      :key="'p-' + opt.value"
+                      :value="opt.value"
+                    >
+                      {{ opt.label }}
+                    </option>
+                  </optgroup>
+                </template>
+              </select>
             </div>
-          </div>
+            <div>
+              <label class="block text-xs font-bold mb-1">Período da tarefa (quando acontece)</label>
+              <p class="text-[10px] text-slate-500 mb-2">Use como referência; abaixo você define o horário de cada pessoa.</p>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-[10px] font-bold mb-1">Início</label>
+                  <input
+                    type="datetime-local"
+                    v-model="taskForm.inicio"
+                    class="w-full h-10 bg-white border border-slate-200 rounded-xl px-3 text-xs font-bold text-slate-700"
+                  />
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold mb-1">Término</label>
+                  <input
+                    type="datetime-local"
+                    v-model="taskForm.fim"
+                    class="w-full h-10 bg-white border border-slate-200 rounded-xl px-3 text-xs font-bold text-slate-700"
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
 
-          <SearchInput
-            v-model="taskForm.clienteId"
-            mode="select"
-            label="Cliente"
-            placeholder="Selecione o cliente..."
-            :options="clientesOptions"
-          />
-          <div>
+          <!-- 2. Cliente -->
+          <section>
+            <div class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">2. Cliente</div>
+            <SearchInput
+              v-model="taskForm.clienteId"
+              mode="select"
+              label=""
+              placeholder="Selecione o cliente..."
+              :options="clientesOptions"
+            />
+          </section>
+
+          <!-- 3. Equipe e horário de cada um -->
+          <section class="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-3">
+            <div class="text-[10px] font-black uppercase tracking-widest text-slate-500">
+              3. Equipe e horário de cada um
+            </div>
+            <p class="text-[10px] text-slate-500">
+              Adicione quem vai atuar e defina o horário (entrada e saída) de cada pessoa.
+            </p>
+
             <div v-if="isAdmin" class="space-y-2">
               <div class="flex items-end gap-2">
                 <div class="flex-1">
                   <SearchInput
                     v-model="funcionarioSelecionado"
                     mode="select"
-                    label="Funcionario"
-                    placeholder="Selecione o funcionario..."
+                    label="Adicionar funcionário"
+                    placeholder="Selecione..."
                     :options="funcionariosOptions"
                   />
                 </div>
                 <button
                   type="button"
-                  class="h-10 px-4 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase"
+                  class="h-10 px-4 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase shrink-0"
                   @click="adicionarFuncionario"
                 >
                   Adicionar
                 </button>
               </div>
 
-              <div v-if="taskForm.funcionarioIds.length" class="flex flex-wrap gap-2">
+              <div v-if="taskForm.funcionarioIds.length" class="flex flex-wrap gap-2 mt-2">
                 <span
                   v-for="fid in taskForm.funcionarioIds"
                   :key="fid"
-                  class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[9px] font-black uppercase bg-slate-100 text-slate-600"
+                  class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700"
                 >
-                  {{ funcionarioNomeById(fid) || 'Funcionario' }}
+                  {{ funcionarioNomeById(fid) || 'Funcionário' }}
                   <button
                     type="button"
-                    class="text-slate-400 hover:text-rose-500"
+                    class="text-slate-500 hover:text-rose-500"
                     @click="removerFuncionario(fid)"
+                    aria-label="Remover"
                   >
                     <i class="pi pi-times text-[10px]"></i>
                   </button>
@@ -237,71 +286,69 @@
               </div>
             </div>
             <div v-else>
-              <label class="block text-xs font-bold mb-1">Funcionario</label>
-              <div
-                class="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 flex items-center text-sm font-bold text-slate-700"
-              >
-                {{ funcionarioNome || 'Nao informado' }}
+              <label class="block text-xs font-bold mb-1">Funcionário</label>
+              <div class="w-full h-10 bg-white border border-slate-200 rounded-xl px-3 flex items-center text-sm font-bold text-slate-700">
+                {{ funcionarioNome || 'Não informado' }}
               </div>
             </div>
-          </div>
 
-          <!-- Apontamentos por funcionário (opcional, para rateio de horas) -->
-          <div v-if="taskForm.funcionarioIds.length" class="mt-2 space-y-2">
-            <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">
-              Apontamentos por funcionario
-            </div>
-            <div
-              v-for="fid in taskForm.funcionarioIds"
-              :key="`apont-${fid}`"
-              class="border border-slate-200 rounded-xl p-3 space-y-2"
-            >
-              <div class="text-[11px] font-black text-slate-700">
-                {{ funcionarioNomeById(fid) || 'Funcionario' }}
-              </div>
-              <div class="space-y-2">
+            <!-- Horário por pessoa -->
+            <div v-if="taskForm.funcionarioIds.length" class="mt-4 space-y-3">
+              <div
+                v-for="fid in taskForm.funcionarioIds"
+                :key="`apont-${fid}`"
+                class="rounded-xl border border-slate-200 p-3 bg-white"
+              >
+                <div class="text-xs font-black text-slate-700 mb-2">
+                  {{ funcionarioNomeById(fid) || 'Funcionário' }} — horário
+                </div>
                 <div
                   v-for="(periodo, idx) in getApontamentosPorFuncionario(fid)"
                   :key="`per-${fid}-${idx}`"
-                  class="grid grid-cols-12 gap-2 items-end"
+                  class="flex flex-wrap gap-2 items-end"
                 >
-                  <div class="col-span-12 md:col-span-5">
-                    <label class="block text-[10px] font-bold mb-1">Inicio</label>
+                  <div class="flex-1 min-w-[140px]">
+                    <label class="block text-[10px] font-bold mb-1">Entrada</label>
                     <input
                       type="datetime-local"
                       v-model="periodo.inicio"
                       class="w-full h-9 bg-slate-50 border border-slate-200 rounded-lg px-2 text-[11px] font-semibold text-slate-700"
                     />
                   </div>
-                  <div class="col-span-12 md:col-span-5">
-                    <label class="block text-[10px] font-bold mb-1">Termino</label>
+                  <div class="flex-1 min-w-[140px]">
+                    <label class="block text-[10px] font-bold mb-1">Saída</label>
                     <input
                       type="datetime-local"
                       v-model="periodo.fim"
                       class="w-full h-9 bg-slate-50 border border-slate-200 rounded-lg px-2 text-[11px] font-semibold text-slate-700"
                     />
                   </div>
-                  <div class="col-span-12 md:col-span-2 flex gap-1">
-                    <button
-                      type="button"
-                      class="flex-1 h-9 rounded-lg bg-slate-100 text-slate-600 text-[9px] font-black uppercase"
-                      @click="adicionarPeriodo(fid)"
-                    >
-                      +
-                    </button>
+                  <div class="flex gap-1 shrink-0">
                     <button
                       v-if="getApontamentosPorFuncionario(fid).length > 1"
                       type="button"
-                      class="flex-1 h-9 rounded-lg bg-rose-50 text-rose-600 text-[9px] font-black uppercase"
+                      class="h-9 w-9 rounded-lg bg-rose-50 text-rose-600 text-xs font-black"
                       @click="removerPeriodo(fid, idx)"
+                      title="Remover este horário"
                     >
-                      -
+                      −
+                    </button>
+                    <button
+                      type="button"
+                      class="h-9 w-9 rounded-lg bg-slate-100 text-slate-600 text-xs font-black"
+                      @click="adicionarPeriodo(fid)"
+                      :title="getApontamentosPorFuncionario(fid).length > 0 ? 'Outro horário (ex.: turno dividido)' : 'Definir horário'"
+                    >
+                      +
                     </button>
                   </div>
                 </div>
+                <p v-if="getApontamentosPorFuncionario(fid).length > 1" class="text-[9px] text-slate-400 mt-1">
+                  + para outro horário (ex.: turno dividido)
+                </p>
               </div>
             </div>
-          </div>
+          </section>
         </div>
 
         <div class="mt-4 flex items-center gap-2">
@@ -403,6 +450,39 @@ const weekDays = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB']
 const monthLabel = computed(() =>
   currentMonth.value.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
 )
+
+// Contexto do evento em edição: venda (cliente) ou plano de corte
+const isEventoPlanoCorte = computed(() => !!editingEvent.value?.plano_corte_id)
+const isEventoVenda = computed(
+  () => !!editingEvent.value?.venda_id || !!editingEvent.value?.orcamento_id
+)
+
+// Opções de tipo conforme o pipeline: venda/cliente vs plano de corte
+const TIPOS_VENDA = [
+  { value: 'LIVRE', label: 'Tarefa livre' },
+  { value: 'MEDIDA', label: 'Medida' },
+  { value: 'MEDIDA_FINA', label: 'Medida fina' },
+  { value: 'PRODUCAO', label: 'Produção' },
+  { value: 'MONTAGEM', label: 'Montagem' },
+]
+const TIPOS_PLANO_CORTE = [
+  { value: 'LIVRE', label: 'Tarefa livre' },
+  { value: 'PRODUCAO', label: 'Produção (plano de corte)' },
+]
+
+const opcoesTipoAgendamento = computed(() => {
+  if (isEventoPlanoCorte.value) {
+    return { unico: true, opcoes: TIPOS_PLANO_CORTE }
+  }
+  if (isEventoVenda.value) {
+    return { unico: true, opcoes: TIPOS_VENDA }
+  }
+  return {
+    unico: false,
+    venda: TIPOS_VENDA,
+    planoCorte: TIPOS_PLANO_CORTE,
+  }
+})
 
 function dateKey(date) {
   const y = date.getFullYear()
@@ -582,7 +662,16 @@ function editTask(event) {
   taskForm.fim = toDateTimeLocal(event.fim_em || event.inicio_em)
   taskForm.clienteId = event?.cliente_id || event?.cliente?.id || ''
   taskForm.funcionarioIds = (event?.equipe || []).map((e) => e.funcionario_id).filter(Boolean)
-  taskForm.categoria = event?.categoria || 'LIVRE'
+  const cat = event?.categoria || 'LIVRE'
+  // Garante categoria válida para o pipeline do evento (venda vs plano de corte)
+  if (event?.plano_corte_id) {
+    taskForm.categoria = ['LIVRE', 'PRODUCAO'].includes(cat) ? cat : 'PRODUCAO'
+  } else if (event?.venda_id || event?.orcamento_id) {
+    const vendaKeys = TIPOS_VENDA.map((o) => o.value)
+    taskForm.categoria = vendaKeys.includes(cat) ? cat : 'LIVRE'
+  } else {
+    taskForm.categoria = cat
+  }
   // Monta apontamentos existentes ou padrão baseado no próprio evento
   if (Array.isArray(event.apontamentos) && event.apontamentos.length) {
     const map = {}
@@ -700,6 +789,21 @@ async function saveTask() {
 
   if (!equipeIds.length) return notify.error('Informe pelo menos um funcionario.')
 
+  // Cada funcionário da equipe deve ter pelo menos um horário (início e término) preenchido
+  for (const fid of taskForm.funcionarioIds) {
+    const periodos = getApontamentosPorFuncionario(fid)
+    const temHorarioValido = periodos.some((p) => {
+      if (!p?.inicio || !p?.fim) return false
+      const i = new Date(p.inicio)
+      const f = new Date(p.fim)
+      return !Number.isNaN(i.getTime()) && !Number.isNaN(f.getTime()) && f > i
+    })
+    if (!temHorarioValido) {
+      const nome = funcionarioNomeById(fid) || 'Funcionário'
+      return notify.error(`Informe o horário de início e término para ${nome}.`)
+    }
+  }
+
   const inicio = new Date(taskForm.inicio)
   if (Number.isNaN(inicio.getTime())) return notify.error('Data invalida.')
   const fim = new Date(taskForm.fim)
@@ -765,6 +869,7 @@ async function loadAgenda() {
     const fim = dateKey(endOfMonth(currentMonth.value))
     const res = await AgendaService.listarTodos(inicio, fim)
     let data = Array.isArray(res?.data) ? res.data : []
+    // Vendedores (só agendamentos.vendas) veem apenas eventos de venda/cliente; produção vê tudo
     if (canVendas.value && !canProducao.value) {
       data = data.filter((ev) => !ev?.plano_corte_id)
     }

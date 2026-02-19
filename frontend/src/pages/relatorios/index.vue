@@ -5,7 +5,7 @@
 
       <PageHeader
         title="Relatórios"
-        subtitle="Analytics e relatórios gerados pelo servidor Python"
+        subtitle="Dashboard, DRE e relatórios"
         icon="pi pi-chart-bar"
         :show-back="false"
       />

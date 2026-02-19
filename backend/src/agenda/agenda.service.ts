@@ -59,12 +59,12 @@ export class AgendaService {
           fornecedor: true,
           plano_corte: true,
           venda: true,
-        },
+        } as any,
       });
 
       // 1.1. Cria apontamentos de horas, se enviados
       if (Array.isArray(apontamentos) && apontamentos.length) {
-        await tx.agenda_apontamentos.createMany({
+        await (tx as any).agenda_apontamentos.createMany({
           data: apontamentos.map((item) => ({
             agenda_id: agendamento.id,
             funcionario_id: item.funcionario_id,
@@ -144,7 +144,7 @@ export class AgendaService {
         plano_corte: true,
         venda: true,
         apontamentos: true,
-      },
+      } as any,
       orderBy: { inicio_em: 'asc' },
     });
   }
@@ -161,7 +161,7 @@ export class AgendaService {
         fornecedor: true,
         plano_corte: true,
         apontamentos: true,
-      },
+      } as any,
       orderBy: { inicio_em: 'asc' },
     });
   }
