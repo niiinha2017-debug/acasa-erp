@@ -153,7 +153,7 @@ export class ContratosService {
   }
 
   private renderTabelaItensVenda(
-    doc: PDFKitDoc,
+    doc: any,
     venda: any,
     left: number,
     right: number,
