@@ -1,208 +1,212 @@
 <!-- src/pages/financeiro/contas-receber/index.vue -->
 <template>
-  <Card :shadow="true">
-    <PageHeader
-      title="Contas a Receber"
-      subtitle="Receitas previstas e recebidas (cliente ou fornecedor)."
-      icon="pi pi-arrow-up-right"
-      :backTo="null"
-    />
+  <div class="w-full h-full">
+    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
+      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
 
-    <div class="p-6 relative space-y-6">
-      <Loading v-if="loading" />
+      <PageHeader
+        title="Contas a Receber"
+        subtitle="Receitas previstas e recebidas (cliente ou fornecedor)."
+        icon="pi pi-arrow-up-right"
+        :backTo="null"
+      />
 
-      <template v-else>
-        <!-- FILTROS -->
-        <div class="grid grid-cols-12 gap-4">
-          <SearchInput
-            class="col-span-12 md:col-span-7"
-            v-model="filtroTexto"
-            mode="search"
-            label="Buscar"
-            placeholder="Buscar por descrição, origem, status..."
-          />
+      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-6 relative">
+        <Loading v-if="loading" />
 
-          <SearchInput
-            class="col-span-12 md:col-span-5"
-            v-model="filtroStatus"
-            mode="select"
-            label="Status"
-            placeholder="Selecione..."
-            :options="STATUS_OPTIONS"
-          />
-        </div>
+        <template v-else>
+          <!-- FILTROS -->
+          <div class="grid grid-cols-12 gap-4">
+            <SearchInput
+              class="col-span-12 md:col-span-7"
+              v-model="filtroTexto"
+              mode="search"
+              label="Buscar"
+              placeholder="Buscar por descrição, origem, status..."
+            />
 
-        <!-- RESUMO -->
-        <div class="grid grid-cols-12 gap-4">
-          <div class="col-span-12 md:col-span-4 px-4 py-3 rounded-2xl bg-gray-50 border border-gray-100">
-            <div class="text-[9px] font-black uppercase tracking-[0.22em] text-gray-400">Total</div>
-            <div class="text-lg font-black text-gray-900">{{ format.currency(totais.total) }}</div>
-            <div class="text-xs font-bold text-gray-500">{{ contagens.total }} registros</div>
+            <SearchInput
+              class="col-span-12 md:col-span-5"
+              v-model="filtroStatus"
+              mode="select"
+              label="Status"
+              placeholder="Selecione..."
+              :options="STATUS_OPTIONS"
+            />
           </div>
 
-          <div class="col-span-12 md:col-span-4 px-4 py-3 rounded-2xl bg-green-50 border border-green-100">
-            <div class="text-[9px] font-black uppercase tracking-[0.22em] text-green-500">Recebidos</div>
-            <div class="text-lg font-black text-green-700">{{ format.currency(totais.recebido) }}</div>
-            <div class="text-xs font-bold text-green-600">{{ contagens.recebido }} registros</div>
+          <!-- RESUMO -->
+          <div class="grid grid-cols-12 gap-4">
+            <div class="col-span-12 md:col-span-4 px-4 py-3 rounded-2xl bg-gray-50 border border-gray-100">
+              <div class="text-[9px] font-black uppercase tracking-[0.22em] text-gray-400">Total</div>
+              <div class="text-lg font-black text-gray-900">{{ format.currency(totais.total) }}</div>
+              <div class="text-xs font-bold text-gray-500">{{ contagens.total }} registros</div>
+            </div>
+
+            <div class="col-span-12 md:col-span-4 px-4 py-3 rounded-2xl bg-green-50 border border-green-100">
+              <div class="text-[9px] font-black uppercase tracking-[0.22em] text-green-500">Recebidos</div>
+              <div class="text-lg font-black text-green-700">{{ format.currency(totais.recebido) }}</div>
+              <div class="text-xs font-bold text-green-600">{{ contagens.recebido }} registros</div>
+            </div>
+
+            <div class="col-span-12 md:col-span-4 px-4 py-3 rounded-2xl bg-amber-50 border border-amber-100">
+              <div class="text-[9px] font-black uppercase tracking-[0.22em] text-amber-500">Em aberto</div>
+              <div class="text-lg font-black text-amber-700">{{ format.currency(totais.aberto) }}</div>
+              <div class="text-xs font-bold text-amber-600">{{ contagens.aberto }} registros</div>
+            </div>
           </div>
 
-          <div class="col-span-12 md:col-span-4 px-4 py-3 rounded-2xl bg-amber-50 border border-amber-100">
-            <div class="text-[9px] font-black uppercase tracking-[0.22em] text-amber-500">Em aberto</div>
-            <div class="text-lg font-black text-amber-700">{{ format.currency(totais.aberto) }}</div>
-            <div class="text-xs font-bold text-amber-600">{{ contagens.aberto }} registros</div>
-          </div>
-        </div>
-
-        <!-- TABELA -->
-        <Table
-          :columns="columns"
-          :rows="rowsFiltrados"
-          :loading="false"
-          emptyText="Nenhuma conta a receber encontrada."
-          :boxed="true"
-        >
-          <template #cell-partes="{ row }">
-            <div class="font-black text-gray-900">
-              <template v-if="row.cliente_id">Cliente #{{ row.cliente_id }}</template>
-              <template v-else-if="row.fornecedor_id">Fornecedor #{{ row.fornecedor_id }}</template>
-              <template v-else>—</template>
-            </div>
-            <div class="text-xs font-bold text-gray-400">
-              <template v-if="row.descricao">{{ row.descricao }}</template>
-              <template v-else>Sem descrição</template>
-            </div>
-          </template>
-
-          <template #cell-origem="{ row }">
-            <div class="font-black text-gray-900">{{ row.origem_tipo || '—' }}</div>
-            <div class="text-xs font-bold text-gray-400">
-              <template v-if="row.origem_id">#{{ row.origem_id }}</template>
-              <template v-else>—</template>
-            </div>
-          </template>
-
-          <template #cell-vencimento="{ row }">
-            <div class="text-xs font-black text-gray-900">{{ format.date(row.vencimento_em) }}</div>
-          </template>
-
-          <template #cell-valor="{ row }">
-            <div class="font-black text-gray-900 text-right">
-              {{ format.currency(Number(row.valor_original || 0)) }}
-            </div>
-            <div class="text-xs font-bold text-gray-400 text-right">
-              Comp.: {{ format.currency(Number(row.valor_compensado || 0)) }}
-            </div>
-          </template>
-
-          <template #cell-status="{ row }">
-            <StatusBadge :value="row.status" />
-          </template>
-
-          <template #cell-acoes="{ row }">
-            <div class="flex justify-end gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                type="button"
-                :disabled="acaoLoadingId === row.id"
-                @click="abrirReceber(row)"
-              >
-                Receber
-              </Button>
-            </div>
-          </template>
-        </Table>
-      </template>
-
-      <!-- MODAL: RECEBER -->
-      <transition name="fade-slide">
-        <div
-          v-if="receberModal.open"
-          class="fixed inset-0 z-50 flex items-center justify-center p-4"
-          @mousedown.self="fecharReceber"
-        >
-          <div class="absolute inset-0 bg-black/20 backdrop-blur-sm"></div>
-
-          <div class="relative w-full max-w-2xl rounded-3xl bg-white shadow-2xl overflow-hidden">
-            <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/40">
-              <div class="text-xs font-black uppercase tracking-[0.22em] text-gray-400">Receber</div>
-              <div class="text-lg font-black text-gray-900">
-                Conta a Receber #{{ receberModal.id }}
+          <!-- TABELA -->
+          <Table
+            :columns="columns"
+            :rows="rowsFiltrados"
+            :loading="false"
+            empty-text="Nenhuma conta a receber encontrada."
+            :boxed="true"
+          >
+            <template #cell-partes="{ row }">
+              <div class="font-black text-gray-900">
+                <template v-if="row.cliente_id">Cliente #{{ row.cliente_id }}</template>
+                <template v-else-if="row.fornecedor_id">Fornecedor #{{ row.fornecedor_id }}</template>
+                <template v-else>—</template>
               </div>
-            </div>
+              <div class="text-xs font-bold text-gray-400">
+                <template v-if="row.descricao">{{ row.descricao }}</template>
+                <template v-else>Sem descrição</template>
+              </div>
+            </template>
 
-            <div class="p-6 space-y-6">
-              <div class="grid grid-cols-12 gap-4">
-                <div class="col-span-12 md:col-span-6">
-                  <Input :modelValue="receberModal.parteLabel" label="Parte" readonly />
-                </div>
+            <template #cell-origem="{ row }">
+              <div class="font-black text-gray-900">{{ row.origem_tipo || '—' }}</div>
+              <div class="text-xs font-bold text-gray-400">
+                <template v-if="row.origem_id">#{{ row.origem_id }}</template>
+                <template v-else>—</template>
+              </div>
+            </template>
 
-                <div class="col-span-12 md:col-span-6">
-                  <Input :modelValue="receberModal.origemLabel" label="Origem" readonly />
-                </div>
+            <template #cell-vencimento="{ row }">
+              <div class="text-xs font-black text-gray-900">{{ format.date(row.vencimento_em) }}</div>
+            </template>
 
-                <div class="col-span-12 md:col-span-6">
-                  <Input :modelValue="format.currency(Number(receberModal.valor_original || 0))" label="Valor" readonly />
-                </div>
+            <template #cell-valor="{ row }">
+              <div class="font-black text-gray-900 text-right">
+                {{ format.currency(Number(row.valor_original || 0)) }}
+              </div>
+              <div class="text-xs font-bold text-gray-400 text-right">
+                Comp.: {{ format.currency(Number(row.valor_compensado || 0)) }}
+              </div>
+            </template>
 
-                <div class="col-span-12 md:col-span-6">
-                  <Input :modelValue="format.date(receberModal.vencimento_em)" label="Vencimento" readonly />
+            <template #cell-status="{ row }">
+              <StatusBadge :value="row.status" />
+            </template>
+
+            <template #cell-acoes="{ row }">
+              <div class="flex justify-end gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  type="button"
+                  :disabled="acaoLoadingId === row.id"
+                  @click="abrirReceber(row)"
+                >
+                  Receber
+                </Button>
+              </div>
+            </template>
+          </Table>
+        </template>
+
+        <!-- MODAL: RECEBER -->
+        <transition name="fade-slide">
+          <div
+            v-if="receberModal.open"
+            class="fixed inset-0 z-50 flex items-center justify-center p-4"
+            @mousedown.self="fecharReceber"
+          >
+            <div class="absolute inset-0 bg-black/20 backdrop-blur-sm"></div>
+
+            <div class="relative w-full max-w-2xl rounded-3xl bg-white shadow-2xl overflow-hidden">
+              <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/40">
+                <div class="text-xs font-black uppercase tracking-[0.22em] text-gray-400">Receber</div>
+                <div class="text-lg font-black text-gray-900">
+                  Conta a Receber #{{ receberModal.id }}
                 </div>
               </div>
 
-              <div class="h-px bg-slate-100"></div>
+              <div class="p-6 space-y-6">
+                <div class="grid grid-cols-12 gap-4">
+                  <div class="col-span-12 md:col-span-6">
+                    <Input :modelValue="receberModal.parteLabel" label="Parte" readonly />
+                  </div>
 
-              <div class="grid grid-cols-12 gap-4">
-                <div class="col-span-12 md:col-span-6">
-                  <SearchInput
-                    v-model="receberModal.forma_recebimento_chave"
-                    mode="search"
-                    label="Forma de recebimento (chave)"
-                    placeholder="Ex: PIX, DINHEIRO, CARTAO..."
-                  />
+                  <div class="col-span-12 md:col-span-6">
+                    <Input :modelValue="receberModal.origemLabel" label="Origem" readonly />
+                  </div>
+
+                  <div class="col-span-12 md:col-span-6">
+                    <Input :modelValue="format.currency(Number(receberModal.valor_original || 0))" label="Valor" readonly />
+                  </div>
+
+                  <div class="col-span-12 md:col-span-6">
+                    <Input :modelValue="format.date(receberModal.vencimento_em)" label="Vencimento" readonly />
+                  </div>
                 </div>
 
-                <div class="col-span-12 md:col-span-6">
-                  <label class="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400 mb-2 block">
-                    Data de recebimento
-                  </label>
-                  <input
-                    type="datetime-local"
-                    class="w-full h-12 px-4 rounded-2xl bg-gray-100 border-none font-bolding text-gray-700 font-bold"
-                    v-model="receberModal.recebido_em_input"
-                  />
-                </div>
+                <div class="h-px bg-slate-100"></div>
 
-                <div class="col-span-12">
-                  <SearchInput
-                    v-model="receberModal.observacao"
-                    mode="search"
-                    label="Observação"
-                    placeholder="Opcional..."
-                  />
+                <div class="grid grid-cols-12 gap-4">
+                  <div class="col-span-12 md:col-span-6">
+                    <SearchInput
+                      v-model="receberModal.forma_recebimento_chave"
+                      mode="search"
+                      label="Forma de recebimento (chave)"
+                      placeholder="Ex: PIX, DINHEIRO, CARTAO..."
+                    />
+                  </div>
+
+                  <div class="col-span-12 md:col-span-6">
+                    <label class="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400 mb-2 block">
+                      Data de recebimento
+                    </label>
+                    <input
+                      type="datetime-local"
+                      class="w-full h-12 px-4 rounded-2xl bg-gray-100 border-none font-bolding text-gray-700 font-bold"
+                      v-model="receberModal.recebido_em_input"
+                    />
+                  </div>
+
+                  <div class="col-span-12">
+                    <SearchInput
+                      v-model="receberModal.observacao"
+                      mode="search"
+                      label="Observação"
+                      placeholder="Opcional..."
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/40 flex items-center justify-end gap-3">
-              <Button variant="secondary" type="button" :disabled="receberModal.saving" @click="fecharReceber">
-                Cancelar
-              </Button>
-              <Button
-                variant="primary"
-                type="button"
-                :loading="receberModal.saving"
-                :disabled="!podeConfirmarRecebimento"
-                @click="confirmarRecebimento"
-              >
-                Confirmar
-              </Button>
+              <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/40 flex items-center justify-end gap-3">
+                <Button variant="secondary" type="button" :disabled="receberModal.saving" @click="fecharReceber">
+                  Cancelar
+                </Button>
+                <Button
+                  variant="primary"
+                  type="button"
+                  :loading="receberModal.saving"
+                  :disabled="!podeConfirmarRecebimento"
+                  @click="confirmarRecebimento"
+                >
+                  Confirmar
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      </transition>
+        </transition>
+      </div>
     </div>
-  </Card>
+  </div>
 </template>
 
 <script setup>

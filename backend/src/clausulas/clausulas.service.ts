@@ -31,6 +31,11 @@ const DEFAULT_MODULOS: Record<
     },
   ],
   CONTRATO: [
+    {
+      modulo_key: 'CABECALHO',
+      titulo: 'Contrato de Compra e Venda de Mercadorias e Prestação de Serviços',
+      ordem: 0,
+    },
     { modulo_key: 'OBJETO', titulo: 'Cláusula Primeira: Do Objeto', ordem: 1 },
     {
       modulo_key: 'PRECO_CONDICOES',

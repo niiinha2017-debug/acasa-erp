@@ -9,9 +9,10 @@ import {
 import { Type } from 'class-transformer';
 
 export class CreateContratoDto {
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
-  cliente_id: number;
+  cliente_id?: number;
 
   @IsOptional()
   @Type(() => Number)

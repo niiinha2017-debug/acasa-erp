@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ClausulasService } from '../clausulas/clausulas.service';
 import { CreateOrcamentoDto } from './dto/create-orcamento.dto';
 import { UpdateOrcamentoDto } from './dto/update-orcamento.dto';
 import { CreateOrcamentoItemDto } from './dto/create-orcamento-item.dto';
@@ -16,12 +15,36 @@ import sizeOf from 'image-size';
 export class OrcamentosService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly clausulasService: ClausulasService,
   ) {}
 
   // =========================================================
   // PDF
   // =========================================================
+  private readonly clausulasPadraoOrcamento: {
+    modulo_key: string;
+    titulo: string;
+    texto: string;
+  }[] = [
+    {
+      modulo_key: 'OBJETO',
+      titulo: 'CLÁUSULA PRIMEIRA: DO OBJETO',
+      texto:
+        'Este documento estabelece as condições gerais para a fabricação, fornecimento e instalação de mobiliário sob medida e itens complementares, conforme as especificações técnicas, projetos e quantitativos detalhados nas páginas anteriores deste orçamento.',
+    },
+    {
+      modulo_key: 'PRECO_CONDICOES',
+      titulo: 'CLÁUSULA SEGUNDA: DO PREÇO E CONDIÇÕES DE PAGAMENTO',
+      texto:
+        'O valor do investimento e as respectivas formas de pagamento são aqueles especificados na folha de rosto ou no resumo financeiro deste orçamento. Os valores apresentados têm validade de 10 (dez) dias corridos, contados a partir da data de emissão deste documento.',
+    },
+    {
+      modulo_key: 'PRAZO_VALIDADE',
+      titulo: 'CLÁUSULA TERCEIRA: DO PRAZO E ENTREGA',
+      texto:
+        'Prazo de Entrega: O prazo estimado para fabricação e instalação é de 60 dias úteis, contados a partir da conferência final das medidas em obra e da confirmação do pedido. Importante: O cumprimento deste prazo está sujeito à disponibilidade da agenda de produção no momento da formalização do contrato. A ordem de execução dos serviços é definida rigorosamente conforme a ordem cronológica de fechamento dos pedidos.',
+    },
+  ];
+
   async gerarPdfCompleto(orc: any): Promise<Uint8Array> {
     const pdf = await this.gerarMioloPdfBuffer(orc);
     return pdf;
@@ -54,7 +77,8 @@ export class OrcamentosService {
         const colValW = 100;
         const colDescW = tableWidth - colAmbW - colValW;
 
-        const aplicarLayoutPagina = () => {
+        const aplicarLayoutPagina = (opts?: { mostrarTabela?: boolean }) => {
+          const mostrarTabela = opts?.mostrarTabela !== false;
           const startY = renderHeaderA4Png(doc);
 
           doc.y = startY + 10;
@@ -129,28 +153,32 @@ export class OrcamentosService {
             .lineTo(right, doc.y)
             .stroke();
 
-          doc.y += 8;
-          const headerY = doc.y;
-          doc.font('Helvetica-Bold').fontSize(10).fillColor('#000');
+          if (mostrarTabela) {
+            doc.y += 8;
+            const headerY = doc.y;
+            doc.font('Helvetica-Bold').fontSize(10).fillColor('#000');
 
-          doc.text('ITEM / AMBIENTE', left, headerY, { width: colAmbW });
-          doc.text('ACABAMENTO / DESCRITIVO', left + colAmbW, headerY, {
-            width: colDescW,
-            align: 'center',
-          });
-          doc.text('VALOR', right - colValW, headerY, {
-            width: colValW,
-            align: 'right',
-          });
+            doc.text('ITEM / AMBIENTE', left, headerY, { width: colAmbW });
+            doc.text('ACABAMENTO / DESCRITIVO', left + colAmbW, headerY, {
+              width: colDescW,
+              align: 'center',
+            });
+            doc.text('VALOR', right - colValW, headerY, {
+              width: colValW,
+              align: 'right',
+            });
 
-          doc.y = headerY + 14;
-          doc
-            .lineWidth(1)
-            .strokeColor('#000')
-            .moveTo(left, doc.y)
-            .lineTo(right, doc.y)
-            .stroke();
-          doc.y += 10;
+            doc.y = headerY + 14;
+            doc
+              .lineWidth(1)
+              .strokeColor('#000')
+              .moveTo(left, doc.y)
+              .lineTo(right, doc.y)
+              .stroke();
+            doc.y += 10;
+          } else {
+            doc.y += 16;
+          }
         };
 
         // CAPA
@@ -277,12 +305,17 @@ export class OrcamentosService {
           const larguraTexto = right - left;
           const rodapeReservado = 50;
 
+          // Nova página de cláusulas com o mesmo cabeçalho do orçamento,
+          // mas sem o cabeçalho da tabela de itens
           doc.addPage();
+          aplicarLayoutPagina({ mostrarTabela: false });
+
+          doc.y += 10;
           doc
             .font('Helvetica-Bold')
             .fontSize(12)
             .fillColor('#000')
-            .text('Cláusulas do Orçamento', left, doc.y + 10, {
+            .text('Termos e Condições do Orçamento', left, doc.y, {
               width: larguraTexto,
               align: 'center',
             });
@@ -302,7 +335,8 @@ export class OrcamentosService {
 
             if (doc.y + 60 > doc.page.height - rodapeReservado) {
               doc.addPage();
-              doc.y = margemClausula;
+              aplicarLayoutPagina({ mostrarTabela: false });
+              doc.y += 10;
             }
             if (titulo) {
               doc
@@ -315,7 +349,8 @@ export class OrcamentosService {
             if (texto) {
               if (doc.y + 40 > doc.page.height - rodapeReservado) {
                 doc.addPage();
-                doc.y = margemClausula;
+                aplicarLayoutPagina({ mostrarTabela: false });
+                doc.y += 10;
               }
               doc
                 .font('Helvetica')
@@ -417,14 +452,26 @@ export class OrcamentosService {
   async gerarPdfESalvar(orcId: number) {
     const orc = await this.detalhar(orcId);
 
-    // Cláusulas do orçamento (contratos) para incluir no PDF antes das imagens
-    const clausulasModelos = await this.clausulasService.buscarOuCriarPorTipo(
-      'ORCAMENTO',
-    );
-    const clausulas = (clausulasModelos || []).map((c) => ({
-      titulo: c.titulo || '',
-      texto: c.texto || '',
-    }));
+    // Cláusulas específicas do orçamento (segunda página - Termos e Condições)
+    const rawClausulas: any = (orc as any).clausulas;
+    let clausulas: { titulo: string; texto: string }[] = [];
+
+    if (Array.isArray(rawClausulas) && rawClausulas.length > 0) {
+      clausulas = rawClausulas
+        .map((c) => ({
+          titulo: String(c?.titulo || '').trim(),
+          texto: String(c?.texto || '').trim(),
+        }))
+        .filter((c) => c.titulo || c.texto);
+    }
+
+    // Se o orçamento ainda não tiver cláusulas próprias, usa um modelo padrão
+    if (clausulas.length === 0) {
+      clausulas = this.clausulasPadraoOrcamento.map((c) => ({
+        titulo: c.titulo,
+        texto: c.texto,
+      }));
+    }
 
     // Só imagens marcadas como "para o PDF" (categoria IMAGEM_PDF) entram no arquivo gerado
     const anexos = await this.prisma.arquivos.findMany({
@@ -492,6 +539,9 @@ export class OrcamentosService {
       orderBy: { id: 'desc' },
       include: {
         cliente: true,
+        venda: {
+          select: { id: true, status: true },
+        },
         itens: {
           select: { valor_total: true, nome_ambiente: true, descricao: true },
           orderBy: { id: 'asc' },
@@ -563,6 +613,40 @@ export class OrcamentosService {
       },
       include: { cliente: true, itens: true },
     });
+  }
+
+  // =========================================================
+  // CLÁUSULAS ESPECÍFICAS DO ORÇAMENTO
+  // =========================================================
+
+  async salvarClausulas(
+    id: number,
+    payload: {
+      clausulas?: { modulo_key?: string; titulo?: string; texto?: string }[];
+    },
+  ) {
+    await this.detalhar(id);
+
+    const lista = Array.isArray(payload?.clausulas)
+      ? payload.clausulas.map((c, idx) => ({
+          modulo_key: c.modulo_key || ['OBJETO', 'PRECO_CONDICOES', 'PRAZO_VALIDADE'][idx] || null,
+          titulo: c.titulo || '',
+          texto: c.texto || '',
+        }))
+      : [];
+
+    const orc = await this.prisma.orcamentos.update({
+      where: { id },
+      data: {
+        clausulas: lista,
+      },
+      select: {
+        id: true,
+        clausulas: true,
+      },
+    });
+
+    return orc;
   }
 
   async remover(id: number) {

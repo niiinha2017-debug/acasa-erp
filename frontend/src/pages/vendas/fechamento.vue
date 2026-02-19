@@ -83,6 +83,7 @@
                     Detalhar
                   </Button>
                   <Button
+                    v-if="!row.venda"
                     size="sm"
                     variant="primary"
                     type="button"
@@ -90,6 +91,16 @@
                     @click="irParaFechamento(row.id)"
                   >
                     Fechar venda
+                  </Button>
+                  <Button
+                    v-else
+                    size="sm"
+                    variant="danger"
+                    type="button"
+                    :disabled="!can('vendas.editar') && !can('vendas.excluir')"
+                    @click="cancelarVenda(row)"
+                  >
+                    Cancelar venda
                   </Button>
                 </div>
               </template>
@@ -104,7 +115,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { OrcamentosService } from '@/services'
+import { OrcamentosService, VendaService } from '@/services'
 import { notify } from '@/services/notify'
 import { can } from '@/services/permissions'
 import { format } from '@/utils/format'
@@ -172,6 +183,29 @@ async function carregar() {
 function irParaFechamento(id) {
   if (!id) return
   router.push({ path: '/vendas/nova-venda', query: { orcamentoId: String(id) } })
+}
+
+async function cancelarVenda(row) {
+  if (!row?.venda?.id) return
+  if (!can('vendas.editar') && !can('vendas.excluir')) {
+    return notify.error('Acesso negado.')
+  }
+
+  const vendaId = row.venda.id
+  const ok = window.confirm(
+    `Você tem certeza que deseja cancelar/excluir a Venda #${vendaId} deste orçamento?`,
+  )
+  if (!ok) return
+
+  try {
+    // Exclui a venda para liberar o orçamento novamente
+    await VendaService.remover(vendaId)
+    notify.success('Venda cancelada/excluída.')
+    await carregar()
+  } catch (e) {
+    const msg = e?.response?.data?.message || e?.message || 'Erro ao cancelar venda.'
+    notify.error(msg)
+  }
 }
 
 onMounted(carregar)

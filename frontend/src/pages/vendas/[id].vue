@@ -210,31 +210,35 @@
             </template>
 
             <template #cell-data_recebimento="{ row }">
-              <template v-if="mostrarDataPorParcela(form.pagamentos[row.__idx])">
-                <div class="space-y-1.5">
-                  <div
-                    v-for="(d, i) in (form.pagamentos[row.__idx].datas_parcelas || [])"
-                    :key="i"
-                    class="flex items-center gap-2"
-                  >
-                    <span class="text-[10px] font-bold text-text-soft w-5">{{ i + 1 }} —</span>
+              <div class="space-y-1.5">
+                <div
+                  v-for="(parc, i) in (form.pagamentos[row.__idx].datas_parcelas || [])"
+                  :key="i"
+                  class="flex items-center gap-2"
+                >
+                  <span class="w-5 text-[10px] font-bold text-text-soft text-right">{{ i + 1 }} —</span>
+                  <div class="flex-1 min-w-0">
                     <Input
-                      v-model="form.pagamentos[row.__idx].datas_parcelas[i]"
+                      v-model="form.pagamentos[row.__idx].datas_parcelas[i].data"
                       type="date"
                       :forceUpper="false"
                       :readonly="!can(permSalvarVenda())"
-                      class="flex-1 min-w-0"
+                      class="w-full"
+                    />
+                  </div>
+                  <div class="w-28">
+                    <Input
+                      :modelValue="format.currency(form.pagamentos[row.__idx].datas_parcelas[i].valor || 0)"
+                      type="text"
+                      inputmode="numeric"
+                      :forceUpper="false"
+                      :readonly="!can(permSalvarVenda())"
+                      class="w-full text-right"
+                      @update:modelValue="(val) => { form.pagamentos[row.__idx].datas_parcelas[i].valor = moedaParaNumero(val); recomputarTotalPagamentoForm(row.__idx) }"
                     />
                   </div>
                 </div>
-              </template>
-              <Input
-                v-else
-                v-model="form.pagamentos[row.__idx].data_recebimento"
-                type="date"
-                :forceUpper="false"
-                :readonly="!can(permSalvarVenda())"
-              />
+              </div>
             </template>
 
             <template #cell-parcelas="{ row }">
@@ -816,6 +820,8 @@ function pipelineKey(key) {
   return k
 }
 
+// (Contrato é aberto a partir do fluxo de venda/fechamento, não daqui)
+
 // =======================
 // ENVIAR PARA PRODUÇÃO (Venda / Pós-venda)
 // =======================
@@ -1072,14 +1078,13 @@ const columnsItens = [
   { key: 'quantidade', label: 'Qtd', align: 'right', width: '110px' },
   { key: 'valor_unitario', label: 'Valor', align: 'right', width: '160px' },
   { key: 'valor_total', label: 'Total', align: 'right', width: '160px' },
-  { key: 'acoes', label: '', align: 'right', width: '140px' },
+  { key: 'acoes', label: 'Ações', align: 'right', width: '140px' },
 ]
 
 const columnsPagamentos = [
   { key: 'forma', label: 'Forma', width: '220px' },
   { key: 'parcelas', label: 'Parcelas', width: '120px', align: 'right' },
-  { key: 'valor', label: 'Valor', width: '160px', align: 'right' },
-  { key: 'data_recebimento', label: 'Recebido', width: '150px' },
+  { key: 'data_recebimento', label: 'Data(s) / Valor(es)', width: '220px' },
   { key: 'acoes', label: 'Ações', width: '140px', align: 'right' },
 ]
 
@@ -1104,7 +1109,7 @@ function addPagamento() {
     parcelas: 1,
     data_prevista_recebimento: '',
     data_recebimento: '',
-    datas_parcelas: [],
+    datas_parcelas: [{ data: '', valor: 0 }],
     status_financeiro_chave: 'EM_ABERTO',
   })
 }
@@ -1113,16 +1118,24 @@ function ensureDatasParcelas(p) {
   if (!FORMAS_COM_DATA_POR_PARCELA.includes(p.forma_pagamento_chave)) return
   const n = Math.max(1, Math.min(12, Number(p.parcelas || 1)))
   if (!Array.isArray(p.datas_parcelas)) p.datas_parcelas = []
-  while (p.datas_parcelas.length < n) p.datas_parcelas.push('')
+  while (p.datas_parcelas.length < n) {
+    p.datas_parcelas.push({ data: '', valor: 0 })
+  }
   if (p.datas_parcelas.length > n) p.datas_parcelas = p.datas_parcelas.slice(0, n)
 }
 
-function mostrarDataPorParcela(p) {
-  if (!p || !FORMAS_COM_DATA_POR_PARCELA.includes(p.forma_pagamento_chave)) return false
-  const n = Math.max(1, Math.min(12, Number(p.parcelas || 1)))
-  if (n <= 1) return false
+function recomputarTotalPagamentoForm(idx) {
+  const p = form.pagamentos[idx]
+  if (!p || !Array.isArray(p.datas_parcelas)) return
+  p.valor = p.datas_parcelas.reduce(
+    (acc, parc) => acc + num(parc?.valor || 0),
+    0,
+  )
+}
+
+function normalizeDatasParcelasForm(p) {
   ensureDatasParcelas(p)
-  return true
+  return Array.isArray(p.datas_parcelas) ? p.datas_parcelas : []
 }
 
 function removerPagamento(idx) {
@@ -1132,7 +1145,18 @@ function removerPagamento(idx) {
 }
 
 const somaPagamentos = computed(() =>
-  round2((form.pagamentos || []).reduce((acc, p) => acc + num(p?.valor || 0), 0)),
+  round2(
+    (form.pagamentos || []).reduce((acc, p) => {
+      if (Array.isArray(p.datas_parcelas) && p.datas_parcelas.length) {
+        const sub = p.datas_parcelas.reduce(
+          (s, parc) => s + num(parc?.valor || 0),
+          0,
+        )
+        return acc + sub
+      }
+      return acc + num(p?.valor || 0)
+    }, 0),
+  ),
 )
 const diferencaRateio = computed(() => round2(somaPagamentos.value - num(form.valor_vendido || 0)))
 const pagamentosBatendo = computed(() => diferencaRateio.value === 0)
@@ -1262,9 +1286,11 @@ const valor_comissoes = computed(() =>
 const valor_taxa_pagamento = computed(() =>
   round2(
     (form.pagamentos || []).reduce((acc, p) => {
-      const v = num(p?.valor || 0)
+      const baseValor = Array.isArray(p.datas_parcelas) && p.datas_parcelas.length
+        ? p.datas_parcelas.reduce((s, parc) => s + num(parc?.valor || 0), 0)
+        : num(p?.valor || 0)
       const pct = taxaPctPorForma(p?.forma_pagamento_chave, p?.parcelas)
-      return acc + round2(v * (pct / 100))
+      return acc + round2(baseValor * (pct / 100))
     }, 0),
   ),
 )
@@ -1390,8 +1416,15 @@ async function carregarVenda() {
         valor: round2(valorUnit * n),
         parcelas: n,
         data_prevista_recebimento: '',
+        data_prevista_recebimento: '',
         data_recebimento: n === 1 ? (rawPagamentos[i].data_recebimento || '') : '',
-        datas_parcelas: FORMAS_COM_DATA_POR_PARCELA.includes(forma) && n > 1 ? (rawPagamentos.slice(i, j).map((x) => x.data_recebimento || '')) : [],
+        datas_parcelas:
+          FORMAS_COM_DATA_POR_PARCELA.includes(forma) && n > 1
+            ? rawPagamentos.slice(i, j).map((x) => ({
+                data: x.data_recebimento || '',
+                valor: round2(num(x.valor || 0)),
+              }))
+            : [{ data: rawPagamentos[i].data_recebimento || '', valor: round2(num(valorUnit || 0)) }],
         status_financeiro_chave: data?.pagamentos?.[i]?.status_financeiro_chave || 'EM_ABERTO',
       })
       i = j - 1
@@ -1461,21 +1494,22 @@ function montarPayload() {
       const list = []
       for (const p of form.pagamentos || []) {
         const forma = String(p.forma_pagamento_chave || '')
-        const valorTotal = round2(num(p.valor || 0))
-        const n = Math.max(1, Math.min(12, Number(p.parcelas || 1)))
-        const comDataPorParcela = FORMAS_COM_DATA_POR_PARCELA.includes(forma) && n > 1 && Array.isArray(p.datas_parcelas) && p.datas_parcelas.length >= n
-        if (comDataPorParcela) {
-          const valorParcela = round2(valorTotal / n)
-          for (let i = 0; i < n; i++) {
+        const parcelas = Array.isArray(p.datas_parcelas) ? p.datas_parcelas : []
+        if (parcelas.length) {
+          for (const parc of parcelas) {
             list.push({
               forma_pagamento_chave: forma,
-              valor: valorParcela,
+              valor: round2(num(parc?.valor || 0)),
               data_prevista_recebimento: null,
-              data_recebimento: (p.datas_parcelas[i] && String(p.datas_parcelas[i]).trim()) ? String(p.datas_parcelas[i]).slice(0, 10) : null,
+              data_recebimento:
+                parc?.data && String(parc.data).trim()
+                  ? String(parc.data).slice(0, 10)
+                  : null,
               status_financeiro_chave: p.status_financeiro_chave || 'EM_ABERTO',
             })
           }
         } else {
+          const valorTotal = round2(num(p.valor || 0))
           list.push({
             forma_pagamento_chave: forma,
             valor: valorTotal,

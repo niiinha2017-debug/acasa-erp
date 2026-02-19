@@ -135,6 +135,10 @@ model orcamentos {
   cliente_cpf_snapshot  String
   qtd_ambientes         Int    @default(0)
 
+  // Cláusulas específicas deste orçamento (pré-contrato / termos)
+  // Armazena um array JSON de objetos { modulo_key, titulo, texto }
+  clausulas Json?
+
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 

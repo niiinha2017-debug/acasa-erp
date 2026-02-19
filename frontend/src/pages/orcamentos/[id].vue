@@ -5,7 +5,7 @@
 
       <PageHeader
         :title="isNovo ? 'Novo Orçamento' : `Orçamento #${orcamentoId}`"
-        subtitle="Cadastro operacional do orçamento"
+        subtitle="Cadastro operacional do orçamento e termos"
         icon="pi pi-briefcase"
       >
         <template #actions>
@@ -26,16 +26,6 @@
           >
             <i class="pi pi-dollar mr-2"></i>
             Fechar venda
-          </Button>
-          <Button
-            v-if="can('orcamentos.ver')"
-            variant="primary"
-            size="sm"
-            type="button"
-            @click="gerarPdf"
-            :disabled="saving || isNovo"
-          >
-            <i class="pi pi-file-pdf mr-2"></i> GERAR PDF
           </Button>
         </template>
       </PageHeader>
@@ -244,6 +234,75 @@
             </div>
         </div>
 
+        <div class="h-px bg-border-ui"></div>
+
+        <!-- TERMOS E CONDIÇÕES / CLÁUSULAS ESPECÍFICAS DO ORÇAMENTO -->
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="text-xs font-black uppercase tracking-widest text-text-soft">
+              Termos e Condições (Cláusulas do Orçamento)
+            </div>
+          </div>
+
+          <p class="text-[11px] text-text-soft max-w-3xl">
+            Estes textos serão usados como <strong>segunda página</strong> do PDF do orçamento,
+            funcionando como um pré-contrato específico para este cliente.
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-1 gap-6">
+            <div class="space-y-2">
+              <label class="block text-xs font-semibold tracking-wide text-text-soft ml-0.5">
+                Cláusula Primeira: Do Objeto
+              </label>
+              <textarea
+                v-model="clausulas.objeto"
+                class="w-full min-h-[120px] rounded-2xl border border-border-ui bg-bg-page text-sm text-text-main p-3 leading-relaxed focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
+              ></textarea>
+            </div>
+
+            <div class="space-y-2">
+              <label class="block text-xs font-semibold tracking-wide text-text-soft ml-0.5">
+                Cláusula Segunda: Do Preço e Condições de Pagamento
+              </label>
+              <textarea
+                v-model="clausulas.preco_condicoes"
+                class="w-full min-h-[120px] rounded-2xl border border-border-ui bg-bg-page text-sm text-text-main p-3 leading-relaxed focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
+              ></textarea>
+            </div>
+
+            <div class="space-y-2">
+              <label class="block text-xs font-semibold tracking-wide text-text-soft ml-0.5">
+                Cláusula Terceira: Do Prazo e Entrega
+              </label>
+              <textarea
+                v-model="clausulas.prazo_validade"
+                class="w-full min-h-[120px] rounded-2xl border border-border-ui bg-bg-page text-sm text-text-main p-3 leading-relaxed focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-3 pt-2">
+            <Button
+              v-if="can('orcamentos.editar')"
+              type="button"
+              variant="secondary"
+              :disabled="saving || isNovo"
+              @click="salvarClausulas"
+            >
+              <i class="pi pi-save mr-2" /> Salvar Termos
+            </Button>
+            <Button
+              v-if="can('orcamentos.ver')"
+              type="button"
+              variant="primary"
+              :disabled="saving || isNovo"
+              @click="gerarPdf"
+            >
+              <i class="pi pi-file-pdf mr-2" /> Gerar PDF do Orçamento
+            </Button>
+          </div>
+        </div>
+
         <!-- Barra de finalização fixa embaixo -->
         <div class="sticky bottom-0 left-0 right-0 border-t border-border-ui bg-bg-card -mx-6 md:-mx-8 px-6 md:px-8 py-4 mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
           <div class="flex items-center gap-2">
@@ -294,6 +353,12 @@ const clientesOptions = ref([])
 const saving = ref(false)
 const editIdx = ref(null)
 
+const clausulas = reactive({
+  objeto: '',
+  preco_condicoes: '',
+  prazo_validade: '',
+})
+
 const draft = reactive({ cliente_id: null, ambientes: [] })
 const ambForm = reactive({ nome_ambiente: '', descricao: '', valor_unitario: '', observacao: '' })
 
@@ -331,6 +396,39 @@ function parseMoney(v) {
 
 const rowsTabela = computed(() => draft.ambientes.map((a, idx) => ({ ...a, __idx: idx })))
 const total = computed(() => draft.ambientes.reduce((acc, a) => acc + parseMoney(a.valor_unitario), 0))
+
+function preencherClausulasPadraoSeVazio() {
+  if (!clausulas.objeto) {
+    clausulas.objeto =
+      'Este documento estabelece as condições gerais para a fabricação, fornecimento e instalação de mobiliário sob medida e itens complementares, conforme as especificações técnicas, projetos e quantitativos detalhados nas páginas anteriores deste orçamento.'
+  }
+  if (!clausulas.preco_condicoes) {
+    clausulas.preco_condicoes =
+      'O valor do investimento e as respectivas formas de pagamento são aqueles especificados na folha de rosto ou no resumo financeiro deste orçamento. Os valores apresentados têm validade de 10 (dez) dias corridos, contados a partir da data de emissão deste documento.'
+  }
+  if (!clausulas.prazo_validade) {
+    clausulas.prazo_validade =
+      'Prazo de Entrega: O prazo estimado para fabricação e instalação é de 60 dias úteis, contados a partir da conferência final das medidas em obra e da confirmação do pedido. Importante: O cumprimento deste prazo está sujeito à disponibilidade da agenda de produção no momento da formalização do contrato. A ordem de execução dos serviços é definida rigorosamente conforme a ordem cronológica de fechamento dos pedidos.'
+  }
+}
+
+function aplicarClausulasDoBackend(raw) {
+  const lista = Array.isArray(raw) ? raw : []
+  const byKey = (key) =>
+    lista.find((c) => String(c?.modulo_key || '').toUpperCase() === key) ||
+    lista.find((c) => String(c?.titulo || '').toUpperCase().includes(key)) ||
+    null
+
+  const cObj = byKey('OBJETO')
+  const cPreco = byKey('PRECO_CONDICOES')
+  const cPrazo = byKey('PRAZO_VALIDADE')
+
+  clausulas.objeto = String(cObj?.texto || '').trim()
+  clausulas.preco_condicoes = String(cPreco?.texto || '').trim()
+  clausulas.prazo_validade = String(cPrazo?.texto || '').trim()
+
+  preencherClausulasPadraoSeVazio()
+}
 
 async function handleAdicionarOuEditar() {
   if (!ambForm.nome_ambiente) return
@@ -537,7 +635,6 @@ async function onPickArquivo(e, categoria) {
   }
 }
 
-
 async function gerarPdf() {
   if (!can('orcamentos.ver')) return notify.error('Acesso negado.')
 
@@ -561,6 +658,39 @@ await router.push({
     const msg = e?.response?.data?.message || e?.message || 'Erro ao gerar PDF.'
     notify.error(msg)
     console.error('[Orcamento PDF]', e?.response?.data || e)
+  }
+}
+
+async function salvarClausulas() {
+  if (!can('orcamentos.editar')) return notify.error('Acesso negado.')
+
+  const id = await ensureOrcamentoId()
+  if (!id) return
+
+  try {
+    await OrcamentosService.salvarClausulas(id, {
+      clausulas: [
+        {
+          modulo_key: 'OBJETO',
+          titulo: 'CLÁUSULA PRIMEIRA: DO OBJETO',
+          texto: clausulas.objeto || '',
+        },
+        {
+          modulo_key: 'PRECO_CONDICOES',
+          titulo: 'CLÁUSULA SEGUNDA: DO PREÇO E CONDIÇÕES DE PAGAMENTO',
+          texto: clausulas.preco_condicoes || '',
+        },
+        {
+          modulo_key: 'PRAZO_VALIDADE',
+          titulo: 'CLÁUSULA TERCEIRA: DO PRAZO E ENTREGA',
+          texto: clausulas.prazo_validade || '',
+        },
+      ],
+    })
+    notify.success('Termos do orçamento salvos.')
+  } catch (e) {
+    const msg = e?.response?.data?.message || e?.message || 'Erro ao salvar termos.'
+    notify.error(msg)
   }
 }
 
@@ -619,7 +749,16 @@ onMounted(async () => {
     draft.cliente_id = res.data.cliente_id
     draft.ambientes = res.data.itens || []
 
+    if (res.data.clausulas) {
+      aplicarClausulasDoBackend(res.data.clausulas)
+    } else {
+      preencherClausulasPadraoSeVazio()
+    }
+
     await carregarArquivos()
+  } else {
+    // novo orçamento: já deixa as cláusulas padrão preenchidas
+    preencherClausulasPadraoSeVazio()
   }
 })
 

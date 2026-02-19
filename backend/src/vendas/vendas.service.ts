@@ -155,14 +155,25 @@ export class VendasService {
     const valorVendido = round2(toNumber(dto.valor_vendido));
     this.validarSomaPagamentos(dto.pagamentos, valorVendido);
 
-    // itens congelados do orçamento
-    const itensClonados = orc.itens.map((it) => ({
-      nome_ambiente: it.nome_ambiente,
-      descricao: it.descricao,
-      observacao: '', // ✅ observação é do item (inicial vazia)
-      quantidade: 1,
-      valor_unitario: round2(toNumber(it.valor_unitario ?? 0)),
-    }));
+    // itens da venda:
+    // - se o frontend enviar dto.itens, usamos exatamente o que veio da tela de venda
+    // - senão, congelamos os itens do orçamento (com quantidade 1 e valor orçado)
+    const itensClonados =
+      dto.itens && dto.itens.length
+        ? dto.itens.map((it) => ({
+            nome_ambiente: it.nome_ambiente,
+            descricao: it.descricao,
+            observacao: '',
+            quantidade: round2(toNumber(it.quantidade ?? 1)),
+            valor_unitario: round2(toNumber(it.valor_unitario ?? 0)),
+          }))
+        : orc.itens.map((it) => ({
+            nome_ambiente: it.nome_ambiente,
+            descricao: it.descricao,
+            observacao: '',
+            quantidade: 1,
+            valor_unitario: round2(toNumber(it.valor_unitario ?? 0)),
+          }));
 
     const comissoesCalc = this.calcularComissoes(
       valorVendido,

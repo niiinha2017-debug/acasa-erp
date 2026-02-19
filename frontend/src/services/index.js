@@ -181,12 +181,15 @@ export const OrcamentosService = {
   removerItem: (id, itemId) => api.delete(`/orcamentos/${id}/itens/${itemId}`),
 
   // PDF (continua existindo)
-abrirPdf: (id) => {
-  const cleanId = String(id || '').replace(/\D/g, '')
-  return api.post(`/orcamentos/${cleanId}/pdf`) // retorna { arquivoId }
-},
+  abrirPdf: (id) => {
+    const cleanId = String(id || '').replace(/\D/g, '')
+    return api.post(`/orcamentos/${cleanId}/pdf`) // retorna { arquivoId }
+  },
 
-
+  salvarClausulas: (id, dados) => {
+    const cleanId = String(id || '').replace(/\D/g, '')
+    return api.put(`/orcamentos/${cleanId}/clausulas`, dados)
+  },
 }
 
 // --- PLANO DE CORTE ---
@@ -253,6 +256,10 @@ export const ContratosService = {
   buscar: (id) => api.get(`/contratos/${id}`),
   salvar: (id, dados) => (id ? api.put(`/contratos/${id}`, dados) : api.post('/contratos', dados)),
   remover: (id) => api.delete(`/contratos/${id}`),
+  abrirPdf: (id) => {
+    const cleanId = String(id || '').replace(/\D/g, '')
+    return api.post(`/contratos/${cleanId}/pdf`)
+  },
 }
 
 // --- PERMISSÕES ---

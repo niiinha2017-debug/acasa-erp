@@ -25,22 +25,10 @@
         <form v-else class="space-y-8" @submit.prevent="salvar" autocomplete="off">
           <div class="grid grid-cols-12 gap-6">
             <SearchInput
-              class="col-span-12 md:col-span-6"
-              v-model="form.cliente_id"
-              mode="select"
-              label="Cliente *"
-              :options="clienteOptions"
-              placeholder="Selecione o cliente"
-              :readonly="isEdit"
-              labelKey="label"
-              valueKey="value"
-            />
-
-            <SearchInput
-              class="col-span-12 md:col-span-6"
+              class="col-span-12"
               v-model="form.venda_id"
               mode="select"
-              label="Venda (opcional)"
+              label="Venda *"
               :options="vendaOptions"
               placeholder="Selecione a venda"
               labelKey="label"
@@ -104,21 +92,35 @@
             />
           </div>
 
-          <div class="flex justify-end gap-3 pt-4 border-t border-border-ui">
-            <RouterLink
-              to="/contratos"
-              class="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 border border-border-ui rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-            >
-              Cancelar
-            </RouterLink>
-            <Button
-              type="submit"
-              variant="primary"
-              :disabled="salvando"
-            >
-              <i v-if="salvando" class="pi pi-spin pi-spinner mr-2"></i>
-              {{ isEdit ? 'Salvar alterações' : 'Criar contrato' }}
-            </Button>
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-border-ui">
+            <div v-if="isEdit" class="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                :disabled="gerandoPdf"
+                @click="gerarPdfContrato"
+              >
+                <i v-if="gerandoPdf" class="pi pi-spin pi-spinner mr-2"></i>
+                <i v-else class="pi pi-file-pdf mr-2"></i>
+                Gerar PDF do Contrato
+              </Button>
+            </div>
+            <div class="flex justify-end gap-3 w-full sm:w-auto">
+              <RouterLink
+                to="/contratos"
+                class="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 border border-border-ui rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
+                Cancelar
+              </RouterLink>
+              <Button
+                type="submit"
+                variant="primary"
+                :disabled="salvando"
+              >
+                <i v-if="salvando" class="pi pi-spin pi-spinner mr-2"></i>
+                {{ isEdit ? 'Salvar alterações' : 'Criar contrato' }}
+              </Button>
+            </div>
           </div>
         </form>
       </div>
@@ -131,13 +133,18 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { notify } from '@/services/notify'
 import { can } from '@/services/permissions'
-import { ContratosService, ClienteService, VendaService } from '@/services/index'
+import { ContratosService, VendaService } from '@/services/index'
 
 definePage({ meta: { perm: 'contratos.ver' } })
 
 const route = useRoute()
 const router = useRouter()
 const contratoId = computed(() => route.params.id)
+const vendaIdFromQuery = computed(() => {
+  const raw = route.query?.vendaId
+  const n = Number(String(raw || '').replace(/\D/g, ''))
+  return Number.isFinite(n) && n > 0 ? n : null
+})
 const isEdit = computed(() => {
   const id = contratoId.value
   return id && id !== 'novo' && !isNaN(Number(id))
@@ -145,7 +152,7 @@ const isEdit = computed(() => {
 
 const loading = ref(true)
 const salvando = ref(false)
-const clienteOptions = ref([])
+const gerandoPdf = ref(false)
 const vendaOptions = ref([])
 
 const statusOptions = [
@@ -156,7 +163,6 @@ const statusOptions = [
 ]
 
 const form = ref({
-  cliente_id: null,
   venda_id: null,
   numero: '',
   descricao: '',
@@ -165,6 +171,14 @@ const form = ref({
   data_inicio: '',
   data_fim: '',
 })
+
+function sugerirNumeroContrato(vendaId) {
+  if (form.value.numero && form.value.numero.trim().length > 0) return
+  const ano = new Date().getFullYear()
+  const seqBase = vendaId && Number.isFinite(vendaId) ? Number(vendaId) : Date.now() % 1000
+  const sequencial = String(seqBase).padStart(3, '0')
+  form.value.numero = `CONT-${ano}-${sequencial}`
+}
 
 function moedaParaNumero(str) {
   if (str == null || str === '') return 0
@@ -185,19 +199,6 @@ function onValorInput(ev) {
   form.value.valor = moedaParaNumero(ev.target.value)
 }
 
-async function carregarClientes() {
-  try {
-    const res = await ClienteService.select()
-    const lista = Array.isArray(res?.data) ? res.data : []
-    clienteOptions.value = lista.map((c) => ({
-      label: c.nome_completo || c.razao_social || c.nome || `#${c.id}`,
-      value: c.id,
-    }))
-  } catch (e) {
-    clienteOptions.value = []
-  }
-}
-
 async function carregarVendas() {
   try {
     const res = await VendaService.listar()
@@ -215,6 +216,20 @@ async function carregarContrato() {
   if (!isEdit.value) {
     loading.value = false
     form.value.status = 'RASCUNHO'
+    // Pré-preenche cliente/venda quando vier de uma venda específica
+    if (vendaIdFromQuery.value) {
+      try {
+        const res = await VendaService.buscar(vendaIdFromQuery.value)
+        const v = res?.data ?? res
+        form.value.venda_id = vendaIdFromQuery.value
+        form.value.valor = Number(v?.valor_vendido || v?.valor_total || 0)
+      } catch (e) {
+        // se falhar, só ignora e deixa o contrato em branco
+      }
+      sugerirNumeroContrato(vendaIdFromQuery.value)
+    } else {
+      sugerirNumeroContrato(null)
+    }
     return
   }
   try {
@@ -242,7 +257,6 @@ async function salvar() {
   if (isEdit.value && !can('contratos.editar')) return notify.error('Sem permissão para editar contrato.')
 
   const payload = {
-    cliente_id: form.value.cliente_id,
     venda_id: form.value.venda_id || null,
     numero: form.value.numero.trim(),
     descricao: form.value.descricao?.trim() || null,
@@ -253,7 +267,7 @@ async function salvar() {
   }
 
   if (!payload.numero) return notify.error('Informe o número do contrato.')
-  if (!payload.cliente_id) return notify.error('Selecione o cliente.')
+  if (!payload.venda_id) return notify.error('Selecione a venda.')
 
   salvando.value = true
   try {
@@ -273,8 +287,38 @@ async function salvar() {
   }
 }
 
+async function gerarPdfContrato() {
+  if (!can('contratos.ver')) return notify.error('Acesso negado.')
+  if (!isEdit.value) {
+    return notify.error('Salve o contrato antes de gerar o PDF.')
+  }
+
+  gerandoPdf.value = true
+  try {
+    const id = Number(String(contratoId.value).replace(/\D/g, ''))
+    if (!id) return notify.error('ID do contrato inválido.')
+
+    const { data } = await ContratosService.abrirPdf(id)
+    const arquivoId = data?.arquivoId
+    if (!arquivoId) return notify.error('Não retornou arquivoId.')
+
+    await router.push({
+      path: `/arquivos/${String(arquivoId).replace(/\D/g, '')}`,
+      query: {
+        name: `CONTRATO_${String(id).replace(/\D/g, '')}.pdf`,
+        type: 'application/pdf',
+      },
+    })
+  } catch (e) {
+    const msg = e?.response?.data?.message || e?.message || 'Erro ao gerar PDF do contrato.'
+    notify.error(msg)
+  } finally {
+    gerandoPdf.value = false
+  }
+}
+
 onMounted(async () => {
-  await Promise.all([carregarClientes(), carregarVendas()])
+  await carregarVendas()
   await carregarContrato()
 })
 </script>

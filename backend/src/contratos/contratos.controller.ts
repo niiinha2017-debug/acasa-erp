@@ -59,4 +59,12 @@ export class ContratosController {
   remover(@Param('id') id: string) {
     return this.service.remover(this.cleanId(id));
   }
+
+  @Post(':id/pdf')
+  @Permissoes('contratos.ver')
+  @HttpCode(HttpStatus.OK)
+  async gerarPdf(@Param('id') id: string) {
+    const contratoId = this.cleanId(id);
+    return this.service.gerarPdfESalvar(contratoId);
+  }
 }

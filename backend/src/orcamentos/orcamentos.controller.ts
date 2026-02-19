@@ -57,6 +57,22 @@ export class OrcamentosController {
     return this.service.atualizar(this.cleanId(id), dto);
   }
 
+  // =========================
+  // CLÁUSULAS ESPECÍFICAS
+  // =========================
+
+  @Put(':id/clausulas')
+  @Permissoes('orcamentos.editar')
+  salvarClausulas(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      clausulas?: { modulo_key?: string; titulo?: string; texto?: string }[];
+    },
+  ) {
+    return this.service.salvarClausulas(this.cleanId(id), body);
+  }
+
   @Delete(':id')
   @Permissoes('orcamentos.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
