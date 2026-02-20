@@ -170,4 +170,64 @@ export class AnalyticsService {
     result.sort((a, b) => (a.mes + a.categoria).localeCompare(b.mes + b.categoria));
     return result;
   }
+
+  /**
+   * DRE mensal (Demonstração do Resultado do Exercício) por competência.
+   * Receita = vendas (data_venda no mês). Despesas = despesas SAÍDA com vencimento no mês.
+   */
+  async getDreMensal(
+    mes: number,
+    ano: number,
+  ): Promise<{
+    mes: number;
+    ano: number;
+    receita_total: number;
+    despesas_total: number;
+    despesas_por_categoria: { categoria: string; total: number }[];
+    resultado: number;
+  }> {
+    const inicioMes = new Date(ano, mes - 1, 1, 0, 0, 0);
+    const fimMes = new Date(ano, mes, 0, 23, 59, 59);
+    const mesStr = `${ano}-${String(mes).padStart(2, '0')}`;
+
+    // Receita: vendas com data_venda no mês (valor_total)
+    const vendasMes = await this.prisma.vendas.aggregate({
+      where: {
+        data_venda: { gte: inicioMes, lte: fimMes },
+      },
+      _sum: { valor_total: true },
+    });
+    const receita_total = Math.round(Number(vendasMes._sum.valor_total ?? 0) * 100) / 100;
+
+    // Despesas: mesmo critério de getDreDespesas, filtrado ao mês
+    const dreDespesas = await this.getDreDespesas(
+      `${ano}-${String(mes).padStart(2, '0')}-01`,
+      `${ano}-${String(mes).padStart(2, '0')}-31`,
+    );
+    const despesasPorCategoria = new Map<string, number>();
+    let despesas_total = 0;
+    for (const d of dreDespesas) {
+      if (d.mes !== mesStr) continue;
+      despesas_total += d.total;
+      despesasPorCategoria.set(d.categoria, (despesasPorCategoria.get(d.categoria) ?? 0) + d.total);
+    }
+    despesas_total = Math.round(despesas_total * 100) / 100;
+
+    const despesas_por_categoria = Array.from(despesasPorCategoria.entries()).map(([categoria, total]) => ({
+      categoria,
+      total: Math.round(total * 100) / 100,
+    }));
+    despesas_por_categoria.sort((a, b) => b.total - a.total);
+
+    const resultado = Math.round((receita_total - despesas_total) * 100) / 100;
+
+    return {
+      mes,
+      ano,
+      receita_total,
+      despesas_total,
+      despesas_por_categoria,
+      resultado,
+    };
+  }
 }

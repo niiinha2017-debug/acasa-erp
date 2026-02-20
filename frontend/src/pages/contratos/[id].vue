@@ -108,7 +108,7 @@
                 Enviar por WhatsApp ou e-mail
               </p>
               <p class="text-xs text-text-soft">
-                Gera um link do PDF (válido 24h). Abre o WhatsApp ou o e-mail com a mensagem pronta; você só envia.
+                Gera um link do PDF (válido 24h). Você pode abrir o WhatsApp/e-mail com a mensagem pronta ou enviar o e-mail automaticamente pelo sistema (usa o e-mail configurado no servidor).
               </p>
               <div class="flex flex-wrap items-center gap-2">
                 <Button
@@ -133,10 +133,24 @@
                   <i class="pi pi-envelope mr-1.5"></i>
                   Abrir e-mail com link
                 </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  :loading="enviarEmailLoading"
+                  :disabled="!emailCliente || enviarEmailLoading"
+                  @click="enviarContratoPorEmailSistema"
+                >
+                  <i class="pi pi-send mr-1.5"></i>
+                  Enviar e-mail pelo sistema
+                </Button>
               </div>
             </div>
             <p v-if="!telefoneCliente" class="text-xs text-amber-600 dark:text-amber-400">
               Cadastre o telefone do cliente para habilitar o envio por WhatsApp.
+            </p>
+            <p v-if="!emailCliente" class="text-xs text-amber-600 dark:text-amber-400">
+              Cadastre o e-mail do cliente para habilitar o envio por e-mail.
             </p>
           </section>
 
@@ -203,6 +217,7 @@ const loading = ref(true)
 const salvando = ref(false)
 const gerandoPdf = ref(false)
 const obterLinkLoading = ref(false)
+const enviarEmailLoading = ref(false)
 const vendaOptions = ref([])
 const contratoCliente = ref(null)
 const telefoneCliente = computed(() => {
@@ -455,13 +470,18 @@ async function gerarPdfContrato() {
 
 // Obter link do PDF e abrir WhatsApp com a mensagem pronta
 async function enviarPorWhatsAppGratis() {
+  if (obterLinkLoading.value) return
+  obterLinkLoading.value = true
   const id = Number(String(contratoId.value).replace(/\D/g, ''))
-  if (!id) return notify.error('Contrato inválido.')
+  if (!id) {
+    obterLinkLoading.value = false
+    return notify.error('Contrato inválido.')
+  }
   if (!telefoneCliente.value) {
+    obterLinkLoading.value = false
     notify.error('Cliente não possui telefone/WhatsApp cadastrado.')
     return
   }
-  obterLinkLoading.value = true
   try {
     const { data } = await ContratosService.linkPublicoPdf(id)
     const baseAceite = (import.meta.env.VITE_CONTRATO_ACEITE_BASE_URL || '').replace(/\/+$/, '')
@@ -487,13 +507,18 @@ async function enviarPorWhatsAppGratis() {
 
 // Grátis: obter link do PDF e abrir cliente de e-mail com a mensagem pronta
 async function enviarPorEmailGratis() {
+  if (obterLinkLoading.value) return
+  obterLinkLoading.value = true
   const id = Number(String(contratoId.value).replace(/\D/g, ''))
-  if (!id) return notify.error('Contrato inválido.')
+  if (!id) {
+    obterLinkLoading.value = false
+    return notify.error('Contrato inválido.')
+  }
   if (!emailCliente.value) {
+    obterLinkLoading.value = false
     notify.error('Cliente não possui e-mail cadastrado.')
     return
   }
-  obterLinkLoading.value = true
   try {
     const { data } = await ContratosService.linkPublicoPdf(id)
     const baseAceite = (import.meta.env.VITE_CONTRATO_ACEITE_BASE_URL || '').replace(/\/+$/, '')
@@ -512,6 +537,26 @@ async function enviarPorEmailGratis() {
     notify.error(e?.response?.data?.message || 'Erro ao obter link.')
   } finally {
     obterLinkLoading.value = false
+  }
+}
+
+// Enviar e-mail automaticamente pelo backend (SMTP do .env) – não abre o app de e-mail
+async function enviarContratoPorEmailSistema() {
+  if (enviarEmailLoading.value) return
+  const id = Number(String(contratoId.value).replace(/\D/g, ''))
+  if (!id) return notify.error('Contrato inválido.')
+  if (!emailCliente.value) {
+    notify.error('Cliente não possui e-mail cadastrado.')
+    return
+  }
+  enviarEmailLoading.value = true
+  try {
+    await ContratosService.enviarContratoPorEmail(id)
+    notify.success('E-mail enviado com sucesso para o cliente.')
+  } catch (e) {
+    notify.error(e?.response?.data?.message || 'Erro ao enviar e-mail.')
+  } finally {
+    enviarEmailLoading.value = false
   }
 }
 

@@ -41,8 +41,15 @@ export const PontoService = {
   },
 
   // Agora o payload só precisa basicamente do { tipo: 'ENTRADA' | 'SAIDA' }
-  // A observação também pode ser enviada se houver um campo de texto.
   registrar(payload, token) {
     return post('/ponto/registrar', payload, token)
+  },
+
+  /** Comprovante em PNG (para compartilhar no WhatsApp) — usa token do app */
+  comprovantePng(registroId, token) {
+    return api.get(`/ponto/comprovante/${registroId}`, {
+      headers: authHeader(token),
+      responseType: 'blob',
+    })
   },
 }

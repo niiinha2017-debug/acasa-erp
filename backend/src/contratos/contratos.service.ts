@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateContratoDto } from './dto/create-contrato.dto';
 import { UpdateContratoDto } from './dto/update-contrato.dto';
 import { ClausulasService } from '../clausulas/clausulas.service';
+import { MailService } from '../mail/mail.service';
 import PDFKitDoc from 'pdfkit';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -18,6 +19,7 @@ export class ContratosService {
     private readonly clausulasService: ClausulasService,
     private readonly config: ConfigService,
     private readonly jwt: JwtService,
+    private readonly mail: MailService,
   ) {}
 
   async listar(vendaId?: number) {
@@ -895,6 +897,25 @@ export class ContratosService {
       token: shortToken,
       expiraEm: expiraEm.toISOString(),
     };
+  }
+
+  /**
+   * Envia o link do contrato por e-mail usando o SMTP configurado no .env.
+   * O e-mail é enviado automaticamente pelo sistema (não abre o cliente de e-mail).
+   */
+  async enviarContratoPorEmail(contratoId: number, baseUrl: string): Promise<{ ok: true }> {
+    const contrato = await this.prisma.contratos.findUnique({
+      where: { id: contratoId },
+      include: { cliente: true },
+    });
+    if (!contrato) throw new NotFoundException('Contrato não encontrado.');
+    const cliente = contrato.cliente as any;
+    const email = (cliente?.email ?? cliente?.email_secundario ?? '').trim();
+    if (!email) throw new BadRequestException('Cliente não possui e-mail cadastrado.');
+    const { link } = await this.obterLinkPublicoPdf(contratoId, baseUrl);
+    const nomeCliente = cliente?.nome_completo || cliente?.razao_social || cliente?.nome || 'Cliente';
+    await this.mail.enviarContratoLink(email, nomeCliente, link);
+    return { ok: true };
   }
 
   /**

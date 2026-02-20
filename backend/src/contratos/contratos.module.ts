@@ -6,11 +6,13 @@ import { ContratosController } from './contratos.controller';
 import { ContratosPublicController } from './contratos-publico.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { ClausulasModule } from '../clausulas/clausulas.module';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
     PrismaModule,
     ClausulasModule,
+    MailModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

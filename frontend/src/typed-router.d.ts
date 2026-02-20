@@ -352,6 +352,27 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/relatorios/dre-mensal': RouteRecordInfo<
+      '/relatorios/dre-mensal',
+      '/relatorios/dre-mensal',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/relatorios/feriados': RouteRecordInfo<
+      '/relatorios/feriados',
+      '/relatorios/feriados',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/relatorios/horas-trabalhadas': RouteRecordInfo<
+      '/relatorios/horas-trabalhadas',
+      '/relatorios/horas-trabalhadas',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/relatorios/status-obras': RouteRecordInfo<
       '/relatorios/status-obras',
       '/relatorios/status-obras',
@@ -728,6 +749,24 @@ declare module 'vue-router/auto-routes' {
     'src/pages/relatorios/despesas-categoria.vue': {
       routes:
         | '/relatorios/despesas-categoria'
+      views:
+        | never
+    }
+    'src/pages/relatorios/dre-mensal.vue': {
+      routes:
+        | '/relatorios/dre-mensal'
+      views:
+        | never
+    }
+    'src/pages/relatorios/feriados.vue': {
+      routes:
+        | '/relatorios/feriados'
+      views:
+        | never
+    }
+    'src/pages/relatorios/horas-trabalhadas.vue': {
+      routes:
+        | '/relatorios/horas-trabalhadas'
       views:
         | never
     }

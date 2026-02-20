@@ -5,7 +5,11 @@ import * as path from 'path';
 import { promises as fs } from 'fs';
 import { randomBytes, createHash } from 'crypto';
 import PDFDocument from 'pdfkit';
+import sharp from 'sharp';
 import { renderHeaderA4Png } from '../../pdf/render-header-a4';
+import { TelegramService } from '../../notifications/telegram.service';
+import { N8nWebhookService } from '../../notifications/n8n-webhook.service';
+import { MailService } from '../../mail/mail.service';
 
 type Filtros = {
   funcionario_id?: string;
@@ -18,7 +22,12 @@ type Filtros = {
 
 @Injectable()
 export class PontoRelatorioService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly telegram: TelegramService,
+    private readonly n8n: N8nWebhookService,
+    private readonly mail: MailService,
+  ) {}
 
   async listarFuncionariosAtivos() {
     return this.prisma.funcionarios.findMany({
@@ -341,6 +350,7 @@ export class PontoRelatorioService {
       select: {
         id: true,
         nome: true,
+        email: true,
         carga_horaria_dia: true,
         carga_horaria_semana: true,
         horario_entrada_1: true,
@@ -733,6 +743,86 @@ export class PontoRelatorioService {
     });
   }
 
+  /** Escapa texto para uso dentro de SVG/XML */
+  private esc(s: string | null | undefined): string {
+    if (s == null || s === '') return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  /** Gera comprovante como imagem (PNG ou JPEG). Mesmo conteúdo do PDF. width opcional para PNG pequeno (ex: 320). */
+  async gerarComprovanteImageBuffer(
+    registroId: number,
+    formato: 'png' | 'jpeg',
+    width?: number,
+  ): Promise<Buffer> {
+    const data = await this.getRegistroComprovante(registroId);
+    if (!data) throw new BadRequestException('Registro de ponto não encontrado.');
+    const { registro, empresa } = data;
+    const tipoLabel = await this.labelTipoRegistro(registro);
+    const transacaoId = this.transacaoId(registro);
+
+    const dataHora = new Date(registro.data_hora);
+    const dataHoraExata = dataHora.toLocaleString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
+
+    const pisCpf = [
+      registro.funcionario?.pis ? `PIS: ${String(registro.funcionario.pis).trim()}` : null,
+      registro.funcionario?.cpf ? `CPF: ${this.maskCpf(registro.funcionario.cpf)}` : null,
+    ]
+      .filter(Boolean)
+      .join('  •  ') || '—';
+
+    const nomeEmpresa = this.esc(empresa?.razao_social || empresa?.nome_fantasia || 'Empresa');
+    const cnpjEmpresa = empresa?.cnpj
+      ? this.esc(`CNPJ: ${this.maskCnpj(empresa.cnpj)}`)
+      : 'CNPJ não informado';
+    const nomeFunc = this.esc(registro.funcionario?.nome?.toUpperCase() || '—');
+
+    const w = 420;
+    const h = 560;
+    const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
+  <rect width="${w}" height="${h}" fill="#ffffff"/>
+  <text x="${w / 2}" y="32" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#1e293b">${nomeEmpresa}</text>
+  <text x="${w / 2}" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#64748b">${cnpjEmpresa}</text>
+  <text x="${w / 2}" y="82" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#1e293b">COMPROVANTE DE REGISTRO DE PONTO</text>
+  <rect x="20" y="100" width="${w - 40}" height="118" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" rx="4"/>
+  <text x="32" y="118" font-family="Arial, sans-serif" font-size="8" fill="#64748b">Nome do Funcionário</text>
+  <text x="32" y="134" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#1e293b">${nomeFunc}</text>
+  <text x="32" y="158" font-family="Arial, sans-serif" font-size="8" fill="#64748b">PIS / CPF</text>
+  <text x="32" y="174" font-family="Arial, sans-serif" font-size="9" fill="#1e293b">${this.esc(pisCpf)}</text>
+  <text x="32" y="198" font-family="Arial, sans-serif" font-size="8" fill="#64748b">Data e Hora</text>
+  <text x="32" y="214" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#1e293b">${this.esc(dataHoraExata)}</text>
+  <text x="32" y="238" font-family="Arial, sans-serif" font-size="8" fill="#64748b">Tipo de registro</text>
+  <text x="32" y="254" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#1e293b">${this.esc(tipoLabel)}</text>
+  <text x="20" y="290" font-family="Arial, sans-serif" font-size="7" fill="#64748b">ID da transação (evita duplicidade):</text>
+  <text x="20" y="305" font-family="monospace" font-size="8" fill="#1e293b">${this.esc(transacaoId)}</text>
+</svg>`;
+
+    const svgBuffer = Buffer.from(svg, 'utf8');
+    let pipeline = sharp(svgBuffer);
+    if (width && width > 0 && width < w) {
+      pipeline = pipeline.resize(width);
+    }
+    if (formato === 'jpeg') {
+      return pipeline.jpeg({ quality: 90 }).toBuffer();
+    }
+    return pipeline.png().toBuffer();
+  }
+
   // --- MÉTODO PRINCIPAL ---
   async gerarPdfMensalESalvar(params: {
     funcionario_id: number;
@@ -771,6 +861,36 @@ export class PontoRelatorioService {
         tamanho: pdfBuffer.length,
       },
     });
+
+    // Notificações (Telegram + n8n) e e-mail espelho (Brevo/SMTP) em background
+    this.telegram
+      .sendRelatorioDisponivel(
+        funcionario.nome,
+        params.mes,
+        params.ano,
+        `Arquivo ID: ${arquivo.id}`,
+      )
+      .catch(() => {});
+    this.n8n
+      .onRelatorioGerado({
+        funcionario_id: params.funcionario_id,
+        funcionario_nome: funcionario.nome,
+        mes: params.mes,
+        ano: params.ano,
+        arquivo_id: arquivo.id,
+      })
+      .catch(() => {});
+    if (funcionario.email && funcionario.email.trim()) {
+      this.mail
+        .enviarEspelhoPonto(
+          funcionario.email.trim(),
+          funcionario.nome,
+          params.mes,
+          params.ano,
+          pdfBuffer,
+        )
+        .catch(() => {});
+    }
 
     return { arquivoId: arquivo.id };
   }

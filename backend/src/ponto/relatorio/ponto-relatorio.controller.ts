@@ -24,12 +24,31 @@ import { PontoRelatorioService } from './ponto-relatorio.service';
 export class PontoRelatorioController {
   constructor(private readonly service: PontoRelatorioService) {}
 
-  /** Comprovante de um único registro de ponto (PDF com cadastro da empresa) */
+  /** Comprovante de um único registro de ponto. PDF (padrão), PNG ou JPEG via ?formato=png|jpeg */
   @Get('comprovante/:id')
-  async comprovante(@Param('id') id: string, @Res() res: Response) {
+  async comprovante(
+    @Param('id') id: string,
+    @Query('formato') formato: string,
+    @Res() res: Response,
+  ) {
     const registroId = Number(String(id).replace(/\D/g, ''));
     if (!registroId) {
       res.status(400).json({ message: 'ID do registro inválido' });
+      return;
+    }
+    const fmt = String(formato || '').toLowerCase();
+    if (fmt === 'png' || fmt === 'jpeg' || fmt === 'jpg') {
+      const ext = fmt === 'jpg' ? 'jpeg' : fmt;
+      const buffer = await this.service.gerarComprovanteImageBuffer(
+        registroId,
+        ext as 'png' | 'jpeg',
+      );
+      res.setHeader('Content-Type', ext === 'jpeg' ? 'image/jpeg' : 'image/png');
+      res.setHeader(
+        'Content-Disposition',
+        `inline; filename="comprovante-ponto-${registroId}.${ext === 'jpeg' ? 'jpg' : 'png'}"`,
+      );
+      res.send(buffer);
       return;
     }
     const buffer = await this.service.gerarComprovantePdfBuffer(registroId);

@@ -8,10 +8,10 @@
         icon="pi pi-sitemap"
       >
         <template #actions>
-          <NuxtLink to="/relatorios" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-border-ui text-sm font-medium text-text-muted hover:bg-bg-page">
+          <RouterLink to="/relatorios" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-border-ui text-sm font-medium text-text-muted hover:bg-bg-page">
             <i class="pi pi-arrow-left"></i>
             Voltar
-          </NuxtLink>
+          </RouterLink>
           <Button variant="outline" size="sm" @click="buscarDados">
             <i class="pi pi-refresh mr-2"></i>
             Atualizar

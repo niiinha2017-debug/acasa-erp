@@ -54,6 +54,9 @@ import Loading from '@/components/common/Loading.vue'
 import ProcessoClienteFlow from '@/components/common/ProcessoClienteFlow.vue'
 import Select from '@/components/common/Select.vue'
 
+// Gráficos (relatórios)
+import VueApexCharts from 'vue3-apexcharts'
+
 // Importação da Diretiva de Permissão
 import { can } from '@/services/permissions'
 
@@ -105,6 +108,7 @@ app.component('TablePagination', TablePagination)
 app.component('Loading', Loading)
 app.component('ProcessoClienteFlow', ProcessoClienteFlow)
 app.component('Select', Select)
+app.component('apexchart', VueApexCharts)
 
 // Modals
 app.component('QuickCreateProduto', QuickCreateProduto)

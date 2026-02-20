@@ -27,11 +27,12 @@ export function resolveAsset(relFromAssets: string) {
 }
 
 export function renderHeaderA4Png(doc: any) {
-  const headerPath = resolveAsset('pdf/header-a4.png');
-  // Renderiza a imagem no topo
-  doc.image(headerPath, 0, 0, { width: doc.page.width });
-
-  // Aumente para 120 ou 130 se o header for pequeno,
-  // ou mantenha 170 se ele for grande, mas garanta que o doc.y seja atualizado
-  return 120;
+  try {
+    const headerPath = resolveAsset('pdf/header-a4.png');
+    doc.image(headerPath, 0, 0, { width: doc.page.width });
+    return 120;
+  } catch {
+    // Asset opcional: se backend/assets/pdf/header-a4.png não existir, PDF é gerado sem logo (evita 500 local)
+    return 40;
+  }
 }

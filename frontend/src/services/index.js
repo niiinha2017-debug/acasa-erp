@@ -263,6 +263,8 @@ export const ContratosService = {
   },
   /** Link público temporário (24h) para download do PDF – envio grátis por WhatsApp/e-mail */
   linkPublicoPdf: (id) => api.get(`/contratos/${id}/link-publico`),
+  /** Envia o link do contrato por e-mail automaticamente (SMTP do backend) */
+  enviarContratoPorEmail: (id) => api.post(`/contratos/${id}/enviar-email`),
 }
 
 // --- PERMISSÕES ---
@@ -347,6 +349,10 @@ export const PontoRelatorioService = {
   /** Comprovante de um registro de ponto (PDF com cadastro da empresa) */
   comprovantePdf: (registroId) =>
     api.get(`/ponto/relatorio/comprovante/${registroId}`, { responseType: 'blob' }),
+
+  /** Comprovante em imagem (PNG ou JPEG) para compartilhar */
+  comprovanteImagem: (registroId, formato = 'png') =>
+    api.get(`/ponto/relatorio/comprovante/${registroId}`, { params: { formato }, responseType: 'blob' }),
 }
 
 

@@ -28,6 +28,7 @@ import { AgendaModule } from './agenda/agenda.module';
 import { ClausulasModule } from './clausulas/clausulas.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -77,6 +78,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     ClausulasModule,
     AnalyticsModule,
     WebhooksModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

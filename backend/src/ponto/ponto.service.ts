@@ -7,6 +7,8 @@ import { AtivarDto } from './dto/ativar.dto';
 import { RegistrarPontoDto } from './dto/registrar-ponto.dto';
 import { createHash, randomBytes } from 'crypto';
 import { PontoTipoRegistro, PontoOrigem } from '@prisma/client';
+import { TelegramService } from '../notifications/telegram.service';
+import { N8nWebhookService } from '../notifications/n8n-webhook.service';
 
 @Injectable()
 export class PontoService {
@@ -14,6 +16,8 @@ export class PontoService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly telegram: TelegramService,
+    private readonly n8n: N8nWebhookService,
   ) {}
 
   private gerarCode(): string {
@@ -296,6 +300,23 @@ export class PontoService {
         data: { ultimo_uso_em: new Date() },
       });
     }
+
+    // Notificações (Telegram + n8n) em background
+    this.prisma.funcionarios
+      .findUnique({ where: { id: funcionario_id }, select: { nome: true } })
+      .then((f) => {
+        const nome = f?.nome ?? 'Funcionário';
+        this.telegram.sendPontoBatido(nome, tipo, registro.data_hora);
+        this.n8n.onPontoBatido({
+          registro_id: registro.id,
+          funcionario_id,
+          funcionario_nome: nome,
+          tipo,
+          data_hora: registro.data_hora.toISOString(),
+          origem: 'PWA',
+        });
+      })
+      .catch(() => {});
 
     const transacao_id = createHash('sha256')
       .update(`${registro.id}|${registro.data_hora.toISOString()}|${registro.funcionario_id}`)

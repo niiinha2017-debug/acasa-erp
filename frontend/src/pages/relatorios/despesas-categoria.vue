@@ -9,10 +9,10 @@
         icon="pi pi-wallet"
       >
         <template #actions>
-          <NuxtLink to="/relatorios" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-border-ui text-sm font-medium text-text-muted hover:bg-bg-page">
+          <RouterLink to="/relatorios" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-border-ui text-sm font-medium text-text-muted hover:bg-bg-page">
             <i class="pi pi-arrow-left"></i>
             Voltar
-          </NuxtLink>
+          </RouterLink>
           <Button variant="outline" size="sm" @click="buscarDados">
             <i class="pi pi-refresh mr-2"></i>
             Atualizar
@@ -29,7 +29,7 @@
           Nenhuma despesa (SAÍDA) no período.
         </div>
 
-        <div v-else class="h-80">
+        <div v-else class="min-h-[28rem] h-96 md:h-[32rem]">
           <apexchart
             v-if="listaCategorias && listaCategorias.length"
             type="bar"

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
 import { AuthModule } from '../auth/auth.module';
+import { MailModule } from '../mail/mail.module';
 import { PrismaModule } from '../prisma/prisma.module';
 
 import { PontoService } from './ponto.service';
@@ -18,19 +19,20 @@ import { PontoJustificativasController } from './justificativa/ponto-justificati
 import { PontoJustificativasService } from './justificativa/ponto-justificativas.service';
 
 @Module({
-  imports: [ConfigModule, PrismaModule, AuthModule],
+  imports: [ConfigModule, PrismaModule, AuthModule, MailModule],
   controllers: [
     PontoAppController,
     PontoAdminController,
     PontoRelatorioController,
-    PontoRegistrosController, // ✅ NOVO
-    PontoJustificativasController, // ✅ NOVO
+    PontoRegistrosController,
+    PontoJustificativasController,
   ],
   providers: [
     PontoService,
     PontoRelatorioService,
-    PontoRegistrosService, // ✅ NOVO
-    PontoJustificativasService, // ✅ NOVO
+    PontoRegistrosService,
+    PontoJustificativasService,
   ],
+  exports: [PontoRelatorioService],
 })
 export class PontoModule {}

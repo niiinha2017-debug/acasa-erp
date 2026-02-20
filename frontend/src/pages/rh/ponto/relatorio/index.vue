@@ -251,9 +251,17 @@
                             type="button"
                             @click="abrirComprovante(row[col].id)"
                             class="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
-                            title="Comprovante (PDF com dados da empresa)"
+                            title="Comprovante PDF"
                           >
                             <i class="pi pi-file-pdf text-xs"></i>
+                          </button>
+                          <button
+                            type="button"
+                            @click="abrirComprovanteImagem(row[col].id, 'png')"
+                            class="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+                            title="Comprovante PNG (imagem)"
+                          >
+                            <i class="pi pi-image text-xs"></i>
                           </button>
                           <button
                             type="button"
@@ -683,6 +691,21 @@ async function abrirComprovante(registroId) {
   } catch (e) {
     console.error('[PONTO COMPROVANTE]', e)
     notify.error(e?.response?.data?.message || 'Não foi possível abrir o comprovante.')
+  }
+}
+
+async function abrirComprovanteImagem(registroId, formato = 'png') {
+  if (!registroId) return
+  try {
+    const res = await PontoRelatorioService.comprovanteImagem(registroId, formato)
+    const mime = formato === 'jpeg' || formato === 'jpg' ? 'image/jpeg' : 'image/png'
+    const blob = new Blob([res.data], { type: mime })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+    setTimeout(() => URL.revokeObjectURL(url), 60000)
+  } catch (e) {
+    console.error('[PONTO COMPROVANTE IMAGEM]', e)
+    notify.error(e?.response?.data?.message || 'Não foi possível gerar a imagem.')
   }
 }
 

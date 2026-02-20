@@ -56,6 +56,19 @@ export class ContratosController {
     return this.service.obterLinkPublicoPdf(contratoId, baseUrl);
   }
 
+  /** Envia o link do contrato por e-mail automaticamente (usa SMTP do .env) */
+  @Post(':id/enviar-email')
+  @Permissoes('contratos.ver')
+  @HttpCode(HttpStatus.OK)
+  async enviarEmail(@Param('id') id: string, @Req() req: Request) {
+    const contratoId = this.cleanId(id);
+    const baseUrl =
+      this.config.get<string>('APP_URL') ||
+      process.env.APP_URL ||
+      (req.protocol && req.get('host') ? `${req.protocol}://${req.get('host')}` : 'http://localhost:3000');
+    return this.service.enviarContratoPorEmail(contratoId, baseUrl);
+  }
+
   @Get(':id')
   @Permissoes('contratos.ver')
   buscar(@Param('id') id: string) {
