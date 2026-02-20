@@ -234,6 +234,7 @@ import { confirm } from '@/services/confirm'
 import { maskCNPJ, maskCEP, maskTelefone, maskIE } from '@/utils/masks'
 import { buscarCep, buscarCnpj } from '@/utils/utils'
 import { can } from '@/services/permissions'
+import { closeTabAndGo } from '@/utils/tabs'
 
 definePage({ meta: { perm: 'fornecedores.ver' } })
 
@@ -347,7 +348,7 @@ async function salvar() {
   try {
     await FornecedorService.salvar(isEdit.value ? Number(fornecedorId.value) : null, payloadParaApi())
     notify.success(isEdit.value ? 'Fornecedor atualizado!' : 'Fornecedor cadastrado!')
-    await router.replace('/fornecedor')
+    closeTabAndGo('/fornecedor')
   } catch (e) {
     const apiMsg = e?.response?.data?.message
     notify.error(Array.isArray(apiMsg) ? apiMsg.join(' | ') : (apiMsg || 'Erro ao salvar.'))
@@ -381,7 +382,7 @@ async function confirmarExcluirFornecedor() {
   try {
     await FornecedorService.remover(Number(fornecedorId.value))
     notify.success('Fornecedor removido!')
-    await router.replace('/fornecedor')
+    closeTabAndGo('/fornecedor')
   } catch (e) {
     const apiMsg = e?.response?.data?.message
     notify.error(Array.isArray(apiMsg) ? apiMsg.join(' | ') : (apiMsg || 'Erro ao excluir.'))

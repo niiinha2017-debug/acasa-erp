@@ -48,6 +48,12 @@
             placeholder="EX: 00.000.000-0"
           />
           <Input
+            class="col-span-12 md:col-span-3"
+            v-model="form.pis"
+            label="PIS"
+            placeholder="Nº PIS"
+          />
+          <Input
             class="col-span-12 md:col-span-4"
             v-model="form.data_nascimento"
             type="date"
@@ -340,6 +346,7 @@ import { maskCEP, maskCPF, maskTelefone, maskReais, maskHora } from '@/utils/mas
 import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
 import { buscarCep, calcularCustoHora } from '@/utils/utils'
 import { can } from '@/services/permissions'
+import { closeTabAndGo } from '@/utils/tabs'
 import { FUNCIONARIOS_LOCAL_SETOR_CARGO } from '@/constantes/funcionarios'
 
 
@@ -363,6 +370,7 @@ const form = ref({
   nome: '',
   cpf: '',
   rg: '',
+  pis: '',
   email: '',
   telefone: '',
   whatsapp: '',
@@ -578,10 +586,12 @@ watch(
 )
 
 async function tratarBuscaCep() {
-  if (!form.value.cep || String(form.value.cep).length < 9) return
-  const data = await buscarCep(form.value.cep)
+  const cepLimpo = String(form.value.cep ?? '').replace(/\D/g, '')
+  if (cepLimpo.length !== 8) return
+  const data = await buscarCep(cepLimpo)
   if (!data) return
 
+  form.value.cep = data.cep ?? form.value.cep
   form.value.endereco = data.logradouro || form.value.endereco
   form.value.bairro = data.bairro || form.value.bairro
   form.value.cidade = data.localidade || form.value.cidade
@@ -590,7 +600,7 @@ async function tratarBuscaCep() {
 
 
 function voltarParaLista() {
-  router.push('/funcionarios')
+  closeTabAndGo('/funcionarios')
 }
 
 async function carregarDados() {
@@ -619,6 +629,7 @@ async function carregarDados() {
       nome: data.nome ?? '',
       cpf: data.cpf ?? '',
       rg: data.rg ?? '',
+      pis: data.pis ?? '',
       email: data.email ?? '',
       telefone: data.telefone ?? '',
       whatsapp: data.whatsapp ?? '',
@@ -684,6 +695,7 @@ async function confirmarSalvar() {
       nome: form.value.nome,
       cpf: form.value.cpf,
       rg: normalizeString(form.value.rg),
+      pis: normalizeString(form.value.pis) ?? null,
       email: normalizeString(form.value.email),
       telefone: normalizeString(form.value.telefone),
       whatsapp: normalizeString(form.value.whatsapp),
@@ -693,9 +705,9 @@ async function confirmarSalvar() {
       data_inicio: normalizeString(form.value.data_inicio),
       admissao: normalizeString(form.value.admissao),
       demissao: normalizeString(form.value.demissao),
-      unidade: normalizeString(form.value.unidade),
-      setor: normalizeString(form.value.setor),
-      cargo: normalizeString(form.value.cargo),
+      unidade: normalizeString(form.value.unidade) ?? null,
+      setor: normalizeString(form.value.setor) ?? null,
+      cargo: normalizeString(form.value.cargo) ?? null,
       cep: normalizeString(form.value.cep),
       endereco: normalizeString(form.value.endereco),
       numero: normalizeString(form.value.numero),

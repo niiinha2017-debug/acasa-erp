@@ -97,13 +97,24 @@ export const PIPELINE_CLIENTE = [
   },
 
   // =========================
+  // CONTRATO
+  // =========================
+  {
+    key: 'CONTRATO_GERADO',
+    label: 'Contrato gerado',
+    fase: 'CONTRATO',
+    ordem: 12,
+    temTela: true,
+  },
+
+  // =========================
   // MEDIDA FINA
   // =========================
   {
     key: 'AGENDAR_MEDIDA_FINA',
     label: 'Agendar medida fina',
     fase: 'MEDIDA_FINA',
-    ordem: 12,
+    ordem: 13,
     temTela: true,
     disparaComData: 'data_medida_fina',
   },
@@ -111,14 +122,14 @@ export const PIPELINE_CLIENTE = [
     key: 'MEDIDA_FINA_AGENDADA',
     label: 'Medida fina agendada',
     fase: 'MEDIDA_FINA',
-    ordem: 13,
+    ordem: 14,
     temTela: false,
   },
   {
     key: 'MEDIDA_FINA_REALIZADA',
     label: 'Medida fina realizada',
     fase: 'MEDIDA_FINA',
-    ordem: 14,
+    ordem: 15,
     temTela: false,
   },
 
@@ -129,14 +140,14 @@ export const PIPELINE_CLIENTE = [
     key: 'PROJETO_TECNICO_EM_ANDAMENTO',
     label: 'Projeto técnico em andamento',
     fase: 'PROJETO',
-    ordem: 15,
+    ordem: 16,
     temTela: true,
   },
   {
     key: 'PROJETO_TECNICO_APROVADO',
     label: 'Projeto técnico aprovado',
     fase: 'PROJETO',
-    ordem: 16,
+    ordem: 17,
     temTela: false,
   },
 
@@ -147,7 +158,7 @@ export const PIPELINE_CLIENTE = [
     key: 'PLANO_DE_CORTE',
     label: 'Plano de corte',
     fase: 'PRODUCAO',
-    ordem: 17,
+    ordem: 18,
     temTela: false,
   },
 
@@ -158,7 +169,7 @@ export const PIPELINE_CLIENTE = [
     key: 'PRODUCAO_AGENDADA',
     label: 'Produção agendada',
     fase: 'PRODUCAO',
-    ordem: 18,
+    ordem: 19,
     temTela: false,
     disparaComData: 'data_producao',
   },
@@ -166,14 +177,14 @@ export const PIPELINE_CLIENTE = [
     key: 'EM_PRODUCAO',
     label: 'Em produção',
     fase: 'PRODUCAO',
-    ordem: 19,
+    ordem: 20,
     temTela: false,
   },
   {
     key: 'PRODUCAO_FINALIZADA',
     label: 'Produção finalizada',
     fase: 'PRODUCAO',
-    ordem: 20,
+    ordem: 21,
     temTela: false,
   },
 
@@ -184,7 +195,7 @@ export const PIPELINE_CLIENTE = [
     key: 'AGENDAR_MONTAGEM',
     label: 'Agendar montagem',
     fase: 'MONTAGEM',
-    ordem: 21,
+    ordem: 22,
     temTela: true,
     disparaComData: 'data_montagem',
   },
@@ -192,21 +203,21 @@ export const PIPELINE_CLIENTE = [
     key: 'MONTAGEM_AGENDADA',
     label: 'Montagem agendada',
     fase: 'MONTAGEM',
-    ordem: 22,
+    ordem: 23,
     temTela: false,
   },
   {
     key: 'EM_MONTAGEM',
     label: 'Em montagem',
     fase: 'MONTAGEM',
-    ordem: 23,
+    ordem: 24,
     temTela: false,
   },
   {
     key: 'MONTAGEM_FINALIZADA',
     label: 'Montagem finalizada',
     fase: 'MONTAGEM',
-    ordem: 24,
+    ordem: 25,
     temTela: false,
   },
 
@@ -217,21 +228,21 @@ export const PIPELINE_CLIENTE = [
     key: 'GARANTIA',
     label: 'Garantia',
     fase: 'POS_VENDA',
-    ordem: 25,
+    ordem: 26,
     temTela: true,
   },
   {
     key: 'ASSISTENCIA',
     label: 'Assistência',
     fase: 'POS_VENDA',
-    ordem: 26,
+    ordem: 27,
     temTela: true,
   },
   {
     key: 'MANUTENCAO',
     label: 'Manutenção',
     fase: 'POS_VENDA',
-    ordem: 27,
+    ordem: 28,
     temTela: true,
   },
 
@@ -239,7 +250,7 @@ export const PIPELINE_CLIENTE = [
     key: 'ENCERRADO',
     label: 'Encerrado',
     fase: 'FINAL',
-    ordem: 28,
+    ordem: 29,
     temTela: false,
   },
 ]

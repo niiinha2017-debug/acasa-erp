@@ -175,6 +175,24 @@
 
           <section>
             <div class="flex items-center gap-3 mb-6">
+              <span class="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
+              <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">
+                Representante Legal (contratos)
+              </h3>
+            </div>
+            <p class="text-[10px] text-slate-500 mb-4">
+              Nome e documentos do representante da empresa que aparecem nos contratos e no cabeçalho do PDF.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <Input v-model="form.representante_legal_nome" label="Nome completo" class="md:col-span-2" />
+              <Input v-model="representanteCpfMask" label="CPF" />
+              <Input v-model="form.representante_legal_rg" label="RG" />
+              <Input v-model="form.representante_estado_civil" label="Estado civil (ex.: Brasileira)" class="md:col-span-2" />
+            </div>
+          </section>
+
+          <section>
+            <div class="flex items-center gap-3 mb-6">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
               <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest text-emerald-600">
                 Dados Bancários e Pix
@@ -220,7 +238,7 @@ import { ConfiguracaoService } from '@/services/index'
 import { ArquivosService } from '@/services/arquivos.service'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
-import { maskCNPJ, maskCEP, maskTelefone, maskIE, onlyNumbers } from '@/utils/masks'
+import { maskCNPJ, maskCEP, maskTelefone, maskIE, maskCPF, onlyNumbers } from '@/utils/masks'
 import { buscarCep, buscarCnpj } from '@/utils/utils'
 import { can } from '@/services/permissions'
 
@@ -264,6 +282,10 @@ const form = ref({
   banco_agencia: '',
   banco_conta: '',
   pix: '',
+  representante_legal_nome: '',
+  representante_legal_cpf: '',
+  representante_legal_rg: '',
+  representante_estado_civil: '',
 })
 
 // --- MÁSCARAS ---
@@ -282,6 +304,10 @@ const ieMask = computed({
 const telefoneMask = computed({
   get: () => maskTelefone(form.value.telefone),
   set: (v) => (form.value.telefone = onlyNumbers(v).slice(0, 11)),
+})
+const representanteCpfMask = computed({
+  get: () => maskCPF(form.value.representante_legal_cpf),
+  set: (v) => (form.value.representante_legal_cpf = onlyNumbers(v).slice(0, 11)),
 })
 
 // --- BUSCAS ---

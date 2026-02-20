@@ -296,6 +296,7 @@ import { confirm } from '@/services/confirm'
 import { maskMoneyBR } from '@/utils/masks'
 import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
 import { can } from '@/services/permissions'
+import { closeTabAndGo } from '@/utils/tabs'
 
 definePage({ meta: { perm: 'compras.ver' } })
 
@@ -659,7 +660,7 @@ if (tipoCompra.value === 'CLIENTE_AMBIENTE') {
 
     await CompraService.salvar(compraId.value, payload)
     notify.success(isEdit.value ? 'Compra atualizada!' : 'Compra criada!')
-    router.push('/compras')
+    closeTabAndGo('/compras')
   } catch (e) {
     console.log('[COMPRA] erro salvar:', e?.response?.status, e?.response?.data, e)
     notify.error(e?.response?.data?.message || 'Erro ao salvar compra.')
@@ -681,7 +682,7 @@ const confirmarExcluirCompra = async () => {
   try {
     await CompraService.remover(compraId.value)
     notify.success('Compra excluída!')
-    router.push('/compras')
+    closeTabAndGo('/compras')
   } catch (e) {
     notify.error(e?.response?.data?.message || 'Erro ao excluir compra.')
   } finally {

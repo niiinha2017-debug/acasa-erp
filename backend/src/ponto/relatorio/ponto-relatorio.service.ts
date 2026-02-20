@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import * as path from 'path';
 import { promises as fs } from 'fs';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 import PDFDocument from 'pdfkit';
 import { renderHeaderA4Png } from '../../pdf/render-header-a4';
 
@@ -576,6 +576,155 @@ export class PontoRelatorioService {
           width: 180,
           align: 'center',
         });
+
+        doc.end();
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
+  /** Formata CNPJ para exibição: 12345678000199 -> 12.345.678/0001-99 */
+  private maskCnpj(val: string | null | undefined): string {
+    const s = String(val || '').replace(/\D/g, '');
+    if (s.length !== 14) return String(val || '');
+    return `${s.slice(0, 2)}.${s.slice(2, 5)}.${s.slice(5, 8)}/${s.slice(8, 12)}-${s.slice(12)}`;
+  }
+
+  /** Formata CPF para exibição: 12345678901 -> 123.456.789-01 */
+  private maskCpf(val: string | null | undefined): string {
+    const s = String(val || '').replace(/\D/g, '');
+    if (s.length !== 11) return String(val || '');
+    return `${s.slice(0, 3)}.${s.slice(3, 6)}.${s.slice(6, 9)}-${s.slice(9)}`;
+  }
+
+  /** Retorna label do tipo: Entrada, Almoço (1ª saída do dia) ou Saída */
+  private async labelTipoRegistro(
+    registro: { id: number; tipo: string; data_hora: Date; funcionario_id: number },
+  ): Promise<string> {
+    if (registro.tipo === 'ENTRADA') return 'Entrada';
+    if (registro.tipo !== 'SAIDA') return registro.tipo;
+    const diaKey = this.dateKeySP(registro.data_hora);
+    const inicio = this.inicioDia(diaKey);
+    const fim = this.fimDia(diaKey);
+    if (!inicio || !fim) return 'Saída';
+    const registrosDia = await this.prisma.ponto_registros.findMany({
+      where: {
+        funcionario_id: registro.funcionario_id,
+        status: 'ATIVO',
+        tipo: 'SAIDA',
+        data_hora: { gte: inicio, lte: fim },
+      },
+      orderBy: { data_hora: 'asc' },
+      select: { id: true },
+    });
+    const index = registrosDia.findIndex((r) => r.id === registro.id);
+    return index === 0 ? 'Almoço' : 'Saída';
+  }
+
+  /** Gera ID único da transação (hash) para evitar duplicidade */
+  private transacaoId(registro: { id: number; data_hora: Date; funcionario_id: number }): string {
+    const payload = `${registro.id}|${new Date(registro.data_hora).toISOString()}|${registro.funcionario_id}`;
+    return createHash('sha256').update(payload).digest('hex').slice(0, 32);
+  }
+
+  /** Busca um registro de ponto por ID com funcionário e empresa para comprovante */
+  async getRegistroComprovante(registroId: number) {
+    const registro = await this.prisma.ponto_registros.findUnique({
+      where: { id: registroId, status: 'ATIVO' },
+      include: {
+        funcionario: { select: { id: true, nome: true, cpf: true, pis: true } },
+      },
+    });
+    if (!registro) return null;
+    const empresa = await this.prisma.empresa.findUnique({ where: { id: 1 } });
+    return { registro, empresa };
+  }
+
+  /** Gera PDF do comprovante: cabeçalho (Empresa + CNPJ), corpo (Nome, PIS/CPF, Data/Hora, Tipo), rodapé (hash) */
+  async gerarComprovantePdfBuffer(registroId: number): Promise<Buffer> {
+    const data = await this.getRegistroComprovante(registroId);
+    if (!data) throw new BadRequestException('Registro de ponto não encontrado.');
+    const { registro, empresa } = data;
+    const tipoLabel = await this.labelTipoRegistro(registro);
+    const transacaoId = this.transacaoId(registro);
+
+    const dataHora = new Date(registro.data_hora);
+    const dataHoraExata = dataHora.toLocaleString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
+
+    const pisCpf = [
+      registro.funcionario?.pis ? `PIS: ${String(registro.funcionario.pis).trim()}` : null,
+      registro.funcionario?.cpf ? `CPF: ${this.maskCpf(registro.funcionario.cpf)}` : null,
+    ]
+      .filter(Boolean)
+      .join('  •  ') || '—';
+
+    return new Promise((resolve, reject) => {
+      try {
+        const doc = new PDFDocument({ margin: 30, size: 'A4' });
+        const chunks: Buffer[] = [];
+        doc.on('data', (c: Buffer) => chunks.push(c));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+
+        const margin = 30;
+        let y = 20;
+
+        // --- Cabeçalho: Nome da Empresa e CNPJ ---
+        doc.fillColor('#1e293b').fontSize(14).font('Helvetica-Bold');
+        doc.text(empresa?.razao_social || empresa?.nome_fantasia || 'Empresa', margin, y);
+        y += 18;
+        doc.fontSize(9).font('Helvetica').fillColor('#64748b');
+        doc.text(
+          empresa?.cnpj ? `CNPJ: ${this.maskCnpj(empresa.cnpj)}` : 'CNPJ não informado',
+          margin,
+          y,
+        );
+        y += 28;
+
+        // --- Título ---
+        doc.fillColor('#1e293b').fontSize(12).font('Helvetica-Bold');
+        doc.text('COMPROVANTE DE REGISTRO DE PONTO', margin, y, { align: 'center', width: 535 });
+        y += 32;
+
+        // --- Corpo: Nome, PIS/CPF, Data e Hora exata, Tipo ---
+        doc.rect(margin, y, 535, 110).fillAndStroke('#f8fafc', '#e2e8f0');
+        y += 14;
+        doc.fillColor('#64748b').fontSize(8).font('Helvetica');
+        doc.text('Nome do Funcionário', margin + 12, y);
+        doc.fillColor('#1e293b').fontSize(11).font('Helvetica-Bold');
+        doc.text(registro.funcionario?.nome?.toUpperCase() || '—', margin + 12, y + 12);
+        y += 28;
+        doc.fillColor('#64748b').fontSize(8).font('Helvetica');
+        doc.text('PIS / CPF', margin + 12, y);
+        doc.fillColor('#1e293b').fontSize(9).font('Helvetica');
+        doc.text(pisCpf, margin + 12, y + 12);
+        y += 26;
+        doc.fillColor('#64748b').fontSize(8).font('Helvetica');
+        doc.text('Data e Hora', margin + 12, y);
+        doc.fillColor('#1e293b').fontSize(10).font('Helvetica-Bold');
+        doc.text(dataHoraExata, margin + 12, y + 12);
+        y += 26;
+        doc.fillColor('#64748b').fontSize(8).font('Helvetica');
+        doc.text('Tipo de registro', margin + 12, y);
+        doc.fillColor('#1e293b').fontSize(10).font('Helvetica-Bold');
+        doc.text(tipoLabel, margin + 12, y + 12);
+
+        // --- Rodapé: ID único da transação ---
+        y += 40;
+        doc.fontSize(7).fillColor('#64748b');
+        doc.text('ID da transação (evita duplicidade):', margin, y);
+        y += 10;
+        doc.fontSize(8).font('Helvetica').fillColor('#1e293b');
+        doc.text(transacaoId, margin, y, { width: 535 });
 
         doc.end();
       } catch (e) {

@@ -252,14 +252,17 @@ export const VendaService = {
 
 // --- CONTRATOS ---
 export const ContratosService = {
-  listar: () => api.get('/contratos'),
+  listar: (params) => api.get('/contratos', { params: params || {} }),
   buscar: (id) => api.get(`/contratos/${id}`),
   salvar: (id, dados) => (id ? api.put(`/contratos/${id}`, dados) : api.post('/contratos', dados)),
   remover: (id) => api.delete(`/contratos/${id}`),
+  assinar: (id, dados) => api.post(`/contratos/${id}/assinar`, dados),
   abrirPdf: (id) => {
     const cleanId = String(id || '').replace(/\D/g, '')
     return api.post(`/contratos/${cleanId}/pdf`)
   },
+  /** Link público temporário (24h) para download do PDF – envio grátis por WhatsApp/e-mail */
+  linkPublicoPdf: (id) => api.get(`/contratos/${id}/link-publico`),
 }
 
 // --- PERMISSÕES ---
@@ -340,6 +343,10 @@ export const PontoRelatorioService = {
   // ✅ padrão do sistema: gera+salva e retorna { arquivoId }
   pdfMensalSalvar: (payload) =>
     api.post('/ponto/relatorio/pdf', payload),
+
+  /** Comprovante de um registro de ponto (PDF com cadastro da empresa) */
+  comprovantePdf: (registroId) =>
+    api.get(`/ponto/relatorio/comprovante/${registroId}`, { responseType: 'blob' }),
 }
 
 

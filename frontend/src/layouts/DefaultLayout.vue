@@ -230,6 +230,28 @@ function handleDuplicateTabEvent(event) {
   duplicateTab(event?.detail?.to)
 }
 
+/** Fecha a aba atual e navega para o path (ex.: após salvar orçamento). */
+function handleCloseCurrentTabAndGo(event) {
+  const to = event?.detail?.to || '/orcamentos'
+  const idx = openTabs.value.findIndex((tab) => tab.key === activeTabId.value)
+  if (openTabs.value.length <= 1) {
+    router.push(to)
+    return
+  }
+  if (idx >= 0) {
+    openTabs.value.splice(idx, 1)
+    persistTabs()
+  }
+  const existing = openTabs.value.find((tab) => tab.to === to || tab.routeKey === to)
+  if (existing) {
+    activeTabId.value = existing.key
+    if (route.fullPath !== to) router.push(to)
+  } else {
+    router.push(to)
+  }
+  persistTabs()
+}
+
 watch(
   () => route.fullPath,
   () => {
@@ -253,10 +275,12 @@ onMounted(() => {
   }
 
   window.addEventListener('acasa-tabs-duplicate-current', handleDuplicateTabEvent)
+  window.addEventListener('acasa-close-current-tab-and-go', handleCloseCurrentTabAndGo)
 })
 
 onUnmounted(() => {
   window.removeEventListener('acasa-tabs-duplicate-current', handleDuplicateTabEvent)
+  window.removeEventListener('acasa-close-current-tab-and-go', handleCloseCurrentTabAndGo)
 })
 </script>
 

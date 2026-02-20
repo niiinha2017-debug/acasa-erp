@@ -27,6 +27,7 @@ import { ArquivosModule } from './arquivos/arquivos.module';
 import { AgendaModule } from './agenda/agenda.module';
 import { ClausulasModule } from './clausulas/clausulas.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -75,6 +76,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
     VendasModule,
     ClausulasModule,
     AnalyticsModule,
+    WebhooksModule,
   ],
 })
 export class AppModule {}

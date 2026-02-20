@@ -45,6 +45,64 @@ export class AnalyticsService {
     }));
   }
 
+  /** Resumo para a visão geral Vendas (Comercial): orçamentos, vendas fechadas no mês, contratos. */
+  async getResumoVendas(): Promise<{
+    orcamentos_em_andamento: number;
+    orcamentos_aprovados_sem_venda: number;
+    vendas_fechadas_mes: number;
+    contratos_total: number;
+  }> {
+    const hoje = new Date();
+    const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59);
+
+    const [orcamentosTotal, orcamentosComVenda, vendasMes, contratosTotal] = await Promise.all([
+      this.prisma.orcamentos.count(),
+      this.prisma.orcamentos.count({ where: { venda: { isNot: null } } }),
+      this.prisma.vendas.count({
+        where: { data_venda: { gte: inicioMes, lte: fimMes } },
+      }),
+      this.prisma.contratos.count(),
+    ]);
+
+    const orcamentosSemVenda = Math.max(0, orcamentosTotal - orcamentosComVenda);
+    return {
+      orcamentos_em_andamento: orcamentosTotal,
+      orcamentos_aprovados_sem_venda: orcamentosSemVenda,
+      vendas_fechadas_mes: vendasMes,
+      contratos_total: contratosTotal,
+    };
+  }
+
+  /** Resumo para a visão geral Produção: vendas por etapa, plano de corte. */
+  async getResumoProducao(): Promise<{
+    vendas_total: number;
+    vendas_em_producao: number;
+    vendas_finalizadas: number;
+    plano_corte_total: number;
+  }> {
+    const vendas = await this.prisma.vendas.findMany({
+      select: { id: true, status: true },
+    });
+    const statusProducao = ['PRODUCAO_AGENDADA', 'EM_PRODUCAO', 'PRODUCAO_FINALIZADA'];
+    const statusFinalizadas = ['MONTAGEM_FINALIZADA', 'ENCERRADO'];
+    const normalize = (s: string) => String(s || '').trim().toUpperCase().replace(/\s+/g, '_');
+    let emProducao = 0;
+    let finalizadas = 0;
+    for (const v of vendas) {
+      const key = normalize(v.status);
+      if (statusProducao.some((x) => key.includes(x) || key === 'EM_PRODUCAO')) emProducao += 1;
+      if (statusFinalizadas.some((x) => key === x)) finalizadas += 1;
+    }
+    const planoTotal = await this.prisma.plano_corte.count();
+    return {
+      vendas_total: vendas.length,
+      vendas_em_producao: emProducao,
+      vendas_finalizadas: finalizadas,
+      plano_corte_total: planoTotal,
+    };
+  }
+
   /** Despesas (SAÍDA) por mês e categoria. Filtros: inicio, fim (YYYY-MM-DD). */
   async getDreDespesas(inicio?: string, fim?: string): Promise<{ mes: string; categoria: string; total: number }[]> {
     const hoje = new Date();

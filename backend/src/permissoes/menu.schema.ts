@@ -108,7 +108,7 @@ export const MENU_SECTIONS: MenuSection[] = [
         label: 'Permissoes',
         to: '/configuracoes/permissoes',
         icon: 'pi-lock',
-        perm: 'permissoes.gerenciar',
+        perm: 'permissoes.ver',
       },
       { divider: true, label: '', to: '' },
       {

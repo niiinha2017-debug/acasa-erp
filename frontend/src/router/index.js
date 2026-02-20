@@ -20,9 +20,7 @@ async function ensureMe() {
   if (!token) return null
 
   const u = storage.getUser()
-  // ✅ Verificação mais tolerante e Case Insensitive
-  if (u?.id && String(u?.status || '').toUpperCase() === 'ATIVO') return u
-
+  // ✅ Sempre valida o token no servidor para evitar 401 em menu/orcamentos com token expirado
   if (!syncingMe) {
     syncingMe = api.get('/auth/me')
       .then(({ data }) => {
@@ -83,7 +81,9 @@ router.beforeEach(async (to) => {
 
   const requiredPerm = getRequiredPerm(to, routePermMap)
   if (requiredPerm && !can(requiredPerm)) {
-    return can('agendamentos.ver') ? AGENDA_HOME : { path: '/' }
+    if (can('agendamentos.ver')) return AGENDA_HOME
+    if (can('index.visualizar')) return { path: '/' }
+    return { path: '/alterar-senha' }
   }
 
   return true

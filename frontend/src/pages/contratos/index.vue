@@ -1,106 +1,120 @@
 <template>
-  <div class="w-full max-w-[1400px] mx-auto space-y-6 animate-page-in">
-    <PageHeader
-      title="Contratos"
-      subtitle="Gestão de contratos comerciais"
-      icon="pi pi-file"
-    >
-      <template #actions>
-        <Button
-          v-if="can('contratos.criar')"
-          variant="primary"
-          @click="router.push('/contratos/novo')"
-        >
-          <i class="pi pi-plus mr-2"></i>
-          Novo Contrato
-        </Button>
-      </template>
-    </PageHeader>
+  <div class="w-full h-full">
+    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
+      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <MetricCard
-        label="Total de Contratos"
-        :value="contratos.length"
+      <PageHeader
+        title="Contratos"
+        subtitle="Gestão de contratos comerciais"
         icon="pi pi-file"
-        color="slate"
-      />
-      <MetricCard
-        label="Valor Total"
-        :value="format.currency(valorTotal)"
-        icon="pi pi-dollar"
-        color="emerald"
-      />
-      <MetricCard
-        label="Vigentes"
-        :value="contratos.filter((c) => String(c.status).toUpperCase() === 'VIGENTE').length"
-        icon="pi pi-check-circle"
-        color="blue"
-      />
-      <MetricCard
-        label="Encerrados"
-        :value="contratos.filter((c) => String(c.status).toUpperCase() === 'ENCERRADO').length"
-        icon="pi pi-lock"
-        color="amber"
-      />
-    </div>
-
-    <div class="space-y-4">
-      <div class="w-full md:w-96">
-        <SearchInput
-          v-model="filtro"
-          placeholder="Buscar por número, cliente ou status..."
-        />
-      </div>
-
-      <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-        <Table
-          :columns="columns"
-          :rows="filtradas"
-          :loading="loading"
-          :boxed="false"
-        >
-          <template #cell-cliente="{ row }">
-            <div class="flex flex-col py-1">
-              <span class="text-sm font-bold text-slate-800 uppercase tracking-tight leading-tight">
-                {{ row.cliente?.nome_completo || row.cliente?.razao_social || row.cliente?.nome || '-' }}
-              </span>
-              <span class="text-[10px] font-bold text-slate-400 tracking-wider uppercase">
-                {{ row.cliente?.cpf || row.cliente?.cnpj || '' }}
-              </span>
+      >
+        <template #actions>
+          <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+            <div class="w-full sm:w-80 order-1 sm:order-0">
+              <SearchInput
+                v-model="filtro"
+                placeholder="Buscar por nome do cliente..."
+              />
             </div>
-          </template>
+            <Button
+              v-if="can('contratos.criar')"
+              variant="primary"
+              class="flex-shrink-0 h-11 rounded-xl font-black uppercase tracking-[0.16em] text-[11px]"
+              @click="router.push('/contratos/novo')"
+            >
+              <i class="pi pi-plus mr-2" />
+              Novo Contrato
+            </Button>
+          </div>
+        </template>
+      </PageHeader>
 
-          <template #cell-status="{ row }">
-            <StatusBadge :value="row.status" />
-          </template>
+      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-8">
+        <div v-if="loading" class="text-center py-10">
+          <i class="pi pi-spin pi-spinner text-2xl text-text-soft" />
+        </div>
 
-          <template #cell-valor="{ row }">
-            <span class="text-sm font-black text-slate-800 tabular-nums">
-              {{ format.currency(row.valor) }}
-            </span>
-          </template>
-
-          <template #cell-data_inicio="{ row }">
-            <span class="text-xs font-medium text-slate-700">
-              {{ row.data_inicio ? format.date(row.data_inicio) : '-' }}
-            </span>
-          </template>
-
-          <template #cell-data_fim="{ row }">
-            <span class="text-xs font-medium text-slate-700">
-              {{ row.data_fim ? format.date(row.data_fim) : '-' }}
-            </span>
-          </template>
-
-          <template #cell-acoes="{ row }">
-            <TableActions
-              :can-edit="can('contratos.editar')"
-              :can-delete="can('contratos.excluir')"
-              @edit="router.push(`/contratos/${row.id}`)"
-              @delete="confirmarExcluir(row.id)"
+        <template v-else>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <MetricCard
+              label="Total de Contratos"
+              :value="contratos.length"
+              icon="pi pi-file"
+              color="slate"
             />
-          </template>
-        </Table>
+            <MetricCard
+              label="Valor Total"
+              :value="format.currency(valorTotalGeral)"
+              icon="pi pi-dollar"
+              color="emerald"
+            />
+            <MetricCard
+              label="Vigentes"
+              :value="contratos.filter((c) => String(c.status).toUpperCase() === 'VIGENTE').length"
+              icon="pi pi-check-circle"
+              color="blue"
+            />
+            <MetricCard
+              label="Encerrados"
+              :value="contratos.filter((c) => String(c.status).toUpperCase() === 'ENCERRADO').length"
+              icon="pi pi-lock"
+              color="amber"
+            />
+          </div>
+
+          <div class="space-y-3">
+            <h2 class="text-xs font-black uppercase tracking-widest text-text-soft">
+              Clientes com contratos
+            </h2>
+            <div
+              v-if="gruposFiltrados.length > 0"
+              class="rounded-xl border border-border-ui bg-bg-page/50 px-4 py-2 flex justify-between items-center"
+            >
+              <span class="text-[10px] font-bold text-text-soft uppercase tracking-wider">Valor total da lista</span>
+              <span class="text-lg font-black text-text-main">{{ format.currency(valorTotalLista) }}</span>
+            </div>
+            <div
+              v-if="gruposFiltrados.length === 0"
+              class="rounded-xl border border-border-ui bg-bg-page py-12 text-center"
+            >
+              <p class="text-text-soft text-sm">
+                {{ filtro ? 'Nenhum cliente encontrado para a busca.' : 'Nenhum cliente com contrato.' }}
+              </p>
+            </div>
+            <div v-else class="space-y-2">
+              <div
+                v-for="grupo in gruposFiltrados"
+                :key="grupo.clienteId"
+                class="rounded-xl border border-border-ui bg-bg-page px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+              >
+                <div class="flex items-center gap-3 min-w-0">
+                  <div
+                    class="w-10 h-10 rounded-lg bg-bg-card border border-border-ui flex items-center justify-center text-text-main font-black text-sm flex-shrink-0"
+                  >
+                    {{ grupo.contratos.length }}
+                  </div>
+                  <div class="min-w-0">
+                    <p class="text-sm font-black text-text-main uppercase tracking-tight truncate">
+                      {{ grupo.clienteNome }}
+                    </p>
+                    <p class="text-[10px] font-bold text-text-soft uppercase tracking-wider">
+                      {{ grupo.contratos.length }} contrato(s) · {{ format.currency(grupo.total) }}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  class="flex-shrink-0 rounded-xl font-black uppercase tracking-wider text-[10px]"
+                  @click="router.push(`/contratos/cliente/${grupo.clienteId}`)"
+                >
+                  <i class="pi pi-list mr-1" />
+                  Abrir lista
+                </Button>
+              </div>
+            </div>
+          </div>
+        </template>
       </div>
     </div>
   </div>
@@ -109,7 +123,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { confirm } from '@/services/confirm'
 import { notify } from '@/services/notify'
 import { can } from '@/services/permissions'
 import { ContratosService } from '@/services/index'
@@ -122,33 +135,38 @@ const loading = ref(false)
 const contratos = ref([])
 const filtro = ref('')
 
-const columns = [
-  { key: 'id', label: 'ID', width: '70px' },
-  { key: 'numero', label: 'NÚMERO', width: '140px' },
-  { key: 'cliente', label: 'CLIENTE', width: '30%' },
-  { key: 'status', label: 'STATUS', width: '120px', align: 'center' },
-  { key: 'valor', label: 'VALOR', width: '120px', align: 'right' },
-  { key: 'data_inicio', label: 'INÍCIO', width: '100px' },
-  { key: 'data_fim', label: 'FIM', width: '100px' },
-  { key: 'acoes', label: '', width: '100px', align: 'right' },
-]
+const grupos = computed(() => {
+  const map = {}
+  ;(contratos.value || []).forEach((c) => {
+    const cliId = c.cliente_id ?? 'avulso'
+    if (!map[cliId]) {
+      map[cliId] = {
+        clienteId: cliId,
+        clienteNome:
+          c.cliente?.nome_completo || c.cliente?.razao_social || c.cliente?.nome || 'Cliente não identificado',
+        contratos: [],
+        total: 0,
+      }
+    }
+    map[cliId].contratos.push(c)
+    map[cliId].total += Number(c.valor || 0)
+  })
+  return Object.values(map).sort((a, b) => (b.contratos[0]?.id || 0) - (a.contratos[0]?.id || 0))
+})
 
-const valorTotal = computed(() =>
+const gruposFiltrados = computed(() => {
+  const termo = String(filtro.value || '').trim().toLowerCase()
+  if (!termo) return grupos.value
+  return grupos.value.filter((g) => (g.clienteNome || '').toLowerCase().includes(termo))
+})
+
+const valorTotalGeral = computed(() =>
   contratos.value.reduce((acc, c) => acc + Number(c.valor || 0), 0)
 )
 
-const filtradas = computed(() => {
-  const f = String(filtro.value || '').toLowerCase().trim()
-  if (!f) return contratos.value
-  return contratos.value.filter((c) => {
-    const cli = c?.cliente || {}
-    const nome = String(cli.nome_completo || cli.razao_social || cli.nome || '').toLowerCase()
-    const numero = String(c?.numero || '').toLowerCase()
-    const status = String(c?.status || '').toLowerCase()
-    const id = String(c?.id || '')
-    return nome.includes(f) || numero.includes(f) || status.includes(f) || id.includes(f)
-  })
-})
+const valorTotalLista = computed(() =>
+  gruposFiltrados.value.reduce((acc, g) => acc + Number(g.total || 0), 0)
+)
 
 async function carregar() {
   if (!can('contratos.ver')) return notify.error('Acesso negado.')
@@ -160,19 +178,6 @@ async function carregar() {
     notify.error('Erro ao carregar contratos.')
   } finally {
     loading.value = false
-  }
-}
-
-async function confirmarExcluir(id) {
-  if (!can('contratos.excluir')) return notify.error('Acesso negado.')
-  const ok = await confirm.show('Excluir contrato', `Deseja excluir o contrato #${id}?`)
-  if (!ok) return
-  try {
-    await ContratosService.remover(id)
-    notify.success('Contrato excluído.')
-    await carregar()
-  } catch (e) {
-    notify.error('Erro ao excluir.')
   }
 }
 

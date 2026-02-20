@@ -1,4 +1,4 @@
-﻿import {
+import {
   BadRequestException,
   Injectable,
   NotFoundException,
@@ -253,6 +253,16 @@ export class FuncionariosService {
 
   private normalizarDatas(dto: any) {
     const data = { ...dto };
+
+    // Dados da empresa: garantir que unidade, setor e cargo sejam persistidos
+    const camposEmpresa = ['unidade', 'setor', 'cargo'] as const;
+    for (const campo of camposEmpresa) {
+      if (Object.prototype.hasOwnProperty.call(dto, campo)) {
+        const v = dto[campo];
+        data[campo] = v === '' || v === undefined || v === null ? null : String(v).trim() || null;
+      }
+    }
+
     const camposData = [
       'data_nascimento',
       'admissao',

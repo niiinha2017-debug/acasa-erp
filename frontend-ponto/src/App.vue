@@ -27,9 +27,16 @@
         </div>
 
         <div v-else class="w-full space-y-6 animate-in">
+          <!-- Cabeçalho: Nome da Empresa e CNPJ -->
+          <div class="w-full text-center border-b border-slate-100 pb-3">
+            <p class="text-sm font-black text-[#1e293b] uppercase">{{ empresaNome }}</p>
+            <p class="text-[10px] font-bold text-[#64748b] mt-0.5">{{ empresaCnpj }}</p>
+          </div>
+
           <header class="text-center">
             <p class="text-[#94a3b8] text-[10px] font-black uppercase tracking-[0.2em] mb-1">Bem-vindo(a)</p>
             <h2 class="text-xl font-black text-[#1e293b] uppercase truncate">{{ funcionarioNome }}</h2>
+            <p v-if="pisCpfExibicao" class="text-[10px] font-bold text-[#64748b] mt-1">{{ pisCpfExibicao }}</p>
           </header>
 
           <div class="bg-slate-50 rounded-[2.5rem] p-8 text-center border border-slate-100">
@@ -112,6 +119,10 @@ const etapa = ref('ativar')
 const loading = ref(false)
 const token = ref(localStorage.getItem('acasa_ponto_token') || '')
 const funcionarioNome = ref(localStorage.getItem('acasa_funcionario_nome') || 'Funcionário')
+const empresaNome = ref('')
+const empresaCnpj = ref('')
+const funcionarioCpf = ref('')
+const funcionarioPis = ref('')
 const parearCode = ref('')
 const registrosHoje = ref([])
 const erro = ref('')
@@ -155,7 +166,44 @@ const ultimoRegistroDataTexto = computed(() => {
   })
 })
 
+const pisCpfExibicao = computed(() => {
+  const parts = []
+  if (funcionarioPis.value) parts.push(`PIS: ${funcionarioPis.value}`)
+  if (funcionarioCpf.value) parts.push(maskCpf(funcionarioCpf.value))
+  return parts.length ? parts.join('  •  ') : ''
+})
+
 const SEGUNDOS_BLOQUEIO = 180
+
+function maskCpf(v) {
+  if (!v) return ''
+  const s = String(v).replace(/\D/g, '')
+  if (s.length !== 11) return v
+  return `${s.slice(0, 3)}.${s.slice(3, 6)}.${s.slice(6, 9)}-${s.slice(9)}`
+}
+
+function maskCnpj(v) {
+  if (!v) return ''
+  const s = String(v).replace(/\D/g, '')
+  if (s.length !== 14) return v
+  return `${s.slice(0, 2)}.${s.slice(2, 5)}.${s.slice(5, 8)}/${s.slice(8, 12)}-${s.slice(12)}`
+}
+
+function formatarDataHoraExata(dataHora) {
+  if (!dataHora) return '--:--'
+  const d = new Date(dataHora)
+  if (Number.isNaN(d.getTime())) return '--:--'
+  return d.toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  })
+}
 
 function formatarHoraRegistro(dataHora) {
   if (!dataHora) return '--:--'
@@ -172,13 +220,19 @@ function formatarHoraRegistro(dataHora) {
 function enviarComprovanteWhatsApp() {
   const reg = ultimoRegistro.value
   if (!reg) return
-  const dataStr = ultimoRegistroDataTexto.value
-  const horaStr = ultimoRegistroHoraTexto.value
+  const dataHoraStr = formatarDataHoraExata(reg.data_hora)
   const nome = funcionarioNome.value || 'Funcionário'
+  const tipoLabel = reg.tipo_label || reg.tipo
+  const pisCpf = pisCpfExibicao.value ? `\n${pisCpfExibicao.value}` : ''
+  const idTransacao = reg.transacao_id ? `\nID: ${reg.transacao_id}` : ''
   const msg =
-`Comprovante de ponto - ACASA
-${nome}
-${reg.tipo} em ${dataStr} às ${horaStr}`
+`Comprovante de ponto - ${empresaNome.value || 'ACASA'}
+CNPJ: ${empresaCnpj.value || '-'}
+
+${nome}${pisCpf}
+
+Data e Hora: ${dataHoraStr}
+Tipo: ${tipoLabel}${idTransacao}`
   const url = `https://wa.me/?text=${encodeURIComponent(msg)}`
   if (typeof window !== 'undefined' && window.open) {
     window.open(url, '_blank', 'noopener,noreferrer')
@@ -195,14 +249,19 @@ async function carregarDados() {
       PontoService.hoje(token.value)
     ])
     
+    const dataMe = resMe?.data || {}
     const nome =
-      resMe?.data?.nome ||
-      resMe?.data?.data?.nome ||
-      resMe?.data?.funcionario?.nome ||
+      dataMe.nome ||
+      dataMe.funcionario?.nome ||
       funcionarioNome.value
 
     funcionarioNome.value = nome
     localStorage.setItem('acasa_funcionario_nome', nome)
+
+    empresaNome.value = dataMe.empresa?.nome || 'Empresa'
+    empresaCnpj.value = maskCnpj(dataMe.empresa?.cnpj || '')
+    funcionarioCpf.value = dataMe.cpf || ''
+    funcionarioPis.value = dataMe.pis ? String(dataMe.pis).trim() : ''
 
     const hojeData = Array.isArray(resHoje?.data)
       ? resHoje.data

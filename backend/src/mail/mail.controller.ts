@@ -4,10 +4,15 @@ import {
   Query,
   BadRequestException,
   ForbiddenException,
+  UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MailService } from './mail.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/permissions.guard';
+import { Permissoes } from '../auth/permissoes.decorator';
 
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('mail')
 export class MailController {
   constructor(
@@ -16,6 +21,7 @@ export class MailController {
   ) {}
 
   @Get('teste')
+  @Permissoes('usuarios.ver')
   async teste(@Query('para') para: string) {
     const enabled = this.config.get<string>('MAIL_TEST_ENABLED') === 'true';
     if (!enabled)

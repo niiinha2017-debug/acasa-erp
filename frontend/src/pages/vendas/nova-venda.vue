@@ -4,12 +4,21 @@
       <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
 
       <PageHeader
-        title="Fechamento da Venda"
-        subtitle="Defina o valor final e condições a partir do orçamento aprovado"
+        :title="isEditMode ? `Editar venda #${vendaId}` : 'Fechamento da Venda'"
+        :subtitle="isEditMode ? 'Altere itens, parcelas e comissões (mesma tela do fechamento).' : 'Defina o valor final e condições a partir do orçamento aprovado'"
         icon="pi pi-dollar"
       >
         <template #actions>
           <RouterLink
+            v-if="isEditMode"
+            :to="`/vendas/venda/${vendaId}`"
+            class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-text-soft hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"
+          >
+            <i class="pi pi-arrow-left text-xs"></i>
+            Voltar para detalhe
+          </RouterLink>
+          <RouterLink
+            v-else
             to="/orcamentos"
             class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-text-soft hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"
           >
@@ -75,6 +84,13 @@
                     class="w-full p-2 rounded-xl border border-border-ui bg-bg-page text-sm text-text-main outline-none resize-y focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
                   ></textarea>
                 </template>
+                <template #cell-observacao="{ row }">
+                  <Input
+                    v-model="itens[row.__idx].observacao"
+                    :forceUpper="false"
+                    placeholder="Ex.: PUXADOR REFIL"
+                  />
+                </template>
                 <template #cell-valor_orcado="{ row }">
                   <span class="font-bold">
                     {{ format.currency(row.valor_unitario || 0) }}
@@ -132,14 +148,6 @@
                 />
               </div>
 
-              <div class="col-span-12 md:col-span-4">
-                <Input
-                  v-model="formaPagamentoTexto"
-                  label="Condição de pagamento (texto para o contrato)"
-                  placeholder="Ex: 30% na assinatura e 70% na entrega..."
-                />
-              </div>
-
               <div class="col-span-12 md:col-span-2">
                 <Input
                   v-model="dataVenda"
@@ -147,6 +155,53 @@
                   label="Data da venda"
                   :forceUpper="false"
                 />
+              </div>
+
+              <div class="col-span-12 mt-2 pt-4 border-t border-border-ui">
+                <p class="text-[10px] font-black text-text-soft uppercase tracking-widest mb-2">
+                  Representante da venda (contrato)
+                </p>
+                <p class="text-[10px] text-text-soft mb-3">
+                  Opcional. Se preenchido, este representante aparece no contrato desta venda. Caso contrário, usa o cadastro da empresa.
+                </p>
+                <div class="grid grid-cols-12 gap-4">
+                  <div class="col-span-12 md:col-span-4">
+                    <Select
+                      v-model="representanteTipo"
+                      label="Representante"
+                      placeholder="Selecione"
+                      :options="opcoesRepresentanteVenda"
+                      labelKey="label"
+                      valueKey="value"
+                    />
+                  </div>
+                  <template v-if="representanteTipo === 'outro'">
+                    <div class="col-span-12 md:col-span-6">
+                      <Input
+                        v-model="representanteVendaNome"
+                        label="Nome completo *"
+                        force-upper
+                        required
+                      />
+                    </div>
+                    <div class="col-span-12 md:col-span-4">
+                      <Input
+                        v-model="representanteVendaCpfMask"
+                        label="CPF *"
+                        :forceUpper="false"
+                        required
+                      />
+                    </div>
+                    <div class="col-span-12 md:col-span-4">
+                      <Input
+                        v-model="representanteVendaRgMask"
+                        label="RG *"
+                        :forceUpper="false"
+                        required
+                      />
+                    </div>
+                  </template>
+                </div>
               </div>
             </div>
 
@@ -244,6 +299,7 @@
 
             <p class="text-[11px] text-text-soft">
               Essas formas de pagamento serão usadas para registrar como a venda será recebida.
+              Para cartão de crédito: informe a <strong>data da 1ª parcela</strong> (data que passou o cartão); as demais serão geradas a cada 30 dias.
             </p>
           </section>
 
@@ -454,10 +510,10 @@
               variant="primary"
               :disabled="saving || !orcamento || valorFinal <= 0"
               :loading="saving"
-              @click="criarVenda"
+              @click="salvarVenda"
             >
               <i class="pi pi-check mr-2" />
-              Criar venda
+              {{ isEditMode ? 'Salvar alterações' : 'Criar venda' }}
             </Button>
           </section>
         </div>
@@ -475,11 +531,19 @@ import { can } from '@/services/permissions'
 import { format } from '@/utils/format'
 import { FORMAS_PAGAMENTO, COMISSOES } from '@/constantes'
 import { moedaParaNumero } from '@/utils/number'
+import { maskCPF, maskRG, onlyNumbers } from '@/utils/masks'
+import { closeTabAndGo } from '@/utils/tabs'
 
 definePage({ meta: { perm: 'vendas.criar' } })
 
 const route = useRoute()
 const router = useRouter()
+
+const vendaId = computed(() => {
+  const p = route.query?.vendaId || route.params?.vendaId
+  return p ? String(p).replace(/\D/g, '') || null : null
+})
+const isEditMode = computed(() => !!vendaId.value)
 
 const loading = ref(false)
 const saving = ref(false)
@@ -488,8 +552,18 @@ const orcamento = ref(null)
 const itens = ref([])
 
 const valorFinal = ref(0)
-const formaPagamentoTexto = ref('')
 const dataVenda = ref(new Date().toISOString().slice(0, 10))
+
+// Representante da venda (contrato) – no topo para estar sempre definido no template
+const representanteTipo = ref('empresa')
+const opcoesRepresentanteVenda = [
+  { label: 'Cadastro da empresa', value: 'empresa' },
+  { label: 'Outro representante', value: 'outro' },
+]
+
+const representanteVendaNome = ref('')
+const representanteVendaCpf = ref('')
+const representanteVendaRg = ref('')
 
 const FORMAS_PAGAMENTO_OPTIONS = (FORMAS_PAGAMENTO || []).map((x) => ({
   label: x.label,
@@ -502,6 +576,15 @@ const COMISSOES_OPTIONS = Object.entries(COMISSOES || {}).map(([key, v]) => ({
   label: v.label,
   value: key,
 }))
+
+const representanteVendaCpfMask = computed({
+  get: () => maskCPF(representanteVendaCpf.value),
+  set: (v) => (representanteVendaCpf.value = onlyNumbers(v).slice(0, 11)),
+})
+const representanteVendaRgMask = computed({
+  get: () => maskRG(representanteVendaRg.value),
+  set: (v) => (representanteVendaRg.value = onlyNumbers(v).slice(0, 12)),
+})
 
 const pagamentos = ref([
   {
@@ -557,6 +640,7 @@ const colArquivos = [
 const columnsItens = [
   { key: 'nome_ambiente', label: 'Item/Ambiente' },
   { key: 'descricao', label: 'Descrição' },
+  { key: 'observacao', label: 'Observações' },
   { key: 'valor_orcado', label: 'Valor orçado', align: 'right', width: '140px' },
   { key: 'valor_rateado', label: 'Valor após desconto', align: 'right', width: '160px' },
   { key: 'acoes', label: '', width: '150px', align: 'right' },
@@ -603,6 +687,12 @@ function removerPagamento(idx) {
 }
 
 function ensureDatasParcelas(p) {
+  // Cartão de crédito: 1 linha (data 1ª parcela e valor da parcela); as demais são geradas no backend
+  if (String(p.forma_pagamento_chave || '').toUpperCase() === 'CREDITO') {
+    if (!Array.isArray(p.datas_parcelas)) p.datas_parcelas = []
+    if (p.datas_parcelas.length === 0) p.datas_parcelas.push({ data: '', valor: 0 })
+    return
+  }
   if (!FORMAS_COM_DATA_POR_PARCELA.includes(p.forma_pagamento_chave)) return
   const n = Math.max(1, Math.min(24, Number(p.parcelas || 1)))
   if (!Array.isArray(p.datas_parcelas)) p.datas_parcelas = []
@@ -771,6 +861,7 @@ function adicionarItemVenda() {
   itens.value.push({
     nome_ambiente: '',
     descricao: '',
+    observacao: '',
     valor_unitario: 0,
     valor_final: 0,
   })
@@ -802,6 +893,7 @@ async function carregarOrcamento() {
     itens.value = (data?.itens || []).map((it) => ({
       nome_ambiente: it.nome_ambiente,
       descricao: it.descricao,
+      observacao: it.observacao ?? '',
       valor_unitario: Number(it.valor_unitario || 0), // orçado (referência)
       valor_final: Number(it.valor_unitario || 0), // valor de venda inicial (pode ser alterado)
     }))
@@ -818,11 +910,110 @@ async function carregarOrcamento() {
   }
 }
 
-async function criarVenda() {
-  if (!can('vendas.criar')) {
-    notify.error('Acesso negado.')
+/** Carrega venda existente para edição (mesma tela do fechamento). */
+async function carregarVenda() {
+  const id = vendaId.value
+  if (!id) {
+    notify.error('Venda não informada.')
     return
   }
+
+  loading.value = true
+  try {
+    const { data: venda } = await VendaService.buscar(id)
+    const orcId = Number(venda?.orcamento_id || 0)
+    if (!orcId) {
+      notify.error('Venda sem orçamento vinculado.')
+      return
+    }
+
+    const { data: orc } = await OrcamentosService.detalhar(orcId)
+    orcamento.value = orc
+
+    const orcItens = orc?.itens || []
+    const vendaItens = venda?.itens || []
+    itens.value = orcItens.length
+      ? orcItens.map((it, i) => ({
+          nome_ambiente: it.nome_ambiente,
+          descricao: it.descricao,
+          observacao: it.observacao ?? '',
+          valor_unitario: Number(it.valor_unitario || 0),
+          valor_final: Number(vendaItens[i]?.valor_unitario ?? it.valor_unitario ?? 0),
+        }))
+      : vendaItens.map((it) => ({
+          nome_ambiente: it.nome_ambiente,
+          descricao: it.descricao,
+          observacao: it.observacao ?? '',
+          valor_unitario: Number(it.valor_unitario || 0),
+          valor_final: Number(it.valor_unitario || 0),
+        }))
+
+    valorFinal.value = Number(venda?.valor_vendido ?? 0)
+    dataVenda.value = venda?.data_venda ? String(venda.data_venda).slice(0, 10) : new Date().toISOString().slice(0, 10)
+
+    if (venda?.representante_venda_nome) {
+      representanteTipo.value = 'outro'
+      representanteVendaNome.value = venda.representante_venda_nome || ''
+      representanteVendaCpf.value = (venda.representante_venda_cpf || '').replace(/\D/g, '')
+      representanteVendaRg.value = (venda.representante_venda_rg || '').replace(/\D/g, '')
+    } else {
+      representanteTipo.value = 'empresa'
+      representanteVendaNome.value = ''
+      representanteVendaCpf.value = ''
+      representanteVendaRg.value = ''
+    }
+
+    const pagos = venda?.pagamentos || []
+    pagamentos.value =
+      pagos.length > 0
+        ? pagos.map((p) => ({
+            forma_pagamento_chave: p.forma_pagamento_chave || '',
+            valor: Number(p.valor || 0),
+            parcelas: 1,
+            data_recebimento: p.data_recebimento ? String(p.data_recebimento).slice(0, 10) : '',
+            datas_parcelas: [
+              {
+                data: p.data_recebimento ? String(p.data_recebimento).slice(0, 10) : '',
+                valor: Number(p.valor || 0),
+              },
+            ],
+          }))
+        : [{ forma_pagamento_chave: '', valor: 0, parcelas: 1, data_recebimento: '', datas_parcelas: [{ data: '', valor: 0 }] }]
+
+    const comis = venda?.comissoes || []
+    comissoes.value =
+      comis.length > 0
+        ? comis.map((c) => ({
+            tipo_comissao_chave: c.tipo_comissao_chave || 'VENDEDOR',
+            responsavel_nome: c.responsavel_nome || '',
+          }))
+        : [{ tipo_comissao_chave: 'VENDEDOR', responsavel_nome: '' }]
+
+    await carregarArquivos()
+  } catch (e) {
+    console.error(e)
+    notify.error('Erro ao carregar venda.')
+  } finally {
+    loading.value = false
+  }
+}
+
+function salvarVenda() {
+  if (isEditMode.value) {
+    if (!can('vendas.editar')) {
+      notify.error('Acesso negado.')
+      return
+    }
+  } else {
+    if (!can('vendas.criar')) {
+      notify.error('Acesso negado.')
+      return
+    }
+  }
+  criarOuAtualizarVenda()
+}
+
+async function criarOuAtualizarVenda() {
   if (!orcamento.value) {
     notify.error('Orçamento não carregado.')
     return
@@ -832,38 +1023,97 @@ async function criarVenda() {
     return
   }
 
+  if (representanteTipo.value === 'outro') {
+    const nome = String(representanteVendaNome.value ?? '').trim()
+    const cpfLen = onlyNumbers(representanteVendaCpf.value ?? '').length
+    const rg = String(representanteVendaRg.value ?? '').trim()
+    if (!nome) {
+      notify.error('Preencha o nome completo do representante da venda.')
+      return
+    }
+    if (cpfLen !== 11) {
+      notify.error('Preencha o CPF do representante da venda (11 dígitos).')
+      return
+    }
+    if (!rg) {
+      notify.error('Preencha o RG do representante da venda.')
+      return
+    }
+  }
+
   saving.value = true
   try {
     const pagamentosPayload = (function () {
       const list = []
+      const valorVendaNum = Number(valorFinal.value || 0)
+      const dataVendaStr = (dataVenda.value || '').trim() || null
+      // Evita fuso: YYYY-MM-DD como meia-noite UTC vira dia anterior no Brasil; parse como data local
+      const parseDataLocal = (str) => {
+        if (!str || typeof str !== 'string') return null
+        const parts = String(str).trim().split('-').map(Number)
+        if (parts.length !== 3) return null
+        const [y, m, d] = parts
+        if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null
+        const date = new Date(y, m - 1, d)
+        return Number.isNaN(date.getTime()) ? null : date
+      }
       for (const p of pagamentos.value || []) {
-        const forma = String(p.forma_pagamento_chave || '')
+        const forma = String(p.forma_pagamento_chave || '').trim()
         const formaUpper = forma.toUpperCase()
         const nParcelas = Math.max(1, Math.min(24, Number(p.parcelas || 1)))
         const parcelas = Array.isArray(p.datas_parcelas) ? p.datas_parcelas : []
 
-        // Cartão de crédito: 1 data/valor na tela, N parcelas geradas a cada 30 dias
+        // Cartão de crédito: data que passou o cartão = 1ª parcela; demais a cada 30 dias (recorrente)
         if (formaUpper === 'CREDITO' && parcelas.length && parcelas[0]?.data) {
           const base = parcelas[0]
-          const valorParcela = Number(base.valor || 0)
-          const dataBase = new Date(base.data)
+          let valorParcela = Number(base.valor || 0)
+          const dataBase = parseDataLocal(base.data) || new Date(base.data)
 
-          if (!Number.isNaN(dataBase.getTime())) {
+          if (dataBase && !Number.isNaN(dataBase.getTime())) {
+            if (valorParcela <= 0 && valorVendaNum > 0) valorParcela = Math.round((valorVendaNum / nParcelas) * 100) / 100
+            // Evita última parcela negativa: limita valor por parcela ao que sobra dividido pelas parcelas
+            const maxValorParcela = nParcelas > 1 ? valorVendaNum / (nParcelas - 1) : valorVendaNum
+            if (valorParcela > maxValorParcela) valorParcela = Math.round((valorVendaNum / nParcelas) * 100) / 100
             for (let i = 0; i < nParcelas; i++) {
               const d = new Date(dataBase)
               d.setDate(d.getDate() + 30 * i)
               const y = d.getFullYear()
               const m = String(d.getMonth() + 1).padStart(2, '0')
               const day = String(d.getDate()).padStart(2, '0')
-
+              const valorEstaParcela =
+                i === nParcelas - 1
+                  ? Math.round((valorVendaNum - valorParcela * (nParcelas - 1)) * 100) / 100
+                  : valorParcela
               list.push({
                 forma_pagamento_chave: forma,
-                valor: valorParcela,
+                valor: valorEstaParcela,
                 data_recebimento: `${y}-${m}-${day}`,
               })
             }
             continue
           }
+        }
+
+        // Cartão de crédito sem data preenchida: gera N parcelas pelo valor total e data da venda (evita cair no fallback PIX)
+        if (formaUpper === 'CREDITO' && nParcelas >= 1 && valorVendaNum > 0) {
+          const valorParcela = Math.round((valorVendaNum / nParcelas) * 100) / 100
+          let dataBase = (dataVendaStr && parseDataLocal(dataVendaStr)) || new Date(dataVendaStr || undefined)
+          if (!dataBase || Number.isNaN(dataBase.getTime())) dataBase = new Date()
+          for (let i = 0; i < nParcelas; i++) {
+            const d = new Date(dataBase)
+            d.setDate(d.getDate() + 30 * i)
+            const y = d.getFullYear()
+            const m = String(d.getMonth() + 1).padStart(2, '0')
+            const day = String(d.getDate()).padStart(2, '0')
+            let valorEstaParcela = i === nParcelas - 1 ? valorVendaNum - valorParcela * (nParcelas - 1) : valorParcela
+            valorEstaParcela = Math.round(valorEstaParcela * 100) / 100
+            list.push({
+              forma_pagamento_chave: forma,
+              valor: valorEstaParcela,
+              data_recebimento: `${y}-${m}-${day}`,
+            })
+          }
+          continue
         }
 
         // Demais formas: cada linha (data/valor) vira um pagamento
@@ -883,6 +1133,12 @@ async function criarVenda() {
           })
         }
       }
+      const soma = list.reduce((acc, x) => acc + Number(x.valor || 0), 0)
+      const valorVenda = Number(valorFinal.value || 0)
+      // Se nenhum pagamento preenchido ou soma não bate com valor da venda, usa um único pagamento PIX com o total
+      if (list.length === 0 || Math.abs(soma - valorVenda) > 0.01) {
+        return [{ forma_pagamento_chave: 'PIX', valor: valorVenda }]
+      }
       return list
     })()
 
@@ -895,6 +1151,7 @@ async function criarVenda() {
     const itensPayload = (itens.value || []).map((it) => ({
       nome_ambiente: it.nome_ambiente,
       descricao: it.descricao,
+      observacao: it.observacao ?? '',
       quantidade: 1,
       valor_unitario: Number(it.valor_final ?? it.valor_unitario ?? 0),
     }))
@@ -904,40 +1161,56 @@ async function criarVenda() {
       status: 'VENDA_FECHADA',
       data_venda: dataVenda.value,
       valor_vendido: Number(valorFinal.value),
+      representante_venda_nome:
+        representanteTipo.value === 'outro' ? (representanteVendaNome.value?.trim() || undefined) : undefined,
+      representante_venda_cpf:
+        representanteTipo.value === 'outro' ? (representanteVendaCpf.value?.trim() || undefined) : undefined,
+      representante_venda_rg:
+        representanteTipo.value === 'outro' ? (representanteVendaRg.value?.trim() || undefined) : undefined,
       itens: itensPayload,
-      pagamentos: pagamentosPayload.length ? pagamentosPayload : [
-        {
-          forma_pagamento_chave: 'PIX',
-          valor: Number(valorFinal.value),
-        },
-      ],
+      pagamentos: pagamentosPayload,
       comissoes: comissoesPayload,
-      // formaPagamentoTexto pode ser usada depois no pós-venda/contrato se você quiser
     }
 
-    const { data } = await VendaService.salvar(null, payload)
-    notify.success('Venda criada. Você será redirecionada para o contrato.')
-    const id = data?.id
-    if (id) {
-      router.push({ path: '/contratos/novo', query: { vendaId: String(id) } })
+    const id = isEditMode.value ? vendaId.value : null
+    const { data } = await VendaService.salvar(id, payload)
+    const savedId = data?.id || id
+    if (isEditMode.value) {
+      notify.success('Venda atualizada.')
+      closeTabAndGo(`/vendas/venda/${savedId}`)
     } else {
-      router.push('/vendas')
+      notify.success('Venda criada. Você será redirecionada para o contrato.')
+      if (savedId) {
+        closeTabAndGo(`/contratos/novo?vendaId=${String(savedId)}`)
+      } else {
+        closeTabAndGo('/vendas')
+      }
     }
   } catch (e) {
     console.error(e)
-    notify.error(e?.response?.data?.message || 'Erro ao criar venda.')
+    notify.error(e?.response?.data?.message || (isEditMode.value ? 'Erro ao atualizar venda.' : 'Erro ao criar venda.'))
   } finally {
     saving.value = false
   }
 }
 
 onMounted(async () => {
-  if (!can('vendas.criar')) {
-    notify.error('Acesso negado.')
-    router.push('/vendas')
-    return
+  const id = vendaId.value
+  if (id) {
+    if (!can('vendas.editar')) {
+      notify.error('Acesso negado.')
+      router.push('/vendas')
+      return
+    }
+    await carregarVenda()
+  } else {
+    if (!can('vendas.criar')) {
+      notify.error('Acesso negado.')
+      router.push('/vendas')
+      return
+    }
+    await carregarOrcamento()
   }
-  await carregarOrcamento()
 })
 </script>
 

@@ -9,18 +9,15 @@ import {
 import { Type } from 'class-transformer';
 
 export class CreateContratoDto {
-  @IsOptional()
+  /** Obrigatório: contrato só pode ser criado a partir de uma venda. */
   @Type(() => Number)
   @IsInt()
-  cliente_id?: number;
+  venda_id: number;
 
+  /** Opcional: se não informado, o número é gerado automaticamente (CONT-YYYY-NNN). */
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  venda_id?: number;
-
   @IsString()
-  numero: string;
+  numero?: string;
 
   @IsOptional()
   @IsString()

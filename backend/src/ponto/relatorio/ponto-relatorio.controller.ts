@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Param,
   Post,
   Query,
   Res,
@@ -22,6 +23,24 @@ import { PontoRelatorioService } from './ponto-relatorio.service';
 @Permissoes('ponto_relatorio.ver')
 export class PontoRelatorioController {
   constructor(private readonly service: PontoRelatorioService) {}
+
+  /** Comprovante de um único registro de ponto (PDF com cadastro da empresa) */
+  @Get('comprovante/:id')
+  async comprovante(@Param('id') id: string, @Res() res: Response) {
+    const registroId = Number(String(id).replace(/\D/g, ''));
+    if (!registroId) {
+      res.status(400).json({ message: 'ID do registro inválido' });
+      return;
+    }
+    const buffer = await this.service.gerarComprovantePdfBuffer(registroId);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="comprovante-ponto-${registroId}.pdf"`,
+    );
+    res.send(buffer);
+    return;
+  }
 
   @Get('funcionarios')
   listarFuncionariosAtivos() {

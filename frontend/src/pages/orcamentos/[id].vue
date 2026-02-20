@@ -332,6 +332,7 @@ import { format } from '@/utils/format'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
+import { closeTabAndGo } from '@/utils/tabs'
 import { ArquivosService } from '@/services/arquivos.service'
 
 
@@ -486,7 +487,7 @@ async function confirmarExcluirOrcamento() {
   const ok = await confirm.show('Excluir Orçamento', `Deseja excluir permanentemente o Orçamento #${orcamentoId.value}?`)
   if (!ok) return
   await OrcamentosService.remover(orcamentoId.value)
-  router.push('/orcamentos')
+  closeTabAndGo('/orcamentos')
 }
 
 async function salvarTudo() {
@@ -525,7 +526,8 @@ async function salvarTudo() {
       }
     }
 
-    await router.push('/orcamentos')
+    notify.success(isNovo.value ? 'Orçamento criado.' : 'Orçamento salvo.')
+    closeTabAndGo('/orcamentos')
   } finally {
     saving.value = false
   }

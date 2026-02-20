@@ -261,6 +261,7 @@ import * as CONST from '@/constantes/index'
 import { upper } from '@/utils/text'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
+import { closeTabAndGo } from '@/utils/tabs'
 import FormActions from '@/components/ui/FormActions.vue'
 
 definePage({ meta: { perm: 'despesas.ver' } })
@@ -435,7 +436,7 @@ async function salvar() {
     }
     await DespesaService.salvar(despesaId.value, payload)
     notify.success(isEdit.value ? 'Atualizado com sucesso.' : 'Lançamento criado.')
-    router.push('/despesas')
+    closeTabAndGo('/despesas')
   } catch (e) {
     const apiMsg = e?.response?.data?.message
     const msg = Array.isArray(apiMsg)
@@ -457,7 +458,7 @@ async function excluir() {
   try {
     await DespesaService.remover(Number(despesaId.value))
     notify.success('Registro excluído.')
-    router.push('/despesas')
+    closeTabAndGo('/despesas')
   } catch (e) {
     const apiMsg = e?.response?.data?.message
     const msg = Array.isArray(apiMsg) ? apiMsg.join(' | ') : (apiMsg || e?.message || 'Erro ao excluir')

@@ -1,14 +1,17 @@
 // src/services/navigation.js
 export const NAV_SCHEMA = {
   comercial: [
+    { label: 'Visão geral', to: '/comercial', icon: 'pi-briefcase', perm: 'orcamentos.ver' },
     { label: 'Orçamento', to: '/orcamentos', icon: 'pi-file-edit', perm: 'orcamentos.ver' },
     { label: 'Venda', to: '/vendas/fechamento', icon: 'pi-shopping-cart', perm: 'vendas.criar' },
-    { label: 'Pós-venda', to: '/vendas', icon: 'pi-cart-plus', perm: 'vendas.ver' },
     { label: 'Contrato', to: '/contratos', icon: 'pi-file', perm: 'contratos.ver' },
-    { label: 'Cláusulas (Orç./Contrato)', to: '/contratos/clausulas', icon: 'pi-file-edit', perm: 'orcamentos.editar' },
+    { label: 'Cláusulas', to: '/contratos/clausulas', icon: 'pi-file-edit', perm: 'orcamentos.editar' },
   ],
 
   producao: [
+    { label: 'Visão geral', to: '/producao', icon: 'pi-cogs', perm: 'vendas.ver' },
+    { label: 'Pós-venda', to: '/vendas', icon: 'pi-cart-plus', perm: 'vendas.ver' },
+    { divider: true },
     { label: 'Plano de corte', to: '/plano-corte', icon: 'pi-sitemap', perm: 'plano_corte.ver' },
     { label: 'Produtos plano de corte', to: '/plano-corte/itens', icon: 'pi-box', perm: 'plano_corte.ver' },
     { label: 'Venda plano de corte', to: '/plano-corte/venda', icon: 'pi-dollar', perm: 'plano_corte.criar' },
@@ -31,7 +34,7 @@ export const NAV_SCHEMA = {
 
   configuracoes: [
     { label: 'Usuarios', to: '/configuracoes/usuarios', icon: 'pi-user', perm: 'usuarios.ver' },
-    { label: 'Permissoes', to: '/configuracoes/permissoes', icon: 'pi-lock', perm: 'permissoes.gerenciar' },
+    { label: 'Permissoes', to: '/configuracoes/permissoes', icon: 'pi-lock', perm: 'permissoes.ver' },
     { divider: true },
     { label: 'Ponto (Registros)', to: '/rh/ponto/relatorio', icon: 'pi-stopwatch', perm: 'ponto_relatorio.ver' },
     { label: 'Convites de Ponto', to: '/rh/ponto/convites', icon: 'pi-link', perm: 'ponto_convite.criar' },

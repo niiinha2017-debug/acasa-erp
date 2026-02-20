@@ -56,9 +56,16 @@ api.interceptors.response.use(
 
     // DEBUG erro (mostra mensagem completa do backend)
     const errData = error?.response?.data
-    console.log('[API] ERROR status =', status)
-    console.log('[API] ERROR url =', (original?.baseURL || '') + (original?.url || ''))
-    console.log('[API] ERROR data =', typeof errData === 'object' ? JSON.stringify(errData, null, 2) : errData)
+    const requestUrl = (original?.baseURL || '') + (original?.url || '')
+    const isMe = (original?.url || '').includes('/auth/me')
+    if (status === 401 && isMe) {
+      // 401 em /auth/me é esperado quando a sessão expirou ou token inválido; evita poluir console
+      console.log('[API] Sessão expirada ou token inválido (/auth/me). Redirecionando para login.')
+    } else {
+      console.log('[API] ERROR status =', status)
+      console.log('[API] ERROR url =', requestUrl)
+      console.log('[API] ERROR data =', typeof errData === 'object' ? JSON.stringify(errData, null, 2) : errData)
+    }
 
     // ✅ se não tem token, não tenta refresh
     const hasToken = !!storage.getToken()

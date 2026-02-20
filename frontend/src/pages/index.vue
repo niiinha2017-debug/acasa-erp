@@ -10,6 +10,8 @@ import { useRouter } from 'vue-router'
 import { can } from '@/services/permissions'
 import { NAV_SCHEMA } from '@/services/navigation'
 
+definePage({ meta: { perm: 'index.visualizar' } })
+
 const router = useRouter()
 const AGENDA_HOME = '/agendamentos?visao=geral'
 

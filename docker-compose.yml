@@ -1,0 +1,27 @@
+# MySQL para o backend (acasa-erp)
+# Uso: na pasta acasa-erp:  docker-compose up -d
+# Parar: docker-compose down
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: acasa-erp-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: acasa_erp
+      MYSQL_USER: acasa_user
+      MYSQL_PASSWORD: gmgt33APCS!
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mysql_data:

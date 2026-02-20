@@ -34,6 +34,8 @@ async function bootstrap() {
       'tauri://localhost', // ✅ Importante para Tauri v1 (Windows)
       'http://tauri.localhost', // ✅ Importante para Tauri v2
       'https://acasamarcenaria.com.br',
+      'https://contrato.acasamarcenaria.com.br',
+      'http://localhost:5174',
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],

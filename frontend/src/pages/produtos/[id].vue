@@ -281,6 +281,7 @@ import SearchInput from '@/components/ui/SearchInput.vue'
 
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
+import { closeTabAndGo } from '@/utils/tabs'
 
 definePage({ meta: { perm: 'produtos.ver' } })
 
@@ -591,7 +592,7 @@ async function salvar() {
     }
 
     await ProdutosService.salvar(isEdit.value ? produtoId.value : null, payload)
-    router.push('/produtos')
+    closeTabAndGo('/produtos')
   } catch (err) {
     console.error(err)
     alert(err?.response?.data?.message || 'Erro ao salvar.')

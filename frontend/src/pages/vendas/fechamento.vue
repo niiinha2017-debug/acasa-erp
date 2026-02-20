@@ -5,7 +5,7 @@
 
       <PageHeader
         title="Venda"
-        subtitle="Selecione um orçamento e faça o fechamento da venda"
+        subtitle="Selecione um cliente e faça o fechamento da venda a partir dos orçamentos"
         icon="pi pi-shopping-cart"
       >
         <template #actions>
@@ -13,98 +13,100 @@
             <div class="w-full sm:w-80 order-1 sm:order-0">
               <SearchInput
                 v-model="filtro"
-                placeholder="Buscar por cliente, ID do orçamento..."
+                placeholder="Buscar por nome do cliente..."
               />
             </div>
+            <Button
+              v-if="can('vendas.criar') && primeiroOrcamentoSemVenda"
+              variant="primary"
+              type="button"
+              @click="irParaFechamento(primeiroOrcamentoSemVenda.id)"
+            >
+              <i class="pi pi-dollar text-sm mr-1" />
+              Fechar venda
+            </Button>
           </div>
         </template>
       </PageHeader>
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-6">
+      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-8">
         <div v-if="loading" class="text-center py-10">
-          <i class="pi pi-spin pi-spinner text-2xl text-text-soft"></i>
+          <i class="pi pi-spin pi-spinner text-2xl text-text-soft" />
         </div>
 
         <template v-else>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <MetricCard
               label="Orçamentos para venda"
-              :value="orcamentosFiltrados.length"
+              :value="orcamentos.length"
               icon="pi pi-file"
               color="slate"
             />
             <MetricCard
               label="Valor total listado"
-              :value="format.currency(totalLista)"
+              :value="format.currency(valorTotalGeral)"
               icon="pi pi-dollar"
               color="emerald"
             />
             <MetricCard
               label="Clientes"
-              :value="totalClientes"
+              :value="grupos.length"
               icon="pi pi-users"
               color="blue"
             />
           </div>
 
-          <div class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden">
-            <Table
-              :columns="columns"
-              :rows="orcamentosFiltrados"
-              :loading="loading"
-              empty-text="Nenhum orçamento encontrado."
-              :boxed="false"
+          <div class="space-y-3">
+            <h2 class="text-xs font-black uppercase tracking-widest text-text-soft">
+              Clientes com orçamentos (para venda)
+            </h2>
+            <div
+              v-if="gruposFiltrados.length > 0"
+              class="rounded-xl border border-border-ui bg-bg-page/50 px-4 py-2 flex justify-between items-center"
             >
-              <template #cell-cliente="{ row }">
-                <div class="flex flex-col py-1">
-                  <span class="text-sm font-bold text-text-main uppercase tracking-tight leading-tight">
-                    {{ row.cliente?.nome_completo || row.cliente?.razao_social || row.cliente_nome_snapshot || 'Cliente' }}
-                  </span>
-                  <span class="text-[10px] font-bold text-text-soft tracking-wider uppercase">
-                    Orçamento #{{ row.id }}
-                  </span>
+              <span class="text-[10px] font-bold text-text-soft uppercase tracking-wider">Valor total da lista</span>
+              <span class="text-lg font-black text-text-main">{{ format.currency(valorTotalLista) }}</span>
+            </div>
+            <div
+              v-if="gruposFiltrados.length === 0"
+              class="rounded-xl border border-border-ui bg-bg-page py-12 text-center"
+            >
+              <p class="text-text-soft text-sm">
+                {{ filtro ? 'Nenhum cliente encontrado para a busca.' : 'Nenhum cliente com orçamento para venda.' }}
+              </p>
+            </div>
+            <div v-else class="space-y-2">
+              <div
+                v-for="grupo in gruposFiltrados"
+                :key="grupo.clienteId"
+                class="rounded-xl border border-border-ui bg-bg-page px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+              >
+                <div class="flex items-center gap-3 min-w-0">
+                  <div
+                    class="w-10 h-10 rounded-lg bg-bg-card border border-border-ui flex items-center justify-center text-text-main font-black text-sm flex-shrink-0"
+                  >
+                    {{ grupo.orcamentos.length }}
+                  </div>
+                  <div class="min-w-0">
+                    <p class="text-sm font-black text-text-main uppercase tracking-tight truncate">
+                      {{ grupo.clienteNome }}
+                    </p>
+                    <p class="text-[10px] font-bold text-text-soft uppercase tracking-wider">
+                      {{ grupo.orcamentos.length }} orçamento(s) · {{ format.currency(grupo.total) }}
+                    </p>
+                  </div>
                 </div>
-              </template>
-
-              <template #cell-valor="{ row }">
-                <span class="text-sm font-black text-text-main tabular-nums">
-                  {{ format.currency(row.total_itens ?? row.valor_total ?? 0) }}
-                </span>
-              </template>
-
-              <template #cell-acoes="{ row }">
-                <div class="flex items-center justify-end gap-2">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    type="button"
-                    @click="router.push(`/orcamentos/${row.id}`)"
-                  >
-                    Detalhar
-                  </Button>
-                  <Button
-                    v-if="!row.venda"
-                    size="sm"
-                    variant="primary"
-                    type="button"
-                    :disabled="!can('vendas.criar')"
-                    @click="irParaFechamento(row.id)"
-                  >
-                    Fechar venda
-                  </Button>
-                  <Button
-                    v-else
-                    size="sm"
-                    variant="danger"
-                    type="button"
-                    :disabled="!can('vendas.editar') && !can('vendas.excluir')"
-                    @click="cancelarVenda(row)"
-                  >
-                    Cancelar venda
-                  </Button>
-                </div>
-              </template>
-            </Table>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  class="flex-shrink-0 rounded-xl font-black uppercase tracking-wider text-[10px]"
+                  @click="router.push(`/vendas/cliente/${grupo.clienteId}`)"
+                >
+                  <i class="pi pi-list mr-1" />
+                  Abrir lista
+                </Button>
+              </div>
+            </div>
           </div>
         </template>
       </div>
@@ -115,7 +117,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { OrcamentosService, VendaService } from '@/services'
+import { OrcamentosService } from '@/services'
 import { notify } from '@/services/notify'
 import { can } from '@/services/permissions'
 import { format } from '@/utils/format'
@@ -127,41 +129,48 @@ const loading = ref(false)
 const orcamentos = ref([])
 const filtro = ref('')
 
-const columns = [
-  { key: 'id', label: 'ID', width: '80px' },
-  { key: 'cliente', label: 'CLIENTE', width: '40%' },
-  { key: 'valor', label: 'VALOR ORÇADO', width: '20%', align: 'right' },
-  { key: 'acoes', label: '', width: '160px', align: 'right' },
-]
-
-const orcamentosFiltrados = computed(() => {
-  const f = String(filtro.value || '').toLowerCase().trim()
-  if (!f) return orcamentos.value
-
-  return (orcamentos.value || []).filter((o) => {
-    const cli = o.cliente || {}
-    const nome = String(
-      cli.nome_completo || cli.razao_social || o.cliente_nome_snapshot || '',
-    ).toLowerCase()
-    const id = String(o.id || '')
-    return nome.includes(f) || id.includes(f)
+const grupos = computed(() => {
+  const map = {}
+  ;(orcamentos.value || []).forEach((orc) => {
+    const cliId = orc.cliente_id ?? 'avulso'
+    if (!map[cliId]) {
+      map[cliId] = {
+        clienteId: cliId,
+        clienteNome:
+          orc.cliente?.nome_completo || orc.cliente?.razao_social || orc.cliente_nome_snapshot || 'Cliente não identificado',
+        orcamentos: [],
+        total: 0,
+      }
+    }
+    map[cliId].orcamentos.push(orc)
+    map[cliId].total += Number(orc.total_itens ?? orc.valor_total ?? 0)
   })
+  return Object.values(map).sort((a, b) => (b.orcamentos[0]?.id || 0) - (a.orcamentos[0]?.id || 0))
 })
 
-const totalLista = computed(() =>
-  (orcamentosFiltrados.value || []).reduce(
-    (acc, o) => acc + Number(o.total_itens ?? o.valor_total ?? 0),
-    0,
-  ),
+const gruposFiltrados = computed(() => {
+  const termo = String(filtro.value || '').trim().toLowerCase()
+  if (!termo) return grupos.value
+  return grupos.value.filter((g) => (g.clienteNome || '').toLowerCase().includes(termo))
+})
+
+const valorTotalGeral = computed(() =>
+  orcamentos.value.reduce((acc, r) => acc + Number(r.total_itens ?? r.valor_total ?? 0), 0)
 )
 
-const totalClientes = computed(() => {
-  const set = new Set()
-  for (const o of orcamentosFiltrados.value || []) {
-    if (o.cliente_id) set.add(o.cliente_id)
-  }
-  return set.size
+const valorTotalLista = computed(() =>
+  gruposFiltrados.value.reduce((acc, g) => acc + Number(g.total || 0), 0)
+)
+
+const primeiroOrcamentoSemVenda = computed(() => {
+  const lista = orcamentos.value || []
+  return lista.find((o) => !o.venda) ?? null
 })
+
+function irParaFechamento(id) {
+  if (!id) return
+  router.push({ path: '/vendas/nova-venda', query: { orcamentoId: String(id) } })
+}
 
 async function carregar() {
   if (!can('vendas.criar')) {
@@ -180,34 +189,5 @@ async function carregar() {
   }
 }
 
-function irParaFechamento(id) {
-  if (!id) return
-  router.push({ path: '/vendas/nova-venda', query: { orcamentoId: String(id) } })
-}
-
-async function cancelarVenda(row) {
-  if (!row?.venda?.id) return
-  if (!can('vendas.editar') && !can('vendas.excluir')) {
-    return notify.error('Acesso negado.')
-  }
-
-  const vendaId = row.venda.id
-  const ok = window.confirm(
-    `Você tem certeza que deseja cancelar/excluir a Venda #${vendaId} deste orçamento?`,
-  )
-  if (!ok) return
-
-  try {
-    // Exclui a venda para liberar o orçamento novamente
-    await VendaService.remover(vendaId)
-    notify.success('Venda cancelada/excluída.')
-    await carregar()
-  } catch (e) {
-    const msg = e?.response?.data?.message || e?.message || 'Erro ao cancelar venda.'
-    notify.error(msg)
-  }
-}
-
 onMounted(carregar)
 </script>
-

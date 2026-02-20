@@ -31,6 +31,10 @@ export class CreateVendaItemDto {
   @IsNumber()
   @Min(0)
   valor_unitario: number;
+
+  @IsOptional()
+  @IsString()
+  observacao?: string;
 }
 
 /**
@@ -77,6 +81,19 @@ export class CreateVendaDto {
   @IsOptional()
   @IsDateString()
   data_entrega?: string;
+
+  /** Representante da venda (contrato). Se preenchido, usado no PDF em vez do cadastro da empresa. */
+  @IsOptional()
+  @IsString()
+  representante_venda_nome?: string;
+
+  @IsOptional()
+  @IsString()
+  representante_venda_cpf?: string;
+
+  @IsOptional()
+  @IsString()
+  representante_venda_rg?: string;
 
   @IsOptional()
   @IsString()

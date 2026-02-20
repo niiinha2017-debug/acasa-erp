@@ -77,6 +77,18 @@ export class OrcamentosService {
         const colValW = 100;
         const colDescW = tableWidth - colAmbW - colValW;
 
+        const montarListaItensComDescricao = (orcamento: any): string => {
+          const itens = orcamento?.itens && Array.isArray(orcamento.itens) ? orcamento.itens : [];
+          if (!itens.length) return '';
+          return itens
+            .map((it: any, idx: number) => {
+              const nome = String(it.nome_ambiente || `Ambiente ${idx + 1}`).toUpperCase();
+              const desc = String(it.descricao || '').trim();
+              return `${idx + 1}. ${nome}${desc ? ` – ${desc}` : ''}`;
+            })
+            .join('\n');
+        };
+
         const aplicarLayoutPagina = (opts?: { mostrarTabela?: boolean }) => {
           const mostrarTabela = opts?.mostrarTabela !== false;
           const startY = renderHeaderA4Png(doc);
@@ -195,6 +207,21 @@ export class OrcamentosService {
         // Página 2
         doc.addPage();
         aplicarLayoutPagina();
+
+        // Lista de itens com descrição (texto) antes da tabela
+        const listaItensComDesc = montarListaItensComDescricao(orc);
+        if (listaItensComDesc) {
+          doc
+            .font('Helvetica')
+            .fontSize(8)
+            .fillColor('#444')
+            .text(listaItensComDesc, left, doc.y, {
+              width: tableWidth,
+              align: 'left',
+            });
+          const numLinhas = listaItensComDesc.split('\n').length;
+          doc.y += doc.currentLineHeight() * numLinhas + 10;
+        }
 
         // ITENS
         let total = 0;

@@ -1,9 +1,14 @@
 import storage from '@/utils/storage'
 
+/**
+ * Verifica se o usuário tem a permissão.
+ * is_admin libera tudo (qualquer permissão retorna true).
+ */
 export function can(permission) {
   const user = storage.getUser()
   if (!user) return false
 
+  // is_admin: acesso total, ignora lista de permissões
   if (user?.is_admin) return true
 
   const permissions = Array.isArray(user?.permissoes)

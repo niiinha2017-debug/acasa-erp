@@ -5,10 +5,10 @@
 
       <PageHeader
         :title="isEdit ? `Venda #${vendaId}` : 'Nova Venda'"
-        subtitle="Pós-venda: venda líquida, rateio, taxas e comissões."
+        :subtitle="isContextoVenda ? 'Editar venda (loja). Itens, parcelas e comissões.' : 'Pós-venda: venda líquida, rateio, taxas e comissões.'"
         icon="pi pi-shopping-cart"
       >
-        <template v-if="isEdit && can('agendamentos.criar')" #actions>
+        <template v-if="isEdit && can('agendamentos.criar') && !isContextoVenda" #actions>
           <Button variant="secondary" size="sm" type="button" @click="abrirModalEnviarProducao">
             <i class="pi pi-send mr-2"></i>
             Enviar para Produção
@@ -65,6 +65,53 @@
 
             <div class="col-span-12 md:col-span-2">
               <Input v-model="form.data_venda" type="date" label="Data da venda" :forceUpper="false" />
+            </div>
+
+            <div class="col-span-12 mt-2 pt-4 border-t border-border-ui">
+              <p class="text-[10px] font-black text-text-soft uppercase tracking-widest mb-3">
+                Representante da venda (contrato)
+              </p>
+              <p class="text-[10px] text-text-soft mb-3">
+                Opcional. Se preenchido, este representante aparece no contrato desta venda. Caso contrário, usa o cadastro da empresa.
+              </p>
+              <div class="grid grid-cols-12 gap-4">
+                <div class="col-span-12 md:col-span-4">
+                  <Select
+                    v-model="representanteTipo"
+                    label="Representante"
+                    placeholder="Selecione"
+                    :options="opcoesRepresentanteVenda"
+                    labelKey="label"
+                    valueKey="value"
+                  />
+                </div>
+                <template v-if="representanteTipo === 'outro'">
+                  <div class="col-span-12 md:col-span-6">
+                    <Input
+                      v-model="form.representante_venda_nome"
+                      label="Nome completo *"
+                      force-upper
+                      required
+                    />
+                  </div>
+                  <div class="col-span-12 md:col-span-4">
+                    <Input
+                      v-model="representanteVendaCpfMask"
+                      label="CPF *"
+                      :forceUpper="false"
+                      required
+                    />
+                  </div>
+                  <div class="col-span-12 md:col-span-4">
+                    <Input
+                      v-model="representanteVendaRgMask"
+                      label="RG *"
+                      :forceUpper="false"
+                      required
+                    />
+                  </div>
+                </template>
+              </div>
             </div>
           </div>
         </section>
@@ -730,6 +777,8 @@ import { format } from '@/utils/format'
 import { moedaParaNumero } from '@/utils/number'
 import { FORMAS_PAGAMENTO, COMISSOES, TAXAS_CARTAO, TAXA_NOTA_FISCAL, PIPELINE_CLIENTE } from '@/constantes'
 import { can } from '@/services/permissions'
+import { closeTabAndGo } from '@/utils/tabs'
+import { maskCPF, maskRG, onlyNumbers } from '@/utils/masks'
 
 definePage({ meta: { perm: 'vendas.ver' } })
 
@@ -756,6 +805,9 @@ const vendaId = computed(() => {
   return Number.isFinite(n) && n > 0 ? n : null
 })
 const isEdit = computed(() => !!vendaId.value)
+// true = tela de VENDA (editar itens, parcelas). false = pós-venda (rateio, produção).
+// Padrão é tela de venda, para que "Editar venda" no detalhe sempre abra a edição.
+const isContextoVenda = computed(() => route.query.contexto !== 'posvenda')
 
 // ✅ perm salvar (criar/editar)
 const permSalvarVenda = () => (isEdit.value ? 'vendas.editar' : 'vendas.criar')
@@ -921,14 +973,37 @@ const form = reactive({
 
   comissoes: [],
 
+  representante_venda_nome: '',
+  representante_venda_cpf: '',
+  representante_venda_rg: '',
+
   taxa_pagamento_percentual_aplicado: 0,
   tem_nota_fiscal: false,
   taxa_nota_fiscal_percentual_aplicado: Number(TAXA_NOTA_FISCAL?.taxa || 0),
 })
 
 // =======================
+// REPRESENTANTE DA VENDA
+// =======================
+const opcoesRepresentanteVenda = [
+  { label: 'Cadastro da empresa', value: 'empresa' },
+  { label: 'Outro representante', value: 'outro' },
+]
+const representanteTipo = ref('empresa')
+
+const representanteVendaCpfMask = computed({
+  get: () => maskCPF(form.representante_venda_cpf),
+  set: (v) => (form.representante_venda_cpf = onlyNumbers(v).slice(0, 11)),
+})
+const representanteVendaRgMask = computed({
+  get: () => maskRG(form.representante_venda_rg),
+  set: (v) => (form.representante_venda_rg = onlyNumbers(v).slice(0, 12)),
+})
+
+// =======================
 // ROWS (somente p/ render)
 // =======================
+
 const rowsItens = computed(() => (form.itens || []).map((it, idx) => ({ ...it, __idx: idx })))
 const rowsPagamentos = computed(() => (form.pagamentos || []).map((p, idx) => ({ ...p, __idx: idx })))
 const rowsComissoes = computed(() => (form.comissoes || []).map((c, idx) => ({ ...c, __idx: idx })))
@@ -1223,7 +1298,7 @@ function carregarArquivos() {
 
 function abrirArquivo(row) {
   const vid = String(vendaId.value || '').replace(/\D/g, '')
-  const backTo = encodeURIComponent(`/vendas/${vid}`)
+  const backTo = encodeURIComponent(isContextoVenda.value ? `/vendas/venda/${vid}` : `/vendas/${vid}`)
   const name = encodeURIComponent(row?.nome || row?.filename || 'ARQUIVO')
   const type = encodeURIComponent(row?.mime_type || '')
   router.push(`/arquivos/${row.id}?name=${name}&type=${type}&backTo=${backTo}`)
@@ -1380,6 +1455,13 @@ async function carregarVenda() {
     form.orcamento_id = data?.orcamento_id ?? ''
     form.data_venda = data?.data_venda ? String(data.data_venda).slice(0, 10) : form.data_venda
     form.valor_vendido = round2(num(data?.valor_vendido || 0))
+    form.representante_venda_nome = data?.representante_venda_nome ?? ''
+    form.representante_venda_cpf = data?.representante_venda_cpf ?? ''
+    form.representante_venda_rg = data?.representante_venda_rg ?? ''
+    const temRepresentante = [form.representante_venda_nome, form.representante_venda_cpf, form.representante_venda_rg].some(
+      (v) => String(v ?? '').trim() !== ''
+    )
+    representanteTipo.value = temRepresentante ? 'outro' : 'empresa'
 
     form.taxa_pagamento_percentual_aplicado = round2(num(data?.taxa_pagamento_percentual_aplicado || 0))
     form.taxa_nota_fiscal_percentual_aplicado = round2(num(data?.taxa_nota_fiscal_percentual_aplicado || 0))
@@ -1486,6 +1568,13 @@ function montarPayload() {
     data_venda: form.data_venda ? String(form.data_venda) : undefined,
     valor_vendido: round2(num(form.valor_vendido || 0)),
 
+    representante_venda_nome:
+      representanteTipo.value === 'outro' ? (form.representante_venda_nome?.trim() || undefined) : undefined,
+    representante_venda_cpf:
+      representanteTipo.value === 'outro' ? (form.representante_venda_cpf?.trim() || undefined) : undefined,
+    representante_venda_rg:
+      representanteTipo.value === 'outro' ? (form.representante_venda_rg?.trim() || undefined) : undefined,
+
     taxa_pagamento_percentual_aplicado: round2(num(form.taxa_pagamento_percentual_aplicado || 0)),
     tem_nota_fiscal: Boolean(form.tem_nota_fiscal),
     taxa_nota_fiscal_percentual_aplicado: round2(num(form.taxa_nota_fiscal_percentual_aplicado || 0)),
@@ -1538,6 +1627,24 @@ async function salvar() {
   if (!can(perm)) return notify.error('Acesso negado.')
   if (saving.value) return
 
+  if (representanteTipo.value === 'outro') {
+    const nome = String(form.representante_venda_nome ?? '').trim()
+    const cpf = onlyNumbers(form.representante_venda_cpf ?? '').length
+    const rg = String(form.representante_venda_rg ?? '').trim()
+    if (!nome) {
+      notify.error('Preencha o nome completo do representante da venda.')
+      return
+    }
+    if (cpf !== 11) {
+      notify.error('Preencha o CPF do representante da venda (11 dígitos).')
+      return
+    }
+    if (!rg) {
+      notify.error('Preencha o RG do representante da venda.')
+      return
+    }
+  }
+
   saving.value = true
   try {
     const payload = montarPayload()
@@ -1545,13 +1652,13 @@ async function salvar() {
     if (isEdit.value) {
       await VendaService.salvar(vendaId.value, payload)
       notify.success('Salvo!')
-      router.push('/vendas')
+      closeTabAndGo(isContextoVenda.value ? `/vendas/venda/${vendaId.value}` : '/vendas')
       return
     }
 
     await VendaService.salvar(null, payload)
     notify.success('Criado!')
-    router.push('/vendas')
+    closeTabAndGo(isContextoVenda.value ? '/vendas/fechamento' : '/vendas')
   } catch (e) {
     console.error(e)
     notify.error('Erro ao salvar venda')
@@ -1603,24 +1710,29 @@ watch(
 // INIT
 // =======================
 onMounted(async () => {
+  const redirecionarSemPerm = (path) => {
+    router.push(path)
+  }
+  const baseRedirect = isContextoVenda.value ? '/vendas/fechamento' : '/vendas'
+
   // ✅ bloqueio base: ver
   if (!can('vendas.ver')) {
     notify.error('Acesso negado.')
-    router.push('/vendas')
+    redirecionarSemPerm(baseRedirect)
     return
   }
 
   // ✅ se for edição, precisa poder editar
   if (isEdit.value && !can('vendas.editar')) {
     notify.error('Acesso negado.')
-    router.push('/vendas')
+    redirecionarSemPerm(baseRedirect)
     return
   }
 
   // ✅ se for novo, precisa poder criar
   if (!isEdit.value && !can('vendas.criar')) {
     notify.error('Acesso negado.')
-    router.push('/vendas')
+    redirecionarSemPerm(baseRedirect)
     return
   }
 

@@ -343,6 +343,7 @@ import { confirm } from '@/services/confirm'
 import { maskCPF, maskCNPJ, maskCEP, maskTelefone, maskRG, maskIE } from '@/utils/masks'
 import { buscarCep, buscarCnpj } from '@/utils/utils'
 import { can } from '@/services/permissions'
+import { closeTabAndGo } from '@/utils/tabs'
 
 definePage({ meta: { perm: 'clientes.ver' } })
 
@@ -552,7 +553,7 @@ async function salvar() {
     await ClienteService.salvar(isEdit.value ? Number(clienteId.value) : null, payload)
 
     notify.success(isEdit.value ? 'Cliente atualizado!' : 'Cliente cadastrado!')
-    await router.push('/clientes')
+    closeTabAndGo('/clientes')
   } catch (err) {
     const apiMsg = err?.response?.data?.message
     notify.error(Array.isArray(apiMsg) ? apiMsg.join(' | ') : (apiMsg || 'Erro ao salvar.'))
@@ -569,7 +570,7 @@ async function excluir() {
   try {
     await ClienteService.remover(Number(clienteId.value))
     notify.success('Cliente removido!')
-    router.push('/clientes')
+    closeTabAndGo('/clientes')
   } catch (err) {
     console.error('Erro ao excluir:', err)
     const apiMsg = err?.response?.data?.message

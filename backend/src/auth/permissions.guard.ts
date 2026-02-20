@@ -33,8 +33,9 @@ export class PermissionsGuard implements CanActivate {
       throw new UnauthorizedException('Sessão inválida');
     }
 
-    // 🔒 status (admin pode operar mesmo pendente)
+    // is_admin: libera tudo, ignora lista de permissões
     if (user?.is_admin) return true;
+    // status: admin pode operar mesmo pendente; demais precisam ATIVO
     if (user.status !== 'ATIVO') {
       throw new ForbiddenException('Acesso negado: sua conta não está ativa.');
     }

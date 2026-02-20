@@ -395,6 +395,7 @@ import { PIPELINE_PLANO_CORTE, UNIDADES } from '@/constantes'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
+import { closeTabAndGo } from '@/utils/tabs'
 
 definePage({ meta: { perm: 'plano_corte.criar' } })
 
@@ -663,7 +664,7 @@ async function salvarApenas() {
     const planoId = await salvarPlano()
     if (planoId) {
       notify.success('Plano salvo!')
-      router.push('/plano-corte')
+      closeTabAndGo('/plano-corte')
     }
   } finally {
     salvando.value = false
@@ -783,7 +784,7 @@ async function confirmarEnviarProducao() {
     })
     notify.success('Plano enviado para produção!')
     fecharModalEnviarProducao()
-    router.push('/plano-corte')
+    closeTabAndGo('/plano-corte')
   } catch (e) {
     notify.error(e?.response?.data?.message || 'Erro ao enviar para produção.')
   } finally {

@@ -198,6 +198,11 @@ model vendas {
 
   valor_total Decimal @default(0.00) @db.Decimal(10, 2)
 
+  // Representante da venda (contrato) – opcional; se preenchido, usado no PDF em vez do cadastro da empresa
+  representante_venda_nome String?
+  representante_venda_cpf  String?
+  representante_venda_rg   String?
+
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
@@ -231,14 +236,47 @@ model contratos {
   valor      Decimal  @default(0.00) @db.Decimal(10, 2)
   data_inicio DateTime?
   data_fim   DateTime?
+  data_assinatura DateTime?  // quando o contrato foi assinado (ex.: assinatura online)
+  zapsign_doc_token String?  // token do documento na ZapSign (assinatura por e-mail)
 
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
+
+  assinaturas_log       assinaturas_log[]
+  link_publico_tokens   contratos_link_publico[]
 
   @@index([cliente_id])
   @@index([venda_id])
   @@index([status])
   @@map("contratos")
+ }
+
+model contratos_link_publico {
+  id           Int      @id @default(autoincrement())
+  short_token  String   @unique  // token curto para URL (ex: 8 caracteres)
+  contrato_id  Int
+  expira_em    DateTime
+  criado_em    DateTime @default(now())
+  contrato     contratos @relation(fields: [contrato_id], references: [id], onDelete: Cascade)
+  @@index([short_token])
+  @@index([expira_em])
+  @@map("contratos_link_publico")
+ }
+
+model assinaturas_log {
+  id Int @id @default(autoincrement())
+
+  contrato_id Int
+  contrato    contratos @relation(fields: [contrato_id], references: [id], onDelete: Cascade)
+
+  data_hora         DateTime   @default(now())
+  ip_address        String?
+  dispositivo       String?    // User-Agent
+  hash_documento    String?    // SHA-256 do PDF no momento da assinatura
+  metodo_verificacao String?   // ex: "Aceite via Link WhatsApp/SMS"
+
+  @@index([contrato_id])
+  @@map("assinaturas_log")
  }
 
 model vendas_pagamentos {
@@ -490,6 +528,7 @@ model funcionarios {
   // ======================
   nome            String
   cpf             String    @unique
+  pis             String?   @db.VarChar(20)
   rg              String?
   data_nascimento DateTime?
   telefone        String?
@@ -1001,6 +1040,11 @@ model Empresa {
   banco_agencia String?
   banco_conta   String?
   pix           String?
+  // Representante legal (contratos e documentos)
+  representante_legal_nome     String?
+  representante_legal_cpf     String?
+  representante_legal_rg      String?
+  representante_estado_civil  String?
   updated_at    DateTime @updatedAt
 
   @@map("empresa") // Nome da tabela no banco de dados
@@ -1013,7 +1057,7 @@ model clausulas_modelos {
   tipo       String
   modulo_key String   // ex: OBJETO, PRECO_PAGAMENTO, PRAZO_ENTREGA...
   titulo     String
-  texto      String
+  texto      String   @db.Text  // cláusulas longas
   ordem      Int      @default(0)
 
   criado_em     DateTime @default(now())

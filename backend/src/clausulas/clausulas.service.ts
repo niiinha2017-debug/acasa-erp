@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 export interface ClausulaModuloDto {
   id?: number;
@@ -48,34 +49,39 @@ const DEFAULT_MODULOS: Record<
       ordem: 3,
     },
     {
-      modulo_key: 'GARANTIA',
-      titulo: 'Cláusula Quarta: Da Garantia',
+      modulo_key: 'ARMAZENAGEM_DESISTENCIA',
+      titulo: 'Cláusula Quarta: Da Armazenagem e da Desistência',
       ordem: 4,
     },
     {
-      modulo_key: 'SERVICOS',
-      titulo: 'Cláusula Quinta: Dos Serviços',
+      modulo_key: 'GARANTIA',
+      titulo: 'Cláusula Quinta: Da Garantia',
       ordem: 5,
     },
     {
-      modulo_key: 'CONDICOES_GERAIS',
-      titulo: 'Cláusula Sexta: Das Condições Gerais',
+      modulo_key: 'SERVICOS',
+      titulo: 'Cláusula Sexta: Dos Serviços',
       ordem: 6,
     },
     {
-      modulo_key: 'RESPONSABILIDADES',
-      titulo: 'Cláusula Sétima: Das Responsabilidades e Obrigações',
+      modulo_key: 'CONDICOES_GERAIS',
+      titulo: 'Cláusula Sétima: Das Condições Gerais',
       ordem: 7,
     },
     {
-      modulo_key: 'CESSAO_IMAGEM',
-      titulo: 'Cláusula Oitava: Da Cessão de Imagem e Voz',
+      modulo_key: 'RESPONSABILIDADES',
+      titulo: 'Cláusula Oitava: Das Responsabilidades e Obrigações',
       ordem: 8,
     },
     {
-      modulo_key: 'FORO',
-      titulo: 'Cláusula Nona: Do Foro',
+      modulo_key: 'CESSAO_IMAGEM',
+      titulo: 'Cláusula Nona: Da Cessão de Imagem e Voz',
       ordem: 9,
+    },
+    {
+      modulo_key: 'FORO',
+      titulo: 'Cláusula Décima: Do Foro',
+      ordem: 10,
     },
   ],
 };
@@ -120,6 +126,20 @@ export class ClausulasService {
       orderBy: [{ ordem: 'asc' }, { id: 'asc' }],
     });
 
+    // Para CONTRATO: corrige títulos pela numeração canônica (evita duas "Oitava" etc.)
+    if (t === 'CONTRATO' && padroes.length > 0) {
+      const tituloPorKey = Object.fromEntries(
+        padroes.map((p) => [p.modulo_key, p.titulo]),
+      );
+      return todos.map((row) => {
+        const tituloCanonico = tituloPorKey[row.modulo_key];
+        return {
+          ...row,
+          titulo: tituloCanonico ?? row.titulo,
+        };
+      });
+    }
+
     return todos;
   }
 
@@ -128,42 +148,56 @@ export class ClausulasService {
 
     const incoming = Array.isArray(dto.modulos) ? dto.modulos : [];
 
-    // Atualiza ou cria cada módulo recebido
-    for (const mod of incoming) {
-      const key = String(mod.modulo_key || '').trim().toUpperCase();
-      if (!key) continue;
+    try {
+      // Atualiza ou cria cada módulo recebido
+      for (const mod of incoming) {
+        const key = String(mod.modulo_key || '').trim().toUpperCase();
+        if (!key) continue;
 
-      const data = {
-        titulo: mod.titulo || '',
-        texto: mod.texto || '',
-        ordem: typeof mod.ordem === 'number' ? mod.ordem : 0,
-      };
+        const data = {
+          titulo: String(mod.titulo ?? '').slice(0, 191),
+          texto: String(mod.texto ?? ''),
+          ordem: typeof mod.ordem === 'number' ? mod.ordem : 0,
+        };
 
-      const existente = await this.prisma.clausulas_modelos.findFirst({
-        where: { tipo: t, modulo_key: key },
-      });
-
-      if (existente) {
-        await this.prisma.clausulas_modelos.update({
-          where: { id: existente.id },
-          data,
+        const existente = await this.prisma.clausulas_modelos.findFirst({
+          where: { tipo: t, modulo_key: key },
         });
-      } else {
-        await this.prisma.clausulas_modelos.create({
-          data: {
-            tipo: t,
-            modulo_key: key,
-            ...data,
-          },
-        });
+
+        if (existente) {
+          await this.prisma.clausulas_modelos.update({
+            where: { id: existente.id },
+            data,
+          });
+        } else {
+          await this.prisma.clausulas_modelos.create({
+            data: {
+              tipo: t,
+              modulo_key: key,
+              ...data,
+            },
+          });
+        }
       }
-    }
 
-    // retorna lista atualizada
-    return this.prisma.clausulas_modelos.findMany({
-      where: { tipo: t },
-      orderBy: [{ ordem: 'asc' }, { id: 'asc' }],
-    });
+      // retorna lista atualizada
+      return this.prisma.clausulas_modelos.findMany({
+        where: { tipo: t },
+        orderBy: [{ ordem: 'asc' }, { id: 'asc' }],
+      });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError) {
+        if (e.code === 'P2002') {
+          throw new BadRequestException('Já existe um módulo com este tipo e chave.');
+        }
+        if (e.code === 'P2003' || e.code === 'P2016') {
+          throw new BadRequestException('Registro referenciado não encontrado.');
+        }
+        // ex.: P2016 = registro não encontrado; dados longos demais etc.
+        throw new BadRequestException(e.message || 'Erro ao salvar cláusulas.');
+      }
+      throw e;
+    }
   }
 }
 

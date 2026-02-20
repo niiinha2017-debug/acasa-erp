@@ -5,3 +5,7 @@
     </p>
   </div>
 </template>
+
+<script setup>
+definePage({ meta: { perm: 'dashboard.visualizar' } })
+</script>

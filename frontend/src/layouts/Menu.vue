@@ -291,7 +291,7 @@ const handleMobileNav = (to) => {
 }
 
 const carregarMenu = async () => {
-  if (!storage.getToken()) return
+  if (!storage.getToken() || route.path === '/login') return
   try {
     const res = await PermissoesService.menu()
     const data = res?.data ?? res

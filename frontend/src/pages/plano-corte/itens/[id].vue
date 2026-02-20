@@ -207,6 +207,7 @@ import PageHeader from '@/components/ui/PageHeader.vue'
 import SearchInput from '@/components/ui/SearchInput.vue'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
+import { closeTabAndGo } from '@/utils/tabs'
 
 definePage({ meta: { perm: 'plano_corte.ver' } })
 
@@ -403,7 +404,7 @@ async function salvar() {
 
     await PlanoCorteService.itens.salvar(isEdit.value ? itemId.value : null, payload)
     notify.success(isEdit.value ? 'Item atualizado!' : 'Item cadastrado!')
-    router.push('/plano-corte/itens')
+    closeTabAndGo('/plano-corte/itens')
   } catch (err) {
     notify.error(err?.response?.data?.message || 'Erro ao salvar.')
   } finally {

@@ -335,6 +335,7 @@ import { PIPELINE_PLANO_CORTE, UNIDADES } from '@/constantes'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
+import { closeTabAndGo } from '@/utils/tabs'
 
 definePage({ meta: { perm: 'plano_corte.ver' } })
 
@@ -614,7 +615,7 @@ async function salvar() {
     }
     await PlanoCorteService.salvar(isEdit.value ? planoId.value : null, payload)
     notify.success(isEdit.value ? 'Plano atualizado.' : 'Plano salvo.')
-    router.push('/plano-corte')
+    closeTabAndGo('/plano-corte')
   } catch (e) {
     const msg = e?.response?.data?.message
     notify.error(Array.isArray(msg) ? msg.join(' ') : msg || 'Erro ao salvar.')
@@ -631,7 +632,7 @@ async function confirmarExcluirPlano() {
   try {
     await PlanoCorteService.remover(planoId.value)
     notify.success('Plano excluído.')
-    router.push('/plano-corte')
+    closeTabAndGo('/plano-corte')
   } catch (e) {
     notify.error('Erro ao excluir.')
   } finally {

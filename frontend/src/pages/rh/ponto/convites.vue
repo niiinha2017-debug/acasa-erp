@@ -159,7 +159,7 @@ import { notify } from '@/services/notify'
 import { can } from '@/services/permissions'
 import PageHeader from '@/components/ui/PageHeader.vue'
 
-definePage({ meta: { perm: 'ponto_relatorio.ver' } })
+definePage({ meta: { perm: 'ponto_convite.criar' } })
 
 const router = useRouter()
 

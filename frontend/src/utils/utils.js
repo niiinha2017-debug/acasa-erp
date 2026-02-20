@@ -6,7 +6,7 @@ import api from '@/services/api'
    CEP
 ===================== */
 export async function buscarCep(cep) {
-  const n = cep.replace(/\D/g, '') // Garante que só tenha números
+  const n = String(cep ?? '').replace(/\D/g, '') // Garante que só tenha números
   if (n.length !== 8) return null
 
   try {

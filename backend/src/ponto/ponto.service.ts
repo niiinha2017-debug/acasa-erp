@@ -297,7 +297,31 @@ export class PontoService {
       });
     }
 
-    return registro;
+    const transacao_id = createHash('sha256')
+      .update(`${registro.id}|${registro.data_hora.toISOString()}|${registro.funcionario_id}`)
+      .digest('hex')
+      .slice(0, 32);
+    return { ...registro, transacao_id };
+  }
+
+  private transacaoId(registro: {
+    id: number;
+    data_hora: Date;
+    funcionario_id: number;
+  }): string {
+    return createHash('sha256')
+      .update(`${registro.id}|${new Date(registro.data_hora).toISOString()}|${registro.funcionario_id}`)
+      .digest('hex')
+      .slice(0, 32);
+  }
+
+  /** Retorna label do tipo: Entrada, Almoço (1ª saída do dia) ou Saída */
+  private tipoLabel(registrosDia: { id: number; tipo: string; data_hora: Date }[], registro: { id: number; tipo: string }): string {
+    if (registro.tipo === 'ENTRADA') return 'Entrada';
+    if (registro.tipo !== 'SAIDA') return registro.tipo;
+    const saidas = registrosDia.filter((r) => r.tipo === 'SAIDA').sort((a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime());
+    const idx = saidas.findIndex((r) => r.id === registro.id);
+    return idx === 0 ? 'Almoço' : 'Saída';
   }
 
   async hoje(req: any) {
@@ -305,7 +329,7 @@ export class PontoService {
     await this.assertFuncionarioAtivoParaPonto(funcionario_id);
     const { inicio, fim } = this.rangeHoje();
 
-    return this.prisma.ponto_registros.findMany({
+    const registros = await this.prisma.ponto_registros.findMany({
       where: {
         funcionario_id,
         status: 'ATIVO',
@@ -313,6 +337,12 @@ export class PontoService {
       },
       orderBy: { data_hora: 'asc' },
     });
+
+    return registros.map((r) => ({
+      ...r,
+      transacao_id: this.transacaoId(r),
+      tipo_label: this.tipoLabel(registros, r),
+    }));
   }
 
   async ultimo(req: any) {
@@ -340,7 +370,14 @@ export class PontoService {
     const funcionario_id = this.getFuncionarioId(req);
     const funcionario = await this.prisma.funcionarios.findUnique({
       where: { id: funcionario_id },
-      select: { id: true, nome: true, status: true, demissao: true },
+      select: {
+        id: true,
+        nome: true,
+        status: true,
+        demissao: true,
+        cpf: true,
+        pis: true,
+      },
     });
 
     if (!funcionario)
@@ -354,6 +391,25 @@ export class PontoService {
       throw new BadRequestException('Funcionário desligado.');
     }
 
-    return funcionario;
+    const empresa = await this.prisma.empresa.findUnique({
+      where: { id: 1 },
+      select: {
+        razao_social: true,
+        nome_fantasia: true,
+        cnpj: true,
+      },
+    });
+
+    const empresaPayload = empresa
+      ? {
+          nome: empresa.razao_social || empresa.nome_fantasia || 'Empresa',
+          cnpj: empresa.cnpj || '',
+        }
+      : { nome: 'Empresa', cnpj: '' };
+
+    return {
+      ...funcionario,
+      empresa: empresaPayload,
+    };
   }
 }

@@ -249,6 +249,14 @@
                         <div v-if="row[col]?.id" class="flex items-center opacity-0 group-hover/btn:opacity-100 transition-opacity gap-0.5">
                           <button
                             type="button"
+                            @click="abrirComprovante(row[col].id)"
+                            class="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                            title="Comprovante (PDF com dados da empresa)"
+                          >
+                            <i class="pi pi-file-pdf text-xs"></i>
+                          </button>
+                          <button
+                            type="button"
                             @click="abrirModalEditar(row[col])"
                             class="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
                             title="Editar"
@@ -661,6 +669,20 @@ async function abrirPdfViaBlob(funcionario_id, mes, ano) {
   } catch (e) {
     console.error('[PONTO PDF blob]', e)
     notify.error(e?.response?.data?.message || 'Não foi possível abrir o PDF.')
+  }
+}
+
+async function abrirComprovante(registroId) {
+  if (!registroId) return
+  try {
+    const res = await PontoRelatorioService.comprovantePdf(registroId)
+    const blob = new Blob([res.data], { type: 'application/pdf' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank', 'noopener')
+    setTimeout(() => URL.revokeObjectURL(url), 60000)
+  } catch (e) {
+    console.error('[PONTO COMPROVANTE]', e)
+    notify.error(e?.response?.data?.message || 'Não foi possível abrir o comprovante.')
   }
 }
 

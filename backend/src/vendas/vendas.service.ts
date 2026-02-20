@@ -163,14 +163,14 @@ export class VendasService {
         ? dto.itens.map((it) => ({
             nome_ambiente: it.nome_ambiente,
             descricao: it.descricao,
-            observacao: '',
+            observacao: (it as any).observacao?.trim?.() ?? '',
             quantidade: round2(toNumber(it.quantidade ?? 1)),
             valor_unitario: round2(toNumber(it.valor_unitario ?? 0)),
           }))
         : orc.itens.map((it) => ({
             nome_ambiente: it.nome_ambiente,
             descricao: it.descricao,
-            observacao: '',
+            observacao: (it as any).observacao?.trim?.() ?? '',
             quantidade: 1,
             valor_unitario: round2(toNumber(it.valor_unitario ?? 0)),
           }));
@@ -212,6 +212,10 @@ export class VendasService {
           valor_nota_fiscal: totais.valor_nota_fiscal,
 
           valor_total: totais.valor_total,
+
+          representante_venda_nome: dto.representante_venda_nome?.trim() || null,
+          representante_venda_cpf: dto.representante_venda_cpf?.trim() || null,
+          representante_venda_rg: dto.representante_venda_rg?.trim() || null,
 
           // ⚠️ tem_nota_fiscal só entra aqui se existir no Prisma:
           // tem_nota_fiscal: nf.tem_nota_fiscal,
@@ -331,6 +335,16 @@ export class VendasService {
           valor_nota_fiscal: totais.valor_nota_fiscal,
 
           valor_total: totais.valor_total,
+
+          ...(dto.representante_venda_nome !== undefined && {
+            representante_venda_nome: dto.representante_venda_nome?.trim() || null,
+          }),
+          ...(dto.representante_venda_cpf !== undefined && {
+            representante_venda_cpf: dto.representante_venda_cpf?.trim() || null,
+          }),
+          ...(dto.representante_venda_rg !== undefined && {
+            representante_venda_rg: dto.representante_venda_rg?.trim() || null,
+          }),
         },
       });
 

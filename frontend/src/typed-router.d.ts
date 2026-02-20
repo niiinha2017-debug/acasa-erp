@@ -30,6 +30,20 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/aceitar/[token]': RouteRecordInfo<
+      '/aceitar/[token]',
+      '/aceitar/:token',
+      { token: ParamValue<true> },
+      { token: ParamValue<false> },
+      | never
+    >,
+    '/aceitar/obrigado': RouteRecordInfo<
+      '/aceitar/obrigado',
+      '/aceitar/obrigado',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/agendamentos/': RouteRecordInfo<
       '/agendamentos/',
       '/agendamentos',
@@ -133,6 +147,13 @@ declare module 'vue-router/auto-routes' {
       '/contratos/clausulas',
       Record<never, never>,
       Record<never, never>,
+      | never
+    >,
+    '/contratos/cliente/[id]': RouteRecordInfo<
+      '/contratos/cliente/[id]',
+      '/contratos/cliente/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
       | never
     >,
     '/debug/update': RouteRecordInfo<
@@ -373,6 +394,13 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
+    '/vendas/cliente/[id]': RouteRecordInfo<
+      '/vendas/cliente/[id]',
+      '/vendas/cliente/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
     '/vendas/fechamento': RouteRecordInfo<
       '/vendas/fechamento',
       '/vendas/fechamento',
@@ -394,6 +422,20 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/vendas/venda/[id]': RouteRecordInfo<
+      '/vendas/venda/[id]',
+      '/vendas/venda/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | '/vendas/venda/[id]/editar'
+    >,
+    '/vendas/venda/[id]/editar': RouteRecordInfo<
+      '/vendas/venda/[id]/editar',
+      '/vendas/venda/:id/editar',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
   }
 
   /**
@@ -410,6 +452,18 @@ declare module 'vue-router/auto-routes' {
     'src/pages/index.vue': {
       routes:
         | '/'
+      views:
+        | never
+    }
+    'src/pages/aceitar/[token].vue': {
+      routes:
+        | '/aceitar/[token]'
+      views:
+        | never
+    }
+    'src/pages/aceitar/obrigado.vue': {
+      routes:
+        | '/aceitar/obrigado'
       views:
         | never
     }
@@ -500,6 +554,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/contratos/clausulas.vue': {
       routes:
         | '/contratos/clausulas'
+      views:
+        | never
+    }
+    'src/pages/contratos/cliente/[id].vue': {
+      routes:
+        | '/contratos/cliente/[id]'
       views:
         | never
     }
@@ -707,6 +767,12 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/vendas/cliente/[id].vue': {
+      routes:
+        | '/vendas/cliente/[id]'
+      views:
+        | never
+    }
     'src/pages/vendas/fechamento.vue': {
       routes:
         | '/vendas/fechamento'
@@ -722,6 +788,19 @@ declare module 'vue-router/auto-routes' {
     'src/pages/vendas/nova-venda.vue': {
       routes:
         | '/vendas/nova-venda'
+      views:
+        | never
+    }
+    'src/pages/vendas/venda/[id].vue': {
+      routes:
+        | '/vendas/venda/[id]'
+        | '/vendas/venda/[id]/editar'
+      views:
+        | 'default'
+    }
+    'src/pages/vendas/venda/[id]/editar.vue': {
+      routes:
+        | '/vendas/venda/[id]/editar'
       views:
         | never
     }

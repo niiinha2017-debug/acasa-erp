@@ -26,6 +26,18 @@ export class UpdateVendaDto {
   data_entrega?: string;
 
   @IsOptional()
+  @IsString()
+  representante_venda_nome?: string;
+
+  @IsOptional()
+  @IsString()
+  representante_venda_cpf?: string;
+
+  @IsOptional()
+  @IsString()
+  representante_venda_rg?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
