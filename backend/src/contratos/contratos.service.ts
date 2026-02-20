@@ -216,6 +216,8 @@ export class ContratosService {
       'O CONTRATANTE autoriza a CONTRATADA a utilizar imagens e vídeos dos ambientes mobiliados, exclusivamente para fins de divulgação de portfólio e campanhas publicitárias da CONTRATADA, em mídias online e off-line, observada a legislação de proteção de dados pessoais (Lei nº 13.709/2018 – LGPD), comprometendo-se a CONTRATADA a não expor dados sensíveis ou informações que possam comprometer a intimidade do CONTRATANTE.',
     FORO:
       '§ Primeiro – As partes elegem o Foro desta cidade, [[cidade_foro]], [[estado_foro]], para dirimir quaisquer dúvidas decorrentes deste contrato, renunciando a qualquer outro, por mais privilegiado que seja.\n\n§ Segundo – Após a leitura do inteiro teor do presente contrato, as partes, estando de pleno acordo, subscrevem o presente instrumento em duas vias de igual teor e forma.\n\n[[cidade_data_assinatura]]',
+    ASSINATURA_ELETRONICA:
+      '11.1. As partes declaram-se cientes e concordam que este instrumento, bem como seus aditamentos e agendamentos, poderão ser assinados de forma eletrônica, sendo considerados válidos e plenamente eficazes para todos os fins de direito.\n\n11.2. O aceite será formalizado através de uma das seguintes modalidades, que as partes reconhecem como meios de prova idôneos para confirmar a autoria e integridade do documento:\n\nE-mail: Resposta positiva à mensagem enviada pelo sistema a partir do endereço cadastrado;\n\nWhatsApp/Mensageria: Interação positiva (clique em botões de aceite ou resposta de texto) em link enviado ao número de telefone celular validado no cadastro;\n\nAssinatura Digital: Clique em "Aceito" ou "Assinar" em ambiente logado com registro de IP, data, hora e código de autenticação único (Hash).\n\n11.3. As partes renunciam a qualquer pretensão de invalidar este contrato sob o argumento de ausência de assinatura física ou reconhecimento de firma, reconhecendo que os registros eletrônicos gerados pelo sistema ERP possuem força executiva e plena validade jurídica.',
   };
 
   /** Formata CNPJ para exibição: 12345678000199 -> 12.345.678/0001-99 */
@@ -319,7 +321,6 @@ export class ContratosService {
     // Cabeçalho da tabela
     if (doc.y + 40 > doc.page.height - margemInferior) {
       doc.addPage();
-      doc.y = renderHeaderA4Png(doc as any) + 20;
     }
 
     const headerY = doc.y;
@@ -366,11 +367,8 @@ export class ContratosService {
       const rowH = Math.max(hAmb, hDesc);
 
       if (doc.y + rowH + margemInferior > doc.page.height) {
-        // Nova página com header do relatório
         doc.addPage();
-        doc.y = renderHeaderA4Png(doc as any) + 20;
-
-        // Reimprime cabeçalho da tabela na nova página
+        // Header aplicado pelo evento pageAdded; reimprime cabeçalho da tabela
         const hY = doc.y;
         doc
           .font('Helvetica-Bold')
@@ -684,16 +682,16 @@ export class ContratosService {
         (venda?.representante_venda_nome?.trim() && venda?.representante_venda_cpf?.trim())
           ? this.maskCpf(venda.representante_venda_cpf) || ''
           : this.maskCpf(empresa?.representante_legal_cpf ?? '') || '',
-      // Dados para pagamento (cadastro da empresa)
+      // Dados para pagamento (cadastro da empresa): nome = razão social da empresa, não do representante
       contratada_pix: empresa?.pix ?? '',
       contratada_banco_titular: empresa?.banco_titular ?? '',
       contratada_banco_nome: empresa?.banco_nome ?? '',
       contratada_banco_agencia: empresa?.banco_agencia ?? '',
       contratada_banco_conta: empresa?.banco_conta ?? '',
       contratada_dados_pagamento: [
-        empresa?.pix ? `PIX CNPJ ${this.maskCnpj(empresa?.cnpj ?? '')} ${empresa?.banco_titular || empresa?.representante_legal_nome || ''}` : null,
+        empresa?.pix ? `PIX CNPJ ${this.maskCnpj(empresa?.cnpj ?? '')} ${empresa?.razao_social || empresa?.banco_titular || ''}` : null,
         empresa?.banco_nome && empresa?.banco_agencia && empresa?.banco_conta
-          ? `transferência bancária ${empresa.banco_nome} Agência ${empresa.banco_agencia} Conta ${empresa.banco_conta}${empresa.banco_titular ? ' – ' + empresa.banco_titular : ''}`
+          ? `transferência bancária ${empresa.banco_nome} Agência ${empresa.banco_agencia} Conta ${empresa.banco_conta}${empresa?.razao_social ? ' – ' + empresa.razao_social : (empresa?.banco_titular ? ' – ' + empresa.banco_titular : '')}`
           : null,
       ].filter(Boolean).join(' ou '),
       prazo_garantia_anos: '5',
@@ -709,6 +707,12 @@ export class ContratosService {
       doc.on('data', (c) => chunks.push(c));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
+
+      // Garante que toda nova página (incluindo por quebra de texto) tenha o header PNG.
+      doc.on('pageAdded', () => {
+        const headerBottom = renderHeaderA4Png(doc as any) + 20;
+        doc.y = headerBottom;
+      });
 
       try {
         const left = 40;
@@ -730,6 +734,7 @@ export class ContratosService {
         for (const mod of modulos) {
           const titulo = String(mod.titulo || '').trim();
           const key = String((mod as any).modulo_key || '').toUpperCase();
+          const textoRaw = (String(mod.texto || '').trim() || this.DEFAULT_TEXTOS_CONTRATO[key] || '');
           let textoBruto = this.substituirPlaceholders(String(mod.texto || ''), mapa);
           if (!textoBruto && this.DEFAULT_TEXTOS_CONTRATO[key]) {
             textoBruto = this.substituirPlaceholders(
@@ -738,16 +743,10 @@ export class ContratosService {
             );
           }
           const texto = String(textoBruto || '').trim();
-          if (!titulo && !texto) continue;
+          if (!titulo && !texto && key !== 'OBJETO') continue;
 
           if (doc.y + 80 > doc.page.height - 60) {
             doc.addPage();
-            doc.y = renderHeaderA4Png(doc as any) + 20;
-          }
-
-          if (key === 'FORO') {
-            doc.addPage();
-            doc.y = renderHeaderA4Png(doc as any) + 20;
           }
 
           if (titulo) {
@@ -758,29 +757,62 @@ export class ContratosService {
             doc.y += doc.currentLineHeight() + 4;
           }
 
-          if (texto) {
-            doc
-              .font('Helvetica')
-              .fontSize(10)
-              .text(texto, left, doc.y, {
-                width: larguraTexto,
-                align: 'justify',
-              });
-            doc.y += 10;
-          }
-
-          if (key === 'OBJETO') {
+          if (texto || (key === 'OBJETO' && textoRaw.includes('[[lista_itens_venda]]'))) {
+            // Cláusula OBJETO: tabela Item/Descritivo fica logo após "Item/ambiente: Descritivo:", não no final.
+            if (key === 'OBJETO' && textoRaw.includes('[[lista_itens_venda]]')) {
+              const partes = textoRaw.split('[[lista_itens_venda]]');
+              const parte1 = this.substituirPlaceholders(partes[0] || '', mapa).trim();
+              const parte2 = this.substituirPlaceholders(partes[1] || '', mapa).trim();
+              if (parte1) {
+                doc
+                  .font('Helvetica')
+                  .fontSize(10)
+                  .text(parte1, left, doc.y, {
+                    width: larguraTexto,
+                    align: 'justify',
+                  });
+                doc.y += 10;
+              }
+              this.renderTabelaItensVenda(doc, venda, left, right);
+              if (parte2) {
+                doc.y += 8;
+                doc
+                  .font('Helvetica')
+                  .fontSize(10)
+                  .text(parte2, left, doc.y, {
+                    width: larguraTexto,
+                    align: 'justify',
+                  });
+                doc.y += 10;
+              }
+              doc.addPage();
+            } else {
+              doc
+                .font('Helvetica')
+                .fontSize(10)
+                .text(texto, left, doc.y, {
+                  width: larguraTexto,
+                  align: 'justify',
+                });
+              doc.y += 10;
+              if (key === 'OBJETO') {
+                this.renderTabelaItensVenda(doc, venda, left, right);
+                doc.addPage();
+              }
+            }
+          } else if (key === 'OBJETO') {
             this.renderTabelaItensVenda(doc, venda, left, right);
             doc.addPage();
-            doc.y = renderHeaderA4Png(doc as any) + 20;
-          }
-
-          if (key === 'FORO' && texto) {
-            this.renderCamposAssinatura(doc, left, right, larguraTexto, mapa);
           }
 
           doc.y += 8;
         }
+
+        // Assinaturas junto com a cláusula 11 (mesma página); nova página só se não couber
+        if (doc.y + 220 > doc.page.height - 60) {
+          doc.addPage();
+        }
+        this.renderCamposAssinatura(doc, left, right, larguraTexto, mapa);
 
         doc.end();
       } catch (e) {

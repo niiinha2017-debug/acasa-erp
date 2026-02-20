@@ -238,6 +238,7 @@ export const UsuariosService = {
 // --- VENDAS ---
 export const VendaService = {
   listar: () => api.get('/vendas'),
+  aguardandoAgendamento: () => api.get('/vendas/aguardando-agendamento'),
   buscar: (id) => api.get(`/vendas/${id}`),
   salvar: (id, dados) => (id ? api.put(`/vendas/${id}`, dados) : api.post('/vendas', dados)),
   remover: (id) => api.delete(`/vendas/${id}`),

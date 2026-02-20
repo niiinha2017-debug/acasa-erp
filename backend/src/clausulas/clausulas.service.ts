@@ -83,6 +83,11 @@ const DEFAULT_MODULOS: Record<
       titulo: 'Cláusula Décima: Do Foro',
       ordem: 10,
     },
+    {
+      modulo_key: 'ASSINATURA_ELETRONICA',
+      titulo: 'Cláusula 11ª – Da Assinatura Eletrônica e Aceite por Meios Digitais',
+      ordem: 11,
+    },
   ],
 };
 

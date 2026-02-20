@@ -26,7 +26,7 @@ android {
         applicationId "com.acasa.erp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-    versionCode 30
+    versionCode 31
         versionName versionNameFromPkg
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 

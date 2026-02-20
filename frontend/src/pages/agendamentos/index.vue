@@ -56,31 +56,44 @@
             >
               {{ d }}
             </div>
-            <button
+            <div
               v-for="day in days"
               :key="day.key"
-              @click="selectDay(day.date)"
-              class="bg-white p-3 h-28 flex flex-col items-start text-left border border-transparent hover:border-brand-primary/30 transition-all"
+              class="bg-white p-3 h-28 flex flex-col items-start text-left border border-transparent hover:border-brand-primary/30 transition-all relative cursor-pointer"
               :class="{
                 'bg-slate-50': !day.inMonth,
                 'ring-2 ring-brand-primary/30': isSameDay(day.date, selectedDay),
               }"
+              @click="selectDay(day.date)"
             >
-              <div
-                class="text-xs font-black"
-                :class="day.inMonth ? 'text-slate-800' : 'text-slate-300'"
-              >
-                {{ day.date.getDate() }}
+              <div class="w-full flex items-center justify-between">
+                <span
+                  class="text-xs font-black cursor-pointer"
+                  :class="day.inMonth ? 'text-slate-800' : 'text-slate-300'"
+                >
+                  {{ day.date.getDate() }}
+                </span>
+                <button
+                  v-if="day.inMonth"
+                  type="button"
+                  class="w-6 h-6 flex items-center justify-center rounded-md bg-brand-primary/15 text-brand-primary hover:bg-brand-primary hover:text-white text-sm font-black transition-colors"
+                  title="Novo agendamento neste dia"
+                  @click.stop="selectDay(day.date)"
+                >
+                  +
+                </button>
               </div>
-              <div class="mt-2 w-full space-y-1">
-                <div
+              <div class="mt-2 w-full space-y-1 flex-1 min-h-0">
+                <button
                   v-for="event in dayEvents(day.date).slice(0, 3)"
                   :key="event.id"
-                  class="text-[9px] font-bold truncate px-2 py-0.5 rounded bg-slate-900 text-white"
+                  type="button"
+                  class="w-full text-left text-[9px] font-bold truncate px-2 py-0.5 rounded bg-slate-900 text-white hover:ring-2 hover:ring-brand-primary"
                   :title="eventTitle(event)"
+                  @click.stop="openModalForEvent(event)"
                 >
                   {{ eventTitle(event) }}
-                </div>
+                </button>
                 <div
                   v-if="dayEvents(day.date).length > 3"
                   class="text-[9px] font-black text-slate-400"
@@ -88,7 +101,7 @@
                   +{{ dayEvents(day.date).length - 3 }}
                 </div>
               </div>
-            </button>
+            </div>
           </div>
 
           <div class="border-t border-slate-100 p-6">
@@ -102,10 +115,12 @@
             </div>
 
             <div v-if="selectedEvents.length" class="space-y-2">
-              <div
+              <button
                 v-for="event in selectedEvents"
                 :key="event.id"
-                class="p-3 rounded-xl border border-slate-200"
+                type="button"
+                class="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-brand-primary/50 hover:bg-slate-50/50 transition-colors"
+                @click="openModalForEvent(event)"
               >
                 <div class="text-xs font-black text-slate-800">
                   {{ eventTitle(event) }}
@@ -124,7 +139,7 @@
                   ></span>
                   {{ planoBadgeLabel(planoStatusForEvent(event)) }}
                 </div>
-              </div>
+              </button>
             </div>
             <div v-else class="text-[10px] font-bold text-slate-400">
               Nenhum agendamento para este dia.
@@ -156,6 +171,42 @@
           {{ selectedLabel }}
         </p>
 
+        <!-- Próxima etapa da venda (só ao criar; pré-preenche cliente + status) -->
+        <section v-if="!editingEvent && canVendas" class="mb-5 p-4 rounded-xl bg-indigo-50 border border-indigo-100 space-y-3">
+          <div class="text-[10px] font-black uppercase tracking-widest text-indigo-600">
+            Próxima etapa da venda
+          </div>
+          <p class="text-[10px] text-slate-600">
+            Selecione uma venda que está aguardando agendamento. O cliente e a etapa (medida fina, montagem, etc.) serão preenchidos e o status da venda será atualizado ao salvar.
+          </p>
+          <SearchInput
+            v-model="vendaSelecionadaId"
+            mode="select"
+            label=""
+            placeholder="Selecione a venda (ex.: medida fina, montagem)..."
+            :options="vendasAguardandoOptions"
+            @update:modelValue="onSelecionarVendaParaAgendamento"
+          />
+          <div v-if="vendaSelecionadaParaAgendamento" class="flex flex-wrap items-center gap-2 pt-2">
+            <span
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase"
+              :class="statusBadgeClassVenda"
+            >
+              {{ statusLabelVenda }}
+            </span>
+            <span class="text-xs font-bold text-slate-700">
+              {{ clienteNomeVenda }}
+            </span>
+            <button
+              type="button"
+              class="text-slate-500 hover:text-rose-500 text-[10px] font-bold"
+              @click="limparVendaSelecionada"
+            >
+              Limpar
+            </button>
+          </div>
+        </section>
+
         <div class="space-y-5">
           <!-- 1. Tipo e período da tarefa -->
           <section class="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-3">
@@ -164,12 +215,13 @@
             </div>
             <div>
               <label class="block text-xs font-bold mb-1">Tipo</label>
-              <p v-if="!opcoesTipoAgendamento.unico" class="text-[10px] text-slate-500 mb-1">
+              <p v-if="!opcoesTipoAgendamento.unico && !vendaSelecionadaParaAgendamento" class="text-[10px] text-slate-500 mb-1">
                 Venda = pipeline do cliente. Plano de corte = produção para fornecedor.
               </p>
               <select
                 v-model="taskForm.categoria"
                 class="w-full h-10 bg-white border border-slate-200 rounded-xl px-3 text-xs font-bold text-slate-700"
+                :disabled="!!vendaSelecionadaParaAgendamento"
               >
                 <template v-if="opcoesTipoAgendamento.unico">
                   <option
@@ -226,8 +278,8 @@
             </div>
           </section>
 
-          <!-- 2. Cliente -->
-          <section>
+          <!-- 2. Cliente (oculto quando veio de "Próxima etapa da venda") -->
+          <section v-if="!vendaSelecionadaParaAgendamento">
             <div class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">2. Cliente</div>
             <SearchInput
               v-model="taskForm.clienteId"
@@ -412,7 +464,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { AgendaService, ClienteService, FuncionarioService, PlanoCorteService } from '@/services/index'
+import { AgendaService, ClienteService, FuncionarioService, PlanoCorteService, VendaService } from '@/services/index'
 import { PIPELINE_CLIENTE, PIPELINE_PLANO_CORTE } from '@/constantes'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
@@ -440,10 +492,87 @@ const taskForm = reactive({
   inicio: '',
   fim: '',
   clienteId: '',
+  vendaId: '',
   funcionarioIds: [],
   categoria: 'LIVRE',
   apontamentos: [],
 })
+
+// Vendas aguardando agendamento (medida, medida fina, montagem) — para pré-preencher o modal
+const vendasAguardandoAgendamento = ref([])
+const vendaSelecionadaParaAgendamento = ref(null)
+
+const STATUS_PARA_CATEGORIA = {
+  CONTRATO_GERADO: 'MEDIDA_FINA',
+  AGENDAR_MEDIDA: 'MEDIDA',
+  AGENDAR_MEDIDA_FINA: 'MEDIDA_FINA',
+  AGENDAR_MONTAGEM: 'MONTAGEM',
+}
+
+const vendaSelecionadaId = ref('')
+
+const vendasAguardandoOptions = computed(() => {
+  const lista = vendasAguardandoAgendamento.value || []
+  return lista.map((v) => {
+    const clienteNome = v?.cliente?.nome_completo || v?.cliente?.razao_social || 'Cliente'
+    const statusKey = v?.status || ''
+    const etapaLabel =
+      statusKey === 'CONTRATO_GERADO'
+        ? 'Agendar medida fina'
+        : (PIPELINE_CLIENTE.find((p) => p.key === statusKey)?.label || statusKey || 'Agendar')
+    return {
+      value: String(v.id),
+      label: `Venda #${v.id} – ${clienteNome} – ${etapaLabel}`,
+      venda: v,
+    }
+  })
+})
+
+const statusLabelVenda = computed(() => {
+  const v = vendaSelecionadaParaAgendamento.value
+  if (!v?.status) return ''
+  const item = PIPELINE_CLIENTE.find((p) => p.key === v.status)
+  return item ? `Aguardando agendamento: ${item.label}` : v.status
+})
+
+const statusBadgeClassVenda = computed(() => {
+  const v = vendaSelecionadaParaAgendamento.value
+  const item = v?.status ? PIPELINE_CLIENTE.find((p) => p.key === v.status) : null
+  const fase = item?.fase || ''
+  if (fase.includes('MEDIDA_FINA') || fase.includes('MEDIDA')) return 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+  if (fase.includes('MONTAGEM')) return 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+  return 'bg-slate-100 text-slate-700 border border-slate-200'
+})
+
+const clienteNomeVenda = computed(() => {
+  const v = vendaSelecionadaParaAgendamento.value
+  return v?.cliente?.nome_completo || v?.cliente?.razao_social || 'Cliente' || ''
+})
+
+function onSelecionarVendaParaAgendamento(value) {
+  const id = value ?? vendaSelecionadaId.value
+  if (!id) return
+  const opt = vendasAguardandoOptions.value.find((o) => String(o.value) === String(id))
+  const v = opt?.venda
+  if (!v) return
+  vendaSelecionadaParaAgendamento.value = v
+  taskForm.vendaId = String(v.id)
+  taskForm.clienteId = String(v.cliente_id)
+  taskForm.categoria = STATUS_PARA_CATEGORIA[v.status] || 'LIVRE'
+  const clienteNome = v?.cliente?.nome_completo || v?.cliente?.razao_social || 'Cliente'
+  const pipelineItem = PIPELINE_CLIENTE.find((p) => p.key === (v?.status || ''))
+  const etapaLabel = pipelineItem?.label || v?.status || 'Etapa'
+  taskForm.titulo = `${etapaLabel} – ${clienteNome}`
+}
+
+function limparVendaSelecionada() {
+  vendaSelecionadaId.value = ''
+  vendaSelecionadaParaAgendamento.value = null
+  taskForm.vendaId = ''
+  taskForm.clienteId = ''
+  taskForm.categoria = 'LIVRE'
+  taskForm.titulo = ''
+}
 
 const weekDays = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB']
 
@@ -624,9 +753,12 @@ function openModal() {
   editingEvent.value = null
   taskForm.titulo = ''
   taskForm.clienteId = ''
+  taskForm.vendaId = ''
   taskForm.funcionarioIds = []
   taskForm.categoria = 'LIVRE'
   taskForm.apontamentos = []
+  vendaSelecionadaId.value = ''
+  vendaSelecionadaParaAgendamento.value = null
   funcionarioSelecionado.value = ''
   const inicio = toDateTimeLocal(selectedDay.value)
   taskForm.inicio = inicio
@@ -653,6 +785,12 @@ function openGarantia() {
   if (!modalOpen.value) {
     openModal()
   }
+}
+
+function openModalForEvent(event) {
+  selectedDay.value = new Date(event.inicio_em)
+  editTask(event)
+  modalOpen.value = true
 }
 
 function editTask(event) {
@@ -839,7 +977,9 @@ async function saveTask() {
           projeto_id: editingEvent.value?.projeto_id || undefined,
           plano_corte_id: editingEvent.value?.plano_corte_id || undefined,
         }
-      : {}
+      : taskForm.vendaId
+        ? { venda_id: Number(taskForm.vendaId) }
+        : {}
 
     if (editingEvent.value) {
       await AgendaService.excluir(editingEvent.value.id)
@@ -923,11 +1063,22 @@ async function loadFuncionarios() {
   }
 }
 
+async function loadVendasAguardandoAgendamento() {
+  if (!canVendas.value) return
+  try {
+    const res = await VendaService.aguardandoAgendamento()
+    vendasAguardandoAgendamento.value = Array.isArray(res?.data) ? res.data : []
+  } catch (e) {
+    vendasAguardandoAgendamento.value = []
+  }
+}
+
 onMounted(() => {
   loadAgenda()
   loadPlanosProducao()
   loadClientes()
   loadFuncionarios()
+  loadVendasAguardandoAgendamento()
 })
 watch(currentMonth, loadAgenda)
 </script>

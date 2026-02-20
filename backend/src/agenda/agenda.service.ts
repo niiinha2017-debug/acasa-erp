@@ -41,13 +41,15 @@ export class AgendaService {
     };
 
     // ✅ Transação Real: Garante a integridade dos dados
+    const idsEquipe = Array.isArray(equipe_ids) ? equipe_ids : [];
+
     return this.prisma.$transaction(async (tx) => {
-      // 1. Cria o evento na agenda com a equipe vinculada
+      // 1. Cria o evento na agenda (equipe opcional)
       const agendamento = await tx.agenda_global.create({
         data: {
           ...dataAgenda,
           equipe: {
-            create: equipe_ids.map((id) => ({
+            create: idsEquipe.map((id) => ({
               funcionario_id: id,
             })),
           },

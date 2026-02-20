@@ -110,6 +110,16 @@ export class VendasService {
     });
   }
 
+  /** Vendas em etapas que aguardam agendamento: contrato (medida fina), medida, medida fina, montagem */
+  async listarAguardandoAgendamento() {
+    const statuses = ['CONTRATO_GERADO', 'AGENDAR_MEDIDA', 'AGENDAR_MEDIDA_FINA', 'AGENDAR_MONTAGEM'];
+    return this.prisma.vendas.findMany({
+      where: { status: { in: statuses } },
+      orderBy: { id: 'asc' },
+      include: { cliente: true },
+    });
+  }
+
   async buscarPorId(id: number) {
     const venda = await this.prisma.vendas.findUnique({
       where: { id },

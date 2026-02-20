@@ -5,7 +5,6 @@ import {
   IsOptional,
   IsInt,
   IsArray,
-  ArrayMinSize,
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
@@ -62,13 +61,11 @@ export class CreateAgendaDto {
   @IsInt()
   projeto_id?: number;
 
-  // Validação da Equipe
+  /** Equipe (opcional; vazio no fluxo "Enviar para Produção") */
+  @IsOptional()
   @IsArray()
   @IsInt({ each: true })
-  @ArrayMinSize(1, {
-    message: 'Selecione pelo menos um funcionário para a equipe',
-  })
-  equipe_ids: number[];
+  equipe_ids?: number[];
 
   @IsOptional()
   @IsString()

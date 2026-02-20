@@ -152,11 +152,11 @@ router.isReady().then(() => {
 })
 
 const maybeRunUpdater = async () => {
-  // Só roda quando estiver dentro do Tauri (desktop).
+  // Só roda quando estiver dentro do Tauri (desktop) e em build de produção.
   if (!window.__TAURI__ && !window.__TAURI_INTERNALS__) return
+  if (import.meta.env.DEV) return // Em dev não verifica atualização (evita erro de release JSON)
 
   try {
-    const currentVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '?'
     notify.info('Tauri: verificando atualização...')
 
     const { check } = await import('@tauri-apps/plugin-updater')
@@ -171,9 +171,12 @@ const maybeRunUpdater = async () => {
       notify.info('Tauri: nenhuma atualização disponível.')
     }
   } catch (err) {
-    console.error('[ACASA_UPDATER]', err)
-    const msg = err?.message || String(err)
-    notify.error(`Tauri updater erro: ${msg}`)
+    console.warn('[ACASA_UPDATER]', err?.message || err)
+    // Não mostra toast para erro de endpoint/release JSON (ex.: servidor de updates ainda não configurado)
+    const msg = String(err?.message || err)
+    if (!msg.includes('release JSON') && !msg.includes('fetch')) {
+      notify.error(`Tauri updater: ${msg}`)
+    }
   }
 }
 

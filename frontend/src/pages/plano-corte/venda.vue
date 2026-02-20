@@ -248,29 +248,6 @@
                   required
                 />
               </div>
-              <div>
-                <label class="block text-[10px] font-bold uppercase tracking-wider text-text-muted mb-2">Equipe (mín. 1) *</label>
-                <div class="flex flex-wrap gap-2">
-                  <SearchInput
-                    v-model="modalEnviarProducao.funcionarioSelecionado"
-                    mode="select"
-                    class="flex-1 min-w-[200px]"
-                    :options="funcionariosOptions"
-                    placeholder="Selecione funcionário..."
-                    @update:modelValue="adicionarEquipe"
-                  />
-                  <div v-if="modalEnviarProducao.equipe_ids.length" class="flex flex-wrap gap-2 mt-2">
-                    <span
-                      v-for="id in modalEnviarProducao.equipe_ids"
-                      :key="id"
-                      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 text-xs font-medium"
-                    >
-                      {{ funcionarioNomeById(id) }}
-                      <button type="button" class="hover:text-rose-500" @click="removerEquipe(id)">&times;</button>
-                    </span>
-                  </div>
-                </div>
-              </div>
               <div class="flex justify-end gap-3 pt-4 border-t border-border-ui">
                 <Button type="button" variant="ghost" @click="fecharModalEnviarProducao">
                   Cancelar
@@ -762,7 +739,6 @@ async function abrirModalEnviarProducao() {
 }
 
 async function confirmarEnviarProducao() {
-  if (!modalEnviarProducao.value.equipe_ids.length) return notify.error('Selecione pelo menos um funcionário na equipe.')
 
   const inicio = new Date(modalEnviarProducao.value.inicio_em)
   const fim = new Date(modalEnviarProducao.value.fim_em)
@@ -779,7 +755,7 @@ async function confirmarEnviarProducao() {
       inicio_em: inicio.toISOString(),
       fim_em: fim.toISOString(),
       plano_corte_id: planoId,
-      equipe_ids: modalEnviarProducao.value.equipe_ids.map((id) => Number(id)),
+      equipe_ids: [],
       categoria: 'PRODUCAO',
     })
     notify.success('Plano enviado para produção!')

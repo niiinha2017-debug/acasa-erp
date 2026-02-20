@@ -196,29 +196,6 @@
                 <Input v-model="modalEnviarProducao.inicio_em" label="Início *" type="datetime-local" required />
                 <Input v-model="modalEnviarProducao.fim_em" label="Término *" type="datetime-local" required />
               </div>
-              <div>
-                <label class="block text-[10px] font-bold uppercase tracking-wider text-text-muted mb-2">Equipe (mín. 1) *</label>
-                <div class="flex flex-wrap gap-2">
-                  <SearchInput
-                    v-model="modalEnviarProducao.funcionarioSelecionado"
-                    mode="select"
-                    class="flex-1 min-w-[200px]"
-                    :options="funcionariosOptionsEnviarProducao"
-                    placeholder="Selecione funcionário..."
-                    @update:modelValue="adicionarEquipeEnviarProducao"
-                  />
-                  <div v-if="modalEnviarProducao.equipe_ids.length" class="flex flex-wrap gap-2 mt-2 w-full">
-                    <span
-                      v-for="id in modalEnviarProducao.equipe_ids"
-                      :key="id"
-                      class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-700 text-xs font-medium"
-                    >
-                      {{ funcionarioNomeByIdEnviarProducao(id) }}
-                      <button type="button" class="hover:text-rose-500" @click="removerEquipeEnviarProducao(id)">&times;</button>
-                    </span>
-                  </div>
-                </div>
-              </div>
               <div class="flex justify-end gap-3 pt-4 border-t border-border-ui">
                 <Button type="button" variant="ghost" @click="fecharModalEnviarProducao">Cancelar</Button>
                 <Button type="submit" variant="primary" :loading="modalEnviarProducao.salvando">
@@ -406,7 +383,6 @@ async function abrirModalEnviarProducao() {
   modalEnviarProducao.value.aberto = true
 }
 async function confirmarEnviarProducao() {
-  if (!modalEnviarProducao.value.equipe_ids.length) return notify.error('Selecione pelo menos um funcionário na equipe.')
   const inicio = new Date(modalEnviarProducao.value.inicio_em)
   const fim = new Date(modalEnviarProducao.value.fim_em)
   if (Number.isNaN(inicio.getTime()) || Number.isNaN(fim.getTime())) return notify.error('Data de início e término inválidas.')
@@ -421,7 +397,7 @@ async function confirmarEnviarProducao() {
       fim_em: fim.toISOString(),
       cliente_id: cid,
       venda_id: vendaId.value,
-      equipe_ids: modalEnviarProducao.value.equipe_ids.map((id) => Number(id)),
+      equipe_ids: [],
       categoria: 'PRODUCAO',
     })
     notify.success('Venda enviada para produção!')
