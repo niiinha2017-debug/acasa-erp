@@ -1,3 +1,7 @@
+<script setup>
+import { notifications, notify } from '@/services/notify'
+</script>
+
 <template>
   <div class="fixed top-6 right-6 z-[10000] flex flex-col gap-3 w-full max-w-[360px] pointer-events-none">
     <TransitionGroup name="toast">
@@ -36,7 +40,7 @@
           </div>
 
           <button 
-            @click="n.remove()" 
+            @click="notify.remove(n.id)" 
             class="ml-auto text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors"
           >
             <i class="pi pi-times text-[10px]"></i>

@@ -129,7 +129,7 @@ import { can } from '@/services/permissions'
 import api from '@/services/api'
 import { format } from '@/utils/format'
 
-definePage({ meta: { perm: 'vendas.ver' } })
+definePage({ meta: { perm: 'posvenda.ver' } })
 
 const router = useRouter()
 const loading = ref(false)
@@ -163,7 +163,7 @@ const filtradas = computed(() => {
 })
 
 async function carregar() {
-  if (!can('vendas.ver')) return notify.error('Acesso negado.')
+  if (!can('posvenda.ver')) return notify.error('Acesso negado.')
   loading.value = true
   try {
     const { data } = await api.get('/vendas')
@@ -201,7 +201,7 @@ async function excluir(id) {
 }
 
 onMounted(async () => {
-  if (!can('vendas.ver')) {
+  if (!can('posvenda.ver')) {
     notify.error('Acesso negado.')
     router.push('/')
     return

@@ -123,7 +123,7 @@ import { notify } from '@/services/notify'
 import { format } from '@/utils/format'
 import { PIPELINE_CLIENTE } from '@/constantes'
 
-definePage({ meta: { perm: 'vendas.ver' } })
+definePage({ meta: { perm: 'posvenda.ver' } })
 
 const router = useRouter()
 const loading = ref(false)
@@ -183,7 +183,7 @@ const cardsByColumn = computed(() => {
 })
 
 async function carregar() {
-  if (!can('vendas.ver')) {
+  if (!can('posvenda.ver')) {
     notify.error('Acesso negado.')
     return
   }
@@ -244,6 +244,11 @@ async function onDrop(targetStatus) {
 }
 
 onMounted(async () => {
+  if (!can('posvenda.ver')) {
+    notify.error('Acesso negado.')
+    router.push('/')
+    return
+  }
   await carregar()
 })
 </script>

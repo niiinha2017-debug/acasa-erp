@@ -10,9 +10,9 @@ export async function buscarCep(cep) {
   if (n.length !== 8) return null
 
   try {
-    const res = await fetch(`https://viacep.com.br/ws/${n}/json`)
-    const data = await res.json()
-    return data.erro ? null : data
+    const res = await api.get(`/utils/cep/${n}`)
+    const data = res?.data
+    return data && !data.erro ? data : null
   } catch (err) {
     return null
   }

@@ -9,6 +9,7 @@ const paths = {
   frontendPkg: path.join(root, 'frontend', 'package.json'),
   frontendLock: path.join(root, 'frontend', 'package-lock.json'),
   androidBuildGradle: path.join(root, 'frontend', 'android', 'app', 'build.gradle'),
+  pontoPkg: path.join(root, 'frontend-ponto', 'package.json'),
 }
 
 function readJson(file) {
@@ -84,6 +85,14 @@ if (fs.existsSync(paths.frontendLock)) {
 
 setCargoVersion(paths.cargoToml, version)
 
+// Ponto (Capacitor): mesma versão para o atualizador do app oferecer o novo APK
+if (fs.existsSync(paths.pontoPkg)) {
+  const pontoPkg = readJson(paths.pontoPkg)
+  pontoPkg.version = version
+  writeJson(paths.pontoPkg, pontoPkg)
+  console.log('frontend-ponto/package.json ->', version)
+}
+
 // Android: incrementa versionCode (obrigatório para nova versão na Play Store) — só no bump, não no --sync
 if (!syncOnly && fs.existsSync(paths.androidBuildGradle)) {
   const gradleSrc = fs.readFileSync(paths.androidBuildGradle, 'utf8')
@@ -97,4 +106,4 @@ if (!syncOnly && fs.existsSync(paths.androidBuildGradle)) {
   }
 }
 
-console.log(`Versão unificada (Desktop + Android): ${current.major}.${current.minor}.${current.patch} -> ${version}`)
+console.log(`Versão unificada (Desktop + Ponto + Android): ${current.major}.${current.minor}.${current.patch} -> ${version}`)

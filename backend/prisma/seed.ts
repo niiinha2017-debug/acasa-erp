@@ -92,10 +92,11 @@ async function main() {
     { chave: 'agendamentos.vendas', descricao: 'Ver agenda - vendas' },
     { chave: 'agendamentos.producao', descricao: 'Ver agenda - producao' },
 
-    { chave: 'vendas.ver', descricao: 'Visualizar vendas' },
-    { chave: 'vendas.criar', descricao: 'Criar vendas' },
-    { chave: 'vendas.editar', descricao: 'Editar vendas' },
+    { chave: 'vendas.ver', descricao: 'Visualizar vendas (detalhe/comercial)' },
+    { chave: 'vendas.criar', descricao: 'Criar vendas (fechamento – comercial)' },
+    { chave: 'vendas.editar', descricao: 'Editar vendas (comercial)' },
     { chave: 'vendas.excluir', descricao: 'Excluir vendas' },
+    { chave: 'posvenda.ver', descricao: 'Pós-venda: listagem e acompanhamento (área produção)' },
 
     { chave: 'orcamentos.ver', descricao: 'Visualizar orcamentos' },
     { chave: 'orcamentos.criar', descricao: 'Criar orcamentos' },

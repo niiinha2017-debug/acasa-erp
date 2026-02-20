@@ -53,4 +53,20 @@ export class UtilsService {
       throw new HttpException('Falha ao consultar serviço de CNPJ', 500);
     }
   }
+
+  async buscarCep(cep: string) {
+    const n = String(cep ?? '').replace(/\D/g, '');
+    if (n.length !== 8) {
+      return null;
+    }
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${n}/json`, {
+        headers: { Accept: 'application/json' },
+      });
+      const data = (await res.json()) as { erro?: boolean; cep?: string; logradouro?: string; bairro?: string; localidade?: string; uf?: string };
+      return data?.erro ? null : data;
+    } catch {
+      return null;
+    }
+  }
 }

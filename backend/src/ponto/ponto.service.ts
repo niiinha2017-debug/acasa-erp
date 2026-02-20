@@ -315,7 +315,6 @@ export class PontoService {
       .slice(0, 32);
   }
 
-  /** Retorna label do tipo: Entrada, Almoço (1ª saída do dia) ou Saída */
   private tipoLabel(registrosDia: { id: number; tipo: string; data_hora: Date }[], registro: { id: number; tipo: string }): string {
     if (registro.tipo === 'ENTRADA') return 'Entrada';
     if (registro.tipo !== 'SAIDA') return registro.tipo;
@@ -393,23 +392,14 @@ export class PontoService {
 
     const empresa = await this.prisma.empresa.findUnique({
       where: { id: 1 },
-      select: {
-        razao_social: true,
-        nome_fantasia: true,
-        cnpj: true,
-      },
+      select: { razao_social: true, nome_fantasia: true, cnpj: true },
     });
-
-    const empresaPayload = empresa
-      ? {
-          nome: empresa.razao_social || empresa.nome_fantasia || 'Empresa',
-          cnpj: empresa.cnpj || '',
-        }
-      : { nome: 'Empresa', cnpj: '' };
 
     return {
       ...funcionario,
-      empresa: empresaPayload,
+      empresa: empresa
+        ? { nome: empresa.razao_social || empresa.nome_fantasia || 'Empresa', cnpj: empresa.cnpj || '' }
+        : { nome: 'Empresa', cnpj: '' },
     };
   }
 }

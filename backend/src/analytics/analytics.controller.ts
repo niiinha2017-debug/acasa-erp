@@ -24,7 +24,7 @@ export class AnalyticsController {
 
   /** Visão geral Produção – vendas em produção, finalizadas, plano de corte. */
   @Get('dashboard/resumo-producao')
-  @Permissoes('vendas.ver', 'plano_corte.ver')
+  @Permissoes('posvenda.ver', 'plano_corte.ver')
   getResumoProducao() {
     return this.service.getResumoProducao();
   }

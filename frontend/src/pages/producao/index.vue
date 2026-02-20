@@ -31,7 +31,7 @@
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
       <RouterLink
-        v-if="can('vendas.ver')"
+        v-if="can('posvenda.ver')"
         to="/vendas"
         class="group flex flex-col p-6 rounded-2xl border border-border-ui bg-bg-card hover:border-brand-primary/50 hover:shadow-lg transition-all duration-200"
       >
@@ -90,14 +90,14 @@ import { computed, onMounted, ref } from 'vue'
 import { can } from '@/services/permissions'
 import api from '@/services/api'
 
-definePage({ meta: { perm: 'vendas.ver' } })
+definePage({ meta: { perm: 'posvenda.ver' } })
 
 const temAlgumAcesso = computed(() =>
-  can('vendas.ver') || can('plano_corte.ver') || can('plano_corte.criar')
+  can('posvenda.ver') || can('plano_corte.ver') || can('plano_corte.criar')
 )
 
 const podeVerResumo = computed(() =>
-  can('vendas.ver') || can('plano_corte.ver')
+  can('posvenda.ver') || can('plano_corte.ver')
 )
 
 const resumo = ref({

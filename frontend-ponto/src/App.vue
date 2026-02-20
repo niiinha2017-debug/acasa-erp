@@ -27,12 +27,10 @@
         </div>
 
         <div v-else class="w-full space-y-6 animate-in">
-          <!-- Cabeçalho: Nome da Empresa e CNPJ -->
           <div class="w-full text-center border-b border-slate-100 pb-3">
             <p class="text-sm font-black text-[#1e293b] uppercase">{{ empresaNome }}</p>
             <p class="text-[10px] font-bold text-[#64748b] mt-0.5">{{ empresaCnpj }}</p>
           </div>
-
           <header class="text-center">
             <p class="text-[#94a3b8] text-[10px] font-black uppercase tracking-[0.2em] mb-1">Bem-vindo(a)</p>
             <h2 class="text-xl font-black text-[#1e293b] uppercase truncate">{{ funcionarioNome }}</h2>
@@ -64,19 +62,26 @@
           <div v-if="registrosHojeOrdenados.length" class="space-y-3">
             <p class="text-[9px] font-black text-[#94a3b8] uppercase tracking-widest">Registros de hoje</p>
             <div class="bg-white border border-slate-100 rounded-2xl overflow-hidden">
-              <ul class="divide-y divide-slate-100 max-h-48 overflow-y-auto">
+              <ul class="divide-y divide-slate-100 max-h-56 overflow-y-auto">
                 <li
                   v-for="(reg, idx) in registrosHojeOrdenados"
                   :key="reg.id || idx"
-                  class="flex justify-between items-center px-4 py-3"
+                  class="px-4 py-3 space-y-1"
                   :class="idx === registrosHojeOrdenados.length - 1 ? 'bg-indigo-50/50' : ''"
                 >
-                  <span class="text-xs font-bold text-[#1e293b] uppercase">{{ reg.tipo }}</span>
-                  <span class="text-xs font-black text-slate-600 tabular-nums">{{ formatarHoraRegistro(reg.data_hora) }}</span>
+                  <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-[#1e293b] uppercase">{{ reg.tipo_label || reg.tipo }}</span>
+                    <span class="text-xs font-black text-slate-600 tabular-nums">{{ formatarDataHoraExata(reg.data_hora) }}</span>
+                  </div>
+                  <p v-if="reg.transacao_id" class="text-[9px] font-mono text-[#94a3b8] truncate" :title="reg.transacao_id">ID: {{ reg.transacao_id }}</p>
                 </li>
               </ul>
             </div>
             <div v-if="ultimoRegistro" class="bg-white border border-slate-100 rounded-2xl p-4 space-y-3">
+              <p v-if="ultimoRegistro.transacao_id" class="text-[9px] text-[#64748b]">
+                <span class="font-black uppercase">ID da transação:</span>
+                <span class="font-mono block mt-1 break-all">{{ ultimoRegistro.transacao_id }}</span>
+              </p>
               <button
                 type="button"
                 @click="enviarComprovanteWhatsApp"
@@ -250,16 +255,13 @@ async function carregarDados() {
     ])
     
     const dataMe = resMe?.data || {}
-    const nome =
-      dataMe.nome ||
-      dataMe.funcionario?.nome ||
-      funcionarioNome.value
+    const nome = dataMe.nome || dataMe.funcionario?.nome || funcionarioNome.value
 
     funcionarioNome.value = nome
     localStorage.setItem('acasa_funcionario_nome', nome)
 
     empresaNome.value = dataMe.empresa?.nome || 'Empresa'
-    empresaCnpj.value = maskCnpj(dataMe.empresa?.cnpj || '')
+    empresaCnpj.value = maskCnpj(dataMe.empresa?.cnpj || '') || dataMe.empresa?.cnpj || ''
     funcionarioCpf.value = dataMe.cpf || ''
     funcionarioPis.value = dataMe.pis ? String(dataMe.pis).trim() : ''
 

@@ -59,23 +59,28 @@ import { can } from '@/services/permissions'
 
 const app = createApp(App)
 
-// ✅ GLOBAL ERROR HANDLER (DEBUG MOBILE)
+// Mostra erro na UI: toast sempre (visível no Tauri); alert como fallback
+function showErrorToUser(title, message) {
+  const text = message ? `${title}: ${message}` : title
+  console.error('[ACASA_ERROR]', text)
+  notify.error(String(text).slice(0, 300))
+  try { alert(text) } catch (_) {}
+}
+
+// ✅ GLOBAL ERROR HANDLER (Vue + Tauri: toast sempre; dialog no Tauri)
 app.config.errorHandler = (err, instance, info) => {
-  console.error('[ACASA_VUE_ERROR]', err)
-  // Mostra erro na tela para o usuário ver no celular
-  alert(`Erro Inesperado: ${err.message}\nInfo: ${info}`)
+  const msg = err?.message || String(err)
+  showErrorToUser('Erro inesperado', `${msg} (${info || ''})`)
 }
 
 // ✅ Captura erros globais e promessas rejeitadas
 window.onerror = (message, source, lineno, colno) => {
-  console.error('[ACASA_WINDOW_ERROR]', message, source, lineno, colno)
-  alert(`Erro JS: ${message}\n${source}:${lineno}:${colno}`)
+  showErrorToUser('Erro JS', `${message} em ${source}:${lineno}:${colno}`)
 }
 
 window.addEventListener('unhandledrejection', (event) => {
   const reason = event?.reason?.message || event?.reason || 'Unknown'
-  console.error('[ACASA_UNHANDLED_REJECTION]', event?.reason)
-  alert(`Promise rejeitada: ${reason}`)
+  showErrorToUser('Operação falhou', String(reason))
 })
 
 // Registro Global - UI

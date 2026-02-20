@@ -522,7 +522,7 @@
                 </template>
                 <template #cell-acoes="{ row }">
                   <div class="flex justify-end gap-2">
-                    <Button v-if="can('arquivos.ver') || can('vendas.ver')" variant="secondary" size="sm" type="button" @click="abrirArquivo(row)">Ver</Button>
+                    <Button v-if="can('arquivos.ver') || can('posvenda.ver')" variant="secondary" size="sm" type="button" @click="abrirArquivo(row)">Ver</Button>
                     <Button v-if="can('arquivos.excluir') && can(permSalvarVenda())" variant="danger" size="sm" type="button" @click="excluirArquivo(row.id, 'IMAGEM_PDF')">Excluir</Button>
                   </div>
                 </template>
@@ -567,7 +567,7 @@
                 </template>
                 <template #cell-acoes="{ row }">
                   <div class="flex justify-end gap-2">
-                    <Button v-if="can('arquivos.ver') || can('vendas.ver')" variant="secondary" size="sm" type="button" @click="abrirArquivo(row)">Ver</Button>
+                    <Button v-if="can('arquivos.ver') || can('posvenda.ver')" variant="secondary" size="sm" type="button" @click="abrirArquivo(row)">Ver</Button>
                     <Button v-if="can('arquivos.excluir') && can(permSalvarVenda())" variant="danger" size="sm" type="button" @click="excluirArquivo(row.id, 'ANEXO')">Excluir</Button>
                   </div>
                 </template>
@@ -780,7 +780,7 @@ import { can } from '@/services/permissions'
 import { closeTabAndGo } from '@/utils/tabs'
 import { maskCPF, maskRG, onlyNumbers } from '@/utils/masks'
 
-definePage({ meta: { perm: 'vendas.ver' } })
+definePage({ meta: { perm: 'posvenda.ver' } })
 
 // =======================
 // ROUTE
@@ -1715,8 +1715,8 @@ onMounted(async () => {
   }
   const baseRedirect = isContextoVenda.value ? '/vendas/fechamento' : '/vendas'
 
-  // ✅ bloqueio base: ver
-  if (!can('vendas.ver')) {
+  // ✅ bloqueio base: pós-venda (produção) – comercial não acessa esta tela
+  if (!can('posvenda.ver')) {
     notify.error('Acesso negado.')
     redirecionarSemPerm(baseRedirect)
     return

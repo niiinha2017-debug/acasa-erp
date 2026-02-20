@@ -14,4 +14,10 @@ export class UtilsController {
   buscarCnpj(@Param('cnpj') cnpj: string) {
     return this.utilsService.buscarCnpj(cnpj);
   }
+
+  @Get('cep/:cep')
+  @Permissoes('clientes.ver', 'clientes.criar', 'clientes.editar', 'fornecedores.ver', 'funcionarios.ver', 'configuracoes.empresa.ver')
+  buscarCep(@Param('cep') cep: string) {
+    return this.utilsService.buscarCep(cep);
+  }
 }

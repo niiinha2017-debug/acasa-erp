@@ -30,5 +30,6 @@ const layout = computed(() => {
     </component>
   </RouterView>
 
+  <ToastContainer />
   <ConfirmModal />
 </template>

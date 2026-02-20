@@ -33,13 +33,13 @@ export class VendasController {
   }
 
   @Get()
-  @Permissoes('vendas.ver')
+  @Permissoes('posvenda.ver')
   listar() {
     return this.service.listar();
   }
 
   @Get(':id')
-  @Permissoes('vendas.ver')
+  @Permissoes('vendas.criar', 'vendas.editar', 'vendas.ver', 'posvenda.ver')
   buscar(@Param('id') id: string) {
     return this.service.buscarPorId(this.cleanId(id));
   }
@@ -92,7 +92,7 @@ export class VendasController {
   }
 
   @Get(':id/ambientes')
-  @Permissoes('vendas.ver')
+  @Permissoes('posvenda.ver', 'vendas.editar')
   listarAmbientes(@Param('id') id: string) {
     return this.service.listarAmbientes(this.cleanId(id));
   }
