@@ -244,9 +244,7 @@ async function enviarComprovanteWhatsApp() {
         })
         return
       }
-      const url = URL.createObjectURL(blob)
-      window.open(url, '_blank', 'noopener')
-      setTimeout(() => URL.revokeObjectURL(url), 60000)
+      baixarBlob(blob, 'comprovante-ponto.png')
       return
     }
   } catch (e) {
@@ -272,6 +270,22 @@ Tipo: ${tipoLabel}${idTransacao}`
     window.open(url, '_blank', 'noopener,noreferrer')
   } else {
     window.location.href = url
+  }
+}
+
+function baixarBlob(blob, nomeArquivo) {
+  const url = URL.createObjectURL(blob)
+  try {
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = nomeArquivo
+    anchor.rel = 'noopener noreferrer'
+    anchor.style.display = 'none'
+    document.body.appendChild(anchor)
+    anchor.click()
+    document.body.removeChild(anchor)
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
 }
 

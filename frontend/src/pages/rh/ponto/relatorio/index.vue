@@ -457,6 +457,7 @@ definePage({ meta: { perm: 'ponto_relatorio.ver' } })
 const router = useRouter()
 const loadingTabela = ref(false)
 const loadingPdf = ref(false)
+const loadingComprovanteId = ref(null)
 const rows = ref([])
 const funcionarioOptions = ref([])
 const funcionarios = ref([])
@@ -681,32 +682,117 @@ async function abrirPdfViaBlob(funcionario_id, mes, ano) {
 }
 
 async function abrirComprovante(registroId) {
-  if (!registroId) return
+  if (!registroId || loadingComprovanteId.value === registroId) return
+  loadingComprovanteId.value = registroId
   try {
     const res = await PontoRelatorioService.comprovantePdf(registroId)
     const blob = new Blob([res.data], { type: 'application/pdf' })
-    const url = URL.createObjectURL(blob)
-    window.open(url, '_blank', 'noopener')
-    setTimeout(() => URL.revokeObjectURL(url), 60000)
+    const imprimiu = await tentarImprimirPdf(blob)
+    if (!imprimiu) {
+      await abrirBlobComFallback(blob, `comprovante-ponto-${registroId}.pdf`)
+    }
   } catch (e) {
     console.error('[PONTO COMPROVANTE]', e)
     notify.error(e?.response?.data?.message || 'Não foi possível abrir o comprovante.')
+  } finally {
+    loadingComprovanteId.value = null
   }
 }
 
 async function abrirComprovanteImagem(registroId, formato = 'png') {
-  if (!registroId) return
+  if (!registroId || loadingComprovanteId.value === registroId) return
+  loadingComprovanteId.value = registroId
   try {
     const res = await PontoRelatorioService.comprovanteImagem(registroId, formato)
     const mime = formato === 'jpeg' || formato === 'jpg' ? 'image/jpeg' : 'image/png'
     const blob = new Blob([res.data], { type: mime })
-    const url = URL.createObjectURL(blob)
-    window.open(url, '_blank', 'noopener')
-    setTimeout(() => URL.revokeObjectURL(url), 60000)
+    await abrirBlobComFallback(blob, `comprovante-ponto-${registroId}.${formato}`)
   } catch (e) {
     console.error('[PONTO COMPROVANTE IMAGEM]', e)
     notify.error(e?.response?.data?.message || 'Não foi possível gerar a imagem.')
+  } finally {
+    loadingComprovanteId.value = null
   }
+}
+
+async function tentarImprimirPdf(blob) {
+  const isTauri = typeof window !== 'undefined' && (window.__TAURI__ ?? window.__TAURI_INTERNALS__)
+  if (isTauri) return false
+  if (typeof document === 'undefined') return false
+
+  const url = URL.createObjectURL(blob)
+  const iframe = document.createElement('iframe')
+  iframe.style.position = 'fixed'
+  iframe.style.right = '0'
+  iframe.style.bottom = '0'
+  iframe.style.width = '0'
+  iframe.style.height = '0'
+  iframe.style.border = '0'
+  iframe.src = url
+  document.body.appendChild(iframe)
+
+  return await new Promise((resolve) => {
+    const cleanup = () => {
+      try {
+        iframe.remove()
+      } catch {}
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+    }
+
+    const timeout = setTimeout(() => {
+      cleanup()
+      resolve(false)
+    }, 4000)
+
+    iframe.onload = () => {
+      clearTimeout(timeout)
+      setTimeout(() => {
+        try {
+          iframe.contentWindow?.focus()
+          iframe.contentWindow?.print()
+          cleanup()
+          resolve(true)
+        } catch (e) {
+          console.error('[PONTO COMPROVANTE PRINT]', e)
+          cleanup()
+          resolve(false)
+        }
+      }, 200)
+    }
+  })
+}
+
+async function abrirBlobComFallback(blob, nomeArquivo) {
+  const url = URL.createObjectURL(blob)
+  const isTauri = typeof window !== 'undefined' && (window.__TAURI__ ?? window.__TAURI_INTERNALS__)
+
+  try {
+    if (isTauri) {
+      baixarBlob(url, nomeArquivo)
+      notify.info('Comprovante baixado. Abra o arquivo para imprimir.')
+      return
+    }
+    try {
+      const opened = window.open(url, '_blank', 'noopener,noreferrer')
+      if (opened) return
+    } catch {}
+
+    baixarBlob(url, nomeArquivo)
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 60000)
+  }
+}
+
+function baixarBlob(url, nomeArquivo) {
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = nomeArquivo
+  anchor.target = '_blank'
+  anchor.rel = 'noopener noreferrer'
+  anchor.style.display = 'none'
+  document.body.appendChild(anchor)
+  anchor.click()
+  document.body.removeChild(anchor)
 }
 
 function abrirWhatsComprovante() {
