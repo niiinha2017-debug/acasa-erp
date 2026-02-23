@@ -5,9 +5,16 @@ import path from 'path'
 import { readFileSync } from 'fs'
 
 const pkg = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf8'))
+const lifecycle = String(process.env.npm_lifecycle_event || '')
+const isTauriBuild =
+  Boolean(process.env.TAURI_PLATFORM) ||
+  Boolean(process.env.TAURI_ENV_PLATFORM) ||
+  lifecycle.includes('tauri')
 
 export default defineConfig({
-  base: './',
+  // Web precisa de caminhos absolutos (/assets/...) para funcionar em rotas como /aceitar/:token.
+  // Tauri empacotado continua usando relativo.
+  base: isTauriBuild ? './' : '/',
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },

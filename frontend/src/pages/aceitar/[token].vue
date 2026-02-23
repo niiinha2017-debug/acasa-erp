@@ -15,6 +15,25 @@
             <p class="mt-4 text-sm text-slate-700 dark:text-slate-300">
               As partes declaram-se cientes e concordam que este contrato será assinado por meio eletrônico, reconhecendo como válida a assinatura realizada através do sistema interno da A Casa Marcenaria, com base na Medida Provisória nº 2.200-2/2001 e na Lei nº 14.063/2020.
             </p>
+            <p class="mt-3 text-sm text-slate-700 dark:text-slate-300">
+              Leia os termos completos do contrato abaixo antes de finalizar o aceite.
+            </p>
+            <div
+              v-if="info?.linkPdf"
+              class="mt-4 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden bg-white dark:bg-slate-900"
+            >
+              <iframe
+                :src="info.linkPdf"
+                class="w-full h-[60vh]"
+                title="Contrato em PDF"
+              />
+            </div>
+            <div
+              v-else
+              class="mt-4 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 text-sm text-amber-700 dark:text-amber-300"
+            >
+              Não foi possível carregar a visualização do PDF no momento.
+            </div>
             <a
               v-if="info?.linkPdf"
               :href="info.linkPdf"
