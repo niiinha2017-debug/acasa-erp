@@ -448,7 +448,7 @@
                   @click="removeTask(event)"
                   class="h-8 px-3 rounded-lg bg-rose-50 text-rose-600 text-[10px] font-black uppercase"
                 >
-                  Excluir
+                  Cancelar
                 </button>
               </div>
             </div>
@@ -912,7 +912,7 @@ async function removeTask(event) {
     await AgendaService.excluir(event.id)
     await loadAgenda()
   } catch (e) {
-    notify.error('Nao foi possivel excluir a tarefa.')
+    notify.error('Nao foi possivel cancelar a tarefa.')
   }
 }
 
@@ -927,8 +927,13 @@ async function saveTask() {
 
   if (!equipeIds.length) return notify.error('Informe pelo menos um funcionario.')
 
+  const equipeParaValidar = isAdmin.value
+    ? taskForm.funcionarioIds
+    : [String(usuarioLogado.value?.funcionario_id || '')]
+  const equipeParaValidarLimpa = equipeParaValidar.filter(Boolean)
+
   // Cada funcionário da equipe deve ter pelo menos um horário (início e término) preenchido
-  for (const fid of taskForm.funcionarioIds) {
+  for (const fid of equipeParaValidarLimpa) {
     const periodos = getApontamentosPorFuncionario(fid)
     const temHorarioValido = periodos.some((p) => {
       if (!p?.inicio || !p?.fim) return false
@@ -981,19 +986,23 @@ async function saveTask() {
         ? { venda_id: Number(taskForm.vendaId) }
         : {}
 
-    if (editingEvent.value) {
-      await AgendaService.excluir(editingEvent.value.id)
-    }
-    await AgendaService.criar({
+    const payload = {
       titulo,
       inicio_em: inicio.toISOString(),
       fim_em: fim.toISOString(),
       cliente_id: Number(taskForm.clienteId),
       equipe_ids: equipeIds,
-       categoria: taskForm.categoria || 'LIVRE',
-       apontamentos: apontamentosPayload,
+      categoria: taskForm.categoria || 'LIVRE',
+      apontamentos: apontamentosPayload,
       ...origemPayload,
-    })
+    }
+
+    if (editingEvent.value) {
+      await AgendaService.atualizar(editingEvent.value.id, payload)
+    } else {
+      await AgendaService.criar(payload)
+    }
+
     await loadAgenda()
     closeModal()
   } catch (e) {
@@ -1007,7 +1016,9 @@ async function loadAgenda() {
   try {
     const inicio = dateKey(startOfMonth(currentMonth.value))
     const fim = dateKey(endOfMonth(currentMonth.value))
-    const res = await AgendaService.listarTodos(inicio, fim)
+    const res = await AgendaService.listarTodos(inicio, fim, {
+      incluir_cancelados: false,
+    })
     let data = Array.isArray(res?.data) ? res.data : []
     // Vendedores (só agendamentos.vendas) veem apenas eventos de venda/cliente; produção vê tudo
     if (canVendas.value && !canProducao.value) {

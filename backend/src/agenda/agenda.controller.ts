@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { AgendaService } from './agenda.service';
 import { CreateAgendaDto } from './dto/create-agenda.dto';
+import { UpdateAgendaDto } from './dto/update-agenda.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
@@ -37,6 +38,9 @@ export class AgendaController {
   async findAll(
     @Query('inicio') inicio?: string,
     @Query('fim') fim?: string,
+    @Query('status') status?: string,
+    @Query('funcionario_id') funcionarioId?: string,
+    @Query('incluir_cancelados') incluirCancelados?: string,
     @Req() req?: any,
   ) {
     const perms: string[] = Array.isArray(req?.user?.permissoes)
@@ -51,6 +55,11 @@ export class AgendaController {
 
     return this.agendaService.findAll(inicio, fim, {
       includePlanoCorte: canProducao,
+      status,
+      funcionarioId: funcionarioId ? Number(funcionarioId) : undefined,
+      incluirCancelados:
+        String(incluirCancelados || '').toLowerCase() === 'true' ||
+        incluirCancelados === '1',
     });
   }
 
@@ -68,10 +77,17 @@ export class AgendaController {
     return this.agendaService.updateStatus(+id, status);
   }
 
+  // 4.1 Atualizar dados do agendamento sem recriar
+  @Patch(':id')
+  @Permissoes('agendamentos.editar')
+  async update(@Param('id') id: string, @Body() updateAgendaDto: UpdateAgendaDto) {
+    return this.agendaService.update(+id, updateAgendaDto);
+  }
+
   // 5. Deletar agendamento
   @Delete(':id')
   @Permissoes('agendamentos.excluir')
   async remove(@Param('id') id: string) {
-    return this.agendaService.remove(+id);
+    return this.agendaService.cancel(+id);
   }
 }

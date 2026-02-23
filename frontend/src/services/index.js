@@ -386,13 +386,18 @@ export const PontoJustificativasService = {
 
 export const AgendaService = {
   // Buscar todos (com filtro opcional de data)
-  listarTodos(inicio, fim) {
-    return api.get('/agenda', { params: { inicio, fim } });
+  listarTodos(inicio, fim, filtros = {}) {
+    return api.get('/agenda', { params: { inicio, fim, ...filtros } });
   },
 
   // Criar novo agendamento
   criar(dados) {
     return api.post('/agenda', dados);
+  },
+
+  // Atualizar agendamento existente
+  atualizar(id, dados) {
+    return api.patch(`/agenda/${id}`, dados);
   },
 
   // Buscar agenda do marceneiro
