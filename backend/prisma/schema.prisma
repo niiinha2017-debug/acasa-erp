@@ -186,6 +186,7 @@ model vendas {
   status String
 
   data_venda DateTime @default(now())
+  endereco_entrega String?
 
   // ✅ NOVO: base real do pós-venda (não é o orçado)
   valor_vendido Decimal @default(0.00) @db.Decimal(10, 2)

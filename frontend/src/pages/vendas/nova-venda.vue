@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="w-full h-full">
     <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
       <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
@@ -104,6 +104,15 @@
                     v-model="dataVenda"
                     type="date"
                     label="Data da venda"
+                    :forceUpper="false"
+                  />
+                </div>
+
+                <div class="col-span-12">
+                  <Input
+                    v-model="enderecoEntrega"
+                    label="Endereço da entrega"
+                    placeholder="Rua, número, bairro, cidade/UF"
                     :forceUpper="false"
                   />
                 </div>
@@ -540,6 +549,7 @@ const itens = ref([])
 const valorFinal = ref(0)
 const percentualDesconto = ref(0)
 const dataVenda = ref(new Date().toISOString().slice(0, 10))
+const enderecoEntrega = ref('')
 const indicacaoNome = ref('')
 const TIPO_COMISSAO_OCULTA = 'VENDEDOR'
 const DESCONTO_MAXIMO_PERCENTUAL = Number(VENDA_FECHAMENTO_REGRAS?.DESCONTO_MAXIMO_PERCENTUAL || 0)
@@ -953,6 +963,21 @@ function getRepresentanteEmpresaSelecionado() {
   }
 }
 
+function montarEnderecoCliente(cliente) {
+  if (!cliente || typeof cliente !== 'object') return ''
+  const partes = [
+    cliente.endereco,
+    cliente.numero,
+    cliente.complemento,
+    cliente.bairro,
+    cliente.cidade,
+    cliente.estado,
+  ]
+    .map((x) => String(x || '').trim())
+    .filter(Boolean)
+  return partes.join(', ')
+}
+
 async function carregarConfiguracaoEmpresa() {
   try {
     const data = await ConfiguracaoService.carregar()
@@ -1002,6 +1027,7 @@ async function carregarOrcamento() {
       valor_unitario: Number(it.valor_unitario || 0), // orçado (referência)
       valor_final: Number(it.valor_unitario || 0), // valor de venda inicial (pode ser alterado)
     }))
+    enderecoEntrega.value = montarEnderecoCliente(data?.cliente)
     percentualDesconto.value = 0
     aplicarRateio()
 
@@ -1063,6 +1089,8 @@ async function carregarVenda() {
       percentualDesconto.value = 0
     }
     dataVenda.value = venda?.data_venda ? String(venda.data_venda).slice(0, 10) : new Date().toISOString().slice(0, 10)
+    enderecoEntrega.value =
+      String(venda?.endereco_entrega || '').trim() || montarEnderecoCliente(orc?.cliente)
 
     const pagos = venda?.pagamentos || []
     pagamentos.value =
@@ -1343,6 +1371,7 @@ async function criarOuAtualizarVenda() {
       orcamento_id: Number(orcamento.value.id),
       status: 'VENDA_FECHADA',
       data_venda: dataVenda.value,
+      endereco_entrega: String(enderecoEntrega.value || '').trim() || undefined,
       valor_vendido: Number(valorCobradoVenda.value),
       representante_venda_nome: representanteEmpresa.nome || undefined,
       representante_venda_cpf: representanteEmpresa.cpf || undefined,

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CriarClienteDto } from './dto/criar-cliente.dto';
 import { AtualizarClienteDto } from './dto/atualizar-cliente.dto';
@@ -126,7 +130,19 @@ export class ClientesService {
 
   async remover(id: number) {
     await this.buscarPorId(id);
-    await this.prisma.cliente.delete({ where: { id } });
+    try {
+      await this.prisma.cliente.delete({ where: { id } });
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2003'
+      ) {
+        throw new BadRequestException(
+          'Este cliente possui vínculos (vendas, orçamentos, contratos ou financeiro) e não pode ser excluído.',
+        );
+      }
+      throw e;
+    }
     return { ok: true };
   }
 

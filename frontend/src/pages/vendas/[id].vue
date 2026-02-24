@@ -67,6 +67,15 @@
               <Input v-model="form.data_venda" type="date" label="Data da venda" :forceUpper="false" />
             </div>
 
+            <div class="col-span-12">
+              <Input
+                v-model="form.endereco_entrega"
+                label="Endereço da entrega"
+                placeholder="Rua, número, bairro, cidade/UF"
+                :forceUpper="false"
+              />
+            </div>
+
           </div>
         </section>
 
@@ -803,6 +812,21 @@ function pipelineKey(key) {
   return k
 }
 
+function montarEnderecoCliente(cliente) {
+  if (!cliente || typeof cliente !== 'object') return ''
+  const partes = [
+    cliente.endereco,
+    cliente.numero,
+    cliente.complemento,
+    cliente.bairro,
+    cliente.cidade,
+    cliente.estado,
+  ]
+    .map((x) => String(x || '').trim())
+    .filter(Boolean)
+  return partes.join(', ')
+}
+
 // (Contrato é aberto a partir do fluxo de venda/fechamento, não daqui)
 
 // =======================
@@ -884,6 +908,7 @@ const form = reactive({
   orcamento_id: '',
   status: pipelineKey('VENDA_FECHADA'),
   data_venda: new Date().toISOString().slice(0, 10),
+  endereco_entrega: '',
 
   valor_vendido: 0,
 
@@ -1332,6 +1357,7 @@ async function carregarOrcamentoNaVenda(orcamentoId) {
   loading.value = true
   try {
     const { data } = await OrcamentosService.detalhar(orcamentoId)
+    form.endereco_entrega = montarEnderecoCliente(data?.cliente)
 
     form.itens = (data?.itens || []).map((it) => ({
       nome_ambiente: it.nome_ambiente,
@@ -1366,6 +1392,8 @@ async function carregarVenda() {
 
     form.orcamento_id = data?.orcamento_id ?? ''
     form.data_venda = data?.data_venda ? String(data.data_venda).slice(0, 10) : form.data_venda
+    form.endereco_entrega =
+      String(data?.endereco_entrega || '').trim() || montarEnderecoCliente(data?.cliente)
     form.valor_vendido = round2(num(data?.valor_vendido || 0))
     form.representante_venda_nome = data?.representante_venda_nome ?? ''
     form.representante_venda_cpf = data?.representante_venda_cpf ?? ''
@@ -1473,6 +1501,7 @@ function montarPayload() {
     orcamento_id: Number(form.orcamento_id),
     status: pipelineKey('VENDA_FECHADA'),
     data_venda: form.data_venda ? String(form.data_venda) : undefined,
+    endereco_entrega: String(form.endereco_entrega || '').trim() || undefined,
     valor_vendido: round2(num(form.valor_vendido || 0)),
 
     representante_venda_nome: undefined,
@@ -1566,6 +1595,7 @@ watch(
   async (val) => {
     if (isEdit.value) return
     form.orcamento_id = ''
+    form.endereco_entrega = ''
     orcamentosOptions.value = []
     form.itens = []
     if (!val) return

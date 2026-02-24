@@ -89,6 +89,10 @@ export class CreateVendaDto {
   data_venda?: string;
 
   @IsOptional()
+  @IsString()
+  endereco_entrega?: string;
+
+  @IsOptional()
   @IsDateString()
   data_entrega?: string;
 

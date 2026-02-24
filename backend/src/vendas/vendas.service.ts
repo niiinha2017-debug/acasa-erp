@@ -411,6 +411,7 @@ export class VendasService {
           status: dto.status,
 
           data_venda: dto.data_venda ? new Date(dto.data_venda) : undefined,
+          endereco_entrega: dto.endereco_entrega?.trim() || null,
           valor_vendido: valorVendido,
 
           valor_bruto: totais.valor_bruto,
@@ -584,6 +585,9 @@ export class VendasService {
         data: {
           status: dto.status ?? undefined,
           data_venda: dto.data_venda ? new Date(dto.data_venda) : undefined,
+          ...(dto.endereco_entrega !== undefined && {
+            endereco_entrega: dto.endereco_entrega?.trim() || null,
+          }),
           valor_vendido: valorVendido,
 
           valor_bruto: totais.valor_bruto,

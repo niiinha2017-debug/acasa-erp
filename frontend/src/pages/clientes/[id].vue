@@ -565,13 +565,33 @@ async function salvar() {
   saving.value = true
 
   try {
-    const payload = {
-      ...form,
-      data_nascimento: form.data_nascimento ? form.data_nascimento : null,
+    const textoOuNulo = (v) => {
+      const s = String(v ?? '').trim()
+      return s ? s : null
+    }
 
-      razao_social: isJuridica.value ? form.nome_completo : null,
+    const payload = {
+      nome_completo: String(form.nome_completo || '').trim(),
+      indicacao_origem: textoOuNulo(form.indicacao_origem),
+      data_nascimento: form.data_nascimento ? form.data_nascimento : null,
+      cpf: textoOuNulo(form.cpf),
+      rg: textoOuNulo(form.rg),
+      cnpj: textoOuNulo(form.cnpj),
+      ie: textoOuNulo(form.ie),
+      telefone: textoOuNulo(form.telefone),
+      whatsapp: textoOuNulo(form.whatsapp),
+      estado_civil: textoOuNulo(form.estado_civil),
+      nome_conjuge: form.estado_civil === 'CASADO' ? textoOuNulo(form.nome_conjuge) : null,
       email: form.email ? String(form.email).toLowerCase().trim() : null,
-      nome_conjuge: form.estado_civil === 'CASADO' ? (form.nome_conjuge || null) : null,
+      cep: textoOuNulo(form.cep),
+      endereco: textoOuNulo(form.endereco),
+      numero: textoOuNulo(form.numero),
+      complemento: textoOuNulo(form.complemento),
+      bairro: textoOuNulo(form.bairro),
+      cidade: textoOuNulo(form.cidade),
+      estado: textoOuNulo(form.estado),
+      status: textoOuNulo(form.status) || 'ATIVO',
+      razao_social: isJuridica.value ? form.nome_completo : null,
       enviar_aniversario_email: form.email ? !!form.enviar_aniversario_email : false,
       enviar_aniversario_whatsapp: form.whatsapp ? !!form.enviar_aniversario_whatsapp : false,
       indicacao_id: form.indicacao_id ? Number(form.indicacao_id) : null,
