@@ -1,11 +1,11 @@
-<template>
+﻿<template>
   <div class="w-full h-full">
     <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
       <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
 
       <PageHeader
-        title="Visão geral – Vendas"
-        subtitle="Orçamentos, fechamento de venda e contratos (área comercial)"
+        title="VisÃ£o geral â€“ Vendas"
+        subtitle="OrÃ§amentos, fechamento de venda e contratos (Ã¡rea comercial)"
         icon="pi pi-briefcase"
       />
 
@@ -27,15 +27,15 @@
             <div v-else class="space-y-3">
               <div class="text-xs text-text-soft">
                 <span class="font-semibold text-text-main">
-                  Vendedor: {{ resumoVendedor.vendedor || 'Não identificado' }}
+                  Vendedor: {{ resumoVendedor.vendedor || 'NÃ£o identificado' }}
                 </span>
-                <span class="mx-2">•</span>
-                <span>Fonte: {{ resumoVendedor.fonte_vendedor || 'Usuário autenticado' }}</span>
+                <span class="mx-2">â€¢</span>
+                <span>Fonte: {{ resumoVendedor.fonte_vendedor || 'UsuÃ¡rio autenticado' }}</span>
                 <RouterLink
                   :to="resumoVendedor.link_referencia || '/vendas/fechamento'"
                   class="ml-2 font-semibold text-brand-primary hover:underline"
                 >
-                  Ver referência
+                  Ver referÃªncia
                 </RouterLink>
               </div>
               <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -44,11 +44,11 @@
                 <p class="text-xl font-black text-text-main">{{ resumoVendedor.minhas_vendas_total ?? 0 }}</p>
               </div>
               <div class="rounded-xl border border-border-ui bg-bg-card p-4">
-                <p class="text-[10px] font-bold uppercase tracking-wider text-text-soft mb-1">Fechadas no mês</p>
+                <p class="text-[10px] font-bold uppercase tracking-wider text-text-soft mb-1">Fechadas no mÃªs</p>
                 <p class="text-xl font-black text-text-main">{{ resumoVendedor.minhas_vendas_mes ?? 0 }}</p>
               </div>
               <div class="rounded-xl border border-border-ui bg-bg-card p-4">
-                <p class="text-[10px] font-bold uppercase tracking-wider text-text-soft mb-1">Em produção</p>
+                <p class="text-[10px] font-bold uppercase tracking-wider text-text-soft mb-1">Em produÃ§Ã£o</p>
                 <p class="text-xl font-black text-text-main">{{ resumoVendedor.minhas_em_producao ?? 0 }}</p>
               </div>
               <div class="rounded-xl border border-border-ui bg-bg-card p-4">
@@ -69,8 +69,8 @@
             <div class="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4 group-hover:bg-brand-primary/10 transition-colors">
               <i class="pi pi-file-edit text-xl text-brand-primary"></i>
             </div>
-            <h3 class="text-base font-bold text-text-main uppercase tracking-tight mb-1">Orçamento</h3>
-            <p class="text-xs text-text-soft">Propostas e negociações</p>
+            <h3 class="text-base font-bold text-text-main uppercase tracking-tight mb-1">OrÃ§amento</h3>
+            <p class="text-xs text-text-soft">Propostas e negociaÃ§Ãµes</p>
           </RouterLink>
 
           <RouterLink
@@ -82,7 +82,7 @@
               <i class="pi pi-shopping-cart text-xl text-brand-primary"></i>
             </div>
             <h3 class="text-base font-bold text-text-main uppercase tracking-tight mb-1">Fechamento de venda</h3>
-            <p class="text-xs text-text-soft">Converter orçamento em venda</p>
+            <p class="text-xs text-text-soft">Converter orÃ§amento em venda</p>
           </RouterLink>
 
           <RouterLink
@@ -105,8 +105,8 @@
             <div class="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4 group-hover:bg-brand-primary/10 transition-colors">
               <i class="pi pi-file-edit text-xl text-brand-primary"></i>
             </div>
-            <h3 class="text-base font-bold text-text-main uppercase tracking-tight mb-1">Cláusulas</h3>
-            <p class="text-xs text-text-soft">Modelos de orçamento e contrato</p>
+            <h3 class="text-base font-bold text-text-main uppercase tracking-tight mb-1">ClÃ¡usulas</h3>
+            <p class="text-xs text-text-soft">Modelos de orÃ§amento e contrato</p>
           </RouterLink>
 
           <RouterLink
@@ -118,18 +118,18 @@
               <i class="pi pi-calendar-clock text-xl text-brand-primary"></i>
             </div>
             <h3 class="text-base font-bold text-text-main uppercase tracking-tight mb-1">Agenda</h3>
-            <p class="text-xs text-text-soft">Produção, montagem e entregas</p>
+            <p class="text-xs text-text-soft">ProduÃ§Ã£o, montagem e entregas</p>
           </RouterLink>
         </div>
 
-        <!-- Próximos agendamentos (agenda da produção) -->
+        <!-- PrÃ³ximos agendamentos (agenda da produÃ§Ã£o) -->
         <div
           v-if="can('agendamentos.ver')"
           class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden"
         >
           <div class="px-4 py-3 border-b border-border-ui flex items-center justify-between">
             <span class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
-              Próximos agendamentos (agenda produção)
+              PrÃ³ximos agendamentos (agenda produÃ§Ã£o)
             </span>
             <RouterLink
               to="/agendamentos?visao=geral"
@@ -144,7 +144,7 @@
               Carregando...
             </div>
             <div v-else-if="proximosAgendamentos.length === 0" class="py-6 text-center text-text-soft text-sm">
-              Nenhum agendamento nos próximos dias.
+              Nenhum agendamento nos prÃ³ximos dias.
             </div>
             <ul v-else class="space-y-2">
               <li
@@ -155,10 +155,10 @@
                 <span class="font-bold text-text-main shrink-0">
                   {{ formatarDataAgenda(ev.inicio_em) }}
                 </span>
-                <span class="text-text-soft">{{ formatarHoraAgenda(ev.inicio_em) }} – {{ formatarHoraAgenda(ev.fim_em) }}</span>
+                <span class="text-text-soft">{{ formatarHoraAgenda(ev.inicio_em) }} â€“ {{ formatarHoraAgenda(ev.fim_em) }}</span>
                 <span class="font-medium text-text-main">{{ ev.titulo }}</span>
                 <span class="text-text-soft">
-                  — {{ ev.cliente?.nome_completo || ev.cliente?.razao_social || 'Cliente' }}
+                  â€” {{ ev.cliente?.nome_completo || ev.cliente?.razao_social || 'Cliente' }}
                   <span class="text-[10px] uppercase">({{ labelOrigemAgenda(ev) }})</span>
                 </span>
               </li>
@@ -167,7 +167,7 @@
         </div>
 
         <div v-if="!temAlgumAcesso" class="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 p-6 text-center">
-          <p class="text-sm text-amber-800 dark:text-amber-200">Você não tem permissão para acessar nenhum módulo comercial.</p>
+          <p class="text-sm text-amber-800 dark:text-amber-200">VocÃª nÃ£o tem permissÃ£o para acessar nenhum mÃ³dulo comercial.</p>
         </div>
       </div>
     </div>
@@ -179,7 +179,7 @@ import { computed, onMounted, ref } from 'vue'
 import { AgendaService } from '@/services'
 import api from '@/services/api'
 import { can } from '@/services/permissions'
-import { storage } from '@/utils/storage'
+import storage from '@/utils/storage'
 
 definePage({ meta: { perm: 'orcamentos.ver' } })
 
@@ -192,7 +192,7 @@ const resumoVendedor = ref({
   vendedor: null,
   vendedor_usuario_id: null,
   vendedor_funcionario_id: null,
-  fonte_vendedor: 'Usuário autenticado',
+  fonte_vendedor: 'UsuÃ¡rio autenticado',
   link_referencia: '/vendas/fechamento',
   minhas_vendas_total: 0,
   minhas_vendas_mes: 0,
@@ -204,22 +204,22 @@ const loadingAgenda = ref(false)
 const proximosAgendamentos = ref([])
 
 function formatarDataAgenda(iso) {
-  if (!iso) return '–'
+  if (!iso) return 'â€“'
   const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return '–'
+  if (Number.isNaN(d.getTime())) return 'â€“'
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
 }
 
 function formatarHoraAgenda(iso) {
-  if (!iso) return '–'
+  if (!iso) return 'â€“'
   const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return '–'
+  if (Number.isNaN(d.getTime())) return 'â€“'
   return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 }
 
 function labelOrigemAgenda(ev) {
   if (ev?.plano_corte_id) return 'Plano de corte'
-  if (ev?.orcamento_id) return 'Orçamento'
+  if (ev?.orcamento_id) return 'OrÃ§amento'
   if (ev?.venda_id) return 'Venda'
   return 'Cliente'
 }
@@ -260,7 +260,7 @@ async function carregarResumoVendedor() {
     const { data } = await api.get('/analytics/dashboard/resumo-vendedor')
     resumoVendedor.value = data ?? resumoVendedor.value
   } catch {
-    // silencia; card é complementar
+    // silencia; card Ã© complementar
   } finally {
     loadingResumoVendedor.value = false
   }
@@ -271,3 +271,4 @@ onMounted(() => {
   carregarAgenda()
 })
 </script>
+
