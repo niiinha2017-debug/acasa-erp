@@ -14,6 +14,7 @@ export class ClientesService {
       const cliente = await tx.cliente.create({
         data: {
           indicacao_id: dto.indicacao_id ?? null,
+          indicacao_origem: dto.indicacao_origem ?? null,
 
           nome_completo: dto.nome_completo,
           razao_social: dto.razao_social ?? null,
@@ -79,6 +80,7 @@ export class ClientesService {
       where: { id },
       data: {
         indicacao_id: dto.indicacao_id ?? undefined,
+        indicacao_origem: dto.indicacao_origem ?? undefined,
 
         nome_completo: dto.nome_completo ?? undefined,
         razao_social: dto.razao_social ?? undefined,

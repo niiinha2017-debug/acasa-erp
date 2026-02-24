@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+﻿import { PrismaClient } from '@prisma/client'
 import * as bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
@@ -89,20 +89,23 @@ async function main() {
     { chave: 'agendamentos.producao', descricao: 'Ver agenda - producao' },
 
     { chave: 'vendas.ver', descricao: 'Visualizar vendas (detalhe/comercial)' },
-    { chave: 'vendas.criar', descricao: 'Criar vendas (fechamento – comercial)' },
+    { chave: 'vendas.criar', descricao: 'Criar vendas (fechamento - comercial)' },
     { chave: 'vendas.editar', descricao: 'Editar vendas (comercial)' },
     { chave: 'vendas.excluir', descricao: 'Excluir vendas' },
-    { chave: 'posvenda.ver', descricao: 'Pós-venda: listagem e acompanhamento (área produção)' },
+    { chave: 'vendas.fechamento.ver', descricao: 'Visualizar tela de fechamento de venda (loja)' },
+    { chave: 'vendas.fechamento.criar', descricao: 'Fechar venda na tela de loja' },
+    { chave: 'posvenda.ver', descricao: 'Pos-venda: listagem e acompanhamento (area producao)' },
 
     { chave: 'orcamentos.ver', descricao: 'Visualizar orcamentos' },
     { chave: 'orcamentos.criar', descricao: 'Criar orcamentos' },
     { chave: 'orcamentos.editar', descricao: 'Editar orcamentos' },
+    { chave: 'orcamentos.clausulas.editar', descricao: 'Editar clausulas do orcamento (por cliente)' },
     { chave: 'orcamentos.excluir', descricao: 'Excluir orcamentos' },
 
     { chave: 'contratos.ver', descricao: 'Visualizar contratos' },
     { chave: 'contratos.criar', descricao: 'Criar contratos' },
     { chave: 'contratos.editar', descricao: 'Editar contratos' },
-    { chave: 'contratos.clausulas.editar', descricao: 'Editar modelos de cláusulas de contrato/orçamento' },
+    { chave: 'contratos.clausulas.editar', descricao: 'Editar modelos de clausulas de contrato/orcamento' },
     { chave: 'contratos.excluir', descricao: 'Excluir contratos' },
 
     { chave: 'plano_corte.ver', descricao: 'Visualizar plano de corte' },
@@ -203,8 +206,7 @@ async function main() {
     data: permsDb.map((p) => ({ usuario_id: admin.id, permissao_id: p.id })),
     skipDuplicates: true,
   })
-
-  console.log('✅ Seed OK: admin + permissões vinculadas')
+  console.log('Seed OK: admin + permissoes vinculadas')
 }
 
 main()
@@ -215,3 +217,5 @@ main()
   .finally(async () => {
     await prisma.$disconnect()
   })
+
+

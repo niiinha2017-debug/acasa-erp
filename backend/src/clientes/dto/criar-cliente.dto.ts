@@ -1,15 +1,23 @@
 import {
   IsBoolean,
   IsEmail,
+  IsIn,
   IsOptional,
   IsString,
   IsDateString,
   MaxLength,
 } from 'class-validator';
+import { INDICACAO_ORIGEM_KEYS } from '../../../shared/constantes/indicacao-origem';
 
 export class CriarClienteDto {
   @IsOptional()
   indicacao_id?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  @IsIn([...INDICACAO_ORIGEM_KEYS])
+  indicacao_origem?: string;
 
   @IsString()
   @MaxLength(255)

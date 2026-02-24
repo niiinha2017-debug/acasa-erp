@@ -17,7 +17,7 @@
               />
             </div>
             <Button
-              v-if="can('vendas.criar') && primeiroOrcamentoSemVenda"
+              v-if="(can('vendas.criar') || can('vendas.fechamento.criar')) && primeiroOrcamentoSemVenda"
               variant="primary"
               type="button"
               @click="irParaFechamento(primeiroOrcamentoSemVenda.id)"
@@ -122,7 +122,7 @@ import { notify } from '@/services/notify'
 import { can } from '@/services/permissions'
 import { format } from '@/utils/format'
 
-definePage({ meta: { perm: 'vendas.criar' } })
+definePage({ meta: { perm: 'vendas.fechamento.ver' } })
 
 const router = useRouter()
 const loading = ref(false)
@@ -173,7 +173,7 @@ function irParaFechamento(id) {
 }
 
 async function carregar() {
-  if (!can('vendas.criar') || !can('orcamentos.ver')) {
+  if (!can('vendas.fechamento.ver') && !can('vendas.criar')) {
     notify.error('Acesso negado.')
     return
   }

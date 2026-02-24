@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="w-full h-full">
     <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
       <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
@@ -67,6 +67,50 @@
                 </span>
               </p>
             </div>
+
+            <!-- FECHAMENTO / VALOR FINAL -->
+            <section class="space-y-4 rounded-2xl border border-border-ui bg-bg-page p-4">
+              <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
+                Fechamento da Venda
+              </div>
+
+              <div class="grid grid-cols-12 gap-4 items-end">
+                <div class="col-span-12 md:col-span-3">
+                  <Input
+                    v-model.number="percentualDesconto"
+                    label="Desconto aplicado (%)"
+                    type="number"
+                    min="0"
+                    :max="DESCONTO_MAXIMO_PERCENTUAL"
+                    :step="DESCONTO_STEP"
+                    :forceUpper="false"
+                    @update:modelValue="onPercentualDescontoInput"
+                  />
+                </div>
+
+                <div class="col-span-12 md:col-span-4">
+                  <Input
+                    :modelValue="format.currency(valorFinal)"
+                    label="Valor final da venda (com desconto) *"
+                    type="text"
+                    inputmode="numeric"
+                    :forceUpper="false"
+                    disabled
+                  />
+                </div>
+
+                <div class="col-span-12 md:col-span-2">
+                  <Input
+                    v-model="dataVenda"
+                    type="date"
+                    label="Data da venda"
+                    :forceUpper="false"
+                  />
+                </div>
+
+              </div>
+
+            </section>
 
             <div class="rounded-2xl border border-border-ui bg-white overflow-hidden">
               <div class="flex items-center justify-between px-4 pt-4 pb-2">
@@ -141,102 +185,10 @@
               </Table>
             </div>
           </section>
-
-          <!-- FECHAMENTO / VALOR FINAL -->
-          <section class="space-y-4">
-            <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
-              Fechamento da Venda
-            </div>
-
-            <div class="grid grid-cols-12 gap-4 items-end">
-              <div class="col-span-12 md:col-span-4">
-                <Input
-                  :modelValue="format.currency(valorFinal)"
-                  label="Valor final da venda (com desconto) *"
-                  type="text"
-                  inputmode="numeric"
-                  :forceUpper="false"
-                  @update:modelValue="onValorFinalInput"
-                />
-              </div>
-
-              <div class="col-span-12 md:col-span-2">
-                <Input
-                  v-model="dataVenda"
-                  type="date"
-                  label="Data da venda"
-                  :forceUpper="false"
-                />
-              </div>
-
-              <div class="col-span-12 mt-2 pt-4 border-t border-border-ui">
-                <p class="text-[10px] font-black text-text-soft uppercase tracking-widest mb-2">
-                  Representante da venda (contrato)
-                </p>
-                <p class="text-[10px] text-text-soft mb-3">
-                  Opcional. Se preenchido, este representante aparece no contrato desta venda. Caso contrário, usa o cadastro da empresa.
-                </p>
-                <div class="grid grid-cols-12 gap-4">
-                  <div class="col-span-12 md:col-span-4">
-                    <Select
-                      v-model="representanteTipo"
-                      label="Representante"
-                      placeholder="Selecione"
-                      :options="opcoesRepresentanteVenda"
-                      labelKey="label"
-                      valueKey="value"
-                    />
-                  </div>
-                  <template v-if="representanteTipo === 'outro'">
-                    <div class="col-span-12 md:col-span-6">
-                      <Input
-                        v-model="representanteVendaNome"
-                        label="Nome completo *"
-                        force-upper
-                        required
-                      />
-                    </div>
-                    <div class="col-span-12 md:col-span-4">
-                      <Input
-                        v-model="representanteVendaCpfMask"
-                        label="CPF *"
-                        :forceUpper="false"
-                        required
-                      />
-                    </div>
-                    <div class="col-span-12 md:col-span-4">
-                      <Input
-                        v-model="representanteVendaRgMask"
-                        label="RG *"
-                        :forceUpper="false"
-                        required
-                      />
-                    </div>
-                  </template>
-                </div>
-              </div>
-            </div>
-
-            <p class="text-[11px] text-text-soft">
-              O valor final informado será utilizado como base da venda e dos recebimentos.
-            </p>
-          </section>
-
           <!-- FORMAS DE PAGAMENTO (SEM VALIDAR COM VALOR FINAL) -->
           <section class="space-y-4">
-            <div class="flex items-center justify-between gap-4">
-              <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
-                Formas de pagamento
-              </div>
-
-              <Button
-                variant="secondary"
-                size="sm"
-                type="button"
-                @click="adicionarPagamento"
-              >
-                + Adicionar pagamento
-              </Button>
+            <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
+              Formas de pagamento
             </div>
 
             <Table
@@ -255,12 +207,11 @@
               </template>
 
               <template #cell-parcelas="{ row }">
-                <Input
-                  v-model.number="pagamentos[row.__idx].parcelas"
-                  type="number"
-                  min="1"
-                  max="24"
-                  :forceUpper="false"
+                <Select
+                  v-model="pagamentos[row.__idx].parcelas"
+                  :options="PARCELAS_OPTIONS_FILTRADAS"
+                  labelKey="label"
+                  valueKey="value"
                 />
               </template>
 
@@ -282,96 +233,58 @@
                     </div>
                     <div class="w-28">
                       <Input
-                        :modelValue="format.currency(pagamentos[row.__idx].datas_parcelas[i].valor || 0)"
+                        :modelValue="
+                          String(pagamentos[row.__idx].forma_pagamento_chave || '').toUpperCase() === 'CREDITO'
+                            ? format.currency(valorCobradoVenda)
+                            : format.currency(pagamentos[row.__idx].datas_parcelas[i].valor || 0)
+                        "
                         type="text"
                         inputmode="numeric"
                         :forceUpper="false"
+                        :disabled="String(pagamentos[row.__idx].forma_pagamento_chave || '').toUpperCase() === 'CREDITO'"
                         class="w-full text-right"
-                        @update:modelValue="(val) => { pagamentos[row.__idx].datas_parcelas[i].valor = moedaParaNumero(val); recomputarTotalPagamento(row.__idx) }"
+                        @update:modelValue="
+                          (val) => {
+                            if (String(pagamentos[row.__idx].forma_pagamento_chave || '').toUpperCase() === 'CREDITO') return
+                            pagamentos[row.__idx].datas_parcelas[i].valor = moedaParaNumero(val)
+                            recomputarTotalPagamento(row.__idx)
+                          }
+                        "
                       />
                     </div>
                   </div>
                 </div>
               </template>
 
-              <template #cell-acoes="{ row }">
-                <div class="flex justify-end">
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    type="button"
-                    :disabled="pagamentos.length === 1"
-                    @click="removerPagamento(row.__idx)"
-                  >
-                    Remover
-                  </Button>
-                </div>
-              </template>
             </Table>
 
-            <p class="text-[11px] text-text-soft">
-              Essas formas de pagamento serão usadas para registrar como a venda será recebida.
-              Para cartão de crédito: informe a <strong>data da 1ª parcela</strong> (data que passou o cartão); as demais serão geradas a cada 30 dias.
-            </p>
+            <div class="rounded-xl border border-border-ui bg-bg-page px-4 py-3 space-y-1">
+              <p class="text-[11px] text-text-soft">
+                Valor base da venda: <strong>{{ format.currency(valorFinal) }}</strong>
+              </p>
+              <p class="text-[11px] text-text-soft">
+                Taxa aplicada: <strong>{{ Number(taxaCobradaPercentual || 0).toFixed(2).replace('.', ',') }}%</strong>
+                <span v-if="taxaCobradaPercentual > 0"> (crédito acima de 10x)</span>
+              </p>
+              <p class="text-[12px] text-text-main font-bold">
+                Preço cobrado da venda: {{ format.currency(valorCobradoVenda) }}
+              </p>
+            </div>
           </section>
 
-          <!-- COMISSÕES (APENAS TIPO + NOME, SEM TAXAS) -->
+          <!-- INDICAÇÃO -->
           <section class="space-y-4">
-            <div class="flex items-center justify-between gap-4">
-              <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
-                Comissões (somente tipo e nome)
-              </div>
-
-              <Button
-                variant="secondary"
-                size="sm"
-                type="button"
-                @click="adicionarComissao"
-              >
-                + Adicionar comissionado
-              </Button>
+            <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
+              Indicação
             </div>
-
-            <Table
-              :columns="columnsComissoes"
-              :rows="rowsComissoes"
-              :boxed="true"
-              empty-text="Nenhum comissionado definido."
-            >
-              <template #cell-tipo="{ row }">
-                <SearchInput
-                  v-model="comissoes[row.__idx].tipo_comissao_chave"
-                  mode="select"
-                  placeholder="Selecione o tipo"
-                  :options="COMISSOES_OPTIONS"
-                />
-              </template>
-
-              <template #cell-responsavel="{ row }">
-                <Input
-                  v-model="comissoes[row.__idx].responsavel_nome"
-                  placeholder="Nome do comissionado"
-                  :forceUpper="false"
-                />
-              </template>
-
-              <template #cell-acoes="{ row }">
-                <div class="flex justify-end">
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    type="button"
-                    @click="removerComissao(row.__idx)"
-                  >
-                    Remover
-                  </Button>
-                </div>
-              </template>
-            </Table>
-
-            <p class="text-[11px] text-text-soft">
-              As taxas e valores das comissões serão calculados automaticamente a partir do tipo configurado no sistema.
-            </p>
+            <div class="rounded-2xl border border-border-ui bg-white p-4">
+              <Input
+                v-model="indicacaoNome"
+                label="Nome da indicação"
+                placeholder="Digite o nome"
+                :forceUpper="false"
+              />
+            </div>
           </section>
 
           <!-- ARQUIVOS VINCULADOS AO ORÇAMENTO -->
@@ -578,15 +491,15 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { AgendaService, ContratosService, FuncionarioService, OrcamentosService, VendaService, ArquivosService } from '@/services'
+import { AgendaService, ConfiguracaoService, ContratosService, FuncionarioService, OrcamentosService, VendaService, ArquivosService } from '@/services'
 import { notify } from '@/services/notify'
 import { can } from '@/services/permissions'
 import { format } from '@/utils/format'
-import { FORMAS_PAGAMENTO, COMISSOES } from '@/constantes'
+import { FORMAS_PAGAMENTO, TAXAS_CARTAO, VENDA_FECHAMENTO_REGRAS } from '@/constantes'
 import { moedaParaNumero } from '@/utils/number'
-import { maskCPF, maskRG, onlyNumbers } from '@/utils/masks'
+import { onlyNumbers } from '@/utils/masks'
 import { closeTabAndGo } from '@/utils/tabs'
 
 definePage({ meta: { perm: 'vendas.criar' } })
@@ -606,6 +519,7 @@ const saving = ref(false)
 const orcamento = ref(null)
 const contratos = ref([])
 const clienteIdVenda = ref(null)
+const configuracaoEmpresa = ref(null)
 
 const contratoAssinado = computed(() =>
   (contratos.value || []).some((c) => String(c.status || '').toUpperCase() === 'VIGENTE'),
@@ -624,39 +538,93 @@ const funcionariosOptionsEnviarProducao = ref([])
 const itens = ref([])
 
 const valorFinal = ref(0)
+const percentualDesconto = ref(0)
 const dataVenda = ref(new Date().toISOString().slice(0, 10))
+const indicacaoNome = ref('')
+const TIPO_COMISSAO_OCULTA = 'VENDEDOR'
+const DESCONTO_MAXIMO_PERCENTUAL = Number(VENDA_FECHAMENTO_REGRAS?.DESCONTO_MAXIMO_PERCENTUAL || 0)
+const DESCONTO_STEP = Number(VENDA_FECHAMENTO_REGRAS?.DESCONTO_PERCENTUAL_STEP || 0.5)
+const LIMITE_DESCONTO_RESTRINGIR_PAGAMENTO = Number(
+  VENDA_FECHAMENTO_REGRAS?.LIMITE_DESCONTO_RESTRINGIR_PAGAMENTO_PERCENTUAL || 7,
+)
+const FORMAS_REMOVIDAS_FECHAMENTO = new Set(
+  (VENDA_FECHAMENTO_REGRAS?.FORMAS_REMOVIDAS_FECHAMENTO || []).map((x) => String(x || '').toUpperCase()),
+)
+const FORMAS_PERMITIDAS_ACIMA_LIMITE = new Set(
+  (VENDA_FECHAMENTO_REGRAS?.FORMAS_PERMITIDAS_ACIMA_LIMITE_DESCONTO || []).map((x) => String(x || '').toUpperCase()),
+)
 
-// Representante da venda (contrato) – no topo para estar sempre definido no template
-const representanteTipo = ref('empresa')
-const opcoesRepresentanteVenda = [
-  { label: 'Cadastro da empresa', value: 'empresa' },
-  { label: 'Outro representante', value: 'outro' },
-]
+function formaPagamentoPermitidaPorDesconto(chave) {
+  const key = String(chave || '').toUpperCase()
+  if (!key) return true
+  if (FORMAS_REMOVIDAS_FECHAMENTO.has(key)) return false
+  if (Number(percentualDesconto.value || 0) >= LIMITE_DESCONTO_RESTRINGIR_PAGAMENTO) {
+    return FORMAS_PERMITIDAS_ACIMA_LIMITE.has(key)
+  }
+  return true
+}
 
-const representanteVendaNome = ref('')
-const representanteVendaCpf = ref('')
-const representanteVendaRg = ref('')
+const FORMAS_PAGAMENTO_OPTIONS = computed(() =>
+  (FORMAS_PAGAMENTO || [])
+    .filter((x) => formaPagamentoPermitidaPorDesconto(x.key))
+    .map((x) => ({ label: x.label, value: x.key })),
+)
+const PARCELAS_OPTIONS = computed(() => {
+  const parcelasCredito = TAXAS_CARTAO?.CREDITO?.parcelas || {}
+  const byTaxa = Object.entries(parcelasCredito)
+    .map(([k, taxa]) => ({
+      label: `${Number(k)}x`,
+      value: Number(k),
+    }))
+    .filter((x) => Number.isFinite(x.value) && x.value > 0)
+    .sort((a, b) => a.value - b.value)
 
-const FORMAS_PAGAMENTO_OPTIONS = (FORMAS_PAGAMENTO || []).map((x) => ({
-  label: x.label,
-  value: x.key,
-}))
+  if (byTaxa.length) return byTaxa
 
-const FORMAS_COM_DATA_POR_PARCELA = ['PIX', 'DINHEIRO', 'CHEQUE', 'TRANSFERENCIA']
-
-const COMISSOES_OPTIONS = Object.entries(COMISSOES || {}).map(([key, v]) => ({
-  label: v.label,
-  value: key,
-}))
-
-const representanteVendaCpfMask = computed({
-  get: () => maskCPF(representanteVendaCpf.value),
-  set: (v) => (representanteVendaCpf.value = onlyNumbers(v).slice(0, 11)),
+  return (VENDA_FECHAMENTO_REGRAS?.PARCELAS_OPCOES || [1]).map((n) => ({
+    label: `${n}x`,
+    value: Number(n),
+  }))
 })
-const representanteVendaRgMask = computed({
-  get: () => maskRG(representanteVendaRg.value),
-  set: (v) => (representanteVendaRg.value = onlyNumbers(v).slice(0, 12)),
+const pagamentoAtual = computed(() => (pagamentos.value || [])[0] || null)
+const PARCELAS_MAX_POR_FORMA = VENDA_FECHAMENTO_REGRAS?.PARCELAS_MAX_POR_FORMA || {}
+function toParcelas(value) {
+  const clean = String(value ?? '')
+    .replace(/\s/g, '')
+    .replace(/x/gi, '')
+  const n = Number(clean)
+  if (!Number.isFinite(n) || n <= 0) return 1
+  return Math.floor(n)
+}
+function maxParcelasDaForma(forma) {
+  const key = String(forma || '').toUpperCase()
+  if (key === 'CREDITO') {
+    const credit = Object.keys(TAXAS_CARTAO?.CREDITO?.parcelas || {})
+      .map((k) => Number(k))
+      .filter((n) => Number.isFinite(n) && n > 0)
+    return credit.length ? Math.max(...credit) : 1
+  }
+  return Number(PARCELAS_MAX_POR_FORMA?.[key] || 1)
+}
+const taxaCobradaPercentual = computed(() => {
+  const forma = String(pagamentoAtual.value?.forma_pagamento_chave || '').toUpperCase()
+  const parcelas = toParcelas(pagamentoAtual.value?.parcelas)
+  if (forma !== 'CREDITO' || parcelas <= 10) return 0
+  const taxa = Number(TAXAS_CARTAO?.CREDITO?.parcelas?.[parcelas] || 0)
+  return Number.isFinite(taxa) ? taxa : 0
 })
+const valorCobradoVenda = computed(() => {
+  const base = Number(valorFinal.value || 0)
+  const taxa = Number(taxaCobradaPercentual.value || 0)
+  return Math.round(base * (1 + taxa / 100) * 100) / 100
+})
+const PARCELAS_OPTIONS_FILTRADAS = computed(() => {
+  const forma = String(pagamentoAtual.value?.forma_pagamento_chave || '').toUpperCase()
+  const max = Math.max(1, maxParcelasDaForma(forma))
+  return (PARCELAS_OPTIONS.value || []).filter((x) => Number(x.value) <= max)
+})
+
+const FORMAS_COM_DATA_POR_PARCELA = ['PIX', 'DINHEIRO', 'CHEQUE', 'TRANSFERENCIA', 'DEBITO']
 
 const pagamentos = ref([
   {
@@ -669,32 +637,14 @@ const pagamentos = ref([
   },
 ])
 
-const comissoes = ref([
-  {
-    tipo_comissao_chave: 'VENDEDOR',
-    responsavel_nome: '',
-  },
-])
-
 const columnsPagamentos = [
   { key: 'forma', label: 'Forma', width: '220px' },
   { key: 'parcelas', label: 'Parcelas', width: '100px', align: 'right' },
   { key: 'data_recebimento', label: 'Data prevista / valor', width: '260px' },
-  { key: 'acoes', label: '', width: '100px', align: 'right' },
 ]
 
 const rowsPagamentos = computed(() =>
   (pagamentos.value || []).map((p, idx) => ({ ...p, __idx: idx })),
-)
-
-const columnsComissoes = [
-  { key: 'tipo', label: 'Tipo', width: '220px' },
-  { key: 'responsavel', label: 'Comissionado' },
-  { key: 'acoes', label: '', width: '100px', align: 'right' },
-]
-
-const rowsComissoes = computed(() =>
-  (comissoes.value || []).map((c, idx) => ({ ...c, __idx: idx })),
 )
 
 const imagensParaPdf = ref([])
@@ -733,8 +683,12 @@ const totalFinal = computed(() =>
   (itens.value || []).reduce((acc, it) => acc + Number(it.valor_final || 0), 0),
 )
 
-function pctComissao(tipo) {
-  return Number(COMISSOES?.[String(tipo || '')]?.percentual || 0)
+function clampPercentualDesconto(v) {
+  const n = Number(v)
+  if (!Number.isFinite(n)) return 0
+  if (n < 0) return 0
+  if (n > DESCONTO_MAXIMO_PERCENTUAL) return DESCONTO_MAXIMO_PERCENTUAL
+  return n
 }
 
 const descontoTotal = computed(() => {
@@ -743,19 +697,31 @@ const descontoTotal = computed(() => {
   return Math.max(0, tot - vf)
 })
 
-function adicionarPagamento() {
-  pagamentos.value.push({
-    forma_pagamento_chave: '',
-    valor: 0,
-    parcelas: 1,
-    data_recebimento: '',
-    datas_parcelas: [{ data: '', valor: 0 }],
+function aplicarRegraPagamentoPorDesconto() {
+  let alterou = false
+  pagamentos.value = (pagamentos.value || []).map((p) => {
+    const key = String(p?.forma_pagamento_chave || '').toUpperCase()
+    if (!key || formaPagamentoPermitidaPorDesconto(key)) return p
+    alterou = true
+    return {
+      ...p,
+      forma_pagamento_chave: '',
+    }
   })
+  if (alterou) {
+    notify.error(
+      `Com desconto a partir de ${LIMITE_DESCONTO_RESTRINGIR_PAGAMENTO}%, somente PIX, Transferência e Dinheiro são permitidos.`,
+    )
+  }
 }
 
-function removerPagamento(idx) {
-  if (pagamentos.value.length === 1) return
-  pagamentos.value.splice(idx, 1)
+function normalizarParcelasPeloCatalogo() {
+  const permitidas = new Set((PARCELAS_OPTIONS_FILTRADAS.value || []).map((x) => Number(x.value)))
+  pagamentos.value = (pagamentos.value || []).map((p) => {
+    const atual = toParcelas(p?.parcelas)
+    if (permitidas.has(atual)) return p
+    return { ...p, parcelas: Number(PARCELAS_OPTIONS_FILTRADAS.value?.[0]?.value || 1) }
+  })
 }
 
 function ensureDatasParcelas(p) {
@@ -766,12 +732,55 @@ function ensureDatasParcelas(p) {
     return
   }
   if (!FORMAS_COM_DATA_POR_PARCELA.includes(p.forma_pagamento_chave)) return
-  const n = Math.max(1, Math.min(24, Number(p.parcelas || 1)))
+  const n = Math.max(1, Math.min(24, toParcelas(p.parcelas)))
   if (!Array.isArray(p.datas_parcelas)) p.datas_parcelas = []
   while (p.datas_parcelas.length < n) {
     p.datas_parcelas.push({ data: '', valor: 0 })
   }
   if (p.datas_parcelas.length > n) p.datas_parcelas = p.datas_parcelas.slice(0, n)
+}
+
+function splitValores(total, parcelas) {
+  const n = Math.max(1, toParcelas(parcelas))
+  const base = Math.round((Number(total || 0) / n) * 100) / 100
+  const list = []
+  for (let i = 0; i < n; i++) {
+    const v = i === n - 1 ? Math.round((Number(total || 0) - base * (n - 1)) * 100) / 100 : base
+    list.push(v)
+  }
+  return list
+}
+
+function prefillParcelasValores({ resetDatas = false } = {}) {
+  const p = pagamentoAtual.value
+  if (!p) return
+  const forma = String(p.forma_pagamento_chave || '').toUpperCase()
+  const n = Math.max(1, toParcelas(p.parcelas))
+  const valores = splitValores(valorCobradoVenda.value, n)
+
+  if (forma === 'CREDITO') {
+    const dataAtual = resetDatas ? '' : (p.datas_parcelas?.[0]?.data || '')
+    p.datas_parcelas = [{ data: dataAtual, valor: valores[0] || 0 }]
+    p.valor = Number(valorCobradoVenda.value || 0)
+    return
+  }
+
+  ensureDatasParcelas(p)
+  p.datas_parcelas = (p.datas_parcelas || []).map((parc, i) => ({
+    data: resetDatas ? '' : (parc?.data || ''),
+    valor: valores[i] || 0,
+  }))
+  p.valor = Number(valorCobradoVenda.value || 0)
+}
+
+function limparPagamentoAoTrocarForma() {
+  const p = pagamentoAtual.value
+  if (!p) return
+  const max = Math.max(1, maxParcelasDaForma(p.forma_pagamento_chave))
+  p.parcelas = Math.max(1, Math.min(toParcelas(p.parcelas), max))
+  p.data_recebimento = ''
+  p.datas_parcelas = []
+  prefillParcelasValores({ resetDatas: true })
 }
 
 function normalizeDatasParcelas(p) {
@@ -790,21 +799,10 @@ function recomputarTotalPagamento(idx) {
 
 function mostrarDataPorParcela(p) {
   if (!p || !FORMAS_COM_DATA_POR_PARCELA.includes(p.forma_pagamento_chave)) return false
-  const n = Math.max(1, Math.min(24, Number(p.parcelas || 1)))
+  const n = Math.max(1, Math.min(24, toParcelas(p.parcelas)))
   if (n <= 1) return false
   ensureDatasParcelas(p)
   return true
-}
-
-function adicionarComissao() {
-  comissoes.value.push({
-    tipo_comissao_chave: 'VENDEDOR',
-    responsavel_nome: '',
-  })
-}
-
-function removerComissao(idx) {
-  comissoes.value.splice(idx, 1)
 }
 
 async function carregarImagensParaPdf() {
@@ -906,7 +904,10 @@ async function onPickArquivo(e, categoria) {
 
 function aplicarRateio() {
   const tot = Number(totalOrcado.value || 0)
-  const vf = Number(valorFinal.value || 0)
+  const pct = clampPercentualDesconto(percentualDesconto.value)
+  percentualDesconto.value = pct
+  const vf = tot > 0 ? Math.round(tot * (1 - pct / 100) * 100) / 100 : 0
+  valorFinal.value = vf
   if (tot <= 0 || vf <= 0) {
     itens.value = (itens.value || []).map((it) => ({ ...it, valor_final: it.valor_unitario || 0 }))
     return
@@ -920,13 +921,45 @@ function aplicarRateio() {
 
 function sincronizarValorFinalComTotal() {
   const soma = Number(totalFinal.value || 0)
+  const tot = Number(totalOrcado.value || 0)
+  if (tot <= 0) {
+    valorFinal.value = soma
+    percentualDesconto.value = 0
+    return
+  }
+  const pct = ((tot - soma) / tot) * 100
+  const pctNormalizado = Math.round(pct * 100) / 100
+  if (pctNormalizado > DESCONTO_MAXIMO_PERCENTUAL) {
+    percentualDesconto.value = DESCONTO_MAXIMO_PERCENTUAL
+    notify.error(`Desconto máximo permitido é ${DESCONTO_MAXIMO_PERCENTUAL}%.`)
+    aplicarRateio()
+    return
+  }
+  percentualDesconto.value = clampPercentualDesconto(pctNormalizado)
   valorFinal.value = soma
 }
 
-function onValorFinalInput(v) {
-  const n = Number(String(v || '').replace(/\D/g, ''))
-  valorFinal.value = Number.isFinite(n) ? n / 100 : 0
+function onPercentualDescontoInput(v) {
+  percentualDesconto.value = clampPercentualDesconto(v)
   aplicarRateio()
+}
+
+function getRepresentanteEmpresaSelecionado() {
+  const cfg = configuracaoEmpresa.value || {}
+  return {
+    nome: String(cfg.representante_legal_nome || '').trim(),
+    cpf: String(cfg.representante_legal_cpf || '').trim(),
+    rg: String(cfg.representante_legal_rg || '').trim(),
+  }
+}
+
+async function carregarConfiguracaoEmpresa() {
+  try {
+    const data = await ConfiguracaoService.carregar()
+    configuracaoEmpresa.value = data || {}
+  } catch {
+    configuracaoEmpresa.value = null
+  }
 }
 
 function adicionarItemVenda() {
@@ -969,8 +1002,7 @@ async function carregarOrcamento() {
       valor_unitario: Number(it.valor_unitario || 0), // orçado (referência)
       valor_final: Number(it.valor_unitario || 0), // valor de venda inicial (pode ser alterado)
     }))
-    const soma = (itens.value || []).reduce((acc, it) => acc + Number(it.valor_unitario || 0), 0)
-    valorFinal.value = soma
+    percentualDesconto.value = 0
     aplicarRateio()
 
     await carregarArquivos()
@@ -1020,50 +1052,41 @@ async function carregarVenda() {
           valor_final: Number(it.valor_unitario || 0),
         }))
 
-    valorFinal.value = Number(venda?.valor_vendido ?? 0)
-    dataVenda.value = venda?.data_venda ? String(venda.data_venda).slice(0, 10) : new Date().toISOString().slice(0, 10)
-
-    if (venda?.representante_venda_nome) {
-      representanteTipo.value = 'outro'
-      representanteVendaNome.value = venda.representante_venda_nome || ''
-      representanteVendaCpf.value = (venda.representante_venda_cpf || '').replace(/\D/g, '')
-      representanteVendaRg.value = (venda.representante_venda_rg || '').replace(/\D/g, '')
+    const totalOrcadoAtual = itens.value.reduce((acc, it) => acc + Number(it.valor_unitario || 0), 0)
+    const valorVendaAtual = Number(venda?.valor_vendido ?? 0)
+    if (totalOrcadoAtual > 0) {
+      const pctAtual = ((totalOrcadoAtual - valorVendaAtual) / totalOrcadoAtual) * 100
+      percentualDesconto.value = clampPercentualDesconto(Math.round(pctAtual * 100) / 100)
+      aplicarRateio()
     } else {
-      representanteTipo.value = 'empresa'
-      representanteVendaNome.value = ''
-      representanteVendaCpf.value = ''
-      representanteVendaRg.value = ''
+      valorFinal.value = valorVendaAtual
+      percentualDesconto.value = 0
     }
+    dataVenda.value = venda?.data_venda ? String(venda.data_venda).slice(0, 10) : new Date().toISOString().slice(0, 10)
 
     const pagos = venda?.pagamentos || []
     pagamentos.value =
       pagos.length > 0
-        ? pagos.map((p) => ({
-            forma_pagamento_chave: p.forma_pagamento_chave || '',
-            valor: Number(p.valor || 0),
-            parcelas: 1,
-            data_recebimento: p.data_prevista_recebimento
-              ? String(p.data_prevista_recebimento).slice(0, 10)
-              : (p.data_recebimento ? String(p.data_recebimento).slice(0, 10) : ''),
-            datas_parcelas: [
-              {
+        ? [
+            {
+              forma_pagamento_chave: pagos[0]?.forma_pagamento_chave || '',
+              valor: pagos.reduce((acc, p) => acc + Number(p?.valor || 0), 0),
+              parcelas: Math.max(1, pagos.length),
+              data_recebimento: pagos[0]?.data_prevista_recebimento
+                ? String(pagos[0].data_prevista_recebimento).slice(0, 10)
+                : (pagos[0]?.data_recebimento ? String(pagos[0].data_recebimento).slice(0, 10) : ''),
+              datas_parcelas: pagos.map((p) => ({
                 data: p.data_prevista_recebimento
                   ? String(p.data_prevista_recebimento).slice(0, 10)
                   : (p.data_recebimento ? String(p.data_recebimento).slice(0, 10) : ''),
                 valor: Number(p.valor || 0),
-              },
-            ],
-          }))
+              })),
+            },
+          ]
         : [{ forma_pagamento_chave: '', valor: 0, parcelas: 1, data_recebimento: '', datas_parcelas: [{ data: '', valor: 0 }] }]
 
     const comis = venda?.comissoes || []
-    comissoes.value =
-      comis.length > 0
-        ? comis.map((c) => ({
-            tipo_comissao_chave: c.tipo_comissao_chave || 'VENDEDOR',
-            responsavel_nome: c.responsavel_nome || '',
-          }))
-        : [{ tipo_comissao_chave: 'VENDEDOR', responsavel_nome: '' }]
+    indicacaoNome.value = String(comis?.[0]?.responsavel_nome || '')
 
     clienteIdVenda.value = venda?.cliente_id ?? orc?.cliente_id ?? null
     if (can('contratos.ver')) {
@@ -1178,20 +1201,10 @@ async function criarOuAtualizarVenda() {
     return
   }
 
-  if (representanteTipo.value === 'outro') {
-    const nome = String(representanteVendaNome.value ?? '').trim()
-    const cpfLen = onlyNumbers(representanteVendaCpf.value ?? '').length
-    const rg = String(representanteVendaRg.value ?? '').trim()
-    if (!nome) {
-      notify.error('Preencha o nome completo do representante da venda.')
-      return
-    }
-    if (cpfLen !== 11) {
-      notify.error('Preencha o CPF do representante da venda (11 dígitos).')
-      return
-    }
-    if (!rg) {
-      notify.error('Preencha o RG do representante da venda.')
+  {
+    const rep = getRepresentanteEmpresaSelecionado()
+    if (!rep.nome || onlyNumbers(rep.cpf).length !== 11 || !rep.rg) {
+      notify.error('Representante legal da empresa está incompleto no cadastro. Verifique em Configurações > Empresa.')
       return
     }
   }
@@ -1200,7 +1213,7 @@ async function criarOuAtualizarVenda() {
   try {
     const pagamentosPayload = (function () {
       const list = []
-      const valorVendaNum = Number(valorFinal.value || 0)
+      const valorVendaNum = Number(valorCobradoVenda.value || 0)
       const dataVendaStr = (dataVenda.value || '').trim() || null
       // Evita fuso: YYYY-MM-DD como meia-noite UTC vira dia anterior no Brasil; parse como data local
       const parseDataLocal = (str) => {
@@ -1215,7 +1228,12 @@ async function criarOuAtualizarVenda() {
       for (const p of pagamentos.value || []) {
         const forma = String(p.forma_pagamento_chave || '').trim()
         const formaUpper = forma.toUpperCase()
-        const nParcelas = Math.max(1, Math.min(24, Number(p.parcelas || 1)))
+        if (!formaPagamentoPermitidaPorDesconto(formaUpper)) {
+          throw new Error(
+            `Forma de pagamento "${formaUpper}" não permitida para desconto de ${Number(percentualDesconto.value || 0).toFixed(2)}%.`,
+          )
+        }
+        const nParcelas = Math.max(1, Math.min(24, toParcelas(p.parcelas)))
         const parcelas = Array.isArray(p.datas_parcelas) ? p.datas_parcelas : []
 
         // Cartão de crédito: data que passou o cartão = 1ª parcela; demais a cada 30 dias (recorrente)
@@ -1293,7 +1311,7 @@ async function criarOuAtualizarVenda() {
         }
       }
       const soma = list.reduce((acc, x) => acc + Number(x.valor || 0), 0)
-      const valorVenda = Number(valorFinal.value || 0)
+      const valorVenda = Number(valorCobradoVenda.value || 0)
       // Não força PIX automático: exige correção explícita do rateio no formulário.
       if (list.length === 0 || Math.abs(soma - valorVenda) > 0.01) {
         throw new Error(`A soma dos pagamentos (${soma.toFixed(2)}) precisa bater com o valor da venda (${valorVenda.toFixed(2)}).`)
@@ -1301,11 +1319,16 @@ async function criarOuAtualizarVenda() {
       return list
     })()
 
-    const comissoesPayload = (comissoes.value || []).map((c) => ({
-      tipo_comissao_chave: String(c.tipo_comissao_chave || ''),
-      percentual_aplicado: pctComissao(c.tipo_comissao_chave),
-      responsavel_nome: c.responsavel_nome || null,
-    }))
+    const nomeIndicacao = String(indicacaoNome.value || '').trim()
+    const comissoesPayload = nomeIndicacao
+      ? [
+          {
+            tipo_comissao_chave: TIPO_COMISSAO_OCULTA,
+            percentual_aplicado: 0,
+            responsavel_nome: nomeIndicacao,
+          },
+        ]
+      : []
 
     const itensPayload = (itens.value || []).map((it) => ({
       nome_ambiente: it.nome_ambiente,
@@ -1315,17 +1338,15 @@ async function criarOuAtualizarVenda() {
       valor_unitario: Number(it.valor_final ?? it.valor_unitario ?? 0),
     }))
 
+    const representanteEmpresa = getRepresentanteEmpresaSelecionado()
     const payload = {
       orcamento_id: Number(orcamento.value.id),
       status: 'VENDA_FECHADA',
       data_venda: dataVenda.value,
-      valor_vendido: Number(valorFinal.value),
-      representante_venda_nome:
-        representanteTipo.value === 'outro' ? (representanteVendaNome.value?.trim() || undefined) : undefined,
-      representante_venda_cpf:
-        representanteTipo.value === 'outro' ? (representanteVendaCpf.value?.trim() || undefined) : undefined,
-      representante_venda_rg:
-        representanteTipo.value === 'outro' ? (representanteVendaRg.value?.trim() || undefined) : undefined,
+      valor_vendido: Number(valorCobradoVenda.value),
+      representante_venda_nome: representanteEmpresa.nome || undefined,
+      representante_venda_cpf: representanteEmpresa.cpf || undefined,
+      representante_venda_rg: representanteEmpresa.rg || undefined,
       itens: itensPayload,
       pagamentos: pagamentosPayload,
       comissoes: comissoesPayload,
@@ -1354,6 +1375,7 @@ async function criarOuAtualizarVenda() {
 }
 
 onMounted(async () => {
+  await carregarConfiguracaoEmpresa()
   const id = vendaId.value
   if (id) {
     if (!can('vendas.editar')) {
@@ -1371,5 +1393,51 @@ onMounted(async () => {
     await carregarOrcamento()
   }
 })
+
+watch(percentualDesconto, () => {
+  aplicarRegraPagamentoPorDesconto()
+})
+
+watch(PARCELAS_OPTIONS, () => {
+  normalizarParcelasPeloCatalogo()
+})
+
+watch(
+  () => pagamentoAtual.value?.forma_pagamento_chave,
+  (nova, antiga) => {
+    if (nova === antiga) return
+    limparPagamentoAoTrocarForma()
+  },
+)
+
+watch(
+  () => pagamentoAtual.value?.parcelas,
+  () => {
+    normalizarParcelasPeloCatalogo()
+    prefillParcelasValores()
+  },
+)
+
+watch(valorCobradoVenda, () => {
+  prefillParcelasValores()
+})
+
+watch(
+  pagamentos,
+  (lista) => {
+    if (!Array.isArray(lista) || lista.length === 0) {
+      pagamentos.value = [{ forma_pagamento_chave: '', valor: 0, parcelas: 1, data_recebimento: '', datas_parcelas: [{ data: '', valor: 0 }] }]
+      return
+    }
+    if (lista.length > 1) {
+      pagamentos.value = [lista[0]]
+    }
+  },
+  { deep: true },
+)
 </script>
+
+
+
+
 

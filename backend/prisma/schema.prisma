@@ -75,6 +75,7 @@ model Cliente {
   id Int @id @default(autoincrement())
 
   indicacao_id Int?
+  indicacao_origem String?
   indicacao    Cliente?  @relation("ClienteIndicacao", fields: [indicacao_id], references: [id])
   indicados    Cliente[] @relation("ClienteIndicacao")
 
@@ -106,7 +107,7 @@ model Cliente {
   cidade      String?
   estado      String?
 
-  status String
+  status String @default("ATIVO")
 
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt

@@ -34,7 +34,7 @@ export class OrcamentosController {
   }
 
   @Get()
-  @Permissoes('orcamentos.ver')
+  @Permissoes('orcamentos.ver', 'vendas.fechamento.ver')
   listar() {
     return this.service.listar();
   }
@@ -62,7 +62,7 @@ export class OrcamentosController {
   // =========================
 
   @Put(':id/clausulas')
-  @Permissoes('orcamentos.editar')
+  @Permissoes('orcamentos.clausulas.editar')
   salvarClausulas(
     @Param('id') id: string,
     @Body()

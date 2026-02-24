@@ -26,6 +26,8 @@
         :disabled="disabled"
         :readonly="readonly"
         :required="required"
+        :min="min"
+        :max="max"
         :autocomplete="autocomplete || undefined"
         :class="[
           'w-full h-10 border rounded-xl text-sm transition-all duration-200',
@@ -72,6 +74,8 @@ const props = defineProps({
   disabled: Boolean,
   readonly: Boolean,
   required: Boolean,
+  min: [String, Number],
+  max: [String, Number],
   autocomplete: String,
   name: String, // ✅ ADD
   id: String,

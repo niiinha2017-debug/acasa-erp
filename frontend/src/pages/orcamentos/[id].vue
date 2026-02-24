@@ -283,7 +283,7 @@
 
           <div class="flex justify-end gap-3 pt-2">
             <Button
-              v-if="can('orcamentos.editar')"
+              v-if="canEditarClausulasOrc()"
               type="button"
               variant="secondary"
               :disabled="saving || isNovo"
@@ -348,6 +348,7 @@ const orcamentoId = computed(() => orcamentoIdReal.value || route.params.id)
 const isNovo = computed(() => String(orcamentoId.value) === 'novo' || !orcamentoId.value)
 
 const permSalvarOrc = () => (isNovo.value ? 'orcamentos.criar' : 'orcamentos.editar')
+const canEditarClausulasOrc = () => can('orcamentos.clausulas.editar')
 
 // estado
 const clientesOptions = ref([])
@@ -664,7 +665,7 @@ await router.push({
 }
 
 async function salvarClausulas() {
-  if (!can('orcamentos.editar')) return notify.error('Acesso negado.')
+  if (!canEditarClausulasOrc()) return notify.error('Acesso negado.')
 
   const id = await ensureOrcamentoId()
   if (!id) return

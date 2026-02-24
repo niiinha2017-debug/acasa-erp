@@ -52,7 +52,7 @@ export class VendasController {
   }
 
   @Post()
-  @Permissoes('vendas.criar')
+  @Permissoes('vendas.criar', 'vendas.fechamento.criar')
   criar(@Body() dto: CreateVendaDto) {
     return this.service.criar(dto);
   }

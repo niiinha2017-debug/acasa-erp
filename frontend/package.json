@@ -1,7 +1,7 @@
 {
   "name": "frontend-vue",
   "private": true,
-  "version": "0.1.42",
+  "version": "0.1.43",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -23,6 +23,7 @@
     "@capacitor/ios": "^8.0.2",
     "@tauri-apps/api": "^2.10.1",
     "@tauri-apps/plugin-updater": "^2.0.0",
+    "@vuepic/vue-datepicker": "^12.1.0",
     "@vueuse/core": "^12.8.2",
     "apexcharts": "^5.3.6",
     "axios": "1.13.2",

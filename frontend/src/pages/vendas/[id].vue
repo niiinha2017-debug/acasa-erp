@@ -67,52 +67,6 @@
               <Input v-model="form.data_venda" type="date" label="Data da venda" :forceUpper="false" />
             </div>
 
-            <div class="col-span-12 mt-2 pt-4 border-t border-border-ui">
-              <p class="text-[10px] font-black text-text-soft uppercase tracking-widest mb-3">
-                Representante da venda (contrato)
-              </p>
-              <p class="text-[10px] text-text-soft mb-3">
-                Opcional. Se preenchido, este representante aparece no contrato desta venda. Caso contrário, usa o cadastro da empresa.
-              </p>
-              <div class="grid grid-cols-12 gap-4">
-                <div class="col-span-12 md:col-span-4">
-                  <Select
-                    v-model="representanteTipo"
-                    label="Representante"
-                    placeholder="Selecione"
-                    :options="opcoesRepresentanteVenda"
-                    labelKey="label"
-                    valueKey="value"
-                  />
-                </div>
-                <template v-if="representanteTipo === 'outro'">
-                  <div class="col-span-12 md:col-span-6">
-                    <Input
-                      v-model="form.representante_venda_nome"
-                      label="Nome completo *"
-                      force-upper
-                      required
-                    />
-                  </div>
-                  <div class="col-span-12 md:col-span-4">
-                    <Input
-                      v-model="representanteVendaCpfMask"
-                      label="CPF *"
-                      :forceUpper="false"
-                      required
-                    />
-                  </div>
-                  <div class="col-span-12 md:col-span-4">
-                    <Input
-                      v-model="representanteVendaRgMask"
-                      label="RG *"
-                      :forceUpper="false"
-                      required
-                    />
-                  </div>
-                </template>
-              </div>
-            </div>
           </div>
         </section>
 
@@ -755,7 +709,7 @@ import { moedaParaNumero } from '@/utils/number'
 import { FORMAS_PAGAMENTO, COMISSOES, TAXAS_CARTAO, TAXA_NOTA_FISCAL, PIPELINE_CLIENTE } from '@/constantes'
 import { can } from '@/services/permissions'
 import { closeTabAndGo } from '@/utils/tabs'
-import { maskCPF, maskRG, onlyNumbers } from '@/utils/masks'
+import { onlyNumbers } from '@/utils/masks'
 
 definePage({ meta: { perm: 'posvenda.ver' } })
 
@@ -956,24 +910,6 @@ const form = reactive({
   taxa_pagamento_percentual_aplicado: 0,
   tem_nota_fiscal: false,
   taxa_nota_fiscal_percentual_aplicado: Number(TAXA_NOTA_FISCAL?.taxa || 0),
-})
-
-// =======================
-// REPRESENTANTE DA VENDA
-// =======================
-const opcoesRepresentanteVenda = [
-  { label: 'Cadastro da empresa', value: 'empresa' },
-  { label: 'Outro representante', value: 'outro' },
-]
-const representanteTipo = ref('empresa')
-
-const representanteVendaCpfMask = computed({
-  get: () => maskCPF(form.representante_venda_cpf),
-  set: (v) => (form.representante_venda_cpf = onlyNumbers(v).slice(0, 11)),
-})
-const representanteVendaRgMask = computed({
-  get: () => maskRG(form.representante_venda_rg),
-  set: (v) => (form.representante_venda_rg = onlyNumbers(v).slice(0, 12)),
 })
 
 // =======================
@@ -1434,10 +1370,6 @@ async function carregarVenda() {
     form.representante_venda_nome = data?.representante_venda_nome ?? ''
     form.representante_venda_cpf = data?.representante_venda_cpf ?? ''
     form.representante_venda_rg = data?.representante_venda_rg ?? ''
-    const temRepresentante = [form.representante_venda_nome, form.representante_venda_cpf, form.representante_venda_rg].some(
-      (v) => String(v ?? '').trim() !== ''
-    )
-    representanteTipo.value = temRepresentante ? 'outro' : 'empresa'
 
     form.taxa_pagamento_percentual_aplicado = round2(num(data?.taxa_pagamento_percentual_aplicado || 0))
     form.taxa_nota_fiscal_percentual_aplicado = round2(num(data?.taxa_nota_fiscal_percentual_aplicado || 0))
@@ -1543,12 +1475,9 @@ function montarPayload() {
     data_venda: form.data_venda ? String(form.data_venda) : undefined,
     valor_vendido: round2(num(form.valor_vendido || 0)),
 
-    representante_venda_nome:
-      representanteTipo.value === 'outro' ? (form.representante_venda_nome?.trim() || undefined) : undefined,
-    representante_venda_cpf:
-      representanteTipo.value === 'outro' ? (form.representante_venda_cpf?.trim() || undefined) : undefined,
-    representante_venda_rg:
-      representanteTipo.value === 'outro' ? (form.representante_venda_rg?.trim() || undefined) : undefined,
+    representante_venda_nome: undefined,
+    representante_venda_cpf: undefined,
+    representante_venda_rg: undefined,
 
     taxa_pagamento_percentual_aplicado: round2(num(form.taxa_pagamento_percentual_aplicado || 0)),
     tem_nota_fiscal: Boolean(form.tem_nota_fiscal),
@@ -1606,24 +1535,6 @@ async function salvar() {
   const perm = permSalvarVenda()
   if (!can(perm)) return notify.error('Acesso negado.')
   if (saving.value) return
-
-  if (representanteTipo.value === 'outro') {
-    const nome = String(form.representante_venda_nome ?? '').trim()
-    const cpf = onlyNumbers(form.representante_venda_cpf ?? '').length
-    const rg = String(form.representante_venda_rg ?? '').trim()
-    if (!nome) {
-      notify.error('Preencha o nome completo do representante da venda.')
-      return
-    }
-    if (cpf !== 11) {
-      notify.error('Preencha o CPF do representante da venda (11 dígitos).')
-      return
-    }
-    if (!rg) {
-      notify.error('Preencha o RG do representante da venda.')
-      return
-    }
-  }
 
   saving.value = true
   try {
@@ -1728,5 +1639,3 @@ onMounted(async () => {
   }
 })
 </script>
-
-

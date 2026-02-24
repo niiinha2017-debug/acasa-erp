@@ -22,15 +22,25 @@
             />
           </div>
 
-          <div class="col-span-12 md:col-span-9">
+          <div class="col-span-12 md:col-span-5">
             <SearchInput
               v-model="form.indicacao_id"
               mode="select"
-              label="Quem indicou?"
+              label="Indicacao de cliente"
               placeholder="Pesquisar cliente existente..."
               :options="clientesOptions"
               labelKey="label"
               valueKey="value"
+            />
+          </div>
+
+          <div class="col-span-12 md:col-span-4">
+            <Select
+              v-model="form.indicacao_origem"
+              label="Indicacao de rede social"
+              placeholder="Selecione a origem"
+              :options="indicacaoOrigens"
+              force-upper
             />
           </div>
         </div>
@@ -118,7 +128,6 @@
               placeholder="Selecione o status"
               :options="opcoesStatus"
               force-upper
-              required
             />
           </div>
         </div>
@@ -344,6 +353,7 @@ import { maskCPF, maskCNPJ, maskCEP, maskTelefone, maskRG, maskIE } from '@/util
 import { buscarCep, buscarCnpj } from '@/utils/utils'
 import { can } from '@/services/permissions'
 import { closeTabAndGo } from '@/utils/tabs'
+import { INDICACAO_ORIGENS } from '@/constantes'
 
 definePage({ meta: { perm: 'clientes.ver' } })
 
@@ -355,6 +365,10 @@ const saving = ref(false)
 const deleting = ref(false)
 const isJuridica = ref(false)
 const listaClientes = ref([])
+const indicacaoOrigens = INDICACAO_ORIGENS.map((item) => ({
+  value: item.key,
+  label: item.label,
+}))
 
 const clienteId = computed(() => Number(route.params?.id))
 const isEdit = computed(() => Number.isFinite(clienteId.value) && clienteId.value > 0)
@@ -376,6 +390,7 @@ const opcoesStatus = [
 
 const form = reactive({
   indicacao_id: null,
+  indicacao_origem: '',
   nome_completo: '',
   razao_social: '',
   nome_fantasia: '',
@@ -463,6 +478,7 @@ async function carregarDados() {
 
         Object.assign(form, {
           indicacao_id: c.indicacao_id || null,
+          indicacao_origem: c.indicacao_origem || '',
           nome_completo: c.nome_completo || '',
           razao_social: c.razao_social || '',
           nome_fantasia: c.nome_fantasia || '',

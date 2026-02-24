@@ -11,6 +11,10 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { createHash, randomBytes } from 'crypto';
 import { renderHeaderA4Png } from '../pdf/render-header-a4';
+import { PDFDocument } from 'pdf-lib';
+import { pdflibAddPlaceholder } from '@signpdf/placeholder-pdf-lib';
+import { SignPdf } from '@signpdf/signpdf';
+import { P12Signer } from '@signpdf/signer-p12';
 
 @Injectable()
 export class ContratosService {
@@ -21,6 +25,120 @@ export class ContratosService {
     private readonly jwt: JwtService,
     private readonly mail: MailService,
   ) {}
+
+  private validarJanelaDataFim(dataInicio: Date, dataFimRaw?: string | Date | null) {
+    if (!dataFimRaw) {
+      throw new BadRequestException('Data de término é obrigatória.');
+    }
+    const dataFim = new Date(dataFimRaw);
+    if (Number.isNaN(dataFim.getTime())) {
+      throw new BadRequestException('Data de término inválida.');
+    }
+    const inicio = new Date(dataInicio);
+    inicio.setHours(0, 0, 0, 0);
+    const fim = new Date(dataFim);
+    fim.setHours(0, 0, 0, 0);
+
+    const limite = new Date(inicio);
+    limite.setFullYear(limite.getFullYear() + 1);
+
+    if (fim < inicio) {
+      throw new BadRequestException('Data de término não pode ser menor que a data de início.');
+    }
+    if (fim > limite) {
+      throw new BadRequestException('Data de término deve ser em até 1 ano após a data de início.');
+    }
+    return dataFim;
+  }
+
+  private assinaturaA1Habilitada(): boolean {
+    const enabled = String(
+      this.config.get<string>('CONTRATO_A1_ASSINAR_PDF') ??
+      process.env.CONTRATO_A1_ASSINAR_PDF ??
+      'false',
+    ).toLowerCase();
+    return enabled === '1' || enabled === 'true' || enabled === 'sim';
+  }
+
+  private assinaturaA1Obrigatoria(): boolean {
+    const required = String(
+      this.config.get<string>('CONTRATO_A1_ASSINATURA_OBRIGATORIA') ??
+      process.env.CONTRATO_A1_ASSINATURA_OBRIGATORIA ??
+      'false',
+    ).toLowerCase();
+    return required === '1' || required === 'true' || required === 'sim';
+  }
+
+  private async assinarPdfComA1SeConfigurado(pdfBuffer: Buffer): Promise<Buffer> {
+    if (!this.assinaturaA1Habilitada()) return pdfBuffer;
+
+    const certPath = String(
+      this.config.get<string>('CONTRATO_A1_CERT_PATH') ??
+      process.env.CONTRATO_A1_CERT_PATH ??
+      '',
+    ).trim();
+    const certPassword = String(
+      this.config.get<string>('CONTRATO_A1_CERT_PASSWORD') ??
+      process.env.CONTRATO_A1_CERT_PASSWORD ??
+      '',
+    );
+    const certName = String(
+      this.config.get<string>('CONTRATO_A1_SIGNER_NAME') ??
+      process.env.CONTRATO_A1_SIGNER_NAME ??
+      'ACASA ERP',
+    ).trim();
+    const certLocation = String(
+      this.config.get<string>('CONTRATO_A1_SIGNER_LOCATION') ??
+      process.env.CONTRATO_A1_SIGNER_LOCATION ??
+      'Ribeirao Preto - SP',
+    ).trim();
+    const certReason = String(
+      this.config.get<string>('CONTRATO_A1_SIGNER_REASON') ??
+      process.env.CONTRATO_A1_SIGNER_REASON ??
+      'Assinatura digital de contrato',
+    ).trim();
+    const signatureLength = Number(
+      this.config.get<string>('CONTRATO_A1_SIGNATURE_LENGTH') ??
+      process.env.CONTRATO_A1_SIGNATURE_LENGTH ??
+      '20000',
+    );
+
+    const fail = (message: string): Buffer => {
+      if (this.assinaturaA1Obrigatoria()) throw new BadRequestException(message);
+      return pdfBuffer;
+    };
+
+    if (!certPath) return fail('Caminho do certificado A1 não configurado (CONTRATO_A1_CERT_PATH).');
+    if (!certPassword) return fail('Senha do certificado A1 não configurada (CONTRATO_A1_CERT_PASSWORD).');
+    if (!fs.existsSync(certPath)) return fail(`Certificado A1 não encontrado no caminho configurado: ${certPath}`);
+
+    try {
+      const p12Buffer = fs.readFileSync(certPath);
+      const pdfDoc = await PDFDocument.load(pdfBuffer);
+
+      pdflibAddPlaceholder({
+        pdfDoc,
+        reason: certReason,
+        location: certLocation,
+        name: certName,
+        contactInfo: certName,
+        signatureLength: Number.isFinite(signatureLength) && signatureLength > 0 ? signatureLength : 20000,
+      });
+
+      const pdfComPlaceholder = Buffer.from(
+        await pdfDoc.save({ useObjectStreams: false }),
+      );
+
+      const signer = new P12Signer(p12Buffer, { passphrase: certPassword });
+      const assinado = await new SignPdf().sign(pdfComPlaceholder, signer);
+      return Buffer.isBuffer(assinado) ? assinado : Buffer.from(assinado);
+    } catch (err: any) {
+      if (this.assinaturaA1Obrigatoria()) {
+        throw new BadRequestException(`Falha ao assinar contrato com A1: ${err?.message || 'erro desconhecido'}`);
+      }
+      return pdfBuffer;
+    }
+  }
 
   async listar(vendaId?: number) {
     const where = vendaId
@@ -70,6 +188,9 @@ export class ContratosService {
     const numero =
       dto.numero?.trim() ? dto.numero.trim() : await this.proximoNumeroContrato();
 
+    const dataInicio = new Date();
+    const dataFim = this.validarJanelaDataFim(dataInicio, dto.data_fim);
+
     return this.prisma.contratos.create({
       data: {
         cliente_id: venda.cliente_id,
@@ -78,8 +199,8 @@ export class ContratosService {
         descricao: dto.descricao ?? null,
         status: dto.status,
         valor: dto.valor,
-        data_inicio: dto.data_inicio ? new Date(dto.data_inicio) : null,
-        data_fim: dto.data_fim ? new Date(dto.data_fim) : null,
+        data_inicio: dataInicio,
+        data_fim: dataFim,
       },
       include: { cliente: true, venda: true },
     });
@@ -87,6 +208,7 @@ export class ContratosService {
 
   async atualizar(id: number, dto: UpdateContratoDto) {
     const atual = await this.buscarPorId(id);
+    const dataInicioBase = atual.data_inicio ? new Date(atual.data_inicio) : new Date();
 
     const statusSolicitado = String(dto.status || '').trim().toUpperCase();
     const statusAtual = String(atual.status || '').trim().toUpperCase();
@@ -114,8 +236,11 @@ export class ContratosService {
         descricao: dto.descricao,
         status: dto.status,
         valor: dto.valor,
-        data_inicio: dto.data_inicio ? new Date(dto.data_inicio) : undefined,
-        data_fim: dto.data_fim ? new Date(dto.data_fim) : undefined,
+        data_inicio: undefined,
+        data_fim:
+          dto.data_fim !== undefined
+            ? this.validarJanelaDataFim(dataInicioBase, dto.data_fim)
+            : undefined,
       },
       include: { cliente: true, venda: true },
     });
@@ -524,28 +649,31 @@ export class ContratosService {
     const spacing = 18;
     const margemInferiorAssinatura = 84; // margem padrão (60) + respiro visual extra
     const razao = mapa.contratada_razao_social || 'CONTRATADA';
-    const cnpj = mapa.contratada_cnpj || '';
-    const representante = mapa.contratada_representante_nome || '';
-    const cpfContratada = mapa.contratada_representante_cpf || '';
     const clienteNome = mapa.cliente_razao_social_ou_nome_completo || 'CONTRATANTE';
     const docTipo = mapa.cliente_documento_tipo || 'CPF';
     const docNum = mapa.cliente_documento_numero || '';
+    const assinaturaDigitalVisivel = mapa.assinatura_digital_visivel || '';
 
     doc.y += spacing;
 
-    const drawCienteBlock = (titulo: string, linhas: string[]) => {
+    const drawCienteBlock = (titulo: string, linhas: string[], assinaturaInfo?: string) => {
       const medirAlturaTexto = (texto: string, font: string, size: number): number => {
         doc.font(font).fontSize(size);
         return doc.heightOfString(texto, { width: larguraTexto });
       };
       const alturaTitulo = medirAlturaTexto(titulo, 'Helvetica-Bold', 10);
       const alturasLinhas = linhas.map((ln) => medirAlturaTexto(ln, 'Helvetica', 9));
+      const alturaAssinatura =
+        assinaturaInfo && String(assinaturaInfo).trim()
+          ? medirAlturaTexto(String(assinaturaInfo).trim(), 'Helvetica-Oblique', 8)
+          : 0;
       const alturaMinimaSemOrfao =
         alturaTitulo + 2 + (lineYOffset + 8) + (alturasLinhas[0] ?? 0) + 2;
       const alturaTotalBloco =
         alturaTitulo +
         2 +
         (lineYOffset + 8) +
+        (alturaAssinatura > 0 ? alturaAssinatura + 6 : 0) +
         alturasLinhas.reduce((acc, h) => acc + h + 2, 0) +
         spacing;
 
@@ -561,6 +689,14 @@ export class ContratosService {
         .lineTo(left + lineW, doc.y + lineYOffset)
         .stroke();
       doc.y += lineYOffset + 8;
+      if (alturaAssinatura > 0) {
+        doc
+          .font('Helvetica-Oblique')
+          .fontSize(8)
+          .fillColor('#4b5563')
+          .text(String(assinaturaInfo).trim(), left, doc.y, { width: larguraTexto });
+        doc.y += doc.currentLineHeight() + 4;
+      }
       doc.font('Helvetica').fontSize(9).fillColor('#333');
       for (const ln of linhas) {
         doc.text(ln, left, doc.y, { width: larguraTexto });
@@ -571,10 +707,7 @@ export class ContratosService {
 
     drawCienteBlock('Ciente:', [
       `CONTRATADA: ${razao}`,
-      `CNPJ: ${cnpj}`,
-      representante ? `REPRESENTANTE LEGAL: ${representante}` : '',
-      cpfContratada ? `CPF: ${cpfContratada}` : '',
-    ].filter(Boolean));
+    ], assinaturaDigitalVisivel);
 
     drawCienteBlock('Ciente:', [
       `CONTRATANTE: ${clienteNome}`,
@@ -705,6 +838,7 @@ export class ContratosService {
 
     const hoje = new Date();
     const dataAss = hoje.toLocaleDateString('pt-BR', { timeZone: TZ_BR });
+    const dataHoraAss = hoje.toLocaleString('pt-BR', { timeZone: TZ_BR });
     const dia = hoje.toLocaleString('pt-BR', { timeZone: TZ_BR, day: 'numeric' });
     const mes = hoje.toLocaleString('pt-BR', { timeZone: TZ_BR, month: 'long' });
     const ano = hoje.toLocaleString('pt-BR', { timeZone: TZ_BR, year: 'numeric' });
@@ -770,7 +904,7 @@ export class ContratosService {
       cidade_data_assinatura: `${
         cliente.cidade || empresa?.cidade || 'Ribeirão Preto'
       }, ${dataPorExtenso}`,
-      // Representante: venda (se preenchido) ou cadastro da empresa
+      // Representante fixo do proprietário (cadastro da empresa)
       contratada_razao_social: razaoSocial,
       contratada_cnpj: this.maskCnpj(empresa?.cnpj ?? cnpj),
       contratada_ie: empresa?.ie ?? '',
@@ -778,22 +912,10 @@ export class ContratosService {
         ? `, inscrita na Inscrição Estadual sob o nº ${String(empresa.ie).trim()}`
         : '',
       contratada_endereco_completo: enderecoEmpresa,
-      contratada_representante_nome:
-        (venda?.representante_venda_nome?.trim() && venda?.representante_venda_cpf?.trim())
-          ? venda.representante_venda_nome.trim()
-          : (empresa?.representante_legal_nome ?? ''),
-      contratada_representante_estado_civil:
-        (venda?.representante_venda_nome?.trim() && venda?.representante_venda_cpf?.trim())
-          ? 'Brasileira'
-          : 'Brasileira',
-      contratada_representante_rg:
-        (venda?.representante_venda_nome?.trim() && venda?.representante_venda_cpf?.trim())
-          ? this.maskRg(venda.representante_venda_rg) || ''
-          : this.maskRg(empresa?.representante_legal_rg) || '',
-      contratada_representante_cpf:
-        (venda?.representante_venda_nome?.trim() && venda?.representante_venda_cpf?.trim())
-          ? this.maskCpf(venda.representante_venda_cpf) || ''
-          : this.maskCpf(empresa?.representante_legal_cpf ?? '') || '',
+      contratada_representante_nome: empresa?.representante_legal_nome ?? '',
+      contratada_representante_estado_civil: 'Brasileira',
+      contratada_representante_rg: this.maskRg(empresa?.representante_legal_rg) || '',
+      contratada_representante_cpf: this.maskCpf(empresa?.representante_legal_cpf ?? '') || '',
       // Dados para pagamento (cadastro da empresa): nome = razão social da empresa, não do representante
       contratada_pix: empresa?.pix ?? '',
       contratada_banco_titular: empresa?.banco_titular ?? '',
@@ -810,12 +932,15 @@ export class ContratosService {
       valor_revisao_base: 'R$ 250,00',
       valor_armazenagem_dia: 'R$ 100,00',
       acabamento_interno_padrao: 'Branco TX (MDF BP 15mm)',
+      assinatura_digital_visivel: this.assinaturaA1Habilitada()
+        ? `Documento assinado digitalmente (certificado A1) por ${razaoSocial} - CNPJ ${this.maskCnpj(empresa?.cnpj ?? cnpj)} em ${dataHoraAss}.`
+        : '',
     };
 
     const doc = new PDFKitDoc({ size: 'A4', margin: 40 });
     const chunks: Buffer[] = [];
 
-    return await new Promise<Buffer>((resolve, reject) => {
+    const pdfGerado = await new Promise<Buffer>((resolve, reject) => {
       doc.on('data', (c) => chunks.push(c));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
@@ -926,6 +1051,7 @@ export class ContratosService {
         reject(e);
       }
     });
+    return this.assinarPdfComA1SeConfigurado(pdfGerado);
   }
 
   async gerarPdfESalvar(contratoId: number) {

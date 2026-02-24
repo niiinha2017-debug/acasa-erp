@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="w-full max-w-[900px] mx-auto animate-page-in">
     <div class="rounded-2xl border border-border-ui bg-bg-card overflow-hidden">
       <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
@@ -38,7 +38,7 @@
             <Input
               class="col-span-12 md:col-span-4"
               v-model="form.numero"
-              label="Número do contrato (opcional – gerado automaticamente se vazio)"
+              label="Número do contrato (opcional - gerado automaticamente se vazio)"
               placeholder="Ex: CONT-2025-001"
             />
 
@@ -81,14 +81,26 @@
               v-model="form.data_inicio"
               label="Data de início"
               type="date"
+              disabled
             />
 
-            <Input
-              class="col-span-12 md:col-span-6"
-              v-model="form.data_fim"
-              label="Data de término"
-              type="date"
-            />
+            <div class="col-span-12 md:col-span-6">
+              <label class="block text-xs font-semibold tracking-wide text-text-soft ml-0.5 mb-1.5">Data de término</label>
+              <VueDatePicker
+                v-model="dataFimDate"
+                :min-date="dataInicioDate"
+                :max-date="dataFimMaximoDate"
+                :time-picker="false"
+                format="dd/MM/yyyy"
+                :locale="ptBR"
+                auto-apply
+                :text-input="{ format: 'dd/MM/yyyy', openMenu: true, enterSubmit: true, tabSubmit: true }"
+                placeholder="DD/MM/AAAA"
+              />
+            </div>
+            <p class="col-span-12 md:col-span-6 -mt-3 text-xs text-text-soft">
+              Data prévia até {{ dataFimMaximoLabel }}.
+            </p>
           </div>
 
           <!-- Compartilhar contrato (assinatura quando rascunho; PDF quando já assinado) -->
@@ -119,18 +131,6 @@
                 }}
               </p>
               <div class="flex flex-wrap items-center gap-2">
-                <Button
-                  v-if="!isContratoAssinado"
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  :loading="assinandoFisico"
-                  :disabled="assinandoFisico"
-                  @click="marcarAssinaturaFisica"
-                >
-                  <i class="pi pi-pencil mr-1.5"></i>
-                  Assinatura física (marcar assinado)
-                </Button>
                 <Button
                   type="button"
                   variant="secondary"
@@ -206,6 +206,9 @@ import { notify } from '@/services/notify'
 import { can } from '@/services/permissions'
 import { ContratosService, VendaService } from '@/services/index'
 import { closeTabAndGo } from '@/utils/tabs'
+import { VueDatePicker } from '@vuepic/vue-datepicker'
+import '@vuepic/vue-datepicker/dist/main.css'
+import { ptBR } from 'date-fns/locale'
 
 definePage({ meta: { perm: 'contratos.ver' } })
 
@@ -227,7 +230,6 @@ const salvando = ref(false)
 const gerandoPdf = ref(false)
 const obterLinkLoading = ref(false)
 const enviarEmailLoading = ref(false)
-const assinandoFisico = ref(false)
 const statusInicial = ref('RASCUNHO')
 const vendaOptions = ref([])
 const contratoCliente = ref(null)
@@ -261,6 +263,74 @@ const form = ref({
   data_inicio: '',
   data_fim: '',
 })
+
+function hojeYmd() {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function addOneYearYmd(ymd) {
+  if (!ymd) return ''
+  const [y, m, d] = String(ymd).split('-').map(Number)
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return ''
+  const dt = new Date(y, m - 1, d)
+  dt.setFullYear(dt.getFullYear() + 1)
+  const yy = dt.getFullYear()
+  const mm = String(dt.getMonth() + 1).padStart(2, '0')
+  const dd = String(dt.getDate()).padStart(2, '0')
+  return `${yy}-${mm}-${dd}`
+}
+
+const dataFimMaximo = computed(() => addOneYearYmd(form.value.data_inicio))
+const dataFimMaximoLabel = computed(() => formatYmdBr(dataFimMaximo.value))
+const dataInicioDate = computed(() => parseYmdLocal(form.value.data_inicio))
+const dataFimMaximoDate = computed(() => parseYmdLocal(dataFimMaximo.value))
+const dataFimDate = ref(null)
+
+function formatYmdBr(ymd) {
+  if (!ymd) return '--/--/----'
+  const [y, m, d] = String(ymd).split('-')
+  if (!y || !m || !d) return '--/--/----'
+  return `${d}/${m}/${y}`
+}
+
+function parseYmdLocal(ymd) {
+  if (!ymd) return null
+  const [y, m, d] = String(ymd).split('-').map(Number)
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null
+  const dt = new Date(y, m - 1, d)
+  return Number.isNaN(dt.getTime()) ? null : dt
+}
+
+function formatDateYmd(v) {
+  if (!v) return ''
+  const d = v instanceof Date ? v : new Date(v)
+  if (Number.isNaN(d.getTime())) return ''
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+watch(
+  () => form.value.data_fim,
+  (v) => {
+    const parsed = parseYmdLocal(v)
+    const current = dataFimDate.value instanceof Date ? dataFimDate.value.getTime() : null
+    const next = parsed instanceof Date ? parsed.getTime() : null
+    if (current !== next) dataFimDate.value = parsed
+  },
+  { immediate: true },
+)
+
+watch(dataFimDate, (v) => {
+  const next = formatDateYmd(v)
+  if (form.value.data_fim !== next) form.value.data_fim = next
+})
+
 
 function montarLabelVenda(v) {
   return `Venda #${v.id} - ${v.cliente?.nome_completo || v.cliente?.nome || '-'} (${numeroParaMoeda(v.valor_vendido || v.valor_total)})`
@@ -323,6 +393,7 @@ async function carregarContrato() {
   if (!isEdit.value) {
     loading.value = false
     form.value.status = 'RASCUNHO'
+    form.value.data_inicio = hojeYmd()
     statusInicial.value = 'RASCUNHO'
     // Pré-preenche cliente/venda quando vier de uma venda específica
     if (vendaIdFromQuery.value) {
@@ -441,11 +512,19 @@ async function salvar() {
   }
 
   if (!payload.venda_id) return notify.error('Selecione a venda. O contrato só pode ser criado a partir de uma venda.')
+  if (!payload.data_inicio) payload.data_inicio = hojeYmd()
+  if (!payload.data_fim) return notify.error('Informe a data de término do contrato.')
+  const inicio = new Date(`${payload.data_inicio}T00:00:00`)
+  const fim = new Date(`${payload.data_fim}T00:00:00`)
+  const fimMax = new Date(`${addOneYearYmd(payload.data_inicio)}T00:00:00`)
+  if (Number.isNaN(inicio.getTime()) || Number.isNaN(fim.getTime())) return notify.error('Datas do contrato inválidas.')
+  if (fim < inicio) return notify.error('A data de término não pode ser menor que a data de início.')
+  if (fim > fimMax) return notify.error('A data de término deve ser em até 1 ano após a data de início.')
   if (
     String(payload.status || '').toUpperCase() === 'VIGENTE' &&
     statusInicial.value !== 'VIGENTE'
   ) {
-    return notify.error('Para segurança, use o botão "Assinatura física (marcar assinado)" ou o link de assinatura.')
+    return notify.error('Para segurança, use apenas o link de assinatura do contrato.')
   }
 
   salvando.value = true
@@ -469,28 +548,6 @@ async function salvar() {
     notify.error(e?.response?.data?.message || 'Erro ao salvar contrato.')
   } finally {
     salvando.value = false
-  }
-}
-
-async function marcarAssinaturaFisica() {
-  if (assinandoFisico.value) return
-  if (!isEdit.value) return notify.error('Salve o contrato antes de marcar assinatura.')
-  if (!can('contratos.editar')) return notify.error('Sem permissão para assinar contrato.')
-
-  const id = Number(String(contratoId.value).replace(/\D/g, ''))
-  if (!id) return notify.error('Contrato inválido.')
-
-  assinandoFisico.value = true
-  try {
-    await ContratosService.assinar(id, {
-      data_assinatura: new Date().toISOString(),
-    })
-    notify.success('Contrato assinado com sucesso. Contas a receber liberadas para esta venda.')
-    await carregarContrato()
-  } catch (e) {
-    notify.error(e?.response?.data?.message || 'Erro ao marcar assinatura do contrato.')
-  } finally {
-    assinandoFisico.value = false
   }
 }
 
@@ -563,7 +620,7 @@ async function enviarPorWhatsApp() {
   }
 }
 
-// Enviar e-mail automaticamente pelo backend (SMTP do .env) – não abre o app de e-mail
+// Enviar e-mail automaticamente pelo backend (SMTP do .env) - não abre o app de e-mail
 async function enviarContratoPorEmailSistema() {
   if (enviarEmailLoading.value) return
   const id = Number(String(contratoId.value).replace(/\D/g, ''))
@@ -588,3 +645,5 @@ onMounted(async () => {
   await carregarContrato()
 })
 </script>
+
+

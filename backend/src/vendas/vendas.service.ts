@@ -12,6 +12,7 @@ import {
   statusClienteEhValido,
   validarTransicaoStatusCliente,
 } from '../shared/constantes/pipeline-cliente';
+import { VENDA_FECHAMENTO_REGRAS } from '../shared/constantes/venda-fechamento';
 
 function round2(n: number) {
   return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
@@ -71,6 +72,21 @@ export class VendasService {
     if (round2(soma - valorVendido) !== 0) {
       throw new BadRequestException(
         `Soma dos pagamentos (${soma}) precisa bater com valor_vendido (${valorVendido}).`,
+      );
+    }
+  }
+
+  private validarRegraDesconto(valorVendido: number, totalOrcado: number) {
+    const total = round2(toNumber(totalOrcado));
+    const vendido = round2(toNumber(valorVendido));
+    if (total <= 0) return;
+    const descontoPercentual = round2(((total - vendido) / total) * 100);
+    const maximo = Number(VENDA_FECHAMENTO_REGRAS.DESCONTO_MAXIMO_PERCENTUAL || 0);
+    if (descontoPercentual > maximo) {
+      throw new BadRequestException(
+        `Desconto máximo permitido é ${maximo}%. Valor mínimo da venda para este orçamento: ${round2(
+          total * (1 - maximo / 100),
+        )}.`,
       );
     }
   }
@@ -335,6 +351,10 @@ export class VendasService {
     }
 
     const valorVendido = round2(toNumber(dto.valor_vendido));
+    const totalOrcado = round2(
+      (orc.itens || []).reduce((acc, it) => acc + toNumber((it as any)?.valor_unitario || 0), 0),
+    );
+    this.validarRegraDesconto(valorVendido, totalOrcado);
     this.validarSomaPagamentos(dto.pagamentos, valorVendido);
 
     // itens da venda:
@@ -501,6 +521,16 @@ export class VendasService {
       dto.valor_vendido !== undefined && dto.valor_vendido !== null
         ? round2(toNumber(dto.valor_vendido))
         : round2(toNumber(atual.valor_vendido));
+
+    const orc = await this.prisma.orcamentos.findUnique({
+      where: { id: atual.orcamento_id },
+      include: { itens: true },
+    });
+    if (!orc) throw new NotFoundException('Orçamento da venda não encontrado.');
+    const totalOrcado = round2(
+      (orc.itens || []).reduce((acc, it) => acc + toNumber((it as any)?.valor_unitario || 0), 0),
+    );
+    this.validarRegraDesconto(valorVendido, totalOrcado);
 
     if (dto.pagamentos?.length)
       this.validarSomaPagamentos(dto.pagamentos as any, valorVendido);
