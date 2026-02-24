@@ -133,17 +133,23 @@ export class ClientesService {
 
     const rows = await this.prisma.cliente.findMany({
       where: {
-        status: 'ATIVO',
-        ...(termo
-          ? {
-              OR: [
-                { nome_completo: { contains: termo } },
-                { razao_social: { contains: termo } },
-                { cpf: { contains: termo } },
-                { cnpj: { contains: termo } },
-              ],
-            }
-          : {}),
+        AND: [
+          {
+            status: { not: 'INATIVO' },
+          },
+          ...(termo
+            ? [
+                {
+                  OR: [
+                    { nome_completo: { contains: termo } },
+                    { razao_social: { contains: termo } },
+                    { cpf: { contains: termo } },
+                    { cnpj: { contains: termo } },
+                  ],
+                },
+              ]
+            : []),
+        ],
       },
       select: {
         id: true,

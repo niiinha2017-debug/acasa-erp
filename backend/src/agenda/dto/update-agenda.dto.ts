@@ -1,6 +1,15 @@
-import { IsArray, IsDateString, IsInt, IsOptional, IsString, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsDateString,
+  IsInt,
+  IsOptional,
+  IsString,
+  ValidateNested,
+  IsIn,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { FuncionarioApontamentoDto } from './create-agenda.dto';
+import { ORIGENS_FLUXO, SETORES_DESTINO } from '../agenda-rules';
 
 export class UpdateAgendaDto {
   @IsOptional()
@@ -47,6 +56,16 @@ export class UpdateAgendaDto {
   @IsOptional()
   @IsString()
   categoria?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(ORIGENS_FLUXO, { message: 'origem_fluxo inválida' })
+  origem_fluxo?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(SETORES_DESTINO, { message: 'setor_destino inválido' })
+  setor_destino?: string;
 
   @IsOptional()
   @IsString()

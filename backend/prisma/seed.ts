@@ -66,10 +66,6 @@ async function main() {
     { chave: 'permissoes.ver', descricao: 'Visualizar permissoes' },
     { chave: 'permissoes.gerenciar', descricao: 'Gerenciar permissoes' },
 
-    { chave: 'obras.ver', descricao: 'Visualizar obras' },
-    { chave: 'obras.criar', descricao: 'Criar obras' },
-    { chave: 'obras.editar', descricao: 'Editar obras' },
-
     { chave: 'configuracoes.empresa.ver', descricao: 'Visualizar empresa' },
     { chave: 'configuracoes.empresa.editar', descricao: 'Editar empresa' },
 
@@ -106,24 +102,14 @@ async function main() {
     { chave: 'contratos.ver', descricao: 'Visualizar contratos' },
     { chave: 'contratos.criar', descricao: 'Criar contratos' },
     { chave: 'contratos.editar', descricao: 'Editar contratos' },
+    { chave: 'contratos.clausulas.editar', descricao: 'Editar modelos de cláusulas de contrato/orçamento' },
     { chave: 'contratos.excluir', descricao: 'Excluir contratos' },
-
-    { chave: 'producao.ver', descricao: 'Visualizar producao' },
-    { chave: 'producao.criar', descricao: 'Criar producao' },
-    { chave: 'producao.editar', descricao: 'Editar producao' },
-    { chave: 'producao.excluir', descricao: 'Excluir producao' },
 
     { chave: 'plano_corte.ver', descricao: 'Visualizar plano de corte' },
     { chave: 'plano_corte.criar', descricao: 'Criar plano de corte' },
     { chave: 'plano_corte.editar', descricao: 'Editar plano de corte' },
     { chave: 'plano_corte.excluir', descricao: 'Excluir plano de corte' },
     { chave: 'plano_corte.enviar_producao', descricao: 'Enviar plano de corte para producao (agenda)' },
-
-    // Projetos
-    { chave: 'projetos.ver', descricao: 'Visualizar projetos' },
-    { chave: 'projetos.criar', descricao: 'Criar projetos' },
-    { chave: 'projetos.editar', descricao: 'Editar projetos' },
-    { chave: 'projetos.excluir', descricao: 'Excluir projetos' },
 
     // Cadastros
     { chave: 'clientes.ver', descricao: 'Visualizar clientes' },
@@ -178,6 +164,32 @@ async function main() {
       where: { chave: p.chave },
       update: { descricao: p.descricao },
       create: { chave: p.chave, descricao: p.descricao },
+    })
+  }
+
+  const permissoesLegadas = [
+    'obras.ver',
+    'obras.criar',
+    'obras.editar',
+    'producao.ver',
+    'producao.criar',
+    'producao.editar',
+    'producao.excluir',
+    'projetos.ver',
+    'projetos.criar',
+    'projetos.editar',
+    'projetos.excluir',
+  ]
+  const legadoDb = await prisma.permissoes.findMany({
+    where: { chave: { in: permissoesLegadas } },
+    select: { id: true },
+  })
+  if (legadoDb.length) {
+    await prisma.usuarios_permissoes.deleteMany({
+      where: { permissao_id: { in: legadoDb.map((p) => p.id) } },
+    })
+    await prisma.permissoes.deleteMany({
+      where: { id: { in: legadoDb.map((p) => p.id) } },
     })
   }
 

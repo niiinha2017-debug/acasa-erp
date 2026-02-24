@@ -10,26 +10,53 @@
       />
 
       <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-6">
-        <!-- Resumo (Vendas só vê números da área comercial) -->
         <div
-          v-if="temAlgumAcesso && podeVerResumo"
-          class="grid grid-cols-2 sm:grid-cols-4 gap-4"
+          v-if="can('vendas.criar')"
+          class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden"
         >
-          <div class="rounded-xl border border-border-ui bg-bg-page p-4">
-            <p class="text-[10px] font-bold uppercase tracking-wider text-text-soft mb-1">Orçamentos</p>
-            <p class="text-xl font-black text-text-main">{{ resumo.orcamentos_em_andamento ?? '–' }}</p>
+          <div class="px-4 py-3 border-b border-border-ui">
+            <span class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
+              Meu progresso em vendas
+            </span>
           </div>
-          <div class="rounded-xl border border-border-ui bg-bg-page p-4">
-            <p class="text-[10px] font-bold uppercase tracking-wider text-text-soft mb-1">Aprovados sem venda</p>
-            <p class="text-xl font-black text-text-main">{{ resumo.orcamentos_aprovados_sem_venda ?? '–' }}</p>
-          </div>
-          <div class="rounded-xl border border-border-ui bg-bg-page p-4">
-            <p class="text-[10px] font-bold uppercase tracking-wider text-text-soft mb-1">Vendas este mês</p>
-            <p class="text-xl font-black text-text-main">{{ resumo.vendas_fechadas_mes ?? '–' }}</p>
-          </div>
-          <div class="rounded-xl border border-border-ui bg-bg-page p-4">
-            <p class="text-[10px] font-bold uppercase tracking-wider text-text-soft mb-1">Contratos</p>
-            <p class="text-xl font-black text-text-main">{{ resumo.contratos_total ?? '–' }}</p>
+          <div class="p-4">
+            <div v-if="loadingResumoVendedor" class="py-4 text-sm text-text-soft">
+              <i class="pi pi-spin pi-spinner mr-2" />
+              Carregando progresso...
+            </div>
+            <div v-else class="space-y-3">
+              <div class="text-xs text-text-soft">
+                <span class="font-semibold text-text-main">
+                  Vendedor: {{ resumoVendedor.vendedor || 'Não identificado' }}
+                </span>
+                <span class="mx-2">•</span>
+                <span>Fonte: {{ resumoVendedor.fonte_vendedor || 'Usuário autenticado' }}</span>
+                <RouterLink
+                  :to="resumoVendedor.link_referencia || '/vendas/fechamento'"
+                  class="ml-2 font-semibold text-brand-primary hover:underline"
+                >
+                  Ver referência
+                </RouterLink>
+              </div>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div class="rounded-xl border border-border-ui bg-bg-card p-4">
+                <p class="text-[10px] font-bold uppercase tracking-wider text-text-soft mb-1">Minhas vendas</p>
+                <p class="text-xl font-black text-text-main">{{ resumoVendedor.minhas_vendas_total ?? 0 }}</p>
+              </div>
+              <div class="rounded-xl border border-border-ui bg-bg-card p-4">
+                <p class="text-[10px] font-bold uppercase tracking-wider text-text-soft mb-1">Fechadas no mês</p>
+                <p class="text-xl font-black text-text-main">{{ resumoVendedor.minhas_vendas_mes ?? 0 }}</p>
+              </div>
+              <div class="rounded-xl border border-border-ui bg-bg-card p-4">
+                <p class="text-[10px] font-bold uppercase tracking-wider text-text-soft mb-1">Em produção</p>
+                <p class="text-xl font-black text-text-main">{{ resumoVendedor.minhas_em_producao ?? 0 }}</p>
+              </div>
+              <div class="rounded-xl border border-border-ui bg-bg-card p-4">
+                <p class="text-[10px] font-bold uppercase tracking-wider text-text-soft mb-1">Finalizadas</p>
+                <p class="text-xl font-black text-text-main">{{ resumoVendedor.minhas_finalizadas ?? 0 }}</p>
+              </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -47,7 +74,7 @@
           </RouterLink>
 
           <RouterLink
-            v-if="can('vendas.criar')"
+            v-if="can('vendas.criar') && can('orcamentos.ver')"
             to="/vendas/fechamento"
             class="group flex flex-col p-6 rounded-2xl border border-border-ui bg-bg-page hover:border-brand-primary/50 hover:shadow-lg transition-all duration-200"
           >
@@ -71,7 +98,7 @@
           </RouterLink>
 
           <RouterLink
-            v-if="can('orcamentos.editar')"
+            v-if="can('contratos.clausulas.editar')"
             to="/contratos/clausulas"
             class="group flex flex-col p-6 rounded-2xl border border-border-ui bg-bg-page hover:border-brand-primary/50 hover:shadow-lg transition-all duration-200"
           >
@@ -152,22 +179,25 @@ import { computed, onMounted, ref } from 'vue'
 import { AgendaService } from '@/services'
 import api from '@/services/api'
 import { can } from '@/services/permissions'
+import { storage } from '@/utils/storage'
 
 definePage({ meta: { perm: 'orcamentos.ver' } })
 
 const temAlgumAcesso = computed(() =>
-  can('orcamentos.ver') || can('vendas.criar') || can('contratos.ver') || can('orcamentos.editar') || can('agendamentos.ver')
+  can('orcamentos.ver') || can('vendas.criar') || can('contratos.ver') || can('contratos.clausulas.editar') || can('agendamentos.ver')
 )
 
-const podeVerResumo = computed(() =>
-  can('orcamentos.ver') || can('vendas.criar') || can('contratos.ver')
-)
-
-const resumo = ref({
-  orcamentos_em_andamento: null,
-  orcamentos_aprovados_sem_venda: null,
-  vendas_fechadas_mes: null,
-  contratos_total: null,
+const loadingResumoVendedor = ref(false)
+const resumoVendedor = ref({
+  vendedor: null,
+  vendedor_usuario_id: null,
+  vendedor_funcionario_id: null,
+  fonte_vendedor: 'Usuário autenticado',
+  link_referencia: '/vendas/fechamento',
+  minhas_vendas_total: 0,
+  minhas_vendas_mes: 0,
+  minhas_em_producao: 0,
+  minhas_finalizadas: 0,
 })
 
 const loadingAgenda = ref(false)
@@ -198,13 +228,19 @@ async function carregarAgenda() {
   if (!can('agendamentos.ver')) return
   loadingAgenda.value = true
   try {
-    const hoje = new Date()
-    const fim = new Date(hoje)
-    fim.setDate(fim.getDate() + 14)
-    const inicioStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`
-    const fimStr = `${fim.getFullYear()}-${String(fim.getMonth() + 1).padStart(2, '0')}-${String(fim.getDate()).padStart(2, '0')}`
-    const res = await AgendaService.listarTodos(inicioStr, fimStr)
+    const user = storage.getUser() || {}
+    const funcionarioId = Number(user?.funcionario_id || 0)
+    if (!funcionarioId) {
+      proximosAgendamentos.value = []
+      return
+    }
+    const res = await AgendaService.buscarPorFuncionario(funcionarioId)
     let data = Array.isArray(res?.data) ? res.data : []
+    const agora = new Date()
+    data = data.filter((ev) => {
+      const inicio = new Date(ev?.inicio_em)
+      return !Number.isNaN(inicio.getTime()) && inicio >= agora
+    })
     if (can('agendamentos.vendas') && !can('agendamentos.producao')) {
       data = data.filter((ev) => !ev?.plano_corte_id)
     }
@@ -217,18 +253,21 @@ async function carregarAgenda() {
   }
 }
 
-async function carregarResumo() {
-  if (!podeVerResumo.value) return
+async function carregarResumoVendedor() {
+  if (!can('vendas.criar')) return
+  loadingResumoVendedor.value = true
   try {
-    const { data } = await api.get('/analytics/dashboard/resumo-vendas')
-    resumo.value = data ?? {}
+    const { data } = await api.get('/analytics/dashboard/resumo-vendedor')
+    resumoVendedor.value = data ?? resumoVendedor.value
   } catch {
-    // silencia; resumo é opcional
+    // silencia; card é complementar
+  } finally {
+    loadingResumoVendedor.value = false
   }
 }
 
 onMounted(() => {
-  carregarResumo()
+  carregarResumoVendedor()
   carregarAgenda()
 })
 </script>

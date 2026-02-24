@@ -7,6 +7,11 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateVendaDto } from './dto/create-venda.dto';
 import { UpdateVendaDto } from './dto/update-venda.dto';
+import {
+  STATUS_POS_VENDA,
+  statusClienteEhValido,
+  validarTransicaoStatusCliente,
+} from '../shared/constantes/pipeline-cliente';
 
 function round2(n: number) {
   return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
@@ -20,6 +25,42 @@ function toNumber(v: any): number {
 export class VendasService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private readonly statusPosVenda = STATUS_POS_VENDA;
+
+  private validarStatusDestino(status: string, contexto: string) {
+    if (!statusClienteEhValido(status)) {
+      throw new BadRequestException(
+        `${contexto}: status "${String(status || '').toUpperCase()}" inválido no pipeline.`,
+      );
+    }
+  }
+
+  private validarTransicaoStatusVenda(
+    statusAtual: string | null | undefined,
+    proximoStatus: string,
+    contexto: string,
+  ) {
+    const resultado = validarTransicaoStatusCliente({
+      atual: statusAtual,
+      proximo: proximoStatus,
+    });
+    if (!resultado.ok) {
+      throw new BadRequestException(`${contexto}: ${resultado.motivo}`);
+    }
+  }
+
+  private resolverStatusPosVenda(vendaStatus?: string | null, clienteStatus?: string | null) {
+    const venda = String(vendaStatus || '').toUpperCase();
+    const cliente = String(clienteStatus || '').toUpperCase();
+    if (this.statusPosVenda.includes(venda)) {
+      return { status: venda, status_source: 'venda' as const };
+    }
+    if (this.statusPosVenda.includes(cliente)) {
+      return { status: cliente, status_source: 'cliente' as const };
+    }
+    return { status: '', status_source: null };
+  }
+
   // ===============================
   // VALIDACOES
   // ===============================
@@ -32,6 +73,83 @@ export class VendasService {
         `Soma dos pagamentos (${soma}) precisa bater com valor_vendido (${valorVendido}).`,
       );
     }
+  }
+
+  private toIntOrNull(v: any): number | null {
+    const n = Number(v);
+    return Number.isInteger(n) && n > 0 ? n : null;
+  }
+
+  private async resolverResponsavelIds(input: {
+    usuarioId?: any;
+    funcionarioId?: any;
+    nome?: any;
+  }): Promise<{
+    usuarioId: number | null;
+    funcionarioId: number | null;
+    nome: string | null;
+  }> {
+    let usuarioId = this.toIntOrNull(input.usuarioId);
+    let funcionarioId = this.toIntOrNull(input.funcionarioId);
+    let nome = String(input.nome || '').trim() || null;
+
+    if (usuarioId) {
+      const usuario = await this.prisma.usuarios.findUnique({
+        where: { id: usuarioId },
+        select: { id: true, nome: true, funcionario_id: true },
+      });
+      if (!usuario) {
+        throw new BadRequestException(`Usuário ${usuarioId} não encontrado.`);
+      }
+      if (funcionarioId && usuario.funcionario_id && funcionarioId !== usuario.funcionario_id) {
+        throw new BadRequestException(
+          `Usuário ${usuarioId} não está vinculado ao funcionário ${funcionarioId}.`,
+        );
+      }
+      funcionarioId = funcionarioId || usuario.funcionario_id || null;
+      nome = nome || usuario.nome || null;
+    }
+
+    if (funcionarioId) {
+      const funcionario = await this.prisma.funcionarios.findUnique({
+        where: { id: funcionarioId },
+        select: { id: true, nome: true, usuario_id: true },
+      });
+      if (!funcionario) {
+        throw new BadRequestException(`Funcionário ${funcionarioId} não encontrado.`);
+      }
+      if (usuarioId && funcionario.usuario_id && usuarioId !== funcionario.usuario_id) {
+        throw new BadRequestException(
+          `Funcionário ${funcionarioId} não está vinculado ao usuário ${usuarioId}.`,
+        );
+      }
+      usuarioId = usuarioId || funcionario.usuario_id || null;
+      nome = nome || funcionario.nome || null;
+    }
+
+    if (!usuarioId && !funcionarioId && nome) {
+      const usuarioPorNome = await this.prisma.usuarios.findFirst({
+        where: { nome: { equals: nome } },
+        select: { id: true, nome: true, funcionario_id: true },
+      });
+      if (usuarioPorNome) {
+        usuarioId = usuarioPorNome.id;
+        funcionarioId = usuarioPorNome.funcionario_id || null;
+        nome = usuarioPorNome.nome || nome;
+      } else {
+        const funcionarioPorNome = await this.prisma.funcionarios.findFirst({
+          where: { nome: { equals: nome } },
+          select: { id: true, nome: true, usuario_id: true },
+        });
+        if (funcionarioPorNome) {
+          funcionarioId = funcionarioPorNome.id;
+          usuarioId = funcionarioPorNome.usuario_id || null;
+          nome = funcionarioPorNome.nome || nome;
+        }
+      }
+    }
+
+    return { usuarioId, funcionarioId, nome };
   }
 
   // ===============================
@@ -48,8 +166,28 @@ export class VendasService {
         responsavel_nome: c?.responsavel_nome
           ? String(c.responsavel_nome)
           : null,
+        responsavel_usuario_id: this.toIntOrNull(c?.responsavel_usuario_id),
+        responsavel_funcionario_id: this.toIntOrNull(c?.responsavel_funcionario_id),
       };
     });
+  }
+
+  private async enriquecerComissoesComIds(comissoes: any[] = []) {
+    return Promise.all(
+      (comissoes || []).map(async (c) => {
+        const resp = await this.resolverResponsavelIds({
+          usuarioId: c?.responsavel_usuario_id,
+          funcionarioId: c?.responsavel_funcionario_id,
+          nome: c?.responsavel_nome,
+        });
+        return {
+          ...c,
+          responsavel_nome: resp.nome,
+          responsavel_usuario_id: resp.usuarioId,
+          responsavel_funcionario_id: resp.funcionarioId,
+        };
+      }),
+    );
   }
 
   private calcularTaxaPagamento(valorVendido: number, dto: any) {
@@ -110,14 +248,46 @@ export class VendasService {
     });
   }
 
-  /** Vendas em etapas que aguardam agendamento: contrato (medida fina), medida, medida fina, montagem */
+  /** Vendas em etapas que aguardam agendamento, incluindo pós-venda.
+   * Observação: algumas etapas de pós-venda podem estar no status do cliente.
+   */
   async listarAguardandoAgendamento() {
-    const statuses = ['CONTRATO_GERADO', 'AGENDAR_MEDIDA', 'AGENDAR_MEDIDA_FINA', 'AGENDAR_MONTAGEM'];
-    return this.prisma.vendas.findMany({
-      where: { status: { in: statuses } },
-      orderBy: { id: 'asc' },
-      include: { cliente: true },
-    });
+    const vendaStatuses = [
+      'CONTRATO_GERADO',
+      'AGENDAR_MEDIDA',
+      'AGENDAR_MEDIDA_FINA',
+      'AGENDAR_MONTAGEM',
+      'GARANTIA',
+      'MANUTENCAO',
+      'ASSISTENCIA',
+    ];
+    const clienteStatusesPosVenda = this.statusPosVenda;
+
+    const [porStatusVenda, porStatusCliente] = await Promise.all([
+      this.prisma.vendas.findMany({
+        where: { status: { in: vendaStatuses } },
+        orderBy: { id: 'asc' },
+        include: { cliente: true },
+      }),
+      this.prisma.vendas.findMany({
+        where: { cliente: { status: { in: clienteStatusesPosVenda } } },
+        orderBy: { id: 'asc' },
+        include: { cliente: true },
+      }),
+    ]);
+
+    // Dedupe explícito por venda.id com prioridade da fonte de status: venda > cliente.
+    const porId = new Map<number, any>();
+    for (const venda of [...porStatusCliente, ...porStatusVenda]) {
+      const efetivo = this.resolverStatusPosVenda(venda.status, venda.cliente?.status);
+      porId.set(venda.id, {
+        ...venda,
+        status_source: efetivo.status_source,
+        status_pos_venda: efetivo.status || null,
+      });
+    }
+
+    return Array.from(porId.values()).sort((a, b) => a.id - b.id);
   }
 
   async buscarPorId(id: number) {
@@ -139,6 +309,8 @@ export class VendasService {
   // CRIAR
   // ===============================
   async criar(dto: CreateVendaDto) {
+    this.validarStatusDestino(dto.status, 'Criação de venda');
+
     if (!dto.orcamento_id)
       throw new BadRequestException('orcamento_id é obrigatório.');
     if (dto.valor_vendido === undefined || dto.valor_vendido === null)
@@ -185,9 +357,17 @@ export class VendasService {
             valor_unitario: round2(toNumber(it.valor_unitario ?? 0)),
           }));
 
-    const comissoesCalc = this.calcularComissoes(
-      valorVendido,
-      dto.comissoes || [],
+    const representante = await this.resolverResponsavelIds({
+      usuarioId: (dto as any).representante_venda_usuario_id,
+      funcionarioId: (dto as any).representante_venda_funcionario_id,
+      nome: dto.representante_venda_nome,
+    });
+
+    const comissoesCalc = await this.enriquecerComissoesComIds(
+      this.calcularComissoes(
+        valorVendido,
+        dto.comissoes || [],
+      ),
     );
     const somaComissoes = round2(
       comissoesCalc.reduce((acc, c) => acc + toNumber(c.valor_comissao), 0),
@@ -223,9 +403,12 @@ export class VendasService {
 
           valor_total: totais.valor_total,
 
-          representante_venda_nome: dto.representante_venda_nome?.trim() || null,
+          representante_venda_nome:
+            (dto.representante_venda_nome?.trim() || representante.nome || null),
           representante_venda_cpf: dto.representante_venda_cpf?.trim() || null,
           representante_venda_rg: dto.representante_venda_rg?.trim() || null,
+          representante_venda_usuario_id: representante.usuarioId,
+          representante_venda_funcionario_id: representante.funcionarioId,
 
           // ⚠️ tem_nota_fiscal só entra aqui se existir no Prisma:
           // tem_nota_fiscal: nf.tem_nota_fiscal,
@@ -254,6 +437,8 @@ export class VendasService {
             percentual_aplicado: c.percentual_aplicado,
             valor_comissao: c.valor_comissao,
             responsavel_nome: c.responsavel_nome,
+            responsavel_usuario_id: c.responsavel_usuario_id,
+            responsavel_funcionario_id: c.responsavel_funcionario_id,
           })),
         });
       }
@@ -303,6 +488,15 @@ export class VendasService {
     });
     if (!atual) throw new NotFoundException('Venda não encontrada');
 
+    if (dto.status !== undefined) {
+      this.validarStatusDestino(dto.status, 'Atualização de venda');
+      this.validarTransicaoStatusVenda(
+        atual.status,
+        dto.status,
+        'Atualização de venda',
+      );
+    }
+
     const valorVendido =
       dto.valor_vendido !== undefined && dto.valor_vendido !== null
         ? round2(toNumber(dto.valor_vendido))
@@ -311,8 +505,34 @@ export class VendasService {
     if (dto.pagamentos?.length)
       this.validarSomaPagamentos(dto.pagamentos as any, valorVendido);
 
+    const representanteMudou =
+      dto.representante_venda_nome !== undefined ||
+      dto.representante_venda_cpf !== undefined ||
+      dto.representante_venda_rg !== undefined ||
+      (dto as any).representante_venda_usuario_id !== undefined ||
+      (dto as any).representante_venda_funcionario_id !== undefined;
+
+    const representante = representanteMudou
+      ? await this.resolverResponsavelIds({
+          usuarioId:
+            (dto as any).representante_venda_usuario_id !== undefined
+              ? (dto as any).representante_venda_usuario_id
+              : (atual as any).representante_venda_usuario_id,
+          funcionarioId:
+            (dto as any).representante_venda_funcionario_id !== undefined
+              ? (dto as any).representante_venda_funcionario_id
+              : (atual as any).representante_venda_funcionario_id,
+          nome:
+            dto.representante_venda_nome !== undefined
+              ? dto.representante_venda_nome
+              : (atual as any).representante_venda_nome,
+        })
+      : null;
+
     const comissoesCalc = dto.comissoes
-      ? this.calcularComissoes(valorVendido, dto.comissoes)
+      ? await this.enriquecerComissoesComIds(
+          this.calcularComissoes(valorVendido, dto.comissoes),
+        )
       : [];
     const somaComissoes = round2(
       comissoesCalc.reduce((acc, c) => acc + toNumber(c.valor_comissao), 0),
@@ -355,6 +575,15 @@ export class VendasService {
           ...(dto.representante_venda_rg !== undefined && {
             representante_venda_rg: dto.representante_venda_rg?.trim() || null,
           }),
+          ...(representanteMudou && {
+            representante_venda_nome:
+              dto.representante_venda_nome !== undefined
+                ? dto.representante_venda_nome?.trim() || null
+                : representante?.nome || null,
+            representante_venda_usuario_id: representante?.usuarioId || null,
+            representante_venda_funcionario_id:
+              representante?.funcionarioId || null,
+          }),
         },
       });
 
@@ -368,6 +597,8 @@ export class VendasService {
               percentual_aplicado: c.percentual_aplicado,
               valor_comissao: c.valor_comissao,
               responsavel_nome: c.responsavel_nome,
+              responsavel_usuario_id: c.responsavel_usuario_id,
+              responsavel_funcionario_id: c.responsavel_funcionario_id,
             })),
           });
         }
@@ -407,7 +638,13 @@ export class VendasService {
   }
 
   async atualizarStatus(id: number, status: string) {
-    await this.buscarPorId(id);
+    const venda = await this.buscarPorId(id);
+    this.validarStatusDestino(status, 'Atualização de status da venda');
+    this.validarTransicaoStatusVenda(
+      venda.status,
+      status,
+      'Atualização de status da venda',
+    );
     return this.prisma.vendas.update({ where: { id }, data: { status } });
   }
 

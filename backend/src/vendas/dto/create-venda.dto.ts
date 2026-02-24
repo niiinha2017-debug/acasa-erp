@@ -51,6 +51,16 @@ export class CreateVendaComissaoDto {
   @IsOptional()
   @IsString()
   responsavel_nome?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  responsavel_usuario_id?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  responsavel_funcionario_id?: number;
 }
 
 /**
@@ -94,6 +104,16 @@ export class CreateVendaDto {
   @IsOptional()
   @IsString()
   representante_venda_rg?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  representante_venda_usuario_id?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  representante_venda_funcionario_id?: number;
 
   @IsOptional()
   @IsString()

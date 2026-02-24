@@ -173,7 +173,7 @@ function irParaFechamento(id) {
 }
 
 async function carregar() {
-  if (!can('vendas.criar')) {
+  if (!can('vendas.criar') || !can('orcamentos.ver')) {
     notify.error('Acesso negado.')
     return
   }

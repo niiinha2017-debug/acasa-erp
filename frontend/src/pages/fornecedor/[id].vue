@@ -296,7 +296,10 @@ async function tratarBuscaCep() {
   if (!form.value.cep || String(form.value.cep).length < 9) return
 
   const data = await buscarCep(form.value.cep)
-  if (!data) return
+  if (!data) {
+    notify.warn('CEP não encontrado.')
+    return
+  }
 
   form.value.endereco = data.logradouro || form.value.endereco
   form.value.bairro = data.bairro || form.value.bairro
@@ -310,7 +313,10 @@ async function tratarBuscaCnpj() {
   try {
     loading.value = true
     const data = await buscarCnpj(form.value.cnpj)
-    if (!data) return
+    if (!data) {
+      notify.warn('CNPJ não encontrado.')
+      return
+    }
 
     form.value.razao_social = data.razao_social || data.nome || form.value.razao_social
     form.value.nome_fantasia = data.nome_fantasia || data.fantasia || form.value.nome_fantasia
@@ -318,6 +324,11 @@ async function tratarBuscaCnpj() {
     form.value.cep = data.cep ? maskCEP(data.cep) : form.value.cep
     form.value.telefone = data.telefone ? maskTelefone(data.telefone) : form.value.telefone
     form.value.ie = data.ie || form.value.ie
+    form.value.endereco = data.endereco || form.value.endereco
+    form.value.numero = data.numero || form.value.numero
+    form.value.bairro = data.bairro || form.value.bairro
+    form.value.cidade = data.cidade || form.value.cidade
+    form.value.estado = data.estado || form.value.estado
 
     await tratarBuscaCep()
   } catch (e) {

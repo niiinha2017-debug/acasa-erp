@@ -10,7 +10,16 @@ export class UtilsController {
   constructor(private readonly utilsService: UtilsService) {}
 
   @Get('cnpj/:cnpj')
-  @Permissoes('clientes.ver', 'fornecedores.ver', 'configuracoes.empresa.ver')
+  @Permissoes(
+    'clientes.ver',
+    'clientes.criar',
+    'clientes.editar',
+    'fornecedores.ver',
+    'fornecedores.criar',
+    'fornecedores.editar',
+    'configuracoes.empresa.ver',
+    'configuracoes.empresa.editar',
+  )
   buscarCnpj(@Param('cnpj') cnpj: string) {
     return this.utilsService.buscarCnpj(cnpj);
   }

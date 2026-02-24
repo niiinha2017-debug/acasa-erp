@@ -234,15 +234,20 @@ async function enviarComprovanteWhatsApp() {
   try {
     const res = await PontoService.comprovantePng(reg.id, token.value)
     const blob = res?.data
-    if (blob && blob instanceof Blob && blob.type?.startsWith('image/')) {
+    if (blob && blob instanceof Blob && blob.size > 0) {
       const file = new File([blob], 'comprovante-ponto.png', { type: 'image/png' })
-      if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: 'Comprovante de ponto',
-          text: `Comprovante de ponto - ${empresaNome.value || 'ACASA'}\n${formatarDataHoraExata(reg.data_hora)} - ${reg.tipo_label || reg.tipo}`,
-        })
-        return
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: 'Comprovante de ponto',
+            text: `Comprovante de ponto - ${empresaNome.value || 'ACASA'}\n${formatarDataHoraExata(reg.data_hora)} - ${reg.tipo_label || reg.tipo}`,
+          })
+          return
+        } catch (shareError) {
+          if (shareError?.name === 'AbortError') return
+          console.warn('[Comprovante PNG share]', shareError)
+        }
       }
       baixarBlob(blob, 'comprovante-ponto.png')
       return

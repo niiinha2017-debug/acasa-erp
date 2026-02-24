@@ -32,7 +32,7 @@ export class AnalyticsService {
     };
   }
 
-  /** Status de projetos (equivalente ao antigo status-obras; tabela obras foi removida) */
+  /** Status de projetos (substitui o antigo status-obras; tabela obras foi removida) */
   async getStatusProjetos(): Promise<{ status: string; total: number }[]> {
     const rows = await this.prisma.projetos.groupBy({
       by: ['status_atual'],
@@ -71,6 +71,178 @@ export class AnalyticsService {
       orcamentos_aprovados_sem_venda: orcamentosSemVenda,
       vendas_fechadas_mes: vendasMes,
       contratos_total: contratosTotal,
+    };
+  }
+
+  /** Resumo individual do vendedor logado para visão geral comercial. */
+  async getResumoVendedor(user: {
+    id?: number | null;
+    funcionario_id?: number | null;
+    nome?: string | null;
+    usuario?: string | null;
+  }): Promise<{
+    vendedor: string | null;
+    vendedor_usuario_id: number | null;
+    vendedor_funcionario_id: number | null;
+    fonte_vendedor: string;
+    link_referencia: string;
+    minhas_vendas_total: number;
+    minhas_vendas_mes: number;
+    minhas_em_producao: number;
+    minhas_finalizadas: number;
+  }> {
+    let usuarioId = Number(user?.id || 0) || null;
+    let funcionarioId = Number(user?.funcionario_id || 0) || null;
+    let nome =
+      String(user?.nome || '').trim() || String(user?.usuario || '').trim() || null;
+
+    // Resolve identificadores e nome com fallback para cadastros legados.
+    if (usuarioId || funcionarioId) {
+      if (usuarioId) {
+        const usuario = await this.prisma.usuarios.findUnique({
+          where: { id: usuarioId },
+          select: { nome: true, usuario: true, funcionario_id: true },
+        });
+        if (usuario) {
+          funcionarioId = funcionarioId || Number(usuario.funcionario_id || 0) || null;
+          nome = nome || String(usuario.nome || '').trim() || String(usuario.usuario || '').trim() || null;
+        }
+      }
+
+      if (funcionarioId) {
+        const funcionario = await this.prisma.funcionarios.findUnique({
+          where: { id: funcionarioId },
+          select: { nome: true, usuario_id: true },
+        });
+        if (funcionario) {
+          usuarioId = usuarioId || Number(funcionario.usuario_id || 0) || null;
+          nome = nome || String(funcionario.nome || '').trim() || null;
+        }
+      }
+    }
+
+    if (!usuarioId && !funcionarioId && !nome) {
+      return {
+        vendedor: null,
+        vendedor_usuario_id: null,
+        vendedor_funcionario_id: null,
+        fonte_vendedor: 'Usuário autenticado',
+        link_referencia: '/vendas/fechamento',
+        minhas_vendas_total: 0,
+        minhas_vendas_mes: 0,
+        minhas_em_producao: 0,
+        minhas_finalizadas: 0,
+      };
+    }
+
+    const hoje = new Date();
+    const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    const fimMes = new Date(
+      hoje.getFullYear(),
+      hoje.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+    );
+
+    const vendas = await this.prisma.vendas.findMany({
+      select: {
+        id: true,
+        status: true,
+        data_venda: true,
+        representante_venda_usuario_id: true,
+        representante_venda_funcionario_id: true,
+        representante_venda_nome: true,
+        comissoes: {
+          select: {
+            tipo_comissao_chave: true,
+            responsavel_usuario_id: true,
+            responsavel_funcionario_id: true,
+            responsavel_nome: true,
+          },
+        },
+      },
+      where: {
+        OR: [
+          ...(usuarioId ? [{ representante_venda_usuario_id: usuarioId }] : []),
+          ...(funcionarioId
+            ? [{ representante_venda_funcionario_id: funcionarioId }]
+            : []),
+          ...(nome ? [{ representante_venda_nome: nome }] : []),
+          ...(usuarioId
+            ? [
+                {
+                  comissoes: {
+                    some: { responsavel_usuario_id: usuarioId },
+                  },
+                },
+              ]
+            : []),
+          ...(funcionarioId
+            ? [
+                {
+                  comissoes: {
+                    some: { responsavel_funcionario_id: funcionarioId },
+                  },
+                },
+              ]
+            : []),
+          ...(nome
+            ? [
+                {
+                  comissoes: { some: { responsavel_nome: nome } },
+                },
+              ]
+            : []),
+        ],
+      },
+    });
+
+    const normalize = (s: string) =>
+      String(s || '')
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, '_');
+
+    const statusProducao = [
+      'PRODUCAO_AGENDADA',
+      'EM_PRODUCAO',
+      'PRODUCAO_FINALIZADA',
+    ];
+    const statusFinalizadas = ['MONTAGEM_FINALIZADA', 'ENCERRADO'];
+
+    let emProducao = 0;
+    let finalizadas = 0;
+    let vendasMes = 0;
+
+    for (const v of vendas) {
+      const key = normalize(v.status);
+      if (
+        statusProducao.some((x) => key.includes(x) || key === 'EM_PRODUCAO')
+      ) {
+        emProducao += 1;
+      }
+      if (statusFinalizadas.some((x) => key === x)) {
+        finalizadas += 1;
+      }
+
+      if (v.data_venda && v.data_venda >= inicioMes && v.data_venda <= fimMes) {
+        vendasMes += 1;
+      }
+    }
+
+    return {
+      vendedor: nome,
+      vendedor_usuario_id: usuarioId,
+      vendedor_funcionario_id: funcionarioId,
+      fonte_vendedor:
+        'Usuário autenticado (ID) com fallback de nome por usuário/funcionário e vínculo por usuário, funcionário e nome legado',
+      link_referencia: '/vendas/fechamento',
+      minhas_vendas_total: vendas.length,
+      minhas_vendas_mes: vendasMes,
+      minhas_em_producao: emProducao,
+      minhas_finalizadas: finalizadas,
     };
   }
 

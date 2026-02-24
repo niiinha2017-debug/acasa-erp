@@ -310,7 +310,10 @@ const salvando = ref(false)
 
 const fornecedor = ref([])
 const fornecedorOptions = computed(() =>
-  (fornecedor.value || []).map((f) => ({ label: f.razao_social, value: f.id })),
+  (fornecedor.value || []).map((f) => ({
+    label: f?.label || f?.razao_social || f?.nome_fantasia || '-',
+    value: f?.value ?? f?.id,
+  })),
 )
 
 const statusOptions = [
@@ -427,7 +430,7 @@ function resetForm() {
 }
 
 async function carregarFornecedor() {
-  const res = await FornecedorService.listar()
+  const res = await FornecedorService.select()
   const data = res?.data ?? res
   fornecedor.value = Array.isArray(data) ? data : []
 }

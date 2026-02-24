@@ -91,47 +91,56 @@
             />
           </div>
 
-          <!-- Enviar para assinar (só quando contrato está em RASCUNHO) -->
+          <!-- Compartilhar contrato (assinatura quando rascunho; PDF quando já assinado) -->
           <section
-            v-if="isEdit && (form.status || '').toUpperCase() === 'RASCUNHO'"
+            v-if="isEdit"
             class="rounded-2xl border border-border-ui bg-bg-page p-6 space-y-4"
           >
             <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
-              Enviar para assinatura
+              {{ isContratoAssinado ? 'Compartilhar contrato assinado' : 'Enviar para assinatura' }}
             </div>
             <p class="text-sm text-text-soft">
-              Envie o contrato para o cliente assinar por WhatsApp ou por e-mail. Após a assinatura, o contrato ficará vigente.
+              {{
+                isContratoAssinado
+                  ? 'Contrato já assinado. Você pode reenviar o PDF por WhatsApp ou por e-mail para leitura/arquivo.'
+                  : 'Envie o contrato para o cliente assinar por WhatsApp ou por e-mail. Após a assinatura, o contrato ficará vigente.'
+              }}
             </p>
 
             <div class="rounded-xl bg-slate-50 dark:bg-slate-800/50 p-4 space-y-2">
               <p class="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                Enviar por WhatsApp ou e-mail
+                Envio por WhatsApp e e-mail
               </p>
               <p class="text-xs text-text-soft">
-                Gera um link do PDF (válido 24h). Você pode abrir o WhatsApp/e-mail com a mensagem pronta ou enviar o e-mail automaticamente pelo sistema (usa o e-mail configurado no servidor).
+                {{
+                  isContratoAssinado
+                    ? 'No WhatsApp abre a mensagem com link do PDF. No e-mail envia automaticamente pelo sistema usando o SMTP configurado no servidor.'
+                    : 'No WhatsApp abre a mensagem com link para leitura e assinatura. No e-mail envia automaticamente pelo sistema usando o SMTP configurado no servidor.'
+                }}
               </p>
               <div class="flex flex-wrap items-center gap-2">
                 <Button
+                  v-if="!isContratoAssinado"
                   type="button"
                   variant="secondary"
                   size="sm"
-                  :loading="obterLinkLoading"
-                  :disabled="!telefoneCliente || obterLinkLoading"
-                  @click="enviarPorWhatsAppGratis"
+                  :loading="assinandoFisico"
+                  :disabled="assinandoFisico"
+                  @click="marcarAssinaturaFisica"
                 >
-                  <i class="pi pi-whatsapp mr-1.5"></i>
-                  Abrir WhatsApp com link
+                  <i class="pi pi-pencil mr-1.5"></i>
+                  Assinatura física (marcar assinado)
                 </Button>
                 <Button
                   type="button"
                   variant="secondary"
                   size="sm"
                   :loading="obterLinkLoading"
-                  :disabled="!emailCliente || obterLinkLoading"
-                  @click="enviarPorEmailGratis"
+                  :disabled="!telefoneCliente || obterLinkLoading"
+                  @click="enviarPorWhatsApp"
                 >
-                  <i class="pi pi-envelope mr-1.5"></i>
-                  Abrir e-mail com link
+                  <i class="pi pi-whatsapp mr-1.5"></i>
+                  Enviar por WhatsApp
                 </Button>
                 <Button
                   type="button"
@@ -218,6 +227,8 @@ const salvando = ref(false)
 const gerandoPdf = ref(false)
 const obterLinkLoading = ref(false)
 const enviarEmailLoading = ref(false)
+const assinandoFisico = ref(false)
+const statusInicial = ref('RASCUNHO')
 const vendaOptions = ref([])
 const contratoCliente = ref(null)
 const telefoneCliente = computed(() => {
@@ -225,13 +236,14 @@ const telefoneCliente = computed(() => {
   const t = c?.whatsapp ?? c?.telefone ?? ''
   const digits = String(t).replace(/\D/g, '')
   if (digits.length >= 10) return digits.slice(-11)
-  return digits ? digits : ''
+  return digits || ''
 })
 const emailCliente = computed(() => {
   const c = contratoCliente.value
   const e = (c?.email ?? c?.email_secundario ?? '').trim()
   return e || ''
 })
+const isContratoAssinado = computed(() => String(form.value.status || '').toUpperCase() === 'VIGENTE')
 
 const statusOptions = [
   { label: 'Rascunho', value: 'RASCUNHO' },
@@ -249,6 +261,23 @@ const form = ref({
   data_inicio: '',
   data_fim: '',
 })
+
+function montarLabelVenda(v) {
+  return `Venda #${v.id} - ${v.cliente?.nome_completo || v.cliente?.nome || '-'} (${numeroParaMoeda(v.valor_vendido || v.valor_total)})`
+}
+
+function garantirOpcaoVenda(v) {
+  if (!v?.id) return
+  const id = Number(v.id)
+  if (!Number.isFinite(id) || id <= 0) return
+  const idx = vendaOptions.value.findIndex((opt) => Number(opt.value) === id)
+  const option = { label: montarLabelVenda(v), value: id }
+  if (idx >= 0) {
+    vendaOptions.value[idx] = option
+  } else {
+    vendaOptions.value.unshift(option)
+  }
+}
 
 function sugerirNumeroContrato(vendaId) {
   if (form.value.numero && form.value.numero.trim().length > 0) return
@@ -282,7 +311,7 @@ async function carregarVendas() {
     const res = await VendaService.listar()
     const lista = Array.isArray(res?.data) ? res.data : []
     vendaOptions.value = lista.map((v) => ({
-      label: `Venda #${v.id} - ${v.cliente?.nome_completo || v.cliente?.nome || '-'} (${numeroParaMoeda(v.valor_vendido || v.valor_total)})`,
+      label: montarLabelVenda(v),
       value: v.id,
     }))
   } catch (e) {
@@ -294,6 +323,7 @@ async function carregarContrato() {
   if (!isEdit.value) {
     loading.value = false
     form.value.status = 'RASCUNHO'
+    statusInicial.value = 'RASCUNHO'
     // Pré-preenche cliente/venda quando vier de uma venda específica
     if (vendaIdFromQuery.value) {
       try {
@@ -301,6 +331,8 @@ async function carregarContrato() {
         const v = res?.data ?? res
         form.value.venda_id = vendaIdFromQuery.value
         form.value.valor = Number(v?.valor_vendido || v?.valor_total || 0)
+        contratoCliente.value = v?.cliente ?? null
+        garantirOpcaoVenda(v)
       } catch (e) {
         // se falhar, só ignora e deixa o contrato em branco
       }
@@ -332,6 +364,7 @@ async function carregarContrato() {
       data_inicio: raw?.data_inicio ? String(raw.data_inicio).slice(0, 10) : '',
       data_fim: raw?.data_fim ? String(raw.data_fim).slice(0, 10) : '',
     }
+    statusInicial.value = String(raw?.status || 'RASCUNHO').toUpperCase()
   } catch (e) {
     notify.error('Contrato não encontrado.')
     router.push('/contratos')
@@ -352,14 +385,15 @@ watch(
       const res = await VendaService.buscar(vendaId)
       const v = res?.data ?? res
       contratoCliente.value = v?.cliente ?? null
+      garantirOpcaoVenda(v)
     } catch (_) {
       contratoCliente.value = null
     }
   },
 )
 
-/** Abre URL no app externo (navegador/WhatsApp) sem sair do Tauri – assim você volta para o sistema. */
-async function abrirUrlExterno(url) {
+/** Abre URL externa (Tauri/web) sem sair da página atual do ERP. */
+async function abrirUrlExterno(url, preOpenedWindow = null) {
   const isTauri = typeof window !== 'undefined' && (window.__TAURI__ || window.__TAURI_INTERNALS__)
   if (isTauri) {
     try {
@@ -380,22 +414,16 @@ async function abrirUrlExterno(url) {
       console.error('[Contrato] Tauri open:', e)
     }
   }
+  if (preOpenedWindow && !preOpenedWindow.closed) {
+    preOpenedWindow.location.href = url
+    preOpenedWindow.focus?.()
+    return true
+  }
   try {
     const opened = window.open(url, '_blank', 'noopener,noreferrer')
-    if (opened) return
+    if (opened) return true
   } catch (_) {}
-  try {
-    const a = document.createElement('a')
-    a.href = url
-    a.target = '_blank'
-    a.rel = 'noopener noreferrer'
-    a.style.display = 'none'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    return
-  } catch (_) {}
-  window.location.href = url
+  return false
 }
 
 async function salvar() {
@@ -413,6 +441,12 @@ async function salvar() {
   }
 
   if (!payload.venda_id) return notify.error('Selecione a venda. O contrato só pode ser criado a partir de uma venda.')
+  if (
+    String(payload.status || '').toUpperCase() === 'VIGENTE' &&
+    statusInicial.value !== 'VIGENTE'
+  ) {
+    return notify.error('Para segurança, use o botão "Assinatura física (marcar assinado)" ou o link de assinatura.')
+  }
 
   salvando.value = true
   try {
@@ -435,6 +469,28 @@ async function salvar() {
     notify.error(e?.response?.data?.message || 'Erro ao salvar contrato.')
   } finally {
     salvando.value = false
+  }
+}
+
+async function marcarAssinaturaFisica() {
+  if (assinandoFisico.value) return
+  if (!isEdit.value) return notify.error('Salve o contrato antes de marcar assinatura.')
+  if (!can('contratos.editar')) return notify.error('Sem permissão para assinar contrato.')
+
+  const id = Number(String(contratoId.value).replace(/\D/g, ''))
+  if (!id) return notify.error('Contrato inválido.')
+
+  assinandoFisico.value = true
+  try {
+    await ContratosService.assinar(id, {
+      data_assinatura: new Date().toISOString(),
+    })
+    notify.success('Contrato assinado com sucesso. Contas a receber liberadas para esta venda.')
+    await carregarContrato()
+  } catch (e) {
+    notify.error(e?.response?.data?.message || 'Erro ao marcar assinatura do contrato.')
+  } finally {
+    assinandoFisico.value = false
   }
 }
 
@@ -468,73 +524,40 @@ async function gerarPdfContrato() {
   }
 }
 
-// Obter link do PDF e abrir WhatsApp com a mensagem pronta
-async function enviarPorWhatsAppGratis() {
+// Gera link público e abre WhatsApp com mensagem pronta.
+async function enviarPorWhatsApp() {
   if (obterLinkLoading.value) return
-  obterLinkLoading.value = true
   const id = Number(String(contratoId.value).replace(/\D/g, ''))
-  if (!id) {
-    obterLinkLoading.value = false
-    return notify.error('Contrato inválido.')
-  }
-  if (!telefoneCliente.value) {
-    obterLinkLoading.value = false
-    notify.error('Cliente não possui telefone/WhatsApp cadastrado.')
-    return
-  }
+  if (!id) return notify.error('Contrato inválido.')
+  if (!telefoneCliente.value) return notify.error('Cliente não possui telefone/WhatsApp cadastrado.')
+  // Pré-abre aba para evitar bloqueio de popup após await.
+  const popup = window.open('about:blank', '_blank', 'noopener,noreferrer')
+  obterLinkLoading.value = true
   try {
     const { data } = await ContratosService.linkPublicoPdf(id)
-    const baseAceite = (import.meta.env.VITE_CONTRATO_ACEITE_BASE_URL || '').replace(/\/+$/, '')
-    const linkAceitar = data?.linkAceitar || (baseAceite && data?.token ? `${baseAceite}/aceitar/${data.token}` : null)
-    const link = linkAceitar || data?.link
-    if (!link) return notify.error('Não foi possível gerar o link.')
-    const isLinkAceite = !!linkAceitar || (typeof link === 'string' && link.includes('/aceitar/'))
-    const msg = isLinkAceite
-      ? `Olá! Segue o link para ler e assinar o contrato: ${link}`
-      : `Olá! Segue o link para baixar e assinar o contrato: ${link}`
-    // Número: só dígitos, Brasil 55 + 11 dígitos (DDD + 9 + número)
-    const digits = String(telefoneCliente.value).replace(/\D/g, '')
-    const numero = digits.length >= 11 ? digits.slice(-11) : digits.length >= 10 ? digits.slice(-10) : digits
-    const url = `https://wa.me/55${numero}?text=${encodeURIComponent(msg)}`
-    await abrirUrlExterno(url)
-    notify.success('WhatsApp aberto no navegador. O app permanece nesta tela.')
+    const link = data?.link || data?.linkPdf || data?.linkAceitar
+    if (!link) return notify.error('Não foi possível gerar o link do contrato.')
+    const msg = isContratoAssinado.value
+      ? `Olá! Segue o link para visualizar e baixar o contrato assinado: ${link}`
+      : `Olá! Segue o link para ler e assinar o contrato: ${link}`
+    const numero = String(telefoneCliente.value).replace(/\D/g, '')
+    const phone = numero.length >= 11 ? numero.slice(-11) : numero
+    const wa = `https://wa.me/55${phone}?text=${encodeURIComponent(msg)}`
+    const abriu = await abrirUrlExterno(wa, popup)
+    if (abriu) {
+      notify.success('WhatsApp aberto com a mensagem pronta.')
+    } else {
+      popup?.close?.()
+      try {
+        await navigator.clipboard.writeText(wa)
+        notify.success('Não foi possível abrir automaticamente. Link do WhatsApp copiado para área de transferência.')
+      } catch (_) {
+        notify.error('Não foi possível abrir o WhatsApp automaticamente. Tente novamente.')
+      }
+    }
   } catch (e) {
-    notify.error(e?.response?.data?.message || 'Erro ao obter link.')
-  } finally {
-    obterLinkLoading.value = false
-  }
-}
-
-// Grátis: obter link do PDF e abrir cliente de e-mail com a mensagem pronta
-async function enviarPorEmailGratis() {
-  if (obterLinkLoading.value) return
-  obterLinkLoading.value = true
-  const id = Number(String(contratoId.value).replace(/\D/g, ''))
-  if (!id) {
-    obterLinkLoading.value = false
-    return notify.error('Contrato inválido.')
-  }
-  if (!emailCliente.value) {
-    obterLinkLoading.value = false
-    notify.error('Cliente não possui e-mail cadastrado.')
-    return
-  }
-  try {
-    const { data } = await ContratosService.linkPublicoPdf(id)
-    const baseAceite = (import.meta.env.VITE_CONTRATO_ACEITE_BASE_URL || '').replace(/\/+$/, '')
-    const linkAceitar = data?.linkAceitar || (baseAceite && data?.token ? `${baseAceite}/aceitar/${data.token}` : null)
-    const link = linkAceitar || data?.link
-    if (!link) return notify.error('Não foi possível gerar o link.')
-    const isLinkAceite = !!linkAceitar || (typeof link === 'string' && link.includes('/aceitar/'))
-    const subject = 'Contrato para assinatura'
-    const body = isLinkAceite
-      ? `Olá,\n\nSegue o link para ler e assinar o contrato (válido por 24h):\n\n${link}\n\nAtt.`
-      : `Olá,\n\nSegue o link para baixar e assinar o contrato (válido por 24h):\n\n${link}\n\nAtt.`
-    const mailto = `mailto:${encodeURIComponent(emailCliente.value)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-    await abrirUrlExterno(mailto)
-    notify.success('E-mail aberto no app padrão. O sistema permanece nesta tela.')
-  } catch (e) {
-    notify.error(e?.response?.data?.message || 'Erro ao obter link.')
+    popup?.close?.()
+    notify.error(e?.response?.data?.message || 'Erro ao gerar link para WhatsApp.')
   } finally {
     obterLinkLoading.value = false
   }

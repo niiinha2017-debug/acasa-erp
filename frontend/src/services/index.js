@@ -324,14 +324,6 @@ export const ConfiguracaoService = {
   },
 }
 
-// --- OBRAS ---
-export const ObrasService = {
-  criar: (dados) => api.post('/obras', dados),
-  buscar: (id) => api.get(`/obras/${id}`),
-  listarPorCliente: (clienteId) => api.get(`/obras/cliente/${clienteId}`),
-  salvar: (id, dados) => (id ? api.put(`/obras/${id}`, dados) : api.post('/obras', dados)),
-}
-
 // --- PONTO ---
 export const PontoRelatorioService = {
   listarFuncionariosAtivos: () =>
@@ -346,6 +338,18 @@ export const PontoRelatorioService = {
   // ✅ padrão do sistema: gera+salva e retorna { arquivoId }
   pdfMensalSalvar: (payload) =>
     api.post('/ponto/relatorio/pdf', payload),
+
+  fechamentoFolha: (params = {}) =>
+    api.get('/ponto/relatorio/fechamento', { params }),
+
+  listarFeriadosConfig: (params = {}) =>
+    api.get('/ponto/relatorio/feriados-config', { params }),
+
+  listarFeriadosNacionais: (params = {}) =>
+    api.get('/ponto/relatorio/feriados', { params }),
+
+  salvarFeriadosConfig: (itens = []) =>
+    api.put('/ponto/relatorio/feriados-config', { itens }),
 
   /** Comprovante de um registro de ponto (PDF com cadastro da empresa) */
   comprovantePdf: (registroId) =>
@@ -408,6 +412,10 @@ export const AgendaService = {
   // Atualizar status (Finalizar)
   atualizarStatus(id, status) {
     return api.patch(`/agenda/${id}/status`, { status });
+  },
+
+  enviarParaProducao(id) {
+    return api.patch(`/agenda/${id}/enviar-producao`);
   },
 
   // Deletar

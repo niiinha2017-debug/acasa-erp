@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  Put,
   Query,
   Res,
   UseGuards,
@@ -71,12 +72,36 @@ export class PontoRelatorioController {
     @Query('data_ini') data_ini: string,
     @Query('data_fim') data_fim: string,
     @Query('apenas_ativos') apenas_ativos?: string,
+    @Query('funcionario_id') funcionario_id?: string,
   ) {
+    const funcId = Number(String(funcionario_id || '').replace(/\D/g, '')) || undefined;
     return this.service.fechamentoFolha({
       data_ini,
       data_fim,
       apenas_ativos: apenas_ativos !== 'false' && apenas_ativos !== '0',
+      funcionario_id: funcId,
     });
+  }
+
+  @Get('feriados-config')
+  listarFeriadosConfig(
+    @Query('data_ini') data_ini?: string,
+    @Query('data_fim') data_fim?: string,
+  ) {
+    return this.service.listarFeriadosConfig(data_ini, data_fim);
+  }
+
+  @Get('feriados')
+  listarFeriadosNacionais(@Query('ano') ano?: string) {
+    const a = ano ? Number(String(ano).replace(/\D/g, '')) : new Date().getFullYear();
+    return this.service.listarFeriadosNacionais(a);
+  }
+
+  @Put('feriados-config')
+  @Permissoes('ponto_relatorio.ver')
+  salvarFeriadosConfig(@Body() body: { itens?: any[] } | any[]) {
+    const itens = Array.isArray(body) ? body : (body?.itens || []);
+    return this.service.salvarFeriadosConfig(itens);
   }
 
   @Get('registros')

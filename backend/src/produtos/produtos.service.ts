@@ -10,6 +10,7 @@ import { UpdateProdutoDto } from './dto/atualizar-produto.dto';
 @Injectable()
 export class ProdutosService {
   constructor(private prisma: PrismaService) {}
+  private readonly markup100Factor = 2;
 
   private normStr(v: any) {
     const s = String(v ?? '').trim();
@@ -41,6 +42,22 @@ export class ProdutosService {
         'Já existe um produto com o mesmo fornecedor, nome do produto, marca, cor e medida. Não é permitido duplicar.',
       );
     }
+  }
+
+  private multiplicarCom2Casas(valor: any) {
+    const n = Number(valor);
+    if (!Number.isFinite(n)) return valor;
+    return Math.round(n * this.markup100Factor * 100) / 100;
+  }
+
+  private aplicarMarkupProduto(produto: any, aplicarMarkup100?: boolean) {
+    if (!aplicarMarkup100 || !produto) return produto;
+    return {
+      ...produto,
+      valor_unitario: this.multiplicarCom2Casas(produto.valor_unitario),
+      valor_total: this.multiplicarCom2Casas(produto.valor_total),
+      preco_m2: this.multiplicarCom2Casas(produto.preco_m2),
+    };
   }
 
   async criar(dto: CreateProdutoDto) {
@@ -97,13 +114,14 @@ export class ProdutosService {
   async listar(
     filtro?: { fornecedor_id?: number },
     opts?: { page?: number; pageSize?: number },
+    ctx?: { aplicarMarkup100?: boolean },
   ) {
     const where: any = {};
     if (filtro?.fornecedor_id) where.fornecedor_id = filtro.fornecedor_id;
 
     // Sem paginação: compatibilidade com chamadas existentes
     if (!opts || !opts.page) {
-      return this.prisma.produtos.findMany({
+      const data = await this.prisma.produtos.findMany({
         where,
         include: {
           fornecedor: {
@@ -112,6 +130,7 @@ export class ProdutosService {
         },
         orderBy: { criado_em: 'desc' },
       });
+      return data.map((p) => this.aplicarMarkupProduto(p, ctx?.aplicarMarkup100));
     }
 
     const page = Math.max(1, Number(opts.page || 1));
@@ -131,7 +150,7 @@ export class ProdutosService {
     });
 
     return {
-      data,
+      data: data.map((p) => this.aplicarMarkupProduto(p, ctx?.aplicarMarkup100)),
       meta: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
     };
   }
@@ -142,7 +161,7 @@ export class ProdutosService {
     cor?: string;
     medida?: string;
     fornecedor_id?: number;
-  }) {
+  }, ctx?: { aplicarMarkup100?: boolean }) {
     const where: any = { status: 'ATIVO' };
 
     // suportar paginação via objeto filtros.page, filtros.pageSize (opcional)
@@ -184,7 +203,7 @@ export class ProdutosService {
     }
 
     if (!page) {
-      return this.prisma.produtos.findMany({
+      const data = await this.prisma.produtos.findMany({
         where,
         include: {
           fornecedor: {
@@ -193,6 +212,7 @@ export class ProdutosService {
         },
         orderBy: [{ nome_produto: 'asc' }, { criado_em: 'desc' }],
       });
+      return data.map((p) => this.aplicarMarkupProduto(p, ctx?.aplicarMarkup100));
     }
 
     const total = await this.prisma.produtos.count({ where });
@@ -209,7 +229,7 @@ export class ProdutosService {
     });
 
     return {
-      data,
+      data: data.map((p) => this.aplicarMarkupProduto(p, ctx?.aplicarMarkup100)),
       meta: {
         page: Math.max(1, page),
         pageSize: Math.max(1, pageSize || 20),
@@ -219,7 +239,7 @@ export class ProdutosService {
     };
   }
 
-  async buscarPorId(id: number) {
+  async buscarPorId(id: number, ctx?: { aplicarMarkup100?: boolean }) {
     const produto = await this.prisma.produtos.findUnique({
       where: { id },
       include: {
@@ -229,7 +249,7 @@ export class ProdutosService {
       },
     });
     if (!produto) throw new NotFoundException('Produto não encontrado');
-    return produto;
+    return this.aplicarMarkupProduto(produto, ctx?.aplicarMarkup100);
   }
 
   async atualizar(id: number, dto: UpdateProdutoDto) {

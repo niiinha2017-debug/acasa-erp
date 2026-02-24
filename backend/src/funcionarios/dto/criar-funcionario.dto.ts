@@ -21,6 +21,10 @@ export class CriarFuncionarioDto {
 
   @IsOptional()
   @IsString()
+  pis?: string;
+
+  @IsOptional()
+  @IsString()
   data_nascimento?: string;
 
   @IsOptional()
@@ -96,6 +100,10 @@ export class CriarFuncionarioDto {
 
   @IsOptional()
   @IsString()
+  data_inicio?: string;
+
+  @IsOptional()
+  @IsString()
   admissao?: string;
 
   @IsOptional()
@@ -109,10 +117,12 @@ export class CriarFuncionarioDto {
   salario_base?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   salario_adicional?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   custo_hora?: number;
 
@@ -123,15 +133,18 @@ export class CriarFuncionarioDto {
   tem_vale?: boolean;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   vale?: number;
 
   // Vale Transporte
   @IsOptional()
+  @Type(() => Boolean)
   @IsBoolean()
   tem_vale_transporte?: boolean; // <--- ADICIONADO PARA O CHECKBOX
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   vale_transporte?: number; // <--- ADICIONADO PARA O VALOR DO VT
 
@@ -162,15 +175,18 @@ export class CriarFuncionarioDto {
 
   // Carga horária
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   carga_horaria_dia?: number;
 
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   carga_horaria_semana?: number;
 
   // Pagamento
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   dia_pagamento?: number;
 

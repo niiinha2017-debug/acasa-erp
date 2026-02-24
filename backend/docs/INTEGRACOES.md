@@ -62,8 +62,8 @@ Se `BREVO_API_KEY` estiver definido, o envio de espelho de ponto usa a API do Br
   Retorna `{ url }` com imagem do gráfico de despesas por mês.
 - `GET /api/analytics/chart-url?type=horas-trabalhadas&data_ini=2025-02-01&data_fim=2025-02-28`  
   Retorna `{ url }` com gráfico de horas por funcionário.
-- `GET /api/analytics/chart-url?type=status-obras`  
-  Retorna `{ url }` com gráfico de status de obras.
+- `GET /api/analytics/chart-url?type=status-projetos`  
+  Retorna `{ url }` com gráfico de status de projetos.
 
 Parâmetros opcionais: `width`, `height` (ex.: `width=1200&height=600` para relatórios maiores).
 

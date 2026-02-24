@@ -86,7 +86,18 @@ export class ContratosService {
   }
 
   async atualizar(id: number, dto: UpdateContratoDto) {
-    await this.buscarPorId(id);
+    const atual = await this.buscarPorId(id);
+
+    const statusSolicitado = String(dto.status || '').trim().toUpperCase();
+    const statusAtual = String(atual.status || '').trim().toUpperCase();
+    if (
+      statusSolicitado === 'VIGENTE' &&
+      statusAtual !== 'VIGENTE'
+    ) {
+      throw new BadRequestException(
+        'Para segurança, o contrato deve ser marcado como assinado pela ação de assinatura.',
+      );
+    }
 
     if (dto.venda_id !== undefined && dto.venda_id != null) {
       const venda = await this.prisma.vendas.findUnique({
@@ -177,13 +188,84 @@ export class ContratosService {
       }
     }
 
-    return this.prisma.contratos.update({
+    const contratoAtualizado = await this.prisma.contratos.update({
       where: { id },
       data: {
         data_assinatura: dataAssinatura,
         status: 'VIGENTE',
       } as any,
       include: { cliente: true, venda: true },
+    });
+
+    await this.garantirContaReceberDeVendaAssinada(contratoAtualizado);
+    return contratoAtualizado;
+  }
+
+  private async garantirContaReceberDeVendaAssinada(contrato: {
+    venda_id?: number | null;
+    cliente_id?: number | null;
+  }) {
+    const vendaId = Number(contrato?.venda_id || 0);
+    const clienteId = Number(contrato?.cliente_id || 0);
+    if (!Number.isFinite(vendaId) || vendaId <= 0) return;
+
+    const existente = await this.prisma.contas_receber.findFirst({
+      where: {
+        origem_tipo: 'VENDA',
+        origem_id: vendaId,
+        cliente_id: clienteId > 0 ? clienteId : undefined,
+      },
+      select: { id: true },
+    });
+    if (existente) return;
+
+    const venda = await this.prisma.vendas.findUnique({
+      where: { id: vendaId },
+      include: { pagamentos: true },
+    });
+    if (!venda) return;
+
+    const pagamentos = Array.isArray((venda as any).pagamentos)
+      ? (venda as any).pagamentos
+      : [];
+
+    const valorTotal = pagamentos.length
+      ? pagamentos.reduce(
+          (sum: number, p: any) => sum + Number(p?.valor || 0),
+          0,
+        )
+      : Number((venda as any).valor_vendido || (venda as any).valor_total || 0);
+
+    const statusPagamento = pagamentos.length
+      ? String(
+          pagamentos.every((p: any) => p?.data_recebimento)
+            ? 'PAGO'
+            : 'EM_ABERTO',
+        )
+      : 'EM_ABERTO';
+
+    const vencimento = pagamentos
+      .map((p: any) => p?.data_prevista_recebimento || null)
+      .find(Boolean);
+
+    const recebidoEm = pagamentos.length
+      ? pagamentos.every((p: any) => p?.data_recebimento)
+        ? new Date()
+        : null
+      : null;
+
+    await this.prisma.contas_receber.create({
+      data: {
+        cliente_id: clienteId > 0 ? clienteId : null,
+        origem_tipo: 'VENDA',
+        origem_id: vendaId,
+        descricao: `Venda #${vendaId}`,
+        valor_original: valorTotal,
+        valor_compensado: 0,
+        status: statusPagamento,
+        vencimento_em: vencimento ? new Date(vencimento) : new Date((venda as any).data_venda || new Date()),
+        recebido_em: recebidoEm,
+      },
     });
   }
 
@@ -193,7 +275,7 @@ export class ContratosService {
 
   private readonly DEFAULT_TEXTOS_CONTRATO: Record<string, string> = {
     CABECALHO:
-      'Pelo presente instrumento e na melhor forma de direito, de um lado, [[contratada_razao_social]], inscrita no CNPJ sob o nº [[contratada_cnpj]][[contratada_ie_frase]], com sede em [[contratada_endereco_completo]], neste ato representada por [[contratada_representante_nome]], [[contratada_representante_estado_civil]], portador(a) do RG [[contratada_representante_rg]] e inscrito(a) no CPF sob o nº [[contratada_representante_cpf]], doravante denominada simplesmente como CONTRATADA, e do outro lado, [[cliente_razao_social_ou_nome_completo]] inscrito no [[cliente_documento_tipo]] sob o nº [[cliente_documento_numero]][[cliente_ie_frase]], residente e domiciliado em [[cliente_endereco_completo]], doravante denominado simplesmente como CONTRATANTE, têm entre si ajustado o presente negócio de compra e venda de mercadorias e prestação de serviços, mediante as cláusulas e condições a seguir.',
+      'Pelo presente instrumento e na melhor forma de direito, de um lado, [[contratada_razao_social]], inscrita no CNPJ sob o nº [[contratada_cnpj]][[contratada_ie_frase]], com sede em [[contratada_endereco_completo]], neste ato representada por [[contratada_representante_nome]], portador(a) do RG [[contratada_representante_rg]] e inscrito(a) no CPF sob o nº [[contratada_representante_cpf]], doravante denominada simplesmente como CONTRATADA, e do outro lado, [[cliente_razao_social_ou_nome_completo]] inscrito no [[cliente_documento_tipo]] sob o nº [[cliente_documento_numero]][[cliente_ie_frase]], residente e domiciliado em [[cliente_endereco_completo]], doravante denominado simplesmente como CONTRATANTE, têm entre si ajustado o presente negócio de compra e venda de mercadorias e prestação de serviços, mediante as cláusulas e condições a seguir.',
     OBJETO:
       '§ Primeiro – O objeto do presente contrato é a comercialização de móveis, descritos e caracterizados nos projetos anexos, previamente aprovados por rubrica pelo CONTRATANTE. Os móveis serão entregues em [[cliente_endereco_completo]].\n\nItem/ambiente: Descritivo:\n[[lista_itens_venda]]\n\nO CONTRATANTE declara-se ciente de que a partir deste momento iniciou-se o processo de produção dos produtos acima adquiridos, e que eles foram projetados e personalizados exclusivamente para seu ambiente, não possibilitando a comercialização para com terceiros.\n\n§ Segundo – Fazem parte integrante do presente instrumento as vistas dos projetos que foram definidos e assinados pelas partes, segundo descrito na cláusula acima, elaborados conforme as medidas e dimensões dos ambientes. A CONTRATADA não se responsabiliza por alterações de medidas e projetos posteriores à assinatura dos pedidos e projetos negociados.\n\n§ Terceiro – Os eletrodomésticos, iluminação, vidros, espelhos, cubas de pias, granitos e demais acessórios constantes nos projetos e não descritos no primeiro parágrafo não fazem parte do escopo de fornecimento da CONTRATADA.',
     PRECO_CONDICOES:
@@ -319,9 +401,7 @@ export class ContratosService {
     const margemInferior = 60;
 
     // Cabeçalho da tabela
-    if (doc.y + 40 > doc.page.height - margemInferior) {
-      doc.addPage();
-    }
+    this.garantirEspacoPagina(doc, 40, margemInferior);
 
     const headerY = doc.y;
     doc
@@ -425,6 +505,13 @@ export class ContratosService {
     doc.y += 8;
   }
 
+  /** Garante espaço mínimo antes de iniciar um bloco na página atual. */
+  private garantirEspacoPagina(doc: any, alturaNecessaria: number, margemInferior = 60): void {
+    if (doc.y + alturaNecessaria > doc.page.height - margemInferior) {
+      doc.addPage();
+    }
+  }
+
   private renderCamposAssinatura(
     doc: any,
     left: number,
@@ -435,6 +522,7 @@ export class ContratosService {
     const lineW = Math.min(260, larguraTexto * 0.6);
     const lineYOffset = 6;
     const spacing = 18;
+    const margemInferiorAssinatura = 84; // margem padrão (60) + respiro visual extra
     const razao = mapa.contratada_razao_social || 'CONTRATADA';
     const cnpj = mapa.contratada_cnpj || '';
     const representante = mapa.contratada_representante_nome || '';
@@ -446,6 +534,24 @@ export class ContratosService {
     doc.y += spacing;
 
     const drawCienteBlock = (titulo: string, linhas: string[]) => {
+      const medirAlturaTexto = (texto: string, font: string, size: number): number => {
+        doc.font(font).fontSize(size);
+        return doc.heightOfString(texto, { width: larguraTexto });
+      };
+      const alturaTitulo = medirAlturaTexto(titulo, 'Helvetica-Bold', 10);
+      const alturasLinhas = linhas.map((ln) => medirAlturaTexto(ln, 'Helvetica', 9));
+      const alturaMinimaSemOrfao =
+        alturaTitulo + 2 + (lineYOffset + 8) + (alturasLinhas[0] ?? 0) + 2;
+      const alturaTotalBloco =
+        alturaTitulo +
+        2 +
+        (lineYOffset + 8) +
+        alturasLinhas.reduce((acc, h) => acc + h + 2, 0) +
+        spacing;
+
+      // Evita "título órfão": só inicia o bloco se couber ao menos título + primeira linha.
+      this.garantirEspacoPagina(doc, alturaMinimaSemOrfao, margemInferiorAssinatura);
+      this.garantirEspacoPagina(doc, alturaTotalBloco, margemInferiorAssinatura);
       doc.font('Helvetica-Bold').fontSize(10).fillColor('#000').text(titulo, left, doc.y, { width: larguraTexto });
       doc.y += doc.currentLineHeight() + 2;
       doc
@@ -476,6 +582,12 @@ export class ContratosService {
     ].filter(Boolean));
 
     const drawLinhaTestemunha = (label: string) => {
+      const alturaLabel = doc
+        .font('Helvetica')
+        .fontSize(9)
+        .heightOfString(label, { width: larguraTexto });
+      const alturaMinimaSemOrfao = alturaLabel + 2 + (lineYOffset + 14);
+      this.garantirEspacoPagina(doc, alturaMinimaSemOrfao, margemInferiorAssinatura);
       doc.font('Helvetica').fontSize(9).fillColor('#333').text(label, left, doc.y, { width: larguraTexto });
       doc.y += doc.currentLineHeight() + 2;
       doc
@@ -673,7 +785,7 @@ export class ContratosService {
       contratada_representante_estado_civil:
         (venda?.representante_venda_nome?.trim() && venda?.representante_venda_cpf?.trim())
           ? 'Brasileira'
-          : (empresa?.representante_estado_civil ?? 'Brasileira'),
+          : 'Brasileira',
       contratada_representante_rg:
         (venda?.representante_venda_nome?.trim() && venda?.representante_venda_cpf?.trim())
           ? this.maskRg(venda.representante_venda_rg) || ''
@@ -745,9 +857,7 @@ export class ContratosService {
           const texto = String(textoBruto || '').trim();
           if (!titulo && !texto && key !== 'OBJETO') continue;
 
-          if (doc.y + 80 > doc.page.height - 60) {
-            doc.addPage();
-          }
+          this.garantirEspacoPagina(doc, 80);
 
           if (titulo) {
             doc
@@ -764,6 +874,7 @@ export class ContratosService {
               const parte1 = this.substituirPlaceholders(partes[0] || '', mapa).trim();
               const parte2 = this.substituirPlaceholders(partes[1] || '', mapa).trim();
               if (parte1) {
+                this.garantirEspacoPagina(doc, 40);
                 doc
                   .font('Helvetica')
                   .fontSize(10)
@@ -776,6 +887,7 @@ export class ContratosService {
               this.renderTabelaItensVenda(doc, venda, left, right);
               if (parte2) {
                 doc.y += 8;
+                this.garantirEspacoPagina(doc, 40);
                 doc
                   .font('Helvetica')
                   .fontSize(10)
@@ -785,8 +897,8 @@ export class ContratosService {
                   });
                 doc.y += 10;
               }
-              doc.addPage();
             } else {
+              this.garantirEspacoPagina(doc, 40);
               doc
                 .font('Helvetica')
                 .fontSize(10)
@@ -797,21 +909,16 @@ export class ContratosService {
               doc.y += 10;
               if (key === 'OBJETO') {
                 this.renderTabelaItensVenda(doc, venda, left, right);
-                doc.addPage();
               }
             }
           } else if (key === 'OBJETO') {
             this.renderTabelaItensVenda(doc, venda, left, right);
-            doc.addPage();
           }
 
           doc.y += 8;
         }
 
-        // Assinaturas junto com a cláusula 11 (mesma página); nova página só se não couber
-        if (doc.y + 220 > doc.page.height - 60) {
-          doc.addPage();
-        }
+        // A quebra das assinaturas é controlada internamente por bloco.
         this.renderCamposAssinatura(doc, left, right, larguraTexto, mapa);
 
         doc.end();
@@ -894,7 +1001,7 @@ export class ContratosService {
   async obterLinkPublicoPdf(contratoId: number, baseUrl: string): Promise<{ link: string; linkAceitar?: string; linkPdf?: string; token: string; expiraEm: string }> {
     const contrato = await this.prisma.contratos.findUnique({
       where: { id: contratoId },
-      select: { id: true },
+      select: { id: true, status: true },
     });
     if (!contrato) throw new NotFoundException('Contrato não encontrado.');
     const expiraEm = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -920,7 +1027,10 @@ export class ContratosService {
     const urlBase = (baseUrl || '').replace(/\/+$/, '');
     const linkPdf = `${urlBase}/api/contratos-publico/${shortToken}/pdf`;
     const baseAceite = (this.config.get<string>('CONTRATO_ACEITE_BASE_URL') || process.env.CONTRATO_ACEITE_BASE_URL || '').trim();
-    const linkAceitar = baseAceite ? `${baseAceite.replace(/\/+$/, '')}/aceitar/${shortToken}` : undefined;
+    const contratoJaAssinado = String(contrato.status || '').toUpperCase() === 'VIGENTE';
+    const linkAceitar = !contratoJaAssinado && baseAceite
+      ? `${baseAceite.replace(/\/+$/, '')}/aceitar/${shortToken}`
+      : undefined;
     const link = linkAceitar || linkPdf;
     return {
       link,
@@ -967,7 +1077,17 @@ export class ContratosService {
   /**
    * Retorna informações do contrato para a página de aceite (rota pública).
    */
-  async getInfoPorTokenPublico(token: string, baseUrl: string): Promise<{ numero: string; nomeCliente: string; linkPdf: string }> {
+  async getInfoPorTokenPublico(
+    token: string,
+    baseUrl: string,
+  ): Promise<{
+    numero: string;
+    nomeCliente: string;
+    linkPdf: string;
+    status: string;
+    podeAssinar: boolean;
+    dataAssinatura: string | null;
+  }> {
     const { contratoId, tokenParaUrl } = await this.resolveTokenPublico(token);
     const contrato = await this.prisma.contratos.findUnique({
       where: { id: contratoId },
@@ -977,10 +1097,16 @@ export class ContratosService {
     const nomeCliente = (contrato.cliente as any)?.nome_completo || (contrato.cliente as any)?.razao_social || 'Contratante';
     const urlBase = (baseUrl || '').replace(/\/+$/, '');
     const linkPdf = `${urlBase}/api/contratos-publico/${tokenParaUrl}/pdf`;
+    const status = String(contrato.status || '');
+    const statusUpper = status.toUpperCase();
+    const podeAssinar = statusUpper !== 'VIGENTE' && statusUpper !== 'CANCELADO' && statusUpper !== 'ENCERRADO';
     return {
       numero: String(contrato.numero || contrato.id),
       nomeCliente,
       linkPdf,
+      status,
+      podeAssinar,
+      dataAssinatura: contrato.data_assinatura ? contrato.data_assinatura.toISOString() : null,
     };
   }
 
@@ -991,13 +1117,20 @@ export class ContratosService {
     token: string,
     ipAddress: string | undefined,
     userAgent: string | undefined,
-  ): Promise<{ success: true; numero: string }> {
+  ): Promise<{ success: true; numero: string; jaAssinado?: boolean }> {
     const { contratoId } = await this.resolveTokenPublico(token);
     const contrato = await this.prisma.contratos.findUnique({
       where: { id: contratoId },
-      select: { id: true, numero: true, status: true },
+      select: { id: true, numero: true, status: true, venda_id: true, cliente_id: true },
     });
     if (!contrato) throw new NotFoundException('Contrato não encontrado.');
+    const statusAtual = String(contrato.status || '').toUpperCase();
+    if (statusAtual === 'VIGENTE') {
+      return { success: true, numero: String(contrato.numero || contrato.id), jaAssinado: true };
+    }
+    if (statusAtual === 'CANCELADO' || statusAtual === 'ENCERRADO') {
+      throw new BadRequestException(`Contrato ${statusAtual.toLowerCase()} não pode ser assinado.`);
+    }
     const { buffer } = await this.getPdfBufferPorTokenPublico(token);
     const hashDocumento = createHash('sha256').update(buffer).digest('hex');
     await this.prisma.assinaturas_log.create({
@@ -1012,6 +1145,10 @@ export class ContratosService {
     await this.prisma.contratos.update({
       where: { id: contrato.id },
       data: { status: 'VIGENTE', data_assinatura: new Date() } as any,
+    });
+    await this.garantirContaReceberDeVendaAssinada({
+      venda_id: (contrato as any).venda_id ?? null,
+      cliente_id: (contrato as any).cliente_id ?? null,
     });
     return { success: true, numero: String(contrato.numero || contrato.id) };
   }

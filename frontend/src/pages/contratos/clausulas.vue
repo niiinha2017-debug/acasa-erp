@@ -137,7 +137,7 @@ import { notify } from '@/services/notify'
 import api from '@/services/api'
 import { can } from '@/services/permissions'
 
-definePage({ meta: { perm: 'orcamentos.editar' } })
+definePage({ meta: { perm: 'contratos.clausulas.editar' } })
 
 const salvando = ref(false)
 
@@ -153,7 +153,7 @@ function contratosDefaults() {
       modulo_key: 'CABECALHO',
       titulo: 'CONTRATO DE COMPRA E VENDA DE MERCADORIAS E PRESTAÇÃO DE SERVIÇOS',
       texto:
-        'Pelo presente instrumento e na melhor forma de direito, de um lado, [[contratada_razao_social]], inscrita no CNPJ sob o nº [[contratada_cnpj]][[contratada_ie_frase]], com sede em [[contratada_endereco_completo]], neste ato representada por [[contratada_representante_nome]], [[contratada_representante_estado_civil]], portador(a) do RG [[contratada_representante_rg]] e inscrito(a) no CPF sob o nº [[contratada_representante_cpf]], doravante denominada simplesmente como CONTRATADA, e do outro lado, [[cliente_razao_social_ou_nome_completo]] inscrito no [[cliente_documento_tipo]] sob o nº [[cliente_documento_numero]][[cliente_ie_frase]], residente e domiciliado em [[cliente_endereco_completo]], doravante denominado simplesmente como CONTRATANTE, têm entre si ajustado o presente negócio de compra e venda de mercadorias e prestação de serviços, mediante as cláusulas e condições a seguir.',
+        'Pelo presente instrumento e na melhor forma de direito, de um lado, [[contratada_razao_social]], inscrita no CNPJ sob o nº [[contratada_cnpj]][[contratada_ie_frase]], com sede em [[contratada_endereco_completo]], neste ato representada por [[contratada_representante_nome]], portador(a) do RG [[contratada_representante_rg]] e inscrito(a) no CPF sob o nº [[contratada_representante_cpf]], doravante denominada simplesmente como CONTRATADA, e do outro lado, [[cliente_razao_social_ou_nome_completo]] inscrito no [[cliente_documento_tipo]] sob o nº [[cliente_documento_numero]][[cliente_ie_frase]], residente e domiciliado em [[cliente_endereco_completo]], doravante denominado simplesmente como CONTRATANTE, têm entre si ajustado o presente negócio de compra e venda de mercadorias e prestação de serviços, mediante as cláusulas e condições a seguir.',
       ordem: 1,
     },
     {
@@ -240,7 +240,7 @@ function contratosDefaults() {
 }
 
 async function carregarContrato() {
-  if (!can('orcamentos.editar')) {
+  if (!can('contratos.clausulas.editar')) {
     notify.error('Acesso negado.')
     return
   }
@@ -268,7 +268,7 @@ async function carregarContrato() {
 }
 
 async function carregarOrcamento() {
-  if (!can('orcamentos.editar')) {
+  if (!can('contratos.clausulas.editar')) {
     notify.error('Acesso negado.')
     return
   }
@@ -290,7 +290,7 @@ async function carregarOrcamento() {
 }
 
 async function salvarContrato() {
-  if (!can('orcamentos.editar')) {
+  if (!can('contratos.clausulas.editar')) {
     notify.error('Acesso negado.')
     return
   }
@@ -324,7 +324,7 @@ async function salvarContrato() {
 }
 
 async function salvarOrcamento() {
-  if (!can('orcamentos.editar')) {
+  if (!can('contratos.clausulas.editar')) {
     notify.error('Acesso negado.')
     return
   }
@@ -366,7 +366,7 @@ function salvarAtual() {
 }
 
 function restaurarTextosPadrao() {
-  if (!can('orcamentos.editar')) {
+  if (!can('contratos.clausulas.editar')) {
     notify.error('Acesso negado.')
     return
   }

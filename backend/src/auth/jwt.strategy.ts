@@ -37,6 +37,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         email: true,
         status: true,
         is_admin: true,
+        funcionario_id: true,
+        funcionario: {
+          select: {
+            setor: true,
+            unidade: true,
+          },
+        },
       },
     });
 

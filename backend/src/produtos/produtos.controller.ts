@@ -9,6 +9,7 @@ import {
   Post,
   Put,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 
@@ -25,9 +26,25 @@ import { Permissoes } from '../auth/permissoes.decorator';
 export class ProdutosController {
   constructor(private readonly produtosService: ProdutosService) {}
 
+  private normTag(v: any): string {
+    return String(v ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toUpperCase();
+  }
+
+  private aplicarMarkup100(user: any): boolean {
+    if (!user || user.is_admin) return false;
+
+    const setor = this.normTag(user?.funcionario?.setor);
+    const unidade = this.normTag(user?.funcionario?.unidade);
+    return setor === 'LOJA' || unidade === 'LOJA';
+  }
+
   @Get('buscar/filtros')
   @Permissoes('produtos.ver')
-  buscar(@Query() dto: BuscarProdutoDto) {
+  buscar(@Query() dto: BuscarProdutoDto, @Req() req: any) {
     const fornecedor_id = dto.fornecedor_id
       ? Number(String(dto.fornecedor_id).replace(/\D/g, ''))
       : undefined;
@@ -45,7 +62,9 @@ export class ProdutosController {
     if (qp.page) payload.page = Number(qp.page);
     if (qp.pageSize) payload.pageSize = Number(qp.pageSize);
 
-    return this.produtosService.buscar(payload);
+    return this.produtosService.buscar(payload, {
+      aplicarMarkup100: this.aplicarMarkup100(req.user),
+    });
   }
 
   @Get()
@@ -54,26 +73,35 @@ export class ProdutosController {
     @Query('fornecedor_id') fornecedor_id?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
+    @Req() req?: any,
   ) {
     const fId = fornecedor_id
       ? Number(String(fornecedor_id).replace(/\D/g, ''))
       : undefined;
+    const aplicarMarkup100 = this.aplicarMarkup100(req?.user);
 
     if (page) {
       return this.produtosService.listar(
         { fornecedor_id: fId },
         { page: Number(page), pageSize: Number(pageSize || 20) },
+        { aplicarMarkup100 },
       );
     }
 
-    return this.produtosService.listar({ fornecedor_id: fId });
+    return this.produtosService.listar(
+      { fornecedor_id: fId },
+      undefined,
+      { aplicarMarkup100 },
+    );
   }
 
   @Get(':id')
   @Permissoes('produtos.ver')
-  buscarPorId(@Param('id') id: string) {
+  buscarPorId(@Param('id') id: string, @Req() req: any) {
     const cleanId = Number(String(id).replace(/\D/g, ''));
-    return this.produtosService.buscarPorId(cleanId);
+    return this.produtosService.buscarPorId(cleanId, {
+      aplicarMarkup100: this.aplicarMarkup100(req.user),
+    });
   }
 
   @Post()

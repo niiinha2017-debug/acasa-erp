@@ -35,6 +35,7 @@ export class ContasReceberController {
   listar(
     @Query('fornecedor_id') fornecedor_id?: string,
     @Query('cliente_id') cliente_id?: string,
+    @Query('origem') origem?: string,
     @Query('status') status?: string,
     @Query('data_ini') data_ini?: string,
     @Query('data_fim') data_fim?: string,
@@ -44,6 +45,7 @@ export class ContasReceberController {
         ? this.cleanIdOrFail(fornecedor_id)
         : undefined,
       cliente_id: cliente_id ? this.cleanIdOrFail(cliente_id) : undefined,
+      origem: origem?.trim() || undefined,
       status: status?.trim() || undefined,
       data_ini: data_ini?.trim() || undefined,
       data_fim: data_fim?.trim() || undefined,

@@ -413,6 +413,8 @@ async function onBlurCep() {
     form.bairro = data.bairro || form.bairro
     form.cidade = data.localidade || form.cidade
     form.estado = data.uf || form.estado
+  } else {
+    notify.warn('CEP não encontrado.')
   }
 }
 
@@ -423,8 +425,17 @@ async function onBlurCnpj() {
     form.nome_completo = data.razao_social || data.nome || form.nome_completo
     form.nome_fantasia = data.nome_fantasia || data.fantasia || form.nome_fantasia
     form.email = data.email || form.email
-    form.cep = data.cep || form.cep
-    onBlurCep()
+    form.ie = data.ie || form.ie
+    form.telefone = data.telefone ? maskTelefone(data.telefone) : form.telefone
+    form.cep = data.cep ? maskCEP(data.cep) : form.cep
+    form.endereco = data.endereco || form.endereco
+    form.numero = data.numero || form.numero
+    form.bairro = data.bairro || form.bairro
+    form.cidade = data.cidade || form.cidade
+    form.estado = data.estado || form.estado
+    await onBlurCep()
+  } else {
+    notify.warn('CNPJ não encontrado.')
   }
 }
 
@@ -432,8 +443,17 @@ async function carregarDados() {
   try {
     loading.value = true
 
-    const resClientes = await ClienteService.select()
-    listaClientes.value = Array.isArray(resClientes?.data) ? resClientes.data : []
+    try {
+      const resClientes = await ClienteService.select()
+      listaClientes.value = Array.isArray(resClientes?.data) ? resClientes.data : []
+    } catch {
+      const resLista = await ClienteService.listar()
+      const rows = Array.isArray(resLista?.data) ? resLista.data : []
+      listaClientes.value = rows.map((c) => ({
+        value: c.id,
+        label: c.nome_completo || c.razao_social || c.nome_fantasia || `CLIENTE #${c.id}`,
+      }))
+    }
 
     if (isEdit.value) {
       const resUnico = await ClienteService.buscar(clienteId.value)

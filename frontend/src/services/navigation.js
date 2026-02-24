@@ -5,7 +5,7 @@ export const NAV_SCHEMA = {
     { label: 'Orçamento', to: '/orcamentos', icon: 'pi-file-edit', perm: 'orcamentos.ver' },
     { label: 'Fechamento de venda', to: '/vendas/fechamento', icon: 'pi-shopping-cart', perm: 'vendas.criar' },
     { label: 'Contrato', to: '/contratos', icon: 'pi-file', perm: 'contratos.ver' },
-    { label: 'Cláusulas', to: '/contratos/clausulas', icon: 'pi-file-edit', perm: 'orcamentos.editar' },
+    { label: 'Cláusulas', to: '/contratos/clausulas', icon: 'pi-file-edit', perm: 'contratos.clausulas.editar' },
     { label: 'Agenda', to: '/agendamentos?visao=geral', icon: 'pi-calendar-clock', perm: 'agendamentos.ver' },
   ],
 
@@ -37,8 +37,7 @@ export const NAV_SCHEMA = {
     { label: 'Usuarios', to: '/configuracoes/usuarios', icon: 'pi-user', perm: 'usuarios.ver' },
     { label: 'Permissoes', to: '/configuracoes/permissoes', icon: 'pi-lock', perm: 'permissoes.ver' },
     { divider: true },
-    { label: 'Ponto (Registros)', to: '/rh/ponto/relatorio', icon: 'pi-stopwatch', perm: 'ponto_relatorio.ver' },
-    { label: 'Convites de Ponto', to: '/rh/ponto/convites', icon: 'pi-link', perm: 'ponto_convite.criar' },
+    { label: 'RH (Gestão)', to: '/rh', icon: 'pi-users', perm: 'ponto_relatorio.ver' },
     { divider: true },
     { label: 'Cadastro da Empresa', to: '/configuracoes/configuracoes', icon: 'pi-sliders-h', perm: 'configuracoes.empresa.ver' },
   ],

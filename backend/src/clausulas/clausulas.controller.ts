@@ -15,7 +15,7 @@ export class ClausulasController {
    * para ORCAMENTO ou CONTRATO.
    */
   @Get(':tipo')
-  @Permissoes('orcamentos.editar')
+  @Permissoes('contratos.clausulas.editar')
   buscar(@Param('tipo') tipo: string) {
     return this.service.buscarOuCriarPorTipo(tipo);
   }
@@ -24,7 +24,7 @@ export class ClausulasController {
    * Salva o texto das cláusulas para ORCAMENTO ou CONTRATO.
    */
   @Put(':tipo')
-  @Permissoes('orcamentos.editar')
+  @Permissoes('contratos.clausulas.editar')
   salvar(
     @Param('tipo') tipo: string,
     @Body() dto: UpdateClausulasDto,

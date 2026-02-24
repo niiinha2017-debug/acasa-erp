@@ -73,9 +73,9 @@ const relatorios = [
     icon: 'pi pi-calendar',
   },
   {
-    label: 'Status de Obras',
-    desc: 'Quantidade de obras por status (Medição, Corte, Montagem)',
-    to: '/relatorios/status-obras',
+    label: 'Status de Projetos',
+    desc: 'Quantidade de projetos por status',
+    to: '/relatorios/status-projetos',
     icon: 'pi pi-sitemap',
   },
   {

@@ -143,10 +143,22 @@
               <Input v-model="formUsuario.nome" label="Nome Completo" class="col-span-2" />
               <Input v-model="formUsuario.usuario" label="Usuário Login" :forceUpper="false" />
               <Input v-model="formUsuario.email" label="E-mail" type="email" :forceUpper="false" />
+              <Input
+                v-if="!modoEdicao"
+                v-model="formUsuario.senha"
+                label="Senha"
+                type="password"
+                :forceUpper="false"
+                class="col-span-2"
+              />
             </div>
 
             <p v-if="!modoEdicao" class="text-[10px] font-bold uppercase tracking-wider text-text-muted">
-              A senha provisória será enviada por e-mail.
+              {{
+                formUsuario.senha
+                  ? 'Senha definida manualmente no cadastro.'
+                  : 'Se a senha ficar em branco, será enviada senha provisória por e-mail.'
+              }}
             </p>
 
             <div class="flex justify-end gap-3 pt-4 border-t border-border-ui">
@@ -216,6 +228,7 @@ const formUsuario = ref({
   nome: '',
   usuario: '',
   email: '',
+  senha: '',
   status: 'PENDENTE',
 })
 
@@ -249,6 +262,7 @@ const abrirModal = (user = null) => {
       nome: user.nome || '',
       usuario: user.usuario || '',
       email: user.email || '',
+      senha: '',
       status: user.status || 'PENDENTE',
     }
   } else {
@@ -257,6 +271,7 @@ const abrirModal = (user = null) => {
       nome: '',
       usuario: '',
       email: '',
+      senha: '',
       status: 'PENDENTE',
     }
   }
@@ -288,6 +303,9 @@ async function confirmarSalvarUsuario() {
 const salvar = async () => {
   const perm = modoEdicao.value ? 'usuarios.editar' : 'usuarios.criar'
   if (!can(perm)) return notify.error('Acesso negado.')
+  if (!modoEdicao.value && formUsuario.value.senha && formUsuario.value.senha.trim().length < 6) {
+    return notify.error('A senha deve ter no minimo 6 caracteres.')
+  }
 
   loadingSalvar.value = true
   try {
@@ -298,6 +316,7 @@ const salvar = async () => {
         nome: formUsuario.value.nome,
         usuario: formUsuario.value.usuario,
         email: formUsuario.value.email,
+        senha: formUsuario.value.senha?.trim() || undefined,
       })
     }
     notify.success('Operação realizada com sucesso!')

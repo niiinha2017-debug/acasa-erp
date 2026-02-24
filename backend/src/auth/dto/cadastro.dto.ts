@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class CreateUsuarioDto {
@@ -24,4 +24,13 @@ export class CreateUsuarioDto {
       .toLowerCase(),
   )
   email: string;
+
+  @IsString()
+  @IsOptional()
+  @MinLength(6)
+  @Transform(({ value }) => {
+    const senha = String(value ?? '').trim();
+    return senha || undefined;
+  })
+  senha?: string;
 }

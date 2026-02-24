@@ -380,6 +380,20 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/relatorios/status-projetos': RouteRecordInfo<
+      '/relatorios/status-projetos',
+      '/relatorios/status-projetos',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/rh/': RouteRecordInfo<
+      '/rh/',
+      '/rh',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/rh/ponto/convites': RouteRecordInfo<
       '/rh/ponto/convites',
       '/rh/ponto/convites',
@@ -390,6 +404,13 @@ declare module 'vue-router/auto-routes' {
     '/rh/ponto/fechamento': RouteRecordInfo<
       '/rh/ponto/fechamento',
       '/rh/ponto/fechamento',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/rh/ponto/horas-extras': RouteRecordInfo<
+      '/rh/ponto/horas-extras',
+      '/rh/ponto/horas-extras',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -776,6 +797,18 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/relatorios/status-projetos.vue': {
+      routes:
+        | '/relatorios/status-projetos'
+      views:
+        | never
+    }
+    'src/pages/rh/index.vue': {
+      routes:
+        | '/rh/'
+      views:
+        | never
+    }
     'src/pages/rh/ponto/convites.vue': {
       routes:
         | '/rh/ponto/convites'
@@ -785,6 +818,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/rh/ponto/fechamento.vue': {
       routes:
         | '/rh/ponto/fechamento'
+      views:
+        | never
+    }
+    'src/pages/rh/ponto/horas-extras.vue': {
+      routes:
+        | '/rh/ponto/horas-extras'
       views:
         | never
     }

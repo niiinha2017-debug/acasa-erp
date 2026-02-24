@@ -1,10 +1,19 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAgendaDto } from './dto/create-agenda.dto';
 import { UpdateAgendaDto } from './dto/update-agenda.dto';
+import {
+  normalizarOrigemFluxo,
+  normalizarSetorDestino,
+  origemPermitidaNoSetor,
+  OrigemFluxo,
+  SetorDestino,
+} from './agenda-rules';
+import { validarTransicaoStatusCliente } from '../shared/constantes/pipeline-cliente';
 
 @Injectable()
 export class AgendaService {
+  private readonly logger = new Logger(AgendaService.name);
   constructor(private prisma: PrismaService) {}
 
   private categoriaToStatus(categoria?: string) {
@@ -15,8 +24,140 @@ export class AgendaService {
       MEDIDA_FINA: 'MEDIDA_FINA_AGENDADA',
       PRODUCAO: 'PRODUCAO_AGENDADA',
       MONTAGEM: 'MONTAGEM_AGENDADA',
+      GARANTIA: 'GARANTIA',
+      MANUTENCAO: 'MANUTENCAO',
+      ASSISTENCIA: 'ASSISTENCIA',
     };
     return { categoriaKey, status: map[categoriaKey] || '' };
+  }
+
+  private registrarAuditoriaStatusPosVenda(params: {
+    agendaId: number;
+    vendaId?: number | null;
+    clienteId?: number | null;
+    statusAplicado: string;
+    origemAplicada: 'venda' | 'cliente';
+  }) {
+    this.logger.log(
+      `[POS_VENDA] agenda=${params.agendaId} venda=${params.vendaId || 'null'} cliente=${params.clienteId || 'null'} status=${params.statusAplicado} origem=${params.origemAplicada}`,
+    );
+  }
+
+  private async atualizarStatusVendaComValidacao(
+    tx: any,
+    vendaId: number,
+    proximoStatus: string,
+    contexto: string,
+  ) {
+    const venda = await tx.vendas.findUnique({
+      where: { id: vendaId },
+      select: { id: true, status: true },
+    });
+    if (!venda) {
+      throw new BadRequestException('Venda vinculada ao agendamento não encontrada.');
+    }
+
+    const validacao = validarTransicaoStatusCliente({
+      atual: venda.status,
+      proximo: proximoStatus,
+    });
+
+    if (!validacao.ok) {
+      throw new BadRequestException(`${contexto}: ${validacao.motivo}`);
+    }
+
+    await tx.vendas.update({
+      where: { id: vendaId },
+      data: { status: proximoStatus },
+    });
+  }
+
+  private async persistirAuditoriaStatusPosVenda(
+    tx: any,
+    params: {
+      agendaId: number;
+      origemAplicada: 'venda' | 'cliente';
+    },
+  ) {
+    await tx.agenda_global.update({
+      where: { id: params.agendaId },
+      data: {
+        status_source: params.origemAplicada,
+        status_aplicado_em: new Date(),
+      },
+    });
+  }
+
+  private inferirOrigemFluxo(
+    planoCorteId?: number | null,
+    vendaId?: number | null,
+  ): OrigemFluxo {
+    if (planoCorteId) return vendaId ? 'VENDA_PLANO_CORTE' : 'PLANO_CORTE';
+    if (vendaId) return 'LOJA_VENDA';
+    return 'TAREFA';
+  }
+
+  private resolverSetorOrigem(params: {
+    setorDestinoInput?: string | null;
+    origemFluxoInput?: string | null;
+    setorAtual?: string | null;
+    origemAtual?: string | null;
+    planoCorteId?: number | null;
+    vendaId?: number | null;
+  }): { setorDestino: SetorDestino; origemFluxo: OrigemFluxo } {
+    const origemAtual = normalizarOrigemFluxo(params.origemAtual);
+    const setorAtual = normalizarSetorDestino(params.setorAtual);
+    const origemFluxo =
+      normalizarOrigemFluxo(params.origemFluxoInput) ||
+      origemAtual ||
+      this.inferirOrigemFluxo(params.planoCorteId, params.vendaId);
+
+    const setorInferidoPorOrigem: SetorDestino =
+      origemFluxo === 'PLANO_CORTE' || origemFluxo === 'VENDA_PLANO_CORTE'
+        ? 'PRODUCAO'
+        : 'LOJA';
+
+    const setorDestino =
+      normalizarSetorDestino(params.setorDestinoInput) ||
+      setorAtual ||
+      (params.planoCorteId ? 'PRODUCAO' : setorInferidoPorOrigem);
+
+    if (!origemPermitidaNoSetor(setorDestino, origemFluxo)) {
+      throw new BadRequestException(
+        `Combinação inválida: setor ${setorDestino} não permite origem ${origemFluxo}.`,
+      );
+    }
+
+    return { setorDestino, origemFluxo };
+  }
+
+  private validarVinculosPorOrigem(params: {
+    origemFluxo: OrigemFluxo;
+    vendaId?: number | null;
+    planoCorteId?: number | null;
+    clienteId?: number | null;
+    fornecedorId?: number | null;
+  }) {
+    const { origemFluxo, vendaId, planoCorteId, clienteId, fornecedorId } = params;
+    if (origemFluxo === 'PLANO_CORTE' && !planoCorteId) {
+      throw new BadRequestException('Origem PLANO_CORTE exige plano_corte_id.');
+    }
+    if (origemFluxo === 'VENDA_PLANO_CORTE' && (!planoCorteId || !vendaId)) {
+      throw new BadRequestException(
+        'Origem VENDA_PLANO_CORTE exige venda_id e plano_corte_id.',
+      );
+    }
+    if (origemFluxo === 'LOJA_VENDA' && !vendaId) {
+      throw new BadRequestException('Origem LOJA_VENDA exige venda_id.');
+    }
+    if (origemFluxo === 'POS_VENDA' && !vendaId && !clienteId) {
+      throw new BadRequestException('Origem POS_VENDA exige venda_id ou cliente_id.');
+    }
+    if (origemFluxo !== 'TAREFA' && !clienteId && !fornecedorId && !planoCorteId) {
+      throw new BadRequestException(
+        'Agendamento vinculado exige cliente_id ou plano_corte_id.',
+      );
+    }
   }
 
   private validarPeriodo(inicio: Date, fim: Date) {
@@ -110,8 +251,15 @@ export class AgendaService {
   }
 
   async create(dto: CreateAgendaDto) {
-    const { equipe_ids, categoria, apontamentos, ...dadosAgenda } = dto;
-    const { categoriaKey, status: clienteStatus } = this.categoriaToStatus(categoria);
+    const {
+      equipe_ids,
+      categoria,
+      apontamentos,
+      origem_fluxo,
+      setor_destino,
+      ...dadosAgenda
+    } = dto;
+    const { status: clienteStatus } = this.categoriaToStatus(categoria);
 
     // Regra: cliente_id OU (plano_corte_id com fornecedor)
     const clienteId = dto.cliente_id ?? null;
@@ -126,15 +274,30 @@ export class AgendaService {
         throw new BadRequestException('Plano de Corte não encontrado');
       fornecedorId = plano.fornecedor_id;
     }
-    if (!clienteId && !fornecedorId) {
-      throw new BadRequestException('Informe cliente_id ou plano_corte_id');
-    }
     this.validarPeriodo(new Date(dto.inicio_em), new Date(dto.fim_em));
+
+    const { setorDestino, origemFluxo } = this.resolverSetorOrigem({
+      setorDestinoInput: setor_destino,
+      origemFluxoInput: origem_fluxo,
+      planoCorteId: dto.plano_corte_id,
+      vendaId: dto.venda_id,
+    });
+
+    this.validarVinculosPorOrigem({
+      origemFluxo,
+      vendaId: dto.venda_id,
+      planoCorteId: dto.plano_corte_id,
+      clienteId,
+      fornecedorId,
+    });
 
     const dataAgenda = {
       ...dadosAgenda,
       cliente_id: clienteId,
       fornecedor_id: fornecedorId,
+      categoria: categoria || null,
+      origem_fluxo: origemFluxo,
+      setor_destino: setorDestino,
     };
 
     const idsEquipe = Array.isArray(equipe_ids)
@@ -189,40 +352,52 @@ export class AgendaService {
         });
       }
 
-      // 3. Atualiza status da Venda baseado na categoria do agendamento
-      // No create do AgendaService.ts
-      if (dto.venda_id) {
-        let novoStatus = '';
+      const novoStatus = clienteStatus;
+      if (origemFluxo === 'POS_VENDA' && novoStatus) {
+        const origemAplicada: 'venda' | 'cliente' =
+          dto.venda_id && dto.venda_id > 0 ? 'venda' : 'cliente';
 
-        // Mapeando a categoria da agenda para a KEY do PIPELINE_CLIENTE
-        switch (categoriaKey) {
-          case 'MEDIDA':
-            novoStatus = 'MEDIDA_AGENDADA'; // Ordem 3 do seu pipeline
-            break;
-          case 'PRODUCAO':
-            novoStatus = 'PRODUCAO_AGENDADA'; // Ordem 18 do seu pipeline
-            break;
-          case 'MONTAGEM':
-            novoStatus = 'MONTAGEM_AGENDADA'; // Ordem 22 do seu pipeline
-            break;
-          case 'MEDIDA_FINA':
-            novoStatus = 'MEDIDA_FINA_AGENDADA'; // Ordem 13 do seu pipeline
-            break;
-        }
-
-        if (novoStatus) {
-          await tx.vendas.update({
-            where: { id: dto.venda_id },
+        if (origemAplicada === 'venda' && dto.venda_id) {
+          await this.atualizarStatusVendaComValidacao(
+            tx,
+            dto.venda_id,
+            novoStatus,
+            'Agendamento (pós-venda)',
+          );
+        } else if (clienteId) {
+          await tx.cliente.update({
+            where: { id: clienteId },
             data: { status: novoStatus },
           });
         }
-      }
 
-      if (clienteId && clienteStatus) {
-        await tx.cliente.update({
-          where: { id: clienteId },
-          data: { status: clienteStatus },
+        this.registrarAuditoriaStatusPosVenda({
+          agendaId: agendamento.id,
+          vendaId: dto.venda_id,
+          clienteId,
+          statusAplicado: novoStatus,
+          origemAplicada,
         });
+        await this.persistirAuditoriaStatusPosVenda(tx, {
+          agendaId: agendamento.id,
+          origemAplicada,
+        });
+      } else {
+        if (dto.venda_id && novoStatus) {
+          await this.atualizarStatusVendaComValidacao(
+            tx,
+            dto.venda_id,
+            novoStatus,
+            'Agendamento',
+          );
+        }
+
+        if (clienteId && clienteStatus) {
+          await tx.cliente.update({
+            where: { id: clienteId },
+            data: { status: clienteStatus },
+          });
+        }
       }
 
       // Retorna o agendamento criado para finalizar a transação
@@ -236,6 +411,8 @@ export class AgendaService {
       includePlanoCorte?: boolean;
       status?: string;
       funcionarioId?: number;
+      setorDestino?: 'LOJA' | 'PRODUCAO';
+      origemFluxo?: OrigemFluxo;
       incluirCancelados?: boolean;
     },
   ) {
@@ -259,6 +436,8 @@ export class AgendaService {
               },
             }
           : undefined,
+        setor_destino: opts?.setorDestino || undefined,
+        origem_fluxo: opts?.origemFluxo || undefined,
         ...(includePlanoCorte ? {} : { plano_corte_id: null }),
       },
       include: {
@@ -303,8 +482,16 @@ export class AgendaService {
       throw new BadRequestException('Agendamento não encontrado');
     }
 
-    const { equipe_ids, categoria, apontamentos, ...dadosAgenda } = dto;
-    const { categoriaKey, status: clienteStatus } = this.categoriaToStatus(categoria);
+    const {
+      equipe_ids,
+      categoria,
+      apontamentos,
+      origem_fluxo,
+      setor_destino,
+      ...dadosAgenda
+    } = dto;
+    const categoriaRef = categoria ?? (atual as any).categoria;
+    const { status: clienteStatus } = this.categoriaToStatus(categoriaRef);
 
     const inicio = dto.inicio_em ? new Date(dto.inicio_em) : new Date(atual.inicio_em);
     const fim = dto.fim_em ? new Date(dto.fim_em) : new Date(atual.fim_em);
@@ -325,9 +512,43 @@ export class AgendaService {
       fornecedorId = plano.fornecedor_id;
     }
 
-    if (!clienteId && !fornecedorId) {
-      throw new BadRequestException('Informe cliente_id ou plano_corte_id');
+    const vendaId = dto.venda_id ?? atual.venda_id ?? null;
+    const { setorDestino, origemFluxo } = this.resolverSetorOrigem({
+      setorDestinoInput: setor_destino,
+      origemFluxoInput: origem_fluxo,
+      setorAtual: (atual as any).setor_destino,
+      origemAtual: (atual as any).origem_fluxo,
+      planoCorteId,
+      vendaId,
+    });
+
+    if (
+      (atual as any).origem_fluxo &&
+      String((atual as any).origem_fluxo).toUpperCase() !== 'TAREFA' &&
+      origemFluxo === 'TAREFA'
+    ) {
+      throw new BadRequestException(
+        'Edição inválida: não é permitido remover o vínculo de origem deste agendamento.',
+      );
     }
+
+    if (
+      setor_destino &&
+      (atual as any).setor_destino &&
+      String((atual as any).setor_destino).toUpperCase() !== setorDestino
+    ) {
+      throw new BadRequestException(
+        'Use o endpoint enviar-producao para alterar o setor destino.',
+      );
+    }
+
+    this.validarVinculosPorOrigem({
+      origemFluxo,
+      vendaId,
+      planoCorteId,
+      clienteId,
+      fornecedorId,
+    });
 
     const equipeIds = Array.isArray(equipe_ids)
       ? Array.from(new Set(equipe_ids.map(Number).filter(Boolean)))
@@ -357,6 +578,9 @@ export class AgendaService {
           ...dadosAgenda,
           cliente_id: clienteId,
           fornecedor_id: fornecedorId,
+          categoria: categoria ?? (atual as any).categoria ?? null,
+          origem_fluxo: origemFluxo,
+          setor_destino: setorDestino,
           inicio_em: inicio,
           fim_em: fim,
         },
@@ -388,36 +612,62 @@ export class AgendaService {
         }
       }
 
-      const vendaId = dto.venda_id ?? atual.venda_id ?? null;
-      if (vendaId) {
-        let novoStatus = '';
-        switch (categoriaKey) {
-          case 'MEDIDA':
-            novoStatus = 'MEDIDA_AGENDADA';
-            break;
-          case 'PRODUCAO':
-            novoStatus = 'PRODUCAO_AGENDADA';
-            break;
-          case 'MONTAGEM':
-            novoStatus = 'MONTAGEM_AGENDADA';
-            break;
-          case 'MEDIDA_FINA':
-            novoStatus = 'MEDIDA_FINA_AGENDADA';
-            break;
-        }
-        if (novoStatus) {
-          await tx.vendas.update({
-            where: { id: vendaId },
+      const novoStatus = clienteStatus;
+      if (origemFluxo === 'POS_VENDA' && novoStatus) {
+        const origemAplicada: 'venda' | 'cliente' =
+          vendaId && vendaId > 0 ? 'venda' : 'cliente';
+
+        if (origemAplicada === 'venda' && vendaId) {
+          await this.atualizarStatusVendaComValidacao(
+            tx,
+            vendaId,
+            novoStatus,
+            'Edição de agendamento (pós-venda)',
+          );
+        } else if (clienteId) {
+          await tx.cliente.update({
+            where: { id: clienteId },
             data: { status: novoStatus },
           });
         }
-      }
 
-      if (clienteId && clienteStatus) {
-        await tx.cliente.update({
-          where: { id: clienteId },
-          data: { status: clienteStatus },
+        this.registrarAuditoriaStatusPosVenda({
+          agendaId: id,
+          vendaId,
+          clienteId,
+          statusAplicado: novoStatus,
+          origemAplicada,
         });
+        await this.persistirAuditoriaStatusPosVenda(tx, {
+          agendaId: id,
+          origemAplicada,
+        });
+      } else {
+        if (vendaId && novoStatus) {
+          await this.atualizarStatusVendaComValidacao(
+            tx,
+            vendaId,
+            novoStatus,
+            'Edição de agendamento',
+          );
+        }
+
+        if (clienteId && clienteStatus) {
+          await tx.cliente.update({
+            where: { id: clienteId },
+            data: { status: clienteStatus },
+          });
+        }
+
+        if ((atual as any).status_source || (atual as any).status_aplicado_em) {
+          await tx.agenda_global.update({
+            where: { id },
+            data: {
+              status_source: null,
+              status_aplicado_em: null,
+            } as any,
+          });
+        }
       }
 
       if (planoCorteId) {
@@ -455,6 +705,55 @@ export class AgendaService {
     return this.prisma.agenda_global.update({
       where: { id },
       data: { status: 'CANCELADO' },
+    });
+  }
+
+  async enviarParaProducao(id: number) {
+    const atual = await this.prisma.agenda_global.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        status: true,
+        setor_destino: true,
+        origem_fluxo: true,
+        venda_id: true,
+        plano_corte_id: true,
+      },
+    });
+
+    if (!atual) {
+      throw new BadRequestException('Agendamento não encontrado');
+    }
+    if (atual.status === 'CANCELADO') {
+      throw new BadRequestException('Não é possível enviar agendamento cancelado para produção.');
+    }
+    if (String(atual.setor_destino || '').toUpperCase() === 'PRODUCAO') {
+      throw new BadRequestException('Agendamento já está no setor de produção.');
+    }
+
+    const origemProducao = this.inferirOrigemFluxo(atual.plano_corte_id, atual.venda_id);
+    const setorOrigemAtual = this.resolverSetorOrigem({
+      setorDestinoInput: atual.setor_destino,
+      origemFluxoInput: atual.origem_fluxo,
+      planoCorteId: atual.plano_corte_id,
+      vendaId: atual.venda_id,
+    });
+
+    if (setorOrigemAtual.setorDestino !== 'LOJA') {
+      throw new BadRequestException('Somente agendamentos da loja podem ser enviados para produção.');
+    }
+    if (origemProducao === 'LOJA_VENDA' || origemProducao === 'POS_VENDA') {
+      throw new BadRequestException(
+        'Envio para produção exige plano de corte vinculado ou origem TAREFA.',
+      );
+    }
+
+    return this.prisma.agenda_global.update({
+      where: { id },
+      data: {
+        setor_destino: 'PRODUCAO',
+        origem_fluxo: origemProducao,
+      },
     });
   }
 }

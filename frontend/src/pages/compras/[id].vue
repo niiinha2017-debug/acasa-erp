@@ -782,12 +782,21 @@ function descDoItem(row) {
 const carregarDadosIniciais = async () => {
   loading.value = true
   try {
-const [fornRes, vendRes] = await Promise.all([
-  FornecedorService.select(),
-  VendaService.listar(),
-])
+const vendRes = await VendaService.listar()
+let fornecedores = []
+try {
+  const fornRes = await FornecedorService.select()
+  fornecedores = Array.isArray(fornRes?.data) ? fornRes.data : []
+} catch {
+  const fornListRes = await FornecedorService.listar()
+  const rows = Array.isArray(fornListRes?.data) ? fornListRes.data : []
+  fornecedores = rows.map((f) => ({
+    value: f?.id,
+    label: f?.nome_fantasia || f?.razao_social || `ID #${f?.id}`,
+  }))
+}
 
-listaFornecedores.value = Array.isArray(fornRes?.data) ? fornRes.data : []
+listaFornecedores.value = fornecedores
 listaVendas.value = Array.isArray(vendRes?.data) ? vendRes.data : []
 
 if (isEdit.value) {

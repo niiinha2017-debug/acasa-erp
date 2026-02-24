@@ -1135,7 +1135,7 @@ const columnsItens = [
 const columnsPagamentos = [
   { key: 'forma', label: 'Forma', width: '220px' },
   { key: 'parcelas', label: 'Parcelas', width: '120px', align: 'right' },
-  { key: 'data_recebimento', label: 'Data(s) / Valor(es)', width: '220px' },
+  { key: 'data_recebimento', label: 'Data prevista / valor', width: '220px' },
   { key: 'acoes', label: 'Ações', width: '140px', align: 'right' },
 ]
 
@@ -1455,17 +1455,17 @@ async function carregarVenda() {
     const rawPagamentos = (data?.pagamentos || []).map((p) => ({
       forma_pagamento_chave: p.forma_pagamento_chave || '',
       valor: round2(num(p.valor || 0)),
-      data_recebimento: p.data_recebimento ? String(p.data_recebimento).slice(0, 10) : '',
+      data_prevista_recebimento: p.data_prevista_recebimento
+        ? String(p.data_prevista_recebimento).slice(0, 10)
+        : (p.data_recebimento ? String(p.data_recebimento).slice(0, 10) : ''),
     }))
     const grupos = []
     for (let i = 0; i < rawPagamentos.length; i++) {
       const p = rawPagamentos[i]
       const forma = p.forma_pagamento_chave
       const valorUnit = p.valor
-      const datas = [p.data_recebimento].filter(Boolean)
       let j = i + 1
       while (j < rawPagamentos.length && rawPagamentos[j].forma_pagamento_chave === forma && round2(num(rawPagamentos[j].valor)) === valorUnit) {
-        if (rawPagamentos[j].data_recebimento) datas.push(rawPagamentos[j].data_recebimento)
         j++
       }
       const n = j - i
@@ -1473,16 +1473,15 @@ async function carregarVenda() {
         forma_pagamento_chave: forma,
         valor: round2(valorUnit * n),
         parcelas: n,
-        data_prevista_recebimento: '',
-        data_prevista_recebimento: '',
-        data_recebimento: n === 1 ? (rawPagamentos[i].data_recebimento || '') : '',
+        data_prevista_recebimento: n === 1 ? (rawPagamentos[i].data_prevista_recebimento || '') : '',
+        data_recebimento: '',
         datas_parcelas:
           FORMAS_COM_DATA_POR_PARCELA.includes(forma) && n > 1
             ? rawPagamentos.slice(i, j).map((x) => ({
-                data: x.data_recebimento || '',
+                data: x.data_prevista_recebimento || '',
                 valor: round2(num(x.valor || 0)),
               }))
-            : [{ data: rawPagamentos[i].data_recebimento || '', valor: round2(num(valorUnit || 0)) }],
+            : [{ data: rawPagamentos[i].data_prevista_recebimento || '', valor: round2(num(valorUnit || 0)) }],
         status_financeiro_chave: data?.pagamentos?.[i]?.status_financeiro_chave || 'EM_ABERTO',
       })
       i = j - 1
@@ -1565,11 +1564,11 @@ function montarPayload() {
             list.push({
               forma_pagamento_chave: forma,
               valor: round2(num(parc?.valor || 0)),
-              data_prevista_recebimento: null,
-              data_recebimento:
+              data_prevista_recebimento:
                 parc?.data && String(parc.data).trim()
                   ? String(parc.data).slice(0, 10)
                   : null,
+              data_recebimento: null,
               status_financeiro_chave: p.status_financeiro_chave || 'EM_ABERTO',
             })
           }
@@ -1578,8 +1577,13 @@ function montarPayload() {
           list.push({
             forma_pagamento_chave: forma,
             valor: valorTotal,
-            data_prevista_recebimento: p.data_prevista_recebimento || null,
-            data_recebimento: (p.data_recebimento && String(p.data_recebimento).trim()) ? String(p.data_recebimento).slice(0, 10) : null,
+            data_prevista_recebimento:
+              (p.data_prevista_recebimento && String(p.data_prevista_recebimento).trim())
+                ? String(p.data_prevista_recebimento).slice(0, 10)
+                : ((p.data_recebimento && String(p.data_recebimento).trim())
+                    ? String(p.data_recebimento).slice(0, 10)
+                    : null),
+            data_recebimento: null,
             status_financeiro_chave: p.status_financeiro_chave || 'EM_ABERTO',
           })
         }

@@ -55,7 +55,7 @@ export class ClientesController {
   }
 
   @Get('select')
-  @Permissoes('clientes.select')
+  @Permissoes('clientes.select', 'clientes.ver')
   select(@Query('q') q?: string) {
     return this.service.select(q);
   }

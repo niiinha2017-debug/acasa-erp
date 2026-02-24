@@ -97,9 +97,9 @@ export class QuickChartService {
   }
 
   /**
-   * Gráfico de pizza: Status de obras/projetos.
+   * Gráfico de pizza: Status de projetos.
    */
-  buildStatusObrasUrl(
+  buildStatusProjetosUrl(
     data: { status: string; total: number }[],
     options?: { width?: number; height?: number },
   ): string {
@@ -121,9 +121,17 @@ export class QuickChartService {
         ],
       },
       options: {
-        title: { display: true, text: 'Status de Obras/Projetos' },
+        title: { display: true, text: 'Status de Projetos' },
       },
     };
     return this.buildChartUrl(config, options);
+  }
+
+  // Compatibilidade com nome legado.
+  buildStatusObrasUrl(
+    data: { status: string; total: number }[],
+    options?: { width?: number; height?: number },
+  ): string {
+    return this.buildStatusProjetosUrl(data, options);
   }
 }

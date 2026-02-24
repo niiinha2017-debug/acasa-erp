@@ -23,6 +23,8 @@ model usuarios {
 
   recuperacoes recuperacao_senha[] // ✅ lado oposto da relação
   permissoes   usuarios_permissoes[]
+  vendas_representante vendas[] @relation("vendas_representante_usuario")
+  comissoes_responsavel vendas_comissoes[] @relation("vendas_comissao_responsavel_usuario")
 
   @@map("usuarios")
  }
@@ -202,6 +204,8 @@ model vendas {
   representante_venda_nome String?
   representante_venda_cpf  String?
   representante_venda_rg   String?
+  representante_venda_usuario_id Int?
+  representante_venda_funcionario_id Int?
 
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
@@ -210,6 +214,8 @@ model vendas {
   comissoes    vendas_comissoes[]
   pagamentos   vendas_pagamentos[] // ✅ NOVO
   agendamentos agenda_global[]
+  representante_venda_usuario usuarios? @relation("vendas_representante_usuario", fields: [representante_venda_usuario_id], references: [id], onDelete: SetNull)
+  representante_venda_funcionario funcionarios? @relation("vendas_representante_funcionario", fields: [representante_venda_funcionario_id], references: [id], onDelete: SetNull)
   // Adicione projetos[] aqui
   projetos     projetos[]
 
@@ -218,6 +224,8 @@ model vendas {
 
   @@index([cliente_id])
   @@index([status])
+  @@index([representante_venda_usuario_id])
+  @@index([representante_venda_funcionario_id])
   @@map("vendas")
  }
 
@@ -341,11 +349,18 @@ model vendas_comissoes {
 
   // opcional: quem é (nome, ou depois vira vínculo com usuario/funcionario)
   responsavel_nome String?
+  responsavel_usuario_id Int?
+  responsavel_funcionario_id Int?
+
+  responsavel_usuario usuarios? @relation("vendas_comissao_responsavel_usuario", fields: [responsavel_usuario_id], references: [id], onDelete: SetNull)
+  responsavel_funcionario funcionarios? @relation("vendas_comissao_responsavel_funcionario", fields: [responsavel_funcionario_id], references: [id], onDelete: SetNull)
 
   criado_em DateTime @default(now())
 
   @@index([venda_id])
   @@index([tipo_comissao_chave])
+  @@index([responsavel_usuario_id])
+  @@index([responsavel_funcionario_id])
   @@map("vendas_comissoes")
  }
 
@@ -610,6 +625,8 @@ model funcionarios {
   // PRODUÇÃO / DESPESAS
   // ======================
   despesas despesas[]
+  vendas_representante vendas[] @relation("vendas_representante_funcionario")
+  comissoes_responsavel vendas_comissoes[] @relation("vendas_comissao_responsavel_funcionario")
 
   // ======================
   // CONTROLE
@@ -729,7 +746,12 @@ model agenda_global {
   titulo    String
   inicio_em DateTime
   fim_em    DateTime
+  categoria String?
+  origem_fluxo String?
+  setor_destino String? @default("LOJA")
   status    String   @default("PENDENTE")
+  status_source String?
+  status_aplicado_em DateTime?
 
   // ✅ RELAÇÃO MUITOS-PARA-MUITOS (Múltiplos funcionários na mesma tarefa)
   equipe agenda_funcionarios[]
@@ -742,8 +764,13 @@ model agenda_global {
 
   @@index([cliente_id])
   @@index([fornecedor_id])
+  @@index([venda_id])
   @@index([inicio_em])
+  @@index([categoria])
+  @@index([origem_fluxo])
+  @@index([setor_destino])
   @@index([status])
+  @@index([status_source])
   @@map("agenda_global")
 }
 
@@ -1044,6 +1071,9 @@ model Empresa {
   representante_legal_nome     String?
   representante_legal_cpf     String?
   representante_legal_rg      String?
+  representante_legal_socio_nome String?
+  representante_legal_socio_cpf  String?
+  representante_legal_socio_rg   String?
   representante_estado_civil  String?
   updated_at    DateTime @updatedAt
 
@@ -1193,6 +1223,22 @@ model ponto_justificativas {
   @@index([data])
   @@index([tipo])
   @@map("ponto_justificativas")
+}
+
+model ponto_feriados_config {
+  id Int @id @default(autoincrement())
+
+  data     DateTime @db.Date
+  nome     String?  @db.VarChar(191)
+  tipo     String?  @db.VarChar(60)
+  trabalha Boolean  @default(false)
+
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  @@unique([data])
+  @@index([trabalha, data])
+  @@map("ponto_feriados_config")
 }
 
 model arquivos {

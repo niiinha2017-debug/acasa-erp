@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
@@ -30,6 +30,13 @@ export class AnalyticsController {
     return this.service.getResumoVendas();
   }
 
+  /** Progresso do vendedor logado para exibir na visão geral comercial. */
+  @Get('dashboard/resumo-vendedor')
+  @Permissoes('vendas.criar')
+  getResumoVendedor(@Req() req: any) {
+    return this.service.getResumoVendedor(req?.user || {});
+  }
+
   /** Visão geral Produção – vendas em produção, finalizadas, plano de corte. */
   @Get('dashboard/resumo-producao')
   @Permissoes('posvenda.ver', 'plano_corte.ver')
@@ -37,9 +44,16 @@ export class AnalyticsController {
     return this.service.getResumoProducao();
   }
 
+  @Get('status-projetos')
+  @Permissoes('dashboard.visualizar')
+  getStatusProjetos() {
+    return this.service.getStatusProjetos();
+  }
+
+  // Compatibilidade temporária com rota antiga.
   @Get('status-obras')
   @Permissoes('dashboard.visualizar')
-  getStatusObras() {
+  getStatusObrasLegado() {
     return this.service.getStatusProjetos();
   }
 
@@ -91,7 +105,7 @@ export class AnalyticsController {
 
   /**
    * URL de gráfico (QuickChart) para relatórios, e-mail, PDF ou n8n.
-   * type: dre-despesas | horas-trabalhadas | status-obras
+   * type: dre-despesas | horas-trabalhadas | status-projetos
    * Para horas-trabalhadas use data_ini e data_fim (YYYY-MM-DD).
    * width/height opcionais (padrão 900x450).
    */
@@ -136,12 +150,12 @@ export class AnalyticsController {
       return { url };
     }
 
-    if (t === 'status-obras') {
+    if (t === 'status-projetos' || t === 'status-obras') {
       const data = await this.service.getStatusProjetos();
-      const url = this.quickchart.buildStatusObrasUrl(data, opts);
+      const url = this.quickchart.buildStatusProjetosUrl(data, opts);
       return { url };
     }
 
-    return { erro: 'type deve ser: dre-despesas | horas-trabalhadas | status-obras' };
+    return { erro: 'type deve ser: dre-despesas | horas-trabalhadas | status-projetos' };
   }
 }

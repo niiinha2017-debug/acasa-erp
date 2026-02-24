@@ -2,6 +2,7 @@ import {
   IsArray,
   IsBoolean,
   IsDateString,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
@@ -36,6 +37,16 @@ export class UpdateVendaDto {
   @IsOptional()
   @IsString()
   representante_venda_rg?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  representante_venda_usuario_id?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  representante_venda_funcionario_id?: number;
 
   @IsOptional()
   @Type(() => Number)

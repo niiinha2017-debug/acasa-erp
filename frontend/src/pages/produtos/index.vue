@@ -16,7 +16,7 @@
               <SearchInput
                 v-model="filtro"
                 mode="search"
-                placeholder="Buscar material, referência, marca ou fornecedor..."
+                placeholder="Buscar por nome, cor, medida ou marca..."
               />
             </div>
             <!-- Aviso informativo (altura fixa para alinhar com busca/select/botão) -->
@@ -82,10 +82,28 @@
                   {{ row.nome_produto || '-' }}
                 </span>
                 <span class="text-[10px] font-medium text-text-muted truncate">
-                  Ref {{ String(row.id || 0).padStart(4, '0') }} • {{ row.marca || 'Sem marca' }}
+                  Ref {{ String(row.id || 0).padStart(4, '0') }}
                 </span>
               </div>
             </div>
+          </template>
+
+          <template #cell-marca="{ row }">
+            <span class="text-sm text-text-main">
+              {{ row.marca || '-' }}
+            </span>
+          </template>
+
+          <template #cell-cor="{ row }">
+            <span class="text-sm text-text-main">
+              {{ row.cor || '-' }}
+            </span>
+          </template>
+
+          <template #cell-medida="{ row }">
+            <span class="text-sm text-text-main">
+              {{ row.medida || '-' }}
+            </span>
           </template>
 
           <template #cell-valor_unitario="{ row }">
@@ -136,7 +154,10 @@ const filtro = ref('')
 const fornecedores = ref([])
 const fornecedorSelecionado = ref(null)
 const fornecedorOptions = computed(() =>
-  (fornecedores.value || []).map((f) => ({ label: f.razao_social, value: f.id })),
+  (fornecedores.value || []).map((f) => ({
+    label: f?.label || f?.razao_social || f?.nome_fantasia || '-',
+    value: f?.value ?? f?.id,
+  })),
 )
 
 function abrirNovoProduto() {
@@ -145,31 +166,43 @@ function abrirNovoProduto() {
 }
 
 const columns = [
-  { key: 'nome_produto', label: 'PRODUTO / REF', width: '34%' },
-  { key: 'fornecedor_nome', label: 'FORNECEDOR', width: '24%' },
+  { key: 'nome_produto', label: 'NOME', width: '20%' },
+  { key: 'fornecedor_nome', label: 'FORNECEDOR', width: '18%' },
+  { key: 'marca', label: 'MARCA', width: '12%' },
+  { key: 'cor', label: 'COR', width: '10%' },
+  { key: 'medida', label: 'MEDIDA', width: '10%' },
   { key: 'unidade', label: 'UN', width: '8%', align: 'center' },
-  { key: 'valor_unitario', label: 'VLR UNIT', width: '14%', align: 'right' },
-  { key: 'status', label: 'STATUS', width: '10%', align: 'center' },
+  { key: 'valor_unitario', label: 'VLR UNIT', width: '10%', align: 'right' },
+  { key: 'status', label: 'STATUS', width: '8%', align: 'center' },
   { key: 'acoes', label: 'Ações', align: 'center', width: '220px' },
 ]
 
+function normalizarBusca(valor) {
+  return String(valor || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase()
+}
+
 const filtrados = computed(() => {
-  const f = String(filtro.value || '').trim().toUpperCase()
-  if (!f) return produtos.value || []
+  const busca = normalizarBusca(filtro.value)
+  if (!busca) return produtos.value || []
+
+  const termos = busca.split(' ').filter(Boolean)
   return (produtos.value || []).filter((p) => {
-    const alvo = [
+    const alvoNormalizado = normalizarBusca([
       p.nome_produto,
-      p.fornecedor?.razao_social,
-      p.fornecedor?.nome_fantasia,
       p.cor,
       p.medida,
       p.marca,
-      p.id,
     ]
       .filter(Boolean)
-      .join(' ')
-      .toUpperCase()
-    return alvo.includes(f)
+      .join(' '))
+
+    return termos.every((termo) => alvoNormalizado.includes(termo))
   })
 })
 
@@ -224,7 +257,7 @@ async function confirmarExcluirProduto(row) {
 
 async function carregarFornecedores() {
   try {
-    const res = await FornecedorService.listar()
+    const res = await FornecedorService.select()
     const data = res?.data ?? res
     fornecedores.value = Array.isArray(data) ? data : []
   } catch (err) {

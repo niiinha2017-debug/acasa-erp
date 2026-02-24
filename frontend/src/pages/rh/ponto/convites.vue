@@ -285,15 +285,19 @@ async function abrirWhats() {
 
   const msg =
 `Ola ${nome}!
-Segue seu acesso ao APP do Ponto:
+Segue seu acesso ao APP do Ponto.
 
-Baixar/instalar APK:
+1) INSTALACAO
+Baixe e instale o APK:
 ${convite.value.apkUrl}
 
-Link de ativacao:
+2) ATIVACAO
+Depois de instalar, abra o link para ativar:
 ${ativacaoUrl}
 
-Se expirar, me avise que eu gero outro.`
+Se o Android bloquear a instalacao, habilite "Permitir de fontes desconhecidas" para este app/navegador.
+
+Se o convite expirar, me avise que gero outro.`
 
   const url = `https://wa.me/?text=${encodeURIComponent(msg)}`
 

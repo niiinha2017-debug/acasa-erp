@@ -157,7 +157,7 @@
       @click.self="closeModal"
     >
       <div
-        class="bg-white rounded-xl shadow-lg w-full max-w-lg p-6 relative max-h-[85vh] overflow-y-auto"
+        class="bg-white rounded-2xl shadow-xl w-full max-w-[760px] p-5 md:p-6 relative max-h-[88vh] overflow-y-auto"
       >
         <button
           @click="closeModal"
@@ -166,97 +166,160 @@
         >
           <i class="pi pi-times"></i>
         </button>
-        <h2 class="text-lg font-black mb-1">Agendar tarefa</h2>
-        <p class="text-xs font-semibold text-slate-500 mb-4">
+        <h2 class="text-lg md:text-xl font-black mb-1">Agendar tarefa</h2>
+        <p class="text-xs font-semibold text-slate-500 mb-3">
           {{ selectedLabel }}
         </p>
 
-        <!-- Próxima etapa da venda (só ao criar; pré-preenche cliente + status) -->
-        <section v-if="!editingEvent && canVendas" class="mb-5 p-4 rounded-xl bg-indigo-50 border border-indigo-100 space-y-3">
+        <section class="mb-4 p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
+          <div class="text-[10px] font-black uppercase tracking-widest text-slate-500">
+            Fluxo da agenda
+          </div>
+
+          <template v-if="!editingEvent">
+            <div>
+              <div class="text-[10px] font-bold text-slate-600 mb-2">1. Setor</div>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  class="h-9 px-3 rounded-lg text-[10px] font-black uppercase border"
+                  :class="taskForm.setorDestino === 'LOJA' ? 'bg-blue-700 text-white border-blue-700' : 'bg-white text-slate-600 border-slate-200'"
+                  @click="selecionarSetor('LOJA')"
+                >
+                  Loja
+                </button>
+                <button
+                  type="button"
+                  class="h-9 px-3 rounded-lg text-[10px] font-black uppercase border"
+                  :class="taskForm.setorDestino === 'PRODUCAO' ? 'bg-blue-700 text-white border-blue-700' : 'bg-white text-slate-600 border-slate-200'"
+                  @click="selecionarSetor('PRODUCAO')"
+                >
+                  Producao
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <div class="text-[10px] font-bold text-slate-600 mb-2">2. Origem</div>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  v-for="origem in opcoesOrigemPorSetor"
+                  :key="origem.value"
+                  type="button"
+                  class="h-9 px-3 rounded-lg text-[10px] font-black uppercase border"
+                  :class="taskForm.origemFluxo === origem.value ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200'"
+                  @click="taskForm.origemFluxo = origem.value"
+                >
+                  {{ origem.label }}
+                </button>
+              </div>
+            </div>
+          </template>
+
+          <template v-else>
+            <div class="flex flex-wrap gap-2">
+              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-blue-100 text-blue-700">
+                Setor: {{ String(editingEvent?.setor_destino || 'LOJA').toUpperCase() }}
+              </span>
+              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-slate-200 text-slate-700">
+                Origem: {{ String(editingEvent?.origem_fluxo || 'TAREFA').toUpperCase() }}
+              </span>
+            </div>
+          </template>
+        </section>
+
+        <!-- Próxima etapa vira apenas status informativo -->
+        <section
+          v-if="!editingEvent && canVendas && ['LOJA_VENDA', 'POS_VENDA'].includes(taskForm.origemFluxo)"
+          class="mb-4 p-4 rounded-xl bg-indigo-50 border border-indigo-100 space-y-3"
+        >
           <div class="text-[10px] font-black uppercase tracking-widest text-indigo-600">
-            Próxima etapa da venda
+            Proxima etapa (status)
           </div>
           <p class="text-[10px] text-slate-600">
-            Selecione uma venda que está aguardando agendamento. O cliente e a etapa (medida fina, montagem, etc.) serão preenchidos e o status da venda será atualizado ao salvar.
+            A próxima etapa é um status do processo. Ela será aplicada ao salvar, conforme a origem e o tipo selecionado.
           </p>
-          <SearchInput
-            v-model="vendaSelecionadaId"
-            mode="select"
-            label=""
-            placeholder="Selecione a venda (ex.: medida fina, montagem)..."
-            :options="vendasAguardandoOptions"
-            @update:modelValue="onSelecionarVendaParaAgendamento"
-          />
-          <div v-if="vendaSelecionadaParaAgendamento" class="flex flex-wrap items-center gap-2 pt-2">
+          <div class="flex flex-wrap items-center gap-2 pt-1">
             <span
               class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase"
               :class="statusBadgeClassVenda"
             >
-              {{ statusLabelVenda }}
+              {{ statusPreviewLabel }}
             </span>
-            <span class="text-xs font-bold text-slate-700">
-              {{ clienteNomeVenda }}
-            </span>
-            <button
-              type="button"
-              class="text-slate-500 hover:text-rose-500 text-[10px] font-bold"
-              @click="limparVendaSelecionada"
-            >
-              Limpar
-            </button>
           </div>
         </section>
 
-        <div class="space-y-5">
-          <!-- 1. Tipo e período da tarefa -->
+        <div v-if="editingEvent || fluxoSelecionado" class="space-y-4">
+          <!-- 1. Cliente -->
+          <section>
+            <div class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">1. Cliente</div>
+            <div
+              v-if="isEventoVinculado && clienteNomeEventoAtual"
+              class="rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2"
+            >
+              <div class="text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-1">
+                Cliente vinculado ao evento
+              </div>
+              <div class="text-xs font-black text-slate-800">
+                {{ clienteNomeEventoAtual }}
+              </div>
+              <div class="text-[10px] font-semibold text-slate-500">
+                {{ origemEventoLabel }}
+              </div>
+            </div>
+            <SearchInput
+              v-else
+              v-model="taskForm.clienteId"
+              mode="select"
+              label=""
+              :placeholder="taskForm.origemFluxo === 'TAREFA' ? 'Cliente opcional para tarefa livre...' : 'Selecione o cliente...'"
+              :options="clientesOptions"
+            />
+            <div
+              v-if="!editingEvent && canVendas && ['LOJA_VENDA', 'POS_VENDA'].includes(taskForm.origemFluxo)"
+              class="mt-3"
+            >
+              <SearchInput
+                v-model="vendaSelecionadaId"
+                mode="select"
+                label="Venda vinculada"
+                placeholder="Selecione a venda..."
+                :options="vendasAguardandoOptions"
+                @update:modelValue="onSelecionarVendaParaAgendamento"
+              />
+              <p v-if="!temVendasAguardando" class="text-[10px] font-semibold text-slate-500 mt-1">
+                Nenhuma venda pendente de agendamento no momento.
+              </p>
+            </div>
+          </section>
+
+          <!-- 2. Tipo e período da tarefa -->
           <section class="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-3">
             <div class="text-[10px] font-black uppercase tracking-widest text-slate-500">
-              1. Tipo e período da tarefa
+              2. Tipo e período da tarefa
             </div>
             <div>
               <label class="block text-xs font-bold mb-1">Tipo</label>
-              <p v-if="!opcoesTipoAgendamento.unico && !vendaSelecionadaParaAgendamento" class="text-[10px] text-slate-500 mb-1">
-                Venda = pipeline do cliente. Plano de corte = produção para fornecedor.
+              <p class="text-[10px] text-slate-500 mb-1">
+                Pipeline do cliente e pipeline do plano de corte são separados.
               </p>
               <select
                 v-model="taskForm.categoria"
                 class="w-full h-10 bg-white border border-slate-200 rounded-xl px-3 text-xs font-bold text-slate-700"
-                :disabled="!!vendaSelecionadaParaAgendamento"
+                :disabled="editingEvent && String(editingEvent?.origem_fluxo || '').toUpperCase() === 'TAREFA'"
               >
-                <template v-if="opcoesTipoAgendamento.unico">
-                  <option
-                    v-for="opt in opcoesTipoAgendamento.opcoes"
-                    :key="opt.value"
-                    :value="opt.value"
-                  >
-                    {{ opt.label }}
-                  </option>
-                </template>
-                <template v-else>
-                  <optgroup label="Venda (cliente)">
-                    <option
-                      v-for="opt in opcoesTipoAgendamento.venda"
-                      :key="'v-' + opt.value"
-                      :value="opt.value"
-                    >
-                      {{ opt.label }}
-                    </option>
-                  </optgroup>
-                  <optgroup label="Plano de corte">
-                    <option
-                      v-for="opt in opcoesTipoAgendamento.planoCorte"
-                      :key="'p-' + opt.value"
-                      :value="opt.value"
-                    >
-                      {{ opt.label }}
-                    </option>
-                  </optgroup>
-                </template>
+                <option
+                  v-for="opt in opcoesTipoAgendamento"
+                  :key="opt.value"
+                  :value="opt.value"
+                >
+                  {{ opt.label }}
+                </option>
               </select>
             </div>
             <div>
-              <label class="block text-xs font-bold mb-1">Período da tarefa (quando acontece)</label>
-              <p class="text-[10px] text-slate-500 mb-2">Use como referência; abaixo você define o horário de cada pessoa.</p>
+              <label class="block text-xs font-bold mb-1">Prazo recorrente da tarefa</label>
+              <p class="text-[10px] text-slate-500 mb-2">Esse período é a referência recorrente; abaixo você define o horário de cada pessoa.</p>
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-[10px] font-bold mb-1">Início</label>
@@ -276,18 +339,6 @@
                 </div>
               </div>
             </div>
-          </section>
-
-          <!-- 2. Cliente (oculto quando veio de "Próxima etapa da venda") -->
-          <section v-if="!vendaSelecionadaParaAgendamento">
-            <div class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">2. Cliente</div>
-            <SearchInput
-              v-model="taskForm.clienteId"
-              mode="select"
-              label=""
-              placeholder="Selecione o cliente..."
-              :options="clientesOptions"
-            />
           </section>
 
           <!-- 3. Equipe e horário de cada um -->
@@ -312,7 +363,7 @@
                 </div>
                 <button
                   type="button"
-                  class="h-10 px-4 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase shrink-0"
+                  class="h-10 px-4 rounded-xl bg-slate-900 text-white text-xs font-black uppercase shrink-0"
                   @click="adicionarFuncionario"
                 >
                   Adicionar
@@ -402,32 +453,35 @@
             </div>
           </section>
         </div>
+        <div v-else class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-700">
+          Selecione Setor e Origem para liberar o formulario do agendamento.
+        </div>
 
-        <div class="mt-4 flex items-center gap-2">
+        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2">
           <button
             @click="saveTask"
-            class="flex-1 h-11 rounded-xl font-black text-[10px] uppercase bg-blue-700 text-white shadow"
+            class="flex-1 h-10 rounded-xl font-black text-xs uppercase bg-blue-700 text-white shadow"
           >
             {{ editingEvent ? 'Salvar edicao' : 'Salvar tarefa' }}
           </button>
           <button
             v-if="editingEvent"
             @click="clearEdit"
-            class="h-11 px-3 rounded-xl border border-slate-200 text-slate-500 text-[10px] font-black uppercase"
+            class="h-10 px-3 rounded-xl border border-slate-200 text-slate-500 text-xs font-black uppercase"
           >
             Cancelar
           </button>
         </div>
 
-        <div class="mt-5 border-t border-slate-100 pt-4">
+        <div v-if="!editingEvent" class="mt-4 border-t border-slate-100 pt-4">
           <div
             class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2"
           >
             Tarefas do dia
           </div>
-          <div v-if="selectedEvents.length" class="space-y-2">
+          <div v-if="selectedEventsParaLista.length" class="space-y-2 max-h-56 overflow-y-auto pr-1">
             <div
-              v-for="event in selectedEvents"
+              v-for="event in selectedEventsParaLista"
               :key="event.id"
               class="p-3 rounded-xl border border-slate-200"
             >
@@ -437,7 +491,14 @@
               <div class="text-[10px] font-semibold text-slate-500">
                 {{ timeLabel(event.inicio_em) }} - {{ timeLabel(event.fim_em) }}
               </div>
-              <div class="mt-2 flex items-center gap-2">
+              <div class="mt-2 flex flex-wrap items-center gap-2">
+                <button
+                  v-if="canVendas && String(event?.setor_destino || 'LOJA').toUpperCase() !== 'PRODUCAO'"
+                  @click="enviarParaProducao(event)"
+                  class="h-8 px-3 rounded-lg bg-indigo-50 text-indigo-700 text-[10px] font-black uppercase"
+                >
+                  Enviar producao
+                </button>
                 <button
                   @click="editTask(event)"
                   class="h-8 px-3 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-black uppercase"
@@ -453,9 +514,7 @@
               </div>
             </div>
           </div>
-          <div v-else class="text-[10px] font-bold text-slate-400">
-            Nenhuma tarefa neste dia.
-          </div>
+          <div v-else class="text-[10px] font-bold text-slate-400">Nenhuma tarefa neste dia.</div>
         </div>
       </div>
     </div>
@@ -495,19 +554,44 @@ const taskForm = reactive({
   vendaId: '',
   funcionarioIds: [],
   categoria: 'LIVRE',
+  setorDestino: '',
+  origemFluxo: '',
   apontamentos: [],
 })
+
+const ORIGENS_POR_SETOR = {
+  LOJA: [
+    { value: 'LOJA_VENDA', label: 'Venda loja' },
+    { value: 'POS_VENDA', label: 'Pos-venda' },
+    { value: 'TAREFA', label: 'Tarefa livre' },
+  ],
+  PRODUCAO: [
+    { value: 'PLANO_CORTE', label: 'Plano corte' },
+    { value: 'VENDA_PLANO_CORTE', label: 'Venda plano corte' },
+    { value: 'TAREFA', label: 'Tarefa livre' },
+  ],
+}
+
+const opcoesOrigemPorSetor = computed(() => {
+  const setor = String(taskForm.setorDestino || '').toUpperCase()
+  return ORIGENS_POR_SETOR[setor] || []
+})
+
+const fluxoSelecionado = computed(() => {
+  return Boolean(taskForm.setorDestino && taskForm.origemFluxo)
+})
+
+function selecionarSetor(setor) {
+  if (taskForm.setorDestino !== setor) {
+    taskForm.origemFluxo = ''
+    limparVendaSelecionada()
+  }
+  taskForm.setorDestino = setor
+}
 
 // Vendas aguardando agendamento (medida, medida fina, montagem) — para pré-preencher o modal
 const vendasAguardandoAgendamento = ref([])
 const vendaSelecionadaParaAgendamento = ref(null)
-
-const STATUS_PARA_CATEGORIA = {
-  CONTRATO_GERADO: 'MEDIDA_FINA',
-  AGENDAR_MEDIDA: 'MEDIDA',
-  AGENDAR_MEDIDA_FINA: 'MEDIDA_FINA',
-  AGENDAR_MONTAGEM: 'MONTAGEM',
-}
 
 const vendaSelecionadaId = ref('')
 
@@ -527,12 +611,54 @@ const vendasAguardandoOptions = computed(() => {
     }
   })
 })
+const temVendasAguardando = computed(() => vendasAguardandoOptions.value.length > 0)
+
+const CATEGORIA_TO_STATUS_CLIENTE = {
+  MEDIDA: 'MEDIDA_AGENDADA',
+  MEDIDA_FINA: 'MEDIDA_FINA_AGENDADA',
+  MONTAGEM: 'MONTAGEM_AGENDADA',
+  PRODUCAO: 'PRODUCAO_AGENDADA',
+}
+
+const STATUS_POS_VENDA = (PIPELINE_CLIENTE || [])
+  .filter((p) => String(p?.fase || '').toUpperCase() === 'POS_VENDA')
+  .map((p) => String(p?.key || '').toUpperCase())
+  .filter(Boolean)
+
+function labelPipelineCliente(key) {
+  const item = (PIPELINE_CLIENTE || []).find((p) => String(p?.key || '').toUpperCase() === String(key || '').toUpperCase())
+  return item?.label || String(key || '')
+}
+
+function labelPipelinePlanoCorte(key) {
+  const item = (PIPELINE_PLANO_CORTE || []).find((p) => String(p?.key || '').toUpperCase() === String(key || '').toUpperCase())
+  return item?.label || String(key || '')
+}
 
 const statusLabelVenda = computed(() => {
   const v = vendaSelecionadaParaAgendamento.value
   if (!v?.status) return ''
   const item = PIPELINE_CLIENTE.find((p) => p.key === v.status)
   return item ? `Aguardando agendamento: ${item.label}` : v.status
+})
+
+const statusPreviewLabel = computed(() => {
+  const origem = String(taskForm.origemFluxo || '').toUpperCase()
+  if (origem === 'PLANO_CORTE' || origem === 'VENDA_PLANO_CORTE') {
+    return `Pipeline plano de corte: ${labelPipelinePlanoCorte('EM_PRODUCAO')}`
+  }
+  if (origem === 'POS_VENDA') {
+    const statusKey = taskForm.categoria ? String(taskForm.categoria).toUpperCase() : 'GARANTIA'
+    return `Pipeline cliente (pos-venda): ${labelPipelineCliente(statusKey)}`
+  }
+  if (origem === 'LOJA_VENDA') {
+    if (vendaSelecionadaParaAgendamento.value) return statusLabelVenda.value || 'Pipeline cliente'
+    const statusKey = CATEGORIA_TO_STATUS_CLIENTE[String(taskForm.categoria || '').toUpperCase()]
+    return statusKey
+      ? `Pipeline cliente: ${labelPipelineCliente(statusKey)}`
+      : 'Pipeline cliente'
+  }
+  return 'Tarefa livre sem pipeline'
 })
 
 const statusBadgeClassVenda = computed(() => {
@@ -558,21 +684,49 @@ function onSelecionarVendaParaAgendamento(value) {
   vendaSelecionadaParaAgendamento.value = v
   taskForm.vendaId = String(v.id)
   taskForm.clienteId = String(v.cliente_id)
-  taskForm.categoria = STATUS_PARA_CATEGORIA[v.status] || 'LIVRE'
+  if (!taskForm.setorDestino) taskForm.setorDestino = 'LOJA'
+  taskForm.origemFluxo = isStatusPosVenda(v?.status) ? 'POS_VENDA' : 'LOJA_VENDA'
+  if (taskForm.origemFluxo === 'POS_VENDA') {
+    const statusVenda = String(v?.status || '').toUpperCase()
+    taskForm.categoria = STATUS_POS_VENDA.includes(statusVenda)
+      ? statusVenda
+      : (STATUS_POS_VENDA[0] || 'GARANTIA')
+  } else {
+    taskForm.categoria = 'MEDIDA_FINA'
+  }
   const clienteNome = v?.cliente?.nome_completo || v?.cliente?.razao_social || 'Cliente'
   const pipelineItem = PIPELINE_CLIENTE.find((p) => p.key === (v?.status || ''))
   const etapaLabel = pipelineItem?.label || v?.status || 'Etapa'
   taskForm.titulo = `${etapaLabel} – ${clienteNome}`
 }
 
+function isStatusPosVenda(status) {
+  const key = String(status || '').toUpperCase()
+  return STATUS_POS_VENDA.includes(key)
+}
+
 function limparVendaSelecionada() {
   vendaSelecionadaId.value = ''
   vendaSelecionadaParaAgendamento.value = null
   taskForm.vendaId = ''
-  taskForm.clienteId = ''
+  if (taskForm.origemFluxo !== 'TAREFA') taskForm.clienteId = ''
   taskForm.categoria = 'LIVRE'
   taskForm.titulo = ''
 }
+
+watch(
+  () => taskForm.origemFluxo,
+  (origem) => {
+    const key = String(origem || '').toUpperCase()
+    if (!['LOJA_VENDA', 'POS_VENDA'].includes(key)) {
+      limparVendaSelecionada()
+    }
+    if (key === 'LOJA_VENDA') taskForm.categoria = 'MEDIDA_FINA'
+    else if (key === 'POS_VENDA') taskForm.categoria = STATUS_POS_VENDA[0] || 'GARANTIA'
+    else if (key === 'PLANO_CORTE' || key === 'VENDA_PLANO_CORTE') taskForm.categoria = 'PRODUCAO'
+    else taskForm.categoria = 'LIVRE'
+  },
+)
 
 const weekDays = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB']
 
@@ -585,32 +739,65 @@ const isEventoPlanoCorte = computed(() => !!editingEvent.value?.plano_corte_id)
 const isEventoVenda = computed(
   () => !!editingEvent.value?.venda_id || !!editingEvent.value?.orcamento_id
 )
+const isEventoVinculado = computed(() => {
+  const ev = editingEvent.value
+  if (!ev) return false
+  if (ev?.venda_id || ev?.orcamento_id || ev?.plano_corte_id || ev?.projeto_id) return true
+  const origem = String(ev?.origem_fluxo || '').toUpperCase()
+  return !!origem && origem !== 'TAREFA'
+})
 
-// Opções de tipo conforme o pipeline: venda/cliente vs plano de corte
-const TIPOS_VENDA = [
-  { value: 'LIVRE', label: 'Tarefa livre' },
-  { value: 'MEDIDA', label: 'Medida' },
-  { value: 'MEDIDA_FINA', label: 'Medida fina' },
-  { value: 'PRODUCAO', label: 'Produção' },
-  { value: 'MONTAGEM', label: 'Montagem' },
+const clienteNomeEventoAtual = computed(() => {
+  const ev = editingEvent.value
+  if (!ev) return ''
+  if (ev?.cliente?.nome_completo || ev?.cliente?.razao_social) {
+    return ev?.cliente?.nome_completo || ev?.cliente?.razao_social || ''
+  }
+  const clienteId = String(taskForm.clienteId || '')
+  if (!clienteId) return ''
+  const opt = clientesOptions.value.find((c) => String(c.value) === clienteId)
+  return opt?.label || ''
+})
+
+const origemEventoLabel = computed(() => {
+  const origem = String(editingEvent.value?.origem_fluxo || '').toUpperCase()
+  const map = {
+    PLANO_CORTE: 'Origem: plano de corte',
+    VENDA_PLANO_CORTE: 'Origem: venda do plano de corte',
+    LOJA_VENDA: 'Origem: cliente venda da loja',
+    POS_VENDA: 'Origem: cliente pós-venda',
+    TAREFA: 'Origem: tarefa livre',
+  }
+  return map[origem] || 'Origem: agenda'
+})
+
+// Opções por origem (fonte da verdade: pipelines compartilhados)
+const TIPOS_LOJA_VENDA = [
+  { value: 'MEDIDA', label: labelPipelineCliente('MEDIDA_AGENDADA') },
+  { value: 'MEDIDA_FINA', label: labelPipelineCliente('MEDIDA_FINA_AGENDADA') },
+  { value: 'MONTAGEM', label: labelPipelineCliente('MONTAGEM_AGENDADA') },
+  { value: 'PRODUCAO', label: labelPipelineCliente('PRODUCAO_AGENDADA') },
 ]
-const TIPOS_PLANO_CORTE = [
-  { value: 'LIVRE', label: 'Tarefa livre' },
-  { value: 'PRODUCAO', label: 'Produção (plano de corte)' },
-]
+const TIPOS_POS_VENDA = STATUS_POS_VENDA.map((key) => ({
+  value: key,
+  label: labelPipelineCliente(key),
+}))
+const TIPOS_PLANO_CORTE = [{ value: 'PRODUCAO', label: labelPipelinePlanoCorte('EM_PRODUCAO') }]
+const TIPOS_TAREFA = [{ value: 'LIVRE', label: 'Tarefa livre' }]
 
 const opcoesTipoAgendamento = computed(() => {
-  if (isEventoPlanoCorte.value) {
-    return { unico: true, opcoes: TIPOS_PLANO_CORTE }
+  if (editingEvent.value) {
+    const origemEvento = String(editingEvent.value?.origem_fluxo || '').toUpperCase()
+    if (origemEvento === 'LOJA_VENDA') return TIPOS_LOJA_VENDA
+    if (origemEvento === 'POS_VENDA') return TIPOS_POS_VENDA
+    if (origemEvento === 'PLANO_CORTE' || origemEvento === 'VENDA_PLANO_CORTE') return TIPOS_PLANO_CORTE
+    return TIPOS_TAREFA
   }
-  if (isEventoVenda.value) {
-    return { unico: true, opcoes: TIPOS_VENDA }
-  }
-  return {
-    unico: false,
-    venda: TIPOS_VENDA,
-    planoCorte: TIPOS_PLANO_CORTE,
-  }
+  const origem = String(taskForm.origemFluxo || '').toUpperCase()
+  if (origem === 'LOJA_VENDA') return TIPOS_LOJA_VENDA
+  if (origem === 'POS_VENDA') return TIPOS_POS_VENDA
+  if (origem === 'PLANO_CORTE' || origem === 'VENDA_PLANO_CORTE') return TIPOS_PLANO_CORTE
+  return TIPOS_TAREFA
 })
 
 function dateKey(date) {
@@ -658,6 +845,12 @@ const eventsByDay = computed(() => {
 })
 
 const selectedEvents = computed(() => eventsByDay.value[dateKey(selectedDay.value)] || [])
+const selectedEventsParaLista = computed(() =>
+  selectedEvents.value.filter((ev) => {
+    if (!editingEvent.value) return true
+    return String(ev.id) !== String(editingEvent.value.id)
+  }),
+)
 
 const selectedLabel = computed(() =>
   selectedDay.value.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })
@@ -665,6 +858,11 @@ const selectedLabel = computed(() =>
 
 const canVendas = computed(() => can('agendamentos.vendas'))
 const canProducao = computed(() => can('agendamentos.producao'))
+const visaoAgenda = computed(() => {
+  if (canVendas.value && !canProducao.value) return 'loja'
+  if (canProducao.value && !canVendas.value) return 'producao'
+  return 'geral'
+})
 
 function isSameDay(a, b) {
   return dateKey(a) === dateKey(b)
@@ -756,6 +954,8 @@ function openModal() {
   taskForm.vendaId = ''
   taskForm.funcionarioIds = []
   taskForm.categoria = 'LIVRE'
+  taskForm.setorDestino = ''
+  taskForm.origemFluxo = ''
   taskForm.apontamentos = []
   vendaSelecionadaId.value = ''
   vendaSelecionadaParaAgendamento.value = null
@@ -763,6 +963,11 @@ function openModal() {
   const inicio = toDateTimeLocal(selectedDay.value)
   taskForm.inicio = inicio
   taskForm.fim = toDateTimeLocal(addHours(selectedDay.value, 1))
+
+  // Garante listas atualizadas ao abrir modal de criação
+  loadClientes()
+  loadVendasAguardandoAgendamento()
+  loadFuncionarios()
 }
 
 function closeModal() {
@@ -776,6 +981,8 @@ function clearEdit() {
   const inicio = toDateTimeLocal(selectedDay.value)
   taskForm.inicio = inicio
   taskForm.fim = toDateTimeLocal(addHours(selectedDay.value, 1))
+  taskForm.setorDestino = ''
+  taskForm.origemFluxo = ''
   taskForm.apontamentos = []
 }
 
@@ -798,18 +1005,35 @@ function editTask(event) {
   taskForm.titulo = event.titulo || ''
   taskForm.inicio = toDateTimeLocal(event.inicio_em)
   taskForm.fim = toDateTimeLocal(event.fim_em || event.inicio_em)
-  taskForm.clienteId = event?.cliente_id || event?.cliente?.id || ''
-  taskForm.funcionarioIds = (event?.equipe || []).map((e) => e.funcionario_id).filter(Boolean)
+  taskForm.vendaId = event?.venda_id ? String(event.venda_id) : ''
+  taskForm.clienteId = event?.cliente_id
+    ? String(event.cliente_id)
+    : event?.cliente?.id
+      ? String(event.cliente.id)
+      : event?.venda?.cliente_id
+        ? String(event.venda.cliente_id)
+      : ''
+  const equipeDoEvento = (event?.equipe || []).map((e) => String(e.funcionario_id)).filter(Boolean)
+  const equipeApontada = (event?.apontamentos || [])
+    .map((a) => String(a.funcionario_id))
+    .filter(Boolean)
+  taskForm.funcionarioIds = Array.from(new Set([...equipeDoEvento, ...equipeApontada]))
   const cat = event?.categoria || 'LIVRE'
   // Garante categoria válida para o pipeline do evento (venda vs plano de corte)
-  if (event?.plano_corte_id) {
-    taskForm.categoria = ['LIVRE', 'PRODUCAO'].includes(cat) ? cat : 'PRODUCAO'
-  } else if (event?.venda_id || event?.orcamento_id) {
-    const vendaKeys = TIPOS_VENDA.map((o) => o.value)
-    taskForm.categoria = vendaKeys.includes(cat) ? cat : 'LIVRE'
+  const origemEvento = String(event?.origem_fluxo || '').toUpperCase()
+  if (origemEvento === 'PLANO_CORTE' || origemEvento === 'VENDA_PLANO_CORTE') {
+    taskForm.categoria = ['PRODUCAO'].includes(cat) ? cat : 'PRODUCAO'
+  } else if (origemEvento === 'LOJA_VENDA') {
+    const vendaKeys = TIPOS_LOJA_VENDA.map((o) => o.value)
+    taskForm.categoria = vendaKeys.includes(cat) ? cat : 'MEDIDA_FINA'
+  } else if (origemEvento === 'POS_VENDA') {
+    const posKeys = TIPOS_POS_VENDA.map((o) => o.value)
+    taskForm.categoria = posKeys.includes(cat) ? cat : (posKeys[0] || 'GARANTIA')
   } else {
-    taskForm.categoria = cat
+    taskForm.categoria = 'LIVRE'
   }
+  taskForm.setorDestino = String(event?.setor_destino || '').toUpperCase() || 'LOJA'
+  taskForm.origemFluxo = String(event?.origem_fluxo || '').toUpperCase() || 'TAREFA'
   // Monta apontamentos existentes ou padrão baseado no próprio evento
   if (Array.isArray(event.apontamentos) && event.apontamentos.length) {
     const map = {}
@@ -916,10 +1140,33 @@ async function removeTask(event) {
   }
 }
 
+async function enviarParaProducao(event) {
+  try {
+    await AgendaService.enviarParaProducao(event.id)
+    notify.success('Agendamento enviado para producao.')
+    await loadAgenda()
+  } catch (e) {
+    notify.error('Nao foi possivel enviar para producao.')
+  }
+}
+
 async function saveTask() {
+  if (!editingEvent.value) {
+    if (!taskForm.setorDestino) return notify.error('Selecione o setor.')
+    if (!taskForm.origemFluxo) return notify.error('Selecione a origem.')
+  }
   if (!taskForm.inicio) return notify.error('Informe a data de inicio.')
   if (!taskForm.fim) return notify.error('Informe a data de termino.')
-  if (!taskForm.clienteId) return notify.error('Selecione o cliente.')
+  const origemSelecionada = editingEvent.value
+    ? String(editingEvent.value?.origem_fluxo || '').toUpperCase()
+    : String(taskForm.origemFluxo || '').toUpperCase()
+  const clienteObrigatorio = origemSelecionada !== 'TAREFA'
+  if (clienteObrigatorio && !taskForm.clienteId) {
+    return notify.error('Selecione o cliente.')
+  }
+  if (origemSelecionada === 'LOJA_VENDA' && !taskForm.vendaId) {
+    return notify.error('Selecione a venda vinculada.')
+  }
 
   const equipeIds = isAdmin.value
     ? taskForm.funcionarioIds.map((id) => Number(id)).filter(Boolean)
@@ -981,18 +1228,29 @@ async function saveTask() {
           venda_id: editingEvent.value?.venda_id || undefined,
           projeto_id: editingEvent.value?.projeto_id || undefined,
           plano_corte_id: editingEvent.value?.plano_corte_id || undefined,
+          origem_fluxo: editingEvent.value?.origem_fluxo || undefined,
+          setor_destino: editingEvent.value?.setor_destino || undefined,
         }
       : taskForm.vendaId
         ? { venda_id: Number(taskForm.vendaId) }
         : {}
 
+    const origemFluxo = editingEvent.value
+      ? editingEvent.value?.origem_fluxo || undefined
+      : taskForm.origemFluxo || undefined
+    const setorDestino = editingEvent.value
+      ? editingEvent.value?.setor_destino || undefined
+      : taskForm.setorDestino || undefined
+
     const payload = {
       titulo,
       inicio_em: inicio.toISOString(),
       fim_em: fim.toISOString(),
-      cliente_id: Number(taskForm.clienteId),
+      cliente_id: taskForm.clienteId ? Number(taskForm.clienteId) : undefined,
       equipe_ids: equipeIds,
       categoria: taskForm.categoria || 'LIVRE',
+      origem_fluxo: origemFluxo,
+      setor_destino: setorDestino,
       apontamentos: apontamentosPayload,
       ...origemPayload,
     }
@@ -1018,12 +1276,9 @@ async function loadAgenda() {
     const fim = dateKey(endOfMonth(currentMonth.value))
     const res = await AgendaService.listarTodos(inicio, fim, {
       incluir_cancelados: false,
+      visao: visaoAgenda.value === 'geral' ? undefined : visaoAgenda.value,
     })
     let data = Array.isArray(res?.data) ? res.data : []
-    // Vendedores (só agendamentos.vendas) veem apenas eventos de venda/cliente; produção vê tudo
-    if (canVendas.value && !canProducao.value) {
-      data = data.filter((ev) => !ev?.plano_corte_id)
-    }
     events.value = data
   } catch (e) {
     notify.error('Falha ao carregar agenda.')
@@ -1045,8 +1300,14 @@ async function loadPlanosProducao() {
 
 async function loadClientes() {
   try {
-    const res = await ClienteService.select()
-    const lista = Array.isArray(res?.data) ? res.data : []
+    let lista = []
+    try {
+      const res = await ClienteService.select()
+      lista = Array.isArray(res?.data) ? res.data : []
+    } catch {
+      const resLista = await ClienteService.listar()
+      lista = Array.isArray(resLista?.data) ? resLista.data : []
+    }
     clientesOptions.value = lista
       .map((item) => ({
         label: item?.label || item?.nome_completo || item?.razao_social || item?.nome || '',

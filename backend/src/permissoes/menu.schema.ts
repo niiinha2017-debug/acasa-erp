@@ -20,7 +20,7 @@ export const MENU_SECTIONS: MenuSection[] = [
       { label: 'Orçamento', to: '/orcamentos', icon: 'pi-file-edit', perm: 'orcamentos.ver' },
       { label: 'Fechamento de venda', to: '/vendas/fechamento', icon: 'pi-shopping-cart', perm: 'vendas.criar' },
       { label: 'Contrato', to: '/contratos', icon: 'pi-file', perm: 'contratos.ver' },
-      { label: 'Cláusulas (Orç./Contrato)', to: '/contratos/clausulas', icon: 'pi-file-edit', perm: 'orcamentos.editar' },
+      { label: 'Cláusulas (Orç./Contrato)', to: '/contratos/clausulas', icon: 'pi-file-edit', perm: 'contratos.clausulas.editar' },
     ],
   },
   {

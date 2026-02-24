@@ -7,8 +7,10 @@ import {
   IsArray,
   ValidateIf,
   ValidateNested,
+  IsIn,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { ORIGENS_FLUXO, SETORES_DESTINO } from '../agenda-rules';
 
 export class FuncionarioApontamentoDto {
   @IsInt()
@@ -33,7 +35,12 @@ export class CreateAgendaDto {
   fim_em: Date;
 
   /** Cliente (obrigatório para venda/orçamento/projeto; opcional para plano de corte) */
-  @ValidateIf((o) => !o.plano_corte_id)
+  @ValidateIf((o) => {
+    const origem = String(o.origem_fluxo || '').toUpperCase();
+    const isTarefaExplicita = origem === 'TAREFA';
+    const isTarefaInferidaSemVinculo = !origem && !o.plano_corte_id && !o.venda_id;
+    return !o.plano_corte_id && !isTarefaExplicita && !isTarefaInferidaSemVinculo;
+  })
   @IsInt()
   @IsNotEmpty({ message: 'Cliente ou Plano de Corte é obrigatório' })
   cliente_id?: number;
@@ -70,6 +77,16 @@ export class CreateAgendaDto {
   @IsOptional()
   @IsString()
   categoria?: string; // Agora não barra mais o 400 se não for enviado
+
+  @IsOptional()
+  @IsString()
+  @IsIn(ORIGENS_FLUXO, { message: 'origem_fluxo inválida' })
+  origem_fluxo?: string; // PLANO_CORTE | VENDA_PLANO_CORTE | LOJA_VENDA | POS_VENDA | TAREFA
+
+  @IsOptional()
+  @IsString()
+  @IsIn(SETORES_DESTINO, { message: 'setor_destino inválido' })
+  setor_destino?: string; // LOJA | PRODUCAO
 
   @IsOptional()
   @IsString()

@@ -155,6 +155,7 @@ export class AuthService {
         email: registro.email,
         status: registro.status,
         is_admin: registro.is_admin,
+        funcionario_id: registro.funcionario_id,
         permissoes,
       },
     };
@@ -168,8 +169,10 @@ export class AuthService {
     const usuarioLimpo = String(dto.usuario || '')
       .trim()
       .toLowerCase();
-    const senhaProvisoria = this.gerarSenhaProvisoria();
-    const senhaHash = await bcrypt.hash(senhaProvisoria, 10);
+    const senhaManual = String(dto.senha || '').trim();
+    const usarSenhaManual = senhaManual.length > 0;
+    const senhaFinal = usarSenhaManual ? senhaManual : this.gerarSenhaProvisoria();
+    const senhaHash = await bcrypt.hash(senhaFinal, 10);
 
     try {
       const criado = await this.prisma.usuarios.create({
@@ -182,15 +185,14 @@ export class AuthService {
         },
       });
 
-      // 🔐 Atribuir permissões padrão: INDEX e DASHBOARD
-      // Estas são as telas que o novo usuário terá acesso ANTES de receber outras permissões
+      // 🔐 Atribuir permissões padrão mínimas do novo usuário
+      // Mantém apenas Agenda (tela inicial) e tela de Pendente.
       try {
         const permissoesDefault = await this.prisma.permissoes.findMany({
           where: {
             chave: {
               in: [
-                'index.visualizar',
-                'dashboard.visualizar',
+                'agendamentos.ver',
                 'pendente.visualizar',
               ],
             },
@@ -211,23 +213,25 @@ export class AuthService {
         );
       }
 
-      await this.prisma.recuperacao_senha.create({
-        data: {
-          usuario_id: criado.id,
-          email: emailLimpo,
-          senha_antiga: senhaHash,
-          senha_nova: senhaHash,
-          utilizado: false,
-        },
-      });
+      if (!usarSenhaManual) {
+        await this.prisma.recuperacao_senha.create({
+          data: {
+            usuario_id: criado.id,
+            email: emailLimpo,
+            senha_antiga: senhaHash,
+            senha_nova: senhaHash,
+            utilizado: false,
+          },
+        });
 
-      await this.mailService.enviarSenhaProvisoria(
-        emailLimpo,
-        senhaProvisoria,
-        criado.nome,
-      );
+        await this.mailService.enviarSenhaProvisoria(
+          emailLimpo,
+          senhaFinal,
+          criado.nome,
+        );
+      }
 
-      return { ...criado, email_enviado: true };
+      return { ...criado, email_enviado: !usarSenhaManual };
     } catch (e: any) {
       if (e?.code === 'P2002') {
         throw new BadRequestException(`Já existe um cadastro com este dado.`);

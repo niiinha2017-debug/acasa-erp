@@ -679,7 +679,7 @@ const comissoes = ref([
 const columnsPagamentos = [
   { key: 'forma', label: 'Forma', width: '220px' },
   { key: 'parcelas', label: 'Parcelas', width: '100px', align: 'right' },
-  { key: 'data_recebimento', label: 'Data(s) / Valor(es)', width: '260px' },
+  { key: 'data_recebimento', label: 'Data prevista / valor', width: '260px' },
   { key: 'acoes', label: '', width: '100px', align: 'right' },
 ]
 
@@ -1042,10 +1042,14 @@ async function carregarVenda() {
             forma_pagamento_chave: p.forma_pagamento_chave || '',
             valor: Number(p.valor || 0),
             parcelas: 1,
-            data_recebimento: p.data_recebimento ? String(p.data_recebimento).slice(0, 10) : '',
+            data_recebimento: p.data_prevista_recebimento
+              ? String(p.data_prevista_recebimento).slice(0, 10)
+              : (p.data_recebimento ? String(p.data_recebimento).slice(0, 10) : ''),
             datas_parcelas: [
               {
-                data: p.data_recebimento ? String(p.data_recebimento).slice(0, 10) : '',
+                data: p.data_prevista_recebimento
+                  ? String(p.data_prevista_recebimento).slice(0, 10)
+                  : (p.data_recebimento ? String(p.data_recebimento).slice(0, 10) : ''),
                 valor: Number(p.valor || 0),
               },
             ],
@@ -1238,14 +1242,15 @@ async function criarOuAtualizarVenda() {
               list.push({
                 forma_pagamento_chave: forma,
                 valor: valorEstaParcela,
-                data_recebimento: `${y}-${m}-${day}`,
+                data_prevista_recebimento: `${y}-${m}-${day}`,
+                data_recebimento: null,
               })
             }
             continue
           }
         }
 
-        // Cartão de crédito sem data preenchida: gera N parcelas pelo valor total e data da venda (evita cair no fallback PIX)
+        // Cartão de crédito sem data preenchida: gera N parcelas pelo valor total e data da venda.
         if (formaUpper === 'CREDITO' && nParcelas >= 1 && valorVendaNum > 0) {
           const valorParcela = Math.round((valorVendaNum / nParcelas) * 100) / 100
           let dataBase = (dataVendaStr && parseDataLocal(dataVendaStr)) || new Date(dataVendaStr || undefined)
@@ -1261,7 +1266,8 @@ async function criarOuAtualizarVenda() {
             list.push({
               forma_pagamento_chave: forma,
               valor: valorEstaParcela,
-              data_recebimento: `${y}-${m}-${day}`,
+              data_prevista_recebimento: `${y}-${m}-${day}`,
+              data_recebimento: null,
             })
           }
           continue
@@ -1273,22 +1279,24 @@ async function criarOuAtualizarVenda() {
             list.push({
               forma_pagamento_chave: forma,
               valor: Number(parc?.valor || 0),
-              data_recebimento: parc?.data || null,
+              data_prevista_recebimento: parc?.data || null,
+              data_recebimento: null,
             })
           }
         } else {
           list.push({
             forma_pagamento_chave: forma,
             valor: Number(p.valor || 0),
-            data_recebimento: p.data_recebimento || null,
+            data_prevista_recebimento: p.data_recebimento || null,
+            data_recebimento: null,
           })
         }
       }
       const soma = list.reduce((acc, x) => acc + Number(x.valor || 0), 0)
       const valorVenda = Number(valorFinal.value || 0)
-      // Se nenhum pagamento preenchido ou soma não bate com valor da venda, usa um único pagamento PIX com o total
+      // Não força PIX automático: exige correção explícita do rateio no formulário.
       if (list.length === 0 || Math.abs(soma - valorVenda) > 0.01) {
-        return [{ forma_pagamento_chave: 'PIX', valor: valorVenda }]
+        throw new Error(`A soma dos pagamentos (${soma.toFixed(2)}) precisa bater com o valor da venda (${valorVenda.toFixed(2)}).`)
       }
       return list
     })()

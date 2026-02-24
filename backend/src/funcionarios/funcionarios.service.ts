@@ -259,7 +259,12 @@ export class FuncionariosService {
     for (const campo of camposEmpresa) {
       if (Object.prototype.hasOwnProperty.call(dto, campo)) {
         const v = dto[campo];
-        data[campo] = v === '' || v === undefined || v === null ? null : String(v).trim() || null;
+        const valor =
+          v && typeof v === 'object' ? (v.value ?? v.label ?? '') : v;
+        data[campo] =
+          valor === '' || valor === undefined || valor === null
+            ? null
+            : String(valor).trim() || null;
       }
     }
 

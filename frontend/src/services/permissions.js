@@ -20,7 +20,7 @@ export function can(permission) {
   // ✅ ADMIN geral via permissão (painel)
   if (permissions.includes('ADMIN')) return true
 
-  // (opcional) manter a exceção da Ana.P enquanto você quiser
+  // Exceção operacional: usuária principal com acesso total
   if (user.usuario === 'Ana.P') return true
 
   return permissions.includes(permission)

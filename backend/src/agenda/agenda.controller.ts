@@ -18,6 +18,7 @@ import { UpdateAgendaDto } from './dto/update-agenda.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
+import { normalizarOrigemFluxo, normalizarSetorDestino } from './agenda-rules';
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('agenda')
@@ -41,6 +42,9 @@ export class AgendaController {
     @Query('status') status?: string,
     @Query('funcionario_id') funcionarioId?: string,
     @Query('incluir_cancelados') incluirCancelados?: string,
+    @Query('visao') visao?: string,
+    @Query('setor_destino') setorDestinoQuery?: string,
+    @Query('origem_fluxo') origemFluxoQuery?: string,
     @Req() req?: any,
   ) {
     const perms: string[] = Array.isArray(req?.user?.permissoes)
@@ -53,10 +57,27 @@ export class AgendaController {
       throw new ForbiddenException('Sem permissão para acessar a agenda.');
     }
 
+    let setorDestino: 'LOJA' | 'PRODUCAO' | undefined;
+    const setorNormalizado = normalizarSetorDestino(setorDestinoQuery);
+    const visaoNorm = String(visao || '').toLowerCase();
+    if (setorNormalizado) {
+      setorDestino = setorNormalizado;
+    } else if (visaoNorm === 'loja') {
+      setorDestino = 'LOJA';
+    } else if (visaoNorm === 'producao') {
+      setorDestino = 'PRODUCAO';
+    } else if (canVendas && !canProducao) {
+      setorDestino = 'LOJA';
+    } else if (canProducao && !canVendas) {
+      setorDestino = 'PRODUCAO';
+    }
+
     return this.agendaService.findAll(inicio, fim, {
       includePlanoCorte: canProducao,
       status,
       funcionarioId: funcionarioId ? Number(funcionarioId) : undefined,
+      setorDestino,
+      origemFluxo: normalizarOrigemFluxo(origemFluxoQuery) || undefined,
       incluirCancelados:
         String(incluirCancelados || '').toLowerCase() === 'true' ||
         incluirCancelados === '1',
@@ -82,6 +103,13 @@ export class AgendaController {
   @Permissoes('agendamentos.editar')
   async update(@Param('id') id: string, @Body() updateAgendaDto: UpdateAgendaDto) {
     return this.agendaService.update(+id, updateAgendaDto);
+  }
+
+  // 4.2 Enviar agendamento da loja para produção
+  @Patch(':id/enviar-producao')
+  @Permissoes('agendamentos.editar')
+  async enviarParaProducao(@Param('id') id: string) {
+    return this.agendaService.enviarParaProducao(+id);
   }
 
   // 5. Deletar agendamento

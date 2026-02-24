@@ -344,7 +344,7 @@ import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
 import { maskCEP, maskCPF, maskTelefone, maskReais, maskHora } from '@/utils/masks'
 import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
-import { buscarCep, calcularCustoHora } from '@/utils/utils'
+import { buscarCep, calcularCustoHora, derivarCargaDosHorarios } from '@/utils/utils'
 import { can } from '@/services/permissions'
 import { closeTabAndGo } from '@/utils/tabs'
 import { FUNCIONARIOS_LOCAL_SETOR_CARGO } from '@/constantes/funcionarios'
@@ -498,6 +498,17 @@ const normalizeString = (value) => {
   return trimmed ? trimmed : undefined
 }
 
+const normalizeSelectString = (value) => {
+  if (value === null || value === undefined) return undefined
+
+  if (typeof value === 'object') {
+    const raw = value.value ?? value.label ?? ''
+    return normalizeString(raw)
+  }
+
+  return normalizeString(value)
+}
+
 const normalizeNumber = (value) => {
   if (value === null || value === undefined || value === '') return undefined
   const parsed = Number(String(value).replace(',', '.'))
@@ -576,6 +587,30 @@ watch(() => form.value.setor, () => {
 })
 
 watch(
+  () => [
+    form.value.horario_entrada_1,
+    form.value.horario_saida_1,
+    form.value.horario_entrada_2,
+    form.value.horario_saida_2,
+    form.value.horario_sabado_entrada_1,
+    form.value.horario_sabado_saida_1,
+  ],
+  () => {
+    if (isHydrating.value) return
+
+    const derivado = derivarCargaDosHorarios(form.value)
+    if (!derivado.cargaSegSex && !derivado.cargaSabado && !derivado.cargaSemana) {
+      form.value.carga_horaria_dia = ''
+      form.value.carga_horaria_semana = ''
+      return
+    }
+
+    form.value.carga_horaria_dia = derivado.cargaSegSex.toFixed(2)
+    form.value.carga_horaria_semana = derivado.cargaSemana.toFixed(2)
+  }
+)
+
+watch(
   () => [form.value.salario_base, form.value.carga_horaria_semana],
   () => {
     const salario = moedaParaNumero(form.value.salario_base)
@@ -589,9 +624,12 @@ async function tratarBuscaCep() {
   const cepLimpo = String(form.value.cep ?? '').replace(/\D/g, '')
   if (cepLimpo.length !== 8) return
   const data = await buscarCep(cepLimpo)
-  if (!data) return
+  if (!data) {
+    notify.warn('CEP não encontrado.')
+    return
+  }
 
-  form.value.cep = data.cep ?? form.value.cep
+  form.value.cep = data.cep ? maskCEP(data.cep) : form.value.cep
   form.value.endereco = data.logradouro || form.value.endereco
   form.value.bairro = data.bairro || form.value.bairro
   form.value.cidade = data.localidade || form.value.cidade
@@ -627,12 +665,12 @@ async function carregarDados() {
     isHydrating.value = true
     form.value = {
       nome: data.nome ?? '',
-      cpf: data.cpf ?? '',
+      cpf: data.cpf ? maskCPF(data.cpf) : '',
       rg: data.rg ?? '',
       pis: data.pis ?? '',
       email: data.email ?? '',
-      telefone: data.telefone ?? '',
-      whatsapp: data.whatsapp ?? '',
+      telefone: data.telefone ? maskTelefone(data.telefone) : '',
+      whatsapp: data.whatsapp ? maskTelefone(data.whatsapp) : '',
       estado_civil: data.estado_civil ?? '',
       escolaridade: data.escolaridade ?? '',
       data_nascimento: data.data_nascimento?.split('T')[0] || '',
@@ -642,7 +680,7 @@ async function carregarDados() {
       unidade: unidadeNormalizada || (data.unidade ?? ''),
       setor: setorNormalizado || (data.setor ?? ''),
       cargo: cargoNormalizado || (data.cargo ?? ''),
-      cep: data.cep ?? '',
+      cep: data.cep ? maskCEP(data.cep) : '',
       endereco: data.endereco ?? '',
       numero: data.numero ?? '',
       complemento: data.complemento ?? '',
@@ -705,9 +743,9 @@ async function confirmarSalvar() {
       data_inicio: normalizeString(form.value.data_inicio),
       admissao: normalizeString(form.value.admissao),
       demissao: normalizeString(form.value.demissao),
-      unidade: normalizeString(form.value.unidade) ?? null,
-      setor: normalizeString(form.value.setor) ?? null,
-      cargo: normalizeString(form.value.cargo) ?? null,
+      unidade: normalizeSelectString(form.value.unidade) ?? null,
+      setor: normalizeSelectString(form.value.setor) ?? null,
+      cargo: normalizeSelectString(form.value.cargo) ?? null,
       cep: normalizeString(form.value.cep),
       endereco: normalizeString(form.value.endereco),
       numero: normalizeString(form.value.numero),

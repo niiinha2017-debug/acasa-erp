@@ -24,6 +24,13 @@ export class PontoService {
     return randomBytes(6).toString('hex').toUpperCase();
   }
 
+  private normalizarCodeConvite(raw: any): string {
+    return String(raw ?? '')
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '');
+  }
+
   private hashToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
   }
@@ -170,8 +177,13 @@ export class PontoService {
   }
 
   async ativar(dto: AtivarDto) {
+    const codeNormalizado = this.normalizarCodeConvite(dto.code);
+    if (!codeNormalizado) {
+      throw new BadRequestException('Código inválido.');
+    }
+
     const convite = await this.prisma.ponto_convites.findUnique({
-      where: { code: dto.code },
+      where: { code: codeNormalizado },
       select: {
         id: true,
         funcionario_id: true,

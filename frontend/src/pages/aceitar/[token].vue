@@ -19,6 +19,12 @@
               Leia os termos completos do contrato abaixo antes de finalizar o aceite.
             </p>
             <div
+              v-if="jaAssinado"
+              class="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800 p-3 text-sm text-emerald-700 dark:text-emerald-300"
+            >
+              Este contrato já foi assinado. Você ainda pode visualizar e baixar o PDF.
+            </div>
+            <div
               v-if="info?.linkPdf"
               class="mt-4 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden bg-white dark:bg-slate-900"
             >
@@ -45,7 +51,7 @@
               Visualizar / Baixar PDF do contrato
             </a>
 
-            <form @submit.prevent="enviarAceite" class="mt-6 space-y-4">
+            <form v-if="!jaAssinado" @submit.prevent="enviarAceite" class="mt-6 space-y-4">
               <label class="flex items-start gap-3 cursor-pointer">
                 <input
                   v-model="aceite"
@@ -73,7 +79,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/services/api'
 
@@ -86,6 +92,11 @@ const info = ref(null)
 const erro = ref('')
 const aceite = ref(false)
 const enviando = ref(false)
+const jaAssinado = computed(() => {
+  const raw = info.value || {}
+  const status = String(raw?.status || '').toUpperCase()
+  return status === 'VIGENTE' || raw?.podeAssinar === false || !!raw?.dataAssinatura
+})
 
 onMounted(async () => {
   if (!token) {
@@ -101,6 +112,10 @@ onMounted(async () => {
 })
 
 async function enviarAceite() {
+  if (jaAssinado.value) {
+    erro.value = 'Este contrato já foi assinado.'
+    return
+  }
   if (!aceite.value || enviando.value) return
   enviando.value = true
   try {

@@ -252,3 +252,76 @@ export const PIPELINE_CLIENTE = [
 		temTela: false,
 	},
 ]
+
+export const PIPELINE_CLIENTE_KEYS = PIPELINE_CLIENTE.map((item) => item.key)
+
+const PIPELINE_CLIENTE_ORDEM = PIPELINE_CLIENTE.reduce((acc, item) => {
+	acc[item.key] = item.ordem
+	return acc
+}, {})
+
+export const STATUS_POS_VENDA = ['GARANTIA', 'MANUTENCAO', 'ASSISTENCIA']
+
+const STATUS_PRODUCAO = ['PRODUCAO_AGENDADA', 'EM_PRODUCAO', 'PRODUCAO_FINALIZADA']
+const STATUS_MINIMO_PARA_PRODUCAO = 'PROJETO_TECNICO_APROVADO'
+
+export function normalizarStatusCliente(status) {
+	return String(status || '').trim().toUpperCase()
+}
+
+export function statusClienteEhValido(status) {
+	const key = normalizarStatusCliente(status)
+	return PIPELINE_CLIENTE_KEYS.includes(key)
+}
+
+export function validarTransicaoStatusCliente({ atual, proximo }) {
+	const statusAtual = normalizarStatusCliente(atual)
+	const statusProximo = normalizarStatusCliente(proximo)
+
+	if (!statusProximo) {
+		return { ok: false, motivo: 'Status de destino nao informado.' }
+	}
+
+	if (!statusClienteEhValido(statusProximo)) {
+		return { ok: false, motivo: `Status "${statusProximo}" invalido no pipeline.` }
+	}
+
+	if (!statusAtual) {
+		return { ok: true }
+	}
+
+	if (!statusClienteEhValido(statusAtual)) {
+		return { ok: false, motivo: `Status atual "${statusAtual}" invalido no pipeline.` }
+	}
+
+	if (statusAtual === statusProximo) {
+		return { ok: true }
+	}
+
+	const atualEhPosVenda = STATUS_POS_VENDA.includes(statusAtual)
+	const proximoEhPosVenda = STATUS_POS_VENDA.includes(statusProximo)
+	if (atualEhPosVenda && proximoEhPosVenda) {
+		return { ok: true }
+	}
+
+	const ordemAtual = PIPELINE_CLIENTE_ORDEM[statusAtual]
+	const ordemProximo = PIPELINE_CLIENTE_ORDEM[statusProximo]
+	if (ordemProximo < ordemAtual) {
+		return {
+			ok: false,
+			motivo: `Transicao invalida de "${statusAtual}" para "${statusProximo}": retrocesso no fluxo nao e permitido.`,
+		}
+	}
+
+	if (STATUS_PRODUCAO.includes(statusProximo)) {
+		const ordemMinima = PIPELINE_CLIENTE_ORDEM[STATUS_MINIMO_PARA_PRODUCAO]
+		if (ordemAtual < ordemMinima) {
+			return {
+				ok: false,
+				motivo: 'Nao e possivel avancar para producao antes da aprovacao do projeto tecnico.',
+			}
+		}
+	}
+
+	return { ok: true }
+}

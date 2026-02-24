@@ -20,6 +20,19 @@ type Filtros = {
   status?: 'ATIVO' | 'INVALIDADO';
 };
 
+type FeriadoConfigItem = {
+  date: string;
+  name?: string;
+  type?: string;
+  trabalha?: boolean;
+};
+
+type FeriadoNacionalItem = {
+  date: string;
+  name: string;
+  type: string;
+};
+
 @Injectable()
 export class PontoRelatorioService {
   constructor(
@@ -85,6 +98,14 @@ export class PontoRelatorioService {
     return d.toLocaleDateString('en-CA', {
       timeZone: 'America/Sao_Paulo',
     });
+  }
+
+  private parseDateOnlyOrNull(dateStr?: string): Date | null {
+    const s = String(dateStr || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+    const [y, m, d] = s.split('-').map(Number);
+    if (!y || !m || !d) return null;
+    return new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
   }
 
   private parseHHMMToDecimal(str: string | null | undefined): number {
@@ -169,6 +190,134 @@ export class PontoRelatorioService {
     return Math.round((ms / 3600000) * 100) / 100;
   }
 
+  async listarFeriadosConfig(data_ini?: string, data_fim?: string) {
+    const ini = this.parseDateOnlyOrNull(data_ini);
+    const fim = this.parseDateOnlyOrNull(data_fim);
+    const filtros: Prisma.Sql[] = [];
+    if (ini) filtros.push(Prisma.sql`data >= ${ini}`);
+    if (fim) filtros.push(Prisma.sql`data <= ${fim}`);
+    const whereSql = filtros.length
+      ? Prisma.sql`WHERE ${Prisma.join(filtros, ' AND ')}`
+      : Prisma.empty;
+
+    let rows: any[] = [];
+    try {
+      rows = await this.prisma.$queryRaw<any[]>(
+        Prisma.sql`
+          SELECT id, data, nome, tipo, trabalha
+          FROM ponto_feriados_config
+          ${whereSql}
+          ORDER BY data ASC
+        `,
+      );
+    } catch (e: any) {
+      const msg = String(e?.message || '');
+      // Ambiente sem migration aplicada ainda: não quebra a tela, segue com lista vazia.
+      if (msg.includes('ponto_feriados_config') && msg.includes("doesn't exist")) {
+        return [];
+      }
+      throw e;
+    }
+
+    return rows.map((r) => ({
+      id: r.id,
+      date: this.dateKeySP(r.data),
+      name: r.nome || '',
+      type: r.tipo || '',
+      trabalha: !!r.trabalha,
+    }));
+  }
+
+  async listarFeriadosNacionais(ano: number): Promise<FeriadoNacionalItem[]> {
+    const a = Number(ano || 0);
+    if (!a || a < 2000 || a > 2100) return [];
+    const url = `https://brasilapi.com.br/api/feriados/v1/${a}`;
+    const fallbackFixos: FeriadoNacionalItem[] = [
+      { date: `${a}-01-01`, name: 'Confraternização Universal', type: 'national' },
+      { date: `${a}-04-21`, name: 'Tiradentes', type: 'national' },
+      { date: `${a}-05-01`, name: 'Dia do Trabalhador', type: 'national' },
+      { date: `${a}-09-07`, name: 'Independência do Brasil', type: 'national' },
+      { date: `${a}-10-12`, name: 'Nossa Senhora Aparecida', type: 'national' },
+      { date: `${a}-11-02`, name: 'Finados', type: 'national' },
+      { date: `${a}-11-15`, name: 'Proclamação da República', type: 'national' },
+      { date: `${a}-12-25`, name: 'Natal', type: 'national' },
+    ];
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return fallbackFixos;
+      const data = await res.json();
+      if (!Array.isArray(data)) return fallbackFixos;
+
+      const daApi = data
+        .map((f: any) => ({
+          date: String(f?.date || '').slice(0, 10),
+          name: String(f?.name || ''),
+          type: String(f?.type || ''),
+        }))
+        .filter((f: FeriadoNacionalItem) => /^\d{4}-\d{2}-\d{2}$/.test(f.date));
+
+      const mapa = new Map<string, FeriadoNacionalItem>();
+      for (const f of fallbackFixos) mapa.set(f.date, f);
+      for (const f of daApi) mapa.set(f.date, f);
+      return Array.from(mapa.values()).sort((x, y) => x.date.localeCompare(y.date));
+    } catch {
+      return fallbackFixos;
+    }
+  }
+
+  async salvarFeriadosConfig(itens: FeriadoConfigItem[]) {
+    if (!Array.isArray(itens)) {
+      throw new BadRequestException('Lista de feriados inválida.');
+    }
+
+    const limpos = itens
+      .map((item) => {
+        const date = this.parseDateOnlyOrNull(item?.date);
+        if (!date) return null;
+        return {
+          date,
+          nome: String(item?.name || '').trim() || null,
+          tipo: String(item?.type || '').trim() || null,
+          trabalha: !!item?.trabalha,
+        };
+      })
+      .filter(Boolean) as Array<{
+      date: Date;
+      nome: string | null;
+      tipo: string | null;
+      trabalha: boolean;
+    }>;
+
+    try {
+      await this.prisma.$transaction(
+        limpos.map((item) =>
+          this.prisma.$executeRaw(
+            Prisma.sql`
+              INSERT INTO ponto_feriados_config (data, nome, tipo, trabalha, criado_em, atualizado_em)
+              VALUES (${item.date}, ${item.nome}, ${item.tipo}, ${item.trabalha}, NOW(), NOW())
+              ON DUPLICATE KEY UPDATE
+                nome = VALUES(nome),
+                tipo = VALUES(tipo),
+                trabalha = VALUES(trabalha),
+                atualizado_em = NOW()
+            `,
+          ),
+        ),
+      );
+    } catch (e: any) {
+      const msg = String(e?.message || '');
+      if (msg.includes('ponto_feriados_config') && msg.includes("doesn't exist")) {
+        throw new BadRequestException(
+          'Tabela de feriados não encontrada. Execute as migrations do banco.',
+        );
+      }
+      throw e;
+    }
+
+    return { ok: true, total: limpos.length };
+  }
+
   private calcularHorasTrabalhadasDia(registrosDia: any[]): number {
     const regs = [...registrosDia]
       .filter((r) => r?.status === 'ATIVO')
@@ -195,15 +344,30 @@ export class PontoRelatorioService {
     data_ini: string;
     data_fim: string;
     apenas_ativos?: boolean;
+    funcionario_id?: number;
   }) {
     const ini = this.inicioDia(params.data_ini);
     const fim = this.fimDia(params.data_fim);
     if (!ini || !fim) {
       throw new BadRequestException('Período (data_ini e data_fim) obrigatório.');
     }
+    const feriadosConfig = await this.listarFeriadosConfig(
+      params.data_ini,
+      params.data_fim,
+    );
+    const feriadosSemMeta = new Set(
+      (feriadosConfig || [])
+        .filter((f) => !f?.trabalha)
+        .map((f) => String(f.date || '').trim())
+        .filter(Boolean),
+    );
+
+    const whereFuncionarios: Prisma.funcionariosWhereInput =
+      params.apenas_ativos !== false ? { status: 'ATIVO' } : {};
+    if (params.funcionario_id) whereFuncionarios.id = params.funcionario_id;
 
     const funcionarios = await this.prisma.funcionarios.findMany({
-      where: params.apenas_ativos !== false ? { status: 'ATIVO' } : {},
+      where: whereFuncionarios,
       select: {
         id: true,
         nome: true,
@@ -262,7 +426,10 @@ export class PontoRelatorioService {
       let metaTotal = 0;
       for (const [key, arr] of porDiaF) {
         horasTrabalhadas += this.calcularHorasTrabalhadasDia(arr);
-        metaTotal += this.metaDiaParaData(key, f);
+        const metaDia = feriadosSemMeta.has(key)
+          ? 0
+          : this.metaDiaParaData(key, f);
+        metaTotal += metaDia;
       }
       const saldo = horasTrabalhadas - metaTotal;
       const horasExtras = saldo > 0 ? saldo : 0;
@@ -275,6 +442,9 @@ export class PontoRelatorioService {
 
       const salarioApurado =
         horasTrabalhadas * custoHora + horasExtras * custoHora * 0.5;
+      const adicionalHoraExtra = horasExtras * custoHora * 0.5;
+      const valorHoraExtra = custoHora * 1.5;
+      const valorTotalHorasExtras = horasExtras * valorHoraExtra;
 
       const hToHHMM = (h: number) => {
         const m = Math.round((h || 0) * 60);
@@ -290,6 +460,9 @@ export class PontoRelatorioService {
         horas_extras: Math.round(horasExtras * 100) / 100,
         saldo_devedor_horas: Math.round(saldoDevedorHoras * 100) / 100,
         custo_hora: custoHora,
+        valor_hora_extra: Math.round(valorHoraExtra * 100) / 100,
+        adicional_hora_extra: Math.round(adicionalHoraExtra * 100) / 100,
+        valor_total_horas_extras: Math.round(valorTotalHorasExtras * 100) / 100,
         salario_contratado: Math.round(salarioContratado * 100) / 100,
         salario_apurado: Math.round(salarioApurado * 100) / 100,
         horas_trabalhadas_hhmm: hToHHMM(horasTrabalhadas),

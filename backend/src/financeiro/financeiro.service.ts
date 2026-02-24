@@ -819,22 +819,180 @@ export class FinanceiroService {
   // =========================================================
   // CONTAS A RECEBER (mantido)
   // =========================================================
+  private async sincronizarContasReceberContratosVigentes() {
+    const resolverDadosFinanceirosVenda = (venda: any) => {
+      const pagamentos = Array.isArray(venda?.pagamentos) ? venda.pagamentos : [];
+      const valorTotal = pagamentos.length
+        ? pagamentos.reduce((sum: number, p: any) => sum + Number(p?.valor || 0), 0)
+        : Number(venda?.valor_vendido || venda?.valor_total || 0);
+
+      const formas = Array.from(
+        new Set(
+          pagamentos
+            .map((p: any) => String(p?.forma_pagamento_chave || '').trim().toUpperCase())
+            .filter(Boolean),
+        ),
+      );
+      const formaUnica = formas.length === 1 ? formas[0] : null;
+
+      const pagamentosPagos = pagamentos.filter(
+        (p: any) => String(p?.status_financeiro_chave || '').trim().toUpperCase() === 'PAGO',
+      );
+      const recebido = pagamentos.length > 0 && pagamentosPagos.length === pagamentos.length;
+
+      const dataRecebido = pagamentosPagos
+        .map((p: any) => p?.data_recebimento || null)
+        .filter(Boolean)
+        .sort((a: any, b: any) => +new Date(b) - +new Date(a))[0];
+
+      const dataVencimento = pagamentos
+        .map((p: any) => p?.data_prevista_recebimento || null)
+        .filter(Boolean)
+        .sort((a: any, b: any) => +new Date(a) - +new Date(b))[0];
+
+      return {
+        valorTotal,
+        formaUnica,
+        recebido,
+        dataRecebido: dataRecebido ? new Date(dataRecebido) : null,
+        dataVencimento: dataVencimento
+          ? new Date(dataVencimento)
+          : new Date(venda?.data_venda || new Date()),
+      };
+    };
+
+    const contratosVigentes = await this.prisma.contratos.findMany({
+      where: { status: 'VIGENTE', venda_id: { not: null } },
+      select: { venda_id: true, cliente_id: true },
+    });
+
+    if (!contratosVigentes.length) return;
+
+    const vendaIds = Array.from(
+      new Set(
+        contratosVigentes
+          .map((c: any) => Number(c?.venda_id || 0))
+          .filter((id: number) => Number.isFinite(id) && id > 0),
+      ),
+    );
+    if (!vendaIds.length) return;
+
+    const contasExistentes = await this.prisma.contas_receber.findMany({
+      where: { origem_tipo: 'VENDA', origem_id: { in: vendaIds } },
+      select: { origem_id: true },
+    });
+    const vendasComConta = new Set(
+      contasExistentes
+        .map((c: any) => Number(c?.origem_id || 0))
+        .filter((id: number) => Number.isFinite(id) && id > 0),
+    );
+
+    const contratosSemConta = contratosVigentes.filter(
+      (c: any) => !vendasComConta.has(Number(c?.venda_id || 0)),
+    );
+    if (!contratosSemConta.length) return;
+
+    const vendas = await this.prisma.vendas.findMany({
+      where: {
+        id: {
+          in: contratosSemConta
+            .map((c: any) => Number(c?.venda_id || 0))
+            .filter((id: number) => Number.isFinite(id) && id > 0),
+        },
+      },
+      include: { pagamentos: true },
+    });
+    const vendaById = new Map<number, any>(
+      vendas
+        .map((v: any) => [Number(v.id), v] as const)
+        .filter(([id]) => Number.isFinite(id) && id > 0),
+    );
+
+    const creates: any[] = [];
+    for (const c of contratosSemConta) {
+      const vendaId = Number((c as any)?.venda_id || 0);
+      const clienteId = Number((c as any)?.cliente_id || 0);
+      const venda = vendaById.get(vendaId);
+      if (!venda) continue;
+
+      const dados = resolverDadosFinanceirosVenda(venda);
+
+      creates.push({
+        cliente_id: clienteId > 0 ? clienteId : null,
+        origem_tipo: 'VENDA',
+        origem_id: vendaId,
+        descricao: `Venda #${vendaId}`,
+        valor_original: dados.valorTotal,
+        valor_compensado: 0,
+        status: dados.recebido ? 'PAGO' : 'EM_ABERTO',
+        forma_recebimento_chave: dados.formaUnica,
+        vencimento_em: dados.dataVencimento,
+        recebido_em: dados.recebido ? dados.dataRecebido || new Date() : null,
+      });
+    }
+
+    if (creates.length) {
+      await this.prisma.contas_receber.createMany({ data: creates });
+    }
+
+    // Mantém contas existentes coerentes com os pagamentos da venda (forma/status/data).
+    const contasVendas = await this.prisma.contas_receber.findMany({
+      where: {
+        origem_tipo: 'VENDA',
+        origem_id: { in: vendaIds },
+      },
+      select: {
+        id: true,
+        origem_id: true,
+        forma_recebimento_chave: true,
+        status: true,
+        vencimento_em: true,
+        recebido_em: true,
+      },
+    });
+
+    for (const conta of contasVendas) {
+      const vendaId = Number((conta as any).origem_id || 0);
+      const venda = vendaById.get(vendaId);
+      if (!venda) continue;
+      const dados = resolverDadosFinanceirosVenda(venda);
+
+      await this.prisma.contas_receber.update({
+        where: { id: (conta as any).id },
+        data: {
+          forma_recebimento_chave: dados.formaUnica,
+          status: dados.recebido ? 'PAGO' : 'EM_ABERTO',
+          vencimento_em: dados.dataVencimento,
+          recebido_em: dados.recebido ? dados.dataRecebido || (conta as any).recebido_em || new Date() : null,
+        },
+      });
+    }
+  }
+
   async listarContasReceber(filtros: {
     fornecedor_id?: number;
     cliente_id?: number;
+    origem?: string;
     status?: string;
     data_ini?: string;
     data_fim?: string;
   }) {
+    await this.sincronizarContasReceberContratosVigentes();
+
+    const normalizeOrigem = (value: any) =>
+      String(value || '')
+        .trim()
+        .toUpperCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[\s-]+/g, '_');
+
+    const origemRaw = normalizeOrigem(filtros.origem);
     const where: any = {
       fornecedor_id: filtros.fornecedor_id || undefined,
       cliente_id: filtros.cliente_id || undefined,
       status: filtros.status || undefined,
     };
-
-    // 🚫 Não exibir lançamentos cuja origem seja PLANO_DE_CORTE no Contas a Receber
-    // Mantém o módulo focado em vendas / relacionamento com cliente.
-    where.origem_tipo = { not: 'PLANO_CORTE' };
 
     if (filtros.data_ini || filtros.data_fim) {
       where.vencimento_em = {};
@@ -844,9 +1002,169 @@ export class FinanceiroService {
         where.vencimento_em.lte = new Date(filtros.data_fim);
     }
 
-    return this.prisma.contas_receber.findMany({
+    const contas = await this.prisma.contas_receber.findMany({
       where,
       orderBy: [{ vencimento_em: 'asc' }, { id: 'desc' }],
+    });
+
+    const isOrigemPosVenda = (origem: string) =>
+      origem.includes('POS') && origem.includes('VENDA');
+    const isOrigemVenda = (origem: string) =>
+      origem.includes('VENDA') && !origem.includes('PLANO') && !isOrigemPosVenda(origem);
+
+    // Regra do módulo: somente venda/pós-venda; plano de corte e demais origens ficam fora.
+    let contasVendaPosVenda = contas.filter((c: any) => {
+      const origem = normalizeOrigem(c?.origem_tipo);
+      return isOrigemVenda(origem) || isOrigemPosVenda(origem);
+    });
+
+    if (origemRaw === 'VENDA') {
+      contasVendaPosVenda = contasVendaPosVenda.filter((c: any) =>
+        isOrigemVenda(normalizeOrigem(c?.origem_tipo)),
+      );
+    } else if (origemRaw === 'POS_VENDA') {
+      contasVendaPosVenda = contasVendaPosVenda.filter((c: any) =>
+        isOrigemPosVenda(normalizeOrigem(c?.origem_tipo)),
+      );
+    }
+
+    const vendaIds = Array.from(
+      new Set(
+        contasVendaPosVenda
+          .map((c: any) => Number(c?.origem_id || 0))
+          .filter((id: number) => Number.isFinite(id) && id > 0),
+      ),
+    );
+
+    const clienteIds = Array.from(
+      new Set(
+        contasVendaPosVenda
+          .map((c: any) => Number(c?.cliente_id || 0))
+          .filter((id: number) => Number.isFinite(id) && id > 0),
+      ),
+    );
+
+    if (!vendaIds.length && !clienteIds.length) return [];
+
+    const contratosVigentes = await this.prisma.contratos.findMany({
+      where: {
+        status: 'VIGENTE',
+        OR: [
+          ...(vendaIds.length ? [{ venda_id: { in: vendaIds } }] : []),
+          ...(clienteIds.length ? [{ cliente_id: { in: clienteIds } }] : []),
+        ],
+      },
+      select: { venda_id: true, cliente_id: true },
+    });
+
+    const vendaIdsComContrato = new Set(
+      contratosVigentes
+        .map((c: any) => Number(c?.venda_id || 0))
+        .filter((id: number) => Number.isFinite(id) && id > 0),
+    );
+    const clienteIdsComContrato = new Set(
+      contratosVigentes
+        .map((c: any) => Number(c?.cliente_id || 0))
+        .filter((id: number) => Number.isFinite(id) && id > 0),
+    );
+
+    const contasComContrato = contasVendaPosVenda.filter((c: any) => {
+      const vendaId = Number(c?.origem_id || 0);
+      const clienteId = Number(c?.cliente_id || 0);
+      return vendaIdsComContrato.has(vendaId) || clienteIdsComContrato.has(clienteId);
+    });
+
+    const vendaIdsContas = Array.from(
+      new Set(
+        contasComContrato
+          .map((c: any) => Number(c?.origem_id || 0))
+          .filter((id: number) => Number.isFinite(id) && id > 0),
+      ),
+    );
+
+    let pagamentosPorVenda = new Map<number, any[]>();
+    if (vendaIdsContas.length) {
+      const pagamentos = await this.prisma.vendas_pagamentos.findMany({
+        where: { venda_id: { in: vendaIdsContas } },
+        orderBy: [{ data_prevista_recebimento: 'asc' }, { data_recebimento: 'asc' }, { id: 'asc' }],
+      });
+      pagamentosPorVenda = pagamentos.reduce((acc: Map<number, any[]>, p: any) => {
+        const vendaId = Number(p?.venda_id || 0);
+        if (!vendaId) return acc;
+        if (!acc.has(vendaId)) acc.set(vendaId, []);
+        acc.get(vendaId)!.push(p);
+        return acc;
+      }, new Map<number, any[]>());
+    }
+
+    let detalhesVendaPorId = new Map<number, any>();
+    if (vendaIdsContas.length) {
+      const vendas = await this.prisma.vendas.findMany({
+        where: { id: { in: vendaIdsContas } },
+        include: {
+          cliente: {
+            select: {
+              nome_completo: true,
+              razao_social: true,
+            },
+          },
+          itens: {
+            select: {
+              nome_ambiente: true,
+            },
+          },
+        },
+      });
+      detalhesVendaPorId = vendas.reduce((acc: Map<number, any>, v: any) => {
+        const id = Number(v?.id || 0);
+        if (!id) return acc;
+        acc.set(id, v);
+        return acc;
+      }, new Map<number, any>());
+    }
+
+    return contasComContrato.map((c: any) => {
+      const vendaId = Number(c?.origem_id || 0);
+      const pagamentos = pagamentosPorVenda.get(vendaId) || [];
+      const venda = detalhesVendaPorId.get(vendaId);
+      const parcelas_venda = pagamentos.map((p: any, idx: number) => ({
+        parcela: idx + 1,
+        valor: Number(p?.valor || 0),
+        forma_pagamento_chave: p?.forma_pagamento_chave || null,
+        status: p?.status_financeiro_chave || null,
+        vencimento_em: p?.data_prevista_recebimento || p?.data_recebimento || null,
+      }));
+      const ambientes_venda = Array.from(
+        new Set(
+          ((venda as any)?.itens || [])
+            .map((it: any) => String(it?.nome_ambiente || '').trim())
+            .filter(Boolean),
+        ),
+      );
+      const cliente_nome =
+        (venda as any)?.cliente?.nome_completo ||
+        (venda as any)?.cliente?.razao_social ||
+        null;
+
+      const obs = String(c?.observacao || '');
+      const taxaMatch = obs.match(/taxa=([0-9.,-]+)/i);
+      const valorTaxaMatch = obs.match(/valor_taxa=([0-9.,-]+)/i);
+      const valorLiquidoMatch = obs.match(/valor_liquido=([0-9.,-]+)/i);
+      const temAntecipacao = /ANTECIPACAO_CARTAO/i.test(obs);
+
+      return {
+        ...c,
+        cliente_nome,
+        ambientes_venda,
+        parcelas_venda,
+        antecipacao: temAntecipacao
+          ? {
+              taxa_percentual: taxaMatch ? Number(String(taxaMatch[1]).replace(',', '.')) : null,
+              valor_taxa: valorTaxaMatch ? Number(String(valorTaxaMatch[1]).replace(',', '.')) : null,
+              valor_liquido: valorLiquidoMatch ? Number(String(valorLiquidoMatch[1]).replace(',', '.')) : null,
+            }
+          : null,
+      };
     });
   }
 
@@ -875,12 +1193,14 @@ export class FinanceiroService {
   }
 
   async receberContaReceber(id: number, dto: any) {
+    const { status: _status, recebido_em: _recebidoEm, ...rest } = dto || {};
+    const recebidoEm = _recebidoEm ? new Date(_recebidoEm) : new Date();
     return this.prisma.contas_receber.update({
       where: { id },
       data: {
         status: SF.PAGO,
-        recebido_em: new Date(),
-        ...dto,
+        recebido_em: Number.isNaN(recebidoEm.getTime()) ? new Date() : recebidoEm,
+        ...rest,
       },
     });
   }

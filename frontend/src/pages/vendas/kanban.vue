@@ -121,7 +121,7 @@ import { VendaService } from '@/services'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
 import { format } from '@/utils/format'
-import { PIPELINE_CLIENTE } from '@/constantes'
+import { PIPELINE_CLIENTE, validarTransicaoStatusCliente } from '@/constantes/pipeline-cliente'
 
 definePage({ meta: { perm: 'posvenda.ver' } })
 
@@ -225,6 +225,16 @@ async function onDrop(targetStatus) {
 
   if (!can('vendas.editar')) {
     notify.error('Sem permissao para mover etapas.')
+    onDragEnd()
+    return
+  }
+
+  const validacao = validarTransicaoStatusCliente({
+    atual: venda.status,
+    proximo: targetStatus,
+  })
+  if (!validacao.ok) {
+    notify.error(validacao.motivo || 'Transicao de status invalida.')
     onDragEnd()
     return
   }

@@ -12,6 +12,14 @@
         <template #actions>
           <div class="flex items-center gap-2">
             <Button
+              v-if="can('ponto_relatorio.ver')"
+              variant="outline"
+              @click="router.push('/rh/ponto/horas-extras')"
+            >
+              <i class="pi pi-calculator mr-2"></i>
+              Horas Extras
+            </Button>
+            <Button
               v-if="can('ponto_convite.criar')"
               variant="outline"
               @click="router.push('/rh/ponto/convites')"
@@ -124,16 +132,7 @@
           </div>
 
           <!-- Cards de resumo -->
-          <div v-if="rows.length" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-            <div class="rounded-xl border border-border-ui bg-bg-card p-4 flex items-center gap-4">
-              <div class="w-11 h-11 rounded-xl bg-brand-primary/10 flex items-center justify-center">
-                <i class="pi pi-calendar text-brand-primary text-lg"></i>
-              </div>
-              <div>
-                <p class="text-[10px] font-black uppercase text-text-soft">Meta diária</p>
-                <p class="text-lg font-black text-text-main tabular-nums">{{ resumo.metaDia.toFixed(2) }}h</p>
-              </div>
-            </div>
+          <div v-if="rows.length" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div class="rounded-xl border border-border-ui bg-bg-card p-4 flex items-center gap-4">
               <div class="w-11 h-11 rounded-xl bg-blue-500/10 flex items-center justify-center">
                 <i class="pi pi-stopwatch text-blue-600 text-lg"></i>
@@ -155,21 +154,12 @@
               </div>
             </div>
             <div class="rounded-xl border border-border-ui bg-bg-card p-4 flex items-center gap-4">
-              <div class="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center">
-                <i class="pi pi-dollar text-slate-600 text-lg"></i>
-              </div>
-              <div>
-                <p class="text-[10px] font-black uppercase text-text-soft">Custo/hora</p>
-                <p class="text-sm font-black text-text-main tabular-nums">{{ formatCurrency(resumo.custoHora) }}</p>
-              </div>
-            </div>
-            <div class="rounded-xl border border-border-ui bg-bg-card p-4 flex items-center gap-4">
               <div class="w-11 h-11 rounded-xl bg-brand-primary/10 flex items-center justify-center">
-                <i class="pi pi-wallet text-brand-primary text-lg"></i>
+                <i class="pi pi-calendar text-brand-primary text-lg"></i>
               </div>
               <div>
-                <p class="text-[10px] font-black uppercase text-text-soft">Custo período</p>
-                <p class="text-sm font-black text-text-main tabular-nums">{{ formatCurrency(resumo.custoTotal) }}</p>
+                <p class="text-[10px] font-black uppercase text-text-soft">Dias com batida</p>
+                <p class="text-lg font-black text-text-main tabular-nums">{{ diasComBatida }}</p>
               </div>
             </div>
           </div>
@@ -515,21 +505,18 @@ const cargaHorariaLabel = computed(() => {
   return 'Não definido'
 })
 
-const metricasFuncionario = computed(() => {
-  const f = funcionarioSelecionado.value || {}
-  return { custoHora: Number(f?.custo_hora || 0), funcionario: f }
-})
-
 const resumo = computed(() => {
-  const m = metricasFuncionario.value
   const base = consolidarSaldoPeriodo({
     registros: rowsFiltrados.value,
-    funcionario: m.funcionario || undefined,
+    funcionario: funcionarioSelecionado.value || undefined,
     horasSemana: 48,
     diasSemana: 6,
   })
-  const custoTotal = Number((base.totalHoras * m.custoHora).toFixed(2))
-  return { ...base, custoHora: m.custoHora, custoTotal }
+  return base
+})
+
+const diasComBatida = computed(() => {
+  return registrosPorDia.value.size
 })
 
 const modalEditar = reactive({
@@ -592,8 +579,6 @@ const isFimDeSemanaErro = (dataStr, horaStr) => {
   const [h, m] = horaStr.split(':').map(Number)
   return data.getDay() === 6 && (h > 12 || (h === 12 && m > 0))
 }
-const formatCurrency = (v) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-
 const rowsAgrupadas = computed(() => {
   if (!filtros.data_ini || !filtros.data_fim) return []
   const dias = listDays(filtros.data_ini, filtros.data_fim).filter((dia) => {

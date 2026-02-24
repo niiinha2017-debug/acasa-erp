@@ -31,7 +31,16 @@ export class FornecedorController {
   }
 
   @Get('select')
-  @Permissoes('fornecedores.select')
+  @Permissoes(
+    'fornecedores.select',
+    'fornecedores.ver',
+    'compras.ver',
+    'compras.criar',
+    'compras.editar',
+    'produtos.ver',
+    'produtos.criar',
+    'produtos.editar',
+  )
   select(@Query('q') q?: string) {
     return this.service.select(q);
   }

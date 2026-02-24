@@ -175,24 +175,72 @@ export function consolidarSaldoPeriodo({
   horasSemana = 48,
   diasSemana = 6,
   funcionario = null,
+  dataIni = null,
+  dataFim = null,
+  diasSemMeta = [],
 }) {
+  const diaKeySP = (dateLike) =>
+    new Date(dateLike).toLocaleDateString('en-CA', {
+      timeZone: 'America/Sao_Paulo',
+    })
+
+  const listarDiasPeriodo = (ini, fim) => {
+    if (!ini || !fim) return []
+    const [yi, mi, di] = String(ini).split('-').map(Number)
+    const [yf, mf, df] = String(fim).split('-').map(Number)
+    if (!yi || !mi || !di || !yf || !mf || !df) return []
+
+    const atual = new Date(yi, mi - 1, di)
+    const final = new Date(yf, mf - 1, df)
+    const dias = []
+    while (atual <= final) {
+      dias.push(atual.toLocaleDateString('en-CA'))
+      atual.setDate(atual.getDate() + 1)
+    }
+    return dias
+  }
+
   const porDia = new Map()
   for (const r of registros) {
-    const dia = new Date(r.data_hora).toISOString().slice(0, 10)
+    const dia = diaKeySP(r.data_hora)
     if (!porDia.has(dia)) porDia.set(dia, [])
     porDia.get(dia).push(r)
   }
 
-  const dias = Array.from(porDia.keys()).sort()
+  const diasBase =
+    dataIni && dataFim
+      ? listarDiasPeriodo(dataIni, dataFim)
+      : Array.from(porDia.keys())
+  const dias = [...new Set(diasBase)].sort()
+  const setDiasSemMeta = new Set(
+    (diasSemMeta || [])
+      .map((d) => String(d || '').trim())
+      .filter(Boolean),
+  )
+
   const metaFix = funcionario
     ? null
     : calcularHorasDiaPorSemana(horasSemana, diasSemana)
 
   const linhas = dias.map((dia) => {
+    const diaSemana = new Date(`${dia}T12:00:00`).getDay()
+    const h = calcularHorasTrabalhadasNoDia(porDia.get(dia) || [])
+    // Domingo e dias marcados sem meta continuam contando horas trabalhadas no saldo.
+    if (diaSemana === 0 || setDiasSemMeta.has(dia)) {
+      return {
+        dia,
+        horas: h,
+        horasHHMM: horasDecimalParaHHMM(h),
+        meta: 0,
+        metaHHMM: horasDecimalParaHHMM(0),
+        saldo: h,
+        saldoHHMM: horasDecimalParaHHMMComSinal(h),
+      }
+    }
+
     const metaDia = funcionario
       ? metaDiaParaData(dia, funcionario)
       : metaFix
-    const h = calcularHorasTrabalhadasNoDia(porDia.get(dia))
     const saldo = h - metaDia
     return {
       dia,

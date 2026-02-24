@@ -1,5 +1,5 @@
 <template>
-  <div class="login-font w-full h-full mt-4 mb-8 mx-2 lg:mx-4 rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
+  <div class="login-font w-full h-full mt-4 mb-8 mx-2 lg:mx-4 rounded-2xl border border-border-ui bg-bg-card overflow-hidden shadow-sm animate-page-in">
     <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
     <PageHeader
       title="Cadastro da Empresa"
@@ -29,12 +29,12 @@
         </div>
       </template>
     </PageHeader>
-      <div class="bg-bg-card border border-border-ui rounded-2xl overflow-hidden clientes-line-form">
-      <div class="grid grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
+      <div class="clientes-line-form border-t border-border-ui bg-gradient-to-b from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-900">
+      <div class="grid grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-border-ui">
         
-        <div class="col-span-12 lg:col-span-4 p-8 bg-slate-50/30 space-y-10">
+        <div class="col-span-12 lg:col-span-4 p-6 lg:p-8 bg-slate-50/70 dark:bg-slate-900/40 space-y-8">
           
-          <section>
+          <section class="pb-6 border-b border-border-ui/70">
             <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 text-center lg:text-left">
               Logo da Marca
             </h3>
@@ -139,9 +139,9 @@
           </section>
         </div>
 
-        <div class="col-span-12 lg:col-span-8 p-8 lg:p-12 space-y-10">
+        <div class="col-span-12 lg:col-span-8 p-6 lg:p-10 space-y-8">
           
-          <section>
+          <section class="pb-6 border-b border-border-ui/70">
             <div class="flex items-center gap-3 mb-6">
               <span class="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
               <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">Informações Fiscais</h3>
@@ -150,48 +150,61 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
               <Input v-model="form.razao_social" label="Razão Social" class="md:col-span-2" />
               <Input v-model="form.nome_fantasia" label="Nome Fantasia" />
-              <Input v-model="cnpjMask" label="CNPJ" @blur="onCnpjBlur" />
+              <Input v-model="cnpjMask" label="CNPJ" placeholder="00.000.000/0000-00" @blur="onCnpjBlur" />
               <Input v-model="ieMask" label="Inscrição Estadual" />
               <Input v-model="form.email" label="E-mail de Contato" icon="pi pi-envelope" />
             </div>
           </section>
 
-          <section>
+          <section class="py-2">
             <div class="flex items-center gap-3 mb-6">
               <span class="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
               <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">Endereço Principal</h3>
             </div>
 
             <div class="grid grid-cols-12 gap-5">
-              <Input v-model="cepMask" label="CEP" class="col-span-4" @blur="onCepBlur" />
-              <Input v-model="form.logradouro" label="Rua/Logradouro" class="col-span-8" />
-              <Input v-model="form.numero" label="Nº" class="col-span-3" />
-              <Input v-model="form.bairro" label="Bairro" class="col-span-5" />
-              <Input v-model="form.cidade" label="Cidade" class="col-span-4" />
-              <Input v-model="form.uf" label="UF" class="col-span-2" maxlength="2" />
+              <Input v-model="cepMask" label="CEP" placeholder="00000-000" class="col-span-4" @blur="onCepBlur" />
+              <Input v-model="form.logradouro" label="Rua/Logradouro" placeholder="Nome da rua" class="col-span-8" />
+              <Input v-model="form.numero" label="Nº" placeholder="Número" class="col-span-3" />
+              <Input v-model="form.bairro" label="Bairro" placeholder="Nome do bairro" class="col-span-5" />
+              <Input v-model="form.cidade" label="Cidade" placeholder="Nome da cidade" class="col-span-4" />
+              <Input v-model="form.uf" label="UF" placeholder="UF" class="col-span-2" maxlength="2" />
               <Input v-model="telefoneMask" label="WhatsApp" icon="pi pi-whatsapp" class="col-span-10" />
             </div>
           </section>
 
-          <section>
+          <section class="py-2">
             <div class="flex items-center gap-3 mb-6">
               <span class="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
               <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">
-                Representante Legal (contratos)
+                Representantes Legais (contratos)
               </h3>
             </div>
             <p class="text-[10px] text-slate-500 mb-4">
-              Nome e documentos do representante da empresa que aparecem nos contratos e no cabeçalho do PDF.
+              Cadastre os dois representantes para uso em contratos e documentos.
             </p>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <Input v-model="form.representante_legal_nome" label="Nome completo" class="md:col-span-2" />
-              <Input v-model="representanteCpfMask" label="CPF" />
-              <Input v-model="form.representante_legal_rg" label="RG" />
-              <Input v-model="form.representante_estado_civil" label="Estado civil (ex.: Brasileira)" class="md:col-span-2" />
+            <div class="space-y-6">
+              <div class="p-4 bg-slate-50/60 dark:bg-slate-900/40">
+                <p class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Proprietário</p>
+                <div class="grid grid-cols-1 gap-4">
+                  <Input v-model="form.representante_legal_nome" label="Nome" placeholder="Nome completo" />
+                  <Input v-model="representanteCpfMask" label="CPF" placeholder="000.000.000-00" />
+                  <Input v-model="form.representante_legal_rg" label="RG" placeholder="00.000.000-0" />
+                </div>
+              </div>
+
+              <div class="p-4 bg-slate-50/60 dark:bg-slate-900/40">
+                <p class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Sócio</p>
+                <div class="grid grid-cols-1 gap-4">
+                  <Input v-model="form.representante_legal_socio_nome" label="Nome" placeholder="Nome completo" />
+                  <Input v-model="representanteSocioCpfMask" label="CPF" placeholder="000.000.000-00" />
+                  <Input v-model="form.representante_legal_socio_rg" label="RG" placeholder="00.000.000-0" />
+                </div>
+              </div>
             </div>
           </section>
 
-          <section>
+          <section class="pt-2">
             <div class="flex items-center gap-3 mb-6">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
               <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest text-emerald-600">
@@ -285,7 +298,9 @@ const form = ref({
   representante_legal_nome: '',
   representante_legal_cpf: '',
   representante_legal_rg: '',
-  representante_estado_civil: '',
+  representante_legal_socio_nome: '',
+  representante_legal_socio_cpf: '',
+  representante_legal_socio_rg: '',
 })
 
 // --- MÁSCARAS ---
@@ -308,6 +323,11 @@ const telefoneMask = computed({
 const representanteCpfMask = computed({
   get: () => maskCPF(form.value.representante_legal_cpf),
   set: (v) => (form.value.representante_legal_cpf = onlyNumbers(v).slice(0, 11)),
+})
+const representanteSocioCpfMask = computed({
+  get: () => maskCPF(form.value.representante_legal_socio_cpf),
+  set: (v) =>
+    (form.value.representante_legal_socio_cpf = onlyNumbers(v).slice(0, 11)),
 })
 
 // --- BUSCAS ---
