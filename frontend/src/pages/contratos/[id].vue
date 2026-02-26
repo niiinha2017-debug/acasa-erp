@@ -105,6 +105,20 @@
             <p class="col-span-12 md:col-span-6 -mt-3 text-xs text-text-soft">
               Data prévia até {{ dataFimMaximoLabel }}.
             </p>
+
+            <div class="col-span-12 pt-2">
+              <label class="flex items-start gap-3 cursor-pointer group">
+                <input
+                  v-model="form.assinatura_presencial"
+                  type="checkbox"
+                  class="mt-1 w-4 h-4 rounded border-border-ui text-brand-primary focus:ring-brand-primary/20"
+                />
+                <span class="text-sm text-text-main">
+                  <span class="font-semibold">Contrato será assinado presencialmente na loja</span>
+                  <span class="block text-xs text-text-soft mt-0.5">No PDF será usado o nome do sócio (Configurações &gt; Empresa). Se desmarcado, assinatura eletrônica: será usado o representante legal da empresa (CNPJ).</span>
+                </span>
+              </label>
+            </div>
           </div>
 
           <!-- Compartilhar contrato (assinatura quando rascunho; PDF quando já assinado) -->
@@ -357,6 +371,7 @@ const form = ref({
   valor: 0,
   data_inicio: '',
   data_fim: '',
+  assinatura_presencial: false,
 })
 
 function hojeYmd() {
@@ -493,6 +508,7 @@ async function carregarContrato() {
       valor: Number(raw?.valor || 0),
       data_inicio: raw?.data_inicio ? String(raw.data_inicio).slice(0, 10) : '',
       data_fim: raw?.data_fim ? String(raw.data_fim).slice(0, 10) : '',
+      assinatura_presencial: !!raw?.assinatura_presencial,
     }
     statusInicial.value = String(raw?.status || 'RASCUNHO').toUpperCase()
   } catch (e) {
@@ -584,6 +600,7 @@ async function salvar() {
     valor: form.value.valor,
     data_inicio: form.value.data_inicio || null,
     data_fim: form.value.data_fim || null,
+    assinatura_presencial: !!form.value.assinatura_presencial,
   }
 
   if (!payload.venda_id) return notify.error('Selecione a venda. O contrato só pode ser criado a partir de uma venda.')

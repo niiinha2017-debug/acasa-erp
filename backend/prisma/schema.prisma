@@ -250,6 +250,7 @@ model contratos {
   data_fim   DateTime?
   data_assinatura DateTime?  // quando o contrato foi assinado (ex.: assinatura online)
   zapsign_doc_token String?  // token do documento na ZapSign (assinatura por e-mail)
+  assinatura_presencial Boolean @default(false) // true = assinatura na loja (PDF sócio); false = eletrônica (PDF representante legal/CNPJ)
 
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt

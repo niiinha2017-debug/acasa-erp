@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsDateString,
   IsInt,
   IsNumber,
@@ -39,4 +40,9 @@ export class UpdateContratoDto {
   @IsOptional()
   @IsDateString()
   data_fim?: string | null;
+
+  /** true = assinatura na loja (PDF com nome do sócio); false = eletrônica (PDF com representante legal/CNPJ) */
+  @IsOptional()
+  @IsBoolean()
+  assinatura_presencial?: boolean;
 }

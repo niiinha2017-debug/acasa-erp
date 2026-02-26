@@ -253,6 +253,7 @@ export class ContratosService {
         valor: dto.valor,
         data_inicio: dataInicio,
         data_fim: dataFim,
+        assinatura_presencial: dto.assinatura_presencial ?? false,
       },
       include: { cliente: true, venda: true },
     });
@@ -296,6 +297,9 @@ export class ContratosService {
           dto.data_fim !== undefined
             ? this.validarJanelaDataFim(dataInicioBase, dto.data_fim)
             : undefined,
+        ...(dto.assinatura_presencial !== undefined && {
+          assinatura_presencial: dto.assinatura_presencial,
+        }),
       },
       include: { cliente: true, venda: true },
     });
@@ -1338,12 +1342,26 @@ export class ContratosService {
         ? `, inscrita na Inscrição Estadual sob o nº ${String(empresa.ie).trim()}`
         : '',
       contratada_endereco_completo: enderecoEmpresa,
-      contratada_representante_nome: empresa?.representante_legal_nome ?? '',
+      // Assinatura presencial na loja → nome do sócio; assinatura eletrônica → representante legal (empresa/CNPJ)
+      contratada_representante_nome: (() => {
+        const presencial = Boolean((contrato as any).assinatura_presencial);
+        if (presencial && empresa?.representante_legal_socio_nome?.trim())
+          return empresa.representante_legal_socio_nome.trim();
+        return empresa?.representante_legal_nome?.trim() ?? '';
+      })(),
       contratada_representante_estado_civil: 'Brasileira',
-      contratada_representante_rg:
-        this.maskRg(empresa?.representante_legal_rg) || '',
-      contratada_representante_cpf:
-        this.maskCpf(empresa?.representante_legal_cpf ?? '') || '',
+      contratada_representante_rg: (() => {
+        const presencial = Boolean((contrato as any).assinatura_presencial);
+        if (presencial && empresa?.representante_legal_socio_rg)
+          return this.maskRg(empresa.representante_legal_socio_rg) || '';
+        return this.maskRg(empresa?.representante_legal_rg) || '';
+      })(),
+      contratada_representante_cpf: (() => {
+        const presencial = Boolean((contrato as any).assinatura_presencial);
+        const cpfSocio = empresa?.representante_legal_socio_cpf?.trim();
+        if (presencial && cpfSocio) return this.maskCpf(cpfSocio) || '';
+        return this.maskCpf(empresa?.representante_legal_cpf ?? '') || '';
+      })(),
       // Dados para pagamento (cadastro da empresa): nome = razão social da empresa, não do representante
       contratada_pix: empresa?.pix ?? '',
       contratada_banco_titular: empresa?.banco_titular ?? '',
@@ -2023,7 +2041,11 @@ export class ContratosService {
 
     await this.prisma.contratos.update({
       where: { id: contratoId },
-      data: { status: 'VIGENTE', data_assinatura: new Date() } as any,
+      data: {
+        status: 'VIGENTE',
+        data_assinatura: new Date(),
+        assinatura_presencial: true,
+      } as any,
     });
 
     if (pdfEscaneado && Buffer.isBuffer(pdfEscaneado) && pdfEscaneado.length > 0) {
