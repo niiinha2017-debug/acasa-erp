@@ -62,8 +62,7 @@ export function useAuth() {
     const user = usuarioLogado.value
     if (!user) return false
 
-    const ehAdmin = user.usuario === 'Ana.P' || permissoes.value.includes('ADMIN')
-    if (ehAdmin) return true
+    if (user.is_admin || permissoes.value.includes('ADMIN')) return true
 
     return permissoes.value.includes(chave)
   }

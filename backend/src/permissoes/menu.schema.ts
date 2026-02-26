@@ -18,6 +18,12 @@ export const MENU_SECTIONS: MenuSection[] = [
     label: 'Comercial',
     items: [
       {
+        label: 'Acompanhamento de status',
+        to: '/relatorios/acompanhamento-status',
+        icon: 'pi-list-check',
+        perm: 'relatorios.acompanhamento_status.ver',
+      },
+      {
         label: 'Orçamento',
         to: '/orcamentos',
         icon: 'pi-file-edit',
@@ -41,6 +47,12 @@ export const MENU_SECTIONS: MenuSection[] = [
         icon: 'pi-file-edit',
         perm: 'contratos.clausulas.editar',
       },
+      {
+        label: 'Agenda de Venda',
+        to: '/agendamentos/loja',
+        icon: 'pi-calendar-clock',
+        perm: 'agendamentos.vendas',
+      },
     ],
   },
   {
@@ -48,10 +60,22 @@ export const MENU_SECTIONS: MenuSection[] = [
     label: 'Produção',
     items: [
       {
+        label: 'Visão geral',
+        to: '/producao',
+        icon: 'pi-cogs',
+        perm: 'posvenda.ver',
+      },
+      {
         label: 'Pós-venda',
         to: '/vendas',
         icon: 'pi-cart-plus',
         perm: 'posvenda.ver',
+      },
+      {
+        label: 'Agenda de Produção',
+        to: '/agendamentos/fabrica',
+        icon: 'pi-calendar-clock',
+        perm: 'agendamentos.producao',
       },
       {
         label: 'Plano de corte',

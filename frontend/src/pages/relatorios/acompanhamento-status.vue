@@ -58,19 +58,24 @@
           empty-text="Nenhum registro encontrado para os filtros."
         >
           <template #cell-cliente="{ row }">
-            <div class="flex flex-col py-1 min-w-0 gap-1">
+            <div class="flex flex-col py-1 min-w-0 gap-1.5">
               <div class="flex flex-wrap items-center gap-2">
                 <span class="text-sm font-bold text-text-main truncate">
                   {{ row.nome_exibicao }}
                 </span>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  class="h-7 px-2.5 rounded-lg text-[10px] font-black uppercase shrink-0"
-                  @click="acompanharStatusCliente(row)"
-                >
-                  Acompanhar status
-                </Button>
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <Button
+                    v-for="(etapa, idx) in row.etapas"
+                    :key="idx"
+                    size="sm"
+                    variant="secondary"
+                    class="h-7 px-2.5 rounded-lg text-[10px] font-black uppercase shrink-0"
+                    :title="getDestinoAcompanhar(row, etapa).label"
+                    @click="acompanharStatusCliente(row, etapa)"
+                  >
+                    {{ row.etapas.length > 1 && etapa.orcamento_numero != null ? `Orç. #${etapa.orcamento_numero}` : 'Acompanhar status' }}
+                  </Button>
+                </div>
               </div>
               <span class="text-[10px] font-semibold text-text-muted truncate">
                 {{ row.telefone_exibicao || row.documento || 'Sem telefone' }}
@@ -123,52 +128,24 @@
           </template>
 
           <template #cell-acoes="{ row }">
-            <div class="flex flex-col gap-3">
-              <div
-                v-for="(etapa, idx) in row.etapas"
-                :key="idx"
-                class="flex flex-wrap items-center gap-2"
+            <div class="flex flex-wrap items-center gap-2">
+              <Button
+                v-if="row.acoes.some((a) => a.action === 'orcamento')"
+                size="sm"
+                variant="primary"
+                class="h-8 px-3 rounded-lg text-[10px] font-black uppercase"
+                @click="abrirOrcamentoCliente(row)"
               >
-                <span
-                  v-if="etapa.orcamento_numero != null && row.etapas.length > 1"
-                  class="text-[9px] font-bold text-brand-primary uppercase"
-                >
-                  Orç. #{{ etapa.orcamento_numero }}
-                </span>
-                <span
-                  v-if="etapa.agendamento_data || etapa.agendamento_hora"
-                  class="text-[10px] font-semibold text-text-muted whitespace-nowrap"
-                >
-                  {{ etapa.agendamento_data || '-' }}{{ etapa.agendamento_hora ? ` às ${etapa.agendamento_hora}` : '' }}
-                </span>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  class="h-8 px-3 rounded-lg text-[10px] font-black uppercase"
-                  @click="acompanharStatusCliente(row, etapa)"
-                >
-                  Acompanhar status
-                </Button>
-              </div>
-              <div class="flex flex-wrap gap-2 pt-1 border-t border-border-ui">
-                <Button
-                  v-if="row.acoes.some((a) => a.action === 'orcamento')"
-                  size="sm"
-                  variant="primary"
-                  class="h-8 px-3 rounded-lg text-[10px] font-black uppercase"
-                  @click="abrirOrcamentoCliente(row)"
-                >
-                  Orçamento
-                </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  class="h-8 px-3 rounded-lg text-[10px] font-black uppercase"
-                  @click="abrirCliente(row.id)"
-                >
-                  Cliente
-                </Button>
-              </div>
+                Orçamento
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                class="h-8 px-3 rounded-lg text-[10px] font-black uppercase"
+                @click="abrirCliente(row.id)"
+              >
+                Cliente
+              </Button>
             </div>
           </template>
         </Table>
@@ -316,41 +293,43 @@ const STATUS_PRODUCAO_POSVENDA = new Set([
 ])
 
 /**
- * Retorna o destino (path) para o botão "Acompanhar status" com base na etapa atual.
- * Orçamento → página de orçamento do cliente; Venda → página da venda; Contrato → página do contrato (via venda);
+ * Retorna o destino (path + label) para o botão "Acompanhar status" com base na etapa atual.
+ * Orçamento em andamento → página do orçamento; Venda → página da venda; Contrato → página do contrato;
  * Agendamento → agenda; Cliente cadastrado → ficha do cliente.
  */
 function getDestinoAcompanhar(row, etapa) {
   const et = etapa ?? row?.etapas?.[0]
-  if (!et) return { path: `/clientes/${row?.id}` }
-  const statusKey = String(et?.status_key || '').toUpperCase()
   const clienteId = row?.id
+  if (!et) return { path: `/clientes/${clienteId}`, label: 'Ver cliente' }
+  const statusKey = String(et?.status_key || '').toUpperCase()
   const vendaId = et?.venda_id
   const contratoId = et?.contrato_id
   const orcamentoId = et?.orcamento_id
 
   if (statusKey === 'CONTRATO_ASSINADO') {
-    return { path: '/contratos' }
+    if (contratoId) return { path: `/contratos/${contratoId}`, label: 'Abrir contrato' }
+    if (vendaId) return { path: `/vendas/venda/${vendaId}`, label: 'Abrir venda' }
+    return { path: '/contratos', label: 'Contratos' }
   }
   if (STATUS_VENDA.has(statusKey) && vendaId) {
-    return { path: `/vendas/venda/${vendaId}` }
+    return { path: `/vendas/venda/${vendaId}`, label: 'Abrir venda' }
   }
   if (STATUS_PRODUCAO_POSVENDA.has(statusKey) && vendaId) {
-    return { path: `/vendas/venda/${vendaId}` }
+    return { path: `/vendas/venda/${vendaId}`, label: 'Abrir venda' }
   }
   if (STATUS_ORCAMENTO.has(statusKey) || statusKey === 'ORCAMENTO_EM_ANDAMENTO' || statusKey === 'ORCAMENTO_ENVIADO' || statusKey === 'ORCAMENTO_EM_NEGOCIACAO') {
-    if (orcamentoId) return { path: `/orcamentos/${orcamentoId}` }
-    return { path: `/orcamentos/cliente/${clienteId}` }
+    if (orcamentoId) return { path: `/orcamentos/${orcamentoId}`, label: 'Abrir orçamento' }
+    return { path: `/orcamentos/cliente/${clienteId}`, label: 'Orçamentos do cliente' }
   }
   if (STATUS_AGENDA.has(statusKey)) {
-    return { path: '/agendamentos/loja' }
+    return { path: '/agendamentos/loja', label: 'Abrir agenda' }
   }
   if (statusKey === 'CLIENTE_CADASTRADO') {
-    return { path: `/clientes/${clienteId}` }
+    return { path: `/clientes/${clienteId}`, label: 'Ver cliente' }
   }
-  if (vendaId) return { path: `/vendas/venda/${vendaId}` }
-  if (orcamentoId) return { path: `/orcamentos/${orcamentoId}` }
-  return { path: `/clientes/${clienteId}` }
+  if (vendaId) return { path: `/vendas/venda/${vendaId}`, label: 'Abrir venda' }
+  if (orcamentoId) return { path: `/orcamentos/${orcamentoId}`, label: 'Abrir orçamento' }
+  return { path: `/clientes/${clienteId}`, label: 'Ver cliente' }
 }
 
 function formatarDataHoraAgendamento(valor) {

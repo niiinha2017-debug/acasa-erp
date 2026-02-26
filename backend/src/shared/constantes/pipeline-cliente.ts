@@ -32,7 +32,7 @@ const STATUS_LABELS: Record<string, string> = {
   AGENDAR_APRESENTACAO: 'Agendar apresentação',
   APRESENTACAO_AGENDADA: 'Apresentação agendada',
   ORCAMENTO_APRESENTADO: 'Orçamento apresentado',
-  VENDA_FECHADA: 'Venda fechada',
+  VENDA_FECHADA: 'Fechar venda',
   CONTRATO_GERADO: 'Contrato gerado',
   CONTRATO_ASSINADO: 'Contrato assinado',
   AGENDAR_MEDIDA_FINA: 'Agendar medida fina',

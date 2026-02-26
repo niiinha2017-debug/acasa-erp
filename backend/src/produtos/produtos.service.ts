@@ -155,7 +155,13 @@ export class ProdutosService {
       data: data.map((p) =>
         this.aplicarMarkupProduto(p, ctx?.aplicarMarkup100),
       ),
-      meta: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+        exibeMarkupLoja: !!ctx?.aplicarMarkup100,
+      },
     };
   }
 
@@ -246,6 +252,7 @@ export class ProdutosService {
         pageSize: Math.max(1, pageSize || 20),
         total,
         totalPages: Math.ceil(total / Math.max(1, pageSize || 20)),
+        exibeMarkupLoja: !!ctx?.aplicarMarkup100,
       },
     };
   }

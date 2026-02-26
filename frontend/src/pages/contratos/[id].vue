@@ -170,6 +170,57 @@
             </p>
           </section>
 
+          <!-- Assinatura presencial na loja: imprimir sem assinatura, cliente assina na loja, marcar vigente e opcionalmente anexar escaneado -->
+          <section
+            v-if="isEdit && !isContratoAssinado && can('contratos.editar')"
+            class="rounded-2xl border border-border-ui bg-bg-page p-6 space-y-4"
+          >
+            <div class="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
+              <i class="pi pi-print text-base text-slate-500" />
+              Assinatura presencial na loja
+            </div>
+            <p class="text-sm text-text-soft">
+              Imprima o contrato sem assinatura; o cliente assina na loja. Marque abaixo e opcionalmente anexe o contrato escaneado para que "Ver contrato" exiba o documento assinado.
+            </p>
+            <label class="flex items-center gap-3 cursor-pointer group">
+              <input
+                v-model="assinaturaPresencialConfirmada"
+                type="checkbox"
+                class="w-4 h-4 rounded border-border-ui text-brand-primary focus:ring-brand-primary/20"
+              />
+              <span class="text-sm font-medium text-text-main group-hover:text-brand-primary transition-colors">
+                Contrato assinado presencialmente na loja
+              </span>
+            </label>
+            <div class="rounded-xl border border-border-ui bg-bg-card p-4 space-y-2">
+              <label class="flex items-center gap-2 text-xs font-semibold text-text-soft">
+                <i class="pi pi-file-pdf text-sky-500" />
+                Anexar contrato escaneado (PDF) – opcional
+              </label>
+              <input
+                ref="inputEscaneadoRef"
+                type="file"
+                accept=".pdf,application/pdf"
+                class="block w-full text-sm text-text-main file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-sky-500/20 file:text-sky-600 file:font-medium file:cursor-pointer hover:file:bg-sky-500/30"
+                @change="onArquivoEscaneadoChange"
+              />
+              <p v-if="arquivoEscaneadoNome" class="text-xs text-text-soft truncate">
+                {{ arquivoEscaneadoNome }}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              :disabled="!assinaturaPresencialConfirmada || vigentePresencialLoading"
+              @click="marcarVigenteAssinaturaPresencial"
+            >
+              <i v-if="vigentePresencialLoading" class="pi pi-spin pi-spinner mr-2" />
+              <i v-else class="pi pi-check-circle mr-2" />
+              Marcar como vigente (assinatura presencial)
+            </Button>
+          </section>
+
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-border-ui">
             <div v-if="isEdit" class="flex items-center gap-2">
               <Button
@@ -234,6 +285,11 @@ const salvando = ref(false)
 const gerandoPdf = ref(false)
 const obterLinkLoading = ref(false)
 const enviarEmailLoading = ref(false)
+const vigentePresencialLoading = ref(false)
+const assinaturaPresencialConfirmada = ref(false)
+const arquivoEscaneado = ref(null)
+const arquivoEscaneadoNome = ref('')
+const inputEscaneadoRef = ref(null)
 const statusInicial = ref('RASCUNHO')
 const vendaOptions = ref([])
 const contratoCliente = ref(null)
@@ -252,6 +308,32 @@ const emailCliente = computed(() => {
   return e || ''
 })
 const isContratoAssinado = computed(() => String(form.value.status || '').toUpperCase() === 'VIGENTE')
+
+function onArquivoEscaneadoChange(ev) {
+  const f = ev?.target?.files?.[0]
+  arquivoEscaneado.value = f && f.type === 'application/pdf' ? f : null
+  arquivoEscaneadoNome.value = arquivoEscaneado.value ? arquivoEscaneado.value.name : ''
+}
+
+async function marcarVigenteAssinaturaPresencial() {
+  if (!assinaturaPresencialConfirmada.value || vigentePresencialLoading.value) return
+  vigentePresencialLoading.value = true
+  try {
+    await ContratosService.vigenteAssinaturaPresencial(contratoId.value, arquivoEscaneado.value || undefined)
+    notify.success('Contrato marcado como vigente (assinatura presencial).')
+    form.value.status = 'VIGENTE'
+    assinaturaPresencialConfirmada.value = false
+    arquivoEscaneado.value = null
+    arquivoEscaneadoNome.value = ''
+    if (inputEscaneadoRef.value) inputEscaneadoRef.value.value = ''
+    await carregarContrato()
+  } catch (e) {
+    console.error(e)
+    notify.error(e?.response?.data?.message || 'Erro ao marcar contrato como vigente.')
+  } finally {
+    vigentePresencialLoading.value = false
+  }
+}
 const dataAssinaturaClienteLabel = computed(() => {
   const raw = dataAssinaturaCliente.value
   if (!raw) return '-'

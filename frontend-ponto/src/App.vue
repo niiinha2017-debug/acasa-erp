@@ -278,7 +278,8 @@ Tipo: ${tipoLabel}${idTransacao}`
       try {
         const res = await PontoService.comprovanteImagem(reg.id, token.value, formato)
         const b = res?.data
-        if (b && b instanceof Blob && b.size > 0) {
+        // Só aceita se for Blob de imagem (evita compartilhar corpo de erro como "imagem")
+        if (b && b instanceof Blob && b.size > 0 && b.type && b.type.startsWith('image/')) {
           blob = b
           ext = formato === 'jpeg' ? 'jpg' : 'png'
           mime = formato === 'jpeg' ? 'image/jpeg' : 'image/png'
@@ -293,10 +294,10 @@ Tipo: ${tipoLabel}${idTransacao}`
       const file = new File([blob], `comprovante-ponto.${ext}`, { type: mime })
       if (typeof navigator !== 'undefined' && navigator.share) {
         try {
+          // Compartilha só o arquivo (imagem). Incluir text faz o WhatsApp priorizar o texto e não anexar o PNG.
           await navigator.share({
             files: [file],
             title: 'Comprovante de ponto',
-            text: msg,
           })
           return
         } catch (shareError) {

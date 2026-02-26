@@ -93,6 +93,13 @@
             placeholder="EX: ENSINO MÉDIO"
             force-upper
           />
+          <div v-if="!isEdit" class="col-span-12 md:col-span-12">
+            <CustomCheckbox
+              v-model="form.criar_usuario"
+              label="Criar usuário de acesso e enviar senha provisória por e-mail"
+              :description="form.email ? 'Ao salvar, o colaborador receberá um e-mail com a senha de primeiro acesso. Depois você gerencia as permissões em Configurações → Equipe.' : 'Preencha o e-mail acima para criar o usuário e enviar a senha.'"
+            />
+          </div>
         </div>
 
         <div class="relative">
@@ -335,12 +342,12 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { FuncionariosService } from '@/services/index'
-
-
 import { notify } from '@/services/notify'
+
+definePage({ meta: { perm: 'funcionarios.ver' } })
 import { confirm } from '@/services/confirm'
 import { maskCEP, maskCPF, maskTelefone, maskReais, maskHora } from '@/utils/masks'
 import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
@@ -412,6 +419,7 @@ const form = ref({
   horario_sabado_saida_1: '',
   carga_horaria_dia: '',
   carga_horaria_semana: '',
+  criar_usuario: true,
 })
 
 
@@ -710,6 +718,8 @@ async function carregarDados() {
       carga_horaria_dia: toStringOrEmpty(data.carga_horaria_dia),
       carga_horaria_semana: toStringOrEmpty(data.carga_horaria_semana),
     }
+    // Só libera os watchers no próximo tick para não limpar setor/cargo ao carregar
+    await nextTick()
     isHydrating.value = false
 
   } catch (e) {
@@ -793,6 +803,7 @@ async function confirmarSalvar() {
     if (isEdit.value) {
       await FuncionariosService.atualizar(funcionarioId.value, payload)
     } else {
+      payload.criar_usuario = !!form.value.criar_usuario
       await FuncionariosService.criar(payload)
     }
 

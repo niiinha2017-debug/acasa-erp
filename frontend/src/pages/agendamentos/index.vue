@@ -4,8 +4,8 @@
       <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
 
       <PageHeader
-        title="Agenda da Loja"
-        subtitle="Visão mensal da agenda da Loja"
+        title="Agenda de Venda"
+        subtitle="Visão mensal da agenda comercial (loja)"
         icon="pi pi-calendar-clock"
       >
         <template #actions>
@@ -237,7 +237,7 @@
           <div class="overflow-y-auto flex-1 p-5 md:p-6">
         <div class="flex items-center gap-2 text-[11px] font-semibold text-text-muted mb-4">
           <span class="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700/50 border border-border-ui">
-            Agenda: Loja
+            Agenda de Venda
           </span>
           <span v-if="editingEvent" class="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700/50 border border-border-ui">
             Edição
@@ -663,7 +663,11 @@ const orcamentosApresentacaoOptions = computed(() => {
 const temOrcamentosApresentacao = computed(() => orcamentosApresentacaoOptions.value.length > 0)
 
 const vendasContratoOptions = computed(() => {
-  const lista = vendasAguardandoContrato.value || []
+  const clienteSelecionadoId = String(taskForm.clienteId || '')
+  const lista = (vendasAguardandoContrato.value || []).filter((v) => {
+    if (!clienteSelecionadoId) return true
+    return String(v?.cliente_id || v?.cliente?.id || '') === clienteSelecionadoId
+  })
   return lista.map((v) => {
     const clienteNome = v?.cliente?.nome_completo || v?.cliente?.razao_social || 'Cliente'
     const statusKey = v?.status || ''

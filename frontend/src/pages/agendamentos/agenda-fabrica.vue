@@ -4,8 +4,8 @@
       <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
 
       <PageHeader
-        title="Agenda da Fábrica"
-        subtitle="Visão mensal da agenda da Fábrica"
+        title="Agenda de Produção"
+        subtitle="Visão mensal da agenda da fábrica"
         icon="pi pi-calendar-clock"
       >
         <template #actions>
@@ -114,6 +114,36 @@
               </div>
             </div>
 
+            <!-- Pipeline do dia: por função (etapa), quantas tarefas e quantos funcionários -->
+            <div v-if="resumoDiaPorEtapa.length" class="mb-5 p-4 rounded-xl border border-border-ui bg-white dark:bg-slate-800/50">
+              <div class="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-3">
+                Resumo do dia por função
+              </div>
+              <div class="grid gap-2 sm:grid-cols-2">
+                <div
+                  v-for="item in resumoDiaPorEtapa"
+                  :key="item.etapaKey"
+                  class="rounded-lg border border-border-ui p-3 bg-slate-50/80 dark:bg-slate-900/30"
+                >
+                  <div class="flex items-center justify-between gap-2 mb-1.5">
+                    <span class="text-xs font-bold text-text-main">{{ item.etapaLabel }}</span>
+                    <span class="text-[10px] font-black text-slate-500 dark:text-slate-400">
+                      {{ item.tarefas }} {{ item.tarefas === 1 ? 'tarefa' : 'tarefas' }} · {{ item.totalFuncionarios }} {{ item.totalFuncionarios === 1 ? 'funcionário' : 'funcionários' }}
+                    </span>
+                  </div>
+                  <div v-if="item.funcionarioNomes.length" class="flex flex-wrap gap-1.5">
+                    <span
+                      v-for="nome in item.funcionarioNomes"
+                      :key="nome"
+                      class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-brand-primary/10 text-brand-primary border border-brand-primary/20"
+                    >
+                      {{ nome }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div v-if="selectedEvents.length" class="space-y-3">
               <button
                 v-for="event in selectedEvents"
@@ -195,7 +225,7 @@
           <div class="overflow-y-auto flex-1 p-5 md:p-6">
         <div class="flex items-center gap-2 text-[11px] font-semibold text-text-muted mb-4">
           <span class="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700/50 border border-border-ui">
-            Agenda: Fábrica
+            Agenda de Produção
           </span>
           <span v-if="editingEvent" class="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700/50 border border-border-ui">
             Edição
@@ -257,7 +287,8 @@
                   </span>
                   <span class="text-[10px] text-text-muted">(primeira etapa automática)</span>
                 </div>
-                <div class="mt-2">
+                <!-- Pós-venda (Garantia / Manutenção / Assistência) só para Venda cliente; plano de corte não tem pós-venda -->
+                <div v-if="taskForm.origemFluxo === 'LOJA_VENDA'" class="mt-2">
                   <label class="block text-[10px] font-bold text-text-muted mb-1">Ou criar pós-venda:</label>
                   <div class="flex flex-wrap gap-2">
                     <button
@@ -633,8 +664,9 @@ const ORIGENS_POR_SETOR = {
     { value: 'LOJA_VENDA', label: 'Venda loja' },
   ],
   FABRICA: [
-    { value: 'PLANO_CORTE', label: 'Plano corte' },
-    { value: 'VENDA_PLANO_CORTE', label: 'Venda plano corte' },
+    { value: 'LOJA_VENDA', label: 'Venda cliente' },
+    { value: 'PLANO_CORTE', label: 'Plano de corte' },
+    { value: 'VENDA_PLANO_CORTE', label: 'Venda para fornecedor' },
   ],
 }
 
@@ -693,7 +725,11 @@ const orcamentosApresentacaoOptions = computed(() => {
 const temOrcamentosApresentacao = computed(() => orcamentosApresentacaoOptions.value.length > 0)
 
 const vendasContratoOptions = computed(() => {
-  const lista = vendasAguardandoContrato.value || []
+  const clienteSelecionadoId = String(taskForm.clienteId || '')
+  const lista = (vendasAguardandoContrato.value || []).filter((v) => {
+    if (!clienteSelecionadoId) return true
+    return String(v?.cliente_id || v?.cliente?.id || '') === clienteSelecionadoId
+  })
   return lista.map((v) => {
     const clienteNome = v?.cliente?.nome_completo || v?.cliente?.razao_social || 'Cliente'
     const statusKey = v?.status || ''
@@ -857,9 +893,8 @@ watch(
     if (!['LOJA_VENDA'].includes(key)) {
       limparVendaSelecionada()
     }
-    if (key === 'LOJA_VENDA') taskForm.categoria = 'MEDIDA'
-    else if (key === 'PLANO_CORTE' || key === 'VENDA_PLANO_CORTE') taskForm.categoria = PRIMEIRA_ETAPA_PRODUCAO.value
-    else taskForm.categoria = 'MEDIDA'
+    // Na agenda de produção todas as origens usam o pipeline de produção (etapas da fábrica)
+    taskForm.categoria = PRIMEIRA_ETAPA_PRODUCAO.value
   },
 )
 
@@ -958,7 +993,9 @@ const opcoesTipoAgendamento = computed(() => {
   if (isAgendaLoja.value) {
     return TIPOS_LOJA_VENDA.value
   }
-  return [...TIPOS_PRODUCAO.value, ...TIPOS_POS_VENDA]
+  // Pós-venda (Garantia / Manutenção / Assistência) só quando origem é Venda cliente
+  const ehVendaCliente = String(taskForm.origemFluxo || '').toUpperCase() === 'LOJA_VENDA'
+  return [...TIPOS_PRODUCAO.value, ...(ehVendaCliente ? TIPOS_POS_VENDA : [])]
 })
 
 const etapaAtualLabel = computed(() => {
@@ -1107,6 +1144,51 @@ const eventsByDay = computed(() => {
 })
 
 const selectedEvents = computed(() => eventsByDay.value[dateKey(selectedDay.value)] || [])
+
+/** Nomes dos funcionários de um evento (equipe + apontamentos) */
+function getFuncionarioNomesEvent(event) {
+  const nomes = new Set()
+  const add = (nome) => nome && nomes.add(String(nome).trim())
+  ;(event?.equipe || []).forEach((e) => {
+    add(e?.funcionario?.nome)
+    if (!e?.funcionario?.nome && e?.funcionario_id) add(funcionarioNomeById(e.funcionario_id))
+  })
+  ;(event?.apontamentos || []).forEach((a) => {
+    if (a?.funcionario_id) add(funcionarioNomeById(a.funcionario_id))
+  })
+  return Array.from(nomes)
+}
+
+/** Resumo do dia agrupado por etapa (função): quantas tarefas e quantos funcionários em cada */
+const resumoDiaPorEtapa = computed(() => {
+  const events = selectedEvents.value
+  if (!events.length) return []
+  const byEtapa = {}
+  events.forEach((ev) => {
+    const cat = String(ev?.categoria || '').toUpperCase()
+    if (!cat) return
+    if (!byEtapa[cat]) {
+      byEtapa[cat] = { etapaKey: cat, etapaLabel: etapaLabelPorCategoria(cat), tarefas: 0, funcionarioNomes: new Set() }
+    }
+    byEtapa[cat].tarefas += 1
+    getFuncionarioNomesEvent(ev).forEach((n) => byEtapa[cat].funcionarioNomes.add(n))
+  })
+  return Object.values(byEtapa)
+    .map((o) => ({
+      ...o,
+      funcionarioNomes: Array.from(o.funcionarioNomes),
+      totalFuncionarios: o.funcionarioNomes.size,
+    }))
+    .sort((a, b) => {
+      const ordemA = TIPOS_PRODUCAO.value.findIndex((t) => t.value === a.etapaKey)
+      const ordemB = TIPOS_PRODUCAO.value.findIndex((t) => t.value === b.etapaKey)
+      if (ordemA >= 0 && ordemB >= 0) return ordemA - ordemB
+      if (ordemA >= 0) return -1
+      if (ordemB >= 0) return 1
+      return a.etapaLabel.localeCompare(b.etapaLabel)
+    })
+})
+
 const selectedEventsParaLista = computed(() =>
   selectedEvents.value.filter((ev) => {
     if (!editingEvent.value) return true
@@ -1701,17 +1783,18 @@ async function loadClientes() {
 }
 
 async function loadFuncionarios() {
-  if (!isAdmin.value) return
   try {
+    // Sempre filtra por setor: só funcionários da fábrica
     const res = await FuncionarioService.select({ unidade: 'FABRICA' })
-    const lista = Array.isArray(res?.data) ? res.data : []
+    const lista = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : [])
     funcionariosOptions.value = lista
       .map((item) => ({
-        label: item?.label || item?.nome || '',
+        label: item?.label ?? item?.nome ?? '',
         value: item?.value ?? item?.id ?? null,
       }))
-      .filter((opt) => opt.value !== null && opt.value !== undefined)
+      .filter((opt) => opt.value != null && (opt.label || opt.value))
   } catch (e) {
+    console.warn('[Agenda Produção] loadFuncionarios:', e?.response?.data || e?.message || e)
     funcionariosOptions.value = []
   }
 }

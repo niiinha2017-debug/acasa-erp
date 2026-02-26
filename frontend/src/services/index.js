@@ -272,10 +272,18 @@ export const ContratosService = {
     const cleanId = String(id || '').replace(/\D/g, '')
     return api.post(`/contratos/${cleanId}/pdf`)
   },
+  /** Visualizar PDF do contrato (assinado, se já tiver sido assinado) – retorna blob para abrir em nova aba */
+  verPdf: (id) => api.get(`/contratos/${String(id || '').replace(/\D/g, '')}/pdf`, { responseType: 'blob' }),
   /** Link público temporário (24h) para download do PDF – envio grátis por WhatsApp/e-mail */
   linkPublicoPdf: (id) => api.get(`/contratos/${id}/link-publico`),
   /** Envia o link do contrato por e-mail automaticamente (SMTP do backend) */
   enviarContratoPorEmail: (id) => api.post(`/contratos/${id}/enviar-email`),
+  /** Marcar como vigente por assinatura presencial na loja (opcional: arquivo PDF escaneado) */
+  vigenteAssinaturaPresencial: (id, file) => {
+    const form = new FormData()
+    if (file && file instanceof File) form.append('file', file)
+    return api.post(`/contratos/${String(id || '').replace(/\D/g, '')}/vigente-assinatura-presencial`, form)
+  },
 }
 
 // --- PERMISSÕES ---

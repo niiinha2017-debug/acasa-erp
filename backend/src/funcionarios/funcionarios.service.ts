@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuthService } from '../auth/auth.service';
 import { promises as fs } from 'fs';
 import { randomBytes } from 'crypto';
 import * as path from 'path';
@@ -14,7 +15,10 @@ import { renderHeaderA4Png } from '../pdf/render-header-a4';
 
 @Injectable()
 export class FuncionariosService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly authService: AuthService,
+  ) {}
 
   private readonly STATUS_ATIVO = 'ATIVO';
   private readonly STATUS_INATIVO = 'INATIVO';
@@ -200,9 +204,24 @@ export class FuncionariosService {
     return { arquivoId: arquivo.id };
   }
 
+  private gerarLoginUnico(nome: string): string {
+    const base = String(nome ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '.')
+      .replace(/[^a-z0-9.]/g, '')
+      .slice(0, 50) || 'usuario';
+    let login = base;
+    let n = 0;
+    return login;
+  }
+
   async criar(dto: CriarFuncionarioDto) {
     try {
       const data = this.normalizarDatas(dto);
+      delete (data as any).criar_usuario;
 
       // status baseado na sua regra (demissao inativa, admissao/registro ativa)
       data.status = this.calcularStatus({
@@ -211,7 +230,56 @@ export class FuncionariosService {
         demissao: data.demissao,
       });
 
-      return await this.prisma.funcionarios.create({ data });
+      const funcionario = await this.prisma.funcionarios.create({ data });
+
+      const email = String(funcionario.email ?? '').trim().toLowerCase();
+      const criarUsuario =
+        dto.criar_usuario !== false && email.length > 0 && email.includes('@');
+
+      if (criarUsuario) {
+        try {
+          const baseLogin = this.gerarLoginUnico(funcionario.nome);
+          let login = baseLogin;
+          let n = 0;
+          while (
+            await this.prisma.usuarios.findUnique({
+              where: { usuario: login },
+              select: { id: true },
+            })
+          ) {
+            n++;
+            login = `${baseLogin}.${n}`;
+          }
+
+          const criado = await this.authService.cadastro({
+            nome: funcionario.nome,
+            email,
+            usuario: login,
+            senha: undefined,
+          });
+
+          const usuarioId = (criado as any).id;
+          if (usuarioId) {
+            await this.prisma.usuarios.update({
+              where: { id: usuarioId },
+              data: { funcionario_id: funcionario.id },
+            });
+            await this.prisma.funcionarios.update({
+              where: { id: funcionario.id },
+              data: { usuario_id: usuarioId },
+            });
+          }
+        } catch (err: any) {
+          if (err?.code === 'P2002' || err?.response?.statusCode === 400) {
+            throw new BadRequestException(
+              err?.message ?? 'E-mail já utilizado por outro usuário. Desmarque "Criar usuário de acesso" ou use outro e-mail.',
+            );
+          }
+          throw err;
+        }
+      }
+
+      return funcionario;
     } catch (e: any) {
       if (e?.code === 'P2002')
         throw new BadRequestException('CPF já cadastrado.');

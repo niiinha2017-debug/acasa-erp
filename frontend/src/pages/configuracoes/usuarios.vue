@@ -73,6 +73,12 @@
               </div>
             </template>
 
+            <template #cell-funcionario_vinculado="{ row }">
+              <span class="text-[10px] text-text-muted">
+                {{ row.funcionario?.nome || (row.funcionario_id ? `#${row.funcionario_id}` : '—') }}
+              </span>
+            </template>
+
             <template #cell-status="{ row }">
               <button
                 v-if="can('usuarios.editar')"
@@ -144,11 +150,19 @@
               <Input v-model="formUsuario.usuario" label="Usuário Login" :forceUpper="false" />
               <Input v-model="formUsuario.email" label="E-mail" type="email" :forceUpper="false" />
               <Input
-                v-if="!modoEdicao"
                 v-model="formUsuario.senha"
-                label="Senha"
+                :label="modoEdicao ? 'Nova senha (deixe em branco para não alterar)' : 'Senha'"
                 type="password"
                 :forceUpper="false"
+                class="col-span-2"
+                autocomplete="new-password"
+              />
+              <Select
+                v-if="modoEdicao"
+                v-model="formUsuario.funcionario_id"
+                label="Vincular a funcionário"
+                placeholder="Nenhum (desvincular)"
+                :options="funcionarioOptions"
                 class="col-span-2"
               />
             </div>
@@ -200,7 +214,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useAuth } from '@/services/useauth'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
-import { UsuariosService, AuthService } from '@/services/index'
+import { UsuariosService, AuthService, FuncionariosService } from '@/services/index'
 import { can } from '@/services/permissions'
 
 definePage({ meta: { perm: 'usuarios.ver' } })
@@ -219,6 +233,7 @@ const reenviandoIds = ref(new Set())
 const columns = [
   { key: 'nome', label: 'Colaborador' },
   { key: 'acesso', label: 'Login' },
+  { key: 'funcionario_vinculado', label: 'Funcionário' },
   { key: 'status', label: 'Status' },
   { key: 'acoes', label: 'Ações', align: 'center' },
 ]
@@ -230,7 +245,16 @@ const formUsuario = ref({
   email: '',
   senha: '',
   status: 'PENDENTE',
+  funcionario_id: null,
 })
+
+const funcionariosLista = ref([])
+const funcionarioOptions = computed(() =>
+  (funcionariosLista.value || []).map((f) => ({
+    label: f.nome || `Func. #${f.id}`,
+    value: f.id,
+  })),
+)
 
 // --- LOAD ---
 const carregar = async () => {
@@ -242,6 +266,16 @@ const carregar = async () => {
     notify.error('Erro ao carregar lista')
   } finally {
     loadingTabela.value = false
+  }
+}
+
+const carregarFuncionarios = async () => {
+  try {
+    const res = await FuncionariosService.listar()
+    const data = res?.data ?? res
+    funcionariosLista.value = Array.isArray(data) ? data : []
+  } catch (err) {
+    funcionariosLista.value = []
   }
 }
 
@@ -264,6 +298,7 @@ const abrirModal = (user = null) => {
       email: user.email || '',
       senha: '',
       status: user.status || 'PENDENTE',
+      funcionario_id: user.funcionario_id ?? user.funcionario?.id ?? null,
     }
   } else {
     formUsuario.value = {
@@ -273,6 +308,7 @@ const abrirModal = (user = null) => {
       email: '',
       senha: '',
       status: 'PENDENTE',
+      funcionario_id: null,
     }
   }
 
@@ -303,14 +339,28 @@ async function confirmarSalvarUsuario() {
 const salvar = async () => {
   const perm = modoEdicao.value ? 'usuarios.editar' : 'usuarios.criar'
   if (!can(perm)) return notify.error('Acesso negado.')
-  if (!modoEdicao.value && formUsuario.value.senha && formUsuario.value.senha.trim().length < 6) {
-    return notify.error('A senha deve ter no minimo 6 caracteres.')
+  const senhaPreenchida = formUsuario.value.senha?.trim()
+  if (senhaPreenchida && senhaPreenchida.length < 6) {
+    return notify.error('A senha deve ter no mínimo 6 caracteres.')
   }
 
   loadingSalvar.value = true
   try {
     if (modoEdicao.value) {
-      await UsuariosService.salvar(formUsuario.value.id, formUsuario.value)
+      const payload = {
+        nome: formUsuario.value.nome,
+        usuario: formUsuario.value.usuario,
+        email: formUsuario.value.email,
+        status: formUsuario.value.status,
+        funcionario_id:
+          formUsuario.value.funcionario_id === '' ||
+          formUsuario.value.funcionario_id == null
+            ? null
+            : Number(formUsuario.value.funcionario_id),
+      }
+      const novaSenha = formUsuario.value.senha?.trim()
+      if (novaSenha && novaSenha.length >= 6) payload.senha = novaSenha
+      await UsuariosService.salvar(formUsuario.value.id, payload)
     } else {
       await solicitarCadastro({
         nome: formUsuario.value.nome,
@@ -420,7 +470,10 @@ const usuariosFiltrados = computed(() => {
   )
 })
 
-onMounted(carregar)
+onMounted(async () => {
+  await carregar()
+  await carregarFuncionarios()
+})
 </script>
 
 

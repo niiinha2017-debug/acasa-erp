@@ -10,9 +10,13 @@ import {
   Put,
   Query,
   Req,
+  Res,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
-import { Request } from 'express';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 
 import { ContratosService } from './contratos.service';
@@ -104,6 +108,35 @@ export class ContratosController {
   @Permissoes('contratos.editar')
   assinar(@Param('id') id: string, @Body() dto: AssinarContratoDto) {
     return this.service.assinar(this.cleanId(id), dto);
+  }
+
+  /** Marcar contrato como vigente por assinatura presencial na loja (opcional: enviar PDF escaneado) */
+  @Post(':id/vigente-assinatura-presencial')
+  @Permissoes('contratos.editar')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 15 * 1024 * 1024 } }),
+  )
+  async vigenteAssinaturaPresencial(
+    @Param('id') id: string,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    const contratoId = this.cleanId(id);
+    const buffer =
+      file?.buffer && Buffer.isBuffer(file.buffer) ? file.buffer : undefined;
+    return this.service.marcarVigenteAssinaturaPresencial(contratoId, buffer);
+  }
+
+  /** Visualizar/baixar o PDF do contrato (assinado, se já tiver sido assinado) */
+  @Get(':id/pdf')
+  @Permissoes('contratos.ver')
+  async visualizarPdf(@Param('id') id: string, @Res() res: Response) {
+    const contratoId = this.cleanId(id);
+    const buffer = await this.service.obterPdfBuffer(contratoId);
+    const nome = `contrato_${contratoId}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${nome}"`);
+    return res.send(buffer);
   }
 
   @Post(':id/pdf')

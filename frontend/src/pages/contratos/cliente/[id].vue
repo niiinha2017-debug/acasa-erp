@@ -70,13 +70,27 @@
               </span>
             </template>
             <template #cell-acoes="{ row }">
-              <TableActions
-                :can-edit="can('contratos.editar')"
-                :can-delete="can('contratos.excluir')"
-                :id="row.id"
-                @edit="router.push(`/contratos/${row.id}`)"
-                @delete="confirmarExcluir(row.id)"
-              />
+              <div class="inline-flex items-center justify-end gap-1.5 flex-nowrap">
+                <button
+                  v-if="can('contratos.ver')"
+                  type="button"
+                  class="h-8 px-2.5 rounded-lg text-slate-500 hover:text-sky-600 hover:bg-sky-500/10 flex items-center gap-1.5 transition-colors text-[11px] font-medium whitespace-nowrap shrink-0 disabled:opacity-50 disabled:pointer-events-none"
+                  title="Ver contrato assinado"
+                  :disabled="pdfLoadingId === row.id"
+                  @click.stop="verContrato(row.id)"
+                >
+                  <i v-if="pdfLoadingId === row.id" class="pi pi-spin pi-spinner text-[12px]" />
+                  <i v-else class="pi pi-file-pdf text-[12px]" />
+                  Ver contrato
+                </button>
+                <TableActions
+                  :can-edit="can('contratos.editar')"
+                  :can-delete="can('contratos.excluir')"
+                  :id="row.id"
+                  @edit="router.push(`/contratos/${row.id}`)"
+                  @delete="confirmarExcluir(row.id)"
+                />
+              </div>
             </template>
           </Table>
         </div>
@@ -100,6 +114,7 @@ const route = useRoute()
 const router = useRouter()
 
 const loading = ref(false)
+const pdfLoadingId = ref(null)
 const filtro = ref('')
 const rows = ref([])
 const dadosClienteExtra = ref(null)
@@ -113,7 +128,7 @@ const columns = [
   { key: 'valor', label: 'Valor', width: '120px', align: 'right' },
   { key: 'data_inicio', label: 'Início', width: '100px' },
   { key: 'data_fim', label: 'Fim', width: '100px' },
-  { key: 'acoes', label: 'Ações', width: '100px', align: 'right' },
+  { key: 'acoes', label: 'Ações', width: '180px', align: 'right' },
 ]
 
 async function carregar() {
@@ -167,6 +182,22 @@ const clienteTelefone = computed(() => {
   const cli = dadosClienteExtra.value || rows.value?.[0]?.cliente || {}
   return cli.whatsapp || cli.telefone || cli.celular || ''
 })
+
+async function verContrato(id) {
+  if (!can('contratos.ver')) return notify.error('Acesso negado.')
+  pdfLoadingId.value = id
+  try {
+    const { data } = await ContratosService.verPdf(id)
+    const url = URL.createObjectURL(new Blob([data], { type: 'application/pdf' }))
+    window.open(url, '_blank', 'noopener,noreferrer')
+    setTimeout(() => URL.revokeObjectURL(url), 60000)
+  } catch (e) {
+    console.error(e)
+    notify.error('Erro ao abrir o contrato. Tente novamente.')
+  } finally {
+    pdfLoadingId.value = null
+  }
+}
 
 async function confirmarExcluir(id) {
   if (!can('contratos.excluir')) return notify.error('Acesso negado.')

@@ -54,7 +54,8 @@ async function main() {
     // Permissoes padrao de primeiro acesso
     { chave: 'index.visualizar', descricao: 'Acesso a pagina inicial' },
     { chave: 'dashboard.visualizar', descricao: 'Acesso ao hub de relatorios' },
-    { chave: 'relatorios.acompanhamento_status.ver', descricao: 'Visualizar acompanhamento de status' },
+    // Acompanhamento de status – tela /relatorios/acompanhamento-status
+    { chave: 'relatorios.acompanhamento_status.ver', descricao: 'Acompanhamento de status' },
     { chave: 'pendente.visualizar', descricao: 'Acesso a tela de primeiro acesso' },
     { chave: 'alterar-senha', descricao: 'Acesso a alterar senha' },
 
@@ -100,13 +101,15 @@ async function main() {
     { chave: 'orcamentos.ver', descricao: 'Visualizar orcamentos' },
     { chave: 'orcamentos.criar', descricao: 'Criar orcamentos' },
     { chave: 'orcamentos.editar', descricao: 'Editar orcamentos' },
+    // Cláusulas – orçamento (por cliente)
     { chave: 'orcamentos.clausulas.editar', descricao: 'Editar clausulas do orcamento (por cliente)' },
     { chave: 'orcamentos.excluir', descricao: 'Excluir orcamentos' },
 
     { chave: 'contratos.ver', descricao: 'Visualizar contratos' },
     { chave: 'contratos.criar', descricao: 'Criar contratos' },
     { chave: 'contratos.editar', descricao: 'Editar contratos' },
-    { chave: 'contratos.clausulas.editar', descricao: 'Editar modelos de clausulas de contrato/orcamento' },
+    // Cláusulas – tela /contratos/clausulas (modelos de contrato e orçamento)
+    { chave: 'contratos.clausulas.editar', descricao: 'Cláusulas (contratos e orçamentos)' },
     { chave: 'contratos.excluir', descricao: 'Excluir contratos' },
 
     { chave: 'plano_corte.ver', descricao: 'Visualizar plano de corte' },

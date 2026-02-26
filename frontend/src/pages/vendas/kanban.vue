@@ -134,7 +134,7 @@ const draggingFrom = ref('')
 
 const kanbanColumns = [
   { key: 'ORCAMENTO_APROVADO', label: 'Orcamento aprovado' },
-  { key: 'VENDA_FECHADA', label: 'Venda fechada' },
+  { key: 'VENDA_FECHADA', label: 'Fechar venda' },
   { key: 'MEDIDA_FINA_AGENDADA', label: 'Medida fina' },
   { key: 'PRODUCAO_AGENDADA', label: 'Producao agendada' },
   { key: 'EM_PRODUCAO', label: 'Em producao' },

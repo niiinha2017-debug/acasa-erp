@@ -47,6 +47,12 @@ export class CriarFuncionarioDto {
   @IsString()
   escolaridade?: string;
 
+  /** Criar usuário de acesso e enviar senha provisória por e-mail (quando e-mail estiver preenchido). Default true. */
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  criar_usuario?: boolean;
+
   // Empresa
   @IsOptional()
   @IsString()

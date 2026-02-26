@@ -1642,9 +1642,28 @@ export class ContratosService {
   }
 
   /**
-   * Retorna o buffer do PDF do contrato (para uso em link público).
+   * Retorna o buffer do PDF do contrato para visualização.
+   * Se existir o PDF já assinado pelo cliente (CONTRATO_ASSINADO_CLIENTE), retorna esse arquivo.
+   * Caso contrário, gera o PDF atual (evita confusão: só mostra o que o cliente assinou quando houver).
    */
   async obterPdfBuffer(contratoId: number): Promise<Buffer> {
+    const assinado = await this.prisma.arquivos.findUnique({
+      where: {
+        owner_type_owner_id_slot_key: {
+          owner_type: 'CONTRATO',
+          owner_id: contratoId,
+          slot_key: 'CONTRATO_ASSINADO_CLIENTE',
+        },
+      },
+      select: { url: true },
+    });
+    if (assinado?.url) {
+      const rel = String(assinado.url).replace(/^\//, '');
+      const abs = path.join(process.cwd(), rel);
+      if (fs.existsSync(abs)) {
+        return fs.readFileSync(abs);
+      }
+    }
     return this.gerarContratoPdfBuffer(contratoId);
   }
 
@@ -1978,5 +1997,58 @@ export class ContratosService {
       cliente_id: (contrato as any).cliente_id ?? null,
     });
     return { success: true, numero: String(contrato.numero || contrato.id) };
+  }
+
+  /**
+   * Marca o contrato como vigente por assinatura presencial na loja.
+   * Atualiza status para VIGENTE e data_assinatura. Se enviar PDF escaneado, grava como CONTRATO_ASSINADO_CLIENTE.
+   */
+  async marcarVigenteAssinaturaPresencial(
+    contratoId: number,
+    pdfEscaneado?: Buffer,
+  ) {
+    const contrato = await this.prisma.contratos.findUnique({
+      where: { id: contratoId },
+      select: { id: true, status: true, venda_id: true, cliente_id: true },
+    });
+    if (!contrato)
+      throw new NotFoundException('Contrato não encontrado.');
+    const statusAtual = String(contrato.status || '').toUpperCase();
+    if (statusAtual === 'VIGENTE')
+      throw new BadRequestException('Contrato já está vigente.');
+    if (statusAtual === 'CANCELADO' || statusAtual === 'ENCERRADO')
+      throw new BadRequestException(
+        `Contrato ${statusAtual.toLowerCase()} não pode ser marcado como vigente.`,
+      );
+
+    await this.prisma.contratos.update({
+      where: { id: contratoId },
+      data: { status: 'VIGENTE', data_assinatura: new Date() } as any,
+    });
+
+    if (pdfEscaneado && Buffer.isBuffer(pdfEscaneado) && pdfEscaneado.length > 0) {
+      await this.salvarPdfContratoComSlot({
+        contratoId,
+        pdfBuffer: pdfEscaneado,
+        slotKey: 'CONTRATO_ASSINADO_CLIENTE',
+        categoria: 'RELATORIO',
+        nomeArquivo: `CONTRATO #${contratoId} (assinado presencialmente)`,
+      });
+    }
+
+    await this.garantirContaReceberDeVendaAssinada({
+      venda_id: contrato.venda_id ?? null,
+      cliente_id: contrato.cliente_id ?? null,
+    });
+    await this.atualizarStatusVendaParaProducaoAoVigorarContrato({
+      venda_id: contrato.venda_id ?? null,
+    });
+    await this.garantirAgendaProducaoDaVendaAoVigorarContrato({
+      id: contrato.id,
+      venda_id: contrato.venda_id ?? null,
+      cliente_id: contrato.cliente_id ?? null,
+    });
+
+    return { success: true, status: 'VIGENTE' };
   }
 }

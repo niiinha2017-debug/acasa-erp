@@ -6,7 +6,12 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { CHAVE_ADMIN } from '../permissoes/permissoes.service';
 
+/**
+ * Guard que exige as permissões declaradas com @Permissoes() na rota.
+ * Regras: sem user → 401; is_admin ou permissão ADMIN → libera; senão exige uma das permissões da rota.
+ */
 @Injectable()
 export class PermissionsGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
@@ -22,20 +27,16 @@ export class PermissionsGuard implements CanActivate {
         ? [String(raw)]
         : [];
 
-    // rota sem permissão -> libera
     if (required.length === 0) return true;
 
     const req = context.switchToHttp().getRequest();
     const user = req.user;
 
-    // ✅ sem user (token ausente/invalidado) -> 401
     if (!user) {
       throw new UnauthorizedException('Sessão inválida');
     }
 
-    // is_admin: libera tudo, ignora lista de permissões
     if (user?.is_admin) return true;
-    // status: admin pode operar mesmo pendente; demais precisam ATIVO
     if (user.status !== 'ATIVO') {
       throw new ForbiddenException('Acesso negado: sua conta não está ativa.');
     }
@@ -43,7 +44,7 @@ export class PermissionsGuard implements CanActivate {
     const userPerms: string[] = Array.isArray(user?.permissoes)
       ? user.permissoes
       : [];
-    if (userPerms.includes('ADMIN')) return true;
+    if (userPerms.includes(CHAVE_ADMIN)) return true;
     const ok = required.some((p) => userPerms.includes(p));
 
     if (!ok)

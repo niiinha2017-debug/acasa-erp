@@ -180,7 +180,7 @@ definePage({ meta: { perm: 'permissoes.ver' } })
 
 
 const router = useRouter()
-const { temAcesso, usuarioLogado } = useAuth()
+const { temAcesso, usuarioLogado, syncMe } = useAuth()
 
 // Estados
 const usuarios = ref([])
@@ -322,6 +322,11 @@ const salvar = async () => {
     // confere na hora o que ficou no banco
     const { data } = await PermissoesService.listarDoUsuario(usuarioSelecionado.value.id)
     permissoesAtivas.value = normalizarPerms(data)
+
+    // Se alteramos as permissões do próprio usuário, atualiza sessão local (menu e can())
+    if (usuarioSelecionado.value.id === usuarioLogado.value?.id) {
+      await syncMe()
+    }
 
     notify.success('Permissões atualizadas!')
   } catch (e) {

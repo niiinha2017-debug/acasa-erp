@@ -1,9 +1,13 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+
+/** Chave da permissão de administrador. Usado para regras de segurança. */
+export const CHAVE_ADMIN = 'ADMIN';
 
 @Injectable()
 export class PermissoesService {
@@ -47,6 +51,12 @@ export class PermissoesService {
     return chaves;
   }
 
+  /**
+   * Define as permissões de um usuário.
+   * Regras de segurança:
+   * - Só aceita IDs de permissões existentes no catálogo.
+   * - Não permite remover ADMIN do último usuário que possui ADMIN (evita lockout).
+   */
   async definirPermissoesDoUsuario(usuarioId: number, permissoesIds: number[]) {
     const usuario = await this.prisma.usuarios.findUnique({
       where: { id: usuarioId },
@@ -58,7 +68,7 @@ export class PermissoesService {
 
     const permissoes = await this.prisma.permissoes.findMany({
       where: { id: { in: ids } },
-      select: { id: true },
+      select: { id: true, chave: true },
     });
 
     if (permissoes.length !== ids.length) {
@@ -67,6 +77,28 @@ export class PermissoesService {
       throw new BadRequestException(
         `Permissoes invalidas: ${faltando.join(', ')}`,
       );
+    }
+
+    // Segurança: não permitir remover ADMIN do último usuário que tem ADMIN
+    const adminPerm = await this.prisma.permissoes.findUnique({
+      where: { chave: CHAVE_ADMIN },
+      select: { id: true },
+    });
+    if (adminPerm) {
+      const novoConjuntoIncluiAdmin = ids.includes(adminPerm.id);
+      if (!novoConjuntoIncluiAdmin) {
+        const usuariosComAdmin = await this.prisma.usuarios_permissoes.count({
+          where: { permissao_id: adminPerm.id },
+        });
+        const esteUsuarioTemAdmin = await this.prisma.usuarios_permissoes.findFirst({
+          where: { usuario_id: usuarioId, permissao_id: adminPerm.id },
+        });
+        if (esteUsuarioTemAdmin && usuariosComAdmin <= 1) {
+          throw new ForbiddenException(
+            'Não é possível remover o último administrador do sistema. Atribua ADMIN a outro usuário antes.',
+          );
+        }
+      }
     }
 
     await this.prisma.$transaction(async (tx) => {
