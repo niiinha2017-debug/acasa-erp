@@ -88,11 +88,9 @@ export class ProdutosController {
       );
     }
 
-    return this.produtosService.listar(
-      { fornecedor_id: fId },
-      undefined,
-      { aplicarMarkup100 },
-    );
+    return this.produtosService.listar({ fornecedor_id: fId }, undefined, {
+      aplicarMarkup100,
+    });
   }
 
   @Get(':id')

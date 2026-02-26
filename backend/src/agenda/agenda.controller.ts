@@ -19,11 +19,18 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
 import { normalizarOrigemFluxo, normalizarSetorDestino } from './agenda-rules';
+import { PIPELINE_PRODUCAO } from '../../shared/constantes/pipeline-producao';
 
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('agenda')
 export class AgendaController {
   constructor(private readonly agendaService: AgendaService) {}
+
+  @Get('pipeline/producao')
+  @Permissoes('agendamentos.ver')
+  getPipelineProducao() {
+    return PIPELINE_PRODUCAO;
+  }
 
   // 1. Criar agendamento (Venda, Orçamento ou Plano de Corte)
   @Post()
@@ -57,19 +64,19 @@ export class AgendaController {
       throw new ForbiddenException('Sem permissão para acessar a agenda.');
     }
 
-    let setorDestino: 'LOJA' | 'PRODUCAO' | undefined;
+    let setorDestino: 'LOJA' | 'FABRICA' | undefined;
     const setorNormalizado = normalizarSetorDestino(setorDestinoQuery);
     const visaoNorm = String(visao || '').toLowerCase();
     if (setorNormalizado) {
       setorDestino = setorNormalizado;
     } else if (visaoNorm === 'loja') {
       setorDestino = 'LOJA';
-    } else if (visaoNorm === 'producao') {
-      setorDestino = 'PRODUCAO';
+    } else if (visaoNorm === 'fabrica' || visaoNorm === 'producao') {
+      setorDestino = 'FABRICA';
     } else if (canVendas && !canProducao) {
       setorDestino = 'LOJA';
     } else if (canProducao && !canVendas) {
-      setorDestino = 'PRODUCAO';
+      setorDestino = 'FABRICA';
     }
 
     return this.agendaService.findAll(inicio, fim, {
@@ -94,14 +101,21 @@ export class AgendaController {
   // 4. Atualizar Status (Para o marceneiro marcar como "CONCLUIDO" / pipeline plano corte "FINALIZADO")
   @Patch(':id/status')
   @Permissoes('agendamentos.editar')
-  async updateStatus(@Param('id') id: string, @Body('status') status: string) {
-    return this.agendaService.updateStatus(+id, status);
+  async updateStatus(
+    @Param('id') id: string,
+    @Body('status') status: string,
+    @Body('categoria') categoria?: string,
+  ) {
+    return this.agendaService.updateStatus(+id, status, categoria);
   }
 
   // 4.1 Atualizar dados do agendamento sem recriar
   @Patch(':id')
   @Permissoes('agendamentos.editar')
-  async update(@Param('id') id: string, @Body() updateAgendaDto: UpdateAgendaDto) {
+  async update(
+    @Param('id') id: string,
+    @Body() updateAgendaDto: UpdateAgendaDto,
+  ) {
     return this.agendaService.update(+id, updateAgendaDto);
   }
 

@@ -1,17 +1,18 @@
 // src/services/navigation.js
 export const NAV_SCHEMA = {
   comercial: [
-    { label: 'Visão geral', to: '/comercial', icon: 'pi-briefcase', perm: 'orcamentos.ver' },
+    { label: 'Acompanhamento de status', to: '/relatorios/acompanhamento-status', icon: 'pi-list-check', perm: 'relatorios.acompanhamento_status.ver' },
     { label: 'Orçamento', to: '/orcamentos', icon: 'pi-file-edit', perm: 'orcamentos.ver' },
     { label: 'Fechamento de venda', to: '/vendas/fechamento', icon: 'pi-shopping-cart', perm: 'vendas.criar' },
     { label: 'Contrato', to: '/contratos', icon: 'pi-file', perm: 'contratos.ver' },
     { label: 'Cláusulas', to: '/contratos/clausulas', icon: 'pi-file-edit', perm: 'contratos.clausulas.editar' },
-    { label: 'Agenda', to: '/agendamentos?visao=geral', icon: 'pi-calendar-clock', perm: 'agendamentos.ver' },
+    { label: 'Agenda Loja', to: '/agendamentos/loja', icon: 'pi-calendar-clock', perm: 'agendamentos.vendas' },
   ],
 
   producao: [
     { label: 'Visão geral', to: '/producao', icon: 'pi-cogs', perm: 'posvenda.ver' },
     { label: 'Pós-venda', to: '/vendas', icon: 'pi-cart-plus', perm: 'posvenda.ver' },
+    { label: 'Agenda Fábrica', to: '/agendamentos/fabrica', icon: 'pi-calendar-clock', perm: 'agendamentos.producao' },
     { divider: true },
     { label: 'Plano de corte', to: '/plano-corte', icon: 'pi-sitemap', perm: 'plano_corte.ver' },
     { label: 'Produtos plano de corte', to: '/plano-corte/itens', icon: 'pi-box', perm: 'plano_corte.ver' },

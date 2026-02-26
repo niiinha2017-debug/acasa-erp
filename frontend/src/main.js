@@ -4,17 +4,76 @@ import router from './router'
 import storage from '@/utils/storage'
 import { notify } from '@/services/notify'
 
-// ✅ Ao reabrir o app (após fechar): logout + limpar abas → tela de login e página inicial sem abas
+const MOJIBAKE_REGEX = /(\u00C3.|\u00C2|\uFFFD|\u00E2\u20AC\u2122|\u00E2\u20AC\u0153|\u00E2\u20AC|\u00F0\u0178)/u
+const AUTH_STARTED_AT_KEY = 'ACASA_AUTH_STARTED_AT'
+const SESSION_MAX_AGE_MS = 8 * 60 * 60 * 1000
+
+function sendDebugLog({ runId = 'pre-fix', hypothesisId, location, message, data = {} }) {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/5584e6b5-c550-4991-8207-4f83f59c9ff1', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Debug-Session-Id': '1125e2'
+    },
+    body: JSON.stringify({
+      sessionId: '1125e2',
+      runId,
+      hypothesisId,
+      location,
+      message,
+      data,
+      timestamp: Date.now()
+    })
+  }).catch(() => {})
+  // #endregion
+}
+
+// Ao reabrir o app (apos fechar): logout + limpar abas -> tela de login e pagina inicial sem abas
 const SESSION_KEY = 'acasa:session'
 const TAB_STORAGE_KEY = 'acasa:tabs:v1'
 if (!sessionStorage.getItem(SESSION_KEY)) {
   storage.removeToken()
   storage.removeUser()
   storage.removeRefreshToken()
+  localStorage.removeItem(AUTH_STARTED_AT_KEY)
   try {
     localStorage.removeItem(TAB_STORAGE_KEY)
   } catch (_) {}
   sessionStorage.setItem(SESSION_KEY, '1')
+}
+
+function logoutLocalByTime() {
+  const startedAt = Number(localStorage.getItem(AUTH_STARTED_AT_KEY) || 0)
+  if (!startedAt || Number.isNaN(startedAt)) return false
+  if (Date.now() - startedAt < SESSION_MAX_AGE_MS) return false
+  storage.removeToken()
+  storage.removeUser()
+  storage.removeRefreshToken()
+  localStorage.removeItem(AUTH_STARTED_AT_KEY)
+  window.dispatchEvent(new CustomEvent('acasa-auth-logout', {
+    detail: { reason: 'session-max-age' },
+  }))
+  return true
+}
+
+// Expiracao fixa de 8h (mesmo com app aberto).
+logoutLocalByTime()
+setInterval(() => {
+  logoutLocalByTime()
+}, 60 * 1000)
+
+// No desktop (Tauri), fechar app deve deslogar para proxima abertura.
+if (window.__TAURI__ || window.__TAURI_INTERNALS__) {
+  const clearSessionOnClose = () => {
+    storage.removeToken()
+    storage.removeUser()
+    storage.removeRefreshToken()
+    localStorage.removeItem(AUTH_STARTED_AT_KEY)
+    sessionStorage.removeItem(SESSION_KEY)
+  }
+  window.addEventListener('beforeunload', clearSessionOnClose)
+  window.addEventListener('pagehide', clearSessionOnClose)
 }
 
 // Estilos
@@ -22,7 +81,7 @@ import '@/assets/CSS/tailwind.css'
 import 'primeicons/primeicons.css'
 import '@/assets/hide-password-eye.css'
 
-// ✅ DevTools auto (Tauri)
+// DevTools auto (Tauri)
 import { autoOpenDevtools } from './devtools-auto'
 
 // UI Components
@@ -54,15 +113,15 @@ import Loading from '@/components/common/Loading.vue'
 import ProcessoClienteFlow from '@/components/common/ProcessoClienteFlow.vue'
 import Select from '@/components/common/Select.vue'
 
-// Gráficos (relatórios)
+// Graficos (relatorios)
 import VueApexCharts from 'vue3-apexcharts'
 
-// Importação da Diretiva de Permissão
+// Importacao da Diretiva de Permissao
 import { can } from '@/services/permissions'
 
 const app = createApp(App)
 
-// Mostra erro na UI: toast sempre (visível no Tauri); alert como fallback
+// Mostra erro na UI: toast sempre (visivel no Tauri); alert como fallback
 function showErrorToUser(title, message) {
   const text = message ? `${title}: ${message}` : title
   console.error('[ACASA_ERROR]', text)
@@ -70,21 +129,38 @@ function showErrorToUser(title, message) {
   try { alert(text) } catch (_) {}
 }
 
-// ✅ GLOBAL ERROR HANDLER (Vue + Tauri: toast sempre; dialog no Tauri)
+// GLOBAL ERROR HANDLER (Vue + Tauri: toast sempre; dialog no Tauri)
 app.config.errorHandler = (err, instance, info) => {
   const msg = err?.message || String(err)
   showErrorToUser('Erro inesperado', `${msg} (${info || ''})`)
 }
 
-// ✅ Captura erros globais e promessas rejeitadas
+// Captura erros globais e promessas rejeitadas
 window.onerror = (message, source, lineno, colno) => {
   showErrorToUser('Erro JS', `${message} em ${source}:${lineno}:${colno}`)
 }
 
 window.addEventListener('unhandledrejection', (event) => {
   const reason = event?.reason?.message || event?.reason || 'Unknown'
-  showErrorToUser('Operação falhou', String(reason))
+  showErrorToUser('Operacao falhou', String(reason))
 })
+
+function scanDomForMojibake(hypothesisId, location) {
+  const text = String(document?.body?.innerText || '').slice(0, 10000)
+  const match = text.match(MOJIBAKE_REGEX)
+  if (match) {
+    const idx = match.index || 0
+    sendDebugLog({
+      hypothesisId,
+      location,
+      message: 'Mojibake detectado em texto renderizado no DOM',
+      data: {
+        route: window?.location?.pathname || '',
+        sample: text.slice(Math.max(0, idx - 40), Math.min(text.length, idx + 140))
+      }
+    })
+  }
+}
 
 // Registro Global - UI
 app.component('Button', Button)
@@ -135,44 +211,44 @@ app.directive('can', {
 
 app.use(router)
 
-// ✅ evita hard reload em logout por erro 401
+// Evita hard reload em logout por erro 401
 window.addEventListener('acasa-auth-logout', () => {
   if (router.currentRoute.value?.path !== '/login') {
     router.push('/login')
   }
 })
 
-// ✅ chama aqui (antes do mount)
+// Chama aqui (antes do mount)
 autoOpenDevtools()
 
-// ✅ Android: ao abrir o app, verifica se há nova versão no subdomínio e avisa
+// Android: ao abrir o app, verifica se ha nova versao no subdominio e avisa
 import { checkAndroidUpdate } from '@/utils/check-android-update'
 router.isReady().then(() => {
   setTimeout(() => checkAndroidUpdate(), 2000)
 })
 
 const maybeRunUpdater = async () => {
-  // Só roda quando estiver dentro do Tauri (desktop) e em build de produção.
+  // So roda quando estiver dentro do Tauri (desktop) e em build de producao.
   if (!window.__TAURI__ && !window.__TAURI_INTERNALS__) return
-  if (import.meta.env.DEV) return // Em dev não verifica atualização (evita erro de release JSON)
+  if (import.meta.env.DEV) return // Em dev nao verifica atualizacao (evita erro de release JSON)
 
   try {
-    notify.info('Tauri: verificando atualização...')
+    notify.info('Tauri: verificando atualizacao...')
 
     const { check } = await import('@tauri-apps/plugin-updater')
     const update = await check()
 
     if (update?.available) {
-      notify.info(`Tauri: atualização ${update.version} encontrada. Baixando...`)
+      notify.info(`Tauri: atualizacao ${update.version} encontrada. Baixando...`)
       await update.downloadAndInstall()
-      notify.success('Tauri: atualização instalada. Reiniciando o app...')
+      notify.success('Tauri: atualizacao instalada. Reiniciando o app...')
       window.location.reload()
     } else {
-      notify.info('Tauri: nenhuma atualização disponível.')
+      notify.info('Tauri: nenhuma atualizacao disponivel.')
     }
   } catch (err) {
     console.warn('[ACASA_UPDATER]', err?.message || err)
-    // Não mostra toast para erro de endpoint/release JSON (ex.: servidor de updates ainda não configurado)
+    // Nao mostra toast para erro de endpoint/release JSON (ex.: servidor de updates ainda nao configurado)
     const msg = String(err?.message || err)
     if (!msg.includes('release JSON') && !msg.includes('fetch')) {
       notify.error(`Tauri updater: ${msg}`)
@@ -180,13 +256,13 @@ const maybeRunUpdater = async () => {
   }
 }
 
-// Desktop (Tauri): checa atualização automaticamente ao iniciar o app.
+// Desktop (Tauri): checa atualizacao automaticamente ao iniciar o app.
 maybeRunUpdater()
 
 const setAppTitleWithVersion = async () => {
   const baseTitle = 'A Casa Marcenaria'
 
-  // Web fallback: mantém título base.
+  // Web fallback: mantem titulo base.
   if (!window.__TAURI__ && !window.__TAURI_INTERNALS__) {
     document.title = baseTitle
     return
@@ -207,3 +283,26 @@ const setAppTitleWithVersion = async () => {
 setAppTitleWithVersion()
 
 app.mount('#app')
+sendDebugLog({
+  hypothesisId: 'H5',
+  location: 'src/main.js:after-mount',
+  message: 'Heartbeat de debug apos mount do app',
+  data: {
+    tauri: Boolean(window.__TAURI__ || window.__TAURI_INTERNALS__),
+    route: window?.location?.pathname || ''
+  }
+})
+requestAnimationFrame(() => scanDomForMojibake('H4', 'src/main.js:post-mount'))
+
+router.afterEach((to) => {
+  sendDebugLog({
+    hypothesisId: 'H7',
+    location: 'src/main.js:router.afterEach',
+    message: 'Navegacao detectada durante debug de mojibake',
+    data: {
+      to: to?.fullPath || '',
+      tauri: Boolean(window.__TAURI__ || window.__TAURI_INTERNALS__)
+    }
+  })
+  requestAnimationFrame(() => scanDomForMojibake('H7', 'src/main.js:afterEach-dom-scan'))
+})

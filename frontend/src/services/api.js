@@ -1,23 +1,67 @@
 import axios from 'axios'
 import storage from '@/utils/storage'
 
+const DEBUG_ENDPOINT = 'http://127.0.0.1:7242/ingest/5584e6b5-c550-4991-8207-4f83f59c9ff1'
+const DEBUG_SESSION_ID = '1125e2'
+const MOJIBAKE_REGEX = /(Ã.|Â|�|â€™|â€œ|â€|ðŸ)/u
+
+function debugLog({ runId = 'pre-fix', hypothesisId, location, message, data = {} }) {
+  // #region agent log
+  fetch(DEBUG_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Debug-Session-Id': DEBUG_SESSION_ID
+    },
+    body: JSON.stringify({
+      sessionId: DEBUG_SESSION_ID,
+      runId,
+      hypothesisId,
+      location,
+      message,
+      data,
+      timestamp: Date.now()
+    })
+  }).catch(() => {})
+  // #endregion
+}
+
+function findMojibake(value, path = 'root') {
+  if (typeof value === 'string') {
+    if (MOJIBAKE_REGEX.test(value)) return { path, value }
+    return null
+  }
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i += 1) {
+      const found = findMojibake(value[i], `${path}[${i}]`)
+      if (found) return found
+    }
+    return null
+  }
+  if (value && typeof value === 'object') {
+    const keys = Object.keys(value)
+    for (const key of keys) {
+      const found = findMojibake(value[key], `${path}.${key}`)
+      if (found) return found
+    }
+    return null
+  }
+  return null
+}
+
 // ✅ baseURL certo pra WEB + TAURI
 // - Em produção web (Nginx): pode ser "/api"
 // - Em Tauri/dev: deve ser "https://acasamarcenaria.com.br/api" (via .env)
 // - Se não tiver VITE_API_URL definido, cai pra "/api"
 // Substitua a linha do BASE_URL por esta:
 const VITE_URL = import.meta.env.VITE_API_URL;
+const IS_DEV = !!import.meta.env.DEV
 
 // Se o .env falhar, usamos a URL real direto para o Tauri não se perder
 const BASE_URL = VITE_URL 
   ? VITE_URL.replace(/\/+$/, '') 
-  : 'https://acasamarcenaria.com.br/api'; 
+  : (IS_DEV ? 'http://127.0.0.1:3000/api' : 'https://acasamarcenaria.com.br/api'); 
 
-console.log('[API] ✅ Conectando em:', BASE_URL);
-
-// ✅ DEBUG (você pediu inteiro)
-console.log('[API] VITE_API_URL =', import.meta?.env?.VITE_API_URL)
-console.log('[API] BASE_URL =', BASE_URL)
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -46,6 +90,20 @@ api.interceptors.request.use(
 // ✅ DEBUG response / refresh logic
 api.interceptors.response.use(
   (response) => {
+    const bad = findMojibake(response?.data)
+    if (bad) {
+      debugLog({
+        hypothesisId: 'H1',
+        location: 'src/services/api.js:response.success',
+        message: 'Mojibake detectado em payload de sucesso da API',
+        data: {
+          url: response?.config?.url || '',
+          status: response?.status || null,
+          path: bad.path,
+          sample: String(bad.value).slice(0, 180)
+        }
+      })
+    }
     // opcional: loga sucesso
     // console.log('[API] <-', response.status, response.config?.url)
     return response
@@ -58,13 +116,24 @@ api.interceptors.response.use(
     const errData = error?.response?.data
     const requestUrl = (original?.baseURL || '') + (original?.url || '')
     const isMe = (original?.url || '').includes('/auth/me')
-    if (status === 401 && isMe) {
-      // 401 em /auth/me é esperado quando a sessão expirou ou token inválido; evita poluir console
-      console.log('[API] Sessão expirada ou token inválido (/auth/me). Redirecionando para login.')
-    } else {
+    if (!(status === 401 && isMe)) {
       console.log('[API] ERROR status =', status)
       console.log('[API] ERROR url =', requestUrl)
       console.log('[API] ERROR data =', typeof errData === 'object' ? JSON.stringify(errData, null, 2) : errData)
+      const badErrorData = findMojibake(errData)
+      if (badErrorData) {
+        debugLog({
+          hypothesisId: 'H2',
+          location: 'src/services/api.js:response.error',
+          message: 'Mojibake detectado em payload de erro da API',
+          data: {
+            url: requestUrl || '',
+            status: status || null,
+            path: badErrorData.path,
+            sample: String(badErrorData.value).slice(0, 180)
+          }
+        })
+      }
     }
 
     // ✅ se não tem token, não tenta refresh

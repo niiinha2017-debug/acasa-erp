@@ -13,7 +13,7 @@ import { NAV_SCHEMA } from '@/services/navigation'
 definePage({ meta: { perm: 'index.visualizar' } })
 
 const router = useRouter()
-const AGENDA_HOME = '/agendamentos?visao=geral'
+const AGENDA_HOME = '/agendamentos/loja'
 
 function getFirstAllowedRoute() {
   const items = Object.values(NAV_SCHEMA).flat()

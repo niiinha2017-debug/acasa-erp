@@ -145,7 +145,7 @@ export class DespesasService {
 
       data_registro: dataRegistro ?? new Date(),
       data_vencimento: primeiroVenc,
-      status: ehPrazo ? SF.EM_ABERTO : (dto.status || SF.EM_ABERTO),
+      status: ehPrazo ? SF.EM_ABERTO : dto.status || SF.EM_ABERTO,
 
       // ✅ não vamos mais usar recorrencia/parcela na despesa
       recorrencia_id: null,
@@ -221,7 +221,9 @@ export class DespesasService {
    */
   async findAll(
     filtros: FiltrosDespesas = {},
-  ): Promise<(despesas & { parcela_numero?: number; parcelas_total?: number })[]> {
+  ): Promise<
+    (despesas & { parcela_numero?: number; parcelas_total?: number })[]
+  > {
     const dataIni = filtros.data_ini
       ? this.parseBRDate(filtros.data_ini)
       : null;
@@ -256,15 +258,24 @@ export class DespesasService {
       where,
       include: {
         titulos: { orderBy: { vencimento_em: 'asc' } },
-        conta_pagar: { include: { titulos: { orderBy: { vencimento_em: 'asc' } } } },
+        conta_pagar: {
+          include: { titulos: { orderBy: { vencimento_em: 'asc' } } },
+        },
       },
       orderBy: { data_registro: 'desc' },
     });
 
-    const rows: (despesas & { parcela_numero?: number; parcelas_total?: number })[] = [];
+    const rows: (despesas & {
+      parcela_numero?: number;
+      parcelas_total?: number;
+    })[] = [];
 
     for (const d of despesasList) {
-      const { titulos: _titulos, conta_pagar: _contaPagar, ...despesaBase } = d as typeof d & {
+      const {
+        titulos: _titulos,
+        conta_pagar: _contaPagar,
+        ...despesaBase
+      } = d as typeof d & {
         titulos?: any[];
         conta_pagar?: { titulos?: any[] } | null;
       };
@@ -285,7 +296,7 @@ export class DespesasService {
           rows.push({
             ...despesaBase,
             data_vencimento: t.vencimento_em,
-            valor_total: t.valor as any,
+            valor_total: t.valor,
             status: t.status,
             data_pagamento: t.pago_em,
             parcela_numero: t.parcela_numero ?? undefined,

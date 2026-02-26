@@ -10,4 +10,3 @@ import { ClausulasController } from './clausulas.controller';
   exports: [ClausulasService],
 })
 export class ClausulasModule {}
-

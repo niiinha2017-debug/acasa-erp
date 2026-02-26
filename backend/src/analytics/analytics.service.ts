@@ -54,18 +54,29 @@ export class AnalyticsService {
   }> {
     const hoje = new Date();
     const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-    const fimMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59);
+    const fimMes = new Date(
+      hoje.getFullYear(),
+      hoje.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+    );
 
-    const [orcamentosTotal, orcamentosComVenda, vendasMes, contratosTotal] = await Promise.all([
-      this.prisma.orcamentos.count(),
-      this.prisma.orcamentos.count({ where: { venda: { isNot: null } } }),
-      this.prisma.vendas.count({
-        where: { data_venda: { gte: inicioMes, lte: fimMes } },
-      }),
-      this.prisma.contratos.count(),
-    ]);
+    const [orcamentosTotal, orcamentosComVenda, vendasMes, contratosTotal] =
+      await Promise.all([
+        this.prisma.orcamentos.count(),
+        this.prisma.orcamentos.count({ where: { venda: { isNot: null } } }),
+        this.prisma.vendas.count({
+          where: { data_venda: { gte: inicioMes, lte: fimMes } },
+        }),
+        this.prisma.contratos.count(),
+      ]);
 
-    const orcamentosSemVenda = Math.max(0, orcamentosTotal - orcamentosComVenda);
+    const orcamentosSemVenda = Math.max(
+      0,
+      orcamentosTotal - orcamentosComVenda,
+    );
     return {
       orcamentos_em_andamento: orcamentosTotal,
       orcamentos_aprovados_sem_venda: orcamentosSemVenda,
@@ -94,7 +105,9 @@ export class AnalyticsService {
     let usuarioId = Number(user?.id || 0) || null;
     let funcionarioId = Number(user?.funcionario_id || 0) || null;
     let nome =
-      String(user?.nome || '').trim() || String(user?.usuario || '').trim() || null;
+      String(user?.nome || '').trim() ||
+      String(user?.usuario || '').trim() ||
+      null;
 
     // Resolve identificadores e nome com fallback para cadastros legados.
     if (usuarioId || funcionarioId) {
@@ -104,8 +117,13 @@ export class AnalyticsService {
           select: { nome: true, usuario: true, funcionario_id: true },
         });
         if (usuario) {
-          funcionarioId = funcionarioId || Number(usuario.funcionario_id || 0) || null;
-          nome = nome || String(usuario.nome || '').trim() || String(usuario.usuario || '').trim() || null;
+          funcionarioId =
+            funcionarioId || Number(usuario.funcionario_id || 0) || null;
+          nome =
+            nome ||
+            String(usuario.nome || '').trim() ||
+            String(usuario.usuario || '').trim() ||
+            null;
         }
       }
 
@@ -256,14 +274,23 @@ export class AnalyticsService {
     const vendas = await this.prisma.vendas.findMany({
       select: { id: true, status: true },
     });
-    const statusProducao = ['PRODUCAO_AGENDADA', 'EM_PRODUCAO', 'PRODUCAO_FINALIZADA'];
+    const statusProducao = [
+      'PRODUCAO_AGENDADA',
+      'EM_PRODUCAO',
+      'PRODUCAO_FINALIZADA',
+    ];
     const statusFinalizadas = ['MONTAGEM_FINALIZADA', 'ENCERRADO'];
-    const normalize = (s: string) => String(s || '').trim().toUpperCase().replace(/\s+/g, '_');
+    const normalize = (s: string) =>
+      String(s || '')
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, '_');
     let emProducao = 0;
     let finalizadas = 0;
     for (const v of vendas) {
       const key = normalize(v.status);
-      if (statusProducao.some((x) => key.includes(x) || key === 'EM_PRODUCAO')) emProducao += 1;
+      if (statusProducao.some((x) => key.includes(x) || key === 'EM_PRODUCAO'))
+        emProducao += 1;
       if (statusFinalizadas.some((x) => key === x)) finalizadas += 1;
     }
     const planoTotal = await this.prisma.plano_corte.count();
@@ -276,9 +303,14 @@ export class AnalyticsService {
   }
 
   /** Despesas (SAÍDA) por mês e categoria. Filtros: inicio, fim (YYYY-MM-DD). */
-  async getDreDespesas(inicio?: string, fim?: string): Promise<{ mes: string; categoria: string; total: number }[]> {
+  async getDreDespesas(
+    inicio?: string,
+    fim?: string,
+  ): Promise<{ mes: string; categoria: string; total: number }[]> {
     const hoje = new Date();
-    const dtInicio = inicio ? new Date(inicio) : new Date(hoje.getFullYear(), 0, 1);
+    const dtInicio = inicio
+      ? new Date(inicio)
+      : new Date(hoje.getFullYear(), 0, 1);
     const dtFim = fim ? new Date(fim) : hoje;
 
     // 1) Títulos financeiros vinculados a despesas SAÍDA
@@ -339,7 +371,9 @@ export class AnalyticsService {
       const [mes, categoria] = key.split('|');
       return { mes, categoria, total: Math.round(total * 100) / 100 };
     });
-    result.sort((a, b) => (a.mes + a.categoria).localeCompare(b.mes + b.categoria));
+    result.sort((a, b) =>
+      (a.mes + a.categoria).localeCompare(b.mes + b.categoria),
+    );
     return result;
   }
 
@@ -369,7 +403,8 @@ export class AnalyticsService {
       },
       _sum: { valor_total: true },
     });
-    const receita_total = Math.round(Number(vendasMes._sum.valor_total ?? 0) * 100) / 100;
+    const receita_total =
+      Math.round(Number(vendasMes._sum.valor_total ?? 0) * 100) / 100;
 
     // Despesas: mesmo critério de getDreDespesas, filtrado ao mês
     const dreDespesas = await this.getDreDespesas(
@@ -381,11 +416,16 @@ export class AnalyticsService {
     for (const d of dreDespesas) {
       if (d.mes !== mesStr) continue;
       despesas_total += d.total;
-      despesasPorCategoria.set(d.categoria, (despesasPorCategoria.get(d.categoria) ?? 0) + d.total);
+      despesasPorCategoria.set(
+        d.categoria,
+        (despesasPorCategoria.get(d.categoria) ?? 0) + d.total,
+      );
     }
     despesas_total = Math.round(despesas_total * 100) / 100;
 
-    const despesas_por_categoria = Array.from(despesasPorCategoria.entries()).map(([categoria, total]) => ({
+    const despesas_por_categoria = Array.from(
+      despesasPorCategoria.entries(),
+    ).map(([categoria, total]) => ({
       categoria,
       total: Math.round(total * 100) / 100,
     }));

@@ -63,7 +63,14 @@ export class UtilsService {
       const res = await fetch(`https://viacep.com.br/ws/${n}/json`, {
         headers: { Accept: 'application/json' },
       });
-      const data = (await res.json()) as { erro?: boolean; cep?: string; logradouro?: string; bairro?: string; localidade?: string; uf?: string };
+      const data = (await res.json()) as {
+        erro?: boolean;
+        cep?: string;
+        logradouro?: string;
+        bairro?: string;
+        localidade?: string;
+        uf?: string;
+      };
       return data?.erro ? null : data;
     } catch {
       return null;

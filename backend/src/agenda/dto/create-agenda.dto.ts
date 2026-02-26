@@ -16,10 +16,16 @@ export class FuncionarioApontamentoDto {
   @IsInt()
   funcionario_id: number;
 
-  @IsDateString({}, { message: 'Data/hora de início do apontamento é inválida' })
+  @IsDateString(
+    {},
+    { message: 'Data/hora de início do apontamento é inválida' },
+  )
   inicio_em: Date;
 
-  @IsDateString({}, { message: 'Data/hora de término do apontamento é inválida' })
+  @IsDateString(
+    {},
+    { message: 'Data/hora de término do apontamento é inválida' },
+  )
   fim_em: Date;
 }
 
@@ -38,8 +44,11 @@ export class CreateAgendaDto {
   @ValidateIf((o) => {
     const origem = String(o.origem_fluxo || '').toUpperCase();
     const isTarefaExplicita = origem === 'TAREFA';
-    const isTarefaInferidaSemVinculo = !origem && !o.plano_corte_id && !o.venda_id;
-    return !o.plano_corte_id && !isTarefaExplicita && !isTarefaInferidaSemVinculo;
+    const isTarefaInferidaSemVinculo =
+      !origem && !o.plano_corte_id && !o.venda_id;
+    return (
+      !o.plano_corte_id && !isTarefaExplicita && !isTarefaInferidaSemVinculo
+    );
   })
   @IsInt()
   @IsNotEmpty({ message: 'Cliente ou Plano de Corte é obrigatório' })
@@ -85,8 +94,8 @@ export class CreateAgendaDto {
 
   @IsOptional()
   @IsString()
-  @IsIn(SETORES_DESTINO, { message: 'setor_destino inválido' })
-  setor_destino?: string; // LOJA | PRODUCAO
+  @IsIn([...SETORES_DESTINO, 'PRODUCAO'], { message: 'setor_destino inválido' })
+  setor_destino?: string; // LOJA | FABRICA
 
   @IsOptional()
   @IsString()

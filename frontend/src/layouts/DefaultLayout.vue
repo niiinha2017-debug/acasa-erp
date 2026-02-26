@@ -111,7 +111,7 @@ function repairLegacyMojibake(text) {
   const value = String(text || '')
   if (!/[Ãâð]/.test(value)) return value
   try {
-    // Corrige strings salvas no passado em latin1 exibidas como UTF-8 (ex.: JoÃ£o -> João)
+    // Corrige strings legadas salvas em latin1 e exibidas como UTF-8.
     return decodeURIComponent(escape(value))
   } catch (_) {
     return value
@@ -125,9 +125,18 @@ function splitRouteTo(to) {
 }
 
 function resolveTabTitle(currentRoute) {
+  if (currentRoute?.path === '/agendamentos/loja') {
+    return 'Agenda Loja'
+  }
+  if (currentRoute?.path === '/agendamentos/fabrica') {
+    return 'Agenda Fábrica'
+  }
   if (currentRoute?.path === '/agendamentos') {
     const visao = String(currentRoute?.query?.visao || '').toUpperCase()
     if (visao === 'GERAL') return 'Agenda Geral'
+    if (visao === 'LOJA') return 'Agenda Loja'
+    if (visao === 'FABRICA' || visao === 'PRODUCAO') return 'Agenda Fábrica'
+    return 'Agenda Loja'
   }
 
   let candidate = null

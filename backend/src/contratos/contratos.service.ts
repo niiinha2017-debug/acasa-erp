@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -15,6 +19,7 @@ import { PDFDocument } from 'pdf-lib';
 import { pdflibAddPlaceholder } from '@signpdf/placeholder-pdf-lib';
 import { SignPdf } from '@signpdf/signpdf';
 import { P12Signer } from '@signpdf/signer-p12';
+import { validarTransicaoStatusCliente } from '../shared/constantes/pipeline-cliente';
 
 @Injectable()
 export class ContratosService {
@@ -26,7 +31,10 @@ export class ContratosService {
     private readonly mail: MailService,
   ) {}
 
-  private validarJanelaDataFim(dataInicio: Date, dataFimRaw?: string | Date | null) {
+  private validarJanelaDataFim(
+    dataInicio: Date,
+    dataFimRaw?: string | Date | null,
+  ) {
     if (!dataFimRaw) {
       throw new BadRequestException('Data de término é obrigatória.');
     }
@@ -43,10 +51,14 @@ export class ContratosService {
     limite.setFullYear(limite.getFullYear() + 1);
 
     if (fim < inicio) {
-      throw new BadRequestException('Data de término não pode ser menor que a data de início.');
+      throw new BadRequestException(
+        'Data de término não pode ser menor que a data de início.',
+      );
     }
     if (fim > limite) {
-      throw new BadRequestException('Data de término deve ser em até 1 ano após a data de início.');
+      throw new BadRequestException(
+        'Data de término deve ser em até 1 ano após a data de início.',
+      );
     }
     return dataFim;
   }
@@ -54,8 +66,8 @@ export class ContratosService {
   private assinaturaA1Habilitada(): boolean {
     const enabled = String(
       this.config.get<string>('CONTRATO_A1_ASSINAR_PDF') ??
-      process.env.CONTRATO_A1_ASSINAR_PDF ??
-      'false',
+        process.env.CONTRATO_A1_ASSINAR_PDF ??
+        'false',
     ).toLowerCase();
     return enabled === '1' || enabled === 'true' || enabled === 'sim';
   }
@@ -63,54 +75,66 @@ export class ContratosService {
   private assinaturaA1Obrigatoria(): boolean {
     const required = String(
       this.config.get<string>('CONTRATO_A1_ASSINATURA_OBRIGATORIA') ??
-      process.env.CONTRATO_A1_ASSINATURA_OBRIGATORIA ??
-      'false',
+        process.env.CONTRATO_A1_ASSINATURA_OBRIGATORIA ??
+        'false',
     ).toLowerCase();
     return required === '1' || required === 'true' || required === 'sim';
   }
 
-  private async assinarPdfComA1SeConfigurado(pdfBuffer: Buffer): Promise<Buffer> {
+  private async assinarPdfComA1SeConfigurado(
+    pdfBuffer: Buffer,
+  ): Promise<Buffer> {
     if (!this.assinaturaA1Habilitada()) return pdfBuffer;
 
     const certPath = String(
       this.config.get<string>('CONTRATO_A1_CERT_PATH') ??
-      process.env.CONTRATO_A1_CERT_PATH ??
-      '',
+        process.env.CONTRATO_A1_CERT_PATH ??
+        '',
     ).trim();
     const certPassword = String(
       this.config.get<string>('CONTRATO_A1_CERT_PASSWORD') ??
-      process.env.CONTRATO_A1_CERT_PASSWORD ??
-      '',
+        process.env.CONTRATO_A1_CERT_PASSWORD ??
+        '',
     );
     const certName = String(
       this.config.get<string>('CONTRATO_A1_SIGNER_NAME') ??
-      process.env.CONTRATO_A1_SIGNER_NAME ??
-      'ACASA ERP',
+        process.env.CONTRATO_A1_SIGNER_NAME ??
+        'ACASA ERP',
     ).trim();
     const certLocation = String(
       this.config.get<string>('CONTRATO_A1_SIGNER_LOCATION') ??
-      process.env.CONTRATO_A1_SIGNER_LOCATION ??
-      'Ribeirao Preto - SP',
+        process.env.CONTRATO_A1_SIGNER_LOCATION ??
+        'Ribeirao Preto - SP',
     ).trim();
     const certReason = String(
       this.config.get<string>('CONTRATO_A1_SIGNER_REASON') ??
-      process.env.CONTRATO_A1_SIGNER_REASON ??
-      'Assinatura digital de contrato',
+        process.env.CONTRATO_A1_SIGNER_REASON ??
+        'Assinatura digital de contrato',
     ).trim();
     const signatureLength = Number(
       this.config.get<string>('CONTRATO_A1_SIGNATURE_LENGTH') ??
-      process.env.CONTRATO_A1_SIGNATURE_LENGTH ??
-      '20000',
+        process.env.CONTRATO_A1_SIGNATURE_LENGTH ??
+        '20000',
     );
 
     const fail = (message: string): Buffer => {
-      if (this.assinaturaA1Obrigatoria()) throw new BadRequestException(message);
+      if (this.assinaturaA1Obrigatoria())
+        throw new BadRequestException(message);
       return pdfBuffer;
     };
 
-    if (!certPath) return fail('Caminho do certificado A1 não configurado (CONTRATO_A1_CERT_PATH).');
-    if (!certPassword) return fail('Senha do certificado A1 não configurada (CONTRATO_A1_CERT_PASSWORD).');
-    if (!fs.existsSync(certPath)) return fail(`Certificado A1 não encontrado no caminho configurado: ${certPath}`);
+    if (!certPath)
+      return fail(
+        'Caminho do certificado A1 não configurado (CONTRATO_A1_CERT_PATH).',
+      );
+    if (!certPassword)
+      return fail(
+        'Senha do certificado A1 não configurada (CONTRATO_A1_CERT_PASSWORD).',
+      );
+    if (!fs.existsSync(certPath))
+      return fail(
+        `Certificado A1 não encontrado no caminho configurado: ${certPath}`,
+      );
 
     try {
       const p12Buffer = fs.readFileSync(certPath);
@@ -122,7 +146,10 @@ export class ContratosService {
         location: certLocation,
         name: certName,
         contactInfo: certName,
-        signatureLength: Number.isFinite(signatureLength) && signatureLength > 0 ? signatureLength : 20000,
+        signatureLength:
+          Number.isFinite(signatureLength) && signatureLength > 0
+            ? signatureLength
+            : 20000,
       });
 
       const pdfComPlaceholder = Buffer.from(
@@ -134,16 +161,16 @@ export class ContratosService {
       return Buffer.isBuffer(assinado) ? assinado : Buffer.from(assinado);
     } catch (err: any) {
       if (this.assinaturaA1Obrigatoria()) {
-        throw new BadRequestException(`Falha ao assinar contrato com A1: ${err?.message || 'erro desconhecido'}`);
+        throw new BadRequestException(
+          `Falha ao assinar contrato com A1: ${err?.message || 'erro desconhecido'}`,
+        );
       }
       return pdfBuffer;
     }
   }
 
   async listar(vendaId?: number) {
-    const where = vendaId
-      ? { venda_id: vendaId }
-      : undefined;
+    const where = vendaId ? { venda_id: vendaId } : undefined;
     return this.prisma.contratos.findMany({
       where,
       orderBy: { id: 'desc' },
@@ -157,7 +184,31 @@ export class ContratosService {
       include: { cliente: true, venda: { include: { orcamento: true } } },
     });
     if (!contrato) throw new NotFoundException('Contrato não encontrado.');
-    return contrato;
+    const assinaturaCliente = await this.prisma.assinaturas_log.findFirst({
+      where: {
+        contrato_id: contrato.id,
+        OR: [
+          { metodo_verificacao: { contains: 'portal seguro' } },
+          { metodo_verificacao: { contains: 'Link WhatsApp/SMS' } },
+        ],
+      },
+      orderBy: { data_hora: 'desc' },
+      select: {
+        data_hora: true,
+        ip_address: true,
+        dispositivo: true,
+        hash_documento: true,
+      },
+    });
+    return {
+      ...contrato,
+      assinatura_cliente_registrada: !!assinaturaCliente,
+      data_assinatura_cliente: assinaturaCliente?.data_hora ?? null,
+      assinatura_cliente_ip: assinaturaCliente?.ip_address ?? null,
+      assinatura_cliente_dispositivo: assinaturaCliente?.dispositivo ?? null,
+      assinatura_cliente_hash_documento:
+        assinaturaCliente?.hash_documento ?? null,
+    };
   }
 
   /** Gera o próximo número de contrato no formato CONT-YYYY-NNN (ex.: CONT-2025-001). */
@@ -185,8 +236,9 @@ export class ContratosService {
     });
     if (!venda) throw new NotFoundException('Venda não encontrada.');
 
-    const numero =
-      dto.numero?.trim() ? dto.numero.trim() : await this.proximoNumeroContrato();
+    const numero = dto.numero?.trim()
+      ? dto.numero.trim()
+      : await this.proximoNumeroContrato();
 
     const dataInicio = new Date();
     const dataFim = this.validarJanelaDataFim(dataInicio, dto.data_fim);
@@ -208,14 +260,17 @@ export class ContratosService {
 
   async atualizar(id: number, dto: UpdateContratoDto) {
     const atual = await this.buscarPorId(id);
-    const dataInicioBase = atual.data_inicio ? new Date(atual.data_inicio) : new Date();
+    const dataInicioBase = atual.data_inicio
+      ? new Date(atual.data_inicio)
+      : new Date();
 
-    const statusSolicitado = String(dto.status || '').trim().toUpperCase();
-    const statusAtual = String(atual.status || '').trim().toUpperCase();
-    if (
-      statusSolicitado === 'VIGENTE' &&
-      statusAtual !== 'VIGENTE'
-    ) {
+    const statusSolicitado = String(dto.status || '')
+      .trim()
+      .toUpperCase();
+    const statusAtual = String(atual.status || '')
+      .trim()
+      .toUpperCase();
+    if (statusSolicitado === 'VIGENTE' && statusAtual !== 'VIGENTE') {
       throw new BadRequestException(
         'Para segurança, o contrato deve ser marcado como assinado pela ação de assinatura.',
       );
@@ -252,8 +307,9 @@ export class ContratosService {
   }
 
   /**
-   * Registra a assinatura do contrato (online): salva a imagem da assinatura e marca o contrato como VIGENTE.
-   * Permite depois "Enviar para produção" na venda.
+   * Registra a assinatura visual (imagem) vinculada ao contrato.
+   * Importante: não altera status para VIGENTE.
+   * O status VIGENTE é definido exclusivamente no fluxo de aceite público do cliente.
    */
   async assinar(
     id: number,
@@ -266,9 +322,17 @@ export class ContratosService {
 
     let urlAssinatura: string | null = null;
     if (dto.assinatura_base64 && dto.assinatura_base64.trim()) {
-      const base64 = dto.assinatura_base64.replace(/^data:image\/\w+;base64,/, '');
+      const base64 = dto.assinatura_base64.replace(
+        /^data:image\/\w+;base64,/,
+        '',
+      );
       const buffer = Buffer.from(base64, 'base64');
-      const dir = path.join(process.cwd(), 'uploads', 'contratos', 'assinaturas');
+      const dir = path.join(
+        process.cwd(),
+        'uploads',
+        'contratos',
+        'assinaturas',
+      );
       fs.mkdirSync(dir, { recursive: true });
       const filename = `contrato_${id}_assinatura.png`;
       const filePath = path.join(dir, filename);
@@ -317,12 +381,10 @@ export class ContratosService {
       where: { id },
       data: {
         data_assinatura: dataAssinatura,
-        status: 'VIGENTE',
       } as any,
       include: { cliente: true, venda: true },
     });
 
-    await this.garantirContaReceberDeVendaAssinada(contratoAtualizado);
     return contratoAtualizado;
   }
 
@@ -388,9 +450,81 @@ export class ContratosService {
         valor_original: valorTotal,
         valor_compensado: 0,
         status: statusPagamento,
-        vencimento_em: vencimento ? new Date(vencimento) : new Date((venda as any).data_venda || new Date()),
+        vencimento_em: vencimento
+          ? new Date(vencimento)
+          : new Date((venda as any).data_venda || new Date()),
         recebido_em: recebidoEm,
       },
+    });
+  }
+
+  private async garantirAgendaProducaoDaVendaAoVigorarContrato(contrato: {
+    id: number;
+    venda_id?: number | null;
+    cliente_id?: number | null;
+  }) {
+    const vendaId = Number(contrato?.venda_id || 0);
+    if (!Number.isFinite(vendaId) || vendaId <= 0) return;
+
+    const existente = await this.prisma.agenda_fabrica.findFirst({
+      where: {
+        venda_id: vendaId,
+        status: { not: 'CANCELADO' },
+      },
+      select: { id: true },
+    });
+    if (existente) return;
+
+    const venda = await this.prisma.vendas.findUnique({
+      where: { id: vendaId },
+      select: { id: true, cliente_id: true },
+    });
+    if (!venda) return;
+
+    const clienteId =
+      Number(contrato?.cliente_id || venda.cliente_id || 0) || null;
+    const inicio = new Date();
+    const fim = new Date(inicio.getTime() + 60 * 60 * 1000);
+
+    await this.prisma.agenda_fabrica.create({
+      data: {
+        titulo: `Produção da venda #${vendaId}`,
+        inicio_em: inicio,
+        fim_em: fim,
+        categoria: 'PRODUCAO_RECEBIDA',
+        origem_fluxo: 'LOJA_VENDA',
+        status: 'PENDENTE',
+        venda_id: vendaId,
+        cliente_id: clienteId,
+      },
+    });
+  }
+
+  private async atualizarStatusVendaParaProducaoAoVigorarContrato(contrato: {
+    venda_id?: number | null;
+  }) {
+    const vendaId = Number(contrato?.venda_id || 0);
+    if (!Number.isFinite(vendaId) || vendaId <= 0) return;
+
+    const venda = await this.prisma.vendas.findUnique({
+      where: { id: vendaId },
+      select: { id: true, status: true },
+    });
+    if (!venda) return;
+
+    const statusAtual = String(venda.status || '').toUpperCase();
+    const statusDestino = 'PRODUCAO_AGENDADA';
+    if (statusAtual === statusDestino) return;
+
+    const validacao = validarTransicaoStatusCliente({
+      atual: statusAtual,
+      proximo: statusDestino,
+    });
+    if (!validacao.ok) return;
+
+    await this.prisma.vendas.update({
+      where: { id: vendaId },
+      data: { status: statusDestino },
     });
   }
 
@@ -421,8 +555,7 @@ export class ContratosService {
       'Este instrumento estabelece a autorização do CONTRATANTE à CONTRATADA, aqui previamente descrita, a dispor de seus dados pessoais, conforme os artigos 7.º e 11.º da Lei n.º 13.709/2018 (Lei Geral de Proteção de Dados Pessoais), e autoriza a utilização de sua imagem e/ou voz, de acordo com os parágrafos dispostos abaixo:\n\n§ Primeiro – O CONTRATANTE autoriza a CONTRATADA a realizar o tratamento, ou seja, a utilizar os dados relacionados à divulgação, em fotos e vídeo do mobiliário contratado, para finalidade de promoção da campanha publicitária de interesse da CONTRATADA, ocorrendo a divulgação no seu site e demais mídias, online e off-line, já existentes ou que venham a existir.\n\n§ Segundo – O CONTRATANTE autoriza que a CONTRATADA utilize a imagem para divulgação de campanha publicitária de seu interesse, adotando todas as medidas de proteção de dados, visando a preservação de seu direito à intimidade, coibindo o uso com finalidade distinta da prevista neste termo.',
     IMAGEM:
       'O CONTRATANTE autoriza a CONTRATADA a utilizar imagens e vídeos dos ambientes mobiliados, exclusivamente para fins de divulgação de portfólio e campanhas publicitárias da CONTRATADA, em mídias online e off-line, observada a legislação de proteção de dados pessoais (Lei nº 13.709/2018 – LGPD), comprometendo-se a CONTRATADA a não expor dados sensíveis ou informações que possam comprometer a intimidade do CONTRATANTE.',
-    FORO:
-      '§ Primeiro – As partes elegem o Foro desta cidade, [[cidade_foro]], [[estado_foro]], para dirimir quaisquer dúvidas decorrentes deste contrato, renunciando a qualquer outro, por mais privilegiado que seja.\n\n§ Segundo – Após a leitura do inteiro teor do presente contrato, as partes, estando de pleno acordo, subscrevem o presente instrumento em duas vias de igual teor e forma.\n\n[[cidade_data_assinatura]]',
+    FORO: '§ Primeiro – As partes elegem o Foro desta cidade, [[cidade_foro]], [[estado_foro]], para dirimir quaisquer dúvidas decorrentes deste contrato, renunciando a qualquer outro, por mais privilegiado que seja.\n\n§ Segundo – Após a leitura do inteiro teor do presente contrato, as partes, estando de pleno acordo, subscrevem o presente instrumento em duas vias de igual teor e forma.\n\n[[cidade_data_assinatura]]',
     ASSINATURA_ELETRONICA:
       '11.1. As partes declaram-se cientes e concordam que este instrumento, bem como seus aditamentos e agendamentos, poderão ser assinados de forma eletrônica, sendo considerados válidos e plenamente eficazes para todos os fins de direito.\n\n11.2. O aceite será formalizado através de uma das seguintes modalidades, que as partes reconhecem como meios de prova idôneos para confirmar a autoria e integridade do documento:\n\nE-mail: Resposta positiva à mensagem enviada pelo sistema a partir do endereço cadastrado;\n\nWhatsApp/Mensageria: Interação positiva (clique em botões de aceite ou resposta de texto) em link enviado ao número de telefone celular validado no cadastro;\n\nAssinatura Digital: Clique em "Aceito" ou "Assinar" em ambiente logado com registro de IP, data, hora e código de autenticação único (Hash).\n\n11.3. As partes renunciam a qualquer pretensão de invalidar este contrato sob o argumento de ausência de assinatura física ou reconhecimento de firma, reconhecendo que os registros eletrônicos gerados pelo sistema ERP possuem força executiva e plena validade jurídica.',
   };
@@ -452,17 +585,79 @@ export class ContratosService {
     return `${t.slice(0, 2)}.${t.slice(2, 5)}.${t.slice(5, 8)}-${t.slice(8)}`;
   }
 
+  /** Formata CEP para exibição: 14066404 -> 14066-404 */
+  private maskCep(val: string | null | undefined): string {
+    const s = String(val || '').replace(/\D/g, '');
+    if (s.length !== 8) return String(val || '');
+    return `${s.slice(0, 5)}-${s.slice(5)}`;
+  }
+
   /** Converte valor em reais para extenso (ex.: 48950.00 -> "quarenta e oito mil e novecentos e cinquenta reais") */
   private valorPorExtensoReais(valor: number): string {
     const n = Number(valor);
     if (!Number.isFinite(n) || n < 0) return 'zero reais';
     const inteiro = Math.floor(n);
     const centavos = Math.round((n - inteiro) * 100);
-    const U = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
-    const U0 = ['zero', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
-    const D10 = ['dez', 'onze', 'doze', 'treze', 'catorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove'];
-    const D = ['', '', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];
-    const C = ['', 'cento', 'duzentos', 'trezentos', 'quatrocentos', 'quinhentos', 'seiscentos', 'setecentos', 'oitocentos', 'novecentos'];
+    const U = [
+      '',
+      'um',
+      'dois',
+      'três',
+      'quatro',
+      'cinco',
+      'seis',
+      'sete',
+      'oito',
+      'nove',
+    ];
+    const U0 = [
+      'zero',
+      'um',
+      'dois',
+      'três',
+      'quatro',
+      'cinco',
+      'seis',
+      'sete',
+      'oito',
+      'nove',
+    ];
+    const D10 = [
+      'dez',
+      'onze',
+      'doze',
+      'treze',
+      'catorze',
+      'quinze',
+      'dezesseis',
+      'dezessete',
+      'dezoito',
+      'dezenove',
+    ];
+    const D = [
+      '',
+      '',
+      'vinte',
+      'trinta',
+      'quarenta',
+      'cinquenta',
+      'sessenta',
+      'setenta',
+      'oitenta',
+      'noventa',
+    ];
+    const C = [
+      '',
+      'cento',
+      'duzentos',
+      'trezentos',
+      'quatrocentos',
+      'quinhentos',
+      'seiscentos',
+      'setecentos',
+      'oitocentos',
+      'novecentos',
+    ];
     const esc = (x: number, useZero: boolean): string => {
       if (x === 0) return useZero ? 'zero' : '';
       const c = Math.floor(x / 100);
@@ -470,7 +665,14 @@ export class ContratosService {
       const dezena = Math.floor(r / 10);
       const un = r % 10;
       const partC = c > 0 ? (c === 1 && r === 0 ? 'cem' : C[c]) : '';
-      const partD = r < 10 ? (un > 0 ? U[un] : '') : r < 20 ? D10[r - 10] : (D[dezena] + (un > 0 ? ' e ' + U[un] : ''));
+      const partD =
+        r < 10
+          ? un > 0
+            ? U[un]
+            : ''
+          : r < 20
+            ? D10[r - 10]
+            : D[dezena] + (un > 0 ? ' e ' + U[un] : '');
       const partes = [partC, partD].filter(Boolean);
       return partes.join(partC && partD ? ' e ' : '');
     };
@@ -485,11 +687,17 @@ export class ContratosService {
     }
     reaisStr = reaisStr.trim() || 'zero';
     reaisStr += inteiro === 1 ? ' real' : ' reais';
-    if (centavos > 0) reaisStr += ' e ' + (centavos === 1 ? 'um centavo' : esc(centavos, false) + ' centavos');
+    if (centavos > 0)
+      reaisStr +=
+        ' e ' +
+        (centavos === 1 ? 'um centavo' : esc(centavos, false) + ' centavos');
     return reaisStr;
   }
 
-  private substituirPlaceholders(texto: string, mapa: Record<string, string>): string {
+  private substituirPlaceholders(
+    texto: string,
+    mapa: Record<string, string>,
+  ): string {
     let out = String(texto || '');
     for (const [key, value] of Object.entries(mapa)) {
       const token = `[[${key}]]`;
@@ -503,7 +711,9 @@ export class ContratosService {
     if (!itens.length) return '-';
     return itens
       .map((it: any, idx: number) => {
-        const nome = String(it.nome_ambiente || `Ambiente ${idx + 1}`).toUpperCase();
+        const nome = String(
+          it.nome_ambiente || `Ambiente ${idx + 1}`,
+        ).toUpperCase();
         const desc = String(it.descricao || '').trim();
         return `${idx + 1}. ${nome}\n${desc ? desc : ''}`.trim();
       })
@@ -516,7 +726,31 @@ export class ContratosService {
     left: number,
     right: number,
   ) {
-    const itens = venda?.itens && Array.isArray(venda.itens) ? venda.itens : [];
+    const itensVenda =
+      venda?.itens && Array.isArray(venda.itens) ? venda.itens : [];
+    const itensOrcamento =
+      venda?.orcamento?.itens && Array.isArray(venda.orcamento.itens)
+        ? venda.orcamento.itens
+        : [];
+    const normalizar = (v: any) =>
+      String(v || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase();
+
+    const base = itensVenda.length ? itensVenda : itensOrcamento;
+    const itens = base.map((it: any, idx: number) => {
+      const obsVenda = String(it?.observacao || '').trim();
+      if (obsVenda) return it;
+      const cand =
+        itensOrcamento.find(
+          (o: any) =>
+            normalizar(o?.nome_ambiente) === normalizar(it?.nome_ambiente) &&
+            normalizar(o?.descricao) === normalizar(it?.descricao),
+        ) || itensOrcamento[idx];
+      return { ...it, observacao: String(cand?.observacao || '').trim() };
+    });
     if (!itens.length) return;
 
     const tableWidth = right - left;
@@ -560,7 +794,8 @@ export class ContratosService {
       let descTexto = linhas.length ? linhas.join('\n') : '-';
       const obs = String(it.observacao || '').trim();
       if (obs) {
-        descTexto = descTexto + (descTexto !== '-' ? '\n' : '') + 'Obs.: ' + obs;
+        descTexto =
+          descTexto + (descTexto !== '-' ? '\n' : '') + 'Obs.: ' + obs;
       }
 
       doc.font('Helvetica-Bold').fontSize(10);
@@ -598,13 +833,10 @@ export class ContratosService {
       const baseY = doc.y;
 
       // Coluna ambiente (centralizado verticalmente)
-      doc
-        .font('Helvetica-Bold')
-        .fontSize(10)
-        .text(ambiente, left, baseY, {
-          width: colAmbW,
-          align: 'center',
-        });
+      doc.font('Helvetica-Bold').fontSize(10).text(ambiente, left, baseY, {
+        width: colAmbW,
+        align: 'center',
+      });
 
       // Coluna descritivo (bullets)
       doc
@@ -627,11 +859,15 @@ export class ContratosService {
       doc.y += 6;
     }
 
-    doc.y += 8;
+    doc.y += 4;
   }
 
   /** Garante espaço mínimo antes de iniciar um bloco na página atual. */
-  private garantirEspacoPagina(doc: any, alturaNecessaria: number, margemInferior = 60): void {
+  private garantirEspacoPagina(
+    doc: any,
+    alturaNecessaria: number,
+    margemInferior = 60,
+  ): void {
     if (doc.y + alturaNecessaria > doc.page.height - margemInferior) {
       doc.addPage();
     }
@@ -644,44 +880,101 @@ export class ContratosService {
     larguraTexto: number,
     mapa: Record<string, string>,
   ): void {
-    const lineW = Math.min(260, larguraTexto * 0.6);
+    const blocoW = Math.min(260, larguraTexto * 0.6);
+    const lineW = blocoW;
     const lineYOffset = 6;
     const spacing = 18;
     const margemInferiorAssinatura = 84; // margem padrão (60) + respiro visual extra
     const razao = mapa.contratada_razao_social || 'CONTRATADA';
-    const clienteNome = mapa.cliente_razao_social_ou_nome_completo || 'CONTRATANTE';
+    const clienteNome =
+      mapa.cliente_razao_social_ou_nome_completo || 'CONTRATANTE';
     const docTipo = mapa.cliente_documento_tipo || 'CPF';
     const docNum = mapa.cliente_documento_numero || '';
     const assinaturaDigitalVisivel = mapa.assinatura_digital_visivel || '';
+    const assinaturaClienteVisivel = mapa.assinatura_cliente_visivel || '';
+    const assinaturaClienteImagemPath =
+      mapa.assinatura_cliente_imagem_path || '';
 
     doc.y += spacing;
 
-    const drawCienteBlock = (titulo: string, linhas: string[], assinaturaInfo?: string) => {
-      const medirAlturaTexto = (texto: string, font: string, size: number): number => {
+    const drawCienteBlock = (
+      titulo: string,
+      linhas: string[],
+      assinaturaInfo?: string,
+      assinaturaImagemPath?: string,
+    ) => {
+      const medirAlturaTexto = (
+        texto: string,
+        font: string,
+        size: number,
+      ): number => {
         doc.font(font).fontSize(size);
-        return doc.heightOfString(texto, { width: larguraTexto });
+        return doc.heightOfString(texto, { width: blocoW });
       };
       const alturaTitulo = medirAlturaTexto(titulo, 'Helvetica-Bold', 10);
-      const alturasLinhas = linhas.map((ln) => medirAlturaTexto(ln, 'Helvetica', 9));
+      const alturasLinhas = linhas.map((ln) =>
+        medirAlturaTexto(ln, 'Helvetica', 9),
+      );
+      const temImagemAssinatura =
+        !!assinaturaImagemPath && fs.existsSync(assinaturaImagemPath);
+      const alturaImagemAssinatura = temImagemAssinatura ? 34 : 0;
       const alturaAssinatura =
         assinaturaInfo && String(assinaturaInfo).trim()
-          ? medirAlturaTexto(String(assinaturaInfo).trim(), 'Helvetica-Oblique', 8)
+          ? medirAlturaTexto(
+              String(assinaturaInfo).trim(),
+              'Helvetica-Oblique',
+              8,
+            )
           : 0;
       const alturaMinimaSemOrfao =
-        alturaTitulo + 2 + (lineYOffset + 8) + (alturasLinhas[0] ?? 0) + 2;
+        alturaTitulo +
+        2 +
+        (alturaImagemAssinatura > 0 ? alturaImagemAssinatura + 2 : 0) +
+        (lineYOffset + 8) +
+        (alturasLinhas[0] ?? 0) +
+        2;
       const alturaTotalBloco =
         alturaTitulo +
         2 +
+        (alturaImagemAssinatura > 0 ? alturaImagemAssinatura + 2 : 0) +
         (lineYOffset + 8) +
         (alturaAssinatura > 0 ? alturaAssinatura + 6 : 0) +
+        (alturaImagemAssinatura > 0 ? alturaImagemAssinatura + 4 : 0) +
         alturasLinhas.reduce((acc, h) => acc + h + 2, 0) +
         spacing;
 
       // Evita "título órfão": só inicia o bloco se couber ao menos título + primeira linha.
-      this.garantirEspacoPagina(doc, alturaMinimaSemOrfao, margemInferiorAssinatura);
-      this.garantirEspacoPagina(doc, alturaTotalBloco, margemInferiorAssinatura);
-      doc.font('Helvetica-Bold').fontSize(10).fillColor('#000').text(titulo, left, doc.y, { width: larguraTexto });
+      this.garantirEspacoPagina(
+        doc,
+        alturaMinimaSemOrfao,
+        margemInferiorAssinatura,
+      );
+      this.garantirEspacoPagina(
+        doc,
+        alturaTotalBloco,
+        margemInferiorAssinatura,
+      );
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(10)
+        .fillColor('#000')
+        .text(titulo, left, doc.y, { width: larguraTexto });
       doc.y += doc.currentLineHeight() + 2;
+      if (alturaAssinatura > 0) {
+        doc
+          .font('Helvetica-Oblique')
+          .fontSize(8)
+          .fillColor('#4b5563')
+          .text(String(assinaturaInfo).trim(), left, doc.y, { width: blocoW });
+        doc.y += doc.currentLineHeight() + 4;
+      }
+      if (temImagemAssinatura) {
+        doc.image(String(assinaturaImagemPath), left, doc.y, {
+          fit: [lineW, 30],
+          align: 'left',
+        });
+        doc.y += 34;
+      }
       doc
         .lineWidth(0.5)
         .strokeColor('#000')
@@ -689,30 +982,33 @@ export class ContratosService {
         .lineTo(left + lineW, doc.y + lineYOffset)
         .stroke();
       doc.y += lineYOffset + 8;
-      if (alturaAssinatura > 0) {
-        doc
-          .font('Helvetica-Oblique')
-          .fontSize(8)
-          .fillColor('#4b5563')
-          .text(String(assinaturaInfo).trim(), left, doc.y, { width: larguraTexto });
-        doc.y += doc.currentLineHeight() + 4;
-      }
       doc.font('Helvetica').fontSize(9).fillColor('#333');
       for (const ln of linhas) {
-        doc.text(ln, left, doc.y, { width: larguraTexto });
+        doc.text(ln, left, doc.y, { width: blocoW });
         doc.y += doc.currentLineHeight() + 2;
       }
       doc.y += spacing;
     };
 
-    drawCienteBlock('Ciente:', [
-      `CONTRATADA: ${razao}`,
-    ], assinaturaDigitalVisivel);
+    drawCienteBlock(
+      'Ciente:',
+      [`CONTRATADA: ${razao}`],
+      assinaturaDigitalVisivel,
+    );
+    const gapEntreAssinaturas = 14;
+    this.garantirEspacoPagina(
+      doc,
+      gapEntreAssinaturas + 20,
+      margemInferiorAssinatura,
+    );
+    doc.y += gapEntreAssinaturas;
 
-    drawCienteBlock('Ciente:', [
-      `CONTRATANTE: ${clienteNome}`,
-      `${docTipo}: ${docNum}`,
-    ].filter(Boolean));
+    drawCienteBlock(
+      'Ciente:',
+      [`CONTRATANTE: ${clienteNome}`, `${docTipo}: ${docNum}`].filter(Boolean),
+      assinaturaClienteVisivel,
+      assinaturaClienteImagemPath,
+    );
 
     const drawLinhaTestemunha = (label: string) => {
       const alturaLabel = doc
@@ -720,8 +1016,16 @@ export class ContratosService {
         .fontSize(9)
         .heightOfString(label, { width: larguraTexto });
       const alturaMinimaSemOrfao = alturaLabel + 2 + (lineYOffset + 14);
-      this.garantirEspacoPagina(doc, alturaMinimaSemOrfao, margemInferiorAssinatura);
-      doc.font('Helvetica').fontSize(9).fillColor('#333').text(label, left, doc.y, { width: larguraTexto });
+      this.garantirEspacoPagina(
+        doc,
+        alturaMinimaSemOrfao,
+        margemInferiorAssinatura,
+      );
+      doc
+        .font('Helvetica')
+        .fontSize(9)
+        .fillColor('#333')
+        .text(label, left, doc.y, { width: larguraTexto });
       doc.y += doc.currentLineHeight() + 2;
       doc
         .lineWidth(0.5)
@@ -734,6 +1038,37 @@ export class ContratosService {
 
     drawLinhaTestemunha('Testemunha 1');
     drawLinhaTestemunha('Testemunha 2');
+  }
+
+  private resumirUserAgent(userAgent?: string | null): string {
+    const ua = String(userAgent || '').trim();
+    if (!ua) return 'Navegador web';
+    if (/android/i.test(ua)) return 'Android';
+    if (/iphone|ipad|ipod/i.test(ua)) return 'iOS';
+    if (/windows/i.test(ua)) return 'Windows';
+    if (/mac os x/i.test(ua)) return 'macOS';
+    if (/linux/i.test(ua)) return 'Linux';
+    return 'Navegador web';
+  }
+
+  private montarResumoAssinaturaClientePdf(params: {
+    dataHora?: Date | null;
+    ip?: string | null;
+    userAgent?: string | null;
+    timezone?: string | null;
+    hashDocumento?: string | null;
+  }): string {
+    const dataFonte = params.dataHora ? new Date(params.dataHora) : new Date();
+    const dataHora = Number.isNaN(dataFonte.getTime())
+      ? new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+      : dataFonte.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    const ip = String(params.ip || '').trim() || 'não identificado';
+    const tz = String(params.timezone || '').trim() || 'America/Sao_Paulo';
+    const dispositivo = this.resumirUserAgent(params.userAgent);
+    const hashCurto = String(params.hashDocumento || '').trim()
+      ? `${String(params.hashDocumento).trim().slice(0, 16)}...`
+      : 'não disponível';
+    return `Assinatura eletrônica do contratante registrada em ${dataHora} (America/Sao_Paulo). IP: ${ip}. Dispositivo: ${dispositivo}. Fuso informado: ${tz}. Hash do documento: ${hashCurto}`;
   }
 
   private async gerarContratoPdfBuffer(contratoId: number): Promise<Buffer> {
@@ -752,39 +1087,62 @@ export class ContratosService {
     });
     if (!contrato) throw new NotFoundException('Contrato não encontrado.');
 
-    const modulos = await this.clausulasService.buscarOuCriarPorTipo('CONTRATO');
+    const modulos =
+      await this.clausulasService.buscarOuCriarPorTipo('CONTRATO');
+    const modulosOrdenados = (() => {
+      const lista = Array.isArray(modulos) ? [...modulos] : [];
+      const idxClausula11 = lista.findIndex(
+        (m: any) =>
+          String(m?.modulo_key || '').toUpperCase() === 'ASSINATURA_ELETRONICA',
+      );
+      if (idxClausula11 <= -1) return lista;
+      const [clausula11] = lista.splice(idxClausula11, 1);
+      return [...lista, clausula11];
+    })();
 
     const cliente: any = contrato.cliente || {};
     const venda: any = contrato.venda || {};
     const orc: any = venda.orcamento || {};
 
     const nomeCliente =
-      cliente.nome_completo || cliente.razao_social || cliente.nome || `CLIENTE #${cliente.id}`;
+      cliente.nome_completo ||
+      cliente.razao_social ||
+      cliente.nome ||
+      `CLIENTE #${cliente.id}`;
     const docTipo = cliente.cnpj ? 'CNPJ' : 'CPF';
     const docNum = cliente.cnpj || cliente.cpf || '';
+    const docNumFormatado =
+      docTipo === 'CNPJ' ? this.maskCnpj(docNum) : this.maskCpf(docNum);
 
     const endPartes = [
       cliente.endereco,
       cliente.numero ? `Nº ${cliente.numero}` : null,
       cliente.complemento ? `(${cliente.complemento})` : null,
       cliente.bairro ? `Bairro: ${cliente.bairro}` : null,
-      cliente.cidade ? `${cliente.cidade}${cliente.estado ? ' - ' + cliente.estado : ''}` : null,
-      cliente.cep ? `CEP: ${cliente.cep}` : null,
+      cliente.cidade
+        ? `${cliente.cidade}${cliente.estado ? ' - ' + cliente.estado : ''}`
+        : null,
+      cliente.cep ? `CEP: ${this.maskCep(cliente.cep)}` : null,
     ].filter(Boolean);
 
     const enderecoCompleto = endPartes.join(' - ') || '-';
 
-    const valorTotal = Number(contrato.valor || venda.valor_vendido || venda.valor_total || 0);
+    const valorTotal = Number(
+      contrato.valor || venda.valor_vendido || venda.valor_total || 0,
+    );
     const valorTotalNumerico = valorTotal.toLocaleString('pt-BR', {
       style: 'currency',
       currency: 'BRL',
     });
 
-
     const TZ_BR = 'America/Sao_Paulo';
     /** Evita dia errado: datas "só dia" (meia-noite UTC) viram dia anterior no Brasil; normaliza para meio-dia UTC. */
     const normalizarDataParaExibicao = (dt: Date): Date => {
-      if (dt.getUTCHours() === 0 && dt.getUTCMinutes() === 0 && dt.getUTCSeconds() === 0) {
+      if (
+        dt.getUTCHours() === 0 &&
+        dt.getUTCMinutes() === 0 &&
+        dt.getUTCSeconds() === 0
+      ) {
         const d = new Date(dt);
         d.setUTCHours(12, 0, 0, 0);
         return d;
@@ -826,11 +1184,18 @@ export class ContratosService {
     const pagamentos = Array.isArray(venda.pagamentos) ? venda.pagamentos : [];
     const primeiroPg = pagamentos[0];
     const labelForma = (chave: string) =>
-      LABEL_FORMA_PAGAMENTO[String(chave || '').toUpperCase()] || String(chave || '').toUpperCase();
+      LABEL_FORMA_PAGAMENTO[String(chave || '').toUpperCase()] ||
+      String(chave || '').toUpperCase();
     // No contrato: só "18x de R$ 3.000,00" (forma + total); o detalhe por parcela/data fica no contas a receber
-    const valorTotalPagamentos = (pagamentos as any[]).reduce((acc, p) => acc + Number(p?.valor ?? 0), 0);
-    const valorTotalStr = valorTotalPagamentos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    let descFormaPagamento =
+    const valorTotalPagamentos = (pagamentos as any[]).reduce(
+      (acc, p) => acc + Number(p?.valor ?? 0),
+      0,
+    );
+    const valorTotalStr = valorTotalPagamentos.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    });
+    const descFormaPagamento =
       contrato.descricao ||
       (primeiroPg
         ? `${labelForma(primeiroPg.forma_pagamento_chave)} em ${pagamentos.length} parcela(s). Valor total: ${valorTotalStr}`
@@ -839,21 +1204,31 @@ export class ContratosService {
     const hoje = new Date();
     const dataAss = hoje.toLocaleDateString('pt-BR', { timeZone: TZ_BR });
     const dataHoraAss = hoje.toLocaleString('pt-BR', { timeZone: TZ_BR });
-    const dia = hoje.toLocaleString('pt-BR', { timeZone: TZ_BR, day: 'numeric' });
-    const mes = hoje.toLocaleString('pt-BR', { timeZone: TZ_BR, month: 'long' });
-    const ano = hoje.toLocaleString('pt-BR', { timeZone: TZ_BR, year: 'numeric' });
+    const dia = hoje.toLocaleString('pt-BR', {
+      timeZone: TZ_BR,
+      day: 'numeric',
+    });
+    const mes = hoje.toLocaleString('pt-BR', {
+      timeZone: TZ_BR,
+      month: 'long',
+    });
+    const ano = hoje.toLocaleString('pt-BR', {
+      timeZone: TZ_BR,
+      year: 'numeric',
+    });
     const dataPorExtenso = `${dia} de ${mes} de ${ano}.`;
 
     const empresa = await this.prisma.empresa.findUnique({ where: { id: 1 } });
 
     const razaoSocial = empresa?.razao_social || 'A Casa Móveis Planejados';
-    const cnpj =
-      empresa?.cnpj || '28.638.791/0001-07';
+    const cnpj = empresa?.cnpj || '28.638.791/0001-07';
     const enderecoEmpresaPartes = [
       empresa?.logradouro,
       empresa?.numero ? `Nº ${empresa.numero}` : null,
       empresa?.bairro ? `Bairro: ${empresa.bairro}` : null,
-      empresa?.cidade ? `${empresa.cidade}${empresa.uf ? ' - ' + empresa.uf : ''}` : null,
+      empresa?.cidade
+        ? `${empresa.cidade}${empresa.uf ? ' - ' + empresa.uf : ''}`
+        : null,
     ].filter(Boolean);
     const enderecoEmpresa =
       enderecoEmpresaPartes.length > 0
@@ -865,11 +1240,60 @@ export class ContratosService {
       docTipo === 'CNPJ' && clienteIe
         ? `, inscrito na Inscrição Estadual sob o nº ${String(clienteIe).trim()}`
         : '';
+    const ultimaAssinatura = await this.prisma.assinaturas_log.findFirst({
+      where: { contrato_id: contrato.id },
+      orderBy: { data_hora: 'desc' },
+      select: {
+        data_hora: true,
+        ip_address: true,
+        dispositivo: true,
+        hash_documento: true,
+        metodo_verificacao: true,
+      },
+    });
+    const timezoneExtraida = (() => {
+      const metodo = String(ultimaAssinatura?.metodo_verificacao || '');
+      const match = metodo.match(/Fuso:\s*([^|]+)/i);
+      return match?.[1]?.trim() || null;
+    })();
+    const assinaturaClienteArquivo = await this.prisma.arquivos.findUnique({
+      where: {
+        owner_type_owner_id_slot_key: {
+          owner_type: 'CONTRATO',
+          owner_id: contrato.id,
+          slot_key: 'ASSINATURA_CLIENTE',
+        },
+      },
+      select: { url: true },
+    });
+    const assinaturaClienteImagemPath = assinaturaClienteArquivo?.url
+      ? path.join(
+          process.cwd(),
+          String(assinaturaClienteArquivo.url).replace(/^\//, ''),
+        )
+      : '';
+    const temAssinaturaClienteImagem =
+      !!assinaturaClienteImagemPath &&
+      fs.existsSync(assinaturaClienteImagemPath);
+    const assinaturaClienteVisivel = ultimaAssinatura
+      ? this.montarResumoAssinaturaClientePdf({
+          dataHora: ultimaAssinatura.data_hora,
+          ip: ultimaAssinatura.ip_address,
+          userAgent: ultimaAssinatura.dispositivo,
+          timezone: timezoneExtraida,
+          hashDocumento: ultimaAssinatura.hash_documento,
+        })
+      : temAssinaturaClienteImagem || contrato.data_assinatura
+        ? this.montarResumoAssinaturaClientePdf({
+            dataHora: contrato.data_assinatura || new Date(),
+            timezone: TZ_BR,
+          })
+        : '';
 
     const mapa: Record<string, string> = {
       cliente_razao_social_ou_nome_completo: String(nomeCliente),
       cliente_documento_tipo: docTipo,
-      cliente_documento_numero: String(docNum),
+      cliente_documento_numero: String(docNumFormatado || docNum),
       cliente_ie: clienteIe,
       cliente_ie_frase: clienteIeFrase,
       cliente_endereco_completo: enderecoCompleto,
@@ -881,7 +1305,9 @@ export class ContratosService {
       lista_itens_venda: '', // itens só na tabela abaixo (evita duplicar com a tabela Item/ambiente e Descritivo)
       descricao_forma_pagamento_contrato: descFormaPagamento,
       data_venda: venda?.data_venda ? formatarDataLocal(venda.data_venda) : '',
-      data_prazo_entrega: contrato.data_fim ? formatarDataLocal(contrato.data_fim) : '',
+      data_prazo_entrega: contrato.data_fim
+        ? formatarDataLocal(contrato.data_fim)
+        : '',
       data_prazo_entrega_por_extenso: contrato.data_fim
         ? (() => {
             try {
@@ -914,8 +1340,10 @@ export class ContratosService {
       contratada_endereco_completo: enderecoEmpresa,
       contratada_representante_nome: empresa?.representante_legal_nome ?? '',
       contratada_representante_estado_civil: 'Brasileira',
-      contratada_representante_rg: this.maskRg(empresa?.representante_legal_rg) || '',
-      contratada_representante_cpf: this.maskCpf(empresa?.representante_legal_cpf ?? '') || '',
+      contratada_representante_rg:
+        this.maskRg(empresa?.representante_legal_rg) || '',
+      contratada_representante_cpf:
+        this.maskCpf(empresa?.representante_legal_cpf ?? '') || '',
       // Dados para pagamento (cadastro da empresa): nome = razão social da empresa, não do representante
       contratada_pix: empresa?.pix ?? '',
       contratada_banco_titular: empresa?.banco_titular ?? '',
@@ -923,11 +1351,15 @@ export class ContratosService {
       contratada_banco_agencia: empresa?.banco_agencia ?? '',
       contratada_banco_conta: empresa?.banco_conta ?? '',
       contratada_dados_pagamento: [
-        empresa?.pix ? `PIX CNPJ ${this.maskCnpj(empresa?.cnpj ?? '')} ${empresa?.razao_social || empresa?.banco_titular || ''}` : null,
-        empresa?.banco_nome && empresa?.banco_agencia && empresa?.banco_conta
-          ? `transferência bancária ${empresa.banco_nome} Agência ${empresa.banco_agencia} Conta ${empresa.banco_conta}${empresa?.razao_social ? ' – ' + empresa.razao_social : (empresa?.banco_titular ? ' – ' + empresa.banco_titular : '')}`
+        empresa?.pix
+          ? `PIX CNPJ ${this.maskCnpj(empresa?.cnpj ?? '')} ${empresa?.razao_social || empresa?.banco_titular || ''}`
           : null,
-      ].filter(Boolean).join(' ou '),
+        empresa?.banco_nome && empresa?.banco_agencia && empresa?.banco_conta
+          ? `transferência bancária ${empresa.banco_nome} Agência ${empresa.banco_agencia} Conta ${empresa.banco_conta}${empresa?.razao_social ? ' – ' + empresa.razao_social : empresa?.banco_titular ? ' – ' + empresa.banco_titular : ''}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(' ou '),
       prazo_garantia_anos: '5',
       valor_revisao_base: 'R$ 250,00',
       valor_armazenagem_dia: 'R$ 100,00',
@@ -935,6 +1367,8 @@ export class ContratosService {
       assinatura_digital_visivel: this.assinaturaA1Habilitada()
         ? `Documento assinado digitalmente (certificado A1) por ${razaoSocial} - CNPJ ${this.maskCnpj(empresa?.cnpj ?? cnpj)} em ${dataHoraAss}.`
         : '',
+      assinatura_cliente_visivel: assinaturaClienteVisivel,
+      assinatura_cliente_imagem_path: assinaturaClienteImagemPath,
     };
 
     const doc = new PDFKitDoc({ size: 'A4', margin: 40 });
@@ -962,17 +1396,34 @@ export class ContratosService {
         doc
           .font('Helvetica-Bold')
           .fontSize(14)
-          .text('CONTRATO DE COMPRA E VENDA DE MERCADORIAS E PRESTAÇÃO DE SERVIÇOS', left, doc.y, {
-            width: larguraTexto,
-            align: 'center',
-          });
+          .text(
+            'CONTRATO DE COMPRA E VENDA DE MERCADORIAS E PRESTAÇÃO DE SERVIÇOS',
+            left,
+            doc.y,
+            {
+              width: larguraTexto,
+              align: 'center',
+            },
+          );
         doc.y += 24;
 
-        for (const mod of modulos) {
+        let jaRenderizouAlgumaClausula = false;
+        const clausulasComQuebraAntes = new Set([
+          'PRECO_CONDICOES', // Cláusula 2 (estabiliza após a tabela da cláusula 1)
+          'CESSAO_IMAGEM', // Cláusula 9 (evita quebrar bloco no limite inferior do layout)
+          'ASSINATURA_ELETRONICA', // Cláusula 11 (fecha junto ao bloco de assinaturas)
+        ]);
+        for (const mod of modulosOrdenados) {
           const titulo = String(mod.titulo || '').trim();
           const key = String((mod as any).modulo_key || '').toUpperCase();
-          const textoRaw = (String(mod.texto || '').trim() || this.DEFAULT_TEXTOS_CONTRATO[key] || '');
-          let textoBruto = this.substituirPlaceholders(String(mod.texto || ''), mapa);
+          const textoRaw =
+            String(mod.texto || '').trim() ||
+            this.DEFAULT_TEXTOS_CONTRATO[key] ||
+            '';
+          let textoBruto = this.substituirPlaceholders(
+            String(mod.texto || ''),
+            mapa,
+          );
           if (!textoBruto && this.DEFAULT_TEXTOS_CONTRATO[key]) {
             textoBruto = this.substituirPlaceholders(
               this.DEFAULT_TEXTOS_CONTRATO[key],
@@ -982,41 +1433,71 @@ export class ContratosService {
           const texto = String(textoBruto || '').trim();
           if (!titulo && !texto && key !== 'OBJETO') continue;
 
-          this.garantirEspacoPagina(doc, 80);
+          if (clausulasComQuebraAntes.has(key) && jaRenderizouAlgumaClausula) {
+            // Cláusulas estratégicas iniciam em nova página para padronizar alinhamento visual.
+            doc.addPage();
+          }
+
+          const alturaMinimaClausula = key === 'CESSAO_IMAGEM' ? 140 : 80;
+          const margemInferiorClausula = key === 'CESSAO_IMAGEM' ? 96 : 60;
+          this.garantirEspacoPagina(
+            doc,
+            alturaMinimaClausula,
+            margemInferiorClausula,
+          );
 
           if (titulo) {
-            doc
-              .font('Helvetica-Bold')
-              .fontSize(11)
-              .text(titulo, left, doc.y, { width: larguraTexto, align: 'center' });
+            doc.font('Helvetica-Bold').fontSize(11).text(titulo, left, doc.y, {
+              width: larguraTexto,
+              align: 'center',
+            });
             doc.y += doc.currentLineHeight() + 4;
           }
 
-          if (texto || (key === 'OBJETO' && textoRaw.includes('[[lista_itens_venda]]'))) {
-            // Cláusula OBJETO: tabela Item/Descritivo fica logo após "Item/ambiente: Descritivo:", não no final.
-            if (key === 'OBJETO' && textoRaw.includes('[[lista_itens_venda]]')) {
-              const partes = textoRaw.split('[[lista_itens_venda]]');
-              const parte1 = this.substituirPlaceholders(partes[0] || '', mapa).trim();
-              const parte2 = this.substituirPlaceholders(partes[1] || '', mapa).trim();
-              if (parte1) {
+          if (texto || key === 'OBJETO') {
+            if (key === 'OBJETO') {
+              // Força a tabela logo após o bloco inicial (endereçamento), antes do § Segundo.
+              const brutoObjeto = String(texto || '').trim();
+              const semPlaceholder = brutoObjeto
+                .replace(/\[\[lista_itens_venda\]\]/gi, '')
+                .replace(/^\s*Item\/\s*ambiente:\s*Descritivo:\s*$/gim, '')
+                .trim();
+              const matchAposEndereco = semPlaceholder.match(
+                /O\s+CONTRATANTE\s+declara-se/i,
+              );
+              const idxAposEndereco = matchAposEndereco?.index ?? -1;
+              const matchSegundo = semPlaceholder.match(/§\s*Segundo/i);
+              const idxSegundo = matchSegundo?.index ?? -1;
+              const idxCorte =
+                idxAposEndereco > 0 ? idxAposEndereco : idxSegundo;
+              const parteAntesTabela =
+                idxCorte > 0
+                  ? semPlaceholder.slice(0, idxCorte).trim()
+                  : semPlaceholder;
+              const parteDepoisTabela =
+                idxCorte > 0 ? semPlaceholder.slice(idxCorte).trim() : '';
+
+              if (parteAntesTabela) {
                 this.garantirEspacoPagina(doc, 40);
                 doc
                   .font('Helvetica')
                   .fontSize(10)
-                  .text(parte1, left, doc.y, {
+                  .text(parteAntesTabela, left, doc.y, {
                     width: larguraTexto,
                     align: 'justify',
                   });
-                doc.y += 10;
+                doc.y += 4;
               }
+
               this.renderTabelaItensVenda(doc, venda, left, right);
-              if (parte2) {
-                doc.y += 8;
+
+              if (parteDepoisTabela) {
+                doc.y += 4;
                 this.garantirEspacoPagina(doc, 40);
                 doc
                   .font('Helvetica')
                   .fontSize(10)
-                  .text(parte2, left, doc.y, {
+                  .text(parteDepoisTabela, left, doc.y, {
                     width: larguraTexto,
                     align: 'justify',
                   });
@@ -1024,23 +1505,16 @@ export class ContratosService {
               }
             } else {
               this.garantirEspacoPagina(doc, 40);
-              doc
-                .font('Helvetica')
-                .fontSize(10)
-                .text(texto, left, doc.y, {
-                  width: larguraTexto,
-                  align: 'justify',
-                });
+              doc.font('Helvetica').fontSize(10).text(texto, left, doc.y, {
+                width: larguraTexto,
+                align: 'justify',
+              });
               doc.y += 10;
-              if (key === 'OBJETO') {
-                this.renderTabelaItensVenda(doc, venda, left, right);
-              }
             }
-          } else if (key === 'OBJETO') {
-            this.renderTabelaItensVenda(doc, venda, left, right);
+            jaRenderizouAlgumaClausula = true;
           }
 
-          doc.y += 8;
+          doc.y += 4;
         }
 
         // A quebra das assinaturas é controlada internamente por bloco.
@@ -1086,6 +1560,87 @@ export class ContratosService {
     return { arquivoId: arquivo.id };
   }
 
+  private async salvarPdfContratoComSlot(params: {
+    contratoId: number;
+    pdfBuffer: Buffer;
+    slotKey: string;
+    categoria: string;
+    nomeArquivo: string;
+  }): Promise<{ id: number }> {
+    const slotKey = String(params.slotKey || '')
+      .trim()
+      .toUpperCase();
+    const categoria = String(params.categoria || '')
+      .trim()
+      .toUpperCase();
+    if (!slotKey)
+      throw new BadRequestException(
+        'slotKey do arquivo de contrato é obrigatório.',
+      );
+    if (!categoria)
+      throw new BadRequestException(
+        'categoria do arquivo de contrato é obrigatória.',
+      );
+
+    const dir = path.join(process.cwd(), 'uploads', 'relatorios');
+    fs.mkdirSync(dir, { recursive: true });
+    const stamp = new Date().toISOString().replace(/[-:.TZ]/g, '');
+    const rand = randomBytes(6).toString('hex');
+    const filename = `contrato_${params.contratoId}_${slotKey.toLowerCase()}_${stamp}_${rand}.pdf`;
+    fs.writeFileSync(path.join(dir, filename), params.pdfBuffer);
+    const url = `/uploads/relatorios/${filename}`;
+
+    const existente = await this.prisma.arquivos.findUnique({
+      where: {
+        owner_type_owner_id_slot_key: {
+          owner_type: 'CONTRATO',
+          owner_id: params.contratoId,
+          slot_key: slotKey,
+        },
+      },
+    });
+
+    const salvo = await this.prisma.arquivos.upsert({
+      where: {
+        owner_type_owner_id_slot_key: {
+          owner_type: 'CONTRATO',
+          owner_id: params.contratoId,
+          slot_key: slotKey,
+        },
+      },
+      create: {
+        owner_type: 'CONTRATO',
+        owner_id: params.contratoId,
+        categoria,
+        slot_key: slotKey,
+        url,
+        filename,
+        nome: params.nomeArquivo,
+        mime_type: 'application/pdf',
+        tamanho: params.pdfBuffer.length,
+      },
+      update: {
+        categoria,
+        url,
+        filename,
+        nome: params.nomeArquivo,
+        mime_type: 'application/pdf',
+        tamanho: params.pdfBuffer.length,
+      },
+      select: { id: true },
+    });
+
+    if (existente?.url && existente.url !== url) {
+      try {
+        const relOld = existente.url.replace(/^\//, '');
+        const absOld = path.join(process.cwd(), relOld);
+        if (fs.existsSync(absOld)) fs.unlinkSync(absOld);
+      } catch {}
+    }
+
+    return salvo;
+  }
+
   /**
    * Retorna o buffer do PDF do contrato (para uso em link público).
    */
@@ -1106,7 +1661,9 @@ export class ContratosService {
    * Resolve token da URL: se for token curto (até 12 chars, sem ponto), busca no banco;
    * senão trata como JWT. Retorna contratoId e o token a usar na URL (para montar linkPdf).
    */
-  private async resolveTokenPublico(token: string): Promise<{ contratoId: number; tokenParaUrl: string }> {
+  private async resolveTokenPublico(
+    token: string,
+  ): Promise<{ contratoId: number; tokenParaUrl: string }> {
     const isShort = token.length <= 12 && !token.includes('.');
     if (isShort) {
       const now = new Date();
@@ -1124,7 +1681,16 @@ export class ContratosService {
     return { contratoId: payload.contratoId, tokenParaUrl: token };
   }
 
-  async obterLinkPublicoPdf(contratoId: number, baseUrl: string): Promise<{ link: string; linkAceitar?: string; linkPdf?: string; token: string; expiraEm: string }> {
+  async obterLinkPublicoPdf(
+    contratoId: number,
+    baseUrl: string,
+  ): Promise<{
+    link: string;
+    linkAceitar?: string;
+    linkPdf?: string;
+    token: string;
+    expiraEm: string;
+  }> {
     const contrato = await this.prisma.contratos.findUnique({
       where: { id: contratoId },
       select: { id: true, status: true },
@@ -1152,11 +1718,31 @@ export class ContratosService {
     }
     const urlBase = (baseUrl || '').replace(/\/+$/, '');
     const linkPdf = `${urlBase}/api/contratos-publico/${shortToken}/pdf`;
-    const baseAceite = (this.config.get<string>('CONTRATO_ACEITE_BASE_URL') || process.env.CONTRATO_ACEITE_BASE_URL || '').trim();
-    const contratoJaAssinado = String(contrato.status || '').toUpperCase() === 'VIGENTE';
-    const linkAceitar = !contratoJaAssinado && baseAceite
-      ? `${baseAceite.replace(/\/+$/, '')}/aceitar/${shortToken}`
-      : undefined;
+    const baseAceite = (
+      this.config.get<string>('CONTRATO_ACEITE_BASE_URL') ||
+      process.env.CONTRATO_ACEITE_BASE_URL ||
+      ''
+    ).trim();
+    const statusAtual = String(contrato.status || '').toUpperCase();
+    const assinaturaClienteExistente =
+      await this.prisma.assinaturas_log.findFirst({
+        where: {
+          contrato_id: contratoId,
+          OR: [
+            { metodo_verificacao: { contains: 'portal seguro' } },
+            { metodo_verificacao: { contains: 'Link WhatsApp/SMS' } },
+          ],
+        },
+        select: { id: true },
+      });
+    const bloqueadoParaAceite =
+      statusAtual === 'CANCELADO' ||
+      statusAtual === 'ENCERRADO' ||
+      !!assinaturaClienteExistente;
+    const linkAceitar =
+      !bloqueadoParaAceite && baseAceite
+        ? `${baseAceite.replace(/\/+$/, '')}/aceitar/${shortToken}`
+        : undefined;
     const link = linkAceitar || linkPdf;
     return {
       link,
@@ -1171,7 +1757,10 @@ export class ContratosService {
    * Envia o link do contrato por e-mail usando o SMTP configurado no .env.
    * O e-mail é enviado automaticamente pelo sistema (não abre o cliente de e-mail).
    */
-  async enviarContratoPorEmail(contratoId: number, baseUrl: string): Promise<{ ok: true }> {
+  async enviarContratoPorEmail(
+    contratoId: number,
+    baseUrl: string,
+  ): Promise<{ ok: true }> {
     const contrato = await this.prisma.contratos.findUnique({
       where: { id: contratoId },
       include: { cliente: true },
@@ -1179,9 +1768,14 @@ export class ContratosService {
     if (!contrato) throw new NotFoundException('Contrato não encontrado.');
     const cliente = contrato.cliente as any;
     const email = (cliente?.email ?? cliente?.email_secundario ?? '').trim();
-    if (!email) throw new BadRequestException('Cliente não possui e-mail cadastrado.');
+    if (!email)
+      throw new BadRequestException('Cliente não possui e-mail cadastrado.');
     const { link } = await this.obterLinkPublicoPdf(contratoId, baseUrl);
-    const nomeCliente = cliente?.nome_completo || cliente?.razao_social || cliente?.nome || 'Cliente';
+    const nomeCliente =
+      cliente?.nome_completo ||
+      cliente?.razao_social ||
+      cliente?.nome ||
+      'Cliente';
     await this.mail.enviarContratoLink(email, nomeCliente, link);
     return { ok: true };
   }
@@ -1189,7 +1783,9 @@ export class ContratosService {
   /**
    * Valida o token do link público e retorna o buffer do PDF (rota pública, sem auth).
    */
-  async getPdfBufferPorTokenPublico(token: string): Promise<{ buffer: Buffer; numero: string }> {
+  async getPdfBufferPorTokenPublico(
+    token: string,
+  ): Promise<{ buffer: Buffer; numero: string }> {
     const { contratoId } = await this.resolveTokenPublico(token);
     const contrato = await this.prisma.contratos.findUnique({
       where: { id: contratoId },
@@ -1213,6 +1809,8 @@ export class ContratosService {
     status: string;
     podeAssinar: boolean;
     dataAssinatura: string | null;
+    assinaturaClienteRegistrada: boolean;
+    dataAssinaturaCliente: string | null;
   }> {
     const { contratoId, tokenParaUrl } = await this.resolveTokenPublico(token);
     const contrato = await this.prisma.contratos.findUnique({
@@ -1220,19 +1818,43 @@ export class ContratosService {
       include: { cliente: true },
     });
     if (!contrato) throw new NotFoundException('Contrato não encontrado.');
-    const nomeCliente = (contrato.cliente as any)?.nome_completo || (contrato.cliente as any)?.razao_social || 'Contratante';
+    const nomeCliente =
+      (contrato.cliente as any)?.nome_completo ||
+      (contrato.cliente as any)?.razao_social ||
+      'Contratante';
     const urlBase = (baseUrl || '').replace(/\/+$/, '');
     const linkPdf = `${urlBase}/api/contratos-publico/${tokenParaUrl}/pdf`;
     const status = String(contrato.status || '');
     const statusUpper = status.toUpperCase();
-    const podeAssinar = statusUpper !== 'VIGENTE' && statusUpper !== 'CANCELADO' && statusUpper !== 'ENCERRADO';
+    const assinaturaCliente = await this.prisma.assinaturas_log.findFirst({
+      where: {
+        contrato_id: contrato.id,
+        OR: [
+          { metodo_verificacao: { contains: 'portal seguro' } },
+          { metodo_verificacao: { contains: 'Link WhatsApp/SMS' } },
+        ],
+      },
+      orderBy: { data_hora: 'desc' },
+      select: { data_hora: true },
+    });
+    const assinaturaClienteRegistrada = !!assinaturaCliente;
+    const podeAssinar =
+      statusUpper !== 'CANCELADO' &&
+      statusUpper !== 'ENCERRADO' &&
+      !assinaturaClienteRegistrada;
     return {
       numero: String(contrato.numero || contrato.id),
       nomeCliente,
       linkPdf,
       status,
       podeAssinar,
-      dataAssinatura: contrato.data_assinatura ? contrato.data_assinatura.toISOString() : null,
+      dataAssinatura: contrato.data_assinatura
+        ? contrato.data_assinatura.toISOString()
+        : null,
+      assinaturaClienteRegistrada,
+      dataAssinaturaCliente: assinaturaCliente?.data_hora
+        ? assinaturaCliente.data_hora.toISOString()
+        : null,
     };
   }
 
@@ -1241,38 +1863,117 @@ export class ContratosService {
    */
   async registrarAceite(
     token: string,
-    ipAddress: string | undefined,
-    userAgent: string | undefined,
+    evidencias: {
+      ipAddress?: string;
+      userAgent?: string;
+      timezone?: string;
+      acceptanceLocalTime?: string;
+      deviceLabel?: string;
+      screen?: string;
+    },
   ): Promise<{ success: true; numero: string; jaAssinado?: boolean }> {
     const { contratoId } = await this.resolveTokenPublico(token);
     const contrato = await this.prisma.contratos.findUnique({
       where: { id: contratoId },
-      select: { id: true, numero: true, status: true, venda_id: true, cliente_id: true },
+      select: {
+        id: true,
+        numero: true,
+        status: true,
+        venda_id: true,
+        cliente_id: true,
+      },
     });
     if (!contrato) throw new NotFoundException('Contrato não encontrado.');
     const statusAtual = String(contrato.status || '').toUpperCase();
-    if (statusAtual === 'VIGENTE') {
-      return { success: true, numero: String(contrato.numero || contrato.id), jaAssinado: true };
+    const assinaturaClienteExistente =
+      await this.prisma.assinaturas_log.findFirst({
+        where: {
+          contrato_id: contrato.id,
+          OR: [
+            { metodo_verificacao: { contains: 'portal seguro' } },
+            { metodo_verificacao: { contains: 'Link WhatsApp/SMS' } },
+          ],
+        },
+        select: { id: true },
+      });
+    if (statusAtual === 'VIGENTE' && assinaturaClienteExistente) {
+      return {
+        success: true,
+        numero: String(contrato.numero || contrato.id),
+        jaAssinado: true,
+      };
     }
     if (statusAtual === 'CANCELADO' || statusAtual === 'ENCERRADO') {
-      throw new BadRequestException(`Contrato ${statusAtual.toLowerCase()} não pode ser assinado.`);
+      throw new BadRequestException(
+        `Contrato ${statusAtual.toLowerCase()} não pode ser assinado.`,
+      );
     }
     const { buffer } = await this.getPdfBufferPorTokenPublico(token);
     const hashDocumento = createHash('sha256').update(buffer).digest('hex');
+    const ipAddress = String(evidencias?.ipAddress || '').trim() || null;
+    const userAgentRaw = String(evidencias?.userAgent || '').trim();
+    const userAgent = userAgentRaw || null;
+    const deviceLabel = String(evidencias?.deviceLabel || '').trim();
+    const screen = String(evidencias?.screen || '').trim();
+    const timezone = String(evidencias?.timezone || '').trim();
+    const acceptanceLocalTime = String(
+      evidencias?.acceptanceLocalTime || '',
+    ).trim();
+    const metodoVerificacao = [
+      'Assinatura eletrônica via portal seguro',
+      timezone ? `Fuso: ${timezone}` : null,
+      acceptanceLocalTime
+        ? `Hora local informada: ${acceptanceLocalTime}`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(' | ');
+    const dispositivoRegistrado =
+      [
+        userAgent,
+        deviceLabel ? `Dispositivo: ${deviceLabel}` : null,
+        screen ? `Tela: ${screen}` : null,
+      ]
+        .filter(Boolean)
+        .join(' | ') || null;
     await this.prisma.assinaturas_log.create({
       data: {
         contrato_id: contrato.id,
-        ip_address: ipAddress ?? null,
-        dispositivo: userAgent ?? null,
+        ip_address: ipAddress,
+        dispositivo: dispositivoRegistrado,
         hash_documento: hashDocumento,
-        metodo_verificacao: 'Aceite via Link WhatsApp/SMS',
+        metodo_verificacao:
+          metodoVerificacao || 'Assinatura eletrônica via portal seguro',
       },
     });
     await this.prisma.contratos.update({
       where: { id: contrato.id },
       data: { status: 'VIGENTE', data_assinatura: new Date() } as any,
     });
+    await this.salvarPdfContratoComSlot({
+      contratoId: contrato.id,
+      pdfBuffer: buffer,
+      slotKey: 'CONTRATO_ASSINADO_EMPRESA',
+      categoria: 'RELATORIO_INTERNO',
+      nomeArquivo: `CONTRATO #${contrato.id} (base empresa)`,
+    });
+    const pdfFinalComCliente = await this.gerarContratoPdfBuffer(contrato.id);
+    await this.salvarPdfContratoComSlot({
+      contratoId: contrato.id,
+      pdfBuffer: pdfFinalComCliente,
+      slotKey: 'CONTRATO_ASSINADO_CLIENTE',
+      categoria: 'RELATORIO',
+      nomeArquivo: `CONTRATO #${contrato.id} (assinado cliente)`,
+    });
     await this.garantirContaReceberDeVendaAssinada({
+      venda_id: (contrato as any).venda_id ?? null,
+      cliente_id: (contrato as any).cliente_id ?? null,
+    });
+    await this.atualizarStatusVendaParaProducaoAoVigorarContrato({
+      venda_id: (contrato as any).venda_id ?? null,
+    });
+    await this.garantirAgendaProducaoDaVendaAoVigorarContrato({
+      id: contrato.id,
       venda_id: (contrato as any).venda_id ?? null,
       cliente_id: (contrato as any).cliente_id ?? null,
     });

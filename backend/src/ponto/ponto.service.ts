@@ -331,7 +331,9 @@ export class PontoService {
       .catch(() => {});
 
     const transacao_id = createHash('sha256')
-      .update(`${registro.id}|${registro.data_hora.toISOString()}|${registro.funcionario_id}`)
+      .update(
+        `${registro.id}|${registro.data_hora.toISOString()}|${registro.funcionario_id}`,
+      )
       .digest('hex')
       .slice(0, 32);
     return { ...registro, transacao_id };
@@ -343,15 +345,25 @@ export class PontoService {
     funcionario_id: number;
   }): string {
     return createHash('sha256')
-      .update(`${registro.id}|${new Date(registro.data_hora).toISOString()}|${registro.funcionario_id}`)
+      .update(
+        `${registro.id}|${new Date(registro.data_hora).toISOString()}|${registro.funcionario_id}`,
+      )
       .digest('hex')
       .slice(0, 32);
   }
 
-  private tipoLabel(registrosDia: { id: number; tipo: string; data_hora: Date }[], registro: { id: number; tipo: string }): string {
+  private tipoLabel(
+    registrosDia: { id: number; tipo: string; data_hora: Date }[],
+    registro: { id: number; tipo: string },
+  ): string {
     if (registro.tipo === 'ENTRADA') return 'Entrada';
     if (registro.tipo !== 'SAIDA') return registro.tipo;
-    const saidas = registrosDia.filter((r) => r.tipo === 'SAIDA').sort((a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime());
+    const saidas = registrosDia
+      .filter((r) => r.tipo === 'SAIDA')
+      .sort(
+        (a, b) =>
+          new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime(),
+      );
     const idx = saidas.findIndex((r) => r.id === registro.id);
     return idx === 0 ? 'Almoço' : 'Saída';
   }
@@ -431,7 +443,10 @@ export class PontoService {
     return {
       ...funcionario,
       empresa: empresa
-        ? { nome: empresa.razao_social || empresa.nome_fantasia || 'Empresa', cnpj: empresa.cnpj || '' }
+        ? {
+            nome: empresa.razao_social || empresa.nome_fantasia || 'Empresa',
+            cnpj: empresa.cnpj || '',
+          }
         : { nome: 'Empresa', cnpj: '' },
     };
   }

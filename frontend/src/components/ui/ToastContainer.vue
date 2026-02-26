@@ -3,7 +3,7 @@ import { notifications, notify } from '@/services/notify'
 </script>
 
 <template>
-  <div class="fixed top-6 right-6 z-[10000] flex flex-col gap-3 w-full max-w-[360px] pointer-events-none">
+  <div class="fixed top-6 right-6 z-[10000] flex flex-col gap-3 w-[calc(100%-1.5rem)] max-w-[560px] pointer-events-none">
     <TransitionGroup name="toast">
       <div 
         v-for="n in notifications" 
@@ -30,11 +30,14 @@ import { notifications, notify } from '@/services/notify'
             <i :class="[n.type === 'error' ? 'pi pi-times-circle' : 'pi pi-check-circle', 'text-lg']"></i>
           </div>
 
-          <div class="flex flex-col min-w-0 pr-4 gap-0.5">
+          <div class="flex flex-col min-w-0 pr-4 gap-1 flex-1">
             <span class="text-xs font-semibold" :class="n.type === 'error' ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'">
               {{ n.type === 'error' ? 'Atenção' : 'Sucesso' }}
             </span>
-            <p class="text-sm font-medium text-slate-600 dark:text-slate-300 leading-snug truncate">
+            <p
+              class="text-sm font-medium text-slate-600 dark:text-slate-300 leading-snug break-words whitespace-pre-wrap"
+              :class="n.type === 'error' ? 'max-h-40 overflow-y-auto pr-1' : ''"
+            >
               {{ n.message }}
             </p>
           </div>

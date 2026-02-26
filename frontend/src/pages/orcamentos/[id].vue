@@ -140,14 +140,14 @@
         <div class="h-px bg-border-ui"></div>
 
         <!-- 1. IMAGENS PARA O PDF + 2. ANEXOS/DOCUMENTOS -->
-        <div class="space-y-6">
+        <div class="space-y-6 border-t border-border-ui pt-5">
             <!-- 1. Imagens para o PDF do orçamento -->
             <div class="space-y-3">
-              <div class="flex items-center justify-between">
-                <div class="text-xs font-black uppercase tracking-widest text-text-soft">
+              <div class="space-y-2">
+                <div class="text-base font-semibold text-text-main text-center">
                   Imagens para o PDF do orçamento
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center justify-end gap-2">
                   <input ref="fileInputImagemPdf" type="file" class="hidden" accept="image/*" @change="(e) => onPickArquivo(e, 'IMAGEM_PDF')" />
                   <Button
                     v-if="can(permSalvarOrc()) && can('arquivos.criar')"
@@ -160,10 +160,10 @@
                   </Button>
                 </div>
               </div>
-              <p class="text-[10px] font-bold text-text-soft uppercase tracking-wider">
+              <p class="text-xs font-medium text-text-soft leading-relaxed">
                 Estas imagens serão incluídas no PDF ao clicar em &quot;Gerar PDF&quot;. Cada imagem é redimensionada para caber na folha A4: até 2 imagens por página, com área útil de aproximadamente 199 mm (largura) × 131 mm (altura) por imagem. O PDF exibe ainda as dimensões em pixels abaixo de cada imagem.
               </p>
-              <div class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden max-h-[200px] overflow-y-auto">
+              <div class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden">
                 <Table
                   :columns="colArquivos"
                   :rows="imagensParaPdf"
@@ -189,11 +189,11 @@
 
             <!-- 2. Anexos e documentos (PDF etc) -->
             <div class="space-y-3">
-              <div class="flex items-center justify-between">
-                <div class="text-xs font-black uppercase tracking-widest text-text-soft">
+              <div class="space-y-2">
+                <div class="text-base font-semibold text-text-main text-center">
                   Anexos e documentos
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center justify-end gap-2">
                   <input ref="fileInputAnexos" type="file" class="hidden" @change="(e) => onPickArquivo(e, 'ANEXO')" />
                   <Button
                     v-if="can(permSalvarOrc()) && can('arquivos.criar')"
@@ -206,10 +206,10 @@
                   </Button>
                 </div>
               </div>
-              <p class="text-[10px] font-bold text-text-soft uppercase tracking-wider">
+              <p class="text-xs font-medium text-text-soft leading-relaxed">
                 PDFs e outros arquivos anexados ao orçamento. Não são inseridos no PDF gerado; ficam apenas vinculados ao orçamento.
               </p>
-              <div class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden max-h-[200px] overflow-y-auto">
+              <div class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden">
                 <Table
                   :columns="colArquivos"
                   :rows="anexosDocumentos"
@@ -237,9 +237,9 @@
         <div class="h-px bg-border-ui"></div>
 
         <!-- TERMOS E CONDIÇÕES / CLÁUSULAS ESPECÍFICAS DO ORÇAMENTO -->
-        <div class="space-y-4">
-          <div class="flex items-center justify-between">
-            <div class="text-xs font-black uppercase tracking-widest text-text-soft">
+        <div class="space-y-4 border-t border-border-ui pt-5">
+          <div class="flex items-center justify-center">
+            <div class="text-base font-semibold text-text-main">
               Termos e Condições (Cláusulas do Orçamento)
             </div>
           </div>

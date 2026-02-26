@@ -1,4 +1,4 @@
-﻿import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
 import * as bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
@@ -53,7 +53,8 @@ async function main() {
 
     // Permissoes padrao de primeiro acesso
     { chave: 'index.visualizar', descricao: 'Acesso a pagina inicial' },
-    { chave: 'dashboard.visualizar', descricao: 'Acesso ao dashboard' },
+    { chave: 'dashboard.visualizar', descricao: 'Acesso ao hub de relatorios' },
+    { chave: 'relatorios.acompanhamento_status.ver', descricao: 'Visualizar acompanhamento de status' },
     { chave: 'pendente.visualizar', descricao: 'Acesso a tela de primeiro acesso' },
     { chave: 'alterar-senha', descricao: 'Acesso a alterar senha' },
 

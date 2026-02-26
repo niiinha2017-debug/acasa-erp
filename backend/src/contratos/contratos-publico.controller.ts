@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   HttpCode,
@@ -31,15 +32,21 @@ export class ContratosPublicController {
   @HttpCode(HttpStatus.OK)
   async downloadPdf(@Param('token') token: string, @Res() res: Response) {
     try {
-      const { buffer, numero } = await this.service.getPdfBufferPorTokenPublico(token);
-      const filename = `contrato_${numero}.pdf`.replace(/[^a-zA-Z0-9_.-]/g, '_');
+      const { buffer, numero } =
+        await this.service.getPdfBufferPorTokenPublico(token);
+      const filename = `contrato_${numero}.pdf`.replace(
+        /[^a-zA-Z0-9_.-]/g,
+        '_',
+      );
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
       res.send(buffer);
     } catch (e: any) {
       this.logger.warn(`PDF público (token): ${e?.message || e}`);
       if (e instanceof HttpException) throw e;
-      throw new InternalServerErrorException('Falha ao gerar PDF do contrato. Tente novamente ou peça um novo link.');
+      throw new InternalServerErrorException(
+        'Falha ao gerar PDF do contrato. Tente novamente ou peça um novo link.',
+      );
     }
   }
 
@@ -49,26 +56,52 @@ export class ContratosPublicController {
       const baseUrl =
         this.config.get<string>('APP_URL') ||
         process.env.APP_URL ||
-        (req.protocol && req.get('host') ? `${req.protocol}://${req.get('host')}` : 'http://localhost:3000');
+        (req.protocol && req.get('host')
+          ? `${req.protocol}://${req.get('host')}`
+          : 'http://localhost:3000');
       return this.service.getInfoPorTokenPublico(token, baseUrl);
     } catch (e: any) {
       this.logger.warn(`Info público (token): ${e?.message || e}`);
       if (e instanceof HttpException) throw e;
-      throw new InternalServerErrorException('Não foi possível carregar os dados do contrato.');
+      throw new InternalServerErrorException(
+        'Não foi possível carregar os dados do contrato.',
+      );
     }
   }
 
   @Post(':token/aceitar')
   @HttpCode(HttpStatus.OK)
-  async aceitar(@Param('token') token: string, @Req() req: Request) {
+  async aceitar(
+    @Param('token') token: string,
+    @Req() req: Request,
+    @Body()
+    payload?: {
+      timezone?: string;
+      acceptanceLocalTime?: string;
+      deviceLabel?: string;
+      screen?: string;
+    },
+  ) {
     try {
-      const ip = req.ip || req.socket?.remoteAddress || (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim();
+      const ipForwarded = String(req.headers['x-forwarded-for'] || '')
+        .split(',')[0]
+        ?.trim();
+      const ip = req.ip || req.socket?.remoteAddress || ipForwarded;
       const userAgent = req.get('user-agent');
-      return this.service.registrarAceite(token, ip, userAgent);
+      return this.service.registrarAceite(token, {
+        ipAddress: ip,
+        userAgent,
+        timezone: payload?.timezone,
+        acceptanceLocalTime: payload?.acceptanceLocalTime,
+        deviceLabel: payload?.deviceLabel,
+        screen: payload?.screen,
+      });
     } catch (e: any) {
       this.logger.warn(`Aceitar público (token): ${e?.message || e}`);
       if (e instanceof HttpException) throw e;
-      throw new InternalServerErrorException('Não foi possível registrar o aceite. Tente novamente.');
+      throw new InternalServerErrorException(
+        'Não foi possível registrar o aceite. Tente novamente.',
+      );
     }
   }
 }

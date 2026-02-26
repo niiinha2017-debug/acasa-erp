@@ -13,12 +13,12 @@ export const PIPELINE_PLANO_CORTE = [
   },
 
   // =========================
-  // PRODUÇÃO
+  // EXECUÇÃO
   // =========================
   {
-    key: 'EM_PRODUCAO',
-    label: 'Em produção',
-    fase: 'PRODUCAO',
+    key: 'EM_ANDAMENTO',
+    label: 'Em andamento',
+    fase: 'EXECUCAO',
     ordem: 2,
     temTela: false,
     badgeClass: 'bg-blue-50 text-blue-700 border border-blue-100',
@@ -27,7 +27,7 @@ export const PIPELINE_PLANO_CORTE = [
   {
     key: 'FINALIZADO',
     label: 'Finalizado',
-    fase: 'PRODUCAO',
+    fase: 'EXECUCAO',
     ordem: 3,
     temTela: false,
     badgeClass: 'bg-emerald-50 text-emerald-700 border border-emerald-100',

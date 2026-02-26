@@ -36,8 +36,8 @@ export class FuncionariosController {
 
   @Get('select')
   @Permissoes('funcionarios.select')
-  select(@Query('q') q?: string) {
-    return this.service.select(q);
+  select(@Query('q') q?: string, @Query('unidade') unidade?: string) {
+    return this.service.select(q, unidade);
   }
 
   @Get()

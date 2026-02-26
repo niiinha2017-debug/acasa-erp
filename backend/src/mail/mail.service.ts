@@ -97,7 +97,11 @@ Passando para te desejar um feliz aniversário! 🎉
    * Envia o link do contrato para assinatura por e-mail (SMTP do .env).
    * O e-mail é enviado automaticamente pelo sistema.
    */
-  async enviarContratoLink(para: string, nomeCliente: string, link: string): Promise<{ ok: boolean }> {
+  async enviarContratoLink(
+    para: string,
+    nomeCliente: string,
+    link: string,
+  ): Promise<{ ok: boolean }> {
     const from =
       this.config.get<string>('MAIL_FROM') ||
       this.config.get<string>('MAIL_USER');
@@ -138,8 +142,15 @@ Passando para te desejar um feliz aniversário! 🎉
       try {
         const body: Record<string, unknown> = {
           sender: {
-            email: this.config.get<string>('MAIL_USER') || this.config.get<string>('BREVO_SENDER_EMAIL') || 'noreply@acasa.com',
-            name: this.config.get<string>('MAIL_FROM')?.replace(/^[^<]*<[^>]+>$/, '').trim() || 'ACASA ERP',
+            email:
+              this.config.get<string>('MAIL_USER') ||
+              this.config.get<string>('BREVO_SENDER_EMAIL') ||
+              'noreply@acasa.com',
+            name:
+              this.config
+                .get<string>('MAIL_FROM')
+                ?.replace(/^[^<]*<[^>]+>$/, '')
+                .trim() || 'ACASA ERP',
           },
           to: [{ email: para }],
           subject,
@@ -147,7 +158,10 @@ Passando para te desejar um feliz aniversário! 🎉
         };
         if (pdfBuffer && pdfBuffer.length) {
           body.attachment = [
-            { name: `espelho-ponto-${ref.replace('/', '-')}.pdf`, content: pdfBuffer.toString('base64') },
+            {
+              name: `espelho-ponto-${ref.replace('/', '-')}.pdf`,
+              content: pdfBuffer.toString('base64'),
+            },
           ];
         }
         const res = await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -182,7 +196,10 @@ Passando para te desejar um feliz aniversário! 🎉
     };
     if (pdfBuffer && pdfBuffer.length) {
       mailOptions.attachments = [
-        { filename: `espelho-ponto-${ref.replace('/', '-')}.pdf`, content: pdfBuffer },
+        {
+          filename: `espelho-ponto-${ref.replace('/', '-')}.pdf`,
+          content: pdfBuffer,
+        },
       ];
     }
     await this.transporter.sendMail(mailOptions);

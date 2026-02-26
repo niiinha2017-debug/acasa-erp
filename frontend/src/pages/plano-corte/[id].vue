@@ -307,7 +307,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { maskMoneyBR } from '@/utils/masks'
-import { AgendaService, FuncionarioService, PlanoCorteService, FornecedorService } from '@/services/index'
+import { AgendaFabricaService, FuncionarioService, PlanoCorteService, FornecedorService } from '@/services/index'
 import { PIPELINE_PLANO_CORTE, UNIDADES } from '@/constantes'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
@@ -451,7 +451,7 @@ async function confirmarEnviarProducao() {
   if (!fornecedorId) return notify.error('Fornecedor do plano não informado.')
   modalEnviarProducao.value.salvando = true
   try {
-    await AgendaService.criar({
+    await AgendaFabricaService.criar({
       titulo: modalEnviarProducao.value.titulo,
       inicio_em: inicio.toISOString(),
       fim_em: fim.toISOString(),

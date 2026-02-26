@@ -1,40 +1,79 @@
-type PipelineClienteItem = {
-  key: string;
+import { PIPELINE_CLIENTE as PIPELINE_CLIENTE_FASES_RAW } from '../../../shared/constantes/pipeline-cliente';
+
+type PipelineClienteFaseItem = {
   fase: string;
+  label: string;
   ordem: number;
+  statusInternos: string[];
+  temAgendamento?: boolean;
+  dataCampo?: string;
 };
 
-export const PIPELINE_CLIENTE: PipelineClienteItem[] = [
-  { key: 'CLIENTE_CADASTRADO', fase: 'CADASTRO', ordem: 1 },
-  { key: 'AGENDAR_MEDIDA', fase: 'MEDIDA', ordem: 2 },
-  { key: 'MEDIDA_AGENDADA', fase: 'MEDIDA', ordem: 3 },
-  { key: 'MEDIDA_REALIZADA', fase: 'MEDIDA', ordem: 4 },
-  { key: 'CRIAR_ORCAMENTO', fase: 'ORCAMENTO', ordem: 5 },
-  { key: 'ORCAMENTO_EM_ANDAMENTO', fase: 'ORCAMENTO', ordem: 6 },
-  { key: 'ORCAMENTO_ENVIADO', fase: 'ORCAMENTO', ordem: 7 },
-  { key: 'ORCAMENTO_EM_NEGOCIACAO', fase: 'ORCAMENTO', ordem: 8 },
-  { key: 'ORCAMENTO_APROVADO', fase: 'ORCAMENTO', ordem: 9 },
-  { key: 'ORCAMENTO_REPROVADO', fase: 'ORCAMENTO', ordem: 10 },
-  { key: 'VENDA_FECHADA', fase: 'VENDA', ordem: 11 },
-  { key: 'CONTRATO_GERADO', fase: 'CONTRATO', ordem: 12 },
-  { key: 'AGENDAR_MEDIDA_FINA', fase: 'MEDIDA_FINA', ordem: 13 },
-  { key: 'MEDIDA_FINA_AGENDADA', fase: 'MEDIDA_FINA', ordem: 14 },
-  { key: 'MEDIDA_FINA_REALIZADA', fase: 'MEDIDA_FINA', ordem: 15 },
-  { key: 'PROJETO_TECNICO_EM_ANDAMENTO', fase: 'PROJETO', ordem: 16 },
-  { key: 'PROJETO_TECNICO_APROVADO', fase: 'PROJETO', ordem: 17 },
-  { key: 'PLANO_DE_CORTE', fase: 'PRODUCAO', ordem: 18 },
-  { key: 'PRODUCAO_AGENDADA', fase: 'PRODUCAO', ordem: 19 },
-  { key: 'EM_PRODUCAO', fase: 'PRODUCAO', ordem: 20 },
-  { key: 'PRODUCAO_FINALIZADA', fase: 'PRODUCAO', ordem: 21 },
-  { key: 'AGENDAR_MONTAGEM', fase: 'MONTAGEM', ordem: 22 },
-  { key: 'MONTAGEM_AGENDADA', fase: 'MONTAGEM', ordem: 23 },
-  { key: 'EM_MONTAGEM', fase: 'MONTAGEM', ordem: 24 },
-  { key: 'MONTAGEM_FINALIZADA', fase: 'MONTAGEM', ordem: 25 },
-  { key: 'GARANTIA', fase: 'POS_VENDA', ordem: 26 },
-  { key: 'ASSISTENCIA', fase: 'POS_VENDA', ordem: 27 },
-  { key: 'MANUTENCAO', fase: 'POS_VENDA', ordem: 28 },
-  { key: 'ENCERRADO', fase: 'FINAL', ordem: 29 },
-];
+type PipelineClienteItem = {
+  key: string;
+  label: string;
+  fase: string;
+  ordem: number;
+  temTela: boolean;
+  disparaComData?: string;
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  CLIENTE_CADASTRADO: 'Cliente cadastrado',
+  AGENDAR_MEDIDA: 'Agendar medida',
+  MEDIDA_AGENDADA: 'Medida agendada',
+  MEDIDA_REALIZADA: 'Medida realizada',
+  CRIAR_ORCAMENTO: 'Criar orçamento',
+  ORCAMENTO_EM_ANDAMENTO: 'Orçamento em andamento',
+  ORCAMENTO_ENVIADO: 'Orçamento enviado',
+  ORCAMENTO_EM_NEGOCIACAO: 'Orçamento em negociação',
+  ORCAMENTO_APROVADO: 'Orçamento aprovado',
+  ORCAMENTO_REPROVADO: 'Orçamento reprovado',
+  AGENDAR_APRESENTACAO: 'Agendar apresentação',
+  APRESENTACAO_AGENDADA: 'Apresentação agendada',
+  ORCAMENTO_APRESENTADO: 'Orçamento apresentado',
+  VENDA_FECHADA: 'Venda fechada',
+  CONTRATO_GERADO: 'Contrato gerado',
+  CONTRATO_ASSINADO: 'Contrato assinado',
+  AGENDAR_MEDIDA_FINA: 'Agendar medida fina',
+  MEDIDA_FINA_AGENDADA: 'Medida fina agendada',
+  MEDIDA_FINA_REALIZADA: 'Medida fina realizada',
+  PROJETO_TECNICO_EM_ANDAMENTO: 'Projeto técnico em andamento',
+  PROJETO_TECNICO_APROVADO: 'Projeto técnico aprovado',
+  PRODUCAO_AGENDADA: 'Produção agendada',
+  EM_PRODUCAO: 'Em produção',
+  PRODUCAO_FINALIZADA: 'Produção finalizada',
+  AGENDAR_MONTAGEM: 'Agendar montagem',
+  MONTAGEM_AGENDADA: 'Montagem agendada',
+  EM_MONTAGEM: 'Em montagem',
+  MONTAGEM_FINALIZADA: 'Montagem finalizada',
+  GARANTIA: 'Garantia',
+  ASSISTENCIA: 'Assistência',
+  MANUTENCAO: 'Manutenção',
+  ENCERRADO: 'Encerrado',
+};
+
+const PIPELINE_CLIENTE_FASES =
+  PIPELINE_CLIENTE_FASES_RAW as PipelineClienteFaseItem[];
+
+export const PIPELINE_CLIENTE: PipelineClienteItem[] =
+  PIPELINE_CLIENTE_FASES.flatMap((faseItem) =>
+    (Array.isArray(faseItem.statusInternos) ? faseItem.statusInternos : []).map(
+      (status, idx) => ({
+        key: String(status || '').toUpperCase(),
+        label:
+          STATUS_LABELS[String(status || '').toUpperCase()] ||
+          String(status || ''),
+        fase: faseItem.fase,
+        ordem: Number(faseItem.ordem || 0) * 100 + idx,
+        temTela: /^(AGENDAR_|CRIAR_)/.test(String(status || '').toUpperCase()),
+        disparaComData:
+          idx === 0 && faseItem.temAgendamento && faseItem.dataCampo
+            ? faseItem.dataCampo
+            : undefined,
+      }),
+    ),
+  ).filter((item) => item.key);
 
 export const PIPELINE_CLIENTE_KEYS = PIPELINE_CLIENTE.map((item) => item.key);
 
@@ -46,18 +85,17 @@ const PIPELINE_CLIENTE_ORDEM = PIPELINE_CLIENTE.reduce<Record<string, number>>(
   {},
 );
 
-export const STATUS_POS_VENDA = ['GARANTIA', 'MANUTENCAO', 'ASSISTENCIA'];
-
-const STATUS_PRODUCAO = [
-  'PRODUCAO_AGENDADA',
-  'EM_PRODUCAO',
-  'PRODUCAO_FINALIZADA',
+export const STATUS_POS_VENDA = [
+  'GARANTIA',
+  'MANUTENCAO',
+  'ASSISTENCIA',
+  'ENCERRADO',
 ];
 
-const STATUS_MINIMO_PARA_PRODUCAO = 'PROJETO_TECNICO_APROVADO';
-
 export function normalizarStatusCliente(status?: string | null): string {
-  return String(status || '').trim().toUpperCase();
+  return String(status || '')
+    .trim()
+    .toUpperCase();
 }
 
 export function statusClienteEhValido(status?: string | null): boolean {
@@ -85,7 +123,10 @@ export function validarTransicaoStatusCliente(params: {
   }
 
   if (!statusClienteEhValido(atual)) {
-    return { ok: false, motivo: `Status atual "${atual}" é inválido no pipeline.` };
+    return {
+      ok: false,
+      motivo: `Status atual "${atual}" é inválido no pipeline.`,
+    };
   }
 
   if (atual === proximo) {
@@ -106,17 +147,6 @@ export function validarTransicaoStatusCliente(params: {
       ok: false,
       motivo: `Transição inválida de "${atual}" para "${proximo}": retrocesso no fluxo não é permitido.`,
     };
-  }
-
-  if (STATUS_PRODUCAO.includes(proximo)) {
-    const ordemMinima = PIPELINE_CLIENTE_ORDEM[STATUS_MINIMO_PARA_PRODUCAO];
-    if (ordemAtual < ordemMinima) {
-      return {
-        ok: false,
-        motivo:
-          'Não é possível avançar para produção antes da aprovação do projeto técnico.',
-      };
-    }
   }
 
   return { ok: true };

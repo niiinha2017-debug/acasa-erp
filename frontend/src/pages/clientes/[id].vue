@@ -353,7 +353,7 @@ import { maskCPF, maskCNPJ, maskCEP, maskTelefone, maskRG, maskIE } from '@/util
 import { buscarCep, buscarCnpj } from '@/utils/utils'
 import { can } from '@/services/permissions'
 import { closeTabAndGo } from '@/utils/tabs'
-import { INDICACAO_ORIGENS } from '@/constantes'
+import { INDICACAO_ORIGENS, PIPELINE_CLIENTE } from '@/constantes'
 
 definePage({ meta: { perm: 'clientes.ver' } })
 
@@ -365,6 +365,7 @@ const saving = ref(false)
 const deleting = ref(false)
 const isJuridica = ref(false)
 const listaClientes = ref([])
+const pipelineStatus = ref([])
 const indicacaoOrigens = INDICACAO_ORIGENS.map((item) => ({
   value: item.key,
   label: item.label,
@@ -381,12 +382,21 @@ const opcoesEstadoCivil = [
   { value: 'VIUVO', label: 'VIUVO(A)' },
 ]
 
-const opcoesStatus = [
-  { value: 'ATIVO', label: 'ATIVO' },
-  { value: 'INATIVO', label: 'INATIVO' },
-  { value: 'PENDENTE', label: 'PENDENTE' },
-  { value: 'BLOQUEADO', label: 'BLOQUEADO' },
-]
+const opcoesStatus = computed(() =>
+  (pipelineStatus.value || []).map((item) => ({
+    value: String(item?.key || '').toUpperCase(),
+    label: String(item?.label || item?.key || '').toUpperCase(),
+  })),
+)
+
+const statusPermitidos = computed(() =>
+  new Set(opcoesStatus.value.map((item) => String(item.value || '').toUpperCase()).filter(Boolean)),
+)
+
+const statusPadrao = computed(() => {
+  const primeiro = opcoesStatus.value[0]?.value
+  return primeiro ? String(primeiro).toUpperCase() : 'CLIENTE_CADASTRADO'
+})
 
 const form = reactive({
   indicacao_id: null,
@@ -413,12 +423,32 @@ const form = reactive({
   bairro: '',
   cidade: '',
   estado: '',
-  status: 'ATIVO',
+  status: '',
 })
 
 const clientesOptions = computed(() => {
   return listaClientes.value.filter((o) => !isEdit.value || Number(o.value) !== clienteId.value)
 })
+
+function garantirStatusPermitido(status) {
+  const key = String(status || '').trim().toUpperCase()
+  if (!key) return statusPadrao.value
+  return statusPermitidos.value.has(key) ? key : statusPadrao.value
+}
+
+async function carregarPipelineStatus() {
+  try {
+    const res = await ClienteService.getPipeline()
+    const rows = Array.isArray(res?.data) ? res.data : []
+    pipelineStatus.value = rows.length
+      ? rows
+      : Array.isArray(PIPELINE_CLIENTE)
+        ? PIPELINE_CLIENTE
+        : []
+  } catch {
+    pipelineStatus.value = Array.isArray(PIPELINE_CLIENTE) ? PIPELINE_CLIENTE : []
+  }
+}
 
 async function onBlurCep() {
   if (form.cep?.length < 9) return
@@ -457,6 +487,8 @@ async function onBlurCnpj() {
 async function carregarDados() {
   try {
     loading.value = true
+    await carregarPipelineStatus()
+    form.status = garantirStatusPermitido(form.status)
 
     try {
       const resClientes = await ClienteService.select()
@@ -501,7 +533,7 @@ async function carregarDados() {
           bairro: c.bairro || '',
           cidade: c.cidade || '',
           estado: c.estado || '',
-          status: c.status || 'ATIVO',
+          status: garantirStatusPermitido(c.status),
         })
 
         isJuridica.value = !!c.cnpj
@@ -590,7 +622,7 @@ async function salvar() {
       bairro: textoOuNulo(form.bairro),
       cidade: textoOuNulo(form.cidade),
       estado: textoOuNulo(form.estado),
-      status: textoOuNulo(form.status) || 'ATIVO',
+      status: textoOuNulo(form.status) || statusPadrao.value,
       razao_social: isJuridica.value ? form.nome_completo : null,
       enviar_aniversario_email: form.email ? !!form.enviar_aniversario_email : false,
       enviar_aniversario_whatsapp: form.whatsapp ? !!form.enviar_aniversario_whatsapp : false,
@@ -604,6 +636,15 @@ async function salvar() {
     } else {
       delete payload.cpf
       delete payload.rg
+    }
+
+    payload.status = garantirStatusPermitido(payload.status)
+    if (
+      statusPermitidos.value.size > 0 &&
+      !statusPermitidos.value.has(String(payload.status || '').toUpperCase())
+    ) {
+      notify.error('Status invalido para o pipeline do cliente.')
+      return
     }
 
     await ClienteService.salvar(isEdit.value ? Number(clienteId.value) : null, payload)

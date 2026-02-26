@@ -4,20 +4,12 @@
       <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
 
       <PageHeader
-        title="Agenda"
-        subtitle="Visão mensal de agendamentos e produção"
+        title="Agenda da Loja"
+        subtitle="Visão mensal da agenda da Loja"
         icon="pi pi-calendar-clock"
       >
         <template #actions>
           <div class="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              type="button"
-              @click="openGarantia"
-            >
-              Garantia
-            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -59,44 +51,52 @@
             <div
               v-for="day in days"
               :key="day.key"
-              class="bg-white p-3 h-28 flex flex-col items-start text-left border border-transparent hover:border-brand-primary/30 transition-all relative cursor-pointer"
+              class="bg-white p-3.5 h-44 flex flex-col items-start text-left border border-transparent hover:border-brand-primary/30 transition-all relative cursor-pointer"
               :class="{
                 'bg-slate-50': !day.inMonth,
                 'ring-2 ring-brand-primary/30': isSameDay(day.date, selectedDay),
               }"
               @click="selectDay(day.date)"
             >
-              <div class="w-full flex items-center justify-between">
+              <div class="w-full flex items-center justify-between mb-1">
                 <span
                   class="text-xs font-black cursor-pointer"
-                  :class="day.inMonth ? 'text-slate-800' : 'text-slate-300'"
+                  :class="day.inMonth ? (day.feriado ? 'text-rose-500' : 'text-slate-800') : 'text-slate-300'"
                 >
                   {{ day.date.getDate() }}
                 </span>
                 <button
                   v-if="day.inMonth"
                   type="button"
-                  class="w-6 h-6 flex items-center justify-center rounded-md bg-brand-primary/15 text-brand-primary hover:bg-brand-primary hover:text-white text-sm font-black transition-colors"
+                  class="w-6 h-6 flex items-center justify-center rounded-md bg-brand-primary/15 text-brand-primary hover:bg-brand-primary hover:text-white text-sm font-black transition-colors flex-shrink-0"
                   title="Novo agendamento neste dia"
-                  @click.stop="selectDay(day.date)"
+                  @click.stop="selectDayAndOpenModal(day.date)"
                 >
                   +
                 </button>
               </div>
-              <div class="mt-2 w-full space-y-1 flex-1 min-h-0">
+              <div v-if="day.feriado" class="w-full text-[8px] font-bold text-rose-500 uppercase tracking-wider truncate mb-1.5">
+                {{ day.feriado }}
+              </div>
+              <div class="w-full space-y-1.5 flex-1 min-h-0 overflow-hidden flex flex-col">
                 <button
                   v-for="event in dayEvents(day.date).slice(0, 3)"
                   :key="event.id"
                   type="button"
-                  class="w-full text-left text-[9px] font-bold truncate px-2 py-0.5 rounded bg-slate-900 text-white hover:ring-2 hover:ring-brand-primary"
+                  :class="['w-full text-left px-2.5 py-2 rounded-lg text-[10px] text-white hover:ring-2 hover:ring-brand-primary transition-colors', corCardCalendarioPorCategoria(event.categoria)]"
                   :title="eventTitle(event)"
                   @click.stop="openModalForEvent(event)"
                 >
-                  {{ eventTitle(event) }}
+                  <div class="font-bold truncate leading-snug">
+                    {{ event?.cliente?.nome_completo || event?.cliente?.razao_social || 'Cliente' }}
+                  </div>
+                  <div class="text-[9px] font-medium text-slate-300 truncate leading-snug mt-0.5">
+                    {{ timeLabel(event.inicio_em) }} · {{ event.titulo }}
+                  </div>
                 </button>
                 <div
                   v-if="dayEvents(day.date).length > 3"
-                  class="text-[9px] font-black text-slate-400"
+                  class="text-[9px] font-bold text-slate-400 pt-0.5"
                 >
                   +{{ dayEvents(day.date).length - 3 }}
                 </div>
@@ -104,33 +104,43 @@
             </div>
           </div>
 
-          <div class="border-t border-slate-100 p-6">
-            <div class="flex items-center justify-between mb-3">
-              <div class="text-[11px] font-black uppercase tracking-widest text-slate-500">
+            <div class="border-t border-border-ui p-5 md:p-6 bg-slate-50/50 dark:bg-slate-900/20">
+            <div class="flex items-center justify-between mb-4">
+              <div class="text-sm font-bold text-text-main uppercase tracking-wider">
                 {{ selectedLabel }}
               </div>
-              <div v-if="loading" class="text-[10px] font-bold text-slate-400">
+              <div v-if="loading" class="text-xs font-medium text-text-muted">
                 Carregando...
               </div>
             </div>
 
-            <div v-if="selectedEvents.length" class="space-y-2">
-              <button
+            <div v-if="selectedEvents.length" class="space-y-3">
+              <div class="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-2">
+                Tarefas do dia
+              </div>
+              <div
                 v-for="event in selectedEvents"
                 :key="event.id"
-                type="button"
-                class="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-brand-primary/50 hover:bg-slate-50/50 transition-colors"
-                @click="openModalForEvent(event)"
+                class="w-full text-left p-4 rounded-xl border border-border-ui bg-bg-card hover:border-brand-primary/40 hover:shadow-md transition-all border-l-4"
+                :class="corBordaCardPorCategoria(event.categoria)"
               >
-                <div class="text-xs font-black text-slate-800">
+                <div class="text-sm font-bold text-text-main leading-snug">
                   {{ eventTitle(event) }}
                 </div>
-                <div class="text-[10px] font-semibold text-slate-500">
-                  {{ timeLabel(event.inicio_em) }} - {{ timeLabel(event.fim_em) }}
+                <div class="text-xs font-medium text-text-muted mt-1">
+                  {{ timeLabel(event.inicio_em) }} – {{ timeLabel(event.fim_em) }}
+                </div>
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                  <span v-if="!isAgendaLoja" class="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase bg-brand-primary/10 text-brand-primary border border-brand-primary/30">
+                    {{ etapaLabelPorCategoria(event.categoria) }}
+                  </span>
+                  <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase" :class="statusExecucaoClass(event)">
+                    {{ statusExecucaoLabel(event) }}
+                  </span>
                 </div>
                 <div
                   v-if="event.plano_corte_id"
-                  class="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase"
+                  class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase"
                   :class="planoBadgeClass(planoStatusForEvent(event))"
                 >
                   <span
@@ -139,9 +149,49 @@
                   ></span>
                   {{ planoBadgeLabel(planoStatusForEvent(event)) }}
                 </div>
-              </button>
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                  <Button
+                    v-if="normalizarStatusExecucao(event?.status) !== 'CONCLUIDO'"
+                    size="sm"
+                    variant="primary"
+                    @click.stop="atualizarStatusExecucao(event, 'EM_ANDAMENTO')"
+                  >
+                    Iniciar
+                  </Button>
+                  <Button
+                    v-if="normalizarStatusExecucao(event?.status) === 'EM_ANDAMENTO'"
+                    size="sm"
+                    variant="secondary"
+                    @click.stop="atualizarStatusExecucao(event, 'PAUSADO')"
+                  >
+                    Pausar
+                  </Button>
+                  <Button
+                    v-if="normalizarStatusExecucao(event?.status) !== 'CONCLUIDO'"
+                    size="sm"
+                    variant="success"
+                    @click.stop="atualizarStatusExecucao(event, 'CONCLUIDO')"
+                  >
+                    {{ botaoConcluirLabel(event) }}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    @click.stop="openModalForEvent(event)"
+                  >
+                    Editar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    @click.stop="removeTask(event)"
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
             </div>
-            <div v-else class="text-[10px] font-bold text-slate-400">
+            <div v-else class="text-sm font-medium text-text-muted py-4 text-center">
               Nenhum agendamento para este dia.
             </div>
           </div>
@@ -150,163 +200,78 @@
       </div>
     </div>
 
-    <!-- Modal de agendamento -->
-    <div
-      v-if="modalOpen"
-      class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md"
-      @click.self="closeModal"
-    >
-      <div
-        class="bg-white rounded-2xl shadow-xl w-full max-w-[760px] p-5 md:p-6 relative max-h-[88vh] overflow-y-auto"
-      >
-        <button
-          @click="closeModal"
-          class="absolute top-3 right-3 text-slate-400 hover:text-rose-500"
-          aria-label="Fechar"
+    <!-- Modal de agendamento: Teleport no body para ficar por cima do menu (z-[9990]) -->
+    <Teleport to="body">
+      <Transition name="modal-fade">
+        <div
+          v-if="modalOpen"
+          class="fixed inset-0 z-[9995] flex items-center justify-center p-4 sm:p-6 bg-slate-900/50 dark:bg-black/50 backdrop-blur-sm"
+          @click.self="closeModal"
         >
-          <i class="pi pi-times"></i>
-        </button>
-        <h2 class="text-lg md:text-xl font-black mb-1">Agendar tarefa</h2>
-        <p class="text-xs font-semibold text-slate-500 mb-3">
-          {{ selectedLabel }}
-        </p>
-
-        <section class="mb-4 p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
-          <div class="text-[10px] font-black uppercase tracking-widest text-slate-500">
-            Fluxo da agenda
-          </div>
-
-          <template v-if="!editingEvent">
-            <div>
-              <div class="text-[10px] font-bold text-slate-600 mb-2">1. Setor</div>
-              <div class="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  class="h-9 px-3 rounded-lg text-[10px] font-black uppercase border"
-                  :class="taskForm.setorDestino === 'LOJA' ? 'bg-blue-700 text-white border-blue-700' : 'bg-white text-slate-600 border-slate-200'"
-                  @click="selecionarSetor('LOJA')"
-                >
-                  Loja
-                </button>
-                <button
-                  type="button"
-                  class="h-9 px-3 rounded-lg text-[10px] font-black uppercase border"
-                  :class="taskForm.setorDestino === 'PRODUCAO' ? 'bg-blue-700 text-white border-blue-700' : 'bg-white text-slate-600 border-slate-200'"
-                  @click="selecionarSetor('PRODUCAO')"
-                >
-                  Producao
-                </button>
+        <div class="w-full max-w-[760px] max-h-[90vh] flex flex-col rounded-2xl border border-border-ui bg-bg-card shadow-xl overflow-hidden">
+          <div class="h-1 flex-shrink-0 bg-brand-primary" />
+          <header class="flex items-center justify-between flex-shrink-0 px-5 py-4 border-b border-border-ui bg-bg-card">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-10 h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center flex-shrink-0">
+                <i class="pi pi-calendar-plus text-brand-primary text-lg"></i>
+              </div>
+              <div class="min-w-0">
+                <h2 class="text-lg font-semibold text-text-main truncate">
+                  {{ funcionarioNome || 'Agendar tarefa' }}
+                </h2>
+                <p class="text-xs font-medium text-text-muted truncate">
+                  {{ selectedLabel }}
+                </p>
               </div>
             </div>
+            <button
+              type="button"
+              @click="closeModal"
+              class="w-9 h-9 flex items-center justify-center rounded-lg border border-border-ui text-text-muted hover:text-rose-500 hover:border-rose-200 dark:hover:border-rose-800 transition-colors flex-shrink-0"
+              aria-label="Fechar"
+            >
+              <i class="pi pi-times text-sm"></i>
+            </button>
+          </header>
 
-            <div>
-              <div class="text-[10px] font-bold text-slate-600 mb-2">2. Origem</div>
-              <div class="flex flex-wrap gap-2">
-                <button
-                  v-for="origem in opcoesOrigemPorSetor"
-                  :key="origem.value"
-                  type="button"
-                  class="h-9 px-3 rounded-lg text-[10px] font-black uppercase border"
-                  :class="taskForm.origemFluxo === origem.value ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200'"
-                  @click="taskForm.origemFluxo = origem.value"
-                >
-                  {{ origem.label }}
-                </button>
-              </div>
-            </div>
-          </template>
+          <div class="overflow-y-auto flex-1 p-5 md:p-6">
+        <div class="flex items-center gap-2 text-[11px] font-semibold text-text-muted mb-4">
+          <span class="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700/50 border border-border-ui">
+            Agenda: Loja
+          </span>
+          <span v-if="editingEvent" class="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700/50 border border-border-ui">
+            Edição
+          </span>
+        </div>
 
-          <template v-else>
-            <div class="flex flex-wrap gap-2">
-              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-blue-100 text-blue-700">
-                Setor: {{ String(editingEvent?.setor_destino || 'LOJA').toUpperCase() }}
-              </span>
-              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-slate-200 text-slate-700">
-                Origem: {{ String(editingEvent?.origem_fluxo || 'TAREFA').toUpperCase() }}
-              </span>
-            </div>
-          </template>
-        </section>
-
-        <!-- Próxima etapa vira apenas status informativo -->
         <section
-          v-if="!editingEvent && canVendas && ['LOJA_VENDA', 'POS_VENDA'].includes(taskForm.origemFluxo)"
-          class="mb-4 p-4 rounded-xl bg-indigo-50 border border-indigo-100 space-y-3"
+          v-if="!isAgendaLoja && opcoesOrigemModal.length > 1"
+          class="mb-4 p-3 rounded-xl border border-border-ui bg-slate-50 dark:bg-slate-800/30"
         >
-          <div class="text-[10px] font-black uppercase tracking-widest text-indigo-600">
-            Proxima etapa (status)
-          </div>
-          <p class="text-[10px] text-slate-600">
-            A próxima etapa é um status do processo. Ela será aplicada ao salvar, conforme a origem e o tipo selecionado.
-          </p>
-          <div class="flex flex-wrap items-center gap-2 pt-1">
-            <span
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase"
-              :class="statusBadgeClassVenda"
+          <label class="block text-[11px] font-bold text-text-soft mb-2">Origem</label>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="origem in opcoesOrigemModal"
+              :key="origem.value"
+              type="button"
+              class="h-9 px-3 rounded-lg text-[11px] font-bold border transition-colors"
+              :class="taskForm.origemFluxo === origem.value ? 'bg-brand-primary text-white border-brand-primary' : 'bg-bg-card text-text-main border-border-ui hover:bg-slate-50 dark:hover:bg-slate-700/50'"
+              @click="taskForm.origemFluxo = origem.value"
             >
-              {{ statusPreviewLabel }}
-            </span>
+              {{ origem.label }}
+            </button>
           </div>
         </section>
 
-        <div v-if="editingEvent || fluxoSelecionado" class="space-y-4">
-          <!-- 1. Cliente -->
-          <section>
-            <div class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">1. Cliente</div>
-            <div
-              v-if="isEventoVinculado && clienteNomeEventoAtual"
-              class="rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2"
-            >
-              <div class="text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-1">
-                Cliente vinculado ao evento
-              </div>
-              <div class="text-xs font-black text-slate-800">
-                {{ clienteNomeEventoAtual }}
-              </div>
-              <div class="text-[10px] font-semibold text-slate-500">
-                {{ origemEventoLabel }}
-              </div>
-            </div>
-            <SearchInput
-              v-else
-              v-model="taskForm.clienteId"
-              mode="select"
-              label=""
-              :placeholder="taskForm.origemFluxo === 'TAREFA' ? 'Cliente opcional para tarefa livre...' : 'Selecione o cliente...'"
-              :options="clientesOptions"
-            />
-            <div
-              v-if="!editingEvent && canVendas && ['LOJA_VENDA', 'POS_VENDA'].includes(taskForm.origemFluxo)"
-              class="mt-3"
-            >
-              <SearchInput
-                v-model="vendaSelecionadaId"
-                mode="select"
-                label="Venda vinculada"
-                placeholder="Selecione a venda..."
-                :options="vendasAguardandoOptions"
-                @update:modelValue="onSelecionarVendaParaAgendamento"
-              />
-              <p v-if="!temVendasAguardando" class="text-[10px] font-semibold text-slate-500 mt-1">
-                Nenhuma venda pendente de agendamento no momento.
-              </p>
-            </div>
-          </section>
-
-          <!-- 2. Tipo e período da tarefa -->
-          <section class="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-3">
-            <div class="text-[10px] font-black uppercase tracking-widest text-slate-500">
-              2. Tipo e período da tarefa
-            </div>
-            <div>
-              <label class="block text-xs font-bold mb-1">Tipo</label>
-              <p class="text-[10px] text-slate-500 mb-1">
-                Pipeline do cliente e pipeline do plano de corte são separados.
-              </p>
+        <div class="space-y-4">
+          <section class="p-4 rounded-xl border border-border-ui bg-slate-50/80 dark:bg-slate-800/30 space-y-3">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-2">1. Dados principais</div>
+            
+            <div v-if="isAgendaLoja" class="mb-3">
+              <label class="block text-xs font-bold mb-1 text-text-main">Tipo de tarefa</label>
               <select
                 v-model="taskForm.categoria"
-                class="w-full h-10 bg-white border border-slate-200 rounded-xl px-3 text-xs font-bold text-slate-700"
-                :disabled="editingEvent && String(editingEvent?.origem_fluxo || '').toUpperCase() === 'TAREFA'"
+                class="w-full h-10 bg-bg-card border border-border-ui rounded-xl px-3 text-xs font-semibold text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
               >
                 <option
                   v-for="opt in opcoesTipoAgendamento"
@@ -317,40 +282,160 @@
                 </option>
               </select>
             </div>
-            <div>
-              <label class="block text-xs font-bold mb-1">Prazo recorrente da tarefa</label>
-              <p class="text-[10px] text-slate-500 mb-2">Esse período é a referência recorrente; abaixo você define o horário de cada pessoa.</p>
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-[10px] font-bold mb-1">Início</label>
-                  <input
-                    type="datetime-local"
-                    v-model="taskForm.inicio"
-                    class="w-full h-10 bg-white border border-slate-200 rounded-xl px-3 text-xs font-bold text-slate-700"
-                  />
+            <div v-else class="mb-3">
+              <label class="block text-xs font-bold mb-1 text-text-main">Etapa</label>
+              <div v-if="editingEvent" class="flex items-center gap-2">
+                <span class="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase bg-brand-primary/10 text-brand-primary border border-brand-primary/30">
+                  {{ etapaAtualLabel }}
+                </span>
+                <span class="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase" :class="statusExecucaoClass({ status: editingEvent?.status, fim_em: taskForm.fim })">
+                  {{ statusExecucaoLabel(editingEvent) }}
+                </span>
+              </div>
+              <div v-else class="space-y-2">
+                <div class="flex items-center gap-2">
+                  <span class="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase bg-brand-primary/10 text-brand-primary border border-brand-primary/30">
+                    {{ etapaAtualLabel }}
+                  </span>
+                  <span class="text-[10px] text-text-muted">(primeira etapa automática)</span>
                 </div>
-                <div>
-                  <label class="block text-[10px] font-bold mb-1">Término</label>
-                  <input
-                    type="datetime-local"
-                    v-model="taskForm.fim"
-                    class="w-full h-10 bg-white border border-slate-200 rounded-xl px-3 text-xs font-bold text-slate-700"
-                  />
+                <div class="mt-2">
+                  <label class="block text-[10px] font-bold text-text-muted mb-1">Ou criar pós-venda:</label>
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      v-for="etapa in ETAPAS_POS_VENDA"
+                      :key="etapa.value"
+                      type="button"
+                      class="h-8 px-3 rounded-lg text-[10px] font-bold uppercase border transition-colors"
+                      :class="
+                        taskForm.categoria === etapa.value
+                          ? 'bg-brand-primary text-white border-brand-primary'
+                          : 'bg-bg-card text-text-main border-border-ui hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                      "
+                      @click="selecionarEtapaPosVenda(etapa.value)"
+                    >
+                      {{ etapa.label }}
+                    </button>
+                  </div>
                 </div>
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <label class="block text-xs font-bold mb-1 text-text-main">Cliente</label>
+              <div
+                v-if="isEventoVinculado && clienteNomeEventoAtual"
+                class="rounded-xl border border-brand-primary/30 bg-brand-primary/5 px-3 py-2"
+              >
+                <div class="text-[10px] font-bold uppercase tracking-wider text-brand-primary mb-1">
+                  Cliente vinculado ao evento
+                </div>
+                <div class="text-xs font-semibold text-text-main">
+                  {{ clienteNomeEventoAtual }}
+                </div>
+                <div class="text-[10px] font-medium text-text-muted">
+                  {{ origemEventoLabel }}
+                </div>
+              </div>
+              <SearchInput
+                v-else
+                v-model="taskForm.clienteId"
+                mode="select"
+                label=""
+                placeholder="Selecione o cliente..."
+                :options="clientesOptions"
+              />
+            </div>
+
+            <!-- APRESENTACAO: vincula ao orçamento -->
+            <div
+              v-if="!editingEvent && canVendas && taskForm.categoria === 'APRESENTACAO'"
+              class="mt-3"
+            >
+              <SearchInput
+                v-model="orcamentoSelecionadoId"
+                mode="select"
+                label="Orçamento vinculado (opcional)"
+                placeholder="Selecione o orçamento..."
+                :options="orcamentosApresentacaoOptions"
+                @update:modelValue="onSelecionarOrcamentoParaApresentacao"
+              />
+              <p v-if="!temOrcamentosApresentacao" class="text-[10px] font-semibold text-slate-500 mt-1">
+                Nenhum orçamento aguardando apresentação no momento.
+              </p>
+            </div>
+
+            <!-- CONTRATO: vincula à venda fechada/contrato -->
+            <div
+              v-if="!editingEvent && canVendas && taskForm.categoria === 'CONTRATO'"
+              class="mt-3"
+            >
+              <SearchInput
+                v-model="vendasContratoId"
+                mode="select"
+                label="Venda vinculada (opcional)"
+                placeholder="Selecione a venda..."
+                :options="vendasContratoOptions"
+                @update:modelValue="onSelecionarVendaContratoParaAgendamento"
+              />
+              <p v-if="!temVendasContrato" class="text-[10px] font-semibold text-slate-500 mt-1">
+                Nenhuma venda com contrato pendente no momento.
+              </p>
+            </div>
+          </section>
+
+          <section class="p-4 rounded-xl border border-border-ui bg-slate-50/80 dark:bg-slate-800/30 space-y-3">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+              2. Período da tarefa
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-[10px] font-bold mb-1 text-text-soft">Início</label>
+                <input
+                  type="datetime-local"
+                  v-model="taskForm.inicio"
+                  class="w-full h-10 bg-bg-card border border-border-ui rounded-xl px-3 text-xs font-semibold text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                />
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold mb-1 text-text-soft">Término</label>
+                <input
+                  type="datetime-local"
+                  v-model="taskForm.fim"
+                  class="w-full h-10 bg-bg-card border border-border-ui rounded-xl px-3 text-xs font-semibold text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                />
               </div>
             </div>
           </section>
 
-          <!-- 3. Equipe e horário de cada um -->
-          <section class="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-3">
-            <div class="text-[10px] font-black uppercase tracking-widest text-slate-500">
+          <section
+            v-if="!isAgendaLoja"
+            class="p-4 rounded-xl border border-border-ui bg-slate-50/80 dark:bg-slate-800/30 space-y-3"
+          >
+            <div class="text-[10px] font-bold uppercase tracking-wider text-text-muted">
               3. Equipe e horário de cada um
             </div>
-            <p class="text-[10px] text-slate-500">
-              Adicione quem vai atuar e defina o horário (entrada e saída) de cada pessoa.
-            </p>
 
             <div v-if="isAdmin" class="space-y-2">
+              <div v-if="taskForm.funcionarioIds.length" class="flex flex-wrap gap-2 mt-1">
+                <span
+                  v-for="fid in taskForm.funcionarioIds"
+                  :key="fid"
+                  class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold bg-slate-200 dark:bg-slate-600 text-text-main"
+                >
+                  {{ funcionarioNomeById(fid) || 'Funcionário' }}
+                  <button
+                    v-if="String(fid) !== String(responsavelLojaId || '')"
+                    type="button"
+                    class="text-slate-500 hover:text-rose-500"
+                    @click="removerFuncionario(fid)"
+                    aria-label="Remover"
+                  >
+                    <i class="pi pi-times text-[10px]"></i>
+                  </button>
+                </span>
+              </div>
+
               <div class="flex items-end gap-2">
                 <div class="flex-1">
                   <SearchInput
@@ -361,48 +446,31 @@
                     :options="funcionariosOptions"
                   />
                 </div>
-                <button
+                <Button
                   type="button"
-                  class="h-10 px-4 rounded-xl bg-slate-900 text-white text-xs font-black uppercase shrink-0"
+                  variant="primary"
+                  size="md"
+                  class="shrink-0"
                   @click="adicionarFuncionario"
                 >
                   Adicionar
-                </button>
-              </div>
-
-              <div v-if="taskForm.funcionarioIds.length" class="flex flex-wrap gap-2 mt-2">
-                <span
-                  v-for="fid in taskForm.funcionarioIds"
-                  :key="fid"
-                  class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700"
-                >
-                  {{ funcionarioNomeById(fid) || 'Funcionário' }}
-                  <button
-                    type="button"
-                    class="text-slate-500 hover:text-rose-500"
-                    @click="removerFuncionario(fid)"
-                    aria-label="Remover"
-                  >
-                    <i class="pi pi-times text-[10px]"></i>
-                  </button>
-                </span>
+                </Button>
               </div>
             </div>
             <div v-else>
-              <label class="block text-xs font-bold mb-1">Funcionário</label>
-              <div class="w-full h-10 bg-white border border-slate-200 rounded-xl px-3 flex items-center text-sm font-bold text-slate-700">
+              <label class="block text-xs font-bold mb-1 text-text-main">Funcionário</label>
+              <div class="w-full h-10 bg-bg-card border border-border-ui rounded-xl px-3 flex items-center text-sm font-semibold text-text-main">
                 {{ funcionarioNome || 'Não informado' }}
               </div>
             </div>
 
-            <!-- Horário por pessoa -->
-            <div v-if="taskForm.funcionarioIds.length" class="mt-4 space-y-3">
+            <div v-if="taskForm.funcionarioIds.length && !isAgendaLoja" class="mt-4 space-y-3">
               <div
                 v-for="fid in taskForm.funcionarioIds"
                 :key="`apont-${fid}`"
-                class="rounded-xl border border-slate-200 p-3 bg-white"
+                class="rounded-xl border border-border-ui p-3 bg-bg-card"
               >
-                <div class="text-xs font-black text-slate-700 mb-2">
+                <div class="text-xs font-bold text-text-main mb-2">
                   {{ funcionarioNomeById(fid) || 'Funcionário' }} — horário
                 </div>
                 <div
@@ -415,7 +483,7 @@
                     <input
                       type="datetime-local"
                       v-model="periodo.inicio"
-                      class="w-full h-9 bg-slate-50 border border-slate-200 rounded-lg px-2 text-[11px] font-semibold text-slate-700"
+                      class="w-full h-9 bg-slate-50 dark:bg-slate-800/50 border border-border-ui rounded-lg px-2 text-[11px] font-semibold text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                     />
                   </div>
                   <div class="flex-1 min-w-[140px]">
@@ -423,113 +491,80 @@
                     <input
                       type="datetime-local"
                       v-model="periodo.fim"
-                      class="w-full h-9 bg-slate-50 border border-slate-200 rounded-lg px-2 text-[11px] font-semibold text-slate-700"
+                      class="w-full h-9 bg-slate-50 dark:bg-slate-800/50 border border-border-ui rounded-lg px-2 text-[11px] font-semibold text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                     />
                   </div>
                   <div class="flex gap-1 shrink-0">
-                    <button
+                    <Button
                       v-if="getApontamentosPorFuncionario(fid).length > 1"
                       type="button"
-                      class="h-9 w-9 rounded-lg bg-rose-50 text-rose-600 text-xs font-black"
+                      variant="danger"
+                      size="sm"
+                      class="!h-9 !w-9 !p-0 !min-w-0"
+                      :title="'Remover este horário'"
                       @click="removerPeriodo(fid, idx)"
-                      title="Remover este horário"
                     >
                       −
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
-                      class="h-9 w-9 rounded-lg bg-slate-100 text-slate-600 text-xs font-black"
-                      @click="adicionarPeriodo(fid)"
+                      variant="secondary"
+                      size="sm"
+                      class="!h-9 !w-9 !p-0 !min-w-0"
                       :title="getApontamentosPorFuncionario(fid).length > 0 ? 'Outro horário (ex.: turno dividido)' : 'Definir horário'"
+                      @click="adicionarPeriodo(fid)"
                     >
                       +
-                    </button>
+                    </Button>
                   </div>
                 </div>
-                <p v-if="getApontamentosPorFuncionario(fid).length > 1" class="text-[9px] text-slate-400 mt-1">
-                  + para outro horário (ex.: turno dividido)
-                </p>
               </div>
             </div>
           </section>
         </div>
-        <div v-else class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-700">
-          Selecione Setor e Origem para liberar o formulario do agendamento.
-        </div>
 
-        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2">
-          <button
+        <div class="mt-4 pt-3 border-t border-border-ui flex items-center gap-2">
+          <Button
+            variant="primary"
+            class="flex-1"
             @click="saveTask"
-            class="flex-1 h-10 rounded-xl font-black text-xs uppercase bg-blue-700 text-white shadow"
           >
-            {{ editingEvent ? 'Salvar edicao' : 'Salvar tarefa' }}
-          </button>
-          <button
+            {{ editingEvent ? 'Salvar edição' : 'Salvar tarefa' }}
+          </Button>
+          <Button
             v-if="editingEvent"
+            variant="danger"
+            @click="removeTask(editingEvent)"
+          >
+            Excluir
+          </Button>
+          <Button
+            v-if="editingEvent"
+            variant="secondary"
             @click="clearEdit"
-            class="h-10 px-3 rounded-xl border border-slate-200 text-slate-500 text-xs font-black uppercase"
           >
             Cancelar
-          </button>
+          </Button>
         </div>
 
-        <div v-if="!editingEvent" class="mt-4 border-t border-slate-100 pt-4">
-          <div
-            class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2"
-          >
-            Tarefas do dia
-          </div>
-          <div v-if="selectedEventsParaLista.length" class="space-y-2 max-h-56 overflow-y-auto pr-1">
-            <div
-              v-for="event in selectedEventsParaLista"
-              :key="event.id"
-              class="p-3 rounded-xl border border-slate-200"
-            >
-              <div class="text-xs font-black text-slate-800">
-                {{ eventTitle(event) }}
-              </div>
-              <div class="text-[10px] font-semibold text-slate-500">
-                {{ timeLabel(event.inicio_em) }} - {{ timeLabel(event.fim_em) }}
-              </div>
-              <div class="mt-2 flex flex-wrap items-center gap-2">
-                <button
-                  v-if="canVendas && String(event?.setor_destino || 'LOJA').toUpperCase() !== 'PRODUCAO'"
-                  @click="enviarParaProducao(event)"
-                  class="h-8 px-3 rounded-lg bg-indigo-50 text-indigo-700 text-[10px] font-black uppercase"
-                >
-                  Enviar producao
-                </button>
-                <button
-                  @click="editTask(event)"
-                  class="h-8 px-3 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-black uppercase"
-                >
-                  Editar
-                </button>
-                <button
-                  @click="removeTask(event)"
-                  class="h-8 px-3 rounded-lg bg-rose-50 text-rose-600 text-[10px] font-black uppercase"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          </div>
-          <div v-else class="text-[10px] font-bold text-slate-400">Nenhuma tarefa neste dia.</div>
-        </div>
       </div>
-    </div>
+      </div>
+      </div>
+    </Transition>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { AgendaService, ClienteService, FuncionarioService, PlanoCorteService, VendaService } from '@/services/index'
+import { AgendaLojaService, ClienteService, FuncionarioService, OrcamentosService, PlanoCorteService, VendaService } from '@/services/index'
 import { PIPELINE_CLIENTE, PIPELINE_PLANO_CORTE } from '@/constantes'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
+import { confirm } from '@/services/confirm'
 import storage from '@/utils/storage'
 
-definePage({ meta: { perm: 'agendamentos.ver' } })
+definePage({ meta: { perm: 'agendamentos.vendas' } })
 
 const today = new Date()
 const currentMonth = ref(new Date(today.getFullYear(), today.getMonth(), 1))
@@ -539,11 +574,14 @@ const events = ref([])
 const modalOpen = ref(false)
 const editingEvent = ref(null)
 const planosProducao = ref([])
+const pipelineProducao = ref([])
 const clientesOptions = ref([])
 const funcionariosOptions = ref([])
 const usuarioLogado = computed(() => storage.getUser())
 const funcionarioNome = computed(() => usuarioLogado.value?.nome || '')
 const isAdmin = computed(() => can('ADMIN'))
+const responsavelLojaId = computed(() => Number(usuarioLogado.value?.funcionario_id || 0))
+const responsavelLojaNome = computed(() => funcionarioNome.value || 'Vendedor logado')
 
 const funcionarioSelecionado = ref('')
 const taskForm = reactive({
@@ -552,8 +590,9 @@ const taskForm = reactive({
   fim: '',
   clienteId: '',
   vendaId: '',
+  orcamentoId: '',
   funcionarioIds: [],
-  categoria: 'LIVRE',
+  categoria: 'MEDIDA',
   setorDestino: '',
   origemFluxo: '',
   apontamentos: [],
@@ -562,48 +601,41 @@ const taskForm = reactive({
 const ORIGENS_POR_SETOR = {
   LOJA: [
     { value: 'LOJA_VENDA', label: 'Venda loja' },
-    { value: 'POS_VENDA', label: 'Pos-venda' },
-    { value: 'TAREFA', label: 'Tarefa livre' },
   ],
-  PRODUCAO: [
+  FABRICA: [
     { value: 'PLANO_CORTE', label: 'Plano corte' },
     { value: 'VENDA_PLANO_CORTE', label: 'Venda plano corte' },
-    { value: 'TAREFA', label: 'Tarefa livre' },
   ],
 }
 
-const opcoesOrigemPorSetor = computed(() => {
-  const setor = String(taskForm.setorDestino || '').toUpperCase()
-  return ORIGENS_POR_SETOR[setor] || []
-})
-
-const fluxoSelecionado = computed(() => {
-  return Boolean(taskForm.setorDestino && taskForm.origemFluxo)
-})
-
-function selecionarSetor(setor) {
-  if (taskForm.setorDestino !== setor) {
-    taskForm.origemFluxo = ''
-    limparVendaSelecionada()
-  }
-  taskForm.setorDestino = setor
+function normalizarSetorAgenda(valor) {
+  const key = String(valor || '').toUpperCase()
+  if (key === 'PRODUCAO' || key === 'FABRICA') return 'FABRICA'
+  return 'LOJA'
 }
 
-// Vendas aguardando agendamento (medida, medida fina, montagem) — para pré-preencher o modal
+// Vendas aguardando agendamento (medida) — para pré-preencher o modal
 const vendasAguardandoAgendamento = ref([])
-const vendaSelecionadaParaAgendamento = ref(null)
+// Orçamentos aguardando apresentação
+const orcamentosApresentacao = ref([])
+// Vendas aguardando contrato/assinatura
+const vendasAguardandoContrato = ref([])
 
+const vendaSelecionadaParaAgendamento = ref(null)
 const vendaSelecionadaId = ref('')
+
+const orcamentoSelecionadoId = ref('')
+const orcamentoSelecionadoParaAgendamento = ref(null)
+
+const vendasContratoId = ref('')
+const vendaContratoSelecionada = ref(null)
 
 const vendasAguardandoOptions = computed(() => {
   const lista = vendasAguardandoAgendamento.value || []
   return lista.map((v) => {
     const clienteNome = v?.cliente?.nome_completo || v?.cliente?.razao_social || 'Cliente'
     const statusKey = v?.status || ''
-    const etapaLabel =
-      statusKey === 'CONTRATO_GERADO'
-        ? 'Agendar medida fina'
-        : (PIPELINE_CLIENTE.find((p) => p.key === statusKey)?.label || statusKey || 'Agendar')
+    const etapaLabel = PIPELINE_CLIENTE.find((p) => p.key === statusKey)?.label || statusKey || 'Agendar'
     return {
       value: String(v.id),
       label: `Venda #${v.id} – ${clienteNome} – ${etapaLabel}`,
@@ -613,17 +645,72 @@ const vendasAguardandoOptions = computed(() => {
 })
 const temVendasAguardando = computed(() => vendasAguardandoOptions.value.length > 0)
 
+const orcamentosApresentacaoOptions = computed(() => {
+  const clienteSelecionadoId = String(taskForm.clienteId || '')
+  const lista = (orcamentosApresentacao.value || []).filter((o) => {
+    if (!clienteSelecionadoId) return true
+    return String(o?.cliente_id || '') === clienteSelecionadoId
+  })
+  return lista.map((o) => {
+    const clienteNome = o?.cliente?.nome_completo || o?.cliente?.razao_social || 'Cliente'
+    return {
+      value: String(o.id),
+      label: `Orçamento #${o.id} – ${clienteNome}`,
+      orcamento: o,
+    }
+  })
+})
+const temOrcamentosApresentacao = computed(() => orcamentosApresentacaoOptions.value.length > 0)
+
+const vendasContratoOptions = computed(() => {
+  const lista = vendasAguardandoContrato.value || []
+  return lista.map((v) => {
+    const clienteNome = v?.cliente?.nome_completo || v?.cliente?.razao_social || 'Cliente'
+    const statusKey = v?.status || ''
+    const etapaLabel = PIPELINE_CLIENTE.find((p) => p.key === statusKey)?.label || statusKey || 'Agendar'
+    return {
+      value: String(v.id),
+      label: `Venda #${v.id} – ${clienteNome} – ${etapaLabel}`,
+      venda: v,
+    }
+  })
+})
+const temVendasContrato = computed(() => vendasContratoOptions.value.length > 0)
+
 const CATEGORIA_TO_STATUS_CLIENTE = {
   MEDIDA: 'MEDIDA_AGENDADA',
-  MEDIDA_FINA: 'MEDIDA_FINA_AGENDADA',
-  MONTAGEM: 'MONTAGEM_AGENDADA',
-  PRODUCAO: 'PRODUCAO_AGENDADA',
+  AGENDAR_MEDIDA: 'MEDIDA_AGENDADA',
+  APRESENTACAO: 'APRESENTACAO_AGENDADA',
+  AGENDAR_APRESENTACAO: 'APRESENTACAO_AGENDADA',
+  ORCAMENTO: 'ORCAMENTO_EM_ANDAMENTO',
+  CRIAR_ORCAMENTO: 'ORCAMENTO_EM_ANDAMENTO',
+  CONTRATO: 'CONTRATO_ASSINADO',
+  CONTRATO_GERADO: 'CONTRATO_ASSINADO',
+  GARANTIA: 'GARANTIA',
+  MANUTENCAO: 'MANUTENCAO',
+  ASSISTENCIA: 'ASSISTENCIA',
 }
 
-const STATUS_POS_VENDA = (PIPELINE_CLIENTE || [])
-  .filter((p) => String(p?.fase || '').toUpperCase() === 'POS_VENDA')
-  .map((p) => String(p?.key || '').toUpperCase())
-  .filter(Boolean)
+function normalizarCategoriaAgenda(categoria) {
+  const key = String(categoria || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, '_')
+
+  const alias = {
+    AGENDAR_MEDIDA: 'MEDIDA',
+    MEDIDA_AGENDADA: 'MEDIDA',
+    CRIAR_ORCAMENTO: 'ORCAMENTO',
+    ORCAMENTO_EM_ANDAMENTO: 'ORCAMENTO',
+    AGENDAR_APRESENTACAO: 'APRESENTACAO',
+    APRESENTACAO_AGENDADA: 'APRESENTACAO',
+    CONTRATO_GERADO: 'CONTRATO',
+    CONTRATO_ASSINADO: 'CONTRATO',
+  }
+  return alias[key] || key
+}
 
 function labelPipelineCliente(key) {
   const item = (PIPELINE_CLIENTE || []).find((p) => String(p?.key || '').toUpperCase() === String(key || '').toUpperCase())
@@ -645,20 +732,16 @@ const statusLabelVenda = computed(() => {
 const statusPreviewLabel = computed(() => {
   const origem = String(taskForm.origemFluxo || '').toUpperCase()
   if (origem === 'PLANO_CORTE' || origem === 'VENDA_PLANO_CORTE') {
-    return `Pipeline plano de corte: ${labelPipelinePlanoCorte('EM_PRODUCAO')}`
-  }
-  if (origem === 'POS_VENDA') {
-    const statusKey = taskForm.categoria ? String(taskForm.categoria).toUpperCase() : 'GARANTIA'
-    return `Pipeline cliente (pos-venda): ${labelPipelineCliente(statusKey)}`
+    return `Pipeline plano de corte: ${labelPipelinePlanoCorte('EM_ANDAMENTO')}`
   }
   if (origem === 'LOJA_VENDA') {
     if (vendaSelecionadaParaAgendamento.value) return statusLabelVenda.value || 'Pipeline cliente'
-    const statusKey = CATEGORIA_TO_STATUS_CLIENTE[String(taskForm.categoria || '').toUpperCase()]
+    const statusKey = CATEGORIA_TO_STATUS_CLIENTE[normalizarCategoriaAgenda(taskForm.categoria)]
     return statusKey
       ? `Pipeline cliente: ${labelPipelineCliente(statusKey)}`
       : 'Pipeline cliente'
   }
-  return 'Tarefa livre sem pipeline'
+  return 'Pipeline cliente'
 })
 
 const statusBadgeClassVenda = computed(() => {
@@ -685,14 +768,16 @@ function onSelecionarVendaParaAgendamento(value) {
   taskForm.vendaId = String(v.id)
   taskForm.clienteId = String(v.cliente_id)
   if (!taskForm.setorDestino) taskForm.setorDestino = 'LOJA'
-  taskForm.origemFluxo = isStatusPosVenda(v?.status) ? 'POS_VENDA' : 'LOJA_VENDA'
-  if (taskForm.origemFluxo === 'POS_VENDA') {
-    const statusVenda = String(v?.status || '').toUpperCase()
-    taskForm.categoria = STATUS_POS_VENDA.includes(statusVenda)
-      ? statusVenda
-      : (STATUS_POS_VENDA[0] || 'GARANTIA')
+  taskForm.origemFluxo = 'LOJA_VENDA'
+  const statusVenda = String(v?.status || '').toUpperCase()
+  if (
+    ['AGENDAR_APRESENTACAO', 'APRESENTACAO_AGENDADA', 'ORCAMENTO_APRESENTADO', 'ORCAMENTO_APROVADO'].includes(statusVenda)
+  ) {
+    taskForm.categoria = 'APRESENTACAO'
+  } else if (['VENDA_FECHADA', 'CONTRATO_ASSINADO'].includes(statusVenda)) {
+    taskForm.categoria = 'CONTRATO'
   } else {
-    taskForm.categoria = 'MEDIDA_FINA'
+    taskForm.categoria = 'MEDIDA'
   }
   const clienteNome = v?.cliente?.nome_completo || v?.cliente?.razao_social || 'Cliente'
   const pipelineItem = PIPELINE_CLIENTE.find((p) => p.key === (v?.status || ''))
@@ -700,31 +785,86 @@ function onSelecionarVendaParaAgendamento(value) {
   taskForm.titulo = `${etapaLabel} – ${clienteNome}`
 }
 
-function isStatusPosVenda(status) {
-  const key = String(status || '').toUpperCase()
-  return STATUS_POS_VENDA.includes(key)
+function onSelecionarOrcamentoParaApresentacao(value) {
+  const id = value ?? orcamentoSelecionadoId.value
+  if (!id) return
+  const opt = orcamentosApresentacaoOptions.value.find((o) => String(o.value) === String(id))
+  const o = opt?.orcamento
+  if (!o) return
+  orcamentoSelecionadoParaAgendamento.value = o
+  taskForm.orcamentoId = String(o.id)
+  taskForm.clienteId = String(o.cliente_id)
+  taskForm.vendaId = o.venda?.id ? String(o.venda.id) : ''
+  if (!taskForm.setorDestino) taskForm.setorDestino = 'LOJA'
+  taskForm.origemFluxo = 'LOJA_VENDA'
+  taskForm.categoria = 'APRESENTACAO'
+}
+
+function onSelecionarVendaContratoParaAgendamento(value) {
+  const id = value ?? vendasContratoId.value
+  if (!id) return
+  const opt = vendasContratoOptions.value.find((o) => String(o.value) === String(id))
+  const v = opt?.venda
+  if (!v) return
+  vendaContratoSelecionada.value = v
+  taskForm.vendaId = String(v.id)
+  taskForm.clienteId = String(v.cliente_id)
+  taskForm.orcamentoId = ''
+  if (!taskForm.setorDestino) taskForm.setorDestino = 'LOJA'
+  taskForm.origemFluxo = 'LOJA_VENDA'
+  taskForm.categoria = 'CONTRATO'
 }
 
 function limparVendaSelecionada() {
   vendaSelecionadaId.value = ''
   vendaSelecionadaParaAgendamento.value = null
+  orcamentoSelecionadoId.value = ''
+  orcamentoSelecionadoParaAgendamento.value = null
+  vendasContratoId.value = ''
+  vendaContratoSelecionada.value = null
   taskForm.vendaId = ''
-  if (taskForm.origemFluxo !== 'TAREFA') taskForm.clienteId = ''
-  taskForm.categoria = 'LIVRE'
+  taskForm.orcamentoId = ''
+  taskForm.clienteId = ''
+  taskForm.categoria = isAgendaLoja.value ? 'MEDIDA' : PRIMEIRA_ETAPA_PRODUCAO.value
   taskForm.titulo = ''
+}
+
+function limparVinculoVenda() {
+  vendaSelecionadaId.value = ''
+  vendaSelecionadaParaAgendamento.value = null
+  orcamentoSelecionadoId.value = ''
+  orcamentoSelecionadoParaAgendamento.value = null
+  vendasContratoId.value = ''
+  vendaContratoSelecionada.value = null
+  taskForm.vendaId = ''
+  taskForm.orcamentoId = ''
+}
+
+function selecionarEtapaPosVenda(categoria) {
+  taskForm.categoria = categoria
+  limparVinculoVenda()
 }
 
 watch(
   () => taskForm.origemFluxo,
   (origem) => {
+    if (editingEvent.value) return
     const key = String(origem || '').toUpperCase()
-    if (!['LOJA_VENDA', 'POS_VENDA'].includes(key)) {
+    if (!['LOJA_VENDA'].includes(key)) {
       limparVendaSelecionada()
     }
-    if (key === 'LOJA_VENDA') taskForm.categoria = 'MEDIDA_FINA'
-    else if (key === 'POS_VENDA') taskForm.categoria = STATUS_POS_VENDA[0] || 'GARANTIA'
-    else if (key === 'PLANO_CORTE' || key === 'VENDA_PLANO_CORTE') taskForm.categoria = 'PRODUCAO'
-    else taskForm.categoria = 'LIVRE'
+    if (key === 'LOJA_VENDA') taskForm.categoria = 'MEDIDA'
+    else if (key === 'PLANO_CORTE' || key === 'VENDA_PLANO_CORTE') taskForm.categoria = PRIMEIRA_ETAPA_PRODUCAO.value
+    else taskForm.categoria = 'MEDIDA'
+  },
+)
+
+watch(
+  () => taskForm.categoria,
+  (categoria) => {
+    if (!CATEGORIAS_QUE_EXIGEM_VENDA.includes(String(categoria || '').toUpperCase())) {
+      limparVinculoVenda()
+    }
   },
 )
 
@@ -744,7 +884,7 @@ const isEventoVinculado = computed(() => {
   if (!ev) return false
   if (ev?.venda_id || ev?.orcamento_id || ev?.plano_corte_id || ev?.projeto_id) return true
   const origem = String(ev?.origem_fluxo || '').toUpperCase()
-  return !!origem && origem !== 'TAREFA'
+  return !!origem
 })
 
 const clienteNomeEventoAtual = computed(() => {
@@ -765,40 +905,139 @@ const origemEventoLabel = computed(() => {
     PLANO_CORTE: 'Origem: plano de corte',
     VENDA_PLANO_CORTE: 'Origem: venda do plano de corte',
     LOJA_VENDA: 'Origem: cliente venda da loja',
-    POS_VENDA: 'Origem: cliente pós-venda',
-    TAREFA: 'Origem: tarefa livre',
   }
   return map[origem] || 'Origem: agenda'
 })
 
 // Opções por origem (fonte da verdade: pipelines compartilhados)
-const TIPOS_LOJA_VENDA = [
-  { value: 'MEDIDA', label: labelPipelineCliente('MEDIDA_AGENDADA') },
-  { value: 'MEDIDA_FINA', label: labelPipelineCliente('MEDIDA_FINA_AGENDADA') },
-  { value: 'MONTAGEM', label: labelPipelineCliente('MONTAGEM_AGENDADA') },
-  { value: 'PRODUCAO', label: labelPipelineCliente('PRODUCAO_AGENDADA') },
+const TIPOS_LOJA_VENDA = computed(() => [
+  { value: 'MEDIDA', label: labelPipelineCliente('AGENDAR_MEDIDA') || 'Agendar visita/medida' },
+  { value: 'APRESENTACAO', label: labelPipelineCliente('AGENDAR_APRESENTACAO') || 'Agendar apresentação' },
+  { value: 'CONTRATO', label: labelPipelineCliente('VENDA_FECHADA') || 'Aguardando Contrato/Sinal' },
+])
+const TIPOS_POS_VENDA = [
+  { value: 'GARANTIA', label: 'Garantia' },
+  { value: 'MANUTENCAO', label: 'Manutenção' },
+  { value: 'ASSISTENCIA', label: 'Assistência' },
 ]
-const TIPOS_POS_VENDA = STATUS_POS_VENDA.map((key) => ({
-  value: key,
-  label: labelPipelineCliente(key),
-}))
-const TIPOS_PLANO_CORTE = [{ value: 'PRODUCAO', label: labelPipelinePlanoCorte('EM_PRODUCAO') }]
-const TIPOS_TAREFA = [{ value: 'LIVRE', label: 'Tarefa livre' }]
+const ETAPAS_POS_VENDA = [
+  { value: 'GARANTIA', label: 'Garantia' },
+  { value: 'MANUTENCAO', label: 'Manutenção' },
+  { value: 'ASSISTENCIA', label: 'Assistência' },
+]
+const CATEGORIAS_QUE_EXIGEM_VENDA = [
+  'APRESENTACAO',
+  'CONTRATO',
+  'GARANTIA',
+  'MANUTENCAO',
+  'ASSISTENCIA',
+]
+const categoriaExigeVenda = computed(() =>
+  String(taskForm.origemFluxo || '').toUpperCase() === 'LOJA_VENDA' &&
+  CATEGORIAS_QUE_EXIGEM_VENDA.includes(String(taskForm.categoria || '').toUpperCase()),
+)
+const TIPOS_PRODUCAO = computed(() => {
+  const lista = Array.isArray(pipelineProducao.value) ? pipelineProducao.value : []
+  return [...lista]
+    .sort((a, b) => Number(a?.ordem || 0) - Number(b?.ordem || 0))
+    .map((etapa) => ({
+      value: String(etapa?.key || ''),
+      label: String(etapa?.label || etapa?.key || ''),
+    }))
+    .filter((item) => item.value)
+})
+const PRIMEIRA_ETAPA_PRODUCAO = computed(
+  () => TIPOS_PRODUCAO.value[0]?.value || 'PRODUCAO_RECEBIDA',
+)
 
 const opcoesTipoAgendamento = computed(() => {
-  if (editingEvent.value) {
-    const origemEvento = String(editingEvent.value?.origem_fluxo || '').toUpperCase()
-    if (origemEvento === 'LOJA_VENDA') return TIPOS_LOJA_VENDA
-    if (origemEvento === 'POS_VENDA') return TIPOS_POS_VENDA
-    if (origemEvento === 'PLANO_CORTE' || origemEvento === 'VENDA_PLANO_CORTE') return TIPOS_PLANO_CORTE
-    return TIPOS_TAREFA
+  if (isAgendaLoja.value) {
+    return TIPOS_LOJA_VENDA.value
   }
-  const origem = String(taskForm.origemFluxo || '').toUpperCase()
-  if (origem === 'LOJA_VENDA') return TIPOS_LOJA_VENDA
-  if (origem === 'POS_VENDA') return TIPOS_POS_VENDA
-  if (origem === 'PLANO_CORTE' || origem === 'VENDA_PLANO_CORTE') return TIPOS_PLANO_CORTE
-  return TIPOS_TAREFA
+  return [...TIPOS_PRODUCAO.value, ...TIPOS_POS_VENDA]
 })
+
+const etapaAtualLabel = computed(() => {
+  const cat = String(taskForm.categoria || editingEvent.value?.categoria || '').toUpperCase()
+  const etapaProd = TIPOS_PRODUCAO.value.find(o => o.value === cat)
+  if (etapaProd) return etapaProd.label
+  const etapaPos = TIPOS_POS_VENDA.find(o => o.value === cat)
+  if (etapaPos) return etapaPos.label
+  return TIPOS_PRODUCAO.value[0]?.label || 'Produção recebida'
+})
+
+function proximaEtapaProducao(categoriaAtual) {
+  const lista = TIPOS_PRODUCAO.value
+  const idx = lista.findIndex(o => o.value === String(categoriaAtual || '').toUpperCase())
+  if (idx >= 0 && idx < lista.length - 1) return lista[idx + 1].value
+  return null
+}
+
+function etapaLabelPorCategoria(categoria) {
+  const cat = String(categoria || '').toUpperCase()
+  const etapa = TIPOS_PRODUCAO.value.find(o => o.value === cat)
+  if (etapa) return etapa.label
+  const pos = TIPOS_POS_VENDA.find(o => o.value === cat)
+  if (pos) return pos.label
+  const loja = TIPOS_LOJA_VENDA.value.find(o => o.value === cat)
+  if (loja) return loja.label
+  return categoria || ''
+}
+
+function corCardCalendarioPorCategoria(categoria) {
+  const cat = String(categoria || '').toUpperCase()
+  const cores = {
+    MEDIDA: 'bg-blue-700 hover:bg-blue-600',
+    AGENDAR_MEDIDA: 'bg-blue-700 hover:bg-blue-600',
+    ORCAMENTO: 'bg-purple-700 hover:bg-purple-600',
+    CRIAR_ORCAMENTO: 'bg-purple-700 hover:bg-purple-600',
+    APRESENTACAO: 'bg-orange-600 hover:bg-orange-500',
+    AGENDAR_APRESENTACAO: 'bg-orange-600 hover:bg-orange-500',
+    CONTRATO: 'bg-emerald-700 hover:bg-emerald-600',
+    CONTRATO_GERADO: 'bg-emerald-700 hover:bg-emerald-600',
+    VENDA_FECHADA: 'bg-emerald-700 hover:bg-emerald-600',
+    MEDIDA_FINA: 'bg-cyan-700 hover:bg-cyan-600',
+    AGENDAR_MEDIDA_FINA: 'bg-cyan-700 hover:bg-cyan-600',
+    GARANTIA: 'bg-amber-600 hover:bg-amber-500',
+    MANUTENCAO: 'bg-amber-600 hover:bg-amber-500',
+    ASSISTENCIA: 'bg-amber-600 hover:bg-amber-500',
+  }
+  if (cores[cat]) return cores[cat]
+  if (TIPOS_PRODUCAO.value.some(o => o.value === cat)) return 'bg-indigo-700 hover:bg-indigo-600'
+  return 'bg-slate-700 hover:bg-slate-600'
+}
+
+function corBordaCardPorCategoria(categoria) {
+  const cat = String(categoria || '').toUpperCase()
+  const bordas = {
+    MEDIDA: 'border-l-blue-500',
+    AGENDAR_MEDIDA: 'border-l-blue-500',
+    ORCAMENTO: 'border-l-purple-500',
+    CRIAR_ORCAMENTO: 'border-l-purple-500',
+    APRESENTACAO: 'border-l-orange-500',
+    AGENDAR_APRESENTACAO: 'border-l-orange-500',
+    CONTRATO: 'border-l-emerald-500',
+    CONTRATO_GERADO: 'border-l-emerald-500',
+    VENDA_FECHADA: 'border-l-emerald-500',
+    MEDIDA_FINA: 'border-l-cyan-500',
+    AGENDAR_MEDIDA_FINA: 'border-l-cyan-500',
+    GARANTIA: 'border-l-amber-500',
+    MANUTENCAO: 'border-l-amber-500',
+    ASSISTENCIA: 'border-l-amber-500',
+  }
+  if (bordas[cat]) return bordas[cat]
+  if (TIPOS_PRODUCAO.value.some(o => o.value === cat)) return 'border-l-indigo-500'
+  return 'border-l-slate-400'
+}
+
+function botaoConcluirLabel(event) {
+  const cat = String(event?.categoria || '').toUpperCase()
+  const ehProducao = TIPOS_PRODUCAO.value.some(o => o.value === cat)
+  if (!ehProducao) return 'Concluir'
+  const proxima = proximaEtapaProducao(cat)
+  if (proxima) return `Concluir → ${etapaLabelPorCategoria(proxima)}`
+  return 'Finalizar produção'
+}
 
 function dateKey(date) {
   const y = date.getFullYear()
@@ -815,20 +1054,41 @@ function endOfMonth(date) {
   return new Date(date.getFullYear(), date.getMonth() + 1, 0)
 }
 
+const FERIADOS_NACIONAIS = [
+  { mes: 1, dia: 1, nome: 'Confraternização Universal' },
+  { mes: 4, dia: 21, nome: 'Tiradentes' },
+  { mes: 5, dia: 1, nome: 'Dia do Trabalhador' },
+  { mes: 9, dia: 7, nome: 'Independência do Brasil' },
+  { mes: 10, dia: 12, nome: 'Nossa Sr.a Aparecida' },
+  { mes: 11, dia: 2, nome: 'Finados' },
+  { mes: 11, dia: 15, nome: 'Proclamação da República' },
+  { mes: 11, dia: 20, nome: 'Dia da Consciência Negra' },
+  { mes: 12, dia: 25, nome: 'Natal' },
+]
+
+function getFeriado(date) {
+  const mes = date.getMonth() + 1
+  const dia = date.getDate()
+  return FERIADOS_NACIONAIS.find((f) => f.mes === mes && f.dia === dia)
+}
+
 const days = computed(() => {
   const start = startOfMonth(currentMonth.value)
   const end = endOfMonth(currentMonth.value)
   const startWeekDay = start.getDay()
-  const totalDays = 42
+  const daysInMonth = end.getDate()
+  const totalDays = startWeekDay + daysInMonth + 7
   const result = []
 
   for (let i = 0; i < totalDays; i += 1) {
     const day = new Date(start)
     day.setDate(start.getDate() - startWeekDay + i)
+    const feriado = getFeriado(day)
     result.push({
       key: dateKey(day),
       date: day,
       inMonth: day.getMonth() === currentMonth.value.getMonth(),
+      feriado: feriado ? feriado.nome : null,
     })
   }
   return result
@@ -858,11 +1118,9 @@ const selectedLabel = computed(() =>
 
 const canVendas = computed(() => can('agendamentos.vendas'))
 const canProducao = computed(() => can('agendamentos.producao'))
-const visaoAgenda = computed(() => {
-  if (canVendas.value && !canProducao.value) return 'loja'
-  if (canProducao.value && !canVendas.value) return 'producao'
-  return 'geral'
-})
+const visaoAgenda = computed(() => 'loja')
+const isAgendaLoja = computed(() => true)
+const opcoesOrigemModal = computed(() => ORIGENS_POR_SETOR.LOJA)
 
 function isSameDay(a, b) {
   return dateKey(a) === dateKey(b)
@@ -870,19 +1128,42 @@ function isSameDay(a, b) {
 
 function selectDay(day) {
   selectedDay.value = new Date(day)
+}
+
+function selectDayAndOpenModal(day) {
+  selectedDay.value = new Date(day)
   openModal()
 }
 
 function eventTitle(event) {
   const nome = event?.cliente?.nome_completo || event?.cliente?.razao_social || 'Cliente'
-  const origem = event?.plano_corte_id
-    ? 'Plano de corte'
-    : event?.orcamento_id
-        ? 'Orcamento'
-        : event?.venda_id
-            ? 'Venda'
-            : 'Cliente'
-  return `${event.titulo} - ${nome} (${origem})`
+  return `${event.titulo} - ${nome}`
+}
+
+function normalizarStatusExecucao(status) {
+  return String(status || '').trim().toUpperCase()
+}
+
+function statusExecucaoLabel(event) {
+  const status = normalizarStatusExecucao(event?.status)
+  if (status === 'CONCLUIDO') return 'Concluido'
+  if (status === 'PAUSADO') return 'Pausado'
+  if (status === 'EM_ANDAMENTO') return 'Em andamento'
+  const fim = new Date(event?.fim_em)
+  if (!Number.isNaN(fim.getTime()) && Date.now() > fim.getTime()) return 'Atrasado'
+  return 'Pendente'
+}
+
+function statusExecucaoClass(event) {
+  const status = normalizarStatusExecucao(event?.status)
+  if (status === 'CONCLUIDO') return 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+  if (status === 'PAUSADO') return 'bg-amber-50 text-amber-700 border border-amber-200'
+  if (status === 'EM_ANDAMENTO') return 'bg-blue-50 text-blue-700 border border-blue-200'
+  const fim = new Date(event?.fim_em)
+  if (!Number.isNaN(fim.getTime()) && Date.now() > fim.getTime()) {
+    return 'bg-rose-50 text-rose-700 border border-rose-200'
+  }
+  return 'bg-slate-100 text-slate-700 border border-slate-200'
 }
 
 function timeLabel(value) {
@@ -946,6 +1227,32 @@ function addHours(date, hours) {
   return d
 }
 
+function sincronizarResponsavelLoja() {
+  if (!isAgendaLoja.value) return
+  if (isAdmin.value && taskForm.funcionarioIds.length > 0) return // Admin já escolheu
+  const responsavelId = responsavelLojaId.value
+  if (!responsavelId) return
+  const fid = String(responsavelId)
+  taskForm.funcionarioIds = [fid]
+  const existente = taskForm.apontamentos.find((a) => String(a.funcionarioId) === fid)
+  const periodos = Array.isArray(existente?.periodos) && existente.periodos.length
+    ? existente.periodos
+    : [
+        {
+          inicio: taskForm.inicio || toDateTimeLocal(getCurrentTimeForDate(selectedDay.value)),
+          fim: taskForm.fim || toDateTimeLocal(addHours(getCurrentTimeForDate(selectedDay.value), 1)),
+        },
+      ]
+  taskForm.apontamentos = [{ funcionarioId: fid, periodos }]
+}
+
+function getCurrentTimeForDate(date) {
+  const now = new Date()
+  const d = new Date(date)
+  d.setHours(now.getHours(), now.getMinutes(), 0, 0)
+  return d
+}
+
 function openModal() {
   modalOpen.value = true
   editingEvent.value = null
@@ -953,20 +1260,25 @@ function openModal() {
   taskForm.clienteId = ''
   taskForm.vendaId = ''
   taskForm.funcionarioIds = []
-  taskForm.categoria = 'LIVRE'
-  taskForm.setorDestino = ''
-  taskForm.origemFluxo = ''
+  taskForm.categoria = 'MEDIDA'
+  taskForm.setorDestino = 'LOJA'
+  taskForm.origemFluxo = 'LOJA_VENDA'
   taskForm.apontamentos = []
   vendaSelecionadaId.value = ''
   vendaSelecionadaParaAgendamento.value = null
   funcionarioSelecionado.value = ''
-  const inicio = toDateTimeLocal(selectedDay.value)
-  taskForm.inicio = inicio
-  taskForm.fim = toDateTimeLocal(addHours(selectedDay.value, 1))
+  
+  const dataComHoraAtual = getCurrentTimeForDate(selectedDay.value)
+  taskForm.inicio = toDateTimeLocal(dataComHoraAtual)
+  taskForm.fim = toDateTimeLocal(addHours(dataComHoraAtual, 1))
+  
+  sincronizarResponsavelLoja()
 
   // Garante listas atualizadas ao abrir modal de criação
   loadClientes()
   loadVendasAguardandoAgendamento()
+  loadOrcamentosApresentacao()
+  loadVendasAguardandoContrato()
   loadFuncionarios()
 }
 
@@ -978,12 +1290,22 @@ function closeModal() {
 function clearEdit() {
   editingEvent.value = null
   taskForm.titulo = ''
-  const inicio = toDateTimeLocal(selectedDay.value)
-  taskForm.inicio = inicio
-  taskForm.fim = toDateTimeLocal(addHours(selectedDay.value, 1))
-  taskForm.setorDestino = ''
-  taskForm.origemFluxo = ''
+  taskForm.vendaId = ''
+  taskForm.orcamentoId = ''
+  vendaSelecionadaId.value = ''
+  vendaSelecionadaParaAgendamento.value = null
+  orcamentoSelecionadoId.value = ''
+  orcamentoSelecionadoParaAgendamento.value = null
+  vendasContratoId.value = ''
+  vendaContratoSelecionada.value = null
+  const dataComHoraAtual = getCurrentTimeForDate(selectedDay.value)
+  taskForm.inicio = toDateTimeLocal(dataComHoraAtual)
+  taskForm.fim = toDateTimeLocal(addHours(dataComHoraAtual, 1))
+  taskForm.setorDestino = 'LOJA'
+  taskForm.origemFluxo = 'LOJA_VENDA'
+  taskForm.categoria = 'MEDIDA'
   taskForm.apontamentos = []
+  sincronizarResponsavelLoja()
 }
 
 function openGarantia() {
@@ -1018,22 +1340,22 @@ function editTask(event) {
     .map((a) => String(a.funcionario_id))
     .filter(Boolean)
   taskForm.funcionarioIds = Array.from(new Set([...equipeDoEvento, ...equipeApontada]))
-  const cat = event?.categoria || 'LIVRE'
+  const cat = normalizarCategoriaAgenda(event?.categoria || 'MEDIDA')
   // Garante categoria válida para o pipeline do evento (venda vs plano de corte)
   const origemEvento = String(event?.origem_fluxo || '').toUpperCase()
   if (origemEvento === 'PLANO_CORTE' || origemEvento === 'VENDA_PLANO_CORTE') {
-    taskForm.categoria = ['PRODUCAO'].includes(cat) ? cat : 'PRODUCAO'
+    const categoriasValidas = TIPOS_PRODUCAO.value.map((o) => o.value)
+    taskForm.categoria = categoriasValidas.includes(cat) ? cat : PRIMEIRA_ETAPA_PRODUCAO.value
   } else if (origemEvento === 'LOJA_VENDA') {
-    const vendaKeys = TIPOS_LOJA_VENDA.map((o) => o.value)
-    taskForm.categoria = vendaKeys.includes(cat) ? cat : 'MEDIDA_FINA'
-  } else if (origemEvento === 'POS_VENDA') {
-    const posKeys = TIPOS_POS_VENDA.map((o) => o.value)
-    taskForm.categoria = posKeys.includes(cat) ? cat : (posKeys[0] || 'GARANTIA')
+    const vendaKeys = TIPOS_LOJA_VENDA.value.map((o) => o.value)
+    taskForm.categoria = vendaKeys.includes(cat) ? cat : 'MEDIDA'
   } else {
-    taskForm.categoria = 'LIVRE'
+    taskForm.categoria = 'MEDIDA'
   }
-  taskForm.setorDestino = String(event?.setor_destino || '').toUpperCase() || 'LOJA'
-  taskForm.origemFluxo = String(event?.origem_fluxo || '').toUpperCase() || 'TAREFA'
+  taskForm.setorDestino = normalizarSetorAgenda(event?.setor_destino || 'LOJA')
+  taskForm.origemFluxo =
+    String(event?.origem_fluxo || '').toUpperCase() ||
+    (taskForm.setorDestino === 'LOJA' ? 'LOJA_VENDA' : 'PLANO_CORTE')
   // Monta apontamentos existentes ou padrão baseado no próprio evento
   if (Array.isArray(event.apontamentos) && event.apontamentos.length) {
     const map = {}
@@ -1052,6 +1374,9 @@ function editTask(event) {
   } else {
     taskForm.apontamentos = []
   }
+  if (taskForm.setorDestino === 'LOJA') {
+    sincronizarResponsavelLoja()
+  }
   funcionarioSelecionado.value = ''
 }
 
@@ -1064,8 +1389,8 @@ function ensureApontamentoParaFuncionario(id) {
       funcionarioId: fid,
       periodos: [
         {
-          inicio: taskForm.inicio || toDateTimeLocal(selectedDay.value),
-          fim: taskForm.fim || toDateTimeLocal(addHours(selectedDay.value, 1)),
+          inicio: taskForm.inicio || toDateTimeLocal(getCurrentTimeForDate(selectedDay.value)),
+          fim: taskForm.fim || toDateTimeLocal(addHours(getCurrentTimeForDate(selectedDay.value), 1)),
         },
       ],
     })
@@ -1094,8 +1419,8 @@ function adicionarPeriodo(id) {
   const periodos = getApontamentosPorFuncionario(id)
   const base =
     periodos[periodos.length - 1] || {
-      inicio: taskForm.inicio || toDateTimeLocal(selectedDay.value),
-      fim: taskForm.fim || toDateTimeLocal(addHours(selectedDay.value, 1)),
+      inicio: taskForm.inicio || toDateTimeLocal(getCurrentTimeForDate(selectedDay.value)),
+      fim: taskForm.fim || toDateTimeLocal(addHours(getCurrentTimeForDate(selectedDay.value), 1)),
     }
   periodos.push({
     inicio: base.inicio,
@@ -1132,25 +1457,55 @@ function removerFuncionario(id) {
 }
 
 async function removeTask(event) {
+  const titulo = String(eventTitle(event) || '').trim() || 'este agendamento'
+  const ok = await confirm.show(
+    'Cancelar agendamento',
+    `Deseja cancelar ${titulo}?`,
+  )
+  if (!ok) return
+
   try {
-    await AgendaService.excluir(event.id)
+    await AgendaLojaService.excluir(event.id)
+    if (editingEvent.value && String(editingEvent.value.id) === String(event.id)) {
+      clearEdit()
+    }
     await loadAgenda()
   } catch (e) {
     notify.error('Nao foi possivel cancelar a tarefa.')
   }
 }
 
-async function enviarParaProducao(event) {
+async function atualizarStatusExecucao(event, status) {
   try {
-    await AgendaService.enviarParaProducao(event.id)
-    notify.success('Agendamento enviado para producao.')
+    const categoriaAtual = String(event?.categoria || '').toUpperCase()
+    const ehProducao = TIPOS_PRODUCAO.value.some(o => o.value === categoriaAtual)
+
+    if (status === 'CONCLUIDO' && ehProducao) {
+      const proxima = proximaEtapaProducao(categoriaAtual)
+      if (proxima) {
+        await AgendaLojaService.atualizarStatus(event.id, 'PENDENTE', proxima)
+        const label = etapaLabelPorCategoria(proxima)
+        notify.success(`Etapa concluída. Avançou para: ${label}`)
+      } else {
+        await AgendaLojaService.atualizarStatus(event.id, 'CONCLUIDO')
+        notify.success('Produção finalizada!')
+      }
+    } else {
+      await AgendaLojaService.atualizarStatus(event.id, status)
+      if (status === 'CONCLUIDO') notify.success('Tarefa concluída.')
+      else if (status === 'PAUSADO') notify.success('Tarefa pausada.')
+      else notify.success('Tarefa iniciada.')
+    }
     await loadAgenda()
   } catch (e) {
-    notify.error('Nao foi possivel enviar para producao.')
+    notify.error('Não foi possível atualizar o status da tarefa.')
   }
 }
 
 async function saveTask() {
+  taskForm.setorDestino = 'LOJA'
+  taskForm.origemFluxo = 'LOJA_VENDA'
+  sincronizarResponsavelLoja()
   if (!editingEvent.value) {
     if (!taskForm.setorDestino) return notify.error('Selecione o setor.')
     if (!taskForm.origemFluxo) return notify.error('Selecione a origem.')
@@ -1160,23 +1515,23 @@ async function saveTask() {
   const origemSelecionada = editingEvent.value
     ? String(editingEvent.value?.origem_fluxo || '').toUpperCase()
     : String(taskForm.origemFluxo || '').toUpperCase()
-  const clienteObrigatorio = origemSelecionada !== 'TAREFA'
+  const clienteObrigatorio = true
   if (clienteObrigatorio && !taskForm.clienteId) {
     return notify.error('Selecione o cliente.')
   }
-  if (origemSelecionada === 'LOJA_VENDA' && !taskForm.vendaId) {
-    return notify.error('Selecione a venda vinculada.')
+  const equipeIds = (
+    isAdmin.value && taskForm.funcionarioIds.length
+      ? taskForm.funcionarioIds.map(Number)
+      : [responsavelLojaId.value]
+  ).filter(Boolean)
+
+  if (!equipeIds.length) {
+    return notify.error('Seu usuário precisa estar vinculado a um funcionário para agendar na loja.')
   }
 
-  const equipeIds = isAdmin.value
-    ? taskForm.funcionarioIds.map((id) => Number(id)).filter(Boolean)
-    : [Number(usuarioLogado.value?.funcionario_id)]
-
-  if (!equipeIds.length) return notify.error('Informe pelo menos um funcionario.')
-
-  const equipeParaValidar = isAdmin.value
+  const equipeParaValidar = isAdmin.value && taskForm.funcionarioIds.length
     ? taskForm.funcionarioIds
-    : [String(usuarioLogado.value?.funcionario_id || '')]
+    : [String(responsavelLojaId.value || '')]
   const equipeParaValidarLimpa = equipeParaValidar.filter(Boolean)
 
   // Cada funcionário da equipe deve ter pelo menos um horário (início e término) preenchido
@@ -1200,7 +1555,22 @@ async function saveTask() {
   if (Number.isNaN(fim.getTime())) return notify.error('Data invalida.')
   if (fim <= inicio) return notify.error('Termino deve ser depois do inicio.')
 
-  const titulo = taskForm.titulo || 'Tarefa de agenda'
+  // Sincroniza o período único de cada funcionário com o início/término da tarefa,
+  // para evitar enviar horários antigos e gerar falso conflito no backend.
+  for (const registro of taskForm.apontamentos || []) {
+    if (Array.isArray(registro.periodos) && registro.periodos.length === 1) {
+      registro.periodos[0].inicio = taskForm.inicio
+      registro.periodos[0].fim = taskForm.fim
+    }
+  }
+
+  let titulo = taskForm.titulo
+  if (!titulo) {
+    const catRaw = normalizarCategoriaAgenda(taskForm.categoria)
+    const catLabel = etapaLabelPorCategoria(catRaw) || opcoesTipoAgendamento.value.find(o => o.value === catRaw)?.label || 'Tarefa'
+    const cliLabel = clienteNomeEventoAtual.value || 'Cliente'
+    titulo = `${catLabel} - ${cliLabel}`
+  }
 
   // Monta apontamentos individuais (flatten)
   const apontamentosPayload = []
@@ -1231,9 +1601,11 @@ async function saveTask() {
           origem_fluxo: editingEvent.value?.origem_fluxo || undefined,
           setor_destino: editingEvent.value?.setor_destino || undefined,
         }
-      : taskForm.vendaId
-        ? { venda_id: Number(taskForm.vendaId) }
-        : {}
+      : taskForm.orcamentoId
+        ? { orcamento_id: Number(taskForm.orcamentoId), venda_id: taskForm.vendaId ? Number(taskForm.vendaId) : undefined }
+        : taskForm.vendaId
+          ? { venda_id: Number(taskForm.vendaId) }
+          : {}
 
     const origemFluxo = editingEvent.value
       ? editingEvent.value?.origem_fluxo || undefined
@@ -1248,7 +1620,7 @@ async function saveTask() {
       fim_em: fim.toISOString(),
       cliente_id: taskForm.clienteId ? Number(taskForm.clienteId) : undefined,
       equipe_ids: equipeIds,
-      categoria: taskForm.categoria || 'LIVRE',
+      categoria: normalizarCategoriaAgenda(taskForm.categoria || 'MEDIDA'),
       origem_fluxo: origemFluxo,
       setor_destino: setorDestino,
       apontamentos: apontamentosPayload,
@@ -1256,15 +1628,16 @@ async function saveTask() {
     }
 
     if (editingEvent.value) {
-      await AgendaService.atualizar(editingEvent.value.id, payload)
+      await AgendaLojaService.atualizar(editingEvent.value.id, payload)
     } else {
-      await AgendaService.criar(payload)
+      await AgendaLojaService.criar(payload)
     }
 
     await loadAgenda()
     closeModal()
   } catch (e) {
-    notify.error('Nao foi possivel salvar a tarefa.')
+    const msg = e?.response?.data?.message
+    notify.error(msg && typeof msg === 'string' ? msg : 'Nao foi possivel salvar a tarefa.')
   }
 }
 
@@ -1274,9 +1647,9 @@ async function loadAgenda() {
   try {
     const inicio = dateKey(startOfMonth(currentMonth.value))
     const fim = dateKey(endOfMonth(currentMonth.value))
-    const res = await AgendaService.listarTodos(inicio, fim, {
+    const res = await AgendaLojaService.listarTodos(inicio, fim, {
       incluir_cancelados: false,
-      visao: visaoAgenda.value === 'geral' ? undefined : visaoAgenda.value,
+      visao: visaoAgenda.value,
     })
     let data = Array.isArray(res?.data) ? res.data : []
     events.value = data
@@ -1295,6 +1668,16 @@ async function loadPlanosProducao() {
     planosProducao.value = Array.isArray(res?.data) ? res.data : []
   } catch (e) {
     planosProducao.value = []
+  }
+}
+
+async function loadPipelineProducao() {
+  if (!canProducao.value) return
+  try {
+    const res = await AgendaLojaService.getPipelineProducao()
+    pipelineProducao.value = Array.isArray(res?.data) ? res.data : []
+  } catch (e) {
+    pipelineProducao.value = []
   }
 }
 
@@ -1322,7 +1705,7 @@ async function loadClientes() {
 async function loadFuncionarios() {
   if (!isAdmin.value) return
   try {
-    const res = await FuncionarioService.select()
+    const res = await FuncionarioService.select({ unidade: 'LOJA' })
     const lista = Array.isArray(res?.data) ? res.data : []
     funcionariosOptions.value = lista
       .map((item) => ({
@@ -1345,13 +1728,47 @@ async function loadVendasAguardandoAgendamento() {
   }
 }
 
+async function loadOrcamentosApresentacao() {
+  if (!canVendas.value) return
+  try {
+    const res = await OrcamentosService.aguardandoApresentacao()
+    orcamentosApresentacao.value = Array.isArray(res?.data) ? res.data : []
+  } catch (e) {
+    orcamentosApresentacao.value = []
+  }
+}
+
+async function loadVendasAguardandoContrato() {
+  if (!canVendas.value) return
+  try {
+    const res = await VendaService.aguardandoContrato()
+    vendasAguardandoContrato.value = Array.isArray(res?.data) ? res.data : []
+  } catch (e) {
+    vendasAguardandoContrato.value = []
+  }
+}
+
 onMounted(() => {
   loadAgenda()
+  loadPipelineProducao()
   loadPlanosProducao()
   loadClientes()
   loadFuncionarios()
   loadVendasAguardandoAgendamento()
+  loadOrcamentosApresentacao()
+  loadVendasAguardandoContrato()
 })
 watch(currentMonth, loadAgenda)
 </script>
+
+<style scoped>
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+</style>
 

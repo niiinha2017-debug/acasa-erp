@@ -123,7 +123,15 @@ export const FuncionariosService = {
     return FuncionariosService.gerarPdf(ids)
   },
 
-  select: (q) => api.get('/funcionarios/select', { params: q ? { q } : {} }),
+  select: (qOrParams) => {
+    if (typeof qOrParams === 'string') {
+      return api.get('/funcionarios/select', { params: qOrParams ? { q: qOrParams } : {} })
+    }
+    if (qOrParams && typeof qOrParams === 'object') {
+      return api.get('/funcionarios/select', { params: qOrParams })
+    }
+    return api.get('/funcionarios/select')
+  },
 
   async reenviarSenhaProvisoria(alvo) {
     const candidate =
@@ -170,6 +178,7 @@ export const FuncionarioService = FuncionariosService
 // --- ORÇAMENTOS ---
 export const OrcamentosService = {
   listar: () => api.get('/orcamentos'),
+  aguardandoApresentacao: () => api.get('/orcamentos/aguardando-apresentacao'),
   detalhar: (id) => api.get(`/orcamentos/${id}`),
   criar: (dados) => api.post('/orcamentos', dados),
   atualizar: (id, dados) => api.put(`/orcamentos/${id}`, dados),
@@ -239,6 +248,7 @@ export const UsuariosService = {
 export const VendaService = {
   listar: () => api.get('/vendas'),
   aguardandoAgendamento: () => api.get('/vendas/aguardando-agendamento'),
+  aguardandoContrato: () => api.get('/vendas/aguardando-contrato'),
   buscar: (id) => api.get(`/vendas/${id}`),
   salvar: (id, dados) => (id ? api.put(`/vendas/${id}`, dados) : api.post('/vendas', dados)),
   remover: (id) => api.delete(`/vendas/${id}`),
@@ -388,38 +398,88 @@ export const PontoJustificativasService = {
     api.delete(`/ponto/justificativas/${id}`),
 }
 
+// Pipeline produção (compartilhado entre loja e fábrica)
+function getPipelineProducao() {
+  return api.get('/agenda/pipeline/producao');
+}
+
+/** Agenda unificada (legado). Preferir AgendaLojaService / AgendaFabricaService. */
 export const AgendaService = {
-  // Buscar todos (com filtro opcional de data)
   listarTodos(inicio, fim, filtros = {}) {
     return api.get('/agenda', { params: { inicio, fim, ...filtros } });
   },
-
-  // Criar novo agendamento
+  getPipelineProducao,
   criar(dados) {
     return api.post('/agenda', dados);
   },
-
-  // Atualizar agendamento existente
   atualizar(id, dados) {
     return api.patch(`/agenda/${id}`, dados);
   },
-
-  // Buscar agenda do marceneiro
   buscarPorFuncionario(id) {
     return api.get(`/agenda/funcionario/${id}`);
   },
-
-  // Atualizar status (Finalizar)
-  atualizarStatus(id, status) {
-    return api.patch(`/agenda/${id}/status`, { status });
+  atualizarStatus(id, status, categoria) {
+    const body = { status };
+    if (categoria) body.categoria = categoria;
+    return api.patch(`/agenda/${id}/status`, body);
   },
-
   enviarParaProducao(id) {
     return api.patch(`/agenda/${id}/enviar-producao`);
   },
-
-  // Deletar
   excluir(id) {
     return api.delete(`/agenda/${id}`);
+  }
+};
+
+/** Agenda Loja: apenas eventos da loja (setor LOJA). */
+export const AgendaLojaService = {
+  listarTodos(inicio, fim, filtros = {}) {
+    return api.get('/agenda-loja', { params: { inicio, fim, ...filtros } });
+  },
+  getPipelineProducao,
+  criar(dados) {
+    return api.post('/agenda-loja', dados);
+  },
+  atualizar(id, dados) {
+    return api.patch(`/agenda-loja/${id}`, dados);
+  },
+  buscarPorFuncionario(id) {
+    return api.get(`/agenda-loja/funcionario/${id}`);
+  },
+  atualizarStatus(id, status, categoria) {
+    const body = { status };
+    if (categoria) body.categoria = categoria;
+    return api.patch(`/agenda-loja/${id}/status`, body);
+  },
+  enviarParaProducao(id) {
+    return api.patch(`/agenda-loja/${id}/enviar-producao`);
+  },
+  excluir(id) {
+    return api.delete(`/agenda-loja/${id}`);
+  }
+};
+
+/** Agenda Fábrica: apenas eventos da fábrica (setor FABRICA/PRODUCAO). */
+export const AgendaFabricaService = {
+  listarTodos(inicio, fim, filtros = {}) {
+    return api.get('/agenda-fabrica', { params: { inicio, fim, ...filtros } });
+  },
+  getPipelineProducao,
+  criar(dados) {
+    return api.post('/agenda-fabrica', dados);
+  },
+  atualizar(id, dados) {
+    return api.patch(`/agenda-fabrica/${id}`, dados);
+  },
+  buscarPorFuncionario(id) {
+    return api.get(`/agenda-fabrica/funcionario/${id}`);
+  },
+  atualizarStatus(id, status, categoria) {
+    const body = { status };
+    if (categoria) body.categoria = categoria;
+    return api.patch(`/agenda-fabrica/${id}/status`, body);
+  },
+  excluir(id) {
+    return api.delete(`/agenda-fabrica/${id}`);
   }
 };

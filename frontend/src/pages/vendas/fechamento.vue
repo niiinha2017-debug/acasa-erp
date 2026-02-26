@@ -16,15 +16,6 @@
                 placeholder="Buscar por nome do cliente..."
               />
             </div>
-            <Button
-              v-if="(can('vendas.criar') || can('vendas.fechamento.criar')) && primeiroOrcamentoSemVenda"
-              variant="primary"
-              type="button"
-              @click="irParaFechamento(primeiroOrcamentoSemVenda.id)"
-            >
-              <i class="pi pi-dollar text-sm mr-1" />
-              Fechar venda
-            </Button>
           </div>
         </template>
       </PageHeader>
@@ -161,16 +152,6 @@ const valorTotalGeral = computed(() =>
 const valorTotalLista = computed(() =>
   gruposFiltrados.value.reduce((acc, g) => acc + Number(g.total || 0), 0)
 )
-
-const primeiroOrcamentoSemVenda = computed(() => {
-  const lista = orcamentos.value || []
-  return lista.find((o) => !o.venda) ?? null
-})
-
-function irParaFechamento(id) {
-  if (!id) return
-  router.push({ path: '/vendas/nova-venda', query: { orcamentoId: String(id) } })
-}
 
 async function carregar() {
   if (!can('vendas.fechamento.ver') && !can('vendas.criar')) {

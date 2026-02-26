@@ -230,33 +230,6 @@ async function enviarComprovanteWhatsApp() {
   const reg = ultimoRegistro.value
   if (!reg) return
   if (!token.value) return
-  loadingComprovante.value = true
-  try {
-    const res = await PontoService.comprovantePng(reg.id, token.value)
-    const blob = res?.data
-    if (blob && blob instanceof Blob && blob.size > 0) {
-      const file = new File([blob], 'comprovante-ponto.png', { type: 'image/png' })
-      if (typeof navigator !== 'undefined' && navigator.share) {
-        try {
-          await navigator.share({
-            files: [file],
-            title: 'Comprovante de ponto',
-            text: `Comprovante de ponto - ${empresaNome.value || 'ACASA'}\n${formatarDataHoraExata(reg.data_hora)} - ${reg.tipo_label || reg.tipo}`,
-          })
-          return
-        } catch (shareError) {
-          if (shareError?.name === 'AbortError') return
-          console.warn('[Comprovante PNG share]', shareError)
-        }
-      }
-      baixarBlob(blob, 'comprovante-ponto.png')
-      return
-    }
-  } catch (e) {
-    console.warn('[Comprovante PNG]', e)
-  } finally {
-    loadingComprovante.value = false
-  }
   const dataHoraStr = formatarDataHoraExata(reg.data_hora)
   const nome = funcionarioNome.value || 'Funcionário'
   const tipoLabel = reg.tipo_label || reg.tipo
@@ -270,12 +243,79 @@ ${nome}${pisCpf}
 
 Data e Hora: ${dataHoraStr}
 Tipo: ${tipoLabel}${idTransacao}`
-  const url = `https://wa.me/?text=${encodeURIComponent(msg)}`
-  if (typeof window !== 'undefined' && window.open) {
-    window.open(url, '_blank', 'noopener,noreferrer')
-  } else {
-    window.location.href = url
+  const waUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`
+
+  async function abrirWhatsApp() {
+    try {
+      const { Capacitor } = await import('@capacitor/core')
+      if (Capacitor.getPlatform() === 'android') {
+        try {
+          const { Browser } = await import('@capacitor/browser')
+          await Browser.open({ url: waUrl })
+          return true
+        } catch {}
+      }
+    } catch {}
+
+    if (typeof window !== 'undefined' && window.open) {
+      const popup = window.open(waUrl, '_blank', 'noopener,noreferrer')
+      if (popup) return true
+    }
+    if (typeof window !== 'undefined') {
+      window.location.href = waUrl
+      return true
+    }
+    return false
   }
+
+  loadingComprovante.value = true
+  try {
+    let blob = null
+    let ext = 'png'
+    let mime = 'image/png'
+
+    for (const formato of ['png', 'jpeg']) {
+      try {
+        const res = await PontoService.comprovanteImagem(reg.id, token.value, formato)
+        const b = res?.data
+        if (b && b instanceof Blob && b.size > 0) {
+          blob = b
+          ext = formato === 'jpeg' ? 'jpg' : 'png'
+          mime = formato === 'jpeg' ? 'image/jpeg' : 'image/png'
+          break
+        }
+      } catch (errFormato) {
+        console.warn(`[Comprovante ${formato}]`, errFormato)
+      }
+    }
+
+    if (blob && blob instanceof Blob && blob.size > 0) {
+      const file = new File([blob], `comprovante-ponto.${ext}`, { type: mime })
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: 'Comprovante de ponto',
+            text: msg,
+          })
+          return
+        } catch (shareError) {
+          if (shareError?.name === 'AbortError') return
+          console.warn('[Comprovante share]', shareError)
+        }
+      }
+      // Fallback robusto: abre WhatsApp com texto e já baixa o arquivo
+      // para o usuário anexar manualmente em qualquer aparelho/navegador.
+      await abrirWhatsApp()
+      baixarBlob(blob, `comprovante-ponto.${ext}`)
+      return
+    }
+  } catch (e) {
+    console.warn('[Comprovante]', e)
+  } finally {
+    loadingComprovante.value = false
+  }
+  await abrirWhatsApp()
 }
 
 function baixarBlob(blob, nomeArquivo) {

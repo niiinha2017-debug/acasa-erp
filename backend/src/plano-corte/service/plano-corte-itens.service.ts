@@ -115,12 +115,18 @@ export class PlanoCorteItensService {
     const atual = await this.buscar(id);
 
     const fornecedor_id = dto.fornecedor_id ?? atual.fornecedor_id;
-    const nome_produto = dto.nome_produto !== undefined
-      ? String(dto.nome_produto).trim()
-      : atual.nome_produto;
-    const marca = dto.marca !== undefined ? this.normStr(dto.marca) : (atual.marca ?? null);
-    const cor = dto.cor !== undefined ? this.normStr(dto.cor) : (atual.cor ?? null);
-    const medida = dto.medida !== undefined ? this.normStr(dto.medida) : (atual.medida ?? null);
+    const nome_produto =
+      dto.nome_produto !== undefined
+        ? String(dto.nome_produto).trim()
+        : atual.nome_produto;
+    const marca =
+      dto.marca !== undefined ? this.normStr(dto.marca) : (atual.marca ?? null);
+    const cor =
+      dto.cor !== undefined ? this.normStr(dto.cor) : (atual.cor ?? null);
+    const medida =
+      dto.medida !== undefined
+        ? this.normStr(dto.medida)
+        : (atual.medida ?? null);
 
     if (nome_produto) {
       await this.checarDuplicado({
@@ -139,9 +145,11 @@ export class PlanoCorteItensService {
         data: {
           fornecedor_id: dto.fornecedor_id ?? atual.fornecedor_id,
           nome_produto: nome_produto || atual.nome_produto,
-          marca: dto.marca !== undefined ? this.normStr(dto.marca) : atual.marca,
+          marca:
+            dto.marca !== undefined ? this.normStr(dto.marca) : atual.marca,
           cor: dto.cor !== undefined ? this.normStr(dto.cor) : atual.cor,
-          medida: dto.medida !== undefined ? this.normStr(dto.medida) : atual.medida,
+          medida:
+            dto.medida !== undefined ? this.normStr(dto.medida) : atual.medida,
           unidade: dto.unidade ?? atual.unidade,
           largura_mm: dto.largura_mm ?? atual.largura_mm,
           comprimento_mm: dto.comprimento_mm ?? atual.comprimento_mm,

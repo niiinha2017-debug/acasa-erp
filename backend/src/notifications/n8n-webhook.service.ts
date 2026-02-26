@@ -12,7 +12,9 @@ export class N8nWebhookService {
   private readonly urlRelatorio: string | undefined;
 
   constructor(private readonly config: ConfigService) {
-    this.urlPontoBatido = this.config.get<string>('N8N_WEBHOOK_URL_PONTO_BATIDO');
+    this.urlPontoBatido = this.config.get<string>(
+      'N8N_WEBHOOK_URL_PONTO_BATIDO',
+    );
     this.urlRelatorio = this.config.get<string>('N8N_WEBHOOK_URL_RELATORIO');
   }
 
@@ -24,7 +26,12 @@ export class N8nWebhookService {
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
-        console.warn('[n8n] Webhook failed:', url, res.status, await res.text());
+        console.warn(
+          '[n8n] Webhook failed:',
+          url,
+          res.status,
+          await res.text(),
+        );
       }
     } catch (e) {
       console.warn('[n8n] Webhook error:', url, e);
@@ -41,7 +48,10 @@ export class N8nWebhookService {
     origem?: string;
   }): Promise<void> {
     if (!this.urlPontoBatido) return;
-    await this.post(this.urlPontoBatido, { evento: 'ponto_batido', ...payload });
+    await this.post(this.urlPontoBatido, {
+      evento: 'ponto_batido',
+      ...payload,
+    });
   }
 
   /** Dispara webhook quando um relatório/espelho de ponto é gerado. */
@@ -53,6 +63,9 @@ export class N8nWebhookService {
     arquivo_id?: number;
   }): Promise<void> {
     if (!this.urlRelatorio) return;
-    await this.post(this.urlRelatorio, { evento: 'relatorio_ponto_gerado', ...payload });
+    await this.post(this.urlRelatorio, {
+      evento: 'relatorio_ponto_gerado',
+      ...payload,
+    });
   }
 }

@@ -59,20 +59,14 @@ export class AnalyticsController {
 
   @Get('dre-despesas')
   @Permissoes('dashboard.visualizar')
-  getDreDespesas(
-    @Query('inicio') inicio?: string,
-    @Query('fim') fim?: string,
-  ) {
+  getDreDespesas(@Query('inicio') inicio?: string, @Query('fim') fim?: string) {
     return this.service.getDreDespesas(inicio, fim);
   }
 
   /** DRE mensal: receita (vendas), despesas por categoria e resultado do mês. */
   @Get('dre-mensal')
   @Permissoes('dashboard.visualizar')
-  getDreMensal(
-    @Query('mes') mes?: string,
-    @Query('ano') ano?: string,
-  ) {
+  getDreMensal(@Query('mes') mes?: string, @Query('ano') ano?: string) {
     const m = mes ? parseInt(mes, 10) : new Date().getMonth() + 1;
     const a = ano ? parseInt(ano, 10) : new Date().getFullYear();
     if (!m || m < 1 || m > 12 || !a) {
@@ -93,10 +87,7 @@ export class AnalyticsController {
   /** Feriados de um mês específico. */
   @Get('feriados/mes')
   @Permissoes('dashboard.visualizar')
-  async getFeriadosMes(
-    @Query('mes') mes?: string,
-    @Query('ano') ano?: string,
-  ) {
+  async getFeriadosMes(@Query('mes') mes?: string, @Query('ano') ano?: string) {
     const m = mes ? parseInt(mes, 10) : new Date().getMonth() + 1;
     const a = ano ? parseInt(ano, 10) : new Date().getFullYear();
     if (!m || m < 1 || m > 12 || !a) return [];
@@ -136,7 +127,9 @@ export class AnalyticsController {
       const di = data_ini || inicio;
       const df = data_fim || fim;
       if (!di || !df) {
-        return { erro: 'data_ini e data_fim (ou inicio e fim) obrigatórios para horas-trabalhadas' };
+        return {
+          erro: 'data_ini e data_fim (ou inicio e fim) obrigatórios para horas-trabalhadas',
+        };
       }
       const { linhas } = await this.pontoRelatorio.fechamentoFolha({
         data_ini: di,
@@ -144,7 +137,10 @@ export class AnalyticsController {
         apenas_ativos: true,
       });
       const url = this.quickchart.buildHorasTrabalhadasUrl(
-        linhas.map((l) => ({ nome: l.nome, horas_trabalhadas: l.horas_trabalhadas })),
+        linhas.map((l) => ({
+          nome: l.nome,
+          horas_trabalhadas: l.horas_trabalhadas,
+        })),
         opts,
       );
       return { url };
@@ -156,6 +152,8 @@ export class AnalyticsController {
       return { url };
     }
 
-    return { erro: 'type deve ser: dre-despesas | horas-trabalhadas | status-projetos' };
+    return {
+      erro: 'type deve ser: dre-despesas | horas-trabalhadas | status-projetos',
+    };
   }
 }

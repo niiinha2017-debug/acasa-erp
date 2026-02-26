@@ -213,7 +213,10 @@ export class PontoRelatorioService {
     } catch (e: any) {
       const msg = String(e?.message || '');
       // Ambiente sem migration aplicada ainda: não quebra a tela, segue com lista vazia.
-      if (msg.includes('ponto_feriados_config') && msg.includes("doesn't exist")) {
+      if (
+        msg.includes('ponto_feriados_config') &&
+        msg.includes("doesn't exist")
+      ) {
         return [];
       }
       throw e;
@@ -233,13 +236,21 @@ export class PontoRelatorioService {
     if (!a || a < 2000 || a > 2100) return [];
     const url = `https://brasilapi.com.br/api/feriados/v1/${a}`;
     const fallbackFixos: FeriadoNacionalItem[] = [
-      { date: `${a}-01-01`, name: 'Confraternização Universal', type: 'national' },
+      {
+        date: `${a}-01-01`,
+        name: 'Confraternização Universal',
+        type: 'national',
+      },
       { date: `${a}-04-21`, name: 'Tiradentes', type: 'national' },
       { date: `${a}-05-01`, name: 'Dia do Trabalhador', type: 'national' },
       { date: `${a}-09-07`, name: 'Independência do Brasil', type: 'national' },
       { date: `${a}-10-12`, name: 'Nossa Senhora Aparecida', type: 'national' },
       { date: `${a}-11-02`, name: 'Finados', type: 'national' },
-      { date: `${a}-11-15`, name: 'Proclamação da República', type: 'national' },
+      {
+        date: `${a}-11-15`,
+        name: 'Proclamação da República',
+        type: 'national',
+      },
       { date: `${a}-12-25`, name: 'Natal', type: 'national' },
     ];
 
@@ -260,7 +271,9 @@ export class PontoRelatorioService {
       const mapa = new Map<string, FeriadoNacionalItem>();
       for (const f of fallbackFixos) mapa.set(f.date, f);
       for (const f of daApi) mapa.set(f.date, f);
-      return Array.from(mapa.values()).sort((x, y) => x.date.localeCompare(y.date));
+      return Array.from(mapa.values()).sort((x, y) =>
+        x.date.localeCompare(y.date),
+      );
     } catch {
       return fallbackFixos;
     }
@@ -307,7 +320,10 @@ export class PontoRelatorioService {
       );
     } catch (e: any) {
       const msg = String(e?.message || '');
-      if (msg.includes('ponto_feriados_config') && msg.includes("doesn't exist")) {
+      if (
+        msg.includes('ponto_feriados_config') &&
+        msg.includes("doesn't exist")
+      ) {
         throw new BadRequestException(
           'Tabela de feriados não encontrada. Execute as migrations do banco.',
         );
@@ -321,7 +337,10 @@ export class PontoRelatorioService {
   private calcularHorasTrabalhadasDia(registrosDia: any[]): number {
     const regs = [...registrosDia]
       .filter((r) => r?.status === 'ATIVO')
-      .sort((a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime());
+      .sort(
+        (a, b) =>
+          new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime(),
+      );
     let totalMs = 0;
     let entrada: Date | null = null;
     for (const r of regs) {
@@ -349,7 +368,9 @@ export class PontoRelatorioService {
     const ini = this.inicioDia(params.data_ini);
     const fim = this.fimDia(params.data_fim);
     if (!ini || !fim) {
-      throw new BadRequestException('Período (data_ini e data_fim) obrigatório.');
+      throw new BadRequestException(
+        'Período (data_ini e data_fim) obrigatório.',
+      );
     }
     const feriadosConfig = await this.listarFeriadosConfig(
       params.data_ini,
@@ -398,17 +419,18 @@ export class PontoRelatorioService {
     for (const r of registros) {
       if (!porFuncionario.has(r.funcionario_id))
         porFuncionario.set(r.funcionario_id, []);
-      porFuncionario.get(r.funcionario_id)!.push(r);
+      porFuncionario.get(r.funcionario_id).push(r);
     }
 
     const porDia = new Map<string, any[]>();
     for (const r of registros) {
       const key = this.dateKeySP(r.data_hora);
       if (!porDia.has(key)) porDia.set(key, []);
-      porDia.get(key)!.push(r);
+      porDia.get(key).push(r);
     }
 
-    const diasNoPeriodo = Math.ceil((fim.getTime() - ini.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+    const diasNoPeriodo =
+      Math.ceil((fim.getTime() - ini.getTime()) / (24 * 60 * 60 * 1000)) + 1;
     const diasUteis = Math.floor(diasNoPeriodo * (6 / 7));
 
     const linhas = funcionarios.map((f) => {
@@ -419,7 +441,7 @@ export class PontoRelatorioService {
         const d = new Date(key + 'T12:00:00').getDay();
         if (d === 0) continue;
         if (!porDiaF.has(key)) porDiaF.set(key, []);
-        porDiaF.get(key)!.push(r);
+        porDiaF.get(key).push(r);
       }
 
       let horasTrabalhadas = 0;
@@ -782,9 +804,12 @@ export class PontoRelatorioService {
   }
 
   /** Retorna label do tipo: Entrada, Almoço (1ª saída do dia) ou Saída */
-  private async labelTipoRegistro(
-    registro: { id: number; tipo: string; data_hora: Date; funcionario_id: number },
-  ): Promise<string> {
+  private async labelTipoRegistro(registro: {
+    id: number;
+    tipo: string;
+    data_hora: Date;
+    funcionario_id: number;
+  }): Promise<string> {
     if (registro.tipo === 'ENTRADA') return 'Entrada';
     if (registro.tipo !== 'SAIDA') return registro.tipo;
     const diaKey = this.dateKeySP(registro.data_hora);
@@ -806,7 +831,11 @@ export class PontoRelatorioService {
   }
 
   /** Gera ID único da transação (hash) para evitar duplicidade */
-  private transacaoId(registro: { id: number; data_hora: Date; funcionario_id: number }): string {
+  private transacaoId(registro: {
+    id: number;
+    data_hora: Date;
+    funcionario_id: number;
+  }): string {
     const payload = `${registro.id}|${new Date(registro.data_hora).toISOString()}|${registro.funcionario_id}`;
     return createHash('sha256').update(payload).digest('hex').slice(0, 32);
   }
@@ -827,7 +856,8 @@ export class PontoRelatorioService {
   /** Gera PDF do comprovante: cabeçalho (Empresa + CNPJ), corpo (Nome, PIS/CPF, Data/Hora, Tipo), rodapé (hash) */
   async gerarComprovantePdfBuffer(registroId: number): Promise<Buffer> {
     const data = await this.getRegistroComprovante(registroId);
-    if (!data) throw new BadRequestException('Registro de ponto não encontrado.');
+    if (!data)
+      throw new BadRequestException('Registro de ponto não encontrado.');
     const { registro, empresa } = data;
     const tipoLabel = await this.labelTipoRegistro(registro);
     const transacaoId = this.transacaoId(registro);
@@ -844,12 +874,17 @@ export class PontoRelatorioService {
       hour12: false,
     });
 
-    const pisCpf = [
-      registro.funcionario?.pis ? `PIS: ${String(registro.funcionario.pis).trim()}` : null,
-      registro.funcionario?.cpf ? `CPF: ${this.maskCpf(registro.funcionario.cpf)}` : null,
-    ]
-      .filter(Boolean)
-      .join('  •  ') || '—';
+    const pisCpf =
+      [
+        registro.funcionario?.pis
+          ? `PIS: ${String(registro.funcionario.pis).trim()}`
+          : null,
+        registro.funcionario?.cpf
+          ? `CPF: ${this.maskCpf(registro.funcionario.cpf)}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join('  •  ') || '—';
 
     return new Promise((resolve, reject) => {
       try {
@@ -863,11 +898,17 @@ export class PontoRelatorioService {
 
         // --- Cabeçalho: Nome da Empresa e CNPJ ---
         doc.fillColor('#1e293b').fontSize(14).font('Helvetica-Bold');
-        doc.text(empresa?.razao_social || empresa?.nome_fantasia || 'Empresa', margin, y);
+        doc.text(
+          empresa?.razao_social || empresa?.nome_fantasia || 'Empresa',
+          margin,
+          y,
+        );
         y += 18;
         doc.fontSize(9).font('Helvetica').fillColor('#64748b');
         doc.text(
-          empresa?.cnpj ? `CNPJ: ${this.maskCnpj(empresa.cnpj)}` : 'CNPJ não informado',
+          empresa?.cnpj
+            ? `CNPJ: ${this.maskCnpj(empresa.cnpj)}`
+            : 'CNPJ não informado',
           margin,
           y,
         );
@@ -875,7 +916,10 @@ export class PontoRelatorioService {
 
         // --- Título ---
         doc.fillColor('#1e293b').fontSize(12).font('Helvetica-Bold');
-        doc.text('COMPROVANTE DE REGISTRO DE PONTO', margin, y, { align: 'center', width: 535 });
+        doc.text('COMPROVANTE DE REGISTRO DE PONTO', margin, y, {
+          align: 'center',
+          width: 535,
+        });
         y += 32;
 
         // --- Corpo: Nome, PIS/CPF, Data e Hora exata, Tipo ---
@@ -884,7 +928,11 @@ export class PontoRelatorioService {
         doc.fillColor('#64748b').fontSize(8).font('Helvetica');
         doc.text('Nome do Funcionário', margin + 12, y);
         doc.fillColor('#1e293b').fontSize(11).font('Helvetica-Bold');
-        doc.text(registro.funcionario?.nome?.toUpperCase() || '—', margin + 12, y + 12);
+        doc.text(
+          registro.funcionario?.nome?.toUpperCase() || '—',
+          margin + 12,
+          y + 12,
+        );
         y += 28;
         doc.fillColor('#64748b').fontSize(8).font('Helvetica');
         doc.text('PIS / CPF', margin + 12, y);
@@ -934,7 +982,8 @@ export class PontoRelatorioService {
     width?: number,
   ): Promise<Buffer> {
     const data = await this.getRegistroComprovante(registroId);
-    if (!data) throw new BadRequestException('Registro de ponto não encontrado.');
+    if (!data)
+      throw new BadRequestException('Registro de ponto não encontrado.');
     const { registro, empresa } = data;
     const tipoLabel = await this.labelTipoRegistro(registro);
     const transacaoId = this.transacaoId(registro);
@@ -951,28 +1000,39 @@ export class PontoRelatorioService {
       hour12: false,
     });
 
-    const pisCpf = [
-      registro.funcionario?.pis ? `PIS: ${String(registro.funcionario.pis).trim()}` : null,
-      registro.funcionario?.cpf ? `CPF: ${this.maskCpf(registro.funcionario.cpf)}` : null,
-    ]
-      .filter(Boolean)
-      .join('  •  ') || '—';
+    const pisCpf =
+      [
+        registro.funcionario?.pis
+          ? `PIS: ${String(registro.funcionario.pis).trim()}`
+          : null,
+        registro.funcionario?.cpf
+          ? `CPF: ${this.maskCpf(registro.funcionario.cpf)}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join('  •  ') || '—';
 
-    const nomeEmpresa = this.esc(empresa?.razao_social || empresa?.nome_fantasia || 'Empresa');
+    const nomeEmpresa = this.esc(
+      empresa?.razao_social || empresa?.nome_fantasia || 'Empresa',
+    );
     const cnpjEmpresa = empresa?.cnpj
       ? this.esc(`CNPJ: ${this.maskCnpj(empresa.cnpj)}`)
       : 'CNPJ não informado';
     const nomeFunc = this.esc(registro.funcionario?.nome?.toUpperCase() || '—');
 
-    const w = 420;
-    const h = 560;
+    // Renderiza em 2x para melhorar nitidez de texto em compartilhamento móvel.
+    const baseW = 420;
+    const baseH = 560;
+    const scale = 2;
+    const w = baseW * scale;
+    const h = baseH * scale;
     const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
-  <rect width="${w}" height="${h}" fill="#ffffff"/>
-  <text x="${w / 2}" y="32" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#1e293b">${nomeEmpresa}</text>
-  <text x="${w / 2}" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#64748b">${cnpjEmpresa}</text>
-  <text x="${w / 2}" y="82" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#1e293b">COMPROVANTE DE REGISTRO DE PONTO</text>
-  <rect x="20" y="100" width="${w - 40}" height="118" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" rx="4"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${baseW} ${baseH}" width="${w}" height="${h}">
+  <rect width="${baseW}" height="${baseH}" fill="#ffffff"/>
+  <text x="${baseW / 2}" y="32" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#1e293b">${nomeEmpresa}</text>
+  <text x="${baseW / 2}" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#64748b">${cnpjEmpresa}</text>
+  <text x="${baseW / 2}" y="82" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#1e293b">COMPROVANTE DE REGISTRO DE PONTO</text>
+  <rect x="20" y="100" width="${baseW - 40}" height="118" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" rx="4"/>
   <text x="32" y="118" font-family="Arial, sans-serif" font-size="8" fill="#64748b">Nome do Funcionário</text>
   <text x="32" y="134" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#1e293b">${nomeFunc}</text>
   <text x="32" y="158" font-family="Arial, sans-serif" font-size="8" fill="#64748b">PIS / CPF</text>

@@ -27,22 +27,28 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const payload = exception.getResponse();
-      message = typeof payload === 'object' && payload !== null && 'message' in payload
-        ? (payload as { message: string | string[] }).message
-        : String(payload);
+      message =
+        typeof payload === 'object' && payload !== null && 'message' in payload
+          ? (payload as { message: string | string[] }).message
+          : String(payload);
     } else if (exception instanceof Error) {
       this.logger.error(
         `${req.method} ${(req as any).url} → ${exception.message}`,
         exception.stack,
       );
-      message = process.env.NODE_ENV === 'production'
-        ? 'Erro interno do servidor.'
-        : exception.message;
+      message =
+        process.env.NODE_ENV === 'production'
+          ? 'Erro interno do servidor.'
+          : exception.message;
     }
 
-    const body = typeof message === 'object'
-      ? { statusCode: status, ...(Array.isArray(message) ? { message } : message) }
-      : { statusCode: status, message };
+    const body =
+      typeof message === 'object'
+        ? {
+            statusCode: status,
+            ...(Array.isArray(message) ? { message } : message),
+          }
+        : { statusCode: status, message };
 
     res.status(status).json(body);
   }

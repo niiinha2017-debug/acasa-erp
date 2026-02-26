@@ -4,6 +4,7 @@ import { CreateOrcamentoDto } from './dto/create-orcamento.dto';
 import { UpdateOrcamentoDto } from './dto/update-orcamento.dto';
 import { CreateOrcamentoItemDto } from './dto/create-orcamento-item.dto';
 import { UpdateOrcamentoItemDto } from './dto/update-orcamento-item.dto';
+import { validarTransicaoStatusCliente } from '../shared/constantes/pipeline-cliente';
 import * as path from 'path';
 import { renderHeaderA4Png, resolveAsset } from '../pdf/render-header-a4';
 import PDFKitDoc from 'pdfkit';
@@ -13,9 +14,7 @@ import sizeOf from 'image-size';
 
 @Injectable()
 export class OrcamentosService {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   // =========================================================
   // PDF
@@ -52,7 +51,11 @@ export class OrcamentosService {
 
   private async gerarMioloPdfBuffer(
     orc: any,
-    anexos: { url: string; nome: string | null; mime_type: string | null }[] = [],
+    anexos: {
+      url: string;
+      nome: string | null;
+      mime_type: string | null;
+    }[] = [],
     clausulas: { titulo: string; texto: string }[] = [],
   ): Promise<Buffer> {
     return new Promise((resolve, reject) => {
@@ -77,18 +80,6 @@ export class OrcamentosService {
         const colValW = 100;
         const colDescW = tableWidth - colAmbW - colValW;
 
-        const montarListaItensComDescricao = (orcamento: any): string => {
-          const itens = orcamento?.itens && Array.isArray(orcamento.itens) ? orcamento.itens : [];
-          if (!itens.length) return '';
-          return itens
-            .map((it: any, idx: number) => {
-              const nome = String(it.nome_ambiente || `Ambiente ${idx + 1}`).toUpperCase();
-              const desc = String(it.descricao || '').trim();
-              return `${idx + 1}. ${nome}${desc ? ` – ${desc}` : ''}`;
-            })
-            .join('\n');
-        };
-
         const aplicarLayoutPagina = (opts?: { mostrarTabela?: boolean }) => {
           const mostrarTabela = opts?.mostrarTabela !== false;
           const startY = renderHeaderA4Png(doc);
@@ -99,12 +90,6 @@ export class OrcamentosService {
             .fontSize(16)
             .fillColor('#000')
             .text('ORÇAMENTO', left, doc.y, { align: 'center' });
-          doc
-            .font('Helvetica')
-            .fontSize(7)
-            .text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, {
-              align: 'center',
-            });
 
           doc.y += 10;
           doc
@@ -208,21 +193,6 @@ export class OrcamentosService {
         doc.addPage();
         aplicarLayoutPagina();
 
-        // Lista de itens com descrição (texto) antes da tabela
-        const listaItensComDesc = montarListaItensComDescricao(orc);
-        if (listaItensComDesc) {
-          doc
-            .font('Helvetica')
-            .fontSize(8)
-            .fillColor('#444')
-            .text(listaItensComDesc, left, doc.y, {
-              width: tableWidth,
-              align: 'left',
-            });
-          const numLinhas = listaItensComDesc.split('\n').length;
-          doc.y += doc.currentLineHeight() * numLinhas + 10;
-        }
-
         // ITENS
         let total = 0;
 
@@ -325,7 +295,9 @@ export class OrcamentosService {
 
         // CLÁUSULAS DO ORÇAMENTO (contratos) — antes das imagens
         const clausulasFiltradas = Array.isArray(clausulas)
-          ? clausulas.filter((c) => c?.titulo != null || String(c?.texto || '').trim())
+          ? clausulas.filter(
+              (c) => c?.titulo != null || String(c?.texto || '').trim(),
+            )
           : [];
         if (clausulasFiltradas.length > 0) {
           const margemClausula = 40;
@@ -395,10 +367,7 @@ export class OrcamentosService {
 
         // ANEXOS (imagens somente nas páginas seguintes, nunca no meio do orçamento)
         const extImg = /\.(jpe?g|png|gif|webp|bmp)$/i;
-        const isImage = (a: {
-          url?: string;
-          mime_type?: string | null;
-        }) => {
+        const isImage = (a: { url?: string; mime_type?: string | null }) => {
           if (!a?.url) return false;
           const mt = String(a.mime_type || '').toLowerCase();
           if (mt.startsWith('image/')) return true;
@@ -549,15 +518,56 @@ export class OrcamentosService {
       where: { id: dto.cliente_id },
     });
     if (!cliente) throw new NotFoundException('Cliente não encontrado.');
+    return this.prisma.$transaction(async (tx) => {
+      const orcamento = await tx.orcamentos.create({
+        data: {
+          cliente_id: cliente.id,
+          cliente_nome_snapshot: cliente.nome_completo,
+          cliente_cpf_snapshot: cliente.cpf || '',
+          qtd_ambientes: 0,
+        },
+        include: { cliente: true, itens: true },
+      });
 
-    return this.prisma.orcamentos.create({
-      data: {
-        cliente_id: cliente.id,
-        cliente_nome_snapshot: cliente.nome_completo,
-        cliente_cpf_snapshot: cliente.cpf || '',
-        qtd_ambientes: 0,
+      const statusDestino = 'CRIAR_ORCAMENTO';
+      const validacao = validarTransicaoStatusCliente({
+        atual: cliente.status,
+        proximo: statusDestino,
+      });
+
+      if (
+        validacao.ok &&
+        String(cliente.status || '').toUpperCase() !== statusDestino
+      ) {
+        await tx.cliente.update({
+          where: { id: cliente.id },
+          data: { status: statusDestino },
+        });
+      }
+
+      return orcamento;
+    });
+  }
+
+  async listarAguardandoApresentacao() {
+    const lista = await this.prisma.orcamentos.findMany({
+      orderBy: { id: 'desc' },
+      include: {
+        cliente: true,
+        venda: { select: { id: true, status: true } },
+        itens: {
+          select: { valor_total: true, nome_ambiente: true },
+          orderBy: { id: 'asc' },
+        },
       },
-      include: { cliente: true, itens: true },
+    });
+    return lista.map((o) => {
+      const totalItens = o.itens.reduce(
+        (acc, i) => acc + Number(i.valor_total || 0),
+        0,
+      );
+      const { itens, ...rest } = o;
+      return { ...rest, total_itens: totalItens };
     });
   }
 
@@ -567,7 +577,15 @@ export class OrcamentosService {
       include: {
         cliente: true,
         venda: {
-          select: { id: true, status: true },
+          select: {
+            id: true,
+            status: true,
+            contratos: {
+              take: 1,
+              select: { id: true },
+              orderBy: { id: 'desc' },
+            },
+          },
         },
         itens: {
           select: { valor_total: true, nome_ambiente: true, descricao: true },
@@ -656,7 +674,10 @@ export class OrcamentosService {
 
     const lista = Array.isArray(payload?.clausulas)
       ? payload.clausulas.map((c, idx) => ({
-          modulo_key: c.modulo_key || ['OBJETO', 'PRECO_CONDICOES', 'PRAZO_VALIDADE'][idx] || null,
+          modulo_key:
+            c.modulo_key ||
+            ['OBJETO', 'PRECO_CONDICOES', 'PRAZO_VALIDADE'][idx] ||
+            null,
           titulo: c.titulo || '',
           texto: c.texto || '',
         }))

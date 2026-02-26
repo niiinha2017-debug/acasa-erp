@@ -7,14 +7,7 @@
         :title="isEdit ? `Venda #${vendaId}` : 'Nova Venda'"
         :subtitle="isContextoVenda ? 'Editar venda (loja). Itens, parcelas e comissões.' : 'Pós-venda: venda líquida, rateio, taxas e comissões.'"
         icon="pi pi-shopping-cart"
-      >
-        <template v-if="isEdit && can('agendamentos.criar')" #actions>
-          <Button variant="secondary" size="sm" type="button" @click="abrirModalEnviarProducao">
-            <i class="pi pi-send mr-2"></i>
-            Enviar para Produção
-          </Button>
-        </template>
-      </PageHeader>
+      />
 
       <div class="p-6 md:p-8 border-t border-border-ui relative">
       <Loading v-if="loading" />
@@ -67,12 +60,68 @@
               <Input v-model="form.data_venda" type="date" label="Data da venda" :forceUpper="false" />
             </div>
 
-            <div class="col-span-12">
+            <div class="col-span-12 md:col-span-3">
+              <Input
+                v-model="form.cep_entrega"
+                label="CEP da entrega"
+                placeholder="00000-000"
+                :forceUpper="false"
+                @input="form.cep_entrega = maskCEP(form.cep_entrega)"
+                @blur="buscarEnderecoEntregaPorCep"
+              />
+            </div>
+
+            <div class="col-span-12 md:col-span-4">
               <Input
                 v-model="form.endereco_entrega"
-                label="Endereço da entrega"
-                placeholder="Rua, número, bairro, cidade/UF"
+                label="Nome da rua"
+                placeholder="Rua/Avenida"
                 :forceUpper="false"
+              />
+            </div>
+
+            <div class="col-span-12 md:col-span-1">
+              <Input
+                v-model="form.numero_entrega"
+                label="Nº"
+                placeholder="123"
+                :forceUpper="false"
+              />
+            </div>
+
+            <div class="col-span-12 md:col-span-2">
+              <Input
+                v-model="form.complemento_entrega"
+                label="Complemento"
+                placeholder="Apto, bloco..."
+                :forceUpper="false"
+              />
+            </div>
+
+            <div class="col-span-12 md:col-span-2">
+              <Input
+                v-model="form.bairro_entrega"
+                label="Bairro"
+                placeholder="Bairro"
+                :forceUpper="false"
+              />
+            </div>
+
+            <div class="col-span-12 md:col-span-2">
+              <Input
+                v-model="form.cidade_entrega"
+                label="Cidade"
+                placeholder="Cidade"
+                :forceUpper="false"
+              />
+            </div>
+
+            <div class="col-span-12 md:col-span-1">
+              <Input
+                v-model="form.estado_entrega"
+                label="Estado"
+                placeholder="UF"
+                :forceUpper="true"
               />
             </div>
 
@@ -416,7 +465,7 @@
 
             <div class="col-span-12 md:col-span-3">
               <Input
-                :modelValue="`${form.tem_nota_fiscal ? form.taxa_nota_fiscal_percentual_aplicado : 0}%`"
+                :modelValue="`${form.tem_nota_fiscal ? form.taxa_nota_fiscal_percentual_aplicado : 0}`"
                 label="Alíquota NF"
                 readonly
               />
@@ -660,49 +709,6 @@
     </div>
   </div>
 
-  <!-- Modal Enviar para Produção (Venda / Pós-venda) -->
-  <Teleport to="body">
-    <Transition name="fade">
-      <div
-        v-if="modalEnviarProducao.aberto"
-        class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
-        @click.self="fecharModalEnviarProducao"
-      >
-        <div class="w-full max-w-md rounded-2xl border border-border-ui bg-bg-card shadow-xl overflow-hidden flex flex-col">
-          <div class="h-1 w-full bg-brand-primary" />
-          <header class="flex items-center justify-between px-6 py-4 border-b border-border-ui">
-            <div class="flex items-center gap-3">
-              <i class="pi pi-send text-2xl text-text-soft"></i>
-              <div>
-                <h3 class="text-lg font-semibold text-text-main">Enviar para Produção</h3>
-                <p class="text-[10px] font-medium text-text-muted uppercase tracking-wider">
-                  Cria agendamento na agenda para esta venda
-                </p>
-              </div>
-            </div>
-            <button type="button" class="w-9 h-9 flex items-center justify-center rounded-lg border border-border-ui text-text-muted hover:text-rose-500" @click="fecharModalEnviarProducao">
-              <i class="pi pi-times text-sm"></i>
-            </button>
-          </header>
-          <form class="p-6 space-y-4" @submit.prevent="confirmarEnviarProducao">
-            <Input v-model="modalEnviarProducao.titulo" label="Título do agendamento *" placeholder="Ex: Produção Venda #..." required />
-            <div class="grid grid-cols-2 gap-4">
-              <Input v-model="modalEnviarProducao.inicio_em" label="Início *" type="datetime-local" required />
-              <Input v-model="modalEnviarProducao.fim_em" label="Término *" type="datetime-local" required />
-            </div>
-            <div class="flex justify-end gap-3 pt-4 border-t border-border-ui">
-              <Button type="button" variant="ghost" @click="fecharModalEnviarProducao">Cancelar</Button>
-              <Button type="submit" variant="primary" :loading="modalEnviarProducao.salvando">
-                <i class="pi pi-send mr-2"></i>
-                Enviar para Produção
-              </Button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </Transition>
-  </Teleport>
-
 </template>
 
 
@@ -711,14 +717,15 @@ import { reactive, ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { confirm } from '@/services/confirm'
 import { notify } from '@/services/notify'
-import { AgendaService, ClienteService, FuncionarioService, OrcamentosService, VendaService } from '@/services/index'
+import { ClienteService, OrcamentosService, VendaService } from '@/services/index'
 import { ArquivosService } from '@/services/arquivos.service'
 import { format } from '@/utils/format'
 import { moedaParaNumero } from '@/utils/number'
 import { FORMAS_PAGAMENTO, COMISSOES, TAXAS_CARTAO, TAXA_NOTA_FISCAL, PIPELINE_CLIENTE } from '@/constantes'
 import { can } from '@/services/permissions'
 import { closeTabAndGo } from '@/utils/tabs'
-import { onlyNumbers } from '@/utils/masks'
+import { onlyNumbers, maskCEP } from '@/utils/masks'
+import { buscarCep } from '@/utils/utils'
 
 definePage({ meta: { perm: 'posvenda.ver' } })
 
@@ -761,18 +768,6 @@ const saving = ref(false)
 const clientesOptions = ref([])
 const orcamentosOptions = ref([])
 const clienteFiltroId = ref('')
-const funcionariosOptionsEnviarProducao = ref([])
-
-const modalEnviarProducao = ref({
-  aberto: false,
-  titulo: '',
-  inicio_em: '',
-  fim_em: '',
-  funcionarioSelecionado: null,
-  equipe_ids: [],
-  salvando: false,
-})
-
 // =======================
 // CONSTANTS / OPTIONS
 // =======================
@@ -812,94 +807,41 @@ function pipelineKey(key) {
   return k
 }
 
-function montarEnderecoCliente(cliente) {
-  if (!cliente || typeof cliente !== 'object') return ''
-  const partes = [
-    cliente.endereco,
-    cliente.numero,
-    cliente.complemento,
-    cliente.bairro,
-    cliente.cidade,
-    cliente.estado,
-  ]
-    .map((x) => String(x || '').trim())
-    .filter(Boolean)
-  return partes.join(', ')
+function preencherEnderecoEntregaComCliente(cliente) {
+  form.endereco_entrega = String(cliente?.endereco || '').trim()
+  form.numero_entrega = String(cliente?.numero || '').trim()
+  form.complemento_entrega = String(cliente?.complemento || '').trim()
+  form.bairro_entrega = String(cliente?.bairro || '').trim()
+  form.cidade_entrega = String(cliente?.cidade || '').trim()
+  form.estado_entrega = String(cliente?.estado || '').trim()
+}
+
+function montarEnderecoEntregaCompleto(rua, numero, complemento, bairro, cidade, estado) {
+  const base = String(rua || '').trim()
+  const num = String(numero || '').trim()
+  const comp = String(complemento || '').trim()
+  const bai = String(bairro || '').trim()
+  const cid = String(cidade || '').trim()
+  const uf = String(estado || '').trim()
+  return [base, num, comp, bai, cid, uf].filter(Boolean).join(', ')
+}
+
+async function buscarEnderecoEntregaPorCep() {
+  const cepLimpo = onlyNumbers(form.cep_entrega).slice(0, 8)
+  if (cepLimpo.length !== 8) return
+  const data = await buscarCep(cepLimpo)
+  if (!data) {
+    notify.warn('CEP de entrega não encontrado.')
+    return
+  }
+  form.cep_entrega = data.cep ? maskCEP(data.cep) : form.cep_entrega
+  form.endereco_entrega = String(data.logradouro || form.endereco_entrega || '').trim()
+  form.bairro_entrega = String(data.bairro || form.bairro_entrega || '').trim()
+  form.cidade_entrega = String(data.localidade || form.cidade_entrega || '').trim()
+  form.estado_entrega = String(data.uf || form.estado_entrega || '').trim()
 }
 
 // (Contrato é aberto a partir do fluxo de venda/fechamento, não daqui)
-
-// =======================
-// ENVIAR PARA PRODUÇÃO (Venda / Pós-venda)
-// =======================
-function funcionarioNomeByIdEnviarProducao(id) {
-  const o = funcionariosOptionsEnviarProducao.value.find((f) => String(f.value) === String(id))
-  return o?.label || String(id)
-}
-function adicionarEquipeEnviarProducao(id) {
-  if (!id) return
-  if (!modalEnviarProducao.value.equipe_ids.includes(id)) modalEnviarProducao.value.equipe_ids.push(id)
-  modalEnviarProducao.value.funcionarioSelecionado = null
-}
-function removerEquipeEnviarProducao(id) {
-  modalEnviarProducao.value.equipe_ids = modalEnviarProducao.value.equipe_ids.filter((f) => String(f) !== String(id))
-}
-function fecharModalEnviarProducao() {
-  modalEnviarProducao.value.aberto = false
-  modalEnviarProducao.value.titulo = ''
-  modalEnviarProducao.value.inicio_em = ''
-  modalEnviarProducao.value.fim_em = ''
-  modalEnviarProducao.value.funcionarioSelecionado = null
-  modalEnviarProducao.value.equipe_ids = []
-}
-async function abrirModalEnviarProducao() {
-  const cid = Number(clienteFiltroId.value)
-  if (!cid) return notify.error('Selecione o cliente da venda.')
-  if (!vendaId.value) return notify.error('Venda não carregada.')
-  try {
-    const res = await FuncionarioService.select()
-    const lista = Array.isArray(res?.data) ? res.data : []
-    funcionariosOptionsEnviarProducao.value = lista
-      .map((item) => ({ label: item?.label || item?.nome || '', value: item?.value ?? item?.id ?? null }))
-      .filter((opt) => opt.value != null)
-  } catch (e) {
-    funcionariosOptionsEnviarProducao.value = []
-  }
-  const now = new Date()
-  const fim = new Date(now.getTime() + 2 * 60 * 60 * 1000)
-  const pad = (n) => String(n).padStart(2, '0')
-  modalEnviarProducao.value.titulo = `Produção Venda #${vendaId.value}`
-  modalEnviarProducao.value.inicio_em = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`
-  modalEnviarProducao.value.fim_em = `${fim.getFullYear()}-${pad(fim.getMonth() + 1)}-${pad(fim.getDate())}T${pad(fim.getHours())}:${pad(fim.getMinutes())}`
-  modalEnviarProducao.value.equipe_ids = []
-  modalEnviarProducao.value.aberto = true
-}
-async function confirmarEnviarProducao() {
-  const inicio = new Date(modalEnviarProducao.value.inicio_em)
-  const fim = new Date(modalEnviarProducao.value.fim_em)
-  if (Number.isNaN(inicio.getTime()) || Number.isNaN(fim.getTime())) return notify.error('Data de início e término inválidas.')
-  if (fim <= inicio) return notify.error('Término deve ser depois do início.')
-  const cid = Number(clienteFiltroId.value)
-  if (!cid) return notify.error('Cliente não informado.')
-  modalEnviarProducao.value.salvando = true
-  try {
-    await AgendaService.criar({
-      titulo: modalEnviarProducao.value.titulo,
-      inicio_em: inicio.toISOString(),
-      fim_em: fim.toISOString(),
-      cliente_id: cid,
-      venda_id: vendaId.value,
-      equipe_ids: [],
-      categoria: 'PRODUCAO',
-    })
-    notify.success('Venda enviada para produção!')
-    fecharModalEnviarProducao()
-  } catch (e) {
-    notify.error(e?.response?.data?.message || 'Erro ao enviar para produção.')
-  } finally {
-    modalEnviarProducao.value.salvando = false
-  }
-}
 
 // =======================
 // FORM
@@ -908,7 +850,13 @@ const form = reactive({
   orcamento_id: '',
   status: pipelineKey('VENDA_FECHADA'),
   data_venda: new Date().toISOString().slice(0, 10),
+  cep_entrega: '',
   endereco_entrega: '',
+  numero_entrega: '',
+  complemento_entrega: '',
+  bairro_entrega: '',
+  cidade_entrega: '',
+  estado_entrega: '',
 
   valor_vendido: 0,
 
@@ -1357,7 +1305,8 @@ async function carregarOrcamentoNaVenda(orcamentoId) {
   loading.value = true
   try {
     const { data } = await OrcamentosService.detalhar(orcamentoId)
-    form.endereco_entrega = montarEnderecoCliente(data?.cliente)
+    form.cep_entrega = data?.cliente?.cep ? maskCEP(data.cliente.cep) : ''
+    preencherEnderecoEntregaComCliente(data?.cliente)
 
     form.itens = (data?.itens || []).map((it) => ({
       nome_ambiente: it.nome_ambiente,
@@ -1392,8 +1341,18 @@ async function carregarVenda() {
 
     form.orcamento_id = data?.orcamento_id ?? ''
     form.data_venda = data?.data_venda ? String(data.data_venda).slice(0, 10) : form.data_venda
-    form.endereco_entrega =
-      String(data?.endereco_entrega || '').trim() || montarEnderecoCliente(data?.cliente)
+    form.cep_entrega = data?.cliente?.cep ? maskCEP(data.cliente.cep) : ''
+    const enderecoEntregaSalvo = String(data?.endereco_entrega || '').trim()
+    if (enderecoEntregaSalvo) {
+      form.endereco_entrega = enderecoEntregaSalvo
+      form.numero_entrega = ''
+      form.complemento_entrega = ''
+      form.bairro_entrega = ''
+      form.cidade_entrega = ''
+      form.estado_entrega = ''
+    } else {
+      preencherEnderecoEntregaComCliente(data?.cliente)
+    }
     form.valor_vendido = round2(num(data?.valor_vendido || 0))
     form.representante_venda_nome = data?.representante_venda_nome ?? ''
     form.representante_venda_cpf = data?.representante_venda_cpf ?? ''
@@ -1501,7 +1460,15 @@ function montarPayload() {
     orcamento_id: Number(form.orcamento_id),
     status: pipelineKey('VENDA_FECHADA'),
     data_venda: form.data_venda ? String(form.data_venda) : undefined,
-    endereco_entrega: String(form.endereco_entrega || '').trim() || undefined,
+    endereco_entrega:
+      montarEnderecoEntregaCompleto(
+        form.endereco_entrega,
+        form.numero_entrega,
+        form.complemento_entrega,
+        form.bairro_entrega,
+        form.cidade_entrega,
+        form.estado_entrega,
+      ) || undefined,
     valor_vendido: round2(num(form.valor_vendido || 0)),
 
     representante_venda_nome: undefined,
@@ -1595,7 +1562,13 @@ watch(
   async (val) => {
     if (isEdit.value) return
     form.orcamento_id = ''
+    form.cep_entrega = ''
     form.endereco_entrega = ''
+    form.numero_entrega = ''
+    form.complemento_entrega = ''
+    form.bairro_entrega = ''
+    form.cidade_entrega = ''
+    form.estado_entrega = ''
     orcamentosOptions.value = []
     form.itens = []
     if (!val) return

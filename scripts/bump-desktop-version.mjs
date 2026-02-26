@@ -54,6 +54,7 @@ function getArg(name) {
 
 const setVersionArg = getArg('--set')
 const syncOnly = process.argv.includes('--sync')
+const includePonto = process.argv.includes('--include-ponto')
 
 const tauriConf = readJson(paths.tauriConf)
 const current = parseVersion(tauriConf.version)
@@ -85,8 +86,8 @@ if (fs.existsSync(paths.frontendLock)) {
 
 setCargoVersion(paths.cargoToml, version)
 
-// Ponto (Capacitor): mesma versão para o atualizador do app oferecer o novo APK
-if (fs.existsSync(paths.pontoPkg)) {
+// Ponto (Capacitor): só versiona quando solicitado explicitamente.
+if (includePonto && fs.existsSync(paths.pontoPkg)) {
   const pontoPkg = readJson(paths.pontoPkg)
   pontoPkg.version = version
   writeJson(paths.pontoPkg, pontoPkg)
@@ -106,4 +107,5 @@ if (!syncOnly && fs.existsSync(paths.androidBuildGradle)) {
   }
 }
 
-console.log(`Versão unificada (Desktop + Ponto + Android): ${current.major}.${current.minor}.${current.patch} -> ${version}`)
+const scope = includePonto ? 'Desktop + ERP Android + Ponto' : 'Desktop + ERP Android'
+console.log(`Versão (${scope}): ${current.major}.${current.minor}.${current.patch} -> ${version}`)

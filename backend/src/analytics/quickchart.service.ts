@@ -13,7 +13,10 @@ export class QuickChartService {
    * Gera URL de gráfico a partir de configuração Chart.js.
    * width/height maiores = gráficos "maiores" para relatórios.
    */
-  buildChartUrl(config: Record<string, unknown>, options?: { width?: number; height?: number }): string {
+  buildChartUrl(
+    config: Record<string, unknown>,
+    options?: { width?: number; height?: number },
+  ): string {
     const width = options?.width ?? 900;
     const height = options?.height ?? 450;
     const encoded = encodeURIComponent(JSON.stringify(config));
@@ -54,7 +57,12 @@ export class QuickChartService {
         title: { display: true, text: 'DRE - Despesas por mês' },
         legend: { display: false },
         scales: {
-          yAxes: [{ ticks: { beginAtZero: true }, scaleLabel: { display: true, labelString: 'R$' } }],
+          yAxes: [
+            {
+              ticks: { beginAtZero: true },
+              scaleLabel: { display: true, labelString: 'R$' },
+            },
+          ],
         },
       },
     };
@@ -68,7 +76,9 @@ export class QuickChartService {
     linhas: { nome: string; horas_trabalhadas: number }[],
     options?: { width?: number; height?: number },
   ): string {
-    const labels = linhas.map((l) => (l.nome.length > 20 ? l.nome.slice(0, 18) + '…' : l.nome));
+    const labels = linhas.map((l) =>
+      l.nome.length > 20 ? l.nome.slice(0, 18) + '…' : l.nome,
+    );
     const data = linhas.map((l) => l.horas_trabalhadas);
 
     const config = {
@@ -89,7 +99,12 @@ export class QuickChartService {
         title: { display: true, text: 'Horas trabalhadas por funcionário' },
         legend: { display: false },
         scales: {
-          yAxes: [{ ticks: { beginAtZero: true }, scaleLabel: { display: true, labelString: 'horas' } }],
+          yAxes: [
+            {
+              ticks: { beginAtZero: true },
+              scaleLabel: { display: true, labelString: 'horas' },
+            },
+          ],
         },
       },
     };

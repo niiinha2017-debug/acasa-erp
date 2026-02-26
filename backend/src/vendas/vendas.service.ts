@@ -1,10 +1,10 @@
-// src/vendas/vendas.service.ts
 import {
   BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AgendaService } from '../agenda/agenda.service';
 import { CreateVendaDto } from './dto/create-venda.dto';
 import { UpdateVendaDto } from './dto/update-venda.dto';
 import {
@@ -24,7 +24,10 @@ function toNumber(v: any): number {
 
 @Injectable()
 export class VendasService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly agendaService: AgendaService,
+  ) {}
 
   private readonly statusPosVenda = STATUS_POS_VENDA;
 
@@ -50,7 +53,10 @@ export class VendasService {
     }
   }
 
-  private resolverStatusPosVenda(vendaStatus?: string | null, clienteStatus?: string | null) {
+  private resolverStatusPosVenda(
+    vendaStatus?: string | null,
+    clienteStatus?: string | null,
+  ) {
     const venda = String(vendaStatus || '').toUpperCase();
     const cliente = String(clienteStatus || '').toUpperCase();
     if (this.statusPosVenda.includes(venda)) {
@@ -60,6 +66,69 @@ export class VendasService {
       return { status: cliente, status_source: 'cliente' as const };
     }
     return { status: '', status_source: null };
+  }
+
+  private async enviarAutomaticamenteParaProducaoQuandoContratoAssinado(
+    vendaId: number,
+  ) {
+    if (!Number.isFinite(vendaId) || vendaId <= 0) return;
+
+    const agendaJaNaFabrica = await this.prisma.agenda_fabrica.findFirst({
+      where: {
+        venda_id: vendaId,
+        status: { not: 'CANCELADO' },
+      },
+      select: { id: true },
+    });
+    if (agendaJaNaFabrica) return;
+
+    const agendaContratoLoja = await this.prisma.agenda_loja.findFirst({
+      where: {
+        venda_id: vendaId,
+        status: { not: 'CANCELADO' },
+        categoria: 'CONTRATO',
+      },
+      orderBy: { id: 'desc' },
+      select: { id: true },
+    });
+
+    const agendaLoja = agendaContratoLoja
+      ? agendaContratoLoja
+      : await this.prisma.agenda_loja.findFirst({
+          where: {
+            venda_id: vendaId,
+            status: { not: 'CANCELADO' },
+          },
+          orderBy: { id: 'desc' },
+          select: { id: true },
+        });
+
+    if (agendaLoja?.id) {
+      await this.agendaService.enviarParaProducao(agendaLoja.id);
+      return;
+    }
+
+    const venda = await this.prisma.vendas.findUnique({
+      where: { id: vendaId },
+      select: { id: true, cliente_id: true },
+    });
+    if (!venda) return;
+
+    const inicio = new Date();
+    const fim = new Date(inicio.getTime() + 60 * 60 * 1000);
+
+    await this.prisma.agenda_fabrica.create({
+      data: {
+        titulo: `Produção da venda #${vendaId}`,
+        inicio_em: inicio,
+        fim_em: fim,
+        categoria: 'PRODUCAO_RECEBIDA',
+        origem_fluxo: 'LOJA_VENDA',
+        status: 'PENDENTE',
+        venda_id: vendaId,
+        cliente_id: venda.cliente_id || null,
+      },
+    });
   }
 
   // ===============================
@@ -81,7 +150,9 @@ export class VendasService {
     const vendido = round2(toNumber(valorVendido));
     if (total <= 0) return;
     const descontoPercentual = round2(((total - vendido) / total) * 100);
-    const maximo = Number(VENDA_FECHAMENTO_REGRAS.DESCONTO_MAXIMO_PERCENTUAL || 0);
+    const maximo = Number(
+      VENDA_FECHAMENTO_REGRAS.DESCONTO_MAXIMO_PERCENTUAL || 0,
+    );
     if (descontoPercentual > maximo) {
       throw new BadRequestException(
         `Desconto máximo permitido é ${maximo}%. Valor mínimo da venda para este orçamento: ${round2(
@@ -117,7 +188,11 @@ export class VendasService {
       if (!usuario) {
         throw new BadRequestException(`Usuário ${usuarioId} não encontrado.`);
       }
-      if (funcionarioId && usuario.funcionario_id && funcionarioId !== usuario.funcionario_id) {
+      if (
+        funcionarioId &&
+        usuario.funcionario_id &&
+        funcionarioId !== usuario.funcionario_id
+      ) {
         throw new BadRequestException(
           `Usuário ${usuarioId} não está vinculado ao funcionário ${funcionarioId}.`,
         );
@@ -132,9 +207,15 @@ export class VendasService {
         select: { id: true, nome: true, usuario_id: true },
       });
       if (!funcionario) {
-        throw new BadRequestException(`Funcionário ${funcionarioId} não encontrado.`);
+        throw new BadRequestException(
+          `Funcionário ${funcionarioId} não encontrado.`,
+        );
       }
-      if (usuarioId && funcionario.usuario_id && usuarioId !== funcionario.usuario_id) {
+      if (
+        usuarioId &&
+        funcionario.usuario_id &&
+        usuarioId !== funcionario.usuario_id
+      ) {
         throw new BadRequestException(
           `Funcionário ${funcionarioId} não está vinculado ao usuário ${usuarioId}.`,
         );
@@ -183,7 +264,9 @@ export class VendasService {
           ? String(c.responsavel_nome)
           : null,
         responsavel_usuario_id: this.toIntOrNull(c?.responsavel_usuario_id),
-        responsavel_funcionario_id: this.toIntOrNull(c?.responsavel_funcionario_id),
+        responsavel_funcionario_id: this.toIntOrNull(
+          c?.responsavel_funcionario_id,
+        ),
       };
     });
   }
@@ -267,12 +350,25 @@ export class VendasService {
   /** Vendas em etapas que aguardam agendamento, incluindo pós-venda.
    * Observação: algumas etapas de pós-venda podem estar no status do cliente.
    */
+  async listarAguardandoContrato() {
+    const statusContrato = [
+      'ORCAMENTO_APROVADO',
+      'VENDA_FECHADA',
+      'CONTRATO_ASSINADO',
+    ];
+    const lista = await this.prisma.vendas.findMany({
+      where: { status: { in: statusContrato } },
+      orderBy: { id: 'asc' },
+      include: { cliente: true },
+    });
+    return lista;
+  }
+
   async listarAguardandoAgendamento() {
     const vendaStatuses = [
       'CONTRATO_GERADO',
       'AGENDAR_MEDIDA',
       'AGENDAR_MEDIDA_FINA',
-      'AGENDAR_MONTAGEM',
       'GARANTIA',
       'MANUTENCAO',
       'ASSISTENCIA',
@@ -295,7 +391,10 @@ export class VendasService {
     // Dedupe explícito por venda.id com prioridade da fonte de status: venda > cliente.
     const porId = new Map<number, any>();
     for (const venda of [...porStatusCliente, ...porStatusVenda]) {
-      const efetivo = this.resolverStatusPosVenda(venda.status, venda.cliente?.status);
+      const efetivo = this.resolverStatusPosVenda(
+        venda.status,
+        venda.cliente?.status,
+      );
       porId.set(venda.id, {
         ...venda,
         status_source: efetivo.status_source,
@@ -352,7 +451,10 @@ export class VendasService {
 
     const valorVendido = round2(toNumber(dto.valor_vendido));
     const totalOrcado = round2(
-      (orc.itens || []).reduce((acc, it) => acc + toNumber((it as any)?.valor_unitario || 0), 0),
+      (orc.itens || []).reduce(
+        (acc, it) => acc + toNumber((it as any)?.valor_unitario || 0),
+        0,
+      ),
     );
     this.validarRegraDesconto(valorVendido, totalOrcado);
     this.validarSomaPagamentos(dto.pagamentos, valorVendido);
@@ -384,10 +486,7 @@ export class VendasService {
     });
 
     const comissoesCalc = await this.enriquecerComissoesComIds(
-      this.calcularComissoes(
-        valorVendido,
-        dto.comissoes || [],
-      ),
+      this.calcularComissoes(valorVendido, dto.comissoes || []),
     );
     const somaComissoes = round2(
       comissoesCalc.reduce((acc, c) => acc + toNumber(c.valor_comissao), 0),
@@ -425,7 +524,7 @@ export class VendasService {
           valor_total: totais.valor_total,
 
           representante_venda_nome:
-            (dto.representante_venda_nome?.trim() || representante.nome || null),
+            dto.representante_venda_nome?.trim() || representante.nome || null,
           representante_venda_cpf: dto.representante_venda_cpf?.trim() || null,
           representante_venda_rg: dto.representante_venda_rg?.trim() || null,
           representante_venda_usuario_id: representante.usuarioId,
@@ -481,6 +580,27 @@ export class VendasService {
         })),
       });
 
+      if (orc.cliente_id && dto.status) {
+        const cliente = await tx.cliente.findUnique({
+          where: { id: orc.cliente_id },
+          select: { id: true, status: true },
+        });
+        if (
+          cliente &&
+          validarTransicaoStatusCliente({
+            atual: cliente.status,
+            proximo: dto.status,
+          }).ok &&
+          String(cliente.status || '').toUpperCase() !==
+            String(dto.status).toUpperCase()
+        ) {
+          await tx.cliente.update({
+            where: { id: orc.cliente_id },
+            data: { status: dto.status },
+          });
+        }
+      }
+
       return tx.vendas.findUnique({
         where: { id: venda.id },
         include: {
@@ -529,7 +649,10 @@ export class VendasService {
     });
     if (!orc) throw new NotFoundException('Orçamento da venda não encontrado.');
     const totalOrcado = round2(
-      (orc.itens || []).reduce((acc, it) => acc + toNumber((it as any)?.valor_unitario || 0), 0),
+      (orc.itens || []).reduce(
+        (acc, it) => acc + toNumber((it as any)?.valor_unitario || 0),
+        0,
+      ),
     );
     this.validarRegraDesconto(valorVendido, totalOrcado);
 
@@ -579,7 +702,7 @@ export class VendasService {
       soma_comissoes: somaComissoes,
     });
 
-    return this.prisma.$transaction(async (tx) => {
+    const vendaAtualizada = await this.prisma.$transaction(async (tx) => {
       await tx.vendas.update({
         where: { id },
         data: {
@@ -601,10 +724,12 @@ export class VendasService {
           valor_total: totais.valor_total,
 
           ...(dto.representante_venda_nome !== undefined && {
-            representante_venda_nome: dto.representante_venda_nome?.trim() || null,
+            representante_venda_nome:
+              dto.representante_venda_nome?.trim() || null,
           }),
           ...(dto.representante_venda_cpf !== undefined && {
-            representante_venda_cpf: dto.representante_venda_cpf?.trim() || null,
+            representante_venda_cpf:
+              dto.representante_venda_cpf?.trim() || null,
           }),
           ...(dto.representante_venda_rg !== undefined && {
             representante_venda_rg: dto.representante_venda_rg?.trim() || null,
@@ -658,6 +783,31 @@ export class VendasService {
         });
       }
 
+      if (
+        dto.status !== undefined &&
+        (atual as any).cliente_id &&
+        statusClienteEhValido(dto.status)
+      ) {
+        const cliente = await tx.cliente.findUnique({
+          where: { id: (atual as any).cliente_id },
+          select: { id: true, status: true },
+        });
+        if (
+          cliente &&
+          validarTransicaoStatusCliente({
+            atual: cliente.status,
+            proximo: dto.status,
+          }).ok &&
+          String(cliente.status || '').toUpperCase() !==
+            String(dto.status).toUpperCase()
+        ) {
+          await tx.cliente.update({
+            where: { id: (atual as any).cliente_id },
+            data: { status: dto.status },
+          });
+        }
+      }
+
       return tx.vendas.findUnique({
         where: { id },
         include: {
@@ -669,6 +819,17 @@ export class VendasService {
         },
       });
     });
+
+    const statusAnterior = String(atual.status || '').toUpperCase();
+    const statusNovo = String(dto.status || statusAnterior).toUpperCase();
+    if (
+      statusAnterior !== 'CONTRATO_ASSINADO' &&
+      statusNovo === 'CONTRATO_ASSINADO'
+    ) {
+      await this.enviarAutomaticamenteParaProducaoQuandoContratoAssinado(id);
+    }
+
+    return vendaAtualizada;
   }
 
   async atualizarStatus(id: number, status: string) {
@@ -679,7 +840,43 @@ export class VendasService {
       status,
       'Atualização de status da venda',
     );
-    return this.prisma.vendas.update({ where: { id }, data: { status } });
+    const vendaAtualizada = await this.prisma.vendas.update({
+      where: { id },
+      data: { status },
+    });
+    const clienteId = (venda as any).cliente_id;
+    if (
+      clienteId &&
+      statusClienteEhValido(status) &&
+      String((venda as any).status || '').toUpperCase() !==
+        String(status).toUpperCase()
+    ) {
+      const cliente = await this.prisma.cliente.findUnique({
+        where: { id: clienteId },
+        select: { id: true, status: true },
+      });
+      if (
+        cliente &&
+        validarTransicaoStatusCliente({
+          atual: cliente.status,
+          proximo: status,
+        }).ok
+      ) {
+        await this.prisma.cliente.update({
+          where: { id: clienteId },
+          data: { status },
+        });
+      }
+    }
+    const statusAnterior = String(venda.status || '').toUpperCase();
+    const statusNovo = String(status || '').toUpperCase();
+    if (
+      statusAnterior !== 'CONTRATO_ASSINADO' &&
+      statusNovo === 'CONTRATO_ASSINADO'
+    ) {
+      await this.enviarAutomaticamenteParaProducaoQuandoContratoAssinado(id);
+    }
+    return vendaAtualizada;
   }
 
   async remover(id: number) {

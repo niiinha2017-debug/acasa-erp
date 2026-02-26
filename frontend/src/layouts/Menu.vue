@@ -3,7 +3,7 @@
     <div class="h-full min-w-0 px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2">
       
       <!-- LOGO E MARCA -->
-      <RouterLink to="/agendamentos?visao=geral" class="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink transition-opacity hover:opacity-90">
+      <RouterLink to="/agendamentos/loja" class="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink transition-opacity hover:opacity-90">
         <div class="w-9 h-9 bg-gradient-to-br from-[#2f7fb3] to-[#255a82] flex items-center justify-center text-white rounded-xl shadow-sm">
           <i class="pi pi-box text-xs"></i>
         </div>

@@ -45,7 +45,7 @@ export class FuncionariosService {
       where: { id },
     });
     if (!funcionario)
-      throw new NotFoundException('FuncionÃ¡rio nÃ£o encontrado.');
+      throw new NotFoundException('Funcionário não encontrado.');
     return funcionario;
   }
   private onlyDigits(v: any) {
@@ -59,14 +59,25 @@ export class FuncionariosService {
   }
 
   private formatRG(v: any) {
-    // RG no seu print jÃ¡ estÃ¡ ok, mas isso garante consistÃªncia se vier sem mÃ¡scara.
+    // RG no seu print já está ok, mas isso garante consistência se vier sem máscara.
     const d = this.onlyDigits(v);
     if (!d) return String(v ?? '-');
 
-    // Se vier com 9 dÃ­gitos (ex: 191646374), formata 00.000.000-0
+    // Se vier com 9 dígitos (ex: 191646374), formata 00.000.000-0
     if (d.length === 9)
       return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}-${d.slice(8)}`;
-    return String(v ?? '-'); // se jÃ¡ vier formatado, mantÃ©m
+    return String(v ?? '-'); // se já vier formatado, mantém
+  }
+
+  private normalizarUnidadeFiltro(unidade?: string | null) {
+    const key = String(unidade || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toUpperCase();
+    if (key === 'LOJA') return ['LOJA'];
+    if (key === 'FABRICA') return ['FABRICA', 'FÁBRICA'];
+    return [];
   }
 
   async gerarPdf(ids: number[]): Promise<Buffer> {
@@ -77,7 +88,7 @@ export class FuncionariosService {
     });
 
     if (!funcionarios.length) {
-      throw new NotFoundException('Nenhum funcionÃ¡rio encontrado.');
+      throw new NotFoundException('Nenhum funcionário encontrado.');
     }
 
     const doc = new PDFDocument({ size: 'A4', margin: 40 });
@@ -123,12 +134,20 @@ export class FuncionariosService {
     return done;
   }
 
-  async select(q?: string) {
+  async select(q?: string, unidade?: string) {
     const termo = String(q || '').trim();
+    const unidadesPermitidas = this.normalizarUnidadeFiltro(unidade);
 
     const rows = await this.prisma.funcionarios.findMany({
       where: {
         status: 'ATIVO',
+        ...(unidadesPermitidas.length
+          ? {
+              unidade: {
+                in: unidadesPermitidas,
+              },
+            }
+          : {}),
         ...(termo
           ? {
               OR: [{ nome: { contains: termo } }, { cpf: { contains: termo } }],
@@ -168,7 +187,7 @@ export class FuncionariosService {
         owner_type: 'EMPRESA',
         owner_id: 1,
         categoria: 'RELATORIO',
-        slot_key: null, // âœ… importante pra nÃ£o bater no unique
+        slot_key: null, // importante para não bater no unique
         url,
         filename,
         nome: `RELATORIO FUNCIONARIOS ${stamp}`,
@@ -185,7 +204,7 @@ export class FuncionariosService {
     try {
       const data = this.normalizarDatas(dto);
 
-      // âœ… status baseado na sua regra (demissao inativa, admissao/registro ativa)
+      // status baseado na sua regra (demissao inativa, admissao/registro ativa)
       data.status = this.calcularStatus({
         data_inicio: data.data_inicio,
         admissao: data.admissao,
@@ -195,7 +214,7 @@ export class FuncionariosService {
       return await this.prisma.funcionarios.create({ data });
     } catch (e: any) {
       if (e?.code === 'P2002')
-        throw new BadRequestException('CPF jÃ¡ cadastrado.');
+        throw new BadRequestException('CPF já cadastrado.');
       throw e;
     }
   }
@@ -206,7 +225,7 @@ export class FuncionariosService {
     try {
       const data = this.normalizarDatas(dto);
 
-      // sÃ³ recalcula se mexeu em registro ou demissao
+      // só recalcula se mexeu em registro ou demissao
       const mexeuEmInicio = Object.prototype.hasOwnProperty.call(
         data,
         'data_inicio',
@@ -225,8 +244,7 @@ export class FuncionariosService {
           where: { id },
           select: { data_inicio: true, admissao: true, demissao: true },
         });
-        if (!atual)
-          throw new NotFoundException('FuncionÃ¡rio nÃ£o encontrado.');
+        if (!atual) throw new NotFoundException('Funcionário não encontrado.');
         data.status = this.calcularStatus({
           data_inicio: mexeuEmInicio ? data.data_inicio : atual.data_inicio,
           admissao: mexeuEmAdmissao ? data.admissao : atual.admissao,
@@ -240,7 +258,7 @@ export class FuncionariosService {
       });
     } catch (e: any) {
       if (e?.code === 'P2002')
-        throw new BadRequestException('CPF jÃ¡ cadastrado.');
+        throw new BadRequestException('CPF já cadastrado.');
       throw e;
     }
   }

@@ -25,7 +25,14 @@ export class UtilsController {
   }
 
   @Get('cep/:cep')
-  @Permissoes('clientes.ver', 'clientes.criar', 'clientes.editar', 'fornecedores.ver', 'funcionarios.ver', 'configuracoes.empresa.ver')
+  @Permissoes(
+    'clientes.ver',
+    'clientes.criar',
+    'clientes.editar',
+    'fornecedores.ver',
+    'funcionarios.ver',
+    'configuracoes.empresa.ver',
+  )
   buscarCep(@Param('cep') cep: string) {
     return this.utilsService.buscarCep(cep);
   }

@@ -171,7 +171,9 @@ export class AuthService {
       .toLowerCase();
     const senhaManual = String(dto.senha || '').trim();
     const usarSenhaManual = senhaManual.length > 0;
-    const senhaFinal = usarSenhaManual ? senhaManual : this.gerarSenhaProvisoria();
+    const senhaFinal = usarSenhaManual
+      ? senhaManual
+      : this.gerarSenhaProvisoria();
     const senhaHash = await bcrypt.hash(senhaFinal, 10);
 
     try {
@@ -191,10 +193,7 @@ export class AuthService {
         const permissoesDefault = await this.prisma.permissoes.findMany({
           where: {
             chave: {
-              in: [
-                'agendamentos.ver',
-                'pendente.visualizar',
-              ],
+              in: ['agendamentos.ver', 'pendente.visualizar'],
             },
           },
         });

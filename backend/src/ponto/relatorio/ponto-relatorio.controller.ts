@@ -42,9 +42,12 @@ export class PontoRelatorioController {
       const ext = fmt === 'jpg' ? 'jpeg' : fmt;
       const buffer = await this.service.gerarComprovanteImageBuffer(
         registroId,
-        ext as 'png' | 'jpeg',
+        ext,
       );
-      res.setHeader('Content-Type', ext === 'jpeg' ? 'image/jpeg' : 'image/png');
+      res.setHeader(
+        'Content-Type',
+        ext === 'jpeg' ? 'image/jpeg' : 'image/png',
+      );
       res.setHeader(
         'Content-Disposition',
         `inline; filename="comprovante-ponto-${registroId}.${ext === 'jpeg' ? 'jpg' : 'png'}"`,
@@ -74,7 +77,8 @@ export class PontoRelatorioController {
     @Query('apenas_ativos') apenas_ativos?: string,
     @Query('funcionario_id') funcionario_id?: string,
   ) {
-    const funcId = Number(String(funcionario_id || '').replace(/\D/g, '')) || undefined;
+    const funcId =
+      Number(String(funcionario_id || '').replace(/\D/g, '')) || undefined;
     return this.service.fechamentoFolha({
       data_ini,
       data_fim,
@@ -93,14 +97,16 @@ export class PontoRelatorioController {
 
   @Get('feriados')
   listarFeriadosNacionais(@Query('ano') ano?: string) {
-    const a = ano ? Number(String(ano).replace(/\D/g, '')) : new Date().getFullYear();
+    const a = ano
+      ? Number(String(ano).replace(/\D/g, ''))
+      : new Date().getFullYear();
     return this.service.listarFeriadosNacionais(a);
   }
 
   @Put('feriados-config')
   @Permissoes('ponto_relatorio.ver')
   salvarFeriadosConfig(@Body() body: { itens?: any[] } | any[]) {
-    const itens = Array.isArray(body) ? body : (body?.itens || []);
+    const itens = Array.isArray(body) ? body : body?.itens || [];
     return this.service.salvarFeriadosConfig(itens);
   }
 

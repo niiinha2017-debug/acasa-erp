@@ -10,20 +10,86 @@ import {
   SetorDestino,
 } from './agenda-rules';
 import { validarTransicaoStatusCliente } from '../shared/constantes/pipeline-cliente';
+import { PIPELINE_PRODUCAO } from '../shared/constantes/pipeline-producao';
 
 @Injectable()
 export class AgendaService {
   private readonly logger = new Logger(AgendaService.name);
+  private readonly categoriasPosVenda = [
+    'GARANTIA',
+    'MANUTENCAO',
+    'ASSISTENCIA',
+  ];
+  private readonly reversaoStatusPorCategoria: Record<
+    string,
+    { statusAplicado: string; statusAnterior: string }
+  > = {
+    MEDIDA: {
+      statusAplicado: 'MEDIDA_AGENDADA',
+      statusAnterior: 'AGENDAR_MEDIDA',
+    },
+    AGENDAR_MEDIDA: {
+      statusAplicado: 'MEDIDA_AGENDADA',
+      statusAnterior: 'AGENDAR_MEDIDA',
+    },
+    ORCAMENTO: {
+      statusAplicado: 'ORCAMENTO_EM_ANDAMENTO',
+      statusAnterior: 'CRIAR_ORCAMENTO',
+    },
+    CRIAR_ORCAMENTO: {
+      statusAplicado: 'ORCAMENTO_EM_ANDAMENTO',
+      statusAnterior: 'CRIAR_ORCAMENTO',
+    },
+    APRESENTACAO: {
+      statusAplicado: 'APRESENTACAO_AGENDADA',
+      statusAnterior: 'AGENDAR_APRESENTACAO',
+    },
+    AGENDAR_APRESENTACAO: {
+      statusAplicado: 'APRESENTACAO_AGENDADA',
+      statusAnterior: 'AGENDAR_APRESENTACAO',
+    },
+    CONTRATO: {
+      statusAplicado: 'CONTRATO_ASSINADO',
+      statusAnterior: 'VENDA_FECHADA',
+    },
+    CONTRATO_GERADO: {
+      statusAplicado: 'CONTRATO_ASSINADO',
+      statusAnterior: 'VENDA_FECHADA',
+    },
+    MEDIDA_FINA: {
+      statusAplicado: 'MEDIDA_FINA_AGENDADA',
+      statusAnterior: 'AGENDAR_MEDIDA_FINA',
+    },
+    AGENDAR_MEDIDA_FINA: {
+      statusAplicado: 'MEDIDA_FINA_AGENDADA',
+      statusAnterior: 'AGENDAR_MEDIDA_FINA',
+    },
+  };
   constructor(private prisma: PrismaService) {}
 
+  private normalizarCategoriaKey(categoria?: string | null): string {
+    return String(categoria || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toUpperCase()
+      .replace(/[\s-]+/g, '_');
+  }
+
   private categoriaToStatus(categoria?: string) {
-    const categoriaKey = String(categoria || '').toUpperCase();
+    const categoriaKey = this.normalizarCategoriaKey(categoria);
     const map: Record<string, string> = {
       MEDIDA: 'MEDIDA_AGENDADA',
+      AGENDAR_MEDIDA: 'MEDIDA_AGENDADA',
       ORCAMENTO: 'ORCAMENTO_EM_ANDAMENTO',
+      CRIAR_ORCAMENTO: 'ORCAMENTO_EM_ANDAMENTO',
+      AGENDAR_ORCAMENTO: 'ORCAMENTO_EM_ANDAMENTO',
+      APRESENTACAO: 'APRESENTACAO_AGENDADA',
+      AGENDAR_APRESENTACAO: 'APRESENTACAO_AGENDADA',
+      CONTRATO: 'CONTRATO_ASSINADO',
+      CONTRATO_GERADO: 'CONTRATO_ASSINADO',
       MEDIDA_FINA: 'MEDIDA_FINA_AGENDADA',
-      PRODUCAO: 'PRODUCAO_AGENDADA',
-      MONTAGEM: 'MONTAGEM_AGENDADA',
+      AGENDAR_MEDIDA_FINA: 'MEDIDA_FINA_AGENDADA',
       GARANTIA: 'GARANTIA',
       MANUTENCAO: 'MANUTENCAO',
       ASSISTENCIA: 'ASSISTENCIA',
@@ -54,7 +120,9 @@ export class AgendaService {
       select: { id: true, status: true },
     });
     if (!venda) {
-      throw new BadRequestException('Venda vinculada ao agendamento não encontrada.');
+      throw new BadRequestException(
+        'Venda vinculada ao agendamento não encontrada.',
+      );
     }
 
     const validacao = validarTransicaoStatusCliente({
@@ -72,14 +140,46 @@ export class AgendaService {
     });
   }
 
+  private async atualizarStatusClienteComValidacao(
+    tx: any,
+    clienteId: number,
+    proximoStatus: string,
+    contexto: string,
+  ) {
+    const cliente = await tx.cliente.findUnique({
+      where: { id: clienteId },
+      select: { id: true, status: true },
+    });
+    if (!cliente) {
+      throw new BadRequestException(
+        'Cliente vinculado ao agendamento não encontrado.',
+      );
+    }
+
+    const validacao = validarTransicaoStatusCliente({
+      atual: cliente.status,
+      proximo: proximoStatus,
+    });
+    if (!validacao.ok) {
+      throw new BadRequestException(`${contexto}: ${validacao.motivo}`);
+    }
+
+    await tx.cliente.update({
+      where: { id: clienteId },
+      data: { status: proximoStatus },
+    });
+  }
+
   private async persistirAuditoriaStatusPosVenda(
     tx: any,
     params: {
       agendaId: number;
       origemAplicada: 'venda' | 'cliente';
+      setor: 'LOJA' | 'FABRICA';
     },
   ) {
-    await tx.agenda_global.update({
+    const table = params.setor === 'LOJA' ? tx.agenda_loja : tx.agenda_fabrica;
+    await table.update({
       where: { id: params.agendaId },
       data: {
         status_source: params.origemAplicada,
@@ -114,13 +214,13 @@ export class AgendaService {
 
     const setorInferidoPorOrigem: SetorDestino =
       origemFluxo === 'PLANO_CORTE' || origemFluxo === 'VENDA_PLANO_CORTE'
-        ? 'PRODUCAO'
+        ? 'FABRICA'
         : 'LOJA';
 
     const setorDestino =
       normalizarSetorDestino(params.setorDestinoInput) ||
       setorAtual ||
-      (params.planoCorteId ? 'PRODUCAO' : setorInferidoPorOrigem);
+      (params.planoCorteId ? 'FABRICA' : setorInferidoPorOrigem);
 
     if (!origemPermitidaNoSetor(setorDestino, origemFluxo)) {
       throw new BadRequestException(
@@ -138,7 +238,8 @@ export class AgendaService {
     clienteId?: number | null;
     fornecedorId?: number | null;
   }) {
-    const { origemFluxo, vendaId, planoCorteId, clienteId, fornecedorId } = params;
+    const { origemFluxo, vendaId, planoCorteId, clienteId, fornecedorId } =
+      params;
     if (origemFluxo === 'PLANO_CORTE' && !planoCorteId) {
       throw new BadRequestException('Origem PLANO_CORTE exige plano_corte_id.');
     }
@@ -147,13 +248,22 @@ export class AgendaService {
         'Origem VENDA_PLANO_CORTE exige venda_id e plano_corte_id.',
       );
     }
-    if (origemFluxo === 'LOJA_VENDA' && !vendaId) {
-      throw new BadRequestException('Origem LOJA_VENDA exige venda_id.');
+    if (origemFluxo === 'LOJA_VENDA' && !vendaId && !clienteId) {
+      throw new BadRequestException(
+        'Agendamento da loja exige venda vinculada ou cliente selecionado.',
+      );
     }
     if (origemFluxo === 'POS_VENDA' && !vendaId && !clienteId) {
-      throw new BadRequestException('Origem POS_VENDA exige venda_id ou cliente_id.');
+      throw new BadRequestException(
+        'Origem POS_VENDA exige venda_id ou cliente_id.',
+      );
     }
-    if (origemFluxo !== 'TAREFA' && !clienteId && !fornecedorId && !planoCorteId) {
+    if (
+      origemFluxo !== 'TAREFA' &&
+      !clienteId &&
+      !fornecedorId &&
+      !planoCorteId
+    ) {
       throw new BadRequestException(
         'Agendamento vinculado exige cliente_id ou plano_corte_id.',
       );
@@ -165,7 +275,69 @@ export class AgendaService {
       throw new BadRequestException('Período inválido para o agendamento');
     }
     if (fim <= inicio) {
-      throw new BadRequestException('Data de término deve ser maior que a de início');
+      throw new BadRequestException(
+        'Data de término deve ser maior que a de início',
+      );
+    }
+  }
+
+  private formatarPeriodo(inicio: Date | string, fim: Date | string): string {
+    const i = typeof inicio === 'string' ? new Date(inicio) : inicio;
+    const f = typeof fim === 'string' ? new Date(fim) : fim;
+    const d = (d: Date) =>
+      d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    const t = (d: Date) =>
+      d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return `${d(i)} ${t(i)}–${t(f)}`;
+  }
+
+  private ehCategoriaPosVenda(categoria?: string | null): boolean {
+    const key = String(categoria || '')
+      .trim()
+      .toUpperCase();
+    return this.categoriasPosVenda.includes(key);
+  }
+
+  private async validarPosVendaAposMontagem(params: {
+    tx: any;
+    categoria?: string | null;
+    vendaId?: number | null;
+    setor?: 'LOJA' | 'FABRICA';
+  }) {
+    if (!this.ehCategoriaPosVenda(params.categoria)) return;
+
+    const vendaId = Number(params.vendaId || 0);
+    if (!vendaId) {
+      throw new BadRequestException(
+        'Para abrir garantia, manutenção ou assistência é obrigatório vincular a venda.',
+      );
+    }
+
+    const montagemLoja = await params.tx.agenda_loja.findFirst({
+      where: {
+        venda_id: vendaId,
+        categoria: {
+          in: ['MONTAGEM_CLIENTE_FINALIZADA', 'MONTAGEM_FINALIZADA'],
+        },
+        status: 'CONCLUIDO',
+      },
+      select: { id: true },
+    });
+    const montagemFabrica = await params.tx.agenda_fabrica.findFirst({
+      where: {
+        venda_id: vendaId,
+        categoria: {
+          in: ['MONTAGEM_CLIENTE_FINALIZADA', 'MONTAGEM_FINALIZADA'],
+        },
+        status: 'CONCLUIDO',
+      },
+      select: { id: true },
+    });
+
+    if (!montagemLoja && !montagemFabrica) {
+      throw new BadRequestException(
+        'Só é possível abrir garantia, manutenção ou assistência após o término da montagem do cliente.',
+      );
     }
   }
 
@@ -176,6 +348,7 @@ export class AgendaService {
       inicio: Date;
       fim: Date;
       equipeIds: number[];
+      setor?: 'LOJA' | 'FABRICA';
       apontamentos?: Array<{
         funcionario_id: number;
         inicio_em: Date | string;
@@ -188,8 +361,12 @@ export class AgendaService {
     );
     if (!equipeIdsUnicos.length) return;
 
-    const hasApontamentos = Array.isArray(params.apontamentos) && params.apontamentos.length > 0;
-    const periodosPorFuncionario = new Map<number, Array<{ inicio: Date; fim: Date }>>();
+    const hasApontamentos =
+      Array.isArray(params.apontamentos) && params.apontamentos.length > 0;
+    const periodosPorFuncionario = new Map<
+      number,
+      Array<{ inicio: Date; fim: Date }>
+    >();
 
     if (hasApontamentos) {
       for (const item of params.apontamentos || []) {
@@ -204,9 +381,19 @@ export class AgendaService {
       }
     } else {
       for (const fid of equipeIdsUnicos) {
-        periodosPorFuncionario.set(fid, [{ inicio: params.inicio, fim: params.fim }]);
+        periodosPorFuncionario.set(fid, [
+          { inicio: params.inicio, fim: params.fim },
+        ]);
       }
     }
+
+    const setor = params.setor ?? 'LOJA';
+    const apontamentosTable =
+      setor === 'LOJA'
+        ? tx.agenda_loja_apontamentos
+        : tx.agenda_fabrica_apontamentos;
+    const agendaTable = setor === 'LOJA' ? tx.agenda_loja : tx.agenda_fabrica;
+    const agendaRelation = setor === 'LOJA' ? 'agenda_loja' : 'agenda_fabrica';
 
     for (const [funcionarioId, periodos] of periodosPorFuncionario.entries()) {
       const orPeriodos = periodos.map((p) => ({
@@ -214,37 +401,56 @@ export class AgendaService {
         fim_em: { gt: p.inicio },
       }));
 
-      // Conflito em apontamentos já existentes desse funcionário
-      const conflitoApontamento = await tx.agenda_apontamentos.findFirst({
+      const conflitoApontamento = await apontamentosTable.findFirst({
         where: {
           funcionario_id: funcionarioId,
-          agenda_id: params.agendaIdIgnorar ? { not: params.agendaIdIgnorar } : undefined,
-          agenda: { status: { not: 'CANCELADO' } },
+          [agendaRelation]: {
+            ...(params.agendaIdIgnorar
+              ? { id: { not: params.agendaIdIgnorar } }
+              : {}),
+            status: { not: 'CANCELADO' },
+          },
           OR: orPeriodos,
         },
-        select: { id: true, agenda_id: true },
+        select: {
+          id: true,
+          inicio_em: true,
+          fim_em: true,
+          [agendaRelation]: { select: { titulo: true } },
+        },
       });
 
       if (conflitoApontamento) {
+        const ag = conflitoApontamento[agendaRelation];
+        const titulo = ag?.titulo || 'Agendamento';
+        const ini = conflitoApontamento.inicio_em;
+        const fim = conflitoApontamento.fim_em;
+        const periodo =
+          ini && fim ? ` (${this.formatarPeriodo(ini, fim)})` : '';
         throw new BadRequestException(
-          `Conflito de horário para o funcionário ${funcionarioId}.`,
+          `Conflito de horário para o funcionário ${funcionarioId}: já existe "${titulo}"${periodo}. Escolha outro horário ou outro funcionário.`,
         );
       }
 
-      // Conflito em eventos sem apontamento detalhado (usa janela do evento)
-      const conflitoEvento = await tx.agenda_global.findFirst({
+      const conflitoEvento = await agendaTable.findFirst({
         where: {
-          id: params.agendaIdIgnorar ? { not: params.agendaIdIgnorar } : undefined,
+          id: params.agendaIdIgnorar
+            ? { not: params.agendaIdIgnorar }
+            : undefined,
           status: { not: 'CANCELADO' },
           equipe: { some: { funcionario_id: funcionarioId } },
           OR: orPeriodos,
         },
-        select: { id: true },
+        select: { id: true, titulo: true, inicio_em: true, fim_em: true },
       });
 
       if (conflitoEvento) {
+        const periodo =
+          conflitoEvento.inicio_em && conflitoEvento.fim_em
+            ? ` (${this.formatarPeriodo(conflitoEvento.inicio_em, conflitoEvento.fim_em)})`
+            : '';
         throw new BadRequestException(
-          `Conflito de horário para o funcionário ${funcionarioId}.`,
+          `Conflito de horário para o funcionário ${funcionarioId}: já existe "${conflitoEvento.titulo || 'Evento'}"${periodo}. Escolha outro horário ou outro funcionário.`,
         );
       }
     }
@@ -297,8 +503,8 @@ export class AgendaService {
       fornecedor_id: fornecedorId,
       categoria: categoria || null,
       origem_fluxo: origemFluxo,
-      setor_destino: setorDestino,
     };
+    const isLoja = setorDestino === 'LOJA';
 
     const idsEquipe = Array.isArray(equipe_ids)
       ? Array.from(new Set(equipe_ids.map(Number).filter(Boolean)))
@@ -310,45 +516,75 @@ export class AgendaService {
         fim: new Date(dto.fim_em),
         equipeIds: idsEquipe,
         apontamentos,
+        setor: setorDestino,
+      });
+      await this.validarPosVendaAposMontagem({
+        tx,
+        categoria: categoria || null,
+        vendaId: dto.venda_id ?? null,
+        setor: setorDestino,
       });
 
-      // 1. Cria o evento na agenda (equipe opcional)
-      const agendamento = await tx.agenda_global.create({
-        data: {
-          ...dataAgenda,
-          equipe: {
-            create: idsEquipe.map((id) => ({
-              funcionario_id: id,
-            })),
-          },
+      const createPayload: any = {
+        ...dataAgenda,
+        equipe: {
+          create: idsEquipe.map((id) => ({ funcionario_id: id })),
         },
-        include: {
-          equipe: { include: { funcionario: true } },
-          apontamentos: true,
-          cliente: true,
-          fornecedor: true,
-          plano_corte: true,
-          venda: true,
-        } as any,
-      });
+      };
+      if (!isLoja && dto.plano_corte_id) {
+        createPayload.plano_corte_id = dto.plano_corte_id;
+      }
 
-      // 1.1. Cria apontamentos de horas, se enviados
+      const agendamento = isLoja
+        ? await tx.agenda_loja.create({
+            data: createPayload,
+            include: {
+              equipe: { include: { funcionario: true } },
+              apontamentos: true,
+              cliente: true,
+              fornecedor: true,
+              venda: true,
+            },
+          })
+        : await tx.agenda_fabrica.create({
+            data: createPayload,
+            include: {
+              equipe: { include: { funcionario: true } },
+              apontamentos: true,
+              cliente: true,
+              fornecedor: true,
+              plano_corte: true,
+              venda: true,
+            },
+          });
+
       if (Array.isArray(apontamentos) && apontamentos.length) {
-        await (tx as any).agenda_apontamentos.createMany({
-          data: apontamentos.map((item) => ({
-            agenda_id: agendamento.id,
-            funcionario_id: item.funcionario_id,
-            inicio_em: new Date(item.inicio_em),
-            fim_em: new Date(item.fim_em),
-          })),
-        });
+        if (isLoja) {
+          await tx.agenda_loja_apontamentos.createMany({
+            data: apontamentos.map((item: any) => ({
+              agenda_loja_id: agendamento.id,
+              funcionario_id: item.funcionario_id,
+              inicio_em: new Date(item.inicio_em),
+              fim_em: new Date(item.fim_em),
+            })),
+          });
+        } else {
+          await tx.agenda_fabrica_apontamentos.createMany({
+            data: apontamentos.map((item: any) => ({
+              agenda_fabrica_id: agendamento.id,
+              funcionario_id: item.funcionario_id,
+              inicio_em: new Date(item.inicio_em),
+              fim_em: new Date(item.fim_em),
+            })),
+          });
+        }
       }
 
       // 2. Atualiza status do Plano de Corte se houver ID
       if (dto.plano_corte_id) {
         await tx.plano_corte.update({
           where: { id: dto.plano_corte_id },
-          data: { status: 'EM_PRODUCAO' }, // Key da ordem 2 do pipeline
+          data: { status: 'EM_ANDAMENTO' }, // Key da ordem 2 do pipeline
         });
       }
 
@@ -358,17 +594,43 @@ export class AgendaService {
           dto.venda_id && dto.venda_id > 0 ? 'venda' : 'cliente';
 
         if (origemAplicada === 'venda' && dto.venda_id) {
-          await this.atualizarStatusVendaComValidacao(
-            tx,
-            dto.venda_id,
-            novoStatus,
-            'Agendamento (pós-venda)',
-          );
-        } else if (clienteId) {
-          await tx.cliente.update({
-            where: { id: clienteId },
-            data: { status: novoStatus },
+          const venda = await tx.vendas.findUnique({
+            where: { id: dto.venda_id },
+            select: { status: true },
           });
+          if (
+            venda &&
+            validarTransicaoStatusCliente({
+              atual: venda.status,
+              proximo: novoStatus,
+            }).ok
+          ) {
+            await this.atualizarStatusVendaComValidacao(
+              tx,
+              dto.venda_id,
+              novoStatus,
+              'Agendamento (pós-venda)',
+            );
+          }
+        } else if (clienteId) {
+          const cliente = await tx.cliente.findUnique({
+            where: { id: clienteId },
+            select: { status: true },
+          });
+          if (
+            cliente &&
+            validarTransicaoStatusCliente({
+              atual: cliente.status,
+              proximo: novoStatus,
+            }).ok
+          ) {
+            await this.atualizarStatusClienteComValidacao(
+              tx,
+              clienteId,
+              novoStatus,
+              'Agendamento (pós-venda)',
+            );
+          }
         }
 
         this.registrarAuditoriaStatusPosVenda({
@@ -381,22 +643,49 @@ export class AgendaService {
         await this.persistirAuditoriaStatusPosVenda(tx, {
           agendaId: agendamento.id,
           origemAplicada,
+          setor: setorDestino,
         });
       } else {
         if (dto.venda_id && novoStatus) {
-          await this.atualizarStatusVendaComValidacao(
-            tx,
-            dto.venda_id,
-            novoStatus,
-            'Agendamento',
-          );
+          const venda = await tx.vendas.findUnique({
+            where: { id: dto.venda_id },
+            select: { status: true },
+          });
+          if (
+            venda &&
+            validarTransicaoStatusCliente({
+              atual: venda.status,
+              proximo: novoStatus,
+            }).ok
+          ) {
+            await this.atualizarStatusVendaComValidacao(
+              tx,
+              dto.venda_id,
+              novoStatus,
+              'Agendamento',
+            );
+          }
         }
 
         if (clienteId && clienteStatus) {
-          await tx.cliente.update({
+          const cliente = await tx.cliente.findUnique({
             where: { id: clienteId },
-            data: { status: clienteStatus },
+            select: { status: true },
           });
+          if (
+            cliente &&
+            validarTransicaoStatusCliente({
+              atual: cliente.status,
+              proximo: clienteStatus,
+            }).ok
+          ) {
+            await this.atualizarStatusClienteComValidacao(
+              tx,
+              clienteId,
+              clienteStatus,
+              'Agendamento',
+            );
+          }
         }
       }
 
@@ -411,73 +700,119 @@ export class AgendaService {
       includePlanoCorte?: boolean;
       status?: string;
       funcionarioId?: number;
-      setorDestino?: 'LOJA' | 'PRODUCAO';
+      setorDestino?: 'LOJA' | 'FABRICA';
       origemFluxo?: OrigemFluxo;
       incluirCancelados?: boolean;
     },
   ) {
+    const setor = opts?.setorDestino ?? 'LOJA';
     const includePlanoCorte = opts?.includePlanoCorte !== false;
     const incluirCancelados = opts?.incluirCancelados === true;
-    return this.prisma.agenda_global.findMany({
-      where: {
-        inicio_em: {
-          gte: inicio ? new Date(inicio) : undefined,
-          lte: fim ? new Date(fim) : undefined,
-        },
-        status: opts?.status
-          ? opts.status
-          : incluirCancelados
-            ? undefined
-            : { not: 'CANCELADO' },
-        equipe: opts?.funcionarioId
-          ? {
-              some: {
-                funcionario_id: opts.funcionarioId,
-              },
-            }
-          : undefined,
-        setor_destino: opts?.setorDestino || undefined,
-        origem_fluxo: opts?.origemFluxo || undefined,
-        ...(includePlanoCorte ? {} : { plano_corte_id: null }),
+    const where: any = {
+      inicio_em: {
+        gte: inicio ? new Date(inicio) : undefined,
+        lte: fim ? new Date(fim) : undefined,
       },
-      include: {
-        cliente: true,
-        fornecedor: true,
-        equipe: { include: { funcionario: true } },
-        plano_corte: true,
-        venda: true,
-        apontamentos: true,
-      } as any,
+      status: opts?.status
+        ? opts.status
+        : incluirCancelados
+          ? undefined
+          : { not: 'CANCELADO' },
+      equipe: opts?.funcionarioId
+        ? { some: { funcionario_id: opts.funcionarioId } }
+        : undefined,
+      origem_fluxo: opts?.origemFluxo || undefined,
+    };
+    const include: any = {
+      cliente: true,
+      fornecedor: true,
+      equipe: { include: { funcionario: true } },
+      venda: true,
+      apontamentos: true,
+    };
+    if (setor === 'FABRICA') {
+      include.plano_corte = true;
+    }
+    if (setor === 'LOJA') {
+      return this.prisma.agenda_loja.findMany({
+        where: { ...where, ...(includePlanoCorte ? {} : {}) },
+        include,
+        orderBy: { inicio_em: 'asc' },
+      });
+    }
+    return this.prisma.agenda_fabrica.findMany({
+      where,
+      include,
       orderBy: { inicio_em: 'asc' },
     });
   }
 
-  async findByFuncionario(funcionarioId: number) {
-    return this.prisma.agenda_global.findMany({
-      where: {
-        status: { not: 'CANCELADO' },
-        equipe: {
-          some: { funcionario_id: funcionarioId },
+  async findOneLoja(id: number) {
+    return this.prisma.agenda_loja.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+  }
+
+  async findOneFabrica(id: number) {
+    return this.prisma.agenda_fabrica.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+  }
+
+  /** @deprecated Use findOneLoja ou findOneFabrica */
+  async findOne(_id: number) {
+    return null;
+  }
+
+  async findByFuncionario(
+    funcionarioId: number,
+    setorDestino?: 'LOJA' | 'FABRICA',
+  ) {
+    const setor = setorDestino ?? 'LOJA';
+    const where = {
+      status: { not: 'CANCELADO' as const },
+      equipe: { some: { funcionario_id: funcionarioId } },
+    };
+    if (setor === 'LOJA') {
+      return this.prisma.agenda_loja.findMany({
+        where,
+        include: {
+          cliente: true,
+          fornecedor: true,
+          apontamentos: true,
         },
-      },
+        orderBy: { inicio_em: 'asc' },
+      });
+    }
+    return this.prisma.agenda_fabrica.findMany({
+      where,
       include: {
         cliente: true,
         fornecedor: true,
         plano_corte: true,
         apontamentos: true,
-      } as any,
+      },
       orderBy: { inicio_em: 'asc' },
     });
   }
 
   async update(id: number, dto: UpdateAgendaDto) {
-    const atual = await this.prisma.agenda_global.findUnique({
+    const inLoja = await this.prisma.agenda_loja.findUnique({
       where: { id },
-      include: {
-        equipe: true,
-        apontamentos: true,
-      } as any,
+      include: { equipe: true, apontamentos: true },
     });
+    const inFabrica = await this.prisma.agenda_fabrica.findUnique({
+      where: { id },
+      include: { equipe: true, apontamentos: true },
+    });
+    const setor: 'LOJA' | 'FABRICA' = inLoja
+      ? 'LOJA'
+      : inFabrica
+        ? 'FABRICA'
+        : (null as any);
+    const atual = inLoja ?? inFabrica;
     if (!atual) {
       throw new BadRequestException('Agendamento não encontrado');
     }
@@ -493,15 +828,18 @@ export class AgendaService {
     const categoriaRef = categoria ?? (atual as any).categoria;
     const { status: clienteStatus } = this.categoriaToStatus(categoriaRef);
 
-    const inicio = dto.inicio_em ? new Date(dto.inicio_em) : new Date(atual.inicio_em);
+    const inicio = dto.inicio_em
+      ? new Date(dto.inicio_em)
+      : new Date(atual.inicio_em);
     const fim = dto.fim_em ? new Date(dto.fim_em) : new Date(atual.fim_em);
     this.validarPeriodo(inicio, fim);
 
     const clienteId = dto.cliente_id ?? atual.cliente_id ?? null;
     let fornecedorId = dto.fornecedor_id ?? atual.fornecedor_id ?? null;
-    const planoCorteId = dto.plano_corte_id ?? atual.plano_corte_id ?? null;
+    const planoCorteId =
+      dto.plano_corte_id ?? (atual as any).plano_corte_id ?? null;
 
-    if (planoCorteId) {
+    if (planoCorteId && setor === 'FABRICA') {
       const plano = await this.prisma.plano_corte.findUnique({
         where: { id: planoCorteId },
         select: { fornecedor_id: true },
@@ -513,10 +851,10 @@ export class AgendaService {
     }
 
     const vendaId = dto.venda_id ?? atual.venda_id ?? null;
-    const { setorDestino, origemFluxo } = this.resolverSetorOrigem({
-      setorDestinoInput: setor_destino,
+    const { setorDestino: _sd, origemFluxo } = this.resolverSetorOrigem({
+      setorDestinoInput: setor_destino ?? setor,
       origemFluxoInput: origem_fluxo,
-      setorAtual: (atual as any).setor_destino,
+      setorAtual: setor,
       origemAtual: (atual as any).origem_fluxo,
       planoCorteId,
       vendaId,
@@ -532,32 +870,22 @@ export class AgendaService {
       );
     }
 
-    if (
-      setor_destino &&
-      (atual as any).setor_destino &&
-      String((atual as any).setor_destino).toUpperCase() !== setorDestino
-    ) {
-      throw new BadRequestException(
-        'Use o endpoint enviar-producao para alterar o setor destino.',
-      );
-    }
-
     this.validarVinculosPorOrigem({
       origemFluxo,
       vendaId,
-      planoCorteId,
+      planoCorteId: setor === 'FABRICA' ? planoCorteId : undefined,
       clienteId,
       fornecedorId,
     });
 
     const equipeIds = Array.isArray(equipe_ids)
       ? Array.from(new Set(equipe_ids.map(Number).filter(Boolean)))
-      : atual.equipe.map((e) => e.funcionario_id);
+      : (atual.equipe as any[]).map((e) => e.funcionario_id);
 
     const apontamentosParaConflito =
       Array.isArray(apontamentos) && apontamentos.length
         ? apontamentos
-        : atual.apontamentos.map((a) => ({
+        : (atual.apontamentos as any[]).map((a) => ({
             funcionario_id: a.funcionario_id,
             inicio_em: a.inicio_em,
             fim_em: a.fim_em,
@@ -570,45 +898,95 @@ export class AgendaService {
         fim,
         equipeIds,
         apontamentos: apontamentosParaConflito,
+        setor,
+      });
+      await this.validarPosVendaAposMontagem({
+        tx,
+        categoria: categoriaRef,
+        vendaId,
+        setor,
       });
 
-      const agendamento = await tx.agenda_global.update({
-        where: { id },
-        data: {
-          ...dadosAgenda,
-          cliente_id: clienteId,
-          fornecedor_id: fornecedorId,
-          categoria: categoria ?? (atual as any).categoria ?? null,
-          origem_fluxo: origemFluxo,
-          setor_destino: setorDestino,
-          inicio_em: inicio,
-          fim_em: fim,
-        },
-      });
+      const updateData: any = {
+        ...dadosAgenda,
+        cliente_id: clienteId,
+        fornecedor_id: fornecedorId,
+        categoria: categoria ?? (atual as any).categoria ?? null,
+        origem_fluxo: origemFluxo,
+        inicio_em: inicio,
+        fim_em: fim,
+      };
+
+      let agendamento: any;
+      if (setor === 'LOJA') {
+        agendamento = await tx.agenda_loja.update({
+          where: { id },
+          data: updateData,
+        });
+      } else {
+        agendamento = await tx.agenda_fabrica.update({
+          where: { id },
+          data: updateData,
+        });
+      }
 
       if (Array.isArray(equipe_ids)) {
-        await tx.agenda_funcionarios.deleteMany({ where: { agenda_id: id } });
-        if (equipeIds.length) {
-          await tx.agenda_funcionarios.createMany({
-            data: equipeIds.map((funcionarioId) => ({
-              agenda_id: id,
-              funcionario_id: funcionarioId,
-            })),
+        if (setor === 'LOJA') {
+          await tx.agenda_loja_funcionarios.deleteMany({
+            where: { agenda_loja_id: id },
           });
+          if (equipeIds.length) {
+            await tx.agenda_loja_funcionarios.createMany({
+              data: equipeIds.map((funcionarioId) => ({
+                agenda_loja_id: id,
+                funcionario_id: funcionarioId,
+              })),
+            });
+          }
+        } else {
+          await tx.agenda_fabrica_funcionarios.deleteMany({
+            where: { agenda_fabrica_id: id },
+          });
+          if (equipeIds.length) {
+            await tx.agenda_fabrica_funcionarios.createMany({
+              data: equipeIds.map((funcionarioId) => ({
+                agenda_fabrica_id: id,
+                funcionario_id: funcionarioId,
+              })),
+            });
+          }
         }
       }
 
       if (Array.isArray(apontamentos)) {
-        await tx.agenda_apontamentos.deleteMany({ where: { agenda_id: id } });
-        if (apontamentos.length) {
-          await tx.agenda_apontamentos.createMany({
-            data: apontamentos.map((item) => ({
-              agenda_id: id,
-              funcionario_id: item.funcionario_id,
-              inicio_em: new Date(item.inicio_em),
-              fim_em: new Date(item.fim_em),
-            })),
+        if (setor === 'LOJA') {
+          await tx.agenda_loja_apontamentos.deleteMany({
+            where: { agenda_loja_id: id },
           });
+          if (apontamentos.length) {
+            await tx.agenda_loja_apontamentos.createMany({
+              data: apontamentos.map((item) => ({
+                agenda_loja_id: id,
+                funcionario_id: item.funcionario_id,
+                inicio_em: new Date(item.inicio_em),
+                fim_em: new Date(item.fim_em),
+              })),
+            });
+          }
+        } else {
+          await tx.agenda_fabrica_apontamentos.deleteMany({
+            where: { agenda_fabrica_id: id },
+          });
+          if (apontamentos.length) {
+            await tx.agenda_fabrica_apontamentos.createMany({
+              data: apontamentos.map((item) => ({
+                agenda_fabrica_id: id,
+                funcionario_id: item.funcionario_id,
+                inicio_em: new Date(item.inicio_em),
+                fim_em: new Date(item.fim_em),
+              })),
+            });
+          }
         }
       }
 
@@ -618,17 +996,43 @@ export class AgendaService {
           vendaId && vendaId > 0 ? 'venda' : 'cliente';
 
         if (origemAplicada === 'venda' && vendaId) {
-          await this.atualizarStatusVendaComValidacao(
-            tx,
-            vendaId,
-            novoStatus,
-            'Edição de agendamento (pós-venda)',
-          );
-        } else if (clienteId) {
-          await tx.cliente.update({
-            where: { id: clienteId },
-            data: { status: novoStatus },
+          const venda = await tx.vendas.findUnique({
+            where: { id: vendaId },
+            select: { status: true },
           });
+          if (
+            venda &&
+            validarTransicaoStatusCliente({
+              atual: venda.status,
+              proximo: novoStatus,
+            }).ok
+          ) {
+            await this.atualizarStatusVendaComValidacao(
+              tx,
+              vendaId,
+              novoStatus,
+              'Edição de agendamento (pós-venda)',
+            );
+          }
+        } else if (clienteId) {
+          const cliente = await tx.cliente.findUnique({
+            where: { id: clienteId },
+            select: { status: true },
+          });
+          if (
+            cliente &&
+            validarTransicaoStatusCliente({
+              atual: cliente.status,
+              proximo: novoStatus,
+            }).ok
+          ) {
+            await this.atualizarStatusClienteComValidacao(
+              tx,
+              clienteId,
+              novoStatus,
+              'Edição de agendamento (pós-venda)',
+            );
+          }
         }
 
         this.registrarAuditoriaStatusPosVenda({
@@ -641,39 +1045,70 @@ export class AgendaService {
         await this.persistirAuditoriaStatusPosVenda(tx, {
           agendaId: id,
           origemAplicada,
+          setor,
         });
       } else {
         if (vendaId && novoStatus) {
-          await this.atualizarStatusVendaComValidacao(
-            tx,
-            vendaId,
-            novoStatus,
-            'Edição de agendamento',
-          );
+          const venda = await tx.vendas.findUnique({
+            where: { id: vendaId },
+            select: { status: true },
+          });
+          if (
+            venda &&
+            validarTransicaoStatusCliente({
+              atual: venda.status,
+              proximo: novoStatus,
+            }).ok
+          ) {
+            await this.atualizarStatusVendaComValidacao(
+              tx,
+              vendaId,
+              novoStatus,
+              'Edição de agendamento',
+            );
+          }
         }
 
         if (clienteId && clienteStatus) {
-          await tx.cliente.update({
+          const cliente = await tx.cliente.findUnique({
             where: { id: clienteId },
-            data: { status: clienteStatus },
+            select: { status: true },
           });
+          if (
+            cliente &&
+            validarTransicaoStatusCliente({
+              atual: cliente.status,
+              proximo: clienteStatus,
+            }).ok
+          ) {
+            await this.atualizarStatusClienteComValidacao(
+              tx,
+              clienteId,
+              clienteStatus,
+              'Edição de agendamento',
+            );
+          }
         }
 
         if ((atual as any).status_source || (atual as any).status_aplicado_em) {
-          await tx.agenda_global.update({
-            where: { id },
-            data: {
-              status_source: null,
-              status_aplicado_em: null,
-            } as any,
-          });
+          if (setor === 'LOJA') {
+            await tx.agenda_loja.update({
+              where: { id },
+              data: { status_source: null, status_aplicado_em: null },
+            });
+          } else {
+            await tx.agenda_fabrica.update({
+              where: { id },
+              data: { status_source: null, status_aplicado_em: null },
+            });
+          }
         }
       }
 
       if (planoCorteId) {
         await tx.plano_corte.update({
           where: { id: planoCorteId },
-          data: { status: 'EM_PRODUCAO' },
+          data: { status: 'EM_ANDAMENTO' },
         });
       }
 
@@ -681,79 +1116,382 @@ export class AgendaService {
     });
   }
 
-  async updateStatus(id: number, status: string) {
+  async updateStatus(id: number, status: string, categoria?: string) {
+    const inLoja = await this.prisma.agenda_loja.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    const inFabrica = await this.prisma.agenda_fabrica.findUnique({
+      where: { id },
+      select: { id: true, plano_corte_id: true },
+    });
+    const setor = inLoja ? 'LOJA' : inFabrica ? 'FABRICA' : null;
+    if (!setor) {
+      throw new BadRequestException('Agendamento não encontrado');
+    }
     return this.prisma.$transaction(async (tx) => {
-      const agendamento = await tx.agenda_global.update({
+      const data: Record<string, unknown> = { status };
+      if (categoria) data.categoria = categoria;
+      if (setor === 'LOJA') {
+        const agendamento = await tx.agenda_loja.update({
+          where: { id },
+          data: data as any,
+        });
+        return agendamento;
+      }
+      const agendamento = await tx.agenda_fabrica.update({
         where: { id },
-        data: { status },
+        data: data as any,
       });
-
-      // Se o funcionário marcou como CONCLUÍDO na agenda,
-      // o status do Plano de Corte sobe para FINALIZADO automaticamente.
-      if (status === 'CONCLUIDO' && agendamento.plano_corte_id) {
+      if (status === 'CONCLUIDO' && inFabrica?.plano_corte_id) {
         await tx.plano_corte.update({
-          where: { id: agendamento.plano_corte_id },
+          where: { id: inFabrica.plano_corte_id },
           data: { status: 'FINALIZADO' },
         });
       }
-
       return agendamento;
     });
   }
 
   async cancel(id: number) {
-    return this.prisma.agenda_global.update({
-      where: { id },
-      data: { status: 'CANCELADO' },
+    return this.prisma.$transaction(async (tx) => {
+      const loja = await tx.agenda_loja.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          status: true,
+          categoria: true,
+          venda_id: true,
+          cliente_id: true,
+        },
+      });
+      const fabrica = await tx.agenda_fabrica.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          status: true,
+          categoria: true,
+          venda_id: true,
+          cliente_id: true,
+        },
+      });
+      const agendamento = loja ?? fabrica;
+      const setor = loja ? 'LOJA' : fabrica ? 'FABRICA' : null;
+      if (!agendamento || !setor) {
+        throw new BadRequestException('Agendamento não encontrado');
+      }
+      const atualizado =
+        setor === 'LOJA'
+          ? await tx.agenda_loja.update({
+              where: { id },
+              data: { status: 'CANCELADO' },
+            })
+          : await tx.agenda_fabrica.update({
+              where: { id },
+              data: { status: 'CANCELADO' },
+            });
+
+      const categoriaKey = this.normalizarCategoriaKey(agendamento.categoria);
+      const reversao = this.reversaoStatusPorCategoria[categoriaKey];
+      if (!reversao) return atualizado;
+
+      const alvosMesmoVinculo: Array<{
+        venda_id?: number;
+        cliente_id?: number;
+      }> = [];
+      if (agendamento.venda_id)
+        alvosMesmoVinculo.push({ venda_id: agendamento.venda_id });
+      if (agendamento.cliente_id)
+        alvosMesmoVinculo.push({ cliente_id: agendamento.cliente_id });
+
+      const existeOutroAgendamentoAtivo =
+        alvosMesmoVinculo.length > 0
+          ? setor === 'LOJA'
+            ? await tx.agenda_loja.findFirst({
+                where: {
+                  id: { not: id },
+                  status: { not: 'CANCELADO' },
+                  categoria: agendamento.categoria || null,
+                  OR: alvosMesmoVinculo,
+                },
+                select: { id: true },
+              })
+            : await tx.agenda_fabrica.findFirst({
+                where: {
+                  id: { not: id },
+                  status: { not: 'CANCELADO' },
+                  categoria: agendamento.categoria || null,
+                  OR: alvosMesmoVinculo,
+                },
+                select: { id: true },
+              })
+          : null;
+      if (existeOutroAgendamentoAtivo) return atualizado;
+
+      if (agendamento.venda_id) {
+        const venda = await tx.vendas.findUnique({
+          where: { id: agendamento.venda_id },
+          select: { id: true, status: true },
+        });
+        if (
+          venda &&
+          String(venda.status || '').toUpperCase() === reversao.statusAplicado
+        ) {
+          await tx.vendas.update({
+            where: { id: venda.id },
+            data: { status: reversao.statusAnterior },
+          });
+        }
+      }
+
+      if (agendamento.cliente_id) {
+        const cliente = await tx.cliente.findUnique({
+          where: { id: agendamento.cliente_id },
+          select: { id: true, status: true },
+        });
+        if (
+          cliente &&
+          String(cliente.status || '').toUpperCase() === reversao.statusAplicado
+        ) {
+          await tx.cliente.update({
+            where: { id: cliente.id },
+            data: { status: reversao.statusAnterior },
+          });
+        }
+      }
+
+      return atualizado;
     });
   }
 
   async enviarParaProducao(id: number) {
-    const atual = await this.prisma.agenda_global.findUnique({
+    const atual = await this.prisma.agenda_loja.findUnique({
       where: { id },
-      select: {
-        id: true,
-        status: true,
-        setor_destino: true,
-        origem_fluxo: true,
-        venda_id: true,
-        plano_corte_id: true,
-      },
+      include: { equipe: true },
     });
 
     if (!atual) {
-      throw new BadRequestException('Agendamento não encontrado');
+      throw new BadRequestException(
+        'Agendamento não encontrado ou já está na agenda da fábrica.',
+      );
     }
     if (atual.status === 'CANCELADO') {
-      throw new BadRequestException('Não é possível enviar agendamento cancelado para produção.');
-    }
-    if (String(atual.setor_destino || '').toUpperCase() === 'PRODUCAO') {
-      throw new BadRequestException('Agendamento já está no setor de produção.');
-    }
-
-    const origemProducao = this.inferirOrigemFluxo(atual.plano_corte_id, atual.venda_id);
-    const setorOrigemAtual = this.resolverSetorOrigem({
-      setorDestinoInput: atual.setor_destino,
-      origemFluxoInput: atual.origem_fluxo,
-      planoCorteId: atual.plano_corte_id,
-      vendaId: atual.venda_id,
-    });
-
-    if (setorOrigemAtual.setorDestino !== 'LOJA') {
-      throw new BadRequestException('Somente agendamentos da loja podem ser enviados para produção.');
-    }
-    if (origemProducao === 'LOJA_VENDA' || origemProducao === 'POS_VENDA') {
       throw new BadRequestException(
-        'Envio para produção exige plano de corte vinculado ou origem TAREFA.',
+        'Não é possível enviar agendamento cancelado para produção.',
       );
     }
 
-    return this.prisma.agenda_global.update({
-      where: { id },
-      data: {
-        setor_destino: 'PRODUCAO',
-        origem_fluxo: origemProducao,
-      },
+    const origemProducao = this.inferirOrigemFluxo(
+      (atual as any).plano_corte_id,
+      atual.venda_id,
+    );
+
+    return this.prisma.$transaction(async (tx) => {
+      const created = await tx.agenda_fabrica.create({
+        data: {
+          cliente_id: atual.cliente_id,
+          fornecedor_id: atual.fornecedor_id,
+          orcamento_id: atual.orcamento_id,
+          venda_id: atual.venda_id,
+          projeto_id: atual.projeto_id,
+          titulo: atual.titulo,
+          inicio_em: atual.inicio_em,
+          fim_em: atual.fim_em,
+          categoria: atual.categoria,
+          origem_fluxo: origemProducao,
+          status: atual.status,
+          equipe: {
+            create: (atual.equipe as any[]).map((e) => ({
+              funcionario_id: e.funcionario_id,
+            })),
+          },
+        },
+        include: { equipe: true, venda: true, plano_corte: true },
+      });
+      await tx.agenda_loja.update({
+        where: { id },
+        data: { status: 'CANCELADO' },
+      });
+      return created;
+    });
+  }
+
+  /** Status do cliente/venda ao concluir o agendamento por categoria (pipeline). */
+  private readonly statusAoConcluirPorCategoria: Record<string, string> = {
+    MEDIDA: 'MEDIDA_REALIZADA',
+    AGENDAR_MEDIDA: 'MEDIDA_REALIZADA',
+    APRESENTACAO: 'ORCAMENTO_APRESENTADO',
+    AGENDAR_APRESENTACAO: 'ORCAMENTO_APRESENTADO',
+    MEDIDA_FINA: 'MEDIDA_FINA_REALIZADA',
+    AGENDAR_MEDIDA_FINA: 'MEDIDA_FINA_REALIZADA',
+  };
+
+  /**
+   * Job: inicia tarefas cujo horário de início já passou (PENDENTE -> EM_ANDAMENTO)
+   * e conclui tarefas cujo horário de término já passou (EM_ANDAMENTO -> CONCLUIDO),
+   * atualizando cliente/venda/plano_corte conforme o pipeline.
+   */
+  async processarAutomaticoPorHorario() {
+    const now = new Date();
+
+    await this.prisma.$transaction(async (tx) => {
+      const [paraIniciarLoja, paraIniciarFabrica] = await Promise.all([
+        tx.agenda_loja.findMany({
+          where: { status: 'PENDENTE', inicio_em: { lte: now } },
+          select: { id: true },
+        }),
+        tx.agenda_fabrica.findMany({
+          where: { status: 'PENDENTE', inicio_em: { lte: now } },
+          select: { id: true },
+        }),
+      ]);
+      if (paraIniciarLoja.length) {
+        await tx.agenda_loja.updateMany({
+          where: { id: { in: paraIniciarLoja.map((a) => a.id) } },
+          data: { status: 'EM_ANDAMENTO' },
+        });
+      }
+      if (paraIniciarFabrica.length) {
+        await tx.agenda_fabrica.updateMany({
+          where: { id: { in: paraIniciarFabrica.map((a) => a.id) } },
+          data: { status: 'EM_ANDAMENTO' },
+        });
+      }
+      const totalIniciadas = paraIniciarLoja.length + paraIniciarFabrica.length;
+      if (totalIniciadas) {
+        this.logger.log(`[AUTO] Iniciadas ${totalIniciadas} tarefa(s).`);
+      }
+
+      const [paraConcluirLoja, paraConcluirFabrica] = await Promise.all([
+        tx.agenda_loja.findMany({
+          where: { status: 'EM_ANDAMENTO', fim_em: { lte: now } },
+          select: {
+            id: true,
+            categoria: true,
+            cliente_id: true,
+            venda_id: true,
+          },
+        }),
+        tx.agenda_fabrica.findMany({
+          where: { status: 'EM_ANDAMENTO', fim_em: { lte: now } },
+          select: {
+            id: true,
+            categoria: true,
+            cliente_id: true,
+            venda_id: true,
+            plano_corte_id: true,
+          },
+        }),
+      ]);
+
+      for (const ag of paraConcluirLoja) {
+        await tx.agenda_loja.update({
+          where: { id: ag.id },
+          data: { status: 'CONCLUIDO' },
+        });
+        const catKey = this.normalizarCategoriaKey(ag.categoria);
+        const proximoStatus = this.statusAoConcluirPorCategoria[catKey];
+        if (proximoStatus) {
+          if (ag.venda_id) {
+            const venda = await tx.vendas.findUnique({
+              where: { id: ag.venda_id },
+              select: { id: true, status: true },
+            });
+            if (
+              venda &&
+              validarTransicaoStatusCliente({
+                atual: venda.status,
+                proximo: proximoStatus,
+              }).ok &&
+              String(venda.status || '').toUpperCase() !== proximoStatus
+            ) {
+              await tx.vendas.update({
+                where: { id: ag.venda_id },
+                data: { status: proximoStatus },
+              });
+            }
+          }
+          if (ag.cliente_id) {
+            const cliente = await tx.cliente.findUnique({
+              where: { id: ag.cliente_id },
+              select: { id: true, status: true },
+            });
+            if (
+              cliente &&
+              validarTransicaoStatusCliente({
+                atual: cliente.status,
+                proximo: proximoStatus,
+              }).ok &&
+              String(cliente.status || '').toUpperCase() !== proximoStatus
+            ) {
+              await tx.cliente.update({
+                where: { id: ag.cliente_id },
+                data: { status: proximoStatus },
+              });
+            }
+          }
+        }
+      }
+
+      for (const ag of paraConcluirFabrica) {
+        await tx.agenda_fabrica.update({
+          where: { id: ag.id },
+          data: { status: 'CONCLUIDO' },
+        });
+        if (ag.plano_corte_id) {
+          await tx.plano_corte.update({
+            where: { id: ag.plano_corte_id },
+            data: { status: 'FINALIZADO' },
+          });
+        }
+        const catKey = this.normalizarCategoriaKey(ag.categoria);
+        const proximoStatus = this.statusAoConcluirPorCategoria[catKey];
+        if (proximoStatus) {
+          if (ag.venda_id) {
+            const venda = await tx.vendas.findUnique({
+              where: { id: ag.venda_id },
+              select: { id: true, status: true },
+            });
+            if (
+              venda &&
+              validarTransicaoStatusCliente({
+                atual: venda.status,
+                proximo: proximoStatus,
+              }).ok &&
+              String(venda.status || '').toUpperCase() !== proximoStatus
+            ) {
+              await tx.vendas.update({
+                where: { id: ag.venda_id },
+                data: { status: proximoStatus },
+              });
+            }
+          }
+          if (ag.cliente_id) {
+            const cliente = await tx.cliente.findUnique({
+              where: { id: ag.cliente_id },
+              select: { id: true, status: true },
+            });
+            if (
+              cliente &&
+              validarTransicaoStatusCliente({
+                atual: cliente.status,
+                proximo: proximoStatus,
+              }).ok &&
+              String(cliente.status || '').toUpperCase() !== proximoStatus
+            ) {
+              await tx.cliente.update({
+                where: { id: ag.cliente_id },
+                data: { status: proximoStatus },
+              });
+            }
+          }
+        }
+      }
+      const totalConcluidas =
+        paraConcluirLoja.length + paraConcluirFabrica.length;
+      if (totalConcluidas) {
+        this.logger.log(`[AUTO] Concluídas ${totalConcluidas} tarefa(s).`);
+      }
     });
   }
 }

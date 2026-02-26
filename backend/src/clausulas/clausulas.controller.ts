@@ -25,11 +25,7 @@ export class ClausulasController {
    */
   @Put(':tipo')
   @Permissoes('contratos.clausulas.editar')
-  salvar(
-    @Param('tipo') tipo: string,
-    @Body() dto: UpdateClausulasDto,
-  ) {
+  salvar(@Param('tipo') tipo: string, @Body() dto: UpdateClausulasDto) {
     return this.service.salvarPorTipo(tipo, dto);
   }
 }
-

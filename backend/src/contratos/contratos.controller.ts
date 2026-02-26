@@ -41,7 +41,9 @@ export class ContratosController {
   @Permissoes('contratos.ver')
   listar(@Query('venda_id') vendaId?: string) {
     const vendaIdNum = vendaId ? this.cleanId(vendaId) : undefined;
-    return this.service.listar(vendaIdNum && vendaIdNum > 0 ? vendaIdNum : undefined);
+    return this.service.listar(
+      vendaIdNum && vendaIdNum > 0 ? vendaIdNum : undefined,
+    );
   }
 
   /** Link público temporário (24h) para download do PDF – envio grátis por WhatsApp/e-mail */
@@ -52,7 +54,9 @@ export class ContratosController {
     const baseUrl =
       this.config.get<string>('APP_URL') ||
       process.env.APP_URL ||
-      (req.protocol && req.get('host') ? `${req.protocol}://${req.get('host')}` : 'http://localhost:3000');
+      (req.protocol && req.get('host')
+        ? `${req.protocol}://${req.get('host')}`
+        : 'http://localhost:3000');
     return this.service.obterLinkPublicoPdf(contratoId, baseUrl);
   }
 
@@ -65,7 +69,9 @@ export class ContratosController {
     const baseUrl =
       this.config.get<string>('APP_URL') ||
       process.env.APP_URL ||
-      (req.protocol && req.get('host') ? `${req.protocol}://${req.get('host')}` : 'http://localhost:3000');
+      (req.protocol && req.get('host')
+        ? `${req.protocol}://${req.get('host')}`
+        : 'http://localhost:3000');
     return this.service.enviarContratoPorEmail(contratoId, baseUrl);
   }
 

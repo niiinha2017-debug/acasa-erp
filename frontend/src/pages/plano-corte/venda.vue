@@ -367,7 +367,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { maskMoneyBR } from '@/utils/masks'
-import { PlanoCorteService, FornecedorService, AgendaService, FuncionarioService } from '@/services/index'
+import { PlanoCorteService, FornecedorService, AgendaFabricaService, FuncionarioService } from '@/services/index'
 import { PIPELINE_PLANO_CORTE, UNIDADES } from '@/constantes'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
@@ -750,7 +750,7 @@ async function confirmarEnviarProducao() {
 
   modalEnviarProducao.value.salvando = true
   try {
-    await AgendaService.criar({
+    await AgendaFabricaService.criar({
       titulo: modalEnviarProducao.value.titulo,
       inicio_em: inicio.toISOString(),
       fim_em: fim.toISOString(),

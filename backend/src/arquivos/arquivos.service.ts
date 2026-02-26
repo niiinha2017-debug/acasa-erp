@@ -60,6 +60,9 @@ export class ArquivosService {
 
     const where: any = { owner_type, owner_id };
     if (categoria) where.categoria = categoria;
+    if (owner_type === 'CONTRATO' && !categoria) {
+      where.NOT = { categoria: 'RELATORIO_INTERNO' };
+    }
 
     if (!params.page) {
       const rows = await this.prisma.arquivos.findMany({

@@ -38,6 +38,12 @@ export class VendasController {
     return this.service.listar();
   }
 
+  @Get('aguardando-contrato')
+  @Permissoes('agendamentos.ver', 'agendamentos.criar')
+  listarAguardandoContrato() {
+    return this.service.listarAguardandoContrato();
+  }
+
   /** Vendas em etapas "agendar medida / medida fina / montagem" para a agenda */
   @Get('aguardando-agendamento')
   @Permissoes('agendamentos.ver', 'agendamentos.criar')

@@ -45,11 +45,17 @@ export const PontoService = {
     return post('/ponto/registrar', payload, token)
   },
 
-  /** Comprovante em PNG (para compartilhar no WhatsApp) — usa token do app */
-  comprovantePng(registroId, token) {
+  /** Comprovante em imagem (png/jpeg) para compartilhar */
+  comprovanteImagem(registroId, token, formato = 'png') {
     return api.get(`/ponto/comprovante/${registroId}`, {
       headers: authHeader(token),
+      params: { formato },
       responseType: 'blob',
     })
+  },
+
+  /** Compat: mantém assinatura antiga */
+  comprovantePng(registroId, token) {
+    return this.comprovanteImagem(registroId, token, 'png')
   },
 }

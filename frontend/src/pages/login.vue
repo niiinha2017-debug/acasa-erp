@@ -137,7 +137,7 @@ definePage({ meta: { public: true, layout: 'auth' } })
 
 const router = useRouter()
 const { login, esqueciSenha, loading } = useAuth()
-const AGENDA_GERAL_PATH = '/agendamentos?visao=geral'
+const AGENDA_GERAL_PATH = '/agendamentos/loja'
 
 const showModalRecuperacao = ref(false)
 const recuperacaoLoading = ref(false)

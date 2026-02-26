@@ -81,7 +81,7 @@ definePage({
 const { alterarSenha, syncMe, loading } = useAuth()
 const router = useRouter()
 const error = ref('')
-const AGENDA_GERAL_PATH = '/agendamentos?visao=geral'
+const AGENDA_GERAL_PATH = '/agendamentos/loja'
 
 const form = reactive({
   senhaAtual: '',
@@ -113,7 +113,7 @@ async function handleTrocarSenha() {
     // 2. Sincroniza o estado do usuário (para o router saber que ele é ATIVO agora)
     await syncMe()
 
-    // 3. Manda para agenda geral
+    // 3. Manda para agenda da loja
     router.push(AGENDA_GERAL_PATH)
   } catch (e) {
     error.value = e.response?.data?.message || 'Erro ao alterar senha. Verifique a senha atual.'

@@ -1,256 +1,83 @@
 // src/constantes/pipeline-cliente.js
 
 export const PIPELINE_CLIENTE = [
-  // =========================
-  // CADASTRO
-  // =========================
   {
-    key: 'CLIENTE_CADASTRADO',
-    label: 'Cliente cadastrado',
     fase: 'CADASTRO',
+    label: 'Cliente cadastrado',
     ordem: 1,
-    temTela: false,
+    statusInternos: ['CLIENTE_CADASTRADO'],
+    cor: '#gray'
   },
-
-  // =========================
-  // MEDIDA INICIAL
-  // =========================
   {
-    key: 'AGENDAR_MEDIDA',
-    label: 'Agendar medida',
-    fase: 'MEDIDA',
+    fase: 'MEDICAO_INICIAL',
+    label: 'Medição Inicial',
     ordem: 2,
-    temTela: true,
-    disparaComData: 'data_medida',
+    temAgendamento: true,
+    dataCampo: 'data_medida',
+    statusInternos: ['AGENDAR_MEDIDA', 'MEDIDA_AGENDADA', 'MEDIDA_REALIZADA'],
+    cor: '#blue'
   },
   {
-    key: 'MEDIDA_AGENDADA',
-    label: 'Medida agendada',
-    fase: 'MEDIDA',
+    fase: 'ORCAMENTO_PROJETO',
+    label: 'Projeto & Orçamento',
     ordem: 3,
-    temTela: false,
+    statusInternos: [
+      'CRIAR_ORCAMENTO',
+      'ORCAMENTO_EM_ANDAMENTO',
+      'ORCAMENTO_ENVIADO',
+      'ORCAMENTO_EM_NEGOCIACAO',
+      'ORCAMENTO_APROVADO',
+      'ORCAMENTO_REPROVADO',
+    ],
+    cor: '#purple'
   },
   {
-    key: 'MEDIDA_REALIZADA',
-    label: 'Medida realizada',
-    fase: 'MEDIDA',
+    fase: 'APRESENTACAO',
+    label: 'Apresentação',
     ordem: 4,
-    temTela: false,
+    temAgendamento: true,
+    dataCampo: 'data_apresentacao',
+    statusInternos: ['AGENDAR_APRESENTACAO', 'APRESENTACAO_AGENDADA', 'ORCAMENTO_APRESENTADO'],
+    cor: '#orange'
   },
-
-  // =========================
-  // ORÇAMENTO
-  // =========================
   {
-    key: 'CRIAR_ORCAMENTO',
-    label: 'Criar orçamento',
-    fase: 'ORCAMENTO',
+    fase: 'CONTRATO_FECHADO',
+    label: 'Venda & Contrato',
     ordem: 5,
-    temTela: true,
+    statusInternos: ['VENDA_FECHADA', 'CONTRATO_GERADO', 'CONTRATO_ASSINADO'],
+    cor: '#green'
   },
   {
-    key: 'ORCAMENTO_EM_ANDAMENTO',
-    label: 'Orçamento em andamento',
-    fase: 'ORCAMENTO',
+    fase: 'MEDICAO_FINA',
+    label: 'Engenharia / Medida Fina',
     ordem: 6,
-    temTela: true,
+    temAgendamento: true,
+    dataCampo: 'data_medida_fina',
+    statusInternos: ['AGENDAR_MEDIDA_FINA', 'MEDIDA_FINA_AGENDADA', 'MEDIDA_FINA_REALIZADA'],
+    cor: '#cyan'
   },
   {
-    key: 'ORCAMENTO_ENVIADO',
-    label: 'Orçamento enviado',
-    fase: 'ORCAMENTO',
+    fase: 'PRODUCAO_MONTAGEM',
+    label: 'Fábrica & Montagem',
     ordem: 7,
-    temTela: false,
+    statusInternos: [
+      'PROJETO_TECNICO_EM_ANDAMENTO',
+      'PROJETO_TECNICO_APROVADO',
+      'PRODUCAO_AGENDADA',
+      'EM_PRODUCAO',
+      'PRODUCAO_FINALIZADA',
+      'AGENDAR_MONTAGEM',
+      'MONTAGEM_AGENDADA',
+      'EM_MONTAGEM',
+      'MONTAGEM_FINALIZADA',
+    ],
+    cor: '#dark-blue'
   },
   {
-    key: 'ORCAMENTO_EM_NEGOCIACAO',
-    label: 'Orçamento em negociação',
-    fase: 'ORCAMENTO',
+    fase: 'POS_VENDA',
+    label: 'Pós-Venda',
     ordem: 8,
-    temTela: false,
-  },
-  {
-    key: 'ORCAMENTO_APROVADO',
-    label: 'Orçamento aprovado',
-    fase: 'ORCAMENTO',
-    ordem: 9,
-    temTela: false,
-  },
-  {
-    key: 'ORCAMENTO_REPROVADO',
-    label: 'Orçamento reprovado',
-    fase: 'ORCAMENTO',
-    ordem: 10,
-    temTela: false,
-    encerraFluxo: true,
-  },
-
-  // =========================
-  // VENDA
-  // =========================
-  {
-    key: 'VENDA_FECHADA',
-    label: 'Venda fechada',
-    fase: 'VENDA',
-    ordem: 11,
-    temTela: false,
-  },
-
-  // =========================
-  // CONTRATO
-  // =========================
-  {
-    key: 'CONTRATO_GERADO',
-    label: 'Contrato gerado',
-    fase: 'CONTRATO',
-    ordem: 12,
-    temTela: true,
-  },
-
-  // =========================
-  // MEDIDA FINA
-  // =========================
-  {
-    key: 'AGENDAR_MEDIDA_FINA',
-    label: 'Agendar medida fina',
-    fase: 'MEDIDA_FINA',
-    ordem: 13,
-    temTela: true,
-    disparaComData: 'data_medida_fina',
-  },
-  {
-    key: 'MEDIDA_FINA_AGENDADA',
-    label: 'Medida fina agendada',
-    fase: 'MEDIDA_FINA',
-    ordem: 14,
-    temTela: false,
-  },
-  {
-    key: 'MEDIDA_FINA_REALIZADA',
-    label: 'Medida fina realizada',
-    fase: 'MEDIDA_FINA',
-    ordem: 15,
-    temTela: false,
-  },
-
-  // =========================
-  // PROJETO TÉCNICO
-  // =========================
-  {
-    key: 'PROJETO_TECNICO_EM_ANDAMENTO',
-    label: 'Projeto técnico em andamento',
-    fase: 'PROJETO',
-    ordem: 16,
-    temTela: true,
-  },
-  {
-    key: 'PROJETO_TECNICO_APROVADO',
-    label: 'Projeto técnico aprovado',
-    fase: 'PROJETO',
-    ordem: 17,
-    temTela: false,
-  },
-
-  // =========================
-  // PLANO DE CORTE (MARCO)
-  // =========================
-  {
-    key: 'PLANO_DE_CORTE',
-    label: 'Plano de corte',
-    fase: 'PRODUCAO',
-    ordem: 18,
-    temTela: false,
-  },
-
-  // =========================
-  // PRODUÇÃO
-  // =========================
-  {
-    key: 'PRODUCAO_AGENDADA',
-    label: 'Produção agendada',
-    fase: 'PRODUCAO',
-    ordem: 19,
-    temTela: false,
-    disparaComData: 'data_producao',
-  },
-  {
-    key: 'EM_PRODUCAO',
-    label: 'Em produção',
-    fase: 'PRODUCAO',
-    ordem: 20,
-    temTela: false,
-  },
-  {
-    key: 'PRODUCAO_FINALIZADA',
-    label: 'Produção finalizada',
-    fase: 'PRODUCAO',
-    ordem: 21,
-    temTela: false,
-  },
-
-  // =========================
-  // MONTAGEM
-  // =========================
-  {
-    key: 'AGENDAR_MONTAGEM',
-    label: 'Agendar montagem',
-    fase: 'MONTAGEM',
-    ordem: 22,
-    temTela: true,
-    disparaComData: 'data_montagem',
-  },
-  {
-    key: 'MONTAGEM_AGENDADA',
-    label: 'Montagem agendada',
-    fase: 'MONTAGEM',
-    ordem: 23,
-    temTela: false,
-  },
-  {
-    key: 'EM_MONTAGEM',
-    label: 'Em montagem',
-    fase: 'MONTAGEM',
-    ordem: 24,
-    temTela: false,
-  },
-  {
-    key: 'MONTAGEM_FINALIZADA',
-    label: 'Montagem finalizada',
-    fase: 'MONTAGEM',
-    ordem: 25,
-    temTela: false,
-  },
-
-  // =========================
-  // PÓS-VENDA
-  // =========================
-  {
-    key: 'GARANTIA',
-    label: 'Garantia',
-    fase: 'POS_VENDA',
-    ordem: 26,
-    temTela: true,
-  },
-  {
-    key: 'ASSISTENCIA',
-    label: 'Assistência',
-    fase: 'POS_VENDA',
-    ordem: 27,
-    temTela: true,
-  },
-  {
-    key: 'MANUTENCAO',
-    label: 'Manutenção',
-    fase: 'POS_VENDA',
-    ordem: 28,
-    temTela: true,
-  },
-
-  {
-    key: 'ENCERRADO',
-    label: 'Encerrado',
-    fase: 'FINAL',
-    ordem: 29,
-    temTela: false,
-  },
+    statusInternos: ['GARANTIA', 'ASSISTENCIA', 'MANUTENCAO', 'ENCERRADO'],
+    cor: '#gold'
+  }
 ]

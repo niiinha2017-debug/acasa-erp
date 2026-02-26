@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   Req,
   Res,
   UseGuards,
@@ -52,11 +53,12 @@ export class PontoAppController {
     return this.service.me(req);
   }
 
-  /** Comprovante em PNG (só do próprio funcionário) para compartilhar no WhatsApp */
+  /** Comprovante em imagem (PNG/JPEG) do próprio funcionário para compartilhar */
   @UseGuards(PontoAuthGuard)
   @Get('comprovante/:id')
-  async comprovantePng(
+  async comprovanteImagem(
     @Param('id') id: string,
+    @Query('formato') formato: string,
     @Req() req: any,
     @Res() res: Response,
   ) {
@@ -72,17 +74,21 @@ export class PontoAppController {
     }
     const data = await this.relatorioService.getRegistroComprovante(registroId);
     if (!data || data.registro.funcionario_id !== funcionarioId) {
-      throw new ForbiddenException('Registro não encontrado ou não pertence a você.');
+      throw new ForbiddenException(
+        'Registro não encontrado ou não pertence a você.',
+      );
     }
+    const fmt = String(formato || '').toLowerCase();
+    const ext: 'png' | 'jpeg' =
+      fmt === 'jpeg' || fmt === 'jpg' ? 'jpeg' : 'png';
     const buffer = await this.relatorioService.gerarComprovanteImageBuffer(
       registroId,
-      'png',
-      320,
+      ext,
     );
-    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Content-Type', ext === 'jpeg' ? 'image/jpeg' : 'image/png');
     res.setHeader(
       'Content-Disposition',
-      `inline; filename="comprovante-ponto-${registroId}.png"`,
+      `inline; filename="comprovante-ponto-${registroId}.${ext === 'jpeg' ? 'jpg' : 'png'}"`,
     );
     res.send(buffer);
     return;

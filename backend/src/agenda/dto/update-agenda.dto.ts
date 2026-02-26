@@ -64,7 +64,7 @@ export class UpdateAgendaDto {
 
   @IsOptional()
   @IsString()
-  @IsIn(SETORES_DESTINO, { message: 'setor_destino inválido' })
+  @IsIn([...SETORES_DESTINO, 'PRODUCAO'], { message: 'setor_destino inválido' })
   setor_destino?: string;
 
   @IsOptional()

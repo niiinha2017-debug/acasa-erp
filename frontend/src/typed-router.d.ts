@@ -51,6 +51,27 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/agendamentos/agenda-fabrica': RouteRecordInfo<
+      '/agendamentos/agenda-fabrica',
+      '/agendamentos/agenda-fabrica',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/agendamentos/fabrica': RouteRecordInfo<
+      '/agendamentos/fabrica',
+      '/agendamentos/fabrica',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/agendamentos/loja': RouteRecordInfo<
+      '/agendamentos/loja',
+      '/agendamentos/loja',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/alterar-senha': RouteRecordInfo<
       '/alterar-senha',
       '/alterar-senha',
@@ -338,6 +359,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/relatorios/acompanhamento-status': RouteRecordInfo<
+      '/relatorios/acompanhamento-status',
+      '/relatorios/acompanhamento-status',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/relatorios/dashboard-resumo': RouteRecordInfo<
       '/relatorios/dashboard-resumo',
       '/relatorios/dashboard-resumo',
@@ -512,6 +540,24 @@ declare module 'vue-router/auto-routes' {
     'src/pages/agendamentos/index.vue': {
       routes:
         | '/agendamentos/'
+      views:
+        | never
+    }
+    'src/pages/agendamentos/agenda-fabrica.vue': {
+      routes:
+        | '/agendamentos/agenda-fabrica'
+      views:
+        | never
+    }
+    'src/pages/agendamentos/fabrica.vue': {
+      routes:
+        | '/agendamentos/fabrica'
+      views:
+        | never
+    }
+    'src/pages/agendamentos/loja.vue': {
+      routes:
+        | '/agendamentos/loja'
       views:
         | never
     }
@@ -758,6 +804,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/relatorios/index.vue': {
       routes:
         | '/relatorios/'
+      views:
+        | never
+    }
+    'src/pages/relatorios/acompanhamento-status.vue': {
+      routes:
+        | '/relatorios/acompanhamento-status'
       views:
         | never
     }

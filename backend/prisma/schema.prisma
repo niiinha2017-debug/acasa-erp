@@ -117,8 +117,8 @@ model Cliente {
   orcamentos   orcamentos[]
   vendas       vendas[]
   contratos   contratos[]
-  agendamentos agenda_global[]
-  // Adicione projetos[] aqui
+  agendamentos_loja    agenda_loja[]
+  agendamentos_fabrica agenda_fabrica[]
   projetos     projetos[]
 
   @@unique([cpf])
@@ -146,7 +146,8 @@ model orcamentos {
   atualizado_em DateTime @updatedAt
 
   itens       orcamento_itens[]
-  agendamento agenda_global?
+  agendamentos_loja agenda_loja[]
+  agendamento_fabrica agenda_fabrica?
 
   // ✅ agora é 0..1 venda por orçamento
   venda    vendas?
@@ -215,7 +216,8 @@ model vendas {
   itens        vendas_itens[]
   comissoes    vendas_comissoes[]
   pagamentos   vendas_pagamentos[] // ✅ NOVO
-  agendamentos agenda_global[]
+  agendamentos_loja    agenda_loja[]
+  agendamentos_fabrica agenda_fabrica[]
   representante_venda_usuario usuarios? @relation("vendas_representante_usuario", fields: [representante_venda_usuario_id], references: [id], onDelete: SetNull)
   representante_venda_funcionario funcionarios? @relation("vendas_representante_funcionario", fields: [representante_venda_funcionario_id], references: [id], onDelete: SetNull)
   // Adicione projetos[] aqui
@@ -398,7 +400,8 @@ model Fornecedor {
 
   compensacoes_fornecedor fornecedor_compensacoes[]
   compras                 compras[]
-  agendamentos            agenda_global[]
+  agendamentos_loja       agenda_loja[]
+  agendamentos_fabrica    agenda_fabrica[]
 
   @@map("fornecedor")
  }
@@ -453,7 +456,7 @@ model plano_corte {
 
   produtos     plano_corte_produto[]
   consumos     plano_corte_consumo[]
-  agendamentos agenda_global[]
+  agendamentos agenda_fabrica[]
 
   @@map("plano_corte")
  }
@@ -640,8 +643,10 @@ model funcionarios {
   ponto_registros      ponto_registros[]
   ponto_convites       ponto_convites[]
   ponto_justificativas ponto_justificativas[]
-  equipe               agenda_funcionarios[]
-  apontamentos         agenda_apontamentos[]
+  equipe_loja          agenda_loja_funcionarios[]
+  apontamentos_loja    agenda_loja_apontamentos[]
+  equipe_fabrica       agenda_fabrica_funcionarios[]
+  apontamentos_fabrica agenda_fabrica_apontamentos[]
 
   @@map("funcionarios")
  }
@@ -710,7 +715,8 @@ model projetos {
 
   status_atual String @default("CLIENTE_CADASTRADO")
 
-  agendamentos agenda_global[]
+  agendamentos_loja    agenda_loja[]
+  agendamentos_fabrica agenda_fabrica[]
 
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
@@ -720,18 +726,91 @@ model projetos {
   @@map("projetos")
 }
 
-model agenda_global {
+// ---------- Agenda Loja (setor LOJA) ----------
+model agenda_loja {
   id Int @id @default(autoincrement())
 
-  // Cliente (obrigatório para venda/orçamento/projeto; opcional para plano de corte)
   cliente_id Int?
   cliente    Cliente? @relation(fields: [cliente_id], references: [id])
 
-  // Fornecedor (obrigatório para plano de corte - venda de metros de corte ao fornecedor)
   fornecedor_id Int?
   fornecedor    Fornecedor? @relation(fields: [fornecedor_id], references: [id])
 
-  // Vínculos Opcionais (uma venda pode ter vários agendamentos, ex. vários dias de produção)
+  orcamento_id Int?
+  orcamento    orcamentos? @relation(fields: [orcamento_id], references: [id])
+
+  venda_id Int?
+  venda    vendas? @relation(fields: [venda_id], references: [id])
+
+  projeto_id Int?
+  projeto    projetos? @relation(fields: [projeto_id], references: [id])
+
+  titulo    String
+  inicio_em DateTime
+  fim_em    DateTime
+  categoria String?
+  origem_fluxo String?
+  status    String   @default("PENDENTE")
+  status_source String?
+  status_aplicado_em DateTime?
+
+  equipe agenda_loja_funcionarios[]
+  apontamentos agenda_loja_apontamentos[]
+
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  @@index([cliente_id])
+  @@index([fornecedor_id])
+  @@index([orcamento_id])
+  @@index([venda_id])
+  @@index([inicio_em])
+  @@index([categoria])
+  @@index([origem_fluxo])
+  @@index([status])
+  @@index([status_source])
+  @@map("agenda_loja")
+}
+
+model agenda_loja_funcionarios {
+  id             Int @id @default(autoincrement())
+  agenda_loja_id Int
+  funcionario_id Int
+
+  agenda_loja agenda_loja @relation(fields: [agenda_loja_id], references: [id], onDelete: Cascade)
+  funcionario funcionarios @relation(fields: [funcionario_id], references: [id], onDelete: Cascade)
+
+  @@index([agenda_loja_id])
+  @@index([funcionario_id])
+  @@map("agenda_loja_funcionarios")
+}
+
+model agenda_loja_apontamentos {
+  id             Int @id @default(autoincrement())
+  agenda_loja_id Int
+  funcionario_id Int
+  inicio_em DateTime
+  fim_em    DateTime
+  criado_em DateTime @default(now())
+
+  agenda_loja agenda_loja @relation(fields: [agenda_loja_id], references: [id], onDelete: Cascade)
+  funcionario funcionarios @relation(fields: [funcionario_id], references: [id], onDelete: Cascade)
+
+  @@index([agenda_loja_id])
+  @@index([funcionario_id])
+  @@map("agenda_loja_apontamentos")
+}
+
+// ---------- Agenda Fábrica (setor FABRICA/PRODUCAO) ----------
+model agenda_fabrica {
+  id Int @id @default(autoincrement())
+
+  cliente_id Int?
+  cliente    Cliente? @relation(fields: [cliente_id], references: [id])
+
+  fornecedor_id Int?
+  fornecedor    Fornecedor? @relation(fields: [fornecedor_id], references: [id])
+
   orcamento_id Int?        @unique
   orcamento    orcamentos? @relation(fields: [orcamento_id], references: [id])
 
@@ -744,22 +823,17 @@ model agenda_global {
   plano_corte_id Int?         @unique
   plano_corte    plano_corte? @relation(fields: [plano_corte_id], references: [id])
 
-  // Dados do evento
   titulo    String
   inicio_em DateTime
   fim_em    DateTime
   categoria String?
   origem_fluxo String?
-  setor_destino String? @default("LOJA")
   status    String   @default("PENDENTE")
   status_source String?
   status_aplicado_em DateTime?
 
-  // ✅ RELAÇÃO MUITOS-PARA-MUITOS (Múltiplos funcionários na mesma tarefa)
-  equipe agenda_funcionarios[]
-
-  // ✅ Apontamentos de horas por funcionário dentro da tarefa
-  apontamentos agenda_apontamentos[]
+  equipe agenda_fabrica_funcionarios[]
+  apontamentos agenda_fabrica_apontamentos[]
 
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
@@ -767,44 +841,42 @@ model agenda_global {
   @@index([cliente_id])
   @@index([fornecedor_id])
   @@index([venda_id])
+  @@index([plano_corte_id])
   @@index([inicio_em])
   @@index([categoria])
   @@index([origem_fluxo])
-  @@index([setor_destino])
   @@index([status])
   @@index([status_source])
-  @@map("agenda_global")
+  @@map("agenda_fabrica")
 }
 
-model agenda_funcionarios {
-  id             Int @id @default(autoincrement())
-  agenda_id      Int
-  funcionario_id Int
+model agenda_fabrica_funcionarios {
+  id                Int @id @default(autoincrement())
+  agenda_fabrica_id Int
+  funcionario_id    Int
 
-  agenda      agenda_global @relation(fields: [agenda_id], references: [id], onDelete: Cascade)
-  funcionario funcionarios  @relation(fields: [funcionario_id], references: [id], onDelete: Cascade)
+  agenda_fabrica agenda_fabrica @relation(fields: [agenda_fabrica_id], references: [id], onDelete: Cascade)
+  funcionario    funcionarios   @relation(fields: [funcionario_id], references: [id], onDelete: Cascade)
 
-  @@index([agenda_id])
+  @@index([agenda_fabrica_id])
   @@index([funcionario_id])
-  @@map("agenda_funcionarios")
+  @@map("agenda_fabrica_funcionarios")
 }
 
-model agenda_apontamentos {
-  id             Int @id @default(autoincrement())
-  agenda_id      Int
-  funcionario_id Int
-
+model agenda_fabrica_apontamentos {
+  id                Int @id @default(autoincrement())
+  agenda_fabrica_id Int
+  funcionario_id    Int
   inicio_em DateTime
   fim_em    DateTime
-
   criado_em DateTime @default(now())
 
-  agenda      agenda_global @relation(fields: [agenda_id], references: [id], onDelete: Cascade)
-  funcionario funcionarios  @relation(fields: [funcionario_id], references: [id], onDelete: Cascade)
+  agenda_fabrica agenda_fabrica @relation(fields: [agenda_fabrica_id], references: [id], onDelete: Cascade)
+  funcionario    funcionarios   @relation(fields: [funcionario_id], references: [id], onDelete: Cascade)
 
-  @@index([agenda_id])
+  @@index([agenda_fabrica_id])
   @@index([funcionario_id])
-  @@map("agenda_apontamentos")
+  @@map("agenda_fabrica_apontamentos")
 }
 
 model contas_pagar {

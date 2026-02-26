@@ -17,20 +17,60 @@ export const MENU_SECTIONS: MenuSection[] = [
     key: 'comercial',
     label: 'Comercial',
     items: [
-      { label: 'Orçamento', to: '/orcamentos', icon: 'pi-file-edit', perm: 'orcamentos.ver' },
-      { label: 'Fechamento de venda', to: '/vendas/fechamento', icon: 'pi-shopping-cart', perm: 'vendas.criar' },
-      { label: 'Contrato', to: '/contratos', icon: 'pi-file', perm: 'contratos.ver' },
-      { label: 'Cláusulas (Orç./Contrato)', to: '/contratos/clausulas', icon: 'pi-file-edit', perm: 'contratos.clausulas.editar' },
+      {
+        label: 'Orçamento',
+        to: '/orcamentos',
+        icon: 'pi-file-edit',
+        perm: 'orcamentos.ver',
+      },
+      {
+        label: 'Fechamento de venda',
+        to: '/vendas/fechamento',
+        icon: 'pi-shopping-cart',
+        perm: 'vendas.criar',
+      },
+      {
+        label: 'Contrato',
+        to: '/contratos',
+        icon: 'pi-file',
+        perm: 'contratos.ver',
+      },
+      {
+        label: 'Cláusulas (Orç./Contrato)',
+        to: '/contratos/clausulas',
+        icon: 'pi-file-edit',
+        perm: 'contratos.clausulas.editar',
+      },
     ],
   },
   {
     key: 'producao',
     label: 'Produção',
     items: [
-      { label: 'Pós-venda', to: '/vendas', icon: 'pi-cart-plus', perm: 'posvenda.ver' },
-      { label: 'Plano de corte', to: '/plano-corte', icon: 'pi-sitemap', perm: 'plano_corte.ver' },
-      { label: 'Produtos plano de corte', to: '/plano-corte/itens', icon: 'pi-box', perm: 'plano_corte.ver' },
-      { label: 'Venda plano de corte', to: '/plano-corte/venda', icon: 'pi-ruler', perm: 'plano_corte.criar' },
+      {
+        label: 'Pós-venda',
+        to: '/vendas',
+        icon: 'pi-cart-plus',
+        perm: 'posvenda.ver',
+      },
+      {
+        label: 'Plano de corte',
+        to: '/plano-corte',
+        icon: 'pi-sitemap',
+        perm: 'plano_corte.ver',
+      },
+      {
+        label: 'Produtos plano de corte',
+        to: '/plano-corte/itens',
+        icon: 'pi-box',
+        perm: 'plano_corte.ver',
+      },
+      {
+        label: 'Venda plano de corte',
+        to: '/plano-corte/venda',
+        icon: 'pi-ruler',
+        perm: 'plano_corte.criar',
+      },
     ],
   },
   {

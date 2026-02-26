@@ -34,7 +34,8 @@ const DEFAULT_MODULOS: Record<
   CONTRATO: [
     {
       modulo_key: 'CABECALHO',
-      titulo: 'Contrato de Compra e Venda de Mercadorias e Prestação de Serviços',
+      titulo:
+        'Contrato de Compra e Venda de Mercadorias e Prestação de Serviços',
       ordem: 0,
     },
     { modulo_key: 'OBJETO', titulo: 'Cláusula Primeira: Do Objeto', ordem: 1 },
@@ -85,7 +86,8 @@ const DEFAULT_MODULOS: Record<
     },
     {
       modulo_key: 'ASSINATURA_ELETRONICA',
-      titulo: 'Cláusula 11ª – Da Assinatura Eletrônica e Aceite por Meios Digitais',
+      titulo:
+        'Cláusula 11ª – Da Assinatura Eletrônica e Aceite por Meios Digitais',
       ordem: 11,
     },
   ],
@@ -96,7 +98,9 @@ export class ClausulasService {
   constructor(private readonly prisma: PrismaService) {}
 
   private normalizeTipo(tipo: string): string {
-    return String(tipo || '').trim().toUpperCase();
+    return String(tipo || '')
+      .trim()
+      .toUpperCase();
   }
 
   async buscarOuCriarPorTipo(tipo: string) {
@@ -156,7 +160,9 @@ export class ClausulasService {
     try {
       // Atualiza ou cria cada módulo recebido
       for (const mod of incoming) {
-        const key = String(mod.modulo_key || '').trim().toUpperCase();
+        const key = String(mod.modulo_key || '')
+          .trim()
+          .toUpperCase();
         if (!key) continue;
 
         const data = {
@@ -193,10 +199,14 @@ export class ClausulasService {
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError) {
         if (e.code === 'P2002') {
-          throw new BadRequestException('Já existe um módulo com este tipo e chave.');
+          throw new BadRequestException(
+            'Já existe um módulo com este tipo e chave.',
+          );
         }
         if (e.code === 'P2003' || e.code === 'P2016') {
-          throw new BadRequestException('Registro referenciado não encontrado.');
+          throw new BadRequestException(
+            'Registro referenciado não encontrado.',
+          );
         }
         // ex.: P2016 = registro não encontrado; dados longos demais etc.
         throw new BadRequestException(e.message || 'Erro ao salvar cláusulas.');
@@ -205,4 +215,3 @@ export class ClausulasService {
     }
   }
 }
-

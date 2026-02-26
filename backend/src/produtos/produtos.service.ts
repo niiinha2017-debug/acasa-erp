@@ -130,7 +130,9 @@ export class ProdutosService {
         },
         orderBy: { criado_em: 'desc' },
       });
-      return data.map((p) => this.aplicarMarkupProduto(p, ctx?.aplicarMarkup100));
+      return data.map((p) =>
+        this.aplicarMarkupProduto(p, ctx?.aplicarMarkup100),
+      );
     }
 
     const page = Math.max(1, Number(opts.page || 1));
@@ -150,18 +152,23 @@ export class ProdutosService {
     });
 
     return {
-      data: data.map((p) => this.aplicarMarkupProduto(p, ctx?.aplicarMarkup100)),
+      data: data.map((p) =>
+        this.aplicarMarkupProduto(p, ctx?.aplicarMarkup100),
+      ),
       meta: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
     };
   }
 
-  async buscar(filtros: {
-    nome_produto?: string;
-    marca?: string;
-    cor?: string;
-    medida?: string;
-    fornecedor_id?: number;
-  }, ctx?: { aplicarMarkup100?: boolean }) {
+  async buscar(
+    filtros: {
+      nome_produto?: string;
+      marca?: string;
+      cor?: string;
+      medida?: string;
+      fornecedor_id?: number;
+    },
+    ctx?: { aplicarMarkup100?: boolean },
+  ) {
     const where: any = { status: 'ATIVO' };
 
     // suportar paginação via objeto filtros.page, filtros.pageSize (opcional)
@@ -212,7 +219,9 @@ export class ProdutosService {
         },
         orderBy: [{ nome_produto: 'asc' }, { criado_em: 'desc' }],
       });
-      return data.map((p) => this.aplicarMarkupProduto(p, ctx?.aplicarMarkup100));
+      return data.map((p) =>
+        this.aplicarMarkupProduto(p, ctx?.aplicarMarkup100),
+      );
     }
 
     const total = await this.prisma.produtos.count({ where });
@@ -229,7 +238,9 @@ export class ProdutosService {
     });
 
     return {
-      data: data.map((p) => this.aplicarMarkupProduto(p, ctx?.aplicarMarkup100)),
+      data: data.map((p) =>
+        this.aplicarMarkupProduto(p, ctx?.aplicarMarkup100),
+      ),
       meta: {
         page: Math.max(1, page),
         pageSize: Math.max(1, pageSize || 20),

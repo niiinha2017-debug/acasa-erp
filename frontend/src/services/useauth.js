@@ -3,6 +3,8 @@ import api from '@/services/api'
 import storage from '@/utils/storage'
 
 const SESSION_KEY = 'ACASA_SESSION_ALIVE'
+const AUTH_STARTED_AT_KEY = 'ACASA_AUTH_STARTED_AT'
+const SESSION_MAX_AGE_MS = 8 * 60 * 60 * 1000
 
 // Estado Global (Singleton)
 const token = ref(storage.getToken())
@@ -19,6 +21,28 @@ if (token.value) {
   if (!usuarioLogado.value) {
     usuarioLogado.value = storage.getUser()
   }
+}
+
+function limparSessaoLocal() {
+  sessionStorage.removeItem(SESSION_KEY)
+  localStorage.removeItem(AUTH_STARTED_AT_KEY)
+  storage.removeToken()
+  storage.removeUser()
+  storage.removeRefreshToken()
+  token.value = null
+  usuarioLogado.value = null
+}
+
+function sessaoExpiradaPorTempo() {
+  const startedAtRaw = localStorage.getItem(AUTH_STARTED_AT_KEY)
+  const startedAt = Number(startedAtRaw || 0)
+  if (!startedAt || Number.isNaN(startedAt)) return false
+  return Date.now() - startedAt >= SESSION_MAX_AGE_MS
+}
+
+// Se reabrir com token antigo e já passou da janela de 8h, derruba sessão no boot.
+if (token.value && sessaoExpiradaPorTempo()) {
+  limparSessaoLocal()
 }
 
 // REMOVIDO: Lógica 'SESSION_KEY' e 'pagehide' que forçavam logout indevido no Android.
@@ -58,6 +82,7 @@ export function useAuth() {
 
       // ✅ marca sessão viva
       sessionStorage.setItem(SESSION_KEY, '1')
+      localStorage.setItem(AUTH_STARTED_AT_KEY, String(Date.now()))
 
       token.value = data.token
       usuarioLogado.value = data.usuario
@@ -131,13 +156,7 @@ async function alterarSenha(dados) { // dados = { senha_atual, senha_nova }
       await api.post('/auth/logout')
     } catch {}
 
-    sessionStorage.removeItem(SESSION_KEY)
-
-    storage.removeToken()
-    storage.removeUser()
-    storage.removeRefreshToken()
-    token.value = null
-    usuarioLogado.value = null
+    limparSessaoLocal()
     window.location.href = '/login'
   }
 

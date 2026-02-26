@@ -11,4 +11,4 @@ export const VENDA_FECHAMENTO_REGRAS = {
     DINHEIRO: 1,
     DEBITO: 1,
   },
-} as const
+} as const;

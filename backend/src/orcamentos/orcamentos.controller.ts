@@ -33,6 +33,12 @@ export class OrcamentosController {
     return Number.isFinite(n) ? n : 0;
   }
 
+  @Get('aguardando-apresentacao')
+  @Permissoes('agendamentos.ver', 'agendamentos.vendas', 'agendamentos.criar')
+  listarAguardandoApresentacao() {
+    return this.service.listarAguardandoApresentacao();
+  }
+
   @Get()
   @Permissoes('orcamentos.ver', 'vendas.fechamento.ver')
   listar() {

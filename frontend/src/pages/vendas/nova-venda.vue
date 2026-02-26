@@ -1,7 +1,7 @@
 <template>
   <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
+    <div class="relative bg-bg-card">
+      <div class="h-1 w-full bg-brand-primary" />
 
       <PageHeader
         :title="isEditMode ? `Editar venda #${vendaId}` : 'Fechamento da Venda'"
@@ -10,16 +10,6 @@
       >
         <template #actions>
           <div class="flex items-center gap-2">
-            <Button
-              v-if="isEditMode && can('agendamentos.criar')"
-              variant="secondary"
-              size="sm"
-              type="button"
-              @click="abrirModalEnviarProducao"
-            >
-              <i class="pi pi-send mr-1" />
-              Enviar para produção
-            </Button>
             <RouterLink
               v-if="isEditMode"
               :to="`/vendas/venda/${vendaId}`"
@@ -40,39 +30,59 @@
         </template>
       </PageHeader>
 
-      <div class="p-6 md:p-8 border-t border-border-ui space-y-8">
+      <div class="p-6 md:p-8 border-t border-border-ui space-y-6 max-w-[1200px] mx-auto">
         <Loading v-if="loading" />
 
-        <div v-else class="space-y-8">
+        <div v-else class="space-y-6">
           <!-- RESUMO DO ORÇAMENTO -->
-          <section v-if="orcamento" class="space-y-3">
-            <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
-              Resumo do Orçamento
+          <section v-if="orcamento" class="space-y-5">
+            <div class="flex items-center justify-center gap-3 pb-2 border-b border-border-ui text-center">
+              <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary text-xs font-bold">1</span>
+              <div class="text-base font-semibold text-text-main">Resumo do orçamento</div>
             </div>
-            <div class="rounded-2xl border border-border-ui bg-bg-page p-4 space-y-2">
-              <p class="text-sm font-bold text-text-main">
-                Cliente:
-                <span class="font-normal">
+            <div class="grid grid-cols-12 gap-x-6 gap-y-2">
+              <div class="col-span-12 md:col-span-7">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <p class="text-[10px] font-black uppercase tracking-wider text-text-soft">Cliente</p>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    type="button"
+                    @click="abrirModalCadastroContrato(false)"
+                  >
+                    <i class="pi pi-id-card mr-1"></i>
+                    Validar contratante
+                  </Button>
+                </div>
+                <p class="text-sm font-semibold text-text-main">
                   {{ orcamento.cliente_nome_snapshot || orcamento.cliente?.nome_completo || orcamento.cliente?.razao_social || '-' }}
-                </span>
-              </p>
-              <p class="text-sm font-bold text-text-main">
-                Orçamento:
-                <span class="font-normal">#{{ orcamento.id }}</span>
-              </p>
-              <p class="text-sm font-bold text-text-main">
-                Valor orçado (soma dos itens):
-                <span class="font-black text-brand-primary">
-                  {{ format.currency(totalOrcado) }}
-                </span>
-              </p>
+                </p>
+                <p
+                  v-if="clienteContratoPendente"
+                  class="text-xs text-amber-700 dark:text-amber-400 mt-1"
+                >
+                  Falta completar dados do contratante para o contrato.
+                </p>
+              </div>
+              <div class="col-span-6 md:col-span-2">
+                <p class="text-[10px] font-black uppercase tracking-wider text-text-soft">Orçamento</p>
+                <p class="text-sm font-semibold text-text-main">#{{ orcamento.id }}</p>
+              </div>
+              <div class="col-span-6 md:col-span-3">
+                <p class="text-[10px] font-black uppercase tracking-wider text-text-soft">Valor orçado</p>
+                <p class="text-sm font-black text-brand-primary">{{ format.currency(totalOrcado) }}</p>
+              </div>
             </div>
 
             <!-- FECHAMENTO / VALOR FINAL -->
-            <section class="space-y-4 rounded-2xl border border-border-ui bg-bg-page p-4">
-              <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
-                Fechamento da Venda
+            <section class="space-y-4 border-t border-border-ui pt-5">
+              <div class="flex items-center justify-center gap-3 text-center">
+                <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary text-xs font-bold">2</span>
+                <div class="text-base font-semibold text-text-main">Fechamento da venda</div>
               </div>
+              <p class="text-xs text-text-soft">
+                Defina desconto, data e valor final. As regras de parcelamento e taxas continuam as mesmas.
+              </p>
 
               <div class="grid grid-cols-12 gap-4 items-end">
                 <div class="col-span-12 md:col-span-3">
@@ -107,24 +117,21 @@
                     :forceUpper="false"
                   />
                 </div>
-
-                <div class="col-span-12">
-                  <Input
-                    v-model="enderecoEntrega"
-                    label="Endereço da entrega"
-                    placeholder="Rua, número, bairro, cidade/UF"
-                    :forceUpper="false"
+                <div class="col-span-12 md:col-span-3">
+                  <CustomCheckbox
+                    v-model="temNotaFiscal"
+                    label="Emitir Nota Fiscal"
                   />
                 </div>
-
               </div>
 
             </section>
 
-            <div class="rounded-2xl border border-border-ui bg-white overflow-hidden">
-              <div class="flex items-center justify-between px-4 pt-4 pb-2">
-                <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
-                  Itens da Venda (não altera o orçamento)
+            <div class="border-t border-border-ui pt-4">
+              <div class="flex items-center justify-between pb-3 border-b border-border-ui">
+                <div class="text-sm font-semibold text-text-main">
+                  Itens da venda
+                  <span class="text-xs font-normal text-text-soft">(não altera o orçamento)</span>
                 </div>
                 <Button
                   variant="secondary"
@@ -195,10 +202,14 @@
             </div>
           </section>
           <!-- FORMAS DE PAGAMENTO (SEM VALIDAR COM VALOR FINAL) -->
-          <section class="space-y-4">
-            <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
-              Formas de pagamento
+          <section class="space-y-4 border-t border-border-ui pt-5">
+            <div class="flex items-center justify-center gap-3 text-center">
+              <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary text-xs font-bold">3</span>
+              <div class="text-base font-semibold text-text-main">Formas de pagamento</div>
             </div>
+            <p class="text-xs text-text-soft">
+              Configure a forma, parcelas e valores. O total deve bater com o preço cobrado da venda.
+            </p>
 
             <Table
               :columns="columnsPagamentos"
@@ -267,12 +278,12 @@
 
             </Table>
 
-            <div class="rounded-xl border border-border-ui bg-bg-page px-4 py-3 space-y-1">
+            <div class="px-1 py-1 space-y-1">
               <p class="text-[11px] text-text-soft">
                 Valor base da venda: <strong>{{ format.currency(valorFinal) }}</strong>
               </p>
               <p class="text-[11px] text-text-soft">
-                Taxa aplicada: <strong>{{ Number(taxaCobradaPercentual || 0).toFixed(2).replace('.', ',') }}%</strong>
+                Taxa aplicada
                 <span v-if="taxaCobradaPercentual > 0"> (crédito acima de 10x)</span>
               </p>
               <p class="text-[12px] text-text-main font-bold">
@@ -282,26 +293,104 @@
           </section>
 
           <!-- INDICAÇÃO -->
-          <section class="space-y-4">
-            <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
-              Indicação
+          <section class="space-y-4 border-t border-border-ui pt-5">
+            <div class="flex items-center justify-center gap-3 text-center">
+              <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary text-xs font-bold">4</span>
+              <div class="text-base font-semibold text-text-main">Indicação</div>
             </div>
-            <div class="rounded-2xl border border-border-ui bg-white p-4">
-              <Input
-                v-model="indicacaoNome"
-                label="Nome da indicação"
-                placeholder="Digite o nome"
-                :forceUpper="false"
-              />
+            <div class="grid grid-cols-12 gap-4 items-end">
+              <div class="col-span-12 md:col-span-6">
+                <Input
+                  v-model="indicacaoNome"
+                  label="Nome da indicação"
+                  placeholder="Digite o nome"
+                  :forceUpper="false"
+                />
+              </div>
             </div>
           </section>
 
+          <!-- ENDEREÇO DE ENTREGA -->
+          <section class="space-y-4 border-t border-border-ui pt-5">
+            <div class="flex items-center justify-center gap-3 text-center">
+              <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary text-xs font-bold">5</span>
+              <div class="text-base font-semibold text-text-main">Endereço de entrega</div>
+            </div>
+            <div class="grid grid-cols-12 gap-4 items-end">
+              <div class="col-span-12 md:col-span-3">
+                <Input
+                  v-model="cepEntrega"
+                  label="CEP"
+                  placeholder="00000-000"
+                  :forceUpper="false"
+                  @input="cepEntrega = maskCEP(cepEntrega)"
+                  @blur="buscarEnderecoEntregaPorCep"
+                />
+              </div>
+              <div class="col-span-12 md:col-span-5">
+                <Input
+                  v-model="enderecoEntrega"
+                  label="Nome da rua"
+                  placeholder="Rua/Avenida"
+                  :forceUpper="false"
+                />
+              </div>
+              <div class="col-span-12 md:col-span-1">
+                <Input
+                  v-model="numeroEntrega"
+                  label="Número"
+                  placeholder="123"
+                  :forceUpper="false"
+                />
+              </div>
+              <div class="col-span-12 md:col-span-3">
+                <Input
+                  v-model="complementoEntrega"
+                  label="Complemento"
+                  placeholder="Apto, bloco..."
+                  :forceUpper="false"
+                />
+              </div>
+              <div class="col-span-12 md:col-span-4">
+                <Input
+                  v-model="bairroEntrega"
+                  label="Bairro"
+                  placeholder="Bairro"
+                  :forceUpper="false"
+                />
+              </div>
+              <div class="col-span-12 md:col-span-6">
+                <Input
+                  v-model="cidadeEntrega"
+                  label="Cidade"
+                  placeholder="Cidade"
+                  :forceUpper="false"
+                />
+              </div>
+              <div class="col-span-12 md:col-span-2">
+                <Input
+                  v-model="estadoEntrega"
+                  label="Estado"
+                  placeholder="UF"
+                  :forceUpper="true"
+                />
+              </div>
+            </div>
+            <p class="text-[11px] text-text-soft">
+              Preencha o endereço de entrega em campos separados para facilitar ajustes e evitar erros no contrato.
+            </p>
+          </section>
+
           <!-- ARQUIVOS VINCULADOS AO ORÇAMENTO -->
-          <section v-if="orcamento" class="space-y-6 border-t border-border-ui pt-6">
+          <section v-if="orcamento" class="space-y-6 border-t border-border-ui pt-5">
+            <div class="flex items-center justify-center gap-3 text-center">
+              <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary text-xs font-bold">6</span>
+              <div class="text-base font-semibold text-text-main">Arquivos do orçamento</div>
+            </div>
             <!-- Imagens para PDF do orçamento -->
             <div class="space-y-3">
               <div class="flex items-center justify-between">
-                <div class="text-xs font-black uppercase tracking-widest text-text-soft">
+                <div class="text-sm font-semibold text-text-main">
                   Imagens do orçamento
                 </div>
                 <div class="flex items-center gap-2">
@@ -326,7 +415,7 @@
               <p class="text-[10px] font-bold text-text-soft uppercase tracking-wider">
                 Imagens vinculadas ao orçamento original. Serão reutilizadas nos documentos relacionados à venda.
               </p>
-              <div class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden max-h-[200px] overflow-y-auto">
+              <div class="border border-border-ui overflow-hidden">
                 <Table
                   :columns="colArquivos"
                   :rows="imagensParaPdf"
@@ -371,7 +460,7 @@
             <!-- Anexos do orçamento -->
             <div class="space-y-3">
               <div class="flex items-center justify-between">
-                <div class="text-xs font-black uppercase tracking-widest text-text-soft">
+                <div class="text-sm font-semibold text-text-main">
                   Anexos do orçamento
                 </div>
                 <div class="flex items-center gap-2">
@@ -395,7 +484,7 @@
               <p class="text-[10px] font-bold text-text-soft uppercase tracking-wider">
                 PDFs e outros arquivos anexados ao orçamento. Ficam vinculados ao orçamento e podem ser consultados pela venda.
               </p>
-              <div class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden max-h-[200px] overflow-y-auto">
+              <div class="border border-border-ui overflow-hidden">
                 <Table
                   :columns="colArquivos"
                   :rows="anexosDocumentos"
@@ -454,61 +543,180 @@
       </div>
     </div>
 
-    <!-- Modal Enviar para Produção (Comercial – só após contrato assinado) -->
-    <Teleport to="body">
-      <Transition name="fade">
-        <div
-          v-if="modalEnviarProducao.aberto"
-          class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
-          @click.self="fecharModalEnviarProducao"
-        >
-          <div class="w-full max-w-md rounded-2xl border border-border-ui bg-bg-card shadow-xl overflow-hidden flex flex-col">
+    <!-- Modal Cadastro Rápido do Contratante (dentro do layout do ERP) -->
+    <Transition name="fade">
+      <div
+        v-if="modalCadastroContrato.aberto"
+        class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+        @click.self="fecharModalCadastroContrato"
+      >
+        <div class="w-full max-w-4xl rounded-2xl border border-border-ui bg-bg-card shadow-xl overflow-hidden flex flex-col">
             <div class="h-1 w-full bg-brand-primary" />
             <header class="flex items-center justify-between px-6 py-4 border-b border-border-ui">
               <div class="flex items-center gap-3">
-                <i class="pi pi-send text-2xl text-text-soft"></i>
+                <i class="pi pi-id-card text-2xl text-text-soft"></i>
                 <div>
-                  <h3 class="text-lg font-semibold text-text-main">Enviar para Produção</h3>
+                  <h3 class="text-lg font-semibold text-text-main">Cadastro rápido do contratante</h3>
                   <p class="text-[10px] font-medium text-text-muted uppercase tracking-wider">
-                    Cria agendamento na agenda para esta venda
+                    Confirme os dados para gerar o contrato sem erro
                   </p>
                 </div>
               </div>
-              <button type="button" class="w-9 h-9 flex items-center justify-center rounded-lg border border-border-ui text-text-muted hover:text-rose-500" @click="fecharModalEnviarProducao">
+              <button
+                type="button"
+                class="w-9 h-9 flex items-center justify-center rounded-lg border border-border-ui text-text-muted hover:text-rose-500"
+                @click="fecharModalCadastroContrato"
+              >
                 <i class="pi pi-times text-sm"></i>
               </button>
             </header>
-            <form class="p-6 space-y-4" @submit.prevent="confirmarEnviarProducao">
-              <Input v-model="modalEnviarProducao.titulo" label="Título do agendamento *" placeholder="Ex: Produção Venda #..." required />
-              <div class="grid grid-cols-2 gap-4">
-                <Input v-model="modalEnviarProducao.inicio_em" label="Início *" type="datetime-local" required />
-                <Input v-model="modalEnviarProducao.fim_em" label="Término *" type="datetime-local" required />
+
+            <form class="p-6 space-y-4" @submit.prevent="salvarCadastroContratoRapido">
+              <div class="grid grid-cols-12 gap-4 items-end">
+                <div class="col-span-12 md:col-span-6">
+                  <Input
+                    v-model="cadastroContratoForm.nome_completo"
+                    label="Nome completo *"
+                    placeholder="Nome do cliente/contratante"
+                    :forceUpper="false"
+                  />
+                </div>
+                <div class="col-span-12 md:col-span-2">
+                  <label class="block text-xs font-semibold tracking-wide text-text-soft ml-0.5 mb-1.5">Tipo de documento *</label>
+                  <select
+                    v-model="cadastroContratoForm.tipo_documento"
+                    class="w-full h-10 rounded-xl border border-border-ui bg-bg-card text-sm text-text-main px-3 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
+                  >
+                    <option value="CPF">CPF</option>
+                    <option value="CNPJ">CNPJ</option>
+                  </select>
+                </div>
+                <div class="col-span-12 md:col-span-4">
+                  <Input
+                    v-model="cadastroContratoForm.documento"
+                    :label="cadastroContratoForm.tipo_documento === 'CNPJ' ? 'CNPJ *' : 'CPF *'"
+                    :placeholder="cadastroContratoForm.tipo_documento === 'CNPJ' ? '00.000.000/0000-00' : '000.000.000-00'"
+                    :forceUpper="false"
+                    @input="cadastroContratoForm.documento = cadastroContratoForm.tipo_documento === 'CNPJ' ? maskCNPJ(cadastroContratoForm.documento) : maskCPF(cadastroContratoForm.documento)"
+                  />
+                </div>
+
+                <div class="col-span-12 md:col-span-3">
+                  <Input
+                    v-model="cadastroContratoForm.rg_ie"
+                    :label="cadastroContratoForm.tipo_documento === 'CNPJ' ? 'Inscrição estadual' : 'RG'"
+                    :forceUpper="false"
+                    @input="cadastroContratoForm.rg_ie = cadastroContratoForm.tipo_documento === 'CNPJ' ? maskIE(cadastroContratoForm.rg_ie) : maskRG(cadastroContratoForm.rg_ie)"
+                  />
+                </div>
+                <div class="col-span-12 md:col-span-3">
+                  <Input
+                    v-model="cadastroContratoForm.telefone"
+                    label="Telefone"
+                    placeholder="(00) 0000-0000"
+                    :forceUpper="false"
+                    @input="cadastroContratoForm.telefone = maskTelefone(cadastroContratoForm.telefone)"
+                  />
+                </div>
+                <div class="col-span-12 md:col-span-3">
+                  <Input
+                    v-model="cadastroContratoForm.whatsapp"
+                    label="WhatsApp"
+                    placeholder="(00) 00000-0000"
+                    :forceUpper="false"
+                    @input="cadastroContratoForm.whatsapp = maskTelefone(cadastroContratoForm.whatsapp)"
+                  />
+                </div>
+                <div class="col-span-12 md:col-span-3">
+                  <Input
+                    v-model="cadastroContratoForm.email"
+                    label="E-mail"
+                    placeholder="cliente@email.com"
+                    :forceUpper="false"
+                  />
+                </div>
+
+                <div class="col-span-12 md:col-span-3">
+                  <Input
+                    v-model="cadastroContratoForm.cep"
+                    label="CEP *"
+                    placeholder="00000-000"
+                    :forceUpper="false"
+                    @input="cadastroContratoForm.cep = maskCEP(cadastroContratoForm.cep)"
+                    @blur="buscarCepCadastroContrato"
+                  />
+                </div>
+                <div class="col-span-12 md:col-span-5">
+                  <Input
+                    v-model="cadastroContratoForm.endereco"
+                    label="Nome da rua *"
+                    :forceUpper="false"
+                  />
+                </div>
+                <div class="col-span-12 md:col-span-1">
+                  <Input
+                    v-model="cadastroContratoForm.numero"
+                    label="Número *"
+                    :forceUpper="false"
+                  />
+                </div>
+                <div class="col-span-12 md:col-span-3">
+                  <Input
+                    v-model="cadastroContratoForm.complemento"
+                    label="Complemento"
+                    :forceUpper="false"
+                  />
+                </div>
+                <div class="col-span-12 md:col-span-4">
+                  <Input
+                    v-model="cadastroContratoForm.bairro"
+                    label="Bairro *"
+                    :forceUpper="false"
+                  />
+                </div>
+                <div class="col-span-12 md:col-span-6">
+                  <Input
+                    v-model="cadastroContratoForm.cidade"
+                    label="Cidade *"
+                    :forceUpper="false"
+                  />
+                </div>
+                <div class="col-span-12 md:col-span-2">
+                  <Input
+                    v-model="cadastroContratoForm.estado"
+                    label="Estado *"
+                    placeholder="UF"
+                    :forceUpper="true"
+                  />
+                </div>
               </div>
+
               <div class="flex justify-end gap-3 pt-4 border-t border-border-ui">
-                <Button type="button" variant="ghost" @click="fecharModalEnviarProducao">Cancelar</Button>
-                <Button type="submit" variant="primary" :loading="modalEnviarProducao.salvando">
-                  <i class="pi pi-send mr-2"></i>
-                  Enviar para Produção
+                <Button type="button" variant="ghost" @click="fecharModalCadastroContrato">Cancelar</Button>
+                <Button type="submit" variant="primary" :loading="modalCadastroContrato.salvando">
+                  <i class="pi pi-check mr-2"></i>
+                  Salvar e continuar
                 </Button>
               </div>
             </form>
           </div>
         </div>
       </Transition>
-    </Teleport>
+
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { AgendaService, ConfiguracaoService, ContratosService, FuncionarioService, OrcamentosService, VendaService, ArquivosService } from '@/services'
+import { ClienteService, ConfiguracaoService, ContratosService, OrcamentosService, VendaService, ArquivosService } from '@/services'
 import { notify } from '@/services/notify'
 import { can } from '@/services/permissions'
 import { format } from '@/utils/format'
-import { FORMAS_PAGAMENTO, TAXAS_CARTAO, VENDA_FECHAMENTO_REGRAS } from '@/constantes'
+import { FORMAS_PAGAMENTO, TAXAS_CARTAO, TAXA_NOTA_FISCAL, VENDA_FECHAMENTO_REGRAS } from '@/constantes'
 import { moedaParaNumero } from '@/utils/number'
-import { onlyNumbers } from '@/utils/masks'
+import { onlyNumbers, maskCEP, maskCPF, maskCNPJ, maskRG, maskIE, maskTelefone } from '@/utils/masks'
+import { buscarCep } from '@/utils/utils'
 import { closeTabAndGo } from '@/utils/tabs'
 
 definePage({ meta: { perm: 'vendas.criar' } })
@@ -528,28 +736,47 @@ const saving = ref(false)
 const orcamento = ref(null)
 const contratos = ref([])
 const clienteIdVenda = ref(null)
+const clienteContrato = ref(null)
 const configuracaoEmpresa = ref(null)
 
-const contratoAssinado = computed(() =>
-  (contratos.value || []).some((c) => String(c.status || '').toUpperCase() === 'VIGENTE'),
+const clienteContratoPendente = computed(() =>
+  clientePrecisaCadastroRapido(clienteContrato.value || orcamento.value?.cliente),
 )
 
-const modalEnviarProducao = ref({
+const modalCadastroContrato = ref({
   aberto: false,
-  titulo: '',
-  inicio_em: '',
-  fim_em: '',
-  funcionarioSelecionado: null,
-  equipe_ids: [],
   salvando: false,
+  continuarAposSalvar: false,
 })
-const funcionariosOptionsEnviarProducao = ref([])
+const cadastroContratoForm = ref({
+  nome_completo: '',
+  tipo_documento: 'CPF',
+  documento: '',
+  rg_ie: '',
+  telefone: '',
+  whatsapp: '',
+  email: '',
+  cep: '',
+  endereco: '',
+  numero: '',
+  complemento: '',
+  bairro: '',
+  cidade: '',
+  estado: '',
+})
 const itens = ref([])
 
 const valorFinal = ref(0)
 const percentualDesconto = ref(0)
 const dataVenda = ref(new Date().toISOString().slice(0, 10))
+const temNotaFiscal = ref(false)
+const cepEntrega = ref('')
 const enderecoEntrega = ref('')
+const numeroEntrega = ref('')
+const complementoEntrega = ref('')
+const bairroEntrega = ref('')
+const cidadeEntrega = ref('')
+const estadoEntrega = ref('')
 const indicacaoNome = ref('')
 const TIPO_COMISSAO_OCULTA = 'VENDEDOR'
 const DESCONTO_MAXIMO_PERCENTUAL = Number(VENDA_FECHAMENTO_REGRAS?.DESCONTO_MAXIMO_PERCENTUAL || 0)
@@ -963,19 +1190,164 @@ function getRepresentanteEmpresaSelecionado() {
   }
 }
 
-function montarEnderecoCliente(cliente) {
-  if (!cliente || typeof cliente !== 'object') return ''
-  const partes = [
-    cliente.endereco,
-    cliente.numero,
-    cliente.complemento,
-    cliente.bairro,
-    cliente.cidade,
-    cliente.estado,
+function preencherEnderecoEntregaComCliente(cliente) {
+  enderecoEntrega.value = String(cliente?.endereco || '').trim()
+  numeroEntrega.value = String(cliente?.numero || '').trim()
+  complementoEntrega.value = String(cliente?.complemento || '').trim()
+  bairroEntrega.value = String(cliente?.bairro || '').trim()
+  cidadeEntrega.value = String(cliente?.cidade || '').trim()
+  estadoEntrega.value = String(cliente?.estado || '').trim()
+}
+
+function obterTipoDocumento(cliente) {
+  const cnpj = onlyNumbers(cliente?.cnpj || '')
+  if (cnpj.length === 14) return 'CNPJ'
+  return 'CPF'
+}
+
+function clientePrecisaCadastroRapido(cliente) {
+  const c = cliente || {}
+  const nome = String(c.nome_completo || '').trim()
+  const cpf = onlyNumbers(c.cpf || '')
+  const cnpj = onlyNumbers(c.cnpj || '')
+  const docOk = cpf.length === 11 || cnpj.length === 14
+  const camposEndereco = [
+    String(c.cep || '').trim(),
+    String(c.endereco || '').trim(),
+    String(c.numero || '').trim(),
+    String(c.bairro || '').trim(),
+    String(c.cidade || '').trim(),
+    String(c.estado || '').trim(),
   ]
-    .map((x) => String(x || '').trim())
-    .filter(Boolean)
-  return partes.join(', ')
+  return !nome || !docOk || camposEndereco.some((v) => !v)
+}
+
+function preencherCadastroRapidoComCliente(cliente) {
+  const c = cliente || {}
+  const tipo = obterTipoDocumento(c)
+  cadastroContratoForm.value = {
+    nome_completo: String(c.nome_completo || '').trim(),
+    tipo_documento: tipo,
+    documento: tipo === 'CNPJ' ? maskCNPJ(c.cnpj || '') : maskCPF(c.cpf || ''),
+    rg_ie: tipo === 'CNPJ' ? maskIE(c.ie || '') : maskRG(c.rg || ''),
+    telefone: maskTelefone(c.telefone || ''),
+    whatsapp: maskTelefone(c.whatsapp || ''),
+    email: String(c.email || '').trim(),
+    cep: maskCEP(c.cep || ''),
+    endereco: String(c.endereco || '').trim(),
+    numero: String(c.numero || '').trim(),
+    complemento: String(c.complemento || '').trim(),
+    bairro: String(c.bairro || '').trim(),
+    cidade: String(c.cidade || '').trim(),
+    estado: String(c.estado || '').trim(),
+  }
+}
+
+function abrirModalCadastroContrato(continuarAposSalvar = false) {
+  preencherCadastroRapidoComCliente(clienteContrato.value || orcamento.value?.cliente || {})
+  modalCadastroContrato.value.continuarAposSalvar = Boolean(continuarAposSalvar)
+  modalCadastroContrato.value.aberto = true
+}
+
+function fecharModalCadastroContrato() {
+  modalCadastroContrato.value.aberto = false
+  modalCadastroContrato.value.salvando = false
+  modalCadastroContrato.value.continuarAposSalvar = false
+}
+
+async function buscarCepCadastroContrato() {
+  const cepLimpo = onlyNumbers(cadastroContratoForm.value.cep).slice(0, 8)
+  if (cepLimpo.length !== 8) return
+  const data = await buscarCep(cepLimpo)
+  if (!data) return notify.warn('CEP não encontrado.')
+  cadastroContratoForm.value.cep = data.cep ? maskCEP(data.cep) : cadastroContratoForm.value.cep
+  cadastroContratoForm.value.endereco = data.logradouro || cadastroContratoForm.value.endereco
+  cadastroContratoForm.value.bairro = data.bairro || cadastroContratoForm.value.bairro
+  cadastroContratoForm.value.cidade = data.localidade || cadastroContratoForm.value.cidade
+  cadastroContratoForm.value.estado = data.uf || cadastroContratoForm.value.estado
+}
+
+function validarCadastroContrato() {
+  const f = cadastroContratoForm.value
+  if (!String(f.nome_completo || '').trim()) return 'Informe o nome do cliente.'
+  const doc = onlyNumbers(f.documento || '')
+  if (f.tipo_documento === 'CPF' && doc.length !== 11) return 'Informe um CPF válido.'
+  if (f.tipo_documento === 'CNPJ' && doc.length !== 14) return 'Informe um CNPJ válido.'
+  if (onlyNumbers(f.cep || '').length !== 8) return 'Informe um CEP válido.'
+  if (!String(f.endereco || '').trim()) return 'Informe o nome da rua.'
+  if (!String(f.numero || '').trim()) return 'Informe o número.'
+  if (!String(f.bairro || '').trim()) return 'Informe o bairro.'
+  if (!String(f.cidade || '').trim()) return 'Informe a cidade.'
+  if (!String(f.estado || '').trim()) return 'Informe o estado.'
+  return null
+}
+
+async function salvarCadastroContratoRapido() {
+  const erro = validarCadastroContrato()
+  if (erro) return notify.error(erro)
+  const clienteId = Number(clienteIdVenda.value || orcamento.value?.cliente_id || orcamento.value?.cliente?.id || 0)
+  if (!clienteId) return notify.error('Cliente da venda não encontrado para atualização.')
+
+  const f = cadastroContratoForm.value
+  const payload = {
+    nome_completo: String(f.nome_completo || '').trim(),
+    cpf: f.tipo_documento === 'CPF' ? onlyNumbers(f.documento) : null,
+    cnpj: f.tipo_documento === 'CNPJ' ? onlyNumbers(f.documento) : null,
+    rg: f.tipo_documento === 'CPF' ? onlyNumbers(f.rg_ie) : null,
+    ie: f.tipo_documento === 'CNPJ' ? onlyNumbers(f.rg_ie) : null,
+    telefone: String(f.telefone || '').trim() || null,
+    whatsapp: String(f.whatsapp || '').trim() || null,
+    email: String(f.email || '').trim() || null,
+    cep: onlyNumbers(f.cep),
+    endereco: String(f.endereco || '').trim(),
+    numero: String(f.numero || '').trim(),
+    complemento: String(f.complemento || '').trim() || null,
+    bairro: String(f.bairro || '').trim(),
+    cidade: String(f.cidade || '').trim(),
+    estado: String(f.estado || '').trim(),
+  }
+
+  modalCadastroContrato.value.salvando = true
+  try {
+    const { data } = await ClienteService.salvar(clienteId, payload)
+    clienteContrato.value = data || { ...(clienteContrato.value || {}), ...payload }
+    if (orcamento.value?.cliente) {
+      orcamento.value = { ...orcamento.value, cliente: { ...orcamento.value.cliente, ...payload } }
+    }
+    notify.success('Cadastro rápido do contratante atualizado.')
+    const continuar = modalCadastroContrato.value.continuarAposSalvar
+    fecharModalCadastroContrato()
+    if (continuar) await criarOuAtualizarVenda({ skipCadastroContrato: true })
+  } catch (e) {
+    notify.error(e?.response?.data?.message || 'Erro ao atualizar cadastro do contratante.')
+  } finally {
+    modalCadastroContrato.value.salvando = false
+  }
+}
+
+function montarEnderecoEntregaCompleto(rua, numero, complemento, bairro, cidade, estado) {
+  const base = String(rua || '').trim()
+  const num = String(numero || '').trim()
+  const comp = String(complemento || '').trim()
+  const bai = String(bairro || '').trim()
+  const cid = String(cidade || '').trim()
+  const uf = String(estado || '').trim()
+  return [base, num, comp, bai, cid, uf].filter(Boolean).join(', ')
+}
+
+async function buscarEnderecoEntregaPorCep() {
+  const cepLimpo = onlyNumbers(cepEntrega.value).slice(0, 8)
+  if (cepLimpo.length !== 8) return
+  const data = await buscarCep(cepLimpo)
+  if (!data) {
+    notify.warn('CEP de entrega não encontrado.')
+    return
+  }
+  cepEntrega.value = data.cep ? maskCEP(data.cep) : cepEntrega.value
+  enderecoEntrega.value = String(data.logradouro || enderecoEntrega.value || '').trim()
+  bairroEntrega.value = String(data.bairro || bairroEntrega.value || '').trim()
+  cidadeEntrega.value = String(data.localidade || cidadeEntrega.value || '').trim()
+  estadoEntrega.value = String(data.uf || estadoEntrega.value || '').trim()
 }
 
 async function carregarConfiguracaoEmpresa() {
@@ -1020,6 +1392,7 @@ async function carregarOrcamento() {
   try {
     const { data } = await OrcamentosService.detalhar(id)
     orcamento.value = data
+    clienteContrato.value = data?.cliente || null
     itens.value = (data?.itens || []).map((it) => ({
       nome_ambiente: it.nome_ambiente,
       descricao: it.descricao,
@@ -1027,7 +1400,9 @@ async function carregarOrcamento() {
       valor_unitario: Number(it.valor_unitario || 0), // orçado (referência)
       valor_final: Number(it.valor_unitario || 0), // valor de venda inicial (pode ser alterado)
     }))
-    enderecoEntrega.value = montarEnderecoCliente(data?.cliente)
+    cepEntrega.value = data?.cliente?.cep ? maskCEP(data.cliente.cep) : ''
+    preencherEnderecoEntregaComCliente(data?.cliente)
+    temNotaFiscal.value = false
     percentualDesconto.value = 0
     aplicarRateio()
 
@@ -1059,6 +1434,7 @@ async function carregarVenda() {
 
     const { data: orc } = await OrcamentosService.detalhar(orcId)
     orcamento.value = orc
+    clienteContrato.value = orc?.cliente || null
 
     const orcItens = orc?.itens || []
     const vendaItens = venda?.itens || []
@@ -1089,8 +1465,19 @@ async function carregarVenda() {
       percentualDesconto.value = 0
     }
     dataVenda.value = venda?.data_venda ? String(venda.data_venda).slice(0, 10) : new Date().toISOString().slice(0, 10)
-    enderecoEntrega.value =
-      String(venda?.endereco_entrega || '').trim() || montarEnderecoCliente(orc?.cliente)
+    temNotaFiscal.value = Boolean(venda?.tem_nota_fiscal) || Number(venda?.taxa_nota_fiscal_percentual_aplicado || 0) > 0
+    cepEntrega.value = orc?.cliente?.cep ? maskCEP(orc.cliente.cep) : ''
+    const enderecoEntregaSalvo = String(venda?.endereco_entrega || '').trim()
+    if (enderecoEntregaSalvo) {
+      enderecoEntrega.value = enderecoEntregaSalvo
+      numeroEntrega.value = ''
+      complementoEntrega.value = ''
+      bairroEntrega.value = ''
+      cidadeEntrega.value = ''
+      estadoEntrega.value = ''
+    } else {
+      preencherEnderecoEntregaComCliente(orc?.cliente)
+    }
 
     const pagos = venda?.pagamentos || []
     pagamentos.value =
@@ -1133,77 +1520,6 @@ async function carregarVenda() {
   }
 }
 
-function fecharModalEnviarProducao() {
-  modalEnviarProducao.value.aberto = false
-  modalEnviarProducao.value.titulo = ''
-  modalEnviarProducao.value.inicio_em = ''
-  modalEnviarProducao.value.fim_em = ''
-  modalEnviarProducao.value.funcionarioSelecionado = null
-  modalEnviarProducao.value.equipe_ids = []
-}
-function adicionarEquipeEnviarProducao(id) {
-  if (!id) return
-  if (!modalEnviarProducao.value.equipe_ids.includes(id)) modalEnviarProducao.value.equipe_ids.push(id)
-  modalEnviarProducao.value.funcionarioSelecionado = null
-}
-function removerEquipeEnviarProducao(id) {
-  modalEnviarProducao.value.equipe_ids = modalEnviarProducao.value.equipe_ids.filter((f) => String(f) !== String(id))
-}
-function funcionarioNomeByIdEnviarProducao(id) {
-  const opt = funcionariosOptionsEnviarProducao.value.find((o) => (o.value ?? o.id) === id)
-  return opt?.label ?? opt?.nome ?? `#${id}`
-}
-async function abrirModalEnviarProducao() {
-  const id = vendaId.value
-  if (!id || !clienteIdVenda.value) {
-    notify.error('Venda ou cliente não carregado.')
-    return
-  }
-  try {
-    const res = await FuncionarioService.select()
-    const lista = Array.isArray(res?.data) ? res.data : []
-    funcionariosOptionsEnviarProducao.value = lista
-      .map((item) => ({ label: item?.label || item?.nome || '', value: item?.value ?? item?.id ?? null }))
-      .filter((opt) => opt.value != null)
-  } catch (e) {
-    funcionariosOptionsEnviarProducao.value = []
-  }
-  const now = new Date()
-  const fim = new Date(now.getTime() + 2 * 60 * 60 * 1000)
-  const pad = (n) => String(n).padStart(2, '0')
-  modalEnviarProducao.value.titulo = `Produção Venda #${id}`
-  modalEnviarProducao.value.inicio_em = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`
-  modalEnviarProducao.value.fim_em = `${fim.getFullYear()}-${pad(fim.getMonth() + 1)}-${pad(fim.getDate())}T${pad(fim.getHours())}:${pad(fim.getMinutes())}`
-  modalEnviarProducao.value.equipe_ids = []
-  modalEnviarProducao.value.aberto = true
-}
-async function confirmarEnviarProducao() {
-  const inicio = new Date(modalEnviarProducao.value.inicio_em)
-  const fim = new Date(modalEnviarProducao.value.fim_em)
-  if (Number.isNaN(inicio.getTime()) || Number.isNaN(fim.getTime())) return notify.error('Data de início e término inválidas.')
-  if (fim <= inicio) return notify.error('Término deve ser depois do início.')
-  const cid = clienteIdVenda.value
-  if (!cid) return notify.error('Cliente não informado.')
-  modalEnviarProducao.value.salvando = true
-  try {
-    await AgendaService.criar({
-      titulo: modalEnviarProducao.value.titulo,
-      inicio_em: inicio.toISOString(),
-      fim_em: fim.toISOString(),
-      cliente_id: cid,
-      venda_id: vendaId.value,
-      equipe_ids: [],
-      categoria: 'PRODUCAO',
-    })
-    notify.success('Venda enviada para produção!')
-    fecharModalEnviarProducao()
-  } catch (e) {
-    notify.error(e?.response?.data?.message || 'Erro ao enviar para produção.')
-  } finally {
-    modalEnviarProducao.value.salvando = false
-  }
-}
-
 function salvarVenda() {
   if (isEditMode.value) {
     if (!can('vendas.editar')) {
@@ -1219,7 +1535,7 @@ function salvarVenda() {
   criarOuAtualizarVenda()
 }
 
-async function criarOuAtualizarVenda() {
+async function criarOuAtualizarVenda({ skipCadastroContrato = false } = {}) {
   if (!orcamento.value) {
     notify.error('Orçamento não carregado.')
     return
@@ -1235,6 +1551,16 @@ async function criarOuAtualizarVenda() {
       notify.error('Representante legal da empresa está incompleto no cadastro. Verifique em Configurações > Empresa.')
       return
     }
+  }
+
+  if (!skipCadastroContrato && clientePrecisaCadastroRapido(clienteContrato.value || orcamento.value?.cliente)) {
+    if (!can('clientes.editar')) {
+      notify.error('Faltam dados do contratante e você não tem permissão para editar cliente.')
+      return
+    }
+    notify.warn('Complete os dados do contratante antes de concluir a venda.')
+    abrirModalCadastroContrato(true)
+    return
   }
 
   saving.value = true
@@ -1371,8 +1697,18 @@ async function criarOuAtualizarVenda() {
       orcamento_id: Number(orcamento.value.id),
       status: 'VENDA_FECHADA',
       data_venda: dataVenda.value,
-      endereco_entrega: String(enderecoEntrega.value || '').trim() || undefined,
+      endereco_entrega:
+        montarEnderecoEntregaCompleto(
+          enderecoEntrega.value,
+          numeroEntrega.value,
+          complementoEntrega.value,
+          bairroEntrega.value,
+          cidadeEntrega.value,
+          estadoEntrega.value,
+        ) || undefined,
       valor_vendido: Number(valorCobradoVenda.value),
+      tem_nota_fiscal: Boolean(temNotaFiscal.value),
+      taxa_nota_fiscal_percentual_aplicado: temNotaFiscal.value ? Number(TAXA_NOTA_FISCAL?.taxa || 0) : 0,
       representante_venda_nome: representanteEmpresa.nome || undefined,
       representante_venda_cpf: representanteEmpresa.cpf || undefined,
       representante_venda_rg: representanteEmpresa.rg || undefined,

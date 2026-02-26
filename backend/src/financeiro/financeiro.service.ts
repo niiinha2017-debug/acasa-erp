@@ -43,12 +43,23 @@ export class FinanceiroService {
     data_fim?: string;
   }) {
     const status = filtros.status || undefined;
-    let dataIni = filtros.data_ini ? new Date(filtros.data_ini + 'T00:00:00') : undefined;
-    let dataFim = filtros.data_fim ? new Date(filtros.data_fim + 'T23:59:59') : undefined;
+    let dataIni = filtros.data_ini
+      ? new Date(filtros.data_ini + 'T00:00:00')
+      : undefined;
+    let dataFim = filtros.data_fim
+      ? new Date(filtros.data_fim + 'T23:59:59')
+      : undefined;
 
     // Compras: sempre período do mês (1º ao último dia). Se só data_ini veio, fecha no último dia do mês.
     if (dataIni && !dataFim) {
-      dataFim = new Date(dataIni.getFullYear(), dataIni.getMonth() + 1, 0, 23, 59, 59);
+      dataFim = new Date(
+        dataIni.getFullYear(),
+        dataIni.getMonth() + 1,
+        0,
+        23,
+        59,
+        59,
+      );
     }
     if (dataFim && !dataIni) {
       dataIni = new Date(dataFim.getFullYear(), dataFim.getMonth(), 1, 0, 0, 0);
@@ -127,7 +138,10 @@ export class FinanceiroService {
 
             descricao: d.local || d.categoria,
             observacao: d.classificacao,
-            parcela_info: totalParcelas > 1 ? `Parcela ${numParcela}/${totalParcelas}` : null,
+            parcela_info:
+              totalParcelas > 1
+                ? `Parcela ${numParcela}/${totalParcelas}`
+                : null,
 
             valor: t.valor,
             valor_compensado: 0,
@@ -190,7 +204,9 @@ export class FinanceiroService {
       // =====================
       ...compras.map((c) => {
         const itens = (c as any).itens || [];
-        const nomesProdutos = itens.map((i: any) => i.nome_produto || '').filter(Boolean);
+        const nomesProdutos = itens
+          .map((i: any) => i.nome_produto || '')
+          .filter(Boolean);
         // Data da compra: usar UTC para evitar dia errado por fuso (ex: 13/02 00:00 UTC → 12/02 no BR)
         let dataCompraStr = '';
         if (c.data_compra) {
@@ -200,9 +216,10 @@ export class FinanceiroService {
           const year = d.getUTCFullYear();
           dataCompraStr = `${day}/${month}/${year}`;
         }
-        const parteProdutos = nomesProdutos.length > 0
-          ? `Produtos: ${nomesProdutos.join(', ')}`
-          : (c.tipo_compra || 'COMPRA');
+        const parteProdutos =
+          nomesProdutos.length > 0
+            ? `Produtos: ${nomesProdutos.join(', ')}`
+            : c.tipo_compra || 'COMPRA';
         const relatorioDescritivo = dataCompraStr
           ? `COMPRA em ${dataCompraStr} — ${parteProdutos}`
           : `COMPRA — ${parteProdutos}`;
@@ -267,7 +284,8 @@ export class FinanceiroService {
 
           cheques_total: 0,
 
-          fornecedor_cobrador_nome: cp.fornecedor_cobrador?.nome_fantasia || null,
+          fornecedor_cobrador_nome:
+            cp.fornecedor_cobrador?.nome_fantasia || null,
           forma_pagamento_chave: cp.forma_pagamento_chave || null,
         };
       }),
@@ -608,9 +626,11 @@ export class FinanceiroService {
       if (!Number.isFinite(valor) || valor < 0)
         throw new BadRequestException('valor de parcela inválido');
       if (valor > 0 && !venc)
-        throw new BadRequestException('vencimento_em obrigatório quando parcela tem valor');
+        throw new BadRequestException(
+          'vencimento_em obrigatório quando parcela tem valor',
+        );
       if (valor === 0 && !venc)
-        (p as any).vencimento_em = vencPadraoBody.toISOString().slice(0, 10);
+        p.vencimento_em = vencPadraoBody.toISOString().slice(0, 10);
     }
 
     const vencPadrao = vencPadraoBody;
@@ -631,7 +651,9 @@ export class FinanceiroService {
         select: { nome_fantasia: true, razao_social: true },
       });
       const fornecedorNome =
-        (fornecedor?.nome_fantasia || fornecedor?.razao_social || '') ||
+        fornecedor?.nome_fantasia ||
+        fornecedor?.razao_social ||
+        '' ||
         `Fornecedor #${fornecedor_id}`;
 
       // 1) automático
@@ -681,7 +703,9 @@ export class FinanceiroService {
         Math.min(debito_base, credito_auto + credito_extra),
       );
 
-      const parcelasComValor = parcelas.filter((p: any) => Number(p?.valor || 0) > 0);
+      const parcelasComValor = parcelas.filter(
+        (p: any) => Number(p?.valor || 0) > 0,
+      );
       const qtdParcelas = parcelasComValor.length || 1;
       const primeiroVenc =
         parcelasComValor.length > 0 && parcelasComValor[0]?.vencimento_em
@@ -730,7 +754,9 @@ export class FinanceiroService {
               `PAGTO tipo=${tipo} parcelas=${parcelas.length}`,
             ].join(' | ');
             const maxLen = 191; // VARCHAR(191) na tabela contas_pagar
-            return txt.length <= maxLen ? txt : txt.slice(0, maxLen - 3) + '...';
+            return txt.length <= maxLen
+              ? txt
+              : txt.slice(0, maxLen - 3) + '...';
           })(),
 
           valor_original: total_final,
@@ -821,24 +847,37 @@ export class FinanceiroService {
   // =========================================================
   private async sincronizarContasReceberContratosVigentes() {
     const resolverDadosFinanceirosVenda = (venda: any) => {
-      const pagamentos = Array.isArray(venda?.pagamentos) ? venda.pagamentos : [];
+      const pagamentos = Array.isArray(venda?.pagamentos)
+        ? venda.pagamentos
+        : [];
       const valorTotal = pagamentos.length
-        ? pagamentos.reduce((sum: number, p: any) => sum + Number(p?.valor || 0), 0)
+        ? pagamentos.reduce(
+            (sum: number, p: any) => sum + Number(p?.valor || 0),
+            0,
+          )
         : Number(venda?.valor_vendido || venda?.valor_total || 0);
 
       const formas = Array.from(
         new Set(
           pagamentos
-            .map((p: any) => String(p?.forma_pagamento_chave || '').trim().toUpperCase())
+            .map((p: any) =>
+              String(p?.forma_pagamento_chave || '')
+                .trim()
+                .toUpperCase(),
+            )
             .filter(Boolean),
         ),
       );
       const formaUnica = formas.length === 1 ? formas[0] : null;
 
       const pagamentosPagos = pagamentos.filter(
-        (p: any) => String(p?.status_financeiro_chave || '').trim().toUpperCase() === 'PAGO',
+        (p: any) =>
+          String(p?.status_financeiro_chave || '')
+            .trim()
+            .toUpperCase() === 'PAGO',
       );
-      const recebido = pagamentos.length > 0 && pagamentosPagos.length === pagamentos.length;
+      const recebido =
+        pagamentos.length > 0 && pagamentosPagos.length === pagamentos.length;
 
       const dataRecebido = pagamentosPagos
         .map((p: any) => p?.data_recebimento || null)
@@ -963,7 +1002,9 @@ export class FinanceiroService {
           forma_recebimento_chave: dados.formaUnica,
           status: dados.recebido ? 'PAGO' : 'EM_ABERTO',
           vencimento_em: dados.dataVencimento,
-          recebido_em: dados.recebido ? dados.dataRecebido || (conta as any).recebido_em || new Date() : null,
+          recebido_em: dados.recebido
+            ? dados.dataRecebido || (conta as any).recebido_em || new Date()
+            : null,
         },
       });
     }
@@ -1010,7 +1051,9 @@ export class FinanceiroService {
     const isOrigemPosVenda = (origem: string) =>
       origem.includes('POS') && origem.includes('VENDA');
     const isOrigemVenda = (origem: string) =>
-      origem.includes('VENDA') && !origem.includes('PLANO') && !isOrigemPosVenda(origem);
+      origem.includes('VENDA') &&
+      !origem.includes('PLANO') &&
+      !isOrigemPosVenda(origem);
 
     // Regra do módulo: somente venda/pós-venda; plano de corte e demais origens ficam fora.
     let contasVendaPosVenda = contas.filter((c: any) => {
@@ -1071,7 +1114,9 @@ export class FinanceiroService {
     const contasComContrato = contasVendaPosVenda.filter((c: any) => {
       const vendaId = Number(c?.origem_id || 0);
       const clienteId = Number(c?.cliente_id || 0);
-      return vendaIdsComContrato.has(vendaId) || clienteIdsComContrato.has(clienteId);
+      return (
+        vendaIdsComContrato.has(vendaId) || clienteIdsComContrato.has(clienteId)
+      );
     });
 
     const vendaIdsContas = Array.from(
@@ -1086,15 +1131,22 @@ export class FinanceiroService {
     if (vendaIdsContas.length) {
       const pagamentos = await this.prisma.vendas_pagamentos.findMany({
         where: { venda_id: { in: vendaIdsContas } },
-        orderBy: [{ data_prevista_recebimento: 'asc' }, { data_recebimento: 'asc' }, { id: 'asc' }],
+        orderBy: [
+          { data_prevista_recebimento: 'asc' },
+          { data_recebimento: 'asc' },
+          { id: 'asc' },
+        ],
       });
-      pagamentosPorVenda = pagamentos.reduce((acc: Map<number, any[]>, p: any) => {
-        const vendaId = Number(p?.venda_id || 0);
-        if (!vendaId) return acc;
-        if (!acc.has(vendaId)) acc.set(vendaId, []);
-        acc.get(vendaId)!.push(p);
-        return acc;
-      }, new Map<number, any[]>());
+      pagamentosPorVenda = pagamentos.reduce(
+        (acc: Map<number, any[]>, p: any) => {
+          const vendaId = Number(p?.venda_id || 0);
+          if (!vendaId) return acc;
+          if (!acc.has(vendaId)) acc.set(vendaId, []);
+          acc.get(vendaId).push(p);
+          return acc;
+        },
+        new Map<number, any[]>(),
+      );
     }
 
     let detalhesVendaPorId = new Map<number, any>();
@@ -1132,19 +1184,18 @@ export class FinanceiroService {
         valor: Number(p?.valor || 0),
         forma_pagamento_chave: p?.forma_pagamento_chave || null,
         status: p?.status_financeiro_chave || null,
-        vencimento_em: p?.data_prevista_recebimento || p?.data_recebimento || null,
+        vencimento_em:
+          p?.data_prevista_recebimento || p?.data_recebimento || null,
       }));
       const ambientes_venda = Array.from(
         new Set(
-          ((venda as any)?.itens || [])
+          (venda?.itens || [])
             .map((it: any) => String(it?.nome_ambiente || '').trim())
             .filter(Boolean),
         ),
       );
       const cliente_nome =
-        (venda as any)?.cliente?.nome_completo ||
-        (venda as any)?.cliente?.razao_social ||
-        null;
+        venda?.cliente?.nome_completo || venda?.cliente?.razao_social || null;
 
       const obs = String(c?.observacao || '');
       const taxaMatch = obs.match(/taxa=([0-9.,-]+)/i);
@@ -1159,9 +1210,15 @@ export class FinanceiroService {
         parcelas_venda,
         antecipacao: temAntecipacao
           ? {
-              taxa_percentual: taxaMatch ? Number(String(taxaMatch[1]).replace(',', '.')) : null,
-              valor_taxa: valorTaxaMatch ? Number(String(valorTaxaMatch[1]).replace(',', '.')) : null,
-              valor_liquido: valorLiquidoMatch ? Number(String(valorLiquidoMatch[1]).replace(',', '.')) : null,
+              taxa_percentual: taxaMatch
+                ? Number(String(taxaMatch[1]).replace(',', '.'))
+                : null,
+              valor_taxa: valorTaxaMatch
+                ? Number(String(valorTaxaMatch[1]).replace(',', '.'))
+                : null,
+              valor_liquido: valorLiquidoMatch
+                ? Number(String(valorLiquidoMatch[1]).replace(',', '.'))
+                : null,
             }
           : null,
       };
@@ -1199,7 +1256,9 @@ export class FinanceiroService {
       where: { id },
       data: {
         status: SF.PAGO,
-        recebido_em: Number.isNaN(recebidoEm.getTime()) ? new Date() : recebidoEm,
+        recebido_em: Number.isNaN(recebidoEm.getTime())
+          ? new Date()
+          : recebidoEm,
         ...rest,
       },
     });

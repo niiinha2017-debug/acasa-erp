@@ -55,8 +55,16 @@ export class TelegramService {
   /**
    * Notificação de ponto batido (para gestor ou funcionário).
    */
-  async sendPontoBatido(nomeFuncionario: string, tipo: 'ENTRADA' | 'SAIDA', dataHora: Date): Promise<boolean> {
-    const hora = dataHora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false });
+  async sendPontoBatido(
+    nomeFuncionario: string,
+    tipo: 'ENTRADA' | 'SAIDA',
+    dataHora: Date,
+  ): Promise<boolean> {
+    const hora = dataHora.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
     const label = tipo === 'ENTRADA' ? 'Entrada' : 'Saída';
     const text = `🕐 <b>Ponto registrado</b>\n${nomeFuncionario}\n${label} às ${hora}`;
     return this.sendMessage(text);
