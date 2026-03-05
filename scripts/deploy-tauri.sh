@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+[[ -f "$SCRIPT_DIR/deploy.env" ]] && source "$SCRIPT_DIR/deploy.env"
 
-KEY_PATH="/c/Users/Julyana Duarte/.ssh/acasa_key"
-EC2_HOST="ec2-user@54.164.55.32"
+KEY_PATH="${KEY_PATH:-/c/Users/Julyana Duarte/.ssh/acasa_key}"
+EC2_HOST="${EC2_HOST:-ec2-user@54.164.55.32}"
 REMOTE_DIR="/var/www/aplicativo/updates/tauri"
 REMOTE_APP_DIR="/var/www/aplicativo/erp"
 BASE_URL="https://aplicativo.acasamarcenaria.com.br/erp"

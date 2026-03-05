@@ -33,6 +33,9 @@ type FeriadoNacionalItem = {
   type: string;
 };
 
+/** Jornada legal semanal (CF Art. 7º XIII). Usado para complementar HE quando a carga contratada é menor (ex.: 42h50). */
+const JORNADA_LEGAL_SEMANAL_HORAS = 44;
+
 @Injectable()
 export class PontoRelatorioService {
   constructor(
@@ -387,16 +390,23 @@ export class PontoRelatorioService {
       params.data_ini,
       params.data_fim,
     );
+    // Usar o mesmo formato de data que dateKeySP (America/Sao_Paulo) para bater com as chaves dos registros
+    const feriadoDateKey = (dateStr: string) => {
+      const s = String(dateStr || '').trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+      const d = new Date(s + 'T12:00:00Z');
+      return this.dateKeySP(d);
+    };
     const feriadosSemMeta = new Set(
       (feriadosConfig || [])
         .filter((f) => !f?.trabalha)
-        .map((f) => String(f.date || '').trim())
+        .map((f) => feriadoDateKey(f.date || ''))
         .filter(Boolean),
     );
     const feriadosTrabalhadosNoPeriodo =
       (feriadosConfig || [])
         .filter((f) => !!f?.trabalha)
-        .map((f) => String(f.date || '').trim())
+        .map((f) => feriadoDateKey(f.date || ''))
         .filter(Boolean);
 
     const whereFuncionarios: Prisma.funcionariosWhereInput =
@@ -470,7 +480,22 @@ export class PontoRelatorioService {
         metaTotal += metaDia;
       }
       const saldo = horasTrabalhadas - metaTotal;
-      const horasExtras = saldo > 0 ? saldo : 0;
+      let horasExtras = saldo > 0 ? saldo : 0;
+
+      // Complemento 44h semanais: se a carga contratada é menor que 44h (ex.: 42h50), a diferença é agregada como HE
+      let horasExtrasComplemento44 = 0;
+      const derivado = this.derivarCargaDosHorarios(f);
+      const cargaSemanaContratada =
+        derivado.cargaSemana > 0
+          ? derivado.cargaSemana
+          : Number(f.carga_horaria_semana || 0) || 0;
+      if (cargaSemanaContratada > 0 && cargaSemanaContratada < JORNADA_LEGAL_SEMANAL_HORAS) {
+        const semanasNoPeriodo = diasNoPeriodo / 7;
+        const diferencaSemanal = JORNADA_LEGAL_SEMANAL_HORAS - cargaSemanaContratada;
+        horasExtrasComplemento44 = Math.round(semanasNoPeriodo * diferencaSemanal * 100) / 100;
+        horasExtras += horasExtrasComplemento44;
+      }
+
       const saldoDevedorHoras = saldo < 0 ? Math.abs(saldo) : 0;
 
       const custoHora = Number(f.custo_hora || 0) || 0;
@@ -503,6 +528,7 @@ export class PontoRelatorioService {
         nome: f.nome || '',
         horas_trabalhadas: Math.round(horasTrabalhadas * 100) / 100,
         horas_extras: Math.round(horasExtras * 100) / 100,
+        horas_extras_complemento_44h: Math.round(horasExtrasComplemento44 * 100) / 100,
         saldo_devedor_horas: Math.round(saldoDevedorHoras * 100) / 100,
         custo_hora: custoHora,
         valor_hora_extra: Math.round(valorHoraExtra * 100) / 100,

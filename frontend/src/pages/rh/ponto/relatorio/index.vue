@@ -259,8 +259,9 @@
                         <button
                           type="button"
                           @click="abrirModalNovoDia(linha)"
-                          class="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-300 hover:text-brand-primary hover:bg-brand-primary/10 transition-all"
-                          title="Adicionar batida"
+                          :class="linha.inconsistente ? 'opacity-100 p-1.5 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200' : 'opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-300 hover:text-brand-primary hover:bg-brand-primary/10'"
+                          class="transition-all"
+                          :title="linha.inconsistente ? 'Adicionar batida faltante (ex.: saída)' : 'Adicionar batida'"
                         >
                           <i class="pi pi-plus text-xs"></i>
                         </button>
@@ -285,14 +286,26 @@
                       </span>
                     </td>
                     <td class="px-5 py-3 text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        class="h-8 px-3 rounded-lg text-[10px] font-bold uppercase"
-                        @click="abrirModalJustificar({ data: linha.dia })"
-                      >
-                        Justificar
-                      </Button>
+                      <div class="flex items-center justify-end gap-2">
+                        <Button
+                          v-if="linha.inconsistente"
+                          variant="outline"
+                          size="sm"
+                          class="h-8 px-3 rounded-lg text-[10px] font-bold uppercase"
+                          @click="abrirModalNovoDia(linha)"
+                        >
+                          <i class="pi pi-plus mr-1 text-[10px]"></i>
+                          Adicionar saída
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          class="h-8 px-3 rounded-lg text-[10px] font-bold uppercase"
+                          @click="abrirModalJustificar({ data: linha.dia })"
+                        >
+                          Justificar
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 </tbody>

@@ -158,12 +158,22 @@ export class UsuariosService {
         };
         if (data.senha != null && String(data.senha).trim().length >= 6) {
           updateData.senha = await bcrypt.hash(String(data.senha).trim(), 10);
+          updateData.status = 'ATIVO'; // desbloqueia conta que estava pendente de troca
         }
         await this.prisma.$transaction([
           this.prisma.usuarios.update({
             where: { id },
             data: updateData,
           }),
+          // Ao alterar senha, marca recuperação como utilizada para remover "Pendente troca"
+          ...(data.senha != null && String(data.senha).trim().length >= 6
+            ? [
+                this.prisma.recuperacao_senha.updateMany({
+                  where: { usuario_id: id, utilizado: false },
+                  data: { utilizado: true },
+                }),
+              ]
+            : []),
           ...(existe.funcionario_id != null && existe.funcionario_id !== novoFuncionarioId
             ? [
                 this.prisma.funcionarios.update({
@@ -191,11 +201,25 @@ export class UsuariosService {
         };
         if (data.senha != null && String(data.senha).trim().length >= 6) {
           updateData.senha = await bcrypt.hash(String(data.senha).trim(), 10);
+          updateData.status = 'ATIVO'; // desbloqueia conta que estava pendente de troca
         }
-        await this.prisma.usuarios.update({
-          where: { id },
-          data: updateData,
-        });
+        if (data.senha != null && String(data.senha).trim().length >= 6) {
+          await this.prisma.$transaction([
+            this.prisma.usuarios.update({
+              where: { id },
+              data: updateData,
+            }),
+            this.prisma.recuperacao_senha.updateMany({
+              where: { usuario_id: id, utilizado: false },
+              data: { utilizado: true },
+            }),
+          ]);
+        } else {
+          await this.prisma.usuarios.update({
+            where: { id },
+            data: updateData,
+          });
+        }
       }
 
       return this.buscarPorId(id);

@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+[[ -f "$SCRIPT_DIR/deploy.env" ]] && source "$SCRIPT_DIR/deploy.env"
 
-KEY_PATH="/c/Users/Julyana Duarte/.ssh/acasa_key"
-EC2_HOST="ec2-user@54.164.55.32"
+KEY_PATH="${KEY_PATH:-/c/Users/Julyana Duarte/.ssh/acasa_key}"
+EC2_HOST="${EC2_HOST:-ec2-user@54.164.55.32}"
 REMOTE_ERP_DIR="/var/www/aplicativo/erp"
 # Relógio de ponto será servido em um vhost/subdomínio próprio (ponto.acasamarcenaria.com.br).
 # Mantemos o APK em /var/www/ponto para ficar simples no nginx.
 REMOTE_PONTO_DIR="/var/www/ponto"
 
-ROOT_DIR="/d/Sistema ERP/acasa-erp"
+ROOT_DIR="${ROOT_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 ERP_DIR="$ROOT_DIR/frontend"
 PONTO_DIR="$ROOT_DIR/frontend-ponto"
 
