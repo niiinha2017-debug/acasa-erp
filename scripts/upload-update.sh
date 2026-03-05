@@ -45,7 +45,7 @@ else
     echo "    Push concluído (branch: main, remote: $PUSH_REMOTE)."
   else
     echo "    ERRO: remote '$PUSH_REMOTE' não existe. Adicione com: git remote add $PUSH_REMOTE <url>"
-    echo "    Exemplo GitLab: git remote add gitlab git@gitlab.com:SEU_USER/acasa-erp.git"
+    echo "    Exemplo GitLab: git remote add gitlab git@gitlab.com:niiinha.2017-group/niiinha.2017-project.git"
     exit 1
   fi
 fi

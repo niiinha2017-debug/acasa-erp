@@ -15,6 +15,8 @@ git pull
 echo "==> Build frontend"
 cd "$REPO_DIR/frontend"
 npm ci
+# Aumenta memória do Node para evitar "heap out of memory" na EC2
+export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=2048}"
 npm run build
 
 echo "==> Publicar em $REMOTE_WEB_DIR"
