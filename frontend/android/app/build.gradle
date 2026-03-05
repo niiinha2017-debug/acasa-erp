@@ -2,12 +2,13 @@ apply plugin: 'com.android.application'
 
 import java.util.Properties
 import java.io.FileInputStream
+import groovy.json.JsonSlurper
 
 // Versão do app = frontend/package.json (mesma do desktop)
 def packageJson = file("${project.projectDir}/../../package.json")
 def versionNameFromPkg = "1.0"
 if (packageJson.exists()) {
-    def pkg = new groovy.json.JsonSlurper().parseText(packageJson.text)
+    def pkg = new JsonSlurper().parseText(packageJson.text)
     if (pkg.version) versionNameFromPkg = pkg.version
 }
 

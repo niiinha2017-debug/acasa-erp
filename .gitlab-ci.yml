@@ -50,7 +50,7 @@ build:android:
     - |
       if [ -n "${ANDROID_KEYSTORE_BASE64:-}" ] && [ -n "${ANDROID_KEYSTORE_PASSWORD:-}" ] && [ -n "${ANDROID_KEY_ALIAS:-}" ] && [ -n "${ANDROID_KEY_PASSWORD:-}" ]; then
         echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$CI_PROJECT_DIR/android-release.keystore"
-        KEYSTORE_PROPS="storeFile=../../android-release.keystore
+        KEYSTORE_PROPS="storeFile=../../../android-release.keystore
       storePassword=$ANDROID_KEYSTORE_PASSWORD
       keyAlias=$ANDROID_KEY_ALIAS
       keyPassword=$ANDROID_KEY_PASSWORD"
