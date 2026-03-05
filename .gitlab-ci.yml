@@ -46,13 +46,37 @@ build:android:
     - export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
     - npm ci --prefix frontend
     - npm ci --prefix frontend-ponto || true
+    # Keystore para assinar release (como no GitHub): variáveis em Settings → CI/CD → Variables
+    - |
+      if [ -n "${ANDROID_KEYSTORE_BASE64:-}" ] && [ -n "${ANDROID_KEYSTORE_PASSWORD:-}" ] && [ -n "${ANDROID_KEY_ALIAS:-}" ] && [ -n "${ANDROID_KEY_PASSWORD:-}" ]; then
+        echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$CI_PROJECT_DIR/android-release.keystore"
+        KEYSTORE_PROPS="storeFile=../../android-release.keystore
+      storePassword=$ANDROID_KEYSTORE_PASSWORD
+      keyAlias=$ANDROID_KEY_ALIAS
+      keyPassword=$ANDROID_KEY_PASSWORD"
+        echo "$KEYSTORE_PROPS" > "$CI_PROJECT_DIR/frontend/android/keystore.properties"
+        echo "$KEYSTORE_PROPS" > "$CI_PROJECT_DIR/frontend-ponto/android/keystore.properties"
+        echo "Keystore configurado: release será assinado."
+      else
+        echo "Keystore não configurado no CI: APKs serão unsigned. Para assinar, defina ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD."
+      fi
   script:
     - node scripts/bump-android-version.mjs
     - chmod +x "$CI_PROJECT_DIR/frontend/android/gradlew" "$CI_PROJECT_DIR/frontend-ponto/android/gradlew"
     - cd "$CI_PROJECT_DIR/frontend" && npm run build && npx cap sync android
     - cd "$CI_PROJECT_DIR/frontend/android" && ./gradlew assembleRelease --no-daemon
+    - |
+      RELEASE_DIR="$CI_PROJECT_DIR/frontend/android/app/build/outputs/apk/release"
+      if [ -f "$RELEASE_DIR/app-release-unsigned.apk" ] && [ ! -f "$RELEASE_DIR/app-release.apk" ]; then
+        cp "$RELEASE_DIR/app-release-unsigned.apk" "$RELEASE_DIR/app-release.apk"
+      fi
     - cd "$CI_PROJECT_DIR/frontend-ponto" && npm run build && npx cap sync android
     - cd "$CI_PROJECT_DIR/frontend-ponto/android" && ./gradlew assembleRelease --no-daemon
+    - |
+      RELEASE_DIR="$CI_PROJECT_DIR/frontend-ponto/android/app/build/outputs/apk/release"
+      if [ -f "$RELEASE_DIR/app-release-unsigned.apk" ] && [ ! -f "$RELEASE_DIR/app-release.apk" ]; then
+        cp "$RELEASE_DIR/app-release-unsigned.apk" "$RELEASE_DIR/app-release.apk"
+      fi
     - cd "$CI_PROJECT_DIR"
   artifacts:
     paths:
@@ -62,6 +86,11 @@ build:android:
 # Recebe artefatos de todos os estágios anteriores (sem dependencies/needs)
 deploy:ec2:
   stage: deploy
+  needs:
+    - job: prepare:android
+      artifacts: true
+    - job: build:android
+      artifacts: true
   before_script:
     - apt-get update -qq && apt-get install -y -qq ssh-client
     - |

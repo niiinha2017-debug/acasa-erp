@@ -14,8 +14,13 @@ if (packageJson.exists()) {
 // ---- KEYS (release signing) ----
 def keystorePropertiesFile = rootProject.file("keystore.properties")
 def keystoreProperties = new Properties()
+def hasKeystoreProps = false
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    hasKeystoreProps = keystoreProperties['storeFile'] &&
+            keystoreProperties['storePassword'] &&
+            keystoreProperties['keyAlias'] &&
+            keystoreProperties['keyPassword']
 }
 
 android {
@@ -44,8 +49,7 @@ android {
 
     signingConfigs {
         release {
-            // Só configura se existir o arquivo (não quebra o build do dev/CI)
-            if (keystorePropertiesFile.exists()) {
+            if (hasKeystoreProps) {
                 storeFile file(keystoreProperties['storeFile'])
                 storePassword keystoreProperties['storePassword']
                 keyAlias keystoreProperties['keyAlias']
@@ -60,9 +64,10 @@ android {
         }
 
         release {
-            // ✅ Assina o release (para de sair -unsigned.apk)
-            signingConfig signingConfigs.release
-
+            // ✅ Assina o release só quando keystore existe (CI sem keystore gera APK unsigned)
+            if (hasKeystoreProps) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

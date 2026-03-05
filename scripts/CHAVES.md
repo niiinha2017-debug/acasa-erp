@@ -18,7 +18,20 @@ Abra `deploy.env` e preencha:
 | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Senha da chave que assina o .exe do Tauri | A que você criou ao gerar a chave |
 | `TAURI_SIGNING_PRIVATE_KEY_PATH` | Caminho do arquivo da chave Tauri | Ex.: `~/.ssh/tauri_private.key` |
 
-**GitLab:** não vai nesse arquivo. Na primeira vez que der `git push gitlab main` o Git pede usuário/senha (ou abre o navegador); depois pode guardar no Gerenciador de Credenciais do Windows. Para usar **só GitLab** (sair do GitHub), veja **scripts/GITLAB-ONLY.md**.
+**GitLab (CI/CD):** em **Settings → CI/CD → Variables** do repositório, configure também (para o pipeline fazer deploy e **assinar os APKs** como no GitHub):
+
+| Variável | Tipo | O que é | Como obter |
+|----------|------|---------|------------|
+| `EC2_SSH_PRIVATE_KEY` | Variable (ou File) | Chave SSH da EC2 (conteúdo do .pem) | Conteúdo do mesmo arquivo que você usa em `KEY_PATH` |
+| `EC2_HOST` | Variable | Acesso SSH à EC2 | Ex.: `ec2-user@54.164.55.32` |
+| `ANDROID_KEYSTORE_BASE64` | Variable, **Masked** | Keystore Android em Base64 | No PC: `base64 -w0 caminho/do/seu.keystore` (ou no Git Bash: `base64 -w 0 seu.keystore`) |
+| `ANDROID_KEYSTORE_PASSWORD` | Variable, **Masked** | Senha do keystore | A senha que você usa ao assinar o APK |
+| `ANDROID_KEY_ALIAS` | Variable, **Masked** | Alias da chave no keystore | Ex.: `mykey` ou o alias que você criou |
+| `ANDROID_KEY_PASSWORD` | Variable, **Masked** | Senha da chave (key) | Geralmente igual à senha do keystore |
+
+Sem as variáveis `ANDROID_*`, o CI ainda roda, mas os APKs saem **unsigned** (não dá para atualizar por cima de uma versão assinada).
+
+**GitLab (push):** na primeira vez que der `git push origin main` o Git pede usuário/senha (ou abre o navegador); depois pode guardar no Gerenciador de Credenciais do Windows. Para usar **só GitLab** (sair do GitHub), veja **scripts/GITLAB-ONLY.md**.
 
 ## 2. Usar nos scripts
 
@@ -42,4 +55,4 @@ bash scripts/deploy-tauri.sh           # 4. Desktop (instalador .exe → EC2)
 
 Ou seja: **2 arquivos de chave** (acasa_key + tauri_private.key) e **1 senha** (Tauri) no `deploy.env`. GitLab é login normal.
 
-**Android (Capacitor):** usa a mesma chave EC2 (`KEY_PATH`); não precisa de chave extra. O script `deploy-android.sh` gera os APKs (ERP + Ponto) e envia para a EC2.
+**Android (Capacitor):** no **PC** usa a mesma chave EC2 (`KEY_PATH`) e o `keystore.properties` local (no projeto Android) para assinar. No **GitLab CI**, use as variáveis `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` e `ANDROID_KEY_PASSWORD` para os APKs saírem assinados no pipeline (igual ao que você tinha no GitHub).
