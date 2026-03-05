@@ -61,13 +61,9 @@ build:android:
       - frontend/android/app/build/outputs/apk/release/app-release.apk
       - frontend-ponto/android/app/build/outputs/apk/release/app-release.apk
 
+# Sem needs: recebe artefatos de TODOS os estágios anteriores (prepare + build)
 deploy:ec2:
   stage: deploy
-  needs:
-    - job: prepare:android
-      artifacts: true
-    - job: build:android
-      artifacts: true
   before_script:
     - apt-get update -qq && apt-get install -y -qq ssh-client
     - |
