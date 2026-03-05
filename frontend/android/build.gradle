@@ -21,6 +21,7 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        maven { url "https://plugins.gradle.org/m2/" }
     }
 }
 
@@ -29,11 +30,11 @@ task clean(type: Delete) {
 }
 subprojects { sub ->
 
-    // ✅ Força Kotlin único (evita duplicadas 1.6 vs 1.8)
+    // ✅ Força Kotlin único (1.9.22 tem kotlin-build-tools-impl no Maven Central; 1.8.22 não)
     sub.configurations.all {
         resolutionStrategy.eachDependency { details ->
             if (details.requested.group == "org.jetbrains.kotlin") {
-                details.useVersion "1.8.22"
+                details.useVersion "1.9.22"
             }
             // @capacitor/browser puxa androidx.browser:1.9.0 que exige compileSdk 36; forçar 1.8.x
             if (details.requested.group == "androidx.browser" && details.requested.name == "browser") {
