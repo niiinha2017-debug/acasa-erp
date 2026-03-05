@@ -63,8 +63,6 @@ build:android:
 
 deploy:ec2:
   stage: deploy
-  dependencies:
-    - build:android
   before_script:
     - apt-get update -qq && apt-get install -y -qq ssh-client
     - |
@@ -87,6 +85,16 @@ deploy:ec2:
       fi
     - mkdir -p ~/.ssh && ssh-keyscan -H "${EC2_HOST#*@}" >> ~/.ssh/known_hosts 2>/dev/null || true
   script:
+    - cd "$CI_PROJECT_DIR"
+    - |
+      ERP_APK="frontend/android/app/build/outputs/apk/release/app-release.apk"
+      PONTO_APK="frontend-ponto/android/app/build/outputs/apk/release/app-release.apk"
+      if [ ! -f "$ERP_APK" ] || [ ! -f "$PONTO_APK" ]; then
+        echo "ERRO: APKs não encontrados. Verifique se o job build:android gerou os artefatos."
+        ls -la frontend/android/app/build/outputs/apk/release/ 2>/dev/null || true
+        ls -la frontend-ponto/android/app/build/outputs/apk/release/ 2>/dev/null || true
+        exit 1
+      fi
     # version.json para o app Android (botão "Verificar atualização")
     - |
       VERSION=$(node -p "require('./frontend/package.json').version")
@@ -94,11 +102,11 @@ deploy:ec2:
     - scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new /tmp/version.json "${EC2_HOST}:/home/ec2-user/version.json"
     - |
       scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new \
-        frontend/android/app/build/outputs/apk/release/app-release.apk \
+        "$CI_PROJECT_DIR/frontend/android/app/build/outputs/apk/release/app-release.apk" \
         "${EC2_HOST}:/home/ec2-user/Acasa.apk"
     - |
       scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new \
-        frontend-ponto/android/app/build/outputs/apk/release/app-release.apk \
+        "$CI_PROJECT_DIR/frontend-ponto/android/app/build/outputs/apk/release/app-release.apk" \
         "${EC2_HOST}:/home/ec2-user/ponto.apk"
     - |
       ssh -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new "$EC2_HOST" \
