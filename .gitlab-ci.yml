@@ -66,19 +66,36 @@ deploy:ec2:
     - build:android
   before_script:
     - apt-get update -qq && apt-get install -y -qq ssh-client
-    - chmod 600 "$EC2_SSH_KEY"
+    - |
+      if [ -z "${EC2_SSH_PRIVATE_KEY:-}" ]; then
+        echo "ERRO: Defina a variável EC2_SSH_PRIVATE_KEY em Settings → CI/CD → Variables"
+        exit 1
+      fi
+      if [ -z "${EC2_HOST:-}" ]; then
+        echo "ERRO: Defina a variável EC2_HOST em Settings → CI/CD → Variables"
+        exit 1
+      fi
+    # EC2_SSH_PRIVATE_KEY: conteúdo da chave ou caminho (tipo File)
+    - |
+      if [ -f "$EC2_SSH_PRIVATE_KEY" ]; then
+        export SSH_KEY_FILE="$EC2_SSH_PRIVATE_KEY"
+      else
+        echo "$EC2_SSH_PRIVATE_KEY" > "$CI_PROJECT_DIR/deploy_key.pem"
+        chmod 600 "$CI_PROJECT_DIR/deploy_key.pem"
+        export SSH_KEY_FILE="$CI_PROJECT_DIR/deploy_key.pem"
+      fi
     - mkdir -p ~/.ssh && ssh-keyscan -H "${EC2_HOST#*@}" >> ~/.ssh/known_hosts 2>/dev/null || true
   script:
     - |
-      scp -i "$EC2_SSH_KEY" -o StrictHostKeyChecking=accept-new \
+      scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new \
         frontend/android/app/build/outputs/apk/release/app-release.apk \
         "${EC2_HOST}:/home/ec2-user/Acasa.apk"
     - |
-      scp -i "$EC2_SSH_KEY" -o StrictHostKeyChecking=accept-new \
+      scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new \
         frontend-ponto/android/app/build/outputs/apk/release/app-release.apk \
         "${EC2_HOST}:/home/ec2-user/ponto.apk"
     - |
-      ssh -i "$EC2_SSH_KEY" -o StrictHostKeyChecking=accept-new "$EC2_HOST" \
+      ssh -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new "$EC2_HOST" \
         "sudo mkdir -p /var/www/aplicativo/erp /var/www/ponto && \
          sudo mv /home/ec2-user/Acasa.apk /var/www/aplicativo/erp/ && \
          sudo mv /home/ec2-user/ponto.apk /var/www/ponto/ && \
