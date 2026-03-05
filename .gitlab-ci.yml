@@ -63,6 +63,11 @@ build:android:
 
 deploy:ec2:
   stage: deploy
+  needs:
+    - job: prepare:android
+      artifacts: true
+    - job: build:android
+      artifacts: true
   before_script:
     - apt-get update -qq && apt-get install -y -qq ssh-client
     - |
