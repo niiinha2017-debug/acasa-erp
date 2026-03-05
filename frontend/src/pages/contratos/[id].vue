@@ -10,6 +10,15 @@
       >
         <template #actions>
           <RouterLink
+            v-if="!isEdit && vendaIdFromQuery"
+            :to="`/vendas/venda/${vendaIdFromQuery}`"
+            class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+          >
+            <i class="pi pi-arrow-left text-xs"></i>
+            Voltar ao fechamento
+          </RouterLink>
+          <RouterLink
+            v-else
             to="/contratos"
             class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
           >
@@ -24,11 +33,13 @@
 
         <form v-else class="space-y-8" @submit.prevent="salvar" autocomplete="off">
           <div
-            v-if="isEdit && assinaturaClienteRegistrada"
-            class="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300"
+            v-if="clientePendenteValidacao"
+            class="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-200"
           >
-            <div class="font-semibold">Assinatura do cliente registrada</div>
-            <div class="text-xs mt-1">Data e hora: {{ dataAssinaturaClienteLabel }}</div>
+            <div class="font-semibold">Cliente não validado</div>
+            <div class="text-xs mt-1">
+              O contrato não será gerado enquanto o cliente/contratante não for validado. Valide o contratante na venda (botão &quot;Validar contratante&quot;) antes de criar o contrato.
+            </div>
           </div>
 
           <div class="grid grid-cols-12 gap-6">
@@ -105,76 +116,42 @@
             <p class="col-span-12 md:col-span-6 -mt-3 text-xs text-text-soft">
               Data prévia até {{ dataFimMaximoLabel }}.
             </p>
-
-            <div class="col-span-12 pt-2">
-              <label class="flex items-start gap-3 cursor-pointer group">
-                <input
-                  v-model="form.assinatura_presencial"
-                  type="checkbox"
-                  class="mt-1 w-4 h-4 rounded border-border-ui text-brand-primary focus:ring-brand-primary/20"
-                />
-                <span class="text-sm text-text-main">
-                  <span class="font-semibold">Contrato será assinado presencialmente na loja</span>
-                  <span class="block text-xs text-text-soft mt-0.5">No PDF será usado o nome do sócio (Configurações &gt; Empresa). Se desmarcado, assinatura eletrônica: será usado o representante legal da empresa (CNPJ).</span>
-                </span>
-              </label>
-            </div>
           </div>
 
-          <!-- Compartilhar contrato (assinatura quando rascunho; PDF quando já assinado) -->
+          <!-- Enviar PDF por WhatsApp e e-mail -->
           <section
             v-if="isEdit"
             class="rounded-2xl border border-border-ui bg-bg-page p-6 space-y-4"
           >
             <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
-              {{ isContratoAssinado ? 'Compartilhar contrato assinado' : 'Enviar para assinatura eletrônica' }}
+              Enviar PDF por WhatsApp ou e-mail
             </div>
             <p class="text-sm text-text-soft">
-              {{
-                isContratoAssinado
-                  ? 'Contrato já assinado. Você pode reenviar o PDF por WhatsApp ou por e-mail para leitura/arquivo.'
-                  : 'Envie o contrato para o cliente assinar no portal seguro por WhatsApp ou por e-mail. Após a assinatura, o contrato ficará vigente.'
-              }}
+              Gere o PDF do contrato (botão abaixo) e envie ao cliente por WhatsApp ou e-mail. O cliente recebe o link e abre o PDF normalmente para visualizar e baixar. A assinatura será feita pelo cliente na residência dele (impresso ou conforme combinado).
             </p>
-            <div class="rounded-xl border border-sky-200 bg-sky-50 dark:bg-sky-950/30 dark:border-sky-800 p-3 text-xs text-sky-700 dark:text-sky-300">
-              Assinatura eletrônica segura no seu subdomínio com trilha de evidências técnicas. Este fluxo não depende de integração oficial GOV.BR.
-            </div>
-
-            <div class="rounded-xl bg-slate-50 dark:bg-slate-800/50 p-4 space-y-2">
-              <p class="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                Envio por WhatsApp e e-mail
-              </p>
-              <p class="text-xs text-text-soft">
-                {{
-                  isContratoAssinado
-                    ? 'No WhatsApp abre a mensagem com link do PDF. No e-mail envia automaticamente pelo sistema usando o SMTP configurado no servidor.'
-                    : 'No WhatsApp abre a mensagem com link para leitura e assinatura eletrônica segura. No e-mail envia automaticamente pelo sistema usando o SMTP configurado no servidor.'
-                }}
-              </p>
-              <div class="flex flex-wrap items-center gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  :loading="obterLinkLoading"
-                  :disabled="!telefoneCliente || obterLinkLoading"
-                  @click="enviarPorWhatsApp"
-                >
-                  <i class="pi pi-whatsapp mr-1.5"></i>
-                  Enviar por WhatsApp
-                </Button>
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  :loading="enviarEmailLoading"
-                  :disabled="!emailCliente || enviarEmailLoading"
-                  @click="enviarContratoPorEmailSistema"
-                >
-                  <i class="pi pi-send mr-1.5"></i>
-                  Enviar e-mail pelo sistema
-                </Button>
-              </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                :loading="obterLinkLoading"
+                :disabled="!telefoneCliente || obterLinkLoading"
+                @click="enviarPorWhatsApp"
+              >
+                <i class="pi pi-whatsapp mr-1.5"></i>
+                Enviar por WhatsApp
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                :loading="enviarEmailLoading"
+                :disabled="!emailCliente || enviarEmailLoading"
+                @click="enviarContratoPorEmailSistema"
+              >
+                <i class="pi pi-send mr-1.5"></i>
+                Enviar e-mail pelo sistema
+              </Button>
             </div>
             <p v-if="!telefoneCliente" class="text-xs text-amber-600 dark:text-amber-400">
               Cadastre o telefone do cliente para habilitar o envio por WhatsApp.
@@ -184,55 +161,70 @@
             </p>
           </section>
 
-          <!-- Assinatura presencial na loja: imprimir sem assinatura, cliente assina na loja, marcar vigente e opcionalmente anexar escaneado -->
+          <!-- Incluir / excluir contrato assinado (upload PDF) – quando cliente assinou fora do sistema -->
           <section
-            v-if="isEdit && !isContratoAssinado && can('contratos.editar')"
+            v-if="isEdit"
             class="rounded-2xl border border-border-ui bg-bg-page p-6 space-y-4"
           >
-            <div class="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
-              <i class="pi pi-print text-base text-slate-500" />
-              Assinatura presencial na loja
+            <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
+              Incluir contrato assinado
             </div>
             <p class="text-sm text-text-soft">
-              Imprima o contrato sem assinatura; o cliente assina na loja. Marque abaixo e opcionalmente anexe o contrato escaneado para que "Ver contrato" exiba o documento assinado.
+              Quando o cliente tiver assinado o contrato (impresso ou por outro meio), envie o PDF assinado aqui. O sistema salva o arquivo e marca o contrato como vigente.
             </p>
-            <label class="flex items-center gap-3 cursor-pointer group">
-              <input
-                v-model="assinaturaPresencialConfirmada"
-                type="checkbox"
-                class="w-4 h-4 rounded border-border-ui text-brand-primary focus:ring-brand-primary/20"
-              />
-              <span class="text-sm font-medium text-text-main group-hover:text-brand-primary transition-colors">
-                Contrato assinado presencialmente na loja
-              </span>
-            </label>
-            <div class="rounded-xl border border-border-ui bg-bg-card p-4 space-y-2">
-              <label class="flex items-center gap-2 text-xs font-semibold text-text-soft">
-                <i class="pi pi-file-pdf text-sky-500" />
-                Anexar contrato escaneado (PDF) – opcional
-              </label>
-              <input
-                ref="inputEscaneadoRef"
-                type="file"
-                accept=".pdf,application/pdf"
-                class="block w-full text-sm text-text-main file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-sky-500/20 file:text-sky-600 file:font-medium file:cursor-pointer hover:file:bg-sky-500/30"
-                @change="onArquivoEscaneadoChange"
-              />
-              <p v-if="arquivoEscaneadoNome" class="text-xs text-text-soft truncate">
-                {{ arquivoEscaneadoNome }}
-              </p>
+            <div v-if="pdfAssinadoArquivoId" class="flex flex-wrap items-center gap-3">
+              <span class="text-sm text-text-soft">Há um PDF assinado vinculado a este contrato.</span>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                :loading="excluindoPdfAssinado"
+                :disabled="excluindoPdfAssinado"
+                @click="excluirPdfAssinado"
+              >
+                <i v-if="excluindoPdfAssinado" class="pi pi-spin pi-spinner mr-1.5"></i>
+                <i v-else class="pi pi-trash mr-1.5"></i>
+                Excluir PDF assinado
+              </Button>
             </div>
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              :disabled="!assinaturaPresencialConfirmada || vigentePresencialLoading"
-              @click="marcarVigenteAssinaturaPresencial"
-            >
-              <i v-if="vigentePresencialLoading" class="pi pi-spin pi-spinner mr-2" />
-              <i v-else class="pi pi-check-circle mr-2" />
-              Marcar como vigente (assinatura presencial)
-            </Button>
+            <template v-if="form.status !== 'VIGENTE'">
+              <div class="flex flex-wrap items-center gap-3">
+                <input
+                  ref="inputContratoAssinado"
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  class="hidden"
+                  @change="onFileContratoAssinadoChange"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  :loading="incluirAssinadoLoading"
+                  :disabled="incluirAssinadoLoading"
+                  @click="abrirSeletorArquivo"
+                >
+                  <i v-if="incluirAssinadoLoading" class="pi pi-spin pi-spinner mr-1.5"></i>
+                  <i v-else class="pi pi-upload mr-1.5"></i>
+                  Escolher PDF assinado
+                </Button>
+                <span v-if="arquivoContratoAssinado" class="text-sm text-text-soft">
+                  {{ arquivoContratoAssinado.name }}
+                </span>
+              </div>
+              <Button
+                v-if="arquivoContratoAssinado"
+                type="button"
+                variant="primary"
+                size="sm"
+                :loading="incluirAssinadoLoading"
+                :disabled="incluirAssinadoLoading"
+                @click="enviarContratoAssinado"
+              >
+                <i v-if="incluirAssinadoLoading" class="pi pi-spin pi-spinner mr-1.5"></i>
+                Incluir contrato assinado e marcar como vigente
+              </Button>
+            </template>
           </section>
 
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-border-ui">
@@ -258,7 +250,7 @@
               <Button
                 type="submit"
                 variant="primary"
-                :disabled="salvando"
+                :disabled="salvando || clientePendenteValidacao"
               >
                 <i v-if="salvando" class="pi pi-spin pi-spinner mr-2"></i>
                 {{ isEdit ? 'Salvar alterações' : 'Criar contrato' }}
@@ -278,6 +270,7 @@ import { notify } from '@/services/notify'
 import { can } from '@/services/permissions'
 import { ContratosService, VendaService } from '@/services/index'
 import { closeTabAndGo } from '@/utils/tabs'
+import { clientePrecisaValidacaoParaContrato } from '@/utils/validators'
 
 definePage({ meta: { perm: 'contratos.ver' } })
 
@@ -299,16 +292,14 @@ const salvando = ref(false)
 const gerandoPdf = ref(false)
 const obterLinkLoading = ref(false)
 const enviarEmailLoading = ref(false)
-const vigentePresencialLoading = ref(false)
-const assinaturaPresencialConfirmada = ref(false)
-const arquivoEscaneado = ref(null)
-const arquivoEscaneadoNome = ref('')
-const inputEscaneadoRef = ref(null)
+const incluirAssinadoLoading = ref(false)
+const arquivoContratoAssinado = ref(null)
+const inputContratoAssinado = ref(null)
+const pdfAssinadoArquivoId = ref(null)
+const excluindoPdfAssinado = ref(false)
 const statusInicial = ref('RASCUNHO')
 const vendaOptions = ref([])
 const contratoCliente = ref(null)
-const assinaturaClienteRegistrada = ref(false)
-const dataAssinaturaCliente = ref(null)
 const telefoneCliente = computed(() => {
   const c = contratoCliente.value
   const t = c?.whatsapp ?? c?.telefone ?? ''
@@ -321,40 +312,13 @@ const emailCliente = computed(() => {
   const e = (c?.email ?? c?.email_secundario ?? '').trim()
   return e || ''
 })
-const isContratoAssinado = computed(() => String(form.value.status || '').toUpperCase() === 'VIGENTE')
-
-function onArquivoEscaneadoChange(ev) {
-  const f = ev?.target?.files?.[0]
-  arquivoEscaneado.value = f && f.type === 'application/pdf' ? f : null
-  arquivoEscaneadoNome.value = arquivoEscaneado.value ? arquivoEscaneado.value.name : ''
-}
-
-async function marcarVigenteAssinaturaPresencial() {
-  if (!assinaturaPresencialConfirmada.value || vigentePresencialLoading.value) return
-  vigentePresencialLoading.value = true
-  try {
-    await ContratosService.vigenteAssinaturaPresencial(contratoId.value, arquivoEscaneado.value || undefined)
-    notify.success('Contrato marcado como vigente (assinatura presencial).')
-    form.value.status = 'VIGENTE'
-    assinaturaPresencialConfirmada.value = false
-    arquivoEscaneado.value = null
-    arquivoEscaneadoNome.value = ''
-    if (inputEscaneadoRef.value) inputEscaneadoRef.value.value = ''
-    await carregarContrato()
-  } catch (e) {
-    console.error(e)
-    notify.error(e?.response?.data?.message || 'Erro ao marcar contrato como vigente.')
-  } finally {
-    vigentePresencialLoading.value = false
-  }
-}
-const dataAssinaturaClienteLabel = computed(() => {
-  const raw = dataAssinaturaCliente.value
-  if (!raw) return '-'
-  const d = new Date(raw)
-  if (Number.isNaN(d.getTime())) return '-'
-  return d.toLocaleString('pt-BR')
-})
+/** Regra: contrato não pode ser gerado se o cliente não for validado (nome, documento, endereço completos). */
+const clientePendenteValidacao = computed(
+  () =>
+    !isEdit.value &&
+    !!contratoCliente.value &&
+    clientePrecisaValidacaoParaContrato(contratoCliente.value),
+)
 
 const statusOptions = [
   { label: 'Rascunho', value: 'RASCUNHO' },
@@ -371,7 +335,6 @@ const form = ref({
   valor: 0,
   data_inicio: '',
   data_fim: '',
-  assinatura_presencial: false,
 })
 
 function hojeYmd() {
@@ -392,6 +355,19 @@ function addOneYearYmd(ymd) {
   const mm = String(dt.getMonth() + 1).padStart(2, '0')
   const dd = String(dt.getDate()).padStart(2, '0')
   return `${yy}-${mm}-${dd}`
+}
+
+/** Normaliza valor vindo da API (ISO, Date, YYYY-MM-DD) para YYYY-MM-DD do input date. */
+function normalizarYmd(val) {
+  if (val == null || val === '') return ''
+  const s = String(val).trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+  const d = new Date(val)
+  if (Number.isNaN(d.getTime())) return ''
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 const dataFimMaximo = computed(() => addOneYearYmd(form.value.data_inicio))
@@ -466,6 +442,7 @@ async function carregarContrato() {
     loading.value = false
     form.value.status = 'RASCUNHO'
     form.value.data_inicio = hojeYmd()
+    form.value.data_fim = addOneYearYmd(form.value.data_inicio)
     statusInicial.value = 'RASCUNHO'
     // Pré-preenche cliente/venda quando vier de uma venda específica
     if (vendaIdFromQuery.value) {
@@ -488,8 +465,6 @@ async function carregarContrato() {
   try {
     const { data } = await ContratosService.buscar(contratoId.value)
     const raw = data?.data ?? data
-    assinaturaClienteRegistrada.value = !!raw?.assinatura_cliente_registrada
-    dataAssinaturaCliente.value = raw?.data_assinatura_cliente || null
     contratoCliente.value = raw?.cliente ?? null
     // Se o contrato não veio com cliente ou cliente sem contato, busca pela venda (cadastro do cliente)
     if (raw?.venda_id && (!contratoCliente.value || (!(contratoCliente.value?.email || contratoCliente.value?.whatsapp || contratoCliente.value?.telefone)))) {
@@ -499,6 +474,8 @@ async function carregarContrato() {
         if (v?.cliente) contratoCliente.value = v.cliente
       } catch (_) {}
     }
+    const dataInicio = normalizarYmd(raw?.data_inicio)
+    const dataFim = normalizarYmd(raw?.data_fim)
     form.value = {
       cliente_id: raw?.cliente_id,
       venda_id: raw?.venda_id ?? null,
@@ -506,11 +483,11 @@ async function carregarContrato() {
       descricao: raw?.descricao || '',
       status: raw?.status || 'RASCUNHO',
       valor: Number(raw?.valor || 0),
-      data_inicio: raw?.data_inicio ? String(raw.data_inicio).slice(0, 10) : '',
-      data_fim: raw?.data_fim ? String(raw.data_fim).slice(0, 10) : '',
-      assinatura_presencial: !!raw?.assinatura_presencial,
+      data_inicio: dataInicio,
+      data_fim: dataFim || addOneYearYmd(dataInicio),
     }
     statusInicial.value = String(raw?.status || 'RASCUNHO').toUpperCase()
+    pdfAssinadoArquivoId.value = raw?.pdf_assinado_arquivo_id ?? null
   } catch (e) {
     notify.error('Contrato não encontrado.')
     router.push('/contratos')
@@ -537,6 +514,52 @@ watch(
     }
   },
 )
+
+function abrirSeletorArquivo() {
+  inputContratoAssinado.value?.click?.()
+}
+
+function onFileContratoAssinadoChange(ev) {
+  const f = ev.target?.files?.[0]
+  if (f && (f.type === 'application/pdf' || /\.pdf$/i.test(f.name)))
+    arquivoContratoAssinado.value = f
+  ev.target.value = ''
+}
+
+async function enviarContratoAssinado() {
+  const file = arquivoContratoAssinado.value
+  if (!file || !can('contratos.editar')) return
+  const id = Number(String(contratoId.value).replace(/\D/g, ''))
+  if (!id) return notify.error('Contrato inválido.')
+  incluirAssinadoLoading.value = true
+  try {
+    await ContratosService.vigenteAssinaturaPresencial(id, file)
+    notify.success('Contrato assinado incluído e marcado como vigente.')
+    form.value.status = 'VIGENTE'
+    arquivoContratoAssinado.value = null
+    await carregarContrato()
+  } catch (e) {
+    notify.error(e?.response?.data?.message || 'Erro ao incluir contrato assinado.')
+  } finally {
+    incluirAssinadoLoading.value = false
+  }
+}
+
+async function excluirPdfAssinado() {
+  if (!can('contratos.editar')) return notify.error('Sem permissão para editar contrato.')
+  const id = Number(String(contratoId.value).replace(/\D/g, ''))
+  if (!id) return notify.error('Contrato inválido.')
+  excluindoPdfAssinado.value = true
+  try {
+    await ContratosService.excluirPdfAssinado(id)
+    notify.success('PDF assinado excluído.')
+    pdfAssinadoArquivoId.value = null
+  } catch (e) {
+    notify.error(e?.response?.data?.message || 'Erro ao excluir PDF assinado.')
+  } finally {
+    excluindoPdfAssinado.value = false
+  }
+}
 
 /** Abre URL externa (Tauri/web) sem sair da página atual do ERP. */
 async function abrirUrlExterno(url, preOpenedWindow = null) {
@@ -591,6 +614,11 @@ async function abrirUrlExterno(url, preOpenedWindow = null) {
 async function salvar() {
   if (!isEdit.value && !can('contratos.criar')) return notify.error('Sem permissão para criar contrato.')
   if (isEdit.value && !can('contratos.editar')) return notify.error('Sem permissão para editar contrato.')
+  if (clientePendenteValidacao.value) {
+    return notify.error(
+      'O contrato não pode ser gerado enquanto o cliente não for validado. Valide o contratante na venda (botão "Validar contratante") antes de criar o contrato.',
+    )
+  }
 
   const payload = {
     venda_id: form.value.venda_id || null,
@@ -600,7 +628,6 @@ async function salvar() {
     valor: form.value.valor,
     data_inicio: form.value.data_inicio || null,
     data_fim: form.value.data_fim || null,
-    assinatura_presencial: !!form.value.assinatura_presencial,
   }
 
   if (!payload.venda_id) return notify.error('Selecione a venda. O contrato só pode ser criado a partir de uma venda.')
@@ -612,12 +639,6 @@ async function salvar() {
   if (Number.isNaN(inicio.getTime()) || Number.isNaN(fim.getTime())) return notify.error('Datas do contrato inválidas.')
   if (fim < inicio) return notify.error('A data de término não pode ser menor que a data de início.')
   if (fim > fimMax) return notify.error('A data de término deve ser em até 1 ano após a data de início.')
-  if (
-    String(payload.status || '').toUpperCase() === 'VIGENTE' &&
-    statusInicial.value !== 'VIGENTE'
-  ) {
-    return notify.error('Para segurança, use apenas o link de assinatura do contrato.')
-  }
 
   salvando.value = true
   try {
@@ -627,7 +648,7 @@ async function salvar() {
       closeTabAndGo('/contratos')
     } else {
       const { data } = await ContratosService.salvar(null, payload)
-      notify.success('Contrato criado. Use os botões abaixo para gerar PDF e enviar por WhatsApp ou e-mail.')
+      notify.success('Contrato criado. Gere o PDF e envie por WhatsApp ou e-mail.')
       const novoId = data?.id ?? data?.data?.id
       if (novoId) {
         closeTabAndGo(`/contratos/${novoId}`)
@@ -658,13 +679,19 @@ async function gerarPdfContrato() {
     const arquivoId = data?.arquivoId
     if (!arquivoId) return notify.error('Não retornou arquivoId.')
 
-    await router.push({
-      path: `/arquivos/${String(arquivoId).replace(/\D/g, '')}`,
-      query: {
-        name: `CONTRATO_${String(id).replace(/\D/g, '')}.pdf`,
-        type: 'application/pdf',
-      },
+    const base = typeof window !== 'undefined' ? window.location.origin : ''
+    const q = new URLSearchParams({
+      name: `CONTRATO_${id}.pdf`,
+      type: 'application/pdf',
+      contratoId: String(id),
     })
+    const url = `${base}/arquivos/${String(arquivoId).replace(/\D/g, '')}?${q.toString()}`
+    const opened = window.open(url, '_blank', 'noopener,noreferrer')
+    if (opened) {
+      notify.success('PDF aberto em nova aba. Você pode imprimir e depois enviar o contrato assinado aqui na mesma tela.')
+    } else {
+      await router.push({ path: `/arquivos/${String(arquivoId).replace(/\D/g, '')}`, query: { name: `CONTRATO_${id}.pdf`, type: 'application/pdf', contratoId: String(id) } })
+    }
   } catch (e) {
     const msg = e?.response?.data?.message || e?.message || 'Erro ao gerar PDF do contrato.'
     notify.error(msg)
@@ -685,12 +712,9 @@ async function enviarPorWhatsApp() {
   obterLinkLoading.value = true
   try {
     const { data } = await ContratosService.linkPublicoPdf(id)
-    const link = data?.link || data?.linkPdf || data?.linkAceitar
+    const link = data?.link || data?.linkPdf
     if (!link) return notify.error('Não foi possível gerar o link do contrato.')
-    const ehLinkDeAssinatura = !!data?.linkAceitar
-    const msg = !ehLinkDeAssinatura
-      ? `Olá! Segue o link para visualizar e baixar o contrato assinado: ${link}`
-      : `Olá! Segue o link para ler e assinar o contrato: ${link}`
+    const msg = `Olá! Segue o link para visualizar e baixar o PDF do contrato: ${link}`
     const numero = String(telefoneCliente.value).replace(/\D/g, '')
     const phone = numero.length >= 11 ? numero.slice(-11) : numero
     const msgEnc = encodeURIComponent(msg)

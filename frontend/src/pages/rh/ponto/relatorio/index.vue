@@ -5,31 +5,10 @@
 
       <PageHeader
         title="Relatório de Ponto"
-        subtitle="Espelho de ponto e horas com base no cadastro do funcionário"
+        subtitle="Correção e visualização do ponto. PDF para enviar à contabilidade e aos funcionários."
         icon="pi pi-stopwatch"
         :show-back="false"
-      >
-        <template #actions>
-          <div class="flex items-center gap-2">
-            <Button
-              v-if="can('ponto_relatorio.ver')"
-              variant="outline"
-              @click="router.push('/rh/ponto/horas-extras')"
-            >
-              <i class="pi pi-calculator mr-2"></i>
-              Horas Extras
-            </Button>
-            <Button
-              v-if="can('ponto_convite.criar')"
-              variant="outline"
-              @click="router.push('/rh/ponto/convites')"
-            >
-              <i class="pi pi-link mr-2"></i>
-              Convites
-            </Button>
-          </div>
-        </template>
-      </PageHeader>
+      />
 
       <div class="px-4 md:px-6 pb-6 pt-4 border-t border-border-ui">
         <!-- Filtros -->
@@ -184,109 +163,133 @@
             </div>
 
             <div v-else class="overflow-x-auto">
-              <table class="w-full min-w-[780px] border-collapse">
+              <table class="w-full min-w-[640px] border-collapse">
                 <thead>
                   <tr class="bg-slate-50 dark:bg-slate-800/50">
                     <th class="px-5 py-3 text-left text-[10px] font-black uppercase tracking-wider text-text-soft">Data</th>
+                    <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-text-soft">Batidas</th>
+                    <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-text-soft">Tempo</th>
                     <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-text-soft">
-                      Ent 1
-                      <span v-if="funcionarioSelecionado?.horario_entrada_1" class="block text-[9px] font-normal text-slate-400 mt-0.5">({{ funcionarioSelecionado.horario_entrada_1 }})</span>
-                    </th>
-                    <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-text-soft">
-                      Sai 1
-                      <span v-if="funcionarioSelecionado?.horario_saida_1" class="block text-[9px] font-normal text-slate-400 mt-0.5">({{ funcionarioSelecionado.horario_saida_1 }})</span>
-                    </th>
-                    <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-text-soft">
-                      Ent 2
-                      <span v-if="funcionarioSelecionado?.horario_entrada_2" class="block text-[9px] font-normal text-slate-400 mt-0.5">({{ funcionarioSelecionado.horario_entrada_2 }})</span>
-                    </th>
-                    <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-text-soft">
-                      Sai 2
-                      <span v-if="funcionarioSelecionado?.horario_saida_2" class="block text-[9px] font-normal text-slate-400 mt-0.5">({{ funcionarioSelecionado.horario_saida_2 }})</span>
+                      Saldo
+                      <span class="block text-[9px] font-normal text-slate-400 mt-0.5">(meta {{ JORNADA_META_MIN / 60 }}h)</span>
                     </th>
                     <th class="px-5 py-3 text-right text-[10px] font-black uppercase tracking-wider text-text-soft">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr
-                    v-for="row in rowsAgrupadas"
-                    :key="row.data"
+                    v-for="linha in linhasRelatorio"
+                    :key="linha.dia"
                     class="group border-t border-border-ui/60 hover:bg-bg-page/60 transition-colors"
+                    :class="classeLinhaDia(linha)"
                   >
                     <td class="px-5 py-3">
                       <div class="flex flex-col">
-                        <span class="text-sm font-bold text-text-main">{{ fmtData(row.data) }}</span>
-                        <span class="text-[10px] font-medium text-text-soft uppercase">{{ getDiaSemana(row.data) }}</span>
+                        <span class="text-sm font-bold text-text-main">{{ fmtData(linha.dia) }}</span>
+                        <span class="text-[10px] font-medium text-text-soft uppercase">{{ getDiaSemana(linha.dia) }}</span>
+                        <span v-if="linha.inconsistente" class="text-[10px] font-bold text-red-600 mt-0.5">Inconsistente</span>
                       </div>
                     </td>
-                    <td
-                      v-for="col in ['ent1', 'sai1', 'ent2', 'sai2']"
-                      :key="col"
-                      class="px-4 py-3 text-center"
-                    >
-                      <div class="flex items-center justify-center gap-2 group/btn">
-                        <span
-                          class="tabular-nums font-bold text-sm min-w-[2.5rem]"
-                          :class="[
-                            row[col]?.hora
-                              ? (col.startsWith('ent') ? 'text-blue-600' : 'text-slate-700')
-                              : 'text-slate-300',
-                            isFimDeSemanaErro(row.data, row[col]?.hora) ? 'text-rose-500' : ''
-                          ]"
-                        >
-                          {{ row[col]?.hora || '--:--' }}
-                        </span>
-                        <div v-if="row[col]?.id" class="flex items-center opacity-0 group-hover/btn:opacity-100 transition-opacity gap-0.5">
+                    <td class="px-4 py-3">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <template v-if="linha.batidas && linha.batidas.length">
+                          <template v-for="(batida, idx) in (expandedDias.has(linha.dia) || linha.batidas.length <= 4 ? linha.batidas : linha.batidas.slice(0, 4))" :key="batida.id || idx">
+                            <div class="flex items-center gap-1.5 group/b">
+                              <span
+                                class="tabular-nums text-sm font-bold min-w-[2.2rem]"
+                                :class="batida.tipo === 'ENTRADA' ? 'text-blue-600' : 'text-slate-700'"
+                              >
+                                {{ batida.hora }}
+                              </span>
+                              <span class="text-[10px] text-text-soft uppercase">{{ batida.tipo === 'ENTRADA' ? 'E' : 'S' }}</span>
+                              <div class="flex items-center opacity-0 group-hover/b:opacity-100 transition-opacity gap-0.5">
+                                <button
+                                  type="button"
+                                  @click="abrirComprovante(batida.id)"
+                                  class="p-1 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
+                                  title="Comprovante PDF"
+                                >
+                                  <i class="pi pi-file-pdf text-xs"></i>
+                                </button>
+                                <button
+                                  type="button"
+                                  @click="abrirComprovanteImagem(batida.id, 'png')"
+                                  class="p-1 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50"
+                                  title="Comprovante PNG"
+                                >
+                                  <i class="pi pi-image text-xs"></i>
+                                </button>
+                                <button
+                                  type="button"
+                                  @click="abrirModalEditar(batida)"
+                                  class="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+                                  title="Editar"
+                                >
+                                  <i class="pi pi-pencil text-xs"></i>
+                                </button>
+                                <button
+                                  type="button"
+                                  @click="confirmarExcluirDireto(batida.id)"
+                                  class="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                                  title="Excluir"
+                                >
+                                  <i class="pi pi-trash text-xs"></i>
+                                </button>
+                              </div>
+                            </div>
+                          </template>
                           <button
+                            v-if="linha.batidas.length > 4 && !expandedDias.has(linha.dia)"
                             type="button"
-                            @click="abrirComprovante(row[col].id)"
-                            class="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
-                            title="Comprovante PDF"
+                            @click="toggleExpandDia(linha.dia)"
+                            class="text-[10px] font-bold text-brand-primary hover:underline"
                           >
-                            <i class="pi pi-file-pdf text-xs"></i>
+                            Ver mais ({{ linha.batidas.length }} batidas)
                           </button>
                           <button
+                            v-else-if="linha.batidas.length > 4 && expandedDias.has(linha.dia)"
                             type="button"
-                            @click="abrirComprovanteImagem(row[col].id, 'png')"
-                            class="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-colors"
-                            title="Comprovante PNG (imagem)"
+                            @click="toggleExpandDia(linha.dia)"
+                            class="text-[10px] font-bold text-text-soft hover:underline"
                           >
-                            <i class="pi pi-image text-xs"></i>
+                            Ocultar
                           </button>
-                          <button
-                            type="button"
-                            @click="abrirModalEditar(row[col])"
-                            class="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                            title="Editar"
-                          >
-                            <i class="pi pi-pencil text-xs"></i>
-                          </button>
-                          <button
-                            type="button"
-                            @click="confirmarExcluirDireto(row[col].id)"
-                            class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                            title="Excluir"
-                          >
-                            <i class="pi pi-trash text-xs"></i>
-                          </button>
-                        </div>
+                        </template>
+                        <span v-else class="text-slate-400 text-sm">—</span>
                         <button
-                          v-else
                           type="button"
-                          @click="abrirModalNovoNaPosicao(row, col)"
-                          class="opacity-0 group-hover/btn:opacity-100 p-1.5 rounded-lg text-slate-300 hover:text-brand-primary hover:bg-brand-primary/10 transition-all"
-                          title="Adicionar"
+                          @click="abrirModalNovoDia(linha)"
+                          class="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-300 hover:text-brand-primary hover:bg-brand-primary/10 transition-all"
+                          title="Adicionar batida"
                         >
                           <i class="pi pi-plus text-xs"></i>
                         </button>
                       </div>
+                    </td>
+                    <td class="px-4 py-3 text-center tabular-nums font-bold text-sm">
+                      {{ linha.horasHHMM }}
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                      <span
+                        v-if="linha.inconsistente"
+                        class="text-xs font-bold text-red-600"
+                      >
+                        Inconsistente
+                      </span>
+                      <span
+                        v-else
+                        class="tabular-nums font-bold text-sm"
+                        :class="linha.saldoMin != null && linha.saldoMin > 0 ? 'text-emerald-600' : linha.saldoMin != null && linha.saldoMin < 0 ? 'text-red-600' : 'text-text-main'"
+                      >
+                        {{ linha.saldoHHMM }}
+                      </span>
                     </td>
                     <td class="px-5 py-3 text-right">
                       <Button
                         variant="ghost"
                         size="sm"
                         class="h-8 px-3 rounded-lg text-[10px] font-bold uppercase"
-                        @click="abrirModalJustificar(row)"
+                        @click="abrirModalJustificar({ data: linha.dia })"
                       >
                         Justificar
                       </Button>
@@ -436,7 +439,7 @@ import { notify } from '@/services/notify'
 import { consolidarSaldoPeriodo, derivarCargaDosHorarios } from '@/utils/utils'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
-import { listDays, groupRegistrosByDia } from '@/utils/ponto'
+import { listDays, groupRegistrosByDia, JORNADA_META_MIN } from '@/utils/ponto'
 import { onlyNumbers } from '@/utils/masks'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import Button from '@/components/ui/Button.vue'
@@ -511,6 +514,9 @@ const resumo = computed(() => {
     funcionario: funcionarioSelecionado.value || undefined,
     horasSemana: 48,
     diasSemana: 6,
+    dataIni: filtros.data_ini || null,
+    dataFim: filtros.data_fim || null,
+    motorAcasa: true,
   })
   return base
 })
@@ -518,6 +524,32 @@ const resumo = computed(() => {
 const diasComBatida = computed(() => {
   return registrosPorDia.value.size
 })
+
+/** Linhas do espelho para exibição (exclui domingo, ordena data desc). */
+const linhasRelatorio = computed(() => {
+  const list = (resumo.value.linhas || []).filter(
+    (l) => new Date(l.dia + 'T12:00:00').getDay() !== 0,
+  )
+  return list.sort((a, b) => b.dia.localeCompare(a.dia))
+})
+
+/** Dias com lista de batidas expandida (> 4 batidas). */
+const expandedDias = ref(new Set())
+function toggleExpandDia(dia) {
+  const next = new Set(expandedDias.value)
+  if (next.has(dia)) next.delete(dia)
+  else next.add(dia)
+  expandedDias.value = next
+}
+
+/** Estilo da linha: vermelho (inconsistente ou saldo negativo), verde (saldo positivo). */
+function classeLinhaDia(linha) {
+  if (linha.inconsistente || (linha.saldoMin != null && linha.saldoMin < 0))
+    return 'bg-red-50 dark:bg-red-950/30 border-l-4 border-red-500'
+  if (linha.saldoMin != null && linha.saldoMin > 0)
+    return 'bg-emerald-50 dark:bg-emerald-950/20 border-l-4 border-emerald-500'
+  return ''
+}
 
 const modalEditar = reactive({
   open: false,
@@ -579,39 +611,6 @@ const isFimDeSemanaErro = (dataStr, horaStr) => {
   const [h, m] = horaStr.split(':').map(Number)
   return data.getDay() === 6 && (h > 12 || (h === 12 && m > 0))
 }
-const rowsAgrupadas = computed(() => {
-  if (!filtros.data_ini || !filtros.data_fim) return []
-  const dias = listDays(filtros.data_ini, filtros.data_fim).filter((dia) => {
-    const d = new Date(dia + 'T12:00:00')
-    return d.getDay() !== 0
-  })
-  const map = registrosPorDia.value
-  return dias
-    .map((dia) => {
-      const regsDia = (map.get(dia) || [])
-        .filter((r) => r.status === 'ATIVO')
-        .slice()
-        .sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora))
-      const batidas = regsDia.map((reg) => ({
-        id: reg.id,
-        hora: fmtHoraLocal(reg.data_hora),
-        tipo: reg.tipo,
-        data_hora: reg.data_hora,
-        observacao: reg.observacao,
-      }))
-      const entradas = batidas.filter((b) => b.tipo === 'ENTRADA')
-      const saidas = batidas.filter((b) => b.tipo === 'SAIDA')
-      return {
-        data: dia,
-        funcionario_id: filtros.funcionario_id,
-        ent1: entradas[0],
-        sai1: saidas[0],
-        ent2: entradas[1],
-        sai2: saidas[1],
-      }
-    })
-    .sort((a, b) => b.data.localeCompare(a.data))
-})
 
 async function buscar() {
   if (!filtros.funcionario_id) {
@@ -855,21 +854,18 @@ async function confirmarExcluirDireto(id) {
   }
 }
 
-function abrirModalNovoNaPosicao(row, coluna) {
+function abrirModalNovoDia(linha) {
   const f = funcionarioSelecionado.value
-  const h = {
-    ent1: f?.horario_entrada_1 || '07:30',
-    sai1: f?.horario_saida_1 || '12:00',
-    ent2: f?.horario_entrada_2 || '13:30',
-    sai2: f?.horario_saida_2 || '17:30',
-  }
+  const ultimaBatida = linha.batidas?.length ? linha.batidas[linha.batidas.length - 1] : null
+  const proximoTipo = ultimaBatida?.tipo === 'ENTRADA' ? 'SAIDA' : 'ENTRADA'
+  const hDefault = proximoTipo === 'ENTRADA' ? (f?.horario_entrada_1 || '08:00') : (f?.horario_saida_1 || '12:00')
   Object.assign(modalEditar, {
     open: true,
     id: null,
     form: {
       funcionario_id: filtros.funcionario_id,
-      data_hora_local: `${row.data}T${h[coluna]}`,
-      tipo: coluna.startsWith('ent') ? 'ENTRADA' : 'SAIDA',
+      data_hora_local: `${linha.dia}T${hDefault}`,
+      tipo: proximoTipo,
       observacao: 'AJUSTE MANUAL',
     },
   })

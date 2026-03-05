@@ -16,11 +16,21 @@ const router = useRouter()
 const AGENDA_HOME = '/agendamentos/loja'
 
 function getFirstAllowedRoute() {
-  const items = Object.values(NAV_SCHEMA).flat()
-  const firstAllowed = items.find((item) => {
-    if (!item?.to || item?.divider) return false
+  const flat = []
+  for (const items of Object.values(NAV_SCHEMA)) {
+    for (const item of items || []) {
+      if (item?.divider) continue
+      if (item?.children?.length) {
+        flat.push(...item.children)
+      } else {
+        flat.push(item)
+      }
+    }
+  }
+  const firstAllowed = flat.find((item) => {
+    if (!item?.to) return false
     if (!item.perm) return true
-    return can(item.perm)
+    return Array.isArray(item.perm) ? item.perm.some((p) => can(p)) : can(item.perm)
   })
   return firstAllowed?.to || '/alterar-senha'
 }

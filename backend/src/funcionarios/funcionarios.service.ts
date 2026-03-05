@@ -39,8 +39,44 @@ export class FuncionariosService {
   }
 
   async listar() {
-    return this.prisma.funcionarios.findMany({
+    const funcionarios = await this.prisma.funcionarios.findMany({
       orderBy: { id: 'desc' },
+      include: {
+        usuario: {
+          select: { id: true, status: true },
+        },
+      },
+    });
+
+    const usuarioIds = funcionarios
+      .map((f) => f.usuario?.id)
+      .filter((id): id is number => id != null);
+    const idsPendenteSenha = new Set<number>();
+    if (usuarioIds.length > 0) {
+      const recs = await this.prisma.recuperacao_senha.findMany({
+        where: { usuario_id: { in: usuarioIds }, utilizado: false },
+        select: { usuario_id: true },
+      });
+      recs.forEach((r) => idsPendenteSenha.add(r.usuario_id));
+    }
+
+    return funcionarios.map((f) => {
+      const statusNorm = String(f.status ?? '').trim().toUpperCase();
+      const usuario = f.usuario;
+      const pendenteSenha = usuario ? idsPendenteSenha.has(usuario.id) : false;
+      const statusUsuario = usuario ? String(usuario.status ?? '').trim().toUpperCase() : '';
+      const statusAcesso =
+        statusNorm === 'INATIVO'
+          ? 'Inativo'
+          : usuario && (statusUsuario === 'PENDENTE' || pendenteSenha)
+            ? 'Pendente de Senha'
+            : 'Ativo';
+
+      const { usuario: _u, ...rest } = f;
+      return {
+        ...rest,
+        status_acesso: statusAcesso,
+      };
     });
   }
 
@@ -218,6 +254,17 @@ export class FuncionariosService {
     return login;
   }
 
+  private cargoUsuarioPorUnidade(unidade: string | null | undefined): 'VENDEDOR_LOJA' | 'MONTADOR_FABRICA' | undefined {
+    const u = String(unidade ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toUpperCase();
+    if (u === 'LOJA') return 'VENDEDOR_LOJA';
+    if (u === 'FABRICA' || u === 'FÁBRICA') return 'MONTADOR_FABRICA';
+    return undefined;
+  }
+
   async criar(dto: CriarFuncionarioDto) {
     try {
       const data = this.normalizarDatas(dto);
@@ -229,6 +276,16 @@ export class FuncionariosService {
         admissao: data.admissao,
         demissao: data.demissao,
       });
+
+      data.custo_total_mensal = this.calcularCustoTotalMensal({
+        salario_base: data.salario_base,
+        impostos_encargos_percentual: data.impostos_encargos_percentual,
+        salario_adicional: data.salario_adicional,
+        tem_vale: data.tem_vale,
+        vale: data.vale,
+        tem_vale_transporte: data.tem_vale_transporte,
+        vale_transporte: data.vale_transporte,
+      }) ?? undefined;
 
       const funcionario = await this.prisma.funcionarios.create({ data });
 
@@ -251,11 +308,13 @@ export class FuncionariosService {
             login = `${baseLogin}.${n}`;
           }
 
+          const cargoUsuario = this.cargoUsuarioPorUnidade(funcionario.unidade);
           const criado = await this.authService.cadastro({
             nome: funcionario.nome,
             email,
             usuario: login,
             senha: undefined,
+            cargo: cargoUsuario,
           });
 
           const usuarioId = (criado as any).id;
@@ -320,6 +379,44 @@ export class FuncionariosService {
         });
       }
 
+      const camposCusto = [
+        'salario_base',
+        'impostos_encargos_percentual',
+        'salario_adicional',
+        'tem_vale',
+        'vale',
+        'tem_vale_transporte',
+        'vale_transporte',
+      ];
+      const mexeuEmCusto = camposCusto.some((c) => Object.prototype.hasOwnProperty.call(data, c));
+      if (mexeuEmCusto) {
+        const atual = await this.prisma.funcionarios.findUnique({
+          where: { id },
+          select: {
+            salario_base: true,
+            impostos_encargos_percentual: true,
+            salario_adicional: true,
+            tem_vale: true,
+            vale: true,
+            tem_vale_transporte: true,
+            vale_transporte: true,
+          },
+        });
+        if (atual) {
+          const merged = { ...atual, ...data };
+          data.custo_total_mensal =
+            this.calcularCustoTotalMensal({
+              salario_base: merged.salario_base,
+              impostos_encargos_percentual: merged.impostos_encargos_percentual,
+              salario_adicional: merged.salario_adicional,
+              tem_vale: merged.tem_vale,
+              vale: merged.vale,
+              tem_vale_transporte: merged.tem_vale_transporte,
+              vale_transporte: merged.vale_transporte,
+            }) ?? undefined;
+        }
+      }
+
       return await this.prisma.funcionarios.update({
         where: { id },
         data,
@@ -335,6 +432,26 @@ export class FuncionariosService {
     await this.buscarPorId(id);
     await this.prisma.funcionarios.delete({ where: { id } });
     return { ok: true };
+  }
+
+  /** Calcula custo total mensal: base*(1+impostos/100) + adicional + vale + vale_transporte */
+  private calcularCustoTotalMensal(f: {
+    salario_base?: number | null;
+    impostos_encargos_percentual?: number | null;
+    salario_adicional?: number | null;
+    tem_vale?: boolean;
+    vale?: number | null;
+    tem_vale_transporte?: boolean;
+    vale_transporte?: number | null;
+  }): number | null {
+    const base = Number(f.salario_base ?? 0);
+    if (!base && base !== 0) return null;
+    const pct = Number(f.impostos_encargos_percentual ?? 0) || 0;
+    const adicional = Number(f.salario_adicional ?? 0) || 0;
+    const vale = f.tem_vale ? Number(f.vale ?? 0) || 0 : 0;
+    const vt = f.tem_vale_transporte ? Number(f.vale_transporte ?? 0) || 0 : 0;
+    const total = base * (1 + pct / 100) + adicional + vale + vt;
+    return Math.round(total * 100) / 100;
   }
 
   private normalizarDatas(dto: any) {

@@ -27,7 +27,7 @@
                 type="text"
                 :disabled="loading"
                 autocomplete="username"
-                class="w-full h-11 sm:h-12 bg-transparent border-0 border-b-2 border-border-ui text-sm sm:text-base font-semibold text-text-main placeholder:text-slate-400 focus:border-brand-primary focus:outline-none transition-colors"
+                class="w-full h-11 sm:h-12 bg-transparent border-0 border-b-2 border-border-ui text-sm sm:text-base font-semibold text-text-main placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-brand-primary focus:outline-none transition-colors"
                 placeholder="Usuario ou e-mail"
               />
             </div>
@@ -39,17 +39,21 @@
                 :type="showPassword ? 'text' : 'password'"
                 :disabled="loading"
                 autocomplete="current-password"
-                class="w-full h-11 sm:h-12 bg-transparent border-0 border-b-2 border-border-ui text-sm sm:text-base font-semibold text-text-main placeholder:text-slate-400 focus:border-brand-primary focus:outline-none transition-colors pr-10"
+                class="w-full h-11 sm:h-12 bg-transparent border-0 border-b-2 border-border-ui text-sm sm:text-base font-semibold text-text-main placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-brand-primary focus:outline-none transition-colors pr-10"
                 placeholder="Senha"
               />
               <button
                 type="button"
                 @click="togglePassword"
-                class="absolute right-0 top-0 h-11 sm:h-12 px-2 text-slate-500 hover:text-brand-primary"
+                class="absolute right-0 top-0 h-11 sm:h-12 px-2 text-slate-500 dark:text-slate-400 hover:text-brand-primary"
               >
                 <i :class="showPassword ? 'pi pi-eye-slash' : 'pi pi-eye'" class="text-base" />
               </button>
             </div>
+          </div>
+
+          <div v-if="msgSenhaExpirada" class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-200">
+            Senha provisória expirada. Peça ao administrador para resetar seu acesso na tela de Equipe (Configurações).
           </div>
 
           <div class="flex items-center justify-between gap-3 sm:gap-4">
@@ -130,12 +134,14 @@
 
 <script setup>
 import { ref, reactive, onMounted, watch, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from '@/services/useauth'
 
 definePage({ meta: { public: true, layout: 'auth' } })
 
 const router = useRouter()
+const route = useRoute()
+const msgSenhaExpirada = computed(() => route.query?.msg === 'senha_expirada')
 const { login, esqueciSenha, loading } = useAuth()
 const AGENDA_GERAL_PATH = '/agendamentos/loja'
 

@@ -67,6 +67,14 @@ export class ProdutosController {
     });
   }
 
+  @Get('abaixo-estoque-minimo')
+  @Permissoes('produtos.ver')
+  listarAbaixoEstoqueMinimo(@Req() req?: any) {
+    return this.produtosService.listarAbaixoEstoqueMinimo({
+      aplicarMarkup100: this.aplicarMarkup100(req?.user),
+    });
+  }
+
   @Get()
   @Permissoes('produtos.ver')
   listar(

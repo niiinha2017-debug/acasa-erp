@@ -75,6 +75,30 @@ export class AnalyticsController {
     return this.service.getDreMensal(m, a);
   }
 
+  /** DRE do plano de corte: receita do plano de corte e custos/despesas rateados. */
+  @Get('dre-plano-corte')
+  @Permissoes('dashboard.visualizar')
+  getDrePlanoCorte(@Query('mes') mes?: string, @Query('ano') ano?: string) {
+    const m = mes ? parseInt(mes, 10) : new Date().getMonth() + 1;
+    const a = ano ? parseInt(ano, 10) : new Date().getFullYear();
+    if (!m || m < 1 || m > 12 || !a) {
+      return { erro: 'mes (1-12) e ano obrigatórios' };
+    }
+    return this.service.getDrePlanoCorte(m, a);
+  }
+
+  /** DRE do período por produção (venda) de cada cliente e por ambiente registrado. */
+  @Get('dre-periodo-cliente-ambiente')
+  @Permissoes('dashboard.visualizar')
+  getDrePeriodoClienteAmbiente(@Query('mes') mes?: string, @Query('ano') ano?: string) {
+    const m = mes ? parseInt(mes, 10) : new Date().getMonth() + 1;
+    const a = ano ? parseInt(ano, 10) : new Date().getFullYear();
+    if (!m || m < 1 || m > 12 || !a) {
+      return { erro: 'mes (1-12) e ano obrigatórios' };
+    }
+    return this.service.getDrePeriodoPorClienteAmbiente(m, a);
+  }
+
   /** Feriados nacionais (Brasil API, grátis). ano opcional (padrão: ano atual). */
   @Get('feriados')
   @Permissoes('dashboard.visualizar')

@@ -25,6 +25,7 @@ import { UtilsModule } from './utils/utils.module';
 import { PontoModule } from './ponto/ponto.module';
 import { ArquivosModule } from './arquivos/arquivos.module';
 import { AgendaModule } from './agenda/agenda.module';
+import { ApontamentoProducaoModule } from './apontamento-producao/apontamento-producao.module';
 import { ClausulasModule } from './clausulas/clausulas.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
@@ -39,16 +40,24 @@ import { NotificationsModule } from './notifications/notifications.module';
       envFilePath:
         process.env.NODE_ENV === 'production'
           ? [
-              join(__dirname, '..', '.env.production'),
+              join(process.cwd(), '.env.production'),
               join(process.cwd(), 'backend', '.env.production'),
-              join(__dirname, '..', '.env'),
+              join(__dirname, '..', '..', '.env.production'),
+              join(__dirname, '..', '.env.production'),
+              join(process.cwd(), '.env'),
               join(process.cwd(), 'backend', '.env'),
+              join(__dirname, '..', '..', '.env'),
+              join(__dirname, '..', '.env'),
             ]
           : [
-              join(__dirname, '..', '.env'),
+              join(process.cwd(), '.env'),
               join(process.cwd(), 'backend', '.env'),
-              join(__dirname, '..', '.env.production'),
+              join(__dirname, '..', '..', '.env'),
+              join(__dirname, '..', '.env'),
+              join(process.cwd(), '.env.production'),
               join(process.cwd(), 'backend', '.env.production'),
+              join(__dirname, '..', '..', '.env.production'),
+              join(__dirname, '..', '.env.production'),
             ],
     }),
 
@@ -74,6 +83,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     UtilsModule,
     PontoModule,
     AgendaModule,
+    ApontamentoProducaoModule,
     VendasModule,
     ClausulasModule,
     AnalyticsModule,

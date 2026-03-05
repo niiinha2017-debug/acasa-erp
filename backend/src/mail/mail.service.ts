@@ -44,18 +44,29 @@ export class MailService {
       );
     }
   }
+  /**
+   * Envia e-mail com senha provisória. dataRegistro em UTC/Date; exibida em horário de Brasília.
+   */
   async enviarSenhaProvisoria(
     para: string,
     senhaProvisoria: string,
     nome?: string,
+    dataRegistro?: Date,
   ) {
     const from =
       this.config.get<string>('MAIL_FROM') ||
       this.config.get<string>('MAIL_USER');
 
+    const dataRef = dataRegistro ?? new Date();
+    const dataFormatada = new Intl.DateTimeFormat('pt-BR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+      timeZone: 'America/Sao_Paulo',
+    }).format(dataRef);
+
     const text = `Olá${nome ? `, ${nome}` : ''}.
 
-Seu acesso ao ACASA ERP foi criado.
+Seu acesso ao ACASA ERP foi criado em ${dataFormatada} (horário de Brasília).
 
 Sua senha provisória é: ${senhaProvisoria}
 
@@ -94,8 +105,8 @@ Passando para te desejar um feliz aniversário! 🎉
   }
 
   /**
-   * Envia o link do contrato para assinatura por e-mail (SMTP do .env).
-   * O e-mail é enviado automaticamente pelo sistema.
+   * Envia o link do PDF do contrato por e-mail (SMTP do .env).
+   * O cliente acessa o link para visualizar e baixar o PDF. Sem assinatura interna/subdomínio.
    */
   async enviarContratoLink(
     para: string,
@@ -106,9 +117,9 @@ Passando para te desejar um feliz aniversário! 🎉
       this.config.get<string>('MAIL_FROM') ||
       this.config.get<string>('MAIL_USER');
 
-    const subject = 'Contrato para assinatura';
-    const text = `Olá${nomeCliente ? `, ${nomeCliente}` : ''},\n\nSegue o link para ler e assinar o contrato (válido por 24h):\n\n${link}\n\nAtt.`;
-    const html = `<!DOCTYPE html><html><body><p>Olá${nomeCliente ? `, ${nomeCliente}` : ''},</p><p>Segue o link para ler e assinar o contrato (válido por 24h):</p><p><a href="${link}">${link}</a></p><p>Att.</p></body></html>`;
+    const subject = 'Link do contrato (PDF)';
+    const text = `Olá${nomeCliente ? `, ${nomeCliente}` : ''},\n\nSegue o link para visualizar e baixar o PDF do contrato (válido por 24h):\n\n${link}\n\nAtt.`;
+    const html = `<!DOCTYPE html><html><body><p>Olá${nomeCliente ? `, ${nomeCliente}` : ''},</p><p>Segue o link para visualizar e baixar o PDF do contrato (válido por 24h):</p><p><a href="${link}">${link}</a></p><p>Att.</p></body></html>`;
 
     await this.transporter.sendMail({
       from,

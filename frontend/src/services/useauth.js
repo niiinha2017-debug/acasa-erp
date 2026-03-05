@@ -1,10 +1,11 @@
 import { ref, computed } from 'vue'
 import api from '@/services/api'
 import storage from '@/utils/storage'
+import { loadStatusColorsConfig } from '@/constantes/status-colors'
 
 const SESSION_KEY = 'ACASA_SESSION_ALIVE'
 const AUTH_STARTED_AT_KEY = 'ACASA_AUTH_STARTED_AT'
-const SESSION_MAX_AGE_MS = 8 * 60 * 60 * 1000
+const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000 // 7 dias (alinhado ao refresh_token do backend)
 
 // Estado Global (Singleton)
 const token = ref(storage.getToken())
@@ -85,6 +86,8 @@ export function useAuth() {
 
       token.value = data.token
       usuarioLogado.value = data.usuario
+
+      loadStatusColorsConfig(api).catch(() => {})
 
       return data
     } catch (e) {

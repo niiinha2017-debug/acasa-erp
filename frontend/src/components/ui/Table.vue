@@ -11,14 +11,14 @@
           <tr class="bg-slate-50/70 dark:bg-slate-800/40 border-b border-border-ui">
             <th
               v-if="hasExpand"
-              class="px-4 py-3 text-[11px] font-semibold text-text-soft whitespace-nowrap uppercase tracking-wide"
+              class="px-4 py-3 align-top text-[11px] font-semibold text-text-soft whitespace-nowrap uppercase tracking-wide"
               style="width: 56px; text-align: center"
             ></th>
 
             <th
               v-for="col in columns"
               :key="col.key"
-              class="px-6 py-3 text-[11px] font-semibold text-text-soft whitespace-nowrap first:pl-6 uppercase tracking-wide"
+              class="px-6 py-3 align-top text-[11px] font-semibold text-text-soft whitespace-nowrap first:pl-6 uppercase tracking-wide"
               :style="{ width: col.width || 'auto', textAlign: col.align || 'left' }"
             >
               {{ col.label }}
@@ -47,10 +47,15 @@
 
           <template v-else>
             <template v-for="(row, index) in rows" :key="getRowKey(row, index)">
-              <tr class="group transition-colors duration-150 hover:bg-slate-50/80 dark:hover:bg-slate-800/45">
+              <tr
+                :class="[
+                  'group transition-colors duration-150 hover:bg-slate-50/80 dark:hover:bg-slate-800/45',
+                  typeof rowClass === 'function' ? rowClass(row, index) : (rowClass || '')
+                ]"
+              >
                 <td
                   v-if="hasExpand"
-                  class="px-4 py-3"
+                  class="px-4 py-3 align-top"
                   style="text-align:center"
                 >
                   <button
@@ -69,8 +74,8 @@
                 <td
                   v-for="col in columns"
                   :key="col.key"
-                  class="px-6 py-3 text-sm text-text-main transition-colors first:pl-6"
-                  :style="{ textAlign: col.align || 'left' }"
+                  class="px-6 py-3 align-top text-sm text-text-main transition-colors first:pl-6"
+                  :style="{ textAlign: col.align || 'left', verticalAlign: 'top' }"
                 >
                   <slot
                     :name="'cell-' + col.key"
@@ -110,11 +115,13 @@ const props = defineProps({
   expandable: { type: Boolean, default: false },
   rowKey: { type: [String, Function], default: 'id' },
   expanded: { type: Array, default: null },
+  rowClass: { type: [Function, String], default: null },
 })
 
 const emit = defineEmits(['update:expanded'])
 const slots = useSlots()
 const internalExpanded = ref(new Set())
+const rowClass = computed(() => props.rowClass)
 
 const hasExpand = computed(() => props.expandable && !!slots['row-expand'])
 const colspan = computed(() => props.columns.length + (hasExpand.value ? 1 : 0))

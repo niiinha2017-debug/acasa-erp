@@ -11,6 +11,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateVendaPagamentoDto } from './create-venda-pagamento.dto';
+import { CreateVendaFormaPagamentoDto } from './create-venda-forma-pagamento.dto';
 
 /**
  * 1. Itens da Venda (Ambientes congelados do orçamento)
@@ -82,7 +83,26 @@ export class CreateVendaDto {
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  valor_vendido: number; // Valor real fechado com o cliente
+  valor_vendido: number; // Valor real fechado com o cliente (pode incluir taxa cartão)
+
+  /** Valor base da venda (sem taxa de cartão). Quando informado, a soma dos pagamentos deve bater com este valor; valor_vendido pode ser maior (acréscimo de juros). */
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  valor_base_venda?: number;
+
+  /** Valor do contrato (sem juros) – o que o cliente vê no contrato. Quando há parcelamento com juros, enviar valor_base_contrato = soma dos valores base. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  valor_base_contrato?: number;
+
+  /** Pagamento combinado para o ato da medição: exibe alerta "RECEBER NO ATO" no Painel de Obras. */
+  @IsOptional()
+  @IsBoolean()
+  receber_no_ato_medicao?: boolean;
 
   @IsOptional()
   @IsDateString()
@@ -121,6 +141,18 @@ export class CreateVendaDto {
 
   @IsOptional()
   @IsString()
+  representante_venda_2_nome?: string;
+
+  @IsOptional()
+  @IsString()
+  representante_venda_2_cpf?: string;
+
+  @IsOptional()
+  @IsString()
+  representante_venda_2_rg?: string;
+
+  @IsOptional()
+  @IsString()
   observacao?: string;
 
   // CAMPOS DE TAXAS (Vindos das constantes do Frontend)
@@ -155,4 +187,11 @@ export class CreateVendaDto {
   @ValidateNested({ each: true })
   @Type(() => CreateVendaPagamentoDto)
   pagamentos: CreateVendaPagamentoDto[];
+
+  /** Formas de pagamento agrupadas (valor base, com/sem juros) para o texto do contrato. Opcional; quando enviado, usado na descrição do contrato. */
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateVendaFormaPagamentoDto)
+  formas_pagamento?: CreateVendaFormaPagamentoDto[];
 }

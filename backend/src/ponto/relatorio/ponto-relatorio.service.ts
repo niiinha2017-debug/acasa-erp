@@ -144,17 +144,18 @@ export class PontoRelatorioService {
     };
   }
 
-  /** Meta diária para uma data (0=Dom, 1-5=Seg-Sex, 6=Sáb) */
+  /** Meta diária para uma data (0=Dom, 1-5=Seg-Sex, 6=Sáb). Sábado = 0 meta: toda hora no sábado contabiliza como hora extra. */
   private metaDiaParaData(dataStr: string, funcionario: any): number {
     const d = new Date(dataStr + 'T12:00:00').getDay();
     if (d === 0) return 0;
+    if (d === 6) return 0; // Sábado: meta zero, tudo que passar do cadastro (ou qualquer batida) = hora extra
 
     const cargaDia = Number(funcionario?.carga_horaria_dia || 0);
     const cargaSemana = Number(funcionario?.carga_horaria_semana || 0);
     const derivado = this.derivarCargaDosHorarios(funcionario);
 
     if (derivado.cargaSegSex > 0 || derivado.cargaSabado > 0) {
-      return d === 6 ? derivado.cargaSabado : derivado.cargaSegSex;
+      return derivado.cargaSegSex;
     }
     if (cargaDia > 0) return cargaDia;
     if (cargaSemana > 0) return Number((cargaSemana / 6).toFixed(2));
@@ -224,11 +225,21 @@ export class PontoRelatorioService {
 
     return rows.map((r) => ({
       id: r.id,
-      date: this.dateKeySP(r.data),
+      date: this.formatDateOnlyForResponse(r.data),
       name: r.nome || '',
       type: r.tipo || '',
       trabalha: !!r.trabalha,
     }));
+  }
+
+  /** Formata data (DATE do MySQL) como YYYY-MM-DD sem mudar dia por timezone (evita 01/01 virar 31/12). */
+  private formatDateOnlyForResponse(date: any): string {
+    if (!date) return '';
+    const d = new Date(date);
+    const y = d.getUTCFullYear();
+    const m = d.getUTCMonth() + 1;
+    const day = d.getUTCDate();
+    return `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   }
 
   async listarFeriadosNacionais(ano: number): Promise<FeriadoNacionalItem[]> {
@@ -382,6 +393,11 @@ export class PontoRelatorioService {
         .map((f) => String(f.date || '').trim())
         .filter(Boolean),
     );
+    const feriadosTrabalhadosNoPeriodo =
+      (feriadosConfig || [])
+        .filter((f) => !!f?.trabalha)
+        .map((f) => String(f.date || '').trim())
+        .filter(Boolean);
 
     const whereFuncionarios: Prisma.funcionariosWhereInput =
       params.apenas_ativos !== false ? { status: 'ATIVO' } : {};
@@ -468,6 +484,13 @@ export class PontoRelatorioService {
       const valorHoraExtra = custoHora * 1.5;
       const valorTotalHorasExtras = horasExtras * valorHoraExtra;
 
+      const cargaDiaHorasDecimal = this.cargaDiaHoras(f);
+      const valorFeriadoDia = cargaDiaHorasDecimal * custoHora;
+      const valorFeriadosTrabalhados =
+        feriadosTrabalhadosNoPeriodo.length * valorFeriadoDia;
+      const custoDevido =
+        valorTotalHorasExtras + Math.round(valorFeriadosTrabalhados * 100) / 100;
+
       const hToHHMM = (h: number) => {
         const m = Math.round((h || 0) * 60);
         const hh = Math.floor(m / 60);
@@ -485,6 +508,9 @@ export class PontoRelatorioService {
         valor_hora_extra: Math.round(valorHoraExtra * 100) / 100,
         adicional_hora_extra: Math.round(adicionalHoraExtra * 100) / 100,
         valor_total_horas_extras: Math.round(valorTotalHorasExtras * 100) / 100,
+        feriados_trabalhados_qtd: feriadosTrabalhadosNoPeriodo.length,
+        valor_feriados_trabalhados: Math.round(valorFeriadosTrabalhados * 100) / 100,
+        custo_devido: Math.round(custoDevido * 100) / 100,
         salario_contratado: Math.round(salarioContratado * 100) / 100,
         salario_apurado: Math.round(salarioApurado * 100) / 100,
         horas_trabalhadas_hhmm: hToHHMM(horasTrabalhadas),
@@ -531,14 +557,18 @@ export class PontoRelatorioService {
   }
 
   // --- BUSCA DE DADOS PARA O PDF ---
+  /** Usa o mesmo intervalo em America/Sao_Paulo (BRT) que a tela (inicioDia/fimDia) para o PDF bater com o relatório na tela. */
   async relatorioMensalPdfData(params: {
     funcionario_id: number;
     mes: number;
     ano: number;
   }) {
     const { funcionario_id, mes, ano } = params;
-    const dataIni = new Date(Date.UTC(ano, mes - 1, 1, 0, 0, 0));
-    const dataFim = new Date(Date.UTC(ano, mes, 1, 0, 0, 0));
+    const primeiroDia = `${ano}-${String(mes).padStart(2, '0')}-01`;
+    const ultimoDiaNum = new Date(ano, mes, 0).getDate();
+    const ultimoDiaStr = `${ano}-${String(mes).padStart(2, '0')}-${String(ultimoDiaNum).padStart(2, '0')}`;
+    const dataIni = this.inicioDia(primeiroDia);
+    const dataFim = this.fimDia(ultimoDiaStr);
 
     const funcionario = await this.prisma.funcionarios.findUnique({
       where: { id: funcionario_id },
@@ -561,7 +591,7 @@ export class PontoRelatorioService {
       where: {
         funcionario_id,
         status: 'ATIVO',
-        data_hora: { gte: dataIni, lt: dataFim },
+        data_hora: { gte: dataIni, lte: dataFim },
       },
       orderBy: { data_hora: 'asc' },
     });
@@ -569,7 +599,7 @@ export class PontoRelatorioService {
     const justificativas = await this.prisma.ponto_justificativas.findMany({
       where: {
         funcionario_id,
-        data: { gte: dataIni, lt: dataFim },
+        data: { gte: dataIni, lte: dataFim },
       },
     });
 
@@ -956,6 +986,155 @@ export class PontoRelatorioService {
         y += 10;
         doc.fontSize(8).font('Helvetica').fillColor('#1e293b');
         doc.text(transacaoId, margin, y, { width: 535 });
+
+        doc.end();
+      } catch (e) {
+        reject(e);
+      }
+    });
+  }
+
+  /** Gera buffer PDF do recibo de folha operacional (logo A Casa + resumo + tabela de auditoria). */
+  async gerarReciboFolhaPdfBuffer(payload: {
+    nome_funcionario: string;
+    data_ini: string;
+    data_fim: string;
+    ganhos_totais: number;
+    total_vales: number;
+    saldo_a_pagar: number;
+    itens_auditoria: Array<{
+      data: string;
+      descricao: string;
+      tipo: 'Provento' | 'Desconto';
+      valor: number;
+    }>;
+  }): Promise<Buffer> {
+    const fmt = (n: number) =>
+      n.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+    const fmtData = (s: string) => {
+      if (!s) return '—';
+      const [y, m, d] = s.split('-');
+      return `${d}/${m}/${y}`;
+    };
+
+    return new Promise((resolve, reject) => {
+      try {
+        const doc = new PDFDocument({ margin: 30, size: 'A4' });
+        const chunks: Buffer[] = [];
+        doc.on('data', (c: Buffer) => chunks.push(c));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+
+        let y = 20;
+        try {
+          const headerH = renderHeaderA4Png(doc);
+          y = headerH + 16;
+        } catch {
+          doc
+            .rect(0, 0, doc.page.width, 44)
+            .fill('#2563a8');
+          doc
+            .fillColor('#ffffff')
+            .fontSize(18)
+            .font('Helvetica-Bold')
+            .text('A Casa', 30, 12)
+            .fontSize(10)
+            .font('Helvetica')
+            .text('Móveis planejados', 30, 30);
+          y = 52;
+        }
+
+        doc
+          .fillColor('#1e293b')
+          .fontSize(14)
+          .font('Helvetica-Bold')
+          .text('RECIBO DE PAGAMENTO — FOLHA OPERACIONAL', 30, y, {
+            align: 'center',
+            width: 535,
+          });
+        y += 22;
+
+        doc
+          .fontSize(9)
+          .font('Helvetica')
+          .fillColor('#64748b')
+          .text('Funcionário:', 30, y);
+        doc
+          .fillColor('#1e293b')
+          .font('Helvetica-Bold')
+          .text(payload.nome_funcionario || '—', 100, y);
+        y += 14;
+        doc
+          .fillColor('#64748b')
+          .font('Helvetica')
+          .text(
+            `Período: ${fmtData(payload.data_ini)} a ${fmtData(payload.data_fim)}`,
+            30,
+            y,
+          );
+        y += 24;
+
+        const colData = 30;
+        const colDesc = 120;
+        const colTipo = 320;
+        const colValor = 420;
+        doc.rect(30, y, 535, 18).fill('#1e293b');
+        doc
+          .fillColor('#fff')
+          .fontSize(8)
+          .font('Helvetica-Bold')
+          .text('Data', colData, y + 5)
+          .text('Descrição', colDesc, y + 5)
+          .text('Tipo', colTipo, y + 5)
+          .text('Valor (R$)', colValor, y + 5);
+        y += 20;
+
+        for (const item of payload.itens_auditoria || []) {
+          doc
+            .fillColor('#1e293b')
+            .font('Helvetica')
+            .fontSize(8)
+            .text(fmtData(item.data), colData, y + 3)
+            .text(item.descricao || '—', colDesc, y + 3, { width: 190 })
+            .text(item.tipo || '—', colTipo, y + 3)
+            .text(`R$ ${fmt(item.valor)}`, colValor, y + 3);
+          y += 14;
+        }
+        y += 14;
+
+        doc.rect(30, y, 535, 50).fill('#f8fafc');
+        doc.strokeColor('#e2e8f0').rect(30, y, 535, 50).stroke();
+        doc
+          .fillColor('#059669')
+          .font('Helvetica-Bold')
+          .fontSize(10)
+          .text('Ganhos Totais:', 40, y + 12)
+          .fillColor('#1e293b')
+          .text(`R$ ${fmt(payload.ganhos_totais)}`, 400, y + 12);
+        doc
+          .fillColor('#d97706')
+          .text('Total de Vales:', 40, y + 26)
+          .fillColor('#1e293b')
+          .text(`R$ ${fmt(payload.total_vales)}`, 400, y + 26);
+        doc
+          .fillColor('#2563eb')
+          .fontSize(11)
+          .text('Saldo a Pagar:', 40, y + 40)
+          .fillColor('#1e293b')
+          .text(`R$ ${fmt(payload.saldo_a_pagar)}`, 400, y + 40);
+        y += 70;
+
+        doc
+          .font('Helvetica')
+          .fontSize(8)
+          .fillColor('#64748b')
+          .text(
+            `Documento gerado em ${new Date().toLocaleString('pt-BR')} — A Casa Móveis Planejados`,
+            30,
+            y,
+          );
 
         doc.end();
       } catch (e) {

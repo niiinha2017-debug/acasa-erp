@@ -33,7 +33,7 @@ export class VendasController {
   }
 
   @Get()
-  @Permissoes('posvenda.ver')
+  @Permissoes('posvenda.ver', 'contratos.criar', 'contratos.ver')
   listar() {
     return this.service.listar();
   }

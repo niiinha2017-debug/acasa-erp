@@ -87,7 +87,7 @@ async function main() {
     { chave: 'agendamentos.criar', descricao: 'Criar agendamentos' },
     { chave: 'agendamentos.editar', descricao: 'Editar agendamentos' },
     { chave: 'agendamentos.excluir', descricao: 'Excluir agendamentos' },
-    { chave: 'agendamentos.vendas', descricao: 'Ver agenda - vendas' },
+    { chave: 'agendamentos.vendas', descricao: 'Agenda de venda (loja): ver, criar, editar e excluir' },
     { chave: 'agendamentos.producao', descricao: 'Ver agenda - producao' },
 
     { chave: 'vendas.ver', descricao: 'Visualizar vendas (detalhe/comercial)' },
@@ -111,6 +111,7 @@ async function main() {
     // Cláusulas – tela /contratos/clausulas (modelos de contrato e orçamento)
     { chave: 'contratos.clausulas.editar', descricao: 'Cláusulas (contratos e orçamentos)' },
     { chave: 'contratos.excluir', descricao: 'Excluir contratos' },
+    { chave: 'contratos.assinatura_digital', descricao: 'Autorizar Uso de Assinatura Digital' },
 
     { chave: 'plano_corte.ver', descricao: 'Visualizar plano de corte' },
     { chave: 'plano_corte.criar', descricao: 'Criar plano de corte' },
@@ -124,6 +125,15 @@ async function main() {
     { chave: 'clientes.editar', descricao: 'Editar clientes' },
     { chave: 'clientes.excluir', descricao: 'Excluir clientes' },
     { chave: 'clientes.select', descricao: 'Listar clientes (select)' },
+    { chave: 'clientes.acesso_global', descricao: 'Acesso Global de Clientes (Fluxo: ver todos; sem esta permissão, só vê onde é Responsável)' },
+
+    // Produção / Fábrica (Loja vs. Fábrica)
+    { chave: 'producao_fabrica.visualizar_producao', descricao: 'Visualizar Produção' },
+    { chave: 'producao_fabrica.concluir_montagem', descricao: 'Concluir Montagem' },
+    { chave: 'producao_fabrica.medidas_finais', descricao: 'Acessar Medidas Finais' },
+    { chave: 'producao_fabrica.ver_medidas_finais', descricao: 'Ver Medidas Finais' },
+    { chave: 'producao_fabrica.avancar_montagem', descricao: 'Avançar para Montagem' },
+    { chave: 'producao_fabrica.acessar_agenda_fabrica', descricao: 'Acessar Agenda de Fábrica' },
 
     { chave: 'fornecedores.ver', descricao: 'Visualizar fornecedores' },
     { chave: 'fornecedores.criar', descricao: 'Criar fornecedores' },
@@ -210,7 +220,53 @@ async function main() {
     data: permsDb.map((p) => ({ usuario_id: admin.id, permissao_id: p.id })),
     skipDuplicates: true,
   })
-  console.log('Seed OK: admin + permissoes vinculadas')
+
+  // Usuária vendedora (agenda de venda + clientes). Senha: 081317
+  const senhaVendedora = await bcrypt.hash('081317', 10)
+  const chavesVendedor = [
+    'index.visualizar',
+    'pendente.visualizar',
+    'alterar-senha',
+    'agendamentos.vendas',
+    'clientes.ver',
+    'clientes.select',
+    'orcamentos.ver',
+    'vendas.ver',
+    'vendas.fechamento.ver',
+    'vendas.fechamento.criar',
+    'contratos.ver',
+    'contratos.criar',
+    'contratos.editar',
+  ]
+  const permsVendedor = await prisma.permissoes.findMany({
+    where: { chave: { in: chavesVendedor } },
+    select: { id: true },
+  })
+  const vendedora = await prisma.usuarios.upsert({
+    where: { usuario: 'vendedora' },
+    update: {
+      nome: 'Vendedora',
+      email: 'vendedora@exemplo.com',
+      status: 'ATIVO',
+      is_admin: false,
+      senha: senhaVendedora,
+    },
+    create: {
+      nome: 'Vendedora',
+      usuario: 'vendedora',
+      email: 'vendedora@exemplo.com',
+      status: 'ATIVO',
+      is_admin: false,
+      senha: senhaVendedora,
+    },
+    select: { id: true },
+  })
+  await prisma.usuarios_permissoes.deleteMany({ where: { usuario_id: vendedora.id } })
+  await prisma.usuarios_permissoes.createMany({
+    data: permsVendedor.map((p) => ({ usuario_id: vendedora.id, permissao_id: p.id })),
+    skipDuplicates: true,
+  })
+  console.log('Seed OK: admin + vendedora (usuário vendedora, senha 081317) + permissoes')
 }
 
 main()

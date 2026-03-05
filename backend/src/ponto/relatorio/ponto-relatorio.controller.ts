@@ -207,4 +207,52 @@ export class PontoRelatorioController {
       ano: a,
     });
   }
+
+  /** Gera recibo de folha operacional em PDF (logo A Casa + resumo + auditoria). */
+  @Post('recibo-folha')
+  @Permissoes('ponto_relatorio.ver')
+  @HttpCode(HttpStatus.OK)
+  async reciboFolhaPdf(
+    @Body()
+    body: {
+      nome_funcionario: string;
+      data_ini: string;
+      data_fim: string;
+      ganhos_totais: number;
+      total_vales: number;
+      saldo_a_pagar: number;
+      itens_auditoria: Array<{
+        data: string;
+        descricao: string;
+        tipo: 'Provento' | 'Desconto';
+        valor: number;
+      }>;
+    },
+    @Res() res: Response,
+  ) {
+    const buffer = await this.service.gerarReciboFolhaPdfBuffer({
+      nome_funcionario: body.nome_funcionario ?? '',
+      data_ini: body.data_ini ?? '',
+      data_fim: body.data_fim ?? '',
+      ganhos_totais: Number(body.ganhos_totais ?? 0),
+      total_vales: Number(body.total_vales ?? 0),
+      saldo_a_pagar: Number(body.saldo_a_pagar ?? 0),
+      itens_auditoria: Array.isArray(body.itens_auditoria)
+        ? body.itens_auditoria.map((i) => ({
+            data: String(i?.data ?? ''),
+            descricao: String(i?.descricao ?? ''),
+            tipo: (i?.tipo === 'Desconto' ? 'Desconto' : 'Provento') as
+              | 'Provento'
+              | 'Desconto',
+            valor: Number(i?.valor ?? 0),
+          }))
+        : [],
+    });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="recibo-folha-${(body.nome_funcionario || 'funcionario').replace(/\s+/g, '-')}.pdf"`,
+    );
+    res.send(buffer);
+  }
 }

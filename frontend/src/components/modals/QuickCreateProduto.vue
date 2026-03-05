@@ -7,21 +7,21 @@
         class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
         @click.self="emit('close')"
       >
-        <div class="w-full max-w-2xl max-h-[85vh] bg-white rounded-[2rem] shadow-2xl overflow-hidden flex flex-col">
+        <div class="w-full max-w-2xl max-h-[85vh] bg-bg-card dark:bg-slate-900 rounded-2xl shadow-2xl dark:shadow-none border border-border-ui overflow-hidden flex flex-col">
           <!-- Header -->
-          <header class="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+          <header class="flex items-center justify-between px-6 py-5 border-b border-border-ui bg-slate-50/50 dark:bg-slate-800/50">
             <div class="flex items-center gap-4">
-              <div class="w-11 h-11 rounded-[1.1rem] bg-slate-900 flex items-center justify-center text-white shadow-lg">
+              <div class="w-11 h-11 rounded-xl bg-brand-primary flex items-center justify-center text-white shadow-lg">
                 <i class="pi pi-box text-lg"></i>
               </div>
 
               <div>
-                <h3 class="text-lg font-black text-slate-800 tracking-tight uppercase leading-none">
+                <h3 class="text-lg font-black text-slate-800 dark:text-slate-100 tracking-tight uppercase leading-none">
                   Cadastrar Produto
                 </h3>
                 <div class="flex items-center gap-2 mt-1">
                   <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                  <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                     Ficha Técnica do Item
                   </p>
                 </div>
@@ -29,7 +29,7 @@
             </div>
 
             <button
-              class="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-rose-500 hover:border-rose-200 transition-all shadow-sm"
+              class="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-400 hover:text-rose-500 hover:border-rose-200 dark:hover:border-rose-800 transition-all shadow-sm"
               @click="emit('close')"
               type="button"
             >

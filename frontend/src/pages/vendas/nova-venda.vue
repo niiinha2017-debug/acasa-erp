@@ -74,10 +74,118 @@
               </div>
             </div>
 
-            <!-- FECHAMENTO / VALOR FINAL -->
+            <!-- REPRESENTANTE DA VENDA (abaixo do nome) -->
             <section class="space-y-4 border-t border-border-ui pt-5">
               <div class="flex items-center justify-center gap-3 text-center">
                 <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary text-xs font-bold">2</span>
+                <div class="text-base font-semibold text-text-main">Representante da venda</div>
+              </div>
+              <p class="text-xs text-text-soft">
+                Nome completo, CPF e RG.
+              </p>
+              <div class="p-4 rounded-xl border border-border-ui bg-bg-page">
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                  <div class="md:col-span-6">
+                    <Input
+                      v-model="representanteVenda.nome"
+                      label="Nome completo"
+                      placeholder="Nome completo"
+                      :forceUpper="true"
+                    />
+                  </div>
+                  <div class="md:col-span-3">
+                    <Input
+                      :model-value="maskCPF(representanteVenda.cpf || '')"
+                      label="CPF"
+                      placeholder="000.000.000-00"
+                      :forceUpper="false"
+                      @update:model-value="(v) => (representanteVenda.cpf = onlyNumbers(String(v || '')).slice(0, 11))"
+                    />
+                  </div>
+                  <div class="md:col-span-3">
+                    <Input
+                      :model-value="maskRG(representanteVenda.rg || '')"
+                      label="RG"
+                      placeholder="00.000.000-0"
+                      :forceUpper="false"
+                      @update:model-value="(v) => (representanteVenda.rg = onlyNumbers(String(v || '')).slice(0, 9))"
+                    />
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <div class="border-t border-border-ui pt-5 space-y-4">
+              <div class="flex items-center justify-center gap-3 text-center">
+                <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary text-xs font-bold">3</span>
+                <div class="text-base font-semibold text-text-main">Itens da venda</div>
+              </div>
+              <p class="text-xs text-text-soft">
+                Ajuste os itens/ambientes e valores rateados. Não altera o orçamento original.
+              </p>
+              <div class="flex justify-end pb-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  type="button"
+                  @click="adicionarItemVenda"
+                >
+                  + Adicionar ambiente
+                </Button>
+              </div>
+              <Table :columns="columnsItens" :rows="rowsItens" :boxed="false">
+                <template #cell-nome_ambiente="{ row }">
+                  <Input
+                    v-model="itens[row.__idx].nome_ambiente"
+                    :forceUpper="true"
+                  />
+                </template>
+                <template #cell-descricao="{ row }">
+                  <textarea
+                    v-model="itens[row.__idx].descricao"
+                    rows="3"
+                    placeholder="* Armario superior com 4 portas de giro&#10;* Armario inferior 4 gavetas e 2 portas de giro&#10;* Nicho para microondas"
+                    class="w-full p-2 rounded-xl border border-border-ui bg-bg-page text-sm text-text-main outline-none resize-y focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
+                  ></textarea>
+                </template>
+                <template #cell-observacao="{ row }">
+                  <Input
+                    v-model="itens[row.__idx].observacao"
+                    :forceUpper="true"
+                    placeholder="Ex.: PUXADOR REFIL"
+                  />
+                </template>
+                <template #cell-valor_orcado="{ row }">
+                  <span class="font-bold">
+                    {{ format.currency(row.valor_unitario || 0) }}
+                  </span>
+                </template>
+                <template #cell-valor_rateado="{ row }">
+                  <Input
+                    :modelValue="format.currency(itens[row.__idx].valor_final || 0)"
+                    type="text"
+                    inputmode="numeric"
+                    :forceUpper="false"
+                    class="w-full text-right"
+                    @update:modelValue="(val) => { itens[row.__idx].valor_final = moedaParaNumero(val); sincronizarValorFinalComTotal() }"
+                  />
+                </template>
+                <template #cell-acoes="{ row }">
+                  <TableActions
+                    :id="row.__idx"
+                    perm-edit="vendas.criar"
+                    perm-delete="vendas.criar"
+                    @edit="editarItemVenda(row.__idx)"
+                    @delete="removerItemVenda(row.__idx)"
+                  />
+                </template>
+              </Table>
+            </div>
+
+            <!-- FECHAMENTO / VALOR FINAL (depois dos itens) -->
+            <section class="space-y-4 border-t border-border-ui pt-5">
+              <div class="flex items-center justify-center gap-3 text-center">
+                <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary text-xs font-bold">4</span>
                 <div class="text-base font-semibold text-text-main">Fechamento da venda</div>
               </div>
               <p class="text-xs text-text-soft">
@@ -106,7 +214,11 @@
                     inputmode="numeric"
                     :forceUpper="false"
                     disabled
+                    keep-readable-when-disabled
                   />
+                  <p v-if="totalReceberCalculado > 0 && Math.abs(totalReceberCalculado - valorFinal) > 0.01" class="text-[11px] text-text-soft mt-1">
+                    Com as formas de pagamento, o valor final da venda é {{ format.currency(totalReceberCalculado) }}.
+                  </p>
                 </div>
 
                 <div class="col-span-12 md:col-span-2">
@@ -124,96 +236,33 @@
                   />
                 </div>
               </div>
-
             </section>
-
-            <div class="border-t border-border-ui pt-4">
-              <div class="flex items-center justify-between pb-3 border-b border-border-ui">
-                <div class="text-sm font-semibold text-text-main">
-                  Itens da venda
-                  <span class="text-xs font-normal text-text-soft">(não altera o orçamento)</span>
-                </div>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  type="button"
-                  @click="adicionarItemVenda"
-                >
-                  + Adicionar ambiente
-                </Button>
-              </div>
-              <Table :columns="columnsItens" :rows="rowsItens" :boxed="false">
-                <template #cell-nome_ambiente="{ row }">
-                  <Input
-                    v-model="itens[row.__idx].nome_ambiente"
-                    :forceUpper="false"
-                  />
-                </template>
-                <template #cell-descricao="{ row }">
-                  <textarea
-                    v-model="itens[row.__idx].descricao"
-                    rows="3"
-                    class="w-full p-2 rounded-xl border border-border-ui bg-bg-page text-sm text-text-main outline-none resize-y focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
-                  ></textarea>
-                </template>
-                <template #cell-observacao="{ row }">
-                  <Input
-                    v-model="itens[row.__idx].observacao"
-                    :forceUpper="false"
-                    placeholder="Ex.: PUXADOR REFIL"
-                  />
-                </template>
-                <template #cell-valor_orcado="{ row }">
-                  <span class="font-bold">
-                    {{ format.currency(row.valor_unitario || 0) }}
-                  </span>
-                </template>
-                <template #cell-valor_rateado="{ row }">
-                  <Input
-                    :modelValue="format.currency(itens[row.__idx].valor_final || 0)"
-                    type="text"
-                    inputmode="numeric"
-                    :forceUpper="false"
-                    class="w-full text-right"
-                    @update:modelValue="(val) => { itens[row.__idx].valor_final = moedaParaNumero(val); sincronizarValorFinalComTotal() }"
-                  />
-                </template>
-                <template #cell-acoes="{ row }">
-                  <div class="flex justify-end gap-2">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      type="button"
-                      @click="editarItemVenda(row.__idx)"
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      type="button"
-                      @click="removerItemVenda(row.__idx)"
-                    >
-                      Excluir
-                    </Button>
-                  </div>
-                </template>
-              </Table>
-            </div>
           </section>
           <!-- FORMAS DE PAGAMENTO (SEM VALIDAR COM VALOR FINAL) -->
           <section class="space-y-4 border-t border-border-ui pt-5">
             <div class="flex items-center justify-center gap-3 text-center">
-              <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary text-xs font-bold">3</span>
+              <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary text-xs font-bold">5</span>
               <div class="text-base font-semibold text-text-main">Formas de pagamento</div>
             </div>
             <p class="text-xs text-text-soft">
-              Configure a forma, parcelas e valores. O total deve bater com o preço cobrado da venda.
+              Configure a forma, parcelas e valores.
             </p>
+
+            <div class="flex justify-end mb-3">
+              <Button
+                variant="secondary"
+                size="sm"
+                type="button"
+                @click="addPagamento"
+              >
+                <i class="pi pi-plus mr-1"></i> Adicionar forma de pagamento
+              </Button>
+            </div>
 
             <Table
               :columns="columnsPagamentos"
               :rows="rowsPagamentos"
+              :row-key="'__id'"
               :boxed="true"
               empty-text="Nenhum pagamento definido."
             >
@@ -222,80 +271,129 @@
                   v-model="pagamentos[row.__idx].forma_pagamento_chave"
                   mode="select"
                   placeholder="Selecione..."
-                  :options="FORMAS_PAGAMENTO_OPTIONS"
+                  :options="getFormasPagamentoOptionsForRow(row.__idx)"
+                  @update:modelValue="() => nextTick(prefillRestanteNosZerados)"
                 />
               </template>
 
               <template #cell-parcelas="{ row }">
                 <Select
                   v-model="pagamentos[row.__idx].parcelas"
-                  :options="PARCELAS_OPTIONS_FILTRADAS"
+                  :options="getParcelasOptionsForForm(pagamentos[row.__idx].forma_pagamento_chave)"
                   labelKey="label"
                   valueKey="value"
+                  @update:modelValue="() => nextTick(prefillRestanteNosZerados)"
                 />
               </template>
 
-              <template #cell-data_recebimento="{ row }">
+              <template #cell-data_prevista="{ row }">
                 <div class="space-y-1.5">
                   <div
                     v-for="(parc, i) in normalizeDatasParcelas(pagamentos[row.__idx])"
                     :key="i"
-                    class="flex items-center gap-2"
+                    class="flex flex-nowrap items-stretch gap-2"
                   >
-                    <span class="w-5 text-[10px] font-bold text-text-soft text-right">{{ i + 1 }} —</span>
-                    <div class="flex-1 min-w-0">
+                    <span class="w-5 shrink-0 flex items-end pb-2.5 text-[10px] font-bold text-text-soft text-right">{{ i + 1 }} —</span>
+                    <div class="flex min-h-10 min-w-0 flex-1 shrink-0 flex-col justify-end">
                       <Input
                         v-model="pagamentos[row.__idx].datas_parcelas[i].data"
                         type="date"
                         :forceUpper="false"
-                        class="w-full"
-                      />
-                    </div>
-                    <div class="w-28">
-                      <Input
-                        :modelValue="
-                          String(pagamentos[row.__idx].forma_pagamento_chave || '').toUpperCase() === 'CREDITO'
-                            ? format.currency(valorCobradoVenda)
-                            : format.currency(pagamentos[row.__idx].datas_parcelas[i].valor || 0)
-                        "
-                        type="text"
-                        inputmode="numeric"
-                        :forceUpper="false"
-                        :disabled="String(pagamentos[row.__idx].forma_pagamento_chave || '').toUpperCase() === 'CREDITO'"
-                        class="w-full text-right"
-                        @update:modelValue="
-                          (val) => {
-                            if (String(pagamentos[row.__idx].forma_pagamento_chave || '').toUpperCase() === 'CREDITO') return
-                            pagamentos[row.__idx].datas_parcelas[i].valor = moedaParaNumero(val)
-                            recomputarTotalPagamento(row.__idx)
-                          }
-                        "
+                        class="w-full [&_input]:h-10"
                       />
                     </div>
                   </div>
                 </div>
               </template>
 
+              <template #cell-valor_parcela="{ row }">
+                <div class="space-y-1.5">
+                  <div
+                    v-for="(parc, i) in normalizeDatasParcelas(pagamentos[row.__idx])"
+                    :key="i"
+                    class="flex min-h-10 flex-col justify-end"
+                  >
+                    <template v-if="String(pagamentos[row.__idx].forma_pagamento_chave || '').toUpperCase() === 'CREDITO'">
+                      <Input
+                        :modelValue="format.currency(pagamentos[row.__idx].datas_parcelas[i].valor || 0)"
+                        type="text"
+                        inputmode="numeric"
+                        :forceUpper="false"
+                        class="w-full text-right [&_input]:h-10"
+                        placeholder="Valor no cartão"
+                        @update:modelValue="(val) => {
+                          pagamentos[row.__idx].datas_parcelas[i].valor = moedaParaNumero(val)
+                          recomputarTotalPagamento(row.__idx)
+                        }"
+                      />
+                    </template>
+                    <Input
+                      v-else
+                      :modelValue="format.currency(pagamentos[row.__idx].datas_parcelas[i].valor || 0)"
+                      type="text"
+                      inputmode="numeric"
+                      :forceUpper="false"
+                      class="w-full text-right [&_input]:h-10"
+                      @update:modelValue="
+                        (val) => {
+                          pagamentos[row.__idx].datas_parcelas[i].valor = moedaParaNumero(val)
+                          recomputarTotalPagamento(row.__idx)
+                        }
+                      "
+                    />
+                  </div>
+                </div>
+              </template>
+
+              <template #cell-acoes="{ row }">
+                <div class="flex justify-end gap-2 flex-wrap">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    type="button"
+                    title="Editar"
+                    @click="editarPagamento(row.__idx)"
+                  >
+                    <i class="pi pi-pencil mr-1"></i> Editar
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    type="button"
+                    :disabled="(pagamentos || []).length === 1"
+                    @click="removerPagamento(row.__idx)"
+                  >
+                    <i class="pi pi-trash mr-1"></i> Remover
+                  </Button>
+                </div>
+              </template>
+
             </Table>
 
             <div class="px-1 py-1 space-y-1">
-              <p class="text-[11px] text-text-soft">
-                Valor base da venda: <strong>{{ format.currency(valorFinal) }}</strong>
-              </p>
-              <p class="text-[11px] text-text-soft">
-                Taxa aplicada
-                <span v-if="taxaCobradaPercentual > 0"> (crédito acima de 10x)</span>
-              </p>
               <p class="text-[12px] text-text-main font-bold">
-                Preço cobrado da venda: {{ format.currency(valorCobradoVenda) }}
+                Valor final: {{ format.currency(totalReceberCalculado) }}
               </p>
+              <div v-if="restanteParaDistribuir > 0" class="flex flex-wrap items-center gap-2 mt-2">
+                <span class="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                  Restante a distribuir: {{ format.currency(restanteParaDistribuir) }}
+                </span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  type="button"
+                  @click="prefillRestanteNosZerados"
+                >
+                  Preencher restante
+                </Button>
+              </div>
             </div>
           </section>
 
           <!-- INDICAÇÃO -->
           <section class="space-y-4 border-t border-border-ui pt-5">
             <div class="flex items-center justify-center gap-3 text-center">
-              <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary text-xs font-bold">4</span>
+              <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary text-xs font-bold">6</span>
               <div class="text-base font-semibold text-text-main">Indicação</div>
             </div>
             <div class="grid grid-cols-12 gap-4 items-end">
@@ -304,7 +402,7 @@
                   v-model="indicacaoNome"
                   label="Nome da indicação"
                   placeholder="Digite o nome"
-                  :forceUpper="false"
+                  :forceUpper="true"
                 />
               </div>
             </div>
@@ -313,7 +411,7 @@
           <!-- ENDEREÇO DE ENTREGA -->
           <section class="space-y-4 border-t border-border-ui pt-5">
             <div class="flex items-center justify-center gap-3 text-center">
-              <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary text-xs font-bold">5</span>
+              <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary text-xs font-bold">7</span>
               <div class="text-base font-semibold text-text-main">Endereço de entrega</div>
             </div>
             <div class="grid grid-cols-12 gap-4 items-end">
@@ -332,7 +430,7 @@
                   v-model="enderecoEntrega"
                   label="Nome da rua"
                   placeholder="Rua/Avenida"
-                  :forceUpper="false"
+                  :forceUpper="true"
                 />
               </div>
               <div class="col-span-12 md:col-span-1">
@@ -348,7 +446,7 @@
                   v-model="complementoEntrega"
                   label="Complemento"
                   placeholder="Apto, bloco..."
-                  :forceUpper="false"
+                  :forceUpper="true"
                 />
               </div>
               <div class="col-span-12 md:col-span-4">
@@ -356,7 +454,7 @@
                   v-model="bairroEntrega"
                   label="Bairro"
                   placeholder="Bairro"
-                  :forceUpper="false"
+                  :forceUpper="true"
                 />
               </div>
               <div class="col-span-12 md:col-span-6">
@@ -364,7 +462,7 @@
                   v-model="cidadeEntrega"
                   label="Cidade"
                   placeholder="Cidade"
-                  :forceUpper="false"
+                  :forceUpper="true"
                 />
               </div>
               <div class="col-span-12 md:col-span-2">
@@ -384,7 +482,7 @@
           <!-- ARQUIVOS VINCULADOS AO ORÇAMENTO -->
           <section v-if="orcamento" class="space-y-6 border-t border-border-ui pt-5">
             <div class="flex items-center justify-center gap-3 text-center">
-              <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary text-xs font-bold">6</span>
+              <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary text-xs font-bold">8</span>
               <div class="text-base font-semibold text-text-main">Arquivos do orçamento</div>
             </div>
             <!-- Imagens para PDF do orçamento -->
@@ -578,7 +676,7 @@
                     v-model="cadastroContratoForm.nome_completo"
                     label="Nome completo *"
                     placeholder="Nome do cliente/contratante"
-                    :forceUpper="false"
+                    :forceUpper="true"
                   />
                 </div>
                 <div class="col-span-12 md:col-span-2">
@@ -650,7 +748,7 @@
                   <Input
                     v-model="cadastroContratoForm.endereco"
                     label="Nome da rua *"
-                    :forceUpper="false"
+                    :forceUpper="true"
                   />
                 </div>
                 <div class="col-span-12 md:col-span-1">
@@ -664,21 +762,21 @@
                   <Input
                     v-model="cadastroContratoForm.complemento"
                     label="Complemento"
-                    :forceUpper="false"
+                    :forceUpper="true"
                   />
                 </div>
                 <div class="col-span-12 md:col-span-4">
                   <Input
                     v-model="cadastroContratoForm.bairro"
                     label="Bairro *"
-                    :forceUpper="false"
+                    :forceUpper="true"
                   />
                 </div>
                 <div class="col-span-12 md:col-span-6">
                   <Input
                     v-model="cadastroContratoForm.cidade"
                     label="Cidade *"
-                    :forceUpper="false"
+                    :forceUpper="true"
                   />
                 </div>
                 <div class="col-span-12 md:col-span-2">
@@ -707,7 +805,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ClienteService, ConfiguracaoService, ContratosService, OrcamentosService, VendaService, ArquivosService } from '@/services'
 import { notify } from '@/services/notify'
@@ -719,7 +817,7 @@ import { onlyNumbers, maskCEP, maskCPF, maskCNPJ, maskRG, maskIE, maskTelefone }
 import { buscarCep } from '@/utils/utils'
 import { closeTabAndGo } from '@/utils/tabs'
 
-definePage({ meta: { perm: 'vendas.criar' } })
+definePage({ meta: { perm: ['vendas.criar', 'vendas.fechamento.criar'] } })
 
 const route = useRoute()
 const router = useRouter()
@@ -778,6 +876,7 @@ const bairroEntrega = ref('')
 const cidadeEntrega = ref('')
 const estadoEntrega = ref('')
 const indicacaoNome = ref('')
+const representanteVenda = ref({ nome: '', cpf: '', rg: '' })
 const TIPO_COMISSAO_OCULTA = 'VENDEDOR'
 const DESCONTO_MAXIMO_PERCENTUAL = Number(VENDA_FECHAMENTO_REGRAS?.DESCONTO_MAXIMO_PERCENTUAL || 0)
 const DESCONTO_STEP = Number(VENDA_FECHAMENTO_REGRAS?.DESCONTO_PERCENTUAL_STEP || 0.5)
@@ -806,6 +905,17 @@ const FORMAS_PAGAMENTO_OPTIONS = computed(() =>
     .filter((x) => formaPagamentoPermitidaPorDesconto(x.key))
     .map((x) => ({ label: x.label, value: x.key })),
 )
+
+/** Opções de forma de pagamento por linha: não permite outro Cartão de Crédito se já existir uma linha com Crédito. */
+function getFormasPagamentoOptionsForRow(rowIdx) {
+  const list = pagamentos.value || []
+  const jaTemCredito = list.some(
+    (p, i) => i !== rowIdx && String(p?.forma_pagamento_chave || '').toUpperCase() === 'CREDITO',
+  )
+  const base = FORMAS_PAGAMENTO_OPTIONS.value || []
+  if (!jaTemCredito) return base
+  return base.filter((opt) => String(opt?.value || '').toUpperCase() !== 'CREDITO')
+}
 const PARCELAS_OPTIONS = computed(() => {
   const parcelasCredito = TAXAS_CARTAO?.CREDITO?.parcelas || {}
   const byTaxa = Object.entries(parcelasCredito)
@@ -843,6 +953,31 @@ function maxParcelasDaForma(forma) {
   }
   return Number(PARCELAS_MAX_POR_FORMA?.[key] || 1)
 }
+
+/** Taxa % da máquina para cartão de crédito; só aplica acima de 10x. */
+function taxaPercentualCredito(parcelas) {
+  const n = toParcelas(parcelas)
+  if (n <= 10) return 0
+  const taxa = Number(TAXAS_CARTAO?.CREDITO?.parcelas?.[n] || 0)
+  return Number.isFinite(taxa) ? taxa : 0
+}
+
+/** Soma das taxas em R$ de todas as linhas de cartão de crédito com parcelas > 10. */
+const totalTaxaCartaoReais = computed(() => {
+  const list = pagamentos.value || []
+  let total = 0
+  for (const p of list) {
+    if (String(p?.forma_pagamento_chave || '').toUpperCase() !== 'CREDITO') continue
+    const parcelas = toParcelas(p.parcelas)
+    if (parcelas <= 10) continue
+    const valorCartao = Number(p.datas_parcelas?.[0]?.valor || 0)
+    const taxaPct = taxaPercentualCredito(p.parcelas)
+    total += Math.round((valorCartao * taxaPct) / 100 * 100) / 100
+  }
+  return total
+})
+
+/** Legado: taxa % só da primeira linha (usado em rótulos). */
 const taxaCobradaPercentual = computed(() => {
   const forma = String(pagamentoAtual.value?.forma_pagamento_chave || '').toUpperCase()
   const parcelas = toParcelas(pagamentoAtual.value?.parcelas)
@@ -850,21 +985,65 @@ const taxaCobradaPercentual = computed(() => {
   const taxa = Number(TAXAS_CARTAO?.CREDITO?.parcelas?.[parcelas] || 0)
   return Number.isFinite(taxa) ? taxa : 0
 })
+
+/** Preço cobrado = valor final da venda + taxa da máquina (cartão acima de 10x). */
 const valorCobradoVenda = computed(() => {
   const base = Number(valorFinal.value || 0)
-  const taxa = Number(taxaCobradaPercentual.value || 0)
-  return Math.round(base * (1 + taxa / 100) * 100) / 100
+  const taxaReais = Number(totalTaxaCartaoReais.value || 0)
+  return Math.round((base + taxaReais) * 100) / 100
 })
+
+/** Valor que será salvo como valor_vendido: campo manual "com juros" se preenchido, senão o calculado. */
+const precoCobradoManual = ref('')
+const valorVendidoParaSalvar = computed(() => {
+  const manual = moedaParaNumero(String(precoCobradoManual.value || '').trim())
+  if (manual > 0) return Math.round(manual * 100) / 100
+  return valorCobradoVenda.value
+})
+
+/** Valor do contrato (sem juros) – o que o cliente vê no contrato. Se preenchido manualmente, usa; senão soma dos valores base das formas (cartão = valor no cartão total; demais = soma das parcelas). */
+const valorBaseContrato = computed(() => {
+  const manual = moedaParaNumero(String(precoCobradoManual.value || '').trim())
+  if (manual > 0) return Math.round(manual * 100) / 100
+  const list = pagamentos.value || []
+  let total = 0
+  for (const p of list) {
+    const forma = String(p?.forma_pagamento_chave || '').toUpperCase()
+    if (forma === 'CREDITO') {
+      // No cartão o vendedor digita o valor total no cartão (sem juros); com taxa vira o valor a receber
+      const valorNoCartao = Number(p.datas_parcelas?.[0]?.valor ?? p.valor ?? 0)
+      total += Math.round(valorNoCartao * 100) / 100
+    } else {
+      const parcelas = Array.isArray(p.datas_parcelas) ? p.datas_parcelas : []
+      total += parcelas.reduce((acc, parc) => acc + Number(parc?.valor || 0), 0)
+    }
+  }
+  return Math.round(total * 100) / 100
+})
+
 const PARCELAS_OPTIONS_FILTRADAS = computed(() => {
   const forma = String(pagamentoAtual.value?.forma_pagamento_chave || '').toUpperCase()
   const max = Math.max(1, maxParcelasDaForma(forma))
   return (PARCELAS_OPTIONS.value || []).filter((x) => Number(x.value) <= max)
 })
 
+/** Opções de parcelas para uma forma de pagamento (uso por linha). */
+function getParcelasOptionsForForm(forma) {
+  const max = Math.max(1, maxParcelasDaForma(forma))
+  return (PARCELAS_OPTIONS.value || []).filter((x) => Number(x.value) <= max)
+}
+
 const FORMAS_COM_DATA_POR_PARCELA = ['PIX', 'DINHEIRO', 'CHEQUE', 'TRANSFERENCIA', 'DEBITO']
+
+let _pagamentoRowId = 0
+function getNextPagamentoRowId() {
+  _pagamentoRowId += 1
+  return _pagamentoRowId
+}
 
 const pagamentos = ref([
   {
+    __id: getNextPagamentoRowId(),
     forma_pagamento_chave: '',
     valor: 0, // continua existindo só para compatibilidade/validação
     parcelas: 1,
@@ -874,15 +1053,85 @@ const pagamentos = ref([
   },
 ])
 
+function addPagamento() {
+  const list = [...(pagamentos.value || [])]
+  list.push({
+    __id: getNextPagamentoRowId(),
+    forma_pagamento_chave: '',
+    valor: 0,
+    parcelas: 1,
+    data_recebimento: '',
+    datas_parcelas: [{ data: '', valor: 0 }],
+  })
+  pagamentos.value = list
+}
+
+function removerPagamento(idx) {
+  const list = pagamentos.value || []
+  if (list.length <= 1) return
+  pagamentos.value = list.filter((_, i) => i !== Number(idx))
+}
+
+function editarPagamento(_idx) {
+  // A linha já é editável; o botão Editar mantém paridade com a tabela de itens (Editar + Excluir).
+  // Opcional: scroll para a seção de pagamentos ou focus no primeiro campo da linha.
+}
+
 const columnsPagamentos = [
-  { key: 'forma', label: 'Forma', width: '220px' },
-  { key: 'parcelas', label: 'Parcelas', width: '100px', align: 'right' },
-  { key: 'data_recebimento', label: 'Data prevista / valor', width: '260px' },
+  { key: 'forma', label: 'FORMA DE PAGAMENTO', width: '220px' },
+  { key: 'parcelas', label: 'PARCELAS', width: '100px', align: 'right' },
+  { key: 'data_prevista', label: 'DATA PREVISTA', width: '160px' },
+  { key: 'valor_parcela', label: 'VALOR', width: '140px', align: 'right' },
+  { key: 'acoes', label: 'AÇÕES', width: '200px', align: 'right' },
 ]
 
 const rowsPagamentos = computed(() =>
   (pagamentos.value || []).map((p, idx) => ({ ...p, __idx: idx })),
 )
+
+/** Soma dos valores de todas as formas de pagamento. */
+const totalValorPagamentos = computed(() => {
+  const list = pagamentos.value || []
+  let total = 0
+  for (const p of list) {
+    const forma = String(p?.forma_pagamento_chave || '').toUpperCase()
+    if (forma === 'CREDITO') {
+      total += Number(p.datas_parcelas?.[0]?.valor ?? p.valor ?? 0)
+    } else {
+      const parcelas = Array.isArray(p.datas_parcelas) ? p.datas_parcelas : []
+      total += parcelas.reduce((acc, parc) => acc + Number(parc?.valor || 0), 0)
+    }
+  }
+  return Math.round(total * 100) / 100
+})
+
+/** Restante para bater com o valor final da venda. Usa o valor do contrato menos a soma do que o vendedor preencheu nas formas. */
+const restanteParaDistribuir = computed(() => {
+  const total = Number(valorBaseContrato.value || 0)
+  const soma = totalValorPagamentos.value || 0
+  return Math.round((total - soma) * 100) / 100
+})
+
+/** Total a receber (soma das parcelas reais, com juros no cartão quando >10x). Usado para enviar como valor_vendido e para exibir quando diferente do valor do contrato. */
+const totalReceberCalculado = computed(() => {
+  const list = pagamentos.value || []
+  let total = 0
+  for (const p of list) {
+    const forma = String(p?.forma_pagamento_chave || '').toUpperCase()
+    const n = Math.max(1, toParcelas(p.parcelas))
+    const parcelas = Array.isArray(p.datas_parcelas) ? p.datas_parcelas : []
+    if (forma === 'CREDITO' && parcelas.length) {
+      // No cartão o valor digitado é o total no cartão; aplicamos taxa para obter total a receber
+      const valorNoCartao = Number(parcelas[0]?.valor ?? p.valor ?? 0)
+      const taxaPct = taxaPercentualCredito(n)
+      const valorComTaxa = taxaPct > 0 ? Math.round(valorNoCartao * (1 + taxaPct / 100) * 100) / 100 : valorNoCartao
+      total += valorComTaxa
+    } else if (forma !== 'CREDITO') {
+      total += parcelas.reduce((acc, parc) => acc + Number(parc?.valor || 0), 0)
+    }
+  }
+  return Math.round(total * 100) / 100
+})
 
 const imagensParaPdf = ref([])
 const anexosDocumentos = ref([])
@@ -897,12 +1146,12 @@ const colArquivos = [
 ]
 
 const columnsItens = [
-  { key: 'nome_ambiente', label: 'Item/Ambiente' },
+  { key: 'nome_ambiente', label: 'Ambiente' },
   { key: 'descricao', label: 'Descrição' },
   { key: 'observacao', label: 'Observações' },
   { key: 'valor_orcado', label: 'Valor orçado', align: 'right', width: '140px' },
   { key: 'valor_rateado', label: 'Valor após desconto', align: 'right', width: '160px' },
-  { key: 'acoes', label: '', width: '150px', align: 'right' },
+  { key: 'acoes', label: 'AÇÕES', width: '150px', align: 'right' },
 ]
 
 const rowsItens = computed(() =>
@@ -953,11 +1202,13 @@ function aplicarRegraPagamentoPorDesconto() {
 }
 
 function normalizarParcelasPeloCatalogo() {
-  const permitidas = new Set((PARCELAS_OPTIONS_FILTRADAS.value || []).map((x) => Number(x.value)))
   pagamentos.value = (pagamentos.value || []).map((p) => {
+    const opts = getParcelasOptionsForForm(p.forma_pagamento_chave)
+    const permitidas = new Set((opts || []).map((x) => Number(x.value)))
     const atual = toParcelas(p?.parcelas)
     if (permitidas.has(atual)) return p
-    return { ...p, parcelas: Number(PARCELAS_OPTIONS_FILTRADAS.value?.[0]?.value || 1) }
+    const primeira = opts?.[0]?.value ?? 1
+    return { ...p, parcelas: Number(primeira) }
   })
 }
 
@@ -968,7 +1219,7 @@ function ensureDatasParcelas(p) {
     if (p.datas_parcelas.length === 0) p.datas_parcelas.push({ data: '', valor: 0 })
     return
   }
-  if (!FORMAS_COM_DATA_POR_PARCELA.includes(p.forma_pagamento_chave)) return
+  if (!FORMAS_COM_DATA_POR_PARCELA.map((f) => String(f).toUpperCase()).includes(String(p.forma_pagamento_chave || '').toUpperCase())) return
   const n = Math.max(1, Math.min(24, toParcelas(p.parcelas)))
   if (!Array.isArray(p.datas_parcelas)) p.datas_parcelas = []
   while (p.datas_parcelas.length < n) {
@@ -993,21 +1244,24 @@ function prefillParcelasValores({ resetDatas = false } = {}) {
   if (!p) return
   const forma = String(p.forma_pagamento_chave || '').toUpperCase()
   const n = Math.max(1, toParcelas(p.parcelas))
-  const valores = splitValores(valorCobradoVenda.value, n)
 
   if (forma === 'CREDITO') {
+    // Cartão: valor no cartão é livre (usuário informa); não preencher com valor da venda.
+    ensureDatasParcelas(p)
+    const valorAtual = p.datas_parcelas?.[0]?.valor ?? 0
     const dataAtual = resetDatas ? '' : (p.datas_parcelas?.[0]?.data || '')
-    p.datas_parcelas = [{ data: dataAtual, valor: valores[0] || 0 }]
-    p.valor = Number(valorCobradoVenda.value || 0)
+    p.datas_parcelas = [{ data: dataAtual, valor: valorAtual }]
+    p.valor = Number(valorAtual)
     return
   }
 
+  const valores = splitValores(valorCobradoVenda.value, n)
   ensureDatasParcelas(p)
   p.datas_parcelas = (p.datas_parcelas || []).map((parc, i) => ({
     data: resetDatas ? '' : (parc?.data || ''),
     valor: valores[i] || 0,
   }))
-  p.valor = Number(valorCobradoVenda.value || 0)
+  p.valor = p.datas_parcelas.reduce((acc, parc) => acc + Number(parc?.valor || 0), 0)
 }
 
 function limparPagamentoAoTrocarForma() {
@@ -1032,6 +1286,98 @@ function recomputarTotalPagamento(idx) {
     (acc, parc) => acc + Number(parc?.valor || 0),
     0,
   )
+}
+
+/** Soma dos valores já preenchidos em todas as linhas de pagamento. */
+function somaValorPagamentos() {
+  const list = pagamentos.value || []
+  let total = 0
+  for (const p of list) {
+    const forma = String(p?.forma_pagamento_chave || '').toUpperCase()
+    if (forma === 'CREDITO') {
+      total += Number(p.datas_parcelas?.[0]?.valor ?? p.valor ?? 0)
+    } else {
+      const parcelas = Array.isArray(p.datas_parcelas) ? p.datas_parcelas : []
+      total += parcelas.reduce((acc, parc) => acc + Number(parc?.valor || 0), 0)
+    }
+  }
+  return Math.round(total * 100) / 100
+}
+
+/** Preenche a primeira linha zerada (não-crédito) com o restante do valor final da venda. A taxa é do cartão; o restante (PIX etc.) não inclui taxa. */
+function prefillRestanteNosZerados() {
+  const DEBUG = false
+  const log = (...args) => DEBUG && console.log('[prefillRestanteNosZerados]', ...args)
+
+  const valorBase = Number(valorFinal.value || 0)
+  log('início', { valorBase: valorFinal.value })
+  if (valorBase <= 0) {
+    log('SAIU: valorFinal <= 0')
+    return
+  }
+  const list = pagamentos.value || []
+  log('pagamentos.length', list.length)
+
+  let somaPreenchida = 0
+  for (const p of list) {
+    const forma = String(p?.forma_pagamento_chave || '').toUpperCase()
+    if (forma === 'CREDITO') {
+      const v = Number(p.datas_parcelas?.[0]?.valor ?? p.valor ?? 0)
+      somaPreenchida += v
+      log('  row CREDITO', { forma, valor: v })
+    } else if (forma) {
+      const parcelas = Array.isArray(p.datas_parcelas) ? p.datas_parcelas : []
+      const somaRow = parcelas.reduce((acc, parc) => acc + Number(parc?.valor || 0), 0)
+      somaPreenchida += somaRow
+      log('  row', { forma, parcelasLength: parcelas.length, somaRow })
+    }
+  }
+  const restante = Math.round((valorBase - somaPreenchida) * 100) / 100
+  log('somaPreenchida', somaPreenchida, 'restante (valor final - preenchido)', restante)
+  // Não fazer return aqui quando restante <= 0: ainda podemos precisar redistribuir (diluir) dentro de uma linha
+
+  for (let idx = 0; idx < list.length; idx++) {
+    const p = list[idx]
+    const forma = String(p?.forma_pagamento_chave || '').toUpperCase()
+    if (forma === 'CREDITO' || !forma) {
+      log('  [', idx, '] PULOU:', forma === 'CREDITO' ? 'CREDITO' : 'forma vazia')
+      continue
+    }
+    ensureDatasParcelas(p)
+    const parcelas = p.datas_parcelas || []
+    const n = Math.max(1, toParcelas(p.parcelas))
+    const somaRow = parcelas.reduce((acc, parc) => acc + Number(parc?.valor || 0), 0)
+    const qtdZeradas = parcelas.filter((parc) => !Number(parc?.valor || 0)).length
+    const linhaZerada = somaRow === 0
+    const soUmaParcelaPreenchida = n > 1 && parcelas.length >= 1 && (qtdZeradas > 0 || parcelas.length < n) && somaRow > 0
+
+    if (linhaZerada && restante <= 0) {
+      log('  [', idx, '] PULOU: linha zerada mas restante <= 0')
+      continue
+    }
+    if (!linhaZerada && !soUmaParcelaPreenchida) {
+      log('  [', idx, '] PULOU: não precisa preencher nem redistribuir')
+      continue
+    }
+
+    const valorLinha = linhaZerada ? restante : somaRow
+    if (linhaZerada && valorLinha <= 0) {
+      log('  [', idx, '] PULOU: valorLinha <= 0')
+      continue
+    }
+    const valores = splitValores(valorLinha, n)
+    log('  [', idx, ']', forma, 'PREENCHENDO', { valorLinha, n, valores })
+
+    const base = Array.from({ length: n }, (_, i) => ({
+      ...(parcelas[i] || { data: '', valor: 0 }),
+      valor: valores[i] ?? 0,
+    }))
+    p.datas_parcelas = base
+    p.valor = base.reduce((acc, parc) => acc + Number(parc?.valor || 0), 0)
+    log('  OK: atribuído', base.map((x) => x.valor))
+    return
+  }
+  log('SAIU: nenhuma linha preenchida')
 }
 
 function mostrarDataPorParcela(p) {
@@ -1179,15 +1525,6 @@ function sincronizarValorFinalComTotal() {
 function onPercentualDescontoInput(v) {
   percentualDesconto.value = clampPercentualDesconto(v)
   aplicarRateio()
-}
-
-function getRepresentanteEmpresaSelecionado() {
-  const cfg = configuracaoEmpresa.value || {}
-  return {
-    nome: String(cfg.representante_legal_nome || '').trim(),
-    cpf: String(cfg.representante_legal_cpf || '').trim(),
-    rg: String(cfg.representante_legal_rg || '').trim(),
-  }
 }
 
 function preencherEnderecoEntregaComCliente(cliente) {
@@ -1359,6 +1696,27 @@ async function carregarConfiguracaoEmpresa() {
   }
 }
 
+/** Representante do cadastro da empresa (Configurações > Empresa). Usado quando o representante da venda não está preenchido. */
+function getRepresentanteFromEmpresa() {
+  const cfg = configuracaoEmpresa.value || {}
+  return {
+    nome: String(cfg.representante_legal_nome || '').trim(),
+    cpf: String(cfg.representante_legal_cpf || '').replace(/\D/g, ''),
+    rg: String(cfg.representante_legal_rg || '').trim(),
+  }
+}
+
+/** Se o representante da venda estiver vazio, preenche com os dados do cadastro da empresa. */
+function preencherRepresentanteDoCadastroEmpresaSeVazio() {
+  const rep = representanteVenda.value || {}
+  const temPreenchido = (rep.nome || '').trim() || (rep.cpf || '').trim() || (rep.rg || '').trim()
+  if (temPreenchido) return
+  const daEmpresa = getRepresentanteFromEmpresa()
+  if (daEmpresa.nome || daEmpresa.cpf || daEmpresa.rg) {
+    representanteVenda.value = { ...daEmpresa }
+  }
+}
+
 function adicionarItemVenda() {
   itens.value.push({
     nome_ambiente: '',
@@ -1405,6 +1763,8 @@ async function carregarOrcamento() {
     temNotaFiscal.value = false
     percentualDesconto.value = 0
     aplicarRateio()
+    representanteVenda.value = { nome: '', cpf: '', rg: '' }
+    preencherRepresentanteDoCadastroEmpresaSeVazio()
 
     await carregarArquivos()
   } catch (e) {
@@ -1479,26 +1839,49 @@ async function carregarVenda() {
       preencherEnderecoEntregaComCliente(orc?.cliente)
     }
 
+    representanteVenda.value = {
+      nome: String(venda?.representante_venda_nome || '').trim(),
+      cpf: String(venda?.representante_venda_cpf || '').replace(/\D/g, ''),
+      rg: String(venda?.representante_venda_rg || '').trim(),
+    }
+
+    const valorVendidoSalvo = Number(venda?.valor_vendido ?? 0)
+    precoCobradoManual.value = valorVendidoSalvo > 0 ? format.currency(valorVendidoSalvo) : ''
+
     const pagos = venda?.pagamentos || []
-    pagamentos.value =
-      pagos.length > 0
-        ? [
-            {
-              forma_pagamento_chave: pagos[0]?.forma_pagamento_chave || '',
-              valor: pagos.reduce((acc, p) => acc + Number(p?.valor || 0), 0),
-              parcelas: Math.max(1, pagos.length),
-              data_recebimento: pagos[0]?.data_prevista_recebimento
-                ? String(pagos[0].data_prevista_recebimento).slice(0, 10)
-                : (pagos[0]?.data_recebimento ? String(pagos[0].data_recebimento).slice(0, 10) : ''),
-              datas_parcelas: pagos.map((p) => ({
-                data: p.data_prevista_recebimento
-                  ? String(p.data_prevista_recebimento).slice(0, 10)
-                  : (p.data_recebimento ? String(p.data_recebimento).slice(0, 10) : ''),
-                valor: Number(p.valor || 0),
-              })),
-            },
-          ]
-        : [{ forma_pagamento_chave: '', valor: 0, parcelas: 1, data_recebimento: '', datas_parcelas: [{ data: '', valor: 0 }] }]
+    if (pagos.length > 0) {
+      const totalPagos = pagos.reduce((acc, p) => acc + Number(p?.valor || 0), 0)
+      const forma = String(pagos[0]?.forma_pagamento_chave || '').toUpperCase()
+      const nParcelas = Math.max(1, pagos.length)
+      // Cartão: no form mostramos "valor no cartão" (o que o vendedor digita). Se as parcelas salvas já têm taxa, exibimos o valor base para não somar juros de novo ao salvar.
+      const taxaPct = forma === 'CREDITO' ? taxaPercentualCredito(nParcelas) : 0
+      const valorCartaoExibir =
+        forma === 'CREDITO' && taxaPct > 0
+          ? Math.round((totalPagos / (1 + taxaPct / 100)) * 100) / 100
+          : totalPagos
+      const primeiraData =
+        pagos[0]?.data_prevista_recebimento
+          ? String(pagos[0].data_prevista_recebimento).slice(0, 10)
+          : (pagos[0]?.data_recebimento ? String(pagos[0].data_recebimento).slice(0, 10) : '')
+      pagamentos.value = [
+        {
+          __id: getNextPagamentoRowId(),
+          forma_pagamento_chave: pagos[0]?.forma_pagamento_chave || '',
+          valor: forma === 'CREDITO' ? valorCartaoExibir : totalPagos,
+          parcelas: Math.max(1, pagos.length),
+          data_recebimento: primeiraData,
+          datas_parcelas:
+            forma === 'CREDITO'
+              ? [{ data: primeiraData, valor: valorCartaoExibir }]
+              : pagos.map((p) => ({
+                  data: p.data_prevista_recebimento ? String(p.data_prevista_recebimento).slice(0, 10) : (p.data_recebimento ? String(p.data_recebimento).slice(0, 10) : ''),
+                  valor: Number(p.valor || 0),
+                })),
+        },
+      ]
+    } else {
+      pagamentos.value = [{ __id: getNextPagamentoRowId(), forma_pagamento_chave: '', valor: 0, parcelas: 1, data_recebimento: '', datas_parcelas: [{ data: '', valor: 0 }] }]
+    }
 
     const comis = venda?.comissoes || []
     indicacaoNome.value = String(comis?.[0]?.responsavel_nome || '')
@@ -1520,6 +1903,10 @@ async function carregarVenda() {
   }
 }
 
+function canCriarVenda() {
+  return can('vendas.criar') || can('vendas.fechamento.criar')
+}
+
 function salvarVenda() {
   if (isEditMode.value) {
     if (!can('vendas.editar')) {
@@ -1527,7 +1914,7 @@ function salvarVenda() {
       return
     }
   } else {
-    if (!can('vendas.criar')) {
+    if (!canCriarVenda()) {
       notify.error('Acesso negado.')
       return
     }
@@ -1545,14 +1932,6 @@ async function criarOuAtualizarVenda({ skipCadastroContrato = false } = {}) {
     return
   }
 
-  {
-    const rep = getRepresentanteEmpresaSelecionado()
-    if (!rep.nome || onlyNumbers(rep.cpf).length !== 11 || !rep.rg) {
-      notify.error('Representante legal da empresa está incompleto no cadastro. Verifique em Configurações > Empresa.')
-      return
-    }
-  }
-
   if (!skipCadastroContrato && clientePrecisaCadastroRapido(clienteContrato.value || orcamento.value?.cliente)) {
     if (!can('clientes.editar')) {
       notify.error('Faltam dados do contratante e você não tem permissão para editar cliente.')
@@ -1567,9 +1946,15 @@ async function criarOuAtualizarVenda({ skipCadastroContrato = false } = {}) {
   try {
     const pagamentosPayload = (function () {
       const list = []
-      const valorVendaNum = Number(valorCobradoVenda.value || 0)
       const dataVendaStr = (dataVenda.value || '').trim() || null
-      // Evita fuso: YYYY-MM-DD como meia-noite UTC vira dia anterior no Brasil; parse como data local
+      // Cartão: valor digitado é o que passa no cartão; acima de 10x aplicamos a taxa e salvamos as parcelas já com juros (diluídos).
+      const valorCartaoComTaxa = (valorDigitado, parcelasCount) => {
+        const v = Number(valorDigitado || 0)
+        if (v <= 0) return 0
+        const taxaPct = taxaPercentualCredito(parcelasCount)
+        if (taxaPct <= 0) return v
+        return Math.round(v * (1 + taxaPct / 100) * 100) / 100
+      }
       const parseDataLocal = (str) => {
         if (!str || typeof str !== 'string') return null
         const parts = String(str).trim().split('-').map(Number)
@@ -1593,14 +1978,12 @@ async function criarOuAtualizarVenda({ skipCadastroContrato = false } = {}) {
         // Cartão de crédito: data que passou o cartão = 1ª parcela; demais a cada 30 dias (recorrente)
         if (formaUpper === 'CREDITO' && parcelas.length && parcelas[0]?.data) {
           const base = parcelas[0]
-          let valorParcela = Number(base.valor || 0)
+          const valorNoCartao = Number(base.valor || 0)
+          const valorParaSalvar = valorCartaoComTaxa(valorNoCartao, nParcelas)
           const dataBase = parseDataLocal(base.data) || new Date(base.data)
 
-          if (dataBase && !Number.isNaN(dataBase.getTime())) {
-            if (valorParcela <= 0 && valorVendaNum > 0) valorParcela = Math.round((valorVendaNum / nParcelas) * 100) / 100
-            // Evita última parcela negativa: limita valor por parcela ao que sobra dividido pelas parcelas
-            const maxValorParcela = nParcelas > 1 ? valorVendaNum / (nParcelas - 1) : valorVendaNum
-            if (valorParcela > maxValorParcela) valorParcela = Math.round((valorVendaNum / nParcelas) * 100) / 100
+          if (dataBase && !Number.isNaN(dataBase.getTime()) && valorParaSalvar > 0) {
+            const valorParcela = Math.round((valorParaSalvar / nParcelas) * 100) / 100
             for (let i = 0; i < nParcelas; i++) {
               const d = new Date(dataBase)
               d.setDate(d.getDate() + 30 * i)
@@ -1609,7 +1992,7 @@ async function criarOuAtualizarVenda({ skipCadastroContrato = false } = {}) {
               const day = String(d.getDate()).padStart(2, '0')
               const valorEstaParcela =
                 i === nParcelas - 1
-                  ? Math.round((valorVendaNum - valorParcela * (nParcelas - 1)) * 100) / 100
+                  ? Math.round((valorParaSalvar - valorParcela * (nParcelas - 1)) * 100) / 100
                   : valorParcela
               list.push({
                 forma_pagamento_chave: forma,
@@ -1622,25 +2005,29 @@ async function criarOuAtualizarVenda({ skipCadastroContrato = false } = {}) {
           }
         }
 
-        // Cartão de crédito sem data preenchida: gera N parcelas pelo valor total e data da venda.
-        if (formaUpper === 'CREDITO' && nParcelas >= 1 && valorVendaNum > 0) {
-          const valorParcela = Math.round((valorVendaNum / nParcelas) * 100) / 100
-          let dataBase = (dataVendaStr && parseDataLocal(dataVendaStr)) || new Date(dataVendaStr || undefined)
-          if (!dataBase || Number.isNaN(dataBase.getTime())) dataBase = new Date()
-          for (let i = 0; i < nParcelas; i++) {
-            const d = new Date(dataBase)
-            d.setDate(d.getDate() + 30 * i)
-            const y = d.getFullYear()
-            const m = String(d.getMonth() + 1).padStart(2, '0')
-            const day = String(d.getDate()).padStart(2, '0')
-            let valorEstaParcela = i === nParcelas - 1 ? valorVendaNum - valorParcela * (nParcelas - 1) : valorParcela
-            valorEstaParcela = Math.round(valorEstaParcela * 100) / 100
-            list.push({
-              forma_pagamento_chave: forma,
-              valor: valorEstaParcela,
-              data_prevista_recebimento: `${y}-${m}-${day}`,
-              data_recebimento: null,
-            })
+        // Cartão de crédito sem data preenchida: gera N parcelas pelo valor no cartão e data da venda.
+        if (formaUpper === 'CREDITO' && nParcelas >= 1) {
+          const valorNoCartao = Number(parcelas[0]?.valor ?? p.valor ?? 0)
+          const valorParaSalvar = valorCartaoComTaxa(valorNoCartao, nParcelas)
+          if (valorParaSalvar > 0) {
+            const valorParcela = Math.round((valorParaSalvar / nParcelas) * 100) / 100
+            let dataBase = (dataVendaStr && parseDataLocal(dataVendaStr)) || new Date(dataVendaStr || undefined)
+            if (!dataBase || Number.isNaN(dataBase.getTime())) dataBase = new Date()
+            for (let i = 0; i < nParcelas; i++) {
+              const d = new Date(dataBase)
+              d.setDate(d.getDate() + 30 * i)
+              const y = d.getFullYear()
+              const m = String(d.getMonth() + 1).padStart(2, '0')
+              const day = String(d.getDate()).padStart(2, '0')
+              let valorEstaParcela = i === nParcelas - 1 ? valorParaSalvar - valorParcela * (nParcelas - 1) : valorParcela
+              valorEstaParcela = Math.round(valorEstaParcela * 100) / 100
+              list.push({
+                forma_pagamento_chave: forma,
+                valor: valorEstaParcela,
+                data_prevista_recebimento: `${y}-${m}-${day}`,
+                data_recebimento: null,
+              })
+            }
           }
           continue
         }
@@ -1665,12 +2052,38 @@ async function criarOuAtualizarVenda({ skipCadastroContrato = false } = {}) {
         }
       }
       const soma = list.reduce((acc, x) => acc + Number(x.valor || 0), 0)
-      const valorVenda = Number(valorCobradoVenda.value || 0)
-      // Não força PIX automático: exige correção explícita do rateio no formulário.
-      if (list.length === 0 || Math.abs(soma - valorVenda) > 0.01) {
-        throw new Error(`A soma dos pagamentos (${soma.toFixed(2)}) precisa bater com o valor da venda (${valorVenda.toFixed(2)}).`)
+      // Soma dos pagamentos = total a receber (valor_vendido). Quando há juros no cartão, pode ser maior que o valor do contrato.
+      if (list.length === 0) {
+        throw new Error('Adicione ao menos uma forma de pagamento.')
       }
       return list
+    })()
+
+    const somaPagamentosPayload = pagamentosPayload.reduce((acc, x) => acc + Number(x.valor || 0), 0)
+
+    const formasPagamentoPayload = (function () {
+      const out = []
+      for (const p of pagamentos.value || []) {
+        const forma = String(p?.forma_pagamento_chave || '').trim()
+        if (!forma) continue
+        const formaUpper = forma.toUpperCase()
+        const n = Math.max(1, toParcelas(p.parcelas))
+        const parcelas = Array.isArray(p.datas_parcelas) ? p.datas_parcelas : []
+        let valorBase = 0
+        if (formaUpper === 'CREDITO') {
+          valorBase = Number(parcelas[0]?.valor ?? p.valor ?? 0)
+        } else {
+          valorBase = parcelas.reduce((acc, parc) => acc + Number(parc?.valor || 0), 0)
+        }
+        if (valorBase <= 0) continue
+        out.push({
+          forma_pagamento_chave: forma,
+          valor_base: Math.round(valorBase * 100) / 100,
+          quantidade_parcelas: n,
+          com_juros: formaUpper === 'CREDITO' && n > 10,
+        })
+      }
+      return out
     })()
 
     const nomeIndicacao = String(indicacaoNome.value || '').trim()
@@ -1692,7 +2105,12 @@ async function criarOuAtualizarVenda({ skipCadastroContrato = false } = {}) {
       valor_unitario: Number(it.valor_final ?? it.valor_unitario ?? 0),
     }))
 
-    const representanteEmpresa = getRepresentanteEmpresaSelecionado()
+    const rep = representanteVenda.value || {}
+    const nomeRep = (rep.nome || '').trim()
+    const cpfRep = (rep.cpf || '').trim()
+    const rgRep = (rep.rg || '').trim()
+    const repPreenchido = nomeRep || cpfRep || rgRep
+    const repFinal = repPreenchido ? rep : getRepresentanteFromEmpresa()
     const payload = {
       orcamento_id: Number(orcamento.value.id),
       status: 'VENDA_FECHADA',
@@ -1706,14 +2124,17 @@ async function criarOuAtualizarVenda({ skipCadastroContrato = false } = {}) {
           cidadeEntrega.value,
           estadoEntrega.value,
         ) || undefined,
-      valor_vendido: Number(valorCobradoVenda.value),
+      valor_vendido: Math.round(somaPagamentosPayload * 100) / 100,
+      valor_base_contrato: Number(valorBaseContrato.value || 0),
+      valor_base_venda: Math.round(somaPagamentosPayload * 100) / 100,
       tem_nota_fiscal: Boolean(temNotaFiscal.value),
       taxa_nota_fiscal_percentual_aplicado: temNotaFiscal.value ? Number(TAXA_NOTA_FISCAL?.taxa || 0) : 0,
-      representante_venda_nome: representanteEmpresa.nome || undefined,
-      representante_venda_cpf: representanteEmpresa.cpf || undefined,
-      representante_venda_rg: representanteEmpresa.rg || undefined,
+      representante_venda_nome: (repFinal.nome || '').trim() || undefined,
+      representante_venda_cpf: (repFinal.cpf || '').trim() || undefined,
+      representante_venda_rg: (repFinal.rg || '').trim() || undefined,
       itens: itensPayload,
       pagamentos: pagamentosPayload,
+      formas_pagamento: formasPagamentoPayload.length ? formasPagamentoPayload : undefined,
       comissoes: comissoesPayload,
     }
 
@@ -1733,14 +2154,21 @@ async function criarOuAtualizarVenda({ skipCadastroContrato = false } = {}) {
     }
   } catch (e) {
     console.error(e)
-    notify.error(e?.response?.data?.message || (isEditMode.value ? 'Erro ao atualizar venda.' : 'Erro ao criar venda.'))
+    const apiMsg = e?.response?.data?.message
+    const msg =
+      Array.isArray(apiMsg)
+        ? apiMsg.filter(Boolean).join(' | ')
+        : (apiMsg && String(apiMsg).trim()) || (isEditMode.value ? 'Erro ao atualizar venda.' : 'Erro ao criar venda.')
+    notify.error(msg)
   } finally {
     saving.value = false
   }
 }
 
 onMounted(async () => {
-  await carregarConfiguracaoEmpresa()
+  if (can('configuracoes.empresa.ver')) {
+    await carregarConfiguracaoEmpresa()
+  }
   const id = vendaId.value
   if (id) {
     if (!can('vendas.editar')) {
@@ -1750,13 +2178,14 @@ onMounted(async () => {
     }
     await carregarVenda()
   } else {
-    if (!can('vendas.criar')) {
+    if (!canCriarVenda()) {
       notify.error('Acesso negado.')
       router.push('/vendas')
       return
     }
     await carregarOrcamento()
   }
+  setTimeout(prefillRestanteNosZerados, 400)
 })
 
 watch(percentualDesconto, () => {
@@ -1785,17 +2214,18 @@ watch(
 
 watch(valorCobradoVenda, () => {
   prefillParcelasValores()
+  prefillRestanteNosZerados()
+})
+
+watch(precoCobradoManual, () => {
+  prefillRestanteNosZerados()
 })
 
 watch(
   pagamentos,
   (lista) => {
     if (!Array.isArray(lista) || lista.length === 0) {
-      pagamentos.value = [{ forma_pagamento_chave: '', valor: 0, parcelas: 1, data_recebimento: '', datas_parcelas: [{ data: '', valor: 0 }] }]
-      return
-    }
-    if (lista.length > 1) {
-      pagamentos.value = [lista[0]]
+      pagamentos.value = [{ __id: getNextPagamentoRowId(), forma_pagamento_chave: '', valor: 0, parcelas: 1, data_recebimento: '', datas_parcelas: [{ data: '', valor: 0 }] }]
     }
   },
   { deep: true },

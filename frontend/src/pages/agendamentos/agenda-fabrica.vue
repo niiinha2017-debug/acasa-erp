@@ -1,7 +1,7 @@
 <template>
   <div class="w-full h-full">
     <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
+      <div class="h-1 w-full bg-cyan-600 rounded-t-2xl" aria-hidden></div>
 
       <PageHeader
         title="Agenda de Produção"
@@ -38,6 +38,161 @@
       </PageHeader>
 
       <div class="p-4 md:p-6 border-t border-border-ui space-y-6 bg-bg-page">
+        <!-- Notificação: Medidas a serem agendadas (recebidos da venda) -->
+        <div
+          v-if="pendentesMedidaFina.length > 0 || pendentesMedidaFinaLoading"
+          class="rounded-2xl border border-purple-200 bg-purple-50/80 dark:bg-purple-950/30 dark:border-purple-800 overflow-hidden"
+        >
+          <button
+            type="button"
+            class="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-purple-100/80 dark:hover:bg-purple-900/30 transition-colors"
+            @click="painelMedidasAbertos = !painelMedidasAbertos"
+          >
+            <span class="flex items-center gap-2">
+              <i class="pi pi-inbox text-purple-600 dark:text-purple-400 text-lg" />
+              <span class="font-bold text-purple-800 dark:text-purple-200">
+                Medidas a serem agendadas
+              </span>
+              <span
+                v-if="!pendentesMedidaFinaLoading"
+                class="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 rounded-full bg-purple-500 text-white text-xs font-black"
+              >
+                {{ pendentesMedidaFina.length }}
+              </span>
+            </span>
+            <i
+              class="pi text-purple-600 dark:text-purple-400 transition-transform"
+              :class="painelMedidasAbertos ? 'pi-angle-up' : 'pi-angle-down'"
+            />
+          </button>
+          <Transition
+            enter-active-class="transition-all duration-200 ease-out"
+            enter-from-class="opacity-0 max-h-0"
+            enter-to-class="opacity-100 max-h-[70vh]"
+            leave-active-class="transition-all duration-200 ease-in"
+            leave-from-class="opacity-100 max-h-[70vh]"
+            leave-to-class="opacity-0 max-h-0"
+          >
+            <div v-show="painelMedidasAbertos" class="border-t border-purple-200 dark:border-purple-800 overflow-hidden">
+              <div v-if="pendentesMedidaFinaLoading" class="px-4 py-6 text-center text-sm text-purple-600 dark:text-purple-400">
+                Carregando...
+              </div>
+              <div
+                v-else
+                class="max-h-[60vh] overflow-y-auto px-2 py-2"
+              >
+                <p class="px-2 py-2 text-xs text-purple-700 dark:text-purple-300 mb-2">
+                  Clientes que receberam venda e aguardam agendamento da medida fina. Clique em &quot;Agendar&quot; para definir data e horário.
+                </p>
+                <ul class="space-y-1.5">
+                  <li
+                    v-for="item in pendentesMedidaFina"
+                    :key="item.id"
+                    class="flex items-center justify-between gap-3 rounded-xl border border-purple-200 dark:border-purple-800 bg-white dark:bg-slate-800/50 px-3 py-2.5"
+                  >
+                    <div class="min-w-0 flex-1">
+                      <span class="font-semibold text-sm text-slate-800 dark:text-slate-200 block truncate">
+                        {{ item?.cliente?.nome_completo || item?.cliente?.razao_social || 'Cliente' }}
+                      </span>
+                      <span v-if="item?.venda_id" class="text-xs text-slate-500 dark:text-slate-400">
+                        Venda #{{ item.venda_id }}
+                      </span>
+                      <span v-if="item?.pendencia_financeira" class="text-xs text-amber-600 dark:text-amber-400 font-semibold block mt-0.5">
+                        Pendência financeira – regularize Contas a Receber para agendar.
+                      </span>
+                    </div>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      class="flex-shrink-0 rounded-xl font-bold text-xs uppercase"
+                      :disabled="!!item?.pendencia_financeira"
+                      :title="item?.pendencia_financeira ? 'Há parcela vencida não paga em Contas a Receber. Regularize para liberar o agendamento.' : undefined"
+                      @click="openModalForEvent(item); painelMedidasAbertos = false"
+                    >
+                      Agendar
+                    </Button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </Transition>
+        </div>
+
+        <!-- Botão / painel: Clientes com montagem concluída (criar pós-venda como tarefa avulsa) -->
+        <div
+          v-if="montagemConcluidaList.length > 0 || montagemConcluidaLoading"
+          class="rounded-2xl border border-amber-200 bg-amber-50/80 dark:bg-amber-950/30 dark:border-amber-800 overflow-hidden"
+        >
+          <button
+            type="button"
+            class="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-amber-100/80 dark:hover:bg-amber-900/30 transition-colors"
+            @click="painelMontagemConcluidaAbertos = !painelMontagemConcluidaAbertos"
+          >
+            <span class="flex items-center gap-2">
+              <i class="pi pi-check-circle text-amber-600 dark:text-amber-400 text-lg" />
+              <span class="font-bold text-amber-800 dark:text-amber-200">
+                Clientes com montagem concluída
+              </span>
+              <span
+                v-if="!montagemConcluidaLoading"
+                class="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 rounded-full bg-amber-500 text-white text-xs font-black"
+              >
+                {{ montagemConcluidaList.length }}
+              </span>
+            </span>
+            <i
+              class="pi text-amber-600 dark:text-amber-400 transition-transform"
+              :class="painelMontagemConcluidaAbertos ? 'pi-angle-up' : 'pi-angle-down'"
+            />
+          </button>
+          <Transition
+            enter-active-class="transition-all duration-200 ease-out"
+            enter-from-class="opacity-0 max-h-0"
+            enter-to-class="opacity-100 max-h-[70vh]"
+            leave-active-class="transition-all duration-200 ease-in"
+            leave-from-class="opacity-100 max-h-[70vh]"
+            leave-to-class="opacity-0 max-h-0"
+          >
+            <div v-show="painelMontagemConcluidaAbertos" class="border-t border-amber-200 dark:border-amber-800 overflow-hidden">
+              <div v-if="montagemConcluidaLoading" class="px-4 py-6 text-center text-sm text-amber-600 dark:text-amber-400">
+                Carregando...
+              </div>
+              <div
+                v-else
+                class="max-h-[60vh] overflow-y-auto px-2 py-2"
+              >
+                <p class="px-2 py-2 text-xs text-amber-700 dark:text-amber-300 mb-2">
+                  Clientes que já finalizaram a montagem. Selecione um para criar uma nova tarefa de pós-venda (garantia, manutenção ou assistência).
+                </p>
+                <ul class="space-y-1.5">
+                  <li
+                    v-for="item in montagemConcluidaList"
+                    :key="item.venda_id || item.id"
+                    class="flex items-center justify-between gap-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-white dark:bg-slate-800/50 px-3 py-2.5"
+                  >
+                    <div class="min-w-0 flex-1">
+                      <span class="font-semibold text-sm text-slate-800 dark:text-slate-200 block truncate">
+                        {{ item?.cliente?.nome_completo || item?.cliente?.razao_social || 'Cliente' }}
+                      </span>
+                      <span v-if="item?.venda_id" class="text-xs text-slate-500 dark:text-slate-400">
+                        Venda #{{ item.venda_id }}
+                      </span>
+                    </div>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      class="flex-shrink-0 rounded-xl font-bold text-xs uppercase"
+                      @click="openModalNovaPosVenda(item); painelMontagemConcluidaAbertos = false"
+                    >
+                      Criar pós-venda
+                    </Button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </Transition>
+        </div>
+
         <!-- Calendário -->
         <div class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
           <div class="grid grid-cols-7 gap-px bg-slate-100">
@@ -83,15 +238,24 @@
                   v-for="event in dayEvents(day.date).slice(0, 3)"
                   :key="event.id"
                   type="button"
-                  :class="['w-full text-left px-2.5 py-2 rounded-lg text-[10px] text-white hover:ring-2 hover:ring-brand-primary transition-colors', corCardCalendarioPorCategoria(event.categoria)]"
-                  :title="eventTitle(event)"
-                  @click.stop="openModalForEvent(event)"
+                  :class="[
+                    'w-full text-left px-2.5 py-1.5 rounded-lg text-[10px] text-white hover:ring-2 hover:ring-brand-primary transition-colors',
+                    eventAtrasado(event) ? 'bg-red-600 hover:bg-red-500' : getCalendarioEventClassProducao(event.categoria, eventConcluido(event)),
+                  ]"
+                  :title="eventTooltipCalendar(event)"
+                  @click.stop="openModalForEvent(event, day.date)"
                 >
-                  <div class="font-bold truncate leading-snug">
-                    {{ event?.cliente?.nome_completo || event?.cliente?.razao_social || 'Cliente' }}
+                  <div class="font-semibold text-[9px] text-white/90 leading-tight">
+                    {{ periodLabel(event.inicio_em, event.fim_em, event) }}
                   </div>
-                  <div class="text-[9px] font-medium text-slate-300 truncate leading-snug mt-0.5">
-                    {{ timeLabel(event.inicio_em) }} · {{ event.titulo }}
+                  <div class="font-bold truncate leading-snug mt-0.5">
+                    {{ tituloSubtituloEvento(event).titulo }}
+                  </div>
+                  <div class="text-[9px] text-white/80 truncate leading-snug">
+                    {{ tituloSubtituloEvento(event).subtitulo }}
+                  </div>
+                  <div class="text-[8px] text-white/70 truncate leading-snug">
+                    {{ event?.cliente?.nome_completo || event?.cliente?.razao_social || 'Cliente' }}
                   </div>
                 </button>
                 <div
@@ -114,10 +278,10 @@
               </div>
             </div>
 
-            <!-- Pipeline do dia: por função (etapa), quantas tarefas e quantos funcionários -->
+            <!-- Resumo do dia por etapa (status): foco nas etapas, sem funcionários -->
             <div v-if="resumoDiaPorEtapa.length" class="mb-5 p-4 rounded-xl border border-border-ui bg-white dark:bg-slate-800/50">
               <div class="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-3">
-                Resumo do dia por função
+                Resumo do dia por etapa
               </div>
               <div class="grid gap-2 sm:grid-cols-2">
                 <div
@@ -125,19 +289,10 @@
                   :key="item.etapaKey"
                   class="rounded-lg border border-border-ui p-3 bg-slate-50/80 dark:bg-slate-900/30"
                 >
-                  <div class="flex items-center justify-between gap-2 mb-1.5">
+                  <div class="flex items-center justify-between gap-2">
                     <span class="text-xs font-bold text-text-main">{{ item.etapaLabel }}</span>
                     <span class="text-[10px] font-black text-slate-500 dark:text-slate-400">
-                      {{ item.tarefas }} {{ item.tarefas === 1 ? 'tarefa' : 'tarefas' }} · {{ item.totalFuncionarios }} {{ item.totalFuncionarios === 1 ? 'funcionário' : 'funcionários' }}
-                    </span>
-                  </div>
-                  <div v-if="item.funcionarioNomes.length" class="flex flex-wrap gap-1.5">
-                    <span
-                      v-for="nome in item.funcionarioNomes"
-                      :key="nome"
-                      class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-brand-primary/10 text-brand-primary border border-brand-primary/20"
-                    >
-                      {{ nome }}
+                      {{ item.tarefas }} {{ item.tarefas === 1 ? 'tarefa' : 'tarefas' }}
                     </span>
                   </div>
                 </div>
@@ -145,22 +300,52 @@
             </div>
 
             <div v-if="selectedEvents.length" class="space-y-3">
-              <button
-                v-for="event in selectedEvents"
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                  Tarefas do dia
+                </div>
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-brand-primary hover:bg-brand-primary/10 border border-brand-primary/30 transition-colors"
+                  @click="listaTarefasExpandida = !listaTarefasExpandida"
+                >
+                  <i class="pi" :class="listaTarefasExpandida ? 'pi pi-window-minimize' : 'pi pi-window-maximize'"></i>
+                  {{ listaTarefasExpandida ? 'Recolher' : 'Expandir' }}
+                </button>
+              </div>
+              <div
+                class="overflow-y-auto overflow-x-hidden pr-2 space-y-3 transition-[max-height] duration-300"
+                :class="listaTarefasExpandida ? 'max-h-[min(85vh,1200px)]' : 'max-h-[min(55vh,480px)]'"
+              >
+                <button
+                  v-for="event in selectedEvents"
                 :key="event.id"
                 type="button"
-                :class="['w-full text-left p-4 rounded-xl border border-border-ui bg-bg-card hover:border-brand-primary/40 hover:shadow-md transition-all border-l-4', corBordaCardPorCategoria(event.categoria)]"
+                :class="[
+                  'w-full text-left p-4 rounded-xl border border-border-ui bg-bg-card hover:border-brand-primary/40 hover:shadow-md transition-all',
+                  eventAtrasado(event) ? 'border-l-4 border-l-red-500 border-red-300 bg-red-50/60 dark:bg-red-950/30' : getProcessColorByStatusProducao(event.categoria, event.status).borderLeftClass,
+                ]"
                 @click="openModalForEvent(event)"
               >
                 <div class="text-sm font-bold text-text-main leading-snug">
                   {{ eventTitle(event) }}
                 </div>
-                <div class="text-xs font-medium text-text-muted mt-1">
-                  {{ timeLabel(event.inicio_em) }} – {{ timeLabel(event.fim_em) }}
+                <div class="mt-2 text-[10px] font-medium text-text-muted">
+                  Responsável: {{ event.criado_por_usuario?.nome || 'Não informado' }}
                 </div>
-                <div class="mt-3 flex flex-wrap items-center gap-2">
-                  <span v-if="!isAgendaLoja" class="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase bg-brand-primary/10 text-brand-primary border border-brand-primary/30">
-                    {{ etapaLabelPorCategoria(event.categoria) }}
+                <div
+                  v-if="event.alterado_por_usuario"
+                  class="mt-0.5 text-[10px] font-medium text-text-muted"
+                >
+                  Editado por: {{ event.alterado_por_usuario.nome }}
+                </div>
+                <div class="text-xs font-medium text-text-muted mt-0.5">
+                  {{ periodLabel(event.inicio_em, event.fim_em, event) }}
+                </div>
+                <div class="mt-2 flex flex-wrap items-center gap-2">
+                  <span v-if="!isAgendaLoja" class="inline-flex flex-col items-start px-2.5 py-1 rounded-lg bg-brand-primary/10 text-brand-primary border border-brand-primary/30">
+                    <span class="text-[10px] font-black uppercase">{{ tituloSubtituloEvento(event).titulo }}</span>
+                    <span class="text-[9px] font-semibold opacity-90">{{ tituloSubtituloEvento(event).subtitulo }}</span>
                   </span>
                   <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase" :class="statusExecucaoClass(event)">
                     {{ statusExecucaoLabel(event) }}
@@ -177,10 +362,34 @@
                   ></span>
                   {{ planoBadgeLabel(planoStatusForEvent(event)) }}
                 </div>
+                <div class="mt-2 flex flex-wrap items-center gap-2">
+                  <RouterLink
+                    :to="`/producao/apontamento?agenda=${event.id}`"
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-700 hover:bg-emerald-200/80 dark:hover:bg-emerald-800/50 transition-colors"
+                  >
+                    <i class="pi pi-stopwatch"></i>
+                    <template v-if="resumoApontamentos[event.id]?.totalHoras">
+                      {{ resumoApontamentos[event.id].totalHoras }}h na timeline
+                    </template>
+                    <template v-else>
+                      Timeline
+                    </template>
+                  </RouterLink>
+                </div>
               </button>
+              </div>
             </div>
-            <div v-else class="text-sm font-medium text-text-muted py-4 text-center">
-              Nenhum agendamento para este dia.
+            <div v-else class="py-4 text-center">
+              <p class="text-sm font-medium text-text-muted mb-3">Nenhum agendamento para este dia.</p>
+              <Button
+                variant="primary"
+                size="sm"
+                class="rounded-xl"
+                @click="openModalNovaTarefaNoDia"
+              >
+                <i class="pi pi-calendar-plus mr-1.5 text-xs" />
+                Agendar tarefa neste dia
+              </Button>
             </div>
           </div>
         </div>
@@ -194,9 +403,17 @@
         <div
           v-if="modalOpen"
           class="fixed inset-0 z-[9995] flex items-center justify-center p-4 sm:p-6 bg-slate-900/50 dark:bg-black/50 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-agenda-titulo"
           @click.self="closeModal"
+          @keydown.escape="closeModal"
         >
-        <div class="w-full max-w-[760px] max-h-[90vh] flex flex-col rounded-2xl border border-border-ui bg-bg-card shadow-xl overflow-hidden">
+        <div
+          ref="modalContentRef"
+          tabindex="-1"
+          class="w-full max-w-[760px] max-h-[90vh] flex flex-col rounded-2xl border border-border-ui bg-bg-card shadow-xl overflow-hidden outline-none"
+        >
           <div class="h-1 flex-shrink-0 bg-brand-primary" />
           <header class="flex items-center justify-between flex-shrink-0 px-5 py-4 border-b border-border-ui bg-bg-card">
             <div class="flex items-center gap-3 min-w-0">
@@ -204,11 +421,11 @@
                 <i class="pi pi-calendar-plus text-brand-primary text-lg"></i>
               </div>
               <div class="min-w-0">
-                <h2 class="text-lg font-semibold text-text-main truncate">
-                  {{ funcionarioNome || 'Agendar tarefa' }}
+                <h2 id="modal-agenda-titulo" class="text-lg font-semibold text-text-main truncate">
+                  {{ editingEvent && clienteNomeEventoAtual ? clienteNomeEventoAtual : (funcionarioNome || 'Agendar tarefa') }}
                 </h2>
                 <p class="text-xs font-medium text-text-muted truncate">
-                  {{ selectedLabel }}
+                  {{ editingEvent && clienteContatoEventoAtual ? clienteContatoEventoAtual : selectedLabel }}
                 </p>
               </div>
             </div>
@@ -223,12 +440,21 @@
           </header>
 
           <div class="overflow-y-auto flex-1 p-5 md:p-6">
-        <div class="flex items-center gap-2 text-[11px] font-semibold text-text-muted mb-4">
+        <div class="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-text-muted mb-4">
           <span class="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700/50 border border-border-ui">
             Agenda de Produção
           </span>
-          <span v-if="editingEvent" class="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700/50 border border-border-ui">
+          <span v-if="editingEvent && !ehAgendandoPendenteMedidaFina" class="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700/50 border border-border-ui">
             Edição
+          </span>
+          <span v-if="ehAgendandoPendenteMedidaFina" class="px-2.5 py-1 rounded-full bg-purple-100 dark:bg-purple-900/40 border border-purple-300 dark:border-purple-700 text-purple-800 dark:text-purple-200">
+            Agendamento
+          </span>
+          <span v-if="editingEvent" class="px-2.5 py-1 rounded-full bg-brand-primary/10 border border-brand-primary/30 text-brand-primary dark:text-brand-primary text-[11px] font-medium">
+            Responsável: {{ editingEvent.criado_por_usuario?.nome || 'Não informado' }}
+          </span>
+          <span v-if="editingEvent?.alterado_por_usuario" class="px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-[11px] font-medium">
+            Editado por: {{ editingEvent.alterado_por_usuario.nome }}
           </span>
         </div>
 
@@ -272,24 +498,29 @@
             </div>
             <div v-else class="mb-3">
               <label class="block text-xs font-bold mb-1 text-text-main">Etapa</label>
-              <div v-if="editingEvent" class="flex items-center gap-2">
-                <span class="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase bg-brand-primary/10 text-brand-primary border border-brand-primary/30">
-                  {{ etapaAtualLabel }}
+              <div v-if="editingEvent" class="flex flex-wrap items-center gap-2">
+                <span class="inline-flex flex-col items-start px-3 py-1.5 rounded-full bg-brand-primary/10 text-brand-primary border border-brand-primary/30">
+                  <span class="text-[10px] font-black uppercase">{{ tituloSubtituloEvento(editingEvent).titulo }}</span>
+                  <span class="text-[9px] font-semibold opacity-90">{{ tituloSubtituloEvento(editingEvent).subtitulo }}</span>
                 </span>
-                <span class="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase" :class="statusExecucaoClass({ status: editingEvent?.status, fim_em: taskForm.fim })">
+                <span class="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase" :class="statusExecucaoClass(editingEvent ? { ...editingEvent, status: editingEvent.status, fim_em: taskForm.fim ?? editingEvent.fim_em } : {})">
                   {{ statusExecucaoLabel(editingEvent) }}
                 </span>
               </div>
               <div v-else class="space-y-2">
                 <div class="flex items-center gap-2">
-                  <span class="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase bg-brand-primary/10 text-brand-primary border border-brand-primary/30">
-                    {{ etapaAtualLabel }}
+                  <span class="inline-flex flex-col items-start px-3 py-1.5 rounded-full bg-brand-primary/10 text-brand-primary border border-brand-primary/30">
+                    <span class="text-[10px] font-black uppercase">{{ tituloFaseParaCategoria(taskForm.categoria) }}</span>
+                    <span class="text-[9px] font-semibold opacity-90">{{ etapaAtualLabel }}</span>
                   </span>
                   <span class="text-[10px] text-text-muted">(primeira etapa automática)</span>
                 </div>
-                <!-- Pós-venda (Garantia / Manutenção / Assistência) só para Venda cliente; plano de corte não tem pós-venda -->
+                <!-- Pós-venda (Garantia / Manutenção / Assistência) só para Venda cliente; plano de corte não tem pós-venda. Só recebe clientes com montagem concluída. -->
                 <div v-if="taskForm.origemFluxo === 'LOJA_VENDA'" class="mt-2">
                   <label class="block text-[10px] font-bold text-text-muted mb-1">Ou criar pós-venda:</label>
+                  <p class="text-[10px] text-text-muted mb-1.5">
+                    Garantia, Manutenção e Assistência: apenas clientes com montagem concluída poderão ser selecionados.
+                  </p>
                   <div class="flex flex-wrap gap-2">
                     <button
                       v-for="etapa in ETAPAS_POS_VENDA"
@@ -310,7 +541,94 @@
               </div>
             </div>
 
-            <div class="mt-4">
+            <!-- Agenda de Produção: nome e contato do cliente ao editar evento -->
+            <div
+              v-if="!isAgendaLoja && editingEvent && clienteEventoAtual"
+              class="mt-4 rounded-xl border border-brand-primary/30 bg-brand-primary/5 px-3 py-2"
+            >
+              <div class="text-[10px] font-bold uppercase tracking-wider text-brand-primary mb-0.5">
+                Cliente
+              </div>
+              <div class="text-xs font-semibold text-text-main">
+                {{ clienteNomeEventoAtual }}
+              </div>
+              <div v-if="clienteContatoEventoAtual" class="text-[10px] font-medium text-text-muted mt-0.5">
+                {{ clienteContatoEventoAtual }}
+              </div>
+            </div>
+
+            <!-- Agenda Fábrica: lista de ambientes da venda – selecione os desta tarefa (o resto fica pendente) -->
+            <div v-if="!isAgendaLoja && vendaIdParaAmbientes" class="mt-4">
+              <label class="block text-xs font-bold mb-1 text-text-main">Ambientes desta tarefa</label>
+              <p class="text-[10px] text-text-muted mb-1.5">
+                Selecione os ambientes incluídos nesta tarefa (ex.: medição de 2 ambientes). Os não marcados ficam pendentes para outra tarefa.
+              </p>
+              <div
+                v-if="loadingAmbientes"
+                class="rounded-xl border border-border-ui px-3 py-2 text-xs text-text-muted"
+              >
+                Carregando ambientes...
+              </div>
+              <div
+                v-else-if="listaAmbientesVenda.length > 0"
+                class="rounded-xl border border-border-ui bg-bg-card px-3 py-2.5 space-y-2"
+              >
+                <label
+                  v-for="(amb, idx) in listaAmbientesVenda"
+                  :key="idx"
+                  class="flex items-center gap-2.5 cursor-pointer group"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="taskForm.ambientesSelecionados.includes(amb.nome)"
+                    class="w-4 h-4 rounded border-border-ui text-brand-primary focus:ring-brand-primary/20"
+                    @change="toggleAmbiente(amb.nome)"
+                  />
+                  <span class="text-xs font-medium text-text-main group-hover:text-brand-primary">
+                    {{ amb.nome }}
+                  </span>
+                </label>
+              </div>
+              <p v-else-if="!loadingAmbientes" class="text-[10px] font-medium text-text-muted mt-1">
+                Nenhum ambiente cadastrado nesta venda.
+              </p>
+            </div>
+            <!-- Agenda Fábrica: Cliente para pós-venda (só montagem concluída) ou tarefa recebida -->
+            <div
+              v-if="!isAgendaLoja && !editingEvent && (ehCategoriaPosVenda || ehTarefaRecebida)"
+              class="mt-4"
+            >
+              <label class="block text-xs font-bold mb-1 text-text-main">Cliente</label>
+              <p v-if="ehCategoriaPosVenda" class="text-[10px] text-text-muted mb-1.5">
+                Lista restrita a clientes com montagem já concluída.
+              </p>
+              <p v-if="ehCategoriaPosVenda && montagemConcluidaList.length === 0 && !montagemConcluidaLoading" class="text-[10px] font-medium text-amber-600 dark:text-amber-400 mb-1.5">
+                Nenhum cliente com montagem concluída no momento.
+              </p>
+              <SearchInput
+                v-model="taskForm.clienteId"
+                mode="select"
+                label=""
+                :placeholder="ehCategoriaPosVenda ? 'Selecione o cliente (montagem concluída)...' : 'Selecione o cliente...'"
+                :options="ehCategoriaPosVenda ? clientesOptionsParaModal : clientesOptions"
+              />
+              <div
+                v-if="ehCategoriaPosVenda && clienteSelecionadoPosVenda?.cliente"
+                class="mt-2 rounded-xl border border-brand-primary/30 bg-brand-primary/5 px-3 py-2"
+              >
+                <div class="text-[10px] font-bold uppercase tracking-wider text-brand-primary mb-0.5">
+                  Nome e contato
+                </div>
+                <div class="text-xs font-semibold text-text-main">
+                  {{ clienteSelecionadoPosVenda.cliente?.nome_completo || clienteSelecionadoPosVenda.cliente?.razao_social || 'Cliente' }}
+                </div>
+                <div v-if="clienteSelecionadoPosVenda.cliente?.telefone || clienteSelecionadoPosVenda.cliente?.celular || clienteSelecionadoPosVenda.cliente?.email" class="text-[10px] font-medium text-text-muted mt-0.5">
+                  {{ [clienteSelecionadoPosVenda.cliente?.telefone, clienteSelecionadoPosVenda.cliente?.celular, clienteSelecionadoPosVenda.cliente?.email].filter(Boolean).join(' · ') }}
+                </div>
+              </div>
+            </div>
+            <!-- Agenda Loja: seletor de Cliente -->
+            <div v-if="isAgendaLoja" class="mt-4">
               <label class="block text-xs font-bold mb-1 text-text-main">Cliente</label>
               <div
                 v-if="isEventoVinculado && clienteNomeEventoAtual"
@@ -375,169 +693,113 @@
 
           <section class="p-4 rounded-xl border border-border-ui bg-slate-50/80 dark:bg-slate-800/30 space-y-3">
             <div class="text-[10px] font-bold uppercase tracking-wider text-text-muted">
-              2. Período da tarefa
+              2. Período da tarefa (data e hora)
             </div>
+            <p class="text-[10px] text-text-muted">
+              Defina data e hora de início e fim. A tarefa aparecerá nos dias do intervalo; o horário é exibido (ex.: medida fina 14:00–16:00).
+            </p>
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-[10px] font-bold mb-1 text-text-soft">Início</label>
+                <label class="block text-[10px] font-bold mb-1 text-text-soft">Data e hora início</label>
                 <input
                   type="datetime-local"
                   v-model="taskForm.inicio"
-                  class="w-full h-10 bg-bg-card border border-border-ui rounded-xl px-3 text-xs font-semibold text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                  min="2000-01-01T00:00"
+                  step="60"
+                  :disabled="eventoFinalizado"
+                  class="w-full h-10 bg-bg-card border border-border-ui rounded-xl px-3 text-xs font-semibold text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20 disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
               <div>
-                <label class="block text-[10px] font-bold mb-1 text-text-soft">Término</label>
+                <label class="block text-[10px] font-bold mb-1 text-text-soft">Data e hora fim</label>
                 <input
                   type="datetime-local"
                   v-model="taskForm.fim"
-                  class="w-full h-10 bg-bg-card border border-border-ui rounded-xl px-3 text-xs font-semibold text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                  min="2000-01-01T00:00"
+                  step="60"
+                  :disabled="eventoFinalizado"
+                  class="w-full h-10 bg-bg-card border border-border-ui rounded-xl px-3 text-xs font-semibold text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20 disabled:opacity-60 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
           </section>
 
-          <section v-if="!isAgendaLoja || isAdmin" class="p-4 rounded-xl border border-border-ui bg-slate-50/80 dark:bg-slate-800/30 space-y-3">
-            <div class="text-[10px] font-bold uppercase tracking-wider text-text-muted">
-              3. Equipe e horário de cada um
-            </div>
+          <!-- Agenda só controla status e tarefas; responsável = criador do agendamento. Funcionários que executam são atribuídos na Timeline. -->
 
-            <div v-if="isAgendaLoja" class="rounded-xl border border-border-ui bg-bg-card px-3 py-2">
-              <div class="text-[10px] font-bold uppercase tracking-wide text-text-muted">Responsável</div>
-              <div class="text-sm font-semibold text-text-main">
-                {{ responsavelLojaNome || 'Funcionário logado' }}
-              </div>
-            </div>
-
-            <div v-if="isAdmin" class="space-y-2">
-              <div v-if="taskForm.funcionarioIds.length" class="flex flex-wrap gap-2 mt-1">
-                <span
-                  v-for="fid in taskForm.funcionarioIds"
-                  :key="fid"
-                  class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold bg-slate-200 dark:bg-slate-600 text-text-main"
-                >
-                  {{ funcionarioNomeById(fid) || 'Funcionário' }}
-                  <button
-                    v-if="String(fid) !== String(responsavelLojaId || '')"
-                    type="button"
-                    class="text-slate-500 hover:text-rose-500"
-                    @click="removerFuncionario(fid)"
-                    aria-label="Remover"
-                  >
-                    <i class="pi pi-times text-[10px]"></i>
-                  </button>
-                </span>
-              </div>
-
-              <div class="flex items-end gap-2">
-                <div class="flex-1">
-                  <SearchInput
-                    v-model="funcionarioSelecionado"
-                    mode="select"
-                    label="Adicionar funcionário"
-                    placeholder="Selecione..."
-                    :options="funcionariosOptions"
-                  />
-                </div>
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="md"
-                  class="shrink-0"
-                  @click="adicionarFuncionario"
-                >
-                  Adicionar
-                </Button>
-              </div>
-            </div>
-            <div v-else>
-              <label class="block text-xs font-bold mb-1 text-text-main">Funcionário</label>
-              <div class="w-full h-10 bg-bg-card border border-border-ui rounded-xl px-3 flex items-center text-sm font-semibold text-text-main">
-                {{ funcionarioNome || 'Não informado' }}
-              </div>
-            </div>
-
-            <div v-if="taskForm.funcionarioIds.length && !isAgendaLoja" class="mt-4 space-y-3">
-              <div
-                v-for="fid in taskForm.funcionarioIds"
-                :key="`apont-${fid}`"
-                class="rounded-xl border border-border-ui p-3 bg-bg-card"
-              >
-                <div class="text-xs font-bold text-text-main mb-2">
-                  {{ funcionarioNomeById(fid) || 'Funcionário' }} — horário
-                </div>
-                <div
-                  v-for="(periodo, idx) in getApontamentosPorFuncionario(fid)"
-                  :key="`per-${fid}-${idx}`"
-                  class="flex flex-wrap gap-2 items-end"
-                >
-                  <div class="flex-1 min-w-[140px]">
-                    <label class="block text-[10px] font-bold mb-1">Entrada</label>
-                    <input
-                      type="datetime-local"
-                      v-model="periodo.inicio"
-                      class="w-full h-9 bg-slate-50 dark:bg-slate-800/50 border border-border-ui rounded-lg px-2 text-[11px] font-semibold text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-                    />
-                  </div>
-                  <div class="flex-1 min-w-[140px]">
-                    <label class="block text-[10px] font-bold mb-1">Saída</label>
-                    <input
-                      type="datetime-local"
-                      v-model="periodo.fim"
-                      class="w-full h-9 bg-slate-50 dark:bg-slate-800/50 border border-border-ui rounded-lg px-2 text-[11px] font-semibold text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-                    />
-                  </div>
-                  <div class="flex gap-1 shrink-0">
-                    <Button
-                      v-if="getApontamentosPorFuncionario(fid).length > 1"
-                      type="button"
-                      variant="danger"
-                      size="sm"
-                      class="!h-9 !w-9 !p-0 !min-w-0"
-                      :title="'Remover este horário'"
-                      @click="removerPeriodo(fid, idx)"
-                    >
-                      −
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      class="!h-9 !w-9 !p-0 !min-w-0"
-                      :title="getApontamentosPorFuncionario(fid).length > 0 ? 'Outro horário (ex.: turno dividido)' : 'Definir horário'"
-                      @click="adicionarPeriodo(fid)"
-                    >
-                      +
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
         </div>
 
-        <div class="mt-4 pt-3 border-t border-border-ui flex items-center gap-2">
-          <Button
-            variant="primary"
-            class="flex-1"
-            @click="saveTask"
-          >
-            {{ editingEvent ? 'Salvar edição' : 'Salvar tarefa' }}
-          </Button>
-          <Button
-            v-if="editingEvent"
-            variant="danger"
-            @click="removeTask(editingEvent)"
-          >
-            Excluir
-          </Button>
-          <Button
-            v-if="editingEvent"
-            variant="secondary"
-            @click="clearEdit"
-          >
-            Cancelar
-          </Button>
+        <!-- Botões: nova tarefa = Salvar + Cancelar; edição = só criador ou Admin pode alterar -->
+        <div class="mt-4 pt-3 border-t border-border-ui flex flex-wrap items-center justify-end gap-2">
+          <template v-if="editingEvent && !podeEditarAgendaProducao && !ehAgendandoPendenteMedidaFina">
+            <p class="text-xs text-amber-700 dark:text-amber-300 mr-auto">
+              Apenas o responsável pela tarefa ou um administrador pode alterar ou excluir.
+            </p>
+            <Button
+              variant="secondary"
+              class="min-w-[90px]"
+              @click="clearEdit"
+            >
+              Fechar
+            </Button>
+          </template>
+          <template v-else-if="editingEvent && !ehAgendandoPendenteMedidaFina">
+            <!-- Edição de tarefa já agendada: Marcar Etapa como Concluída (check verde), Salvar edição, Excluir, Cancelar -->
+            <Button
+              v-if="normalizarStatusExecucao(editingEvent?.status) !== 'CONCLUIDO'"
+              variant="success"
+              class="min-w-[180px] gap-1.5"
+              :disabled="savingTask"
+              @click="finalizarProducaoNoModal(editingEvent)"
+            >
+              <i class="pi pi-check"></i>
+              Marcar Etapa como Concluída
+            </Button>
+            <Button
+              v-if="!eventoFinalizado"
+              variant="primary"
+              class="min-w-[120px]"
+              :disabled="savingTask"
+              @click.prevent="onClickSalvar"
+            >
+              {{ savingTask ? 'Salvando...' : 'Salvar edição' }}
+            </Button>
+            <Button
+              v-if="!eventoFinalizado"
+              variant="danger"
+              class="min-w-[90px]"
+              :disabled="savingTask"
+              @click="removeTask(editingEvent)"
+            >
+              Excluir
+            </Button>
+            <Button
+              variant="secondary"
+              class="min-w-[90px]"
+              :disabled="savingTask"
+              @click="clearEdit"
+            >
+              {{ eventoFinalizado ? 'Fechar' : 'Cancelar' }}
+            </Button>
+          </template>
+          <template v-else>
+            <!-- Nova tarefa ou "Agendar" a partir de Medidas a serem agendadas: criação -->
+            <Button
+              variant="primary"
+              class="min-w-[140px]"
+              :disabled="savingTask"
+              @click.prevent="onClickSalvar"
+            >
+              {{ savingTask ? 'Salvando...' : (ehAgendandoPendenteMedidaFina ? 'Confirmar agendamento' : 'Salvar tarefa') }}
+            </Button>
+            <Button
+              variant="secondary"
+              class="min-w-[90px]"
+              :disabled="savingTask"
+              @click="ehAgendandoPendenteMedidaFina ? clearEdit() : closeModal()"
+            >
+              Cancelar
+            </Button>
+          </template>
         </div>
 
         <div v-if="!editingEvent" class="mt-4 border-t border-border-ui pt-4">
@@ -548,19 +810,21 @@
             <div
               v-for="event in selectedEventsParaLista"
               :key="event.id"
-              class="p-3 rounded-xl border border-border-ui bg-bg-card"
+              class="p-3 rounded-xl border border-border-ui bg-bg-card border-l-4"
+              :class="eventAtrasado(event) ? 'border-l-red-500 border-red-300 bg-red-50/60 dark:bg-red-950/30' : getCardBorderClassProducao(event.categoria, event.status)"
             >
               <div class="text-xs font-bold text-text-main">
                 {{ eventTitle(event) }}
               </div>
               <div class="text-[10px] font-semibold text-text-muted">
-                {{ timeLabel(event.inicio_em) }} - {{ timeLabel(event.fim_em) }}
+                {{ periodLabel(event.inicio_em, event.fim_em, event) }}
               </div>
               <div class="mt-1 flex flex-wrap items-center gap-1.5">
-                <span v-if="!isAgendaLoja" class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-brand-primary/10 text-brand-primary border border-brand-primary/30">
-                  {{ etapaLabelPorCategoria(event.categoria) }}
+                <span v-if="!isAgendaLoja" class="inline-flex flex-col items-start px-2 py-0.5 rounded-full bg-brand-primary/10 text-brand-primary border border-brand-primary/30">
+                  <span class="text-[9px] font-black uppercase leading-tight">{{ tituloSubtituloEvento(event).titulo }}</span>
+                  <span class="text-[8px] font-semibold opacity-90 leading-tight">{{ tituloSubtituloEvento(event).subtitulo }}</span>
                 </span>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase" :class="statusExecucaoClass(event)">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase" :class="getProcessColorByStatusProducao(event.categoria, event.status).badgeClass">
                   {{ statusExecucaoLabel(event) }}
                 </span>
               </div>
@@ -590,6 +854,7 @@
                   {{ botaoConcluirLabel(event) }}
                 </Button>
                 <Button
+                  v-if="normalizarStatusExecucao(event?.status) !== 'CONCLUIDO'"
                   size="sm"
                   variant="secondary"
                   @click="editTask(event)"
@@ -601,7 +866,7 @@
                   variant="danger"
                   @click="removeTask(event)"
                 >
-                  Cancelar
+                  Excluir
                 </Button>
               </div>
             </div>
@@ -617,9 +882,10 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { AgendaFabricaService, ClienteService, FuncionarioService, OrcamentosService, PlanoCorteService, VendaService } from '@/services/index'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { AgendaFabricaService, ApontamentoProducaoService, ClienteService, FuncionarioService, OrcamentosService, PlanoCorteService, VendaService } from '@/services/index'
 import { PIPELINE_CLIENTE, PIPELINE_PLANO_CORTE } from '@/constantes'
+import { getCalendarioEventClassProducao, getProcessColorByStatusProducao } from '@/constantes'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
@@ -631,24 +897,50 @@ const today = new Date()
 const currentMonth = ref(new Date(today.getFullYear(), today.getMonth(), 1))
 const selectedDay = ref(new Date(today.getFullYear(), today.getMonth(), today.getDate()))
 const loading = ref(false)
+const savingTask = ref(false)
+const listaTarefasExpandida = ref(false)
 const events = ref([])
 const modalOpen = ref(false)
+const modalContentRef = ref(null)
 const editingEvent = ref(null)
 const planosProducao = ref([])
 const pipelineProducao = ref([])
+const resumoApontamentos = ref({}) // { [agenda_fabrica_id]: { totalHoras, totalCusto, quantidade } }
 const clientesOptions = ref([])
 const funcionariosOptions = ref([])
+const listaAmbientesVenda = ref([])
+const loadingAmbientes = ref(false)
 const usuarioLogado = computed(() => storage.getUser())
 const funcionarioNome = computed(() => usuarioLogado.value?.nome || '')
 const isAdmin = computed(() => can('ADMIN'))
+/** Na agenda de produção: só o criador da tarefa ou Admin pode alterar/excluir. Registros concluídos não são editáveis. */
+const podeEditarAgendaProducao = computed(() => {
+  if (!editingEvent.value) return true // nova tarefa: pode salvar
+  if (String(editingEvent.value?.status || '').toUpperCase() === 'CONCLUIDO') return false
+  if (isAdmin.value) return true
+  const criadorId = editingEvent.value?.criado_por_usuario_id ?? editingEvent.value?.criado_por_usuario?.id
+  const meuId = usuarioLogado.value?.id
+  return meuId != null && criadorId != null && Number(meuId) === Number(criadorId)
+})
+
+/** "Medidas a serem agendadas": ao clicar em Agendar, exibir como criação (Salvar tarefa + Cancelar), não como edição. */
+const ehAgendandoPendenteMedidaFina = computed(() => {
+  const ev = editingEvent.value
+  if (!ev) return false
+  const cat = String(ev?.categoria || '').toUpperCase()
+  const status = String(ev?.status || '').toUpperCase()
+  return cat === 'AGENDAR_MEDIDA_FINA' && status === 'PENDENTE'
+})
+/** Etapa já finalizada (CONCLUIDO): desabilita edição dos campos básicos no modal. */
+const eventoFinalizado = computed(() => String(editingEvent.value?.status || '').toUpperCase() === 'CONCLUIDO')
 const responsavelLojaId = computed(() => Number(usuarioLogado.value?.funcionario_id || 0))
 const responsavelLojaNome = computed(() => funcionarioNome.value || 'Vendedor logado')
 
 const funcionarioSelecionado = ref('')
 const taskForm = reactive({
   titulo: '',
-  inicio: '',
-  fim: '',
+  inicio: '', // datetime-local (YYYY-MM-DDTHH:mm) — data e hora início
+  fim: '',   // datetime-local — data e hora fim (ex.: medida fina 14:00–16:00)
   clienteId: '',
   vendaId: '',
   orcamentoId: '',
@@ -657,6 +949,7 @@ const taskForm = reactive({
   setorDestino: '',
   origemFluxo: '',
   apontamentos: [],
+  ambientesSelecionados: [],
 })
 
 const ORIGENS_POR_SETOR = {
@@ -665,8 +958,6 @@ const ORIGENS_POR_SETOR = {
   ],
   FABRICA: [
     { value: 'LOJA_VENDA', label: 'Venda cliente' },
-    { value: 'PLANO_CORTE', label: 'Plano de corte' },
-    { value: 'VENDA_PLANO_CORTE', label: 'Venda para fornecedor' },
   ],
 }
 
@@ -682,6 +973,12 @@ const vendasAguardandoAgendamento = ref([])
 const orcamentosApresentacao = ref([])
 // Vendas aguardando contrato/assinatura
 const vendasAguardandoContrato = ref([])
+const pendentesMedidaFina = ref([])
+const pendentesMedidaFinaLoading = ref(false)
+const montagemConcluidaList = ref([])
+const montagemConcluidaLoading = ref(false)
+const painelMontagemConcluidaAbertos = ref(false)
+const painelMedidasAbertos = ref(false)
 
 const vendaSelecionadaParaAgendamento = ref(null)
 const vendaSelecionadaId = ref('')
@@ -807,7 +1104,7 @@ function onSelecionarVendaParaAgendamento(value) {
   vendaSelecionadaParaAgendamento.value = v
   taskForm.vendaId = String(v.id)
   taskForm.clienteId = String(v.cliente_id)
-  if (!taskForm.setorDestino) taskForm.setorDestino = 'LOJA'
+  if (!taskForm.setorDestino) taskForm.setorDestino = 'FABRICA'
   taskForm.origemFluxo = 'LOJA_VENDA'
   const statusVenda = String(v?.status || '').toUpperCase()
   if (
@@ -835,7 +1132,7 @@ function onSelecionarOrcamentoParaApresentacao(value) {
   taskForm.orcamentoId = String(o.id)
   taskForm.clienteId = String(o.cliente_id)
   taskForm.vendaId = o.venda?.id ? String(o.venda.id) : ''
-  if (!taskForm.setorDestino) taskForm.setorDestino = 'LOJA'
+  if (!taskForm.setorDestino) taskForm.setorDestino = 'FABRICA'
   taskForm.origemFluxo = 'LOJA_VENDA'
   taskForm.categoria = 'APRESENTACAO'
 }
@@ -850,7 +1147,7 @@ function onSelecionarVendaContratoParaAgendamento(value) {
   taskForm.vendaId = String(v.id)
   taskForm.clienteId = String(v.cliente_id)
   taskForm.orcamentoId = ''
-  if (!taskForm.setorDestino) taskForm.setorDestino = 'LOJA'
+  if (!taskForm.setorDestino) taskForm.setorDestino = 'FABRICA'
   taskForm.origemFluxo = 'LOJA_VENDA'
   taskForm.categoria = 'CONTRATO'
 }
@@ -865,6 +1162,7 @@ function limparVendaSelecionada() {
   taskForm.vendaId = ''
   taskForm.orcamentoId = ''
   taskForm.clienteId = ''
+  taskForm.ambientesSelecionados = []
   taskForm.categoria = isAgendaLoja.value ? 'MEDIDA' : PRIMEIRA_ETAPA_PRODUCAO.value
   taskForm.titulo = ''
 }
@@ -878,11 +1176,20 @@ function limparVinculoVenda() {
   vendaContratoSelecionada.value = null
   taskForm.vendaId = ''
   taskForm.orcamentoId = ''
+  taskForm.ambientesSelecionados = []
 }
 
 function selecionarEtapaPosVenda(categoria) {
   taskForm.categoria = categoria
+  taskForm.clienteId = '' // pós-venda só aceita clientes da lista "montagem concluída"
   limparVinculoVenda()
+  loadMontagemConcluida()
+}
+
+function toggleAmbiente(nome) {
+  const idx = taskForm.ambientesSelecionados.indexOf(nome)
+  if (idx >= 0) taskForm.ambientesSelecionados.splice(idx, 1)
+  else taskForm.ambientesSelecionados.push(nome)
 }
 
 watch(
@@ -907,6 +1214,18 @@ watch(
   },
 )
 
+watch(
+  () => taskForm.clienteId,
+  (clienteId) => {
+    if (!ehCategoriaPosVenda.value || !clienteId) return
+    const list = Array.isArray(montagemConcluidaList.value) ? montagemConcluidaList.value : []
+    const item = list.find(
+      (i) => String(i?.cliente_id ?? i?.cliente?.id ?? '') === String(clienteId),
+    )
+    if (item?.venda_id != null) taskForm.vendaId = String(item.venda_id)
+  },
+)
+
 const weekDays = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB']
 
 const monthLabel = computed(() =>
@@ -914,7 +1233,6 @@ const monthLabel = computed(() =>
 )
 
 // Contexto do evento em edição: venda (cliente) ou plano de corte
-const isEventoPlanoCorte = computed(() => !!editingEvent.value?.plano_corte_id)
 const isEventoVenda = computed(
   () => !!editingEvent.value?.venda_id || !!editingEvent.value?.orcamento_id
 )
@@ -926,16 +1244,69 @@ const isEventoVinculado = computed(() => {
   return !!origem
 })
 
+const vendaIdParaAmbientes = computed(() => {
+  const v = taskForm.vendaId ? Number(taskForm.vendaId) : null
+  if (v && Number.isFinite(v)) return v
+  return editingEvent.value?.venda_id ?? null
+})
+
+const ehCategoriaPosVenda = computed(() =>
+  CATEGORIAS_POS_VENDA.includes(String(taskForm.categoria || '').toUpperCase()),
+)
+const ehTarefaRecebida = computed(
+  () => !editingEvent.value && String(taskForm.categoria || '').toUpperCase() === String(PRIMEIRA_ETAPA_PRODUCAO.value || '').toUpperCase(),
+)
+/** No pós-venda: só clientes com montagem concluída; label com nome e contato. */
+const clientesOptionsParaModal = computed(() => {
+  if (!ehCategoriaPosVenda.value) return clientesOptions.value
+  const list = Array.isArray(montagemConcluidaList.value) ? montagemConcluidaList.value : []
+  return list.map((item) => {
+    const c = item?.cliente || item
+    const nome = c?.nome_completo || c?.razao_social || c?.nome || 'Cliente'
+    const contato = [c?.telefone, c?.celular, c?.email].filter(Boolean).join(' · ') || ''
+    return {
+      value: item?.cliente_id ?? c?.id ?? null,
+      label: contato ? `${nome} – ${contato}` : nome,
+    }
+  }).filter((o) => o.value != null)
+})
+/** Item da lista montagem concluída selecionado (para exibir nome + contato no pós-venda). */
+const clienteSelecionadoPosVenda = computed(() => {
+  if (!ehCategoriaPosVenda.value || !taskForm.clienteId) return null
+  const list = Array.isArray(montagemConcluidaList.value) ? montagemConcluidaList.value : []
+  return list.find(
+    (item) => String(item?.cliente_id ?? item?.cliente?.id ?? '') === String(taskForm.clienteId),
+  ) || null
+})
+
+/** Cliente do evento em edição (direto no evento ou via venda). */
+const clienteEventoAtual = computed(() => {
+  const ev = editingEvent.value
+  if (!ev) return null
+  return ev?.cliente ?? ev?.venda?.cliente ?? null
+})
+
 const clienteNomeEventoAtual = computed(() => {
   const ev = editingEvent.value
   if (!ev) return ''
   if (ev?.cliente?.nome_completo || ev?.cliente?.razao_social) {
     return ev?.cliente?.nome_completo || ev?.cliente?.razao_social || ''
   }
+  if (ev?.venda?.cliente?.nome_completo || ev?.venda?.cliente?.razao_social) {
+    return ev?.venda?.cliente?.nome_completo || ev?.venda?.cliente?.razao_social || ''
+  }
   const clienteId = String(taskForm.clienteId || '')
   if (!clienteId) return ''
   const opt = clientesOptions.value.find((c) => String(c.value) === clienteId)
   return opt?.label || ''
+})
+
+/** Contato formatado do cliente do evento (telefone, whatsapp, email). */
+const clienteContatoEventoAtual = computed(() => {
+  const c = clienteEventoAtual.value
+  if (!c) return ''
+  const partes = [c?.telefone, c?.whatsapp, c?.celular, c?.email].filter(Boolean)
+  return partes.join(' · ') || ''
 })
 
 const origemEventoLabel = computed(() => {
@@ -947,6 +1318,25 @@ const origemEventoLabel = computed(() => {
   }
   return map[origem] || 'Origem: agenda'
 })
+
+watch(
+  vendaIdParaAmbientes,
+  async (vendaId) => {
+    listaAmbientesVenda.value = []
+    if (!vendaId || !Number.isFinite(Number(vendaId))) return
+    loadingAmbientes.value = true
+    try {
+      const res = await VendaService.listarAmbientes(Number(vendaId))
+      const data = res?.data ?? res
+      listaAmbientesVenda.value = Array.isArray(data) ? data : []
+    } catch {
+      listaAmbientesVenda.value = []
+    } finally {
+      loadingAmbientes.value = false
+    }
+  },
+  { immediate: true }
+)
 
 // Opções por origem (fonte da verdade: pipelines compartilhados)
 const TIPOS_LOJA_VENDA = computed(() => [
@@ -975,6 +1365,8 @@ const categoriaExigeVenda = computed(() =>
   String(taskForm.origemFluxo || '').toUpperCase() === 'LOJA_VENDA' &&
   CATEGORIAS_QUE_EXIGEM_VENDA.includes(String(taskForm.categoria || '').toUpperCase()),
 )
+/** Etapas legadas de produção (corte, montagem interna etc.) não exibidas; o cálculo de produção já é um só. */
+const CATEGORIAS_PRODUCAO_OCULTAS = ['PREPARACAO_TECNICA', 'CORTE', 'MONTAGEM_INTERNA', 'ACABAMENTO', 'CONFERENCIA_QUALIDADE']
 const TIPOS_PRODUCAO = computed(() => {
   const lista = Array.isArray(pipelineProducao.value) ? pipelineProducao.value : []
   return [...lista]
@@ -983,7 +1375,7 @@ const TIPOS_PRODUCAO = computed(() => {
       value: String(etapa?.key || ''),
       label: String(etapa?.label || etapa?.key || ''),
     }))
-    .filter((item) => item.value)
+    .filter((item) => item.value && !CATEGORIAS_PRODUCAO_OCULTAS.includes(item.value))
 })
 const PRIMEIRA_ETAPA_PRODUCAO = computed(
   () => TIPOS_PRODUCAO.value[0]?.value || 'PRODUCAO_RECEBIDA',
@@ -1014,6 +1406,38 @@ function proximaEtapaProducao(categoriaAtual) {
   return null
 }
 
+/** Títulos das fases para vendas (cliente): exibidos como título; pipeline como subtítulo */
+const TITULOS_FASE_VENDA = {
+  MEDIDA_FINA: 'Medida fina',
+  PROJETO_TECNICO: 'Projeto técnico',
+  PRODUCAO: 'Produção',
+  MONTAGEM: 'Montagem',
+  POS_VENDA: 'Pós-venda',
+}
+const CATEGORIAS_MEDIDA_FINA = ['AGENDAR_MEDIDA_FINA', 'MEDIDA_FINA']
+const CATEGORIAS_PROJETO_TECNICO = ['AGUARDANDO_PROJETO_TECNICO', 'PROJETO_TECNICO_EM_ANDAMENTO', 'PROJETO_TECNICO_CONCLUIDO']
+/** Ao concluir, enviar CONCLUIDO para o backend atualizar venda/cliente (ex.: "Medida fina concluída") e criar próximo evento. */
+const CATEGORIAS_CONCLUIR_NO_BACKEND = ['AGENDAR_MEDIDA_FINA', 'MEDIDA_FINA', 'AGUARDANDO_PROJETO_TECNICO', 'PROJETO_TECNICO_EM_ANDAMENTO', 'PRODUCAO_EM_ANDAMENTO', 'MONTAGEM_CLIENTE_AGENDADA', 'EM_MONTAGEM_CLIENTE']
+const CATEGORIAS_PRODUCAO = [
+  'PRODUCAO_RECEBIDA',
+  'PRODUCAO_EM_ANDAMENTO',
+  'PRODUCAO_FINALIZADA',
+  ...CATEGORIAS_PRODUCAO_OCULTAS,
+]
+const CATEGORIAS_MONTAGEM = ['MONTAGEM_CLIENTE_AGENDADA', 'EM_MONTAGEM_CLIENTE', 'MONTAGEM_CLIENTE_FINALIZADA']
+/** Pós-venda (garantia/manutenção/assistência) é tarefa avulsa, não faz parte do fluxo medida → projeto → produção → montagem. */
+const CATEGORIAS_POS_VENDA = ['AGENDAR_POS_VENDA', 'GARANTIA', 'MANUTENCAO', 'ASSISTENCIA']
+
+function tituloFaseParaCategoria(categoria) {
+  const cat = String(categoria || '').toUpperCase()
+  if (CATEGORIAS_MEDIDA_FINA.includes(cat)) return TITULOS_FASE_VENDA.MEDIDA_FINA
+  if (CATEGORIAS_PROJETO_TECNICO.includes(cat)) return TITULOS_FASE_VENDA.PROJETO_TECNICO
+  if (CATEGORIAS_PRODUCAO.includes(cat)) return TITULOS_FASE_VENDA.PRODUCAO
+  if (CATEGORIAS_MONTAGEM.includes(cat)) return TITULOS_FASE_VENDA.MONTAGEM
+  if (CATEGORIAS_POS_VENDA.includes(cat)) return TITULOS_FASE_VENDA.POS_VENDA
+  return TITULOS_FASE_VENDA.PRODUCAO
+}
+
 function etapaLabelPorCategoria(categoria) {
   const cat = String(categoria || '').toUpperCase()
   const etapa = TIPOS_PRODUCAO.value.find(o => o.value === cat)
@@ -1025,56 +1449,134 @@ function etapaLabelPorCategoria(categoria) {
   return categoria || ''
 }
 
-function corCardCalendarioPorCategoria(categoria) {
-  const cat = String(categoria || '').toUpperCase()
-  const cores = {
-    MEDIDA: 'bg-blue-700 hover:bg-blue-600',
-    AGENDAR_MEDIDA: 'bg-blue-700 hover:bg-blue-600',
-    ORCAMENTO: 'bg-purple-700 hover:bg-purple-600',
-    CRIAR_ORCAMENTO: 'bg-purple-700 hover:bg-purple-600',
-    APRESENTACAO: 'bg-orange-600 hover:bg-orange-500',
-    AGENDAR_APRESENTACAO: 'bg-orange-600 hover:bg-orange-500',
-    CONTRATO: 'bg-emerald-700 hover:bg-emerald-600',
-    CONTRATO_GERADO: 'bg-emerald-700 hover:bg-emerald-600',
-    MEDIDA_FINA: 'bg-cyan-700 hover:bg-cyan-600',
-    AGENDAR_MEDIDA_FINA: 'bg-cyan-700 hover:bg-cyan-600',
-    GARANTIA: 'bg-amber-600 hover:bg-amber-500',
-    MANUTENCAO: 'bg-amber-600 hover:bg-amber-500',
-    ASSISTENCIA: 'bg-amber-600 hover:bg-amber-500',
+/** Medida fina: título fixo "Medida fina", subtítulo por status: Agendar medida fina / Medida fina agendada / Medida fina concluída. Cores mudam conforme o agendamento. */
+const SUBTITULOS_MEDIDA_FINA = {
+  AGENDAR_MEDIDA_FINA: 'Agendar medida fina',
+  MEDIDA_FINA: 'Medida fina agendada',
+  CONCLUIDO: 'Medida fina concluída',
+}
+function tituloSubtituloEvento(event) {
+  if (event?.plano_corte_id) {
+    return { titulo: 'Produção', subtitulo: planoBadgeLabel(planoStatusForEvent(event)) || 'Plano de corte' }
   }
-  if (cores[cat]) return cores[cat]
-  if (TIPOS_PRODUCAO.value.some(o => o.value === cat)) return 'bg-indigo-700 hover:bg-indigo-600'
-  return 'bg-slate-700 hover:bg-slate-600'
+  const cat = String(event?.categoria || '').toUpperCase()
+  const titulo = tituloFaseParaCategoria(cat)
+  if (CATEGORIAS_MEDIDA_FINA.includes(cat)) {
+    const status = String(event?.status || '').toUpperCase()
+    const concluido = status === 'CONCLUIDO'
+    const emAndamento = status === 'EM_ANDAMENTO'
+    let subtitulo
+    if (concluido) subtitulo = SUBTITULOS_MEDIDA_FINA.CONCLUIDO
+    else if (cat === 'MEDIDA_FINA' || (cat === 'AGENDAR_MEDIDA_FINA' && emAndamento)) subtitulo = SUBTITULOS_MEDIDA_FINA.MEDIDA_FINA
+    else subtitulo = SUBTITULOS_MEDIDA_FINA.AGENDAR_MEDIDA_FINA
+    return { titulo: TITULOS_FASE_VENDA.MEDIDA_FINA, subtitulo }
+  }
+  if (CATEGORIAS_PROJETO_TECNICO.includes(cat)) {
+    const status = String(event?.status || '').toUpperCase()
+    if (status === 'CONCLUIDO') {
+      return { titulo: TITULOS_FASE_VENDA.PROJETO_TECNICO, subtitulo: 'Projeto técnico concluído' }
+    }
+    return { titulo: TITULOS_FASE_VENDA.PROJETO_TECNICO, subtitulo: etapaLabelPorCategoria(cat) }
+  }
+  if (CATEGORIAS_PRODUCAO.includes(cat)) {
+    const status = String(event?.status || '').toUpperCase()
+    if (status === 'CONCLUIDO') {
+      return { titulo: TITULOS_FASE_VENDA.PRODUCAO, subtitulo: 'Produção concluída' }
+    }
+    return { titulo: TITULOS_FASE_VENDA.PRODUCAO, subtitulo: etapaLabelPorCategoria(cat) }
+  }
+  if (CATEGORIAS_MONTAGEM.includes(cat)) {
+    const status = String(event?.status || '').toUpperCase()
+    if (status === 'CONCLUIDO') {
+      return { titulo: TITULOS_FASE_VENDA.MONTAGEM, subtitulo: 'Montagem concluída' }
+    }
+    return { titulo: TITULOS_FASE_VENDA.MONTAGEM, subtitulo: etapaLabelPorCategoria(cat) }
+  }
+  if (CATEGORIAS_POS_VENDA.includes(cat)) {
+    return { titulo: TITULOS_FASE_VENDA.POS_VENDA, subtitulo: etapaLabelPorCategoria(cat) }
+  }
+  return { titulo, subtitulo: etapaLabelPorCategoria(cat) }
+}
+
+/** Cor da etapa vinda do pipeline (backend). Se não achar, usa slate. */
+function getColorFamilyFromPipeline(categoria) {
+  const cat = String(categoria || '').toUpperCase()
+  const pipeline = Array.isArray(pipelineProducao.value) ? pipelineProducao.value : []
+  const item = pipeline.find((p) => String(p?.key || '').toUpperCase() === cat)
+  return item?.colorFamily || 'slate'
+}
+
+/** Tom do status: claro (aguardando) → médio (em andamento) → escuro (concluído). */
+function getTomStatus(event) {
+  const status = String(event?.status || '').toUpperCase()
+  if (status === 'CONCLUIDO') return 'escuro'
+  if (status === 'EM_ANDAMENTO') return 'medio'
+  return 'claro'
+}
+
+/** Mapa genérico: por colorFamily (do pipeline) e tom → classes. Frontend só herda; pipeline define a cor. */
+const CORES_POR_FAMILIA_TOM = {
+  card: {
+    teal: { claro: 'bg-teal-400 hover:bg-teal-300', medio: 'bg-teal-500 hover:bg-teal-400', escuro: 'bg-teal-700 hover:bg-teal-600' },
+    violet: { claro: 'bg-violet-400 hover:bg-violet-300', medio: 'bg-violet-500 hover:bg-violet-400', escuro: 'bg-violet-700 hover:bg-violet-600' },
+    indigo: { claro: 'bg-indigo-400 hover:bg-indigo-300', medio: 'bg-indigo-500 hover:bg-indigo-400', escuro: 'bg-indigo-700 hover:bg-indigo-600' },
+    sky: { claro: 'bg-sky-400 hover:bg-sky-300', medio: 'bg-sky-500 hover:bg-sky-400', escuro: 'bg-sky-700 hover:bg-sky-600' },
+    amber: { claro: 'bg-amber-400 hover:bg-amber-300', medio: 'bg-amber-500 hover:bg-amber-400', escuro: 'bg-amber-700 hover:bg-amber-600' },
+    slate: { claro: 'bg-slate-400 hover:bg-slate-300', medio: 'bg-slate-500 hover:bg-slate-400', escuro: 'bg-slate-700 hover:bg-slate-600' },
+  },
+  borda: {
+    teal: { claro: 'border-l-teal-400 border-teal-200 bg-teal-50/70 dark:bg-teal-950/20', medio: 'border-l-teal-500 border-teal-300 bg-teal-50/80 dark:bg-teal-950/30', escuro: 'border-l-teal-500 border-teal-300 bg-teal-50/80 dark:bg-teal-950/30' },
+    violet: { claro: 'border-l-violet-400 border-violet-200 bg-violet-50/70 dark:bg-violet-950/20', medio: 'border-l-violet-500 border-violet-300 bg-violet-50/80 dark:bg-violet-950/30', escuro: 'border-l-violet-500 border-violet-300 bg-violet-50/80 dark:bg-violet-950/30' },
+    indigo: { claro: 'border-l-indigo-400 border-indigo-200 bg-indigo-50/70 dark:bg-indigo-950/20', medio: 'border-l-indigo-500 border-indigo-300 bg-indigo-50/80 dark:bg-indigo-950/30', escuro: 'border-l-indigo-500 border-indigo-300 bg-indigo-50/80 dark:bg-indigo-950/30' },
+    sky: { claro: 'border-l-sky-400 border-sky-200 bg-sky-50/70 dark:bg-sky-950/20', medio: 'border-l-sky-500 border-sky-300 bg-sky-50/80 dark:bg-sky-950/30', escuro: 'border-l-sky-500 border-sky-300 bg-sky-50/80 dark:bg-sky-950/30' },
+    amber: { claro: 'border-l-amber-400 border-amber-200 bg-amber-50/70 dark:bg-amber-950/20', medio: 'border-l-amber-500 border-amber-300 bg-amber-50/80 dark:bg-amber-950/30', escuro: 'border-l-amber-500 border-amber-300 bg-amber-50/80 dark:bg-amber-950/30' },
+    slate: { claro: 'border-l-slate-400 border-slate-200 bg-slate-50/70 dark:bg-slate-950/20', medio: 'border-l-slate-500 border-slate-300 bg-slate-50/80 dark:bg-slate-950/30', escuro: 'border-l-slate-500 border-slate-300 bg-slate-50/80 dark:bg-slate-950/30' },
+  },
+  /** Badge de status (Pendente / Em andamento / Concluído): mesma família de cor do evento, tom muda com o status. */
+  badge: {
+    teal: { claro: 'bg-teal-50 text-teal-700 border border-teal-200', medio: 'bg-teal-100 text-teal-800 border border-teal-300', escuro: 'bg-teal-100 text-teal-800 border border-teal-400' },
+    violet: { claro: 'bg-violet-50 text-violet-700 border border-violet-200', medio: 'bg-violet-100 text-violet-800 border border-violet-300', escuro: 'bg-violet-100 text-violet-800 border border-violet-400' },
+    indigo: { claro: 'bg-indigo-50 text-indigo-700 border border-indigo-200', medio: 'bg-indigo-100 text-indigo-800 border border-indigo-300', escuro: 'bg-indigo-100 text-indigo-800 border border-indigo-400' },
+    sky: { claro: 'bg-sky-50 text-sky-700 border border-sky-200', medio: 'bg-sky-100 text-sky-800 border border-sky-300', escuro: 'bg-sky-100 text-sky-800 border border-sky-400' },
+    amber: { claro: 'bg-amber-50 text-amber-700 border border-amber-200', medio: 'bg-amber-100 text-amber-800 border border-amber-300', escuro: 'bg-amber-100 text-amber-800 border border-amber-400' },
+    slate: { claro: 'bg-slate-100 text-slate-700 border border-slate-200', medio: 'bg-slate-200 text-slate-800 border border-slate-300', escuro: 'bg-slate-200 text-slate-800 border border-slate-400' },
+  },
+}
+
+function corCardCalendarioPorEvento(event) {
+  if (eventAtrasado(event)) return 'bg-red-600 hover:bg-red-500'
+  const colorFamily = getColorFamilyFromPipeline(event?.categoria)
+  const tom = eventConcluido(event) ? 'escuro' : getTomStatus(event)
+  const familias = CORES_POR_FAMILIA_TOM.card
+  const map = familias[colorFamily] || familias.slate
+  return map[tom] || map.medio
+}
+
+function corCardCalendarioPorCategoria(categoria) {
+  return corCardCalendarioPorEvento({ categoria, status: '' })
+}
+
+function corBordaCardPorEvento(event) {
+  if (eventAtrasado(event)) return 'border-l-rose-500 border-rose-300 bg-rose-50/60 dark:bg-rose-950/30'
+  const colorFamily = getColorFamilyFromPipeline(event?.categoria)
+  const tom = eventConcluido(event) ? 'escuro' : getTomStatus(event)
+  const familias = CORES_POR_FAMILIA_TOM.borda
+  const map = familias[colorFamily] || familias.slate
+  return map[tom] || map.medio
 }
 
 function corBordaCardPorCategoria(categoria) {
-  const cat = String(categoria || '').toUpperCase()
-  const bordas = {
-    MEDIDA: 'border-l-blue-500',
-    AGENDAR_MEDIDA: 'border-l-blue-500',
-    ORCAMENTO: 'border-l-purple-500',
-    CRIAR_ORCAMENTO: 'border-l-purple-500',
-    APRESENTACAO: 'border-l-orange-500',
-    AGENDAR_APRESENTACAO: 'border-l-orange-500',
-    CONTRATO: 'border-l-emerald-500',
-    CONTRATO_GERADO: 'border-l-emerald-500',
-    MEDIDA_FINA: 'border-l-cyan-500',
-    AGENDAR_MEDIDA_FINA: 'border-l-cyan-500',
-    GARANTIA: 'border-l-amber-500',
-    MANUTENCAO: 'border-l-amber-500',
-    ASSISTENCIA: 'border-l-amber-500',
-  }
-  if (bordas[cat]) return bordas[cat]
-  if (TIPOS_PRODUCAO.value.some(o => o.value === cat)) return 'border-l-indigo-500'
-  return 'border-l-slate-400'
+  return corBordaCardPorEvento({ categoria, status: '' })
 }
 
 function botaoConcluirLabel(event) {
   const cat = String(event?.categoria || '').toUpperCase()
   const ehProducao = TIPOS_PRODUCAO.value.some(o => o.value === cat)
   if (!ehProducao) return 'Concluir'
+  if (CATEGORIAS_MEDIDA_FINA.includes(cat)) return 'Finalizar medida fina'
+  if (['AGUARDANDO_PROJETO_TECNICO', 'PROJETO_TECNICO_EM_ANDAMENTO'].includes(cat)) return 'Finalizar projeto técnico'
   const proxima = proximaEtapaProducao(cat)
-  if (proxima) return `Concluir → ${etapaLabelPorCategoria(proxima)}`
+  if (proxima) return 'Concluir etapa'
   return 'Finalizar produção'
 }
 
@@ -1133,60 +1635,61 @@ const days = computed(() => {
   return result
 })
 
+/** Retorna todas as chaves de data (YYYY-MM-DD) entre início e fim do evento (inclusive). */
+function dateKeysBetween(inicioEm, fimEm) {
+  const start = new Date(inicioEm)
+  const end = new Date(fimEm)
+  start.setHours(0, 0, 0, 0)
+  end.setHours(0, 0, 0, 0)
+  const keys = []
+  const cur = new Date(start)
+  while (cur <= end) {
+    keys.push(dateKey(cur))
+    cur.setDate(cur.getDate() + 1)
+  }
+  return keys
+}
+
+/** Data fim efetiva: se a tarefa foi concluída, usa o dia da conclusão para não aparecer nos dias seguintes (limpa dia 18+). */
+function effectiveFimEm(event) {
+  const status = normalizarStatusExecucao(event?.status)
+  if (status !== 'CONCLUIDO') return event?.fim_em
+  const alterado = event?.alterado_em ? new Date(event.alterado_em) : null
+  const fim = event?.fim_em ? new Date(event.fim_em) : null
+  const conclusao = alterado ?? fim
+  if (!conclusao || Number.isNaN(conclusao.getTime())) return event?.fim_em
+  conclusao.setHours(23, 59, 59, 999)
+  return conclusao.toISOString()
+}
+
+/** Eventos por dia: tarefa preenche os blocos do intervalo. Se foi finalizada no dia 17, aparece só até o 17 (dias 18 e 19 ficam livres). */
 const eventsByDay = computed(() => {
   const map = {}
   for (const ev of events.value) {
-    const k = dateKey(new Date(ev.inicio_em))
-    if (!map[k]) map[k] = []
-    map[k].push(ev)
+    const fimEfetivo = effectiveFimEm(ev)
+    const keys = dateKeysBetween(ev.inicio_em, fimEfetivo)
+    for (const k of keys) {
+      if (!map[k]) map[k] = []
+      map[k].push(ev)
+    }
   }
   return map
 })
 
 const selectedEvents = computed(() => eventsByDay.value[dateKey(selectedDay.value)] || [])
 
-/** Nomes dos funcionários de um evento (equipe + apontamentos) */
-function getFuncionarioNomesEvent(event) {
-  const nomes = new Set()
-  const add = (nome) => nome && nomes.add(String(nome).trim())
-  ;(event?.equipe || []).forEach((e) => {
-    add(e?.funcionario?.nome)
-    if (!e?.funcionario?.nome && e?.funcionario_id) add(funcionarioNomeById(e.funcionario_id))
-  })
-  ;(event?.apontamentos || []).forEach((a) => {
-    if (a?.funcionario_id) add(funcionarioNomeById(a.funcionario_id))
-  })
-  return Array.from(nomes)
-}
-
-/** Resumo do dia agrupado por etapa (função): quantas tarefas e quantos funcionários em cada */
+/** Resumo do dia agrupado por título (Medida fina, Projeto técnico, Produção, Montagem) */
 const resumoDiaPorEtapa = computed(() => {
   const events = selectedEvents.value
   if (!events.length) return []
-  const byEtapa = {}
+  const byTitulo = {}
+  const ordemTitulos = [TITULOS_FASE_VENDA.MEDIDA_FINA, TITULOS_FASE_VENDA.PROJETO_TECNICO, TITULOS_FASE_VENDA.PRODUCAO, TITULOS_FASE_VENDA.MONTAGEM, TITULOS_FASE_VENDA.POS_VENDA]
   events.forEach((ev) => {
-    const cat = String(ev?.categoria || '').toUpperCase()
-    if (!cat) return
-    if (!byEtapa[cat]) {
-      byEtapa[cat] = { etapaKey: cat, etapaLabel: etapaLabelPorCategoria(cat), tarefas: 0, funcionarioNomes: new Set() }
-    }
-    byEtapa[cat].tarefas += 1
-    getFuncionarioNomesEvent(ev).forEach((n) => byEtapa[cat].funcionarioNomes.add(n))
+    const titulo = tituloSubtituloEvento(ev).titulo
+    if (!byTitulo[titulo]) byTitulo[titulo] = { etapaKey: titulo, etapaLabel: titulo, tarefas: 0 }
+    byTitulo[titulo].tarefas += 1
   })
-  return Object.values(byEtapa)
-    .map((o) => ({
-      ...o,
-      funcionarioNomes: Array.from(o.funcionarioNomes),
-      totalFuncionarios: o.funcionarioNomes.size,
-    }))
-    .sort((a, b) => {
-      const ordemA = TIPOS_PRODUCAO.value.findIndex((t) => t.value === a.etapaKey)
-      const ordemB = TIPOS_PRODUCAO.value.findIndex((t) => t.value === b.etapaKey)
-      if (ordemA >= 0 && ordemB >= 0) return ordemA - ordemB
-      if (ordemA >= 0) return -1
-      if (ordemB >= 0) return 1
-      return a.etapaLabel.localeCompare(b.etapaLabel)
-    })
+  return ordemTitulos.filter((t) => byTitulo[t]).map((t) => byTitulo[t])
 })
 
 const selectedEventsParaLista = computed(() =>
@@ -1220,8 +1723,17 @@ function selectDayAndOpenModal(day) {
 }
 
 function eventTitle(event) {
+  const ts = tituloSubtituloEvento(event)
   const nome = event?.cliente?.nome_completo || event?.cliente?.razao_social || 'Cliente'
-  return `${event.titulo} - ${nome}`
+  return `${ts.titulo} – ${nome}`
+}
+
+/** Tooltip completo para o evento no calendário (vários horários: ver responsável e horário ao passar o mouse). */
+function eventTooltipCalendar(event) {
+  const horario = periodLabel(event.inicio_em, event.fim_em, event)
+  const titulo = eventTitle(event)
+  const resp = event?.criado_por_usuario?.nome || 'Não informado'
+  return `${horario}\n${titulo}\nResponsável: ${resp}`
 }
 
 function normalizarStatusExecucao(status) {
@@ -1238,22 +1750,54 @@ function statusExecucaoLabel(event) {
   return 'Pendente'
 }
 
+/** Classe do badge de status: usa a cor da etapa (pipeline) quando o evento tem categoria, para a cor mudar com o status (claro → médio → escuro). */
 function statusExecucaoClass(event) {
   const status = normalizarStatusExecucao(event?.status)
-  if (status === 'CONCLUIDO') return 'bg-emerald-50 text-emerald-700 border border-emerald-200'
   if (status === 'PAUSADO') return 'bg-amber-50 text-amber-700 border border-amber-200'
-  if (status === 'EM_ANDAMENTO') return 'bg-blue-50 text-blue-700 border border-blue-200'
   const fim = new Date(event?.fim_em)
-  if (!Number.isNaN(fim.getTime()) && Date.now() > fim.getTime()) {
+  if (!Number.isNaN(fim.getTime()) && Date.now() > fim.getTime() && status !== 'CONCLUIDO') {
     return 'bg-rose-50 text-rose-700 border border-rose-200'
   }
+  const categoria = event?.categoria
+  if (categoria && pipelineProducao.value?.length) {
+    const colorFamily = getColorFamilyFromPipeline(categoria)
+    const tom = eventConcluido(event) ? 'escuro' : getTomStatus(event)
+    const familias = CORES_POR_FAMILIA_TOM.badge
+    const map = familias[colorFamily] || familias.slate
+    return map[tom] || map.medio
+  }
+  if (status === 'CONCLUIDO') return 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+  if (status === 'EM_ANDAMENTO') return 'bg-blue-50 text-blue-700 border border-blue-200'
   return 'bg-slate-100 text-slate-700 border border-slate-200'
+}
+
+/** True quando o horário de término já passou e a tarefa não foi concluída (exibir em vermelho). */
+function eventAtrasado(event) {
+  const status = normalizarStatusExecucao(event?.status)
+  if (status === 'CONCLUIDO') return false
+  const fim = new Date(event?.fim_em)
+  return !Number.isNaN(fim.getTime()) && Date.now() > fim.getTime()
+}
+
+/** True quando a tarefa está concluída (exibir em verde no dia e nas tarefas). */
+function eventConcluido(event) {
+  return normalizarStatusExecucao(event?.status) === 'CONCLUIDO'
 }
 
 function timeLabel(value) {
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return ''
   return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+}
+
+/** Período para exibição: sempre com hora (ex.: "02/03 08:00 – 10:00" ou "02/03 08:00 – 10/03 18:00"). Se event concluído, usa data efetiva. */
+function periodLabel(inicioEm, fimEm, event) {
+  const fimEfetivo = event ? effectiveFimEm(event) : fimEm
+  const ini = new Date(inicioEm)
+  const fim = new Date(fimEfetivo)
+  if (Number.isNaN(ini.getTime()) || Number.isNaN(fim.getTime())) return ''
+  const dd = (d) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+  return `${dd(ini)} ${timeLabel(ini)} – ${dd(fim)} ${timeLabel(fim)}`
 }
 
 function dayEvents(day) {
@@ -1300,9 +1844,31 @@ function pad2(value) {
   return String(value).padStart(2, '0')
 }
 
+/** Formata data para input datetime-local (sempre em horário local do navegador). API envia UTC (ex.: ...Z); new Date() converte para local. */
 function toDateTimeLocal(date) {
+  if (date == null || date === '') return ''
   const d = new Date(date)
+  if (Number.isNaN(d.getTime())) return ''
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+}
+
+/** Normaliza valor do datetime-local para ISO (YYYY-MM-DDTHH:mm). Aceita "DD/MM/YYYY HH:mm" ou "YYYY-MM-DDTHH:mm". */
+function normalizarDatetimeForm(val) {
+  if (val == null || typeof val !== 'string') return val
+  const s = String(val).trim()
+  if (!s) return s
+  const matchBr = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s*(\d{1,2})?:?(\d{2})?/)
+  if (matchBr) {
+    const [, d, m, y, h = '0', min = '0'] = matchBr
+    return `${y}-${pad2(m)}-${pad2(d)}T${pad2(h)}:${pad2(min)}`
+  }
+  return s
+}
+
+/** Retorna YYYY-MM-DD para uso em input type="date" (período recorrente). */
+function toDateOnly(date) {
+  const d = new Date(date)
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
 }
 
 function addHours(date, hours) {
@@ -1346,15 +1912,16 @@ function openModal() {
   taskForm.funcionarioIds = []
   taskForm.categoria = PRIMEIRA_ETAPA_PRODUCAO.value
   taskForm.setorDestino = 'FABRICA'
-  taskForm.origemFluxo = 'PLANO_CORTE'
+  taskForm.origemFluxo = 'LOJA_VENDA'
   taskForm.apontamentos = []
+  taskForm.ambientesSelecionados = []
   vendaSelecionadaId.value = ''
   vendaSelecionadaParaAgendamento.value = null
   funcionarioSelecionado.value = ''
   
-  const dataComHoraAtual = getCurrentTimeForDate(selectedDay.value)
-  taskForm.inicio = toDateTimeLocal(dataComHoraAtual)
-  taskForm.fim = toDateTimeLocal(addHours(dataComHoraAtual, 1))
+  const dia = selectedDay.value
+  taskForm.inicio = toDateOnly(dia) + 'T08:00:00'
+  taskForm.fim = toDateOnly(dia) + 'T09:00:00'
   
   sincronizarResponsavelLoja()
 
@@ -1363,7 +1930,6 @@ function openModal() {
   loadVendasAguardandoAgendamento()
   loadOrcamentosApresentacao()
   loadVendasAguardandoContrato()
-  loadFuncionarios()
 }
 
 function closeModal() {
@@ -1376,20 +1942,27 @@ function clearEdit() {
   taskForm.titulo = ''
   taskForm.vendaId = ''
   taskForm.orcamentoId = ''
+  taskForm.clienteId = ''
   vendaSelecionadaId.value = ''
   vendaSelecionadaParaAgendamento.value = null
   orcamentoSelecionadoId.value = ''
   orcamentoSelecionadoParaAgendamento.value = null
   vendasContratoId.value = ''
   vendaContratoSelecionada.value = null
-  const dataComHoraAtual = getCurrentTimeForDate(selectedDay.value)
-  taskForm.inicio = toDateTimeLocal(dataComHoraAtual)
-  taskForm.fim = toDateTimeLocal(addHours(dataComHoraAtual, 1))
+  const dia = selectedDay.value
+  taskForm.inicio = toDateOnly(dia) + 'T08:00:00'
+  taskForm.fim = toDateOnly(dia) + 'T09:00:00'
   taskForm.setorDestino = 'FABRICA'
-  taskForm.origemFluxo = 'PLANO_CORTE'
+  taskForm.origemFluxo = 'LOJA_VENDA'
   taskForm.categoria = PRIMEIRA_ETAPA_PRODUCAO.value
   taskForm.apontamentos = []
+  taskForm.ambientesSelecionados = []
   sincronizarResponsavelLoja()
+}
+
+function openModalNovaTarefaNoDia() {
+  clearEdit()
+  modalOpen.value = true
 }
 
 function openGarantia() {
@@ -1400,9 +1973,38 @@ function openGarantia() {
   }
 }
 
-function openModalForEvent(event) {
-  selectedDay.value = new Date(event.inicio_em)
-  editTask(event)
+function openModalForEvent(event, dayClicked) {
+  // Usar evento atualizado da lista (evita dados antigos após salvar)
+  const atual = events.value.find((e) => e.id === event.id)
+  const eventoParaEditar = atual || event
+  // Usar o dia clicado (ex.: 04/03) em vez da data de início do evento (ex.: 02/03)
+  if (dayClicked) {
+    selectedDay.value = dayClicked instanceof Date ? dayClicked : new Date(dayClicked)
+  }
+  editTask(eventoParaEditar)
+  modalOpen.value = true
+}
+
+/** Abre o modal para criar nova tarefa de pós-venda (tarefa avulsa) para um cliente com montagem já concluída. */
+function openModalNovaPosVenda(item) {
+  editingEvent.value = null
+  taskForm.titulo = ''
+  taskForm.clienteId = item?.cliente_id ? String(item.cliente_id) : (item?.cliente?.id ? String(item.cliente.id) : '')
+  taskForm.vendaId = item?.venda_id ? String(item.venda_id) : (item?.venda?.id ? String(item.venda.id) : '')
+  taskForm.funcionarioIds = []
+  taskForm.categoria = 'GARANTIA'
+  taskForm.setorDestino = 'FABRICA'
+  taskForm.origemFluxo = 'LOJA_VENDA'
+  taskForm.apontamentos = []
+  taskForm.ambientesSelecionados = []
+  vendaSelecionadaId.value = taskForm.vendaId
+  vendaSelecionadaParaAgendamento.value = item?.venda || null
+  funcionarioSelecionado.value = ''
+  const dia = selectedDay.value
+  taskForm.inicio = toDateOnly(dia) + 'T08:00:00'
+  taskForm.fim = toDateOnly(dia) + 'T09:00:00'
+  sincronizarResponsavelLoja()
+  loadClientes()
   modalOpen.value = true
 }
 
@@ -1419,11 +2021,10 @@ function editTask(event) {
       : event?.venda?.cliente_id
         ? String(event.venda.cliente_id)
       : ''
-  const equipeDoEvento = (event?.equipe || []).map((e) => String(e.funcionario_id)).filter(Boolean)
-  const equipeApontada = (event?.apontamentos || [])
-    .map((a) => String(a.funcionario_id))
-    .filter(Boolean)
-  taskForm.funcionarioIds = Array.from(new Set([...equipeDoEvento, ...equipeApontada]))
+  const ambSel = event?.ambientes_selecionados
+  taskForm.ambientesSelecionados = Array.isArray(ambSel) ? [...ambSel] : []
+  // Funcionários que executam ficam na Timeline; na Agenda só o responsável (criador) do agendamento.
+  taskForm.funcionarioIds = []
   const cat = event?.categoria || PRIMEIRA_ETAPA_PRODUCAO.value
   // Garante categoria válida para o pipeline do evento (venda vs plano de corte)
   const origemEvento = String(event?.origem_fluxo || '').toUpperCase()
@@ -1559,115 +2160,167 @@ async function removeTask(event) {
   }
 }
 
+/** Dia da conclusão: fim do selectedDay (dia aberto na agenda) em ISO. Evita evento "ficar" na data de início. */
+function dataConclusaoIso() {
+  const d = new Date(selectedDay.value)
+  d.setHours(23, 59, 59, 999)
+  return d.toISOString()
+}
+
+/** Data/hora de conclusão ao marcar como concluído: usa o "Data e hora fim" do formulário quando está no modal, senão fim do dia selecionado. */
+function concluidoIsoEData(event, status) {
+  if (status !== 'CONCLUIDO') return { concluidoIso: null, dataConclusao: undefined }
+  const noModal = editingEvent.value && Number(editingEvent.value.id) === Number(event?.id)
+  const fimForm = noModal && taskForm.fim ? (normalizarDatetimeForm(taskForm.fim) || taskForm.fim) : ''
+  if (fimForm) {
+    const d = new Date(fimForm)
+    if (!Number.isNaN(d.getTime())) {
+      return { concluidoIso: d.toISOString(), dataConclusao: dateKey(d) }
+    }
+  }
+  return { concluidoIso: dataConclusaoIso(), dataConclusao: dateKey(selectedDay.value) }
+}
+
 async function atualizarStatusExecucao(event, status) {
   try {
+    if (status === 'CONCLUIDO' && event?.id) {
+      try {
+        await ApontamentoProducaoService.finalizarEtapa({ agenda_fabrica_id: event.id })
+      } catch (_) {
+        // Se já estiver concluído ou falhar, segue com atualizarStatus para próxima etapa
+      }
+    }
+
     const categoriaAtual = String(event?.categoria || '').toUpperCase()
     const ehProducao = TIPOS_PRODUCAO.value.some(o => o.value === categoriaAtual)
+    // Medida fina / projeto técnico: enviar CONCLUIDO para o backend atualizar venda (ex.: "Medida fina concluída") e criar próximo evento
+    const concluirNoBackend = CATEGORIAS_CONCLUIR_NO_BACKEND.includes(categoriaAtual)
+    const { concluidoIso, dataConclusao } = concluidoIsoEData(event, status)
 
-    if (status === 'CONCLUIDO' && ehProducao) {
+    if (status === 'CONCLUIDO' && concluirNoBackend) {
+      await AgendaFabricaService.atualizarStatus(event.id, 'CONCLUIDO', undefined, concluidoIso, dataConclusao)
+      // Atualização otimista: prazo de conclusão = dia selecionado; evita tela piscar e mostra data correta
+      const idx = events.value.findIndex((e) => Number(e.id) === Number(event.id))
+      if (idx !== -1) {
+        events.value = [
+          ...events.value.slice(0, idx),
+          { ...events.value[idx], status: 'CONCLUIDO', alterado_em: concluidoIso, fim_em: concluidoIso },
+          ...events.value.slice(idx + 1),
+        ]
+      }
+      const criouNovaEtapa =
+        CATEGORIAS_MEDIDA_FINA.includes(categoriaAtual) ||
+        CATEGORIAS_PROJETO_TECNICO.includes(categoriaAtual) ||
+        CATEGORIAS_PRODUCAO.includes(categoriaAtual)
+      if (CATEGORIAS_MEDIDA_FINA.includes(categoriaAtual)) {
+        notify.success('Medida fina concluída. Venda atualizada e próxima etapa criada na agenda.')
+      } else if (CATEGORIAS_PROJETO_TECNICO.includes(categoriaAtual)) {
+        notify.success('Projeto técnico concluído. Venda atualizada e produção agendada criada na agenda.')
+      } else if (CATEGORIAS_PRODUCAO.includes(categoriaAtual)) {
+        notify.success('Produção finalizada. Montagem criada na agenda.')
+      } else if (CATEGORIAS_MONTAGEM.includes(categoriaAtual)) {
+        notify.success('Montagem finalizada. Venda atualizada.')
+      } else {
+        notify.success('Tarefa concluída.')
+      }
+      if (criouNovaEtapa) {
+        // Manter o dia da conclusão selecionado para exibir o próximo evento criado nesse dia
+        const dia = new Date(selectedDay.value)
+        dia.setHours(0, 0, 0, 0)
+        selectedDay.value = dia
+      }
+    } else if (status === 'CONCLUIDO' && ehProducao) {
       const proxima = proximaEtapaProducao(categoriaAtual)
       if (proxima) {
         await AgendaFabricaService.atualizarStatus(event.id, 'PENDENTE', proxima)
         const label = etapaLabelPorCategoria(proxima)
         notify.success(`Etapa concluída. Avançou para: ${label}`)
       } else {
-        await AgendaFabricaService.atualizarStatus(event.id, 'CONCLUIDO')
+        await AgendaFabricaService.atualizarStatus(event.id, 'CONCLUIDO', undefined, concluidoIso, dataConclusao)
         notify.success('Produção finalizada!')
       }
     } else {
-      await AgendaFabricaService.atualizarStatus(event.id, status)
-      if (status === 'CONCLUIDO') notify.success('Tarefa concluída.')
-      else if (status === 'PAUSADO') notify.success('Tarefa pausada.')
+      await AgendaFabricaService.atualizarStatus(event.id, status, undefined, concluidoIso || undefined, dataConclusao)
+      if (status === 'CONCLUIDO') {
+        const idx = events.value.findIndex((e) => Number(e.id) === Number(event.id))
+        if (idx !== -1) {
+          events.value = [
+            ...events.value.slice(0, idx),
+            { ...events.value[idx], status: 'CONCLUIDO', alterado_em: concluidoIso, fim_em: concluidoIso },
+            ...events.value.slice(idx + 1),
+          ]
+        }
+        notify.success('Tarefa concluída.')
+      } else if (status === 'PAUSADO') notify.success('Tarefa pausada.')
       else notify.success('Tarefa iniciada.')
     }
-    await loadAgenda()
+    // Recarrega em segundo plano sem mostrar "Carregando..." (evita limpar a tela); traz novo evento se houver
+    await loadAgenda(true, true)
+    loadPendentesMedidaFina()
+    // Ao concluir MONTAGEM: atualizar lista de pós-venda só depois (evita abrir modal de pós-venda; usuário só cria pós-venda pelo botão)
+    if (CATEGORIAS_MONTAGEM.includes(categoriaAtual)) {
+      setTimeout(() => loadMontagemConcluida(), 400)
+    } else {
+      loadMontagemConcluida()
+    }
+    return true
   } catch (e) {
     notify.error('Não foi possível atualizar o status da tarefa.')
+    return false
   }
 }
 
+/** Finalizar produção/montagem a partir do modal: encerra cronômetros (finalizarEtapa) e dispara lógica de próxima etapa. */
+async function finalizarProducaoNoModal(event) {
+  const ehMontagem = CATEGORIAS_MONTAGEM.includes(String(event?.categoria || '').toUpperCase())
+  if (ehMontagem) closeModal()
+  const ok = await atualizarStatusExecucao(event, 'CONCLUIDO')
+  if (ok && !ehMontagem) closeModal()
+}
+
+function onClickSalvar() {
+  saveTask()
+}
+
 async function saveTask() {
+  const DEBUG = false
+  if (DEBUG) console.warn('[Agenda] saveTask chamada', { inicio: taskForm.inicio, fim: taskForm.fim, editingEventId: editingEvent.value?.id })
+
   if (!editingEvent.value) {
-    if (!taskForm.setorDestino) return notify.error('Selecione o setor.')
-    if (!taskForm.origemFluxo) return notify.error('Selecione a origem.')
+    if (!taskForm.setorDestino) { if (DEBUG) console.warn('[Agenda] Bloqueado: sem setor'); return notify.error('Selecione o setor.') }
+    if (!taskForm.origemFluxo) { if (DEBUG) console.warn('[Agenda] Bloqueado: sem origem'); return notify.error('Selecione a origem.') }
   }
-  if (!taskForm.inicio) return notify.error('Informe a data de inicio.')
-  if (!taskForm.fim) return notify.error('Informe a data de termino.')
+  if (!taskForm.inicio) { if (DEBUG) console.warn('[Agenda] Bloqueado: sem inicio'); return notify.error('Informe a data e hora de início.') }
+  if (!taskForm.fim) { if (DEBUG) console.warn('[Agenda] Bloqueado: sem fim'); return notify.error('Informe a data e hora de fim.') }
+  if (!editingEvent.value && !isAgendaLoja.value && taskForm.origemFluxo === 'LOJA_VENDA' && !taskForm.vendaId && !taskForm.clienteId) {
+    if (DEBUG) console.warn('[Agenda] Bloqueado: LOJA_VENDA sem venda/cliente'); return notify.error('Selecione uma venda (ou o cliente) para vincular ao agendamento.')
+  }
   const origemSelecionada = editingEvent.value
     ? String(editingEvent.value?.origem_fluxo || '').toUpperCase()
     : String(taskForm.origemFluxo || '').toUpperCase()
-  const clienteObrigatorio = true
-  if (clienteObrigatorio && !taskForm.clienteId) {
-    return notify.error('Selecione o cliente.')
+  if (isAgendaLoja.value) {
+    if (!taskForm.clienteId) { if (DEBUG) console.warn('[Agenda] Bloqueado: sem cliente'); return notify.error('Selecione o cliente.') }
   }
-  const equipeIds = isAdmin.value
-    ? taskForm.funcionarioIds.map((id) => Number(id)).filter(Boolean)
-    : [Number(usuarioLogado.value?.funcionario_id)]
+  const inicioStr = normalizarDatetimeForm(taskForm.inicio) || taskForm.inicio
+  const fimStr = normalizarDatetimeForm(taskForm.fim) || taskForm.fim
+  const inicio = new Date(inicioStr)
+  const fim = new Date(fimStr)
+  if (Number.isNaN(inicio.getTime())) { if (DEBUG) console.warn('[Agenda] Bloqueado: inicio inválido', taskForm.inicio); return notify.error('Data/hora de início inválida.') }
+  if (Number.isNaN(fim.getTime())) { if (DEBUG) console.warn('[Agenda] Bloqueado: fim inválido', taskForm.fim); return notify.error('Data/hora de fim inválida.') }
+  if (fim <= inicio) { if (DEBUG) console.warn('[Agenda] Bloqueado: fim <= inicio'); return notify.error('Data e hora de fim devem ser posteriores ao início.') }
 
-  if (!equipeIds.length) {
-    return notify.error('Informe pelo menos um funcionario.')
-  }
-
-  const equipeParaValidar = isAdmin.value
-    ? taskForm.funcionarioIds
-    : [String(usuarioLogado.value?.funcionario_id || '')]
-  const equipeParaValidarLimpa = equipeParaValidar.filter(Boolean)
-
-  // Cada funcionário da equipe deve ter pelo menos um horário (início e término) preenchido
-  for (const fid of equipeParaValidarLimpa) {
-    const periodos = getApontamentosPorFuncionario(fid)
-    const temHorarioValido = periodos.some((p) => {
-      if (!p?.inicio || !p?.fim) return false
-      const i = new Date(p.inicio)
-      const f = new Date(p.fim)
-      return !Number.isNaN(i.getTime()) && !Number.isNaN(f.getTime()) && f > i
-    })
-    if (!temHorarioValido) {
-      const nome = funcionarioNomeById(fid) || 'Funcionário'
-      return notify.error(`Informe o horário de início e término para ${nome}.`)
-    }
-  }
-
-  const inicio = new Date(taskForm.inicio)
-  if (Number.isNaN(inicio.getTime())) return notify.error('Data invalida.')
-  const fim = new Date(taskForm.fim)
-  if (Number.isNaN(fim.getTime())) return notify.error('Data invalida.')
-  if (fim <= inicio) return notify.error('Termino deve ser depois do inicio.')
-
-  // Sincroniza o período único de cada funcionário com o início/término da tarefa
-  for (const registro of taskForm.apontamentos || []) {
-    if (Array.isArray(registro.periodos) && registro.periodos.length === 1) {
-      registro.periodos[0].inicio = taskForm.inicio
-      registro.periodos[0].fim = taskForm.fim
-    }
-  }
-
+  savingTask.value = true
   let titulo = taskForm.titulo
   if (!titulo) {
     const catRaw = editingEvent.value?.categoria || PRIMEIRA_ETAPA_PRODUCAO.value
     const catLabel = etapaLabelPorCategoria(catRaw) || opcoesTipoAgendamento.value.find(o => o.value === catRaw)?.label || 'Tarefa'
-    const cliLabel = clienteNomeEventoAtual.value || 'Cliente'
+    const cliLabel = isAgendaLoja.value ? (clienteNomeEventoAtual.value || 'Cliente') : (clienteNomeEventoAtual.value || 'Venda')
     titulo = `${catLabel} - ${cliLabel}`
   }
 
-  // Monta apontamentos individuais (flatten)
+  // Agenda só controla status e tarefas; funcionários que executam são atribuídos na Timeline (apontamento).
+  const equipeIds = []
   const apontamentosPayload = []
-  for (const registro of taskForm.apontamentos || []) {
-    const fid = Number(registro.funcionarioId)
-    if (!fid) continue
-    for (const periodo of registro.periodos || []) {
-      if (!periodo.inicio || !periodo.fim) continue
-      const apInicio = new Date(periodo.inicio)
-      const apFim = new Date(periodo.fim)
-      if (Number.isNaN(apInicio.getTime()) || Number.isNaN(apFim.getTime())) continue
-      if (apFim <= apInicio) continue
-      apontamentosPayload.push({
-        funcionario_id: fid,
-        inicio_em: apInicio.toISOString(),
-        fim_em: apFim.toISOString(),
-      })
-    }
-  }
 
   try {
     const origemPayload = editingEvent.value
@@ -1680,23 +2333,28 @@ async function saveTask() {
           setor_destino: editingEvent.value?.setor_destino || undefined,
         }
       : taskForm.orcamentoId
-        ? { orcamento_id: Number(taskForm.orcamentoId), venda_id: taskForm.vendaId ? Number(taskForm.vendaId) : undefined }
-        : taskForm.vendaId
-          ? { venda_id: Number(taskForm.vendaId) }
-          : {}
+          ? { orcamento_id: Number(taskForm.orcamentoId), venda_id: taskForm.vendaId ? Number(taskForm.vendaId) : undefined }
+          : taskForm.vendaId
+            ? { venda_id: Number(taskForm.vendaId) }
+            : {}
 
     const origemFluxo = editingEvent.value
       ? editingEvent.value?.origem_fluxo || undefined
       : taskForm.origemFluxo || undefined
+    // Na Agenda de Produção: edição usa setor do evento; criação sempre FABRICA
     const setorDestino = editingEvent.value
-      ? editingEvent.value?.setor_destino || undefined
-      : taskForm.setorDestino || undefined
+      ? (editingEvent.value?.setor_destino || undefined)
+      : 'FABRICA'
+
+    const catEdit = editingEvent.value?.categoria ? String(editingEvent.value.categoria).toUpperCase() : ''
+    const ehAgendarMedidaFina = catEdit === 'AGENDAR_MEDIDA_FINA'
+    // Ao editar e salvar data/hora em "Agendar medida fina", marcar como agendado (EM_ANDAMENTO) para exibir "Medida fina agendada"
+    const statusParaSalvar = editingEvent.value && ehAgendarMedidaFina ? 'EM_ANDAMENTO' : undefined
 
     const payload = {
       titulo,
       inicio_em: inicio.toISOString(),
       fim_em: fim.toISOString(),
-      cliente_id: taskForm.clienteId ? Number(taskForm.clienteId) : undefined,
       equipe_ids: equipeIds,
       categoria: editingEvent.value
         ? editingEvent.value.categoria
@@ -1704,45 +2362,139 @@ async function saveTask() {
       origem_fluxo: origemFluxo,
       setor_destino: setorDestino,
       apontamentos: apontamentosPayload,
+      ...(statusParaSalvar && { status: statusParaSalvar }),
       ...origemPayload,
     }
-
-    if (editingEvent.value) {
-      await AgendaFabricaService.atualizar(editingEvent.value.id, payload)
-    } else {
-      await AgendaFabricaService.criar(payload)
+    if (!isAgendaLoja.value && Array.isArray(taskForm.ambientesSelecionados)) {
+      payload.ambientes_selecionados = taskForm.ambientesSelecionados
+    }
+    if (taskForm.clienteId) {
+      payload.cliente_id = Number(taskForm.clienteId)
+    }
+    if (editingEvent.value?.cliente_id != null && payload.cliente_id == null) {
+      payload.cliente_id = Number(editingEvent.value.cliente_id)
     }
 
+    if (DEBUG) console.warn('[Agenda] Payload antes da API', { edicao: !!editingEvent.value, id: editingEvent.value?.id, payload })
+
+    let idEditado = null
+    let inicioSalvo = null
+    let fimSalvo = null
+    if (editingEvent.value) {
+      idEditado = editingEvent.value.id
+      inicioSalvo = payload.inicio_em
+      fimSalvo = payload.fim_em
+      const res = await AgendaFabricaService.atualizar(editingEvent.value.id, payload)
+      if (DEBUG) console.warn('[Agenda] atualizar OK', res)
+      // Atualiza o evento na lista local para o frontend refletir na hora (data/dia)
+      const idx = events.value.findIndex((e) => String(e.id) === String(editingEvent.value.id))
+      if (idx >= 0) {
+        const atualizado = {
+          ...events.value[idx],
+          inicio_em: payload.inicio_em,
+          fim_em: payload.fim_em,
+          ...(payload.status && { status: payload.status }),
+        }
+        events.value = [...events.value.slice(0, idx), atualizado, ...events.value.slice(idx + 1)]
+      }
+    } else {
+      const res = await AgendaFabricaService.criar(payload)
+      if (DEBUG) console.warn('[Agenda] criar OK', res)
+    }
+
+    if (DEBUG) console.warn('[Agenda] Chamando loadAgenda...')
     await loadAgenda()
+    loadPendentesMedidaFina()
+    loadMontagemConcluida()
+    if (DEBUG) console.warn('[Agenda] loadAgenda OK, fechando modal')
+    // Se editamos, garante que o evento na lista tenha as datas que salvamos (loadAgenda pode ter trazido cache)
+    if (idEditado != null && inicioSalvo && fimSalvo) {
+      const idxDepois = events.value.findIndex((e) => String(e.id) === String(idEditado))
+      if (idxDepois >= 0) {
+        const ev = events.value[idxDepois]
+        const precisaCorrigir =
+          ev.inicio_em !== inicioSalvo ||
+          ev.fim_em !== fimSalvo ||
+          (ehAgendarMedidaFina && String(ev.status || '').toUpperCase() !== 'EM_ANDAMENTO') ||
+          (ehAgendarMedidaFina && String(ev.categoria || '').toUpperCase() !== 'MEDIDA_FINA')
+        if (precisaCorrigir) {
+          const corrigido = {
+            ...ev,
+            inicio_em: inicioSalvo,
+            fim_em: fimSalvo,
+            ...(ehAgendarMedidaFina && { status: 'EM_ANDAMENTO', categoria: 'MEDIDA_FINA' }),
+          }
+          if (DEBUG_AGENDA) console.log('[Agenda Produção] saveTask: corrigido evento local', idEditado, '→ categoria MEDIDA_FINA, status EM_ANDAMENTO')
+          events.value = [...events.value.slice(0, idxDepois), corrigido, ...events.value.slice(idxDepois + 1)]
+        }
+      }
+    }
+    const dataSalva = inicio.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    const horaSalva = inicio.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    const eraAgendandoPendente =
+      editingEvent.value &&
+      String(editingEvent.value?.categoria || '').toUpperCase() === 'AGENDAR_MEDIDA_FINA' &&
+      String(editingEvent.value?.status || '').toUpperCase() === 'PENDENTE'
+    if (eraAgendandoPendente) {
+      notify.success(`Medida fina agendada para ${dataSalva} às ${horaSalva}.`)
+    } else if (editingEvent.value) {
+      notify.success(`Edição salva: ${dataSalva} às ${horaSalva}.`)
+    } else {
+      notify.success('Tarefa criada.')
+    }
     closeModal()
   } catch (e) {
-    const msg = e?.response?.data?.message
-    notify.error(msg && typeof msg === 'string' ? msg : 'Nao foi possivel salvar a tarefa.')
+    if (DEBUG) console.warn('[Agenda] saveTask erro', e, 'response:', e?.response, 'data:', e?.response?.data, 'message:', e?.message)
+    const data = e?.response?.data
+    const msg = Array.isArray(data?.message) ? data.message.join(', ') : (data?.message && typeof data.message === 'string' ? data.message : null)
+    notify.error(msg || 'Não foi possível salvar a tarefa.')
+  } finally {
+    savingTask.value = false
   }
 }
 
-async function loadAgenda() {
+const DEBUG_AGENDA = false // Debug: ativar para ver no console (eventos, período, etc.)
+
+async function loadAgenda(evitarCache = false, silentRefresh = false) {
   if (!can('agendamentos.ver')) return
-  loading.value = true
+  if (!silentRefresh) loading.value = true
   try {
     const inicio = dateKey(startOfMonth(currentMonth.value))
     const fim = dateKey(endOfMonth(currentMonth.value))
-    const res = await AgendaFabricaService.listarTodos(inicio, fim, {
+    const filtros = {
       incluir_cancelados: false,
       visao: visaoAgenda.value,
-    })
+    }
+    if (evitarCache) filtros._ = Date.now()
+    if (DEBUG_AGENDA) console.log('[Agenda Produção] loadAgenda: requisitando', { inicio, fim, filtros })
+    const res = await AgendaFabricaService.listarTodos(inicio, fim, filtros)
     let data = Array.isArray(res?.data) ? res.data : []
+    if (DEBUG_AGENDA) {
+      const concluidos = data.filter((e) => String(e?.status || '').toUpperCase() === 'CONCLUIDO')
+      console.log('[Agenda Produção] loadAgenda: retornou', data.length, 'eventos', concluidos.length, 'concluídos (ficam visíveis para consultar o dia)', data.map((e) => ({ id: e.id, cat: e.categoria, status: e.status, inicio: e.inicio_em })))
+    }
     events.value = data
+    if (canProducao.value && data.length) {
+      try {
+        const { data: resumo } = await ApontamentoProducaoService.resumoPorAgenda(data.map((e) => e.id))
+        resumoApontamentos.value = resumo || {}
+      } catch {
+        resumoApontamentos.value = {}
+      }
+    } else {
+      resumoApontamentos.value = {}
+    }
   } catch (e) {
-    notify.error('Falha ao carregar agenda.')
-    events.value = []
+    if (DEBUG_AGENDA) console.warn('[Agenda Produção] loadAgenda erro', e?.message || e, e?.response?.data)
+    if (!silentRefresh) notify.error('Falha ao carregar agenda.')
+    if (!silentRefresh) events.value = []
   } finally {
     loading.value = false
   }
 }
 
 async function loadPlanosProducao() {
-  if (!canProducao.value) return
+  if (!canProducao.value || !can('plano_corte.ver')) return
   try {
     const res = await PlanoCorteService.listar()
     planosProducao.value = Array.isArray(res?.data) ? res.data : []
@@ -1829,7 +2581,36 @@ async function loadVendasAguardandoContrato() {
   }
 }
 
+async function loadPendentesMedidaFina() {
+  if (!can('agendamentos.ver')) return
+  pendentesMedidaFinaLoading.value = true
+  try {
+    const res = await AgendaFabricaService.pendentesMedidaFina()
+    pendentesMedidaFina.value = Array.isArray(res?.data) ? res.data : []
+    if (DEBUG_AGENDA) console.log('[Agenda Produção] loadPendentesMedidaFina:', pendentesMedidaFina.value.length, 'pendentes', pendentesMedidaFina.value.map((p) => ({ id: p.id, venda_id: p.venda_id })))
+  } catch (e) {
+    pendentesMedidaFina.value = []
+    if (DEBUG_AGENDA) console.warn('[Agenda Produção] loadPendentesMedidaFina erro', e)
+  } finally {
+    pendentesMedidaFinaLoading.value = false
+  }
+}
+
+async function loadMontagemConcluida() {
+  if (!can('agendamentos.ver')) return
+  montagemConcluidaLoading.value = true
+  try {
+    const res = await AgendaFabricaService.montagemConcluida()
+    montagemConcluidaList.value = Array.isArray(res?.data) ? res.data : []
+  } catch (e) {
+    montagemConcluidaList.value = []
+  } finally {
+    montagemConcluidaLoading.value = false
+  }
+}
+
 onMounted(() => {
+  if (!storage.getToken()) return
   loadAgenda()
   loadPipelineProducao()
   loadPlanosProducao()
@@ -1838,8 +2619,19 @@ onMounted(() => {
   loadVendasAguardandoAgendamento()
   loadOrcamentosApresentacao()
   loadVendasAguardandoContrato()
+  loadPendentesMedidaFina()
+  loadMontagemConcluida()
 })
 watch(currentMonth, loadAgenda)
+
+// Acessibilidade: foco inicial no modal ao abrir
+watch(modalOpen, (open) => {
+  if (open) {
+    nextTick(() => {
+      modalContentRef.value?.focus()
+    })
+  }
+})
 </script>
 
 <style scoped>

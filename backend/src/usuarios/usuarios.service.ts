@@ -11,22 +11,35 @@ export class UsuariosService {
   constructor(private readonly prisma: PrismaService) {}
 
   async listar() {
-    return this.prisma.usuarios.findMany({
+    const usuarios = await this.prisma.usuarios.findMany({
       select: {
         id: true,
         nome: true,
         usuario: true,
         email: true,
         status: true,
+        cargo: true,
         funcionario_id: true,
         funcionario: {
-          select: { id: true, nome: true, unidade: true, setor: true },
+          select: { id: true, nome: true, unidade: true, setor: true, cargo: true },
         },
         criado_em: true,
         atualizado_em: true,
       },
       orderBy: { id: 'asc' },
     });
+
+    const idsComPendencia = await this.prisma.recuperacao_senha
+      .findMany({
+        where: { utilizado: false },
+        select: { usuario_id: true },
+      })
+      .then((rows) => new Set(rows.map((r) => r.usuario_id)));
+
+    return usuarios.map((u) => ({
+      ...u,
+      precisa_trocar_senha: idsComPendencia.has(u.id),
+    }));
   }
 
   async buscarPorId(id: number) {
@@ -38,9 +51,10 @@ export class UsuariosService {
         usuario: true,
         email: true,
         status: true,
+        cargo: true,
         funcionario_id: true,
         funcionario: {
-          select: { id: true, nome: true, unidade: true, setor: true },
+          select: { id: true, nome: true, unidade: true, setor: true, cargo: true },
         },
         criado_em: true,
         atualizado_em: true,
@@ -100,6 +114,7 @@ export class UsuariosService {
       email?: string;
       status?: string;
       senha?: string;
+      cargo?: string | null;
       funcionario_id?: number | null;
     },
   ) {
@@ -139,6 +154,7 @@ export class UsuariosService {
           email: data.email,
           status: data.status,
           funcionario_id: novoFuncionarioId,
+          ...(data.cargo !== undefined && { cargo: data.cargo || null }),
         };
         if (data.senha != null && String(data.senha).trim().length >= 6) {
           updateData.senha = await bcrypt.hash(String(data.senha).trim(), 10);
@@ -171,6 +187,7 @@ export class UsuariosService {
           usuario: data.usuario,
           email: data.email,
           status: data.status,
+          ...(data.cargo !== undefined && { cargo: data.cargo || null }),
         };
         if (data.senha != null && String(data.senha).trim().length >= 6) {
           updateData.senha = await bcrypt.hash(String(data.senha).trim(), 10);

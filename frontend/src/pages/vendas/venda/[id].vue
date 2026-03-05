@@ -145,7 +145,7 @@
               </div>
             </div>
             <p class="text-xs text-text-soft">
-              Abra o contrato para enviar o link de assinatura (WhatsApp/e-mail) pelo subdomínio.
+              Abra o contrato para gerar o PDF e enviar o link por WhatsApp ou e-mail.
             </p>
           </section>
         </template>
@@ -166,6 +166,7 @@ import { ContratosService, VendaService } from '@/services'
 import { notify } from '@/services/notify'
 import { can } from '@/services/permissions'
 import { format } from '@/utils/format'
+import { clientePrecisaValidacaoParaContrato } from '@/utils/validators'
 import { FORMAS_PAGAMENTO } from '@/constantes'
 
 definePage({ meta: { perm: 'vendas.criar' } })
@@ -214,18 +215,19 @@ function formatarDataExibicao(s) {
   return d.toLocaleDateString('pt-BR')
 }
 
-// No detalhe: várias parcelas do mesmo tipo mostram "18x de R$ 3.000,00"; o detalhe por data fica no contas a receber
+// No detalhe: várias parcelas do mesmo tipo mostram "18x de R$ [valor da parcela]"; o detalhe por data fica no contas a receber
 const pagamentosParaExibir = computed(() => {
   const list = venda.value?.pagamentos || []
   if (list.length === 0) return []
   const forma = list[0].forma_pagamento_chave
   const todasMesmaForma = list.every((p) => p.forma_pagamento_chave === forma)
   const total = list.reduce((acc, p) => acc + Number(p.valor ?? 0), 0)
+  const valorParcela = list.length > 0 ? total / list.length : 0
   if (list.length > 1 && todasMesmaForma) {
     return [
       {
         forma_pagamento_chave: forma,
-        resumo: `${list.length}x de ${format.currency(total)}`,
+        resumo: `${list.length}x de ${format.currency(valorParcela)}`,
         valor: total,
         agrupado: true,
       },
@@ -241,10 +243,17 @@ function irParaEdicao() {
   router.replace({ path: '/vendas/nova-venda', query: { vendaId: String(id) } })
 }
 
-/** Abre a tela de novo contrato vinculado a esta venda (para gerar/atualizar o contrato após editar a venda). */
+/** Abre a tela de novo contrato vinculado a esta venda. Regra: contrato não é gerado se o cliente não for validado. */
 function irParaContrato() {
   const id = vendaId.value
   if (!id) return
+  const cliente = venda.value?.cliente
+  if (cliente && clientePrecisaValidacaoParaContrato(cliente)) {
+    notify.error(
+      'O contrato não pode ser gerado enquanto o cliente não for validado. Valide o contratante em "Editar venda" (botão "Validar contratante") antes de gerar o contrato.',
+    )
+    return
+  }
   router.push({ path: '/contratos/novo', query: { vendaId: String(id) } })
 }
 

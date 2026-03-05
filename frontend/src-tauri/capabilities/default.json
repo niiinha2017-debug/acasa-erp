@@ -1,1 +1,19 @@
-{"$schema":"../gen/schemas/desktop-schema.json","identifier":"default","description":"enables the default permissions","windows":["main"],"permissions":["core:default","core:window:allow-set-title","updater:default","opener:default"]}
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "enables the default permissions",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-set-title",
+    "updater:default",
+    "opener:default",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "https://wa.me/**" },
+        { "url": "https://web.whatsapp.com/**" }
+      ]
+    }
+  ]
+}

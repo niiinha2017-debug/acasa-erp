@@ -8,6 +8,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+// Req já estava no import
 import { PermissoesService } from './permissoes.service';
 import { DefinirPermissoesUsuarioDto } from './dto/definir-permissoes-usuario.dto';
 import { MENU_SECTIONS, MenuItem, MenuSection } from './menu.schema';
@@ -38,8 +39,14 @@ export class PermissoesController {
   definirPermissoesDoUsuario(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: DefinirPermissoesUsuarioDto,
+    @Req() req: { user?: { id: number } },
   ) {
-    return this.service.definirPermissoesDoUsuario(id, dto.permissoes || []);
+    const alteradoPorUsuarioId = Number(req?.user?.id ?? 0);
+    return this.service.definirPermissoesDoUsuario(
+      id,
+      dto.permissoes || [],
+      alteradoPorUsuarioId,
+    );
   }
 
   @Get('permissoes/menu')

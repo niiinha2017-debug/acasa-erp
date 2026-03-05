@@ -1,7 +1,11 @@
 import { Injectable, HttpException } from '@nestjs/common';
+import { getStatusColorsConfig } from '../../shared/constantes/etapas-cores';
 
 @Injectable()
 export class UtilsService {
+  getStatusColorsConfig() {
+    return getStatusColorsConfig();
+  }
   async buscarCnpj(cnpj: string) {
     const limpo = String(cnpj || '').replace(/\D/g, '');
     if (limpo.length !== 14) {

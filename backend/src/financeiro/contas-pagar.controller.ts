@@ -33,15 +33,25 @@ export class ContasPagarController {
     return n;
   }
 
-  // ✅ LISTA CONSOLIDADA
+  // ✅ LISTA POR ABA (Para Fechar | Agendados | Pagos) ou consolidada legada
   @Get()
   @Permissoes('contas_pagar.ver')
   async listar(
+    @Query('visao') visao?: string,
     @Query('status') status?: string,
     @Query('data_ini') data_ini?: string,
     @Query('data_fim') data_fim?: string,
   ) {
     await this.service.atualizarVencidos();
+
+    const visaoNorm = (visao || '').trim().toUpperCase();
+    if (visaoNorm === 'PARA_FECHAR' || visaoNorm === 'AGENDADOS' || visaoNorm === 'PAGOS') {
+      return this.service.listarContasPagarPorAba({
+        visao: visaoNorm as 'PARA_FECHAR' | 'AGENDADOS' | 'PAGOS',
+        data_ini: data_ini?.trim() || undefined,
+        data_fim: data_fim?.trim() || undefined,
+      });
+    }
 
     return this.service.listarContasPagarConsolidado({
       status: status?.trim() || undefined,
@@ -69,6 +79,13 @@ export class ContasPagarController {
       data_ini: data_ini?.trim() || undefined,
       data_fim: data_fim?.trim() || undefined,
     });
+  }
+
+  // ✅ Painel de Obras Vigentes (obras em medição, produção ou montagem)
+  @Get('painel-obras-vigentes')
+  @Permissoes('contas_pagar.ver')
+  painelObrasVigentes() {
+    return this.service.getPainelObrasVigentes();
   }
 
   // ✅ PREVIEW DO FECHAMENTO (Etapa 1 do modal — não salva)

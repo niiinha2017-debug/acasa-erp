@@ -19,6 +19,13 @@
             </div>
 
             <Button
+              variant="secondary"
+              @click="router.push('/compras/sugestao')"
+            >
+              <i class="pi pi-shopping-bag mr-2"></i>
+              Sugestão de Compra
+            </Button>
+            <Button
               v-if="can('compras.criar')"
               variant="primary"
               @click="router.push('/compras/novo')"
@@ -93,7 +100,7 @@
           </template>
 
           <template #cell-status="{ row }">
-            <StatusBadge :value="row.status || 'CONCLUIDO'" />
+            <StatusBadge :value="statusExibicao(row)" />
           </template>
 
           <template #cell-acoes="{ row }">
@@ -153,6 +160,19 @@ const totalGeral = computed(() => compras.value.reduce((acc, c) => acc + Number(
 const totalInsumos = computed(() => compras.value.filter(c => c.categoria === 'INSUMO').reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
 const totalDespesas = computed(() => compras.value.filter(c => c.categoria === 'DESPESA').reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
 const totalInvestimentos = computed(() => compras.value.filter(c => c.categoria === 'INVESTIMENTO').reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
+
+/** Verde = já chegou/pago. Vermelho = atrasado (vencimento passado e em aberto). */
+function statusExibicao(row) {
+  const status = String(row.status || '').toUpperCase()
+  const vencimento = row.vencimento_em ? new Date(row.vencimento_em) : null
+  const hoje = new Date()
+  hoje.setHours(0, 0, 0, 0)
+  if (vencimento && status === 'EM_ABERTO') {
+    vencimento.setHours(0, 0, 0, 0)
+    if (vencimento < hoje) return 'ATRASADO'
+  }
+  return row.status || 'EM_ABERTO'
+}
 
 async function carregar() {
   if (!can('compras.ver')) return notify.error('Acesso negado.')

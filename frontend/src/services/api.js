@@ -1,29 +1,10 @@
 import axios from 'axios'
 import storage from '@/utils/storage'
 
-const DEBUG_ENDPOINT = 'http://127.0.0.1:7242/ingest/5584e6b5-c550-4991-8207-4f83f59c9ff1'
-const DEBUG_SESSION_ID = '1125e2'
 const MOJIBAKE_REGEX = /(Ã.|Â|�|â€™|â€œ|â€|ðŸ)/u
 
-function debugLog({ runId = 'pre-fix', hypothesisId, location, message, data = {} }) {
-  // #region agent log
-  fetch(DEBUG_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Debug-Session-Id': DEBUG_SESSION_ID
-    },
-    body: JSON.stringify({
-      sessionId: DEBUG_SESSION_ID,
-      runId,
-      hypothesisId,
-      location,
-      message,
-      data,
-      timestamp: Date.now()
-    })
-  }).catch(() => {})
-  // #endregion
+function debugLog() {
+  // Debug ingest desativado (evita ERR_CONNECTION_REFUSED quando o serviço não está rodando)
 }
 
 function findMojibake(value, path = 'root') {
@@ -49,18 +30,22 @@ function findMojibake(value, path = 'root') {
   return null
 }
 
-// ✅ baseURL certo pra WEB + TAURI
-// - Em produção web (Nginx): pode ser "/api"
-// - Em Tauri/dev: deve ser "https://acasamarcenaria.com.br/api" (via .env)
-// - Se não tiver VITE_API_URL definido, cai pra "/api"
-// Substitua a linha do BASE_URL por esta:
-const VITE_URL = import.meta.env.VITE_API_URL;
+// ✅ baseURL: Tauri e Android sem web rodando — usam sempre API remota (ou VITE_API_URL).
+// - VITE_API_URL no .env: usado em todos os ambientes.
+// - Sem .env: Tauri e Android usam produção; só navegador em dev usa localhost.
+const VITE_URL = import.meta.env.VITE_API_URL
 const IS_DEV = !!import.meta.env.DEV
+const isTauri = typeof window !== 'undefined' && (!!window.__TAURI__ || !!window.__TAURI_INTERNALS__)
 
-// Se o .env falhar, usamos a URL real direto para o Tauri não se perder
-const BASE_URL = VITE_URL 
-  ? VITE_URL.replace(/\/+$/, '') 
-  : (IS_DEV ? 'http://127.0.0.1:3000/api' : 'https://acasamarcenaria.com.br/api'); 
+function getBaseUrl() {
+  if (VITE_URL) return String(VITE_URL).replace(/\/+$/, '')
+  // Tauri ou build de produção: API em produção (não há “web” rodando).
+  if (isTauri || !IS_DEV) return 'https://acasamarcenaria.com.br/api'
+  // Navegador em dev: localhost
+  return 'http://127.0.0.1:3000/api'
+}
+
+const BASE_URL = getBaseUrl() 
 
 
 const api = axios.create({
@@ -111,15 +96,34 @@ api.interceptors.response.use(
   async (error) => {
     const status = error?.response?.status
     const original = error?.config
+    const isNetworkError = !error?.response && (error?.code === 'ERR_NETWORK' || error?.message?.includes('Network Error'))
 
     // DEBUG erro (mostra mensagem completa do backend)
     const errData = error?.response?.data
     const requestUrl = (original?.baseURL || '') + (original?.url || '')
     const isMe = (original?.url || '').includes('/auth/me')
-    if (!(status === 401 && isMe)) {
-      console.log('[API] ERROR status =', status)
-      console.log('[API] ERROR url =', requestUrl)
-      console.log('[API] ERROR data =', typeof errData === 'object' ? JSON.stringify(errData, null, 2) : errData)
+    const is401 = status === 401
+    // 401: loga uma vez só (evita dezenas de linhas iguais quando várias requisições falham sem token)
+    if (is401 && !isMe) {
+      if (!window.__acasa_401_logged) {
+        window.__acasa_401_logged = true
+        setTimeout(() => { window.__acasa_401_logged = false }, 2000)
+        console.warn('[API] Não autenticado (401). Faça login em /login ou verifique se o token expirou.')
+      }
+    } else if (!(is401 && isMe)) {
+      if (isNetworkError) {
+        const base = original?.baseURL || 'http://localhost:3000/api'
+        console.warn(
+          '[API] Backend indisponível (conexão recusada).',
+          'URL:', base,
+          '— Requisição:', requestUrl,
+          '\n→ Para desenvolvimento local, inicie o backend: cd acasa-erp/backend && npm run start:dev'
+        )
+      } else {
+        console.log('[API] ERROR status =', status)
+        console.log('[API] ERROR url =', requestUrl)
+        console.log('[API] ERROR data =', typeof errData === 'object' ? JSON.stringify(errData, null, 2) : errData)
+      }
       const badErrorData = findMojibake(errData)
       if (badErrorData) {
         debugLog({

@@ -379,7 +379,8 @@ export class AnalyticsService {
 
   /**
    * DRE mensal (Demonstração do Resultado do Exercício) por competência.
-   * Receita = vendas (data_venda no mês). Despesas = despesas SAÍDA com vencimento no mês.
+   * Receita = venda loja (vendas) + venda plano de corte.
+   * Deduções: custo da compra, custo hora de produção, despesas do período.
    */
   async getDreMensal(
     mes: number,
@@ -387,7 +388,11 @@ export class AnalyticsService {
   ): Promise<{
     mes: number;
     ano: number;
+    receita_venda_loja: number;
+    receita_venda_plano_corte: number;
     receita_total: number;
+    custo_compra: number;
+    custo_hora_producao: number;
     despesas_total: number;
     despesas_por_categoria: { categoria: string; total: number }[];
     resultado: number;
@@ -396,17 +401,72 @@ export class AnalyticsService {
     const fimMes = new Date(ano, mes, 0, 23, 59, 59);
     const mesStr = `${ano}-${String(mes).padStart(2, '0')}`;
 
-    // Receita: vendas com data_venda no mês (valor_total)
-    const vendasMes = await this.prisma.vendas.aggregate({
-      where: {
-        data_venda: { gte: inicioMes, lte: fimMes },
-      },
-      _sum: { valor_total: true },
-    });
-    const receita_total =
-      Math.round(Number(vendasMes._sum.valor_total ?? 0) * 100) / 100;
+    // Receita: venda loja (vendas com data_venda no mês)
+    const [vendasLoja, planoCorteMes, comprasMes] = await Promise.all([
+      this.prisma.vendas.aggregate({
+        where: {
+          data_venda: { gte: inicioMes, lte: fimMes },
+        },
+        _sum: { valor_total: true },
+      }),
+      this.prisma.plano_corte.aggregate({
+        where: {
+          data_venda: { gte: inicioMes, lte: fimMes },
+        },
+        _sum: { valor_total: true },
+      }),
+      this.prisma.compras.aggregate({
+        where: {
+          data_compra: { gte: inicioMes, lte: fimMes },
+        },
+        _sum: { valor_total: true },
+      }),
+    ]);
 
-    // Despesas: mesmo critério de getDreDespesas, filtrado ao mês
+    let apontamentosMes: {
+      horas: unknown;
+      custo_calculado: unknown;
+      funcionario: { custo_hora: unknown } | null;
+    }[] = [];
+    try {
+      apontamentosMes = await this.prisma
+        .apontamento_producao.findMany({
+          where: { data: { gte: inicioMes, lte: fimMes } },
+          select: {
+            horas: true,
+            custo_calculado: true,
+            funcionario: { select: { custo_hora: true } },
+          },
+        })
+        .catch(() => [] as typeof apontamentosMes);
+    } catch {
+      // Tabela apontamento_producao pode não existir se a migração não foi aplicada
+    }
+
+    const receita_venda_loja =
+      Math.round(Number(vendasLoja._sum.valor_total ?? 0) * 100) / 100;
+    const receita_venda_plano_corte =
+      Math.round(Number(planoCorteMes._sum.valor_total ?? 0) * 100) / 100;
+    const receita_total =
+      Math.round((receita_venda_loja + receita_venda_plano_corte) * 100) / 100;
+
+    const custo_compra =
+      Math.round(Number(comprasMes._sum.valor_total ?? 0) * 100) / 100;
+
+    let custo_hora_producao = 0;
+    for (const ap of apontamentosMes) {
+      const custo = Number(ap.custo_calculado ?? 0);
+      if (custo > 0) {
+        custo_hora_producao += custo;
+      } else {
+        const horas = Number(ap.horas ?? 0);
+        const custoHora = Number(ap.funcionario?.custo_hora ?? 0);
+        custo_hora_producao += horas * custoHora;
+      }
+    }
+    custo_hora_producao = Math.round(custo_hora_producao * 100) / 100;
+
+    // Despesas do período: mesmo critério de getDreDespesas, filtrado ao mês
     const dreDespesas = await this.getDreDespesas(
       `${ano}-${String(mes).padStart(2, '0')}-01`,
       `${ano}-${String(mes).padStart(2, '0')}-31`,
@@ -431,15 +491,274 @@ export class AnalyticsService {
     }));
     despesas_por_categoria.sort((a, b) => b.total - a.total);
 
-    const resultado = Math.round((receita_total - despesas_total) * 100) / 100;
+    const resultado =
+      Math.round(
+        (receita_total -
+          custo_compra -
+          custo_hora_producao -
+          despesas_total) *
+          100,
+      ) / 100;
 
     return {
       mes,
       ano,
+      receita_venda_loja,
+      receita_venda_plano_corte,
       receita_total,
+      custo_compra,
+      custo_hora_producao,
       despesas_total,
       despesas_por_categoria,
       resultado,
+    };
+  }
+
+  /**
+   * DRE do plano de corte: receita apenas de plano_corte (data_venda no mês).
+   * Sem custo de compra (plano de corte não tem compra). Custo hora e despesas rateados pela participação na receita total.
+   */
+  async getDrePlanoCorte(
+    mes: number,
+    ano: number,
+  ): Promise<{
+    mes: number;
+    ano: number;
+    receita: number;
+    custo_hora_producao_rateado: number;
+    despesas_total_rateado: number;
+    resultado: number;
+  }> {
+    const dre = await this.getDreMensal(mes, ano);
+    const receita = dre.receita_venda_plano_corte;
+    const receitaTotal = dre.receita_total;
+    const rateio =
+      receitaTotal > 0 ? receita / receitaTotal : 0;
+    const custo_hora_producao_rateado =
+      Math.round(dre.custo_hora_producao * rateio * 100) / 100;
+    const despesas_total_rateado =
+      Math.round(dre.despesas_total * rateio * 100) / 100;
+    const resultado =
+      Math.round(
+        (receita - custo_hora_producao_rateado - despesas_total_rateado) * 100,
+      ) / 100;
+    return {
+      mes: dre.mes,
+      ano: dre.ano,
+      receita,
+      custo_hora_producao_rateado,
+      despesas_total_rateado,
+      resultado,
+    };
+  }
+
+  /**
+   * DRE do período detalhada por produção (venda) de cada cliente e por ambiente registrado.
+   * Cada linha = um ambiente de uma venda (cliente + venda + ambiente): receita, custo compra, custo produção rateado, resultado.
+   */
+  async getDrePeriodoPorClienteAmbiente(
+    mes: number,
+    ano: number,
+  ): Promise<{
+    mes: number;
+    ano: number;
+    linhas: {
+      cliente_id: number;
+      cliente_nome: string;
+      venda_id: number;
+      data_venda: string;
+      nome_ambiente: string;
+      receita: number;
+      custo_compra: number;
+      custo_hora_producao: number;
+      despesas_periodo_rateado: number;
+      resultado: number;
+    }[];
+    despesas_periodo: number;
+  }> {
+    const inicioMes = new Date(ano, mes - 1, 1, 0, 0, 0);
+    const fimMes = new Date(ano, mes, 0, 23, 59, 59);
+
+    const vendas = await this.prisma.vendas.findMany({
+      where: { data_venda: { gte: inicioMes, lte: fimMes } },
+      select: {
+        id: true,
+        data_venda: true,
+        cliente_id: true,
+        cliente: { select: { nome_fantasia: true, nome_completo: true } },
+        itens: { select: { id: true, nome_ambiente: true, valor_total: true } },
+      },
+      orderBy: [{ cliente: { nome_fantasia: 'asc' } }, { data_venda: 'asc' }],
+    });
+
+    type Key = string;
+    const receitaMap = new Map<Key, number>();
+    const custoCompraMap = new Map<Key, number>();
+    const vendaInfoMap = new Map<
+      Key,
+      { cliente_id: number; cliente_nome: string; venda_id: number; data_venda: Date }
+    >();
+
+    for (const v of vendas) {
+      const clienteNome =
+        v.cliente?.nome_fantasia ||
+        v.cliente?.nome_completo ||
+        'Cliente';
+      for (const item of v.itens) {
+        const key: Key = `${v.id}|${item.nome_ambiente}`;
+        const receita = Number(item.valor_total ?? 0);
+        receitaMap.set(key, (receitaMap.get(key) ?? 0) + receita);
+        if (!vendaInfoMap.has(key)) {
+          vendaInfoMap.set(key, {
+            cliente_id: v.cliente_id,
+            cliente_nome: clienteNome,
+            venda_id: v.id,
+            data_venda: v.data_venda,
+          });
+        }
+      }
+    }
+
+    const vendaIds = vendas.map((x) => x.id);
+    if (vendaIds.length > 0) {
+      // Compras vinculadas às vendas do período: inclui todas (sem filtrar por data_compra) para o custo do cliente entrar na DRE
+      const compras = await this.prisma.compras.findMany({
+        where: { venda_id: { in: vendaIds } },
+        select: {
+          id: true,
+          venda_id: true,
+          venda_item_id: true,
+          valor_total: true,
+          venda_item: { select: { nome_ambiente: true } },
+          rateios: { select: { nome_ambiente: true, valor_alocado: true } },
+        },
+      });
+
+      for (const c of compras) {
+        const vendaId = c.venda_id!;
+        const valorTotal = Number(c.valor_total ?? 0);
+        if (c.venda_item_id != null && c.venda_item?.nome_ambiente) {
+          const key: Key = `${vendaId}|${c.venda_item.nome_ambiente}`;
+          custoCompraMap.set(key, (custoCompraMap.get(key) ?? 0) + valorTotal);
+        } else if (c.rateios?.length) {
+          for (const r of c.rateios) {
+            const key: Key = `${vendaId}|${r.nome_ambiente}`;
+            custoCompraMap.set(
+              key,
+              (custoCompraMap.get(key) ?? 0) + Number(r.valor_alocado ?? 0),
+            );
+          }
+        }
+      }
+    }
+
+    const custoProducaoPorVenda = new Map<number, number>();
+    if (vendaIds.length > 0) {
+      try {
+        const apontamentos = await this.prisma.apontamento_producao.findMany({
+          where: {
+            data: { gte: inicioMes, lte: fimMes },
+            venda_id: { in: vendaIds },
+          },
+        select: {
+          venda_id: true,
+          horas: true,
+          custo_calculado: true,
+          funcionario: { select: { custo_hora: true } },
+        },
+      });
+      for (const ap of apontamentos) {
+        const vid = ap.venda_id ?? 0;
+        if (vid === 0) continue;
+        let custo = Number(ap.custo_calculado ?? 0);
+        if (custo <= 0) {
+          const horas = Number(ap.horas ?? 0);
+          const ch = Number(ap.funcionario?.custo_hora ?? 0);
+          custo = horas * ch;
+        }
+        custoProducaoPorVenda.set(
+          vid,
+          (custoProducaoPorVenda.get(vid) ?? 0) + custo,
+        );
+      }
+      } catch {
+        // tabela pode não existir
+      }
+    }
+
+    const receitaPorVenda = new Map<number, number>();
+    for (const [key, val] of receitaMap) {
+      const vendaId = Number(key.split('|')[0]);
+      receitaPorVenda.set(vendaId, (receitaPorVenda.get(vendaId) ?? 0) + val);
+    }
+
+    const linhas: {
+      cliente_id: number;
+      cliente_nome: string;
+      venda_id: number;
+      data_venda: string;
+      nome_ambiente: string;
+      receita: number;
+      custo_compra: number;
+      custo_hora_producao: number;
+      despesas_periodo_rateado: number;
+      resultado: number;
+    }[] = [];
+
+    for (const [key, receita] of receitaMap) {
+      const info = vendaInfoMap.get(key);
+      if (!info) continue;
+      const [vendaIdStr, nomeAmbiente] = key.split('|');
+      const vendaId = Number(vendaIdStr);
+      const custo_compra = Math.round((custoCompraMap.get(key) ?? 0) * 100) / 100;
+      const receitaVenda = receitaPorVenda.get(vendaId) ?? 1;
+      const custoVenda = custoProducaoPorVenda.get(vendaId) ?? 0;
+      const custo_hora_producao =
+        receitaVenda > 0
+          ? Math.round((custoVenda * (receita / receitaVenda)) * 100) / 100
+          : 0;
+      linhas.push({
+        cliente_id: info.cliente_id,
+        cliente_nome: info.cliente_nome,
+        venda_id: info.venda_id,
+        data_venda: info.data_venda.toISOString().slice(0, 10),
+        nome_ambiente: nomeAmbiente,
+        receita: Math.round(receita * 100) / 100,
+        custo_compra,
+        custo_hora_producao,
+        despesas_periodo_rateado: 0,
+        resultado: Math.round((receita - custo_compra - custo_hora_producao) * 100) / 100,
+      });
+    }
+
+    const mesStr = `${ano}-${String(mes).padStart(2, '0')}`;
+    const dreDespesas = await this.getDreDespesas(
+      `${ano}-${String(mes).padStart(2, '0')}-01`,
+      `${ano}-${String(mes).padStart(2, '0')}-31`,
+    );
+    let despesas_periodo = 0;
+    for (const d of dreDespesas) {
+      if (d.mes === mesStr) despesas_periodo += d.total;
+    }
+    despesas_periodo = Math.round(despesas_periodo * 100) / 100;
+
+    const totalReceita = linhas.reduce((s, l) => s + l.receita, 0);
+    for (const linha of linhas) {
+      const despesas_periodo_rateado =
+        totalReceita > 0
+          ? Math.round((despesas_periodo * (linha.receita / totalReceita)) * 100) / 100
+          : 0;
+      linha.despesas_periodo_rateado = despesas_periodo_rateado;
+      linha.resultado = Math.round(
+        (linha.receita - linha.custo_compra - linha.custo_hora_producao - despesas_periodo_rateado) * 100,
+      ) / 100;
+    }
+
+    return {
+      mes,
+      ano,
+      linhas,
+      despesas_periodo,
     };
   }
 }

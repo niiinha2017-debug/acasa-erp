@@ -1,7 +1,7 @@
 <template>
   <div class="w-full h-full">
     <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
+      <div class="h-1 w-full bg-emerald-600 rounded-t-2xl" aria-hidden></div>
 
       <PageHeader
         title="Agenda de Venda"
@@ -83,15 +83,21 @@
                   v-for="event in dayEvents(day.date).slice(0, 3)"
                   :key="event.id"
                   type="button"
-                  :class="['w-full text-left px-2.5 py-2 rounded-lg text-[10px] text-white hover:ring-2 hover:ring-brand-primary transition-colors', corCardCalendarioPorCategoria(event.categoria)]"
-                  :title="eventTitle(event)"
+                  :class="[
+                    'w-full text-left px-2.5 py-1.5 rounded-lg text-[10px] text-white hover:ring-2 hover:ring-brand-primary transition-colors',
+                    eventAtrasado(event) ? 'bg-red-600 hover:bg-red-500' : getCalendarioEventClassVendas(event.categoria, event.status),
+                  ]"
+                  :title="eventTooltipCalendar(event)"
                   @click.stop="openModalForEvent(event)"
                 >
-                  <div class="font-bold truncate leading-snug">
-                    {{ event?.cliente?.nome_completo || event?.cliente?.razao_social || 'Cliente' }}
+                  <div class="font-semibold text-[9px] text-white/90 leading-tight">
+                    {{ timeLabel(event.inicio_em) }} – {{ timeLabel(event.fim_em) }}
                   </div>
-                  <div class="text-[9px] font-medium text-slate-300 truncate leading-snug mt-0.5">
-                    {{ timeLabel(event.inicio_em) }} · {{ event.titulo }}
+                  <div class="font-bold truncate leading-snug mt-0.5">
+                    {{ event.titulo }}
+                  </div>
+                  <div class="text-[9px] text-white/80 truncate leading-snug">
+                    {{ event?.cliente?.nome_completo || event?.cliente?.razao_social || 'Cliente' }}
                   </div>
                 </button>
                 <div
@@ -115,29 +121,63 @@
             </div>
 
             <div v-if="selectedEvents.length" class="space-y-3">
-              <div class="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-2">
-                Tarefas do dia
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <div class="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                  Tarefas do dia
+                </div>
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-brand-primary hover:bg-brand-primary/10 border border-brand-primary/30 transition-colors"
+                  @click="listaTarefasExpandida = !listaTarefasExpandida"
+                >
+                  <i class="pi" :class="listaTarefasExpandida ? 'pi pi-window-minimize' : 'pi pi-window-maximize'"></i>
+                  {{ listaTarefasExpandida ? 'Recolher' : 'Expandir' }}
+                </button>
               </div>
               <div
-                v-for="event in selectedEvents"
+                class="overflow-y-auto overflow-x-hidden pr-2 space-y-3 transition-[max-height] duration-300"
+                :class="listaTarefasExpandida ? 'max-h-[min(85vh,1200px)]' : 'max-h-[min(55vh,480px)]'"
+              >
+                <div
+                  v-for="event in selectedEventsParaLista"
                 :key="event.id"
-                class="w-full text-left p-4 rounded-xl border border-border-ui bg-bg-card hover:border-brand-primary/40 hover:shadow-md transition-all border-l-4"
-                :class="corBordaCardPorCategoria(event.categoria)"
+                class="w-full text-left p-4 rounded-xl border border-border-ui bg-bg-card hover:border-brand-primary/40 hover:shadow-md transition-all"
+                :class="[
+                  eventAtrasado(event) ? 'border-l-4 border-l-red-500 border-red-400 bg-red-50 dark:bg-red-950/40' : getProcessColorByStatusVendas(event.categoria, event.status).borderLeftClass,
+                ]"
               >
                 <div class="text-sm font-bold text-text-main leading-snug">
                   {{ eventTitle(event) }}
                 </div>
-                <div class="text-xs font-medium text-text-muted mt-1">
+                <div class="mt-2 text-[10px] font-medium text-text-muted">
+                  Responsável: {{ event.criado_por_usuario?.nome || 'Não informado' }}
+                </div>
+                <div
+                  v-if="event.alterado_por_usuario"
+                  class="mt-0.5 text-[10px] font-medium text-text-muted"
+                >
+                  Editado por: {{ event.alterado_por_usuario.nome }}
+                </div>
+                <div class="text-xs font-medium text-text-muted mt-0.5">
                   {{ timeLabel(event.inicio_em) }} – {{ timeLabel(event.fim_em) }}
                 </div>
-                <div class="mt-3 flex flex-wrap items-center gap-2">
+                <p v-if="event.orcamento_id || event.orcamento?.id" class="mt-1 text-[10px] font-medium text-text-muted">
+                  Orçamento #{{ event.orcamento?.id ?? event.orcamento_id }}
+                </p>
+                <p v-if="event.venda_id || event.venda?.id" class="mt-0.5 text-[10px] font-medium text-text-muted">
+                  Venda #{{ event.venda?.id ?? event.venda_id }}
+                </p>
+                <div class="mt-2 flex flex-wrap items-center gap-2">
                   <span v-if="!isAgendaLoja" class="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase bg-brand-primary/10 text-brand-primary border border-brand-primary/30">
                     {{ etapaLabelPorCategoria(event.categoria) }}
                   </span>
-                  <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase" :class="statusExecucaoClass(event)">
+                  <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase" :class="getProcessColorByStatusVendas(event.categoria, event.status).badgeClass">
                     {{ statusExecucaoLabel(event) }}
                   </span>
                 </div>
+                <p v-if="eventAtrasado(event)" class="mt-1.5 text-[10px] text-red-600 dark:text-red-400">
+                  O horário de término ({{ timeLabel(event.fim_em) }}) já passou. Marque como concluído se a tarefa foi realizada.
+                </p>
                 <div
                   v-if="event.plano_corte_id"
                   class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase"
@@ -150,49 +190,148 @@
                   {{ planoBadgeLabel(planoStatusForEvent(event)) }}
                 </div>
                 <div class="mt-3 flex flex-wrap items-center gap-2">
-                  <Button
-                    v-if="normalizarStatusExecucao(event?.status) !== 'CONCLUIDO'"
-                    size="sm"
-                    variant="primary"
-                    @click.stop="atualizarStatusExecucao(event, 'EM_ANDAMENTO')"
-                  >
-                    Iniciar
-                  </Button>
-                  <Button
-                    v-if="normalizarStatusExecucao(event?.status) === 'EM_ANDAMENTO'"
-                    size="sm"
-                    variant="secondary"
-                    @click.stop="atualizarStatusExecucao(event, 'PAUSADO')"
-                  >
-                    Pausar
-                  </Button>
-                  <Button
-                    v-if="normalizarStatusExecucao(event?.status) !== 'CONCLUIDO'"
-                    size="sm"
-                    variant="success"
-                    @click.stop="atualizarStatusExecucao(event, 'CONCLUIDO')"
-                  >
-                    {{ botaoConcluirLabel(event) }}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    @click.stop="openModalForEvent(event)"
-                  >
-                    Editar
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    @click.stop="removeTask(event)"
-                  >
-                    Cancelar
-                  </Button>
+                  <template v-if="podeEditarEvento(event)">
+                    <!-- Agendar medida: só Editar e Cancelar (atribuição ao funcionário é feita na timeline) -->
+                    <template v-if="ehAgendarMedida(event)">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        @click.stop="openModalForEvent(event)"
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        @click.stop="removeTask(event)"
+                      >
+                        Excluir
+                      </Button>
+                    </template>
+                    <!-- Outras tarefas: cronômetro (venda) ou status da tarefa -->
+                    <template v-else>
+                      <!-- Cronômetro na venda: 1 tarefa, cada funcionário com seu cronômetro -->
+                      <template v-if="responsavelLojaId && getCronometroAbertoParaEvento(event)">
+                        <template v-if="isCronometroPausado(getCronometroAbertoParaEvento(event))">
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            @click.stop="retomarCronometroVenda(getCronometroAbertoParaEvento(event))"
+                          >
+                            Iniciar
+                          </Button>
+                        </template>
+                        <template v-else>
+                          <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-slate-800 text-white">
+                            {{ formatElapsed(elapsedCronometro(getCronometroAbertoParaEvento(event))) }}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            @click.stop="pausarCronometroVenda(getCronometroAbertoParaEvento(event))"
+                          >
+                            Pausar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="success"
+                            @click.stop="concluirCronometroVenda(getCronometroAbertoParaEvento(event), event)"
+                          >
+                            Concluir
+                          </Button>
+                        </template>
+                      </template>
+                      <template v-else-if="responsavelLojaId">
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          @click.stop="iniciarCronometroVenda(event)"
+                        >
+                          Iniciar
+                        </Button>
+                      </template>
+                      <template v-else>
+                        <Button
+                          v-if="normalizarStatusExecucao(event?.status) !== 'CONCLUIDO'"
+                          size="sm"
+                          variant="primary"
+                          @click.stop="atualizarStatusExecucao(event, 'EM_ANDAMENTO')"
+                        >
+                          Iniciar
+                        </Button>
+                        <Button
+                          v-if="normalizarStatusExecucao(event?.status) === 'EM_ANDAMENTO'"
+                          size="sm"
+                          variant="secondary"
+                          @click.stop="atualizarStatusExecucao(event, 'PAUSADO')"
+                        >
+                          Pausar
+                        </Button>
+                        <Button
+                          v-if="normalizarStatusExecucao(event?.status) !== 'CONCLUIDO'"
+                          size="sm"
+                          variant="success"
+                          @click.stop="atualizarStatusExecucao(event, 'CONCLUIDO')"
+                        >
+                          {{ botaoConcluirLabel(event) }}
+                        </Button>
+                      </template>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        @click.stop="openModalForEvent(event)"
+                      >
+                        Editar
+                      </Button>
+                      <RouterLink
+                        v-if="canProducao"
+                        :to="`/producao/apontamento?agenda=l-${event.id}`"
+                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-700 hover:bg-emerald-200/80 dark:hover:bg-emerald-800/50 transition-colors"
+                      >
+                        <i class="pi pi-stopwatch"></i>
+                        Timeline
+                      </RouterLink>
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        @click.stop="removeTask(event)"
+                      >
+                        Excluir
+                      </Button>
+                    </template>
+                  </template>
+                  <template v-else>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      @click.stop="openModalForEvent(event)"
+                    >
+                      Ver detalhes
+                    </Button>
+                    <RouterLink
+                      v-if="canProducao"
+                      :to="`/producao/apontamento?agenda=l-${event.id}`"
+                      class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-700 hover:bg-emerald-200/80 dark:hover:bg-emerald-800/50 transition-colors"
+                    >
+                      <i class="pi pi-stopwatch"></i>
+                      Ver na timeline
+                    </RouterLink>
+                  </template>
                 </div>
               </div>
+              </div>
             </div>
-            <div v-else class="text-sm font-medium text-text-muted py-4 text-center">
-              Nenhum agendamento para este dia.
+            <div v-else class="py-4 text-center">
+              <p class="text-sm font-medium text-text-muted mb-3">Nenhum agendamento para este dia.</p>
+              <Button
+                variant="primary"
+                size="sm"
+                class="rounded-xl"
+                @click="openModalNovaTarefaNoDia"
+              >
+                <i class="pi pi-calendar-plus mr-1.5 text-xs" />
+                Agendar tarefa neste dia
+              </Button>
             </div>
           </div>
         </div>
@@ -206,9 +345,17 @@
         <div
           v-if="modalOpen"
           class="fixed inset-0 z-[9995] flex items-center justify-center p-4 sm:p-6 bg-slate-900/50 dark:bg-black/50 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-agenda-venda-titulo"
           @click.self="closeModal"
+          @keydown.escape="closeModal"
         >
-        <div class="w-full max-w-[760px] max-h-[90vh] flex flex-col rounded-2xl border border-border-ui bg-bg-card shadow-xl overflow-hidden">
+        <div
+          ref="modalContentRef"
+          tabindex="-1"
+          class="w-full max-w-[760px] max-h-[90vh] flex flex-col rounded-2xl border border-border-ui bg-bg-card shadow-xl overflow-hidden outline-none"
+        >
           <div class="h-1 flex-shrink-0 bg-brand-primary" />
           <header class="flex items-center justify-between flex-shrink-0 px-5 py-4 border-b border-border-ui bg-bg-card">
             <div class="flex items-center gap-3 min-w-0">
@@ -216,7 +363,7 @@
                 <i class="pi pi-calendar-plus text-brand-primary text-lg"></i>
               </div>
               <div class="min-w-0">
-                <h2 class="text-lg font-semibold text-text-main truncate">
+                <h2 id="modal-agenda-venda-titulo" class="text-lg font-semibold text-text-main truncate">
                   {{ funcionarioNome || 'Agendar tarefa' }}
                 </h2>
                 <p class="text-xs font-medium text-text-muted truncate">
@@ -235,12 +382,21 @@
           </header>
 
           <div class="overflow-y-auto flex-1 p-5 md:p-6">
-        <div class="flex items-center gap-2 text-[11px] font-semibold text-text-muted mb-4">
+        <div class="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-text-muted mb-4">
           <span class="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700/50 border border-border-ui">
             Agenda de Venda
           </span>
           <span v-if="editingEvent" class="px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700/50 border border-border-ui">
             Edição
+          </span>
+          <span v-if="editingEvent" class="px-2.5 py-1 rounded-full bg-brand-primary/10 border border-brand-primary/30 text-brand-primary dark:text-brand-primary text-[11px] font-medium">
+            Responsável: {{ editingEvent.criado_por_usuario?.nome || 'Não informado' }}
+          </span>
+          <span v-if="editingEvent?.alterado_por_usuario" class="px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-[11px] font-medium">
+            Editado por: {{ editingEvent.alterado_por_usuario.nome }}
+          </span>
+          <span v-if="editingEvent && !podeEditarEvento(editingEvent)" class="px-2.5 py-1 rounded-full bg-slate-200 dark:bg-slate-600/50 text-slate-700 dark:text-slate-300 text-[11px] font-medium">
+            Somente visualização (apenas o criador ou admin pode editar)
           </span>
         </div>
 
@@ -249,7 +405,10 @@
           class="mb-4 p-3 rounded-xl border border-border-ui bg-slate-50 dark:bg-slate-800/30"
         >
           <label class="block text-[11px] font-bold text-text-soft mb-2">Origem</label>
-          <div class="flex flex-wrap gap-2">
+          <div v-if="somenteVisualizacaoAgenda" class="rounded-xl border border-border-ui bg-bg-card px-3 py-2 text-xs font-semibold text-text-main">
+            {{ opcoesOrigemModal.find(o => o.value === taskForm.origemFluxo)?.label || taskForm.origemFluxo || '—' }}
+          </div>
+          <div v-else class="flex flex-wrap gap-2">
             <button
               v-for="origem in opcoesOrigemModal"
               :key="origem.value"
@@ -269,9 +428,17 @@
             
             <div v-if="isAgendaLoja" class="mb-3">
               <label class="block text-xs font-bold mb-1 text-text-main">Tipo de tarefa</label>
+              <div
+                v-if="somenteVisualizacaoAgenda"
+                class="rounded-xl border border-border-ui bg-bg-card px-3 py-2 text-xs font-semibold text-text-main"
+              >
+                {{ opcoesTipoAgendamento.find(o => o.value === (taskForm.categoria || editingEvent?.categoria))?.label || taskForm.categoria || '—' }}
+              </div>
               <select
+                v-else
                 v-model="taskForm.categoria"
-                class="w-full h-10 bg-bg-card border border-border-ui rounded-xl px-3 text-xs font-semibold text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
+                :disabled="eventoFinalizado"
+                class="w-full h-10 bg-bg-card border border-border-ui rounded-xl px-3 text-xs font-semibold text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <option
                   v-for="opt in opcoesTipoAgendamento"
@@ -321,6 +488,14 @@
               </div>
             </div>
 
+            <!-- Responsável pelo agendamento (quem criou): visível para todos, inclusive em modo somente leitura -->
+            <div v-if="editingEvent" class="mt-3">
+              <label class="block text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1">Responsável pelo agendamento</label>
+              <div class="rounded-xl border border-border-ui bg-bg-card px-3 py-2 text-xs font-semibold text-text-main">
+                {{ editingEvent.criado_por_usuario?.nome || 'Não informado' }}
+              </div>
+            </div>
+
             <div class="mt-4">
               <label class="block text-xs font-bold mb-1 text-text-main">Cliente</label>
               <div
@@ -344,9 +519,29 @@
                 label=""
                 placeholder="Selecione o cliente..."
                 :options="clientesOptions"
+                :disabled="somenteVisualizacaoAgenda || eventoFinalizado"
               />
             </div>
 
+            <!-- Orçamento e venda vinculados (exibição ao editar) -->
+            <div
+              v-if="editingEvent && (editingEvent.orcamento_id || editingEvent.orcamento?.id)"
+              class="mt-3"
+            >
+              <label class="block text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1">Orçamento vinculado</label>
+              <div class="rounded-xl border border-border-ui bg-bg-card px-3 py-2 text-xs font-semibold text-text-main">
+                Orçamento #{{ editingEvent.orcamento?.id ?? editingEvent.orcamento_id }}
+              </div>
+            </div>
+            <div
+              v-if="editingEvent && (editingEvent.venda_id || editingEvent.venda?.id)"
+              class="mt-3"
+            >
+              <label class="block text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1">Venda vinculada</label>
+              <div class="rounded-xl border border-border-ui bg-bg-card px-3 py-2 text-xs font-semibold text-text-main">
+                Venda #{{ editingEvent.venda?.id ?? editingEvent.venda_id }}
+              </div>
+            </div>
             <!-- APRESENTACAO: vincula ao orçamento -->
             <div
               v-if="!editingEvent && canVendas && taskForm.categoria === 'APRESENTACAO'"
@@ -391,7 +586,14 @@
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-[10px] font-bold mb-1 text-text-soft">Início</label>
+                <div
+                  v-if="somenteVisualizacaoAgenda || eventoFinalizado"
+                  class="flex h-10 items-center rounded-xl border border-border-ui bg-bg-card px-3 text-xs font-semibold text-text-main"
+                >
+                  {{ formatDateTimeExibicao(taskForm.inicio) || '—' }}
+                </div>
                 <input
+                  v-else
                   type="datetime-local"
                   v-model="taskForm.inicio"
                   class="w-full h-10 bg-bg-card border border-border-ui rounded-xl px-3 text-xs font-semibold text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
@@ -399,7 +601,14 @@
               </div>
               <div>
                 <label class="block text-[10px] font-bold mb-1 text-text-soft">Término</label>
+                <div
+                  v-if="somenteVisualizacaoAgenda || eventoFinalizado"
+                  class="flex h-10 items-center rounded-xl border border-border-ui bg-bg-card px-3 text-xs font-semibold text-text-main"
+                >
+                  {{ formatDateTimeExibicao(taskForm.fim) || '—' }}
+                </div>
                 <input
+                  v-else
                   type="datetime-local"
                   v-model="taskForm.fim"
                   class="w-full h-10 bg-bg-card border border-border-ui rounded-xl px-3 text-xs font-semibold text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
@@ -408,123 +617,20 @@
             </div>
           </section>
 
-          <section
-            v-if="!isAgendaLoja"
-            class="p-4 rounded-xl border border-border-ui bg-slate-50/80 dark:bg-slate-800/30 space-y-3"
-          >
-            <div class="text-[10px] font-bold uppercase tracking-wider text-text-muted">
-              3. Equipe e horário de cada um
-            </div>
-
-            <div v-if="isAdmin" class="space-y-2">
-              <div v-if="taskForm.funcionarioIds.length" class="flex flex-wrap gap-2 mt-1">
-                <span
-                  v-for="fid in taskForm.funcionarioIds"
-                  :key="fid"
-                  class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold bg-slate-200 dark:bg-slate-600 text-text-main"
-                >
-                  {{ funcionarioNomeById(fid) || 'Funcionário' }}
-                  <button
-                    v-if="String(fid) !== String(responsavelLojaId || '')"
-                    type="button"
-                    class="text-slate-500 hover:text-rose-500"
-                    @click="removerFuncionario(fid)"
-                    aria-label="Remover"
-                  >
-                    <i class="pi pi-times text-[10px]"></i>
-                  </button>
-                </span>
-              </div>
-
-              <div class="flex items-end gap-2">
-                <div class="flex-1">
-                  <SearchInput
-                    v-model="funcionarioSelecionado"
-                    mode="select"
-                    label="Adicionar funcionário"
-                    placeholder="Selecione..."
-                    :options="funcionariosOptions"
-                  />
-                </div>
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="md"
-                  class="shrink-0"
-                  @click="adicionarFuncionario"
-                >
-                  Adicionar
-                </Button>
-              </div>
-            </div>
-            <div v-else>
-              <label class="block text-xs font-bold mb-1 text-text-main">Funcionário</label>
-              <div class="w-full h-10 bg-bg-card border border-border-ui rounded-xl px-3 flex items-center text-sm font-semibold text-text-main">
-                {{ funcionarioNome || 'Não informado' }}
-              </div>
-            </div>
-
-            <div v-if="taskForm.funcionarioIds.length && !isAgendaLoja" class="mt-4 space-y-3">
-              <div
-                v-for="fid in taskForm.funcionarioIds"
-                :key="`apont-${fid}`"
-                class="rounded-xl border border-border-ui p-3 bg-bg-card"
-              >
-                <div class="text-xs font-bold text-text-main mb-2">
-                  {{ funcionarioNomeById(fid) || 'Funcionário' }} — horário
-                </div>
-                <div
-                  v-for="(periodo, idx) in getApontamentosPorFuncionario(fid)"
-                  :key="`per-${fid}-${idx}`"
-                  class="flex flex-wrap gap-2 items-end"
-                >
-                  <div class="flex-1 min-w-[140px]">
-                    <label class="block text-[10px] font-bold mb-1">Entrada</label>
-                    <input
-                      type="datetime-local"
-                      v-model="periodo.inicio"
-                      class="w-full h-9 bg-slate-50 dark:bg-slate-800/50 border border-border-ui rounded-lg px-2 text-[11px] font-semibold text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-                    />
-                  </div>
-                  <div class="flex-1 min-w-[140px]">
-                    <label class="block text-[10px] font-bold mb-1">Saída</label>
-                    <input
-                      type="datetime-local"
-                      v-model="periodo.fim"
-                      class="w-full h-9 bg-slate-50 dark:bg-slate-800/50 border border-border-ui rounded-lg px-2 text-[11px] font-semibold text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-                    />
-                  </div>
-                  <div class="flex gap-1 shrink-0">
-                    <Button
-                      v-if="getApontamentosPorFuncionario(fid).length > 1"
-                      type="button"
-                      variant="danger"
-                      size="sm"
-                      class="!h-9 !w-9 !p-0 !min-w-0"
-                      :title="'Remover este horário'"
-                      @click="removerPeriodo(fid, idx)"
-                    >
-                      −
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      class="!h-9 !w-9 !p-0 !min-w-0"
-                      :title="getApontamentosPorFuncionario(fid).length > 0 ? 'Outro horário (ex.: turno dividido)' : 'Definir horário'"
-                      @click="adicionarPeriodo(fid)"
-                    >
-                      +
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
         </div>
 
-        <div class="mt-4 pt-3 border-t border-border-ui flex items-center gap-2">
+        <div class="mt-4 pt-3 border-t border-border-ui flex flex-wrap items-center gap-2">
           <Button
+            v-if="editingEvent && ehTarefaMedicaoLoja(editingEvent) && !eventoFinalizado"
+            variant="primary"
+            class="gap-1.5"
+            @click="finalizarEtapaNoModal(editingEvent)"
+          >
+            <i class="pi pi-check"></i>
+            Marcar Etapa como Concluída
+          </Button>
+          <Button
+            v-if="!editingEvent || (podeEditarEvento(editingEvent) && !eventoFinalizado)"
             variant="primary"
             class="flex-1"
             @click="saveTask"
@@ -532,7 +638,7 @@
             {{ editingEvent ? 'Salvar edição' : 'Salvar tarefa' }}
           </Button>
           <Button
-            v-if="editingEvent"
+            v-if="editingEvent && podeEditarEvento(editingEvent) && !eventoFinalizado"
             variant="danger"
             @click="removeTask(editingEvent)"
           >
@@ -543,7 +649,7 @@
             variant="secondary"
             @click="clearEdit"
           >
-            Cancelar
+            {{ podeEditarEvento(editingEvent) && !eventoFinalizado ? 'Cancelar' : 'Fechar' }}
           </Button>
         </div>
 
@@ -556,9 +662,10 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { AgendaLojaService, ClienteService, FuncionarioService, OrcamentosService, PlanoCorteService, VendaService } from '@/services/index'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { AgendaLojaService, ApontamentoProducaoService, ClienteService, FuncionarioService, OrcamentosService, PlanoCorteService, VendaService } from '@/services/index'
 import { PIPELINE_CLIENTE, PIPELINE_PLANO_CORTE } from '@/constantes'
+import { getCalendarioEventClassVendas, getProcessColorByStatusVendas } from '@/constantes'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
@@ -570,8 +677,10 @@ const today = new Date()
 const currentMonth = ref(new Date(today.getFullYear(), today.getMonth(), 1))
 const selectedDay = ref(new Date(today.getFullYear(), today.getMonth(), today.getDate()))
 const loading = ref(false)
+const listaTarefasExpandida = ref(false)
 const events = ref([])
 const modalOpen = ref(false)
+const modalContentRef = ref(null)
 const editingEvent = ref(null)
 const planosProducao = ref([])
 const pipelineProducao = ref([])
@@ -580,8 +689,66 @@ const funcionariosOptions = ref([])
 const usuarioLogado = computed(() => storage.getUser())
 const funcionarioNome = computed(() => usuarioLogado.value?.nome || '')
 const isAdmin = computed(() => can('ADMIN'))
+/** Vendedor vê toda a agenda; só pode editar/excluir o que ele mesmo criou. Admin pode tudo. Registros concluídos não são editáveis. */
+function podeEditarEvento(event) {
+  if (!event) return false
+  if (String(event?.status || '').toUpperCase() === 'CONCLUIDO') return false
+  if (isAdmin.value) return true
+  const meuId = usuarioLogado.value?.id != null ? Number(usuarioLogado.value.id) : null
+  const criadorId = event.criado_por_usuario_id != null ? Number(event.criado_por_usuario_id) : (event.criado_por_usuario?.id != null ? Number(event.criado_por_usuario.id) : null)
+  return meuId != null && criadorId === meuId
+}
+const somenteVisualizacaoAgenda = computed(() => editingEvent.value && !podeEditarEvento(editingEvent.value))
+/** Etapa já finalizada (CONCLUIDO): desabilita edição dos campos básicos no modal. */
+const eventoFinalizado = computed(() => String(editingEvent.value?.status || '').toUpperCase() === 'CONCLUIDO')
+/** É tarefa de medição (Timeline): pode usar "Finalizar Etapa" para encerrar ciclo. */
+function ehTarefaMedicaoLoja(event) {
+  const cat = String(event?.categoria || '').toUpperCase()
+  return cat === 'MEDIDA' || cat === 'AGENDAR_MEDIDA' || cat === 'MEDIDA_AGENDADA'
+}
+function formatDateTimeExibicao(val) {
+  if (!val) return ''
+  const d = new Date(val)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
 const responsavelLojaId = computed(() => Number(usuarioLogado.value?.funcionario_id || 0))
 const responsavelLojaNome = computed(() => funcionarioNome.value || 'Vendedor logado')
+
+// Cronômetro: 1 tarefa, vários funcionários, cada um com seu cronômetro (apontamento em andamento).
+const cronometrosAbertos = ref([])
+const cronometroAgora = ref(Date.now()) // atualiza a cada 1s para o cronômetro rodar ao vivo
+function isApontamentoEmAndamento(ap) {
+  if (!ap?.inicio_em || !ap?.fim_em) return false
+  const diff = new Date(ap.fim_em).getTime() - new Date(ap.inicio_em).getTime()
+  return diff >= 0 && diff < 3000
+}
+function isCronometroPausado(ap) {
+  return ap?.pausa_inicio_em && !ap?.pausa_fim_em
+}
+function getCronometroAbertoParaEvento(event) {
+  if (!event?.id || !cronometrosAbertos.value?.length) return null
+  return cronometrosAbertos.value.find((a) => a.agenda_loja_id === event.id) || null
+}
+/** Tempo decorrido em segundos (para exibição do cronômetro). */
+function elapsedCronometro(ap) {
+  if (!ap?.inicio_em) return 0
+  const inicio = new Date(ap.inicio_em).getTime()
+  const agora = cronometroAgora.value
+  let pausado = 0
+  if (ap.pausa_inicio_em) {
+    const pFim = ap.pausa_fim_em ? new Date(ap.pausa_fim_em).getTime() : agora
+    pausado += Math.max(0, pFim - new Date(ap.pausa_inicio_em).getTime())
+  }
+  return Math.max(0, Math.floor((agora - inicio - pausado) / 1000))
+}
+function formatElapsed(seconds) {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  return `${m}:${String(s).padStart(2, '0')}`
+}
 
 const funcionarioSelecionado = ref('')
 const taskForm = reactive({
@@ -1109,6 +1276,13 @@ const eventsByDay = computed(() => {
 })
 
 const selectedEvents = computed(() => eventsByDay.value[dateKey(selectedDay.value)] || [])
+
+/** Agenda de Venda: tarefa "Agendar medida" — só mostra Editar/Cancelar (atribuição ao funcionário é na timeline). */
+function ehAgendarMedida(event) {
+  const cat = normalizarCategoriaAgenda(event?.categoria || '')
+  return cat === 'MEDIDA'
+}
+
 const selectedEventsParaLista = computed(() =>
   selectedEvents.value.filter((ev) => {
     if (!editingEvent.value) return true
@@ -1144,12 +1318,39 @@ function eventTitle(event) {
   return `${event.titulo} - ${nome}`
 }
 
+/** Tooltip completo para o evento no calendário (vários horários: ver responsável e horário ao passar o mouse). */
+function eventTooltipCalendar(event) {
+  const horario = `${timeLabel(event.inicio_em)} – ${timeLabel(event.fim_em)}`
+  const titulo = eventTitle(event)
+  const resp = event?.criado_por_usuario?.nome || 'Não informado'
+  let txt = `${horario}\n${titulo}\nResponsável: ${resp}`
+  const orcNum = event?.orcamento?.id ?? event?.orcamento_id
+  if (orcNum) txt += `\nOrçamento #${orcNum}`
+  const vendaNum = event?.venda?.id ?? event?.venda_id
+  if (vendaNum) txt += `\nVenda #${vendaNum}`
+  if (eventAtrasado(event)) {
+    const fim = timeLabel(event.fim_em)
+    txt += `\n\n⚠️ Atrasado: o horário de término (${fim}) já passou e a tarefa não foi marcada como concluída.`
+  }
+  return txt
+}
+
 function normalizarStatusExecucao(status) {
   return String(status || '').trim().toUpperCase()
 }
 
+/** Status efetivo: se há cronômetro aberto para este evento (venda), usa o estado do cronômetro. */
+function statusExecucaoEfetivo(event) {
+  const ap = getCronometroAbertoParaEvento(event)
+  if (ap) {
+    if (isCronometroPausado(ap)) return 'PAUSADO'
+    return 'EM_ANDAMENTO'
+  }
+  return normalizarStatusExecucao(event?.status)
+}
+
 function statusExecucaoLabel(event) {
-  const status = normalizarStatusExecucao(event?.status)
+  const status = statusExecucaoEfetivo(event)
   if (status === 'CONCLUIDO') return 'Concluido'
   if (status === 'PAUSADO') return 'Pausado'
   if (status === 'EM_ANDAMENTO') return 'Em andamento'
@@ -1159,7 +1360,7 @@ function statusExecucaoLabel(event) {
 }
 
 function statusExecucaoClass(event) {
-  const status = normalizarStatusExecucao(event?.status)
+  const status = statusExecucaoEfetivo(event)
   if (status === 'CONCLUIDO') return 'bg-emerald-50 text-emerald-700 border border-emerald-200'
   if (status === 'PAUSADO') return 'bg-amber-50 text-amber-700 border border-amber-200'
   if (status === 'EM_ANDAMENTO') return 'bg-blue-50 text-blue-700 border border-blue-200'
@@ -1168,6 +1369,19 @@ function statusExecucaoClass(event) {
     return 'bg-rose-50 text-rose-700 border border-rose-200'
   }
   return 'bg-slate-100 text-slate-700 border border-slate-200'
+}
+
+/** True quando o horário de término já passou e a tarefa não foi concluída (exibir em vermelho). */
+function eventAtrasado(event) {
+  const status = normalizarStatusExecucao(event?.status)
+  if (status === 'CONCLUIDO') return false
+  const fim = new Date(event?.fim_em)
+  return !Number.isNaN(fim.getTime()) && Date.now() > fim.getTime()
+}
+
+/** True quando a tarefa está concluída (exibir em verde no dia e nas tarefas). */
+function eventConcluido(event) {
+  return normalizarStatusExecucao(event?.status) === 'CONCLUIDO'
 }
 
 function timeLabel(value) {
@@ -1233,6 +1447,8 @@ function addHours(date, hours) {
 
 function sincronizarResponsavelLoja() {
   if (!isAgendaLoja.value) return
+  // Medida da loja (antes do orçamento): quem executa fica em aberto; quem seleciona na Timeline é avulso
+  if (normalizarCategoriaAgenda(taskForm.categoria) === 'MEDIDA') return
   if (isAdmin.value && taskForm.funcionarioIds.length > 0) return // Admin já escolheu
   const responsavelId = responsavelLojaId.value
   if (!responsavelId) return
@@ -1310,6 +1526,11 @@ function clearEdit() {
   taskForm.categoria = 'MEDIDA'
   taskForm.apontamentos = []
   sincronizarResponsavelLoja()
+}
+
+function openModalNovaTarefaNoDia() {
+  clearEdit()
+  modalOpen.value = true
 }
 
 function openGarantia() {
@@ -1484,6 +1705,18 @@ async function atualizarStatusExecucao(event, status) {
     const categoriaAtual = String(event?.categoria || '').toUpperCase()
     const ehProducao = TIPOS_PRODUCAO.value.some(o => o.value === categoriaAtual)
 
+    if (status === 'CONCLUIDO' && ehTarefaMedicaoLoja(event)) {
+      const res = await ApontamentoProducaoService.finalizarEtapa({ agenda_loja_id: event.id })
+      const data = res?.data ?? res
+      if (data?.mensagem_vendedor) notify.success(data.mensagem_vendedor)
+      else notify.success('Etapa finalizada. Cronômetros encerrados e fluxo do cliente atualizado.')
+      await loadAgenda()
+      if (editingEvent.value && String(editingEvent.value.id) === String(event.id)) {
+        editingEvent.value = { ...editingEvent.value, status: 'CONCLUIDO' }
+      }
+      return
+    }
+
     if (status === 'CONCLUIDO' && ehProducao) {
       const proxima = proximaEtapaProducao(categoriaAtual)
       if (proxima) {
@@ -1499,59 +1732,133 @@ async function atualizarStatusExecucao(event, status) {
       if (status === 'CONCLUIDO') notify.success('Tarefa concluída.')
       else if (status === 'PAUSADO') notify.success('Tarefa pausada.')
       else notify.success('Tarefa iniciada.')
+      // Atualização otimista: reflete na lista e no modal para não ficar como PENDENTE até o reload
+      const idStr = String(event.id)
+      events.value = events.value.map((ev) =>
+        String(ev.id) === idStr ? { ...ev, status } : ev
+      )
+      if (editingEvent.value && String(editingEvent.value.id) === idStr) {
+        editingEvent.value = { ...editingEvent.value, status }
+      }
     }
     await loadAgenda()
   } catch (e) {
-    notify.error('Não foi possível atualizar o status da tarefa.')
+    const msg = e?.response?.data?.message || e?.message
+    notify.error(msg || 'Não foi possível atualizar o status da tarefa.')
+  }
+}
+
+/** Marcar etapa como concluída (modal): encerra cronômetros, marca agenda CONCLUIDO e avança fluxo do cliente. */
+async function finalizarEtapaNoModal(event) {
+  if (!event?.id) return
+  try {
+    const res = await ApontamentoProducaoService.finalizarEtapa({ agenda_loja_id: event.id })
+    const data = res?.data ?? res
+    if (data?.mensagem_vendedor) notify.success(data.mensagem_vendedor)
+    else notify.success('Etapa finalizada. Fluxo do cliente atualizado.')
+    await loadAgenda()
+    if (editingEvent.value && String(editingEvent.value.id) === String(event.id)) {
+      editingEvent.value = { ...editingEvent.value, status: 'CONCLUIDO' }
+    }
+  } catch (e) {
+    notify.error(e?.response?.data?.message || 'Não foi possível finalizar a etapa.')
+  }
+}
+
+/** Cronômetro na venda: Iniciar = criar apontamento em andamento. */
+async function iniciarCronometroVenda(event) {
+  const fid = responsavelLojaId.value
+  if (!fid) return notify.error('Seu usuário precisa estar vinculado a um funcionário.')
+  try {
+    await ApontamentoProducaoService.startCronometro({ agenda_loja_id: event.id, funcionario_id: fid })
+    notify.success('Cronômetro iniciado.')
+    await loadCronometrosAbertos()
+  } catch (e) {
+    const msg = e?.response?.data?.message
+    notify.error(msg || 'Não foi possível iniciar o cronômetro.')
+  }
+}
+
+/** Cronômetro: Pausar. */
+async function pausarCronometroVenda(ap) {
+  try {
+    await ApontamentoProducaoService.pauseCronometro(ap.id)
+    notify.success('Cronômetro pausado.')
+    await loadCronometrosAbertos()
+  } catch (e) {
+    const msg = e?.response?.data?.message
+    notify.error(msg || 'Não foi possível pausar.')
+  }
+}
+
+/** Cronômetro: Retomar (Iniciar de novo). */
+async function retomarCronometroVenda(ap) {
+  try {
+    await ApontamentoProducaoService.resumeCronometro(ap.id)
+    notify.success('Cronômetro retomado.')
+    await loadCronometrosAbertos()
+  } catch (e) {
+    const msg = e?.response?.data?.message
+    notify.error(msg || 'Não foi possível retomar.')
+  }
+}
+
+/** Cronômetro: Concluir (fecha apontamento e marca a agenda como CONCLUIDO para não voltar a Pendente). */
+async function concluirCronometroVenda(ap, event) {
+  if (!ap?.id) return
+  try {
+    await ApontamentoProducaoService.finishCronometro(ap.id)
+    notify.success('Cronômetro encerrado.')
+    await loadCronometrosAbertos()
+    // Marca a tarefa da agenda como CONCLUIDO para o card não exibir "Pendente" após fechar o cronômetro
+    if (event?.id) {
+      try {
+        await AgendaLojaService.atualizarStatus(event.id, 'CONCLUIDO')
+        const idStr = String(event.id)
+        events.value = events.value.map((ev) =>
+          String(ev.id) === idStr ? { ...ev, status: 'CONCLUIDO' } : ev
+        )
+        if (editingEvent.value && String(editingEvent.value.id) === idStr) {
+          editingEvent.value = { ...editingEvent.value, status: 'CONCLUIDO' }
+        }
+        await loadAgenda()
+      } catch (e2) {
+        notify.error(e2?.response?.data?.message || 'Cronômetro encerrado, mas não foi possível marcar a tarefa como concluída.')
+      }
+    }
+  } catch (e) {
+    const msg = e?.response?.data?.message
+    notify.error(msg || 'Não foi possível encerrar.')
   }
 }
 
 async function saveTask() {
   taskForm.setorDestino = 'LOJA'
   taskForm.origemFluxo = 'LOJA_VENDA'
-  sincronizarResponsavelLoja()
   if (!editingEvent.value) {
     if (!taskForm.setorDestino) return notify.error('Selecione o setor.')
     if (!taskForm.origemFluxo) return notify.error('Selecione a origem.')
   }
   if (!taskForm.inicio) return notify.error('Informe a data de inicio.')
   if (!taskForm.fim) return notify.error('Informe a data de termino.')
-  const origemSelecionada = editingEvent.value
-    ? String(editingEvent.value?.origem_fluxo || '').toUpperCase()
-    : String(taskForm.origemFluxo || '').toUpperCase()
   const clienteObrigatorio = true
   if (clienteObrigatorio && !taskForm.clienteId) {
     return notify.error('Selecione o cliente.')
   }
-  const equipeIds = (
-    isAdmin.value && taskForm.funcionarioIds.length
-      ? taskForm.funcionarioIds.map(Number)
-      : [responsavelLojaId.value]
-  ).filter(Boolean)
 
-  if (!equipeIds.length) {
+  const catNorm = normalizarCategoriaAgenda(taskForm.categoria || 'MEDIDA')
+  const ehMedidaLoja = catNorm === 'MEDIDA' // medida da loja (antes do orçamento): executor em aberto
+  // Medida da loja: quem executa fica em aberto; na Timeline alguém (avulso) seleciona o funcionário
+  const responsavelId = Number(usuarioLogado.value?.funcionario_id || 0)
+  if (!ehMedidaLoja && !responsavelId) {
     return notify.error('Seu usuário precisa estar vinculado a um funcionário para agendar na loja.')
   }
-
-  const equipeParaValidar = isAdmin.value && taskForm.funcionarioIds.length
-    ? taskForm.funcionarioIds
-    : [String(responsavelLojaId.value || '')]
-  const equipeParaValidarLimpa = equipeParaValidar.filter(Boolean)
-
-  // Cada funcionário da equipe deve ter pelo menos um horário (início e término) preenchido
-  for (const fid of equipeParaValidarLimpa) {
-    const periodos = getApontamentosPorFuncionario(fid)
-    const temHorarioValido = periodos.some((p) => {
-      if (!p?.inicio || !p?.fim) return false
-      const i = new Date(p.inicio)
-      const f = new Date(p.fim)
-      return !Number.isNaN(i.getTime()) && !Number.isNaN(f.getTime()) && f > i
-    })
-    if (!temHorarioValido) {
-      const nome = funcionarioNomeById(fid) || 'Funcionário'
-      return notify.error(`Informe o horário de início e término para ${nome}.`)
-    }
-  }
+  const equipeIds = ehMedidaLoja ? [] : (responsavelId ? [responsavelId] : [])
+  const apontamentosPayload = ehMedidaLoja ? [] : (responsavelId ? [{
+    funcionario_id: responsavelId,
+    inicio_em: new Date(taskForm.inicio).toISOString(),
+    fim_em: new Date(taskForm.fim).toISOString(),
+  }] : [])
 
   const inicio = new Date(taskForm.inicio)
   if (Number.isNaN(inicio.getTime())) return notify.error('Data invalida.')
@@ -1559,40 +1866,12 @@ async function saveTask() {
   if (Number.isNaN(fim.getTime())) return notify.error('Data invalida.')
   if (fim <= inicio) return notify.error('Termino deve ser depois do inicio.')
 
-  // Sincroniza o período único de cada funcionário com o início/término da tarefa,
-  // para evitar enviar horários antigos e gerar falso conflito no backend.
-  for (const registro of taskForm.apontamentos || []) {
-    if (Array.isArray(registro.periodos) && registro.periodos.length === 1) {
-      registro.periodos[0].inicio = taskForm.inicio
-      registro.periodos[0].fim = taskForm.fim
-    }
-  }
-
   let titulo = taskForm.titulo
   if (!titulo) {
     const catRaw = normalizarCategoriaAgenda(taskForm.categoria)
     const catLabel = etapaLabelPorCategoria(catRaw) || opcoesTipoAgendamento.value.find(o => o.value === catRaw)?.label || 'Tarefa'
     const cliLabel = clienteNomeEventoAtual.value || 'Cliente'
     titulo = `${catLabel} - ${cliLabel}`
-  }
-
-  // Monta apontamentos individuais (flatten)
-  const apontamentosPayload = []
-  for (const registro of taskForm.apontamentos || []) {
-    const fid = Number(registro.funcionarioId)
-    if (!fid) continue
-    for (const periodo of registro.periodos || []) {
-      if (!periodo.inicio || !periodo.fim) continue
-      const apInicio = new Date(periodo.inicio)
-      const apFim = new Date(periodo.fim)
-      if (Number.isNaN(apInicio.getTime()) || Number.isNaN(apFim.getTime())) continue
-      if (apFim <= apInicio) continue
-      apontamentosPayload.push({
-        funcionario_id: fid,
-        inicio_em: apInicio.toISOString(),
-        fim_em: apFim.toISOString(),
-      })
-    }
   }
 
   try {
@@ -1645,18 +1924,33 @@ async function saveTask() {
   }
 }
 
+async function loadCronometrosAbertos() {
+  const fid = responsavelLojaId.value
+  if (!fid) return
+  try {
+    const res = await ApontamentoProducaoService.getCronometrosAbertos(fid)
+    cronometrosAbertos.value = Array.isArray(res?.data) ? res.data : []
+  } catch {
+    cronometrosAbertos.value = []
+  }
+}
+
 async function loadAgenda() {
   if (!can('agendamentos.ver')) return
   loading.value = true
   try {
-    const inicio = dateKey(startOfMonth(currentMonth.value))
-    const fim = dateKey(endOfMonth(currentMonth.value))
+    const start = startOfMonth(currentMonth.value)
+    const end = endOfMonth(currentMonth.value)
+    const inicio = dateKey(start)
+    // Enviar fim como fim do último dia (23:59:59) para incluir todos os eventos do dia 28 (e de qualquer último dia do mês)
+    const fim = `${dateKey(end)}T23:59:59.999`
     const res = await AgendaLojaService.listarTodos(inicio, fim, {
       incluir_cancelados: false,
       visao: visaoAgenda.value,
     })
     let data = Array.isArray(res?.data) ? res.data : []
     events.value = data
+    await loadCronometrosAbertos()
   } catch (e) {
     notify.error('Falha ao carregar agenda.')
     events.value = []
@@ -1666,7 +1960,7 @@ async function loadAgenda() {
 }
 
 async function loadPlanosProducao() {
-  if (!canProducao.value) return
+  if (!canProducao.value || !can('plano_corte.ver')) return
   try {
     const res = await PlanoCorteService.listar()
     planosProducao.value = Array.isArray(res?.data) ? res.data : []
@@ -1752,6 +2046,26 @@ async function loadVendasAguardandoContrato() {
   }
 }
 
+// Atualiza o "agora" a cada 1s para o cronômetro ao vivo quando há apontamento em andamento (não pausado).
+let intervalCronometro = null
+function temCronometroRodando() {
+  return cronometrosAbertos.value.some((a) => isApontamentoEmAndamento(a) && !isCronometroPausado(a))
+}
+watch(cronometrosAbertos, () => {
+  if (intervalCronometro) {
+    clearInterval(intervalCronometro)
+    intervalCronometro = null
+  }
+  if (temCronometroRodando()) {
+    intervalCronometro = setInterval(() => { cronometroAgora.value = Date.now() }, 1000)
+  }
+}, { immediate: true })
+onBeforeUnmount(() => {
+  if (intervalCronometro) {
+    clearInterval(intervalCronometro)
+    intervalCronometro = null
+  }
+})
 onMounted(() => {
   loadAgenda()
   loadPipelineProducao()
@@ -1763,6 +2077,15 @@ onMounted(() => {
   loadVendasAguardandoContrato()
 })
 watch(currentMonth, loadAgenda)
+
+// Acessibilidade: foco inicial no modal ao abrir
+watch(modalOpen, (open) => {
+  if (open) {
+    nextTick(() => {
+      modalContentRef.value?.focus()
+    })
+  }
+})
 </script>
 
 <style scoped>

@@ -1,7 +1,7 @@
 {
   "name": "frontend-vue",
   "private": true,
-  "version": "0.1.48",
+  "version": "0.1.50",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
+    "tauri:dev:quiet": "cross-env RUST_LOG=tao=error tauri dev",
     "tauri:build": "tauri build"
   },
   "dependencies": {
@@ -20,7 +21,9 @@
     "@capacitor/browser": "^8.0.0",
     "@capacitor/cli": "^7.4.5",
     "@capacitor/core": "^8.0.2",
+    "@capacitor/filesystem": "^8.0.0",
     "@capacitor/ios": "^8.0.2",
+    "@capacitor/share": "^8.0.0",
     "@tauri-apps/api": "^2.10.1",
     "@tauri-apps/plugin-opener": "^2.5.3",
     "@tauri-apps/plugin-updater": "^2.0.0",
@@ -29,12 +32,14 @@
     "apexcharts": "^5.3.6",
     "axios": "1.13.2",
     "primeicons": "7.0.0",
+    "qrcode": "^1.5.4",
     "vue": "3.5.24",
     "vue-router": "4.6.4",
     "vue-router-layout": "0.4.1",
     "vue3-apexcharts": "^1.10.0"
   },
   "devDependencies": {
+    "cross-env": "^7.0.3",
     "@capacitor/assets": "^3.0.5",
     "@tailwindcss/postcss": "4.1.18",
     "@tailwindcss/vite": "4.1.18",

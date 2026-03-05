@@ -59,10 +59,10 @@ export class VendasService {
   ) {
     const venda = String(vendaStatus || '').toUpperCase();
     const cliente = String(clienteStatus || '').toUpperCase();
-    if (this.statusPosVenda.includes(venda)) {
+    if ((this.statusPosVenda as readonly string[]).includes(venda)) {
       return { status: venda, status_source: 'venda' as const };
     }
-    if (this.statusPosVenda.includes(cliente)) {
+    if ((this.statusPosVenda as readonly string[]).includes(cliente)) {
       return { status: cliente, status_source: 'cliente' as const };
     }
     return { status: '', status_source: null };
@@ -134,13 +134,13 @@ export class VendasService {
   // ===============================
   // VALIDACOES
   // ===============================
-  private validarSomaPagamentos(pagamentos: any[], valorVendido: number) {
+  private validarSomaPagamentos(pagamentos: any[], valorEsperado: number) {
     const soma = round2(
       (pagamentos || []).reduce((acc, p) => acc + toNumber(p?.valor || 0), 0),
     );
-    if (round2(soma - valorVendido) !== 0) {
+    if (round2(soma - valorEsperado) !== 0) {
       throw new BadRequestException(
-        `Soma dos pagamentos (${soma}) precisa bater com valor_vendido (${valorVendido}).`,
+        `Soma dos pagamentos (${soma}) precisa bater com o valor esperado (${valorEsperado}).`,
       );
     }
   }
@@ -343,12 +343,17 @@ export class VendasService {
         itens: true,
         comissoes: true,
         pagamentos: true,
+        formas_pagamento: true,
       },
     });
   }
 
   /** Vendas em etapas que aguardam agendamento, incluindo pós-venda.
    * Observação: algumas etapas de pós-venda podem estar no status do cliente.
+   */
+  /** Vendas que podem ser vinculadas a agendamentos de tipo CONTRATO/VENDA_FECHADA:
+   *  - em etapas pré-contrato (ORCAMENTO_APROVADO, VENDA_FECHADA, CONTRATO_ASSINADO), ou
+   *  - com contrato vigente (para que o usuário possa vincular e o card exiba "Venda #id").
    */
   async listarAguardandoContrato() {
     const statusContrato = [
@@ -357,7 +362,12 @@ export class VendasService {
       'CONTRATO_ASSINADO',
     ];
     const lista = await this.prisma.vendas.findMany({
-      where: { status: { in: statusContrato } },
+      where: {
+        OR: [
+          { status: { in: statusContrato } },
+          { contratos: { some: { status: 'VIGENTE' } } },
+        ],
+      },
       orderBy: { id: 'asc' },
       include: { cliente: true },
     });
@@ -373,7 +383,7 @@ export class VendasService {
       'MANUTENCAO',
       'ASSISTENCIA',
     ];
-    const clienteStatusesPosVenda = this.statusPosVenda;
+    const clienteStatusesPosVenda = [...this.statusPosVenda];
 
     const [porStatusVenda, porStatusCliente] = await Promise.all([
       this.prisma.vendas.findMany({
@@ -390,7 +400,10 @@ export class VendasService {
 
     // Dedupe explícito por venda.id com prioridade da fonte de status: venda > cliente.
     const porId = new Map<number, any>();
-    for (const venda of [...porStatusCliente, ...porStatusVenda]) {
+    const todas = [...porStatusCliente, ...porStatusVenda] as Array<
+      (typeof porStatusVenda)[number] & { cliente?: { status: string } | null }
+    >;
+    for (const venda of todas) {
       const efetivo = this.resolverStatusPosVenda(
         venda.status,
         venda.cliente?.status,
@@ -414,6 +427,7 @@ export class VendasService {
         itens: true,
         comissoes: true,
         pagamentos: true,
+        formas_pagamento: true,
       },
     });
     if (!venda) throw new NotFoundException('Venda não encontrada');
@@ -457,7 +471,17 @@ export class VendasService {
       ),
     );
     this.validarRegraDesconto(valorVendido, totalOrcado);
-    this.validarSomaPagamentos(dto.pagamentos, valorVendido);
+    // Quando há taxa de cartão, valor_vendido = preço cobrado (base + juros); a soma dos pagamentos deve bater com valor_vendido (total a receber).
+    const valorParaSomaPagamentos =
+      dto.valor_base_venda !== undefined && dto.valor_base_venda !== null
+        ? round2(toNumber(dto.valor_base_venda))
+        : valorVendido;
+    this.validarSomaPagamentos(dto.pagamentos, valorParaSomaPagamentos);
+
+    const valorBaseContrato =
+      dto.valor_base_contrato !== undefined && dto.valor_base_contrato !== null
+        ? round2(toNumber(dto.valor_base_contrato))
+        : null;
 
     // itens da venda:
     // - se o frontend enviar dto.itens, usamos exatamente o que veio da tela de venda
@@ -512,6 +536,7 @@ export class VendasService {
           data_venda: dto.data_venda ? new Date(dto.data_venda) : undefined,
           endereco_entrega: dto.endereco_entrega?.trim() || null,
           valor_vendido: valorVendido,
+          valor_base_contrato: valorBaseContrato,
 
           valor_bruto: totais.valor_bruto,
 
@@ -529,6 +554,11 @@ export class VendasService {
           representante_venda_rg: dto.representante_venda_rg?.trim() || null,
           representante_venda_usuario_id: representante.usuarioId,
           representante_venda_funcionario_id: representante.funcionarioId,
+          representante_venda_2_nome: (dto as any).representante_venda_2_nome?.trim() || null,
+          representante_venda_2_cpf: (dto as any).representante_venda_2_cpf?.trim() || null,
+          representante_venda_2_rg: (dto as any).representante_venda_2_rg?.trim() || null,
+
+          receber_no_ato_medicao: Boolean((dto as any).receber_no_ato_medicao),
 
           // ⚠️ tem_nota_fiscal só entra aqui se existir no Prisma:
           // tem_nota_fiscal: nf.tem_nota_fiscal,
@@ -580,6 +610,18 @@ export class VendasService {
         })),
       });
 
+      if (dto.formas_pagamento?.length) {
+        await tx.vendas_formas_pagamento.createMany({
+          data: dto.formas_pagamento.map((f) => ({
+            venda_id: venda.id,
+            forma_pagamento_chave: String(f.forma_pagamento_chave),
+            valor_base: round2(toNumber(f.valor_base)),
+            quantidade_parcelas: Math.max(1, Number(f.quantidade_parcelas) || 1),
+            com_juros: Boolean(f.com_juros),
+          })),
+        });
+      }
+
       if (orc.cliente_id && dto.status) {
         const cliente = await tx.cliente.findUnique({
           where: { id: orc.cliente_id },
@@ -609,6 +651,7 @@ export class VendasService {
           itens: true,
           comissoes: true,
           pagamentos: true,
+          formas_pagamento: true,
         },
       });
     });
@@ -656,8 +699,13 @@ export class VendasService {
     );
     this.validarRegraDesconto(valorVendido, totalOrcado);
 
-    if (dto.pagamentos?.length)
-      this.validarSomaPagamentos(dto.pagamentos as any, valorVendido);
+    if (dto.pagamentos?.length) {
+      const valorParaSomaPagamentos =
+        dto.valor_base_venda !== undefined && dto.valor_base_venda !== null
+          ? round2(toNumber(dto.valor_base_venda))
+          : valorVendido;
+      this.validarSomaPagamentos(dto.pagamentos as any, valorParaSomaPagamentos);
+    }
 
     const representanteMudou =
       dto.representante_venda_nome !== undefined ||
@@ -712,6 +760,12 @@ export class VendasService {
             endereco_entrega: dto.endereco_entrega?.trim() || null,
           }),
           valor_vendido: valorVendido,
+          ...(dto.valor_base_contrato !== undefined && dto.valor_base_contrato !== null && {
+            valor_base_contrato: round2(toNumber(dto.valor_base_contrato)),
+          }),
+          ...(dto.receber_no_ato_medicao !== undefined && {
+            receber_no_ato_medicao: Boolean(dto.receber_no_ato_medicao),
+          }),
 
           valor_bruto: totais.valor_bruto,
 
@@ -742,6 +796,15 @@ export class VendasService {
             representante_venda_usuario_id: representante?.usuarioId || null,
             representante_venda_funcionario_id:
               representante?.funcionarioId || null,
+          }),
+          ...((dto as any).representante_venda_2_nome !== undefined && {
+            representante_venda_2_nome: (dto as any).representante_venda_2_nome?.trim() || null,
+          }),
+          ...((dto as any).representante_venda_2_cpf !== undefined && {
+            representante_venda_2_cpf: (dto as any).representante_venda_2_cpf?.trim() || null,
+          }),
+          ...((dto as any).representante_venda_2_rg !== undefined && {
+            representante_venda_2_rg: (dto as any).representante_venda_2_rg?.trim() || null,
           }),
         },
       });
@@ -783,6 +846,21 @@ export class VendasService {
         });
       }
 
+      if (dto.formas_pagamento) {
+        await tx.vendas_formas_pagamento.deleteMany({ where: { venda_id: id } });
+        if (dto.formas_pagamento.length) {
+          await tx.vendas_formas_pagamento.createMany({
+            data: dto.formas_pagamento.map((f) => ({
+              venda_id: id,
+              forma_pagamento_chave: String(f.forma_pagamento_chave),
+              valor_base: round2(toNumber(f.valor_base)),
+              quantidade_parcelas: Math.max(1, Number(f.quantidade_parcelas) || 1),
+              com_juros: Boolean(f.com_juros),
+            })),
+          });
+        }
+      }
+
       if (
         dto.status !== undefined &&
         (atual as any).cliente_id &&
@@ -816,6 +894,7 @@ export class VendasService {
           itens: true,
           comissoes: true,
           pagamentos: true,
+          formas_pagamento: true,
         },
       });
     });

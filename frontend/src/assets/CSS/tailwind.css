@@ -1,10 +1,13 @@
 @import "tailwindcss";
 
 @theme {
-  /* Cores de Marca */
-  --color-brand-primary: #3a78a8;
-  --color-brand-dark: #2c5a7d;
-  --color-danger: #ef4444;
+  /* Tipografia */
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+
+  /* Cores de Marca (alinhado ao logo A Casa) */
+  --color-brand-primary: #2563a8;
+  --color-brand-dark: #1e4d7a;
+  --color-danger: #dc2626;
   --color-success: #059669;
   --color-warning: #d97706;
 
@@ -13,6 +16,7 @@
   --color-bg-card: var(--bg-card);
   --color-text-main: var(--text-main);
   --color-border-ui: var(--border-ui);
+  --color-text-soft: var(--text-soft);
 
   /* Z-Index */
   --z-index-dropdown: 1000;
@@ -38,22 +42,26 @@
 }
 
 :root {
-  --bg-page: #f8fafc;
+  --bg-page: #f1f5f9;
   --bg-card: #ffffff;
   --text-main: #0f172a;
-  --border-ui: #f1f5f9;
+  --text-soft: #64748b;
+  --border-ui: #e2e8f0;
 }
 
 .dark {
   --bg-page: #0f172a;
   --bg-card: #1e293b;
-  --text-main: #f8fafc;
+  --text-main: #f1f5f9;
+  --text-soft: #94a3b8;
   --border-ui: #334155;
 }
 
 @layer base {
   body {
     @apply bg-bg-page text-text-main transition-colors duration-300 antialiased;
+    font-family: var(--font-sans);
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 
   /* Padding interno do Card reduzido para dar escala ao conteúdo */
@@ -61,7 +69,7 @@
     @apply p-5 md:p-8 lg:p-10; 
   }
 
-  /* Scrollbar Customizado */
+  /* Scrollbar Customizado (light e dark) */
   .custom-scroll {
     scrollbar-width: thin;
     scrollbar-color: var(--border-ui) transparent;
@@ -69,43 +77,43 @@
   .custom-scroll::-webkit-scrollbar { width: 5px; }
   .custom-scroll::-webkit-scrollbar-track { @apply bg-transparent; }
   .custom-scroll::-webkit-scrollbar-thumb { @apply bg-border-ui rounded-full hover:bg-slate-400; }
+  .dark .custom-scroll::-webkit-scrollbar-thumb { @apply hover:bg-slate-500; }
 }
 
 @layer components {
-  /* ===== BOTÕES MINIMALISTAS COM LINHAS ===== */
+  /* ===== BOTÕES ===== */
   .btn-primary-tw {
-    @apply px-4 py-2.5 text-sm font-medium rounded-md
+    @apply px-4 py-2.5 text-sm font-medium rounded-xl
            border border-brand-primary bg-brand-primary text-white
-           hover:bg-brand-dark hover:border-brand-dark
+           hover:bg-brand-dark hover:border-brand-dark hover:shadow-md
            active:scale-[0.98] transition-all duration-200 disabled:opacity-50;
   }
 
   .btn-secondary-tw {
-    @apply px-4 py-2.5 text-sm font-medium rounded-md
-           border border-slate-300 dark:border-slate-600 bg-transparent text-slate-700 dark:text-slate-200
-           hover:border-slate-400 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800
+    @apply px-4 py-2.5 text-sm font-medium rounded-xl
+           border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800/50 text-slate-700 dark:text-slate-200
+           hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700/50
            active:scale-[0.98] transition-all duration-200;
   }
 
   .btn-outline-tw {
-    @apply px-4 py-2.5 text-sm font-medium rounded-md
-           border border-slate-300 dark:border-slate-600 
+    @apply px-4 py-2.5 text-sm font-medium rounded-xl
+           border border-slate-200 dark:border-slate-600
            text-slate-600 dark:text-slate-300 bg-transparent
-           hover:bg-slate-50 dark:hover:bg-slate-900
+           hover:bg-slate-50 dark:hover:bg-slate-800
            active:scale-[0.98] transition-all duration-200;
   }
 
   .btn-ghost-tw {
-    @apply px-4 py-2.5 text-sm font-medium rounded-md
+    @apply px-4 py-2.5 text-sm font-medium rounded-xl
            bg-transparent text-slate-600 dark:text-slate-300
            hover:bg-slate-100 dark:hover:bg-slate-800
            active:scale-[0.98] transition-all duration-200;
   }
 
-  /* Botão pequeno e detalhado */
   .btn-sm-tw {
-    @apply px-3 py-1.5 text-xs font-medium rounded-md
-           border border-slate-300 dark:border-slate-600
+    @apply px-3 py-1.5 text-xs font-medium rounded-lg
+           border border-slate-200 dark:border-slate-600
            hover:bg-slate-50 dark:hover:bg-slate-800
            transition-all duration-200;
   }
@@ -128,10 +136,11 @@
     z-index: var(--z-index-dropdown);
   }
 
-  /* ===== CARDS MINIMALISTAS COM BORDAS ===== */
+  /* ===== CARDS ===== */
   .card-minimal-tw {
-    @apply bg-bg-card border border-border-ui rounded-md
-           transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600;
+    @apply bg-bg-card border border-border-ui rounded-xl
+           shadow-sm hover:shadow-md
+           transition-all duration-200 hover:border-slate-200 dark:hover:border-slate-600;
   }
 
   .card-header-tw {

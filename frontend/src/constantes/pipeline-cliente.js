@@ -1,1 +1,1 @@
-export * from '../../../backend/src/shared/constantes/pipeline-cliente.ts'
+export * from '../../../backend/shared/constantes/pipeline-cliente'

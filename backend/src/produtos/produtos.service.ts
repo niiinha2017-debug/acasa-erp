@@ -88,27 +88,26 @@ export class ProdutosService {
       medida,
     });
 
-    return this.prisma.produtos.create({
-      data: {
-        fornecedor_id,
-        nome_produto,
-        marca,
-        cor,
-        unidade: this.normStr(dto.unidade),
-        medida,
-        largura_mm,
-        comprimento_mm,
-        espessura_mm,
-        preco_m2,
-        quantidade: Number(dto.quantidade ?? 0),
-        valor_unitario: Number(dto.valor_unitario ?? 0),
-        valor_total: Number(dto.valor_total ?? 0),
-
-        imagem_url: this.normStr(dto.imagem_url),
-
-        status: dto.status ?? 'ATIVO',
-      },
-    });
+    const createData = {
+      fornecedor_id,
+      nome_produto,
+      marca,
+      cor,
+      unidade: this.normStr(dto.unidade),
+      medida,
+      largura_mm,
+      comprimento_mm,
+      espessura_mm,
+      preco_m2,
+      quantidade: Number(dto.quantidade ?? 0),
+      estoque_minimo: dto.estoque_minimo !== undefined ? Number(dto.estoque_minimo) : 0,
+      valor_unitario: Number(dto.valor_unitario ?? 0),
+      valor_total: Number(dto.valor_total ?? 0),
+      categoria: this.normStr(dto.categoria),
+      imagem_url: this.normStr(dto.imagem_url),
+      status: dto.status ?? 'ATIVO',
+    };
+    return this.prisma.produtos.create({ data: createData as any });
   }
 
   async listar(
@@ -257,6 +256,30 @@ export class ProdutosService {
     };
   }
 
+  /**
+   * Lista produtos com estoque atual abaixo do estoque mínimo (para sugestão de compra).
+   * Filtro: quantidade < estoque_minimo (e estoque_minimo > 0).
+   */
+  async listarAbaixoEstoqueMinimo(ctx?: { aplicarMarkup100?: boolean }) {
+    const data = await this.prisma.produtos.findMany({
+      where: { status: 'ATIVO' },
+      include: {
+        fornecedor: {
+          select: { id: true, razao_social: true, nome_fantasia: true },
+        },
+      },
+      orderBy: [{ nome_produto: 'asc' }],
+    });
+    const filtrados = data.filter((p) => {
+      const qtd = Number(p.quantidade ?? 0);
+      const min = Number(p.estoque_minimo ?? 0);
+      return min > 0 && qtd < min;
+    });
+    return filtrados.map((p) =>
+      this.aplicarMarkupProduto(p, ctx?.aplicarMarkup100),
+    );
+  }
+
   async buscarPorId(id: number, ctx?: { aplicarMarkup100?: boolean }) {
     const produto = await this.prisma.produtos.findUnique({
       where: { id },
@@ -331,42 +354,45 @@ export class ProdutosService {
       ignorarId: id,
     });
 
-    return this.prisma.produtos.update({
-      where: { id },
-      data: {
-        fornecedor_id,
-        nome_produto,
-        marca,
-        cor,
-        unidade:
-          dto.unidade === undefined ? atual.unidade : this.normStr(dto.unidade),
-        medida,
-        largura_mm,
-        comprimento_mm,
-        espessura_mm,
-        preco_m2,
-        quantidade:
-          dto.quantidade === undefined
-            ? atual.quantidade
-            : Number(dto.quantidade),
-        valor_unitario:
-          dto.valor_unitario === undefined
-            ? Number(atual.valor_unitario)
-            : Number(dto.valor_unitario),
-        valor_total:
-          dto.valor_total === undefined
-            ? Number(atual.valor_total)
-            : Number(dto.valor_total),
-
-        // ✅ novo
-        imagem_url:
-          dto.imagem_url === undefined
-            ? atual.imagem_url
-            : this.normStr(dto.imagem_url),
-
-        status: dto.status === undefined ? atual.status : dto.status,
-      },
-    });
+    const updateData = {
+      fornecedor_id,
+      nome_produto,
+      marca,
+      cor,
+      unidade:
+        dto.unidade === undefined ? atual.unidade : this.normStr(dto.unidade),
+      medida,
+      largura_mm,
+      comprimento_mm,
+      espessura_mm,
+      preco_m2,
+      quantidade:
+        dto.quantidade === undefined
+          ? atual.quantidade
+          : Number(dto.quantidade),
+      estoque_minimo:
+        dto.estoque_minimo === undefined
+          ? (atual as any).estoque_minimo ?? 0
+          : Number(dto.estoque_minimo),
+      categoria:
+        dto.categoria === undefined
+          ? (atual as any).categoria ?? null
+          : this.normStr(dto.categoria),
+      valor_unitario:
+        dto.valor_unitario === undefined
+          ? Number(atual.valor_unitario)
+          : Number(dto.valor_unitario),
+      valor_total:
+        dto.valor_total === undefined
+          ? Number(atual.valor_total)
+          : Number(dto.valor_total),
+      imagem_url:
+        dto.imagem_url === undefined
+          ? atual.imagem_url
+          : this.normStr(dto.imagem_url),
+      status: dto.status === undefined ? atual.status : dto.status,
+    };
+    return this.prisma.produtos.update({ where: { id }, data: updateData as any });
   }
 
   async remover(id: number) {

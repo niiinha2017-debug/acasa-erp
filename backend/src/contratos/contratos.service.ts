@@ -20,6 +20,8 @@ import { pdflibAddPlaceholder } from '@signpdf/placeholder-pdf-lib';
 import { SignPdf } from '@signpdf/signpdf';
 import { P12Signer } from '@signpdf/signer-p12';
 import { validarTransicaoStatusCliente } from '../shared/constantes/pipeline-cliente';
+import { AGENDA_FABRICA_SOMENTE_PAINEL_CATEGORIAS } from '../shared/constantes/pipeline-producao';
+import { getDataCorteContasReceber } from '../../shared/constantes/pipeline-regras';
 
 @Injectable()
 export class ContratosService {
@@ -169,13 +171,130 @@ export class ContratosService {
     }
   }
 
-  async listar(vendaId?: number) {
-    const where = vendaId ? { venda_id: vendaId } : undefined;
-    return this.prisma.contratos.findMany({
+  async listar(vendaId?: number, status?: string) {
+    const where: any = {};
+    if (vendaId) where.venda_id = vendaId;
+    if (status) where.status = status;
+    const contratos = await this.prisma.contratos.findMany({
       where,
       orderBy: { id: 'desc' },
       include: { cliente: true, venda: true },
     });
+
+    const ids = contratos.map((c) => c.id);
+    if (ids.length === 0) return [];
+
+    const comPdf = await this.prisma.arquivos.findMany({
+      where: {
+        owner_type: 'CONTRATO',
+        owner_id: { in: ids },
+        OR: [
+          { slot_key: 'CONTRATO_ASSINADO_CLIENTE' },
+          {
+            categoria: 'RELATORIO',
+            slot_key: null,
+          },
+        ],
+      },
+      select: { id: true, owner_id: true, slot_key: true },
+      orderBy: { id: 'desc' },
+    });
+    const idsComPdf = new Set<number>();
+    const pdfArquivoIdPorContrato = new Map<number, number>();
+    for (const a of comPdf) {
+      if (!a.owner_id) continue;
+      idsComPdf.add(a.owner_id);
+      const isAssinado = a.slot_key === 'CONTRATO_ASSINADO_CLIENTE';
+      if (isAssinado) pdfArquivoIdPorContrato.set(a.owner_id, a.id);
+      else if (!pdfArquivoIdPorContrato.has(a.owner_id)) pdfArquivoIdPorContrato.set(a.owner_id, a.id);
+    }
+
+    const base = contratos.map((c) => ({
+      ...c,
+      tem_pdf: idsComPdf.has(c.id),
+      pdf_arquivo_id: pdfArquivoIdPorContrato.get(c.id) ?? null,
+    }));
+
+    if (status === 'VIGENTE') {
+      const vendaIds = [...new Set((base as any[]).map((c) => c.venda_id).filter(Boolean))];
+      const dataCorte = getDataCorteContasReceber();
+      const clienteIds = [...new Set((base as any[]).map((c) => c.cliente_id).filter(Boolean))] as number[];
+
+      let porVenda = new Map<number, { total_pago: number; tem_parcelas_abertas: boolean }>();
+      if (vendaIds.length > 0) {
+        const pagamentos = await this.prisma.vendas_pagamentos.findMany({
+          where: { venda_id: { in: vendaIds } },
+          select: {
+            venda_id: true,
+            valor: true,
+            data_recebimento: true,
+            status_financeiro_chave: true,
+          },
+        });
+        for (const vid of vendaIds) {
+          const list = pagamentos.filter((p) => p.venda_id === vid);
+          const total_pago = list
+            .filter((p) => p.data_recebimento != null)
+            .reduce((s, p) => s + Number(p.valor ?? 0), 0);
+          const tem_parcelas_abertas = list.some(
+            (p) =>
+              p.data_recebimento == null ||
+              String(p.status_financeiro_chave || '').toUpperCase() === 'EM_ABERTO',
+          );
+          porVenda.set(vid, { total_pago, tem_parcelas_abertas });
+        }
+      }
+
+      const clienteIdsComRecebivelPendente = new Set<number>();
+      if (clienteIds.length > 0) {
+        const contasPendentes = await this.prisma.contas_receber.findMany({
+          where: {
+            cliente_id: { in: clienteIds },
+            vencimento_em: { lte: dataCorte },
+            status: { not: 'PAGO' },
+          },
+          select: { cliente_id: true },
+        });
+        for (const c of contasPendentes) {
+          if (c.cliente_id != null) clienteIdsComRecebivelPendente.add(c.cliente_id);
+        }
+        const titulosPendentes = await this.prisma.titulos_financeiros.findMany({
+          where: {
+            conta_receber_id: { not: null },
+            conta_receber: { cliente_id: { in: clienteIds } },
+            vencimento_em: { lte: dataCorte },
+            status: { not: 'PAGO' },
+          },
+          select: { conta_receber: { select: { cliente_id: true } } },
+        });
+        for (const t of titulosPendentes) {
+          const cid = (t as any).conta_receber?.cliente_id;
+          if (cid != null) clienteIdsComRecebivelPendente.add(cid);
+        }
+      }
+
+      return (base as any[]).map((c) => {
+        const resumo = c.venda_id ? porVenda.get(c.venda_id) : null;
+        const statusPagamento =
+          c.cliente_id != null && clienteIdsComRecebivelPendente.has(c.cliente_id) ? 'PENDENTE' : 'OK';
+        const statusVenda = String((c as any).venda?.status ?? '').toUpperCase();
+        const aguardandoFinanceiro =
+          statusVenda === 'MEDIDA_FINA_REALIZADA' && statusPagamento === 'PENDENTE';
+        return {
+          ...c,
+          resumo_financeiro: resumo
+            ? {
+                total_pago: resumo.total_pago,
+                quitado: !resumo.tem_parcelas_abertas,
+              }
+            : null,
+          status_pagamento: statusPagamento,
+          aguardando_financeiro: aguardandoFinanceiro,
+        };
+      });
+    }
+
+    return base;
   }
 
   async buscarPorId(id: number) {
@@ -200,6 +319,16 @@ export class ContratosService {
         hash_documento: true,
       },
     });
+    const pdfAssinadoArquivo = await this.prisma.arquivos.findUnique({
+      where: {
+        owner_type_owner_id_slot_key: {
+          owner_type: 'CONTRATO',
+          owner_id: contrato.id,
+          slot_key: 'CONTRATO_ASSINADO_CLIENTE',
+        },
+      },
+      select: { id: true },
+    });
     return {
       ...contrato,
       assinatura_cliente_registrada: !!assinaturaCliente,
@@ -208,7 +337,37 @@ export class ContratosService {
       assinatura_cliente_dispositivo: assinaturaCliente?.dispositivo ?? null,
       assinatura_cliente_hash_documento:
         assinaturaCliente?.hash_documento ?? null,
+      pdf_assinado_arquivo_id: pdfAssinadoArquivo?.id ?? null,
     };
+  }
+
+  /**
+   * Remove o PDF do contrato assinado pelo cliente (slot CONTRATO_ASSINADO_CLIENTE).
+   * Apaga o registro em arquivos e o arquivo físico. Não altera o status do contrato.
+   */
+  async removerPdfAssinadoCliente(contratoId: number): Promise<{ ok: boolean }> {
+    const arquivo = await this.prisma.arquivos.findUnique({
+      where: {
+        owner_type_owner_id_slot_key: {
+          owner_type: 'CONTRATO',
+          owner_id: contratoId,
+          slot_key: 'CONTRATO_ASSINADO_CLIENTE',
+        },
+      },
+      select: { id: true, url: true },
+    });
+    if (!arquivo) {
+      throw new NotFoundException(
+        'Não há PDF assinado vinculado a este contrato para excluir.',
+      );
+    }
+    try {
+      const rel = String(arquivo.url || '').replace(/^\//, '');
+      const abs = path.join(process.cwd(), rel);
+      if (fs.existsSync(abs)) fs.unlinkSync(abs);
+    } catch {}
+    await this.prisma.arquivos.delete({ where: { id: arquivo.id } });
+    return { ok: true };
   }
 
   /** Gera o próximo número de contrato no formato CONT-YYYY-NNN (ex.: CONT-2025-001). */
@@ -259,23 +418,11 @@ export class ContratosService {
     });
   }
 
-  async atualizar(id: number, dto: UpdateContratoDto) {
+  async atualizar(id: number, dto: UpdateContratoDto, criadoPorUsuarioId?: number) {
     const atual = await this.buscarPorId(id);
     const dataInicioBase = atual.data_inicio
       ? new Date(atual.data_inicio)
       : new Date();
-
-    const statusSolicitado = String(dto.status || '')
-      .trim()
-      .toUpperCase();
-    const statusAtual = String(atual.status || '')
-      .trim()
-      .toUpperCase();
-    if (statusSolicitado === 'VIGENTE' && statusAtual !== 'VIGENTE') {
-      throw new BadRequestException(
-        'Para segurança, o contrato deve ser marcado como assinado pela ação de assinatura.',
-      );
-    }
 
     if (dto.venda_id !== undefined && dto.venda_id != null) {
       const venda = await this.prisma.vendas.findUnique({
@@ -284,7 +431,7 @@ export class ContratosService {
       if (!venda) throw new NotFoundException('Venda não encontrada.');
     }
 
-    return this.prisma.contratos.update({
+    const atualizado = await this.prisma.contratos.update({
       where: { id },
       data: {
         venda_id: dto.venda_id ?? undefined,
@@ -303,6 +450,33 @@ export class ContratosService {
       },
       include: { cliente: true, venda: true },
     });
+
+    const statusNovo = String(dto.status || '').toUpperCase();
+    const statusAnterior = String((atual as any).status || '').toUpperCase();
+    const vendaId = atualizado.venda_id ?? null;
+
+    // Quando o contrato deixa de ser VIGENTE (ex.: volta para RASCUNHO), limpar evento "Agendar medida fina" da agenda para o fluxo poder ser refeito ao voltar a vigente
+    if (vendaId && statusAnterior === 'VIGENTE' && statusNovo !== 'VIGENTE') {
+      await this.limparAgendaMedidaFinaAoDeixarDeSerVigente(vendaId);
+    }
+
+    // Se o status foi alterado para VIGENTE, disparar envio para produção (venda/cliente + agenda fábrica)
+    if (statusNovo === 'VIGENTE' && vendaId) {
+      await this.atualizarStatusVendaParaProducaoAoVigorarContrato({
+        venda_id: atualizado.venda_id,
+        cliente_id: (atualizado as any).cliente_id ?? (atualizado as any).venda?.cliente_id ?? null,
+      });
+      await this.garantirAgendaProducaoDaVendaAoVigorarContrato(
+        {
+          id: atualizado.id,
+          venda_id: atualizado.venda_id,
+          cliente_id: (atualizado as any).cliente_id ?? (atualizado as any).venda?.cliente_id ?? null,
+        },
+        criadoPorUsuarioId,
+      );
+    }
+
+    return atualizado;
   }
 
   async remover(id: number) {
@@ -420,12 +594,16 @@ export class ContratosService {
       ? (venda as any).pagamentos
       : [];
 
-    const valorTotal = pagamentos.length
+    const somaPagamentos = pagamentos.length
       ? pagamentos.reduce(
           (sum: number, p: any) => sum + Number(p?.valor || 0),
           0,
         )
-      : Number((venda as any).valor_vendido || (venda as any).valor_total || 0);
+      : 0;
+    const valorVenda = Number((venda as any).valor_vendido || (venda as any).valor_total || 0);
+    // Usar sempre o maior: valor da venda (com juros) ou soma das parcelas, para contas a receber refletirem o total a receber
+    const valorTotal =
+      pagamentos.length > 0 ? Math.max(somaPagamentos, valorVenda) : valorVenda;
 
     const statusPagamento = pagamentos.length
       ? String(
@@ -462,22 +640,52 @@ export class ContratosService {
     });
   }
 
-  private async garantirAgendaProducaoDaVendaAoVigorarContrato(contrato: {
-    id: number;
-    venda_id?: number | null;
-    cliente_id?: number | null;
-  }) {
-    const vendaId = Number(contrato?.venda_id || 0);
-    if (!Number.isFinite(vendaId) || vendaId <= 0) return;
-
-    const existente = await this.prisma.agenda_fabrica.findFirst({
+  /**
+   * Quando o contrato deixa de ser vigente (ex.: volta para rascunho), cancela os eventos
+   * "só painel" (constante do pipeline) dessa venda na agenda fábrica.
+   */
+  private async limparAgendaMedidaFinaAoDeixarDeSerVigente(vendaId: number) {
+    const categorias = AGENDA_FABRICA_SOMENTE_PAINEL_CATEGORIAS as readonly string[];
+    const eventos = await this.prisma.agenda_fabrica.findMany({
       where: {
         venda_id: vendaId,
+        categoria: { in: [...categorias] },
         status: { not: 'CANCELADO' },
       },
       select: { id: true },
     });
-    if (existente) return;
+    if (eventos.length > 0) {
+      console.log(`[Contrato/Agenda] limparAgendaMedidaFina venda ${vendaId}: cancelando ${eventos.length} evento(s) id=${eventos.map((e) => e.id).join(',')}`);
+    }
+    for (const ev of eventos) {
+      await this.prisma.agenda_fabrica.update({
+        where: { id: ev.id },
+        data: { status: 'CANCELADO' },
+      });
+    }
+  }
+
+  private async garantirAgendaProducaoDaVendaAoVigorarContrato(
+    contrato: { id: number; venda_id?: number | null; cliente_id?: number | null },
+    criadoPorUsuarioId?: number,
+  ) {
+    const vendaId = Number(contrato?.venda_id || 0);
+    if (!Number.isFinite(vendaId) || vendaId <= 0) return;
+
+    // Só não cria se já existir um evento "só painel" PENDENTE para esta venda (regra do pipeline)
+    const categoriasPainel = AGENDA_FABRICA_SOMENTE_PAINEL_CATEGORIAS as readonly string[];
+    const existentePendente = await this.prisma.agenda_fabrica.findFirst({
+      where: {
+        venda_id: vendaId,
+        categoria: { in: [...categoriasPainel] },
+        status: 'PENDENTE',
+      },
+      select: { id: true },
+    });
+    if (existentePendente) {
+      console.log(`[Contrato/Agenda] garantirAgendaProducao venda ${vendaId}: já existe evento pendente id=${existentePendente.id}, não cria`);
+      return;
+    }
 
     const venda = await this.prisma.vendas.findUnique({
       where: { id: vendaId },
@@ -490,34 +698,79 @@ export class ContratosService {
     const inicio = new Date();
     const fim = new Date(inicio.getTime() + 60 * 60 * 1000);
 
-    await this.prisma.agenda_fabrica.create({
+    const created = await this.prisma.agenda_fabrica.create({
       data: {
-        titulo: `Produção da venda #${vendaId}`,
+        titulo: `Aguardando medida fina - Venda #${vendaId}`,
         inicio_em: inicio,
         fim_em: fim,
-        categoria: 'PRODUCAO_RECEBIDA',
+        categoria: 'AGENDAR_MEDIDA_FINA',
         origem_fluxo: 'LOJA_VENDA',
         status: 'PENDENTE',
         venda_id: vendaId,
         cliente_id: clienteId,
+        ...(criadoPorUsuarioId != null && Number.isFinite(criadoPorUsuarioId)
+          ? { criado_por_usuario_id: criadoPorUsuarioId }
+          : {}),
       },
     });
+    console.log(`[Contrato/Agenda] garantirAgendaProducao venda ${vendaId}: criado evento agenda_fabrica id=${created.id} (AGENDAR_MEDIDA_FINA PENDENTE)`);
   }
 
   private async atualizarStatusVendaParaProducaoAoVigorarContrato(contrato: {
     venda_id?: number | null;
+    cliente_id?: number | null;
   }) {
     const vendaId = Number(contrato?.venda_id || 0);
     if (!Number.isFinite(vendaId) || vendaId <= 0) return;
 
     const venda = await this.prisma.vendas.findUnique({
       where: { id: vendaId },
-      select: { id: true, status: true },
+      select: { id: true, status: true, cliente_id: true },
     });
     if (!venda) return;
 
-    const statusAtual = String(venda.status || '').toUpperCase();
-    const statusDestino = 'PRODUCAO_AGENDADA';
+    const statusAtualVenda = String(venda.status || '').toUpperCase();
+    const clienteId = Number(contrato?.cliente_id ?? venda.cliente_id ?? 0) || null;
+
+    // 1) Primeiro leva venda (e cliente) para CONTRATO_ASSINADO se ainda não estiver
+    if (statusAtualVenda !== 'CONTRATO_ASSINADO') {
+      const valContrato = validarTransicaoStatusCliente({
+        atual: statusAtualVenda,
+        proximo: 'CONTRATO_ASSINADO',
+      });
+      if (valContrato.ok) {
+        await this.prisma.vendas.update({
+          where: { id: vendaId },
+          data: { status: 'CONTRATO_ASSINADO' },
+        });
+        if (clienteId) {
+          const cliente = await this.prisma.cliente.findUnique({
+            where: { id: clienteId },
+            select: { id: true, status: true },
+          });
+          if (
+            cliente &&
+            validarTransicaoStatusCliente({
+              atual: cliente.status,
+              proximo: 'CONTRATO_ASSINADO',
+            }).ok
+          ) {
+            await this.prisma.cliente.update({
+              where: { id: clienteId },
+              data: { status: 'CONTRATO_ASSINADO' },
+            });
+          }
+        }
+      }
+    }
+
+    // 2) Depois leva venda (e cliente) para AGENDAR_MEDIDA_FINA (aguardando medida fina)
+    const vendaAtual = await this.prisma.vendas.findUnique({
+      where: { id: vendaId },
+      select: { status: true },
+    });
+    const statusAtual = String(vendaAtual?.status || '').toUpperCase();
+    const statusDestino = 'AGENDAR_MEDIDA_FINA';
     if (statusAtual === statusDestino) return;
 
     const validacao = validarTransicaoStatusCliente({
@@ -530,6 +783,24 @@ export class ContratosService {
       where: { id: vendaId },
       data: { status: statusDestino },
     });
+    if (clienteId) {
+      const cliente = await this.prisma.cliente.findUnique({
+        where: { id: clienteId },
+        select: { id: true, status: true },
+      });
+      if (
+        cliente &&
+        validarTransicaoStatusCliente({
+          atual: cliente.status,
+          proximo: statusDestino,
+        }).ok
+      ) {
+        await this.prisma.cliente.update({
+          where: { id: clienteId },
+          data: { status: statusDestino },
+        });
+      }
+    }
   }
 
   // =======================================
@@ -877,6 +1148,44 @@ export class ContratosService {
     }
   }
 
+  /**
+   * Desenha texto com quebra de página correta: se o parágrafo inteiro couber na página,
+   * garante espaço e desenha; senão usa posição atual (doc.x = left) e desenha em fluxo,
+   * para o PDFKit poder quebrar para a próxima página quando necessário.
+   */
+  private textoComQuebraPagina(
+    doc: any,
+    texto: string,
+    left: number,
+    larguraTexto: number,
+    margemInferior = 60,
+  ): void {
+    if (!texto || !String(texto).trim()) return;
+    doc.font('Helvetica').fontSize(10);
+    const h = doc.heightOfString(texto, { width: larguraTexto });
+    const espacoRestante = doc.page.height - margemInferior - doc.y;
+    if (h <= espacoRestante) {
+      this.garantirEspacoPagina(doc, h, margemInferior);
+      doc
+        .font('Helvetica')
+        .fontSize(10)
+        .text(texto, left, doc.y, {
+          width: larguraTexto,
+          align: 'justify',
+        });
+    } else {
+      this.garantirEspacoPagina(doc, 1, margemInferior);
+      doc.x = left;
+      doc
+        .font('Helvetica')
+        .fontSize(10)
+        .text(texto, {
+          width: larguraTexto,
+          align: 'justify',
+        });
+    }
+  }
+
   private renderCamposAssinatura(
     doc: any,
     left: number,
@@ -890,11 +1199,13 @@ export class ContratosService {
     const spacing = 18;
     const margemInferiorAssinatura = 84; // margem padrão (60) + respiro visual extra
     const razao = mapa.contratada_razao_social || 'CONTRATADA';
+    const repNome = mapa.contratada_representante_nome || '';
+    const repCpf = mapa.contratada_representante_cpf || '';
+    const repRg = mapa.contratada_representante_rg || '';
     const clienteNome =
       mapa.cliente_razao_social_ou_nome_completo || 'CONTRATANTE';
     const docTipo = mapa.cliente_documento_tipo || 'CPF';
     const docNum = mapa.cliente_documento_numero || '';
-    const assinaturaDigitalVisivel = mapa.assinatura_digital_visivel || '';
     const assinaturaClienteVisivel = mapa.assinatura_cliente_visivel || '';
     const assinaturaClienteImagemPath =
       mapa.assinatura_cliente_imagem_path || '';
@@ -994,10 +1305,21 @@ export class ContratosService {
       doc.y += spacing;
     };
 
+    // Bloco CONTRATADA (empresa): Ciente + imagem Assinatura do Responsável (se houver) + linha para assinatura + nome e dados do representante
+    const assinaturaResponsavelPath = mapa.assinatura_responsavel_imagem_path || '';
+    const linhasContratada = [
+      `CONTRATADA: ${razao}`,
+      repNome ? `Nome: ${repNome}` : '',
+      repCpf ? `CPF: ${repCpf}` : '',
+      repRg ? `RG: ${repRg}` : '',
+    ].filter(Boolean);
     drawCienteBlock(
       'Ciente:',
-      [`CONTRATADA: ${razao}`],
-      assinaturaDigitalVisivel,
+      linhasContratada,
+      undefined,
+      assinaturaResponsavelPath && fs.existsSync(assinaturaResponsavelPath)
+        ? assinaturaResponsavelPath
+        : undefined,
     );
     const gapEntreAssinaturas = 14;
     this.garantirEspacoPagina(
@@ -1007,6 +1329,7 @@ export class ContratosService {
     );
     doc.y += gapEntreAssinaturas;
 
+    // Bloco CONTRATANTE (cliente): Ciente + linha para assinatura + nome e documento
     drawCienteBlock(
       'Ciente:',
       [`CONTRATANTE: ${clienteNome}`, `${docTipo}: ${docNum}`].filter(Boolean),
@@ -1084,6 +1407,7 @@ export class ContratosService {
           include: {
             itens: true,
             pagamentos: true,
+            formas_pagamento: true,
             orcamento: { include: { itens: true } },
           },
         },
@@ -1131,8 +1455,13 @@ export class ContratosService {
 
     const enderecoCompleto = endPartes.join(' - ') || '-';
 
+    // Valor total do contrato = total que o cliente vai pagar (valor_vendido), para evitar questionamento jurídico
     const valorTotal = Number(
-      contrato.valor || venda.valor_vendido || venda.valor_total || 0,
+      contrato.valor ||
+      venda.valor_vendido ||
+      venda.valor_total ||
+      (venda.valor_base_contrato != null ? Number(venda.valor_base_contrato) : null) ||
+      0,
     );
     const valorTotalNumerico = valorTotal.toLocaleString('pt-BR', {
       style: 'currency',
@@ -1186,24 +1515,138 @@ export class ContratosService {
       TRANSFERENCIA: 'Transferência bancária',
     };
     const pagamentos = Array.isArray(venda.pagamentos) ? venda.pagamentos : [];
-    const primeiroPg = pagamentos[0];
+    const formasPagamento = Array.isArray((venda as any).formas_pagamento)
+      ? (venda as any).formas_pagamento
+      : [];
     const labelForma = (chave: string) =>
       LABEL_FORMA_PAGAMENTO[String(chave || '').toUpperCase()] ||
       String(chave || '').toUpperCase();
-    // No contrato: só "18x de R$ 3.000,00" (forma + total); o detalhe por parcela/data fica no contas a receber
+    // Valor total do contrato (preço certo e ajustado) – sem juros quando há valor_base_contrato
+    const valorTotalContratoStr = valorTotal.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    });
+    // Agrupa por forma de pagamento e monta descrição
     const valorTotalPagamentos = (pagamentos as any[]).reduce(
       (acc, p) => acc + Number(p?.valor ?? 0),
       0,
     );
-    const valorTotalStr = valorTotalPagamentos.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    });
-    const descFormaPagamento =
-      contrato.descricao ||
-      (primeiroPg
-        ? `${labelForma(primeiroPg.forma_pagamento_chave)} em ${pagamentos.length} parcela(s). Valor total: ${valorTotalStr}`
-        : '');
+    const descFormaPagamento = (() => {
+      const temJurosAposDescricao = (): boolean => {
+        if (pagamentos.length === 0) return false;
+        const porForma = new Map<string, { total: number; qtd: number }>();
+        for (const p of pagamentos as any[]) {
+          const chave = String(p?.forma_pagamento_chave ?? '').toUpperCase() || 'OUTRO';
+          const valor = Number(p?.valor ?? 0);
+          const atual = porForma.get(chave) || { total: 0, qtd: 0 };
+          atual.total += valor;
+          atual.qtd += 1;
+          porForma.set(chave, atual);
+        }
+        const credito = porForma.get('CREDITO');
+        const parceladoCredito = credito && credito.qtd > 1;
+        return valorTotal > valorTotalPagamentos + 0.01 || !!parceladoCredito;
+      };
+      const aplicarValorTotalCorreto = (texto: string): string => {
+        const fraseCorreta = `Valor total: ${valorTotalContratoStr}`;
+        const resultado = texto.replace(
+          /\bValor total\b(?:\s*\(com juros\))?\s*:\s*R\$\s*[\d.,]+/gi,
+          fraseCorreta,
+        );
+        if (resultado === texto && /Valor total/i.test(texto)) {
+          return texto.replace(
+            /[,.]?\s*Valor total\s*(?:\(com juros\))?\s*:?\s*R\$\s*[\d.,]+/gi,
+            `. ${fraseCorreta}`,
+          ).replace(/\.\s*\./g, '.');
+        }
+        return resultado;
+      };
+      if (contrato.descricao?.trim()) {
+        return aplicarValorTotalCorreto(contrato.descricao.trim());
+      }
+      // Usar vendas_formas_pagamento quando existir: mostrar valores JÁ COM JUROS (soma de vendas_pagamentos por forma)
+      if (formasPagamento.length > 0 && pagamentos.length > 0) {
+        const totalPorForma = new Map<string, { total: number; qtd: number }>();
+        for (const p of pagamentos as any[]) {
+          const chave = String(p?.forma_pagamento_chave ?? '').toUpperCase() || 'OUTRO';
+          const valor = Number(p?.valor ?? 0);
+          const atual = totalPorForma.get(chave) || { total: 0, qtd: 0 };
+          atual.total += valor;
+          atual.qtd += 1;
+          totalPorForma.set(chave, atual);
+        }
+        const partes: string[] = [];
+        for (const f of formasPagamento as any[]) {
+          const chave = String(f?.forma_pagamento_chave ?? '').toUpperCase();
+          const label = labelForma(chave);
+          const n = Math.max(1, Number(f?.quantidade_parcelas) || 1);
+          const comJuros = Boolean(f?.com_juros);
+          const dados = totalPorForma.get(chave);
+          const totalReal = dados ? dados.total : 0;
+          const totalFmt = totalReal.toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+          });
+          if (n > 1) {
+            partes.push(
+              `${label} em ${n}x, total ${totalFmt}${comJuros ? ' (com juros)' : ''}`,
+            );
+          } else {
+            partes.push(`${label} à vista: ${totalFmt}`);
+          }
+        }
+        return partes.length
+          ? `${partes.join('. ')}. Valor total: ${valorTotalContratoStr}`
+          : valorTotalContratoStr;
+      }
+      if (formasPagamento.length > 0) {
+        const partes: string[] = [];
+        for (const f of formasPagamento as any[]) {
+          const chave = String(f?.forma_pagamento_chave ?? '').toUpperCase();
+          const label = labelForma(chave);
+          const valorBase = Number(f?.valor_base ?? 0);
+          const valorFmt = valorBase.toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL',
+          });
+          const n = Math.max(1, Number(f?.quantidade_parcelas) || 1);
+          const comJuros = Boolean(f?.com_juros);
+          if (n > 1) {
+            partes.push(
+              `${label} em ${n}x, valor de ${valorFmt}${comJuros ? ' (com juros)' : ''}`,
+            );
+          } else {
+            partes.push(`${label} à vista: ${valorFmt}`);
+          }
+        }
+        return partes.length
+          ? `${partes.join('. ')}. Valor total: ${valorTotalContratoStr}`
+          : valorTotalContratoStr;
+      }
+      if (pagamentos.length === 0) return '';
+      const porForma = new Map<string, { total: number; qtd: number }>();
+      for (const p of pagamentos as any[]) {
+        const chave = String(p?.forma_pagamento_chave ?? '').toUpperCase() || 'OUTRO';
+        const valor = Number(p?.valor ?? 0);
+        const atual = porForma.get(chave) || { total: 0, qtd: 0 };
+        atual.total += valor;
+        atual.qtd += 1;
+        porForma.set(chave, atual);
+      }
+      // Sempre mostra o total por forma e "Valor total: R$ X" (sem mencionar juros)
+      const partes: string[] = [];
+      for (const [chave, { total, qtd }] of porForma) {
+        const label = labelForma(chave);
+        const totalFmt = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        if (qtd > 1) {
+          partes.push(`${label} em ${qtd} parcela(s), total ${totalFmt}`);
+        } else {
+          partes.push(`${label} à vista: ${totalFmt}`);
+        }
+      }
+      const texto = partes.join('. ');
+      return texto ? `${texto}. Valor total: ${valorTotalContratoStr}` : valorTotalContratoStr;
+    })();
 
     const hoje = new Date();
     const dataAss = hoje.toLocaleDateString('pt-BR', { timeZone: TZ_BR });
@@ -1279,6 +1722,26 @@ export class ContratosService {
     const temAssinaturaClienteImagem =
       !!assinaturaClienteImagemPath &&
       fs.existsSync(assinaturaClienteImagemPath);
+
+    // Assinatura do Responsável (empresa) — variável para PDFs
+    const assinaturaResponsavelArquivo = await this.prisma.arquivos.findFirst({
+      where: {
+        owner_type: 'EMPRESA',
+        owner_id: 1,
+        slot_key: 'ASSINATURA_RESPONSAVEL',
+      },
+      select: { url: true },
+    });
+    const assinaturaResponsavelImagemPath = assinaturaResponsavelArquivo?.url
+      ? path.join(
+          process.cwd(),
+          String(assinaturaResponsavelArquivo.url).replace(/^\//, ''),
+        )
+      : '';
+    const temAssinaturaResponsavelImagem =
+      !!assinaturaResponsavelImagemPath &&
+      fs.existsSync(assinaturaResponsavelImagemPath);
+
     const assinaturaClienteVisivel = ultimaAssinatura
       ? this.montarResumoAssinaturaClientePdf({
           dataHora: ultimaAssinatura.data_hora,
@@ -1342,24 +1805,30 @@ export class ContratosService {
         ? `, inscrita na Inscrição Estadual sob o nº ${String(empresa.ie).trim()}`
         : '',
       contratada_endereco_completo: enderecoEmpresa,
-      // Assinatura presencial na loja → nome do sócio; assinatura eletrônica → representante legal (empresa/CNPJ)
+      // Representante: se o vendedor preencheu "Representante da venda", usa esses dados; senão usa cadastro da empresa conforme checkbox (sócio ou representante legal)
       contratada_representante_nome: (() => {
-        const presencial = Boolean((contrato as any).assinatura_presencial);
-        if (presencial && empresa?.representante_legal_socio_nome?.trim())
+        const repVendaNome = String((venda as any)?.representante_venda_nome ?? '').trim();
+        if (repVendaNome) return repVendaNome;
+        const usarSocio = empresa?.contrato_usar_socio_quando_vazio !== false;
+        if (usarSocio && empresa?.representante_legal_socio_nome?.trim())
           return empresa.representante_legal_socio_nome.trim();
         return empresa?.representante_legal_nome?.trim() ?? '';
       })(),
       contratada_representante_estado_civil: 'Brasileira',
       contratada_representante_rg: (() => {
-        const presencial = Boolean((contrato as any).assinatura_presencial);
-        if (presencial && empresa?.representante_legal_socio_rg)
-          return this.maskRg(empresa.representante_legal_socio_rg) || '';
+        const repVendaRg = (venda as any)?.representante_venda_rg;
+        if (repVendaRg != null && String(repVendaRg).trim()) return this.maskRg(String(repVendaRg).trim()) || '';
+        const usarSocio = empresa?.contrato_usar_socio_quando_vazio !== false;
+        if (usarSocio && empresa?.representante_legal_socio_rg) return this.maskRg(empresa.representante_legal_socio_rg) || '';
         return this.maskRg(empresa?.representante_legal_rg) || '';
       })(),
       contratada_representante_cpf: (() => {
-        const presencial = Boolean((contrato as any).assinatura_presencial);
+        const repVendaCpf = (venda as any)?.representante_venda_cpf;
+        if (repVendaCpf != null && String(repVendaCpf).replace(/\D/g, '').length >= 11)
+          return this.maskCpf(String(repVendaCpf).replace(/\D/g, '').slice(0, 11)) || '';
+        const usarSocio = empresa?.contrato_usar_socio_quando_vazio !== false;
         const cpfSocio = empresa?.representante_legal_socio_cpf?.trim();
-        if (presencial && cpfSocio) return this.maskCpf(cpfSocio) || '';
+        if (usarSocio && cpfSocio) return this.maskCpf(cpfSocio) || '';
         return this.maskCpf(empresa?.representante_legal_cpf ?? '') || '';
       })(),
       // Dados para pagamento (cadastro da empresa): nome = razão social da empresa, não do representante
@@ -1382,11 +1851,13 @@ export class ContratosService {
       valor_revisao_base: 'R$ 250,00',
       valor_armazenagem_dia: 'R$ 100,00',
       acabamento_interno_padrao: 'Branco TX (MDF BP 15mm)',
-      assinatura_digital_visivel: this.assinaturaA1Habilitada()
-        ? `Documento assinado digitalmente (certificado A1) por ${razaoSocial} - CNPJ ${this.maskCnpj(empresa?.cnpj ?? cnpj)} em ${dataHoraAss}.`
+      assinatura_digital_visivel: '', // Removido: não usar mais assinatura eletrônica no PDF
+      assinatura_cliente_visivel: '', // Apenas linha para assinatura física; sem registro eletrônico no PDF
+      assinatura_cliente_imagem_path: '',
+      // Variável para exibir imagem da Assinatura do Responsável (cadastro da empresa) em PDFs
+      assinatura_responsavel_imagem_path: temAssinaturaResponsavelImagem
+        ? assinaturaResponsavelImagemPath
         : '',
-      assinatura_cliente_visivel: assinaturaClienteVisivel,
-      assinatura_cliente_imagem_path: assinaturaClienteImagemPath,
     };
 
     const doc = new PDFKitDoc({ size: 'A4', margin: 40 });
@@ -1496,14 +1967,13 @@ export class ContratosService {
                 idxCorte > 0 ? semPlaceholder.slice(idxCorte).trim() : '';
 
               if (parteAntesTabela) {
-                this.garantirEspacoPagina(doc, 40);
-                doc
-                  .font('Helvetica')
-                  .fontSize(10)
-                  .text(parteAntesTabela, left, doc.y, {
-                    width: larguraTexto,
-                    align: 'justify',
-                  });
+                this.textoComQuebraPagina(
+                  doc,
+                  parteAntesTabela,
+                  left,
+                  larguraTexto,
+                  60,
+                );
                 doc.y += 4;
               }
 
@@ -1511,22 +1981,17 @@ export class ContratosService {
 
               if (parteDepoisTabela) {
                 doc.y += 4;
-                this.garantirEspacoPagina(doc, 40);
-                doc
-                  .font('Helvetica')
-                  .fontSize(10)
-                  .text(parteDepoisTabela, left, doc.y, {
-                    width: larguraTexto,
-                    align: 'justify',
-                  });
+                this.textoComQuebraPagina(
+                  doc,
+                  parteDepoisTabela,
+                  left,
+                  larguraTexto,
+                  60,
+                );
                 doc.y += 10;
               }
             } else {
-              this.garantirEspacoPagina(doc, 40);
-              doc.font('Helvetica').fontSize(10).text(texto, left, doc.y, {
-                width: larguraTexto,
-                align: 'justify',
-              });
+              this.textoComQuebraPagina(doc, texto, left, larguraTexto, 60);
               doc.y += 10;
             }
             jaRenderizouAlgumaClausula = true;
@@ -1718,13 +2183,23 @@ export class ContratosService {
     return { contratoId: payload.contratoId, tokenParaUrl: token };
   }
 
+  /**
+   * Inclui contrato assinado via link público (token). Marca como vigente e grava PDF no slot CONTRATO_ASSINADO_CLIENTE.
+   */
+  async incluirContratoAssinadoPorToken(
+    token: string,
+    pdfBuffer?: Buffer,
+  ): Promise<{ success: boolean; status: string }> {
+    const { contratoId } = await this.resolveTokenPublico(token);
+    return this.marcarVigenteAssinaturaPresencial(contratoId, pdfBuffer);
+  }
+
   async obterLinkPublicoPdf(
     contratoId: number,
     baseUrl: string,
   ): Promise<{
     link: string;
-    linkAceitar?: string;
-    linkPdf?: string;
+    linkPdf: string;
     token: string;
     expiraEm: string;
   }> {
@@ -1755,36 +2230,11 @@ export class ContratosService {
     }
     const urlBase = (baseUrl || '').replace(/\/+$/, '');
     const linkPdf = `${urlBase}/api/contratos-publico/${shortToken}/pdf`;
-    const baseAceite = (
-      this.config.get<string>('CONTRATO_ACEITE_BASE_URL') ||
-      process.env.CONTRATO_ACEITE_BASE_URL ||
-      ''
-    ).trim();
-    const statusAtual = String(contrato.status || '').toUpperCase();
-    const assinaturaClienteExistente =
-      await this.prisma.assinaturas_log.findFirst({
-        where: {
-          contrato_id: contratoId,
-          OR: [
-            { metodo_verificacao: { contains: 'portal seguro' } },
-            { metodo_verificacao: { contains: 'Link WhatsApp/SMS' } },
-          ],
-        },
-        select: { id: true },
-      });
-    const bloqueadoParaAceite =
-      statusAtual === 'CANCELADO' ||
-      statusAtual === 'ENCERRADO' ||
-      !!assinaturaClienteExistente;
-    const linkAceitar =
-      !bloqueadoParaAceite && baseAceite
-        ? `${baseAceite.replace(/\/+$/, '')}/aceitar/${shortToken}`
-        : undefined;
-    const link = linkAceitar || linkPdf;
+    // Sempre retorna apenas o link direto do PDF (sem subdomínio de aceite/assinatura).
+    const link = linkPdf;
     return {
       link,
-      linkAceitar,
-      linkPdf: linkAceitar ? linkPdf : undefined,
+      linkPdf,
       token: shortToken,
       expiraEm: expiraEm.toISOString(),
     };
@@ -2008,6 +2458,7 @@ export class ContratosService {
     });
     await this.atualizarStatusVendaParaProducaoAoVigorarContrato({
       venda_id: (contrato as any).venda_id ?? null,
+      cliente_id: (contrato as any).cliente_id ?? null,
     });
     await this.garantirAgendaProducaoDaVendaAoVigorarContrato({
       id: contrato.id,
@@ -2024,6 +2475,7 @@ export class ContratosService {
   async marcarVigenteAssinaturaPresencial(
     contratoId: number,
     pdfEscaneado?: Buffer,
+    criadoPorUsuarioId?: number,
   ) {
     const contrato = await this.prisma.contratos.findUnique({
       where: { id: contratoId },
@@ -2064,12 +2516,16 @@ export class ContratosService {
     });
     await this.atualizarStatusVendaParaProducaoAoVigorarContrato({
       venda_id: contrato.venda_id ?? null,
-    });
-    await this.garantirAgendaProducaoDaVendaAoVigorarContrato({
-      id: contrato.id,
-      venda_id: contrato.venda_id ?? null,
       cliente_id: contrato.cliente_id ?? null,
     });
+    await this.garantirAgendaProducaoDaVendaAoVigorarContrato(
+      {
+        id: contrato.id,
+        venda_id: contrato.venda_id ?? null,
+        cliente_id: contrato.cliente_id ?? null,
+      },
+      criadoPorUsuarioId,
+    );
 
     return { success: true, status: 'VIGENTE' };
   }

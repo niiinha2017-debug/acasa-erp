@@ -9,23 +9,28 @@
       class="border-b border-border-ui"
     >
       <template #actions>
-        <div class="flex items-center gap-2 w-full sm:w-auto">
-          <Button
-            v-if="can('configuracoes.empresa.ver')"
-            variant="ghost"
-            class="flex-1 sm:flex-none !rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200"
-            @click="confirmarExportarDadosEmpresa"
-          >
-            <i class="pi pi-external-link mr-2"></i> Exportar
-          </Button>
-          <Button
-            v-if="can('configuracoes.empresa.editar')"
-            class="flex-1 sm:flex-none !rounded-xl text-[10px] font-black uppercase tracking-widest bg-brand-primary hover:bg-brand-primary/90"
-            :loading="salvando"
-            @click="confirmarSalvarDadosEmpresa"
-          >
-            <i class="pi pi-check-circle mr-2"></i> Salvar Alterações
-          </Button>
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+          <p v-if="ultimoSalvamento" class="text-[10px] text-slate-500 self-center sm:self-auto sm:mr-2 order-last sm:order-none">
+            Último salvamento: {{ ultimoSalvamento }}
+          </p>
+          <div class="flex items-center gap-2">
+            <Button
+              v-if="can('configuracoes.empresa.ver')"
+              variant="ghost"
+              class="flex-1 sm:flex-none !rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200"
+              @click="confirmarExportarDadosEmpresa"
+            >
+              <i class="pi pi-external-link mr-2"></i> Exportar
+            </Button>
+            <Button
+              v-if="can('configuracoes.empresa.editar')"
+              class="flex-1 sm:flex-none !rounded-xl text-[10px] font-black uppercase tracking-widest bg-brand-primary hover:bg-brand-primary/90"
+              :loading="salvando"
+              @click="confirmarSalvarDadosEmpresa"
+            >
+              <i class="pi pi-check-circle mr-2"></i> Salvar Alterações
+            </Button>
+          </div>
         </div>
       </template>
     </PageHeader>
@@ -36,45 +41,159 @@
           
           <section class="pb-6 border-b border-border-ui/70">
             <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 text-center lg:text-left">
-              Logo da Marca
+              Identidade
             </h3>
 
-            <div
-              class="relative aspect-square w-48 mx-auto lg:ml-0 rounded-2xl border-2 border-dashed border-slate-200 bg-white flex items-center justify-center overflow-hidden group cursor-pointer hover:border-brand-primary transition-all"
-              @click="fileInput?.click()"
-            >
-              <img
-                v-if="logoPreview"
-                :src="logoPreview"
-                class="object-contain w-full h-full p-6 transition-transform group-hover:scale-105"
-                alt="Logo"
-              />
-              <div v-else class="flex flex-col items-center text-slate-300">
-                <i class="pi pi-images text-3xl mb-2"></i>
-                <span class="text-[9px] font-black uppercase text-center px-4">Clique para fazer upload</span>
+            <div class="space-y-6">
+              <div>
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Logo da Marca</p>
+                <div
+                  class="relative aspect-square w-48 mx-auto lg:ml-0 rounded-2xl border-2 border-dashed border-slate-200 bg-white flex items-center justify-center overflow-hidden group cursor-pointer hover:border-brand-primary transition-all"
+                  @click="fileInput?.click()"
+                >
+                  <img
+                    v-if="logoPreview"
+                    :src="logoPreview"
+                    class="object-contain w-full h-full p-6 transition-transform group-hover:scale-105"
+                    alt="Logo"
+                  />
+                  <div v-else class="flex flex-col items-center text-slate-300">
+                    <i class="pi pi-images text-3xl mb-2"></i>
+                    <span class="text-[9px] font-black uppercase text-center px-4">Clique para fazer upload</span>
+                  </div>
+                  <input type="file" ref="fileInput" class="hidden" accept="image/*" @change="handleLogoUpload" />
+                </div>
+                <div class="mt-2 flex justify-center lg:justify-start">
+                  <Button
+                    v-if="logoPreview"
+                    variant="ghost"
+                    size="sm"
+                    class="!h-9 !rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-white hover:text-rose-500"
+                    type="button"
+                    :loading="removendoLogo"
+                    @click="confirmarRemoverLogo"
+                  >
+                    <i class="pi pi-trash mr-2"></i> Remover logo
+                  </Button>
+                </div>
               </div>
 
-              <input
-                type="file"
-                ref="fileInput"
-                class="hidden"
-                accept="image/*"
-                @change="handleLogoUpload"
-              />
-            </div>
+              <div>
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Logo para Fundo Escuro</p>
+                <div
+                  class="relative aspect-square w-40 mx-auto lg:ml-0 rounded-xl border-2 border-dashed border-slate-200 bg-slate-800 flex items-center justify-center overflow-hidden group cursor-pointer hover:border-brand-primary transition-all"
+                  @click="fileInputFundoEscuro?.click()"
+                >
+                  <img
+                    v-if="logoFundoEscuroPreview"
+                    :src="logoFundoEscuroPreview"
+                    class="object-contain w-full h-full p-4 transition-transform group-hover:scale-105"
+                    alt="Logo fundo escuro"
+                  />
+                  <div v-else class="flex flex-col items-center text-slate-500">
+                    <i class="pi pi-moon text-2xl mb-1"></i>
+                    <span class="text-[9px] font-black uppercase text-center px-2">Clique para upload</span>
+                  </div>
+                  <input type="file" ref="fileInputFundoEscuro" class="hidden" accept="image/*" @change="handleLogoFundoEscuroUpload" />
+                </div>
+                <div class="mt-2 flex justify-center lg:justify-start">
+                  <Button
+                    v-if="logoFundoEscuroPreview"
+                    variant="ghost"
+                    size="sm"
+                    class="!h-8 !rounded-xl text-[9px] font-black uppercase border border-slate-200 text-slate-600 hover:text-rose-500"
+                    type="button"
+                    :loading="removendoLogoFundoEscuro"
+                    @click="confirmarRemoverLogoFundoEscuro"
+                  >
+                    <i class="pi pi-trash mr-1"></i> Remover
+                  </Button>
+                </div>
+              </div>
 
-            <div class="mt-3 flex justify-center lg:justify-start">
-              <Button
-                v-if="logoPreview"
-                variant="ghost"
-                size="sm"
-                class="!h-9 !rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-white hover:text-rose-500"
-                type="button"
-                :loading="removendoLogo"
-                @click="confirmarRemoverLogo"
-              >
-                <i class="pi pi-trash mr-2"></i> Remover logo
-              </Button>
+              <div>
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Cor da Marca</p>
+                <div class="flex items-center gap-3">
+                  <input
+                    v-model="form.cor_marca"
+                    type="color"
+                    class="w-12 h-12 rounded-xl border-2 border-slate-200 cursor-pointer bg-white p-0.5"
+                  />
+                  <input
+                    v-model="form.cor_marca"
+                    type="text"
+                    class="flex-1 h-10 rounded-xl border border-slate-200 px-3 text-sm font-mono uppercase bg-bg-card text-text-main"
+                    placeholder="#2563eb"
+                    maxlength="7"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Logotipo Secundário / Ícone</p>
+                <div
+                  class="relative aspect-square w-32 mx-auto lg:ml-0 rounded-xl border-2 border-dashed border-slate-200 bg-white flex items-center justify-center overflow-hidden group cursor-pointer hover:border-brand-primary transition-all"
+                  @click="fileInputLogoSecundario?.click()"
+                >
+                  <img
+                    v-if="logoSecundarioPreview"
+                    :src="logoSecundarioPreview"
+                    class="object-contain w-full h-full p-3 transition-transform group-hover:scale-105"
+                    alt="Logo secundário"
+                  />
+                  <div v-else class="flex flex-col items-center text-slate-300">
+                    <i class="pi pi-image text-2xl mb-1"></i>
+                    <span class="text-[8px] font-black uppercase text-center px-2">Ícone</span>
+                  </div>
+                  <input type="file" ref="fileInputLogoSecundario" class="hidden" accept="image/*" @change="handleLogoSecundarioUpload" />
+                </div>
+                <div class="mt-2 flex justify-center lg:justify-start">
+                  <Button
+                    v-if="logoSecundarioPreview"
+                    variant="ghost"
+                    size="sm"
+                    class="!h-8 !rounded-xl text-[9px] font-black uppercase border border-slate-200 text-slate-600 hover:text-rose-500"
+                    type="button"
+                    :loading="removendoLogoSecundario"
+                    @click="confirmarRemoverLogoSecundario"
+                  >
+                    <i class="pi pi-trash mr-1"></i> Remover
+                  </Button>
+                </div>
+              </div>
+
+              <div>
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Imagem da Assinatura Digital</p>
+                <div
+                  class="relative aspect-[3/1] w-full max-w-48 mx-auto lg:ml-0 rounded-xl border-2 border-dashed border-slate-200 bg-white flex items-center justify-center overflow-hidden group cursor-pointer hover:border-brand-primary transition-all"
+                  @click="fileInputAssinatura?.click()"
+                >
+                  <img
+                    v-if="assinaturaPreview"
+                    :src="assinaturaPreview"
+                    class="object-contain w-full h-full p-2 transition-transform group-hover:scale-105"
+                    alt="Assinatura digital"
+                  />
+                  <div v-else class="flex flex-col items-center text-slate-300">
+                    <i class="pi pi-pencil text-2xl mb-1"></i>
+                    <span class="text-[9px] font-black uppercase text-center px-2">Clique para upload</span>
+                  </div>
+                  <input type="file" ref="fileInputAssinatura" class="hidden" accept="image/*" @change="handleAssinaturaUpload" />
+                </div>
+                <div class="mt-2 flex justify-center lg:justify-start">
+                  <Button
+                    v-if="assinaturaPreview"
+                    variant="ghost"
+                    size="sm"
+                    class="!h-8 !rounded-xl text-[9px] font-black uppercase border border-slate-200 text-slate-600 hover:text-rose-500"
+                    type="button"
+                    :loading="removendoAssinatura"
+                    @click="confirmarRemoverAssinatura"
+                  >
+                    <i class="pi pi-trash mr-1"></i> Remover
+                  </Button>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -152,7 +271,32 @@
               <Input v-model="form.nome_fantasia" label="Nome Fantasia" />
               <Input v-model="cnpjMask" label="CNPJ" placeholder="00.000.000/0000-00" @blur="onCnpjBlur" />
               <Input v-model="ieMask" label="Inscrição Estadual" />
-              <Input v-model="form.email" label="E-mail de Contato" icon="pi pi-envelope" />
+              <Input v-model="imMask" label="Inscrição Municipal" placeholder="Conforme prefeitura" />
+              <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-semibold tracking-wide text-text-soft ml-0.5 mb-0.5">Regime Tributário</label>
+                <select
+                  v-model="form.regime_tributario"
+                  class="w-full h-10 border rounded-xl text-sm bg-bg-card text-text-main border-border-ui hover:border-slate-300 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 outline-none transition-all px-3"
+                >
+                  <option value="">Selecione</option>
+                  <option v-for="opt in REGIME_TRIBUTARIO_OPCOES" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          <section class="pb-6 border-b border-border-ui/70">
+            <div class="flex items-center gap-3 mb-6">
+              <span class="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
+              <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">Contato</h3>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <Input v-model="form.email" label="E-mail de Contato" type="email" icon="pi pi-envelope" class="md:col-span-2" />
+              <Input v-model="telefoneMask" label="WhatsApp (número)" icon="pi pi-whatsapp" placeholder="(00) 00000-0000" />
+              <Input v-model="form.whatsapp_url" label="Link do WhatsApp" placeholder="https://wa.me/5511999999999" />
+              <Input v-model="form.instagram_url" label="Link do Instagram" placeholder="https://instagram.com/..." />
+              <Input v-model="form.site" label="Site da Empresa" placeholder="https://..." class="md:col-span-2" />
             </div>
           </section>
 
@@ -162,6 +306,9 @@
               <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">Endereço Principal</h3>
             </div>
 
+            <p class="text-[11px] text-slate-500 mb-3">
+              Preencha o CEP e perca o foco (Tab ou clique fora) para preencher Rua, Bairro e Cidade automaticamente.
+            </p>
             <div class="grid grid-cols-12 gap-5">
               <Input v-model="cepMask" label="CEP" placeholder="00000-000" class="col-span-4" @blur="onCepBlur" />
               <Input v-model="form.logradouro" label="Rua/Logradouro" placeholder="Nome da rua" class="col-span-8" />
@@ -169,37 +316,104 @@
               <Input v-model="form.bairro" label="Bairro" placeholder="Nome do bairro" class="col-span-5" />
               <Input v-model="form.cidade" label="Cidade" placeholder="Nome da cidade" class="col-span-4" />
               <Input v-model="form.uf" label="UF" placeholder="UF" class="col-span-2" maxlength="2" />
-              <Input v-model="telefoneMask" label="WhatsApp" icon="pi pi-whatsapp" class="col-span-10" />
             </div>
           </section>
 
-          <section class="py-2">
+          <section class="pt-2">
             <div class="flex items-center gap-3 mb-6">
               <span class="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
               <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">
-                Representantes Legais (contratos)
+                Representante Legal e Sócio
               </h3>
             </div>
-            <p class="text-[10px] text-slate-500 mb-4">
-              Cadastre os dois representantes para uso em contratos e documentos.
+            <p class="text-[11px] text-slate-500 mb-4">
+              Usados nos contratos quando o vendedor não preencher o &quot;Representante da venda&quot;. Representante legal (CNPJ) e Sócio/Proprietário podem ser a mesma pessoa ou diferentes.
             </p>
-            <div class="space-y-6">
-              <div class="p-4 bg-slate-50/60 dark:bg-slate-900/40">
-                <p class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Proprietário</p>
-                <div class="grid grid-cols-1 gap-4">
-                  <Input v-model="form.representante_legal_nome" label="Nome" placeholder="Nome completo" />
-                  <Input v-model="representanteCpfMask" label="CPF" placeholder="000.000.000-00" />
-                  <Input v-model="form.representante_legal_rg" label="RG" placeholder="00.000.000-0" />
+            <div class="mb-4 p-4 rounded-xl bg-white border border-slate-200">
+              <p class="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-3">Quando o vendedor não preencher o Representante da venda, usar no contrato:</p>
+              <label class="flex items-center gap-3 cursor-pointer group">
+                <input
+                  v-model="form.contrato_usar_socio_quando_vazio"
+                  type="checkbox"
+                  class="w-4 h-4 rounded border-border-ui text-brand-primary focus:ring-brand-primary/20"
+                />
+                <span class="text-sm text-text-main">
+                  <strong>Sócio / Proprietário</strong> (desmarque para usar Representante Legal)
+                </span>
+              </label>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 p-6 rounded-2xl bg-slate-50 border border-slate-100 space-y-6">
+              <div class="md:col-span-2">
+                <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Representante Legal (CNPJ)</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Input v-model="form.representante_legal_nome" label="Nome completo" placeholder="Nome do representante legal" />
+                  <Input
+                    :model-value="representanteLegalCpfMask"
+                    label="CPF"
+                    placeholder="000.000.000-00"
+                    @update:model-value="(v) => (form.representante_legal_cpf = onlyNumbers(v).slice(0, 11))"
+                  />
+                  <Input
+                    :model-value="representanteLegalRgMask"
+                    label="RG"
+                    placeholder="00.000.000-0"
+                    @update:model-value="(v) => (form.representante_legal_rg = (v || '').replace(/\D/g, '').slice(0, 14))"
+                  />
                 </div>
               </div>
-
-              <div class="p-4 bg-slate-50/60 dark:bg-slate-900/40">
-                <p class="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Sócio</p>
-                <div class="grid grid-cols-1 gap-4">
-                  <Input v-model="form.representante_legal_socio_nome" label="Nome" placeholder="Nome completo" />
-                  <Input v-model="representanteSocioCpfMask" label="CPF" placeholder="000.000.000-00" />
-                  <Input v-model="form.representante_legal_socio_rg" label="RG" placeholder="00.000.000-0" />
+              <div class="md:col-span-2">
+                <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Sócio / Proprietário</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Input v-model="form.representante_legal_socio_nome" label="Nome completo" placeholder="Nome do sócio ou proprietário" />
+                  <Input
+                    :model-value="socioCpfMask"
+                    label="CPF"
+                    placeholder="000.000.000-00"
+                    @update:model-value="(v) => (form.representante_legal_socio_cpf = onlyNumbers(v).slice(0, 11))"
+                  />
+                  <Input
+                    :model-value="socioRgMask"
+                    label="RG"
+                    placeholder="00.000.000-0"
+                    @update:model-value="(v) => (form.representante_legal_socio_rg = (v || '').replace(/\D/g, '').slice(0, 14))"
+                  />
                 </div>
+              </div>
+            </div>
+
+            <div class="mt-6 p-4 rounded-xl bg-white border border-slate-200">
+              <p class="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-3">Assinatura do Responsável</p>
+              <p class="text-[11px] text-slate-500 mb-3">
+                Imagem usada como variável em PDFs (contratos, orçamentos). Recomendado: assinatura escaneada ou desenhada em fundo transparente.
+              </p>
+              <div
+                class="relative aspect-[3/1] w-full max-w-56 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden group cursor-pointer hover:border-brand-primary transition-all"
+                @click="fileInputAssinaturaResponsavel?.click()"
+              >
+                <img
+                  v-if="assinaturaResponsavelPreview"
+                  :src="assinaturaResponsavelPreview"
+                  class="object-contain w-full h-full p-2"
+                  alt="Assinatura do responsável"
+                />
+                <div v-else class="flex flex-col items-center text-slate-400">
+                  <i class="pi pi-user-edit text-2xl mb-1"></i>
+                  <span class="text-[9px] font-black uppercase">Clique para upload</span>
+                </div>
+                <input type="file" ref="fileInputAssinaturaResponsavel" class="hidden" accept="image/*" @change="handleAssinaturaResponsavelUpload" />
+              </div>
+              <div class="mt-2">
+                <Button
+                  v-if="assinaturaResponsavelPreview"
+                  variant="ghost"
+                  size="sm"
+                  class="!h-8 !rounded-xl text-[9px] font-black uppercase border border-slate-200 text-slate-600 hover:text-rose-500"
+                  type="button"
+                  :loading="removendoAssinaturaResponsavel"
+                  @click="confirmarRemoverAssinaturaResponsavel"
+                >
+                  <i class="pi pi-trash mr-1"></i> Remover
+                </Button>
               </div>
             </div>
           </section>
@@ -210,6 +424,19 @@
               <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest text-emerald-600">
                 Dados Bancários e Pix
               </h3>
+            </div>
+
+            <div
+              v-if="avisoDadosBancariosVazios"
+              class="mb-4 p-4 rounded-xl border-2 border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 flex items-start gap-3"
+            >
+              <i class="pi pi-exclamation-triangle text-amber-600 dark:text-amber-400 text-xl mt-0.5"></i>
+              <div>
+                <p class="text-sm font-bold text-amber-800 dark:text-amber-200">Dados bancários incompletos</p>
+                <p class="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                  Ao salvar, alguns campos de Dados Bancários e Pix estão vazios. Recomendamos preencher Titular, Banco, Agência, Conta e Chave Pix para orçamentos e documentos.
+                </p>
+              </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5 p-6 rounded-2xl bg-slate-50 border border-slate-100">
@@ -251,7 +478,7 @@ import { ConfiguracaoService } from '@/services/index'
 import { ArquivosService } from '@/services/arquivos.service'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
-import { maskCNPJ, maskCEP, maskTelefone, maskIE, maskCPF, onlyNumbers } from '@/utils/masks'
+import { maskCNPJ, maskCEP, maskTelefone, maskIE, maskCPF, maskRG, onlyNumbers } from '@/utils/masks'
 import { buscarCep, buscarCnpj } from '@/utils/utils'
 import { can } from '@/services/permissions'
 
@@ -271,17 +498,45 @@ const anexandoDoc = ref(false)
 
 // ✅ dados “não persistem” no form: vêm da tabela global de arquivos
 const logoPreview = ref('')
+const logoFundoEscuroPreview = ref('')
+const assinaturaPreview = ref('')
 const documentos = ref([])
+const removendoLogoFundoEscuro = ref(false)
+const removendoAssinatura = ref(false)
+const removendoLogoSecundario = ref(false)
+const removendoAssinaturaResponsavel = ref(false)
+const fileInputFundoEscuro = ref(null)
+const fileInputAssinatura = ref(null)
+const fileInputLogoSecundario = ref(null)
+const fileInputAssinaturaResponsavel = ref(null)
+const logoSecundarioPreview = ref('')
+const assinaturaResponsavelPreview = ref('')
+const ultimoSalvamento = ref('')
 
 function triggerDocumentUpload() {
   documentInput.value?.click()
 }
+
+const REGIME_TRIBUTARIO_OPCOES = [
+  { value: 'MEI', label: 'MEI' },
+  { value: 'SIMPLES_NACIONAL', label: 'Simples Nacional' },
+  { value: 'SIMPLES_NACIONAL_EXCESSO', label: 'Simples Nacional - Excesso de Sublimite' },
+  { value: 'LUCRO_PRESUMIDO', label: 'Lucro Presumido' },
+  { value: 'LUCRO_REAL', label: 'Lucro Real' },
+  { value: 'OUTRO', label: 'Outro' },
+]
 
 const form = ref({
   razao_social: '',
   nome_fantasia: '',
   cnpj: '',
   ie: '',
+  inscricao_municipal: '',
+  regime_tributario: '',
+  instagram_url: '',
+  whatsapp_url: '',
+  site: '',
+  cor_marca: '#2563eb',
   cep: '',
   logradouro: '',
   numero: '',
@@ -301,6 +556,7 @@ const form = ref({
   representante_legal_socio_nome: '',
   representante_legal_socio_cpf: '',
   representante_legal_socio_rg: '',
+  contrato_usar_socio_quando_vazio: true,
 })
 
 // --- MÁSCARAS ---
@@ -316,18 +572,23 @@ const ieMask = computed({
   get: () => maskIE(form.value.ie),
   set: (v) => (form.value.ie = onlyNumbers(v).slice(0, 12)),
 })
+const imMask = computed({
+  get: () => maskIE(form.value.inscricao_municipal),
+  set: (v) => (form.value.inscricao_municipal = onlyNumbers(v).slice(0, 12)),
+})
 const telefoneMask = computed({
   get: () => maskTelefone(form.value.telefone),
   set: (v) => (form.value.telefone = onlyNumbers(v).slice(0, 11)),
 })
-const representanteCpfMask = computed({
-  get: () => maskCPF(form.value.representante_legal_cpf),
-  set: (v) => (form.value.representante_legal_cpf = onlyNumbers(v).slice(0, 11)),
-})
-const representanteSocioCpfMask = computed({
-  get: () => maskCPF(form.value.representante_legal_socio_cpf),
-  set: (v) =>
-    (form.value.representante_legal_socio_cpf = onlyNumbers(v).slice(0, 11)),
+const representanteLegalCpfMask = computed(() => maskCPF(form.value.representante_legal_cpf || ''))
+const representanteLegalRgMask = computed(() => maskRG(form.value.representante_legal_rg || ''))
+const socioCpfMask = computed(() => maskCPF(form.value.representante_legal_socio_cpf || ''))
+const socioRgMask = computed(() => maskRG(form.value.representante_legal_socio_rg || ''))
+
+const avisoDadosBancariosVazios = computed(() => {
+  const f = form.value
+  const v = (x) => !String(x ?? '').trim()
+  return v(f.banco_titular) || v(f.banco_nome) || v(f.banco_agencia) || v(f.banco_conta) || v(f.pix)
 })
 
 // --- BUSCAS ---
@@ -380,6 +641,54 @@ async function carregarLogo() {
   }
 }
 
+async function carregarLogoFundoEscuro() {
+  try {
+    const res = await ArquivosService.listar({ ownerType: 'EMPRESA', ownerId: 1, categoria: 'LOGO' })
+    const arr = res?.data?.data ?? res?.data ?? res
+    const lista = Array.isArray(arr) ? arr : []
+    const logo = lista.find(a => String(a.slot_key || '') === 'LOGO_FUNDO_ESCURO')
+    logoFundoEscuroPreview.value = logo?.url || ''
+  } catch {
+    logoFundoEscuroPreview.value = ''
+  }
+}
+
+async function carregarAssinatura() {
+  try {
+    const res = await ArquivosService.listar({ ownerType: 'EMPRESA', ownerId: 1, categoria: 'ASSINATURA' })
+    const arr = res?.data?.data ?? res?.data ?? res
+    const lista = Array.isArray(arr) ? arr : []
+    const assinatura = lista.find(a => String(a.slot_key || '') === 'ASSINATURA_DIGITAL') || lista[0]
+    assinaturaPreview.value = assinatura?.url || ''
+  } catch {
+    assinaturaPreview.value = ''
+  }
+}
+
+async function carregarLogoSecundario() {
+  try {
+    const res = await ArquivosService.listar({ ownerType: 'EMPRESA', ownerId: 1, categoria: 'LOGO' })
+    const arr = res?.data?.data ?? res?.data ?? res
+    const lista = Array.isArray(arr) ? arr : []
+    const logo = lista.find(a => String(a.slot_key || '') === 'LOGO_SECUNDARIO')
+    logoSecundarioPreview.value = logo?.url || ''
+  } catch {
+    logoSecundarioPreview.value = ''
+  }
+}
+
+async function carregarAssinaturaResponsavel() {
+  try {
+    const res = await ArquivosService.listar({ ownerType: 'EMPRESA', ownerId: 1, categoria: 'ASSINATURA' })
+    const arr = res?.data?.data ?? res?.data ?? res
+    const lista = Array.isArray(arr) ? arr : []
+    const assinatura = lista.find(a => String(a.slot_key || '') === 'ASSINATURA_RESPONSAVEL')
+    assinaturaResponsavelPreview.value = assinatura?.url || ''
+  } catch {
+    assinaturaResponsavelPreview.value = ''
+  }
+}
+
 async function carregarDocumentos() {
   try {
     const res = await ArquivosService.listar({ ownerType: 'EMPRESA', ownerId: 1, categoria: 'ANEXO' })
@@ -421,7 +730,6 @@ async function confirmarRemoverLogo() {
 
   removendoLogo.value = true
   try {
-    // remove o registro do slot (logo principal)
     const res = await ArquivosService.listar({ ownerType: 'EMPRESA', ownerId: 1, categoria: 'LOGO' })
     const arr = res?.data ?? res
     const lista = Array.isArray(arr) ? arr : []
@@ -435,6 +743,170 @@ async function confirmarRemoverLogo() {
     notify.error(err?.response?.data?.message || 'Erro ao remover logo.')
   } finally {
     removendoLogo.value = false
+  }
+}
+
+const handleLogoFundoEscuroUpload = async (e) => {
+  const file = e.target.files?.[0]
+  if (!file) return
+  if (logoFundoEscuroPreview.value?.startsWith('blob:')) URL.revokeObjectURL(logoFundoEscuroPreview.value)
+  logoFundoEscuroPreview.value = URL.createObjectURL(file)
+  try {
+    await ArquivosService.upload({
+      ownerType: 'EMPRESA',
+      ownerId: 1,
+      categoria: 'LOGO',
+      slotKey: 'LOGO_FUNDO_ESCURO',
+      file,
+    })
+    notify.success('Logo para fundo escuro enviada!')
+    await carregarLogoFundoEscuro()
+  } catch (err) {
+    notify.error(err?.response?.data?.message || 'Erro ao enviar logo.')
+  } finally {
+    if (fileInputFundoEscuro.value) fileInputFundoEscuro.value.value = ''
+  }
+}
+
+async function confirmarRemoverLogoFundoEscuro() {
+  const ok = await confirm.show('Remover Logo', 'Deseja remover a logo para fundo escuro?')
+  if (!ok) return
+  removendoLogoFundoEscuro.value = true
+  try {
+    const res = await ArquivosService.listar({ ownerType: 'EMPRESA', ownerId: 1, categoria: 'LOGO' })
+    const arr = res?.data ?? res
+    const lista = Array.isArray(arr) ? arr : []
+    const logo = lista.find(a => String(a.slot_key || '') === 'LOGO_FUNDO_ESCURO')
+    if (logo?.id) await ArquivosService.remover(logo.id)
+    logoFundoEscuroPreview.value = ''
+    notify.success('Logo removida!')
+  } catch (err) {
+    notify.error(err?.response?.data?.message || 'Erro ao remover.')
+  } finally {
+    removendoLogoFundoEscuro.value = false
+  }
+}
+
+const handleAssinaturaUpload = async (e) => {
+  const file = e.target.files?.[0]
+  if (!file) return
+  if (assinaturaPreview.value?.startsWith('blob:')) URL.revokeObjectURL(assinaturaPreview.value)
+  assinaturaPreview.value = URL.createObjectURL(file)
+  try {
+    await ArquivosService.upload({
+      ownerType: 'EMPRESA',
+      ownerId: 1,
+      categoria: 'ASSINATURA',
+      slotKey: 'ASSINATURA_DIGITAL',
+      file,
+    })
+    notify.success('Imagem da assinatura digital enviada!')
+    await carregarAssinatura()
+  } catch (err) {
+    notify.error(err?.response?.data?.message || 'Erro ao enviar assinatura.')
+  } finally {
+    if (fileInputAssinatura.value) fileInputAssinatura.value.value = ''
+  }
+}
+
+async function confirmarRemoverAssinatura() {
+  const ok = await confirm.show('Remover Assinatura', 'Deseja remover a imagem da assinatura digital?')
+  if (!ok) return
+  removendoAssinatura.value = true
+  try {
+    const res = await ArquivosService.listar({ ownerType: 'EMPRESA', ownerId: 1, categoria: 'ASSINATURA' })
+    const arr = res?.data ?? res
+    const lista = Array.isArray(arr) ? arr : []
+    const assinatura = lista.find(a => String(a.slot_key || '') === 'ASSINATURA_DIGITAL') || lista[0]
+    if (assinatura?.id) await ArquivosService.remover(assinatura.id)
+    assinaturaPreview.value = ''
+    notify.success('Assinatura removida!')
+  } catch (err) {
+    notify.error(err?.response?.data?.message || 'Erro ao remover.')
+  } finally {
+    removendoAssinatura.value = false
+  }
+}
+
+const handleLogoSecundarioUpload = async (e) => {
+  const file = e.target.files?.[0]
+  if (!file) return
+  if (logoSecundarioPreview.value?.startsWith('blob:')) URL.revokeObjectURL(logoSecundarioPreview.value)
+  logoSecundarioPreview.value = URL.createObjectURL(file)
+  try {
+    await ArquivosService.upload({
+      ownerType: 'EMPRESA',
+      ownerId: 1,
+      categoria: 'LOGO',
+      slotKey: 'LOGO_SECUNDARIO',
+      file,
+    })
+    notify.success('Logotipo secundário enviado!')
+    await carregarLogoSecundario()
+  } catch (err) {
+    notify.error(err?.response?.data?.message || 'Erro ao enviar.')
+  } finally {
+    if (fileInputLogoSecundario.value) fileInputLogoSecundario.value.value = ''
+  }
+}
+
+async function confirmarRemoverLogoSecundario() {
+  const ok = await confirm.show('Remover', 'Deseja remover o logotipo secundário/ícone?')
+  if (!ok) return
+  removendoLogoSecundario.value = true
+  try {
+    const res = await ArquivosService.listar({ ownerType: 'EMPRESA', ownerId: 1, categoria: 'LOGO' })
+    const arr = res?.data ?? res
+    const lista = Array.isArray(arr) ? arr : []
+    const logo = lista.find(a => String(a.slot_key || '') === 'LOGO_SECUNDARIO')
+    if (logo?.id) await ArquivosService.remover(logo.id)
+    logoSecundarioPreview.value = ''
+    notify.success('Removido!')
+  } catch (err) {
+    notify.error(err?.response?.data?.message || 'Erro ao remover.')
+  } finally {
+    removendoLogoSecundario.value = false
+  }
+}
+
+const handleAssinaturaResponsavelUpload = async (e) => {
+  const file = e.target.files?.[0]
+  if (!file) return
+  if (assinaturaResponsavelPreview.value?.startsWith('blob:')) URL.revokeObjectURL(assinaturaResponsavelPreview.value)
+  assinaturaResponsavelPreview.value = URL.createObjectURL(file)
+  try {
+    await ArquivosService.upload({
+      ownerType: 'EMPRESA',
+      ownerId: 1,
+      categoria: 'ASSINATURA',
+      slotKey: 'ASSINATURA_RESPONSAVEL',
+      file,
+    })
+    notify.success('Assinatura do responsável enviada! Disponível como variável em PDFs.')
+    await carregarAssinaturaResponsavel()
+  } catch (err) {
+    notify.error(err?.response?.data?.message || 'Erro ao enviar.')
+  } finally {
+    if (fileInputAssinaturaResponsavel.value) fileInputAssinaturaResponsavel.value.value = ''
+  }
+}
+
+async function confirmarRemoverAssinaturaResponsavel() {
+  const ok = await confirm.show('Remover', 'Deseja remover a assinatura do responsável?')
+  if (!ok) return
+  removendoAssinaturaResponsavel.value = true
+  try {
+    const res = await ArquivosService.listar({ ownerType: 'EMPRESA', ownerId: 1, categoria: 'ASSINATURA' })
+    const arr = res?.data ?? res
+    const lista = Array.isArray(arr) ? arr : []
+    const assinatura = lista.find(a => String(a.slot_key || '') === 'ASSINATURA_RESPONSAVEL')
+    if (assinatura?.id) await ArquivosService.remover(assinatura.id)
+    assinaturaResponsavelPreview.value = ''
+    notify.success('Removida!')
+  } catch (err) {
+    notify.error(err?.response?.data?.message || 'Erro ao remover.')
+  } finally {
+    removendoAssinaturaResponsavel.value = false
   }
 }
 
@@ -491,13 +963,28 @@ const copiarPix = () => {
   })
 }
 
+function formatarUltimoSalvamento(updatedAt) {
+  if (!updatedAt) return ''
+  const d = new Date(updatedAt)
+  if (isNaN(d.getTime())) return ''
+  return d.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 // --- AÇÕES FINAIS ---
 const salvar = async () => {
   if (!can('configuracoes.empresa.editar')) return notify.error('Acesso negado.')
   salvando.value = true
 
   try {
-    await ConfiguracaoService.salvar(form.value)
+    const data = await ConfiguracaoService.salvar(form.value)
+    const saved = data?.updated_at ?? data
+    ultimoSalvamento.value = formatarUltimoSalvamento(saved)
     notify.success('Configurações salvas!')
   } catch {
     notify.error('Erro ao salvar.')
@@ -508,7 +995,11 @@ const salvar = async () => {
 
 async function confirmarSalvarDadosEmpresa() {
   if (!can('configuracoes.empresa.editar')) return notify.error('Acesso negado.')
-  const ok = await confirm.show('Salvar Dados da Empresa', 'Deseja salvar as configurações fiscais e de recebimento?')
+  let msg = 'Deseja salvar as configurações fiscais e de recebimento?'
+  if (avisoDadosBancariosVazios.value) {
+    msg = 'Alguns campos de Dados Bancários e Pix estão vazios. Recomendamos preenchê-los para orçamentos e documentos. Deseja mesmo salvar?'
+  }
+  const ok = await confirm.show('Salvar Dados da Empresa', msg)
   if (!ok) return
   await salvar()
 }
@@ -591,8 +1082,16 @@ onMounted(async () => {
   try {
     const data = await ConfiguracaoService.carregar()
     if (data) Object.assign(form.value, data)
-    await carregarLogo()
-    await carregarDocumentos()
+    if (!form.value.cor_marca) form.value.cor_marca = '#2563eb'
+    ultimoSalvamento.value = formatarUltimoSalvamento(data?.updated_at)
+    await Promise.all([
+      carregarLogo(),
+      carregarLogoFundoEscuro(),
+      carregarLogoSecundario(),
+      carregarAssinatura(),
+      carregarAssinaturaResponsavel(),
+      carregarDocumentos(),
+    ])
   } catch (err) {
     console.error('[CONFIGURACOES_EMPRESA_LOAD]', err)
     notify.error('Nao foi possivel carregar os dados da empresa.')

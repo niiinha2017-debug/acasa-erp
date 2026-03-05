@@ -56,9 +56,10 @@
           <Input
             class="col-span-12 md:col-span-3"
             v-model="form.data_compra"
-            label="Data da Compra *"
+            label="Data de Entrada (Nota Fiscal) *"
             type="date"
             required
+            :readonly="!isEdit"
           />
         </div>
 
@@ -315,8 +316,10 @@ const tipoCompra = ref('INSUMOS')
 const fornecedorSelecionado = ref(null)
 const vendaSelecionada = ref(null)
 
+// Data de entrada da NF: sempre hoje ao criar (04/03/2026 ou data atual)
+const dataHoje = () => new Date().toISOString().split('T')[0]
 const form = reactive({
-  data_compra: new Date().toISOString().split('T')[0],
+  data_compra: dataHoje(),
 })
 
 const itens = ref([])
@@ -801,6 +804,16 @@ listaVendas.value = Array.isArray(vendRes?.data) ? vendRes.data : []
 
 if (isEdit.value) {
   await carregarCompra()
+} else {
+  // Nova compra: data de entrada fixada em hoje; opcionalmente pré-selecionar fornecedor pela sugestão
+  form.data_compra = dataHoje()
+  const fornecedorId = route.query?.fornecedor_id
+  if (fornecedorId) {
+    const id = Number(String(fornecedorId).replace(/\D/g, ''))
+    if (id && listaFornecedores.value.some((f) => (f.value ?? f.id) === id)) {
+      fornecedorSelecionado.value = id
+    }
+  }
 }
 
   } catch (e) {

@@ -124,8 +124,13 @@ export class OrcamentosController {
   @Post(':id/pdf')
   @Permissoes('orcamentos.ver')
   @HttpCode(HttpStatus.OK)
-  async gerarPdfSalvar(@Param('id') id: string) {
+  async gerarPdfSalvar(
+    @Param('id') id: string,
+    @Body() body: { incluirTermos?: boolean },
+  ) {
     const orcId = this.cleanId(id);
-    return this.service.gerarPdfESalvar(orcId); // { arquivoId }
+    return this.service.gerarPdfESalvar(orcId, {
+      incluirTermos: body?.incluirTermos === true,
+    });
   }
 }

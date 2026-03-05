@@ -285,7 +285,7 @@ export class OrcamentosService {
         if (doc.y + 60 > doc.page.height) doc.addPage();
         doc.y += 10;
         doc.font('Helvetica-Bold').fontSize(12).fillColor('#000');
-        doc.text(`Total do orçamento: ${brl(total)}`, left, doc.y, {
+        doc.text(`Total: ${brl(total)}`, left, doc.y, {
           width: tableWidth,
           align: 'right',
         });
@@ -445,28 +445,34 @@ export class OrcamentosService {
     });
   }
 
-  async gerarPdfESalvar(orcId: number) {
+  async gerarPdfESalvar(
+    orcId: number,
+    opts?: { incluirTermos?: boolean },
+  ) {
     const orc = await this.detalhar(orcId);
 
-    // Cláusulas específicas do orçamento (segunda página - Termos e Condições)
-    const rawClausulas: any = (orc as any).clausulas;
     let clausulas: { titulo: string; texto: string }[] = [];
 
-    if (Array.isArray(rawClausulas) && rawClausulas.length > 0) {
-      clausulas = rawClausulas
-        .map((c) => ({
-          titulo: String(c?.titulo || '').trim(),
-          texto: String(c?.texto || '').trim(),
-        }))
-        .filter((c) => c.titulo || c.texto);
-    }
+    // Só inclui termos e condições no PDF quando explicitamente solicitado
+    if (opts?.incluirTermos === true) {
+      const rawClausulas: any = (orc as any).clausulas;
 
-    // Se o orçamento ainda não tiver cláusulas próprias, usa um modelo padrão
-    if (clausulas.length === 0) {
-      clausulas = this.clausulasPadraoOrcamento.map((c) => ({
-        titulo: c.titulo,
-        texto: c.texto,
-      }));
+      if (Array.isArray(rawClausulas) && rawClausulas.length > 0) {
+        clausulas = rawClausulas
+          .map((c) => ({
+            titulo: String(c?.titulo || '').trim(),
+            texto: String(c?.texto || '').trim(),
+          }))
+          .filter((c) => c.titulo || c.texto);
+      }
+
+      // Se o orçamento ainda não tiver cláusulas próprias, usa um modelo padrão
+      if (clausulas.length === 0) {
+        clausulas = this.clausulasPadraoOrcamento.map((c) => ({
+          titulo: c.titulo,
+          texto: c.texto,
+        }));
+      }
     }
 
     // Só imagens marcadas como "para o PDF" (categoria IMAGEM_PDF) entram no arquivo gerado
@@ -580,9 +586,20 @@ export class OrcamentosService {
           select: {
             id: true,
             status: true,
+            valor_vendido: true,
+            representante_venda_usuario_id: true,
+            representante_venda_funcionario_id: true,
             contratos: {
               take: 1,
-              select: { id: true },
+              select: {
+                id: true,
+                numero: true,
+                valor: true,
+                status: true,
+                data_inicio: true,
+                data_fim: true,
+                data_assinatura: true,
+              },
               orderBy: { id: 'desc' },
             },
           },

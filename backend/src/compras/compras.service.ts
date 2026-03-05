@@ -264,7 +264,7 @@ export class ComprasService {
     if (filtros.venda_id) where.venda_id = filtros.venda_id;
     if (filtros.tipo_compra) where.tipo_compra = filtros.tipo_compra;
 
-    return this.prisma.compras.findMany({
+    const list = await this.prisma.compras.findMany({
       where,
       orderBy: { id: 'desc' },
       include: {
@@ -280,6 +280,14 @@ export class ComprasService {
         rateios: true,
       },
     });
+
+    return list.map((c) => ({
+      ...c,
+      descricao:
+        (c.itens as any[])?.[0]?.nome_produto || `Compra #${c.id}`,
+      categoria:
+        c.tipo_compra === 'INSUMOS' ? 'INSUMO' : 'VENDA',
+    }));
   }
 
   async buscarPorId(id: number) {
@@ -378,13 +386,14 @@ export class ComprasService {
       }
     }
 
+    // Data de entrada da NF: sempre hoje (registro da nota na data atual)
+    const dataEntrada = new Date();
+
     const compra = await this.prisma.compras.create({
       data: {
         tipo_compra: tipo,
         venda_id: tipo === 'CLIENTE_AMBIENTE' ? (dto as any).venda_id : null,
-        data_compra: (dto as any).data_compra
-          ? new Date((dto as any).data_compra)
-          : undefined,
+        data_compra: dataEntrada,
         fornecedor_id: (dto as any).fornecedor_id,
         venda_item_id: (dto as any).venda_item_id ?? null,
         status: String((dto as any).status || '').trim() || 'EM_ABERTO',

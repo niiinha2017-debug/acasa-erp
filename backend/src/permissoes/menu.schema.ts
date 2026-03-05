@@ -42,6 +42,12 @@ export const MENU_SECTIONS: MenuSection[] = [
         perm: 'contratos.ver',
       },
       {
+        label: 'Histórico de Contratos',
+        to: '/contratos/historico',
+        icon: 'pi-history',
+        perm: 'contratos.ver',
+      },
+      {
         label: 'Cláusulas (Orç./Contrato)',
         to: '/contratos/clausulas',
         icon: 'pi-file-edit',
@@ -64,6 +70,12 @@ export const MENU_SECTIONS: MenuSection[] = [
         to: '/producao',
         icon: 'pi-cogs',
         perm: 'posvenda.ver',
+      },
+      {
+        label: 'Contratos em obra',
+        to: '/producao/contratos',
+        icon: 'pi-file-edit',
+        perm: 'contratos.ver',
       },
       {
         label: 'Pós-venda',
@@ -101,6 +113,12 @@ export const MENU_SECTIONS: MenuSection[] = [
     key: 'financeiro',
     label: 'Financeiro',
     items: [
+      {
+        label: 'Administração Financeira',
+        to: '/financeiro/administracao',
+        icon: 'pi-wallet',
+        perm: 'contas_pagar.ver',
+      },
       {
         label: 'Contas a Pagar',
         to: '/financeiro/contas-pagar',
@@ -182,7 +200,7 @@ export const MENU_SECTIONS: MenuSection[] = [
         perm: 'ponto_relatorio.ver',
       },
       {
-        label: 'Convites de Ponto',
+        label: 'Convites do Ponto',
         to: '/rh/ponto/convites',
         icon: 'pi-link',
         perm: 'ponto_convite.criar',

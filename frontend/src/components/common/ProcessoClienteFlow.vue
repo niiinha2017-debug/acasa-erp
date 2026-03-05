@@ -5,35 +5,43 @@
       :key="step.key"
       class="relative flex items-start gap-4 pb-8 last:pb-0 group"
     >
-      <div 
+      <div
         v-if="index !== steps.length - 1"
-        class="absolute left-[6px] top-4 w-[2px] h-full bg-slate-100 dark:bg-slate-800 transition-colors duration-500"
-        :class="{ '!bg-brand-primary/30': isDone(step) || isCurrent(step) }"
+        class="absolute left-[6px] top-4 w-[2px] h-full transition-colors duration-500"
+        :class="linhaClass(step)"
       ></div>
 
+      <!-- Ícone check sutil para etapa concluída; dot na cor do status para etapa atual -->
       <div
-        class="relative z-10 mt-1.5 h-3.5 w-3.5 rounded-full border-2 transition-all duration-300"
+        v-if="isDone(step)"
+        class="relative z-10 mt-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-slate-300 dark:bg-slate-600 text-slate-600 dark:text-slate-400 transition-all duration-300"
+      >
+        <i class="pi pi-check text-[8px]" />
+      </div>
+      <div
+        v-else
+        class="relative z-10 mt-1.5 h-3.5 w-3.5 rounded-full transition-all duration-300 border-2 bg-white dark:bg-slate-900"
         :class="dotClass(step)"
       ></div>
 
       <div class="min-w-0 flex-1">
         <div class="flex items-center justify-between gap-3">
-          <div 
-            class="text-[11px] font-bold uppercase tracking-wider transition-colors duration-300" 
+          <div
+            class="text-[11px] font-bold uppercase tracking-wider transition-colors duration-300"
             :class="textClass(step)"
           >
             {{ step.label }}
           </div>
 
           <div
-            v-if="step.dataKey && datas?.[step.dataKey]"
+            v-if="(step.dataKey || step.disparaComData) && datas?.[step.dataKey || step.disparaComData]"
             class="text-[9px] font-semibold text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-2 py-0.5 rounded-md"
           >
-            {{ formatDate(datas[step.dataKey]) }}
+            {{ formatDate(datas[step.dataKey || step.disparaComData]) }}
           </div>
         </div>
 
-        <div class="text-[10px] font-medium text-slate-400 dark:text-slate-600 uppercase tracking-tight mt-0.5">
+        <div v-if="step.fase" class="text-[10px] font-medium text-slate-400 dark:text-slate-600 uppercase tracking-tight mt-0.5">
           {{ step.fase }}
           <span v-if="step.temTela === false" class="ml-2 italic opacity-60">• offline</span>
         </div>
@@ -44,7 +52,13 @@
 
 <script setup>
 import { computed } from 'vue'
-import { PIPELINE_CLIENTE } from '@/constantes'
+import {
+  ETAPAS_OFICIAL_10,
+  getEtapaKeyByCategoria,
+  getStepTextClassEtapa,
+  getStatusLineBgClass,
+  getStatusStepperDotClass,
+} from '@/constantes'
 import { format } from '@/utils/format'
 
 const props = defineProps({
@@ -52,30 +66,38 @@ const props = defineProps({
   datas: { type: Object, default: () => ({}) },
 })
 
-const steps = computed(() => {
-  const arr = Array.isArray(PIPELINE_CLIENTE) ? PIPELINE_CLIENTE : []
-  return [...arr].sort((a, b) => (a.ordem || 0) - (b.ordem || 0))
-})
+const steps = computed(() => [...ETAPAS_OFICIAL_10].sort((a, b) => (a.ordem || 0) - (b.ordem || 0)))
+
+const etapaAtualKey = computed(() => getEtapaKeyByCategoria(props.statusAtual))
 
 const idxAtual = computed(() => {
-  const i = steps.value.findIndex(s => s.key === props.statusAtual)
+  const i = steps.value.findIndex((s) => s.key === etapaAtualKey.value)
   return i < 0 ? 0 : i
 })
 
-const idxOf = (step) => steps.value.findIndex(s => s.key === step.key)
+const idxOf = (step) => steps.value.findIndex((s) => s.key === step.key)
 const isDone = (step) => idxOf(step) < idxAtual.value
-const isCurrent = (step) => step.key === props.statusAtual
+const isCurrent = (step) => step.key === etapaAtualKey.value
+
+function stateFor(step) {
+  if (isCurrent(step)) return 'em_andamento'
+  if (isDone(step)) return 'concluido'
+  return 'agendado'
+}
+
+function linhaClass(step) {
+  if (isCurrent(step)) return getStatusLineBgClass(step.key)
+  if (isDone(step)) return '!bg-slate-300 dark:!bg-slate-600'
+  return 'bg-slate-100 dark:bg-slate-800'
+}
 
 function dotClass(step) {
-  if (isCurrent(step)) return 'bg-white dark:bg-slate-900 border-brand-primary shadow-[0_0_8px_rgba(var(--brand-primary-rgb),0.4)]'
-  if (isDone(step)) return 'bg-brand-primary border-brand-primary'
-  return 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+  if (isCurrent(step)) return getStatusStepperDotClass(step.key)
+  return 'border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-800'
 }
 
 function textClass(step) {
-  if (isCurrent(step)) return 'text-slate-800 dark:text-slate-100'
-  if (isDone(step)) return 'text-slate-500 dark:text-slate-400'
-  return 'text-slate-300 dark:text-slate-600'
+  return getStepTextClassEtapa(step.key, stateFor(step))
 }
 
 function formatDate(value) {

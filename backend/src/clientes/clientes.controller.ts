@@ -38,6 +38,13 @@ export class ClientesController {
   }
 
   // Rotas de relatórios antes do :id (ok)
+  /** IDs de clientes com status AGENDAR_MEDIDA_FINA e parcela vencida no Contas a Receber (para alerta no Fluxo de Clientes). */
+  @Get('relatorios/pendencias-agendamento')
+  @Permissoes('clientes.ver')
+  pendenciasAgendamento() {
+    return this.service.getPendenciasAgendamento();
+  }
+
   @Get('relatorios/aniversariantes')
   @Permissoes('clientes.ver') // (ou 'clientes.relatorios' se você tiver essa chave)
   aniversariantes(

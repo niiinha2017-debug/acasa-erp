@@ -43,10 +43,15 @@ export class ContratosController {
 
   @Get()
   @Permissoes('contratos.ver')
-  listar(@Query('venda_id') vendaId?: string) {
+  listar(
+    @Query('venda_id') vendaId?: string,
+    @Query('status') status?: string,
+  ) {
     const vendaIdNum = vendaId ? this.cleanId(vendaId) : undefined;
+    const statusNorm = status?.trim()?.toUpperCase() || undefined;
     return this.service.listar(
       vendaIdNum && vendaIdNum > 0 ? vendaIdNum : undefined,
+      statusNorm,
     );
   }
 
@@ -93,8 +98,13 @@ export class ContratosController {
 
   @Put(':id')
   @Permissoes('contratos.editar')
-  atualizar(@Param('id') id: string, @Body() dto: UpdateContratoDto) {
-    return this.service.atualizar(this.cleanId(id), dto);
+  atualizar(
+    @Param('id') id: string,
+    @Body() dto: UpdateContratoDto,
+    @Req() req: Request & { user?: { id?: number } },
+  ) {
+    const userId = req?.user?.id != null ? Number(req.user.id) : undefined;
+    return this.service.atualizar(this.cleanId(id), dto, userId);
   }
 
   @Delete(':id')
@@ -110,6 +120,14 @@ export class ContratosController {
     return this.service.assinar(this.cleanId(id), dto);
   }
 
+  /** Excluir o PDF do contrato assinado (upload) – permite enviar outro depois */
+  @Delete(':id/pdf-assinado')
+  @Permissoes('contratos.editar')
+  @HttpCode(HttpStatus.OK)
+  async excluirPdfAssinado(@Param('id') id: string) {
+    return this.service.removerPdfAssinadoCliente(this.cleanId(id));
+  }
+
   /** Marcar contrato como vigente por assinatura presencial na loja (opcional: enviar PDF escaneado) */
   @Post(':id/vigente-assinatura-presencial')
   @Permissoes('contratos.editar')
@@ -120,11 +138,13 @@ export class ContratosController {
   async vigenteAssinaturaPresencial(
     @Param('id') id: string,
     @UploadedFile() file?: Express.Multer.File,
+    @Req() req?: Request & { user?: { id?: number } },
   ) {
     const contratoId = this.cleanId(id);
     const buffer =
       file?.buffer && Buffer.isBuffer(file.buffer) ? file.buffer : undefined;
-    return this.service.marcarVigenteAssinaturaPresencial(contratoId, buffer);
+    const userId = req?.user?.id != null ? Number(req.user.id) : undefined;
+    return this.service.marcarVigenteAssinaturaPresencial(contratoId, buffer, userId);
   }
 
   /** Visualizar/baixar o PDF do contrato (assinado, se já tiver sido assinado) */

@@ -73,6 +73,16 @@ export class CreateProdutoDto {
 
   @IsOptional()
   @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  estoque_minimo?: number;
+
+  @IsOptional()
+  @IsString()
+  categoria?: string;
+
+  @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   @Min(0)
   valor_unitario?: number;

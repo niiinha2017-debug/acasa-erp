@@ -56,8 +56,13 @@ export class PermissoesService {
    * Regras de segurança:
    * - Só aceita IDs de permissões existentes no catálogo.
    * - Não permite remover ADMIN do último usuário que possui ADMIN (evita lockout).
+   * Registra em auditoria_permissoes quem alterou e quando.
    */
-  async definirPermissoesDoUsuario(usuarioId: number, permissoesIds: number[]) {
+  async definirPermissoesDoUsuario(
+    usuarioId: number,
+    permissoesIds: number[],
+    alteradoPorUsuarioId: number,
+  ) {
     const usuario = await this.prisma.usuarios.findUnique({
       where: { id: usuarioId },
       select: { id: true },
@@ -115,6 +120,13 @@ export class PermissoesService {
           skipDuplicates: true,
         });
       }
+
+      await tx.auditoria_permissoes.create({
+        data: {
+          usuario_id_alterado: usuarioId,
+          alterado_por_usuario_id: alteradoPorUsuarioId,
+        },
+      });
     });
 
     return { ok: true };

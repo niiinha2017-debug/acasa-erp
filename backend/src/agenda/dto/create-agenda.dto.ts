@@ -101,6 +101,12 @@ export class CreateAgendaDto {
   @IsString()
   status?: string; // Ex: PENDENTE, EM_ANDAMENTO
 
+  /** Ambientes incluídos nesta tarefa (nomes). Vazio = todos da venda. Ex.: medição de 2 ambientes, resto fica pendente. */
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  ambientes_selecionados?: string[];
+
   /** Apontamentos individuais de horas por funcionário dentro da tarefa */
   @IsOptional()
   @IsArray()

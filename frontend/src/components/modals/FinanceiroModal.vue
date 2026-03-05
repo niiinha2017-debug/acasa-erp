@@ -3,17 +3,17 @@
     <div v-if="open" class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" @click.self="$emit('close')">
       <div class="relative z-10 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-border-ui w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col" @click.stop>
       
-        <header class="flex justify-between items-center p-6 border-b bg-slate-50 shrink-0">
+        <header class="flex justify-between items-center p-6 border-b border-border-ui bg-slate-50 dark:bg-slate-800/50 shrink-0">
           <div>
-            <h2 class="text-xl font-black text-slate-800 uppercase italic">Fechamento Mensal — Baixa de Pagamento</h2>
-            <p class="text-xs text-slate-500 font-bold uppercase tracking-widest">
+            <h2 class="text-xl font-black text-slate-800 dark:text-slate-100 uppercase italic">Fechamento Mensal — Baixa de Pagamento</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">
               {{ fornecedorNome }} | REF: {{ form.mes }}/{{ form.ano }}
             </p>
-            <p v-if="periodoLegenda" class="text-[10px] text-slate-400 mt-1">
+            <p v-if="periodoLegenda" class="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
               Relatório mensal (1º ao último dia do mês): {{ periodoLegenda }}
             </p>
           </div>
-          <button @click="$emit('close')" class="text-slate-400 hover:text-rose-500 transition-colors">
+          <button @click="$emit('close')" class="text-slate-400 dark:text-slate-500 hover:text-rose-500 transition-colors">
             <i class="pi pi-times text-xl"></i>
           </button>
         </header>
@@ -22,13 +22,13 @@
           <!-- Histórico: Compras + Planos de Corte -->
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="space-y-2">
-              <h3 class="text-sm font-black text-rose-600 uppercase flex items-center gap-2">
+              <h3 class="text-sm font-black text-rose-600 dark:text-rose-400 uppercase flex items-center gap-2">
                 <i class="pi pi-shopping-cart"></i> Histórico de Compras (por data de compra)
               </h3>
-              <p class="text-[10px] text-slate-500">Relatório mensal — 1º ao último dia do mês</p>
-              <div class="bg-rose-50/50 border border-rose-100 rounded-xl overflow-hidden max-h-40 overflow-y-auto">
+              <p class="text-[10px] text-slate-500 dark:text-slate-400">Relatório mensal — 1º ao último dia do mês</p>
+              <div class="bg-rose-50/50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/50 rounded-xl overflow-hidden max-h-40 overflow-y-auto">
                 <table class="w-full text-xs">
-                  <thead class="bg-rose-100 sticky top-0">
+                  <thead class="bg-rose-100 dark:bg-rose-900/40 sticky top-0">
                     <tr>
                       <th class="text-left py-2 px-3 font-black">Data</th>
                       <th class="text-left py-2 px-3 font-black">Tipo</th>
@@ -36,45 +36,45 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="c in (preview.historico_compras || [])" :key="c.id" class="border-t border-rose-100">
-                      <td class="py-1.5 px-3">{{ fmtData(c.data_compra) }}</td>
-                      <td class="py-1.5 px-3">{{ c.tipo_compra || '—' }}</td>
-                      <td class="py-1.5 px-3 text-right font-bold">{{ fmtMoeda(c.valor_total) }}</td>
+                    <tr v-for="c in (preview.historico_compras || [])" :key="c.id" class="border-t border-rose-100 dark:border-rose-900/50">
+                      <td class="py-1.5 px-3 text-text-main">{{ fmtData(c.data_compra) }}</td>
+                      <td class="py-1.5 px-3 text-text-main">{{ c.tipo_compra || '—' }}</td>
+                      <td class="py-1.5 px-3 text-right font-bold text-text-main">{{ fmtMoeda(c.valor_total) }}</td>
                     </tr>
-                    <tr v-if="!(preview.historico_compras || []).length" class="border-t border-rose-100">
-                      <td colspan="3" class="py-3 px-3 text-slate-500 text-center">Nenhuma compra no período</td>
+                    <tr v-if="!(preview.historico_compras || []).length" class="border-t border-rose-100 dark:border-rose-900/50">
+                      <td colspan="3" class="py-3 px-3 text-slate-500 dark:text-slate-400 text-center">Nenhuma compra no período</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
-              <p class="text-xs font-black text-rose-700">Total compras: {{ fmtMoeda(preview.total_compras || 0) }}</p>
+              <p class="text-xs font-black text-rose-700 dark:text-rose-400">Total compras: {{ fmtMoeda(preview.total_compras || 0) }}</p>
             </div>
 
             <div class="space-y-2">
-              <h3 class="text-sm font-black text-emerald-600 uppercase flex items-center gap-2">
+              <h3 class="text-sm font-black text-emerald-600 dark:text-emerald-400 uppercase flex items-center gap-2">
                 <i class="pi pi-list"></i> Histórico Vendas Plano de Corte (por data de venda)
               </h3>
-              <p class="text-[10px] text-slate-500">Relatório mensal — 1º ao último dia do mês</p>
-              <div class="bg-emerald-50/50 border border-emerald-100 rounded-xl overflow-hidden max-h-40 overflow-y-auto">
+              <p class="text-[10px] text-slate-500 dark:text-slate-400">Relatório mensal — 1º ao último dia do mês</p>
+              <div class="bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50 rounded-xl overflow-hidden max-h-40 overflow-y-auto">
                 <table class="w-full text-xs">
-                  <thead class="bg-emerald-100 sticky top-0">
+                  <thead class="bg-emerald-100 dark:bg-emerald-900/40 sticky top-0">
                     <tr>
                       <th class="text-left py-2 px-3 font-black">Data</th>
                       <th class="text-right py-2 px-3 font-black">Valor</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="p in (preview.historico_planos || [])" :key="p.id" class="border-t border-emerald-100">
-                      <td class="py-1.5 px-3">{{ fmtData(p.data_venda) }}</td>
-                      <td class="py-1.5 px-3 text-right font-bold">{{ fmtMoeda(p.valor_total) }}</td>
+                    <tr v-for="p in (preview.historico_planos || [])" :key="p.id" class="border-t border-emerald-100 dark:border-emerald-900/50">
+                      <td class="py-1.5 px-3 text-text-main">{{ fmtData(p.data_venda) }}</td>
+                      <td class="py-1.5 px-3 text-right font-bold text-text-main">{{ fmtMoeda(p.valor_total) }}</td>
                     </tr>
-                    <tr v-if="!(preview.historico_planos || []).length" class="border-t border-emerald-100">
-                      <td colspan="2" class="py-3 px-3 text-slate-500 text-center">Nenhum plano no período</td>
+                    <tr v-if="!(preview.historico_planos || []).length" class="border-t border-emerald-100 dark:border-emerald-900/50">
+                      <td colspan="2" class="py-3 px-3 text-slate-500 dark:text-slate-400 text-center">Nenhum plano no período</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
-              <p class="text-xs font-black text-emerald-700">Total planos (crédito/abatimento): {{ fmtMoeda(preview.total_planos || 0) }}</p>
+              <p class="text-xs font-black text-emerald-700 dark:text-emerald-400">Total planos (crédito/abatimento): {{ fmtMoeda(preview.total_planos || 0) }}</p>
             </div>
           </div>
 
@@ -84,19 +84,19 @@
               <h3 class="text-sm font-black text-rose-600 uppercase flex items-center gap-2">
                 <i class="pi pi-arrow-circle-up"></i> Débitos (Saídas)
               </h3>
-              <div class="bg-rose-50 border border-rose-100 rounded-xl p-4 space-y-3">
+              <div class="bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/50 rounded-xl p-4 space-y-3">
                 <div class="flex justify-between text-sm">
-                  <span class="text-slate-600 font-bold uppercase">Compras do período:</span>
-                  <span class="font-black text-slate-800 italic">R$ {{ (preview.total_compras || 0).toLocaleString('pt-BR') }}</span>
+                  <span class="text-slate-600 dark:text-slate-400 font-bold uppercase">Compras do período:</span>
+                  <span class="font-black text-slate-800 dark:text-slate-200 italic">R$ {{ (preview.total_compras || 0).toLocaleString('pt-BR') }}</span>
                 </div>
-                <hr class="border-rose-200/50">
+                <hr class="border-rose-200/50 dark:border-rose-800/50">
                 <div class="space-y-1">
-                  <label class="text-[10px] font-black text-rose-500 uppercase italic">Ajuste Débito (R$) — valor que soma ao que você deve</label>
+                  <label class="text-[10px] font-black text-rose-500 dark:text-rose-400 uppercase italic">Ajuste Débito (R$) — valor que soma ao que você deve</label>
                   <input 
                     v-model.number="form.valor_dever" 
                     type="number" 
                     step="0.01"
-                    class="w-full bg-white border-2 border-rose-200 rounded-lg p-2 font-black text-lg focus:border-rose-500 outline-none transition-all"
+                    class="w-full bg-white dark:bg-slate-800 border-2 border-rose-200 dark:border-rose-800 rounded-lg p-2 font-black text-lg text-text-main focus:border-rose-500 outline-none transition-all"
                     placeholder="0,00"
                   />
                 </div>
@@ -107,12 +107,12 @@
               <h3 class="text-sm font-black text-emerald-600 uppercase flex items-center gap-2">
                 <i class="pi pi-arrow-circle-down"></i> Créditos (Abatimentos) — desconto do fornecedor
               </h3>
-              <div class="bg-emerald-50 border border-emerald-100 rounded-xl p-4 space-y-3">
+              <div class="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/50 rounded-xl p-4 space-y-3">
                 <div class="flex justify-between text-sm">
-                  <span class="text-slate-600 font-bold uppercase">Planos de Corte (crédito):</span>
-                  <span class="font-black text-slate-800 italic">R$ {{ (preview.total_planos || 0).toLocaleString('pt-BR') }}</span>
+                  <span class="text-slate-600 dark:text-slate-400 font-bold uppercase">Planos de Corte (crédito):</span>
+                  <span class="font-black text-slate-800 dark:text-slate-200 italic">R$ {{ (preview.total_planos || 0).toLocaleString('pt-BR') }}</span>
                 </div>
-                <hr class="border-emerald-200/50">
+                <hr class="border-emerald-200/50 dark:border-emerald-800/50">
                 <div class="grid grid-cols-2 gap-3">
                   <div class="space-y-1">
                     <label class="text-[10px] font-black text-emerald-500 uppercase italic">Crédito Manual (R$)</label>

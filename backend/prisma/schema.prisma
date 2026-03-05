@@ -15,6 +15,7 @@ model usuarios {
   senha         String
   status        String
   is_admin      Boolean  @default(false)
+  cargo         String?  // VENDEDOR_LOJA | MONTADOR_FABRICA (Loja vs. Fábrica)
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
@@ -25,6 +26,10 @@ model usuarios {
   permissoes   usuarios_permissoes[]
   vendas_representante vendas[] @relation("vendas_representante_usuario")
   comissoes_responsavel vendas_comissoes[] @relation("vendas_comissao_responsavel_usuario")
+  agenda_loja_alterados agenda_loja[] @relation("AgendaLojaAlteradoPor")
+  agenda_fabrica_alterados agenda_fabrica[] @relation("AgendaFabricaAlteradoPor")
+  agenda_loja_criados agenda_loja[] @relation("AgendaLojaCriadoPor")
+  agenda_fabrica_criados agenda_fabrica[] @relation("AgendaFabricaCriadoPor")
 
   @@map("usuarios")
  }
@@ -69,7 +74,17 @@ model permissoes {
   usuarios usuarios_permissoes[]
 
   @@map("permissoes")
- }
+}
+
+model auditoria_permissoes {
+  id                      Int      @id @default(autoincrement())
+  usuario_id_alterado      Int      // usuário cujas permissões foram alteradas
+  alterado_por_usuario_id  Int      // quem fez a alteração
+  alterado_em              DateTime @default(now())
+
+  @@index([usuario_id_alterado])
+  @@map("auditoria_permissoes")
+}
 
 model Cliente {
   id Int @id @default(autoincrement())
@@ -109,6 +124,11 @@ model Cliente {
 
   status String @default("ATIVO")
 
+  // Vendedor responsável (funcionário da loja) e profissão para contrato
+  vendedor_responsavel_id Int?
+  vendedor_responsavel    funcionarios? @relation("ClienteVendedorResponsavel", fields: [vendedor_responsavel_id], references: [id], onDelete: SetNull)
+  profissao               String?
+
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
@@ -125,6 +145,7 @@ model Cliente {
   @@unique([cnpj])
   @@unique([email])
   @@index([indicacao_id])
+  @@index([vendedor_responsavel_id])
   @@map("clientes")
  }
 
@@ -192,6 +213,9 @@ model vendas {
   // ✅ NOVO: base real do pós-venda (não é o orçado)
   valor_vendido Decimal @default(0.00) @db.Decimal(10, 2)
 
+  // Valor do contrato (sem juros) – quando diferente de valor_vendido, o contrato mostra este valor; contas a receber usam valor_vendido/soma das parcelas
+  valor_base_contrato Decimal? @db.Decimal(10, 2)
+
   // (mantém seus campos calculados)
   valor_bruto Decimal @default(0.00) @db.Decimal(10, 2)
 
@@ -209,6 +233,13 @@ model vendas {
   representante_venda_rg   String?
   representante_venda_usuario_id Int?
   representante_venda_funcionario_id Int?
+  // Segundo representante (sequência pode ser alterada no frontend)
+  representante_venda_2_nome String?
+  representante_venda_2_cpf  String?
+  representante_venda_2_rg   String?
+
+  // Pagamento combinado para o ato da medição: exibir alerta "RECEBER NO ATO" no painel de obras
+  receber_no_ato_medicao Boolean @default(false)
 
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
@@ -216,8 +247,10 @@ model vendas {
   itens        vendas_itens[]
   comissoes    vendas_comissoes[]
   pagamentos   vendas_pagamentos[] // ✅ NOVO
+  formas_pagamento vendas_formas_pagamento[] // formas agrupadas (valor base, com/sem juros) para contrato
   agendamentos_loja    agenda_loja[]
   agendamentos_fabrica agenda_fabrica[]
+  apontamentos_producao apontamento_producao[]
   representante_venda_usuario usuarios? @relation("vendas_representante_usuario", fields: [representante_venda_usuario_id], references: [id], onDelete: SetNull)
   representante_venda_funcionario funcionarios? @relation("vendas_representante_funcionario", fields: [representante_venda_funcionario_id], references: [id], onDelete: SetNull)
   // Adicione projetos[] aqui
@@ -316,6 +349,24 @@ model vendas_pagamentos {
   @@map("vendas_pagamentos")
  }
 
+model vendas_formas_pagamento {
+  id Int @id @default(autoincrement())
+
+  venda_id Int
+  venda    vendas @relation(fields: [venda_id], references: [id], onDelete: Cascade)
+
+  forma_pagamento_chave String // CREDITO | PIX | ...
+  valor_base             Decimal @db.Decimal(10, 2)   // valor sem juros desta parte (para contrato)
+  quantidade_parcelas    Int     @default(1)         // 1 = à vista
+  com_juros              Boolean @default(false)     // true = cartão parcelado com juros; valor real a receber > valor_base
+
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  @@index([venda_id])
+  @@map("vendas_formas_pagamento")
+ }
+
 model vendas_itens {
   id       Int    @id @default(autoincrement())
   venda_id Int
@@ -385,9 +436,11 @@ model Fornecedor {
   bairro          String?
   cidade          String?
   estado          String?
-  forma_pagamento String?
-  data_vencimento Int?
-  criado_em       DateTime @default(now())
+  forma_pagamento   String?
+  data_vencimento   Int?
+  ramo_atividade    String?
+  prazo_entrega_dias Int?
+  criado_em         DateTime @default(now())
   atualizado_em   DateTime @updatedAt
 
   produtos         produtos[] // 👈 LADO OPOSTO DA RELAÇÃO
@@ -423,9 +476,12 @@ model produtos {
   espessura_mm  Int?
   preco_m2      Decimal? @db.Decimal(10, 2)
 
-  quantidade     Int?     @default(0)
-  valor_unitario Decimal? @db.Decimal(10, 2)
-  valor_total    Decimal? @db.Decimal(10, 2)
+  quantidade      Int?     @default(0)
+  estoque_minimo  Int?     @default(0)
+  valor_unitario  Decimal? @db.Decimal(10, 2)
+  valor_total     Decimal? @db.Decimal(10, 2)
+
+  categoria String?
 
   // ✅ novo campo (1 imagem)
   imagem_url String?
@@ -587,9 +643,11 @@ model funcionarios {
   // ======================
   // FINANCEIRO
   // ======================
-  salario_base      Decimal? @db.Decimal(12, 2)
-  salario_adicional Decimal? @db.Decimal(12, 2)
-  custo_hora        Decimal? @db.Decimal(12, 2)
+  salario_base                Decimal? @db.Decimal(12, 2)
+  impostos_encargos_percentual Decimal? @db.Decimal(5, 2)  // % sobre salário (INSS, FGTS, etc.)
+  custo_total_mensal          Decimal? @db.Decimal(12, 2)  // calculado: base*(1+impostos/100)+adicional+vales
+  salario_adicional           Decimal? @db.Decimal(12, 2)
+  custo_hora                  Decimal? @db.Decimal(12, 2)
 
   tem_vale Boolean  @default(false)
   vale     Decimal? @db.Decimal(12, 2)
@@ -648,6 +706,8 @@ model funcionarios {
   apontamentos_loja    agenda_loja_apontamentos[]
   equipe_fabrica       agenda_fabrica_funcionarios[]
   apontamentos_fabrica agenda_fabrica_apontamentos[]
+  apontamentos_producao apontamento_producao[]
+  clientes_vendedor    Cliente[] @relation("ClienteVendedorResponsavel")
 
   @@map("funcionarios")
  }
@@ -757,6 +817,14 @@ model agenda_loja {
 
   equipe agenda_loja_funcionarios[]
   apontamentos agenda_loja_apontamentos[]
+  apontamentos_producao apontamento_producao[]
+
+  criado_por_usuario_id Int?
+  criado_por_usuario     usuarios? @relation("AgendaLojaCriadoPor", fields: [criado_por_usuario_id], references: [id], onDelete: SetNull)
+
+  alterado_por_usuario_id Int?
+  alterado_em              DateTime?
+  alterado_por_usuario     usuarios? @relation("AgendaLojaAlteradoPor", fields: [alterado_por_usuario_id], references: [id], onDelete: SetNull)
 
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
@@ -770,6 +838,8 @@ model agenda_loja {
   @@index([origem_fluxo])
   @@index([status])
   @@index([status_source])
+  @@index([criado_por_usuario_id])
+  @@index([alterado_por_usuario_id])
   @@map("agenda_loja")
 }
 
@@ -833,8 +903,19 @@ model agenda_fabrica {
   status_source String?
   status_aplicado_em DateTime?
 
+  // Ambientes desta tarefa (nomes). Vazio = todos da venda.
+  ambientes_selecionados Json?
+
   equipe agenda_fabrica_funcionarios[]
   apontamentos agenda_fabrica_apontamentos[]
+  apontamentos_producao apontamento_producao[]
+
+  criado_por_usuario_id Int?
+  criado_por_usuario     usuarios? @relation("AgendaFabricaCriadoPor", fields: [criado_por_usuario_id], references: [id], onDelete: SetNull)
+
+  alterado_por_usuario_id Int?
+  alterado_em              DateTime?
+  alterado_por_usuario     usuarios? @relation("AgendaFabricaAlteradoPor", fields: [alterado_por_usuario_id], references: [id], onDelete: SetNull)
 
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
@@ -848,6 +929,8 @@ model agenda_fabrica {
   @@index([origem_fluxo])
   @@index([status])
   @@index([status_source])
+  @@index([criado_por_usuario_id])
+  @@index([alterado_por_usuario_id])
   @@map("agenda_fabrica")
 }
 
@@ -878,6 +961,41 @@ model agenda_fabrica_apontamentos {
   @@index([agenda_fabrica_id])
   @@index([funcionario_id])
   @@map("agenda_fabrica_apontamentos")
+}
+
+// ---------- Apontamento de produção (horas reais para rateio de custo) ----------
+// Time fica nesta tela; a agenda da produção apenas reflete (badge/link).
+model apontamento_producao {
+  id                Int       @id @default(autoincrement())
+  agenda_fabrica_id Int?
+  agenda_loja_id    Int?
+  venda_id          Int?
+  funcionario_id    Int
+  categoria        String?   @db.VarChar(60)  // etapa: PRODUCAO_RECEBIDA, CORTE, MONTAGEM, etc.
+  data              DateTime  @db.Date
+  inicio_em         DateTime
+  fim_em            DateTime
+  pausa_inicio_em       DateTime?  // início da pausa atual (enquanto pausado)
+  pausa_fim_em          DateTime?  // fim da última pausa (legado; múltiplas pausas usam pausa_total_segundos)
+  pausa_total_segundos  Float?     // soma de todas as pausas já encerradas (permite pausar/retomar várias vezes)
+  horas             Decimal?  @db.Decimal(6, 2) // opcional: horas decimais (ex: 2.5)
+  custo_calculado   Decimal?  @db.Decimal(12, 2) // horas * funcionario.custo_hora
+  observacao        String?   @db.VarChar(500)
+  criado_em         DateTime  @default(now())
+  atualizado_em     DateTime  @updatedAt
+
+  agenda_fabrica agenda_fabrica? @relation(fields: [agenda_fabrica_id], references: [id], onDelete: SetNull)
+  agenda_loja    agenda_loja?    @relation(fields: [agenda_loja_id], references: [id], onDelete: SetNull)
+  venda          vendas?         @relation(fields: [venda_id], references: [id], onDelete: SetNull)
+  funcionario    funcionarios   @relation(fields: [funcionario_id], references: [id], onDelete: Cascade)
+
+  @@index([agenda_fabrica_id])
+  @@index([agenda_loja_id])
+  @@index([venda_id])
+  @@index([funcionario_id])
+  @@index([data])
+  @@index([categoria])
+  @@map("apontamento_producao")
 }
 
 model contas_pagar {
@@ -1129,6 +1247,12 @@ model Empresa {
   nome_fantasia String?
   cnpj          String?  @unique
   ie            String?
+  inscricao_municipal String?
+  regime_tributario   String?
+  instagram_url       String?
+  whatsapp_url        String?
+  site                String?
+  cor_marca           String?  @db.VarChar(7)
   logradouro    String?
   numero        String?
   bairro        String?
@@ -1149,6 +1273,8 @@ model Empresa {
   representante_legal_socio_nome String?
   representante_legal_socio_cpf  String?
   representante_legal_socio_rg   String?
+  // Quando o vendedor não preenche "Representante da venda": true = usar Sócio no contrato; false = usar Representante Legal
+  contrato_usar_socio_quando_vazio Boolean? @default(true)
   representante_estado_civil  String?
   updated_at    DateTime @updatedAt
 

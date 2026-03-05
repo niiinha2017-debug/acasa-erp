@@ -100,6 +100,9 @@
             <div class="mt-3 text-[10px] font-black uppercase tracking-widest text-slate-400 truncate">
               {{ statusLabel(item.status) }}
             </div>
+            <div v-if="agendaPorVenda[item.id]" class="mt-2 px-2 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-600 dark:text-slate-300">
+              {{ agendaPorVenda[item.id].label }}
+            </div>
           </article>
 
           <div
@@ -117,7 +120,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { VendaService } from '@/services'
+import { VendaService, AgendaFabricaService } from '@/services'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
 import { format } from '@/utils/format'
@@ -128,6 +131,7 @@ definePage({ meta: { perm: 'posvenda.ver' } })
 const router = useRouter()
 const loading = ref(false)
 const vendas = ref([])
+const agendaFabrica = ref([])
 const filtro = ref('')
 const draggingId = ref(null)
 const draggingFrom = ref('')
@@ -157,6 +161,39 @@ function clienteNome(venda) {
   return venda?.cliente?.nome_completo || venda?.cliente?.razao_social || venda?.cliente?.nome || 'Cliente'
 }
 
+function formatAgendaHorario(inicioEm, fimEm) {
+  if (!inicioEm) return '—'
+  const d = new Date(inicioEm)
+  const dia = String(d.getDate()).padStart(2, '0')
+  const mes = String(d.getMonth() + 1).padStart(2, '0')
+  const hIni = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')
+  if (!fimEm) return `${dia}/${mes} ${hIni}`
+  const f = new Date(fimEm)
+  const hFim = String(f.getHours()).padStart(2, '0') + ':' + String(f.getMinutes()).padStart(2, '0')
+  return `${dia}/${mes} ${hIni} – ${hFim}`
+}
+
+const agendaPorVenda = computed(() => {
+  const map = {}
+  const lista = Array.isArray(agendaFabrica.value) ? agendaFabrica.value : []
+  const now = new Date()
+  const porVenda = {}
+  for (const ev of lista) {
+    const vendaId = ev.venda_id
+    if (!vendaId || ev.status === 'CANCELADO') continue
+    if (!porVenda[vendaId]) porVenda[vendaId] = []
+    porVenda[vendaId].push(ev)
+  }
+  for (const vendaId of Object.keys(porVenda)) {
+    const eventos = porVenda[vendaId].sort((a, b) => new Date(a.inicio_em) - new Date(b.inicio_em))
+    const proximo = eventos.find((e) => new Date(e.inicio_em) >= now) || eventos[eventos.length - 1]
+    if (proximo) {
+      map[vendaId] = { label: formatAgendaHorario(proximo.inicio_em, proximo.fim_em), inicio: proximo.inicio_em, fim: proximo.fim_em }
+    }
+  }
+  return map
+})
+
 const vendasFiltradas = computed(() => {
   const f = String(filtro.value || '').toLowerCase().trim()
   if (!f) return vendas.value
@@ -182,6 +219,21 @@ const cardsByColumn = computed(() => {
   return grouped
 })
 
+async function carregarAgenda() {
+  if (!can('agendamentos.ver')) return
+  try {
+    const hoje = new Date()
+    const inicio = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1)
+    const fim = new Date(hoje.getFullYear(), hoje.getMonth() + 3, 0)
+    const inicioStr = inicio.toISOString().slice(0, 10)
+    const fimStr = fim.toISOString().slice(0, 10)
+    const { data } = await AgendaFabricaService.listarTodos(inicioStr, fimStr, { incluir_cancelados: false })
+    agendaFabrica.value = Array.isArray(data) ? data : []
+  } catch {
+    agendaFabrica.value = []
+  }
+}
+
 async function carregar() {
   if (!can('posvenda.ver')) {
     notify.error('Acesso negado.')
@@ -190,7 +242,11 @@ async function carregar() {
 
   loading.value = true
   try {
-    const { data } = await VendaService.listar()
+    const [vendasRes] = await Promise.all([
+      VendaService.listar(),
+      carregarAgenda(),
+    ])
+    const { data } = vendasRes ?? {}
     vendas.value = Array.isArray(data) ? data : []
   } catch (e) {
     notify.error('Erro ao carregar vendas.')

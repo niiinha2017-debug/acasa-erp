@@ -11,9 +11,12 @@ import {
   Post,
   Req,
   Res,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ContratosService } from './contratos.service';
 
 /**
@@ -65,6 +68,30 @@ export class ContratosPublicController {
       if (e instanceof HttpException) throw e;
       throw new InternalServerErrorException(
         'Não foi possível carregar os dados do contrato.',
+      );
+    }
+  }
+
+  /** Incluir contrato assinado (upload do PDF) – rota pública com token do link */
+  @Post(':token/incluir-assinado')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 15 * 1024 * 1024 } }),
+  )
+  async incluirAssinado(
+    @Param('token') token: string,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    try {
+      const buffer =
+        file?.buffer && Buffer.isBuffer(file.buffer) ? file.buffer : undefined;
+      return this.service.incluirContratoAssinadoPorToken(token, buffer);
+    } catch (e: any) {
+      this.logger.warn(`Incluir assinado (token): ${e?.message || e}`);
+      if (e instanceof HttpException) throw e;
+      throw new InternalServerErrorException(
+        e?.message ||
+          'Não foi possível incluir o contrato assinado. Tente novamente.',
       );
     }
   }

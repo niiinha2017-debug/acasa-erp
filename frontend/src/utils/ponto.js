@@ -45,3 +45,100 @@ export function groupJustificativasByDia(justificativas = []) {
   }
   return map
 }
+
+// --- Motor de Ponto (A Casa): minutos absolutos, pares E/S, jornada 8.5h = 510 min ---
+/** Jornada padrão em minutos (8h30). */
+export const JORNADA_META_MIN = 510
+
+/**
+ * Converte "HH:mm" ou "HH:mm:ss" em minutos totais desde 00:00.
+ * @param {string} hhmm - Ex: "08:30", "17:45"
+ * @returns {number}
+ */
+export function hhmmParaMinutos(hhmm) {
+  if (!hhmm || typeof hhmm !== 'string') return 0
+  const parts = String(hhmm).trim().split(/[:\s]/).map(Number)
+  const h = Number(parts[0]) || 0
+  const m = Number(parts[1]) || 0
+  const s = Number(parts[2]) || 0
+  return h * 60 + m + s / 60
+}
+
+/**
+ * Converte minutos (desde 00:00) em "HH:mm". Se negativo, retorna "-HH:mm".
+ * @param {number} min
+ * @returns {string}
+ */
+export function minutosParaHHMM(min) {
+  const isNeg = min < 0
+  const abs = Math.abs(Math.round(min))
+  const h = Math.floor(abs / 60)
+  const m = abs % 60
+  return `${isNeg ? '-' : ''}${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
+/**
+ * Formata data_hora ISO para hora local "HH:mm" (America/Sao_Paulo).
+ */
+function fmtHoraLocalPonto(iso) {
+  if (!iso) return '--:--'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return '--:--'
+  return d.toLocaleTimeString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+}
+
+/**
+ * Motor de cálculo por dia: array de batidas, pares Saída[n]-Entrada[n], saldo = líquido - meta.
+ * Se número de batidas for ÍMPAR, status Inconsistente e cálculo bloqueado.
+ * @param {Array} registrosDoDia - Registros do dia (com data_hora, tipo ENTRADA/SAIDA, id, etc.)
+ * @param {number} metaMin - Meta do dia em minutos (padrão 510 = 8h30)
+ * @returns {{ batidas: Array<{id, data_hora, hora, tipo}>, tempoLiquidoMin: number|null, saldoMin: number|null, inconsistente: boolean }}
+ */
+export function calcularDiaPonto(registrosDoDia = [], metaMin = JORNADA_META_MIN) {
+  const regs = [...(registrosDoDia || [])]
+    .filter((r) => r?.status !== 'INVALIDADO')
+    .sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora))
+
+  const batidas = regs.map((r) => ({
+    id: r.id,
+    data_hora: r.data_hora,
+    hora: fmtHoraLocalPonto(r.data_hora),
+    tipo: r.tipo,
+    observacao: r.observacao,
+  }))
+
+  const inconsistente = batidas.length % 2 !== 0
+
+  if (inconsistente) {
+    return {
+      batidas,
+      tempoLiquidoMin: null,
+      saldoMin: null,
+      inconsistente: true,
+    }
+  }
+
+  let tempoLiquidoMin = 0
+  for (let i = 0; i < batidas.length; i += 2) {
+    const ent = batidas[i]
+    const sai = batidas[i + 1]
+    if (ent?.tipo === 'ENTRADA' && sai?.tipo === 'SAIDA') {
+      const entMin = hhmmParaMinutos(ent.hora)
+      const saiMin = hhmmParaMinutos(sai.hora)
+      if (saiMin > entMin) tempoLiquidoMin += saiMin - entMin
+    }
+  }
+
+  const saldoMin = tempoLiquidoMin - metaMin
+  return {
+    batidas,
+    tempoLiquidoMin,
+    saldoMin,
+    inconsistente: false,
+  }
+}

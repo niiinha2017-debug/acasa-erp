@@ -63,4 +63,13 @@ export class CreateFornecedorDto {
   @Min(1)
   @Max(31)
   data_vencimento?: number;
+
+  @IsOptional()
+  @IsString()
+  ramo_atividade?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  prazo_entrega_dias?: number;
 }

@@ -1,6 +1,7 @@
 //src/utils/utils.js
 
 import api from '@/services/api'
+import { calcularDiaPonto, JORNADA_META_MIN } from '@/utils/ponto'
 
 /* =====================
    CEP
@@ -103,19 +104,20 @@ export function derivarCargaDosHorarios(f) {
 
 /**
  * Retorna a meta diária (em horas) para um dado dia da semana.
- * 0=Dom (0), 1-5=Seg-Sex (cargaSegSex), 6=Sáb (cargaSabado).
- * Se não houver horários, usa carga_horaria_dia ou carga_horaria_semana/6.
+ * 0=Dom e 6=Sáb: meta 0 (sábado contabiliza como hora extra).
+ * 1-5=Seg-Sex: meta = carga do cadastro; o que passar = hora extra.
  */
 export function metaDiaParaData(dataStr, funcionario) {
   const d = new Date(dataStr + 'T12:00:00').getDay()
   if (d === 0) return 0
+  if (d === 6) return 0 // Sábado: meta zero, toda hora no sábado = hora extra
 
   const cargaDia = Number(funcionario?.carga_horaria_dia || 0)
   const cargaSemana = Number(funcionario?.carga_horaria_semana || 0)
   const derivado = derivarCargaDosHorarios(funcionario)
 
   if (derivado.cargaSegSex > 0 || derivado.cargaSabado > 0) {
-    return d === 6 ? derivado.cargaSabado : derivado.cargaSegSex
+    return derivado.cargaSegSex
   }
   if (cargaDia > 0) return cargaDia
   if (cargaSemana > 0) return cargaSemana / 6
@@ -169,6 +171,7 @@ export function horasDecimalParaHHMMComSinal(h) {
  * Consolida saldo do período com base nos registros de ponto.
  * Se `funcionario` for passado, usa meta variável por dia (Seg-Sex vs Sábado) derivada dos horários.
  * Caso contrário, usa meta fixa: horasSemana / diasSemana.
+ * Se `motorAcasa` for true: usa motor A Casa (array de batidas, pares E/S, 510 min jornada, dia ímpar = Inconsistente).
  */
 export function consolidarSaldoPeriodo({
   registros = [],
@@ -178,6 +181,7 @@ export function consolidarSaldoPeriodo({
   dataIni = null,
   dataFim = null,
   diasSemMeta = [],
+  motorAcasa = false,
 }) {
   const diaKeySP = (dateLike) =>
     new Date(dateLike).toLocaleDateString('en-CA', {
@@ -217,6 +221,42 @@ export function consolidarSaldoPeriodo({
       .map((d) => String(d || '').trim())
       .filter(Boolean),
   )
+
+  if (motorAcasa) {
+    const metaMinSegSex = JORNADA_META_MIN
+    const linhas = dias.map((dia) => {
+      const diaSemana = new Date(`${dia}T12:00:00`).getDay()
+      const metaMin = diaSemana === 0 || diaSemana === 6 || setDiasSemMeta.has(dia) ? 0 : metaMinSegSex
+      const result = calcularDiaPonto(porDia.get(dia) || [], metaMin)
+      const horas = result.tempoLiquidoMin != null ? result.tempoLiquidoMin / 60 : 0
+      const saldo = result.saldoMin != null ? result.saldoMin / 60 : null
+      const metaHoras = metaMin / 60
+      return {
+        dia,
+        batidas: result.batidas,
+        tempoLiquidoMin: result.tempoLiquidoMin,
+        saldoMin: result.saldoMin,
+        inconsistente: result.inconsistente,
+        horas,
+        horasHHMM: result.tempoLiquidoMin != null ? horasDecimalParaHHMM(horas) : '--:--',
+        meta: metaHoras,
+        metaHHMM: horasDecimalParaHHMM(metaHoras),
+        saldo,
+        saldoHHMM: result.inconsistente ? 'Inconsistente' : (saldo != null ? horasDecimalParaHHMMComSinal(saldo) : '--:--'),
+      }
+    })
+    const linhasConsistentes = linhas.filter((l) => !l.inconsistente && l.saldo != null)
+    const totalHoras = linhasConsistentes.reduce((acc, l) => acc + l.horas, 0)
+    const totalSaldo = linhasConsistentes.reduce((acc, l) => acc + l.saldo, 0)
+    return {
+      metaDia: metaMinSegSex / 60,
+      linhas,
+      totalHoras,
+      totalHorasHHMM: horasDecimalParaHHMM(totalHoras),
+      totalSaldo,
+      totalSaldoHHMM: horasDecimalParaHHMMComSinal(totalSaldo),
+    }
+  }
 
   const metaFix = funcionario
     ? null

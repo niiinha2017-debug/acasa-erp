@@ -7,6 +7,8 @@ import { PrismaService } from '../prisma/prisma.service';
 
 // ✅ Fonte da verdade dos status (shared)
 import { STATUS_FINANCEIRO_KEYS as SF } from '../../shared/constantes/status-financeiro';
+import { OBRA_VIGENTE_STATUSES } from '../../shared/constantes/pipeline-cliente';
+import { getDataCorteContasReceber } from '../../shared/constantes/pipeline-regras';
 
 @Injectable()
 export class FinanceiroService {
@@ -813,18 +815,18 @@ export class FinanceiroService {
         });
       }
 
-      // 5) atualiza origens (mantém seu padrão atual)
+      // 5) Marca compras e créditos de plano de corte como COMPENSADOS (ocultos da listagem "Para Fechar")
       if (compras.length) {
         await tx.compras.updateMany({
           where: { id: { in: compras.map((c) => c.id) } },
-          data: { status: SF.PAGO },
+          data: { status: SF.COMPENSADO },
         });
       }
 
       if (planos.length) {
         await tx.plano_corte.updateMany({
           where: { id: { in: planos.map((p) => p.id) } },
-          data: { status: SF.PAGO },
+          data: { status: SF.COMPENSADO },
         });
       }
 
@@ -850,12 +852,18 @@ export class FinanceiroService {
       const pagamentos = Array.isArray(venda?.pagamentos)
         ? venda.pagamentos
         : [];
-      const valorTotal = pagamentos.length
+      const somaPagamentos = pagamentos.length
         ? pagamentos.reduce(
             (sum: number, p: any) => sum + Number(p?.valor || 0),
             0,
           )
-        : Number(venda?.valor_vendido || venda?.valor_total || 0);
+        : 0;
+      const valorVenda = Number(venda?.valor_vendido || venda?.valor_total || 0);
+      // Usar sempre o maior: valor da venda (com juros) ou soma das parcelas, para contas a receber refletirem o total a receber
+      const valorTotal =
+        pagamentos.length > 0
+          ? Math.max(somaPagamentos, valorVenda)
+          : valorVenda;
 
       const formas = Array.from(
         new Set(
@@ -1318,6 +1326,196 @@ export class FinanceiroService {
     });
   }
 
+  /**
+   * Listagem por aba: Para Fechar (compras brutas), Agendados (parcelas do fechamento), Pagos (histórico).
+   * Compras e créditos de plano usados no fechamento ficam COMPENSADOS e não aparecem em "Para Fechar".
+   */
+  async listarContasPagarPorAba(filtros: {
+    visao: 'PARA_FECHAR' | 'AGENDADOS' | 'PAGOS';
+    data_ini?: string;
+    data_fim?: string;
+  }): Promise<any[]> {
+    const visao = filtros.visao;
+    let dataIni = filtros.data_ini
+      ? new Date(filtros.data_ini + 'T00:00:00')
+      : undefined;
+    let dataFim = filtros.data_fim
+      ? new Date(filtros.data_fim + 'T23:59:59')
+      : undefined;
+    if (dataIni && !dataFim) {
+      dataFim = new Date(
+        dataIni.getFullYear(),
+        dataIni.getMonth() + 1,
+        0,
+        23,
+        59,
+        59,
+      );
+    }
+    if (dataFim && !dataIni) {
+      dataIni = new Date(dataFim.getFullYear(), dataFim.getMonth(), 1, 0, 0, 0);
+    }
+
+    if (visao === 'PARA_FECHAR') {
+      const range = dataIni && dataFim ? { gte: dataIni, lte: dataFim } : undefined;
+      const compras = await this.prisma.compras.findMany({
+        where: {
+          status: SF.EM_ABERTO,
+          ...(range ? { data_compra: range } : {}),
+        },
+        include: {
+          fornecedor: true,
+          itens: { select: { nome_produto: true } },
+        },
+        orderBy: { data_compra: 'asc' },
+      });
+      return compras.map((c) => {
+        const itens = (c as any).itens || [];
+        const nomesProdutos = itens.map((i: any) => i.nome_produto || '').filter(Boolean);
+        let dataCompraStr = '';
+        if (c.data_compra) {
+          const d = new Date(c.data_compra);
+          dataCompraStr = `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`;
+        }
+        const parteProdutos = nomesProdutos.length > 0 ? `Produtos: ${nomesProdutos.join(', ')}` : (c as any).tipo_compra || 'COMPRA';
+        const relatorioDescritivo = dataCompraStr ? `COMPRA em ${dataCompraStr} — ${parteProdutos}` : `COMPRA — ${parteProdutos}`;
+        return {
+          id: c.id,
+          origem: 'COMPRA',
+          fornecedor_id: c.fornecedor_id,
+          fornecedor_nome: (c as any).fornecedor?.nome_fantasia || null,
+          descricao: 'COMPRA',
+          observacao: (c as any).tipo_compra,
+          detalhe_produtos: nomesProdutos,
+          data_compra: c.data_compra,
+          relatorio_descritivo: relatorioDescritivo,
+          valor: c.valor_total,
+          valor_compensado: 0,
+          vencimento_em: c.vencimento_em,
+          pago_em: null,
+          status: c.status,
+          mes_referencia: null,
+          ano_referencia: null,
+        };
+      });
+    }
+
+    if (visao === 'AGENDADOS') {
+      const range = dataIni && dataFim ? { gte: dataIni, lte: dataFim } : undefined;
+      const titulos = await this.prisma.titulos_financeiros.findMany({
+        where: {
+          conta_pagar_id: { not: null },
+          status: { in: [SF.EM_ABERTO, SF.VENCIDO] },
+          ...(range ? { vencimento_em: range } : {}),
+        },
+        include: {
+          conta_pagar: {
+            include: { fornecedor: true, fornecedor_cobrador: true },
+          },
+        },
+        orderBy: { vencimento_em: 'asc' },
+      });
+      return titulos.map((t) => {
+        const cp = (t as any).conta_pagar;
+        const desc = cp?.descricao || `Fechamento ${cp?.mes_referencia || ''}/${cp?.ano_referencia || ''}`;
+        const totalParc = Number(t.parcelas_total) || 1;
+        const numParc = Number(t.parcela_numero) || 1;
+        return {
+          id: t.id,
+          titulo_id: t.id,
+          conta_pagar_id: cp?.id,
+          origem: 'TITULO_FECHAMENTO',
+          fornecedor_id: cp?.fornecedor_id ?? null,
+          fornecedor_nome: cp?.fornecedor?.nome_fantasia || null,
+          descricao: desc,
+          observacao: cp?.observacao || null,
+          relatorio_descritivo: `${desc} — Parcela ${numParc}/${totalParc}`,
+          valor: t.valor,
+          valor_compensado: 0,
+          vencimento_em: t.vencimento_em,
+          pago_em: t.pago_em,
+          status: t.status,
+          parcelas_total: totalParc,
+          parcela_numero: numParc,
+          forma_pagamento_chave: cp?.forma_pagamento_chave || null,
+        };
+      });
+    }
+
+    // PAGOS: histórico — titulos de fechamento PAGO + titulos de despesas PAGO
+    const rangePago = dataIni && dataFim ? { gte: dataIni, lte: dataFim } : undefined;
+
+    const [titulosPagos, despesasComTitulosPagos] = await Promise.all([
+      this.prisma.titulos_financeiros.findMany({
+        where: {
+          conta_pagar_id: { not: null },
+          status: SF.PAGO,
+          ...(rangePago ? { pago_em: rangePago } : {}),
+        },
+        include: {
+          conta_pagar: { include: { fornecedor: true } },
+        },
+        orderBy: { pago_em: 'desc' },
+      }),
+      this.prisma.despesas.findMany({
+        where: {
+          titulos: { some: { status: SF.PAGO, ...(rangePago ? { pago_em: rangePago } : {}) } },
+        },
+        include: { titulos: { where: { status: SF.PAGO }, orderBy: { pago_em: 'desc' } } },
+      }),
+    ]);
+
+    const rows: any[] = [];
+
+    for (const t of titulosPagos) {
+      const cp = (t as any).conta_pagar;
+      const desc = cp?.descricao || `Fechamento ${cp?.mes_referencia || ''}/${cp?.ano_referencia || ''}`;
+      const totalParc = Number(t.parcelas_total) || 1;
+      const numParc = Number(t.parcela_numero) || 1;
+      rows.push({
+        id: t.id,
+        titulo_id: t.id,
+        origem: 'TITULO_FECHAMENTO',
+        fornecedor_nome: cp?.fornecedor?.nome_fantasia || null,
+        descricao: desc,
+        relatorio_descritivo: `${desc} — Parcela ${numParc}/${totalParc}`,
+        valor: t.valor,
+        vencimento_em: t.vencimento_em,
+        pago_em: t.pago_em,
+        status: SF.PAGO,
+      });
+    }
+
+    for (const d of despesasComTitulosPagos) {
+      const titulosPagosDespesa = (d as any).titulos || [];
+      for (const t of titulosPagosDespesa) {
+        if (!t.pago_em) continue;
+        if (rangePago && (t.pago_em < dataIni! || t.pago_em > dataFim!)) continue;
+        const totalParc = titulosPagosDespesa.length || 1;
+        const numParc = Number(t.parcela_numero) || 0;
+        rows.push({
+          id: t.id,
+          titulo_id: t.id,
+          origem: 'DESPESA',
+          fornecedor_nome: null,
+          descricao: d.local || d.categoria,
+          relatorio_descritivo: totalParc > 1 ? `Parcela ${numParc}/${totalParc}` : (d.local || d.categoria),
+          valor: t.valor,
+          vencimento_em: t.vencimento_em,
+          pago_em: t.pago_em,
+          status: SF.PAGO,
+        });
+      }
+    }
+
+    rows.sort((a, b) => {
+      const pa = a.pago_em ? new Date(a.pago_em).getTime() : 0;
+      const pb = b.pago_em ? new Date(b.pago_em).getTime() : 0;
+      return pb - pa;
+    });
+    return rows;
+  }
+
   // =========================================================
   // ✅ FECHAMENTO ANTIGO (MANTIDO PARA NÃO QUEBRAR)
   // (você pode remover quando o novo fluxo estiver em produção)
@@ -1392,14 +1590,14 @@ export class FinanceiroService {
       if (compras.length) {
         await tx.compras.updateMany({
           where: { id: { in: compras.map((c) => c.id) } },
-          data: { status: SF.PAGO },
+          data: { status: SF.COMPENSADO },
         });
       }
 
       if (planos.length) {
         await tx.plano_corte.updateMany({
           where: { id: { in: planos.map((p) => p.id) } },
-          data: { status: SF.PAGO },
+          data: { status: SF.COMPENSADO },
         });
       }
 
@@ -1414,5 +1612,138 @@ export class FinanceiroService {
         conta_pagar_id: contaPagar.id,
       };
     });
+  }
+
+  /**
+   * Painel de Obras Vigentes: vigência começa em AGENDAR_MEDIDA_FINA.
+   * Saldo e pendência lidos do Contas a Receber (parcelas vencidas até hoje).
+   */
+  async getPainelObrasVigentes(): Promise<
+    Array<{
+      venda_id: number;
+      contrato_id: number | null;
+      cliente_nome: string;
+      contrato_numero: string | null;
+      status_venda: string;
+      valor_total: number;
+      total_pago: number;
+      saldo_a_receber: number;
+      pendencia_financeira: boolean;
+      receber_no_ato: boolean;
+    }>
+  > {
+    const statusSet = new Set(
+      OBRA_VIGENTE_STATUSES.map((s) => s.toUpperCase()),
+    );
+
+    const vendas = await this.prisma.vendas.findMany({
+      where: {
+        status: {
+          in: Array.from(statusSet),
+        },
+      },
+      include: {
+        cliente: {
+          select: {
+            id: true,
+            nome_completo: true,
+            razao_social: true,
+            nome_fantasia: true,
+          },
+        },
+        contratos: {
+          take: 1,
+          orderBy: { id: 'desc' },
+          select: { id: true, numero: true, valor: true },
+        },
+      },
+      orderBy: { id: 'desc' },
+    });
+
+    const vendaIds = vendas.map((v) => v.id);
+    const dataCorte = getDataCorteContasReceber();
+
+    const contas = await this.prisma.contas_receber.findMany({
+      where: {
+        origem_tipo: 'VENDA',
+        origem_id: { in: vendaIds },
+      },
+      select: {
+        origem_id: true,
+        valor_original: true,
+        valor_compensado: true,
+        status: true,
+        vencimento_em: true,
+      },
+    });
+
+    const porVenda: Record<
+      number,
+      { total_pago: number; saldo: number; pendencia: boolean }
+    > = {};
+    for (const v of vendas) porVenda[v.id] = { total_pago: 0, saldo: 0, pendencia: false };
+
+    for (const c of contas) {
+      const vendaId = Number((c as any).origem_id);
+      if (!vendaId || !porVenda[vendaId]) continue;
+      const valOrig = Number((c as any).valor_original ?? 0);
+      const valComp = Number((c as any).valor_compensado ?? 0);
+      const status = String((c as any).status ?? '').toUpperCase();
+      const venc = (c as any).vencimento_em ? new Date((c as any).vencimento_em) : null;
+
+      if (status === 'PAGO') {
+        porVenda[vendaId].total_pago += valOrig;
+      } else {
+        porVenda[vendaId].saldo += Math.max(valOrig - valComp, 0);
+        if (venc && venc <= dataCorte) porVenda[vendaId].pendencia = true;
+      }
+    }
+
+    const rows: Array<{
+      venda_id: number;
+      contrato_id: number | null;
+      cliente_nome: string;
+      contrato_numero: string | null;
+      status_venda: string;
+      valor_total: number;
+      total_pago: number;
+      saldo_a_receber: number;
+      pendencia_financeira: boolean;
+      receber_no_ato: boolean;
+    }> = [];
+
+    for (const v of vendas) {
+      const cliente = v.cliente as any;
+      const clienteNome =
+        cliente?.nome_completo ||
+        cliente?.razao_social ||
+        cliente?.nome_fantasia ||
+        '—';
+      const contrato = Array.isArray(v.contratos) ? v.contratos[0] : null;
+      const valorTotal = contrato
+        ? Number(contrato.valor ?? 0)
+        : Number(
+            (v as any).valor_base_contrato ?? (v as any).valor_vendido ?? 0,
+          );
+      const fin = porVenda[v.id] ?? { total_pago: 0, saldo: 0, pendencia: false };
+      const totalPago = this.round2(fin.total_pago);
+      const saldo = this.round2(fin.saldo);
+      const receberNoAto = Boolean((v as any).receber_no_ato_medicao);
+
+      rows.push({
+        venda_id: v.id,
+        contrato_id: contrato?.id ?? null,
+        cliente_nome: clienteNome,
+        contrato_numero: contrato?.numero ?? null,
+        status_venda: v.status,
+        valor_total: this.round2(valorTotal),
+        total_pago: totalPago,
+        saldo_a_receber: saldo,
+        pendencia_financeira: fin.pendencia,
+        receber_no_ato: receberNoAto,
+      });
+    }
+
+    return rows;
   }
 }

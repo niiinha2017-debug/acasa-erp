@@ -55,6 +55,20 @@
             label="IE"
             placeholder="Inscricao Estadual"
           />
+          <Input
+            class="col-span-12 md:col-span-8"
+            v-model="form.ramo_atividade"
+            label="Ramo de Atividade"
+            placeholder="Ex: Confecção, Tecidos, Aviação"
+            force-upper
+          />
+          <Input
+            class="col-span-12 md:col-span-4"
+            v-model.number="form.prazo_entrega_dias"
+            type="number"
+            label="Prazo de Entrega (Dias)"
+            placeholder="Ex: 15"
+          />
         </div>
 
         <div class="relative">
@@ -253,6 +267,8 @@ const form = ref({
   nome_fantasia: '',
   cnpj: '',
   ie: '',
+  ramo_atividade: '',
+  prazo_entrega_dias: null,
   telefone: '',
   whatsapp: '',
   email: '',
@@ -343,6 +359,7 @@ function payloadParaApi() {
     ...form.value,
     email: form.value.email ? String(form.value.email).toLowerCase().trim() : null,
     data_vencimento: form.value.data_vencimento ? Number(form.value.data_vencimento) : null,
+    prazo_entrega_dias: form.value.prazo_entrega_dias != null && form.value.prazo_entrega_dias !== '' ? Number(form.value.prazo_entrega_dias) : null,
   }
 }
 
@@ -414,6 +431,7 @@ async function carregarDados() {
       ...form.value,
       ...data,
       data_vencimento: data?.data_vencimento ?? null,
+      prazo_entrega_dias: data?.prazo_entrega_dias ?? null,
     }
   } catch (e) {
     const apiMsg = e?.response?.data?.message

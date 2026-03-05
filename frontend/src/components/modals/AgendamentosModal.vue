@@ -1,48 +1,48 @@
 <template>
   <Teleport to="body">
-    <div v-if="open" class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md" @click.self="close">
-    <div class="bg-white rounded-xl shadow-lg w-full max-w-lg p-6 relative">
-      <button @click="close" class="absolute top-3 right-3 text-slate-400 hover:text-rose-500"><i class="pi pi-times"></i></button>
-      <h2 class="text-lg font-black mb-1">Agendar etapa</h2>
-      <p class="text-xs font-semibold text-slate-500 mb-4">
+    <div v-if="open" class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/60 backdrop-blur-md" @click.self="close">
+    <div class="bg-bg-card dark:bg-slate-900 rounded-2xl shadow-xl dark:shadow-2xl border border-border-ui w-full max-w-lg p-6 relative">
+      <button @click="close" class="absolute top-3 right-3 text-slate-400 dark:text-slate-500 hover:text-rose-500"><i class="pi pi-times"></i></button>
+      <h2 class="text-lg font-black mb-1 text-text-main">Agendar etapa</h2>
+      <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-4">
         {{ cliente?.nome_completo || cliente?.razao_social || 'Cliente' }}
       </p>
 
       <div v-if="hasEtapas" class="space-y-3">
         <div class="flex items-center justify-between gap-3">
-          <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Status</div>
+          <div class="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Status</div>
           <span class="px-3 py-1 rounded-full text-[9px] font-black uppercase" :class="statusBadgeClass">
             {{ statusLabel || 'Sem status' }}
           </span>
         </div>
 
         <div>
-          <label class="block text-xs font-bold mb-1">Funcionario</label>
+          <label class="block text-xs font-bold mb-1 text-text-main">Funcionario</label>
           <div v-if="isAdmin">
-            <select v-model="funcionarioId" class="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 font-bold text-slate-700">
+            <select v-model="funcionarioId" class="w-full h-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl px-3 font-bold text-slate-700 dark:text-slate-200">
               <option value="">Selecione</option>
               <option v-for="f in funcionarios" :key="f.id" :value="f.id">{{ f.nome }}</option>
             </select>
           </div>
-          <div v-else class="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 flex items-center text-sm font-bold text-slate-700">
+          <div v-else class="w-full h-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl px-3 flex items-center text-sm font-bold text-slate-700 dark:text-slate-200">
             {{ funcionarioNome || 'Nao informado' }}
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-bold mb-1">Data e horario</label>
+          <label class="block text-xs font-bold mb-1 text-text-main">Data e horario</label>
           <input
             type="datetime-local"
             v-model="dataHora"
-            class="w-full h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 font-bold text-slate-700"
+            class="w-full h-10 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl px-3 font-bold text-slate-700 dark:text-slate-200"
           />
         </div>
       </div>
-      <div v-else class="text-xs font-semibold text-slate-500">
+      <div v-else class="text-xs font-semibold text-slate-500 dark:text-slate-400">
         Nenhuma etapa disponivel para agendamento.
       </div>
 
-      <button @click="salvar" class="w-full mt-4 h-12 rounded-xl font-black text-[10px] uppercase bg-blue-700 text-white shadow">Salvar agendamento</button>
+      <button @click="salvar" class="w-full mt-4 h-12 rounded-xl font-black text-[10px] uppercase bg-brand-primary hover:bg-brand-dark text-white shadow transition-colors">Salvar agendamento</button>
     </div>
   </div>
   </Teleport>
@@ -96,12 +96,12 @@ const statusLabel = computed(() => {
 const statusBadgeClass = computed(() => {
   const item = sortedPipeline.value.find((p) => p.key === targetStatusKey.value)
   const fase = item?.fase || ''
-  if (fase.includes('MEDIDA')) return 'bg-indigo-50 text-indigo-600 border border-indigo-100'
-  if (fase.includes('ORCAMENTO')) return 'bg-amber-50 text-amber-700 border border-amber-100'
-  if (fase.includes('PRODUCAO')) return 'bg-blue-50 text-blue-700 border border-blue-100'
-  if (fase.includes('MONTAGEM')) return 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-  if (fase.includes('FINAL') || fase.includes('ENCERR')) return 'bg-slate-200 text-slate-700 border border-slate-300'
-  return 'bg-slate-100 text-slate-600 border border-slate-200'
+  if (fase.includes('MEDIDA')) return 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-800'
+  if (fase.includes('ORCAMENTO')) return 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-100 dark:border-amber-800'
+  if (fase.includes('PRODUCAO')) return 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-100 dark:border-blue-800'
+  if (fase.includes('MONTAGEM')) return 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800'
+  if (fase.includes('FINAL') || fase.includes('ENCERR')) return 'bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-500'
+  return 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600'
 })
 
 watch(() => props.open, (val) => {

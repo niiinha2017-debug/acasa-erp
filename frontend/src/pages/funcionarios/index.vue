@@ -101,7 +101,19 @@
             </template>
 
             <template #cell-status="{ row }">
-              <StatusBadge :value="getStatus(row)" />
+              <span
+                class="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                :class="row.status_acesso === 'Pendente de Senha' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' : (row.status_acesso === 'Ativo' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300')"
+              >
+                {{ row.status_acesso ?? getStatus(row) }}
+              </span>
+            </template>
+
+            <template #cell-custo_total_mensal="{ row }">
+              <span v-if="row.custo_total_mensal != null" class="text-[11px] font-semibold text-slate-700 tabular-nums">
+                R$ {{ formatCusto(row.custo_total_mensal) }}
+              </span>
+              <span v-else class="text-[10px] text-slate-400">–</span>
             </template>
 
             <template #cell-acoes="{ row }">
@@ -233,14 +245,19 @@ const pdfBlobUrl = ref('')
 const pdfModalLoading = ref(false)
 const pdfModalError = ref('')
 
-const columns = [
+const isAdmin = computed(() => can('ADMIN'))
 
-  { key: 'nome', label: 'FUNCIONÁRIO', width: '40%' },
-  { key: 'cargo', label: 'CARGO / SETOR', width: '25%' },
-  { key: 'unidade', label: 'UNIDADE', width: '15%' },
-  { key: 'status', label: 'STATUS', width: '10%' },
-  { key: 'acoes', label: '', align: 'right', width: '28%' }
-]
+const columns = computed(() => {
+  const base = [
+    { key: 'nome', label: 'FUNCIONÁRIO', width: '38%' },
+    { key: 'cargo', label: 'CARGO / SETOR', width: '22%' },
+    { key: 'unidade', label: 'UNIDADE', width: '12%' },
+    { key: 'status', label: 'STATUS', width: '10%' },
+    ...(isAdmin.value ? [{ key: 'custo_total_mensal', label: 'CUSTO TOTAL', width: '12%' }] : []),
+    { key: 'acoes', label: '', align: 'right', width: '26%' }
+  ]
+  return base
+})
 
 function toggle(id) {
   const s = new Set(selectedIds.value)
@@ -262,6 +279,12 @@ function getStatus(row) {
   const s = normUpper(row?.status)
   if (s === 'ATIVO' || s === 'INATIVO') return s
   return 'INATIVO'
+}
+
+function formatCusto(value) {
+  if (value == null || Number.isNaN(Number(value))) return '–'
+  const n = Number(value)
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 const funcionariosFiltrados = computed(() => {
@@ -331,6 +354,7 @@ async function carregar() {
       setor: f.setor ?? '',
       unidade: f.unidade ?? '',
       rg: f.rg ?? '',
+      status_acesso: f.status_acesso ?? (f.status === 'INATIVO' ? 'Inativo' : 'Ativo'),
     }))
   } catch (err) {
     notify.error(err?.response?.data?.message || 'Erro ao carregar lista de funcionários.')

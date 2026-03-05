@@ -1,54 +1,23 @@
-// src/constantes/pipeline-plano-corte.js
-
 export const PIPELINE_PLANO_CORTE = [
-  // =========================
-  // ABERTURA
-  // =========================
-  {
-    key: 'EM_ABERTO',
-    label: 'Em aberto',
-    fase: 'ABERTURA',
-    ordem: 1,
-    temTela: true, // tela de cadastro/edição do plano
-    badgeClass: 'bg-amber-50 text-amber-700 border border-amber-100',
-    dotClass: 'bg-amber-500',
+  { 
+    ordem: 1, 
+    fase: 'INICIO', 
+    label: 'Aguardando / Conferência', 
+    cor: '#94a3b8', // Slate (Cinza)
+    statusInternos: ['RECEBIDO', 'CONFERIDO_TECNICO']
   },
-
-  // =========================
-  // EXECUÇÃO
-  // =========================
-  {
-    key: 'EM_ANDAMENTO',
-    label: 'Em andamento',
-    fase: 'EXECUCAO',
-    ordem: 2,
-    temTela: false,
-    badgeClass: 'bg-blue-50 text-blue-700 border border-blue-100',
-    dotClass: 'bg-blue-500',
+  { 
+    ordem: 2, 
+    fase: 'PRODUZINDO', 
+    label: 'Em Corte / Usinagem', 
+    cor: '#f59e0b', // Amber (Laranja)
+    statusInternos: ['NA_MAQUINA', 'BORDA_E_ACABAMENTO']
   },
-  {
-    key: 'FINALIZADO',
-    label: 'Finalizado',
-    fase: 'EXECUCAO',
-    ordem: 3,
-    temTela: false,
-    badgeClass: 'bg-emerald-50 text-emerald-700 border border-emerald-100',
-    dotClass: 'bg-emerald-500',
-  },
-
-  // =========================
-  // FINANCEIRO
-  // =========================
-  {
-    key: 'COMPENSADO',
-    label: 'Compensado',
-    fase: 'FINANCEIRO',
-    ordem: 4,
-    temTela: false,
-    badgeClass: 'bg-slate-50 text-slate-700 border border-slate-200',
-    dotClass: 'bg-slate-500',
-  },
-]
-
-/** Chaves válidas do pipeline (para validação no backend) */
-export const PIPELINE_PLANO_CORTE_KEYS: string[] = PIPELINE_PLANO_CORTE.map((p) => p.key)
+  { 
+    ordem: 3, 
+    fase: 'FIM', 
+    label: 'Pronto / Retirado', 
+    cor: '#10b981', // Emerald (Verde)
+    statusInternos: ['PRONTO_PARA_RETIRADA', 'ENTREGUE']
+  }
+];

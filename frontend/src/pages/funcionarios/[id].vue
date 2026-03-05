@@ -177,9 +177,9 @@
           <Select
             class="col-span-12 md:col-span-3"
             v-model="form.unidade"
-            label="Unidade"
-            placeholder="Selecione"
-            :options="unidadeOptions"
+            label="Vínculo de Local"
+            placeholder="LOJA ou FÁBRICA"
+            :options="vinculoLocalOptions"
             required
             forceUpper
           />
@@ -217,7 +217,14 @@
         </div>
 
         <div class="grid grid-cols-12 gap-6">
-          <Input class="col-span-12 md:col-span-4" v-model="salarioBaseMask" label="Salário Base" placeholder="0,00" />
+          <Input class="col-span-12 md:col-span-4" v-model="salarioBaseMask" label="Salário Base (R$)" placeholder="0,00" />
+          <Input class="col-span-12 md:col-span-2" v-model="form.impostos_encargos_percentual" label="Impostos/Encargos (%)" type="number" step="0.01" min="0" placeholder="0" />
+          <div class="col-span-12 md:col-span-4 flex flex-col gap-1.5">
+            <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Custo Total Mensal (R$)</label>
+            <div class="text-lg font-bold text-slate-800 border-b-2 border-slate-200 pb-1 min-h-[2.25rem] flex items-center">
+              {{ custoTotalMensalFormatado }}
+            </div>
+          </div>
           <Input class="col-span-12 md:col-span-4" v-model="salarioAdicionalMask" label="Complementos" placeholder="0,00" />
 
           <div class="col-span-12 md:col-span-6 space-y-4">
@@ -398,6 +405,7 @@ const form = ref({
   cidade: '',
   estado: '',
   salario_base: '',
+  impostos_encargos_percentual: '',
   salario_adicional: '',
   custo_hora: '',
   tem_vale: false,
@@ -557,6 +565,12 @@ const unidadeOptions = computed(() => {
   return Object.keys(obj).map((k) => ({ label: humanizeConstKey(k), value: k }))
 })
 
+/** Opções para Vínculo de Local: LOJA ou FÁBRICA (pré-configura perfil de permissões do usuário) */
+const vinculoLocalOptions = computed(() => [
+  { label: 'LOJA', value: 'LOJA' },
+  { label: 'FÁBRICA', value: 'FÁBRICA' },
+])
+
 const setorOptions = computed(() => {
   const unidade = String(form.value.unidade || '').trim()
   if (!unidade) return []
@@ -573,6 +587,23 @@ const cargoOptions = computed(() => {
   const rows = (FUNCIONARIOS_LOCAL_SETOR_CARGO?.[unidade] || []).filter((x) => x?.setor === setor)
   const cargos = rows.flatMap((x) => (Array.isArray(x?.cargo) ? x.cargo : [])).filter(Boolean)
   return cargos.map((c) => ({ label: humanizeConstKey(c), value: c }))
+})
+
+/** Custo total mensal: base*(1 + impostos/100) + adicional + vale + vale_transporte */
+const custoTotalMensal = computed(() => {
+  const base = moedaParaNumero(form.value.salario_base)
+  if (!base && base !== 0) return null
+  const pct = Number(String(form.value.impostos_encargos_percentual || '').replace(',', '.')) || 0
+  const adicional = moedaParaNumero(form.value.salario_adicional) || 0
+  const vale = form.value.tem_vale ? (moedaParaNumero(form.value.vale) || 0) : 0
+  const vt = form.value.tem_vale_transporte ? (moedaParaNumero(form.value.vale_transporte) || 0) : 0
+  return base * (1 + pct / 100) + adicional + vale + vt
+})
+
+const custoTotalMensalFormatado = computed(() => {
+  const v = custoTotalMensal.value
+  if (v == null || (typeof v === 'number' && Number.isNaN(v))) return '–'
+  return numeroParaMoeda(Math.round(v * 100) / 100)
 })
 
 watch(() => form.value.tem_vale, (val) => {
@@ -696,6 +727,7 @@ async function carregarDados() {
       cidade: data.cidade ?? '',
       estado: data.estado ?? '',
       salario_base: data.salario_base != null && data.salario_base !== '' ? numeroParaMoeda(data.salario_base) : '',
+      impostos_encargos_percentual: data.impostos_encargos_percentual != null && data.impostos_encargos_percentual !== '' ? String(data.impostos_encargos_percentual) : '',
       salario_adicional: data.salario_adicional != null && data.salario_adicional !== '' ? numeroParaMoeda(data.salario_adicional) : '',
       custo_hora: data.custo_hora != null && data.custo_hora !== '' ? numeroParaMoeda(data.custo_hora) : '',
       tem_vale: !!data.tem_vale,
@@ -780,6 +812,8 @@ async function confirmarSalvar() {
     }
 
     if (form.value.salario_base !== '') payload.salario_base = moedaParaNumero(form.value.salario_base)
+    const impPct = normalizeNumber(form.value.impostos_encargos_percentual)
+    if (impPct !== undefined) payload.impostos_encargos_percentual = impPct
     if (form.value.salario_adicional !== '') payload.salario_adicional = moedaParaNumero(form.value.salario_adicional)
     if (form.value.custo_hora !== '') payload.custo_hora = moedaParaNumero(form.value.custo_hora)
     if (form.value.tem_vale && form.value.vale !== '') payload.vale = moedaParaNumero(form.value.vale)

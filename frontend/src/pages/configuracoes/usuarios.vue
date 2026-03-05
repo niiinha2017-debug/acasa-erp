@@ -79,6 +79,38 @@
               </span>
             </template>
 
+            <template #cell-senha_status="{ row }">
+              <div class="flex items-center gap-2">
+                <i
+                  v-if="row.senha_expirada"
+                  class="pi pi-key text-amber-600 dark:text-amber-400"
+                  title="Senha expirada"
+                />
+                <i
+                  v-else-if="row.precisa_trocar_senha"
+                  class="pi pi-key text-amber-600 dark:text-amber-400"
+                  title="Pendente troca de senha"
+                />
+                <i
+                  v-else
+                  class="pi pi-key text-emerald-600 dark:text-emerald-400"
+                  title="Senha alterada"
+                />
+                <span
+                  :class="[
+                    'inline-flex items-center px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider border',
+                    row.senha_expirada
+                      ? 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20'
+                      : row.precisa_trocar_senha
+                        ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
+                        : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
+                  ]"
+                >
+                  {{ row.senha_expirada ? 'Expirada' : row.precisa_trocar_senha ? 'Pendente troca' : 'Alterada' }}
+                </span>
+              </div>
+            </template>
+
             <template #cell-status="{ row }">
               <button
                 v-if="can('usuarios.editar')"
@@ -106,7 +138,16 @@
               <div class="flex justify-center">
                 <div class="inline-flex items-center gap-2">
                 <button
-                  v-if="can('usuarios.editar')"
+                  v-if="can('usuarios.editar') && row.senha_expirada"
+                  :disabled="reenviandoIds.has(row.id)"
+                  @click.stop="confirmarResetarAcesso(row)"
+                  class="h-10 w-10 flex-shrink-0 rounded-lg flex items-center justify-center text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 dark:hover:bg-rose-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-border-ui bg-bg-card"
+                  title="Resetar Acesso"
+                >
+                  <i class="pi pi-refresh text-xs" />
+                </button>
+                <button
+                  v-else-if="can('usuarios.editar')"
                   v-can="'usuarios.editar'"
                   :disabled="reenviandoIds.has(row.id)"
                   @click.stop="confirmarReenviarSenha(row)"
@@ -149,6 +190,13 @@
               <Input v-model="formUsuario.nome" label="Nome Completo" class="col-span-2" />
               <Input v-model="formUsuario.usuario" label="Usuário Login" :forceUpper="false" />
               <Input v-model="formUsuario.email" label="E-mail" type="email" :forceUpper="false" />
+              <Select
+                v-model="formUsuario.cargo"
+                label="Cargo"
+                placeholder="Selecione o cargo"
+                :options="cargoOptions"
+                class="col-span-2"
+              />
               <Input
                 v-model="formUsuario.senha"
                 :label="modoEdicao ? 'Nova senha (deixe em branco para não alterar)' : 'Senha'"
@@ -234,8 +282,14 @@ const columns = [
   { key: 'nome', label: 'Colaborador' },
   { key: 'acesso', label: 'Login' },
   { key: 'funcionario_vinculado', label: 'Funcionário' },
+  { key: 'senha_status', label: 'Senha' },
   { key: 'status', label: 'Status' },
   { key: 'acoes', label: 'Ações', align: 'center' },
+]
+
+const cargoOptions = [
+  { label: 'Vendedor/Loja', value: 'VENDEDOR_LOJA' },
+  { label: 'Montador/Fábrica', value: 'MONTADOR_FABRICA' },
 ]
 
 const formUsuario = ref({
@@ -245,6 +299,7 @@ const formUsuario = ref({
   email: '',
   senha: '',
   status: 'PENDENTE',
+  cargo: null,
   funcionario_id: null,
 })
 
@@ -298,6 +353,7 @@ const abrirModal = (user = null) => {
       email: user.email || '',
       senha: '',
       status: user.status || 'PENDENTE',
+      cargo: user.cargo ?? null,
       funcionario_id: user.funcionario_id ?? user.funcionario?.id ?? null,
     }
   } else {
@@ -308,6 +364,7 @@ const abrirModal = (user = null) => {
       email: '',
       senha: '',
       status: 'PENDENTE',
+      cargo: null,
       funcionario_id: null,
     }
   }
@@ -352,6 +409,7 @@ const salvar = async () => {
         usuario: formUsuario.value.usuario,
         email: formUsuario.value.email,
         status: formUsuario.value.status,
+        cargo: formUsuario.value.cargo || null,
         funcionario_id:
           formUsuario.value.funcionario_id === '' ||
           formUsuario.value.funcionario_id == null
@@ -367,6 +425,7 @@ const salvar = async () => {
         usuario: formUsuario.value.usuario,
         email: formUsuario.value.email,
         senha: formUsuario.value.senha?.trim() || undefined,
+        cargo: formUsuario.value.cargo || undefined,
       })
     }
     notify.success('Operação realizada com sucesso!')
@@ -436,22 +495,37 @@ async function confirmarReenviarSenha(row) {
   if (!row?.email) return notify.error('Usuario sem e-mail cadastrado.')
 
   const ok = await confirm.show(
-    'Reenviar Senha Provisoria',
-    `Deseja reenviar uma senha provisoria para "${row.email}"?`,
+    'Reenviar Senha Provisória',
+    `Deseja reenviar uma senha provisória para "${row.email}"?`,
   )
   if (!ok) return
 
-  await reenviarSenha(row)
+  await reenviarSenha(row, false)
 }
 
-async function reenviarSenha(row) {
+async function confirmarResetarAcesso(row) {
+  if (!can('usuarios.editar')) return notify.error('Acesso negado.')
+  if (!row?.email) return notify.error('Usuário sem e-mail cadastrado.')
+
+  const ok = await confirm.show(
+    'Resetar Acesso',
+    `A senha provisória expirou. Deseja gerar nova senha e reenviar por e-mail para "${row.email}"?`,
+  )
+  if (!ok) return
+
+  await reenviarSenha(row, true)
+}
+
+async function reenviarSenha(row, isReset = false) {
   try {
     reenviandoIds.value.add(row.id)
     await AuthService.reenviarSenhaProvisoria(row.email)
     row.status = 'PENDENTE'
-    notify.success('Senha provisoria reenviada com sucesso.')
+    row.senha_expirada = false
+    row.precisa_trocar_senha = true
+    notify.success(isReset ? 'Acesso resetado. Nova senha enviada por e-mail.' : 'Senha provisória reenviada com sucesso.')
   } catch (err) {
-    notify.error(err?.response?.data?.message || 'Erro ao reenviar senha provisoria.')
+    notify.error(err?.response?.data?.message || 'Erro ao reenviar senha provisória.')
   } finally {
     reenviandoIds.value.delete(row.id)
   }

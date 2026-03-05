@@ -17,7 +17,7 @@
               />
             </div>
             <Button
-              v-if="can('vendas.criar') && primeiroSemVenda"
+              v-if="(can('vendas.criar') || can('vendas.fechamento.criar')) && primeiroSemVenda"
               variant="primary"
               size="sm"
               @click="irParaFechamento(primeiroSemVenda.id)"
@@ -55,7 +55,7 @@
             </template>
             <template #cell-valor="{ row }">
               <span class="text-sm font-black text-text-main tabular-nums">
-                {{ format.currency(row.total_itens ?? row.valor_total ?? 0) }}
+                {{ format.currency(row.venda?.valor_vendido ?? row.total_itens ?? row.valor_total ?? 0) }}
               </span>
             </template>
             <template #cell-acoes="{ row }">
@@ -67,7 +67,7 @@
                   v-if="!row.venda"
                   size="sm"
                   variant="primary"
-                  :disabled="!can('vendas.criar')"
+                  :disabled="!can('vendas.criar') && !can('vendas.fechamento.criar')"
                   @click="irParaFechamento(row.id)"
                 >
                   Fechar venda
@@ -152,13 +152,16 @@ const filtrados = computed(() => {
   return rows.value.filter((o) => {
     const id = String(o.id || '').toLowerCase()
     const dataFmt = format.date(o.criado_em || o.data || '').toLowerCase()
-    const valor = format.currency(o.total_itens ?? o.valor_total ?? 0).toLowerCase()
+    const valor = format.currency(o.venda?.valor_vendido ?? o.total_itens ?? o.valor_total ?? 0).toLowerCase()
     return id.includes(query) || dataFmt.includes(query) || valor.includes(query)
   })
 })
 
 const valorTotalFiltrado = computed(() =>
-  filtrados.value.reduce((acc, o) => acc + Number(o.total_itens ?? o.valor_total ?? 0), 0)
+  filtrados.value.reduce(
+    (acc, o) => acc + Number(o.venda?.valor_vendido ?? o.total_itens ?? o.valor_total ?? 0),
+    0,
+  )
 )
 
 const clienteNome = computed(() => {

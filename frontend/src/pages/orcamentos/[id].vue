@@ -17,7 +17,7 @@
             Voltar
           </RouterLink>
           <Button
-            v-if="!isNovo && can('vendas.criar')"
+            v-if="!isNovo && (can('vendas.criar') || can('vendas.fechamento.criar'))"
             variant="secondary"
             size="sm"
             type="button"
@@ -52,8 +52,11 @@
 
         <!-- ITEM (FORM) -->
         <div class="space-y-4">
-          <div class="text-xs font-black uppercase tracking-widest text-text-soft">
-            Itens do Orçamento
+          <div class="space-y-1">
+            <div class="text-xs font-black uppercase tracking-widest text-text-soft">
+              Itens do Orçamento
+            </div>
+            <div class="text-[10px] font-bold uppercase text-text-soft tracking-wider">Ambiente</div>
           </div>
 
           <div class="p-6 rounded-2xl border border-border-ui bg-bg-page space-y-6">
@@ -61,8 +64,9 @@
               <div class="col-span-12 md:col-span-8">
                 <Input
                   v-model="ambForm.nome_ambiente"
-                  label="ITEM / AMBIENTE"
+                  label="AMBIENTE"
                   placeholder="Ex: COZINHA"
+                  :forceUpper="true"
                 />
               </div>
 
@@ -77,21 +81,22 @@
 
               <div class="col-span-12">
                 <label class="text-[10px] font-black uppercase text-text-soft mb-2 block ml-1">
-                  ACABAMENTO / DESCRIÇÃO (TÓPICOS)
+                  DESCRIÇÃO
                 </label>
                 <textarea
                   v-model="ambForm.descricao"
                   rows="4"
                   class="w-full p-4 rounded-2xl bg-bg-page border border-border-ui text-sm text-text-main outline-none resize-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
-                  placeholder="* MDF azul&#10;* MDF verde&#10;* puxador perfil"
+                  placeholder="* Armario superior com 4 portas de giro&#10;* Armario inferior 4 gavetas e 2 portas de giro&#10;* Nicho para microondas"
                 ></textarea>
               </div>
 
               <div class="col-span-12">
                 <Input
-                  v-model="ambForm.observacao"
+                  :model-value="ambForm.observacao"
                   label="OBSERVAÇÕES TÉCNICAS"
                   placeholder="MDF Branco TX, puxador perfil..."
+                  @update:model-value="(v) => (ambForm.observacao = String(v || '').toUpperCase())"
                 />
               </div>
             </div>
@@ -114,8 +119,8 @@
               </template>
 
               <template #cell-observacao="{ row }">
-                <div class="whitespace-pre-line font-bold">
-                  {{ row.observacao || '-' }}
+                <div class="whitespace-pre-line font-bold uppercase">
+                  {{ (row.observacao || '-').toUpperCase() }}
                 </div>
               </template>
 
@@ -244,12 +249,35 @@
             </div>
           </div>
 
-          <p class="text-[11px] text-text-soft max-w-3xl">
-            Estes textos serão usados como <strong>segunda página</strong> do PDF do orçamento,
-            funcionando como um pré-contrato específico para este cliente.
-          </p>
+          <div v-if="can('orcamentos.ver')" class="flex flex-wrap items-center gap-4 rounded-xl border border-border-ui bg-bg-page p-4">
+            <div class="flex items-center gap-3">
+              <input
+                id="incluir-termos-pdf"
+                v-model="incluirTermosNoPdf"
+                type="checkbox"
+                class="h-4 w-4 rounded border-border-ui text-brand-primary focus:ring-brand-primary"
+              />
+              <label for="incluir-termos-pdf" class="text-sm font-medium text-text-main cursor-pointer select-none">
+                Incluir termos e condições no PDF ao gerar
+              </label>
+            </div>
+            <Button
+              type="button"
+              variant="primary"
+              :disabled="saving || isNovo"
+              @click="gerarPdf"
+            >
+              <i class="pi pi-file-pdf mr-2" /> Gerar PDF do Orçamento
+            </Button>
+          </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-1 gap-6">
+          <template v-if="incluirTermosNoPdf">
+            <p class="text-[11px] text-text-soft max-w-3xl">
+              Estes textos serão usados como <strong>segunda página</strong> do PDF do orçamento,
+              funcionando como um pré-contrato específico para este cliente.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-1 gap-6">
             <div class="space-y-2">
               <label class="block text-xs font-semibold tracking-wide text-text-soft ml-0.5">
                 Cláusula Primeira: Do Objeto
@@ -281,32 +309,24 @@
             </div>
           </div>
 
-          <div class="flex justify-end gap-3 pt-2">
-            <Button
-              v-if="canEditarClausulasOrc()"
-              type="button"
-              variant="secondary"
-              :disabled="saving || isNovo"
-              @click="salvarClausulas"
-            >
-              <i class="pi pi-save mr-2" /> Salvar Termos
-            </Button>
-            <Button
-              v-if="can('orcamentos.ver')"
-              type="button"
-              variant="primary"
-              :disabled="saving || isNovo"
-              @click="gerarPdf"
-            >
-              <i class="pi pi-file-pdf mr-2" /> Gerar PDF do Orçamento
-            </Button>
-          </div>
+            <div class="flex justify-end gap-3 pt-2">
+              <Button
+                v-if="canEditarClausulasOrc()"
+                type="button"
+                variant="secondary"
+                :disabled="saving || isNovo"
+                @click="salvarClausulas"
+              >
+                <i class="pi pi-save mr-2" /> Salvar Termos
+              </Button>
+            </div>
+          </template>
         </div>
 
         <!-- Barra de finalização fixa embaixo -->
         <div class="sticky bottom-0 left-0 right-0 border-t border-border-ui bg-bg-card -mx-6 md:-mx-8 px-6 md:px-8 py-4 mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
           <div class="flex items-center gap-2">
-            <span class="text-[10px] font-black uppercase text-text-soft tracking-widest">Total do orçamento</span>
+            <span class="text-[10px] font-black uppercase text-text-soft tracking-widest">Total</span>
             <span class="text-xl font-black text-text-main">{{ format.currency(total) }}</span>
           </div>
           <FormActions
@@ -370,6 +390,7 @@ const loadingImagensPdf = ref(false)
 const loadingAnexos = ref(false)
 const fileInputImagemPdf = ref(null)
 const fileInputAnexos = ref(null)
+const incluirTermosNoPdf = ref(false)
 
 const colArquivos = [
   { key: 'nome', label: 'ARQUIVO' },
@@ -378,8 +399,8 @@ const colArquivos = [
 
 
 const columns = [
-  { key: 'nome_ambiente', label: 'Item/Ambiente' },
-  { key: 'descricao', label: 'Acabamento' },
+  { key: 'nome_ambiente', label: 'Ambiente' },
+  { key: 'descricao', label: 'Descrição' },
   { key: 'observacao', label: 'Observações' },
   { key: 'valor_unitario', label: 'Valor', align: 'right' },
   { key: 'acoes', label: '', width: '140px', align: 'right' },
@@ -463,6 +484,7 @@ function iniciarEdicao(idx) {
   const a = draft.ambientes[idx]
   Object.assign(ambForm, {
     ...a,
+    observacao: String(a.observacao || '').toUpperCase(),
     valor_unitario: Number(a.valor_unitario || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
   })
   editIdx.value = idx
@@ -645,18 +667,17 @@ async function gerarPdf() {
   if (!id) return
 
   try {
-    const { data } = await OrcamentosService.abrirPdf(id)
+    const { data } = await OrcamentosService.abrirPdf(id, { incluirTermos: incluirTermosNoPdf.value })
     const arquivoId = data?.arquivoId
     if (!arquivoId) return notify.error('Não retornou arquivoId.')
 
-await router.push({
-  path: `/arquivos/${String(arquivoId).replace(/\D/g, '')}`,
-  query: {
-    name: `ORCAMENTO_${String(id).replace(/\D/g, '')}.pdf`,
-    type: 'application/pdf',
-  },
-})
-
+    const idArquivo = String(arquivoId).replace(/\D/g, '')
+    const nomePdf = `ORCAMENTO_${String(id).replace(/\D/g, '')}.pdf`
+    notify.success('PDF gerado. Abrindo visualização...')
+    await router.push({
+      path: `/arquivos/${idArquivo}`,
+      query: { name: nomePdf, type: 'application/pdf' },
+    })
   } catch (e) {
     const msg = e?.response?.data?.message || e?.message || 'Erro ao gerar PDF.'
     notify.error(msg)

@@ -85,6 +85,13 @@
             type="number"
             required
           />
+          <Input
+            class="col-span-12 md:col-span-4"
+            v-model="estoqueMinimoInput"
+            label="Estoque Mínimo"
+            type="number"
+            placeholder="0"
+          />
 
           <Input
             class="col-span-12 md:col-span-4"
@@ -105,6 +112,13 @@
             v-model="form.medida"
             label="Medida"
             placeholder="Ex: 2750x1840mm"
+            force-upper
+          />
+          <Input
+            class="col-span-12 md:col-span-4"
+            v-model="form.categoria"
+            label="Categoria"
+            placeholder="Ex: Chapas, Acabamento"
             force-upper
           />
         </div>
@@ -149,21 +163,21 @@
         <div class="grid grid-cols-12 gap-6">
           <div class="col-span-12 md:col-span-5">
             <div
-              class="relative group aspect-square rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center overflow-hidden transition-all hover:border-slate-300"
-              :class="{ 'cursor-pointer': previewImagem }"
-              @click="previewImagem ? abrirPreviewImagem() : null"
+              class="relative group aspect-square rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center overflow-hidden transition-all hover:border-slate-300 cursor-pointer"
+              @click="previewImagem ? abrirPreviewImagem() : (imagemInput?.click())"
             >
               <img v-if="previewImagem" :src="previewImagem" class="w-full h-full object-contain p-4" />
               <div v-else class="text-center p-6">
                 <i class="pi pi-image text-slate-300 text-3xl mb-2"></i>
                 <p class="text-[10px] text-slate-400 font-medium uppercase tracking-tighter leading-tight">
-                  {{ isEdit ? 'Sem imagem anexada' : 'Salve para anexar' }}
+                  {{ isEdit ? 'Sem imagem anexada' : 'Clique para enviar imagem' }}
                 </p>
               </div>
 
               <div
-                v-if="isEdit && can('produtos.editar')"
+                v-if="(isEdit && can('produtos.editar')) || (!isEdit && can('produtos.criar'))"
                 class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
+                @click.stop
               >
                 <button type="button" @click.stop="imagemInput?.click()" class="p-2 bg-white rounded-lg text-slate-900 hover:scale-110 transition-transform">
                   <i class="pi pi-upload"></i>
@@ -180,7 +194,7 @@
             <div class="w-full rounded-2xl border border-border-ui bg-slate-50/70 dark:bg-slate-800/30 p-5">
               <p class="text-xs uppercase tracking-[0.14em] text-slate-500 font-semibold mb-2">Observacao</p>
               <p class="text-sm text-slate-600 dark:text-slate-300">
-                O upload de imagem fica disponivel apos salvar o produto em modo edicao.
+                Clique na area ao lado para anexar uma imagem. Em novo produto, a imagem sera enviada ao cadastrar.
               </p>
             </div>
           </div>
@@ -269,7 +283,7 @@
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { maskMoneyBR } from '@/utils/masks'
 import { UNIDADES } from '@/constantes'
@@ -337,22 +351,30 @@ const form = ref({
   espessura_mm: null,
   preco_m2: 0,
   quantidade: 0,
+  estoque_minimo: 0,
   valor_unitario: 0,
   valor_total: 0,
   status: 'ATIVO',
-
-  // ✅ novo campo
+  categoria: '',
   imagem_url: '',
 })
 
-// preview simples (não altera lógica)
+// Arquivo pendente (criação): permite enviar imagem antes de salvar
+const pendingImagemFile = ref(null)
+const pendingImagemObjectUrl = ref('')
+watch(pendingImagemFile, (file) => {
+  if (pendingImagemObjectUrl.value) URL.revokeObjectURL(pendingImagemObjectUrl.value)
+  pendingImagemObjectUrl.value = file ? URL.createObjectURL(file) : ''
+}, { immediate: true })
 const previewImagem = computed(() => {
+  if (pendingImagemFile.value && pendingImagemObjectUrl.value) return pendingImagemObjectUrl.value
   const url = String(form.value.imagem_url || '').trim()
   return url.length ? url : ''
 })
 
 // ======= Inputs auxiliares (máscaras) =======
 const quantidadeInput = ref('')
+const estoqueMinimoInput = ref('')
 const valorUnitarioMask = ref('R$ 0,00')
 const precoM2Mask = ref('R$ 0,00')
 
@@ -373,6 +395,10 @@ watch(quantidadeInput, (v) => {
   form.value.quantidade = n ? Number(n) : 0
   if (v !== n) quantidadeInput.value = n
 })
+watch(estoqueMinimoInput, (v) => {
+  const n = String(v || '').replace(/\D/g, '')
+  form.value.estoque_minimo = n ? Number(n) : 0
+})
 
 watch(valorUnitarioMask, (v) => {
   const n = String(v || '').replace(/\D/g, '')
@@ -391,6 +417,24 @@ watch(precoM2Mask, (v) => {
   const formatado = maskMoneyBR(valor)
   if (v !== formatado) precoM2Mask.value = formatado
 })
+
+// Cálculo automático: Preço por M² = Custo Unitário / área em m² (quando Largura, Comprimento e Custo Unitário preenchidos)
+function calcularPrecoM2Automatico() {
+  const larg = Number(form.value.largura_mm) || 0
+  const comp = Number(form.value.comprimento_mm) || 0
+  const custo = Number(form.value.valor_unitario) || 0
+  if (larg <= 0 || comp <= 0 || custo <= 0) return
+  const areaM2 = (larg / 1000) * (comp / 1000)
+  if (areaM2 <= 0) return
+  const precoM2 = custo / areaM2
+  form.value.preco_m2 = Math.round(precoM2 * 100) / 100
+  precoM2Mask.value = maskMoneyBR(form.value.preco_m2)
+}
+watch(
+  () => [form.value.largura_mm, form.value.comprimento_mm, form.value.valor_unitario],
+  () => calcularPrecoM2Automatico(),
+  { deep: true },
+)
 
 // ======= UNIDADES (constantes) =======
 const unidadesOptions = computed(() => UNIDADES.map((u) => ({ label: u.label, value: u.key })))
@@ -413,20 +457,24 @@ function resetForm() {
     marca: '',
     cor: '',
     medida: '',
+    categoria: '',
     unidade: '',
     largura_mm: null,
     comprimento_mm: null,
     espessura_mm: null,
     preco_m2: 0,
     quantidade: 0,
+    estoque_minimo: 0,
     valor_unitario: 0,
     valor_total: 0,
     status: 'ATIVO',
     imagem_url: '',
   }
   quantidadeInput.value = ''
+  estoqueMinimoInput.value = ''
   valorUnitarioMask.value = 'R$ 0,00'
   precoM2Mask.value = 'R$ 0,00'
+  pendingImagemFile.value = null
 }
 
 async function carregarFornecedor() {
@@ -448,6 +496,8 @@ async function carregarProduto() {
     espessura_mm: data.espessura_mm ?? null,
     preco_m2: Number(data.preco_m2 || 0),
     quantidade: Number(data.quantidade || 0),
+    estoque_minimo: Number(data.estoque_minimo ?? 0),
+    categoria: data.categoria || '',
     valor_unitario: Number(data.valor_unitario || 0),
     valor_total: Number(data.valor_total || 0),
     status: data.status || 'ATIVO',
@@ -455,28 +505,29 @@ async function carregarProduto() {
   }
 
   quantidadeInput.value = form.value.quantidade ? String(form.value.quantidade) : ''
+  estoqueMinimoInput.value = form.value.estoque_minimo != null && form.value.estoque_minimo !== '' ? String(form.value.estoque_minimo) : ''
   valorUnitarioMask.value = maskMoneyBR(form.value.valor_unitario || 0)
   precoM2Mask.value = maskMoneyBR(form.value.preco_m2 || 0)
 }
 
 async function onImagemPick(e) {
+  const file = e?.target?.files?.[0]
+  if (!file) return
+
+  if (!file.type?.startsWith('image/')) {
+    notify.error('Selecione um arquivo de imagem.')
+    if (imagemInput.value) imagemInput.value.value = ''
+    return
+  }
+
   if (!isEdit.value) {
-    notify.warn('Salve o produto primeiro para anexar imagem.')
+    pendingImagemFile.value = file
     if (imagemInput.value) imagemInput.value.value = ''
     return
   }
 
   if (!can('produtos.editar')) {
     notify.error('Acesso negado.')
-    if (imagemInput.value) imagemInput.value.value = ''
-    return
-  }
-
-  const file = e?.target?.files?.[0]
-  if (!file) return
-
-  if (!file.type?.startsWith('image/')) {
-    notify.error('Selecione um arquivo de imagem.')
     if (imagemInput.value) imagemInput.value.value = ''
     return
   }
@@ -512,7 +563,10 @@ async function onImagemPick(e) {
 
 
 async function confirmarRemoverImagem() {
-  if (!isEdit.value) return
+  if (!isEdit.value) {
+    pendingImagemFile.value = null
+    return
+  }
   if (!can('produtos.editar')) return notify.error('Acesso negado.')
 
   const ok = await confirm.show('Remover imagem', 'Deseja remover a imagem deste produto?')
@@ -520,8 +574,6 @@ async function confirmarRemoverImagem() {
 
   removendoImagem.value = true
   try {
-    // opcional: remover arquivo do slot (se seu backend tiver listagem por slot/categoria)
-    // se não tiver, só limpa o campo do produto mesmo:
     await ProdutosService.salvar(produtoId.value, { imagem_url: null })
     form.value.imagem_url = ''
     notify.success('Imagem removida!')
@@ -592,9 +644,33 @@ async function salvar() {
 
       // ✅ imagem opcional
       imagem_url: String(form.value.imagem_url || '').trim() || null,
+      estoque_minimo: Number(form.value.estoque_minimo ?? 0),
+      categoria: form.value.categoria ? String(form.value.categoria).trim() : null,
     }
 
-    await ProdutosService.salvar(isEdit.value ? produtoId.value : null, payload)
+    const res = await ProdutosService.salvar(isEdit.value ? produtoId.value : null, payload)
+    const produtoSalvo = res?.data ?? res
+    const idNovo = produtoSalvo?.id
+
+    if (!isEdit.value && idNovo && pendingImagemFile.value) {
+      uploadingImagem.value = true
+      try {
+        const up = await ArquivosService.upload({
+          ownerType: 'PRODUTO',
+          ownerId: idNovo,
+          categoria: 'IMAGEM',
+          slotKey: 'IMAGEM_PRINCIPAL',
+          file: pendingImagemFile.value,
+        })
+        const arq = up?.data ?? up
+        if (arq?.url) await ProdutosService.salvar(idNovo, { imagem_url: arq.url })
+      } catch (err) {
+        notify.error(err?.response?.data?.message || 'Erro ao enviar imagem.')
+      } finally {
+        uploadingImagem.value = false
+      }
+    }
+
     closeTabAndGo('/produtos')
   } catch (err) {
     console.error(err)
@@ -603,6 +679,10 @@ async function salvar() {
     salvando.value = false
   }
 }
+
+onBeforeUnmount(() => {
+  if (pendingImagemObjectUrl.value) URL.revokeObjectURL(pendingImagemObjectUrl.value)
+})
 
 onMounted(async () => {
   const perm = isEdit.value ? 'produtos.editar' : 'produtos.criar'

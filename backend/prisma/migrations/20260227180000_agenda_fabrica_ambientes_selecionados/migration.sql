@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `agenda_fabrica` ADD COLUMN `ambientes_selecionados` JSON NULL;

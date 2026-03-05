@@ -39,4 +39,13 @@ export class CreateUsuarioDto {
     return senha || undefined;
   })
   senha?: string;
+
+  @IsString()
+  @IsOptional()
+  @Transform(({ value }) => {
+    const v = String(value ?? '').trim().toUpperCase();
+    if (v === '' || v === 'VENDEDOR_LOJA' || v === 'MONTADOR_FABRICA') return v || undefined;
+    return undefined;
+  })
+  cargo?: 'VENDEDOR_LOJA' | 'MONTADOR_FABRICA';
 }

@@ -71,21 +71,41 @@ router.beforeEach(async (to) => {
   }
 
   const status = String(user?.status || '').toUpperCase()
+  const precisaTrocarSenha = !!user?.precisa_trocar_senha
+  const senhaExpirada = !!user?.senha_expirada
 
-  // 4. Lógica de PENDENTE (Troca de senha)
+  // 3.1 Senha provisória expirada: desloga e redireciona para login com mensagem
+  if (senhaExpirada) {
+    storage.removeToken()
+    storage.removeUser()
+    return { path: '/login', query: { msg: 'senha_expirada' } }
+  }
+
+  // 4. Segurança absoluta: usuário com senha provisória só acessa /pendente (menu já oculto via layout auth)
+  if (precisaTrocarSenha) {
+    if (to.path === '/pendente') return true
+    return { path: '/pendente' }
+  }
+
+  // 5. Status PENDENTE (sem token de recuperação ativo) também redireciona para troca de senha
   if (status !== 'ATIVO') {
     if (to.path === '/pendente') return true
     return { path: '/pendente' }
   }
 
-  // 5. Se já é ATIVO e está na tela de pendente, manda pra home
+  // 6. Se já é ATIVO e está na tela de pendente, manda pra home
   if (status === 'ATIVO' && to.path === '/pendente') {
     const agendaHome = getAgendaHome()
     return agendaHome || { path: '/' }
   }
 
   const requiredPerm = getRequiredPerm(to, routePermMap)
-  if (requiredPerm && !can(requiredPerm)) {
+  const allowed = requiredPerm
+    ? Array.isArray(requiredPerm)
+      ? requiredPerm.some((p) => can(p))
+      : can(requiredPerm)
+    : true
+  if (requiredPerm && !allowed) {
     const agendaHome = getAgendaHome()
     if (agendaHome) return agendaHome
     if (can('index.visualizar')) return { path: '/' }

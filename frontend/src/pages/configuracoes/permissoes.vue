@@ -52,8 +52,11 @@
               <span :class="['text-[11px] font-black uppercase tracking-tight', usuarioSelecionado?.id === row.id ? 'text-brand-primary' : 'text-slate-700']">
                 {{ row.nome }}
               </span>
+              <span v-if="row.funcionario?.cargo" class="text-[9px] font-semibold text-slate-500 uppercase tracking-tighter mt-0.5">
+                {{ row.funcionario.cargo }}
+              </span>
               <div class="flex items-center gap-2 mt-1">
-                <span class="text-[9px] font-bold uppercase text-slate-400 tracking-tighter">{{ row.setor || 'Geral' }}</span>
+                <span class="text-[9px] font-bold uppercase text-slate-400 tracking-tighter">{{ row.funcionario?.setor || row.setor || 'Geral' }}</span>
 <span :class="[
   'w-1 h-1 rounded-full',
   String(row.status || '').toUpperCase() === 'ATIVO'
@@ -107,7 +110,7 @@
               <div class="flex items-center justify-between border-b border-slate-50 pb-2">
                 <h4 class="text-[11px] font-black uppercase tracking-[0.15em] text-slate-400 flex items-center gap-2">
                   <span class="w-1 h-3 bg-brand-primary rounded-full"></span>
-                  {{ modulo }}
+                  {{ ROTULO_MODULO[modulo] || modulo }}
                 </h4>
                 <div class="flex gap-3">
                   <button @click="confirmarMarcarTudoModulo(modulo, true)"class="text-[9px] font-black uppercase text-brand-primary/60 hover:text-brand-primary transition-colors">Marcar Todos</button>
@@ -191,6 +194,33 @@ const loadingSalvar = ref(false)
 const loadingDados = ref(false)
 const loadingPermissoes = ref(false)
 const catalogoPermissoes = ref([])
+
+// Rótulos amigáveis dos módulos (ex.: producao_fabrica → PRODUÇÃO/FÁBRICA)
+const ROTULO_MODULO = {
+  producao_fabrica: 'PRODUÇÃO/FÁBRICA',
+  geral: 'Geral',
+  contratos: 'Contratos',
+  clientes: 'Clientes',
+  permissoes: 'Permissões',
+  configuracoes: 'Configurações',
+  agendamentos: 'Agendamentos',
+  vendas: 'Vendas',
+  orcamentos: 'Orçamentos',
+  plano_corte: 'Plano de Corte',
+  funcionarios: 'Funcionários',
+  ponto_relatorio: 'Ponto',
+  ponto_convite: 'Ponto Convites',
+  relatorios: 'Relatórios',
+  usuarios: 'Usuários',
+  arquivos: 'Arquivos',
+  contas_pagar: 'Contas a Pagar',
+  contas_receber: 'Contas a Receber',
+  despesas: 'Despesas',
+  compras: 'Compras',
+  fornecedores: 'Fornecedores',
+  produtos: 'Produtos',
+  fechamento_fornecedor: 'Fechamento Fornecedor',
+}
 
 // Chave -> ID
 const mapaChaveParaId = computed(() => {
@@ -328,7 +358,13 @@ const salvar = async () => {
       await syncMe()
     }
 
-    notify.success('Permissões atualizadas!')
+    const agora = new Date()
+    const dia = String(agora.getDate()).padStart(2, '0')
+    const mes = String(agora.getMonth() + 1).padStart(2, '0')
+    const ano = agora.getFullYear()
+    const dataRegistro = `${dia}/${mes}/${ano}`
+    const quem = usuarioLogado.value?.nome || 'Sistema'
+    notify.success(`Permissões atualizadas! Registrado em ${dataRegistro} por ${quem}.`)
   } catch (e) {
     console.error(e)
     notify.error('Erro ao salvar')

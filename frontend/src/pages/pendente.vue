@@ -6,7 +6,7 @@
         <h1 class="text-lg font-black uppercase tracking-tight text-slate-800 dark:text-slate-100">
           Primeiro Acesso
         </h1>
-        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mt-1">
+        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mt-1">
           Defina sua senha definitiva para ativar sua conta
         </p>
       </div>

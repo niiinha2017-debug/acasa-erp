@@ -1,9 +1,4 @@
 import api from './api'
-import { getBaseOriginFromApi } from '@/utils/url'
-
-
-const base = getBaseOriginFromApi(api)
-
 
 // ✅ GLOBAL: ARQUIVOS
 export { ArquivosService } from './arquivos.service'
@@ -34,6 +29,8 @@ export const ClienteService = {
   getAniversariantes: (data, enviar) =>
     api.get('/clientes/relatorios/aniversariantes', { params: { data, enviar } }),
   getPipeline: () => api.get('/clientes/pipeline'),
+  /** Cliente_ids com AGENDAR_MEDIDA_FINA e parcela vencida (Fluxo de Clientes: alerta e bloqueio de agendamento). */
+  pendenciasAgendamento: () => api.get('/clientes/relatorios/pendencias-agendamento'),
 }
 
 // --- SERVIÇO DE COMPRAS ---
@@ -47,6 +44,9 @@ export const CompraService = {
 // --- SERVIÇO DE DESPESAS ---
 export const DespesaService = {
   listar: (filtros = {}) => api.get('/despesas', { params: filtros }),
+  listarComFuncionario: (filtros = {}) =>
+    api.get('/despesas/funcionarios', { params: filtros }),
+  pagar: (id) => api.post(`/despesas/${id}/pagar`),
   buscar: (id) => api.get(`/despesas/${id}`),
   salvar: (id, dados) => (id ? api.put(`/despesas/${id}`, dados) : api.post('/despesas', dados)),
   atualizarRecorrencia: (recorrenciaId, dados) =>
@@ -189,10 +189,10 @@ export const OrcamentosService = {
   atualizarItem: (id, itemId, item) => api.put(`/orcamentos/${id}/itens/${itemId}`, item),
   removerItem: (id, itemId) => api.delete(`/orcamentos/${id}/itens/${itemId}`),
 
-  // PDF (continua existindo)
-  abrirPdf: (id) => {
+  // PDF (opts.incluirTermos = true para incluir termos e condições no PDF)
+  abrirPdf: (id, opts = {}) => {
     const cleanId = String(id || '').replace(/\D/g, '')
-    return api.post(`/orcamentos/${cleanId}/pdf`) // retorna { arquivoId }
+    return api.post(`/orcamentos/${cleanId}/pdf`, opts) // retorna { arquivoId }
   },
 
   salvarClausulas: (id, dados) => {
@@ -230,6 +230,7 @@ export const PlanoCorteService = {
 // --- PRODUTOS ---
 export const ProdutosService = {
   listar: (filtros = {}) => api.get('/produtos', { params: filtros }),
+  listarAbaixoEstoqueMinimo: () => api.get('/produtos/abaixo-estoque-minimo'),
   buscar: (id) => api.get(`/produtos/${id}`),
   salvar: (id, dados) => (id ? api.put(`/produtos/${id}`, dados) : api.post('/produtos', dados)),
   remover: (id) => api.delete(`/produtos/${id}`),
@@ -284,6 +285,9 @@ export const ContratosService = {
     if (file && file instanceof File) form.append('file', file)
     return api.post(`/contratos/${String(id || '').replace(/\D/g, '')}/vigente-assinatura-presencial`, form)
   },
+  /** Excluir o PDF do contrato assinado (upload) – permite enviar outro depois */
+  excluirPdfAssinado: (id) =>
+    api.delete(`/contratos/${String(id || '').replace(/\D/g, '')}/pdf-assinado`),
 }
 
 // --- PERMISSÕES ---
@@ -319,6 +323,9 @@ export const FinanceiroService = {
   // ✅ NOVO: etapa 2 do modal (fecha mês + cria títulos)
   fecharMesFornecedor: (dados) =>
     api.post('/financeiro/contas-pagar/fechar-mes', dados),
+
+  // Painel de Obras Vigentes (apenas obras em medição, produção ou montagem)
+  painelObrasVigentes: () => api.get('/financeiro/contas-pagar/painel-obras-vigentes'),
 
   // --- RECEBER (mantém) ---
   listarReceber: (filtros = {}) => api.get('/financeiro/contas-receber', { params: filtros }),
@@ -376,6 +383,10 @@ export const PontoRelatorioService = {
   /** Comprovante em imagem (PNG ou JPEG) para compartilhar */
   comprovanteImagem: (registroId, formato = 'png') =>
     api.get(`/ponto/relatorio/comprovante/${registroId}`, { params: { formato }, responseType: 'blob' }),
+
+  /** Gera recibo de folha operacional em PDF (logo A Casa). Body: nome_funcionario, data_ini, data_fim, ganhos_totais, total_vales, saldo_a_pagar, itens_auditoria */
+  reciboFolhaPdf: (payload) =>
+    api.post('/ponto/relatorio/recibo-folha', payload, { responseType: 'blob' }),
 }
 
 
@@ -464,6 +475,10 @@ export const AgendaLojaService = {
   },
   excluir(id) {
     return api.delete(`/agenda-loja/${id}`);
+  },
+  /** Apaga do banco todos os agendamentos com status CANCELADO (limpeza). */
+  purgeCancelados() {
+    return api.post('/agenda-loja/purge-cancelados');
   }
 };
 
@@ -471,6 +486,14 @@ export const AgendaLojaService = {
 export const AgendaFabricaService = {
   listarTodos(inicio, fim, filtros = {}) {
     return api.get('/agenda-fabrica', { params: { inicio, fim, ...filtros } });
+  },
+  /** Lista de eventos "Agendar medida fina" ainda pendentes (recebidos da venda). */
+  pendentesMedidaFina() {
+    return api.get('/agenda-fabrica/pendentes-medida-fina');
+  },
+  /** Lista clientes/vendas com montagem concluída (para criar pós-venda como tarefa avulsa). */
+  montagemConcluida() {
+    return api.get('/agenda-fabrica/montagem-concluida');
   },
   getPipelineProducao,
   criar(dados) {
@@ -482,12 +505,70 @@ export const AgendaFabricaService = {
   buscarPorFuncionario(id) {
     return api.get(`/agenda-fabrica/funcionario/${id}`);
   },
-  atualizarStatus(id, status, categoria) {
+  atualizarStatus(id, status, categoria, alteradoEm, dataConclusao) {
     const body = { status };
     if (categoria) body.categoria = categoria;
+    if (alteradoEm) body.alterado_em = alteradoEm;
+    if (dataConclusao) body.data_conclusao = dataConclusao;
     return api.patch(`/agenda-fabrica/${id}/status`, body);
   },
   excluir(id) {
     return api.delete(`/agenda-fabrica/${id}`);
+  },
+  /** Apaga do banco todos os agendamentos com status CANCELADO (limpeza). */
+  purgeCancelados() {
+    return api.post('/agenda-fabrica/purge-cancelados');
+  }
+};
+
+/** Apontamento de produção: horas reais por funcionário/etapa (rateio de custo). Cronômetro: 1 tarefa, vários funcionários, cada um com seu cronômetro. */
+export const ApontamentoProducaoService = {
+  listar(filtros = {}) {
+    return api.get('/apontamento-producao', { params: filtros });
+  },
+  /** Retorna { apontamentos, pendentes } — pendentes = tarefas da agenda de venda ainda sem registro de horas. */
+  getTimeline(params = {}) {
+    return api.get('/apontamento-producao/timeline', { params });
+  },
+  /** Timeline por tarefas: { tarefas, tipo }. Cada tarefa tem apontamentos_producao (início/fim de cada funcionário). */
+  getTimelinePorTarefas(params = {}) {
+    return api.get('/apontamento-producao/timeline/tarefas', { params });
+  },
+  /** Cronômetros em andamento (abertos) do funcionário — para exibir Iniciar/Pausar/Concluir na agenda. */
+  getCronometrosAbertos(funcionarioId) {
+    return api.get('/apontamento-producao/cronometro/abertos', { params: { funcionario_id: funcionarioId } });
+  },
+  /** Medições em andamento por cliente (Fluxo de Clientes: responsável + tempo decorrido). */
+  getMedicaoEmAndamento() {
+    return api.get('/apontamento-producao/medicao-em-andamento');
+  },
+  startCronometro(payload) {
+    return api.post('/apontamento-producao/cronometro/iniciar', payload);
+  },
+  pauseCronometro(id) {
+    return api.post(`/apontamento-producao/cronometro/${id}/pausar`);
+  },
+  resumeCronometro(id) {
+    return api.post(`/apontamento-producao/cronometro/${id}/retomar`);
+  },
+  finishCronometro(id) {
+    return api.post(`/apontamento-producao/cronometro/${id}/concluir`);
+  },
+  /** Finalizar etapa: encerra cronômetros abertos, marca agenda como CONCLUIDO e avança cliente (ex.: Medição → ORÇAMENTO). */
+  finalizarEtapa(payload) {
+    return api.post('/apontamento-producao/finalizar-etapa', payload);
+  },
+  resumoPorAgenda(agendaFabricaIds) {
+    const ids = Array.isArray(agendaFabricaIds) ? agendaFabricaIds.join(',') : String(agendaFabricaIds || '');
+    return api.get('/apontamento-producao/resumo-por-agenda', { params: { ids } });
+  },
+  criar(dados) {
+    return api.post('/apontamento-producao', dados);
+  },
+  atualizar(id, dados) {
+    return api.patch(`/apontamento-producao/${id}`, dados);
+  },
+  excluir(id) {
+    return api.delete(`/apontamento-producao/${id}`);
   }
 };

@@ -122,6 +122,12 @@ export class CriarFuncionarioDto {
   @IsNumber()
   salario_base?: number;
 
+  /** Percentual de impostos/encargos sobre o salário (ex: 28 para 28%). Usado no cálculo do Custo Total Mensal. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  impostos_encargos_percentual?: number;
+
   @IsOptional()
   @Type(() => Number)
   @IsNumber()

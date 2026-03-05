@@ -12,6 +12,7 @@ import {
   normalizarStatusCliente,
   validarTransicaoStatusCliente,
 } from '../shared/constantes/pipeline-cliente';
+import { getDataCorteContasReceber } from '../../shared/constantes/pipeline-regras';
 
 @Injectable()
 export class ClientesService {
@@ -66,6 +67,13 @@ export class ClientesService {
     });
   }
 
+  /** Retorna null para e-mail vazio/em branco; evita violar unique constraint (vários clientes sem e-mail = null). */
+  private normalizarEmail(email: string | null | undefined): string | null {
+    if (email == null) return null;
+    const t = String(email).trim();
+    return t === '' ? null : t;
+  }
+
   async criar(dto: CriarClienteDto) {
     const statusInicialPipeline =
       PIPELINE_CLIENTE && PIPELINE_CLIENTE.length
@@ -83,6 +91,20 @@ export class ClientesService {
       throw new BadRequestException(
         `Criação de cliente: ${validacaoStatus.motivo}`,
       );
+    }
+
+    const emailCriar = this.normalizarEmail(dto.email);
+
+    if (emailCriar) {
+      const outro = await this.prisma.cliente.findFirst({
+        where: { email: emailCriar },
+        select: { id: true },
+      });
+      if (outro) {
+        throw new BadRequestException(
+          'Já existe um cliente cadastrado com este e-mail. Use outro e-mail ou edite o cliente existente.',
+        );
+      }
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -106,7 +128,7 @@ export class ClientesService {
 
           telefone: dto.telefone ?? null,
           whatsapp: dto.whatsapp ?? null,
-          email: dto.email ?? null,
+          email: emailCriar,
 
           estado_civil: dto.estado_civil ?? null,
           nome_conjuge:
@@ -124,6 +146,9 @@ export class ClientesService {
 
           enviar_aniversario_email: dto.enviar_aniversario_email ?? true,
           enviar_aniversario_whatsapp: dto.enviar_aniversario_whatsapp ?? false,
+
+          profissao: dto.profissao ?? null,
+          vendedor_responsavel_id: dto.vendedor_responsavel_id ?? null,
         },
       });
       return cliente;
@@ -139,16 +164,73 @@ export class ClientesService {
         },
       },
       orderBy: { nome_completo: 'asc' },
+      include: {
+        vendedor_responsavel: { select: { id: true, nome: true } },
+      },
     });
 
     return rows;
+  }
+
+  /**
+   * Datas da barra de progresso: primeira ocorrência CONCLUIDO por tipo (agenda loja + fabrica).
+   * Usado na tela Progresso do cliente (status + data em cada fase).
+   */
+  async getDatasProgresso(clienteId: number): Promise<{
+    data_medida_venda?: string;
+    data_apresentacao?: string;
+    data_medida_fina?: string;
+  }> {
+    const categoriasMedidaVenda = ['MEDIDA', 'AGENDAR_MEDIDA_VENDA'];
+    const categoriasApresentacao = ['APRESENTACAO', 'AGENDAR_APRESENTACAO'];
+    const categoriasMedidaFina = ['MEDIDA_FINA', 'AGENDAR_MEDIDA_FINA'];
+
+    const eventos = await this.prisma.agenda_loja.findMany({
+      where: {
+        cliente_id: clienteId,
+        status: 'CONCLUIDO',
+        categoria: { in: [...categoriasMedidaVenda, ...categoriasApresentacao] },
+      },
+      select: { categoria: true, fim_em: true, status_aplicado_em: true },
+      orderBy: { fim_em: 'asc' },
+    });
+
+    const eventosFabrica = await this.prisma.agenda_fabrica.findMany({
+      where: {
+        cliente_id: clienteId,
+        status: 'CONCLUIDO',
+        categoria: { in: categoriasMedidaFina },
+      },
+      select: { categoria: true, fim_em: true, status_aplicado_em: true },
+      orderBy: { fim_em: 'asc' },
+    });
+
+    const dataOuAplicado = (e: { fim_em: Date; status_aplicado_em: Date | null }) =>
+      (e.status_aplicado_em || e.fim_em).toISOString();
+
+    const primeiro = <T extends { categoria: string | null }>(
+      arr: T[],
+      cats: string[],
+    ): T | undefined =>
+      arr.find((e) => e.categoria && cats.includes(e.categoria.toUpperCase()));
+
+    const datas: Record<string, string> = {};
+    const e1 = primeiro(eventos, categoriasMedidaVenda);
+    if (e1) datas.data_medida_venda = dataOuAplicado(e1);
+    const e2 = primeiro(eventos, categoriasApresentacao);
+    if (e2) datas.data_apresentacao = dataOuAplicado(e2);
+    const e3 = primeiro(eventosFabrica, categoriasMedidaFina);
+    if (e3) datas.data_medida_fina = dataOuAplicado(e3);
+
+    return datas;
   }
 
   async buscarPorId(id: number) {
     await this.aplicarStatusAutomaticoMedidaRealizada();
     const cliente = await this.prisma.cliente.findUnique({ where: { id } });
     if (!cliente) throw new NotFoundException('Cliente não encontrado');
-    return cliente;
+    const datas_progresso = await this.getDatasProgresso(id);
+    return { ...cliente, datas_progresso };
   }
 
   async atualizar(id: number, dto: AtualizarClienteDto) {
@@ -258,6 +340,9 @@ export class ClientesService {
         enviar_aniversario_email: dto.enviar_aniversario_email ?? undefined,
         enviar_aniversario_whatsapp:
           dto.enviar_aniversario_whatsapp ?? undefined,
+
+        profissao: dto.profissao ?? undefined,
+        vendedor_responsavel_id: dto.vendedor_responsavel_id ?? undefined,
       },
     });
   }
@@ -366,5 +451,35 @@ export class ClientesService {
     ORDER BY nome_completo ASC
   `,
     );
+  }
+
+  /**
+   * Venda_ids com status AGENDAR_MEDIDA_FINA que possuem parcela vencida no Contas a Receber (origem_tipo=VENDA).
+   * Usado no Fluxo de Clientes para exibir alerta e bloquear agendamento apenas no bloco daquela venda.
+   */
+  async getPendenciasAgendamento(): Promise<{ venda_ids: number[] }> {
+    const vendas = await this.prisma.vendas.findMany({
+      where: { status: 'AGENDAR_MEDIDA_FINA' },
+      select: { id: true },
+    });
+    const vendaIds = vendas.map((v) => v.id).filter((id) => id > 0);
+    if (vendaIds.length === 0) return { venda_ids: [] };
+
+    const dataCorte = getDataCorteContasReceber();
+    const contas = await this.prisma.contas_receber.findMany({
+      where: {
+        origem_tipo: 'VENDA',
+        origem_id: { in: vendaIds },
+        vencimento_em: { lte: dataCorte },
+        status: { not: 'PAGO' },
+      },
+      select: { origem_id: true },
+    });
+    const idsComPendencia = [
+      ...new Set(
+        contas.map((c) => c.origem_id).filter((id): id is number => id != null && id > 0),
+      ),
+    ];
+    return { venda_ids: idsComPendencia };
   }
 }

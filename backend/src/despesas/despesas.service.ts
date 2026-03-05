@@ -317,6 +317,69 @@ export class DespesasService {
     return rows;
   }
 
+  /** Lista despesas que têm funcionário vinculado (custo/vale) para tela de pagamento. */
+  async listarComFuncionario(filtros: {
+    data_ini?: string;
+    data_fim?: string;
+    status?: string;
+    funcionario_id?: number;
+    categorias?: string[];
+  }) {
+    const dataIni = filtros.data_ini
+      ? this.parseBRDate(filtros.data_ini)
+      : null;
+    const dataFim = filtros.data_fim
+      ? this.parseBRDate(filtros.data_fim)
+      : null;
+    const rangeFim = dataFim
+      ? (() => {
+          const d = new Date(dataFim);
+          d.setHours(23, 59, 59, 999);
+          return d;
+        })()
+      : null;
+
+    const where: Prisma.despesasWhereInput = {
+      funcionario_id: { not: null },
+      ...(filtros.status ? { status: filtros.status } : {}),
+      ...(filtros.funcionario_id
+        ? { funcionario_id: filtros.funcionario_id }
+        : {}),
+      ...(filtros.categorias?.length
+        ? { categoria: { in: filtros.categorias } }
+        : {}),
+    };
+    if (dataIni || rangeFim) {
+      const vencRange: any = {};
+      if (dataIni) vencRange.gte = dataIni;
+      if (rangeFim) vencRange.lte = rangeFim;
+      where.data_vencimento = vencRange;
+    }
+
+    const list = await this.prisma.despesas.findMany({
+      where,
+      include: { funcionario: { select: { id: true, nome: true } } },
+      orderBy: [{ data_vencimento: 'desc' }, { id: 'desc' }],
+    });
+    return list.map((d) => ({
+      ...d,
+      valor_total: Number(d.valor_total ?? 0),
+      funcionario: d.funcionario
+        ? { id: d.funcionario.id, nome: d.funcionario.nome }
+        : null,
+    }));
+  }
+
+  /** Marca despesa como paga (status PAGO e data_pagamento = hoje). */
+  async marcarComoPago(id: number): Promise<despesas> {
+    const despesa = await this.findOne(id);
+    const agora = new Date();
+    return this.prisma.despesas.update({
+      where: { id },
+      data: { status: SF.PAGO, data_pagamento: agora },
+    });
+  }
+
   async findOne(id: number): Promise<despesas> {
     const despesa = await this.prisma.despesas.findUnique({ where: { id } });
     if (!despesa) throw new NotFoundException('Despesa não encontrada');

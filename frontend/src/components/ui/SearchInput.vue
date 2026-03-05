@@ -56,6 +56,7 @@
       <button
         v-if="texto"
         type="button"
+        aria-label="Limpar"
         @pointerdown.prevent.stop="limparBusca"
         class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors p-1"
         :disabled="disabled"
@@ -69,7 +70,7 @@
       <Teleport to="body">
         <transition name="dropdown">
           <div
-            v-if="open"
+            v-if="open && showDropdown"
             ref="dropdownRef"
             :style="floatingStyles"
             class="fixed z-[100000] bg-bg-card border border-border-ui
@@ -131,6 +132,11 @@ const typing = ref(false)
 
 const floatingStyles = ref({ width: '0px', top: '0px', left: '0px' })
 
+/** Exibe dropdown apenas em modo select ou quando há options (evita "Nenhum resultado" em busca livre). */
+const showDropdown = computed(
+  () => props.mode === 'select' || (Array.isArray(props.options) && props.options.length > 0),
+)
+
 const normalizados = computed(() =>
   (props.options || []).map((o) => ({
     label: o?.[props.labelKey],
@@ -161,7 +167,7 @@ function updatePosition() {
 }
 
 function abrirDropdown() {
-  if (isDisabled()) return
+  if (isDisabled() || !showDropdown.value) return
 
   // garante 1 aberto por vez
   window.dispatchEvent(new CustomEvent('searchinput:open', { detail: { uid } }))
@@ -214,6 +220,7 @@ function onBlur() {
 }
 
 function limparBusca() {
+  typing.value = false
   texto.value = ''
   emit('update:modelValue', props.mode === 'select' ? null : '')
   fecharDropdown()

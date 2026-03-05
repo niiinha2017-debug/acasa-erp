@@ -3,30 +3,15 @@ import App from './App.vue'
 import router from './router'
 import storage from '@/utils/storage'
 import { notify } from '@/services/notify'
+import api from '@/services/api'
+import { loadStatusColorsConfig } from '@/constantes/status-colors'
 
 const MOJIBAKE_REGEX = /(\u00C3.|\u00C2|\uFFFD|\u00E2\u20AC\u2122|\u00E2\u20AC\u0153|\u00E2\u20AC|\u00F0\u0178)/u
 const AUTH_STARTED_AT_KEY = 'ACASA_AUTH_STARTED_AT'
 const SESSION_MAX_AGE_MS = 8 * 60 * 60 * 1000
 
-function sendDebugLog({ runId = 'pre-fix', hypothesisId, location, message, data = {} }) {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/5584e6b5-c550-4991-8207-4f83f59c9ff1', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Debug-Session-Id': '1125e2'
-    },
-    body: JSON.stringify({
-      sessionId: '1125e2',
-      runId,
-      hypothesisId,
-      location,
-      message,
-      data,
-      timestamp: Date.now()
-    })
-  }).catch(() => {})
-  // #endregion
+function sendDebugLog() {
+  // Debug ingest desativado (evita ERR_CONNECTION_REFUSED quando o serviço não está rodando)
 }
 
 // Ao reabrir o app (apos fechar): logout + limpar abas -> tela de login e pagina inicial sem abas
@@ -210,6 +195,11 @@ app.directive('can', {
 })
 
 app.use(router)
+
+// Carrega etapas/cores do backend (fonte única); fallback local se API falhar
+if (storage.getToken()) {
+  loadStatusColorsConfig(api).catch(() => {})
+}
 
 // Evita hard reload em logout por erro 401
 window.addEventListener('acasa-auth-logout', () => {

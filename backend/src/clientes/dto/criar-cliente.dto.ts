@@ -79,4 +79,14 @@ export class CriarClienteDto {
   @IsOptional()
   @IsBoolean()
   enviar_aniversario_whatsapp?: boolean;
+
+  /** Profissão do cliente (para fins de contrato) */
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  profissao?: string;
+
+  /** ID do funcionário vendedor responsável (loja) */
+  @IsOptional()
+  vendedor_responsavel_id?: number;
 }

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div
     class="transition-all duration-300 ease-in-out"
     :class="[
@@ -7,8 +7,8 @@
         ? 'bg-bg-card text-text-main'
         : 'bg-slate-900 text-white shadow-xl shadow-slate-950/20',
       {
-        'shadow-sm shadow-slate-100/50 dark:shadow-none': shadow && !hoverable,
-        'hover:shadow-lg hover:shadow-slate-200/50 dark:hover:shadow-none hover:border-slate-300 dark:hover:border-slate-700 cursor-pointer': hoverable,
+        'shadow-sm shadow-slate-100/50 dark:shadow-slate-950/30': shadow && !hoverable,
+        'hover:shadow-lg hover:shadow-slate-200/50 dark:hover:shadow-xl dark:hover:shadow-black/20 hover:border-slate-300 dark:hover:border-slate-600 cursor-pointer': hoverable,
         'ring-2 ring-brand-primary/10 border-brand-primary/30': active,
         'overflow-hidden': true,
       },

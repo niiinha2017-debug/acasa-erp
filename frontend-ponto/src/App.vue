@@ -135,12 +135,22 @@ const funcionarioPis = ref('')
 const parearCode = ref('')
 const registrosHoje = ref([])
 const erro = ref('')
-const contadorBloqueio = ref(0)
 const agora = ref(new Date())
-let timerRelogio, timerBloqueio
+let timerRelogio
 
-const horaAgora = computed(() => agora.value.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
-const dataHoje = computed(() => agora.value.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }))
+const horaAgora = computed(() => agora.value.toLocaleTimeString('pt-BR', {
+  timeZone: 'America/Sao_Paulo',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false,
+}))
+const dataHoje = computed(() => agora.value.toLocaleDateString('pt-BR', {
+  timeZone: 'America/Sao_Paulo',
+  day: '2-digit',
+  month: 'long',
+  year: 'numeric',
+}))
 const registrosHojeOrdenados = computed(() => {
   const lista = Array.isArray(registrosHoje.value) ? [...registrosHoje.value] : []
   return lista.sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora))
@@ -150,6 +160,16 @@ const ultimoRegistro = computed(() => {
   return lista.length ? lista[lista.length - 1] : null
 })
 const proximoStatus = computed(() => (!ultimoRegistro.value || ultimoRegistro.value.tipo === 'SAIDA') ? 'ENTRADA' : 'SAIDA')
+
+const SEGUNDOS_BLOQUEIO = 180
+// Tempo restante de bloqueio calculado pela diferença real (agora - último registro).
+// Assim o timer não fica "travado" quando o app fica aberto em segundo plano (ex.: 8h → 12h).
+const contadorBloqueio = computed(() => {
+  const reg = ultimoRegistro.value
+  if (!reg?.data_hora) return 0
+  const diff = Math.floor((agora.value.getTime() - new Date(reg.data_hora).getTime()) / 1000)
+  return Math.max(0, SEGUNDOS_BLOQUEIO - diff)
+})
 const bloqueioTemporario = computed(() => contadorBloqueio.value > 0)
 const ultimoRegistroHoraTexto = computed(() => {
   if (!ultimoRegistro.value?.data_hora) return ''
@@ -181,8 +201,6 @@ const pisCpfExibicao = computed(() => {
   if (funcionarioCpf.value) parts.push(maskCpf(funcionarioCpf.value))
   return parts.length ? parts.join('  •  ') : ''
 })
-
-const SEGUNDOS_BLOQUEIO = 180
 
 function maskCpf(v) {
   if (!v) return ''
@@ -361,14 +379,6 @@ async function carregarDados() {
         : []
 
     registrosHoje.value = hojeData
-    
-    if (ultimoRegistro.value) {
-      const diff = Math.floor((Date.now() - new Date(ultimoRegistro.value.data_hora).getTime()) / 1000)
-      if (diff < SEGUNDOS_BLOQUEIO) {
-        contadorBloqueio.value = SEGUNDOS_BLOQUEIO - diff
-        startTimerBloqueio()
-      }
-    }
   } catch (e) {
     if (e.response?.status === 401) {
       token.value = ''
@@ -416,14 +426,6 @@ async function realizarPareamento() {
   }
 }
 
-function startTimerBloqueio() {
-  clearInterval(timerBloqueio)
-  timerBloqueio = setInterval(() => {
-    if (contadorBloqueio.value > 0) contadorBloqueio.value--
-    else clearInterval(timerBloqueio)
-  }, 1000)
-}
-
 onMounted(() => {
   timerRelogio = setInterval(() => { agora.value = new Date() }, 1000)
 
@@ -460,6 +462,5 @@ async function verificarAtualizacao() {
 
 onUnmounted(() => {
   clearInterval(timerRelogio)
-  clearInterval(timerBloqueio)
 })
 </script>

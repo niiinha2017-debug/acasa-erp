@@ -231,7 +231,27 @@ export class PlanoCorteService {
         });
       }
 
-      // opcional: devolver já completo (pra front não ter que refetch)
+      // Evento isolado na agenda da produção: sem cliente_id (não reflete no acompanhar status), sem prazo de execução
+      const agendaExistente = await tx.agenda_fabrica.findFirst({
+        where: { plano_corte_id: plano.id, status: { not: 'CANCELADO' } },
+        select: { id: true },
+      });
+      if (!agendaExistente) {
+        const inicio = new Date();
+        const fim = new Date(inicio.getTime() + 60 * 60 * 1000);
+        await tx.agenda_fabrica.create({
+          data: {
+            titulo: `Plano de corte #${plano.id}`,
+            inicio_em: inicio,
+            fim_em: fim,
+            categoria: 'PRODUCAO_RECEBIDA',
+            origem_fluxo: 'PLANO_CORTE',
+            status: 'PENDENTE',
+            plano_corte_id: plano.id,
+          },
+        });
+      }
+
       return tx.plano_corte.findUnique({
         where: { id: plano.id },
         include: {
@@ -340,6 +360,27 @@ export class PlanoCorteService {
           valor_total: totalGeral, // Aqui o valor 1,74 vira 17,40 automaticamente
         },
       });
+
+      // 4. Evento isolado na agenda da produção: ao salvar, abre evento na agenda; sem cliente_id (não reflete no acompanhar status), sem prazo
+      const agendaExistente = await tx.agenda_fabrica.findFirst({
+        where: { plano_corte_id: id, status: { not: 'CANCELADO' } },
+        select: { id: true },
+      });
+      if (!agendaExistente) {
+        const inicio = new Date();
+        const fim = new Date(inicio.getTime() + 60 * 60 * 1000);
+        await tx.agenda_fabrica.create({
+          data: {
+            titulo: `Plano de corte #${id}`,
+            inicio_em: inicio,
+            fim_em: fim,
+            categoria: 'PRODUCAO_RECEBIDA',
+            origem_fluxo: 'PLANO_CORTE',
+            status: 'PENDENTE',
+            plano_corte_id: id,
+          },
+        });
+      }
 
       // Retorna o plano atualizado com todas as relações
       return tx.plano_corte.findUnique({

@@ -16,7 +16,7 @@
 
               <div>
                 <div class="flex items-center gap-2">
-                   <h3 class="text-xl font-black text-slate-900 tracking-tight uppercase leading-none">Arquivos</h3>
+                   <h3 class="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight uppercase leading-none">Arquivos</h3>
                    <span class="px-2 py-0.5 rounded-md bg-brand-primary/10 text-brand-primary text-[9px] font-black uppercase tracking-widest">Digital Assets</span>
                 </div>
                 <p class="text-[10px] font-bold text-brand-primary/60 uppercase tracking-[0.2em] mt-2 flex items-center gap-2">
@@ -48,21 +48,21 @@
               <input ref="fileRef" type="file" class="hidden" @change="onPickFile" />
               <div 
                 @click="fileRef?.value?.click()"
-                class="border-2 border-dashed border-slate-200 rounded-[2rem] p-8 transition-all cursor-pointer hover:border-brand-primary hover:bg-brand-primary/5 flex flex-col items-center justify-center text-center group"
+                class="border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-[2rem] p-8 transition-all cursor-pointer hover:border-brand-primary hover:bg-brand-primary/5 dark:hover:bg-brand-primary/10 flex flex-col items-center justify-center text-center group"
               >
-                <div class="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-white transition-all duration-500 shadow-sm">
+                <div class="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-white dark:group-hover:bg-slate-700 transition-all duration-500 shadow-sm">
                   <i class="pi pi-cloud-upload text-slate-400 group-hover:text-brand-primary"></i>
                 </div>
-                <h4 class="text-[11px] font-black text-slate-800 uppercase tracking-widest">
+                <h4 class="text-[11px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest">
                   {{ arquivoSelecionadoNome || 'Arraste ou clique para selecionar' }}
                 </h4>
-                <p class="text-[9px] font-bold text-slate-400 uppercase mt-1">Upload de documentos, imagens e contratos</p>
+                <p class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase mt-1">Upload de documentos, imagens e contratos</p>
               </div>
 
               <Transition name="fade">
-                <div v-if="fileToUpload" class="absolute inset-0 bg-white/80 backdrop-blur-sm rounded-[2rem] flex items-center justify-center gap-4 animate-in zoom-in-95">
+                <div v-if="fileToUpload" class="absolute inset-0 bg-white/80 dark:bg-slate-900/90 backdrop-blur-sm rounded-[2rem] flex items-center justify-center gap-4 animate-in zoom-in-95">
                   <div class="text-center px-6">
-                    <p class="text-[10px] font-black text-slate-900 uppercase truncate max-w-[200px] mb-4">{{ arquivoSelecionadoNome }}</p>
+                    <p class="text-[10px] font-black text-slate-900 dark:text-slate-100 uppercase truncate max-w-[200px] mb-4">{{ arquivoSelecionadoNome }}</p>
                     <div class="flex gap-2">
                        <Button variant="secondary" @click="fileToUpload = null; arquivoSelecionadoNome = ''" class="!h-10 !rounded-xl">Cancelar</Button>
                        <Button variant="primary" :loading="uploading" @click="enviar" class="!h-10 !rounded-xl !px-8 shadow-lg shadow-brand-primary/20">Confirmar Upload</Button>
@@ -74,40 +74,40 @@
 
             <div class="space-y-4">
               <div class="flex items-center justify-between px-2">
-                <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">Repositório Local</h4>
+                <h4 class="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em]">Repositório Local</h4>
                 <button @click="carregar" class="text-[10px] font-black text-brand-primary uppercase hover:underline">Recarregar</button>
               </div>
 
               <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div v-for="i in 2" :key="i" class="h-24 rounded-3xl bg-slate-50 animate-pulse"></div>
+                <div v-for="i in 2" :key="i" class="h-24 rounded-3xl bg-slate-50 dark:bg-slate-800 animate-pulse"></div>
               </div>
 
               <div v-else-if="!arquivos.length" class="py-20 flex flex-col items-center justify-center text-center opacity-40">
-                <i class="pi pi-inbox text-4xl mb-4 text-slate-200"></i>
-                <p class="text-[10px] font-black uppercase tracking-widest">O deserto está vazio</p>
+                <i class="pi pi-inbox text-4xl mb-4 text-slate-200 dark:text-slate-600"></i>
+                <p class="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">O deserto está vazio</p>
               </div>
 
               <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div
                   v-for="a in arquivosOrdenados"
                   :key="a.id"
-                  class="group p-5 rounded-3xl border border-slate-100 bg-white hover:border-brand-primary/20 hover:shadow-xl hover:shadow-slate-200/50 transition-all flex items-center justify-between"
+                  class="group p-5 rounded-3xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-brand-primary/20 hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-black/20 transition-all flex items-center justify-between"
                 >
                   <div class="flex items-center gap-4 min-w-0">
-                    <div class="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-brand-primary/10 group-hover:text-brand-primary transition-colors">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-700 flex items-center justify-center text-slate-400 group-hover:bg-brand-primary/10 group-hover:text-brand-primary transition-colors">
                       <i :class="getFileIcon(a.mime_type)" class="text-lg"></i>
                     </div>
                     <div class="min-w-0">
-                      <div class="text-[11px] font-black uppercase text-slate-800 truncate">{{ a.nome || a.filename }}</div>
-                      <div class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{{ formatSize(a.tamanho) }} • {{ a.mime_type?.split('/')[1] }}</div>
+                      <div class="text-[11px] font-black uppercase text-slate-800 dark:text-slate-200 truncate">{{ a.nome || a.filename }}</div>
+                      <div class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">{{ formatSize(a.tamanho) }} • {{ a.mime_type?.split('/')[1] }}</div>
                     </div>
                   </div>
 
                   <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button @click="visualizar(a)" class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-900 text-white shadow-lg active:scale-90 transition-all">
+                    <button @click="visualizar(a)" class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-900 dark:bg-slate-700 text-white shadow-lg active:scale-90 transition-all">
                       <i class="pi pi-eye text-[10px]"></i>
                     </button>
-                    <button v-if="props.canManage" @click="remover(a)" class="w-9 h-9 flex items-center justify-center rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white active:scale-90 transition-all">
+                    <button v-if="props.canManage" @click="remover(a)" class="w-9 h-9 flex items-center justify-center rounded-xl bg-rose-50 dark:bg-rose-950/30 text-rose-500 hover:bg-rose-500 hover:text-white active:scale-90 transition-all">
                       <i class="pi pi-trash text-[10px]"></i>
                     </button>
                   </div>
@@ -116,12 +116,12 @@
             </div>
           </div>
 
-          <footer class="px-8 py-5 border-t border-slate-50 bg-slate-50/30 flex items-center justify-between">
+          <footer class="px-8 py-5 border-t border-slate-100 dark:border-slate-700 bg-slate-50/30 dark:bg-slate-800/50 flex items-center justify-between">
             <div v-if="erro" class="flex items-center gap-2 text-rose-500 animate-pulse">
                <i class="pi pi-exclamation-triangle text-xs"></i>
                <span class="text-[9px] font-black uppercase tracking-widest">{{ erro }}</span>
             </div>
-            <div v-else class="flex items-center gap-2 text-slate-400">
+            <div v-else class="flex items-center gap-2 text-slate-400 dark:text-slate-500">
                <i class="pi pi-shield text-[10px]"></i>
                <span class="text-[9px] font-black uppercase tracking-widest">Acesso Seguro • SSD Encryption</span>
             </div>

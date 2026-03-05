@@ -4,10 +4,21 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>A Casa Marcenaria</title>
-
+    <title>A Casa Móveis Planejados</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   </head>
   <body>
+    <script>
+      (function() {
+        try {
+          var v = localStorage.getItem('acasa-color-scheme');
+          if (v === 'dark' || v === 'true') document.documentElement.classList.add('dark');
+          else if (v === 'light' || v === 'false') document.documentElement.classList.remove('dark');
+        } catch (e) {}
+      })();
+    </script>
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
   </body>

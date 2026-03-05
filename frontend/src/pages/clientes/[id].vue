@@ -43,6 +43,27 @@
               force-upper
             />
           </div>
+
+          <div class="col-span-12 md:col-span-4">
+            <SearchInput
+              v-model="form.vendedor_responsavel_id"
+              mode="select"
+              label="Vendedor Responsável"
+              placeholder="Selecione o vendedor (loja)..."
+              :options="vendedorOptions"
+              labelKey="label"
+              valueKey="value"
+            />
+          </div>
+
+          <div class="col-span-12 md:col-span-4">
+            <Input
+              v-model="form.profissao"
+              label="Profissão"
+              placeholder="Para fins de contrato"
+              force-upper
+            />
+          </div>
         </div>
 
         <div class="relative">
@@ -346,7 +367,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ClienteService } from '@/services/index'
+import { ClienteService, FuncionarioService } from '@/services/index'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
 import { maskCPF, maskCNPJ, maskCEP, maskTelefone, maskRG, maskIE } from '@/utils/masks'
@@ -365,6 +386,7 @@ const saving = ref(false)
 const deleting = ref(false)
 const isJuridica = ref(false)
 const listaClientes = ref([])
+const listaVendedores = ref([])
 const pipelineStatus = ref([])
 const indicacaoOrigens = INDICACAO_ORIGENS.map((item) => ({
   value: item.key,
@@ -375,7 +397,6 @@ const clienteId = computed(() => Number(route.params?.id))
 const isEdit = computed(() => Number.isFinite(clienteId.value) && clienteId.value > 0)
 
 const opcoesEstadoCivil = [
-  { value: '', label: 'SELECIONE...' },
   { value: 'SOLTEIRO', label: 'SOLTEIRO' },
   { value: 'CASADO', label: 'CASADO' },
   { value: 'DIVORCIADO', label: 'DIVORCIADO' },
@@ -424,11 +445,20 @@ const form = reactive({
   cidade: '',
   estado: '',
   status: '',
+  profissao: '',
+  vendedor_responsavel_id: null,
 })
 
 const clientesOptions = computed(() => {
   return listaClientes.value.filter((o) => !isEdit.value || Number(o.value) !== clienteId.value)
 })
+
+const vendedorOptions = computed(() =>
+  (listaVendedores.value || []).map((v) => ({
+    value: v.value,
+    label: v.label,
+  })),
+)
 
 function garantirStatusPermitido(status) {
   const key = String(status || '').trim().toUpperCase()
@@ -491,6 +521,13 @@ async function carregarDados() {
     form.status = garantirStatusPermitido(form.status)
 
     try {
+      const resVendedores = await FuncionarioService.select({ unidade: 'LOJA' })
+      listaVendedores.value = Array.isArray(resVendedores?.data) ? resVendedores.data : []
+    } catch {
+      listaVendedores.value = []
+    }
+
+    try {
       const resClientes = await ClienteService.select()
       listaClientes.value = Array.isArray(resClientes?.data) ? resClientes.data : []
     } catch {
@@ -534,6 +571,8 @@ async function carregarDados() {
           cidade: c.cidade || '',
           estado: c.estado || '',
           status: garantirStatusPermitido(c.status),
+          profissao: c.profissao || '',
+          vendedor_responsavel_id: c.vendedor_responsavel_id ?? null,
         })
 
         isJuridica.value = !!c.cnpj
@@ -627,6 +666,8 @@ async function salvar() {
       enviar_aniversario_email: form.email ? !!form.enviar_aniversario_email : false,
       enviar_aniversario_whatsapp: form.whatsapp ? !!form.enviar_aniversario_whatsapp : false,
       indicacao_id: form.indicacao_id ? Number(form.indicacao_id) : null,
+      profissao: textoOuNulo(form.profissao),
+      vendedor_responsavel_id: form.vendedor_responsavel_id ? Number(form.vendedor_responsavel_id) : null,
     }
 
     if (!isJuridica.value) {

@@ -255,6 +255,18 @@
                 title="Valor conferido com o rateio"
               />
             </div>
+            <div class="col-span-12 md:col-span-4 flex items-center gap-2">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input
+                  v-model="form.receber_no_ato_medicao"
+                  type="checkbox"
+                  class="rounded border-border-ui text-brand-primary focus:ring-brand-primary"
+                  :disabled="!can(permSalvarVenda())"
+                />
+                <span class="text-sm font-semibold text-text-main">💎 Receber no ato da medição</span>
+              </label>
+              <span class="text-[10px] text-text-soft">Exibe alerta no Painel de Obras</span>
+            </div>
           </div>
 
           <Table :columns="columnsPagamentos" :rows="rowsPagamentos" :boxed="true" emptyText="Nenhum pagamento.">
@@ -268,34 +280,43 @@
               />
             </template>
 
-            <template #cell-data_recebimento="{ row }">
+            <template #cell-data_prevista="{ row }">
               <div class="space-y-1.5">
                 <div
                   v-for="(parc, i) in (form.pagamentos[row.__idx].datas_parcelas || [])"
                   :key="i"
-                  class="flex items-center gap-2"
+                  class="flex flex-nowrap items-stretch gap-2"
                 >
-                  <span class="w-5 text-[10px] font-bold text-text-soft text-right">{{ i + 1 }} —</span>
-                  <div class="flex-1 min-w-0">
+                  <span class="w-5 shrink-0 flex items-end pb-2.5 text-[10px] font-bold text-text-soft text-right">{{ i + 1 }} —</span>
+                  <div class="flex min-h-10 min-w-0 flex-1 shrink-0 flex-col justify-end">
                     <Input
                       v-model="form.pagamentos[row.__idx].datas_parcelas[i].data"
                       type="date"
                       :forceUpper="false"
                       :readonly="!can(permSalvarVenda())"
-                      class="w-full"
+                      class="w-full [&_input]:h-10"
                     />
                   </div>
-                  <div class="w-28">
-                    <Input
-                      :modelValue="format.currency(form.pagamentos[row.__idx].datas_parcelas[i].valor || 0)"
-                      type="text"
-                      inputmode="numeric"
-                      :forceUpper="false"
-                      :readonly="!can(permSalvarVenda())"
-                      class="w-full text-right"
-                      @update:modelValue="(val) => { form.pagamentos[row.__idx].datas_parcelas[i].valor = moedaParaNumero(val); recomputarTotalPagamentoForm(row.__idx) }"
-                    />
-                  </div>
+                </div>
+              </div>
+            </template>
+
+            <template #cell-valor_parcela="{ row }">
+              <div class="space-y-1.5">
+                <div
+                  v-for="(parc, i) in (form.pagamentos[row.__idx].datas_parcelas || [])"
+                  :key="i"
+                  class="flex min-h-10 flex-col justify-end"
+                >
+                  <Input
+                    :modelValue="format.currency(form.pagamentos[row.__idx].datas_parcelas[i].valor || 0)"
+                    type="text"
+                    inputmode="numeric"
+                    :forceUpper="false"
+                    :readonly="!can(permSalvarVenda())"
+                    class="w-full text-right [&_input]:h-10"
+                    @update:modelValue="(val) => { form.pagamentos[row.__idx].datas_parcelas[i].valor = moedaParaNumero(val); recomputarTotalPagamentoForm(row.__idx) }"
+                  />
                 </div>
               </div>
             </template>
@@ -448,11 +469,11 @@
 
           <div class="grid grid-cols-12 gap-4 items-end">
             <div class="col-span-12 md:col-span-3">
-              <Input :modelValue="format.currency(valor_bruto)" label="Total vendido (base)" readonly />
+              <Input :modelValue="format.currency(valor_bruto)" label="Valor vendido" readonly />
             </div>
 
             <div class="col-span-12 md:col-span-3">
-              <Input :modelValue="format.currency(valor_taxa_pagamento)" label="Taxa Cartão/Meio" readonly />
+              <Input :modelValue="format.currency(valor_taxa_pagamento)" label="Taxa do meio" readonly />
             </div>
 
             <div class="col-span-12 md:col-span-3">
@@ -645,17 +666,17 @@
             <Input
               class="col-span-12 md:col-span-6"
               v-model="itemDraft.nome_ambiente"
-              label="Item/Ambiente *"
+              label="Ambiente *"
               placeholder="Ex: COZINHA / ARMÁRIO / FRETE"
-              :forceUpper="false"
+              :forceUpper="true"
             />
 
             <Input
               class="col-span-12 md:col-span-6"
               v-model="itemDraft.descricao"
               label="Acabamento"
-              placeholder="Ex: MDF BRANCO / RIPADO / VIDRO"
-              :forceUpper="false"
+              placeholder="* Armario superior com 4 portas de giro&#10;* Armario inferior 4 gavetas e 2 portas de giro&#10;* Nicho para microondas"
+              :forceUpper="true"
             />
 
             <Input
@@ -663,7 +684,7 @@
               v-model="itemDraft.observacao"
               label="Observações"
               placeholder="Texto livre"
-              :forceUpper="false"
+              :forceUpper="true"
             />
 
             <Input
@@ -859,6 +880,7 @@ const form = reactive({
   estado_entrega: '',
 
   valor_vendido: 0,
+  receber_no_ato_medicao: false,
 
   itens: [],
 
@@ -950,7 +972,7 @@ function salvarItemDoModal() {
   if (!isEdit.value || !can('vendas.editar')) return notify.error('Acesso negado.')
 
   if (!String(itemDraft.nome_ambiente || '').trim()) {
-    notify.warn('Preencha Item/Ambiente')
+    notify.warn('Preencha Ambiente')
     return
   }
 
@@ -1032,7 +1054,7 @@ async function confirmarRemoverComissao(idx) {
 // TABLE DEFINITIONS
 // =======================
 const columnsItens = [
-  { key: 'nome_ambiente', label: 'Item/Ambiente' },
+  { key: 'nome_ambiente', label: 'Ambiente' },
   { key: 'descricao', label: 'Acabamento' },
   { key: 'observacao', label: 'Observações' },
   { key: 'quantidade', label: 'Qtd', align: 'right', width: '110px' },
@@ -1042,10 +1064,11 @@ const columnsItens = [
 ]
 
 const columnsPagamentos = [
-  { key: 'forma', label: 'Forma', width: '220px' },
-  { key: 'parcelas', label: 'Parcelas', width: '120px', align: 'right' },
-  { key: 'data_recebimento', label: 'Data prevista / valor', width: '220px' },
-  { key: 'acoes', label: 'Ações', width: '140px', align: 'right' },
+  { key: 'forma', label: 'FORMA DE PAGAMENTO', width: '220px' },
+  { key: 'parcelas', label: 'PARCELAS', width: '120px', align: 'right' },
+  { key: 'data_prevista', label: 'DATA PREVISTA', width: '160px' },
+  { key: 'valor_parcela', label: 'VALOR', width: '140px', align: 'right' },
+  { key: 'acoes', label: 'AÇÕES', width: '140px', align: 'right' },
 ]
 
 const columnsComissoes = [
@@ -1354,6 +1377,7 @@ async function carregarVenda() {
       preencherEnderecoEntregaComCliente(data?.cliente)
     }
     form.valor_vendido = round2(num(data?.valor_vendido || 0))
+    form.receber_no_ato_medicao = Boolean(data?.receber_no_ato_medicao)
     form.representante_venda_nome = data?.representante_venda_nome ?? ''
     form.representante_venda_cpf = data?.representante_venda_cpf ?? ''
     form.representante_venda_rg = data?.representante_venda_rg ?? ''
@@ -1470,6 +1494,7 @@ function montarPayload() {
         form.estado_entrega,
       ) || undefined,
     valor_vendido: round2(num(form.valor_vendido || 0)),
+    receber_no_ato_medicao: Boolean(form.receber_no_ato_medicao),
 
     representante_venda_nome: undefined,
     representante_venda_cpf: undefined,

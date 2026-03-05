@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full flex flex-col gap-1.5" :class="{ 'opacity-60 pointer-events-none': disabled }">
+  <div class="w-full flex flex-col gap-1.5" :class="{ 'opacity-60 pointer-events-none': disabled && !keepReadableWhenDisabled, 'pointer-events-none': disabled && keepReadableWhenDisabled }">
     <label
       v-if="label"
       :for="inputId"
@@ -38,7 +38,7 @@
             : 'border-border-ui hover:border-slate-300 dark:hover:border-slate-600 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10',
           $slots.prefix ? 'pl-10' : 'pl-3',
           $slots.suffix ? 'pr-10' : 'pr-3',
-          { 'uppercase': forceUpper && type !== 'password', 'opacity-50 bg-slate-50 dark:bg-slate-800': disabled }
+          { 'uppercase': forceUpper && type !== 'password', 'opacity-50 bg-slate-50 dark:bg-slate-800': disabled && !keepReadableWhenDisabled, 'bg-slate-50 dark:bg-slate-800 font-semibold text-text-main': disabled && keepReadableWhenDisabled }
         ]"
         @input="handleInput"
         @blur="e => emit('blur', e)"
@@ -79,7 +79,9 @@ const props = defineProps({
   autocomplete: String,
   name: String, // ✅ ADD
   id: String,
-  forceUpper: { type: Boolean, default: true }
+  forceUpper: { type: Boolean, default: true },
+  /** Quando true, campo disabled mantém texto escuro/legível (ex.: valor final da venda). */
+  keepReadableWhenDisabled: { type: Boolean, default: false }
 })
 
 

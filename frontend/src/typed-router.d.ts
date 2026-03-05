@@ -128,6 +128,13 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
+    '/compras/sugestao': RouteRecordInfo<
+      '/compras/sugestao',
+      '/compras/sugestao',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/configuracoes/configuracoes': RouteRecordInfo<
       '/configuracoes/configuracoes',
       '/configuracoes/configuracoes',
@@ -147,6 +154,13 @@ declare module 'vue-router/auto-routes' {
       '/configuracoes/usuarios',
       Record<never, never>,
       Record<never, never>,
+      | never
+    >,
+    '/contrato/incluir/[token]': RouteRecordInfo<
+      '/contrato/incluir/[token]',
+      '/contrato/incluir/:token',
+      { token: ParamValue<true> },
+      { token: ParamValue<false> },
       | never
     >,
     '/contratos/': RouteRecordInfo<
@@ -198,6 +212,13 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
+    '/financeiro/administracao': RouteRecordInfo<
+      '/financeiro/administracao',
+      '/financeiro/administracao',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/financeiro/contas-pagar/': RouteRecordInfo<
       '/financeiro/contas-pagar/',
       '/financeiro/contas-pagar',
@@ -243,6 +264,13 @@ declare module 'vue-router/auto-routes' {
     '/login': RouteRecordInfo<
       '/login',
       '/login',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/modelo': RouteRecordInfo<
+      '/modelo',
+      '/modelo',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -338,6 +366,48 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/producao/apontamento': RouteRecordInfo<
+      '/producao/apontamento',
+      '/producao/apontamento',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/producao/components/TimelineCardAtiva': RouteRecordInfo<
+      '/producao/components/TimelineCardAtiva',
+      '/producao/components/TimelineCardAtiva',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/producao/components/TimelineCardConcluida': RouteRecordInfo<
+      '/producao/components/TimelineCardConcluida',
+      '/producao/components/TimelineCardConcluida',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/producao/components/TimelineFilters': RouteRecordInfo<
+      '/producao/components/TimelineFilters',
+      '/producao/components/TimelineFilters',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/producao/components/TimelineHeader': RouteRecordInfo<
+      '/producao/components/TimelineHeader',
+      '/producao/components/TimelineHeader',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/producao/contratos': RouteRecordInfo<
+      '/producao/contratos',
+      '/producao/contratos',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/produtos/': RouteRecordInfo<
       '/produtos/',
       '/produtos',
@@ -387,6 +457,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/relatorios/dre-plano-corte': RouteRecordInfo<
+      '/relatorios/dre-plano-corte',
+      '/relatorios/dre-plano-corte',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/relatorios/feriados': RouteRecordInfo<
       '/relatorios/feriados',
       '/relatorios/feriados',
@@ -418,6 +495,20 @@ declare module 'vue-router/auto-routes' {
     '/rh/': RouteRecordInfo<
       '/rh/',
       '/rh',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/rh/folha-operacional': RouteRecordInfo<
+      '/rh/folha-operacional',
+      '/rh/folha-operacional',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/rh/pagamento-funcionarios': RouteRecordInfo<
+      '/rh/pagamento-funcionarios',
+      '/rh/pagamento-funcionarios',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -609,6 +700,12 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/compras/sugestao.vue': {
+      routes:
+        | '/compras/sugestao'
+      views:
+        | never
+    }
     'src/pages/configuracoes/configuracoes.vue': {
       routes:
         | '/configuracoes/configuracoes'
@@ -624,6 +721,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/configuracoes/usuarios.vue': {
       routes:
         | '/configuracoes/usuarios'
+      views:
+        | never
+    }
+    'src/pages/contrato/incluir/[token].vue': {
+      routes:
+        | '/contrato/incluir/[token]'
       views:
         | never
     }
@@ -669,6 +772,12 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/financeiro/administracao.vue': {
+      routes:
+        | '/financeiro/administracao'
+      views:
+        | never
+    }
     'src/pages/financeiro/contas-pagar/index.vue': {
       routes:
         | '/financeiro/contas-pagar/'
@@ -708,6 +817,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/login.vue': {
       routes:
         | '/login'
+      views:
+        | never
+    }
+    'src/pages/modelo.vue': {
+      routes:
+        | '/modelo'
       views:
         | never
     }
@@ -789,6 +904,42 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/producao/apontamento.vue': {
+      routes:
+        | '/producao/apontamento'
+      views:
+        | never
+    }
+    'src/pages/producao/components/TimelineCardAtiva.vue': {
+      routes:
+        | '/producao/components/TimelineCardAtiva'
+      views:
+        | never
+    }
+    'src/pages/producao/components/TimelineCardConcluida.vue': {
+      routes:
+        | '/producao/components/TimelineCardConcluida'
+      views:
+        | never
+    }
+    'src/pages/producao/components/TimelineFilters.vue': {
+      routes:
+        | '/producao/components/TimelineFilters'
+      views:
+        | never
+    }
+    'src/pages/producao/components/TimelineHeader.vue': {
+      routes:
+        | '/producao/components/TimelineHeader'
+      views:
+        | never
+    }
+    'src/pages/producao/contratos.vue': {
+      routes:
+        | '/producao/contratos'
+      views:
+        | never
+    }
     'src/pages/produtos/index.vue': {
       routes:
         | '/produtos/'
@@ -831,6 +982,12 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/relatorios/dre-plano-corte.vue': {
+      routes:
+        | '/relatorios/dre-plano-corte'
+      views:
+        | never
+    }
     'src/pages/relatorios/feriados.vue': {
       routes:
         | '/relatorios/feriados'
@@ -858,6 +1015,18 @@ declare module 'vue-router/auto-routes' {
     'src/pages/rh/index.vue': {
       routes:
         | '/rh/'
+      views:
+        | never
+    }
+    'src/pages/rh/folha-operacional.vue': {
+      routes:
+        | '/rh/folha-operacional'
+      views:
+        | never
+    }
+    'src/pages/rh/pagamento-funcionarios.vue': {
+      routes:
+        | '/rh/pagamento-funcionarios'
       views:
         | never
     }

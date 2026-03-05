@@ -71,6 +71,12 @@ export class UpdateAgendaDto {
   @IsString()
   status?: string;
 
+  /** Ambientes incluídos nesta tarefa (nomes). Vazio = todos. */
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  ambientes_selecionados?: string[];
+
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })

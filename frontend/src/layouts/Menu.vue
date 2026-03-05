@@ -1,73 +1,57 @@
 <template>
-  <nav class="menu-bar w-full min-h-[4rem] h-16 bg-bg-card/90 backdrop-blur-xl border-b border-border-ui fixed top-0 left-0 right-0 z-[9990] transition-colors duration-300 overflow-visible">
+  <nav class="menu-bar w-full min-h-[4rem] h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-700/80 shadow-sm fixed top-0 left-0 right-0 z-[9990] transition-colors duration-300 overflow-visible">
     <div class="h-full min-w-0 px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2">
       
-      <!-- LOGO E MARCA -->
-      <RouterLink to="/agendamentos/loja" class="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink transition-opacity hover:opacity-90">
-        <div class="w-9 h-9 bg-gradient-to-br from-[#2f7fb3] to-[#255a82] flex items-center justify-center text-white rounded-xl shadow-sm">
-          <i class="pi pi-box text-xs"></i>
+      <!-- LOGO E MARCA (A Casa Móveis Planejados) -->
+      <RouterLink to="/agendamentos/loja" class="flex items-center gap-0 min-w-0 flex-shrink transition-opacity hover:opacity-90">
+        <!-- Bloco azul com "A" (como no logo) -->
+        <div class="w-8 h-10 sm:h-11 flex-shrink-0 bg-[#2563a8] flex items-center justify-center text-white font-bold text-lg sm:text-xl tracking-tight rounded-none shadow-sm" aria-hidden="true">
+          A
         </div>
-        <div class="hidden sm:flex flex-col leading-none">
-          <span class="font-extrabold text-[13px] tracking-[0.14em] text-slate-900 dark:text-white">A Casa Marcenaria</span>
-          <span class="text-[9px] font-medium text-slate-500 dark:text-slate-400">v{{ appVersion }}</span>
+        <div class="flex flex-col leading-tight pl-2 min-w-0">
+          <span class="font-bold text-sm sm:text-base tracking-tight text-slate-900 dark:text-white truncate">Casa</span>
+          <span class="hidden sm:block text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-600 dark:text-slate-400">Móveis planejados</span>
+          <span class="hidden sm:block text-[8px] font-medium text-slate-400 dark:text-slate-500 mt-0.5">v{{ appVersion }}</span>
         </div>
       </RouterLink>
 
-      <!-- MENU DESKTOP/TABLET: a partir de md (>= 768px); celular usa hambúrguer -->
-      <div class="hidden md:flex items-center gap-2 rounded-2xl border border-border-ui bg-slate-50/70 dark:bg-slate-900/40 px-2 py-1.5">
+      <!-- MENU DESKTOP/TABLET (oculto quando usuário está com senha provisória) -->
+      <div v-if="!deveOcultarMenu" class="hidden md:flex items-center gap-1 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-slate-50/80 dark:bg-slate-800/50 px-2 py-1.5 shadow-sm">
         <template v-for="(section, index) in NAV_VISIVEL" :key="section.key">
           <NavMenu
             :label="section.label"
             :items="section.items"
           />
-          <!-- Separador entre Comercial e Produção -->
-          <div
-            v-if="section.key === 'comercial'"
-            class="w-px h-6 bg-slate-300 dark:bg-slate-600 rounded-full flex-shrink-0"
-            aria-hidden="true"
-          />
         </template>
       </div>
 
-      <!-- AÇÕES DIREITA -->
-      <div class="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
+      <!-- NOME DO USUÁRIO LOGADO + AÇÕES -->
+      <div class="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+        <span
+          v-if="nomeUsuarioLogado"
+          class="hidden sm:inline text-xs font-medium text-slate-500 dark:text-slate-400 truncate max-w-[100px] lg:max-w-[140px]"
+          :title="nomeUsuarioLogado"
+        >
+          {{ nomeUsuarioLogado }}
+        </span>
         <!-- TOGGLE TEMA -->
         <button
           @click="toggleDark()" 
-          class="w-9 h-9 flex items-center justify-center text-slate-500 dark:text-slate-300 border border-border-ui rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+          class="w-9 h-9 flex items-center justify-center text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/80 transition-all"
           title="Alternar tema"
         >
           <i :class="isDark ? 'pi pi-sun' : 'pi pi-moon'" class="text-sm"></i>
         </button>
 
-        <!-- VERIFICAR ATUALIZAÇÃO (Tauri desktop ou Capacitor Android) -->
-        <button
-          v-if="showUpdateButton"
-          type="button"
-          :disabled="checkingUpdate"
-          @click="verificarAtualizacao"
-          class="w-9 h-9 flex items-center justify-center text-slate-500 dark:text-slate-300 border border-border-ui rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all disabled:opacity-50"
-          title="Verificar atualização"
-        >
-          <i class="pi pi-download text-sm" :class="{ 'pi-spin': checkingUpdate }"></i>
-        </button>
-
         <!-- LOGOUT DESKTOP -->
         <button
           @click="handleLogout" 
-          class="hidden lg:flex items-center justify-center w-9 h-9 text-red-500 border border-border-ui rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 transition-all"
+          class="hidden lg:flex items-center justify-center w-9 h-9 text-red-500 border border-red-200 dark:border-red-900/50 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
           title="Sair"
         >
           <i class="pi pi-power-off text-sm"></i>
         </button>
 
-        <!-- MENU MOBILE (hambúrguer até md) -->
-        <button
-          @click="isMobileMenuOpen = true" 
-          class="md:hidden w-9 h-9 flex items-center justify-center border border-border-ui rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-        >
-          <i class="pi pi-bars text-sm"></i>
-        </button>
       </div>
     </div>
 
@@ -76,41 +60,90 @@
       <transition name="slide-right">
         <div
           v-if="isMobileMenuOpen"
-          class="menu-drawer-overlay fixed inset-0 z-[99998] md:hidden"
+          class="menu-drawer-overlay fixed inset-0 z-[99998]"
           role="dialog"
           aria-modal="true"
           aria-label="Menu de navegação"
         >
           <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="isMobileMenuOpen = false" aria-hidden="true"></div>
-          <div class="absolute right-0 top-0 bottom-0 w-[min(300px,calc(100vw-2rem))] max-w-[300px] min-w-0 bg-bg-card border-l border-border-ui flex flex-col shadow-2xl">
-            <!-- HEADER DO DRAWER -->
-            <div class="h-16 px-4 sm:px-6 border-b border-border-ui flex items-center justify-between flex-shrink-0">
-              <span class="font-bold text-xs uppercase tracking-[0.2em] text-slate-600 dark:text-slate-400">Menu</span>
-              <button type="button" @click="isMobileMenuOpen = false" class="p-2 -mr-2 text-slate-400 hover:text-slate-600 touch-manipulation" aria-label="Fechar menu">
-                <i class="pi pi-times text-sm"></i>
-              </button>
-            </div>
+          <div class="absolute right-0 top-0 bottom-0 flex flex-col shadow-2xl" :class="drawerSubmenuItem ? 'w-[min(520px,calc(100vw-2rem))] max-w-[520px]' : 'w-[min(320px,calc(100vw-2rem))] max-w-[320px]'">
+            <div class="flex flex-1 min-w-0 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-700">
+              <!-- Coluna principal do menu -->
+              <div class="flex flex-col flex-shrink-0 w-[min(320px,100%)]" :class="drawerSubmenuItem ? 'border-r border-slate-200 dark:border-slate-700' : ''">
+                <!-- HEADER DO DRAWER -->
+                <div class="px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
+                  <div class="flex items-center justify-between">
+                    <span class="font-bold text-xs uppercase tracking-[0.2em] text-slate-600 dark:text-slate-400">Menu</span>
+                    <button type="button" @click="isMobileMenuOpen = false" class="p-2 -mr-2 text-slate-400 hover:text-slate-600 touch-manipulation" aria-label="Fechar menu">
+                      <i class="pi pi-times text-sm"></i>
+                    </button>
+                  </div>
+                  <p v-if="nomeUsuarioLogado" class="mt-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 truncate">
+                    {{ nomeUsuarioLogado }}
+                  </p>
+                </div>
 
-            <!-- ITENS DO MENU -->
-            <div class="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 overscroll-contain">
-              <div v-for="section in NAV_VISIVEL" :key="section.key" class="space-y-2">
-                <div v-if="section.key === 'producao'" class="my-4 border-t border-border-ui" />
-                <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 px-3 mt-4 mb-2">{{ section.label }}</p>
-                <a
-                  v-for="item in section.items.filter(i => !i.divider)"
-                  :key="item.to"
-                  href="#"
-                  class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 text-sm hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-200 dark:active:bg-slate-700 transition-colors cursor-pointer touch-manipulation min-w-0"
-                  @click.prevent="handleMobileNav(item.to)"
-                >
-                  <i :class="item.icon" class="text-xs opacity-70 w-4 flex-shrink-0"></i>
-                  <span class="break-words line-clamp-2">{{ item.label }}</span>
-                </a>
+                <!-- ITENS DO MENU (oculto quando senha provisória) -->
+                <div v-if="!deveOcultarMenu" class="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 overscroll-contain">
+                  <div v-for="section in NAV_VISIVEL" :key="section.key" class="space-y-2">
+                    <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 px-3 mt-4 mb-2">{{ section.label }}</p>
+                    <template v-for="item in section.items.filter(i => !i.divider)" :key="item.to || item.label">
+                      <button
+                        v-if="item.children?.length && filhosVisiveis(item).length"
+                        type="button"
+                        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 text-sm active:bg-slate-200 dark:active:bg-slate-700 transition-colors cursor-pointer touch-manipulation min-w-0 text-left"
+                        :class="[item.etapaKey ? getStatusHoverBgClass(item.etapaKey) : 'hover:bg-slate-100 dark:hover:bg-slate-800', { 'bg-slate-100 dark:bg-slate-800': drawerSubmenuItem === item }]"
+                        @click="drawerSubmenuItem = drawerSubmenuItem === item ? null : item"
+                      >
+                        <i :class="item.icon" class="text-xs opacity-70 w-4 flex-shrink-0"></i>
+                        <span class="break-words line-clamp-2 flex-1">{{ item.label }}</span>
+                        <i class="pi pi-chevron-right text-xs opacity-60 flex-shrink-0"></i>
+                      </button>
+                      <a
+                        v-else-if="item.to"
+                        href="#"
+                        class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 text-sm active:bg-slate-200 dark:active:bg-slate-600 transition-colors cursor-pointer touch-manipulation min-w-0"
+                        :class="item.etapaKey ? getStatusHoverBgClass(item.etapaKey) : 'hover:bg-slate-100 dark:hover:bg-slate-800'"
+                        @click.prevent="handleMobileNav(item.to)"
+                      >
+                        <i :class="item.icon" class="text-xs opacity-70 w-4 flex-shrink-0"></i>
+                        <span class="break-words line-clamp-2">{{ item.label }}</span>
+                      </a>
+                    </template>
+                  </div>
+                </div>
               </div>
+
+              <!-- Lista lateral: subitens (ex.: RH → Horas extras, Fechamento de ponto) -->
+              <transition name="slide-left">
+                <div v-if="drawerSubmenuItem" class="flex-1 flex flex-col min-w-0 bg-slate-50/50 dark:bg-slate-800/30">
+                  <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
+                    <button type="button" @click="drawerSubmenuItem = null" class="p-1.5 -ml-1.5 rounded-lg text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 touch-manipulation" aria-label="Voltar">
+                      <i class="pi pi-chevron-left text-sm"></i>
+                    </button>
+                    <span class="font-semibold text-sm text-slate-700 dark:text-slate-200">{{ drawerSubmenuItem.label }}</span>
+                  </div>
+                  <div class="flex-1 overflow-y-auto p-3 space-y-1">
+                    <template v-for="(child, childIdx) in filhosVisiveis(drawerSubmenuItem)" :key="child.divider ? `div-${childIdx}` : (child.to || childIdx)">
+                      <hr v-if="child.divider" class="my-1 border-slate-200 dark:border-slate-700" />
+                      <a
+                        v-else
+                        href="#"
+                        class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 text-sm active:bg-slate-200 dark:active:bg-slate-600 transition-colors cursor-pointer touch-manipulation"
+                        :class="child.etapaKey ? getStatusHoverBgClass(child.etapaKey) : 'hover:bg-slate-100 dark:hover:bg-slate-700'"
+                        @click.prevent="handleMobileNav(child.to)"
+                      >
+                        <i :class="child.icon" class="text-xs opacity-70 w-4 flex-shrink-0"></i>
+                        <span class="break-words line-clamp-2">{{ child.label }}</span>
+                      </a>
+                    </template>
+                  </div>
+                </div>
+              </transition>
             </div>
 
             <!-- FOOTER DO DRAWER -->
-            <div class="p-4 border-t border-border-ui flex-shrink-0">
+            <div class="p-4 border-t border-slate-200 dark:border-slate-700 flex-shrink-0">
               <button
                 type="button"
                 @click="handleLogout"
@@ -133,6 +166,7 @@ import { can } from '@/services/permissions'
 import { useRoute, useRouter } from 'vue-router'
 import { NAV_SCHEMA } from '@/services/navigation'
 import { PermissoesService } from '@/services/index'
+import { getStatusHoverBgClass } from '@/constantes'
 import storage from '@/utils/storage'
 import { notify } from '@/services/notify'
 import { checkAndroidUpdate } from '@/utils/check-android-update'
@@ -205,9 +239,28 @@ async function verificarAtualizacao() {
 const route = useRoute()
 const router = useRouter()
 
-const isDark = useDark()
+const isDark = useDark({
+  selector: 'html',
+  attribute: 'class',
+  valueDark: 'dark',
+  valueLight: '',
+  storageKey: 'acasa-color-scheme',
+})
 const toggleDark = useToggle(isDark)
 const isMobileMenuOpen = ref(false)
+const drawerSubmenuItem = ref(null)
+
+const nomeUsuarioLogado = computed(() => {
+  const user = storage.getUser()
+  if (!user) return ''
+  return (user.nome || user.usuario || user.email || '').trim() || ''
+})
+
+/** Usuário com senha provisória não vê o menu (fica só na tela de troca); ocultar itens de navegação. */
+const deveOcultarMenu = computed(() => {
+  const user = storage.getUser()
+  return !!user?.precisa_trocar_senha
+})
 const menuSections = ref([])
 
 const SECTION_LABELS = {
@@ -216,7 +269,7 @@ const SECTION_LABELS = {
   financeiro: 'Financeiro',
   cadastros: 'Cadastros',
   configuracoes: 'Configurações',
-  relatorios: 'Relatórios',
+  relatorios: 'Relatório',
 }
 
 const handleLogout = () => {
@@ -241,17 +294,30 @@ const limparDivisores = (items = []) => {
   return out
 }
 
+function filhosVisiveis(item) {
+  const list = item.children || []
+  return list.filter((child) => {
+    if (!child.perm) return true
+    return Array.isArray(child.perm) ? child.perm.some((p) => can(p)) : can(child.perm)
+  })
+}
+
 const filtrarItens = (items = []) => {
   const filtrados = items.filter((i) => {
     if (i.divider) return true
+    if (i.children?.length) return filhosVisiveis(i).length > 0
     if (!i.perm) return true
-    return can(i.perm)
+    return Array.isArray(i.perm) ? i.perm.some((p) => can(p)) : can(i.perm)
   })
   return limparDivisores(filtrados)
 }
 
 watch(() => route.fullPath, () => {
   isMobileMenuOpen.value = false
+  drawerSubmenuItem.value = null
+})
+watch(isMobileMenuOpen, (open) => {
+  if (!open) drawerSubmenuItem.value = null
 })
 
 const fallbackSections = computed(() =>
@@ -273,8 +339,10 @@ const NAV_VISIVEL = computed(() => {
     }))
     .filter((section) => section.items.some((i) => !i.divider))
 
-  // Fallback: se por algum motivo todas as permissões falharem (ex: bug no mobile),
-  // exibe pelo menos o menu base completo.
+  // Só mostra menu completo para admin quando filtrado vier vazio (ex.: bug). Vendedor vê só o que tem permissão.
+  const user = storage.getUser()
+  const isAdmin = user?.is_admin === true || (Array.isArray(user?.permissoes) && user.permissoes.includes('ADMIN'))
+  if (!filtrado.length && !isAdmin) return []
   if (!filtrado.length) return source
 
   return filtrado
@@ -320,4 +388,6 @@ onMounted(() => {
 <style scoped>
 .slide-right-enter-active, .slide-right-leave-active { transition: all 0.3s ease; }
 .slide-right-enter-from, .slide-right-leave-to { transform: translateX(100%); opacity: 0; }
+.slide-left-enter-active, .slide-left-leave-active { transition: all 0.2s ease; }
+.slide-left-enter-from, .slide-left-leave-to { transform: translateX(10px); opacity: 0; }
 </style>

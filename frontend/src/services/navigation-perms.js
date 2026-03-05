@@ -20,11 +20,12 @@ export function buildRoutePermMap() {
     for (const r of arr) {
       const path = normalizePath(r?.path)
 
-      // pegue a perm da meta se existir (não força nada)
+      // pegue a perm da meta se existir (string ou array = qualquer uma das permissões)
       const perm = r?.meta?.perm || r?.meta?.permissao || r?.meta?.requiredPerm
 
-      if (path && typeof perm === 'string' && perm.trim()) {
-        map[path] = perm.trim()
+      if (path && perm) {
+        if (typeof perm === 'string' && perm.trim()) map[path] = perm.trim()
+        else if (Array.isArray(perm) && perm.length) map[path] = perm.map((p) => (typeof p === 'string' ? p.trim() : '')).filter(Boolean)
       }
 
       if (Array.isArray(r?.children) && r.children.length) {

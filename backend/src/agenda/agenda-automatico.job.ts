@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+// import { Cron } from '@nestjs/schedule';
 import { AgendaService } from './agenda.service';
 
 @Injectable()
@@ -8,15 +8,14 @@ export class AgendaAutomaticoJob {
 
   constructor(private readonly agendaService: AgendaService) {}
 
-  /** A cada minuto: inicia tarefas no horário e conclui tarefas após o término. */
-  @Cron('* * * * *', { timeZone: 'America/Sao_Paulo' })
+  /**
+   * Job desativado: agendamento é manual.
+   * A tarefa só inicia quando o funcionário clicar em "Iniciar".
+   * (Era: a cada minuto iniciava tarefas no horário e concluía após o término.)
+   */
+  // @Cron('* * * * *', { timeZone: 'America/Sao_Paulo' })
   async executar() {
-    try {
-      await this.agendaService.processarAutomaticoPorHorario();
-    } catch (e: any) {
-      this.logger.warn(
-        `[AUTO] Falha ao processar agenda por horário: ${e?.message || e}`,
-      );
-    }
+    // Manual: não alterar status por horário.
+    // await this.agendaService.processarAutomaticoPorHorario();
   }
 }

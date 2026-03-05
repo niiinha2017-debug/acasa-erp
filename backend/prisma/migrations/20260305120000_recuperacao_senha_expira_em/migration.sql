@@ -1,0 +1,1 @@
+-- No-op: alterações de recuperacao_senha (expira_em) já aplicadas em 20260304190000_senha_expiracao_cliente_vendedor_profissao

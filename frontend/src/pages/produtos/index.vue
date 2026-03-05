@@ -65,6 +65,7 @@
           :loading="loading"
           empty-text="Nenhum produto encontrado."
           :boxed="false"
+          :row-class="rowClassEstoque"
         >
           <template #cell-nome_produto="{ row }">
             <div class="flex items-center gap-3 py-1">
@@ -103,6 +104,12 @@
           <template #cell-medida="{ row }">
             <span class="text-sm text-text-main">
               {{ row.medida || '-' }}
+            </span>
+          </template>
+
+          <template #cell-categoria="{ row }">
+            <span class="text-sm text-text-main">
+              {{ row.categoria || '-' }}
             </span>
           </template>
 
@@ -166,16 +173,24 @@ function abrirNovoProduto() {
 }
 
 const columns = [
-  { key: 'nome_produto', label: 'NOME', width: '20%' },
-  { key: 'fornecedor_nome', label: 'FORNECEDOR', width: '18%' },
-  { key: 'marca', label: 'MARCA', width: '12%' },
-  { key: 'cor', label: 'COR', width: '10%' },
-  { key: 'medida', label: 'MEDIDA', width: '10%' },
-  { key: 'unidade', label: 'UN', width: '8%', align: 'center' },
+  { key: 'nome_produto', label: 'NOME', width: '18%' },
+  { key: 'fornecedor_nome', label: 'FORNECEDOR', width: '14%' },
+  { key: 'categoria', label: 'CATEGORIA', width: '12%' },
+  { key: 'marca', label: 'MARCA', width: '10%' },
+  { key: 'cor', label: 'COR', width: '8%' },
+  { key: 'medida', label: 'MEDIDA', width: '8%' },
+  { key: 'unidade', label: 'UN', width: '6%', align: 'center' },
   { key: 'valor_unitario', label: 'VLR UNIT', width: '10%', align: 'right' },
   { key: 'status', label: 'STATUS', width: '8%', align: 'center' },
   { key: 'acoes', label: 'Ações', align: 'center', width: '220px' },
 ]
+
+function rowClassEstoque(row) {
+  const qtd = Number(row.quantidade ?? 0)
+  const min = Number(row.estoque_minimo ?? 0)
+  if (min > 0 && qtd < min) return 'bg-red-50 dark:bg-red-950/40'
+  return ''
+}
 
 function normalizarBusca(valor) {
   return String(valor || '')
@@ -210,6 +225,7 @@ const rows = computed(() =>
   filtrados.value.map((p) => ({
     ...p,
     fornecedor_nome: p.fornecedor?.razao_social || p.fornecedor?.nome_fantasia || '-',
+    categoria: p.categoria || '-',
     valor_unitario: Number(p.valor_unitario || 0),
     status: String(p.status || 'INATIVO').toUpperCase(),
   })),

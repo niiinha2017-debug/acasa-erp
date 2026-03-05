@@ -24,13 +24,23 @@ export class UtilsController {
     return this.utilsService.buscarCnpj(cnpj);
   }
 
+  @Get('status-colors')
+  @Permissoes('clientes.ver')
+  statusColors() {
+    return this.utilsService.getStatusColorsConfig();
+  }
+
   @Get('cep/:cep')
   @Permissoes(
     'clientes.ver',
     'clientes.criar',
     'clientes.editar',
     'fornecedores.ver',
+    'fornecedores.criar',
+    'fornecedores.editar',
     'funcionarios.ver',
+    'funcionarios.criar',
+    'funcionarios.editar',
     'configuracoes.empresa.ver',
   )
   buscarCep(@Param('cep') cep: string) {

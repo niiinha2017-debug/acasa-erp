@@ -11,6 +11,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateVendaPagamentoDto } from './create-venda-pagamento.dto';
+import { CreateVendaFormaPagamentoDto } from './create-venda-forma-pagamento.dto';
 import { CreateVendaComissaoDto } from './create-venda.dto'; // Importe o DTO de comissão
 
 export class UpdateVendaDto {
@@ -53,10 +54,40 @@ export class UpdateVendaDto {
   representante_venda_funcionario_id?: number;
 
   @IsOptional()
+  @IsString()
+  representante_venda_2_nome?: string;
+
+  @IsOptional()
+  @IsString()
+  representante_venda_2_cpf?: string;
+
+  @IsOptional()
+  @IsString()
+  representante_venda_2_rg?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
   valor_vendido?: number;
+
+  /** Pagamento combinado para o ato da medição: exibe alerta "RECEBER NO ATO" no Painel de Obras. */
+  @IsOptional()
+  @IsBoolean()
+  receber_no_ato_medicao?: boolean;
+
+  /** Valor base da venda (sem taxa de cartão). Quando informado, a soma dos pagamentos deve bater com este valor. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  valor_base_venda?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  valor_base_contrato?: number;
 
   @IsOptional()
   @IsString()
@@ -90,4 +121,10 @@ export class UpdateVendaDto {
   @ValidateNested({ each: true })
   @Type(() => CreateVendaPagamentoDto)
   pagamentos?: CreateVendaPagamentoDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateVendaFormaPagamentoDto)
+  formas_pagamento?: CreateVendaFormaPagamentoDto[];
 }

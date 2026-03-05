@@ -6,8 +6,11 @@ import { config as loadEnv } from 'dotenv';
 import { join } from 'path';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 
+// Carrega .env: na pasta backend (cwd) ou em monorepo (cwd/backend) ou relativo ao dist (dist/src → backend)
+loadEnv({ path: join(process.cwd(), '.env'), override: true });
 loadEnv({ path: join(process.cwd(), 'backend', '.env'), override: true });
 loadEnv({ path: join(__dirname, '..', '.env'), override: true });
+loadEnv({ path: join(__dirname, '..', '..', '.env'), override: true });
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -44,8 +47,15 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
 
-  await app.listen(3000, '0.0.0.0');
-  console.log('🚀 Backend rodando na porta 3000 com Validações Ativas');
+  const port = 3000;
+  await app.listen(port, '0.0.0.0');
+  console.log(`🚀 Backend rodando em http://localhost:${port}/api (Validações Ativas)`);
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+  console.error('Falha ao iniciar o backend:', err?.message || err);
+  if (String(err?.message || '').includes('EADDRINUSE')) {
+    console.error('A porta 3000 já está em uso. Feche o outro processo ou altere a porta.');
+  }
+  process.exit(1);
+});
