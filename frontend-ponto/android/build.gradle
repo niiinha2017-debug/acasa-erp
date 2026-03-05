@@ -1,48 +1,64 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
-    ext.kotlin_version = '1.8.22'
-
     repositories {
         google()
         mavenCentral()
     }
-
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.9.1'
+        classpath 'com.android.tools.build:gradle:8.10.1'
         classpath 'com.google.gms:google-services:4.4.2'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.20'
     }
 }
 
 apply from: "variables.gradle"
 
-// ✅ Java usado para compilar (todos os módulos)
-ext {
-    javaVersion = JavaVersion.VERSION_17
-}
-
 allprojects {
     repositories {
         google()
         mavenCentral()
-    }
-}
-
-// ✅ Força Java 17 em TODOS os subprojects (inclui :capacitor-android)
-subprojects {
-    afterEvaluate { project ->
-        if (project.hasProperty("android")) {
-            project.android {
-                compileOptions {
-                    sourceCompatibility rootProject.ext.javaVersion
-                    targetCompatibility rootProject.ext.javaVersion
-                }
-            }
-        }
+        maven { url "https://plugins.gradle.org/m2/" }
     }
 }
 
 task clean(type: Delete) {
     delete rootProject.buildDir
+}
+subprojects { sub ->
+    sub.configurations.all {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == "org.jetbrains.kotlin") {
+                details.useVersion "2.2.20"
+            }
+            if (details.requested.group == "androidx.browser" && details.requested.name == "browser") {
+                details.useVersion "1.8.0"
+                details.because "compatível com compileSdk 35"
+            }
+        }
+    }
+    sub.afterEvaluate {
+        def isAndroidApp = sub.plugins.hasPlugin("com.android.application")
+        def isAndroidLib = sub.plugins.hasPlugin("com.android.library")
+        if (isAndroidApp || isAndroidLib) {
+            def androidExt = sub.extensions.findByName("android")
+            if (androidExt != null) {
+                androidExt.compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+            }
+        }
+        sub.tasks.matching { it.name.startsWith("compile") && it.name.endsWith("Kotlin") }.configureEach { t ->
+            if (t.hasProperty("kotlinOptions")) {
+                t.kotlinOptions.jvmTarget = "17"
+            }
+        }
+        try {
+            def kotlinExt = sub.extensions.findByName("kotlin")
+            if (kotlinExt != null && kotlinExt.respondsTo("jvmToolchain")) {
+                kotlinExt.jvmToolchain(17)
+            }
+        } catch (Exception ignored) {}
+    }
 }
