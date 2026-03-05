@@ -18,7 +18,7 @@ Abra `deploy.env` e preencha:
 | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Senha da chave que assina o .exe do Tauri | A que você criou ao gerar a chave |
 | `TAURI_SIGNING_PRIVATE_KEY_PATH` | Caminho do arquivo da chave Tauri | Ex.: `~/.ssh/tauri_private.key` |
 
-**GitLab:** não vai nesse arquivo. Na primeira vez que der `git push gitlab main` o Git pede usuário/senha (ou abre o navegador); depois pode guardar no Gerenciador de Credenciais do Windows.
+**GitLab:** não vai nesse arquivo. Na primeira vez que der `git push gitlab main` o Git pede usuário/senha (ou abre o navegador); depois pode guardar no Gerenciador de Credenciais do Windows. Para usar **só GitLab** (sair do GitHub), veja **scripts/GITLAB-ONLY.md**.
 
 ## 2. Usar nos scripts
 

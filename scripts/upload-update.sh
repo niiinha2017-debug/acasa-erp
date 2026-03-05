@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
-# Upload da atualização para o Git (sem deploy na EC2).
-# Padrão: push para GitLab (remote "gitlab").
-# Para usar GitHub: PUSH_REMOTE=origin bash scripts/upload-update.sh
-# Depois rode na EC2: bash scripts/ec2-publish.sh
+# Upload da atualização para o GitLab. Push na main dispara o pipeline (build Android + deploy EC2).
+# Tauri: build e deploy manual no PC com bash scripts/deploy-tauri.sh
 
 set -euo pipefail
 
-# Remote para push: gitlab (padrão) ou origin (GitHub)
+# Remote GitLab (único remoto em uso)
 PUSH_REMOTE="${PUSH_REMOTE:-gitlab}"
 
 ROOT_DIR="${ROOT_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"

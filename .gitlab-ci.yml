@@ -1,0 +1,87 @@
+# Pipeline: a cada push em main, builda Android (ERP + Ponto) e publica APKs na EC2.
+# Tauri (.exe): não roda no CI (precisa Windows). Use no PC: bash scripts/deploy-tauri.sh
+
+default:
+  image: node:20-bookworm
+
+variables:
+  ANDROID_HOME: "$CI_PROJECT_DIR/android-sdk"
+  JAVA_HOME: "/usr/lib/jvm/java-17-openjdk-amd64"
+
+stages:
+  - prepare
+  - build-android
+  - deploy
+
+# Instala JDK 17 + Android SDK (uma vez por job)
+prepare:android:
+  stage: prepare
+  script:
+    - apt-get update -qq && apt-get install -y -qq openjdk-17-jdk wget unzip ssh-client
+    - export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+    - |
+      mkdir -p "$ANDROID_HOME/cmdline-tools"
+      wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/cmdline-tools.zip
+      unzip -q /tmp/cmdline-tools.zip -d "$ANDROID_HOME/cmdline-tools"
+      mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
+      yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_HOME" "platforms;android-35" "build-tools;35.0.0" "platform-tools" || true
+    - export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+    - java -version
+  artifacts:
+    paths:
+      - android-sdk/
+  cache:
+    key: android-sdk
+    paths:
+      - android-sdk/
+
+build:android:
+  stage: build-android
+  dependencies:
+    - prepare:android
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq openjdk-17-jdk
+    - export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+    - export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+    - npm ci --prefix frontend
+    - npm ci --prefix frontend-ponto || true
+  script:
+    - node scripts/bump-android-version.mjs
+    # ERP
+    - cd frontend && npm run build && npx cap sync android
+    - cd frontend/android && ./gradlew assembleRelease --no-daemon
+    - cd "$CI_PROJECT_DIR"
+    # Ponto
+    - cd frontend-ponto && npm run build && npx cap sync android
+    - cd frontend-ponto/android && ./gradlew assembleRelease --no-daemon
+    - cd "$CI_PROJECT_DIR"
+  artifacts:
+    paths:
+      - frontend/android/app/build/outputs/apk/release/app-release.apk
+      - frontend-ponto/android/app/build/outputs/apk/release/app-release.apk
+
+deploy:ec2:
+  stage: deploy
+  dependencies:
+    - build:android
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq ssh-client
+    - chmod 600 "$EC2_SSH_KEY"
+    - mkdir -p ~/.ssh && ssh-keyscan -H "${EC2_HOST#*@}" >> ~/.ssh/known_hosts 2>/dev/null || true
+  script:
+    - |
+      scp -i "$EC2_SSH_KEY" -o StrictHostKeyChecking=accept-new \
+        frontend/android/app/build/outputs/apk/release/app-release.apk \
+        "${EC2_HOST}:/home/ec2-user/Acasa.apk"
+    - |
+      scp -i "$EC2_SSH_KEY" -o StrictHostKeyChecking=accept-new \
+        frontend-ponto/android/app/build/outputs/apk/release/app-release.apk \
+        "${EC2_HOST}:/home/ec2-user/ponto.apk"
+    - |
+      ssh -i "$EC2_SSH_KEY" -o StrictHostKeyChecking=accept-new "$EC2_HOST" \
+        "sudo mkdir -p /var/www/aplicativo/erp /var/www/ponto && \
+         sudo mv /home/ec2-user/Acasa.apk /var/www/aplicativo/erp/ && \
+         sudo mv /home/ec2-user/ponto.apk /var/www/ponto/ && \
+         sudo chown -R nginx:nginx /var/www/aplicativo/erp /var/www/ponto"
+  environment:
+    name: production

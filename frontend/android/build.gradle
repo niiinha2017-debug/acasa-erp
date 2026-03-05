@@ -64,6 +64,14 @@ subprojects { sub ->
                 t.kotlinOptions.jvmTarget = "17"
             }
         }
+
+        // Força Kotlin jvmToolchain 17 (evita JDK 21 exigido por @capacitor/filesystem em node_modules)
+        try {
+            def kotlinExt = sub.extensions.findByName("kotlin")
+            if (kotlinExt != null && kotlinExt.respondsTo("jvmToolchain")) {
+                kotlinExt.jvmToolchain(17)
+            }
+        } catch (Exception ignored) {}
     }
 }
 

@@ -3,16 +3,17 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 [[ -f "$SCRIPT_DIR/deploy.env" ]] && source "$SCRIPT_DIR/deploy.env"
 
-KEY_PATH="${KEY_PATH:-/c/Users/Julyana Duarte/.ssh/acasa_key}"
+ROOT_DIR="${ROOT_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+KEY_PATH="${KEY_PATH:-$HOME/.ssh/acasa_key}"
 EC2_HOST="${EC2_HOST:-ec2-user@54.164.55.32}"
 REMOTE_DIR="/var/www/aplicativo/updates/tauri"
 REMOTE_APP_DIR="/var/www/aplicativo/erp"
 BASE_URL="https://aplicativo.acasamarcenaria.com.br/erp"
 
-PROJECT_DIR="/d/Sistema ERP/acasa-erp/frontend"
+PROJECT_DIR="$ROOT_DIR/frontend"
 BUNDLE_DIR="$PROJECT_DIR/src-tauri/target/release/bundle/nsis"
 VERSION_JSON="$PROJECT_DIR/src-tauri/tauri.conf.json"
-cd "/d/Sistema ERP/acasa-erp"
+cd "$ROOT_DIR"
 START_TAURI=$(date +%s)
 echo "[$(date +%H:%M:%S)] Início deploy Tauri (Rust + NSIS — pode levar vários minutos)"
 
@@ -36,7 +37,7 @@ if [[ -z "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD:-}" ]]; then
 fi
 
 if [[ -z "${TAURI_SIGNING_PRIVATE_KEY_PATH:-}" ]]; then
-  export TAURI_SIGNING_PRIVATE_KEY_PATH="/c/Users/Julyana Duarte/.ssh/tauri_private.key"
+  export TAURI_SIGNING_PRIVATE_KEY_PATH="$HOME/.ssh/tauri_private.key"
 fi
 
 if [[ ! -f "$TAURI_SIGNING_PRIVATE_KEY_PATH" ]]; then
@@ -57,7 +58,7 @@ npm run tauri -- build --bundles "nsis"
 
 unset TAURI_SIGNING_PRIVATE_KEY
 npm run tauri -- signer sign \
-  --private-key-path "/c/Users/Julyana Duarte/.ssh/tauri_private.key" \
+  --private-key-path "$TAURI_SIGNING_PRIVATE_KEY_PATH" \
   --password "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" \
   "$EXE_FILE"
 
