@@ -48,6 +48,7 @@ build:android:
     - npm ci --prefix frontend-ponto || true
   script:
     - node scripts/bump-android-version.mjs
+    - chmod +x "$CI_PROJECT_DIR/frontend/android/gradlew" "$CI_PROJECT_DIR/frontend-ponto/android/gradlew"
     - cd "$CI_PROJECT_DIR/frontend" && npm run build && npx cap sync android
     - cd "$CI_PROJECT_DIR/frontend/android" && ./gradlew assembleRelease --no-daemon
     - cd "$CI_PROJECT_DIR/frontend-ponto" && npm run build && npx cap sync android
