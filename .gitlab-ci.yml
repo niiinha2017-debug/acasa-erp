@@ -48,20 +48,17 @@ build:android:
     - npm ci --prefix frontend-ponto || true
   script:
     - node scripts/bump-android-version.mjs
-    # ERP
-    - cd frontend && npm run build && npx cap sync android
-    - cd frontend/android && ./gradlew assembleRelease --no-daemon
-    - cd "$CI_PROJECT_DIR"
-    # Ponto
-    - cd frontend-ponto && npm run build && npx cap sync android
-    - cd frontend-ponto/android && ./gradlew assembleRelease --no-daemon
+    - cd "$CI_PROJECT_DIR/frontend" && npm run build && npx cap sync android
+    - cd "$CI_PROJECT_DIR/frontend/android" && ./gradlew assembleRelease --no-daemon
+    - cd "$CI_PROJECT_DIR/frontend-ponto" && npm run build && npx cap sync android
+    - cd "$CI_PROJECT_DIR/frontend-ponto/android" && ./gradlew assembleRelease --no-daemon
     - cd "$CI_PROJECT_DIR"
   artifacts:
     paths:
       - frontend/android/app/build/outputs/apk/release/app-release.apk
       - frontend-ponto/android/app/build/outputs/apk/release/app-release.apk
 
-# Sem needs: recebe artefatos de TODOS os estágios anteriores (prepare + build)
+# Recebe artefatos de todos os estágios anteriores (sem dependencies/needs)
 deploy:ec2:
   stage: deploy
   before_script:
@@ -75,7 +72,6 @@ deploy:ec2:
         echo "ERRO: Defina a variável EC2_HOST em Settings → CI/CD → Variables"
         exit 1
       fi
-    # EC2_SSH_PRIVATE_KEY: conteúdo da chave ou caminho (tipo File)
     - |
       if [ -f "$EC2_SSH_PRIVATE_KEY" ]; then
         export SSH_KEY_FILE="$EC2_SSH_PRIVATE_KEY"
@@ -85,30 +81,24 @@ deploy:ec2:
         export SSH_KEY_FILE="$CI_PROJECT_DIR/deploy_key.pem"
       fi
     - mkdir -p ~/.ssh && ssh-keyscan -H "${EC2_HOST#*@}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
   script:
     - cd "$CI_PROJECT_DIR"
     - |
-      ERP_APK="frontend/android/app/build/outputs/apk/release/app-release.apk"
-      PONTO_APK="frontend-ponto/android/app/build/outputs/apk/release/app-release.apk"
-      if [ ! -f "$ERP_APK" ] || [ ! -f "$PONTO_APK" ]; then
+      echo "=== Artefatos do build:android ==="
+      ls -la frontend/android/app/build/outputs/apk/release/ 2>/dev/null || true
+      ls -la frontend-ponto/android/app/build/outputs/apk/release/ 2>/dev/null || true
+      if [ ! -f "frontend/android/app/build/outputs/apk/release/app-release.apk" ] || [ ! -f "frontend-ponto/android/app/build/outputs/apk/release/app-release.apk" ]; then
         echo "ERRO: APKs não encontrados. Verifique se o job build:android gerou os artefatos."
-        ls -la frontend/android/app/build/outputs/apk/release/ 2>/dev/null || true
-        ls -la frontend-ponto/android/app/build/outputs/apk/release/ 2>/dev/null || true
         exit 1
       fi
-    # version.json para o app Android (botão "Verificar atualização")
     - |
       VERSION=$(node -p "require('./frontend/package.json').version")
       echo "{\"version\":\"$VERSION\",\"url\":\"https://aplicativo.acasamarcenaria.com.br/erp/Acasa.apk\"}" > /tmp/version.json
     - scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new /tmp/version.json "${EC2_HOST}:/home/ec2-user/version.json"
-    - |
-      scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new \
-        "$CI_PROJECT_DIR/frontend/android/app/build/outputs/apk/release/app-release.apk" \
-        "${EC2_HOST}:/home/ec2-user/Acasa.apk"
-    - |
-      scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new \
-        "$CI_PROJECT_DIR/frontend-ponto/android/app/build/outputs/apk/release/app-release.apk" \
-        "${EC2_HOST}:/home/ec2-user/ponto.apk"
+    - scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new "$CI_PROJECT_DIR/frontend/android/app/build/outputs/apk/release/app-release.apk" "${EC2_HOST}:/home/ec2-user/Acasa.apk"
+    - scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new "$CI_PROJECT_DIR/frontend-ponto/android/app/build/outputs/apk/release/app-release.apk" "${EC2_HOST}:/home/ec2-user/ponto.apk"
+
     - |
       ssh -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new "$EC2_HOST" \
         "sudo mkdir -p /var/www/aplicativo/erp /var/www/aplicativo/updates/android /var/www/ponto && \
