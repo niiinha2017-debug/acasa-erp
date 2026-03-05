@@ -60,10 +60,10 @@ No GitLab: **Settings → CI/CD → Variables**. Crie:
 
 | Nome           | Valor              | Tipo   | Protegida |
 |----------------|--------------------|--------|-----------|
-| `EC2_SSH_KEY`  | Conteúdo do arquivo da chave SSH da EC2 (ex.: `acasa_key`) | **File** | ✓ |
+| `EC2_SSH_PRIVATE_KEY` | Conteúdo da chave SSH da EC2 (arquivo `acasa_key`) | Variable | ✓ |
 | `EC2_HOST`     | `ec2-user@54.164.55.32` (ou o IP/host que você usa) | Variable | ✓ |
 
-- **EC2_SSH_KEY:** em “Type” escolha **File**; no valor, cole o conteúdo da chave privada (o que você usa em `ssh -i acasa_key`). O GitLab guarda em um arquivo e usa no job.
-- Marque como **protegida** se a branch padrão for protegida.
+- **EC2_SSH_PRIVATE_KEY:** em “Type” escolha **File**; no valor, cole o conteúdo da chave privada (o que você usa em `ssh -i acasa_key`). O GitLab guarda em um arquivo e usa no job.
+- **EC2_HOST:** usuário e host para SSH na EC2.
 
 Sem essas variáveis, o estágio **deploy** do pipeline falha (o build Android pode ter rodado; a falha será só no envio para a EC2).

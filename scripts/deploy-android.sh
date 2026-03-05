@@ -3,11 +3,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 [[ -f "$SCRIPT_DIR/deploy.env" ]] && source "$SCRIPT_DIR/deploy.env"
 
-KEY_PATH="${KEY_PATH:-/c/Users/Julyana Duarte/.ssh/acasa_key}"
+KEY_PATH="${KEY_PATH:-$HOME/.ssh/acasa_key}"
 EC2_HOST="${EC2_HOST:-ec2-user@54.164.55.32}"
 REMOTE_ERP_DIR="/var/www/aplicativo/erp"
+REMOTE_UPDATES_ANDROID="/var/www/aplicativo/updates/android"
 # Relógio de ponto será servido em um vhost/subdomínio próprio (ponto.acasamarcenaria.com.br).
-# Mantemos o APK em /var/www/ponto para ficar simples no nginx.
 REMOTE_PONTO_DIR="/var/www/ponto"
 
 ROOT_DIR="${ROOT_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)}"
@@ -47,12 +47,25 @@ npx cap sync android
 cd android
 ./gradlew assembleRelease
 
+echo "[$(date +%H:%M:%S)] ==> version.json (Android: Verificar atualização)"
+mkdir -p "$ROOT_DIR/aplicativo-site/updates/android"
+(cd "$ROOT_DIR" && node -e "
+const p = require('./frontend/package.json');
+const o = { version: p.version, url: 'https://aplicativo.acasamarcenaria.com.br/erp/Acasa.apk' };
+require('fs').writeFileSync('./aplicativo-site/updates/android/version.json', JSON.stringify(o, null, 2));
+")
+scp -i "$KEY_PATH" "$ROOT_DIR/aplicativo-site/updates/android/version.json" "$EC2_HOST:/home/ec2-user/version.json"
+
 echo "[$(date +%H:%M:%S)] ==> Upload APKs"
 scp -i "$KEY_PATH" "$ERP_APK_LOCAL" "$EC2_HOST:/home/ec2-user/$ERP_APK_REMOTE"
 scp -i "$KEY_PATH" "$PONTO_APK_LOCAL" "$EC2_HOST:/home/ec2-user/$PONTO_APK_REMOTE"
 
 ssh -i "$KEY_PATH" "$EC2_HOST" \
-  "sudo mkdir -p $REMOTE_ERP_DIR $REMOTE_PONTO_DIR && sudo mv /home/ec2-user/$ERP_APK_REMOTE $REMOTE_ERP_DIR/ && sudo mv /home/ec2-user/$PONTO_APK_REMOTE $REMOTE_PONTO_DIR/ && sudo chown -R nginx:nginx $REMOTE_ERP_DIR $REMOTE_PONTO_DIR"
+  "sudo mkdir -p $REMOTE_ERP_DIR $REMOTE_UPDATES_ANDROID $REMOTE_PONTO_DIR && \
+   sudo mv /home/ec2-user/version.json $REMOTE_UPDATES_ANDROID/ && \
+   sudo mv /home/ec2-user/$ERP_APK_REMOTE $REMOTE_ERP_DIR/ && \
+   sudo mv /home/ec2-user/$PONTO_APK_REMOTE $REMOTE_PONTO_DIR/ && \
+   sudo chown -R nginx:nginx $REMOTE_ERP_DIR $REMOTE_UPDATES_ANDROID $REMOTE_PONTO_DIR"
 
 ELAPSED=$(($(date +%s) - START_TOTAL))
 echo "[$(date +%H:%M:%S)] OK: APKs enviados em ${ELAPSED}s. ERP: https://aplicativo.acasamarcenaria.com.br/erp/Acasa.apk"

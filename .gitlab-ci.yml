@@ -21,6 +21,7 @@ prepare:android:
     - export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
     - |
       mkdir -p "$ANDROID_HOME/cmdline-tools"
+      rm -rf "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
       wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/cmdline-tools.zip
       unzip -q /tmp/cmdline-tools.zip -d "$ANDROID_HOME/cmdline-tools"
       mv "$ANDROID_HOME/cmdline-tools/cmdline-tools" "$ANDROID_HOME/cmdline-tools/latest"
@@ -86,6 +87,11 @@ deploy:ec2:
       fi
     - mkdir -p ~/.ssh && ssh-keyscan -H "${EC2_HOST#*@}" >> ~/.ssh/known_hosts 2>/dev/null || true
   script:
+    # version.json para o app Android (botão "Verificar atualização")
+    - |
+      VERSION=$(node -p "require('./frontend/package.json').version")
+      echo "{\"version\":\"$VERSION\",\"url\":\"https://aplicativo.acasamarcenaria.com.br/erp/Acasa.apk\"}" > /tmp/version.json
+    - scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new /tmp/version.json "${EC2_HOST}:/home/ec2-user/version.json"
     - |
       scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new \
         frontend/android/app/build/outputs/apk/release/app-release.apk \
@@ -96,9 +102,10 @@ deploy:ec2:
         "${EC2_HOST}:/home/ec2-user/ponto.apk"
     - |
       ssh -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new "$EC2_HOST" \
-        "sudo mkdir -p /var/www/aplicativo/erp /var/www/ponto && \
+        "sudo mkdir -p /var/www/aplicativo/erp /var/www/aplicativo/updates/android /var/www/ponto && \
+         sudo mv /home/ec2-user/version.json /var/www/aplicativo/updates/android/ && \
          sudo mv /home/ec2-user/Acasa.apk /var/www/aplicativo/erp/ && \
          sudo mv /home/ec2-user/ponto.apk /var/www/ponto/ && \
-         sudo chown -R nginx:nginx /var/www/aplicativo/erp /var/www/ponto"
+         sudo chown -R nginx:nginx /var/www/aplicativo/erp /var/www/aplicativo/updates /var/www/ponto"
   environment:
     name: production
