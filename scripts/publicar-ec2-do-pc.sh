@@ -28,6 +28,6 @@ ssh -i "$KEY_PATH" "$EC2_HOST" "mkdir -p /home/ec2-user/dist-upload"
 scp -i "$KEY_PATH" -r "$DIST_DIR/." "$EC2_HOST:/home/ec2-user/dist-upload/"
 
 echo "==> Publicar na EC2 (rsync + nginx)"
-ssh -i "$KEY_PATH" "$EC2_HOST" "sudo rsync -a --delete --exclude 'erp' --exclude 'ponto' --exclude 'downloads' --exclude 'index.html' /home/ec2-user/dist-upload/ $REMOTE_WEB_DIR/ && sudo chown -R nginx:nginx $REMOTE_WEB_DIR && sudo systemctl reload nginx && rm -rf /home/ec2-user/dist-upload"
+ssh -i "$KEY_PATH" "$EC2_HOST" "sudo rsync -a --delete --exclude 'erp' --exclude 'ponto' --exclude 'downloads' /home/ec2-user/dist-upload/ $REMOTE_WEB_DIR/ && sudo chown -R nginx:nginx $REMOTE_WEB_DIR && sudo systemctl reload nginx && rm -rf /home/ec2-user/dist-upload"
 
 echo "OK: Frontend publicado (build no PC, deploy na EC2)."

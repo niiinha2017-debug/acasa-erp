@@ -25,8 +25,8 @@ PONTO_APK_REMOTE="ponto.apk"
 START_TOTAL=$(date +%s)
 echo "[$(date +%H:%M:%S)] Início do deploy Android (ERP + Ponto)"
 
-echo "[$(date +%H:%M:%S)] ==> Bump Android versionCode + cache buster"
-python scripts/bump-android-version.py
+echo "[$(date +%H:%M:%S)] ==> Bump Android versionCode (ERP + Ponto)"
+node scripts/bump-android-version.mjs
 
 echo "[$(date +%H:%M:%S)] ==> Build ERP (Capacitor) — npm install + build + Gradle..."
 cd "$ERP_DIR"

@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
-# Rode ESTE SCRIPT NA EC2 depois de dar git pull.
-# Publica o frontend (dist) em /var/www/aplicativo (ERP web).
+# Rode ESTE SCRIPT NA EC2 para publicar o frontend (ERP web).
+#
+# Equivalente manual:
+#   cd ~/acasa-erp/frontend
+#   git pull
+#   npm ci
+#   npm run build
+#   sudo rsync -a --delete --exclude 'erp' --exclude 'ponto' --exclude 'downloads' dist/ /var/www/aplicativo/  # inclui index.html
+#   sudo chown -R nginx:nginx /var/www/aplicativo
+#   sudo nginx -t && sudo systemctl reload nginx
 
 set -euo pipefail
 
@@ -24,7 +32,6 @@ sudo rsync -a --delete \
   --exclude 'erp' \
   --exclude 'ponto' \
   --exclude 'downloads' \
-  --exclude 'index.html' \
   dist/ "$REMOTE_WEB_DIR/"
 sudo chown -R nginx:nginx "$REMOTE_WEB_DIR"
 sudo nginx -t && sudo systemctl reload nginx

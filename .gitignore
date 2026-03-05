@@ -37,6 +37,9 @@ lerna-debug.log*
 
 # Chaves e senhas de deploy (uma vez em scripts/deploy.env)
 scripts/deploy.env
+# Chaves SSH (NUNCA versionar)
+acasa3358
+acasa3358.pub
 
 # dotenv environment variable files
 .env

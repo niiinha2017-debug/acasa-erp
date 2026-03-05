@@ -99,7 +99,8 @@
 
       <!-- Tabela de auditoria -->
       <div class="px-6 pb-6">
-        <h2 class="text-sm font-black text-text-main uppercase tracking-wider mb-3">Tabela de Auditoria</h2>
+        <h2 class="text-sm font-black text-text-main uppercase tracking-wider mb-1">Tabela de Auditoria</h2>
+        <p class="text-[10px] text-text-soft mb-3">Horas extras: valor = horas × (custo/hora × 1,5), ou seja 50% de acréscimo sobre o valor da hora.</p>
         <div v-if="loading" class="py-10 text-center text-text-soft text-xs font-bold uppercase">
           Carregando...
         </div>
@@ -132,7 +133,10 @@
                 class="border-t border-border-ui hover:bg-bg-page/40"
               >
                 <td class="px-4 py-3 text-xs font-bold text-text-main tabular-nums">{{ fmtData(item.data) }}</td>
-                <td class="px-4 py-3 text-xs text-text-main">{{ item.descricao }}</td>
+                <td class="px-4 py-3 text-xs text-text-main">
+                  <span>{{ item.descricao }}</span>
+                  <p v-if="item.detalhe" class="text-[10px] text-text-soft mt-0.5">{{ item.detalhe }}</p>
+                </td>
                 <td class="px-4 py-3">
                   <span
                     class="text-xs font-bold px-2 py-1 rounded-lg"
@@ -220,7 +224,10 @@ const itensAuditoria = computed(() => {
   const out = []
   if (l) {
     const base = Number(l.salario_contratado ?? 0)
-    const he = Number(l.valor_total_horas_extras ?? 0)
+    const valorHoraExtra = Number(l.valor_hora_extra ?? 0)
+    const horasExtrasTotal = Number(l.horas_extras ?? 0)
+    const complemento44 = Number(l.horas_extras_complemento_44h ?? 0)
+    const heBatidas = Math.max(0, horasExtrasTotal - complemento44)
     const feriado = Number(l.valor_feriados_trabalhados ?? 0)
     if (base > 0) {
       out.push({
@@ -230,12 +237,25 @@ const itensAuditoria = computed(() => {
         valor: base,
       })
     }
-    if (he > 0) {
+    // Horas extras: 50% sobre o valor da hora → valor = horas × (custo/hora × 1,5)
+    if (heBatidas > 0) {
+      const valorHeBatidas = Math.round(heBatidas * valorHoraExtra * 100) / 100
       out.push({
         data: filtros.data_fim,
-        descricao: 'Horas Extras',
+        descricao: 'Horas Extras (batidas)',
         tipo: 'Provento',
-        valor: he,
+        valor: valorHeBatidas,
+        detalhe: `${heBatidas.toFixed(2).replace('.', ',')} h × R$ ${(valorHoraExtra || 0).toFixed(2)} (hora + 50%)`,
+      })
+    }
+    if (complemento44 > 0) {
+      const valorComplemento = Math.round(complemento44 * valorHoraExtra * 100) / 100
+      out.push({
+        data: filtros.data_fim,
+        descricao: 'Complemento 44h (dif. jornada legal)',
+        tipo: 'Provento',
+        valor: valorComplemento,
+        detalhe: `${complemento44.toFixed(2).replace('.', ',')} h × R$ ${(valorHoraExtra || 0).toFixed(2)} (dif. 44h − carga semanal)`,
       })
     }
     if (feriado > 0) {
