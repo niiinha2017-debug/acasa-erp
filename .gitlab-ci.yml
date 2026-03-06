@@ -1,4 +1,4 @@
-# Pipeline: a cada push em main, builda Android (ERP + Ponto) e publica APKs na EC2.
+# Pipeline: a cada push em main, builda Android (ERP + Ponto), publica APKs na EC2 e atualiza site/backend.
 # Tauri (.exe): não roda no CI (precisa Windows). Use no PC: bash scripts/deploy-tauri.sh
 
 default:
@@ -138,3 +138,62 @@ deploy:ec2:
          sudo chown -R nginx:nginx /var/www/aplicativo/erp /var/www/aplicativo/updates /var/www/ponto"
   environment:
     name: production
+
+# Atualiza código na EC2: git pull, backend (migrate + restart), frontend web (build + rsync)
+deploy:ec2-update-app:
+  stage: deploy
+  needs:
+    - job: deploy:ec2
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq ssh-client
+    - |
+      if [ -z "${EC2_SSH_PRIVATE_KEY:-}" ] || [ -z "${EC2_HOST:-}" ]; then
+        echo "EC2_SSH_PRIVATE_KEY ou EC2_HOST não definidos; pulando atualização do site/backend."
+        exit 0
+      fi
+    - |
+      if [ -f "$EC2_SSH_PRIVATE_KEY" ]; then
+        export SSH_KEY_FILE="$EC2_SSH_PRIVATE_KEY"
+      else
+        echo "$EC2_SSH_PRIVATE_KEY" > "$CI_PROJECT_DIR/deploy_key.pem"
+        chmod 600 "$CI_PROJECT_DIR/deploy_key.pem"
+        export SSH_KEY_FILE="$CI_PROJECT_DIR/deploy_key.pem"
+      fi
+    - mkdir -p ~/.ssh && ssh-keyscan -H "${EC2_HOST#*@}" >> ~/.ssh/known_hosts 2>/dev/null || true
+  script:
+    - cd "$CI_PROJECT_DIR"
+    - |
+      if [ -z "${EC2_SSH_PRIVATE_KEY:-}" ] || [ -z "${EC2_HOST:-}" ]; then
+        echo "Variáveis EC2 não definidas; atualização do site/backend ignorada."
+        exit 0
+      fi
+    - |
+      REMOTE_WEB_DIR="/var/www/aplicativo"
+      ssh -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new "$EC2_HOST" "
+        set -e
+        cd ~/acasa-erp || { echo 'Pasta ~/acasa-erp não existe na EC2.'; exit 1; }
+        echo '==> git pull'
+        git pull origin main || git pull origin master || git pull
+
+        echo '==> Backend: migrate + build + restart'
+        cd ~/acasa-erp/backend
+        npx prisma generate
+        npx prisma migrate deploy
+        npm ci
+        npm run build
+        pm2 restart acasa-backend || pm2 restart all || true
+
+        echo '==> Frontend web: build + publicar'
+        cd ~/acasa-erp/frontend
+        export NODE_OPTIONS=\${NODE_OPTIONS:---max-old-space-size=2048}
+        npm ci
+        npm run build
+        sudo rsync -a --delete --exclude 'erp' --exclude 'ponto' --exclude 'downloads' --exclude 'index.html' dist/ $REMOTE_WEB_DIR/
+        sudo chown -R nginx:nginx $REMOTE_WEB_DIR
+        sudo nginx -t && sudo systemctl reload nginx
+
+        echo 'OK: Site e backend atualizados.'
+      "
+  environment:
+    name: production
+  allow_failure: true
