@@ -195,6 +195,11 @@ export const OrcamentosService = {
     return api.post(`/orcamentos/${cleanId}/pdf`, opts) // retorna { arquivoId }
   },
 
+  enviarPorWhatsapp: (id) => {
+    const cleanId = String(id || '').replace(/\D/g, '')
+    return api.post(`/orcamentos/${cleanId}/enviar-whatsapp`)
+  },
+
   salvarClausulas: (id, dados) => {
     const cleanId = String(id || '').replace(/\D/g, '')
     return api.put(`/orcamentos/${cleanId}/clausulas`, dados)
@@ -345,6 +350,11 @@ export const ConfiguracaoService = {
   },
   async salvar(dados) {
     const { data } = await api.put('/configuracoes/empresa', dados)
+    return data
+  },
+  /** Testa se o token da API WhatsApp (.env) está válido na Meta */
+  async whatsappTest() {
+    const { data } = await api.get('/configuracoes/empresa/whatsapp-test')
     return data
   },
 }

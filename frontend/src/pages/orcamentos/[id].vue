@@ -285,6 +285,15 @@
             >
               <i class="pi pi-file-pdf mr-2" /> Gerar PDF do Orçamento
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              :disabled="saving || isNovo || enviandoWhatsApp"
+              :loading="enviandoWhatsApp"
+              @click="enviarPorWhatsApp"
+            >
+              <i class="pi pi-whatsapp mr-2" /> Enviar por WhatsApp
+            </Button>
           </div>
 
           <template v-if="incluirTermosNoPdf">
@@ -399,6 +408,7 @@ const canEditarClausulasOrc = () => can('orcamentos.clausulas.editar')
 // estado
 const clientesOptions = ref([])
 const saving = ref(false)
+const enviandoWhatsApp = ref(false)
 const editIdx = ref(null)
 
 const clausulas = reactive({
@@ -724,6 +734,26 @@ async function gerarPdf() {
     const msg = getApiErrorMessage(e, 'Erro ao gerar PDF.')
     notify.error(msg)
     console.error('[Orcamento PDF]', e?.response?.data ?? e)
+  }
+}
+
+async function enviarPorWhatsApp() {
+  if (!can('orcamentos.ver')) return notify.error('Acesso negado.')
+  const id = await ensureOrcamentoId()
+  if (!id) return
+  enviandoWhatsApp.value = true
+  try {
+    const { data } = await OrcamentosService.enviarPorWhatsapp(id)
+    if (data?.ok) {
+      notify.success(data?.message || 'Mensagem enviada por WhatsApp.')
+    } else {
+      notify.error(data?.message || 'Falha ao enviar por WhatsApp.')
+    }
+  } catch (e) {
+    const msg = getApiErrorMessage(e, 'Erro ao enviar por WhatsApp.')
+    notify.error(msg)
+  } finally {
+    enviandoWhatsApp.value = false
   }
 }
 

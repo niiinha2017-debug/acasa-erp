@@ -295,6 +295,25 @@
               <Input v-model="form.email" label="E-mail de Contato" type="email" icon="pi pi-envelope" class="md:col-span-2" />
               <Input v-model="telefoneMask" label="WhatsApp (número)" icon="pi pi-whatsapp" placeholder="(00) 00000-0000" />
               <Input v-model="form.whatsapp_url" label="Link do WhatsApp" placeholder="https://wa.me/5511999999999" />
+              <Input
+                v-model="form.whatsapp_api_token"
+                type="password"
+                label="Token da API WhatsApp"
+                placeholder="Token da API oficial (Meta) para envio programático"
+                class="md:col-span-2"
+              />
+              <div class="md:col-span-2 flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  :loading="testandoWhatsApp"
+                  @click="testarTokenWhatsApp"
+                >
+                  <i class="pi pi-whatsapp mr-2"></i>
+                  Testar token WhatsApp (produção)
+                </Button>
+              </div>
               <Input v-model="form.instagram_url" label="Link do Instagram" placeholder="https://instagram.com/..." />
               <Input v-model="form.site" label="Site da Empresa" placeholder="https://..." class="md:col-span-2" />
             </div>
@@ -493,6 +512,7 @@ const fileInput = ref(null)
 const documentInput = ref(null)
 
 const salvando = ref(false)
+const testandoWhatsApp = ref(false)
 const removendoLogo = ref(false)
 const anexandoDoc = ref(false)
 
@@ -535,6 +555,7 @@ const form = ref({
   regime_tributario: '',
   instagram_url: '',
   whatsapp_url: '',
+  whatsapp_api_token: '',
   site: '',
   cor_marca: '#2563eb',
   cep: '',
@@ -990,6 +1011,22 @@ const salvar = async () => {
     notify.error('Erro ao salvar.')
   } finally {
     salvando.value = false
+  }
+}
+
+async function testarTokenWhatsApp() {
+  testandoWhatsApp.value = true
+  try {
+    const data = await ConfiguracaoService.whatsappTest()
+    if (data?.ok) {
+      notify.success(data.message || 'Token WhatsApp válido.')
+    } else {
+      notify.error(data?.message || 'Token inválido ou não configurado.')
+    }
+  } catch (e) {
+    notify.error(e?.response?.data?.message || 'Erro ao testar token WhatsApp.')
+  } finally {
+    testandoWhatsApp.value = false
   }
 }
 

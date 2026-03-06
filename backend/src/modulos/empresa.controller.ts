@@ -11,6 +11,12 @@ import { Permissoes } from '../auth/permissoes.decorator';
 export class EmpresaController {
   constructor(private readonly empresaService: EmpresaService) {}
 
+  @Get('whatsapp-test')
+  @Permissoes('configuracoes.empresa.ver')
+  whatsappTest() {
+    return this.empresaService.testarWhatsAppToken();
+  }
+
   @Get()
   @Permissoes('configuracoes.empresa.ver')
   buscar() {

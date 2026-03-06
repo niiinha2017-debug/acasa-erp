@@ -1,0 +1,43 @@
+# Exemplo de vhost para aplicativo.acasamarcenaria.com.br
+# Copie para a EC2: sudo cp scripts/nginx-aplicativo.conf.example /etc/nginx/conf.d/aplicativo.conf
+# Ajuste server_name se precisar e: sudo nginx -t && sudo systemctl reload nginx
+#
+# Pré-requisito: DNS A de aplicativo.acasamarcenaria.com.br apontando para o IP da EC2
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name aplicativo.acasamarcenaria.com.br;
+    root /var/www/aplicativo;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /erp/ {
+        try_files $uri $uri/ =404;
+    }
+
+    location /updates/ {
+        try_files $uri $uri/ =404;
+    }
+
+    location /downloads/ {
+        try_files $uri $uri/ /downloads/index.html;
+    }
+
+    # SSL (descomente e ajuste após obter certificado, ex: certbot)
+    # listen 443 ssl;
+    # listen [::]:443 ssl;
+    # ssl_certificate     /etc/letsencrypt/live/aplicativo.acasamarcenaria.com.br/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/aplicativo.acasamarcenaria.com.br/privkey.pem;
+}
+
+# Redirecionar HTTP -> HTTPS quando SSL estiver ativo (opcional)
+# server {
+#     listen 80;
+#     listen [::]:80;
+#     server_name aplicativo.acasamarcenaria.com.br;
+#     return 301 https://$server_name$request_uri;
+# }

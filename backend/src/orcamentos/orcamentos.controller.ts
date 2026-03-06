@@ -123,6 +123,13 @@ export class OrcamentosController {
   // PDF
   // =========================
 
+  @Post(':id/enviar-whatsapp')
+  @Permissoes('orcamentos.ver')
+  @HttpCode(HttpStatus.OK)
+  async enviarPorWhatsapp(@Param('id') id: string) {
+    return this.service.enviarPorWhatsApp(this.cleanId(id));
+  }
+
   @Post(':id/pdf')
   @Permissoes('orcamentos.ver')
   @HttpCode(HttpStatus.OK)

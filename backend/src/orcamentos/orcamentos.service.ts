@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { WhatsAppService } from '../notifications/whatsapp.service';
 import { CreateOrcamentoDto } from './dto/create-orcamento.dto';
 import { UpdateOrcamentoDto } from './dto/update-orcamento.dto';
 import { CreateOrcamentoItemDto } from './dto/create-orcamento-item.dto';
@@ -14,7 +15,10 @@ import sizeOf from 'image-size';
 
 @Injectable()
 export class OrcamentosService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly whatsapp: WhatsAppService,
+  ) {}
 
   // =========================================================
   // PDF
@@ -514,6 +518,30 @@ export class OrcamentosService {
     });
 
     return { arquivoId: arquivo.id };
+  }
+
+  /**
+   * Envia mensagem de texto por WhatsApp para o cliente do orçamento.
+   * Usa o número do cliente (whatsapp ou telefone). Requer WHATSAPP_API_TOKEN e WHATSAPP_PHONE_NUMBER_ID no .env.
+   */
+  async enviarPorWhatsApp(orcId: number): Promise<{ ok: boolean; message?: string }> {
+    const orc = await this.detalhar(orcId);
+    const cliente = orc?.cliente as { whatsapp?: string; telefone?: string; nome_completo?: string; razao_social?: string } | null;
+    if (!cliente) {
+      return { ok: false, message: 'Cliente não encontrado.' };
+    }
+    const telefone = cliente.whatsapp || cliente.telefone || '';
+    const apenasNumeros = String(telefone).replace(/\D/g, '');
+    if (apenasNumeros.length < 10) {
+      return { ok: false, message: 'Cliente sem WhatsApp ou telefone cadastrado.' };
+    }
+    const nome = String(cliente.nome_completo || cliente.razao_social || 'Cliente').trim();
+    const texto = `Olá ${nome}! Seu orçamento #${orcId} está pronto. Qualquer dúvida estamos à disposição.`;
+    const result = await this.whatsapp.sendText(telefone, texto);
+    if (!result.ok) {
+      return { ok: false, message: result.error || 'Falha ao enviar WhatsApp.' };
+    }
+    return { ok: true, message: 'Mensagem enviada por WhatsApp.' };
   }
 
   // =========================================================

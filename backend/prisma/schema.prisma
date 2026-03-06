@@ -1270,6 +1270,7 @@ model Empresa {
   regime_tributario   String?
   instagram_url       String?
   whatsapp_url        String?
+  whatsapp_api_token  String?   // Token da API oficial WhatsApp (Meta) para envio programático
   site                String?
   cor_marca           String?  @db.VarChar(7)
   logradouro    String?
