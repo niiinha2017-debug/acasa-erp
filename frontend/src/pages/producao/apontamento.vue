@@ -204,8 +204,10 @@
                 v-for="tarefa in tarefasConcluidas"
                 :key="'concluida-' + tarefa.id"
                 class="group relative border rounded-xl p-3 pl-4 opacity-90 hover:opacity-100 transition-all duration-200"
-                :class="tarefa.plano_corte_id ? 'bg-[#e0f2fe] dark:bg-sky-950/40 border-sky-200 dark:border-sky-700 border-l-4 border-l-sky-500' : 'bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-600'"
-                :class="tarefa.plano_corte_id ? '' : getTimelineConcluidoClass(tarefa.categoria).borderLeftClass"
+                :class="[
+                  tarefa.plano_corte_id ? 'bg-[#e0f2fe] dark:bg-sky-950/40 border-sky-200 dark:border-sky-700 border-l-4 border-l-sky-500' : 'bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-600',
+                  tarefa.plano_corte_id ? '' : getTimelineConcluidoClass(tarefa.categoria).borderLeftClass,
+                ]"
               >
                 <div class="flex items-center gap-2 mb-2">
                   <div class="w-9 h-9 rounded-lg shrink-0 font-bold text-xs flex items-center justify-center text-white" :class="tarefa.plano_corte_id ? 'bg-sky-600 dark:bg-sky-500' : getTimelineConcluidoClass(tarefa.categoria).dotClass">
