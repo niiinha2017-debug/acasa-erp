@@ -33,8 +33,8 @@
           v-for="tarefa in tarefasAtivas"
           :key="'ativa-' + tarefa.id"
           class="group relative overflow-hidden border rounded-xl p-3 pl-4 shadow-sm dark:shadow-none transition-all duration-200"
-          :class="tarefa.plano_corte_id ? 'bg-[#e0f2fe] dark:bg-sky-950/40 border-sky-200 dark:border-sky-700 border-l-4 border-l-sky-500' : 'bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-600'"
           :class="[
+            tarefa.plano_corte_id ? 'bg-[#e0f2fe] dark:bg-sky-950/40 border-sky-200 dark:border-sky-700 border-l-4 border-l-sky-500' : 'bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-600',
             !tarefa.plano_corte_id && tarefaAtrasada(tarefa) ? 'border-red-300 dark:border-red-500/70 ring-1 ring-red-200 dark:ring-red-900/50' : '',
             !tarefa.plano_corte_id ? (getProcessColorByStatus(tarefa.categoria, tarefa.status).borderLeftClass || '') : '',
             getProcessColorByStatus(tarefa.categoria, tarefa.status).pulse ? 'animate-pulse' : '',
