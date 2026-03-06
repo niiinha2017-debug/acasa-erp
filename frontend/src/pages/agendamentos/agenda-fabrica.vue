@@ -239,23 +239,25 @@
                   :key="event.id"
                   type="button"
                   :class="[
-                    'w-full text-left px-2.5 py-1.5 rounded-lg text-[10px] text-white hover:ring-2 hover:ring-brand-primary transition-colors',
-                    eventAtrasado(event) ? 'bg-red-600 hover:bg-red-500' : getCalendarioEventClassProducao(event.categoria, eventConcluido(event)),
+                    'w-full text-left px-2.5 py-1.5 rounded-lg text-[10px] hover:ring-2 hover:ring-brand-primary transition-colors',
+                    event.plano_corte_id ? 'bg-[#e0f2fe] dark:bg-sky-950/50 text-sky-900 dark:text-sky-100 border border-sky-300 dark:border-sky-700' : 'text-white',
+                    eventAtrasado(event) && !event.plano_corte_id ? 'bg-red-600 hover:bg-red-500' : (!event.plano_corte_id ? getCalendarioEventClassProducao(event.categoria, eventConcluido(event)) : ''),
                   ]"
                   :title="eventTooltipCalendar(event)"
                   @click.stop="openModalForEvent(event, day.date)"
                 >
-                  <div class="font-semibold text-[9px] text-white/90 leading-tight">
+                  <div :class="event.plano_corte_id ? 'font-semibold text-[9px] text-sky-800 dark:text-sky-200 leading-tight' : 'font-semibold text-[9px] text-white/90 leading-tight'">
                     {{ periodLabel(event.inicio_em, event.fim_em, event) }}
                   </div>
-                  <div class="font-bold truncate leading-snug mt-0.5">
+                  <div class="font-bold truncate leading-snug mt-0.5 flex items-center gap-1">
                     {{ tituloSubtituloEvento(event).titulo }}
+                    <span v-if="event.plano_corte_id" class="shrink-0 text-[7px] font-black bg-sky-600 text-white dark:bg-sky-500 px-1 rounded">[APENAS CORTE]</span>
                   </div>
-                  <div class="text-[9px] text-white/80 truncate leading-snug">
+                  <div :class="event.plano_corte_id ? 'text-[9px] text-sky-700 dark:text-sky-300 truncate leading-snug' : 'text-[9px] text-white/80 truncate leading-snug'">
                     {{ tituloSubtituloEvento(event).subtitulo }}
                   </div>
-                  <div class="text-[8px] text-white/70 truncate leading-snug">
-                    {{ event?.cliente?.nome_completo || event?.cliente?.razao_social || 'Cliente' }}
+                  <div :class="event.plano_corte_id ? 'text-[8px] text-sky-600 dark:text-sky-400 truncate leading-snug' : 'text-[8px] text-white/70 truncate leading-snug'">
+                    {{ event?.cliente?.nome_completo || event?.cliente?.razao_social || event?.plano_corte?.fornecedor?.nome_fantasia || 'Cliente' }}
                   </div>
                 </button>
                 <div
@@ -322,13 +324,15 @@
                 :key="event.id"
                 type="button"
                 :class="[
-                  'w-full text-left p-4 rounded-xl border border-border-ui bg-bg-card hover:border-brand-primary/40 hover:shadow-md transition-all',
-                  eventAtrasado(event) ? 'border-l-4 border-l-red-500 border-red-300 bg-red-50/60 dark:bg-red-950/30' : getProcessColorByStatusProducao(event.categoria, event.status).borderLeftClass,
+                  'w-full text-left p-4 rounded-xl border border-border-ui hover:border-brand-primary/40 hover:shadow-md transition-all',
+                  event.plano_corte_id ? 'bg-[#e0f2fe] dark:bg-sky-950/40 border-sky-200 dark:border-sky-700 border-l-4 border-l-sky-500' : 'bg-bg-card',
+                  eventAtrasado(event) && !event.plano_corte_id ? 'border-l-4 border-l-red-500 border-red-300 bg-red-50/60 dark:bg-red-950/30' : (!event.plano_corte_id ? getProcessColorByStatusProducao(event.categoria, event.status).borderLeftClass : ''),
                 ]"
                 @click="openModalForEvent(event)"
               >
-                <div class="text-sm font-bold text-text-main leading-snug">
+                <div class="text-sm font-bold text-text-main leading-snug flex items-center gap-2 flex-wrap">
                   {{ eventTitle(event) }}
+                  <span v-if="event.plano_corte_id" class="inline-flex px-2 py-0.5 rounded text-[10px] font-black uppercase bg-sky-600 text-white dark:bg-sky-500 dark:text-sky-950">[APENAS CORTE]</span>
                 </div>
                 <div class="mt-2 text-[10px] font-medium text-text-muted">
                   Responsável: {{ event.criado_por_usuario?.nome || 'Não informado' }}
@@ -810,11 +814,15 @@
             <div
               v-for="event in selectedEventsParaLista"
               :key="event.id"
-              class="p-3 rounded-xl border border-border-ui bg-bg-card border-l-4"
-              :class="eventAtrasado(event) ? 'border-l-red-500 border-red-300 bg-red-50/60 dark:bg-red-950/30' : getCardBorderClassProducao(event.categoria, event.status)"
+              class="p-3 rounded-xl border border-l-4"
+              :class="[
+                event.plano_corte_id ? 'bg-[#e0f2fe] dark:bg-sky-950/40 border-sky-200 dark:border-sky-700 border-l-sky-500' : 'border-border-ui bg-bg-card',
+                eventAtrasado(event) && !event.plano_corte_id ? 'border-l-red-500 border-red-300 bg-red-50/60 dark:bg-red-950/30' : (!event.plano_corte_id ? getCardBorderClassProducao(event.categoria, event.status) : ''),
+              ]"
             >
-              <div class="text-xs font-bold text-text-main">
+              <div class="text-xs font-bold text-text-main flex items-center gap-2 flex-wrap">
                 {{ eventTitle(event) }}
+                <span v-if="event.plano_corte_id" class="inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase bg-sky-600 text-white dark:bg-sky-500 dark:text-sky-950">[APENAS CORTE]</span>
               </div>
               <div class="text-[10px] font-semibold text-text-muted">
                 {{ periodLabel(event.inicio_em, event.fim_em, event) }}
@@ -824,7 +832,7 @@
                   <span class="text-[9px] font-black uppercase leading-tight">{{ tituloSubtituloEvento(event).titulo }}</span>
                   <span class="text-[8px] font-semibold opacity-90 leading-tight">{{ tituloSubtituloEvento(event).subtitulo }}</span>
                 </span>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase" :class="getProcessColorByStatusProducao(event.categoria, event.status).badgeClass">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase" :class="event.plano_corte_id ? 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-200 border border-sky-300 dark:border-sky-700' : getProcessColorByStatusProducao(event.categoria, event.status).badgeClass">
                   {{ statusExecucaoLabel(event) }}
                 </span>
               </div>
@@ -1367,6 +1375,9 @@ const categoriaExigeVenda = computed(() =>
 )
 /** Etapas legadas de produção (corte, montagem interna etc.) não exibidas; o cálculo de produção já é um só. */
 const CATEGORIAS_PRODUCAO_OCULTAS = ['PREPARACAO_TECNICA', 'CORTE', 'MONTAGEM_INTERNA', 'ACABAMENTO', 'CONFERENCIA_QUALIDADE']
+/** Serviço de Corte (Fornecedor): fluxo encerra após Corte — ocultar Marcenaria/Montagem e pós-venda. */
+const ETAPAS_SERVICO_CORTE_EXCLUIDAS = ['MONTAGEM_CLIENTE_AGENDADA', 'EM_MONTAGEM_CLIENTE', 'MONTAGEM_CLIENTE_FINALIZADA', 'AGENDAR_POS_VENDA', 'GARANTIA', 'MANUTENCAO', 'ASSISTENCIA']
+
 const TIPOS_PRODUCAO = computed(() => {
   const lista = Array.isArray(pipelineProducao.value) ? pipelineProducao.value : []
   return [...lista]
@@ -1377,6 +1388,14 @@ const TIPOS_PRODUCAO = computed(() => {
     }))
     .filter((item) => item.value && !CATEGORIAS_PRODUCAO_OCULTAS.includes(item.value))
 })
+
+/** Para Serviço de Corte (plano_corte_id): apenas etapas até Produção/Corte e PRODUCAO_FINALIZADA. */
+const TIPOS_PRODUCAO_APENAS_CORTE = computed(() => {
+  return TIPOS_PRODUCAO.value.filter(
+    (o) => !ETAPAS_SERVICO_CORTE_EXCLUIDAS.includes(o.value),
+  )
+})
+
 const PRIMEIRA_ETAPA_PRODUCAO = computed(
   () => TIPOS_PRODUCAO.value[0]?.value || 'PRODUCAO_RECEBIDA',
 )
@@ -1385,9 +1404,14 @@ const opcoesTipoAgendamento = computed(() => {
   if (isAgendaLoja.value) {
     return TIPOS_LOJA_VENDA.value
   }
-  // Pós-venda (Garantia / Manutenção / Assistência) só quando origem é Venda cliente
-  const ehVendaCliente = String(taskForm.origemFluxo || '').toUpperCase() === 'LOJA_VENDA'
-  return [...TIPOS_PRODUCAO.value, ...(ehVendaCliente ? TIPOS_POS_VENDA : [])]
+  const origem = String(taskForm.origemFluxo || '').toUpperCase()
+  const ehServicoCorte =
+    !!editingEvent.value?.plano_corte_id ||
+    origem === 'PLANO_CORTE' ||
+    origem === 'VENDA_PLANO_CORTE'
+  const listaProducao = ehServicoCorte ? TIPOS_PRODUCAO_APENAS_CORTE.value : TIPOS_PRODUCAO.value
+  const ehVendaCliente = origem === 'LOJA_VENDA'
+  return [...listaProducao, ...(ehVendaCliente && !ehServicoCorte ? TIPOS_POS_VENDA : [])]
 })
 
 const etapaAtualLabel = computed(() => {
@@ -1457,7 +1481,7 @@ const SUBTITULOS_MEDIDA_FINA = {
 }
 function tituloSubtituloEvento(event) {
   if (event?.plano_corte_id) {
-    return { titulo: 'Produção', subtitulo: planoBadgeLabel(planoStatusForEvent(event)) || 'Plano de corte' }
+    return { titulo: 'Serviço de Corte', subtitulo: planoBadgeLabel(planoStatusForEvent(event)) || 'Serviço de corte' }
   }
   const cat = String(event?.categoria || '').toUpperCase()
   const titulo = tituloFaseParaCategoria(cat)

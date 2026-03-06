@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   Query,
+  Req,
   UseGuards,
   ParseIntPipe,
 } from '@nestjs/common';
@@ -31,6 +32,7 @@ export class ApontamentoProducaoController {
   @Get()
   @Permissoes('agendamentos.producao', 'agendamentos.vendas')
   findAll(
+    @Req() req: { user?: { funcionario_id?: number | null; is_admin?: boolean } },
     @Query('agenda_fabrica_id') agendaFabricaId?: string,
     @Query('agenda_loja_id') agendaLojaId?: string,
     @Query('tipo_agenda') tipoAgenda?: string,
@@ -50,6 +52,7 @@ export class ApontamentoProducaoController {
       data_inicio: dataInicio,
       data_fim: dataFim,
       categoria: categoria || undefined,
+      usuario: req?.user,
     });
   }
 
@@ -57,6 +60,7 @@ export class ApontamentoProducaoController {
   @Get('timeline')
   @Permissoes('agendamentos.producao', 'agendamentos.vendas')
   getTimeline(
+    @Req() req: { user?: { funcionario_id?: number | null; is_admin?: boolean } },
     @Query('data_inicio') dataInicio?: string,
     @Query('data_fim') dataFim?: string,
     @Query('tipo_agenda') tipoAgenda?: string,
@@ -66,6 +70,7 @@ export class ApontamentoProducaoController {
       data_inicio: dataInicio,
       data_fim: dataFim,
       tipo_agenda: tipo,
+      usuario: req?.user,
     });
   }
 
@@ -73,6 +78,7 @@ export class ApontamentoProducaoController {
   @Get('timeline/tarefas')
   @Permissoes('agendamentos.producao', 'agendamentos.vendas')
   getTimelinePorTarefas(
+    @Req() req: { user?: { funcionario_id?: number | null; is_admin?: boolean } },
     @Query('data_inicio') dataInicio?: string,
     @Query('data_fim') dataFim?: string,
     @Query('tipo_agenda') tipoAgenda?: string,
@@ -82,6 +88,7 @@ export class ApontamentoProducaoController {
       data_inicio: dataInicio,
       data_fim: dataFim,
       tipo_agenda: tipo,
+      usuario: req?.user,
     });
   }
 

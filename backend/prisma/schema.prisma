@@ -122,7 +122,8 @@ model Cliente {
   cidade      String?
   estado      String?
 
-  status String @default("ATIVO")
+  status   String  @default("ATIVO") // Pipeline do cliente (CADASTRO, MEDICAO_VENDA, etc.) - definido pelo fluxo
+  situacao String? // Ativo / Inativo / Pendente (exibido no cadastro)
 
   // Vendedor responsável (funcionário da loja) e profissão para contrato
   vendedor_responsavel_id Int?
@@ -155,6 +156,10 @@ model orcamentos {
   cliente_id Int
   cliente    Cliente @relation(fields: [cliente_id], references: [id])
 
+  // Vendedor responsável pelo cliente no momento do orçamento (espelho do cliente para todo o processo)
+  vendedor_responsavel_id Int?
+  vendedor_responsavel    funcionarios? @relation("OrcamentoVendedor", fields: [vendedor_responsavel_id], references: [id], onDelete: SetNull)
+
   cliente_nome_snapshot String
   cliente_cpf_snapshot  String
   qtd_ambientes         Int    @default(0)
@@ -176,6 +181,7 @@ model orcamentos {
   projetos projetos[]
 
   @@index([cliente_id])
+  @@index([vendedor_responsavel_id])
   @@map("orcamentos")
  }
 
@@ -188,7 +194,7 @@ model orcamento_itens {
   descricao      String
   valor_unitario Decimal @db.Decimal(10, 2)
   valor_total    Decimal @db.Decimal(10, 2)
-  observacao     String
+  observacao     String  @db.VarChar(2000)
 
   criado_em DateTime @default(now())
 
@@ -204,6 +210,10 @@ model vendas {
 
   orcamento_id Int        @unique
   orcamento    orcamentos @relation(fields: [orcamento_id], references: [id], onDelete: Restrict)
+
+  // Vendedor responsável pelo cliente no momento da venda (espelho para todo o processo)
+  vendedor_responsavel_id Int?
+  vendedor_responsavel    funcionarios? @relation("VendaVendedor", fields: [vendedor_responsavel_id], references: [id], onDelete: SetNull)
 
   status String
 
@@ -261,6 +271,7 @@ model vendas {
 
   @@index([cliente_id])
   @@index([status])
+  @@index([vendedor_responsavel_id])
   @@index([representante_venda_usuario_id])
   @@index([representante_venda_funcionario_id])
   @@map("vendas")
@@ -274,6 +285,10 @@ model contratos {
 
   venda_id Int?
   venda    vendas? @relation(fields: [venda_id], references: [id], onDelete: SetNull)
+
+  // Vendedor responsável pelo cliente no momento do contrato (espelho para todo o processo)
+  vendedor_responsavel_id Int?
+  vendedor_responsavel    funcionarios? @relation("ContratoVendedor", fields: [vendedor_responsavel_id], references: [id], onDelete: SetNull)
 
   numero     String   // ex: CONT-2025-001
   descricao  String?
@@ -293,6 +308,7 @@ model contratos {
 
   @@index([cliente_id])
   @@index([venda_id])
+  @@index([vendedor_responsavel_id])
   @@index([status])
   @@map("contratos")
  }
@@ -708,6 +724,9 @@ model funcionarios {
   apontamentos_fabrica agenda_fabrica_apontamentos[]
   apontamentos_producao apontamento_producao[]
   clientes_vendedor    Cliente[] @relation("ClienteVendedorResponsavel")
+  orcamentos_vendedor  orcamentos[] @relation("OrcamentoVendedor")
+  vendas_vendedor      vendas[] @relation("VendaVendedor")
+  contratos_vendedor   contratos[] @relation("ContratoVendedor")
 
   @@map("funcionarios")
  }

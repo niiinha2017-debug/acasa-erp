@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -74,7 +75,7 @@ export class ClientesService {
     return t === '' ? null : t;
   }
 
-  async criar(dto: CriarClienteDto) {
+  async criar(dto: CriarClienteDto, usuario?: { funcionario_id?: number | null } | null) {
     const statusInicialPipeline =
       PIPELINE_CLIENTE && PIPELINE_CLIENTE.length
         ? PIPELINE_CLIENTE[0].key
@@ -148,21 +149,37 @@ export class ClientesService {
           enviar_aniversario_whatsapp: dto.enviar_aniversario_whatsapp ?? false,
 
           profissao: dto.profissao ?? null,
-          vendedor_responsavel_id: dto.vendedor_responsavel_id ?? null,
+          vendedor_responsavel_id:
+            dto.vendedor_responsavel_id ??
+            (usuario?.funcionario_id != null ? Number(usuario.funcionario_id) : null),
+          situacao: dto.situacao ?? null,
         },
       });
       return cliente;
     });
   }
 
-  async listar() {
+  /**
+   * Lista clientes. Se o usuário for vendedor (tem funcionario_id e não é admin),
+   * retorna apenas clientes em que ele é o vendedor responsável pelo cadastro.
+   */
+  async listar(usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null) {
     await this.aplicarStatusAutomaticoMedidaRealizada();
-    const rows = await this.prisma.cliente.findMany({
-      where: {
-        status: {
-          notIn: ['INATIVO', this.statusClienteEncerrado],
-        },
+
+    const where: Prisma.ClienteWhereInput = {
+      status: {
+        notIn: ['INATIVO', this.statusClienteEncerrado],
       },
+    };
+
+    const funcionarioId = usuario?.funcionario_id != null ? Number(usuario.funcionario_id) : null;
+    const isAdmin = !!usuario?.is_admin;
+    if (funcionarioId != null && !isAdmin) {
+      where.vendedor_responsavel_id = funcionarioId;
+    }
+
+    const rows = await this.prisma.cliente.findMany({
+      where,
       orderBy: { nome_completo: 'asc' },
       include: {
         vendedor_responsavel: { select: { id: true, nome: true } },
@@ -225,16 +242,41 @@ export class ClientesService {
     return datas;
   }
 
-  async buscarPorId(id: number) {
+  /**
+   * Se o usuário for vendedor (não admin, tem funcionario_id), só pode acessar cliente em que ele é o vendedor responsável.
+   */
+  private async assertVendedorAcessoCliente(
+    clienteId: number,
+    usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null,
+  ) {
+    const funcionarioId = usuario?.funcionario_id != null ? Number(usuario.funcionario_id) : null;
+    if (funcionarioId == null || !!usuario?.is_admin) return;
+    const c = await this.prisma.cliente.findUnique({
+      where: { id: clienteId },
+      select: { vendedor_responsavel_id: true },
+    });
+    if (!c) return;
+    if (c.vendedor_responsavel_id !== funcionarioId) {
+      throw new ForbiddenException('Você só pode acessar clientes dos quais é o vendedor responsável.');
+    }
+  }
+
+  async buscarPorId(id: number, usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null) {
     await this.aplicarStatusAutomaticoMedidaRealizada();
+    await this.assertVendedorAcessoCliente(id, usuario);
     const cliente = await this.prisma.cliente.findUnique({ where: { id } });
     if (!cliente) throw new NotFoundException('Cliente não encontrado');
     const datas_progresso = await this.getDatasProgresso(id);
     return { ...cliente, datas_progresso };
   }
 
-  async atualizar(id: number, dto: AtualizarClienteDto) {
-    const atual = await this.buscarPorId(id);
+  async atualizar(
+    id: number,
+    dto: AtualizarClienteDto,
+    usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null,
+  ) {
+    await this.assertVendedorAcessoCliente(id, usuario);
+    const atual = await this.buscarPorId(id, usuario);
 
     let statusAtualizado: string | undefined = undefined;
     if (dto.status !== undefined) {
@@ -343,12 +385,14 @@ export class ClientesService {
 
         profissao: dto.profissao ?? undefined,
         vendedor_responsavel_id: dto.vendedor_responsavel_id ?? undefined,
+        situacao: dto.situacao ?? undefined,
       },
     });
   }
 
-  async remover(id: number) {
-    await this.buscarPorId(id);
+  async remover(id: number, usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null) {
+    await this.assertVendedorAcessoCliente(id, usuario);
+    await this.buscarPorId(id, usuario);
     try {
       await this.prisma.cliente.delete({ where: { id } });
     } catch (e) {
@@ -387,9 +431,13 @@ export class ClientesService {
     return { ok: true };
   }
 
-  async select(q?: string) {
+  async select(q?: string, usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null) {
     await this.aplicarStatusAutomaticoMedidaRealizada();
     const termo = String(q || '').trim();
+
+    const funcionarioId = usuario?.funcionario_id != null ? Number(usuario.funcionario_id) : null;
+    const isAdmin = !!usuario?.is_admin;
+    const soVendedor = funcionarioId != null && !isAdmin;
 
     const rows = await this.prisma.cliente.findMany({
       where: {
@@ -397,6 +445,7 @@ export class ClientesService {
           {
             status: { notIn: ['INATIVO', this.statusClienteEncerrado] },
           },
+          ...(soVendedor ? [{ vendedor_responsavel_id: funcionarioId }] : []),
           ...(termo
             ? [
                 {

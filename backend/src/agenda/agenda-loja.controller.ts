@@ -53,6 +53,7 @@ export class AgendaLojaController {
     @Query('funcionario_id') funcionarioId?: string,
     @Query('incluir_cancelados') incluirCancelados?: string,
     @Query('origem_fluxo') origemFluxoQuery?: string,
+    @Req() req?: { user?: { funcionario_id?: number | null; is_admin?: boolean } },
   ) {
     return this.agendaService.findAll(inicio, fim, {
       setorDestino: SETOR_LOJA,
@@ -63,6 +64,7 @@ export class AgendaLojaController {
       incluirCancelados:
         String(incluirCancelados || '').toLowerCase() === 'true' ||
         incluirCancelados === '1',
+      usuario: req?.user,
     });
   }
 

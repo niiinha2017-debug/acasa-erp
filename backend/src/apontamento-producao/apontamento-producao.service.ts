@@ -123,6 +123,16 @@ export class ApontamentoProducaoService {
     });
   }
 
+  private whereVendedorAgenda(funcionarioId: number) {
+    return {
+      OR: [
+        { cliente: { vendedor_responsavel_id: funcionarioId } },
+        { venda: { representante_venda_funcionario_id: funcionarioId } },
+        { equipe: { some: { funcionario_id: funcionarioId } } },
+      ],
+    };
+  }
+
   async findAll(filtros: {
     agenda_fabrica_id?: number;
     agenda_loja_id?: number;
@@ -132,6 +142,7 @@ export class ApontamentoProducaoService {
     data_inicio?: string;
     data_fim?: string;
     categoria?: string;
+    usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null;
   }) {
     const where: Record<string, unknown> = {};
     if (filtros.agenda_fabrica_id != null) {
@@ -143,6 +154,18 @@ export class ApontamentoProducaoService {
       where.agenda_loja_id = filtros.agenda_loja_id;
     } else if (filtros.tipo_agenda === 'venda') {
       where.agenda_loja_id = { not: null };
+    }
+    const funcionarioIdVendedor =
+      filtros.usuario?.funcionario_id != null && !filtros.usuario?.is_admin
+        ? Number(filtros.usuario.funcionario_id)
+        : null;
+    if (funcionarioIdVendedor != null) {
+      const vendedorWhere = this.whereVendedorAgenda(funcionarioIdVendedor);
+      if (filtros.tipo_agenda === 'venda') {
+        where.agenda_loja = vendedorWhere;
+      } else if (filtros.tipo_agenda === 'producao') {
+        where.agenda_fabrica = vendedorWhere;
+      }
     }
     if (filtros.venda_id != null) {
       where.venda_id = filtros.venda_id;
@@ -232,23 +255,26 @@ export class ApontamentoProducaoService {
    * Retorna apontamentos + tarefas pendentes no período.
    * - tipo_agenda 'venda': reflete só a Agenda da Loja (pendentes = agenda_loja, pendentes_fabrica = []).
    * - tipo_agenda 'producao': reflete só a Agenda da Produção (pendentes = [], pendentes_fabrica = agenda_fabrica).
+   * Se usuario for vendedor (não admin), retorna apenas dados dos seus clientes/vendas.
    */
   async getTimeline(filtros: {
     data_inicio?: string;
     data_fim?: string;
     tipo_agenda?: 'venda' | 'producao';
+    usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null;
   }) {
     const [apontamentos, pendentesLoja, pendentesFabricaResult] = await Promise.all([
       this.findAll({
         data_inicio: filtros.data_inicio,
         data_fim: filtros.data_fim,
         tipo_agenda: filtros.tipo_agenda,
+        usuario: filtros.usuario,
       }),
       filtros.tipo_agenda === 'venda'
-        ? this.getPendentesAgendaLoja(filtros.data_inicio, filtros.data_fim, false)
+        ? this.getPendentesAgendaLoja(filtros.data_inicio, filtros.data_fim, false, filtros.usuario)
         : Promise.resolve([]),
       filtros.tipo_agenda === 'producao'
-        ? this.getPendentesAgendaFabrica(filtros.data_inicio, filtros.data_fim).catch(
+        ? this.getPendentesAgendaFabrica(filtros.data_inicio, filtros.data_fim, filtros.usuario).catch(
             () => [] as Awaited<ReturnType<typeof this.getPendentesAgendaFabrica>>,
           )
         : Promise.resolve([]),
@@ -263,11 +289,13 @@ export class ApontamentoProducaoService {
   /**
    * Timeline por tarefas: lista de agendamentos no período, cada um com seus apontamentos (início/fim de cada funcionário).
    * Agenda = datas fixas da tarefa; Timeline = início e fim da hora de cada funcionário executando.
+   * Se usuario for vendedor (não admin), retorna apenas tarefas dos seus clientes/vendas.
    */
   async getTimelinePorTarefas(filtros: {
     data_inicio?: string;
     data_fim?: string;
     tipo_agenda?: 'venda' | 'producao';
+    usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null;
   }) {
     const dataInicio = filtros.data_inicio ? new Date(filtros.data_inicio + 'T00:00:00') : undefined;
     const dataFim = filtros.data_fim ? new Date(filtros.data_fim + 'T23:59:59') : undefined;
@@ -275,12 +303,22 @@ export class ApontamentoProducaoService {
     if (dataInicio) (whereData.inicio_em as Record<string, Date>).gte = dataInicio;
     if (dataFim) (whereData.inicio_em as Record<string, Date>).lte = dataFim;
 
+    const funcionarioIdVendedor =
+      filtros.usuario?.funcionario_id != null && !filtros.usuario?.is_admin
+        ? Number(filtros.usuario.funcionario_id)
+        : null;
+    const whereVendedor =
+      funcionarioIdVendedor != null
+        ? this.whereVendedorAgenda(funcionarioIdVendedor)
+        : null;
+
     if (filtros.tipo_agenda === 'venda') {
       // Timeline Vendas: exibe todos os agendamentos da agenda de venda no período (Orçamento, Apresentação, Contrato, Medição, etc.).
       const tarefas = await this.prisma.agenda_loja.findMany({
         where: {
           status: { notIn: ['CANCELADO', 'Cancelado', 'cancelado'] },
           ...whereData,
+          ...(whereVendedor ? { AND: [whereVendedor] } : {}),
         },
         orderBy: { inicio_em: 'asc' },
         include: {
@@ -302,25 +340,27 @@ export class ApontamentoProducaoService {
       const somentePainelCats = [...AGENDA_FABRICA_SOMENTE_PAINEL_CATEGORIAS];
       const statusSempreVisivel = AGENDA_FABRICA_STATUS_SEMPRE_VISIVEL;
       const statusAgendado = AGENDA_FABRICA_STATUS_AGENDADO;
+      const andProducao: any[] = [
+        {
+          OR: [
+            { venda_id: null },
+            { venda: { contratos: { some: { status: 'VIGENTE' } } } },
+            { status: statusSempreVisivel },
+          ],
+        },
+        {
+          OR: [
+            ...(somentePainelCats.length > 0 ? [{ categoria: { notIn: somentePainelCats } }] : []),
+            { status: statusSempreVisivel },
+            ...somentePainelCats.map((c) => ({ categoria: c, status: statusAgendado })),
+          ],
+        },
+      ];
+      if (whereVendedor) andProducao.push(whereVendedor);
       const whereProducao = {
         status: { notIn: ['CANCELADO', 'Cancelado', 'cancelado'] },
         ...whereData,
-        AND: [
-          {
-            OR: [
-              { venda_id: null },
-              { venda: { contratos: { some: { status: 'VIGENTE' } } } },
-              { status: statusSempreVisivel },
-            ],
-          },
-          {
-            OR: [
-              ...(somentePainelCats.length > 0 ? [{ categoria: { notIn: somentePainelCats } }] : []),
-              { status: statusSempreVisivel },
-              ...somentePainelCats.map((c) => ({ categoria: c, status: statusAgendado })),
-            ],
-          },
-        ],
+        AND: andProducao,
       };
       const tarefas = await this.prisma.agenda_fabrica.findMany({
         where: whereProducao,
@@ -344,10 +384,12 @@ export class ApontamentoProducaoService {
 
   /**
    * Tarefas da agenda_fabrica no período que ainda não possuem apontamento_producao.
+   * Se usuario for vendedor (não admin), retorna apenas tarefas dos seus clientes/vendas.
    */
   private async getPendentesAgendaFabrica(
     dataInicio?: string,
     dataFim?: string,
+    usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null,
   ) {
     const where: Record<string, unknown> = {
       status: { not: 'CANCELADO' },
@@ -365,6 +407,13 @@ export class ApontamentoProducaoService {
           dataFim + 'T23:59:59',
         );
       }
+    }
+    const funcionarioIdVendedor =
+      usuario?.funcionario_id != null && !usuario?.is_admin
+        ? Number(usuario.funcionario_id)
+        : null;
+    if (funcionarioIdVendedor != null) {
+      where.AND = [this.whereVendedorAgenda(funcionarioIdVendedor)];
     }
     return this.prisma.agenda_fabrica.findMany({
       where,
@@ -388,16 +437,25 @@ export class ApontamentoProducaoService {
    * Tarefas da agenda_loja no período que ainda não possuem apontamento_producao.
    * Regra: Medição é sempre um funcionário da fábrica que vai medir (antes do orçamento). Outros casos = quando não tem medição.
    * @param onlyMedicao quando true (Timeline Produção), retorna só categorias de medição (MEDIDA).
+   * Se usuario for vendedor (não admin), retorna apenas tarefas dos seus clientes/vendas.
    */
   private async getPendentesAgendaLoja(
     dataInicio?: string,
     dataFim?: string,
     onlyMedicao = false,
+    usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null,
   ) {
     const where: Record<string, unknown> = {
       status: { not: 'CANCELADO' },
       apontamentos_producao: { none: {} },
     };
+    const funcionarioIdVendedor =
+      usuario?.funcionario_id != null && !usuario?.is_admin
+        ? Number(usuario.funcionario_id)
+        : null;
+    if (funcionarioIdVendedor != null) {
+      where.AND = [this.whereVendedorAgenda(funcionarioIdVendedor)];
+    }
     if (onlyMedicao) {
       where.categoria = { in: [...CATEGORIAS_AGENDA_LOJA_MEDICAO] };
     }

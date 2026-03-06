@@ -46,8 +46,8 @@
         </div>
 
         <!-- Abas: Para Fechar | Agendados | Pagos -->
-        <div class="border-b border-slate-200">
-          <nav class="flex gap-0">
+        <div class="border-b border-slate-200 overflow-x-auto custom-scroll">
+          <nav class="flex gap-0 min-w-max">
             <button
               v-for="tab in tabs"
               :key="tab.id"
@@ -64,11 +64,12 @@
           </nav>
         </div>
 
-        <!-- Tabela única densa -->
+        <!-- Tabela única densa (scroll horizontal em telas pequenas) -->
         <div class="border border-slate-200 rounded-lg overflow-hidden bg-white">
           <div v-if="loading" class="p-8 text-center text-slate-500 text-sm">Carregando...</div>
           <template v-else>
-            <table class="w-full text-xs" cellpadding="0" cellspacing="0">
+            <div class="overflow-x-auto custom-scroll">
+              <table class="w-full text-xs min-w-[600px]" cellpadding="0" cellspacing="0">
               <thead>
                 <tr class="bg-slate-50 border-b border-slate-200">
                   <th class="text-left py-2 px-3 font-semibold text-slate-600 w-24">Origem</th>
@@ -116,6 +117,7 @@
                 </tr>
               </tbody>
             </table>
+            </div>
             <div v-if="listaFiltrada.length === 0" class="p-8 text-center text-slate-500 text-sm">
               Nenhum registro nesta aba para o período selecionado.
             </div>

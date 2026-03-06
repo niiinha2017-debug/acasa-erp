@@ -44,26 +44,6 @@
             />
           </div>
 
-          <div class="col-span-12 md:col-span-4">
-            <SearchInput
-              v-model="form.vendedor_responsavel_id"
-              mode="select"
-              label="Vendedor Responsável"
-              placeholder="Selecione o vendedor (loja)..."
-              :options="vendedorOptions"
-              labelKey="label"
-              valueKey="value"
-            />
-          </div>
-
-          <div class="col-span-12 md:col-span-4">
-            <Input
-              v-model="form.profissao"
-              label="Profissão"
-              placeholder="Para fins de contrato"
-              force-upper
-            />
-          </div>
         </div>
 
         <div class="relative">
@@ -144,10 +124,10 @@
 
           <div class="col-span-12 md:col-span-4">
             <Select
-              v-model="form.status"
+              v-model="form.situacao"
               label="Status"
               placeholder="Selecione o status"
-              :options="opcoesStatus"
+              :options="opcoesSituacao"
               force-upper
             />
           </div>
@@ -294,6 +274,69 @@
           />
         </div>
 
+        <!-- Progresso do cliente (contratos) – apenas na edição -->
+        <template v-if="isEdit && can('contratos.ver')">
+          <div class="relative mt-10">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-border-ui/50"></div>
+            </div>
+            <div class="relative flex justify-center">
+              <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+                Progresso do cliente
+              </span>
+            </div>
+          </div>
+
+          <div class="mt-6 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800/50 overflow-hidden">
+            <div class="px-4 py-3 border-b border-border-ui flex items-center justify-between gap-3 flex-wrap">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Contratos</span>
+              <RouterLink
+                :to="`/contratos/cliente/${clienteId}`"
+                class="text-xs font-semibold text-brand-primary hover:underline"
+              >
+                Ver todos os contratos
+              </RouterLink>
+            </div>
+            <div v-if="loadingContratos" class="px-4 py-8 text-center text-slate-500 text-sm">
+              Carregando contratos...
+            </div>
+            <div v-else-if="contratosDoCliente.length === 0" class="px-4 py-6 text-center text-slate-400 text-sm">
+              Nenhum contrato para este cliente.
+            </div>
+            <ul v-else class="divide-y divide-border-ui/70">
+              <li
+                v-for="c in contratosDoCliente"
+                :key="c.id"
+                class="px-4 py-3 flex items-center justify-between gap-4 flex-wrap hover:bg-slate-50/80 dark:hover:bg-slate-800/40"
+              >
+                <div class="flex items-center gap-3 min-w-0">
+                  <span class="text-sm font-semibold text-slate-800 dark:text-white">{{ c.numero || `#${c.id}` }}</span>
+                  <span
+                    class="px-2 py-0.5 rounded text-[10px] font-medium uppercase"
+                    :class="{
+                      'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300': (c.status || '').toUpperCase() === 'RASCUNHO',
+                      'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300': (c.status || '').toUpperCase() === 'VIGENTE',
+                      'bg-slate-200 text-slate-600 dark:bg-slate-600 dark:text-slate-200': (c.status || '').toUpperCase() === 'ENCERRADO',
+                    }"
+                  >
+                    {{ c.status === 'VIGENTE' ? 'Em obra' : c.status === 'ENCERRADO' ? 'Encerrado' : 'Rascunho' }}
+                  </span>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular-nums">{{ format.currency(c.valor) }}</span>
+                  <RouterLink
+                    :to="`/contratos/${c.id}`"
+                    class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                    title="Abrir contrato"
+                  >
+                    <i class="pi pi-eye text-sm" />
+                  </RouterLink>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </template>
+
         <div class="pt-10 mt-6 border-t border-border-ui">
           <div class="flex items-center justify-between gap-4">
             <Button
@@ -367,14 +410,16 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ClienteService, FuncionarioService } from '@/services/index'
+import { ClienteService, ContratosService } from '@/services/index'
+import { format } from '@/utils/format'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
 import { maskCPF, maskCNPJ, maskCEP, maskTelefone, maskRG, maskIE } from '@/utils/masks'
 import { buscarCep, buscarCnpj } from '@/utils/utils'
 import { can } from '@/services/permissions'
 import { closeTabAndGo } from '@/utils/tabs'
-import { INDICACAO_ORIGENS, PIPELINE_CLIENTE } from '@/constantes'
+import storage from '@/utils/storage'
+import { INDICACAO_ORIGENS } from '@/constantes'
 
 definePage({ meta: { perm: 'clientes.ver' } })
 
@@ -382,12 +427,12 @@ const route = useRoute()
 const router = useRouter()
 
 const loading = ref(false)
+const loadingContratos = ref(false)
 const saving = ref(false)
 const deleting = ref(false)
 const isJuridica = ref(false)
 const listaClientes = ref([])
-const listaVendedores = ref([])
-const pipelineStatus = ref([])
+const contratosDoCliente = ref([])
 const indicacaoOrigens = INDICACAO_ORIGENS.map((item) => ({
   value: item.key,
   label: item.label,
@@ -403,21 +448,11 @@ const opcoesEstadoCivil = [
   { value: 'VIUVO', label: 'VIUVO(A)' },
 ]
 
-const opcoesStatus = computed(() =>
-  (pipelineStatus.value || []).map((item) => ({
-    value: String(item?.key || '').toUpperCase(),
-    label: String(item?.label || item?.key || '').toUpperCase(),
-  })),
-)
-
-const statusPermitidos = computed(() =>
-  new Set(opcoesStatus.value.map((item) => String(item.value || '').toUpperCase()).filter(Boolean)),
-)
-
-const statusPadrao = computed(() => {
-  const primeiro = opcoesStatus.value[0]?.value
-  return primeiro ? String(primeiro).toUpperCase() : 'CLIENTE_CADASTRADO'
-})
+const opcoesSituacao = [
+  { value: 'ATIVO', label: 'ATIVO' },
+  { value: 'INATIVO', label: 'INATIVO' },
+  { value: 'PENDENTE', label: 'PENDENTE' },
+]
 
 const form = reactive({
   indicacao_id: null,
@@ -444,41 +479,13 @@ const form = reactive({
   bairro: '',
   cidade: '',
   estado: '',
-  status: '',
-  profissao: '',
+  situacao: 'ATIVO',
   vendedor_responsavel_id: null,
 })
 
 const clientesOptions = computed(() => {
   return listaClientes.value.filter((o) => !isEdit.value || Number(o.value) !== clienteId.value)
 })
-
-const vendedorOptions = computed(() =>
-  (listaVendedores.value || []).map((v) => ({
-    value: v.value,
-    label: v.label,
-  })),
-)
-
-function garantirStatusPermitido(status) {
-  const key = String(status || '').trim().toUpperCase()
-  if (!key) return statusPadrao.value
-  return statusPermitidos.value.has(key) ? key : statusPadrao.value
-}
-
-async function carregarPipelineStatus() {
-  try {
-    const res = await ClienteService.getPipeline()
-    const rows = Array.isArray(res?.data) ? res.data : []
-    pipelineStatus.value = rows.length
-      ? rows
-      : Array.isArray(PIPELINE_CLIENTE)
-        ? PIPELINE_CLIENTE
-        : []
-  } catch {
-    pipelineStatus.value = Array.isArray(PIPELINE_CLIENTE) ? PIPELINE_CLIENTE : []
-  }
-}
 
 async function onBlurCep() {
   if (form.cep?.length < 9) return
@@ -517,15 +524,6 @@ async function onBlurCnpj() {
 async function carregarDados() {
   try {
     loading.value = true
-    await carregarPipelineStatus()
-    form.status = garantirStatusPermitido(form.status)
-
-    try {
-      const resVendedores = await FuncionarioService.select({ unidade: 'LOJA' })
-      listaVendedores.value = Array.isArray(resVendedores?.data) ? resVendedores.data : []
-    } catch {
-      listaVendedores.value = []
-    }
 
     try {
       const resClientes = await ClienteService.select()
@@ -537,6 +535,13 @@ async function carregarDados() {
         value: c.id,
         label: c.nome_completo || c.razao_social || c.nome_fantasia || `CLIENTE #${c.id}`,
       }))
+    }
+
+    if (!isEdit.value) {
+      const usuarioLogado = storage.getUser()
+      const funcId = usuarioLogado?.funcionario_id ?? null
+      form.vendedor_responsavel_id = funcId ? Number(funcId) : null
+      form.situacao = form.situacao || 'ATIVO'
     }
 
     if (isEdit.value) {
@@ -570,13 +575,29 @@ async function carregarDados() {
           bairro: c.bairro || '',
           cidade: c.cidade || '',
           estado: c.estado || '',
-          status: garantirStatusPermitido(c.status),
-          profissao: c.profissao || '',
+          situacao: c.situacao || 'ATIVO',
           vendedor_responsavel_id: c.vendedor_responsavel_id ?? null,
         })
 
         isJuridica.value = !!c.cnpj
       }
+    }
+
+    if (isEdit.value && can('contratos.ver')) {
+      loadingContratos.value = true
+      try {
+        const resContratos = await ContratosService.listar()
+        const all = Array.isArray(resContratos?.data) ? resContratos.data : []
+        contratosDoCliente.value = all
+          .filter((c) => Number(c.cliente_id) === clienteId.value)
+          .sort((a, b) => (b.id || 0) - (a.id || 0))
+      } catch {
+        contratosDoCliente.value = []
+      } finally {
+        loadingContratos.value = false
+      }
+    } else {
+      contratosDoCliente.value = []
     }
   } catch (err) {
     console.error('Erro ao carregar dados:', err)
@@ -661,12 +682,11 @@ async function salvar() {
       bairro: textoOuNulo(form.bairro),
       cidade: textoOuNulo(form.cidade),
       estado: textoOuNulo(form.estado),
-      status: textoOuNulo(form.status) || statusPadrao.value,
+      situacao: textoOuNulo(form.situacao) || 'ATIVO',
       razao_social: isJuridica.value ? form.nome_completo : null,
       enviar_aniversario_email: form.email ? !!form.enviar_aniversario_email : false,
       enviar_aniversario_whatsapp: form.whatsapp ? !!form.enviar_aniversario_whatsapp : false,
       indicacao_id: form.indicacao_id ? Number(form.indicacao_id) : null,
-      profissao: textoOuNulo(form.profissao),
       vendedor_responsavel_id: form.vendedor_responsavel_id ? Number(form.vendedor_responsavel_id) : null,
     }
 
@@ -677,15 +697,6 @@ async function salvar() {
     } else {
       delete payload.cpf
       delete payload.rg
-    }
-
-    payload.status = garantirStatusPermitido(payload.status)
-    if (
-      statusPermitidos.value.size > 0 &&
-      !statusPermitidos.value.has(String(payload.status || '').toUpperCase())
-    ) {
-      notify.error('Status invalido para o pipeline do cliente.')
-      return
     }
 
     await ClienteService.salvar(isEdit.value ? Number(clienteId.value) : null, payload)

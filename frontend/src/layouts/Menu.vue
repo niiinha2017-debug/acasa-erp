@@ -1,5 +1,5 @@
 <template>
-  <nav class="menu-bar w-full min-h-[4rem] h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-700/80 shadow-sm fixed top-0 left-0 right-0 z-[9990] transition-colors duration-300 overflow-visible">
+  <nav class="menu-bar w-full min-h-[4rem] h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-700/80 shadow-sm fixed top-0 left-0 right-0 z-[9990] transition-colors duration-300 overflow-visible pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
     <div class="h-full min-w-0 px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2">
       
       <!-- LOGO E MARCA (A Casa Móveis Planejados) -->
@@ -24,6 +24,17 @@
           />
         </template>
       </div>
+
+      <!-- BOTÃO MENU MOBILE (hamburger) – visível só quando o menu desktop está oculto -->
+      <button
+        v-if="!deveOcultarMenu"
+        type="button"
+        class="md:hidden flex items-center justify-center w-10 h-10 min-w-[2.5rem] min-h-[2.5rem] rounded-xl text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700/80 active:bg-slate-200 dark:active:bg-slate-700 transition-colors touch-manipulation"
+        aria-label="Abrir menu"
+        @click="isMobileMenuOpen = true"
+      >
+        <i class="pi pi-bars text-lg"></i>
+      </button>
 
       <!-- NOME DO USUÁRIO LOGADO + AÇÕES -->
       <div class="flex items-center gap-2 sm:gap-4 flex-shrink-0">
@@ -269,7 +280,7 @@ const SECTION_LABELS = {
   financeiro: 'Financeiro',
   cadastros: 'Cadastros',
   configuracoes: 'Configurações',
-  relatorios: 'Relatório',
+  relatorios: 'Relatórios',
 }
 
 const handleLogout = () => {

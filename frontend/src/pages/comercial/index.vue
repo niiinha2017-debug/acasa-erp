@@ -218,7 +218,7 @@ function formatarHoraAgenda(iso) {
 }
 
 function labelOrigemAgenda(ev) {
-  if (ev?.plano_corte_id) return 'Plano de corte'
+  if (ev?.plano_corte_id) return 'Serviço de corte'
   if (ev?.orcamento_id) return 'Orçamento'
   if (ev?.venda_id) return 'Venda'
   return 'Cliente'

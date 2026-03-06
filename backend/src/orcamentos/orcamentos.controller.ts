@@ -8,6 +8,7 @@ import {
   Param,
   Post,
   Put,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 
@@ -41,8 +42,8 @@ export class OrcamentosController {
 
   @Get()
   @Permissoes('orcamentos.ver', 'vendas.fechamento.ver')
-  listar() {
-    return this.service.listar();
+  listar(@Req() req?: { user?: { funcionario_id?: number | null; is_admin?: boolean } }) {
+    return this.service.listar(req?.user);
   }
 
   @Get(':id')
@@ -54,7 +55,8 @@ export class OrcamentosController {
   @Post()
   @Permissoes('orcamentos.criar')
   criar(@Body() dto: CreateOrcamentoDto) {
-    return this.service.criar(dto);
+    const clienteId = this.cleanId(String(dto?.cliente_id ?? ''));
+    return this.service.criar({ ...dto, cliente_id: clienteId });
   }
 
   @Put(':id')

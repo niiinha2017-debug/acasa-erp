@@ -134,9 +134,9 @@
                   Ver contrato
                 </button>
                 <TableActions
-                  :can-edit="can('contratos.editar')"
-                  :can-delete="can('contratos.excluir')"
                   :id="row.id"
+                  perm-edit="contratos.editar"
+                  perm-delete="contratos.excluir"
                   @edit="router.push(`/contratos/${row.id}`)"
                   @delete="confirmarExcluir(row.id)"
                 />

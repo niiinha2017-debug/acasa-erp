@@ -7,6 +7,7 @@ import {
   Post,
   Put,
   Query,
+  Req,
   HttpCode,
   HttpStatus,
   UseGuards,
@@ -84,8 +85,8 @@ export class ContasPagarController {
   // ✅ Painel de Obras Vigentes (obras em medição, produção ou montagem)
   @Get('painel-obras-vigentes')
   @Permissoes('contas_pagar.ver')
-  painelObrasVigentes() {
-    return this.service.getPainelObrasVigentes();
+  painelObrasVigentes(@Req() req?: { user?: { funcionario_id?: number | null; is_admin?: boolean } }) {
+    return this.service.getPainelObrasVigentes(req?.user);
   }
 
   // ✅ PREVIEW DO FECHAMENTO (Etapa 1 do modal — não salva)

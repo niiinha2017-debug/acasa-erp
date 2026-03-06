@@ -191,6 +191,13 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
+    '/contratos/historico': RouteRecordInfo<
+      '/contratos/historico',
+      '/contratos/historico',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/debug/update': RouteRecordInfo<
       '/debug/update',
       '/debug/update',
@@ -264,13 +271,6 @@ declare module 'vue-router/auto-routes' {
     '/login': RouteRecordInfo<
       '/login',
       '/login',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/modelo': RouteRecordInfo<
-      '/modelo',
-      '/modelo',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -754,6 +754,12 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/contratos/historico.vue': {
+      routes:
+        | '/contratos/historico'
+      views:
+        | never
+    }
     'src/pages/debug/update.vue': {
       routes:
         | '/debug/update'
@@ -817,12 +823,6 @@ declare module 'vue-router/auto-routes' {
     'src/pages/login.vue': {
       routes:
         | '/login'
-      views:
-        | never
-    }
-    'src/pages/modelo.vue': {
-      routes:
-        | '/modelo'
       views:
         | never
     }

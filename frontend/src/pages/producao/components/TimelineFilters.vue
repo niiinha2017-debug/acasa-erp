@@ -2,7 +2,7 @@
   <div
     class="rounded-[2rem] border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 shadow-sm dark:shadow-none p-4 md:p-5 mb-6"
   >
-    <div class="flex flex-col md:flex-row md:flex-wrap items-stretch md:items-center gap-4">
+    <div class="flex flex-col md:flex-row md:flex-wrap items-stretch md:items-center md:justify-center gap-4">
       <div class="flex items-center gap-2 shrink-0">
         <i class="pi pi-stopwatch text-slate-400" aria-hidden />
         <span class="text-sm font-semibold text-slate-700 dark:text-slate-300">

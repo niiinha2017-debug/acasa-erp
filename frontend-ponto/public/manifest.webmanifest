@@ -1,0 +1,19 @@
+{
+  "name": "Relógio de Ponto ACASA",
+  "short_name": "Ponto",
+  "description": "Registro de ponto digital - entrada e saída",
+  "start_url": ".",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#1e293b",
+  "background_color": "#f8faff",
+  "icons": [
+    {
+      "src": "./logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

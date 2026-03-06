@@ -171,10 +171,30 @@ export class ContratosService {
     }
   }
 
-  async listar(vendaId?: number, status?: string) {
+  /**
+   * Lista contratos. Se usuario for vendedor (funcionario_id e não admin), retorna apenas
+   * contratos cuja venda é do seu cliente (vendedor_responsavel_id) ou onde ele é representante.
+   */
+  async listar(
+    vendaId?: number,
+    status?: string,
+    usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null,
+  ) {
     const where: any = {};
     if (vendaId) where.venda_id = vendaId;
     if (status) where.status = status;
+    const funcionarioId =
+      usuario?.funcionario_id != null && !usuario?.is_admin
+        ? Number(usuario.funcionario_id)
+        : null;
+    if (funcionarioId != null) {
+      where.venda = {
+        OR: [
+          { cliente: { vendedor_responsavel_id: funcionarioId } },
+          { representante_venda_funcionario_id: funcionarioId },
+        ],
+      };
+    }
     const contratos = await this.prisma.contratos.findMany({
       where,
       orderBy: { id: 'desc' },
@@ -392,6 +412,7 @@ export class ContratosService {
   async criar(dto: CreateContratoDto) {
     const venda = await this.prisma.vendas.findUnique({
       where: { id: dto.venda_id },
+      include: { cliente: { select: { vendedor_responsavel_id: true } } },
     });
     if (!venda) throw new NotFoundException('Venda não encontrada.');
 
@@ -402,10 +423,13 @@ export class ContratosService {
     const dataInicio = new Date();
     const dataFim = this.validarJanelaDataFim(dataInicio, dto.data_fim);
 
+    const vendedorId = (venda as any).vendedor_responsavel_id ?? venda.cliente?.vendedor_responsavel_id ?? undefined;
+
     return this.prisma.contratos.create({
       data: {
         cliente_id: venda.cliente_id,
         venda_id: dto.venda_id,
+        vendedor_responsavel_id: vendedorId,
         numero,
         descricao: dto.descricao ?? null,
         status: dto.status,

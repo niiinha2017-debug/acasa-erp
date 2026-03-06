@@ -520,16 +520,25 @@ export class OrcamentosService {
   // CRUD - ORÇAMENTOS
   // =========================================================
   async criar(dto: CreateOrcamentoDto) {
+    const clienteId = Number(dto.cliente_id);
+    if (!Number.isFinite(clienteId) || clienteId < 1) {
+      throw new NotFoundException('Cliente não informado ou inválido.');
+    }
     const cliente = await this.prisma.cliente.findUnique({
-      where: { id: dto.cliente_id },
+      where: { id: clienteId },
     });
     if (!cliente) throw new NotFoundException('Cliente não encontrado.');
+    const clienteNome =
+      (String(cliente.nome_completo || cliente.razao_social || '').trim()) ||
+      'Cliente';
+    const clienteCpf = String(cliente.cpf ?? '').trim();
     return this.prisma.$transaction(async (tx) => {
       const orcamento = await tx.orcamentos.create({
         data: {
           cliente_id: cliente.id,
-          cliente_nome_snapshot: cliente.nome_completo,
-          cliente_cpf_snapshot: cliente.cpf || '',
+          vendedor_responsavel_id: cliente.vendedor_responsavel_id ?? undefined,
+          cliente_nome_snapshot: clienteNome,
+          cliente_cpf_snapshot: clienteCpf,
           qtd_ambientes: 0,
         },
         include: { cliente: true, itens: true },
@@ -577,8 +586,18 @@ export class OrcamentosService {
     });
   }
 
-  async listar() {
+  /** Se o usuário for vendedor (tem funcionario_id e não é admin), retorna apenas orçamentos de clientes dos quais ele é o vendedor responsável. */
+  async listar(usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null) {
+    const funcionarioId =
+      usuario?.funcionario_id != null && !usuario?.is_admin
+        ? Number(usuario.funcionario_id)
+        : null;
+    const where =
+      funcionarioId != null
+        ? { cliente: { vendedor_responsavel_id: funcionarioId } }
+        : undefined;
     const lista = await this.prisma.orcamentos.findMany({
+      where,
       orderBy: { id: 'desc' },
       include: {
         cliente: true,

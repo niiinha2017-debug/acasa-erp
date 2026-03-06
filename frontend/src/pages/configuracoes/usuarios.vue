@@ -205,6 +205,9 @@
                 class="col-span-2"
                 autocomplete="new-password"
               />
+              <p class="col-span-2 text-xs text-slate-500 dark:text-slate-400 -mt-1">
+                A senha provisória enviada por e-mail vem em maiúsculas. Ao definir uma nova senha, inclua pelo menos uma letra maiúscula.
+              </p>
               <Select
                 v-if="modoEdicao"
                 v-model="formUsuario.funcionario_id"
@@ -397,8 +400,13 @@ const salvar = async () => {
   const perm = modoEdicao.value ? 'usuarios.editar' : 'usuarios.criar'
   if (!can(perm)) return notify.error('Acesso negado.')
   const senhaPreenchida = formUsuario.value.senha?.trim()
-  if (senhaPreenchida && senhaPreenchida.length < 6) {
-    return notify.error('A senha deve ter no mínimo 6 caracteres.')
+  if (senhaPreenchida) {
+    if (senhaPreenchida.length < 6) {
+      return notify.error('A senha deve ter no mínimo 6 caracteres.')
+    }
+    if (!/[A-Z]/.test(senhaPreenchida)) {
+      return notify.error('A senha deve conter pelo menos uma letra maiúscula.')
+    }
   }
 
   loadingSalvar.value = true

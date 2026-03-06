@@ -17,7 +17,7 @@
             Segurança da Conta
           </p>
           <p class="text-sm text-indigo-900/80 dark:text-indigo-200/70 mt-1">
-            Para sua segurança, substitua a senha provisória enviada por e-mail por uma nova senha pessoal.
+            Para sua segurança, substitua a senha provisória enviada por e-mail por uma nova senha pessoal. A senha provisória recebida está em maiúsculas; sua nova senha deve ter pelo menos uma letra maiúscula.
           </p>
         </div>
 
@@ -25,26 +25,59 @@
           <Input
             v-model="form.senhaAtual"
             label="Senha Provisória (a que recebeu)"
-            type="password"
+            :type="showSenhaAtual ? 'text' : 'password'"
             required
             :disabled="loading"
-          />
+          >
+            <template #suffix>
+              <button
+                type="button"
+                class="p-1 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-200/80 dark:hover:bg-slate-600 dark:hover:text-slate-200 transition-colors"
+                :aria-label="showSenhaAtual ? 'Ocultar senha' : 'Ver senha'"
+                @click="showSenhaAtual = !showSenhaAtual"
+              >
+                <i :class="showSenhaAtual ? 'pi pi-eye-slash' : 'pi pi-eye'" />
+              </button>
+            </template>
+          </Input>
 
           <Input
             v-model="form.senhaNova"
             label="Nova Senha"
-            type="password"
+            :type="showSenhaNova ? 'text' : 'password'"
             required
             :disabled="loading"
-          />
+          >
+            <template #suffix>
+              <button
+                type="button"
+                class="p-1 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-200/80 dark:hover:bg-slate-600 dark:hover:text-slate-200 transition-colors"
+                :aria-label="showSenhaNova ? 'Ocultar senha' : 'Ver senha'"
+                @click="showSenhaNova = !showSenhaNova"
+              >
+                <i :class="showSenhaNova ? 'pi pi-eye-slash' : 'pi pi-eye'" />
+              </button>
+            </template>
+          </Input>
 
           <Input
             v-model="form.senhaConfirmacao"
             label="Confirmar Nova Senha"
-            type="password"
+            :type="showSenhaConfirmacao ? 'text' : 'password'"
             required
             :disabled="loading"
-          />
+          >
+            <template #suffix>
+              <button
+                type="button"
+                class="p-1 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-200/80 dark:hover:bg-slate-600 dark:hover:text-slate-200 transition-colors"
+                :aria-label="showSenhaConfirmacao ? 'Ocultar senha' : 'Ver senha'"
+                @click="showSenhaConfirmacao = !showSenhaConfirmacao"
+              >
+                <i :class="showSenhaConfirmacao ? 'pi pi-eye-slash' : 'pi pi-eye'" />
+              </button>
+            </template>
+          </Input>
 
           <div v-if="error" class="text-xs font-bold text-rose-500 px-1">
             {{ error }}
@@ -70,18 +103,23 @@ import { reactive, ref, computed } from 'vue'
 import { useAuth } from '@/services/useauth' 
 import { useRouter } from 'vue-router'
 
-definePage({ 
+definePage({
   path: '/pendente', // Garante que o nome da rota seja este
-  meta: { 
+  meta: {
     public: false, // O usuário PRECISA estar logado (ter o token) para alterar a senha
-    layout: 'auth' 
-  } 
+    perm: 'pendente.visualizar', // alinhado ao seed; acesso real é controlado pelo router (status/precisaTrocarSenha)
+    layout: 'auth',
+  },
 })
 
 const { alterarSenha, syncMe, loading } = useAuth()
 const router = useRouter()
 const error = ref('')
 const AGENDA_GERAL_PATH = '/agendamentos/loja'
+
+const showSenhaAtual = ref(false)
+const showSenhaNova = ref(false)
+const showSenhaConfirmacao = ref(false)
 
 const form = reactive({
   senhaAtual: '',
@@ -90,14 +128,19 @@ const form = reactive({
 })
 
 const canSubmit = computed(() => {
-  return form.senhaAtual.length >= 3 && 
-         form.senhaNova.length >= 6 && 
+  return form.senhaAtual.length >= 3 &&
+         form.senhaNova.length >= 6 &&
+         /[A-Z]/.test(form.senhaNova) &&
          form.senhaNova === form.senhaConfirmacao
 })
 
 async function handleTrocarSenha() {
   error.value = ''
-  
+
+  if (!/[A-Z]/.test(form.senhaNova)) {
+    error.value = 'A nova senha deve conter pelo menos uma letra maiúscula.'
+    return
+  }
   if (form.senhaNova !== form.senhaConfirmacao) {
     error.value = 'As senhas não conferem.'
     return

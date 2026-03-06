@@ -8,6 +8,7 @@ import {
   Param,
   Post,
   Put,
+  Req,
   UseGuards,
   BadRequestException,
 } from '@nestjs/common';
@@ -34,21 +35,21 @@ export class VendasController {
 
   @Get()
   @Permissoes('posvenda.ver', 'contratos.criar', 'contratos.ver')
-  listar() {
-    return this.service.listar();
+  listar(@Req() req?: { user?: { funcionario_id?: number | null; is_admin?: boolean } }) {
+    return this.service.listar(req?.user);
   }
 
   @Get('aguardando-contrato')
   @Permissoes('agendamentos.ver', 'agendamentos.criar')
-  listarAguardandoContrato() {
-    return this.service.listarAguardandoContrato();
+  listarAguardandoContrato(@Req() req?: { user?: { funcionario_id?: number | null; is_admin?: boolean } }) {
+    return this.service.listarAguardandoContrato(req?.user);
   }
 
   /** Vendas em etapas "agendar medida / medida fina / montagem" para a agenda */
   @Get('aguardando-agendamento')
   @Permissoes('agendamentos.ver', 'agendamentos.criar')
-  listarAguardandoAgendamento() {
-    return this.service.listarAguardandoAgendamento();
+  listarAguardandoAgendamento(@Req() req?: { user?: { funcionario_id?: number | null; is_admin?: boolean } }) {
+    return this.service.listarAguardandoAgendamento(req?.user);
   }
 
   @Get(':id')

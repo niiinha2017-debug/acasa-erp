@@ -4,8 +4,8 @@
       <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
 
       <PageHeader
-        title="Plano de Corte"
-        subtitle="Industrialização e controle de produção"
+        title="Serviço de Corte"
+        subtitle="Corte para fornecedor — industrialização e controle de produção"
         icon="pi pi-sitemap"
         :show-back="false"
       >

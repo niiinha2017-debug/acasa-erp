@@ -1,5 +1,5 @@
 // src/constantes/index.js
-export { PIPELINE_CLIENTE } from './pipeline-cliente'
+export { PIPELINE_CLIENTE, normalizarStatusCliente } from './pipeline-cliente'
 export { FINANCEIRO_CATEGORIAS } from './financeiro'
 export { FORMAS_PAGAMENTO } from './formas-pagamento'
 export { TAXAS_CARTAO } from './taxas-cartao'

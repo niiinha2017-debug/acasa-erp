@@ -272,7 +272,7 @@
 <script setup>
 import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { PIPELINE_CLIENTE } from '@/constantes'
+import { PIPELINE_CLIENTE, normalizarStatusCliente } from '@/constantes'
 import { INDICACAO_ORIGENS } from '@/constantes/indicacao'
 import { addDiasUteis, PRAZO_POR_FASE, getPrazoAposMedidaFina, getPrazoAte, diasParaLimite, PRAZO_ALERTA_VIGENCIA_DIAS } from '@/constantes/pipeline-regras'
 import { getPrazoTextClass } from '@/constantes'
@@ -399,6 +399,7 @@ const statusOptions = computed(() =>
 
 /** Mapeia status_key para fase 1–5 (uso em prazos/ordenação). */
 const FASE_POR_KEY = {
+  ATIVO: 1, // cliente já cadastrado entra no fluxo na primeira fase
   CADASTRO: 1,
   CLIENTE_CADASTRADO: 1,
   MEDICAO_VENDA: 2,
@@ -451,6 +452,7 @@ function statusKeyParaFase(statusKey) {
 
 /** Mapeia status_key para etapa 1–11 do fluxo (barra de progresso e tom do card). Alinhado às 11 etapas oficiais. */
 const FASE_11_POR_KEY = {
+  ATIVO: 1, // cliente já cadastrado entra no fluxo na primeira fase
   CADASTRO: 1,
   CLIENTE_CADASTRADO: 1,
   MEDICAO_VENDA: 2,
@@ -1070,7 +1072,7 @@ const rows = computed(() => {
 
     const etapas = []
     if (orcs.length === 0) {
-      const statusKey = String(c?.status || 'INATIVO').toUpperCase()
+      const statusKey = normalizarStatusCliente(c?.status || 'INATIVO')
       const ag = agendamentoParaEtapa(clienteId, null)
       const agFmtEtapa = formatarDataHoraAgendamento(ag?.inicio_em)
       etapas.push({
@@ -1345,7 +1347,7 @@ const rows = computed(() => {
           comFase.sort((a, b) => b.fase - a.fase)
           return comFase[0]?.statusKey || 'CLIENTE_CADASTRADO'
         }
-        const key = String(c?.status || 'CLIENTE_CADASTRADO').toUpperCase()
+        const key = normalizarStatusCliente(c?.status || 'CLIENTE_CADASTRADO')
         const fase = statusKeyParaFase(key)
         if (clienteTemAgendamentoMedida(clienteId) && fase < 2) return 'MEDIDA_AGENDADA'
         return key
@@ -1361,7 +1363,7 @@ const rows = computed(() => {
                 comFase.sort((a, b) => b.fase - a.fase)
                 return comFase[0]?.statusKey || 'CLIENTE_CADASTRADO'
               })()
-            : String(c?.status || 'CLIENTE_CADASTRADO').toUpperCase()
+            : normalizarStatusCliente(c?.status || 'CLIENTE_CADASTRADO')
         if (orcs.length === 0 && clienteTemAgendamentoMedida(clienteId) && statusKeyParaFase(key) < 2) key = 'MEDIDA_AGENDADA'
         if (key === 'MEDIDA_EM_ANDAMENTO') return 'MEDIÇÃO EM ANDAMENTO ⏱️'
         return statusLabelMap.value.get(key) || (key === 'MEDIDA_AGENDADA' ? statusLabelMap.value.get('MEDICAO_VENDA') : null) || key
@@ -1377,7 +1379,7 @@ const rows = computed(() => {
                 comFase.sort((a, b) => b.fase - a.fase)
                 return comFase[0]?.statusKey || 'CLIENTE_CADASTRADO'
               })()
-            : String(c?.status || 'CLIENTE_CADASTRADO').toUpperCase()
+            : normalizarStatusCliente(c?.status || 'CLIENTE_CADASTRADO')
         if (orcs.length === 0 && clienteTemAgendamentoMedida(clienteId) && statusKeyParaFase(key) < 2) key = 'MEDIDA_AGENDADA'
         let fase = statusKeyParaFase(key)
         if (orcs.length > 0 && fase < 3) fase = 3
@@ -1439,7 +1441,7 @@ const rows = computed(() => {
       agendamentoMedicaoExibicao: getAgendamentoMedicaoExibicao(clienteId),
       responsavelExibicao: (() => {
         const vendedorCadastro = c?.vendedor_responsavel?.nome || ''
-        const statusAtualKey = String(etapas[0]?.status_key ?? c?.status ?? '').toUpperCase()
+        const statusAtualKey = etapas[0]?.status_key ?? normalizarStatusCliente(c?.status ?? '')
         if (medidaFinaRealizada) {
           const agsFabrica = (agendamentos.value || []).filter(
             (a) =>
@@ -1508,6 +1510,8 @@ const rows = computed(() => {
       })(),
       responsavelFuncionarioIds: (() => {
         const ids = new Set()
+        const vendedorRespId = c?.vendedor_responsavel_id ?? c?.vendedor_responsavel?.id
+        if (vendedorRespId) ids.add(Number(vendedorRespId))
         orcs.forEach((orc) => {
           const fid = orc?.venda?.representante_venda_funcionario_id ?? orc?.venda?.representante_venda_funcionario?.id
           if (fid) ids.add(Number(fid))
@@ -1538,9 +1542,13 @@ const rows = computed(() => {
       const dataInicio = String(filtroDataInicio.value || '').trim()
       const dataFim = String(filtroDataFim.value || '').trim()
       if (dataInicio || dataFim) {
-        const timestamps = (row.etapas || [])
+        let timestamps = (row.etapas || [])
           .map((e) => e.agendamento_inicio_em)
           .filter((t) => t != null)
+        // Cliente só em cadastro (sem agendamentos): usa data de criação/atualização para o filtro
+        if (!timestamps.length && row.ultimaAtualizacaoTs != null) {
+          timestamps = [row.ultimaAtualizacaoTs]
+        }
         if (!timestamps.length) return false
         const dayStart = (d) => {
           const x = new Date(d)

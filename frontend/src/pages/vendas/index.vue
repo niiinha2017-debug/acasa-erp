@@ -105,9 +105,9 @@
 
               <template #cell-acoes="{ row }">
                 <TableActions
-              :id="row.id"
-                  :can-edit="can('vendas.editar')"
-                  :can-delete="can('vendas.excluir')"
+                  :id="row.id"
+                  perm-edit="vendas.editar"
+                  perm-delete="vendas.excluir"
                   @edit="router.push(`/vendas/${row.id}`)"
                   @delete="confirmarExcluirVenda(row.id)"
                 />

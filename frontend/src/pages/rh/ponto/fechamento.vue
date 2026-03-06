@@ -12,6 +12,6 @@ definePage({ meta: { perm: 'ponto_relatorio.ver' } })
 
 const router = useRouter()
 onMounted(() => {
-  router.replace('/rh/folha-operacional')
+  router.replace('/rh/ponto/relatorio')
 })
 </script>

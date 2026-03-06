@@ -2,10 +2,17 @@
 <html lang="pt-br">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>A CASA Ponto</title>
-    <script type="module" crossorigin src="./assets/index-BQklVrcJ.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-BoEBIP2V.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#1e293b" />
+    <!-- PWA: abre somente o relógio de ponto (iPhone Add to Home Screen / TWA Android) -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <!-- iOS: modo standalone = apenas o app de ponto, sem barra do Safari -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Ponto" />
+    <title>Relógio de Ponto – A CASA</title>
+    <script type="module" crossorigin src="./assets/index-DlfrSyml.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-CjWDd-Bh.css">
   </head>
   <body>
     <div id="app"></div>

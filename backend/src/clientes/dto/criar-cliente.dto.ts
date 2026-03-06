@@ -66,10 +66,16 @@ export class CriarClienteDto {
   @IsOptional() @IsString() cidade?: string;
   @IsOptional() @IsString() estado?: string;
 
-  // ✅ status vem das constantes; opcional no create — será preenchido pelo backend se não enviado
+  // ✅ status = pipeline (CADASTRO, MEDICAO_VENDA, etc.) — definido pelo fluxo; não enviado no cadastro
   @IsOptional()
   @IsString()
   status?: string;
+
+  /** Situação do cliente no cadastro: ATIVO | INATIVO | PENDENTE */
+  @IsOptional()
+  @IsIn(['ATIVO', 'INATIVO', 'PENDENTE'])
+  @IsString()
+  situacao?: string;
 
   // preferências
   @IsOptional()

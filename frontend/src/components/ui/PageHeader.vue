@@ -16,7 +16,7 @@
         </div>
       </div>
 
-      <div class="flex items-center gap-3 w-full sm:w-auto justify-start sm:justify-end">
+      <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-start sm:justify-end gap-y-2">
         <slot name="actions" />
       </div>
     </header>

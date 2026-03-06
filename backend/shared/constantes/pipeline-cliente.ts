@@ -69,6 +69,7 @@ export const PIPELINE_CLIENTE_KEYS = PIPELINE_CLIENTE.map((p) => p.key);
 
 /** Mapeia status antigos do banco para as 5 fases (compatibilidade). Fase 5 = após Medida Fina concluída. */
 const STATUS_ANTIGO_PARA_FASE: Record<string, string> = {
+  ATIVO: 'CADASTRO', // cliente já cadastrado entra no fluxo na primeira fase
   CLIENTE_CADASTRADO: 'CADASTRO',
   AGENDAR_MEDIDA_VENDA: 'MEDICAO_VENDA',
   MEDIDA_AGENDADA: 'MEDICAO_VENDA',

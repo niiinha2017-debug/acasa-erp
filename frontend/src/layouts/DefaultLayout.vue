@@ -1,5 +1,5 @@
 <template>
-  <div class="pt-16 min-h-screen bg-slate-100 dark:bg-slate-950 text-text-main transition-colors duration-300">
+  <div class="pt-16 min-h-screen bg-slate-100 dark:bg-slate-950 text-text-main transition-colors duration-300" style="padding-top: calc(4rem + env(safe-area-inset-top, 0px));">
     <Menu />
     <!-- Área de conteúdo com stacking context explícito para o menu fixo ficar sempre por cima (Android/WebView/landscape) -->
     <div class="relative z-0 isolation-isolate">

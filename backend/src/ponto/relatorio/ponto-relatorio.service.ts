@@ -33,8 +33,12 @@ type FeriadoNacionalItem = {
   type: string;
 };
 
-/** Jornada legal semanal (CF Art. 7º XIII). Usado para complementar HE quando a carga contratada é menor (ex.: 42h50). */
+/** Jornada legal semanal (CF Art. 7º XIII). Meta para HE: só o que exceder 44h/semana é hora extra 50%. */
 const JORNADA_LEGAL_SEMANAL_HORAS = 44;
+/** Meta diária legal Seg-Sex (44/5). A diferença 44h - carga contratada (ex.: 42,5h) vai para banco de horas, não HE. */
+const JORNADA_LEGAL_DIARIA_HORAS = 44 / 5;
+/** Tolerância em horas: excedente diário até este valor vai para banco de horas, não é pago como HE (1,5 min). */
+const TOLERANCIA_BANCO_HORAS = 1.5 / 60;
 
 @Injectable()
 export class PontoRelatorioService {
@@ -163,6 +167,20 @@ export class PontoRelatorioService {
     if (cargaDia > 0) return cargaDia;
     if (cargaSemana > 0) return Number((cargaSemana / 6).toFixed(2));
     return 0;
+  }
+
+  /**
+   * Meta diária legal para fechamento: 44h/5 em Seg-Sex, 0 em sábado e feriados.
+   * Usado para que apenas o que exceder 44h/semana seja HE 50%; a diferença 44h - carga contratada vai para banco.
+   */
+  private metaDiaLegalParaFechamento(
+    dataStr: string,
+    feriadosSemMeta: Set<string>,
+  ): number {
+    if (feriadosSemMeta.has(dataStr)) return 0;
+    const d = new Date(dataStr + 'T12:00:00').getDay();
+    if (d === 0 || d === 6) return 0; // Dom e Sáb: meta zero (sábado = HE ou folga, sem desconto de falta)
+    return JORNADA_LEGAL_DIARIA_HORAS;
   }
 
   /** Retorna carga diária fixa (para compatibilidade). Prefira metaDiaParaData. */
@@ -472,30 +490,22 @@ export class PontoRelatorioService {
 
       let horasTrabalhadas = 0;
       let metaTotal = 0;
+      let horasExtras = 0;
+      // Cálculo por dia: meta legal 44h/semana (8,8h Seg-Sex), tolerância até 1,5 min → banco de horas (não HE)
       for (const [key, arr] of porDiaF) {
-        horasTrabalhadas += this.calcularHorasTrabalhadasDia(arr);
-        const metaDia = feriadosSemMeta.has(key)
-          ? 0
-          : this.metaDiaParaData(key, f);
+        const hDia = this.calcularHorasTrabalhadasDia(arr);
+        horasTrabalhadas += hDia;
+        const metaDia = this.metaDiaLegalParaFechamento(key, feriadosSemMeta);
         metaTotal += metaDia;
+        const saldoDia = hDia - metaDia;
+        // Excedente até 1,5 min vai para banco de horas; só acima disso é HE remunerada (50%)
+        const heDia =
+          saldoDia > TOLERANCIA_BANCO_HORAS
+            ? saldoDia - TOLERANCIA_BANCO_HORAS
+            : 0;
+        horasExtras += heDia;
       }
       const saldo = horasTrabalhadas - metaTotal;
-      let horasExtras = saldo > 0 ? saldo : 0;
-
-      // Complemento 44h semanais: se a carga contratada é menor que 44h (ex.: 42h50), a diferença é agregada como HE
-      let horasExtrasComplemento44 = 0;
-      const derivado = this.derivarCargaDosHorarios(f);
-      const cargaSemanaContratada =
-        derivado.cargaSemana > 0
-          ? derivado.cargaSemana
-          : Number(f.carga_horaria_semana || 0) || 0;
-      if (cargaSemanaContratada > 0 && cargaSemanaContratada < JORNADA_LEGAL_SEMANAL_HORAS) {
-        const semanasNoPeriodo = diasNoPeriodo / 7;
-        const diferencaSemanal = JORNADA_LEGAL_SEMANAL_HORAS - cargaSemanaContratada;
-        horasExtrasComplemento44 = Math.round(semanasNoPeriodo * diferencaSemanal * 100) / 100;
-        horasExtras += horasExtrasComplemento44;
-      }
-
       const saldoDevedorHoras = saldo < 0 ? Math.abs(saldo) : 0;
 
       const custoHora = Number(f.custo_hora || 0) || 0;
@@ -528,7 +538,6 @@ export class PontoRelatorioService {
         nome: f.nome || '',
         horas_trabalhadas: Math.round(horasTrabalhadas * 100) / 100,
         horas_extras: Math.round(horasExtras * 100) / 100,
-        horas_extras_complemento_44h: Math.round(horasExtrasComplemento44 * 100) / 100,
         saldo_devedor_horas: Math.round(saldoDevedorHoras * 100) / 100,
         custo_hora: custoHora,
         valor_hora_extra: Math.round(valorHoraExtra * 100) / 100,

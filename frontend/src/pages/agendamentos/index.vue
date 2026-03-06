@@ -141,13 +141,15 @@
                 <div
                   v-for="event in selectedEventsParaLista"
                 :key="event.id"
-                class="w-full text-left p-4 rounded-xl border border-border-ui bg-bg-card hover:border-brand-primary/40 hover:shadow-md transition-all"
+                class="w-full text-left p-4 rounded-xl border hover:border-brand-primary/40 hover:shadow-md transition-all"
                 :class="[
-                  eventAtrasado(event) ? 'border-l-4 border-l-red-500 border-red-400 bg-red-50 dark:bg-red-950/40' : getProcessColorByStatusVendas(event.categoria, event.status).borderLeftClass,
+                  event.plano_corte_id ? 'bg-[#e0f2fe] dark:bg-sky-950/40 border-sky-200 dark:border-sky-700 border-l-4 border-l-sky-500' : 'border-border-ui bg-bg-card',
+                  eventAtrasado(event) && !event.plano_corte_id ? 'border-l-4 border-l-red-500 border-red-400 bg-red-50 dark:bg-red-950/40' : (!event.plano_corte_id ? getProcessColorByStatusVendas(event.categoria, event.status).borderLeftClass : ''),
                 ]"
               >
-                <div class="text-sm font-bold text-text-main leading-snug">
+                <div class="text-sm font-bold text-text-main leading-snug flex items-center gap-2 flex-wrap">
                   {{ eventTitle(event) }}
+                  <span v-if="event.plano_corte_id" class="inline-flex px-2 py-0.5 rounded text-[10px] font-black uppercase bg-sky-600 text-white dark:bg-sky-500 dark:text-sky-950">[APENAS CORTE]</span>
                 </div>
                 <div class="mt-2 text-[10px] font-medium text-text-muted">
                   Responsável: {{ event.criado_por_usuario?.nome || 'Não informado' }}
@@ -1314,8 +1316,9 @@ function selectDayAndOpenModal(day) {
 }
 
 function eventTitle(event) {
-  const nome = event?.cliente?.nome_completo || event?.cliente?.razao_social || 'Cliente'
-  return `${event.titulo} - ${nome}`
+  const nome = event?.cliente?.nome_completo || event?.cliente?.razao_social || event?.plano_corte?.fornecedor?.nome_fantasia || 'Cliente'
+  const titulo = event?.plano_corte_id ? 'Serviço de Corte' : (event?.titulo || 'Tarefa')
+  return `${titulo} - ${nome}`
 }
 
 /** Tooltip completo para o evento no calendário (vários horários: ver responsável e horário ao passar o mouse). */

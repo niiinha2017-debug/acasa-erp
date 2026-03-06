@@ -14,6 +14,33 @@
         <!-- Filtros -->
         <div class="rounded-2xl border border-border-ui bg-bg-page/40 p-5 mb-6">
           <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+            <!-- Mês de referência -->
+            <div class="md:col-span-4 flex items-center gap-2">
+              <label class="text-[10px] font-black text-text-soft uppercase ml-2 mb-1 block w-12 shrink-0">Mês</label>
+              <div class="flex items-center gap-2 flex-1">
+                <button
+                  type="button"
+                  class="h-11 w-11 shrink-0 flex items-center justify-center rounded-xl border border-border-ui bg-bg-card hover:bg-bg-page text-text-main transition-colors"
+                  aria-label="Mês anterior"
+                  @click="mesAnterior"
+                >
+                  <i class="pi pi-angle-left text-sm font-bold"></i>
+                </button>
+                <div
+                  class="flex-1 min-w-0 h-11 flex items-center justify-center rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest px-4"
+                >
+                  {{ mesReferenciaLabel }}
+                </div>
+                <button
+                  type="button"
+                  class="h-11 w-11 shrink-0 flex items-center justify-center rounded-xl border border-border-ui bg-bg-card hover:bg-bg-page text-text-main transition-colors"
+                  aria-label="Mês seguinte"
+                  @click="mesSeguinte"
+                >
+                  <i class="pi pi-angle-right text-sm font-bold"></i>
+                </button>
+              </div>
+            </div>
             <div class="md:col-span-4">
               <label class="text-[10px] font-black text-text-soft uppercase ml-2 mb-1 block">Funcionário</label>
               <SearchInput
@@ -24,24 +51,6 @@
                 labelKey="label"
                 valueKey="value"
                 @update:modelValue="buscar"
-              />
-            </div>
-            <div class="md:col-span-2">
-              <label class="text-[10px] font-black text-text-soft uppercase ml-2 mb-1 block">Início</label>
-              <input
-                v-model="filtros.data_ini"
-                type="date"
-                @change="buscar"
-                class="w-full h-11 bg-bg-card border border-border-ui rounded-xl px-4 text-xs font-bold text-text-main outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary transition-all"
-              />
-            </div>
-            <div class="md:col-span-2">
-              <label class="text-[10px] font-black text-text-soft uppercase ml-2 mb-1 block">Fim</label>
-              <input
-                v-model="filtros.data_fim"
-                type="date"
-                @change="buscar"
-                class="w-full h-11 bg-bg-card border border-border-ui rounded-xl px-4 text-xs font-bold text-text-main outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary transition-all"
               />
             </div>
             <div class="md:col-span-4 flex gap-2 justify-end flex-wrap">
@@ -84,61 +93,77 @@
                 </span>
               </div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div class="rounded-xl border border-border-ui bg-bg-card p-4">
-                <p class="text-[10px] font-black uppercase tracking-wider text-text-soft mb-2">Segunda a Sexta</p>
-                <div class="flex flex-wrap gap-3">
-                  <span v-if="horarioSegSex" class="text-sm font-bold text-text-main tabular-nums">
-                    {{ horarioSegSex }}
-                  </span>
-                  <span v-else class="text-sm text-text-soft italic">Não definido</span>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <!-- Jornada: Seg–Sex + Sábado (só mostra Sáb quando preenchido) -->
+              <div class="rounded-2xl border border-border-ui/80 bg-bg-card p-5 min-h-[88px] flex flex-col justify-center shadow-sm">
+                <p class="text-[10px] font-black uppercase tracking-wider text-text-soft mb-2">Jornada</p>
+                <div class="space-y-1">
+                  <p class="text-sm font-semibold text-text-main tabular-nums leading-snug">
+                    Seg–Sex: {{ horarioSegSex || '—' }}
+                  </p>
+                  <p v-if="horarioSabado" class="text-sm font-semibold text-text-main tabular-nums leading-snug">
+                    Sáb: {{ horarioSabado }}
+                  </p>
                 </div>
               </div>
-              <div class="rounded-xl border border-border-ui bg-bg-card p-4">
-                <p class="text-[10px] font-black uppercase tracking-wider text-text-soft mb-2">Sábado</p>
-                <div class="flex flex-wrap gap-3">
-                  <span v-if="horarioSabado" class="text-sm font-bold text-text-main tabular-nums">
-                    {{ horarioSabado }}
-                  </span>
-                  <span v-else class="text-sm text-text-soft italic">Não definido</span>
-                </div>
-              </div>
-              <div class="rounded-xl border border-border-ui bg-bg-card p-4">
+              <div class="rounded-2xl border border-border-ui/80 bg-bg-card p-5 min-h-[88px] flex flex-col justify-center shadow-sm">
                 <p class="text-[10px] font-black uppercase tracking-wider text-text-soft mb-2">Carga horária</p>
-                <span class="text-sm font-bold text-text-main tabular-nums">{{ cargaHorariaLabel }}</span>
+                <p class="text-sm font-semibold text-text-main tabular-nums">{{ cargaHorariaLabel }}</p>
+              </div>
+              <div class="rounded-2xl border border-border-ui/80 bg-bg-card p-5 min-h-[88px] flex flex-col justify-center shadow-sm">
+                <p class="text-[10px] font-black uppercase tracking-wider text-text-soft mb-2">Valor da hora</p>
+                <p class="text-sm font-semibold text-text-main tabular-nums">{{ valorHoraLabel }}</p>
+              </div>
+              <div class="rounded-2xl border border-border-ui/80 bg-bg-card p-5 min-h-[88px] flex items-center gap-4 shadow-sm">
+                <div :class="resumo.totalSaldo >= 0 ? 'bg-emerald-500/10' : 'bg-rose-500/10'" class="w-11 h-11 shrink-0 rounded-xl flex items-center justify-center">
+                  <i :class="resumo.totalSaldo >= 0 ? 'pi pi-arrow-up text-emerald-600' : 'pi pi-arrow-down text-rose-600'" class="text-lg"></i>
+                </div>
+                <div class="min-w-0">
+                  <p class="text-[10px] font-black uppercase text-text-soft mb-0">Saldo</p>
+                  <p :class="resumo.totalSaldo >= 0 ? 'text-emerald-600' : 'text-rose-600'" class="text-sm font-bold tabular-nums italic">
+                    {{ resumo.totalSaldoHHMM }}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Cards de resumo -->
-          <div v-if="rows.length" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div class="rounded-xl border border-border-ui bg-bg-card p-4 flex items-center gap-4">
-              <div class="w-11 h-11 rounded-xl bg-blue-500/10 flex items-center justify-center">
+          <!-- Cards de resumo (Trabalhado, Horas Extras, Valor H.E., Dias com batida) -->
+          <div v-if="funcionarioSelecionado" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="rounded-2xl border border-border-ui/80 bg-bg-card p-5 flex items-center gap-4 min-h-[88px] shadow-sm">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-blue-500/10 flex items-center justify-center">
                 <i class="pi pi-stopwatch text-blue-600 text-lg"></i>
               </div>
-              <div>
-                <p class="text-[10px] font-black uppercase text-text-soft">Trabalhado</p>
-                <p class="text-lg font-black text-text-main tabular-nums">{{ resumo.totalHorasHHMM }}</p>
+              <div class="min-w-0">
+                <p class="text-[10px] font-black uppercase text-text-soft mb-0">Trabalhado</p>
+                <p class="text-sm font-bold text-text-main tabular-nums truncate">{{ resumo.totalHorasHHMM }}</p>
               </div>
             </div>
-            <div class="rounded-xl border border-border-ui bg-bg-card p-4 flex items-center gap-4">
-              <div :class="resumo.totalSaldo >= 0 ? 'bg-emerald-500/10' : 'bg-rose-500/10'" class="w-11 h-11 rounded-xl flex items-center justify-center">
-                <i :class="resumo.totalSaldo >= 0 ? 'pi pi-arrow-up text-emerald-600' : 'pi pi-arrow-down text-rose-600'" class="text-lg"></i>
+            <div class="rounded-2xl border border-border-ui/80 bg-bg-card p-5 flex items-center gap-4 min-h-[88px] shadow-sm">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                <i class="pi pi-clock text-amber-600 text-lg"></i>
               </div>
-              <div>
-                <p class="text-[10px] font-black uppercase text-text-soft">Saldo</p>
-                <p :class="resumo.totalSaldo >= 0 ? 'text-emerald-600' : 'text-rose-600'" class="text-lg font-black tabular-nums italic">
-                  {{ resumo.totalSaldoHHMM }}
-                </p>
+              <div class="min-w-0">
+                <p class="text-[10px] font-black uppercase text-text-soft mb-0">Horas extras</p>
+                <p class="text-sm font-bold text-amber-600 tabular-nums truncate">{{ horasExtrasHHMM }}</p>
               </div>
             </div>
-            <div class="rounded-xl border border-border-ui bg-bg-card p-4 flex items-center gap-4">
-              <div class="w-11 h-11 rounded-xl bg-brand-primary/10 flex items-center justify-center">
+            <div class="rounded-2xl border border-border-ui/80 bg-bg-card p-5 flex items-center gap-4 min-h-[88px] shadow-sm">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                <i class="pi pi-wallet text-emerald-600 text-lg"></i>
+              </div>
+              <div class="min-w-0">
+                <p class="text-[10px] font-black uppercase text-text-soft mb-0">Valor H.E.</p>
+                <p class="text-sm font-bold text-text-main tabular-nums truncate">{{ valorHorasExtrasLabel }}</p>
+              </div>
+            </div>
+            <div class="rounded-2xl border border-border-ui/80 bg-bg-card p-5 flex items-center gap-4 min-h-[88px] shadow-sm">
+              <div class="w-11 h-11 shrink-0 rounded-xl bg-brand-primary/10 flex items-center justify-center">
                 <i class="pi pi-calendar text-brand-primary text-lg"></i>
               </div>
-              <div>
-                <p class="text-[10px] font-black uppercase text-text-soft">Dias com batida</p>
-                <p class="text-lg font-black text-text-main tabular-nums">{{ diasComBatida }}</p>
+              <div class="min-w-0">
+                <p class="text-[10px] font-black uppercase text-text-soft mb-0">Dias com batida</p>
+                <p class="text-sm font-bold text-text-main tabular-nums">{{ diasComBatida }}</p>
               </div>
             </div>
           </div>
@@ -398,6 +423,8 @@
             <label class="text-[10px] font-black text-text-soft uppercase block mb-1">Descrição</label>
             <textarea
               v-model="modalJust.form.descricao"
+              spellcheck="true"
+              lang="pt-BR"
               rows="3"
               class="w-full rounded-xl p-4 text-sm font-medium bg-bg-card text-text-main border border-border-ui outline-none focus:ring-2 focus:ring-brand-primary/30 resize-none"
             ></textarea>
@@ -454,6 +481,7 @@ import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
 import { listDays, groupRegistrosByDia, JORNADA_META_MIN } from '@/utils/ponto'
 import { onlyNumbers } from '@/utils/masks'
+import { numeroParaMoeda } from '@/utils/number'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import Button from '@/components/ui/Button.vue'
 import SearchInput from '@/components/ui/SearchInput.vue'
@@ -469,6 +497,41 @@ const funcionarioOptions = ref([])
 const funcionarios = ref([])
 
 const filtros = reactive({ funcionario_id: '', data_ini: '', data_fim: '' })
+
+function getMesInicioISO() {
+  const hoje = new Date()
+  return new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10)
+}
+function getMesFimISO() {
+  const hoje = new Date()
+  return new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().slice(0, 10)
+}
+
+const mesReferenciaLabel = computed(() => {
+  const base = filtros.data_ini || getMesInicioISO()
+  const d = new Date(base + 'T12:00:00')
+  return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()
+})
+
+function aplicarMesReferencia(ano, mes) {
+  const primeiro = new Date(ano, mes, 1)
+  const ultimo = new Date(ano, mes + 1, 0)
+  filtros.data_ini = primeiro.toISOString().slice(0, 10)
+  filtros.data_fim = ultimo.toISOString().slice(0, 10)
+  buscar()
+}
+
+function mesAnterior() {
+  const base = filtros.data_ini || getMesInicioISO()
+  const d = new Date(base + 'T12:00:00')
+  aplicarMesReferencia(d.getFullYear(), d.getMonth() - 1)
+}
+
+function mesSeguinte() {
+  const base = filtros.data_ini || getMesInicioISO()
+  const d = new Date(base + 'T12:00:00')
+  aplicarMesReferencia(d.getFullYear(), d.getMonth() + 1)
+}
 
 const rowsFiltrados = computed(() => {
   return (rows.value || []).filter((r) => {
@@ -521,6 +584,14 @@ const cargaHorariaLabel = computed(() => {
   return 'Não definido'
 })
 
+const valorHoraLabel = computed(() => {
+  const f = funcionarioSelecionado.value
+  if (!f || f.custo_hora == null || f.custo_hora === '') return '—'
+  const v = Number(f.custo_hora)
+  if (Number.isNaN(v) || v === 0) return '—'
+  return `R$ ${numeroParaMoeda(v)}`
+})
+
 const resumo = computed(() => {
   const base = consolidarSaldoPeriodo({
     registros: rowsFiltrados.value,
@@ -536,6 +607,24 @@ const resumo = computed(() => {
 
 const diasComBatida = computed(() => {
   return registrosPorDia.value.size
+})
+
+/** Horas extras do período (saldo positivo em HH:MM). */
+const horasExtrasHHMM = computed(() => {
+  const saldo = resumo.value?.totalSaldo ?? 0
+  if (saldo <= 0) return '00:00'
+  return resumo.value?.totalSaldoHHMM ?? '00:00'
+})
+
+/** Valor em R$ das horas extras (saldo positivo × custo/hora × 1,5). */
+const valorHorasExtrasLabel = computed(() => {
+  const saldo = resumo.value?.totalSaldo ?? 0
+  if (saldo <= 0) return 'R$ 0,00'
+  const f = funcionarioSelecionado.value
+  const custoHora = f ? Number(f.custo_hora || 0) : 0
+  if (custoHora <= 0) return '—'
+  const valor = saldo * custoHora * 1.5
+  return `R$ ${numeroParaMoeda(valor)}`
 })
 
 /** Linhas do espelho para exibição (exclui domingo, ordena data desc). */
@@ -972,9 +1061,8 @@ async function confirmarSalvarJustificativa() {
 }
 
 onMounted(async () => {
-  const hoje = new Date()
-  filtros.data_ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10)
-  filtros.data_fim = hoje.toISOString().slice(0, 10)
+  filtros.data_ini = getMesInicioISO()
+  filtros.data_fim = getMesFimISO()
   try {
     const { data } = await PontoRelatorioService.listarFuncionariosAtivos()
     const lista = data?.data || data || []

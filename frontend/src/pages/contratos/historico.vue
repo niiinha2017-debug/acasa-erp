@@ -8,9 +8,10 @@
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
-definePage({ meta: { perm: 'plano_corte.ver' } })
+definePage({ meta: { perm: 'contratos.ver' } })
 
 onMounted(() => {
-  useRouter().replace('/plano-corte')
+  useRouter().replace('/contratos')
 })
 </script>
+

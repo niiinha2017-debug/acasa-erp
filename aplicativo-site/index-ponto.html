@@ -146,8 +146,9 @@
       </div>
     </div>
 
+    <p id="ativacaoLabel" class="muted" style="margin-top: 12px; margin-bottom: 4px; font-size: 11px;"></p>
     <div id="ativacaoUrl" class="mono"></div>
-    <p class="muted">Copie os links e envie no WhatsApp se precisar.</p>
+    <p class="muted">Copie o link <strong>com o código</strong> e envie no WhatsApp se precisar.</p>
   </main>
 
   <script>
@@ -157,6 +158,7 @@
     const btnWhats = document.getElementById("btnWhats");
     const btnCopiar = document.getElementById("btnCopiar");
     const ativacaoUrlView = document.getElementById("ativacaoUrl");
+    const ativacaoLabel = document.getElementById("ativacaoLabel");
 
     const params = new URLSearchParams(window.location.search);
     const preCode = (params.get("code") || "").trim();
@@ -167,15 +169,23 @@
       const ativacao = code
         ? `${base}/ativar?code=${encodeURIComponent(code)}`
         : `${base}/ativar`;
-      // APK fica em /ponto.apk na raiz do subdomínio
       const apk = `${base}/ponto.apk`;
       return { code, ativacao, apk };
     }
 
     function render() {
-      const { ativacao } = getLinks();
+      const { code, ativacao } = getLinks();
       btnAtivar.href = ativacao;
       ativacaoUrlView.textContent = ativacao;
+      if (code) {
+        ativacaoLabel.textContent = "Link completo de ativação (este é o link correto para compartilhar):";
+        ativacaoLabel.classList.remove("muted");
+        ativacaoLabel.style.color = "#0f172a";
+      } else {
+        ativacaoLabel.textContent = "Digite o código acima para gerar o link completo de ativação. O link correto inclui ?code=SEU_CODIGO";
+        ativacaoLabel.classList.add("muted");
+        ativacaoLabel.style.color = "";
+      }
     }
 
     codeInput.addEventListener("input", render);

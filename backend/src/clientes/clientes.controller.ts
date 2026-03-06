@@ -7,6 +7,7 @@ import {
   Put,
   Post,
   Query,
+  Req,
   HttpCode,
   HttpStatus,
   UseGuards,
@@ -27,14 +28,17 @@ export class ClientesController {
 
   @Post()
   @Permissoes('clientes.criar')
-  criar(@Body() dto: CriarClienteDto) {
-    return this.service.criar(dto);
+  criar(
+    @Body() dto: CriarClienteDto,
+    @Req() req?: { user?: { funcionario_id?: number | null } },
+  ) {
+    return this.service.criar(dto, req?.user);
   }
 
   @Get()
   @Permissoes('clientes.ver')
-  listar() {
-    return this.service.listar();
+  listar(@Req() req: { user?: { funcionario_id?: number | null; is_admin?: boolean } }) {
+    return this.service.listar(req?.user);
   }
 
   // Rotas de relatórios antes do :id (ok)
@@ -63,29 +67,42 @@ export class ClientesController {
 
   @Get('select')
   @Permissoes('clientes.select', 'clientes.ver')
-  select(@Query('q') q?: string) {
-    return this.service.select(q);
+  select(
+    @Query('q') q?: string,
+    @Req() req?: { user?: { funcionario_id?: number | null; is_admin?: boolean } },
+  ) {
+    return this.service.select(q, req?.user);
   }
 
   @Get(':id')
   @Permissoes('clientes.ver')
-  buscar(@Param('id') id: string) {
+  buscar(
+    @Param('id') id: string,
+    @Req() req?: { user?: { funcionario_id?: number | null; is_admin?: boolean } },
+  ) {
     const cleanId = Number(id.replace(/\D/g, ''));
-    return this.service.buscarPorId(cleanId);
+    return this.service.buscarPorId(cleanId, req?.user);
   }
 
   @Put(':id')
   @Permissoes('clientes.editar')
-  atualizar(@Param('id') id: string, @Body() dto: AtualizarClienteDto) {
+  atualizar(
+    @Param('id') id: string,
+    @Body() dto: AtualizarClienteDto,
+    @Req() req?: { user?: { funcionario_id?: number | null; is_admin?: boolean } },
+  ) {
     const cleanId = Number(id.replace(/\D/g, ''));
-    return this.service.atualizar(cleanId, dto);
+    return this.service.atualizar(cleanId, dto, req?.user);
   }
 
   @Delete(':id')
   @Permissoes('clientes.excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remover(@Param('id') id: string) {
+  remover(
+    @Param('id') id: string,
+    @Req() req?: { user?: { funcionario_id?: number | null; is_admin?: boolean } },
+  ) {
     const cleanId = Number(id.replace(/\D/g, ''));
-    return this.service.remover(cleanId);
+    return this.service.remover(cleanId, req?.user);
   }
 }

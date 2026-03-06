@@ -1617,8 +1617,12 @@ export class FinanceiroService {
   /**
    * Painel de Obras Vigentes: vigência começa em AGENDAR_MEDIDA_FINA.
    * Saldo e pendência lidos do Contas a Receber (parcelas vencidas até hoje).
+   * Se o usuário for vendedor (tem funcionario_id e não é admin), retorna apenas vendas dos seus clientes ou onde é representante.
    */
-  async getPainelObrasVigentes(): Promise<
+  async getPainelObrasVigentes(usuario?: {
+    funcionario_id?: number | null;
+    is_admin?: boolean;
+  } | null): Promise<
     Array<{
       venda_id: number;
       contrato_id: number | null;
@@ -1636,12 +1640,28 @@ export class FinanceiroService {
       OBRA_VIGENTE_STATUSES.map((s) => s.toUpperCase()),
     );
 
-    const vendas = await this.prisma.vendas.findMany({
-      where: {
-        status: {
-          in: Array.from(statusSet),
-        },
+    const funcionarioId =
+      usuario?.funcionario_id != null && !usuario?.is_admin
+        ? Number(usuario.funcionario_id)
+        : null;
+    const whereVenda: any = {
+      status: {
+        in: Array.from(statusSet),
       },
+    };
+    if (funcionarioId != null) {
+      whereVenda.AND = [
+        {
+          OR: [
+            { cliente: { vendedor_responsavel_id: funcionarioId } },
+            { representante_venda_funcionario_id: funcionarioId },
+          ],
+        },
+      ];
+    }
+
+    const vendas = await this.prisma.vendas.findMany({
+      where: whereVenda,
       include: {
         cliente: {
           select: {

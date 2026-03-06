@@ -29,6 +29,8 @@
         :min="min"
         :max="max"
         :autocomplete="autocomplete || undefined"
+        :spellcheck="spellcheckAtivo"
+        :lang="spellcheckAtivo ? 'pt-BR' : undefined"
         :class="[
           'w-full h-10 border rounded-xl text-sm transition-all duration-200',
           'bg-bg-card text-text-main',
@@ -62,7 +64,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { upper } from '@/utils/text'
 
 const props = defineProps({
@@ -81,12 +83,20 @@ const props = defineProps({
   id: String,
   forceUpper: { type: Boolean, default: true },
   /** Quando true, campo disabled mantém texto escuro/legível (ex.: valor final da venda). */
-  keepReadableWhenDisabled: { type: Boolean, default: false }
+  keepReadableWhenDisabled: { type: Boolean, default: false },
+  /** Corretor ortográfico em PT-BR. Default true para type text/search/email. */
+  spellcheck: { type: Boolean, default: undefined }
 })
 
 
 const emit = defineEmits(['update:modelValue', 'input', 'blur', 'focus'])
 const inputId = ref(props.id || `input-${Math.random().toString(36).slice(2)}`)
+
+const tiposComSpellcheck = ['text', 'search', 'email']
+const spellcheckAtivo = computed(() => {
+  if (props.spellcheck !== undefined) return props.spellcheck
+  return tiposComSpellcheck.includes(props.type)
+})
 
 const handleInput = (e) => {
   let value = e.target.value

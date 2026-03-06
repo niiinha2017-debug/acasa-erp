@@ -44,6 +44,7 @@ export class ContratosController {
   @Get()
   @Permissoes('contratos.ver')
   listar(
+    @Req() req: { user?: { funcionario_id?: number | null; is_admin?: boolean } },
     @Query('venda_id') vendaId?: string,
     @Query('status') status?: string,
   ) {
@@ -52,6 +53,7 @@ export class ContratosController {
     return this.service.listar(
       vendaIdNum && vendaIdNum > 0 ? vendaIdNum : undefined,
       statusNorm,
+      req?.user,
     );
   }
 

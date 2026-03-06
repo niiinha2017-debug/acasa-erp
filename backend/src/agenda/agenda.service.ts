@@ -823,11 +823,17 @@ export class AgendaService {
       setorDestino?: 'LOJA' | 'FABRICA';
       origemFluxo?: OrigemFluxo;
       incluirCancelados?: boolean;
+      usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null;
     },
   ) {
     const setor = opts?.setorDestino ?? 'LOJA';
     const includePlanoCorte = opts?.includePlanoCorte !== false;
     const incluirCancelados = opts?.incluirCancelados === true;
+
+    const funcionarioIdVendedor =
+      opts?.usuario?.funcionario_id != null && !opts?.usuario?.is_admin
+        ? Number(opts.usuario.funcionario_id)
+        : null;
 
     // Fim: se for só data (YYYY-MM-DD), considerar fim do dia (23:59:59.999) para incluir eventos no último dia do mês
     let fimDate: Date | undefined;
@@ -853,6 +859,18 @@ export class AgendaService {
         : undefined,
       origem_fluxo: opts?.origemFluxo || undefined,
     };
+
+    if (funcionarioIdVendedor != null) {
+      where.AND = [
+        {
+          OR: [
+            { cliente: { vendedor_responsavel_id: funcionarioIdVendedor } },
+            { venda: { representante_venda_funcionario_id: funcionarioIdVendedor } },
+            { equipe: { some: { funcionario_id: funcionarioIdVendedor } } },
+          ],
+        },
+      ];
+    }
     const include: any = {
       cliente: true,
       fornecedor: true,
@@ -877,28 +895,38 @@ export class AgendaService {
     const somentePainelCats = AGENDA_FABRICA_SOMENTE_PAINEL_CATEGORIAS;
     const statusSempreVisivel = AGENDA_FABRICA_STATUS_SEMPRE_VISIVEL;
     const statusAgendado = AGENDA_FABRICA_STATUS_AGENDADO;
+    const andFabrica: any[] = [
+      {
+        OR: [
+          { venda_id: null },
+          { venda: { contratos: { some: { status: 'VIGENTE' } } } },
+          { status: statusSempreVisivel },
+        ],
+      },
+      {
+        OR: [
+          // Qualquer categoria que não seja "só painel" → aparece no calendário
+          ...(somentePainelCats.length > 0
+            ? [{ categoria: { notIn: [...somentePainelCats] } }]
+            : []),
+          { status: statusSempreVisivel },
+          // "Só painel" mas já agendado → aparece no calendário
+          ...somentePainelCats.map((c) => ({ categoria: c, status: statusAgendado })),
+        ],
+      },
+    ];
+    if (funcionarioIdVendedor != null) {
+      andFabrica.push({
+        OR: [
+          { cliente: { vendedor_responsavel_id: funcionarioIdVendedor } },
+          { venda: { representante_venda_funcionario_id: funcionarioIdVendedor } },
+          { equipe: { some: { funcionario_id: funcionarioIdVendedor } } },
+        ],
+      });
+    }
     const whereFabrica: any = {
       ...where,
-      AND: [
-        {
-          OR: [
-            { venda_id: null },
-            { venda: { contratos: { some: { status: 'VIGENTE' } } } },
-            { status: statusSempreVisivel },
-          ],
-        },
-        {
-          OR: [
-            // Qualquer categoria que não seja "só painel" → aparece no calendário
-            ...(somentePainelCats.length > 0
-              ? [{ categoria: { notIn: [...somentePainelCats] } }]
-              : []),
-            { status: statusSempreVisivel },
-            // "Só painel" mas já agendado → aparece no calendário
-            ...somentePainelCats.map((c) => ({ categoria: c, status: statusAgendado })),
-          ],
-        },
-      ],
+      AND: andFabrica,
     };
     const eventos = await this.prisma.agenda_fabrica.findMany({
       where: whereFabrica,

@@ -88,6 +88,7 @@ export class AgendaController {
       incluirCancelados:
         String(incluirCancelados || '').toLowerCase() === 'true' ||
         incluirCancelados === '1',
+      usuario: req?.user,
     });
   }
 

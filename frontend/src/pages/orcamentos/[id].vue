@@ -86,18 +86,34 @@
                 <textarea
                   v-model="ambForm.descricao"
                   rows="4"
+                  spellcheck="true"
+                  lang="pt-BR"
                   class="w-full p-4 rounded-2xl bg-bg-page border border-border-ui text-sm text-text-main outline-none resize-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
-                  placeholder="* Armario superior com 4 portas de giro&#10;* Armario inferior 4 gavetas e 2 portas de giro&#10;* Nicho para microondas"
+                  placeholder="* Armário superior com 4 portas de giro&#10;* Armário inferior 4 gavetas e 2 portas de giro&#10;* Nicho para microondas"
                 ></textarea>
               </div>
 
               <div class="col-span-12">
-                <Input
-                  :model-value="ambForm.observacao"
-                  label="OBSERVAÇÕES TÉCNICAS"
-                  placeholder="MDF Branco TX, puxador perfil..."
-                  @update:model-value="(v) => (ambForm.observacao = String(v || '').toUpperCase())"
-                />
+                <label class="text-[10px] font-black uppercase text-text-soft ml-1 mb-2 block">
+                  OBSERVAÇÕES TÉCNICAS
+                </label>
+                <div class="relative rounded-2xl border border-border-ui bg-bg-page focus-within:ring-2 focus-within:ring-brand-primary/20 focus-within:border-brand-primary transition-all">
+                  <textarea
+                    :value="ambForm.observacao"
+                    rows="5"
+                    :maxlength="OBSERVACAO_MAX_LENGTH"
+                    placeholder="Ex: MDF Branco TX, puxador perfil, acabamento interno..."
+                    class="w-full p-4 rounded-2xl bg-transparent text-sm text-text-main placeholder:text-text-soft/70 outline-none resize-y min-h-[120px] uppercase"
+                    @input="(e) => (ambForm.observacao = String(e.target.value || '').slice(0, OBSERVACAO_MAX_LENGTH).toUpperCase())"
+                  />
+                  <div
+                    class="flex items-center justify-end gap-2 px-4 py-2 border-t border-border-ui/80 rounded-b-2xl bg-bg-card/50 text-[11px] font-medium tabular-nums"
+                    :class="observacaoRestante < 100 ? (observacaoRestante === 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400') : 'text-text-soft'"
+                  >
+                    <span>{{ observacaoLength }} / {{ OBSERVACAO_MAX_LENGTH }}</span>
+                    <span v-if="observacaoRestante <= 200" class="opacity-90">({{ observacaoRestante }} restantes)</span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -119,7 +135,7 @@
               </template>
 
               <template #cell-observacao="{ row }">
-                <div class="whitespace-pre-line font-bold uppercase">
+                <div class="whitespace-pre-line font-bold uppercase text-sm max-h-24 overflow-y-auto rounded px-2 py-1 bg-bg-page/60">
                   {{ (row.observacao || '-').toUpperCase() }}
                 </div>
               </template>
@@ -133,7 +149,7 @@
                 <TableActions
                   :id="row.id ?? row.__idx"
                   perm-edit="orcamentos.editar"
-                  perm-delete="orcamentos.editar"
+                  perm-delete="orcamentos.excluir"
                   @edit="iniciarEdicao(row.__idx)"
                   @delete="confirmarRemoverItem(row.__idx)"
                 />
@@ -284,6 +300,8 @@
               </label>
               <textarea
                 v-model="clausulas.objeto"
+                spellcheck="true"
+                lang="pt-BR"
                 class="w-full min-h-[120px] rounded-2xl border border-border-ui bg-bg-page text-sm text-text-main p-3 leading-relaxed focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
               ></textarea>
             </div>
@@ -294,6 +312,8 @@
               </label>
               <textarea
                 v-model="clausulas.preco_condicoes"
+                spellcheck="true"
+                lang="pt-BR"
                 class="w-full min-h-[120px] rounded-2xl border border-border-ui bg-bg-page text-sm text-text-main p-3 leading-relaxed focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
               ></textarea>
             </div>
@@ -304,6 +324,8 @@
               </label>
               <textarea
                 v-model="clausulas.prazo_validade"
+                spellcheck="true"
+                lang="pt-BR"
                 class="w-full min-h-[120px] rounded-2xl border border-border-ui bg-bg-page text-sm text-text-main p-3 leading-relaxed focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
               ></textarea>
             </div>
@@ -332,6 +354,9 @@
           <FormActions
             :is-edit="!isNovo"
             :loading-save="saving"
+            perm-create="orcamentos.criar"
+            perm-edit="orcamentos.editar"
+            perm-delete="orcamentos.excluir"
             @save="salvarTudo"
             @delete="confirmarExcluirOrcamento"
             class="flex-row-reverse gap-2 w-full sm:w-auto"
@@ -349,6 +374,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { OrcamentosService, ClienteService } from '@/services/index'
 import { format } from '@/utils/format'
+import { getApiErrorMessage } from '@/utils/apiError'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
@@ -383,6 +409,11 @@ const clausulas = reactive({
 
 const draft = reactive({ cliente_id: null, ambientes: [] })
 const ambForm = reactive({ nome_ambiente: '', descricao: '', valor_unitario: '', observacao: '' })
+
+// Limite de caracteres para observações técnicas (banco: VARCHAR(2000))
+const OBSERVACAO_MAX_LENGTH = 2000
+const observacaoLength = computed(() => String(ambForm.observacao || '').length)
+const observacaoRestante = computed(() => Math.max(0, OBSERVACAO_MAX_LENGTH - observacaoLength.value))
 
 const imagensParaPdf = ref([])
 const anexosDocumentos = ref([])
@@ -463,21 +494,26 @@ async function handleAdicionarOuEditar() {
   const payloadItem = {
     nome_ambiente: ambForm.nome_ambiente,
     descricao: ambForm.descricao,
-    observacao: ambForm.observacao || '',
+    observacao: (ambForm.observacao || '').slice(0, OBSERVACAO_MAX_LENGTH),
     valor_unitario: parseMoney(ambForm.valor_unitario),
     valor_total: parseMoney(ambForm.valor_unitario),
   }
 
-  if (base.id) {
-    await OrcamentosService.atualizarItem(id, base.id, payloadItem)
-    draft.ambientes.splice(editIdx.value, 1, { ...base, ...payloadItem })
-  } else {
-    const created = await OrcamentosService.adicionarItem(id, payloadItem)
-    draft.ambientes.push({ id: created.data.id, ...payloadItem })
+  try {
+    if (base.id) {
+      await OrcamentosService.atualizarItem(id, base.id, payloadItem)
+      draft.ambientes.splice(editIdx.value, 1, { ...base, ...payloadItem })
+    } else {
+      const created = await OrcamentosService.adicionarItem(id, payloadItem)
+      draft.ambientes.push({ id: created.data.id, ...payloadItem })
+    }
+    Object.keys(ambForm).forEach((k) => (ambForm[k] = ''))
+    editIdx.value = null
+  } catch (err) {
+    const msg = getApiErrorMessage(err, 'Erro ao adicionar/atualizar item.')
+    notify.error(msg)
+    console.error('[Orçamento item]', err?.response?.data ?? err)
   }
-
-  Object.keys(ambForm).forEach((k) => (ambForm[k] = ''))
-  editIdx.value = null
 }
 
 function iniciarEdicao(idx) {
@@ -525,7 +561,9 @@ async function salvarTudo() {
     let id = orcamentoId.value
 
     if (isNovo.value) {
-      const res = await OrcamentosService.criar({ cliente_id: draft.cliente_id })
+      const clienteId = Number(draft.cliente_id) || 0;
+      if (!clienteId) return alert('Selecione um cliente.');
+      const res = await OrcamentosService.criar({ cliente_id: clienteId });
       id = res.data.id
       orcamentoIdReal.value = id
       router.replace(`/orcamentos/${id}`)
@@ -537,7 +575,7 @@ async function salvarTudo() {
       const payloadItem = {
         nome_ambiente: it.nome_ambiente,
         descricao: it.descricao,
-        observacao: it.observacao || '',
+        observacao: (it.observacao || '').slice(0, OBSERVACAO_MAX_LENGTH),
         valor_unitario: Number(it.valor_unitario || 0),
         valor_total: Number(it.valor_unitario || 0),
       }
@@ -551,6 +589,10 @@ async function salvarTudo() {
 
     notify.success(isNovo.value ? 'Orçamento criado.' : 'Orçamento salvo.')
     closeTabAndGo('/orcamentos')
+  } catch (err) {
+    const msg = getApiErrorMessage(err, 'Erro ao salvar orçamento.')
+    notify.error(msg)
+    console.error('[Orçamento]', err?.response?.data ?? err)
   } finally {
     saving.value = false
   }
@@ -621,7 +663,7 @@ async function excluirArquivo(arquivoId, _categoria) {
     notify.success('Arquivo removido.')
     await carregarArquivos()
   } catch (err) {
-    notify.error(err?.response?.data?.message || 'Erro ao excluir arquivo.')
+    notify.error(getApiErrorMessage(err, 'Erro ao excluir arquivo.'))
   }
 }
 
@@ -656,7 +698,7 @@ async function onPickArquivo(e, categoria) {
     notify.success(categoria === 'IMAGEM_PDF' ? 'Imagem adicionada ao PDF.' : 'Arquivo anexado.')
     await carregarArquivos()
   } catch (err) {
-    notify.error(err?.response?.data?.message || 'Erro ao anexar arquivo.')
+    notify.error(getApiErrorMessage(err, 'Erro ao anexar arquivo.'))
   }
 }
 
@@ -679,9 +721,9 @@ async function gerarPdf() {
       query: { name: nomePdf, type: 'application/pdf' },
     })
   } catch (e) {
-    const msg = e?.response?.data?.message || e?.message || 'Erro ao gerar PDF.'
+    const msg = getApiErrorMessage(e, 'Erro ao gerar PDF.')
     notify.error(msg)
-    console.error('[Orcamento PDF]', e?.response?.data || e)
+    console.error('[Orcamento PDF]', e?.response?.data ?? e)
   }
 }
 
@@ -713,7 +755,7 @@ async function salvarClausulas() {
     })
     notify.success('Termos do orçamento salvos.')
   } catch (e) {
-    const msg = e?.response?.data?.message || e?.message || 'Erro ao salvar termos.'
+    const msg = getApiErrorMessage(e, 'Erro ao salvar termos.')
     notify.error(msg)
   }
 }
@@ -741,16 +783,21 @@ async function ensureOrcamentoId() {
     return orcamentoIdReal.value
   }
 
-  // ✅ cria primeiro
-  const res = await OrcamentosService.criar({ cliente_id: draft.cliente_id })
-  orcamentoIdReal.value = res.data.id
+  const clienteId = Number(draft.cliente_id) || 0
+  if (!clienteId) return null
 
-  await router.replace(`/orcamentos/${orcamentoIdReal.value}`)
-
-  // ✅ agora sim (opcional)
-  await carregarArquivos()
-
-  return orcamentoIdReal.value
+  try {
+    const res = await OrcamentosService.criar({ cliente_id: clienteId })
+    orcamentoIdReal.value = res.data.id
+    await router.replace(`/orcamentos/${orcamentoIdReal.value}`)
+    await carregarArquivos()
+    return orcamentoIdReal.value
+  } catch (err) {
+    const msg = getApiErrorMessage(err, 'Erro ao criar orçamento.')
+    notify.error(msg)
+    console.error('[Orçamento criar]', err?.response?.data ?? err)
+    return null
+  }
 }
 
 onMounted(async () => {

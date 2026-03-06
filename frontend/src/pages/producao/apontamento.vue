@@ -32,20 +32,23 @@
         <div
           v-for="tarefa in tarefasAtivas"
           :key="'ativa-' + tarefa.id"
-          class="group relative overflow-hidden bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl p-3 pl-4 shadow-sm dark:shadow-none transition-all duration-200"
+          class="group relative overflow-hidden border rounded-xl p-3 pl-4 shadow-sm dark:shadow-none transition-all duration-200"
+          :class="tarefa.plano_corte_id ? 'bg-[#e0f2fe] dark:bg-sky-950/40 border-sky-200 dark:border-sky-700 border-l-4 border-l-sky-500' : 'bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-600'"
           :class="[
-            tarefaAtrasada(tarefa) ? 'border-red-300 dark:border-red-500/70 ring-1 ring-red-200 dark:ring-red-900/50' : getProcessColorByStatus(tarefa.categoria, tarefa.status).borderLeftClass,
+            !tarefa.plano_corte_id && tarefaAtrasada(tarefa) ? 'border-red-300 dark:border-red-500/70 ring-1 ring-red-200 dark:ring-red-900/50' : '',
+            !tarefa.plano_corte_id ? (getProcessColorByStatus(tarefa.categoria, tarefa.status).borderLeftClass || '') : '',
             getProcessColorByStatus(tarefa.categoria, tarefa.status).pulse ? 'animate-pulse' : '',
           ]"
         >
           <!-- Topo compacto: avatar + título + status + timer -->
           <div class="flex items-center gap-2 mb-2">
-            <div class="w-9 h-9 rounded-lg shrink-0 font-bold text-xs flex items-center justify-center text-white" :class="[getProcessColorByStatus(tarefa.categoria, tarefa.status).dotClass, getProcessColorByStatus(tarefa.categoria, tarefa.status).pulse ? 'animate-pulse' : '']">
+            <div class="w-9 h-9 rounded-lg shrink-0 font-bold text-xs flex items-center justify-center text-white" :class="tarefa.plano_corte_id ? 'bg-sky-600 dark:bg-sky-500' : [getProcessColorByStatus(tarefa.categoria, tarefa.status).dotClass, getProcessColorByStatus(tarefa.categoria, tarefa.status).pulse ? 'animate-pulse' : '']">
               {{ iniciaisTarefa(tarefa) }}
             </div>
             <div class="min-w-0 flex-1">
-              <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate leading-tight">
-                {{ labelCategoriaPendente(tarefa.categoria, tipoTimeline === 'venda' ? 'loja' : 'fabrica') || tarefa.titulo || 'Tarefa' }} #{{ tarefa.id }}
+              <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate leading-tight flex items-center gap-2 flex-wrap">
+                {{ tarefa.plano_corte_id ? 'Serviço de Corte' : (labelCategoriaPendente(tarefa.categoria, tipoTimeline === 'venda' ? 'loja' : 'fabrica') || tarefa.titulo || 'Tarefa') }} #{{ tarefa.id }}
+                <span v-if="tarefa.plano_corte_id" class="inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase bg-sky-600 text-white dark:bg-sky-500 dark:text-sky-950 shrink-0">[APENAS CORTE]</span>
               </h3>
               <div class="flex items-center gap-1.5 flex-wrap">
                 <template v-if="temCronometroRodandoNaTarefa(tarefa)">
@@ -200,16 +203,18 @@
               <div
                 v-for="tarefa in tarefasConcluidas"
                 :key="'concluida-' + tarefa.id"
-                class="group relative bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl p-3 pl-4 opacity-90 hover:opacity-100 transition-all duration-200"
-                :class="getTimelineConcluidoClass(tarefa.categoria).borderLeftClass"
+                class="group relative border rounded-xl p-3 pl-4 opacity-90 hover:opacity-100 transition-all duration-200"
+                :class="tarefa.plano_corte_id ? 'bg-[#e0f2fe] dark:bg-sky-950/40 border-sky-200 dark:border-sky-700 border-l-4 border-l-sky-500' : 'bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-600'"
+                :class="tarefa.plano_corte_id ? '' : getTimelineConcluidoClass(tarefa.categoria).borderLeftClass"
               >
                 <div class="flex items-center gap-2 mb-2">
-                  <div class="w-9 h-9 rounded-lg shrink-0 font-bold text-xs flex items-center justify-center text-white" :class="getTimelineConcluidoClass(tarefa.categoria).dotClass">
+                  <div class="w-9 h-9 rounded-lg shrink-0 font-bold text-xs flex items-center justify-center text-white" :class="tarefa.plano_corte_id ? 'bg-sky-600 dark:bg-sky-500' : getTimelineConcluidoClass(tarefa.categoria).dotClass">
                     {{ iniciaisTarefa(tarefa) }}
                   </div>
                   <div class="min-w-0 flex-1">
-                    <h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400 truncate">
-                      {{ labelCategoriaPendente(tarefa.categoria, tipoTimeline === 'venda' ? 'loja' : 'fabrica') || tarefa.titulo || 'Tarefa' }} #{{ tarefa.id }}
+                    <h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400 truncate flex items-center gap-2 flex-wrap">
+                      {{ tarefa.plano_corte_id ? 'Serviço de Corte' : (labelCategoriaPendente(tarefa.categoria, tipoTimeline === 'venda' ? 'loja' : 'fabrica') || tarefa.titulo || 'Tarefa') }} #{{ tarefa.id }}
+                      <span v-if="tarefa.plano_corte_id" class="inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase bg-sky-600 text-white dark:bg-sky-500 dark:text-sky-950 shrink-0">[APENAS CORTE]</span>
                     </h3>
                     <span class="text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase">Concluída</span>
                   </div>

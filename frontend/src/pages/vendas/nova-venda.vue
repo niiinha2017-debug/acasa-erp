@@ -144,7 +144,9 @@
                   <textarea
                     v-model="itens[row.__idx].descricao"
                     rows="3"
-                    placeholder="* Armario superior com 4 portas de giro&#10;* Armario inferior 4 gavetas e 2 portas de giro&#10;* Nicho para microondas"
+                    spellcheck="true"
+                    lang="pt-BR"
+                    placeholder="* Armário superior com 4 portas de giro&#10;* Armário inferior 4 gavetas e 2 portas de giro&#10;* Nicho para microondas"
                     class="w-full p-2 rounded-xl border border-border-ui bg-bg-page text-sm text-text-main outline-none resize-y focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
                   ></textarea>
                 </template>

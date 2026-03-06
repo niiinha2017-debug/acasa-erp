@@ -98,7 +98,7 @@
               </div>
 
               <div class="rounded-xl border border-slate-200 bg-white p-3">
-                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">APK</p>
+                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">APK (Android)</p>
                 <p class="mt-2 break-all text-sm font-semibold text-slate-800 font-mono">{{ linkCurto(convite.apkUrl) }}</p>
                 <div class="mt-2 flex flex-wrap items-center gap-2">
                   <button
@@ -113,6 +113,29 @@
                     type="button"
                     class="inline-flex h-8 items-center rounded-lg border border-slate-200 px-3 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-700 hover:bg-slate-50"
                     @click="handleCopiarApk"
+                  >
+                    Copiar
+                  </button>
+                </div>
+              </div>
+
+              <div class="rounded-xl border border-slate-200 bg-white p-3 md:col-span-2">
+                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">App relógio de ponto (iPhone / PWA)</p>
+                <p class="mt-1 text-[10px] text-slate-500">Abra no iPhone e adicione à tela inicial para usar só o relógio.</p>
+                <p class="mt-2 break-all text-sm font-semibold text-slate-800 font-mono">{{ linkCurto(convite.pwaUrl) }}</p>
+                <div class="mt-2 flex flex-wrap items-center gap-2">
+                  <a
+                    :href="convite.pwaUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex h-8 items-center rounded-lg border border-slate-200 px-3 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-700 hover:bg-slate-50"
+                  >
+                    Abrir
+                  </a>
+                  <button
+                    type="button"
+                    class="inline-flex h-8 items-center rounded-lg border border-slate-200 px-3 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-700 hover:bg-slate-50"
+                    @click="handleCopiarPwa"
                   >
                     Copiar
                   </button>
@@ -158,6 +181,26 @@
                 Copiar APK
               </Button>
 
+              <Button
+                v-if="podeGerar && convite?.pwaUrl"
+                variant="secondary"
+                class="h-10 rounded-xl font-bold text-[11px] uppercase tracking-[0.14em]"
+                @click="handleCopiarPwa"
+              >
+                <i class="pi pi-copy mr-2 text-xs"></i>
+                Copiar link (iPhone/PWA)
+              </Button>
+
+              <button
+                v-if="podeGerar && convite?.pwaUrl"
+                type="button"
+                class="h-10 px-4 rounded-xl bg-slate-700 text-white text-[11px] font-black uppercase tracking-[0.14em] hover:bg-slate-800 transition-colors"
+                @click="abrirWhatsAppPwaIphone"
+              >
+                <i class="pi pi-mobile mr-2 text-xs"></i>
+                Enviar PWA (iPhone)
+              </button>
+
               <button
                 v-if="podeGerar"
                 type="button"
@@ -191,6 +234,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { PontoRelatorioService, PontoService } from '@/services/index'
 import { notify } from '@/services/notify'
 import { can } from '@/services/permissions'
+import { APP_LINKS } from '@/config/app-links'
 import PageHeader from '@/components/ui/PageHeader.vue'
 
 definePage({ meta: { perm: 'ponto_convite.criar' } })
@@ -351,10 +395,10 @@ async function gerarConvite() {
       return
     }
 
-    const pontoBaseUrl = 'https://ponto.acasamarcenaria.com.br'
+    const pontoBaseUrl = APP_LINKS.ponto.baseUrl
     const codigoEnc = encodeURIComponent(codigo)
     const fallbackAtivacaoUrl = `${pontoBaseUrl}/ativar?code=${codigoEnc}`
-    const fallbackApkUrl = `${pontoBaseUrl}/ponto.apk`
+    const fallbackApkUrl = APP_LINKS.ponto.android || `${pontoBaseUrl}/ponto.apk`
 
     let urlAtivacaoVal = String(data.url || '').trim() || fallbackAtivacaoUrl
     try {
@@ -375,6 +419,7 @@ async function gerarConvite() {
       url: urlAtivacaoVal,
       webUrl: urlAtivacaoVal,
       apkUrl,
+      pwaUrl: pontoBaseUrl,
     }
 
     const expiraEm = data.expira_em ?? data.expires_at
@@ -426,6 +471,10 @@ function handleCopiarApk() {
   if (convite.value?.apkUrl) copiarParaAreaTransferencia(convite.value.apkUrl)
 }
 
+function handleCopiarPwa() {
+  if (convite.value?.pwaUrl) copiarParaAreaTransferencia(convite.value.pwaUrl)
+}
+
 function abrirOuBaixarApk() {
   const apkUrl = convite.value?.apkUrl
   if (!apkUrl) return
@@ -462,6 +511,85 @@ function abrirOuBaixarApk() {
   document.body.removeChild(a)
 }
 
+function abrirWhatsAppComMensagem(mensagem) {
+  const id = Number(funcionario_id.value)
+  const funcionario = funcionarios.value.find((x) => x.id === id)
+  const numeroWhatsApp = funcionario?.whatsapp ? String(funcionario.whatsapp).replace(/\D/g, '') : ''
+  const phone = numeroWhatsApp.length >= 11 ? numeroWhatsApp.slice(-11) : numeroWhatsApp
+  const urlWhatsApp = phone
+    ? `https://wa.me/55${phone}?text=${encodeURIComponent(mensagem)}`
+    : `https://wa.me/?text=${encodeURIComponent(mensagem)}`
+
+  const isTauri = typeof window !== 'undefined' && (window.__TAURI__ || window.__TAURI_INTERNALS__)
+  if (isTauri) {
+    try {
+      const tauri = window.__TAURI__ ?? window.__TAURI_INTERNALS__
+      if (tauri?.opener?.open) {
+        tauri.opener.open(urlWhatsApp)
+        return
+      }
+      if (typeof tauri?.opener?.openUrl === 'function') {
+        tauri.opener.openUrl(urlWhatsApp)
+        return
+      }
+      if (tauri?.shell?.open) {
+        tauri.shell.open(urlWhatsApp)
+        return
+      }
+    } catch (e) {
+      console.error('[PONTO_WHATS_TAURI]', e)
+    }
+  }
+
+  try {
+    if (window.open(urlWhatsApp, '_blank', 'noopener,noreferrer')) return
+  } catch {}
+  try {
+    const anchor = document.createElement('a')
+    anchor.href = urlWhatsApp
+    anchor.target = '_blank'
+    anchor.rel = 'noopener noreferrer'
+    anchor.style.display = 'none'
+    document.body.appendChild(anchor)
+    anchor.click()
+    document.body.removeChild(anchor)
+  } catch {}
+  window.location.href = urlWhatsApp
+}
+
+async function abrirWhatsAppPwaIphone() {
+  if (!podeGerar.value) return notify.error('Acesso negado.')
+  if (!convite.value?.pwaUrl || !convite.value?.webUrl) {
+    notify.error('Convite sem link PWA para envio.')
+    return
+  }
+
+  const codigo = String(convite.value?.code || '').trim()
+  const urlAtivacao = String(convite.value?.webUrl || '').trim()
+  const linkPwa = convite.value.pwaUrl || APP_LINKS.ponto.baseUrl
+  if (!codigo || !urlAtivacao.includes('code=')) {
+    notify.error('Token de ativação inválido.')
+    return
+  }
+
+  const id = Number(funcionario_id.value)
+  const funcionario = funcionarios.value.find((x) => x.id === id)
+  const nomeColaborador = funcionario?.nome ? String(funcionario.nome).trim() : 'Colaborador'
+
+  const mensagem = `Olá ${nomeColaborador}, seu acesso ao *Relógio de Ponto* está pronto! 📱
+
+*Para usar no iPhone:*
+1. Abra este link no Safari: ${linkPwa}
+2. Toque em Compartilhar → *Adicionar à Tela de Início*
+3. Abra o app na tela inicial e use o código: *${codigo}*
+
+Ou ative direto por este link: ${urlAtivacao}
+
+⏰ Este convite expira em breve!`
+
+  abrirWhatsAppComMensagem(mensagem)
+}
+
 async function abrirWhatsAppFormatado() {
   if (!podeGerar.value) return notify.error('Acesso negado.')
   if (!convite.value?.apkUrl || !convite.value?.webUrl) {
@@ -481,57 +609,15 @@ async function abrirWhatsAppFormatado() {
   const nomeColaborador = funcionario?.nome ? String(funcionario.nome).trim() : 'Colaborador'
 
   const linkApk = convite.value.apkUrl
+  const linkPwa = convite.value.pwaUrl || APP_LINKS.ponto.baseUrl
   const mensagem = `Olá ${nomeColaborador}, seu acesso ao Ponto da Marcenaria está pronto! 🛠️
-1. Baixe o App: ${linkApk}
+1. Baixe o App (Android): ${linkApk}
 *2. Use o Código: ${codigo}*
 3. Ou ative pelo link: ${urlAtivacao}
+📱 iPhone: abra este link e adicione à tela inicial para usar o relógio: ${linkPwa}
 Atenção: Este convite expira em breve!`
 
-  const numeroWhatsApp = funcionario?.whatsapp ? String(funcionario.whatsapp).replace(/\D/g, '') : ''
-  const phone = numeroWhatsApp.length >= 11 ? numeroWhatsApp.slice(-11) : numeroWhatsApp
-  const urlWhatsApp = phone
-    ? `https://wa.me/55${phone}?text=${encodeURIComponent(mensagem)}`
-    : `https://wa.me/?text=${encodeURIComponent(mensagem)}`
-
-  const isTauri = typeof window !== 'undefined' && (window.__TAURI__ || window.__TAURI_INTERNALS__)
-
-  if (isTauri) {
-    try {
-      const tauri = window.__TAURI__ ?? window.__TAURI_INTERNALS__
-      if (tauri?.opener?.open) {
-        await tauri.opener.open(urlWhatsApp)
-        return
-      }
-      if (typeof tauri?.opener?.openUrl === 'function') {
-        await tauri.opener.openUrl(urlWhatsApp)
-        return
-      }
-      if (tauri?.shell?.open) {
-        await tauri.shell.open(urlWhatsApp)
-        return
-      }
-    } catch (e) {
-      console.error('[PONTO_WHATS_TAURI]', e)
-    }
-  }
-
-  try {
-    const opened = window.open(urlWhatsApp, '_blank', 'noopener,noreferrer')
-    if (opened) return
-  } catch {}
-
-  try {
-    const anchor = document.createElement('a')
-    anchor.href = urlWhatsApp
-    anchor.target = '_blank'
-    anchor.rel = 'noopener noreferrer'
-    anchor.style.display = 'none'
-    document.body.appendChild(anchor)
-    anchor.click()
-    document.body.removeChild(anchor)
-  } catch {}
-
-  window.location.href = urlWhatsApp
+  abrirWhatsAppComMensagem(mensagem)
 }
 
 function linkCurto(url) {

@@ -334,8 +334,23 @@ export class VendasService {
   // ===============================
   // LISTAR / DETALHAR
   // ===============================
-  async listar() {
+  /** Se o usuário for vendedor (tem funcionario_id e não é admin), retorna apenas vendas do cliente que ele é responsável ou onde ele é representante. */
+  async listar(usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null) {
+    const funcionarioId =
+      usuario?.funcionario_id != null && !usuario?.is_admin
+        ? Number(usuario.funcionario_id)
+        : null;
+    const where =
+      funcionarioId != null
+        ? {
+            OR: [
+              { cliente: { vendedor_responsavel_id: funcionarioId } },
+              { representante_venda_funcionario_id: funcionarioId },
+            ],
+          }
+        : undefined;
     return this.prisma.vendas.findMany({
+      where,
       orderBy: { id: 'desc' },
       include: {
         cliente: true,
@@ -355,26 +370,41 @@ export class VendasService {
    *  - em etapas pré-contrato (ORCAMENTO_APROVADO, VENDA_FECHADA, CONTRATO_ASSINADO), ou
    *  - com contrato vigente (para que o usuário possa vincular e o card exiba "Venda #id").
    */
-  async listarAguardandoContrato() {
+  async listarAguardandoContrato(usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null) {
     const statusContrato = [
       'ORCAMENTO_APROVADO',
       'VENDA_FECHADA',
       'CONTRATO_ASSINADO',
     ];
+    const funcionarioId =
+      usuario?.funcionario_id != null && !usuario?.is_admin
+        ? Number(usuario.funcionario_id)
+        : null;
+    const where: any = {
+      OR: [
+        { status: { in: statusContrato } },
+        { contratos: { some: { status: 'VIGENTE' } } },
+      ],
+    };
+    if (funcionarioId != null) {
+      where.AND = [
+        {
+          OR: [
+            { cliente: { vendedor_responsavel_id: funcionarioId } },
+            { representante_venda_funcionario_id: funcionarioId },
+          ],
+        },
+      ];
+    }
     const lista = await this.prisma.vendas.findMany({
-      where: {
-        OR: [
-          { status: { in: statusContrato } },
-          { contratos: { some: { status: 'VIGENTE' } } },
-        ],
-      },
+      where,
       orderBy: { id: 'asc' },
       include: { cliente: true },
     });
     return lista;
   }
 
-  async listarAguardandoAgendamento() {
+  async listarAguardandoAgendamento(usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null) {
     const vendaStatuses = [
       'CONTRATO_GERADO',
       'AGENDAR_MEDIDA',
@@ -385,14 +415,34 @@ export class VendasService {
     ];
     const clienteStatusesPosVenda = [...this.statusPosVenda];
 
+    const funcionarioId =
+      usuario?.funcionario_id != null && !usuario?.is_admin
+        ? Number(usuario.funcionario_id)
+        : null;
+    const whereVendedor =
+      funcionarioId != null
+        ? {
+            OR: [
+              { cliente: { vendedor_responsavel_id: funcionarioId } },
+              { representante_venda_funcionario_id: funcionarioId },
+            ],
+          }
+        : undefined;
+
     const [porStatusVenda, porStatusCliente] = await Promise.all([
       this.prisma.vendas.findMany({
-        where: { status: { in: vendaStatuses } },
+        where: {
+          status: { in: vendaStatuses },
+          ...(whereVendedor ? { AND: [whereVendedor] } : {}),
+        },
         orderBy: { id: 'asc' },
         include: { cliente: true },
       }),
       this.prisma.vendas.findMany({
-        where: { cliente: { status: { in: clienteStatusesPosVenda } } },
+        where: {
+          cliente: { status: { in: clienteStatusesPosVenda } },
+          ...(whereVendedor ? { AND: [whereVendedor] } : {}),
+        },
         orderBy: { id: 'asc' },
         include: { cliente: true },
       }),
@@ -527,10 +577,12 @@ export class VendasService {
     });
 
     return this.prisma.$transaction(async (tx) => {
+      const vendedorId = (orc as any).vendedor_responsavel_id ?? orc.cliente?.vendedor_responsavel_id ?? undefined;
       const venda = await tx.vendas.create({
         data: {
           cliente_id: orc.cliente_id,
           orcamento_id: orc.id,
+          vendedor_responsavel_id: vendedorId,
           status: dto.status,
 
           data_venda: dto.data_venda ? new Date(dto.data_venda) : undefined,

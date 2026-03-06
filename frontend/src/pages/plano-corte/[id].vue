@@ -2,8 +2,8 @@
   <div class="login-font w-full h-full mt-4 mb-8 mx-2 lg:mx-4 rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
     <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
     <PageHeader
-      :title="isEdit ? `Editar Plano de Corte #${planoId}` : 'Novo Plano de Corte'"
-      subtitle="Ordem de industrialização e controle de produção"
+      :title="isEdit ? `Editar Serviço de Corte #${planoId}` : 'Novo Serviço de Corte'"
+      subtitle="Corte para fornecedor — industrialização e controle de produção"
       icon="pi pi-sitemap"
       :backTo="'/plano-corte'"
       class="border-b border-border-ui"
