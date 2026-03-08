@@ -52,7 +52,9 @@ $latestJson = @{
 
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 Copy-Item $exeFile (Join-Path $OutDir "AcasaSetup.exe")
-$latestJson | Out-File (Join-Path $OutDir "latest.json") -Encoding UTF8
+# UTF-8 sem BOM para o Tauri updater conseguir decodificar (Out-File -Encoding UTF8 grava BOM e causa "error decoding response body")
+$latestPath = Join-Path $OutDir "latest.json"
+[System.IO.File]::WriteAllText($latestPath, $latestJson, [System.Text.UTF8Encoding]::new($false))
 
 Write-Host "==> Artefatos em $OutDir"
 Get-ChildItem $OutDir
