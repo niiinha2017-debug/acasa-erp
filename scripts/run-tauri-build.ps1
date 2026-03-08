@@ -17,6 +17,26 @@ New-Item -ItemType Directory -Force -Path $tauriCacheRoot | Out-Null
 $env:LOCALAPPDATA = $tauriCacheRoot
 Write-Host "Tauri cache (LOCALAPPDATA): $tauriCacheRoot"
 
+# Pre-popular o cache com copia do NSIS do sistema (evita download e "Unable to start child process" do makensis baixado)
+$tauriNsisPath = Join-Path $tauriCacheRoot "tauri\NSIS"
+$systemNsis = "C:\Program Files (x86)\NSIS"
+if ((Test-Path (Join-Path $systemNsis "makensis.exe")) -and (-not (Test-Path (Join-Path $tauriNsisPath "makensis.exe")))) {
+  Write-Host "Pre-populando cache NSIS a partir do sistema: $systemNsis -> $tauriNsisPath"
+  New-Item -ItemType Directory -Force -Path $tauriNsisPath | Out-Null
+  robocopy $systemNsis $tauriNsisPath /E /NFL /NDL /NJH /NJS /nc /ns /np 2>&1 | Out-Null
+  if ($LASTEXITCODE -ge 8) { Write-Warning "robocopy NSIS retornou $LASTEXITCODE" }
+  # Plugin nsis_tauri_utils.dll (obrigatorio para o Tauri)
+  $pluginDir = Join-Path $tauriNsisPath "Plugins\x86-unicode\additional"
+  New-Item -ItemType Directory -Force -Path $pluginDir | Out-Null
+  $dllUrl = "https://github.com/tauri-apps/nsis-tauri-utils/releases/download/nsis_tauri_utils-v0.5.3/nsis_tauri_utils.dll"
+  try {
+    Invoke-WebRequest -Uri $dllUrl -OutFile (Join-Path $pluginDir "nsis_tauri_utils.dll") -UseBasicParsing
+    Write-Host "nsis_tauri_utils.dll baixado em $pluginDir"
+  } catch {
+    Write-Warning "Falha ao baixar nsis_tauri_utils.dll: $_"
+  }
+}
+
 $cargoPaths = @(
   (Join-Path $env:USERPROFILE ".cargo\bin"),
   (Join-Path $env:ProgramFiles "Rust\bin")
