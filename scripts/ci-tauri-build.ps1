@@ -1,4 +1,5 @@
 # Build Tauri no CI (Windows runner). Requer: Node, Rust, TAURI_SIGNING_PRIVATE_KEY e TAURI_SIGNING_PRIVATE_KEY_PASSWORD.
+# Se SKIP_TAURI_BUILD=1, apenas assina e gera latest.json (build já foi feito no job).
 $ErrorActionPreference = "Stop"
 $ProjectDir = Join-Path $env:CI_PROJECT_DIR "frontend"
 $BundleDir = Join-Path $ProjectDir "src-tauri\target\release\bundle\nsis"
@@ -9,18 +10,21 @@ $tauriConf = Get-Content (Join-Path $ProjectDir "src-tauri\tauri.conf.json") -Ra
 $version = $tauriConf.version
 Write-Host "==> Versao: $version"
 
-# Chave de assinatura (conteudo da variavel CI)
+# Chave de assinatura (conteudo da variavel CI) - before_script do job ja pode ter escrito; senao escrever aqui
 $keyPath = Join-Path $env:CI_PROJECT_DIR "tauri_private.key"
-$env:TAURI_SIGNING_PRIVATE_KEY | Out-File -FilePath $keyPath -Encoding utf8NoBOM
+if (-not (Test-Path $keyPath)) {
+  $env:TAURI_SIGNING_PRIVATE_KEY | Out-File -FilePath $keyPath -Encoding utf8NoBOM
+}
 $env:TAURI_SIGNING_PRIVATE_KEY_PATH = $keyPath
 
 Set-Location $ProjectDir
 
-Write-Host "==> npm ci..."
-npm ci
-
-Write-Host "==> Tauri build (pode levar varios minutos)..."
-npm run tauri -- build --bundles nsis
+if (-not $env:SKIP_TAURI_BUILD) {
+  Write-Host "==> npm ci..."
+  npm ci
+  Write-Host "==> Tauri build (pode levar varios minutos)..."
+  npm run tauri -- build --bundles nsis
+}
 
 $exeFile = Join-Path $BundleDir "Acasa_${version}_x64-setup.exe"
 if (-not (Test-Path $exeFile)) { throw "Arquivo nao encontrado: $exeFile" }

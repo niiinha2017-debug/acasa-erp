@@ -1,5 +1,5 @@
 # Pipeline: a cada push em main, builda Android + Tauri (Desktop), publica APKs e .exe na EC2 e atualiza site/backend.
-# Tauri: requer runner Windows (tag windows) e variáveis TAURI_SIGNING_PRIVATE_KEY e TAURI_SIGNING_PRIVATE_KEY_PASSWORD.
+# Tauri: job build:tauri usa tag "Windows" (runner local); variáveis TAURI_SIGNING_* em CI/CD.
 
 default:
   image: node:20-bookworm
@@ -30,6 +30,7 @@ prepare:android:
     - export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
     - java -version
   artifacts:
+    expire_in: 1 day
     paths:
       - android-sdk/
   cache:
@@ -62,7 +63,6 @@ build:android:
         echo "Keystore não configurado no CI: APKs serão unsigned. Para assinar, defina ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD."
       fi
   script:
-    - node scripts/bump-android-version.mjs
     - chmod +x "$CI_PROJECT_DIR/frontend/android/gradlew" "$CI_PROJECT_DIR/frontend-ponto/android/gradlew"
     - cd "$CI_PROJECT_DIR/frontend" && npm run build && npx cap sync android
     - cd "$CI_PROJECT_DIR/frontend/android" && ./gradlew assembleRelease --no-daemon
@@ -80,6 +80,7 @@ build:android:
       fi
     - cd "$CI_PROJECT_DIR"
   artifacts:
+    expire_in: 1 day
     paths:
       - frontend/android/app/build/outputs/apk/release/app-release.apk
       - frontend-ponto/android/app/build/outputs/apk/release/app-release.apk
@@ -205,20 +206,30 @@ deploy:ec2-update-app:
     name: production
   allow_failure: true
 
-# Build Tauri (Desktop Windows). Roda em runner com tag "windows".
-# Variáveis obrigatórias: TAURI_SIGNING_PRIVATE_KEY (conteúdo da chave), TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+# Build Tauri (Desktop Windows). Runner com tag "Windows".
+# Variáveis CI: TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD
 build:tauri:
   stage: build-desktop
-  tags: [windows]
+  tags: [Windows]
   rules:
     - if: $TAURI_SIGNING_PRIVATE_KEY == null || $TAURI_SIGNING_PRIVATE_KEY == ""
       when: never
     - when: on_success
   before_script:
-    - pwsh -Command "if (-not $env:TAURI_SIGNING_PRIVATE_KEY -or -not $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD) { Write-Error 'Defina TAURI_SIGNING_PRIVATE_KEY e TAURI_SIGNING_PRIVATE_KEY_PASSWORD em Settings -> CI/CD -> Variables'; exit 1 }"
+    - pwsh -Command |
+      if (-not $env:TAURI_SIGNING_PRIVATE_KEY -or -not $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD) {
+        Write-Error "Defina TAURI_SIGNING_PRIVATE_KEY e TAURI_SIGNING_PRIVATE_KEY_PASSWORD em Settings → CI/CD → Variables"
+        exit 1
+      }
+      $keyPath = Join-Path $env:CI_PROJECT_DIR "tauri_private.key"
+      $env:TAURI_SIGNING_PRIVATE_KEY | Out-File -FilePath $keyPath -Encoding utf8NoBOM
+      $env:TAURI_SIGNING_PRIVATE_KEY_PATH = $keyPath
   script:
-    - pwsh -File scripts/ci-tauri-build.ps1
+    - cd frontend && npm ci
+    - cd frontend && npm run tauri -- build --bundles nsis
+    - pwsh -Command "$env:SKIP_TAURI_BUILD='1'; & .\scripts\ci-tauri-build.ps1"
   artifacts:
+    expire_in: 1 day
     paths:
       - tauri-artifacts/AcasaSetup.exe
       - tauri-artifacts/latest.json

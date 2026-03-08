@@ -39,6 +39,17 @@ Antes de rodar qualquer script de deploy, carregue o arquivo:
 
 Todos os scripts de deploy leem `scripts/deploy.env` automaticamente (se existir). Só rodar:
 
+**Um comando só (recomendado):** bump + commit + push + deploy Tauri (na sua máquina Windows):
+
+```bash
+cd "d:\Sistema ERP\acasa-erp"
+bash scripts/deploy-tudo.sh              # ou: bash scripts/deploy-tudo.sh "release v0.1.64"
+```
+
+Isso sobe o push (o pipeline atualiza Android, site e backend na nuvem) e publica o instalador .exe na EC2.
+
+**Scripts separados (se precisar):**
+
 ```bash
 cd "d:\Sistema ERP\acasa-erp"
 bash scripts/upload-update.sh          # 1. Git (bump + build + push)

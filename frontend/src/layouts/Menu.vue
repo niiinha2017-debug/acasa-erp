@@ -56,6 +56,17 @@
 
         <!-- LOGOUT DESKTOP -->
         <button
+          v-if="showUpdateButton"
+          type="button"
+          @click="verificarAtualizacao"
+          :disabled="checkingUpdate"
+          class="hidden lg:flex items-center justify-center gap-1.5 w-auto px-2.5 h-9 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-all text-xs font-medium"
+          title="Verificar e instalar atualização do aplicativo"
+        >
+          <i class="pi pi-download text-sm" aria-hidden="true"></i>
+          <span>{{ checkingUpdate ? 'Verificando...' : 'Atualizar app' }}</span>
+        </button>
+        <button
           @click="handleLogout" 
           class="hidden lg:flex items-center justify-center w-9 h-9 text-red-500 border border-red-200 dark:border-red-900/50 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
           title="Sair"
@@ -154,7 +165,17 @@
             </div>
 
             <!-- FOOTER DO DRAWER -->
-            <div class="p-4 border-t border-slate-200 dark:border-slate-700 flex-shrink-0">
+            <div class="p-4 border-t border-slate-200 dark:border-slate-700 flex-shrink-0 space-y-2">
+              <button
+                v-if="showUpdateButton"
+                type="button"
+                @click="verificarAtualizacao"
+                :disabled="checkingUpdate"
+                class="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-blue-600 dark:text-blue-400 text-xs font-medium border border-blue-300 dark:border-blue-700 rounded-md hover:bg-blue-50 dark:hover:bg-blue-950/30 active:opacity-90 transition-colors touch-manipulation disabled:opacity-60"
+              >
+                <i class="pi pi-download text-xs"></i>
+                {{ checkingUpdate ? 'Verificando...' : 'Atualizar aplicativo' }}
+              </button>
               <button
                 type="button"
                 @click="handleLogout"
