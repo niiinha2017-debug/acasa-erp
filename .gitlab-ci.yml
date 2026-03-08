@@ -218,8 +218,8 @@ build:tauri:
   before_script:
     - powershell -ExecutionPolicy Bypass -File scripts/setup-tauri-key.ps1
   script:
-    - cd frontend; npm ci
-    - cd frontend; npm run tauri -- build --bundles nsis
+    - powershell -Command "Set-Location (Join-Path $env:CI_PROJECT_DIR 'frontend'); npm ci"
+    - powershell -ExecutionPolicy Bypass -File scripts/run-tauri-build.ps1
     - powershell -ExecutionPolicy Bypass -File scripts/run-tauri-sign-only.ps1
   artifacts:
     expire_in: 1 day
