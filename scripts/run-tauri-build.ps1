@@ -1,6 +1,16 @@
 # Adiciona Cargo ao PATH (runner como serviço pode nao herdar) e roda npm run tauri build.
 $ErrorActionPreference = "Stop"
 
+# NSIS: colocar primeiro no PATH com caminhos literais (servico pode nao herdar PATH do sistema)
+$nsisPaths = "C:\Program Files (x86)\NSIS", "C:\Program Files\NSIS"
+foreach ($np in $nsisPaths) {
+  if (Test-Path (Join-Path $np "makensis.exe")) {
+    $env:Path = "$np;$env:Path"
+    Write-Host "NSIS no PATH: $np"
+    break
+  }
+}
+
 $cargoPaths = @(
   (Join-Path $env:USERPROFILE ".cargo\bin"),
   (Join-Path $env:ProgramFiles "Rust\bin")
@@ -24,34 +34,6 @@ $prevErrPref = $ErrorActionPreference
 $ErrorActionPreference = "Continue"
 & rustup default stable 2>&1 | Out-Null
 $ErrorActionPreference = $prevErrPref
-
-# NSIS (makensis) necessario para gerar o instalador .exe; o download do Tauri pode falhar no CI
-$makensisPaths = @(
-  (Join-Path $env:ProgramFiles "NSIS\makensis.exe"),
-  (Join-Path ${env:ProgramFiles(x86)} "NSIS\makensis.exe")
-)
-$hasMakensis = $false
-foreach ($mp in $makensisPaths) {
-  if ($mp -and (Test-Path $mp)) {
-    $env:Path = (Split-Path $mp -Parent) + ";" + $env:Path
-    $hasMakensis = $true
-    Write-Host "NSIS encontrado: $mp"
-    break
-  }
-}
-if (-not $hasMakensis) {
-  Write-Host "Instalando NSIS via winget..."
-  $ErrorActionPreference = "Continue"
-  winget install --id NSIS.NSIS -e --accept-source-agreements --accept-package-agreements 2>&1 | Out-Null
-  $ErrorActionPreference = $prevErrPref
-  foreach ($mp in $makensisPaths) {
-    if ($mp -and (Test-Path $mp)) {
-      $env:Path = (Split-Path $mp -Parent) + ";" + $env:Path
-      Write-Host "NSIS instalado: $mp"
-      break
-    }
-  }
-}
 
 $frontendDir = Join-Path $env:CI_PROJECT_DIR "frontend"
 Set-Location $frontendDir
