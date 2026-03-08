@@ -13,7 +13,7 @@ Write-Host "==> Versao: $version"
 # Chave de assinatura (conteudo da variavel CI) - before_script do job ja pode ter escrito; senao escrever aqui
 $keyPath = Join-Path $env:CI_PROJECT_DIR "tauri_private.key"
 if (-not (Test-Path $keyPath)) {
-  $env:TAURI_SIGNING_PRIVATE_KEY | Out-File -FilePath $keyPath -Encoding utf8NoBOM
+  [System.IO.File]::WriteAllText($keyPath, $env:TAURI_SIGNING_PRIVATE_KEY, [System.Text.UTF8Encoding]::new($false))
 }
 $env:TAURI_SIGNING_PRIVATE_KEY_PATH = $keyPath
 
@@ -52,7 +52,7 @@ $latestJson = @{
 
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 Copy-Item $exeFile (Join-Path $OutDir "AcasaSetup.exe")
-$latestJson | Out-File (Join-Path $OutDir "latest.json") -Encoding utf8NoBOM
+$latestJson | Out-File (Join-Path $OutDir "latest.json") -Encoding UTF8
 
 Write-Host "==> Artefatos em $OutDir"
 Get-ChildItem $OutDir
