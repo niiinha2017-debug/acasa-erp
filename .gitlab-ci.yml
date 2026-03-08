@@ -216,7 +216,7 @@ build:tauri:
       when: never
     - when: on_success
   before_script:
-    - powershell -Command "if (-not $env:TAURI_SIGNING_PRIVATE_KEY -or -not $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD) { Write-Error 'Defina TAURI_SIGNING_PRIVATE_KEY e TAURI_SIGNING_PRIVATE_KEY_PASSWORD em Settings -> CI/CD -> Variables'; exit 1 }; $keyPath = Join-Path $env:CI_PROJECT_DIR 'tauri_private.key'; $env:TAURI_SIGNING_PRIVATE_KEY | Out-File -FilePath $keyPath -Encoding utf8; $env:TAURI_SIGNING_PRIVATE_KEY_PATH = $keyPath"
+    - powershell -Command "if (-not $$env:TAURI_SIGNING_PRIVATE_KEY -or -not $$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD) { Write-Error 'Defina TAURI_SIGNING_PRIVATE_KEY e TAURI_SIGNING_PRIVATE_KEY_PASSWORD em Settings -> CI/CD -> Variables'; exit 1 }; $$keyPath = Join-Path $$env:CI_PROJECT_DIR 'tauri_private.key'; $$env:TAURI_SIGNING_PRIVATE_KEY | Out-File -FilePath $$keyPath -Encoding utf8; $$env:TAURI_SIGNING_PRIVATE_KEY_PATH = $$keyPath"
   script:
     - cd frontend; npm ci
     - cd frontend; npm run tauri -- build --bundles nsis
