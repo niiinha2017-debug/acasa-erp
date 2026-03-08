@@ -1,31 +1,19 @@
 # Adiciona Cargo ao PATH (runner como serviço pode nao herdar) e roda npm run tauri build.
 $ErrorActionPreference = "Stop"
 
-# NSIS: colocar primeiro no PATH com caminhos literais (servico pode nao herdar PATH do sistema)
-$nsisPaths = "C:\Program Files (x86)\NSIS", "C:\Program Files\NSIS"
-foreach ($np in $nsisPaths) {
-  if (Test-Path (Join-Path $np "makensis.exe")) {
-    $env:Path = "$np;$env:Path"
-    Write-Host "NSIS no PATH: $np"
-    break
-  }
-}
-
-# Forcar cache do Tauri (NSIS, etc.) para dentro do projeto; evita AppData do usuario do servico (inacessivel ou quebrado)
-$tauriCacheRoot = Join-Path $env:CI_PROJECT_DIR "tauri-ci-cache"
-New-Item -ItemType Directory -Force -Path $tauriCacheRoot | Out-Null
-$env:LOCALAPPDATA = $tauriCacheRoot
-Write-Host "Tauri cache (LOCALAPPDATA): $tauriCacheRoot"
-
-# Pre-popular o cache com copia do NSIS do sistema (evita download e "Unable to start child process" do makensis baixado)
-$tauriNsisPath = Join-Path $tauriCacheRoot "tauri\NSIS"
+# useLocalToolsDir: true no tauri.conf.json faz as ferramentas (NSIS) irem para target/.tauri/ no projeto,
+# evitando AppData do usuario do servico (que causava "Unable to start child process" error 0x2).
+# Pre-popular target/.tauri/NSIS com o NSIS do sistema + nsis_tauri_utils.dll para evitar download e garantir execucao.
+$frontendDir = Join-Path $env:CI_PROJECT_DIR "frontend"
+$srcTauriDir = Join-Path $frontendDir "src-tauri"
+$tauriToolsDir = Join-Path $srcTauriDir "target\.tauri"
+$tauriNsisPath = Join-Path $tauriToolsDir "NSIS"
 $systemNsis = "C:\Program Files (x86)\NSIS"
-if ((Test-Path (Join-Path $systemNsis "makensis.exe")) -and (-not (Test-Path (Join-Path $tauriNsisPath "makensis.exe")))) {
-  Write-Host "Pre-populando cache NSIS a partir do sistema: $systemNsis -> $tauriNsisPath"
+if ($env:CI_PROJECT_DIR -and (Test-Path (Join-Path $systemNsis "makensis.exe")) -and (-not (Test-Path (Join-Path $tauriNsisPath "makensis.exe")))) {
+  Write-Host "Pre-populando NSIS do Tauri no projeto (target/.tauri/NSIS): $systemNsis -> $tauriNsisPath"
   New-Item -ItemType Directory -Force -Path $tauriNsisPath | Out-Null
   robocopy $systemNsis $tauriNsisPath /E /NFL /NDL /NJH /NJS /nc /ns /np 2>&1 | Out-Null
   if ($LASTEXITCODE -ge 8) { Write-Warning "robocopy NSIS retornou $LASTEXITCODE" }
-  # Plugin nsis_tauri_utils.dll (obrigatorio para o Tauri)
   $pluginDir = Join-Path $tauriNsisPath "Plugins\x86-unicode\additional"
   New-Item -ItemType Directory -Force -Path $pluginDir | Out-Null
   $dllUrl = "https://github.com/tauri-apps/nsis-tauri-utils/releases/download/nsis_tauri_utils-v0.5.3/nsis_tauri_utils.dll"
@@ -34,6 +22,16 @@ if ((Test-Path (Join-Path $systemNsis "makensis.exe")) -and (-not (Test-Path (Jo
     Write-Host "nsis_tauri_utils.dll baixado em $pluginDir"
   } catch {
     Write-Warning "Falha ao baixar nsis_tauri_utils.dll: $_"
+  }
+}
+
+# NSIS no PATH (para o caso de o bundler chamar makensis do PATH em algum passo)
+$nsisPaths = "C:\Program Files (x86)\NSIS", "C:\Program Files\NSIS"
+foreach ($np in $nsisPaths) {
+  if (Test-Path (Join-Path $np "makensis.exe")) {
+    $env:Path = "$np;$env:Path"
+    Write-Host "NSIS no PATH: $np"
+    break
   }
 }
 
@@ -61,6 +59,5 @@ $ErrorActionPreference = "Continue"
 & rustup default stable 2>&1 | Out-Null
 $ErrorActionPreference = $prevErrPref
 
-$frontendDir = Join-Path $env:CI_PROJECT_DIR "frontend"
 Set-Location $frontendDir
 npm run tauri -- build --bundles nsis
