@@ -23,6 +23,12 @@ server {
         try_files $uri $uri/ =404;
     }
 
+    # JSON com Content-Type correto para o Tauri updater (evita "error decoding response body")
+    location ~ \.json$ {
+        add_header Content-Type "application/json; charset=utf-8";
+        try_files $uri =404;
+    }
+
     location /downloads/ {
         try_files $uri $uri/ /downloads/index.html;
     }

@@ -261,6 +261,10 @@ deploy:tauri:
         echo "Artefatos Tauri nao encontrados (build:tauri pode ter falhado ou nao rodou)."
         exit 0
       fi
+    - |
+      echo "=== Estado na EC2 antes do deploy ==="
+      ssh -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new "$EC2_HOST" \
+        "echo '-- /var/www/aplicativo/erp/' ; ls -la /var/www/aplicativo/erp/ 2>/dev/null || echo '(pasta nao existe)' ; echo '-- /var/www/aplicativo/updates/tauri/' ; ls -la /var/www/aplicativo/updates/tauri/ 2>/dev/null || echo '(pasta nao existe)'"
     - 'scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new tauri-artifacts/AcasaSetup.exe "${EC2_HOST}:/home/ec2-user/AcasaSetup.exe"'
     - 'scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new tauri-artifacts/latest.json "${EC2_HOST}:/home/ec2-user/latest.json"'
     - 'ssh -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new "$EC2_HOST" "sudo mkdir -p /var/www/aplicativo/erp /var/www/aplicativo/updates/tauri && sudo mv /home/ec2-user/AcasaSetup.exe /var/www/aplicativo/erp/ && sudo mv /home/ec2-user/latest.json /var/www/aplicativo/updates/tauri/ && sudo chown -R nginx:nginx /var/www/aplicativo/erp /var/www/aplicativo/updates/tauri && sudo chmod 644 /var/www/aplicativo/erp/AcasaSetup.exe /var/www/aplicativo/updates/tauri/latest.json"'

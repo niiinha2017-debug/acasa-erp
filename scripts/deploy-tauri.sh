@@ -50,6 +50,10 @@ export TAURI_SIGNING_PRIVATE_KEY="$(cat "$TAURI_SIGNING_PRIVATE_KEY_PATH")"
 
 cd "$PROJECT_DIR"
 
+echo "[$(date +%H:%M:%S)] Estado na EC2 antes do deploy..."
+ssh -i "$KEY_PATH" "$EC2_HOST" \
+  "echo '-- /var/www/aplicativo/erp/' ; ls -la /var/www/aplicativo/erp/ 2>/dev/null || echo '(pasta nao existe)' ; echo '-- /var/www/aplicativo/updates/tauri/' ; ls -la /var/www/aplicativo/updates/tauri/ 2>/dev/null || echo '(pasta nao existe)'"
+
 echo "[$(date +%H:%M:%S)] npm install..."
 npm install --prefer-offline --no-audit
 
