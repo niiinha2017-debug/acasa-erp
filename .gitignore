@@ -51,6 +51,7 @@ acasa3358.pub
 # temp directory
 .temp
 .tmp
+tauri-ci-cache/
 
 # Runtime data
 pids

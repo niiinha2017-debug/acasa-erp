@@ -11,6 +11,12 @@ foreach ($np in $nsisPaths) {
   }
 }
 
+# Forcar cache do Tauri (NSIS, etc.) para dentro do projeto; evita AppData do usuario do servico (inacessivel ou quebrado)
+$tauriCacheRoot = Join-Path $env:CI_PROJECT_DIR "tauri-ci-cache"
+New-Item -ItemType Directory -Force -Path $tauriCacheRoot | Out-Null
+$env:LOCALAPPDATA = $tauriCacheRoot
+Write-Host "Tauri cache (LOCALAPPDATA): $tauriCacheRoot"
+
 $cargoPaths = @(
   (Join-Path $env:USERPROFILE ".cargo\bin"),
   (Join-Path $env:ProgramFiles "Rust\bin")
