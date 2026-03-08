@@ -19,9 +19,11 @@ foreach ($p in $cargoPaths) {
 
 # Definir toolchain padrão para o rustup (CI pode rodar sem default configurado)
 if (-not $env:RUSTUP_TOOLCHAIN) { $env:RUSTUP_TOOLCHAIN = "stable" }
-# Garantir que o default esteja configurado (evita "rustup could not choose a version")
-& rustup default stable 2>$null
-if ($LASTEXITCODE -ne 0) { Write-Host "Aviso: rustup default stable falhou ou nao encontrado; continuando com RUSTUP_TOOLCHAIN=stable" }
+# Garantir que o default esteja configurado (rustup escreve em stderr; nao falhar o script)
+$prevErrPref = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+& rustup default stable 2>&1 | Out-Null
+$ErrorActionPreference = $prevErrPref
 
 $frontendDir = Join-Path $env:CI_PROJECT_DIR "frontend"
 Set-Location $frontendDir
