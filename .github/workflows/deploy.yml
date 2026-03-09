@@ -86,7 +86,7 @@ jobs:
             sudo cp /tmp/acasa-downloads-index.html '$REMOTE_WEB/downloads/index.html'
             sudo cp /tmp/acasa-downloads-index.html '$REMOTE_WEB/index.html'
             sudo rm -f /tmp/acasa-downloads-index.html
-            sudo chown -R nginx:nginx '$REMOTE_WEB/downloads' '$REMOTE_WEB/index.html'
+            sudo chown -R www-data:www-data '$REMOTE_WEB/downloads' '$REMOTE_WEB/index.html'
             sudo find '$REMOTE_WEB/downloads' -type d -exec chmod 755 {} \;
             sudo find '$REMOTE_WEB/downloads' -type f -exec chmod 644 {} \;
             sudo chmod 644 '$REMOTE_WEB/index.html'
@@ -111,7 +111,7 @@ jobs:
               --exclude 'index.html' \
               /tmp/acasa-frontend-dist/ '$REMOTE_WEB/'
             sudo rm -rf /tmp/acasa-frontend-dist
-            sudo chown -R nginx:nginx '$REMOTE_WEB'
+            sudo chown -R www-data:www-data '$REMOTE_WEB'
             sudo nginx -t
             sudo systemctl reload nginx
           "
@@ -274,7 +274,7 @@ jobs:
             sudo mkdir -p '$REMOTE_WEB/erp' '$REMOTE_WEB/updates/android'
             sudo mv /tmp/Acasa.apk '$REMOTE_WEB/erp/Acasa.apk'
             sudo mv /tmp/version.json '$REMOTE_WEB/updates/android/version.json'
-            sudo chown -R nginx:nginx '$REMOTE_WEB/erp' '$REMOTE_WEB/updates'
+            sudo chown -R www-data:www-data '$REMOTE_WEB/erp' '$REMOTE_WEB/updates'
             sudo chmod 644 '$REMOTE_WEB/erp/Acasa.apk' '$REMOTE_WEB/updates/android/version.json'
           "
 
@@ -291,7 +291,7 @@ jobs:
             sudo mv /tmp/ponto.apk '$REMOTE_PONTO/ponto.apk'
             sudo mv /tmp/version-ponto.json '$REMOTE_PONTO/version.json'
             sudo mv /tmp/index-ponto.html '$REMOTE_PONTO/index.html'
-            sudo chown -R nginx:nginx '$REMOTE_PONTO'
+            sudo chown -R www-data:www-data '$REMOTE_PONTO'
             sudo chmod 644 '$REMOTE_PONTO/ponto.apk' '$REMOTE_PONTO/version.json' '$REMOTE_PONTO/index.html'
           "
 
@@ -476,7 +476,7 @@ jobs:
             sudo mkdir -p '$REMOTE_WEB/erp' '$REMOTE_WEB/updates/tauri'
             sudo mv /tmp/AcasaSetup.exe '$REMOTE_WEB/erp/AcasaSetup.exe'
             sudo mv /tmp/latest.json '$REMOTE_WEB/updates/tauri/latest.json'
-            sudo chown nginx:nginx '$REMOTE_WEB/erp/AcasaSetup.exe' '$REMOTE_WEB/updates/tauri/latest.json'
+            sudo chown www-data:www-data '$REMOTE_WEB/erp/AcasaSetup.exe' '$REMOTE_WEB/updates/tauri/latest.json'
             sudo chmod 644 '$REMOTE_WEB/erp/AcasaSetup.exe' '$REMOTE_WEB/updates/tauri/latest.json'
             ls -lh '$REMOTE_WEB/erp/AcasaSetup.exe' '$REMOTE_WEB/updates/tauri/latest.json'
           "
