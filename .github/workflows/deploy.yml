@@ -1,4 +1,4 @@
-name: Deploy ACASA (EC2)
+name: Deploy ACASA (Lightsail)
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 env:
   SSH_HOST: ${{ secrets.EC2_HOST }}
   SSH_USER: ${{ secrets.EC2_USER }}
-  REMOTE_ROOT: /home/ec2-user/acasa-erp
+  REMOTE_ROOT: /home/ubuntu/acasa-erp
   REMOTE_WEB: /var/www/aplicativo
   REMOTE_PONTO: /var/www/ponto
 

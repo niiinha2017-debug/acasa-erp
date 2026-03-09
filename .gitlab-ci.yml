@@ -1,7 +1,7 @@
-# Pipeline: a cada push em main, builda Android + Tauri (Desktop), publica APKs e .exe na EC2.
+# Pipeline: a cada push em main, builda Android + Tauri (Desktop), publica APKs e .exe no Lightsail (Ubuntu).
+# Variáveis em Settings → CI/CD → Variables: EC2_HOST (ubuntu@44.205.23.128), EC2_SSH_PRIVATE_KEY (chave Lightsail).
 # Windows (sua máquina): build:tauri → tag "Windows".
-# Linux na sua máquina (WSL2 + runner com tag "Local"): prepare:android, build:android, deploy:* → tag "Local".
-# Se não houver runner "Local", esses jobs rodam nos runners compartilhados do GitLab (consumem minutos).
+# Linux (WSL2 + runner "Local"): prepare:android, build:android, deploy:* → tag "Local".
 
 default:
   image: node:20-bookworm
@@ -149,33 +149,33 @@ deploy:ec2:
         VERSION_PONTO=$(node -p "require('./frontend-ponto/package.json').version")
         echo "{\"version\":\"$VERSION_PONTO\",\"url\":\"https://ponto.acasamarcenaria.com.br/ponto.apk\"}" > /tmp/version-ponto.json
       fi
-    - scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new /tmp/version.json "${EC2_HOST}:/home/ec2-user/version.json"
-    - scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new /tmp/version-ponto.json "${EC2_HOST}:/home/ec2-user/version-ponto.json"
-    - scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new "$CI_PROJECT_DIR/frontend/android/app/build/outputs/apk/release/app-release.apk" "${EC2_HOST}:/home/ec2-user/Acasa.apk"
-    - scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new "$CI_PROJECT_DIR/frontend-ponto/android/app/build/outputs/apk/release/app-release.apk" "${EC2_HOST}:/home/ec2-user/ponto.apk"
+    - scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new /tmp/version.json "${EC2_HOST}:/home/ubuntu/version.json"
+    - scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new /tmp/version-ponto.json "${EC2_HOST}:/home/ubuntu/version-ponto.json"
+    - scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new "$CI_PROJECT_DIR/frontend/android/app/build/outputs/apk/release/app-release.apk" "${EC2_HOST}:/home/ubuntu/Acasa.apk"
+    - scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new "$CI_PROJECT_DIR/frontend-ponto/android/app/build/outputs/apk/release/app-release.apk" "${EC2_HOST}:/home/ubuntu/ponto.apk"
 
-    - scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new "$CI_PROJECT_DIR/aplicativo-site/index.html" "${EC2_HOST}:/home/ec2-user/index-aplicativo.html"
+    - scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new "$CI_PROJECT_DIR/aplicativo-site/index.html" "${EC2_HOST}:/home/ubuntu/index-aplicativo.html"
 
     - |
       echo "==> Build PWA do Ponto (relógio por ID de funcionário)"
       npm ci --prefix frontend-ponto
       cd frontend-ponto && npm run build && cd ..
       tar czf /tmp/ponto-dist.tar.gz -C frontend-ponto/dist .
-    - scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new /tmp/ponto-dist.tar.gz "${EC2_HOST}:/home/ec2-user/ponto-dist.tar.gz"
+    - scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new /tmp/ponto-dist.tar.gz "${EC2_HOST}:/home/ubuntu/ponto-dist.tar.gz"
 
     - |
       ssh -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new "$EC2_HOST" \
         "sudo mkdir -p /var/www/aplicativo/erp /var/www/aplicativo/updates/android /var/www/ponto /var/www/aplicativo/downloads && \
-         sudo mv /home/ec2-user/version.json /var/www/aplicativo/updates/android/ && \
-         sudo mv /home/ec2-user/Acasa.apk /var/www/aplicativo/erp/ && \
+         sudo mv /home/ubuntu/version.json /var/www/aplicativo/updates/android/ && \
+         sudo mv /home/ubuntu/Acasa.apk /var/www/aplicativo/erp/ && \
          sudo rm -rf /var/www/ponto/* && \
-         sudo tar xzf /home/ec2-user/ponto-dist.tar.gz -C /var/www/ponto && \
-         sudo mv /home/ec2-user/ponto.apk /var/www/ponto/ && \
-         sudo mv /home/ec2-user/version-ponto.json /var/www/ponto/version.json && \
-         sudo cp /home/ec2-user/index-aplicativo.html /var/www/aplicativo/index.html && \
-         sudo cp /home/ec2-user/index-aplicativo.html /var/www/aplicativo/downloads/index.html && \
-         sudo rm -f /home/ec2-user/index-aplicativo.html /home/ec2-user/ponto-dist.tar.gz && \
-         sudo chown -R nginx:nginx /var/www/aplicativo/erp /var/www/aplicativo/updates /var/www/ponto /var/www/aplicativo/index.html /var/www/aplicativo/downloads"
+         sudo tar xzf /home/ubuntu/ponto-dist.tar.gz -C /var/www/ponto && \
+         sudo mv /home/ubuntu/ponto.apk /var/www/ponto/ && \
+         sudo mv /home/ubuntu/version-ponto.json /var/www/ponto/version.json && \
+         sudo cp /home/ubuntu/index-aplicativo.html /var/www/aplicativo/index.html && \
+         sudo cp /home/ubuntu/index-aplicativo.html /var/www/aplicativo/downloads/index.html && \
+         sudo rm -f /home/ubuntu/index-aplicativo.html /home/ubuntu/ponto-dist.tar.gz && \
+         sudo chown -R www-data:www-data /var/www/aplicativo/erp /var/www/aplicativo/updates /var/www/ponto /var/www/aplicativo/index.html /var/www/aplicativo/downloads"
   environment:
     name: production
 
@@ -212,7 +212,7 @@ deploy:ec2-update-app:
       REMOTE_WEB_DIR="/var/www/aplicativo"
       ssh -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new "$EC2_HOST" "
         set -e
-        cd ~/acasa-erp || { echo 'Pasta ~/acasa-erp não existe na EC2.'; exit 1; }
+        cd ~/acasa-erp || { echo 'Pasta ~/acasa-erp não existe no servidor.'; exit 1; }
         echo '==> git pull'
         git pull origin main || git pull origin master || git pull
 
@@ -230,7 +230,7 @@ deploy:ec2-update-app:
         npm ci
         npm run build
         sudo rsync -a --delete --exclude 'erp' --exclude 'ponto' --exclude 'downloads' --exclude 'index.html' dist/ $REMOTE_WEB_DIR/
-        sudo chown -R nginx:nginx $REMOTE_WEB_DIR
+        sudo chown -R www-data:www-data $REMOTE_WEB_DIR
         sudo nginx -t && sudo systemctl reload nginx
 
         echo 'OK: Site e backend atualizados.'
@@ -299,9 +299,9 @@ deploy:tauri:
       echo "=== Estado na EC2 antes do deploy ==="
       ssh -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new "$EC2_HOST" \
         "echo '-- /var/www/aplicativo/erp/' ; ls -la /var/www/aplicativo/erp/ 2>/dev/null || echo '(pasta nao existe)' ; echo '-- /var/www/aplicativo/updates/tauri/' ; ls -la /var/www/aplicativo/updates/tauri/ 2>/dev/null || echo '(pasta nao existe)'"
-    - 'scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new tauri-artifacts/AcasaSetup.exe "${EC2_HOST}:/home/ec2-user/AcasaSetup.exe"'
-    - 'scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new tauri-artifacts/latest.json "${EC2_HOST}:/home/ec2-user/latest.json"'
-    - 'ssh -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new "$EC2_HOST" "sudo mkdir -p /var/www/aplicativo/erp /var/www/aplicativo/updates/tauri && sudo mv /home/ec2-user/AcasaSetup.exe /var/www/aplicativo/erp/ && sudo mv /home/ec2-user/latest.json /var/www/aplicativo/updates/tauri/ && sudo chown -R nginx:nginx /var/www/aplicativo/erp /var/www/aplicativo/updates/tauri && sudo chmod 644 /var/www/aplicativo/erp/AcasaSetup.exe /var/www/aplicativo/updates/tauri/latest.json"'
+    - 'scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new tauri-artifacts/AcasaSetup.exe "${EC2_HOST}:/home/ubuntu/AcasaSetup.exe"'
+    - 'scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new tauri-artifacts/latest.json "${EC2_HOST}:/home/ubuntu/latest.json"'
+    - 'ssh -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new "$EC2_HOST" "sudo mkdir -p /var/www/aplicativo/erp /var/www/aplicativo/updates/tauri && sudo mv /home/ubuntu/AcasaSetup.exe /var/www/aplicativo/erp/ && sudo mv /home/ubuntu/latest.json /var/www/aplicativo/updates/tauri/ && sudo chown -R www-data:www-data /var/www/aplicativo/erp /var/www/aplicativo/updates/tauri && sudo chmod 644 /var/www/aplicativo/erp/AcasaSetup.exe /var/www/aplicativo/updates/tauri/latest.json"'
     - 'echo "OK: Tauri publicado em aplicativo.acasamarcenaria.com.br/erp/AcasaSetup.exe"'
   environment:
     name: production
