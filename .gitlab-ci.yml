@@ -1,7 +1,6 @@
 # Pipeline: a cada push em main, builda Android + Tauri (Desktop), publica APKs e .exe no Lightsail (Ubuntu).
 # Variáveis em Settings → CI/CD → Variables: EC2_HOST (ubuntu@44.205.23.128), EC2_SSH_PRIVATE_KEY (chave Lightsail).
-# Windows (sua máquina): build:tauri → tag "Windows".
-# Linux (WSL2 + runner "Local"): prepare:android, build:android, deploy:* → tag "Local".
+# Jobs rodam nos runners do GitLab (shared). Nenhum runner local no PC.
 
 default:
   image: node:20-bookworm
@@ -16,10 +15,9 @@ stages:
   - build   # Android e Desktop rodam em paralelo
   - deploy
 
-# Instala JDK 17 + Android SDK (uma vez por job). Roda no runner com tag Local (WSL2) ou no GitLab.
+# Instala JDK 17 + Android SDK (uma vez por job). Roda nos runners do GitLab (shared).
 prepare:android:
   stage: prepare
-  tags: [Local]
   script:
     - apt-get update -qq && apt-get install -y -qq openjdk-17-jdk wget unzip ssh-client
     - export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
@@ -43,7 +41,6 @@ prepare:android:
 
 build:android:
   stage: build
-  tags: [Local]
   dependencies:
     - prepare:android
   cache:
@@ -98,7 +95,6 @@ build:android:
 # Recebe artefatos de todos os estágios anteriores (sem dependencies/needs)
 deploy:ec2:
   stage: deploy
-  tags: [Local]
   needs:
     - job: prepare:android
       artifacts: true
@@ -182,7 +178,6 @@ deploy:ec2:
 # Atualiza código na EC2: git pull, backend (migrate + restart), frontend web (build + rsync)
 deploy:ec2-update-app:
   stage: deploy
-  tags: [Local]
   needs:
     - job: deploy:ec2
   before_script:
@@ -243,7 +238,6 @@ deploy:ec2-update-app:
 # Variáveis CI: TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD
 build:tauri:
   stage: build
-  tags: [Windows]
   rules:
     - if: $TAURI_SIGNING_PRIVATE_KEY == null || $TAURI_SIGNING_PRIVATE_KEY == ""
       when: never
@@ -264,7 +258,6 @@ build:tauri:
 # Publica o instalador Tauri e latest.json na EC2 (usa artefatos do build:tauri)
 deploy:tauri:
   stage: deploy
-  tags: [Local]
   needs:
     - job: build:tauri
       artifacts: true

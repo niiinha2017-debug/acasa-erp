@@ -25,7 +25,7 @@ jobs:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
       - name: Trust EC2 host
-        run: ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+        run: mkdir -p ~/.ssh && ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
       - name: Deploy backend on EC2
         run: |
@@ -75,7 +75,7 @@ jobs:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
       - name: Trust EC2 host
-        run: ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+        run: mkdir -p ~/.ssh && ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
       - name: Upload downloads page (root + /downloads)
         run: |
@@ -246,7 +246,7 @@ jobs:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
       - name: Trust EC2 host
-        run: ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+        run: mkdir -p ~/.ssh && ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
       - name: Generate version.json (Android "Verificar atualização")
         run: |
@@ -464,7 +464,7 @@ jobs:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
       - name: Trust EC2 host
-        run: ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+        run: mkdir -p ~/.ssh && ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
       - name: Upload installer + latest.json to EC2
         run: |
