@@ -505,8 +505,9 @@ export class FinanceiroService {
   /**
    * Dar baixa em um título (parcela): marca como PAGO e cria registro em Despesas
    * com data_vencimento/data_compensacao. Usa $transaction para atomicidade.
+   * @param dto.data_pagamento opcional - data do pagamento (ISO string); se omitido, usa data atual.
    */
-  async pagarTitulo(tituloId: number) {
+  async pagarTitulo(tituloId: number, dto: { data_pagamento?: string } = {}) {
     return this.prisma.$transaction(async (tx) => {
       const titulo = await tx.titulos_financeiros.findUnique({
         where: { id: tituloId },
@@ -517,7 +518,7 @@ export class FinanceiroService {
         throw new BadRequestException('Este título já está pago.');
       }
 
-      const pagoEm = new Date();
+      const pagoEm = dto?.data_pagamento ? new Date(dto.data_pagamento) : new Date();
       const valorTitulo = Number((titulo as any).valor ?? 0);
       const formaPagamento = String((titulo as any).tipo ?? 'DINHEIRO').toUpperCase();
       const vencimentoEm = (titulo as any).vencimento_em
@@ -575,8 +576,9 @@ export class FinanceiroService {
 
   /**
    * Dar baixa em despesa à vista (sem parcelas).
+   * @param dto.data_pagamento opcional - data do pagamento (ISO string); se omitido, usa data atual.
    */
-  async pagarDespesa(despesaId: number) {
+  async pagarDespesa(despesaId: number, dto: { data_pagamento?: string } = {}) {
     const despesa = await this.prisma.despesas.findUnique({
       where: { id: despesaId },
       include: { titulos: true },
@@ -591,7 +593,7 @@ export class FinanceiroService {
       throw new BadRequestException('Esta despesa já está paga.');
     }
 
-    const pagoEm = new Date();
+    const pagoEm = dto?.data_pagamento ? new Date(dto.data_pagamento) : new Date();
     await this.prisma.despesas.update({
       where: { id: despesaId },
       data: { status: SF.PAGO, data_pagamento: pagoEm },

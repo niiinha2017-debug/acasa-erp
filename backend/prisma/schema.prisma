@@ -456,6 +456,7 @@ model Fornecedor {
   data_vencimento   Int?
   ramo_atividade    String?
   prazo_entrega_dias Int?
+  saldo_credito     Decimal? @db.Decimal(10, 2)
   criado_em         DateTime @default(now())
   atualizado_em   DateTime @updatedAt
 

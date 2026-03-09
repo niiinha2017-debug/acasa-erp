@@ -147,16 +147,16 @@ export class ContasPagarController {
   @Post('titulo/:id/pagar')
   @Permissoes('contas_pagar.editar')
   @HttpCode(HttpStatus.OK)
-  pagarTitulo(@Param('id') id: string) {
-    return this.service.pagarTitulo(this.cleanIdOrFail(id));
+  pagarTitulo(@Param('id') id: string, @Body() dto: { data_pagamento?: string } = {}) {
+    return this.service.pagarTitulo(this.cleanIdOrFail(id), dto);
   }
 
   // ✅ Dar baixa em despesa à vista (sem parcelas)
   @Post('despesa/:id/pagar')
   @Permissoes('contas_pagar.editar')
   @HttpCode(HttpStatus.OK)
-  pagarDespesa(@Param('id') id: string) {
-    return this.service.pagarDespesa(this.cleanIdOrFail(id));
+  pagarDespesa(@Param('id') id: string, @Body() dto: { data_pagamento?: string } = {}) {
+    return this.service.pagarDespesa(this.cleanIdOrFail(id), dto);
   }
 
   // ✅ DETALHE (sempre depois das rotas fixas)

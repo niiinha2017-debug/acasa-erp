@@ -322,8 +322,8 @@ export const FinanceiroService = {
   atualizarContaPagar: (id, dados) => api.put(`/financeiro/contas-pagar/${id}`, dados),
 
   pagarContaPagar: (id, dados) => api.post(`/financeiro/contas-pagar/${id}/pagar`, dados),
-  pagarTitulo: (tituloId) => api.post(`/financeiro/contas-pagar/titulo/${tituloId}/pagar`),
-  pagarDespesa: (despesaId) => api.post(`/financeiro/contas-pagar/despesa/${despesaId}/pagar`),
+  pagarTitulo: (tituloId, dados = {}) => api.post(`/financeiro/contas-pagar/titulo/${tituloId}/pagar`, dados),
+  pagarDespesa: (despesaId, dados = {}) => api.post(`/financeiro/contas-pagar/despesa/${despesaId}/pagar`, dados),
 
   // ✅ NOVO: etapa 1 do modal (preview)
   previewFechamentoFornecedor: (params) =>

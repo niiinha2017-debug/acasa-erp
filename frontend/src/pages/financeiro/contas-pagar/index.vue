@@ -239,6 +239,46 @@
       @close="fecharModalFechamento()"
       @confirm="executarFechamentoFinal"
     />
+
+    <!-- Modal: confirmar pagamento com data do pagamento -->
+    <Teleport to="body">
+      <div
+        v-if="modalPagamentoOpen"
+        class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50"
+        @click.self="fecharModalPagamento()"
+      >
+        <div class="bg-white rounded-xl shadow-xl border border-slate-200 p-6 w-full max-w-sm mx-4">
+          <h3 class="text-base font-semibold text-slate-800 mb-2">Confirmar pagamento</h3>
+          <p class="text-sm text-slate-600 mb-4">
+            Valor: <strong>{{ formatarMoeda(pagamentoContext?.valor) }}</strong>
+          </p>
+          <div class="mb-5">
+            <label class="text-[10px] font-semibold text-slate-500 uppercase mb-1 block tracking-wide">Data do pagamento</label>
+            <input
+              v-model="dataPagamento"
+              type="date"
+              class="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:ring-1 focus:ring-slate-300 text-slate-700"
+            />
+          </div>
+          <div class="flex gap-2 justify-end">
+            <button
+              type="button"
+              class="h-9 px-4 rounded-lg border border-slate-300 bg-white text-slate-700 text-sm font-medium hover:bg-slate-50"
+              @click="fecharModalPagamento()"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              class="h-9 px-4 rounded-lg bg-slate-800 text-white text-sm font-medium hover:bg-slate-700"
+              @click="confirmarPagamento()"
+            >
+              Confirmar
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -246,7 +286,6 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { FinanceiroService, FornecedorService } from '@/services/index'
 import { notify } from '@/services/notify'
-import { confirm } from '@/services/confirm'
 
 definePage({ meta: { perm: 'contas_pagar.ver' } })
 
@@ -276,6 +315,11 @@ const fornecedorIdFechamentoRef = ref(null)
 const modalFechamentoOpen = ref(false)
 const fornecedorSelecionadoParaFechamento = ref(null)
 const rowExpandido = ref(null)
+
+// Modal de pagamento (data do pagamento)
+const modalPagamentoOpen = ref(false)
+const pagamentoContext = ref(null) // { tipo: 'titulo'|'despesa', id, valor }
+const dataPagamento = ref('')
 
 const nomeFornecedorFechamento = computed(() => {
   const id = fornecedorIdFechamentoRef.value
@@ -404,41 +448,48 @@ async function executarFechamentoFinal(payload) {
   }
 }
 
-async function darBaixaTitulo(row) {
-  const ok = await confirm.show('Confirmar Pagamento', `Deseja confirmar o pagamento de ${formatarMoeda(row.valor)}?`)
-  if (!ok) return
+function abrirModalPagamento(tipo, id, valor) {
+  pagamentoContext.value = { tipo, id, valor }
+  const hoje = new Date()
+  dataPagamento.value = hoje.toISOString().slice(0, 10)
+  modalPagamentoOpen.value = true
+}
+
+function fecharModalPagamento() {
+  modalPagamentoOpen.value = false
+  pagamentoContext.value = null
+}
+
+async function confirmarPagamento() {
+  const ctx = pagamentoContext.value
+  if (!ctx) return
+  const dataPag = dataPagamento.value ? `${dataPagamento.value}T12:00:00.000Z` : null
+  const payload = dataPag ? { data_pagamento: dataPag } : {}
   try {
-    await FinanceiroService.pagarTitulo(row.titulo_id)
+    if (ctx.tipo === 'titulo') {
+      await FinanceiroService.pagarTitulo(ctx.id, payload)
+    } else {
+      await FinanceiroService.pagarDespesa(ctx.id, payload)
+    }
     notify.success('Pagamento registrado com sucesso.')
+    fecharModalPagamento()
     await buscar()
   } catch (e) {
     notify.error(e?.response?.data?.message || 'Erro ao registrar pagamento')
   }
+}
+
+async function darBaixaTitulo(row) {
+  abrirModalPagamento('titulo', row.titulo_id, row.valor)
 }
 
 async function darBaixaDespesa(row) {
   if (!row.id_despesa) return
-  const ok = await confirm.show('Confirmar Pagamento', `Deseja confirmar o pagamento de ${formatarMoeda(row.valor)}?`)
-  if (!ok) return
-  try {
-    await FinanceiroService.pagarDespesa(row.id_despesa)
-    notify.success('Pagamento registrado com sucesso.')
-    await buscar()
-  } catch (e) {
-    notify.error(e?.response?.data?.message || 'Erro ao registrar pagamento')
-  }
+  abrirModalPagamento('despesa', row.id_despesa, row.valor)
 }
 
 async function darBaixaTituloById(tituloId, valor) {
-  const ok = await confirm.show('Confirmar Pagamento', `Deseja confirmar o pagamento de ${formatarMoeda(valor)}?`)
-  if (!ok) return
-  try {
-    await FinanceiroService.pagarTitulo(tituloId)
-    notify.success('Pagamento registrado com sucesso.')
-    await buscar()
-  } catch (e) {
-    notify.error(e?.response?.data?.message || 'Erro ao registrar pagamento')
-  }
+  abrirModalPagamento('titulo', tituloId, valor)
 }
 
 async function carregarDashboard() {
