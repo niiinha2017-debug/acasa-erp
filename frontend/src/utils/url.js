@@ -12,22 +12,23 @@ export async function openExternalUrl(url) {
   const isTauri = typeof window !== 'undefined' && (!!window.__TAURI__ || !!window.__TAURI_INTERNALS__)
   if (isTauri) {
     try {
+      // openUrl = abre no app padrão do sistema (navegador/WhatsApp), evita abrir dentro da webview do Tauri
       const openerMod = await import('@tauri-apps/plugin-opener').catch(() => null)
-      if (openerMod?.open) {
-        await openerMod.open(url)
-        return true
-      }
       if (typeof openerMod?.openUrl === 'function') {
         await openerMod.openUrl(url)
         return true
       }
-      const tauri = window.__TAURI__ ?? window.__TAURI_INTERNALS__
-      if (tauri?.opener?.open) {
-        await tauri.opener.open(url)
+      if (openerMod?.open) {
+        await openerMod.open(url)
         return true
       }
+      const tauri = window.__TAURI__ ?? window.__TAURI_INTERNALS__
       if (typeof tauri?.opener?.openUrl === 'function') {
         await tauri.opener.openUrl(url)
+        return true
+      }
+      if (tauri?.opener?.open) {
+        await tauri.opener.open(url)
         return true
       }
       if (tauri?.shell?.open) {

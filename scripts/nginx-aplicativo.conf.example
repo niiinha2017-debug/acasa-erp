@@ -40,6 +40,25 @@ server {
     # ssl_certificate_key /etc/letsencrypt/live/aplicativo.acasamarcenaria.com.br/privkey.pem;
 }
 
+# --- Subdomínio do Relógio de Ponto ---
+# Pré-requisito: DNS A de ponto.acasamarcenaria.com.br apontando para o IP da EC2
+# server {
+#     listen 80;
+#     listen [::]:80;
+#     server_name ponto.acasamarcenaria.com.br;
+#     root /var/www/ponto;
+#     index index.html;
+#
+#     location / {
+#         try_files $uri $uri/ /index.html;
+#     }
+#
+#     location = /ponto.apk {
+#         add_header Content-Disposition 'attachment; filename="ponto.apk"';
+#         add_header Content-Type "application/vnd.android.package-archive";
+#     }
+# }
+
 # Redirecionar HTTP -> HTTPS quando SSL estiver ativo (opcional)
 # server {
 #     listen 80;

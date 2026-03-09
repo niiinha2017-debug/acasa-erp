@@ -1,5 +1,7 @@
-# Pipeline: a cada push em main, builda Android + Tauri (Desktop), publica APKs e .exe na EC2 e atualiza site/backend.
-# Tauri: job build:tauri usa tag "Windows" (runner local); variáveis TAURI_SIGNING_* em CI/CD.
+# Pipeline: a cada push em main, builda Android + Tauri (Desktop), publica APKs e .exe na EC2.
+# Windows (sua máquina): build:tauri → tag "Windows".
+# Linux na sua máquina (WSL2 + runner com tag "Local"): prepare:android, build:android, deploy:* → tag "Local".
+# Se não houver runner "Local", esses jobs rodam nos runners compartilhados do GitLab (consumem minutos).
 
 default:
   image: node:20-bookworm
@@ -14,9 +16,10 @@ stages:
   - build-desktop
   - deploy
 
-# Instala JDK 17 + Android SDK (uma vez por job)
+# Instala JDK 17 + Android SDK (uma vez por job). Roda no runner com tag Local (WSL2) ou no GitLab.
 prepare:android:
   stage: prepare
+  tags: [Local]
   script:
     - apt-get update -qq && apt-get install -y -qq openjdk-17-jdk wget unzip ssh-client
     - export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
@@ -40,6 +43,7 @@ prepare:android:
 
 build:android:
   stage: build-android
+  tags: [Local]
   dependencies:
     - prepare:android
   before_script:
@@ -88,6 +92,7 @@ build:android:
 # Recebe artefatos de todos os estágios anteriores (sem dependencies/needs)
 deploy:ec2:
   stage: deploy
+  tags: [Local]
   needs:
     - job: prepare:android
       artifacts: true
@@ -125,31 +130,53 @@ deploy:ec2:
         exit 1
       fi
     - |
-      VERSION=$(node -p "require('./frontend/package.json').version")
-      echo "{\"version\":\"$VERSION\",\"url\":\"https://aplicativo.acasamarcenaria.com.br/erp/Acasa.apk\"}" > /tmp/version.json
+      if [ -f aplicativo-site/updates/android/version.json ]; then
+        node -e "const j=require('./aplicativo-site/updates/android/version.json'); j.version=require('./frontend/package.json').version; require('fs').writeFileSync('/tmp/version.json', JSON.stringify(j,null,2))"
+      else
+        VERSION=$(node -p "require('./frontend/package.json').version")
+        echo "{\"version\":\"$VERSION\",\"url\":\"https://aplicativo.acasamarcenaria.com.br/erp/Acasa.apk\"}" > /tmp/version.json
+      fi
+    - |
+      if [ -f aplicativo-site/updates/ponto/version.json ]; then
+        node -e "const j=require('./aplicativo-site/updates/ponto/version.json'); j.version=require('./frontend-ponto/package.json').version; require('fs').writeFileSync('/tmp/version-ponto.json', JSON.stringify(j,null,2))"
+      else
+        VERSION_PONTO=$(node -p "require('./frontend-ponto/package.json').version")
+        echo "{\"version\":\"$VERSION_PONTO\",\"url\":\"https://ponto.acasamarcenaria.com.br/ponto.apk\"}" > /tmp/version-ponto.json
+      fi
     - scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new /tmp/version.json "${EC2_HOST}:/home/ec2-user/version.json"
+    - scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new /tmp/version-ponto.json "${EC2_HOST}:/home/ec2-user/version-ponto.json"
     - scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new "$CI_PROJECT_DIR/frontend/android/app/build/outputs/apk/release/app-release.apk" "${EC2_HOST}:/home/ec2-user/Acasa.apk"
     - scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new "$CI_PROJECT_DIR/frontend-ponto/android/app/build/outputs/apk/release/app-release.apk" "${EC2_HOST}:/home/ec2-user/ponto.apk"
 
     - scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new "$CI_PROJECT_DIR/aplicativo-site/index.html" "${EC2_HOST}:/home/ec2-user/index-aplicativo.html"
 
     - |
+      echo "==> Build PWA do Ponto (relógio por ID de funcionário)"
+      npm ci --prefix frontend-ponto
+      cd frontend-ponto && npm run build && cd ..
+      tar czf /tmp/ponto-dist.tar.gz -C frontend-ponto/dist .
+    - scp -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new /tmp/ponto-dist.tar.gz "${EC2_HOST}:/home/ec2-user/ponto-dist.tar.gz"
+
+    - |
       ssh -i "$SSH_KEY_FILE" -o StrictHostKeyChecking=accept-new "$EC2_HOST" \
         "sudo mkdir -p /var/www/aplicativo/erp /var/www/aplicativo/updates/android /var/www/ponto /var/www/aplicativo/downloads && \
          sudo mv /home/ec2-user/version.json /var/www/aplicativo/updates/android/ && \
          sudo mv /home/ec2-user/Acasa.apk /var/www/aplicativo/erp/ && \
+         sudo rm -rf /var/www/ponto/* && \
+         sudo tar xzf /home/ec2-user/ponto-dist.tar.gz -C /var/www/ponto && \
          sudo mv /home/ec2-user/ponto.apk /var/www/ponto/ && \
+         sudo mv /home/ec2-user/version-ponto.json /var/www/ponto/version.json && \
          sudo cp /home/ec2-user/index-aplicativo.html /var/www/aplicativo/index.html && \
          sudo cp /home/ec2-user/index-aplicativo.html /var/www/aplicativo/downloads/index.html && \
-         sudo rm -f /home/ec2-user/index-aplicativo.html && \
-         sudo chown -R nginx:nginx /var/www/aplicativo/erp /var/www/aplicativo/updates /var/www/ponto /var/www/aplicativo/index.html /var/www/aplicativo/downloads && \
-         sudo chmod 644 /var/www/aplicativo/index.html /var/www/aplicativo/downloads/index.html"
+         sudo rm -f /home/ec2-user/index-aplicativo.html /home/ec2-user/ponto-dist.tar.gz && \
+         sudo chown -R nginx:nginx /var/www/aplicativo/erp /var/www/aplicativo/updates /var/www/ponto /var/www/aplicativo/index.html /var/www/aplicativo/downloads"
   environment:
     name: production
 
 # Atualiza código na EC2: git pull, backend (migrate + restart), frontend web (build + rsync)
 deploy:ec2-update-app:
   stage: deploy
+  tags: [Local]
   needs:
     - job: deploy:ec2
   before_script:
@@ -231,6 +258,7 @@ build:tauri:
 # Publica o instalador Tauri e latest.json na EC2 (usa artefatos do build:tauri)
 deploy:tauri:
   stage: deploy
+  tags: [Local]
   needs:
     - job: build:tauri
       artifacts: true

@@ -24,6 +24,9 @@
             <span v-if="!loading">Ativar Dispositivo</span>
             <div v-else class="animate-spin h-5 w-5 border-2 border-white/20 border-t-white rounded-full"></div>
           </button>
+          <p class="text-center text-[10px] text-slate-400">
+            Android: <a :href="apkUrl" target="_blank" rel="noopener" class="underline font-bold text-[#1e293b]">Baixar app (APK)</a>
+          </p>
         </div>
 
         <div v-else class="w-full space-y-6 animate-in">
@@ -122,6 +125,7 @@ import { PontoService } from './services/ponto.service'
 import { checkPontoUpdate } from './utils/check-ponto-update'
 
 const isAndroid = ref(false)
+const apkUrl = typeof window !== 'undefined' ? `${window.location.origin}/ponto.apk` : 'https://ponto.acasamarcenaria.com.br/ponto.apk'
 
 const etapa = ref('ativar')
 const loading = ref(false)

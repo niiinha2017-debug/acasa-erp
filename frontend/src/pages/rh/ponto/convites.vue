@@ -234,6 +234,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { PontoRelatorioService, PontoService } from '@/services/index'
 import { notify } from '@/services/notify'
 import { can } from '@/services/permissions'
+import { openExternalUrl } from '@/utils/url'
 import { APP_LINKS } from '@/config/app-links'
 import PageHeader from '@/components/ui/PageHeader.vue'
 
@@ -511,7 +512,7 @@ function abrirOuBaixarApk() {
   document.body.removeChild(a)
 }
 
-function abrirWhatsAppComMensagem(mensagem) {
+async function abrirWhatsAppComMensagem(mensagem) {
   const id = Number(funcionario_id.value)
   const funcionario = funcionarios.value.find((x) => x.id === id)
   const numeroWhatsApp = funcionario?.whatsapp ? String(funcionario.whatsapp).replace(/\D/g, '') : ''
@@ -522,23 +523,11 @@ function abrirWhatsAppComMensagem(mensagem) {
 
   const isTauri = typeof window !== 'undefined' && (window.__TAURI__ || window.__TAURI_INTERNALS__)
   if (isTauri) {
-    try {
-      const tauri = window.__TAURI__ ?? window.__TAURI_INTERNALS__
-      if (tauri?.opener?.open) {
-        tauri.opener.open(urlWhatsApp)
-        return
-      }
-      if (typeof tauri?.opener?.openUrl === 'function') {
-        tauri.opener.openUrl(urlWhatsApp)
-        return
-      }
-      if (tauri?.shell?.open) {
-        tauri.shell.open(urlWhatsApp)
-        return
-      }
-    } catch (e) {
-      console.error('[PONTO_WHATS_TAURI]', e)
-    }
+    const aberto = await openExternalUrl(urlWhatsApp)
+    if (aberto) return
+    copiarParaAreaTransferencia(urlWhatsApp)
+    notify.warn('Link do WhatsApp copiado. Abra o navegador e cole o link, ou use o WhatsApp pelo celular.')
+    return
   }
 
   try {
