@@ -253,6 +253,8 @@ export const UsuariosService = {
 // --- VENDAS ---
 export const VendaService = {
   listar: () => api.get('/vendas'),
+  /** Vendas com contrato vigente – usado no módulo Compras (só clientes com contrato vigente). */
+  listarComContratoVigente: () => api.get('/vendas/com-contrato-vigente'),
   aguardandoAgendamento: () => api.get('/vendas/aguardando-agendamento'),
   aguardandoContrato: () => api.get('/vendas/aguardando-contrato'),
   buscar: (id) => api.get(`/vendas/${id}`),
@@ -312,6 +314,8 @@ export const FinanceiroService = {
     api.get('/financeiro/contas-pagar', { params: filtros }),
   listarContasPagarConsolidado: (filtros = {}) =>
     api.get('/financeiro/contas-pagar', { params: filtros }),
+  getContasPagarDashboard: (filtros = {}) =>
+    api.get('/financeiro/contas-pagar/dashboard', { params: filtros }),
 
   buscarContaPagar: (id) => api.get(`/financeiro/contas-pagar/${id}`),
   criarContaPagar: (dados) => api.post('/financeiro/contas-pagar', dados),

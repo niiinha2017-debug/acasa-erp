@@ -356,7 +356,15 @@ export class ApontamentoProducaoService {
           ],
         },
       ];
-      if (whereVendedor) andProducao.push(whereVendedor);
+      // Serviço de Corte (plano_corte_id) sempre aparece na Timeline; vendedor vê só suas vendas OU qualquer Serviço de Corte
+      if (whereVendedor) {
+        andProducao.push({
+          OR: [
+            whereVendedor,
+            { plano_corte_id: { not: null } },
+          ],
+        });
+      }
       const whereProducao = {
         status: { notIn: ['CANCELADO', 'Cancelado', 'cancelado'] },
         ...whereData,
@@ -368,6 +376,7 @@ export class ApontamentoProducaoService {
         include: {
           cliente: { select: { id: true, nome_completo: true, razao_social: true } },
           criado_por_usuario: { select: { id: true, nome: true } },
+          plano_corte: { select: { id: true, fornecedor_id: true, status: true } },
           apontamentos_producao: {
             orderBy: { inicio_em: 'asc' },
             include: {
@@ -413,7 +422,14 @@ export class ApontamentoProducaoService {
         ? Number(usuario.funcionario_id)
         : null;
     if (funcionarioIdVendedor != null) {
-      where.AND = [this.whereVendedorAgenda(funcionarioIdVendedor)];
+      where.AND = [
+        {
+          OR: [
+            this.whereVendedorAgenda(funcionarioIdVendedor),
+            { plano_corte_id: { not: null } },
+          ],
+        },
+      ];
     }
     return this.prisma.agenda_fabrica.findMany({
       where,

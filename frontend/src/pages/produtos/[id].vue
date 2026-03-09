@@ -16,7 +16,7 @@
       </div>
 
       <form v-else class="space-y-10 produtos-line-form" @submit.prevent="confirmarSalvarProduto" autocomplete="off">
-        <!-- Trava: só habilita o restante do cadastro após selecionar o fornecedor (igual Produtos Plano de Corte) -->
+        <!-- Trava: só habilita o restante do cadastro após selecionar o fornecedor (igual Produtos Serviço de Corte) -->
         <div class="grid grid-cols-12 gap-6 items-end bg-slate-50/50 dark:bg-slate-800/20 p-6 rounded-2xl">
           <div class="col-span-12 md:col-span-6">
             <SearchInput

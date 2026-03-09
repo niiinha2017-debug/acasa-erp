@@ -36,15 +36,99 @@ export class FinanceiroService {
   }
 
   // =========================================================
+  // Dashboard Central de Consolidação: totais para cards
+  // =========================================================
+  async getContasPagarDashboard(filtros: {
+    mes?: number;
+    ano?: number;
+  }) {
+    const hoje = new Date();
+    const mes = filtros.mes ?? hoje.getMonth() + 1;
+    const ano = filtros.ano ?? hoje.getFullYear();
+    const inicioMes = new Date(ano, mes - 1, 1, 0, 0, 0);
+    const fimMes = new Date(ano, mes, 0, 23, 59, 59);
+
+    const [titulosAberto, despesasAberto, comprasAberto, fornecedores] =
+      await Promise.all([
+        this.prisma.titulos_financeiros.findMany({
+          where: {
+            OR: [{ conta_pagar_id: { not: null } }, { despesa_id: { not: null } }],
+            status: { in: [SF.EM_ABERTO, SF.VENCIDO] },
+            vencimento_em: { gte: inicioMes, lte: fimMes },
+          },
+          select: { valor: true, tipo: true },
+        }),
+        this.prisma.despesas.findMany({
+          where: {
+            titulos: { none: {} },
+            status: { in: [SF.EM_ABERTO, SF.VENCIDO] },
+            data_vencimento: { gte: inicioMes, lte: fimMes },
+          },
+          select: { valor_total: true },
+        }),
+        this.prisma.compras.findMany({
+          where: {
+            status: SF.EM_ABERTO,
+            data_compra: { gte: inicioMes, lte: fimMes },
+          },
+          select: { valor_total: true },
+        }),
+        this.prisma.fornecedor.findMany({
+          where: { saldo_credito: { gt: 0 } },
+          select: { saldo_credito: true },
+        }),
+      ]);
+
+    const totalAbertoTitulos = titulosAberto.reduce(
+      (s, t) => s + Number((t as any).valor ?? 0),
+      0,
+    );
+    const totalAbertoDespesas = despesasAberto.reduce(
+      (s, d) => s + Number((d as any).valor_total ?? 0),
+      0,
+    );
+    const totalAbertoCompras = comprasAberto.reduce(
+      (s, c) => s + Number((c as any).valor_total ?? 0),
+      0,
+    );
+    const total_a_vencer_mes = this.round2(
+      totalAbertoTitulos + totalAbertoDespesas + totalAbertoCompras,
+    );
+    const cheques_a_compensar = this.round2(
+      titulosAberto
+        .filter((t) => String((t as any).tipo ?? '').toUpperCase() === 'CHEQUE')
+        .reduce((s, t) => s + Number((t as any).valor ?? 0), 0),
+    );
+    const creditos_disponiveis = this.round2(
+      fornecedores.reduce(
+        (s, f) => s + Number((f as any).saldo_credito ?? 0),
+        0,
+      ),
+    );
+
+    return {
+      total_a_vencer_mes,
+      cheques_a_compensar,
+      creditos_disponiveis,
+      mes,
+      ano,
+    };
+  }
+
+  // =========================================================
   // ✅ CONSOLIDADO (CONTAS A PAGAR) = DESPESAS + COMPRAS + FECHAMENTOS
-  // Despesas parceladas: uma linha por parcela (titulo), dar baixa em cada
+  // Lista unificada por data de vencimento; filtros: fornecedor_id, mes/ano competência
   // =========================================================
   async listarContasPagarConsolidado(filtros: {
     status?: string;
     data_ini?: string;
     data_fim?: string;
+    fornecedor_id?: number;
+    mes?: number;
+    ano?: number;
   }) {
     const status = filtros.status || undefined;
+    const fornecedorId = filtros.fornecedor_id;
     let dataIni = filtros.data_ini
       ? new Date(filtros.data_ini + 'T00:00:00')
       : undefined;
@@ -68,15 +152,32 @@ export class FinanceiroService {
     }
 
     const whereDespesas: any = {};
-    const whereCompras: any = status ? { status } : {};
+    // Unificado: compras compensadas só aparecem na aba Compensados
+    const whereCompras: any = status ? { status } : { status: { not: SF.COMPENSADO } };
     const whereContasPagar: any = status ? { status } : {};
+    if (fornecedorId != null) {
+      whereContasPagar.fornecedor_id = fornecedorId;
+      whereCompras.fornecedor_id = fornecedorId;
+    }
+    if (filtros.mes != null && filtros.ano != null) {
+      whereContasPagar.mes_referencia = filtros.mes;
+      whereContasPagar.ano_referencia = filtros.ano;
+    }
+    const rangeCompras =
+      filtros.mes != null && filtros.ano != null
+        ? {
+            gte: new Date(filtros.ano, filtros.mes - 1, 1, 0, 0, 0),
+            lte: new Date(filtros.ano, filtros.mes, 0, 23, 59, 59),
+          }
+        : dataIni || dataFim
+          ? { gte: dataIni!, lte: dataFim! }
+          : undefined;
+    if (rangeCompras) whereCompras.data_compra = rangeCompras;
 
-    // Compras: período do mês (data de compra, 1º ao último dia). Despesas/Fechamentos: período de vencimento.
     if (dataIni || dataFim) {
       const range: any = {};
       if (dataIni) range.gte = dataIni;
       if (dataFim) range.lte = dataFim;
-      whereCompras.data_compra = range;
       whereContasPagar.vencimento_em = range;
       whereDespesas.OR = [
         { titulos: { some: { vencimento_em: range } } },
@@ -105,6 +206,7 @@ export class FinanceiroService {
         include: {
           fornecedor: true,
           fornecedor_cobrador: true,
+          titulos: { orderBy: { vencimento_em: 'asc' } },
         },
         orderBy: { vencimento_em: 'asc' },
       }),
@@ -134,6 +236,8 @@ export class FinanceiroService {
             id_despesa: d.id,
             titulo_id: t.id,
             origem: 'DESPESA',
+            classificacao_badge: (d as any).classificacao === 'FECHAMENTO' ? 'PRODUÇÃO' : 'OPERACIONAL',
+            forma_pagamento_chave: (t as any).tipo ?? null,
 
             fornecedor_id: null,
             fornecedor_nome: null,
@@ -176,6 +280,8 @@ export class FinanceiroService {
           id_despesa: d.id,
           titulo_id: null,
           origem: 'DESPESA',
+          classificacao_badge: (d as any).classificacao === 'FECHAMENTO' ? 'PRODUÇÃO' : 'OPERACIONAL',
+          forma_pagamento_chave: (d as any).forma_pagamento ?? null,
 
           fornecedor_id: null,
           fornecedor_nome: null,
@@ -229,6 +335,8 @@ export class FinanceiroService {
         return {
           id: c.id,
           origem: 'COMPRA',
+          classificacao_badge: 'PRODUÇÃO',
+          forma_pagamento_chave: null,
 
           fornecedor_id: c.fornecedor_id,
           fornecedor_nome: c.fornecedor?.nome_fantasia || null,
@@ -253,45 +361,67 @@ export class FinanceiroService {
       }),
 
       // =====================
-      // FECHAMENTOS (origem = FECHAMENTO)
+      // FECHAMENTOS (origem = FECHAMENTO) — exclui os que têm compensado e aguardam quitação (vão para aba Compensados)
       // =====================
-      ...fechamentos.map((cp) => {
-        const desc =
-          cp.descricao ||
-          `Fechamento ${String(cp.mes_referencia).padStart(2, '0')}/${cp.ano_referencia}`;
-        const relatorioDescritivo = cp.observacao
-          ? `${desc} — ${cp.observacao}`
-          : desc;
+      ...fechamentos
+        .filter(
+          (cp) =>
+            Number((cp as any).valor_compensado ?? 0) <= 0 ||
+            ((cp as any).status !== SF.EM_ABERTO && (cp as any).status !== SF.VENCIDO),
+        )
+        .map((cp) => {
+          const desc =
+            cp.descricao ||
+            `Fechamento ${String(cp.mes_referencia).padStart(2, '0')}/${cp.ano_referencia}`;
+          const relatorioDescritivo = cp.observacao
+            ? `${desc} — ${cp.observacao}`
+            : desc;
+          const titulos = (cp as any).titulos ?? [];
 
-        return {
-          id: cp.id,
-          origem: 'FECHAMENTO',
+          return {
+            id: cp.id,
+            origem: 'FECHAMENTO',
+            classificacao_badge: 'PRODUÇÃO',
 
-          fornecedor_id: cp.fornecedor_id,
-          fornecedor_nome: cp.fornecedor?.nome_fantasia || null,
+            fornecedor_id: cp.fornecedor_id,
+            fornecedor_nome: cp.fornecedor?.nome_fantasia || null,
 
-          descricao: desc,
-          observacao: cp.observacao || null,
-          relatorio_descritivo: relatorioDescritivo,
+            descricao: desc,
+            observacao: cp.observacao || null,
+            relatorio_descritivo: relatorioDescritivo,
 
-          valor: cp.valor_original,
-          valor_compensado: cp.valor_compensado,
+            valor: cp.valor_original,
+            valor_compensado: cp.valor_compensado,
 
-          vencimento_em: cp.vencimento_em,
-          pago_em: cp.pago_em,
-          status: cp.status,
+            vencimento_em: cp.vencimento_em,
+            pago_em: cp.pago_em,
+            status: cp.status,
 
-          mes_referencia: cp.mes_referencia,
-          ano_referencia: cp.ano_referencia,
+            mes_referencia: cp.mes_referencia,
+            ano_referencia: cp.ano_referencia,
 
-          cheques_total: 0,
+            cheques_total: titulos.filter((t: any) => String(t.tipo).toUpperCase() === 'CHEQUE').length,
 
-          fornecedor_cobrador_nome:
-            cp.fornecedor_cobrador?.nome_fantasia || null,
-          forma_pagamento_chave: cp.forma_pagamento_chave || null,
-        };
-      }),
-    ];
+            fornecedor_cobrador_nome:
+              cp.fornecedor_cobrador?.nome_fantasia || null,
+            forma_pagamento_chave: cp.forma_pagamento_chave || null,
+            titulos_vinculados: titulos.map((t: any) => ({
+              id: t.id,
+              valor: Number(t.valor ?? 0),
+              tipo: t.tipo,
+              vencimento_em: t.vencimento_em,
+              pago_em: t.pago_em,
+              status: t.status,
+              parcela_numero: t.parcela_numero,
+              parcelas_total: t.parcelas_total,
+            })),
+          };
+        }),
+    ].sort((a, b) => {
+      const va = a.vencimento_em ? new Date(a.vencimento_em).getTime() : 0;
+      const vb = b.vencimento_em ? new Date(b.vencimento_em).getTime() : 0;
+      return va - vb;
+    });
   }
 
   // =========================================================
@@ -373,41 +503,74 @@ export class FinanceiroService {
   }
 
   /**
-   * ✅ Dar baixa em um título (parcela de despesa).
-   * Usado quando o usuário paga uma parcela no Contas a Pagar.
+   * Dar baixa em um título (parcela): marca como PAGO e cria registro em Despesas
+   * com data_vencimento/data_compensacao. Usa $transaction para atomicidade.
    */
   async pagarTitulo(tituloId: number) {
-    const titulo = await this.prisma.titulos_financeiros.findUnique({
-      where: { id: tituloId },
-      include: { despesa: true },
-    });
-    if (!titulo) throw new NotFoundException('Título não encontrado');
-    if (titulo.status === SF.PAGO) {
-      throw new BadRequestException('Este título já está pago.');
-    }
-
-    const pagoEm = new Date();
-    await this.prisma.titulos_financeiros.update({
-      where: { id: tituloId },
-      data: { status: SF.PAGO, pago_em: pagoEm },
-    });
-
-    if (titulo.despesa_id && titulo.despesa) {
-      const totalTitulos = await this.prisma.titulos_financeiros.count({
-        where: { despesa_id: titulo.despesa_id },
+    return this.prisma.$transaction(async (tx) => {
+      const titulo = await tx.titulos_financeiros.findUnique({
+        where: { id: tituloId },
+        include: { despesa: true, conta_pagar: { include: { fornecedor: true } } },
       });
-      const titulosPagos = await this.prisma.titulos_financeiros.count({
-        where: { despesa_id: titulo.despesa_id, status: SF.PAGO },
-      });
-      if (totalTitulos === titulosPagos) {
-        await this.prisma.despesas.update({
-          where: { id: titulo.despesa_id },
-          data: { status: SF.PAGO, data_pagamento: pagoEm },
-        });
+      if (!titulo) throw new NotFoundException('Título não encontrado');
+      if (titulo.status === SF.PAGO) {
+        throw new BadRequestException('Este título já está pago.');
       }
-    }
 
-    return { success: true };
+      const pagoEm = new Date();
+      const valorTitulo = Number((titulo as any).valor ?? 0);
+      const formaPagamento = String((titulo as any).tipo ?? 'DINHEIRO').toUpperCase();
+      const vencimentoEm = (titulo as any).vencimento_em
+        ? new Date((titulo as any).vencimento_em)
+        : pagoEm;
+
+      await tx.titulos_financeiros.update({
+        where: { id: tituloId },
+        data: { status: SF.PAGO, pago_em: pagoEm },
+      });
+
+      const cp = (titulo as any).conta_pagar;
+      const descricaoLocal =
+        cp?.fornecedor?.nome_fantasia
+          ? `Pagamento ${formaPagamento} - ${cp.fornecedor.nome_fantasia}`
+          : `Pagamento ${formaPagamento}`;
+
+      await tx.despesas.create({
+        data: {
+          tipo_movimento: 'SAIDA',
+          unidade: 'FÁBRICA',
+          categoria: 'PAGAMENTO_FORNECEDOR',
+          classificacao: cp ? 'FECHAMENTO' : 'OPERACIONAL',
+          local: descricaoLocal,
+          valor_total: valorTitulo,
+          forma_pagamento: formaPagamento,
+          quantidade_parcelas: 1,
+          data_vencimento: vencimentoEm,
+          data_pagamento: pagoEm,
+          status: SF.PAGO,
+          recorrencia_id: titulo.conta_pagar_id
+            ? `CP-TIT-${titulo.conta_pagar_id}-${tituloId}`
+            : `TIT-${tituloId}`,
+        },
+      });
+
+      if (titulo.despesa_id && (titulo as any).despesa) {
+        const totalTitulos = await tx.titulos_financeiros.count({
+          where: { despesa_id: titulo.despesa_id },
+        });
+        const titulosPagos = await tx.titulos_financeiros.count({
+          where: { despesa_id: titulo.despesa_id, status: SF.PAGO },
+        });
+        if (totalTitulos === titulosPagos) {
+          await tx.despesas.update({
+            where: { id: titulo.despesa_id },
+            data: { status: SF.PAGO, data_pagamento: pagoEm },
+          });
+        }
+      }
+
+      return { success: true };
+    });
   }
 
   /**
@@ -488,7 +651,7 @@ export class FinanceiroService {
 
   // =========================================================
   // ✅ PREVIEW DO FECHAMENTO (ETAPA 1 DO MODAL)
-  // Plano de corte é VENDA pro fornecedor => CRÉDITO/ABATIMENTO
+  // Funil: Total Compras (+) - Crédito Acumulado (-) - Serviços Corte (-) - Desconto Negociado (-) = Valor Líquido
   // =========================================================
   async previewFechamentoFornecedor(body: {
     fornecedor_id: number;
@@ -502,51 +665,61 @@ export class FinanceiroService {
     const inicio = new Date(ano, mes - 1, 1, 0, 0, 0);
     const fim = new Date(ano, mes, 0, 23, 59, 59);
 
-    const compras = await this.prisma.compras.findMany({
-      where: {
-        fornecedor_id,
-        status: SF.EM_ABERTO,
-        data_compra: { gte: inicio, lte: fim },
-      },
-      orderBy: { data_compra: 'asc' },
-      select: {
-        id: true,
-        data_compra: true,
-        valor_total: true,
-        tipo_compra: true,
-        vencimento_em: true,
-      },
-    });
+    const [fornecedor, compras, planos] = await Promise.all([
+      this.prisma.fornecedor.findUnique({
+        where: { id: fornecedor_id },
+        select: { saldo_credito: true },
+      }),
+      this.prisma.compras.findMany({
+        where: {
+          fornecedor_id,
+          status: SF.EM_ABERTO,
+          data_compra: { gte: inicio, lte: fim },
+        },
+        orderBy: { data_compra: 'asc' },
+        select: {
+          id: true,
+          data_compra: true,
+          valor_total: true,
+          tipo_compra: true,
+          vencimento_em: true,
+        },
+      }),
+      this.prisma.plano_corte.findMany({
+        where: {
+          fornecedor_id,
+          status: { notIn: [SF.COMPENSADO, 'CANCELADO'] },
+          data_venda: { gte: inicio, lte: fim },
+        },
+        orderBy: { data_venda: 'asc' },
+        select: {
+          id: true,
+          data_venda: true,
+          valor_total: true,
+          status: true,
+        },
+      }),
+    ]);
 
     const totalCompras = this.round2(
       compras.reduce((s, c) => s + Number((c as any).valor_total || 0), 0),
     );
-
-    const planos = await this.prisma.plano_corte.findMany({
-      where: {
-        fornecedor_id,
-        status: SF.EM_ABERTO,
-        data_venda: { gte: inicio, lte: fim },
-      },
-      orderBy: { data_venda: 'asc' },
-      select: {
-        id: true,
-        data_venda: true,
-        valor_total: true,
-        status: true,
-      },
-    });
-
     const totalPlanos = this.round2(
       planos.reduce((s, p) => s + Number((p as any).valor_total || 0), 0),
     );
-
-    const compensado_auto = this.round2(Math.min(totalCompras, totalPlanos));
-    const saldo_a_pagar_auto = this.round2(
-      Math.max(totalCompras - totalPlanos, 0),
+    const saldoCreditoAcumulado = this.round2(
+      Number((fornecedor as any)?.saldo_credito ?? 0),
     );
-    const credito_sobra_auto = this.round2(
-      Math.max(totalPlanos - totalCompras, 0),
+
+    // Funil: base = compras; abate crédito acumulado; abate serviços corte; desconto é aplicado na baixa
+    let base = totalCompras;
+    const usadoCredito = this.round2(Math.min(saldoCreditoAcumulado, base));
+    base = this.round2(Math.max(0, base - usadoCredito));
+    const usadoPlanos = this.round2(Math.min(totalPlanos, base));
+    base = this.round2(Math.max(0, base - usadoPlanos));
+    const valorLiquidoSemDesconto = base;
+    const creditoSobraAuto = this.round2(
+      Math.max(totalPlanos - usadoPlanos, 0) + Math.max(saldoCreditoAcumulado - usadoCredito, 0),
     );
 
     const periodo_inicio = inicio.toISOString().slice(0, 10);
@@ -559,10 +732,12 @@ export class FinanceiroService {
       periodo_inicio,
       periodo_fim,
       total_compras: totalCompras,
+      saldo_credito_acumulado: saldoCreditoAcumulado,
       total_planos: totalPlanos,
-      compensado_auto,
-      saldo_a_pagar_auto,
-      credito_sobra_auto,
+      compensado_auto: this.round2(usadoCredito + usadoPlanos),
+      valor_liquido_sem_desconto: valorLiquidoSemDesconto,
+      credito_sobra_auto: creditoSobraAuto,
+      saldo_a_pagar_auto: valorLiquidoSemDesconto,
       historico_compras: compras.map((c) => ({
         id: c.id,
         data_compra: c.data_compra,
@@ -591,6 +766,17 @@ export class FinanceiroService {
     const tipo = String(body?.forma_pagamento_chave || '').trim(); // CHEQUE | CARTAO
     if (!tipo)
       throw new BadRequestException('forma_pagamento_chave é obrigatório');
+
+    // opcional: se informado, títulos e conta são criados já como PAGO (não precisa dar baixa depois)
+    const dataPagamentoStr = String(body?.data_pagamento ?? '').trim();
+    let dataPagamento: Date | null = null;
+    if (dataPagamentoStr) {
+      try {
+        dataPagamento = this.toDate(dataPagamentoStr, 'data_pagamento');
+      } catch {
+        dataPagamento = null;
+      }
+    }
 
     // opcional: Rimad cobrador (se quiser usar)
     const fornecedor_cobrador_id = body?.fornecedor_cobrador_id
@@ -650,13 +836,17 @@ export class FinanceiroService {
 
       const fornecedor = await tx.fornecedor.findUnique({
         where: { id: fornecedor_id },
-        select: { nome_fantasia: true, razao_social: true },
+        select: { nome_fantasia: true, razao_social: true, saldo_credito: true },
       });
       const fornecedorNome =
-        fornecedor?.nome_fantasia ||
-        fornecedor?.razao_social ||
+        (fornecedor as any)?.nome_fantasia ||
+        (fornecedor as any)?.razao_social ||
         '' ||
         `Fornecedor #${fornecedor_id}`;
+
+      const saldoCreditoAtual = this.round2(
+        Number((fornecedor as any)?.saldo_credito ?? 0),
+      );
 
       // 1) automático
       const inicio = new Date(ano, mes - 1, 1, 0, 0, 0);
@@ -677,7 +867,7 @@ export class FinanceiroService {
       const planos = await tx.plano_corte.findMany({
         where: {
           fornecedor_id,
-          status: SF.EM_ABERTO,
+          status: { notIn: [SF.COMPENSADO, 'CANCELADO'] },
           data_venda: { gte: inicio, lte: fim },
         },
         select: { id: true, valor_total: true },
@@ -685,25 +875,34 @@ export class FinanceiroService {
       const totalPlanos = this.round2(
         planos.reduce((s, p) => s + Number((p as any).valor_total || 0), 0),
       );
-
-      const compensado_auto = this.round2(Math.min(totalCompras, totalPlanos));
-
-      // 2) cálculo final (correto: plano ABATE)
-      const debito_base = this.round2(totalCompras + Math.max(valorDever, 0));
-      const credito_auto = this.round2(Math.max(totalPlanos, 0));
       const credito_extra = this.round2(
         (Math.max(valorCreditar, 0) * pctLiberado) / 100,
       );
 
-      const subtotal = this.round2(
-        Math.max(debito_base - (credito_auto + credito_extra), 0),
-      );
-      const desconto_valor = this.round2((subtotal * descontoPct) / 100);
-      const total_final = this.round2(Math.max(subtotal - desconto_valor, 0));
+      // 2) Funil: Total Compras (+) - Crédito Acumulado (-) - Serviços Corte (-) - Desconto Negociado (-) = Valor Líquido
+      let debito_base = this.round2(totalCompras + Math.max(valorDever, 0));
+      const usadoCredito = this.round2(Math.min(saldoCreditoAtual, debito_base));
+      debito_base = this.round2(Math.max(0, debito_base - usadoCredito));
+      const usadoPlanos = this.round2(Math.min(totalPlanos, debito_base));
+      debito_base = this.round2(Math.max(0, debito_base - usadoPlanos));
+      const usadoCreditoExtra = this.round2(Math.min(credito_extra, debito_base));
+      debito_base = this.round2(Math.max(0, debito_base - usadoCreditoExtra));
+      const desconto_valor = this.round2((debito_base * descontoPct) / 100);
+      const total_final = this.round2(Math.max(0, debito_base - desconto_valor));
 
       const compensado_total = this.round2(
-        Math.min(debito_base, credito_auto + credito_extra),
+        usadoCredito + usadoPlanos + usadoCreditoExtra,
       );
+      const compensado_auto = this.round2(usadoPlanos);
+      const credito_auto = totalPlanos;
+      const credito_sobra =
+        total_final <= 0
+          ? this.round2(
+              (saldoCreditoAtual - usadoCredito) +
+                (totalPlanos - usadoPlanos) +
+                (credito_extra - usadoCreditoExtra),
+            )
+          : 0;
 
       const parcelasComValor = parcelas.filter(
         (p: any) => Number(p?.valor || 0) > 0,
@@ -713,11 +912,60 @@ export class FinanceiroService {
         parcelasComValor.length > 0 && parcelasComValor[0]?.vencimento_em
           ? this.toDate(parcelasComValor[0].vencimento_em, 'vencimento_em')
           : vencPadrao;
-      const statusFinal = total_final > 0 ? SF.EM_ABERTO : SF.PAGO;
+      const statusFinal =
+        total_final > 0
+          ? dataPagamento
+            ? SF.PAGO
+            : SF.EM_ABERTO
+          : SF.PAGO;
+      const pagoEmConta = dataPagamento ?? (total_final <= 0 ? new Date() : null);
 
-      // 3a) Cria DESPESA só quando há saldo a pagar (total_final > 0). Crédito/abatimento zerando = não gera despesa.
+      // 2b) Valor Líquido <= 0: zerar dívida e salvar sobra como crédito no fornecedor
+      if (total_final <= 0) {
+        const novoSaldoCredito = this.round2(
+          saldoCreditoAtual - usadoCredito + credito_sobra,
+        );
+        await tx.fornecedor.update({
+          where: { id: fornecedor_id },
+          data: { saldo_credito: novoSaldoCredito },
+        });
+        if (compras.length) {
+          await tx.compras.updateMany({
+            where: { id: { in: compras.map((c) => c.id) } },
+            data: { status: SF.COMPENSADO },
+          });
+        }
+        if (planos.length) {
+          await tx.plano_corte.updateMany({
+            where: { id: { in: planos.map((p) => p.id) } },
+            data: { status: SF.COMPENSADO },
+          });
+        }
+        return {
+          fornecedor_id,
+          mes,
+          ano,
+          total_compras: totalCompras,
+          total_planos: totalPlanos,
+          compensado_total,
+          total_final: 0,
+          credito_sobra,
+          saldo_credito_atualizado: novoSaldoCredito,
+          conta_pagar_id: null,
+        };
+      }
+
+      // 2c) Valor Líquido > 0: abater crédito usado e seguir com criação de títulos/despesas
+      await tx.fornecedor.update({
+        where: { id: fornecedor_id },
+        data: {
+          saldo_credito: this.round2(saldoCreditoAtual - usadoCredito),
+        },
+      });
+
+      // 3a) Cria DESPESA só quando há saldo a pagar (total_final > 0).
       let despesaId: number | null = null;
-      if (total_final > 0) {
+      {
         const despesa = await tx.despesas.create({
           data: {
             tipo_movimento: 'SAIDA',
@@ -729,7 +977,7 @@ export class FinanceiroService {
             forma_pagamento: tipo,
             quantidade_parcelas: qtdParcelas,
             data_vencimento: primeiroVenc,
-            data_pagamento: null,
+            data_pagamento: dataPagamento ?? null,
             status: statusFinal,
           },
           select: { id: true },
@@ -750,10 +998,9 @@ export class FinanceiroService {
           descricao: `Fechamento ${String(mes).padStart(2, '0')}/${ano}`,
           observacao: (() => {
             const txt = [
-              `AUTO compras=${totalCompras} planos=${totalPlanos} comp_auto=${compensado_auto}`,
-              `MANUAL dever=${valorDever} creditar=${valorCreditar} pct=${pctLiberado}% desc=${descontoPct}%`,
-              `CALC debito=${debito_base} cred_auto=${credito_auto} cred_extra=${credito_extra} comp_total=${compensado_total} subtotal=${subtotal} desc_val=${desconto_valor} total=${total_final}`,
-              `PAGTO tipo=${tipo} parcelas=${parcelas.length}`,
+              `AUTO compras=${totalCompras} planos=${totalPlanos} cred_uso=${usadoCredito} planos_uso=${usadoPlanos} comp_total=${compensado_total}`,
+              `MANUAL dever=${valorDever} creditar=${valorCreditar} pct=${pctLiberado}% desc=${descontoPct}% desc_val=${desconto_valor}`,
+              `total_final=${total_final} PAGTO tipo=${tipo} parcelas=${parcelas.length}`,
             ].join(' | ');
             const maxLen = 191; // VARCHAR(191) na tabela contas_pagar
             return txt.length <= maxLen
@@ -771,7 +1018,7 @@ export class FinanceiroService {
           parcela_numero: null,
 
           vencimento_em: vencPadrao,
-          pago_em: total_final > 0 ? null : new Date(),
+          pago_em: pagoEmConta,
         },
         select: { id: true },
       });
@@ -795,6 +1042,8 @@ export class FinanceiroService {
           compensado_total,
           total_final,
         };
+        const statusTitulo = dataPagamento ? SF.PAGO : SF.EM_ABERTO;
+        const pagoEmTitulo = dataPagamento ?? null;
         await tx.titulos_financeiros.createMany({
           data: parcelasComValor.map((p: any) => {
             const venc = p.vencimento_em
@@ -804,9 +1053,9 @@ export class FinanceiroService {
               conta_pagar_id: contaPagar.id,
               tipo,
               valor: Number(p.valor),
-              status: SF.EM_ABERTO,
+              status: statusTitulo,
               vencimento_em: venc,
-              pago_em: null,
+              pago_em: pagoEmTitulo,
               parcelas_total: parcelas.length,
               parcela_numero: Number(p.parcela),
               meta: metaJson,
@@ -815,7 +1064,7 @@ export class FinanceiroService {
         });
       }
 
-      // 5) Marca compras e créditos de plano de corte como COMPENSADOS (ocultos da listagem "Para Fechar")
+      // 5) Marca compras e créditos de serviço de corte como COMPENSADOS (ocultos da listagem "Para Fechar")
       if (compras.length) {
         await tx.compras.updateMany({
           where: { id: { in: compras.map((c) => c.id) } },
@@ -1063,7 +1312,7 @@ export class FinanceiroService {
       !origem.includes('PLANO') &&
       !isOrigemPosVenda(origem);
 
-    // Regra do módulo: somente venda/pós-venda; plano de corte e demais origens ficam fora.
+    // Regra do módulo: somente venda/pós-venda; serviço de corte e demais origens ficam fora.
     let contasVendaPosVenda = contas.filter((c: any) => {
       const origem = normalizeOrigem(c?.origem_tipo);
       return isOrigemVenda(origem) || isOrigemPosVenda(origem);
@@ -1327,11 +1576,11 @@ export class FinanceiroService {
   }
 
   /**
-   * Listagem por aba: Para Fechar (compras brutas), Agendados (parcelas do fechamento), Pagos (histórico).
+   * Listagem por aba: Para Fechar (compras brutas), Compensados (compras/planos já compensados), Agendados (parcelas do fechamento), Pagos (histórico).
    * Compras e créditos de plano usados no fechamento ficam COMPENSADOS e não aparecem em "Para Fechar".
    */
   async listarContasPagarPorAba(filtros: {
-    visao: 'PARA_FECHAR' | 'AGENDADOS' | 'PAGOS';
+    visao: 'PARA_FECHAR' | 'COMPENSADOS' | 'AGENDADOS' | 'PAGOS';
     data_ini?: string;
     data_fim?: string;
   }): Promise<any[]> {
@@ -1400,11 +1649,130 @@ export class FinanceiroService {
       });
     }
 
+    if (visao === 'COMPENSADOS') {
+      const range = dataIni && dataFim ? { gte: dataIni, lte: dataFim } : undefined;
+      const [comprasComp, planosComp, fechamentosAguardandoQuitacao] = await Promise.all([
+        this.prisma.compras.findMany({
+          where: {
+            status: SF.COMPENSADO,
+            ...(range ? { data_compra: range } : {}),
+          },
+          include: {
+            fornecedor: true,
+            itens: { select: { nome_produto: true } },
+          },
+          orderBy: { data_compra: 'asc' },
+        }),
+        this.prisma.plano_corte.findMany({
+          where: {
+            status: SF.COMPENSADO,
+            ...(range ? { data_venda: range } : {}),
+          },
+          include: { fornecedor: true },
+          orderBy: { data_venda: 'asc' },
+        }),
+        this.prisma.contas_pagar.findMany({
+          where: {
+            valor_compensado: { gt: 0 },
+            status: { in: [SF.EM_ABERTO, SF.VENCIDO] },
+            ...(range ? { vencimento_em: range } : {}),
+          },
+          include: {
+            fornecedor: true,
+            fornecedor_cobrador: true,
+            titulos: { where: { status: { in: [SF.EM_ABERTO, SF.VENCIDO] } }, orderBy: { vencimento_em: 'asc' } },
+          },
+          orderBy: { vencimento_em: 'asc' },
+        }),
+      ]);
+      const rowsCompras = comprasComp.map((c) => {
+        const itens = (c as any).itens || [];
+        const nomesProdutos = itens.map((i: any) => i.nome_produto || '').filter(Boolean);
+        let dataCompraStr = '';
+        if (c.data_compra) {
+          const d = new Date(c.data_compra);
+          dataCompraStr = `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`;
+        }
+        const parteProdutos = nomesProdutos.length > 0 ? `Produtos: ${nomesProdutos.join(', ')}` : (c as any).tipo_compra || 'COMPRA';
+        const relatorioDescritivo = dataCompraStr ? `COMPRA em ${dataCompraStr} — ${parteProdutos}` : `COMPRA — ${parteProdutos}`;
+        return {
+          id: c.id,
+          origem: 'COMPRA',
+          fornecedor_id: c.fornecedor_id,
+          fornecedor_nome: (c as any).fornecedor?.nome_fantasia || null,
+          descricao: 'COMPRA',
+          observacao: (c as any).tipo_compra,
+          detalhe_produtos: nomesProdutos,
+          data_compra: c.data_compra,
+          relatorio_descritivo: relatorioDescritivo,
+          valor: c.valor_total,
+          valor_compensado: 0,
+          vencimento_em: c.vencimento_em,
+          pago_em: null,
+          status: SF.COMPENSADO,
+          mes_referencia: null,
+          ano_referencia: null,
+        };
+      });
+      const rowsPlanos = planosComp.map((pc) => {
+        const dataVenda = pc.data_venda ? new Date(pc.data_venda) : null;
+        const dataVendaStr = dataVenda
+          ? `${String(dataVenda.getUTCDate()).padStart(2, '0')}/${String(dataVenda.getUTCMonth() + 1).padStart(2, '0')}/${dataVenda.getUTCFullYear()}`
+          : '';
+        const desc = dataVendaStr ? `Serviço de Corte — ${dataVendaStr}` : 'Serviço de Corte';
+        return {
+          id: pc.id,
+          origem: 'PLANO_CORTE',
+          fornecedor_id: pc.fornecedor_id,
+          fornecedor_nome: (pc as any).fornecedor?.nome_fantasia || null,
+          descricao: 'Serviço de Corte',
+          observacao: desc,
+          relatorio_descritivo: desc,
+          valor: pc.valor_total,
+          valor_compensado: 0,
+          vencimento_em: pc.data_venda,
+          pago_em: null,
+          status: SF.COMPENSADO,
+          mes_referencia: null,
+          ano_referencia: null,
+        };
+      });
+      const rowsFechamentoAguardando = fechamentosAguardandoQuitacao.flatMap((cp) => {
+        const titulos = (cp as any).titulos ?? [];
+        const desc = cp.descricao || `Fechamento ${String(cp.mes_referencia).padStart(2, '0')}/${cp.ano_referencia}`;
+        return titulos.map((t: any) => ({
+          id: t.id,
+          titulo_id: t.id,
+          conta_pagar_id: cp.id,
+          origem: 'FECHAMENTO',
+          fornecedor_id: cp.fornecedor_id,
+          fornecedor_nome: (cp as any).fornecedor?.nome_fantasia || null,
+          descricao: desc,
+          observacao: cp.observacao || null,
+          relatorio_descritivo: `${desc} — Parcela ${Number(t.parcela_numero) || 1}/${Number(t.parcelas_total) || 1}`,
+          valor: t.valor,
+          valor_compensado: Number((cp as any).valor_compensado ?? 0),
+          vencimento_em: t.vencimento_em,
+          pago_em: t.pago_em,
+          status: t.status,
+          forma_pagamento_chave: cp.forma_pagamento_chave || null,
+          parcelas_total: Number(t.parcelas_total) || 1,
+          parcela_numero: Number(t.parcela_numero) || 1,
+        }));
+      });
+      return [...rowsCompras, ...rowsPlanos, ...rowsFechamentoAguardando].sort((a, b) => {
+        const va = a.vencimento_em ? new Date(a.vencimento_em).getTime() : 0;
+        const vb = b.vencimento_em ? new Date(b.vencimento_em).getTime() : 0;
+        return va - vb;
+      });
+    }
+
     if (visao === 'AGENDADOS') {
       const range = dataIni && dataFim ? { gte: dataIni, lte: dataFim } : undefined;
       const titulos = await this.prisma.titulos_financeiros.findMany({
         where: {
           conta_pagar_id: { not: null },
+          conta_pagar: { valor_compensado: { lte: 0 } },
           status: { in: [SF.EM_ABERTO, SF.VENCIDO] },
           ...(range ? { vencimento_em: range } : {}),
         },
@@ -1553,7 +1921,7 @@ export class FinanceiroService {
       const planos = await tx.plano_corte.findMany({
         where: {
           fornecedor_id,
-          status: SF.EM_ABERTO,
+          status: { notIn: [SF.COMPENSADO, 'CANCELADO'] },
           data_venda: { gte: inicio, lte: fim },
         },
         select: { id: true, valor_total: true },

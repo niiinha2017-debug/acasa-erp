@@ -24,12 +24,12 @@
             />
             <Button
               v-if="can('plano_corte.criar')"
-              variant="ghost"
+              variant="primary"
               size="sm"
+              class="order-3 flex-shrink-0 h-9 rounded-xl font-black uppercase tracking-[0.16em] text-[11px]"
               @click="novo()"
-              class="order-3 text-text-soft hover:text-brand-primary"
             >
-              <i class="pi pi-plus"></i>
+              <i class="pi pi-plus mr-2"></i>
               Novo
             </Button>
           </div>
@@ -39,7 +39,7 @@
       <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <MetricCard
-            label="Planos Ativos"
+            label="Serviços Ativos"
             :value="rows.length"
             icon="pi pi-cog"
             color="slate"
@@ -68,7 +68,7 @@
           :columns="columns"
           :rows="filtradas"
           :loading="loading"
-          empty-text="Nenhum plano de corte encontrado."
+          empty-text="Nenhum serviço de corte encontrado."
           :boxed="false"
         >
           <template #cell-fornecedor="{ row }">
@@ -166,7 +166,7 @@ async function carregar() {
     const { data } = await api.get('/plano-corte')
     rows.value = Array.isArray(data) ? data : []
   } catch (e) {
-    notify.error('Erro ao listar planos de corte.')
+    notify.error('Erro ao listar serviços de corte.')
   } finally {
     loading.value = false
   }
@@ -178,7 +178,7 @@ function novo() {
 
 async function confirmarExcluir(row) {
   if (!can('plano_corte.excluir')) return notify.error('Acesso negado.')
-  const ok = await confirm.show('Excluir Plano', 'Deseja remover este plano de corte?')
+  const ok = await confirm.show('Excluir Serviço de Corte', 'Deseja remover este serviço de corte?')
   if (!ok) return
   try {
     await api.delete(`/plano-corte/${row.id}`)

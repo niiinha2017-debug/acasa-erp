@@ -191,20 +191,6 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
-    '/contratos/historico': RouteRecordInfo<
-      '/contratos/historico',
-      '/contratos/historico',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/debug/update': RouteRecordInfo<
-      '/debug/update',
-      '/debug/update',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
     '/despesas/': RouteRecordInfo<
       '/despesas/',
       '/despesas',
@@ -217,13 +203,6 @@ declare module 'vue-router/auto-routes' {
       '/despesas/:id',
       { id: ParamValue<true> },
       { id: ParamValue<false> },
-      | never
-    >,
-    '/financeiro/administracao': RouteRecordInfo<
-      '/financeiro/administracao',
-      '/financeiro/administracao',
-      Record<never, never>,
-      Record<never, never>,
       | never
     >,
     '/financeiro/contas-pagar/': RouteRecordInfo<
@@ -296,13 +275,6 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
-    '/orcamentos/lista': RouteRecordInfo<
-      '/orcamentos/lista',
-      '/orcamentos/lista',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
     '/orcamentos/processo': RouteRecordInfo<
       '/orcamentos/processo',
       '/orcamentos/processo',
@@ -355,13 +327,6 @@ declare module 'vue-router/auto-routes' {
     '/plano-corte/venda': RouteRecordInfo<
       '/plano-corte/venda',
       '/plano-corte/venda',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/producao/': RouteRecordInfo<
-      '/producao/',
-      '/producao',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -422,72 +387,9 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
-    '/relatorios/': RouteRecordInfo<
-      '/relatorios/',
-      '/relatorios',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
     '/relatorios/acompanhamento-status': RouteRecordInfo<
       '/relatorios/acompanhamento-status',
       '/relatorios/acompanhamento-status',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/relatorios/dashboard-resumo': RouteRecordInfo<
-      '/relatorios/dashboard-resumo',
-      '/relatorios/dashboard-resumo',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/relatorios/despesas-categoria': RouteRecordInfo<
-      '/relatorios/despesas-categoria',
-      '/relatorios/despesas-categoria',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/relatorios/dre-mensal': RouteRecordInfo<
-      '/relatorios/dre-mensal',
-      '/relatorios/dre-mensal',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/relatorios/dre-plano-corte': RouteRecordInfo<
-      '/relatorios/dre-plano-corte',
-      '/relatorios/dre-plano-corte',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/relatorios/feriados': RouteRecordInfo<
-      '/relatorios/feriados',
-      '/relatorios/feriados',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/relatorios/horas-trabalhadas': RouteRecordInfo<
-      '/relatorios/horas-trabalhadas',
-      '/relatorios/horas-trabalhadas',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/relatorios/status-obras': RouteRecordInfo<
-      '/relatorios/status-obras',
-      '/relatorios/status-obras',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/relatorios/status-projetos': RouteRecordInfo<
-      '/relatorios/status-projetos',
-      '/relatorios/status-projetos',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -499,30 +401,9 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/rh/folha-operacional': RouteRecordInfo<
-      '/rh/folha-operacional',
-      '/rh/folha-operacional',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/rh/pagamento-funcionarios': RouteRecordInfo<
-      '/rh/pagamento-funcionarios',
-      '/rh/pagamento-funcionarios',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
     '/rh/ponto/convites': RouteRecordInfo<
       '/rh/ponto/convites',
       '/rh/ponto/convites',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/rh/ponto/fechamento': RouteRecordInfo<
-      '/rh/ponto/fechamento',
-      '/rh/ponto/fechamento',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -754,18 +635,6 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/contratos/historico.vue': {
-      routes:
-        | '/contratos/historico'
-      views:
-        | never
-    }
-    'src/pages/debug/update.vue': {
-      routes:
-        | '/debug/update'
-      views:
-        | never
-    }
     'src/pages/despesas/index.vue': {
       routes:
         | '/despesas/'
@@ -775,12 +644,6 @@ declare module 'vue-router/auto-routes' {
     'src/pages/despesas/[id].vue': {
       routes:
         | '/despesas/[id]'
-      views:
-        | never
-    }
-    'src/pages/financeiro/administracao.vue': {
-      routes:
-        | '/financeiro/administracao'
       views:
         | never
     }
@@ -844,12 +707,6 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/orcamentos/lista.vue': {
-      routes:
-        | '/orcamentos/lista'
-      views:
-        | never
-    }
     'src/pages/orcamentos/processo.vue': {
       routes:
         | '/orcamentos/processo'
@@ -895,12 +752,6 @@ declare module 'vue-router/auto-routes' {
     'src/pages/plano-corte/venda.vue': {
       routes:
         | '/plano-corte/venda'
-      views:
-        | never
-    }
-    'src/pages/producao/index.vue': {
-      routes:
-        | '/producao/'
       views:
         | never
     }
@@ -952,63 +803,9 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/relatorios/index.vue': {
-      routes:
-        | '/relatorios/'
-      views:
-        | never
-    }
     'src/pages/relatorios/acompanhamento-status.vue': {
       routes:
         | '/relatorios/acompanhamento-status'
-      views:
-        | never
-    }
-    'src/pages/relatorios/dashboard-resumo.vue': {
-      routes:
-        | '/relatorios/dashboard-resumo'
-      views:
-        | never
-    }
-    'src/pages/relatorios/despesas-categoria.vue': {
-      routes:
-        | '/relatorios/despesas-categoria'
-      views:
-        | never
-    }
-    'src/pages/relatorios/dre-mensal.vue': {
-      routes:
-        | '/relatorios/dre-mensal'
-      views:
-        | never
-    }
-    'src/pages/relatorios/dre-plano-corte.vue': {
-      routes:
-        | '/relatorios/dre-plano-corte'
-      views:
-        | never
-    }
-    'src/pages/relatorios/feriados.vue': {
-      routes:
-        | '/relatorios/feriados'
-      views:
-        | never
-    }
-    'src/pages/relatorios/horas-trabalhadas.vue': {
-      routes:
-        | '/relatorios/horas-trabalhadas'
-      views:
-        | never
-    }
-    'src/pages/relatorios/status-obras.vue': {
-      routes:
-        | '/relatorios/status-obras'
-      views:
-        | never
-    }
-    'src/pages/relatorios/status-projetos.vue': {
-      routes:
-        | '/relatorios/status-projetos'
       views:
         | never
     }
@@ -1018,27 +815,9 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/rh/folha-operacional.vue': {
-      routes:
-        | '/rh/folha-operacional'
-      views:
-        | never
-    }
-    'src/pages/rh/pagamento-funcionarios.vue': {
-      routes:
-        | '/rh/pagamento-funcionarios'
-      views:
-        | never
-    }
     'src/pages/rh/ponto/convites.vue': {
       routes:
         | '/rh/ponto/convites'
-      views:
-        | never
-    }
-    'src/pages/rh/ponto/fechamento.vue': {
-      routes:
-        | '/rh/ponto/fechamento'
       views:
         | never
     }

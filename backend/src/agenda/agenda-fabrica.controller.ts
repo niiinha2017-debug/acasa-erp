@@ -89,9 +89,10 @@ export class AgendaFabricaController {
   @Post()
   @Permissoes('agendamentos.criar')
   async create(@Body() dto: CreateAgendaDto, @Req() req?: any) {
+    const criadoPorUsuarioId = req?.user?.id != null ? Number(req.user.id) : undefined;
     return this.agendaService.create(
       { ...dto, setor_destino: SETOR_FABRICA },
-      req?.user?.id ? { criadoPorUsuarioId: req.user.id } : undefined,
+      criadoPorUsuarioId ? { criadoPorUsuarioId } : undefined,
     );
   }
 

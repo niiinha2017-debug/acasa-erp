@@ -59,7 +59,6 @@
             label="Data de Entrada (Nota Fiscal) *"
             type="date"
             required
-            :readonly="!isEdit"
           />
         </div>
 
@@ -455,15 +454,16 @@ function montarRateiosClienteAmbiente(total) {
     return unicos.map((nome) => ({ nome_ambiente: nome, valor_alocado: 0 }))
   }
 
-  // total > 0: divide igualmente e ajusta último
+  // total > 0: divide igualmente; último ambiente recebe o restante para soma bater exatamente no total
   const base = round2(Math.floor((tot / unicos.length) * 100) / 100)
   let soma = 0
-
-  return unicos.map((nome, idx) => {
-    const valor = idx === unicos.length - 1 ? round2(tot - soma) : base
+  const resultado = unicos.map((nome, idx) => {
+    const isUltimo = idx === unicos.length - 1
+    const valor = isUltimo ? round2(tot - soma) : base
     soma = round2(soma + valor)
     return { nome_ambiente: nome, valor_alocado: valor }
   })
+  return resultado
 }
 
 // =======================
@@ -785,7 +785,8 @@ function descDoItem(row) {
 const carregarDadosIniciais = async () => {
   loading.value = true
   try {
-const vendRes = await VendaService.listar()
+// Só vendas com contrato vigente – compras só podem ser vinculadas a clientes com contrato vigente
+const vendRes = await VendaService.listarComContratoVigente()
 let fornecedores = []
 try {
   const fornRes = await FornecedorService.select()

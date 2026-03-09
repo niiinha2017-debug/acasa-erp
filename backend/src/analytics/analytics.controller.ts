@@ -37,7 +37,7 @@ export class AnalyticsController {
     return this.service.getResumoVendedor(req?.user || {});
   }
 
-  /** Visão geral Produção – vendas em produção, finalizadas, plano de corte. */
+  /** Visão geral Produção – vendas em produção, finalizadas, serviço de corte. */
   @Get('dashboard/resumo-producao')
   @Permissoes('posvenda.ver', 'plano_corte.ver')
   getResumoProducao() {
@@ -75,7 +75,7 @@ export class AnalyticsController {
     return this.service.getDreMensal(m, a);
   }
 
-  /** DRE do plano de corte: receita do plano de corte e custos/despesas rateados. */
+  /** DRE do serviço de corte: receita do serviço de corte e custos/despesas rateados. */
   @Get('dre-plano-corte')
   @Permissoes('dashboard.visualizar')
   getDrePlanoCorte(@Query('mes') mes?: string, @Query('ano') ano?: string) {

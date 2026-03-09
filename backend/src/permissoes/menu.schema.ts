@@ -96,13 +96,13 @@ export const MENU_SECTIONS: MenuSection[] = [
         perm: 'plano_corte.ver',
       },
       {
-        label: 'Produtos plano de corte',
+        label: 'Produtos Serviço de Corte',
         to: '/plano-corte/itens',
         icon: 'pi-box',
         perm: 'plano_corte.ver',
       },
       {
-        label: 'Venda plano de corte',
+        label: 'Venda Serviço de Corte',
         to: '/plano-corte/venda',
         icon: 'pi-ruler',
         perm: 'plano_corte.criar',

@@ -4,7 +4,7 @@
       <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
 
       <PageHeader
-        title="Produtos Plano de Corte"
+        title="Produtos Serviço de Corte"
         subtitle="Cadastro de itens por fornecedor"
         icon="pi pi-box"
         :show-back="false"

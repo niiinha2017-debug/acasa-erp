@@ -10,16 +10,6 @@
     >
       <template #actions>
         <Button
-          v-if="isEdit && can('agendamentos.criar')"
-          variant="secondary"
-          size="sm"
-          type="button"
-          @click="abrirModalEnviarProducao"
-        >
-          <i class="pi pi-send mr-2"></i>
-          Enviar para Produção
-        </Button>
-        <Button
           v-if="isEdit"
           variant="secondary"
           size="sm"
@@ -83,7 +73,7 @@
 
           <div class="flex items-center justify-between gap-4">
             <p class="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Adicione os itens ao plano
+              Adicione os itens ao serviço de corte
             </p>
             <Button
               v-if="can(permSalvarPlano())"
@@ -178,8 +168,11 @@
           </div>
         </div>
 
-        <!-- Footer (igual compras) -->
-        <div class="pt-10 mt-6 border-t border-border-ui">
+        <!-- Footer (igual compras): ao salvar, o backend envia automaticamente para a Agenda de Produção (mesma regra do contrato vigente) -->
+        <p class="text-[11px] text-text-muted mb-4">
+          Ao salvar, o serviço de corte é enviado automaticamente para a Agenda de Produção.
+        </p>
+        <div class="pt-6 mt-2 border-t border-border-ui">
           <div class="flex items-center justify-between gap-4">
             <Button type="button" variant="ghost" @click="router.push('/plano-corte')">
               Cancelar
@@ -192,7 +185,7 @@
               :loading="salvando"
             >
               <i class="pi pi-save mr-2 text-[12px]"></i>
-              {{ isEdit ? 'ATUALIZAR PLANO' : 'SALVAR PLANO' }}
+              {{ isEdit ? 'ATUALIZAR SERVIÇO DE CORTE' : 'SALVAR SERVIÇO DE CORTE' }}
             </Button>
             <Button
               v-if="isEdit && can('plano_corte.excluir')"
@@ -260,46 +253,6 @@
       </Transition>
     </Teleport>
 
-    <!-- Modal Enviar para Produção -->
-    <Teleport to="body">
-      <Transition name="fade">
-        <div
-          v-if="modalEnviarProducao.aberto"
-          class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
-          @click.self="fecharModalEnviarProducao"
-        >
-          <div class="w-full max-w-md rounded-2xl border border-border-ui bg-bg-card shadow-xl overflow-hidden flex flex-col">
-            <div class="h-1 w-full bg-brand-primary" />
-            <header class="flex items-center justify-between px-6 py-4 border-b border-border-ui">
-              <div class="flex items-center gap-3">
-                <i class="pi pi-send text-2xl text-text-soft"></i>
-                <div>
-                  <h3 class="text-lg font-semibold text-text-main">Enviar para Produção</h3>
-                  <p class="text-[10px] font-medium text-text-muted uppercase tracking-wider">Cria agendamento na agenda com este plano</p>
-                </div>
-              </div>
-              <button type="button" class="w-9 h-9 flex items-center justify-center rounded-lg border border-border-ui text-text-muted hover:text-rose-500" @click="fecharModalEnviarProducao">
-                <i class="pi pi-times text-sm"></i>
-              </button>
-            </header>
-            <form class="p-6 space-y-4" @submit.prevent="confirmarEnviarProducao">
-              <Input v-model="modalEnviarProducao.titulo" label="Título do agendamento *" placeholder="Ex: Plano de Corte #..." required />
-              <div class="grid grid-cols-2 gap-4">
-                <Input v-model="modalEnviarProducao.inicio_em" label="Início *" type="datetime-local" required />
-                <Input v-model="modalEnviarProducao.fim_em" label="Término *" type="datetime-local" required />
-              </div>
-              <div class="flex justify-end gap-3 pt-4 border-t border-border-ui">
-                <Button type="button" variant="ghost" @click="fecharModalEnviarProducao">Cancelar</Button>
-                <Button type="submit" variant="primary" :loading="modalEnviarProducao.salvando">
-                  <i class="pi pi-send mr-2"></i>
-                  Enviar para Produção
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
   </div>
 </template>
 
@@ -307,8 +260,8 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { maskMoneyBR } from '@/utils/masks'
-import { AgendaFabricaService, FuncionarioService, PlanoCorteService, FornecedorService } from '@/services/index'
-import { PIPELINE_PLANO_CORTE, UNIDADES } from '@/constantes'
+import { PlanoCorteService, FornecedorService } from '@/services/index'
+import { PIPELINE_PLANO_CORTE_OPTIONS, UNIDADES } from '@/constantes'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
@@ -330,14 +283,24 @@ const excluindo = ref(false)
 const gerandoPdf = ref(false)
 
 const statusPlanoOptions = computed(() =>
-  (PIPELINE_PLANO_CORTE || []).map((s) => ({ label: s.label, value: s.key }))
+  (PIPELINE_PLANO_CORTE_OPTIONS || []).map((s) => ({ label: s.label, value: s.key }))
 )
 
 const unidadesOptions = computed(() => (UNIDADES || []).map((u) => ({ label: u.label, value: u.key })))
 
 function planoKey(key) {
-  const k = (PIPELINE_PLANO_CORTE || []).find((p) => p.key === key)?.key
-  return k || (PIPELINE_PLANO_CORTE?.[0]?.key || 'EM_ABERTO')
+  const k = (PIPELINE_PLANO_CORTE_OPTIONS || []).find((p) => p.key === key)?.key
+  return k || (PIPELINE_PLANO_CORTE_OPTIONS?.[0]?.key || 'PRODUCAO_RECEBIDA')
+}
+
+/** Status antigos do Serviço de Corte mapeados para as mesmas etapas da agenda de produção. */
+function mapLegacyStatusToProducao(status) {
+  const s = String(status || '').toUpperCase()
+  if (['PRODUCAO_RECEBIDA', 'CORTE', 'PRODUCAO_FINALIZADA'].includes(s)) return s
+  if (['RECEBIDO', 'CONFERIDO_TECNICO'].includes(s)) return 'PRODUCAO_RECEBIDA'
+  if (['NA_MAQUINA', 'BORDA_E_ACABAMENTO'].includes(s)) return 'CORTE'
+  if (['PRONTO_PARA_RETIRADA', 'ENTREGUE'].includes(s)) return 'PRODUCAO_FINALIZADA'
+  return planoKey(s) || 'PRODUCAO_RECEBIDA'
 }
 
 const dataPlano = ref('')
@@ -388,86 +351,6 @@ const modalProduto = ref({
     status: 'ATIVO',
   },
 })
-
-const funcionariosOptionsEnviarProducao = ref([])
-const modalEnviarProducao = ref({
-  aberto: false,
-  titulo: '',
-  inicio_em: '',
-  fim_em: '',
-  funcionarioSelecionado: null,
-  equipe_ids: [],
-  salvando: false,
-})
-
-function funcionarioNomeByIdEnviarProducao(id) {
-  const o = funcionariosOptionsEnviarProducao.value.find((f) => String(f.value) === String(id))
-  return o?.label || String(id)
-}
-function adicionarEquipeEnviarProducao(id) {
-  if (!id) return
-  if (!modalEnviarProducao.value.equipe_ids.includes(id)) modalEnviarProducao.value.equipe_ids.push(id)
-  modalEnviarProducao.value.funcionarioSelecionado = null
-}
-function removerEquipeEnviarProducao(id) {
-  modalEnviarProducao.value.equipe_ids = modalEnviarProducao.value.equipe_ids.filter((f) => String(f) !== String(id))
-}
-function fecharModalEnviarProducao() {
-  modalEnviarProducao.value.aberto = false
-  modalEnviarProducao.value.titulo = ''
-  modalEnviarProducao.value.inicio_em = ''
-  modalEnviarProducao.value.fim_em = ''
-  modalEnviarProducao.value.funcionarioSelecionado = null
-  modalEnviarProducao.value.equipe_ids = []
-}
-async function abrirModalEnviarProducao() {
-  if (!planoId.value) return notify.error('Plano não carregado.')
-  if (!fornecedorSelecionado.value) return notify.error('Selecione o fornecedor do plano.')
-  try {
-    const res = await FuncionarioService.select()
-    const lista = Array.isArray(res?.data) ? res.data : []
-    funcionariosOptionsEnviarProducao.value = lista
-      .map((item) => ({ label: item?.label || item?.nome || '', value: item?.value ?? item?.id ?? null }))
-      .filter((opt) => opt.value != null)
-  } catch (e) {
-    funcionariosOptionsEnviarProducao.value = []
-  }
-  const now = new Date()
-  const fim = new Date(now.getTime() + 2 * 60 * 60 * 1000)
-  const pad = (n) => String(n).padStart(2, '0')
-  modalEnviarProducao.value.titulo = `Plano de Corte #${planoId.value} - Produção`
-  modalEnviarProducao.value.inicio_em = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`
-  modalEnviarProducao.value.fim_em = `${fim.getFullYear()}-${pad(fim.getMonth() + 1)}-${pad(fim.getDate())}T${pad(fim.getHours())}:${pad(fim.getMinutes())}`
-  modalEnviarProducao.value.equipe_ids = []
-  modalEnviarProducao.value.aberto = true
-}
-async function confirmarEnviarProducao() {
-  const inicio = new Date(modalEnviarProducao.value.inicio_em)
-  const fim = new Date(modalEnviarProducao.value.fim_em)
-  if (Number.isNaN(inicio.getTime()) || Number.isNaN(fim.getTime())) return notify.error('Data de início e término inválidas.')
-  if (fim <= inicio) return notify.error('Término deve ser depois do início.')
-  if (!planoId.value) return notify.error('Plano não carregado.')
-  const fornecedorId = Number(fornecedorSelecionado.value)
-  if (!fornecedorId) return notify.error('Fornecedor do plano não informado.')
-  modalEnviarProducao.value.salvando = true
-  try {
-    await AgendaFabricaService.criar({
-      titulo: modalEnviarProducao.value.titulo,
-      inicio_em: inicio.toISOString(),
-      fim_em: fim.toISOString(),
-      plano_corte_id: planoId.value,
-      fornecedor_id: fornecedorId,
-      equipe_ids: [],
-      categoria: 'PRODUCAO',
-    })
-    notify.success('Plano enviado para produção!')
-    fecharModalEnviarProducao()
-  } catch (e) {
-    notify.error(e?.response?.data?.message || 'Erro ao enviar para produção.')
-  } finally {
-    modalEnviarProducao.value.salvando = false
-  }
-}
 
 function abrirModalProduto() {
   if (!can(permSalvarPlano())) return notify.error('Acesso negado.')
@@ -545,7 +428,7 @@ async function confirmarRemoverItemPlano(index) {
   if (!can(permSalvarPlano())) return notify.error('Acesso negado.')
   const row = itens.value?.[index]
   const nome = row?.item?.nome_produto || 'Item'
-  const ok = await confirm.show('Remover Item', `Deseja remover "${nome}" do plano?`)
+  const ok = await confirm.show('Remover Item', `Deseja remover "${nome}" deste serviço de corte?`)
   if (!ok) return
   itens.value.splice(index, 1)
 }
@@ -571,8 +454,8 @@ function registrarItemNovo() {
 async function salvar() {
   if (!can(permSalvarPlano())) return notify.error('Acesso negado.')
   if (!fornecedorSelecionado.value) return notify.error('Selecione o fornecedor.')
-  if (!dataPlano.value?.trim()) return notify.error('Informe a data do plano.')
-  if (!itens.value?.length) return notify.error('Adicione pelo menos um item ao plano.')
+  if (!dataPlano.value?.trim()) return notify.error('Informe a data do serviço de corte.')
+  if (!itens.value?.length) return notify.error('Adicione pelo menos um item ao serviço de corte.')
   salvando.value = true
   try {
     const dataVenda = dataPlano.value.trim()
@@ -580,7 +463,7 @@ async function salvar() {
     const payload = {
       fornecedor_id: Number(fornecedorSelecionado.value),
       data_venda: dataVendaIso,
-      status: isEdit.value ? (statusPlano.value || planoKey('EM_ABERTO')) : (statusPlano.value || planoKey('EM_ABERTO')),
+      status: isEdit.value ? (statusPlano.value || planoKey('PRODUCAO_RECEBIDA')) : (statusPlano.value || planoKey('PRODUCAO_RECEBIDA')),
       produtos: itens.value.map((p) => ({
         item_id: Number(p.item_id),
         quantidade: Number(p.quantidade) || 0,
@@ -590,7 +473,7 @@ async function salvar() {
       })),
     }
     await PlanoCorteService.salvar(isEdit.value ? planoId.value : null, payload)
-    notify.success(isEdit.value ? 'Plano atualizado.' : 'Plano salvo.')
+    notify.success(isEdit.value ? 'Serviço de corte atualizado e enviado para a Agenda de Produção.' : 'Serviço de corte salvo e enviado para a Agenda de Produção.')
     closeTabAndGo('/plano-corte')
   } catch (e) {
     const msg = e?.response?.data?.message
@@ -602,7 +485,7 @@ async function salvar() {
 
 async function confirmarExcluirPlano() {
   if (!can('plano_corte.excluir')) return notify.error('Acesso negado.')
-  const ok = await confirm.show('Excluir Plano', `Deseja excluir o Plano de Corte #${planoId.value}?`)
+  const ok = await confirm.show('Excluir Serviço de Corte', `Deseja excluir o Serviço de Corte #${planoId.value}?`)
   if (!ok) return
   excluindo.value = true
   try {
@@ -644,7 +527,7 @@ onMounted(async () => {
     if (isEdit.value) {
       const { data } = await PlanoCorteService.buscar(planoId.value)
       fornecedorSelecionado.value = data.fornecedor_id ?? null
-      statusPlano.value = data.status ?? ''
+      statusPlano.value = mapLegacyStatusToProducao(data.status ?? '')
       dataPlano.value = data.data_venda?.slice(0, 10) || ''
       itens.value = (data.produtos || []).map((p) => ({
         ...p,
@@ -656,7 +539,7 @@ onMounted(async () => {
       if (data.fornecedor_id) await carregarItensDisponiveis(data.fornecedor_id)
     } else {
       dataPlano.value = new Date().toISOString().slice(0, 10)
-      statusPlano.value = planoKey('EM_ABERTO')
+      statusPlano.value = planoKey('PRODUCAO_RECEBIDA')
     }
   } catch (err) {
     notify.error('Erro ao carregar.')

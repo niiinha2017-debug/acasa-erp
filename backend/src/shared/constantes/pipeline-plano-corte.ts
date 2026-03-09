@@ -28,9 +28,12 @@ const STATUS_LABELS: Record<string, string> = {
   LIBERADO_PARA_CORTE: 'Liberado para corte',
   NA_FILA_DE_CORTE: 'Na fila de corte',
   EM_EXECUCAO: 'Em execução',
-  PRODUCAO_FINALIZADA: 'Produção finalizada',
+  PRODUCAO_FINALIZADA: 'Produção Finalizada',
   AGUARDANDO_PAGAMENTO: 'Aguardando pagamento',
   COMPENSADO: 'Compensado',
+  // Mesmos da agenda de produção (pipeline-producao)
+  PRODUCAO_RECEBIDA: 'Produção Recebida',
+  CORTE: 'Corte / Usinagem',
 };
 
 const PIPELINE_PLANO_CORTE_FASES =
@@ -88,7 +91,7 @@ export function validarTransicaoStatusPlanoCorte(params: {
   }
 
   if (!statusPlanoCorteEhValido(proximo)) {
-    return { ok: false, motivo: `Status "${proximo}" é inválido no pipeline do plano de corte.` };
+    return { ok: false, motivo: `Status "${proximo}" é inválido no pipeline do serviço de corte.` };
   }
 
   if (!atual) {
@@ -98,7 +101,7 @@ export function validarTransicaoStatusPlanoCorte(params: {
   if (!statusPlanoCorteEhValido(atual)) {
     return {
       ok: false,
-      motivo: `Status atual "${atual}" é inválido no pipeline do plano de corte.`,
+      motivo: `Status atual "${atual}" é inválido no pipeline do serviço de corte.`,
     };
   }
 

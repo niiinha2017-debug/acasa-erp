@@ -32,11 +32,12 @@ export class AgendaController {
     return PIPELINE_PRODUCAO;
   }
 
-  // 1. Criar agendamento (Venda, Orçamento ou Plano de Corte)
+  // 1. Criar agendamento (Venda, Orçamento ou Plano de Corte). Criador = sempre usuário logado.
   @Post()
   @Permissoes('agendamentos.criar')
-  async create(@Body() createAgendaDto: CreateAgendaDto) {
-    return this.agendaService.create(createAgendaDto);
+  async create(@Body() createAgendaDto: CreateAgendaDto, @Req() req?: any) {
+    const criadoPorUsuarioId = req?.user?.id != null ? Number(req.user.id) : undefined;
+    return this.agendaService.create(createAgendaDto, criadoPorUsuarioId ? { criadoPorUsuarioId } : undefined);
   }
 
   // 2. Buscar TODOS os agendamentos (Visão do Administrador/Escritório)

@@ -206,7 +206,7 @@ const ROTULO_MODULO = {
   agendamentos: 'Agendamentos',
   vendas: 'Vendas',
   orcamentos: 'Orçamentos',
-  plano_corte: 'Plano de Corte',
+  plano_corte: 'Serviço de Corte',
   funcionarios: 'Funcionários',
   ponto_relatorio: 'Ponto',
   ponto_convite: 'Ponto Convites',

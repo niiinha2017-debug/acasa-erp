@@ -143,16 +143,17 @@
                 :key="event.id"
                 class="w-full text-left p-4 rounded-xl border hover:border-brand-primary/40 hover:shadow-md transition-all"
                 :class="[
-                  event.plano_corte_id ? 'bg-[#e0f2fe] dark:bg-sky-950/40 border-sky-200 dark:border-sky-700 border-l-4 border-l-sky-500' : 'border-border-ui bg-bg-card',
+                  event.plano_corte_id ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-700 border-l-4 border-l-amber-500' : 'border-border-ui bg-bg-card',
                   eventAtrasado(event) && !event.plano_corte_id ? 'border-l-4 border-l-red-500 border-red-400 bg-red-50 dark:bg-red-950/40' : (!event.plano_corte_id ? getProcessColorByStatusVendas(event.categoria, event.status).borderLeftClass : ''),
                 ]"
               >
                 <div class="text-sm font-bold text-text-main leading-snug flex items-center gap-2 flex-wrap">
                   {{ eventTitle(event) }}
-                  <span v-if="event.plano_corte_id" class="inline-flex px-2 py-0.5 rounded text-[10px] font-black uppercase bg-sky-600 text-white dark:bg-sky-500 dark:text-sky-950">[APENAS CORTE]</span>
+                  <span v-if="event.plano_corte_id" class="inline-flex px-2 py-0.5 rounded text-[10px] font-black uppercase bg-amber-600 text-white dark:bg-amber-500 dark:text-amber-950">[APENAS CORTE]</span>
                 </div>
-                <div class="mt-2 text-[10px] font-medium text-text-muted">
-                  Responsável: {{ event.criado_por_usuario?.nome || 'Não informado' }}
+                <div class="mt-2 text-[10px] font-medium text-text-muted space-y-0.5">
+                  <div><span class="font-semibold text-text-main">Criador da tarefa:</span> {{ event.criado_por_usuario?.nome || 'Não informado' }}</div>
+                  <div><span class="font-semibold text-text-main">Executores:</span> {{ nomesExecutoresEvento(event) || 'Nenhum funcionário atribuído ainda' }}</div>
                 </div>
                 <div
                   v-if="event.alterado_por_usuario"
@@ -392,13 +393,13 @@
             Edição
           </span>
           <span v-if="editingEvent" class="px-2.5 py-1 rounded-full bg-brand-primary/10 border border-brand-primary/30 text-brand-primary dark:text-brand-primary text-[11px] font-medium">
-            Responsável: {{ editingEvent.criado_por_usuario?.nome || 'Não informado' }}
+            Criador: {{ editingEvent.criado_por_usuario?.nome || 'Não informado' }}
           </span>
           <span v-if="editingEvent?.alterado_por_usuario" class="px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-[11px] font-medium">
             Editado por: {{ editingEvent.alterado_por_usuario.nome }}
           </span>
           <span v-if="editingEvent && !podeEditarEvento(editingEvent)" class="px-2.5 py-1 rounded-full bg-slate-200 dark:bg-slate-600/50 text-slate-700 dark:text-slate-300 text-[11px] font-medium">
-            Somente visualização (apenas o criador ou admin pode editar)
+            Somente visualização (apenas o criador da tarefa ou admin pode editar)
           </span>
         </div>
 
@@ -490,12 +491,12 @@
               </div>
             </div>
 
-            <!-- Responsável pelo agendamento (quem criou): visível para todos, inclusive em modo somente leitura -->
-            <div v-if="editingEvent" class="mt-3">
-              <label class="block text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1">Responsável pelo agendamento</label>
-              <div class="rounded-xl border border-border-ui bg-bg-card px-3 py-2 text-xs font-semibold text-text-main">
-                {{ editingEvent.criado_por_usuario?.nome || 'Não informado' }}
-              </div>
+            <!-- Criador da tarefa e executores (funcionários que executam). -->
+            <div v-if="editingEvent" class="mt-3 p-3 rounded-xl border border-border-ui bg-slate-50/50 dark:bg-slate-800/20 space-y-2">
+              <div class="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1">Responsáveis</div>
+              <div><span class="text-[10px] font-semibold text-text-main">1. Criador da tarefa:</span> <span class="text-xs text-text-main">{{ editingEvent.criado_por_usuario?.nome || 'Não informado' }}</span></div>
+              <div><span class="text-[10px] font-semibold text-text-main">2. Executores (funcionários na tarefa):</span> <span class="text-xs text-text-main">{{ nomesExecutoresEvento(editingEvent) || 'Nenhum funcionário atribuído ainda' }}</span></div>
+              <p class="text-[10px] text-text-muted mt-1">Executores são atribuídos na Timeline (apontamento de horas).</p>
             </div>
 
             <div class="mt-4">
@@ -666,7 +667,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { AgendaLojaService, ApontamentoProducaoService, ClienteService, FuncionarioService, OrcamentosService, PlanoCorteService, VendaService } from '@/services/index'
-import { PIPELINE_CLIENTE, PIPELINE_PLANO_CORTE } from '@/constantes'
+import { PIPELINE_CLIENTE, PIPELINE_PLANO_CORTE_OPTIONS } from '@/constantes'
 import { getCalendarioEventClassVendas, getProcessColorByStatusVendas } from '@/constantes'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
@@ -891,7 +892,7 @@ function labelPipelineCliente(key) {
 }
 
 function labelPipelinePlanoCorte(key) {
-  const item = (PIPELINE_PLANO_CORTE || []).find((p) => String(p?.key || '').toUpperCase() === String(key || '').toUpperCase())
+  const item = (PIPELINE_PLANO_CORTE_OPTIONS || []).find((p) => String(p?.key || '').toUpperCase() === String(key || '').toUpperCase())
   return item?.label || String(key || '')
 }
 
@@ -905,7 +906,7 @@ const statusLabelVenda = computed(() => {
 const statusPreviewLabel = computed(() => {
   const origem = String(taskForm.origemFluxo || '').toUpperCase()
   if (origem === 'PLANO_CORTE' || origem === 'VENDA_PLANO_CORTE') {
-    return `Pipeline plano de corte: ${labelPipelinePlanoCorte('EM_ANDAMENTO')}`
+    return `Pipeline Serviço de Corte: ${labelPipelinePlanoCorte('EM_ANDAMENTO')}`
   }
   if (origem === 'LOJA_VENDA') {
     if (vendaSelecionadaParaAgendamento.value) return statusLabelVenda.value || 'Pipeline cliente'
@@ -1047,7 +1048,7 @@ const monthLabel = computed(() =>
   currentMonth.value.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
 )
 
-// Contexto do evento em edição: venda (cliente) ou plano de corte
+// Contexto do evento em edição: venda (cliente) ou serviço de corte
 const isEventoPlanoCorte = computed(() => !!editingEvent.value?.plano_corte_id)
 const isEventoVenda = computed(
   () => !!editingEvent.value?.venda_id || !!editingEvent.value?.orcamento_id
@@ -1075,8 +1076,8 @@ const clienteNomeEventoAtual = computed(() => {
 const origemEventoLabel = computed(() => {
   const origem = String(editingEvent.value?.origem_fluxo || '').toUpperCase()
   const map = {
-    PLANO_CORTE: 'Origem: plano de corte',
-    VENDA_PLANO_CORTE: 'Origem: venda do plano de corte',
+    PLANO_CORTE: 'Origem: serviço de corte',
+    VENDA_PLANO_CORTE: 'Origem: venda do serviço de corte',
     LOJA_VENDA: 'Origem: cliente venda da loja',
   }
   return map[origem] || 'Origem: agenda'
@@ -1321,12 +1322,13 @@ function eventTitle(event) {
   return `${titulo} - ${nome}`
 }
 
-/** Tooltip completo para o evento no calendário (vários horários: ver responsável e horário ao passar o mouse). */
+/** Tooltip completo para o evento no calendário (horário, criador e executores ao passar o mouse). */
 function eventTooltipCalendar(event) {
   const horario = `${timeLabel(event.inicio_em)} – ${timeLabel(event.fim_em)}`
   const titulo = eventTitle(event)
-  const resp = event?.criado_por_usuario?.nome || 'Não informado'
-  let txt = `${horario}\n${titulo}\nResponsável: ${resp}`
+  const criador = event?.criado_por_usuario?.nome || 'Não informado'
+  const exec = nomesExecutoresEvento(event)
+  let txt = `${horario}\n${titulo}\nCriador: ${criador}${exec ? `\nExecutores: ${exec}` : ''}`
   const orcNum = event?.orcamento?.id ?? event?.orcamento_id
   if (orcNum) txt += `\nOrçamento #${orcNum}`
   const vendaNum = event?.venda?.id ?? event?.venda_id
@@ -1342,31 +1344,50 @@ function normalizarStatusExecucao(status) {
   return String(status || '').trim().toUpperCase()
 }
 
-/** Status efetivo: se há cronômetro aberto para este evento (venda), usa o estado do cronômetro. */
+/** Cronômetro rodando: algum apontamento_producao com início e sem fim (e não pausado). */
+function temCronometroRodandoAgenda(event) {
+  const aps = event?.apontamentos_producao || []
+  return aps.some(
+    (ap) =>
+      ap?.inicio_em &&
+      !ap?.fim_em &&
+      !(ap?.pausa_inicio_em && !ap?.pausa_fim_em),
+  )
+}
+
+/** Status efetivo: apontamentos_producao (Início/Em produção/Ativo) ou cronômetro aberto ou status da agenda. */
 function statusExecucaoEfetivo(event) {
+  const status = normalizarStatusExecucao(event?.status)
+  if (status === 'CONCLUIDO') return 'CONCLUIDO'
+  const aps = event?.apontamentos_producao || []
+  if (aps.length) {
+    if (temCronometroRodandoAgenda(event)) return 'EM_ANDAMENTO'
+    return 'EM_PRODUCAO'
+  }
   const ap = getCronometroAbertoParaEvento(event)
   if (ap) {
     if (isCronometroPausado(ap)) return 'PAUSADO'
     return 'EM_ANDAMENTO'
   }
-  return normalizarStatusExecucao(event?.status)
+  return status
 }
 
 function statusExecucaoLabel(event) {
   const status = statusExecucaoEfetivo(event)
   if (status === 'CONCLUIDO') return 'Concluido'
   if (status === 'PAUSADO') return 'Pausado'
-  if (status === 'EM_ANDAMENTO') return 'Em andamento'
+  if (status === 'EM_ANDAMENTO') return 'Ativo'
+  if (status === 'EM_PRODUCAO') return 'Em produção'
   const fim = new Date(event?.fim_em)
   if (!Number.isNaN(fim.getTime()) && Date.now() > fim.getTime()) return 'Atrasado'
-  return 'Pendente'
+  return 'Início'
 }
 
 function statusExecucaoClass(event) {
   const status = statusExecucaoEfetivo(event)
   if (status === 'CONCLUIDO') return 'bg-emerald-50 text-emerald-700 border border-emerald-200'
   if (status === 'PAUSADO') return 'bg-amber-50 text-amber-700 border border-amber-200'
-  if (status === 'EM_ANDAMENTO') return 'bg-blue-50 text-blue-700 border border-blue-200'
+  if (status === 'EM_ANDAMENTO' || status === 'EM_PRODUCAO') return 'bg-blue-50 text-blue-700 border border-blue-200'
   const fim = new Date(event?.fim_em)
   if (!Number.isNaN(fim.getTime()) && Date.now() > fim.getTime()) {
     return 'bg-rose-50 text-rose-700 border border-rose-200'
@@ -1401,9 +1422,18 @@ function normalizePlanoStatus(status) {
   return String(status || '').trim().toUpperCase().replace(/\s+/g, '_')
 }
 
+function mapLegacyPlanoStatusToProducao(status) {
+  const s = normalizePlanoStatus(status)
+  if (['PRODUCAO_RECEBIDA', 'CORTE', 'PRODUCAO_FINALIZADA'].includes(s)) return s
+  if (['RECEBIDO', 'CONFERIDO_TECNICO'].includes(s)) return 'PRODUCAO_RECEBIDA'
+  if (['NA_MAQUINA', 'BORDA_E_ACABAMENTO'].includes(s)) return 'CORTE'
+  if (['PRONTO_PARA_RETIRADA', 'ENTREGUE'].includes(s)) return 'PRODUCAO_FINALIZADA'
+  return s
+}
+
 function getPlanoPipeline(status) {
-  const key = normalizePlanoStatus(status)
-  return (PIPELINE_PLANO_CORTE || []).find((p) => p.key === key)
+  const key = mapLegacyPlanoStatusToProducao(status)
+  return (PIPELINE_PLANO_CORTE_OPTIONS || []).find((p) => p.key === key)
 }
 
 function planoBadgeClass(status) {
@@ -1423,6 +1453,13 @@ function planoStatusForEvent(event) {
   if (!id) return null
   const plano = planosProducao.value.find((p) => String(p.id) === String(id))
   return plano?.status || null
+}
+
+/** Nomes dos funcionários que estão executando a tarefa (apontamentos_producao), únicos e separados por vírgula. */
+function nomesExecutoresEvento(event) {
+  const aps = event?.apontamentos_producao || []
+  const nomes = [...new Set(aps.map((ap) => ap?.funcionario?.nome).filter(Boolean))]
+  return nomes.length ? nomes.join(', ') : ''
 }
 
 function prevMonth() {
@@ -1569,7 +1606,7 @@ function editTask(event) {
     .filter(Boolean)
   taskForm.funcionarioIds = Array.from(new Set([...equipeDoEvento, ...equipeApontada]))
   const cat = normalizarCategoriaAgenda(event?.categoria || 'MEDIDA')
-  // Garante categoria válida para o pipeline do evento (venda vs plano de corte)
+  // Garante categoria válida para o pipeline do evento (venda vs serviço de corte)
   const origemEvento = String(event?.origem_fluxo || '').toUpperCase()
   if (origemEvento === 'PLANO_CORTE' || origemEvento === 'VENDA_PLANO_CORTE') {
     const categoriasValidas = TIPOS_PRODUCAO.value.map((o) => o.value)
@@ -1938,9 +1975,9 @@ async function loadCronometrosAbertos() {
   }
 }
 
-async function loadAgenda() {
+async function loadAgenda(silentRefresh = false) {
   if (!can('agendamentos.ver')) return
-  loading.value = true
+  if (!silentRefresh) loading.value = true
   try {
     const start = startOfMonth(currentMonth.value)
     const end = endOfMonth(currentMonth.value)
@@ -2063,10 +2100,21 @@ watch(cronometrosAbertos, () => {
     intervalCronometro = setInterval(() => { cronometroAgora.value = Date.now() }, 1000)
   }
 }, { immediate: true })
+let visibilityHandler = null
+function setupRefreshAgenda() {
+  visibilityHandler = () => {
+    if (document.visibilityState === 'visible') loadAgenda(true)
+  }
+  document.addEventListener('visibilitychange', visibilityHandler)
+}
 onBeforeUnmount(() => {
   if (intervalCronometro) {
     clearInterval(intervalCronometro)
     intervalCronometro = null
+  }
+  if (visibilityHandler && typeof document !== 'undefined') {
+    document.removeEventListener('visibilitychange', visibilityHandler)
+    visibilityHandler = null
   }
 })
 onMounted(() => {
@@ -2078,6 +2126,7 @@ onMounted(() => {
   loadVendasAguardandoAgendamento()
   loadOrcamentosApresentacao()
   loadVendasAguardandoContrato()
+  setupRefreshAgenda()
 })
 watch(currentMonth, loadAgenda)
 

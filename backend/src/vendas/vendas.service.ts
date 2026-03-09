@@ -366,6 +366,41 @@ export class VendasService {
   /** Vendas em etapas que aguardam agendamento, incluindo pós-venda.
    * Observação: algumas etapas de pós-venda podem estar no status do cliente.
    */
+  /** Lista vendas que possuem contrato com status VIGENTE. Usado no módulo Compras: só é possível
+   * relacionar compra (destino Venda) com clientes cujo contrato está vigente.
+   */
+  async listarComContratoVigente(usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null) {
+    const funcionarioId =
+      usuario?.funcionario_id != null && !usuario?.is_admin
+        ? Number(usuario.funcionario_id)
+        : null;
+    const where: any = {
+      contratos: { some: { status: 'VIGENTE' } },
+    };
+    if (funcionarioId != null) {
+      where.AND = [
+        {
+          OR: [
+            { cliente: { vendedor_responsavel_id: funcionarioId } },
+            { representante_venda_funcionario_id: funcionarioId },
+          ],
+        },
+      ];
+    }
+    return this.prisma.vendas.findMany({
+      where,
+      orderBy: { id: 'desc' },
+      include: {
+        cliente: true,
+        orcamento: true,
+        itens: true,
+        comissoes: true,
+        pagamentos: true,
+        formas_pagamento: true,
+      },
+    });
+  }
+
   /** Vendas que podem ser vinculadas a agendamentos de tipo CONTRATO/VENDA_FECHADA:
    *  - em etapas pré-contrato (ORCAMENTO_APROVADO, VENDA_FECHADA, CONTRATO_ASSINADO), ou
    *  - com contrato vigente (para que o usuário possa vincular e o card exiba "Venda #id").

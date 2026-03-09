@@ -113,11 +113,11 @@ async function main() {
     { chave: 'contratos.excluir', descricao: 'Excluir contratos' },
     { chave: 'contratos.assinatura_digital', descricao: 'Autorizar Uso de Assinatura Digital' },
 
-    { chave: 'plano_corte.ver', descricao: 'Visualizar plano de corte' },
-    { chave: 'plano_corte.criar', descricao: 'Criar plano de corte' },
-    { chave: 'plano_corte.editar', descricao: 'Editar plano de corte' },
-    { chave: 'plano_corte.excluir', descricao: 'Excluir plano de corte' },
-    { chave: 'plano_corte.enviar_producao', descricao: 'Enviar plano de corte para producao (agenda)' },
+    { chave: 'plano_corte.ver', descricao: 'Visualizar serviço de corte' },
+    { chave: 'plano_corte.criar', descricao: 'Criar serviço de corte' },
+    { chave: 'plano_corte.editar', descricao: 'Editar serviço de corte' },
+    { chave: 'plano_corte.excluir', descricao: 'Excluir serviço de corte' },
+    { chave: 'plano_corte.enviar_producao', descricao: 'Enviar serviço de corte para producao (agenda)' },
 
     // Cadastros
     { chave: 'clientes.ver', descricao: 'Visualizar clientes' },

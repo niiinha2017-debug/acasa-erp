@@ -264,7 +264,7 @@ export class AnalyticsService {
     };
   }
 
-  /** Resumo para a visão geral Produção: vendas por etapa, plano de corte. */
+  /** Resumo para a visão geral Produção: vendas por etapa, serviço de corte. */
   async getResumoProducao(): Promise<{
     vendas_total: number;
     vendas_em_producao: number;
@@ -379,7 +379,7 @@ export class AnalyticsService {
 
   /**
    * DRE mensal (Demonstração do Resultado do Exercício) por competência.
-   * Receita = venda loja (vendas) + venda plano de corte.
+   * Receita = venda loja (vendas) + venda serviço de corte.
    * Deduções: custo da compra, custo hora de produção, despesas do período.
    */
   async getDreMensal(
@@ -515,8 +515,8 @@ export class AnalyticsService {
   }
 
   /**
-   * DRE do plano de corte: receita apenas de plano_corte (data_venda no mês).
-   * Sem custo de compra (plano de corte não tem compra). Custo hora e despesas rateados pela participação na receita total.
+   * DRE do serviço de corte: receita apenas de plano_corte (data_venda no mês).
+   * Sem custo de compra (serviço de corte não tem compra). Custo hora e despesas rateados pela participação na receita total.
    */
   async getDrePlanoCorte(
     mes: number,

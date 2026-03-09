@@ -52,6 +52,13 @@ export class VendasController {
     return this.service.listarAguardandoAgendamento(req?.user);
   }
 
+  /** Vendas com contrato vigente – usado no módulo Compras para vincular compra a cliente (só contrato vigente). */
+  @Get('com-contrato-vigente')
+  @Permissoes('compras.ver', 'compras.criar', 'compras.editar')
+  listarComContratoVigente(@Req() req?: { user?: { funcionario_id?: number | null; is_admin?: boolean } }) {
+    return this.service.listarComContratoVigente(req?.user);
+  }
+
   @Get(':id')
   @Permissoes('vendas.criar', 'vendas.editar', 'vendas.ver', 'posvenda.ver')
   buscar(@Param('id') id: string) {

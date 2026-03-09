@@ -4,8 +4,20 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PIPELINE_PLANO_CORTE_KEYS } from '../../shared/constantes/pipeline-plano-corte';
 import { PrismaService } from '../../prisma/prisma.service';
+
+/** Status aceitos (mesmos da agenda de produção). Inclui legados para compatibilidade. */
+const STATUS_PLANO_CORTE_ACEITOS = [
+  'PRODUCAO_RECEBIDA',
+  'CORTE',
+  'PRODUCAO_FINALIZADA',
+  'RECEBIDO',
+  'CONFERIDO_TECNICO',
+  'NA_MAQUINA',
+  'BORDA_E_ACABAMENTO',
+  'PRONTO_PARA_RETIRADA',
+  'ENTREGUE',
+];
 import { CreatePlanoCorteDto } from '../dto/create-plano-corte.dto';
 import { UpdatePlanoCorteDto } from '../dto/update-plano-corte.dto';
 import { randomBytes } from 'crypto';
@@ -183,10 +195,11 @@ export class PlanoCorteService {
     return { arquivoId: arquivo.id };
   }
 
-  async create(dto: CreatePlanoCorteDto) {
-    if (!PIPELINE_PLANO_CORTE_KEYS.includes(dto.status)) {
+  async create(dto: CreatePlanoCorteDto, opts?: { criadoPorUsuarioId?: number }) {
+    const statusNorm = String(dto.status || '').trim().toUpperCase();
+    if (!statusNorm || !STATUS_PLANO_CORTE_ACEITOS.includes(statusNorm)) {
       throw new BadRequestException(
-        `Status inválido. Use: ${PIPELINE_PLANO_CORTE_KEYS.join(', ')}`,
+        `Status inválido. Use: ${STATUS_PLANO_CORTE_ACEITOS.slice(0, 3).join(', ')}`,
       );
     }
     return this.prisma.$transaction(async (tx) => {
@@ -200,7 +213,7 @@ export class PlanoCorteService {
         data: {
           fornecedor_id: dto.fornecedor_id,
           data_venda: new Date(dto.data_venda),
-          status: dto.status,
+          status: statusNorm,
           valor_total: total,
         },
       });
@@ -239,15 +252,19 @@ export class PlanoCorteService {
       if (!agendaExistente) {
         const inicio = new Date();
         const fim = new Date(inicio.getTime() + 60 * 60 * 1000);
+        const criadoPor = opts?.criadoPorUsuarioId != null && Number.isFinite(opts.criadoPorUsuarioId)
+          ? { criado_por_usuario_id: opts.criadoPorUsuarioId }
+          : {};
         await tx.agenda_fabrica.create({
           data: {
-            titulo: `Plano de corte #${plano.id}`,
+            titulo: `Serviço de Corte #${plano.id}`,
             inicio_em: inicio,
             fim_em: fim,
             categoria: 'PRODUCAO_RECEBIDA',
             origem_fluxo: 'PLANO_CORTE',
             status: 'PENDENTE',
             plano_corte_id: plano.id,
+            ...criadoPor,
           },
         });
       }
@@ -289,11 +306,14 @@ export class PlanoCorteService {
     return plano;
   }
 
-  async update(id: number, dto: UpdatePlanoCorteDto) {
+  async update(id: number, dto: UpdatePlanoCorteDto, opts?: { criadoPorUsuarioId?: number }) {
     await this.findOne(id);
-    if (dto.status && !PIPELINE_PLANO_CORTE_KEYS.includes(dto.status)) {
+    const statusNorm = dto.status
+      ? String(dto.status).trim().toUpperCase()
+      : null;
+    if (statusNorm && !STATUS_PLANO_CORTE_ACEITOS.includes(statusNorm)) {
       throw new BadRequestException(
-        `Status inválido. Use: ${PIPELINE_PLANO_CORTE_KEYS.join(', ')}`,
+        `Status inválido. Use: ${STATUS_PLANO_CORTE_ACEITOS.slice(0, 3).join(', ')}`,
       );
     }
     return this.prisma.$transaction(async (tx) => {
@@ -356,7 +376,7 @@ export class PlanoCorteService {
         data: {
           fornecedor_id: dto.fornecedor_id,
           data_venda: dto.data_venda ? new Date(dto.data_venda) : undefined,
-          status: dto.status,
+          ...(statusNorm && { status: statusNorm }),
           valor_total: totalGeral, // Aqui o valor 1,74 vira 17,40 automaticamente
         },
       });
@@ -369,15 +389,19 @@ export class PlanoCorteService {
       if (!agendaExistente) {
         const inicio = new Date();
         const fim = new Date(inicio.getTime() + 60 * 60 * 1000);
+        const criadoPor = opts?.criadoPorUsuarioId != null && Number.isFinite(opts.criadoPorUsuarioId)
+          ? { criado_por_usuario_id: opts.criadoPorUsuarioId }
+          : {};
         await tx.agenda_fabrica.create({
           data: {
-            titulo: `Plano de corte #${id}`,
+            titulo: `Serviço de Corte #${id}`,
             inicio_em: inicio,
             fim_em: fim,
             categoria: 'PRODUCAO_RECEBIDA',
             origem_fluxo: 'PLANO_CORTE',
             status: 'PENDENTE',
             plano_corte_id: id,
+            ...criadoPor,
           },
         });
       }

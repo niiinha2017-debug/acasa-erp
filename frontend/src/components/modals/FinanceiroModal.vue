@@ -52,7 +52,7 @@
 
             <div class="space-y-2">
               <h3 class="text-sm font-black text-emerald-600 dark:text-emerald-400 uppercase flex items-center gap-2">
-                <i class="pi pi-list"></i> Histórico Vendas Plano de Corte (por data de venda)
+                <i class="pi pi-list"></i> Histórico Vendas Serviço de Corte (por data de venda)
               </h3>
               <p class="text-[10px] text-slate-500 dark:text-slate-400">Relatório mensal — 1º ao último dia do mês</p>
               <div class="bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50 rounded-xl overflow-hidden max-h-40 overflow-y-auto">
@@ -105,11 +105,15 @@
 
             <div class="col-span-12 lg:col-span-6 space-y-4">
               <h3 class="text-sm font-black text-emerald-600 uppercase flex items-center gap-2">
-                <i class="pi pi-arrow-circle-down"></i> Créditos (Abatimentos) — desconto do fornecedor
+                <i class="pi pi-arrow-circle-down"></i> Créditos (Abatimentos)
               </h3>
               <div class="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/50 rounded-xl p-4 space-y-3">
                 <div class="flex justify-between text-sm">
-                  <span class="text-slate-600 dark:text-slate-400 font-bold uppercase">Planos de Corte (crédito):</span>
+                  <span class="text-slate-600 dark:text-slate-400 font-bold uppercase">Crédito acumulado (meses anteriores):</span>
+                  <span class="font-black text-slate-800 dark:text-slate-200 italic">R$ {{ (preview.saldo_credito_acumulado || 0).toLocaleString('pt-BR') }}</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                  <span class="text-slate-600 dark:text-slate-400 font-bold uppercase">Serviços de Corte (mês):</span>
                   <span class="font-black text-slate-800 dark:text-slate-200 italic">R$ {{ (preview.total_planos || 0).toLocaleString('pt-BR') }}</span>
                 </div>
                 <hr class="border-emerald-200/50 dark:border-emerald-800/50">
@@ -161,6 +165,22 @@
               <option v-for="fp in formasPagamentoOptions" :key="fp.value" :value="fp.value">{{ fp.label }}</option>
             </select>
             <p class="text-[10px] text-slate-500 mt-1">Use a mesma forma que em Despesas Gerais (cheque, cartão 6x, PIX, etc.)</p>
+          </div>
+
+          <!-- Data do pagamento: se preenchida, o fechamento já é registrado como PAGO (não precisa clicar em PAGAR depois) -->
+          <div class="border-t pt-6">
+            <h3 class="text-sm font-black text-slate-700 uppercase mb-3">Já pagou?</h3>
+            <div class="flex flex-wrap items-end gap-3">
+              <div class="space-y-1">
+                <label class="text-[10px] font-black text-slate-500 uppercase block">Data do pagamento (opcional)</label>
+                <input 
+                  v-model="form.data_pagamento" 
+                  type="date"
+                  class="h-10 px-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-brand-primary/20"
+                />
+              </div>
+              <p class="text-[10px] text-slate-500 max-w-sm">Se você já pagou, informe a data. O fechamento será registrado como pago e não aparecerá para dar baixa de novo. Deixe em branco se vai pagar depois.</p>
+            </div>
           </div>
 
           <!-- Parcelas (cheque / cartão em 6x) -->
@@ -231,6 +251,7 @@ const form = reactive({
   desconto_percentual: 0,
   forma_pagamento_chave: 'CHEQUE',
   fornecedor_cobrador_id: '',
+  data_pagamento: '', // opcional: se preenchido, fechamento já é criado como PAGO
   parcelas: [{ parcela: 1, valor: 0, vencimento_em: '' }],
 })
 
@@ -243,7 +264,8 @@ watch(() => props.preview, (p) => {
   form.valor_creditar = 0
   form.percentual_liberado = 100
   form.desconto_percentual = 0
-  const saldo = Number(p.saldo_a_pagar_auto ?? p.total_compras - p.total_planos ?? 0)
+  form.data_pagamento = ''
+  const saldo = Number(p.valor_liquido_sem_desconto ?? p.saldo_a_pagar_auto ?? 0)
   if (saldo > 0) {
     form.parcelas = [{ parcela: 1, valor: saldo, vencimento_em: '' }]
   } else {
@@ -280,27 +302,33 @@ const fmtData = (v) => {
 }
 const fmtMoeda = (v) => (Number(v) ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
+// Funil: Total Compras - Crédito Acumulado - Serviços Corte - Desconto = Valor Líquido
 const totalCompensado = computed(() => {
   const debitoBase = Number(props.preview?.total_compras ?? 0) + Number(form.valor_dever || 0)
+  const creditoAcum = Number(props.preview?.saldo_credito_acumulado ?? 0)
+  const creditoPlanos = Number(props.preview?.total_planos ?? 0)
   const creditoExtra = (Number(form.valor_creditar || 0) * Number(form.percentual_liberado || 100)) / 100
-  const creditoTotal = Number(props.preview?.total_planos ?? 0) + creditoExtra
+  const creditoTotal = creditoAcum + creditoPlanos + creditoExtra
   return Math.min(debitoBase, creditoTotal)
 })
 
 const totalFinal = computed(() => {
   const debitoBase = Number(props.preview?.total_compras ?? 0) + Number(form.valor_dever || 0)
+  const creditoAcum = Number(props.preview?.saldo_credito_acumulado ?? 0)
+  const creditoPlanos = Number(props.preview?.total_planos ?? 0)
   const creditoExtra = (Number(form.valor_creditar || 0) * Number(form.percentual_liberado || 100)) / 100
-  const creditoTotal = Number(props.preview?.total_planos ?? 0) + creditoExtra
+  const creditoTotal = creditoAcum + creditoPlanos + creditoExtra
   const subtotal = Math.max(debitoBase - creditoTotal, 0)
   const desconto = (subtotal * Number(form.desconto_percentual || 0)) / 100
   return Math.max(subtotal - desconto, 0)
 })
 
-// Crédito que sobra após abater os débitos (435 - 350 = 85 para o próximo mês)
 const creditoProximoMes = computed(() => {
   const debitoBase = Number(props.preview?.total_compras ?? 0) + Number(form.valor_dever || 0)
+  const creditoAcum = Number(props.preview?.saldo_credito_acumulado ?? 0)
+  const creditoPlanos = Number(props.preview?.total_planos ?? 0)
   const creditoExtra = (Number(form.valor_creditar || 0) * Number(form.percentual_liberado || 100)) / 100
-  const creditoTotal = Number(props.preview?.total_planos ?? 0) + creditoExtra
+  const creditoTotal = creditoAcum + creditoPlanos + creditoExtra
   const usado = totalCompensado.value
   return Math.max(creditoTotal - usado, 0)
 })
@@ -335,6 +363,7 @@ function confirmarFechamento() {
     ...form,
     fornecedor_cobrador_id: form.fornecedor_cobrador_id || undefined,
     forma_pagamento_chave: forma === 'CREDITO' ? 'CARTAO' : forma,
+    data_pagamento: (form.data_pagamento || '').trim() || undefined,
     parcelas,
   }
   emit('confirm', payload)

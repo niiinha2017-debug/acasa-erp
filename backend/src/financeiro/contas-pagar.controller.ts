@@ -34,7 +34,22 @@ export class ContasPagarController {
     return n;
   }
 
-  // ✅ LISTA POR ABA (Para Fechar | Agendados | Pagos) ou consolidada legada
+  // ✅ Dashboard: Total a Vencer (Mês), Cheques a Compensar, Créditos Disponíveis
+  @Get('dashboard')
+  @Permissoes('contas_pagar.ver')
+  async dashboard(
+    @Query('mes') mes?: string,
+    @Query('ano') ano?: string,
+  ) {
+    const mesNum = mes ? Number(mes) : undefined;
+    const anoNum = ano ? Number(ano) : undefined;
+    return this.service.getContasPagarDashboard({
+      mes: Number.isFinite(mesNum) ? mesNum : undefined,
+      ano: Number.isFinite(anoNum) ? anoNum : undefined,
+    });
+  }
+
+  // ✅ LISTA POR ABA (Para Fechar | Agendados | Pagos) ou consolidada unificada
   @Get()
   @Permissoes('contas_pagar.ver')
   async listar(
@@ -42,13 +57,16 @@ export class ContasPagarController {
     @Query('status') status?: string,
     @Query('data_ini') data_ini?: string,
     @Query('data_fim') data_fim?: string,
+    @Query('fornecedor_id') fornecedor_id?: string,
+    @Query('mes') mes?: string,
+    @Query('ano') ano?: string,
   ) {
     await this.service.atualizarVencidos();
 
     const visaoNorm = (visao || '').trim().toUpperCase();
-    if (visaoNorm === 'PARA_FECHAR' || visaoNorm === 'AGENDADOS' || visaoNorm === 'PAGOS') {
+    if (visaoNorm === 'PARA_FECHAR' || visaoNorm === 'COMPENSADOS' || visaoNorm === 'AGENDADOS' || visaoNorm === 'PAGOS') {
       return this.service.listarContasPagarPorAba({
-        visao: visaoNorm as 'PARA_FECHAR' | 'AGENDADOS' | 'PAGOS',
+        visao: visaoNorm as 'PARA_FECHAR' | 'COMPENSADOS' | 'AGENDADOS' | 'PAGOS',
         data_ini: data_ini?.trim() || undefined,
         data_fim: data_fim?.trim() || undefined,
       });
@@ -58,6 +76,9 @@ export class ContasPagarController {
       status: status?.trim() || undefined,
       data_ini: data_ini?.trim() || undefined,
       data_fim: data_fim?.trim() || undefined,
+      fornecedor_id: fornecedor_id ? this.cleanIdOrFail(fornecedor_id) : undefined,
+      mes: mes ? Number(mes) : undefined,
+      ano: ano ? Number(ano) : undefined,
     });
   }
 

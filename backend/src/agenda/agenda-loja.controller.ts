@@ -71,9 +71,10 @@ export class AgendaLojaController {
   @Post()
   @Permissoes('agendamentos.vendas')
   async create(@Body() dto: CreateAgendaDto, @Req() req?: any) {
+    const criadoPorUsuarioId = req?.user?.id != null ? Number(req.user.id) : undefined;
     return this.agendaService.create(
       { ...dto, setor_destino: SETOR_LOJA },
-      req?.user?.id ? { criadoPorUsuarioId: req.user.id } : undefined,
+      criadoPorUsuarioId ? { criadoPorUsuarioId } : undefined,
     );
   }
 

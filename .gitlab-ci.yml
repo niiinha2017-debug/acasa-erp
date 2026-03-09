@@ -9,11 +9,11 @@ default:
 variables:
   ANDROID_HOME: "$CI_PROJECT_DIR/android-sdk"
   JAVA_HOME: "/usr/lib/jvm/java-17-openjdk-amd64"
+  GRADLE_USER_HOME: "${CI_PROJECT_DIR}/.gradle"
 
 stages:
   - prepare
-  - build-android
-  - build-desktop
+  - build   # Android e Desktop rodam em paralelo
   - deploy
 
 # Instala JDK 17 + Android SDK (uma vez por job). Roda no runner com tag Local (WSL2) ou no GitLab.
@@ -42,10 +42,16 @@ prepare:android:
       - android-sdk/
 
 build:android:
-  stage: build-android
+  stage: build
   tags: [Local]
   dependencies:
     - prepare:android
+  cache:
+    key: gradle-${CI_COMMIT_REF_SLUG}
+    paths:
+      - .gradle/
+      - frontend/android/.gradle/
+      - frontend-ponto/android/.gradle/
   before_script:
     - apt-get update -qq && apt-get install -y -qq openjdk-17-jdk
     - export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
@@ -236,7 +242,7 @@ deploy:ec2-update-app:
 # Build Tauri (Desktop Windows). Runner com tag "Windows".
 # Variáveis CI: TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD
 build:tauri:
-  stage: build-desktop
+  stage: build
   tags: [Windows]
   rules:
     - if: $TAURI_SIGNING_PRIVATE_KEY == null || $TAURI_SIGNING_PRIVATE_KEY == ""

@@ -531,6 +531,12 @@ export class AgendaService {
   }
 
   async create(dto: CreateAgendaDto, opts?: { criadoPorUsuarioId?: number }) {
+    const criadoPorUsuarioId = opts?.criadoPorUsuarioId != null ? Number(opts.criadoPorUsuarioId) : null;
+    if (criadoPorUsuarioId == null || !Number.isFinite(criadoPorUsuarioId)) {
+      throw new BadRequestException(
+        'Criador da tarefa é obrigatório. Faça login novamente e tente criar o agendamento.',
+      );
+    }
     const {
       equipe_ids,
       categoria,
@@ -618,7 +624,7 @@ export class AgendaService {
         setor: setorDestino,
       });
 
-      const criadoPor = opts?.criadoPorUsuarioId ? { criado_por_usuario_id: opts.criadoPorUsuarioId } : {};
+      const criadoPor = { criado_por_usuario_id: criadoPorUsuarioId };
       const createPayload: any = {
         ...dataAgenda,
         ...criadoPor,
@@ -706,7 +712,7 @@ export class AgendaService {
       }
 
       const novoStatus = clienteStatus;
-      // Plano de corte é venda de fornecedor: não atualizar status da venda do cliente
+      // Serviço de corte é venda de fornecedor: não atualizar status da venda do cliente
       if (!dto.plano_corte_id) {
         if (origemFluxo === 'POS_VENDA' && novoStatus) {
           const origemAplicada: 'venda' | 'cliente' =
@@ -878,6 +884,17 @@ export class AgendaService {
       equipe: { include: { funcionario: true } },
       venda: { include: { cliente: true } },
       apontamentos: true,
+      apontamentos_producao: {
+        select: {
+          id: true,
+          inicio_em: true,
+          fim_em: true,
+          pausa_inicio_em: true,
+          pausa_fim_em: true,
+          funcionario_id: true,
+          funcionario: { select: { id: true, nome: true } },
+        },
+      },
       alterado_por_usuario: { select: { id: true, nome: true } },
       criado_por_usuario: { select: { id: true, nome: true } },
     };
@@ -1407,7 +1424,7 @@ export class AgendaService {
         }
       }
 
-      // Plano de corte é venda de fornecedor: não atualizar status da venda do cliente
+      // Serviço de corte é venda de fornecedor: não atualizar status da venda do cliente
       if (!planoCorteId) {
         if (origemFluxo === 'POS_VENDA' && novoStatus) {
           const origemAplicada: 'venda' | 'cliente' =
@@ -2303,7 +2320,7 @@ export class AgendaService {
             data: { status: 'PRODUCAO_FINALIZADA' },
           });
         }
-        // Plano de corte é venda de fornecedor: não atualizar status da venda do cliente
+        // Serviço de corte é venda de fornecedor: não atualizar status da venda do cliente
         const catKey = this.normalizarCategoriaKey(ag.categoria);
         const proximoStatus = !ag.plano_corte_id
           ? this.statusAoConcluirPorCategoria[catKey]

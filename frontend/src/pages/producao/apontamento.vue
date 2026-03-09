@@ -34,7 +34,7 @@
           :key="'ativa-' + tarefa.id"
           class="group relative overflow-hidden border rounded-xl p-3 pl-4 shadow-sm dark:shadow-none transition-all duration-200"
           :class="[
-            tarefa.plano_corte_id ? 'bg-[#e0f2fe] dark:bg-sky-950/40 border-sky-200 dark:border-sky-700 border-l-4 border-l-sky-500' : 'bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-600',
+            tarefa.plano_corte_id ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-700 border-l-4 border-l-amber-500' : 'bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-600',
             !tarefa.plano_corte_id && tarefaAtrasada(tarefa) ? 'border-red-300 dark:border-red-500/70 ring-1 ring-red-200 dark:ring-red-900/50' : '',
             !tarefa.plano_corte_id ? (getProcessColorByStatus(tarefa.categoria, tarefa.status).borderLeftClass || '') : '',
             getProcessColorByStatus(tarefa.categoria, tarefa.status).pulse ? 'animate-pulse' : '',
@@ -42,24 +42,35 @@
         >
           <!-- Topo compacto: avatar + título + status + timer -->
           <div class="flex items-center gap-2 mb-2">
-            <div class="w-9 h-9 rounded-lg shrink-0 font-bold text-xs flex items-center justify-center text-white" :class="tarefa.plano_corte_id ? 'bg-sky-600 dark:bg-sky-500' : [getProcessColorByStatus(tarefa.categoria, tarefa.status).dotClass, getProcessColorByStatus(tarefa.categoria, tarefa.status).pulse ? 'animate-pulse' : '']">
+            <div class="w-9 h-9 rounded-lg shrink-0 font-bold text-xs flex items-center justify-center text-white" :class="tarefa.plano_corte_id ? 'bg-amber-600 dark:bg-amber-500 text-white' : [getProcessColorByStatus(tarefa.categoria, tarefa.status).dotClass, getProcessColorByStatus(tarefa.categoria, tarefa.status).pulse ? 'animate-pulse' : '']">
               {{ iniciaisTarefa(tarefa) }}
             </div>
             <div class="min-w-0 flex-1">
               <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate leading-tight flex items-center gap-2 flex-wrap">
                 {{ tarefa.plano_corte_id ? 'Serviço de Corte' : (labelCategoriaPendente(tarefa.categoria, tipoTimeline === 'venda' ? 'loja' : 'fabrica') || tarefa.titulo || 'Tarefa') }} #{{ tarefa.id }}
-                <span v-if="tarefa.plano_corte_id" class="inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase bg-sky-600 text-white dark:bg-sky-500 dark:text-sky-950 shrink-0">[APENAS CORTE]</span>
+                <span v-if="tarefa.plano_corte_id" class="inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase bg-amber-600 text-white dark:bg-amber-500 dark:text-amber-950 shrink-0">[APENAS CORTE]</span>
               </h3>
               <div class="flex items-center gap-1.5 flex-wrap">
-                <template v-if="temCronometroRodandoNaTarefa(tarefa)">
-                  <span class="relative flex h-1.5 w-1.5" :class="getProcessColorByStatus(tarefa.categoria, tarefa.status).pulse ? 'animate-pulse' : ''">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
-                  </span>
-                  <span class="text-[9px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Ativo</span>
+                <template v-if="tarefa.plano_corte_id">
+                  <span v-if="!(tarefa.apontamentos_producao && tarefa.apontamentos_producao.length)" class="text-[9px] font-semibold text-amber-600 dark:text-amber-400 uppercase">Início</span>
+                  <template v-else>
+                    <span v-if="temCronometroRodandoNaTarefa(tarefa)" class="relative flex h-1.5 w-1.5">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+                    </span>
+                    <span class="text-[9px] font-semibold text-slate-500 dark:text-slate-400 uppercase">{{ temCronometroRodandoNaTarefa(tarefa) ? 'Ativo' : 'Em produção' }}</span>
+                  </template>
                 </template>
                 <template v-else>
-                  <span class="text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase">Em andamento</span>
+                  <!-- Vendas/Produção: mesmo fluxo Início → Em produção → Ativo (cronômetro) -->
+                  <span v-if="!(tarefa.apontamentos_producao && tarefa.apontamentos_producao.length)" class="text-[9px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Início</span>
+                  <template v-else>
+                    <span v-if="temCronometroRodandoNaTarefa(tarefa)" class="relative flex h-1.5 w-1.5" :class="getProcessColorByStatus(tarefa.categoria, tarefa.status).pulse ? 'animate-pulse' : ''">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+                    </span>
+                    <span class="text-[9px] font-semibold text-slate-500 dark:text-slate-400 uppercase">{{ temCronometroRodandoNaTarefa(tarefa) ? 'Ativo' : 'Em produção' }}</span>
+                  </template>
                 </template>
                 <span v-if="tarefaAtrasada(tarefa)" class="text-[9px] font-bold uppercase text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 px-1.5 py-0.5 rounded" title="Prazo excedido">Excedido</span>
               </div>
@@ -205,18 +216,18 @@
                 :key="'concluida-' + tarefa.id"
                 class="group relative border rounded-xl p-3 pl-4 opacity-90 hover:opacity-100 transition-all duration-200"
                 :class="[
-                  tarefa.plano_corte_id ? 'bg-[#e0f2fe] dark:bg-sky-950/40 border-sky-200 dark:border-sky-700 border-l-4 border-l-sky-500' : 'bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-600',
+                  tarefa.plano_corte_id ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-700 border-l-4 border-l-amber-500' : 'bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-600',
                   tarefa.plano_corte_id ? '' : getTimelineConcluidoClass(tarefa.categoria).borderLeftClass,
                 ]"
               >
                 <div class="flex items-center gap-2 mb-2">
-                  <div class="w-9 h-9 rounded-lg shrink-0 font-bold text-xs flex items-center justify-center text-white" :class="tarefa.plano_corte_id ? 'bg-sky-600 dark:bg-sky-500' : getTimelineConcluidoClass(tarefa.categoria).dotClass">
+                  <div class="w-9 h-9 rounded-lg shrink-0 font-bold text-xs flex items-center justify-center text-white" :class="tarefa.plano_corte_id ? 'bg-amber-600 dark:bg-amber-500 text-white' : getTimelineConcluidoClass(tarefa.categoria).dotClass">
                     {{ iniciaisTarefa(tarefa) }}
                   </div>
                   <div class="min-w-0 flex-1">
                     <h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400 truncate flex items-center gap-2 flex-wrap">
                       {{ tarefa.plano_corte_id ? 'Serviço de Corte' : (labelCategoriaPendente(tarefa.categoria, tipoTimeline === 'venda' ? 'loja' : 'fabrica') || tarefa.titulo || 'Tarefa') }} #{{ tarefa.id }}
-                      <span v-if="tarefa.plano_corte_id" class="inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase bg-sky-600 text-white dark:bg-sky-500 dark:text-sky-950 shrink-0">[APENAS CORTE]</span>
+                      <span v-if="tarefa.plano_corte_id" class="inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase bg-amber-600 text-white dark:bg-amber-500 dark:text-amber-950 shrink-0">[APENAS CORTE]</span>
                     </h3>
                     <span class="text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase">Concluída</span>
                   </div>

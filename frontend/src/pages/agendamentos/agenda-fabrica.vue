@@ -240,23 +240,23 @@
                   type="button"
                   :class="[
                     'w-full text-left px-2.5 py-1.5 rounded-lg text-[10px] hover:ring-2 hover:ring-brand-primary transition-colors',
-                    event.plano_corte_id ? 'bg-[#e0f2fe] dark:bg-sky-950/50 text-sky-900 dark:text-sky-100 border border-sky-300 dark:border-sky-700' : 'text-white',
+                    event.plano_corte_id ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-900 dark:text-amber-100 border border-amber-300 dark:border-amber-700' : 'text-white',
                     eventAtrasado(event) && !event.plano_corte_id ? 'bg-red-600 hover:bg-red-500' : (!event.plano_corte_id ? getCalendarioEventClassProducao(event.categoria, eventConcluido(event)) : ''),
                   ]"
                   :title="eventTooltipCalendar(event)"
                   @click.stop="openModalForEvent(event, day.date)"
                 >
-                  <div :class="event.plano_corte_id ? 'font-semibold text-[9px] text-sky-800 dark:text-sky-200 leading-tight' : 'font-semibold text-[9px] text-white/90 leading-tight'">
+                  <div :class="event.plano_corte_id ? 'font-semibold text-[9px] text-amber-800 dark:text-amber-200 leading-tight' : 'font-semibold text-[9px] text-white/90 leading-tight'">
                     {{ periodLabel(event.inicio_em, event.fim_em, event) }}
                   </div>
                   <div class="font-bold truncate leading-snug mt-0.5 flex items-center gap-1">
                     {{ tituloSubtituloEvento(event).titulo }}
-                    <span v-if="event.plano_corte_id" class="shrink-0 text-[7px] font-black bg-sky-600 text-white dark:bg-sky-500 px-1 rounded">[APENAS CORTE]</span>
+                    <span v-if="event.plano_corte_id" class="shrink-0 text-[7px] font-black bg-amber-600 text-white dark:bg-amber-500 dark:text-amber-950 px-1 rounded">[APENAS CORTE]</span>
                   </div>
-                  <div :class="event.plano_corte_id ? 'text-[9px] text-sky-700 dark:text-sky-300 truncate leading-snug' : 'text-[9px] text-white/80 truncate leading-snug'">
+                  <div :class="event.plano_corte_id ? 'text-[9px] text-amber-700 dark:text-amber-300 truncate leading-snug' : 'text-[9px] text-white/80 truncate leading-snug'">
                     {{ tituloSubtituloEvento(event).subtitulo }}
                   </div>
-                  <div :class="event.plano_corte_id ? 'text-[8px] text-sky-600 dark:text-sky-400 truncate leading-snug' : 'text-[8px] text-white/70 truncate leading-snug'">
+                  <div :class="event.plano_corte_id ? 'text-[8px] text-amber-600 dark:text-amber-400 truncate leading-snug' : 'text-[8px] text-white/70 truncate leading-snug'">
                     {{ event?.cliente?.nome_completo || event?.cliente?.razao_social || event?.plano_corte?.fornecedor?.nome_fantasia || 'Cliente' }}
                   </div>
                 </button>
@@ -325,17 +325,18 @@
                 type="button"
                 :class="[
                   'w-full text-left p-4 rounded-xl border border-border-ui hover:border-brand-primary/40 hover:shadow-md transition-all',
-                  event.plano_corte_id ? 'bg-[#e0f2fe] dark:bg-sky-950/40 border-sky-200 dark:border-sky-700 border-l-4 border-l-sky-500' : 'bg-bg-card',
+                  event.plano_corte_id ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-700 border-l-4 border-l-amber-500' : 'bg-bg-card',
                   eventAtrasado(event) && !event.plano_corte_id ? 'border-l-4 border-l-red-500 border-red-300 bg-red-50/60 dark:bg-red-950/30' : (!event.plano_corte_id ? getProcessColorByStatusProducao(event.categoria, event.status).borderLeftClass : ''),
                 ]"
                 @click="openModalForEvent(event)"
               >
                 <div class="text-sm font-bold text-text-main leading-snug flex items-center gap-2 flex-wrap">
                   {{ eventTitle(event) }}
-                  <span v-if="event.plano_corte_id" class="inline-flex px-2 py-0.5 rounded text-[10px] font-black uppercase bg-sky-600 text-white dark:bg-sky-500 dark:text-sky-950">[APENAS CORTE]</span>
+                  <span v-if="event.plano_corte_id" class="inline-flex px-2 py-0.5 rounded text-[10px] font-black uppercase bg-amber-600 text-white dark:bg-amber-500 dark:text-amber-950">[APENAS CORTE]</span>
                 </div>
-                <div class="mt-2 text-[10px] font-medium text-text-muted">
-                  Responsável: {{ event.criado_por_usuario?.nome || 'Não informado' }}
+                <div class="mt-2 text-[10px] font-medium text-text-muted space-y-0.5">
+                  <div><span class="font-semibold text-text-main">Criador da tarefa:</span> {{ event.criado_por_usuario?.nome || 'Não informado' }}</div>
+                  <div><span class="font-semibold text-text-main">Executores:</span> {{ nomesExecutoresEvento(event) || 'Nenhum funcionário atribuído ainda' }}</div>
                 </div>
                 <div
                   v-if="event.alterado_por_usuario"
@@ -455,7 +456,7 @@
             Agendamento
           </span>
           <span v-if="editingEvent" class="px-2.5 py-1 rounded-full bg-brand-primary/10 border border-brand-primary/30 text-brand-primary dark:text-brand-primary text-[11px] font-medium">
-            Responsável: {{ editingEvent.criado_por_usuario?.nome || 'Não informado' }}
+            Criador: {{ editingEvent.criado_por_usuario?.nome || 'Não informado' }}
           </span>
           <span v-if="editingEvent?.alterado_por_usuario" class="px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-[11px] font-medium">
             Editado por: {{ editingEvent.alterado_por_usuario.nome }}
@@ -519,7 +520,7 @@
                   </span>
                   <span class="text-[10px] text-text-muted">(primeira etapa automática)</span>
                 </div>
-                <!-- Pós-venda (Garantia / Manutenção / Assistência) só para Venda cliente; plano de corte não tem pós-venda. Só recebe clientes com montagem concluída. -->
+                <!-- Pós-venda (Garantia / Manutenção / Assistência) só para Venda cliente; serviço de corte não tem pós-venda. Só recebe clientes com montagem concluída. -->
                 <div v-if="taskForm.origemFluxo === 'LOJA_VENDA'" class="mt-2">
                   <label class="block text-[10px] font-bold text-text-muted mb-1">Ou criar pós-venda:</label>
                   <p class="text-[10px] text-text-muted mb-1.5">
@@ -728,7 +729,13 @@
             </div>
           </section>
 
-          <!-- Agenda só controla status e tarefas; responsável = criador do agendamento. Funcionários que executam são atribuídos na Timeline. -->
+          <!-- Criador da tarefa (quem agendou) e executores (funcionários na Timeline). -->
+            <div v-if="editingEvent" class="mt-4 p-3 rounded-xl border border-border-ui bg-slate-50/50 dark:bg-slate-800/20 space-y-2">
+              <div class="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-1">Responsáveis</div>
+              <div><span class="text-[10px] font-semibold text-text-main">1. Criador da tarefa:</span> <span class="text-xs text-text-main">{{ editingEvent.criado_por_usuario?.nome || 'Não informado' }}</span></div>
+              <div><span class="text-[10px] font-semibold text-text-main">2. Executores (funcionários na tarefa):</span> <span class="text-xs text-text-main">{{ nomesExecutoresEvento(editingEvent) || 'Nenhum funcionário atribuído ainda' }}</span></div>
+              <p class="text-[10px] text-text-muted mt-1">Executores são atribuídos na Timeline de Produção (apontamento de horas).</p>
+            </div>
 
         </div>
 
@@ -736,7 +743,7 @@
         <div class="mt-4 pt-3 border-t border-border-ui flex flex-wrap items-center justify-end gap-2">
           <template v-if="editingEvent && !podeEditarAgendaProducao && !ehAgendandoPendenteMedidaFina">
             <p class="text-xs text-amber-700 dark:text-amber-300 mr-auto">
-              Apenas o responsável pela tarefa ou um administrador pode alterar ou excluir.
+              Apenas o criador da tarefa ou um administrador pode alterar ou excluir.
             </p>
             <Button
               variant="secondary"
@@ -816,13 +823,13 @@
               :key="event.id"
               class="p-3 rounded-xl border border-l-4"
               :class="[
-                event.plano_corte_id ? 'bg-[#e0f2fe] dark:bg-sky-950/40 border-sky-200 dark:border-sky-700 border-l-sky-500' : 'border-border-ui bg-bg-card',
+                event.plano_corte_id ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-700 border-l-amber-500' : 'border-border-ui bg-bg-card',
                 eventAtrasado(event) && !event.plano_corte_id ? 'border-l-red-500 border-red-300 bg-red-50/60 dark:bg-red-950/30' : (!event.plano_corte_id ? getCardBorderClassProducao(event.categoria, event.status) : ''),
               ]"
             >
               <div class="text-xs font-bold text-text-main flex items-center gap-2 flex-wrap">
                 {{ eventTitle(event) }}
-                <span v-if="event.plano_corte_id" class="inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase bg-sky-600 text-white dark:bg-sky-500 dark:text-sky-950">[APENAS CORTE]</span>
+                <span v-if="event.plano_corte_id" class="inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase bg-amber-600 text-white dark:bg-amber-500 dark:text-amber-950">[APENAS CORTE]</span>
               </div>
               <div class="text-[10px] font-semibold text-text-muted">
                 {{ periodLabel(event.inicio_em, event.fim_em, event) }}
@@ -832,7 +839,7 @@
                   <span class="text-[9px] font-black uppercase leading-tight">{{ tituloSubtituloEvento(event).titulo }}</span>
                   <span class="text-[8px] font-semibold opacity-90 leading-tight">{{ tituloSubtituloEvento(event).subtitulo }}</span>
                 </span>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase" :class="event.plano_corte_id ? 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-200 border border-sky-300 dark:border-sky-700' : getProcessColorByStatusProducao(event.categoria, event.status).badgeClass">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase" :class="event.plano_corte_id ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200 border border-amber-300 dark:border-amber-700' : getProcessColorByStatusProducao(event.categoria, event.status).badgeClass">
                   {{ statusExecucaoLabel(event) }}
                 </span>
               </div>
@@ -890,9 +897,9 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { AgendaFabricaService, ApontamentoProducaoService, ClienteService, FuncionarioService, OrcamentosService, PlanoCorteService, VendaService } from '@/services/index'
-import { PIPELINE_CLIENTE, PIPELINE_PLANO_CORTE } from '@/constantes'
+import { PIPELINE_CLIENTE, PIPELINE_PLANO_CORTE_OPTIONS } from '@/constantes'
 import { getCalendarioEventClassProducao, getProcessColorByStatusProducao } from '@/constantes'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
@@ -1063,7 +1070,7 @@ function labelPipelineCliente(key) {
 }
 
 function labelPipelinePlanoCorte(key) {
-  const item = (PIPELINE_PLANO_CORTE || []).find((p) => String(p?.key || '').toUpperCase() === String(key || '').toUpperCase())
+  const item = (PIPELINE_PLANO_CORTE_OPTIONS || []).find((p) => String(p?.key || '').toUpperCase() === String(key || '').toUpperCase())
   return item?.label || String(key || '')
 }
 
@@ -1077,7 +1084,7 @@ const statusLabelVenda = computed(() => {
 const statusPreviewLabel = computed(() => {
   const origem = String(taskForm.origemFluxo || '').toUpperCase()
   if (origem === 'PLANO_CORTE' || origem === 'VENDA_PLANO_CORTE') {
-    return `Pipeline plano de corte: ${labelPipelinePlanoCorte('EM_ANDAMENTO')}`
+    return `Pipeline Serviço de Corte: ${labelPipelinePlanoCorte('EM_ANDAMENTO')}`
   }
   if (origem === 'LOJA_VENDA') {
     if (vendaSelecionadaParaAgendamento.value) return statusLabelVenda.value || 'Pipeline cliente'
@@ -1240,7 +1247,7 @@ const monthLabel = computed(() =>
   currentMonth.value.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
 )
 
-// Contexto do evento em edição: venda (cliente) ou plano de corte
+// Contexto do evento em edição: venda (cliente) ou serviço de corte
 const isEventoVenda = computed(
   () => !!editingEvent.value?.venda_id || !!editingEvent.value?.orcamento_id
 )
@@ -1320,8 +1327,8 @@ const clienteContatoEventoAtual = computed(() => {
 const origemEventoLabel = computed(() => {
   const origem = String(editingEvent.value?.origem_fluxo || '').toUpperCase()
   const map = {
-    PLANO_CORTE: 'Origem: plano de corte',
-    VENDA_PLANO_CORTE: 'Origem: venda do plano de corte',
+    PLANO_CORTE: 'Origem: serviço de corte',
+    VENDA_PLANO_CORTE: 'Origem: venda do serviço de corte',
     LOJA_VENDA: 'Origem: cliente venda da loja',
   }
   return map[origem] || 'Origem: agenda'
@@ -1481,7 +1488,7 @@ const SUBTITULOS_MEDIDA_FINA = {
 }
 function tituloSubtituloEvento(event) {
   if (event?.plano_corte_id) {
-    return { titulo: 'Serviço de Corte', subtitulo: planoBadgeLabel(planoStatusForEvent(event)) || 'Serviço de corte' }
+    return { titulo: 'Serviço de Corte', subtitulo: planoBadgeLabel(planoStatusForEvent(event)) || 'Serviço de Corte' }
   }
   const cat = String(event?.categoria || '').toUpperCase()
   const titulo = tituloFaseParaCategoria(cat)
@@ -1752,46 +1759,69 @@ function eventTitle(event) {
   return `${ts.titulo} – ${nome}`
 }
 
-/** Tooltip completo para o evento no calendário (vários horários: ver responsável e horário ao passar o mouse). */
+/** Tooltip completo para o evento no calendário (horário, criador e executores ao passar o mouse). */
 function eventTooltipCalendar(event) {
   const horario = periodLabel(event.inicio_em, event.fim_em, event)
   const titulo = eventTitle(event)
-  const resp = event?.criado_por_usuario?.nome || 'Não informado'
-  return `${horario}\n${titulo}\nResponsável: ${resp}`
+  const criador = event?.criado_por_usuario?.nome || 'Não informado'
+  const exec = nomesExecutoresEvento(event)
+  return `${horario}\n${titulo}\nCriador: ${criador}${exec ? `\nExecutores: ${exec}` : ''}`
 }
 
 function normalizarStatusExecucao(status) {
   return String(status || '').trim().toUpperCase()
 }
 
+/** Cronômetro rodando: algum apontamento_producao com início e sem fim (e não pausado). */
+function temCronometroRodandoAgenda(event) {
+  const aps = event?.apontamentos_producao || []
+  return aps.some(
+    (ap) =>
+      ap?.inicio_em &&
+      !ap?.fim_em &&
+      !(ap?.pausa_inicio_em && !ap?.pausa_fim_em),
+  )
+}
+
+/** Nomes dos funcionários que estão executando a tarefa (apontamentos_producao), únicos e separados por vírgula. */
+function nomesExecutoresEvento(event) {
+  const aps = event?.apontamentos_producao || []
+  const nomes = [...new Set(aps.map((ap) => ap?.funcionario?.nome).filter(Boolean))]
+  return nomes.length ? nomes.join(', ') : ''
+}
+
+/** Status na agenda: Início / Em produção / Ativo / Concluído (conforme funcionário atribuído e cronômetro). */
 function statusExecucaoLabel(event) {
   const status = normalizarStatusExecucao(event?.status)
   if (status === 'CONCLUIDO') return 'Concluido'
-  if (status === 'PAUSADO') return 'Pausado'
-  if (status === 'EM_ANDAMENTO') return 'Em andamento'
+  const aps = event?.apontamentos_producao || []
+  if (temCronometroRodandoAgenda(event)) return 'Ativo'
+  if (aps.length) return 'Em produção'
   const fim = new Date(event?.fim_em)
   if (!Number.isNaN(fim.getTime()) && Date.now() > fim.getTime()) return 'Atrasado'
-  return 'Pendente'
+  return 'Início'
 }
 
-/** Classe do badge de status: usa a cor da etapa (pipeline) quando o evento tem categoria, para a cor mudar com o status (claro → médio → escuro). */
+/** Classe do badge de status: Início / Em produção / Ativo (cronômetro) / Concluído. */
 function statusExecucaoClass(event) {
   const status = normalizarStatusExecucao(event?.status)
+  if (status === 'CONCLUIDO') return 'bg-emerald-50 text-emerald-700 border border-emerald-200'
   if (status === 'PAUSADO') return 'bg-amber-50 text-amber-700 border border-amber-200'
   const fim = new Date(event?.fim_em)
-  if (!Number.isNaN(fim.getTime()) && Date.now() > fim.getTime() && status !== 'CONCLUIDO') {
+  if (!Number.isNaN(fim.getTime()) && Date.now() > fim.getTime()) {
     return 'bg-rose-50 text-rose-700 border border-rose-200'
   }
+  const aps = event?.apontamentos_producao || []
+  if (temCronometroRodandoAgenda(event)) return 'bg-blue-50 text-blue-700 border border-blue-200'
+  if (aps.length) return 'bg-blue-50 text-blue-700 border border-blue-200'
   const categoria = event?.categoria
   if (categoria && pipelineProducao.value?.length) {
     const colorFamily = getColorFamilyFromPipeline(categoria)
-    const tom = eventConcluido(event) ? 'escuro' : getTomStatus(event)
+    const tom = getTomStatus(event)
     const familias = CORES_POR_FAMILIA_TOM.badge
     const map = familias[colorFamily] || familias.slate
     return map[tom] || map.medio
   }
-  if (status === 'CONCLUIDO') return 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-  if (status === 'EM_ANDAMENTO') return 'bg-blue-50 text-blue-700 border border-blue-200'
   return 'bg-slate-100 text-slate-700 border border-slate-200'
 }
 
@@ -1832,9 +1862,18 @@ function normalizePlanoStatus(status) {
   return String(status || '').trim().toUpperCase().replace(/\s+/g, '_')
 }
 
+function mapLegacyPlanoStatusToProducao(status) {
+  const s = normalizePlanoStatus(status)
+  if (['PRODUCAO_RECEBIDA', 'CORTE', 'PRODUCAO_FINALIZADA'].includes(s)) return s
+  if (['RECEBIDO', 'CONFERIDO_TECNICO'].includes(s)) return 'PRODUCAO_RECEBIDA'
+  if (['NA_MAQUINA', 'BORDA_E_ACABAMENTO'].includes(s)) return 'CORTE'
+  if (['PRONTO_PARA_RETIRADA', 'ENTREGUE'].includes(s)) return 'PRODUCAO_FINALIZADA'
+  return s
+}
+
 function getPlanoPipeline(status) {
-  const key = normalizePlanoStatus(status)
-  return (PIPELINE_PLANO_CORTE || []).find((p) => p.key === key)
+  const key = mapLegacyPlanoStatusToProducao(status)
+  return (PIPELINE_PLANO_CORTE_OPTIONS || []).find((p) => p.key === key)
 }
 
 function planoBadgeClass(status) {
@@ -2050,7 +2089,7 @@ function editTask(event) {
   // Funcionários que executam ficam na Timeline; na Agenda só o responsável (criador) do agendamento.
   taskForm.funcionarioIds = []
   const cat = event?.categoria || PRIMEIRA_ETAPA_PRODUCAO.value
-  // Garante categoria válida para o pipeline do evento (venda vs plano de corte)
+  // Garante categoria válida para o pipeline do evento (venda vs serviço de corte)
   const origemEvento = String(event?.origem_fluxo || '').toUpperCase()
   if (origemEvento === 'PLANO_CORTE' || origemEvento === 'VENDA_PLANO_CORTE') {
     const categoriasValidas = TIPOS_PRODUCAO.value.map((o) => o.value)
@@ -2633,6 +2672,19 @@ async function loadMontagemConcluida() {
   }
 }
 
+let visibilityHandlerAgenda = null
+function setupRefreshAgenda() {
+  visibilityHandlerAgenda = () => {
+    if (document.visibilityState === 'visible') loadAgenda(true, true)
+  }
+  document.addEventListener('visibilitychange', visibilityHandlerAgenda)
+}
+onBeforeUnmount(() => {
+  if (visibilityHandlerAgenda && typeof document !== 'undefined') {
+    document.removeEventListener('visibilitychange', visibilityHandlerAgenda)
+    visibilityHandlerAgenda = null
+  }
+})
 onMounted(() => {
   if (!storage.getToken()) return
   loadAgenda()
@@ -2645,6 +2697,7 @@ onMounted(() => {
   loadVendasAguardandoContrato()
   loadPendentesMedidaFina()
   loadMontagemConcluida()
+  setupRefreshAgenda()
 })
 watch(currentMonth, loadAgenda)
 

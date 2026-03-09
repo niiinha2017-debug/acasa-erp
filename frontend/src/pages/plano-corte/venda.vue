@@ -4,7 +4,7 @@
       <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
 
       <PageHeader
-        title="Venda Plano de Corte"
+        title="Venda Serviço de Corte"
         subtitle="Cortes internos — cadastre os produtos na hora e venda por metragem"
         icon="pi pi-ruler"
         :backTo="'/plano-corte'"
@@ -13,7 +13,7 @@
 
       <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui">
         <p v-if="!fornecedorSelecionado && fornecedorCarregado" class="mb-4 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs font-bold text-amber-800 dark:text-amber-200">
-          Cadastre um fornecedor (próprio) em <strong>Produtos plano de corte</strong> para usar cortes internos.
+          Cadastre um fornecedor (próprio) em <strong>Produtos Serviço de Corte</strong> para usar cortes internos.
         </p>
 
         <section class="grid grid-cols-12 gap-6 mb-8">
@@ -215,7 +215,7 @@
                 <div>
                   <h3 class="text-lg font-semibold text-text-main">Enviar para Produção</h3>
                   <p class="text-[10px] font-medium text-text-muted uppercase tracking-wider">
-                    Cria agendamento na agenda com este plano
+                    Cria agendamento na agenda com este serviço de corte
                   </p>
                 </div>
               </div>
@@ -231,7 +231,7 @@
               <Input
                 v-model="modalEnviarProducao.titulo"
                 label="Título do agendamento *"
-                placeholder="Ex: Plano de Corte - Cortes internos"
+                placeholder="Ex: Serviço de Corte - Cortes internos"
                 required
               />
               <div class="grid grid-cols-2 gap-4">
@@ -368,7 +368,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { maskMoneyBR } from '@/utils/masks'
 import { PlanoCorteService, FornecedorService, AgendaFabricaService, FuncionarioService } from '@/services/index'
-import { PIPELINE_PLANO_CORTE, UNIDADES } from '@/constantes'
+import { PIPELINE_PLANO_CORTE_OPTIONS, UNIDADES } from '@/constantes'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
@@ -380,7 +380,7 @@ const router = useRouter()
 const salvando = ref(false)
 
 const statusPlanoOptions = computed(() =>
-  (PIPELINE_PLANO_CORTE || []).map((s) => ({
+  (PIPELINE_PLANO_CORTE_OPTIONS || []).map((s) => ({
     label: s.label,
     value: s.key,
   })),
@@ -480,7 +480,7 @@ const modalProduto = ref({
 
 function abrirModalProduto() {
   if (!fornecedorSelecionado.value) {
-    notify.warn('Cadastre um fornecedor (próprio) em Produtos plano de corte primeiro.')
+    notify.warn('Cadastre um fornecedor (próprio) em Produtos Serviço de Corte primeiro.')
     return
   }
   modalProduto.value.form.fornecedor_id = Number(fornecedorSelecionado.value)
@@ -609,7 +609,7 @@ function buildPayload() {
   return {
     fornecedor_id: Number(fornecedorSelecionado.value),
     data_venda: dataVendaIso,
-    status: statusPlano.value || (PIPELINE_PLANO_CORTE?.[0]?.key || 'EM_ABERTO'),
+    status: statusPlano.value || (PIPELINE_PLANO_CORTE_OPTIONS?.[0]?.key || 'PRODUCAO_RECEBIDA'),
     produtos: itens.value.map((p) => ({
       item_id: Number(p.item_id),
       quantidade: Number(p.quantidade) || 0,
@@ -628,19 +628,19 @@ async function salvarPlano() {
     const { data } = await PlanoCorteService.salvar(null, buildPayload())
     return data?.id ?? null
   } catch (e) {
-    notify.error('Erro ao salvar plano.')
+    notify.error('Erro ao salvar serviço de corte.')
     return null
   }
 }
 
 async function salvarApenas() {
-  if (!fornecedorSelecionado.value) return notify.error('Cadastre um fornecedor (próprio) em Produtos plano de corte para usar cortes internos.')
+  if (!fornecedorSelecionado.value) return notify.error('Cadastre um fornecedor (próprio) em Produtos Serviço de Corte para usar cortes internos.')
   if (!itens.value.length) return notify.error('Adicione ao menos um item.')
   salvando.value = true
   try {
     const planoId = await salvarPlano()
     if (planoId) {
-      notify.success('Plano salvo!')
+      notify.success('Serviço de corte salvo!')
       closeTabAndGo('/plano-corte')
     }
   } finally {
@@ -649,7 +649,7 @@ async function salvarApenas() {
 }
 
 async function salvarEGerarPdf() {
-  if (!fornecedorSelecionado.value) return notify.error('Cadastre um fornecedor (próprio) em Produtos plano de corte para usar cortes internos.')
+  if (!fornecedorSelecionado.value) return notify.error('Cadastre um fornecedor (próprio) em Produtos Serviço de Corte para usar cortes internos.')
   if (!itens.value.length) return notify.error('Adicione ao menos um item.')
 
   salvando.value = true
@@ -713,7 +713,7 @@ function fecharModalEnviarProducao() {
 }
 
 async function abrirModalEnviarProducao() {
-  if (!fornecedorSelecionado.value) return notify.error('Cadastre um fornecedor (próprio) em Produtos plano de corte para usar cortes internos.')
+  if (!fornecedorSelecionado.value) return notify.error('Cadastre um fornecedor (próprio) em Produtos Serviço de Corte para usar cortes internos.')
   if (!itens.value.length) return notify.error('Adicione ao menos um item.')
 
   salvando.value = true
@@ -728,7 +728,7 @@ async function abrirModalEnviarProducao() {
     const fim = new Date(hoje)
     fim.setHours(18, 0, 0, 0)
 
-    modalEnviarProducao.value.titulo = `Plano de Corte #${planoId} - Cortes internos`
+    modalEnviarProducao.value.titulo = `Serviço de Corte #${planoId} - Cortes internos`
     modalEnviarProducao.value.inicio_em = inicio.toISOString().slice(0, 16)
     modalEnviarProducao.value.fim_em = fim.toISOString().slice(0, 16)
     modalEnviarProducao.value.equipe_ids = []
@@ -746,7 +746,7 @@ async function confirmarEnviarProducao() {
   if (fim <= inicio) return notify.error('Término deve ser depois do início.')
 
   const planoId = planoIdParaProducao.value
-  if (!planoId) return notify.error('Plano não encontrado. Salve o plano antes.')
+  if (!planoId) return notify.error('Serviço de corte não encontrado. Salve antes.')
 
   modalEnviarProducao.value.salvando = true
   try {
@@ -784,7 +784,7 @@ async function loadFuncionarios() {
 }
 
 onMounted(async () => {
-  statusPlano.value = PIPELINE_PLANO_CORTE?.[0]?.key || 'EM_ABERTO'
+  statusPlano.value = PIPELINE_PLANO_CORTE_OPTIONS?.[0]?.key || 'PRODUCAO_RECEBIDA'
   loadFuncionarios()
   try {
     const { data: fData } = await FornecedorService.listar()

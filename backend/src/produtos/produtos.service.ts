@@ -401,7 +401,7 @@ export class ProdutosService {
       return await this.prisma.produtos.delete({ where: { id } });
     } catch (e: any) {
       throw new BadRequestException(
-        'Não é possível excluir: produto está em uso (compras/plano de corte).',
+        'Não é possível excluir: produto está em uso (compras/serviço de corte).',
       );
     }
   }

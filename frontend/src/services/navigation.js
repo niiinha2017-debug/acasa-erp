@@ -11,7 +11,6 @@ export const NAV_SCHEMA = {
   ],
 
   producao: [
-    { label: 'Visão geral', to: '/producao', icon: 'pi-cogs', perm: 'posvenda.ver', etapaKey: 'PRODUCAO' },
     { label: 'Contratos em obra', to: '/producao/contratos', icon: 'pi-file-edit', perm: 'contratos.ver', etapaKey: 'PRODUCAO' },
     { label: 'Pós-venda', to: '/vendas', icon: 'pi-cart-plus', perm: 'posvenda.ver', etapaKey: 'POS_VENDA_GARANTIA' },
     { label: 'Agenda de Produção', to: '/agendamentos/fabrica', icon: 'pi-calendar-clock', perm: 'agendamentos.producao', etapaKey: 'PRODUCAO' },
@@ -49,50 +48,11 @@ export const NAV_SCHEMA = {
         { label: 'Relatório de Ponto', to: '/rh/ponto/relatorio', icon: 'pi-stopwatch', perm: 'ponto_relatorio.ver' },
         { label: 'Convites do Ponto', to: '/rh/ponto/convites', icon: 'pi-link', perm: 'ponto_convite.criar' },
         { label: 'Feriados', to: '/rh/ponto/horas-extras', icon: 'pi-calendar', perm: 'ponto_relatorio.ver' },
-        { label: 'Pagamento Funcionários', to: '/rh/pagamento-funcionarios', icon: 'pi-wallet', perm: 'despesas.ver' },
+        { label: 'Pagamento Funcionários', to: '/rh/ponto/relatorio', icon: 'pi-wallet', perm: 'despesas.ver' },
       ],
     },
     { divider: true },
     { label: 'Cadastro da Empresa', to: '/configuracoes/configuracoes', icon: 'pi-sliders-h', perm: 'configuracoes.empresa.ver' },
   ],
 
-  relatorios: [
-    {
-      label: 'DRE',
-      icon: 'pi-chart-bar',
-      perm: 'dashboard.visualizar',
-      children: [
-        { label: 'DRE Mensal', to: '/relatorios/dre-mensal', icon: 'pi-calculator', perm: 'dashboard.visualizar' },
-        { label: 'DRE por cliente', to: '/relatorios/dre-mensal?aba=cliente', icon: 'pi-user', perm: 'dashboard.visualizar' },
-        { label: 'DRE Serviço de Corte', to: '/relatorios/dre-plano-corte', icon: 'pi-sitemap', perm: 'dashboard.visualizar' },
-      ],
-    },
-    {
-      label: 'Dashboard',
-      icon: 'pi-chart-line',
-      perm: 'dashboard.visualizar',
-      children: [
-        { label: 'Dashboard Resumo', to: '/relatorios/dashboard-resumo', icon: 'pi-chart-line', perm: 'dashboard.visualizar' },
-      ],
-    },
-    {
-      label: 'Projetos e obra',
-      icon: 'pi-briefcase',
-      perm: 'dashboard.visualizar',
-      children: [
-        { label: 'Status de Projetos', to: '/relatorios/status-projetos', icon: 'pi-list', perm: 'dashboard.visualizar' },
-        { label: 'Status de Obras', to: '/relatorios/status-obras', icon: 'pi-building', perm: 'dashboard.visualizar' },
-        { label: 'Horas Trabalhadas', to: '/relatorios/horas-trabalhadas', icon: 'pi-clock', perm: 'dashboard.visualizar' },
-      ],
-    },
-    {
-      label: 'Outros relatórios',
-      icon: 'pi-file',
-      perm: 'dashboard.visualizar',
-      children: [
-        { label: 'Despesas por Categoria', to: '/relatorios/despesas-categoria', icon: 'pi-chart-pie', perm: 'dashboard.visualizar' },
-        { label: 'Feriados', to: '/relatorios/feriados', icon: 'pi-calendar', perm: 'ponto_relatorio.ver' },
-      ],
-    },
-  ],
 }

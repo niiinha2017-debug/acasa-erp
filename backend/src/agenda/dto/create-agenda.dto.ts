@@ -40,7 +40,7 @@ export class CreateAgendaDto {
   @IsDateString({}, { message: 'Data de término inválida' })
   fim_em: Date;
 
-  /** Cliente (obrigatório para venda/orçamento/projeto; opcional para plano de corte) */
+  /** Cliente (obrigatório para venda/orçamento/projeto; opcional para serviço de corte) */
   @ValidateIf((o) => {
     const origem = String(o.origem_fluxo || '').toUpperCase();
     const isTarefaExplicita = origem === 'TAREFA';

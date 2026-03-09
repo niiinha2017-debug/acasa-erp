@@ -80,6 +80,18 @@ export class ComprasService {
     }
   }
 
+  /** Só é permitido vincular compra (destino Venda) a uma venda cujo contrato está vigente. */
+  private async validarVendaComContratoVigente(vendaId: number) {
+    const contratoVigente = await this.prisma.contratos.findFirst({
+      where: { venda_id: vendaId, status: 'VIGENTE' },
+    });
+    if (!contratoVigente) {
+      throw new BadRequestException(
+        'Só é possível relacionar compra a clientes com contrato vigente. Gere e assine o contrato da venda antes de vincular a compra.',
+      );
+    }
+  }
+
   // ============================
   // ESTOQUE (CREATE) -> increment
   // ============================
@@ -329,6 +341,7 @@ export class ComprasService {
           'venda_id é obrigatório para CLIENTE_AMBIENTE.',
         );
       }
+      await this.validarVendaComContratoVigente(Number((dto as any).venda_id));
       if (!itensInput?.length) {
         throw new BadRequestException('CLIENTE_AMBIENTE exige itens.');
       }
@@ -386,8 +399,10 @@ export class ComprasService {
       }
     }
 
-    // Data de entrada da NF: sempre hoje (registro da nota na data atual)
-    const dataEntrada = new Date();
+    // Data de entrada da NF: usa a data enviada pelo frontend ou hoje
+    const dataEntrada = (dto as any).data_compra
+      ? new Date((dto as any).data_compra)
+      : new Date();
 
     const compra = await this.prisma.compras.create({
       data: {
@@ -506,6 +521,13 @@ export class ComprasService {
     }
 
     if (tipoAtual === 'CLIENTE_AMBIENTE') {
+      const vendaId =
+        (dto as any).venda_id !== undefined && (dto as any).venda_id !== null
+          ? Number((dto as any).venda_id)
+          : existe.venda_id;
+      if (vendaId) {
+        await this.validarVendaComContratoVigente(vendaId);
+      }
       const rateiosInput = (dto as any).rateios;
       if (rateiosInput) {
         this.validarRateios(rateiosInput, total);

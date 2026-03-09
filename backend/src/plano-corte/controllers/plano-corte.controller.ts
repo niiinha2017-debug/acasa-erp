@@ -8,6 +8,7 @@ import {
   Param,
   Post,
   Put,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { PlanoCorteService } from '../service/plano-corte.service';
@@ -30,8 +31,9 @@ export class PlanoCorteController {
 
   @Post()
   @Permissoes('plano_corte.criar')
-  create(@Body() dto: CreatePlanoCorteDto) {
-    return this.service.create(dto);
+  create(@Body() dto: CreatePlanoCorteDto, @Req() req?: any) {
+    const criadoPorUsuarioId = req?.user?.id != null ? Number(req.user.id) : undefined;
+    return this.service.create(dto, criadoPorUsuarioId ? { criadoPorUsuarioId } : undefined);
   }
 
   @Get()
@@ -54,8 +56,9 @@ export class PlanoCorteController {
 
   @Put(':id')
   @Permissoes('plano_corte.editar')
-  update(@Param('id') id: string, @Body() dto: UpdatePlanoCorteDto) {
-    return this.service.update(this.cleanId(id), dto);
+  update(@Param('id') id: string, @Body() dto: UpdatePlanoCorteDto, @Req() req?: any) {
+    const criadoPorUsuarioId = req?.user?.id != null ? Number(req.user.id) : undefined;
+    return this.service.update(this.cleanId(id), dto, criadoPorUsuarioId ? { criadoPorUsuarioId } : undefined);
   }
 
   @Post(':id/pdf')
