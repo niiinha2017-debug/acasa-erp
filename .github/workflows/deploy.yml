@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
 
 env:
-  SSH_HOST: ${{ secrets.EC2_HOST }}
-  SSH_USER: ${{ secrets.EC2_USER }}
+  SSH_HOST: ${{ secrets.SSH_HOST }}
+  SSH_USER: ${{ secrets.SSH_USER }}
   REMOTE_ROOT: /home/ubuntu/acasa-erp
   REMOTE_WEB: /var/www/aplicativo
   REMOTE_PONTO: /var/www/ponto
@@ -22,7 +22,7 @@ jobs:
       - name: Start SSH agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Trust EC2 host
         run: mkdir -p ~/.ssh && ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
@@ -72,7 +72,7 @@ jobs:
       - name: Start SSH agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Trust EC2 host
         run: mkdir -p ~/.ssh && ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
@@ -146,7 +146,7 @@ jobs:
           [ -n "${P:-}" ] || missing="$missing ANDROID_KEYSTORE_PASSWORD"
           [ -n "${A:-}" ] || missing="$missing ANDROID_KEY_ALIAS"
           [ -n "${KP:-}" ] || missing="$missing ANDROID_KEY_PASSWORD"
-          [ -n "${SSH:-}" ] || missing="$missing EC2_SSH_KEY"
+          [ -n "${SSH:-}" ] || missing="$missing SSH_PRIVATE_KEY"
           [ -z "$missing" ] || { echo "Secrets faltando no GitHub (Settings > Secrets and variables > Actions):$missing"; exit 1; }
           echo "Secrets OK. APKs serao gerados e enviados ao servidor."
 
@@ -243,7 +243,7 @@ jobs:
       - name: Start SSH agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Trust EC2 host
         run: mkdir -p ~/.ssh && ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
@@ -461,7 +461,7 @@ jobs:
       - name: Start SSH agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Trust EC2 host
         run: mkdir -p ~/.ssh && ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
