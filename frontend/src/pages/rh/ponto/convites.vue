@@ -414,13 +414,15 @@ async function gerarConvite() {
     }
 
     const apkUrl = String(data.apk_url || '').trim() || fallbackApkUrl
+    // PWA deve abrir direto na ativação com o código na URL (igual ao webUrl)
+    const pwaUrlComCodigo = urlAtivacaoVal
     convite.value = {
       ...data,
       code: codigo,
       url: urlAtivacaoVal,
       webUrl: urlAtivacaoVal,
       apkUrl,
-      pwaUrl: pontoBaseUrl,
+      pwaUrl: pwaUrlComCodigo,
     }
 
     const expiraEm = data.expira_em ?? data.expires_at

@@ -38,6 +38,26 @@ export default defineConfig({
     sourcemap: true,
     // Um único CSS evita "Unable to preload CSS" no webview Tauri ao navegar entre rotas
     cssCodeSplit: false,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('vue') && !id.includes('vue-router')) return 'vue'
+            if (id.includes('vue-router')) return 'vue-router'
+            if (id.includes('apexcharts') || id.includes('vue3-apexcharts')) return 'charts'
+            if (id.includes('@vueuse/core')) return 'vueuse'
+            if (id.includes('@vuepic/vue-datepicker')) return 'datepicker'
+            if (id.includes('axios')) return 'axios'
+            if (id.includes('qrcode')) return 'qrcode'
+            if (id.includes('primeicons')) return 'primeicons'
+            if (id.includes('@tauri-apps') || id.includes('@capacitor')) return 'native'
+            // demais deps em vendor para não inflar o chunk principal
+            return 'vendor'
+          }
+        },
+      },
+    },
+    chunkSizeWarningLimit: 600,
   },
 
   server: {

@@ -16,11 +16,14 @@ import {
   Logger,
 } from '@nestjs/common';
 import { FinanceiroService } from './financeiro.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { FecharMesDto } from './dto/fechar-mes.dto';
+import { CreateContaPagarDto } from './dto/create-conta-pagar.dto';
+import { UpdateContaPagarDto } from './dto/update-conta-pagar.dto';
+import { PagarContaPagarDto } from './dto/pagar-conta-pagar.dto';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 @Controller('financeiro/contas-pagar')
 export class ContasPagarController {
   private readonly logger = new Logger(ContasPagarController.name);
@@ -61,7 +64,11 @@ export class ContasPagarController {
     @Query('mes') mes?: string,
     @Query('ano') ano?: string,
   ) {
-    await this.service.atualizarVencidos();
+    try {
+      await this.service.atualizarVencidos();
+    } catch (err) {
+      this.logger.warn('atualizarVencidos falhou (listagem continua):', err?.message || err);
+    }
 
     const visaoNorm = (visao || '').trim().toUpperCase();
     if (visaoNorm === 'PARA_FECHAR' || visaoNorm === 'COMPENSADOS' || visaoNorm === 'AGENDADOS' || visaoNorm === 'PAGOS') {
@@ -91,7 +98,11 @@ export class ContasPagarController {
     @Query('data_ini') data_ini?: string,
     @Query('data_fim') data_fim?: string,
   ) {
-    await this.service.atualizarVencidos();
+    try {
+      await this.service.atualizarVencidos();
+    } catch (err) {
+      this.logger.warn('atualizarVencidos falhou (listagem continua):', err?.message || err);
+    }
 
     return this.service.listarContasPagarFechamentos({
       fornecedor_id: fornecedor_id
@@ -129,7 +140,7 @@ export class ContasPagarController {
   @Post('fechar-mes')
   @Permissoes('contas_pagar.criar')
   @HttpCode(HttpStatus.OK)
-  async fecharMes(@Body() body: any) {
+  async fecharMes(@Body() body: FecharMesDto) {
     try {
       return await this.service.fecharMesFornecedorComTitulos(body);
     } catch (err: any) {
@@ -168,20 +179,20 @@ export class ContasPagarController {
 
   @Post()
   @Permissoes('contas_pagar.criar')
-  criar(@Body() dto: any) {
+  criar(@Body() dto: CreateContaPagarDto) {
     return this.service.criarContaPagar(dto);
   }
 
   @Put(':id')
   @Permissoes('contas_pagar.editar')
-  atualizar(@Param('id') id: string, @Body() dto: any) {
+  atualizar(@Param('id') id: string, @Body() dto: UpdateContaPagarDto) {
     return this.service.atualizarContaPagar(this.cleanIdOrFail(id), dto);
   }
 
   @Post(':id/pagar')
   @Permissoes('contas_pagar.editar')
   @HttpCode(HttpStatus.OK)
-  pagar(@Param('id') id: string, @Body() dto: any) {
+  pagar(@Param('id') id: string, @Body() dto: PagarContaPagarDto) {
     // (mantém por enquanto; o fluxo novo usa títulos)
     return this.service.pagarContaPagar(this.cleanIdOrFail(id), dto);
   }

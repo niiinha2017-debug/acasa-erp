@@ -127,22 +127,15 @@
 <body>
   <main class="card">
     <h1>Ponto ACASA</h1>
-    <p>1) Baixe o app. 2) Depois ative com o codigo.</p>
+    <p>Use no navegador (PWA). No celular: abra o link e adicione à tela inicial. Depois ative com o código.</p>
 
     <div class="stack">
-      <label>1. Baixar o app (Android)</label>
-      <div class="row">
-        <a id="btnApk" class="btn btn-primary" href="https://ponto.acasamarcenaria.com.br/ponto.apk" download="ponto.apk" target="_blank" rel="noopener noreferrer">Baixar APK</a>
-        <button id="btnWhats" class="btn btn-ok" type="button">Enviar no WhatsApp</button>
-      </div>
-    </div>
-
-    <div class="stack" style="margin-top: 24px;">
-      <label for="code">2. Depois: codigo de ativacao</label>
+      <label for="code">1. Código de ativação</label>
       <input id="code" placeholder="Ex.: A1B2C3D4" />
       <div class="row">
-        <a id="btnAtivar" class="btn btn-primary" href="#" target="_blank" rel="noopener noreferrer">Abrir ativacao</a>
-        <button id="btnCopiar" class="btn btn-soft" type="button">Copiar links</button>
+        <a id="btnAtivar" class="btn btn-primary" href="#" target="_blank" rel="noopener noreferrer">Abrir ativação (PWA)</a>
+        <button id="btnCopiar" class="btn btn-soft" type="button">Copiar link</button>
+        <button id="btnWhats" class="btn btn-ok" type="button">Enviar no WhatsApp</button>
       </div>
     </div>
 
@@ -169,8 +162,7 @@
       const ativacao = code
         ? `${base}/ativar?code=${encodeURIComponent(code)}`
         : `${base}/ativar`;
-      const apk = `${base}/ponto.apk`;
-      return { code, ativacao, apk };
+      return { code, ativacao };
     }
 
     function render() {
@@ -192,19 +184,19 @@
     render();
 
     btnWhats.addEventListener("click", () => {
-      const { ativacao, apk } = getLinks();
-      const msg = `Segue acesso ao Ponto:%0A%0AAPK:%0A${encodeURIComponent(apk)}%0A%0AAtivacao:%0A${encodeURIComponent(ativacao)}`;
+      const { ativacao } = getLinks();
+      const msg = `Ponto ACASA (use no navegador / PWA):%0A%0A${encodeURIComponent(ativacao)}`;
       const wa = `https://wa.me/?text=${msg}`;
       window.open(wa, "_blank", "noopener,noreferrer");
     });
 
     btnCopiar.addEventListener("click", async () => {
-      const { ativacao, apk } = getLinks();
-      const texto = `APK: ${apk}\nAtivacao: ${ativacao}`;
+      const { ativacao } = getLinks();
+      const texto = ativacao;
       try {
         await navigator.clipboard.writeText(texto);
         btnCopiar.textContent = "Copiado";
-        setTimeout(() => (btnCopiar.textContent = "Copiar links"), 1200);
+        setTimeout(() => (btnCopiar.textContent = "Copiar link"), 1200);
       } catch {
         alert(texto);
       }

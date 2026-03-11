@@ -1,11 +1,10 @@
 import { Body, Controller, Get, Param, Put, UseGuards } from '@nestjs/common';
 
 import { ClausulasService, UpdateClausulasDto } from './clausulas.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 @Controller('clausulas')
 export class ClausulasController {
   constructor(private readonly service: ClausulasService) {}

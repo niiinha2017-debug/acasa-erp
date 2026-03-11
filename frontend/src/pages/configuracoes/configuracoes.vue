@@ -295,12 +295,24 @@
               <Input v-model="form.email" label="E-mail de Contato" type="email" icon="pi pi-envelope" class="md:col-span-2" />
               <Input v-model="telefoneMask" label="WhatsApp (número)" icon="pi pi-whatsapp" placeholder="(00) 00000-0000" />
               <Input v-model="form.whatsapp_url" label="Link do WhatsApp" placeholder="https://wa.me/5511999999999" />
+              <p class="text-[11px] text-slate-500 md:col-span-2 -mt-1">Envio de mensagens (ex.: orçamento) usa <strong>Evolution API</strong>. Configure abaixo.</p>
               <Input
-                v-model="form.whatsapp_api_token"
-                type="password"
-                label="Token da API WhatsApp"
-                placeholder="Token da API oficial (Meta) para envio programático"
+                v-model="form.evolution_api_url"
+                label="Evolution API – URL"
+                placeholder="Ex: http://localhost:8080 ou https://sua-evolution.com"
                 class="md:col-span-2"
+              />
+              <Input
+                v-model="form.evolution_api_key"
+                type="password"
+                label="Evolution API – Chave (API Key)"
+                placeholder="Chave de autenticação da Evolution API"
+                class="md:col-span-2"
+              />
+              <Input
+                v-model="form.evolution_instance_name"
+                label="Evolution API – Nome da instância"
+                placeholder="Ex: acasa-erp"
               />
               <div class="md:col-span-2 flex items-center gap-3">
                 <Button
@@ -311,7 +323,7 @@
                   @click="testarTokenWhatsApp"
                 >
                   <i class="pi pi-whatsapp mr-2"></i>
-                  Testar token WhatsApp (produção)
+                  Testar Evolution API
                 </Button>
               </div>
               <Input v-model="form.instagram_url" label="Link do Instagram" placeholder="https://instagram.com/..." />
@@ -335,6 +347,48 @@
               <Input v-model="form.bairro" label="Bairro" placeholder="Nome do bairro" class="col-span-5" />
               <Input v-model="form.cidade" label="Cidade" placeholder="Nome da cidade" class="col-span-4" />
               <Input v-model="form.uf" label="UF" placeholder="UF" class="col-span-2" maxlength="2" />
+            </div>
+          </section>
+
+          <section class="pb-6 border-b border-border-ui/70">
+            <div class="flex items-center gap-3 mb-6">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">Controle de Estoque / Desperdício</h3>
+            </div>
+            <p class="text-[11px] text-slate-500 mb-3">
+              Percentual de perda padrão usado no cálculo de desperdício na DRE do projeto: (Material Comprado) − (Material Usado) − (Sobras/Retalhos) = Perda Real.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <Input
+                v-model="form.perda_padrao_percentual"
+                type="number"
+                label="Perda padrão (%)"
+                placeholder="Ex: 5"
+                step="0.5"
+                min="0"
+                max="100"
+              />
+            </div>
+          </section>
+
+          <section class="pb-6 border-b border-border-ui/70">
+            <div class="flex items-center gap-3 mb-6">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">Base de cálculo – Custos de Estrutura / Timeline</h3>
+            </div>
+            <p class="text-[11px] text-slate-500 mb-3">
+              Horas úteis da fábrica no mês. Usado na Taxa de Máquina (Financeiro → Custos de Estrutura) e na base de cálculo da timeline. Se os funcionários trabalham 220 h/mês, informe 220; senão use o padrão 176 (22 dias × 8 h).
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <Input
+                v-model.number="form.horas_uteis_mes_fabrica"
+                type="number"
+                label="Horas úteis mês (fábrica)"
+                placeholder="Ex: 220 ou 176"
+                step="1"
+                min="1"
+                max="400"
+              />
             </div>
           </section>
 
@@ -556,6 +610,9 @@ const form = ref({
   instagram_url: '',
   whatsapp_url: '',
   whatsapp_api_token: '',
+  evolution_api_url: '',
+  evolution_api_key: '',
+  evolution_instance_name: '',
   site: '',
   cor_marca: '#2563eb',
   cep: '',
@@ -578,6 +635,8 @@ const form = ref({
   representante_legal_socio_cpf: '',
   representante_legal_socio_rg: '',
   contrato_usar_socio_quando_vazio: true,
+  perda_padrao_percentual: null,
+  horas_uteis_mes_fabrica: null,
 })
 
 // --- MÁSCARAS ---
@@ -1019,12 +1078,12 @@ async function testarTokenWhatsApp() {
   try {
     const data = await ConfiguracaoService.whatsappTest()
     if (data?.ok) {
-      notify.success(data.message || 'Token WhatsApp válido.')
+      notify.success(data.message || 'Evolution API conectada.')
     } else {
-      notify.error(data?.message || 'Token inválido ou não configurado.')
+      notify.error(data?.message || 'Evolution API não configurada ou instância desconectada.')
     }
   } catch (e) {
-    notify.error(e?.response?.data?.message || 'Erro ao testar token WhatsApp.')
+    notify.error(e?.response?.data?.message || 'Erro ao testar Evolution API.')
   } finally {
     testandoWhatsApp.value = false
   }

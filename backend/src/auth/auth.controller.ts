@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { AuthService } from './auth.service';
-import { JwtAuthGuard } from './jwt-auth.guard';
+import { Public } from './public.decorator';
 import { LoginDto } from './dto/login.dto';
 import { AlterarSenhaDto } from './dto/alterar-senha.dto';
 import { EsqueciSenhaDto } from './dto/esqueci-senha.dto';
@@ -24,6 +24,7 @@ import { Permissoes } from './permissoes.decorator';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK) // Alterado para 200 (mais comum para login)
   async login(@Body() dto: LoginDto) {
@@ -31,6 +32,7 @@ export class AuthController {
     return await this.authService.login(dto.usuario, dto.senha);
   }
 
+  @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(@Body() dto: RefreshDto) {
@@ -39,20 +41,21 @@ export class AuthController {
     return this.authService.refresh(dto.refresh_token);
   }
 
-  // Endpoint que o ADMIN usa para criar o funcionário
+  @Public()
   @Post('cadastro')
   @HttpCode(HttpStatus.CREATED)
   cadastro(@Body() dto: CreateUsuarioDto) {
     return this.authService.cadastro(dto);
   }
 
+  @Public()
   @Post('esqueci-senha')
   @HttpCode(HttpStatus.OK)
   esqueciSenha(@Body() dto: EsqueciSenhaDto) {
     return this.authService.esqueciSenha(dto.email);
   }
 
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @UseGuards(PermissionsGuard)
   @Post('reenviar-senha-provisoria')
   @Permissoes('usuarios.editar')
   @HttpCode(HttpStatus.OK)
@@ -60,7 +63,6 @@ export class AuthController {
     return this.authService.reenviarSenhaProvisoria(dto.email);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Post('alterar-senha')
   @HttpCode(HttpStatus.OK)
   async alterarSenha(@Req() req: Request, @Body() dto: AlterarSenhaDto) {
@@ -76,7 +78,6 @@ export class AuthController {
     );
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('me')
   async me(@Req() req: Request) {
     const user = (req as any).user;
@@ -85,6 +86,7 @@ export class AuthController {
     return await this.authService.me(Number(userId));
   }
 
+  @Public()
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout() {

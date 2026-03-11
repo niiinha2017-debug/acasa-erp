@@ -1,14 +1,14 @@
 <template>
-  <div class="relative inline-flex" ref="menuRef">
+  <div class="relative inline-flex items-center" ref="menuRef">
     <button
       @click.stop="toggleMenu"
       type="button"
-      class="flex items-center gap-1.5 px-3 py-2 rounded-lg text-text-soft hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5 transition-colors duration-150 outline-none border-0"
-      :class="{ 'text-text-main bg-black/5 dark:bg-white/5': isOpen }"
+      class="flex items-center justify-center gap-1.5 px-0 py-0.5 rounded-md text-sm font-medium text-text-soft hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5 border-b-2 border-transparent hover:border-slate-400 dark:hover:border-slate-500 transition-all duration-200 outline-none leading-none"
+      :class="{ 'text-text-main bg-black/5 dark:bg-white/5 border-slate-400 dark:border-slate-500': isOpen }"
     >
-      <span class="text-xs font-medium">{{ label }}</span>
+      <span class="whitespace-nowrap">{{ label }}</span>
       <i
-        class="pi pi-chevron-down text-[10px] opacity-60 transition-transform duration-200"
+        class="pi pi-chevron-down text-[10px] opacity-60 transition-transform duration-200 flex-shrink-0"
         :class="{ 'rotate-180': isOpen }"
       />
     </button>
@@ -16,47 +16,52 @@
     <transition name="dropdown">
       <div
         v-if="isOpen"
-        class="absolute left-0 top-full mt-1 min-w-[180px] py-1 bg-bg-card rounded-lg border border-border-ui z-[9999] overflow-visible shadow-lg"
+        class="absolute left-0 top-full mt-0.5 min-w-[200px] p-1 bg-bg-card rounded-lg border border-border-ui z-[9999] overflow-visible shadow-sm"
       >
-        <div v-if="visibleItems.length === 0" class="px-3 py-2.5 text-xs text-text-soft">
+        <div v-if="visibleItems.length === 0" class="px-4 py-2.5 text-sm text-text-soft">
           Nenhum item disponível
         </div>
 
-        <div v-else class="flex flex-col overflow-visible">
+        <div v-else class="flex flex-col gap-0.5 overflow-visible">
           <template v-for="(item, index) in visibleItems" :key="index">
-            <hr v-if="item.divider" class="my-1 border-border-ui" />
+            <hr v-if="item.divider" class="my-0.5 border-border-ui" />
+
+            <div
+              v-else-if="item.heading"
+              class="px-4 py-1.5 pt-2 first:pt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500"
+            >
+              {{ item.heading }}
+            </div>
 
             <div
               v-else-if="item.children?.length"
-              class="nav-submenu-trigger relative flex items-center justify-between gap-2 px-3 py-2 text-xs text-text-main cursor-pointer overflow-visible transition-colors"
-              :class="[item.etapaKey ? getStatusHoverBgClass(item.etapaKey) : 'hover:bg-black/5 dark:hover:bg-white/5', { 'bg-black/5 dark:bg-white/5': openSubmenuIndex === index }]"
+              class="nav-submenu-trigger relative flex items-center gap-3 px-4 py-2.5 text-sm text-text-main cursor-pointer overflow-visible rounded-md transition-colors duration-200"
+              :class="[item.etapaKey ? getStatusHoverBgClass(item.etapaKey) : 'hover:bg-slate-50 dark:hover:bg-slate-800/50', { 'bg-slate-50 dark:bg-slate-800/50': openSubmenuIndex === index }]"
               @click.stop.prevent="toggleSubmenu(index)"
               @mouseenter="clearSubmenuLeaveTimer(); openSubmenuIndex = index"
               @mouseleave="scheduleSubmenuClose()"
             >
-              <div class="flex items-center gap-2.5 min-w-0">
-                <i v-if="item.icon" :class="[item.icon, 'pi text-[11px] opacity-70 flex-shrink-0']" />
-                <span class="font-medium truncate">{{ item.label }}</span>
-              </div>
+              <i v-if="item.icon" :class="[item.icon, 'pi text-xs opacity-70 w-5 flex-shrink-0']" />
+              <span class="font-medium truncate flex-1 min-w-0">{{ item.label }}</span>
               <i class="pi pi-chevron-right text-[10px] opacity-60 flex-shrink-0" />
               <!-- Lista lateral (flyout) à direita -->
               <transition name="dropdown">
                 <div
                   v-if="openSubmenuIndex === index"
-                  class="absolute left-full top-0 ml-0.5 min-w-[180px] py-1.5 px-0 bg-bg-card rounded-lg border border-border-ui shadow-lg z-[10001] overflow-visible"
+                  class="absolute left-full top-0 ml-0.5 min-w-[200px] p-1 bg-bg-card rounded-lg border border-border-ui shadow-sm z-[10001] overflow-visible"
                   @click.stop
                   @mouseenter="clearSubmenuLeaveTimer()"
                   @mouseleave="scheduleSubmenuClose()"
                 >
                   <template v-for="(child, childIndex) in visibleChildren(item)" :key="child.divider ? `div-${childIndex}` : (child.to || childIndex)">
-                    <hr v-if="child.divider" class="my-1 border-border-ui" />
+                    <hr v-if="child.divider" class="my-0.5 border-border-ui" />
                     <a
                       v-else
                       @click="handleNavChild(child.to)"
-                      class="flex items-center gap-2.5 px-3 py-2 text-xs text-text-main hover:text-brand-primary transition-colors rounded-md"
-                      :class="child.etapaKey ? getStatusHoverBgClass(child.etapaKey) : 'hover:bg-black/5 dark:hover:bg-white/5'"
+                      class="flex items-center gap-3 px-4 py-2.5 text-sm text-text-main hover:text-brand-primary rounded-md transition-colors duration-200"
+                      :class="child.etapaKey ? getStatusHoverBgClass(child.etapaKey) : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'"
                     >
-                      <i v-if="child.icon" :class="[child.icon, 'pi text-[11px] opacity-70']" />
+                      <i v-if="child.icon" :class="[child.icon, 'pi text-xs opacity-70 w-5 flex-shrink-0']" />
                       <span class="font-medium">{{ child.label }}</span>
                     </a>
                   </template>
@@ -67,10 +72,10 @@
             <a
               v-else
               @click="handleNav(item.to)"
-              class="flex items-center gap-2.5 px-3 py-2 text-xs text-text-main hover:text-brand-primary transition-colors rounded-md"
-              :class="item.etapaKey ? getStatusHoverBgClass(item.etapaKey) : 'hover:bg-black/5 dark:hover:bg-white/5'"
+              class="flex items-center gap-3 px-4 py-2.5 text-sm text-text-main hover:text-brand-primary rounded-md transition-colors duration-200"
+              :class="item.etapaKey ? getStatusHoverBgClass(item.etapaKey) : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'"
             >
-              <i v-if="item.icon" :class="[item.icon, 'pi text-[11px] opacity-70']" />
+              <i v-if="item.icon" :class="[item.icon, 'pi text-xs opacity-70 w-5 flex-shrink-0']" />
               <span class="font-medium">{{ item.label }}</span>
             </a>
           </template>
@@ -147,6 +152,7 @@ function visibleChildren(item) {
 const visibleItems = computed(() => {
   return (props.items || []).filter((item) => {
     if (item.divider) return true
+    if (item.heading) return true
     if (item.children?.length) {
       return visibleChildren(item).length > 0
     }

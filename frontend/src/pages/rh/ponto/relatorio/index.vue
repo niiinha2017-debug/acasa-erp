@@ -53,7 +53,15 @@
                 @update:modelValue="buscar"
               />
             </div>
-            <div class="md:col-span-4 flex gap-2 justify-end flex-wrap">
+            <div class="md:col-span-4 flex flex-wrap items-center gap-3 justify-end">
+              <label class="inline-flex items-center gap-2 cursor-pointer">
+                <input
+                  v-model="apenasAteHoje"
+                  type="checkbox"
+                  class="rounded border-border-ui text-brand-primary focus:ring-brand-primary/30"
+                />
+                <span class="text-xs font-semibold text-text-main">Apenas até hoje</span>
+              </label>
               <Button
                 variant="secondary"
                 class="h-11 px-5 rounded-xl font-black text-[10px] uppercase"
@@ -394,7 +402,9 @@
         <div class="p-6 border-b border-border-ui flex justify-between items-center bg-bg-page/60">
           <div>
             <h3 class="font-black text-text-main uppercase text-lg">Justificativa</h3>
-            <p class="text-[10px] font-bold text-text-soft uppercase mt-1">Data: {{ fmtData(modalJust.dia) }}</p>
+            <p class="text-[10px] font-bold text-text-soft uppercase mt-1">
+              {{ modalJust.form.data_fim && modalJust.form.data_fim !== modalJust.form.data ? `Período: ${fmtData(modalJust.form.data)} a ${fmtData(modalJust.form.data_fim)}` : `Data: ${fmtData(modalJust.dia)}` }}
+            </p>
           </div>
           <button type="button" @click="modalJust.open = false" class="p-2 text-text-soft hover:text-rose-500 rounded-lg transition-colors">
             <i class="pi pi-times"></i>
@@ -411,10 +421,45 @@
               />
             </div>
             <div>
-              <label class="text-[10px] font-black text-text-soft uppercase block mb-1">Data</label>
+              <label class="text-[10px] font-black text-text-soft uppercase block mb-1">Data inicial</label>
               <input
                 v-model="modalJust.form.data"
                 type="date"
+                class="w-full h-11 rounded-xl px-4 text-sm font-semibold bg-bg-card text-text-main border border-border-ui outline-none focus:ring-2 focus:ring-brand-primary/30"
+              />
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-[10px] font-black text-text-soft uppercase block mb-1">Data final (opcional — mesmo dia ou período)</label>
+              <input
+                v-model="modalJust.form.data_fim"
+                type="date"
+                class="w-full h-11 rounded-xl px-4 text-sm font-semibold bg-bg-card text-text-main border border-border-ui outline-none focus:ring-2 focus:ring-brand-primary/30"
+              />
+            </div>
+            <div>
+              <label class="text-[10px] font-black text-text-soft uppercase block mb-1">Das (horário)</label>
+              <input
+                v-model="modalJust.form.hora_inicio"
+                type="time"
+                class="w-full h-11 rounded-xl px-4 text-sm font-semibold bg-bg-card text-text-main border border-border-ui outline-none focus:ring-2 focus:ring-brand-primary/30"
+              />
+            </div>
+            <div>
+              <label class="text-[10px] font-black text-text-soft uppercase block mb-1">Até (horário)</label>
+              <input
+                v-model="modalJust.form.hora_fim"
+                type="time"
+                class="w-full h-11 rounded-xl px-4 text-sm font-semibold bg-bg-card text-text-main border border-border-ui outline-none focus:ring-2 focus:ring-brand-primary/30"
+              />
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-[10px] font-black text-text-soft uppercase block mb-1">Ou informe os minutos (ex: 60 = 1h; vazio = dia inteiro)</label>
+              <input
+                v-model.number="modalJust.form.minutos_justificados"
+                type="number"
+                min="0"
+                max="1440"
+                placeholder="Ex: 60 — ou use os horários acima"
                 class="w-full h-11 rounded-xl px-4 text-sm font-semibold bg-bg-card text-text-main border border-border-ui outline-none focus:ring-2 focus:ring-brand-primary/30"
               />
             </div>
@@ -493,10 +538,12 @@ const loadingTabela = ref(false)
 const loadingPdf = ref(false)
 const loadingComprovanteId = ref(null)
 const rows = ref([])
+const justificativas = ref([])
 const funcionarioOptions = ref([])
 const funcionarios = ref([])
 
 const filtros = reactive({ funcionario_id: '', data_ini: '', data_fim: '' })
+const apenasAteHoje = ref(false)
 
 function getMesInicioISO() {
   const hoje = new Date()
@@ -592,6 +639,23 @@ const valorHoraLabel = computed(() => {
   return `R$ ${numeroParaMoeda(v)}`
 })
 
+const dataFimEfetivo = computed(() => {
+  if (!apenasAteHoje.value || !filtros.data_fim) return filtros.data_fim || null
+  const hoje = new Date().toISOString().slice(0, 10)
+  return hoje < filtros.data_fim ? hoje : filtros.data_fim
+})
+
+/** Mapa dia (YYYY-MM-DD) -> minutos justificados para reduzir a meta no cálculo */
+const justificativasPorDia = computed(() => {
+  const map = {}
+  for (const j of justificativas.value || []) {
+    const dia = new Date(j.data).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+    const min = Number(j.minutos_justificados ?? 0) || 0
+    map[dia] = (map[dia] || 0) + min
+  }
+  return map
+})
+
 const resumo = computed(() => {
   const base = consolidarSaldoPeriodo({
     registros: rowsFiltrados.value,
@@ -599,8 +663,9 @@ const resumo = computed(() => {
     horasSemana: 48,
     diasSemana: 6,
     dataIni: filtros.data_ini || null,
-    dataFim: filtros.data_fim || null,
+    dataFim: dataFimEfetivo.value || filtros.data_fim || null,
     motorAcasa: true,
+    justificativasPorDia: justificativasPorDia.value,
   })
   return base
 })
@@ -664,7 +729,7 @@ const modalJust = reactive({
   open: false,
   saving: false,
   dia: '',
-  form: { funcionario_id: null, data: '', tipo: '', descricao: '', arquivo_id: null },
+  form: { funcionario_id: null, data: '', data_fim: '', tipo: '', descricao: '', arquivo_id: null, minutos_justificados: null, hora_inicio: '', hora_fim: '' },
 })
 
 const justificativaFileRef = ref(null)
@@ -717,12 +782,27 @@ const isFimDeSemanaErro = (dataStr, horaStr) => {
 async function buscar() {
   if (!filtros.funcionario_id) {
     rows.value = []
+    justificativas.value = []
     return
   }
   try {
     loadingTabela.value = true
-    const { data } = await PontoRelatorioService.listarRegistros({ ...filtros })
-    rows.value = data || []
+    const dataFimEnviar = dataFimEfetivo.value || filtros.data_fim
+    const [resReg, resJust] = await Promise.all([
+      PontoRelatorioService.listarRegistros({
+        ...filtros,
+        data_fim: dataFimEnviar || undefined,
+      }),
+      filtros.funcionario_id
+        ? PontoJustificativasService.listar({
+            funcionario_id: filtros.funcionario_id,
+            data_ini: filtros.data_ini || undefined,
+            data_fim: dataFimEnviar || filtros.data_fim || undefined,
+          })
+        : Promise.resolve({ data: [] }),
+    ])
+    rows.value = resReg?.data ?? resReg ?? []
+    justificativas.value = resJust?.data ?? resJust ?? []
   } catch (e) {
     notify.error(e?.response?.data?.message || 'Erro ao buscar')
   } finally {
@@ -790,12 +870,14 @@ async function abrirComprovanteImagem(registroId, formato = 'png') {
   loadingComprovanteId.value = registroId
   try {
     const res = await PontoRelatorioService.comprovanteImagem(registroId, formato)
-    const mime = formato === 'jpeg' || formato === 'jpg' ? 'image/jpeg' : 'image/png'
-    const blob = new Blob([res.data], { type: mime })
-    await abrirBlobComFallback(blob, `comprovante-ponto-${registroId}.${formato}`)
+    // Usa o tipo real da resposta (backend pode devolver JPEG ou PDF quando PNG falha)
+    const mime = res.data?.type || (formato === 'jpeg' || formato === 'jpg' ? 'image/jpeg' : 'image/png')
+    const ext = mime.includes('pdf') ? 'pdf' : (mime.includes('jpeg') ? 'jpg' : 'png')
+    const blob = res.data instanceof Blob ? res.data : new Blob([res.data], { type: mime })
+    await abrirBlobComFallback(blob, `comprovante-ponto-${registroId}.${ext}`)
   } catch (e) {
     console.error('[PONTO COMPROVANTE IMAGEM]', e)
-    notify.error(e?.response?.data?.message || 'Não foi possível gerar a imagem.')
+    notify.error(e?.response?.data?.message || 'Não foi possível gerar o comprovante.')
   } finally {
     loadingComprovanteId.value = null
   }
@@ -1029,12 +1111,30 @@ function abrirModalJustificar(row) {
   Object.assign(modalJust, {
     open: true,
     dia: row.data,
-    form: { funcionario_id: filtros.funcionario_id, data: row.data, tipo: '', descricao: '', arquivo_id: null },
+    form: {
+      funcionario_id: filtros.funcionario_id,
+      data: row.data,
+      data_fim: row.data,
+      tipo: '',
+      descricao: '',
+      arquivo_id: null,
+      minutos_justificados: null,
+      hora_inicio: '',
+      hora_fim: '',
+    },
   })
 }
 
 async function confirmarSalvarJustificativa() {
   try {
+    if (!modalJust.form.data?.trim()) {
+      notify.warn('Informe a data inicial.')
+      return
+    }
+    if (!modalJust.form.tipo?.trim()) {
+      notify.warn('Informe o tipo da justificativa (ex: Atestado).')
+      return
+    }
     modalJust.saving = true
     const form = { ...modalJust.form }
     const funcionario_id = Number(String(form.funcionario_id || '').replace(/\D/g, ''))
@@ -1048,8 +1148,28 @@ async function confirmarSalvarJustificativa() {
       })
       if (data?.id) form.arquivo_id = data.id
     }
-    await PontoJustificativasService.salvar(form)
-    notify.success('Justificativa salva!')
+    const payload = {
+      funcionario_id,
+      data: form.data,
+      tipo: form.tipo || 'OUTRO',
+      descricao: form.descricao || null,
+      arquivo_id: form.arquivo_id ?? null,
+    }
+    if (form.data_fim && form.data_fim.trim() && form.data_fim >= form.data) {
+      payload.data_fim = form.data_fim.trim()
+    }
+    let minutos = form.minutos_justificados != null && form.minutos_justificados !== '' ? Number(form.minutos_justificados) : null
+    if (minutos == null && form.hora_inicio && form.hora_fim) {
+      const [hi, mi] = (form.hora_inicio + ':00').split(':').map(Number)
+      const [hf, mf] = (form.hora_fim + ':00').split(':').map(Number)
+      const totalMin = (hf * 60 + mf) - (hi * 60 + mi)
+      if (totalMin > 0) minutos = totalMin
+    }
+    if (minutos != null && minutos >= 0) payload.minutos_justificados = minutos
+    const res = await PontoJustificativasService.salvar(payload)
+    const data = res?.data ?? res
+    const plural = data?.criados > 1 || (Array.isArray(data?.itens) && data.itens.length > 1)
+    notify.success(plural ? 'Justificativas salvas!' : 'Justificativa salva!')
     modalJust.open = false
     limparJustificativaArquivo()
     await buscar()

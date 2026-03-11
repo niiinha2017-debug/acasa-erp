@@ -17,7 +17,7 @@ cd "$ROOT_DIR"
 START_TAURI=$(date +%s)
 echo "[$(date +%H:%M:%S)] Início deploy Tauri (Rust + NSIS — pode levar vários minutos)"
 
-# Só dá bump quando roda sozinho; deploy-all já fez o bump antes
+# Só dá bump quando roda sozinho; deploy-tudo ou outro script já pode ter feito o bump
 if [[ -z "${SKIP_BUMP:-}" ]]; then
   node scripts/bump-desktop-version.mjs
 fi

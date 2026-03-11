@@ -103,6 +103,13 @@ const atalhosPonto = computed(() =>
       icon: 'pi pi-link',
       show: () => can('ponto_convite.criar'),
     },
+    {
+      label: 'Fechamento de Folha',
+      desc: 'Resumo por período: horas trabalhadas, extras e custo devido (pagamento)',
+      to: '/rh/ponto/fechamento',
+      icon: 'pi pi-wallet',
+      show: () => can('despesas.ver'),
+    },
   ].filter((item) => item.show()),
 )
 

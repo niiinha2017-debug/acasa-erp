@@ -182,6 +182,8 @@ export function consolidarSaldoPeriodo({
   dataFim = null,
   diasSemMeta = [],
   motorAcasa = false,
+  /** Mapa dia (YYYY-MM-DD) -> minutos justificados; reduz a meta do dia no cálculo */
+  justificativasPorDia = {},
 }) {
   const diaKeySP = (dateLike) =>
     new Date(dateLike).toLocaleDateString('en-CA', {
@@ -224,9 +226,12 @@ export function consolidarSaldoPeriodo({
 
   if (motorAcasa) {
     const metaMinSegSex = JORNADA_META_MIN
+    const justMap = justificativasPorDia && typeof justificativasPorDia === 'object' ? justificativasPorDia : {}
     const linhas = dias.map((dia) => {
       const diaSemana = new Date(`${dia}T12:00:00`).getDay()
-      const metaMin = diaSemana === 0 || diaSemana === 6 || setDiasSemMeta.has(dia) ? 0 : metaMinSegSex
+      let metaMin = diaSemana === 0 || diaSemana === 6 || setDiasSemMeta.has(dia) ? 0 : metaMinSegSex
+      const minJust = Number(justMap[dia]) || 0
+      if (minJust > 0) metaMin = Math.max(0, metaMin - minJust)
       const result = calcularDiaPonto(porDia.get(dia) || [], metaMin)
       const horas = result.tempoLiquidoMin != null ? result.tempoLiquidoMin / 60 : 0
       const saldo = result.saldoMin != null ? result.saldoMin / 60 : null

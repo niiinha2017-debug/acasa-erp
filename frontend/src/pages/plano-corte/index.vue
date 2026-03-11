@@ -166,7 +166,9 @@ async function carregar() {
     const { data } = await api.get('/plano-corte')
     rows.value = Array.isArray(data) ? data : []
   } catch (e) {
-    notify.error('Erro ao listar serviços de corte.')
+    const msg = e?.response?.data?.message || e?.message || 'Erro ao listar serviços de corte.'
+    notify.error(msg)
+    console.error('[Serviço de Corte] Erro ao carregar:', e?.response?.data || e)
   } finally {
     loading.value = false
   }

@@ -1462,7 +1462,7 @@ function clicarAdicionarArquivo(categoria) {
 
   const input = categoria === 'IMAGEM_PDF' ? fileInputImagemPdf.value : fileInputAnexos.value
   if (!input) return notify.error('Input de arquivo não montado.')
-  input.click()
+  input?.click?.()
 }
 
 async function onPickArquivo(e, categoria) {

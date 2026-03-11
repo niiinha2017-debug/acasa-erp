@@ -1,31 +1,30 @@
 <template>
-  <nav class="menu-bar w-full min-h-[4rem] h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-700/80 shadow-sm fixed top-0 left-0 right-0 z-[9990] transition-colors duration-300 overflow-visible pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
-    <div class="h-full min-w-0 px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2">
-      
-      <!-- LOGO E MARCA (A Casa Móveis Planejados) -->
-      <RouterLink to="/agendamentos/loja" class="flex items-center gap-0 min-w-0 flex-shrink transition-opacity hover:opacity-90">
-        <!-- Bloco azul com "A" (como no logo) -->
-        <div class="w-8 h-10 sm:h-11 flex-shrink-0 bg-[#2563a8] flex items-center justify-center text-white font-bold text-lg sm:text-xl tracking-tight rounded-none shadow-sm" aria-hidden="true">
-          A
-        </div>
-        <div class="flex flex-col leading-tight pl-2 min-w-0">
-          <span class="font-bold text-sm sm:text-base tracking-tight text-slate-900 dark:text-white truncate">Casa</span>
-          <span class="hidden sm:block text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-600 dark:text-slate-400">Móveis planejados</span>
-          <span class="hidden sm:block text-[8px] font-medium text-slate-400 dark:text-slate-500 mt-0.5">v{{ appVersion }}</span>
-        </div>
-      </RouterLink>
+  <nav class="menu-bar w-full h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-700/80 shadow-sm fixed top-0 left-0 right-0 z-[9990] transition-colors duration-300 overflow-visible pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
+    <div class="h-full min-w-0 px-3 sm:px-4 md:px-5 flex items-center justify-between gap-4">
+      <!-- ESQUERDA: Logo + margem fixa + Pílula de menus -->
+      <div class="flex items-center justify-start min-w-0 flex-1">
+        <RouterLink to="/agendamentos/loja" class="flex items-center gap-0 min-w-0 flex-shrink-0 transition-opacity hover:opacity-90">
+          <div class="w-7 h-9 sm:h-10 flex-shrink-0 bg-[#2563a8] flex items-center justify-center text-white font-bold text-base sm:text-lg tracking-tight rounded-none shadow-sm" aria-hidden="true">
+            A
+          </div>
+          <div class="flex flex-col leading-tight pl-1.5 min-w-0">
+            <span class="font-bold text-[13px] sm:text-sm tracking-tight text-slate-900 dark:text-white truncate">Casa</span>
+            <span class="hidden sm:block text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-600 dark:text-slate-400">Móveis planejados</span>
+            <span class="hidden sm:block text-[8px] font-medium text-slate-400 dark:text-slate-500 mt-0.5">v{{ appVersion }}</span>
+          </div>
+        </RouterLink>
 
-      <!-- MENU DESKTOP/TABLET (oculto quando usuário está com senha provisória) -->
-      <div v-if="!deveOcultarMenu" class="hidden md:flex items-center gap-1 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-slate-50/80 dark:bg-slate-800/50 px-2 py-1.5 shadow-sm">
-        <template v-for="(section, index) in NAV_VISIVEL" :key="section.key">
-          <NavMenu
-            :label="section.label"
-            :items="section.items"
-          />
-        </template>
-      </div>
+        <!-- Pílula: espaço fixo ml-8 após o logo, depois os menus -->
+        <div v-if="!deveOcultarMenu" class="hidden md:flex items-center gap-x-4 ml-8 rounded-lg border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-800/50 px-4 py-2 shadow-sm">
+          <template v-for="(section, index) in NAV_VISIVEL" :key="section.key">
+            <NavMenu
+              :label="section.label"
+              :items="section.items"
+            />
+          </template>
+        </div>
 
-      <!-- BOTÃO MENU MOBILE (hamburger) – visível só quando o menu desktop está oculto -->
+      <!-- Botão menu mobile (hamburger) -->
       <button
         v-if="!deveOcultarMenu"
         type="button"
@@ -35,45 +34,31 @@
       >
         <i class="pi pi-bars text-lg"></i>
       </button>
+      </div>
 
-      <!-- NOME DO USUÁRIO LOGADO + AÇÕES -->
-      <div class="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+      <!-- DIREITA: Usuário + ícones -->
+      <div class="flex items-center gap-x-2 sm:gap-x-2.5 flex-shrink-0">
         <span
           v-if="nomeUsuarioLogado"
-          class="hidden sm:inline text-xs font-medium text-slate-500 dark:text-slate-400 truncate max-w-[100px] lg:max-w-[140px]"
+          class="hidden sm:inline text-[13px] font-medium text-slate-600 dark:text-slate-400 truncate max-w-[140px]"
           :title="nomeUsuarioLogado"
         >
           {{ nomeUsuarioLogado }}
         </span>
-        <!-- TOGGLE TEMA -->
         <button
           @click="toggleDark()" 
-          class="w-9 h-9 flex items-center justify-center text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/80 transition-all"
+          class="w-8 h-8 flex items-center justify-center text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700/80 transition-all"
           title="Alternar tema"
         >
-          <i :class="isDark ? 'pi pi-sun' : 'pi pi-moon'" class="text-sm"></i>
-        </button>
-
-        <!-- LOGOUT DESKTOP -->
-        <button
-          v-if="showUpdateButton"
-          type="button"
-          @click="verificarAtualizacao"
-          :disabled="checkingUpdate"
-          class="hidden lg:flex items-center justify-center gap-1.5 w-auto px-2.5 h-9 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-all text-xs font-medium"
-          title="Verificar e instalar atualização do aplicativo"
-        >
-          <i class="pi pi-download text-sm" aria-hidden="true"></i>
-          <span>{{ checkingUpdate ? 'Verificando...' : 'Atualizar app' }}</span>
+          <i :class="isDark ? 'pi pi-sun' : 'pi pi-moon'" class="text-xs"></i>
         </button>
         <button
           @click="handleLogout" 
-          class="hidden lg:flex items-center justify-center w-9 h-9 text-red-500 border border-red-200 dark:border-red-900/50 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
+          class="hidden lg:flex items-center justify-center w-8 h-8 text-red-500 border border-red-200 dark:border-red-900/50 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
           title="Sair"
         >
-          <i class="pi pi-power-off text-sm"></i>
+          <i class="pi pi-power-off text-xs"></i>
         </button>
-
       </div>
     </div>
 
@@ -109,9 +94,15 @@
                 <div v-if="!deveOcultarMenu" class="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 overscroll-contain">
                   <div v-for="section in NAV_VISIVEL" :key="section.key" class="space-y-2">
                     <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 px-3 mt-4 mb-2">{{ section.label }}</p>
-                    <template v-for="item in section.items.filter(i => !i.divider)" :key="item.to || item.label">
+                    <template v-for="item in section.items.filter(i => !i.divider)" :key="item.to || item.label || item.heading">
+                      <p
+                        v-if="item.heading"
+                        class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3 py-1.5 mt-2 first:mt-0"
+                      >
+                        {{ item.heading }}
+                      </p>
                       <button
-                        v-if="item.children?.length && filhosVisiveis(item).length"
+                        v-else-if="item.children?.length && filhosVisiveis(item).length"
                         type="button"
                         class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 text-sm active:bg-slate-200 dark:active:bg-slate-700 transition-colors cursor-pointer touch-manipulation min-w-0 text-left"
                         :class="[item.etapaKey ? getStatusHoverBgClass(item.etapaKey) : 'hover:bg-slate-100 dark:hover:bg-slate-800', { 'bg-slate-100 dark:bg-slate-800': drawerSubmenuItem === item }]"
@@ -165,17 +156,7 @@
             </div>
 
             <!-- FOOTER DO DRAWER -->
-            <div class="p-4 border-t border-slate-200 dark:border-slate-700 flex-shrink-0 space-y-2">
-              <button
-                v-if="showUpdateButton"
-                type="button"
-                @click="verificarAtualizacao"
-                :disabled="checkingUpdate"
-                class="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-blue-600 dark:text-blue-400 text-xs font-medium border border-blue-300 dark:border-blue-700 rounded-md hover:bg-blue-50 dark:hover:bg-blue-950/30 active:opacity-90 transition-colors touch-manipulation disabled:opacity-60"
-              >
-                <i class="pi pi-download text-xs"></i>
-                {{ checkingUpdate ? 'Verificando...' : 'Atualizar aplicativo' }}
-              </button>
+            <div class="p-4 border-t border-slate-200 dark:border-slate-700 flex-shrink-0">
               <button
                 type="button"
                 @click="handleLogout"
@@ -200,73 +181,9 @@ import { NAV_SCHEMA } from '@/services/navigation'
 import { PermissoesService } from '@/services/index'
 import { getStatusHoverBgClass } from '@/constantes'
 import storage from '@/utils/storage'
-import { notify } from '@/services/notify'
-import { checkAndroidUpdate } from '@/utils/check-android-update'
 import { useDark, useToggle } from '@vueuse/core'
 
 const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '?'
-
-const isTauri = computed(() => typeof window !== 'undefined' && (!!window.__TAURI__ || !!window.__TAURI_INTERNALS__))
-const isCapacitorAndroid = ref(false)
-const showUpdateButton = computed(() => isTauri.value || isCapacitorAndroid.value)
-const checkingUpdate = ref(false)
-
-async function verificarAtualizacao() {
-  if (!showUpdateButton.value || checkingUpdate.value) return
-  checkingUpdate.value = true
-  try {
-      if (isTauri.value) {
-      const currentVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '?'
-      try {
-        const res = await fetch('https://aplicativo.acasamarcenaria.com.br/updates/tauri/latest.json', { cache: 'no-store' })
-        if (res.ok) {
-          const data = await res.json()
-          const serverVersion = data?.version || '?'
-          notify.info(`Desktop: versão atual ${currentVersion} | servidor ${serverVersion}`)
-        }
-      } catch (_) {
-        // ignore erro de debug de versão
-      }
-
-      const { check } = await import('@tauri-apps/plugin-updater')
-      const update = await check()
-      if (update?.available) {
-        notify.success(`Atualização ${update.version} disponível. Baixando e instalando...`)
-        try {
-          await update.downloadAndInstall()
-          notify.success('Instalação concluída. Reiniciando o app...')
-          window.location.reload()
-        } catch (e) {
-          console.error('[Menu downloadAndInstall]', e)
-          notify.error('Download automático falhou. Abrindo a página para baixar manualmente.')
-          const tauri = window.__TAURI__ ?? window.__TAURI_INTERNALS__
-          const url = 'https://aplicativo.acasamarcenaria.com.br'
-          if (tauri?.opener?.open) await tauri.opener.open(url)
-          else if (typeof tauri?.opener?.openUrl === 'function') await tauri.opener.openUrl(url)
-          else if (tauri?.shell?.open) await tauri.shell.open(url)
-          else window.open(url, '_blank')
-        }
-      } else {
-        notify.success('Você está na versão mais recente.')
-      }
-    } else {
-      // Capacitor Android
-      const result = await checkAndroidUpdate()
-      if (!result.updateAvailable) {
-        notify.success('Você está na versão mais recente.')
-      }
-    }
-  } catch (err) {
-    console.error('[Menu verificarAtualizacao]', err)
-    const msg = err?.message || 'Não foi possível verificar atualização.'
-    notify.error(msg)
-    if (isTauri.value) {
-      notify.info('Baixe a versão mais recente em aplicativo.acasamarcenaria.com.br')
-    }
-  } finally {
-    checkingUpdate.value = false
-  }
-}
 
 const route = useRoute()
 const router = useRouter()
@@ -298,6 +215,7 @@ const menuSections = ref([])
 const SECTION_LABELS = {
   comercial: 'Comercial',
   producao: 'Produção',
+  servico_corte: 'Serviço de Corte',
   financeiro: 'Financeiro',
   cadastros: 'Cadastros',
   configuracoes: 'Configurações',
@@ -337,6 +255,7 @@ function filhosVisiveis(item) {
 const filtrarItens = (items = []) => {
   const filtrados = items.filter((i) => {
     if (i.divider) return true
+    if (i.heading) return true
     if (i.children?.length) return filhosVisiveis(i).length > 0
     if (!i.perm) return true
     return Array.isArray(i.perm) ? i.perm.some((p) => can(p)) : can(i.perm)
@@ -401,19 +320,8 @@ const carregarMenu = async () => {
   }
 }
 
-async function detectarCapacitorAndroid() {
-  if (typeof window === 'undefined' || window.__TAURI__) return
-  try {
-    const { Capacitor } = await import('@capacitor/core')
-    if (Capacitor.getPlatform() === 'android') isCapacitorAndroid.value = true
-  } catch {
-    // não é ambiente Capacitor
-  }
-}
-
 onMounted(() => {
   carregarMenu()
-  detectarCapacitorAndroid()
 })
 </script>
 

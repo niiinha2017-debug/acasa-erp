@@ -93,8 +93,8 @@ function fmtHoraLocalPonto(iso) {
 }
 
 /**
- * Motor de cálculo por dia: array de batidas, pares Saída[n]-Entrada[n], saldo = líquido - meta.
- * Se número de batidas for ÍMPAR, status Inconsistente e cálculo bloqueado.
+ * Motor de cálculo por dia: soma todos os intervalos entre ENTRADA e SAÍDA (em ordem cronológica).
+ * Ex.: 6 batidas (E, S, E, S, E, S) = 3 intervalos somados. Ímpar de batidas = Inconsistente.
  * @param {Array} registrosDoDia - Registros do dia (com data_hora, tipo ENTRADA/SAIDA, id, etc.)
  * @param {number} metaMin - Meta do dia em minutos (padrão 510 = 8h30)
  * @returns {{ batidas: Array<{id, data_hora, hora, tipo}>, tempoLiquidoMin: number|null, saldoMin: number|null, inconsistente: boolean }}
@@ -123,14 +123,19 @@ export function calcularDiaPonto(registrosDoDia = [], metaMin = JORNADA_META_MIN
     }
   }
 
+  // Soma cada par ENTRADA → SAÍDA em ordem cronológica (igual ao backend; suporta várias idas e voltas)
   let tempoLiquidoMin = 0
-  for (let i = 0; i < batidas.length; i += 2) {
-    const ent = batidas[i]
-    const sai = batidas[i + 1]
-    if (ent?.tipo === 'ENTRADA' && sai?.tipo === 'SAIDA') {
-      const entMin = hhmmParaMinutos(ent.hora)
-      const saiMin = hhmmParaMinutos(sai.hora)
+  let entradaPendente = null
+  for (const b of batidas) {
+    if (b.tipo === 'ENTRADA') {
+      entradaPendente = b
+      continue
+    }
+    if (b.tipo === 'SAIDA' && entradaPendente) {
+      const entMin = hhmmParaMinutos(entradaPendente.hora)
+      const saiMin = hhmmParaMinutos(b.hora)
       if (saiMin > entMin) tempoLiquidoMin += saiMin - entMin
+      entradaPendente = null
     }
   }
 

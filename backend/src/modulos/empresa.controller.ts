@@ -2,11 +2,10 @@
 import { Controller, Get, Put, Body, UseGuards } from '@nestjs/common';
 import { EmpresaService } from './empresa.service';
 
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 @Controller('configuracoes/empresa')
 export class EmpresaController {
   constructor(private readonly empresaService: EmpresaService) {}
@@ -14,7 +13,13 @@ export class EmpresaController {
   @Get('whatsapp-test')
   @Permissoes('configuracoes.empresa.ver')
   whatsappTest() {
-    return this.empresaService.testarWhatsAppToken();
+    return this.empresaService.testarEvolutionApi();
+  }
+
+  @Get('evolution-test')
+  @Permissoes('configuracoes.empresa.ver')
+  evolutionTest() {
+    return this.empresaService.testarEvolutionApi();
   }
 
   @Get()

@@ -15,11 +15,10 @@ import { CreateFornecedorDto } from './dto/criar-fornecedor.dto';
 import { UpdateFornecedorDto } from './dto/atualizar-fornecedor.dto';
 import { FornecedorService } from './fornecedores.service';
 
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 @Controller('fornecedor')
 export class FornecedorController {
   constructor(private readonly service: FornecedorService) {}

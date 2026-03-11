@@ -1,7 +1,6 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { PontoService } from './ponto.service';
 import { CriarConviteDto } from './dto/criar-convite.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
 
@@ -10,7 +9,7 @@ export class PontoAdminController {
   constructor(private readonly service: PontoService) {}
 
   // ERP: só admin gera link
-  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @UseGuards(PermissionsGuard)
   @Permissoes('ponto_convite.criar')
   @Post('convites')
   criarConvite(@Body() dto: CriarConviteDto) {

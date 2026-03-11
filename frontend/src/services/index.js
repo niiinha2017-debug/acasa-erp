@@ -342,6 +342,71 @@ export const FinanceiroService = {
   criarReceber: (dados) => api.post('/financeiro/contas-receber', dados),
   atualizarReceber: (id, dados) => api.put(`/financeiro/contas-receber/${id}`, dados),
   receber: (id, dados) => api.post(`/financeiro/contas-receber/${id}/receber`, dados),
+
+  /** DRE Mensal: receita, CPV (materiais + mão de obra), margem e lucro */
+  getDreMensal: (params = {}) =>
+    api.get('/relatorios/dre-mensal', { params }),
+}
+
+// --- Custos de Estrutura (Taxa de Máquina / Custo Hora Estrutura) ---
+export const CustosEstruturaService = {
+  getResumo: (params = {}) => api.get('/financeiro/custos-estrutura/resumo', { params }),
+  getConstantes: () => api.get('/financeiro/custos-estrutura/constantes'),
+  getGrafico: (params = {}) => api.get('/financeiro/custos-estrutura/grafico', { params }),
+  getByMesAno: (mes, ano) => api.get('/financeiro/custos-estrutura', { params: { mes, ano } }),
+  getFromDespesas: (mes, ano) => api.get('/financeiro/custos-estrutura/from-despesas', { params: { mes, ano } }),
+  upsert: (dados) => api.put('/financeiro/custos-estrutura', dados),
+}
+
+// --- DRE Detalhada (por Cliente / Ambiente) ---
+export const DreDetalhadaService = {
+  buscarClientes: (q) =>
+    api.get('/relatorios/dre-detalhada/clientes', { params: q ? { q } : {} }),
+  listarAmbientes: (clienteId) =>
+    api.get('/relatorios/dre-detalhada/ambientes', { params: { cliente_id: clienteId } }),
+  getDre: (params) =>
+    api.get('/relatorios/dre-detalhada/dre', { params }),
+
+  /** Resumo de prazos do mês: média dias negociação e fábrica (visão geral) */
+  getResumoPrazos: (params = {}) =>
+    api.get('/relatorios/dre-detalhada/resumo-prazos', { params }),
+
+  /** Dashboard consumo do projeto: área peças, retalhos, perda real (gráfico pizza + validação perda padrão) */
+  getDashboardProjeto: (projetoId) =>
+    api.get('/relatorios/dre-detalhada/dashboard-projeto', { params: { projeto_id: projetoId } }),
+
+  /** Gráficos de validação: composição custo, lucro por ambiente, meta produção */
+  getGraficosValidacao: (params = {}) =>
+    api.get('/relatorios/dre-detalhada/graficos-validacao', { params }),
+}
+
+// --- Comissão de Produtividade da Fábrica ---
+export const ComissaoProducaoService = {
+  getResumo: (params = {}) =>
+    api.get('/comissao-producao/resumo', { params }),
+}
+
+// --- Medição Fina (dados reais do ambiente antes da produção) ---
+export const MedicaoFinaService = {
+  resolverProjeto: (q) =>
+    api.get('/medicao-fina/projeto/resolver', { params: { q } }),
+  getProjetoDados: (projetoId) =>
+    api.get(`/medicao-fina/projeto/${projetoId}/dados`),
+  validarMedicao: (projetoId) =>
+    api.post(`/medicao-fina/projeto/${projetoId}/validar`),
+  listarAmbientes: (projetoId) =>
+    api.get(`/medicao-fina/projeto/${projetoId}/ambientes`),
+  /** Projetos do cliente (para buscar por cliente e depois escolher projeto) */
+  projetosPorCliente: (clienteId) =>
+    api.get(`/medicao-fina/projetos-por-cliente/${clienteId}`),
+  listarPorProjeto: (projetoId) =>
+    api.get(`/medicao-fina/projeto/${projetoId}`),
+  buscarPorProjetoAmbiente: (projetoId, ambiente) =>
+    api.get(`/medicao-fina/projeto/${projetoId}/ambiente`, { params: { ambiente } }),
+  salvar: (dados) => api.post('/medicao-fina', dados),
+  atualizar: (id, dados) => api.put(`/medicao-fina/${id}`, dados),
+  /** Totem: finalizar medição e enviar para engenharia (status Medido - Aguardando Técnico) */
+  finalizarTotem: (dados) => api.post('/medicao-fina/finalizar-totem', dados),
 }
 
 
@@ -356,7 +421,7 @@ export const ConfiguracaoService = {
     const { data } = await api.put('/configuracoes/empresa', dados)
     return data
   },
-  /** Testa se o token da API WhatsApp (.env) está válido na Meta */
+  /** Testa a conexão com a Evolution API (configuração em Configurações > Contato) */
   async whatsappTest() {
     const { data } = await api.get('/configuracoes/empresa/whatsapp-test')
     return data
@@ -380,6 +445,10 @@ export const PontoRelatorioService = {
 
   fechamentoFolha: (params = {}) =>
     api.get('/ponto/relatorio/fechamento', { params }),
+
+  /** Efetua pagamento de folha: cria despesa (SAÍDA, FOLHA) já paga. */
+  efetuarPagamentoFolha: (body) =>
+    api.post('/ponto/relatorio/fechamento/efetuar-pagamento', body),
 
   listarFeriadosConfig: (params = {}) =>
     api.get('/ponto/relatorio/feriados-config', { params }),
@@ -532,6 +601,41 @@ export const AgendaFabricaService = {
   /** Apaga do banco todos os agendamentos com status CANCELADO (limpeza). */
   purgeCancelados() {
     return api.post('/agenda-fabrica/purge-cancelados');
+  }
+};
+
+/** Totem Fábrica: tela para usuário Fábrica — tarefas Pendente/Em Produção, botões Play e Check. Inclui medições externas (agenda_loja) e ordens produção (agenda_fabrica). */
+export const TotemFabricaService = {
+  getTarefas(params = {}) {
+    return api.get('/totem-fabrica/tarefas', { params });
+  },
+  getConsumos(agendaFabricaId) {
+    return api.get(`/totem-fabrica/${agendaFabricaId}/consumos`);
+  },
+  /** tipo: 'agenda_fabrica' | 'agenda_loja' — agenda_loja = medição externa. */
+  play(idParaPlay, body = {}) {
+    return api.post(`/totem-fabrica/${idParaPlay}/play`, body);
+  },
+  /** tipo: 'agenda_fabrica' | 'agenda_loja'; sobras só para agenda_fabrica. */
+  check(idParaPlay, body = {}) {
+    return api.post(`/totem-fabrica/${idParaPlay}/check`, body);
+  },
+  /** Concluir Medição para Orçamento: salva medidas gerais + observações e fecha a tarefa. */
+  concluirMedicaoOrcamento(id, body = {}) {
+    return api.post(`/totem-fabrica/${id}/concluir-medicao-orcamento`, body);
+  }
+};
+
+/** Retalhos (sobras de material) — gestão e listagem por produto. */
+export const EstoqueRetalhoService = {
+  listar(produtoId) {
+    return api.get('/estoque/retalhos', { params: produtoId != null ? { produto_id: produtoId } : {} });
+  },
+  listarPorProduto(produtoId) {
+    return api.get(`/estoque/retalhos/por-produto/${produtoId}`);
+  },
+  criar(dto) {
+    return api.post('/estoque/retalhos', dto);
   }
 };
 

@@ -4,15 +4,22 @@ import {
   IsString,
   IsISO8601,
   MaxLength,
+  Min,
+  Max,
 } from 'class-validator';
 
 export class SalvarPontoJustificativaDto {
   @IsInt()
   funcionario_id: number;
 
-  // dia (você pode mandar "2026-01-10" ou ISO)
+  /** Data inicial (dia da justificativa ou início do período). */
   @IsISO8601()
   data: string;
+
+  /** Data final (opcional). Se informada e maior que data, cria uma justificativa por dia no período. */
+  @IsOptional()
+  @IsISO8601()
+  data_fim?: string;
 
   @IsString()
   @MaxLength(40)
@@ -26,4 +33,11 @@ export class SalvarPontoJustificativaDto {
   @IsOptional()
   @IsInt()
   arquivo_id?: number;
+
+  /** Minutos justificados (ex.: 60 = 1h). Reduz a meta do dia no cálculo do saldo. Null = justificativa de dia inteiro. */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(1440)
+  minutos_justificados?: number;
 }

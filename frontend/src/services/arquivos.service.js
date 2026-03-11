@@ -17,7 +17,12 @@ export const ArquivosService = {
     return api.get('/arquivos', { params })
   },
 
-  upload: ({ ownerType, ownerId, file, categoria, slotKey, prefixo, nomeBase } = {}) => {
+  /**
+   * Upload de arquivo.
+   * @param {Object} opts - ownerType, ownerId, file, categoria?, slotKey?, prefixo?, nomeBase?
+   * @param {Function} opts.onUploadProgress - (ev) => {} para barra de progresso (arquivos pesados)
+   */
+  upload: ({ ownerType, ownerId, file, categoria, slotKey, prefixo, nomeBase, onUploadProgress } = {}) => {
     if (!file) return Promise.reject(new Error('Arquivo não informado'))
 
     const owner_type = normUpper(ownerType)
@@ -40,9 +45,14 @@ export const ArquivosService = {
     // ✅ por último o arquivo
     fd.append('file', file)
 
-    return api.post('/arquivos/upload', fd, {
+    const config = {
       headers: { 'Content-Type': 'multipart/form-data' },
-    })
+    }
+    if (typeof onUploadProgress === 'function') {
+      config.onUploadProgress = onUploadProgress
+    }
+
+    return api.post('/arquivos/upload', fd, config)
   },
 
   baixarBlob: (id) => {

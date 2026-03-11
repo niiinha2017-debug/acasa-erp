@@ -33,6 +33,7 @@ export class ArquivosService {
   }
 
   private folderFromOwnerType(ownerType: string) {
+    if (ownerType === 'MEDICAO_ORCAMENTO') return 'medicao_orcamento';
     // PRODUTO -> produtos, ORCAMENTO -> orcamentos, EMPRESA -> empresas
     return ownerType.toLowerCase() + 's';
   }

@@ -15,13 +15,12 @@ import {
 import { AgendaService } from './agenda.service';
 import { CreateAgendaDto } from './dto/create-agenda.dto';
 import { UpdateAgendaDto } from './dto/update-agenda.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
 import { normalizarOrigemFluxo, normalizarSetorDestino } from './agenda-rules';
 import { PIPELINE_PRODUCAO } from '../../shared/constantes/pipeline-producao';
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 @Controller('agenda')
 export class AgendaController {
   constructor(private readonly agendaService: AgendaService) {}

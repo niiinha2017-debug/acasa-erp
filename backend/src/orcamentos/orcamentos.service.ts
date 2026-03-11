@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { WhatsAppService } from '../notifications/whatsapp.service';
+import { EvolutionService } from '../evolution/evolution.service';
 import { CreateOrcamentoDto } from './dto/create-orcamento.dto';
 import { UpdateOrcamentoDto } from './dto/update-orcamento.dto';
 import { CreateOrcamentoItemDto } from './dto/create-orcamento-item.dto';
@@ -17,7 +17,7 @@ import sizeOf from 'image-size';
 export class OrcamentosService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly whatsapp: WhatsAppService,
+    private readonly evolution: EvolutionService,
   ) {}
 
   // =========================================================
@@ -521,8 +521,8 @@ export class OrcamentosService {
   }
 
   /**
-   * Envia mensagem de texto por WhatsApp para o cliente do orçamento.
-   * Usa o número do cliente (whatsapp ou telefone). Requer WHATSAPP_API_TOKEN e WHATSAPP_PHONE_NUMBER_ID no .env.
+   * Envia mensagem de texto por WhatsApp para o cliente do orçamento via Evolution API.
+   * Usa o número do cliente (whatsapp ou telefone). Configure Evolution API em Configurações > Contato.
    */
   async enviarPorWhatsApp(orcId: number): Promise<{ ok: boolean; message?: string }> {
     const orc = await this.detalhar(orcId);
@@ -537,11 +537,16 @@ export class OrcamentosService {
     }
     const nome = String(cliente.nome_completo || cliente.razao_social || 'Cliente').trim();
     const texto = `Olá ${nome}! Seu orçamento #${orcId} está pronto. Qualquer dúvida estamos à disposição.`;
-    const result = await this.whatsapp.sendText(telefone, texto);
-    if (!result.ok) {
-      return { ok: false, message: result.error || 'Falha ao enviar WhatsApp.' };
+    try {
+      const result = await this.evolution.sendMessage(telefone, texto);
+      if (!result) {
+        return { ok: false, message: 'Evolution API não configurada. Configure em Configurações > Contato (URL, API Key e Nome da instância).' };
+      }
+      return { ok: true, message: 'Mensagem enviada por WhatsApp.' };
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Falha ao enviar WhatsApp.';
+      return { ok: false, message: msg };
     }
-    return { ok: true, message: 'Mensagem enviada por WhatsApp.' };
   }
 
   // =========================================================

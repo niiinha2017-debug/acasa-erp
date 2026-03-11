@@ -5,7 +5,7 @@
 
       <PageHeader
         title="Permissões de Acesso"
-        subtitle="Controle de níveis e segurança por usuário"
+        subtitle="Todos precisam estar logados. Aqui você libera ou bloqueia o que cada usuário pode acessar no sistema."
         icon="pi pi-lock"
         :show-back="false"
       >
@@ -36,40 +36,48 @@
           </div>
         </div>
 
-        <div class="flex-1 overflow-y-auto p-3 space-y-1 custom-scroll">
-          <button
-            v-for="row in usuariosFiltrados"
-            :key="row.id"
-            @click="selecionarUsuario(row)"
-            :class="[
-              'w-full p-3 rounded-xl transition-all text-left group border',
-              usuarioSelecionado?.id === row.id 
-                ? 'bg-white border-brand-primary/20 shadow-sm ring-1 ring-brand-primary/10' 
-                : 'bg-transparent border-transparent hover:bg-white hover:border-slate-200'
-            ]"
-          >
-            <div class="flex flex-col">
-              <span :class="['text-[11px] font-black uppercase tracking-tight', usuarioSelecionado?.id === row.id ? 'text-brand-primary' : 'text-slate-700']">
-                {{ row.nome }}
+        <div class="flex-1 overflow-y-auto p-3 space-y-4 custom-scroll">
+          <div v-for="grupo in usuariosPorSetor" :key="grupo.setor" class="space-y-1">
+            <div class="px-2 py-1.5 flex items-center gap-2">
+              <span class="w-1 h-4 bg-brand-primary/60 rounded-full"></span>
+              <span class="text-[9px] font-black uppercase tracking-widest text-slate-500">
+                {{ grupo.setor }}
               </span>
-              <span v-if="row.funcionario?.cargo" class="text-[9px] font-semibold text-slate-500 uppercase tracking-tighter mt-0.5">
-                {{ row.funcionario.cargo }}
-              </span>
-              <div class="flex items-center gap-2 mt-1">
-                <span class="text-[9px] font-bold uppercase text-slate-400 tracking-tighter">{{ row.funcionario?.setor || row.setor || 'Geral' }}</span>
-<span :class="[
-  'w-1 h-1 rounded-full',
-  String(row.status || '').toUpperCase() === 'ATIVO'
-    ? 'bg-emerald-400'
-    : String(row.status || '').toUpperCase() === 'PENDENTE'
-      ? 'bg-amber-400'
-      : 'bg-rose-400'
-]"></span>
-
-
-              </div>
             </div>
-          </button>
+            <button
+              v-for="row in grupo.usuarios"
+              :key="row.id"
+              @click="selecionarUsuario(row)"
+              :class="[
+                'w-full p-3 rounded-xl transition-all text-left group border',
+                usuarioSelecionado?.id === row.id
+                  ? 'bg-white border-brand-primary/20 shadow-sm ring-1 ring-brand-primary/10'
+                  : 'bg-transparent border-transparent hover:bg-white hover:border-slate-200'
+              ]"
+            >
+              <div class="flex flex-col">
+                <span :class="['text-[11px] font-black uppercase tracking-tight', usuarioSelecionado?.id === row.id ? 'text-brand-primary' : 'text-slate-700']">
+                  {{ row.nome }}
+                </span>
+                <span v-if="row.funcionario?.cargo" class="text-[9px] font-semibold text-slate-500 uppercase tracking-tighter mt-0.5">
+                  {{ row.funcionario.cargo }}
+                </span>
+                <div class="flex items-center gap-2 mt-1">
+                  <span :class="[
+                    'w-1 h-1 rounded-full shrink-0',
+                    String(row.status || '').toUpperCase() === 'ATIVO'
+                      ? 'bg-emerald-400'
+                      : String(row.status || '').toUpperCase() === 'PENDENTE'
+                        ? 'bg-amber-400'
+                        : 'bg-rose-400'
+                  ]"></span>
+                  <span class="text-[9px] font-bold uppercase text-slate-400 tracking-tighter">
+                    {{ String(row.status || '').toUpperCase() === 'ATIVO' ? 'Ativo' : String(row.status || '').toUpperCase() === 'PENDENTE' ? 'Pendente' : 'Inativo' }}
+                  </span>
+                </div>
+              </div>
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -84,6 +92,12 @@
         </div>
 
         <template v-else>
+          <div class="px-6 pt-4 pb-2 border-b border-slate-100 bg-slate-50/50">
+            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-2">
+              <i class="pi pi-info-circle text-brand-primary"></i>
+              Acesso ao sistema exige login. Abaixo você define o que este usuário pode ver e fazer (liberar ou bloquear por permissão).
+            </p>
+          </div>
           <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
             <div class="flex items-center gap-3">
               <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
@@ -251,6 +265,10 @@ const MAPA_PERMISSOES = computed(() => {
   return grupos
 })
 
+// Nome do setor do usuário (funcionario.setor ou usuário)
+const setorDoUsuario = (u) =>
+  String(u?.funcionario?.setor || u?.setor || '').trim() || 'Geral'
+
 // Filtro usuários
 const usuariosFiltrados = computed(() => {
   const termo = String(filtroUsuarios.value || '').toLowerCase().trim()
@@ -259,6 +277,23 @@ const usuariosFiltrados = computed(() => {
     String(u?.nome || '').toLowerCase().includes(termo) ||
     String(u?.usuario || '').toLowerCase().includes(termo)
   )
+})
+
+// Usuários agrupados por setor (ordenado: setores A–Z, "Geral" por último)
+const usuariosPorSetor = computed(() => {
+  const lista = usuariosFiltrados.value
+  const porSetor = {}
+  for (const u of lista) {
+    const setor = setorDoUsuario(u)
+    if (!porSetor[setor]) porSetor[setor] = []
+    porSetor[setor].push(u)
+  }
+  const setores = Object.keys(porSetor).sort((a, b) => {
+    if (a === 'Geral') return 1
+    if (b === 'Geral') return -1
+    return a.localeCompare(b, 'pt-BR')
+  })
+  return setores.map((setor) => ({ setor, usuarios: porSetor[setor] }))
 })
 
 // Funções de API

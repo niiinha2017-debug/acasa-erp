@@ -1,11 +1,13 @@
 // app.module.ts
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { join } from 'path';
 import { ScheduleModule } from '@nestjs/schedule';
 
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { MailModule } from './mail/mail.module';
 import { ClientesModule } from './clientes/clientes.module';
@@ -30,6 +32,11 @@ import { ClausulasModule } from './clausulas/clausulas.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { RelatoriosModule } from './relatorios/relatorios.module';
+import { ComissaoProducaoModule } from './comissao-producao/comissao-producao.module';
+import { MedicaoFinaModule } from './medicao-fina/medicao-fina.module';
+import { EvolutionModule } from './evolution/evolution.module';
+import { EstoqueRetalhoModule } from './estoque-retalho/estoque-retalho.module';
 
 @Module({
   imports: [
@@ -89,6 +96,15 @@ import { NotificationsModule } from './notifications/notifications.module';
     AnalyticsModule,
     WebhooksModule,
     NotificationsModule,
+    RelatoriosModule,
+    ComissaoProducaoModule,
+    MedicaoFinaModule,
+    EvolutionModule,
+    EstoqueRetalhoModule,
+  ],
+  providers: [
+    // Guard global: todas as rotas exigem JWT; rotas com @Public() continuam acessíveis sem token
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
 })
 export class AppModule {}

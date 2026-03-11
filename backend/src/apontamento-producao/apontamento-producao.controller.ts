@@ -14,11 +14,10 @@ import {
 import { ApontamentoProducaoService } from './apontamento-producao.service';
 import { CreateApontamentoProducaoDto } from './dto/create-apontamento-producao.dto';
 import { UpdateApontamentoProducaoDto } from './dto/update-apontamento-producao.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 @Controller('apontamento-producao')
 export class ApontamentoProducaoController {
   constructor(private readonly service: ApontamentoProducaoService) {}

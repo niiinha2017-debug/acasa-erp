@@ -56,6 +56,9 @@ async function main() {
     { chave: 'dashboard.visualizar', descricao: 'Acesso ao hub de relatorios' },
     // Acompanhamento de status – tela /relatorios/acompanhamento-status
     { chave: 'relatorios.acompanhamento_status.ver', descricao: 'Acompanhamento de status' },
+    { chave: 'relatorios.dre_mensal.ver', descricao: 'DRE Mensal' },
+    { chave: 'relatorios.dre_detalhada.ver', descricao: 'DRE Detalhada por Cliente/Ambiente' },
+    { chave: 'comissao_producao.ver', descricao: 'Comissão de Produtividade da Fábrica' },
     { chave: 'pendente.visualizar', descricao: 'Acesso a tela de primeiro acesso' },
     { chave: 'alterar-senha', descricao: 'Acesso a alterar senha' },
 
@@ -164,6 +167,9 @@ async function main() {
     { chave: 'contas_receber.criar', descricao: 'Criar contas a receber' },
     { chave: 'contas_receber.editar', descricao: 'Editar contas a receber' },
     { chave: 'contas_receber.excluir', descricao: 'Excluir contas a receber' },
+
+    { chave: 'custos_estrutura.ver', descricao: 'Visualizar Custos de Estrutura (Taxa de Máquina)' },
+    { chave: 'custos_estrutura.editar', descricao: 'Editar Custos de Estrutura' },
 
     { chave: 'despesas.ver', descricao: 'Visualizar despesas' },
     { chave: 'despesas.criar', descricao: 'Criar despesas' },

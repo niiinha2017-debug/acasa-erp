@@ -17,11 +17,10 @@ import { ProdutosService } from './produtos.service';
 import { CreateProdutoDto } from './dto/criar-produto.dto';
 import { UpdateProdutoDto } from './dto/atualizar-produto.dto';
 import { BuscarProdutoDto } from './dto/buscar-produto.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 @Controller('produtos')
 export class ProdutosController {
   constructor(private readonly produtosService: ProdutosService) {}

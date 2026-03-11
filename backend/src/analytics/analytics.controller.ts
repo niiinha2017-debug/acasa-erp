@@ -1,5 +1,4 @@
 import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
 import { PontoRelatorioService } from '../ponto/relatorio/ponto-relatorio.service';
@@ -8,7 +7,7 @@ import { FeriadosService } from './feriados.service';
 import { QuickChartService } from './quickchart.service';
 
 @Controller('analytics')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 export class AnalyticsController {
   constructor(
     private readonly service: AnalyticsService,

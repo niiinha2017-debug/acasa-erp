@@ -17,7 +17,6 @@ import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import * as fs from 'fs';
 
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
 import { ArquivosService } from './arquivos.service';
@@ -43,7 +42,7 @@ function todayYmd() {
   return `${y}-${m}-${day}`;
 }
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 @Controller('arquivos')
 export class ArquivosController {
   constructor(private readonly arquivosService: ArquivosService) {}

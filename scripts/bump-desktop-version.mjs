@@ -1,3 +1,8 @@
+/**
+ * Bump de versão: Desktop (Tauri) + frontend + ERP Android.
+ * --include-ponto: também atualiza frontend-ponto/package.json e Ponto Android (versionCode + versionName).
+ * Use UM comando só: version:desktop-ponto:bump atualiza tudo; não rode version:desktop:bump em seguida.
+ */
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -10,6 +15,7 @@ const paths = {
   frontendLock: path.join(root, 'frontend', 'package-lock.json'),
   androidBuildGradle: path.join(root, 'frontend', 'android', 'app', 'build.gradle'),
   pontoPkg: path.join(root, 'frontend-ponto', 'package.json'),
+  pontoAndroidBuildGradle: path.join(root, 'frontend-ponto', 'android', 'app', 'build.gradle'),
 }
 
 function readJson(file) {
@@ -94,18 +100,38 @@ if (includePonto && fs.existsSync(paths.pontoPkg)) {
   console.log('frontend-ponto/package.json ->', version)
 }
 
-// Android: incrementa versionCode (obrigatório para nova versão na Play Store) — só no bump, não no --sync
+// Atualiza versionCode (e opcionalmente versionName) em um build.gradle
+function bumpAndroidGradle(gradlePath, version, options = {}) {
+  if (!fs.existsSync(gradlePath)) return
+  let src = fs.readFileSync(gradlePath, 'utf8')
+  const versionCodeMatch = src.match(/versionCode\s+(\d+)/)
+  if (!versionCodeMatch) return
+  const prevCode = Number(versionCodeMatch[1])
+  const nextCode = prevCode + 1
+  src = src.replace(/versionCode\s+\d+/, `versionCode ${nextCode}`)
+  if (options.setVersionName && version) {
+    src = src.replace(/versionName\s+"[^"]*"/, `versionName "${version}"`)
+  }
+  fs.writeFileSync(gradlePath, src, 'utf8')
+  return { prevCode, nextCode }
+}
+
+// Android ERP: incrementa versionCode (obrigatório para nova versão na Play Store) — só no bump, não no --sync
 if (!syncOnly && fs.existsSync(paths.androidBuildGradle)) {
-  const gradleSrc = fs.readFileSync(paths.androidBuildGradle, 'utf8')
-  const versionCodeMatch = gradleSrc.match(/versionCode\s+(\d+)/)
-  if (versionCodeMatch) {
-    const prevCode = Number(versionCodeMatch[1])
-    const nextCode = prevCode + 1
-    const gradleUpdated = gradleSrc.replace(/versionCode\s+\d+/, `versionCode ${nextCode}`)
-    fs.writeFileSync(paths.androidBuildGradle, gradleUpdated, 'utf8')
-    console.log(`Android versionCode: ${prevCode} -> ${nextCode}`)
+  const result = bumpAndroidGradle(paths.androidBuildGradle, version)
+  if (result) console.log(`Android ERP versionCode: ${result.prevCode} -> ${result.nextCode}`)
+}
+
+// Android Ponto: mesma versão e versionCode quando --include-ponto
+if (includePonto && !syncOnly && fs.existsSync(paths.pontoAndroidBuildGradle)) {
+  const result = bumpAndroidGradle(paths.pontoAndroidBuildGradle, version, { setVersionName: true })
+  if (result) {
+    console.log(`Android Ponto versionCode: ${result.prevCode} -> ${result.nextCode}, versionName -> ${version}`)
   }
 }
 
 const scope = includePonto ? 'Desktop + ERP Android + Ponto' : 'Desktop + ERP Android'
 console.log(`Versão (${scope}): ${current.major}.${current.minor}.${current.patch} -> ${version}`)
+if (includePonto) {
+  console.log('(Use só este comando para release completo; não rode version:desktop:bump em seguida.)')
+}

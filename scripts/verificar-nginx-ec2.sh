@@ -22,3 +22,11 @@ sudo grep -A2 "location /" /etc/nginx/conf.d/*.conf 2>/dev/null || true
 echo ""
 echo "=== 5. Arquivos em /var/www/aplicativo"
 ls /var/www/aplicativo/ | head -20
+
+echo ""
+echo "=== 6. Ponto (ponto.acasamarcenaria.com.br): server_name e root"
+sudo grep -E "server_name|root " /etc/nginx/nginx.conf /etc/nginx/conf.d/*.conf 2>/dev/null | grep -E "ponto|/var/www/ponto" || echo "Nenhum vhost de ponto encontrado - pode ser a causa da página nginx padrão."
+
+echo ""
+echo "=== 7. Conteúdo em /var/www/ponto"
+ls -la /var/www/ponto/ 2>/dev/null || echo "FALTA: diretório /var/www/ponto ou vazio (rode deploy do frontend-ponto)."

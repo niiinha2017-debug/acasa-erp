@@ -141,6 +141,7 @@ model Cliente {
   agendamentos_loja    agenda_loja[]
   agendamentos_fabrica agenda_fabrica[]
   projetos     projetos[]
+  medicoes_orcamento   medicao_orcamento[]
 
   @@unique([cpf])
   @@unique([cnpj])
@@ -174,16 +175,16 @@ model orcamentos {
   itens       orcamento_itens[]
   agendamentos_loja agenda_loja[]
   agendamento_fabrica agenda_fabrica?
+  medicoes_orcamento medicao_orcamento[]
 
   // ✅ agora é 0..1 venda por orçamento
   venda    vendas?
-  // Adicione projetos[] aqui
   projetos projetos[]
 
   @@index([cliente_id])
   @@index([vendedor_responsavel_id])
   @@map("orcamentos")
- }
+}
 
 model orcamento_itens {
   id           Int        @id @default(autoincrement())
@@ -229,6 +230,7 @@ model vendas {
   // (mantém seus campos calculados)
   valor_bruto Decimal @default(0.00) @db.Decimal(10, 2)
 
+  // Juros e taxas de cartão: salvos na venda (não em Despesas)
   taxa_pagamento_percentual_aplicado Decimal? @db.Decimal(5, 2)
   valor_taxa_pagamento               Decimal  @default(0.00) @db.Decimal(10, 2)
 
@@ -365,6 +367,7 @@ model vendas_pagamentos {
   @@map("vendas_pagamentos")
  }
 
+// Formas de pagamento da venda: juros e taxas de cartão ficam aqui e em vendas.valor_taxa_pagamento
 model vendas_formas_pagamento {
   id Int @id @default(autoincrement())
 
@@ -510,6 +513,7 @@ model produtos {
 
   plano_corte_consumo plano_corte_consumo[]
   compras_itens       compras_itens[]
+  retalhos            estoque_retalho[]
 
   @@index([fornecedor_id])
   @@map("produtos")
@@ -798,6 +802,7 @@ model projetos {
 
   agendamentos_loja    agenda_loja[]
   agendamentos_fabrica agenda_fabrica[]
+  medicoes_fina        medicao_fina[]
 
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
@@ -805,6 +810,65 @@ model projetos {
   @@index([cliente_id])
   @@index([status_atual])
   @@map("projetos")
+}
+
+// Medição Fina: dados reais do ambiente antes da produção (por projeto + ambiente)
+model medicao_fina {
+  id         Int      @id @default(autoincrement())
+  projeto_id Int
+  projeto    projetos @relation(fields: [projeto_id], references: [id], onDelete: Cascade)
+
+  nome_ambiente String @db.VarChar(120)
+
+  // Variáveis críticas (cm)
+  altura_cm    Decimal? @db.Decimal(10, 2)
+  largura_cm   Decimal? @db.Decimal(10, 2)
+  profundidade_cm Decimal? @db.Decimal(10, 2)
+  // Medidas do projeto Promob (para conferência vs medida real)
+  altura_promob_cm    Decimal? @db.Decimal(10, 2)
+  largura_promob_cm   Decimal? @db.Decimal(10, 2)
+  profundidade_promob_cm Decimal? @db.Decimal(10, 2)
+  prumo_ok     Boolean?  // estado da parede: prumo
+  esquadro_ok  Boolean?  // estado da parede: esquadro
+
+  // Checklist interferências (JSON array de chaves: AGUA, GAS, ESGOTO, TOMADAS, AR_CONDICIONADO, RODAPES, GESSO)
+  interferencias Json?
+
+  // Checklist de conferência (obra pronta para medição)
+  conferencia_eletrica_ok   Boolean?
+  conferencia_hidraulica_ok Boolean?
+  conferencia_gas_ok        Boolean?
+  conferencia_alvenaria_ok  Boolean?
+
+  observacoes_montador String? @db.Text
+
+  concluida Boolean @default(false)
+  criado_em DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  @@unique([projeto_id, nome_ambiente])
+  @@index([projeto_id])
+  @@map("medicao_fina")
+}
+
+// Medição para Orçamento: visita no cliente, medidas gerais + fotos + observações (alimenta criação de orçamento)
+model medicao_orcamento {
+  id            Int       @id @default(autoincrement())
+  agenda_loja_id Int      @unique
+  agenda_loja   agenda_loja @relation(fields: [agenda_loja_id], references: [id], onDelete: Cascade)
+  cliente_id    Int?
+  cliente       Cliente?  @relation(fields: [cliente_id], references: [id], onDelete: SetNull)
+  orcamento_id  Int?
+  orcamento     orcamentos? @relation(fields: [orcamento_id], references: [id], onDelete: SetNull)
+  medidas_gerais String?  @db.Text
+  observacoes   String?   @db.Text
+  concluida     Boolean   @default(false)
+  criado_em     DateTime  @default(now())
+  atualizado_em DateTime  @updatedAt
+
+  @@index([cliente_id])
+  @@index([orcamento_id])
+  @@map("medicao_orcamento")
 }
 
 // ---------- Agenda Loja (setor LOJA) ----------
@@ -835,9 +899,14 @@ model agenda_loja {
   status_source String?
   status_aplicado_em DateTime?
 
+  // Totem: custo coletivo (tempo total × custo hora médio fábrica) e tempo total para auditoria
+  tempo_total_tarefa   Decimal? @db.Decimal(8, 2)
+  custo_tarefa_fabrica Decimal? @db.Decimal(12, 2)
+
   equipe agenda_loja_funcionarios[]
   apontamentos agenda_loja_apontamentos[]
   apontamentos_producao apontamento_producao[]
+  medicao_orcamento medicao_orcamento?
 
   criado_por_usuario_id Int?
   criado_por_usuario     usuarios? @relation("AgendaLojaCriadoPor", fields: [criado_por_usuario_id], references: [id], onDelete: SetNull)
@@ -926,9 +995,20 @@ model agenda_fabrica {
   // Ambientes desta tarefa (nomes). Vazio = todos da venda.
   ambientes_selecionados Json?
 
+  // Totem: custo coletivo (tempo total × custo hora médio fábrica) e tempo total para auditoria
+  tempo_total_tarefa   Decimal? @db.Decimal(8, 2)
+  custo_tarefa_fabrica Decimal? @db.Decimal(12, 2)
+
+  // Consumo e desvio (área peças Promob + perda padrão → consumo estimado; consumo real = peças + retalhos; perda real para DRE)
+  area_pecas_m2      Decimal? @db.Decimal(12, 4)
+  consumo_estimado_m2 Decimal? @db.Decimal(12, 4)
+  consumo_real_m2    Decimal? @db.Decimal(12, 4)
+  perda_real_m2     Decimal? @db.Decimal(12, 4)
+
   equipe agenda_fabrica_funcionarios[]
   apontamentos agenda_fabrica_apontamentos[]
   apontamentos_producao apontamento_producao[]
+  retalhos estoque_retalho[]
 
   criado_por_usuario_id Int?
   criado_por_usuario     usuarios? @relation("AgendaFabricaCriadoPor", fields: [criado_por_usuario_id], references: [id], onDelete: SetNull)
@@ -952,6 +1032,24 @@ model agenda_fabrica {
   @@index([criado_por_usuario_id])
   @@index([alterado_por_usuario_id])
   @@map("agenda_fabrica")
+}
+
+model estoque_retalho {
+  id                Int      @id @default(autoincrement())
+  produto_id        Int
+  agenda_fabrica_id Int?
+  largura_mm        Int
+  comprimento_mm    Int
+  quantidade_m2     Decimal  @db.Decimal(10, 4)
+  imagem_url        String?  @db.VarChar(500)
+  criado_em         DateTime @default(now())
+
+  produto        produtos        @relation(fields: [produto_id], references: [id], onDelete: Restrict)
+  agenda_fabrica agenda_fabrica? @relation(fields: [agenda_fabrica_id], references: [id], onDelete: SetNull)
+
+  @@index([produto_id])
+  @@index([agenda_fabrica_id])
+  @@map("estoque_retalho")
 }
 
 model agenda_fabrica_funcionarios {
@@ -1113,6 +1211,25 @@ model titulos_financeiros {
   @@map("titulos_financeiros")
 }
 
+// ---------- Custos de Estrutura (Taxa de Máquina / Custo Hora Estrutura) ----------
+// Um registro por mês/ano: ocupação, operacional, manutenção; custo_hora_estrutura = total / horas_uteis_mes
+model custos_estrutura_mensal {
+  id                          Int      @id @default(autoincrement())
+  mes                         Int
+  ano                         Int
+  custo_ocupacao              Decimal  @default(0) @db.Decimal(12, 2)   // Aluguel, IPTU, Seguros
+  custo_operacional           Decimal  @default(0) @db.Decimal(12, 2)   // Energia, Água, Internet
+  custo_manutencao_depreciacao Decimal @default(0) @db.Decimal(12, 2) // Afiação, reparos, desgaste
+  horas_uteis_mes             Decimal  @db.Decimal(8, 2)               // Capacidade instalada (horas)
+  custo_hora_estrutura        Decimal  @default(0) @db.Decimal(10, 4)  // (soma custos) / horas_uteis_mes
+  criado_em                   DateTime @default(now())
+  atualizado_em               DateTime @updatedAt
+
+  @@unique([mes, ano])
+  @@index([mes, ano])
+  @@map("custos_estrutura_mensal")
+}
+
 model contas_receber {
   id Int @id @default(autoincrement())
 
@@ -1271,7 +1388,10 @@ model Empresa {
   regime_tributario   String?
   instagram_url       String?
   whatsapp_url        String?
-  whatsapp_api_token  String?   // Token da API oficial WhatsApp (Meta) para envio programático
+  whatsapp_api_token  String?   // (legado) Token Meta – uso descontinuado; use Evolution API
+  evolution_api_url   String?   // URL da Evolution API (ex: http://localhost:8080)
+  evolution_api_key   String?   // API Key da Evolution API
+  evolution_instance_name String? // Nome da instância WhatsApp (ex: acasa-erp)
   site                String?
   cor_marca           String?  @db.VarChar(7)
   logradouro    String?
@@ -1297,6 +1417,12 @@ model Empresa {
   // Quando o vendedor não preenche "Representante da venda": true = usar Sócio no contrato; false = usar Representante Legal
   contrato_usar_socio_quando_vazio Boolean? @default(true)
   representante_estado_civil  String?
+  // % de perda padrão para cálculo de desperdício (Material Comprado - Usado - Retalhos = Perda Real)
+  perda_padrao_percentual     Decimal? @db.Decimal(5, 2)
+  // Valor da hora do comercial (R$/h) para custo do tempo de negociação na DRE Detalhada
+  valor_hora_comercial        Decimal? @db.Decimal(10, 2)
+  // Horas úteis da fábrica no mês (base de cálculo para Taxa de Máquina / Custos de Estrutura e timeline). Ex.: 220 se os funcionários trabalham 220h/mês.
+  horas_uteis_mes_fabrica     Decimal? @db.Decimal(8, 2)
   updated_at    DateTime @updatedAt
 
   @@map("empresa") // Nome da tabela no banco de dados
@@ -1433,6 +1559,9 @@ model ponto_justificativas {
   tipo String @db.VarChar(40)
 
   descricao String? @db.VarChar(255)
+
+  // Minutos justificados (ex: 60 = 1h). Reduz a meta do dia. Null = dia inteiro.
+  minutos_justificados Int?
 
   arquivo_id Int?
   arquivo    arquivos? @relation(fields: [arquivo_id], references: [id], onDelete: SetNull)

@@ -9,7 +9,6 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
-import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../auth/permissions.guard';
 import { Permissoes } from '../../auth/permissoes.decorator';
 
@@ -17,7 +16,7 @@ import { PontoJustificativasService } from './ponto-justificativas.service';
 import { SalvarPontoJustificativaDto } from '../justificativa/salvar-ponto-justificativa.dto';
 
 @Controller('ponto/justificativas')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 export class PontoJustificativasController {
   constructor(private readonly service: PontoJustificativasService) {}
 
@@ -27,8 +26,10 @@ export class PontoJustificativasController {
     @Query('funcionario_id') funcionario_id?: string,
     @Query('mes') mes?: string,
     @Query('ano') ano?: string,
+    @Query('data_ini') data_ini?: string,
+    @Query('data_fim') data_fim?: string,
   ) {
-    return this.service.listar({ funcionario_id, mes, ano });
+    return this.service.listar({ funcionario_id, mes, ano, data_ini, data_fim });
   }
 
   @Put()

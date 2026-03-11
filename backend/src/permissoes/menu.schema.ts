@@ -59,6 +59,12 @@ export const MENU_SECTIONS: MenuSection[] = [
         icon: 'pi-calendar-clock',
         perm: 'agendamentos.vendas',
       },
+      {
+        label: 'Medição Fina',
+        to: '/producao/medicao-fina',
+        icon: 'pi-ruler',
+        perm: 'agendamentos.vendas',
+      },
     ],
   },
   {
@@ -130,6 +136,12 @@ export const MENU_SECTIONS: MenuSection[] = [
         to: '/financeiro/contas-receber',
         icon: 'pi-arrow-up-right',
         perm: 'contas_receber.ver',
+      },
+      {
+        label: 'Custos de Estrutura',
+        to: '/financeiro/custos-estrutura',
+        icon: 'pi-building',
+        perm: 'custos_estrutura.ver',
       },
       { divider: true, label: '', to: '' },
       {
@@ -223,6 +235,24 @@ export const MENU_SECTIONS: MenuSection[] = [
         to: '/relatorios',
         icon: 'pi-chart-bar',
         perm: 'dashboard.visualizar',
+      },
+      {
+        label: 'DRE Mensal',
+        to: '/relatorios/dre-mensal',
+        icon: 'pi-chart-line',
+        perm: 'relatorios.dre_mensal.ver',
+      },
+      {
+        label: 'DRE Detalhada',
+        to: '/relatorios/dre-detalhada',
+        icon: 'pi-chart-pie',
+        perm: 'relatorios.dre_detalhada.ver',
+      },
+      {
+        label: 'Comissão de Produção',
+        to: '/comissao-producao',
+        icon: 'pi-percentage',
+        perm: 'comissao_producao.ver',
       },
     ],
   },

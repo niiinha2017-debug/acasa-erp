@@ -16,11 +16,10 @@ import { CreatePlanoCorteDto } from '../dto/create-plano-corte.dto';
 import { UpdatePlanoCorteDto } from '../dto/update-plano-corte.dto';
 import { PIPELINE_PLANO_CORTE } from '../../shared/constantes/pipeline-plano-corte';
 
-import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../auth/permissions.guard';
 import { Permissoes } from '../../auth/permissoes.decorator';
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 @Controller('plano-corte')
 export class PlanoCorteController {
   constructor(private readonly service: PlanoCorteService) {}

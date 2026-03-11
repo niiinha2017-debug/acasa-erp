@@ -20,11 +20,10 @@ import { UpdateOrcamentoDto } from './dto/update-orcamento.dto';
 import { CreateOrcamentoItemDto } from './dto/create-orcamento-item.dto';
 import { UpdateOrcamentoItemDto } from './dto/update-orcamento-item.dto';
 
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 @Controller('orcamentos')
 export class OrcamentosController {
   constructor(private readonly service: OrcamentosService) {}

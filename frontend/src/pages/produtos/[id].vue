@@ -155,7 +155,7 @@
           </div>
           <div class="relative flex justify-center">
             <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
-              Imagem
+              Imagem principal e galeria
             </span>
           </div>
         </div>
@@ -190,15 +190,82 @@
             <input ref="imagemInput" type="file" class="hidden" accept="image/*" @change="onImagemPick" />
           </div>
 
-          <div class="col-span-12 md:col-span-7 flex items-end">
-            <div class="w-full rounded-2xl border border-border-ui bg-slate-50/70 dark:bg-slate-800/30 p-5">
-              <p class="text-xs uppercase tracking-[0.14em] text-slate-500 font-semibold mb-2">Observacao</p>
+          <div class="col-span-12 md:col-span-7 space-y-3">
+            <div class="rounded-2xl border border-border-ui bg-slate-50/70 dark:bg-slate-800/30 p-5">
+              <p class="text-xs uppercase tracking-[0.14em] text-slate-500 font-semibold mb-2">Imagem principal</p>
               <p class="text-sm text-slate-600 dark:text-slate-300">
-                Clique na area ao lado para anexar uma imagem. Em novo produto, a imagem sera enviada ao cadastrar.
+                Clique na área ao lado para anexar a imagem principal (usada no card e na listagem).
               </p>
             </div>
+            <!-- Galeria: fotos adicionais (apenas em edição) -->
+            <div v-if="isEdit && produtoId" class="rounded-2xl border border-border-ui bg-slate-50/70 dark:bg-slate-800/30 p-4">
+              <p class="text-xs uppercase tracking-[0.14em] text-slate-500 font-semibold mb-2">Galeria de fotos</p>
+              <div class="flex flex-wrap gap-2 items-start">
+                <div
+                  v-for="arq in galeriaFotos"
+                  :key="arq.id"
+                  class="relative group w-20 h-20 rounded-xl overflow-hidden border border-border-ui bg-slate-100 dark:bg-slate-700 shrink-0"
+                >
+                  <img :src="arq.url" class="w-full h-full object-cover" alt="" />
+                  <button
+                    v-if="can('produtos.editar')"
+                    type="button"
+                    class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity"
+                    @click="removerFotoGaleria(arq)"
+                  >
+                    <i class="pi pi-trash text-sm" />
+                  </button>
+                </div>
+                <label
+                  v-if="can('produtos.editar')"
+                  class="w-20 h-20 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center cursor-pointer hover:border-brand-primary hover:bg-brand-primary/5 transition-colors shrink-0"
+                >
+                  <i class="pi pi-plus text-2xl text-text-muted" />
+                  <input type="file" class="hidden" accept="image/*" @change="onGaleriaPick" />
+                </label>
+              </div>
+              <p class="text-[10px] text-slate-500 mt-2">Fotos adicionais do produto (miniatura chapa/ferragem).</p>
+            </div>
+
+            <!-- Retalhos (sobras) vinculados a este material -->
+            <div v-if="isEdit && produtoId" class="col-span-12 rounded-2xl border border-border-ui bg-slate-50/70 dark:bg-slate-800/30 p-4">
+              <p class="text-xs uppercase tracking-[0.14em] text-slate-500 font-semibold mb-2 flex items-center gap-2">
+                <i class="pi pi-box text-amber-500" />
+                Retalhos (sobras)
+              </p>
+              <p class="text-[10px] text-slate-500 mb-3">Sobras cadastradas no Totem ao concluir tarefas, vinculadas a este material.</p>
+              <div v-if="retalhosList.length === 0" class="text-sm text-text-muted py-4 text-center">
+                Nenhum retalho registrado para este produto.
+              </div>
+              <div v-else class="overflow-x-auto">
+                <table class="w-full text-sm border border-border-ui rounded-xl overflow-hidden">
+                  <thead>
+                    <tr class="bg-slate-100 dark:bg-slate-700/50">
+                      <th class="text-left py-2 px-3 font-medium text-text-muted w-14">Foto</th>
+                      <th class="text-left py-2 px-3 font-medium text-text-muted">Dimensões (mm)</th>
+                      <th class="text-right py-2 px-3 font-medium text-text-muted">Área (m²)</th>
+                      <th class="text-left py-2 px-3 font-medium text-text-muted">Tarefa</th>
+                      <th class="text-left py-2 px-3 font-medium text-text-muted">Data</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="r in retalhosList" :key="r.id" class="border-t border-border-ui">
+                      <td class="py-2 px-3">
+                        <div class="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-700 overflow-hidden flex items-center justify-center shrink-0">
+                          <img v-if="r.produto?.imagem_url || r.imagem_url" :src="r.imagem_url || r.produto?.imagem_url" class="w-full h-full object-cover" alt="" />
+                          <i v-else class="pi pi-box text-amber-500 text-lg" />
+                        </div>
+                      </td>
+                      <td class="py-2 px-3 text-text-main">{{ r.largura_mm }} × {{ r.comprimento_mm }}</td>
+                      <td class="py-2 px-3 text-right tabular-nums text-text-main">{{ Number(r.quantidade_m2).toFixed(4) }}</td>
+                      <td class="py-2 px-3 text-text-muted text-xs">{{ r.agenda_fabrica?.titulo || '—' }}</td>
+                      <td class="py-2 px-3 text-text-muted text-xs">{{ r.criado_em ? new Date(r.criado_em).toLocaleDateString('pt-BR') : '—' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
-        </div>
         </div>
 
         <div class="pt-10 mt-6 border-t border-border-ui">
@@ -223,6 +290,7 @@
               </span>
             </Button>
           </div>
+        </div>
         </div>
       </form>
     </div>
@@ -287,7 +355,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { maskMoneyBR } from '@/utils/masks'
 import { UNIDADES } from '@/constantes'
-import { ProdutosService, FornecedorService } from '@/services/index'
+import { ProdutosService, FornecedorService, EstoqueRetalhoService } from '@/services/index'
 import { confirm } from '@/services/confirm'
 import { ArquivosService } from '@/services/arquivos.service' 
 import PageHeader from '@/components/ui/PageHeader.vue'
@@ -318,6 +386,9 @@ function abrirPreviewImagem() {
 const imagemInput = ref(null)
 const uploadingImagem = ref(false)
 const removendoImagem = ref(false)
+const galeriaFotos = ref([])
+const uploadingGaleria = ref(false)
+const retalhosList = ref([])
 
 const loading = ref(false)
 const salvando = ref(false)
@@ -584,6 +655,69 @@ async function confirmarRemoverImagem() {
   }
 }
 
+async function carregarGaleriaFotos() {
+  if (!isEdit.value || !produtoId.value) return
+  try {
+    const res = await ArquivosService.listar({ ownerType: 'PRODUTO', ownerId: produtoId.value })
+    const arr = res?.data ?? res
+    const lista = Array.isArray(arr) ? arr : (arr?.data ?? [])
+    galeriaFotos.value = lista.filter((a) => String(a.slot_key || '').startsWith('GALERIA_'))
+  } catch {
+    galeriaFotos.value = []
+  }
+}
+
+async function carregarRetalhos() {
+  if (!isEdit.value || !produtoId.value) return
+  try {
+    const res = await EstoqueRetalhoService.listarPorProduto(produtoId.value)
+    const data = res?.data ?? res
+    retalhosList.value = Array.isArray(data) ? data : []
+  } catch {
+    retalhosList.value = []
+  }
+}
+
+async function onGaleriaPick(e) {
+  const file = e?.target?.files?.[0]
+  if (!file || !produtoId.value || !can('produtos.editar')) return
+  if (!file.type?.startsWith('image/')) {
+    notify.error('Selecione um arquivo de imagem.')
+    e.target.value = ''
+    return
+  }
+  uploadingGaleria.value = true
+  try {
+    await ArquivosService.upload({
+      ownerType: 'PRODUTO',
+      ownerId: produtoId.value,
+      categoria: 'GALERIA',
+      slotKey: 'GALERIA_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      file,
+    })
+    notify.success('Foto adicionada à galeria.')
+    await carregarGaleriaFotos()
+  } catch (err) {
+    notify.error(err?.response?.data?.message || 'Erro ao enviar foto.')
+  } finally {
+    uploadingGaleria.value = false
+    e.target.value = ''
+  }
+}
+
+async function removerFotoGaleria(arq) {
+  if (!can('produtos.editar')) return
+  const ok = await confirm.show('Remover foto', 'Remover esta foto da galeria?')
+  if (!ok) return
+  try {
+    await ArquivosService.remover(arq.id)
+    galeriaFotos.value = galeriaFotos.value.filter((f) => f.id !== arq.id)
+    notify.success('Foto removida.')
+  } catch (err) {
+    notify.error(err?.response?.data?.message || 'Erro ao remover.')
+  }
+}
+
 async function confirmarSalvarProduto() {
   const perm = isEdit.value ? 'produtos.editar' : 'produtos.criar'
   if (!can(perm)) return notify.error('Acesso negado.')
@@ -695,8 +829,10 @@ onMounted(async () => {
   loading.value = true
   try {
     await carregarFornecedor()
-    if (isEdit.value) await carregarProduto()
-    else {
+    if (isEdit.value) {
+      await carregarProduto()
+      await Promise.all([carregarGaleriaFotos(), carregarRetalhos()])
+    } else {
       resetForm()
       const idFornecedor = route.query.fornecedor
       if (idFornecedor) form.value.fornecedor_id = Number(idFornecedor)

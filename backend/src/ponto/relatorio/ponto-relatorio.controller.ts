@@ -14,13 +14,13 @@ import {
 import { Response } from 'express';
 import PDFDocument from 'pdfkit';
 
-import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../auth/permissions.guard';
 import { Permissoes } from '../../auth/permissoes.decorator';
 import { PontoRelatorioService } from './ponto-relatorio.service';
+import { EfetuarPagamentoFolhaDto } from './dto/efetuar-pagamento-folha.dto';
 
 @Controller('ponto/relatorio')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 @Permissoes('ponto_relatorio.ver')
 export class PontoRelatorioController {
   constructor(private readonly service: PontoRelatorioService) {}
@@ -40,19 +40,25 @@ export class PontoRelatorioController {
     const fmt = String(formato || '').toLowerCase();
     if (fmt === 'png' || fmt === 'jpeg' || fmt === 'jpg') {
       const ext = fmt === 'jpg' ? 'jpeg' : fmt;
-      const buffer = await this.service.gerarComprovanteImageBuffer(
-        registroId,
-        ext,
-      );
-      res.setHeader(
-        'Content-Type',
-        ext === 'jpeg' ? 'image/jpeg' : 'image/png',
-      );
-      res.setHeader(
-        'Content-Disposition',
-        `inline; filename="comprovante-ponto-${registroId}.${ext === 'jpeg' ? 'jpg' : 'png'}"`,
-      );
-      res.send(buffer);
+      try {
+        const { buffer, contentType, ext: extReal } =
+          await this.service.gerarComprovanteImageBuffer(registroId, ext);
+        res.setHeader('Content-Type', contentType);
+        res.setHeader(
+          'Content-Disposition',
+          `inline; filename="comprovante-ponto-${registroId}.${extReal}"`,
+        );
+        res.send(buffer);
+      } catch {
+        // Se PNG/JPEG falharem (ex.: sharp sem SVG), devolve comprovante em PDF
+        const buffer = await this.service.gerarComprovantePdfBuffer(registroId);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader(
+          'Content-Disposition',
+          `inline; filename="comprovante-ponto-${registroId}.pdf"`,
+        );
+        res.send(buffer);
+      }
       return;
     }
     const buffer = await this.service.gerarComprovantePdfBuffer(registroId);
@@ -85,6 +91,14 @@ export class PontoRelatorioController {
       apenas_ativos: apenas_ativos !== 'false' && apenas_ativos !== '0',
       funcionario_id: funcId,
     });
+  }
+
+  /** Efetua pagamento de folha: cria despesa (SAÍDA, FOLHA) já paga e reflete em Custos de Estrutura. */
+  @Post('fechamento/efetuar-pagamento')
+  @Permissoes('despesas.criar')
+  @HttpCode(HttpStatus.OK)
+  efetuarPagamentoFolha(@Body() dto: EfetuarPagamentoFolhaDto) {
+    return this.service.efetuarPagamentoFolha(dto);
   }
 
   @Get('feriados-config')

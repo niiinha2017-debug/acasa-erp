@@ -13,12 +13,13 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FinanceiroService } from './financeiro.service';
-
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CreateContaReceberDto } from './dto/create-conta-receber.dto';
+import { UpdateContaReceberDto } from './dto/update-conta-receber.dto';
+import { ReceberContaReceberDto } from './dto/receber-conta-receber.dto';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 @Controller('financeiro/contas-receber')
 export class ContasReceberController {
   constructor(private readonly service: FinanceiroService) {}
@@ -60,20 +61,20 @@ export class ContasReceberController {
 
   @Post()
   @Permissoes('contas_receber.criar')
-  criar(@Body() dto: any) {
+  criar(@Body() dto: CreateContaReceberDto) {
     return this.service.criarContaReceber(dto);
   }
 
   @Put(':id')
   @Permissoes('contas_receber.editar')
-  atualizar(@Param('id') id: string, @Body() dto: any) {
+  atualizar(@Param('id') id: string, @Body() dto: UpdateContaReceberDto) {
     return this.service.atualizarContaReceber(this.cleanIdOrFail(id), dto);
   }
 
   @Post(':id/receber')
   @Permissoes('contas_receber.editar')
   @HttpCode(HttpStatus.OK)
-  receber(@Param('id') id: string, @Body() dto: any) {
+  receber(@Param('id') id: string, @Body() dto: ReceberContaReceberDto) {
     return this.service.receberContaReceber(this.cleanIdOrFail(id), dto);
   }
 

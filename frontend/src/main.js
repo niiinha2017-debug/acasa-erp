@@ -1,4 +1,37 @@
 import { createApp } from 'vue'
+import {
+  Chart,
+  ArcElement,
+  BarElement,
+  LineElement,
+  PointElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend,
+  Filler,
+  BarController,
+  LineController,
+  DoughnutController,
+} from 'chart.js'
+
+// Registro global dos controllers do Chart.js (bar, line, doughnut, etc.) para evitar
+// "X is not a registered controller" ao navegar para páginas com gráficos (ex.: DRE, relatórios).
+Chart.register(
+  ArcElement,
+  BarElement,
+  LineElement,
+  PointElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend,
+  Filler,
+  BarController,
+  LineController,
+  DoughnutController,
+)
+
 import App from './App.vue'
 import router from './router'
 import storage from '@/utils/storage'
@@ -66,8 +99,8 @@ import '@/assets/CSS/tailwind.css'
 import 'primeicons/primeicons.css'
 import '@/assets/hide-password-eye.css'
 
-// DevTools auto (Tauri)
-import { autoOpenDevtools } from './devtools-auto'
+// DevTools auto (Tauri) e atalho F12 / Ctrl+Shift+I
+import { autoOpenDevtools, setupDevtoolsShortcut } from './devtools-auto'
 
 // UI Components
 import Button from '@/components/ui/Button.vue'
@@ -209,6 +242,7 @@ window.addEventListener('acasa-auth-logout', () => {
 })
 
 // Chama aqui (antes do mount)
+setupDevtoolsShortcut()
 autoOpenDevtools()
 
 // Android: ao abrir o app, verifica se ha nova versao no subdominio e avisa

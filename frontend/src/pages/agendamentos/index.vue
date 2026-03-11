@@ -287,6 +287,14 @@
                         Editar
                       </Button>
                       <RouterLink
+                        v-if="canVendas && event.projeto_id && ['MEDIDA_FINA', 'AGENDAR_MEDIDA_FINA'].includes(event.categoria)"
+                        :to="`/producao/medicao-fina?projetoId=${event.projeto_id}`"
+                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200 border border-sky-200 dark:border-sky-700 hover:bg-sky-200/80 dark:hover:bg-sky-800/50 transition-colors"
+                      >
+                        <i class="pi pi-ruler"></i>
+                        Medição Fina
+                      </RouterLink>
+                      <RouterLink
                         v-if="canProducao"
                         :to="`/producao/apontamento?agenda=l-${event.id}`"
                         class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-700 hover:bg-emerald-200/80 dark:hover:bg-emerald-800/50 transition-colors"
@@ -311,6 +319,14 @@
                     >
                       Ver detalhes
                     </Button>
+                    <RouterLink
+                      v-if="canVendas && event.projeto_id && ['MEDIDA_FINA', 'AGENDAR_MEDIDA_FINA'].includes(event.categoria)"
+                      :to="`/producao/medicao-fina?projetoId=${event.projeto_id}`"
+                      class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200 border border-sky-200 dark:border-sky-700 hover:bg-sky-200/80 dark:hover:bg-sky-800/50 transition-colors"
+                    >
+                      <i class="pi pi-ruler"></i>
+                      Medição Fina
+                    </RouterLink>
                     <RouterLink
                       v-if="canProducao"
                       :to="`/producao/apontamento?agenda=l-${event.id}`"

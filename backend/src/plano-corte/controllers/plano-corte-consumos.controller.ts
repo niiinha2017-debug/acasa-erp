@@ -16,11 +16,10 @@ import { CreatePlanoCorteConsumoDto } from '../dto/create-plano-corte-consumo.dt
 import { UpdatePlanoCorteConsumoDto } from '../dto/update-plano-corte-consumo.dto';
 import { BuscarProdutoDto } from '../../produtos/dto/buscar-produto.dto';
 
-import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../auth/permissions.guard';
 import { Permissoes } from '../../auth/permissoes.decorator';
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 @Controller('plano-corte-consumos')
 export class PlanoCorteConsumosController {
   constructor(private readonly service: PlanoCorteConsumosService) {}

@@ -1,17 +1,21 @@
 import { Module } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { FinanceiroService } from './financeiro.service';
+import { CustosEstruturaService } from './custos-estrutura.service';
 
 import { ContasPagarController } from './contas-pagar.controller';
 import { ContasReceberController } from './contas-receber.controller';
 import { FechamentoController } from './fechamento.controller';
+import { CustosEstruturaController } from './custos-estrutura.controller';
 
 @Module({
   controllers: [
     ContasPagarController,
     ContasReceberController,
     FechamentoController,
+    CustosEstruturaController,
   ],
-  providers: [FinanceiroService],
+  providers: [FinanceiroService, CustosEstruturaService],
+  exports: [FinanceiroService, CustosEstruturaService],
 })
 export class FinanceiroModule {}

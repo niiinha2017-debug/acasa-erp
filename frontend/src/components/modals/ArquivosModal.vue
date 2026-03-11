@@ -47,7 +47,7 @@
             <div v-if="props.canManage" class="group relative">
               <input ref="fileRef" type="file" class="hidden" @change="onPickFile" />
               <div 
-                @click="fileRef?.value?.click()"
+                @click="fileRef?.click?.()"
                 class="border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-[2rem] p-8 transition-all cursor-pointer hover:border-brand-primary hover:bg-brand-primary/5 dark:hover:bg-brand-primary/10 flex flex-col items-center justify-center text-center group"
               >
                 <div class="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-white dark:group-hover:bg-slate-700 transition-all duration-500 shadow-sm">

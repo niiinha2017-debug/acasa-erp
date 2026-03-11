@@ -15,11 +15,10 @@ import { PlanoCorteItensService } from '../service/plano-corte-itens.service';
 import { CreatePlanoCorteItemDto } from '../dto/create-plano-corte-iten.dto';
 import { UpdatePlanoCorteItemDto } from '../dto/update-plano-corte-iten.dto';
 
-import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../../auth/permissions.guard';
 import { Permissoes } from '../../auth/permissoes.decorator';
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 @Controller('plano-corte-itens')
 export class PlanoCorteItensController {
   constructor(private readonly service: PlanoCorteItensService) {}

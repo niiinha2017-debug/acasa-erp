@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EstoqueRetalhoService } from '../estoque-retalho/estoque-retalho.service';
 import { CreateApontamentoProducaoDto } from './dto/create-apontamento-producao.dto';
 import { UpdateApontamentoProducaoDto } from './dto/update-apontamento-producao.dto';
 import { Decimal } from '@prisma/client/runtime/library';
@@ -10,8 +11,13 @@ import {
 } from '../shared/constantes/pipeline-producao';
 import { validarTransicaoStatusCliente } from '../shared/constantes/pipeline-cliente';
 
-/** Categorias da agenda_loja que são "medição" (funcionário da fábrica vai até o cliente). Só essas entram na Timeline de Produção. */
+/** Categorias da agenda_loja que são "medição para orçamento" (funcionário vai ao cliente, conclui na volta). */
 const CATEGORIAS_AGENDA_LOJA_MEDICAO = ['MEDIDA', 'MEDIDA_AGENDADA', 'AGENDAR_MEDIDA'] as const;
+/** Categorias da agenda_fabrica que são "medicação fina" (pós-venda, libera ordem de serviço). */
+const CATEGORIAS_AGENDA_FABRICA_MEDICAO_FINA = ['MEDIDA_FINA', 'AGENDAR_MEDIDA_FINA'] as const;
+
+/** Categorias administrativas/comerciais que NÃO devem aparecer no Totem (só operacional: medição + ordens produção). */
+const CATEGORIAS_TOTEM_EXCLUIDAS = ['AGENDAR_APRESENTACAO', 'VENDA_FECHADA'] as const;
 
 /** Categoria normalizada para medição (case-insensitive). */
 function ehCategoriaMedida(categoria: string | null | undefined): boolean {
@@ -19,9 +25,14 @@ function ehCategoriaMedida(categoria: string | null | undefined): boolean {
   return CATEGORIAS_AGENDA_LOJA_MEDICAO.includes(key as any);
 }
 
+export type SobraTotemDto = { produto_id: number; largura_mm: number; comprimento_mm: number };
+
 @Injectable()
 export class ApontamentoProducaoService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly estoqueRetalhoService: EstoqueRetalhoService,
+  ) {}
 
   private calcularHoras(
     inicio: Date,
@@ -61,6 +72,45 @@ export class ApontamentoProducaoService {
     if (!f?.custo_hora) return null;
     const custo = Number(f.custo_hora) * horas;
     return new Decimal(custo);
+  }
+
+  /**
+   * Custo hora médio da fábrica: média dos custo_hora dos funcionários (para Custo_Tarefa_Fabrica).
+   * Usado ao finalizar etapa para gravar custo_tarefa_fabrica = tempo_total × média.
+   */
+  async getCustoHoraMedioFabrica(): Promise<number> {
+    const agg = await this.prisma.funcionarios.aggregate({
+      _avg: { custo_hora: true },
+      where: { custo_hora: { not: null } },
+    });
+    const avg = agg._avg.custo_hora;
+    return avg != null && Number.isFinite(Number(avg)) ? Number(avg) : 0;
+  }
+
+  /**
+   * Calcula tempo total da tarefa (soma das horas dos apontamentos) e custo_tarefa_fabrica
+   * (tempo_total × custo hora médio da fábrica). Usado ao finalizar etapa no Totem.
+   */
+  private async calcularCustoTarefaFabrica(
+    agendaLojaId: number | null,
+    agendaFabricaId: number | null,
+  ): Promise<{ tempoTotalTarefa: number; custoTarefaFabrica: number }> {
+    const where: { agenda_loja_id?: number; agenda_fabrica_id?: number } = {};
+    if (agendaLojaId != null) where.agenda_loja_id = agendaLojaId;
+    if (agendaFabricaId != null) where.agenda_fabrica_id = agendaFabricaId;
+    const apontamentos = await this.prisma.apontamento_producao.findMany({
+      where,
+      select: { horas: true },
+    });
+    let tempoTotalTarefa = 0;
+    for (const ap of apontamentos) {
+      const h = ap.horas != null ? Number(ap.horas) : 0;
+      tempoTotalTarefa += h;
+    }
+    tempoTotalTarefa = Math.round(tempoTotalTarefa * 100) / 100;
+    const custoHoraMedio = await this.getCustoHoraMedioFabrica();
+    const custoTarefaFabrica = Math.round(tempoTotalTarefa * custoHoraMedio * 100) / 100;
+    return { tempoTotalTarefa, custoTarefaFabrica };
   }
 
   async create(dto: CreateApontamentoProducaoDto) {
@@ -389,6 +439,472 @@ export class ApontamentoProducaoService {
     }
 
     return { tarefas: [], tipo: 'venda' as const };
+  }
+
+  /**
+   * Totem Fábrica: apenas tarefas operacionais de fábrica:
+   * - Medições externas (agenda_loja: AGENDAR_MEDIDA / MEDIDA / MEDIDA_AGENDADA) — aparecem como "MEDIÇÃO EXTERNA".
+   * - Ordens de serviço da Timeline de Produção (agenda_fabrica).
+   * NÃO aparecem: AGENDAR_APRESENTACAO, VENDA_FECHADA (administrativo/comercial).
+   * Mesma ordem da Agenda (inicio_em asc).
+   */
+  async getTotemTarefas(filtros: {
+    data_inicio?: string;
+    data_fim?: string;
+    usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null;
+  }) {
+    const dataInicio = filtros.data_inicio ? new Date(filtros.data_inicio + 'T00:00:00') : undefined;
+    const dataFim = filtros.data_fim ? new Date(filtros.data_fim + 'T23:59:59') : undefined;
+    const whereData = dataInicio || dataFim ? { inicio_em: {} as Record<string, Date> } : {};
+    if (dataInicio) (whereData.inicio_em as Record<string, Date>).gte = dataInicio;
+    if (dataFim) (whereData.inicio_em as Record<string, Date>).lte = dataFim;
+
+    const funcionarioIdVendedor =
+      filtros.usuario?.funcionario_id != null && !filtros.usuario?.is_admin
+        ? Number(filtros.usuario.funcionario_id)
+        : null;
+    const whereVendedor =
+      funcionarioIdVendedor != null
+        ? this.whereVendedorAgenda(funcionarioIdVendedor)
+        : null;
+
+    // 1) Medições externas (agenda_loja): só categorias de medição — caem no Totem automaticamente ao serem criadas na Agenda.
+    const whereLoja = {
+      status: { in: ['PENDENTE', 'EM_PRODUCAO'] },
+      categoria: { in: [...CATEGORIAS_AGENDA_LOJA_MEDICAO] },
+      ...whereData,
+      ...(whereVendedor ? { AND: [whereVendedor] } : {}),
+    };
+    const tarefasLoja = await this.prisma.agenda_loja.findMany({
+      where: whereLoja,
+      orderBy: { inicio_em: 'asc' },
+      include: {
+        cliente: { select: { id: true, nome_completo: true, razao_social: true } },
+        criado_por_usuario: { select: { id: true, nome: true } },
+        equipe: { include: { funcionario: { select: { id: true, nome: true, custo_hora: true } } } },
+        apontamentos_producao: {
+          orderBy: { inicio_em: 'asc' },
+          include: {
+            funcionario: { select: { id: true, nome: true, custo_hora: true } },
+          },
+        },
+      },
+    });
+
+    // 2) Ordens de produção (agenda_fabrica): excluir categorias administrativas (AGENDAR_APRESENTACAO, VENDA_FECHADA).
+    const somentePainelCats = [...AGENDA_FABRICA_SOMENTE_PAINEL_CATEGORIAS];
+    const statusSempreVisivel = AGENDA_FABRICA_STATUS_SEMPRE_VISIVEL;
+    const statusAgendado = AGENDA_FABRICA_STATUS_AGENDADO;
+    const andProducao: any[] = [
+      {
+        OR: [
+          { venda_id: null },
+          { venda: { contratos: { some: { status: 'VIGENTE' } } } },
+          { status: statusSempreVisivel },
+        ],
+      },
+      {
+        OR: [
+          ...(somentePainelCats.length > 0 ? [{ categoria: { notIn: somentePainelCats } }] : []),
+          { status: statusSempreVisivel },
+          ...somentePainelCats.map((c) => ({ categoria: c, status: statusAgendado })),
+        ],
+      },
+      { OR: [{ categoria: { notIn: [...CATEGORIAS_TOTEM_EXCLUIDAS] } }, { categoria: null }] },
+    ];
+    if (whereVendedor) {
+      andProducao.push({
+        OR: [whereVendedor, { plano_corte_id: { not: null } }],
+      });
+    }
+
+    const tarefasFabrica = await this.prisma.agenda_fabrica.findMany({
+      where: {
+        status: { in: ['PENDENTE', 'EM_PRODUCAO'] },
+        ...whereData,
+        AND: andProducao,
+      },
+      orderBy: { inicio_em: 'asc' },
+      include: {
+        cliente: { select: { id: true, nome_completo: true, razao_social: true } },
+        criado_por_usuario: { select: { id: true, nome: true } },
+        equipe: { include: { funcionario: { select: { id: true, nome: true, custo_hora: true } } } },
+        apontamentos_producao: {
+          orderBy: { inicio_em: 'asc' },
+          include: {
+            funcionario: { select: { id: true, nome: true, custo_hora: true } },
+          },
+        },
+      },
+    });
+
+    type TarefaUnificada = {
+      id_para_play: number;
+      tipo: 'agenda_fabrica' | 'agenda_loja';
+      is_medicao_externa: boolean;
+      tipo_medicao: 'MEDICAO_ORCAMENTO' | 'MEDICAO_FINA' | null;
+      titulo: string;
+      inicio_em: Date;
+      fim_em: Date;
+      status: string;
+      categoria: string | null;
+      projeto_id: number | null;
+      cliente: { id: number; nome_completo: string | null; razao_social: string | null } | null;
+      criado_por_usuario: { id: number; nome: string | null } | null;
+      equipe: unknown[];
+      apontamentos_producao: unknown[];
+    };
+
+    const normLoja: TarefaUnificada[] = tarefasLoja.map((t) => ({
+      id_para_play: t.id,
+      tipo: 'agenda_loja' as const,
+      is_medicao_externa: true,
+      tipo_medicao: 'MEDICAO_ORCAMENTO' as const,
+      titulo: t.titulo,
+      inicio_em: t.inicio_em,
+      fim_em: t.fim_em,
+      status: t.status,
+      categoria: t.categoria,
+      projeto_id: t.projeto_id ?? null,
+      cliente: t.cliente,
+      criado_por_usuario: t.criado_por_usuario,
+      equipe: t.equipe,
+      apontamentos_producao: t.apontamentos_producao,
+    }));
+
+    const normFabrica: TarefaUnificada[] = tarefasFabrica.map((t) => {
+      const cat = String(t.categoria ?? '').toUpperCase();
+      const ehMedicaoFina = CATEGORIAS_AGENDA_FABRICA_MEDICAO_FINA.includes(cat as any);
+      return {
+        id_para_play: t.id,
+        tipo: 'agenda_fabrica' as const,
+        is_medicao_externa: ehMedicaoFina,
+        tipo_medicao: ehMedicaoFina ? ('MEDICAO_FINA' as const) : null,
+        titulo: t.titulo,
+        inicio_em: t.inicio_em,
+        fim_em: t.fim_em,
+        status: t.status,
+        categoria: t.categoria,
+        projeto_id: t.projeto_id ?? null,
+        cliente: t.cliente,
+        criado_por_usuario: t.criado_por_usuario,
+        equipe: t.equipe,
+        apontamentos_producao: t.apontamentos_producao,
+      };
+    });
+
+    const tarefas = [...normLoja, ...normFabrica].sort(
+      (a, b) => a.inicio_em.getTime() - b.inicio_em.getTime(),
+    );
+    return { tarefas };
+  }
+
+  /**
+   * Totem Fábrica - Play: define status Em Produção e grava horário de início (apontamento por membro da equipe).
+   * Suporta agenda_fabrica (ordem de produção) ou agenda_loja (medição externa) via parâmetro tipo.
+   */
+  async totemPlay(
+    id: number,
+    alteradoPorUsuarioId?: number,
+    tipo: 'agenda_fabrica' | 'agenda_loja' = 'agenda_fabrica',
+  ) {
+    if (tipo === 'agenda_loja') {
+      return this.totemPlayAgendaLoja(id, alteradoPorUsuarioId);
+    }
+    return this.totemPlayAgendaFabrica(id, alteradoPorUsuarioId);
+  }
+
+  private async totemPlayAgendaLoja(agendaLojaId: number, alteradoPorUsuarioId?: number) {
+    const agenda = await this.prisma.agenda_loja.findUnique({
+      where: { id: agendaLojaId },
+      include: {
+        equipe: { include: { funcionario: { select: { id: true, custo_hora: true } } } },
+        apontamentos_producao: {
+          select: { id: true, inicio_em: true, fim_em: true },
+        },
+      },
+    });
+    if (!agenda) throw new BadRequestException('Tarefa não encontrada.');
+    const statusNorm = String(agenda.status || '').toUpperCase();
+    if (statusNorm === 'CONCLUIDO' || statusNorm === 'CANCELADO') {
+      throw new BadRequestException('Tarefa já concluída ou cancelada.');
+    }
+
+    const agora = new Date();
+    const dataDate = new Date(agora);
+    dataDate.setHours(0, 0, 0, 0);
+
+    const abertos = (agenda.apontamentos_producao || []).filter((ap) => this.isEmAndamento(ap));
+    if (abertos.length > 0) {
+      await this.prisma.agenda_loja.update({
+        where: { id: agendaLojaId },
+        data: {
+          status: 'EM_PRODUCAO',
+          ...(alteradoPorUsuarioId
+            ? { alterado_por_usuario_id: alteradoPorUsuarioId, alterado_em: agora }
+            : { alterado_em: agora }),
+        },
+      });
+      return { ok: true, agenda_loja_id: agendaLojaId, mensagem: 'Já em produção.' };
+    }
+
+    const equipeIds = (agenda.equipe || []).map((e) => e.funcionario_id);
+    if (equipeIds.length === 0) {
+      throw new BadRequestException('Tarefa sem equipe definida.');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.agenda_loja.update({
+        where: { id: agendaLojaId },
+        data: {
+          status: 'EM_PRODUCAO',
+          ...(alteradoPorUsuarioId
+            ? { alterado_por_usuario_id: alteradoPorUsuarioId, alterado_em: agora }
+            : { alterado_em: agora }),
+        },
+      });
+      const categoria = agenda.categoria ?? undefined;
+      const venda_id = agenda.venda_id ?? undefined;
+      for (const funcionarioId of equipeIds) {
+        const custo_calculado = await this.calcularCusto(funcionarioId, 0);
+        await tx.apontamento_producao.create({
+          data: {
+            agenda_loja_id: agendaLojaId,
+            venda_id,
+            funcionario_id: funcionarioId,
+            categoria,
+            data: dataDate,
+            inicio_em: agora,
+            fim_em: new Date(agora.getTime()),
+            horas: 0,
+            custo_calculado,
+          } as any,
+        });
+      }
+    });
+
+    return { ok: true, agenda_loja_id: agendaLojaId };
+  }
+
+  private async totemPlayAgendaFabrica(agendaFabricaId: number, alteradoPorUsuarioId?: number) {
+    const agenda = await this.prisma.agenda_fabrica.findUnique({
+      where: { id: agendaFabricaId },
+      include: {
+        equipe: { include: { funcionario: { select: { id: true, custo_hora: true } } } },
+        apontamentos_producao: {
+          select: { id: true, inicio_em: true, fim_em: true },
+        },
+      },
+    });
+    if (!agenda) throw new BadRequestException('Tarefa não encontrada.');
+    const statusNorm = String(agenda.status || '').toUpperCase();
+    if (statusNorm === 'CONCLUIDO' || statusNorm === 'CANCELADO') {
+      throw new BadRequestException('Tarefa já concluída ou cancelada.');
+    }
+
+    const agora = new Date();
+    const dataDate = new Date(agora);
+    dataDate.setHours(0, 0, 0, 0);
+
+    // Se já está em produção (tem apontamentos em aberto), só atualiza status/alterado_em
+    const abertos = (agenda.apontamentos_producao || []).filter((ap) =>
+      this.isEmAndamento(ap),
+    );
+    if (abertos.length > 0) {
+      await this.prisma.agenda_fabrica.update({
+        where: { id: agendaFabricaId },
+        data: {
+          status: 'EM_PRODUCAO',
+          ...(alteradoPorUsuarioId
+            ? { alterado_por_usuario_id: alteradoPorUsuarioId, alterado_em: agora }
+            : { alterado_em: agora }),
+        },
+      });
+      return { ok: true, agenda_fabrica_id: agendaFabricaId, mensagem: 'Já em produção.' };
+    }
+
+    const equipeIds = (agenda.equipe || []).map((e) => e.funcionario_id);
+    if (equipeIds.length === 0) {
+      throw new BadRequestException('Tarefa sem equipe definida.');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.agenda_fabrica.update({
+        where: { id: agendaFabricaId },
+        data: {
+          status: 'EM_PRODUCAO',
+          ...(alteradoPorUsuarioId
+            ? { alterado_por_usuario_id: alteradoPorUsuarioId, alterado_em: agora }
+            : { alterado_em: agora }),
+        },
+      });
+      const categoria = agenda.categoria ?? undefined;
+      const venda_id = agenda.venda_id ?? undefined;
+      for (const funcionarioId of equipeIds) {
+        const custo_calculado = await this.calcularCusto(funcionarioId, 0);
+        await tx.apontamento_producao.create({
+          data: {
+            agenda_fabrica_id: agendaFabricaId,
+            venda_id,
+            funcionario_id: funcionarioId,
+            categoria,
+            data: dataDate,
+            inicio_em: agora,
+            fim_em: new Date(agora.getTime()),
+            horas: 0,
+            custo_calculado,
+          } as any,
+        });
+      }
+    });
+
+    return { ok: true, agenda_fabrica_id: agendaFabricaId };
+  }
+
+  /**
+   * Totem Fábrica - Check: define como Concluído, grava horário fim e calcula custo.
+   * Para agenda_loja (medição externa): apenas finaliza etapa (encerra cronômetros e marca CONCLUIDO).
+   * Para agenda_fabrica: calcula consumo/retalhos e depois finaliza.
+   */
+  async totemCheck(
+    id: number,
+    sobras?: SobraTotemDto[],
+    tipo: 'agenda_fabrica' | 'agenda_loja' = 'agenda_fabrica',
+  ) {
+    if (tipo === 'agenda_loja') {
+      return this.finalizarEtapa({ agenda_loja_id: id });
+    }
+    return this.totemCheckAgendaFabrica(id, sobras);
+  }
+
+  private async totemCheckAgendaFabrica(agendaFabricaId: number, sobras?: SobraTotemDto[]) {
+    const agenda = await this.prisma.agenda_fabrica.findUnique({
+      where: { id: agendaFabricaId },
+      select: { id: true, plano_corte_id: true },
+    });
+    if (!agenda) throw new BadRequestException('Tarefa não encontrada.');
+
+    let areaPecasM2 = 0;
+    let consumoEstimadoM2: number | null = null;
+    let consumoRealM2: number | null = null;
+    let perdaRealM2: number | null = null;
+
+    if (agenda.plano_corte_id) {
+      const empresa = await this.prisma.empresa.findUnique({
+        where: { id: 1 },
+        select: { perda_padrao_percentual: true },
+      });
+      const perdaPadrao = Number(empresa?.perda_padrao_percentual ?? 0) / 100;
+
+      const produtosPlano = await this.prisma.plano_corte_produto.findMany({
+        where: { plano_corte_id: agenda.plano_corte_id },
+        select: { largura_mm: true, comprimento_mm: true, quantidade: true },
+      });
+      for (const p of produtosPlano) {
+        const larg = Number(p.largura_mm ?? 0);
+        const comp = Number(p.comprimento_mm ?? 0);
+        const qtd = Number(p.quantidade ?? 0);
+        if (larg > 0 && comp > 0 && qtd > 0) {
+          areaPecasM2 += (larg / 1000) * (comp / 1000) * qtd;
+        }
+      }
+      areaPecasM2 = Math.round(areaPecasM2 * 10000) / 10000;
+      consumoEstimadoM2 = Math.round(areaPecasM2 * (1 + perdaPadrao) * 10000) / 10000;
+    }
+
+    let retalhosCriados: { quantidade_m2: number }[] = [];
+    if (sobras?.length) {
+      retalhosCriados = await this.estoqueRetalhoService.criarVarios(sobras, agendaFabricaId);
+    }
+
+    const somaRetalhosM2 = retalhosCriados.reduce((s, r) => s + Number((r as any).quantidade_m2 ?? 0), 0);
+    consumoRealM2 = Math.round((areaPecasM2 + somaRetalhosM2) * 10000) / 10000;
+    perdaRealM2 = consumoEstimadoM2 != null
+      ? Math.max(0, Math.round((consumoEstimadoM2 - consumoRealM2) * 10000) / 10000)
+      : null;
+
+    await this.prisma.agenda_fabrica.update({
+      where: { id: agendaFabricaId },
+      data: {
+        area_pecas_m2: areaPecasM2 > 0 ? new Decimal(areaPecasM2) : undefined,
+        consumo_estimado_m2: consumoEstimadoM2 != null ? new Decimal(consumoEstimadoM2) : undefined,
+        consumo_real_m2: consumoRealM2 != null ? new Decimal(consumoRealM2) : undefined,
+        perda_real_m2: perdaRealM2 != null ? new Decimal(perdaRealM2) : undefined,
+      } as any,
+    });
+
+    return this.finalizarEtapa({ agenda_fabrica_id: agendaFabricaId });
+  }
+
+  /**
+   * Totem – Concluir Medição para Orçamento: salva medidas gerais + observações na tabela medicao_orcamento,
+   * fecha a tarefa na agenda e notifica que está pronto para orçamento.
+   */
+  async concluirMedicaoOrcamento(agendaLojaId: number, medidasGerais: string, observacoes: string) {
+    const agenda = await this.prisma.agenda_loja.findUnique({
+      where: { id: agendaLojaId },
+      select: { id: true, status: true, cliente_id: true, orcamento_id: true },
+    });
+    if (!agenda) throw new BadRequestException('Tarefa não encontrada.');
+    if (String(agenda.status).toUpperCase() === 'CONCLUIDO') {
+      return { ok: true, mensagem: 'Tarefa já concluída.', medicao_orcamento_id: null };
+    }
+
+    const medicao = await this.prisma.medicao_orcamento.upsert({
+      where: { agenda_loja_id: agendaLojaId },
+      create: {
+        agenda_loja_id: agendaLojaId,
+        cliente_id: agenda.cliente_id ?? undefined,
+        orcamento_id: agenda.orcamento_id ?? undefined,
+        medidas_gerais: (medidasGerais || '').trim() || null,
+        observacoes: (observacoes || '').trim() || null,
+        concluida: true,
+      },
+      update: {
+        medidas_gerais: (medidasGerais || '').trim() || null,
+        observacoes: (observacoes || '').trim() || null,
+        concluida: true,
+      },
+    });
+
+    const result = await this.finalizarEtapa({ agenda_loja_id: agendaLojaId });
+    await this.prisma.agenda_loja.update({
+      where: { id: agendaLojaId },
+      data: { status_source: 'PRONTO_PARA_ORCAMENTO', status_aplicado_em: new Date() },
+    });
+    return {
+      ...result,
+      medicao_orcamento_id: medicao.id,
+      mensagem: 'Medição concluída. Cliente pronto para orçamento.',
+    };
+  }
+
+  /**
+   * Consumos (produtos) do plano de corte da tarefa — para o totem listar materiais ao registrar sobra.
+   */
+  async getConsumosTotem(agendaFabricaId: number) {
+    const agenda = await this.prisma.agenda_fabrica.findUnique({
+      where: { id: agendaFabricaId },
+      select: { plano_corte_id: true },
+    });
+    if (!agenda?.plano_corte_id) return { consumos: [] };
+    const consumos = await this.prisma.plano_corte_consumo.findMany({
+      where: { plano_corte_id: agenda.plano_corte_id },
+      include: {
+        produto: {
+          select: {
+            id: true,
+            nome_produto: true,
+            cor: true,
+            medida: true,
+            unidade: true,
+            largura_mm: true,
+            comprimento_mm: true,
+          },
+        },
+      },
+    });
+    return { consumos };
   }
 
   /**
@@ -917,9 +1433,15 @@ export class ApontamentoProducaoService {
         }
       }
 
+      const { tempoTotalTarefa, custoTarefaFabrica } = await this.calcularCustoTarefaFabrica(agenda_loja_id, null);
       await this.prisma.agenda_loja.update({
         where: { id: agenda_loja_id },
-        data: { status: 'CONCLUIDO', alterado_em: agora },
+        data: {
+          status: 'CONCLUIDO',
+          alterado_em: agora,
+          tempo_total_tarefa: tempoTotalTarefa != null ? new Decimal(tempoTotalTarefa) : null,
+          custo_tarefa_fabrica: custoTarefaFabrica != null ? new Decimal(custoTarefaFabrica) : null,
+        },
       });
 
       let mensagemVendedor: string | null = null;
@@ -984,9 +1506,15 @@ export class ApontamentoProducaoService {
         }
       }
 
+      const { tempoTotalTarefa, custoTarefaFabrica } = await this.calcularCustoTarefaFabrica(null, agenda_fabrica_id);
       await this.prisma.agenda_fabrica.update({
         where: { id: agenda_fabrica_id },
-        data: { status: 'CONCLUIDO', alterado_em: agora },
+        data: {
+          status: 'CONCLUIDO',
+          alterado_em: agora,
+          tempo_total_tarefa: tempoTotalTarefa != null ? new Decimal(tempoTotalTarefa) : null,
+          custo_tarefa_fabrica: custoTarefaFabrica != null ? new Decimal(custoTarefaFabrica) : null,
+        },
       });
 
       return { ok: true, agenda_fabrica_id };

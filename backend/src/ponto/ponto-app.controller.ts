@@ -16,6 +16,7 @@ import { PontoRelatorioService } from './relatorio/ponto-relatorio.service';
 import { AtivarDto } from './dto/ativar.dto';
 import { RegistrarPontoDto } from './dto/registrar-ponto.dto';
 import { PontoAuthGuard } from './ponto-auth.guard';
+import { Public } from '../auth/public.decorator';
 
 @Controller('ponto')
 export class PontoAppController {
@@ -24,6 +25,7 @@ export class PontoAppController {
     private readonly relatorioService: PontoRelatorioService,
   ) {}
 
+  @Public()
   @Post('ativar')
   ativar(@Body() dto: AtivarDto) {
     return this.service.ativar(dto);
@@ -81,16 +83,27 @@ export class PontoAppController {
     const fmt = String(formato || '').toLowerCase();
     const ext: 'png' | 'jpeg' =
       fmt === 'jpeg' || fmt === 'jpg' ? 'jpeg' : 'png';
-    const buffer = await this.relatorioService.gerarComprovanteImageBuffer(
-      registroId,
-      ext,
-    );
-    res.setHeader('Content-Type', ext === 'jpeg' ? 'image/jpeg' : 'image/png');
-    res.setHeader(
-      'Content-Disposition',
-      `inline; filename="comprovante-ponto-${registroId}.${ext === 'jpeg' ? 'jpg' : 'png'}"`,
-    );
-    res.send(buffer);
+    try {
+      const { buffer, contentType, ext: extReal } =
+        await this.relatorioService.gerarComprovanteImageBuffer(registroId, ext);
+      res.setHeader('Content-Type', contentType);
+      res.setHeader(
+        'Content-Disposition',
+        `inline; filename="comprovante-ponto-${registroId}.${extReal}"`,
+      );
+      res.send(buffer);
+    } catch {
+      // Se PNG/JPEG falharem (ex.: sharp sem SVG), devolve comprovante em PDF
+      const buffer = await this.relatorioService.gerarComprovantePdfBuffer(
+        registroId,
+      );
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader(
+        'Content-Disposition',
+        `inline; filename="comprovante-ponto-${registroId}.pdf"`,
+      );
+      res.send(buffer);
+    }
     return;
   }
 }

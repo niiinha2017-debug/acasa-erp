@@ -51,25 +51,105 @@
         </template>
       </PageHeader>
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui">
+      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-4">
         <!-- Aviso no mobile -->
-        <div class="sm:hidden flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 mb-4">
+        <div class="sm:hidden flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
           <i class="pi pi-info-circle text-amber-600 dark:text-amber-400 text-sm flex-shrink-0"></i>
           <span class="text-[10px] font-bold text-amber-800 dark:text-amber-200 uppercase tracking-wider">
             Selecione o fornecedor para cadastrar produto
           </span>
         </div>
-        <Table
-          :columns="columns"
-          :rows="rows"
-          :loading="loading"
-          empty-text="Nenhum produto encontrado."
-          :boxed="false"
-          :row-class="rowClassEstoque"
-        >
+
+        <!-- Resumo, vista e contagem -->
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-4 text-sm">
+            <span class="font-semibold text-text-main tabular-nums">
+              {{ rows.length }} {{ rows.length === 1 ? 'produto' : 'produtos' }}
+            </span>
+            <span
+              v-if="totalEstoqueBaixo > 0"
+              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-medium"
+            >
+              <i class="pi pi-exclamation-triangle text-[10px]"></i>
+              {{ totalEstoqueBaixo }} com estoque abaixo do mínimo
+            </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Ver como</span>
+            <button
+              type="button"
+              class="p-2 rounded-lg transition-colors"
+              :class="viewMode === 'table' ? 'bg-brand-primary/15 text-brand-primary' : 'bg-slate-100 dark:bg-slate-700 text-text-muted hover:text-text-main'"
+              title="Tabela"
+              @click="viewMode = 'table'"
+            >
+              <i class="pi pi-list" />
+            </button>
+            <button
+              type="button"
+              class="p-2 rounded-lg transition-colors"
+              :class="viewMode === 'cards' ? 'bg-brand-primary/15 text-brand-primary' : 'bg-slate-100 dark:bg-slate-700 text-text-muted hover:text-text-main'"
+              title="Cards"
+              @click="viewMode = 'cards'"
+            >
+              <i class="pi pi-th-large" />
+            </button>
+          </div>
+        </div>
+
+        <!-- Cards (galeria) -->
+        <div v-if="viewMode === 'cards'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div
+            v-for="row in rows"
+            :key="row.id"
+            class="rounded-xl border border-border-ui bg-bg-page overflow-hidden hover:border-brand-primary/40 transition-colors group"
+          >
+            <div class="aspect-square bg-slate-100 dark:bg-slate-800/50 flex items-center justify-center overflow-hidden relative">
+              <img
+                v-if="String(row.imagem_url || '').trim()"
+                :src="row.imagem_url"
+                class="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                alt=""
+              />
+              <span v-else class="text-4xl font-bold text-text-muted/60">{{ String(row.nome_produto || '').substring(0, 2).toUpperCase() }}</span>
+              <div class="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/90 dark:bg-slate-900/90 text-xs font-medium text-text-main shadow-sm">
+                <i class="pi pi-box text-amber-600 dark:text-amber-400" title="Chapa inteira" />
+                <span>Chapa</span>
+              </div>
+            </div>
+            <div class="p-3">
+              <h3 class="text-sm font-semibold text-text-main truncate" :title="row.nome_produto">{{ row.nome_produto || '-' }}</h3>
+              <p class="text-[10px] text-text-muted mt-0.5">Ref. {{ String(row.id || 0).padStart(4, '0') }} · {{ row.categoria || '-' }}</p>
+              <div class="mt-2 flex items-center justify-between">
+                <span class="text-sm font-semibold text-text-main tabular-nums">{{ format.currency(row.valor_unitario) }}</span>
+                <div class="flex items-center gap-1">
+                  <StatusBadge :value="row.status || 'INATIVO'" />
+                  <TableActions
+                    :id="row.id"
+                    perm-edit="produtos.editar"
+                    perm-delete="produtos.excluir"
+                    @edit="(id) => router.push(`/produtos/${id}`)"
+                    @delete="() => confirmarExcluirProduto(row)"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabela em container definido -->
+        <div v-else class="rounded-xl border border-border-ui bg-bg-page overflow-hidden">
+          <Table
+            :columns="columns"
+            :rows="rows"
+            :loading="loading"
+            :empty-text="emptyTableText"
+            :boxed="false"
+            :row-class="rowClassEstoque"
+          >
           <template #cell-nome_produto="{ row }">
-            <div class="flex items-center gap-3 py-1">
-              <div class="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-text-muted text-xs bg-bg-page border border-border-ui overflow-hidden">
+            <div class="flex items-center gap-3 py-1 min-w-0">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-text-muted text-xs bg-slate-100 dark:bg-slate-700/50 border border-border-ui overflow-hidden shrink-0">
                 <img
                   v-if="String(row.imagem_url || '').trim()"
                   :src="row.imagem_url"
@@ -78,15 +158,24 @@
                 />
                 <span v-else>{{ String(row.nome_produto || '').substring(0, 2).toUpperCase() }}</span>
               </div>
-              <div class="flex flex-col min-w-0">
-                <span class="text-sm font-bold text-text-main uppercase tracking-tight truncate">
-                  {{ row.nome_produto || '-' }}
-                </span>
-                <span class="text-[10px] font-medium text-text-muted truncate">
-                  Ref {{ String(row.id || 0).padStart(4, '0') }}
-                </span>
+              <div class="flex items-center gap-2 min-w-0">
+                <i class="pi pi-box text-amber-600 dark:text-amber-400 text-xs shrink-0" title="Chapa inteira" />
+                <div class="flex flex-col min-w-0">
+                  <span class="text-sm font-semibold text-text-main truncate" :title="row.nome_produto">
+                    {{ row.nome_produto || '-' }}
+                  </span>
+                  <span class="text-[10px] text-text-muted mt-0.5">
+                    Ref. {{ String(row.id || 0).padStart(4, '0') }}
+                  </span>
+                </div>
               </div>
             </div>
+          </template>
+
+          <template #cell-fornecedor_nome="{ row }">
+            <span class="text-sm text-text-main truncate block max-w-[140px]" :title="row.fornecedor_nome">
+              {{ row.fornecedor_nome || '-' }}
+            </span>
           </template>
 
           <template #cell-marca="{ row }">
@@ -114,8 +203,14 @@
           </template>
 
           <template #cell-valor_unitario="{ row }">
-            <span class="text-sm text-text-main tabular-nums">
+            <span class="text-sm font-semibold text-text-main tabular-nums">
               {{ format.currency(row.valor_unitario) }}
+            </span>
+          </template>
+
+          <template #cell-unidade="{ row }">
+            <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700/50 text-xs font-medium text-text-muted">
+              {{ row.unidade || '-' }}
             </span>
           </template>
 
@@ -124,7 +219,7 @@
           </template>
 
           <template #cell-acoes="{ row }">
-            <div class="flex justify-center">
+            <div class="flex justify-end">
               <TableActions
                 :id="row.id"
                 perm-edit="produtos.editar"
@@ -134,7 +229,8 @@
               />
             </div>
           </template>
-        </Table>
+          </Table>
+        </div>
       </div>
     </div>
   </div>
@@ -157,6 +253,7 @@ const meta = ref({ page: 1, pageSize: 20, total: 0, totalPages: 0 })
 const loading = ref(false)
 const router = useRouter()
 const filtro = ref('')
+const viewMode = ref('table') // 'table' | 'cards'
 
 const fornecedores = ref([])
 const fornecedorSelecionado = ref(null)
@@ -173,16 +270,16 @@ function abrirNovoProduto() {
 }
 
 const columns = [
-  { key: 'nome_produto', label: 'NOME', width: '18%' },
-  { key: 'fornecedor_nome', label: 'FORNECEDOR', width: '14%' },
-  { key: 'categoria', label: 'CATEGORIA', width: '12%' },
-  { key: 'marca', label: 'MARCA', width: '10%' },
-  { key: 'cor', label: 'COR', width: '8%' },
-  { key: 'medida', label: 'MEDIDA', width: '8%' },
-  { key: 'unidade', label: 'UN', width: '6%', align: 'center' },
-  { key: 'valor_unitario', label: 'VLR UNIT', width: '10%', align: 'right' },
-  { key: 'status', label: 'STATUS', width: '8%', align: 'center' },
-  { key: 'acoes', label: 'Ações', align: 'center', width: '220px' },
+  { key: 'nome_produto', label: 'Produto', width: '22%' },
+  { key: 'fornecedor_nome', label: 'Fornecedor', width: '14%' },
+  { key: 'categoria', label: 'Categoria', width: '11%' },
+  { key: 'marca', label: 'Marca', width: '10%' },
+  { key: 'cor', label: 'Cor', width: '8%' },
+  { key: 'medida', label: 'Medida', width: '9%' },
+  { key: 'unidade', label: 'Un.', width: '52px', align: 'center' },
+  { key: 'valor_unitario', label: 'Valor unit.', width: '10%', align: 'right' },
+  { key: 'status', label: 'Status', width: '80px', align: 'center' },
+  { key: 'acoes', label: '', align: 'right', width: '112px' },
 ]
 
 function rowClassEstoque(row) {
@@ -230,6 +327,17 @@ const rows = computed(() =>
     status: String(p.status || 'INATIVO').toUpperCase(),
   })),
 )
+
+const totalEstoqueBaixo = computed(() => {
+  const min = (p) => Number(p.estoque_minimo ?? 0)
+  const qtd = (p) => Number(p.quantidade ?? 0)
+  return (filtrados.value || []).filter((p) => min(p) > 0 && qtd(p) < min(p)).length
+})
+
+const emptyTableText = computed(() => {
+  if (!fornecedorSelecionado.value) return 'Selecione um fornecedor para listar os produtos.'
+  return 'Nenhum produto encontrado.'
+})
 
 async function buscarDadosDoBanco(page = 1) {
   loading.value = true

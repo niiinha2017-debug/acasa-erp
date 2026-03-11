@@ -13,11 +13,10 @@ import { PermissoesService } from './permissoes.service';
 import { DefinirPermissoesUsuarioDto } from './dto/definir-permissoes-usuario.dto';
 import { MENU_SECTIONS, MenuItem, MenuSection } from './menu.schema';
 
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 @Controller()
 export class PermissoesController {
   constructor(private readonly service: PermissoesService) {}
@@ -50,7 +49,6 @@ export class PermissoesController {
   }
 
   @Get('permissoes/menu')
-  @UseGuards(JwtAuthGuard)
   async listarMenu(@Req() req: any) {
     const usuarioId = Number(req?.user?.id || 0);
     const perms = usuarioId

@@ -19,11 +19,10 @@ import { UpdateVendaDto } from './dto/update-venda.dto';
 import { UpdateVendaStatusDto } from './dto/update-venda-status.dto';
 import { UpdateVendaItemDto } from './dto/update-venda-item.dto';
 
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 @Controller('vendas')
 export class VendasController {
   constructor(private readonly service: VendasService) {}

@@ -15,11 +15,10 @@ import { ComprasService } from './compras.service';
 import { CriarCompraDto } from './dto/criar-compra.dto';
 import { AtualizarCompraDto } from './dto/atualizar-compra.dto';
 
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 @Controller('compras')
 export class ComprasController {
   constructor(private readonly service: ComprasService) {}

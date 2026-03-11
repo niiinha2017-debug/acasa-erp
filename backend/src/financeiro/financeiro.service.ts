@@ -3,16 +3,24 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 // ✅ Fonte da verdade dos status (shared)
 import { STATUS_FINANCEIRO_KEYS as SF } from '../../shared/constantes/status-financeiro';
 import { OBRA_VIGENTE_STATUSES } from '../../shared/constantes/pipeline-cliente';
 import { getDataCorteContasReceber } from '../../shared/constantes/pipeline-regras';
+import {
+  CustosEstruturaService,
+  CATEGORIAS_DESPESA_FIXA_SALARIOS,
+} from './custos-estrutura.service';
 
 @Injectable()
 export class FinanceiroService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly custosEstrutura: CustosEstruturaService,
+  ) {}
 
   // =========================================================
   // HELPERS
@@ -479,27 +487,60 @@ export class FinanceiroService {
   // CONTAS A PAGAR (tabela contas_pagar)
   // =========================================================
   async buscarContaPagar(id: number) {
-    return this.prisma.contas_pagar.findUnique({
-      where: { id },
-      include: {
-        fornecedor: true,
-        fornecedor_cobrador: true,
-        despesa: true,
-        titulos: true,
-      },
-    });
+    try {
+      const row = await this.prisma.contas_pagar.findUnique({
+        where: { id },
+        include: {
+          fornecedor: true,
+          fornecedor_cobrador: true,
+          despesa: true,
+          titulos: true,
+        },
+      });
+      if (!row) throw new NotFoundException('Conta a pagar não encontrada');
+      return row;
+    } catch (e: any) {
+      if (e instanceof NotFoundException) throw e;
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025') {
+        throw new NotFoundException('Conta a pagar não encontrada');
+      }
+      throw e;
+    }
   }
 
   async criarContaPagar(dto: any) {
-    return this.prisma.contas_pagar.create({ data: dto });
+    try {
+      return await this.prisma.contas_pagar.create({ data: dto });
+    } catch (e: any) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError) {
+        if (e.code === 'P2025') throw new NotFoundException('Fornecedor ou registro relacionado não encontrado');
+        if (e.code === 'P2003') throw new BadRequestException('Referência inválida (fornecedor ou relacionamento).');
+      }
+      throw e;
+    }
   }
 
   async atualizarContaPagar(id: number, dto: any) {
-    return this.prisma.contas_pagar.update({ where: { id }, data: dto });
+    try {
+      return await this.prisma.contas_pagar.update({ where: { id }, data: dto });
+    } catch (e: any) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError) {
+        if (e.code === 'P2025') throw new NotFoundException('Conta a pagar não encontrada');
+        if (e.code === 'P2003') throw new BadRequestException('Referência inválida.');
+      }
+      throw e;
+    }
   }
 
   async removerContaPagar(id: number) {
-    return this.prisma.contas_pagar.delete({ where: { id } });
+    try {
+      return await this.prisma.contas_pagar.delete({ where: { id } });
+    } catch (e: any) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025') {
+        throw new NotFoundException('Conta a pagar não encontrada');
+      }
+      throw e;
+    }
   }
 
   /**
@@ -1485,42 +1526,82 @@ export class FinanceiroService {
   }
 
   async buscarContaReceber(id: number) {
-    return this.prisma.contas_receber.findUnique({
-      where: { id },
-      include: {
-        fornecedor: true,
-        cliente: true,
-        compensacoes: true,
-        titulos: true,
-      },
-    });
+    try {
+      const row = await this.prisma.contas_receber.findUnique({
+        where: { id },
+        include: {
+          fornecedor: true,
+          cliente: true,
+          compensacoes: true,
+          titulos: true,
+        },
+      });
+      if (!row) throw new NotFoundException('Conta a receber não encontrada');
+      return row;
+    } catch (e: any) {
+      if (e instanceof NotFoundException) throw e;
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025') {
+        throw new NotFoundException('Conta a receber não encontrada');
+      }
+      throw e;
+    }
   }
 
   async criarContaReceber(dto: any) {
-    return this.prisma.contas_receber.create({ data: dto });
+    try {
+      return await this.prisma.contas_receber.create({ data: dto });
+    } catch (e: any) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError) {
+        if (e.code === 'P2025') throw new NotFoundException('Fornecedor, cliente ou registro relacionado não encontrado');
+        if (e.code === 'P2003') throw new BadRequestException('Referência inválida.');
+      }
+      throw e;
+    }
   }
 
   async removerContaReceber(id: number) {
-    return this.prisma.contas_receber.delete({ where: { id } });
+    try {
+      return await this.prisma.contas_receber.delete({ where: { id } });
+    } catch (e: any) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025') {
+        throw new NotFoundException('Conta a receber não encontrada');
+      }
+      throw e;
+    }
   }
 
   async atualizarContaReceber(id: number, dto: any) {
-    return this.prisma.contas_receber.update({ where: { id }, data: dto });
+    try {
+      return await this.prisma.contas_receber.update({ where: { id }, data: dto });
+    } catch (e: any) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError) {
+        if (e.code === 'P2025') throw new NotFoundException('Conta a receber não encontrada');
+        if (e.code === 'P2003') throw new BadRequestException('Referência inválida.');
+      }
+      throw e;
+    }
   }
 
   async receberContaReceber(id: number, dto: any) {
     const { status: _status, recebido_em: _recebidoEm, ...rest } = dto || {};
     const recebidoEm = _recebidoEm ? new Date(_recebidoEm) : new Date();
-    return this.prisma.contas_receber.update({
-      where: { id },
-      data: {
-        status: SF.PAGO,
-        recebido_em: Number.isNaN(recebidoEm.getTime())
-          ? new Date()
-          : recebidoEm,
-        ...rest,
-      },
-    });
+    try {
+      return await this.prisma.contas_receber.update({
+        where: { id },
+        data: {
+          status: SF.PAGO,
+          recebido_em: Number.isNaN(recebidoEm.getTime())
+            ? new Date()
+            : recebidoEm,
+          ...rest,
+        },
+      });
+    } catch (e: any) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025') {
+        throw new NotFoundException('Conta a receber não encontrada');
+      }
+      throw e;
+    }
   }
 
   // =========================================================
@@ -2135,5 +2216,112 @@ export class FinanceiroService {
     }
 
     return rows;
+  }
+
+  /**
+   * DRE Mensal: agrega receita (recebimentos Pix/Cartão/Cheque), CPV materiais e mão de obra.
+   */
+  async getDreMensal(mes: number, ano: number) {
+    const inicioMes = new Date(ano, mes - 1, 1, 0, 0, 0);
+    const fimMes = new Date(ano, mes, 0, 23, 59, 59);
+    const formasReceita = ['PIX', 'CREDITO', 'DEBITO', 'CHEQUE'];
+
+    // Receita: contas_receber recebidas no mês (Pix, Cartão, Cheque)
+    const contasRecebidas = await this.prisma.contas_receber.findMany({
+      where: {
+        status: SF.PAGO,
+        recebido_em: { gte: inicioMes, lte: fimMes },
+        forma_recebimento_chave: { in: formasReceita },
+      },
+      select: { valor_original: true, valor_compensado: true },
+    });
+    const receitaBruta =
+      contasRecebidas.reduce((s, c) => {
+        const v = Number((c as any).valor_compensado ?? (c as any).valor_original ?? 0);
+        return s + (v > 0 ? v : Number((c as any).valor_original ?? 0));
+      }, 0) || 0;
+
+    // Impostos: placeholder (pode vir de vendas/NF depois)
+    const impostos = 0;
+
+    // CPV Materiais: contas_pagar pagas no mês, despesa categoria insumo/matéria-prima OU origem COMPRA (projetos)
+    const CATEGORIAS_CPV_MATERIAIS = ['INSUMO', 'MATERIA_PRIMA', 'MATERIA PRIMA', 'INSUMOS'];
+    const contasPagarPagas = await this.prisma.contas_pagar.findMany({
+      where: {
+        status: SF.PAGO,
+        pago_em: { gte: inicioMes, lte: fimMes },
+        OR: [
+          {
+            despesa_id: { not: null },
+            despesa: {
+              categoria: {
+                in: CATEGORIAS_CPV_MATERIAIS,
+              },
+            },
+          },
+          { origem_tipo: 'COMPRA' },
+        ],
+      },
+      select: { valor_original: true, valor_compensado: true },
+    });
+    const cpvMateriais = contasPagarPagas.reduce((s, c) => {
+      const v = Number((c as any).valor_compensado ?? (c as any).valor_original ?? 0);
+      return s + (v > 0 ? v : Number((c as any).valor_original ?? 0));
+    }, 0);
+
+    // Despesas Fixas (competência: data_registro no mês). Salários não são somados de novo: o custo apontado por projeto é subdivisão desta despesa.
+    const despesasMes = await this.prisma.despesas.findMany({
+      where: {
+        data_registro: { gte: inicioMes, lte: fimMes },
+        categoria: { notIn: CATEGORIAS_CPV_MATERIAIS },
+      },
+      select: { categoria: true, valor_total: true },
+    });
+    const categoriasSalario = [...CATEGORIAS_DESPESA_FIXA_SALARIOS];
+    let despesasFixasSalarios = 0;
+    let despesasFixasOutras = 0;
+    for (const d of despesasMes) {
+      const v = Number((d as any).valor_total ?? 0);
+      const isSalario = categoriasSalario.some(
+        (c) => String((d as any).categoria ?? '').toUpperCase() === c.toUpperCase(),
+      );
+      if (isSalario) despesasFixasSalarios += v;
+      else despesasFixasOutras += v;
+    }
+    despesasFixasSalarios = this.round2(despesasFixasSalarios);
+    despesasFixasOutras = this.round2(despesasFixasOutras);
+    const despesasFixasTotal = this.round2(despesasFixasSalarios + despesasFixasOutras);
+
+    // Absorção por projetos (informativo): horas Totem × Taxa de Absorção — parte da despesa fixa de salários já contabilizada
+    const taxaAbsorcao = await this.custosEstrutura.getTaxaAbsorcaoSalarios(mes, ano);
+    const apontamentos = await this.prisma.apontamento_producao.findMany({
+      where: { data: { gte: inicioMes, lte: fimMes } },
+      select: { horas: true },
+    });
+    let totalHorasTotem = 0;
+    for (const ap of apontamentos) {
+      totalHorasTotem += Number((ap as any).horas ?? 0);
+    }
+    const absorcaoProjetos = this.round2(totalHorasTotem * taxaAbsorcao);
+
+    const cpvTotal = this.round2(cpvMateriais);
+    const receita = this.round2(receitaBruta);
+    const margemContribuicao = this.round2(receita - impostos - cpvTotal);
+    const lucroLiquido = this.round2(margemContribuicao - despesasFixasTotal);
+
+    return {
+      mes,
+      ano,
+      receitaBruta: receita,
+      impostos: this.round2(impostos),
+      cpvMateriais: this.round2(cpvMateriais),
+      cpvTotal,
+      despesasFixasSalarios,
+      despesasFixasOutras,
+      despesasFixasTotal,
+      absorcaoProjetos,
+      margemContribuicao,
+      lucroLiquido,
+    };
   }
 }

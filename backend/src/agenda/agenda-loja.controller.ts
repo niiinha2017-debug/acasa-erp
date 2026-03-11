@@ -15,14 +15,13 @@ import {
 import { AgendaService } from './agenda.service';
 import { CreateAgendaDto } from './dto/create-agenda.dto';
 import { UpdateAgendaDto } from './dto/update-agenda.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
 import { normalizarOrigemFluxo } from './agenda-rules';
 
 const SETOR_LOJA = 'LOJA';
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 @Controller('agenda-loja')
 export class AgendaLojaController {
   constructor(private readonly agendaService: AgendaService) {}

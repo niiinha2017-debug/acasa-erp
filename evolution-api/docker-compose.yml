@@ -1,0 +1,44 @@
+# Evolution API + Redis para WhatsApp (Ubuntu)
+# Uso: cd evolution-api && cp .env.example .env && docker compose up -d
+
+version: '3.9'
+
+services:
+  evolution-api:
+    container_name: evolution_api
+    image: atendai/evolution-api:v2.1.1
+    restart: always
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      - SERVER_URL=${SERVER_URL:-http://localhost:8080}
+      - AUTHENTICATION_API_KEY=${AUTHENTICATION_API_KEY}
+      - CACHE_REDIS_ENABLED=true
+      - CACHE_REDIS_URI=redis://redis:6379/0
+      - CACHE_REDIS_PREFIX_KEY=evolution
+    volumes:
+      - evolution_instances:/evolution/instances
+    depends_on:
+      - redis
+    networks:
+      - evolution_net
+
+  redis:
+    container_name: evolution_redis
+    image: redis:7-alpine
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - evolution_net
+
+volumes:
+  evolution_instances:
+  redis_data:
+
+networks:
+  evolution_net:
+    driver: bridge

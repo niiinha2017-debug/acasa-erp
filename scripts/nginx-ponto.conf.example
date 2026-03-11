@@ -1,0 +1,35 @@
+# Vhost para ponto.acasamarcenaria.com.br (Relógio de Ponto)
+# Uso na EC2/Lightsail:
+#   sudo cp scripts/nginx-ponto.conf.example /etc/nginx/conf.d/ponto.conf
+#   sudo nginx -t && sudo systemctl reload nginx
+#
+# Pré-requisitos:
+#   - DNS: registro A de ponto.acasamarcenaria.com.br apontando para o IP do servidor
+#   - Conteúdo em /var/www/ponto (index.html, ponto.apk, version.json) via deploy
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ponto.acasamarcenaria.com.br;
+    root /var/www/ponto;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location = /ponto.apk {
+        add_header Content-Disposition 'attachment; filename="ponto.apk"';
+        add_header Content-Type "application/vnd.android.package-archive";
+    }
+
+    location = /version.json {
+        add_header Content-Type "application/json; charset=utf-8";
+    }
+
+    # SSL (descomente após certificado, ex: certbot -d ponto.acasamarcenaria.com.br)
+    # listen 443 ssl;
+    # listen [::]:443 ssl;
+    # ssl_certificate     /etc/letsencrypt/live/ponto.acasamarcenaria.com.br/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/ponto.acasamarcenaria.com.br/privkey.pem;
+}

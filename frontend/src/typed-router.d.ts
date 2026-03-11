@@ -114,6 +114,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/comissao-producao/': RouteRecordInfo<
+      '/comissao-producao/',
+      '/comissao-producao',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/compras/': RouteRecordInfo<
       '/compras/',
       '/compras',
@@ -215,6 +222,13 @@ declare module 'vue-router/auto-routes' {
     '/financeiro/contas-receber/': RouteRecordInfo<
       '/financeiro/contas-receber/',
       '/financeiro/contas-receber',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/financeiro/custos-estrutura/': RouteRecordInfo<
+      '/financeiro/custos-estrutura/',
+      '/financeiro/custos-estrutura',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -373,6 +387,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/producao/medicao-fina/': RouteRecordInfo<
+      '/producao/medicao-fina/',
+      '/producao/medicao-fina',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/produtos/': RouteRecordInfo<
       '/produtos/',
       '/produtos',
@@ -387,9 +408,30 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
+    '/relatorios/': RouteRecordInfo<
+      '/relatorios/',
+      '/relatorios',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/relatorios/acompanhamento-status': RouteRecordInfo<
       '/relatorios/acompanhamento-status',
       '/relatorios/acompanhamento-status',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/relatorios/dre-detalhada': RouteRecordInfo<
+      '/relatorios/dre-detalhada',
+      '/relatorios/dre-detalhada',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/relatorios/dre-mensal': RouteRecordInfo<
+      '/relatorios/dre-mensal',
+      '/relatorios/dre-mensal',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -408,6 +450,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/rh/ponto/fechamento': RouteRecordInfo<
+      '/rh/ponto/fechamento',
+      '/rh/ponto/fechamento',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/rh/ponto/horas-extras': RouteRecordInfo<
       '/rh/ponto/horas-extras',
       '/rh/ponto/horas-extras',
@@ -418,6 +467,20 @@ declare module 'vue-router/auto-routes' {
     '/rh/ponto/relatorio/': RouteRecordInfo<
       '/rh/ponto/relatorio/',
       '/rh/ponto/relatorio',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/totem-fabrica': RouteRecordInfo<
+      '/totem-fabrica',
+      '/totem-fabrica',
+      Record<never, never>,
+      Record<never, never>,
+      | '/totem-fabrica/medicao'
+    >,
+    '/totem-fabrica/medicao': RouteRecordInfo<
+      '/totem-fabrica/medicao',
+      '/totem-fabrica/medicao',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -569,6 +632,12 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/comissao-producao/index.vue': {
+      routes:
+        | '/comissao-producao/'
+      views:
+        | never
+    }
     'src/pages/compras/index.vue': {
       routes:
         | '/compras/'
@@ -656,6 +725,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/financeiro/contas-receber/index.vue': {
       routes:
         | '/financeiro/contas-receber/'
+      views:
+        | never
+    }
+    'src/pages/financeiro/custos-estrutura/index.vue': {
+      routes:
+        | '/financeiro/custos-estrutura/'
       views:
         | never
     }
@@ -791,6 +866,12 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/producao/medicao-fina/index.vue': {
+      routes:
+        | '/producao/medicao-fina/'
+      views:
+        | never
+    }
     'src/pages/produtos/index.vue': {
       routes:
         | '/produtos/'
@@ -803,9 +884,27 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/relatorios/index.vue': {
+      routes:
+        | '/relatorios/'
+      views:
+        | never
+    }
     'src/pages/relatorios/acompanhamento-status.vue': {
       routes:
         | '/relatorios/acompanhamento-status'
+      views:
+        | never
+    }
+    'src/pages/relatorios/dre-detalhada.vue': {
+      routes:
+        | '/relatorios/dre-detalhada'
+      views:
+        | never
+    }
+    'src/pages/relatorios/dre-mensal.vue': {
+      routes:
+        | '/relatorios/dre-mensal'
       views:
         | never
     }
@@ -821,6 +920,12 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/rh/ponto/fechamento.vue': {
+      routes:
+        | '/rh/ponto/fechamento'
+      views:
+        | never
+    }
     'src/pages/rh/ponto/horas-extras.vue': {
       routes:
         | '/rh/ponto/horas-extras'
@@ -830,6 +935,19 @@ declare module 'vue-router/auto-routes' {
     'src/pages/rh/ponto/relatorio/index.vue': {
       routes:
         | '/rh/ponto/relatorio/'
+      views:
+        | never
+    }
+    'src/pages/totem-fabrica.vue': {
+      routes:
+        | '/totem-fabrica'
+        | '/totem-fabrica/medicao'
+      views:
+        | 'default'
+    }
+    'src/pages/totem-fabrica/medicao.vue': {
+      routes:
+        | '/totem-fabrica/medicao'
       views:
         | never
     }

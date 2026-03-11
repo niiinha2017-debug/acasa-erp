@@ -18,20 +18,21 @@ Abra `deploy.env` e preencha:
 | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Senha da chave que assina o .exe do Tauri | A que você criou ao gerar a chave |
 | `TAURI_SIGNING_PRIVATE_KEY_PATH` | Caminho do arquivo da chave Tauri | Ex.: `~/.ssh/tauri_private.key` |
 
-**GitLab (CI/CD):** em **Settings → CI/CD → Variables** do repositório, configure também (para o pipeline fazer deploy e **assinar os APKs** como no GitHub):
+**GitHub (CI/CD):** em **Settings → Secrets and variables → Actions** do repositório, configure (para o pipeline fazer deploy e **assinar os APKs**):
 
-| Variável | Tipo | O que é | Como obter |
-|----------|------|---------|------------|
-| `EC2_SSH_PRIVATE_KEY` | Variable (ou File) | Chave SSH da EC2 (conteúdo do .pem) | Conteúdo do mesmo arquivo que você usa em `KEY_PATH` |
-| `EC2_HOST` | Variable | Acesso SSH à EC2 | Ex.: `ec2-user@54.164.55.32` |
-| `ANDROID_KEYSTORE_BASE64` | Variable, **Masked** | Keystore Android em Base64 | No PC: `base64 -w0 caminho/do/seu.keystore` (ou no Git Bash: `base64 -w 0 seu.keystore`) |
-| `ANDROID_KEYSTORE_PASSWORD` | Variable, **Masked** | Senha do keystore | A senha que você usa ao assinar o APK |
-| `ANDROID_KEY_ALIAS` | Variable, **Masked** | Alias da chave no keystore | Ex.: `mykey` ou o alias que você criou |
-| `ANDROID_KEY_PASSWORD` | Variable, **Masked** | Senha da chave (key) | Geralmente igual à senha do keystore |
+| Secret | O que é | Como obter |
+|-------|---------|------------|
+| `SSH_PRIVATE_KEY` | Chave SSH da EC2 (conteúdo do .pem) | Conteúdo do mesmo arquivo que você usa em `KEY_PATH` |
+| `SSH_HOST` | Host da EC2 (IP ou domínio) | Ex.: `54.164.55.32` |
+| `SSH_USER` | Usuário SSH (ex.: `ubuntu` ou `ec2-user`) | Conforme o servidor |
+| `ANDROID_KEYSTORE_B64` | Keystore Android em Base64 | No PC: `base64 -w0 caminho/do/seu.keystore` (ou no Git Bash: `base64 -w 0 seu.keystore`) |
+| `ANDROID_KEYSTORE_PASSWORD` | Senha do keystore | A senha que você usa ao assinar o APK |
+| `ANDROID_KEY_ALIAS` | Alias da chave no keystore | Ex.: `mykey` ou o alias que você criou |
+| `ANDROID_KEY_PASSWORD` | Senha da chave (key) | Geralmente igual à senha do keystore |
 
-Sem as variáveis `ANDROID_*`, o CI ainda roda, mas os APKs saem **unsigned** (não dá para atualizar por cima de uma versão assinada).
+Sem os secrets `ANDROID_*`, o CI ainda roda, mas os APKs saem **unsigned** (não dá para atualizar por cima de uma versão assinada).
 
-**GitLab (push):** na primeira vez que der `git push origin main` o Git pede usuário/senha (ou abre o navegador); depois pode guardar no Gerenciador de Credenciais do Windows. Para usar **só GitLab** (sair do GitHub), veja **scripts/GITLAB-ONLY.md**.
+**Git (push):** na primeira vez que der `git push origin main` o Git pede usuário/senha (ou abre o navegador); depois pode guardar no Gerenciador de Credenciais do Windows. O CI em uso é o **GitHub Actions** (`.github/workflows/deploy.yml`).
 
 ## 2. Usar nos scripts
 
@@ -48,14 +49,16 @@ bash scripts/deploy-tudo.sh              # ou: bash scripts/deploy-tudo.sh "rele
 
 Isso sobe o push (o pipeline atualiza Android, site e backend na nuvem) e publica o instalador .exe na EC2.
 
-**Scripts separados (se precisar):**
+**Scripts separados (se precisar publicar só uma parte):**
 
 ```bash
 cd "d:\Sistema ERP\acasa-erp"
-bash scripts/upload-update.sh          # 1. Git (bump + build + push)
-bash scripts/publicar-ec2-do-pc.sh     # 2. Site (frontend na EC2)
-bash scripts/deploy-android.sh         # 3. Android (APK ERP + Ponto → EC2)
-bash scripts/deploy-tauri.sh           # 4. Desktop (instalador .exe → EC2)
+bash scripts/publicar-ec2-do-pc.sh     # Site (frontend na EC2, build no PC)
+bash scripts/deploy-android.sh          # Android (APK ERP + Ponto → EC2)
+bash scripts/deploy-tauri.sh            # Desktop (instalador .exe → EC2)
+bash scripts/publicar-app-ponto.sh      # Só PWA do Ponto
+bash scripts/publicar-apk-ponto.sh      # Só APK do Ponto
+bash scripts/publicar-landing-ponto.sh  # Só página de ativação do Ponto
 ```
 
 ## Resumo: quantas chaves?

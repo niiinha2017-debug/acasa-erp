@@ -520,21 +520,25 @@ async function buscar() {
       ano: filtros.ano || undefined,
     }
 
-    const [resUnif, resPF, resAg, resPg] = await Promise.all([
+    const [resUnif, resPF, resComp, resAg, resPg] = await Promise.all([
       FinanceiroService.listarContasPagarConsolidado(params),
       FinanceiroService.listarContasPagarConsolidado({ ...params, visao: 'PARA_FECHAR' }),
+      FinanceiroService.listarContasPagarConsolidado({ ...params, visao: 'COMPENSADOS' }),
       FinanceiroService.listarContasPagarConsolidado({ ...params, visao: 'AGENDADOS' }),
       FinanceiroService.listarContasPagarConsolidado({ ...params, visao: 'PAGOS' }),
     ])
 
     listaUnificado.value = Array.isArray(resUnif?.data) ? resUnif.data : (Array.isArray(resUnif) ? resUnif : [])
     listaParaFechar.value = Array.isArray(resPF?.data) ? resPF.data : (Array.isArray(resPF) ? resPF : [])
+    listaCompensados.value = Array.isArray(resComp?.data) ? resComp.data : (Array.isArray(resComp) ? resComp : [])
     listaAgendados.value = Array.isArray(resAg?.data) ? resAg.data : (Array.isArray(resAg) ? resAg : [])
     listaPagos.value = Array.isArray(resPg?.data) ? resPg.data : (Array.isArray(resPg) ? resPg : [])
 
     await carregarDashboard()
   } catch (e) {
-    notify.error('Erro ao carregar contas a pagar')
+    const msg = e?.response?.data?.message || e?.message || 'Erro ao carregar contas a pagar'
+    notify.error(msg)
+    console.error('[Contas a pagar] Erro ao buscar:', e?.response?.data || e)
     listaUnificado.value = []
     listaParaFechar.value = []
     listaCompensados.value = []

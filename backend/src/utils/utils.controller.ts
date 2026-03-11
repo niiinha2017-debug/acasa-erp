@@ -1,10 +1,9 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { UtilsService } from './utils.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
 
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 @Controller('utils')
 export class UtilsController {
   constructor(private readonly utilsService: UtilsService) {}

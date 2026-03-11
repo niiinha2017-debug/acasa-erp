@@ -10,6 +10,8 @@ import { renderHeaderA4Png } from '../../pdf/render-header-a4';
 import { TelegramService } from '../../notifications/telegram.service';
 import { N8nWebhookService } from '../../notifications/n8n-webhook.service';
 import { MailService } from '../../mail/mail.service';
+import { DespesasService } from '../../despesas/despesas.service';
+import { EfetuarPagamentoFolhaDto } from './dto/efetuar-pagamento-folha.dto';
 
 type Filtros = {
   funcionario_id?: string;
@@ -47,6 +49,7 @@ export class PontoRelatorioService {
     private readonly telegram: TelegramService,
     private readonly n8n: N8nWebhookService,
     private readonly mail: MailService,
+    private readonly despesasService: DespesasService,
   ) {}
 
   async listarFuncionariosAtivos() {
@@ -185,6 +188,15 @@ export class PontoRelatorioService {
 
   /** Retorna carga diária fixa (para compatibilidade). Prefira metaDiaParaData. */
   private cargaDiaHoras(funcionario: any): number {
+    const v = this.cargaDiaHorasOrNull(funcionario);
+    if (v !== null) return v;
+    throw new BadRequestException(
+      'Funcionário sem carga horária cadastrada (dia/semana ou horários).',
+    );
+  }
+
+  /** Retorna carga diária em horas ou null se não houver carga cadastrada (evita throw no fechamento). */
+  private cargaDiaHorasOrNull(funcionario: any): number | null {
     const derivado = this.derivarCargaDosHorarios(funcionario);
     if (derivado.cargaSegSex > 0) return derivado.cargaSegSex;
     if (derivado.cargaSabado > 0) return derivado.cargaSabado;
@@ -195,9 +207,7 @@ export class PontoRelatorioService {
     const cargaSemana = Number(funcionario?.carga_horaria_semana || 0);
     if (cargaSemana > 0) return Number((cargaSemana / 6).toFixed(2));
 
-    throw new BadRequestException(
-      'Funcionário sem carga horária cadastrada (dia/semana ou horários).',
-    );
+    return null;
   }
 
   private msToHHMM(ms: number): string {
@@ -477,7 +487,24 @@ export class PontoRelatorioService {
       Math.ceil((fim.getTime() - ini.getTime()) / (24 * 60 * 60 * 1000)) + 1;
     const diasUteis = Math.floor(diasNoPeriodo * (6 / 7));
 
-    const linhas = funcionarios.map((f) => {
+    const funcionariosComCarga = funcionarios.filter(
+      (f) => this.cargaDiaHorasOrNull(f) !== null,
+    );
+    const funcionariosSemCargaList = funcionarios.filter(
+      (f) => this.cargaDiaHorasOrNull(f) === null,
+    );
+    const funcionariosSemCarga = funcionariosSemCargaList.map(
+      (f) => f.nome || `ID ${f.id}`,
+    );
+
+    const hToHHMM = (h: number) => {
+      const m = Math.round((h || 0) * 60);
+      const hh = Math.floor(m / 60);
+      const mm = m % 60;
+      return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+    };
+
+    const linhas = funcionariosComCarga.map((f) => {
       const regs = porFuncionario.get(f.id) || [];
       const porDiaF = new Map<string, any[]>();
       for (const r of regs) {
@@ -526,16 +553,10 @@ export class PontoRelatorioService {
       const custoDevido =
         valorTotalHorasExtras + Math.round(valorFeriadosTrabalhados * 100) / 100;
 
-      const hToHHMM = (h: number) => {
-        const m = Math.round((h || 0) * 60);
-        const hh = Math.floor(m / 60);
-        const mm = m % 60;
-        return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
-      };
-
       return {
         funcionario_id: f.id,
         nome: f.nome || '',
+        sem_carga: false,
         horas_trabalhadas: Math.round(horasTrabalhadas * 100) / 100,
         horas_extras: Math.round(horasExtras * 100) / 100,
         saldo_devedor_horas: Math.round(saldoDevedorHoras * 100) / 100,
@@ -554,7 +575,63 @@ export class PontoRelatorioService {
       };
     });
 
-    return { linhas };
+    const linhasSemCarga = funcionariosSemCargaList.map((f) => ({
+      funcionario_id: f.id,
+      nome: f.nome || '',
+      sem_carga: true,
+      horas_trabalhadas: 0,
+      horas_extras: 0,
+      saldo_devedor_horas: 0,
+      custo_hora: Number(f.custo_hora || 0) || 0,
+      valor_hora_extra: 0,
+      adicional_hora_extra: 0,
+      valor_total_horas_extras: 0,
+      feriados_trabalhados_qtd: 0,
+      valor_feriados_trabalhados: 0,
+      custo_devido: 0,
+      salario_contratado: 0,
+      salario_apurado: 0,
+      horas_trabalhadas_hhmm: '00:00',
+      horas_extras_hhmm: '00:00',
+      saldo_devedor_hhmm: '00:00',
+    }));
+
+    return {
+      linhas: [...linhas, ...linhasSemCarga],
+      funcionarios_sem_carga: funcionariosSemCarga,
+    };
+  }
+
+  /**
+   * Efetua pagamento de folha: cria despesa SAÍDA categoria FOLHA, já marcada como Paga.
+   * O lançamento entra nos Custos de Estrutura (Operacional) e evita duplicidade no financeiro.
+   */
+  async efetuarPagamentoFolha(dto: EfetuarPagamentoFolhaDto) {
+    const valor = Number(dto.custo_devido);
+    if (!Number.isFinite(valor) || valor <= 0) {
+      throw new BadRequestException('custo_devido deve ser maior que zero');
+    }
+    const refMes = Number(dto.ref_mes);
+    const refAno = Number(dto.ref_ano);
+    const ultimoDia = new Date(refAno, refMes, 0);
+    const hoje = new Date();
+    const fmt = (d: Date) => d.toISOString().slice(0, 10);
+    const descricao = `Pagamento Salário - ${dto.nome || 'Funcionário'} - Ref. ${String(refMes).padStart(2, '0')}/${refAno}`;
+    return this.despesasService.create({
+      tipo_movimento: 'SAIDA',
+      unidade: 'MATRIZ',
+      categoria: 'FOLHA',
+      classificacao: 'Folha',
+      local: descricao,
+      valor_total: String(valor.toFixed(2)),
+      forma_pagamento: 'DINHEIRO',
+      quantidade_parcelas: 1,
+      data_registro: fmt(hoje),
+      data_vencimento: fmt(ultimoDia),
+      data_pagamento: fmt(hoje),
+      status: 'PAGO',
+      funcionario_id: dto.funcionario_id,
+    });
   }
 
   // --- LISTAGEM (O QUE ALIMENTA A TELA) ---
@@ -1189,12 +1266,12 @@ export class PontoRelatorioService {
       .replace(/'/g, '&#39;');
   }
 
-  /** Gera comprovante como imagem (PNG ou JPEG). Mesmo conteúdo do PDF. width opcional para PNG pequeno (ex: 320). */
+  /** Gera comprovante como imagem (PNG ou JPEG). Mesmo conteúdo do PDF. width opcional para PNG pequeno (ex: 320). Se PNG falhar (ex.: sharp sem SVG), faz fallback para JPEG. */
   async gerarComprovanteImageBuffer(
     registroId: number,
     formato: 'png' | 'jpeg',
     width?: number,
-  ): Promise<Buffer> {
+  ): Promise<{ buffer: Buffer; contentType: string; ext: string }> {
     const data = await this.getRegistroComprovante(registroId);
     if (!data)
       throw new BadRequestException('Registro de ponto não encontrado.');
@@ -1239,9 +1316,8 @@ export class PontoRelatorioService {
     const baseH = 560;
     const scale = 2;
     const w = baseW * scale;
-    const h = baseH * scale;
     const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${baseW} ${baseH}" width="${w}" height="${h}">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${baseW} ${baseH}" width="${w}" height="${baseH * scale}">
   <rect width="${baseW}" height="${baseH}" fill="#ffffff"/>
   <text x="${baseW / 2}" y="32" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#1e293b">${nomeEmpresa}</text>
   <text x="${baseW / 2}" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#64748b">${cnpjEmpresa}</text>
@@ -1260,14 +1336,33 @@ export class PontoRelatorioService {
 </svg>`;
 
     const svgBuffer = Buffer.from(svg, 'utf8');
-    let pipeline = sharp(svgBuffer);
-    if (width && width > 0 && width < w) {
-      pipeline = pipeline.resize(width);
-    }
+
+    const runSharp = async (wantPng: boolean) => {
+      let pipeline = sharp(svgBuffer);
+      if (width && width > 0 && width < w) {
+        pipeline = pipeline.resize(width);
+      }
+      if (wantPng) {
+        return { buffer: await pipeline.png().toBuffer(), contentType: 'image/png', ext: 'png' };
+      }
+      return { buffer: await pipeline.jpeg({ quality: 90 }).toBuffer(), contentType: 'image/jpeg', ext: 'jpg' };
+    };
+
     if (formato === 'jpeg') {
-      return pipeline.jpeg({ quality: 90 }).toBuffer();
+      return runSharp(false);
     }
-    return pipeline.png().toBuffer();
+    try {
+      return await runSharp(true);
+    } catch (pngErr: any) {
+      // Em alguns servidores o sharp não converte SVG→PNG. Fallback para JPEG; o controller pode ainda usar PDF.
+      try {
+        return await runSharp(false);
+      } catch {
+        throw new BadRequestException(
+          'Não foi possível gerar PNG nem JPEG. O controller pode devolver o comprovante em PDF.',
+        );
+      }
+    }
   }
 
   // --- MÉTODO PRINCIPAL ---

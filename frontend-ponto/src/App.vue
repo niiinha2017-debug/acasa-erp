@@ -25,7 +25,7 @@
             <div v-else class="animate-spin h-5 w-5 border-2 border-white/20 border-t-white rounded-full"></div>
           </button>
           <p class="text-center text-[10px] text-slate-400">
-            Android: <a :href="apkUrl" target="_blank" rel="noopener" class="underline font-bold text-[#1e293b]">Baixar app (APK)</a>
+            Use no navegador (PWA). No celular: abra este site e adicione à tela inicial.
           </p>
         </div>
 
@@ -104,14 +104,6 @@
           <div v-if="erro" class="w-full text-[10px] font-black text-rose-500 uppercase bg-rose-50 px-4 py-2 rounded-full text-center mb-4">
             {{ erro }}
           </div>
-          <button
-            v-if="isAndroid"
-            type="button"
-            @click="verificarAtualizacao"
-            class="text-[10px] font-black text-[#94a3b8] uppercase tracking-widest hover:text-[#1e293b] active:scale-95 transition-all"
-          >
-            Verificar atualização
-          </button>
           <span class="text-[9px] font-black text-[#cbd5e1] uppercase tracking-[0.3em]">ACASA • REGISTRO DIGITAL</span>
         </footer>
       </div>
@@ -122,10 +114,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { PontoService } from './services/ponto.service'
-import { checkPontoUpdate } from './utils/check-ponto-update'
-
-const isAndroid = ref(false)
-const apkUrl = typeof window !== 'undefined' ? `${window.location.origin}/ponto.apk` : 'https://ponto.acasamarcenaria.com.br/ponto.apk'
 
 const etapa = ref('ativar')
 const loading = ref(false)
@@ -300,12 +288,16 @@ Tipo: ${tipoLabel}${idTransacao}`
       try {
         const res = await PontoService.comprovanteImagem(reg.id, token.value, formato)
         const b = res?.data
-        // Só aceita se for Blob de imagem (evita compartilhar corpo de erro como "imagem")
-        if (b && b instanceof Blob && b.size > 0 && b.type && b.type.startsWith('image/')) {
-          blob = b
-          ext = formato === 'jpeg' ? 'jpg' : 'png'
-          mime = formato === 'jpeg' ? 'image/jpeg' : 'image/png'
-          break
+        // Aceita imagem (PNG/JPEG) ou PDF (fallback quando o servidor não gera imagem)
+        if (b && b instanceof Blob && b.size > 0 && b.type) {
+          const isImage = b.type.startsWith('image/')
+          const isPdf = b.type === 'application/pdf'
+          if (isImage || isPdf) {
+            blob = b
+            ext = isPdf ? 'pdf' : (formato === 'jpeg' ? 'jpg' : 'png')
+            mime = b.type
+            break
+          }
         }
       } catch (errFormato) {
         console.warn(`[Comprovante ${formato}]`, errFormato)
@@ -316,7 +308,6 @@ Tipo: ${tipoLabel}${idTransacao}`
       const file = new File([blob], `comprovante-ponto.${ext}`, { type: mime })
       if (typeof navigator !== 'undefined' && navigator.share) {
         try {
-          // Compartilha só o arquivo (imagem). Incluir text faz o WhatsApp priorizar o texto e não anexar o PNG.
           await navigator.share({
             files: [file],
             title: 'Comprovante de ponto',
@@ -327,8 +318,6 @@ Tipo: ${tipoLabel}${idTransacao}`
           console.warn('[Comprovante share]', shareError)
         }
       }
-      // Fallback robusto: abre WhatsApp com texto e já baixa o arquivo
-      // para o usuário anexar manualmente em qualquer aparelho/navegador.
       await abrirWhatsApp()
       baixarBlob(blob, `comprovante-ponto.${ext}`)
       return
@@ -406,13 +395,19 @@ async function baterPonto() {
   }
 }
 
+function normalizarCodigoConvite(val) {
+  if (!val || typeof val !== 'string') return ''
+  return val.trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
+}
+
 async function realizarPareamento() {
-  if (!parearCode.value) return
+  const codeNorm = normalizarCodigoConvite(parearCode.value)
+  if (!codeNorm) return
   loading.value = true
   erro.value = ""
   try {
     const res = await PontoService.ativar({ 
-      code: parearCode.value.trim().toUpperCase(), 
+      code: codeNorm, 
       device_uuid: crypto.randomUUID().toUpperCase(),
       plataforma: 'PWA' 
     })
@@ -424,7 +419,10 @@ async function realizarPareamento() {
     // Limpa o código da URL para ficar elegante
     window.history.replaceState({}, document.title, window.location.pathname);
   } catch (e) {
-    erro.value = "CÓDIGO INVÁLIDO OU EXPIRADO"
+    const msg = e?.response?.data?.message
+    erro.value = (typeof msg === 'string' && msg.trim())
+      ? msg.trim().toUpperCase()
+      : 'CÓDIGO INVÁLIDO OU EXPIRADO'
   } finally {
     loading.value = false
   }
@@ -435,10 +433,19 @@ onMounted(() => {
 
   // --- CAPTURA O CÓDIGO DA URL ---
   const params = new URLSearchParams(window.location.search)
-  const code = params.get('code')
+  let code = null
+  try {
+    const rawCode = params.get('code')
+    if (rawCode) {
+      const decoded = decodeURIComponent(String(rawCode).replace(/\+/g, ' '))
+      code = decoded.trim().toUpperCase().replace(/[^A-Z0-9]/g, '') || null
+    }
+  } catch {
+    code = null
+  }
 
   if (code && !token.value) {
-    parearCode.value = code.toUpperCase()
+    parearCode.value = code
     // Tenta ativar automático após 500ms
     setTimeout(() => {
       realizarPareamento()
@@ -450,19 +457,7 @@ onMounted(() => {
     etapa.value = 'app'
     carregarDados()
   }
-
-  // Android: detectar plataforma e checar atualização após 2s
-  import('@capacitor/core').then(({ Capacitor }) => {
-    if (Capacitor.getPlatform() === 'android') {
-      isAndroid.value = true
-      setTimeout(() => checkPontoUpdate(), 2000)
-    }
-  }).catch(() => {})
 })
-
-async function verificarAtualizacao() {
-  await checkPontoUpdate({ interactive: true })
-}
 
 onUnmounted(() => {
   clearInterval(timerRelogio)

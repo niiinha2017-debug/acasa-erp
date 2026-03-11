@@ -18,10 +18,12 @@ import { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ContratosService } from './contratos.service';
+import { Public } from '../auth/public.decorator';
 
 /**
  * Rotas públicas (sem autenticação) para download do PDF e aceite do contrato.
  */
+@Public()
 @Controller('contratos-publico')
 export class ContratosPublicController {
   private readonly logger = new Logger(ContratosPublicController.name);
