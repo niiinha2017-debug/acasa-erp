@@ -346,14 +346,15 @@ function baixarBlob(blob, nomeArquivo) {
   }
 }
 
-async function carregarDados() {
-  if (!token.value) return
+async function carregarDados(éRetry = false) {
+  const t = token.value
+  if (!t) return
   try {
     const [resMe, resHoje] = await Promise.all([
-      PontoService.me(token.value),
-      PontoService.hoje(token.value)
+      PontoService.me(t),
+      PontoService.hoje(t)
     ])
-    
+
     const dataMe = resMe?.data || {}
     const nome = dataMe.nome || dataMe.funcionario?.nome || funcionarioNome.value
 
@@ -373,7 +374,11 @@ async function carregarDados() {
 
     registrosHoje.value = hojeData
   } catch (e) {
-    if (e.response?.status === 401) {
+    if (e?.response?.status === 401 && !éRetry) {
+      await new Promise((r) => setTimeout(r, 400))
+      return carregarDados(true)
+    }
+    if (e?.response?.status === 401) {
       token.value = ''
       localStorage.removeItem('acasa_ponto_token')
       localStorage.removeItem('acasa_funcionario_nome')
@@ -450,6 +455,7 @@ async function realizarPareamento() {
     token.value = newToken
     localStorage.setItem('acasa_ponto_token', newToken)
     etapa.value = 'app'
+    await new Promise((r) => setTimeout(r, 300))
     await carregarDados()
 
     window.history.replaceState({}, document.title, window.location.pathname)

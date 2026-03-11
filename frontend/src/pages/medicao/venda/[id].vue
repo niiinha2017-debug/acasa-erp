@@ -84,78 +84,16 @@
                 />
               </div>
 
-              <!-- Medidas: Largura (mm) e Pé-direito (mm) -->
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div>
-                  <label class="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">Largura (mm)</label>
-                  <input
-                    v-model.number="amb.largura_mm"
-                    type="number"
-                    min="0"
-                    step="1"
-                    placeholder="Ex: 3200"
-                    class="w-full text-xl font-semibold rounded-xl border-2 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-4 py-3 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">Pé-direito (mm)</label>
-                  <input
-                    v-model.number="amb.pe_direito_mm"
-                    type="number"
-                    min="0"
-                    step="1"
-                    placeholder="Ex: 2700"
-                    class="w-full text-xl font-semibold rounded-xl border-2 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-4 py-3 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                  />
-                </div>
-              </div>
-
-              <!-- Área de fotos: botão câmera grande + galeria horizontal -->
-              <div>
-                <label class="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-3">Fotos deste ambiente</label>
-                <input
-                  :ref="(el) => setInputFotosRef(el, idx)"
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  multiple
-                  class="hidden"
-                  @change="(ev) => onFotosChange(ev, idx)"
-                />
-                <button
-                  type="button"
-                  class="w-full min-h-[140px] rounded-2xl border-2 border-dashed border-amber-400 dark:border-amber-500 bg-amber-50/90 dark:bg-amber-900/20 flex flex-col items-center justify-center gap-3 text-amber-600 dark:text-amber-400 hover:bg-amber-100/90 dark:hover:bg-amber-900/30 hover:border-amber-500 dark:hover:border-amber-400 transition-all touch-manipulation active:scale-[0.99]"
-                  @click="dispararCaptura(idx)"
-                >
-                  <i class="pi pi-camera text-6xl md:text-7xl" />
-                  <span class="text-base font-semibold">Tirar foto</span>
-                  <span class="text-xs opacity-90">Toque para abrir a câmera · Celular usa câmera traseira</span>
-                </button>
-                <p v-if="amb.fotos && amb.fotos.length" class="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                  Toque de novo no botão para adicionar mais fotos.
+              <!-- Área de croqui: desenhar planta (paredes + cotas) ou foto com marcações (Tomada, Água, Gás, Porta, Janela, Pilastra) -->
+              <div class="space-y-2">
+                <label class="block text-sm font-semibold text-slate-600 dark:text-slate-400">Desenho do ambiente</label>
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                  Desenhe o cômodo com o dedo (paredes e cotas) ou tire uma foto e marque pontos (⚡ Tomada, 💧 Água, 🔥 Gás) e arraste Porta, Janela, Pilastra.
                 </p>
-
-                <!-- Galeria horizontal de miniaturas 100x100px -->
-                <div
-                  v-if="amb.fotosPreview && amb.fotosPreview.length"
-                  class="flex flex-nowrap gap-3 mt-4 overflow-x-auto pb-2 custom-scroll"
-                >
-                  <div
-                    v-for="(url, i) in amb.fotosPreview"
-                    :key="i"
-                    class="relative flex-shrink-0 w-[100px] h-[100px] rounded-xl border-2 border-slate-200 dark:border-slate-600 overflow-hidden bg-slate-100 dark:bg-slate-800 shadow-sm"
-                  >
-                    <img :src="url" alt="Foto" class="w-full h-full object-cover" />
-                    <button
-                      type="button"
-                      class="absolute top-1 right-1 w-8 h-8 rounded-full bg-black/70 hover:bg-rose-600 text-white flex items-center justify-center touch-manipulation"
-                      aria-label="Remover foto"
-                      @click="removerFotoAmbiente(idx, i)"
-                    >
-                      <i class="pi pi-times text-sm" />
-                    </button>
-                  </div>
-                </div>
+                <CroquiAmbienteVenda
+                  :model-value="amb.croquiData"
+                  @update:model-value="amb.croquiData = $event"
+                />
               </div>
             </div>
 
@@ -181,16 +119,19 @@
             />
           </div>
 
-          <!-- Rodapé: card de resumo + botão principal -->
+          <!-- Rodapé: botão Finalizar só após desenho/marcação por ambiente -->
           <footer class="px-5 md:px-8 py-6 border-t-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80">
             <div class="rounded-2xl border-2 border-amber-200 dark:border-amber-800 bg-amber-50/80 dark:bg-amber-900/20 p-5 md:p-6">
               <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <p class="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                    {{ ambientes.length }} {{ ambientes.length === 1 ? 'ambiente medido' : 'ambientes medidos' }}
+                    {{ ambientes.length }} {{ ambientes.length === 1 ? 'ambiente' : 'ambientes' }}
                   </p>
-                  <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Os dados e fotos serão salvos e vinculados ao orçamento. A equipe administrativa será notificada para precificar.
+                  <p v-if="!podeFinalizar" class="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                    Salve pelo menos um desenho ou marcação em cada ambiente para habilitar o envio.
+                  </p>
+                  <p v-else class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Os dados serão salvos e vinculados ao orçamento. A equipe será notificada para precificar.
                   </p>
                 </div>
                 <div class="flex gap-3 flex-shrink-0">
@@ -203,7 +144,7 @@
                   <button
                     type="submit"
                     class="min-h-[52px] px-8 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-white text-base font-bold flex items-center gap-2 disabled:opacity-50 transition touch-manipulation shadow-lg shadow-amber-500/25"
-                    :disabled="enviando || ambientes.length === 0"
+                    :disabled="enviando || ambientes.length === 0 || !podeFinalizar"
                   >
                     <i v-if="enviando" class="pi pi-spin pi-spinner text-lg" />
                     <i v-else class="pi pi-send text-lg" />
@@ -231,8 +172,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { TotemFabricaService, ArquivosService } from '@/services'
+import { TotemFabricaService } from '@/services'
 import { notify } from '@/services/notify'
+import CroquiAmbienteVenda from '@/components/croqui-tecnico/CroquiAmbienteVenda.vue'
 
 definePage({ meta: { perm: 'agendamentos.producao' } })
 
@@ -258,7 +200,6 @@ const enviando = ref(false)
 const observacoesGerais = ref('')
 
 const ambientes = ref([])
-const inputFotosRefs = ref({})
 
 function nomeAmbienteParaApi(amb) {
   if (amb.tipo_ambiente === 'OUTRO' && (amb.nome_outro || '').trim()) {
@@ -273,51 +214,31 @@ function novoAmbiente() {
     _key: `amb-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     tipo_ambiente: 'COZINHA',
     nome_outro: '',
-    largura_mm: null,
-    pe_direito_mm: null,
-    fotos: [],
-    fotosPreview: [],
+    croquiData: null,
   }
 }
+
+function temDesenhoOuMarcacao(amb) {
+  const d = amb?.croquiData
+  if (!d) return false
+  const temCotas = d.cotas && d.cotas.length > 0
+  const temPontos = d.pontos && d.pontos.length > 0
+  const temSimbolos = d.simbolos && d.simbolos.length > 0
+  const temFoto = !!d.backgroundImage
+  return temCotas || temPontos || temSimbolos || (temFoto && (temPontos || temSimbolos))
+}
+
+const podeFinalizar = computed(() => {
+  if (!ambientes.value.length) return false
+  return ambientes.value.every((a) => temDesenhoOuMarcacao(a))
+})
 
 function adicionarAmbiente() {
   ambientes.value.push(novoAmbiente())
 }
 
 function removerAmbiente(idx) {
-  const amb = ambientes.value[idx]
-  if (amb?.fotosPreview?.length) {
-    amb.fotosPreview.forEach((url) => URL.revokeObjectURL(url))
-  }
   ambientes.value.splice(idx, 1)
-}
-
-function setInputFotosRef(el, idx) {
-  if (el) inputFotosRefs.value[idx] = el
-}
-
-function dispararCaptura(idx) {
-  const input = inputFotosRefs.value[idx]
-  if (input && typeof input.click === 'function') input.click()
-}
-
-function onFotosChange(ev, idx) {
-  const files = ev.target?.files ? Array.from(ev.target.files) : []
-  const amb = ambientes.value[idx]
-  if (!amb) return
-  if (files.length === 0) return
-  const novasUrls = files.map((f) => URL.createObjectURL(f))
-  amb.fotos = [...(amb.fotos || []), ...files]
-  amb.fotosPreview = [...(amb.fotosPreview || []), ...novasUrls]
-  ev.target.value = ''
-}
-
-function removerFotoAmbiente(ambIdx, fotoIdx) {
-  const amb = ambientes.value[ambIdx]
-  if (!amb?.fotosPreview?.[fotoIdx]) return
-  URL.revokeObjectURL(amb.fotosPreview[fotoIdx])
-  amb.fotosPreview.splice(fotoIdx, 1)
-  amb.fotos.splice(fotoIdx, 1)
 }
 
 async function carregar() {
@@ -352,34 +273,18 @@ async function salvar() {
   try {
     const payload = {
       observacoes: observacoesGerais.value?.trim() || '',
-      ambientes: ambientes.value.map((a) => ({
-        nome_ambiente: nomeAmbienteParaApi(a),
-        largura_m: a.largura_mm != null && a.largura_mm !== '' ? Number(a.largura_mm) / 1000 : undefined,
-        pe_direito_m: a.pe_direito_mm != null && a.pe_direito_mm !== '' ? Number(a.pe_direito_mm) / 1000 : undefined,
-        profundidade_m: undefined,
-      })),
-    }
-    const { data } = await TotemFabricaService.concluirMedicaoOrcamento(id.value, payload)
-    const ambientesCriados = data?.ambientes ?? []
-    for (let i = 0; i < ambientes.value.length; i++) {
-      const amb = ambientes.value[i]
-      const fotos = amb.fotos || []
-      const ambienteId = ambientesCriados[i]?.id
-      if (ambienteId && fotos.length) {
-        for (const file of fotos) {
-          try {
-            await ArquivosService.upload({
-              ownerType: 'MEDICAO_ORCAMENTO_AMBIENTE',
-              ownerId: ambienteId,
-              file,
-              categoria: 'FOTO',
-            })
-          } catch {
-            // falha em um anexo não bloqueia
-          }
+      ambientes: ambientes.value.map((a) => {
+        const c = a.croquiData
+        const primeiraCota = c?.cotas?.[0]?.lengthMm
+        return {
+          nome_ambiente: nomeAmbienteParaApi(a),
+          largura_m: primeiraCota != null ? Number(primeiraCota) / 1000 : undefined,
+          pe_direito_m: c?.cotas?.[1]?.lengthMm != null ? Number(c.cotas[1].lengthMm) / 1000 : undefined,
+          profundidade_m: undefined,
         }
-      }
+      }),
     }
+    await TotemFabricaService.concluirMedicaoOrcamento(id.value, payload)
     notify.success('Medição enviada. A equipe será notificada para precificar o orçamento.')
     await new Promise((r) => setTimeout(r, 800))
     window.location.href = '/totem-fabrica'

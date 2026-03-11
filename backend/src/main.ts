@@ -30,11 +30,12 @@ async function bootstrap() {
 
   app.use(cookieParser());
 
-  // CORS: ERP, PWA de ponto, Tauri, etc. NestJS responde ao preflight OPTIONS e envia os headers.
+  // CORS: ERP, PWA de ponto, APK (Capacitor), Tauri. Mesmo backend para web e app nativo.
   app.enableCors({
     origin: [
       'https://localhost',
-      'capacitor://localhost',
+      'capacitor://localhost',   // Capacitor iOS / WebView
+      'http://localhost',       // Capacitor Android
       'http://localhost:5173',
       'http://127.0.0.1:5173',
       'tauri://localhost',

@@ -88,8 +88,8 @@
           </button>
         </div>
 
-        <!-- Editor de croqui: 100% do espaço restante -->
-        <div class="flex-1 min-h-0">
+        <!-- Editor de croqui: 100% do espaço restante (altura mínima para sempre mostrar o canvas) -->
+        <div class="flex-1 min-h-0 min-h-[60vh]">
           <CroquiTecnicoEditor
             ref="editorRef"
             :model-value="dadosAmbienteAtual"
