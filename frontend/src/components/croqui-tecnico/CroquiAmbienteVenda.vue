@@ -75,6 +75,24 @@
           ⚡💧🔥 Ponto
         </button>
       </div>
+      <!-- Barra de status inferior: área total + parede selecionada + Editar Medida -->
+      <div
+        v-if="fotoDataUrl || cotas.length > 0 || pontos.length > 0 || simbolos.length > 0"
+        class="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-between gap-2 px-3 py-2 bg-slate-800/95 border-t border-slate-600 text-slate-300 text-xs"
+      >
+        <span class="font-medium text-slate-200">{{ areaTotalText }}</span>
+        <span v-if="selectedCotaInfo" class="flex items-center gap-2">
+          <span>Parede: {{ selectedCotaInfo.lengthMm }} mm</span>
+          <button
+            type="button"
+            class="px-2 py-1 rounded bg-amber-500/90 hover:bg-amber-500 text-white text-xs font-medium touch-manipulation"
+            @click="abrirEditarMedida"
+          >
+            Editar Medida
+          </button>
+        </span>
+        <span v-else class="text-slate-500">Clique em uma parede para editar</span>
+      </div>
     </div>
   </div>
 
@@ -126,6 +144,12 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import Konva from 'konva'
 
 const SCALE_MM_PER_PX = 10
+const RULER_SIZE = 28
+const GRID_MM = 100
+const GRID_STEP = GRID_MM / SCALE_MM_PER_PX
+const RULER_COLOR = 'rgba(148, 163, 184, 0.7)'
+const RULER_FONT_SIZE = 10
+
 const SIMBOLOS_ARRESTAR = [
   { tipo: 'PORTA', label: 'Porta', icon: 'pi pi-minus' },
   { tipo: 'JANELA', label: 'Janela', icon: 'pi pi-th-large' },
@@ -154,6 +178,7 @@ const pontos = ref([])
 const simbolos = ref([])
 const cotaStart = ref(null)
 const cotaEditando = ref(null)
+const selectedCotaIndex = ref(null)
 const pontoPendente = ref(null)
 const modalCota = ref(false)
 const modalPonto = ref(false)
@@ -169,12 +194,27 @@ const simbolosVisiveis = computed(() => {
 })
 
 let stage = null
+let layerRulers = null
 let layerGrid = null
 let layerBg = null
 let layerDraw = null
 
 const SNAP_RADIUS = 24
-const GRID_STEP = 20
+
+function getContentRect() {
+  const size = getSize()
+  return {
+    x: RULER_SIZE,
+    y: RULER_SIZE,
+    width: Math.max(0, size.width - RULER_SIZE),
+    height: Math.max(0, size.height - RULER_SIZE),
+  }
+}
+
+function toStageX(x) { return x + RULER_SIZE }
+function toStageY(y) { return y + RULER_SIZE }
+function toContentX(px) { return px - RULER_SIZE }
+function toContentY(py) { return py - RULER_SIZE }
 
 function cor(tipo) {
   const c = { TOMADA: '#eab308', AGUA: '#0ea5e9', GAS: '#ef4444', PORTA: '#78716c', JANELA: '#0ea5e9', PILASTRA: '#57534e' }
@@ -264,6 +304,63 @@ const temDesenhoOuMarcacao = computed(() => {
   return temCotas > 0 || temPontos > 0 || temSimbolos > 0 || (temFoto && (pontos.value.length || simbolos.value.length))
 })
 
+/** Área em m² a partir das cotas fechadas (fórmula do shoelace); null se não formar polígono fechado */
+function areaFechadaM2() {
+  const segs = cotas.value.map((c) => [{ x: c.x1, y: c.y1 }, { x: c.x2, y: c.y2 }])
+  if (segs.length < 3) return null
+  const pts = []
+  const used = new Set()
+  let cur = segs[0]
+  pts.push(cur[0])
+  let end = cur[1]
+  pts.push(end)
+  used.add(0)
+  while (pts.length < segs.length + 1) {
+    let found = false
+    for (let i = 0; i < segs.length; i++) {
+      if (used.has(i)) continue
+      const s = segs[i]
+      const d0 = (end.x - s[0].x) ** 2 + (end.y - s[0].y) ** 2
+      const d1 = (end.x - s[1].x) ** 2 + (end.y - s[1].y) ** 2
+      if (d0 < 1e-6) { end = s[1]; pts.push(end); used.add(i); found = true; break }
+      if (d1 < 1e-6) { end = s[0]; pts.push(end); used.add(i); found = true; break }
+    }
+    if (!found) return null
+    if (used.size === segs.length && Math.hypot(end.x - pts[0].x, end.y - pts[0].y) < 1e-6) break
+  }
+  if (pts.length < 3) return null
+  let areaPx2 = 0
+  const n = pts.length - 1
+  for (let i = 0; i < n; i++) areaPx2 += pts[i].x * (pts[i + 1].y - pts[(i - 1 + n) % n].y)
+  areaPx2 = Math.abs(areaPx2) / 2
+  const areaMm2 = areaPx2 * SCALE_MM_PER_PX * SCALE_MM_PER_PX
+  return areaMm2 / 1e6
+}
+
+const areaTotalText = computed(() => {
+  const a = areaFechadaM2()
+  if (a != null) return `Área total: ${a.toFixed(2)} m²`
+  const totalMm = cotas.value.reduce((acc, c) => acc + (c.lengthMm ?? Math.round(dist(c.x1, c.y1, c.x2, c.y2) * SCALE_MM_PER_PX)), 0)
+  if (totalMm > 0) return `Soma paredes: ${(totalMm / 1000).toFixed(2)} m`
+  return 'Área total: —'
+})
+
+const selectedCotaInfo = computed(() => {
+  const i = selectedCotaIndex.value
+  if (i == null || i < 0 || i >= cotas.value.length) return null
+  const c = cotas.value[i]
+  const mm = c.lengthMm ?? Math.round(dist(c.x1, c.y1, c.x2, c.y2) * SCALE_MM_PER_PX)
+  return { index: i, cota: c, lengthMm: mm }
+})
+
+function abrirEditarMedida() {
+  if (!selectedCotaInfo.value) return
+  cotaEditando.value = selectedCotaInfo.value.cota
+  cotaMm.value = String(selectedCotaInfo.value.lengthMm ?? '')
+  modalCota.value = true
+  setTimeout(() => inputCotaRef.value?.focus(), 80)
+}
+
 function redesenhar() {
   if (!layerDraw) return
   layerDraw.destroyChildren()
@@ -271,9 +368,14 @@ function redesenhar() {
   const size = getSize()
   const cotaOffset = 22
 
-  cotas.value.forEach((c) => {
+  cotas.value.forEach((c, idx) => {
     const g = new Konva.Group({ listening: true })
-    const line = new Konva.Line({ points: [c.x1, c.y1, c.x2, c.y2], stroke: '#22c55e', strokeWidth: 3, lineCap: 'round' })
+    const line = new Konva.Line({
+      points: [toStageX(c.x1), toStageY(c.y1), toStageX(c.x2), toStageY(c.y2)],
+      stroke: selectedCotaIndex.value === idx ? '#f59e0b' : '#22c55e',
+      strokeWidth: selectedCotaIndex.value === idx ? 4 : 3,
+      lineCap: 'round',
+    })
     g.add(line)
 
     const cx = (c.x1 + c.x2) / 2
@@ -282,8 +384,8 @@ function redesenhar() {
     const deg = (angle * 180) / Math.PI
     const perpX = -Math.sin(angle) * cotaOffset
     const perpY = Math.cos(angle) * cotaOffset
-    const tx = cx + perpX
-    const ty = cy + perpY
+    const tx = toStageX(cx) + perpX
+    const ty = toStageY(cy) + perpY
     const text = new Konva.Text({
       x: tx,
       y: ty,
@@ -299,29 +401,35 @@ function redesenhar() {
     })
     text.on('click', (e) => {
       e.cancelBubble = true
+      selectedCotaIndex.value = idx
       cotaEditando.value = c
       cotaMm.value = String(c.lengthMm ?? '')
       modalCota.value = true
       setTimeout(() => inputCotaRef.value?.focus(), 80)
+    })
+    line.on('click', (e) => {
+      e.cancelBubble = true
+      selectedCotaIndex.value = idx
+      redesenhar()
     })
     g.add(text)
     layerDraw.add(g)
   })
 
   pontos.value.forEach((p) => {
-    const g = new Konva.Group({ x: p.x, y: p.y, draggable: true })
+    const g = new Konva.Group({ x: toStageX(p.x), y: toStageY(p.y), draggable: true })
     const circle = new Konva.Circle({ radius: 14, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 })
     const lbl = new Konva.Text({ y: 18, width: 50, text: p.alturaMm != null ? p.alturaMm + ' mm' : 'Ponto', fontSize: 10, fill: '#fff', align: 'center', offsetX: 25 })
     g.add(circle).add(lbl)
-    g.on('dragend', () => { p.x = g.x(); p.y = g.y(); emitData() })
+    g.on('dragend', () => { p.x = toContentX(g.x()); p.y = toContentY(g.y()); emitData() })
     layerDraw.add(g)
   })
 
   simbolos.value.forEach((s) => {
     const rot = s.rotation != null ? s.rotation : 0
     const g = new Konva.Group({
-      x: s.x,
-      y: s.y,
+      x: toStageX(s.x),
+      y: toStageY(s.y),
       rotation: rot,
       offsetX: 0,
       offsetY: 0,
@@ -331,8 +439,8 @@ function redesenhar() {
     const lbl = new Konva.Text({ y: 20, width: 60, text: simbolosVisiveis.value.find(x => x.tipo === s.tipo)?.label || s.tipo, fontSize: 9, fill: '#fff', align: 'center', offsetX: 30 })
     g.add(circle).add(lbl)
     g.on('dragend', () => {
-      s.x = g.x()
-      s.y = g.y()
+      s.x = toContentX(g.x())
+      s.y = toContentY(g.y())
       const snap = snapToWall(s.x, s.y)
       if (snap && SIMBOLOS_ARRESTAR.some((x) => x.tipo === s.tipo)) {
         s.x = snap.x
@@ -351,8 +459,8 @@ function redesenhar() {
 
   if (cotaStart.value) {
     const circ = new Konva.Circle({
-      x: cotaStart.value.x,
-      y: cotaStart.value.y,
+      x: toStageX(cotaStart.value.x),
+      y: toStageY(cotaStart.value.y),
       radius: 8,
       fill: 'rgba(34, 197, 94, 0.6)',
       stroke: '#22c55e',
@@ -365,16 +473,82 @@ function redesenhar() {
   layerDraw.batchDraw()
 }
 
+function desenharRulers() {
+  if (!layerRulers) return
+  layerRulers.destroyChildren()
+  const size = getSize()
+  const rect = getContentRect()
+  const thin = '#94a3b8'
+  const thinAlpha = 'rgba(148, 163, 184, 0.6)'
+  const tickStepPx = GRID_STEP
+  const labelEvery = 5
+
+  for (let i = 0; i * tickStepPx <= rect.width + tickStepPx; i++) {
+    const x = RULER_SIZE + i * tickStepPx
+    if (x > size.width) break
+    const mm = i * GRID_MM
+    const isMajor = mm % 500 === 0
+    layerRulers.add(new Konva.Line({
+      points: [x, RULER_SIZE, x, RULER_SIZE - (isMajor ? 8 : 4)],
+      stroke: thinAlpha,
+      strokeWidth: 1,
+    }))
+    if (mm % 500 === 0) {
+      const t = new Konva.Text({
+        x: x - 12,
+        y: 2,
+        width: 24,
+        text: String(mm),
+        fontSize: RULER_FONT_SIZE,
+        fill: thin,
+        align: 'center',
+      })
+      layerRulers.add(t)
+    }
+  }
+  for (let i = 0; i * tickStepPx <= rect.height + tickStepPx; i++) {
+    const y = RULER_SIZE + i * tickStepPx
+    if (y > size.height) break
+    const mm = i * GRID_MM
+    const isMajor = mm % 500 === 0
+    layerRulers.add(new Konva.Line({
+      points: [RULER_SIZE, y, RULER_SIZE - (isMajor ? 8 : 4), y],
+      stroke: thinAlpha,
+      strokeWidth: 1,
+    }))
+    if (mm % 500 === 0) {
+      const t = new Konva.Text({
+        x: 2,
+        y: y - 6,
+        width: RULER_SIZE - 6,
+        text: String(mm),
+        fontSize: RULER_FONT_SIZE,
+        fill: thin,
+        align: 'right',
+      })
+      layerRulers.add(t)
+    }
+  }
+  layerRulers.add(new Konva.Line({ points: [RULER_SIZE, 0, RULER_SIZE, size.height], stroke: thinAlpha, strokeWidth: 1 }))
+  layerRulers.add(new Konva.Line({ points: [0, RULER_SIZE, size.width, RULER_SIZE], stroke: thinAlpha, strokeWidth: 1 }))
+  layerRulers.batchDraw()
+}
+
 function desenharGrid() {
   if (!layerGrid) return
   layerGrid.destroyChildren()
   const size = getSize()
-  const gridColor = 'rgba(148, 163, 184, 0.2)'
-  for (let x = 0; x <= size.width + GRID_STEP; x += GRID_STEP) {
-    layerGrid.add(new Konva.Line({ points: [x, 0, x, size.height], stroke: gridColor, strokeWidth: 1 }))
+  const rect = getContentRect()
+  const gridColor = 'rgba(148, 163, 184, 0.15)'
+  for (let i = 0; i * GRID_STEP <= rect.width + GRID_STEP; i++) {
+    const x = RULER_SIZE + i * GRID_STEP
+    if (x > size.width) break
+    layerGrid.add(new Konva.Line({ points: [x, RULER_SIZE, x, size.height], stroke: gridColor, strokeWidth: 1 }))
   }
-  for (let y = 0; y <= size.height + GRID_STEP; y += GRID_STEP) {
-    layerGrid.add(new Konva.Line({ points: [0, y, size.width, y], stroke: gridColor, strokeWidth: 1 }))
+  for (let i = 0; i * GRID_STEP <= rect.height + GRID_STEP; i++) {
+    const y = RULER_SIZE + i * GRID_STEP
+    if (y > size.height) break
+    layerGrid.add(new Konva.Line({ points: [RULER_SIZE, y, size.width, y], stroke: gridColor, strokeWidth: 1 }))
   }
   layerGrid.batchDraw()
 }
@@ -382,20 +556,38 @@ function desenharGrid() {
 function fitBg() {
   if (!layerBg || !fotoDataUrl.value) return
   layerBg.destroyChildren()
-  const size = getSize()
+  const rect = getContentRect()
   const img = new Image()
   img.onload = () => {
-    layerBg.add(new Konva.Image({ image: img, x: 0, y: 0, width: size.width, height: size.height, listening: false }))
+    layerBg.add(new Konva.Image({
+      image: img,
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height,
+      listening: false,
+    }))
     layerBg.batchDraw()
   }
   img.src = fotoDataUrl.value
 }
 
+function clampContent(px, py) {
+  const rect = getContentRect()
+  return {
+    x: Math.max(0, Math.min(rect.width, toContentX(px))),
+    y: Math.max(0, Math.min(rect.height, toContentY(py))),
+  }
+}
+
 function onStageClick(e) {
   const pos = stage.getPointerPosition()
   if (!pos) return
+  const rect = getContentRect()
+  if (pos.x < rect.x || pos.y < rect.y) return
+  const { x: cx, y: cy } = clampContent(pos.x, pos.y)
   if (modo.value === 'cota') {
-    const snapped = snapToVertex(pos.x, pos.y)
+    const snapped = snapToVertex(cx, cy)
     if (!cotaStart.value) {
       cotaStart.value = { x: snapped.x, y: snapped.y }
       redesenhar()
@@ -416,7 +608,7 @@ function onStageClick(e) {
     return
   }
   if (modo.value === 'ponto' && fotoDataUrl.value) {
-    pontoPendente.value = { x: pos.x, y: pos.y }
+    pontoPendente.value = { x: cx, y: cy }
     pontoAlturaMm.value = ''
     modalPonto.value = true
     setTimeout(() => inputPontoRef.value?.focus(), 80)
@@ -433,8 +625,9 @@ function onDrop(e) {
   const tipo = e.dataTransfer?.getData('text/plain')
   if (!tipo || !containerRef.value || !stage) return
   const rect = containerRef.value.getBoundingClientRect()
-  const x = e.clientX - rect.left
-  const y = e.clientY - rect.top
+  const stageX = e.clientX - rect.left
+  const stageY = e.clientY - rect.top
+  const { x, y } = clampContent(stageX, stageY)
   const isParedeSymbol = SIMBOLOS_ARRESTAR.some((s) => s.tipo === tipo)
   if (isParedeSymbol && cotas.value.length > 0) {
     const snap = snapToWall(x, y)
@@ -485,6 +678,7 @@ function onFotoSelect(ev) {
 function fecharCota() {
   modalCota.value = false
   cotaEditando.value = null
+  redesenhar()
 }
 
 function aplicarCota() {
@@ -536,11 +730,13 @@ function init() {
   if (!containerRef.value) return
   const size = getSize()
   stage = new Konva.Stage({ container: containerRef.value, width: size.width, height: size.height })
+  layerRulers = new Konva.Layer({ listening: false })
   layerGrid = new Konva.Layer({ listening: false })
   layerBg = new Konva.Layer({ listening: false })
   layerDraw = new Konva.Layer()
-  stage.add(layerGrid).add(layerBg).add(layerDraw)
+  stage.add(layerRulers).add(layerGrid).add(layerBg).add(layerDraw)
   stage.on('click', onStageClick)
+  desenharRulers()
   desenharGrid()
   load(props.modelValue)
   if (fotoDataUrl.value) fitBg()
@@ -553,6 +749,7 @@ onMounted(() => {
       const size = getSize()
       stage.width(size.width)
       stage.height(size.height)
+      desenharRulers()
       desenharGrid()
       if (fotoDataUrl.value) fitBg()
       layerDraw?.batchDraw()
@@ -569,6 +766,7 @@ function marcarSobreFoto() {
 onUnmounted(() => {
   if (stage) stage.destroy()
   stage = null
+  layerRulers = null
   layerGrid = null
   layerBg = null
   layerDraw = null

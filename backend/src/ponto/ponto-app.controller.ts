@@ -18,6 +18,11 @@ import { RegistrarPontoDto } from './dto/registrar-ponto.dto';
 import { PontoAuthGuard } from './ponto-auth.guard';
 import { Public } from '../auth/public.decorator';
 
+/**
+ * Rotas do app de Ponto (PWA/APK). Acesso por convite (token próprio), não usa login do ERP.
+ * @Public() no controller: o JwtAuthGuard global ignora aqui; o PontoAuthGuard exige o token do convite em me/hoje/registrar.
+ */
+@Public()
 @Controller('ponto')
 export class PontoAppController {
   constructor(
