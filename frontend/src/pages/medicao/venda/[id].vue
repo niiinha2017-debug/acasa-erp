@@ -167,6 +167,7 @@
               <i class="pi pi-plus text-xl" />
               Adicionar outro ambiente
             </button>
+            </section>
           </div>
 
           <!-- Observações gerais -->
