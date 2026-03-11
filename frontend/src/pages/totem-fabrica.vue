@@ -88,7 +88,7 @@
                   type="button"
                   class="w-fit min-w-[7rem] py-2 px-6 rounded-full bg-brand-primary hover:opacity-90 text-white font-medium text-sm flex items-center justify-center gap-2 transition-opacity touch-manipulation disabled:opacity-60"
                   :disabled="acionando === tarefa.id_para_play"
-                  @click="play(tarefa)"
+                  @click="playOuIrParaPagina(tarefa)"
                 >
                   <i class="pi pi-play" />
                   <span>Iniciar</span>
@@ -97,11 +97,10 @@
                   v-if="podeCheck(tarefa) && tarefa.tipo_medicao === 'MEDICAO_FINA' && tarefa.projeto_id"
                   type="button"
                   class="w-fit min-w-[7rem] py-2 px-6 rounded-full border border-blue-600 bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm flex items-center justify-center gap-2 transition-colors touch-manipulation disabled:opacity-60"
-                  :disabled="acionando === tarefa.id_para_play"
-                  @click="abrirModalMedicaoProducao(tarefa)"
+                  @click="irParaMedicaoFina(tarefa)"
                 >
-                  <i class="pi pi-check" />
-                  <span>Concluir</span>
+                  <i class="pi pi-pencil" />
+                  <span>Preencher</span>
                 </button>
                 <button
                   v-else-if="podeCheck(tarefa) && tarefa.tipo_medicao === 'MEDICAO_FINA' && !tarefa.projeto_id"
@@ -109,18 +108,17 @@
                   class="w-fit min-w-[7rem] py-2 px-6 rounded-full border border-slate-300 bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-400 font-medium text-sm cursor-not-allowed"
                   title="Vincule um projeto à tarefa na Agenda para concluir a medição fina."
                 >
-                  <i class="pi pi-check" />
-                  <span>Concluir</span>
+                  <i class="pi pi-pencil" />
+                  <span>Preencher</span>
                 </button>
                 <button
                   v-else-if="podeCheck(tarefa) && tarefa.tipo_medicao === 'MEDICAO_ORCAMENTO'"
                   type="button"
                   class="w-fit min-w-[7rem] py-2 px-6 rounded-full border border-amber-500 bg-amber-500 hover:bg-amber-400 text-white font-medium text-sm flex items-center justify-center gap-2 transition-colors touch-manipulation disabled:opacity-60"
-                  :disabled="acionando === tarefa.id_para_play"
-                  @click="abrirModalMedicaoOrcamento(tarefa)"
+                  @click="irParaMedicaoVenda(tarefa)"
                 >
-                  <i class="pi pi-check" />
-                  <span>Concluir</span>
+                  <i class="pi pi-pencil" />
+                  <span>Preencher</span>
                 </button>
                 <button
                   v-else-if="podeCheck(tarefa)"
@@ -242,171 +240,20 @@
         </div>
       </Transition>
 
-      <!-- Modal: Medição da Agenda da Venda — formulário simples (cliente/orçamento, sem projeto) -->
-      <Transition name="fade">
-        <div
-          v-if="modalMedicaoOrcamentoOpen"
-          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-          @click.self="fecharModalMedicaoOrcamento"
-        >
-          <div class="bg-bg-card rounded-2xl shadow-xl max-w-lg w-full overflow-hidden flex flex-col border border-border-ui totem-modal max-h-[90vh]">
-            <div class="px-4 py-3 border-b border-border-ui flex items-center justify-between shrink-0">
-              <h3 class="text-base font-semibold text-text-main">Medição — Orçamento</h3>
-              <button type="button" class="min-w-[44px] min-h-[44px] rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 text-text-muted flex items-center justify-center touch-manipulation" @click="fecharModalMedicaoOrcamento">
-                <i class="pi pi-times text-lg" />
-              </button>
-            </div>
-            <form class="flex-1 overflow-y-auto flex flex-col min-h-0" @submit.prevent="enviarMedicaoOrcamento">
-              <div class="p-4 space-y-3">
-                <p class="text-xs text-text-muted">Vinculada ao cliente ou orçamento. Formulário simples: medidas gerais e fotos (projeto não exigido).</p>
-                <div>
-                  <label class="block text-xs font-semibold text-text-muted uppercase mb-1">Medidas gerais</label>
-                  <textarea
-                    v-model="formMedicaoOrcamento.medidas_gerais"
-                    rows="3"
-                    class="w-full rounded-xl border border-border-ui bg-bg-page text-text-main text-sm px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 resize-y min-h-[72px]"
-                    placeholder="Ex.: Pé-direito 2,70 m; largura 3,20 m; profundidade 1,50 m; pontos de água e luz no local."
-                  ></textarea>
-                </div>
-                <div>
-                  <label class="block text-xs font-semibold text-text-muted uppercase mb-1">Observações</label>
-                  <textarea
-                    v-model="formMedicaoOrcamento.observacoes"
-                    rows="2"
-                    class="w-full rounded-xl border border-border-ui bg-bg-page text-text-main text-sm px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 resize-y min-h-[56px]"
-                    placeholder="Observações simples do local."
-                  ></textarea>
-                </div>
-                <div>
-                  <label class="block text-xs font-semibold text-text-muted uppercase mb-1">Fotos da obra (opcional)</label>
-                  <input
-                    ref="inputFotosMedicaoOrcamento"
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    class="w-full text-sm text-text-muted file:mr-2 file:rounded-lg file:border-0 file:bg-sky-100 file:px-3 file:py-2 file:text-sky-700 file:text-sm"
-                    @change="onFotosMedicaoOrcamentoChange"
-                  />
-                  <p class="text-xs text-text-muted mt-1">Podem ser enviadas agora ou depois na tela do orçamento.</p>
-                </div>
-              </div>
-              <div class="px-4 py-4 border-t border-border-ui flex gap-3 justify-end shrink-0">
-                <button type="button" class="min-h-[48px] px-5 py-3 rounded-xl border border-border-ui text-text-main text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-700 touch-manipulation" @click="fecharModalMedicaoOrcamento">
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  class="min-h-[48px] px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-white text-sm font-semibold flex items-center gap-2 disabled:opacity-50 touch-manipulation"
-                  :disabled="enviandoMedicaoOrcamento"
-                >
-                  <i v-if="enviandoMedicaoOrcamento" class="pi pi-spin pi-spinner" />
-                  <i v-else class="pi pi-check" />
-                  {{ enviandoMedicaoOrcamento ? 'Enviando...' : 'Concluir e enviar para orçamento' }}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </Transition>
-
-      <!-- Modal: Medição da Agenda da Produção — formulário técnico (projeto obrigatório) -->
-      <Transition name="fade">
-        <div
-          v-if="modalMedicaoProducaoOpen"
-          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-          @click.self="fecharModalMedicaoProducao"
-        >
-          <div class="bg-bg-card rounded-2xl shadow-xl max-w-lg w-full overflow-hidden flex flex-col border border-border-ui totem-modal max-h-[90vh]">
-            <div class="px-4 py-3 border-b border-border-ui flex items-center justify-between shrink-0">
-              <h3 class="text-base font-semibold text-text-main">Medição — Produção</h3>
-              <button type="button" class="min-w-[44px] min-h-[44px] rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 text-text-muted flex items-center justify-center touch-manipulation" @click="fecharModalMedicaoProducao">
-                <i class="pi pi-times text-lg" />
-              </button>
-            </div>
-            <form class="flex-1 overflow-y-auto flex flex-col min-h-0" @submit.prevent="enviarMedicaoProducao">
-              <div class="p-4 space-y-4">
-                <p class="text-xs text-text-muted">Projeto vinculado. Preencha as medidas em milímetros e o checklist técnico.</p>
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-xs font-semibold text-text-muted uppercase mb-1">Largura (mm)</label>
-                    <input
-                      v-model.number="formMedicaoProducao.largura_mm"
-                      type="number"
-                      min="1"
-                      step="1"
-                      placeholder="Ex: 2400"
-                      class="w-full rounded-xl border border-border-ui bg-bg-page text-text-main text-lg font-semibold px-3 py-2.5 focus:ring-2 focus:ring-blue-500"
-                      :class="{ 'border-rose-500': submittedMedicaoProducao && !formMedicaoProducao.largura_mm }"
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-xs font-semibold text-text-muted uppercase mb-1">Pé-direito (mm)</label>
-                    <input
-                      v-model.number="formMedicaoProducao.pe_direito_mm"
-                      type="number"
-                      min="1"
-                      step="1"
-                      placeholder="Ex: 2700"
-                      class="w-full rounded-xl border border-border-ui bg-bg-page text-text-main text-lg font-semibold px-3 py-2.5 focus:ring-2 focus:ring-blue-500"
-                      :class="{ 'border-rose-500': submittedMedicaoProducao && !formMedicaoProducao.pe_direito_mm }"
-                    />
-                  </div>
-                </div>
-                <p v-if="submittedMedicaoProducao && (!formMedicaoProducao.largura_mm || !formMedicaoProducao.pe_direito_mm)" class="text-xs text-rose-600">
-                  Preencha largura e pé-direito para concluir.
-                </p>
-                <div>
-                  <span class="block text-xs font-semibold text-text-muted uppercase mb-2">Pontos técnicos</span>
-                  <div class="grid grid-cols-2 gap-2">
-                    <label class="flex items-center gap-2 p-3 rounded-xl border border-border-ui hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer">
-                      <input v-model="formMedicaoProducao.conferencia_agua" type="checkbox" class="rounded border-slate-300 text-blue-600 w-4 h-4" />
-                      <span class="text-sm">Água</span>
-                    </label>
-                    <label class="flex items-center gap-2 p-3 rounded-xl border border-border-ui hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer">
-                      <input v-model="formMedicaoProducao.conferencia_luz" type="checkbox" class="rounded border-slate-300 text-blue-600 w-4 h-4" />
-                      <span class="text-sm">Luz</span>
-                    </label>
-                    <label class="flex items-center gap-2 p-3 rounded-xl border border-border-ui hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer">
-                      <input v-model="formMedicaoProducao.conferencia_gas" type="checkbox" class="rounded border-slate-300 text-blue-600 w-4 h-4" />
-                      <span class="text-sm">Gás</span>
-                    </label>
-                    <label class="flex items-center gap-2 p-3 rounded-xl border border-border-ui hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer">
-                      <input v-model="formMedicaoProducao.conferencia_ar_condicionado" type="checkbox" class="rounded border-slate-300 text-blue-600 w-4 h-4" />
-                      <span class="text-sm">Ar-condicionado</span>
-                    </label>
-                  </div>
-                </div>
-                <p class="text-xs text-text-muted">Promob e fotos da obra podem ser anexados no menu <strong>Medição Fina</strong> no sistema.</p>
-              </div>
-              <div class="px-4 py-4 border-t border-border-ui flex gap-3 justify-end shrink-0">
-                <button type="button" class="min-h-[48px] px-5 py-3 rounded-xl border border-border-ui text-text-main text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-700 touch-manipulation" @click="fecharModalMedicaoProducao">
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  class="min-h-[48px] px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold flex items-center gap-2 disabled:opacity-50 touch-manipulation"
-                  :disabled="enviandoMedicaoProducao"
-                >
-                  <i v-if="enviandoMedicaoProducao" class="pi pi-spin pi-spinner" />
-                  <i v-else class="pi pi-check" />
-                  {{ enviandoMedicaoProducao ? 'Enviando...' : 'Finalizar medição' }}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </Transition>
     </Teleport>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import PageHeader from '@/components/ui/PageHeader.vue'
-import { TotemFabricaService, ArquivosService, MedicaoFinaService } from '@/services'
+import { TotemFabricaService } from '@/services'
 import { notify } from '@/services/notify'
 
 definePage({ meta: { perm: 'agendamentos.producao' } })
+
+const router = useRouter()
 
 const tarefas = ref([])
 const loading = ref(false)
@@ -492,31 +339,52 @@ async function play(tarefa) {
   }
 }
 
+/** Iniciar: para medição redireciona para a página dedicada; caso contrário apenas dá play. */
+async function playOuIrParaPagina(tarefa) {
+  if (tarefa.tipo_medicao === 'MEDICAO_ORCAMENTO') {
+    acionando.value = tarefa.id_para_play
+    try {
+      await TotemFabricaService.play(tarefa.id_para_play, { tipo: 'agenda_loja' })
+      notify.success('Medição iniciada.')
+      router.push(`/medicao-venda/${tarefa.id_para_play}`)
+    } catch (e) {
+      const msg = e?.response?.data?.message || 'Não foi possível iniciar.'
+      notify.error(msg)
+    } finally {
+      acionando.value = null
+    }
+    return
+  }
+  if (tarefa.tipo_medicao === 'MEDICAO_FINA') {
+    acionando.value = tarefa.id_para_play
+    try {
+      await TotemFabricaService.play(tarefa.id_para_play, { tipo: 'agenda_fabrica' })
+      notify.success('Medição iniciada.')
+      router.push(`/medicao-fina/${tarefa.id_para_play}`)
+    } catch (e) {
+      const msg = e?.response?.data?.message || 'Não foi possível iniciar.'
+      notify.error(msg)
+    } finally {
+      acionando.value = null
+    }
+    return
+  }
+  await play(tarefa)
+}
+
+function irParaMedicaoVenda(tarefa) {
+  router.push(`/medicao-venda/${tarefa.id_para_play}`)
+}
+
+function irParaMedicaoFina(tarefa) {
+  router.push(`/medicao-fina/${tarefa.id_para_play}`)
+}
+
 const modalSobrasOpen = ref(false)
 const modalPassoSobras = ref(false)
 const tarefaSobras = ref(null)
 const consumosTotem = ref([])
 const sobrasRows = ref([{ produto_id: null, largura_mm: null, comprimento_mm: null }])
-
-const modalMedicaoOrcamentoOpen = ref(false)
-const tarefaMedicaoOrcamento = ref(null)
-const formMedicaoOrcamento = ref({ medidas_gerais: '', observacoes: '' })
-const fotosMedicaoOrcamento = ref([])
-const inputFotosMedicaoOrcamento = ref(null)
-const enviandoMedicaoOrcamento = ref(false)
-
-const modalMedicaoProducaoOpen = ref(false)
-const tarefaMedicaoProducao = ref(null)
-const formMedicaoProducao = ref({
-  largura_mm: null,
-  pe_direito_mm: null,
-  conferencia_agua: false,
-  conferencia_luz: false,
-  conferencia_gas: false,
-  conferencia_ar_condicionado: false,
-})
-const submittedMedicaoProducao = ref(false)
-const enviandoMedicaoProducao = ref(false)
 
 async function abrirModalSobras(tarefa) {
   tarefaSobras.value = tarefa
@@ -541,117 +409,6 @@ function fecharModalSobras() {
   modalSobrasOpen.value = false
   modalPassoSobras.value = false
   tarefaSobras.value = null
-}
-
-function abrirModalMedicaoOrcamento(tarefa) {
-  tarefaMedicaoOrcamento.value = tarefa
-  formMedicaoOrcamento.value = { medidas_gerais: '', observacoes: '' }
-  fotosMedicaoOrcamento.value = []
-  if (inputFotosMedicaoOrcamento.value) inputFotosMedicaoOrcamento.value.value = ''
-  modalMedicaoOrcamentoOpen.value = true
-}
-
-function fecharModalMedicaoOrcamento() {
-  modalMedicaoOrcamentoOpen.value = false
-  tarefaMedicaoOrcamento.value = null
-  formMedicaoOrcamento.value = { medidas_gerais: '', observacoes: '' }
-  fotosMedicaoOrcamento.value = []
-}
-
-function onFotosMedicaoOrcamentoChange(ev) {
-  const files = ev.target?.files
-  fotosMedicaoOrcamento.value = files ? Array.from(files) : []
-}
-
-async function enviarMedicaoOrcamento() {
-  const t = tarefaMedicaoOrcamento.value
-  if (!t) return
-  enviandoMedicaoOrcamento.value = true
-  acionando.value = t.id_para_play
-  try {
-    const { data } = await TotemFabricaService.concluirMedicaoOrcamento(t.id_para_play, {
-      medidas_gerais: formMedicaoOrcamento.value.medidas_gerais?.trim() || '',
-      observacoes: formMedicaoOrcamento.value.observacoes?.trim() || '',
-    })
-    const idMedicao = data?.medicao_orcamento_id
-    if (idMedicao && fotosMedicaoOrcamento.value.length) {
-      for (const file of fotosMedicaoOrcamento.value) {
-        try {
-          await ArquivosService.upload({
-            ownerType: 'MEDICAO_ORCAMENTO',
-            ownerId: idMedicao,
-            file,
-            categoria: 'FOTO',
-          })
-        } catch {
-          // falha em um anexo não bloqueia
-        }
-      }
-    }
-    notify.success(data?.mensagem || 'Medição concluída. Cliente pronto para orçamento.')
-    fecharModalMedicaoOrcamento()
-    await carregarTarefas()
-  } catch (e) {
-    const msg = e?.response?.data?.message || 'Não foi possível concluir a medição.'
-    notify.error(msg)
-  } finally {
-    enviandoMedicaoOrcamento.value = false
-    acionando.value = null
-  }
-}
-
-function abrirModalMedicaoProducao(tarefa) {
-  tarefaMedicaoProducao.value = tarefa
-  formMedicaoProducao.value = {
-    largura_mm: null,
-    pe_direito_mm: null,
-    conferencia_agua: false,
-    conferencia_luz: false,
-    conferencia_gas: false,
-    conferencia_ar_condicionado: false,
-  }
-  submittedMedicaoProducao.value = false
-  modalMedicaoProducaoOpen.value = true
-}
-
-function fecharModalMedicaoProducao() {
-  modalMedicaoProducaoOpen.value = false
-  tarefaMedicaoProducao.value = null
-  submittedMedicaoProducao.value = false
-}
-
-async function enviarMedicaoProducao() {
-  const t = tarefaMedicaoProducao.value
-  if (!t?.projeto_id || !t?.id_para_play) return
-  submittedMedicaoProducao.value = true
-  const larg = formMedicaoProducao.value.largura_mm
-  const pe = formMedicaoProducao.value.pe_direito_mm
-  if (larg == null || Number(larg) < 1 || pe == null || Number(pe) < 1) return
-  enviandoMedicaoProducao.value = true
-  acionando.value = t.id_para_play
-  try {
-    await MedicaoFinaService.finalizarTotem({
-      agenda_id: t.id_para_play,
-      tipo: t.tipo,
-      projeto_id: t.projeto_id,
-      nome_ambiente: undefined,
-      largura_mm: Number(larg),
-      pe_direito_mm: Number(pe),
-      conferencia_agua: formMedicaoProducao.value.conferencia_agua,
-      conferencia_luz: formMedicaoProducao.value.conferencia_luz,
-      conferencia_gas: formMedicaoProducao.value.conferencia_gas,
-      conferencia_ar_condicionado: formMedicaoProducao.value.conferencia_ar_condicionado,
-    })
-    notify.success('Medição finalizada. Status: Medido - Aguardando Técnico.')
-    fecharModalMedicaoProducao()
-    await carregarTarefas()
-  } catch (e) {
-    const msg = e?.response?.data?.message || e?.response?.data?.error || 'Não foi possível finalizar a medição.'
-    notify.error(msg)
-  } finally {
-    enviandoMedicaoProducao.value = false
-    acionando.value = null
-  }
 }
 
 async function confirmarCheckSemSobras(tarefaFromButton) {

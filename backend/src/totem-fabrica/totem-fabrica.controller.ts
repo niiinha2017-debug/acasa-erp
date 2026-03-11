@@ -9,6 +9,19 @@ export class TotemFabricaController {
   constructor(private readonly apontamentoService: ApontamentoProducaoService) {}
 
   /**
+   * Retorna uma única tarefa do totem por id (para páginas dedicadas de medição).
+   * Query: tipo = 'agenda_loja' | 'agenda_fabrica'
+   */
+  @Get('tarefa/:id')
+  @Permissoes('agendamentos.producao')
+  getTarefa(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('tipo') tipo: 'agenda_loja' | 'agenda_fabrica' = 'agenda_fabrica',
+  ) {
+    return this.apontamentoService.getTotemTarefaById(id, tipo);
+  }
+
+  /**
    * Lista tarefas para o totem: apenas status Pendente ou Em Produção, mesma ordem da Agenda (inicio_em asc).
    */
   @Get('tarefas')

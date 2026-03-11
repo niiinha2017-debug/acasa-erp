@@ -124,9 +124,10 @@ export class PontoService {
 
   private assertConviteValido(convite: any) {
     if (!convite) throw new BadRequestException('Código inválido.');
-    if (convite.usado_em) throw new BadRequestException('Código já utilizado.');
+    if (convite.usado_em)
+      throw new BadRequestException('Código já utilizado. Gere um novo convite no ERP.');
     if (new Date() > convite.expira_em)
-      throw new BadRequestException('Código expirado.');
+      throw new BadRequestException('Código expirado. Gere um novo convite no ERP.');
     this.assertFuncionarioAtivo(convite.funcionario?.status);
   }
 

@@ -414,8 +414,9 @@ async function gerarConvite() {
     }
 
     const apkUrl = String(data.apk_url || '').trim() || fallbackApkUrl
-    // PWA deve abrir direto na ativação com o código na URL (igual ao webUrl)
-    const pwaUrlComCodigo = urlAtivacaoVal
+    // PWA/iPhone: usar hash (#code=) para o código não se perder ao abrir como app
+    const basePwa = pontoBaseUrl.replace(/\/+$/, '')
+    const pwaUrlComCodigo = `${basePwa}/ativar#code=${codigoEnc}`
     convite.value = {
       ...data,
       code: codigo,

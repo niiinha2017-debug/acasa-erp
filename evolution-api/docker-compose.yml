@@ -1,5 +1,5 @@
-# Evolution API + Redis para WhatsApp (Ubuntu)
-# Uso: cd evolution-api && cp .env.example .env && docker compose up -d
+# Evolution API + Redis + PostgreSQL para WhatsApp (Ubuntu)
+# v2 exige banco: postgresql ou mysql. Uso: cd evolution-api && cp .env.example .env && docker-compose up -d
 
 version: '3.9'
 
@@ -18,10 +18,42 @@ services:
       - CACHE_REDIS_ENABLED=true
       - CACHE_REDIS_URI=redis://redis:6379/0
       - CACHE_REDIS_PREFIX_KEY=evolution
+      - DATABASE_ENABLED=true
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://evolution:evolution@postgres:5432/evolution
+      - DATABASE_CONNECTION_CLIENT_NAME=evolution_exchange
+      - DATABASE_SAVE_DATA_INSTANCE=true
+      - DATABASE_SAVE_DATA_NEW_MESSAGE=true
+      - DATABASE_SAVE_MESSAGE_UPDATE=true
+      - DATABASE_SAVE_DATA_CONTACTS=true
+      - DATABASE_SAVE_DATA_CHATS=true
+      - DATABASE_SAVE_DATA_LABELS=true
+      - DATABASE_SAVE_DATA_HISTORIC=true
     volumes:
       - evolution_instances:/evolution/instances
     depends_on:
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - evolution_net
+
+  postgres:
+    container_name: evolution_postgres
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: evolution
+      POSTGRES_DB: evolution
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evolution -d evolution"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - evolution_net
 
@@ -38,6 +70,7 @@ services:
 volumes:
   evolution_instances:
   redis_data:
+  postgres_data:
 
 networks:
   evolution_net:

@@ -268,6 +268,20 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/medicao-fina/[id]': RouteRecordInfo<
+      '/medicao-fina/[id]',
+      '/medicao-fina/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/medicao-venda/[id]': RouteRecordInfo<
+      '/medicao-venda/[id]',
+      '/medicao-venda/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
     '/orcamentos/': RouteRecordInfo<
       '/orcamentos/',
       '/orcamentos',
@@ -761,6 +775,18 @@ declare module 'vue-router/auto-routes' {
     'src/pages/login.vue': {
       routes:
         | '/login'
+      views:
+        | never
+    }
+    'src/pages/medicao-fina/[id].vue': {
+      routes:
+        | '/medicao-fina/[id]'
+      views:
+        | never
+    }
+    'src/pages/medicao-venda/[id].vue': {
+      routes:
+        | '/medicao-venda/[id]'
       views:
         | never
     }

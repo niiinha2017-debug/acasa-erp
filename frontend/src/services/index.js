@@ -609,6 +609,10 @@ export const TotemFabricaService = {
   getTarefas(params = {}) {
     return api.get('/totem-fabrica/tarefas', { params });
   },
+  /** Uma tarefa por id (para páginas dedicadas de medição). tipo: 'agenda_loja' | 'agenda_fabrica' */
+  getTarefa(id, tipo = 'agenda_fabrica') {
+    return api.get(`/totem-fabrica/tarefa/${id}`, { params: { tipo } });
+  },
   getConsumos(agendaFabricaId) {
     return api.get(`/totem-fabrica/${agendaFabricaId}/consumos`);
   },

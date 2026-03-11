@@ -600,6 +600,77 @@ export class ApontamentoProducaoService {
   }
 
   /**
+   * Retorna uma única tarefa do totem por id e tipo (para páginas dedicadas de medição).
+   */
+  async getTotemTarefaById(
+    id: number,
+    tipo: 'agenda_loja' | 'agenda_fabrica' = 'agenda_fabrica',
+  ) {
+    if (tipo === 'agenda_loja') {
+      const t = await this.prisma.agenda_loja.findUnique({
+        where: { id },
+        include: {
+          cliente: { select: { id: true, nome_completo: true, razao_social: true } },
+          criado_por_usuario: { select: { id: true, nome: true } },
+          equipe: { include: { funcionario: { select: { id: true, nome: true, custo_hora: true } } } },
+          apontamentos_producao: {
+            orderBy: { inicio_em: 'asc' },
+            include: { funcionario: { select: { id: true, nome: true, custo_hora: true } } },
+          },
+        },
+      });
+      if (!t) throw new BadRequestException('Tarefa não encontrada.');
+      return {
+        id_para_play: t.id,
+        tipo: 'agenda_loja' as const,
+        is_medicao_externa: true,
+        tipo_medicao: 'MEDICAO_ORCAMENTO' as const,
+        titulo: t.titulo,
+        inicio_em: t.inicio_em,
+        fim_em: t.fim_em,
+        status: t.status,
+        categoria: t.categoria,
+        projeto_id: null,
+        cliente: t.cliente,
+        criado_por_usuario: t.criado_por_usuario,
+        equipe: t.equipe,
+        apontamentos_producao: t.apontamentos_producao,
+      };
+    }
+    const t = await this.prisma.agenda_fabrica.findUnique({
+      where: { id },
+      include: {
+        cliente: { select: { id: true, nome_completo: true, razao_social: true } },
+        criado_por_usuario: { select: { id: true, nome: true } },
+        equipe: { include: { funcionario: { select: { id: true, nome: true, custo_hora: true } } } },
+        apontamentos_producao: {
+          orderBy: { inicio_em: 'asc' },
+          include: { funcionario: { select: { id: true, nome: true, custo_hora: true } } },
+        },
+      },
+    });
+    if (!t) throw new BadRequestException('Tarefa não encontrada.');
+    const cat = String(t.categoria ?? '').toUpperCase();
+    const ehMedicaoFina = CATEGORIAS_AGENDA_FABRICA_MEDICAO_FINA.includes(cat as any);
+    return {
+      id_para_play: t.id,
+      tipo: 'agenda_fabrica' as const,
+      is_medicao_externa: ehMedicaoFina,
+      tipo_medicao: ehMedicaoFina ? ('MEDICAO_FINA' as const) : null,
+      titulo: t.titulo,
+      inicio_em: t.inicio_em,
+      fim_em: t.fim_em,
+      status: t.status,
+      categoria: t.categoria,
+      projeto_id: t.projeto_id ?? null,
+      cliente: t.cliente,
+      criado_por_usuario: t.criado_por_usuario,
+      equipe: t.equipe,
+      apontamentos_producao: t.apontamentos_producao,
+    };
+  }
+
+  /**
    * Totem Fábrica - Play: define status Em Produção e grava horário de início (apontamento por membro da equipe).
    * Suporta agenda_fabrica (ordem de produção) ou agenda_loja (medição externa) via parâmetro tipo.
    */

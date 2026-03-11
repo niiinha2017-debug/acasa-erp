@@ -396,8 +396,28 @@ async function baterPonto() {
 }
 
 function normalizarCodigoConvite(val) {
-  if (!val || typeof val !== 'string') return ''
-  return val.trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
+  if (val == null) return ''
+  const s = String(val).trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
+  return s
+}
+
+/** Lê o código do convite da URL: query (?code=) e/ou hash (#code=). No PWA o hash costuma ser preservado. */
+function obterCodigoDaUrl() {
+  try {
+    const search = new URLSearchParams(window.location.search)
+    let raw = search.get('code')
+    if (!raw && window.location.hash) {
+      const hash = window.location.hash.replace(/^#/, '')
+      const hashParams = new URLSearchParams(hash)
+      raw = hashParams.get('code')
+    }
+    if (!raw) return null
+    const decoded = decodeURIComponent(String(raw).replace(/\+/g, ' '))
+    const code = normalizarCodigoConvite(decoded)
+    return code || null
+  } catch {
+    return null
+  }
 }
 
 async function realizarPareamento() {
@@ -420,9 +440,14 @@ async function realizarPareamento() {
     window.history.replaceState({}, document.title, window.location.pathname);
   } catch (e) {
     const msg = e?.response?.data?.message
-    erro.value = (typeof msg === 'string' && msg.trim())
-      ? msg.trim().toUpperCase()
-      : 'CÓDIGO INVÁLIDO OU EXPIRADO'
+    if (typeof msg === 'string' && msg.trim()) {
+      erro.value = msg.trim()
+      if (msg.includes('expirado')) erro.value = 'Código expirado. Gere um novo convite no ERP.'
+      else if (msg.includes('utilizado')) erro.value = 'Código já utilizado. Gere um novo convite no ERP.'
+      else if (msg.includes('inativo')) erro.value = 'Funcionário inativo. Verifique no ERP.'
+    } else {
+      erro.value = 'Código inválido ou sem conexão. Verifique o código e a internet.'
+    }
   } finally {
     loading.value = false
   }
@@ -431,22 +456,12 @@ async function realizarPareamento() {
 onMounted(() => {
   timerRelogio = setInterval(() => { agora.value = new Date() }, 1000)
 
-  // --- CAPTURA O CÓDIGO DA URL ---
-  const params = new URLSearchParams(window.location.search)
-  let code = null
-  try {
-    const rawCode = params.get('code')
-    if (rawCode) {
-      const decoded = decodeURIComponent(String(rawCode).replace(/\+/g, ' '))
-      code = decoded.trim().toUpperCase().replace(/[^A-Z0-9]/g, '') || null
-    }
-  } catch {
-    code = null
-  }
+  // --- CAPTURA O CÓDIGO DA URL (query ?code= e hash #code= para PWA) ---
+  const code = obterCodigoDaUrl()
 
   if (code && !token.value) {
     parearCode.value = code
-    // Tenta ativar automático após 500ms
+    // Tenta ativar automático após 500ms (dá tempo do app inicializar)
     setTimeout(() => {
       realizarPareamento()
     }, 500)

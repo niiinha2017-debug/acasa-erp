@@ -1,6 +1,7 @@
 # Evolution API (WhatsApp)
 
-Instalação da Evolution API com Redis no Ubuntu via Docker Compose.
+Instalação da Evolution API v2 com Redis e PostgreSQL no Ubuntu via Docker Compose.  
+A v2 exige banco (PostgreSQL ou MySQL); este compose sobe PostgreSQL automaticamente.
 
 ## Pré-requisitos
 
