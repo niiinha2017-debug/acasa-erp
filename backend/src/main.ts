@@ -30,21 +30,25 @@ async function bootstrap() {
 
   app.use(cookieParser());
 
+  // CORS: ERP, PWA de ponto, Tauri, etc. NestJS responde ao preflight OPTIONS e envia os headers.
   app.enableCors({
     origin: [
       'https://localhost',
       'capacitor://localhost',
       'http://localhost:5173',
       'http://127.0.0.1:5173',
-      'tauri://localhost', // ✅ Importante para Tauri v1 (Windows)
-      'http://tauri.localhost', // ✅ Importante para Tauri v2
+      'tauri://localhost',
+      'http://tauri.localhost',
       'https://acasamarcenaria.com.br',
+      'https://www.acasamarcenaria.com.br',
       'https://contrato.acasamarcenaria.com.br',
+      'https://ponto.acasamarcenaria.com.br',
       'http://localhost:5174',
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    preflightContinue: false, // NestJS responde ao OPTIONS com os headers CORS
   });
 
   const port = 3000;

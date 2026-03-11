@@ -71,6 +71,10 @@ export class CreateMedicaoFinaDto {
   @IsString()
   observacoes_montador?: string;
 
+  /** Planta baixa interativa: { walls, technicalPoints, texts } para orçamento técnico */
+  @IsOptional()
+  planta_baixa_json?: Record<string, unknown>;
+
   @IsOptional()
   @IsBoolean()
   concluida?: boolean;

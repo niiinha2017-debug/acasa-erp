@@ -908,18 +908,33 @@ export class ApontamentoProducaoService {
   }
 
   /**
-   * Totem – Concluir Medição para Orçamento: salva medidas gerais + observações na tabela medicao_orcamento,
+   * Totem – Concluir Medição para Orçamento: salva medidas gerais + observações ou lista de ambientes na tabela medicao_orcamento,
    * fecha a tarefa na agenda e notifica que está pronto para orçamento.
+   * ambientes opcional: quando informado, cria registros em medicao_orcamento_ambiente e retorna seus ids para upload de fotos.
    */
-  async concluirMedicaoOrcamento(agendaLojaId: number, medidasGerais: string, observacoes: string) {
+  async concluirMedicaoOrcamento(
+    agendaLojaId: number,
+    medidasGerais: string,
+    observacoes: string,
+    ambientes?: Array<{
+      nome_ambiente: string;
+      largura_m?: number;
+      pe_direito_m?: number;
+      profundidade_m?: number;
+    }>,
+  ) {
     const agenda = await this.prisma.agenda_loja.findUnique({
       where: { id: agendaLojaId },
       select: { id: true, status: true, cliente_id: true, orcamento_id: true },
     });
     if (!agenda) throw new BadRequestException('Tarefa não encontrada.');
     if (String(agenda.status).toUpperCase() === 'CONCLUIDO') {
-      return { ok: true, mensagem: 'Tarefa já concluída.', medicao_orcamento_id: null };
+      return { ok: true, mensagem: 'Tarefa já concluída.', medicao_orcamento_id: null, ambientes: [] };
     }
+
+    const temAmbientes = Array.isArray(ambientes) && ambientes.length > 0;
+    const medidasGeraisFinal = temAmbientes ? null : ((medidasGerais || '').trim() || null);
+    const observacoesFinal = (observacoes || '').trim() || null;
 
     const medicao = await this.prisma.medicao_orcamento.upsert({
       where: { agenda_loja_id: agendaLojaId },
@@ -927,16 +942,36 @@ export class ApontamentoProducaoService {
         agenda_loja_id: agendaLojaId,
         cliente_id: agenda.cliente_id ?? undefined,
         orcamento_id: agenda.orcamento_id ?? undefined,
-        medidas_gerais: (medidasGerais || '').trim() || null,
-        observacoes: (observacoes || '').trim() || null,
+        medidas_gerais: medidasGeraisFinal,
+        observacoes: observacoesFinal,
         concluida: true,
       },
       update: {
-        medidas_gerais: (medidasGerais || '').trim() || null,
-        observacoes: (observacoes || '').trim() || null,
+        medidas_gerais: medidasGeraisFinal,
+        observacoes: observacoesFinal,
         concluida: true,
       },
     });
+
+    let ambientesCriados: Array<{ id: number; nome_ambiente: string }> = [];
+    if (temAmbientes) {
+      await this.prisma.medicao_orcamento_ambiente.deleteMany({
+        where: { medicao_orcamento_id: medicao.id },
+      });
+      for (const a of ambientes) {
+        const nome = String(a.nome_ambiente || '').trim() || 'Ambiente';
+        const created = await this.prisma.medicao_orcamento_ambiente.create({
+          data: {
+            medicao_orcamento_id: medicao.id,
+            nome_ambiente: nome,
+            largura_m: a.largura_m != null ? a.largura_m : null,
+            pe_direito_m: a.pe_direito_m != null ? a.pe_direito_m : null,
+            profundidade_m: a.profundidade_m != null ? a.profundidade_m : null,
+          },
+        });
+        ambientesCriados.push({ id: created.id, nome_ambiente: nome });
+      }
+    }
 
     const result = await this.finalizarEtapa({ agenda_loja_id: agendaLojaId });
     await this.prisma.agenda_loja.update({
@@ -946,6 +981,7 @@ export class ApontamentoProducaoService {
     return {
       ...result,
       medicao_orcamento_id: medicao.id,
+      ambientes: ambientesCriados,
       mensagem: 'Medição concluída. Cliente pronto para orçamento.',
     };
   }

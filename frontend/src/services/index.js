@@ -624,7 +624,7 @@ export const TotemFabricaService = {
   check(idParaPlay, body = {}) {
     return api.post(`/totem-fabrica/${idParaPlay}/check`, body);
   },
-  /** Concluir Medição para Orçamento: salva medidas gerais + observações e fecha a tarefa. */
+  /** Concluir Medição para Orçamento: body { medidas_gerais?, observacoes? } ou { observacoes?, ambientes: [{ nome_ambiente, largura_m?, pe_direito_m?, profundidade_m? }] }. Retorna medicao_orcamento_id e ambientes: [{ id, nome_ambiente }]. */
   concluirMedicaoOrcamento(id, body = {}) {
     return api.post(`/totem-fabrica/${id}/concluir-medicao-orcamento`, body);
   }

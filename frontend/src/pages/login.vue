@@ -195,7 +195,13 @@ async function handleLoginSubmit() {
     }
   } catch (e) {
     const msg = e?.response?.data?.message
-    error.value = msg ? (Array.isArray(msg) ? msg.join(' | ') : msg) : 'Usuario ou senha invalidos.'
+    if (msg) {
+      error.value = Array.isArray(msg) ? msg.join(' | ') : msg
+    } else if (!e?.response && e?.message && /network|fetch|timeout|failed/i.test(String(e.message))) {
+      error.value = 'Falha ao conectar com o servidor. Verifique a internet e se o sistema está no ar.'
+    } else {
+      error.value = 'Usuário ou senha inválidos.'
+    }
   }
 }
 

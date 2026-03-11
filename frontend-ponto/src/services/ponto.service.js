@@ -1,6 +1,7 @@
 import axios from 'axios'
 
-// Usa URL absoluta no Android/Capacitor para evitar requests em localhost
+// URL da API. No build de produção use .env.production com VITE_API_URL apontando
+// para o MESMO backend onde os convites são criados (ex: https://api.acasamarcenaria.com.br/api).
 const VITE_URL = import.meta.env.VITE_API_URL
 const BASE_URL = VITE_URL
   ? VITE_URL.replace(/\/+$/, '')

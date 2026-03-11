@@ -439,14 +439,19 @@ async function realizarPareamento() {
     // Limpa o código da URL para ficar elegante
     window.history.replaceState({}, document.title, window.location.pathname);
   } catch (e) {
-    const msg = e?.response?.data?.message
+    const msg = e?.response?.data?.message ?? e?.response?.data?.error
+    const hasResponse = e?.response != null
     if (typeof msg === 'string' && msg.trim()) {
       erro.value = msg.trim()
-      if (msg.includes('expirado')) erro.value = 'Código expirado. Gere um novo convite no ERP.'
-      else if (msg.includes('utilizado')) erro.value = 'Código já utilizado. Gere um novo convite no ERP.'
-      else if (msg.includes('inativo')) erro.value = 'Funcionário inativo. Verifique no ERP.'
+      if (msg.toLowerCase().includes('expirado')) erro.value = 'Código expirado. Gere um novo convite no ERP.'
+      else if (msg.toLowerCase().includes('utilizado') || msg.toLowerCase().includes('já utilizado')) erro.value = 'Código já utilizado. Gere um novo convite no ERP.'
+      else if (msg.toLowerCase().includes('inativo')) erro.value = 'Funcionário inativo. Verifique no ERP.'
+    } else if (hasResponse && e.response.status >= 400) {
+      erro.value = e.response.status === 401
+        ? 'Não autorizado. Gere um novo convite no ERP.'
+        : `Erro do servidor (${e.response.status}). Tente novamente ou gere outro convite.`
     } else {
-      erro.value = 'Código inválido ou sem conexão. Verifique o código e a internet.'
+      erro.value = 'Sem conexão com o servidor. Verifique a internet e se o app de ponto está na versão correta.'
     }
   } finally {
     loading.value = false

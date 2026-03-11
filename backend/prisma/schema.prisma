@@ -842,6 +842,9 @@ model medicao_fina {
 
   observacoes_montador String? @db.Text
 
+  // Planta baixa interativa: JSON com paredes, pontos técnicos e textos (coordenadas e medidas para orçamento)
+  planta_baixa_json Json?
+
   concluida Boolean @default(false)
   criado_em DateTime @default(now())
   atualizado_em DateTime @updatedAt
@@ -851,7 +854,7 @@ model medicao_fina {
   @@map("medicao_fina")
 }
 
-// Medição para Orçamento: visita no cliente, medidas gerais + fotos + observações (alimenta criação de orçamento)
+// Medição para Orçamento: visita no cliente, medidas gerais + observações (alimenta criação de orçamento)
 model medicao_orcamento {
   id            Int       @id @default(autoincrement())
   agenda_loja_id Int      @unique
@@ -866,9 +869,27 @@ model medicao_orcamento {
   criado_em     DateTime  @default(now())
   atualizado_em DateTime  @updatedAt
 
+  ambientes    medicao_orcamento_ambiente[]
+
   @@index([cliente_id])
   @@index([orcamento_id])
   @@map("medicao_orcamento")
+}
+
+// Ambientes medidos numa medição para orçamento (Cozinha, Suíte, etc.) — cada um com medidas e fotos próprias
+model medicao_orcamento_ambiente {
+  id                   Int      @id @default(autoincrement())
+  medicao_orcamento_id Int
+  medicao_orcamento   medicao_orcamento @relation(fields: [medicao_orcamento_id], references: [id], onDelete: Cascade)
+  nome_ambiente       String   @db.VarChar(191)
+  largura_m            Decimal? @db.Decimal(10, 2)
+  pe_direito_m         Decimal? @db.Decimal(10, 2)
+  profundidade_m       Decimal? @db.Decimal(10, 2)
+  criado_em            DateTime @default(now())
+  atualizado_em        DateTime @updatedAt
+
+  @@index([medicao_orcamento_id])
+  @@map("medicao_orcamento_ambiente")
 }
 
 // ---------- Agenda Loja (setor LOJA) ----------

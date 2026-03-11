@@ -131,6 +131,7 @@ export class MedicaoFinaService {
       conferencia_gas_ok: dto.conferencia_gas_ok ?? null,
       conferencia_alvenaria_ok: dto.conferencia_alvenaria_ok ?? null,
       observacoes_montador: dto.observacoes_montador?.trim() || null,
+      planta_baixa_json: dto.planta_baixa_json ?? null,
       concluida: dto.concluida ?? false,
     };
 
@@ -174,6 +175,7 @@ export class MedicaoFinaService {
     if (dto.conferencia_gas_ok !== undefined) data.conferencia_gas_ok = dto.conferencia_gas_ok;
     if (dto.conferencia_alvenaria_ok !== undefined) data.conferencia_alvenaria_ok = dto.conferencia_alvenaria_ok;
     if (dto.observacoes_montador !== undefined) data.observacoes_montador = dto.observacoes_montador?.trim() || null;
+    if (dto.planta_baixa_json !== undefined) data.planta_baixa_json = dto.planta_baixa_json;
     if (dto.concluida !== undefined) data.concluida = dto.concluida;
 
     const medicao = await this.prisma.medicao_fina.update({
@@ -315,6 +317,7 @@ export class MedicaoFinaService {
       conferencia_gas_ok: m.conferencia_gas_ok ?? null,
       conferencia_alvenaria_ok: m.conferencia_alvenaria_ok ?? null,
       observacoes_montador: m.observacoes_montador,
+      planta_baixa_json: m.planta_baixa_json ?? null,
       concluida: m.concluida,
       criado_em: m.criado_em,
       atualizado_em: m.atualizado_em,

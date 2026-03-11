@@ -346,7 +346,7 @@ async function playOuIrParaPagina(tarefa) {
     try {
       await TotemFabricaService.play(tarefa.id_para_play, { tipo: 'agenda_loja' })
       notify.success('Medição iniciada.')
-      router.push(`/medicao-venda/${tarefa.id_para_play}`)
+      router.push(`/medicao/venda/${tarefa.id_para_play}`)
     } catch (e) {
       const msg = e?.response?.data?.message || 'Não foi possível iniciar.'
       notify.error(msg)
@@ -373,7 +373,7 @@ async function playOuIrParaPagina(tarefa) {
 }
 
 function irParaMedicaoVenda(tarefa) {
-  router.push(`/medicao-venda/${tarefa.id_para_play}`)
+  router.push(`/medicao/venda/${tarefa.id_para_play}`)
 }
 
 function irParaMedicaoFina(tarefa) {

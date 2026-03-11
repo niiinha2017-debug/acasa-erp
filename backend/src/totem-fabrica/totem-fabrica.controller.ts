@@ -79,19 +79,31 @@ export class TotemFabricaController {
   }
 
   /**
-   * Concluir Medição para Orçamento: salva formulário (medidas gerais, observações), fecha a tarefa e notifica pronto para orçamento.
-   * Use após o funcionário preencher o formulário na volta da visita (MEDICAO_ORCAMENTO).
+   * Concluir Medição para Orçamento: salva formulário (medidas gerais/observações ou lista de ambientes), fecha a tarefa e notifica pronto para orçamento.
+   * Body: { medidas_gerais?, observacoes? } (legado) ou { ambientes: [{ nome_ambiente, largura_m?, pe_direito_m?, profundidade_m? }] }.
+   * Retorna medicao_orcamento_id e ambientes: [{ id, nome_ambiente }] para upload de fotos por ambiente.
    */
   @Post(':id/concluir-medicao-orcamento')
   @Permissoes('agendamentos.producao')
   concluirMedicaoOrcamento(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: { medidas_gerais?: string; observacoes?: string },
+    @Body()
+    body: {
+      medidas_gerais?: string;
+      observacoes?: string;
+      ambientes?: Array<{
+        nome_ambiente: string;
+        largura_m?: number;
+        pe_direito_m?: number;
+        profundidade_m?: number;
+      }>;
+    },
   ) {
     return this.apontamentoService.concluirMedicaoOrcamento(
       id,
       body?.medidas_gerais ?? '',
       body?.observacoes ?? '',
+      body?.ambientes,
     );
   }
 }

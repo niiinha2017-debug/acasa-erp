@@ -434,9 +434,11 @@ async function gerarConvite() {
     notify.success('Convite gerado.')
   } catch (e) {
     console.error('[Convites] Erro ao gerar convite', e)
-    const mensagem = e?.response?.data?.message
-      || (e?.message && /network|fetch|timeout/i.test(e.message)
-        ? 'Falha ao conectar com o servidor de autenticação.'
+    const msgBackend = e?.response?.data?.message
+    const isRede = !e?.response && e?.message && /network|fetch|timeout|failed/i.test(String(e.message))
+    const mensagem = msgBackend
+      || (isRede
+        ? 'Falha ao conectar com a API. Verifique se o backend está em execução no servidor.'
         : 'Não foi possível gerar o convite.')
     notify.error(mensagem)
   } finally {

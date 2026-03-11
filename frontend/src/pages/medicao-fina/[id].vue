@@ -1,6 +1,6 @@
 <template>
   <div class="w-full min-h-full bg-slate-50 dark:bg-slate-900/50 font-sans antialiased text-slate-900 dark:text-slate-100">
-    <div class="mx-auto max-w-2xl px-4 py-6 md:py-8">
+    <div class="mx-auto max-w-5xl px-4 py-6 md:py-8">
       <div class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden">
         <div class="h-1 w-full bg-blue-600 rounded-t-2xl" aria-hidden />
 
@@ -161,6 +161,23 @@
               <p v-else class="text-xs text-slate-500">Preparando ambiente de medição...</p>
             </section>
 
+            <!-- Planta Baixa interativa (dados salvos em JSON para orçamento técnico) -->
+            <section class="space-y-3">
+              <h2 class="text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                Planta baixa
+              </h2>
+              <p class="text-xs text-slate-500 dark:text-slate-400">
+                Desenhe paredes, marque pontos técnicos e adicione textos. Os dados são salvos em JSON (coordenadas e medidas) para uso no orçamento.
+              </p>
+              <div class="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-600">
+                <PlantaBaixaEditor
+                  v-if="medicaoId"
+                  :model-value="plantaBaixaData"
+                  @update:model-value="setPlantaBaixaData"
+                />
+              </div>
+            </section>
+
             <div class="pt-4 border-t border-slate-200 dark:border-slate-700 flex gap-3 justify-end">
               <router-link
                 :to="{ path: '/totem-fabrica' }"
@@ -199,6 +216,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { TotemFabricaService, MedicaoFinaService, ArquivosService } from '@/services'
 import { notify } from '@/services/notify'
+import PlantaBaixaEditor from '@/components/planta-baixa/PlantaBaixaEditor.vue'
 
 definePage({ meta: { perm: 'agendamentos.producao' } })
 
@@ -215,6 +233,10 @@ const finalizando = ref(false)
 const submitted = ref(false)
 const uploadProgress = ref(0)
 const arquivosLista = ref([])
+const plantaBaixaData = ref(null)
+function setPlantaBaixaData (data) {
+  plantaBaixaData.value = data
+}
 
 const form = ref({
   largura_mm: null,
@@ -277,6 +299,7 @@ async function carregarMedicao() {
     if (Array.isArray(medicao?.interferencias) && medicao.interferencias.includes('AR_CONDICIONADO')) {
       form.value.conferencia_ar_condicionado = true
     }
+    plantaBaixaData.value = medicao?.planta_baixa_json ?? null
     await carregarArquivos()
   } catch (e) {
     console.error(e)
@@ -354,6 +377,9 @@ async function finalizar() {
   }
   finalizando.value = true
   try {
+    if (medicaoId.value && plantaBaixaData.value) {
+      await MedicaoFinaService.atualizar(medicaoId.value, { planta_baixa_json: plantaBaixaData.value })
+    }
     await MedicaoFinaService.finalizarTotem({
       agenda_id: id.value,
       tipo: 'agenda_fabrica',
