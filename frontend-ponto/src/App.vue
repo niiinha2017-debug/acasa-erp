@@ -375,7 +375,8 @@ async function carregarDados() {
   } catch (e) {
     if (e.response?.status === 401) {
       token.value = ''
-      localStorage.clear()
+      localStorage.removeItem('acasa_ponto_token')
+      localStorage.removeItem('acasa_funcionario_nome')
       etapa.value = 'ativar'
     }
   }
@@ -420,24 +421,38 @@ function obterCodigoDaUrl() {
   }
 }
 
+function getOrCreateDeviceUuid() {
+  const key = 'acasa_ponto_device_uuid'
+  let uuid = localStorage.getItem(key)
+  if (!uuid || uuid.length < 10) {
+    uuid = crypto.randomUUID().toUpperCase()
+    localStorage.setItem(key, uuid)
+  }
+  return uuid
+}
+
 async function realizarPareamento() {
   const codeNorm = normalizarCodigoConvite(parearCode.value)
   if (!codeNorm) return
   loading.value = true
   erro.value = ""
   try {
-    const res = await PontoService.ativar({ 
-      code: codeNorm, 
-      device_uuid: crypto.randomUUID().toUpperCase(),
-      plataforma: 'PWA' 
+    const res = await PontoService.ativar({
+      code: codeNorm,
+      device_uuid: getOrCreateDeviceUuid(),
+      plataforma: 'PWA',
     })
-    token.value = res.data.token
-    localStorage.setItem('acasa_ponto_token', token.value)
+    const newToken = res?.data?.token ?? res?.data?.data?.token
+    if (!newToken || typeof newToken !== 'string') {
+      erro.value = 'Resposta inválida do servidor. Tente novamente ou gere outro convite.'
+      return
+    }
+    token.value = newToken
+    localStorage.setItem('acasa_ponto_token', newToken)
     etapa.value = 'app'
     await carregarDados()
-    
-    // Limpa o código da URL para ficar elegante
-    window.history.replaceState({}, document.title, window.location.pathname);
+
+    window.history.replaceState({}, document.title, window.location.pathname)
   } catch (e) {
     const msg = e?.response?.data?.message ?? e?.response?.data?.error
     const hasResponse = e?.response != null
