@@ -346,8 +346,14 @@ function baixarBlob(blob, nomeArquivo) {
   }
 }
 
+function getTokenEnviar() {
+  const t = token.value || (typeof localStorage !== 'undefined' ? localStorage.getItem('acasa_ponto_token') : null) || ''
+  if (t) token.value = t
+  return t
+}
+
 async function carregarDados(éRetry = false) {
-  const t = token.value
+  const t = getTokenEnviar()
   if (!t) return
   try {
     const [resMe, resHoje] = await Promise.all([
@@ -389,10 +395,15 @@ async function carregarDados(éRetry = false) {
 
 async function baterPonto() {
   if (bloqueioTemporario.value || loading.value) return
+  const t = getTokenEnviar()
+  if (!t) {
+    etapa.value = 'ativar'
+    return
+  }
   loading.value = true
   erro.value = ""
   try {
-    await PontoService.registrar({ tipo: proximoStatus.value }, token.value)
+    await PontoService.registrar({ tipo: proximoStatus.value }, t)
     await carregarDados()
   } catch (e) {
     erro.value = e.response?.data?.message || "ERRO NO REGISTRO"

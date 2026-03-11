@@ -1,6 +1,9 @@
 <template>
-  <div class="croqui-ambiente-venda flex rounded-xl overflow-hidden border-2 border-slate-200 dark:border-slate-600 bg-slate-800" style="min-height: 360px;">
-    <!-- Paleta: Porta, Janela, Pilastra + (com foto) Tomada, Água, Gás -->
+  <div
+    class="croqui-ambiente-venda flex overflow-hidden bg-slate-800"
+    :class="fullScreen ? 'h-full min-h-0 rounded-none border-0' : 'rounded-xl border-2 border-slate-200 dark:border-slate-600 min-h-[360px]'"
+  >
+    <!-- Barra lateral fixa: ARRASTE (Porta, Janela, Pilastra + com foto: Tomada, Água, Gás) -->
     <div class="w-20 flex-shrink-0 flex flex-col gap-2 p-2 bg-slate-700/80 border-r border-slate-600">
       <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1">Arraste</p>
       <button
@@ -16,14 +19,18 @@
       </button>
     </div>
 
-    <!-- Área do canvas (altura fixa para o Konva ter dimensões) -->
+    <!-- Área do canvas: ocupa todo o resto; bloqueia scroll no dedo (touch-action: none) -->
     <div
-      class="flex-1 min-w-0 relative bg-slate-900"
-      style="min-height: 320px; height: 360px;"
+      class="flex-1 min-w-0 min-h-0 relative bg-slate-900 touch-none"
+      :style="fullScreen ? {} : { minHeight: '320px', height: '360px' }"
       @dragover.prevent
       @drop="onDrop"
     >
-      <div ref="containerRef" class="absolute inset-0 w-full h-full" style="min-height: 320px;" />
+      <div
+        ref="containerRef"
+        class="absolute inset-0 w-full h-full"
+        :style="fullScreen ? {} : { minHeight: '320px' }"
+      />
       <!-- Sem foto e sem desenho: escolher modo -->
       <div
         v-if="!fotoDataUrl && cotas.length === 0 && pontos.length === 0 && simbolos.length === 0"
@@ -38,13 +45,13 @@
           >
             <i class="pi pi-pencil text-3xl" />
             <span class="font-medium text-sm">Desenhar planta</span>
-            <span class="text-xs opacity-90">Paredes e cotas</span>
+            <span class="text-xs opacity-90">Paredes e cotas (grudam no fechamento)</span>
           </button>
           <label class="flex flex-col items-center gap-2 px-5 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white cursor-pointer touch-manipulation">
             <i class="pi pi-camera text-3xl" />
-            <span class="font-medium text-sm">Tirar foto</span>
-            <span class="text-xs opacity-90">Elevação (marcar pontos)</span>
-            <input type="file" accept="image/*" capture="environment" class="hidden" @change="onFotoSelect" />
+            <span class="font-medium text-sm">Marcar sobre Foto</span>
+            <span class="text-xs opacity-90">Foto vai para o fundo; marque tomadas e água na imagem</span>
+            <input ref="inputFotoRef" type="file" accept="image/*" capture="environment" class="hidden" @change="onFotoSelect" />
           </label>
         </div>
       </div>
@@ -132,11 +139,14 @@ const PONTOS_ELEVACAO = [
 
 const props = defineProps({
   modelValue: { type: Object, default: () => null },
+  /** true = página fullscreen (tablet): preenche altura, sidebar fixa, sem bordas */
+  fullScreen: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['update:modelValue'])
 
 const containerRef = ref(null)
+const inputFotoRef = ref(null)
 const modo = ref('cota')
 const fotoDataUrl = ref(null)
 const cotas = ref([])
@@ -159,8 +169,12 @@ const simbolosVisiveis = computed(() => {
 })
 
 let stage = null
+let layerGrid = null
 let layerBg = null
 let layerDraw = null
+
+const SNAP_RADIUS = 24
+const GRID_STEP = 20
 
 function cor(tipo) {
   const c = { TOMADA: '#eab308', AGUA: '#0ea5e9', GAS: '#ef4444', PORTA: '#78716c', JANELA: '#0ea5e9', PILASTRA: '#57534e' }
@@ -171,10 +185,63 @@ function dist(x1, y1, x2, y2) {
   return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
 }
 
+/** Todos os vértices das paredes (para snapping) */
+function getAllVertices() {
+  const out = []
+  cotas.value.forEach((c) => {
+    out.push({ x: c.x1, y: c.y1 })
+    out.push({ x: c.x2, y: c.y2 })
+  })
+  return out
+}
+
+/** Gruda o ponto no vértice mais próximo se estiver dentro do raio */
+function snapToVertex(px, py) {
+  const verts = getAllVertices()
+  let best = { x: px, y: py }
+  let bestD = SNAP_RADIUS
+  verts.forEach((v) => {
+    const d = dist(px, py, v.x, v.y)
+    if (d < bestD) {
+      bestD = d
+      best = { x: v.x, y: v.y }
+    }
+  })
+  return best
+}
+
+/** Distância de ponto (px,py) ao segmento (x1,y1)-(x2,y2); retorna { dist, x, y, t } (t = 0..1 = posição na linha) */
+function distToSegment(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1
+  const dy = y2 - y1
+  const len = Math.sqrt(dx * dx + dy * dy) || 1e-6
+  let t = ((px - x1) * dx + (py - y1) * dy) / (len * len)
+  t = Math.max(0, Math.min(1, t))
+  const x = x1 + t * dx
+  const y = y1 + t * dy
+  return { dist: dist(px, py, x, y), x, y, t }
+}
+
+/** Encontra a parede mais próxima do ponto e retorna posição projetada + ângulo em graus */
+function snapToWall(px, py) {
+  let best = null
+  let bestDist = 36
+  cotas.value.forEach((c, idx) => {
+    const r = distToSegment(px, py, c.x1, c.y1, c.x2, c.y2)
+    if (r.dist < bestDist) {
+      bestDist = r.dist
+      const angle = Math.atan2(c.y2 - c.y1, c.x2 - c.x1)
+      best = { x: r.x, y: r.y, rotation: (angle * 180) / Math.PI, lineIndex: idx }
+    }
+  })
+  return best
+}
+
 function getSize() {
   if (!containerRef.value) return { width: 400, height: 320 }
   const r = containerRef.value.getBoundingClientRect()
-  return { width: r.width, height: Math.max(r.height, 320) }
+  const minH = props.fullScreen ? 200 : 320
+  return { width: r.width, height: Math.max(r.height, minH) }
 }
 
 function emitData() {
@@ -183,7 +250,7 @@ function emitData() {
     scaleMmPerPx: SCALE_MM_PER_PX,
     cotas: cotas.value.map((c) => ({ x1: c.x1, y1: c.y1, x2: c.x2, y2: c.y2, lengthMm: c.lengthMm })),
     pontos: pontos.value.map((p) => ({ x: p.x, y: p.y, alturaMm: p.alturaMm })),
-    simbolos: simbolos.value.map((s) => ({ tipo: s.tipo, x: s.x, y: s.y })),
+    simbolos: simbolos.value.map((s) => ({ tipo: s.tipo, x: s.x, y: s.y, lineIndex: s.lineIndex, rotation: s.rotation })),
   })
 }
 
@@ -201,18 +268,43 @@ function redesenhar() {
   if (!layerDraw) return
   layerDraw.destroyChildren()
 
+  const size = getSize()
+  const cotaOffset = 22
+
   cotas.value.forEach((c) => {
     const g = new Konva.Group({ listening: true })
     const line = new Konva.Line({ points: [c.x1, c.y1, c.x2, c.y2], stroke: '#22c55e', strokeWidth: 3, lineCap: 'round' })
+    g.add(line)
+
     const cx = (c.x1 + c.x2) / 2
     const cy = (c.y1 + c.y2) / 2
+    const angle = Math.atan2(c.y2 - c.y1, c.x2 - c.x1)
+    const deg = (angle * 180) / Math.PI
+    const perpX = -Math.sin(angle) * cotaOffset
+    const perpY = Math.cos(angle) * cotaOffset
+    const tx = cx + perpX
+    const ty = cy + perpY
     const text = new Konva.Text({
-      x: cx - 35, y: cy - 10, width: 70,
+      x: tx,
+      y: ty,
+      width: 70,
       text: (c.lengthMm ?? Math.round(dist(c.x1, c.y1, c.x2, c.y2) * SCALE_MM_PER_PX)) + ' mm',
-      fontSize: 14, fill: '#22c55e', align: 'center', listening: true,
+      fontSize: 13,
+      fill: '#22c55e',
+      align: 'center',
+      listening: true,
+      offsetX: 35,
+      offsetY: 6,
+      rotation: deg,
     })
-    text.on('click', (e) => { e.cancelBubble = true; cotaEditando.value = c; cotaMm.value = String(c.lengthMm ?? ''); modalCota.value = true; setTimeout(() => inputCotaRef.value?.focus(), 80) })
-    g.add(line).add(text)
+    text.on('click', (e) => {
+      e.cancelBubble = true
+      cotaEditando.value = c
+      cotaMm.value = String(c.lengthMm ?? '')
+      modalCota.value = true
+      setTimeout(() => inputCotaRef.value?.focus(), 80)
+    })
+    g.add(text)
     layerDraw.add(g)
   })
 
@@ -226,15 +318,65 @@ function redesenhar() {
   })
 
   simbolos.value.forEach((s) => {
-    const g = new Konva.Group({ x: s.x, y: s.y, draggable: true })
+    const rot = s.rotation != null ? s.rotation : 0
+    const g = new Konva.Group({
+      x: s.x,
+      y: s.y,
+      rotation: rot,
+      offsetX: 0,
+      offsetY: 0,
+      draggable: true,
+    })
     const circle = new Konva.Circle({ radius: 16, fill: cor(s.tipo), stroke: '#fff', strokeWidth: 2 })
     const lbl = new Konva.Text({ y: 20, width: 60, text: simbolosVisiveis.value.find(x => x.tipo === s.tipo)?.label || s.tipo, fontSize: 9, fill: '#fff', align: 'center', offsetX: 30 })
     g.add(circle).add(lbl)
-    g.on('dragend', () => { s.x = g.x(); s.y = g.y(); emitData() })
+    g.on('dragend', () => {
+      s.x = g.x()
+      s.y = g.y()
+      const snap = snapToWall(s.x, s.y)
+      if (snap && SIMBOLOS_ARRESTAR.some((x) => x.tipo === s.tipo)) {
+        s.x = snap.x
+        s.y = snap.y
+        s.rotation = snap.rotation
+        s.lineIndex = snap.lineIndex
+      } else {
+        s.rotation = undefined
+        s.lineIndex = undefined
+      }
+      emitData()
+      redesenhar()
+    })
     layerDraw.add(g)
   })
 
+  if (cotaStart.value) {
+    const circ = new Konva.Circle({
+      x: cotaStart.value.x,
+      y: cotaStart.value.y,
+      radius: 8,
+      fill: 'rgba(34, 197, 94, 0.6)',
+      stroke: '#22c55e',
+      strokeWidth: 2,
+      listening: false,
+    })
+    layerDraw.add(circ)
+  }
+
   layerDraw.batchDraw()
+}
+
+function desenharGrid() {
+  if (!layerGrid) return
+  layerGrid.destroyChildren()
+  const size = getSize()
+  const gridColor = 'rgba(148, 163, 184, 0.2)'
+  for (let x = 0; x <= size.width + GRID_STEP; x += GRID_STEP) {
+    layerGrid.add(new Konva.Line({ points: [x, 0, x, size.height], stroke: gridColor, strokeWidth: 1 }))
+  }
+  for (let y = 0; y <= size.height + GRID_STEP; y += GRID_STEP) {
+    layerGrid.add(new Konva.Line({ points: [0, y, size.width, y], stroke: gridColor, strokeWidth: 1 }))
+  }
+  layerGrid.batchDraw()
 }
 
 function fitBg() {
@@ -253,13 +395,19 @@ function onStageClick(e) {
   const pos = stage.getPointerPosition()
   if (!pos) return
   if (modo.value === 'cota') {
+    const snapped = snapToVertex(pos.x, pos.y)
     if (!cotaStart.value) {
-      cotaStart.value = { x: pos.x, y: pos.y }
+      cotaStart.value = { x: snapped.x, y: snapped.y }
+      redesenhar()
       return
     }
-    const lenPx = dist(cotaStart.value.x, cotaStart.value.y, pos.x, pos.y)
+    const lenPx = dist(cotaStart.value.x, cotaStart.value.y, snapped.x, snapped.y)
+    if (lenPx < 8) return
     cotas.value.push({
-      x1: cotaStart.value.x, y1: cotaStart.value.y, x2: pos.x, y2: pos.y,
+      x1: cotaStart.value.x,
+      y1: cotaStart.value.y,
+      x2: snapped.x,
+      y2: snapped.y,
       lengthMm: Math.round(lenPx * SCALE_MM_PER_PX) || 100,
     })
     cotaStart.value = null
@@ -287,7 +435,23 @@ function onDrop(e) {
   const rect = containerRef.value.getBoundingClientRect()
   const x = e.clientX - rect.left
   const y = e.clientY - rect.top
-  simbolos.value.push({ tipo, x, y })
+  const isParedeSymbol = SIMBOLOS_ARRESTAR.some((s) => s.tipo === tipo)
+  if (isParedeSymbol && cotas.value.length > 0) {
+    const snap = snapToWall(x, y)
+    if (snap) {
+      simbolos.value.push({
+        tipo,
+        x: snap.x,
+        y: snap.y,
+        rotation: snap.rotation,
+        lineIndex: snap.lineIndex,
+      })
+    } else {
+      simbolos.value.push({ tipo, x, y })
+    }
+  } else {
+    simbolos.value.push({ tipo, x, y })
+  }
   redesenhar()
   emitData()
 }
@@ -296,6 +460,7 @@ function iniciarDesenhoPlanta() {
   fotoDataUrl.value = null
   modo.value = 'cota'
   fitBg()
+  desenharGrid()
   redesenhar()
 }
 
@@ -308,7 +473,11 @@ function onFotoSelect(ev) {
     fotoDataUrl.value = reader.result
     modo.value = 'ponto'
     emitData()
-    setTimeout(fitBg, 100)
+    setTimeout(() => {
+      fitBg()
+      desenharGrid()
+      redesenhar()
+    }, 100)
   }
   reader.readAsDataURL(file)
 }
@@ -355,21 +524,24 @@ function aplicarPonto() {
 function load(d) {
   if (!d) return
   fotoDataUrl.value = d.backgroundImage ?? null
-  cotas.value = (d.cotas || []).map(c => ({ ...c }))
-  pontos.value = (d.pontos || []).map(p => ({ ...p }))
-  simbolos.value = (d.simbolos || []).map(s => ({ ...s }))
+  cotas.value = (d.cotas || []).map((c) => ({ ...c }))
+  pontos.value = (d.pontos || []).map((p) => ({ ...p }))
+  simbolos.value = (d.simbolos || []).map((s) => ({ ...s, lineIndex: s.lineIndex, rotation: s.rotation }))
   redesenhar()
   if (fotoDataUrl.value) setTimeout(fitBg, 50)
+  desenharGrid()
 }
 
 function init() {
   if (!containerRef.value) return
   const size = getSize()
   stage = new Konva.Stage({ container: containerRef.value, width: size.width, height: size.height })
-  layerBg = new Konva.Layer()
+  layerGrid = new Konva.Layer({ listening: false })
+  layerBg = new Konva.Layer({ listening: false })
   layerDraw = new Konva.Layer()
-  stage.add(layerBg).add(layerDraw)
+  stage.add(layerGrid).add(layerBg).add(layerDraw)
   stage.on('click', onStageClick)
+  desenharGrid()
   load(props.modelValue)
   if (fotoDataUrl.value) fitBg()
 }
@@ -381,6 +553,7 @@ onMounted(() => {
       const size = getSize()
       stage.width(size.width)
       stage.height(size.height)
+      desenharGrid()
       if (fotoDataUrl.value) fitBg()
       layerDraw?.batchDraw()
     }
@@ -389,9 +562,14 @@ onMounted(() => {
   onUnmounted(() => window.removeEventListener('resize', resize))
 })
 
+function marcarSobreFoto() {
+  inputFotoRef.value?.click()
+}
+
 onUnmounted(() => {
   if (stage) stage.destroy()
   stage = null
+  layerGrid = null
   layerBg = null
   layerDraw = null
 })

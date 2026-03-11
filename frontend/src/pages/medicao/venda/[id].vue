@@ -1,182 +1,134 @@
 <template>
-  <div class="w-full min-h-full bg-slate-100 dark:bg-slate-900/50 font-sans antialiased text-slate-900 dark:text-slate-100">
-    <div class="mx-auto max-w-4xl px-4 sm:px-6 py-6 md:py-8">
-      <div class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg overflow-hidden">
-        <div class="h-1.5 w-full bg-amber-500 rounded-t-2xl" aria-hidden />
+  <div class="medicao-venda-fullscreen flex flex-col w-full h-full overflow-hidden bg-slate-900">
+    <!-- Aviso modo paisagem (tablet) -->
+    <div
+      v-if="mostrarAvisoPaisagem"
+      class="absolute inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-slate-900/98 p-6"
+    >
+      <i class="pi pi-mobile text-6xl text-amber-400 rotate-90" />
+      <p class="text-xl font-semibold text-white text-center">Gire o tablet para modo paisagem</p>
+      <p class="text-slate-400 text-center text-sm">O desenho da planta baixa funciona melhor na horizontal.</p>
+      <button
+        type="button"
+        class="px-6 py-3 rounded-xl bg-slate-600 text-slate-200 text-sm"
+        @click="mostrarAvisoPaisagem = false"
+      >
+        Continuar mesmo assim
+      </button>
+    </div>
 
-        <header class="px-5 md:px-8 py-5 md:py-6 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div class="min-w-0">
-              <h1 class="text-xl md:text-2xl font-bold text-slate-900 dark:text-slate-100 truncate">
-                Medição para Orçamento
-              </h1>
-              <p class="text-sm md:text-base text-slate-500 dark:text-slate-400 mt-1 truncate">
-                {{ tarefa?.titulo || `Tarefa #${id}` }}
-              </p>
-              <p v-if="tarefa?.cliente" class="text-sm text-slate-600 dark:text-slate-300 mt-0.5">
-                {{ tarefa.cliente.nome_completo || tarefa.cliente.razao_social || 'Cliente' }}
-              </p>
-            </div>
-            <router-link
-              :to="{ path: '/totem-fabrica' }"
-              class="shrink-0 min-h-[48px] px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-600 transition touch-manipulation flex items-center justify-center gap-2"
-            >
-              <i class="pi pi-arrow-left" />
-              Voltar ao Totem
-            </router-link>
-          </div>
-        </header>
+    <!-- Botão Voltar flutuante -->
+    <router-link
+      :to="{ path: '/totem-fabrica' }"
+      class="absolute top-3 left-3 z-30 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/95 border border-slate-600 text-white text-sm font-medium shadow-lg touch-manipulation"
+    >
+      <i class="pi pi-arrow-left" />
+      Voltar
+    </router-link>
 
-        <div v-if="erroCarregamento" class="p-8 text-center">
-          <p class="text-rose-600 dark:text-rose-400 font-medium">{{ erroCarregamento }}</p>
-          <router-link to="/totem-fabrica" class="inline-block mt-4 text-amber-600 dark:text-amber-400 font-medium">
-            Voltar ao Totem
-          </router-link>
-        </div>
-
-        <form v-else-if="tarefa" class="flex flex-col" @submit.prevent="salvar">
-          <div class="flex-1 px-5 md:px-8 py-6 md:py-8 space-y-8">
-            <!-- Lista de ambientes: cards -->
-            <section class="space-y-6">
-              <h2 class="text-base font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                Lista de ambientes
-              </h2>
-              <p class="text-sm text-slate-500 dark:text-slate-400">
-                Adicione cada ambiente, informe as medidas em milímetros e tire as fotos no local.
-              </p>
-
-            <div
-              v-for="(amb, idx) in ambientes"
-              :key="amb._key"
-              class="rounded-2xl border-2 border-slate-200 dark:border-slate-600 bg-slate-50/60 dark:bg-slate-800/60 p-5 md:p-6 space-y-5"
-            >
-              <div class="flex items-center justify-between gap-3">
-                <span class="text-sm font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                  Ambiente {{ idx + 1 }}
-                </span>
-                <button
-                  v-if="ambientes.length > 1"
-                  type="button"
-                  class="text-slate-400 hover:text-rose-600 text-sm font-medium"
-                  @click="removerAmbiente(idx)"
-                >
-                  Remover
-                </button>
-              </div>
-
-              <!-- Seletor de ambiente -->
-              <div>
-                <label class="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">Tipo de ambiente</label>
-                <select
-                  v-model="amb.tipo_ambiente"
-                  class="w-full rounded-xl border-2 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-4 py-3 text-base focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-                >
-                  <option v-for="opt in opcoesAmbiente" :key="opt.value" :value="opt.value">
-                    {{ opt.label }}
-                  </option>
-                </select>
-                <input
-                  v-if="amb.tipo_ambiente === 'OUTRO'"
-                  v-model="amb.nome_outro"
-                  type="text"
-                  class="mt-2 w-full rounded-xl border-2 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 px-4 py-2.5 text-base focus:ring-2 focus:ring-amber-500"
-                  placeholder="Nome do ambiente"
-                />
-              </div>
-
-              <!-- Área de croqui: desenhar planta (paredes + cotas) ou foto com marcações (Tomada, Água, Gás, Porta, Janela, Pilastra) -->
-              <div class="space-y-2">
-                <label class="block text-sm font-semibold text-slate-600 dark:text-slate-400">Desenho do ambiente</label>
-                <p class="text-xs text-slate-500 dark:text-slate-400">
-                  Desenhe o cômodo com o dedo (paredes e cotas) ou tire uma foto e marque pontos (⚡ Tomada, 💧 Água, 🔥 Gás) e arraste Porta, Janela, Pilastra.
-                </p>
-                <CroquiAmbienteVenda
-                  :model-value="amb.croquiData"
-                  @update:model-value="amb.croquiData = $event"
-                />
-              </div>
-            </div>
-
-            <button
-              type="button"
-              class="w-full min-h-[56px] py-4 rounded-2xl border-2 border-dashed border-amber-400 dark:border-amber-600 text-amber-600 dark:text-amber-400 font-semibold flex items-center justify-center gap-2 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition touch-manipulation"
-              @click="adicionarAmbiente"
-            >
-              <i class="pi pi-plus text-xl" />
-              Adicionar outro ambiente
-            </button>
-            </section>
-          </div>
-
-          <!-- Observações gerais -->
-          <div class="px-5 md:px-8 pb-6">
-            <label class="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">Observações do local</label>
-            <textarea
-              v-model="observacoesGerais"
-              rows="2"
-              class="w-full rounded-xl border-2 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm px-4 py-3 focus:ring-2 focus:ring-amber-500 resize-y min-h-[72px]"
-              placeholder="Ex.: Pontos de água e luz; rodapé; interferências."
-            />
-          </div>
-
-          <!-- Rodapé: botão Finalizar só após desenho/marcação por ambiente -->
-          <footer class="px-5 md:px-8 py-6 border-t-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80">
-            <div class="rounded-2xl border-2 border-amber-200 dark:border-amber-800 bg-amber-50/80 dark:bg-amber-900/20 p-5 md:p-6">
-              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <p class="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                    {{ ambientes.length }} {{ ambientes.length === 1 ? 'ambiente' : 'ambientes' }}
-                  </p>
-                  <p v-if="!podeFinalizar" class="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
-                    Salve pelo menos um desenho ou marcação em cada ambiente para habilitar o envio.
-                  </p>
-                  <p v-else class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Os dados serão salvos e vinculados ao orçamento. A equipe será notificada para precificar.
-                  </p>
-                </div>
-                <div class="flex gap-3 flex-shrink-0">
-                  <router-link
-                    :to="{ path: '/totem-fabrica' }"
-                    class="min-h-[52px] px-5 py-3 rounded-xl border-2 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-700 transition"
-                  >
-                    Cancelar
-                  </router-link>
-                  <button
-                    type="submit"
-                    class="min-h-[52px] px-8 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-white text-base font-bold flex items-center gap-2 disabled:opacity-50 transition touch-manipulation shadow-lg shadow-amber-500/25"
-                    :disabled="enviando || ambientes.length === 0 || !podeFinalizar"
-                  >
-                    <i v-if="enviando" class="pi pi-spin pi-spinner text-lg" />
-                    <i v-else class="pi pi-send text-lg" />
-                    {{ enviando ? 'Enviando...' : 'Finalizar e Enviar para Orçamento' }}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </footer>
-        </form>
-
-        <div v-else-if="!loading" class="p-8 text-center text-slate-500">
-          Tarefa não encontrada.
-          <router-link to="/totem-fabrica" class="block mt-3 text-amber-600 dark:text-amber-400 font-medium">Voltar ao Totem</router-link>
-        </div>
-
-        <div v-else class="flex items-center justify-center py-24">
-          <i class="pi pi-spin pi-spinner text-4xl text-amber-500" />
+    <template v-if="erroCarregamento">
+      <div class="flex-1 flex items-center justify-center p-6">
+        <div class="text-center text-slate-300">
+          <p class="font-medium text-rose-400">{{ erroCarregamento }}</p>
+          <router-link to="/totem-fabrica" class="inline-block mt-4 text-amber-400 font-medium">Voltar ao Totem</router-link>
         </div>
       </div>
-    </div>
+    </template>
+
+    <template v-else-if="!tarefa && !loading">
+      <div class="flex-1 flex items-center justify-center text-slate-400">
+        Tarefa não encontrada. <router-link to="/totem-fabrica" class="text-amber-400 ml-1">Voltar</router-link>
+      </div>
+    </template>
+
+    <template v-else-if="loading">
+      <div class="flex-1 flex items-center justify-center">
+        <i class="pi pi-spin pi-spinner text-4xl text-amber-500" />
+      </div>
+    </template>
+
+    <form v-else class="flex flex-col flex-1 min-h-0 overflow-hidden" @submit.prevent="salvar">
+      <!-- Faixa: ambientes + tipo do ambiente atual -->
+      <div class="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-slate-800/90 border-b border-slate-700 safe-area-pad">
+        <div class="flex items-center gap-1.5 overflow-x-auto flex-1 min-w-0">
+          <button
+            v-for="(amb, idx) in ambientes"
+            :key="amb._key"
+            type="button"
+            class="flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition"
+            :class="ambienteAtualIndex === idx ? 'bg-amber-500 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'"
+            @click="ambienteAtualIndex = idx"
+          >
+            {{ idx + 1 }}
+          </button>
+          <button
+            type="button"
+            class="flex-shrink-0 px-4 py-2 rounded-lg border-2 border-dashed border-amber-500/60 text-amber-400 text-sm font-medium hover:bg-amber-500/10"
+            @click="adicionarAmbiente(); ambienteAtualIndex = ambientes.length - 1"
+          >
+            +
+          </button>
+        </div>
+        <template v-if="ambienteAtual">
+          <select
+            v-model="ambienteAtual.tipo_ambiente"
+            class="flex-shrink-0 rounded-lg border border-slate-600 bg-slate-700 text-white text-sm px-3 py-2 max-w-[140px]"
+          >
+            <option v-for="opt in opcoesAmbiente" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          </select>
+          <input
+            v-if="ambienteAtual.tipo_ambiente === 'OUTRO'"
+            v-model="ambienteAtual.nome_outro"
+            type="text"
+            class="flex-shrink-0 rounded-lg border border-slate-600 bg-slate-700 text-white text-sm px-3 py-2 w-32"
+            placeholder="Nome"
+          />
+        </template>
+      </div>
+
+      <!-- Área do croqui: sidebar fixa + canvas (sem scroll) -->
+      <div v-if="ambienteAtual" class="flex-1 min-h-0 flex overflow-hidden touch-none">
+        <CroquiAmbienteVenda
+          :model-value="ambienteAtual.croquiData"
+          full-screen
+          class="flex-1 min-h-0 min-w-0"
+          @update:model-value="(v) => (ambienteAtual.croquiData = v)"
+        />
+      </div>
+
+      <!-- Rodapé: observações + Finalizar -->
+      <div class="flex-shrink-0 px-4 py-3 bg-slate-800/95 border-t border-slate-700 flex flex-wrap items-center gap-3 safe-area-pad">
+        <input
+          v-model="observacoesGerais"
+          type="text"
+          class="flex-1 min-w-[120px] rounded-lg border border-slate-600 bg-slate-700 text-white text-sm px-3 py-2"
+          placeholder="Observações (opcional)"
+        />
+        <button
+          type="submit"
+          class="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-white text-sm font-bold flex items-center gap-2 disabled:opacity-50 touch-manipulation"
+          :disabled="enviando || ambientes.length === 0 || !podeFinalizar"
+        >
+          <i v-if="enviando" class="pi pi-spin pi-spinner" />
+          <i v-else class="pi pi-send" />
+          {{ enviando ? 'Enviando...' : 'Finalizar e Enviar' }}
+        </button>
+        <p v-if="!podeFinalizar && ambientes.length" class="text-xs text-amber-300 w-full">
+          Desenhe ou marque algo em cada ambiente para habilitar o envio.
+        </p>
+      </div>
+    </form>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { TotemFabricaService } from '@/services'
 import { notify } from '@/services/notify'
 import CroquiAmbienteVenda from '@/components/croqui-tecnico/CroquiAmbienteVenda.vue'
 
-definePage({ meta: { perm: 'agendamentos.producao' } })
+definePage({ meta: { perm: 'agendamentos.producao', layout: 'fullscreen' } })
 
 const route = useRoute()
 const id = computed(() => Number(String(route.params?.id || '').replace(/\D/g, '')) || null)
@@ -198,14 +150,15 @@ const erroCarregamento = ref('')
 const tarefa = ref(null)
 const enviando = ref(false)
 const observacoesGerais = ref('')
-
 const ambientes = ref([])
+const ambienteAtualIndex = ref(0)
+const mostrarAvisoPaisagem = ref(false)
+
+const ambienteAtual = computed(() => ambientes.value[ambienteAtualIndex.value] ?? null)
 
 function nomeAmbienteParaApi(amb) {
-  if (amb.tipo_ambiente === 'OUTRO' && (amb.nome_outro || '').trim()) {
-    return (amb.nome_outro || '').trim()
-  }
-  const opt = opcoesAmbiente.find((o) => o.value === amb.tipo_ambiente)
+  if (amb?.tipo_ambiente === 'OUTRO' && (amb?.nome_outro || '').trim()) return (amb.nome_outro || '').trim()
+  const opt = opcoesAmbiente.find((o) => o.value === amb?.tipo_ambiente)
   return opt ? opt.label : 'Ambiente'
 }
 
@@ -235,10 +188,6 @@ const podeFinalizar = computed(() => {
 
 function adicionarAmbiente() {
   ambientes.value.push(novoAmbiente())
-}
-
-function removerAmbiente(idx) {
-  ambientes.value.splice(idx, 1)
 }
 
 async function carregar() {
@@ -296,12 +245,31 @@ async function salvar() {
   }
 }
 
-onMounted(() => carregar())
+function checkLandscape() {
+  if (typeof window === 'undefined') return
+  const w = window.innerWidth
+  const h = window.innerHeight
+  const portrait = h > w
+  if (portrait && !mostrarAvisoPaisagem.value) {
+    mostrarAvisoPaisagem.value = true
+  }
+}
+
+onMounted(() => {
+  carregar()
+  checkLandscape()
+  window.addEventListener('resize', checkLandscape)
+  document.body.classList.add('overflow-hidden')
+})
+onUnmounted(() => {
+  window.removeEventListener('resize', checkLandscape)
+  document.body.classList.remove('overflow-hidden')
+})
 </script>
 
 <style scoped>
-.custom-scroll {
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
+.safe-area-pad {
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
 }
 </style>
