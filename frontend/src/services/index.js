@@ -426,6 +426,23 @@ export const ConfiguracaoService = {
     const { data } = await api.get('/configuracoes/empresa/whatsapp-test')
     return data
   },
+  /** Cria a instância na Evolution API (se não existir) e retorna o QR. Use antes de getEvolutionQrCode. */
+  async createEvolutionInstance(instanceName) {
+    const { data } = await api.post('/evolution/instance/create', {
+      instanceName: (instanceName || 'acasa-erp').trim().toLowerCase(),
+    })
+    return data
+  },
+  /** Obtém QR Code ou pairing code para conectar o WhatsApp na Evolution API. number = número com DDI (opcional). */
+  async getEvolutionQrCode(instanceName, number) {
+    const params = { instanceName: instanceName || 'acasa-erp' }
+    if (number) {
+      const digits = number.replace(/\D/g, '')
+      params.number = digits.startsWith('55') ? digits : '55' + digits
+    }
+    const { data } = await api.get('/evolution/instance/qrcode', { params })
+    return data
+  },
 }
 
 // --- PONTO ---
@@ -624,10 +641,38 @@ export const TotemFabricaService = {
   check(idParaPlay, body = {}) {
     return api.post(`/totem-fabrica/${idParaPlay}/check`, body);
   },
-  /** Concluir Medição para Orçamento: body { medidas_gerais?, observacoes? } ou { observacoes?, ambientes: [{ nome_ambiente, largura_m?, pe_direito_m?, profundidade_m? }] }. Retorna medicao_orcamento_id e ambientes: [{ id, nome_ambiente }]. */
+  /** Medição por ambiente: retorna medicao_orcamento com ambientes (ou null). */
+  getMedicaoOrcamento(agendaLojaId) {
+    return api.get(`/totem-fabrica/${agendaLojaId}/medicao-orcamento`);
+  },
+  /** Salva um único ambiente (Cozinha, Sala, etc.). Body: { nome_ambiente, largura_m?, pe_direito_m?, profundidade_m?, observacoes?, medidas? }. */
+  salvarAmbienteMedicao(agendaLojaId, body) {
+    return api.post(`/totem-fabrica/${agendaLojaId}/salvar-ambiente-medicao`, body);
+  },
+  /** Salva uma parede (lado) de um ambiente. Body: { nome, largura_m?, pe_direito_m?, profundidade_m?, observacoes?, medidas? }. */
+  salvarParedeMedicao(ambienteId, body) {
+    return api.post(`/totem-fabrica/ambiente/${ambienteId}/parede`, body);
+  },
+  /** Concluir Medição para Orçamento: finaliza a tarefa. Body opcional: { observacoes? }. */
   concluirMedicaoOrcamento(id, body = {}) {
     return api.post(`/totem-fabrica/${id}/concluir-medicao-orcamento`, body);
   }
+};
+
+/** Orçamento Técnico (novo fluxo): converte ambientes/paredes da medição em itens em tabela independente. Rotas em /orcamentos. */
+export const OrcamentoTecnicoService = {
+  /** Lista orçamentos técnicos. Params opcional: { agenda_loja_id }. */
+  listar(params = {}) {
+    return api.get('/orcamentos/tecnico-lista', { params });
+  },
+  /** Busca um orçamento técnico por id (com itens). */
+  buscar(id) {
+    return api.get(`/orcamentos/tecnico/${id}`);
+  },
+  /** Cria orçamento técnico a partir dos ambientes selecionados. Body: { agenda_loja_id, ambiente_ids: number[] }. */
+  criarNovo(body) {
+    return api.post('/orcamentos/tecnico-novo', body);
+  },
 };
 
 /** Retalhos (sobras de material) — gestão e listagem por produto. */

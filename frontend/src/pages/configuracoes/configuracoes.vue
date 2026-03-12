@@ -35,11 +35,39 @@
       </template>
     </PageHeader>
       <div class="clientes-line-form border-t border-border-ui bg-gradient-to-b from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-900">
+        <!-- Abas: Dados da Empresa | Operação e Documentos -->
+        <div class="flex border-b border-border-ui bg-white/80">
+          <button
+            type="button"
+            :class="[
+              'flex-1 py-3.5 px-4 text-xs font-bold uppercase tracking-wider transition-colors',
+              abaConfig === 'empresa'
+                ? 'text-brand-primary border-b-2 border-brand-primary bg-slate-50/50'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50/50'
+            ]"
+            @click="abaConfig = 'empresa'"
+          >
+            <i class="pi pi-building mr-2"></i> Dados da Empresa
+          </button>
+          <button
+            type="button"
+            :class="[
+              'flex-1 py-3.5 px-4 text-xs font-bold uppercase tracking-wider transition-colors',
+              abaConfig === 'operacao'
+                ? 'text-brand-primary border-b-2 border-brand-primary bg-slate-50/50'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50/50'
+            ]"
+            @click="abaConfig = 'operacao'"
+          >
+            <i class="pi pi-cog mr-2"></i> Operação e Documentos
+          </button>
+        </div>
+
       <div class="grid grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-border-ui">
         
         <div class="col-span-12 lg:col-span-4 p-6 lg:p-8 bg-slate-50/70 dark:bg-slate-900/40 space-y-8">
           
-          <section class="pb-6 border-b border-border-ui/70">
+          <section v-show="abaConfig === 'empresa'" class="pb-6 border-b border-border-ui/70">
             <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 text-center lg:text-left">
               Identidade
             </h3>
@@ -197,7 +225,7 @@
             </div>
           </section>
 
-          <section>
+          <section v-show="abaConfig === 'operacao'">
             <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
               Arquivos e Documentos
             </h3>
@@ -260,7 +288,7 @@
 
         <div class="col-span-12 lg:col-span-8 p-6 lg:p-10 space-y-8">
           
-          <section class="pb-6 border-b border-border-ui/70">
+          <section v-show="abaConfig === 'empresa'" class="pb-6 border-b border-border-ui/70">
             <div class="flex items-center gap-3 mb-6">
               <span class="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
               <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">Informações Fiscais</h3>
@@ -285,7 +313,7 @@
             </div>
           </section>
 
-          <section class="pb-6 border-b border-border-ui/70">
+          <section v-show="abaConfig === 'empresa'" class="pb-6 border-b border-border-ui/70">
             <div class="flex items-center gap-3 mb-6">
               <span class="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
               <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">Contato</h3>
@@ -295,43 +323,104 @@
               <Input v-model="form.email" label="E-mail de Contato" type="email" icon="pi pi-envelope" class="md:col-span-2" />
               <Input v-model="telefoneMask" label="WhatsApp (número)" icon="pi pi-whatsapp" placeholder="(00) 00000-0000" />
               <Input v-model="form.whatsapp_url" label="Link do WhatsApp" placeholder="https://wa.me/5511999999999" />
-              <p class="text-[11px] text-slate-500 md:col-span-2 -mt-1">Envio de mensagens (ex.: orçamento) usa <strong>Evolution API</strong>. Configure abaixo.</p>
-              <Input
-                v-model="form.evolution_api_url"
-                label="Evolution API – URL"
-                placeholder="Ex: http://localhost:8080 ou https://sua-evolution.com"
-                class="md:col-span-2"
-              />
-              <Input
-                v-model="form.evolution_api_key"
-                type="password"
-                label="Evolution API – Chave (API Key)"
-                placeholder="Chave de autenticação da Evolution API"
-                class="md:col-span-2"
-              />
-              <Input
-                v-model="form.evolution_instance_name"
-                label="Evolution API – Nome da instância"
-                placeholder="Ex: acasa-erp"
-              />
-              <div class="md:col-span-2 flex items-center gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="md"
-                  :loading="testandoWhatsApp"
-                  @click="testarTokenWhatsApp"
-                >
-                  <i class="pi pi-whatsapp mr-2"></i>
-                  Testar Evolution API
-                </Button>
+
+              <div class="md:col-span-2 p-4 rounded-xl border border-slate-200 bg-slate-50/80 space-y-4">
+                <div class="flex items-center gap-2">
+                  <i class="pi pi-key text-slate-500"></i>
+                  <h4 class="text-[11px] font-black text-slate-700 uppercase tracking-wider">WhatsApp – Base de autenticação (Evolution API)</h4>
+                </div>
+                <p class="text-[11px] text-slate-500 -mt-1">Envio de mensagens (ex.: orçamento) usa Evolution API. Preencha URL, API Key e nome da instância.</p>
+                <div class="grid grid-cols-1 gap-4">
+                  <Input
+                    v-model="form.evolution_api_url"
+                    label="Evolution API – URL"
+                    placeholder="Ex: http://localhost:8080 ou https://acasamarcenaria.com.br/evolution-api"
+                    class="md:col-span-2"
+                  />
+                  <Input
+                    v-model="form.evolution_api_key"
+                    type="password"
+                    label="Evolution API – Chave (API Key)"
+                    placeholder="Chave de autenticação da Evolution API"
+                    class="md:col-span-2"
+                  />
+                  <Input
+                    v-model="form.evolution_instance_name"
+                    label="Evolution API – Nome da instância"
+                    placeholder="Ex: acasa-erp"
+                    :force-upper="false"
+                    @blur="normalizarNomeInstanciaEvolution"
+                  />
+                  <div class="flex flex-wrap items-center gap-3 pt-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="md"
+                      :loading="testandoWhatsApp"
+                      @click="testarTokenWhatsApp"
+                    >
+                      <i class="pi pi-whatsapp mr-2"></i>
+                      Testar Evolution API
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="md"
+                      :loading="loadingQrWhatsApp"
+                      @click="mostrarQrWhatsApp"
+                    >
+                      <i class="pi pi-qrcode mr-2"></i>
+                      Conectar meu WhatsApp (QR)
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <!-- Modal QR Code / Pairing para conectar WhatsApp -->
+              <div
+                v-if="showQrWhatsAppModal"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                @click.self="showQrWhatsAppModal = false"
+              >
+                <div class="bg-white rounded-lg shadow-xl max-w-sm w-full p-5">
+                  <div class="flex justify-between items-center mb-3">
+                    <h4 class="text-sm font-bold text-slate-800">Conectar WhatsApp</h4>
+                    <button type="button" class="text-slate-400 hover:text-slate-600" @click="showQrWhatsAppModal = false" aria-label="Fechar">
+                      <i class="pi pi-times text-lg"></i>
+                    </button>
+                  </div>
+                  <p class="text-xs text-slate-600 mb-3">Escaneie o QR Code no WhatsApp (Aparelhos conectados) ou use o código de vinculação. Se não aparecer, informe seu número abaixo e clique de novo em &quot;Conectar meu WhatsApp&quot;.</p>
+                  <div class="mb-3">
+                    <label class="block text-xs text-slate-600 mb-1">Número com DDI (opcional)</label>
+                    <input
+                      v-model="qrWhatsAppNumber"
+                      type="text"
+                      placeholder="5511999999999"
+                      class="w-full text-sm border border-slate-300 rounded px-2 py-1.5"
+                    />
+                  </div>
+                  <div v-if="qrWhatsAppData?.code" class="flex justify-center mb-3">
+                    <img :src="'data:image/png;base64,' + qrWhatsAppData.code" alt="QR Code WhatsApp" class="w-48 h-48 object-contain border border-slate-200 rounded" />
+                  </div>
+                  <div v-else-if="qrWhatsAppData?.pairingCode" class="mb-3 p-3 bg-slate-100 rounded text-center">
+                    <p class="text-xs text-slate-600 mb-1">Código de vinculação:</p>
+                    <p class="text-lg font-mono font-bold">{{ qrWhatsAppData.pairingCode }}</p>
+                    <p class="text-[11px] text-slate-500 mt-1">WhatsApp → Ajustes → Aparelhos conectados → Conectar um aparelho → Código de vinculação</p>
+                  </div>
+                  <div v-else-if="qrWhatsAppData && !qrWhatsAppData.code && !qrWhatsAppData.pairingCode" class="text-sm text-amber-600 py-2">
+                    Aguardando QR na Evolution API. Preencha seu número com DDI acima e clique em &quot;Buscar QR de novo&quot;.
+                  </div>
+                  <div class="flex gap-2 mt-3">
+                    <Button type="button" variant="outline" size="sm" :loading="loadingQrWhatsApp" @click="mostrarQrWhatsApp(true)">Buscar QR de novo</Button>
+                    <Button type="button" variant="outline" size="sm" @click="showQrWhatsAppModal = false">Fechar</Button>
+                  </div>
+                </div>
               </div>
               <Input v-model="form.instagram_url" label="Link do Instagram" placeholder="https://instagram.com/..." />
               <Input v-model="form.site" label="Site da Empresa" placeholder="https://..." class="md:col-span-2" />
             </div>
           </section>
 
-          <section class="py-2">
+          <section v-show="abaConfig === 'empresa'" class="py-2">
             <div class="flex items-center gap-3 mb-6">
               <span class="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
               <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">Endereço Principal</h3>
@@ -350,7 +439,7 @@
             </div>
           </section>
 
-          <section class="pb-6 border-b border-border-ui/70">
+          <section v-show="abaConfig === 'operacao'" class="pb-6 border-b border-border-ui/70">
             <div class="flex items-center gap-3 mb-6">
               <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
               <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">Controle de Estoque / Desperdício</h3>
@@ -371,7 +460,7 @@
             </div>
           </section>
 
-          <section class="pb-6 border-b border-border-ui/70">
+          <section v-show="abaConfig === 'operacao'" class="pb-6 border-b border-border-ui/70">
             <div class="flex items-center gap-3 mb-6">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
               <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">Base de cálculo – Custos de Estrutura / Timeline</h3>
@@ -392,7 +481,7 @@
             </div>
           </section>
 
-          <section class="pt-2">
+          <section v-show="abaConfig === 'empresa'" class="pt-2">
             <div class="flex items-center gap-3 mb-6">
               <span class="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
               <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">
@@ -491,7 +580,7 @@
             </div>
           </section>
 
-          <section class="pt-2">
+          <section v-show="abaConfig === 'empresa'" class="pt-2">
             <div class="flex items-center gap-3 mb-6">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
               <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest text-emerald-600">
@@ -565,8 +654,14 @@ definePage({ meta: { perm: 'configuracoes.empresa.ver' } })
 const fileInput = ref(null)
 const documentInput = ref(null)
 
+const abaConfig = ref('empresa')
+
 const salvando = ref(false)
 const testandoWhatsApp = ref(false)
+const loadingQrWhatsApp = ref(false)
+const showQrWhatsAppModal = ref(false)
+const qrWhatsAppData = ref(null)
+const qrWhatsAppNumber = ref('')
 const removendoLogo = ref(false)
 const anexandoDoc = ref(false)
 
@@ -684,7 +779,7 @@ const onCnpjBlur = async () => {
       form.value.numero = d.numero || ''
       form.value.bairro = d.bairro || ''
       form.value.cidade = d.cidade || ''
-      form.value.uf = (d.estado || '').toUpperCase()
+      form.value.uf = (d.estado || '').toLowerCase()
       form.value.cep = (d.cep || '').replace(/\D/g, '')
       if (d.ie) form.value.ie = d.ie
       if (!form.value.pix) form.value.pix = maskCNPJ(cnpj)
@@ -1062,6 +1157,9 @@ const salvar = async () => {
   salvando.value = true
 
   try {
+    if (form.value.evolution_instance_name) {
+      form.value.evolution_instance_name = String(form.value.evolution_instance_name).trim().toLowerCase()
+    }
     const data = await ConfiguracaoService.salvar(form.value)
     const saved = data?.updated_at ?? data
     ultimoSalvamento.value = formatarUltimoSalvamento(saved)
@@ -1070,6 +1168,12 @@ const salvar = async () => {
     notify.error('Erro ao salvar.')
   } finally {
     salvando.value = false
+  }
+}
+
+function normalizarNomeInstanciaEvolution() {
+  if (form.value.evolution_instance_name != null) {
+    form.value.evolution_instance_name = String(form.value.evolution_instance_name).trim().toLowerCase()
   }
 }
 
@@ -1086,6 +1190,43 @@ async function testarTokenWhatsApp() {
     notify.error(e?.response?.data?.message || 'Erro ao testar Evolution API.')
   } finally {
     testandoWhatsApp.value = false
+  }
+}
+
+async function mostrarQrWhatsApp(comNumero) {
+  loadingQrWhatsApp.value = true
+  if (!showQrWhatsAppModal.value) {
+    qrWhatsAppData.value = null
+    showQrWhatsAppModal.value = true
+  }
+  try {
+    const instanceName = (form.value.evolution_instance_name?.trim() || 'acasa-erp').toLowerCase()
+    const number = (comNumero && qrWhatsAppNumber.value?.trim()) ? qrWhatsAppNumber.value.trim() : null
+    let data = null
+    try {
+      data = await ConfiguracaoService.createEvolutionInstance(instanceName)
+      if (data?.qrCodeBase64 || data?.pairingCode) {
+        qrWhatsAppData.value = { code: data.qrCodeBase64, pairingCode: data.pairingCode }
+      } else {
+        data = await ConfiguracaoService.getEvolutionQrCode(instanceName, number)
+        qrWhatsAppData.value = data || {}
+      }
+    } catch (createErr) {
+      if (createErr?.response?.status === 403) {
+        data = await ConfiguracaoService.getEvolutionQrCode(instanceName, number)
+        qrWhatsAppData.value = data || {}
+      } else {
+        throw createErr
+      }
+    }
+    if (!qrWhatsAppData.value?.code && !qrWhatsAppData.value?.pairingCode) {
+      notify.info('QR ainda não disponível. Informe seu número com DDI (ex: 5511999999999) e clique em "Buscar QR de novo".')
+    }
+  } catch (e) {
+    notify.error(e?.response?.data?.message || 'Erro ao obter QR Code. Verifique a Evolution API e o nome da instância.')
+    if (!showQrWhatsAppModal.value) showQrWhatsAppModal.value = false
+  } finally {
+    loadingQrWhatsApp.value = false
   }
 }
 
@@ -1178,6 +1319,9 @@ onMounted(async () => {
   try {
     const data = await ConfiguracaoService.carregar()
     if (data) Object.assign(form.value, data)
+    if (form.value.evolution_instance_name) {
+      form.value.evolution_instance_name = String(form.value.evolution_instance_name).trim().toLowerCase()
+    }
     if (!form.value.cor_marca) form.value.cor_marca = '#2563eb'
     ultimoSalvamento.value = formatarUltimoSalvamento(data?.updated_at)
     await Promise.all([

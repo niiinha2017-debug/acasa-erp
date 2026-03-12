@@ -45,8 +45,9 @@ class EvolutionController {
   @Get('instance/qrcode')
   async getQrCode(
     @Query('instanceName') instanceName?: string,
+    @Query('number') number?: string,
   ): Promise<{ code?: string; pairingCode?: string } | null> {
-    const data = await this.evolutionService.fetchQrCode(instanceName);
+    const data = await this.evolutionService.fetchQrCode(instanceName, number);
     return data ?? null;
   }
 

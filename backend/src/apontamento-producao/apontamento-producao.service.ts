@@ -908,20 +908,240 @@ export class ApontamentoProducaoService {
   }
 
   /**
-   * Totem – Concluir Medição para Orçamento: salva medidas gerais + observações ou lista de ambientes na tabela medicao_orcamento,
-   * fecha a tarefa na agenda e notifica que está pronto para orçamento.
-   * ambientes opcional: quando informado, cria registros em medicao_orcamento_ambiente e retorna seus ids para upload de fotos.
+   * Retorna a medição para orçamento (se existir) com todos os ambientes, para a página de medição por ambiente.
+   * Se não existir medição ou não houver nenhum ambiente, cria a medição e um primeiro ambiente (Cozinha) para novo início de orçamento.
+   */
+  async getMedicaoOrcamentoByAgenda(agendaLojaId: number) {
+    const agenda = await this.prisma.agenda_loja.findUnique({
+      where: { id: agendaLojaId },
+      select: { id: true, status: true, cliente_id: true, orcamento_id: true },
+    });
+    if (!agenda) throw new BadRequestException('Tarefa não encontrada.');
+    if (String(agenda.status || '').toUpperCase() === 'CONCLUIDO') {
+      const medicaoConcluida = await this.prisma.medicao_orcamento.findUnique({
+        where: { agenda_loja_id: agendaLojaId },
+        include: {
+          ambientes: {
+            orderBy: { nome_ambiente: 'asc' },
+            include: { paredes: { orderBy: { nome: 'asc' } } },
+          },
+        },
+      });
+      return medicaoConcluida;
+    }
+    let medicao = await this.prisma.medicao_orcamento.findUnique({
+      where: { agenda_loja_id: agendaLojaId },
+      include: {
+        ambientes: {
+          orderBy: { nome_ambiente: 'asc' },
+          include: {
+            paredes: { orderBy: { nome: 'asc' } },
+          },
+        },
+      },
+    });
+    const precisaPrimeiroAmbiente = !medicao || !medicao.ambientes?.length;
+    if (precisaPrimeiroAmbiente) {
+      medicao = await this.prisma.medicao_orcamento.upsert({
+        where: { agenda_loja_id: agendaLojaId },
+        create: {
+          agenda_loja_id: agendaLojaId,
+          cliente_id: agenda.cliente_id ?? undefined,
+          orcamento_id: agenda.orcamento_id ?? undefined,
+          concluida: false,
+        },
+        update: {},
+        include: {
+          ambientes: {
+            orderBy: { nome_ambiente: 'asc' },
+            include: { paredes: { orderBy: { nome: 'asc' } } },
+          },
+        },
+      });
+      if (!medicao.ambientes?.length) {
+        await this.prisma.medicao_orcamento_ambiente.create({
+          data: {
+            medicao_orcamento_id: medicao.id,
+            nome_ambiente: 'Cozinha',
+          },
+        });
+        const atualizada = await this.prisma.medicao_orcamento.findUnique({
+          where: { id: medicao.id },
+          include: {
+            ambientes: {
+              orderBy: { nome_ambiente: 'asc' },
+              include: { paredes: { orderBy: { nome: 'asc' } } },
+            },
+          },
+        });
+        if (atualizada) medicao = atualizada;
+      }
+    }
+    return medicao;
+  }
+
+  /**
+   * Salva uma única parede (lado) de um ambiente. Se body.parede_id for informado, atualiza essa parede; senão upsert por (ambiente_id, nome).
+   * Body: parede_id?, nome, largura_m?, pe_direito_m?, profundidade_m?, observacoes?, medidas?: [{ descricao, valor_mm }].
+   */
+  async salvarParedeMedicao(
+    ambienteId: number,
+    body: {
+      parede_id?: number;
+      nome: string;
+      largura_m?: number;
+      pe_direito_m?: number;
+      profundidade_m?: number;
+      observacoes?: string;
+      medidas?: Array<{ descricao: string; valor_mm: number }>;
+    },
+  ) {
+    const ambiente = await this.prisma.medicao_orcamento_ambiente.findUnique({
+      where: { id: ambienteId },
+      include: { medicao_orcamento: { include: { agenda_loja: true } } },
+    });
+    if (!ambiente) throw new BadRequestException('Ambiente não encontrado.');
+    const status = ambiente.medicao_orcamento?.agenda_loja?.status;
+    if (status && String(status).toUpperCase() === 'CONCLUIDO') {
+      throw new BadRequestException('Tarefa já concluída.');
+    }
+    const nome = String(body.nome || '').trim() || 'Parede';
+    const medidasJson =
+      Array.isArray(body.medidas) && body.medidas.length > 0
+        ? JSON.stringify(body.medidas)
+        : null;
+    const observacoes = (body.observacoes || '').trim() || null;
+    const data = {
+      nome,
+      largura_m: body.largura_m != null ? body.largura_m : null,
+      pe_direito_m: body.pe_direito_m != null ? body.pe_direito_m : null,
+      profundidade_m: body.profundidade_m != null ? body.profundidade_m : null,
+      observacoes,
+      medidas_json: medidasJson,
+    };
+    let parede;
+    if (body.parede_id != null && body.parede_id > 0) {
+      parede = await this.prisma.medicao_orcamento_parede.update({
+        where: { id: body.parede_id },
+        data,
+      });
+    } else {
+      const existente = await this.prisma.medicao_orcamento_parede.findFirst({
+        where: {
+          medicao_orcamento_ambiente_id: ambienteId,
+          nome,
+        },
+      });
+      parede = existente
+        ? await this.prisma.medicao_orcamento_parede.update({
+            where: { id: existente.id },
+            data,
+          })
+        : await this.prisma.medicao_orcamento_parede.create({
+            data: {
+              medicao_orcamento_ambiente_id: ambienteId,
+              ...data,
+            },
+          });
+    }
+    return { parede: { id: parede.id, nome: parede.nome } };
+  }
+
+  /**
+   * Salva um único ambiente da medição (upsert por nome_ambiente). Não finaliza a tarefa.
+   * Body: nome_ambiente, largura_m?, pe_direito_m?, profundidade_m?, observacoes?, medidas?: [{ descricao, valor_mm }].
+   */
+  async salvarAmbienteMedicao(
+    agendaLojaId: number,
+    body: {
+      nome_ambiente: string;
+      largura_m?: number;
+      pe_direito_m?: number;
+      profundidade_m?: number;
+      observacoes?: string;
+      medidas?: Array<{ descricao: string; valor_mm: number }>;
+    },
+  ) {
+    const agenda = await this.prisma.agenda_loja.findUnique({
+      where: { id: agendaLojaId },
+      select: { id: true, status: true, cliente_id: true, orcamento_id: true },
+    });
+    if (!agenda) throw new BadRequestException('Tarefa não encontrada.');
+    if (String(agenda.status).toUpperCase() === 'CONCLUIDO') {
+      throw new BadRequestException('Tarefa já concluída.');
+    }
+    const nome = String(body.nome_ambiente || '').trim() || 'Ambiente';
+    const medicao = await this.prisma.medicao_orcamento.upsert({
+      where: { agenda_loja_id: agendaLojaId },
+      create: {
+        agenda_loja_id: agendaLojaId,
+        cliente_id: agenda.cliente_id ?? undefined,
+        orcamento_id: agenda.orcamento_id ?? undefined,
+        concluida: false,
+      },
+      update: {},
+    });
+    const medidasJson =
+      Array.isArray(body.medidas) && body.medidas.length > 0
+        ? JSON.stringify(body.medidas)
+        : null;
+    const observacoes = (body.observacoes || '').trim() || null;
+    const ambiente = await this.prisma.medicao_orcamento_ambiente.upsert({
+      where: {
+        medicao_orcamento_id_nome_ambiente: {
+          medicao_orcamento_id: medicao.id,
+          nome_ambiente: nome,
+        },
+      },
+      create: {
+        medicao_orcamento_id: medicao.id,
+        nome_ambiente: nome,
+        largura_m: body.largura_m != null ? body.largura_m : null,
+        pe_direito_m: body.pe_direito_m != null ? body.pe_direito_m : null,
+        profundidade_m: body.profundidade_m != null ? body.profundidade_m : null,
+        observacoes,
+        medidas_json: medidasJson,
+      },
+      update: {
+        largura_m: body.largura_m != null ? body.largura_m : null,
+        pe_direito_m: body.pe_direito_m != null ? body.pe_direito_m : null,
+        profundidade_m: body.profundidade_m != null ? body.profundidade_m : null,
+        observacoes,
+        medidas_json: medidasJson,
+      },
+    });
+    return {
+      medicao_orcamento_id: medicao.id,
+      ambiente: { id: ambiente.id, nome_ambiente: nome },
+    };
+  }
+
+  /**
+   * Totem – Concluir Medição: quando ambientes é informado, substitui ambientes e suas paredes;
+   * quando não é informado, apenas marca concluída e finaliza (dados já salvos).
    */
   async concluirMedicaoOrcamento(
     agendaLojaId: number,
     medidasGerais: string,
     observacoes: string,
     ambientes?: Array<{
+      id?: number;
       nome_ambiente: string;
       largura_m?: number;
       pe_direito_m?: number;
       profundidade_m?: number;
+      observacoes?: string;
+      medidas?: Array<{ descricao: string; valor_mm: number }>;
+      paredes?: Array<{
+        nome: string;
+        largura_m?: number;
+        pe_direito_m?: number;
+        profundidade_m?: number;
+        observacoes?: string;
+        medidas?: Array<{ descricao: string; valor_mm: number }>;
+      }>;
     }>,
+    medidas?: Array<{ descricao: string; valor_mm: number }>,
   ) {
     const agenda = await this.prisma.agenda_loja.findUnique({
       where: { id: agendaLojaId },
@@ -933,7 +1153,13 @@ export class ApontamentoProducaoService {
     }
 
     const temAmbientes = Array.isArray(ambientes) && ambientes.length > 0;
-    const medidasGeraisFinal = temAmbientes ? null : ((medidasGerais || '').trim() || null);
+    const temMedidas = Array.isArray(medidas) && medidas.length > 0;
+    let medidasGeraisFinal: string | null = null;
+    if (temMedidas) {
+      medidasGeraisFinal = JSON.stringify(medidas);
+    } else if (!temAmbientes && (medidasGerais || '').trim()) {
+      medidasGeraisFinal = (medidasGerais || '').trim();
+    }
     const observacoesFinal = (observacoes || '').trim() || null;
 
     const medicao = await this.prisma.medicao_orcamento.upsert({
@@ -947,19 +1173,24 @@ export class ApontamentoProducaoService {
         concluida: true,
       },
       update: {
-        medidas_gerais: medidasGeraisFinal,
-        observacoes: observacoesFinal,
+        ...(temAmbientes || temMedidas || medidasGeraisFinal != null
+          ? { medidas_gerais: medidasGeraisFinal }
+          : {}),
+        ...(observacoesFinal != null ? { observacoes: observacoesFinal } : {}),
         concluida: true,
       },
     });
 
-    let ambientesCriados: Array<{ id: number; nome_ambiente: string }> = [];
+    const ambientesCriados: Array<{ id: number; nome_ambiente: string }> = [];
     if (temAmbientes) {
       await this.prisma.medicao_orcamento_ambiente.deleteMany({
         where: { medicao_orcamento_id: medicao.id },
       });
       for (const a of ambientes) {
         const nome = String(a.nome_ambiente || '').trim() || 'Ambiente';
+        const medidasJson =
+          Array.isArray(a.medidas) && a.medidas.length > 0 ? JSON.stringify(a.medidas) : null;
+        const obsAmb = (a.observacoes || '').trim() || null;
         const created = await this.prisma.medicao_orcamento_ambiente.create({
           data: {
             medicao_orcamento_id: medicao.id,
@@ -967,9 +1198,29 @@ export class ApontamentoProducaoService {
             largura_m: a.largura_m != null ? a.largura_m : null,
             pe_direito_m: a.pe_direito_m != null ? a.pe_direito_m : null,
             profundidade_m: a.profundidade_m != null ? a.profundidade_m : null,
+            observacoes: obsAmb,
+            medidas_json: medidasJson,
           },
         });
         ambientesCriados.push({ id: created.id, nome_ambiente: nome });
+        const paredes = Array.isArray(a.paredes) ? a.paredes : [];
+        for (const p of paredes) {
+          const nomeP = String(p.nome || '').trim() || 'Parede';
+          const medidasP =
+            Array.isArray(p.medidas) && p.medidas.length > 0 ? JSON.stringify(p.medidas) : null;
+          const obsP = (p.observacoes || '').trim() || null;
+          await this.prisma.medicao_orcamento_parede.create({
+            data: {
+              medicao_orcamento_ambiente_id: created.id,
+              nome: nomeP,
+              largura_m: p.largura_m != null ? p.largura_m : null,
+              pe_direito_m: p.pe_direito_m != null ? p.pe_direito_m : null,
+              profundidade_m: p.profundidade_m != null ? p.profundidade_m : null,
+              observacoes: obsP,
+              medidas_json: medidasP,
+            },
+          });
+        }
       }
     }
 

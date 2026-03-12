@@ -43,6 +43,7 @@ acasa3358.pub
 
 # dotenv environment variable files
 .env
+docker.env
 .env.development.local
 .env.test.local
 .env.production.local

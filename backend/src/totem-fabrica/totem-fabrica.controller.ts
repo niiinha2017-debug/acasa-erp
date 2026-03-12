@@ -9,6 +9,28 @@ export class TotemFabricaController {
   constructor(private readonly apontamentoService: ApontamentoProducaoService) {}
 
   /**
+   * Salva uma parede (lado) de um ambiente. Body: { parede_id?, nome, largura_m?, pe_direito_m?, profundidade_m?, observacoes?, medidas? }.
+   * Declarada antes das rotas :id para não ser capturada por elas.
+   */
+  @Post('ambiente/:ambienteId/parede')
+  @Permissoes('agendamentos.producao')
+  salvarParedeMedicao(
+    @Param('ambienteId', ParseIntPipe) ambienteId: number,
+    @Body()
+    body: {
+      parede_id?: number;
+      nome: string;
+      largura_m?: number;
+      pe_direito_m?: number;
+      profundidade_m?: number;
+      observacoes?: string;
+      medidas?: Array<{ descricao: string; valor_mm: number }>;
+    },
+  ) {
+    return this.apontamentoService.salvarParedeMedicao(ambienteId, body);
+  }
+
+  /**
    * Retorna uma única tarefa do totem por id (para páginas dedicadas de medição).
    * Query: tipo = 'agenda_loja' | 'agenda_fabrica'
    */
@@ -79,9 +101,38 @@ export class TotemFabricaController {
   }
 
   /**
-   * Concluir Medição para Orçamento: salva formulário (medidas gerais/observações ou lista de ambientes), fecha a tarefa e notifica pronto para orçamento.
-   * Body: { medidas_gerais?, observacoes? } (legado) ou { ambientes: [{ nome_ambiente, largura_m?, pe_direito_m?, profundidade_m? }] }.
-   * Retorna medicao_orcamento_id e ambientes: [{ id, nome_ambiente }] para upload de fotos por ambiente.
+   * Retorna a medição para orçamento (com ambientes) do agendamento, para a página de medição por ambiente.
+   */
+  @Get(':id/medicao-orcamento')
+  @Permissoes('agendamentos.producao')
+  getMedicaoOrcamento(@Param('id', ParseIntPipe) id: number) {
+    return this.apontamentoService.getMedicaoOrcamentoByAgenda(id);
+  }
+
+  /**
+   * Salva um único ambiente da medição (Cozinha, Sala, etc.). Não finaliza a tarefa.
+   * Body: { nome_ambiente, largura_m?, pe_direito_m?, profundidade_m?, observacoes?, medidas?: [{ descricao, valor_mm }] }.
+   */
+  @Post(':id/salvar-ambiente-medicao')
+  @Permissoes('agendamentos.producao')
+  salvarAmbienteMedicao(
+    @Param('id', ParseIntPipe) id: number,
+    @Body()
+    body: {
+      nome_ambiente: string;
+      largura_m?: number;
+      pe_direito_m?: number;
+      profundidade_m?: number;
+      observacoes?: string;
+      medidas?: Array<{ descricao: string; valor_mm: number }>;
+    },
+  ) {
+    return this.apontamentoService.salvarAmbienteMedicao(id, body);
+  }
+
+  /**
+   * Concluir Medição para Orçamento: salva ambientes com suas paredes e finaliza.
+   * ambientes[].paredes = array de paredes a persistir na MedicaoParede.
    */
   @Post(':id/concluir-medicao-orcamento')
   @Permissoes('agendamentos.producao')
@@ -92,11 +143,23 @@ export class TotemFabricaController {
       medidas_gerais?: string;
       observacoes?: string;
       ambientes?: Array<{
+        id?: number;
         nome_ambiente: string;
         largura_m?: number;
         pe_direito_m?: number;
         profundidade_m?: number;
+        observacoes?: string;
+        medidas?: Array<{ descricao: string; valor_mm: number }>;
+        paredes?: Array<{
+          nome: string;
+          largura_m?: number;
+          pe_direito_m?: number;
+          profundidade_m?: number;
+          observacoes?: string;
+          medidas?: Array<{ descricao: string; valor_mm: number }>;
+        }>;
       }>;
+      medidas?: Array<{ descricao: string; valor_mm: number }>;
     },
   ) {
     return this.apontamentoService.concluirMedicaoOrcamento(
@@ -104,6 +167,7 @@ export class TotemFabricaController {
       body?.medidas_gerais ?? '',
       body?.observacoes ?? '',
       body?.ambientes,
+      body?.medidas,
     );
   }
 }

@@ -379,15 +379,14 @@ async function carregarDados(éRetry = false) {
         : []
 
     registrosHoje.value = hojeData
+    etapa.value = 'app'
   } catch (e) {
     if (e?.response?.status === 401 && !éRetry) {
       await new Promise((r) => setTimeout(r, 400))
       return carregarDados(true)
     }
     if (e?.response?.status === 401) {
-      token.value = ''
-      localStorage.removeItem('acasa_ponto_token')
-      localStorage.removeItem('acasa_funcionario_nome')
+      // Não remove o token: evita deslogar todo mundo por 401 temporário (rede/backend).
       etapa.value = 'ativar'
     }
   }
@@ -465,7 +464,6 @@ async function realizarPareamento() {
     }
     token.value = newToken
     localStorage.setItem('acasa_ponto_token', newToken)
-    etapa.value = 'app'
     await new Promise((r) => setTimeout(r, 300))
     await carregarDados()
 
@@ -496,17 +494,14 @@ onMounted(() => {
   // --- CAPTURA O CÓDIGO DA URL (query ?code= e hash #code= para PWA) ---
   const code = obterCodigoDaUrl()
 
-  if (code && !token.value) {
+  if (code && !getTokenEnviar()) {
     parearCode.value = code
-    // Tenta ativar automático após 500ms (dá tempo do app inicializar)
     setTimeout(() => {
       realizarPareamento()
     }, 500)
   }
-  // -------------------------------
 
-  if (token.value) {
-    etapa.value = 'app'
+  if (getTokenEnviar()) {
     carregarDados()
   }
 })

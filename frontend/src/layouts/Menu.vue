@@ -1,60 +1,62 @@
 <template>
-  <nav class="menu-bar w-full h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-700/80 shadow-sm fixed top-0 left-0 right-0 z-[9990] transition-colors duration-300 overflow-visible pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
-    <div class="h-full min-w-0 px-3 sm:px-4 md:px-5 flex items-center justify-between gap-4">
-      <!-- ESQUERDA: Logo + margem fixa + Pílula de menus -->
-      <div class="flex items-center justify-start min-w-0 flex-1">
+  <nav class="menu-bar w-full min-h-[3.5rem] sm:min-h-[4rem] h-16 max-h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-700/80 shadow-sm fixed top-0 left-0 right-0 z-[9990] transition-colors duration-300 overflow-visible pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
+    <div class="h-full min-w-0 max-w-full px-2 sm:px-4 md:px-5 flex items-center justify-between gap-2 sm:gap-4">
+      <!-- ESQUERDA: Logo + Pílula de menus (PC) ou hamburger (celular/tablet) -->
+      <div class="flex items-center justify-start min-w-0 flex-1 overflow-visible">
         <RouterLink to="/agendamentos/loja" class="flex items-center gap-0 min-w-0 flex-shrink-0 transition-opacity hover:opacity-90">
-          <div class="w-7 h-9 sm:h-10 flex-shrink-0 bg-[#2563a8] flex items-center justify-center text-white font-bold text-base sm:text-lg tracking-tight rounded-none shadow-sm" aria-hidden="true">
+          <div class="w-6 h-8 sm:w-7 sm:h-9 md:h-10 flex-shrink-0 bg-[#2563a8] flex items-center justify-center text-white font-bold text-sm sm:text-base md:text-lg tracking-tight rounded-none shadow-sm" aria-hidden="true">
             A
           </div>
-          <div class="flex flex-col leading-tight pl-1.5 min-w-0">
-            <span class="font-bold text-[13px] sm:text-sm tracking-tight text-slate-900 dark:text-white truncate">Casa</span>
+          <div class="flex flex-col leading-tight pl-1 sm:pl-1.5 min-w-0 max-w-[120px] sm:max-w-none">
+            <span class="font-bold text-xs sm:text-[13px] md:text-sm tracking-tight text-slate-900 dark:text-white truncate">Casa</span>
             <span class="hidden sm:block text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-600 dark:text-slate-400">Móveis planejados</span>
-            <span class="hidden sm:block text-[8px] font-medium text-slate-400 dark:text-slate-500 mt-0.5">v{{ appVersion }}</span>
+            <span class="hidden md:block text-[8px] font-medium text-slate-400 dark:text-slate-500 mt-0.5">v{{ appVersion }}</span>
           </div>
         </RouterLink>
 
-        <!-- Pílula: espaço fixo ml-8 após o logo, depois os menus -->
-        <div v-if="!deveOcultarMenu" class="hidden md:flex items-center gap-x-4 ml-8 rounded-lg border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-800/50 px-4 py-2 shadow-sm">
-          <template v-for="(section, index) in NAV_VISIVEL" :key="section.key">
-            <NavMenu
-              :label="section.label"
-              :items="section.items"
-            />
-          </template>
+        <!-- Pílula de menus: notebook e desktop (md+), com scroll horizontal se necessário -->
+        <div v-if="!deveOcultarMenu" class="hidden md:flex flex-1 min-w-0 ml-4 md:ml-6 overflow-x-auto custom-scroll">
+          <div class="flex items-center gap-x-2 xl:gap-x-4 flex-shrink-0 rounded-lg border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-800/50 px-2 md:px-4 py-1.5 md:py-2 shadow-sm">
+            <template v-for="(section, index) in NAV_VISIVEL" :key="section.key">
+              <NavMenu
+                :label="section.label"
+                :items="section.items"
+              />
+            </template>
+          </div>
         </div>
 
-      <!-- Botão menu mobile (hamburger) -->
-      <button
-        v-if="!deveOcultarMenu"
-        type="button"
-        class="md:hidden flex items-center justify-center w-10 h-10 min-w-[2.5rem] min-h-[2.5rem] rounded-xl text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700/80 active:bg-slate-200 dark:active:bg-slate-700 transition-colors touch-manipulation"
-        aria-label="Abrir menu"
-        @click="isMobileMenuOpen = true"
-      >
-        <i class="pi pi-bars text-lg"></i>
-      </button>
+        <!-- Botão menu (hamburger): só em celular (abaixo de md) -->
+        <button
+          v-if="!deveOcultarMenu"
+          type="button"
+          class="md:hidden flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 min-w-[2.25rem] min-h-[2.25rem] sm:min-w-[2.5rem] sm:min-h-[2.5rem] rounded-xl text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700/80 active:bg-slate-200 dark:active:bg-slate-700 transition-colors touch-manipulation flex-shrink-0 ml-1 sm:ml-2"
+          aria-label="Abrir menu"
+          @click="isMobileMenuOpen = true"
+        >
+          <i class="pi pi-bars text-base sm:text-lg"></i>
+        </button>
       </div>
 
       <!-- DIREITA: Usuário + ícones -->
-      <div class="flex items-center gap-x-2 sm:gap-x-2.5 flex-shrink-0">
+      <div class="flex items-center gap-x-1.5 sm:gap-x-2.5 flex-shrink-0">
         <span
           v-if="nomeUsuarioLogado"
-          class="hidden sm:inline text-[13px] font-medium text-slate-600 dark:text-slate-400 truncate max-w-[140px]"
+          class="hidden sm:inline text-xs md:text-[13px] font-medium text-slate-600 dark:text-slate-400 truncate max-w-[100px] md:max-w-[140px]"
           :title="nomeUsuarioLogado"
         >
           {{ nomeUsuarioLogado }}
         </span>
         <button
-          @click="toggleDark()" 
-          class="w-8 h-8 flex items-center justify-center text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700/80 transition-all"
+          @click="toggleDark()"
+          class="w-8 h-8 min-w-8 min-h-8 flex items-center justify-center text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700/80 transition-all touch-manipulation"
           title="Alternar tema"
         >
           <i :class="isDark ? 'pi pi-sun' : 'pi pi-moon'" class="text-xs"></i>
         </button>
         <button
-          @click="handleLogout" 
-          class="hidden lg:flex items-center justify-center w-8 h-8 text-red-500 border border-red-200 dark:border-red-900/50 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
+          @click="handleLogout"
+          class="hidden md:flex items-center justify-center w-8 h-8 min-w-8 min-h-8 text-red-500 border border-red-200 dark:border-red-900/50 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-all"
           title="Sair"
         >
           <i class="pi pi-power-off text-xs"></i>
@@ -73,10 +75,10 @@
           aria-label="Menu de navegação"
         >
           <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="isMobileMenuOpen = false" aria-hidden="true"></div>
-          <div class="absolute right-0 top-0 bottom-0 flex flex-col shadow-2xl" :class="drawerSubmenuItem ? 'w-[min(520px,calc(100vw-2rem))] max-w-[520px]' : 'w-[min(320px,calc(100vw-2rem))] max-w-[320px]'">
-            <div class="flex flex-1 min-w-0 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-700">
-              <!-- Coluna principal do menu -->
-              <div class="flex flex-col flex-shrink-0 w-[min(320px,100%)]" :class="drawerSubmenuItem ? 'border-r border-slate-200 dark:border-slate-700' : ''">
+          <div class="absolute right-0 top-0 bottom-0 flex flex-col shadow-2xl w-[85vw] max-w-[320px] sm:max-w-[360px] md:max-w-[400px] max-h-[100dvh]" :class="drawerSubmenuItem ? 'sm:max-w-[420px] md:max-w-[520px]' : ''">
+            <div class="flex flex-1 min-h-0 min-w-0 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-700">
+              <!-- Coluna principal do menu: min-h-0 para o flex permitir scroll no filho -->
+              <div class="flex flex-col flex-1 min-h-0 w-full min-w-0 overflow-hidden" :class="drawerSubmenuItem ? 'border-r border-slate-200 dark:border-slate-700' : ''">
                 <!-- HEADER DO DRAWER -->
                 <div class="px-4 sm:px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
                   <div class="flex items-center justify-between">
@@ -90,8 +92,8 @@
                   </p>
                 </div>
 
-                <!-- ITENS DO MENU (oculto quando senha provisória) -->
-                <div v-if="!deveOcultarMenu" class="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2 overscroll-contain">
+                <!-- ITENS DO MENU: min-h-0 + overflow-y-auto para scroll funcionar em telas pequenas -->
+                <div v-if="!deveOcultarMenu" class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 space-y-2 overscroll-contain custom-scroll touch-pan-y">
                   <div v-for="section in NAV_VISIVEL" :key="section.key" class="space-y-2">
                     <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 px-3 mt-4 mb-2">{{ section.label }}</p>
                     <template v-for="item in section.items.filter(i => !i.divider)" :key="item.to || item.label || item.heading">
@@ -108,7 +110,7 @@
                         :class="[item.etapaKey ? getStatusHoverBgClass(item.etapaKey) : 'hover:bg-slate-100 dark:hover:bg-slate-800', { 'bg-slate-100 dark:bg-slate-800': drawerSubmenuItem === item }]"
                         @click="drawerSubmenuItem = drawerSubmenuItem === item ? null : item"
                       >
-                        <i :class="item.icon" class="text-xs opacity-70 w-4 flex-shrink-0"></i>
+                        <i :class="['pi', item.icon]" class="text-xs opacity-70 w-4 flex-shrink-0"></i>
                         <span class="break-words line-clamp-2 flex-1">{{ item.label }}</span>
                         <i class="pi pi-chevron-right text-xs opacity-60 flex-shrink-0"></i>
                       </button>
@@ -119,7 +121,7 @@
                         :class="item.etapaKey ? getStatusHoverBgClass(item.etapaKey) : 'hover:bg-slate-100 dark:hover:bg-slate-800'"
                         @click.prevent="handleMobileNav(item.to)"
                       >
-                        <i :class="item.icon" class="text-xs opacity-70 w-4 flex-shrink-0"></i>
+                        <i :class="['pi', item.icon]" class="text-xs opacity-70 w-4 flex-shrink-0"></i>
                         <span class="break-words line-clamp-2">{{ item.label }}</span>
                       </a>
                     </template>
@@ -129,14 +131,14 @@
 
               <!-- Lista lateral: subitens (ex.: RH → Horas extras, Fechamento de ponto) -->
               <transition name="slide-left">
-                <div v-if="drawerSubmenuItem" class="flex-1 flex flex-col min-w-0 bg-slate-50/50 dark:bg-slate-800/30">
+                <div v-if="drawerSubmenuItem" class="flex-1 flex flex-col min-h-0 min-w-0 bg-slate-50/50 dark:bg-slate-800/30 overflow-hidden">
                   <div class="flex items-center gap-2 px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
                     <button type="button" @click="drawerSubmenuItem = null" class="p-1.5 -ml-1.5 rounded-lg text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 touch-manipulation" aria-label="Voltar">
                       <i class="pi pi-chevron-left text-sm"></i>
                     </button>
-                    <span class="font-semibold text-sm text-slate-700 dark:text-slate-200">{{ drawerSubmenuItem.label }}</span>
+                    <span class="font-semibold text-sm text-slate-700 dark:text-slate-200 truncate">{{ drawerSubmenuItem.label }}</span>
                   </div>
-                  <div class="flex-1 overflow-y-auto p-3 space-y-1">
+                  <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3 space-y-1 custom-scroll touch-pan-y">
                     <template v-for="(child, childIdx) in filhosVisiveis(drawerSubmenuItem)" :key="child.divider ? `div-${childIdx}` : (child.to || childIdx)">
                       <hr v-if="child.divider" class="my-1 border-slate-200 dark:border-slate-700" />
                       <a
@@ -146,7 +148,7 @@
                         :class="child.etapaKey ? getStatusHoverBgClass(child.etapaKey) : 'hover:bg-slate-100 dark:hover:bg-slate-700'"
                         @click.prevent="handleMobileNav(child.to)"
                       >
-                        <i :class="child.icon" class="text-xs opacity-70 w-4 flex-shrink-0"></i>
+                        <i :class="['pi', child.icon]" class="text-xs opacity-70 w-4 flex-shrink-0"></i>
                         <span class="break-words line-clamp-2">{{ child.label }}</span>
                       </a>
                     </template>
@@ -330,4 +332,9 @@ onMounted(() => {
 .slide-right-enter-from, .slide-right-leave-to { transform: translateX(100%); opacity: 0; }
 .slide-left-enter-active, .slide-left-leave-active { transition: all 0.2s ease; }
 .slide-left-enter-from, .slide-left-leave-to { transform: translateX(10px); opacity: 0; }
+/* Garante scroll por toque no drawer em telas pequenas */
+.menu-drawer-overlay .overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
 </style>

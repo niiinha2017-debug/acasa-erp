@@ -876,7 +876,7 @@ model medicao_orcamento {
   @@map("medicao_orcamento")
 }
 
-// Ambientes medidos numa medição para orçamento (Cozinha, Suíte, etc.) — cada um com medidas e fotos próprias
+// Ambientes medidos numa medição para orçamento (Cozinha, Suíte, etc.) — cada um com paredes (1:N)
 model medicao_orcamento_ambiente {
   id                   Int      @id @default(autoincrement())
   medicao_orcamento_id Int
@@ -885,11 +885,63 @@ model medicao_orcamento_ambiente {
   largura_m            Decimal? @db.Decimal(10, 2)
   pe_direito_m         Decimal? @db.Decimal(10, 2)
   profundidade_m       Decimal? @db.Decimal(10, 2)
+  observacoes         String?  @db.Text
+  medidas_json        String?  @db.Text
   criado_em            DateTime @default(now())
   atualizado_em        DateTime @updatedAt
 
+  paredes              medicao_orcamento_parede[]
+
+  @@unique([medicao_orcamento_id, nome_ambiente], map: "moa_orc_id_nome_ambiente_unique")
   @@index([medicao_orcamento_id])
   @@map("medicao_orcamento_ambiente")
+}
+
+// Paredes/Lados dentro de cada ambiente (ex: Cozinha > Parede Pia, Parede Geladeira) — medidas e fotos por parede
+model medicao_orcamento_parede {
+  id                            Int      @id @default(autoincrement())
+  medicao_orcamento_ambiente_id Int
+  medicao_orcamento_ambiente   medicao_orcamento_ambiente @relation(fields: [medicao_orcamento_ambiente_id], references: [id], onDelete: Cascade)
+  nome                          String   @db.VarChar(191)
+  largura_m                     Decimal? @db.Decimal(10, 2)
+  pe_direito_m                  Decimal? @db.Decimal(10, 2)
+  profundidade_m                Decimal? @db.Decimal(10, 2)
+  observacoes                   String?  @db.Text
+  medidas_json                  String?  @db.Text
+  criado_em                     DateTime @default(now())
+  atualizado_em                 DateTime @updatedAt
+
+  @@unique([medicao_orcamento_ambiente_id, nome], name: "moa_parede_ambiente_id_nome_unique")
+  @@index([medicao_orcamento_ambiente_id])
+  @@map("medicao_orcamento_parede")
+}
+
+// Orçamento Técnico (novo fluxo): origem na medição por ambiente/parede; itens em tabela independente.
+model orcamento_tecnico {
+  id             Int      @id @default(autoincrement())
+  agenda_loja_id Int
+  agenda_loja    agenda_loja @relation(fields: [agenda_loja_id], references: [id], onDelete: Cascade)
+  criado_em      DateTime @default(now())
+
+  itens orcamento_tecnico_itens[]
+
+  @@index([agenda_loja_id])
+  @@map("orcamento_tecnico")
+}
+
+model orcamento_tecnico_itens {
+  id              Int      @id @default(autoincrement())
+  orcamento_tecnico_id Int
+  orcamento_tecnico   orcamento_tecnico @relation(fields: [orcamento_tecnico_id], references: [id], onDelete: Cascade)
+  nome_ambiente   String   @db.VarChar(191)
+  descricao       String   @db.VarChar(500)
+  valor_unitario  Decimal  @db.Decimal(10, 2)
+  valor_total     Decimal  @db.Decimal(10, 2)
+  observacao      String   @db.VarChar(2000)
+  criado_em       DateTime @default(now())
+
+  @@index([orcamento_tecnico_id])
+  @@map("orcamento_tecnico_itens")
 }
 
 // ---------- Agenda Loja (setor LOJA) ----------
@@ -928,6 +980,7 @@ model agenda_loja {
   apontamentos agenda_loja_apontamentos[]
   apontamentos_producao apontamento_producao[]
   medicao_orcamento medicao_orcamento?
+  orcamentos_tecnicos orcamento_tecnico[]
 
   criado_por_usuario_id Int?
   criado_por_usuario     usuarios? @relation("AgendaLojaCriadoPor", fields: [criado_por_usuario_id], references: [id], onDelete: SetNull)

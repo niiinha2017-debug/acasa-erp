@@ -1,5 +1,5 @@
 <template>
-  <div class="relative inline-flex items-center" ref="menuRef">
+  <div class="relative inline-flex items-center flex-shrink-0" ref="menuRef">
     <button
       @click.stop="toggleMenu"
       type="button"
@@ -13,11 +13,14 @@
       />
     </button>
 
-    <transition name="dropdown">
-      <div
-        v-if="isOpen"
-        class="absolute left-0 top-full mt-0.5 min-w-[200px] p-1 bg-bg-card rounded-lg border border-border-ui z-[9999] overflow-visible shadow-sm"
-      >
+    <Teleport to="body">
+      <transition name="dropdown">
+        <div
+          v-if="isOpen"
+          ref="dropdownRef"
+          class="fixed min-w-[200px] p-1 bg-bg-card rounded-lg border border-border-ui z-[9999] overflow-visible shadow-sm"
+          :style="dropdownStyle"
+        >
         <div v-if="visibleItems.length === 0" class="px-4 py-2.5 text-sm text-text-soft">
           Nenhum item disponível
         </div>
@@ -80,13 +83,14 @@
             </a>
           </template>
         </div>
-      </div>
-    </transition>
+        </div>
+      </transition>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { can } from '@/services/permissions'
 import { getStatusHoverBgClass } from '@/constantes'
@@ -101,7 +105,22 @@ const route = useRoute()
 const isOpen = ref(false)
 const openSubmenuIndex = ref(null)
 const menuRef = ref(null)
+const dropdownRef = ref(null)
+const dropdownStyle = ref({ left: '0', top: '0' })
 let submenuLeaveTimer = null
+
+function updateDropdownPosition() {
+  if (!menuRef.value || !isOpen.value) return
+  const rect = menuRef.value.getBoundingClientRect()
+  dropdownStyle.value = {
+    left: `${rect.left}px`,
+    top: `${rect.bottom + 4}px`,
+  }
+}
+
+watch(isOpen, (open) => {
+  if (open) nextTick(updateDropdownPosition)
+})
 
 const toggleMenu = () => {
   if (!isOpen.value) {
@@ -181,7 +200,10 @@ function handleNavChild(to) {
 }
 
 const closeOutside = (e) => {
-  if (menuRef.value && !menuRef.value.contains(e.target)) {
+  if (!menuRef.value) return
+  const inMenu = menuRef.value.contains(e.target)
+  const inDropdown = dropdownRef.value?.contains(e.target)
+  if (!inMenu && !inDropdown) {
     isOpen.value = false
     openSubmenuIndex.value = null
   }
@@ -190,11 +212,15 @@ const closeOutside = (e) => {
 onMounted(() => {
   document.addEventListener('click', closeOutside)
   window.addEventListener('close-all-nav-menus', handleClose)
+  window.addEventListener('scroll', updateDropdownPosition, true)
+  window.addEventListener('resize', updateDropdownPosition)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', closeOutside)
   window.removeEventListener('close-all-nav-menus', handleClose)
+  window.removeEventListener('scroll', updateDropdownPosition, true)
+  window.removeEventListener('resize', updateDropdownPosition)
 })
 </script>
 

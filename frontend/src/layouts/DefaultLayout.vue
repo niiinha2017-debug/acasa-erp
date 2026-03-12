@@ -1,16 +1,16 @@
 <template>
-  <div class="pt-16 min-h-screen bg-slate-100 dark:bg-slate-950 text-text-main transition-colors duration-300" style="padding-top: calc(4rem + env(safe-area-inset-top, 0px));">
+  <div class="min-h-screen bg-slate-100 dark:bg-slate-950 text-text-main transition-colors duration-300" style="padding-top: calc(4rem + env(safe-area-inset-top, 0px));">
     <Menu />
     <!-- Área de conteúdo com stacking context explícito para o menu fixo ficar sempre por cima (Android/WebView/landscape) -->
     <div class="relative z-0 isolation-isolate">
       <!-- Barra de abas abertas -->
       <div class="border-b border-slate-200/80 dark:border-slate-700/80 bg-white/95 dark:bg-slate-900/50 backdrop-blur-sm">
-        <div class="px-4 md:px-6 overflow-x-auto custom-scroll">
-          <div class="flex items-center gap-1.5 py-2.5 min-w-max">
+        <div class="px-2 sm:px-4 md:px-6 overflow-x-auto custom-scroll -mb-px">
+          <div class="flex items-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 min-w-max">
             <div
               v-for="(tab, index) in openTabs"
               :key="tab.key"
-              class="group flex items-center gap-0 rounded-lg text-xs font-medium transition-all duration-200 overflow-hidden min-w-0 max-w-[180px] sm:max-w-[220px]"
+              class="group flex items-center gap-0 rounded-lg text-xs font-medium transition-all duration-200 overflow-hidden min-w-0 max-w-[140px] sm:max-w-[180px] md:max-w-[220px]"
               :class="activeTabId === tab.key
                 ? 'bg-brand-primary/12 dark:bg-brand-primary/20 text-brand-primary dark:text-brand-primary shadow-sm ring-1 ring-brand-primary/25 dark:ring-brand-primary/30'
                 : 'bg-slate-100/80 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-200/80 dark:hover:bg-slate-700/80 hover:text-slate-800 dark:hover:text-slate-200'"

@@ -289,6 +289,27 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
+    '/orcamento-tecnico/': RouteRecordInfo<
+      '/orcamento-tecnico/',
+      '/orcamento-tecnico',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/orcamento-tecnico/[id]': RouteRecordInfo<
+      '/orcamento-tecnico/[id]',
+      '/orcamento-tecnico/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/orcamento-tecnico/novo/[agendamentoId]': RouteRecordInfo<
+      '/orcamento-tecnico/novo/[agendamentoId]',
+      '/orcamento-tecnico/novo/:agendamentoId',
+      { agendamentoId: ParamValue<true> },
+      { agendamentoId: ParamValue<false> },
+      | never
+    >,
     '/orcamentos/': RouteRecordInfo<
       '/orcamentos/',
       '/orcamentos',
@@ -800,6 +821,24 @@ declare module 'vue-router/auto-routes' {
     'src/pages/medicao-venda/[id].vue': {
       routes:
         | '/medicao-venda/[id]'
+      views:
+        | never
+    }
+    'src/pages/orcamento-tecnico/index.vue': {
+      routes:
+        | '/orcamento-tecnico/'
+      views:
+        | never
+    }
+    'src/pages/orcamento-tecnico/[id].vue': {
+      routes:
+        | '/orcamento-tecnico/[id]'
+      views:
+        | never
+    }
+    'src/pages/orcamento-tecnico/novo/[agendamentoId].vue': {
+      routes:
+        | '/orcamento-tecnico/novo/[agendamentoId]'
       views:
         | never
     }

@@ -195,6 +195,32 @@ export class PlanoCorteService {
     return { arquivoId: arquivo.id };
   }
 
+  /** Valida fornecedor e itens antes de criar/atualizar (evita erro interno quando dados já existem no banco ou referências quebradas). */
+  private async validarFornecedorEItens(
+    fornecedor_id: number,
+    produtos: { item_id: number }[],
+  ): Promise<void> {
+    const fornecedor = await this.prisma.fornecedor.findUnique({
+      where: { id: fornecedor_id },
+      select: { id: true },
+    });
+    if (!fornecedor) {
+      throw new BadRequestException('Fornecedor não encontrado. Verifique se o cadastro ainda existe.');
+    }
+    const itemIds = [...new Set(produtos.map((p) => p.item_id))];
+    const itens = await this.prisma.plano_corte_item.findMany({
+      where: { id: { in: itemIds }, fornecedor_id },
+      select: { id: true },
+    });
+    const idsEncontrados = new Set(itens.map((i) => i.id));
+    const faltando = itemIds.filter((id) => !idsEncontrados.has(id));
+    if (faltando.length > 0) {
+      throw new BadRequestException(
+        `Item(s) de corte não encontrado(s) ou não pertencem a este fornecedor (IDs: ${faltando.join(', ')}). Cadastre os itens em Serviço de Corte → Itens ou verifique se não foram excluídos.`,
+      );
+    }
+  }
+
   async create(dto: CreatePlanoCorteDto, opts?: { criadoPorUsuarioId?: number }) {
     const statusNorm = String(dto.status || '').trim().toUpperCase();
     if (!statusNorm || !STATUS_PLANO_CORTE_ACEITOS.includes(statusNorm)) {
@@ -202,7 +228,9 @@ export class PlanoCorteService {
         `Status inválido. Use: ${STATUS_PLANO_CORTE_ACEITOS.slice(0, 3).join(', ')}`,
       );
     }
-    return this.prisma.$transaction(async (tx) => {
+    await this.validarFornecedorEItens(dto.fornecedor_id, dto.produtos);
+    try {
+      return await this.prisma.$transaction(async (tx) => {
       // soma com Decimal (evita ruído de float)
       const total = dto.produtos.reduce(
         (acc, p) => acc.plus(new Prisma.Decimal(p.valor_total || 0)),
@@ -278,6 +306,26 @@ export class PlanoCorteService {
         },
       });
     });
+    } catch (e: any) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError) {
+        if (e.code === 'P2025') {
+          throw new BadRequestException(
+            'Item de corte não encontrado. Verifique se os itens ainda existem em Serviço de Corte → Itens.',
+          );
+        }
+        if (e.code === 'P2002') {
+          throw new BadRequestException(
+            'Já existe um agendamento para este plano de corte.',
+          );
+        }
+        if (e.code === 'P2003') {
+          throw new BadRequestException(
+            'Referência inválida (fornecedor ou item não existe). Verifique os cadastros.',
+          );
+        }
+      }
+      throw e;
+    }
   }
 
   async findAll() {
@@ -307,7 +355,7 @@ export class PlanoCorteService {
   }
 
   async update(id: number, dto: UpdatePlanoCorteDto, opts?: { criadoPorUsuarioId?: number }) {
-    await this.findOne(id);
+    const plano = await this.findOne(id);
     const statusNorm = dto.status
       ? String(dto.status).trim().toUpperCase()
       : null;
@@ -316,7 +364,12 @@ export class PlanoCorteService {
         `Status inválido. Use: ${STATUS_PLANO_CORTE_ACEITOS.slice(0, 3).join(', ')}`,
       );
     }
-    return this.prisma.$transaction(async (tx) => {
+    const fornecedorId = dto.fornecedor_id ?? plano.fornecedor_id;
+    if (dto.produtos?.length) {
+      await this.validarFornecedorEItens(fornecedorId, dto.produtos);
+    }
+    try {
+      return await this.prisma.$transaction(async (tx) => {
       // 1. Se houver produtos no DTO, atualizamos a lista
       if (dto.produtos) {
         // Remove os itens antigos para evitar duplicidade ou lixo
@@ -416,6 +469,26 @@ export class PlanoCorteService {
         },
       });
     });
+    } catch (e: any) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError) {
+        if (e.code === 'P2025') {
+          throw new BadRequestException(
+            'Item de corte não encontrado. Verifique se os itens ainda existem em Serviço de Corte → Itens.',
+          );
+        }
+        if (e.code === 'P2002') {
+          throw new BadRequestException(
+            'Já existe um agendamento para este plano de corte.',
+          );
+        }
+        if (e.code === 'P2003') {
+          throw new BadRequestException(
+            'Referência inválida (fornecedor ou item não existe). Verifique os cadastros.',
+          );
+        }
+      }
+      throw e;
+    }
   }
 
   async remove(id: number) {

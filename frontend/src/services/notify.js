@@ -28,6 +28,7 @@ export const notify = {
   error(msg) { this.add(msg, 'error', 12000) }, // Erro fica mais tempo para leitura
   info(msg) { this.add(msg, 'info') },
   warn(msg) { this.add(msg, 'info') },
+  warning(msg) { this.add(msg, 'info') }, // alias para warn
 
   remove(id) {
     const index = notifications.findIndex(n => n.id === id)

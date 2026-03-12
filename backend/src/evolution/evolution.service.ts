@@ -58,7 +58,7 @@ export class EvolutionService {
     });
     const url = (empresa?.evolution_api_url || this.config.get<string>('EVOLUTION_API_URL') || '').trim().replace(/\/$/, '');
     const key = (empresa?.evolution_api_key || this.config.get<string>('EVOLUTION_API_KEY') || '').trim();
-    const instance = (empresa?.evolution_instance_name || this.config.get<string>('EVOLUTION_INSTANCE_NAME') || 'acasa-erp').trim() || 'acasa-erp';
+    const instance = ((empresa?.evolution_instance_name || this.config.get<string>('EVOLUTION_INSTANCE_NAME') || 'acasa-erp').trim() || 'acasa-erp').toUpperCase();
     if (!url || !key) return null;
     return { baseUrl: url, apiKey: key, instanceName: instance };
   }
@@ -67,6 +67,7 @@ export class EvolutionService {
     return {
       'Content-Type': 'application/json',
       apikey: apiKey,
+      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
     };
   }
 
@@ -90,18 +91,28 @@ export class EvolutionService {
     if (!c) {
       return { ok: false, message: 'Evolution API não configurada. Preencha URL, API Key e Nome da instância em Configurações > Contato.' };
     }
+    const url = `${c.baseUrl.replace(/\/$/, '')}/instance/connectionState/${encodeURIComponent(c.instanceName)}`;
     try {
-      const res = await fetch(
-        `${c.baseUrl}/instance/connectionState/${encodeURIComponent(c.instanceName)}`,
-        { headers: { apikey: c.apiKey } },
-      );
-      const data = (await res.json()) as { instance?: { state?: string }; error?: string; message?: string };
+      const res = await fetch(url, {
+        headers: this.headers(c.apiKey),
+        signal: AbortSignal.timeout(15000),
+      });
+      let data: { instance?: { state?: string }; error?: string; message?: string; response?: { message?: string[] } } = {};
+      try {
+        data = (await res.json()) as typeof data;
+      } catch {
+        data = { message: `Resposta não é JSON (status ${res.status})` };
+      }
       if (!res.ok) {
-        return {
-          ok: false,
-          message: data?.message || data?.error || `Erro ${res.status} da Evolution API`,
-          details: data,
-        };
+        const msg =
+          res.status === 401
+            ? 'API Key inválida. Verifique EVOLUTION_API_KEY em Configurações > Contato.'
+            : res.status === 404
+              ? `Instância "${c.instanceName}" não existe na Evolution API. Crie a instância ou confira o nome.`
+              : res.status >= 500
+                ? 'Evolution API retornou erro no servidor. Verifique se o serviço está no ar.'
+                : (Array.isArray(data?.response?.message) ? data.response.message[0] : null) || data?.message || data?.error || `Erro ${res.status} da Evolution API`;
+        return { ok: false, message: msg, details: data };
       }
       const state = data?.instance?.state;
       if (state === 'open') {
@@ -109,16 +120,23 @@ export class EvolutionService {
       }
       return {
         ok: false,
-        message: state ? `Instância "${c.instanceName}" não está conectada (estado: ${state}). Escaneie o QR Code na Evolution API.` : 'Resposta inválida da Evolution API.',
+        message: state
+          ? `Instância "${c.instanceName}" não está conectada (estado: ${state}). Escaneie o QR Code na Evolution API.`
+          : 'Resposta inválida da Evolution API (sem estado da instância).',
         details: data,
       };
     } catch (e: unknown) {
-      const err = e as Error;
-      return {
-        ok: false,
-        message: err?.message || 'Falha ao conectar na Evolution API. Verifique a URL e se o servidor está no ar.',
-        details: err?.message ? undefined : String(e),
-      };
+      const err = e as Error & { code?: string; cause?: Error };
+      const errMsg = String(err?.message || '').toLowerCase();
+      const isTimeout = err.name === 'TimeoutError' || (err.cause as Error)?.name === 'TimeoutError';
+      const isRefused = err?.code === 'ECONNREFUSED' || errMsg.includes('econnrefused');
+      const isFetchFailed = errMsg.includes('fetch failed') || errMsg.includes('failed to fetch') || errMsg.includes('network');
+      const msg = isRefused || isFetchFailed
+        ? `Não foi possível conectar na Evolution API (URL: ${c.baseUrl}). Verifique se a URL está correta e se o serviço está rodando. No local use ex.: http://127.0.0.1:8080`
+        : isTimeout
+          ? 'Evolution API não respondeu a tempo. Verifique a URL e se o serviço está acessível.'
+          : err?.message || 'Falha ao conectar na Evolution API. Verifique a URL e se o servidor está no ar.';
+      return { ok: false, message: msg, details: err?.message ? undefined : String(e) };
     }
   }
 
@@ -131,7 +149,7 @@ export class EvolutionService {
   ): Promise<CreateInstanceResult | null> {
     const c = await this.getConfig();
     if (!c) return null;
-    const name = instanceName || c.instanceName;
+    const name = ((instanceName || c.instanceName) || '').trim().toUpperCase();
 
     try {
       await firstValueFrom(
@@ -167,19 +185,23 @@ export class EvolutionService {
 
   /**
    * Obtém o QR Code atual da instância (para reconectar ou exibir no dashboard).
+   * @param number Número com DDI (ex: 5511999999999) – em algumas versões da Evolution API o QR só aparece com esse parâmetro.
    */
   async fetchQrCode(
     instanceName?: string,
+    number?: string,
   ): Promise<{ code?: string; pairingCode?: string; count?: number } | null> {
     const c = await this.getConfig();
     if (!c) return null;
     const name = instanceName || c.instanceName;
+    const num = number?.replace(/\D/g, '').trim();
+    const params = num ? { number: num.startsWith('55') ? num : '55' + num } : {};
 
     try {
       const { data } = await firstValueFrom(
         this.httpService.get<{ code?: string; pairingCode?: string; count?: number }>(
           `${c.baseUrl}/instance/connect/${encodeURIComponent(name)}`,
-          { headers: this.headers(c.apiKey) },
+          { headers: this.headers(c.apiKey), params },
         ),
       );
       return data;
@@ -233,7 +255,7 @@ export class EvolutionService {
   ): Promise<SendMessageResult | null> {
     const c = await this.getConfig();
     if (!c) return null;
-    const name = instanceName || c.instanceName;
+    const name = ((instanceName || c.instanceName) || '').trim().toUpperCase();
     const number = this.normalizeNumber(remoteJid);
 
     const mimetype =

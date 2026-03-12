@@ -48,13 +48,19 @@ cd android
 ./gradlew assembleRelease
 
 echo "[$(date +%H:%M:%S)] ==> version.json (Android: Verificar atualização)"
-mkdir -p "$ROOT_DIR/aplicativo-site/updates/android"
+mkdir -p "$ROOT_DIR/aplicativo-site/updates/android" "$ROOT_DIR/aplicativo-site/updates/ponto"
 (cd "$ROOT_DIR" && node -e "
 const p = require('./frontend/package.json');
 const o = { version: p.version, url: 'https://aplicativo.acasamarcenaria.com.br/erp/Acasa.apk' };
 require('fs').writeFileSync('./aplicativo-site/updates/android/version.json', JSON.stringify(o, null, 2));
 ")
+(cd "$ROOT_DIR" && node -e "
+const p = require('./frontend-ponto/package.json');
+const o = { version: p.version, url: 'https://ponto.acasamarcenaria.com.br/ponto.apk' };
+require('fs').writeFileSync('./aplicativo-site/updates/ponto/version.json', JSON.stringify(o, null, 2));
+")
 scp -i "$KEY_PATH" "$ROOT_DIR/aplicativo-site/updates/android/version.json" "$EC2_HOST:/home/ec2-user/version.json"
+scp -i "$KEY_PATH" "$ROOT_DIR/aplicativo-site/updates/ponto/version.json" "$EC2_HOST:/home/ec2-user/version-ponto.json"
 
 echo "[$(date +%H:%M:%S)] ==> Upload APKs"
 scp -i "$KEY_PATH" "$ERP_APK_LOCAL" "$EC2_HOST:/home/ec2-user/$ERP_APK_REMOTE"
@@ -63,6 +69,7 @@ scp -i "$KEY_PATH" "$PONTO_APK_LOCAL" "$EC2_HOST:/home/ec2-user/$PONTO_APK_REMOT
 ssh -i "$KEY_PATH" "$EC2_HOST" \
   "sudo mkdir -p $REMOTE_ERP_DIR $REMOTE_UPDATES_ANDROID $REMOTE_PONTO_DIR && \
    sudo mv /home/ec2-user/version.json $REMOTE_UPDATES_ANDROID/ && \
+   sudo mv /home/ec2-user/version-ponto.json $REMOTE_PONTO_DIR/version.json && \
    sudo mv /home/ec2-user/$ERP_APK_REMOTE $REMOTE_ERP_DIR/ && \
    sudo mv /home/ec2-user/$PONTO_APK_REMOTE $REMOTE_PONTO_DIR/ && \
    sudo chown -R nginx:nginx $REMOTE_ERP_DIR $REMOTE_UPDATES_ANDROID $REMOTE_PONTO_DIR"

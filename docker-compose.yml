@@ -1,6 +1,10 @@
-# MySQL para o backend (acasa-erp)
+# ACASA ERP - MySQL + Evolution API (WhatsApp)
 # Uso: na pasta acasa-erp:  docker-compose up -d
 # Parar: docker-compose down
+#
+# MySQL: porta 3307 (evita conflito com MySQL local). No backend/.env use DB_PORT=3307.
+# Evolution API: porta 8080. No backend/.env use EVOLUTION_API_URL=http://127.0.0.1:8080
+# e a mesma chave em EVOLUTION_API_KEY que estiver em .env (ou docker.env) como EVOLUTION_API_KEY.
 
 services:
   mysql:
@@ -13,7 +17,7 @@ services:
       MYSQL_USER: acasa_user
       MYSQL_PASSWORD: gmgt33APCS!
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
@@ -23,5 +27,74 @@ services:
       timeout: 5s
       retries: 10
 
+  # Evolution API (WhatsApp) - exige Postgres e Redis
+  evolution-api:
+    image: atendai/evolution-api:v2.1.1
+    container_name: acasa-erp-evolution-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SERVER_URL: ${EVOLUTION_SERVER_URL:-http://localhost:8080}
+      AUTHENTICATION_API_KEY: ${EVOLUTION_API_KEY}
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://evolution-redis:6379/0
+      CACHE_REDIS_PREFIX_KEY: evolution
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://evolution:evolution@evolution-postgres:5432/evolution
+      DATABASE_CONNECTION_CLIENT_NAME: evolution_exchange
+      DATABASE_SAVE_DATA_INSTANCE: "true"
+      DATABASE_SAVE_DATA_NEW_MESSAGE: "true"
+      DATABASE_SAVE_MESSAGE_UPDATE: "true"
+      DATABASE_SAVE_DATA_CONTACTS: "true"
+      DATABASE_SAVE_DATA_CHATS: "true"
+      DATABASE_SAVE_DATA_LABELS: "true"
+      DATABASE_SAVE_DATA_HISTORIC: "true"
+    volumes:
+      - evolution_instances:/evolution/instances
+    depends_on:
+      evolution-postgres:
+        condition: service_healthy
+      evolution-redis:
+        condition: service_started
+    networks:
+      - evolution_net
+
+  evolution-postgres:
+    image: postgres:15-alpine
+    container_name: acasa-erp-evolution-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: evolution
+      POSTGRES_DB: evolution
+    volumes:
+      - evolution_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evolution -d evolution"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - evolution_net
+
+  evolution-redis:
+    image: redis:7-alpine
+    container_name: acasa-erp-evolution-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - evolution_redis_data:/data
+    networks:
+      - evolution_net
+
 volumes:
   mysql_data:
+  evolution_instances:
+  evolution_postgres_data:
+  evolution_redis_data:
+
+networks:
+  evolution_net:
+    driver: bridge

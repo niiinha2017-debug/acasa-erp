@@ -47,7 +47,7 @@
           >
             <!-- Código em destaque + QR Code lado a lado -->
             <div class="grid gap-3 md:grid-cols-[1fr_auto] items-start">
-              <div class="rounded-xl border border-slate-200 bg-slate-100/80 p-4 shadow-inner">
+              <div class="rounded-xl border border-slate-200 bg-slate-100/80 p-4 shadow-inner min-w-0">
                 <p class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">Código</p>
                 <p class="mt-2 text-lg md:text-xl font-mono font-black tracking-[0.2em] text-slate-900 break-all">
                   {{ convite.code }}

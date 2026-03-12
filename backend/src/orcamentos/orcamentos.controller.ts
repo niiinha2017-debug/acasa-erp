@@ -8,6 +8,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -15,6 +16,7 @@ import {
 import { Response } from 'express';
 
 import { OrcamentosService } from './orcamentos.service';
+import { OrcamentoTecnicoService } from '../orcamento-tecnico/orcamento-tecnico.service';
 import { CreateOrcamentoDto } from './dto/create-orcamento.dto';
 import { UpdateOrcamentoDto } from './dto/update-orcamento.dto';
 import { CreateOrcamentoItemDto } from './dto/create-orcamento-item.dto';
@@ -26,7 +28,32 @@ import { Permissoes } from '../auth/permissoes.decorator';
 @UseGuards(PermissionsGuard)
 @Controller('orcamentos')
 export class OrcamentosController {
-  constructor(private readonly service: OrcamentosService) {}
+  constructor(
+    private readonly service: OrcamentosService,
+    private readonly orcamentoTecnicoService: OrcamentoTecnicoService,
+  ) {}
+
+  // ----- Orçamento Técnico (lista/detalhe/criar) — rotas fixas antes de :id -----
+  @Get('tecnico-lista')
+  @Permissoes('agendamentos.producao')
+  listarOrcamentoTecnico(@Query('agenda_loja_id') agendaLojaId?: string) {
+    const id = agendaLojaId ? Number(agendaLojaId) : undefined;
+    return this.orcamentoTecnicoService.listar(id);
+  }
+
+  @Get('tecnico/:id')
+  @Permissoes('agendamentos.producao')
+  buscarOrcamentoTecnico(@Param('id') id: string) {
+    return this.orcamentoTecnicoService.buscarPorId(Number(id) || 0);
+  }
+
+  @Post('tecnico-novo')
+  @Permissoes('agendamentos.producao')
+  criarOrcamentoTecnico(@Body() body: { agenda_loja_id: number; ambiente_ids: number[] }) {
+    const agendaLojaId = Number(body?.agenda_loja_id);
+    const ambienteIds = Array.isArray(body?.ambiente_ids) ? body.ambiente_ids.map(Number).filter((i) => i > 0) : [];
+    return this.orcamentoTecnicoService.criarDeMedicao(agendaLojaId, ambienteIds);
+  }
 
   private cleanId(id: string): number {
     const n = Number(String(id || '').replace(/\D/g, ''));

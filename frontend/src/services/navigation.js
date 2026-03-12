@@ -5,6 +5,7 @@ export const NAV_SCHEMA = {
     { label: 'Agenda de Venda', to: '/agendamentos/loja', icon: 'pi-calendar-clock', perm: 'agendamentos.vendas', etapaKey: 'AGENDAR_APRESENTACAO' },
     { label: 'Fluxo de Clientes', to: '/relatorios/acompanhamento-status', icon: 'pi-list-check', perm: 'relatorios.acompanhamento_status.ver', etapaKey: 'MEDICAO' },
     { label: 'Orçamento', to: '/orcamentos', icon: 'pi-file-edit', perm: 'orcamentos.ver', etapaKey: 'ORCAMENTO' },
+    { label: 'Orçamento Técnico', to: '/orcamento-tecnico', icon: 'pi-file-edit', perm: 'agendamentos.producao', etapaKey: 'ORCAMENTO' },
     { label: 'Fechamento de Venda', to: '/vendas/fechamento', icon: 'pi-shopping-cart', perm: ['vendas.criar', 'vendas.fechamento.ver', 'vendas.fechamento.criar'], etapaKey: 'FECHAR_VENDA' },
     { label: 'Contrato', to: '/contratos', icon: 'pi-file', perm: 'contratos.ver', etapaKey: 'FECHAR_VENDA' },
     { label: 'Cláusulas', to: '/contratos/clausulas', icon: 'pi-file-edit', perm: 'contratos.clausulas.editar', etapaKey: 'FECHAR_VENDA' },

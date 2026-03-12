@@ -46,6 +46,23 @@ jobs:
             pm2 restart acasa-backend --update-env
           "
 
+      - name: Configurar Evolution API (WhatsApp) no servidor
+        env:
+          EVOLUTION_API_URL: ${{ secrets.EVOLUTION_API_URL }}
+          EVOLUTION_API_KEY: ${{ secrets.EVOLUTION_API_KEY }}
+          EVOLUTION_INSTANCE_NAME: ${{ secrets.EVOLUTION_INSTANCE_NAME }}
+        run: |
+          if [ -n "$EVOLUTION_API_URL" ] && [ -n "$EVOLUTION_API_KEY" ]; then
+            printf 'EVOLUTION_API_URL=%s\nEVOLUTION_API_KEY=%s\nEVOLUTION_INSTANCE_NAME=%s\n' \
+              "$EVOLUTION_API_URL" "$EVOLUTION_API_KEY" "${EVOLUTION_INSTANCE_NAME:-acasa-erp}" > evolution.env
+            scp -o StrictHostKeyChecking=no evolution.env "$SSH_USER@$SSH_HOST:$REMOTE_ROOT/backend/evolution.env"
+            ssh "$SSH_USER@$SSH_HOST" "cd $REMOTE_ROOT/backend && sed -i '/^EVOLUTION_/d' .env 2>/dev/null; cat evolution.env >> .env; rm -f evolution.env"
+            rm -f evolution.env
+            echo "Evolution API (WhatsApp) configurada no .env do backend."
+          else
+            echo "Secrets EVOLUTION_API_URL/EVOLUTION_API_KEY não definidos; passo ignorado."
+          fi
+
       - name: Backend logs (last 80)
         run: ssh "$SSH_USER@$SSH_HOST" "pm2 logs acasa-backend --lines 80 --nostream"
 

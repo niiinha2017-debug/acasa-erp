@@ -35,6 +35,8 @@ export class ArquivosService {
   private folderFromOwnerType(ownerType: string) {
     if (ownerType === 'MEDICAO_ORCAMENTO') return 'medicao_orcamento';
     if (ownerType === 'MEDICAO_ORCAMENTO_AMBIENTE') return 'medicao_orcamento_ambiente';
+    if (ownerType === 'MEDICAO_ORCAMENTO_PAREDE') return 'medicao_orcamento_parede';
+    if (ownerType === 'AGENDA_LOJA') return 'agenda_loja';
     // PRODUTO -> produtos, ORCAMENTO -> orcamentos, EMPRESA -> empresas
     return ownerType.toLowerCase() + 's';
   }
