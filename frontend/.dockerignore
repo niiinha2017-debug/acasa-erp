@@ -1,0 +1,29 @@
+# Reduz contexto de ~12GB para dezenas de MB (evita android/, ios/, src-tauri/)
+node_modules
+dist
+dev-dist
+.git
+.gitignore
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+
+# Pastas pesadas (raiz do contexto)
+/android
+/ios
+/src-tauri
+/dev-dist
+/.gradle
+/.capacitor
+*.xcworkspace
+*.xcodeproj
+
+# Caches e builds
+**/target
+**/build
+*.apk
+*.ipa
+*.aab
+*.app

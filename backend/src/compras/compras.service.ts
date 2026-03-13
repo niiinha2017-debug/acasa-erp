@@ -368,6 +368,7 @@ export class ComprasService {
               marca: p.marca,
               cor: p.cor,
               medida: p.medida,
+              categoria_base: p.categoria_base,
               unidade: i.unidade || p.unidade || '',
             };
           }
@@ -391,6 +392,7 @@ export class ComprasService {
         itensParaCriar.push({
           produto_id: i.produto_id ?? null,
           ...dadosProd,
+          categoria_base: String((i as any).categoria_base || dadosProd.categoria_base || '').trim() || null,
           unidade,
           quantidade,
           valor_unitario: valorUnit,
@@ -404,12 +406,17 @@ export class ComprasService {
       ? new Date((dto as any).data_compra)
       : new Date();
 
+    const fornecedorId = (dto as any).fornecedor_id != null ? Number((dto as any).fornecedor_id) : null;
+    if (fornecedorId == null || !Number.isFinite(fornecedorId) || fornecedorId <= 0) {
+      throw new BadRequestException('fornecedor_id é obrigatório e deve ser um ID válido.');
+    }
+
     const compra = await this.prisma.compras.create({
       data: {
         tipo_compra: tipo,
         venda_id: tipo === 'CLIENTE_AMBIENTE' ? (dto as any).venda_id : null,
         data_compra: dataEntrada,
-        fornecedor_id: (dto as any).fornecedor_id,
+        fornecedor_id: fornecedorId,
         venda_item_id: (dto as any).venda_item_id ?? null,
         status: String((dto as any).status || '').trim() || 'EM_ABERTO',
         valor_total: total,
@@ -426,7 +433,11 @@ export class ComprasService {
               }
             : undefined,
       },
-      include: { itens: true, rateios: true },
+      include: {
+        itens: true,
+        rateios: true,
+        fornecedor: { select: { id: true, razao_social: true, nome_fantasia: true, cnpj: true } },
+      },
     });
 
     await this.atualizarEstoqueEValorProdutosCreate(compra.itens as any);
@@ -469,6 +480,7 @@ export class ComprasService {
               marca: p.marca,
               cor: p.cor,
               medida: p.medida,
+              categoria_base: p.categoria_base,
               unidade: item.unidade || p.unidade || '',
             };
           }
@@ -492,6 +504,7 @@ export class ComprasService {
         const payloadItem = {
           produto_id: item.produto_id ?? null,
           ...dadosProd,
+          categoria_base: String((item as any).categoria_base || dadosProd.categoria_base || '').trim() || null,
           unidade,
           quantidade,
           valor_unitario: valorUnit,
@@ -576,11 +589,14 @@ export class ComprasService {
       }
     }
 
-    // 4. Update final da compra
+    // 4. Update final da compra (fornecedor_id sempre enviado no payload para garantir atualização)
+    const payloadFornecedorId = (dto as any).fornecedor_id != null ? Number((dto as any).fornecedor_id) : undefined;
     const compraAtualizada = await this.prisma.compras.update({
       where: { id },
       data: {
-        fornecedor_id: (dto as any).fornecedor_id ?? undefined,
+        ...(payloadFornecedorId != null && Number.isFinite(payloadFornecedorId) && payloadFornecedorId > 0
+          ? { fornecedor_id: payloadFornecedorId }
+          : {}),
         status:
           (dto as any).status !== undefined
             ? String((dto as any).status || '').trim() || 'EM_ABERTO'
@@ -594,7 +610,11 @@ export class ComprasService {
             ? ((dto as any).venda_id ?? undefined)
             : null,
       },
-      include: { itens: true, rateios: true },
+      include: {
+        itens: true,
+        rateios: true,
+        fornecedor: { select: { id: true, razao_social: true, nome_fantasia: true, cnpj: true } },
+      },
     });
 
     // ✅ aplica delta (atualiza quantidade e valor_unitario do produto)

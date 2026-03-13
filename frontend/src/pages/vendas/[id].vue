@@ -546,6 +546,7 @@
                 :loading="loadingImagensPdf"
                 empty-text="Nenhuma imagem."
                 :boxed="false"
+                :flush="true"
               >
                 <template #cell-nome="{ row }">
                   <div class="flex flex-col">
@@ -591,6 +592,7 @@
                 :loading="loadingAnexos"
                 empty-text="Nenhum anexo ou documento."
                 :boxed="false"
+                :flush="true"
               >
                 <template #cell-nome="{ row }">
                   <div class="flex flex-col">

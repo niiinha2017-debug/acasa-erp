@@ -92,6 +92,111 @@
         <div class="border border-slate-200 rounded-lg overflow-hidden bg-white">
           <div v-if="loading" class="p-8 text-center text-slate-500 text-sm">Carregando...</div>
           <template v-else>
+            <!-- Vista Por Fornecedor: collapsible row minimalista -->
+            <template v-if="abaAtiva === 'POR_FORNECEDOR'">
+              <p class="text-[10px] text-slate-500 px-3 py-1 border-b border-slate-100">
+                Competência: <strong>{{ String(filtros.mes).padStart(2, '0') }}/{{ filtros.ano }}</strong>
+                — Fechamento e abatimento (Serviço de Corte) referem-se ao mês vigente. Cada linha = um fornecedor (ID).
+              </p>
+              <div class="overflow-x-auto custom-scroll">
+                <table class="w-full text-xs min-w-[400px]" cellpadding="0" cellspacing="0">
+                  <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200">
+                      <th class="text-left py-2 px-3 font-semibold text-slate-600 w-10"></th>
+                      <th class="text-left py-2 px-3 font-semibold text-slate-600">Fornecedor (ID)</th>
+                      <th class="text-right py-2 px-3 font-semibold text-slate-600 w-32">Total</th>
+                      <th class="text-left py-2 px-3 font-semibold text-slate-600 w-28">Status</th>
+                      <th v-if="mostrarAcoes" class="text-right py-2 px-3 font-semibold text-slate-600 w-28"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <template v-for="(row, idx) in listaFiltrada" :key="row.fornecedor_id + '-' + row.mes + '-' + row.ano + '-' + idx">
+                      <!-- Estado fechado: só fornecedor (com ID) | total | status -->
+                      <tr
+                        class="border-b border-slate-100 hover:bg-slate-50/50 cursor-pointer"
+                        :class="{ 'bg-slate-50/40': rowExpandidoPorFornecedor === chaveExpandPorFornecedor(row) }"
+                        @click="toggleExpandPorFornecedor(row)"
+                      >
+                        <td class="py-2.5 px-3">
+                          <span class="text-slate-400 inline-flex">
+                            <i :class="rowExpandidoPorFornecedor === chaveExpandPorFornecedor(row) ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"></i>
+                          </span>
+                        </td>
+                        <td class="py-2.5 px-3 font-medium text-slate-800">
+                          <span class="text-slate-500 font-normal">ID {{ row.fornecedor_id }}</span>
+                          <span class="mx-1.5 text-slate-300">·</span>
+                          <span>[{{ row.fornecedor_nome || '—' }}]</span>
+                        </td>
+                        <td class="py-2.5 px-3 text-right font-semibold text-slate-800 tabular-nums">{{ formatarMoeda(row.valor_liquido) }}</td>
+                        <td class="py-2.5 px-3">
+                          <span
+                            class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                            :class="row.valor_liquido > 0 ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'"
+                          >
+                            {{ row.valor_liquido > 0 ? 'EM_ABERTO' : 'QUITADO' }}
+                          </span>
+                        </td>
+                        <td v-if="mostrarAcoes" class="py-2.5 px-3 text-right" @click.stop>
+                          <button
+                            v-if="row.valor_liquido > 0"
+                            type="button"
+                            @click="abrirModalFechamento(row.fornecedor_id)"
+                            class="h-7 px-2.5 rounded border border-slate-300 bg-white text-slate-700 text-[10px] font-semibold uppercase hover:bg-slate-50"
+                          >
+                            Fechamento
+                          </button>
+                        </td>
+                      </tr>
+                      <!-- Estado aberto: detalhamento (subtotal, abatimentos, valor líquido + itens) -->
+                      <tr v-if="rowExpandidoPorFornecedor === chaveExpandPorFornecedor(row)" class="bg-slate-50/50 border-b border-slate-100">
+                        <td :colspan="mostrarAcoes ? 5 : 4" class="py-3 px-3">
+                          <div class="pl-5 border-l-2 border-slate-200 space-y-3">
+                            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Detalhamento · Competência {{ String(row.mes).padStart(2, '0') }}/{{ row.ano }}</p>
+                            <div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-600">
+                              <span>Subtotal (compras mês): <strong class="text-slate-800 tabular-nums">{{ formatarMoeda(row.subtotal) }}</strong></span>
+                              <span class="text-emerald-700">Abatimentos (Serviço de Corte mês + crédito): <strong class="tabular-nums">{{ formatarMoeda(row.total_abatimentos) }}</strong></span>
+                              <span>Valor líquido: <strong class="text-slate-800 tabular-nums">{{ formatarMoeda(row.valor_liquido) }}</strong></span>
+                            </div>
+                            <div v-if="row.itens && row.itens.length" class="pt-1">
+                              <table class="w-full max-w-2xl text-xs">
+                                <thead>
+                                  <tr class="text-slate-500">
+                                    <th class="text-left py-1 font-medium">Origem</th>
+                                    <th class="text-left py-1 font-medium">Descrição</th>
+                                    <th class="text-left py-1 font-medium">Data</th>
+                                    <th class="text-right py-1 font-medium">Valor</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr v-for="item in row.itens" :key="item.id + '-' + item.origem" class="border-t border-slate-100">
+                                    <td class="py-1.5">
+                                      <span
+                                        class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                                        :class="item.origem === 'COMPRA' ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700'"
+                                      >
+                                        {{ item.origem === 'COMPRA' ? 'Compra' : 'Serviço de Corte' }}
+                                      </span>
+                                    </td>
+                                    <td class="py-1.5 text-slate-700">{{ item.descricao || '—' }}</td>
+                                    <td class="py-1.5 tabular-nums text-slate-600">{{ item.data_referencia || '—' }}</td>
+                                    <td class="py-1.5 text-right font-medium tabular-nums">{{ formatarMoeda(item.valor) }}</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+              <div v-if="listaFiltrada.length === 0" class="p-8 text-center text-slate-500 text-sm">
+                Nenhum fornecedor com lançamentos no período.
+              </div>
+            </template>
+            <!-- Vista Unificado / Para Fechar / etc. -->
+            <template v-else>
             <div class="overflow-x-auto custom-scroll">
               <table class="w-full text-xs min-w-[600px]" cellpadding="0" cellspacing="0">
                 <thead>
@@ -222,9 +327,10 @@
                 </tbody>
               </table>
             </div>
-            <div v-if="listaFiltrada.length === 0" class="p-8 text-center text-slate-500 text-sm">
+            <div v-if="listaFiltrada.length === 0 && abaAtiva !== 'POR_FORNECEDOR'" class="p-8 text-center text-slate-500 text-sm">
               Nenhum registro nesta aba para o período selecionado.
             </div>
+            </template>
           </template>
         </div>
       </div>
@@ -301,6 +407,8 @@ const listaParaFechar = ref([])
 const listaCompensados = ref([])
 const listaAgendados = ref([])
 const listaPagos = ref([])
+/** Fechamento agrupado por fornecedor (subtotal, abatimentos, valor líquido + itens) */
+const listaFechamentoPorFornecedor = ref([])
 const dashboard = reactive({
   total_a_vencer_mes: 0,
   cheques_a_compensar: 0,
@@ -315,6 +423,8 @@ const fornecedorIdFechamentoRef = ref(null)
 const modalFechamentoOpen = ref(false)
 const fornecedorSelecionadoParaFechamento = ref(null)
 const rowExpandido = ref(null)
+/** Chave da linha expandida na aba Por Fornecedor: 'fornecedorId-mes-ano' */
+const rowExpandidoPorFornecedor = ref(null)
 
 // Modal de pagamento (data do pagamento)
 const modalPagamentoOpen = ref(false)
@@ -350,6 +460,7 @@ const filtros = reactive({
 })
 
 const tabs = computed(() => [
+  { id: 'POR_FORNECEDOR', label: 'Por Fornecedor', count: listaFechamentoPorFornecedor.value.length },
   { id: 'UNIFICADO', label: 'Unificado', count: listaUnificado.value.length },
   { id: 'PARA_FECHAR', label: 'Para Fechar', count: listaParaFechar.value.length },
   { id: 'COMPENSADOS', label: 'Compensados', count: listaCompensados.value.length },
@@ -358,6 +469,7 @@ const tabs = computed(() => [
 ])
 
 const listaAbaAtiva = computed(() => {
+  if (abaAtiva.value === 'POR_FORNECEDOR') return listaFechamentoPorFornecedor.value
   if (abaAtiva.value === 'UNIFICADO') return listaUnificado.value
   if (abaAtiva.value === 'PARA_FECHAR') return listaParaFechar.value
   if (abaAtiva.value === 'COMPENSADOS') return listaCompensados.value
@@ -369,6 +481,9 @@ const listaFiltrada = computed(() => {
   const q = (filtroBusca.value || '').trim().toLowerCase()
   const list = listaAbaAtiva.value
   if (!q) return list
+  if (abaAtiva.value === 'POR_FORNECEDOR') {
+    return list.filter((r) => (r.fornecedor_nome || '').toLowerCase().includes(q))
+  }
   return list.filter((r) => {
     const fornecedor = (r.fornecedor_nome || '').toLowerCase()
     const descricao = (r.descricao || '').toLowerCase()
@@ -377,7 +492,7 @@ const listaFiltrada = computed(() => {
   })
 })
 
-const mostrarAcoes = computed(() => ['UNIFICADO', 'PARA_FECHAR', 'COMPENSADOS', 'AGENDADOS'].includes(abaAtiva.value))
+const mostrarAcoes = computed(() => ['UNIFICADO', 'PARA_FECHAR', 'COMPENSADOS', 'AGENDADOS', 'POR_FORNECEDOR'].includes(abaAtiva.value))
 
 function origemLabel(origem) {
   const map = {
@@ -402,9 +517,19 @@ function toggleExpand(id) {
   rowExpandido.value = rowExpandido.value === id ? null : id
 }
 
+function chaveExpandPorFornecedor(row) {
+  return `${row.fornecedor_id}-${row.mes}-${row.ano}`
+}
+
+function toggleExpandPorFornecedor(row) {
+  const key = chaveExpandPorFornecedor(row)
+  rowExpandidoPorFornecedor.value = rowExpandidoPorFornecedor.value === key ? null : key
+}
+
 function mudarAba(id) {
   abaAtiva.value = id
   rowExpandido.value = null
+  rowExpandidoPorFornecedor.value = null
 }
 
 function fecharModalFechamento() {
@@ -418,11 +543,12 @@ async function abrirModalFechamento(fornecedorId) {
   try {
     loading.value = true
     fornecedorIdFechamentoRef.value = fornecedorId
-    const d = new Date(DATA_REFERENCIA + 'T12:00:00')
+    const mes = filtros.mes || new Date().getMonth() + 1
+    const ano = filtros.ano || new Date().getFullYear()
     const res = await FinanceiroService.previewFechamentoFornecedor({
       fornecedor_id: fornecedorId,
-      mes: d.getMonth() + 1,
-      ano: d.getFullYear(),
+      mes,
+      ano,
     })
     const data = res?.data ?? res
     fornecedorSelecionadoParaFechamento.value = data
@@ -534,6 +660,13 @@ async function buscar() {
     listaAgendados.value = Array.isArray(resAg?.data) ? resAg.data : (Array.isArray(resAg) ? resAg : [])
     listaPagos.value = Array.isArray(resPg?.data) ? resPg.data : (Array.isArray(resPg) ? resPg : [])
 
+    const resFech = await FinanceiroService.getFechamentoPorFornecedor({
+      mes: filtros.mes || new Date().getMonth() + 1,
+      ano: filtros.ano || new Date().getFullYear(),
+      fornecedor_id: filtros.fornecedor_id || undefined,
+    })
+    listaFechamentoPorFornecedor.value = Array.isArray(resFech?.data) ? resFech.data : (Array.isArray(resFech) ? resFech : [])
+
     await carregarDashboard()
   } catch (e) {
     const msg = e?.response?.data?.message || e?.message || 'Erro ao carregar contas a pagar'
@@ -544,6 +677,7 @@ async function buscar() {
     listaCompensados.value = []
     listaAgendados.value = []
     listaPagos.value = []
+    listaFechamentoPorFornecedor.value = []
   } finally {
     loading.value = false
   }

@@ -30,13 +30,14 @@
         </template>
       </PageHeader>
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui">
+      <div class="pb-5 md:pb-6 pt-4 border-t border-border-ui">
         <Table
           :columns="columns"
-          :rows="rowsFiltrados"
+          :rows="rowsToShow"
           :loading="loading"
           empty-text="Nenhum fornecedor encontrado."
           :boxed="false"
+          :flush="true"
         >
           <template #cell-razao_social="{ row }">
             <div class="flex items-center gap-3 py-1">
@@ -79,18 +80,27 @@
             </div>
           </template>
         </Table>
+        <TablePagination
+          flush
+          v-if="total > 0"
+          :page="page"
+          :page-size="pageSize"
+          :total="total"
+          @update:page="setPage"
+        />
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { FornecedorService } from '@/services/index'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
+import { usePagination } from '@/composables/usePagination'
 
 definePage({ meta: { perm: 'fornecedores.ver' } })
 
@@ -117,6 +127,12 @@ const rowsFiltrados = computed(() => {
   }
   return filtrados
 })
+
+const { page, setPage, total, totalPages, pageSize, rowsToShow } = usePagination(
+  rowsFiltrados,
+  { pageSize: 15 },
+)
+watch(busca, () => setPage(1))
 
 function editarFornecedor(id) {
   if (!can('fornecedores.editar')) return notify.error('Acesso negado.')

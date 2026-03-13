@@ -1,13 +1,12 @@
 <template>
-  <div class="min-h-screen w-full bg-[#f8faff] flex items-center justify-center p-4 font-sans antialiased">
-    <div class="w-full max-w-[400px] bg-white rounded-[3rem] shadow-[0_40px_100px_rgba(0,0,0,0.05)] overflow-hidden border border-slate-50">
-      
-      <div class="p-8 sm:p-10 flex flex-col items-center">
+  <div class="h-screen w-screen overflow-hidden bg-white font-sans antialiased text-slate-900">
+    <div class="h-full w-full overflow-y-auto overflow-x-hidden bg-white pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
+      <div class="min-h-full w-full px-5 py-6 sm:px-8 sm:py-8 flex flex-col items-center">
         <div class="mb-8">
           <img src="/logo.png" alt="ACASA" class="h-14 w-14 object-contain" />
         </div>
 
-        <div v-if="etapa === 'ativar'" class="w-full space-y-6 animate-in">
+        <div v-if="etapa === 'ativar'" class="w-full max-w-none space-y-6 animate-in">
           <header class="text-center mb-6">
             <h2 class="text-2xl font-black text-[#1e293b] uppercase tracking-tight">Vincular</h2>
             <p class="text-[#94a3b8] text-[10px] font-bold uppercase tracking-widest mt-1">Configuração Inicial</p>
@@ -29,7 +28,7 @@
           </p>
         </div>
 
-        <div v-else class="w-full space-y-6 animate-in">
+        <div v-else class="w-full max-w-none space-y-6 animate-in">
           <div class="w-full text-center border-b border-slate-100 pb-3">
             <p class="text-sm font-black text-[#1e293b] uppercase">{{ empresaNome }}</p>
             <p class="text-[10px] font-bold text-[#64748b] mt-0.5">{{ empresaCnpj || 'CNPJ não cadastrado' }}</p>
@@ -114,12 +113,13 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { PontoService } from './services/ponto.service'
+import { pontoStorage } from './modules/ponto/pontoStorage'
 
 const etapa = ref('ativar')
 const loading = ref(false)
 const loadingComprovante = ref(false)
-const token = ref(localStorage.getItem('acasa_ponto_token') || '')
-const funcionarioNome = ref(localStorage.getItem('acasa_funcionario_nome') || 'Funcionário')
+const token = ref(pontoStorage.getToken() || '')
+const funcionarioNome = ref(pontoStorage.getFuncionarioNome() || 'Funcionário')
 const empresaNome = ref('')
 const empresaCnpj = ref('')
 const funcionarioCpf = ref('')
@@ -365,7 +365,7 @@ async function carregarDados(éRetry = false) {
     const nome = dataMe.nome || dataMe.funcionario?.nome || funcionarioNome.value
 
     funcionarioNome.value = nome
-    localStorage.setItem('acasa_funcionario_nome', nome)
+    pontoStorage.setFuncionarioNome(nome)
 
     empresaNome.value = dataMe.empresa?.nome || 'Empresa'
     empresaCnpj.value = maskCnpj(dataMe.empresa?.cnpj || '') || dataMe.empresa?.cnpj || ''
@@ -463,7 +463,7 @@ async function realizarPareamento() {
       return
     }
     token.value = newToken
-    localStorage.setItem('acasa_ponto_token', newToken)
+    pontoStorage.setToken(newToken)
     await new Promise((r) => setTimeout(r, 300))
     await carregarDados()
 
@@ -488,8 +488,20 @@ async function realizarPareamento() {
   }
 }
 
+function syncTokenFromStorage() {
+  const t = pontoStorage.getToken()
+  if (t && !token.value) {
+    token.value = t
+    if (etapa.value === 'ativar') carregarDados()
+  }
+}
+
 onMounted(() => {
   timerRelogio = setInterval(() => { agora.value = new Date() }, 1000)
+
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    document.addEventListener('visibilitychange', syncTokenFromStorage)
+  }
 
   // --- CAPTURA O CÓDIGO DA URL (query ?code= e hash #code= para PWA) ---
   const code = obterCodigoDaUrl()
@@ -508,5 +520,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   clearInterval(timerRelogio)
+  if (typeof document !== 'undefined' && document.removeEventListener) {
+    document.removeEventListener('visibilitychange', syncTokenFromStorage)
+  }
 })
 </script>

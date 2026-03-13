@@ -35,13 +35,14 @@
           <span class="text-lg font-black text-text-main">{{ format.currency(valorTotalFiltrado) }}</span>
         </div>
 
-        <div class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden">
+        <div class="native-table-flush overflow-visible">
           <Table
             :columns="columns"
             :rows="filtrados"
             :loading="loading"
             empty-text="Nenhum orçamento para este cliente."
             :boxed="false"
+            :flush="true"
           >
             <template #cell-id="{ row }">
               <span class="inline-flex items-center justify-center bg-bg-card border border-border-ui px-3 py-1 rounded-lg text-[10px] font-black text-text-main">

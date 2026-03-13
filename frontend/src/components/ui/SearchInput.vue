@@ -147,9 +147,12 @@ const normalizados = computed(() =>
 const filtrados = computed(() => {
   const termo = String(texto.value || '').toLowerCase().trim()
   if (!termo) return normalizados.value
-  return normalizados.value.filter((opt) =>
-    String(opt.label || '').toLowerCase().includes(termo),
-  )
+  // Cada palavra do termo deve aparecer no label (busca por nome, cor, marca, medida etc.)
+  const palavras = termo.split(/\s+/).filter(Boolean)
+  return normalizados.value.filter((opt) => {
+    const label = String(opt.label || '').toLowerCase()
+    return palavras.every((p) => label.includes(p))
+  })
 })
 
 function isDisabled() {

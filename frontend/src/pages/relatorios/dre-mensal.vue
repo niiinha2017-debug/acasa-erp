@@ -37,7 +37,8 @@
           <i class="pi pi-spin pi-spinner text-2xl text-brand-primary" />
         </div>
 
-        <div v-else class="rounded-xl border border-border-ui bg-white dark:bg-slate-900/40 overflow-hidden">
+        <div v-else class="native-table-flush border-y border-border-ui bg-white dark:bg-slate-900/40 overflow-hidden">
+          <div class="native-table-flush-scroll overflow-x-auto">
           <table class="w-full text-sm min-w-[320px]">
             <tbody>
               <tr class="border-b border-border-ui">
@@ -113,6 +114,7 @@
               </tr>
             </tbody>
           </table>
+          </div>
         </div>
       </div>
     </div>

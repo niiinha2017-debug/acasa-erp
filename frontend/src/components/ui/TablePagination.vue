@@ -1,5 +1,8 @@
 ﻿<template>
-  <div class="flex items-center justify-between gap-3 pt-4 border-t border-border-ui">
+  <div :class="[
+    'flex items-center justify-between gap-3 pt-4 border-t border-border-ui',
+    flush ? 'table-pagination-flush' : ''
+  ]">
     <div class="text-xs font-medium text-text-soft">
       {{ from }}-{{ to }} de {{ total }}
     </div>
@@ -54,6 +57,7 @@ const props = defineProps({
   pageSize: { type: Number, default: 10 },
   total: { type: Number, default: 0 },
   maxButtons: { type: Number, default: 5 },
+  flush: { type: Boolean, default: false },
 })
 
 defineEmits(['update:page'])
@@ -91,3 +95,17 @@ const pagesToShow = computed(() => {
   return items
 })
 </script>
+
+<style scoped>
+.table-pagination-flush {
+  width: 100vw;
+  max-width: 100vw;
+  margin-inline: calc(50% - 50vw);
+}
+
+@media (min-width: 768px) {
+  .table-pagination-flush {
+    margin-inline: calc(50% - 50vw);
+  }
+}
+</style>

@@ -51,7 +51,7 @@
         </template>
       </PageHeader>
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-4">
+      <div class="pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-4">
         <!-- Aviso no mobile -->
         <div class="sm:hidden flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
           <i class="pi pi-info-circle text-amber-600 dark:text-amber-400 text-sm flex-shrink-0"></i>
@@ -118,7 +118,15 @@
               </div>
             </div>
             <div class="p-3">
-              <h3 class="text-sm font-semibold text-text-main truncate" :title="row.nome_produto">{{ row.nome_produto || '-' }}</h3>
+              <div class="flex items-center gap-2 min-w-0">
+                <h3 class="text-sm font-semibold text-text-main truncate" :title="row.nome_produto">{{ row.nome_produto || '-' }}</h3>
+                <span
+                  class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide border shrink-0"
+                  :class="categoriaBaseBadgeClass(row?.categoria_base)"
+                >
+                  {{ getCategoriaBaseLabel(row?.categoria_base) }}
+                </span>
+              </div>
               <p class="text-[10px] text-text-muted mt-0.5">Ref. {{ String(row.id || 0).padStart(4, '0') }} · {{ row.categoria || '-' }}</p>
               <div class="mt-2 flex items-center justify-between">
                 <span class="text-sm font-semibold text-text-main tabular-nums">{{ format.currency(row.valor_unitario) }}</span>
@@ -145,6 +153,7 @@
             :loading="loading"
             :empty-text="emptyTableText"
             :boxed="false"
+            :flush="true"
             :row-class="rowClassEstoque"
           >
           <template #cell-nome_produto="{ row }">
@@ -161,9 +170,17 @@
               <div class="flex items-center gap-2 min-w-0">
                 <i class="pi pi-box text-amber-600 dark:text-amber-400 text-xs shrink-0" title="Chapa inteira" />
                 <div class="flex flex-col min-w-0">
-                  <span class="text-sm font-semibold text-text-main truncate" :title="row.nome_produto">
-                    {{ row.nome_produto || '-' }}
-                  </span>
+                  <div class="flex items-center gap-2 min-w-0">
+                    <span class="text-sm font-semibold text-text-main truncate" :title="row.nome_produto">
+                      {{ row.nome_produto || '-' }}
+                    </span>
+                    <span
+                      class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide border shrink-0"
+                      :class="categoriaBaseBadgeClass(row?.categoria_base)"
+                    >
+                      {{ getCategoriaBaseLabel(row?.categoria_base) }}
+                    </span>
+                  </div>
                   <span class="text-[10px] text-text-muted mt-0.5">
                     Ref. {{ String(row.id || 0).padStart(4, '0') }}
                   </span>
@@ -230,6 +247,14 @@
             </div>
           </template>
           </Table>
+          <TablePagination
+            flush
+            v-if="meta.total > 0"
+            :page="meta.page"
+            :page-size="meta.pageSize"
+            :total="meta.total"
+            @update:page="(p) => buscarDadosDoBanco(p)"
+          />
         </div>
       </div>
     </div>
@@ -245,6 +270,7 @@ import { notify } from '@/services/notify'
 import { format } from '@/utils/format'
 import { can } from '@/services/permissions'
 import { FornecedorService } from '@/services/index'
+import { getCategoriaBaseLabel } from '@/constantes/categorias-base'
 
 definePage({ meta: { perm: 'produtos.ver' } })
 
@@ -287,6 +313,17 @@ function rowClassEstoque(row) {
   const min = Number(row.estoque_minimo ?? 0)
   if (min > 0 && qtd < min) return 'bg-red-50 dark:bg-red-950/40'
   return ''
+}
+
+function categoriaBaseBadgeClass(value) {
+  const key = String(value || '').trim().toUpperCase()
+  if (key === 'TERCIARIA') {
+    return 'bg-amber-50 text-amber-800 border-amber-200'
+  }
+  if (key === 'SECUNDARIA') {
+    return 'bg-emerald-50 text-emerald-800 border-emerald-200'
+  }
+  return 'bg-slate-100 text-slate-700 border-slate-200'
 }
 
 function normalizarBusca(valor) {

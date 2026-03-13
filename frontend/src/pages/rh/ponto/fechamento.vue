@@ -59,8 +59,8 @@
         </div>
 
         <template v-else-if="linhas.length">
-          <div class="rounded-2xl border border-border-ui bg-bg-card overflow-hidden shadow-sm">
-            <div class="overflow-x-auto">
+          <div class="native-table-flush border-y border-border-ui bg-bg-card overflow-hidden shadow-sm">
+            <div class="native-table-flush-scroll overflow-x-auto">
               <table class="w-full text-left text-sm">
                 <thead class="bg-bg-page/60 border-b border-border-ui">
                   <tr>

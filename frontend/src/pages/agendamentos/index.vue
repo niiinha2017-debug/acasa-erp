@@ -1,110 +1,130 @@
 <template>
   <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-emerald-600 rounded-t-2xl" aria-hidden></div>
+    <div class="relative overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white">
+      <div class="h-1 w-full bg-emerald-500 rounded-t-2xl" aria-hidden></div>
 
-      <PageHeader
-        title="Agenda de Venda"
-        subtitle="Visão mensal da agenda comercial (loja)"
-        icon="pi pi-calendar-clock"
-      >
-        <template #actions>
-          <div class="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              type="button"
-              class="w-10 h-10 !p-0 flex items-center justify-center"
-              @click="prevMonth"
-            >
-              <i class="pi pi-angle-left"></i>
-            </Button>
-            <div
-              class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest"
-            >
-              {{ monthLabel }}
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              type="button"
-              class="w-10 h-10 !p-0 flex items-center justify-center"
-              @click="nextMonth"
-            >
-              <i class="pi pi-angle-right"></i>
-            </Button>
+      <!-- Header inline: título + navegação de mês na mesma linha -->
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-8 py-4 border-b border-[#e2e8f0]">
+        <div class="flex items-center gap-3 min-w-0">
+          <i class="pi pi-calendar-clock text-emerald-500 text-xl flex-shrink-0"></i>
+          <div class="min-w-0">
+            <h1 class="text-lg font-bold text-slate-800 leading-none">Agenda de Venda</h1>
+            <p class="text-xs text-slate-400 mt-0.5 hidden sm:block">Visão mensal da agenda comercial (loja)</p>
           </div>
-        </template>
-      </PageHeader>
+        </div>
+        <div class="flex items-center gap-2 self-start sm:self-auto">
+          <Button
+            variant="ghost"
+            size="sm"
+            type="button"
+            class="w-9 h-9 !p-0 flex items-center justify-center rounded-xl hover:bg-slate-100"
+            @click="prevMonth"
+          >
+            <i class="pi pi-angle-left text-slate-600"></i>
+          </Button>
+          <div class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest min-w-[10rem] text-center">
+            {{ monthLabel }}
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            type="button"
+            class="w-9 h-9 !p-0 flex items-center justify-center rounded-xl hover:bg-slate-100"
+            @click="nextMonth"
+          >
+            <i class="pi pi-angle-right text-slate-600"></i>
+          </Button>
+        </div>
+      </div>
 
-      <div class="p-4 md:p-6 border-t border-border-ui space-y-6 bg-bg-page">
+      <div class="p-3 sm:p-5 md:p-6 space-y-4 bg-[#f8fafc]">
         <!-- Calendário -->
-        <div class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
-          <div class="grid grid-cols-7 gap-px bg-slate-100">
+        <div class="bg-white border border-[#e2e8f0] rounded-2xl shadow-sm overflow-hidden">
+          <!-- Cabeçalho dos dias da semana -->
+          <div class="grid grid-cols-7 border-b border-[#e2e8f0]">
             <div
               v-for="d in weekDays"
               :key="d"
-              class="bg-white p-3 text-[10px] font-black uppercase tracking-widest text-slate-400"
+              class="py-2 sm:py-3 text-center text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-50"
             >
               {{ d }}
             </div>
+          </div>
+          <!-- Grid de dias -->
+          <div class="grid grid-cols-7">
             <div
               v-for="day in days"
               :key="day.key"
-              class="bg-white p-3.5 h-44 flex flex-col items-start text-left border border-transparent hover:border-brand-primary/30 transition-all relative cursor-pointer"
-              :class="{
-                'bg-slate-50': !day.inMonth,
-                'ring-2 ring-brand-primary/30': isSameDay(day.date, selectedDay),
-              }"
+              class="relative border-r border-b border-[#e2e8f0] last:border-r-0 cursor-pointer transition-all duration-200 group"
+              :class="[
+                'h-24 sm:h-36 md:h-44 flex flex-col p-1.5 sm:p-2.5',
+                !day.inMonth ? 'bg-slate-50/70' : isSameDay(day.date, selectedDay) ? 'bg-blue-50' : 'bg-white hover:-translate-y-px hover:shadow-md hover:z-10 hover:bg-slate-50/60',
+                isSameDay(day.date, selectedDay) ? 'ring-2 ring-inset ring-blue-400' : '',
+                day.inMonth && hasEvents(day.date) && !isSameDay(day.date, selectedDay) ? 'hover:bg-blue-50/40' : '',
+              ]"
               @click="selectDay(day.date)"
             >
-              <div class="w-full flex items-center justify-between mb-1">
+              <!-- Número do dia + botão + -->
+              <div class="flex items-center justify-between mb-1">
                 <span
-                  class="text-xs font-black cursor-pointer"
-                  :class="day.inMonth ? (day.feriado ? 'text-rose-500' : 'text-slate-800') : 'text-slate-300'"
+                  class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-black leading-none transition-colors"
+                  :class="[
+                    !day.inMonth ? 'text-slate-300' :
+                    isSameDay(day.date, new Date()) ? 'bg-blue-600 text-white' :
+                    isSameDay(day.date, selectedDay) ? 'text-blue-700 font-black' :
+                    day.feriado ? 'text-rose-500' : 'text-slate-700'
+                  ]"
                 >
                   {{ day.date.getDate() }}
                 </span>
                 <button
                   v-if="day.inMonth"
                   type="button"
-                  class="w-6 h-6 flex items-center justify-center rounded-md bg-brand-primary/15 text-brand-primary hover:bg-brand-primary hover:text-white text-sm font-black transition-colors flex-shrink-0"
+                  class="w-5 h-5 sm:w-6 sm:h-6 hidden sm:flex items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white text-sm font-black transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
                   title="Novo agendamento neste dia"
                   @click.stop="selectDayAndOpenModal(day.date)"
                 >
                   +
                 </button>
               </div>
-              <div v-if="day.feriado" class="w-full text-[8px] font-bold text-rose-500 uppercase tracking-wider truncate mb-1.5">
+              <div v-if="day.feriado" class="w-full text-[7px] font-bold text-rose-400 uppercase tracking-wider truncate mb-1 hidden sm:block">
                 {{ day.feriado }}
               </div>
-              <div class="w-full space-y-1.5 flex-1 min-h-0 overflow-hidden flex flex-col">
+              <!-- Pills de eventos -->
+              <div class="flex-1 min-h-0 overflow-hidden flex flex-col gap-0.5 sm:gap-1">
+                <!-- Mobile: só ponto colorido indicando evento -->
+                <template v-if="dayEvents(day.date).length > 0">
+                  <div class="sm:hidden flex flex-wrap gap-0.5 mt-0.5">
+                    <span
+                      v-for="event in dayEvents(day.date).slice(0, 4)"
+                      :key="event.id"
+                      class="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                      :class="eventAtrasado(event) ? 'bg-red-500' : getAccentDotClass(event)"
+                    ></span>
+                    <span v-if="dayEvents(day.date).length > 4" class="text-[8px] font-bold text-slate-400">+{{ dayEvents(day.date).length - 4 }}</span>
+                  </div>
+                </template>
+                <!-- Desktop: pills completas -->
                 <button
                   v-for="event in dayEvents(day.date).slice(0, 3)"
                   :key="event.id"
                   type="button"
+                  class="hidden sm:flex w-full items-center gap-1 text-left pl-1.5 pr-2 py-1 rounded-full text-[9px] font-semibold transition-all duration-150 hover:brightness-95 active:scale-95"
                   :class="[
-                    'w-full text-left px-2.5 py-1.5 rounded-lg text-[10px] text-white hover:ring-2 hover:ring-brand-primary transition-colors',
-                    eventAtrasado(event) ? 'bg-red-600 hover:bg-red-500' : getCalendarioEventClassVendas(event.categoria, event.status),
+                    eventAtrasado(event) ? 'bg-red-500 text-white' : getCalendarioEventClassVendas(event.categoria, event.status),
                   ]"
                   :title="eventTooltipCalendar(event)"
                   @click.stop="openModalForEvent(event)"
                 >
-                  <div class="font-semibold text-[9px] text-white/90 leading-tight">
-                    {{ timeLabel(event.inicio_em) }} – {{ timeLabel(event.fim_em) }}
-                  </div>
-                  <div class="font-bold truncate leading-snug mt-0.5">
-                    {{ event.titulo }}
-                  </div>
-                  <div class="text-[9px] text-white/80 truncate leading-snug">
-                    {{ event?.cliente?.nome_completo || event?.cliente?.razao_social || 'Cliente' }}
-                  </div>
+                  <i class="pi pi-clock text-[7px] opacity-80 flex-shrink-0"></i>
+                  <span class="opacity-90 flex-shrink-0">{{ timeLabel(event.inicio_em) }}</span>
+                  <span class="truncate font-bold opacity-95">{{ event.titulo }}</span>
                 </button>
                 <div
                   v-if="dayEvents(day.date).length > 3"
-                  class="text-[9px] font-bold text-slate-400 pt-0.5"
+                  class="hidden sm:block text-[8px] font-bold text-slate-400 pl-1"
                 >
-                  +{{ dayEvents(day.date).length - 3 }}
+                  +{{ dayEvents(day.date).length - 3 }} mais
                 </div>
               </div>
             </div>
@@ -138,206 +158,232 @@
                 class="overflow-y-auto overflow-x-hidden pr-2 space-y-3 transition-[max-height] duration-300"
                 :class="listaTarefasExpandida ? 'max-h-[min(85vh,1200px)]' : 'max-h-[min(55vh,480px)]'"
               >
-                <div
-                  v-for="event in selectedEventsParaLista"
-                :key="event.id"
-                class="w-full text-left p-4 rounded-xl border hover:border-brand-primary/40 hover:shadow-md transition-all"
-                :class="[
-                  event.plano_corte_id ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-700 border-l-4 border-l-amber-500' : 'border-border-ui bg-bg-card',
-                  eventAtrasado(event) && !event.plano_corte_id ? 'border-l-4 border-l-red-500 border-red-400 bg-red-50 dark:bg-red-950/40' : (!event.plano_corte_id ? getProcessColorByStatusVendas(event.categoria, event.status).borderLeftClass : ''),
-                ]"
-              >
-                <div class="text-sm font-bold text-text-main leading-snug flex items-center gap-2 flex-wrap">
-                  {{ eventTitle(event) }}
-                  <span v-if="event.plano_corte_id" class="inline-flex px-2 py-0.5 rounded text-[10px] font-black uppercase bg-amber-600 text-white dark:bg-amber-500 dark:text-amber-950">[APENAS CORTE]</span>
-                </div>
-                <div class="mt-2 text-[10px] font-medium text-text-muted space-y-0.5">
-                  <div><span class="font-semibold text-text-main">Criador da tarefa:</span> {{ event.criado_por_usuario?.nome || 'Não informado' }}</div>
-                  <div><span class="font-semibold text-text-main">Executores:</span> {{ nomesExecutoresEvento(event) || 'Nenhum funcionário atribuído ainda' }}</div>
-                </div>
-                <div
-                  v-if="event.alterado_por_usuario"
-                  class="mt-0.5 text-[10px] font-medium text-text-muted"
-                >
-                  Editado por: {{ event.alterado_por_usuario.nome }}
-                </div>
-                <div class="text-xs font-medium text-text-muted mt-0.5">
-                  {{ timeLabel(event.inicio_em) }} – {{ timeLabel(event.fim_em) }}
-                </div>
-                <p v-if="event.orcamento_id || event.orcamento?.id" class="mt-1 text-[10px] font-medium text-text-muted">
-                  Orçamento #{{ event.orcamento?.id ?? event.orcamento_id }}
-                </p>
-                <p v-if="event.venda_id || event.venda?.id" class="mt-0.5 text-[10px] font-medium text-text-muted">
-                  Venda #{{ event.venda?.id ?? event.venda_id }}
-                </p>
-                <div class="mt-2 flex flex-wrap items-center gap-2">
-                  <span v-if="!isAgendaLoja" class="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase bg-brand-primary/10 text-brand-primary border border-brand-primary/30">
-                    {{ etapaLabelPorCategoria(event.categoria) }}
-                  </span>
-                  <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase" :class="getProcessColorByStatusVendas(event.categoria, event.status).badgeClass">
-                    {{ statusExecucaoLabel(event) }}
-                  </span>
-                </div>
-                <p v-if="eventAtrasado(event)" class="mt-1.5 text-[10px] text-red-600 dark:text-red-400">
-                  O horário de término ({{ timeLabel(event.fim_em) }}) já passou. Marque como concluído se a tarefa foi realizada.
-                </p>
-                <div
-                  v-if="event.plano_corte_id"
-                  class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase"
-                  :class="planoBadgeClass(planoStatusForEvent(event))"
-                >
-                  <span
-                    class="w-1.5 h-1.5 rounded-full"
-                    :class="planoDotClass(planoStatusForEvent(event))"
-                  ></span>
-                  {{ planoBadgeLabel(planoStatusForEvent(event)) }}
-                </div>
-                <div class="mt-3 flex flex-wrap items-center gap-2">
-                  <template v-if="podeEditarEvento(event)">
-                    <!-- Agendar medida: só Editar e Cancelar (atribuição ao funcionário é feita na timeline) -->
-                    <template v-if="ehAgendarMedida(event)">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        @click.stop="openModalForEvent(event)"
+                <ul class="space-y-3">
+                  <li
+                    v-for="event in selectedEventsParaLista"
+                    :key="event.id"
+                    class="group"
+                  >
+                    <div class="flex items-stretch gap-3">
+                      <div class="w-16 shrink-0 pt-1 text-right">
+                        <div class="text-sm font-extrabold tracking-tight text-text-main">
+                          {{ timeLabel(event.inicio_em) }}
+                        </div>
+                        <div class="mt-0.5 text-[10px] font-medium text-text-muted">
+                          ate {{ timeLabel(event.fim_em) }}
+                        </div>
+                      </div>
+                      <div class="w-1 shrink-0 rounded-full" :class="taskAccentBarClass(event)"></div>
+                      <div
+                        class="relative flex-1 rounded-2xl border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-200/70"
+                        :class="taskCardSurfaceClass(event)"
                       >
-                        Editar
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="danger"
-                        @click.stop="removeTask(event)"
-                      >
-                        Excluir
-                      </Button>
-                    </template>
-                    <!-- Outras tarefas: cronômetro (venda) ou status da tarefa -->
-                    <template v-else>
-                      <!-- Cronômetro na venda: 1 tarefa, cada funcionário com seu cronômetro -->
-                      <template v-if="responsavelLojaId && getCronometroAbertoParaEvento(event)">
-                        <template v-if="isCronometroPausado(getCronometroAbertoParaEvento(event))">
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            @click.stop="retomarCronometroVenda(getCronometroAbertoParaEvento(event))"
+                        <div
+                          v-if="podeEditarEvento(event)"
+                          class="absolute right-3 top-3 flex items-center gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+                        >
+                          <button
+                            type="button"
+                            class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-500 transition-colors hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700"
+                            title="Editar tarefa"
+                            @click.stop="openModalForEvent(event)"
                           >
-                            Iniciar
-                          </Button>
-                        </template>
-                        <template v-else>
-                          <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-slate-800 text-white">
-                            {{ formatElapsed(elapsedCronometro(getCronometroAbertoParaEvento(event))) }}
-                          </span>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            @click.stop="pausarCronometroVenda(getCronometroAbertoParaEvento(event))"
+                            <i class="pi pi-pencil text-[12px]"></i>
+                          </button>
+                          <button
+                            type="button"
+                            class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-500 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+                            title="Excluir tarefa"
+                            @click.stop="removeTask(event)"
                           >
-                            Pausar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="success"
-                            @click.stop="concluirCronometroVenda(getCronometroAbertoParaEvento(event), event)"
+                            <i class="pi pi-trash text-[12px]"></i>
+                          </button>
+                        </div>
+
+                        <div class="pr-16">
+                          <div class="flex items-start gap-2 flex-wrap">
+                            <div class="text-sm font-bold leading-snug text-text-main">
+                              {{ eventTitle(event) }}
+                            </div>
+                            <span
+                              v-if="taskCategoryBadgeLabel(event.categoria)"
+                              class="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
+                              :class="taskCategoryBadgeClass(event.categoria)"
+                            >
+                              {{ taskCategoryBadgeLabel(event.categoria) }}
+                            </span>
+                            <span v-if="event.plano_corte_id" class="inline-flex rounded-full bg-amber-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white dark:bg-amber-500 dark:text-amber-950">[APENAS CORTE]</span>
+                          </div>
+
+                          <div class="mt-3 grid gap-2 text-[11px] text-slate-500 sm:grid-cols-2">
+                            <div class="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2">
+                              <i class="pi pi-user text-[11px] text-slate-400"></i>
+                              <div class="min-w-0">
+                                <div class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Criador</div>
+                                <div class="truncate text-[11px] font-medium text-slate-600">{{ event.criado_por_usuario?.nome || 'Não informado' }}</div>
+                              </div>
+                            </div>
+                            <div class="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2">
+                              <i class="pi pi-users text-[11px] text-slate-400"></i>
+                              <div class="min-w-0">
+                                <div class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Executores</div>
+                                <div class="truncate text-[11px] font-medium text-slate-600">{{ nomesExecutoresEvento(event) || 'Nenhum funcionário atribuído ainda' }}</div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="mt-3 flex flex-wrap items-center gap-2">
+                            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase" :class="getProcessColorByStatusVendas(event.categoria, event.status).badgeClass">
+                              {{ statusExecucaoLabel(event) }}
+                            </span>
+                            <span
+                              v-if="event.alterado_por_usuario"
+                              class="text-[10px] font-medium text-text-muted"
+                            >
+                              Editado por: {{ event.alterado_por_usuario.nome }}
+                            </span>
+                            <span v-if="event.orcamento_id || event.orcamento?.id" class="text-[10px] font-medium text-text-muted">
+                              Orçamento #{{ event.orcamento?.id ?? event.orcamento_id }}
+                            </span>
+                            <span v-if="event.venda_id || event.venda?.id" class="text-[10px] font-medium text-text-muted">
+                              Venda #{{ event.venda?.id ?? event.venda_id }}
+                            </span>
+                          </div>
+
+                          <p v-if="eventAtrasado(event)" class="mt-2 text-[10px] text-red-600 dark:text-red-400">
+                            O horário de término ({{ timeLabel(event.fim_em) }}) já passou. Marque como concluído se a tarefa foi realizada.
+                          </p>
+
+                          <div
+                            v-if="event.plano_corte_id"
+                            class="mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase"
+                            :class="planoBadgeClass(planoStatusForEvent(event))"
                           >
-                            Concluir
-                          </Button>
-                        </template>
-                      </template>
-                      <template v-else-if="responsavelLojaId">
-                        <Button
-                          size="sm"
-                          variant="primary"
-                          @click.stop="iniciarCronometroVenda(event)"
-                        >
-                          Iniciar
-                        </Button>
-                      </template>
-                      <template v-else>
-                        <Button
-                          v-if="normalizarStatusExecucao(event?.status) !== 'CONCLUIDO'"
-                          size="sm"
-                          variant="primary"
-                          @click.stop="atualizarStatusExecucao(event, 'EM_ANDAMENTO')"
-                        >
-                          Iniciar
-                        </Button>
-                        <Button
-                          v-if="normalizarStatusExecucao(event?.status) === 'EM_ANDAMENTO'"
-                          size="sm"
-                          variant="secondary"
-                          @click.stop="atualizarStatusExecucao(event, 'PAUSADO')"
-                        >
-                          Pausar
-                        </Button>
-                        <Button
-                          v-if="normalizarStatusExecucao(event?.status) !== 'CONCLUIDO'"
-                          size="sm"
-                          variant="success"
-                          @click.stop="atualizarStatusExecucao(event, 'CONCLUIDO')"
-                        >
-                          {{ botaoConcluirLabel(event) }}
-                        </Button>
-                      </template>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        @click.stop="openModalForEvent(event)"
-                      >
-                        Editar
-                      </Button>
-                      <RouterLink
-                        v-if="canVendas && event.projeto_id && ['MEDIDA_FINA', 'AGENDAR_MEDIDA_FINA'].includes(event.categoria)"
-                        :to="`/producao/medicao-fina?projetoId=${event.projeto_id}`"
-                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200 border border-sky-200 dark:border-sky-700 hover:bg-sky-200/80 dark:hover:bg-sky-800/50 transition-colors"
-                      >
-                        <i class="pi pi-ruler"></i>
-                        Medição Fina
-                      </RouterLink>
-                      <RouterLink
-                        v-if="canProducao"
-                        :to="`/producao/apontamento?agenda=l-${event.id}`"
-                        class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-700 hover:bg-emerald-200/80 dark:hover:bg-emerald-800/50 transition-colors"
-                      >
-                        <i class="pi pi-stopwatch"></i>
-                        Timeline
-                      </RouterLink>
-                      <Button
-                        size="sm"
-                        variant="danger"
-                        @click.stop="removeTask(event)"
-                      >
-                        Excluir
-                      </Button>
-                    </template>
-                  </template>
-                  <template v-else>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      @click.stop="openModalForEvent(event)"
-                    >
-                      Ver detalhes
-                    </Button>
-                    <RouterLink
-                      v-if="canVendas && event.projeto_id && ['MEDIDA_FINA', 'AGENDAR_MEDIDA_FINA'].includes(event.categoria)"
-                      :to="`/producao/medicao-fina?projetoId=${event.projeto_id}`"
-                      class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200 border border-sky-200 dark:border-sky-700 hover:bg-sky-200/80 dark:hover:bg-sky-800/50 transition-colors"
-                    >
-                      <i class="pi pi-ruler"></i>
-                      Medição Fina
-                    </RouterLink>
-                    <RouterLink
-                      v-if="canProducao"
-                      :to="`/producao/apontamento?agenda=l-${event.id}`"
-                      class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-700 hover:bg-emerald-200/80 dark:hover:bg-emerald-800/50 transition-colors"
-                    >
-                      <i class="pi pi-stopwatch"></i>
-                      Ver na timeline
-                    </RouterLink>
-                  </template>
-                </div>
-              </div>
+                            <span
+                              class="h-1.5 w-1.5 rounded-full"
+                              :class="planoDotClass(planoStatusForEvent(event))"
+                            ></span>
+                            {{ planoBadgeLabel(planoStatusForEvent(event)) }}
+                          </div>
+
+                          <div class="mt-3 flex flex-wrap items-center gap-2">
+                            <template v-if="podeEditarEvento(event)">
+                              <template v-if="ehAgendarMedida(event)"></template>
+                              <template v-else>
+                                <template v-if="responsavelLojaId && getCronometroAbertoParaEvento(event)">
+                                  <template v-if="isCronometroPausado(getCronometroAbertoParaEvento(event))">
+                                    <Button
+                                      size="sm"
+                                      variant="primary"
+                                      @click.stop="retomarCronometroVenda(getCronometroAbertoParaEvento(event))"
+                                    >
+                                      Iniciar
+                                    </Button>
+                                  </template>
+                                  <template v-else>
+                                    <span class="inline-flex items-center rounded-lg bg-slate-800 px-2.5 py-1 text-[10px] font-mono font-bold text-white">
+                                      {{ formatElapsed(elapsedCronometro(getCronometroAbertoParaEvento(event))) }}
+                                    </span>
+                                    <Button
+                                      size="sm"
+                                      variant="secondary"
+                                      @click.stop="pausarCronometroVenda(getCronometroAbertoParaEvento(event))"
+                                    >
+                                      Pausar
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="success"
+                                      @click.stop="concluirCronometroVenda(getCronometroAbertoParaEvento(event), event)"
+                                    >
+                                      Concluir
+                                    </Button>
+                                  </template>
+                                </template>
+                                <template v-else-if="responsavelLojaId">
+                                  <Button
+                                    size="sm"
+                                    variant="primary"
+                                    @click.stop="iniciarCronometroVenda(event)"
+                                  >
+                                    Iniciar
+                                  </Button>
+                                </template>
+                                <template v-else>
+                                  <Button
+                                    v-if="normalizarStatusExecucao(event?.status) !== 'CONCLUIDO'"
+                                    size="sm"
+                                    variant="primary"
+                                    @click.stop="atualizarStatusExecucao(event, 'EM_ANDAMENTO')"
+                                  >
+                                    Iniciar
+                                  </Button>
+                                  <Button
+                                    v-if="normalizarStatusExecucao(event?.status) === 'EM_ANDAMENTO'"
+                                    size="sm"
+                                    variant="secondary"
+                                    @click.stop="atualizarStatusExecucao(event, 'PAUSADO')"
+                                  >
+                                    Pausar
+                                  </Button>
+                                  <Button
+                                    v-if="normalizarStatusExecucao(event?.status) !== 'CONCLUIDO'"
+                                    size="sm"
+                                    variant="success"
+                                    @click.stop="atualizarStatusExecucao(event, 'CONCLUIDO')"
+                                  >
+                                    {{ botaoConcluirLabel(event) }}
+                                  </Button>
+                                </template>
+                                <RouterLink
+                                  v-if="canVendas && event.projeto_id && ['MEDIDA_FINA', 'AGENDAR_MEDIDA_FINA'].includes(event.categoria)"
+                                  :to="`/producao/medicao-fina?projetoId=${event.projeto_id}`"
+                                  class="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-100 px-2.5 py-1 text-[10px] font-bold text-sky-800 transition-colors hover:bg-sky-200/80 dark:border-sky-700 dark:bg-sky-900/40 dark:text-sky-200 dark:hover:bg-sky-800/50"
+                                >
+                                  <i class="pi pi-ruler"></i>
+                                  Medição Fina
+                                </RouterLink>
+                                <RouterLink
+                                  v-if="canProducao"
+                                  :to="`/producao/apontamento?agenda=l-${event.id}`"
+                                  class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-100 px-2.5 py-1 text-[10px] font-bold text-emerald-800 transition-colors hover:bg-emerald-200/80 dark:border-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200 dark:hover:bg-emerald-800/50"
+                                >
+                                  <i class="pi pi-stopwatch"></i>
+                                  Timeline
+                                </RouterLink>
+                              </template>
+                            </template>
+                            <template v-else>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                @click.stop="openModalForEvent(event)"
+                              >
+                                Ver detalhes
+                              </Button>
+                              <RouterLink
+                                v-if="canVendas && event.projeto_id && ['MEDIDA_FINA', 'AGENDAR_MEDIDA_FINA'].includes(event.categoria)"
+                                :to="`/producao/medicao-fina?projetoId=${event.projeto_id}`"
+                                class="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-100 px-2.5 py-1 text-[10px] font-bold text-sky-800 transition-colors hover:bg-sky-200/80 dark:border-sky-700 dark:bg-sky-900/40 dark:text-sky-200 dark:hover:bg-sky-800/50"
+                              >
+                                <i class="pi pi-ruler"></i>
+                                Medição Fina
+                              </RouterLink>
+                              <RouterLink
+                                v-if="canProducao"
+                                :to="`/producao/apontamento?agenda=l-${event.id}`"
+                                class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-100 px-2.5 py-1 text-[10px] font-bold text-emerald-800 transition-colors hover:bg-emerald-200/80 dark:border-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200 dark:hover:bg-emerald-800/50"
+                              >
+                                <i class="pi pi-stopwatch"></i>
+                                Ver na timeline
+                              </RouterLink>
+                            </template>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
               </div>
             </div>
             <div v-else class="py-4 text-center">
@@ -1411,6 +1457,67 @@ function statusExecucaoClass(event) {
   return 'bg-slate-100 text-slate-700 border border-slate-200'
 }
 
+function taskAccentBarClass(event) {
+  if (event?.plano_corte_id) return 'bg-amber-500'
+  if (eventAtrasado(event)) return 'bg-rose-500'
+  const cat = String(event?.categoria || '').toUpperCase()
+  const colors = {
+    MEDIDA: 'bg-blue-500',
+    AGENDAR_MEDIDA: 'bg-sky-500',
+    ORCAMENTO: 'bg-violet-500',
+    CRIAR_ORCAMENTO: 'bg-violet-500',
+    APRESENTACAO: 'bg-orange-500',
+    AGENDAR_APRESENTACAO: 'bg-orange-500',
+    CONTRATO: 'bg-emerald-500',
+    CONTRATO_GERADO: 'bg-emerald-500',
+    VENDA_FECHADA: 'bg-emerald-500',
+    MEDIDA_FINA: 'bg-cyan-500',
+    AGENDAR_MEDIDA_FINA: 'bg-cyan-500',
+    GARANTIA: 'bg-amber-500',
+    MANUTENCAO: 'bg-amber-500',
+    ASSISTENCIA: 'bg-amber-500',
+  }
+  if (colors[cat]) return colors[cat]
+  if (TIPOS_PRODUCAO.value.some(o => o.value === cat)) return 'bg-indigo-500'
+  return 'bg-slate-400'
+}
+
+function taskCardSurfaceClass(event) {
+  if (event?.plano_corte_id) return 'border-amber-200 bg-amber-50/80 dark:border-amber-700 dark:bg-amber-950/30'
+  if (eventAtrasado(event)) return 'border-rose-200 bg-rose-50/70 dark:border-rose-800 dark:bg-rose-950/20'
+  return 'border-border-ui bg-bg-card hover:border-brand-primary/30'
+}
+
+function taskCategoryBadgeClass(categoria) {
+  const cat = String(categoria || '').toUpperCase()
+  const colors = {
+    AGENDAR_MEDIDA: 'border border-sky-200 bg-sky-100 text-sky-800',
+    MEDIDA: 'border border-blue-200 bg-blue-100 text-blue-800',
+    ORCAMENTO: 'border border-violet-200 bg-violet-100 text-violet-800',
+    CRIAR_ORCAMENTO: 'border border-violet-200 bg-violet-100 text-violet-800',
+    APRESENTACAO: 'border border-orange-200 bg-orange-100 text-orange-800',
+    AGENDAR_APRESENTACAO: 'border border-orange-200 bg-orange-100 text-orange-800',
+    CONTRATO: 'border border-emerald-200 bg-emerald-100 text-emerald-800',
+    CONTRATO_GERADO: 'border border-emerald-200 bg-emerald-100 text-emerald-800',
+    VENDA_FECHADA: 'border border-emerald-200 bg-emerald-100 text-emerald-800',
+    MEDIDA_FINA: 'border border-cyan-200 bg-cyan-100 text-cyan-800',
+    AGENDAR_MEDIDA_FINA: 'border border-cyan-200 bg-cyan-100 text-cyan-800',
+    GARANTIA: 'border border-amber-200 bg-amber-100 text-amber-800',
+    MANUTENCAO: 'border border-amber-200 bg-amber-100 text-amber-800',
+    ASSISTENCIA: 'border border-amber-200 bg-amber-100 text-amber-800',
+  }
+  if (colors[cat]) return colors[cat]
+  if (TIPOS_PRODUCAO.value.some(o => o.value === cat)) return 'border border-indigo-200 bg-indigo-100 text-indigo-800'
+  return 'border border-slate-200 bg-slate-100 text-slate-700'
+}
+
+function taskCategoryBadgeLabel(categoria) {
+  const cat = String(categoria || '').toUpperCase()
+  if (!cat) return ''
+  if (cat === 'AGENDAR_MEDIDA') return cat
+  return etapaLabelPorCategoria(cat) || cat
+}
+
 /** True quando o horário de término já passou e a tarefa não foi concluída (exibir em vermelho). */
 function eventAtrasado(event) {
   const status = normalizarStatusExecucao(event?.status)
@@ -1432,6 +1539,24 @@ function timeLabel(value) {
 
 function dayEvents(day) {
   return eventsByDay.value[dateKey(day)] || []
+}
+
+function hasEvents(day) {
+  return (eventsByDay.value[dateKey(day)] || []).length > 0
+}
+
+function getAccentDotClass(event) {
+  const cat = String(event?.categoria || '').toUpperCase()
+  const colors = {
+    MEDIDA: 'bg-blue-500', AGENDAR_MEDIDA: 'bg-sky-500',
+    ORCAMENTO: 'bg-violet-500', CRIAR_ORCAMENTO: 'bg-violet-500',
+    APRESENTACAO: 'bg-orange-500', AGENDAR_APRESENTACAO: 'bg-orange-500',
+    CONTRATO: 'bg-emerald-500', CONTRATO_GERADO: 'bg-emerald-500',
+    VENDA_FECHADA: 'bg-emerald-500',
+    MEDIDA_FINA: 'bg-cyan-500', AGENDAR_MEDIDA_FINA: 'bg-cyan-500',
+    GARANTIA: 'bg-amber-500', MANUTENCAO: 'bg-amber-500', ASSISTENCIA: 'bg-amber-500',
+  }
+  return colors[cat] || 'bg-brand-primary'
 }
 
 function normalizePlanoStatus(status) {

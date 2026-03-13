@@ -58,10 +58,25 @@
 }
 
 @layer base {
+  html,
+  body,
+  #app {
+    margin: 0;
+    height: 100%;
+    width: 100%;
+  }
+  html {
+    overflow: hidden;
+  }
   body {
+    overflow: hidden;
     @apply bg-bg-page text-text-main transition-colors duration-300 antialiased;
     font-family: var(--font-sans);
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  #app {
+    display: block;
+    overflow: hidden;
   }
 
   /* Padding interno do Card reduzido para dar escala ao conteúdo */

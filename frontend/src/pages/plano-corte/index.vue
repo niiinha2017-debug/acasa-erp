@@ -17,11 +17,23 @@
                 placeholder="Buscar..."
               />
             </div>
-            <input
-              v-model="mesFiltro"
-              type="month"
-              class="h-9 px-3 rounded-lg text-xs font-medium text-text-main bg-bg-card border border-border-ui focus:ring-1 focus:ring-brand-primary/20 focus:border-brand-primary/50 outline-none transition-colors order-1 sm:order-2"
-            />
+            <div class="flex items-center gap-1 order-1 sm:order-2">
+              <input
+                v-model="mesFiltro"
+                type="month"
+                :title="mesFiltro ? `Filtrando: ${mesFiltro}` : 'Todos os meses'"
+                class="h-9 px-3 rounded-lg text-xs font-medium text-text-main bg-bg-card border border-border-ui focus:ring-1 focus:ring-brand-primary/20 focus:border-brand-primary/50 outline-none transition-colors"
+              />
+              <button
+                v-if="mesFiltro"
+                type="button"
+                class="h-9 px-2 rounded-lg text-xs font-medium text-text-muted hover:text-text-main hover:bg-bg-card border border-border-ui"
+                title="Ver todos os meses"
+                @click="mesFiltro = ''"
+              >
+                Todos
+              </button>
+            </div>
             <Button
               v-if="can('plano_corte.criar')"
               variant="primary"
@@ -40,13 +52,13 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <MetricCard
             label="Serviços Ativos"
-            :value="rows.length"
+            :value="filtradas.length"
             icon="pi pi-cog"
             color="slate"
           />
           <MetricCard
             label="Vínculados a Vendas"
-            :value="rows.filter(r => r.venda_id).length"
+            :value="filtradas.filter(r => r.venda_id).length"
             icon="pi pi-shopping-cart"
             color="blue"
           />
@@ -58,18 +70,20 @@
           />
           <MetricCard
             label="Finalizados"
-            :value="rows.filter(r => r.status === 'FINALIZADO').length"
+            :value="filtradas.filter(r => r.status === 'FINALIZADO').length"
             icon="pi pi-check"
             color="amber"
           />
         </div>
 
+        <div class="native-table-flush overflow-visible">
         <Table
           :columns="columns"
           :rows="filtradas"
           :loading="loading"
           empty-text="Nenhum serviço de corte encontrado."
           :boxed="false"
+          :flush="true"
         >
           <template #cell-fornecedor="{ row }">
             <div class="flex flex-col py-1">
@@ -106,6 +120,7 @@
             </div>
           </template>
         </Table>
+        </div>
       </div>
     </div>
   </div>
@@ -128,10 +143,8 @@ const rows = ref([])
 const busca = ref('')
 const mesFiltro = ref('')
 
-const hoje = new Date()
-const mes = String(hoje.getMonth() + 1).padStart(2, '0')
-const ano = hoje.getFullYear()
-mesFiltro.value = `${ano}-${mes}`
+// Inicialmente "todos os meses" para exibir a lista inteira; usuário pode filtrar por mês
+mesFiltro.value = ''
 
 const columns = [
   { key: 'fornecedor', label: 'FORNECEDOR / ORIGEM', width: '35%' },

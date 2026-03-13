@@ -224,6 +224,12 @@ export const MENU_SECTIONS: MenuSection[] = [
         icon: 'pi-sliders-h',
         perm: 'configuracoes.empresa.ver',
       },
+      {
+        label: 'Estrategia de Precos',
+        to: '/configuracoes/estrategia-precos',
+        icon: 'pi-chart-line',
+        perm: 'configuracoes.estrategia_precos.ver',
+      },
     ],
   },
   {

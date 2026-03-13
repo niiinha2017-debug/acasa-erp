@@ -143,7 +143,7 @@
           <div v-if="loadingDre" class="p-8 text-center">
             <i class="pi pi-spin pi-spinner text-2xl text-brand-primary" />
           </div>
-          <div v-else class="p-4">
+          <div v-else class="space-y-4">
             <table class="w-full text-sm min-w-[280px]">
               <tbody>
                 <tr class="border-b border-border-ui">
@@ -265,7 +265,7 @@
             <!-- Indicador de desperdício (perda padrão + retalhos) -->
             <div
               v-if="(dre.perda_padrao_percentual != null || (dre.retalhos_m2 != null && Number(dre.retalhos_m2) > 0) || (dre.perda_real_m2 != null && Number(dre.perda_real_m2) > 0))"
-              class="mt-4 pt-4 border-t border-border-ui"
+              class="px-4 pb-4 pt-4 border-t border-border-ui"
             >
               <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-3 flex items-center gap-2">
                 <i class="pi pi-chart-line text-amber-500" />

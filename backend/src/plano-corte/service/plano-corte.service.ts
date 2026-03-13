@@ -24,6 +24,7 @@ import { randomBytes } from 'crypto';
 import PDFDocument from 'pdfkit';
 import { promises as fs } from 'fs';
 import * as path from 'path';
+import { renderHeaderDocumento } from '../../pdf/header-documento';
 
 @Injectable()
 export class PlanoCorteService {
@@ -37,6 +38,10 @@ export class PlanoCorteService {
   }
 
   private async gerarPdfBuffer(plano: any): Promise<Buffer> {
+    const empresa = await this.prisma.empresa.findUnique({
+      where: { id: 1 },
+    });
+
     const doc = new PDFDocument({ size: 'A4', margin: 40 });
     const chunks: Buffer[] = [];
 
@@ -46,51 +51,74 @@ export class PlanoCorteService {
       doc.on('error', reject);
     });
 
-    const left = 40;
-    const right = doc.page.width - 40;
+    const margin = 40;
+    const left = margin;
+    const right = doc.page.width - margin;
+    const contentWidth = right - left;
 
-    doc.fontSize(16).font('Helvetica-Bold').fillColor('#111');
-    doc.text(`PLANO DE CORTE #${plano.id}`, left, doc.y);
+    // Cabeçalho: logo (se existir) + dados da empresa + título "PLANO DE CORTE #N"
+    let y = renderHeaderDocumento(
+      doc,
+      empresa,
+      `PLANO DE CORTE #${plano.id}`,
+      { margin },
+    );
 
-    doc.moveDown(0.5);
-    doc.fontSize(10).font('Helvetica');
-    doc.text(`Fornecedor: ${plano.fornecedor?.razao_social || '-'}`, left);
+    // Bloco de informações do pedido (card)
+    const cardPadding = 12;
+    const cardTop = y;
+    doc.rect(left, cardTop, contentWidth, 52)
+      .fillAndStroke('#f8fafc', '#e2e8f0');
+    y = cardTop + cardPadding;
+
+    doc.font('Helvetica').fontSize(9).fillColor('#64748b');
+    doc.text('Fornecedor', left + cardPadding, y);
+    doc.text('Data do pedido', left + cardPadding + 200, y);
+    doc.text('Status', left + cardPadding + 380, y);
+    y += 12;
+
+    doc.font('Helvetica-Bold').fontSize(10).fillColor('#1e293b');
+    doc.text(plano.fornecedor?.razao_social || '—', left + cardPadding, y, { width: 180 });
     const dataVenda = plano.data_venda
       ? new Date(plano.data_venda).toLocaleDateString('pt-BR')
-      : '-';
-    doc.text(`Data do pedido: ${dataVenda}`, left);
-    doc.text(`Status: ${plano.status || '-'}`, left);
+      : '—';
+    doc.font('Helvetica').text(dataVenda, left + cardPadding + 200, y);
+    doc.text(String(plano.status || '—'), left + cardPadding + 380, y, { width: 120 });
+    y = cardTop + 52 + 14;
 
-    doc.moveDown(1);
-    doc
-      .lineWidth(0.5)
-      .strokeColor('#E5E7EB')
-      .moveTo(left, doc.y)
-      .lineTo(right, doc.y)
-      .stroke();
-    doc.moveDown(0.6);
-
+    // Tabela de produtos
     const colProduto = left;
     const colQtd = 320;
     const colUnit = 400;
     const colTotal = 480;
+    const rowHeight = 22;
 
     doc.font('Helvetica-Bold').fontSize(9).fillColor('#374151');
-    doc.text('PRODUTO', colProduto, doc.y);
-    doc.text('QTD', colQtd, doc.y, { width: 70, align: 'right' });
-    doc.text('VL. UNIT', colUnit, doc.y, { width: 70, align: 'right' });
-    doc.text('TOTAL', colTotal, doc.y, { width: 70, align: 'right' });
-    doc.moveDown(0.4);
+    doc.text('PRODUTO', colProduto, y);
+    doc.text('QTD', colQtd, y, { width: 70, align: 'right' });
+    doc.text('VL. UNIT', colUnit, y, { width: 70, align: 'right' });
+    doc.text('TOTAL', colTotal, y, { width: 70, align: 'right' });
+    y += 10;
     doc
-      .lineWidth(0.2)
-      .strokeColor('#E5E7EB')
-      .moveTo(left, doc.y)
-      .lineTo(right, doc.y)
+      .lineWidth(0.5)
+      .strokeColor('#e2e8f0')
+      .moveTo(left, y)
+      .lineTo(right, y)
       .stroke();
-    doc.moveDown(0.6);
+    y += 10;
 
-    doc.font('Helvetica').fontSize(9).fillColor('#111');
-    for (const item of plano.produtos || []) {
+    const produtos = plano.produtos || [];
+    doc.font('Helvetica').fontSize(9);
+    for (let i = 0; i < produtos.length; i++) {
+      const item = produtos[i];
+      if (y > doc.page.height - 70) {
+        doc.addPage();
+        y = margin;
+      }
+      // Linha zebrada
+      if (i % 2 === 1) {
+        doc.rect(left, y - 2, contentWidth, rowHeight + 4).fill('#f8fafc');
+      }
       const nome = item.item?.nome_produto || 'ITEM';
       const dimensao =
         item.largura_mm && item.comprimento_mm
@@ -102,9 +130,9 @@ export class PlanoCorteService {
           ? (Number(item.largura_mm) / 1000) *
             (Number(item.comprimento_mm) / 1000)
           : null;
-      const areaTxt = areaM2 ? `${areaM2.toFixed(3)} m2` : null;
+      const areaTxt = areaM2 ? `${areaM2.toFixed(3)} m²` : null;
       const precoM2Txt = item.preco_m2
-        ? `${this.brl(Number(item.preco_m2))}/m2`
+        ? `${this.brl(Number(item.preco_m2))}/m²`
         : null;
       const complemento = [
         item.item?.marca,
@@ -119,41 +147,39 @@ export class PlanoCorteService {
         .join(' • ');
       const linha = complemento ? `${nome} (${complemento})` : nome;
 
-      doc.text(linha, colProduto, doc.y, { width: 260 });
-      doc.text(String(item.quantidade ?? 0), colQtd, doc.y, {
+      doc.fillColor('#1e293b');
+      doc.text(linha, colProduto, y, { width: 260 });
+      doc.text(String(item.quantidade ?? 0), colQtd, y, {
         width: 70,
         align: 'right',
       });
-      doc.text(this.brl(Number(item.valor_unitario || 0)), colUnit, doc.y, {
+      doc.text(this.brl(Number(item.valor_unitario || 0)), colUnit, y, {
         width: 70,
         align: 'right',
       });
-      doc.text(this.brl(Number(item.valor_total || 0)), colTotal, doc.y, {
+      doc.text(this.brl(Number(item.valor_total || 0)), colTotal, y, {
         width: 70,
         align: 'right',
       });
-      doc.moveDown(0.6);
-      if (doc.y > doc.page.height - 80) {
-        doc.addPage();
-      }
+      y += rowHeight;
     }
 
-    doc.moveDown(0.5);
+    y += 8;
     doc
       .lineWidth(0.5)
-      .strokeColor('#E5E7EB')
-      .moveTo(left, doc.y)
-      .lineTo(right, doc.y)
+      .strokeColor('#e2e8f0')
+      .moveTo(left, y)
+      .lineTo(right, y)
       .stroke();
-    doc.moveDown(0.6);
+    y += 12;
 
-    doc.font('Helvetica-Bold').fontSize(11).fillColor('#111');
+    doc.font('Helvetica-Bold').fontSize(11).fillColor('#1e293b');
     doc.text(
       `TOTAL: ${this.brl(Number(plano.valor_total || 0))}`,
       left,
-      doc.y,
+      y,
       {
-        width: right - left,
+        width: contentWidth,
         align: 'right',
       },
     );

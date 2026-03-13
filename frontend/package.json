@@ -1,15 +1,18 @@
 {
   "name": "frontend-vue",
   "private": true,
-  "version": "0.1.93",
+  "version": "0.1.94",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "build:all": "npm run build && npm run tauri:build && npx cap sync",
     "prepare:subdomain": "node scripts/prepare-aplicativo-site.mjs",
+    "prepare-docker-context": "node scripts/prepare-docker-context.cjs",
     "build:all:deploy": "npm run build:all && npm run prepare:subdomain",
     "preview": "vite preview",
+    "kill:5175": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$pids = Get-NetTCPConnection -LocalPort 5175 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique; if ($pids) { foreach ($procId in $pids) { Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue }; Write-Output 'Freed port 5175' } else { Write-Output 'Port 5175 already free' }\"",
+    "pretauri:dev": "npm run kill:5175",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:dev:quiet": "cross-env RUST_LOG=tao=error tauri dev",
@@ -38,6 +41,7 @@
     "three": "^0.183.2",
     "vue": "3.5.24",
     "vue-chartjs": "^5.3.3",
+    "vue-konva": "^3.4.0",
     "vue-router": "4.6.4",
     "vue-router-layout": "0.4.1",
     "vue3-apexcharts": "^1.10.0"

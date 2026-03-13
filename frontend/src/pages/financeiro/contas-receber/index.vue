@@ -11,7 +11,7 @@
         :backTo="null"
       />
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-6 relative">
+      <div class="pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-6 relative">
         <Loading v-if="loading" />
 
         <template v-else>
@@ -95,6 +95,7 @@
               :loading="false"
               empty-text="Nenhuma conta a receber encontrada."
               :boxed="false"
+              :flush="true"
             >
             <template #cell-partes="{ row }">
               <div class="font-black text-gray-900">

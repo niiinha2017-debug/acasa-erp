@@ -73,6 +73,8 @@ async function main() {
 
     { chave: 'configuracoes.empresa.ver', descricao: 'Visualizar empresa' },
     { chave: 'configuracoes.empresa.editar', descricao: 'Editar empresa' },
+    { chave: 'configuracoes.estrategia_precos.ver', descricao: 'Visualizar estrategia de precos' },
+    { chave: 'configuracoes.estrategia_precos.editar', descricao: 'Editar estrategia de precos' },
 
     { chave: 'arquivos.ver', descricao: 'Visualizar arquivos' },
     { chave: 'arquivos.criar', descricao: 'Criar arquivos' },

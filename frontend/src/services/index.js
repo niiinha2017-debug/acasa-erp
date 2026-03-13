@@ -241,6 +241,22 @@ export const ProdutosService = {
   remover: (id) => api.delete(`/produtos/${id}`),
 }
 
+export const EstrategiaPrecosService = {
+  buscarConfig: () => api.get('/configuracoes/estrategia-precos'),
+  atualizarConfig: (search_strategy) => api.patch('/configuracoes/estrategia-precos', { search_strategy }),
+  listarMateriais: (filtros = {}) => api.get('/configuracoes/estrategia-precos/materiais', { params: filtros }),
+  listarInsumosFixos: () => api.get('/configuracoes/estrategia-precos/insumos-fixos'),
+  listarMateriaisMdf: () => api.get('/configuracoes/estrategia-precos/materiais-mdf'),
+  buscarMateriaisMdfPorTermo: (termo, strategy = 'AVG_PRICE') =>
+    api.get('/configuracoes/estrategia-precos/materiais-mdf/busca', { params: { termo, strategy } }),
+    buscarMdfPorCategoria: (categoriaComercial, strategy = 'AVG_PRICE') =>
+      api.get('/configuracoes/estrategia-precos/materiais-mdf/por-categoria', { params: { categoria_comercial: categoriaComercial, strategy } }),
+  buscarProdutoReferencia: (filtros = {}) => api.get('/configuracoes/estrategia-precos/produto-referencia', { params: filtros }),
+  // Matriz Operacional de Insumos Base
+  processarMatriz: (payload = {}) => api.post('/configuracoes/estrategia-precos/matriz-operacional/processar', payload),
+  listarMatriz: (filtros = {}) => api.get('/configuracoes/estrategia-precos/matriz-operacional', { params: filtros }),
+}
+
 // --- USUÁRIOS ---
 export const UsuariosService = {
   listar: () => api.get('/usuarios'),
@@ -314,6 +330,9 @@ export const FinanceiroService = {
     api.get('/financeiro/contas-pagar', { params: filtros }),
   listarContasPagarConsolidado: (filtros = {}) =>
     api.get('/financeiro/contas-pagar', { params: filtros }),
+  /** Fechamento agrupado por fornecedor (subtotal, abatimentos, valor líquido) + itens expansíveis */
+  getFechamentoPorFornecedor: (filtros = {}) =>
+    api.get('/financeiro/contas-pagar/fechamento-por-fornecedor', { params: filtros }),
   getContasPagarDashboard: (filtros = {}) =>
     api.get('/financeiro/contas-pagar/dashboard', { params: filtros }),
 
@@ -652,6 +671,14 @@ export const TotemFabricaService = {
   /** Salva uma parede (lado) de um ambiente. Body: { nome, largura_m?, pe_direito_m?, profundidade_m?, observacoes?, medidas? }. */
   salvarParedeMedicao(ambienteId, body) {
     return api.post(`/totem-fabrica/ambiente/${ambienteId}/parede`, body);
+  },
+  /** Exclui uma parede de um ambiente da medição (pré-orçamento). */
+  removerParedeMedicao(ambienteId, paredeId) {
+    return api.delete(`/totem-fabrica/ambiente/${ambienteId}/parede/${paredeId}`);
+  },
+  /** Exclui um ambiente inteiro da medição (pré-orçamento). */
+  removerAmbienteMedicao(agendaLojaId, ambienteId) {
+    return api.delete(`/totem-fabrica/${agendaLojaId}/ambiente/${ambienteId}`);
   },
   /** Concluir Medição para Orçamento: finaliza a tarefa. Body opcional: { observacoes? }. */
   concluirMedicaoOrcamento(id, body = {}) {

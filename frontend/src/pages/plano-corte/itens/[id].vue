@@ -1,5 +1,5 @@
 <template>
-  <div class="login-font w-full h-full mt-4 mb-8 mx-2 lg:mx-4 rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
+  <div class="login-font w-full h-full rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
     <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
     <PageHeader
       :title="isEdit ? `Editar Item #${itemId}` : 'Novo Item'"
@@ -9,7 +9,7 @@
       class="border-b border-border-ui"
     />
 
-    <div class="p-8 lg:p-12">
+    <div class="px-4 py-4 md:px-6 md:py-6 lg:px-8 lg:py-8">
       <div v-if="loading" class="py-24 flex flex-col items-center justify-center gap-4">
         <div class="w-10 h-10 border-2 border-border-ui border-t-brand-primary rounded-full animate-spin"></div>
         <p class="text-xs font-medium text-text-muted uppercase tracking-widest">Carregando...</p>

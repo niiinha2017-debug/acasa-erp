@@ -41,6 +41,7 @@
               :loading="false"
               empty-text="Nenhum contrato em obra no momento."
               :boxed="false"
+              :flush="true"
             >
               <template #cell-cliente="{ row }">
                 <div class="contratos-cell flex flex-col gap-1">

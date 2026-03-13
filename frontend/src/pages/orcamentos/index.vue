@@ -29,7 +29,7 @@
         </template>
       </PageHeader>
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-8">
+      <div class="pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-8">
         <div v-if="loading" class="text-center py-10">
           <i class="pi pi-spin pi-spinner text-2xl text-text-soft"></i>
         </div>
@@ -76,7 +76,7 @@
             </div>
             <div v-else class="space-y-2">
               <div
-                v-for="grupo in gruposFiltrados"
+                v-for="grupo in rowsToShow"
                 :key="grupo.clienteId"
                 class="rounded-xl border border-border-ui bg-bg-page px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
               >
@@ -103,6 +103,14 @@
                   Abrir lista
                 </Button>
               </div>
+              <TablePagination
+                flush
+                v-if="total > 0"
+                :page="page"
+                :page-size="pageSize"
+                :total="total"
+                @update:page="setPage"
+              />
             </div>
           </div>
 
@@ -113,12 +121,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { notify } from '@/services/notify'
 import { can } from '@/services/permissions'
 import api from '@/services/api'
 import { format } from '@/utils/format'
+import { usePagination } from '@/composables/usePagination'
 
 definePage({ meta: { perm: 'orcamentos.ver' } })
 
@@ -150,6 +159,12 @@ const gruposFiltrados = computed(() => {
   if (!termo) return grupos.value
   return grupos.value.filter((g) => (g.clienteNome || '').toLowerCase().includes(termo))
 })
+
+const { page, setPage, total, totalPages, pageSize, rowsToShow } = usePagination(
+  gruposFiltrados,
+  { pageSize: 15 },
+)
+watch(filtro, () => setPage(1))
 
 const valorTotalGeral = computed(() =>
   rows.value.reduce((acc, r) => acc + Number(r.total_itens ?? r.valor_total ?? 0), 0)

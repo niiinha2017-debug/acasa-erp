@@ -133,7 +133,7 @@
                   + Adicionar ambiente
                 </Button>
               </div>
-              <Table :columns="columnsItens" :rows="rowsItens" :boxed="false">
+              <Table :columns="columnsItens" :rows="rowsItens" :boxed="false" :flush="true">
                 <template #cell-nome_ambiente="{ row }">
                   <Input
                     v-model="itens[row.__idx].nome_ambiente"
@@ -522,6 +522,7 @@
                   :loading="loadingImagensPdf"
                   empty-text="Nenhuma imagem."
                   :boxed="false"
+                  :flush="true"
                 >
                   <template #cell-nome="{ row }">
                     <div class="flex flex-col">
@@ -591,6 +592,7 @@
                   :loading="loadingAnexos"
                   empty-text="Nenhum anexo ou documento."
                   :boxed="false"
+                  :flush="true"
                 >
                   <template #cell-nome="{ row }">
                     <div class="flex flex-col">

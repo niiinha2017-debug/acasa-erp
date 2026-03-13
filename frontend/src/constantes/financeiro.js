@@ -1,1 +1,1 @@
-export { FINANCEIRO_CATEGORIAS } from '../../../backend/shared/constantes/financeiro'
+export { FINANCEIRO_CATEGORIAS } from '@backend/shared/constantes/financeiro'

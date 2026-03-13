@@ -36,13 +36,14 @@
           <p class="text-xs text-text-muted mt-1">Todos os insumos estão dentro do nível configurado.</p>
         </div>
 
+        <div v-else class="native-table-flush overflow-visible">
         <Table
-          v-else
           :columns="columns"
           :rows="filtradas"
           :loading="loading"
           empty-text="Nenhum produto encontrado para os filtros."
           :boxed="false"
+          :flush="true"
           row-class="bg-red-50/50 dark:bg-red-950/20"
         >
           <template #cell-nome_produto="{ row }">
@@ -101,6 +102,7 @@
             </div>
           </template>
         </Table>
+        </div>
       </div>
     </div>
   </div>

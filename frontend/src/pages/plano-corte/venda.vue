@@ -110,10 +110,12 @@
           </div>
         </div>
 
+        <div class="native-table-flush overflow-visible">
         <Table
           :columns="columnsItens"
           :rows="itens"
           :boxed="false"
+          :flush="true"
           empty-text="Nenhum item adicionado."
         >
           <template #cell-produto="{ row }">
@@ -149,6 +151,7 @@
             </div>
           </template>
         </Table>
+        </div>
 
         <div class="flex justify-end mt-8">
           <div class="rounded-2xl border border-border-ui bg-slate-50/50 dark:bg-slate-800/30 px-6 py-4 min-w-[240px] text-right">
@@ -409,8 +412,19 @@ const itemNovo = ref({
 
 const unidadesOptions = computed(() => (UNIDADES || []).map((u) => ({ label: u.label, value: u.key })))
 
+function descricaoProdutoCorte(item) {
+  const partes = [item.nome_produto]
+  if (item.cor) partes.push(`(${item.cor})`)
+  const extras = [item.marca, item.medida]
+  const dims = [item.largura_mm, item.comprimento_mm, item.espessura_mm].filter(Boolean)
+  if (dims.length) extras.push(`${dims.join('×')}mm`)
+  const extraStr = extras.filter(Boolean).join(' • ')
+  if (extraStr) partes.push('—', extraStr)
+  return partes.join(' ').trim()
+}
+
 const produtoOptions = computed(() =>
-  itensDisponiveis.value.map((i) => ({ label: `${i.nome_produto} ${i.cor ? `(${i.cor})` : ''}`, value: i.id })),
+  itensDisponiveis.value.map((i) => ({ label: descricaoProdutoCorte(i), value: i.id })),
 )
 
 const areaPeca = computed(() => {

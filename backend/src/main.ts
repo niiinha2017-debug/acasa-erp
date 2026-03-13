@@ -38,6 +38,8 @@ async function bootstrap() {
       'http://localhost',       // Capacitor Android
       'http://localhost:5173',
       'http://127.0.0.1:5173',
+      'http://localhost:5175',
+      'http://127.0.0.1:5175',
       'tauri://localhost',
       'http://tauri.localhost',
       'https://acasamarcenaria.com.br',
@@ -52,9 +54,11 @@ async function bootstrap() {
     preflightContinue: false, // NestJS responde ao OPTIONS com os headers CORS
   });
 
-  const port = 3000;
+  const port = Number(process.env.PORT || 3000);
   await app.listen(port, '0.0.0.0');
   console.log(`🚀 Backend rodando em http://localhost:${port}/api (Validações Ativas)`);
+  console.log(`   Escutando em 0.0.0.0:${port} (aceita conexões do host)`);
+  console.log('Backend Ready.');
 }
 
 bootstrap().catch((err) => {

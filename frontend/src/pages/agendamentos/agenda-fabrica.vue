@@ -1,43 +1,43 @@
 <template>
   <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-cyan-600 rounded-t-2xl" aria-hidden></div>
+    <div class="relative overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white">
+      <div class="h-1 w-full bg-cyan-500 rounded-t-2xl" aria-hidden></div>
 
-      <PageHeader
-        title="Agenda de Produção"
-        subtitle="Visão mensal da agenda da fábrica"
-        icon="pi pi-calendar-clock"
-      >
-        <template #actions>
-          <div class="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              type="button"
-              class="w-10 h-10 !p-0 flex items-center justify-center"
-              @click="prevMonth"
-            >
-              <i class="pi pi-angle-left"></i>
-            </Button>
-            <div
-              class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest"
-            >
-              {{ monthLabel }}
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              type="button"
-              class="w-10 h-10 !p-0 flex items-center justify-center"
-              @click="nextMonth"
-            >
-              <i class="pi pi-angle-right"></i>
-            </Button>
+      <!-- Header inline: título + navegação de mês na mesma linha -->
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-8 py-4 border-b border-[#e2e8f0]">
+        <div class="flex items-center gap-3 min-w-0">
+          <i class="pi pi-calendar-clock text-cyan-500 text-xl flex-shrink-0"></i>
+          <div class="min-w-0">
+            <h1 class="text-lg font-bold text-slate-800 leading-none">Agenda de Produção</h1>
+            <p class="text-xs text-slate-400 mt-0.5 hidden sm:block">Visão mensal da agenda da fábrica</p>
           </div>
-        </template>
-      </PageHeader>
+        </div>
+        <div class="flex items-center gap-2 self-start sm:self-auto">
+          <Button
+            variant="ghost"
+            size="sm"
+            type="button"
+            class="w-9 h-9 !p-0 flex items-center justify-center rounded-xl hover:bg-slate-100"
+            @click="prevMonth"
+          >
+            <i class="pi pi-angle-left text-slate-600"></i>
+          </Button>
+          <div class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest min-w-[10rem] text-center">
+            {{ monthLabel }}
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            type="button"
+            class="w-9 h-9 !p-0 flex items-center justify-center rounded-xl hover:bg-slate-100"
+            @click="nextMonth"
+          >
+            <i class="pi pi-angle-right text-slate-600"></i>
+          </Button>
+        </div>
+      </div>
 
-      <div class="p-4 md:p-6 border-t border-border-ui space-y-6 bg-bg-page">
+      <div class="p-3 sm:p-5 md:p-6 space-y-4 bg-[#f8fafc]">
         <!-- Notificação: Medidas a serem agendadas (recebidos da venda) -->
         <div
           v-if="pendentesMedidaFina.length > 0 || pendentesMedidaFinaLoading"
@@ -194,77 +194,94 @@
         </div>
 
         <!-- Calendário -->
-        <div class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
-          <div class="grid grid-cols-7 gap-px bg-slate-100">
+        <div class="bg-white border border-[#e2e8f0] rounded-2xl shadow-sm overflow-hidden">
+          <!-- Cabeçalho dos dias da semana -->
+          <div class="grid grid-cols-7 border-b border-[#e2e8f0]">
             <div
               v-for="d in weekDays"
               :key="d"
-              class="bg-white p-3 text-[10px] font-black uppercase tracking-widest text-slate-400"
+              class="py-2 sm:py-3 text-center text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-50"
             >
               {{ d }}
             </div>
+          </div>
+          <!-- Grid de dias -->
+          <div class="grid grid-cols-7">
             <div
               v-for="day in days"
               :key="day.key"
-              class="bg-white p-3.5 h-44 flex flex-col items-start text-left border border-transparent hover:border-brand-primary/30 transition-all relative cursor-pointer"
-              :class="{
-                'bg-slate-50': !day.inMonth,
-                'ring-2 ring-brand-primary/30': isSameDay(day.date, selectedDay),
-              }"
+              class="relative border-r border-b border-[#e2e8f0] last:border-r-0 cursor-pointer transition-all duration-200 group"
+              :class="[
+                'h-24 sm:h-36 md:h-44 flex flex-col p-1.5 sm:p-2.5',
+                !day.inMonth ? 'bg-slate-50/70' : isSameDay(day.date, selectedDay) ? 'bg-blue-50' : 'bg-white hover:-translate-y-px hover:shadow-md hover:z-10 hover:bg-slate-50/60',
+                isSameDay(day.date, selectedDay) ? 'ring-2 ring-inset ring-blue-400' : '',
+                day.inMonth && hasEvents(day.date) && !isSameDay(day.date, selectedDay) ? 'hover:bg-blue-50/40' : '',
+              ]"
               @click="selectDay(day.date)"
             >
-              <div class="w-full flex items-center justify-between mb-1">
+              <!-- Número do dia + botão + -->
+              <div class="flex items-center justify-between mb-1">
                 <span
-                  class="text-xs font-black cursor-pointer"
-                  :class="day.inMonth ? (day.feriado ? 'text-rose-500' : 'text-slate-800') : 'text-slate-300'"
+                  class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-black leading-none transition-colors"
+                  :class="[
+                    !day.inMonth ? 'text-slate-300' :
+                    isSameDay(day.date, new Date()) ? 'bg-blue-600 text-white' :
+                    isSameDay(day.date, selectedDay) ? 'text-blue-700 font-black' :
+                    day.feriado ? 'text-rose-500' : 'text-slate-700'
+                  ]"
                 >
                   {{ day.date.getDate() }}
                 </span>
                 <button
                   v-if="day.inMonth"
                   type="button"
-                  class="w-6 h-6 flex items-center justify-center rounded-md bg-brand-primary/15 text-brand-primary hover:bg-brand-primary hover:text-white text-sm font-black transition-colors flex-shrink-0"
+                  class="w-5 h-5 sm:w-6 sm:h-6 hidden sm:flex items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white text-sm font-black transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
                   title="Novo agendamento neste dia"
                   @click.stop="selectDayAndOpenModal(day.date)"
                 >
                   +
                 </button>
               </div>
-              <div v-if="day.feriado" class="w-full text-[8px] font-bold text-rose-500 uppercase tracking-wider truncate mb-1.5">
+              <div v-if="day.feriado" class="w-full text-[7px] font-bold text-rose-400 uppercase tracking-wider truncate mb-1 hidden sm:block">
                 {{ day.feriado }}
               </div>
-              <div class="w-full space-y-1.5 flex-1 min-h-0 overflow-hidden flex flex-col">
+              <!-- Pills de eventos -->
+              <div class="flex-1 min-h-0 overflow-hidden flex flex-col gap-0.5 sm:gap-1">
+                <!-- Mobile: pontos coloridos indicando eventos -->
+                <template v-if="dayEvents(day.date).length > 0">
+                  <div class="sm:hidden flex flex-wrap gap-0.5 mt-0.5">
+                    <span
+                      v-for="event in dayEvents(day.date).slice(0, 4)"
+                      :key="event.id"
+                      class="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                      :class="eventAtrasado(event) ? 'bg-red-500' : getFabricaAccentDotClass(event)"
+                    ></span>
+                    <span v-if="dayEvents(day.date).length > 4" class="text-[8px] font-bold text-slate-400">+{{ dayEvents(day.date).length - 4 }}</span>
+                  </div>
+                </template>
+                <!-- Desktop: pills completas -->
                 <button
                   v-for="event in dayEvents(day.date).slice(0, 3)"
                   :key="event.id"
                   type="button"
+                  class="hidden sm:flex w-full items-center gap-1 text-left pl-1.5 pr-2 py-1 rounded-full text-[9px] font-semibold transition-all duration-150 hover:brightness-95 active:scale-95"
                   :class="[
-                    'w-full text-left px-2.5 py-1.5 rounded-lg text-[10px] hover:ring-2 hover:ring-brand-primary transition-colors',
-                    event.plano_corte_id ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-900 dark:text-amber-100 border border-amber-300 dark:border-amber-700' : 'text-white',
-                    eventAtrasado(event) && !event.plano_corte_id ? 'bg-red-600 hover:bg-red-500' : (!event.plano_corte_id ? getCalendarioEventClassProducao(event.categoria, eventConcluido(event)) : ''),
+                    event.plano_corte_id ? 'bg-amber-100 text-amber-900 border border-amber-300' : '',
+                    eventAtrasado(event) && !event.plano_corte_id ? 'bg-red-500 text-white' : (!event.plano_corte_id ? getCalendarioEventClassProducao(event.categoria, eventConcluido(event)) : ''),
                   ]"
                   :title="eventTooltipCalendar(event)"
                   @click.stop="openModalForEvent(event, day.date)"
                 >
-                  <div :class="event.plano_corte_id ? 'font-semibold text-[9px] text-amber-800 dark:text-amber-200 leading-tight' : 'font-semibold text-[9px] text-white/90 leading-tight'">
-                    {{ periodLabel(event.inicio_em, event.fim_em, event) }}
-                  </div>
-                  <div class="font-bold truncate leading-snug mt-0.5 flex items-center gap-1">
-                    {{ tituloSubtituloEvento(event).titulo }}
-                    <span v-if="event.plano_corte_id" class="shrink-0 text-[7px] font-black bg-amber-600 text-white dark:bg-amber-500 dark:text-amber-950 px-1 rounded">[APENAS CORTE]</span>
-                  </div>
-                  <div :class="event.plano_corte_id ? 'text-[9px] text-amber-700 dark:text-amber-300 truncate leading-snug' : 'text-[9px] text-white/80 truncate leading-snug'">
-                    {{ tituloSubtituloEvento(event).subtitulo }}
-                  </div>
-                  <div :class="event.plano_corte_id ? 'text-[8px] text-amber-600 dark:text-amber-400 truncate leading-snug' : 'text-[8px] text-white/70 truncate leading-snug'">
-                    {{ event?.cliente?.nome_completo || event?.cliente?.razao_social || event?.plano_corte?.fornecedor?.nome_fantasia || 'Cliente' }}
-                  </div>
+                  <i class="pi pi-clock text-[7px] opacity-80 flex-shrink-0" :class="event.plano_corte_id ? 'text-amber-700' : ''"></i>
+                  <span class="opacity-90 flex-shrink-0" :class="event.plano_corte_id ? 'text-amber-800' : ''">{{ timeLabel(event.inicio_em) }}</span>
+                  <span class="truncate font-bold" :class="event.plano_corte_id ? 'text-amber-900' : 'opacity-95'">{{ tituloSubtituloEvento(event).titulo }}</span>
+                  <span v-if="event.plano_corte_id" class="shrink-0 text-[7px] font-black bg-amber-500 text-white px-1 rounded-full">[C]</span>
                 </button>
                 <div
                   v-if="dayEvents(day.date).length > 3"
-                  class="text-[9px] font-bold text-slate-400 pt-0.5"
+                  class="hidden sm:block text-[8px] font-bold text-slate-400 pl-1"
                 >
-                  +{{ dayEvents(day.date).length - 3 }}
+                  +{{ dayEvents(day.date).length - 3 }} mais
                 </div>
               </div>
             </div>
@@ -319,69 +336,126 @@
                 class="overflow-y-auto overflow-x-hidden pr-2 space-y-3 transition-[max-height] duration-300"
                 :class="listaTarefasExpandida ? 'max-h-[min(85vh,1200px)]' : 'max-h-[min(55vh,480px)]'"
               >
-                <button
-                  v-for="event in selectedEvents"
-                :key="event.id"
-                type="button"
-                :class="[
-                  'w-full text-left p-4 rounded-xl border border-border-ui hover:border-brand-primary/40 hover:shadow-md transition-all',
-                  event.plano_corte_id ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-700 border-l-4 border-l-amber-500' : 'bg-bg-card',
-                  eventAtrasado(event) && !event.plano_corte_id ? 'border-l-4 border-l-red-500 border-red-300 bg-red-50/60 dark:bg-red-950/30' : (!event.plano_corte_id ? getProcessColorByStatusProducao(event.categoria, event.status).borderLeftClass : ''),
-                ]"
-                @click="openModalForEvent(event)"
-              >
-                <div class="text-sm font-bold text-text-main leading-snug flex items-center gap-2 flex-wrap">
-                  {{ eventTitle(event) }}
-                  <span v-if="event.plano_corte_id" class="inline-flex px-2 py-0.5 rounded text-[10px] font-black uppercase bg-amber-600 text-white dark:bg-amber-500 dark:text-amber-950">[APENAS CORTE]</span>
-                </div>
-                <div class="mt-2 text-[10px] font-medium text-text-muted space-y-0.5">
-                  <div><span class="font-semibold text-text-main">Criador da tarefa:</span> {{ event.criado_por_usuario?.nome || 'Não informado' }}</div>
-                  <div><span class="font-semibold text-text-main">Executores:</span> {{ nomesExecutoresEvento(event) || 'Nenhum funcionário atribuído ainda' }}</div>
-                </div>
-                <div
-                  v-if="event.alterado_por_usuario"
-                  class="mt-0.5 text-[10px] font-medium text-text-muted"
-                >
-                  Editado por: {{ event.alterado_por_usuario.nome }}
-                </div>
-                <div class="text-xs font-medium text-text-muted mt-0.5">
-                  {{ periodLabel(event.inicio_em, event.fim_em, event) }}
-                </div>
-                <div class="mt-2 flex flex-wrap items-center gap-2">
-                  <span v-if="!isAgendaLoja" class="inline-flex flex-col items-start px-2.5 py-1 rounded-lg bg-brand-primary/10 text-brand-primary border border-brand-primary/30">
-                    <span class="text-[10px] font-black uppercase">{{ tituloSubtituloEvento(event).titulo }}</span>
-                    <span class="text-[9px] font-semibold opacity-90">{{ tituloSubtituloEvento(event).subtitulo }}</span>
-                  </span>
-                  <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase" :class="statusExecucaoClass(event)">
-                    {{ statusExecucaoLabel(event) }}
-                  </span>
-                </div>
-                <div
-                  v-if="event.plano_corte_id"
-                  class="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase"
-                  :class="planoBadgeClass(planoStatusForEvent(event))"
-                >
-                  <span
-                    class="w-1.5 h-1.5 rounded-full"
-                    :class="planoDotClass(planoStatusForEvent(event))"
-                  ></span>
-                  {{ planoBadgeLabel(planoStatusForEvent(event)) }}
-                </div>
-                <div class="mt-2 flex flex-wrap items-center gap-2">
-                  <RouterLink
-                    :to="`/producao/apontamento?agenda=${event.id}`"
-                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-700 hover:bg-emerald-200/80 dark:hover:bg-emerald-800/50 transition-colors"
+                <ul class="space-y-3">
+                  <li
+                    v-for="event in selectedEventsParaLista"
+                    :key="event.id"
+                    class="group"
                   >
-                    <i class="pi pi-stopwatch"></i>
-                    <template v-if="resumoApontamentos[event.id]?.totalHoras">
-                      {{ resumoApontamentos[event.id].totalHoras }}h na timeline
-                    </template>
-                    <template v-else>
-                      Timeline
-                    </template>
-                  </RouterLink>
-                </div>
-              </button>
+                    <div class="flex items-stretch gap-3">
+                      <div class="w-16 shrink-0 pt-1 text-right">
+                        <div class="text-sm font-extrabold tracking-tight text-text-main">
+                          {{ timeLabel(event.inicio_em) }}
+                        </div>
+                        <div class="mt-0.5 text-[10px] font-medium text-text-muted">
+                          ate {{ timeLabel(event.fim_em) }}
+                        </div>
+                      </div>
+                      <div class="w-1 shrink-0 rounded-full" :class="taskAccentBarClass(event)"></div>
+                      <div
+                        class="relative flex-1 rounded-2xl border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-slate-200/70"
+                        :class="taskCardSurfaceClass(event)"
+                      >
+                        <div
+                          v-if="canManageSelectedEvent(event)"
+                          class="absolute right-3 top-3 flex items-center gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+                        >
+                          <button
+                            type="button"
+                            class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-500 transition-colors hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700"
+                            title="Editar tarefa"
+                            @click.stop="openModalForEvent(event)"
+                          >
+                            <i class="pi pi-pencil text-[12px]"></i>
+                          </button>
+                          <button
+                            type="button"
+                            class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white/90 text-slate-500 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+                            title="Excluir tarefa"
+                            @click.stop="removeTask(event)"
+                          >
+                            <i class="pi pi-trash text-[12px]"></i>
+                          </button>
+                        </div>
+
+                        <div class="cursor-pointer pr-16" @click="openModalForEvent(event)">
+                          <div class="flex items-start gap-2 flex-wrap">
+                            <div class="text-sm font-bold leading-snug text-text-main">
+                              {{ eventTitle(event) }}
+                            </div>
+                            <span
+                              v-if="taskCategoryBadgeLabel(event.categoria)"
+                              class="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
+                              :class="taskCategoryBadgeClass(event.categoria)"
+                            >
+                              {{ taskCategoryBadgeLabel(event.categoria) }}
+                            </span>
+                            <span v-if="event.plano_corte_id" class="inline-flex rounded-full bg-amber-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white dark:bg-amber-500 dark:text-amber-950">[APENAS CORTE]</span>
+                          </div>
+
+                          <div class="mt-3 grid gap-2 text-[11px] text-slate-500 sm:grid-cols-2">
+                            <div class="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2">
+                              <i class="pi pi-user text-[11px] text-slate-400"></i>
+                              <div class="min-w-0">
+                                <div class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Criador</div>
+                                <div class="truncate text-[11px] font-medium text-slate-600">{{ event.criado_por_usuario?.nome || 'Não informado' }}</div>
+                              </div>
+                            </div>
+                            <div class="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2">
+                              <i class="pi pi-users text-[11px] text-slate-400"></i>
+                              <div class="min-w-0">
+                                <div class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Executores</div>
+                                <div class="truncate text-[11px] font-medium text-slate-600">{{ nomesExecutoresEvento(event) || 'Nenhum funcionário atribuído ainda' }}</div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="mt-3 flex flex-wrap items-center gap-2">
+                            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase" :class="statusExecucaoClass(event)">
+                              {{ statusExecucaoLabel(event) }}
+                            </span>
+                            <span
+                              v-if="event.alterado_por_usuario"
+                              class="text-[10px] font-medium text-text-muted"
+                            >
+                              Editado por: {{ event.alterado_por_usuario.nome }}
+                            </span>
+                            <span class="text-[10px] font-medium text-text-muted">
+                              {{ periodLabel(event.inicio_em, event.fim_em, event) }}
+                            </span>
+                          </div>
+
+                          <div
+                            v-if="event.plano_corte_id"
+                            class="mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase"
+                            :class="planoBadgeClass(planoStatusForEvent(event))"
+                          >
+                            <span
+                              class="h-1.5 w-1.5 rounded-full"
+                              :class="planoDotClass(planoStatusForEvent(event))"
+                            ></span>
+                            {{ planoBadgeLabel(planoStatusForEvent(event)) }}
+                          </div>
+                        </div>
+
+                        <div class="mt-3 flex flex-wrap items-center gap-2">
+                          <RouterLink
+                            :to="`/producao/apontamento?agenda=${event.id}`"
+                            class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-100 px-2.5 py-1 text-[10px] font-bold text-emerald-800 transition-colors hover:bg-emerald-200/80 dark:border-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200 dark:hover:bg-emerald-800/50"
+                          >
+                            <i class="pi pi-stopwatch"></i>
+                            <template v-if="resumoApontamentos[event.id]?.totalHoras">
+                              {{ resumoApontamentos[event.id].totalHoras }}h na timeline
+                            </template>
+                            <template v-else>
+                              Timeline
+                            </template>
+                          </RouterLink>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
               </div>
             </div>
             <div v-else class="py-4 text-center">
@@ -1825,6 +1899,57 @@ function statusExecucaoClass(event) {
   return 'bg-slate-100 text-slate-700 border border-slate-200'
 }
 
+function taskAccentBarClass(event) {
+  if (event?.plano_corte_id) return 'bg-amber-500'
+  if (eventAtrasado(event)) return 'bg-rose-500'
+  const cat = String(event?.categoria || '').toUpperCase()
+  const colors = {
+    AGENDAR_MEDIDA_FINA: 'bg-cyan-500',
+    MEDIDA_FINA: 'bg-cyan-500',
+    AGUARDANDO_PROJETO_TECNICO: 'bg-indigo-500',
+    PROJETO_TECNICO_EM_ANDAMENTO: 'bg-indigo-500',
+    PRODUCAO_EM_ANDAMENTO: 'bg-blue-500',
+    MONTAGEM_CLIENTE_AGENDADA: 'bg-orange-500',
+    EM_MONTAGEM_CLIENTE: 'bg-orange-500',
+    AGENDAR_POS_VENDA: 'bg-amber-500',
+    GARANTIA: 'bg-amber-500',
+    MANUTENCAO: 'bg-amber-500',
+    ASSISTENCIA: 'bg-amber-500',
+  }
+  if (colors[cat]) return colors[cat]
+  return 'bg-slate-400'
+}
+
+function taskCardSurfaceClass(event) {
+  if (event?.plano_corte_id) return 'border-amber-200 bg-amber-50/80 dark:border-amber-700 dark:bg-amber-950/30'
+  if (eventAtrasado(event)) return 'border-rose-200 bg-rose-50/70 dark:border-rose-800 dark:bg-rose-950/20'
+  return 'border-border-ui bg-bg-card hover:border-brand-primary/30'
+}
+
+function taskCategoryBadgeClass(categoria) {
+  const cat = String(categoria || '').toUpperCase()
+  const colors = {
+    AGENDAR_MEDIDA_FINA: 'border border-cyan-200 bg-cyan-100 text-cyan-800',
+    MEDIDA_FINA: 'border border-cyan-200 bg-cyan-100 text-cyan-800',
+    AGUARDANDO_PROJETO_TECNICO: 'border border-indigo-200 bg-indigo-100 text-indigo-800',
+    PROJETO_TECNICO_EM_ANDAMENTO: 'border border-indigo-200 bg-indigo-100 text-indigo-800',
+    PRODUCAO_EM_ANDAMENTO: 'border border-blue-200 bg-blue-100 text-blue-800',
+    MONTAGEM_CLIENTE_AGENDADA: 'border border-orange-200 bg-orange-100 text-orange-800',
+    EM_MONTAGEM_CLIENTE: 'border border-orange-200 bg-orange-100 text-orange-800',
+    AGENDAR_POS_VENDA: 'border border-amber-200 bg-amber-100 text-amber-800',
+    GARANTIA: 'border border-amber-200 bg-amber-100 text-amber-800',
+    MANUTENCAO: 'border border-amber-200 bg-amber-100 text-amber-800',
+    ASSISTENCIA: 'border border-amber-200 bg-amber-100 text-amber-800',
+  }
+  return colors[cat] || 'border border-slate-200 bg-slate-100 text-slate-700'
+}
+
+function taskCategoryBadgeLabel(categoria) {
+  const cat = String(categoria || '').toUpperCase()
+  if (!cat) return ''
+  return etapaLabelPorCategoria(cat) || tituloSubtituloEvento({ categoria: cat }).subtitulo || cat
+}
+
 /** True quando o horário de término já passou e a tarefa não foi concluída (exibir em vermelho). */
 function eventAtrasado(event) {
   const status = normalizarStatusExecucao(event?.status)
@@ -1856,6 +1981,24 @@ function periodLabel(inicioEm, fimEm, event) {
 
 function dayEvents(day) {
   return eventsByDay.value[dateKey(day)] || []
+}
+
+function hasEvents(day) {
+  return (eventsByDay.value[dateKey(day)] || []).length > 0
+}
+
+function getFabricaAccentDotClass(event) {
+  if (event?.plano_corte_id) return 'bg-amber-500'
+  const cat = String(event?.categoria || '').toUpperCase()
+  const colors = {
+    AGENDAR_MEDIDA_FINA: 'bg-cyan-500', MEDIDA_FINA: 'bg-cyan-500',
+    AGUARDANDO_PROJETO_TECNICO: 'bg-indigo-500', PROJETO_TECNICO_EM_ANDAMENTO: 'bg-indigo-500',
+    PRODUCAO_EM_ANDAMENTO: 'bg-blue-500',
+    MONTAGEM_CLIENTE_AGENDADA: 'bg-orange-500', EM_MONTAGEM_CLIENTE: 'bg-orange-500',
+    AGENDAR_POS_VENDA: 'bg-amber-500', GARANTIA: 'bg-amber-500',
+    MANUTENCAO: 'bg-amber-500', ASSISTENCIA: 'bg-amber-500',
+  }
+  return colors[cat] || 'bg-brand-primary'
 }
 
 function normalizePlanoStatus(status) {

@@ -31,13 +31,14 @@
         </template>
       </PageHeader>
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui">
+      <div class="pb-5 md:pb-6 pt-4 border-t border-border-ui">
         <Table
           :columns="columns"
           :rows="rows"
           :loading="loading"
           empty-text="Nenhum cliente encontrado."
           :boxed="false"
+          :flush="true"
         >
           <template #cell-nome_completo="{ row }">
             <div class="flex items-center gap-3 py-1">
@@ -81,19 +82,28 @@
             </div>
           </template>
         </Table>
+        <TablePagination
+          flush
+          v-if="total > 0"
+          :page="page"
+          :page-size="pageSize"
+          :total="total"
+          @update:page="setPage"
+        />
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ClienteService } from '@/services/index'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
 import { onlyNumbers } from '@/utils/masks'
+import { usePagination } from '@/composables/usePagination'
 
 definePage({ meta: { perm: 'clientes.ver' } })
 
@@ -149,8 +159,14 @@ const filtrados = computed(() => {
   })
 })
 
+const { page, setPage, total, totalPages, pageSize, rowsToShow } = usePagination(
+  computed(() => filtrados.value),
+  { pageSize: 15 },
+)
+watch(filtro, () => setPage(1))
+
 const rows = computed(() =>
-  filtrados.value.map((c) => ({
+  rowsToShow.value.map((c) => ({
     ...c,
     nome_exibicao: c.nome_completo || c.razao_social || '-',
     documento: c.cpf || c.cnpj || '',

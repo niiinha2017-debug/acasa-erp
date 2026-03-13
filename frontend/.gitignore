@@ -1,3 +1,6 @@
+# Contexto enxuto para Docker (gerado por scripts/prepare-docker-context.cjs)
+.docker-context
+
 # Logs
 logs
 *.log

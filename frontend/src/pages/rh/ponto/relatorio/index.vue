@@ -177,7 +177,7 @@
           </div>
 
           <!-- Tabela espelho de ponto -->
-          <div class="rounded-xl border border-border-ui bg-bg-card overflow-hidden">
+          <div class="native-table-flush border-y border-border-ui bg-bg-card overflow-hidden">
             <div class="relative">
               <div class="absolute inset-0 flex items-center">
                 <div class="w-full border-t border-border-ui/50"></div>
@@ -195,7 +195,7 @@
               <p class="text-xs text-text-soft mt-1">Os registros serão exibidos conforme o horário cadastrado</p>
             </div>
 
-            <div v-else class="overflow-x-auto">
+            <div v-else class="native-table-flush-scroll overflow-x-auto">
               <table class="w-full min-w-[640px] border-collapse">
                 <thead>
                   <tr class="bg-slate-50 dark:bg-slate-800/50">

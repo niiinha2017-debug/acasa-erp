@@ -30,22 +30,43 @@ function findMojibake(value, path = 'root') {
   return null
 }
 
-// ✅ baseURL: Tauri e Android sem web rodando — usam sempre API remota (ou VITE_API_URL).
+// ✅ baseURL:
 // - VITE_API_URL no .env: usado em todos os ambientes.
-// - Sem .env: Tauri e Android usam produção; só navegador em dev usa localhost.
+// - Em desenvolvimento local, navegador e Tauri usam localhost.
+// - Android e builds de produção usam API remota por padrão.
 const VITE_URL = import.meta.env.VITE_API_URL
+const VITE_PROXY_TARGET = import.meta.env.VITE_API_PROXY_TARGET
 const IS_DEV = !!import.meta.env.DEV
 const isTauri = typeof window !== 'undefined' && (!!window.__TAURI__ || !!window.__TAURI_INTERNALS__)
 
+function getDirectDevApiUrl() {
+  const target = String(VITE_PROXY_TARGET || 'http://127.0.0.1:3000').replace(/\/+$/, '')
+  return `${target}/api`
+}
+
+function isHttpDevOrigin() {
+  if (typeof window === 'undefined') return false
+  const origin = String(window.location.origin || '')
+  return /^https?:\/\/(127\.0\.0\.1|localhost):(5173|5175)$/i.test(origin)
+}
+
 function getBaseUrl() {
   if (VITE_URL) return String(VITE_URL).replace(/\/+$/, '')
-  // Tauri ou build de produção: API em produção (não há “web” rodando).
-  if (isTauri || !IS_DEV) return 'https://acasamarcenaria.com.br/api'
-  // Navegador em dev: localhost
-  return 'http://127.0.0.1:3000/api'
+  // Desenvolvimento local no navegador/Tauri com devUrl HTTP: usa o proxy do Vite.
+  if (IS_DEV && isHttpDevOrigin()) return '/api'
+  // Desenvolvimento local no Tauri com origem interna: fala direto com o backend do host.
+  if (IS_DEV && isTauri) return getDirectDevApiUrl()
+  // Demais cenários de dev local.
+  if (IS_DEV) return getDirectDevApiUrl()
+  // Builds nativos/produção: API remota por padrão.
+  return 'https://acasamarcenaria.com.br/api'
 }
 
 const BASE_URL = getBaseUrl() 
+
+export function getApiBaseUrl() {
+  return BASE_URL
+}
 
 
 const api = axios.create({

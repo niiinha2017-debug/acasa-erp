@@ -13,6 +13,13 @@ export enum StatusProduto {
   INATIVO = 'INATIVO',
 }
 
+export enum TipoAplicacaoProduto {
+  MDF = 'MDF',
+  MATERIA_PRIMA = 'MATERIA_PRIMA',
+  COMPLEMENTO = 'COMPLEMENTO',
+  INSUMO = 'INSUMO',
+}
+
 export class CreateProdutoDto {
   @Type(() => Number)
   @IsInt()
@@ -80,6 +87,14 @@ export class CreateProdutoDto {
   @IsOptional()
   @IsString()
   categoria?: string;
+
+  @IsOptional()
+  @IsString()
+  categoria_base?: string;
+
+  @IsOptional()
+  @IsEnum(TipoAplicacaoProduto)
+  tipo_aplicacao?: TipoAplicacaoProduto;
 
   @IsOptional()
   @Type(() => Number)

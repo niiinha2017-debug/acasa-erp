@@ -1,4 +1,4 @@
-import { PontoService } from '@/services/pontoService' // Use o serviço que criamos
+import { PontoService } from '@/services/ponto.service'
 import { pontoStorage } from './pontoStorage'
 
 export function usePontoAuth() {

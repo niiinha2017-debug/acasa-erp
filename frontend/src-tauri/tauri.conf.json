@@ -1,12 +1,12 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Acasa",
-  "version": "0.1.93",
+  "version": "0.1.94",
   "identifier": "com.acasa.erp",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:5173",
-    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://127.0.0.1:5175",
+    "beforeDevCommand": "npm run dev -- --host 127.0.0.1 --port 5175 --strictPort",
     "beforeBuildCommand": "npm run build"
   },
   "app": {
@@ -20,7 +20,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' asset: http://asset.localhost http://tauri.localhost; frame-src 'self' blob:; img-src 'self' data: https: asset: http://asset.localhost blob:; style-src 'self' 'unsafe-inline' asset: http://asset.localhost http://tauri.localhost; font-src 'self' data:; script-src 'self'; connect-src 'self' http://127.0.0.1:7242 http://localhost:7242 https://acasamarcenaria.com.br https://aplicativo.acasamarcenaria.com.br;"
+      "csp": "default-src 'self' asset: http://asset.localhost http://tauri.localhost; frame-src 'self' blob:; img-src 'self' data: https: asset: http://asset.localhost blob:; style-src 'self' 'unsafe-inline' asset: http://asset.localhost http://tauri.localhost; font-src 'self' data:; script-src 'self'; connect-src 'self' http://127.0.0.1:7242 http://localhost:7242 http://127.0.0.1:3000 http://localhost:3000 http://127.0.0.1:3001 http://localhost:3001 http://127.0.0.1:5175 http://localhost:5175 ws://127.0.0.1:5175 ws://localhost:5175 https://acasamarcenaria.com.br https://aplicativo.acasamarcenaria.com.br;"
     }
   },
   "plugins": {

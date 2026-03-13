@@ -133,6 +133,7 @@ import Select from '@/components/common/Select.vue'
 
 // Graficos (relatorios)
 import VueApexCharts from 'vue3-apexcharts'
+import VueKonva from 'vue-konva'
 
 // Importacao da Diretiva de Permissao
 import { can } from '@/services/permissions'
@@ -228,6 +229,7 @@ app.directive('can', {
 })
 
 app.use(router)
+app.use(VueKonva)
 
 // Carrega etapas/cores do backend (fonte única); fallback local se API falhar
 if (storage.getToken()) {

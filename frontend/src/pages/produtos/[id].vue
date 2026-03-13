@@ -1,5 +1,5 @@
 <template>
-  <div class="login-font w-full h-full mt-4 mb-8 mx-2 lg:mx-4 rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
+  <div class="login-font w-full h-full rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
     <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
     <PageHeader
       :title="isEdit ? `Editar Produto #${produtoId}` : 'Novo Produto'"
@@ -9,7 +9,7 @@
       class="border-b border-border-ui"
     />
 
-    <div class="p-8 lg:p-12">
+    <div class="px-4 py-4 md:px-6 md:py-6 lg:px-8 lg:py-8">
       <div v-if="loading" class="py-24 flex flex-col items-center justify-center gap-4">
         <div class="w-10 h-10 border-2 border-border-ui border-t-brand-primary rounded-full animate-spin"></div>
         <p class="text-xs font-medium text-text-muted uppercase tracking-widest">Carregando...</p>
@@ -120,6 +120,24 @@
             label="Categoria"
             placeholder="Ex: Chapas, Acabamento"
             force-upper
+          />
+          <SearchInput
+            class="col-span-12 md:col-span-4"
+            v-model="form.categoria_base"
+            mode="select"
+            label="Categoria Base"
+            :options="categoriasBaseOptions"
+            placeholder="Selecione..."
+            required
+          />
+          <SearchInput
+            class="col-span-12 md:col-span-4"
+            v-model="form.tipo_aplicacao"
+            mode="select"
+            label="Tipo de Aplicacao"
+            :options="tipoAplicacaoOptions"
+            placeholder="Selecione..."
+            required
           />
         </div>
 
@@ -355,6 +373,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { maskMoneyBR } from '@/utils/masks'
 import { UNIDADES } from '@/constantes'
+import { CATEGORIAS_BASE } from '@/constantes/categorias-base'
 import { ProdutosService, FornecedorService, EstoqueRetalhoService } from '@/services/index'
 import { confirm } from '@/services/confirm'
 import { ArquivosService } from '@/services/arquivos.service' 
@@ -427,6 +446,8 @@ const form = ref({
   valor_total: 0,
   status: 'ATIVO',
   categoria: '',
+  categoria_base: 'PRIMARIA',
+  tipo_aplicacao: 'MDF',
   imagem_url: '',
 })
 
@@ -509,6 +530,12 @@ watch(
 
 // ======= UNIDADES (constantes) =======
 const unidadesOptions = computed(() => UNIDADES.map((u) => ({ label: u.label, value: u.key })))
+const categoriasBaseOptions = computed(() => CATEGORIAS_BASE)
+const tipoAplicacaoOptions = [
+  { label: 'MDF', value: 'MDF' },
+  { label: 'Complemento', value: 'COMPLEMENTO' },
+  { label: 'Insumo', value: 'INSUMO' },
+]
 
 // ======= CRUD =======
 function validar() {
@@ -518,6 +545,8 @@ function validar() {
   if (!form.value.quantidade || Number(form.value.quantidade) <= 0) return 'Informe a quantidade.'
   if (!form.value.valor_unitario || Number(form.value.valor_unitario) <= 0) return 'Informe o valor unitário.'
   if (!form.value.status) return 'Informe o status.'
+  if (!form.value.categoria_base) return 'Selecione a categoria base.'
+  if (!form.value.tipo_aplicacao) return 'Selecione o tipo de aplicacao.'
   return null
 }
 
@@ -529,6 +558,8 @@ function resetForm() {
     cor: '',
     medida: '',
     categoria: '',
+    categoria_base: 'PRIMARIA',
+    tipo_aplicacao: 'MDF',
     unidade: '',
     largura_mm: null,
     comprimento_mm: null,
@@ -569,6 +600,11 @@ async function carregarProduto() {
     quantidade: Number(data.quantidade || 0),
     estoque_minimo: Number(data.estoque_minimo ?? 0),
     categoria: data.categoria || '',
+    categoria_base: data.categoria_base || 'PRIMARIA',
+    tipo_aplicacao:
+      String(data.tipo_aplicacao || '').toUpperCase() === 'MATERIA_PRIMA'
+        ? 'MDF'
+        : (data.tipo_aplicacao || 'MDF'),
     valor_unitario: Number(data.valor_unitario || 0),
     valor_total: Number(data.valor_total || 0),
     status: data.status || 'ATIVO',
@@ -780,6 +816,8 @@ async function salvar() {
       imagem_url: String(form.value.imagem_url || '').trim() || null,
       estoque_minimo: Number(form.value.estoque_minimo ?? 0),
       categoria: form.value.categoria ? String(form.value.categoria).trim() : null,
+      categoria_base: form.value.categoria_base ? String(form.value.categoria_base).trim().toUpperCase() : 'PRIMARIA',
+      tipo_aplicacao: form.value.tipo_aplicacao ? String(form.value.tipo_aplicacao).trim().toUpperCase() : 'MDF',
     }
 
     const res = await ProdutosService.salvar(isEdit.value ? produtoId.value : null, payload)

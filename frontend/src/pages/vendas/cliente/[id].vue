@@ -35,13 +35,14 @@
           <span class="text-lg font-black text-text-main">{{ format.currency(valorTotalFiltrado) }}</span>
         </div>
 
-        <div class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden">
+        <div class="native-table-flush overflow-visible">
           <Table
             :columns="columns"
             :rows="filtrados"
             :loading="loading"
             empty-text="Nenhum orçamento para este cliente."
             :boxed="false"
+            :flush="true"
           >
             <template #cell-id="{ row }">
               <span class="inline-flex items-center justify-center bg-bg-card border border-border-ui px-3 py-1 rounded-lg text-[10px] font-black text-text-main">
@@ -97,6 +98,7 @@ import { ClienteService, OrcamentosService, VendaService } from '@/services'
 import { format } from '@/utils/format'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
+import { confirm } from '@/services/confirm'
 
 definePage({ meta: { perm: 'vendas.ver' } })
 
@@ -194,7 +196,7 @@ function irParaDetalhar(row) {
 async function cancelarVenda(row) {
   if (!row?.venda?.id) return
   if (!can('vendas.editar') && !can('vendas.excluir')) return notify.error('Acesso negado.')
-  const ok = window.confirm(`Cancelar/excluir a Venda #${row.venda.id} deste orçamento?`)
+  const ok = await confirm.show('Cancelar venda', `Cancelar/excluir a Venda #${row.venda.id} deste orçamento?`)
   if (!ok) return
   try {
     await VendaService.remover(row.venda.id)

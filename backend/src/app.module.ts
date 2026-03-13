@@ -5,6 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import { join } from 'path';
 import { ScheduleModule } from '@nestjs/schedule';
 
+import { AppController } from './app.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
@@ -37,6 +38,7 @@ import { ComissaoProducaoModule } from './comissao-producao/comissao-producao.mo
 import { MedicaoFinaModule } from './medicao-fina/medicao-fina.module';
 import { EvolutionModule } from './evolution/evolution.module';
 import { EstoqueRetalhoModule } from './estoque-retalho/estoque-retalho.module';
+import { EstrategiaPrecosModule } from './estrategia-precos/estrategia-precos.module';
 
 @Module({
   imports: [
@@ -101,7 +103,9 @@ import { EstoqueRetalhoModule } from './estoque-retalho/estoque-retalho.module';
     MedicaoFinaModule,
     EvolutionModule,
     EstoqueRetalhoModule,
+    EstrategiaPrecosModule,
   ],
+  controllers: [AppController],
   providers: [
     // Guard global: todas as rotas exigem JWT; rotas com @Public() continuam acessíveis sem token
     { provide: APP_GUARD, useClass: JwtAuthGuard },

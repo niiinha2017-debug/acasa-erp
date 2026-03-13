@@ -136,6 +136,7 @@
 import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from '@/services/useauth'
+import { getApiBaseUrl } from '@/services/api'
 
 definePage({ meta: { public: true, layout: 'auth' } })
 
@@ -198,7 +199,17 @@ async function handleLoginSubmit() {
     if (msg) {
       error.value = Array.isArray(msg) ? msg.join(' | ') : msg
     } else if (!e?.response && e?.message && /network|fetch|timeout|failed/i.test(String(e.message))) {
-      error.value = 'Falha ao conectar com o servidor. Verifique a internet e se o sistema está no ar.'
+      const apiBase = getApiBaseUrl()
+      const origin = typeof window !== 'undefined' ? window.location.origin : ''
+      const requestUrl = `${apiBase.replace(/\/+$/, '')}/auth/login`
+      const detail = [
+        'Falha ao conectar com o servidor.',
+        `API: ${requestUrl}`,
+        origin ? `Origem: ${origin}` : '',
+        e?.code ? `Codigo: ${e.code}` : '',
+        e?.message ? `Erro: ${String(e.message)}` : '',
+      ].filter(Boolean).join(' ')
+      error.value = detail
     } else {
       error.value = 'Usuário ou senha inválidos.'
     }

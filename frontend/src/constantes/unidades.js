@@ -1,2 +1,2 @@
-export { UNIDADES } from '../../../backend/shared/constantes/unidades'
+export { UNIDADES } from '@backend/shared/constantes/unidades'
 

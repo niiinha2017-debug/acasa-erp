@@ -34,6 +34,10 @@ export class CriarCompraItemDto {
 
   @IsOptional()
   @IsString()
+  categoria_base?: string;
+
+  @IsOptional()
+  @IsString()
   unidade?: string;
 
   @IsOptional()

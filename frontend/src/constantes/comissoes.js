@@ -1,1 +1,1 @@
-export { COMISSOES } from '../../../backend/shared/constantes/comissoes'
+export { COMISSOES } from '@backend/shared/constantes/comissoes'

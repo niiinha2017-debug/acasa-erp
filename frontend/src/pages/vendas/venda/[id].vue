@@ -83,7 +83,7 @@
             <div class="px-4 py-3 border-b border-border-ui text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
               Itens da venda
             </div>
-            <Table :columns="columnsItens" :rows="rowsItens" :boxed="false">
+            <Table :columns="columnsItens" :rows="rowsItens" :boxed="false" :flush="true">
               <template #cell-descricao="{ row }">
                 <div class="whitespace-pre-line text-sm">{{ row.descricao || '-' }}</div>
               </template>

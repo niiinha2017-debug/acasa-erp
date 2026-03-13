@@ -1,1 +1,1 @@
-export { TAXAS_CARTAO } from '../../../backend/shared/constantes/taxas-cartao'
+export { TAXAS_CARTAO } from '@backend/shared/constantes/taxas-cartao'

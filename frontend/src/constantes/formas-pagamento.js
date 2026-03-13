@@ -1,1 +1,1 @@
-export { FORMAS_PAGAMENTO } from '../../../backend/shared/constantes/formas-pagamento'
+export { FORMAS_PAGAMENTO } from '@backend/shared/constantes/formas-pagamento'

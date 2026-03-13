@@ -39,6 +39,10 @@ export class AtualizarCompraItemDto {
 
   @IsOptional()
   @IsString()
+  categoria_base?: string;
+
+  @IsOptional()
+  @IsString()
   unidade?: string;
 
   @IsOptional()

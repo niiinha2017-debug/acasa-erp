@@ -149,6 +149,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/configuracoes/estrategia-precos': RouteRecordInfo<
+      '/configuracoes/estrategia-precos',
+      '/configuracoes/estrategia-precos',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/configuracoes/permissoes': RouteRecordInfo<
       '/configuracoes/permissoes',
       '/configuracoes/permissoes',
@@ -583,6 +590,13 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
+    '/visual-lab': RouteRecordInfo<
+      '/visual-lab',
+      '/visual-lab',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
   }
 
   /**
@@ -701,6 +715,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/configuracoes/configuracoes.vue': {
       routes:
         | '/configuracoes/configuracoes'
+      views:
+        | never
+    }
+    'src/pages/configuracoes/estrategia-precos.vue': {
+      routes:
+        | '/configuracoes/estrategia-precos'
       views:
         | never
     }
@@ -1075,6 +1095,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/vendas/venda/[id]/editar.vue': {
       routes:
         | '/vendas/venda/[id]/editar'
+      views:
+        | never
+    }
+    'src/pages/visual-lab.vue': {
+      routes:
+        | '/visual-lab'
       views:
         | never
     }

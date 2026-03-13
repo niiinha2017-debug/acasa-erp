@@ -1047,6 +1047,50 @@ export class ApontamentoProducaoService {
     return { parede: { id: parede.id, nome: parede.nome } };
   }
 
+  /** Remove uma parede de um ambiente da medição (somente tarefa não concluída). */
+  async removerParedeMedicao(ambienteId: number, paredeId: number) {
+    const parede = await this.prisma.medicao_orcamento_parede.findUnique({
+      where: { id: paredeId },
+      include: {
+        medicao_orcamento_ambiente: {
+          include: { medicao_orcamento: { include: { agenda_loja: true } } },
+        },
+      },
+    });
+    if (!parede) throw new BadRequestException('Parede não encontrada.');
+    if (parede.medicao_orcamento_ambiente_id !== ambienteId) {
+      throw new BadRequestException('Parede não pertence ao ambiente informado.');
+    }
+    const status = parede.medicao_orcamento_ambiente?.medicao_orcamento?.agenda_loja?.status;
+    if (status && String(status).toUpperCase() === 'CONCLUIDO') {
+      throw new BadRequestException('Tarefa já concluída.');
+    }
+    await this.prisma.medicao_orcamento_parede.delete({ where: { id: paredeId } });
+    return { ok: true };
+  }
+
+  /** Remove um ambiente inteiro da medição (somente tarefa não concluída). */
+  async removerAmbienteMedicao(agendaLojaId: number, ambienteId: number) {
+    const agenda = await this.prisma.agenda_loja.findUnique({
+      where: { id: agendaLojaId },
+      select: { id: true, status: true },
+    });
+    if (!agenda) throw new BadRequestException('Tarefa não encontrada.');
+    if (String(agenda.status).toUpperCase() === 'CONCLUIDO') {
+      throw new BadRequestException('Tarefa já concluída.');
+    }
+    const ambiente = await this.prisma.medicao_orcamento_ambiente.findUnique({
+      where: { id: ambienteId },
+      include: { medicao_orcamento: true },
+    });
+    if (!ambiente) throw new BadRequestException('Ambiente não encontrado.');
+    if (ambiente.medicao_orcamento?.agenda_loja_id !== agendaLojaId) {
+      throw new BadRequestException('Ambiente não pertence à tarefa informada.');
+    }
+    await this.prisma.medicao_orcamento_ambiente.delete({ where: { id: ambienteId } });
+    return { ok: true };
+  }
+
   /**
    * Salva um único ambiente da medição (upsert por nome_ambiente). Não finaliza a tarefa.
    * Body: nome_ambiente, largura_m?, pe_direito_m?, profundidade_m?, observacoes?, medidas?: [{ descricao, valor_mm }].

@@ -1,10 +1,10 @@
 <template>
-  <div class="min-h-screen bg-slate-100 dark:bg-slate-950 text-text-main transition-colors duration-300" style="padding-top: calc(4rem + env(safe-area-inset-top, 0px));">
-    <Menu />
-    <!-- Área de conteúdo com stacking context explícito para o menu fixo ficar sempre por cima (Android/WebView/landscape) -->
-    <div class="relative z-0 isolation-isolate">
-      <!-- Barra de abas abertas -->
-      <div class="border-b border-slate-200/80 dark:border-slate-700/80 bg-white/95 dark:bg-slate-900/50 backdrop-blur-sm">
+  <div class="default-layout h-screen w-screen overflow-hidden flex flex-col bg-bg-card text-text-main transition-colors duration-300">
+    <!-- Header unificado: Menu + Abas (mesma cor de fundo, sem espaço entre eles) -->
+    <header class="flex-shrink-0 flex flex-col bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-700/80 shadow-sm pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
+      <Menu />
+      <!-- Barra de abas colada ao Menu -->
+      <div class="border-t border-slate-200/60 dark:border-slate-700/60">
         <div class="px-2 sm:px-4 md:px-6 overflow-x-auto custom-scroll -mb-px">
           <div class="flex items-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 min-w-max">
             <div
@@ -35,7 +35,10 @@
           </div>
         </div>
       </div>
-      <PageShell :contained="false" :padded="true">
+    </header>
+    <!-- Área de conteúdo: único scroll da página -->
+    <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-bg-card pb-[env(safe-area-inset-bottom)]">
+      <PageShell :contained="false" :padded="false">
         <slot />
       </PageShell>
     </div>

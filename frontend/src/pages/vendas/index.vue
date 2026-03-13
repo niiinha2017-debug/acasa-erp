@@ -29,7 +29,7 @@
         </template>
       </PageHeader>
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-6">
+      <div class="pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-6">
         <div v-if="loading" class="text-center py-10">
           <i class="pi pi-spin pi-spinner text-2xl text-text-soft"></i>
         </div>
@@ -65,10 +65,11 @@
           <div class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden">
             <Table
               :columns="columns"
-              :rows="filtradas"
+              :rows="rowsToShow"
               :loading="loading"
               empty-text="Nenhuma venda encontrada."
               :boxed="false"
+              :flush="true"
             >
               <template #cell-cliente="{ row }">
                 <div class="flex flex-col py-1">
@@ -113,6 +114,14 @@
                 />
               </template>
             </Table>
+            <TablePagination
+              flush
+              v-if="total > 0"
+              :page="page"
+              :page-size="pageSize"
+              :total="total"
+              @update:page="setPage"
+            />
           </div>
         </template>
       </div>
@@ -121,13 +130,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { confirm } from '@/services/confirm'
 import { notify } from '@/services/notify'
 import { can } from '@/services/permissions'
 import api from '@/services/api'
 import { format } from '@/utils/format'
+import { usePagination } from '@/composables/usePagination'
 
 definePage({ meta: { perm: 'posvenda.ver' } })
 
@@ -161,6 +171,12 @@ const filtradas = computed(() => {
     return cliente.includes(f) || status.includes(f) || pag.includes(f) || id.includes(f)
   })
 })
+
+const { page, setPage, total, totalPages, pageSize, rowsToShow } = usePagination(
+  computed(() => filtradas.value),
+  { pageSize: 15 },
+)
+watch(filtro, () => setPage(1))
 
 async function carregar() {
   if (!can('posvenda.ver')) return notify.error('Acesso negado.')

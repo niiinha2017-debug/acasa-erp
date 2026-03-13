@@ -31,13 +31,14 @@
           </template>
         </PageHeader>
 
-        <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui">
+        <div class="pb-5 md:pb-6 pt-4 border-t border-border-ui">
           <Table
             :columns="columns"
             :rows="usuariosFiltrados"
             :loading="loadingTabela"
             empty-text="Nenhum colaborador encontrado."
             :boxed="false"
+            :flush="true"
           >
             <template #cell-nome="{ row }">
               <div class="flex items-center gap-3 py-2">

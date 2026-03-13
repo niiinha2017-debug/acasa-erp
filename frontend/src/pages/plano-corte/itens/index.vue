@@ -76,12 +76,14 @@
           </Button>
         </div>
 
+        <div class="native-table-flush overflow-visible">
         <Table
           :columns="columns"
           :rows="rowsFiltradas"
           :loading="loading"
           empty-text="Nenhum item encontrado. Selecione um fornecedor e clique em Novo Item ou Atualizar."
           :boxed="false"
+          :flush="true"
         >
           <template #cell-nome_produto="{ row }">
             <div class="flex items-center gap-3 py-1">
@@ -129,6 +131,7 @@
             </div>
           </template>
         </Table>
+        </div>
       </div>
     </div>
   </div>

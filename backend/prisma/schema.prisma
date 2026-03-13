@@ -1,6 +1,7 @@
 generator client {
-  provider = "prisma-client-js"
- }
+  provider      = "prisma-client-js"
+  binaryTargets  = ["native", "debian-openssl-3.0.x"]
+}
 
 datasource db {
   provider = "mysql"
@@ -502,6 +503,8 @@ model produtos {
   valor_total     Decimal? @db.Decimal(10, 2)
 
   categoria String?
+  categoria_base String?
+  tipo_aplicacao String @default("MDF")
 
   // ✅ novo campo (1 imagem)
   imagem_url String?
@@ -1419,6 +1422,7 @@ model compras_itens {
   marca        String?
   cor          String?
   medida       String?
+  categoria_base String?
   unidade      String
 
   quantidade     Decimal @default(1.00) @db.Decimal(10, 2)
@@ -1518,6 +1522,43 @@ model clausulas_modelos {
   @@unique([tipo, modulo_key])
   @@index([tipo, ordem])
   @@map("clausulas_modelos")
+}
+
+enum SearchStrategy {
+  MIN_PRICE
+  AVG_PRICE
+  MAX_PRICE
+}
+
+model GlobalConfig {
+  id              Int            @id @default(autoincrement())
+  key             String         @unique @db.VarChar(80)
+  search_strategy SearchStrategy @default(AVG_PRICE)
+  criado_em       DateTime       @default(now())
+  atualizado_em   DateTime       @updatedAt
+
+  @@map("global_config")
+}
+
+model OperationalMatrix {
+  id    Int    @id @default(autoincrement())
+
+  category  String @db.VarChar(100)
+  thickness Int
+  group     String @db.VarChar(200)
+
+  min_cost_base Float
+  avg_cost_base Float
+  max_cost_base Float
+
+  mdf_extra_pct Float @default(0)
+  fix_insumo_value Float
+
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  @@unique([category, thickness, group])
+  @@map("operational_matrix")
 }
 
 enum PontoTipoRegistro {

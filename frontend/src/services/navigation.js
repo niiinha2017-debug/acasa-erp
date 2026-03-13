@@ -2,6 +2,7 @@
 /** etapaKey: chave do mapa de cores A Casa (CADASTRO, MEDICAO, ORCAMENTO, AGENDAR_APRESENTACAO, FECHAR_VENDA, AGENDAR_FECHAMENTO, MEDIDA_FINA, PRODUCAO, MONTAGEM, POS_VENDA_GARANTIA) para indicador e hover no menu. */
 export const NAV_SCHEMA = {
   comercial: [
+    { label: 'Visual Lab', to: '/visual-lab', icon: 'pi-box' },
     { label: 'Agenda de Venda', to: '/agendamentos/loja', icon: 'pi-calendar-clock', perm: 'agendamentos.vendas', etapaKey: 'AGENDAR_APRESENTACAO' },
     { label: 'Fluxo de Clientes', to: '/relatorios/acompanhamento-status', icon: 'pi-list-check', perm: 'relatorios.acompanhamento_status.ver', etapaKey: 'MEDICAO' },
     { label: 'Orçamento', to: '/orcamentos', icon: 'pi-file-edit', perm: 'orcamentos.ver', etapaKey: 'ORCAMENTO' },
@@ -61,6 +62,8 @@ export const NAV_SCHEMA = {
     },
     { divider: true },
     { label: 'Cadastro da Empresa', to: '/configuracoes/configuracoes', icon: 'pi-sliders-h', perm: 'configuracoes.empresa.ver' },
+    { label: 'Estratégia de Preços', to: '/configuracoes/estrategia-precos', icon: 'pi-chart-line', perm: 'configuracoes.estrategia_precos.ver' },
+    { label: 'Visual Lab', to: '/visual-lab', icon: 'pi-box' },
   ],
 
   relatorios: [

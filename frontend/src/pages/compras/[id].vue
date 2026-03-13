@@ -1,5 +1,5 @@
 <template>
-  <div class="login-font w-full h-full mt-4 mb-8 mx-2 lg:mx-4 rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
+  <div class="login-font w-full h-full rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
     <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
     <PageHeader
       :title="isEdit ? `Editar Compra #${compraId}` : 'Nova Compra'"
@@ -9,7 +9,7 @@
       class="border-b border-border-ui"
     />
 
-    <div class="p-8 lg:p-12">
+    <div class="px-4 py-4 md:px-6 md:py-6 lg:px-8 lg:py-8">
       <Loading v-if="loading" />
 
       <form v-else class="space-y-10" @submit.prevent="confirmarSalvarCompra" autocomplete="off">
@@ -166,6 +166,15 @@
   @input="itemNovo.valorUnitarioMask = maskMoneyBR($event.target.value)"
 />
 
+<SearchInput
+  class="col-span-12 md:col-span-4"
+  v-model="itemNovo.categoria_base"
+  mode="select"
+  label="Categoria Base"
+  :options="categoriaBaseOptions"
+  placeholder="Selecione..."
+/>
+
 
             <div class="col-span-12">
               <Button
@@ -184,8 +193,16 @@
             <Table :columns="columnsItens" :rows="itens" boxed>
 <template #cell-nome_produto="{ row }">
   <div class="py-2">
-    <div class="font-black text-slate-700 uppercase text-xs">
-      {{ row.nome_produto }}
+    <div class="flex items-center gap-2 flex-wrap">
+      <div class="font-black text-slate-700 uppercase text-xs">
+        {{ row.nome_produto }}
+      </div>
+      <span
+        class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide border"
+        :class="categoriaBaseBadgeClass(row?.categoria_base)"
+      >
+        {{ getCategoriaBaseLabel(row?.categoria_base) }}
+      </span>
     </div>
 
     <div v-if="descDoItem(row)" class="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
@@ -297,6 +314,7 @@ import { maskMoneyBR } from '@/utils/masks'
 import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
 import { can } from '@/services/permissions'
 import { closeTabAndGo } from '@/utils/tabs'
+import { CATEGORIAS_BASE, getCategoriaBaseLabel } from '@/constantes/categorias-base'
 
 definePage({ meta: { perm: 'compras.ver' } })
 
@@ -342,6 +360,7 @@ const itemNovoKey = ref(0)
 const itemNovo = reactive({
   produto_id: null,
   nome_produto: '',
+  categoria_base: 'PRIMARIA',
   marca: null,
   cor: null,
   medida: null,
@@ -404,6 +423,8 @@ const columnsItens = [
   { key: 'acoes', label: 'Ações', width: '120px', align: 'center' },
 ]
 
+const categoriaBaseOptions = computed(() => CATEGORIAS_BASE)
+
 // =======================
 // HELPERS
 // =======================
@@ -415,6 +436,7 @@ function resetarItemNovo() {
   Object.assign(itemNovo, {
     produto_id: null,
     nome_produto: '',
+    categoria_base: 'PRIMARIA',
     marca: null,
     cor: null,
     medida: null,
@@ -476,6 +498,7 @@ const onSelecionarProdutoNovo = (id) => {
 
   itemNovo.produto_id = cleanId
   itemNovo.nome_produto = p.nome_produto
+  itemNovo.categoria_base = p.categoria_base || 'PRIMARIA'
   itemNovo.marca = p.marca ?? null
   itemNovo.cor = p.cor ?? null
   itemNovo.medida = p.medida ?? null
@@ -512,6 +535,7 @@ if (!itemNovo.unidade) {
     _key: Date.now() + Math.random(),
     produto_id: Number(itemNovo.produto_id),
     nome_produto: itemNovo.nome_produto,
+    categoria_base: itemNovo.categoria_base || 'PRIMARIA',
     marca: itemNovo.marca,
     cor: itemNovo.cor,
     medida: itemNovo.medida,
@@ -637,15 +661,22 @@ const salvarCompra = async () => {
   try {
     const total = round2(Number(totalCalculado.value || 0))
 
+    const fornecedorId = Number(fornecedorSelecionado.value)
+    if (!fornecedorId) {
+      notify.error('Selecione um fornecedor.')
+      salvando.value = false
+      return
+    }
     const payload = {
       tipo_compra: tipoCompra.value,
-      fornecedor_id: Number(fornecedorSelecionado.value),
+      fornecedor_id: fornecedorId,
       venda_id: tipoCompra.value === 'CLIENTE_AMBIENTE' ? Number(vendaSelecionada.value) : null,
       data_compra: form.data_compra,
       valor_total: total,
       itens: itens.value.map((it) => ({
         ...(it.id ? { id: Number(it.id) } : {}),
         produto_id: Number(it.produto_id),
+        categoria_base: it.categoria_base ? String(it.categoria_base).trim().toUpperCase() : 'PRIMARIA',
         quantidade: Number(it.quantidade),
         unidade: it.unidade,
         valor_unitario: Number(it.valor_unitario),
@@ -708,10 +739,13 @@ const carregarProdutos = async () => {
     const data = res?.data ?? res
     const arr = Array.isArray(data) ? data : []
 
-produtoOptions.value = arr.map((p) => ({
-  value: p.id,
-  label: `${p.nome_produto}${p.marca ? ` • ${p.marca}` : ''}${p.cor ? ` • ${p.cor}` : ''}${p.medida ? ` • ${p.medida}` : ''}`,
-}))
+produtoOptions.value = arr.map((p) => {
+  const esp = p.espessura_mm != null ? `${p.espessura_mm}MM` : ''
+  return {
+    value: p.id,
+    label: `${p.nome_produto}${p.marca ? ` • ${p.marca}` : ''}${p.cor ? ` • ${p.cor}` : ''}${p.medida ? ` • ${p.medida}` : ''}${esp ? ` • ${esp}` : ''}`.trim(),
+  }
+})
 
 
     const map = new Map()
@@ -719,6 +753,7 @@ produtoOptions.value = arr.map((p) => ({
       map.set(Number(p.id), {
         id: p.id,
         nome_produto: p.nome_produto,
+        categoria_base: p.categoria_base || 'PRIMARIA',
         marca: p.marca ?? null,
         cor: p.cor ?? null,
         medida: p.medida ?? null,
@@ -781,6 +816,17 @@ function descDoItem(row) {
   return partes.join(' • ')
 }
 
+function categoriaBaseBadgeClass(value) {
+  const key = String(value || '').trim().toUpperCase()
+  if (key === 'TERCIARIA') {
+    return 'bg-amber-50 text-amber-800 border-amber-200'
+  }
+  if (key === 'SECUNDARIA') {
+    return 'bg-emerald-50 text-emerald-800 border-emerald-200'
+  }
+  return 'bg-slate-100 text-slate-700 border-slate-200'
+}
+
 
 const carregarDadosIniciais = async () => {
   loading.value = true
@@ -790,14 +836,20 @@ const vendRes = await VendaService.listarComContratoVigente()
 let fornecedores = []
 try {
   const fornRes = await FornecedorService.select()
-  fornecedores = Array.isArray(fornRes?.data) ? fornRes.data : []
+  const raw = Array.isArray(fornRes?.data) ? fornRes.data : []
+  fornecedores = raw.map((f) => {
+    const partes = [f?.nome_fantasia, f?.razao_social].filter(Boolean)
+    const label = partes.length ? partes.join(' • ') : (f?.label || `ID #${f?.id}`)
+    return { value: Number(f?.id ?? f?.value ?? 0), label }
+  }).filter((f) => f.value > 0)
 } catch {
   const fornListRes = await FornecedorService.listar()
   const rows = Array.isArray(fornListRes?.data) ? fornListRes.data : []
-  fornecedores = rows.map((f) => ({
-    value: f?.id,
-    label: f?.nome_fantasia || f?.razao_social || `ID #${f?.id}`,
-  }))
+  fornecedores = rows.map((f) => {
+    const partes = [f?.nome_fantasia, f?.razao_social].filter(Boolean)
+    const label = partes.length ? partes.join(' • ') : `ID #${f?.id}`
+    return { value: Number(f?.id ?? 0), label }
+  }).filter((f) => f.value > 0)
 }
 
 listaFornecedores.value = fornecedores

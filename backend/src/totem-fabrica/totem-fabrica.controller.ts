@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Param, Query, Req, UseGuards, ParseIntPipe } from '@nestjs/common';
+import { Body, Controller, Get, Post, Param, Query, Req, UseGuards, ParseIntPipe, Delete } from '@nestjs/common';
 import { ApontamentoProducaoService, SobraTotemDto } from '../apontamento-producao/apontamento-producao.service';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
@@ -28,6 +28,26 @@ export class TotemFabricaController {
     },
   ) {
     return this.apontamentoService.salvarParedeMedicao(ambienteId, body);
+  }
+
+  /** Remove uma parede de um ambiente da medição (pré-orçamento). */
+  @Delete('ambiente/:ambienteId/parede/:paredeId')
+  @Permissoes('agendamentos.producao')
+  removerParedeMedicao(
+    @Param('ambienteId', ParseIntPipe) ambienteId: number,
+    @Param('paredeId', ParseIntPipe) paredeId: number,
+  ) {
+    return this.apontamentoService.removerParedeMedicao(ambienteId, paredeId);
+  }
+
+  /** Remove um ambiente inteiro da medição (pré-orçamento). */
+  @Delete(':id/ambiente/:ambienteId')
+  @Permissoes('agendamentos.producao')
+  removerAmbienteMedicao(
+    @Param('id', ParseIntPipe) agendaLojaId: number,
+    @Param('ambienteId', ParseIntPipe) ambienteId: number,
+  ) {
+    return this.apontamentoService.removerAmbienteMedicao(agendaLojaId, ambienteId);
   }
 
   /**

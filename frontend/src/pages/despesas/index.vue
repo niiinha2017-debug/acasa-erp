@@ -50,7 +50,7 @@
         </template>
       </PageHeader>
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui">
+      <div class="pb-5 md:pb-6 pt-4 border-t border-border-ui">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <MetricCard
             label="Entradas"
@@ -74,10 +74,11 @@
 
         <Table
           :columns="columns"
-          :rows="filtradas"
+          :rows="rowsToShow"
           :loading="loading"
           empty-text="Nenhuma movimentação registrada."
           :boxed="false"
+          :flush="true"
         >
           <template #cell-descricao="{ row }">
             <div class="flex flex-col py-1 gap-0.5">
@@ -129,19 +130,28 @@
             </div>
           </template>
         </Table>
+        <TablePagination
+          flush
+          v-if="total > 0"
+          :page="page"
+          :page-size="pageSize"
+          :total="total"
+          @update:page="setPage"
+        />
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { confirm } from '@/services/confirm'
 import { notify } from '@/services/notify'
 import { can } from '@/services/permissions'
 import api from '@/services/api' // Ajuste se usar Service específico
 import { format } from '@/utils/format'
+import { usePagination } from '@/composables/usePagination'
 
 definePage({ meta: { perm: 'despesas.ver' } })
 
@@ -195,6 +205,12 @@ const filtradas = computed(() => {
     return desc.includes(f) || cat.includes(f)
   })
 })
+
+const { page, setPage, total, totalPages, pageSize, rowsToShow } = usePagination(
+  filtradas,
+  { pageSize: 15 },
+)
+watch(filtro, () => setPage(1))
 
 const totalEntradas = computed(() => despesasExibir.value.filter(d => (d.tipo || d.tipo_movimento) === 'ENTRADA').reduce((a, b) => a + Number((b.valor ?? b.valor_total) ?? 0), 0))
 const totalSaidas = computed(() => despesasExibir.value.filter(d => (d.tipo || d.tipo_movimento) === 'SAIDA').reduce((a, b) => a + Number((b.valor ?? b.valor_total) ?? 0), 0))

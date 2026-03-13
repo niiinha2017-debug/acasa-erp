@@ -90,6 +90,18 @@
                 />
               </div>
 
+              <!-- Categoria Base -->
+              <div class="col-span-12 md:col-span-4">
+                <SearchInput
+                  v-model="form.categoria_base"
+                  mode="select"
+                  label="Categoria Base"
+                  :options="categoriasBaseOptions"
+                  placeholder="SELECIONE..."
+                  required
+                />
+              </div>
+
               <!-- Valor unitário -->
               <div class="col-span-12 md:col-span-6">
                 <div class="relative">
@@ -278,6 +290,7 @@ import { notify } from '@/services/notify'
 import { maskMoneyBR } from '@/utils/masks'
 import { moedaParaNumero } from '@/utils/number'
 import { UNIDADES } from '@/constantes/unidades'
+import { CATEGORIAS_BASE } from '@/constantes/categorias-base'
 import { ArquivosService } from '@/services/arquivos.service'
 
 const props = defineProps({
@@ -307,6 +320,7 @@ const form = reactive({
   cor: '',
   medida: '',
   unidade: 'M',
+  categoria_base: 'PRIMARIA',
   marca: '',
   valor_unitario_mask: '0,00',
   status: 'ATIVO',
@@ -325,6 +339,7 @@ const unidadesOptions = computed(() =>
     label: u.label,
   })),
 )
+const categoriasBaseOptions = computed(() => CATEGORIAS_BASE)
 
 function norm(v) {
   const s = String(v ?? '').trim().toUpperCase()
@@ -357,6 +372,7 @@ function resetForm() {
     cor: '',
     medida: '',
     unidade: 'M',
+    categoria_base: 'PRIMARIA',
     marca: '',
     valor_unitario_mask: '0,00',
     status: 'ATIVO',
@@ -451,6 +467,10 @@ async function salvar() {
     notify.warn('Selecione a unidade.')
     return
   }
+  if (!form.categoria_base) {
+    notify.warn('Selecione a categoria base.')
+    return
+  }
 
   const valorNum = moedaParaNumero(form.valor_unitario_mask)
 if (!Number(valorNum || 0)) {
@@ -465,6 +485,7 @@ if (!Number(valorNum || 0)) {
     medida: form.medida?.trim() ? form.medida.trim() : null,
     unidade: form.unidade || 'M',
     marca: form.marca?.trim() ? form.marca.trim() : null,
+    categoria_base: form.categoria_base ? String(form.categoria_base).trim().toUpperCase() : 'PRIMARIA',
     valor_unitario: Number(valorNum || 0),
     status: form.status,
     imagem_url: null,

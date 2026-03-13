@@ -2,13 +2,14 @@
   <div
     :class="[
       boxed ? 'rounded-2xl border border-border-ui bg-bg-card' : '',
+      !boxed && flush ? 'table-flush' : '',
       'w-full relative overflow-hidden transition-all duration-300'
     ]"
   >
-    <div class="w-full overflow-x-auto custom-scrollbar">
-      <table class="w-full border-collapse min-w-[520px] sm:min-w-[640px] md:min-w-[800px]">
-        <thead>
-          <tr class="bg-slate-50/70 dark:bg-slate-800/40 border-b border-border-ui">
+    <div :class="['w-full overflow-x-auto custom-scrollbar', !boxed && flush ? 'table-flush-scroll' : '']">
+      <table :class="['w-full border-collapse min-w-[520px] sm:min-w-[640px] md:min-w-[800px]', !boxed && flush ? 'table-flush-table' : '']">
+        <thead :class="!boxed && flush ? 'table-flush-head' : ''">
+          <tr :class="['bg-slate-50/70 dark:bg-slate-800/40 border-b border-border-ui', !boxed && flush ? 'table-flush-head-row' : '']">
             <th
               v-if="hasExpand"
               class="px-4 py-3 align-top text-[11px] font-semibold text-text-soft whitespace-nowrap uppercase tracking-wide"
@@ -112,6 +113,7 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
   emptyText: { type: String, default: 'Nenhum registro encontrado.' },
   boxed: { type: Boolean, default: true },
+  flush: { type: Boolean, default: false },
   expandable: { type: Boolean, default: false },
   rowKey: { type: [String, Function], default: 'id' },
   expanded: { type: Array, default: null },
@@ -177,6 +179,27 @@ watch(
 }
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
   background: #334155;
+}
+
+.table-flush {
+  width: 100vw;
+  max-width: 100vw;
+  margin-inline: calc(50% - 50vw);
+  border-radius: 0;
+}
+
+.table-flush-scroll,
+.table-flush-table,
+.table-flush-head,
+.table-flush-head-row {
+  width: 100vw;
+  min-width: 100vw;
+}
+
+@media (min-width: 768px) {
+  .table-flush {
+    margin-inline: calc(50% - 50vw);
+  }
 }
 
 tr:hover td:first-child {

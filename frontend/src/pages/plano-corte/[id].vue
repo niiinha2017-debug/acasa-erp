@@ -1,5 +1,5 @@
 <template>
-  <div class="login-font w-full h-full mt-4 mb-8 mx-2 lg:mx-4 rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
+  <div class="login-font w-full h-full rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
     <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
     <PageHeader
       :title="isEdit ? `Editar Serviço de Corte #${planoId}` : 'Novo Serviço de Corte'"
@@ -22,7 +22,7 @@
       </template>
     </PageHeader>
 
-    <div class="p-8 lg:p-12">
+    <div class="px-4 py-4 md:px-6 md:py-6 lg:px-8 lg:py-8">
       <Loading v-if="loading" />
 
       <form v-else class="space-y-10" @submit.prevent="salvar" autocomplete="off">
@@ -313,9 +313,20 @@ const itensDisponiveis = ref([])
 const itens = ref([])
 const itemNovo = ref({ item_id: null, unidade: '', quantidade: '', valorUnitarioMask: 'R$ 0,00' })
 
+function descricaoProdutoCorte(item) {
+  const partes = [item.nome_produto]
+  if (item.cor) partes.push(`(${item.cor})`)
+  const extras = [item.marca, item.medida]
+  const dims = [item.largura_mm, item.comprimento_mm, item.espessura_mm].filter(Boolean)
+  if (dims.length) extras.push(`${dims.join('×')}mm`)
+  const extraStr = extras.filter(Boolean).join(' • ')
+  if (extraStr) partes.push('—', extraStr)
+  return partes.join(' ').trim()
+}
+
 const produtoOptions = computed(() =>
   itensDisponiveis.value.map((i) => ({
-    label: `${i.nome_produto} ${i.cor ? `(${i.cor})` : ''}`.trim(),
+    label: descricaoProdutoCorte(i),
     value: i.id,
   }))
 )
@@ -418,6 +429,15 @@ async function onSelecionarFornecedor(v) {
 function onSelecionarProdutoNovo(v) {
   const item = itensDisponiveis.value.find((i) => Number(i.id) === Number(v))
   itemNovo.value.unidade = item?.unidade || ''
+  // Preenche valor unitário do banco: valor_unitario do item ou último comprado/vendido
+  if (item) {
+    const valor =
+      Number(item.valor_unitario) ||
+      Number(item.ultimo_valor_comprado) ||
+      Number(item.ultimo_valor_vendido) ||
+      0
+    itemNovo.value.valorUnitarioMask = maskMoneyBR(valor)
+  }
 }
 
 function limparItemNovo() {

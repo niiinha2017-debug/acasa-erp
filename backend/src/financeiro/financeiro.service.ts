@@ -14,6 +14,10 @@ import {
   CustosEstruturaService,
   CATEGORIAS_DESPESA_FIXA_SALARIOS,
 } from './custos-estrutura.service';
+import type {
+  FechamentoFornecedorItem,
+  FechamentoFornecedorItemOrigem,
+} from './dto/fechamento-fornecedor.dto';
 
 @Injectable()
 export class FinanceiroService {
@@ -121,6 +125,176 @@ export class FinanceiroService {
       mes,
       ano,
     };
+  }
+
+  // =========================================================
+  // ✅ FECHAMENTO POR FORNECEDOR (Contas a Pagar agrupado)
+  // Agrupa por fornecedorId + mês/ano; soma Compra + Serviço de Corte; subtrai Abatimentos (créditos).
+  // =========================================================
+  async listarFechamentoPorFornecedor(filtros: {
+    mes: number;
+    ano: number;
+    fornecedor_id?: number;
+  }): Promise<FechamentoFornecedorItem[]> {
+    const mes = Number(filtros.mes) || new Date().getMonth() + 1;
+    const ano = Number(filtros.ano) || new Date().getFullYear();
+    const fornecedorId = filtros.fornecedor_id;
+
+    const inicio = new Date(ano, mes - 1, 1, 0, 0, 0);
+    const fim = new Date(ano, mes, 0, 23, 59, 59);
+
+    const whereCompras: any = {
+      status: SF.EM_ABERTO,
+      data_compra: { gte: inicio, lte: fim },
+    };
+    if (fornecedorId != null) whereCompras.fornecedor_id = fornecedorId;
+
+    const wherePlanos: any = {
+      status: { notIn: [SF.COMPENSADO, 'CANCELADO'] },
+      data_venda: { gte: inicio, lte: fim },
+    };
+    if (fornecedorId != null) wherePlanos.fornecedor_id = fornecedorId;
+
+    const [compras, planos] = await Promise.all([
+      this.prisma.compras.findMany({
+        where: whereCompras,
+        include: {
+          fornecedor: { select: { id: true, nome_fantasia: true, razao_social: true } },
+          itens: { select: { nome_produto: true } },
+        },
+        orderBy: { data_compra: 'asc' },
+      }),
+      this.prisma.plano_corte.findMany({
+        where: wherePlanos,
+        include: { fornecedor: { select: { id: true, nome_fantasia: true, razao_social: true } } },
+        orderBy: { data_venda: 'asc' },
+      }),
+    ]);
+
+    const fornecedorIds = Array.from(
+      new Set([
+        ...compras.map((c) => c.fornecedor_id),
+        ...planos.map((p) => p.fornecedor_id),
+      ]),
+    );
+    const fornecedoresComCredito =
+      fornecedorIds.length > 0
+        ? await this.prisma.fornecedor.findMany({
+            where: { id: { in: fornecedorIds } },
+            select: { id: true, nome_fantasia: true, razao_social: true, saldo_credito: true },
+          })
+        : [];
+
+    const creditoPorFornecedor = new Map<number, number>();
+    for (const f of fornecedoresComCredito) {
+      creditoPorFornecedor.set(f.id, Number((f as any).saldo_credito ?? 0));
+    }
+
+    // Agrupar por fornecedor_id
+    const porFornecedor = new Map<
+      number,
+      {
+        fornecedor_nome: string | null;
+        itensOrigem: FechamentoFornecedorItemOrigem[];
+        totalCompras: number;
+        totalPlanos: number;
+      }
+    >();
+
+    const addFornecedor = (id: number, nome: string | null) => {
+      if (!porFornecedor.has(id)) {
+        porFornecedor.set(id, {
+          fornecedor_nome: nome,
+          itensOrigem: [],
+          totalCompras: 0,
+          totalPlanos: 0,
+        });
+      }
+    };
+
+    for (const c of compras) {
+      const fid = c.fornecedor_id;
+      const nome = (c as any).fornecedor?.nome_fantasia || (c as any).fornecedor?.razao_social || null;
+      addFornecedor(fid, nome);
+      const entry = porFornecedor.get(fid)!;
+      const valor = Number((c as any).valor_total ?? 0);
+      entry.totalCompras += valor;
+      const itens = (c as any).itens || [];
+      const nomesProdutos = itens.map((i: any) => i.nome_produto || '').filter(Boolean);
+      let dataStr = '';
+      if (c.data_compra) {
+        const d = new Date(c.data_compra);
+        dataStr = `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`;
+      }
+      const descricao =
+        nomesProdutos.length > 0 ? `Compra — ${nomesProdutos.join(', ')}` : (c as any).tipo_compra || 'Compra';
+      entry.itensOrigem.push({
+        id: c.id,
+        origem: 'COMPRA',
+        descricao,
+        data_referencia: dataStr || null,
+        valor,
+        status: c.status,
+      });
+    }
+
+    for (const p of planos) {
+      const fid = p.fornecedor_id;
+      const nome = (p as any).fornecedor?.nome_fantasia || (p as any).fornecedor?.razao_social || null;
+      addFornecedor(fid, nome);
+      const entry = porFornecedor.get(fid)!;
+      const valor = Number((p as any).valor_total ?? 0);
+      entry.totalPlanos += valor;
+      let dataStr = '';
+      if (p.data_venda) {
+        const d = new Date(p.data_venda);
+        dataStr = `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`;
+      }
+      entry.itensOrigem.push({
+        id: p.id,
+        origem: 'SERVICO_CORTE',
+        descricao: 'Serviço de Corte',
+        data_referencia: dataStr || null,
+        valor,
+        status: p.status,
+      });
+    }
+
+    const result: FechamentoFornecedorItem[] = [];
+
+    for (const [fid, data] of porFornecedor.entries()) {
+      const subtotal = this.round2(data.totalCompras);
+      const creditoDisponivel = creditoPorFornecedor.get(fid) ?? 0;
+      const abatePlanos = this.round2(Math.min(data.totalPlanos, subtotal));
+      const baseAposPlanos = this.round2(Math.max(0, subtotal - abatePlanos));
+      const abateCredito = this.round2(Math.min(creditoDisponivel, baseAposPlanos));
+      const total_abatimentos = this.round2(abatePlanos + abateCredito);
+      const valor_liquido = this.round2(Math.max(0, subtotal - total_abatimentos));
+
+      const fornecedorNome =
+        data.fornecedor_nome ||
+        fornecedoresComCredito.find((f) => f.id === fid)?.nome_fantasia ||
+        fornecedoresComCredito.find((f) => f.id === fid)?.razao_social ||
+        null;
+
+      result.push({
+        fornecedor_id: fid,
+        fornecedor_nome: fornecedorNome,
+        mes,
+        ano,
+        subtotal,
+        total_abatimentos,
+        valor_liquido,
+        itens: data.itensOrigem.sort((a, b) => {
+          const da = a.data_referencia || '';
+          const db = b.data_referencia || '';
+          return da.localeCompare(db) || a.origem.localeCompare(b.origem);
+        }),
+      });
+    }
+
+    result.sort((a, b) => (a.fornecedor_nome || '').localeCompare(b.fornecedor_nome || ''));
+    return result;
   }
 
   // =========================================================

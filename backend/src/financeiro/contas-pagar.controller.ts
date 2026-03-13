@@ -89,6 +89,23 @@ export class ContasPagarController {
     });
   }
 
+  // ✅ LISTA FECHAMENTO POR FORNECEDOR (agrupado por fornecedor + mês/ano)
+  @Get('fechamento-por-fornecedor')
+  @Permissoes('contas_pagar.ver')
+  async listarFechamentoPorFornecedor(
+    @Query('mes') mes?: string,
+    @Query('ano') ano?: string,
+    @Query('fornecedor_id') fornecedor_id?: string,
+  ) {
+    const mesNum = mes ? Number(mes) : new Date().getMonth() + 1;
+    const anoNum = ano ? Number(ano) : new Date().getFullYear();
+    return this.service.listarFechamentoPorFornecedor({
+      mes: Number.isFinite(mesNum) ? mesNum : new Date().getMonth() + 1,
+      ano: Number.isFinite(anoNum) ? anoNum : new Date().getFullYear(),
+      fornecedor_id: fornecedor_id ? this.cleanIdOrFail(fornecedor_id) : undefined,
+    });
+  }
+
   // ✅ FECHAMENTOS
   @Get('fechamentos')
   @Permissoes('contas_pagar.ver')

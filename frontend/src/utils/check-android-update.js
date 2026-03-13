@@ -1,3 +1,5 @@
+import { confirm } from '@/services/confirm'
+
 /**
  * No Android (Capacitor), verifica se existe versão nova no subdomínio.
  * Se existir, mostra aviso e abre o link para baixar o APK.
@@ -53,14 +55,14 @@ export async function checkAndroidUpdate () {
     const hasNewer = isNewer(serverVersion, currentVersion)
     if (!hasNewer) return noUpdate
     const msg = `Há uma nova versão (${serverVersion}) disponível.\n\nAbrir no navegador para baixar e instalar o APK?`
-    if (window.confirm(msg)) {
+    const ok = await confirm.show('Nova versão disponível', msg)
+    if (ok) {
       try {
         const { Browser } = await import('@capacitor/browser')
         await Browser.open({ url })
       } catch (e) {
         window.open(url, '_blank')
       }
-    } else {
     }
     return { updateAvailable: true, serverVersion, url }
   } catch (err) {

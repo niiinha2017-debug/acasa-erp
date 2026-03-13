@@ -100,7 +100,7 @@
             <template v-else>
               <!-- Abas: Paredes (Parede Pia, Parede Geladeira...) -->
               <div class="mb-4">
-                <p class="text-xs font-semibold text-text-soft mb-2">{{ nomeAmbienteAtual() }} — Paredes / Lados</p>
+                <p class="mb-2 text-xs font-semibold text-text-soft">{{ nomeAmbienteAtual() }} — Paredes / Lados</p>
                 <div class="flex flex-wrap gap-2 items-center">
                   <button
                     v-for="p in listaParedes"
@@ -121,17 +121,6 @@
                   </button>
                 </div>
               </div>
-              <!-- Cards resumidos das paredes já salvas na lista -->
-              <div v-if="listaParedes.length > 0" class="mb-6 flex flex-wrap gap-2">
-                <div
-                  v-for="p in listaParedes"
-                  :key="(p.id || p._key) + '-card'"
-                  class="rounded-xl border border-border-ui bg-bg-card px-3 py-2 text-sm text-text-main shadow-sm"
-                >
-                  <span class="font-medium">{{ p.nome || 'Parede' }}</span>
-                  <span class="text-text-soft ml-1">— {{ resumoMedidasParede(p) }}</span>
-                </div>
-              </div>
 
               <!-- Ficha da parede selecionada: Auto-save no blur -->
               <div v-if="mostrarFormParede" class="space-y-6">
@@ -147,46 +136,83 @@
                   <Input v-model.number="larguraMm" type="number" inputmode="numeric" class="col-span-12 md:col-span-4" label="Largura (mm)" placeholder="Ex: 3200" @blur="onBlurSalvar" />
                   <Input v-model.number="alturaMm" type="number" inputmode="numeric" class="col-span-12 md:col-span-4" label="Altura / Pé-direito (mm)" placeholder="Ex: 2700" @blur="onBlurSalvar" />
                   <Input v-model.number="profundidadeMm" type="number" inputmode="numeric" class="col-span-12 md:col-span-4" label="Profundidade (mm)" placeholder="Ex: 450" @blur="onBlurSalvar" />
-                  <div class="col-span-12">
-                    <Input v-model="observacoes" type="text" label="Observações (esta parede)" placeholder="Texto livre..." class="w-full" @blur="onBlurSalvar" />
-                  </div>
                 </div>
                 <div class="border-t border-border-ui pt-6">
                   <div class="flex items-center justify-between gap-2 mb-3">
-                    <h3 class="text-sm font-semibold text-text-main">Medidas adicionais</h3>
+                    <h3 class="text-sm font-semibold text-text-main">Medidas do ambiente</h3>
                     <Button type="button" variant="secondary" size="sm" class="!rounded-xl" @click="adicionarMedida">
                       <i class="pi pi-plus mr-2" />
                       Adicionar medida
                     </Button>
                   </div>
-                  <div class="rounded-xl border border-border-ui overflow-hidden">
-                    <table class="w-full text-sm text-left">
-                      <thead class="bg-bg-card border-b border-border-ui">
-                        <tr>
-                          <th class="px-3 py-2.5 font-semibold text-text-main">Descrição</th>
-                          <th class="px-3 py-2.5 font-semibold text-text-main w-28">Valor (mm)</th>
-                          <th class="px-3 py-2.5 font-semibold text-text-main w-12 text-center">Ações</th>
-                        </tr>
-                      </thead>
-                      <tbody class="bg-bg-page divide-y divide-border-ui">
-                        <tr v-for="(m, idx) in medidas" :key="m._key" class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                          <td class="px-3 py-2">
-                            <input v-model="m.descricao" type="text" class="w-full rounded-lg border border-border-ui bg-bg-card px-2.5 py-1.5 text-text-main placeholder:text-text-soft" placeholder="Ex: Vão janela, Altura pia" @blur="onBlurSalvar" />
-                          </td>
-                          <td class="px-3 py-2">
-                            <input v-model.number="m.valor_mm" type="number" inputmode="numeric" class="w-full rounded-lg border border-border-ui bg-bg-card px-2.5 py-1.5 text-text-main" placeholder="mm" @blur="onBlurSalvar" />
-                          </td>
-                          <td class="px-3 py-2 text-center">
-                            <button type="button" class="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30" title="Remover" @click="removerMedida(idx)">
-                              <i class="pi pi-trash text-sm" />
-                            </button>
-                          </td>
-                        </tr>
-                        <tr v-if="medidas.length === 0" class="text-text-soft">
-                          <td colspan="3" class="px-3 py-4 text-center">Nenhuma medida. Clique em &quot;Adicionar medida&quot; para incluir.</td>
-                        </tr>
-                      </tbody>
-                    </table>
+                  <div class="space-y-3">
+                    <div
+                      v-for="(m, idx) in medidas"
+                      :key="m._key"
+                        class="relative rounded-xl border border-border-ui bg-bg-card p-3 md:p-4"
+                    >
+                        <button
+                          type="button"
+                          class="absolute top-2 right-2 inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:text-red-600 active:text-red-600"
+                          title="Excluir medida"
+                          @click="removerMedida(idx)"
+                        >
+                          <i class="pi pi-trash text-sm" />
+                        </button>
+                        <div class="pr-10">
+                          <div class="flex-1">
+                          <label class="block text-xs font-semibold text-text-soft mb-1">Nome</label>
+                          <input
+                            v-model="m.nome"
+                            type="text"
+                            class="w-full rounded-lg border border-border-ui bg-bg-card px-2.5 py-1.5 text-text-main placeholder:text-text-soft"
+                            placeholder="Ex: Pia, Fogão, Janela"
+                            @blur="onBlurSalvar"
+                          />
+                        </div>
+                      </div>
+                      <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <div>
+                          <label class="block text-xs font-semibold text-text-soft mb-1">Largura (mm)</label>
+                          <input
+                            v-model.number="m.largura_mm"
+                            type="number"
+                            inputmode="numeric"
+                            class="w-full rounded-lg border border-border-ui bg-bg-card px-2.5 py-1.5 text-text-main"
+                            placeholder="Ex: 1200"
+                            @blur="onBlurSalvar"
+                          />
+                        </div>
+                        <div>
+                          <label class="block text-xs font-semibold text-text-soft mb-1">Altura (mm)</label>
+                          <input
+                            v-model.number="m.altura_mm"
+                            type="number"
+                            inputmode="numeric"
+                            class="w-full rounded-lg border border-border-ui bg-bg-card px-2.5 py-1.5 text-text-main"
+                            placeholder="Ex: 900"
+                            @blur="onBlurSalvar"
+                          />
+                        </div>
+                        <div>
+                          <label class="block text-xs font-semibold text-text-soft mb-1">Profundidade (mm)</label>
+                          <input
+                            v-model.number="m.profundidade_mm"
+                            type="number"
+                            inputmode="numeric"
+                            class="w-full rounded-lg border border-border-ui bg-bg-card px-2.5 py-1.5 text-text-main"
+                            placeholder="Ex: 600"
+                            @blur="onBlurSalvar"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div v-if="medidas.length === 0" class="rounded-xl border border-dashed border-border-ui px-3 py-4 text-center text-sm text-text-soft bg-bg-page">
+                      Nenhuma medida. Clique em &quot;Adicionar medida&quot; para incluir.
+                    </div>
+                  </div>
+                  <div class="mt-4">
+                    <Input v-model="observacoes" type="text" label="Observações gerais do ambiente" placeholder="Texto livre..." class="w-full" @blur="onBlurSalvar" />
                   </div>
                 </div>
                 <div class="border-t border-border-ui pt-6">
@@ -227,14 +253,72 @@
     <aside class="w-full lg:w-72 flex-shrink-0">
       <div class="rounded-2xl border border-border-ui bg-bg-card p-4 sticky top-4">
         <h3 class="text-sm font-bold text-text-main mb-3">Resumo</h3>
-        <ul class="space-y-2 text-sm">
-          <li v-for="item in resumoAmbientesComParedes" :key="item.ambiente + '-' + item.parede" class="flex items-center gap-2" :class="item.medido ? 'text-emerald-600 dark:text-emerald-400' : 'text-text-soft'">
-            <i :class="item.medido ? 'pi pi-check-circle' : 'pi pi-circle'" class="flex-shrink-0" />
-            <span>{{ item.ambiente }} › {{ item.parede }}</span>
-            <span class="text-xs">({{ item.medido ? 'Medido' : 'Pendente' }})</span>
-          </li>
-        </ul>
-        <p v-if="resumoAmbientesComParedes.length === 0" class="text-xs text-text-soft">Crie um ambiente e adicione paredes.</p>
+        <div v-if="resumoAmbientes.length > 0" class="space-y-2 text-sm">
+          <div
+            v-for="amb in resumoAmbientes"
+            :key="amb.id"
+            class="rounded-xl border border-border-ui bg-bg-page overflow-hidden"
+          >
+            <div class="relative flex items-center gap-2 px-3 pr-24 min-h-[44px]">
+              <button
+                type="button"
+                class="flex min-h-[44px] flex-1 items-center gap-2 text-left"
+                @click="toggleResumoAmbiente(amb.id)"
+              >
+                <i
+                  class="pi text-xs text-text-soft transition-transform"
+                  :class="ambienteResumoExpandidoId === amb.id ? 'pi-chevron-down' : 'pi-chevron-right'"
+                />
+                <span class="flex-1 font-medium text-text-main">{{ amb.nome_ambiente }}</span>
+              </button>
+              <span class="pointer-events-none absolute right-12 top-1/2 -translate-y-1/2 text-[11px] font-medium text-text-soft">
+                {{ amb.paredes.length }}
+              </span>
+              <button
+                type="button"
+                class="inline-flex h-11 w-11 items-center justify-center text-rose-500 transition hover:text-red-600 active:text-red-600"
+                title="Excluir ambiente"
+                @click.stop="excluirAmbiente(amb)"
+              >
+                <i class="pi pi-trash" />
+              </button>
+            </div>
+            <div v-if="ambienteResumoExpandidoId === amb.id" class="border-t border-border-ui bg-bg-card px-2 pb-2 pt-1">
+              <div
+                v-for="parede in amb.paredes"
+                :key="parede.id || parede._key"
+                class="ml-5 flex w-auto items-center gap-2 rounded-lg border-l-2 border-slate-200 bg-transparent pl-3 pr-1 min-h-[44px] text-left"
+              >
+                <i
+                  :class="parede.medido ? 'pi pi-check-circle text-emerald-600 dark:text-emerald-400' : 'pi pi-circle text-text-soft'"
+                  class="flex-shrink-0"
+                />
+                <button
+                  type="button"
+                  class="flex min-h-[44px] flex-1 items-center rounded-md px-2 text-left text-sm transition"
+                  :class="(ambienteIdAtual === amb.id && paredeSelecionadaId === (parede.id || parede._key))
+                    ? 'bg-brand-primary/15 text-brand-primary font-semibold'
+                    : 'text-text-main hover:bg-slate-100/70 dark:hover:bg-slate-800/60'"
+                  @click="selecionarParedeDoResumo(amb, parede)"
+                >
+                  {{ parede.nome || 'Parede' }}
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex h-11 w-11 items-center justify-center text-rose-500 transition hover:text-red-600 active:text-red-600"
+                  title="Excluir parede"
+                  @click.stop="excluirParede(amb, parede)"
+                >
+                  <i class="pi pi-trash" />
+                </button>
+              </div>
+              <div v-if="amb.paredes.length === 0" class="ml-5 flex min-h-[44px] items-center pl-3 text-xs text-text-soft">
+                Nenhuma parede neste ambiente.
+              </div>
+            </div>
+          </div>
+        </div>
+        <p v-else class="text-xs text-text-soft">Crie um ambiente e adicione paredes.</p>
       </div>
     </aside>
   </div>
@@ -245,6 +329,7 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { TotemFabricaService, ArquivosService } from '@/services'
 import { notify } from '@/services/notify'
+import { confirm } from '@/services/confirm'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
@@ -287,6 +372,7 @@ const paredeSelecionada = ref(null)
 const paredeSelecionadaId = ref(null)
 const paredeNova = ref(false)
 const nomeParedeNova = ref('')
+const ambienteResumoExpandidoId = ref(null)
 /** Array de paredes por ambiente (id do ambiente). Preenchido no carregar e ao salvar cada parede na lista. */
 const paredesPorAmbiente = ref({})
 
@@ -309,6 +395,18 @@ function nomeAmbienteAtual() {
   if (ambienteSelecionado.value === 'OUTRO') return (nomeOutroAmbiente.value || '').trim() || 'Outro'
   const opt = OPCOES_AMBIENTE.find((o) => o.value === ambienteSelecionado.value)
   return opt ? opt.label : ambienteSelecionado.value
+}
+
+function aplicarSelecaoAmbientePorNome(nome) {
+  const nomeLimpo = String(nome || '').trim()
+  const opt = OPCOES_AMBIENTE.find((o) => o.label === nomeLimpo)
+  if (opt) {
+    ambienteSelecionado.value = opt.value
+    nomeOutroAmbiente.value = ''
+    return
+  }
+  ambienteSelecionado.value = 'OUTRO'
+  nomeOutroAmbiente.value = nomeLimpo
 }
 
 const ambientesSalvos = computed(() => medicao.value?.ambientes ?? [])
@@ -360,6 +458,19 @@ const resumoAmbientesComParedes = computed(() => {
   return out
 })
 
+const resumoAmbientes = computed(() => {
+  return ambientesSalvos.value.map((amb) => {
+    const paredes = (paredesPorAmbiente.value[amb.id] ?? []).map((parede) => ({
+      ...parede,
+      medido: parede.largura_m != null || parede.pe_direito_m != null || parede.profundidade_m != null,
+    }))
+    return {
+      ...amb,
+      paredes,
+    }
+  })
+})
+
 function resumoMedidasParede(p) {
   const L = p.largura_m != null ? Math.round(Number(p.largura_m) * 1000) : null
   const A = p.pe_direito_m != null ? Math.round(Number(p.pe_direito_m) * 1000) : null
@@ -369,7 +480,13 @@ function resumoMedidasParede(p) {
 }
 
 function novaMedida() {
-  return { _key: `m-${Date.now()}-${Math.random().toString(36).slice(2)}`, descricao: '', valor_mm: null }
+  return {
+    _key: `m-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    nome: '',
+    largura_mm: null,
+    altura_mm: null,
+    profundidade_mm: null,
+  }
 }
 
 function adicionarMedida() {
@@ -387,6 +504,20 @@ async function selecionarAmbiente(value) {
   paredeSelecionadaId.value = null
   paredeNova.value = false
   limparFormParede()
+}
+
+async function selecionarAmbienteSalvo(ambiente) {
+  await salvarParedeNaApiAntesDeSair()
+  aplicarSelecaoAmbientePorNome(ambiente?.nome_ambiente || '')
+  ambienteResumoExpandidoId.value = ambiente?.id ?? null
+  paredeSelecionada.value = null
+  paredeSelecionadaId.value = null
+  paredeNova.value = false
+  limparFormParede()
+}
+
+function toggleResumoAmbiente(ambienteId) {
+  ambienteResumoExpandidoId.value = ambienteResumoExpandidoId.value === ambienteId ? null : ambienteId
 }
 
 /** Cria uma nova parede no banco com nome padrão e foca o campo nome. */
@@ -435,7 +566,13 @@ function formParedeTemDados() {
   if (alturaMm.value !== '' && alturaMm.value != null) return true
   if (profundidadeMm.value !== '' && profundidadeMm.value != null) return true
   if ((observacoes.value || '').trim()) return true
-  if (medidas.value.some((m) => (m.descricao || '').trim() || (m.valor_mm != null && m.valor_mm !== ''))) return true
+  if (medidas.value.some((m) => {
+    const nomeMedida = (m.nome || '').trim()
+    const largura = m.largura_mm != null && m.largura_mm !== ''
+    const altura = m.altura_mm != null && m.altura_mm !== ''
+    const profundidade = m.profundidade_mm != null && m.profundidade_mm !== ''
+    return nomeMedida || largura || altura || profundidade
+  })) return true
   return false
 }
 
@@ -469,7 +606,15 @@ function preencherFormParede(p) {
   profundidadeMm.value = p.profundidade_m != null ? Number(p.profundidade_m) * 1000 : ''
   observacoes.value = p.observacoes ?? ''
   try {
-    medidas.value = (p.medidas_json ? JSON.parse(p.medidas_json) : []).map((m) => ({ ...m, _key: `m-${Date.now()}-${Math.random().toString(36).slice(2)}` }))
+    const parsed = p.medidas_json ? JSON.parse(p.medidas_json) : []
+    medidas.value = (Array.isArray(parsed) ? parsed : []).map((m) => ({
+      _key: `m-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      // Compatibilidade com formato antigo: { descricao, valor_mm }
+      nome: m?.nome ?? m?.descricao ?? '',
+      largura_mm: m?.largura_mm ?? m?.valor_mm ?? null,
+      altura_mm: m?.altura_mm ?? null,
+      profundidade_mm: m?.profundidade_mm ?? null,
+    }))
   } catch {
     medidas.value = []
   }
@@ -524,6 +669,67 @@ async function carregarFotosParede(paredeId) {
   }
 }
 
+async function excluirParede(ambiente, parede) {
+  const ambienteId = ambiente?.id
+  const paredeId = parede?.id
+  if (!ambienteId || !paredeId) return
+  const nome = parede?.nome || 'esta parede'
+  const ok = await confirm.show('Excluir parede', `Deseja excluir ${nome}?`)
+  if (!ok) return
+  try {
+    await TotemFabricaService.removerParedeMedicao(ambienteId, paredeId)
+    const list = [...(paredesPorAmbiente.value[ambienteId] ?? [])].filter((p) => p.id !== paredeId)
+    paredesPorAmbiente.value = { ...paredesPorAmbiente.value, [ambienteId]: list }
+    if (paredeSelecionada.value?.id === paredeId) {
+      paredeSelecionada.value = null
+      paredeSelecionadaId.value = null
+      paredeNova.value = false
+      nomeParedeNova.value = ''
+      limparFormParede()
+    }
+  } catch (e) {
+    console.warn(e?.response?.data?.message || 'Não foi possível excluir a parede.')
+  }
+}
+
+async function excluirAmbiente(ambiente) {
+  const ambienteId = ambiente?.id
+  if (!id.value || !ambienteId) return
+  const nome = ambiente?.nome_ambiente || 'este ambiente'
+  const ok = await confirm.show('Excluir ambiente', `Deseja excluir o ambiente ${nome}?`)
+  if (!ok) return
+  try {
+    await TotemFabricaService.removerAmbienteMedicao(id.value, ambienteId)
+    const ambientesRestantes = (medicao.value?.ambientes ?? []).filter((item) => item.id !== ambienteId)
+    medicao.value = medicao.value ? { ...medicao.value, ambientes: ambientesRestantes } : medicao.value
+    const next = { ...paredesPorAmbiente.value }
+    delete next[ambienteId]
+    paredesPorAmbiente.value = next
+    paredeSelecionada.value = null
+    paredeSelecionadaId.value = null
+    paredeNova.value = false
+    nomeParedeNova.value = ''
+    limparFormParede()
+    if (ambienteIdAtual.value === ambienteId) {
+      if (ambientesRestantes.length > 0) aplicarSelecaoAmbientePorNome(ambientesRestantes[0].nome_ambiente)
+      else {
+        ambienteSelecionado.value = 'COZINHA'
+        nomeOutroAmbiente.value = ''
+      }
+    }
+    if (ambienteResumoExpandidoId.value === ambienteId) {
+      ambienteResumoExpandidoId.value = ambientesRestantes[0]?.id ?? null
+    }
+  } catch (e) {
+    console.warn(e?.response?.data?.message || 'Não foi possível excluir o ambiente.')
+  }
+}
+
+async function selecionarParedeDoResumo(ambiente, parede) {
+  await selecionarAmbienteSalvo(ambiente)
+  await selecionarParede(parede)
+}
+
 async function onFotoSelect(ev) {
   const files = ev.target?.files
   if (!files?.length || !paredeIdAtual.value) return
@@ -563,16 +769,15 @@ async function salvarAmbientePrimeiraVez() {
   if (!id.value) return
   const nome = nomeAmbienteAtual()
   if (!nome) {
-    notify.warning('Informe o nome do ambiente.')
+    console.warn('Informe o nome do ambiente.')
     return
   }
   salvandoAmbiente.value = true
   try {
     await TotemFabricaService.salvarAmbienteMedicao(id.value, { nome_ambiente: nome })
-    notify.success(`Ambiente "${nome}" criado. Adicione paredes e medidas.`)
     await carregar()
   } catch (e) {
-    notify.error(e?.response?.data?.message || 'Não foi possível criar o ambiente.')
+    console.warn(e?.response?.data?.message || 'Não foi possível criar o ambiente.')
   } finally {
     salvandoAmbiente.value = false
   }
@@ -585,8 +790,19 @@ function buildWallFromForm() {
   const alturaM = alturaMm.value !== '' && Number(alturaMm.value) >= 0 ? Number(alturaMm.value) / 1000 : null
   const profundidadeM = profundidadeMm.value !== '' && Number(profundidadeMm.value) >= 0 ? Number(profundidadeMm.value) / 1000 : null
   const medidasPayload = medidas.value
-    .filter((m) => (m.descricao || '').trim() || (m.valor_mm != null && m.valor_mm !== ''))
-    .map((m) => ({ descricao: (m.descricao || '').trim() || 'Medida', valor_mm: Number(m.valor_mm) || 0 }))
+    .filter((m) => {
+      const nome = (m.nome || '').trim()
+      const largura = m.largura_mm != null && m.largura_mm !== ''
+      const altura = m.altura_mm != null && m.altura_mm !== ''
+      const profundidade = m.profundidade_mm != null && m.profundidade_mm !== ''
+      return nome || largura || altura || profundidade
+    })
+    .map((m) => ({
+      nome: (m.nome || '').trim() || 'Medida',
+      largura_mm: m.largura_mm != null && m.largura_mm !== '' ? Number(m.largura_mm) : null,
+      altura_mm: m.altura_mm != null && m.altura_mm !== '' ? Number(m.altura_mm) : null,
+      profundidade_mm: m.profundidade_mm != null && m.profundidade_mm !== '' ? Number(m.profundidade_mm) : null,
+    }))
   return {
     nome: nome || 'Parede',
     largura_m: larguraM,
@@ -655,7 +871,7 @@ function salvarParedeNaLista() {
   if (!ambienteId) return
   const nome = paredeNova.value ? (nomeParedeNova.value || '').trim() || 'Parede' : (paredeSelecionada.value?.nome || 'Parede')
   if (!nome) {
-    notify.warning('Informe o nome da parede.')
+    console.warn('Informe o nome da parede.')
     return
   }
   const wall = buildWallFromForm()
@@ -674,13 +890,12 @@ async function salvarParede() {
   if (!ambienteId) return
   const nome = paredeNova.value ? (nomeParedeNova.value || '').trim() : (paredeSelecionada.value?.nome || '')
   if (!nome) {
-    notify.warning('Informe o nome da parede.')
+    console.warn('Informe o nome da parede.')
     return
   }
   salvandoParede.value = true
   try {
     salvarParedeNaLista()
-    notify.success(`Parede "${nome}" adicionada à lista.`)
     paredeSelecionada.value = null
     paredeSelecionadaId.value = null
     paredeNova.value = true

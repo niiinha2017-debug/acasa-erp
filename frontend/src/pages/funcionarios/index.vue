@@ -60,13 +60,14 @@
         </template>
       </PageHeader>
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui">
+      <div class="pb-5 md:pb-6 pt-4 border-t border-border-ui">
         <Table
             :columns="columns"
-            :rows="funcionariosFiltrados"
+            :rows="rowsToShow"
             :loading="loading"
             empty-text="Nenhum colaborador encontrado."
             :boxed="false"
+            :flush="true"
           >
             <template #cell-nome="{ row }">
               <div class="flex items-center gap-3 py-1">
@@ -156,6 +157,14 @@
               </div>
             </template>
         </Table>
+        <TablePagination
+          flush
+          v-if="total > 0"
+          :page="page"
+          :page-size="pageSize"
+          :total="total"
+          @update:page="setPage"
+        />
       </div>
     </div>
 
@@ -219,7 +228,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { FuncionarioService, ArquivosService } from '@/services/index'
 import { confirm } from '@/services/confirm'
@@ -227,6 +236,7 @@ import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
 import { onlyNumbers, maskCPF, maskRG } from '@/utils/masks'
 import ArquivosModal from '@/components/modals/ArquivosModal.vue'
+import { usePagination } from '@/composables/usePagination'
 
 
 definePage({ meta: { perm: 'funcionarios.ver' } })
@@ -334,6 +344,12 @@ const funcionariosFiltrados = computed(() => {
     return bateTexto || bateDocs || bateHorario || bateSalario
   })
 })
+
+const { page, setPage, total, totalPages, pageSize, rowsToShow } = usePagination(
+  funcionariosFiltrados,
+  { pageSize: 15 },
+)
+watch(filtro, () => setPage(1))
 
 async function carregar() {
   loading.value = true

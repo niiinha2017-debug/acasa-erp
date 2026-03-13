@@ -1,4 +1,5 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { TipoAplicacaoProduto } from './criar-produto.dto';
 
 export class BuscarProdutoDto {
   @IsOptional()
@@ -19,4 +20,8 @@ export class BuscarProdutoDto {
 
   @IsOptional()
   fornecedor_id?: string | number;
+
+  @IsOptional()
+  @IsEnum(TipoAplicacaoProduto)
+  tipo_aplicacao?: TipoAplicacaoProduto;
 }

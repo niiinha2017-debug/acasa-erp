@@ -1,5 +1,5 @@
 <template>
-  <div class="login-font w-full h-full mt-4 mb-8 mx-2 lg:mx-4 rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
+  <div class="login-font w-full h-full rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
     <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
     <PageHeader
       :title="isEdit ? `Editar Fornecedor #${fornecedorId}` : 'Novo Fornecedor'"
@@ -9,7 +9,7 @@
       class="border-b border-border-ui"
     />
 
-    <div class="p-8 lg:p-12">
+    <div class="px-4 py-4 md:px-6 md:py-6 lg:px-8 lg:py-8">
       <Loading v-if="loading" />
 
       <form v-else class="space-y-10 clientes-line-form" @submit.prevent="confirmarSalvarFornecedor" autocomplete="off">

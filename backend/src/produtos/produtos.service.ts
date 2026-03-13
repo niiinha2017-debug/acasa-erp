@@ -79,6 +79,7 @@ export class ProdutosService {
     const espessura_mm =
       dto.espessura_mm === undefined ? null : Number(dto.espessura_mm);
     const preco_m2 = dto.preco_m2 === undefined ? null : Number(dto.preco_m2);
+    const tipo_aplicacao = String(dto.tipo_aplicacao || 'MDF').trim().toUpperCase();
 
     await this.checarDuplicado({
       fornecedor_id,
@@ -104,6 +105,8 @@ export class ProdutosService {
       valor_unitario: Number(dto.valor_unitario ?? 0),
       valor_total: Number(dto.valor_total ?? 0),
       categoria: this.normStr(dto.categoria),
+      categoria_base: this.normStr((dto as any).categoria_base),
+      tipo_aplicacao,
       imagem_url: this.normStr(dto.imagem_url),
       status: dto.status ?? 'ATIVO',
     };
@@ -111,12 +114,13 @@ export class ProdutosService {
   }
 
   async listar(
-    filtro?: { fornecedor_id?: number },
+    filtro?: { fornecedor_id?: number; tipo_aplicacao?: string },
     opts?: { page?: number; pageSize?: number },
     ctx?: { aplicarMarkup100?: boolean },
   ) {
     const where: any = {};
     if (filtro?.fornecedor_id) where.fornecedor_id = filtro.fornecedor_id;
+    if (filtro?.tipo_aplicacao) where.tipo_aplicacao = String(filtro.tipo_aplicacao).trim().toUpperCase();
 
     // Sem paginação: compatibilidade com chamadas existentes
     if (!opts || !opts.page) {
@@ -171,6 +175,7 @@ export class ProdutosService {
       cor?: string;
       medida?: string;
       fornecedor_id?: number;
+      tipo_aplicacao?: string;
     },
     ctx?: { aplicarMarkup100?: boolean },
   ) {
@@ -212,6 +217,10 @@ export class ProdutosService {
 
     if (filtros.fornecedor_id) {
       where.fornecedor_id = filtros.fornecedor_id;
+    }
+
+    if (filtros.tipo_aplicacao) {
+      where.tipo_aplicacao = String(filtros.tipo_aplicacao).trim().toUpperCase();
     }
 
     if (!page) {
@@ -378,6 +387,14 @@ export class ProdutosService {
         dto.categoria === undefined
           ? (atual as any).categoria ?? null
           : this.normStr(dto.categoria),
+      categoria_base:
+        (dto as any).categoria_base === undefined
+          ? (atual as any).categoria_base ?? null
+          : this.normStr((dto as any).categoria_base),
+      tipo_aplicacao:
+        (dto as any).tipo_aplicacao === undefined
+          ? (atual as any).tipo_aplicacao ?? 'MDF'
+          : String((dto as any).tipo_aplicacao).trim().toUpperCase(),
       valor_unitario:
         dto.valor_unitario === undefined
           ? Number(atual.valor_unitario)

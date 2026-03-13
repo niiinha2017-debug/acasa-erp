@@ -1,17 +1,22 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import VueRouter from 'unplugin-vue-router/vite'
 import path from 'path'
 import { readFileSync } from 'fs'
 
 const pkg = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf8'))
-const lifecycle = String(process.env.npm_lifecycle_event || '')
-const isTauriBuild =
-  Boolean(process.env.TAURI_PLATFORM) ||
-  Boolean(process.env.TAURI_ENV_PLATFORM) ||
-  lifecycle.includes('tauri')
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, __dirname, '')
+  const lifecycle = String(process.env.npm_lifecycle_event || '')
+  const devPort = Number(env.VITE_PORT || process.env.VITE_PORT || 5173)
+  const apiProxyTarget = String(env.VITE_API_PROXY_TARGET || process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:3000').replace(/\/+$/, '')
+  const isTauriBuild =
+    Boolean(process.env.TAURI_PLATFORM) ||
+    Boolean(process.env.TAURI_ENV_PLATFORM) ||
+    lifecycle.includes('tauri')
+
+  return {
   // Web precisa de caminhos absolutos (/assets/...) para funcionar em rotas como /aceitar/:token.
   // Tauri empacotado continua usando relativo.
   base: isTauriBuild ? './' : '/',
@@ -28,7 +33,11 @@ export default defineConfig({
   ],
 
   resolve: {
-    alias: { '@': path.resolve(__dirname, './src') },
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      // backend compartilhado (dev: ../backend; Docker: COPY coloca em /backend)
+      '@backend': path.resolve(__dirname, '..', 'backend'),
+    },
   },
 
   build: {
@@ -61,16 +70,17 @@ export default defineConfig({
   },
 
   server: {
-    port: 5173,
+    port: devPort,
     host: '127.0.0.1', // necessário para o Tauri conectar em dev
-    strictPort: true,  // falha se 5173 estiver em uso (evita porta errada no Tauri)
+    strictPort: true,  // falha se a porta configurada estiver em uso (evita porta errada no Tauri)
     fs: { allow: [path.resolve(__dirname, '..')] },
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:3000',
+        target: apiProxyTarget,
         changeOrigin: true,
         secure: false,
       },
     },
   },
+  }
 })
