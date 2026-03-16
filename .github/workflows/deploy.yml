@@ -41,19 +41,17 @@ jobs:
             rm -rf node_modules/.prisma
             npx prisma generate
             set +e
-            MIGRATE_OUTPUT=
-            MIGRATE_OUTPUT="$(npx prisma migrate deploy 2>&1)"
-            MIGRATE_CODE=$?
+            npx prisma migrate deploy 2>&1 | tee /tmp/prisma-migrate.log
+            MIGRATE_CODE=\${PIPESTATUS[0]}
             set -e
-            echo "$MIGRATE_OUTPUT"
-            if [ $MIGRATE_CODE -ne 0 ]; then
-              if echo "$MIGRATE_OUTPUT" | grep -q 'P3009' && echo "$MIGRATE_OUTPUT" | grep -q '20260313180000_add_tipo_aplicacao_produtos'; then
+            if [ \$MIGRATE_CODE -ne 0 ]; then
+              if grep -q 'P3009' /tmp/prisma-migrate.log && grep -q '20260313180000_add_tipo_aplicacao_produtos' /tmp/prisma-migrate.log; then
                 echo 'Detectado P3009 na migration 20260313180000_add_tipo_aplicacao_produtos. Executando resolve --rolled-back e retry.'
                 npx prisma migrate resolve --rolled-back 20260313180000_add_tipo_aplicacao_produtos || true
                 npx prisma migrate deploy
               else
                 echo 'Falha no prisma migrate deploy (nao tratada automaticamente).'
-                exit $MIGRATE_CODE
+                exit \$MIGRATE_CODE
               fi
             fi
             rm -rf dist

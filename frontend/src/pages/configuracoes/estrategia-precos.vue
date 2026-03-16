@@ -354,7 +354,7 @@
           </div>
         </div>
 
-        <div v-if="activeTab === 'cmv'" class="px-4 md:px-5 py-3 border-b border-border-ui/60 bg-slate-50/30">
+        <div v-if="activeTab === 'cmv'" class="w-full px-4 md:px-5 py-3 border-b border-border-ui/60 bg-slate-50/30">
           <div class="mb-3 flex flex-wrap items-center gap-2">
             <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Categoria para simulação CMV:</span>
             <button
@@ -369,8 +369,8 @@
             </button>
           </div>
 
-          <div class="grid grid-cols-1 xl:grid-cols-12 gap-4 items-start">
-            <div class="xl:col-span-8">
+          <div class="w-full grid grid-cols-1 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)] gap-5 items-start">
+            <div class="space-y-4">
               <div class="rounded-xl border border-border-ui bg-white overflow-hidden">
                 <div class="px-3 py-2 bg-slate-50 border-b border-border-ui text-[11px] uppercase tracking-wider text-slate-500 font-bold">
                   Tabela da Matriz Operacional
@@ -430,9 +430,31 @@
                   </table>
                 </div>
               </div>
+
+              <div class="rounded-xl border border-border-ui bg-white overflow-hidden">
+                <div class="px-3 py-2 bg-slate-50 border-b border-border-ui text-[11px] uppercase tracking-wider text-slate-500 font-bold">
+                  CMV por categoria
+                </div>
+                <table class="w-full">
+                  <thead>
+                    <tr class="border-b border-border-ui text-[10px] uppercase tracking-wider text-slate-400">
+                      <th class="px-3 py-1.5 text-left font-semibold">Categoria</th>
+                      <th class="px-3 py-1.5 text-right font-semibold">Total/m2</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="cat in CATEGORIAS_ABA1" :key="cat.id" class="border-b border-border-ui/50 last:border-b-0">
+                      <td class="px-3 py-2 text-xs font-semibold text-text-main">{{ cat.label }}</td>
+                      <td class="px-3 py-2 text-xs text-right tabular-nums font-bold text-slate-900">
+                        {{ formatCurrency((matrizPorCategoria[cat.id]?.avg_cost_base || 0) * (1 + acrescimoPct / 100) + kitTotal + custosInternosTotal) }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            <aside class="xl:col-span-4">
+            <aside class="w-full">
               <div class="space-y-3">
                 <div class="rounded-xl border border-blue-100 bg-blue-50/60 p-3">
                   <p class="text-[11px] font-bold uppercase tracking-wider text-blue-700">Quanto vai custar cada opção</p>
@@ -466,28 +488,6 @@
                       </p>
                     </div>
                   </div>
-                </div>
-
-                <div class="rounded-xl border border-border-ui bg-white overflow-hidden">
-                  <div class="px-3 py-2 bg-slate-50 border-b border-border-ui text-[11px] uppercase tracking-wider text-slate-500 font-bold">
-                    CMV por categoria
-                  </div>
-                  <table class="w-full">
-                    <thead>
-                      <tr class="border-b border-border-ui text-[10px] uppercase tracking-wider text-slate-400">
-                        <th class="px-3 py-1.5 text-left font-semibold">Categoria</th>
-                        <th class="px-3 py-1.5 text-right font-semibold">Total/m2</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="cat in CATEGORIAS_ABA1" :key="cat.id" class="border-b border-border-ui/50 last:border-b-0">
-                        <td class="px-3 py-2 text-xs font-semibold text-text-main">{{ cat.label }}</td>
-                        <td class="px-3 py-2 text-xs text-right tabular-nums font-bold text-slate-900">
-                          {{ formatCurrency((matrizPorCategoria[cat.id]?.avg_cost_base || 0) * (1 + acrescimoPct / 100) + kitTotal + custosInternosTotal) }}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
                 </div>
 
                 <div class="rounded-xl border border-border-ui bg-white p-3 space-y-1.5">
