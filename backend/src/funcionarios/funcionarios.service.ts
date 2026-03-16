@@ -12,7 +12,10 @@ import PDFDocument from 'pdfkit';
 import { CriarFuncionarioDto } from './dto/criar-funcionario.dto';
 import { AtualizarFuncionarioDto } from './dto/atualizar-funcionario.dto';
 import { renderHeaderA4Png } from '../pdf/render-header-a4';
-import { FUNCIONARIOS_BASE_CALCULO } from '../../shared/constantes/funcionarios-custos';
+import {
+  FUNCIONARIOS_BASE_CALCULO,
+  FUNCIONARIOS_TIPOS_CUSTO_KEYWORDS,
+} from '../../shared/constantes/funcionarios-custos';
 import { UpsertFuncionarioCustoConstanteDto } from './dto/upsert-funcionario-custo-constante.dto';
 
 @Injectable()
@@ -31,6 +34,144 @@ export class FuncionariosService {
 
   private round4(n: number) {
     return Math.round((n + Number.EPSILON) * 10000) / 10000;
+  }
+
+  private toNum(v: unknown): number {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  private normalizarTexto(v?: string | null): string {
+    return String(v ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toUpperCase();
+  }
+
+  private textoDespesa(despesa: {
+    categoria?: string | null;
+    classificacao?: string | null;
+    local?: string | null;
+  }): string {
+    return FUNCIONARIOS_BASE_CALCULO.campos_texto
+      .map((campo) => this.normalizarTexto(despesa[campo]))
+      .filter(Boolean)
+      .join(' ');
+  }
+
+  async calcularEstruturaCustos() {
+    const agora = new Date();
+    const mes = agora.getMonth() + 1;
+    const ano = agora.getFullYear();
+    const inicioMes = new Date(ano, mes - 1, 1, 0, 0, 0);
+    const fimMes = new Date(ano, mes, 0, 23, 59, 59);
+
+    const divisorHoraHomemPadrao =
+      FUNCIONARIOS_BASE_CALCULO.custo_hora_empresarial_por_hora.divisor_padrao;
+    const divisorHoraFabricaPadrao =
+      FUNCIONARIOS_BASE_CALCULO.custo_hora_empresarial_por_m2.divisor_padrao;
+
+    const empresa = await this.prisma.empresa.findUnique({
+      where: { id: 1 },
+      select: { horas_uteis_mes_fabrica: true },
+    });
+
+    const horasUteisMesFabrica = this.toNum((empresa as any)?.horas_uteis_mes_fabrica);
+    const divisorHoraHomem =
+      horasUteisMesFabrica > 0 ? horasUteisMesFabrica : divisorHoraHomemPadrao;
+
+    // Quando capacidade_m2_mes não está disponível no schema, usamos horas totais da fábrica.
+    const divisorHoraFabrica =
+      horasUteisMesFabrica > 0
+        ? horasUteisMesFabrica
+        : divisorHoraFabricaPadrao > 0
+          ? divisorHoraFabricaPadrao
+          : divisorHoraHomemPadrao;
+
+    const despesasMes = await this.prisma.despesas.findMany({
+      where: {
+        tipo_movimento: 'SAIDA',
+        data_registro: { gte: inicioMes, lte: fimMes },
+      },
+      select: {
+        categoria: true,
+        classificacao: true,
+        local: true,
+        valor_total: true,
+      },
+    });
+
+    const todasKeywords = [...FUNCIONARIOS_TIPOS_CUSTO_KEYWORDS].map((k) => this.normalizarTexto(k));
+    const containsAny = (texto: string, termos: string[]) => termos.some((termo) => texto.includes(termo));
+
+    const categoriasHoraHomem = ['SALARIO', 'SALARIOS', 'HORA_EXTRA', 'HORAS_EXTRAS', 'FERIAS'].map((v) =>
+      this.normalizarTexto(v),
+    );
+    const categoriasHoraFabricaBase = [
+      'INSS',
+      'FGTS',
+      'VALE_TRANSPORTE',
+      'VALE TRANSPORTE',
+      'VALE_ALIMENTACAO',
+      'VALE ALIMENTACAO',
+      'PLANO_SAUDE',
+      'PLANO SAUDE',
+    ].map((v) => this.normalizarTexto(v));
+
+    const categoriasBeneficiosExtras = todasKeywords.filter((k) => {
+      return (
+        k.includes('BENEFICIO') ||
+        k === 'VALE' ||
+        k === 'VT' ||
+        k === 'VA' ||
+        k === 'VR' ||
+        k.includes('PLANO SAUDE')
+      );
+    });
+
+    const categoriasDespesaGlobal = ['PRO_LABORE', 'PRO LABORE', 'COMISSAO', 'COMISSOES'].map((v) =>
+      this.normalizarTexto(v),
+    );
+
+    let totalHoraHomem = 0;
+    let totalHoraFabrica = 0;
+    let despesaGlobal = 0;
+
+    for (const despesa of despesasMes) {
+      const texto = this.textoDespesa(despesa);
+      const localNorm = this.normalizarTexto(despesa.local);
+      const valor = this.toNum((despesa as any).valor_total);
+      const isLocalFabrica = localNorm === 'FABRICA';
+
+      if (containsAny(texto, categoriasDespesaGlobal)) {
+        despesaGlobal += valor;
+        continue;
+      }
+
+      if (isLocalFabrica && containsAny(texto, categoriasHoraHomem)) {
+        totalHoraHomem += valor;
+        continue;
+      }
+
+      if (
+        isLocalFabrica &&
+        (containsAny(texto, categoriasHoraFabricaBase) || containsAny(texto, categoriasBeneficiosExtras))
+      ) {
+        totalHoraFabrica += valor;
+      }
+    }
+
+    const custoHoraHomem = this.round4(totalHoraHomem / divisorHoraHomem);
+    const custoHoraFabrica = this.round4(totalHoraFabrica / divisorHoraFabrica);
+
+    return {
+      custoHoraHomem,
+      custoHoraFabrica,
+      despesaGlobal: this.round2(despesaGlobal),
+    };
   }
 
   private calcularStatus(input: {
