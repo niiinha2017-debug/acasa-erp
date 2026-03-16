@@ -519,6 +519,7 @@ model produtos {
   retalhos            estoque_retalho[]
 
   @@index([fornecedor_id])
+  @@index([tipo_aplicacao])
   @@map("produtos")
  }
 
@@ -731,6 +732,7 @@ model funcionarios {
   equipe_fabrica       agenda_fabrica_funcionarios[]
   apontamentos_fabrica agenda_fabrica_apontamentos[]
   apontamentos_producao apontamento_producao[]
+  custo_constante funcionario_custo_constante?
   clientes_vendedor    Cliente[] @relation("ClienteVendedorResponsavel")
   orcamentos_vendedor  orcamentos[] @relation("OrcamentoVendedor")
   vendas_vendedor      vendas[] @relation("VendaVendedor")
@@ -738,6 +740,27 @@ model funcionarios {
 
   @@map("funcionarios")
  }
+
+model funcionario_custo_constante {
+  id Int @id @default(autoincrement())
+
+  funcionario_id Int @unique
+  funcionario funcionarios @relation(fields: [funcionario_id], references: [id], onDelete: Cascade)
+
+  salario_base                Decimal @default(0) @db.Decimal(12, 2)
+  impostos_encargos_percentual Decimal @default(0) @db.Decimal(5, 2)
+  salario_adicional           Decimal @default(0) @db.Decimal(12, 2)
+  beneficios                  Decimal @default(0) @db.Decimal(12, 2)
+  horas_mes_base              Decimal @default(176) @db.Decimal(8, 2)
+  custo_total_mensal          Decimal @default(0) @db.Decimal(12, 2)
+  custo_hora                  Decimal @default(0) @db.Decimal(12, 4)
+
+  criado_em DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  @@index([funcionario_id])
+  @@map("funcionario_custo_constante")
+}
 
 model despesas {
   id Int @id @default(autoincrement())

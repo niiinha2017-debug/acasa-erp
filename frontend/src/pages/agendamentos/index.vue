@@ -1,10 +1,10 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white">
-      <div class="h-1 w-full bg-emerald-500 rounded-t-2xl" aria-hidden></div>
+  <div class="w-full min-h-screen bg-[#eef2f6] p-3 sm:p-4 md:p-5">
+    <div class="relative overflow-hidden rounded-xl border border-[#dbe3ea] bg-white shadow-sm">
+      <div class="h-1 w-full bg-emerald-500" aria-hidden></div>
 
       <!-- Header inline: título + navegação de mês na mesma linha -->
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-8 py-4 border-b border-[#e2e8f0]">
+      <div class="flex flex-col gap-3 px-4 sm:px-6 md:px-7 py-4 border-b border-[#e2e8f0] md:flex-row md:items-center md:justify-between">
         <div class="flex items-center gap-3 min-w-0">
           <i class="pi pi-calendar-clock text-emerald-500 text-xl flex-shrink-0"></i>
           <div class="min-w-0">
@@ -12,24 +12,24 @@
             <p class="text-xs text-slate-400 mt-0.5 hidden sm:block">Visão mensal da agenda comercial (loja)</p>
           </div>
         </div>
-        <div class="flex items-center gap-2 self-start sm:self-auto">
+        <div class="flex items-center gap-2 self-start md:self-auto">
           <Button
             variant="ghost"
             size="sm"
             type="button"
-            class="w-9 h-9 !p-0 flex items-center justify-center rounded-xl hover:bg-slate-100"
+            class="w-9 h-9 !p-0 flex items-center justify-center rounded-lg hover:bg-slate-100"
             @click="prevMonth"
           >
             <i class="pi pi-angle-left text-slate-600"></i>
           </Button>
-          <div class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest min-w-[10rem] text-center">
+          <div class="px-3 sm:px-4 py-2 rounded-lg bg-slate-900 text-white text-[10px] sm:text-xs font-black uppercase tracking-[0.14em] sm:tracking-widest min-w-[8.25rem] sm:min-w-[10rem] text-center">
             {{ monthLabel }}
           </div>
           <Button
             variant="ghost"
             size="sm"
             type="button"
-            class="w-9 h-9 !p-0 flex items-center justify-center rounded-xl hover:bg-slate-100"
+            class="w-9 h-9 !p-0 flex items-center justify-center rounded-lg hover:bg-slate-100"
             @click="nextMonth"
           >
             <i class="pi pi-angle-right text-slate-600"></i>
@@ -37,15 +37,15 @@
         </div>
       </div>
 
-      <div class="p-3 sm:p-5 md:p-6 space-y-4 bg-[#f8fafc]">
+      <div class="p-3 sm:p-4 md:p-5 space-y-4 bg-[#f5f8fb]">
         <!-- Calendário -->
-        <div class="bg-white border border-[#e2e8f0] rounded-2xl shadow-sm overflow-hidden">
+        <div class="bg-white border border-[#e2e8f0] rounded-xl shadow-sm overflow-hidden">
           <!-- Cabeçalho dos dias da semana -->
           <div class="grid grid-cols-7 border-b border-[#e2e8f0]">
             <div
               v-for="d in weekDays"
               :key="d"
-              class="py-2 sm:py-3 text-center text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-50"
+              class="py-2 sm:py-3 text-center text-[9px] sm:text-[10px] font-black uppercase tracking-[0.14em] sm:tracking-widest text-slate-400 bg-slate-50"
             >
               {{ d }}
             </div>
@@ -57,7 +57,7 @@
               :key="day.key"
               class="relative border-r border-b border-[#e2e8f0] last:border-r-0 cursor-pointer transition-all duration-200 group"
               :class="[
-                'h-24 sm:h-36 md:h-44 flex flex-col p-1.5 sm:p-2.5',
+                'h-20 sm:h-32 md:h-40 flex flex-col p-1.5 sm:p-2.5',
                 !day.inMonth ? 'bg-slate-50/70' : isSameDay(day.date, selectedDay) ? 'bg-blue-50' : 'bg-white hover:-translate-y-px hover:shadow-md hover:z-10 hover:bg-slate-50/60',
                 isSameDay(day.date, selectedDay) ? 'ring-2 ring-inset ring-blue-400' : '',
                 day.inMonth && hasEvents(day.date) && !isSameDay(day.date, selectedDay) ? 'hover:bg-blue-50/40' : '',
@@ -130,7 +130,7 @@
             </div>
           </div>
 
-            <div class="border-t border-border-ui p-5 md:p-6 bg-slate-50/50 dark:bg-slate-900/20">
+            <div class="border-t border-border-ui p-4 sm:p-5 md:p-6 bg-slate-50/50 dark:bg-slate-900/20">
             <div class="flex items-center justify-between mb-4">
               <div class="text-sm font-bold text-text-main uppercase tracking-wider">
                 {{ selectedLabel }}

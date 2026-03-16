@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpsertCustosEstruturaDto } from './dto/upsert-custos-estrutura.dto';
 import { HORAS_UTEIS_MES_PADRAO, CUSTOS_ESTRUTURA_CONSTANTES } from '../shared/constantes/custos-estrutura';
+import { CATEGORIAS_DESPESA_FIXA_SALARIOS as CATEGORIAS_SALARIO_SHARED } from '../../shared/constantes/funcionarios-custos';
 function toNum(v: unknown): number {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
@@ -16,13 +17,7 @@ function round4(n: number): number {
 }
 
 /** Categorias de despesa consideradas "Despesa Fixa de Salários" (para Taxa de Absorção). */
-export const CATEGORIAS_DESPESA_FIXA_SALARIOS = [
-  'SALARIO',
-  'SALÁRIO',
-  'FOLHA',
-  'FOLHA_PAGAMENTO',
-  'FOLHA DE PAGAMENTO',
-] as const;
+export const CATEGORIAS_DESPESA_FIXA_SALARIOS = [...CATEGORIAS_SALARIO_SHARED] as const;
 
 /**
  * Categorias de despesa (módulo Despesas) que entram em Custos de Estrutura.

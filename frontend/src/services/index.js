@@ -84,6 +84,21 @@ export const FuncionariosService = {
     return FuncionariosService.buscarPorId(id)
   },
 
+  buscarCustosConstantes(id) {
+    const cleanId = sanitizeFuncionarioId(id)
+    if (!cleanId) return Promise.reject(new Error('ID inválido'))
+    return api.get(`/funcionarios/${cleanId}/custos-constantes`)
+  },
+
+  atualizarCustosConstantes(id, dados) {
+    const cleanId = sanitizeFuncionarioId(id)
+    if (!cleanId) return Promise.reject(new Error('ID inválido'))
+    if (!dados || typeof dados !== 'object') {
+      return Promise.reject(new Error('Dados não informados'))
+    }
+    return api.put(`/funcionarios/${cleanId}/custos-constantes`, dados)
+  },
+
   criar(dados) {
     if (!dados || typeof dados !== 'object') {
       return Promise.reject(new Error('Dados não informados'))
@@ -253,6 +268,10 @@ export const EstrategiaPrecosService = {
       api.get('/configuracoes/estrategia-precos/materiais-mdf/por-categoria', { params: { categoria_comercial: categoriaComercial, strategy } }),
   buscarProdutoReferencia: (filtros = {}) => api.get('/configuracoes/estrategia-precos/produto-referencia', { params: filtros }),
   // Matriz Operacional de Insumos Base
+  calcularCustosInternos: (params = {}) =>
+    api.get('/configuracoes/estrategia-precos/matriz-operacional/custos-internos', { params }),
+    calcularCustosRH: (params = {}) =>
+      api.get('/configuracoes/estrategia-precos/matriz-operacional/custos-rh', { params }),
   processarMatriz: (payload = {}) => api.post('/configuracoes/estrategia-precos/matriz-operacional/processar', payload),
   listarMatriz: (filtros = {}) => api.get('/configuracoes/estrategia-precos/matriz-operacional', { params: filtros }),
 }

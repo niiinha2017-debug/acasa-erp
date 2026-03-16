@@ -40,6 +40,17 @@
           <!-- Body -->
           <div class="p-6 overflow-y-auto">
             <div class="grid grid-cols-12 gap-x-6 gap-y-6">
+              <div class="col-span-12 md:col-span-5">
+                <SearchInput
+                  v-model="form.fornecedor_id"
+                  mode="select"
+                  label="Fornecedor"
+                  :options="fornecedorOptionsInternas"
+                  placeholder="SELECIONE..."
+                  required
+                />
+              </div>
+
               <!-- Nome -->
               <div class="col-span-12 md:col-span-7">
                 <Input
@@ -297,6 +308,7 @@ const props = defineProps({
   open: { type: Boolean, default: false },
   textoInicial: { type: String, default: '' },
   fornecedorId: { type: Number, default: null },
+  fornecedorOptions: { type: Array, default: () => [] },
 })
 
 const emit = defineEmits(['close', 'created'])
@@ -316,6 +328,7 @@ const imagemTempUrl = ref('')         // preview local (URL.createObjectURL)
 const nomeArquivoImagem = computed(() => imagemFile.value?.name || '')
 
 const form = reactive({
+  fornecedor_id: null,
   nome_produto: '',
   cor: '',
   medida: '',
@@ -338,6 +351,14 @@ const unidadesOptions = computed(() =>
     value: u.key,
     label: u.label,
   })),
+)
+const fornecedorOptionsInternas = computed(() =>
+  (Array.isArray(props.fornecedorOptions) ? props.fornecedorOptions : [])
+    .map((f) => ({
+      value: Number(f?.value ?? f?.id ?? 0),
+      label: String(f?.label ?? f?.nome_fantasia ?? f?.razao_social ?? '').trim(),
+    }))
+    .filter((f) => f.value > 0 && f.label),
 )
 const categoriasBaseOptions = computed(() => CATEGORIAS_BASE)
 
@@ -368,6 +389,7 @@ function removerImagemLocal() {
 function resetForm() {
   erroLocal.value = ''
   Object.assign(form, {
+    fornecedor_id: props.fornecedorId ? Number(props.fornecedorId) : null,
     nome_produto: props.textoInicial || '',
     cor: '',
     medida: '',
@@ -381,10 +403,10 @@ function resetForm() {
   limparImagemLocal()
 }
 
-async function existeDuplicadoNoFornecedor(payloadCheck) {
-  if (!props.fornecedorId) return false
+async function existeDuplicadoNoFornecedor(payloadCheck, fornecedorId) {
+  if (!fornecedorId) return false
 
-  const res = await ProdutosService.listar({ fornecedor_id: props.fornecedorId })
+  const res = await ProdutosService.listar({ fornecedor_id: Number(fornecedorId) })
   const data = res?.data ?? res
   const lista = Array.isArray(data) ? data : []
 
@@ -455,8 +477,9 @@ watch(
 async function salvar() {
   erroLocal.value = ''
 
-  if (!props.fornecedorId) {
-    notify.warn('Selecione um fornecedor antes.')
+  const fornecedorIdSelecionado = Number(form.fornecedor_id || props.fornecedorId || 0)
+  if (!fornecedorIdSelecionado) {
+    notify.warn('Selecione o fornecedor do produto.')
     return
   }
   if (!form.nome_produto?.trim()) {
@@ -479,7 +502,7 @@ if (!Number(valorNum || 0)) {
 }
 
   const payload = {
-    fornecedor_id: props.fornecedorId,
+    fornecedor_id: fornecedorIdSelecionado,
     nome_produto: form.nome_produto.trim(),
     cor: form.cor?.trim() ? form.cor.trim() : null,
     medida: form.medida?.trim() ? form.medida.trim() : null,
@@ -500,7 +523,7 @@ if (!Number(valorNum || 0)) {
       medida: norm(payload.medida),
     }
 
-    const dup = await existeDuplicadoNoFornecedor(check)
+    const dup = await existeDuplicadoNoFornecedor(check, fornecedorIdSelecionado)
     if (dup) {
       erroLocal.value = 'Produto duplicado para este fornecedor (mesmo nome/marca/cor/medida).'
       notify.warn('Produto duplicado.')

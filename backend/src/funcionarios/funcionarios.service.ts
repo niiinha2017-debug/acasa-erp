@@ -12,6 +12,8 @@ import PDFDocument from 'pdfkit';
 import { CriarFuncionarioDto } from './dto/criar-funcionario.dto';
 import { AtualizarFuncionarioDto } from './dto/atualizar-funcionario.dto';
 import { renderHeaderA4Png } from '../pdf/render-header-a4';
+import { FUNCIONARIOS_BASE_CALCULO } from '../../shared/constantes/funcionarios-custos';
+import { UpsertFuncionarioCustoConstanteDto } from './dto/upsert-funcionario-custo-constante.dto';
 
 @Injectable()
 export class FuncionariosService {
@@ -22,6 +24,14 @@ export class FuncionariosService {
 
   private readonly STATUS_ATIVO = 'ATIVO';
   private readonly STATUS_INATIVO = 'INATIVO';
+
+  private round2(n: number) {
+    return Math.round((n + Number.EPSILON) * 100) / 100;
+  }
+
+  private round4(n: number) {
+    return Math.round((n + Number.EPSILON) * 10000) / 10000;
+  }
 
   private calcularStatus(input: {
     data_inicio?: Date | null;
@@ -87,6 +97,164 @@ export class FuncionariosService {
     if (!funcionario)
       throw new NotFoundException('Funcionário não encontrado.');
     return funcionario;
+  }
+
+  private calcularHorasMesBasePorFuncionario(f: {
+    carga_horaria_semana?: unknown;
+    carga_horaria_dia?: unknown;
+  }): number {
+    const semanal = Number(f.carga_horaria_semana ?? 0);
+    if (Number.isFinite(semanal) && semanal > 0) return this.round2(semanal * 4);
+
+    const diaria = Number(f.carga_horaria_dia ?? 0);
+    if (Number.isFinite(diaria) && diaria > 0) return this.round2(diaria * 22);
+
+    return FUNCIONARIOS_BASE_CALCULO.custo_hora_empresarial_por_hora.divisor_padrao;
+  }
+
+  private calcularCustoConstanteFuncionario(input: {
+    salario_base?: unknown;
+    impostos_encargos_percentual?: unknown;
+    salario_adicional?: unknown;
+    beneficios?: unknown;
+    horas_mes_base?: unknown;
+  }) {
+    const salarioBase = Number(input.salario_base ?? 0) || 0;
+    const encargosPct = Number(input.impostos_encargos_percentual ?? 0) || 0;
+    const salarioAdicional = Number(input.salario_adicional ?? 0) || 0;
+    const beneficios = Number(input.beneficios ?? 0) || 0;
+    const horasMesBase = Number(input.horas_mes_base ?? 0) || 0;
+
+    const custoTotalMensal = this.round2(
+      salarioBase * (1 + encargosPct / 100) + salarioAdicional + beneficios,
+    );
+    const custoHora = horasMesBase > 0 ? this.round4(custoTotalMensal / horasMesBase) : 0;
+
+    return {
+      salario_base: this.round2(salarioBase),
+      impostos_encargos_percentual: this.round2(encargosPct),
+      salario_adicional: this.round2(salarioAdicional),
+      beneficios: this.round2(beneficios),
+      horas_mes_base: this.round2(
+        horasMesBase > 0
+          ? horasMesBase
+          : FUNCIONARIOS_BASE_CALCULO.custo_hora_empresarial_por_hora.divisor_padrao,
+      ),
+      custo_total_mensal: custoTotalMensal,
+      custo_hora: custoHora,
+    };
+  }
+
+  async sincronizarConstanteCustoComFuncionario(funcionarioId: number) {
+    const funcionario = await this.prisma.funcionarios.findUnique({
+      where: { id: funcionarioId },
+      select: {
+        id: true,
+        salario_base: true,
+        impostos_encargos_percentual: true,
+        salario_adicional: true,
+        tem_vale: true,
+        vale: true,
+        tem_vale_transporte: true,
+        vale_transporte: true,
+        carga_horaria_semana: true,
+        carga_horaria_dia: true,
+      },
+    });
+
+    if (!funcionario) {
+      throw new NotFoundException('Funcionário não encontrado.');
+    }
+
+    const beneficios =
+      (funcionario.tem_vale ? Number(funcionario.vale ?? 0) || 0 : 0) +
+      (funcionario.tem_vale_transporte
+        ? Number(funcionario.vale_transporte ?? 0) || 0
+        : 0);
+
+    const calculado = this.calcularCustoConstanteFuncionario({
+      salario_base: funcionario.salario_base,
+      impostos_encargos_percentual: funcionario.impostos_encargos_percentual,
+      salario_adicional: funcionario.salario_adicional,
+      beneficios,
+      horas_mes_base: this.calcularHorasMesBasePorFuncionario(funcionario),
+    });
+
+    const saved = await (this.prisma as any).funcionario_custo_constante.upsert({
+      where: { funcionario_id: funcionarioId },
+      update: calculado,
+      create: {
+        funcionario_id: funcionarioId,
+        ...calculado,
+      },
+    });
+
+    await this.prisma.funcionarios.update({
+      where: { id: funcionarioId },
+      data: {
+        custo_total_mensal: calculado.custo_total_mensal,
+        custo_hora: calculado.custo_hora,
+      },
+    });
+
+    return saved;
+  }
+
+  async obterConstanteCusto(funcionarioId: number) {
+    await this.buscarPorId(funcionarioId);
+    return this.sincronizarConstanteCustoComFuncionario(funcionarioId);
+  }
+
+  async upsertConstanteCusto(
+    funcionarioId: number,
+    dto: UpsertFuncionarioCustoConstanteDto,
+  ) {
+    await this.buscarPorId(funcionarioId);
+
+    const atual = await (this.prisma as any).funcionario_custo_constante.findUnique({
+      where: { funcionario_id: funcionarioId },
+    });
+
+    const horasMesBasePadrao =
+      atual?.horas_mes_base ??
+      FUNCIONARIOS_BASE_CALCULO.custo_hora_empresarial_por_hora.divisor_padrao;
+
+    const payload = {
+      salario_base:
+        dto.salario_base ?? atual?.salario_base ?? 0,
+      impostos_encargos_percentual:
+        dto.impostos_encargos_percentual ?? atual?.impostos_encargos_percentual ?? 0,
+      salario_adicional:
+        dto.salario_adicional ?? atual?.salario_adicional ?? 0,
+      beneficios:
+        dto.beneficios ?? atual?.beneficios ?? 0,
+      horas_mes_base:
+        dto.horas_mes_base ?? horasMesBasePadrao,
+    };
+
+    const calculado = this.calcularCustoConstanteFuncionario(payload);
+
+    const saved = await (this.prisma as any).funcionario_custo_constante.upsert({
+      where: { funcionario_id: funcionarioId },
+      update: calculado,
+      create: {
+        funcionario_id: funcionarioId,
+        ...calculado,
+      },
+    });
+
+    await this.prisma.funcionarios.update({
+      where: { id: funcionarioId },
+      data: {
+        salario_base: calculado.salario_base,
+        impostos_encargos_percentual: calculado.impostos_encargos_percentual,
+        salario_adicional: calculado.salario_adicional,
+        custo_total_mensal: calculado.custo_total_mensal,
+        custo_hora: calculado.custo_hora,
+      },
+    });
+
+    return saved;
   }
   private onlyDigits(v: any) {
     return String(v ?? '').replace(/\D/g, '');
@@ -338,6 +506,8 @@ export class FuncionariosService {
         }
       }
 
+      await this.sincronizarConstanteCustoComFuncionario(funcionario.id);
+
       return funcionario;
     } catch (e: any) {
       if (e?.code === 'P2002')
@@ -417,10 +587,16 @@ export class FuncionariosService {
         }
       }
 
-      return await this.prisma.funcionarios.update({
+      const atualizado = await this.prisma.funcionarios.update({
         where: { id },
         data,
       });
+
+      if (mexeuEmCusto || Object.prototype.hasOwnProperty.call(data, 'carga_horaria_semana') || Object.prototype.hasOwnProperty.call(data, 'carga_horaria_dia')) {
+        await this.sincronizarConstanteCustoComFuncionario(id);
+      }
+
+      return atualizado;
     } catch (e: any) {
       if (e?.code === 'P2002')
         throw new BadRequestException('CPF já cadastrado.');

@@ -297,6 +297,7 @@
     <QuickCreateProduto
       :open="modalProdutoOpen"
       :fornecedor-id="fornecedorSelecionado ? Number(fornecedorSelecionado) : null"
+      :fornecedor-options="fornecedorOptions"
       :texto-inicial="''"
       @close="fecharModalProduto"
       @created="onProdutoCriado"
@@ -728,14 +729,11 @@ const confirmarExcluirCompra = async () => {
 // LOADERS
 // =======================
 const carregarProdutos = async () => {
-  if (!fornecedorSelecionado.value) {
-    produtoOptions.value = []
-    produtoMap.value = new Map()
-    return
-  }
-
   try {
-    const res = await ProdutosService.listar({ fornecedor_id: Number(fornecedorSelecionado.value) })
+    const filtro = fornecedorSelecionado.value
+      ? { fornecedor_id: Number(fornecedorSelecionado.value) }
+      : undefined
+    const res = await ProdutosService.listar(filtro)
     const data = res?.data ?? res
     const arr = Array.isArray(data) ? data : []
 
@@ -766,7 +764,7 @@ produtoOptions.value = arr.map((p) => {
     console.log('[COMPRA] erro carregarProdutos:', e?.response?.data || e)
     produtoOptions.value = []
     produtoMap.value = new Map()
-    notify.error('Erro ao carregar produtos do fornecedor.')
+    notify.error('Erro ao carregar produtos.')
   }
 }
 
@@ -824,6 +822,9 @@ function categoriaBaseBadgeClass(value) {
   if (key === 'SECUNDARIA') {
     return 'bg-emerald-50 text-emerald-800 border-emerald-200'
   }
+  if (key === 'INSUMO') {
+    return 'bg-blue-50 text-blue-800 border-blue-200'
+  }
   return 'bg-slate-100 text-slate-700 border-slate-200'
 }
 
@@ -869,6 +870,8 @@ if (isEdit.value) {
   }
 }
 
+await carregarProdutos()
+
   } catch (e) {
     console.log('[COMPRA] erro carregarDadosIniciais:', e)
     notify.error('Erro ao carregar dados.')
@@ -881,10 +884,6 @@ if (isEdit.value) {
 // MODAL PRODUTO
 // =======================
 function abrirModalProduto() {
-  if (!fornecedorSelecionado.value) {
-    notify.warn('Selecione um fornecedor primeiro.')
-    return
-  }
   modalProdutoOpen.value = true
 }
 
@@ -924,12 +923,6 @@ watch(vendaSelecionada, async () => {
 })
 
 watch(fornecedorSelecionado, async (id) => {
-  if (!id) {
-    produtoOptions.value = []
-    produtoMap.value = new Map()
-    resetarItemNovo()
-    return
-  }
   resetarItemNovo()
   await carregarProdutos()
 })

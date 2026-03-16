@@ -55,6 +55,24 @@ async function ensureMe() {
 router.beforeEach(async (to) => {
   const token = storage.getToken()
 
+  if (to.path === '/login' && token) {
+    const user = await ensureMe()
+    if (user) {
+      if (user?.senha_expirada) {
+        storage.removeToken()
+        storage.removeUser()
+        return { path: '/login', query: { msg: 'senha_expirada' } }
+      }
+
+      if (user?.precisa_trocar_senha || String(user?.status || '').toUpperCase() !== 'ATIVO') {
+        return { path: '/pendente' }
+      }
+
+      const agendaHome = getAgendaHome()
+      return agendaHome || { path: '/' }
+    }
+  }
+
   // 1. Rota Pública? Deixa passar.
   if (to.meta?.public) return true
 

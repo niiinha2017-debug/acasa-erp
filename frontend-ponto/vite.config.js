@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 import VueRouter from 'unplugin-vue-router/vite'
 import { readFileSync } from 'fs'
+import { VitePWA } from 'vite-plugin-pwa'
 
 const pkg = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf8'))
 
@@ -18,6 +19,18 @@ export default defineConfig({
     VueRouter(),
     vue(),
     tailwindcss(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      manifest: './public/manifest.webmanifest',
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,png,svg,webmanifest}'],
+      },
+      includeAssets: ['logo.png', 'pwa-192.png', 'pwa-512.png'],
+      devOptions: {
+        enabled: true,
+      },
+      base: './',
+    }),
   ],
 
   resolve: {

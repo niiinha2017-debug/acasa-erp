@@ -1,5 +1,5 @@
 <template>
-  <div class="login-font w-full h-full rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
+  <div class="login-font cliente-editor w-full h-full rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
     <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
 
     <PageHeader
@@ -10,11 +10,11 @@
       class="border-b border-border-ui"
     />
 
-    <div class="px-4 py-4 md:px-6 md:py-6 lg:px-8 lg:py-8">
+    <div class="cliente-body px-4 py-4 md:px-6 md:py-6 lg:px-8 lg:py-8">
       <Loading v-if="loading" />
 
-      <form v-else class="space-y-10 clientes-line-form" @submit.prevent="confirmarSalvarCliente" autocomplete="off">
-        <div class="grid grid-cols-12 gap-6 items-end bg-slate-50/50 dark:bg-slate-800/20 p-6 rounded-2xl">
+      <form v-else class="cliente-form space-y-12 clientes-line-form" @submit.prevent="confirmarSalvarCliente" autocomplete="off">
+        <div class="grid grid-cols-12 gap-8 items-end pb-4">
           <div class="col-span-12 md:col-span-3 pb-2">
             <CustomCheckbox
               v-model="isJuridica"
@@ -46,18 +46,18 @@
 
         </div>
 
-        <div class="relative">
+        <div class="section-divider relative">
           <div class="absolute inset-0 flex items-center">
             <div class="w-full border-t border-border-ui/50"></div>
           </div>
           <div class="relative flex justify-center">
-            <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span class="section-title bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
               Dados Principais
             </span>
           </div>
         </div>
 
-        <div class="grid grid-cols-12 gap-6">
+        <div class="grid grid-cols-12 gap-x-6 gap-y-7">
           <Input
             :class="isJuridica ? 'col-span-12 md:col-span-6' : 'col-span-12 md:col-span-9'"
             v-model="form.nome_completo"
@@ -84,7 +84,7 @@
           />
         </div>
 
-        <div class="grid grid-cols-12 gap-6">
+        <div class="grid grid-cols-12 gap-x-6 gap-y-7">
           <template v-if="!isJuridica">
             <Input
               class="col-span-12 md:col-span-4"
@@ -133,12 +133,12 @@
           </div>
         </div>
 
-        <div class="relative">
+        <div class="section-divider relative">
           <div class="absolute inset-0 flex items-center">
             <div class="w-full border-t border-border-ui/50"></div>
           </div>
           <div class="relative flex justify-center">
-            <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span class="section-title bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
               Contato
             </span>
           </div>
@@ -170,7 +170,7 @@
             @input="form.telefone = maskTelefone(form.telefone)"
           />
 
-          <div class="col-span-12 grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-800/30 p-6 rounded-2xl border border-border-ui">
+          <div class="col-span-12 grid grid-cols-1 md:grid-cols-2 gap-5 pt-6 mt-1 border-t border-border-ui/70">
             <CustomCheckbox
               v-model="form.enviar_aniversario_email"
               :label="'Aviso por E-mail'"
@@ -206,18 +206,18 @@
           </div>
         </div>
 
-        <div class="relative">
+        <div class="section-divider relative">
           <div class="absolute inset-0 flex items-center">
             <div class="w-full border-t border-border-ui/50"></div>
           </div>
           <div class="relative flex justify-center">
-            <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span class="section-title bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
               Endereco
             </span>
           </div>
         </div>
 
-        <div class="grid grid-cols-12 gap-6">
+        <div class="grid grid-cols-12 gap-x-6 gap-y-7">
           <Input
             class="col-span-12 md:col-span-3"
             v-model="form.cep"
@@ -287,7 +287,7 @@
             </div>
           </div>
 
-          <div class="mt-6 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800/50 overflow-hidden">
+          <div class="mt-6 rounded-xl border border-border-ui/70 overflow-hidden">
             <div class="px-4 py-3 border-b border-border-ui flex items-center justify-between gap-3 flex-wrap">
               <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Contratos</span>
               <RouterLink
@@ -377,34 +377,71 @@
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
-
 .login-font {
-  font-family: 'Manrope', 'Segoe UI', sans-serif;
+  font-family: 'Segoe UI Variable', 'Segoe UI', Tahoma, Arial, sans-serif;
+}
+
+.cliente-form {
+  max-width: 1160px;
+  margin: 0 auto;
+}
+
+.cliente-form > * + * {
+  margin-top: 3.1rem !important;
+}
+
+.section-divider {
+  margin-top: 0.9rem;
+}
+
+.section-title {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: rgb(148 163 184);
 }
 
 .clientes-line-form :deep(.w-full.flex.flex-col.gap-1\.5 > label),
 .clientes-line-form :deep(.search-container > label) {
   font-size: 10px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   color: rgb(100 116 139);
 }
 
-.clientes-line-form :deep(input.w-full),
-.clientes-line-form :deep(select.w-full) {
-  border-top: 0;
-  border-left: 0;
-  border-right: 0;
-  border-bottom-width: 2px;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+.clientes-line-form :deep(.w-full.flex.flex-col.gap-1\.5 > .relative.group > input),
+.clientes-line-form :deep(.w-full.flex.flex-col.gap-1\.5 > .relative.group > select),
+.clientes-line-form :deep(.search-container > .relative.group > input) {
+  min-height: 46px !important;
+  height: 46px !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.55rem !important;
+  font-size: 15px !important;
+  font-weight: 400 !important;
+  border-top: 0 !important;
+  border-left: 0 !important;
+  border-right: 0 !important;
+  border-bottom-width: 2px !important;
+  border-bottom-style: solid !important;
+  border-bottom-color: rgba(148, 163, 184, 0.65) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
-.clientes-line-form :deep(input.w-full:focus),
-.clientes-line-form :deep(select.w-full:focus) {
-  box-shadow: none;
+.clientes-line-form :deep(.w-full.flex.flex-col.gap-1\.5 > .relative.group > input:focus),
+.clientes-line-form :deep(.w-full.flex.flex-col.gap-1\.5 > .relative.group > select:focus),
+.clientes-line-form :deep(.search-container > .relative.group > input:focus) {
+  border-bottom-color: rgba(2, 132, 199, 0.9) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.clientes-line-form :deep(.w-full.flex.flex-col.gap-1\.5 > .relative.group > input::placeholder),
+.clientes-line-form :deep(.search-container > .relative.group > input::placeholder) {
+  color: rgb(148 163 184);
 }
 </style>
 <script setup>

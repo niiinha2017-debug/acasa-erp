@@ -96,6 +96,7 @@ if (window.__TAURI__ || window.__TAURI_INTERNALS__) {
 
 // Estilos
 import '@/assets/CSS/tailwind.css'
+import '@/assets/CSS/design-system.css'
 import 'primeicons/primeicons.css'
 import '@/assets/hide-password-eye.css'
 

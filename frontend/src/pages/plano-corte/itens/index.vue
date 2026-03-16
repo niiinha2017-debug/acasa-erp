@@ -11,7 +11,6 @@
       >
         <template #actions>
           <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end [&>*]:min-h-10 [&>*]:sm:h-10">
-            <!-- Barra de busca sempre livre -->
             <div class="w-full sm:w-64 order-1 sm:order-0 flex items-center">
               <SearchInput
                 v-model="busca"
@@ -19,30 +18,12 @@
                 placeholder="Buscar nome, marca ou cor..."
               />
             </div>
-            <!-- Aviso informativo (altura fixa para alinhar com busca/select/botão) -->
-            <div class="hidden sm:flex items-center gap-2 h-10 px-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 order-2 shrink-0">
-              <i class="pi pi-info-circle text-amber-600 dark:text-amber-400 text-sm flex-shrink-0"></i>
-              <span class="text-[10px] font-bold text-amber-800 dark:text-amber-200 uppercase tracking-wider whitespace-nowrap">
-                Selecione o fornecedor para listar e cadastrar itens
-              </span>
-            </div>
-            <!-- Fornecedor (informativo) -->
-            <div class="w-full sm:w-52 order-3 flex items-center">
-              <SearchInput
-                v-model="fornecedorSelecionado"
-                mode="select"
-                class="w-full"
-                :options="fornecedorOptions"
-                placeholder="Selecione o fornecedor"
-              />
-            </div>
             <!-- Cadastrar item (abre mesma tela de cadastro de produtos) -->
             <Button
               v-if="can('plano_corte.criar')"
               variant="primary"
               class="order-4 h-10 min-h-10 px-4"
-              :disabled="!fornecedorSelecionado"
-              @click="router.push(`/plano-corte/itens/novo?fornecedor=${fornecedorSelecionado}`)"
+              @click="router.push('/plano-corte/itens/novo')"
             >
               <i class="pi pi-plus mr-2"></i>
               Cadastrar item
@@ -52,21 +33,11 @@
       </PageHeader>
 
       <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui">
-        <!-- Aviso no mobile (no desktop já está no header) -->
-        <div class="sm:hidden flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 mb-4">
-          <i class="pi pi-info-circle text-amber-600 dark:text-amber-400 text-sm flex-shrink-0"></i>
-          <span class="text-[10px] font-bold text-amber-800 dark:text-amber-200 uppercase tracking-wider">
-            Selecione o fornecedor para listar e cadastrar itens
-          </span>
-        </div>
-
         <div class="flex items-center justify-between gap-4 mb-4">
           <span class="text-xs font-bold text-text-muted uppercase tracking-wider">
             Itens cadastrados
-            <span v-if="fornecedorSelecionado"> (fornecedor selecionado)</span>
           </span>
           <Button
-            v-if="fornecedorSelecionado"
             variant="ghost"
             size="sm"
             :loading="loading"
@@ -81,7 +52,7 @@
           :columns="columns"
           :rows="rowsFiltradas"
           :loading="loading"
-          empty-text="Nenhum item encontrado. Selecione um fornecedor e clique em Novo Item ou Atualizar."
+          empty-text="Nenhum item encontrado."
           :boxed="false"
           :flush="true"
         >
@@ -138,9 +109,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { PlanoCorteService, FornecedorService } from '@/services/index'
+import { PlanoCorteService } from '@/services/index'
 import { confirm } from '@/services/confirm'
 import { notify } from '@/services/notify'
 import { can } from '@/services/permissions'
@@ -149,11 +120,6 @@ import { format } from '@/utils/format'
 definePage({ meta: { perm: 'plano_corte.ver' } })
 
 const router = useRouter()
-const fornecedor = ref([])
-const fornecedorSelecionado = ref(null)
-const fornecedorOptions = computed(() =>
-  fornecedor.value.map((f) => ({ label: f.razao_social || f.nome_fantasia, value: f.id }))
-)
 const busca = ref('')
 const loading = ref(false)
 const itens = ref([])
@@ -184,8 +150,7 @@ async function carregarItens() {
   if (!can('plano_corte.ver')) return notify.error('Acesso negado.')
   loading.value = true
   try {
-    const fornecedorId = fornecedorSelecionado.value ? Number(fornecedorSelecionado.value) : undefined
-    const { data } = await PlanoCorteService.itens.listar(fornecedorId)
+    const { data } = await PlanoCorteService.itens.listar()
     itens.value = Array.isArray(data) ? data : []
   } catch (e) {
     notify.error(e?.response?.data?.message || 'Erro ao carregar itens.')
@@ -210,13 +175,7 @@ async function excluir(row) {
   }
 }
 
-watch(fornecedorSelecionado, () => {
-  carregarItens()
-})
-
 onMounted(async () => {
-  const { data } = await FornecedorService.listar()
-  fornecedor.value = data || []
   carregarItens()
 })
 </script>

@@ -66,6 +66,45 @@ export class EstrategiaPrecosController {
     return this.service.listarInsumosFixos();
   }
 
+  @Get('matriz-operacional/custos-internos')
+  @Permissoes('configuracoes.estrategia_precos.ver')
+  calcularCustosInternos(
+    @Query('mes') mes?: string,
+    @Query('ano') ano?: string,
+    @Query('capacidade_m2_mes') capacidadeM2Mes?: string,
+  ) {
+    const mesNum = mes ? Number(String(mes).replace(/\D/g, '')) : undefined;
+    const anoNum = ano ? Number(String(ano).replace(/\D/g, '')) : undefined;
+    const capacidadeNum = capacidadeM2Mes ? Number(String(capacidadeM2Mes).replace(',', '.')) : undefined;
+
+    return this.service.calcularCustosInternosPorDespesas({
+      mes: Number.isFinite(mesNum) ? mesNum : undefined,
+      ano: Number.isFinite(anoNum) ? anoNum : undefined,
+      capacidade_m2_mes: Number.isFinite(capacidadeNum) ? capacidadeNum : undefined,
+    });
+  }
+
+  @Get('matriz-operacional/custos-rh')
+  @Permissoes('configuracoes.estrategia_precos.ver')
+  calcularCustosRH(
+    @Query('mes') mes?: string,
+    @Query('ano') ano?: string,
+    @Query('capacidade_m2_mes') capacidadeM2Mes?: string,
+    @Query('horas_uteis_mes') horasUteisMes?: string,
+  ) {
+    const mesNum = mes ? Number(String(mes).replace(/\D/g, '')) : undefined;
+    const anoNum = ano ? Number(String(ano).replace(/\D/g, '')) : undefined;
+    const capacidadeNum = capacidadeM2Mes ? Number(String(capacidadeM2Mes).replace(',', '.')) : undefined;
+    const horasNum = horasUteisMes ? Number(String(horasUteisMes).replace(',', '.')) : undefined;
+
+    return this.service.getCalculoCustosRH({
+      mes: Number.isFinite(mesNum) ? mesNum : undefined,
+      ano: Number.isFinite(anoNum) ? anoNum : undefined,
+      capacidade_m2_mes: Number.isFinite(capacidadeNum) ? capacidadeNum : undefined,
+      horas_uteis_mes: Number.isFinite(horasNum) ? horasNum : undefined,
+    });
+  }
+
   @Post('matriz-operacional/processar')
   @Permissoes('configuracoes.estrategia_precos.editar')
   processarMatriz(
@@ -84,6 +123,7 @@ export class EstrategiaPrecosController {
       kit_items?: Array<{ name?: string; value?: number; selected?: boolean }>;
       hora_homem_value?: number;
       custo_fixo_fabrica_value?: number;
+      capacidade_m2_mes?: number;
       fix_insumo_per_m2?: number;
     },
   ) {

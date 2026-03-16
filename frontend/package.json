@@ -1,7 +1,7 @@
 {
   "name": "frontend-vue",
   "private": true,
-  "version": "0.1.94",
+  "version": "0.1.95",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,7 +11,7 @@
     "prepare-docker-context": "node scripts/prepare-docker-context.cjs",
     "build:all:deploy": "npm run build:all && npm run prepare:subdomain",
     "preview": "vite preview",
-    "kill:5175": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$pids = Get-NetTCPConnection -LocalPort 5175 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique; if ($pids) { foreach ($procId in $pids) { Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue }; Write-Output 'Freed port 5175' } else { Write-Output 'Port 5175 already free' }\"",
+    "kill:5175": "node scripts/kill-port.mjs 5175",
     "pretauri:dev": "npm run kill:5175",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",

@@ -1,6 +1,10 @@
 ﻿import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PriceStrategyFiltersDto } from './dto/price-strategy-filters.dto';
+import {
+  FUNCIONARIOS_BASE_CALCULO,
+  FUNCIONARIOS_TIPOS_CUSTO_KEYWORDS,
+} from '../../shared/constantes/funcionarios-custos';
 
 const GLOBAL_CONFIG_KEY = 'PRICING_SEARCH_STRATEGY';
 type SearchStrategy = 'MIN_PRICE' | 'AVG_PRICE' | 'MAX_PRICE';
@@ -9,6 +13,7 @@ type ProdutoComPreco = {
   id: number;
   nome_produto: string;
   categoria: string | null;
+  categoria_base?: string | null;
   marca: string | null;
   espessura_mm: number | null;
   valor_unitario: any;
@@ -33,7 +38,7 @@ type OperationalMaterialLink = {
 type OperationalKitItem = {
   id?: number;
   name?: string;
-  tipo_aplicacao?: string;
+  categoria_base?: string;
   value?: number;
   selected?: boolean;
 };
@@ -46,12 +51,27 @@ type ProcessOperationalMatrixPayload = {
   kit_items?: OperationalKitItem[];
   hora_homem_value?: number;
   custo_fixo_fabrica_value?: number;
+  capacidade_m2_mes?: number;
   fix_insumo_per_m2?: number;
 };
 
 @Injectable()
 export class EstrategiaPrecosService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private readonly CUSTO_FIXO_CATEGORIAS = [
+    'AGUA',
+    'ENERGIA',
+    'INTERNET',
+    'SEGURANCA',
+    'LIMPEZA',
+    'DEPRECIACAO_MAQUINAS',
+    'SEGURO_MAQUINAS',
+    'ALUGUEL',
+  ];
+
+  /** Keywords que identificam despesas de pro-labore/diretoria → sempre Administrativo */
+  private readonly PRO_LABORE_KEYWORDS = ['PRO_LABORE', 'PRO LABORE'] as const;
 
   private get globalConfigTable(): any {
     return (this.prisma as any).globalConfig;
@@ -67,6 +87,18 @@ export class EstrategiaPrecosService {
     if (!cleaned) return null;
     const parsed = Number(cleaned);
     return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  private normalizeFinanceText(value?: string): string {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toUpperCase();
+  }
+
+  private round4(value: number): number {
+    return Math.round((value + Number.EPSILON) * 10000) / 10000;
   }
 
   private buildWhere(filters?: PriceStrategyFiltersDto): any {
@@ -294,6 +326,7 @@ export class EstrategiaPrecosService {
   private buildGruposMdfFromProdutos(
     produtos: Array<{
       categoria: string | null;
+      categoria_base?: string | null;
       espessura_mm: number | null;
       nome_produto: string | null;
       cor?: string | null;
@@ -319,7 +352,9 @@ export class EstrategiaPrecosService {
       const thickness = Number(p.espessura_mm ?? 0);
       const colorRaw = String(p.cor || p.nome_produto || '').trim();
       const group = colorRaw;
-      const commercialCategory = this.normalizeCommercialCategory(p.marca || p.categoria || p.nome_produto || '');
+      const commercialCategory = this.normalizeCommercialCategory(
+        p.categoria_base || p.marca || p.categoria || p.nome_produto || '',
+      );
 
       if (!category || !thickness || !group) continue;
 
@@ -366,15 +401,29 @@ export class EstrategiaPrecosService {
     const produtos = await (this.prisma as any).produtos.findMany({
       where: {
         status: 'ATIVO',
-        tipo_aplicacao: {
-          in: ['MDF', 'MATERIA_PRIMA'],
-        },
-        categoria: {
-          contains: 'MDF',
-        },
+        OR: [
+          {
+            categoria_base: {
+              in: [...this.COMMERCIAL_CATEGORIES],
+            },
+          },
+          {
+            AND: [
+              {
+                OR: [{ categoria_base: null }, { categoria_base: '' }],
+              },
+              {
+                tipo_aplicacao: {
+                  in: ['MDF', 'MATERIA_PRIMA'],
+                },
+              },
+            ],
+          },
+        ],
       },
       select: {
         categoria: true,
+        categoria_base: true,
         espessura_mm: true,
         nome_produto: true,
         cor: true,
@@ -399,18 +448,32 @@ export class EstrategiaPrecosService {
     const produtos = await (this.prisma as any).produtos.findMany({
       where: {
         status: 'ATIVO',
-        tipo_aplicacao: {
-          in: ['MDF', 'MATERIA_PRIMA'],
-        },
-        categoria: {
-          contains: 'MDF',
-        },
+        OR: [
+          {
+            categoria_base: {
+              in: [...this.COMMERCIAL_CATEGORIES],
+            },
+          },
+          {
+            AND: [
+              {
+                OR: [{ categoria_base: null }, { categoria_base: '' }],
+              },
+              {
+                tipo_aplicacao: {
+                  in: ['MDF', 'MATERIA_PRIMA'],
+                },
+              },
+            ],
+          },
+        ],
         nome_produto: {
           contains: texto,
         },
       },
       select: {
         categoria: true,
+        categoria_base: true,
         espessura_mm: true,
         nome_produto: true,
         cor: true,
@@ -437,13 +500,29 @@ export class EstrategiaPrecosService {
     const produtos = await (this.prisma as any).produtos.findMany({
       where: {
         status: 'ATIVO',
-        tipo_aplicacao: {
-          in: ['MDF', 'MATERIA_PRIMA'],
-        },
-        categoria: { contains: 'MDF' },
+        OR: [
+          {
+            categoria_base: {
+              in: [...this.COMMERCIAL_CATEGORIES],
+            },
+          },
+          {
+            AND: [
+              {
+                OR: [{ categoria_base: null }, { categoria_base: '' }],
+              },
+              {
+                tipo_aplicacao: {
+                  in: ['MDF', 'MATERIA_PRIMA'],
+                },
+              },
+            ],
+          },
+        ],
       },
       select: {
         categoria: true,
+        categoria_base: true,
         espessura_mm: true,
         nome_produto: true,
         cor: true,
@@ -456,7 +535,7 @@ export class EstrategiaPrecosService {
     const filtered = produtos.filter(
       (p) =>
         this.normalizeCommercialCategory(
-          p.marca || p.categoria || p.nome_produto || '',
+          p.categoria_base || p.marca || p.categoria || p.nome_produto || '',
         ) === normalized,
     );
 
@@ -467,14 +546,24 @@ export class EstrategiaPrecosService {
     const produtos = await (this.prisma as any).produtos.findMany({
       where: {
         status: 'ATIVO',
-        tipo_aplicacao: 'INSUMO',
+        OR: [
+          { categoria_base: 'INSUMO' },
+          {
+            AND: [
+              {
+                OR: [{ categoria_base: null }, { categoria_base: '' }],
+              },
+              { tipo_aplicacao: 'INSUMO' },
+            ],
+          },
+        ],
       },
       select: {
         id: true,
         nome_produto: true,
         unidade: true,
         categoria: true,
-        tipo_aplicacao: true,
+        categoria_base: true,
         valor_unitario: true,
       },
       orderBy: [{ nome_produto: 'asc' }],
@@ -485,10 +574,280 @@ export class EstrategiaPrecosService {
       name: item.nome_produto,
       unidade: item.unidade,
       categoria: item.categoria,
-      tipo_aplicacao: item.tipo_aplicacao,
+      categoria_base: item.categoria_base,
       value: Number(item.valor_unitario ?? 0),
       selected: true,
     }));
+  }
+
+  async calcularCustosInternosPorDespesas(params?: {
+    mes?: number;
+    ano?: number;
+    capacidade_m2_mes?: number;
+  }) {
+    const now = new Date();
+    const mes =
+      Number.isFinite(Number(params?.mes)) && Number(params?.mes) >= 1 && Number(params?.mes) <= 12
+        ? Number(params?.mes)
+        : now.getMonth() + 1;
+    const ano =
+      Number.isFinite(Number(params?.ano)) && Number(params?.ano) >= 2000
+        ? Number(params?.ano)
+        : now.getFullYear();
+
+    const capacidadeM2Mes = Number(params?.capacidade_m2_mes ?? 0);
+    const capacidadeFinal =
+      capacidadeM2Mes > 0
+        ? capacidadeM2Mes
+        : FUNCIONARIOS_BASE_CALCULO.custo_hora_empresarial_por_m2.divisor_padrao;
+
+    const inicioMes = new Date(ano, mes - 1, 1, 0, 0, 0);
+    const fimMes = new Date(ano, mes, 0, 23, 59, 59);
+
+    const despesas = await this.prisma.despesas.findMany({
+      where: {
+        tipo_movimento: 'SAIDA',
+        data_vencimento: { gte: inicioMes, lte: fimMes },
+      },
+      select: {
+        categoria: true,
+        classificacao: true,
+        local: true,
+        unidade: true,
+        valor_total: true,
+        funcionario_id: true,
+      },
+    });
+
+    const keywordsFuncionario = [...FUNCIONARIOS_TIPOS_CUSTO_KEYWORDS];
+    const custosFixosSet = new Set(this.CUSTO_FIXO_CATEGORIAS);
+
+    // Pessoal de Fábrica (produção) → denominador: capacidade_m2_mes
+    let totalFabrica = 0;
+    // Pessoal Administrativo/Pro-labore → denominador: horas_uteis_mes (176h)
+    let totalAdministrativo = 0;
+    // Custos fixos operacionais (luz, aluguel, etc.) — nunca soma pessoal
+    let operacaoTotal = 0;
+
+    for (const despesa of despesas) {
+      const camposTexto = FUNCIONARIOS_BASE_CALCULO.campos_texto.map((campo) =>
+        this.normalizeFinanceText((despesa as any)?.[campo] || ''),
+      );
+      const categoria = camposTexto[0] || '';
+      const classificacao = camposTexto[1] || '';
+      const valor = Number(despesa.valor_total ?? 0);
+
+      if (!Number.isFinite(valor) || valor <= 0) continue;
+
+      const textoCompleto = camposTexto.join(' ');
+      const isFuncionarioPorTexto = keywordsFuncionario.some((k) => textoCompleto.includes(k));
+      const isFuncionarioPorVinculo =
+        Number.isFinite(Number(despesa.funcionario_id)) && Number(despesa.funcionario_id) > 0;
+
+      if (isFuncionarioPorTexto || isFuncionarioPorVinculo) {
+        // Isolamento garantido: pessoal nunca entra em isCustoFixo
+        const normalizedUnidade = this.normalizeFinanceText((despesa as any).unidade || '');
+        const isProLabore = this.PRO_LABORE_KEYWORDS.some((k) => textoCompleto.includes(k));
+        const isProducaoFabrica = normalizedUnidade.includes('FABRICA') && !isProLabore;
+
+        if (isProducaoFabrica) {
+          totalFabrica += valor;
+        } else {
+          totalAdministrativo += valor;
+        }
+        continue;
+      }
+
+      const isCustoFixo =
+        classificacao.includes('CUSTO_FIXO') ||
+        classificacao.includes('CUSTOS_FIXOS') ||
+        classificacao.includes('CUSTO FIXO') ||
+        classificacao.includes('CUSTOS FIXOS') ||
+        categoria.includes('CUSTO_FIXO') ||
+        categoria.includes('CUSTOS_FIXOS') ||
+        categoria.includes('CUSTO FIXO') ||
+        categoria.includes('CUSTOS FIXOS') ||
+        custosFixosSet.has(categoria);
+
+      if (isCustoFixo) {
+        operacaoTotal += valor;
+      }
+    }
+
+    const horasUtilesMes = FUNCIONARIOS_BASE_CALCULO.custo_hora_empresarial_por_hora.divisor_padrao;
+    const maoDeObraTotal = totalFabrica + totalAdministrativo;
+    // HORA-HOMEM (Aba 3): somente pessoal de Fábrica / capacidade m²
+    const horaHomemValue = this.round4(totalFabrica / capacidadeFinal);
+    // Custo hora administrativo: pessoal não-produção / 176h
+    const custoHoraAdministrativo = this.round4(totalAdministrativo / horasUtilesMes);
+    const custoFixoFabricaValue = this.round4(operacaoTotal / capacidadeFinal);
+
+    return {
+      mes,
+      ano,
+      capacidade_m2_mes: capacidadeFinal,
+      mao_de_obra_total: this.round4(maoDeObraTotal),
+      mao_de_obra_fabrica: this.round4(totalFabrica),
+      mao_de_obra_administrativo: this.round4(totalAdministrativo),
+      custo_hora_administrativo: custoHoraAdministrativo,
+      operacao_total: this.round4(operacaoTotal),
+      hora_homem_value: horaHomemValue,
+      custo_fixo_fabrica_value: custoFixoFabricaValue,
+      custos_internos_total: this.round4(horaHomemValue + custoFixoFabricaValue),
+    };
+  }
+
+  // ─── MOTOR DE RH ────────────────────────────────────────────────────────────
+
+  /**
+   * Motor de RH: percorre despesas do mês e distribui custos de pessoal entre
+   * Produção/Fábrica e Administrativo usando divisores distintos.
+   *
+   *  - custoM2Producao        → alimenta HORA-HOMEM na Aba 3 da Matriz Operacional
+   *  - custoHoraAdministrativo → custo operacional administrativo (financeiro geral)
+   *
+   * Divisores (de FUNCIONARIOS_BASE_CALCULO):
+   *  - Fábrica:        capacidade_m2_mes
+   *  - Administrativo: horas_uteis_mes_fabrica (padrão 176h)
+   */
+  async getCalculoCustosRH(params?: {
+    mes?: number;
+    ano?: number;
+    capacidade_m2_mes?: number;
+    horas_uteis_mes?: number;
+  }) {
+    const now = new Date();
+    const mes =
+      Number.isFinite(Number(params?.mes)) && Number(params?.mes) >= 1 && Number(params?.mes) <= 12
+        ? Number(params?.mes)
+        : now.getMonth() + 1;
+    const ano =
+      Number.isFinite(Number(params?.ano)) && Number(params?.ano) >= 2000
+        ? Number(params?.ano)
+        : now.getFullYear();
+
+    const capacidadeM2Mes =
+      Number(params?.capacidade_m2_mes ?? 0) > 0
+        ? Number(params!.capacidade_m2_mes)
+        : FUNCIONARIOS_BASE_CALCULO.custo_hora_empresarial_por_m2.divisor_padrao;
+    const horasUtilesMes =
+      Number(params?.horas_uteis_mes ?? 0) > 0
+        ? Number(params!.horas_uteis_mes)
+        : FUNCIONARIOS_BASE_CALCULO.custo_hora_empresarial_por_hora.divisor_padrao;
+
+    const inicioMes = new Date(ano, mes - 1, 1, 0, 0, 0);
+    const fimMes = new Date(ano, mes, 0, 23, 59, 59);
+
+    const despesas = await this.prisma.despesas.findMany({
+      where: {
+        tipo_movimento: 'SAIDA',
+        data_vencimento: { gte: inicioMes, lte: fimMes },
+      },
+      select: {
+        categoria: true,
+        classificacao: true,
+        local: true,
+        unidade: true,
+        valor_total: true,
+        funcionario_id: true,
+      },
+    });
+
+    const keywordsFuncionario = [...FUNCIONARIOS_TIPOS_CUSTO_KEYWORDS];
+    let totalFabrica = 0;
+    let totalAdministrativo = 0;
+
+    for (const despesa of despesas) {
+      const camposTexto = FUNCIONARIOS_BASE_CALCULO.campos_texto.map((campo) =>
+        this.normalizeFinanceText((despesa as any)?.[campo] || ''),
+      );
+      const valor = Number(despesa.valor_total ?? 0);
+      if (!Number.isFinite(valor) || valor <= 0) continue;
+
+      const textoCompleto = camposTexto.join(' ');
+      const isFuncionarioPorTexto = keywordsFuncionario.some((k) => textoCompleto.includes(k));
+      const isFuncionarioPorVinculo =
+        Number.isFinite(Number(despesa.funcionario_id)) && Number(despesa.funcionario_id) > 0;
+
+      if (!isFuncionarioPorTexto && !isFuncionarioPorVinculo) continue;
+
+      const normalizedUnidade = this.normalizeFinanceText((despesa as any).unidade || '');
+      const isProLabore = this.PRO_LABORE_KEYWORDS.some((k) => textoCompleto.includes(k));
+      const isProducaoFabrica = normalizedUnidade.includes('FABRICA') && !isProLabore;
+
+      if (isProducaoFabrica) {
+        totalFabrica += valor;
+      } else {
+        totalAdministrativo += valor;
+      }
+    }
+
+    const custoM2Producao = this.round4(totalFabrica / capacidadeM2Mes);
+    const custoHoraAdministrativo = this.round4(totalAdministrativo / horasUtilesMes);
+    const totalFolhaMensal = this.round4(totalFabrica + totalAdministrativo);
+
+    return {
+      mes,
+      ano,
+      capacidade_m2_mes: capacidadeM2Mes,
+      horas_uteis_mes: horasUtilesMes,
+      totalFabrica: this.round4(totalFabrica),
+      totalAdministrativo: this.round4(totalAdministrativo),
+      totalFolhaMensal,
+      custoM2Producao,          // → HORA-HOMEM (Aba 3, divisor: capacidade_m2_mes)
+      custoHoraAdministrativo,  // → custo operacional administrativo (divisor: 176h)
+    };
+  }
+
+  /**
+   * Recalcula automaticamente os valores de Hora-Homem na OperationalMatrix
+   * quando uma despesa de pessoal é criada, alterada ou removida no módulo de Despesas.
+   *
+   * Lê o cache de componentes (kit + custoFixo) persistido pelo último
+   * processOperationalMatrix para não sobrescrever os demais componentes do CMV.
+   */
+  async recalcularCMVPorFuncionarios(params?: {
+    mes?: number;
+    ano?: number;
+    capacidade_m2_mes?: number;
+  }) {
+    const rh = await this.getCalculoCustosRH(params);
+
+    // Cache de componentes salvo em processOperationalMatrix (row especial)
+    const cacheRow: any = await (this.prisma as any).operationalMatrix.findUnique({
+      where: {
+        category_thickness_group: {
+          category: '_RH_CACHE_',
+          thickness: -1,
+          group: '_CACHE_',
+        },
+      },
+    });
+
+    const kitValue = cacheRow ? Number(cacheRow.max_cost_base ?? 0) : 0;
+    const custoFixoValue = cacheRow ? Number(cacheRow.avg_cost_base ?? 0) : 0;
+    const newFixInsumo = this.round4(kitValue + rh.custoM2Producao + custoFixoValue);
+
+    // Atualiza todos os registros reais da matrix com o novo fix_insumo_value
+    await (this.prisma as any).operationalMatrix.updateMany({
+      where: { NOT: { category: '_RH_CACHE_' } },
+      data: { fix_insumo_value: newFixInsumo },
+    });
+
+    // Mantém o campo hora-homem do cache atualizado
+    if (cacheRow) {
+      await (this.prisma as any).operationalMatrix.update({
+        where: { id: cacheRow.id },
+        data: { min_cost_base: rh.custoM2Producao },
+      });
+    }
+
+    return {
+      ...rh,
+      kit_value: kitValue,
+      custo_fixo_value: custoFixoValue,
+      novo_fix_insumo_value: newFixInsumo,
+    };
   }
 
   /**
@@ -500,9 +859,24 @@ export class EstrategiaPrecosService {
     items: any[];
   }> {
     const materialLinks = Array.isArray(payload?.material_links) ? payload.material_links : [];
-    const fixInsumoValue = (Array.isArray(payload?.kit_items) ? payload.kit_items : [])
+    const kitValue = (Array.isArray(payload?.kit_items) ? payload.kit_items : [])
       .filter((item) => item?.selected !== false)
       .reduce((acc, item) => acc + Number(item?.value ?? 0), 0);
+
+    const custosInternosAuto =
+      payload?.hora_homem_value == null || payload?.custo_fixo_fabrica_value == null
+        ? await this.calcularCustosInternosPorDespesas({
+            capacidade_m2_mes: Number(payload?.capacidade_m2_mes ?? 1),
+          })
+        : null;
+
+    const horaHomemValue = Number(
+      payload?.hora_homem_value ?? custosInternosAuto?.hora_homem_value ?? 0,
+    );
+    const custoFixoFabricaValue = Number(
+      payload?.custo_fixo_fabrica_value ?? custosInternosAuto?.custo_fixo_fabrica_value ?? 0,
+    );
+    const fixInsumoValue = kitValue + horaHomemValue + custoFixoFabricaValue;
     const selectedLinks = materialLinks.filter((link) => link?.selected !== false);
 
     const grouped = new Map<string, { prices: number[]; thicknesses: Set<number> }>();
@@ -580,6 +954,36 @@ export class EstrategiaPrecosService {
           .join(', ') || 'Consolidado',
       });
     }
+
+    // Persiste o breakdown de componentes (kit, hora-homem, custo-fixo)
+    // para que recalcularCMVPorFuncionarios possa atualizar apenas a hora-homem
+    // sem perder os valores de kit e custo fixo salvos nesta sessão.
+    await (this.prisma as any).operationalMatrix.upsert({
+      where: {
+        category_thickness_group: {
+          category: '_RH_CACHE_',
+          thickness: -1,
+          group: '_CACHE_',
+        },
+      },
+      update: {
+        min_cost_base: horaHomemValue,        // campo hora-homem
+        avg_cost_base: custoFixoFabricaValue, // campo custo fixo fábrica
+        max_cost_base: kitValue,              // campo kit/insumos
+        fix_insumo_value: 0,
+        mdf_extra_pct: 0,
+      },
+      create: {
+        category: '_RH_CACHE_',
+        thickness: -1,
+        group: '_CACHE_',
+        min_cost_base: horaHomemValue,
+        avg_cost_base: custoFixoFabricaValue,
+        max_cost_base: kitValue,
+        fix_insumo_value: 0,
+        mdf_extra_pct: 0,
+      },
+    });
 
     return {
       processed: results.length,

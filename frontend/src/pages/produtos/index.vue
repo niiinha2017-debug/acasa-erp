@@ -11,7 +11,6 @@
       >
         <template #actions>
           <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end [&>*]:min-h-10 [&>*]:sm:h-10">
-            <!-- Barra de busca sempre livre -->
             <div class="w-full sm:w-64 order-1 sm:order-0 flex items-center">
               <SearchInput
                 v-model="filtro"
@@ -19,29 +18,11 @@
                 placeholder="Buscar por nome, cor, medida ou marca..."
               />
             </div>
-            <!-- Aviso informativo (altura fixa para alinhar com busca/select/botão) -->
-            <div class="hidden sm:flex items-center gap-2 h-10 px-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 order-2 shrink-0">
-              <i class="pi pi-info-circle text-amber-600 dark:text-amber-400 text-sm flex-shrink-0"></i>
-              <span class="text-[10px] font-bold text-amber-800 dark:text-amber-200 uppercase tracking-wider whitespace-nowrap">
-                Selecione o fornecedor para cadastrar produto
-              </span>
-            </div>
-            <!-- Fornecedor (informativo) -->
-            <div class="w-full sm:w-52 order-3 flex items-center">
-              <SearchInput
-                v-model="fornecedorSelecionado"
-                mode="select"
-                class="w-full"
-                :options="fornecedorOptions"
-                placeholder="Selecione o fornecedor"
-              />
-            </div>
-            <!-- Novo Produto (só habilita com fornecedor) -->
+            <!-- Novo Produto -->
             <Button
               v-if="can('produtos.criar')"
               variant="primary"
               class="order-4 h-10 min-h-10 px-4"
-              :disabled="!fornecedorSelecionado"
               @click="abrirNovoProduto"
             >
               <i class="pi pi-plus mr-2"></i>
@@ -52,14 +33,6 @@
       </PageHeader>
 
       <div class="pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-4">
-        <!-- Aviso no mobile -->
-        <div class="sm:hidden flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
-          <i class="pi pi-info-circle text-amber-600 dark:text-amber-400 text-sm flex-shrink-0"></i>
-          <span class="text-[10px] font-bold text-amber-800 dark:text-amber-200 uppercase tracking-wider">
-            Selecione o fornecedor para cadastrar produto
-          </span>
-        </div>
-
         <!-- Resumo, vista e contagem -->
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-center gap-4 text-sm">
@@ -269,7 +242,6 @@ import { confirm } from '@/services/confirm'
 import { notify } from '@/services/notify'
 import { format } from '@/utils/format'
 import { can } from '@/services/permissions'
-import { FornecedorService } from '@/services/index'
 import { getCategoriaBaseLabel } from '@/constantes/categorias-base'
 
 definePage({ meta: { perm: 'produtos.ver' } })
@@ -281,18 +253,8 @@ const router = useRouter()
 const filtro = ref('')
 const viewMode = ref('table') // 'table' | 'cards'
 
-const fornecedores = ref([])
-const fornecedorSelecionado = ref(null)
-const fornecedorOptions = computed(() =>
-  (fornecedores.value || []).map((f) => ({
-    label: f?.label || f?.razao_social || f?.nome_fantasia || '-',
-    value: f?.value ?? f?.id,
-  })),
-)
-
 function abrirNovoProduto() {
-  if (!fornecedorSelecionado.value) return
-  router.push(`/produtos/novo?fornecedor=${fornecedorSelecionado.value}`)
+  router.push('/produtos/novo')
 }
 
 const columns = [
@@ -322,6 +284,9 @@ function categoriaBaseBadgeClass(value) {
   }
   if (key === 'SECUNDARIA') {
     return 'bg-emerald-50 text-emerald-800 border-emerald-200'
+  }
+  if (key === 'INSUMO') {
+    return 'bg-blue-50 text-blue-800 border-blue-200'
   }
   return 'bg-slate-100 text-slate-700 border-slate-200'
 }
@@ -372,7 +337,6 @@ const totalEstoqueBaixo = computed(() => {
 })
 
 const emptyTableText = computed(() => {
-  if (!fornecedorSelecionado.value) return 'Selecione um fornecedor para listar os produtos.'
   return 'Nenhum produto encontrado.'
 })
 
@@ -380,7 +344,6 @@ async function buscarDadosDoBanco(page = 1) {
   loading.value = true
   try {
     const params = { page, pageSize: 20 }
-    if (fornecedorSelecionado.value) params.fornecedor_id = fornecedorSelecionado.value
     const resp = await api.get('/produtos', { params })
     const payload = resp.data
     const arr = payload?.data ?? payload
@@ -416,27 +379,12 @@ async function confirmarExcluirProduto(row) {
   }
 }
 
-async function carregarFornecedores() {
-  try {
-    const res = await FornecedorService.select()
-    const data = res?.data ?? res
-    fornecedores.value = Array.isArray(data) ? data : []
-  } catch (err) {
-    console.error('Erro ao carregar fornecedores:', err)
-  }
-}
-
-watch(fornecedorSelecionado, () => {
-  buscarDadosDoBanco(1)
-})
-
 onMounted(async () => {
   if (!can('produtos.ver')) {
     notify.error('Acesso negado.')
     router.push('/')
     return
   }
-  await carregarFornecedores()
   buscarDadosDoBanco(1)
 })
 </script>

@@ -680,6 +680,34 @@ function voltarParaLista() {
   closeTabAndGo('/funcionarios')
 }
 
+function aplicarCustosConstantesNoFormulario(data) {
+  if (!data || typeof data !== 'object') return
+
+  if (data.salario_base !== undefined && data.salario_base !== null) {
+    form.value.salario_base = numeroParaMoeda(data.salario_base)
+  }
+  if (data.impostos_encargos_percentual !== undefined && data.impostos_encargos_percentual !== null) {
+    form.value.impostos_encargos_percentual = String(data.impostos_encargos_percentual)
+  }
+  if (data.salario_adicional !== undefined && data.salario_adicional !== null) {
+    form.value.salario_adicional = numeroParaMoeda(data.salario_adicional)
+  }
+  if (data.custo_hora !== undefined && data.custo_hora !== null) {
+    form.value.custo_hora = numeroParaMoeda(data.custo_hora)
+  }
+}
+
+async function carregarCustosConstantes(funcId) {
+  if (!funcId) return
+  try {
+    const res = await FuncionariosService.buscarCustosConstantes(funcId)
+    const data = res?.data ?? res
+    aplicarCustosConstantesNoFormulario(data)
+  } catch (e) {
+    console.warn('[FUNCIONARIOS] Não foi possível carregar custos constantes.', e)
+  }
+}
+
 async function carregarDados() {
     if (!isEdit.value) return
   loading.value = true
@@ -753,6 +781,8 @@ async function carregarDados() {
     // Só libera os watchers no próximo tick para não limpar setor/cargo ao carregar
     await nextTick()
     isHydrating.value = false
+
+    await carregarCustosConstantes(funcionarioId.value)
 
   } catch (e) {
     notify.error('Erro ao carregar funcionário.')
@@ -834,11 +864,19 @@ async function confirmarSalvar() {
       }
     })
 
+    let savedId = null
+
     if (isEdit.value) {
-      await FuncionariosService.atualizar(funcionarioId.value, payload)
+      const updated = await FuncionariosService.atualizar(funcionarioId.value, payload)
+      savedId = Number(updated?.data?.id ?? updated?.id ?? funcionarioId.value)
     } else {
       payload.criar_usuario = !!form.value.criar_usuario
-      await FuncionariosService.criar(payload)
+      const created = await FuncionariosService.criar(payload)
+      savedId = Number(created?.data?.id ?? created?.id ?? 0)
+    }
+
+    if (savedId) {
+      await carregarCustosConstantes(savedId)
     }
 
 

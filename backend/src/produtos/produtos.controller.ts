@@ -54,7 +54,7 @@ export class ProdutosController {
       cor: dto.cor?.trim(),
       medida: dto.medida?.trim(),
       fornecedor_id,
-      tipo_aplicacao: dto.tipo_aplicacao,
+      categoria_base: dto.categoria_base,
     };
 
     // suporta paginação
@@ -79,7 +79,7 @@ export class ProdutosController {
   @Permissoes('produtos.ver')
   listar(
     @Query('fornecedor_id') fornecedor_id?: string,
-    @Query('tipo_aplicacao') tipo_aplicacao?: string,
+    @Query('categoria_base') categoria_base?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
     @Req() req?: any,
@@ -91,13 +91,13 @@ export class ProdutosController {
 
     if (page) {
       return this.produtosService.listar(
-        { fornecedor_id: fId, tipo_aplicacao },
+        { fornecedor_id: fId, categoria_base },
         { page: Number(page), pageSize: Number(pageSize || 20) },
         { aplicarMarkup100 },
       );
     }
 
-    return this.produtosService.listar({ fornecedor_id: fId, tipo_aplicacao }, undefined, {
+    return this.produtosService.listar({ fornecedor_id: fId, categoria_base }, undefined, {
       aplicarMarkup100,
     });
   }

@@ -16,7 +16,6 @@
       </div>
 
       <form v-else class="space-y-10 produtos-line-form" @submit.prevent="confirmarSalvarProduto" autocomplete="off">
-        <!-- Trava: só habilita o restante do cadastro após selecionar o fornecedor (igual Produtos Serviço de Corte) -->
         <div class="grid grid-cols-12 gap-6 items-end bg-slate-50/50 dark:bg-slate-800/20 p-6 rounded-2xl">
           <div class="col-span-12 md:col-span-6">
             <SearchInput
@@ -25,15 +24,10 @@
               label="Fornecedor Principal *"
               :options="fornecedorOptions"
               required
-              placeholder="Selecione o fornecedor para habilitar o cadastro"
+              placeholder="Selecione o fornecedor"
             />
           </div>
 
-          <p v-if="!camposDesbloqueados" class="col-span-12 text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
-            Selecione o fornecedor principal para habilitar o cadastro do produto.
-          </p>
-
-          <template v-if="camposDesbloqueados">
           <div class="col-span-12 md:col-span-3">
             <SearchInput
               v-model="form.unidade"
@@ -53,10 +47,9 @@
               required
             />
           </div>
-          </template>
         </div>
 
-        <div v-if="camposDesbloqueados" class="space-y-10">
+        <div class="space-y-10">
         <div class="relative">
           <div class="absolute inset-0 flex items-center">
             <div class="w-full border-t border-border-ui/50"></div>
@@ -424,9 +417,6 @@ const statusOptions = [
   { label: 'ATIVO', value: 'ATIVO' },
   { label: 'INATIVO', value: 'INATIVO' },
 ]
-
-// ======= Trava: só cadastra com fornecedor selecionado =======
-const camposDesbloqueados = computed(() => isEdit.value || !!form.value.fornecedor_id)
 
 // ======= FORM (estado numérico) =======
 const form = ref({
