@@ -62,6 +62,123 @@ export class FuncionariosService {
       .join(' ');
   }
 
+  async sincronizarComSistemaRH(params?: {
+    mes?: number;
+    ano?: number;
+    capacidade_m2_mes?: number;
+  }) {
+    const now = new Date();
+    const mes =
+      Number.isFinite(Number(params?.mes)) && Number(params?.mes) >= 1 && Number(params?.mes) <= 12
+        ? Number(params?.mes)
+        : now.getMonth() + 1;
+    const ano =
+      Number.isFinite(Number(params?.ano)) && Number(params?.ano) >= 2000
+        ? Number(params?.ano)
+        : now.getFullYear();
+
+    const divisorPadraoM2 = FUNCIONARIOS_BASE_CALCULO.custo_hora_empresarial_por_m2.divisor_padrao;
+    const capacidadeM2 = this.toNum(params?.capacidade_m2_mes);
+    const divisorM2 = capacidadeM2 > 0 ? capacidadeM2 : divisorPadraoM2;
+
+    const inicioMes = new Date(ano, mes - 1, 1, 0, 0, 0);
+    const fimMes = new Date(ano, mes, 0, 23, 59, 59);
+
+    const despesasMes = await this.prisma.despesas.findMany({
+      where: {
+        tipo_movimento: 'SAIDA',
+        data_vencimento: { gte: inicioMes, lte: fimMes },
+      },
+      select: {
+        categoria: true,
+        classificacao: true,
+        local: true,
+        valor_total: true,
+      },
+    });
+
+    const normalizadas = [...FUNCIONARIOS_TIPOS_CUSTO_KEYWORDS].map((k) => this.normalizarTexto(k));
+    const termosComissao = ['COMISSAO', 'COMISSOES'].map((v) => this.normalizarTexto(v));
+
+    const termosSalario = ['SALARIO', 'SALARIOS'].map((v) => this.normalizarTexto(v));
+    const termosHoraExtra = ['HORA_EXTRA', 'HORAS_EXTRAS'].map((v) => this.normalizarTexto(v));
+    const termosProLabore = ['PRO_LABORE', 'PRO LABORE'].map((v) => this.normalizarTexto(v));
+
+    const termosEncargosFixos = [
+      'INSS',
+      'FGTS',
+      'VALE_TRANSPORTE',
+      'VALE TRANSPORTE',
+      'VALE_ALIMENTACAO',
+      'VALE ALIMENTACAO',
+      'PLANO_SAUDE',
+      'PLANO SAUDE',
+    ].map((v) => this.normalizarTexto(v));
+
+    const termosBeneficiosExtras = normalizadas.filter((k) => {
+      return (
+        k.includes('BENEFICIO') ||
+        k === 'VA' ||
+        k === 'VR' ||
+        k === 'VT' ||
+        k === 'VALE' ||
+        k.includes('VALE ') ||
+        k.includes('PLANO SAUDE')
+      );
+    });
+
+    const containsAny = (texto: string, termos: string[]) => termos.some((t) => texto.includes(t));
+
+    let fabricaProducao = 0;
+    let admProLabore = 0;
+    let somaEncargosBeneficios = 0;
+
+    for (const despesa of despesasMes) {
+      const texto = this.textoDespesa(despesa);
+      const local = this.normalizarTexto(despesa.local);
+      const valor = this.toNum((despesa as any).valor_total);
+
+      if (!Number.isFinite(valor) || valor <= 0) continue;
+
+      // Exclusão global: comissão não entra nos cards de RH.
+      if (containsAny(texto, termosComissao)) continue;
+
+      const isFabrica = local === 'FABRICA';
+      const isEscritorio = local === 'ESCRITORIO';
+      const isSalario = containsAny(texto, termosSalario);
+      const isHoraExtra = containsAny(texto, termosHoraExtra);
+      const isProLabore = containsAny(texto, termosProLabore);
+      const isEncargoBeneficio =
+        containsAny(texto, termosEncargosFixos) || containsAny(texto, termosBeneficiosExtras);
+
+      if (isFabrica && (isSalario || isHoraExtra)) {
+        fabricaProducao += valor;
+        continue;
+      }
+
+      if (isProLabore || (isEscritorio && isSalario)) {
+        admProLabore += valor;
+        continue;
+      }
+
+      if (isEncargoBeneficio) {
+        somaEncargosBeneficios += valor;
+      }
+    }
+
+    const folhaTotal = fabricaProducao + admProLabore;
+    const custoHoraHomemM2 = this.round4(fabricaProducao / divisorM2);
+    const custoFixoFabricaM2 = this.round4(somaEncargosBeneficios / divisorM2);
+
+    return {
+      fabricaProducao: this.round2(fabricaProducao),
+      admProLabore: this.round2(admProLabore),
+      folhaTotal: this.round2(folhaTotal),
+      custoHoraHomemM2,
+      custoFixoFabricaM2,
+    };
+  }
+
   async calcularEstruturaCustos() {
     const agora = new Date();
     const mes = agora.getMonth() + 1;
