@@ -24,8 +24,8 @@ android {
         applicationId "br.com.acasa.ponto"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-    versionCode 39
-        versionName "0.1.98"
+    versionCode 40
+        versionName "0.1.99"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         aaptOptions {

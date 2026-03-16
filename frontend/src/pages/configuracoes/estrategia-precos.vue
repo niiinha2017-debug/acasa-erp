@@ -354,7 +354,7 @@
           </div>
         </div>
 
-        <div v-if="activeTab === 'cmv'" class="w-full px-4 md:px-5 py-3 border-b border-border-ui/60 bg-slate-50/30">
+        <div v-if="activeTab === 'cmv'" class="w-full px-4 md:px-5 py-4 border-b border-border-ui/60 bg-slate-50/30 space-y-4">
           <div class="mb-3 flex flex-wrap items-center gap-2">
             <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Categoria para simulação CMV:</span>
             <button
@@ -369,281 +369,241 @@
             </button>
           </div>
 
-          <div class="w-full grid grid-cols-1 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)] gap-5 items-start">
-            <div class="space-y-4">
-              <div class="rounded-xl border border-border-ui bg-white overflow-hidden">
-                <div class="px-3 py-2 bg-slate-50 border-b border-border-ui text-[11px] uppercase tracking-wider text-slate-500 font-bold">
-                  Tabela da Matriz Operacional
-                </div>
-                <div class="overflow-auto">
-                  <table class="w-full min-w-[620px]">
-                    <thead>
-                      <tr class="border-b border-border-ui bg-white text-left text-[11px] uppercase tracking-wider text-slate-500">
-                        <th class="px-4 py-3 font-black">Categoria</th>
-                        <th class="px-4 py-3 font-black">Espessura</th>
-                        <th class="px-4 py-3 font-black text-emerald-600">Custo Minimo / m2</th>
-                        <th class="px-4 py-3 font-black text-amber-600">Custo Medio / m2</th>
-                        <th class="px-4 py-3 font-black text-red-500">Custo Maximo / m2</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <template v-if="loadingMatriz">
-                        <tr v-for="n in 5" :key="n" class="border-b border-border-ui/70 animate-pulse">
-                          <td v-for="c in 5" :key="c" class="px-4 py-3">
-                            <div class="h-3.5 rounded bg-slate-100 w-3/4"></div>
-                          </td>
-                        </tr>
-                      </template>
-                      <template v-else>
-                        <tr
-                          v-for="row in matrizViewData"
-                          :key="row.id"
-                          class="border-b border-border-ui/70 last:border-b-0 hover:bg-slate-50/70 transition-colors"
-                        >
-                          <td class="px-4 py-3">
-                            <span class="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-bold bg-slate-100 text-slate-600 uppercase tracking-wide">
-                              {{ categoriaLabel(row.category) }}
-                            </span>
-                          </td>
-                          <td class="px-4 py-3 text-[11px] text-text-muted font-semibold">{{ row.thickness_label || 'Consolidado' }}</td>
-                          <td class="px-4 py-3">
-                            <span class="inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-black bg-emerald-50 text-emerald-700 tabular-nums">{{ formatCurrency(row.min_cost_base) }}</span>
-                          </td>
-                          <td class="px-4 py-3">
-                            <span class="inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-black bg-amber-50 text-amber-700 tabular-nums">{{ formatCurrency(row.avg_cost_base) }}</span>
-                          </td>
-                          <td class="px-4 py-3">
-                            <span class="inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-black bg-red-50 text-red-600 tabular-nums">{{ formatCurrency(row.max_cost_base) }}</span>
-                          </td>
-                        </tr>
+          <!-- Linha 1: 3 cards de opções CMV lado a lado -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3.5">
+              <div class="flex items-center justify-between mb-2">
+                <span class="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-emerald-700">Opção 1 · Mínimo</span>
+                <span class="text-[10px] font-semibold text-emerald-600">{{ categoriaAtivaResumoLabel }}</span>
+              </div>
+              <p class="text-2xl font-black tabular-nums text-emerald-700">{{ formatCurrency(custosOpcoesCMV.total1) }}<span class="text-xs font-semibold text-emerald-400 ml-1">/m²</span></p>
+              <p class="mt-1 text-[11px] text-slate-500">Base: <span class="font-bold">{{ formatCurrency(custosOpcoesCMV.base1) }}/m²</span></p>
+            </div>
+            <div class="rounded-xl border border-amber-200 bg-amber-50/60 p-3.5">
+              <div class="flex items-center justify-between mb-2">
+                <span class="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-amber-700">Opção 2 · Médio</span>
+                <span class="text-[10px] font-semibold text-amber-600">{{ categoriaAtivaResumoLabel }}</span>
+              </div>
+              <p class="text-2xl font-black tabular-nums text-amber-700">{{ formatCurrency(custosOpcoesCMV.total2) }}<span class="text-xs font-semibold text-amber-400 ml-1">/m²</span></p>
+              <p class="mt-1 text-[11px] text-slate-500">Base: <span class="font-bold">{{ formatCurrency(custosOpcoesCMV.base2) }}/m²</span></p>
+            </div>
+            <div class="rounded-xl border border-red-200 bg-red-50/60 p-3.5">
+              <div class="flex items-center justify-between mb-2">
+                <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-red-700">Opção 3 · Máximo</span>
+                <span class="text-[10px] font-semibold text-red-500">{{ categoriaAtivaResumoLabel }}</span>
+              </div>
+              <p class="text-2xl font-black tabular-nums text-red-600">{{ formatCurrency(custosOpcoesCMV.total3) }}<span class="text-xs font-semibold text-red-300 ml-1">/m²</span></p>
+              <p class="mt-1 text-[11px] text-slate-500">Base: <span class="font-bold">{{ formatCurrency(custosOpcoesCMV.base3) }}/m²</span></p>
+            </div>
+          </div>
 
-                        <tr v-if="!matrizViewData.length">
-                          <td colspan="5" class="px-4 py-12 text-center">
-                            <div class="flex flex-col items-center gap-2 text-text-muted">
-                              <i class="pi pi-table text-2xl opacity-40"></i>
-                              <p class="text-sm">Nenhum dado na Matriz Operacional.</p>
-                            </div>
-                          </td>
-                        </tr>
-                      </template>
-                    </tbody>
-                  </table>
+          <!-- Linha 2: Decomposição (esquerda, maior) + Custos e botões (direita) -->
+          <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(260px,1fr)] gap-4 items-start">
+            <!-- Decomposição de Preço -->
+            <div
+              class="rounded-xl p-4 space-y-4 transition-colors"
+              :class="decomposicaoCardToneClass"
+            >
+              <div class="flex items-start justify-between gap-3 flex-wrap">
+                <div>
+                  <p class="text-[0.8rem] font-bold uppercase tracking-wider text-slate-500">Decomposição de Preço</p>
+                  <p class="text-[0.8rem] text-text-muted mt-0.5">
+                    Leitura da categoria {{ categoriaAtivaResumoLabel }} antes de gerar o orçamento.
+                  </p>
+                </div>
+                <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600">
+                  Referência: {{ formatCurrency(precoClienteProjetado) }}/m2
+                </span>
+              </div>
+
+              <div class="rounded-lg border border-border-ui bg-slate-50/80 p-3 space-y-2">
+                <label class="block text-[0.8rem] font-bold uppercase tracking-wider text-slate-500">Valor de Venda Pretendido</label>
+                <input
+                  v-model.number="valorVendaPretendido"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="w-full rounded-xl border border-border-ui bg-white px-3 py-2 text-sm font-semibold tabular-nums"
+                  placeholder="Digite o valor de venda por m²"
+                />
+                <p class="text-[0.8rem] text-slate-500">
+                  As barras abaixo representam a fatia consumida desse valor digitado.
+                </p>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <div class="flex items-center justify-between text-[0.8rem] mb-1">
+                    <span class="font-semibold text-emerald-700">Material</span>
+                    <span class="font-bold text-emerald-700 tabular-nums">{{ formatCurrency(decomposicaoPreco.material) }}</span>
+                  </div>
+                  <div class="h-2.5 rounded-full bg-emerald-50 overflow-hidden">
+                    <div class="h-full rounded-full bg-emerald-500 transition-all duration-300" :style="{ width: `${decomposicaoPreco.materialPct}%` }"></div>
+                  </div>
+                  <p class="mt-1 text-[0.8rem] text-slate-500">{{ decomposicaoPreco.materialPctLabel }} — MDF, ferragem e insumos.</p>
+                </div>
+                <div>
+                  <div class="flex items-center justify-between text-[0.8rem] mb-1">
+                    <span class="font-semibold text-blue-700">RH</span>
+                    <span class="font-bold text-blue-700 tabular-nums">{{ formatCurrency(decomposicaoPreco.rh) }}</span>
+                  </div>
+                  <div class="h-2.5 rounded-full bg-blue-50 overflow-hidden">
+                    <div class="h-full rounded-full bg-blue-500 transition-all duration-300" :style="{ width: `${decomposicaoPreco.rhPct}%` }"></div>
+                  </div>
+                  <p class="mt-1 text-[0.8rem] text-slate-500">{{ decomposicaoPreco.rhPctLabel }} — mão de obra.</p>
+                </div>
+                <div>
+                  <div class="flex items-center justify-between text-[0.8rem] mb-1">
+                    <span class="font-semibold text-violet-700">Operacional</span>
+                    <span class="font-bold text-violet-700 tabular-nums">{{ formatCurrency(decomposicaoPreco.operacional) }}</span>
+                  </div>
+                  <div class="h-2.5 rounded-full bg-violet-50 overflow-hidden">
+                    <div class="h-full rounded-full bg-violet-500 transition-all duration-300" :style="{ width: `${decomposicaoPreco.operacionalPct}%` }"></div>
+                  </div>
+                  <p class="mt-1 text-[0.8rem] text-slate-500">{{ decomposicaoPreco.operacionalPctLabel }} — aluguel, luz e estrutura.</p>
                 </div>
               </div>
 
-              <div class="rounded-xl border border-border-ui bg-white overflow-hidden">
-                <div class="px-3 py-2 bg-slate-50 border-b border-border-ui text-[11px] uppercase tracking-wider text-slate-500 font-bold">
-                  CMV por categoria
+              <div class="grid grid-cols-2 gap-3 text-[0.8rem]">
+                <div class="rounded-lg bg-slate-50 px-3 py-2.5">
+                  <p class="text-slate-500 text-[0.8rem]">Custo total (inclui CMV)</p>
+                  <p class="font-bold text-slate-900 tabular-nums">{{ formatCurrency(decomposicaoPreco.custoTotal) }}</p>
+                  <p class="mt-1 text-[11px] text-slate-500">
+                    CMV considerado: <span class="font-bold text-slate-700">{{ formatCurrency(decomposicaoPreco.cmvConsiderado) }}</span>
+                  </p>
                 </div>
-                <table class="w-full">
-                  <thead>
-                    <tr class="border-b border-border-ui text-[10px] uppercase tracking-wider text-slate-400">
-                      <th class="px-3 py-1.5 text-left font-semibold">Categoria</th>
-                      <th class="px-3 py-1.5 text-right font-semibold">Total/m2</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="cat in CATEGORIAS_ABA1" :key="cat.id" class="border-b border-border-ui/50 last:border-b-0">
-                      <td class="px-3 py-2 text-xs font-semibold text-text-main">{{ cat.label }}</td>
-                      <td class="px-3 py-2 text-xs text-right tabular-nums font-bold text-slate-900">
-                        {{ formatCurrency((matrizPorCategoria[cat.id]?.avg_cost_base || 0) * (1 + acrescimoPct / 100) + kitTotal + custosInternosTotal) }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                <div class="rounded-lg bg-slate-50 px-3 py-2.5">
+                  <div class="flex items-center justify-between gap-2">
+                    <div>
+                      <p class="text-slate-500 text-[0.8rem]">Lucro Real</p>
+                      <p class="font-bold tabular-nums" :class="decomposicaoPreco.lucroReal < 0 ? 'text-red-600' : 'text-slate-900'">
+                        {{ formatCurrency(decomposicaoPreco.lucroReal) }}
+                      </p>
+                    </div>
+                    <span
+                      class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-black"
+                      :class="decomposicaoPreco.lucroRealPct < 10 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'"
+                    >
+                      {{ decomposicaoPreco.lucroRealPctLabel }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                v-if="decomposicaoPreco.riscoStatus !== 'ok'"
+                class="rounded-lg border px-3 py-2 text-[0.8rem]"
+                :class="decomposicaoPreco.riscoStatus === 'alto' ? 'border-red-200 bg-red-50 text-red-700' : 'border-amber-200 bg-amber-50 text-amber-700'"
+              >
+                <p class="font-black uppercase tracking-wide">Margem de Risco</p>
+                <p class="mt-1 leading-relaxed">{{ decomposicaoPreco.riscoMensagem }}</p>
               </div>
             </div>
 
-            <aside class="w-full">
-              <div class="space-y-3">
-                <div class="rounded-xl border border-blue-100 bg-blue-50/60 p-3">
-                  <p class="text-[11px] font-bold uppercase tracking-wider text-blue-700">Quanto vai custar cada opção</p>
-                  <p class="mt-1 text-[11px] text-blue-600">Categoria atual: {{ categoriaAtivaResumoLabel }}</p>
-                  <div class="mt-2 space-y-2">
-                    <div class="rounded-lg bg-white/70 px-2.5 py-2 text-xs">
-                      <div class="flex items-center justify-between">
-                        <span class="font-semibold text-slate-600">Opção 1 (Base: custo mínimo)</span>
-                        <span class="font-bold tabular-nums text-emerald-700">{{ formatCurrency(custosOpcoesCMV.base1) }}/m2</span>
-                      </div>
-                      <p class="mt-1 text-[11px] text-slate-500">
-                        Total projetado: <span class="font-bold text-slate-700">{{ formatCurrency(custosOpcoesCMV.total1) }}/m2</span>
-                      </p>
-                    </div>
-                    <div class="rounded-lg bg-white/70 px-2.5 py-2 text-xs">
-                      <div class="flex items-center justify-between">
-                        <span class="font-semibold text-slate-600">Opção 2 (Base: custo médio)</span>
-                        <span class="font-bold tabular-nums text-amber-700">{{ formatCurrency(custosOpcoesCMV.base2) }}/m2</span>
-                      </div>
-                      <p class="mt-1 text-[11px] text-slate-500">
-                        Total projetado: <span class="font-bold text-slate-700">{{ formatCurrency(custosOpcoesCMV.total2) }}/m2</span>
-                      </p>
-                    </div>
-                    <div class="rounded-lg bg-white/70 px-2.5 py-2 text-xs">
-                      <div class="flex items-center justify-between">
-                        <span class="font-semibold text-slate-600">Opção 3 (Base: custo máximo)</span>
-                        <span class="font-bold tabular-nums text-red-600">{{ formatCurrency(custosOpcoesCMV.base3) }}/m2</span>
-                      </div>
-                      <p class="mt-1 text-[11px] text-slate-500">
-                        Total projetado: <span class="font-bold text-slate-700">{{ formatCurrency(custosOpcoesCMV.total3) }}/m2</span>
-                      </p>
-                    </div>
-                  </div>
+            <!-- Custos Consolidados + Botões -->
+            <div class="space-y-3">
+              <div class="rounded-xl border border-border-ui bg-white p-3 space-y-1.5">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Custos Consolidados</p>
+                <div class="flex items-center justify-between text-xs">
+                  <span class="text-slate-500">+ Insumos</span>
+                  <span class="font-bold text-emerald-700">{{ formatCurrency(kitTotal) }}</span>
                 </div>
-
-                <div class="rounded-xl border border-border-ui bg-white p-3 space-y-1.5">
-                  <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Custos Consolidados</p>
-                  <div class="flex items-center justify-between text-xs">
-                    <span class="text-slate-500">+ Insumos</span>
-                    <span class="font-bold text-emerald-700">{{ formatCurrency(kitTotal) }}</span>
-                  </div>
-                  <div class="flex items-center justify-between text-xs">
-                    <span class="flex items-center gap-1.5 text-slate-500">
-                      + Custos internos
-                      <span class="inline-flex items-center gap-0.5 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-600 leading-none">
-                        <i class="pi pi-sync text-[8px]"></i> RH
-                      </span>
+                <div class="flex items-center justify-between text-xs">
+                  <span class="flex items-center gap-1.5 text-slate-500">
+                    + Custos internos
+                    <span class="inline-flex items-center gap-0.5 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-600 leading-none">
+                      <i class="pi pi-sync text-[8px]"></i> RH
                     </span>
-                    <span class="font-bold text-blue-700 tabular-nums">{{ formatCurrency(custosInternosTotal) }}</span>
-                  </div>
-                  <div class="flex items-center justify-between text-xs">
-                    <span class="text-slate-500">Acréscimo global</span>
-                    <span class="font-bold text-slate-700">{{ Number(acrescimoPct || 0).toFixed(2) }}%</span>
-                  </div>
+                  </span>
+                  <span class="font-bold text-blue-700 tabular-nums">{{ formatCurrency(custosInternosTotal) }}</span>
                 </div>
-
-                <div
-                  class="rounded-xl p-3 space-y-3 xl:sticky xl:top-5 transition-colors"
-                  :class="decomposicaoCardToneClass"
-                >
-                  <div class="flex items-start justify-between gap-3">
-                    <div>
-                      <p class="text-[0.8rem] font-bold uppercase tracking-wider text-slate-500">Decomposição de Preço</p>
-                      <p class="text-[0.8rem] text-text-muted mt-0.5">
-                        Leitura da categoria {{ categoriaAtivaResumoLabel }} antes de gerar o orçamento.
-                      </p>
-                    </div>
-                    <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
-                      Referência: {{ formatCurrency(precoClienteProjetado) }}/m2
-                    </span>
-                  </div>
-
-                  <div class="rounded-lg border border-border-ui bg-slate-50/80 p-2.5 space-y-2">
-                    <label class="block text-[0.8rem] font-bold uppercase tracking-wider text-slate-500">Valor de Venda Pretendido</label>
-                    <input
-                      v-model.number="valorVendaPretendido"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      class="w-full rounded-xl border border-border-ui bg-white px-3 py-2 text-sm font-semibold tabular-nums"
-                      placeholder="Digite o valor de venda por m²"
-                    />
-                    <p class="text-[0.8rem] text-slate-500">
-                      As barras abaixo representam a fatia consumida desse valor digitado.
-                    </p>
-                  </div>
-
-                  <div class="space-y-6">
-                    <div>
-                      <div class="flex items-center justify-between text-[0.8rem] mb-1">
-                        <span class="font-semibold text-emerald-700">Material</span>
-                        <span class="font-bold text-emerald-700 tabular-nums">{{ formatCurrency(decomposicaoPreco.material) }}</span>
-                      </div>
-                      <div class="h-2.5 rounded-full bg-emerald-50 overflow-hidden">
-                        <div
-                          class="h-full rounded-full bg-emerald-500 transition-all duration-300"
-                          :style="{ width: `${decomposicaoPreco.materialPct}%` }"
-                        ></div>
-                      </div>
-                      <p class="mt-1 text-[0.8rem] text-slate-500">{{ decomposicaoPreco.materialPctLabel }} do preço para MDF, ferragem e insumos.</p>
-                    </div>
-
-                    <div>
-                      <div class="flex items-center justify-between text-[0.8rem] mb-1">
-                        <span class="font-semibold text-blue-700">RH</span>
-                        <span class="font-bold text-blue-700 tabular-nums">{{ formatCurrency(decomposicaoPreco.rh) }}</span>
-                      </div>
-                      <div class="h-2.5 rounded-full bg-blue-50 overflow-hidden">
-                        <div
-                          class="h-full rounded-full bg-blue-500 transition-all duration-300"
-                          :style="{ width: `${decomposicaoPreco.rhPct}%` }"
-                        ></div>
-                      </div>
-                      <p class="mt-1 text-[0.8rem] text-slate-500">{{ decomposicaoPreco.rhPctLabel }} do preço para absorver a mão de obra.</p>
-                    </div>
-
-                    <div>
-                      <div class="flex items-center justify-between text-[0.8rem] mb-1">
-                        <span class="font-semibold text-violet-700">Operacional</span>
-                        <span class="font-bold text-violet-700 tabular-nums">{{ formatCurrency(decomposicaoPreco.operacional) }}</span>
-                      </div>
-                      <div class="h-2.5 rounded-full bg-violet-50 overflow-hidden">
-                        <div
-                          class="h-full rounded-full bg-violet-500 transition-all duration-300"
-                          :style="{ width: `${decomposicaoPreco.operacionalPct}%` }"
-                        ></div>
-                      </div>
-                      <p class="mt-1 text-[0.8rem] text-slate-500">{{ decomposicaoPreco.operacionalPctLabel }} do preço para aluguel, luz e estrutura.</p>
-                    </div>
-                  </div>
-
-                  <div class="grid grid-cols-2 gap-2 text-[0.8rem]">
-                    <div class="rounded-lg bg-slate-50 px-2.5 py-2">
-                      <p class="text-slate-500 text-[0.8rem]">Custo total (inclui CMV)</p>
-                      <p class="font-bold text-slate-900 tabular-nums">{{ formatCurrency(decomposicaoPreco.custoTotal) }}</p>
-                      <p class="mt-1 text-[11px] text-slate-500">
-                        CMV considerado: <span class="font-bold text-slate-700">{{ formatCurrency(decomposicaoPreco.cmvConsiderado) }}</span>
-                      </p>
-                    </div>
-                    <div class="rounded-lg bg-slate-50 px-2.5 py-2">
-                      <div class="flex items-center justify-between gap-2">
-                        <div>
-                          <p class="text-slate-500 text-[0.8rem]">Lucro Real</p>
-                          <p class="font-bold tabular-nums" :class="decomposicaoPreco.lucroReal < 0 ? 'text-red-600' : 'text-slate-900'">
-                            {{ formatCurrency(decomposicaoPreco.lucroReal) }}
-                          </p>
-                        </div>
-                        <span
-                          class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-black"
-                          :class="decomposicaoPreco.lucroRealPct < 10 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'"
-                        >
-                          {{ decomposicaoPreco.lucroRealPctLabel }}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    v-if="decomposicaoPreco.riscoStatus !== 'ok'"
-                    class="rounded-lg border px-3 py-2 text-[0.8rem]"
-                    :class="decomposicaoPreco.riscoStatus === 'alto' ? 'border-red-200 bg-red-50 text-red-700' : 'border-amber-200 bg-amber-50 text-amber-700'"
-                  >
-                    <p class="font-black uppercase tracking-wide">Margem de Risco</p>
-                    <p class="mt-1 leading-relaxed">{{ decomposicaoPreco.riscoMensagem }}</p>
-                  </div>
-                </div>
-
-                <div class="flex flex-col gap-2">
-                  <button
-                    type="button"
-                    class="w-full inline-flex justify-center items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 text-white hover:scale-[1.02] hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                    :disabled="processando"
-                    @click="processarMatriz"
-                  >
-                    <i :class="processando ? 'pi pi-spin pi-spinner' : 'pi pi-calculator'" class="text-sm"></i>
-                    {{ processando ? 'Gerando Orçamento...' : 'GERAR ORÇAMENTO' }}
-                  </button>
-                  <button
-                    type="button"
-                    class="w-full inline-flex justify-center items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold border border-border-ui text-text-main hover:bg-slate-50 transition-all"
-                    :disabled="loadingMatriz"
-                    @click="loadMatriz"
-                  >
-                    <i :class="loadingMatriz ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'" class="text-sm"></i>
-                    Atualizar tabela
-                  </button>
+                <div class="flex items-center justify-between text-xs">
+                  <span class="text-slate-500">Acréscimo global</span>
+                  <span class="font-bold text-slate-700">{{ Number(acrescimoPct || 0).toFixed(2) }}%</span>
                 </div>
               </div>
-            </aside>
+
+              <div class="flex flex-col gap-2">
+                <button
+                  type="button"
+                  class="w-full inline-flex justify-center items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 text-white hover:scale-[1.02] hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  :disabled="processando"
+                  @click="processarMatriz"
+                >
+                  <i :class="processando ? 'pi pi-spin pi-spinner' : 'pi pi-calculator'" class="text-sm"></i>
+                  {{ processando ? 'Gerando Orçamento...' : 'GERAR ORÇAMENTO' }}
+                </button>
+                <button
+                  type="button"
+                  class="w-full inline-flex justify-center items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold border border-border-ui text-text-main hover:bg-slate-50 transition-all"
+                  :disabled="loadingMatriz"
+                  @click="loadMatriz"
+                >
+                  <i :class="loadingMatriz ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'" class="text-sm"></i>
+                  Atualizar tabela
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Linha 3: Tabela Matriz full-width -->
+          <div class="rounded-xl border border-border-ui bg-white overflow-hidden">
+            <div class="px-3 py-2 bg-slate-50 border-b border-border-ui text-[11px] uppercase tracking-wider text-slate-500 font-bold">
+              Matriz Operacional — Consolidado da categoria ativa
+            </div>
+            <div class="overflow-auto">
+              <table class="w-full min-w-[620px]">
+                <thead>
+                  <tr class="border-b border-border-ui bg-white text-left text-[11px] uppercase tracking-wider text-slate-500">
+                    <th class="px-4 py-3 font-black">Categoria</th>
+                    <th class="px-4 py-3 font-black">Espessura</th>
+                    <th class="px-4 py-3 font-black text-emerald-600">Custo Minimo / m2</th>
+                    <th class="px-4 py-3 font-black text-amber-600">Custo Medio / m2</th>
+                    <th class="px-4 py-3 font-black text-red-500">Custo Maximo / m2</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template v-if="loadingMatriz">
+                    <tr v-for="n in 2" :key="n" class="border-b border-border-ui/70 animate-pulse">
+                      <td v-for="c in 5" :key="c" class="px-4 py-3">
+                        <div class="h-3.5 rounded bg-slate-100 w-3/4"></div>
+                      </td>
+                    </tr>
+                  </template>
+                  <template v-else>
+                    <tr
+                      v-for="row in matrizViewData"
+                      :key="row.id"
+                      class="border-b border-border-ui/70 last:border-b-0 hover:bg-slate-50/70 transition-colors"
+                    >
+                      <td class="px-4 py-3">
+                        <span class="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-bold bg-slate-100 text-slate-600 uppercase tracking-wide">
+                          {{ categoriaLabel(row.category) }}
+                        </span>
+                      </td>
+                      <td class="px-4 py-3 text-[11px] text-text-muted font-semibold">{{ row.thickness_label || 'Consolidado' }}</td>
+                      <td class="px-4 py-3">
+                        <span class="inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-black bg-emerald-50 text-emerald-700 tabular-nums">{{ formatCurrency(row.min_cost_base) }}</span>
+                      </td>
+                      <td class="px-4 py-3">
+                        <span class="inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-black bg-amber-50 text-amber-700 tabular-nums">{{ formatCurrency(row.avg_cost_base) }}</span>
+                      </td>
+                      <td class="px-4 py-3">
+                        <span class="inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-black bg-red-50 text-red-600 tabular-nums">{{ formatCurrency(row.max_cost_base) }}</span>
+                      </td>
+                    </tr>
+                    <tr v-if="!matrizViewData.length">
+                      <td colspan="5" class="px-4 py-10 text-center">
+                        <div class="flex flex-col items-center gap-2 text-text-muted">
+                          <i class="pi pi-table text-2xl opacity-40"></i>
+                          <p class="text-sm">Nenhum dado consolidado para a categoria selecionada.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>
@@ -883,12 +843,46 @@ const decomposicaoCardToneClass = computed(() => {
   return 'border-border-ui bg-white'
 })
 
-const matrizViewData = computed(() =>
-  (matrizData.value || []).map((row) => ({
-    ...row,
-    thickness_label: row?.thickness > 0 ? `${row.thickness} mm` : 'Consolidado',
-  })),
-)
+const matrizViewData = computed(() => {
+  const categoriaAlvo = normalizeCommercialCategory(categoriaComercialAtiva.value)
+  const rowsDaCategoria = (matrizData.value || []).filter(
+    (row) => normalizeCommercialCategory(row?.category) === categoriaAlvo,
+  )
+
+  if (!rowsDaCategoria.length) return []
+
+  const consolidado = rowsDaCategoria.reduce(
+    (acc, row) => {
+      acc.min_cost_base = Math.min(acc.min_cost_base, Number(row?.min_cost_base || 0))
+      acc.avg_cost_base += Number(row?.avg_cost_base || 0)
+      acc.max_cost_base = Math.max(acc.max_cost_base, Number(row?.max_cost_base || 0))
+      acc.total += 1
+      return acc
+    },
+    {
+      id: `${categoriaAlvo}-consolidado`,
+      category: categoriaAlvo,
+      thickness_label: 'Consolidado',
+      min_cost_base: Number.POSITIVE_INFINITY,
+      avg_cost_base: 0,
+      max_cost_base: Number.NEGATIVE_INFINITY,
+      total: 0,
+    },
+  )
+
+  return [
+    {
+      id: consolidado.id,
+      category: consolidado.category,
+      thickness_label: consolidado.thickness_label,
+      min_cost_base:
+        consolidado.min_cost_base === Number.POSITIVE_INFINITY ? 0 : consolidado.min_cost_base,
+      avg_cost_base: consolidado.total > 0 ? consolidado.avg_cost_base / consolidado.total : 0,
+      max_cost_base:
+        consolidado.max_cost_base === Number.NEGATIVE_INFINITY ? 0 : consolidado.max_cost_base,
+    },
+  ]
+})
 
 function strategyLabel(value) {
   if (value === 'MIN_PRICE') return 'Menor Preco'
