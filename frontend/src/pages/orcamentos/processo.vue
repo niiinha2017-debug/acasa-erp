@@ -89,7 +89,7 @@
         </div>
         <div class="rounded-xl border border-border-ui bg-bg-page p-3">
           <p class="font-black text-text-main">3. Pos-venda e Agenda</p>
-          <p class="text-text-soft mt-1">Producao -> Montagem -> Entrega -> Pos-venda. Ao entrar em producao, vai para Agenda Geral.</p>
+          <p class="text-text-soft mt-1">Producao -> Material carregado -> Montagem -> Pos-venda. Ao entrar em producao, vai para Agenda Geral.</p>
         </div>
       </div>
     </section>

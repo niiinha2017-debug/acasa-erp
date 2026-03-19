@@ -219,6 +219,13 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
+    '/estoque/': RouteRecordInfo<
+      '/estoque/',
+      '/estoque',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/financeiro/contas-pagar/': RouteRecordInfo<
       '/financeiro/contas-pagar/',
       '/financeiro/contas-pagar',
@@ -289,13 +296,6 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
-    '/medicao-venda/[id]': RouteRecordInfo<
-      '/medicao-venda/[id]',
-      '/medicao-venda/:id',
-      { id: ParamValue<true> },
-      { id: ParamValue<false> },
-      | never
-    >,
     '/orcamento-tecnico/': RouteRecordInfo<
       '/orcamento-tecnico/',
       '/orcamento-tecnico',
@@ -308,6 +308,20 @@ declare module 'vue-router/auto-routes' {
       '/orcamento-tecnico/:id',
       { id: ParamValue<true> },
       { id: ParamValue<false> },
+      | never
+    >,
+    '/orcamento-tecnico/importar': RouteRecordInfo<
+      '/orcamento-tecnico/importar',
+      '/orcamento-tecnico/importar',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/orcamento-tecnico/marcenaria-rapido': RouteRecordInfo<
+      '/orcamento-tecnico/marcenaria-rapido',
+      '/orcamento-tecnico/marcenaria-rapido',
+      Record<never, never>,
+      Record<never, never>,
       | never
     >,
     '/orcamento-tecnico/novo/[agendamentoId]': RouteRecordInfo<
@@ -562,6 +576,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/vendas/fechamento-venda/[orcamentoId]': RouteRecordInfo<
+      '/vendas/fechamento-venda/[orcamentoId]',
+      '/vendas/fechamento-venda/:orcamentoId',
+      { orcamentoId: ParamValue<true> },
+      { orcamentoId: ParamValue<false> },
+      | never
+    >,
     '/vendas/kanban': RouteRecordInfo<
       '/vendas/kanban',
       '/vendas/kanban',
@@ -778,6 +799,12 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/estoque/index.vue': {
+      routes:
+        | '/estoque/'
+      views:
+        | never
+    }
     'src/pages/financeiro/contas-pagar/index.vue': {
       routes:
         | '/financeiro/contas-pagar/'
@@ -838,12 +865,6 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/medicao-venda/[id].vue': {
-      routes:
-        | '/medicao-venda/[id]'
-      views:
-        | never
-    }
     'src/pages/orcamento-tecnico/index.vue': {
       routes:
         | '/orcamento-tecnico/'
@@ -853,6 +874,18 @@ declare module 'vue-router/auto-routes' {
     'src/pages/orcamento-tecnico/[id].vue': {
       routes:
         | '/orcamento-tecnico/[id]'
+      views:
+        | never
+    }
+    'src/pages/orcamento-tecnico/importar.vue': {
+      routes:
+        | '/orcamento-tecnico/importar'
+      views:
+        | never
+    }
+    'src/pages/orcamento-tecnico/marcenaria-rapido.vue': {
+      routes:
+        | '/orcamento-tecnico/marcenaria-rapido'
       views:
         | never
     }
@@ -1070,6 +1103,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/vendas/fechamento.vue': {
       routes:
         | '/vendas/fechamento'
+      views:
+        | never
+    }
+    'src/pages/vendas/fechamento-venda/[orcamentoId].vue': {
+      routes:
+        | '/vendas/fechamento-venda/[orcamentoId]'
       views:
         | never
     }

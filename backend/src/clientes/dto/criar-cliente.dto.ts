@@ -7,7 +7,7 @@ import {
   IsDateString,
   MaxLength,
 } from 'class-validator';
-import { INDICACAO_ORIGEM_KEYS } from '../../../shared/constantes/indicacao-origem';
+import { INDICACAO_ORIGEM_KEYS } from '../../shared/constantes/indicacao-origem';
 
 export class CriarClienteDto {
   @IsOptional()

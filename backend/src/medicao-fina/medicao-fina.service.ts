@@ -4,13 +4,17 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { CreateMedicaoFinaDto } from './dto/create-medicao-fina.dto';
 import { UpdateMedicaoFinaDto } from './dto/update-medicao-fina.dto';
 import { FinalizarMedicaoTotemDto } from './dto/finalizar-medicao-totem.dto';
+import { AgendaService } from '../agenda/agenda.service';
 
 const STATUS_PROJETO_PRONTO_CALCULO = 'PRONTO_PARA_PROJETO_CALCULO';
 const STATUS_PROJETO_PRONTO_PRODUCAO = 'PRONTO_PARA_PRODUCAO';
 
 @Injectable()
 export class MedicaoFinaService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly agendaService: AgendaService,
+  ) {}
 
   /** Resolve projeto_id por id/código do projeto ou id do orçamento */
   async resolverProjetoId(q: string): Promise<{ projeto_id: number } | null> {
@@ -197,14 +201,42 @@ export class MedicaoFinaService {
         where: { id: projetoId },
         data: { status_atual: STATUS_PROJETO_PRONTO_CALCULO },
       });
-      await tx.agenda_loja.updateMany({
+      const agendas = await tx.agenda_loja.findMany({
         where: {
           projeto_id: projetoId,
           status: { not: 'CONCLUIDO' },
           categoria: { in: ['MEDIDA_FINA', 'AGENDAR_MEDIDA_FINA'] },
         },
-        data: { status: 'CONCLUIDO', status_aplicado_em: new Date() },
+        select: {
+          id: true,
+          categoria: true,
+          origem_fluxo: true,
+          fluxo_tipo: true,
+          macroetapa: true,
+          subetapa: true,
+          execucao_etapa: true,
+        },
       });
+      const statusAplicadoEm = new Date();
+      for (const agenda of agendas) {
+        await tx.agenda_loja.update({
+          where: { id: agenda.id },
+          data: {
+            status: 'CONCLUIDO',
+            status_aplicado_em: statusAplicadoEm,
+            ...this.agendaService.montarCamposStatusMatrixFromAtual({
+              categoria: agenda.categoria ?? null,
+              status: 'CONCLUIDO',
+              origemFluxo: agenda.origem_fluxo ?? null,
+              planoCorteId: null,
+              fluxoTipo: agenda.fluxo_tipo ?? null,
+              macroetapa: agenda.macroetapa ?? null,
+              subetapa: agenda.subetapa ?? null,
+              execucaoEtapa: agenda.execucao_etapa ?? null,
+            }),
+          },
+        });
+      }
     });
   }
 
@@ -267,21 +299,68 @@ export class MedicaoFinaService {
 
     await this.prisma.$transaction(async (tx) => {
       if (dto.tipo === 'agenda_loja') {
+        const agendaLoja = await tx.agenda_loja.findUnique({
+          where: { id: dto.agenda_id },
+          select: {
+            id: true,
+            categoria: true,
+            origem_fluxo: true,
+            fluxo_tipo: true,
+            macroetapa: true,
+            subetapa: true,
+            execucao_etapa: true,
+          },
+        });
+        if (!agendaLoja) throw new NotFoundException('Tarefa da agenda não encontrada.');
         await tx.agenda_loja.update({
           where: { id: dto.agenda_id },
           data: {
             status: 'CONCLUIDO',
             status_source: statusSource,
             status_aplicado_em: agora,
+            ...this.agendaService.montarCamposStatusMatrixFromAtual({
+              categoria: agendaLoja.categoria ?? null,
+              status: 'CONCLUIDO',
+              origemFluxo: agendaLoja.origem_fluxo ?? null,
+              planoCorteId: null,
+              fluxoTipo: agendaLoja.fluxo_tipo ?? null,
+              macroetapa: agendaLoja.macroetapa ?? null,
+              subetapa: agendaLoja.subetapa ?? null,
+              execucaoEtapa: agendaLoja.execucao_etapa ?? null,
+            }),
           },
         });
       } else {
+        const agendaFabrica = await tx.agenda_fabrica.findUnique({
+          where: { id: dto.agenda_id },
+          select: {
+            id: true,
+            categoria: true,
+            origem_fluxo: true,
+            plano_corte_id: true,
+            fluxo_tipo: true,
+            macroetapa: true,
+            subetapa: true,
+            execucao_etapa: true,
+          },
+        });
+        if (!agendaFabrica) throw new NotFoundException('Tarefa da agenda não encontrada.');
         await tx.agenda_fabrica.update({
           where: { id: dto.agenda_id },
           data: {
             status: 'CONCLUIDO',
             status_source: statusSource,
             status_aplicado_em: agora,
+            ...this.agendaService.montarCamposStatusMatrixFromAtual({
+              categoria: agendaFabrica.categoria ?? null,
+              status: 'CONCLUIDO',
+              origemFluxo: agendaFabrica.origem_fluxo ?? null,
+              planoCorteId: agendaFabrica.plano_corte_id ?? null,
+              fluxoTipo: agendaFabrica.fluxo_tipo ?? null,
+              macroetapa: agendaFabrica.macroetapa ?? null,
+              subetapa: agendaFabrica.subetapa ?? null,
+              execucaoEtapa: agendaFabrica.execucao_etapa ?? null,
+            }),
           },
         });
       }

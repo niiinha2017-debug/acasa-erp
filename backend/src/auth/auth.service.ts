@@ -28,21 +28,60 @@ export class AuthService {
     );
   }
 
-  private async buscarUsuarioPorLogin(loginLimpo: string, isEmail: boolean) {
-    try {
-      return await this.prisma.usuarios.findFirst({
-        where: isEmail ? { email: loginLimpo } : { usuario: loginLimpo },
-      });
-    } catch (error: any) {
-      if (error?.code === 'P5010') {
+  private isPrismaTransientError(error: unknown): boolean {
+    const prismaError = error as {
+      code?: string;
+      message?: string;
+      cause?: { message?: string };
+    };
+
+    const message = String(
+      prismaError?.message || prismaError?.cause?.message || '',
+    ).toLowerCase();
+
+    return (
+      prismaError?.code === 'P5010' ||
+      message.includes('fetch failed') ||
+      message.includes('failed to fetch') ||
+      message.includes('econnreset') ||
+      message.includes('socket hang up')
+    );
+  }
+
+  private async sleep(ms: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private async executarComRetryPrisma<T>(
+    operation: () => Promise<T>,
+    maxTentativas = 3,
+  ): Promise<T> {
+    let lastError: unknown;
+
+    for (let tentativa = 1; tentativa <= maxTentativas; tentativa++) {
+      try {
+        return await operation();
+      } catch (error) {
+        if (!this.isPrismaTransientError(error) || tentativa === maxTentativas) {
+          throw error;
+        }
+
+        lastError = error;
         await this.prisma.$disconnect();
         await this.prisma.$connect();
-        return await this.prisma.usuarios.findFirst({
-          where: isEmail ? { email: loginLimpo } : { usuario: loginLimpo },
-        });
+        await this.sleep(tentativa * 150);
       }
-      throw error;
     }
+
+    throw lastError;
+  }
+
+  private async buscarUsuarioPorLogin(loginLimpo: string, isEmail: boolean) {
+    return this.executarComRetryPrisma(() =>
+      this.prisma.usuarios.findFirst({
+        where: isEmail ? { email: loginLimpo } : { usuario: loginLimpo },
+      }),
+    );
   }
 
   // 1. REFRESH TOKEN (Necessário para o build)

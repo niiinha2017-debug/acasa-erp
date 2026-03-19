@@ -11,32 +11,227 @@ import { UpdateProdutoDto } from './dto/atualizar-produto.dto';
 export class ProdutosService {
   constructor(private prisma: PrismaService) {}
   private readonly markup100Factor = 2;
+  private readonly commercialCategories = ['PRIMARIA', 'SECUNDARIA', 'TERCIARIA'] as const;
+
+  private normalizeCategoriaBase(categoriaBase?: string | null) {
+    const base = String(categoriaBase || '')
+      .trim()
+      .toUpperCase();
+    if (base) return base;
+
+    return 'PRIMARIA';
+  }
+
+  private isCategoriaComercial(categoriaBase?: string | null) {
+    const categoria = this.normalizeCategoriaBase(categoriaBase);
+    return this.commercialCategories.includes(categoria as (typeof this.commercialCategories)[number]);
+  }
+
+  private isCategoriaFitaBorda(categoriaBase?: string | null) {
+    return this.normalizeCategoriaBase(categoriaBase) === 'FITA_BORDA';
+  }
+
+  private aplicarFiltroCategoriaBaseComLegado(
+    where: Record<string, any>,
+    categoriaBase?: string | null,
+  ) {
+    const categoria = String(categoriaBase || '')
+      .trim()
+      .toUpperCase();
+
+    if (!categoria) return;
+
+    // Produtos legados sem categoria_base são tratados como PRIMARIA
+    if (categoria === 'PRIMARIA') {
+      where.OR = [
+        { categoria_base: 'PRIMARIA' },
+        { categoria_base: null },
+        { categoria_base: '' },
+      ];
+    } else {
+      where.categoria_base = categoria;
+    }
+  }
 
   private normStr(v: any) {
     const s = String(v ?? '').trim();
     return s.length ? s : null;
   }
 
-  private resolveTipoAplicacao(
+  private normalizeDecimal(value: any): number | null {
+    if (value === undefined || value === null || value === '') return null;
+    const parsed = Number(String(value).replace(',', '.').trim());
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  private roundNumber(value: number, precision = 4): number {
+    const factor = 10 ** precision;
+    return Math.round((value + Number.EPSILON) * factor) / factor;
+  }
+
+  private normalizeMetragemRolo(
+    metragemRolo: any,
     categoriaBase?: string | null,
-    tipoAplicacaoDto?: string | null,
-    fallback: 'MDF' | 'MATERIA_PRIMA' | 'COMPLEMENTO' | 'INSUMO' = 'MDF',
-  ): 'MDF' | 'MATERIA_PRIMA' | 'COMPLEMENTO' | 'INSUMO' {
-    const categoria = String(categoriaBase || '')
-      .trim()
-      .toUpperCase();
-    if (categoria === 'INSUMO') return 'INSUMO';
+  ): number | null {
+    if (!this.isCategoriaFitaBorda(categoriaBase)) return null;
 
-    const tipo = String(tipoAplicacaoDto || '')
-      .trim()
-      .toUpperCase();
+    const parsed = this.normalizeDecimal(metragemRolo);
+    if (parsed == null || parsed <= 0) return null;
+    return this.roundNumber(parsed, 3);
+  }
 
-    if (tipo === 'MDF') return 'MDF';
-    if (tipo === 'MATERIA_PRIMA') return 'MATERIA_PRIMA';
-    if (tipo === 'COMPLEMENTO') return 'COMPLEMENTO';
-    if (tipo === 'INSUMO') return 'INSUMO';
+  private formatarMedidaFita(metragemRoloM: number | null): string | null {
+    if (!Number.isFinite(Number(metragemRoloM)) || Number(metragemRoloM) <= 0) return null;
+    const texto = String(this.roundNumber(Number(metragemRoloM), 3)).replace(/\.0+$|0+$/g, '');
+    return `${texto.replace(/\.$/, '')}m`;
+  }
 
-    return fallback;
+  private resolveMedidaProduto(
+    medidaInformada: string | null,
+    categoriaBase?: string | null,
+    metragemRoloM?: number | null,
+  ): string | null {
+    if (this.isCategoriaFitaBorda(categoriaBase)) {
+      return this.formatarMedidaFita(metragemRoloM ?? null);
+    }
+
+    return medidaInformada;
+  }
+
+  private async resolveFitaVinculada(
+    fitaVinculadaId: any,
+    categoriaBase?: string | null,
+  ): Promise<{
+    fita_vinculada_id: number | null;
+    adicional_fita_m2: number | null;
+    fita_vinculada: any | null;
+  }> {
+    if (!this.isCategoriaComercial(categoriaBase)) {
+      return {
+        fita_vinculada_id: null,
+        adicional_fita_m2: null,
+        fita_vinculada: null,
+      };
+    }
+
+    const fitaId = Number(fitaVinculadaId ?? 0);
+    if (!Number.isFinite(fitaId) || fitaId <= 0) {
+      return {
+        fita_vinculada_id: null,
+        adicional_fita_m2: null,
+        fita_vinculada: null,
+      };
+    }
+
+    const fita = await (this.prisma as any).produtos.findUnique({
+      where: { id: fitaId },
+      select: {
+        id: true,
+        nome_produto: true,
+        cor: true,
+        medida: true,
+        categoria_base: true,
+        metragem_rolo_m: true,
+        valor_unitario: true,
+        status: true,
+      },
+    });
+
+    if (!fita) {
+      throw new BadRequestException('A fita vinculada selecionada não foi encontrada.');
+    }
+
+    if (!this.isCategoriaFitaBorda(fita.categoria_base)) {
+      throw new BadRequestException('O produto vinculado precisa ser da categoria Fita de Borda.');
+    }
+
+    const metragemRoloM = this.normalizeDecimal(fita.metragem_rolo_m);
+    if (metragemRoloM == null || metragemRoloM <= 0) {
+      throw new BadRequestException('A fita vinculada precisa ter a metragem do rolo preenchida.');
+    }
+
+    const valorUnitario = Number(fita.valor_unitario ?? 0);
+    const adicionalFitaM2 = valorUnitario > 0 ? this.roundNumber(valorUnitario / metragemRoloM, 4) : 0;
+
+    return {
+      fita_vinculada_id: fitaId,
+      adicional_fita_m2: adicionalFitaM2,
+      fita_vinculada: {
+        id: fita.id,
+        nome_produto: fita.nome_produto,
+        cor: fita.cor,
+        medida: fita.medida,
+        categoria_base: fita.categoria_base,
+        metragem_rolo_m: metragemRoloM,
+        valor_unitario: valorUnitario,
+        status: fita.status,
+      },
+    };
+  }
+
+  private normalizeInsumoFatorConversao(
+    fator: any,
+    unidadeCompra?: string | null,
+    categoriaBase?: string | null,
+  ): number | null {
+    const categoria = String(categoriaBase || '').trim().toUpperCase();
+    if (categoria !== 'INSUMO') return null;
+
+    const raw = fator === undefined || fator === null || fator === '' ? null : Number(fator);
+    if (raw != null && Number.isFinite(raw) && raw > 0) return raw;
+
+    const unidade = String(unidadeCompra || '').trim().toUpperCase();
+    if (unidade === 'KG') return 1000;
+    if (unidade === 'PAR') return 2;
+
+    return 1;
+  }
+
+  private normalizeFatorConversao(
+    fator: any,
+    unidadeCompra?: string | null,
+    categoriaBase?: string | null,
+  ): number {
+    const base = this.normalizeInsumoFatorConversao(fator, unidadeCompra, categoriaBase);
+    const n = Number(base ?? 1);
+    if (!Number.isFinite(n) || n <= 0) return 1;
+    return n;
+  }
+
+  private calcCustoUnitarioReal(valorUnitario: number, fatorConversao: number): number {
+    const fator = Number(fatorConversao);
+    if (!Number.isFinite(fator) || fator <= 0) return Number(valorUnitario || 0);
+    return Number(valorUnitario || 0) / fator;
+  }
+
+  private normalizeInsumoConsumoM2(
+    consumoM2: any,
+    categoriaBase?: string | null,
+  ): number | null {
+    const categoria = String(categoriaBase || '').trim().toUpperCase();
+    if (categoria !== 'INSUMO') return null;
+
+    const parsed = this.normalizeDecimal(consumoM2);
+    if (parsed == null || parsed < 0) return null;
+    return this.roundNumber(parsed, 4);
+  }
+
+  private normalizeInsumoUnidadeReferencia(
+    unidadeRef: any,
+    unidadeCompra?: string | null,
+    categoriaBase?: string | null,
+  ): string | null {
+    const categoria = String(categoriaBase || '').trim().toUpperCase();
+    if (categoria !== 'INSUMO') return null;
+
+    const informada = this.normStr(unidadeRef)?.toUpperCase();
+    if (informada) return informada;
+
+    const unidade = String(unidadeCompra || '').trim().toUpperCase();
+    if (unidade === 'KG') return 'G';
+    if (unidade === 'PAR') return 'UN';
+    if (unidade === 'CX') return 'UN';
+    return unidade || 'UN';
   }
 
   private async checarDuplicado(params: {
@@ -93,16 +288,65 @@ export class ProdutosService {
 
     const marca = this.normStr(dto.marca);
     const cor = this.normStr(dto.cor);
-    const medida = this.normStr(dto.medida);
     const largura_mm =
       dto.largura_mm === undefined ? null : Number(dto.largura_mm);
     const comprimento_mm =
       dto.comprimento_mm === undefined ? null : Number(dto.comprimento_mm);
     const espessura_mm =
       dto.espessura_mm === undefined ? null : Number(dto.espessura_mm);
+    const categoria_base = this.normalizeCategoriaBase(
+      this.normStr((dto as any).categoria_base),
+    );
+    const metragem_rolo_m = this.normalizeMetragemRolo(
+      (dto as any).metragem_rolo_m,
+      categoria_base,
+    );
+    if (this.isCategoriaFitaBorda(categoria_base) && (metragem_rolo_m == null || metragem_rolo_m <= 0)) {
+      throw new BadRequestException('Metragem do rolo é obrigatória para produtos da categoria Fita de Borda.');
+    }
+    const medida = this.resolveMedidaProduto(
+      this.normStr(dto.medida),
+      categoria_base,
+      metragem_rolo_m,
+    );
     const preco_m2 = dto.preco_m2 === undefined ? null : Number(dto.preco_m2);
-    const categoria_base = this.normStr((dto as any).categoria_base);
-    const tipo_aplicacao = this.resolveTipoAplicacao(categoria_base, dto.tipo_aplicacao);
+    const adicional_fita_m2_informado =
+      (dto as any).adicional_fita_m2 === undefined
+        ? null
+        : Number((dto as any).adicional_fita_m2);
+    const fitaVinculada = await this.resolveFitaVinculada(
+      (dto as any).fita_vinculada_id,
+      categoria_base,
+    );
+    const adicional_fita_m2 =
+      fitaVinculada.adicional_fita_m2 ?? adicional_fita_m2_informado;
+    const unidade = this.normStr(dto.unidade);
+    const unidade_compra =
+      this.normStr((dto as any).unidade_compra) ?? unidade;
+    const unidade_consumo =
+      this.normStr((dto as any).unidade_consumo) ??
+      this.normStr((dto as any).insumo_unidade_referencia);
+    const insumo_fator_conversao = this.normalizeInsumoFatorConversao(
+      (dto as any).insumo_fator_conversao ?? (dto as any).fator_conversao,
+      unidade_compra,
+      categoria_base,
+    );
+    const fator_conversao = this.normalizeFatorConversao(
+      (dto as any).fator_conversao ?? (dto as any).insumo_fator_conversao,
+      unidade_compra,
+      categoria_base,
+    );
+    const insumo_unidade_referencia = this.normalizeInsumoUnidadeReferencia(
+      (dto as any).insumo_unidade_referencia ?? (dto as any).unidade_consumo,
+      unidade_compra,
+      categoria_base,
+    );
+    const insumo_consumo_m2 = this.normalizeInsumoConsumoM2(
+      (dto as any).insumo_consumo_m2,
+      categoria_base,
+    );
+    const valor_unitario = Number(dto.valor_unitario ?? 0);
+    const custo_unitario_real = this.calcCustoUnitarioReal(valor_unitario, fator_conversao);
 
     await this.checarDuplicado({
       fornecedor_id,
@@ -113,23 +357,33 @@ export class ProdutosService {
     });
 
     const createData = {
-      fornecedor_id,
+      fornecedor: { connect: { id: fornecedor_id } },
       nome_produto,
       marca,
       cor,
-      unidade: this.normStr(dto.unidade),
+      unidade,
+      unidade_compra,
+      unidade_consumo,
       medida,
       largura_mm,
       comprimento_mm,
       espessura_mm,
+      metragem_rolo_m,
       preco_m2,
+      adicional_fita_m2,
       quantidade: Number(dto.quantidade ?? 0),
       estoque_minimo: dto.estoque_minimo !== undefined ? Number(dto.estoque_minimo) : 0,
-      valor_unitario: Number(dto.valor_unitario ?? 0),
+      valor_unitario,
+      custo_unitario_real,
       valor_total: Number(dto.valor_total ?? 0),
-      categoria: this.normStr(dto.categoria),
+      fator_conversao,
+      insumo_fator_conversao,
+      insumo_unidade_referencia,
+      insumo_consumo_m2,
       categoria_base,
-      tipo_aplicacao,
+      fita_vinculada_id: fitaVinculada.fita_vinculada_id,
+      categoria_ferragem:
+        this.normStr((dto as any).categoria_ferragem) ?? null,
       imagem_url: this.normStr(dto.imagem_url),
       status: dto.status ?? 'ATIVO',
     };
@@ -144,7 +398,7 @@ export class ProdutosService {
     const where: any = {};
     if (filtro?.fornecedor_id) where.fornecedor_id = filtro.fornecedor_id;
     if (filtro?.categoria_base) {
-      where.categoria_base = String(filtro.categoria_base).trim().toUpperCase();
+      this.aplicarFiltroCategoriaBaseComLegado(where, filtro.categoria_base);
     }
 
     // Sem paginação: compatibilidade com chamadas existentes
@@ -245,7 +499,7 @@ export class ProdutosService {
     }
 
     if (filtros.categoria_base) {
-      where.categoria_base = String(filtros.categoria_base).trim().toUpperCase();
+      this.aplicarFiltroCategoriaBaseComLegado(where, filtros.categoria_base);
     }
 
     if (!page) {
@@ -324,16 +578,45 @@ export class ProdutosService {
       },
     });
     if (!produto) throw new NotFoundException('Produto não encontrado');
-    return this.aplicarMarkupProduto(produto, ctx?.aplicarMarkup100);
+
+    const fitaVinculadaId = Number((produto as any).fita_vinculada_id ?? 0);
+    let fita_vinculada: any = null;
+
+    if (fitaVinculadaId > 0) {
+      fita_vinculada = await (this.prisma as any).produtos.findUnique({
+        where: { id: fitaVinculadaId },
+        select: {
+          id: true,
+          nome_produto: true,
+          cor: true,
+          medida: true,
+          categoria_base: true,
+          metragem_rolo_m: true,
+          valor_unitario: true,
+          status: true,
+        },
+      });
+    }
+
+    return this.aplicarMarkupProduto(
+      {
+        ...produto,
+        fita_vinculada,
+      },
+      ctx?.aplicarMarkup100,
+    );
   }
 
   async atualizar(id: number, dto: UpdateProdutoDto) {
     const atual = await this.buscarPorId(id);
+    const atualAny = atual as any;
 
     const fornecedor_id =
       dto.fornecedor_id === undefined
         ? atual.fornecedor_id
         : Number(dto.fornecedor_id);
+    if (!fornecedor_id)
+      throw new BadRequestException('fornecedor_id é obrigatório.');
 
     const nome_produto =
       dto.nome_produto === undefined
@@ -346,10 +629,29 @@ export class ProdutosService {
     const cor =
       dto.cor === undefined ? (atual.cor ?? null) : this.normStr(dto.cor);
 
-    const medida =
+    const categoria_base = this.normalizeCategoriaBase(
+      (dto as any).categoria_base === undefined
+        ? atualAny.categoria_base ?? null
+        : this.normStr((dto as any).categoria_base),
+    );
+
+    const metragem_rolo_m =
+      (dto as any).metragem_rolo_m === undefined
+        ? this.normalizeMetragemRolo(atualAny.metragem_rolo_m, categoria_base)
+        : this.normalizeMetragemRolo((dto as any).metragem_rolo_m, categoria_base);
+
+    if (this.isCategoriaFitaBorda(categoria_base) && (metragem_rolo_m == null || metragem_rolo_m <= 0)) {
+      throw new BadRequestException('Metragem do rolo é obrigatória para produtos da categoria Fita de Borda.');
+    }
+
+    const medidaBase =
       dto.medida === undefined
-        ? (atual.medida ?? null)
+        ? (this.isCategoriaFitaBorda(atualAny.categoria_base) && !this.isCategoriaFitaBorda(categoria_base)
+            ? null
+            : (atual.medida ?? null))
         : this.normStr(dto.medida);
+
+    const medida = this.resolveMedidaProduto(medidaBase, categoria_base, metragem_rolo_m);
 
     const largura_mm =
       dto.largura_mm === undefined
@@ -379,6 +681,23 @@ export class ProdutosService {
           ? null
           : Number(dto.preco_m2);
 
+    const adicional_fita_m2_informado =
+      (dto as any).adicional_fita_m2 === undefined
+        ? (atualAny.adicional_fita_m2 ?? null)
+        : (dto as any).adicional_fita_m2 === null
+          ? null
+          : Number((dto as any).adicional_fita_m2);
+
+    const fitaVinculada = await this.resolveFitaVinculada(
+      (dto as any).fita_vinculada_id === undefined
+        ? atualAny.fita_vinculada_id
+        : (dto as any).fita_vinculada_id,
+      categoria_base,
+    );
+
+    const adicional_fita_m2 =
+      fitaVinculada.adicional_fita_m2 ?? adicional_fita_m2_informado;
+
     await this.checarDuplicado({
       fornecedor_id,
       nome_produto,
@@ -388,33 +707,87 @@ export class ProdutosService {
       ignorarId: id,
     });
 
-    const categoria_base =
-      (dto as any).categoria_base === undefined
-        ? (atual as any).categoria_base ?? null
-        : this.normStr((dto as any).categoria_base);
+    const unidade =
+      dto.unidade === undefined ? atual.unidade : this.normStr(dto.unidade);
+    const unidade_compra =
+      (dto as any).unidade_compra === undefined
+        ? ((atual as any).unidade_compra ?? unidade)
+        : this.normStr((dto as any).unidade_compra);
+    const unidade_consumo =
+      (dto as any).unidade_consumo === undefined
+        ? ((atual as any).unidade_consumo ?? (atual as any).insumo_unidade_referencia ?? null)
+        : this.normStr((dto as any).unidade_consumo);
 
-    const tipo_aplicacao = this.resolveTipoAplicacao(
-      categoria_base,
-      (dto as any).tipo_aplicacao,
-      String((atual as any).tipo_aplicacao || 'MDF').trim().toUpperCase() as
-        | 'MDF'
-        | 'MATERIA_PRIMA'
-        | 'COMPLEMENTO'
-        | 'INSUMO',
-    );
+    const insumo_fator_conversao =
+      (dto as any).insumo_fator_conversao === undefined
+        ? this.normalizeInsumoFatorConversao(
+            (atual as any).insumo_fator_conversao,
+            unidade_compra,
+            categoria_base,
+          )
+        : this.normalizeInsumoFatorConversao(
+            (dto as any).insumo_fator_conversao ?? (dto as any).fator_conversao,
+            unidade_compra,
+            categoria_base,
+          );
+
+    const fator_conversao =
+      (dto as any).fator_conversao === undefined
+        ? this.normalizeFatorConversao(
+            (atual as any).fator_conversao ?? (atual as any).insumo_fator_conversao,
+            unidade_compra,
+            categoria_base,
+          )
+        : this.normalizeFatorConversao(
+            (dto as any).fator_conversao ?? (dto as any).insumo_fator_conversao,
+            unidade_compra,
+            categoria_base,
+          );
+
+    const insumo_unidade_referencia =
+      (dto as any).insumo_unidade_referencia === undefined
+        ? this.normalizeInsumoUnidadeReferencia(
+            (atual as any).insumo_unidade_referencia ?? unidade_consumo,
+            unidade_compra,
+            categoria_base,
+          )
+        : this.normalizeInsumoUnidadeReferencia(
+            (dto as any).insumo_unidade_referencia ?? (dto as any).unidade_consumo,
+            unidade_compra,
+            categoria_base,
+          );
+    const insumo_consumo_m2 =
+      (dto as any).insumo_consumo_m2 === undefined
+        ? this.normalizeInsumoConsumoM2(
+            (atual as any).insumo_consumo_m2,
+            categoria_base,
+          )
+        : this.normalizeInsumoConsumoM2(
+            (dto as any).insumo_consumo_m2,
+            categoria_base,
+          );
+
+    const valor_unitario =
+      dto.valor_unitario === undefined
+        ? Number(atual.valor_unitario)
+        : Number(dto.valor_unitario);
+    const custo_unitario_real = this.calcCustoUnitarioReal(valor_unitario, fator_conversao);
 
     const updateData = {
-      fornecedor_id,
+      fornecedor: { connect: { id: fornecedor_id } },
       nome_produto,
       marca,
       cor,
-      unidade:
-        dto.unidade === undefined ? atual.unidade : this.normStr(dto.unidade),
+      unidade,
+      unidade_compra,
+      unidade_consumo,
       medida,
       largura_mm,
       comprimento_mm,
       espessura_mm,
+      metragem_rolo_m,
       preco_m2,
+      adicional_fita_m2,
       quantidade:
         dto.quantidade === undefined
           ? atual.quantidade
@@ -423,16 +796,18 @@ export class ProdutosService {
         dto.estoque_minimo === undefined
           ? (atual as any).estoque_minimo ?? 0
           : Number(dto.estoque_minimo),
-      categoria:
-        dto.categoria === undefined
-          ? (atual as any).categoria ?? null
-          : this.normStr(dto.categoria),
       categoria_base,
-      tipo_aplicacao,
-      valor_unitario:
-        dto.valor_unitario === undefined
-          ? Number(atual.valor_unitario)
-          : Number(dto.valor_unitario),
+      fita_vinculada_id: fitaVinculada.fita_vinculada_id,
+      categoria_ferragem:
+        (dto as any).categoria_ferragem === undefined
+          ? ((atual as any).categoria_ferragem ?? null)
+          : (this.normStr((dto as any).categoria_ferragem) ?? null),
+      fator_conversao,
+      insumo_fator_conversao,
+      insumo_unidade_referencia,
+      insumo_consumo_m2,
+      valor_unitario,
+      custo_unitario_real,
       valor_total:
         dto.valor_total === undefined
           ? Number(atual.valor_total)

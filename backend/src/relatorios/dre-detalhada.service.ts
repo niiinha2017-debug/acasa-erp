@@ -52,7 +52,11 @@ export class DreDetalhadaService {
    */
   async getDashboardConsumoProjeto(projetoId: number) {
     const agendas = await this.prisma.agenda_fabrica.findMany({
-      where: { projeto_id: projetoId, status: 'CONCLUIDO' },
+      where: {
+        projeto_id: projetoId,
+        status: { not: 'CANCELADO' },
+        OR: [{ execucao_etapa: 'CONCLUIDO' }, { status: 'CONCLUIDO' }],
+      },
       select: {
         area_pecas_m2: true,
         consumo_estimado_m2: true,
@@ -652,8 +656,34 @@ export class DreDetalhadaService {
       .map(([nome_ambiente, lucro_liquido]) => ({ nome_ambiente, lucro_liquido: round2(lucro_liquido) }))
       .sort((a, b) => b.lucro_liquido - a.lucro_liquido);
 
+    const projetosConcluidosNaMatriz = await this.prisma.agenda_fabrica.findMany({
+      where: {
+        venda_id: { in: vendaIdsList },
+        projeto_id: { not: null },
+        status: { not: 'CANCELADO' },
+        execucao_etapa: 'CONCLUIDO',
+        OR: [
+          { subetapa: 'MONTAGEM' },
+          { subetapa: 'SERVICO_CORTE_FITA_BORDA' },
+        ],
+      },
+      select: { projeto_id: true },
+      distinct: ['projeto_id'],
+    });
+    const idsProjetosConcluidosNaMatriz = projetosConcluidosNaMatriz
+      .map((row: any) => Number(row.projeto_id || 0))
+      .filter((id) => id > 0);
+
     const projetosConcluidos = await this.prisma.projetos.findMany({
-      where: { venda_id: { in: vendaIdsList }, status_atual: { in: ['MONTAGEM_FINALIZADA', 'ENCERRADO'] } },
+      where: {
+        venda_id: { in: vendaIdsList },
+        OR: [
+          { status_atual: { in: ['MONTAGEM_FINALIZADA', 'ENCERRADO'] } },
+          ...(idsProjetosConcluidosNaMatriz.length
+            ? [{ id: { in: idsProjetosConcluidosNaMatriz } }]
+            : []),
+        ],
+      },
       select: { venda_id: true },
     });
     let comissaoGerada = 0;

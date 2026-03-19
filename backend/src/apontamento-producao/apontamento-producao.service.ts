@@ -8,8 +8,9 @@ import {
   AGENDA_FABRICA_SOMENTE_PAINEL_CATEGORIAS,
   AGENDA_FABRICA_STATUS_AGENDADO,
   AGENDA_FABRICA_STATUS_SEMPRE_VISIVEL,
-} from '../shared/constantes/pipeline-producao';
-import { validarTransicaoStatusCliente } from '../shared/constantes/pipeline-cliente';
+  validarTransicaoStatusCliente,
+} from '../shared/constantes/status-matrix';
+import { AgendaService } from '../agenda/agenda.service';
 
 /** Categorias da agenda_loja que são "medição para orçamento" (funcionário vai ao cliente, conclui na volta). */
 const CATEGORIAS_AGENDA_LOJA_MEDICAO = ['MEDIDA', 'MEDIDA_AGENDADA', 'AGENDAR_MEDIDA'] as const;
@@ -32,7 +33,94 @@ export class ApontamentoProducaoService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly estoqueRetalhoService: EstoqueRetalhoService,
+    private readonly agendaService: AgendaService,
   ) {}
+
+  private getPreMedicaoDelegate() {
+    const prismaAny = this.prisma as any;
+    const delegate = prismaAny.pre_medicao ?? prismaAny.preMedicao;
+    if (!delegate) {
+      throw new BadRequestException(
+        'Pré-medição indisponível no Prisma Client atual. Execute `npm run db:generate` e reinicie o backend.',
+      );
+    }
+    return delegate;
+  }
+
+  private getPreMedicaoAmbienteDelegate() {
+    const prismaAny = this.prisma as any;
+    const delegate = prismaAny.pre_medicao_ambiente ?? prismaAny.preMedicaoAmbiente;
+    if (!delegate) {
+      throw new BadRequestException(
+        'Pré-medição indisponível no Prisma Client atual. Execute `npm run db:generate` e reinicie o backend.',
+      );
+    }
+    return delegate;
+  }
+
+  private preMedicaoEditavel(status: string | null | undefined): boolean {
+    return String(status || '').toUpperCase() === 'RASCUNHO';
+  }
+
+  private ambienteTemMedidaPreenchida(ambiente: {
+    largura_m?: unknown;
+    pe_direito_m?: unknown;
+    profundidade_m?: unknown;
+    medidas_json?: unknown;
+  }): boolean {
+    const medidasDiretas = [ambiente?.largura_m, ambiente?.pe_direito_m, ambiente?.profundidade_m]
+      .map((valor) => (valor == null ? null : Number(valor)))
+      .some((valor) => valor != null && Number.isFinite(valor) && valor > 0);
+
+    if (medidasDiretas) return true;
+
+    if (!ambiente?.medidas_json) return false;
+    try {
+      const parsed = JSON.parse(String(ambiente.medidas_json));
+      if (!Array.isArray(parsed)) return false;
+      return parsed.some((item) => {
+        const largura = item?.largura_mm != null ? Number(item.largura_mm) : item?.valor_mm != null ? Number(item.valor_mm) : null;
+        const altura = item?.altura_mm != null ? Number(item.altura_mm) : null;
+        const profundidade = item?.profundidade_mm != null ? Number(item.profundidade_mm) : null;
+        return [largura, altura, profundidade].some((valor) => Number.isFinite(valor) && Number(valor) > 0);
+      });
+    } catch {
+      return false;
+    }
+  }
+
+  private async validarAmbientesMedicaoParaConclusao(medicaoId: number) {
+    const ambientes = await this.prisma.medicao_orcamento_ambiente.findMany({
+      where: { medicao_orcamento_id: medicaoId },
+      orderBy: { nome_ambiente: 'asc' },
+      select: {
+        id: true,
+        nome_ambiente: true,
+        largura_m: true,
+        pe_direito_m: true,
+        profundidade_m: true,
+        medidas_json: true,
+      },
+    });
+
+    if (!ambientes.length) {
+      throw new BadRequestException('Nenhum ambiente disponível para concluir a medição.');
+    }
+
+    const ambientesInvalidos: string[] = [];
+    for (const ambiente of ambientes) {
+      const temMedida = this.ambienteTemMedidaPreenchida(ambiente);
+      if (!temMedida) {
+        ambientesInvalidos.push(String(ambiente.nome_ambiente || `Ambiente #${ambiente.id}`));
+      }
+    }
+
+    if (ambientesInvalidos.length) {
+      throw new BadRequestException(
+        `Finalize a medição apenas após preencher ao menos uma medida em todos os ambientes. Foto é opcional. Pendentes: ${ambientesInvalidos.join(', ')}.`,
+      );
+    }
+  }
 
   private calcularHoras(
     inicio: Date,
@@ -630,6 +718,10 @@ export class ApontamentoProducaoService {
         fim_em: t.fim_em,
         status: t.status,
         categoria: t.categoria,
+        fluxo_tipo: t.fluxo_tipo ?? null,
+        macroetapa: t.macroetapa ?? null,
+        subetapa: t.subetapa ?? null,
+        execucao_etapa: t.execucao_etapa ?? null,
         projeto_id: null,
         cliente: t.cliente,
         criado_por_usuario: t.criado_por_usuario,
@@ -662,6 +754,10 @@ export class ApontamentoProducaoService {
       fim_em: t.fim_em,
       status: t.status,
       categoria: t.categoria,
+      fluxo_tipo: t.fluxo_tipo ?? null,
+      macroetapa: t.macroetapa ?? null,
+      subetapa: t.subetapa ?? null,
+      execucao_etapa: t.execucao_etapa ?? null,
       projeto_id: t.projeto_id ?? null,
       cliente: t.cliente,
       criado_por_usuario: t.criado_por_usuario,
@@ -688,7 +784,16 @@ export class ApontamentoProducaoService {
   private async totemPlayAgendaLoja(agendaLojaId: number, alteradoPorUsuarioId?: number) {
     const agenda = await this.prisma.agenda_loja.findUnique({
       where: { id: agendaLojaId },
-      include: {
+      select: {
+        id: true,
+        categoria: true,
+        status: true,
+        origem_fluxo: true,
+        fluxo_tipo: true,
+        macroetapa: true,
+        subetapa: true,
+        execucao_etapa: true,
+        venda_id: true,
         equipe: { include: { funcionario: { select: { id: true, custo_hora: true } } } },
         apontamentos_producao: {
           select: { id: true, inicio_em: true, fim_em: true },
@@ -711,6 +816,16 @@ export class ApontamentoProducaoService {
         where: { id: agendaLojaId },
         data: {
           status: 'EM_PRODUCAO',
+          ...this.agendaService.montarCamposStatusMatrixFromAtual({
+            categoria: agenda.categoria ?? null,
+            status: 'EM_PRODUCAO',
+            origemFluxo: agenda.origem_fluxo ?? null,
+            planoCorteId: null,
+            fluxoTipo: agenda.fluxo_tipo ?? null,
+            macroetapa: agenda.macroetapa ?? null,
+            subetapa: agenda.subetapa ?? null,
+            execucaoEtapa: agenda.execucao_etapa ?? null,
+          }),
           ...(alteradoPorUsuarioId
             ? { alterado_por_usuario_id: alteradoPorUsuarioId, alterado_em: agora }
             : { alterado_em: agora }),
@@ -729,6 +844,16 @@ export class ApontamentoProducaoService {
         where: { id: agendaLojaId },
         data: {
           status: 'EM_PRODUCAO',
+          ...this.agendaService.montarCamposStatusMatrixFromAtual({
+            categoria: agenda.categoria ?? null,
+            status: 'EM_PRODUCAO',
+            origemFluxo: agenda.origem_fluxo ?? null,
+            planoCorteId: null,
+            fluxoTipo: agenda.fluxo_tipo ?? null,
+            macroetapa: agenda.macroetapa ?? null,
+            subetapa: agenda.subetapa ?? null,
+            execucaoEtapa: agenda.execucao_etapa ?? null,
+          }),
           ...(alteradoPorUsuarioId
             ? { alterado_por_usuario_id: alteradoPorUsuarioId, alterado_em: agora }
             : { alterado_em: agora }),
@@ -760,7 +885,17 @@ export class ApontamentoProducaoService {
   private async totemPlayAgendaFabrica(agendaFabricaId: number, alteradoPorUsuarioId?: number) {
     const agenda = await this.prisma.agenda_fabrica.findUnique({
       where: { id: agendaFabricaId },
-      include: {
+      select: {
+        id: true,
+        categoria: true,
+        status: true,
+        origem_fluxo: true,
+        fluxo_tipo: true,
+        macroetapa: true,
+        subetapa: true,
+        execucao_etapa: true,
+        venda_id: true,
+        plano_corte_id: true,
         equipe: { include: { funcionario: { select: { id: true, custo_hora: true } } } },
         apontamentos_producao: {
           select: { id: true, inicio_em: true, fim_em: true },
@@ -786,6 +921,16 @@ export class ApontamentoProducaoService {
         where: { id: agendaFabricaId },
         data: {
           status: 'EM_PRODUCAO',
+          ...this.agendaService.montarCamposStatusMatrixFromAtual({
+            categoria: agenda.categoria ?? null,
+            status: 'EM_PRODUCAO',
+            origemFluxo: agenda.origem_fluxo ?? null,
+            planoCorteId: agenda.plano_corte_id ?? null,
+            fluxoTipo: agenda.fluxo_tipo ?? null,
+            macroetapa: agenda.macroetapa ?? null,
+            subetapa: agenda.subetapa ?? null,
+            execucaoEtapa: agenda.execucao_etapa ?? null,
+          }),
           ...(alteradoPorUsuarioId
             ? { alterado_por_usuario_id: alteradoPorUsuarioId, alterado_em: agora }
             : { alterado_em: agora }),
@@ -804,6 +949,16 @@ export class ApontamentoProducaoService {
         where: { id: agendaFabricaId },
         data: {
           status: 'EM_PRODUCAO',
+          ...this.agendaService.montarCamposStatusMatrixFromAtual({
+            categoria: agenda.categoria ?? null,
+            status: 'EM_PRODUCAO',
+            origemFluxo: agenda.origem_fluxo ?? null,
+            planoCorteId: agenda.plano_corte_id ?? null,
+            fluxoTipo: agenda.fluxo_tipo ?? null,
+            macroetapa: agenda.macroetapa ?? null,
+            subetapa: agenda.subetapa ?? null,
+            execucaoEtapa: agenda.execucao_etapa ?? null,
+          }),
           ...(alteradoPorUsuarioId
             ? { alterado_por_usuario_id: alteradoPorUsuarioId, alterado_em: agora }
             : { alterado_em: agora }),
@@ -907,6 +1062,372 @@ export class ApontamentoProducaoService {
     return this.finalizarEtapa({ agenda_fabrica_id: agendaFabricaId });
   }
 
+  private mapPreMedicao(pre: any) {
+    return {
+      id: pre.id,
+      cliente_id: pre.cliente_id,
+      agenda_loja_id: pre.agenda_loja_id ?? null,
+      status: pre.status,
+      observacoes: pre.observacoes ?? null,
+      criado_em: pre.criado_em,
+      atualizado_em: pre.atualizado_em,
+      ambientes: (pre.ambientes || []).map((a: any) => ({
+        id: a.id,
+        nome_ambiente: a.nome_ambiente,
+        largura_m: a.largura_m,
+        pe_direito_m: a.pe_direito_m,
+        profundidade_m: a.profundidade_m,
+        observacoes: a.observacoes,
+      })),
+    };
+  }
+
+  async getOuCriarPreMedicaoByCliente(clienteId: number) {
+    const cliente = await this.prisma.cliente.findUnique({
+      where: { id: clienteId },
+      select: { id: true },
+    });
+    if (!cliente) throw new BadRequestException('Cliente não encontrado.');
+
+    const preMedicao = this.getPreMedicaoDelegate();
+    let pre = await preMedicao.findFirst({
+      where: { cliente_id: clienteId, status: 'RASCUNHO' },
+      include: { ambientes: { orderBy: { nome_ambiente: 'asc' } } },
+      orderBy: [{ atualizado_em: 'desc' }],
+    });
+
+    if (!pre) {
+      pre = await preMedicao.create({
+        data: { cliente_id: clienteId, status: 'RASCUNHO' },
+        include: { ambientes: { orderBy: { nome_ambiente: 'asc' } } },
+      });
+    }
+
+    return this.mapPreMedicao(pre);
+  }
+
+  async salvarAmbientePreMedicao(
+    preMedicaoId: number,
+    body: {
+      nome_ambiente: string;
+      largura_m?: number;
+      pe_direito_m?: number;
+      profundidade_m?: number;
+      observacoes?: string;
+    },
+  ) {
+    const preMedicao = this.getPreMedicaoDelegate();
+    const preMedicaoAmbiente = this.getPreMedicaoAmbienteDelegate();
+    const pre = await preMedicao.findUnique({
+      where: { id: preMedicaoId },
+      select: { id: true, status: true },
+    });
+    if (!pre) throw new BadRequestException('Pré-medição não encontrada.');
+    if (!this.preMedicaoEditavel(pre.status)) {
+      throw new BadRequestException('Esta pré-medição não pode mais ser alterada porque já está aguardando visita técnica.');
+    }
+
+    const nome = String(body.nome_ambiente || '').trim() || 'Ambiente';
+    await preMedicaoAmbiente.upsert({
+      where: {
+        pre_medicao_id_nome_ambiente: {
+          pre_medicao_id: preMedicaoId,
+          nome_ambiente: nome,
+        },
+      },
+      create: {
+        pre_medicao_id: preMedicaoId,
+        nome_ambiente: nome,
+        largura_m: body.largura_m != null ? body.largura_m : null,
+        pe_direito_m: body.pe_direito_m != null ? body.pe_direito_m : null,
+        profundidade_m: body.profundidade_m != null ? body.profundidade_m : null,
+        observacoes: (body.observacoes || '').trim() || null,
+      },
+      update: {
+        largura_m: body.largura_m != null ? body.largura_m : null,
+        pe_direito_m: body.pe_direito_m != null ? body.pe_direito_m : null,
+        profundidade_m: body.profundidade_m != null ? body.profundidade_m : null,
+        observacoes: (body.observacoes || '').trim() || null,
+      },
+    });
+
+    await preMedicao.update({
+      where: { id: preMedicaoId },
+      data: { atualizado_em: new Date() },
+    });
+
+    const atualizado = await preMedicao.findUnique({
+      where: { id: preMedicaoId },
+      include: { ambientes: { orderBy: { nome_ambiente: 'asc' } } },
+    });
+    return this.mapPreMedicao(atualizado);
+  }
+
+  async removerAmbientePreMedicao(preMedicaoId: number, ambienteId: number) {
+    const preMedicao = this.getPreMedicaoDelegate();
+    const preMedicaoAmbiente = this.getPreMedicaoAmbienteDelegate();
+    const ambiente = await preMedicaoAmbiente.findUnique({ where: { id: ambienteId } });
+    if (!ambiente) throw new BadRequestException('Ambiente não encontrado.');
+    if (Number(ambiente.pre_medicao_id) !== Number(preMedicaoId)) {
+      throw new BadRequestException('Ambiente não pertence à pré-medição informada.');
+    }
+    const pre = await preMedicao.findUnique({
+      where: { id: preMedicaoId },
+      select: { status: true },
+    });
+    if (!this.preMedicaoEditavel(pre?.status)) {
+      throw new BadRequestException('Esta pré-medição não pode mais ser alterada porque já está aguardando visita técnica.');
+    }
+    await preMedicaoAmbiente.delete({ where: { id: ambienteId } });
+    await preMedicao.update({
+      where: { id: preMedicaoId },
+      data: { atualizado_em: new Date() },
+    });
+    return { ok: true };
+  }
+
+  async vincularPreMedicaoAoAgendamento(preMedicaoId: number, agendaLojaId: number) {
+    const preMedicao = this.getPreMedicaoDelegate();
+    const pre = await preMedicao.findUnique({
+      where: { id: preMedicaoId },
+      include: { ambientes: { orderBy: { nome_ambiente: 'asc' } } },
+    });
+    if (!pre) throw new BadRequestException('Pré-medição não encontrada.');
+
+    const agenda = await this.prisma.agenda_loja.findUnique({
+      where: { id: agendaLojaId },
+      select: { id: true, cliente_id: true, orcamento_id: true, status: true },
+    });
+    if (!agenda) throw new BadRequestException('Agendamento não encontrado.');
+    if (String(agenda.status || '').toUpperCase() === 'CONCLUIDO') {
+      throw new BadRequestException('Não é possível vincular em agendamento concluído.');
+    }
+    if (!Array.isArray(pre.ambientes) || pre.ambientes.length === 0) {
+      throw new BadRequestException('Cadastre ao menos um ambiente na pré-medição antes de vincular.');
+    }
+
+    const medicao = await this.prisma.medicao_orcamento.upsert({
+      where: { agenda_loja_id: agendaLojaId },
+      create: {
+        agenda_loja_id: agendaLojaId,
+        cliente_id: agenda.cliente_id ?? pre.cliente_id ?? undefined,
+        orcamento_id: agenda.orcamento_id ?? undefined,
+        observacoes: pre.observacoes ?? null,
+        concluida: false,
+      },
+      update: {
+        cliente_id: agenda.cliente_id ?? pre.cliente_id ?? undefined,
+        orcamento_id: agenda.orcamento_id ?? undefined,
+        ...(pre.observacoes ? { observacoes: pre.observacoes } : {}),
+        concluida: false,
+      },
+    });
+
+    await this.prisma.medicao_orcamento_ambiente.deleteMany({
+      where: { medicao_orcamento_id: medicao.id },
+    });
+
+    for (const a of pre.ambientes) {
+      await this.prisma.medicao_orcamento_ambiente.create({
+        data: {
+          medicao_orcamento_id: medicao.id,
+          nome_ambiente: String(a.nome_ambiente || '').trim() || 'Ambiente',
+          largura_m: a.largura_m != null ? a.largura_m : null,
+          pe_direito_m: a.pe_direito_m != null ? a.pe_direito_m : null,
+          profundidade_m: a.profundidade_m != null ? a.profundidade_m : null,
+          observacoes: (a.observacoes || '').trim() || null,
+          medidas_json: a.medidas_json ?? null,
+        },
+      });
+    }
+
+    await preMedicao.update({
+      where: { id: preMedicaoId },
+      data: {
+        agenda_loja_id: agendaLojaId,
+        status: 'STATUS_AGUARDANDO_VISITA',
+      },
+    });
+
+    return {
+      ok: true,
+      pre_medicao_id: preMedicaoId,
+      agenda_loja_id: agendaLojaId,
+      medicao_orcamento_id: medicao.id,
+      ambientes_importados: pre.ambientes.length,
+    };
+  }
+
+  private async criarAgendaLojaParaPreMedicao(
+    pre: any,
+    modo: 'VENDA_DIRETA' | 'VISITA_TECNICA',
+    criadoPorUsuarioId?: number,
+  ) {
+    const agora = new Date();
+    const inicio = new Date(agora);
+    const fim = new Date(agora);
+
+    if (modo === 'VISITA_TECNICA') {
+      inicio.setDate(inicio.getDate() + 1);
+      inicio.setHours(9, 0, 0, 0);
+      fim.setTime(inicio.getTime());
+      fim.setHours(10, 0, 0, 0);
+    } else {
+      fim.setHours(fim.getHours() + 1);
+    }
+
+    const agenda = await this.agendaService.criarAgendaLojaAutomatica({
+      cliente_id: pre.cliente_id,
+      titulo:
+        modo === 'VISITA_TECNICA'
+          ? `Medição técnica - ${pre?.cliente?.nome_completo || `Cliente #${pre.cliente_id}`}`
+          : `Medição direta - ${pre?.cliente?.nome_completo || `Cliente #${pre.cliente_id}`}`,
+      inicio_em: inicio,
+      fim_em: fim,
+      subetapa: 'MEDIDA',
+      origem_fluxo:
+        modo === 'VISITA_TECNICA'
+          ? 'PRE_MEDICAO_VISITA_TECNICA'
+          : 'PRE_MEDICAO_VENDA_DIRETA',
+      status: 'PENDENTE',
+      criado_por_usuario_id: criadoPorUsuarioId ?? null,
+    });
+    return {
+      id: agenda.id,
+      inicio_em: agenda.inicio_em,
+      fim_em: agenda.fim_em,
+      categoria: agenda.categoria,
+      status: agenda.status,
+    };
+  }
+
+  async iniciarVendaDiretaComPreMedicao(preMedicaoId: number, criadoPorUsuarioId?: number) {
+    const preMedicao = this.getPreMedicaoDelegate();
+    const pre = await preMedicao.findUnique({
+      where: { id: preMedicaoId },
+      include: {
+        cliente: { select: { id: true, nome_completo: true } },
+        ambientes: { orderBy: { nome_ambiente: 'asc' } },
+      },
+    });
+    if (!pre) throw new BadRequestException('Pré-medição não encontrada.');
+    if (!Array.isArray(pre.ambientes) || pre.ambientes.length === 0) {
+      throw new BadRequestException('Cadastre ao menos um ambiente antes de seguir com venda direta.');
+    }
+
+    const agenda = await this.criarAgendaLojaParaPreMedicao(pre, 'VENDA_DIRETA', criadoPorUsuarioId);
+    const vinculo = await this.vincularPreMedicaoAoAgendamento(preMedicaoId, agenda.id);
+
+    return {
+      ok: true,
+      modo: 'VENDA_DIRETA',
+      agenda_loja_id: agenda.id,
+      medicao_orcamento_id: (vinculo as any)?.medicao_orcamento_id ?? null,
+      rota_orcamento_tecnico: `/orcamento-tecnico/novo/${agenda.id}`,
+      rota_medicao: `/medicao/venda/${agenda.id}`,
+    };
+  }
+
+  async solicitarMedicaoTecnicaComPreMedicao(preMedicaoId: number, criadoPorUsuarioId?: number) {
+    const preMedicao = this.getPreMedicaoDelegate();
+    const pre = await preMedicao.findUnique({
+      where: { id: preMedicaoId },
+      include: {
+        cliente: { select: { id: true, nome_completo: true } },
+        ambientes: { orderBy: { nome_ambiente: 'asc' } },
+      },
+    });
+    if (!pre) throw new BadRequestException('Pré-medição não encontrada.');
+    if (!Array.isArray(pre.ambientes) || pre.ambientes.length === 0) {
+      throw new BadRequestException('Cadastre ao menos um ambiente antes de solicitar medição técnica.');
+    }
+
+    const agenda = await this.criarAgendaLojaParaPreMedicao(pre, 'VISITA_TECNICA', criadoPorUsuarioId);
+    const vinculo = await this.vincularPreMedicaoAoAgendamento(preMedicaoId, agenda.id);
+
+    return {
+      ok: true,
+      modo: 'VISITA_TECNICA',
+      agenda_loja_id: agenda.id,
+      medicao_orcamento_id: (vinculo as any)?.medicao_orcamento_id ?? null,
+      rota_agenda: '/agendamentos/loja',
+      rota_medicao: `/medicao/venda/${agenda.id}`,
+    };
+  }
+
+  private async importarRascunhoPreMedicaoParaAgenda(
+    agendaLojaId: number,
+    clienteId?: number | null,
+    orcamentoId?: number | null,
+  ) {
+    const clienteIdFinal = clienteId != null ? Number(clienteId) : 0;
+    if (!clienteIdFinal) return null;
+
+    const preMedicao = this.getPreMedicaoDelegate();
+    const pre = await preMedicao.findFirst({
+      where: { cliente_id: clienteIdFinal, status: 'RASCUNHO' },
+      include: { ambientes: { orderBy: { nome_ambiente: 'asc' } } },
+      orderBy: [{ atualizado_em: 'desc' }],
+    });
+
+    if (!pre || !Array.isArray(pre.ambientes) || pre.ambientes.length === 0) {
+      return null;
+    }
+
+    const medicao = await this.prisma.medicao_orcamento.upsert({
+      where: { agenda_loja_id: agendaLojaId },
+      create: {
+        agenda_loja_id: agendaLojaId,
+        cliente_id: clienteIdFinal,
+        orcamento_id: orcamentoId ?? undefined,
+        observacoes: pre.observacoes ?? null,
+        concluida: false,
+      },
+      update: {
+        cliente_id: clienteIdFinal,
+        orcamento_id: orcamentoId ?? undefined,
+        ...(pre.observacoes ? { observacoes: pre.observacoes } : {}),
+        concluida: false,
+      },
+    });
+
+    await this.prisma.medicao_orcamento_ambiente.deleteMany({
+      where: { medicao_orcamento_id: medicao.id },
+    });
+
+    for (const a of pre.ambientes) {
+      await this.prisma.medicao_orcamento_ambiente.create({
+        data: {
+          medicao_orcamento_id: medicao.id,
+          nome_ambiente: String(a.nome_ambiente || '').trim() || 'Ambiente',
+          largura_m: a.largura_m != null ? a.largura_m : null,
+          pe_direito_m: a.pe_direito_m != null ? a.pe_direito_m : null,
+          profundidade_m: a.profundidade_m != null ? a.profundidade_m : null,
+          observacoes: (a.observacoes || '').trim() || null,
+          medidas_json: a.medidas_json ?? null,
+        },
+      });
+    }
+
+    await preMedicao.update({
+      where: { id: pre.id },
+      data: {
+        agenda_loja_id: agendaLojaId,
+        status: 'STATUS_AGUARDANDO_VISITA',
+      },
+    });
+
+    return this.prisma.medicao_orcamento.findUnique({
+      where: { id: medicao.id },
+      include: {
+        ambientes: {
+          orderBy: { nome_ambiente: 'asc' },
+          include: { paredes: { orderBy: { nome: 'asc' } } },
+        },
+      },
+    });
+  }
+
   /**
    * Retorna a medição para orçamento (se existir) com todos os ambientes, para a página de medição por ambiente.
    * Se não existir medição ou não houver nenhum ambiente, cria a medição e um primeiro ambiente (Cozinha) para novo início de orçamento.
@@ -942,22 +1463,31 @@ export class ApontamentoProducaoService {
     });
     const precisaPrimeiroAmbiente = !medicao || !medicao.ambientes?.length;
     if (precisaPrimeiroAmbiente) {
-      medicao = await this.prisma.medicao_orcamento.upsert({
-        where: { agenda_loja_id: agendaLojaId },
-        create: {
-          agenda_loja_id: agendaLojaId,
-          cliente_id: agenda.cliente_id ?? undefined,
-          orcamento_id: agenda.orcamento_id ?? undefined,
-          concluida: false,
-        },
-        update: {},
-        include: {
-          ambientes: {
-            orderBy: { nome_ambiente: 'asc' },
-            include: { paredes: { orderBy: { nome: 'asc' } } },
+      medicao = await this.importarRascunhoPreMedicaoParaAgenda(
+        agendaLojaId,
+        agenda.cliente_id,
+        agenda.orcamento_id,
+      );
+
+      if (!medicao) {
+        medicao = await this.prisma.medicao_orcamento.upsert({
+          where: { agenda_loja_id: agendaLojaId },
+          create: {
+            agenda_loja_id: agendaLojaId,
+            cliente_id: agenda.cliente_id ?? undefined,
+            orcamento_id: agenda.orcamento_id ?? undefined,
+            concluida: false,
           },
-        },
-      });
+          update: {},
+          include: {
+            ambientes: {
+              orderBy: { nome_ambiente: 'asc' },
+              include: { paredes: { orderBy: { nome: 'asc' } } },
+            },
+          },
+        });
+      }
+
       if (!medicao.ambientes?.length) {
         await this.prisma.medicao_orcamento_ambiente.create({
           data: {
@@ -977,7 +1507,25 @@ export class ApontamentoProducaoService {
         if (atualizada) medicao = atualizada;
       }
     }
-    return medicao;
+
+    const preMedicao = this.getPreMedicaoDelegate();
+    const pre = await preMedicao.findFirst({
+      where: {
+        cliente_id: agenda.cliente_id ?? 0,
+        OR: [
+          { agenda_loja_id: agendaLojaId },
+          { status: 'STATUS_AGUARDANDO_VISITA' },
+          { status: 'RASCUNHO' },
+        ],
+      },
+      include: { ambientes: { orderBy: { nome_ambiente: 'asc' } } },
+      orderBy: [{ atualizado_em: 'desc' }],
+    });
+
+    return {
+      ...medicao,
+      pre_medicao: pre ? this.mapPreMedicao(pre) : null,
+    };
   }
 
   /**
@@ -989,6 +1537,8 @@ export class ApontamentoProducaoService {
     body: {
       parede_id?: number;
       nome: string;
+      agenda_loja_id?: number;
+      nome_ambiente?: string;
       largura_m?: number;
       pe_direito_m?: number;
       profundidade_m?: number;
@@ -996,10 +1546,20 @@ export class ApontamentoProducaoService {
       medidas?: Array<{ descricao: string; valor_mm: number }>;
     },
   ) {
-    const ambiente = await this.prisma.medicao_orcamento_ambiente.findUnique({
+    let ambiente = await this.prisma.medicao_orcamento_ambiente.findUnique({
       where: { id: ambienteId },
       include: { medicao_orcamento: { include: { agenda_loja: true } } },
     });
+    if (!ambiente && body?.agenda_loja_id && body?.nome_ambiente) {
+      const criado = await this.salvarAmbienteMedicao(Number(body.agenda_loja_id), {
+        nome_ambiente: String(body.nome_ambiente),
+      });
+      ambienteId = Number(criado?.ambiente?.id || 0) || ambienteId;
+      ambiente = await this.prisma.medicao_orcamento_ambiente.findUnique({
+        where: { id: ambienteId },
+        include: { medicao_orcamento: { include: { agenda_loja: true } } },
+      });
+    }
     if (!ambiente) throw new BadRequestException('Ambiente não encontrado.');
     const status = ambiente.medicao_orcamento?.agenda_loja?.status;
     if (status && String(status).toUpperCase() === 'CONCLUIDO') {
@@ -1267,6 +1827,8 @@ export class ApontamentoProducaoService {
         }
       }
     }
+
+    await this.validarAmbientesMedicaoParaConclusao(medicao.id);
 
     const result = await this.finalizarEtapa({ agenda_loja_id: agendaLojaId });
     await this.prisma.agenda_loja.update({
@@ -1802,7 +2364,17 @@ export class ApontamentoProducaoService {
     if (agenda_loja_id) {
       const agenda = await this.prisma.agenda_loja.findUnique({
         where: { id: agenda_loja_id },
-        select: { id: true, status: true, categoria: true, cliente_id: true },
+        select: {
+          id: true,
+          status: true,
+          categoria: true,
+          cliente_id: true,
+          origem_fluxo: true,
+          fluxo_tipo: true,
+          macroetapa: true,
+          subetapa: true,
+          execucao_etapa: true,
+        },
       });
       if (!agenda) throw new BadRequestException('Agenda loja não encontrada.');
       if (String(agenda.status).toUpperCase() === 'CONCLUIDO') {
@@ -1840,6 +2412,16 @@ export class ApontamentoProducaoService {
         where: { id: agenda_loja_id },
         data: {
           status: 'CONCLUIDO',
+          ...this.agendaService.montarCamposStatusMatrixFromAtual({
+            categoria: agenda.categoria ?? null,
+            status: 'CONCLUIDO',
+            origemFluxo: agenda.origem_fluxo ?? null,
+            planoCorteId: null,
+            fluxoTipo: agenda.fluxo_tipo ?? null,
+            macroetapa: agenda.macroetapa ?? null,
+            subetapa: agenda.subetapa ?? null,
+            execucaoEtapa: agenda.execucao_etapa ?? null,
+          }),
           alterado_em: agora,
           tempo_total_tarefa: tempoTotalTarefa != null ? new Decimal(tempoTotalTarefa) : null,
           custo_tarefa_fabrica: custoTarefaFabrica != null ? new Decimal(custoTarefaFabrica) : null,
@@ -1875,7 +2457,19 @@ export class ApontamentoProducaoService {
     if (agenda_fabrica_id) {
       const agenda = await this.prisma.agenda_fabrica.findUnique({
         where: { id: agenda_fabrica_id },
-        select: { id: true, status: true },
+        select: {
+          id: true,
+          status: true,
+          categoria: true,
+          venda_id: true,
+          cliente_id: true,
+          origem_fluxo: true,
+          plano_corte_id: true,
+          fluxo_tipo: true,
+          macroetapa: true,
+          subetapa: true,
+          execucao_etapa: true,
+        },
       });
       if (!agenda) throw new BadRequestException('Agenda fábrica não encontrada.');
       if (String(agenda.status).toUpperCase() === 'CONCLUIDO') {
@@ -1913,11 +2507,58 @@ export class ApontamentoProducaoService {
         where: { id: agenda_fabrica_id },
         data: {
           status: 'CONCLUIDO',
+          ...this.agendaService.montarCamposStatusMatrixFromAtual({
+            categoria: agenda.categoria ?? null,
+            status: 'CONCLUIDO',
+            origemFluxo: agenda.origem_fluxo ?? null,
+            planoCorteId: agenda.plano_corte_id ?? null,
+            fluxoTipo: agenda.fluxo_tipo ?? null,
+            macroetapa: agenda.macroetapa ?? null,
+            subetapa: agenda.subetapa ?? null,
+            execucaoEtapa: agenda.execucao_etapa ?? null,
+          }),
           alterado_em: agora,
           tempo_total_tarefa: tempoTotalTarefa != null ? new Decimal(tempoTotalTarefa) : null,
           custo_tarefa_fabrica: custoTarefaFabrica != null ? new Decimal(custoTarefaFabrica) : null,
         },
       });
+
+      const categoriaKey = String(agenda.categoria || '').toUpperCase().trim();
+      if ((categoriaKey === 'MEDIDA_FINA' || categoriaKey === 'AGENDAR_MEDIDA_FINA') && (agenda.venda_id || agenda.cliente_id)) {
+        const proximoStatus = 'AGUARDANDO_PRECIFICACAO';
+        if (agenda.venda_id) {
+          const venda = await this.prisma.vendas.findUnique({
+            where: { id: agenda.venda_id },
+            select: { id: true, status: true },
+          });
+          if (
+            venda &&
+            validarTransicaoStatusCliente({ atual: venda.status, proximo: proximoStatus }).ok &&
+            String(venda.status || '').toUpperCase() !== proximoStatus
+          ) {
+            await this.prisma.vendas.update({
+              where: { id: agenda.venda_id },
+              data: { status: proximoStatus },
+            });
+          }
+        }
+        if (agenda.cliente_id) {
+          const cliente = await this.prisma.cliente.findUnique({
+            where: { id: agenda.cliente_id },
+            select: { id: true, status: true },
+          });
+          if (
+            cliente &&
+            validarTransicaoStatusCliente({ atual: cliente.status, proximo: proximoStatus }).ok &&
+            String(cliente.status || '').toUpperCase() !== proximoStatus
+          ) {
+            await this.prisma.cliente.update({
+              where: { id: agenda.cliente_id },
+              data: { status: proximoStatus },
+            });
+          }
+        }
+      }
 
       return { ok: true, agenda_fabrica_id };
     }

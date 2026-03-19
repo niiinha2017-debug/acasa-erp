@@ -50,6 +50,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
+import { getStatusVendaAoAgendarAgendaLoja } from '@/constantes'
 
 const props = defineProps({
   open: Boolean,
@@ -77,16 +78,8 @@ const nextStage = computed(() => {
     : sortedPipeline.value.find((p) => p.temTela) || sortedPipeline.value[0]
 })
 
-const categoriaToStatusKey = {
-  MEDIDA: 'MEDIDA_AGENDADA',
-  ORCAMENTO: 'ORCAMENTO_EM_ANDAMENTO',
-  MEDIDA_FINA: 'MEDIDA_FINA_AGENDADA',
-  PRODUCAO: 'PRODUCAO_AGENDADA',
-  MONTAGEM: 'MONTAGEM_AGENDADA',
-}
-
 const categoriaKey = computed(() => String(nextStage.value?.fase || '').toUpperCase())
-const targetStatusKey = computed(() => categoriaToStatusKey[categoriaKey.value] || nextStage.value?.key || '')
+const targetStatusKey = computed(() => getStatusVendaAoAgendarAgendaLoja(categoriaKey.value) || nextStage.value?.key || '')
 
 const statusLabel = computed(() => {
   const item = sortedPipeline.value.find((p) => p.key === targetStatusKey.value)

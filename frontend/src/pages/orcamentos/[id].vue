@@ -383,7 +383,10 @@
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { OrcamentosService, ClienteService } from '@/services/index'
+import {
+  OrcamentosService,
+  ClienteService,
+} from '@/services/index'
 import { format } from '@/utils/format'
 import { getApiErrorMessage } from '@/utils/apiError'
 import { confirm } from '@/services/confirm'
@@ -421,6 +424,7 @@ const clausulas = reactive({
 
 const draft = reactive({ cliente_id: null, ambientes: [] })
 const ambForm = reactive({ nome_ambiente: '', descricao: '', valor_unitario: '', observacao: '' })
+const clientesIndex = ref({})
 
 // Limite de caracteres para observações técnicas (banco: VARCHAR(2000))
 const OBSERVACAO_MAX_LENGTH = 2000
@@ -834,6 +838,16 @@ async function ensureOrcamentoId() {
 
 onMounted(async () => {
   const { data: clis } = await ClienteService.listar()
+  clientesIndex.value = Object.fromEntries(
+    (clis || []).map((c) => [
+      String(c.id),
+      {
+        telefone: c?.telefone || '',
+        whatsapp: c?.whatsapp || '',
+        email: c?.email || '',
+      },
+    ]),
+  )
   clientesOptions.value = (clis || []).map(c => ({
     label: c.nome_completo || c.razao_social || `ID #${c.id}`,
     value: c.id,
@@ -863,6 +877,8 @@ onMounted(async () => {
     // novo orçamento: já deixa as cláusulas padrão preenchidas
     preencherClausulasPadraoSeVazio()
   }
+
+  
 })
 
 </script>

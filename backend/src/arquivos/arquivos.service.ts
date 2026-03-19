@@ -7,6 +7,22 @@ import { PrismaService } from '../prisma/prisma.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
+export function getUploadFolderFromOwnerType(ownerType: string) {
+  if (ownerType === 'MEDICAO_ORCAMENTO') return 'medicao_orcamento';
+  if (ownerType === 'MEDICAO_ORCAMENTO_AMBIENTE')
+    return 'medicao_orcamento_ambiente';
+  if (ownerType === 'MEDICAO_ORCAMENTO_PAREDE')
+    return 'medicao_orcamento_parede';
+  if (ownerType === 'AGENDA_LOJA') return 'agenda_loja';
+  return ownerType.toLowerCase() + 's';
+}
+
+function getUploadFolderAliases(ownerType: string) {
+  const canonical = getUploadFolderFromOwnerType(ownerType);
+  const legacy = ownerType.toLowerCase() + 's';
+  return [...new Set([canonical, legacy].filter(Boolean))];
+}
+
 @Injectable()
 export class ArquivosService {
   constructor(private prisma: PrismaService) {}
@@ -33,12 +49,49 @@ export class ArquivosService {
   }
 
   private folderFromOwnerType(ownerType: string) {
-    if (ownerType === 'MEDICAO_ORCAMENTO') return 'medicao_orcamento';
-    if (ownerType === 'MEDICAO_ORCAMENTO_AMBIENTE') return 'medicao_orcamento_ambiente';
-    if (ownerType === 'MEDICAO_ORCAMENTO_PAREDE') return 'medicao_orcamento_parede';
-    if (ownerType === 'AGENDA_LOJA') return 'agenda_loja';
-    // PRODUTO -> produtos, ORCAMENTO -> orcamentos, EMPRESA -> empresas
-    return ownerType.toLowerCase() + 's';
+    return getUploadFolderFromOwnerType(ownerType);
+  }
+
+  private resolveArquivoFisico(arquivo: {
+    owner_type: string;
+    url?: string | null;
+  }) {
+    const url = String(arquivo.url || '').trim();
+    if (!url) return null;
+
+    const rel = url.replace(/^\//, '').replace(/^uploads[\/\\]+/, '');
+    if (!rel) return null;
+
+    const absAtual = path.join(process.cwd(), 'uploads', rel);
+    if (fs.existsSync(absAtual)) {
+      return { abs: absAtual, url: `/uploads/${rel.replace(/\\/g, '/')}` };
+    }
+
+    const parts = rel.split(/[\/\\]+/).filter(Boolean);
+    if (parts.length < 2) return null;
+
+    const [, ...rest] = parts;
+    const suffix = rest.join('/');
+    for (const folder of getUploadFolderAliases(arquivo.owner_type)) {
+      const relAlternativo = [folder, suffix].filter(Boolean).join('/');
+      const absAlternativo = path.join(process.cwd(), 'uploads', relAlternativo);
+      if (fs.existsSync(absAlternativo)) {
+        return {
+          abs: absAlternativo,
+          url: `/uploads/${relAlternativo.replace(/\\/g, '/')}`,
+        };
+      }
+    }
+
+    return null;
+  }
+
+  private normalizarArquivo<T extends { owner_type: string; url?: string | null }>(
+    arquivo: T,
+  ): T {
+    const resolvido = this.resolveArquivoFisico(arquivo);
+    if (!resolvido || resolvido.url === arquivo.url) return arquivo;
+    return { ...arquivo, url: resolvido.url };
   }
 
   async listar(params: {
@@ -73,7 +126,7 @@ export class ArquivosService {
         where,
         orderBy: { criado_em: 'desc' },
       });
-      return rows;
+      return rows.map((row) => this.normalizarArquivo(row));
     }
 
     const page = Math.max(1, Number(params.page || 1));
@@ -88,7 +141,7 @@ export class ArquivosService {
     });
 
     return {
-      data,
+      data: data.map((row) => this.normalizarArquivo(row)),
       meta: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
     };
   }
@@ -117,9 +170,10 @@ export class ArquivosService {
 
     // tenta apagar o arquivo físico (best effort)
     try {
-      const rel = arquivo.url.replace(/^\//, '');
-      const abs = path.join(process.cwd(), rel);
-      if (fs.existsSync(abs)) fs.unlinkSync(abs);
+      const resolvido = this.resolveArquivoFisico(arquivo);
+      if (resolvido?.abs && fs.existsSync(resolvido.abs)) {
+        fs.unlinkSync(resolvido.abs);
+      }
     } catch {}
 
     await this.prisma.arquivos.delete({ where: { id: cleanId } });
@@ -213,6 +267,14 @@ export class ArquivosService {
   async buscarPorId(id: number) {
     const arq = await this.prisma.arquivos.findUnique({ where: { id } });
     if (!arq) throw new NotFoundException('Arquivo não encontrado.');
-    return arq;
+    return this.normalizarArquivo(arq);
+  }
+
+  async resolverArquivoFisicoPorId(id: number) {
+    const arquivo = await this.buscarPorId(id);
+    return {
+      arquivo,
+      resolvido: this.resolveArquivoFisico(arquivo),
+    };
   }
 }

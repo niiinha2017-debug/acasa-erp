@@ -7,9 +7,10 @@ import { PlanoCorteService } from './service/plano-corte.service';
 import { PlanoCorteItensService } from './service/plano-corte-itens.service';
 import { PlanoCorteConsumosService } from './service/plano-corte-consumos.service';
 import { ProdutosModule } from '../produtos/produtos.module';
+import { AgendaModule } from '../agenda/agenda.module';
 
 @Module({
-  imports: [ProdutosModule],
+  imports: [ProdutosModule, AgendaModule],
   controllers: [
     PlanoCorteController,
     PlanoCorteItensController,

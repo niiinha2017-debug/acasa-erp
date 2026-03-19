@@ -10,15 +10,33 @@ import {
   OrigemFluxo,
   SetorDestino,
 } from './agenda-rules';
-import { validarTransicaoStatusCliente } from '../shared/constantes/pipeline-cliente';
 import {
+  EXECUCOES_ETAPA,
+  FLUXO_TIPOS,
+  MACRO_ETAPAS,
+  SUBETAPAS,
+  SUBETAPA_CATALOGO_POR_KEY,
+  categoriaAgendaFabricaPorSubetapa,
+  categoriaAgendaLojaPorSubetapa,
+  normalizarExecucaoEtapa,
+  normalizarSubetapa,
+  reversaoStatusClientePorSubetapa,
+  statusClienteAoAgendarPorSubetapa,
+  statusClienteAoConcluirSubetapa,
+  type ExecucaoEtapa,
+  type FluxoTipo,
+  type MacroEtapa,
+  type Subetapa,
+  // migrado de pipeline-cliente:
+  validarTransicaoStatusCliente,
+  // migrado de pipeline-producao:
   AGENDA_FABRICA_SOMENTE_PAINEL_CATEGORIAS,
   AGENDA_FABRICA_STATUS_AGENDADO,
   AGENDA_FABRICA_STATUS_SEMPRE_VISIVEL,
   PIPELINE_PRODUCAO_KEYS,
   validarTransicaoStatusProducao,
-} from '../shared/constantes/pipeline-producao';
-import { getDataCorteContasReceber } from '../../shared/constantes/pipeline-regras';
+} from '../shared/constantes/status-matrix';
+import { getDataCorteContasReceber } from '../shared/constantes/status-matrix';
 
 @Injectable()
 export class AgendaService {
@@ -28,51 +46,6 @@ export class AgendaService {
     'MANUTENCAO',
     'ASSISTENCIA',
   ];
-  private readonly reversaoStatusPorCategoria: Record<
-    string,
-    { statusAplicado: string; statusAnterior: string }
-  > = {
-    MEDIDA: {
-      statusAplicado: 'MEDIDA_AGENDADA',
-      statusAnterior: 'AGENDAR_MEDIDA',
-    },
-    AGENDAR_MEDIDA: {
-      statusAplicado: 'MEDIDA_AGENDADA',
-      statusAnterior: 'AGENDAR_MEDIDA',
-    },
-    ORCAMENTO: {
-      statusAplicado: 'ORCAMENTO_EM_ANDAMENTO',
-      statusAnterior: 'CRIAR_ORCAMENTO',
-    },
-    CRIAR_ORCAMENTO: {
-      statusAplicado: 'ORCAMENTO_EM_ANDAMENTO',
-      statusAnterior: 'CRIAR_ORCAMENTO',
-    },
-    APRESENTACAO: {
-      statusAplicado: 'APRESENTACAO_AGENDADA',
-      statusAnterior: 'AGENDAR_APRESENTACAO',
-    },
-    AGENDAR_APRESENTACAO: {
-      statusAplicado: 'APRESENTACAO_AGENDADA',
-      statusAnterior: 'AGENDAR_APRESENTACAO',
-    },
-    CONTRATO: {
-      statusAplicado: 'CONTRATO_ASSINADO',
-      statusAnterior: 'VENDA_FECHADA',
-    },
-    CONTRATO_GERADO: {
-      statusAplicado: 'CONTRATO_ASSINADO',
-      statusAnterior: 'VENDA_FECHADA',
-    },
-    MEDIDA_FINA: {
-      statusAplicado: 'MEDIDA_FINA_AGENDADA',
-      statusAnterior: 'AGENDAR_MEDIDA_FINA',
-    },
-    AGENDAR_MEDIDA_FINA: {
-      statusAplicado: 'MEDIDA_FINA_AGENDADA',
-      statusAnterior: 'AGENDAR_MEDIDA_FINA',
-    },
-  };
   constructor(private prisma: PrismaService) {}
 
   /**
@@ -132,25 +105,320 @@ export class AgendaService {
       .replace(/[\s-]+/g, '_');
   }
 
-  private categoriaToStatus(categoria?: string) {
-    const categoriaKey = this.normalizarCategoriaKey(categoria);
-    const map: Record<string, string> = {
-      MEDIDA: 'MEDIDA_AGENDADA',
-      AGENDAR_MEDIDA: 'MEDIDA_AGENDADA',
-      ORCAMENTO: 'ORCAMENTO_EM_ANDAMENTO',
-      CRIAR_ORCAMENTO: 'ORCAMENTO_EM_ANDAMENTO',
-      AGENDAR_ORCAMENTO: 'ORCAMENTO_EM_ANDAMENTO',
-      APRESENTACAO: 'APRESENTACAO_AGENDADA',
-      AGENDAR_APRESENTACAO: 'APRESENTACAO_AGENDADA',
-      CONTRATO: 'CONTRATO_ASSINADO',
-      CONTRATO_GERADO: 'CONTRATO_ASSINADO',
-      MEDIDA_FINA: 'MEDIDA_FINA_AGENDADA',
-      AGENDAR_MEDIDA_FINA: 'MEDIDA_FINA_AGENDADA',
-      GARANTIA: 'GARANTIA',
-      MANUTENCAO: 'MANUTENCAO',
-      ASSISTENCIA: 'ASSISTENCIA',
+  private tituloPareceLegado(titulo?: string | null): boolean {
+    const raw = String(titulo || '').trim();
+    if (!raw) return true;
+    const key = raw
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+    const base = key.split(/[\u2013-]/)[0]?.trim() || key;
+    if (/^agenda[_\s-]/i.test(base)) return true;
+    return /^[A-Z0-9_]+$/i.test(base) && base.includes('_');
+  }
+
+  private resolverTituloAgenda(params: {
+    titulo?: string | null;
+    subetapa?: string | null;
+  }): string {
+    const raw = String(params.titulo || '').trim();
+    if (raw && !this.tituloPareceLegado(raw)) {
+      return raw;
+    }
+    const subetapa = normalizarSubetapa(params.subetapa);
+    if (subetapa) {
+      return SUBETAPA_CATALOGO_POR_KEY[subetapa]?.label || raw || 'Agendamento';
+    }
+    return raw || 'Agendamento';
+  }
+
+  private resolverExecucaoMatrixAtualizada(params: {
+    status?: string | null;
+    execucaoEtapa?: string | null;
+  }): ExecucaoEtapa {
+    const status = String(params.status || '').trim().toUpperCase();
+    const execucaoAtual = normalizarExecucaoEtapa(params.execucaoEtapa);
+
+    if (status === 'CONCLUIDO') return 'CONCLUIDO';
+    if (status === 'EM_PRODUCAO' || status === 'EM_ANDAMENTO' || status === 'PAUSADO') {
+      return 'EM_ANDAMENTO';
+    }
+    if (status === 'PENDENTE') {
+      return execucaoAtual === 'AGENDADO' ? 'AGENDADO' : 'PENDENTE';
+    }
+    return execucaoAtual || 'PENDENTE';
+  }
+
+  private exigirSubetapaMatrix(subetapa?: string | null, contexto = 'agendamento'): Subetapa {
+    const subetapaNormalizada = normalizarSubetapa(subetapa);
+    if (subetapaNormalizada) return subetapaNormalizada;
+    throw new BadRequestException(
+      `Subetapa da matriz obrigatória em ${contexto}. Faça o backfill dos registros antigos antes de continuar.`,
+    );
+  }
+
+  private resolverFluxoTipoPorSubetapa(params: {
+    subetapa: Subetapa;
+    fluxoTipo?: string | null;
+  }): FluxoTipo {
+    const fluxoTipoAtual = String(params.fluxoTipo || '').trim().toUpperCase();
+    const catalogo = SUBETAPA_CATALOGO_POR_KEY[params.subetapa];
+
+    if (
+      (FLUXO_TIPOS as readonly string[]).includes(fluxoTipoAtual) &&
+      catalogo.fluxos.includes(fluxoTipoAtual as FluxoTipo)
+    ) {
+      return fluxoTipoAtual as FluxoTipo;
+    }
+
+    return catalogo.fluxos[0] ?? 'MARCENARIA';
+  }
+
+  montarCamposStatusMatrixFromAtual(params: {
+    status?: string | null;
+    categoria?: string | null;
+    origemFluxo?: string | null;
+    planoCorteId?: number | null;
+    fluxoTipo?: string | null;
+    macroetapa?: string | null;
+    subetapa?: string | null;
+    execucaoEtapa?: string | null;
+  }) {
+    const fluxoTipo = String(params.fluxoTipo || '').trim().toUpperCase();
+    const macroetapa = String(params.macroetapa || '').trim().toUpperCase();
+    const subetapa = this.exigirSubetapaMatrix(params.subetapa, 'registro atual');
+    const catalogo = SUBETAPA_CATALOGO_POR_KEY[subetapa];
+
+    const possuiMatrixAtual =
+      (FLUXO_TIPOS as readonly string[]).includes(fluxoTipo) &&
+      (MACRO_ETAPAS as readonly string[]).includes(macroetapa) &&
+      (SUBETAPAS as readonly string[]).includes(subetapa);
+
+    if (possuiMatrixAtual) {
+      return {
+        fluxo_tipo: fluxoTipo as FluxoTipo,
+        macroetapa: macroetapa as MacroEtapa,
+        subetapa: subetapa as Subetapa,
+        execucao_etapa: this.resolverExecucaoMatrixAtualizada({
+          status: params.status,
+          execucaoEtapa: params.execucaoEtapa,
+        }),
+      };
+    }
+
+    return {
+      fluxo_tipo: this.resolverFluxoTipoPorSubetapa({
+        subetapa,
+        fluxoTipo: params.fluxoTipo,
+      }),
+      macroetapa: catalogo.macroetapa,
+      subetapa,
+      execucao_etapa: this.resolverExecucaoMatrixAtualizada({
+        status: params.status,
+        execucaoEtapa: params.execucaoEtapa,
+      }),
     };
-    return { categoriaKey, status: map[categoriaKey] || '' };
+  }
+
+  private montarCamposStatusMatrixPorSubetapa(params: {
+    subetapa: Subetapa;
+    status?: string | null;
+    fluxoTipo?: string | null;
+    origemFluxo?: string | null;
+    planoCorteId?: number | null;
+    execucaoEtapaAtual?: string | null;
+  }) {
+    const catalogo = SUBETAPA_CATALOGO_POR_KEY[params.subetapa];
+    const fluxo_tipo = this.resolverFluxoTipoPorSubetapa({
+      subetapa: params.subetapa,
+      fluxoTipo: params.fluxoTipo,
+    });
+
+    return {
+      fluxo_tipo,
+      macroetapa: catalogo.macroetapa,
+      subetapa: params.subetapa,
+      execucao_etapa: this.resolverExecucaoMatrixAtualizada({
+        status: params.status,
+        execucaoEtapa: params.execucaoEtapaAtual,
+      }),
+    };
+  }
+
+  private resolverStatusClienteAgendamento(params: {
+    subetapa?: string | null;
+    categoria?: string | null;
+    status?: string | null;
+    origemFluxo?: string | null;
+    planoCorteId?: number | null;
+  }): string {
+    const subetapa = this.resolverSubetapaReferencia(params);
+    return statusClienteAoAgendarPorSubetapa({ subetapa }) || '';
+  }
+
+  private resolverStatusClienteConclusao(params: {
+    subetapa?: string | null;
+    categoria?: string | null;
+    status?: string | null;
+    origemFluxo?: string | null;
+    planoCorteId?: number | null;
+  }): string {
+    const subetapa = this.resolverSubetapaReferencia(params);
+    return statusClienteAoConcluirSubetapa({ subetapa }) || '';
+  }
+
+  private resolverSubetapaReferencia(params: {
+    subetapa?: string | null;
+    categoria?: string | null;
+    status?: string | null;
+    origemFluxo?: string | null;
+    planoCorteId?: number | null;
+  }): Subetapa {
+    return this.exigirSubetapaMatrix(params.subetapa, 'payload do agendamento');
+  }
+
+  private resolverCategoriaPersistida(params: {
+    setor: 'LOJA' | 'FABRICA';
+    subetapa?: string | null;
+    categoria?: string | null;
+    status?: string | null;
+    origemFluxo?: string | null;
+    planoCorteId?: number | null;
+    execucaoEtapa?: string | null;
+  }): string | null {
+    const subetapa = this.resolverSubetapaReferencia(params);
+    const categoriaDerivada = params.setor === 'FABRICA'
+      ? categoriaAgendaFabricaPorSubetapa({
+          subetapa,
+          execucaoEtapa: this.resolverExecucaoMatrixAtualizada({
+            status: params.status,
+            execucaoEtapa: params.execucaoEtapa,
+          }),
+        })
+      : categoriaAgendaLojaPorSubetapa({ subetapa });
+    return categoriaDerivada || null;
+  }
+
+  async criarAgendaFabricaAutomatica(
+    params: {
+      titulo: string;
+      inicio_em: Date;
+      fim_em: Date;
+      subetapa?: string | null;
+      origem_fluxo?: string | null;
+      status?: string | null;
+      venda_id?: number | null;
+      cliente_id?: number | null;
+      plano_corte_id?: number | null;
+      criado_por_usuario_id?: number | null;
+      ambientes_selecionados?: string[] | null;
+    },
+    tx: any = this.prisma,
+  ) {
+    const status = String(params.status || 'PENDENTE')
+      .trim()
+      .toUpperCase();
+    const origemFluxo = String(params.origem_fluxo || '').trim().toUpperCase() || null;
+    const subetapa = this.resolverSubetapaReferencia({
+      subetapa: params.subetapa ?? 'PRODUCAO',
+    });
+    const categoriaPersistida = this.resolverCategoriaPersistida({
+      setor: 'FABRICA',
+      subetapa,
+      status,
+      origemFluxo,
+      planoCorteId: params.plano_corte_id ?? null,
+    });
+    const criadoPorUsuarioId =
+      params.criado_por_usuario_id != null &&
+      Number.isFinite(Number(params.criado_por_usuario_id))
+        ? Number(params.criado_por_usuario_id)
+        : null;
+
+    return tx.agenda_fabrica.create({
+      data: {
+        titulo: params.titulo,
+        inicio_em: params.inicio_em,
+        fim_em: params.fim_em,
+        categoria: categoriaPersistida,
+        origem_fluxo: origemFluxo,
+        status,
+        venda_id: params.venda_id ?? null,
+        cliente_id: params.cliente_id ?? null,
+        plano_corte_id: params.plano_corte_id ?? null,
+        ...(Array.isArray(params.ambientes_selecionados)
+          ? { ambientes_selecionados: params.ambientes_selecionados }
+          : {}),
+        ...(criadoPorUsuarioId != null
+          ? { criado_por_usuario_id: criadoPorUsuarioId }
+          : {}),
+        ...this.montarCamposStatusMatrixPorSubetapa({
+          subetapa,
+          status,
+        }),
+      },
+    });
+  }
+
+  async criarAgendaLojaAutomatica(
+    params: {
+      titulo: string;
+      inicio_em: Date;
+      fim_em: Date;
+      subetapa?: string | null;
+      origem_fluxo?: string | null;
+      status?: string | null;
+      cliente_id?: number | null;
+      venda_id?: number | null;
+      orcamento_id?: number | null;
+      projeto_id?: number | null;
+      fornecedor_id?: number | null;
+      criado_por_usuario_id?: number | null;
+    },
+    tx: any = this.prisma,
+  ) {
+    const status = String(params.status || 'PENDENTE')
+      .trim()
+      .toUpperCase();
+    const origemFluxo = String(params.origem_fluxo || '').trim().toUpperCase() || null;
+    const subetapa = this.resolverSubetapaReferencia({
+      subetapa: params.subetapa ?? 'MEDIDA',
+    });
+    const categoriaPersistida = this.resolverCategoriaPersistida({
+      setor: 'LOJA',
+      subetapa,
+      status,
+      origemFluxo,
+      planoCorteId: null,
+    });
+    const criadoPorUsuarioId =
+      params.criado_por_usuario_id != null &&
+      Number.isFinite(Number(params.criado_por_usuario_id))
+        ? Number(params.criado_por_usuario_id)
+        : null;
+
+    return tx.agenda_loja.create({
+      data: {
+        titulo: params.titulo,
+        inicio_em: params.inicio_em,
+        fim_em: params.fim_em,
+        categoria: categoriaPersistida,
+        origem_fluxo: origemFluxo,
+        status,
+        cliente_id: params.cliente_id ?? null,
+        venda_id: params.venda_id ?? null,
+        orcamento_id: params.orcamento_id ?? null,
+        projeto_id: params.projeto_id ?? null,
+        fornecedor_id: params.fornecedor_id ?? null,
+        ...(criadoPorUsuarioId != null
+          ? { criado_por_usuario_id: criadoPorUsuarioId }
+          : {}),
+        ...this.montarCamposStatusMatrixPorSubetapa({
+          subetapa,
+          status,
+        }),
+      },
+    });
   }
 
   private registrarAuditoriaStatusPosVenda(params: {
@@ -373,6 +641,7 @@ export class AgendaService {
   private async validarPosVendaAposMontagem(params: {
     tx: any;
     categoria?: string | null;
+    subetapa?: string | null;
     vendaId?: number | null;
     setor?: 'LOJA' | 'FABRICA';
   }) {
@@ -385,25 +654,43 @@ export class AgendaService {
       );
     }
 
-    const categoriasMontagemConcluida = [
-      'MONTAGEM_CLIENTE_AGENDADA',
-      'EM_MONTAGEM_CLIENTE',
-      'MONTAGEM_CLIENTE_FINALIZADA',
-      'MONTAGEM_FINALIZADA',
-    ];
     const montagemLoja = await params.tx.agenda_loja.findFirst({
       where: {
         venda_id: vendaId,
-        categoria: { in: categoriasMontagemConcluida },
-        status: 'CONCLUIDO',
+        OR: [
+          { subetapa: 'MONTAGEM', execucao_etapa: 'CONCLUIDO' },
+          {
+            categoria: {
+              in: [
+                'MONTAGEM_CLIENTE_AGENDADA',
+                'EM_MONTAGEM_CLIENTE',
+                'MONTAGEM_CLIENTE_FINALIZADA',
+                'MONTAGEM_FINALIZADA',
+              ],
+            },
+            status: 'CONCLUIDO',
+          },
+        ],
       },
       select: { id: true },
     });
     const montagemFabrica = await params.tx.agenda_fabrica.findFirst({
       where: {
         venda_id: vendaId,
-        categoria: { in: categoriasMontagemConcluida },
-        status: 'CONCLUIDO',
+        OR: [
+          { subetapa: 'MONTAGEM', execucao_etapa: 'CONCLUIDO' },
+          {
+            categoria: {
+              in: [
+                'MONTAGEM_CLIENTE_AGENDADA',
+                'EM_MONTAGEM_CLIENTE',
+                'MONTAGEM_CLIENTE_FINALIZADA',
+                'MONTAGEM_FINALIZADA',
+              ],
+            },
+            status: 'CONCLUIDO',
+          },
+        ],
       },
       select: { id: true },
     });
@@ -539,14 +826,13 @@ export class AgendaService {
     }
     const {
       equipe_ids,
-      categoria,
+      subetapa,
       apontamentos,
       origem_fluxo,
       setor_destino,
       ambientes_selecionados: ambientesSelecionados,
       ...dadosAgenda
     } = dto;
-    const { status: clienteStatus } = this.categoriaToStatus(categoria);
 
     // Regra: cliente_id OU (plano_corte_id com fornecedor)
     const clienteId = dto.cliente_id ?? null;
@@ -583,26 +869,43 @@ export class AgendaService {
       await this.validarContratoVigenteParaFabrica(dto.venda_id);
     }
 
-    let categoriaFabrica = categoria ?? null;
-    if (!isLoja) {
-      const key = (categoriaFabrica || '').trim().toUpperCase();
-      if (!categoriaFabrica) {
-        categoriaFabrica = 'PRODUCAO_RECEBIDA';
-      } else if (!PIPELINE_PRODUCAO_KEYS.includes(key)) {
+    const subetapaRef = this.resolverSubetapaReferencia({
+      subetapa,
+    });
+    const clienteStatus = this.resolverStatusClienteAgendamento({
+      subetapa: subetapaRef,
+    });
+    const categoriaPersistida = this.resolverCategoriaPersistida({
+      setor: setorDestino,
+      subetapa: subetapaRef,
+      status: dto.status ?? 'PENDENTE',
+      origemFluxo,
+      planoCorteId: dto.plano_corte_id ?? null,
+    });
+
+    if (!isLoja && categoriaPersistida) {
+      const key = String(categoriaPersistida).trim().toUpperCase();
+      if (key && !PIPELINE_PRODUCAO_KEYS.includes(key)) {
         throw new BadRequestException(
           `Categoria de produção inválida. Use uma destas: ${PIPELINE_PRODUCAO_KEYS.join(', ')}`,
         );
-      } else {
-        categoriaFabrica = key;
       }
     }
 
     const dataAgenda = {
       ...dadosAgenda,
+      titulo: this.resolverTituloAgenda({
+        titulo: dadosAgenda.titulo,
+        subetapa: subetapaRef,
+      }),
       cliente_id: clienteId,
       fornecedor_id: fornecedorId,
-      categoria: isLoja ? (categoria || null) : categoriaFabrica,
+      categoria: categoriaPersistida,
       origem_fluxo: origemFluxo,
+      ...this.montarCamposStatusMatrixPorSubetapa({
+        subetapa: subetapaRef,
+        status: dto.status ?? 'PENDENTE',
+      }),
     };
 
     const idsEquipe = Array.isArray(equipe_ids)
@@ -619,9 +922,10 @@ export class AgendaService {
       });
       await this.validarPosVendaAposMontagem({
         tx,
-        categoria: categoria || null,
+        categoria: categoriaPersistida,
         vendaId: dto.venda_id ?? null,
         setor: setorDestino,
+        subetapa: subetapaRef,
       });
 
       const criadoPor = { criado_por_usuario_id: criadoPorUsuarioId };
@@ -1008,10 +1312,21 @@ export class AgendaService {
     };
     const eventos = await this.prisma.agenda_fabrica.findMany({
       where: {
-        categoria: { in: ['MONTAGEM_CLIENTE_AGENDADA', 'EM_MONTAGEM_CLIENTE', 'MONTAGEM_CLIENTE_FINALIZADA'] },
-        status: 'CONCLUIDO',
         origem_fluxo: 'LOJA_VENDA',
         venda_id: { not: null },
+        OR: [
+          { subetapa: 'MONTAGEM', execucao_etapa: 'CONCLUIDO' },
+          {
+            categoria: {
+              in: [
+                'MONTAGEM_CLIENTE_AGENDADA',
+                'EM_MONTAGEM_CLIENTE',
+                'MONTAGEM_CLIENTE_FINALIZADA',
+              ],
+            },
+            status: 'CONCLUIDO',
+          },
+        ],
       },
       include,
       orderBy: { alterado_em: 'desc' },
@@ -1122,15 +1437,13 @@ export class AgendaService {
 
     const {
       equipe_ids,
-      categoria,
+      subetapa,
       apontamentos,
       origem_fluxo,
       setor_destino,
       ambientes_selecionados: ambientesSelecionadosUpdate,
       ...dadosAgenda
     } = dto;
-    const categoriaRef = categoria ?? (atual as any).categoria;
-    const { status: clienteStatus } = this.categoriaToStatus(categoriaRef);
 
     const inicio = dto.inicio_em
       ? new Date(dto.inicio_em)
@@ -1163,6 +1476,13 @@ export class AgendaService {
       planoCorteId,
       vendaId,
     });
+    const subetapaAtual = normalizarSubetapa((atual as any).subetapa);
+    const subetapaRef = this.resolverSubetapaReferencia({
+      subetapa: subetapa ?? (atual as any).subetapa,
+    });
+    const clienteStatus = this.resolverStatusClienteAgendamento({
+      subetapa: subetapaRef,
+    });
 
     if (
       (atual as any).origem_fluxo &&
@@ -1186,14 +1506,24 @@ export class AgendaService {
       await this.validarContratoVigenteParaFabrica(vendaId);
     }
 
-    if (setor === 'FABRICA' && categoria !== undefined && categoria !== null) {
-      const key = String(categoria).trim().toUpperCase();
+    const categoriaPersistida = this.resolverCategoriaPersistida({
+      setor,
+      subetapa: subetapaRef,
+      status: dto.status ?? (atual as any).status ?? 'PENDENTE',
+      origemFluxo,
+      planoCorteId,
+      execucaoEtapa:
+        dto.status ?? (atual as any).execucao_etapa ?? (atual as any).status,
+    });
+
+    if (setor === 'FABRICA' && categoriaPersistida !== undefined && categoriaPersistida !== null) {
+      const key = String(categoriaPersistida).trim().toUpperCase();
       if (key && !PIPELINE_PRODUCAO_KEYS.includes(key)) {
         throw new BadRequestException(
           `Categoria de produção inválida. Use uma destas: ${PIPELINE_PRODUCAO_KEYS.join(', ')}`,
         );
       }
-      if (key) {
+      if (key && subetapa !== undefined && subetapaAtual && subetapaRef !== subetapaAtual) {
         const validacao = validarTransicaoStatusProducao({
           atual: (atual as any).categoria ?? undefined,
           proximo: key,
@@ -1228,9 +1558,10 @@ export class AgendaService {
       });
       await this.validarPosVendaAposMontagem({
         tx,
-        categoria: categoriaRef,
+        categoria: categoriaPersistida,
         vendaId,
         setor,
+        subetapa: subetapaRef,
       });
 
       const alteradoPor = opts?.alteradoPorUsuarioId
@@ -1238,12 +1569,20 @@ export class AgendaService {
         : {};
       const updateData: any = {
         ...dadosAgenda,
+        titulo: this.resolverTituloAgenda({
+          titulo: dto.titulo ?? (atual as any).titulo,
+          subetapa: subetapaRef,
+        }),
         cliente_id: clienteId,
         fornecedor_id: fornecedorId,
-        categoria: categoria ?? (atual as any).categoria ?? null,
+        categoria: categoriaPersistida,
         origem_fluxo: origemFluxo,
         inicio_em: inicio,
         fim_em: fim,
+        ...this.montarCamposStatusMatrixPorSubetapa({
+          subetapa: subetapaRef,
+          status: dto.status ?? (atual as any).status ?? 'PENDENTE',
+        }),
         ...alteradoPor,
       };
       if (setor === 'FABRICA') {
@@ -1254,7 +1593,20 @@ export class AgendaService {
         const ehSomentePainel = (AGENDA_FABRICA_SOMENTE_PAINEL_CATEGORIAS as readonly string[]).includes(catAtual);
         if (ehSomentePainel && (dto.status === AGENDA_FABRICA_STATUS_AGENDADO || dto.inicio_em != null)) {
           updateData.status = AGENDA_FABRICA_STATUS_AGENDADO;
-          updateData.categoria = 'MEDIDA_FINA';
+          updateData.categoria = this.resolverCategoriaPersistida({
+            setor: 'FABRICA',
+            subetapa: 'MEDIDA_FINA',
+            status: AGENDA_FABRICA_STATUS_AGENDADO,
+            origemFluxo,
+            planoCorteId,
+          });
+          Object.assign(
+            updateData,
+            this.montarCamposStatusMatrixPorSubetapa({
+              subetapa: 'MEDIDA_FINA',
+              status: AGENDA_FABRICA_STATUS_AGENDADO,
+            }),
+          );
           this.logger.log(`[Agenda Produção] update: evento ${id} ${catAtual} → MEDIDA_FINA (agendado), inicio_em=${dto.inicio_em}`);
         }
       }
@@ -1330,7 +1682,7 @@ export class AgendaService {
             await this.syncApontamentosToProducao(tx, {
               agenda_loja_id: id,
               apontamentos: apontamentosDados,
-              categoria: (agendamento as any)?.categoria ?? categoria ?? null,
+              categoria: (agendamento as any)?.categoria ?? null,
               venda_id: vendaId ?? null,
             });
           }
@@ -1353,7 +1705,7 @@ export class AgendaService {
             await this.syncApontamentosToProducao(tx, {
               agenda_fabrica_id: id,
               apontamentos: apontamentosDados,
-              categoria: (agendamento as any)?.categoria ?? categoria ?? null,
+              categoria: (agendamento as any)?.categoria ?? null,
               venda_id: vendaId ?? null,
             });
           }
@@ -1362,7 +1714,6 @@ export class AgendaService {
 
       const novoStatus = clienteStatus;
       // Agenda fábrica: ao editar evento "Aguardando medida fina" com data/hora, venda/cliente → Medida fina agendada
-      const catKey = this.normalizarCategoriaKey(categoriaRef);
       const origemOk =
         !(atual as any).origem_fluxo ||
         String((atual as any).origem_fluxo).toUpperCase() === 'LOJA_VENDA' ||
@@ -1370,7 +1721,7 @@ export class AgendaService {
       const ehMedidaFinaAgendar =
         setor === 'FABRICA' &&
         !planoCorteId &&
-        (catKey === 'AGENDAR_MEDIDA_FINA' || catKey === 'MEDIDA_FINA') &&
+        subetapaRef === 'MEDIDA_FINA' &&
         origemOk;
       if (ehMedidaFinaAgendar && (vendaId || clienteId) && clienteStatus) {
         let atualizouVendaOuCliente = false;
@@ -1555,12 +1906,11 @@ export class AgendaService {
   async updateStatus(
     id: number,
     status: string,
-    categoria?: string,
-    opts?: { alteradoPorUsuarioId?: number; setorDestino?: 'LOJA' | 'FABRICA'; alteradoEm?: string; dataConclusao?: string },
+    opts?: { alteradoPorUsuarioId?: number; setorDestino?: 'LOJA' | 'FABRICA'; alteradoEm?: string; dataConclusao?: string; subetapa?: string },
   ) {
     const inLoja = await this.prisma.agenda_loja.findUnique({
       where: { id },
-      select: { id: true },
+      select: { id: true, categoria: true, origem_fluxo: true, fluxo_tipo: true, macroetapa: true, subetapa: true, execucao_etapa: true },
     });
     const inFabrica = await this.prisma.agenda_fabrica.findUnique({
       where: { id },
@@ -1568,6 +1918,11 @@ export class AgendaService {
         id: true,
         plano_corte_id: true,
         categoria: true,
+        origem_fluxo: true,
+        fluxo_tipo: true,
+        macroetapa: true,
+        subetapa: true,
+        execucao_etapa: true,
         venda_id: true,
         cliente_id: true,
         titulo: true,
@@ -1588,10 +1943,18 @@ export class AgendaService {
     if (!setor) {
       throw new BadRequestException('Agendamento não encontrado');
     }
-    if (setor === 'FABRICA' && categoria) {
+    const subetapaBody = normalizarSubetapa(opts?.subetapa);
+    const categoriaDestinoValidacao = (setor === 'FABRICA'
+        ? categoriaAgendaFabricaPorSubetapa({ subetapa: subetapaBody, execucaoEtapa: status })
+        : categoriaAgendaLojaPorSubetapa({ subetapa: subetapaBody }))
+      ?? inFabrica?.categoria
+      ?? inLoja?.categoria
+      ?? null;
+
+    if (setor === 'FABRICA' && categoriaDestinoValidacao) {
       const validacao = validarTransicaoStatusProducao({
         atual: inFabrica?.categoria ?? undefined,
-        proximo: categoria,
+        proximo: categoriaDestinoValidacao,
       });
       if (!validacao.ok) {
         throw new BadRequestException(validacao.motivo);
@@ -1604,8 +1967,32 @@ export class AgendaService {
       ? { alterado_por_usuario_id: opts.alteradoPorUsuarioId, alterado_em: concluidoEm }
       : { alterado_em: concluidoEm };
     return this.prisma.$transaction(async (tx) => {
-      const data: Record<string, unknown> = { status, ...alteradoPor };
-      if (categoria) data.categoria = categoria;
+      const registroAtual = setor === 'FABRICA' ? inFabrica : inLoja;
+      const subetapaAtual = this.exigirSubetapaMatrix(
+        registroAtual?.subetapa,
+        `agendamento #${id}`,
+      );
+      const subetapaDestino = subetapaBody ?? subetapaAtual;
+      const categoriaDestino = (setor === 'FABRICA'
+          ? categoriaAgendaFabricaPorSubetapa({ subetapa: subetapaDestino, execucaoEtapa: status })
+          : categoriaAgendaLojaPorSubetapa({ subetapa: subetapaDestino }))
+        ?? registroAtual?.categoria
+        ?? null;
+      const origemFluxoAtual = registroAtual?.origem_fluxo ?? null;
+      const planoCorteIdAtual = inFabrica?.plano_corte_id ?? null;
+      const data: Record<string, unknown> = {
+        status,
+        ...alteradoPor,
+        ...this.montarCamposStatusMatrixPorSubetapa({
+          subetapa: subetapaDestino,
+          status,
+          fluxoTipo: registroAtual?.fluxo_tipo ?? null,
+          origemFluxo: origemFluxoAtual,
+          planoCorteId: planoCorteIdAtual,
+          execucaoEtapaAtual: registroAtual?.execucao_etapa ?? null,
+        }),
+      };
+      if (categoriaDestino) data.categoria = categoriaDestino;
       if (setor === 'LOJA') {
         const agendamento = await tx.agenda_loja.update({
           where: { id },
@@ -1626,8 +2013,8 @@ export class AgendaService {
         });
       }
       if (status === 'CONCLUIDO' && setor === 'FABRICA' && !inFabrica?.plano_corte_id) {
-        const catKey = this.normalizarCategoriaKey(inFabrica?.categoria);
-        const proximoStatusVenda = this.statusAoConcluirPorCategoria[catKey];
+        const proximoStatusVenda = statusClienteAoConcluirSubetapa({ subetapa: subetapaDestino }) || '';
+        const subetapaAtual = subetapaDestino;
         let vendaId = inFabrica?.venda_id ?? undefined;
         let clienteId = inFabrica?.cliente_id ?? undefined;
         if (vendaId && !clienteId) {
@@ -1671,7 +2058,7 @@ export class AgendaService {
             }
           }
           // Próximo evento só: medida→projeto→produção→montagem. Pós-venda (garantia etc.) nunca é criado aqui – só pelo botão na agenda.
-          if (catKey === 'MEDIDA_FINA' || catKey === 'AGENDAR_MEDIDA_FINA') {
+          if (subetapaAtual === 'MEDIDA_FINA') {
             const dataCorte = getDataCorteContasReceber();
             const financeiroPendente =
               clienteId != null &&
@@ -1688,23 +2075,14 @@ export class AgendaService {
               );
             }
           }
-          if (catKey === 'PROJETO_TECNICO_EM_ANDAMENTO' || catKey === 'AGUARDANDO_PROJETO_TECNICO') {
+          if (subetapaAtual === 'PROJETO_TECNICO') {
             await this.criarEventoProducaoAgendada(tx, {
               venda_id: vendaId,
               cliente_id: clienteId,
               dataConclusao: opts?.dataConclusao,
             });
           }
-          const categoriasProducaoQueCriamMontagem = [
-            'PRODUCAO_EM_ANDAMENTO',
-            'PRODUCAO_FINALIZADA',
-            'PREPARACAO_TECNICA',
-            'CORTE',
-            'MONTAGEM_INTERNA',
-            'ACABAMENTO',
-            'CONFERENCIA_QUALIDADE',
-          ];
-          if (categoriasProducaoQueCriamMontagem.includes(catKey)) {
+          if (subetapaAtual === 'PRODUCAO') {
             const equipeConcluida = await tx.agenda_fabrica_funcionarios.findMany({
               where: { agenda_fabrica_id: id },
               select: { funcionario_id: true },
@@ -1732,8 +2110,8 @@ export class AgendaService {
       : {};
     const setorForcado = opts?.setor;
     return this.prisma.$transaction(async (tx) => {
-      let loja: { id: number; status: string | null; categoria: string | null; venda_id: number | null; cliente_id: number | null } | null = null;
-      let fabrica: { id: number; status: string | null; categoria: string | null; venda_id: number | null; cliente_id: number | null; plano_corte_id: number | null } | null = null;
+      let loja: { id: number; status: string | null; categoria: string | null; subetapa: string | null; origem_fluxo: string | null; venda_id: number | null; cliente_id: number | null } | null = null;
+      let fabrica: { id: number; status: string | null; categoria: string | null; subetapa: string | null; origem_fluxo: string | null; venda_id: number | null; cliente_id: number | null; plano_corte_id: number | null } | null = null;
       if (setorForcado !== 'FABRICA') {
         loja = await tx.agenda_loja.findUnique({
           where: { id },
@@ -1741,6 +2119,8 @@ export class AgendaService {
             id: true,
             status: true,
             categoria: true,
+            subetapa: true,
+            origem_fluxo: true,
             venda_id: true,
             cliente_id: true,
           },
@@ -1753,6 +2133,8 @@ export class AgendaService {
             id: true,
             status: true,
             categoria: true,
+            subetapa: true,
+            origem_fluxo: true,
             venda_id: true,
             cliente_id: true,
             plano_corte_id: true,
@@ -1765,8 +2147,11 @@ export class AgendaService {
         throw new BadRequestException('Agendamento não encontrado');
       }
 
-      const categoriaKey = this.normalizarCategoriaKey(agendamento.categoria);
-      const reversao = this.reversaoStatusPorCategoria[categoriaKey];
+      const subetapaAtual = this.exigirSubetapaMatrix(
+        agendamento.subetapa,
+        `agendamento #${id}`,
+      );
+      const reversao = reversaoStatusClientePorSubetapa({ subetapa: subetapaAtual });
       const ehAgendaPlanoCorte = setor === 'FABRICA' && (agendamento as any).plano_corte_id;
 
       const alvosMesmoVinculo: Array<{
@@ -1785,7 +2170,7 @@ export class AgendaService {
                 where: {
                   id: { not: id },
                   status: { not: 'CANCELADO' },
-                  categoria: agendamento.categoria || null,
+                  subetapa: subetapaAtual || null,
                   OR: alvosMesmoVinculo,
                 },
                 select: { id: true },
@@ -1794,7 +2179,7 @@ export class AgendaService {
                 where: {
                   id: { not: id },
                   status: { not: 'CANCELADO' },
-                  categoria: agendamento.categoria || null,
+                  subetapa: subetapaAtual || null,
                   OR: alvosMesmoVinculo,
                 },
                 select: { id: true },
@@ -1907,6 +2292,17 @@ export class AgendaService {
     );
 
     return this.prisma.$transaction(async (tx) => {
+      const subetapaAtual = this.exigirSubetapaMatrix(
+        (atual as any).subetapa,
+        `agendamento loja #${id}`,
+      );
+      const categoriaDestino = this.resolverCategoriaPersistida({
+        setor: 'FABRICA',
+        subetapa: subetapaAtual,
+        status: atual.status,
+        origemFluxo: origemProducao,
+        planoCorteId: null,
+      });
       const created = await tx.agenda_fabrica.create({
         data: {
           cliente_id: atual.cliente_id,
@@ -1917,9 +2313,13 @@ export class AgendaService {
           titulo: atual.titulo,
           inicio_em: atual.inicio_em,
           fim_em: atual.fim_em,
-          categoria: atual.categoria,
+          categoria: categoriaDestino,
           origem_fluxo: origemProducao,
           status: atual.status,
+          ...this.montarCamposStatusMatrixPorSubetapa({
+            subetapa: subetapaAtual,
+            status: atual.status,
+          }),
           equipe: {
             create: (atual.equipe as any[]).map((e) => ({
               funcionario_id: e.funcionario_id,
@@ -1935,27 +2335,6 @@ export class AgendaService {
       return created;
     });
   }
-
-  /** Status do cliente/venda ao concluir o agendamento por categoria (pipeline). */
-  private readonly statusAoConcluirPorCategoria: Record<string, string> = {
-    MEDIDA: 'MEDIDA_REALIZADA',
-    AGENDAR_MEDIDA: 'MEDIDA_REALIZADA',
-    APRESENTACAO: 'ORCAMENTO_APRESENTADO',
-    AGENDAR_APRESENTACAO: 'ORCAMENTO_APRESENTADO',
-    MEDIDA_FINA: 'MEDIDA_FINA_REALIZADA',
-    AGENDAR_MEDIDA_FINA: 'MEDIDA_FINA_REALIZADA',
-    PROJETO_TECNICO_EM_ANDAMENTO: 'PROJETO_TECNICO_CONCLUIDO',
-    AGUARDANDO_PROJETO_TECNICO: 'PROJETO_TECNICO_CONCLUIDO',
-    PRODUCAO_EM_ANDAMENTO: 'AGENDAR_MONTAGEM',
-    PRODUCAO_FINALIZADA: 'AGENDAR_MONTAGEM',
-    PREPARACAO_TECNICA: 'AGENDAR_MONTAGEM',
-    CORTE: 'AGENDAR_MONTAGEM',
-    MONTAGEM_INTERNA: 'AGENDAR_MONTAGEM',
-    ACABAMENTO: 'AGENDAR_MONTAGEM',
-    CONFERENCIA_QUALIDADE: 'AGENDAR_MONTAGEM',
-    MONTAGEM_CLIENTE_AGENDADA: 'MONTAGEM_FINALIZADA',
-    EM_MONTAGEM_CLIENTE: 'MONTAGEM_FINALIZADA',
-  };
 
   /** Próximo status da venda após concluir projeto técnico (abre nova etapa Produção agendada). */
   private readonly statusAposProjetoTecnico = 'PRODUCAO_AGENDADA';
@@ -2006,7 +2385,7 @@ export class AgendaService {
   }
 
   /**
-   * Cria evento "Aguardando projeto técnico" e atualiza venda/cliente para AGUARDANDO_PROJETO_TECNICO.
+  * Cria evento "Aguardando projeto técnico" e atualiza venda/cliente para AGUARDANDO_PRECIFICACAO.
    * Chamado ao concluir medida fina (igual ao fluxo quando contrato fica vigente).
    */
   private async criarEventoAguardandoProjetoTecnico(
@@ -2020,19 +2399,30 @@ export class AgendaService {
       ? `Aguardando projeto técnico - Venda #${vendaId}`
       : 'Aguardando projeto técnico';
     const { inicio, fim } = this.inicioFimProximoEvento(params.dataConclusao);
+    const subetapa = this.resolverSubetapaReferencia({ subetapa: 'PROJETO_TECNICO' });
     await tx.agenda_fabrica.create({
       data: {
         titulo,
         inicio_em: inicio,
         fim_em: fim,
-        categoria: 'AGUARDANDO_PROJETO_TECNICO',
+        categoria: this.resolverCategoriaPersistida({
+          setor: 'FABRICA',
+          subetapa,
+          status: 'PENDENTE',
+          origemFluxo: 'LOJA_VENDA',
+          planoCorteId: null,
+        }),
         origem_fluxo: 'LOJA_VENDA',
         status: 'PENDENTE',
+        ...this.montarCamposStatusMatrixPorSubetapa({
+          subetapa,
+          status: 'PENDENTE',
+        }),
         venda_id: vendaId ?? undefined,
         cliente_id: clienteId ?? undefined,
       },
     });
-    const proximoStatus = 'AGUARDANDO_PROJETO_TECNICO';
+    const proximoStatus = 'AGUARDANDO_PRECIFICACAO';
     if (vendaId) {
       const venda = await tx.vendas.findUnique({
         where: { id: vendaId },
@@ -2082,14 +2472,25 @@ export class AgendaService {
       ? `Produção agendada - Venda #${vendaId}`
       : 'Produção agendada';
     const { inicio, fim } = this.inicioFimProximoEvento(params.dataConclusao);
+    const subetapa = this.resolverSubetapaReferencia({ subetapa: 'PRODUCAO' });
     await tx.agenda_fabrica.create({
       data: {
         titulo,
         inicio_em: inicio,
         fim_em: fim,
-        categoria: 'PRODUCAO_EM_ANDAMENTO',
+        categoria: this.resolverCategoriaPersistida({
+          setor: 'FABRICA',
+          subetapa,
+          status: 'PENDENTE',
+          origemFluxo: 'LOJA_VENDA',
+          planoCorteId: null,
+        }),
         origem_fluxo: 'LOJA_VENDA',
         status: 'PENDENTE',
+        ...this.montarCamposStatusMatrixPorSubetapa({
+          subetapa,
+          status: 'PENDENTE',
+        }),
         venda_id: vendaId ?? undefined,
         cliente_id: clienteId ?? undefined,
       },
@@ -2144,14 +2545,25 @@ export class AgendaService {
       ? `Aguardando montagem - Venda #${vendaId}`
       : 'Aguardando montagem';
     const { inicio, fim } = this.inicioFimProximoEvento(params.dataConclusao);
+    const subetapa = this.resolverSubetapaReferencia({ subetapa: 'MONTAGEM' });
     const created = await tx.agenda_fabrica.create({
       data: {
         titulo,
         inicio_em: inicio,
         fim_em: fim,
-        categoria: 'MONTAGEM_CLIENTE_AGENDADA',
+        categoria: this.resolverCategoriaPersistida({
+          setor: 'FABRICA',
+          subetapa,
+          status: 'PENDENTE',
+          origemFluxo: 'LOJA_VENDA',
+          planoCorteId: null,
+        }),
         origem_fluxo: 'LOJA_VENDA',
         status: 'PENDENTE',
+        ...this.montarCamposStatusMatrixPorSubetapa({
+          subetapa,
+          status: 'PENDENTE',
+        }),
         venda_id: vendaId ?? undefined,
         cliente_id: clienteId ?? undefined,
       },
@@ -2214,24 +2626,54 @@ export class AgendaService {
       const [paraIniciarLoja, paraIniciarFabrica] = await Promise.all([
         tx.agenda_loja.findMany({
           where: { status: 'PENDENTE', inicio_em: { lte: now } },
-          select: { id: true },
+          select: { id: true, categoria: true, origem_fluxo: true, subetapa: true },
         }),
         tx.agenda_fabrica.findMany({
           where: { status: 'PENDENTE', inicio_em: { lte: now } },
-          select: { id: true },
+          select: {
+            id: true,
+            categoria: true,
+            origem_fluxo: true,
+            plano_corte_id: true,
+            subetapa: true,
+          },
         }),
       ]);
       if (paraIniciarLoja.length) {
-        await tx.agenda_loja.updateMany({
-          where: { id: { in: paraIniciarLoja.map((a) => a.id) } },
-          data: { status: 'EM_ANDAMENTO' },
-        });
+        for (const agenda of paraIniciarLoja) {
+          const subetapaAtual = this.exigirSubetapaMatrix(
+            (agenda as any).subetapa,
+            `agendamento loja #${agenda.id}`,
+          );
+          await tx.agenda_loja.update({
+            where: { id: agenda.id },
+            data: {
+              status: 'EM_ANDAMENTO',
+              ...this.montarCamposStatusMatrixPorSubetapa({
+                subetapa: subetapaAtual,
+                status: 'EM_ANDAMENTO',
+              }),
+            },
+          });
+        }
       }
       if (paraIniciarFabrica.length) {
-        await tx.agenda_fabrica.updateMany({
-          where: { id: { in: paraIniciarFabrica.map((a) => a.id) } },
-          data: { status: 'EM_ANDAMENTO' },
-        });
+        for (const agenda of paraIniciarFabrica) {
+          const subetapaAtual = this.exigirSubetapaMatrix(
+            (agenda as any).subetapa,
+            `agendamento fábrica #${agenda.id}`,
+          );
+          await tx.agenda_fabrica.update({
+            where: { id: agenda.id },
+            data: {
+              status: 'EM_ANDAMENTO',
+              ...this.montarCamposStatusMatrixPorSubetapa({
+                subetapa: subetapaAtual,
+                status: 'EM_ANDAMENTO',
+              }),
+            },
+          });
+        }
       }
       const totalIniciadas = paraIniciarLoja.length + paraIniciarFabrica.length;
       if (totalIniciadas) {
@@ -2244,8 +2686,10 @@ export class AgendaService {
           select: {
             id: true,
             categoria: true,
+            origem_fluxo: true,
             cliente_id: true,
             venda_id: true,
+            subetapa: true,
           },
         }),
         tx.agenda_fabrica.findMany({
@@ -2253,20 +2697,37 @@ export class AgendaService {
           select: {
             id: true,
             categoria: true,
+            origem_fluxo: true,
             cliente_id: true,
             venda_id: true,
             plano_corte_id: true,
+            subetapa: true,
           },
         }),
       ]);
 
       for (const ag of paraConcluirLoja) {
+        const subetapaAtual = this.exigirSubetapaMatrix(
+          (ag as any).subetapa,
+          `agendamento loja #${ag.id}`,
+        );
         await tx.agenda_loja.update({
           where: { id: ag.id },
-          data: { status: 'CONCLUIDO' },
+          data: {
+            status: 'CONCLUIDO',
+            ...this.montarCamposStatusMatrixPorSubetapa({
+              subetapa: subetapaAtual,
+              status: 'CONCLUIDO',
+            }),
+          },
         });
-        const catKey = this.normalizarCategoriaKey(ag.categoria);
-        const proximoStatus = this.statusAoConcluirPorCategoria[catKey];
+        const proximoStatus = this.resolverStatusClienteConclusao({
+          subetapa: subetapaAtual,
+          categoria: ag.categoria ?? null,
+          status: 'CONCLUIDO',
+          origemFluxo: ag.origem_fluxo ?? null,
+          planoCorteId: null,
+        });
         if (proximoStatus) {
           if (ag.venda_id) {
             const venda = await tx.vendas.findUnique({
@@ -2310,9 +2771,19 @@ export class AgendaService {
       }
 
       for (const ag of paraConcluirFabrica) {
+        const subetapaAtual = this.exigirSubetapaMatrix(
+          (ag as any).subetapa,
+          `agendamento fábrica #${ag.id}`,
+        );
         await tx.agenda_fabrica.update({
           where: { id: ag.id },
-          data: { status: 'CONCLUIDO' },
+          data: {
+            status: 'CONCLUIDO',
+            ...this.montarCamposStatusMatrixPorSubetapa({
+              subetapa: subetapaAtual,
+              status: 'CONCLUIDO',
+            }),
+          },
         });
         if (ag.plano_corte_id) {
           await tx.plano_corte.update({
@@ -2321,9 +2792,14 @@ export class AgendaService {
           });
         }
         // Serviço de corte é venda de fornecedor: não atualizar status da venda do cliente
-        const catKey = this.normalizarCategoriaKey(ag.categoria);
         const proximoStatus = !ag.plano_corte_id
-          ? this.statusAoConcluirPorCategoria[catKey]
+          ? this.resolverStatusClienteConclusao({
+              subetapa: subetapaAtual,
+              categoria: ag.categoria ?? null,
+              status: 'CONCLUIDO',
+              origemFluxo: ag.origem_fluxo ?? null,
+              planoCorteId: ag.plano_corte_id ?? null,
+            })
           : undefined;
         if (proximoStatus) {
           if (ag.venda_id) {
@@ -2364,7 +2840,7 @@ export class AgendaService {
               });
             }
           }
-          if (catKey === 'MEDIDA_FINA' || catKey === 'AGENDAR_MEDIDA_FINA') {
+          if (subetapaAtual === 'MEDIDA_FINA') {
             const clienteId =
               ag.cliente_id ??
               (ag.venda_id
@@ -2388,13 +2864,13 @@ export class AgendaService {
               );
             }
           }
-          if (catKey === 'PROJETO_TECNICO_EM_ANDAMENTO' || catKey === 'AGUARDANDO_PROJETO_TECNICO') {
+          if (subetapaAtual === 'PROJETO_TECNICO') {
             await this.criarEventoProducaoAgendada(tx, {
               venda_id: ag.venda_id ?? undefined,
               cliente_id: ag.cliente_id ?? undefined,
             });
           }
-          if (catKey === 'PRODUCAO_FINALIZADA') {
+          if (subetapaAtual === 'PRODUCAO') {
             await this.criarEventoMontagemAgendada(tx, {
               venda_id: ag.venda_id ?? undefined,
               cliente_id: ag.cliente_id ?? undefined,

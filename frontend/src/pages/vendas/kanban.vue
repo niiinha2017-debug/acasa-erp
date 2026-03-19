@@ -29,13 +29,13 @@
     />
     <MetricCard
       label="Em Producao"
-      :value="vendas.filter((v) => normalizeKey(v.status).includes('PRODUCAO') || normalizeKey(v.status) === 'EM_PRODUCAO').length"
+      :value="vendas.filter((v) => statusVendaEhEmProducao(v.status)).length"
       icon="pi pi-cog"
       color="amber"
     />
     <MetricCard
       label="Finalizadas"
-      :value="vendas.filter((v) => normalizeKey(v.status) === 'MONTAGEM_FINALIZADA' || normalizeKey(v.status) === 'ENCERRADO').length"
+      :value="vendas.filter((v) => statusVendaEhFinalizada(v.status)).length"
       icon="pi pi-check"
       color="blue"
     />
@@ -121,6 +121,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { VendaService, AgendaFabricaService } from '@/services'
+import { getStatusVendaOperacionalLabel, statusVendaEhEmProducao, statusVendaEhFinalizada } from '@/constantes'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
 import { format } from '@/utils/format'
@@ -137,13 +138,13 @@ const draggingId = ref(null)
 const draggingFrom = ref('')
 
 const kanbanColumns = [
-  { key: 'ORCAMENTO_APROVADO', label: 'Orcamento aprovado' },
-  { key: 'VENDA_FECHADA', label: 'Fechar venda' },
-  { key: 'MEDIDA_FINA_AGENDADA', label: 'Medida fina' },
-  { key: 'PRODUCAO_AGENDADA', label: 'Producao agendada' },
-  { key: 'EM_PRODUCAO', label: 'Em producao' },
-  { key: 'MONTAGEM_AGENDADA', label: 'Montagem agendada' },
-  { key: 'EM_MONTAGEM', label: 'Em montagem' },
+  { key: 'ORCAMENTO_APROVADO', label: getStatusVendaOperacionalLabel('ORCAMENTO_APROVADO') },
+  { key: 'VENDA_FECHADA', label: getStatusVendaOperacionalLabel('VENDA_FECHADA') },
+  { key: 'MEDIDA_FINA_AGENDADA', label: getStatusVendaOperacionalLabel('MEDIDA_FINA_AGENDADA') },
+  { key: 'PRODUCAO_AGENDADA', label: getStatusVendaOperacionalLabel('PRODUCAO_AGENDADA') },
+  { key: 'EM_PRODUCAO', label: getStatusVendaOperacionalLabel('EM_PRODUCAO') },
+  { key: 'MONTAGEM_AGENDADA', label: getStatusVendaOperacionalLabel('MONTAGEM_AGENDADA') },
+  { key: 'EM_MONTAGEM', label: getStatusVendaOperacionalLabel('EM_MONTAGEM') },
   { key: 'MONTAGEM_FINALIZADA', label: 'Finalizada' },
 ]
 
@@ -153,6 +154,8 @@ function normalizeKey(value) {
 
 function statusLabel(status) {
   const key = normalizeKey(status)
+  const matrixLabel = getStatusVendaOperacionalLabel(key)
+  if (matrixLabel) return matrixLabel
   const match = (PIPELINE_CLIENTE || []).find((p) => p.key === key)
   return match?.label || key || 'Sem status'
 }

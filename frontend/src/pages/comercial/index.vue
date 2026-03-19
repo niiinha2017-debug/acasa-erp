@@ -118,7 +118,7 @@
               <i class="pi pi-calendar-clock text-xl text-brand-primary"></i>
             </div>
             <h3 class="text-base font-bold text-text-main uppercase tracking-tight mb-1">Agenda</h3>
-            <p class="text-xs text-text-soft">Produção, montagem e entregas</p>
+            <p class="text-xs text-text-soft">Produção, material carregado e montagem</p>
           </RouterLink>
         </div>
 

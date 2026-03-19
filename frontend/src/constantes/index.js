@@ -15,6 +15,30 @@ export { FUNCIONARIOS_LOCAL_SETOR_CARGO } from './funcionarios'
 export { CONTAS_BANCARIAS, CARTOES_CREDITO, TIPOS_CONTAS_BANCARIAS } from './banco'
 export { INDICACAO_ORIGENS } from './indicacao'
 export { VENDA_FECHAMENTO_REGRAS } from './venda-fechamento'
+export {
+  getCategoriaAgendaFabricaPorSubetapa,
+  getCategoriaProcessoLabel,
+  getCategoriaVisualComercialPorSubetapa,
+  getCategoriaVisualOperacionalPorSubetapa,
+  getSubetapaProcessoPorCategoria,
+  getSubetapaLabel,
+  getExecucaoEtapaLabel,
+  getStatusVendaSubetapa,
+  getStatusVendaOperacionalLabel,
+  getStatusVendaFase5,
+  getStatusVendaFase11,
+  getCategoriaAgendaLojaPorSubetapa,
+  getCategoriaAgendaLojaPorStatusVenda,
+  getStatusVendaAoAgendarAgendaLoja,
+  statusVendaEhOrcamento,
+  statusVendaEhVenda,
+  statusVendaEhAgenda,
+  statusVendaEhProducaoPosVenda,
+  statusVendaUsa45DiasAposMedidaFina,
+  statusVendaEhMedidaFina,
+  statusVendaEhEmProducao,
+  statusVendaEhFinalizada,
+} from './status-matrix'
 
 // Módulo único de cores/etapas (fonte: backend GET /utils/status-colors)
 export {

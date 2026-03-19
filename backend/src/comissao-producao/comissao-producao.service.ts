@@ -23,9 +23,30 @@ export class ComissaoProducaoService {
    * Se lucro > 0: 50% Margem Fábrica (retenção), 50% Fundo de Comissão (distribuição).
    */
   async getResumo(mes: number, ano: number) {
+    const projetosConcluidosNaMatriz =
+      await this.prisma.agenda_fabrica.findMany({
+        where: {
+          projeto_id: { not: null },
+          status: { not: 'CANCELADO' },
+          execucao_etapa: 'CONCLUIDO',
+          OR: [
+            { subetapa: 'MONTAGEM' },
+            { subetapa: 'SERVICO_CORTE_FITA_BORDA' },
+          ],
+        },
+        select: { projeto_id: true },
+        distinct: ['projeto_id'],
+      });
+    const idsProjetosMatriz = projetosConcluidosNaMatriz
+      .map((r) => Number((r as any).projeto_id || 0))
+      .filter((id) => id > 0);
+
     const projetosElegiveis = await this.prisma.projetos.findMany({
       where: {
-        status_atual: { in: STATUS_MONTAGEM_CONCLUIDA },
+        OR: [
+          { status_atual: { in: STATUS_MONTAGEM_CONCLUIDA } },
+          ...(idsProjetosMatriz.length ? [{ id: { in: idsProjetosMatriz } }] : []),
+        ],
         venda_id: { not: null },
       },
       select: {

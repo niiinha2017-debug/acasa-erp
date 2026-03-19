@@ -1,169 +1,152 @@
 <template>
-  <div class="w-full min-h-full bg-slate-50 dark:bg-slate-900/50">
-    <!-- Layout: sem projeto = centralizado; com projeto e aba 3D = tela cheia split -->
-    <div
-      class="mx-auto px-4 py-6 md:py-8"
-      :class="
-        projetoId && ambienteSelecionado && abaAtiva === '3d'
-          ? 'max-w-[100%]'
-          : 'max-w-2xl'
-      "
+  <div class="flex flex-col h-screen overflow-hidden bg-slate-50 dark:bg-slate-900/50">
+    <div class="h-1 w-full bg-emerald-600 flex-shrink-0" aria-hidden />
+
+    <PageHeader
+      title="Medição Fina"
+      subtitle="Dados reais do ambiente antes da produção"
+      icon="pi pi-ruler"
     >
-      <div
-        class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden"
-        :class="
-          projetoId && ambienteSelecionado && abaAtiva === '3d'
-            ? 'flex flex-col h-[calc(100vh-8rem)] min-h-[480px]'
-            : ''
-        "
-      >
-        <div class="h-1 w-full bg-emerald-600" aria-hidden />
-
-        <PageHeader
-          title="Medição Fina"
-          subtitle="Dados reais do ambiente antes da produção"
-          icon="pi pi-ruler"
+      <template v-if="projetoId" #actions>
+        <Button
+          variant="ghost"
+          size="sm"
+          type="button"
+          @click="voltar"
         >
-          <template v-if="projetoId" #actions>
-            <Button
-              variant="ghost"
-              size="sm"
-              type="button"
-              @click="voltar"
-            >
-              <i class="pi pi-arrow-left mr-1" />
-              Voltar
-            </Button>
-          </template>
-        </PageHeader>
+          <i class="pi pi-arrow-left mr-1" />
+          Voltar
+        </Button>
+      </template>
+    </PageHeader>
 
-        <!-- Buscador: só aparece quando ainda não abriu um projeto -->
-        <div v-if="!projetoId" class="p-4 md:p-6 space-y-6">
-          <p class="text-sm text-slate-600 dark:text-slate-400">
-            Pela <strong>Agenda</strong> ou pela <strong>Timeline</strong> o projeto abre direto. Ou busque por cliente abaixo.
+    <div class="px-4 md:px-6 pt-3 pb-2 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+      <div class="inline-flex rounded-xl bg-slate-100 dark:bg-slate-700/50 p-1">
+        <button
+          type="button"
+          class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+          :class="
+            etapaFluxo === 'pre'
+              ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+          "
+          @click="etapaFluxo = 'pre'"
+        >
+          <i class="pi pi-search mr-1.5" />
+          Medição Inicial (pré-orçamento)
+        </button>
+        <button
+          type="button"
+          class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+          :class="
+            etapaFluxo === 'pos'
+              ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm'
+              : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+          "
+          @click="etapaFluxo = 'pos'"
+        >
+          <i class="pi pi-sliders-h mr-1.5" />
+          Medição Fina (pós-contrato)
+        </button>
+      </div>
+    </div>
+
+    <template v-if="etapaFluxo === 'pos'">
+
+    <!-- Buscador: só aparece quando ainda não abriu um projeto -->
+    <div v-if="!projetoId" class="flex-1 overflow-y-auto p-4 md:p-6">
+      <div class="max-w-md mx-auto space-y-3">
+        <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 space-y-2">
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Busca manual por projeto
           </p>
-
-          <!-- Buscar por cliente → depois escolher projeto -->
-          <div class="rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/50 p-4 space-y-3">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-              Buscar por cliente
-            </h3>
-            <div class="relative">
-              <input
-                v-model="clienteSearch"
-                type="text"
-                placeholder="Digite o nome do cliente..."
-                class="w-full h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-                autocomplete="off"
-                @focus="buscarClientes()"
-                @input="buscarClientes()"
-              />
-              <ul
-                v-if="clienteSuggestions.length > 0 && !clienteSelecionado"
-                class="absolute z-10 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg py-1"
-              >
-                <li
-                  v-for="c in clienteSuggestions"
-                  :key="c.value"
-                  class="px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
-                  @click="selecionarCliente(c)"
-                >
-                  {{ c.label }}
-                </li>
-              </ul>
-            </div>
-            <template v-if="clienteSelecionado">
-              <p class="text-xs text-slate-500 dark:text-slate-400">
-                Cliente: <strong>{{ clienteSelecionado.label }}</strong>
-                <button type="button" class="ml-2 text-rose-600 hover:underline" @click="limparCliente">trocar</button>
-              </p>
-              <div v-if="projetosDoCliente.length === 0 && !loadingProjetos" class="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 text-sm text-amber-800 dark:text-amber-200">
-                <p class="font-medium">Nenhum projeto encontrado para este cliente.</p>
-                <p class="mt-1 text-xs opacity-90">
-                  O <strong>projeto</strong> é criado quando a venda é fechada ou o contrato é gerado (a partir do orçamento). Se o cliente só tem orçamento ainda, use o campo abaixo e informe o <strong>ID do orçamento</strong> para abrir a medição.
-                </p>
-              </div>
-              <template v-else-if="projetosDoCliente.length > 0">
-                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400">
-                  Selecione o projeto
-                </label>
-                <select
-                  v-model="projetoSelecionadoId"
-                  class="w-full h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-                  @change="abrirProjetoDoCliente"
-                >
-                  <option :value="null">Selecione o projeto</option>
-                  <option v-for="p in projetosDoCliente" :key="p.id" :value="p.id">
-                    {{ p.codigo }} (ID {{ p.id }})
-                  </option>
-                </select>
-              </template>
-              <div v-else-if="loadingProjetos" class="flex items-center gap-2 text-sm text-slate-500">
-                <i class="pi pi-spin pi-spinner" />
-                Carregando projetos...
-              </div>
-            </template>
-          </div>
-
-          <div class="flex items-center gap-3 text-xs text-slate-500">
-            <span class="flex-shrink-0">ou informe direto:</span>
-            <span class="border-t border-slate-200 dark:border-slate-600 flex-1" />
-          </div>
-
-          <div class="space-y-2">
-            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400">
-              Projeto ou orçamento (código / ID)
-            </label>
-            <div class="flex gap-2">
-              <input
-                v-model="projetoIdInput"
-                type="text"
-                placeholder="Ex: 123, PROJ-2025-001"
-                class="flex-1 h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-                @keyup.enter="irParaProjeto"
-              />
-              <Button type="button" @click="irParaProjeto">
-                Abrir medição
-              </Button>
-            </div>
+          <div class="flex gap-2">
+            <input
+              v-model="projetoIdInput"
+              type="text"
+              placeholder="ID ou código do projeto"
+              class="flex-1 h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+              @keyup.enter="irParaProjeto"
+            />
+            <Button type="button" @click="irParaProjeto">
+              Abrir
+            </Button>
           </div>
         </div>
 
-        <!-- Após clicar em Abrir Medição: dados do cliente + Formulário de Conferência -->
-        <template v-else>
-          <Loading v-if="loading" class="p-8" />
+        <div class="relative">
+          <input
+            v-model="clienteSearch"
+            type="text"
+            placeholder="Buscar cliente..."
+            class="w-full h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+            autocomplete="off"
+            @focus="buscarClientes()"
+            @input="buscarClientes()"
+          />
+          <ul
+            v-if="clienteSuggestions.length > 0 && !clienteSelecionado"
+            class="absolute z-10 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-lg py-1"
+          >
+            <li
+              v-for="c in clienteSuggestions"
+              :key="c.value"
+              class="px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
+              @click="selecionarCliente(c)"
+            >
+              {{ c.label }}
+            </li>
+          </ul>
+        </div>
+
+        <template v-if="clienteSelecionado">
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            Cliente: <strong>{{ clienteSelecionado.label }}</strong>
+            <button type="button" class="ml-2 text-rose-600 hover:underline" @click="limparCliente">trocar</button>
+          </p>
+          <div v-if="loadingProjetos" class="flex items-center gap-2 text-sm text-slate-500">
+            <i class="pi pi-spin pi-spinner" />
+            Carregando projetos...
+          </div>
+          <div v-else-if="projetosDoCliente.length === 0" class="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 text-sm text-amber-800 dark:text-amber-200">
+            Nenhum projeto encontrado para este cliente.
+          </div>
+          <select
+            v-else
+            v-model="projetoSelecionadoId"
+            class="w-full h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+            @change="abrirProjetoDoCliente"
+          >
+            <option :value="null">Selecione o projeto</option>
+            <option v-for="p in projetosDoCliente" :key="p.id" :value="p.id">
+              {{ p.codigo }} (ID {{ p.id }})
+            </option>
+          </select>
+        </template>
+      </div>
+    </div>
+
+    <!-- Após abrir projeto -->
+    <template v-else>
+          <Loading v-if="loading" class="p-8 flex-1" />
 
           <template v-else>
-            <!-- Card Dados do cliente (escondido o buscador) -->
-            <div v-if="dadosProjeto" class="mx-4 mt-4 md:mx-6 md:mt-4">
-              <div class="rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 p-4">
-                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">
-                  Dados do cliente
-                </h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
-                  <div>
-                    <span class="text-slate-500 dark:text-slate-400">Nome</span>
-                    <p class="font-medium text-slate-800 dark:text-slate-200">{{ dadosProjeto.cliente?.nome_completo || dadosProjeto.cliente?.razao_social || '—' }}</p>
-                  </div>
-                  <div>
-                    <span class="text-slate-500 dark:text-slate-400">Contato</span>
-                    <p class="font-medium text-slate-800 dark:text-slate-200">{{ dadosProjeto.cliente?.telefone || dadosProjeto.cliente?.whatsapp || dadosProjeto.cliente?.email || '—' }}</p>
-                  </div>
-                  <div class="sm:col-span-2 lg:col-span-1">
-                    <span class="text-slate-500 dark:text-slate-400">Endereço</span>
-                    <p class="font-medium text-slate-800 dark:text-slate-200">{{ enderecoCliente }}</p>
-                  </div>
-                </div>
-                <p class="mt-2 text-[11px] text-slate-500">
-                  Projeto: <strong>{{ dadosProjeto.codigo }}</strong>
-                  <span v-if="dadosProjeto.status_atual === 'PRONTO_PARA_PRODUCAO'" class="ml-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200">
-                    Pronto para Produção
-                  </span>
-                </p>
-                <div v-if="validacaoOk" class="mt-3 p-3 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 text-sm font-medium">
-                  Medição validada. Status do projeto alterado para &quot;Pronto para Produção&quot;.
-                </div>
-              </div>
+            <!-- Barra compacta de dados do cliente -->
+            <div v-if="dadosProjeto" class="flex-shrink-0 px-4 py-2 md:px-6 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex flex-wrap items-center gap-x-4 gap-y-0.5 text-sm">
+              <span class="font-semibold text-slate-800 dark:text-slate-200">
+                {{ dadosProjeto.cliente?.nome_completo || dadosProjeto.cliente?.razao_social || '—' }}
+              </span>
+              <span class="text-slate-400 dark:text-slate-500">
+                {{ dadosProjeto.cliente?.telefone || dadosProjeto.cliente?.whatsapp || dadosProjeto.cliente?.email || '' }}
+              </span>
+              <span class="text-slate-400 dark:text-slate-500 truncate hidden sm:block">{{ enderecoCliente }}</span>
+              <span class="text-xs text-slate-400">Projeto: <strong>{{ dadosProjeto.codigo }}</strong></span>
+              <span v-if="dadosProjeto.status_atual === 'PRONTO_PARA_PRODUCAO'" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200">
+                Pronto para Produção
+              </span>
+              <span v-if="validacaoOk" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200">
+                Medição validada!
+              </span>
             </div>
 
             <!-- Seletor de ambiente + Abas (Medição | Ver 3D) -->
@@ -219,10 +202,10 @@
             </div>
 
             <template v-if="ambienteSelecionado">
-              <!-- Aba Medição: layout em coluna única -->
+              <!-- Aba Medição -->
               <div
                 v-show="abaAtiva === 'medicao'"
-                class="p-4 md:p-6 space-y-6 overflow-y-auto"
+                class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6"
               >
                 <MedicaoForm
                   :form="form"
@@ -463,8 +446,164 @@
             </template>
           </template>
         </template>
+    </template>
+
+    <template v-else>
+      <div class="flex-1 overflow-y-auto p-4 md:p-6">
+        <div class="w-full h-full flex flex-col lg:flex-row gap-4">
+          <div class="flex-1 min-w-0">
+            <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
+              <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
+
+              <div class="border-b border-border-ui px-4 md:px-6 py-4 bg-bg-card flex items-center justify-between gap-2">
+                <div>
+                  <h2 class="text-lg md:text-xl font-semibold text-text-main">Medição para orçamento</h2>
+                  <p class="text-xs text-text-soft mt-0.5">Layout espelhado da tela do Totem para o fluxo pré-orçamento.</p>
+                </div>
+                <span
+                  class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium"
+                  :class="preMensagemErro ? 'bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'"
+                >
+                  <i class="pi" :class="preMensagemErro ? 'pi-exclamation-triangle' : 'pi-sliders-h'" />
+                  Pré-medição
+                </span>
+              </div>
+
+              <div class="p-4 md:p-6 border-t border-border-ui bg-bg-page space-y-6">
+                <section class="space-y-2">
+                  <p class="text-xs font-semibold text-text-soft">Buscar cliente</p>
+                  <div class="relative max-w-xl">
+                    <input
+                      v-model="clienteSearchPre"
+                      type="text"
+                      placeholder="Buscar cliente..."
+                      class="w-full h-11 px-4 rounded-xl border border-border-ui bg-bg-card text-text-main"
+                      autocomplete="off"
+                      @focus="buscarClientesPre()"
+                      @input="buscarClientesPre()"
+                    />
+                    <ul
+                      v-if="clienteSuggestionsPre.length > 0 && !clienteSelecionadoPre"
+                      class="absolute z-10 top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded-xl border border-border-ui bg-bg-card shadow-lg py-1"
+                    >
+                      <li
+                        v-for="c in clienteSuggestionsPre"
+                        :key="c.value"
+                        class="px-4 py-2.5 text-sm text-text-main hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
+                        @click="selecionarClientePre(c)"
+                      >
+                        {{ c.label }}
+                      </li>
+                    </ul>
+                  </div>
+                  <p v-if="clienteSelecionadoPre" class="text-xs text-text-soft">
+                    Cliente: <strong>{{ clienteSelecionadoPre.label }}</strong>
+                    <button type="button" class="ml-2 text-rose-600 hover:underline" @click="limparClientePre">trocar</button>
+                  </p>
+                  <p v-if="preMensagem" class="text-xs" :class="preMensagemErro ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-300'">
+                    {{ preMensagem }}
+                  </p>
+                </section>
+
+                <section v-if="preMedicao" class="space-y-4">
+                  <div class="grid grid-cols-12 gap-4">
+                    <div class="col-span-12 md:col-span-6">
+                      <input
+                        v-model="preForm.nome_ambiente"
+                        type="text"
+                        placeholder="Nome do ambiente"
+                        class="w-full h-11 rounded-xl border border-border-ui bg-bg-card px-4 text-sm text-text-main"
+                      />
+                    </div>
+                    <div class="col-span-12 md:col-span-2">
+                      <input
+                        v-model.number="preForm.largura_m"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="Largura"
+                        class="w-full h-11 rounded-xl border border-border-ui bg-bg-card px-3 text-sm text-text-main"
+                      />
+                    </div>
+                    <div class="col-span-12 md:col-span-2">
+                      <input
+                        v-model.number="preForm.pe_direito_m"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="Pé-dir."
+                        class="w-full h-11 rounded-xl border border-border-ui bg-bg-card px-3 text-sm text-text-main"
+                      />
+                    </div>
+                    <div class="col-span-12 md:col-span-2">
+                      <input
+                        v-model.number="preForm.profundidade_m"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="Prof."
+                        class="w-full h-11 rounded-xl border border-border-ui bg-bg-card px-3 text-sm text-text-main"
+                      />
+                    </div>
+                  </div>
+
+                  <textarea
+                    v-model="preForm.observacoes"
+                    rows="3"
+                    placeholder="Observações"
+                    class="w-full rounded-xl border border-border-ui bg-bg-card px-4 py-3 text-sm text-text-main"
+                  />
+
+                  <div class="flex flex-wrap gap-2">
+                    <Button type="button" :disabled="salvandoPre" @click="salvarAmbientePreManual">
+                      <i class="pi" :class="salvandoPre ? 'pi-spin pi-spinner' : 'pi-save'" />
+                      <span class="ml-1">Salvar ambiente</span>
+                    </Button>
+                    <Button type="button" variant="ghost" :disabled="abrindoTelaTotem" @click="abrirTelaIgualTotemPre">
+                      <i class="pi" :class="abrindoTelaTotem ? 'pi-spin pi-spinner' : 'pi-external-link'" />
+                      <span class="ml-1">Abrir tela igual ao Totem</span>
+                    </Button>
+                  </div>
+
+                  <div class="border-t border-border-ui pt-4">
+                    <div class="flex items-center justify-between mb-2">
+                      <h3 class="text-sm font-semibold text-text-main">Ambientes da medição inicial</h3>
+                      <span class="text-xs text-text-soft">Status: <strong>{{ preMedicao.status || 'RASCUNHO' }}</strong></span>
+                    </div>
+                    <div v-if="!preMedicao.ambientes?.length" class="rounded-xl border border-border-ui bg-bg-card px-4 py-3 text-sm text-text-soft">
+                      Nenhum ambiente cadastrado.
+                    </div>
+                    <ul v-else class="space-y-2 max-h-[360px] overflow-y-auto">
+                      <li
+                        v-for="amb in preMedicao.ambientes"
+                        :key="amb.id"
+                        class="rounded-xl border border-border-ui bg-bg-card p-3 flex items-start justify-between gap-3"
+                      >
+                        <div>
+                          <p class="text-sm font-semibold text-text-main">{{ amb.nome_ambiente }}</p>
+                          <p class="text-xs text-text-soft">
+                            L {{ amb.largura_m ?? '—' }}m • P.D. {{ amb.pe_direito_m ?? '—' }}m • Prof. {{ amb.profundidade_m ?? '—' }}m
+                          </p>
+                          <p v-if="amb.observacoes" class="text-xs text-text-soft mt-1">{{ amb.observacoes }}</p>
+                        </div>
+                        <button
+                          type="button"
+                          class="text-rose-500 hover:text-rose-600"
+                          title="Remover"
+                          @click="removerAmbientePre(amb.id)"
+                        >
+                          <i class="pi pi-trash" />
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
@@ -472,7 +611,7 @@
 import { ref, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/services/api'
-import { MedicaoFinaService, ArquivosService, ClienteService } from '@/services'
+import { MedicaoFinaService, ArquivosService, ClienteService, TotemFabricaService } from '@/services'
 import MedicaoForm from '@/components/medicao-fina/MedicaoForm.vue'
 import { defineAsyncComponent } from 'vue'
 
@@ -484,6 +623,7 @@ definePage({ meta: { perm: 'agendamentos.vendas' } })
 
 const route = useRoute()
 const router = useRouter()
+const etapaFluxo = ref('pos')
 
 const projetoIdInput = ref('')
 const projetoId = ref(Number(String(route.query?.projetoId || '').replace(/\D/g, '')) || null)
@@ -496,6 +636,25 @@ const projetosDoCliente = ref([])
 const loadingProjetos = ref(false)
 const projetoSelecionadoId = ref(null)
 let clienteSearchTimeout = null
+
+// Pré-orçamento (manual, sem totem)
+const clienteSearchPre = ref('')
+const clienteSuggestionsPre = ref([])
+const clienteSelecionadoPre = ref(null)
+const preMedicao = ref(null)
+const preMensagem = ref('')
+const preMensagemErro = ref(false)
+const salvandoPre = ref(false)
+const abrindoTelaTotem = ref(false)
+let clienteSearchTimeoutPre = null
+const preForm = ref({
+  nome_ambiente: '',
+  largura_m: null,
+  pe_direito_m: null,
+  profundidade_m: null,
+  observacoes: '',
+})
+
 const ambientes = ref([])
 const ambienteSelecionado = ref('')
 const loading = ref(false)
@@ -594,6 +753,161 @@ const modelo3DBlobCache = ref({})
 
 function voltar() {
   router.push('/agendamentos')
+}
+
+async function buscarClientesPre() {
+  if (clienteSearchTimeoutPre) clearTimeout(clienteSearchTimeoutPre)
+  const q = String(clienteSearchPre.value || '').trim()
+  if (q.length < 2) {
+    clienteSuggestionsPre.value = []
+    return
+  }
+  clienteSearchTimeoutPre = setTimeout(async () => {
+    try {
+      const res = await ClienteService.select(q)
+      const data = Array.isArray(res?.data) ? res.data : []
+      clienteSuggestionsPre.value = data.map((item) => ({
+        label: item?.label || item?.nome_completo || item?.razao_social || item?.nome || '',
+        value: item?.value ?? item?.id ?? item?.cliente_id ?? null,
+      })).filter((opt) => opt.value != null && opt.label)
+    } catch {
+      clienteSuggestionsPre.value = []
+    }
+  }, 300)
+}
+
+function resetPreForm() {
+  preForm.value = {
+    nome_ambiente: '',
+    largura_m: null,
+    pe_direito_m: null,
+    profundidade_m: null,
+    observacoes: '',
+  }
+}
+
+async function selecionarClientePre(cliente) {
+  clienteSelecionadoPre.value = cliente
+  clienteSuggestionsPre.value = []
+  clienteSearchPre.value = cliente.label
+  preMensagem.value = ''
+  preMensagemErro.value = false
+  try {
+    const res = await TotemFabricaService.getOuCriarPreMedicao(cliente.value)
+    preMedicao.value = res?.data ?? res
+  } catch (e) {
+    preMedicao.value = null
+    preMensagemErro.value = true
+    preMensagem.value = e?.response?.data?.message || 'Não foi possível abrir a medição inicial deste cliente.'
+  }
+}
+
+function limparClientePre() {
+  clienteSelecionadoPre.value = null
+  clienteSearchPre.value = ''
+  clienteSuggestionsPre.value = []
+  preMedicao.value = null
+  preMensagem.value = ''
+  preMensagemErro.value = false
+  resetPreForm()
+}
+
+async function salvarAmbientePreManual() {
+  const preId = preMedicao.value?.id
+  if (!preId) {
+    preMensagemErro.value = true
+    preMensagem.value = 'Selecione um cliente para iniciar a medição inicial.'
+    return
+  }
+  const nome = String(preForm.value.nome_ambiente || '').trim()
+  if (!nome) {
+    preMensagemErro.value = true
+    preMensagem.value = 'Informe o nome do ambiente.'
+    return
+  }
+  salvandoPre.value = true
+  preMensagem.value = ''
+  preMensagemErro.value = false
+  try {
+    const res = await TotemFabricaService.salvarAmbientePreMedicao(preId, {
+      nome_ambiente: nome,
+      largura_m: preForm.value.largura_m != null ? Number(preForm.value.largura_m) : undefined,
+      pe_direito_m: preForm.value.pe_direito_m != null ? Number(preForm.value.pe_direito_m) : undefined,
+      profundidade_m: preForm.value.profundidade_m != null ? Number(preForm.value.profundidade_m) : undefined,
+      observacoes: String(preForm.value.observacoes || '').trim() || undefined,
+    })
+    preMedicao.value = res?.data ?? res
+    preMensagem.value = 'Ambiente salvo na medição inicial.'
+    preMensagemErro.value = false
+    resetPreForm()
+  } catch (e) {
+    preMensagemErro.value = true
+    preMensagem.value = e?.response?.data?.message || 'Não foi possível salvar o ambiente.'
+  } finally {
+    salvandoPre.value = false
+  }
+}
+
+async function removerAmbientePre(ambienteId) {
+  const preId = preMedicao.value?.id
+  if (!preId || !ambienteId) return
+  preMensagem.value = ''
+  preMensagemErro.value = false
+  try {
+    await TotemFabricaService.removerAmbientePreMedicao(preId, ambienteId)
+    const res = await TotemFabricaService.getOuCriarPreMedicao(clienteSelecionadoPre.value?.value)
+    preMedicao.value = res?.data ?? res
+    preMensagem.value = 'Ambiente removido.'
+  } catch (e) {
+    preMensagemErro.value = true
+    preMensagem.value = e?.response?.data?.message || 'Não foi possível remover o ambiente.'
+  }
+}
+
+async function abrirTelaIgualTotemPre() {
+  const preId = preMedicao.value?.id
+  if (!preId) {
+    preMensagemErro.value = true
+    preMensagem.value = 'Selecione um cliente para abrir a tela de medição.'
+    return
+  }
+  if (!Array.isArray(preMedicao.value?.ambientes) || preMedicao.value.ambientes.length === 0) {
+    preMensagemErro.value = true
+    preMensagem.value = 'Cadastre ao menos um ambiente para abrir a tela completa da medição.'
+    return
+  }
+
+  abrindoTelaTotem.value = true
+  preMensagem.value = ''
+  preMensagemErro.value = false
+  try {
+    const agendaExistente = Number(preMedicao.value?.agenda_loja_id || 0)
+    if (agendaExistente > 0) {
+      router.push(`/medicao/venda/${agendaExistente}`)
+      return
+    }
+
+    const res = await TotemFabricaService.iniciarVendaDiretaComPreMedicao(preId)
+    const data = res?.data ?? res
+    const rota = String(data?.rota_medicao || '').trim()
+    if (rota) {
+      router.push(rota)
+      return
+    }
+
+    const agendaId = Number(data?.agenda_loja_id || 0)
+    if (agendaId > 0) {
+      router.push(`/medicao/venda/${agendaId}`)
+      return
+    }
+
+    throw new Error('Rota de medição não retornada.')
+  } catch (e) {
+    preMensagemErro.value = true
+    preMensagem.value = e?.response?.data?.message || 'Não foi possível abrir a tela igual ao Totem.'
+  } finally {
+    abrindoTelaTotem.value = false
+  }
 }
 
 async function buscarClientes() {

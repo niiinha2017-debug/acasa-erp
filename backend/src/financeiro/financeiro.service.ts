@@ -5,11 +5,12 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { classificarVendaPorFluxoMatrixOuLegado } from '../shared/constantes/status-matrix';
 
 // ✅ Fonte da verdade dos status (shared)
-import { STATUS_FINANCEIRO_KEYS as SF } from '../../shared/constantes/status-financeiro';
-import { OBRA_VIGENTE_STATUSES } from '../../shared/constantes/pipeline-cliente';
-import { getDataCorteContasReceber } from '../../shared/constantes/pipeline-regras';
+import { STATUS_FINANCEIRO_KEYS as SF } from '../shared/constantes/status-financeiro';
+import { OBRA_VIGENTE_STATUSES } from '../shared/constantes/status-matrix';
+import { getDataCorteContasReceber } from '../shared/constantes/status-matrix';
 import {
   CustosEstruturaService,
   CATEGORIAS_DESPESA_FIXA_SALARIOS,
@@ -2265,14 +2266,53 @@ export class FinanceiroService {
       OBRA_VIGENTE_STATUSES.map((s) => s.toUpperCase()),
     );
 
+    const agendasObra = await this.prisma.agenda_fabrica.findMany({
+      where: {
+        venda_id: { not: null },
+        status: { not: 'CANCELADO' },
+        macroetapa: { in: ['ENGENHARIA', 'FABRICA', 'LOGISTICA', 'POS_VENDA'] },
+      },
+      select: {
+        venda_id: true,
+        subetapa: true,
+        execucao_etapa: true,
+        status: true,
+      },
+    });
+    const agendasPorVenda = new Map<
+      number,
+      Array<{
+        subetapa?: string | null;
+        execucao_etapa?: string | null;
+        status?: string | null;
+      }>
+    >();
+    for (const agenda of agendasObra) {
+      const vendaId = Number((agenda as any).venda_id || 0);
+      if (!vendaId) continue;
+      const lista = agendasPorVenda.get(vendaId) || [];
+      lista.push(agenda);
+      agendasPorVenda.set(vendaId, lista);
+    }
+    const idsMatriz = Array.from(agendasPorVenda.entries())
+      .filter(([, agendas]) =>
+        classificarVendaPorFluxoMatrixOuLegado({ agendas }).obraVigente,
+      )
+      .map(([vendaId]) => vendaId);
+
     const funcionarioId =
       usuario?.funcionario_id != null && !usuario?.is_admin
         ? Number(usuario.funcionario_id)
         : null;
     const whereVenda: any = {
-      status: {
-        in: Array.from(statusSet),
-      },
+      OR: [
+        {
+          status: {
+            in: Array.from(statusSet),
+          },
+        },
+        ...(idsMatriz.length ? [{ id: { in: idsMatriz } }] : []),
+      ],
     };
     if (funcionarioId != null) {
       whereVenda.AND = [

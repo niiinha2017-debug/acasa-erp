@@ -47,11 +47,12 @@ services:
     environment:
       # DATABASE_URL deve apontar para o serviço "mysql" (definido em backend/.env.docker).
       # EVOLUTION_API_URL no Docker é o nome do serviço, não localhost.
+      PORT: 3000
       EVOLUTION_API_URL: http://evolution-api:8080
     ports:
       - "127.0.0.1:3000:3000"
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api', r => { r.resume(); process.exit(r.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1))"]
+      test: ["CMD", "node", "-e", "require('net').connect(3000, '127.0.0.1').on('connect', () => process.exit(0)).on('error', () => process.exit(1))"]
       interval: 15s
       timeout: 10s
       retries: 8

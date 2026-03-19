@@ -34,6 +34,7 @@ Chart.register(
 
 import App from './App.vue'
 import router from './router'
+import { createPinia } from 'pinia'
 import storage from '@/utils/storage'
 import { notify } from '@/services/notify'
 import api from '@/services/api'
@@ -229,6 +230,7 @@ app.directive('can', {
   }
 })
 
+app.use(createPinia())
 app.use(router)
 app.use(VueKonva)
 

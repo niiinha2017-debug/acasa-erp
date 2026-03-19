@@ -47,7 +47,7 @@
             <div class="flex flex-col gap-4">
               <div>
                 <h2 class="text-base md:text-lg font-semibold text-text-main line-clamp-2">
-                  {{ tarefa.titulo || `Tarefa #${tarefa.id}` }}
+                  {{ tituloTarefa(tarefa) }}
                 </h2>
                 <p class="text-sm text-text-muted mt-1">
                   {{ nomeCliente(tarefa) }}
@@ -249,6 +249,7 @@ import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import { TotemFabricaService } from '@/services'
+import { getCategoriaVisualOperacionalPorSubetapa, getExecucaoEtapaLabel, getProcessColorByStatus, getSubetapaLabel } from '@/constantes'
 import { notify } from '@/services/notify'
 
 definePage({ meta: { perm: 'agendamentos.producao' } })
@@ -275,17 +276,24 @@ function nomeCliente(tarefa) {
   return c.nome_completo || c.razao_social || 'Cliente'
 }
 
+function tituloTarefa(tarefa) {
+  return getSubetapaLabel(tarefa?.subetapa) || tarefa?.titulo || `Tarefa #${tarefa?.id ?? tarefa?.id_para_play ?? ''}`
+}
+
 function statusLabel(tarefa) {
+  const execucao = getExecucaoEtapaLabel(tarefa?.execucao_etapa)
+  if (execucao) return execucao
   const s = String(tarefa?.status || '').toUpperCase()
+  const statusPadrao = getExecucaoEtapaLabel(s)
+  if (statusPadrao) return statusPadrao
   if (s === 'EM_PRODUCAO') return 'Em produção'
-  if (s === 'PENDENTE') return 'Pendente'
   return tarefa?.status || '—'
 }
 
 function statusBadgeClass(tarefa) {
-  const s = String(tarefa?.status || '').toUpperCase()
-  if (s === 'EM_PRODUCAO') return 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
-  return 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600'
+  const categoriaVisual = getCategoriaVisualOperacionalPorSubetapa(tarefa?.subetapa)
+    || String(tarefa?.categoria || tarefa?.status || '').toUpperCase()
+  return getProcessColorByStatus(categoriaVisual, tarefa?.status).badgeClass
 }
 
 function temCronometroAberto(tarefa) {

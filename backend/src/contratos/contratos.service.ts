@@ -19,9 +19,12 @@ import { PDFDocument } from 'pdf-lib';
 import { pdflibAddPlaceholder } from '@signpdf/placeholder-pdf-lib';
 import { SignPdf } from '@signpdf/signpdf';
 import { P12Signer } from '@signpdf/signer-p12';
-import { validarTransicaoStatusCliente } from '../shared/constantes/pipeline-cliente';
-import { AGENDA_FABRICA_SOMENTE_PAINEL_CATEGORIAS } from '../shared/constantes/pipeline-producao';
-import { getDataCorteContasReceber } from '../../shared/constantes/pipeline-regras';
+import {
+  validarTransicaoStatusCliente,
+  AGENDA_FABRICA_SOMENTE_PAINEL_CATEGORIAS,
+} from '../shared/constantes/status-matrix';
+import { getDataCorteContasReceber } from '../shared/constantes/status-matrix';
+import { AgendaService } from '../agenda/agenda.service';
 
 @Injectable()
 export class ContratosService {
@@ -31,6 +34,7 @@ export class ContratosService {
     private readonly config: ConfigService,
     private readonly jwt: JwtService,
     private readonly mail: MailService,
+    private readonly agendaService: AgendaService,
   ) {}
 
   private validarJanelaDataFim(
@@ -299,7 +303,7 @@ export class ContratosService {
           c.cliente_id != null && clienteIdsComRecebivelPendente.has(c.cliente_id) ? 'PENDENTE' : 'OK';
         const statusVenda = String((c as any).venda?.status ?? '').toUpperCase();
         const aguardandoFinanceiro =
-          statusVenda === 'MEDIDA_FINA_REALIZADA' && statusPagamento === 'PENDENTE';
+          ['MEDIDA_FINA_REALIZADA', 'AGUARDANDO_PRECIFICACAO'].includes(statusVenda) && statusPagamento === 'PENDENTE';
         return {
           ...c,
           resumo_financeiro: resumo
@@ -722,20 +726,19 @@ export class ContratosService {
     const inicio = new Date();
     const fim = new Date(inicio.getTime() + 60 * 60 * 1000);
 
-    const created = await this.prisma.agenda_fabrica.create({
-      data: {
-        titulo: `Aguardando medida fina - Venda #${vendaId}`,
-        inicio_em: inicio,
-        fim_em: fim,
-        categoria: 'AGENDAR_MEDIDA_FINA',
-        origem_fluxo: 'LOJA_VENDA',
-        status: 'PENDENTE',
-        venda_id: vendaId,
-        cliente_id: clienteId,
-        ...(criadoPorUsuarioId != null && Number.isFinite(criadoPorUsuarioId)
-          ? { criado_por_usuario_id: criadoPorUsuarioId }
-          : {}),
-      },
+    const created = await this.agendaService.criarAgendaFabricaAutomatica({
+      titulo: `Aguardando medida fina - Venda #${vendaId}`,
+      inicio_em: inicio,
+      fim_em: fim,
+      subetapa: 'MEDIDA_FINA',
+      origem_fluxo: 'LOJA_VENDA',
+      status: 'PENDENTE',
+      venda_id: vendaId,
+      cliente_id: clienteId,
+      criado_por_usuario_id:
+        criadoPorUsuarioId != null && Number.isFinite(criadoPorUsuarioId)
+          ? criadoPorUsuarioId
+          : null,
     });
     console.log(`[Contrato/Agenda] garantirAgendaProducao venda ${vendaId}: criado evento agenda_fabrica id=${created.id} (AGENDAR_MEDIDA_FINA PENDENTE)`);
   }

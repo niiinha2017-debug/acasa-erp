@@ -15,7 +15,7 @@ import { renderHeaderA4Png } from '../pdf/render-header-a4';
 import {
   FUNCIONARIOS_BASE_CALCULO,
   FUNCIONARIOS_TIPOS_CUSTO_KEYWORDS,
-} from '../../shared/constantes/funcionarios-custos';
+} from '../shared/constantes/funcionarios-custos';
 import { UpsertFuncionarioCustoConstanteDto } from './dto/upsert-funcionario-custo-constante.dto';
 
 @Injectable()

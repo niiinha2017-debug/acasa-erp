@@ -115,7 +115,7 @@ export class AgendaFabricaController {
   async updateStatus(
     @Param('id') id: string,
     @Body('status') status: string,
-    @Body('categoria') categoria?: string,
+    @Body('subetapa') subetapa?: string,
     @Body('alterado_em') alteradoEm?: string,
     @Body('data_conclusao') dataConclusao?: string,
     @Req() req?: any,
@@ -130,10 +130,11 @@ export class AgendaFabricaController {
         'Só o responsável pela tarefa ou um administrador pode alterar.',
       );
     }
-    return this.agendaService.updateStatus(+id, status, categoria, {
+    return this.agendaService.updateStatus(+id, status, {
       setorDestino: SETOR_FABRICA,
       alteradoEm,
       dataConclusao,
+      subetapa,
       ...(registrarAlteradoPor && req?.user?.id
         ? { alteradoPorUsuarioId: req.user.id }
         : {}),

@@ -111,14 +111,14 @@
                   type="button"
                   class="hidden sm:flex w-full items-center gap-1 text-left pl-1.5 pr-2 py-1 rounded-full text-[9px] font-semibold transition-all duration-150 hover:brightness-95 active:scale-95"
                   :class="[
-                    eventAtrasado(event) ? 'bg-red-500 text-white' : getCalendarioEventClassVendas(event.categoria, event.status),
+                    eventAtrasado(event) ? 'bg-red-500 text-white' : getCalendarioEventClassVendas(categoriaVisualEvento(event), event.status),
                   ]"
                   :title="eventTooltipCalendar(event)"
                   @click.stop="openModalForEvent(event)"
                 >
                   <i class="pi pi-clock text-[7px] opacity-80 flex-shrink-0"></i>
                   <span class="opacity-90 flex-shrink-0">{{ timeLabel(event.inicio_em) }}</span>
-                  <span class="truncate font-bold opacity-95">{{ event.titulo }}</span>
+                  <span class="truncate font-bold opacity-95">{{ eventTituloCompacto(event) }}</span>
                 </button>
                 <div
                   v-if="dayEvents(day.date).length > 3"
@@ -206,11 +206,12 @@
                               {{ eventTitle(event) }}
                             </div>
                             <span
-                              v-if="taskCategoryBadgeLabel(event.categoria)"
-                              class="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
-                              :class="taskCategoryBadgeClass(event.categoria)"
+                              v-if="taskStageMeta(event).subtitulo"
+                              class="inline-flex flex-col items-start rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide leading-tight"
+                              :class="taskCategoryBadgeClass(event)"
                             >
-                              {{ taskCategoryBadgeLabel(event.categoria) }}
+                              <span class="text-[9px] font-black uppercase leading-tight">{{ taskStageMeta(event).titulo }}</span>
+                              <span class="text-[8px] font-semibold normal-case tracking-normal opacity-90 leading-tight">{{ taskStageMeta(event).subtitulo }}</span>
                             </span>
                             <span v-if="event.plano_corte_id" class="inline-flex rounded-full bg-amber-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white dark:bg-amber-500 dark:text-amber-950">[APENAS CORTE]</span>
                           </div>
@@ -233,7 +234,7 @@
                           </div>
 
                           <div class="mt-3 flex flex-wrap items-center gap-2">
-                            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase" :class="getProcessColorByStatusVendas(event.categoria, event.status).badgeClass">
+                            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase" :class="statusExecucaoBadgeClass(event)">
                               {{ statusExecucaoLabel(event) }}
                             </span>
                             <span
@@ -336,7 +337,7 @@
                                   </Button>
                                 </template>
                                 <RouterLink
-                                  v-if="canVendas && event.projeto_id && ['MEDIDA_FINA', 'AGENDAR_MEDIDA_FINA'].includes(event.categoria)"
+                                  v-if="canVendas && event.projeto_id && ehEventoMedicaoFina(event)"
                                   :to="`/producao/medicao-fina?projetoId=${event.projeto_id}`"
                                   class="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-100 px-2.5 py-1 text-[10px] font-bold text-sky-800 transition-colors hover:bg-sky-200/80 dark:border-sky-700 dark:bg-sky-900/40 dark:text-sky-200 dark:hover:bg-sky-800/50"
                                 >
@@ -362,7 +363,7 @@
                                 Ver detalhes
                               </Button>
                               <RouterLink
-                                v-if="canVendas && event.projeto_id && ['MEDIDA_FINA', 'AGENDAR_MEDIDA_FINA'].includes(event.categoria)"
+                                v-if="canVendas && event.projeto_id && ehEventoMedicaoFina(event)"
                                 :to="`/producao/medicao-fina?projetoId=${event.projeto_id}`"
                                 class="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-100 px-2.5 py-1 text-[10px] font-bold text-sky-800 transition-colors hover:bg-sky-200/80 dark:border-sky-700 dark:bg-sky-900/40 dark:text-sky-200 dark:hover:bg-sky-800/50"
                               >
@@ -497,11 +498,11 @@
                 v-if="somenteVisualizacaoAgenda"
                 class="rounded-xl border border-border-ui bg-bg-card px-3 py-2 text-xs font-semibold text-text-main"
               >
-                {{ opcoesTipoAgendamento.find(o => o.value === (taskForm.categoria || editingEvent?.categoria))?.label || taskForm.categoria || '—' }}
+                {{ opcoesTipoAgendamento.find(o => o.value === (taskForm.subetapa || editingEvent?.subetapa))?.label || getSubetapaLabel(taskForm.subetapa || editingEvent?.subetapa) || etapaAtualLabel || '—' }}
               </div>
               <select
                 v-else
-                v-model="taskForm.categoria"
+                v-model="taskForm.subetapa"
                 :disabled="eventoFinalizado"
                 class="w-full h-10 bg-bg-card border border-border-ui rounded-xl px-3 text-xs font-semibold text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary disabled:opacity-60 disabled:cursor-not-allowed"
               >
@@ -517,8 +518,9 @@
             <div v-else class="mb-3">
               <label class="block text-xs font-bold mb-1 text-text-main">Etapa</label>
               <div v-if="editingEvent" class="flex items-center gap-2">
-                <span class="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase bg-brand-primary/10 text-brand-primary border border-brand-primary/30">
-                  {{ etapaAtualLabel }}
+                <span class="inline-flex flex-col items-start px-3 py-1.5 rounded-full bg-brand-primary/10 text-brand-primary border border-brand-primary/30">
+                  <span class="text-[10px] font-black uppercase leading-tight">{{ etapaAtualMeta.titulo }}</span>
+                  <span class="text-[9px] font-semibold normal-case leading-tight opacity-90">{{ etapaAtualMeta.subtitulo }}</span>
                 </span>
                 <span class="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase" :class="statusExecucaoClass({ status: editingEvent?.status, fim_em: taskForm.fim })">
                   {{ statusExecucaoLabel(editingEvent) }}
@@ -526,8 +528,9 @@
               </div>
               <div v-else class="space-y-2">
                 <div class="flex items-center gap-2">
-                  <span class="px-3 py-1.5 rounded-full text-[10px] font-bold uppercase bg-brand-primary/10 text-brand-primary border border-brand-primary/30">
-                    {{ etapaAtualLabel }}
+                  <span class="inline-flex flex-col items-start px-3 py-1.5 rounded-full bg-brand-primary/10 text-brand-primary border border-brand-primary/30">
+                    <span class="text-[10px] font-black uppercase leading-tight">{{ etapaAtualMeta.titulo }}</span>
+                    <span class="text-[9px] font-semibold normal-case leading-tight opacity-90">{{ etapaAtualMeta.subtitulo }}</span>
                   </span>
                   <span class="text-[10px] text-text-muted">(primeira etapa automática)</span>
                 </div>
@@ -540,7 +543,7 @@
                       type="button"
                       class="h-8 px-3 rounded-lg text-[10px] font-bold uppercase border transition-colors"
                       :class="
-                        taskForm.categoria === etapa.value
+                          taskForm.subetapa === etapa.value
                           ? 'bg-brand-primary text-white border-brand-primary'
                           : 'bg-bg-card text-text-main border-border-ui hover:bg-slate-50 dark:hover:bg-slate-700/50'
                       "
@@ -609,7 +612,7 @@
             </div>
             <!-- APRESENTACAO: vincula ao orçamento -->
             <div
-              v-if="!editingEvent && canVendas && taskForm.categoria === 'APRESENTACAO'"
+              v-if="!editingEvent && canVendas && taskForm.subetapa === 'APRESENTACAO'"
               class="mt-3"
             >
               <SearchInput
@@ -627,7 +630,7 @@
 
             <!-- CONTRATO: vincula à venda fechada/contrato -->
             <div
-              v-if="!editingEvent && canVendas && taskForm.categoria === 'CONTRATO'"
+              v-if="!editingEvent && canVendas && taskForm.subetapa === 'FECHAMENTO'"
               class="mt-3"
             >
               <SearchInput
@@ -729,7 +732,19 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { AgendaLojaService, ApontamentoProducaoService, ClienteService, FuncionarioService, OrcamentosService, PlanoCorteService, VendaService } from '@/services/index'
-import { PIPELINE_CLIENTE, PIPELINE_PLANO_CORTE_OPTIONS } from '@/constantes'
+import {
+  getCategoriaVisualComercialPorSubetapa,
+  PIPELINE_CLIENTE,
+  PIPELINE_PLANO_CORTE_OPTIONS,
+  getCategoriaAgendaLojaPorStatusVenda,
+  getCategoriaAgendaLojaPorSubetapa,
+  getExecucaoEtapaLabel,
+  getSubetapaProcessoPorCategoria,
+  getStatusVendaAoAgendarAgendaLoja,
+  getStatusVendaOperacionalLabel,
+  getStatusVendaSubetapa,
+  getSubetapaLabel,
+} from '@/constantes'
 import { getCalendarioEventClassVendas, getProcessColorByStatusVendas } from '@/constantes'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
@@ -768,6 +783,8 @@ const somenteVisualizacaoAgenda = computed(() => editingEvent.value && !podeEdit
 const eventoFinalizado = computed(() => String(editingEvent.value?.status || '').toUpperCase() === 'CONCLUIDO')
 /** É tarefa de medição (Timeline): pode usar "Finalizar Etapa" para encerrar ciclo. */
 function ehTarefaMedicaoLoja(event) {
+  const subetapa = String(event?.subetapa || '').toUpperCase()
+  if (subetapa) return subetapa === 'MEDIDA'
   const cat = String(event?.categoria || '').toUpperCase()
   return cat === 'MEDIDA' || cat === 'AGENDAR_MEDIDA' || cat === 'MEDIDA_AGENDADA'
 }
@@ -824,7 +841,7 @@ const taskForm = reactive({
   vendaId: '',
   orcamentoId: '',
   funcionarioIds: [],
-  categoria: 'MEDIDA',
+  subetapa: 'MEDIDA',
   setorDestino: '',
   origemFluxo: '',
   apontamentos: [],
@@ -867,7 +884,7 @@ const vendasAguardandoOptions = computed(() => {
   return lista.map((v) => {
     const clienteNome = v?.cliente?.nome_completo || v?.cliente?.razao_social || 'Cliente'
     const statusKey = v?.status || ''
-    const etapaLabel = PIPELINE_CLIENTE.find((p) => p.key === statusKey)?.label || statusKey || 'Agendar'
+    const etapaLabel = getStatusVendaOperacionalLabel(statusKey) || labelPipelineCliente(statusKey) || 'Agendar'
     return {
       value: String(v.id),
       label: `Venda #${v.id} – ${clienteNome} – ${etapaLabel}`,
@@ -903,7 +920,7 @@ const vendasContratoOptions = computed(() => {
   return lista.map((v) => {
     const clienteNome = v?.cliente?.nome_completo || v?.cliente?.razao_social || 'Cliente'
     const statusKey = v?.status || ''
-    const etapaLabel = PIPELINE_CLIENTE.find((p) => p.key === statusKey)?.label || statusKey || 'Agendar'
+    const etapaLabel = getStatusVendaOperacionalLabel(statusKey) || labelPipelineCliente(statusKey) || 'Agendar'
     return {
       value: String(v.id),
       label: `Venda #${v.id} – ${clienteNome} – ${etapaLabel}`,
@@ -912,20 +929,6 @@ const vendasContratoOptions = computed(() => {
   })
 })
 const temVendasContrato = computed(() => vendasContratoOptions.value.length > 0)
-
-const CATEGORIA_TO_STATUS_CLIENTE = {
-  MEDIDA: 'MEDIDA_AGENDADA',
-  AGENDAR_MEDIDA: 'MEDIDA_AGENDADA',
-  APRESENTACAO: 'APRESENTACAO_AGENDADA',
-  AGENDAR_APRESENTACAO: 'APRESENTACAO_AGENDADA',
-  ORCAMENTO: 'ORCAMENTO_EM_ANDAMENTO',
-  CRIAR_ORCAMENTO: 'ORCAMENTO_EM_ANDAMENTO',
-  CONTRATO: 'CONTRATO_ASSINADO',
-  CONTRATO_GERADO: 'CONTRATO_ASSINADO',
-  GARANTIA: 'GARANTIA',
-  MANUTENCAO: 'MANUTENCAO',
-  ASSISTENCIA: 'ASSISTENCIA',
-}
 
 function normalizarCategoriaAgenda(categoria) {
   const key = String(categoria || '')
@@ -936,9 +939,13 @@ function normalizarCategoriaAgenda(categoria) {
     .replace(/[\s-]+/g, '_')
 
   const alias = {
+    ATIVO: 'CADASTRO',
+    CLIENTE_CADASTRADO: 'CADASTRO',
     AGENDAR_MEDIDA: 'MEDIDA',
+    AGENDAR_MEDIDA_VENDA: 'MEDIDA',
     MEDIDA_AGENDADA: 'MEDIDA',
     CRIAR_ORCAMENTO: 'ORCAMENTO',
+    AGENDAR_ORCAMENTO: 'ORCAMENTO',
     ORCAMENTO_EM_ANDAMENTO: 'ORCAMENTO',
     AGENDAR_APRESENTACAO: 'APRESENTACAO',
     APRESENTACAO_AGENDADA: 'APRESENTACAO',
@@ -946,6 +953,19 @@ function normalizarCategoriaAgenda(categoria) {
     CONTRATO_ASSINADO: 'CONTRATO',
   }
   return alias[key] || key
+}
+
+function categoriaLojaPorEvento(event) {
+  return getCategoriaAgendaLojaPorSubetapa(event?.subetapa) || normalizarCategoriaAgenda(event?.categoria || 'MEDIDA')
+}
+
+function subetapaLojaPorValor(value) {
+  return getSubetapaProcessoPorCategoria(value) || String(value || '').toUpperCase() || 'MEDIDA'
+}
+
+function definirSubetapaLoja(subetapa) {
+  const key = subetapaLojaPorValor(subetapa)
+  taskForm.subetapa = key
 }
 
 function labelPipelineCliente(key) {
@@ -961,8 +981,7 @@ function labelPipelinePlanoCorte(key) {
 const statusLabelVenda = computed(() => {
   const v = vendaSelecionadaParaAgendamento.value
   if (!v?.status) return ''
-  const item = PIPELINE_CLIENTE.find((p) => p.key === v.status)
-  return item ? `Aguardando agendamento: ${item.label}` : v.status
+  return `Aguardando agendamento: ${getStatusVendaOperacionalLabel(v.status)}`
 })
 
 const statusPreviewLabel = computed(() => {
@@ -972,9 +991,9 @@ const statusPreviewLabel = computed(() => {
   }
   if (origem === 'LOJA_VENDA') {
     if (vendaSelecionadaParaAgendamento.value) return statusLabelVenda.value || 'Pipeline cliente'
-    const statusKey = CATEGORIA_TO_STATUS_CLIENTE[normalizarCategoriaAgenda(taskForm.categoria)]
+    const statusKey = getStatusVendaAoAgendarAgendaLoja(taskForm.subetapa || 'MEDIDA')
     return statusKey
-      ? `Pipeline cliente: ${labelPipelineCliente(statusKey)}`
+      ? `Pipeline cliente: ${getStatusVendaOperacionalLabel(statusKey) || labelPipelineCliente(statusKey)}`
       : 'Pipeline cliente'
   }
   return 'Pipeline cliente'
@@ -982,10 +1001,9 @@ const statusPreviewLabel = computed(() => {
 
 const statusBadgeClassVenda = computed(() => {
   const v = vendaSelecionadaParaAgendamento.value
-  const item = v?.status ? PIPELINE_CLIENTE.find((p) => p.key === v.status) : null
-  const fase = item?.fase || ''
-  if (fase.includes('MEDIDA_FINA') || fase.includes('MEDIDA')) return 'bg-indigo-100 text-indigo-800 border border-indigo-200'
-  if (fase.includes('MONTAGEM')) return 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+  const subetapa = getStatusVendaSubetapa(v?.status)
+  if (['CADASTRO', 'MEDIDA', 'MEDIDA_FINA'].includes(subetapa)) return 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+  if (['MONTAGEM', 'GARANTIA', 'ASSISTENCIA', 'MANUTENCAO'].includes(subetapa)) return 'bg-emerald-100 text-emerald-800 border border-emerald-200'
   return 'bg-slate-100 text-slate-700 border border-slate-200'
 })
 
@@ -1005,20 +1023,11 @@ function onSelecionarVendaParaAgendamento(value) {
   taskForm.clienteId = String(v.cliente_id)
   if (!taskForm.setorDestino) taskForm.setorDestino = 'LOJA'
   taskForm.origemFluxo = 'LOJA_VENDA'
-  const statusVenda = String(v?.status || '').toUpperCase()
-  if (
-    ['AGENDAR_APRESENTACAO', 'APRESENTACAO_AGENDADA', 'ORCAMENTO_APRESENTADO', 'ORCAMENTO_APROVADO'].includes(statusVenda)
-  ) {
-    taskForm.categoria = 'APRESENTACAO'
-  } else if (['VENDA_FECHADA', 'CONTRATO_ASSINADO'].includes(statusVenda)) {
-    taskForm.categoria = 'CONTRATO'
-  } else {
-    taskForm.categoria = 'MEDIDA'
-  }
+  const subetapa = getStatusVendaSubetapa(v?.status) || 'MEDIDA'
+  definirSubetapaLoja(subetapa)
   const clienteNome = v?.cliente?.nome_completo || v?.cliente?.razao_social || 'Cliente'
-  const pipelineItem = PIPELINE_CLIENTE.find((p) => p.key === (v?.status || ''))
-  const etapaLabel = pipelineItem?.label || v?.status || 'Etapa'
-  taskForm.titulo = `${etapaLabel} – ${clienteNome}`
+  const etapaMeta = tituloSubtituloEtapaVenda(subetapa, 'PENDENTE')
+  taskForm.titulo = `${etapaMeta.titulo} – ${clienteNome}`
 }
 
 function onSelecionarOrcamentoParaApresentacao(value) {
@@ -1033,7 +1042,9 @@ function onSelecionarOrcamentoParaApresentacao(value) {
   taskForm.vendaId = o.venda?.id ? String(o.venda.id) : ''
   if (!taskForm.setorDestino) taskForm.setorDestino = 'LOJA'
   taskForm.origemFluxo = 'LOJA_VENDA'
-  taskForm.categoria = 'APRESENTACAO'
+  definirSubetapaLoja('APRESENTACAO')
+  const clienteNome = o?.cliente?.nome_completo || o?.cliente?.razao_social || 'Cliente'
+  taskForm.titulo = `Apresentação – ${clienteNome}`
 }
 
 function onSelecionarVendaContratoParaAgendamento(value) {
@@ -1048,7 +1059,9 @@ function onSelecionarVendaContratoParaAgendamento(value) {
   taskForm.orcamentoId = ''
   if (!taskForm.setorDestino) taskForm.setorDestino = 'LOJA'
   taskForm.origemFluxo = 'LOJA_VENDA'
-  taskForm.categoria = 'CONTRATO'
+  definirSubetapaLoja('FECHAMENTO')
+  const clienteNome = v?.cliente?.nome_completo || v?.cliente?.razao_social || 'Cliente'
+  taskForm.titulo = `Fechamento – ${clienteNome}`
 }
 
 function limparVendaSelecionada() {
@@ -1061,7 +1074,7 @@ function limparVendaSelecionada() {
   taskForm.vendaId = ''
   taskForm.orcamentoId = ''
   taskForm.clienteId = ''
-  taskForm.categoria = isAgendaLoja.value ? 'MEDIDA' : PRIMEIRA_ETAPA_PRODUCAO.value
+  definirSubetapaLoja(isAgendaLoja.value ? 'MEDIDA' : PRIMEIRA_ETAPA_PRODUCAO.value)
   taskForm.titulo = ''
 }
 
@@ -1076,8 +1089,8 @@ function limparVinculoVenda() {
   taskForm.orcamentoId = ''
 }
 
-function selecionarEtapaPosVenda(categoria) {
-  taskForm.categoria = categoria
+function selecionarEtapaPosVenda(subetapa) {
+  definirSubetapaLoja(subetapa)
   limparVinculoVenda()
 }
 
@@ -1089,16 +1102,16 @@ watch(
     if (!['LOJA_VENDA'].includes(key)) {
       limparVendaSelecionada()
     }
-    if (key === 'LOJA_VENDA') taskForm.categoria = 'MEDIDA'
-    else if (key === 'PLANO_CORTE' || key === 'VENDA_PLANO_CORTE') taskForm.categoria = PRIMEIRA_ETAPA_PRODUCAO.value
-    else taskForm.categoria = 'MEDIDA'
+    if (key === 'LOJA_VENDA') definirSubetapaLoja('MEDIDA')
+    else if (key === 'PLANO_CORTE' || key === 'VENDA_PLANO_CORTE') definirSubetapaLoja(PRIMEIRA_ETAPA_PRODUCAO.value)
+    else definirSubetapaLoja('MEDIDA')
   },
 )
 
 watch(
-  () => taskForm.categoria,
-  (categoria) => {
-    if (!CATEGORIAS_QUE_EXIGEM_VENDA.includes(String(categoria || '').toUpperCase())) {
+  () => taskForm.subetapa,
+  (subetapa) => {
+    if (!CATEGORIAS_QUE_EXIGEM_VENDA.includes(String(subetapa || '').toUpperCase())) {
       limparVinculoVenda()
     }
   },
@@ -1147,9 +1160,11 @@ const origemEventoLabel = computed(() => {
 
 // Opções por origem (fonte da verdade: pipelines compartilhados)
 const TIPOS_LOJA_VENDA = computed(() => [
-  { value: 'MEDIDA', label: labelPipelineCliente('AGENDAR_MEDIDA') || 'Agendar visita/medida' },
-  { value: 'APRESENTACAO', label: labelPipelineCliente('AGENDAR_APRESENTACAO') || 'Agendar apresentação' },
-  { value: 'CONTRATO', label: labelPipelineCliente('VENDA_FECHADA') || 'Aguardando Contrato/Sinal' },
+  { value: 'CADASTRO', label: getStatusVendaOperacionalLabel('CLIENTE_CADASTRADO') || 'Cadastro' },
+  { value: 'MEDIDA', label: getStatusVendaOperacionalLabel('AGENDAR_MEDIDA') || 'Medida' },
+  { value: 'ORCAMENTO', label: getStatusVendaOperacionalLabel('AGENDAR_ORCAMENTO') || 'Orçamento' },
+  { value: 'APRESENTACAO', label: getStatusVendaOperacionalLabel('AGENDAR_APRESENTACAO') || 'Apresentação' },
+  { value: 'FECHAMENTO', label: getStatusVendaOperacionalLabel('VENDA_FECHADA') || 'Fechamento' },
 ])
 const TIPOS_POS_VENDA = [
   { value: 'GARANTIA', label: 'Garantia' },
@@ -1163,14 +1178,14 @@ const ETAPAS_POS_VENDA = [
 ]
 const CATEGORIAS_QUE_EXIGEM_VENDA = [
   'APRESENTACAO',
-  'CONTRATO',
+  'FECHAMENTO',
   'GARANTIA',
   'MANUTENCAO',
   'ASSISTENCIA',
 ]
 const categoriaExigeVenda = computed(() =>
   String(taskForm.origemFluxo || '').toUpperCase() === 'LOJA_VENDA' &&
-  CATEGORIAS_QUE_EXIGEM_VENDA.includes(String(taskForm.categoria || '').toUpperCase()),
+  CATEGORIAS_QUE_EXIGEM_VENDA.includes(String(taskForm.subetapa || '').toUpperCase()),
 )
 const TIPOS_PRODUCAO = computed(() => {
   const lista = Array.isArray(pipelineProducao.value) ? pipelineProducao.value : []
@@ -1194,23 +1209,150 @@ const opcoesTipoAgendamento = computed(() => {
 })
 
 const etapaAtualLabel = computed(() => {
-  const cat = String(taskForm.categoria || editingEvent.value?.categoria || '').toUpperCase()
-  const etapaProd = TIPOS_PRODUCAO.value.find(o => o.value === cat)
+  const subetapa = subetapaLojaPorValor(taskForm.subetapa || editingEvent.value?.subetapa || editingEvent.value?.categoria)
+  const subetapaLabel = getSubetapaLabel(subetapa)
+  if (subetapaLabel) return subetapaLabel
+  const etapaProd = TIPOS_PRODUCAO.value.find(o => o.value === subetapa)
   if (etapaProd) return etapaProd.label
-  const etapaPos = TIPOS_POS_VENDA.find(o => o.value === cat)
+  const etapaPos = TIPOS_POS_VENDA.find(o => o.value === subetapa)
   if (etapaPos) return etapaPos.label
   return TIPOS_PRODUCAO.value[0]?.label || 'Produção recebida'
 })
 
-function proximaEtapaProducao(categoriaAtual) {
+function tituloSubtituloEtapaVenda(subetapa, status = 'PENDENTE') {
+  const etapa = String(subetapa || '').toUpperCase()
+  const situacao = normalizarStatusExecucao(status)
+  const subtitulos = {
+    CADASTRO: {
+      titulo: 'Cadastro',
+      subtitulo: 'Cliente cadastrado',
+    },
+    MEDIDA: {
+      titulo: 'Medida',
+      subtitulo:
+        situacao === 'CONCLUIDO'
+          ? 'Medida concluída'
+          : ['EM_ANDAMENTO', 'EM_PRODUCAO', 'PAUSADO'].includes(situacao)
+            ? 'Medida agendada'
+            : 'Agendar medida',
+    },
+    ORCAMENTO: {
+      titulo: 'Orçamento',
+      subtitulo:
+        situacao === 'CONCLUIDO'
+          ? 'Orçamento concluído'
+          : ['EM_ANDAMENTO', 'EM_PRODUCAO', 'PAUSADO'].includes(situacao)
+            ? 'Orçamento em andamento'
+            : 'Preparar orçamento',
+    },
+    APRESENTACAO: {
+      titulo: 'Apresentação',
+      subtitulo:
+        situacao === 'CONCLUIDO'
+          ? 'Apresentação concluída'
+          : ['EM_ANDAMENTO', 'EM_PRODUCAO', 'PAUSADO'].includes(situacao)
+            ? 'Apresentação agendada'
+            : 'Agendar apresentação',
+    },
+    FECHAMENTO: {
+      titulo: 'Fechamento',
+      subtitulo:
+        situacao === 'CONCLUIDO'
+          ? 'Fechamento concluído'
+          : ['EM_ANDAMENTO', 'EM_PRODUCAO', 'PAUSADO'].includes(situacao)
+            ? 'Fechamento em andamento'
+            : 'Negociação e fechamento',
+    },
+    MEDIDA_FINA: {
+      titulo: 'Medida fina',
+      subtitulo:
+        situacao === 'CONCLUIDO'
+          ? 'Medida fina concluída'
+          : ['EM_ANDAMENTO', 'EM_PRODUCAO', 'PAUSADO'].includes(situacao)
+            ? 'Medida fina agendada'
+            : 'Agendar medida fina',
+    },
+    PROJETO_TECNICO: {
+      titulo: 'Projeto técnico',
+      subtitulo: situacao === 'CONCLUIDO' ? 'Projeto técnico concluído' : 'Desenvolvimento técnico',
+    },
+    PRODUCAO: {
+      titulo: 'Produção',
+      subtitulo: situacao === 'CONCLUIDO' ? 'Produção concluída' : 'Em produção',
+    },
+    SERVICO_CORTE_FITA_BORDA: {
+      titulo: 'Serviço de corte',
+      subtitulo: 'Corte e fita de borda',
+    },
+    ENTREGA: {
+      titulo: 'Entrega',
+      subtitulo: situacao === 'CONCLUIDO' ? 'Entrega concluída' : 'Material carregado',
+    },
+    MONTAGEM: {
+      titulo: 'Montagem',
+      subtitulo: situacao === 'CONCLUIDO' ? 'Montagem concluída' : 'Montagem agendada',
+    },
+    GARANTIA: {
+      titulo: 'Pós-venda',
+      subtitulo: 'Garantia',
+    },
+    MANUTENCAO: {
+      titulo: 'Pós-venda',
+      subtitulo: 'Manutenção',
+    },
+    ASSISTENCIA: {
+      titulo: 'Pós-venda',
+      subtitulo: 'Assistência',
+    },
+  }
+
+  const meta = subtitulos[etapa]
+  if (meta) return meta
+
+  const label = getSubetapaLabel(etapa) || etapaLabelPorCategoria(etapa) || 'Tarefa'
+  return {
+    titulo: label,
+    subtitulo: situacao === 'CONCLUIDO' ? `${label} concluída` : 'Etapa da agenda comercial',
+  }
+}
+
+function tituloSubtituloEvento(event) {
+  if (event?.plano_corte_id) {
+    return {
+      titulo: 'Serviço de corte',
+      subtitulo: planoBadgeLabel(planoStatusForEvent(event)) || 'Plano de corte',
+    }
+  }
+  const subetapa = subetapaLojaPorValor(event?.subetapa || categoriaLojaPorEvento(event))
+  return tituloSubtituloEtapaVenda(subetapa, statusExecucaoEfetivo(event))
+}
+
+function tituloPareceLegado(valor) {
+  const key = String(valor || '').trim()
+  if (!key) return true
+  const normalizado = key.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  if (/^[A-Z0-9_]+$/i.test(normalizado) && normalizado.includes('_')) return true
+  return /^agenda[_\s-]/i.test(normalizado)
+}
+
+const etapaAtualMeta = computed(() =>
+  tituloSubtituloEtapaVenda(
+    subetapaLojaPorValor(taskForm.subetapa || editingEvent.value?.subetapa || editingEvent.value?.categoria || 'MEDIDA'),
+    editingEvent.value?.status || 'PENDENTE',
+  ),
+)
+
+function proximaEtapaProducao(etapaAtual) {
   const lista = TIPOS_PRODUCAO.value
-  const idx = lista.findIndex(o => o.value === String(categoriaAtual || '').toUpperCase())
+  const idx = lista.findIndex(o => o.value === String(etapaAtual || '').toUpperCase())
   if (idx >= 0 && idx < lista.length - 1) return lista[idx + 1].value
   return null
 }
 
 function etapaLabelPorCategoria(categoria) {
   const cat = String(categoria || '').toUpperCase()
+  const subetapaLabel = getSubetapaLabel(cat)
+  if (subetapaLabel) return subetapaLabel
   const etapa = TIPOS_PRODUCAO.value.find(o => o.value === cat)
   if (etapa) return etapa.label
   const pos = TIPOS_POS_VENDA.find(o => o.value === cat)
@@ -1220,8 +1362,23 @@ function etapaLabelPorCategoria(categoria) {
   return categoria || ''
 }
 
+function categoriaVisualEvento(eventOrCategoria) {
+  if (typeof eventOrCategoria === 'string') return String(eventOrCategoria || '').toUpperCase()
+  const subetapa = String(eventOrCategoria?.subetapa || '').toUpperCase()
+  const categoriaVisual = getCategoriaVisualComercialPorSubetapa(subetapa)
+  if (categoriaVisual) {
+    return categoriaVisual
+  }
+  return String(eventOrCategoria?.categoria || '').toUpperCase()
+}
+
+function ehEventoMedicaoFina(event) {
+  return String(event?.subetapa || '').toUpperCase() === 'MEDIDA_FINA'
+    || ['MEDIDA_FINA', 'AGENDAR_MEDIDA_FINA'].includes(String(event?.categoria || '').toUpperCase())
+}
+
 function corCardCalendarioPorCategoria(categoria) {
-  const cat = String(categoria || '').toUpperCase()
+  const cat = categoriaVisualEvento(categoria)
   const cores = {
     MEDIDA: 'bg-blue-700 hover:bg-blue-600',
     AGENDAR_MEDIDA: 'bg-blue-700 hover:bg-blue-600',
@@ -1244,7 +1401,7 @@ function corCardCalendarioPorCategoria(categoria) {
 }
 
 function corBordaCardPorCategoria(categoria) {
-  const cat = String(categoria || '').toUpperCase()
+  const cat = categoriaVisualEvento(categoria)
   const bordas = {
     MEDIDA: 'border-l-blue-500',
     AGENDAR_MEDIDA: 'border-l-blue-500',
@@ -1267,11 +1424,11 @@ function corBordaCardPorCategoria(categoria) {
 }
 
 function botaoConcluirLabel(event) {
-  const cat = String(event?.categoria || '').toUpperCase()
-  const ehProducao = TIPOS_PRODUCAO.value.some(o => o.value === cat)
+  const subetapaAtual = subetapaLojaPorValor(event?.subetapa || categoriaLojaPorEvento(event))
+  const ehProducao = TIPOS_PRODUCAO.value.some(o => o.value === subetapaAtual)
   if (!ehProducao) return 'Concluir'
-  const proxima = proximaEtapaProducao(cat)
-  if (proxima) return `Concluir → ${etapaLabelPorCategoria(proxima)}`
+  const proxima = proximaEtapaProducao(subetapaAtual)
+  if (proxima) return `Concluir → ${getSubetapaLabel(proxima) || etapaLabelPorCategoria(proxima)}`
   return 'Finalizar produção'
 }
 
@@ -1344,8 +1501,7 @@ const selectedEvents = computed(() => eventsByDay.value[dateKey(selectedDay.valu
 
 /** Agenda de Venda: tarefa "Agendar medida" — só mostra Editar/Cancelar (atribuição ao funcionário é na timeline). */
 function ehAgendarMedida(event) {
-  const cat = normalizarCategoriaAgenda(event?.categoria || '')
-  return cat === 'MEDIDA'
+  return subetapaLojaPorValor(event?.subetapa || categoriaLojaPorEvento(event)) === 'MEDIDA'
 }
 
 const selectedEventsParaLista = computed(() =>
@@ -1378,10 +1534,14 @@ function selectDayAndOpenModal(day) {
   openModal()
 }
 
+function eventTituloCompacto(event) {
+  return tituloSubtituloEvento(event).titulo
+}
+
 function eventTitle(event) {
   const nome = event?.cliente?.nome_completo || event?.cliente?.razao_social || event?.plano_corte?.fornecedor?.nome_fantasia || 'Cliente'
-  const titulo = event?.plano_corte_id ? 'Serviço de Corte' : (event?.titulo || 'Tarefa')
-  return `${titulo} - ${nome}`
+  const titulo = tituloSubtituloEvento(event).titulo
+  return `${titulo} – ${nome}`
 }
 
 /** Tooltip completo para o evento no calendário (horário, criador e executores ao passar o mouse). */
@@ -1436,10 +1596,12 @@ function statusExecucaoEfetivo(event) {
 
 function statusExecucaoLabel(event) {
   const status = statusExecucaoEfetivo(event)
-  if (status === 'CONCLUIDO') return 'Concluido'
+  if (status === 'CONCLUIDO') return getExecucaoEtapaLabel(event?.execucao_etapa) || 'Concluido'
   if (status === 'PAUSADO') return 'Pausado'
   if (status === 'EM_ANDAMENTO') return 'Ativo'
   if (status === 'EM_PRODUCAO') return 'Em produção'
+  const execucao = getExecucaoEtapaLabel(event?.execucao_etapa)
+  if (execucao) return execucao
   const fim = new Date(event?.fim_em)
   if (!Number.isNaN(fim.getTime()) && Date.now() > fim.getTime()) return 'Atrasado'
   return 'Início'
@@ -1460,8 +1622,27 @@ function statusExecucaoClass(event) {
 function taskAccentBarClass(event) {
   if (event?.plano_corte_id) return 'bg-amber-500'
   if (eventAtrasado(event)) return 'bg-rose-500'
-  const cat = String(event?.categoria || '').toUpperCase()
+  const subetapa = String(event?.subetapa || '').toUpperCase()
+  const subetapaColors = {
+    CADASTRO: 'bg-slate-500',
+    MEDIDA: 'bg-blue-500',
+    ORCAMENTO: 'bg-violet-500',
+    APRESENTACAO: 'bg-orange-500',
+    FECHAMENTO: 'bg-emerald-500',
+    MEDIDA_FINA: 'bg-cyan-500',
+    PROJETO_TECNICO: 'bg-indigo-500',
+    PRODUCAO: 'bg-indigo-500',
+    SERVICO_CORTE_FITA_BORDA: 'bg-amber-500',
+    ENTREGA: 'bg-sky-500',
+    MONTAGEM: 'bg-orange-500',
+    GARANTIA: 'bg-amber-500',
+    MANUTENCAO: 'bg-amber-500',
+    ASSISTENCIA: 'bg-amber-500',
+  }
+  if (subetapaColors[subetapa]) return subetapaColors[subetapa]
+  const cat = categoriaVisualEvento(event)
   const colors = {
+    CLIENTE_CADASTRADO: 'bg-slate-500',
     MEDIDA: 'bg-blue-500',
     AGENDAR_MEDIDA: 'bg-sky-500',
     ORCAMENTO: 'bg-violet-500',
@@ -1488,8 +1669,26 @@ function taskCardSurfaceClass(event) {
   return 'border-border-ui bg-bg-card hover:border-brand-primary/30'
 }
 
-function taskCategoryBadgeClass(categoria) {
-  const cat = String(categoria || '').toUpperCase()
+function taskCategoryBadgeClass(event) {
+  const subetapa = String(event?.subetapa || '').toUpperCase()
+  const subetapaColors = {
+    CADASTRO: 'border border-slate-200 bg-slate-100 text-slate-800',
+    MEDIDA: 'border border-blue-200 bg-blue-100 text-blue-800',
+    ORCAMENTO: 'border border-violet-200 bg-violet-100 text-violet-800',
+    APRESENTACAO: 'border border-orange-200 bg-orange-100 text-orange-800',
+    FECHAMENTO: 'border border-emerald-200 bg-emerald-100 text-emerald-800',
+    MEDIDA_FINA: 'border border-cyan-200 bg-cyan-100 text-cyan-800',
+    PROJETO_TECNICO: 'border border-indigo-200 bg-indigo-100 text-indigo-800',
+    PRODUCAO: 'border border-indigo-200 bg-indigo-100 text-indigo-800',
+    SERVICO_CORTE_FITA_BORDA: 'border border-amber-200 bg-amber-100 text-amber-800',
+    ENTREGA: 'border border-sky-200 bg-sky-100 text-sky-800',
+    MONTAGEM: 'border border-orange-200 bg-orange-100 text-orange-800',
+    GARANTIA: 'border border-amber-200 bg-amber-100 text-amber-800',
+    MANUTENCAO: 'border border-amber-200 bg-amber-100 text-amber-800',
+    ASSISTENCIA: 'border border-amber-200 bg-amber-100 text-amber-800',
+  }
+  if (subetapaColors[subetapa]) return subetapaColors[subetapa]
+  const cat = categoriaVisualEvento(event)
   const colors = {
     AGENDAR_MEDIDA: 'border border-sky-200 bg-sky-100 text-sky-800',
     MEDIDA: 'border border-blue-200 bg-blue-100 text-blue-800',
@@ -1511,11 +1710,16 @@ function taskCategoryBadgeClass(categoria) {
   return 'border border-slate-200 bg-slate-100 text-slate-700'
 }
 
-function taskCategoryBadgeLabel(categoria) {
-  const cat = String(categoria || '').toUpperCase()
-  if (!cat) return ''
-  if (cat === 'AGENDAR_MEDIDA') return cat
-  return etapaLabelPorCategoria(cat) || cat
+function taskCategoryBadgeLabel(event) {
+  return tituloSubtituloEvento(event).subtitulo
+}
+
+function taskStageMeta(event) {
+  return tituloSubtituloEvento(event)
+}
+
+function statusExecucaoBadgeClass(event) {
+  return getProcessColorByStatusVendas(categoriaVisualEvento(event), event?.status).badgeClass
 }
 
 /** True quando o horário de término já passou e a tarefa não foi concluída (exibir em vermelho). */
@@ -1546,8 +1750,27 @@ function hasEvents(day) {
 }
 
 function getAccentDotClass(event) {
-  const cat = String(event?.categoria || '').toUpperCase()
+  const subetapa = String(event?.subetapa || '').toUpperCase()
+  const subetapaColors = {
+    CADASTRO: 'bg-slate-500',
+    MEDIDA: 'bg-blue-500',
+    ORCAMENTO: 'bg-violet-500',
+    APRESENTACAO: 'bg-orange-500',
+    FECHAMENTO: 'bg-emerald-500',
+    MEDIDA_FINA: 'bg-cyan-500',
+    PROJETO_TECNICO: 'bg-indigo-500',
+    PRODUCAO: 'bg-indigo-500',
+    SERVICO_CORTE_FITA_BORDA: 'bg-amber-500',
+    ENTREGA: 'bg-sky-500',
+    MONTAGEM: 'bg-orange-500',
+    GARANTIA: 'bg-amber-500',
+    MANUTENCAO: 'bg-amber-500',
+    ASSISTENCIA: 'bg-amber-500',
+  }
+  if (subetapaColors[subetapa]) return subetapaColors[subetapa]
+  const cat = categoriaVisualEvento(event)
   const colors = {
+    CLIENTE_CADASTRADO: 'bg-slate-500',
     MEDIDA: 'bg-blue-500', AGENDAR_MEDIDA: 'bg-sky-500',
     ORCAMENTO: 'bg-violet-500', CRIAR_ORCAMENTO: 'bg-violet-500',
     APRESENTACAO: 'bg-orange-500', AGENDAR_APRESENTACAO: 'bg-orange-500',
@@ -1629,7 +1852,8 @@ function addHours(date, hours) {
 function sincronizarResponsavelLoja() {
   if (!isAgendaLoja.value) return
   // Medida da loja (antes do orçamento): quem executa fica em aberto; quem seleciona na Timeline é avulso
-  if (normalizarCategoriaAgenda(taskForm.categoria) === 'MEDIDA') return
+  const subetapaAtual = String(taskForm.subetapa || '').toUpperCase()
+  if (subetapaAtual === 'MEDIDA') return
   if (isAdmin.value && taskForm.funcionarioIds.length > 0) return // Admin já escolheu
   const responsavelId = responsavelLojaId.value
   if (!responsavelId) return
@@ -1661,7 +1885,7 @@ function openModal() {
   taskForm.clienteId = ''
   taskForm.vendaId = ''
   taskForm.funcionarioIds = []
-  taskForm.categoria = 'MEDIDA'
+  definirSubetapaLoja('MEDIDA')
   taskForm.setorDestino = 'LOJA'
   taskForm.origemFluxo = 'LOJA_VENDA'
   taskForm.apontamentos = []
@@ -1704,7 +1928,7 @@ function clearEdit() {
   taskForm.fim = toDateTimeLocal(addHours(dataComHoraAtual, 1))
   taskForm.setorDestino = 'LOJA'
   taskForm.origemFluxo = 'LOJA_VENDA'
-  taskForm.categoria = 'MEDIDA'
+  definirSubetapaLoja('MEDIDA')
   taskForm.apontamentos = []
   sincronizarResponsavelLoja()
 }
@@ -1746,17 +1970,18 @@ function editTask(event) {
     .map((a) => String(a.funcionario_id))
     .filter(Boolean)
   taskForm.funcionarioIds = Array.from(new Set([...equipeDoEvento, ...equipeApontada]))
-  const cat = normalizarCategoriaAgenda(event?.categoria || 'MEDIDA')
+  const cat = categoriaLojaPorEvento(event)
+  const subetapa = subetapaLojaPorValor(event?.subetapa || cat)
   // Garante categoria válida para o pipeline do evento (venda vs serviço de corte)
   const origemEvento = String(event?.origem_fluxo || '').toUpperCase()
   if (origemEvento === 'PLANO_CORTE' || origemEvento === 'VENDA_PLANO_CORTE') {
-    const categoriasValidas = TIPOS_PRODUCAO.value.map((o) => o.value)
-    taskForm.categoria = categoriasValidas.includes(cat) ? cat : PRIMEIRA_ETAPA_PRODUCAO.value
+    const subetapasValidas = TIPOS_PRODUCAO.value.map((o) => o.value)
+    definirSubetapaLoja(subetapasValidas.includes(subetapa) ? subetapa : PRIMEIRA_ETAPA_PRODUCAO.value)
   } else if (origemEvento === 'LOJA_VENDA') {
     const vendaKeys = TIPOS_LOJA_VENDA.value.map((o) => o.value)
-    taskForm.categoria = vendaKeys.includes(cat) ? cat : 'MEDIDA'
+    definirSubetapaLoja(vendaKeys.includes(subetapa) ? subetapa : 'MEDIDA')
   } else {
-    taskForm.categoria = 'MEDIDA'
+    definirSubetapaLoja('MEDIDA')
   }
   taskForm.setorDestino = normalizarSetorAgenda(event?.setor_destino || 'LOJA')
   taskForm.origemFluxo =
@@ -1883,8 +2108,8 @@ async function removeTask(event) {
 
 async function atualizarStatusExecucao(event, status) {
   try {
-    const categoriaAtual = String(event?.categoria || '').toUpperCase()
-    const ehProducao = TIPOS_PRODUCAO.value.some(o => o.value === categoriaAtual)
+    const subetapaAtual = subetapaLojaPorValor(event?.subetapa || categoriaLojaPorEvento(event))
+    const ehProducao = TIPOS_PRODUCAO.value.some(o => o.value === subetapaAtual)
 
     if (status === 'CONCLUIDO' && ehTarefaMedicaoLoja(event)) {
       const res = await ApontamentoProducaoService.finalizarEtapa({ agenda_loja_id: event.id })
@@ -1899,17 +2124,17 @@ async function atualizarStatusExecucao(event, status) {
     }
 
     if (status === 'CONCLUIDO' && ehProducao) {
-      const proxima = proximaEtapaProducao(categoriaAtual)
+      const proxima = proximaEtapaProducao(subetapaAtual)
       if (proxima) {
-        await AgendaLojaService.atualizarStatus(event.id, 'PENDENTE', proxima)
-        const label = etapaLabelPorCategoria(proxima)
+        await AgendaLojaService.atualizarStatus(event.id, { status: 'PENDENTE', subetapa: proxima })
+        const label = getSubetapaLabel(proxima) || etapaLabelPorCategoria(proxima)
         notify.success(`Etapa concluída. Avançou para: ${label}`)
       } else {
-        await AgendaLojaService.atualizarStatus(event.id, 'CONCLUIDO')
+        await AgendaLojaService.atualizarStatus(event.id, { status: 'CONCLUIDO' })
         notify.success('Produção finalizada!')
       }
     } else {
-      await AgendaLojaService.atualizarStatus(event.id, status)
+      await AgendaLojaService.atualizarStatus(event.id, { status })
       if (status === 'CONCLUIDO') notify.success('Tarefa concluída.')
       else if (status === 'PAUSADO') notify.success('Tarefa pausada.')
       else notify.success('Tarefa iniciada.')
@@ -1994,7 +2219,7 @@ async function concluirCronometroVenda(ap, event) {
     // Marca a tarefa da agenda como CONCLUIDO para o card não exibir "Pendente" após fechar o cronômetro
     if (event?.id) {
       try {
-        await AgendaLojaService.atualizarStatus(event.id, 'CONCLUIDO')
+        await AgendaLojaService.atualizarStatus(event.id, { status: 'CONCLUIDO' })
         const idStr = String(event.id)
         events.value = events.value.map((ev) =>
           String(ev.id) === idStr ? { ...ev, status: 'CONCLUIDO' } : ev
@@ -2027,8 +2252,8 @@ async function saveTask() {
     return notify.error('Selecione o cliente.')
   }
 
-  const catNorm = normalizarCategoriaAgenda(taskForm.categoria || 'MEDIDA')
-  const ehMedidaLoja = catNorm === 'MEDIDA' // medida da loja (antes do orçamento): executor em aberto
+  const subetapaAtual = String(taskForm.subetapa || '').toUpperCase()
+  const ehMedidaLoja = subetapaAtual === 'MEDIDA' // medida da loja (antes do orçamento): executor em aberto
   // Medida da loja: quem executa fica em aberto; na Timeline alguém (avulso) seleciona o funcionário
   const responsavelId = Number(usuarioLogado.value?.funcionario_id || 0)
   if (!ehMedidaLoja && !responsavelId) {
@@ -2048,11 +2273,11 @@ async function saveTask() {
   if (fim <= inicio) return notify.error('Termino deve ser depois do inicio.')
 
   let titulo = taskForm.titulo
-  if (!titulo) {
-    const catRaw = normalizarCategoriaAgenda(taskForm.categoria)
-    const catLabel = etapaLabelPorCategoria(catRaw) || opcoesTipoAgendamento.value.find(o => o.value === catRaw)?.label || 'Tarefa'
+  if (!titulo || tituloPareceLegado(titulo)) {
+    const subetapaAtual = String(taskForm.subetapa || 'MEDIDA').toUpperCase()
+    const catLabel = getSubetapaLabel(subetapaAtual) || etapaLabelPorCategoria(subetapaAtual) || opcoesTipoAgendamento.value.find(o => o.value === subetapaAtual)?.label || 'Tarefa'
     const cliLabel = clienteNomeEventoAtual.value || 'Cliente'
-    titulo = `${catLabel} - ${cliLabel}`
+    titulo = `${catLabel} – ${cliLabel}`
   }
 
   try {
@@ -2084,7 +2309,7 @@ async function saveTask() {
       fim_em: fim.toISOString(),
       cliente_id: taskForm.clienteId ? Number(taskForm.clienteId) : undefined,
       equipe_ids: equipeIds,
-      categoria: normalizarCategoriaAgenda(taskForm.categoria || 'MEDIDA'),
+      subetapa: String(taskForm.subetapa || 'MEDIDA').toUpperCase(),
       origem_fluxo: origemFluxo,
       setor_destino: setorDestino,
       apontamentos: apontamentosPayload,

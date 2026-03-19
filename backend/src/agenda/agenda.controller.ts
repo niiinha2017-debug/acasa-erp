@@ -18,7 +18,7 @@ import { UpdateAgendaDto } from './dto/update-agenda.dto';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
 import { normalizarOrigemFluxo, normalizarSetorDestino } from './agenda-rules';
-import { PIPELINE_PRODUCAO } from '../../shared/constantes/pipeline-producao';
+import { PIPELINE_PRODUCAO } from '../shared/constantes/status-matrix';
 
 @UseGuards(PermissionsGuard)
 @Controller('agenda')
@@ -105,9 +105,9 @@ export class AgendaController {
   async updateStatus(
     @Param('id') id: string,
     @Body('status') status: string,
-    @Body('categoria') categoria?: string,
+    @Body('subetapa') subetapa?: string,
   ) {
-    return this.agendaService.updateStatus(+id, status, categoria);
+    return this.agendaService.updateStatus(+id, status, { subetapa });
   }
 
   // 4.1 Atualizar dados do agendamento sem recriar

@@ -19,7 +19,7 @@ import * as fs from 'fs';
 
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
-import { ArquivosService } from './arquivos.service';
+import { ArquivosService, getUploadFolderFromOwnerType } from './arquivos.service';
 
 function onlySafeName(v: any) {
   return (
@@ -92,7 +92,7 @@ export class ArquivosController {
           const ot = String((req as any).body?.owner_type || '')
             .trim()
             .toUpperCase();
-          const folder = ot ? ot.toLowerCase() + 's' : 'geral';
+          const folder = ot ? getUploadFolderFromOwnerType(ot) : 'geral';
           const dir = `./uploads/${folder}`;
           if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
           cb(null, dir);
@@ -154,10 +154,9 @@ export class ArquivosController {
     const cleanId = Number(String(id).replace(/\D/g, ''));
     if (!cleanId) throw new BadRequestException('ID inválido.');
 
-    const arquivo = await this.arquivosService.buscarPorId(cleanId);
-    const rel = String(arquivo.url || '').replace(/^\//, '');
-    const relNoUploads = rel.replace(/^uploads[\/\\]/, '');
-    const abs = join(process.cwd(), 'uploads', relNoUploads);
+    const { arquivo, resolvido } =
+      await this.arquivosService.resolverArquivoFisicoPorId(cleanId);
+    const abs = resolvido?.abs || '';
 
     if (!fs.existsSync(abs)) {
       throw new BadRequestException(`Arquivo físico não encontrado.`);

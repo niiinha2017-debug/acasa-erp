@@ -36,18 +36,18 @@
           :class="[
             tarefa.plano_corte_id ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-700 border-l-4 border-l-amber-500' : 'bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-600',
             !tarefa.plano_corte_id && tarefaAtrasada(tarefa) ? 'border-red-300 dark:border-red-500/70 ring-1 ring-red-200 dark:ring-red-900/50' : '',
-            !tarefa.plano_corte_id ? (getProcessColorByStatus(tarefa.categoria, tarefa.status).borderLeftClass || '') : '',
-            getProcessColorByStatus(tarefa.categoria, tarefa.status).pulse ? 'animate-pulse' : '',
+            !tarefa.plano_corte_id ? (coresTimelineAtiva(tarefa).borderLeftClass || '') : '',
+            coresTimelineAtiva(tarefa).pulse ? 'animate-pulse' : '',
           ]"
         >
           <!-- Topo compacto: avatar + título + status + timer -->
           <div class="flex items-center gap-2 mb-2">
-            <div class="w-9 h-9 rounded-lg shrink-0 font-bold text-xs flex items-center justify-center text-white" :class="tarefa.plano_corte_id ? 'bg-amber-600 dark:bg-amber-500 text-white' : [getProcessColorByStatus(tarefa.categoria, tarefa.status).dotClass, getProcessColorByStatus(tarefa.categoria, tarefa.status).pulse ? 'animate-pulse' : '']">
+            <div class="w-9 h-9 rounded-lg shrink-0 font-bold text-xs flex items-center justify-center text-white" :class="tarefa.plano_corte_id ? 'bg-amber-600 dark:bg-amber-500 text-white' : [coresTimelineAtiva(tarefa).dotClass, coresTimelineAtiva(tarefa).pulse ? 'animate-pulse' : '']">
               {{ iniciaisTarefa(tarefa) }}
             </div>
             <div class="min-w-0 flex-1">
               <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate leading-tight flex items-center gap-2 flex-wrap">
-                {{ tarefa.plano_corte_id ? 'Serviço de Corte' : (labelCategoriaPendente(tarefa.categoria, tipoTimeline === 'venda' ? 'loja' : 'fabrica') || tarefa.titulo || 'Tarefa') }} #{{ tarefa.id }}
+                {{ tituloTarefaTimeline(tarefa) }} #{{ tarefa.id }}
                 <span v-if="tarefa.plano_corte_id" class="inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase bg-amber-600 text-white dark:bg-amber-500 dark:text-amber-950 shrink-0">[APENAS CORTE]</span>
               </h3>
               <div class="flex items-center gap-1.5 flex-wrap">
@@ -65,7 +65,7 @@
                   <!-- Vendas/Produção: mesmo fluxo Início → Em produção → Ativo (cronômetro) -->
                   <span v-if="!(tarefa.apontamentos_producao && tarefa.apontamentos_producao.length)" class="text-[9px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Início</span>
                   <template v-else>
-                    <span v-if="temCronometroRodandoNaTarefa(tarefa)" class="relative flex h-1.5 w-1.5" :class="getProcessColorByStatus(tarefa.categoria, tarefa.status).pulse ? 'animate-pulse' : ''">
+                    <span v-if="temCronometroRodandoNaTarefa(tarefa)" class="relative flex h-1.5 w-1.5" :class="coresTimelineAtiva(tarefa).pulse ? 'animate-pulse' : ''">
                       <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                       <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
                     </span>
@@ -75,7 +75,7 @@
                 <span v-if="tarefaAtrasada(tarefa)" class="text-[9px] font-bold uppercase text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 px-1.5 py-0.5 rounded" title="Prazo excedido">Excedido</span>
               </div>
             </div>
-            <div class="px-2.5 py-1 rounded-lg shrink-0 font-mono text-sm font-semibold tabular-nums" :class="getProcessColorByStatus(tarefa.categoria, tarefa.status).badgeClass">
+            <div class="px-2.5 py-1 rounded-lg shrink-0 font-mono text-sm font-semibold tabular-nums" :class="coresTimelineAtiva(tarefa).badgeClass">
               {{ formatarHorasParaExibicao(totalHorasTarefa(tarefa)) }}
             </div>
           </div>
@@ -217,21 +217,21 @@
                 class="group relative border rounded-xl p-3 pl-4 opacity-90 hover:opacity-100 transition-all duration-200"
                 :class="[
                   tarefa.plano_corte_id ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-700 border-l-4 border-l-amber-500' : 'bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-600',
-                  tarefa.plano_corte_id ? '' : getTimelineConcluidoClass(tarefa.categoria).borderLeftClass,
+                  tarefa.plano_corte_id ? '' : coresTimelineConcluida(tarefa).borderLeftClass,
                 ]"
               >
                 <div class="flex items-center gap-2 mb-2">
-                  <div class="w-9 h-9 rounded-lg shrink-0 font-bold text-xs flex items-center justify-center text-white" :class="tarefa.plano_corte_id ? 'bg-amber-600 dark:bg-amber-500 text-white' : getTimelineConcluidoClass(tarefa.categoria).dotClass">
+                  <div class="w-9 h-9 rounded-lg shrink-0 font-bold text-xs flex items-center justify-center text-white" :class="tarefa.plano_corte_id ? 'bg-amber-600 dark:bg-amber-500 text-white' : coresTimelineConcluida(tarefa).dotClass">
                     {{ iniciaisTarefa(tarefa) }}
                   </div>
                   <div class="min-w-0 flex-1">
                     <h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400 truncate flex items-center gap-2 flex-wrap">
-                      {{ tarefa.plano_corte_id ? 'Serviço de Corte' : (labelCategoriaPendente(tarefa.categoria, tipoTimeline === 'venda' ? 'loja' : 'fabrica') || tarefa.titulo || 'Tarefa') }} #{{ tarefa.id }}
+                      {{ tituloTarefaTimeline(tarefa) }} #{{ tarefa.id }}
                       <span v-if="tarefa.plano_corte_id" class="inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase bg-amber-600 text-white dark:bg-amber-500 dark:text-amber-950 shrink-0">[APENAS CORTE]</span>
                     </h3>
                     <span class="text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase">Concluída</span>
                   </div>
-                  <div class="px-2 py-1 rounded-lg shrink-0 font-mono text-xs" :class="getTimelineConcluidoClass(tarefa.categoria).badgeClass">
+                  <div class="px-2 py-1 rounded-lg shrink-0 font-mono text-xs" :class="coresTimelineConcluida(tarefa).badgeClass">
                     {{ formatarHorasParaExibicao(totalHorasTarefa(tarefa)) }}
                   </div>
                 </div>
@@ -548,7 +548,7 @@ import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
 import storage from '@/utils/storage'
 import { can } from '@/services/permissions'
-import { getProcessColorByStatus, getTimelineConcluidoClass } from '@/constantes'
+import { getCategoriaProcessoLabel, getCategoriaVisualOperacionalPorSubetapa, getExecucaoEtapaLabel, getProcessColorByStatus, getSubetapaLabel, getTimelineConcluidoClass } from '@/constantes'
 import { useTimelineFormatters } from '@/composables/useTimelineFormatters'
 import { useTimelineCronometro } from '@/composables/useTimelineCronometro'
 import PageHeader from '@/components/ui/PageHeader.vue'
@@ -781,24 +781,7 @@ const opcoesEtapas = computed(() => {
 })
 function formatarEtapaLabel(key) {
   if (!key) return ''
-  const map = {
-    MEDIDA: 'Visita / Medição',
-    AGENDAR_MEDIDA: 'Visita / Medição',
-    MEDIDA_AGENDADA: 'Visita / Medição',
-    AGENDAR_MEDIDA_FINA: 'Medida fina',
-    MEDIDA_FINA: 'Medida fina',
-    PRODUCAO_RECEBIDA: 'Produção recebida',
-    CORTE: 'Corte',
-    PREPARACAO_TECNICA: 'Preparação técnica',
-    MONTAGEM_INTERNA: 'Montagem interna',
-    ACABAMENTO: 'Acabamento',
-    CONFERENCIA_QUALIDADE: 'Conferência / Qualidade',
-    MONTAGEM_CLIENTE_AGENDADA: 'Montagem cliente (agendada)',
-    EM_MONTAGEM_CLIENTE: 'Em montagem no cliente',
-    MONTAGEM_CLIENTE_FINALIZADA: 'Montagem cliente finalizada',
-    PRODUCAO_FINALIZADA: 'Produção finalizada',
-  }
-  return map[key] || key.replace(/_/g, ' ')
+  return getCategoriaProcessoLabel(key) || key.replace(/_/g, ' ')
 }
 
 // Valor do filtro pode ser "f-123" (fabrica) ou "l-456" (loja)
@@ -1331,17 +1314,19 @@ function fecharModal() {
 
 // Categorias da agenda de venda (timeline exibe todas)
 const LABEL_CATEGORIA_LOJA = {
-  MEDIDA: 'Medição',
-  MEDIDA_AGENDADA: 'Medição',
-  AGENDAR_MEDIDA: 'Agendar medição',
+  CADASTRO: 'Cadastro',
+  CLIENTE_CADASTRADO: 'Cadastro',
+  MEDIDA: 'Medida',
+  MEDIDA_AGENDADA: 'Medida',
+  AGENDAR_MEDIDA: 'Medida',
   ORCAMENTO: 'Orçamento',
-  CRIAR_ORCAMENTO: 'Criar orçamento',
+  CRIAR_ORCAMENTO: 'Orçamento',
   AGENDAR_ORCAMENTO: 'Orçamento',
-  APRESENTACAO: 'Agendar apresentação',
-  AGENDAR_APRESENTACAO: 'Agendar apresentação',
-  CONTRATO: 'Fechar venda / Contrato',
-  CONTRATO_GERADO: 'Fechar venda / Contrato',
-  VENDA_FECHADA: 'Venda fechada',
+  APRESENTACAO: 'Apresentação',
+  AGENDAR_APRESENTACAO: 'Apresentação',
+  CONTRATO: 'Fechamento',
+  CONTRATO_GERADO: 'Fechamento',
+  VENDA_FECHADA: 'Fechamento',
 }
 function labelCategoriaPendente(cat, origem) {
   if (origem === 'fabrica') {
@@ -1349,6 +1334,43 @@ function labelCategoriaPendente(cat, origem) {
   }
   return LABEL_CATEGORIA_LOJA[cat] || cat || '—'
 }
+
+function labelEtapaTimeline(item) {
+  return getSubetapaLabel(item?.subetapa) || labelCategoriaPendente(item?.categoria, item?.agenda_loja_id ? 'loja' : 'fabrica')
+}
+
+function labelExecucaoTimeline(item) {
+  return getExecucaoEtapaLabel(item?.execucao_etapa) || null
+}
+
+function categoriaVisualTimeline(item) {
+  const subetapa = String(item?.subetapa || '').toUpperCase()
+  const categoriaVisual = getCategoriaVisualOperacionalPorSubetapa(subetapa)
+  if (categoriaVisual) {
+    return categoriaVisual
+  }
+  return String(item?.categoria || '').toUpperCase()
+}
+
+function coresTimelineAtiva(item) {
+  return getProcessColorByStatus(categoriaVisualTimeline(item), item?.status)
+}
+
+function coresTimelineConcluida(item) {
+  return getTimelineConcluidoClass(categoriaVisualTimeline(item))
+}
+
+function tituloTarefaTimeline(item) {
+  const etapa = labelEtapaTimeline(item)
+  const execucao = labelExecucaoTimeline(item)
+
+  if (item?.plano_corte_id) {
+    return etapa || 'Serviço de Corte'
+  }
+
+  return etapa || execucao || item?.titulo || 'Tarefa'
+}
+
 /** Nome de quem agendou a tarefa (pode ser vendedor); executante é outro campo (Funcionário). */
 function agendadoPorItem(item) {
   return item?.agenda_loja?.criado_por_usuario?.nome || item?.agenda_fabrica?.criado_por_usuario?.nome || '—'
@@ -1359,9 +1381,7 @@ function dataDisplayApontamento(item) {
   return formatarData(new Date(item.inicio_em))
 }
 function labelEtapaItem(item) {
-  const cat = item?.categoria || ''
-  const origem = item?.agenda_loja_id ? 'loja' : 'fabrica'
-  return labelCategoriaPendente(cat, origem)
+  return labelEtapaTimeline(item)
 }
 
 function podeAtribuirMedida() {
@@ -1371,6 +1391,8 @@ function podeAtribuirMedida() {
 function podeIniciarPendente(p) {
   if (!p || !usuarioLogado.value?.funcionario_id) return false
   if (p.criado_por_usuario_id !== usuarioLogado.value?.id) return false
+  const subetapa = String(p?.subetapa || '').toUpperCase()
+  if (subetapa) return ['APRESENTACAO', 'FECHAMENTO'].includes(subetapa)
   return ['APRESENTACAO', 'CONTRATO'].includes(String(p.categoria || '').toUpperCase())
 }
 

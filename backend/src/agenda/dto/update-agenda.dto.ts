@@ -55,7 +55,7 @@ export class UpdateAgendaDto {
 
   @IsOptional()
   @IsString()
-  categoria?: string;
+  subetapa?: string;
 
   @IsOptional()
   @IsString()

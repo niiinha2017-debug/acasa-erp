@@ -100,7 +100,7 @@
                   {{ getCategoriaBaseLabel(row?.categoria_base) }}
                 </span>
               </div>
-              <p class="text-[10px] text-text-muted mt-0.5">Ref. {{ String(row.id || 0).padStart(4, '0') }} · {{ row.categoria || '-' }}</p>
+              <p class="text-[10px] text-text-muted mt-0.5">Ref. {{ String(row.id || 0).padStart(4, '0') }}</p>
               <div class="mt-2 flex items-center justify-between">
                 <span class="text-sm font-semibold text-text-main tabular-nums">{{ format.currency(row.valor_unitario) }}</span>
                 <div class="flex items-center gap-1">
@@ -186,12 +186,6 @@
             </span>
           </template>
 
-          <template #cell-categoria="{ row }">
-            <span class="text-sm text-text-main">
-              {{ row.categoria || '-' }}
-            </span>
-          </template>
-
           <template #cell-valor_unitario="{ row }">
             <span class="text-sm font-semibold text-text-main tabular-nums">
               {{ format.currency(row.valor_unitario) }}
@@ -260,7 +254,6 @@ function abrirNovoProduto() {
 const columns = [
   { key: 'nome_produto', label: 'Produto', width: '22%' },
   { key: 'fornecedor_nome', label: 'Fornecedor', width: '14%' },
-  { key: 'categoria', label: 'Categoria', width: '11%' },
   { key: 'marca', label: 'Marca', width: '10%' },
   { key: 'cor', label: 'Cor', width: '8%' },
   { key: 'medida', label: 'Medida', width: '9%' },
@@ -284,6 +277,9 @@ function categoriaBaseBadgeClass(value) {
   }
   if (key === 'SECUNDARIA') {
     return 'bg-emerald-50 text-emerald-800 border-emerald-200'
+  }
+  if (key === 'FITA_BORDA') {
+    return 'bg-orange-50 text-orange-800 border-orange-200'
   }
   if (key === 'INSUMO') {
     return 'bg-blue-50 text-blue-800 border-blue-200'
@@ -324,7 +320,6 @@ const rows = computed(() =>
   filtrados.value.map((p) => ({
     ...p,
     fornecedor_nome: p.fornecedor?.razao_social || p.fornecedor?.nome_fantasia || '-',
-    categoria: p.categoria || '-',
     valor_unitario: Number(p.valor_unitario || 0),
     status: String(p.status || 'INATIVO').toUpperCase(),
   })),

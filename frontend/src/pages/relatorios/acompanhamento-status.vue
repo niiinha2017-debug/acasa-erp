@@ -272,7 +272,19 @@
 <script setup>
 import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { PIPELINE_CLIENTE, normalizarStatusCliente } from '@/constantes'
+import {
+  PIPELINE_CLIENTE,
+  normalizarStatusCliente,
+  getStatusVendaOperacionalLabel,
+  getStatusVendaFase5,
+  getStatusVendaFase11,
+  statusVendaEhOrcamento,
+  statusVendaEhVenda,
+  statusVendaEhAgenda,
+  statusVendaEhProducaoPosVenda,
+  statusVendaUsa45DiasAposMedidaFina,
+  statusVendaEhMedidaFina,
+} from '@/constantes'
 import { INDICACAO_ORIGENS } from '@/constantes/indicacao'
 import { addDiasUteis, PRAZO_POR_FASE, getPrazoAposMedidaFina, getPrazoAte, diasParaLimite, PRAZO_ALERTA_VIGENCIA_DIAS } from '@/constantes/pipeline-regras'
 import { getPrazoTextClass } from '@/constantes'
@@ -380,12 +392,20 @@ const vendaIdsComPendenciaFinanceira = ref(new Set())
 /** Atualizado a cada 1s para tempo decorrido em tempo real (MEDIÇÃO EM ANDAMENTO). */
 const nowForTimer = ref(Date.now())
 
+function getStatusDisplayLabel(statusKey) {
+  const key = String(statusKey || '').toUpperCase()
+  if (!key) return ''
+  if (key === 'MEDIDA_EM_ANDAMENTO') return 'Medida em andamento'
+  if (key === 'MEDIDA_AGENDADA' || key === 'MEDICAO_VENDA') return 'Medida'
+  return getStatusVendaOperacionalLabel(key)
+}
+
 const statusLabelMap = computed(() => {
   const map = new Map()
   for (const item of PIPELINE_CLIENTE || []) {
     const key = String(item?.key || '').toUpperCase()
     if (!key) continue
-    map.set(key, String(item?.label || key))
+    map.set(key, getStatusDisplayLabel(key) || String(item?.label || key))
   }
   return map
 })
@@ -393,126 +413,24 @@ const statusLabelMap = computed(() => {
 const statusOptions = computed(() =>
   (PIPELINE_CLIENTE || []).map((item) => ({
     value: String(item?.key || '').toUpperCase(),
-    label: String(item?.label || item?.key || ''),
+    label: getStatusDisplayLabel(item?.key) || String(item?.label || item?.key || ''),
   })),
 )
 
-/** Mapeia status_key para fase 1–5 (uso em prazos/ordenação). */
-const FASE_POR_KEY = {
-  ATIVO: 1, // cliente já cadastrado entra no fluxo na primeira fase
-  CADASTRO: 1,
-  CLIENTE_CADASTRADO: 1,
-  MEDICAO_VENDA: 2,
-  MEDICAO: 2,
-  AGENDAR_MEDIDA_VENDA: 2,
-  MEDIDA_AGENDADA: 2,
-  MEDIDA_EM_ANDAMENTO: 2,
-  MEDIDA_REALIZADA: 2,
-  ORCAMENTO: 3,
-  CRIAR_ORCAMENTO: 3,
-  ORCAMENTO_EM_ANDAMENTO: 3,
-  ORCAMENTO_ENVIADO: 3,
-  ORCAMENTO_EM_NEGOCIACAO: 3,
-  ORCAMENTO_APROVADO: 3,
-  ORCAMENTO_REPROVADO: 3,
-  AGENDAR_APRESENTACAO: 3,
-  APRESENTACAO_AGENDADA: 3,
-  ORCAMENTO_APRESENTADO: 3,
-  CONTRATO: 4,
-  VENDA_FECHADA: 4,
-  CONTRATO_GERADO: 4,
-  CONTRATO_ASSINADO: 4,
-  AGENDAR_MEDIDA_FINA: 4,
-  MEDIDA_FINA_AGENDADA: 4,
-  MEDIDA_FINA_REALIZADA: 5,
-  AGUARDANDO_PROJETO_TECNICO: 5,
-  PROJETO_TECNICO_EM_ANDAMENTO: 5,
-  PROJETO_TECNICO_CONCLUIDO: 5,
-  PROJETO_TECNICO_APROVADO: 5,
-  PRODUCAO_AGENDADA: 5,
-  EM_PRODUCAO: 5,
-  PRODUCAO_FINALIZADA: 5,
-  AGENDAR_MONTAGEM: 5,
-  MONTAGEM_AGENDADA: 5,
-  EM_MONTAGEM: 5,
-  MONTAGEM_FINALIZADA: 5,
-  GARANTIA: 5,
-  ASSISTENCIA: 5,
-  MANUTENCAO: 5,
-  ENCERRADO: 5,
-}
-
 function statusKeyParaFase(statusKey) {
   const key = String(statusKey || '').toUpperCase()
-  if (FASE_POR_KEY[key] != null) return FASE_POR_KEY[key]
+  const fase = getStatusVendaFase5(key)
+  if (fase != null) return fase
   const item = (PIPELINE_CLIENTE || []).find((i) => String(i?.key || '').toUpperCase() === key)
   if (item?.ordem != null) return Math.min(5, Math.max(1, Math.floor(Number(item.ordem))))
   return 1
 }
 
-/** Mapeia status_key para etapa 1–11 do fluxo (barra de progresso e tom do card). Alinhado às 11 etapas oficiais. */
-const FASE_11_POR_KEY = {
-  ATIVO: 1, // cliente já cadastrado entra no fluxo na primeira fase
-  CADASTRO: 1,
-  CLIENTE_CADASTRADO: 1,
-  MEDICAO_VENDA: 2,
-  MEDICAO: 2,
-  AGENDAR_MEDIDA_VENDA: 2,
-  MEDIDA_AGENDADA: 2,
-  MEDIDA_EM_ANDAMENTO: 2,
-  MEDIDA_REALIZADA: 2,
-  ORCAMENTO: 3,
-  CRIAR_ORCAMENTO: 3,
-  ORCAMENTO_EM_ANDAMENTO: 3,
-  ORCAMENTO_ENVIADO: 3,
-  ORCAMENTO_EM_NEGOCIACAO: 3,
-  ORCAMENTO_APROVADO: 3,
-  ORCAMENTO_REPROVADO: 3,
-  AGENDAR_APRESENTACAO: 4,
-  APRESENTACAO: 4,
-  APRESENTACAO_AGENDADA: 4,
-  ORCAMENTO_APRESENTADO: 4,
-  CONTRATO: 5,
-  VENDA_FECHADA: 5,
-  CONTRATO_GERADO: 5,
-  CONTRATO_ASSINADO: 5,
-  FECHAR_VENDA: 5,
-  AGENDAR_FECHAMENTO: 6,
-  AGENDAR_MEDIDA_FINA: 7,
-  MEDIDA_FINA: 7,
-  MEDIDA_FINA_AGENDADA: 7,
-  MEDIDA_FINA_REALIZADA: 7,
-  AGUARDANDO_PROJETO_TECNICO: 8,
-  PROJETO_TECNICO_EM_ANDAMENTO: 8,
-  PROJETO_TECNICO_CONCLUIDO: 8,
-  PROJETO_TECNICO_APROVADO: 8,
-  PRODUCAO_RECEBIDA: 9,
-  PRODUCAO_AGENDADA: 9,
-  EM_PRODUCAO: 9,
-  PRODUCAO_FINALIZADA: 9,
-  CORTE: 9,
-  PREPARACAO_TECNICA: 9,
-  MONTAGEM_INTERNA: 9,
-  ACABAMENTO: 9,
-  CONFERENCIA_QUALIDADE: 9,
-  PRODUCAO_MONTAGEM: 9,
-  AGENDAR_MONTAGEM: 10,
-  MONTAGEM_AGENDADA: 10,
-  MONTAGEM_CLIENTE_AGENDADA: 10,
-  EM_MONTAGEM: 10,
-  EM_MONTAGEM_CLIENTE: 10,
-  MONTAGEM_FINALIZADA: 10,
-  MONTAGEM_CLIENTE_FINALIZADA: 10,
-  GARANTIA: 11,
-  ASSISTENCIA: 11,
-  MANUTENCAO: 11,
-  ENCERRADO: 11,
-}
-
 /** Retorna a etapa atual no fluxo de 11 (1–11) para a barra e o tom do card. */
 function statusKeyParaFase11(statusKey) {
   const key = String(statusKey || '').toUpperCase()
-  if (FASE_11_POR_KEY[key] != null) return FASE_11_POR_KEY[key]
+  const fase = getStatusVendaFase11(key)
+  if (fase != null) return fase
   const item = (PIPELINE_CLIENTE || []).find((i) => String(i?.key || '').toUpperCase() === key)
   if (item?.ordem != null) return Math.min(11, Math.max(1, Math.floor(Number(item.ordem))))
   return 1
@@ -529,12 +447,12 @@ const totalEtapasPipeline = computed(() => {
 /** Retorna a label da próxima ação no pipeline (para exibir no prazo). */
 function getProximaAcao(statusKey) {
   const key = String(statusKey || '').toUpperCase()
-  if (key === 'CLIENTE_CADASTRADO' || key === 'CADASTRO') return 'agendar medida ou apresentar orçamento'
+  if (key === 'CLIENTE_CADASTRADO' || key === 'CADASTRO') return 'avançar para Medida ou Orçamento'
   const arr = PIPELINE_CLIENTE || []
   const idx = arr.findIndex((i) => String(i?.key || '').toUpperCase() === key)
   if (idx < 0 || idx >= arr.length - 1) return null
   const proximo = arr[idx + 1]
-  return proximo?.label || null
+  return getStatusDisplayLabel(proximo?.key) || proximo?.label || null
 }
 
 /** Categorias de agenda que indicam "medida da venda" (conclusão = entrada na fase orçamento). */
@@ -629,8 +547,9 @@ function getDataBasePrazoOrcamentoComTransicao(clienteId, orcs, dataTransicaoCli
 function getDataConclusaoMedidaFina(clienteId, orcamentoId) {
   const ags = filtrarAgendaPorClienteEOrcamento(clienteId, orcamentoId).filter(
     (a) =>
-      a?.status === 'CONCLUIDO' &&
-      (String(a?.categoria || '').toUpperCase() === 'MEDIDA_FINA' ||
+      String(a?.execucao_etapa || a?.status || '').toUpperCase() === 'CONCLUIDO' &&
+      (String(a?.subetapa || '').toUpperCase() === 'MEDIDA_FINA' ||
+        String(a?.categoria || '').toUpperCase() === 'MEDIDA_FINA' ||
         String(a?.categoria || '').toUpperCase() === 'AGENDAR_MEDIDA_FINA'),
   )
   if (!ags.length) return null
@@ -701,7 +620,7 @@ function getDataBasePrazo(c, { statusAtual, orcs, clienteId, orcAtivo } = {}) {
   }
 
   const ehFaseOrcamento =
-    STATUS_ORCAMENTO.has(key) ||
+    statusVendaEhOrcamento(key) ||
     key === 'ORCAMENTO_EM_ANDAMENTO' ||
     key === 'ORCAMENTO_ENVIADO' ||
     key === 'ORCAMENTO_EM_NEGOCIACAO'
@@ -791,6 +710,7 @@ const STATUS_PRODUCAO_POSVENDA = new Set([
 
 /** Status que usam o prazo de 45 dias corridos após conclusão da medida fina (projeto técnico + produção + montagem). */
 const STATUS_45_DIAS_APOS_MEDIDA_FINA = new Set([
+  'AGUARDANDO_PRECIFICACAO',
   'AGUARDANDO_PROJETO_TECNICO',
   'PROJETO_TECNICO_EM_ANDAMENTO',
   'PROJETO_TECNICO_CONCLUIDO',
@@ -809,7 +729,7 @@ const STATUS_45_DIAS_APOS_MEDIDA_FINA = new Set([
 function computeBlocoData(c, orc, clienteId, etapa, orcs) {
   const statusAtual = etapa?.status_key
   const key = String(statusAtual || '').toUpperCase()
-  const ehMedidaFina = key === 'AGENDAR_MEDIDA_FINA' || key === 'MEDIDA_FINA_AGENDADA' || key === 'MEDIDA_FINA_REALIZADA'
+  const ehMedidaFina = statusVendaEhMedidaFina(key)
   const contrato = orc?.venda?.contratos?.[0] ?? null
   let dataBase = getDataBasePrazo(c, { statusAtual, orcs, clienteId, orcAtivo: orc })
   let prazoAte = null
@@ -819,7 +739,7 @@ function computeBlocoData(c, orc, clienteId, etapa, orcs) {
     dataBase = contrato.data_inicio instanceof Date ? contrato.data_inicio : new Date(contrato.data_inicio)
     prazoAte = contrato.data_fim instanceof Date ? contrato.data_fim : new Date(contrato.data_fim)
     prazoLabel = 'Data para marcar a medida fina'
-  } else if (STATUS_45_DIAS_APOS_MEDIDA_FINA.has(key)) {
+  } else if (statusVendaUsa45DiasAposMedidaFina(key)) {
     const dataConclusaoMedidaFina = getDataConclusaoMedidaFina(clienteId, orc?.id)
     if (dataConclusaoMedidaFina) {
       dataBase = dataConclusaoMedidaFina
@@ -830,7 +750,7 @@ function computeBlocoData(c, orc, clienteId, etapa, orcs) {
     const faseParaPrazo =
       key === 'CLIENTE_CADASTRADO' || key === 'CADASTRO'
         ? 'CADASTRO'
-        : STATUS_ORCAMENTO.has(key) ||
+        : statusVendaEhOrcamento(key) ||
             key === 'ORCAMENTO_EM_ANDAMENTO' ||
             key === 'ORCAMENTO_ENVIADO' ||
             key === 'ORCAMENTO_EM_NEGOCIACAO'
@@ -936,17 +856,17 @@ function getDestinoAcompanhar(row, etapa) {
     if (vendaId) return { path: `/vendas/venda/${vendaId}`, label: 'Abrir venda' }
     return { path: '/contratos', label: 'Contratos' }
   }
-  if (STATUS_VENDA.has(statusKey) && vendaId) {
+  if (statusVendaEhVenda(statusKey) && vendaId) {
     return { path: `/vendas/venda/${vendaId}`, label: 'Abrir venda' }
   }
-  if (STATUS_PRODUCAO_POSVENDA.has(statusKey) && vendaId) {
+  if (statusVendaEhProducaoPosVenda(statusKey) && vendaId) {
     return { path: `/vendas/venda/${vendaId}`, label: 'Abrir venda' }
   }
-  if (STATUS_ORCAMENTO.has(statusKey) || statusKey === 'ORCAMENTO_EM_ANDAMENTO' || statusKey === 'ORCAMENTO_ENVIADO' || statusKey === 'ORCAMENTO_EM_NEGOCIACAO') {
+  if (statusVendaEhOrcamento(statusKey) || statusKey === 'ORCAMENTO_EM_ANDAMENTO' || statusKey === 'ORCAMENTO_ENVIADO' || statusKey === 'ORCAMENTO_EM_NEGOCIACAO') {
     if (orcamentoId) return { path: `/orcamentos/${orcamentoId}`, label: 'Abrir orçamento' }
     return { path: `/orcamentos/cliente/${clienteId}`, label: 'Orçamentos do cliente' }
   }
-  if (STATUS_AGENDA.has(statusKey)) {
+  if (statusVendaEhAgenda(statusKey)) {
     return { path: '/agendamentos/loja', label: 'Abrir agenda' }
   }
   if (statusKey === 'CLIENTE_CADASTRADO') {
@@ -1037,7 +957,7 @@ function montarAcoesPorStatus(row) {
     return [{ label: 'Cliente', action: 'cliente', variant: 'secondary' }]
   }
 
-  if (STATUS_ORCAMENTO.has(statusKey)) {
+  if (statusVendaEhOrcamento(statusKey)) {
     return [
       { label: 'Orçamento', action: 'orcamento', variant: 'primary' },
       { label: 'Acompanhar status', action: 'acompanhar', variant: 'secondary' },
@@ -1079,7 +999,7 @@ const rows = computed(() => {
         orcamento_id: null,
         orcamento_numero: null,
         status_key: statusKey,
-        status_label: statusLabelMap.value.get(statusKey) || statusKey,
+        status_label: getStatusDisplayLabel(statusKey) || statusKey,
         etapa_numero: etapaNumeroPorStatus(statusKey),
         agendamento_data: agFmtEtapa?.data ?? null,
         agendamento_hora: agFmtEtapa?.hora ?? null,
@@ -1097,7 +1017,7 @@ const rows = computed(() => {
           venda_id: orc?.venda?.id ? Number(orc.venda.id) : null,
           contrato_id: contratoId,
           status_key: statusKey,
-          status_label: statusLabelMap.value.get(statusKey) || statusKey,
+          status_label: getStatusDisplayLabel(statusKey) || statusKey,
           etapa_numero: etapaNumeroPorStatus(statusKey),
           agendamento_data: agFmtEtapa?.data ?? null,
           agendamento_hora: agFmtEtapa?.hora ?? null,
@@ -1113,7 +1033,7 @@ const rows = computed(() => {
     const statusAtual = etapas[0]?.status_key
     const etapaNum = etapaNumeroPorStatus(statusAtual)
     const key = String(statusAtual || '').toUpperCase()
-    const ehMedidaFina = key === 'AGENDAR_MEDIDA_FINA' || key === 'MEDIDA_FINA_AGENDADA' || key === 'MEDIDA_FINA_REALIZADA'
+    const ehMedidaFina = statusVendaEhMedidaFina(key)
     const contrato = orcs?.[0]?.venda?.contratos?.[0]
     const orcAtivo = orcs?.length
       ? orcs.reduce((best, o) => {
@@ -1135,7 +1055,7 @@ const rows = computed(() => {
       dataBase = contrato.data_inicio instanceof Date ? contrato.data_inicio : new Date(contrato.data_inicio)
       prazoAte = contrato.data_fim instanceof Date ? contrato.data_fim : new Date(contrato.data_fim)
       prazoLabel = 'Data para marcar a medida fina'
-    } else if (STATUS_45_DIAS_APOS_MEDIDA_FINA.has(key)) {
+    } else if (statusVendaUsa45DiasAposMedidaFina(key)) {
       const dataConclusaoMedidaFina = getDataConclusaoMedidaFina(clienteId)
       if (dataConclusaoMedidaFina) {
         dataBase = dataConclusaoMedidaFina
@@ -1146,7 +1066,7 @@ const rows = computed(() => {
       let faseParaPrazo =
         key === 'CLIENTE_CADASTRADO' || key === 'CADASTRO'
           ? 'CADASTRO'
-          : STATUS_ORCAMENTO.has(key) ||
+            : statusVendaEhOrcamento(key) ||
               key === 'ORCAMENTO_EM_ANDAMENTO' ||
               key === 'ORCAMENTO_ENVIADO' ||
               key === 'ORCAMENTO_EM_NEGOCIACAO'
@@ -1158,9 +1078,9 @@ const rows = computed(() => {
       prazoAte = faseParaPrazo ? getPrazoAte(dataBase, faseParaPrazo) : null
       prazoLabel =
         faseParaPrazo === 'ORCAMENTO'
-          ? 'validade do orçamento (apresentar ou aprovar)'
+          ? 'prazo para concluir Orçamento ou avançar para Apresentação'
           : faseParaPrazo === 'FECHAR_VENDA'
-            ? 'agendar fechar venda (assinar contrato)'
+            ? 'prazo para concluir Fechamento'
             : prazoLabel
     }
 
@@ -1272,9 +1192,8 @@ const rows = computed(() => {
           const dataOrc = orc?.alterado_em || orc?.criado_em
           const ehAprovadoOuContrato =
             statusKey === 'ORCAMENTO_APROVADO' ||
-            statusKey === 'VENDA_FECHADA' ||
-            statusKey.startsWith('CONTRATO') ||
-            FASE_POR_KEY[statusKey] === 4
+            statusVendaEhVenda(statusKey) ||
+            statusKeyParaFase(statusKey) === 4
           return {
             id: orc?.id,
             numero: idx + 1,
@@ -1282,7 +1201,7 @@ const rows = computed(() => {
             valorFormatado: format.currency(valor),
             dataExibicao: dataOrc ? formatarDataExibicao(new Date(dataOrc)) : '—',
             status_key: statusKey,
-            status_label: statusLabelMap.value.get(statusKey) || statusKey,
+            status_label: getStatusDisplayLabel(statusKey) || statusKey,
             fase,
             contratoVigente,
             ehAprovadoOuContrato,
@@ -1312,7 +1231,7 @@ const rows = computed(() => {
             valorFormatado: format.currency(valor),
             dataExibicao: dataOrc ? formatarDataExibicao(new Date(dataOrc)) : '—',
             status_key: statusKey,
-            status_label: statusLabelMap.value.get(statusKey) || statusKey,
+            status_label: getStatusDisplayLabel(statusKey) || statusKey,
           }
           const etapa = etapas[idx]
           const blocoData = computeBlocoData(c, orc, clienteId, etapa, orcs)
@@ -1366,7 +1285,7 @@ const rows = computed(() => {
             : normalizarStatusCliente(c?.status || 'CLIENTE_CADASTRADO')
         if (orcs.length === 0 && clienteTemAgendamentoMedida(clienteId) && statusKeyParaFase(key) < 2) key = 'MEDIDA_AGENDADA'
         if (key === 'MEDIDA_EM_ANDAMENTO') return 'MEDIÇÃO EM ANDAMENTO ⏱️'
-        return statusLabelMap.value.get(key) || (key === 'MEDIDA_AGENDADA' ? statusLabelMap.value.get('MEDICAO_VENDA') : null) || key
+        return getStatusDisplayLabel(key) || statusLabelMap.value.get(key) || key
       })(),
       faseAtual: (() => {
         let key =
@@ -1420,7 +1339,7 @@ const rows = computed(() => {
           : null
         const contrato = orcAtivo?.venda?.contratos?.[0]
         const temContratoVigente = contrato?.status === 'VIGENTE'
-        if (temContratoVigente && (key === 'MEDIDA_FINA_REALIZADA' || STATUS_45_DIAS_APOS_MEDIDA_FINA.has(key))) {
+        if (temContratoVigente && (key === 'MEDIDA_FINA_REALIZADA' || statusVendaUsa45DiasAposMedidaFina(key))) {
           const dataConclusaoMedidaFina = getDataConclusaoMedidaFina(clienteId)
           if (dataConclusaoMedidaFina) {
             const prazo45 = getPrazoAposMedidaFina(dataConclusaoMedidaFina)
@@ -1651,7 +1570,7 @@ function abrirOrcamentoParaAprovar(id) {
 function podeAprovarOrcamento(orc) {
   const key = String(orc?.status_key || '').toUpperCase()
   if (key === 'ORCAMENTO_APROVADO') return false
-  if (FASE_POR_KEY[key] >= 4) return false
+  if (statusKeyParaFase(key) >= 4) return false
   return true
 }
 

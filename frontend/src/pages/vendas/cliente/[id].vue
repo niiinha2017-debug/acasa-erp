@@ -181,7 +181,7 @@ const primeiroSemVenda = computed(() => filtrados.value.find((o) => !o.venda) ??
 
 function irParaFechamento(id) {
   if (!id) return
-  router.push({ path: '/vendas/nova-venda', query: { orcamentoId: String(id) } })
+  router.push(`/vendas/fechamento-venda/${id}`)
 }
 
 function irParaDetalhar(row) {

@@ -40,7 +40,7 @@ const IS_DEV = !!import.meta.env.DEV
 const isTauri = typeof window !== 'undefined' && (!!window.__TAURI__ || !!window.__TAURI_INTERNALS__)
 
 function getDirectDevApiUrl() {
-  const target = String(VITE_PROXY_TARGET || 'http://127.0.0.1:3000').replace(/\/+$/, '')
+  const target = String(VITE_PROXY_TARGET || 'http://127.0.0.1:3001').replace(/\/+$/, '')
   return `${target}/api`
 }
 
@@ -133,7 +133,7 @@ api.interceptors.response.use(
       }
     } else if (!(is401 && isMe)) {
       if (isNetworkError) {
-        const base = original?.baseURL || 'http://localhost:3000/api'
+        const base = original?.baseURL || 'http://localhost:3001/api'
         console.warn(
           '[API] Backend indisponível (conexão recusada).',
           'URL:', base,

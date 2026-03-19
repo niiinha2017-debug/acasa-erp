@@ -1,5 +1,5 @@
 import { Injectable, HttpException } from '@nestjs/common';
-import { getStatusColorsConfig } from '../../shared/constantes/etapas-cores';
+import { getStatusColorsConfig } from '../shared/constantes/etapas-cores';
 
 @Injectable()
 export class UtilsService {

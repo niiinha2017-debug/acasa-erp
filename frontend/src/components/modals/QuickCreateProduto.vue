@@ -83,9 +83,17 @@
               <!-- Medida -->
               <div class="col-span-12 md:col-span-4">
                 <Input
+                  v-if="ehFitaBorda"
+                  v-model="metragemRoloInput"
+                  label="Metragem do Rolo (m)"
+                  placeholder="EX: 50"
+                  type="number"
+                />
+                <Input
+                  v-else
                   v-model="form.medida"
-                  label="Espessura"
-                  placeholder="EX: 18MM"
+                  label="Medida"
+                  placeholder="EX: 2750X1840MM"
                 />
               </div>
 
@@ -111,6 +119,19 @@
                   placeholder="SELECIONE..."
                   required
                 />
+              </div>
+
+              <div v-if="ehCategoriaComercial" class="col-span-12 md:col-span-8">
+                <SearchInput
+                  v-model="form.fita_vinculada_id"
+                  mode="select"
+                  label="Vincular Fita"
+                  :options="fitasBordaOptions"
+                  placeholder="BUSQUE A FITA DE BORDA"
+                />
+                <p class="mt-2 text-[9px] font-bold text-slate-300 uppercase tracking-widest">
+                  {{ textoVinculoFita }}
+                </p>
               </div>
 
               <!-- Valor unitário -->
@@ -322,6 +343,9 @@ const imagemInput = ref(null)
 const uploadingImagem = ref(false)
 const removendoImagem = ref(false)
 const modalImagemOpen = ref(false)
+const fitasBorda = ref([])
+const loadingFitasBorda = ref(false)
+const metragemRoloInput = ref('')
 
 const imagemFile = ref(null)          // File selecionado
 const imagemTempUrl = ref('')         // preview local (URL.createObjectURL)
@@ -332,8 +356,11 @@ const form = reactive({
   nome_produto: '',
   cor: '',
   medida: '',
+  metragem_rolo_m: null,
   unidade: 'M',
   categoria_base: 'PRIMARIA',
+  fita_vinculada_id: null,
+  fita_vinculada: null,
   marca: '',
   valor_unitario_mask: '0,00',
   status: 'ATIVO',
@@ -361,6 +388,58 @@ const fornecedorOptionsInternas = computed(() =>
     .filter((f) => f.value > 0 && f.label),
 )
 const categoriasBaseOptions = computed(() => CATEGORIAS_BASE)
+const ehFitaBorda = computed(() => String(form.categoria_base || '').trim().toUpperCase() === 'FITA_BORDA')
+const ehCategoriaComercial = computed(() => ['PRIMARIA', 'SECUNDARIA', 'TERCIARIA'].includes(String(form.categoria_base || '').trim().toUpperCase()))
+
+function normalizeNumber(value) {
+  const raw = String(value ?? '').replace(',', '.').trim()
+  if (!raw) return null
+  const parsed = Number(raw)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function formatarMetragemRolo(metragem) {
+  const valor = normalizeNumber(metragem)
+  if (valor == null || valor <= 0) return '-'
+  return `${valor.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} m`
+}
+
+function calcularValorFitaPorMetro(produto) {
+  const valorUnitario = Number(produto?.valor_unitario || 0)
+  const metragemRolo = normalizeNumber(produto?.metragem_rolo_m)
+  if (!metragemRolo || metragemRolo <= 0) return 0
+  return Math.round(((valorUnitario / metragemRolo) + Number.EPSILON) * 10000) / 10000
+}
+
+function montarLabelFita(produto) {
+  const partes = [
+    produto?.nome_produto,
+    produto?.cor,
+    formatarMetragemRolo(produto?.metragem_rolo_m),
+    maskMoneyBR(Number(produto?.valor_unitario || 0)),
+  ].filter(Boolean)
+
+  return partes.join(' · ')
+}
+
+const fitasBordaOptions = computed(() =>
+  (fitasBorda.value || []).map((produto) => ({
+    value: produto.id,
+    label: montarLabelFita(produto),
+  })),
+)
+
+const fitaVinculadaSelecionada = computed(() => {
+  const fitaId = Number(form.fita_vinculada_id || 0)
+  if (!fitaId) return form.fita_vinculada || null
+  return fitasBorda.value.find((produto) => Number(produto.id) === fitaId) || form.fita_vinculada || null
+})
+
+const textoVinculoFita = computed(() => {
+  if (loadingFitasBorda.value) return 'CARREGANDO FITAS DE BORDA DISPONÍVEIS.'
+  if (!fitaVinculadaSelecionada.value) return 'AO SELECIONAR UMA FITA, O ADICIONAL DE FITA / M² SERÁ CALCULADO AUTOMATICAMENTE.'
+  return `${maskMoneyBR(calcularValorFitaPorMetro(fitaVinculadaSelecionada.value))}/M A PARTIR DE ${maskMoneyBR(Number(fitaVinculadaSelecionada.value?.valor_unitario || 0))} POR ${formatarMetragemRolo(fitaVinculadaSelecionada.value?.metragem_rolo_m)}.`
+})
 
 function norm(v) {
   const s = String(v ?? '').trim().toUpperCase()
@@ -393,14 +472,36 @@ function resetForm() {
     nome_produto: props.textoInicial || '',
     cor: '',
     medida: '',
+    metragem_rolo_m: null,
     unidade: 'M',
     categoria_base: 'PRIMARIA',
+    fita_vinculada_id: null,
+    fita_vinculada: null,
     marca: '',
     valor_unitario_mask: '0,00',
     status: 'ATIVO',
     imagem_url: '',
   })
+  metragemRoloInput.value = ''
   limparImagemLocal()
+}
+
+async function carregarFitasBorda() {
+  loadingFitasBorda.value = true
+  try {
+    const res = await ProdutosService.buscarComFiltros({ categoria_base: 'FITA_BORDA' })
+    const data = res?.data ?? res
+    fitasBorda.value = (Array.isArray(data) ? data : []).map((produto) => ({
+      ...produto,
+      metragem_rolo_m: normalizeNumber(produto?.metragem_rolo_m),
+      valor_unitario: Number(produto?.valor_unitario || 0),
+    }))
+  } catch (e) {
+    console.log('[MODAL PRODUTO] erro ao carregar fitas:', e?.response?.data || e)
+    fitasBorda.value = []
+  } finally {
+    loadingFitasBorda.value = false
+  }
 }
 
 async function existeDuplicadoNoFornecedor(payloadCheck, fornecedorId) {
@@ -467,10 +568,48 @@ watch(
   async (isOpen) => {
     if (!isOpen) return
     resetForm()
+    await carregarFitasBorda()
     await nextTick()
     try {
       nomeRef.value?.$el?.querySelector?.('input')?.focus?.()
     } catch {}
+  },
+)
+
+watch(metragemRoloInput, (value) => {
+  const parsed = normalizeNumber(value)
+  form.metragem_rolo_m = parsed != null && parsed > 0 ? parsed : null
+})
+
+watch(
+  () => form.categoria_base,
+  (categoriaAtual, categoriaAnterior) => {
+    const categoria = String(categoriaAtual || '').trim().toUpperCase()
+    const anterior = String(categoriaAnterior || '').trim().toUpperCase()
+
+    if (!['PRIMARIA', 'SECUNDARIA', 'TERCIARIA'].includes(categoria)) {
+      form.fita_vinculada_id = null
+      form.fita_vinculada = null
+    }
+
+    if (categoria !== 'FITA_BORDA') {
+      form.metragem_rolo_m = null
+      metragemRoloInput.value = ''
+      if (anterior === 'FITA_BORDA') {
+        form.medida = ''
+      }
+      return
+    }
+
+    form.medida = ''
+  },
+)
+
+watch(
+  () => form.fita_vinculada_id,
+  (fitaId) => {
+    const fitaSelecionada = fitasBorda.value.find((produto) => Number(produto.id) === Number(fitaId || 0))
+    form.fita_vinculada = fitaSelecionada || null
   },
 )
 
@@ -494,6 +633,10 @@ async function salvar() {
     notify.warn('Selecione a categoria base.')
     return
   }
+  if (ehFitaBorda.value && (!form.metragem_rolo_m || Number(form.metragem_rolo_m) <= 0)) {
+    notify.warn('Informe a metragem do rolo da fita.')
+    return
+  }
 
   const valorNum = moedaParaNumero(form.valor_unitario_mask)
 if (!Number(valorNum || 0)) {
@@ -505,10 +648,19 @@ if (!Number(valorNum || 0)) {
     fornecedor_id: fornecedorIdSelecionado,
     nome_produto: form.nome_produto.trim(),
     cor: form.cor?.trim() ? form.cor.trim() : null,
-    medida: form.medida?.trim() ? form.medida.trim() : null,
+    medida: ehFitaBorda.value ? `${String(form.metragem_rolo_m).replace(/\.0+$|0+$/g, '').replace(/\.$/, '')}m` : (form.medida?.trim() ? form.medida.trim() : null),
+    metragem_rolo_m: ehFitaBorda.value && form.metragem_rolo_m != null ? Number(form.metragem_rolo_m) : null,
     unidade: form.unidade || 'M',
     marca: form.marca?.trim() ? form.marca.trim() : null,
     categoria_base: form.categoria_base ? String(form.categoria_base).trim().toUpperCase() : 'PRIMARIA',
+    fita_vinculada_id:
+      ehCategoriaComercial.value && form.fita_vinculada_id
+        ? Number(form.fita_vinculada_id)
+        : null,
+    adicional_fita_m2:
+      ehCategoriaComercial.value && fitaVinculadaSelecionada.value
+        ? calcularValorFitaPorMetro(fitaVinculadaSelecionada.value)
+        : null,
     valor_unitario: Number(valorNum || 0),
     status: form.status,
     imagem_url: null,

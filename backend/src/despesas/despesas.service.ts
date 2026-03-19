@@ -7,8 +7,8 @@ import { Prisma, despesas } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDespesaDto } from './dto/create-despesa.dto';
 import { UpdateDespesaDto } from './dto/update-despesa.dto';
-import { STATUS_FINANCEIRO_KEYS as SF } from '../../shared/constantes/status-financeiro';
-import { FUNCIONARIOS_TIPOS_CUSTO_KEYWORDS } from '../../shared/constantes/funcionarios-custos';
+import { STATUS_FINANCEIRO_KEYS as SF } from '../shared/constantes/status-financeiro';
+import { FUNCIONARIOS_TIPOS_CUSTO_KEYWORDS } from '../shared/constantes/funcionarios-custos';
 import { EstrategiaPrecosService } from '../estrategia-precos/estrategia-precos.service';
 
 type FiltrosDespesas = {

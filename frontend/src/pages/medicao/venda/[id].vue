@@ -25,17 +25,7 @@
               <i v-else class="pi pi-cloud" />
               {{ syncStatus === 'synced' ? 'Sincronizado' : syncStatus === 'saving' ? 'Salvando...' : 'Erro' }}
             </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              class="!rounded-xl text-text-soft hover:text-brand-primary"
-              title="Abre em nova aba"
-              @click="abrirOrcamentoTecnico"
-            >
-              <i class="pi pi-file-edit mr-2" />
-              Gerar Orçamento Técnico
-            </Button>
-            <Button variant="ghost" size="sm" class="!rounded-xl" @click="router.push('/totem-fabrica')">
+            <Button variant="ghost" size="sm" class="!rounded-xl" @click="router.push(rotaVoltar)">
               <i class="pi pi-arrow-left mr-2" />
               Voltar
             </Button>
@@ -70,30 +60,12 @@
                 >
                   {{ opt.label }}
                 </button>
-                <button
-                  type="button"
-                  class="px-4 py-2.5 rounded-xl text-sm font-medium border border-dashed border-amber-500/60 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30"
-                  @click="ambienteSelecionado = 'OUTRO'"
-                >
-                  + Outro
-                </button>
               </div>
-              <input
-                v-if="ambienteSelecionado === 'OUTRO'"
-                v-model="nomeOutroAmbiente"
-                type="text"
-                class="mt-2 w-full max-w-xs rounded-xl border border-border-ui bg-bg-card px-3 py-2 text-sm text-text-main"
-                placeholder="Nome do ambiente"
-              />
             </div>
 
-            <!-- 2) Se o ambiente ainda não foi salvo: botão para criar ambiente -->
+            <!-- 2) Sem ambiente disponível: orientar ajuste no pré-medição -->
             <div v-if="!ambienteIdAtual" class="mb-6 p-4 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
-              <p class="text-sm text-amber-800 dark:text-amber-200 mb-3">Salve o ambiente para adicionar paredes e medidas.</p>
-              <Button type="button" variant="primary" class="!rounded-xl" :loading="salvandoAmbiente" @click="salvarAmbientePrimeiraVez">
-                <i v-if="!salvandoAmbiente" class="pi pi-plus mr-2" />
-                Criar ambiente {{ nomeAmbienteAtual() }}
-              </Button>
+              <p class="text-sm text-amber-800 dark:text-amber-200">Nenhum ambiente disponível na medição. Crie os ambientes no pré-medição para continuar.</p>
             </div>
 
             <!-- 3) Se temos ambiente salvo: abas Paredes + ficha da parede -->
@@ -216,7 +188,10 @@
                   </div>
                 </div>
                 <div class="border-t border-border-ui pt-6">
-                  <h3 class="text-sm font-semibold text-text-main mb-3">Foto desta parede</h3>
+                  <div class="mb-3 flex items-center gap-2">
+                    <h3 class="text-sm font-semibold text-text-main">Foto desta parede</h3>
+                    <span class="text-xs text-text-soft">(opcional)</span>
+                  </div>
                   <input ref="inputFotoRef" type="file" accept="image/*" capture="environment" class="hidden" multiple @change="onFotoSelect" />
                   <Button type="button" variant="secondary" class="!rounded-xl" :disabled="uploadingFoto || !paredeIdAtual" @click="inputFotoRef?.click()">
                     <i v-if="uploadingFoto" class="pi pi-spin pi-spinner mr-2" />
@@ -237,6 +212,17 @@
               </div>
 
               <div class="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-border-ui mt-6">
+                <Button
+                  v-if="podeGerarOrcamento"
+                  type="button"
+                  variant="secondary"
+                  class="!rounded-xl font-medium w-full sm:w-auto"
+                  :loading="gerandoOrcamento"
+                  @click="gerarOrcamentoTecnico"
+                >
+                  <i v-if="!gerandoOrcamento" class="pi pi-file-edit mr-2" />
+                  Gerar Orçamento Técnico
+                </Button>
                 <Button type="button" variant="primary" class="!rounded-xl font-medium w-full sm:w-auto" :disabled="enviando" @click="finalizarMedicao">
                   <i v-if="enviando" class="pi pi-spin pi-spinner mr-2" />
                   <i v-else class="pi pi-check-circle mr-2" />
@@ -274,14 +260,6 @@
               <span class="pointer-events-none absolute right-12 top-1/2 -translate-y-1/2 text-[11px] font-medium text-text-soft">
                 {{ amb.paredes.length }}
               </span>
-              <button
-                type="button"
-                class="inline-flex h-11 w-11 items-center justify-center text-rose-500 transition hover:text-red-600 active:text-red-600"
-                title="Excluir ambiente"
-                @click.stop="excluirAmbiente(amb)"
-              >
-                <i class="pi pi-trash" />
-              </button>
             </div>
             <div v-if="ambienteResumoExpandidoId === amb.id" class="border-t border-border-ui bg-bg-card px-2 pb-2 pt-1">
               <div
@@ -318,7 +296,7 @@
             </div>
           </div>
         </div>
-        <p v-else class="text-xs text-text-soft">Crie um ambiente e adicione paredes.</p>
+        <p v-else class="text-xs text-text-soft">Nenhum ambiente carregado do pré-medição.</p>
       </div>
     </aside>
   </div>
@@ -327,27 +305,16 @@
 <script setup>
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { TotemFabricaService, ArquivosService } from '@/services'
+import { TotemFabricaService, ArquivosService, OrcamentoTecnicoService, FuncionariosService } from '@/services'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Loading from '@/components/common/Loading.vue'
+import storage from '@/utils/storage'
 
 definePage({ meta: { perm: 'agendamentos.producao' } })
-
-const OPCOES_AMBIENTE = [
-  { value: 'COZINHA', label: 'Cozinha' },
-  { value: 'DORMITORIO', label: 'Dormitório' },
-  { value: 'SALA', label: 'Sala' },
-  { value: 'BANHEIRO', label: 'Banheiro' },
-  { value: 'SUITE', label: 'Suíte' },
-  { value: 'AREA_SERVICO', label: 'Área de Serviço' },
-  { value: 'VARANDA', label: 'Varanda' },
-  { value: 'ESCRITORIO', label: 'Escritório' },
-  { value: 'OUTRO', label: 'Outro' },
-]
 
 const route = useRoute()
 const router = useRouter()
@@ -357,17 +324,16 @@ const loading = ref(true)
 const erroCarregamento = ref('')
 const tarefa = ref(null)
 const medicao = ref(null)
-const salvandoAmbiente = ref(false)
 const salvandoParede = ref(false)
 const syncStatus = ref('synced') // 'synced' | 'saving' | 'error'
 const enviando = ref(false)
+const gerandoOrcamento = ref(false)
 const uploadingFoto = ref(false)
 const inputFotoRef = ref(null)
 const inputNomeParedeRef = ref(null)
 let blurSaveTimeout = null
 
-const ambienteSelecionado = ref('COZINHA')
-const nomeOutroAmbiente = ref('')
+const ambienteSelecionado = ref('')
 const paredeSelecionada = ref(null)
 const paredeSelecionadaId = ref(null)
 const paredeNova = ref(false)
@@ -382,8 +348,15 @@ const profundidadeMm = ref('')
 const observacoes = ref('')
 const medidas = ref([])
 const fotos = ref([])
+const usuarioLogado = ref(storage.getUser())
+const unidadeUsuario = ref('')
 
-const opcoesAmbiente = computed(() => OPCOES_AMBIENTE)
+const opcoesAmbiente = computed(() => {
+  return ambientesSalvos.value.map((amb) => ({
+    value: String(amb.id),
+    label: amb.nome_ambiente,
+  }))
+})
 
 const nomeCliente = computed(() => {
   const c = tarefa.value?.cliente
@@ -391,30 +364,36 @@ const nomeCliente = computed(() => {
   return c.nome_completo || c.razao_social || 'Cliente'
 })
 
+function normalizarNomeAmbiente(valor) {
+  return String(valor || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase()
+}
+
 function nomeAmbienteAtual() {
-  if (ambienteSelecionado.value === 'OUTRO') return (nomeOutroAmbiente.value || '').trim() || 'Outro'
-  const opt = OPCOES_AMBIENTE.find((o) => o.value === ambienteSelecionado.value)
+  const opt = opcoesAmbiente.value.find((o) => o.value === String(ambienteSelecionado.value || ''))
   return opt ? opt.label : ambienteSelecionado.value
 }
 
 function aplicarSelecaoAmbientePorNome(nome) {
-  const nomeLimpo = String(nome || '').trim()
-  const opt = OPCOES_AMBIENTE.find((o) => o.label === nomeLimpo)
-  if (opt) {
-    ambienteSelecionado.value = opt.value
-    nomeOutroAmbiente.value = ''
+  const nomeRef = normalizarNomeAmbiente(nome)
+  const amb = ambientesSalvos.value.find((item) => normalizarNomeAmbiente(item.nome_ambiente) === nomeRef)
+  if (amb?.id) {
+    ambienteSelecionado.value = String(amb.id)
     return
   }
-  ambienteSelecionado.value = 'OUTRO'
-  nomeOutroAmbiente.value = nomeLimpo
+  ambienteSelecionado.value = ambientesSalvos.value[0]?.id ? String(ambientesSalvos.value[0].id) : ''
 }
 
 const ambientesSalvos = computed(() => medicao.value?.ambientes ?? [])
 
 const ambienteIdAtual = computed(() => {
-  const nome = nomeAmbienteAtual()
-  const a = ambientesSalvos.value.find((x) => x.nome_ambiente === nome)
-  return a?.id ?? null
+  const idAmbiente = Number(ambienteSelecionado.value || 0)
+  return idAmbiente > 0 ? idAmbiente : null
 })
 
 const ambienteAtual = computed(() => ambientesSalvos.value.find((a) => a.id === ambienteIdAtual.value))
@@ -441,6 +420,54 @@ const breadcrumb = computed(() => {
   const nomeP = paredeNova.value ? (nomeParedeNova.value || 'Nova parede') : (p?.nome || '')
   return nomeP ? `${amb} › ${nomeP}` : `Ambiente: ${amb}`
 })
+
+const isAdmin = computed(() => {
+  const user = usuarioLogado.value
+  return Boolean(user?.is_admin) || (Array.isArray(user?.permissoes) && user.permissoes.includes('ADMIN'))
+})
+
+const isFabrica = computed(() => {
+  if (isAdmin.value) return false
+  const unidade = String(unidadeUsuario.value || '').toUpperCase()
+  if (unidade === 'FABRICA' || unidade === 'PRODUCAO') return true
+  const perms = Array.isArray(usuarioLogado.value?.permissoes) ? usuarioLogado.value.permissoes : []
+  return perms.includes('agendamentos.producao') && !perms.includes('agendamentos.vendas')
+})
+
+const podeVerAcoesComerciais = computed(() => !isFabrica.value)
+
+function ambienteTemMedidas(ambiente) {
+  const diretas = [ambiente?.largura_m, ambiente?.pe_direito_m, ambiente?.profundidade_m]
+    .map((valor) => (valor == null ? null : Number(valor)))
+    .some((valor) => valor != null && Number.isFinite(valor) && valor > 0)
+  if (diretas) return true
+
+  const paredes = Array.isArray(ambiente?.paredes) ? ambiente.paredes : []
+  return paredes.some((parede) => {
+    const medidasParede = [parede?.largura_m, parede?.pe_direito_m, parede?.profundidade_m]
+      .map((valor) => (valor == null ? null : Number(valor)))
+      .some((valor) => valor != null && Number.isFinite(valor) && valor > 0)
+    if (medidasParede) return true
+    if (!parede?.medidas_json) return false
+    try {
+      const parsed = JSON.parse(String(parede.medidas_json))
+      return Array.isArray(parsed) && parsed.length > 0
+    } catch {
+      return false
+    }
+  })
+}
+
+const ambienteIdsProntosParaOrcamento = computed(() => {
+  const ambientes = Array.isArray(medicao.value?.ambientes) ? medicao.value.ambientes : []
+  return ambientes.filter((ambiente) => ambienteTemMedidas(ambiente)).map((ambiente) => Number(ambiente.id)).filter((id) => id > 0)
+})
+
+const podeGerarOrcamento = computed(() => {
+  return podeVerAcoesComerciais.value && ambienteIdsProntosParaOrcamento.value.length > 0 && !gerandoOrcamento.value
+})
+
+const rotaVoltar = computed(() => (isFabrica.value ? '/totem-fabrica' : '/agendamentos/loja'))
 
 const resumoAmbientesComParedes = computed(() => {
   const out = []
@@ -508,7 +535,7 @@ async function selecionarAmbiente(value) {
 
 async function selecionarAmbienteSalvo(ambiente) {
   await salvarParedeNaApiAntesDeSair()
-  aplicarSelecaoAmbientePorNome(ambiente?.nome_ambiente || '')
+  ambienteSelecionado.value = ambiente?.id ? String(ambiente.id) : ''
   ambienteResumoExpandidoId.value = ambiente?.id ?? null
   paredeSelecionada.value = null
   paredeSelecionadaId.value = null
@@ -523,13 +550,20 @@ function toggleResumoAmbiente(ambienteId) {
 /** Cria uma nova parede no banco com nome padrão e foca o campo nome. */
 async function adicionarParede() {
   const ambienteId = ambienteIdAtual.value
-  if (!ambienteId) return
+  if (!ambienteId) {
+    notify.error('Selecione um ambiente criado no pré-medição para adicionar paredes.')
+    return
+  }
   const num = (listaParedes.value.length || 0) + 1
   const nomePadrao = `Parede ${num}`
   salvandoParede.value = true
   syncStatus.value = 'saving'
   try {
-    const res = await TotemFabricaService.salvarParedeMedicao(ambienteId, { nome: nomePadrao })
+    const res = await TotemFabricaService.salvarParedeMedicao(ambienteId, {
+      nome: nomePadrao,
+      agenda_loja_id: id.value || undefined,
+      nome_ambiente: nomeAmbienteAtual(),
+    })
     const data = res?.data ?? res
     const id = data?.parede?.id
     const nome = data?.parede?.nome ?? nomePadrao
@@ -635,6 +669,16 @@ async function carregar() {
     ])
     tarefa.value = tarefaRes.data
     medicao.value = medicaoRes?.data ?? null
+
+    const ambientes = Array.isArray(medicao.value?.ambientes) ? medicao.value.ambientes : []
+    const ambienteSelecionadoExiste = ambientes.some((amb) => String(amb.id) === String(ambienteSelecionado.value || ''))
+    if (ambientes.length > 0 && !ambienteSelecionadoExiste) {
+      ambienteSelecionado.value = String(ambientes[0]?.id || '')
+    }
+    if (ambientes.length === 0) {
+      ambienteSelecionado.value = ''
+    }
+
     const next = { ...paredesPorAmbiente.value }
     for (const a of medicao.value?.ambientes ?? []) {
       if (next[a.id] === undefined) next[a.id] = [...(a.paredes || [])]
@@ -651,6 +695,48 @@ async function carregar() {
     medicao.value = null
   } finally {
     loading.value = false
+  }
+}
+
+async function carregarContextoUsuario() {
+  const user = storage.getUser()
+  usuarioLogado.value = user
+  unidadeUsuario.value = ''
+  if (user?.is_admin) return
+  const funcionarioId = Number(user?.funcionario_id || 0)
+  if (!funcionarioId) return
+  try {
+    const res = await FuncionariosService.buscarPorId(funcionarioId)
+    const data = res?.data ?? res ?? null
+    unidadeUsuario.value = String(data?.unidade || data?.setor || '').toUpperCase()
+  } catch {
+    unidadeUsuario.value = ''
+  }
+}
+
+async function gerarOrcamentoTecnico() {
+  if (!id.value || ambienteIdsProntosParaOrcamento.value.length === 0) {
+    notify.error('Preencha ao menos uma medida antes de gerar o orçamento técnico.')
+    return
+  }
+  gerandoOrcamento.value = true
+  try {
+    const res = await OrcamentoTecnicoService.criarNovo({
+      agenda_loja_id: id.value,
+      ambiente_ids: ambienteIdsProntosParaOrcamento.value,
+    })
+    const created = res?.data ?? res ?? null
+    const orcamentoTecnicoId = Number(created?.id || 0)
+    notify.success('Orçamento técnico gerado com sucesso.')
+    if (orcamentoTecnicoId > 0) {
+      router.push(`/orcamento-tecnico/${orcamentoTecnicoId}`)
+      return
+    }
+    router.push('/orcamento-tecnico')
+  } catch (e) {
+    notify.error(e?.response?.data?.message || 'Não foi possível gerar o orçamento técnico.')
+  } finally {
+    gerandoOrcamento.value = false
   }
 }
 
@@ -689,39 +775,6 @@ async function excluirParede(ambiente, parede) {
     }
   } catch (e) {
     console.warn(e?.response?.data?.message || 'Não foi possível excluir a parede.')
-  }
-}
-
-async function excluirAmbiente(ambiente) {
-  const ambienteId = ambiente?.id
-  if (!id.value || !ambienteId) return
-  const nome = ambiente?.nome_ambiente || 'este ambiente'
-  const ok = await confirm.show('Excluir ambiente', `Deseja excluir o ambiente ${nome}?`)
-  if (!ok) return
-  try {
-    await TotemFabricaService.removerAmbienteMedicao(id.value, ambienteId)
-    const ambientesRestantes = (medicao.value?.ambientes ?? []).filter((item) => item.id !== ambienteId)
-    medicao.value = medicao.value ? { ...medicao.value, ambientes: ambientesRestantes } : medicao.value
-    const next = { ...paredesPorAmbiente.value }
-    delete next[ambienteId]
-    paredesPorAmbiente.value = next
-    paredeSelecionada.value = null
-    paredeSelecionadaId.value = null
-    paredeNova.value = false
-    nomeParedeNova.value = ''
-    limparFormParede()
-    if (ambienteIdAtual.value === ambienteId) {
-      if (ambientesRestantes.length > 0) aplicarSelecaoAmbientePorNome(ambientesRestantes[0].nome_ambiente)
-      else {
-        ambienteSelecionado.value = 'COZINHA'
-        nomeOutroAmbiente.value = ''
-      }
-    }
-    if (ambienteResumoExpandidoId.value === ambienteId) {
-      ambienteResumoExpandidoId.value = ambientesRestantes[0]?.id ?? null
-    }
-  } catch (e) {
-    console.warn(e?.response?.data?.message || 'Não foi possível excluir o ambiente.')
   }
 }
 
@@ -765,24 +818,6 @@ async function removerFoto(idx) {
   }
 }
 
-async function salvarAmbientePrimeiraVez() {
-  if (!id.value) return
-  const nome = nomeAmbienteAtual()
-  if (!nome) {
-    console.warn('Informe o nome do ambiente.')
-    return
-  }
-  salvandoAmbiente.value = true
-  try {
-    await TotemFabricaService.salvarAmbienteMedicao(id.value, { nome_ambiente: nome })
-    await carregar()
-  } catch (e) {
-    console.warn(e?.response?.data?.message || 'Não foi possível criar o ambiente.')
-  } finally {
-    salvandoAmbiente.value = false
-  }
-}
-
 function buildWallFromForm() {
   // Sempre usar o nome digitado no campo (nomeParedeNova); fallback para o nome da parede selecionada
   const nome = (nomeParedeNova.value || '').trim() || (paredeSelecionada.value?.nome || '').trim() || 'Parede'
@@ -805,6 +840,8 @@ function buildWallFromForm() {
     }))
   return {
     nome: nome || 'Parede',
+    agenda_loja_id: id.value || undefined,
+    nome_ambiente: ambienteAtual.value?.nome_ambiente || nomeAmbienteAtual(),
     largura_m: larguraM,
     pe_direito_m: alturaM,
     profundidade_m: profundidadeM,
@@ -934,18 +971,13 @@ async function finalizarMedicao() {
   }
 }
 
-function abrirOrcamentoTecnico() {
-  if (!id.value) return
-  const path = `/orcamento-tecnico/novo/${id.value}`
-  window.open(path, '_blank', 'noopener,noreferrer')
-}
-
 watch(ambienteSelecionado, () => {
   paredeSelecionadaId.value = null
   paredeNova.value = false
 })
 
 onMounted(() => {
+  carregarContextoUsuario()
   carregar()
 })
 </script>

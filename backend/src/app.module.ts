@@ -38,6 +38,7 @@ import { ComissaoProducaoModule } from './comissao-producao/comissao-producao.mo
 import { MedicaoFinaModule } from './medicao-fina/medicao-fina.module';
 import { EvolutionModule } from './evolution/evolution.module';
 import { EstoqueRetalhoModule } from './estoque-retalho/estoque-retalho.module';
+import { EstoqueModule } from './estoque/estoque.module';
 import { EstrategiaPrecosModule } from './estrategia-precos/estrategia-precos.module';
 
 @Module({
@@ -103,6 +104,7 @@ import { EstrategiaPrecosModule } from './estrategia-precos/estrategia-precos.mo
     MedicaoFinaModule,
     EvolutionModule,
     EstoqueRetalhoModule,
+    EstoqueModule,
     EstrategiaPrecosModule,
   ],
   controllers: [AppController],

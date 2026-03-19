@@ -122,11 +122,11 @@
             />
           </template>
 
-          <div class="col-span-12 md:col-span-4">
+          <div class="col-span-12 md:col-span-2">
             <Select
               v-model="form.situacao"
-              label="Status"
-              placeholder="Selecione o status"
+              label="Situação do cadastro"
+              placeholder="Selecione a situação"
               :options="opcoesSituacao"
               force-upper
             />

@@ -1,6 +1,8 @@
+// re-exporta de status-matrix (fonte única)
+export * from '@backend/shared/constantes/status-matrix'
+// ---- conteúdo legado abaixo mantido para compatibilidade até remoção completa ----
 /**
- * Regras de prazo do pipeline (fonte: backend/shared/constantes/pipeline-regras).
- * Usar mesma constante e addDiasUteis para exibir prazos em dias úteis.
+ * @deprecated use status-matrix diretamente
  */
 
 export const PRAZO_CLIENTE_CADASTRADO_DIAS_UTEIS = 10

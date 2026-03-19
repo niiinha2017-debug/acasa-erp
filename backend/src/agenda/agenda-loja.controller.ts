@@ -97,21 +97,24 @@ export class AgendaLojaController {
   async updateStatus(
     @Param('id') id: string,
     @Body('status') status: string,
-    @Body('categoria') categoria?: string,
+    @Body('subetapa') subetapa?: string,
     @Req() req?: any,
   ) {
     await this.garantirSetorLoja(+id);
     const { pode, registrarAlteradoPor } = await this.podeEditarAgendaLoja(+id, req);
     const statusNorm = String(status || '').toUpperCase();
-    const soConcluir = statusNorm === 'CONCLUIDO' && !categoria;
+    const soConcluir = statusNorm === 'CONCLUIDO';
     if (!pode && !soConcluir) {
       throw new ForbiddenException('Você só pode alterar agendamentos que você mesmo criou.');
     }
     return this.agendaService.updateStatus(
       +id,
       status,
-      categoria,
-      (pode && registrarAlteradoPor && req?.user?.id) ? { alteradoPorUsuarioId: req.user.id } : soConcluir && req?.user?.id ? { alteradoPorUsuarioId: req.user.id } : undefined,
+      (pode && registrarAlteradoPor && req?.user?.id)
+        ? { alteradoPorUsuarioId: req.user.id, subetapa }
+        : soConcluir && req?.user?.id
+          ? { alteradoPorUsuarioId: req.user.id, subetapa }
+          : { subetapa },
     );
   }
 

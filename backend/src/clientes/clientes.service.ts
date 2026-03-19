@@ -8,16 +8,20 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CriarClienteDto } from './dto/criar-cliente.dto';
 import { AtualizarClienteDto } from './dto/atualizar-cliente.dto';
 import { Prisma } from '@prisma/client';
-import { PIPELINE_CLIENTE } from '../shared/constantes/pipeline-cliente';
 import {
+  PIPELINE_CLIENTE,
   normalizarStatusCliente,
   validarTransicaoStatusCliente,
-} from '../shared/constantes/pipeline-cliente';
-import { getDataCorteContasReceber } from '../../shared/constantes/pipeline-regras';
+} from '../shared/constantes/status-matrix';
+import { getDataCorteContasReceber } from '../shared/constantes/status-matrix';
+import { AgendaService } from '../agenda/agenda.service';
 
 @Injectable()
 export class ClientesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly agendaService: AgendaService,
+  ) {}
   private readonly statusClienteEncerrado =
     PIPELINE_CLIENTE.find(
       (s) => String(s.key || '').toUpperCase() === 'ENCERRADO',
@@ -401,14 +405,68 @@ export class ClientesService {
         e.code === 'P2003'
       ) {
         await this.prisma.$transaction(async (tx) => {
-          await tx.agenda_loja.updateMany({
+          const agendasLoja = await tx.agenda_loja.findMany({
             where: { cliente_id: id, status: { not: 'CANCELADO' } },
-            data: { status: 'CANCELADO' },
+            select: {
+              id: true,
+              categoria: true,
+              origem_fluxo: true,
+              fluxo_tipo: true,
+              macroetapa: true,
+              subetapa: true,
+              execucao_etapa: true,
+            },
           });
-          await tx.agenda_fabrica.updateMany({
+          for (const agenda of agendasLoja) {
+            await tx.agenda_loja.update({
+              where: { id: agenda.id },
+              data: {
+                status: 'CANCELADO',
+                ...this.agendaService.montarCamposStatusMatrixFromAtual({
+                  categoria: agenda.categoria ?? null,
+                  status: 'CANCELADO',
+                  origemFluxo: agenda.origem_fluxo ?? null,
+                  planoCorteId: null,
+                  fluxoTipo: agenda.fluxo_tipo ?? null,
+                  macroetapa: agenda.macroetapa ?? null,
+                  subetapa: agenda.subetapa ?? null,
+                  execucaoEtapa: agenda.execucao_etapa ?? null,
+                }),
+              },
+            });
+          }
+
+          const agendasFabrica = await tx.agenda_fabrica.findMany({
             where: { cliente_id: id, status: { not: 'CANCELADO' } },
-            data: { status: 'CANCELADO' },
+            select: {
+              id: true,
+              categoria: true,
+              origem_fluxo: true,
+              plano_corte_id: true,
+              fluxo_tipo: true,
+              macroetapa: true,
+              subetapa: true,
+              execucao_etapa: true,
+            },
           });
+          for (const agenda of agendasFabrica) {
+            await tx.agenda_fabrica.update({
+              where: { id: agenda.id },
+              data: {
+                status: 'CANCELADO',
+                ...this.agendaService.montarCamposStatusMatrixFromAtual({
+                  categoria: agenda.categoria ?? null,
+                  status: 'CANCELADO',
+                  origemFluxo: agenda.origem_fluxo ?? null,
+                  planoCorteId: agenda.plano_corte_id ?? null,
+                  fluxoTipo: agenda.fluxo_tipo ?? null,
+                  macroetapa: agenda.macroetapa ?? null,
+                  subetapa: agenda.subetapa ?? null,
+                  execucaoEtapa: agenda.execucao_etapa ?? null,
+                }),
+              },
+            });
+          }
 
           await tx.contratos.updateMany({
             where: {

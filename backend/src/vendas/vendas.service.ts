@@ -5,13 +5,14 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AgendaService } from '../agenda/agenda.service';
+import { EstoqueService } from '../estoque/estoque.service';
 import { CreateVendaDto } from './dto/create-venda.dto';
 import { UpdateVendaDto } from './dto/update-venda.dto';
 import {
   STATUS_POS_VENDA,
   statusClienteEhValido,
   validarTransicaoStatusCliente,
-} from '../shared/constantes/pipeline-cliente';
+} from '../shared/constantes/status-matrix';
 import { VENDA_FECHAMENTO_REGRAS } from '../shared/constantes/venda-fechamento';
 
 function round2(n: number) {
@@ -27,6 +28,7 @@ export class VendasService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly agendaService: AgendaService,
+    private readonly estoqueService: EstoqueService,
   ) {}
 
   private readonly statusPosVenda = STATUS_POS_VENDA;
@@ -117,18 +119,49 @@ export class VendasService {
     const inicio = new Date();
     const fim = new Date(inicio.getTime() + 60 * 60 * 1000);
 
-    await this.prisma.agenda_fabrica.create({
-      data: {
-        titulo: `Produção da venda #${vendaId}`,
-        inicio_em: inicio,
-        fim_em: fim,
-        categoria: 'PRODUCAO_RECEBIDA',
-        origem_fluxo: 'LOJA_VENDA',
-        status: 'PENDENTE',
-        venda_id: vendaId,
-        cliente_id: venda.cliente_id || null,
-      },
+    await this.agendaService.criarAgendaFabricaAutomatica({
+      titulo: `Produção da venda #${vendaId}`,
+      inicio_em: inicio,
+      fim_em: fim,
+      subetapa: 'PRODUCAO',
+      origem_fluxo: 'LOJA_VENDA',
+      status: 'PENDENTE',
+      venda_id: vendaId,
+      cliente_id: venda.cliente_id || null,
     });
+  }
+
+  private async processarAutomacoesPosFechamento(
+    vendaId: number,
+    statusAnteriorRaw: string | null | undefined,
+    statusNovoRaw: string | null | undefined,
+  ) {
+    const statusAnterior = String(statusAnteriorRaw || '').toUpperCase();
+    const statusNovo = String(statusNovoRaw || '').toUpperCase();
+
+    if (
+      statusAnterior !== 'CONTRATO_ASSINADO' &&
+      statusNovo === 'CONTRATO_ASSINADO'
+    ) {
+      await this.enviarAutomaticamenteParaProducaoQuandoContratoAssinado(vendaId);
+    }
+
+    const statusFechamento = ['VENDA_FECHADA', 'CONTRATO_ASSINADO'];
+    const entrouNoFechamento =
+      !statusFechamento.includes(statusAnterior) &&
+      statusFechamento.includes(statusNovo);
+
+    if (entrouNoFechamento) {
+      try {
+        await this.estoqueService.reservarAutomaticoPorVendaFechada(vendaId);
+      } catch (err: any) {
+        // Reserva de estoque não pode bloquear o fechamento da venda.
+        console.warn(
+          `[VendasService] Falha na reserva automática de estoque da venda #${vendaId}:`,
+          err?.message || err,
+        );
+      }
+    }
   }
 
   // ===============================
@@ -611,7 +644,7 @@ export class VendasService {
       soma_comissoes: somaComissoes,
     });
 
-    return this.prisma.$transaction(async (tx) => {
+    const vendaCriada = await this.prisma.$transaction(async (tx) => {
       const vendedorId = (orc as any).vendedor_responsavel_id ?? orc.cliente?.vendedor_responsavel_id ?? undefined;
       const venda = await tx.vendas.create({
         data: {
@@ -742,6 +775,16 @@ export class VendasService {
         },
       });
     });
+
+    if (vendaCriada?.id) {
+      await this.processarAutomacoesPosFechamento(
+        vendaCriada.id,
+        '',
+        String(dto.status || ''),
+      );
+    }
+
+    return vendaCriada;
   }
   async enviarParaProducao(vendaId: number, dataProducao: string) {
     throw new BadRequestException(
@@ -988,12 +1031,7 @@ export class VendasService {
 
     const statusAnterior = String(atual.status || '').toUpperCase();
     const statusNovo = String(dto.status || statusAnterior).toUpperCase();
-    if (
-      statusAnterior !== 'CONTRATO_ASSINADO' &&
-      statusNovo === 'CONTRATO_ASSINADO'
-    ) {
-      await this.enviarAutomaticamenteParaProducaoQuandoContratoAssinado(id);
-    }
+    await this.processarAutomacoesPosFechamento(id, statusAnterior, statusNovo);
 
     return vendaAtualizada;
   }
@@ -1036,12 +1074,7 @@ export class VendasService {
     }
     const statusAnterior = String(venda.status || '').toUpperCase();
     const statusNovo = String(status || '').toUpperCase();
-    if (
-      statusAnterior !== 'CONTRATO_ASSINADO' &&
-      statusNovo === 'CONTRATO_ASSINADO'
-    ) {
-      await this.enviarAutomaticamenteParaProducaoQuandoContratoAssinado(id);
-    }
+    await this.processarAutomacoesPosFechamento(id, statusAnterior, statusNovo);
     return vendaAtualizada;
   }
 

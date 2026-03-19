@@ -148,6 +148,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { ContratosService } from '@/services/index'
+import { getStatusVendaOperacionalLabel } from '@/constantes'
 import { format } from '@/utils/format'
 import { notify } from '@/services/notify'
 
@@ -182,21 +183,7 @@ const totais = computed(() => {
 })
 
 function labelStatusObra(status) {
-  const s = String(status || '').trim()
-  const map = {
-    AGENDAR_MEDIDA_FINA: 'Agendar medida fina',
-    MEDIDA_FINA_AGENDADA: 'Medição (agendada)',
-    MEDIDA_FINA_REALIZADA: 'Medição (realizada)',
-    AGUARDANDO_PROJETO_TECNICO: 'Aguard. projeto',
-    PROJETO_TECNICO_EM_ANDAMENTO: 'Projeto em andamento',
-    PROJETO_TECNICO_CONCLUIDO: 'Projeto concluído',
-    PRODUCAO_AGENDADA: 'Produção (agendada)',
-    EM_PRODUCAO: 'Em produção',
-    PRODUCAO_FINALIZADA: 'Produção finalizada',
-    MONTAGEM_AGENDADA: 'Montagem (agendada)',
-    EM_MONTAGEM: 'Em montagem',
-  }
-  return map[s] || s.replace(/_/g, ' ') || '—'
+  return getStatusVendaOperacionalLabel(status) || '—'
 }
 
 async function carregar() {

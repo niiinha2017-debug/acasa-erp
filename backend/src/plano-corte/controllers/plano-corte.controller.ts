@@ -14,7 +14,7 @@ import {
 import { PlanoCorteService } from '../service/plano-corte.service';
 import { CreatePlanoCorteDto } from '../dto/create-plano-corte.dto';
 import { UpdatePlanoCorteDto } from '../dto/update-plano-corte.dto';
-import { PIPELINE_PLANO_CORTE } from '../../shared/constantes/pipeline-plano-corte';
+import { PIPELINE_PLANO_CORTE } from '../../shared/constantes/status-matrix';
 
 import { PermissionsGuard } from '../../auth/permissions.guard';
 import { Permissoes } from '../../auth/permissoes.decorator';

@@ -1,28 +1,13 @@
-import { Body, Controller, Get, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
 import { PriceStrategyFiltersDto } from './dto/price-strategy-filters.dto';
-import { UpdateSearchStrategyDto } from './dto/update-search-strategy.dto';
 import { EstrategiaPrecosService } from './estrategia-precos.service';
-
-type SearchStrategy = 'MIN_PRICE' | 'AVG_PRICE' | 'MAX_PRICE';
 
 @UseGuards(PermissionsGuard)
 @Controller('configuracoes/estrategia-precos')
 export class EstrategiaPrecosController {
   constructor(private readonly service: EstrategiaPrecosService) {}
-
-  @Get()
-  @Permissoes('configuracoes.estrategia_precos.ver')
-  buscarConfig() {
-    return this.service.getConfig();
-  }
-
-  @Patch()
-  @Permissoes('configuracoes.estrategia_precos.editar')
-  atualizarEstrategia(@Body() dto: UpdateSearchStrategyDto) {
-    return this.service.updateStrategy(dto.search_strategy as SearchStrategy);
-  }
 
   @Get('produto-referencia')
   @Permissoes('configuracoes.estrategia_precos.ver')
@@ -44,20 +29,27 @@ export class EstrategiaPrecosController {
 
   @Get('materiais-mdf/busca')
   @Permissoes('configuracoes.estrategia_precos.ver')
-  buscarMateriaisMdf(@Query('termo') termo?: string, @Query('strategy') strategy?: SearchStrategy) {
-    return this.service.buscarReferenciasMdfPorTermo(String(termo || ''), strategy ?? 'AVG_PRICE');
+  buscarMateriaisMdf(@Query('termo') termo?: string) {
+    return this.service.buscarReferenciasMdfPorTermo(String(termo || ''));
   }
 
   @Get('materiais-mdf/por-categoria')
   @Permissoes('configuracoes.estrategia_precos.ver')
   buscarMdfPorCategoria(
     @Query('categoria_comercial') categoriaComercial?: string,
-    @Query('strategy') strategy?: SearchStrategy,
+    @Query('termo') termo?: string,
   ) {
     return this.service.buscarMdfPorCategoriaComercial(
       categoriaComercial ?? 'PRIMARIA',
-      strategy ?? 'AVG_PRICE',
+      termo,
     );
+  }
+
+  @Get('materiais-mdf/custo-consolidado')
+  @Permissoes('configuracoes.estrategia_precos.ver', 'agendamentos.vendas')
+  buscarCustoConsolidadoMdf(@Query('produto_id') produtoId?: string) {
+    const id = produtoId ? Number(String(produtoId).replace(/\D/g, '')) : 0;
+    return this.service.buscarCustoConsolidadoMdf(id);
   }
 
   @Get('insumos-fixos')
@@ -67,7 +59,7 @@ export class EstrategiaPrecosController {
   }
 
   @Get('matriz-operacional/custos-internos')
-  @Permissoes('configuracoes.estrategia_precos.ver')
+  @Permissoes('configuracoes.estrategia_precos.ver', 'agendamentos.vendas')
   calcularCustosInternos(
     @Query('mes') mes?: string,
     @Query('ano') ano?: string,
@@ -117,6 +109,7 @@ export class EstrategiaPrecosController {
         category?: string;
         thickness?: number;
         group?: string;
+        adicional_fita_m2?: number;
         acrescimo_pct?: number;
         area_m2?: number;
       }>;
@@ -130,9 +123,21 @@ export class EstrategiaPrecosController {
     return this.service.processOperationalMatrix(body ?? {});
   }
 
+  @Get('matriz-operacional/selecoes')
+  @Permissoes('configuracoes.estrategia_precos.ver')
+  listarSelecoesMatriz() {
+    return this.service.listarSelecoesMatrizOperacional();
+  }
+
   @Get('matriz-operacional')
   @Permissoes('configuracoes.estrategia_precos.ver')
   listarMatriz(@Query() filters: PriceStrategyFiltersDto) {
     return this.service.listarMatrizOperacional(filters);
+  }
+
+  @Get('matriz-operacional/configuracoes-preco')
+  @Permissoes('configuracoes.estrategia_precos.ver', 'agendamentos.vendas')
+  listarConfiguracoesPreco() {
+    return this.service.listarConfiguracoesPreco();
   }
 }

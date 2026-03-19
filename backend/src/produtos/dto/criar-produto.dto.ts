@@ -13,13 +13,6 @@ export enum StatusProduto {
   INATIVO = 'INATIVO',
 }
 
-export enum TipoAplicacaoProduto {
-  MDF = 'MDF',
-  MATERIA_PRIMA = 'MATERIA_PRIMA',
-  COMPLEMENTO = 'COMPLEMENTO',
-  INSUMO = 'INSUMO',
-}
-
 export class CreateProdutoDto {
   @Type(() => Number)
   @IsInt()
@@ -69,8 +62,20 @@ export class CreateProdutoDto {
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
+  @Min(0.001)
+  metragem_rolo_m?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
   @Min(0)
   preco_m2?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  adicional_fita_m2?: number;
 
   @IsOptional()
   @Type(() => Number)
@@ -86,15 +91,13 @@ export class CreateProdutoDto {
 
   @IsOptional()
   @IsString()
-  categoria?: string;
-
-  @IsOptional()
-  @IsString()
   categoria_base?: string;
 
   @IsOptional()
-  @IsEnum(TipoAplicacaoProduto)
-  tipo_aplicacao?: TipoAplicacaoProduto;
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  fita_vinculada_id?: number;
 
   @IsOptional()
   @Type(() => Number)
@@ -107,6 +110,39 @@ export class CreateProdutoDto {
   @IsNumber()
   @Min(0)
   valor_total?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0.0001)
+  insumo_fator_conversao?: number;
+
+  @IsOptional()
+  @IsString()
+  insumo_unidade_referencia?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  insumo_consumo_m2?: number;
+
+  @IsOptional()
+  @IsString()
+  unidade_compra?: string;
+
+  @IsOptional()
+  @IsString()
+  unidade_consumo?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  fator_conversao?: number;
+
+  @IsOptional()
+  @IsString()
+  categoria_ferragem?: string;
 
   @IsOptional()
   @IsEnum(StatusProduto)

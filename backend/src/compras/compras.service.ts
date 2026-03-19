@@ -11,6 +11,16 @@ import { AtualizarCompraDto } from './dto/atualizar-compra.dto';
 export class ComprasService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private normalizeFatorConversao(value: any): number {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? n : 1;
+  }
+
+  private calcCustoUnitarioReal(valorUnitario: number, fatorConversao: number): number {
+    const fator = this.normalizeFatorConversao(fatorConversao);
+    return Number(valorUnitario || 0) / fator;
+  }
+
   // --- MÉTODOS AUXILIARES ---
 
   private num(n: any, field: string) {
@@ -109,12 +119,20 @@ export class ComprasService {
 
       const valorUnit = this.num(it.valor_unitario ?? 0, 'item.valor_unitario');
       const qtdComprada = this.num(it.quantidade ?? 0, 'item.quantidade');
+      const produto = await this.prisma.produtos.findUnique({
+        where: { id: it.produto_id },
+        select: { fator_conversao: true },
+      });
+      const fator = this.normalizeFatorConversao((produto as any)?.fator_conversao);
+      const qtdEstoque = qtdComprada * fator;
+      const custoUnitarioReal = this.calcCustoUnitarioReal(valorUnit, fator);
 
       await this.prisma.produtos.update({
         where: { id: it.produto_id },
         data: {
           valor_unitario: valorUnit,
-          quantidade: { increment: qtdComprada },
+          custo_unitario_real: custoUnitarioReal,
+          quantidade: { increment: qtdEstoque },
           atualizado_em: new Date(),
         },
       });
@@ -125,7 +143,7 @@ export class ComprasService {
   // ESTOQUE (UPDATE) -> delta
   // + atualiza valor_unitario pelo "último" visto em depois
   // ============================
-  private somarPorProdutoId(
+  private async somarPorProdutoId(
     itens: Array<{
       produto_id?: number | null;
       quantidade: any;
@@ -133,12 +151,25 @@ export class ComprasService {
     }>,
     fieldPrefix: string,
   ) {
+    const produtoIds = [...new Set((itens || []).map((i) => Number(i?.produto_id || 0)).filter((id) => id > 0))];
+    const produtos = produtoIds.length
+      ? await this.prisma.produtos.findMany({
+          where: { id: { in: produtoIds } },
+          select: { id: true, fator_conversao: true },
+        })
+      : [];
+    const fatorByProduto = new Map<number, number>(
+      (produtos || []).map((p: any) => [Number(p.id), this.normalizeFatorConversao(p.fator_conversao)]),
+    );
+
     const map = new Map<number, { qtd: number; valor_unitario: number }>();
     for (const it of itens || []) {
       if (!it.produto_id) continue;
 
       const id = Number(it.produto_id);
-      const qtd = this.num(it.quantidade ?? 0, `${fieldPrefix}.quantidade`);
+      const qtdCompra = this.num(it.quantidade ?? 0, `${fieldPrefix}.quantidade`);
+      const fator = fatorByProduto.get(id) ?? 1;
+      const qtd = qtdCompra * fator;
       const vu = this.num(
         it.valor_unitario ?? 0,
         `${fieldPrefix}.valor_unitario`,
@@ -164,8 +195,8 @@ export class ComprasService {
       valor_unitario?: any;
     }>,
   ) {
-    const A = this.somarPorProdutoId(antes, 'antes');
-    const B = this.somarPorProdutoId(depois, 'depois');
+    const A = await this.somarPorProdutoId(antes, 'antes');
+    const B = await this.somarPorProdutoId(depois, 'depois');
 
     const ids = new Set<number>([...A.keys(), ...B.keys()]);
 
@@ -178,9 +209,18 @@ export class ComprasService {
         // mesmo sem delta, se quiser manter valor_unitario atualizado pelo "depois"
         const vuMesmo = B.get(produto_id)?.valor_unitario;
         if (vuMesmo !== undefined) {
+          const produto = await this.prisma.produtos.findUnique({
+            where: { id: produto_id },
+            select: { fator_conversao: true },
+          });
+          const fator = this.normalizeFatorConversao((produto as any)?.fator_conversao);
           await this.prisma.produtos.update({
             where: { id: produto_id },
-            data: { valor_unitario: vuMesmo, atualizado_em: new Date() },
+            data: {
+              valor_unitario: vuMesmo,
+              custo_unitario_real: this.calcCustoUnitarioReal(vuMesmo, fator),
+              atualizado_em: new Date(),
+            },
           });
         }
         continue;
@@ -191,10 +231,17 @@ export class ComprasService {
         A.get(produto_id)?.valor_unitario ??
         0;
 
+      const produto = await this.prisma.produtos.findUnique({
+        where: { id: produto_id },
+        select: { fator_conversao: true },
+      });
+      const fator = this.normalizeFatorConversao((produto as any)?.fator_conversao);
+
       await this.prisma.produtos.update({
         where: { id: produto_id },
         data: {
           valor_unitario: valorUnit,
+          custo_unitario_real: this.calcCustoUnitarioReal(valorUnit, fator),
           quantidade:
             delta > 0 ? { increment: delta } : { decrement: Math.abs(delta) },
           atualizado_em: new Date(),
@@ -211,11 +258,24 @@ export class ComprasService {
   ) {
     if (!itens?.length) return;
 
+    const produtoIds = [...new Set((itens || []).map((i) => Number(i?.produto_id || 0)).filter((id) => id > 0))];
+    const produtos = produtoIds.length
+      ? await this.prisma.produtos.findMany({
+          where: { id: { in: produtoIds } },
+          select: { id: true, fator_conversao: true },
+        })
+      : [];
+    const fatorByProduto = new Map<number, number>(
+      (produtos || []).map((p: any) => [Number(p.id), this.normalizeFatorConversao(p.fator_conversao)]),
+    );
+
     const map = new Map<number, number>();
     for (const it of itens) {
       if (!it.produto_id) continue;
       const id = Number(it.produto_id);
-      const qtd = this.num(it.quantidade ?? 0, 'itens.quantidade');
+      const qtdCompra = this.num(it.quantidade ?? 0, 'itens.quantidade');
+      const fator = fatorByProduto.get(id) ?? 1;
+      const qtd = qtdCompra * fator;
       map.set(id, this.round2((map.get(id) || 0) + qtd));
     }
 

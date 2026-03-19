@@ -85,7 +85,7 @@ export class CreateAgendaDto {
 
   @IsOptional()
   @IsString()
-  categoria?: string; // Agora não barra mais o 400 se não for enviado
+  subetapa?: string;
 
   @IsOptional()
   @IsString()

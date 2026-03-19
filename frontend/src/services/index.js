@@ -250,22 +250,34 @@ export const PlanoCorteService = {
 // --- PRODUTOS ---
 export const ProdutosService = {
   listar: (filtros = {}) => api.get('/produtos', { params: filtros }),
+  buscarComFiltros: (filtros = {}) => api.get('/produtos/buscar/filtros', { params: filtros }),
   listarAbaixoEstoqueMinimo: () => api.get('/produtos/abaixo-estoque-minimo'),
   buscar: (id) => api.get(`/produtos/${id}`),
   salvar: (id, dados) => (id ? api.put(`/produtos/${id}`, dados) : api.post('/produtos', dados)),
   remover: (id) => api.delete(`/produtos/${id}`),
+  listarFerragens: (filtros = {}) =>
+    api.get('/produtos/buscar/filtros', { params: { ...filtros, categoria_base: 'FERRAGEM' } }),
+}
+
+export const EstoqueService = {
+  disponibilidade: (params = {}) => api.get('/estoque/disponibilidade', { params }),
+  darEntradaManual: (dados) => api.post('/estoque/dar-entrada/manual', dados),
+  darEntradaNf: (dados) => api.post('/estoque/dar-entrada/nf', dados),
+  reservarVenda: (vendaId, dados = {}) => api.post(`/estoque/reservar-venda/${vendaId}`, dados),
 }
 
 export const EstrategiaPrecosService = {
-  buscarConfig: () => api.get('/configuracoes/estrategia-precos'),
-  atualizarConfig: (search_strategy) => api.patch('/configuracoes/estrategia-precos', { search_strategy }),
   listarMateriais: (filtros = {}) => api.get('/configuracoes/estrategia-precos/materiais', { params: filtros }),
   listarInsumosFixos: () => api.get('/configuracoes/estrategia-precos/insumos-fixos'),
   listarMateriaisMdf: () => api.get('/configuracoes/estrategia-precos/materiais-mdf'),
-  buscarMateriaisMdfPorTermo: (termo, strategy = 'AVG_PRICE') =>
-    api.get('/configuracoes/estrategia-precos/materiais-mdf/busca', { params: { termo, strategy } }),
-    buscarMdfPorCategoria: (categoriaComercial, strategy = 'AVG_PRICE') =>
-      api.get('/configuracoes/estrategia-precos/materiais-mdf/por-categoria', { params: { categoria_comercial: categoriaComercial, strategy } }),
+  buscarMateriaisMdfPorTermo: (termo) =>
+    api.get('/configuracoes/estrategia-precos/materiais-mdf/busca', { params: { termo } }),
+  buscarMdfPorCategoria: (categoriaComercial, termo = '') =>
+    api.get('/configuracoes/estrategia-precos/materiais-mdf/por-categoria', {
+      params: { categoria_comercial: categoriaComercial, termo },
+    }),
+  buscarCustoConsolidadoMdf: (produtoId) =>
+    api.get('/configuracoes/estrategia-precos/materiais-mdf/custo-consolidado', { params: { produto_id: produtoId } }),
   buscarProdutoReferencia: (filtros = {}) => api.get('/configuracoes/estrategia-precos/produto-referencia', { params: filtros }),
   // Matriz Operacional de Insumos Base
   calcularCustosInternos: (params = {}) =>
@@ -274,6 +286,8 @@ export const EstrategiaPrecosService = {
       api.get('/configuracoes/estrategia-precos/matriz-operacional/custos-rh', { params }),
   processarMatriz: (payload = {}) => api.post('/configuracoes/estrategia-precos/matriz-operacional/processar', payload),
   listarMatriz: (filtros = {}) => api.get('/configuracoes/estrategia-precos/matriz-operacional', { params: filtros }),
+    listarSelecoesMatriz: () => api.get('/configuracoes/estrategia-precos/matriz-operacional/selecoes'),
+  listarConfiguracoesPreco: () => api.get('/configuracoes/estrategia-precos/matriz-operacional/configuracoes-preco'),
 }
 
 // --- USUÁRIOS ---
@@ -575,9 +589,10 @@ export const AgendaService = {
   buscarPorFuncionario(id) {
     return api.get(`/agenda/funcionario/${id}`);
   },
-  atualizarStatus(id, status, categoria) {
-    const body = { status };
-    if (categoria) body.categoria = categoria;
+  atualizarStatus(id, payload) {
+    const body = { status: payload?.status };
+    if (payload?.categoria) body.categoria = payload.categoria;
+    if (payload?.subetapa) body.subetapa = payload.subetapa;
     return api.patch(`/agenda/${id}/status`, body);
   },
   enviarParaProducao(id) {
@@ -603,9 +618,10 @@ export const AgendaLojaService = {
   buscarPorFuncionario(id) {
     return api.get(`/agenda-loja/funcionario/${id}`);
   },
-  atualizarStatus(id, status, categoria) {
-    const body = { status };
-    if (categoria) body.categoria = categoria;
+  atualizarStatus(id, payload) {
+    const body = { status: payload?.status };
+    if (payload?.categoria) body.categoria = payload.categoria;
+    if (payload?.subetapa) body.subetapa = payload.subetapa;
     return api.patch(`/agenda-loja/${id}/status`, body);
   },
   enviarParaProducao(id) {
@@ -643,11 +659,12 @@ export const AgendaFabricaService = {
   buscarPorFuncionario(id) {
     return api.get(`/agenda-fabrica/funcionario/${id}`);
   },
-  atualizarStatus(id, status, categoria, alteradoEm, dataConclusao) {
-    const body = { status };
-    if (categoria) body.categoria = categoria;
-    if (alteradoEm) body.alterado_em = alteradoEm;
-    if (dataConclusao) body.data_conclusao = dataConclusao;
+  atualizarStatus(id, payload) {
+    const body = { status: payload?.status };
+    if (payload?.categoria) body.categoria = payload.categoria;
+    if (payload?.subetapa) body.subetapa = payload.subetapa;
+    if (payload?.alteradoEm) body.alterado_em = payload.alteradoEm;
+    if (payload?.dataConclusao) body.data_conclusao = payload.dataConclusao;
     return api.patch(`/agenda-fabrica/${id}/status`, body);
   },
   excluir(id) {
@@ -682,6 +699,30 @@ export const TotemFabricaService = {
   /** Medição por ambiente: retorna medicao_orcamento com ambientes (ou null). */
   getMedicaoOrcamento(agendaLojaId) {
     return api.get(`/totem-fabrica/${agendaLojaId}/medicao-orcamento`);
+  },
+  /** Pré-medição por cliente: retorna rascunho atual ou cria um novo. */
+  getOuCriarPreMedicao(clienteId) {
+    return api.get(`/totem-fabrica/pre-medicao/cliente/${clienteId}`);
+  },
+  /** Salva/atualiza ambiente no rascunho da pré-medição. */
+  salvarAmbientePreMedicao(preMedicaoId, body) {
+    return api.post(`/totem-fabrica/pre-medicao/${preMedicaoId}/ambiente`, body);
+  },
+  /** Remove ambiente do rascunho da pré-medição. */
+  removerAmbientePreMedicao(preMedicaoId, ambienteId) {
+    return api.delete(`/totem-fabrica/pre-medicao/${preMedicaoId}/ambiente/${ambienteId}`);
+  },
+  /** Vincula o rascunho ao agendamento técnico e importa os ambientes para a medição oficial. */
+  vincularPreMedicao(preMedicaoId, agendaLojaId) {
+    return api.post(`/totem-fabrica/pre-medicao/${preMedicaoId}/vincular-agendamento/${agendaLojaId}`);
+  },
+  /** Fluxo Venda Direta: cria agenda automática e libera geração imediata de orçamento técnico. */
+  iniciarVendaDiretaComPreMedicao(preMedicaoId) {
+    return api.post(`/totem-fabrica/pre-medicao/${preMedicaoId}/digitar-medidas-agora`);
+  },
+  /** Fluxo Visita Técnica: cria agendamento para preenchimento da medida real via Totem. */
+  solicitarMedicaoTecnicaComPreMedicao(preMedicaoId) {
+    return api.post(`/totem-fabrica/pre-medicao/${preMedicaoId}/solicitar-medicao-tecnica`);
   },
   /** Salva um único ambiente (Cozinha, Sala, etc.). Body: { nome_ambiente, largura_m?, pe_direito_m?, profundidade_m?, observacoes?, medidas? }. */
   salvarAmbienteMedicao(agendaLojaId, body) {
@@ -718,6 +759,35 @@ export const OrcamentoTecnicoService = {
   /** Cria orçamento técnico a partir dos ambientes selecionados. Body: { agenda_loja_id, ambiente_ids: number[] }. */
   criarNovo(body) {
     return api.post('/orcamentos/tecnico-novo', body);
+  },
+  criarDireto(body) {
+    return api.post('/orcamentos/tecnico-direto', body);
+  },
+  finalizar(id, body) {
+    return api.post(`/orcamentos/tecnico/${id}/finalizar`, body);
+  },
+  /**
+   * Importa arquivo CSV ou XML (Promob / Corte Cloud) e retorna custo real cruzado com Aba 1 + Aba 2 + Aba 3.
+   * formData: FormData com campo "arquivo" + campos opcionais hora_homem_value, custo_fixo_fabrica_value, acrescimo_pct
+   */
+  importarProjeto(formData) {
+    return api.post('/orcamentos/tecnico-importar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  /**
+   * Vincula os itens importados à categoria comercial do produto no DB.
+   * Itens sem match aparecem em `itens_pendentes` para classificação manual.
+   * Body: { itens, hora_homem_value?, custo_fixo_fabrica_value?, acrescimo_pct? }
+   */
+  vincularMateriais(dados) {
+    return api.post('/orcamentos/tecnico-vincular', dados);
+  },
+  /**
+   * Gera PDF de Proposta Técnica para o cliente (apenas preço de venda, sem custos internos).
+   */
+  gerarPdfProposta(id, body) {
+    return api.post(`/orcamento-tecnico/${id}/pdf-proposta`, body);
   },
 };
 

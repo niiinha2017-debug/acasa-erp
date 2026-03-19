@@ -1,1 +1,1 @@
-export * from '@backend/shared/constantes/pipeline-cliente'
+export * from '@backend/shared/constantes/status-matrix'

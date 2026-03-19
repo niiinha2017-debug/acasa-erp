@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { classificarVendaPorFluxoMatrixOuLegado } from '../shared/constantes/status-matrix';
 @Injectable()
 export class AnalyticsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -217,33 +218,48 @@ export class AnalyticsService {
       },
     });
 
-    const normalize = (s: string) =>
-      String(s || '')
-        .trim()
-        .toUpperCase()
-        .replace(/\s+/g, '_');
-
-    const statusProducao = [
-      'PRODUCAO_AGENDADA',
-      'EM_PRODUCAO',
-      'PRODUCAO_FINALIZADA',
-    ];
-    const statusFinalizadas = ['MONTAGEM_FINALIZADA', 'ENCERRADO'];
+    const vendaIds = vendas.map((v) => v.id);
+    const agendas = vendaIds.length
+      ? await this.prisma.agenda_fabrica.findMany({
+          where: {
+            venda_id: { in: vendaIds },
+            status: { not: 'CANCELADO' },
+          },
+          select: {
+            venda_id: true,
+            subetapa: true,
+            execucao_etapa: true,
+            status: true,
+          },
+        })
+      : [];
+    const agendasPorVenda = new Map<
+      number,
+      Array<{
+        subetapa?: string | null;
+        execucao_etapa?: string | null;
+        status?: string | null;
+      }>
+    >();
+    for (const a of agendas) {
+      const vendaId = Number(a.venda_id || 0);
+      if (!vendaId) continue;
+      const list = agendasPorVenda.get(vendaId) || [];
+      list.push(a);
+      agendasPorVenda.set(vendaId, list);
+    }
 
     let emProducao = 0;
     let finalizadas = 0;
     let vendasMes = 0;
 
     for (const v of vendas) {
-      const key = normalize(v.status);
-      if (
-        statusProducao.some((x) => key.includes(x) || key === 'EM_PRODUCAO')
-      ) {
-        emProducao += 1;
-      }
-      if (statusFinalizadas.some((x) => key === x)) {
-        finalizadas += 1;
-      }
+      const classificacao = classificarVendaPorFluxoMatrixOuLegado({
+        statusVenda: v.status,
+        agendas: agendasPorVenda.get(v.id) || [],
+      });
+      if (classificacao.emProducao) emProducao += 1;
+      if (classificacao.finalizada) finalizadas += 1;
 
       if (v.data_venda && v.data_venda >= inicioMes && v.data_venda <= fimMes) {
         vendasMes += 1;
@@ -274,24 +290,45 @@ export class AnalyticsService {
     const vendas = await this.prisma.vendas.findMany({
       select: { id: true, status: true },
     });
-    const statusProducao = [
-      'PRODUCAO_AGENDADA',
-      'EM_PRODUCAO',
-      'PRODUCAO_FINALIZADA',
-    ];
-    const statusFinalizadas = ['MONTAGEM_FINALIZADA', 'ENCERRADO'];
-    const normalize = (s: string) =>
-      String(s || '')
-        .trim()
-        .toUpperCase()
-        .replace(/\s+/g, '_');
+    const vendaIds = vendas.map((v) => v.id);
+    const agendas = vendaIds.length
+      ? await this.prisma.agenda_fabrica.findMany({
+          where: {
+            venda_id: { in: vendaIds },
+            status: { not: 'CANCELADO' },
+          },
+          select: {
+            venda_id: true,
+            subetapa: true,
+            execucao_etapa: true,
+            status: true,
+          },
+        })
+      : [];
+    const agendasPorVenda = new Map<
+      number,
+      Array<{
+        subetapa?: string | null;
+        execucao_etapa?: string | null;
+        status?: string | null;
+      }>
+    >();
+    for (const a of agendas) {
+      const vendaId = Number(a.venda_id || 0);
+      if (!vendaId) continue;
+      const list = agendasPorVenda.get(vendaId) || [];
+      list.push(a);
+      agendasPorVenda.set(vendaId, list);
+    }
     let emProducao = 0;
     let finalizadas = 0;
     for (const v of vendas) {
-      const key = normalize(v.status);
-      if (statusProducao.some((x) => key.includes(x) || key === 'EM_PRODUCAO'))
-        emProducao += 1;
-      if (statusFinalizadas.some((x) => key === x)) finalizadas += 1;
+      const classificacao = classificarVendaPorFluxoMatrixOuLegado({
+        statusVenda: v.status,
+        agendas: agendasPorVenda.get(v.id) || [],
+      });
+      if (classificacao.emProducao) emProducao += 1;
+      if (classificacao.finalizada) finalizadas += 1;
     }
     const planoTotal = await this.prisma.plano_corte.count();
     return {

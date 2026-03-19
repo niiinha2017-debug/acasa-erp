@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpsertCustosEstruturaDto } from './dto/upsert-custos-estrutura.dto';
 import { HORAS_UTEIS_MES_PADRAO, CUSTOS_ESTRUTURA_CONSTANTES } from '../shared/constantes/custos-estrutura';
-import { CATEGORIAS_DESPESA_FIXA_SALARIOS as CATEGORIAS_SALARIO_SHARED } from '../../shared/constantes/funcionarios-custos';
+import { CATEGORIAS_DESPESA_FIXA_SALARIOS as CATEGORIAS_SALARIO_SHARED } from '../shared/constantes/funcionarios-custos';
 function toNum(v: unknown): number {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;

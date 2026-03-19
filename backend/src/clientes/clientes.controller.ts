@@ -18,7 +18,7 @@ import { AtualizarClienteDto } from './dto/atualizar-cliente.dto';
 
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
-import { PIPELINE_CLIENTE } from '../../shared/constantes/pipeline-cliente';
+import { PIPELINE_CLIENTE } from '../shared/constantes/status-matrix';
 
 @UseGuards(PermissionsGuard)
 @Controller('clientes')

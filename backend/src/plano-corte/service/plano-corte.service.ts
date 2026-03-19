@@ -25,10 +25,75 @@ import PDFDocument from 'pdfkit';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { renderHeaderDocumento } from '../../pdf/header-documento';
+import { AgendaService } from '../../agenda/agenda.service';
 
 @Injectable()
 export class PlanoCorteService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly agendaService: AgendaService,
+  ) {}
+
+  private async garantirAgendaProducaoPlanoCorte(
+    plano: { id: number },
+    opts?: { criadoPorUsuarioId?: number },
+    tx: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const agendaExistente = await tx.agenda_fabrica.findFirst({
+      where: { plano_corte_id: plano.id, status: { not: 'CANCELADO' } },
+      select: { id: true },
+    });
+
+    if (agendaExistente) return agendaExistente;
+
+    const inicio = new Date();
+    const fim = new Date(inicio.getTime() + 60 * 60 * 1000);
+    const criadoPorUsuarioId =
+      opts?.criadoPorUsuarioId != null && Number.isFinite(opts.criadoPorUsuarioId)
+        ? opts.criadoPorUsuarioId
+        : null;
+
+    const agenda = await this.agendaService.criarAgendaFabricaAutomatica(
+      {
+        titulo: `Serviço de Corte #${plano.id}`,
+        inicio_em: inicio,
+        fim_em: fim,
+        subetapa: 'SERVICO_CORTE_FITA_BORDA',
+        origem_fluxo: 'PLANO_CORTE',
+        status: 'PENDENTE',
+        plano_corte_id: plano.id,
+        criado_por_usuario_id: criadoPorUsuarioId,
+      },
+      tx,
+    );
+    return { id: agenda.id };
+  }
+
+  private async garantirAgendaParaPlanosLegados(planos: Array<{ id: number }>) {
+    if (!planos.length) return;
+
+    const ids = planos.map((plano) => plano.id);
+    const agendas = await this.prisma.agenda_fabrica.findMany({
+      where: {
+        plano_corte_id: { in: ids },
+        status: { not: 'CANCELADO' },
+      },
+      select: { plano_corte_id: true },
+    });
+
+    const idsComAgenda = new Set(
+      agendas.map((agenda) => Number(agenda.plano_corte_id)).filter(Boolean),
+    );
+
+    const faltantes = planos.filter((plano) => !idsComAgenda.has(plano.id));
+    if (!faltantes.length) return;
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const plano of faltantes) {
+        await this.garantirAgendaProducaoPlanoCorte(plano, undefined, tx);
+      }
+    });
+  }
 
   private brl(value: number) {
     return Number(value || 0).toLocaleString('pt-BR', {
@@ -299,29 +364,7 @@ export class PlanoCorteService {
       }
 
       // Evento isolado na agenda da produção: sem cliente_id (não reflete no acompanhar status), sem prazo de execução
-      const agendaExistente = await tx.agenda_fabrica.findFirst({
-        where: { plano_corte_id: plano.id, status: { not: 'CANCELADO' } },
-        select: { id: true },
-      });
-      if (!agendaExistente) {
-        const inicio = new Date();
-        const fim = new Date(inicio.getTime() + 60 * 60 * 1000);
-        const criadoPor = opts?.criadoPorUsuarioId != null && Number.isFinite(opts.criadoPorUsuarioId)
-          ? { criado_por_usuario_id: opts.criadoPorUsuarioId }
-          : {};
-        await tx.agenda_fabrica.create({
-          data: {
-            titulo: `Serviço de Corte #${plano.id}`,
-            inicio_em: inicio,
-            fim_em: fim,
-            categoria: 'PRODUCAO_RECEBIDA',
-            origem_fluxo: 'PLANO_CORTE',
-            status: 'PENDENTE',
-            plano_corte_id: plano.id,
-            ...criadoPor,
-          },
-        });
-      }
+      await this.garantirAgendaProducaoPlanoCorte({ id: plano.id }, opts, tx);
 
       return tx.plano_corte.findUnique({
         where: { id: plano.id },
@@ -355,7 +398,7 @@ export class PlanoCorteService {
   }
 
   async findAll() {
-    return this.prisma.plano_corte.findMany({
+    const planos = await this.prisma.plano_corte.findMany({
       include: {
         fornecedor: true,
         produtos: { include: { item: true } },
@@ -363,6 +406,9 @@ export class PlanoCorteService {
       },
       orderBy: { data_venda: 'desc' },
     });
+
+    await this.garantirAgendaParaPlanosLegados(planos);
+    return planos;
   }
 
   async findOne(id: number) {
@@ -377,6 +423,8 @@ export class PlanoCorteService {
 
     if (!plano)
       throw new NotFoundException(`Plano de Corte #${id} não encontrado.`);
+
+    await this.garantirAgendaProducaoPlanoCorte(plano);
     return plano;
   }
 
@@ -461,29 +509,7 @@ export class PlanoCorteService {
       });
 
       // 4. Evento isolado na agenda da produção: ao salvar, abre evento na agenda; sem cliente_id (não reflete no acompanhar status), sem prazo
-      const agendaExistente = await tx.agenda_fabrica.findFirst({
-        where: { plano_corte_id: id, status: { not: 'CANCELADO' } },
-        select: { id: true },
-      });
-      if (!agendaExistente) {
-        const inicio = new Date();
-        const fim = new Date(inicio.getTime() + 60 * 60 * 1000);
-        const criadoPor = opts?.criadoPorUsuarioId != null && Number.isFinite(opts.criadoPorUsuarioId)
-          ? { criado_por_usuario_id: opts.criadoPorUsuarioId }
-          : {};
-        await tx.agenda_fabrica.create({
-          data: {
-            titulo: `Serviço de Corte #${id}`,
-            inicio_em: inicio,
-            fim_em: fim,
-            categoria: 'PRODUCAO_RECEBIDA',
-            origem_fluxo: 'PLANO_CORTE',
-            status: 'PENDENTE',
-            plano_corte_id: id,
-            ...criadoPor,
-          },
-        });
-      }
+      await this.garantirAgendaProducaoPlanoCorte({ id }, opts, tx);
 
       // Retorna o plano atualizado com todas as relações
       return tx.plano_corte.findUnique({
@@ -532,4 +558,5 @@ export class PlanoCorteService {
       return { ok: true };
     });
   }
+
 }

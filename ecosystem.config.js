@@ -3,8 +3,7 @@ module.exports = {
     {
       name: 'acasa-backend',
       cwd: '/home/ec2-user/acasa-erp/backend',
-      // Ajustado para o caminho padrão do NestJS
-      script: 'dist/main.js', 
+      script: 'dist/src/main.js',
       exec_mode: 'fork',
       instances: 1,
       autorestart: true,

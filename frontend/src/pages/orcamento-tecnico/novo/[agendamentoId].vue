@@ -113,7 +113,7 @@ import PageHeader from '@/components/ui/PageHeader.vue'
 import Button from '@/components/ui/Button.vue'
 import Loading from '@/components/common/Loading.vue'
 
-definePage({ meta: { perm: 'agendamentos.producao' } })
+definePage({ meta: { perm: 'agendamentos.vendas' } })
 
 const route = useRoute()
 const router = useRouter()
@@ -168,12 +168,16 @@ async function gerarOrcamento() {
   salvando.value = true
   sucesso.value = false
   try {
-    await OrcamentoTecnicoService.criarNovo({
+    const res = await OrcamentoTecnicoService.criarNovo({
       agenda_loja_id: agendamentoId.value,
       ambiente_ids: ambientesSelecionados.value,
     })
+    const created = res?.data ?? res ?? null
     notify.success('Orçamento técnico criado com sucesso.')
     sucesso.value = true
+    if (created?.id) {
+      router.push(`/orcamento-tecnico/${created.id}`)
+    }
   } catch (e) {
     notify.error(e?.response?.data?.message || 'Não foi possível criar o orçamento técnico.')
   } finally {

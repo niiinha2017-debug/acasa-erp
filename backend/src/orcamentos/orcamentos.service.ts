@@ -5,7 +5,7 @@ import { CreateOrcamentoDto } from './dto/create-orcamento.dto';
 import { UpdateOrcamentoDto } from './dto/update-orcamento.dto';
 import { CreateOrcamentoItemDto } from './dto/create-orcamento-item.dto';
 import { UpdateOrcamentoItemDto } from './dto/update-orcamento-item.dto';
-import { validarTransicaoStatusCliente } from '../shared/constantes/pipeline-cliente';
+import { validarTransicaoStatusCliente } from '../shared/constantes/status-matrix';
 import * as path from 'path';
 import { renderHeaderA4Png, resolveAsset } from '../pdf/render-header-a4';
 import PDFKitDoc from 'pdfkit';
@@ -61,6 +61,22 @@ export class OrcamentosService {
       mime_type: string | null;
     }[] = [],
     clausulas: { titulo: string; texto: string }[] = [],
+    dadosTecnicos?: {
+      chapas_inteiras_total?: number | null;
+      custo_chapas_total?: number | null;
+      custo_pecas_terceiros?: number | null;
+      custo_rh_estimado?: number | null;
+      custo_total_producao?: number | null;
+      margem_lucro_pct?: number | null;
+      preco_venda_sugerido?: number | null;
+    } | null,
+    rodapeComercial?: {
+      validade_data?: string | null;
+      valor_entrada?: number | null;
+      quantidade_parcelas?: number | null;
+      observacoes_pagamento?: string | null;
+      prazo_entrega_dias_uteis?: number | null;
+    } | null,
   ): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       const doc = new PDFKitDoc({ size: 'A4', margin: 40 });
@@ -294,6 +310,111 @@ export class OrcamentosService {
           align: 'right',
         });
 
+        if (dadosTecnicos) {
+          const chapas = Math.max(0, Math.round(Number(dadosTecnicos.chapas_inteiras_total || 0)));
+          const custoChapas = Number(dadosTecnicos.custo_chapas_total || 0);
+          const custoTerceiros = Number(dadosTecnicos.custo_pecas_terceiros || 0);
+          const custoRh = Number(dadosTecnicos.custo_rh_estimado || 0);
+          const custoProducao = Number(dadosTecnicos.custo_total_producao || 0);
+          const margem = Number(dadosTecnicos.margem_lucro_pct || 0);
+          const precoVenda = Number(dadosTecnicos.preco_venda_sugerido || 0);
+
+          if (doc.y + 120 > doc.page.height - 40) doc.addPage();
+          doc.y += 10;
+          doc
+            .lineWidth(0.5)
+            .strokeColor('#D6D6D6')
+            .moveTo(left, doc.y)
+            .lineTo(right, doc.y)
+            .stroke();
+          doc.y += 10;
+
+          doc
+            .font('Helvetica-Bold')
+            .fontSize(11)
+            .fillColor('#000')
+            .text('RESUMO TECNICO PROMOB', left, doc.y, { width: tableWidth });
+          doc.y += 8;
+          doc
+            .font('Helvetica')
+            .fontSize(9)
+            .fillColor('#111')
+            .text(`Chapas inteiras estimadas: ${chapas}`, left, doc.y, { width: tableWidth });
+          doc.y += 4;
+          doc.text(`Custo chapas: ${brl(custoChapas)}`, left, doc.y, { width: tableWidth });
+          doc.y += 4;
+          doc.text(`Pecas de terceiros: ${brl(custoTerceiros)}`, left, doc.y, { width: tableWidth });
+          doc.y += 4;
+          doc.text(`Aba 3 (Hora-Homem + Custo Fixo): ${brl(custoRh)}`, left, doc.y, { width: tableWidth });
+          doc.y += 4;
+          doc.text(`Custo total de producao: ${brl(custoProducao)}`, left, doc.y, { width: tableWidth });
+          doc.y += 4;
+          doc.text(`Margem aplicada: ${margem.toFixed(2)}%`, left, doc.y, { width: tableWidth });
+          doc.y += 4;
+          doc.text(`Preco de venda sugerido: ${brl(precoVenda)}`, left, doc.y, { width: tableWidth });
+        }
+
+        if (rodapeComercial) {
+          const validadeDataRaw = String(rodapeComercial.validade_data || '').trim();
+          const validadeDataFmt = /^\d{4}-\d{2}-\d{2}$/.test(validadeDataRaw)
+            ? (() => {
+                const [yy, mm, dd] = validadeDataRaw.split('-');
+                return `${dd}/${mm}/${yy}`;
+              })()
+            : '-';
+          const valorEntrada = Number(rodapeComercial.valor_entrada || 0);
+          const quantidadeParcelas = Math.max(1, Math.round(Number(rodapeComercial.quantidade_parcelas || 1)));
+          const observacoesPagamento = String(rodapeComercial.observacoes_pagamento || '').trim();
+          const prazoEntrega = Math.max(0, Math.round(Number(rodapeComercial.prazo_entrega_dias_uteis || 0)));
+
+          if (doc.y + 130 > doc.page.height - 40) doc.addPage();
+          doc.y += 10;
+          doc
+            .lineWidth(0.5)
+            .strokeColor('#D6D6D6')
+            .moveTo(left, doc.y)
+            .lineTo(right, doc.y)
+            .stroke();
+          doc.y += 10;
+
+          doc
+            .font('Helvetica-Bold')
+            .fontSize(11)
+            .fillColor('#000')
+            .text('RODAPE COMERCIAL', left, doc.y, { width: tableWidth });
+          doc.y += 8;
+
+          doc
+            .font('Helvetica')
+            .fontSize(9)
+            .fillColor('#111')
+            .text(`Validade da proposta: ${validadeDataFmt}`, left, doc.y, { width: tableWidth });
+          doc.y += 4;
+          doc.text(`Valor de entrada: ${brl(valorEntrada)}`, left, doc.y, { width: tableWidth });
+          doc.y += 4;
+          doc.text(`Quantidade de parcelas: ${quantidadeParcelas}`, left, doc.y, { width: tableWidth });
+          doc.y += 4;
+          doc.text(`Prazo de entrega: ${prazoEntrega} dias uteis`, left, doc.y, { width: tableWidth });
+
+          if (observacoesPagamento) {
+            doc.y += 6;
+            doc
+              .font('Helvetica-Bold')
+              .fontSize(9)
+              .fillColor('#000')
+              .text('Observacoes de pagamento:', left, doc.y, { width: tableWidth });
+            doc.y += 3;
+            doc
+              .font('Helvetica')
+              .fontSize(9)
+              .fillColor('#222')
+              .text(observacoesPagamento, left, doc.y, {
+                width: tableWidth,
+                align: 'left',
+              });
+          }
+        }
+
         // Remove o listener para as próximas páginas serem só de anexos (sem repetir layout do orçamento)
         doc.removeListener('pageAdded', handlerPageAdded);
 
@@ -451,7 +572,25 @@ export class OrcamentosService {
 
   async gerarPdfESalvar(
     orcId: number,
-    opts?: { incluirTermos?: boolean },
+    opts?: {
+      incluirTermos?: boolean;
+      dadosTecnicos?: {
+        chapas_inteiras_total?: number;
+        custo_chapas_total?: number;
+        custo_pecas_terceiros?: number;
+        custo_rh_estimado?: number;
+        custo_total_producao?: number;
+        margem_lucro_pct?: number;
+        preco_venda_sugerido?: number;
+      };
+      rodapeComercial?: {
+        validade_data?: string;
+        valor_entrada?: number;
+        quantidade_parcelas?: number;
+        observacoes_pagamento?: string;
+        prazo_entrega_dias_uteis?: number;
+      };
+    },
   ) {
     const orc = await this.detalhar(orcId);
 
@@ -489,7 +628,29 @@ export class OrcamentosService {
       orderBy: { criado_em: 'asc' },
     });
 
-    const pdfBuffer = await this.gerarMioloPdfBuffer(orc, anexos, clausulas);
+    const dadosTecnicos = opts?.dadosTecnicos
+      ? {
+          chapas_inteiras_total: Math.max(0, Math.round(Number(opts.dadosTecnicos.chapas_inteiras_total || 0))),
+          custo_chapas_total: Number(opts.dadosTecnicos.custo_chapas_total || 0),
+          custo_pecas_terceiros: Number(opts.dadosTecnicos.custo_pecas_terceiros || 0),
+          custo_rh_estimado: Number(opts.dadosTecnicos.custo_rh_estimado || 0),
+          custo_total_producao: Number(opts.dadosTecnicos.custo_total_producao || 0),
+          margem_lucro_pct: Number(opts.dadosTecnicos.margem_lucro_pct || 0),
+          preco_venda_sugerido: Number(opts.dadosTecnicos.preco_venda_sugerido || 0),
+        }
+      : null;
+
+    const rodapeComercial = opts?.rodapeComercial
+      ? {
+          validade_data: String(opts.rodapeComercial.validade_data || '').trim() || null,
+          valor_entrada: Number(opts.rodapeComercial.valor_entrada || 0),
+          quantidade_parcelas: Math.max(1, Math.round(Number(opts.rodapeComercial.quantidade_parcelas || 1))),
+          observacoes_pagamento: String(opts.rodapeComercial.observacoes_pagamento || '').trim() || null,
+          prazo_entrega_dias_uteis: Math.max(0, Math.round(Number(opts.rodapeComercial.prazo_entrega_dias_uteis || 0))),
+        }
+      : null;
+
+    const pdfBuffer = await this.gerarMioloPdfBuffer(orc, anexos, clausulas, dadosTecnicos, rodapeComercial);
 
     const dir = path.join(process.cwd(), 'uploads', 'relatorios');
     await fs.mkdir(dir, { recursive: true });

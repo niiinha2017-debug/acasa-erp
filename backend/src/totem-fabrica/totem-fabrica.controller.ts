@@ -8,6 +8,75 @@ import { Permissoes } from '../auth/permissoes.decorator';
 export class TotemFabricaController {
   constructor(private readonly apontamentoService: ApontamentoProducaoService) {}
 
+  /** Pré-medição por cliente: retorna rascunho atual ou cria um novo automaticamente. */
+  @Get('pre-medicao/cliente/:clienteId')
+  @Permissoes('agendamentos.producao', 'agendamentos.vendas')
+  getOuCriarPreMedicao(@Param('clienteId', ParseIntPipe) clienteId: number) {
+    return this.apontamentoService.getOuCriarPreMedicaoByCliente(clienteId);
+  }
+
+  /** Salva/atualiza ambiente no rascunho da pré-medição (por nome). */
+  @Post('pre-medicao/:preMedicaoId/ambiente')
+  @Permissoes('agendamentos.producao', 'agendamentos.vendas')
+  salvarAmbientePreMedicao(
+    @Param('preMedicaoId', ParseIntPipe) preMedicaoId: number,
+    @Body()
+    body: {
+      nome_ambiente: string;
+      largura_m?: number;
+      pe_direito_m?: number;
+      profundidade_m?: number;
+      observacoes?: string;
+    },
+  ) {
+    return this.apontamentoService.salvarAmbientePreMedicao(preMedicaoId, body);
+  }
+
+  /** Remove um ambiente do rascunho da pré-medição. */
+  @Delete('pre-medicao/:preMedicaoId/ambiente/:ambienteId')
+  @Permissoes('agendamentos.producao', 'agendamentos.vendas')
+  removerAmbientePreMedicao(
+    @Param('preMedicaoId', ParseIntPipe) preMedicaoId: number,
+    @Param('ambienteId', ParseIntPipe) ambienteId: number,
+  ) {
+    return this.apontamentoService.removerAmbientePreMedicao(preMedicaoId, ambienteId);
+  }
+
+  /**
+   * Vincula pré-medição ao agendamento técnico e importa os ambientes para medicao_orcamento.
+   * A partir desse momento, a medição por ambiente pode seguir no fluxo normal.
+   */
+  @Post('pre-medicao/:preMedicaoId/vincular-agendamento/:agendaLojaId')
+  @Permissoes('agendamentos.producao', 'agendamentos.vendas')
+  vincularPreMedicaoAoAgendamento(
+    @Param('preMedicaoId', ParseIntPipe) preMedicaoId: number,
+    @Param('agendaLojaId', ParseIntPipe) agendaLojaId: number,
+  ) {
+    return this.apontamentoService.vincularPreMedicaoAoAgendamento(preMedicaoId, agendaLojaId);
+  }
+
+  /** Venda Direta: cria agenda técnica automática e permite gerar orçamento técnico sem depender de agendamento manual. */
+  @Post('pre-medicao/:preMedicaoId/digitar-medidas-agora')
+  @Permissoes('agendamentos.producao', 'agendamentos.vendas')
+  iniciarVendaDiretaComPreMedicao(
+    @Param('preMedicaoId', ParseIntPipe) preMedicaoId: number,
+    @Req() req: { user?: { id?: number } },
+  ) {
+    const userId = req?.user?.id != null ? Number(req.user.id) : undefined;
+    return this.apontamentoService.iniciarVendaDiretaComPreMedicao(preMedicaoId, userId);
+  }
+
+  /** Visita Técnica: cria agendamento e envia a medição para preenchimento via Totem em campo. */
+  @Post('pre-medicao/:preMedicaoId/solicitar-medicao-tecnica')
+  @Permissoes('agendamentos.producao', 'agendamentos.vendas')
+  solicitarMedicaoTecnicaComPreMedicao(
+    @Param('preMedicaoId', ParseIntPipe) preMedicaoId: number,
+    @Req() req: { user?: { id?: number } },
+  ) {
+    const userId = req?.user?.id != null ? Number(req.user.id) : undefined;
+    return this.apontamentoService.solicitarMedicaoTecnicaComPreMedicao(preMedicaoId, userId);
+  }
+
   /**
    * Salva uma parede (lado) de um ambiente. Body: { parede_id?, nome, largura_m?, pe_direito_m?, profundidade_m?, observacoes?, medidas? }.
    * Declarada antes das rotas :id para não ser capturada por elas.
@@ -20,6 +89,8 @@ export class TotemFabricaController {
     body: {
       parede_id?: number;
       nome: string;
+      agenda_loja_id?: number;
+      nome_ambiente?: string;
       largura_m?: number;
       pe_direito_m?: number;
       profundidade_m?: number;

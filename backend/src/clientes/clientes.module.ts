@@ -4,9 +4,10 @@ import { ClientesController } from './clientes.controller';
 import { ClientesAniversarioJob } from './clientes-aniversario.job';
 import { PrismaModule } from '../prisma/prisma.module';
 import { MailModule } from '../mail/mail.module';
+import { AgendaModule } from '../agenda/agenda.module';
 
 @Module({
-  imports: [PrismaModule, MailModule],
+  imports: [PrismaModule, MailModule, AgendaModule],
   providers: [ClientesService, ClientesAniversarioJob],
   controllers: [ClientesController],
 })

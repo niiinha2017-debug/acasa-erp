@@ -67,7 +67,16 @@
           </template>
 
           <template #cell-status="{ row }">
-            <StatusBadge :value="row.status || 'INATIVO'" />
+            <span
+              class="inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
+              :class="row.fluxo_comercial_class"
+            >
+              {{ row.fluxo_comercial || 'Cadastro' }}
+            </span>
+          </template>
+
+          <template #cell-situacao="{ row }">
+            <StatusBadge :value="row.situacao || 'INATIVO'" />
           </template>
 
           <template #cell-acoes="{ row }">
@@ -104,6 +113,7 @@ import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
 import { onlyNumbers } from '@/utils/masks'
 import { usePagination } from '@/composables/usePagination'
+import { getStatusVendaOperacionalLabel, getStatusVendaSubetapa } from '@/constantes'
 
 definePage({ meta: { perm: 'clientes.ver' } })
 
@@ -115,8 +125,9 @@ const clientes = ref([])
 const columns = [
   { key: 'nome_completo', label: 'CLIENTE', width: '40%' },
   { key: 'endereco', label: 'ENDEREÇO', width: '25%' },
-  { key: 'status', label: 'STATUS', width: '15%' },
-  { key: 'acoes', label: 'Ações', align: 'center', width: '20%' },
+  { key: 'status', label: 'FLUXO COMERCIAL', width: '15%' },
+  { key: 'situacao', label: 'SITUAÇÃO', width: '10%' },
+  { key: 'acoes', label: 'Ações', align: 'center', width: '10%' },
 ]
 
 const filtrados = computed(() => {
@@ -126,6 +137,7 @@ const filtrados = computed(() => {
   const termoDigits = onlyNumbers(termo)
 
   return (clientes.value || []).filter((c) => {
+    const fluxoComercial = getStatusVendaOperacionalLabel(c.status || 'CLIENTE_CADASTRADO') || 'Cadastro'
     const texto = [
       c.nome_completo,
       c.razao_social,
@@ -137,6 +149,8 @@ const filtrados = computed(() => {
       c.cidade,
       c.estado,
       c.status,
+      fluxoComercial,
+      c.situacao,
     ]
       .filter(Boolean)
       .join(' ')
@@ -165,13 +179,38 @@ const { page, setPage, total, totalPages, pageSize, rowsToShow } = usePagination
 )
 watch(filtro, () => setPage(1))
 
+function fluxoComercialClass(status) {
+  const subetapa = getStatusVendaSubetapa(status || 'CLIENTE_CADASTRADO')
+  const mapa = {
+    CADASTRO: 'border border-slate-200 bg-slate-100 text-slate-800',
+    MEDIDA: 'border border-sky-200 bg-sky-100 text-sky-800',
+    ORCAMENTO: 'border border-amber-200 bg-amber-100 text-amber-800',
+    APRESENTACAO: 'border border-indigo-200 bg-indigo-100 text-indigo-800',
+    FECHAMENTO: 'border border-emerald-200 bg-emerald-100 text-emerald-800',
+    MEDIDA_FINA: 'border border-cyan-200 bg-cyan-100 text-cyan-800',
+    PROJETO_TECNICO: 'border border-violet-200 bg-violet-100 text-violet-800',
+    PRODUCAO: 'border border-fuchsia-200 bg-fuchsia-100 text-fuchsia-800',
+    MONTAGEM: 'border border-orange-200 bg-orange-100 text-orange-800',
+    GARANTIA: 'border border-lime-200 bg-lime-100 text-lime-800',
+    ASSISTENCIA: 'border border-teal-200 bg-teal-100 text-teal-800',
+    MANUTENCAO: 'border border-rose-200 bg-rose-100 text-rose-800',
+  }
+  if (String(status || '').toUpperCase() === 'ENCERRADO') {
+    return 'border border-slate-300 bg-slate-200 text-slate-700'
+  }
+  return mapa[subetapa] || 'border border-sky-200 bg-sky-50 text-sky-800'
+}
+
 const rows = computed(() =>
   rowsToShow.value.map((c) => ({
     ...c,
     nome_exibicao: c.nome_completo || c.razao_social || '-',
     documento: c.cpf || c.cnpj || '',
     endereco_resumo: [c.endereco, c.numero, c.bairro].filter(Boolean).join(', ') || '-',
-    status: String(c.status || 'INATIVO').toUpperCase(),
+    status: String(c.status || '').toUpperCase(),
+    fluxo_comercial: getStatusVendaOperacionalLabel(c.status || 'CLIENTE_CADASTRADO') || 'Cadastro',
+    fluxo_comercial_class: fluxoComercialClass(c.status),
+    situacao: String(c.situacao || 'INATIVO').toUpperCase(),
   })),
 )
 

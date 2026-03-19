@@ -1,7 +1,7 @@
 {
   "name": "frontend-vue",
   "private": true,
-  "version": "0.1.99",
+  "version": "0.1.100",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -36,6 +36,7 @@
     "axios": "1.13.2",
     "chart.js": "^4.5.1",
     "konva": "^10.2.0",
+    "pinia": "^3.0.4",
     "primeicons": "7.0.0",
     "qrcode": "^1.5.4",
     "three": "^0.183.2",

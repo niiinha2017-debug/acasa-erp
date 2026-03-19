@@ -39,6 +39,17 @@
               <i class="pi pi-pencil mr-1" />
               Editar venda
             </Button>
+            <Button
+              v-if="can('produtos.ver')"
+              variant="secondary"
+              size="sm"
+              type="button"
+              :disabled="verificandoDisponibilidade"
+              @click="verificarDisponibilidade"
+            >
+              <i class="pi pi-search mr-1" />
+              Verificar Disponibilidade
+            </Button>
           </div>
         </template>
       </PageHeader>
@@ -94,6 +105,35 @@
                 <span class="font-bold">{{ format.currency((row.valor_unitario ?? 0) * (row.quantidade ?? 1)) }}</span>
               </template>
             </Table>
+          </section>
+
+          <section v-if="disponibilidadeEstoque" class="rounded-2xl border border-border-ui bg-bg-page p-4 space-y-3">
+            <div class="flex items-center justify-between gap-2">
+              <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
+                Disponibilidade em estoque
+              </div>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-text-soft">
+                Atualizado: {{ disponibilidadeAtualizadaEm || '-' }}
+              </span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <p class="text-xs text-slate-500">Chapas disponíveis</p>
+                <p class="text-lg font-black text-slate-900">{{ disponibilidadeEstoque?.resumo?.chapas_disponiveis ?? 0 }}</p>
+              </div>
+              <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <p class="text-xs text-slate-500">Chapas reservadas (registros)</p>
+                <p class="text-lg font-black text-slate-900">{{ disponibilidadeEstoque?.resumo?.chapas_reservadas_registros ?? 0 }}</p>
+              </div>
+              <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <p class="text-xs text-slate-500">Retalhos disponíveis (m²)</p>
+                <p class="text-lg font-black text-slate-900">{{ formatNumber(disponibilidadeEstoque?.resumo?.retalhos_disponiveis_m2 ?? 0) }}</p>
+              </div>
+              <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <p class="text-xs text-slate-500">Retalhos reservados</p>
+                <p class="text-lg font-black text-slate-900">{{ disponibilidadeEstoque?.resumo?.retalhos_reservados_registros ?? 0 }}</p>
+              </div>
+            </div>
           </section>
 
           <section v-if="pagamentosParaExibir.length" class="rounded-2xl border border-border-ui bg-bg-page p-4 space-y-3">
@@ -162,7 +202,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ContratosService, VendaService } from '@/services'
+import { ContratosService, EstoqueService, VendaService } from '@/services'
 import { notify } from '@/services/notify'
 import { can } from '@/services/permissions'
 import { format } from '@/utils/format'
@@ -178,6 +218,9 @@ const vendaId = computed(() => String(route.params?.id || '').replace(/\D/g, '')
 const loading = ref(false)
 const venda = ref(null)
 const contratos = ref([])
+const verificandoDisponibilidade = ref(false)
+const disponibilidadeEstoque = ref(null)
+const disponibilidadeAtualizadaEm = ref('')
 
 const columnsItens = [
   { key: 'nome_ambiente', label: 'Item / Ambiente' },
@@ -198,6 +241,13 @@ const rowsItens = computed(() =>
 function labelForma(key) {
   const found = (FORMAS_PAGAMENTO || []).find((x) => x.key === key)
   return found?.label || key || '-'
+}
+
+function formatNumber(value) {
+  return Number(value || 0).toLocaleString('pt-BR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 4,
+  })
 }
 
 // Exibe data sem mudar dia por fuso: YYYY-MM-DD ou ISO meia-noite UTC = dia literal; senão fuso local
@@ -241,6 +291,21 @@ function irParaEdicao() {
   if (!id) return
   // Mesma tela do Nova venda (Fechamento da Venda), em modo edição
   router.replace({ path: '/vendas/nova-venda', query: { vendaId: String(id) } })
+}
+
+async function verificarDisponibilidade() {
+  if (!vendaId.value) return
+  verificandoDisponibilidade.value = true
+  try {
+    const { data } = await EstoqueService.disponibilidade({ venda_id: vendaId.value })
+    disponibilidadeEstoque.value = data || null
+    disponibilidadeAtualizadaEm.value = new Date().toLocaleString('pt-BR')
+    notify.success('Disponibilidade de estoque atualizada.')
+  } catch (e) {
+    notify.error(e?.response?.data?.message || 'Erro ao consultar disponibilidade de estoque.')
+  } finally {
+    verificandoDisponibilidade.value = false
+  }
 }
 
 /** Abre a tela de novo contrato vinculado a esta venda. Regra: contrato não é gerado se o cliente não for validado. */

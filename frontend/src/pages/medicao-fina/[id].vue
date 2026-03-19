@@ -51,6 +51,15 @@
 
     <!-- Conteúdo principal: 100% da tela -->
     <div class="flex-1 min-h-0 flex flex-col pt-14">
+      <div v-if="tarefa && !loading" class="flex-shrink-0 px-4 py-2 bg-slate-800/70 border-b border-slate-700 flex items-center gap-2 flex-wrap">
+        <span class="text-sm font-semibold text-slate-100">
+          {{ tituloTarefa }}
+        </span>
+        <span v-if="statusTarefaLabel" class="inline-flex px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-500/20 text-blue-200 border border-blue-400/30 uppercase tracking-wide">
+          {{ statusTarefaLabel }}
+        </span>
+      </div>
+
       <template v-if="erroCarregamento">
         <div class="flex-1 flex items-center justify-center p-6">
           <div class="text-center">
@@ -106,6 +115,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { TotemFabricaService, MedicaoFinaService } from '@/services'
+import { getExecucaoEtapaLabel, getSubetapaLabel } from '@/constantes'
 import { notify } from '@/services/notify'
 import CroquiTecnicoEditor from '@/components/croqui-tecnico/CroquiTecnicoEditor.vue'
 
@@ -129,6 +139,9 @@ const ambientes = ref([{}])
 const ambienteAtualIndex = ref(0)
 
 const dadosAmbienteAtual = computed(() => ambientes.value[ambienteAtualIndex.value] ?? {})
+
+const tituloTarefa = computed(() => getSubetapaLabel(tarefa.value?.subetapa) || tarefa.value?.titulo || `Tarefa #${id.value ?? ''}`)
+const statusTarefaLabel = computed(() => getExecucaoEtapaLabel(tarefa.value?.execucao_etapa) || String(tarefa.value?.status || '').trim())
 
 function atualizarAmbienteAtual(data) {
   const idx = ambienteAtualIndex.value

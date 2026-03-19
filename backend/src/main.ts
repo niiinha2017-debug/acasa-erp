@@ -6,11 +6,10 @@ import { config as loadEnv } from 'dotenv';
 import { join } from 'path';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 
-// Carrega .env: na pasta backend (cwd) ou em monorepo (cwd/backend) ou relativo ao dist (dist/src → backend)
+// Carrega .env: backend (cwd) tem prioridade; fallbacks para monorepo sem sobrescrever
 loadEnv({ path: join(process.cwd(), '.env'), override: true });
-loadEnv({ path: join(process.cwd(), 'backend', '.env'), override: true });
-loadEnv({ path: join(__dirname, '..', '.env'), override: true });
-loadEnv({ path: join(__dirname, '..', '..', '.env'), override: true });
+loadEnv({ path: join(process.cwd(), 'backend', '.env'), override: false });
+loadEnv({ path: join(__dirname, '..', '.env'), override: false });
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -64,7 +63,8 @@ async function bootstrap() {
 bootstrap().catch((err) => {
   console.error('Falha ao iniciar o backend:', err?.message || err);
   if (String(err?.message || '').includes('EADDRINUSE')) {
-    console.error('A porta 3000 já está em uso. Feche o outro processo ou altere a porta.');
+    const port = Number(process.env.PORT || 3000);
+    console.error(`A porta ${port} já está em uso. Feche o outro processo ou altere a porta.`);
   }
   process.exit(1);
 });

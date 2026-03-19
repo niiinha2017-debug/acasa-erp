@@ -7,12 +7,14 @@ import { ContratosPublicController } from './contratos-publico.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { ClausulasModule } from '../clausulas/clausulas.module';
 import { MailModule } from '../mail/mail.module';
+import { AgendaModule } from '../agenda/agenda.module';
 
 @Module({
   imports: [
     PrismaModule,
     ClausulasModule,
     MailModule,
+    AgendaModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

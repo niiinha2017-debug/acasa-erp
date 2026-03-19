@@ -215,9 +215,9 @@ const deveOcultarMenu = computed(() => {
 const menuSections = ref([])
 
 const SECTION_LABELS = {
-  comercial: 'Comercial',
+  comercial: '1 Comercial',
+  comercial_2: '2 Comercial',
   producao: 'Produção',
-  servico_corte: 'Serviço de Corte',
   financeiro: 'Financeiro',
   cadastros: 'Cadastros',
   configuracoes: 'Configurações',
