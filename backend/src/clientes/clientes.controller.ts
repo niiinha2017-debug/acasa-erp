@@ -29,7 +29,7 @@ export class ClientesController {
   @Permissoes('clientes.criar')
   criar(
     @Body() dto: CriarClienteDto,
-    @Req() req?: { user?: { funcionario_id?: number | null } },
+    @Req() req?: { user?: { funcionario_id?: number | null; is_admin?: boolean } },
   ) {
     return this.service.criar(dto, req?.user);
   }

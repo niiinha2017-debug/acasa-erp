@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { config as loadEnv } from 'dotenv';
+import { appendFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 
@@ -10,6 +11,38 @@ import { HttpExceptionFilter } from './common/http-exception.filter';
 loadEnv({ path: join(process.cwd(), '.env'), override: true });
 loadEnv({ path: join(process.cwd(), 'backend', '.env'), override: false });
 loadEnv({ path: join(__dirname, '..', '.env'), override: false });
+
+const logDir = join(process.cwd(), 'logs');
+const runtimeLogFile = join(logDir, 'runtime-errors.log');
+
+function persistRuntimeError(label: string, error: unknown) {
+  try {
+    mkdirSync(logDir, { recursive: true });
+    const normalized =
+      error instanceof Error
+        ? `${error.name}: ${error.message}\n${error.stack || ''}`
+        : typeof error === 'string'
+          ? error
+          : JSON.stringify(error, null, 2);
+    appendFileSync(
+      runtimeLogFile,
+      `[${new Date().toISOString()}] ${label}\n${normalized}\n\n`,
+      'utf8',
+    );
+  } catch {
+    // Evita travar o bootstrap por falha de IO no log.
+  }
+}
+
+process.on('unhandledRejection', (reason) => {
+  persistRuntimeError('unhandledRejection', reason);
+  console.error('Unhandled rejection:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  persistRuntimeError('uncaughtException', error);
+  console.error('Uncaught exception:', error);
+});
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -61,6 +94,7 @@ async function bootstrap() {
 }
 
 bootstrap().catch((err) => {
+  persistRuntimeError('bootstrap', err);
   console.error('Falha ao iniciar o backend:', err?.message || err);
   if (String(err?.message || '').includes('EADDRINUSE')) {
     const port = Number(process.env.PORT || 3000);

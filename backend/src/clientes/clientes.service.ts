@@ -79,7 +79,10 @@ export class ClientesService {
     return t === '' ? null : t;
   }
 
-  async criar(dto: CriarClienteDto, usuario?: { funcionario_id?: number | null } | null) {
+  async criar(
+    dto: CriarClienteDto,
+    usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null,
+  ) {
     const statusInicialPipeline =
       PIPELINE_CLIENTE && PIPELINE_CLIENTE.length
         ? PIPELINE_CLIENTE[0].key
@@ -111,6 +114,12 @@ export class ClientesService {
         );
       }
     }
+
+    const funcionarioId =
+      usuario?.funcionario_id != null ? Number(usuario.funcionario_id) : null;
+    const isAdmin = !!usuario?.is_admin;
+    const vendedorResponsavelId =
+      dto.vendedor_responsavel_id ?? (isAdmin ? null : funcionarioId);
 
     return this.prisma.$transaction(async (tx) => {
       const cliente = await tx.cliente.create({
@@ -153,9 +162,7 @@ export class ClientesService {
           enviar_aniversario_whatsapp: dto.enviar_aniversario_whatsapp ?? false,
 
           profissao: dto.profissao ?? null,
-          vendedor_responsavel_id:
-            dto.vendedor_responsavel_id ??
-            (usuario?.funcionario_id != null ? Number(usuario.funcionario_id) : null),
+          vendedor_responsavel_id: vendedorResponsavelId,
           situacao: dto.situacao ?? null,
         },
       });
@@ -179,7 +186,10 @@ export class ClientesService {
     const funcionarioId = usuario?.funcionario_id != null ? Number(usuario.funcionario_id) : null;
     const isAdmin = !!usuario?.is_admin;
     if (funcionarioId != null && !isAdmin) {
-      where.vendedor_responsavel_id = funcionarioId;
+      where.OR = [
+        { vendedor_responsavel_id: funcionarioId },
+        { vendedor_responsavel_id: null },
+      ];
     }
 
     const rows = await this.prisma.cliente.findMany({
@@ -260,7 +270,7 @@ export class ClientesService {
       select: { vendedor_responsavel_id: true },
     });
     if (!c) return;
-    if (c.vendedor_responsavel_id !== funcionarioId) {
+    if (c.vendedor_responsavel_id != null && c.vendedor_responsavel_id !== funcionarioId) {
       throw new ForbiddenException('Você só pode acessar clientes dos quais é o vendedor responsável.');
     }
   }
@@ -503,7 +513,16 @@ export class ClientesService {
           {
             status: { notIn: ['INATIVO', this.statusClienteEncerrado] },
           },
-          ...(soVendedor ? [{ vendedor_responsavel_id: funcionarioId }] : []),
+          ...(soVendedor
+            ? [
+                {
+                  OR: [
+                    { vendedor_responsavel_id: funcionarioId },
+                    { vendedor_responsavel_id: null },
+                  ],
+                },
+              ]
+            : []),
           ...(termo
             ? [
                 {

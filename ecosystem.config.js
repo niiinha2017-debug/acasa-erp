@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'acasa-backend',
-      cwd: '/home/ec2-user/acasa-erp/backend',
+      cwd: '/home/ubuntu/acasa-erp/backend',
       script: 'dist/src/main.js',
       exec_mode: 'fork',
       instances: 1,
