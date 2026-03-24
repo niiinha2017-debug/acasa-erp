@@ -1,21 +1,19 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
+  <PageShell :padded="false">
+    <section class="rh-ponto-convites ds-page-context ds-page-context--list animate-page-in">
       <PageHeader
         title="Convites do Ponto"
-        subtitle="Geração de acesso para colaboradores"
+        subtitle="Gere o acesso do relógio de ponto e compartilhe com o colaborador."
         icon="pi pi-link"
         :show-back="false"
       >
         <template #actions>
-          <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
-            <div class="w-full sm:w-80 order-1 sm:order-0 min-w-0">
+          <div class="rh-ponto-convites__header-actions ds-page-context__actions">
+            <div class="w-full sm:w-80 min-w-0">
               <SearchInput
                 v-model="funcionario_id"
                 mode="select"
-                placeholder="Pesquise por nome ou CPF..."
+                placeholder="Busque por nome ou CPF..."
                 :options="funcionariosOptions"
                 labelKey="label"
                 valueKey="value"
@@ -31,79 +29,139 @@
               @click="confirmarGerarConvite"
             >
               <i class="pi pi-plus mr-2 text-xs"></i>
-              Gerar Convite
+              Gerar acesso
             </Button>
           </div>
         </template>
       </PageHeader>
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui">
+      <div class="rh-ponto-convites__body ds-page-context__content">
         <Loading v-if="loading" />
 
         <div v-else class="space-y-4">
           <div
             v-if="convite"
-            class="rounded-2xl border border-border-ui bg-white/70 p-4 md:p-5"
+            class="rh-ponto-convites__panel"
           >
-            <!-- Código em destaque + QR Code lado a lado -->
-            <div class="grid gap-3 md:grid-cols-[1fr_auto] items-start">
-              <div class="rounded-xl border border-slate-200 bg-slate-100/80 p-4 shadow-inner min-w-0">
-                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">Código</p>
-                <p class="mt-2 text-lg md:text-xl font-mono font-black tracking-[0.2em] text-slate-900 break-all">
+            <div class="rh-ponto-convites__hero grid gap-3 lg:grid-cols-[minmax(0,1fr)_280px] items-start">
+              <div class="rh-ponto-convites__code-box min-w-0">
+                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-text-soft">Código de ativação</p>
+                <p class="mt-2 text-lg md:text-xl font-mono font-black tracking-[0.2em] text-text-main break-all">
                   {{ convite.code }}
+                </p>
+                <p class="mt-2 text-xs text-text-soft">
+                  Envie primeiro pelo WhatsApp ou compartilhe o código para ativação manual.
                 </p>
                 <div class="mt-3 flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    class="inline-flex h-9 items-center rounded-lg border border-slate-300 bg-white px-3 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-700 hover:bg-slate-50 transition-colors"
+                    class="ds-btn ds-btn--secondary ds-btn--sm rh-ponto-convites__micro-action"
                     @click="handleCopiarCodigo"
                   >
                     <i class="pi pi-copy mr-2 text-xs"></i>
-                    Copiar
+                    Copiar código
                   </button>
                 </div>
               </div>
 
-              <div class="rounded-xl border border-slate-200 bg-white p-3 flex flex-col items-center justify-center min-w-[140px]">
-                <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 mb-2">Ativar por QR</p>
-                <div v-if="urlQrCode" class="rounded-lg overflow-hidden bg-white p-1 border border-slate-200">
+              <div class="rh-ponto-convites__qr-box flex flex-col items-center justify-center min-w-[140px]">
+                <p class="text-[10px] font-black uppercase tracking-[0.14em] text-text-soft mb-2">Ativar por QR</p>
+                <div v-if="urlQrCode" class="rounded-lg overflow-hidden bg-white p-1 border border-border-ui">
                   <img :src="urlQrCode" alt="QR Code para ativação" class="w-28 h-28 md:w-32 md:h-32 object-contain" />
                 </div>
-                <p class="mt-2 text-[10px] text-slate-500 text-center">Escaneie para ativar</p>
+                <p class="mt-2 text-[10px] text-text-soft text-center">Use a camera do celular para abrir a ativação</p>
               </div>
             </div>
 
-            <!-- Link de ativação e APK -->
+            <div class="rh-ponto-convites__actions-row mt-4 flex flex-wrap items-center gap-2">
+              <button
+                v-if="podeGerar"
+                type="button"
+                class="ds-btn ds-btn--success ds-btn--md rh-ponto-convites__action"
+                @click="abrirWhatsAppFormatado"
+              >
+                <i class="pi pi-whatsapp mr-2 text-xs"></i>
+                Enviar no WhatsApp
+              </button>
+
+              <button
+                v-if="podeGerar && convite?.pwaUrl"
+                type="button"
+                class="ds-btn ds-btn--primary ds-btn--md rh-ponto-convites__action"
+                @click="abrirWhatsAppPwaIphone"
+              >
+                <i class="pi pi-mobile mr-2 text-xs"></i>
+                Enviar PWA (iPhone)
+              </button>
+
+              <Button
+                v-if="podeGerar"
+                variant="outline"
+                class="h-10 rounded-xl font-bold text-[11px] uppercase tracking-[0.14em]"
+                @click="handleCopiarLinkAtivacao"
+              >
+                <i class="pi pi-copy mr-2 text-xs"></i>
+                Copiar link de ativação
+              </Button>
+
+              <Button
+                v-if="podeGerar"
+                variant="secondary"
+                class="h-10 rounded-xl font-bold text-[11px] uppercase tracking-[0.14em]"
+                :loading="loadingGerar"
+                :disabled="!funcionario_id"
+                @click="confirmarGerarConvite"
+              >
+                <i class="pi pi-refresh mr-2 text-xs"></i>
+                Gerar novo acesso
+              </Button>
+            </div>
+
             <div class="mt-3 grid gap-3 md:grid-cols-2">
-              <div class="rounded-xl border border-slate-200 bg-white p-3">
-                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">Link de ativação</p>
-                <p class="mt-2 break-all text-sm font-semibold text-slate-800 font-mono">{{ linkCurto(convite.webUrl) }}</p>
+              <div class="rh-ponto-convites__validity-box">
+                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-text-soft">Validade</p>
+                <p
+                  class="mt-1 text-sm font-bold tabular-nums"
+                  :class="classeCorValidade"
+                >
+                  {{ textoCountdown }}
+                </p>
+                <p v-if="dataExpiracao" class="mt-0.5 text-xs text-text-soft">
+                  Expira em {{ formatarDataExpiracao(dataExpiracao) }}
+                </p>
+              </div>
+
+              <div class="rh-ponto-convites__link-box">
+                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-text-soft">Link de ativação</p>
+                <p class="mt-2 break-all text-sm font-semibold text-text-main font-mono">{{ linkCurto(convite.webUrl) }}</p>
                 <div class="mt-2 flex flex-wrap items-center gap-2">
                   <a
                     :href="convite.webUrl"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="inline-flex h-8 items-center rounded-lg border border-slate-200 px-3 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-700 hover:bg-slate-50"
+                    class="ds-btn ds-btn--secondary ds-btn--sm rh-ponto-convites__micro-action"
                   >
                     Abrir
                   </a>
                   <button
                     type="button"
-                    class="inline-flex h-8 items-center rounded-lg border border-slate-200 px-3 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-700 hover:bg-slate-50"
+                    class="ds-btn ds-btn--secondary ds-btn--sm rh-ponto-convites__micro-action"
                     @click="handleCopiarLinkAtivacao"
                   >
                     Copiar
                   </button>
                 </div>
               </div>
+            </div>
 
-              <div class="rounded-xl border border-slate-200 bg-white p-3">
-                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">APK (Android)</p>
-                <p class="mt-2 break-all text-sm font-semibold text-slate-800 font-mono">{{ linkCurto(convite.apkUrl) }}</p>
+            <div class="mt-3 grid gap-3 md:grid-cols-2">
+              <div class="rh-ponto-convites__link-box">
+                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-text-soft">APK (Android)</p>
+                <p class="mt-2 break-all text-sm font-semibold text-text-main font-mono">{{ linkCurto(convite.apkUrl) }}</p>
                 <div class="mt-2 flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    class="inline-flex h-8 items-center rounded-lg border border-slate-200 px-3 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                    class="ds-btn ds-btn--secondary ds-btn--sm rh-ponto-convites__micro-action"
                     :disabled="baixandoApk"
                     @click="abrirOuBaixarApk"
                   >
@@ -111,7 +169,7 @@
                   </button>
                   <button
                     type="button"
-                    class="inline-flex h-8 items-center rounded-lg border border-slate-200 px-3 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-700 hover:bg-slate-50"
+                    class="ds-btn ds-btn--secondary ds-btn--sm rh-ponto-convites__micro-action"
                     @click="handleCopiarApk"
                   >
                     Copiar
@@ -119,22 +177,22 @@
                 </div>
               </div>
 
-              <div class="rounded-xl border border-slate-200 bg-white p-3 md:col-span-2">
-                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">App relógio de ponto (iPhone / PWA)</p>
-                <p class="mt-1 text-[10px] text-slate-500">Abra no iPhone e adicione à tela inicial para usar só o relógio.</p>
-                <p class="mt-2 break-all text-sm font-semibold text-slate-800 font-mono">{{ linkCurto(convite.pwaUrl) }}</p>
+              <div class="rh-ponto-convites__link-box">
+                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-text-soft">App relógio de ponto (iPhone / PWA)</p>
+                <p class="mt-1 text-[10px] text-text-soft">Abra no iPhone e adicione à tela inicial para usar só o relógio.</p>
+                <p class="mt-2 break-all text-sm font-semibold text-text-main font-mono">{{ linkCurto(convite.pwaUrl) }}</p>
                 <div class="mt-2 flex flex-wrap items-center gap-2">
                   <a
                     :href="convite.pwaUrl"
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="inline-flex h-8 items-center rounded-lg border border-slate-200 px-3 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-700 hover:bg-slate-50"
+                    class="ds-btn ds-btn--secondary ds-btn--sm rh-ponto-convites__micro-action"
                   >
                     Abrir
                   </a>
                   <button
                     type="button"
-                    class="inline-flex h-8 items-center rounded-lg border border-slate-200 px-3 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-700 hover:bg-slate-50"
+                    class="ds-btn ds-btn--secondary ds-btn--sm rh-ponto-convites__micro-action"
                     @click="handleCopiarPwa"
                   >
                     Copiar
@@ -142,90 +200,21 @@
                 </div>
               </div>
             </div>
-
-            <!-- Validade com countdown -->
-            <div class="mt-3">
-              <div class="rounded-xl border border-slate-200 bg-white p-3">
-                <p class="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">Validade</p>
-                <p
-                  class="mt-1 text-sm font-bold tabular-nums"
-                  :class="classeCorValidade"
-                >
-                  {{ textoCountdown }}
-                </p>
-                <p v-if="dataExpiracao" class="mt-0.5 text-xs text-slate-500">
-                  Expira em {{ formatarDataExpiracao(dataExpiracao) }}
-                </p>
-              </div>
-            </div>
-
-            <!-- Botões de ação -->
-            <div class="mt-4 flex flex-wrap items-center gap-2">
-              <Button
-                v-if="podeGerar"
-                variant="secondary"
-                class="h-10 rounded-xl font-bold text-[11px] uppercase tracking-[0.14em]"
-                @click="handleCopiarLinkAtivacao"
-              >
-                <i class="pi pi-copy mr-2 text-xs"></i>
-                Copiar Ativação
-              </Button>
-
-              <Button
-                v-if="podeGerar"
-                variant="secondary"
-                class="h-10 rounded-xl font-bold text-[11px] uppercase tracking-[0.14em]"
-                @click="handleCopiarApk"
-              >
-                <i class="pi pi-copy mr-2 text-xs"></i>
-                Copiar APK
-              </Button>
-
-              <Button
-                v-if="podeGerar && convite?.pwaUrl"
-                variant="secondary"
-                class="h-10 rounded-xl font-bold text-[11px] uppercase tracking-[0.14em]"
-                @click="handleCopiarPwa"
-              >
-                <i class="pi pi-copy mr-2 text-xs"></i>
-                Copiar link (iPhone/PWA)
-              </Button>
-
-              <button
-                v-if="podeGerar && convite?.pwaUrl"
-                type="button"
-                class="h-10 px-4 rounded-xl bg-slate-700 text-white text-[11px] font-black uppercase tracking-[0.14em] hover:bg-slate-800 transition-colors"
-                @click="abrirWhatsAppPwaIphone"
-              >
-                <i class="pi pi-mobile mr-2 text-xs"></i>
-                Enviar PWA (iPhone)
-              </button>
-
-              <button
-                v-if="podeGerar"
-                type="button"
-                class="h-10 px-4 rounded-xl bg-[#25D366] text-white text-[11px] font-black uppercase tracking-[0.14em] hover:bg-[#128C7E] transition-colors"
-                @click="abrirWhatsAppFormatado"
-              >
-                <i class="pi pi-whatsapp mr-2 text-xs"></i>
-                Enviar no WhatsApp
-              </button>
-            </div>
           </div>
 
           <div
             v-else
-            class="rounded-2xl border border-dashed border-slate-300 bg-white/60 p-10 text-center"
+            class="rh-ponto-convites__empty"
           >
-            <i class="pi pi-user-plus text-3xl text-slate-400"></i>
-            <p class="mt-3 text-sm font-semibold text-slate-600">
-              Selecione um funcionário e clique em "Gerar Convite".
+            <i class="pi pi-user-plus text-3xl text-text-soft"></i>
+            <p class="mt-3 text-sm font-semibold text-text-soft">
+              Selecione um colaborador, gere o acesso e use as ações de envio quando tudo estiver pronto.
             </p>
           </div>
         </div>
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
@@ -237,6 +226,7 @@ import { can } from '@/services/permissions'
 import { openExternalUrl } from '@/utils/url'
 import { APP_LINKS } from '@/config/app-links'
 import PageHeader from '@/components/ui/PageHeader.vue'
+import PageShell from '@/components/ui/PageShell.vue'
 
 definePage({ meta: { perm: 'ponto_convite.criar' } })
 
@@ -383,8 +373,6 @@ async function gerarConvite() {
   if (!funcionario_id.value) return
 
   loadingGerar.value = true
-  convite.value = null
-  dataExpiracao.value = null
 
   try {
     const res = await PontoService.gerarConvite(Number(funcionario_id.value))
@@ -427,9 +415,7 @@ async function gerarConvite() {
     }
 
     const expiraEm = data.expira_em ?? data.expires_at
-    if (expiraEm) {
-      dataExpiracao.value = expiraEm
-    }
+    dataExpiracao.value = expiraEm || null
 
     notify.success('Convite gerado.')
   } catch (e) {
@@ -622,10 +608,90 @@ function linkCurto(url) {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+.rh-ponto-convites__body {
+  width: min(100%, 1380px);
+  margin: 0 auto;
+  padding: 0.85rem 1rem 1.5rem;
+}
 
-.login-font {
-  font-family: 'Manrope', 'Segoe UI', sans-serif;
+.rh-ponto-convites__header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.rh-ponto-convites__panel {
+  padding: 0.35rem 0 0.25rem;
+  border-top: 1px solid color-mix(in srgb, var(--ds-color-primary) 14%, var(--ds-color-border) 86%);
+}
+
+.rh-ponto-convites__code-box,
+.rh-ponto-convites__qr-box,
+.rh-ponto-convites__link-box,
+.rh-ponto-convites__validity-box {
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--ds-color-primary) 10%, var(--ds-color-border) 90%);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.rh-ponto-convites__code-box {
+  padding: 1rem 0 0.25rem;
+}
+
+.rh-ponto-convites__qr-box {
+  padding: 1rem 0 0.25rem;
+}
+
+.rh-ponto-convites__link-box,
+.rh-ponto-convites__validity-box {
+  padding: 0.95rem 0 0.2rem;
+}
+
+.rh-ponto-convites__actions-row {
+  padding-top: 1rem;
+  border-top: 1px solid color-mix(in srgb, var(--ds-color-primary) 10%, var(--ds-color-border) 90%);
+}
+
+.rh-ponto-convites__micro-action {
+  text-decoration: none;
+}
+
+.rh-ponto-convites__action {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  text-decoration: none;
+  transition: transform 180ms ease;
+}
+
+.rh-ponto-convites__action:hover {
+  transform: translateY(-1px);
+}
+
+.rh-ponto-convites__empty {
+  border: 0;
+  border-top: 1px dashed color-mix(in srgb, var(--ds-color-primary) 22%, var(--ds-color-border) 78%);
+  border-bottom: 1px dashed color-mix(in srgb, var(--ds-color-primary) 12%, var(--ds-color-border) 88%);
+  border-radius: 0;
+  background: transparent;
+  padding: 2.75rem 1.5rem;
+  text-align: center;
+}
+
+.rh-ponto-convites :deep(.ds-shell-card) {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.rh-ponto-convites :deep(.ds-header-block) {
+  padding-left: 1rem;
+  padding-right: 1rem;
 }
 
 @keyframes pulse {
@@ -647,5 +713,43 @@ function linkCurto(url) {
 
 .clientes-line-list :deep(.search-container input.w-full:focus) {
   box-shadow: none;
+}
+
+.dark .rh-ponto-convites__panel {
+  border-top-color: color-mix(in srgb, var(--ds-color-primary) 24%, var(--ds-color-border) 76%);
+}
+
+.dark .rh-ponto-convites__code-box,
+.dark .rh-ponto-convites__qr-box,
+.dark .rh-ponto-convites__link-box,
+.dark .rh-ponto-convites__validity-box {
+  border-top-color: color-mix(in srgb, var(--ds-color-primary) 18%, var(--ds-color-border) 82%);
+}
+
+.dark .rh-ponto-convites__empty {
+  border-color: color-mix(in srgb, var(--ds-color-primary) 28%, var(--ds-color-border) 72%);
+  background: transparent;
+}
+
+@media (min-width: 768px) {
+  .rh-ponto-convites__body {
+    padding: 1rem 1.5rem 1.75rem;
+  }
+
+  .rh-ponto-convites :deep(.ds-header-block) {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .rh-ponto-convites__body {
+    padding: 1rem 2rem 2rem;
+  }
+
+  .rh-ponto-convites :deep(.ds-header-block) {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
 }
 </style>

@@ -1,18 +1,25 @@
 <template>
-  <div class="w-full flex flex-col gap-1.5" :class="{ 'opacity-60 pointer-events-none': disabled && !keepReadableWhenDisabled, 'pointer-events-none': disabled && keepReadableWhenDisabled }">
+  <div
+    class="ds-field"
+    :class="{
+      'ds-field--disabled': disabled && !keepReadableWhenDisabled,
+      'ds-field--readonly-disabled': disabled && keepReadableWhenDisabled,
+      'ds-field--line': variant === 'line',
+    }"
+  >
     <label
       v-if="label"
       :for="inputId"
-      class="text-xs font-semibold tracking-wide text-text-soft ml-0.5 mb-0.5"
+      class="ds-field-label"
     >
       {{ label }}
-      <span v-if="required" class="text-rose-500 ml-0.5">*</span>
+      <span v-if="required" class="ds-field-label__required">*</span>
     </label>
 
-    <div class="relative group">
+    <div class="ds-control-shell group">
       <div
         v-if="$slots.prefix"
-        class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-primary transition-colors duration-200"
+        class="ds-control-icon ds-control-icon--left"
       >
         <slot name="prefix" />
       </div>
@@ -28,19 +35,21 @@
         :required="required"
         :min="min"
         :max="max"
+        :step="step"
         :autocomplete="autocomplete || undefined"
         :spellcheck="spellcheckAtivo"
         :lang="spellcheckAtivo ? 'pt-BR' : undefined"
         :class="[
-          'w-full h-10 border rounded-xl text-sm transition-all duration-200',
-          'bg-bg-card text-text-main',
-          'placeholder:text-slate-400 dark:placeholder:text-slate-500 placeholder:font-normal',
-          error
-            ? 'border-rose-300 ring-2 ring-rose-100 dark:border-rose-800 dark:ring-rose-900/30'
-            : 'border-border-ui hover:border-slate-300 dark:hover:border-slate-600 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10',
-          $slots.prefix ? 'pl-10' : 'pl-3',
-          $slots.suffix ? 'pr-10' : 'pr-3',
-          { 'uppercase': forceUpper && type !== 'password', 'opacity-50 bg-slate-50 dark:bg-slate-800': disabled && !keepReadableWhenDisabled, 'bg-slate-50 dark:bg-slate-800 font-semibold text-text-main': disabled && keepReadableWhenDisabled }
+          'ds-control-input',
+          {
+            'ds-control-input--error': error,
+            'ds-control-input--with-prefix': $slots.prefix,
+            'ds-control-input--with-suffix': $slots.suffix,
+            'ds-control-input--line': variant === 'line',
+            'uppercase': forceUpper && type !== 'password',
+            'ds-control-input--soft-disabled': disabled && !keepReadableWhenDisabled,
+            'ds-control-input--readable-disabled': disabled && keepReadableWhenDisabled
+          }
         ]"
         @input="handleInput"
         @blur="e => emit('blur', e)"
@@ -49,14 +58,14 @@
 
       <div
         v-if="$slots.suffix"
-        class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-primary transition-colors duration-200"
+        class="ds-control-icon ds-control-icon--right"
       >
         <slot name="suffix" />
       </div>
     </div>
 
     <Transition name="slide-up">
-      <span v-if="error" class="text-[10px] font-bold text-red-500 ml-0.5 tracking-wide">
+      <span v-if="error" class="ds-control-message">
         {{ error }}
       </span>
     </Transition>
@@ -78,6 +87,7 @@ const props = defineProps({
   required: Boolean,
   min: [String, Number],
   max: [String, Number],
+  step: [String, Number],
   autocomplete: String,
   name: String, // ✅ ADD
   id: String,
@@ -85,7 +95,8 @@ const props = defineProps({
   /** Quando true, campo disabled mantém texto escuro/legível (ex.: valor final da venda). */
   keepReadableWhenDisabled: { type: Boolean, default: false },
   /** Corretor ortográfico em PT-BR. Default true para type text/search/email. */
-  spellcheck: { type: Boolean, default: undefined }
+  spellcheck: { type: Boolean, default: undefined },
+  variant: { type: String, default: 'line' }
 })
 
 

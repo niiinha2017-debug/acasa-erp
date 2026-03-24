@@ -9,6 +9,7 @@ import { promises as fs } from 'fs';
 import { randomBytes } from 'crypto';
 import * as path from 'path';
 import PDFDocument from 'pdfkit';
+import sharp from 'sharp';
 import { CriarFuncionarioDto } from './dto/criar-funcionario.dto';
 import { AtualizarFuncionarioDto } from './dto/atualizar-funcionario.dto';
 import { renderHeaderA4Png } from '../pdf/render-header-a4';
@@ -600,6 +601,77 @@ export class FuncionariosService {
     return done;
   }
 
+  private escSvg(value: unknown) {
+    if (value == null || value === '') return '';
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  async gerarImagem(ids: number[], formato: 'png' | 'jpeg' = 'png'): Promise<{ buffer: Buffer; contentType: string; ext: string }> {
+    const funcionarios = await this.prisma.funcionarios.findMany({
+      where: { id: { in: ids } },
+      select: { nome: true, cpf: true, rg: true },
+      orderBy: { nome: 'asc' },
+    });
+
+    if (!funcionarios.length) {
+      throw new NotFoundException('Nenhum funcionário encontrado.');
+    }
+
+    const baseWidth = 1180;
+    const headerHeight = 172;
+    const tableHeaderHeight = 46;
+    const rowHeight = 34;
+    const footerHeight = 32;
+    const baseHeight = headerHeight + tableHeaderHeight + (funcionarios.length * rowHeight) + footerHeight;
+    const scale = 2;
+    const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${baseWidth} ${baseHeight}" width="${baseWidth * scale}" height="${baseHeight * scale}">
+  <rect width="${baseWidth}" height="${baseHeight}" fill="#ffffff"/>
+  <rect x="32" y="28" width="${baseWidth - 64}" height="96" rx="18" fill="#f8fafc" stroke="#dbe4ee" stroke-width="1.5"/>
+  <text x="64" y="62" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#0f172a">Relatório de Funcionários</text>
+  <text x="64" y="88" font-family="Arial, sans-serif" font-size="15" fill="#475569">Relação consolidada para conferência visual da equipe</text>
+  <text x="64" y="112" font-family="Arial, sans-serif" font-size="13" fill="#64748b">Gerado em ${this.escSvg(new Date().toLocaleString('pt-BR'))}</text>
+
+  <rect x="32" y="146" width="${baseWidth - 64}" height="46" fill="#eaf0f6" rx="10"/>
+  <text x="56" y="174" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#334155">NOME</text>
+  <text x="620" y="174" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#334155">CPF</text>
+  <text x="900" y="174" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#334155">RG</text>
+
+  ${funcionarios.map((f, index) => {
+    const y = headerHeight + tableHeaderHeight + (index * rowHeight);
+    const rowY = y - 2;
+    const lineY = y + 22;
+    return `
+    <rect x="32" y="${rowY}" width="${baseWidth - 64}" height="${rowHeight - 2}" fill="${index % 2 === 0 ? '#ffffff' : '#fbfdff'}"/>
+    <text x="56" y="${lineY}" font-family="Arial, sans-serif" font-size="13" fill="#0f172a">${this.escSvg(String(f.nome || '-').toUpperCase())}</text>
+    <text x="620" y="${lineY}" font-family="Arial, sans-serif" font-size="13" fill="#334155">${this.escSvg(this.formatCPF(f.cpf))}</text>
+    <text x="900" y="${lineY}" font-family="Arial, sans-serif" font-size="13" fill="#334155">${this.escSvg(this.formatRG(f.rg))}</text>
+    <line x1="32" y1="${y + rowHeight - 1}" x2="${baseWidth - 32}" y2="${y + rowHeight - 1}" stroke="#edf2f7" stroke-width="1"/>
+    `;
+  }).join('')}
+</svg>`;
+
+    const svgBuffer = Buffer.from(svg, 'utf8');
+    const pipeline = sharp(svgBuffer);
+    if (formato === 'jpeg') {
+      return {
+        buffer: await pipeline.jpeg({ quality: 92 }).toBuffer(),
+        contentType: 'image/jpeg',
+        ext: 'jpg',
+      };
+    }
+    return {
+      buffer: await pipeline.png().toBuffer(),
+      contentType: 'image/png',
+      ext: 'png',
+    };
+  }
+
   async select(q?: string, unidade?: string) {
     const termo = String(q || '').trim();
     const unidadesPermitidas = this.normalizarUnidadeFiltro(unidade);
@@ -664,6 +736,44 @@ export class FuncionariosService {
     });
 
     return { arquivoId: arquivo.id };
+  }
+
+  async gerarRelatorioESalvar(ids: number[], formato?: string) {
+    const fmt = String(formato || 'pdf').trim().toLowerCase();
+    if (fmt === 'png' || fmt === 'jpeg' || fmt === 'jpg') {
+      const normalized = fmt === 'jpg' ? 'jpeg' : fmt;
+      const image = await this.gerarImagem(ids, normalized as 'png' | 'jpeg');
+
+      const dir = path.join(process.cwd(), 'uploads', 'relatorios');
+      await fs.mkdir(dir, { recursive: true });
+
+      const stamp = new Date().toISOString().replace(/[-:.TZ]/g, '');
+      const rand = randomBytes(6).toString('hex');
+      const filename = `relatorio_funcionarios_${stamp}_${rand}.${image.ext}`;
+
+      await fs.writeFile(path.join(dir, filename), image.buffer);
+
+      const url = `/uploads/relatorios/${filename}`;
+
+      const arquivo = await this.prisma.arquivos.create({
+        data: {
+          owner_type: 'EMPRESA',
+          owner_id: 1,
+          categoria: 'RELATORIO',
+          slot_key: null,
+          url,
+          filename,
+          nome: `RELATORIO FUNCIONARIOS ${stamp}`,
+          mime_type: image.contentType,
+          tamanho: image.buffer.length,
+        },
+        select: { id: true },
+      });
+
+      return { arquivoId: arquivo.id };
+    }
+
+    return this.gerarPdfESalvar(ids);
   }
 
   private gerarLoginUnico(nome: string): string {

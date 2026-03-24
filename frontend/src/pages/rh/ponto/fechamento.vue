@@ -1,68 +1,58 @@
 <template>
-  <div class="w-full h-full animate-page-in">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
+  <PageShell :padded="false">
+    <section class="rh-fechamento ds-page-context ds-page-context--list animate-page-in">
       <PageHeader
         title="Fechamento de Folha"
-        subtitle="Resumo por funcionário no período: horas trabalhadas, extras e custo devido (pagamento)."
+        subtitle="Revise o período, confira os valores por colaborador e gere o fechamento no Financeiro."
         icon="pi pi-wallet"
         :show-back="false"
       />
 
-      <div class="px-4 md:px-6 pb-6 pt-4 border-t border-border-ui">
-        <div class="rounded-2xl border border-border-ui bg-bg-page/40 p-5 mb-6">
-          <p class="text-[10px] font-black text-text-soft uppercase tracking-wider mb-3">Período</p>
-          <div class="flex flex-wrap items-end gap-4">
-            <div>
-              <label class="text-[10px] font-black text-text-soft uppercase block mb-1">Data início</label>
-              <input
-                v-model="dataIni"
-                type="date"
-                class="h-11 min-w-[160px] rounded-xl border border-border-ui bg-bg-card px-4 text-sm font-bold text-text-main outline-none focus:ring-2 focus:ring-brand-primary/40 focus:border-brand-primary"
-                @change="buscar"
-              />
+      <div class="rh-fechamento__body ds-page-context__content">
+        <div class="rh-fechamento__filters">
+          <div class="rh-fechamento__period">
+            <MonthReferenceField
+              v-model="mesReferencia"
+              class="rh-fechamento__month-wrap"
+              label="Mês de referência"
+            />
+          </div>
+
+          <div class="rh-fechamento__metrics grid grid-cols-2 md:grid-cols-3 gap-3 mt-5">
+            <div class="rh-fechamento__metric">
+              <p class="text-[10px] font-black uppercase tracking-wider text-text-soft">Funcionários</p>
+              <p class="mt-2 text-lg font-black text-text-main tabular-nums">{{ totalFuncionarios }}</p>
             </div>
-            <div>
-              <label class="text-[10px] font-black text-text-soft uppercase block mb-1">Data fim</label>
-              <input
-                v-model="dataFim"
-                type="date"
-                class="h-11 min-w-[160px] rounded-xl border border-border-ui bg-bg-card px-4 text-sm font-bold text-text-main outline-none focus:ring-2 focus:ring-brand-primary/40 focus:border-brand-primary"
-                @change="buscar"
-              />
+            <div class="rh-fechamento__metric">
+              <p class="text-[10px] font-black uppercase tracking-wider text-text-soft">Com valor devido</p>
+              <p class="mt-2 text-lg font-black text-[color:var(--ds-color-primary)] tabular-nums">{{ totalComCusto }}</p>
             </div>
-            <Button
-              variant="primary"
-              class="h-11 px-5 rounded-xl font-black text-[10px] uppercase"
-              :loading="loading"
-              @click="buscar"
-            >
-              <i class="pi pi-refresh mr-2 text-xs"></i>
-              Atualizar
-            </Button>
+            <div class="rh-fechamento__metric">
+              <p class="text-[10px] font-black uppercase tracking-wider text-text-soft">Valor total</p>
+              <p class="mt-2 text-lg font-black text-text-main tabular-nums">{{ valorTotalCusto }}</p>
+            </div>
           </div>
         </div>
 
-        <div v-if="funcionariosSemCarga.length" class="mb-4 p-4 rounded-xl border border-amber-500/50 bg-amber-500/10 text-amber-800 dark:text-amber-200">
+        <div v-if="funcionariosSemCarga.length" class="rh-fechamento__warning">
           <p class="text-sm font-semibold flex items-center gap-2">
             <i class="pi pi-exclamation-triangle"></i>
-            Funcionários sem carga horária cadastrada (não entram no fechamento):
+            {{ funcionariosSemCarga.length }} funcionário<span v-if="funcionariosSemCarga.length > 1">s</span> sem carga horária cadastrada
           </p>
           <p class="text-xs mt-1">{{ funcionariosSemCarga.join(', ') }}</p>
-          <p class="text-xs mt-2 opacity-90">Cadastre carga horária (dia/semana ou horários) em Cadastro de Funcionários para incluí-los.</p>
+          <p class="text-xs mt-2 opacity-90">Cadastre a carga horária em Cadastro de Funcionários para incluir essas pessoas no fechamento.</p>
         </div>
 
-        <div v-if="loading && !linhas.length" class="py-12 flex items-center justify-center gap-2 text-text-soft">
+        <div v-if="loading && !linhas.length" class="rh-fechamento__loading py-12 flex items-center justify-center gap-2 text-text-soft">
           <i class="pi pi-spin pi-spinner"></i>
           <span>Carregando fechamento...</span>
         </div>
 
         <template v-else-if="linhas.length">
-          <div class="native-table-flush border-y border-border-ui bg-bg-card overflow-hidden shadow-sm">
+          <div class="native-table-flush rh-fechamento__table border-y border-border-ui overflow-hidden">
             <div class="native-table-flush-scroll overflow-x-auto">
               <table class="w-full text-left text-sm">
-                <thead class="bg-bg-page/60 border-b border-border-ui">
+                <thead>
                   <tr>
                     <th class="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-text-soft">Funcionário</th>
                     <th class="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-text-soft text-right">Horas trab.</th>
@@ -77,8 +67,8 @@
                   <tr
                     v-for="row in linhas"
                     :key="row.funcionario_id"
-                    class="border-b border-border-ui/50 hover:bg-bg-page/30 transition-colors"
-                    :class="row.sem_carga ? 'bg-amber-50/50 dark:bg-amber-950/20' : ''"
+                    class="rh-fechamento__row"
+                    :class="row.sem_carga ? 'rh-fechamento__row--warning' : ''"
                   >
                     <td class="px-4 py-3 font-semibold text-text-main">
                       {{ row.nome }}
@@ -90,19 +80,18 @@
                     <td class="px-4 py-3 text-text-main text-right tabular-nums">{{ row.feriados_trabalhados_qtd }}</td>
                     <td class="px-4 py-3 font-bold text-text-main text-right tabular-nums">{{ formatarMoeda(row.custo_devido) }}</td>
                     <td class="px-4 py-3 text-center">
-                      <button
+                      <Button
                         v-if="!row.sem_carga && Number(row.custo_devido) > 0"
-                        type="button"
-                        class="inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-xl border border-brand-primary/50 bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white font-semibold text-xs transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                        variant="secondary"
+                        size="sm"
+                        class="!rounded-xl"
+                        :loading="pagandoId === row.funcionario_id"
                         :disabled="pagandoId === row.funcionario_id"
-                        :title="'Efetuar pagamento – ' + formatarMoeda(row.custo_devido)"
                         @click="efetuarPagamento(row)"
                       >
-                        <i v-if="pagandoId === row.funcionario_id" class="pi pi-spin pi-spinner" />
-                        <i v-else class="pi pi-wallet" />
-                        {{ pagandoId === row.funcionario_id ? 'Gerando...' : 'Efetuar Pagamento' }}
-                      </button>
-                      <span v-else-if="!row.sem_carga && Number(row.custo_devido) === 0" class="text-[10px] text-text-soft">—</span>
+                        <i class="pi pi-wallet mr-2 text-xs"></i>
+                        Gerar no Financeiro
+                      </Button>
                       <span v-else class="text-[10px] text-text-soft">—</span>
                     </td>
                   </tr>
@@ -112,21 +101,23 @@
           </div>
         </template>
 
-        <div v-else class="py-12 text-center rounded-2xl bg-bg-page/50 border border-border-ui/50">
+        <div v-else class="rh-fechamento__empty py-12 text-center">
           <i class="pi pi-wallet text-4xl text-text-soft/70 mb-3 block"></i>
-          <p class="text-sm font-medium text-text-main">Nenhum dado no período.</p>
-          <p class="text-xs text-text-soft mt-1">Ajuste as datas e clique em Atualizar.</p>
+          <p class="text-sm font-medium text-text-main">Nenhum valor encontrado no período.</p>
+          <p class="text-xs text-text-soft mt-1">Troque o mês de referência para verificar outro fechamento.</p>
         </div>
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
-import { PontoRelatorioService } from '@/services/index'
+import { computed, onMounted, ref } from 'vue'
+import MonthReferenceField from '@/components/ui/MonthReferenceField.vue'
+import { FinanceiroService, PontoRelatorioService } from '@/services/index'
 import { notify } from '@/services/notify'
 import { numeroParaMoeda } from '@/utils/number'
+import PageShell from '@/components/ui/PageShell.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import Button from '@/components/ui/Button.vue'
 
@@ -139,6 +130,20 @@ const dataIni = ref('')
 const dataFim = ref('')
 const pagandoId = ref(null)
 
+const totalFuncionarios = computed(() => linhas.value.length)
+const totalComCusto = computed(() => linhas.value.filter((row) => Number(row.custo_devido) > 0 && !row.sem_carga).length)
+const valorTotalCusto = computed(() => formatarMoeda(linhas.value.reduce((acc, row) => acc + (Number(row.custo_devido) || 0), 0)))
+const mesReferencia = computed({
+  get: () => String(dataIni.value || primeiroDiaMes()).slice(0, 7),
+  set: (valor) => {
+    const [anoStr, mesStr] = String(valor || '').split('-')
+    const ano = Number(anoStr)
+    const mes = Number(mesStr)
+    if (!ano || !mes) return
+    aplicarMesReferencia(ano, mes - 1)
+  },
+})
+
 function primeiroDiaMes() {
   const d = new Date()
   return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10)
@@ -150,6 +155,12 @@ function ultimoDiaMes() {
 
 function formatarMoeda(val) {
   return numeroParaMoeda(Number(val) || 0)
+}
+
+function aplicarMesReferencia(ano, mes) {
+  dataIni.value = new Date(ano, mes, 1).toISOString().slice(0, 10)
+  dataFim.value = new Date(ano, mes + 1, 0).toISOString().slice(0, 10)
+  buscar()
 }
 
 async function buscar() {
@@ -190,25 +201,245 @@ async function efetuarPagamento(row) {
   const { ref_mes, ref_ano } = refMesAnoFromDataFim()
   pagandoId.value = row.funcionario_id
   try {
-    await PontoRelatorioService.efetuarPagamentoFolha({
+    await FinanceiroService.fecharMesFuncionario({
       funcionario_id: row.funcionario_id,
-      nome: row.nome || '',
-      custo_devido: Number(row.custo_devido) || 0,
-      ref_mes,
-      ref_ano,
+      mes: ref_mes,
+      ano: ref_ano,
+      horas_extras_valor: Number(row.custo_devido) || 0,
+      observacao: `Fechamento gerado pela tela de RH/Ponto. Horas extras e feriados do periodo ${dataIni.value || ''} a ${dataFim.value || ''}.`,
     })
-    notify.success('Pagamento efetuado. O lançamento foi criado no Financeiro (Despesas) e já aparece nos Custos de Estrutura.')
+    notify.success('Fechamento criado no Financeiro. A conta a pagar do funcionário foi gerada com sucesso.')
     await buscar()
   } catch (e) {
-    notify.error(e?.response?.data?.message || 'Erro ao efetuar pagamento.')
+    notify.error(e?.response?.data?.message || 'Erro ao fechar mês do funcionário.')
   } finally {
     pagandoId.value = null
   }
 }
 
 onMounted(() => {
-  dataIni.value = primeiroDiaMes()
-  dataFim.value = ultimoDiaMes()
-  buscar()
+  const d = new Date()
+  aplicarMesReferencia(d.getFullYear(), d.getMonth())
 })
 </script>
+
+<style scoped>
+.rh-fechamento__body {
+  width: min(100%, 1380px);
+  margin: 0 auto;
+  padding: 0.85rem 1rem 1.5rem;
+}
+
+.rh-fechamento__filters {
+  padding: 0 0 1.1rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--ds-color-primary) 10%, var(--ds-color-border) 90%);
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--ds-color-primary) 6%, transparent),
+      color-mix(in srgb, var(--ds-color-success) 4%, transparent) 46%,
+      transparent 82%
+    );
+}
+
+.rh-fechamento__period {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.rh-fechamento__month-wrap {
+  min-width: 0;
+  max-width: 320px;
+}
+
+.rh-fechamento__month-caption {
+  margin-bottom: 0.35rem;
+  letter-spacing: 0.14em;
+  padding-left: 0.15rem;
+}
+
+.rh-fechamento__month-control {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.rh-fechamento__month-nav {
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--ds-color-primary) 12%, var(--ds-color-border) 88%);
+  background: transparent;
+  color: color-mix(in srgb, var(--ds-color-primary-strong) 86%, var(--ds-color-text) 14%);
+  transition: border-color 180ms ease, color 180ms ease, background-color 180ms ease;
+}
+
+.rh-fechamento__month-nav:hover {
+  border-color: color-mix(in srgb, var(--ds-color-primary) 24%, var(--ds-color-border) 76%);
+  background: color-mix(in srgb, var(--ds-color-primary) 4%, transparent);
+}
+
+.rh-fechamento__month-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--ds-color-primary) 18%, var(--ds-color-border) 82%);
+  background: transparent;
+  color: var(--ds-color-text);
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  outline: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rh-fechamento__refresh {
+  align-self: end;
+}
+
+.rh-fechamento__metrics {
+  gap: 0.75rem;
+  max-width: 980px;
+}
+
+.rh-fechamento__metric {
+  padding: 0.95rem 0 0.25rem;
+  border-top: 1px solid color-mix(in srgb, var(--ds-color-primary) 10%, var(--ds-color-border) 90%);
+}
+
+.rh-fechamento__warning {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem 0;
+  border-top: 1px solid rgba(245, 158, 11, 0.35);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.25);
+  color: rgb(146 64 14);
+}
+
+.rh-fechamento__table thead tr {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--ds-color-primary) 8%, var(--ds-color-surface) 92%), color-mix(in srgb, var(--ds-color-page) 70%, transparent));
+  border-bottom: 1px solid var(--ds-color-border);
+}
+
+.rh-fechamento__row {
+  border-bottom: 1px solid color-mix(in srgb, var(--ds-color-border) 86%, transparent);
+  transition: background-color 180ms ease;
+}
+
+.rh-fechamento__row:hover {
+  background: color-mix(in srgb, var(--ds-color-primary) 5%, transparent);
+}
+
+.rh-fechamento__row--warning {
+  background: rgba(245, 158, 11, 0.06);
+}
+
+.rh-fechamento__empty,
+.rh-fechamento__loading {
+  border-top: 1px dashed color-mix(in srgb, var(--ds-color-primary) 16%, var(--ds-color-border) 84%);
+  border-bottom: 1px dashed color-mix(in srgb, var(--ds-color-primary) 10%, var(--ds-color-border) 90%);
+}
+
+.rh-fechamento :deep(.ds-shell-card) {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.rh-fechamento :deep(.ds-header-block) {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.dark .rh-fechamento__filters,
+.dark .rh-fechamento__metric,
+.dark .rh-fechamento__empty,
+.dark .rh-fechamento__loading {
+  border-color: color-mix(in srgb, var(--ds-color-primary) 20%, var(--ds-color-border) 80%);
+}
+
+.dark .rh-fechamento__filters {
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--ds-color-primary) 12%, transparent),
+      color-mix(in srgb, var(--ds-color-success) 8%, transparent) 46%,
+      transparent 82%
+    );
+}
+
+.dark .rh-fechamento__month-nav {
+  border-color: color-mix(in srgb, var(--ds-color-primary) 18%, var(--ds-color-border) 82%);
+  color: rgb(191 219 254);
+}
+
+.dark .rh-fechamento__month-label {
+  border-bottom-color: rgba(148, 163, 184, 0.18);
+  color: rgb(241 245 249);
+}
+
+.dark .rh-fechamento__warning {
+  color: rgb(253 224 71);
+}
+
+.dark .rh-fechamento__row {
+  border-bottom-color: color-mix(in srgb, var(--ds-color-border) 76%, transparent);
+}
+
+@media (max-width: 767px) {
+  .rh-fechamento__month-wrap {
+    max-width: 100%;
+  }
+
+  .rh-fechamento__month-control {
+    gap: 0.5rem;
+  }
+
+  .rh-fechamento__month-nav {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .rh-fechamento__month-label {
+    min-width: 0;
+    height: 2.5rem;
+    font-size: 0.76rem;
+    letter-spacing: 0.1em;
+  }
+
+  .rh-fechamento__warning {
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .rh-fechamento__body {
+    padding: 1rem 1.5rem 1.75rem;
+  }
+
+  .rh-fechamento :deep(.ds-header-block) {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .rh-fechamento__body {
+    padding: 1rem 2rem 2rem;
+  }
+
+  .rh-fechamento :deep(.ds-header-block) {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+</style>

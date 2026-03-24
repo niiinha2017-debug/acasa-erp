@@ -48,19 +48,19 @@
     />
   </div>
 
-  <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+  <div class="ds-card ds-card--default p-4">
     <div class="flex gap-4 overflow-x-auto pb-2">
       <section
         v-for="col in kanbanColumns"
         :key="col.key"
-        class="min-w-[300px] max-w-[300px] rounded-2xl border border-slate-200 bg-slate-50"
+        class="min-w-[300px] max-w-[300px] rounded-2xl border border-[var(--ds-color-border)] bg-[var(--ds-color-surface-muted)]"
         @dragover.prevent
         @drop="onDrop(col.key)"
       >
-        <header class="px-3 py-3 border-b border-slate-200 bg-white rounded-t-2xl">
+        <header class="px-3 py-3 border-b border-[var(--ds-color-border)] bg-[var(--ds-color-surface)] rounded-t-2xl">
           <div class="flex items-center justify-between gap-2">
-            <h3 class="text-[11px] font-black uppercase tracking-widest text-slate-600">{{ col.label }}</h3>
-            <span class="h-6 min-w-6 px-2 rounded-full bg-slate-900 text-white text-[10px] font-black inline-flex items-center justify-center">
+            <h3 class="text-[11px] font-black uppercase tracking-widest text-[var(--ds-color-text-soft)]">{{ col.label }}</h3>
+            <span class="h-6 min-w-6 px-2 rounded-full bg-[var(--ds-color-text)] text-[var(--ds-color-surface)] text-[10px] font-black inline-flex items-center justify-center">
               {{ cardsByColumn[col.key]?.length || 0 }}
             </span>
           </div>
@@ -71,43 +71,43 @@
             v-for="item in cardsByColumn[col.key]"
             :key="item.id"
             draggable="true"
-            class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm cursor-grab active:cursor-grabbing"
+            class="rounded-xl border border-[var(--ds-color-border)] bg-[var(--ds-color-surface)] p-3 shadow-sm cursor-grab active:cursor-grabbing"
             :class="draggingId === item.id ? 'opacity-60' : ''"
             @dragstart="onDragStart(item)"
             @dragend="onDragEnd"
           >
             <div class="flex items-start justify-between gap-2">
               <div class="min-w-0">
-                <div class="text-[10px] font-black uppercase tracking-widest text-slate-400">Venda #{{ item.id }}</div>
-                <div class="text-sm font-black text-slate-800 truncate">
+                <div class="text-[10px] font-black uppercase tracking-widest text-[var(--ds-color-text-faint)]">Venda #{{ item.id }}</div>
+                <div class="text-sm font-black text-[var(--ds-color-text)] truncate">
                   {{ clienteNome(item) }}
                 </div>
               </div>
               <button
                 type="button"
-                class="h-7 w-7 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-800"
+                class="h-7 w-7 rounded-lg border border-[var(--ds-color-border)] text-[var(--ds-color-text-soft)] hover:text-[var(--ds-color-text)]"
                 @click="router.push(`/vendas/${item.id}`)"
               >
                 <i class="pi pi-external-link"></i>
               </button>
             </div>
 
-            <div class="mt-2 flex items-center justify-between text-[10px] font-bold text-slate-500">
+            <div class="mt-2 flex items-center justify-between text-[10px] font-bold text-[var(--ds-color-text-soft)]">
               <span>{{ format.date(item.data_venda) }}</span>
               <span>{{ format.currency(item.valor_vendido || 0) }}</span>
             </div>
 
-            <div class="mt-3 text-[10px] font-black uppercase tracking-widest text-slate-400 truncate">
+            <div class="mt-3 text-[10px] font-black uppercase tracking-widest text-[var(--ds-color-text-faint)] truncate">
               {{ statusLabel(item.status) }}
             </div>
-            <div v-if="agendaPorVenda[item.id]" class="mt-2 px-2 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[10px] font-bold text-slate-600 dark:text-slate-300">
+            <div v-if="agendaPorVenda[item.id]" class="mt-2 px-2 py-1.5 rounded-lg bg-[var(--ds-color-surface-muted)] text-[10px] font-bold text-[var(--ds-color-text-soft)]">
               {{ agendaPorVenda[item.id].label }}
             </div>
           </article>
 
           <div
             v-if="!(cardsByColumn[col.key] && cardsByColumn[col.key].length)"
-            class="h-24 rounded-xl border border-dashed border-slate-300 text-[10px] font-bold uppercase tracking-widest text-slate-400 flex items-center justify-center"
+            class="h-24 rounded-xl border border-dashed border-[var(--ds-color-border-strong)] text-[10px] font-bold uppercase tracking-widest text-[var(--ds-color-text-faint)] flex items-center justify-center"
           >
             Sem vendas
           </div>

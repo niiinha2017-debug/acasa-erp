@@ -118,6 +118,12 @@ api.interceptors.response.use(
     const status = error?.response?.status
     const original = error?.config
     const isNetworkError = !error?.response && (error?.code === 'ERR_NETWORK' || error?.message?.includes('Network Error'))
+    const url = String(original?.url || '')
+    const isAuthRoute =
+      url.includes('/auth/login') ||
+      url.includes('/auth/refresh') ||
+      url.includes('/auth/logout') ||
+      url.includes('/auth/esqueci-senha')
 
     // DEBUG erro (mostra mensagem completa do backend)
     const errData = error?.response?.data
@@ -125,7 +131,7 @@ api.interceptors.response.use(
     const isMe = (original?.url || '').includes('/auth/me')
     const is401 = status === 401
     // 401: loga uma vez só (evita dezenas de linhas iguais quando várias requisições falham sem token)
-    if (is401 && !isMe) {
+    if (is401 && !isMe && !isAuthRoute) {
       if (!window.__acasa_401_logged) {
         window.__acasa_401_logged = true
         setTimeout(() => { window.__acasa_401_logged = false }, 2000)
@@ -165,13 +171,6 @@ api.interceptors.response.use(
     const hasToken = !!storage.getToken()
     const refreshToken = storage.getRefreshToken()
 
-    // ✅ não tenta refresh em rotas de auth
-    const url = String(original?.url || '')
-    const isAuthRoute =
-      url.includes('/auth/login') ||
-      url.includes('/auth/refresh') ||
-      url.includes('/auth/logout')
-
     // ✅ tenta renovar token 1x apenas se a sessão estava ativa
     if (status === 401 && hasToken && refreshToken && !isAuthRoute && original && !original._retry) {
       original._retry = true
@@ -192,7 +191,7 @@ api.interceptors.response.use(
 
     // ✅ 401 sem token / refresh falhou -> encerra sessão
     // Evita hard reload no Android (causa loop/lag). O router vai redirecionar.
-    if (status === 401) {
+    if (status === 401 && !isAuthRoute) {
       try { await api.post('/auth/logout') } catch {}
       storage.removeToken()
       storage.removeUser()

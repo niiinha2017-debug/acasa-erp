@@ -1,6 +1,7 @@
 import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
+  IsBoolean,
   IsInt,
   IsNumber,
   IsOptional,
@@ -28,8 +29,14 @@ export class FecharMesDto {
   @Min(2020)
   ano: number;
 
+  @IsOptional()
   @IsString()
-  forma_pagamento_chave: string;
+  forma_pagamento_chave?: string;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  usar_multiplas_formas?: boolean;
 
   @IsOptional()
   @IsString()

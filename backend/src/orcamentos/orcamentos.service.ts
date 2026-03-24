@@ -5,6 +5,7 @@ import { CreateOrcamentoDto } from './dto/create-orcamento.dto';
 import { UpdateOrcamentoDto } from './dto/update-orcamento.dto';
 import { CreateOrcamentoItemDto } from './dto/create-orcamento-item.dto';
 import { UpdateOrcamentoItemDto } from './dto/update-orcamento-item.dto';
+import { ClausulasService } from '../clausulas/clausulas.service';
 import { validarTransicaoStatusCliente } from '../shared/constantes/status-matrix';
 import * as path from 'path';
 import { renderHeaderA4Png, resolveAsset } from '../pdf/render-header-a4';
@@ -18,6 +19,7 @@ export class OrcamentosService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly evolution: EvolutionService,
+    private readonly clausulasService: ClausulasService,
   ) {}
 
   // =========================================================
@@ -47,6 +49,65 @@ export class OrcamentosService {
         'Prazo de Entrega: O prazo estimado para fabricação e instalação é de 60 dias úteis, contados a partir da conferência final das medidas em obra e da confirmação do pedido. Importante: O cumprimento deste prazo está sujeito à disponibilidade da agenda de produção no momento da formalização do contrato. A ordem de execução dos serviços é definida rigorosamente conforme a ordem cronológica de fechamento dos pedidos.',
     },
   ];
+
+  private normalizarClausulasOrcamento(
+    raw: any,
+  ): { modulo_key: string; titulo: string; texto: string }[] {
+    return Array.isArray(raw)
+      ? raw
+          .map((item) => ({
+            modulo_key: String(item?.modulo_key || '').trim().toUpperCase(),
+            titulo: String(item?.titulo || '').trim(),
+            texto: String(item?.texto || '').trim(),
+          }))
+          .filter((item) => item.modulo_key)
+      : [];
+  }
+
+  private async obterModeloClausulasOrcamento() {
+    const fallbackMap = new Map(
+      this.clausulasPadraoOrcamento.map((item) => [item.modulo_key, item]),
+    );
+
+    try {
+      const modelos = await this.clausulasService.buscarOuCriarPorTipo('ORCAMENTO');
+      const normalizados = this.normalizarClausulasOrcamento(modelos);
+
+      if (!normalizados.length) {
+        return this.clausulasPadraoOrcamento.map((item) => ({ ...item }));
+      }
+
+      return normalizados.map((item) => {
+        const fallback = fallbackMap.get(item.modulo_key);
+        return {
+          modulo_key: item.modulo_key,
+          titulo: item.titulo || fallback?.titulo || item.modulo_key,
+          texto: item.texto || fallback?.texto || '',
+        };
+      });
+    } catch {
+      return this.clausulasPadraoOrcamento.map((item) => ({ ...item }));
+    }
+  }
+
+  private async resolverClausulasOrcamento(raw: any) {
+    const atuais = this.normalizarClausulasOrcamento(raw);
+    const modelo = await this.obterModeloClausulasOrcamento();
+
+    if (!atuais.length) {
+      return modelo;
+    }
+
+    const atuaisMap = new Map(atuais.map((item) => [item.modulo_key, item]));
+    return modelo.map((item) => {
+      const atual = atuaisMap.get(item.modulo_key);
+      return {
+        modulo_key: item.modulo_key,
+        titulo: atual?.titulo || item.titulo,
+        texto: atual?.texto || item.texto,
+      };
+    });
+  }
 
   async gerarPdfCompleto(orc: any): Promise<Uint8Array> {
     const pdf = await this.gerarMioloPdfBuffer(orc);
@@ -598,24 +659,12 @@ export class OrcamentosService {
 
     // Só inclui termos e condições no PDF quando explicitamente solicitado
     if (opts?.incluirTermos === true) {
-      const rawClausulas: any = (orc as any).clausulas;
-
-      if (Array.isArray(rawClausulas) && rawClausulas.length > 0) {
-        clausulas = rawClausulas
-          .map((c) => ({
-            titulo: String(c?.titulo || '').trim(),
-            texto: String(c?.texto || '').trim(),
-          }))
-          .filter((c) => c.titulo || c.texto);
-      }
-
-      // Se o orçamento ainda não tiver cláusulas próprias, usa um modelo padrão
-      if (clausulas.length === 0) {
-        clausulas = this.clausulasPadraoOrcamento.map((c) => ({
-          titulo: c.titulo,
-          texto: c.texto,
-        }));
-      }
+      clausulas = (await this.resolverClausulasOrcamento((orc as any).clausulas))
+        .map((c) => ({
+          titulo: String(c?.titulo || '').trim(),
+          texto: String(c?.texto || '').trim(),
+        }))
+        .filter((c) => c.titulo || c.texto);
     }
 
     // Só imagens marcadas como "para o PDF" (categoria IMAGEM_PDF) entram no arquivo gerado
@@ -726,6 +775,7 @@ export class OrcamentosService {
       (String(cliente.nome_completo || cliente.razao_social || '').trim()) ||
       'Cliente';
     const clienteCpf = String(cliente.cpf ?? '').trim();
+    const clausulasIniciais = await this.obterModeloClausulasOrcamento();
     return this.prisma.$transaction(async (tx) => {
       const orcamento = await tx.orcamentos.create({
         data: {
@@ -734,6 +784,7 @@ export class OrcamentosService {
           cliente_nome_snapshot: clienteNome,
           cliente_cpf_snapshot: clienteCpf,
           qtd_ambientes: 0,
+          clausulas: clausulasIniciais,
         },
         include: { cliente: true, itens: true },
       });
@@ -857,7 +908,14 @@ export class OrcamentosService {
       },
     });
     if (!orc) throw new NotFoundException('Orçamento não encontrado.');
-    return orc;
+    return {
+      ...orc,
+      clausulas: await this.resolverClausulasOrcamento((orc as any).clausulas),
+    };
+  }
+
+  async listarClausulasPadrao() {
+    return this.obterModeloClausulasOrcamento();
   }
 
   async atualizar(id: number, dto: UpdateOrcamentoDto) {

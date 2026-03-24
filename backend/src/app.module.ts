@@ -40,6 +40,7 @@ import { EvolutionModule } from './evolution/evolution.module';
 import { EstoqueRetalhoModule } from './estoque-retalho/estoque-retalho.module';
 import { EstoqueModule } from './estoque/estoque.module';
 import { EstrategiaPrecosModule } from './estrategia-precos/estrategia-precos.module';
+import { PlanoCorteProjetoModule } from './plano-corte-projeto/plano-corte-projeto.module';
 
 @Module({
   imports: [
@@ -106,6 +107,7 @@ import { EstrategiaPrecosModule } from './estrategia-precos/estrategia-precos.mo
     EstoqueRetalhoModule,
     EstoqueModule,
     EstrategiaPrecosModule,
+    PlanoCorteProjetoModule,
   ],
   controllers: [AppController],
   providers: [

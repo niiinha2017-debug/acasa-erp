@@ -34,7 +34,7 @@ export class MedicaoFinaController {
 
   /** Lista projetos do cliente (para buscar por cliente e carregar ambientes) */
   @Get('projetos-por-cliente/:clienteId')
-  @Permissoes('agendamentos.vendas', 'agendamentos.ver')
+  @Permissoes('agendamentos.vendas', 'agendamentos.ver', 'agendamentos.producao')
   projetosPorCliente(@Param('clienteId') clienteId: string) {
     return this.service.listarProjetosPorCliente(this.cleanId(clienteId));
   }
@@ -60,9 +60,16 @@ export class MedicaoFinaController {
     return this.service.listarAmbientesPorProjeto(this.cleanId(projetoId));
   }
 
+  /** Dados da pré-medição para comparação técnica na medição fina */
+  @Get('projeto/:projetoId/comparativo-pre')
+  @Permissoes('agendamentos.vendas', 'agendamentos.ver')
+  getComparativoPreOrcamento(@Param('projetoId') projetoId: string) {
+    return this.service.getComparativoPreOrcamento(this.cleanId(projetoId));
+  }
+
   /** Lista todas as medições finas do projeto */
   @Get('projeto/:projetoId')
-  @Permissoes('agendamentos.vendas', 'agendamentos.ver')
+  @Permissoes('agendamentos.vendas', 'agendamentos.ver', 'agendamentos.producao')
   listarPorProjeto(@Param('projetoId') projetoId: string) {
     return this.service.listarPorProjeto(this.cleanId(projetoId));
   }
@@ -89,14 +96,14 @@ export class MedicaoFinaController {
 
   /** Cria ou atualiza medição fina (upsert por projeto_id + nome_ambiente) */
   @Post()
-  @Permissoes('agendamentos.vendas')
+  @Permissoes('agendamentos.vendas', 'agendamentos.producao')
   salvar(@Body() dto: CreateMedicaoFinaDto) {
     return this.service.salvar(dto);
   }
 
   /** Atualiza medição fina por id */
   @Put(':id')
-  @Permissoes('agendamentos.vendas')
+  @Permissoes('agendamentos.vendas', 'agendamentos.producao')
   atualizar(@Param('id') id: string, @Body() dto: UpdateMedicaoFinaDto) {
     return this.service.atualizar(this.cleanId(id), dto);
   }

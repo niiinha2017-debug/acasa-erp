@@ -1,308 +1,327 @@
 <template>
-  <div class="login-font w-full h-full rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
-    <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
-    <PageHeader
-      :title="isEdit ? `Editar Compra #${compraId}` : 'Nova Compra'"
-      subtitle="Registre uma nova entrada de materiais."
-      icon="pi pi-shopping-cart"
-      :backTo="'/compras'"
-      class="border-b border-border-ui"
-    />
+  <PageShell :padded="false" variant="minimal">
+    <section class="login-font compra-editor ds-page-context ds-page-context--editor animate-page-in">
+      <PageHeader
+        :title="isEdit ? `Editar Compra #${compraId}` : 'Nova Compra'"
+        subtitle="Registro de entradas, compras vinculadas e rateios de custo"
+        icon="pi pi-shopping-cart"
+        :backTo="'/compras'"
+        variant="minimal"
+      />
 
-    <div class="px-4 py-4 md:px-6 md:py-6 lg:px-8 lg:py-8">
-      <Loading v-if="loading" />
+      <div class="compra-body ds-editor-body">
+        <Loading v-if="loading" />
 
-      <form v-else class="space-y-10" @submit.prevent="confirmarSalvarCompra" autocomplete="off">
-        <!-- Identificação -->
-        <div class="grid grid-cols-12 gap-6 items-end bg-slate-50/50 dark:bg-slate-800/20 p-6 rounded-2xl">
-          <div class="col-span-12 md:col-span-4">
-            <label class="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 ml-1">
-              Destino do Gasto
-            </label>
+        <form v-else class="compra-form ds-editor-form space-y-12" @submit.prevent="confirmarSalvarCompra" autocomplete="off">
+          <div class="compra-form__lead-grid ds-editor-lead-grid grid grid-cols-12 gap-6 items-end pb-4">
+            <div class="col-span-12 md:col-span-4">
+              <label class="block text-xs font-semibold tracking-wide text-text-soft ml-0.5 mb-2">
+                Destino da compra
+              </label>
 
-            <div class="flex gap-3">
-              <Button
-                type="button"
-                variant="secondary"
-                class="flex-1 justify-center !h-12 !rounded-xl"
-                :class="tipoCompra === 'INSUMOS' ? 'ring-2 ring-brand-primary bg-brand-primary/10' : ''"
-                @click="tipoCompra = 'INSUMOS'"
-              >
-                <span class="text-[10px] font-black uppercase">Estoque</span>
-              </Button>
-
-              <Button
-                type="button"
-                variant="secondary"
-                class="flex-1 justify-center !h-12 !rounded-xl"
-                :class="tipoCompra === 'CLIENTE_AMBIENTE' ? 'ring-2 ring-brand-primary bg-brand-primary/10' : ''"
-                @click="tipoCompra = 'CLIENTE_AMBIENTE'"
-              >
-                <span class="text-[10px] font-black uppercase">Venda</span>
-              </Button>
+              <div class="inline-flex w-full rounded-2xl border border-border-ui bg-transparent p-1 gap-1">
+                <button
+                  type="button"
+                  class="flex-1 h-11 rounded-[14px] text-sm font-semibold transition-all duration-200"
+                  :class="tipoCompra === 'INSUMOS'
+                    ? 'bg-slate-100 dark:bg-slate-800 text-brand-primary'
+                    : 'text-text-soft hover:text-text-main hover:bg-slate-50 dark:hover:bg-slate-900/60'"
+                  @click="tipoCompra = 'INSUMOS'"
+                >
+                  Estoque
+                </button>
+                <button
+                  type="button"
+                  class="flex-1 h-11 rounded-[14px] text-sm font-semibold transition-all duration-200"
+                  :class="tipoCompra === 'CLIENTE_AMBIENTE'
+                    ? 'bg-slate-100 dark:bg-slate-800 text-brand-primary'
+                    : 'text-text-soft hover:text-text-main hover:bg-slate-50 dark:hover:bg-slate-900/60'"
+                  @click="tipoCompra = 'CLIENTE_AMBIENTE'"
+                >
+                  Venda
+                </button>
+              </div>
             </div>
+
+            <SearchInput
+              class="col-span-12 md:col-span-5"
+              v-model="fornecedorSelecionado"
+              mode="select"
+              variant="line"
+              label="Fornecedor *"
+              :options="fornecedorOptions"
+              required
+              placeholder="Selecione o fornecedor"
+            />
+
+            <Input
+              class="col-span-12 md:col-span-3"
+              v-model="form.data_compra"
+              variant="line"
+              label="Data de entrada *"
+              type="date"
+              required
+            />
           </div>
 
-          <SearchInput
-            class="col-span-12 md:col-span-5"
-            v-model="fornecedorSelecionado"
-            mode="select"
-            label="Fornecedor *"
-            :options="fornecedorOptions"
-            required
-            placeholder="Selecione..."
-          />
-
-          <Input
-            class="col-span-12 md:col-span-3"
-            v-model="form.data_compra"
-            label="Data de Entrada (Nota Fiscal) *"
-            type="date"
-            required
-          />
-        </div>
-
-        <!-- Cliente x Ambiente (somente quando Venda) -->
-        <div v-if="tipoCompra === 'CLIENTE_AMBIENTE'" class="space-y-6">
-          <div class="relative">
+          <div class="section-divider ds-section-divider relative">
             <div class="absolute inset-0 flex items-center">
               <div class="w-full border-t border-border-ui/50"></div>
             </div>
             <div class="relative flex justify-center">
-              <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
-                Cliente x Ambiente
+              <span class="section-title ds-section-title bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+                Vínculo da compra
               </span>
             </div>
           </div>
 
-          <div class="grid grid-cols-12 gap-6 items-end">
-            <SearchInput
-              class="col-span-12 md:col-span-6"
-              v-model="vendaSelecionada"
-              mode="select"
-              label="Venda *"
-              :options="vendaOptions"
-              required
-              placeholder="Selecione..."
-            />
+          <section
+            v-if="tipoCompra === 'CLIENTE_AMBIENTE'"
+            class="space-y-6"
+          >
+            <div class="grid grid-cols-12 gap-6 items-end">
+              <SearchInput
+                class="col-span-12 md:col-span-6"
+                v-model="vendaSelecionada"
+                mode="select"
+                variant="line"
+                label="Venda *"
+                :options="vendaOptions"
+                required
+                placeholder="Selecione a venda"
+              />
 
-            <SearchInput
-              class="col-span-12 md:col-span-6"
-              v-model="ambienteSelecionado"
-              mode="select"
-              label="Ambiente"
-              :options="ambienteOptions"
-              :required="!todosAmbientesMes"
-              :readonly="todosAmbientesMes"
-              placeholder="Selecione..."
-            />
-
-            <div class="col-span-12">
-              <CustomCheckbox
-                label="Aplicar em TODOS os ambientes do mês"
-                description="Quando marcado, o rateio será dividido entre todos os ambientes desta venda."
-                :model-value="todosAmbientesMes"
-                @update:model-value="(v) => { todosAmbientesMes = v; if (v) ambienteSelecionado = null }"
+              <SearchInput
+                class="col-span-12 md:col-span-6"
+                v-model="ambienteSelecionado"
+                mode="select"
+                variant="line"
+                label="Ambiente"
+                :options="ambienteOptions"
+                :required="!todosAmbientesMes"
+                :readonly="todosAmbientesMes"
+                placeholder="Selecione o ambiente"
               />
             </div>
-          </div>
-        </div>
 
-        <!-- Itens -->
-        <div class="space-y-6">
-          <div class="relative">
+            <CustomCheckbox
+              label="Aplicar em todos os ambientes do mês"
+              description="Quando marcado, o rateio será dividido entre todos os ambientes desta venda."
+              :model-value="todosAmbientesMes"
+              @update:model-value="(v) => { todosAmbientesMes = v; if (v) ambienteSelecionado = null }"
+            />
+          </section>
+
+          <section
+            v-else
+            class="compra-inline-note"
+          >
+            <p class="text-sm font-medium text-text-main">Compra para estoque ou insumos internos.</p>
+            <p class="mt-1 text-xs text-text-soft">Nenhum vínculo com venda ou ambiente será enviado nesse lançamento.</p>
+          </section>
+
+          <div class="section-divider ds-section-divider relative">
             <div class="absolute inset-0 flex items-center">
               <div class="w-full border-t border-border-ui/50"></div>
             </div>
             <div class="relative flex justify-center">
-              <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
-                Itens da Nota
+              <span class="section-title ds-section-title bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+                Itens da nota
               </span>
             </div>
           </div>
 
-          <div class="flex items-center justify-between gap-4">
-            <p class="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Adicione os itens da compra
-            </p>
+          <section class="space-y-4">
+            <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p class="text-sm font-semibold text-text-main">Adicionar item</p>
+                <p class="text-xs text-text-soft">Informe produto, quantidade e valor unitário.</p>
+              </div>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              type="button"
-              class="text-[10px] font-black uppercase tracking-widest hover:bg-brand-primary/5 text-brand-primary"
-              @click="abrirModalProduto"
-            >
-              <i class="pi pi-plus-circle mr-2"></i>
-              Produto não cadastrado?
-            </Button>
-          </div>
-
-          <div class="grid grid-cols-12 gap-6 items-end bg-slate-50/50 dark:bg-slate-800/20 p-6 rounded-2xl border border-border-ui">
-            <SearchInput
-  class="col-span-12 md:col-span-6"
-  :key="itemNovoKey"
-  v-model="itemNovo.produto_id"
-  mode="select"
-  label="Produto"
-  :options="produtoOptions"
-  @update:modelValue="onSelecionarProdutoNovo"
-  placeholder="Selecione..."
-/>
-
-<Input
-  class="col-span-6 md:col-span-2"
-  v-model="itemNovo.quantidade"
-  label="Qtd"
-  type="number"
-  placeholder="0"
-/>
-
-<Input
-  class="col-span-6 md:col-span-4"
-  v-model="itemNovo.valorUnitarioMask"
-  label="Valor Unitário"
-  placeholder="0,00"
-  @input="itemNovo.valorUnitarioMask = maskMoneyBR($event.target.value)"
-/>
-
-<SearchInput
-  class="col-span-12 md:col-span-4"
-  v-model="itemNovo.categoria_base"
-  mode="select"
-  label="Categoria Base"
-  :options="categoriaBaseOptions"
-  placeholder="Selecione..."
-/>
-
-
-            <div class="col-span-12">
               <Button
-                variant="primary"
-                size="lg"
-                class="w-full !rounded-xl"
+                variant="ghost"
+                size="sm"
                 type="button"
-                @click="registrarItemNovo"
+                class="self-start md:self-auto text-brand-primary compra-item-link"
+                :disabled="!temFornecedorSelecionado"
+                @click="abrirModalProduto"
               >
-                ADICIONAR ITEM
+                <i class="pi pi-plus-circle mr-2"></i>
+                Produto não cadastrado?
               </Button>
             </div>
-          </div>
 
-          <div v-if="itens.length" class="border border-border-ui rounded-2xl overflow-hidden">
-            <Table :columns="columnsItens" :rows="itens" boxed>
-<template #cell-nome_produto="{ row }">
-  <div class="py-2">
-    <div class="flex items-center gap-2 flex-wrap">
-      <div class="font-black text-slate-700 uppercase text-xs">
-        {{ row.nome_produto }}
-      </div>
-      <span
-        class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide border"
-        :class="categoriaBaseBadgeClass(row?.categoria_base)"
-      >
-        {{ getCategoriaBaseLabel(row?.categoria_base) }}
-      </span>
-    </div>
+            <div class="grid grid-cols-12 gap-x-6 gap-y-4 items-end">
+              <SearchInput
+                class="col-span-12 md:col-span-6"
+                :key="itemNovoKey"
+                v-model="itemNovo.produto_id"
+                mode="select"
+                variant="line"
+                label="Produto"
+                :options="produtoOptions"
+                @update:modelValue="onSelecionarProdutoNovo"
+                placeholder="Selecione o produto"
+              />
 
-    <div v-if="descDoItem(row)" class="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-      {{ descDoItem(row) }}
-    </div>
-  </div>
-</template>
+              <Input
+                class="col-span-6 md:col-span-2"
+                v-model="itemNovo.quantidade"
+                variant="line"
+                label="Qtd"
+                type="number"
+                placeholder="0"
+              />
 
+              <Input
+                class="col-span-6 md:col-span-4"
+                v-model="itemNovo.valorUnitarioMask"
+                variant="line"
+                label="Valor unitário"
+                placeholder="0,00"
+                @input="itemNovo.valorUnitarioMask = maskMoneyBR($event.target.value)"
+              />
 
-              <template #cell-valor_unitario="{ value }">
-                <span class="text-xs font-bold text-slate-500">
-                  R$ {{ Number(value).toLocaleString('pt-br', { minimumFractionDigits: 2 }) }}
-                </span>
-              </template>
+              <div class="col-span-12 md:col-span-4">
+                <label class="block text-xs font-semibold tracking-wide text-text-soft ml-0.5 mb-1.5">Categoria herdada</label>
+                <div class="h-10 rounded-xl border border-border-ui bg-transparent px-3 flex items-center">
+                  <span
+                    v-if="itemNovo.categoria_base"
+                    class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide border"
+                    :class="categoriaBaseBadgeClass(itemNovo.categoria_base)"
+                  >
+                    {{ getCategoriaBaseLabel(itemNovo.categoria_base) }}
+                  </span>
+                  <span v-else class="text-sm text-text-soft">Definida no cadastro do produto</span>
+                </div>
+              </div>
 
-              <template #cell-valor_total="{ value }">
-                <span class="text-sm font-black text-slate-800">
-                  R$ {{ Number(value).toLocaleString('pt-br', { minimumFractionDigits: 2 }) }}
-                </span>
-              </template>
-
-<template #cell-acoes="{ row }">
-  <div class="flex justify-center gap-2">
-    <button
-      type="button"
-      class="h-9 px-3 rounded-lg flex items-center gap-1.5 text-text-muted hover:text-brand-primary hover:bg-brand-primary/10 text-xs font-semibold transition-colors"
-      @click="editarItemPorKey(row._key)"
-    >
-      <i class="pi pi-pencil text-sm"></i>
-      <span>Editar</span>
-    </button>
-    <button
-      type="button"
-      class="h-9 px-3 rounded-lg flex items-center gap-1.5 text-text-muted hover:text-rose-500 hover:bg-rose-500/10 text-xs font-semibold transition-colors"
-      @click="removerItem(row._key)"
-    >
-      <i class="pi pi-trash text-sm"></i>
-      <span>Excluir</span>
-    </button>
-  </div>
-</template>
-
-
-            </Table>
-
-            <div class="flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-800/20 border-t border-border-ui">
-              <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Total da Compra</span>
-              <span class="text-lg font-black">
-                R$ {{ Number(totalCalculado).toLocaleString('pt-br', { minimumFractionDigits: 2 }) }}
-              </span>
+              <div class="col-span-12 md:col-span-8 flex justify-start md:justify-end pt-1">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  type="button"
+                  class="w-full md:w-auto min-w-[160px]"
+                  @click="registrarItemNovo"
+                >
+                  Adicionar item
+                </Button>
+              </div>
             </div>
-          </div>
-        </div>
+          </section>
 
-        <!-- Footer (igual Cliente: simples, sem firula) -->
-        <div class="pt-10 mt-6 border-t border-border-ui">
-          <div class="flex items-center justify-between gap-4">
-            <div></div>
+          <section v-if="itens.length" class="compra-lista space-y-4">
+            <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p class="text-sm font-semibold text-text-main">Itens lançados</p>
+                <p class="mt-1 text-xs text-text-soft">{{ totalItens }} {{ totalItens === 1 ? 'item registrado' : 'itens registrados' }}</p>
+              </div>
+              <div class="text-sm font-semibold text-text-main">
+                Total parcial: R$ {{ Number(totalCalculado).toLocaleString('pt-br', { minimumFractionDigits: 2 }) }}
+              </div>
+            </div>
 
-    
-<Button
-  v-if="can(isEdit ? 'compras.editar' : 'compras.criar')"
-  variant="primary"
-  size="lg"
-  type="submit"
-  :loading="salvando"
-  :disabled="!podeSalvar"
->
+            <div class="rounded-2xl border border-border-ui overflow-hidden bg-bg-card">
+              <Table :columns="columnsItens" :rows="itens" boxed>
+                <template #cell-nome_produto="{ row }">
+                  <div class="py-2">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <div class="font-black text-slate-700 uppercase text-xs">
+                        {{ row.nome_produto }}
+                      </div>
+                      <span
+                        class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide border"
+                        :class="categoriaBaseBadgeClass(row?.categoria_base)"
+                      >
+                        {{ getCategoriaBaseLabel(row?.categoria_base) }}
+                      </span>
+                    </div>
 
-              <i class="pi pi-save mr-2 text-[12px]"></i>
-              {{ isEdit ? 'ATUALIZAR COMPRA' : 'SALVAR COMPRA' }}
-            </Button>
+                    <div v-if="descDoItem(row)" class="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      {{ descDoItem(row) }}
+                    </div>
+                  </div>
+                </template>
 
-<Button
-  v-if="isEdit && can('compras.excluir')"
-  type="button"
-  variant="danger"
-  size="lg"
-  :loading="excluindo"
-  @click="confirmarExcluirCompra"
->
-              <i class="pi pi-trash mr-2 text-[12px]"></i>
-              EXCLUIR
-            </Button>
+                <template #cell-valor_unitario="{ value }">
+                  <span class="text-xs font-bold text-slate-500">
+                    R$ {{ Number(value).toLocaleString('pt-br', { minimumFractionDigits: 2 }) }}
+                  </span>
+                </template>
 
-            <div v-if="!isEdit"></div>
-          </div>
-        </div>
-      </form>
-    </div>
+                <template #cell-valor_total="{ value }">
+                  <span class="text-sm font-black text-slate-800">
+                    R$ {{ Number(value).toLocaleString('pt-br', { minimumFractionDigits: 2 }) }}
+                  </span>
+                </template>
 
-    <QuickCreateProduto
-      :open="modalProdutoOpen"
-      :fornecedor-id="fornecedorSelecionado ? Number(fornecedorSelecionado) : null"
-      :fornecedor-options="fornecedorOptions"
-      :texto-inicial="''"
-      @close="fecharModalProduto"
-      @created="onProdutoCriado"
-    />
-  </div>
+                <template #cell-acoes="{ row }">
+                  <div class="flex justify-center gap-2">
+                    <button
+                      type="button"
+                      class="h-9 px-3 rounded-lg flex items-center gap-1.5 text-text-muted hover:text-brand-primary hover:bg-brand-primary/10 text-xs font-semibold transition-colors"
+                      @click="editarItemPorKey(row._key)"
+                    >
+                      <i class="pi pi-pencil text-sm"></i>
+                      <span>Editar</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="h-9 px-3 rounded-lg flex items-center gap-1.5 text-text-muted hover:text-rose-500 hover:bg-rose-500/10 text-xs font-semibold transition-colors"
+                      @click="removerItem(row._key)"
+                    >
+                      <i class="pi pi-trash text-sm"></i>
+                      <span>Excluir</span>
+                    </button>
+                  </div>
+                </template>
+              </Table>
+            </div>
+          </section>
+
+          <section
+            v-else
+            class="compra-inline-empty"
+          >
+            <p class="text-sm font-semibold text-text-main">Nenhum item lançado ainda.</p>
+            <p class="mt-1 text-xs text-text-soft">Selecione um produto, informe quantidade e valor unitário para compor a compra.</p>
+          </section>
+
+          <FormActions
+            :is-edit="isEdit"
+            :loading-save="salvando"
+            :loading-delete="excluindo"
+            :show-delete="isEdit"
+            perm-create="compras.criar"
+            perm-edit="compras.editar"
+            perm-delete="compras.excluir"
+            label-create="Criar compra"
+            @save="confirmarSalvarCompra"
+            @delete="confirmarExcluirCompra"
+          >
+            <template #left>
+              <div class="text-xs text-text-soft">
+                <span class="font-semibold text-text-main">{{ tipoCompraLabel }}</span>
+                <span class="mx-2">•</span>
+                <span>{{ totalItens }} {{ totalItens === 1 ? 'item' : 'itens' }}</span>
+                <span class="mx-2">•</span>
+                <span>Total R$ {{ Number(totalCalculado).toLocaleString('pt-br', { minimumFractionDigits: 2 }) }}</span>
+              </div>
+            </template>
+          </FormActions>
+        </form>
+      </div>
+
+      <QuickCreateProduto
+        :open="modalProdutoOpen"
+        :fornecedor-id="fornecedorSelecionado ? Number(fornecedorSelecionado) : null"
+        :fornecedor-options="fornecedorOptions"
+        :texto-inicial="''"
+        @close="fecharModalProduto"
+        @created="onProdutoCriado"
+      />
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
@@ -315,7 +334,8 @@ import { maskMoneyBR } from '@/utils/masks'
 import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
 import { can } from '@/services/permissions'
 import { closeTabAndGo } from '@/utils/tabs'
-import { CATEGORIAS_BASE, getCategoriaBaseLabel } from '@/constantes/categorias-base'
+import { getCategoriaBaseLabel } from '@/constantes/categorias-base'
+import FormActions from '@/components/ui/FormActions.vue'
 
 definePage({ meta: { perm: 'compras.ver' } })
 
@@ -381,8 +401,15 @@ const totalCalculado = computed(() => {
   return round2(total)
 })
 
+const totalItens = computed(() => itens.value.length)
+
+const tipoCompraLabel = computed(() => (
+  tipoCompra.value === 'CLIENTE_AMBIENTE' ? 'Compra vinculada a venda' : 'Compra para estoque'
+))
+
 
 const fornecedorOptions = computed(() => Array.isArray(listaFornecedores.value) ? listaFornecedores.value : [])
+const temFornecedorSelecionado = computed(() => Number(fornecedorSelecionado.value || 0) > 0)
 
 
 const vendaOptions = computed(() =>
@@ -399,21 +426,6 @@ const ambienteOptions = computed(() =>
   })),
 )
 
-const podeSalvar = computed(() => {
-  if (!fornecedorSelecionado.value || !form.data_compra) return false
-
-  if (tipoCompra.value === 'INSUMOS') return true
-
-  if (tipoCompra.value === 'CLIENTE_AMBIENTE') {
-    if (!vendaSelecionada.value) return false
-    if (!todosAmbientesMes.value && !ambienteSelecionado.value) return false
-    if (!itens.value.length) return false
-    return true
-  }
-
-  return false
-})
-
 
 // tabela
 const columnsItens = [
@@ -423,8 +435,6 @@ const columnsItens = [
   { key: 'valor_total', label: 'Subtotal' },
   { key: 'acoes', label: 'Ações', width: '120px', align: 'center' },
 ]
-
-const categoriaBaseOptions = computed(() => CATEGORIAS_BASE)
 
 // =======================
 // HELPERS
@@ -884,6 +894,10 @@ await carregarProdutos()
 // MODAL PRODUTO
 // =======================
 function abrirModalProduto() {
+  if (!temFornecedorSelecionado.value) {
+    notify.warn('Selecione o fornecedor no topo da compra antes de cadastrar o produto.')
+    return
+  }
   modalProdutoOpen.value = true
 }
 
@@ -943,9 +957,25 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
-
 .login-font {
-  font-family: 'Manrope', 'Segoe UI', sans-serif;
+  font-family: var(--ds-font-sans);
+}
+
+.compra-inline-note {
+  padding: 0.25rem 0 0;
+}
+
+.compra-inline-empty {
+  padding: 1rem 0 0;
+  text-align: left;
+}
+
+.compra-lista {
+  padding-top: 0.25rem;
+}
+
+.compra-item-link {
+  padding-left: 0;
+  padding-right: 0;
 }
 </style>

@@ -1,12 +1,12 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary" />
+  <PageShell :padded="false" variant="minimal">
+    <section class="login-font ds-page-context ds-page-context--editor animate-page-in">
 
       <PageHeader
         :title="isEditMode ? `Editar venda #${vendaId}` : 'Fechamento da Venda'"
         :subtitle="isEditMode ? 'Altere itens, parcelas e comissões (mesma tela do fechamento).' : 'Defina o valor final e condições a partir do orçamento aprovado'"
         icon="pi pi-dollar"
+        variant="minimal"
       >
         <template #actions>
           <div class="flex items-center gap-2">
@@ -30,7 +30,7 @@
         </template>
       </PageHeader>
 
-      <div class="p-6 md:p-8 border-t border-border-ui space-y-6 max-w-[1200px] mx-auto">
+      <div class="ds-editor-body space-y-6">
         <Loading v-if="loading" />
 
         <div v-else class="space-y-6">
@@ -133,7 +133,7 @@
                   + Adicionar ambiente
                 </Button>
               </div>
-              <Table :columns="columnsItens" :rows="rowsItens" :boxed="false" :flush="true">
+              <Table class="venda-editor-table" :columns="columnsItens" :rows="rowsItens" :boxed="true">
                 <template #cell-nome_ambiente="{ row }">
                   <Input
                     v-model="itens[row.__idx].nome_ambiente"
@@ -262,6 +262,7 @@
             </div>
 
             <Table
+              class="venda-editor-table"
               :columns="columnsPagamentos"
               :rows="rowsPagamentos"
               :row-key="'__id'"
@@ -515,14 +516,14 @@
               <p class="text-[10px] font-bold text-text-soft uppercase tracking-wider">
                 Imagens vinculadas ao orçamento original. Serão reutilizadas nos documentos relacionados à venda.
               </p>
-              <div class="border border-border-ui overflow-hidden">
+              <div class="ds-card ds-card--default overflow-hidden">
                 <Table
+                  class="venda-editor-table"
                   :columns="colArquivos"
                   :rows="imagensParaPdf"
                   :loading="loadingImagensPdf"
                   empty-text="Nenhuma imagem."
-                  :boxed="false"
-                  :flush="true"
+                  :boxed="true"
                 >
                   <template #cell-nome="{ row }">
                     <div class="flex flex-col">
@@ -585,14 +586,14 @@
               <p class="text-[10px] font-bold text-text-soft uppercase tracking-wider">
                 PDFs e outros arquivos anexados ao orçamento. Ficam vinculados ao orçamento e podem ser consultados pela venda.
               </p>
-              <div class="border border-border-ui overflow-hidden">
+              <div class="ds-card ds-card--default overflow-hidden">
                 <Table
+                  class="venda-editor-table"
                   :columns="colArquivos"
                   :rows="anexosDocumentos"
                   :loading="loadingAnexos"
                   empty-text="Nenhum anexo ou documento."
-                  :boxed="false"
-                  :flush="true"
+                  :boxed="true"
                 >
                   <template #cell-nome="{ row }">
                     <div class="flex flex-col">
@@ -643,7 +644,6 @@
           </section>
         </div>
       </div>
-    </div>
 
     <!-- Modal Cadastro Rápido do Contratante (dentro do layout do ERP) -->
     <Transition name="fade">
@@ -652,9 +652,8 @@
         class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
         @click.self="fecharModalCadastroContrato"
       >
-        <div class="w-full max-w-4xl rounded-2xl border border-border-ui bg-bg-card shadow-xl overflow-hidden flex flex-col">
-            <div class="h-1 w-full bg-brand-primary" />
-            <header class="flex items-center justify-between px-6 py-4 border-b border-border-ui">
+        <div class="w-full max-w-4xl ds-card ds-card--default shadow-xl overflow-hidden flex flex-col">
+            <header class="flex items-center justify-between px-6 py-4 border-b border-border-ui bg-[var(--ds-color-surface-muted)]/70">
               <div class="flex items-center gap-3">
                 <i class="pi pi-id-card text-2xl text-text-soft"></i>
                 <div>
@@ -687,7 +686,7 @@
                   <label class="block text-xs font-semibold tracking-wide text-text-soft ml-0.5 mb-1.5">Tipo de documento *</label>
                   <select
                     v-model="cadastroContratoForm.tipo_documento"
-                    class="w-full h-10 rounded-xl border border-border-ui bg-bg-card text-sm text-text-main px-3 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
+                    class="ds-field-line ds-field-line--select w-full h-10 text-sm px-3"
                   >
                     <option value="CPF">CPF</option>
                     <option value="CNPJ">CNPJ</option>
@@ -805,7 +804,8 @@
         </div>
       </Transition>
 
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
@@ -1745,8 +1745,17 @@ function removerItemVenda(idx) {
 async function carregarOrcamento() {
   const idParam = route.query?.orcamentoId || route.params?.orcamentoId
   const id = Number(String(idParam || '').replace(/\D/g, ''))
-  if (!id) {
+  const precoVendaOT = Number(route.query?.precoVenda || 0)
+  const orcamentoTecnicoId = Number(route.query?.orcamentoTecnicoId || 0)
+
+  if (!id && !orcamentoTecnicoId) {
     notify.error('Orçamento não informado.')
+    return
+  }
+
+  if (!id) {
+    notify.warn('Orçamento comercial não encontrado para este orçamento técnico.')
+    router.push('/orcamento-tecnico')
     return
   }
 
@@ -1759,13 +1768,44 @@ async function carregarOrcamento() {
       nome_ambiente: it.nome_ambiente,
       descricao: it.descricao,
       observacao: it.observacao ?? '',
-      valor_unitario: Number(it.valor_unitario || 0), // orçado (referência)
-      valor_final: Number(it.valor_unitario || 0), // valor de venda inicial (pode ser alterado)
+      valor_unitario: Number(it.valor_unitario || 0),
+      valor_final: Number(it.valor_unitario || 0),
     }))
     cepEntrega.value = data?.cliente?.cep ? maskCEP(data.cliente.cep) : ''
     preencherEnderecoEntregaComCliente(data?.cliente)
     temNotaFiscal.value = false
     percentualDesconto.value = 0
+
+    // Se veio do OT com um preço calculado, aplicar desconto proporcional
+    if (precoVendaOT > 0) {
+      const totalOrcadoAtual = (data?.itens || []).reduce((acc, it) => acc + Number(it.valor_unitario || 0), 0)
+      if (totalOrcadoAtual > 0 && precoVendaOT < totalOrcadoAtual) {
+        const pct = ((totalOrcadoAtual - precoVendaOT) / totalOrcadoAtual) * 100
+        percentualDesconto.value = clampPercentualDesconto(Math.round(pct * 100) / 100)
+      } else if (precoVendaOT > 0) {
+        valorFinal.value = precoVendaOT
+      }
+    }
+
+    // Pré-popular pagamentos/NF/comissões vindos do orçamento técnico
+    try {
+      const fechamentoOTRaw = route.query?.fechamentoOT
+      if (fechamentoOTRaw) {
+        const fechamentoOT = JSON.parse(decodeURIComponent(String(fechamentoOTRaw)))
+        if (Array.isArray(fechamentoOT?.pagamentos) && fechamentoOT.pagamentos.length) {
+          pagamentos.value = fechamentoOT.pagamentos.map((p) => ({
+            __id: getNextPagamentoRowId(),
+            forma_pagamento_chave: p.forma_pagamento_chave || '',
+            valor: Number(p.valor || 0),
+            parcelas: Number(p.parcelas || 1),
+            data_recebimento: '',
+            datas_parcelas: [{ data: '', valor: Number(p.valor || 0) }],
+          }))
+        }
+        if (fechamentoOT?.com_nota_fiscal) temNotaFiscal.value = true
+      }
+    } catch (_) { /* fechamentoOT inválido — ignora */ }
+
     aplicarRateio()
     representanteVenda.value = { nome: '', cpf: '', rg: '' }
     preencherRepresentanteDoCadastroEmpresaSeVazio()
@@ -2235,6 +2275,28 @@ watch(
   { deep: true },
 )
 </script>
+
+<style scoped>
+.venda-editor-table {
+  width: 100%;
+}
+
+.venda-editor-table :deep(.ds-table-shell),
+.venda-editor-table :deep(.ds-table),
+.venda-editor-table :deep(.ds-table__scroll) {
+  width: 100%;
+}
+
+.venda-editor-table :deep(.ds-table__element) {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.venda-editor-table :deep(.ds-table__head-cell),
+.venda-editor-table :deep(.ds-table__cell) {
+  vertical-align: middle;
+}
+</style>
 
 
 

@@ -19,6 +19,9 @@
           <p class="text-sm text-indigo-900/80 dark:text-indigo-200/70 mt-1">
             Para sua segurança, substitua a senha provisória enviada por e-mail por uma nova senha pessoal. A senha provisória recebida está em maiúsculas; sua nova senha deve ter pelo menos uma letra maiúscula.
           </p>
+          <p class="text-sm text-indigo-900/80 dark:text-indigo-200/70 mt-3">
+            Depois de ativar sua conta, voce sera direcionada automaticamente para a agenda.
+          </p>
         </div>
 
         <form @submit.prevent="handleTrocarSenha" class="space-y-4">
@@ -28,6 +31,7 @@
             :type="showSenhaAtual ? 'text' : 'password'"
             required
             :disabled="loading"
+            :force-upper="false"
           >
             <template #suffix>
               <button
@@ -47,6 +51,7 @@
             :type="showSenhaNova ? 'text' : 'password'"
             required
             :disabled="loading"
+            :force-upper="false"
           >
             <template #suffix>
               <button
@@ -66,6 +71,7 @@
             :type="showSenhaConfirmacao ? 'text' : 'password'"
             required
             :disabled="loading"
+            :force-upper="false"
           >
             <template #suffix>
               <button
@@ -83,7 +89,17 @@
             {{ error }}
           </div>
 
-          <div class="flex items-center justify-end gap-2 pt-2">
+          <div class="flex flex-col gap-3 pt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              class="w-full h-11 rounded-2xl font-black uppercase tracking-wider"
+              :disabled="loading"
+              @click="handleVoltarLogin"
+            >
+              Voltar ao Login
+            </Button>
+
             <Button 
               type="submit" 
               label="Ativar Minha Conta" 
@@ -100,6 +116,7 @@
 
 <script setup>
 import { reactive, ref, computed } from 'vue'
+import { AGENDA_ROUTE_PATH, hasAgendaAccess } from '@/constantes/agenda-route'
 import { useAuth } from '@/services/useauth' 
 import { useRouter } from 'vue-router'
 
@@ -112,10 +129,14 @@ definePage({
   },
 })
 
-const { alterarSenha, syncMe, loading } = useAuth()
+const { alterarSenha, syncMe, loading, logout } = useAuth()
 const router = useRouter()
 const error = ref('')
-const AGENDA_GERAL_PATH = '/agendamentos/loja'
+
+function getAgendaPath() {
+  if (hasAgendaAccess()) return AGENDA_ROUTE_PATH
+  return '/'
+}
 
 const showSenhaAtual = ref(false)
 const showSenhaNova = ref(false)
@@ -157,9 +178,14 @@ async function handleTrocarSenha() {
     await syncMe()
 
     // 3. Manda para agenda da loja
-    router.push(AGENDA_GERAL_PATH)
+    router.push(getAgendaPath())
   } catch (e) {
     error.value = e.response?.data?.message || 'Erro ao alterar senha. Verifique a senha atual.'
   }
+}
+
+async function handleVoltarLogin() {
+  error.value = ''
+  await logout()
 }
 </script>

@@ -13,7 +13,7 @@
               Relatório mensal (1º ao último dia do mês): {{ periodoLegenda }}
             </p>
           </div>
-          <button @click="$emit('close')" class="text-slate-400 dark:text-slate-500 hover:text-rose-500 transition-colors">
+          <button @click="$emit('close')" class="text-slate-400 dark:text-slate-500 hover:text-[var(--ds-color-danger-500)] transition-colors">
             <i class="pi pi-times text-xl"></i>
           </button>
         </header>
@@ -22,13 +22,13 @@
           <!-- Histórico: Compras + Planos de Corte -->
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="space-y-2">
-              <h3 class="text-sm font-black text-rose-600 dark:text-rose-400 uppercase flex items-center gap-2">
+              <h3 class="text-sm font-black text-[var(--ds-color-danger-600)] uppercase flex items-center gap-2">
                 <i class="pi pi-shopping-cart"></i> Histórico de Compras (por data de compra)
               </h3>
               <p class="text-[10px] text-slate-500 dark:text-slate-400">Relatório mensal — 1º ao último dia do mês</p>
-              <div class="bg-rose-50/50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/50 rounded-xl overflow-hidden max-h-40 overflow-y-auto">
+              <div class="bg-[var(--ds-color-danger-50)] border border-[var(--ds-color-danger-100)] rounded-xl overflow-hidden max-h-40 overflow-y-auto">
                 <table class="w-full text-xs">
-                  <thead class="bg-rose-100 dark:bg-rose-900/40 sticky top-0">
+                  <thead class="bg-[var(--ds-color-danger-100)] sticky top-0">
                     <tr>
                       <th class="text-left py-2 px-3 font-black">Data</th>
                       <th class="text-left py-2 px-3 font-black">Tipo</th>
@@ -36,67 +36,67 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="c in (preview.historico_compras || [])" :key="c.id" class="border-t border-rose-100 dark:border-rose-900/50">
+                    <tr v-for="c in (preview.historico_compras || [])" :key="c.id" class="border-t border-[var(--ds-color-danger-100)]">
                       <td class="py-1.5 px-3 text-text-main">{{ fmtData(c.data_compra) }}</td>
                       <td class="py-1.5 px-3 text-text-main">{{ c.tipo_compra || '—' }}</td>
                       <td class="py-1.5 px-3 text-right font-bold text-text-main">{{ fmtMoeda(c.valor_total) }}</td>
                     </tr>
-                    <tr v-if="!(preview.historico_compras || []).length" class="border-t border-rose-100 dark:border-rose-900/50">
+                    <tr v-if="!(preview.historico_compras || []).length" class="border-t border-[var(--ds-color-danger-100)]">
                       <td colspan="3" class="py-3 px-3 text-slate-500 dark:text-slate-400 text-center">Nenhuma compra no período</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
-              <p class="text-xs font-black text-rose-700 dark:text-rose-400">Total compras: {{ fmtMoeda(preview.total_compras || 0) }}</p>
+              <p class="text-xs font-black text-[var(--ds-color-danger-700)]">Total compras: {{ fmtMoeda(preview.total_compras || 0) }}</p>
             </div>
 
             <div class="space-y-2">
-              <h3 class="text-sm font-black text-emerald-600 dark:text-emerald-400 uppercase flex items-center gap-2">
+              <h3 class="text-sm font-black text-[var(--ds-color-success-600)] uppercase flex items-center gap-2">
                 <i class="pi pi-list"></i> Histórico Vendas Serviço de Corte (por data de venda)
               </h3>
               <p class="text-[10px] text-slate-500 dark:text-slate-400">Relatório mensal — 1º ao último dia do mês</p>
-              <div class="bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50 rounded-xl overflow-hidden max-h-40 overflow-y-auto">
+              <div class="bg-[var(--ds-color-success-50)] border border-[var(--ds-color-success-100)] rounded-xl overflow-hidden max-h-40 overflow-y-auto">
                 <table class="w-full text-xs">
-                  <thead class="bg-emerald-100 dark:bg-emerald-900/40 sticky top-0">
+                  <thead class="bg-[var(--ds-color-success-100)] sticky top-0">
                     <tr>
                       <th class="text-left py-2 px-3 font-black">Data</th>
                       <th class="text-right py-2 px-3 font-black">Valor</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="p in (preview.historico_planos || [])" :key="p.id" class="border-t border-emerald-100 dark:border-emerald-900/50">
+                    <tr v-for="p in (preview.historico_planos || [])" :key="p.id" class="border-t border-[var(--ds-color-success-100)]">
                       <td class="py-1.5 px-3 text-text-main">{{ fmtData(p.data_venda) }}</td>
                       <td class="py-1.5 px-3 text-right font-bold text-text-main">{{ fmtMoeda(p.valor_total) }}</td>
                     </tr>
-                    <tr v-if="!(preview.historico_planos || []).length" class="border-t border-emerald-100 dark:border-emerald-900/50">
+                    <tr v-if="!(preview.historico_planos || []).length" class="border-t border-[var(--ds-color-success-100)]">
                       <td colspan="2" class="py-3 px-3 text-slate-500 dark:text-slate-400 text-center">Nenhum plano no período</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
-              <p class="text-xs font-black text-emerald-700 dark:text-emerald-400">Total planos (crédito/abatimento): {{ fmtMoeda(preview.total_planos || 0) }}</p>
+              <p class="text-xs font-black text-[var(--ds-color-success-700)]">Total planos (crédito/abatimento): {{ fmtMoeda(preview.total_planos || 0) }}</p>
             </div>
           </div>
 
           <!-- Débitos e Créditos manuais -->
           <div class="grid grid-cols-12 gap-6">
             <div class="col-span-12 lg:col-span-6 space-y-4">
-              <h3 class="text-sm font-black text-rose-600 uppercase flex items-center gap-2">
+              <h3 class="text-sm font-black text-[var(--ds-color-danger-600)] uppercase flex items-center gap-2">
                 <i class="pi pi-arrow-circle-up"></i> Débitos (Saídas)
               </h3>
-              <div class="bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/50 rounded-xl p-4 space-y-3">
+              <div class="bg-[var(--ds-color-danger-50)] border border-[var(--ds-color-danger-100)] rounded-xl p-4 space-y-3">
                 <div class="flex justify-between text-sm">
                   <span class="text-slate-600 dark:text-slate-400 font-bold uppercase">Compras do período:</span>
                   <span class="font-black text-slate-800 dark:text-slate-200 italic">R$ {{ (preview.total_compras || 0).toLocaleString('pt-BR') }}</span>
                 </div>
-                <hr class="border-rose-200/50 dark:border-rose-800/50">
+                <hr class="border-[var(--ds-color-danger-200)]/50">
                 <div class="space-y-1">
-                  <label class="text-[10px] font-black text-rose-500 dark:text-rose-400 uppercase italic">Ajuste Débito (R$) — valor que soma ao que você deve</label>
+                  <label class="text-[10px] font-black text-[var(--ds-color-danger-500)] uppercase italic">Ajuste Débito (R$) — valor que soma ao que você deve</label>
                   <input 
                     v-model.number="form.valor_dever" 
                     type="number" 
                     step="0.01"
-                    class="w-full bg-white dark:bg-slate-800 border-2 border-rose-200 dark:border-rose-800 rounded-lg p-2 font-black text-lg text-text-main focus:border-rose-500 outline-none transition-all"
+                    class="w-full bg-white dark:bg-slate-800 border-2 border-[var(--ds-color-danger-200)] rounded-lg p-2 font-black text-lg text-text-main focus:border-[var(--ds-color-danger-500)] outline-none transition-all"
                     placeholder="0,00"
                   />
                 </div>
@@ -104,10 +104,10 @@
             </div>
 
             <div class="col-span-12 lg:col-span-6 space-y-4">
-              <h3 class="text-sm font-black text-emerald-600 uppercase flex items-center gap-2">
+              <h3 class="text-sm font-black text-[var(--ds-color-success-600)] uppercase flex items-center gap-2">
                 <i class="pi pi-arrow-circle-down"></i> Créditos (Abatimentos)
               </h3>
-              <div class="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/50 rounded-xl p-4 space-y-3">
+              <div class="bg-[var(--ds-color-success-50)] border border-[var(--ds-color-success-100)] rounded-xl p-4 space-y-3">
                 <div class="flex justify-between text-sm">
                   <span class="text-slate-600 dark:text-slate-400 font-bold uppercase">Crédito acumulado (meses anteriores):</span>
                   <span class="font-black text-slate-800 dark:text-slate-200 italic">R$ {{ (preview.saldo_credito_acumulado || 0).toLocaleString('pt-BR') }}</span>
@@ -116,26 +116,26 @@
                   <span class="text-slate-600 dark:text-slate-400 font-bold uppercase">Serviços de Corte (mês):</span>
                   <span class="font-black text-slate-800 dark:text-slate-200 italic">R$ {{ (preview.total_planos || 0).toLocaleString('pt-BR') }}</span>
                 </div>
-                <hr class="border-emerald-200/50 dark:border-emerald-800/50">
+                <hr class="border-[var(--ds-color-success-200)]/50">
                 <div class="grid grid-cols-2 gap-3">
                   <div class="space-y-1">
-                    <label class="text-[10px] font-black text-emerald-500 uppercase italic">Crédito Manual (R$)</label>
+                    <label class="text-[10px] font-black text-[var(--ds-color-success-500)] uppercase italic">Crédito Manual (R$)</label>
                     <input 
                       v-model.number="form.valor_creditar" 
                       type="number" 
                       step="0.01"
-                      class="w-full bg-white border-2 border-emerald-200 rounded-lg p-2 font-black text-lg focus:border-emerald-500 outline-none transition-all"
+                      class="w-full bg-white border-2 border-[var(--ds-color-success-200)] rounded-lg p-2 font-black text-lg focus:border-[var(--ds-color-success-500)] outline-none transition-all"
                       placeholder="0,00"
                     />
                   </div>
                   <div class="space-y-1">
-                    <label class="text-[10px] font-black text-emerald-500 uppercase italic">Liberar %</label>
+                    <label class="text-[10px] font-black text-[var(--ds-color-success-500)] uppercase italic">Liberar %</label>
                     <input 
                       v-model.number="form.percentual_liberado" 
                       type="number" 
                       min="0"
                       max="100"
-                      class="w-full bg-white border-2 border-emerald-200 rounded-lg p-2 font-black text-lg focus:border-emerald-500 outline-none transition-all"
+                      class="w-full bg-white border-2 border-[var(--ds-color-success-200)] rounded-lg p-2 font-black text-lg focus:border-[var(--ds-color-success-500)] outline-none transition-all"
                     />
                   </div>
                 </div>
@@ -164,6 +164,10 @@
             >
               <option v-for="fp in formasPagamentoOptions" :key="fp.value" :value="fp.value">{{ fp.label }}</option>
             </select>
+            <label class="mt-3 inline-flex items-center gap-2 text-[10px] font-black text-slate-600 uppercase">
+              <input v-model="form.usar_multiplas_formas" type="checkbox" class="h-4 w-4 rounded border-slate-300" />
+              Usar múltiplas formas no fechamento
+            </label>
             <p class="text-[10px] text-slate-500 mt-1">Use a mesma forma que em Despesas Gerais (cheque, cartão 6x, PIX, etc.)</p>
           </div>
 
@@ -190,6 +194,13 @@
               <div v-for="(p, idx) in form.parcelas" :key="idx" class="flex gap-2 mb-2 items-center">
                 <span class="w-10 text-center text-xs font-black text-slate-500">{{ p.parcela }}ª</span>
                 <input v-model="p.vencimento_em" type="date" class="flex-1 rounded-lg border border-slate-200 p-2 text-xs font-bold">
+                <select
+                  v-if="form.usar_multiplas_formas"
+                  v-model="p.forma_pagamento_chave"
+                  class="w-36 rounded-lg border border-slate-200 p-2 text-xs font-bold uppercase"
+                >
+                  <option v-for="fp in formasPagamentoOptions" :key="fp.value" :value="fp.value">{{ fp.label }}</option>
+                </select>
                 <input v-model.number="p.valor" type="number" step="0.01" class="w-28 rounded-lg border border-slate-200 p-2 text-xs font-black text-right" placeholder="0,00">
               </div>
               <button type="button" @click="adicionarParcela" class="text-[10px] font-black text-indigo-600 uppercase p-2 hover:underline">
@@ -203,7 +214,7 @@
           <div class="flex flex-wrap gap-6">
             <div class="flex flex-col">
               <span class="text-[10px] text-slate-400 font-bold uppercase">Abatimento consolidado</span>
-              <span class="text-xl font-black text-emerald-400">R$ {{ totalCompensado.toLocaleString('pt-BR') }}</span>
+              <span class="text-xl font-black text-[var(--ds-color-success-400)]">R$ {{ totalCompensado.toLocaleString('pt-BR') }}</span>
             </div>
             <div class="flex flex-col">
               <span class="text-[10px] text-slate-400 font-bold uppercase">Saldo final a pagar</span>
@@ -211,7 +222,7 @@
             </div>
             <div v-if="creditoProximoMes > 0" class="flex flex-col">
               <span class="text-[10px] text-slate-400 font-bold uppercase">Crédito para o próximo mês</span>
-              <span class="text-xl font-black text-amber-400">R$ {{ creditoProximoMes.toLocaleString('pt-BR') }}</span>
+              <span class="text-xl font-black text-[var(--ds-color-warning-400)]">R$ {{ creditoProximoMes.toLocaleString('pt-BR') }}</span>
             </div>
           </div>
           <button 
@@ -250,9 +261,17 @@ const form = reactive({
   percentual_liberado: 100,
   desconto_percentual: 0,
   forma_pagamento_chave: 'CHEQUE',
+  usar_multiplas_formas: false,
   fornecedor_cobrador_id: '',
   data_pagamento: '', // opcional: se preenchido, fechamento já é criado como PAGO
-  parcelas: [{ parcela: 1, valor: 0, vencimento_em: '' }],
+  parcelas: [
+    {
+      parcela: 1,
+      valor: 0,
+      vencimento_em: '',
+      forma_pagamento_chave: 'CHEQUE',
+    },
+  ],
 })
 
 watch(() => props.preview, (p) => {
@@ -264,12 +283,27 @@ watch(() => props.preview, (p) => {
   form.valor_creditar = 0
   form.percentual_liberado = 100
   form.desconto_percentual = 0
+  form.usar_multiplas_formas = false
   form.data_pagamento = ''
   const saldo = Number(p.valor_liquido_sem_desconto ?? p.saldo_a_pagar_auto ?? 0)
   if (saldo > 0) {
-    form.parcelas = [{ parcela: 1, valor: saldo, vencimento_em: '' }]
+    form.parcelas = [
+      {
+        parcela: 1,
+        valor: saldo,
+        vencimento_em: '',
+        forma_pagamento_chave: (form.forma_pagamento_chave || 'CHEQUE').toUpperCase(),
+      },
+    ]
   } else {
-    form.parcelas = [{ parcela: 1, valor: 0, vencimento_em: '' }]
+    form.parcelas = [
+      {
+        parcela: 1,
+        valor: 0,
+        vencimento_em: '',
+        forma_pagamento_chave: (form.forma_pagamento_chave || 'CHEQUE').toUpperCase(),
+      },
+    ]
   }
 }, { immediate: true, deep: true })
 
@@ -338,6 +372,7 @@ function adicionarParcela() {
     parcela: form.parcelas.length + 1,
     valor: 0,
     vencimento_em: '',
+    forma_pagamento_chave: (form.forma_pagamento_chave || 'CHEQUE').toUpperCase(),
   })
 }
 
@@ -352,18 +387,29 @@ function confirmarFechamento() {
   })()
   let parcelas = [...form.parcelas]
   if (!parcelas.length || !precisaParcelas) {
-    parcelas = [{ parcela: 1, valor: total, vencimento_em: vencPadrao }]
+    parcelas = [
+      {
+        parcela: 1,
+        valor: total,
+        vencimento_em: vencPadrao,
+        forma_pagamento_chave: forma,
+      },
+    ]
   } else {
     parcelas = parcelas.map((p) => ({
       ...p,
       vencimento_em: p.vencimento_em || vencPadrao,
+      forma_pagamento_chave: form.usar_multiplas_formas
+        ? String(p.forma_pagamento_chave || forma).toUpperCase()
+        : forma,
     }))
   }
   const payload = {
     ...form,
     fornecedor_cobrador_id: form.fornecedor_cobrador_id || undefined,
-    forma_pagamento_chave: forma === 'CREDITO' ? 'CARTAO' : forma,
+    forma_pagamento_chave: forma,
     data_pagamento: (form.data_pagamento || '').trim() || undefined,
+    usar_multiplas_formas: !!form.usar_multiplas_formas,
     parcelas,
   }
   emit('confirm', payload)

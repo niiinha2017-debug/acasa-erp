@@ -1,5 +1,10 @@
 {
   "scripts": {
+    "db:up": "podman compose up -d mysql",
+    "db:down": "podman compose stop mysql",
+    "db:status": "podman ps --filter name=acasa-erp_mysql_1 --format \"table {{.Names}}\\t{{.Status}}\\t{{.Ports}}\"",
+    "db:logs": "podman logs --tail 100 acasa-erp_mysql_1",
+    "dev:backend": "npm run db:up && cd backend && npm run start:dev",
     "version:desktop:bump": "node scripts/bump-desktop-version.mjs",
     "version:desktop:sync": "node scripts/bump-desktop-version.mjs --sync",
     "version:desktop-ponto:bump": "node scripts/bump-desktop-version.mjs --include-ponto",

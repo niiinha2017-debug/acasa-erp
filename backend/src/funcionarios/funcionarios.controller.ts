@@ -31,8 +31,11 @@ export class FuncionariosController {
   @Post('pdf')
   @Permissoes('funcionarios.ver')
   @HttpCode(HttpStatus.OK)
-  async gerarPdfLote(@Body() dto: GerarPdfFuncionariosDto) {
-    return this.service.gerarPdfESalvar(dto.ids); // retorna { arquivoId }
+  async gerarPdfLote(
+    @Body() dto: GerarPdfFuncionariosDto,
+    @Query('formato') formato?: string,
+  ) {
+    return this.service.gerarRelatorioESalvar(dto.ids, formato); // retorna { arquivoId }
   }
 
   @Get('select')

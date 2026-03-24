@@ -1,98 +1,97 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
-      <div class="flex flex-col gap-4 px-4 md:px-6 py-4 border-b border-border-ui">
-        <h1 class="text-xl font-semibold text-text-main flex items-center gap-2">
-          <i class="pi pi-chart-pie text-text-muted" />
-          DRE Detalhada por Cliente / Ambiente
-        </h1>
-
-        <div class="flex flex-wrap items-end gap-4">
-          <div class="flex-1 min-w-[200px] max-w-md">
-            <label class="text-xs font-medium text-text-muted block mb-1">Cliente</label>
-            <div class="relative">
-              <input
-                v-model="clienteBusca"
-                type="text"
-                placeholder="Buscar por nome..."
-                class="w-full h-10 rounded-lg border border-border-ui bg-bg-page pl-3 pr-10 text-sm text-text-main placeholder:text-text-muted"
-                @focus="mostrarSugestoes = true"
-                @blur="aplicarBlurSugestoes"
-              />
-              <i class="pi pi-search absolute right-3 top-1/2 -translate-y-1/2 text-text-muted text-sm" />
-              <div
-                v-if="mostrarSugestoes && clienteBusca.length >= 2"
-                class="absolute top-full left-0 right-0 mt-1 rounded-lg border border-border-ui bg-bg-card shadow-lg z-10 max-h-48 overflow-y-auto"
-              >
-                <div v-if="loadingClientes" class="p-3 text-center text-text-muted text-sm">
-                  <i class="pi pi-spin pi-spinner mr-1" /> Buscando...
+  <PageShell :padded="false">
+    <section class="dre-detalhada-page ds-page-context animate-page-in">
+      <PageHeader
+        title="DRE Detalhada por Cliente / Ambiente"
+        subtitle="Análise por projeto e ambiente na competência selecionada"
+        icon="pi pi-chart-pie"
+      >
+        <template #actions>
+          <div class="flex flex-col gap-4 w-full min-w-0">
+            <div class="flex flex-wrap items-end gap-4">
+              <div class="flex-1 min-w-[200px] max-w-md">
+                <label class="ds-field-label text-xs block mb-1">Cliente</label>
+                <div class="relative">
+                  <input
+                    v-model="clienteBusca"
+                    type="text"
+                    placeholder="Buscar por nome..."
+                    class="ds-field-line w-full h-10 pl-3 pr-10"
+                    @focus="mostrarSugestoes = true"
+                    @blur="aplicarBlurSugestoes"
+                  />
+                  <i class="pi pi-search absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ds-color-text-faint)] text-sm" />
+                  <div
+                    v-if="mostrarSugestoes && clienteBusca.length >= 2"
+                    class="absolute top-full left-0 right-0 mt-1 z-10 max-h-48 overflow-y-auto ds-card ds-card--default shadow-lg"
+                  >
+                    <div v-if="loadingClientes" class="p-3 text-center text-[var(--ds-color-text-soft)] text-sm">
+                      <i class="pi pi-spin pi-spinner mr-1" /> Buscando...
+                    </div>
+                    <button
+                      v-else-if="sugestoesClientes.length === 0"
+                      type="button"
+                      class="w-full px-3 py-2 text-left text-sm text-[var(--ds-color-text-soft)]"
+                    >
+                      Nenhum cliente encontrado
+                    </button>
+                    <button
+                      v-for="c in sugestoesClientes"
+                      :key="c.id"
+                      type="button"
+                      class="w-full px-3 py-2 text-left text-sm text-[var(--ds-color-text)] hover:bg-[color-mix(in_srgb,var(--ds-color-text)_6%,transparent)]"
+                      @mousedown.prevent="selecionarCliente(c)"
+                    >
+                      {{ c.nome }}
+                    </button>
+                  </div>
                 </div>
-                <button
-                  v-else-if="sugestoesClientes.length === 0"
-                  type="button"
-                  class="w-full px-3 py-2 text-left text-sm text-text-muted"
-                >
-                  Nenhum cliente encontrado
-                </button>
-                <button
-                  v-for="c in sugestoesClientes"
-                  :key="c.id"
-                  type="button"
-                  class="w-full px-3 py-2 text-left text-sm text-text-main hover:bg-black/5 dark:hover:bg-white/5"
-                  @mousedown.prevent="selecionarCliente(c)"
-                >
-                  {{ c.nome }}
-                </button>
+              </div>
+              <div class="flex gap-2 shrink-0">
+                <div>
+                  <label class="ds-field-label text-xs block mb-1">Mês</label>
+                  <select
+                    v-model="mes"
+                    class="ds-field-line ds-field-line--select h-10 w-[72px] text-sm"
+                    @change="carregarDre"
+                  >
+                    <option v-for="m in 12" :key="m" :value="m">{{ String(m).padStart(2, '0') }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="ds-field-label text-xs block mb-1">Ano</label>
+                  <select
+                    v-model="ano"
+                    class="ds-field-line ds-field-line--select h-10 w-[80px] text-sm"
+                    @change="carregarDre"
+                  >
+                    <option v-for="y in anosDisponiveis" :key="y" :value="y">{{ y }}</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
-          <div class="flex gap-2 shrink-0">
-            <div>
-              <label class="text-xs font-medium text-text-muted block mb-1">Mês</label>
-              <select
-                v-model="mes"
-                class="h-10 w-[72px] rounded-lg border border-border-ui bg-bg-page pl-2 pr-2 text-sm text-text-main"
-                @change="carregarDre"
-              >
-                <option v-for="m in 12" :key="m" :value="m">{{ String(m).padStart(2, '0') }}</option>
-              </select>
-            </div>
-            <div>
-              <label class="text-xs font-medium text-text-muted block mb-1">Ano</label>
-              <select
-                v-model="ano"
-                class="h-10 w-[80px] rounded-lg border border-border-ui bg-bg-page pl-2 pr-2 text-sm text-text-main"
-                @change="carregarDre"
-              >
-                <option v-for="y in anosDisponiveis" :key="y" :value="y">{{ y }}</option>
-              </select>
-            </div>
-          </div>
-        </div>
+        </template>
+      </PageHeader>
 
-        <p v-if="clienteSelecionado" class="text-sm text-text-muted">
-          Cliente: <strong class="text-text-main">{{ clienteSelecionado.nome }}</strong>
+      <div class="dre-detalhada-page__body ds-page-context__content space-y-6 pb-6">
+        <p v-if="clienteSelecionado" class="text-sm text-[var(--ds-color-text-soft)]">
+          Cliente: <strong class="text-[var(--ds-color-text)]">{{ clienteSelecionado.nome }}</strong>
         </p>
 
-        <!-- Visão geral (média do mês): prazos de negociação e fábrica -->
         <div
           v-if="resumoPrazos.quantidade_projetos > 0"
-          class="flex flex-wrap items-center gap-4 py-2 px-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-border-ui"
+          class="flex flex-wrap items-center gap-4 py-2 px-3 rounded-xl border border-[var(--ds-color-border)] bg-[var(--ds-color-surface-muted)]"
         >
-          <span class="text-xs font-semibold text-text-muted uppercase tracking-wide">Visão geral (média do mês)</span>
-          <span class="text-sm text-text-main">
-            Tempo de Negociação: <strong class="text-amber-700 dark:text-amber-400">{{ resumoPrazos.tempo_negociacao_medio_dias ?? 0 }} dias</strong>
+          <span class="text-xs font-semibold text-[var(--ds-color-text-soft)] uppercase tracking-wide">Visão geral (média do mês)</span>
+          <span class="text-sm text-[var(--ds-color-text)]">
+            Tempo de Negociação: <strong class="text-[var(--ds-color-warning-700)]">{{ resumoPrazos.tempo_negociacao_medio_dias ?? 0 }} dias</strong>
           </span>
-          <span class="text-sm text-text-main">
-            Tempo de Fábrica: <strong class="text-violet-700 dark:text-violet-400">{{ resumoPrazos.tempo_fabrica_medio_dias ?? 0 }} dias</strong>
+          <span class="text-sm text-[var(--ds-color-text)]">
+            Tempo de Fábrica: <strong class="text-[var(--ds-color-info-700)]">{{ resumoPrazos.tempo_fabrica_medio_dias ?? 0 }} dias</strong>
           </span>
-          <span class="text-xs text-text-muted">({{ resumoPrazos.quantidade_projetos }} projeto(s) no mês)</span>
+          <span class="text-xs text-[var(--ds-color-text-soft)]">({{ resumoPrazos.quantidade_projetos }} projeto(s) no mês)</span>
         </div>
-      </div>
-
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 space-y-6">
         <!-- Dashboard consumo do projeto (gráfico pizza + validação perda padrão) -->
         <DashboardConsumoProjeto
           v-if="projetoAtual?.id"
@@ -133,10 +132,10 @@
             <!-- Indicadores de prazo (este projeto) -->
             <div class="flex flex-wrap gap-4 mt-2 pt-2 border-t border-border-ui/70">
               <span class="text-xs text-text-muted">
-                Tempo de Negociação: <strong class="text-amber-700 dark:text-amber-400">{{ Number(dre.tempo_negociacao_dias ?? 0).toFixed(0) }} dias</strong>
+                Tempo de Negociação: <strong class="text-[var(--ds-color-warning-700)]">{{ Number(dre.tempo_negociacao_dias ?? 0).toFixed(0) }} dias</strong>
               </span>
               <span class="text-xs text-text-muted">
-                Tempo de Fábrica: <strong class="text-violet-700 dark:text-violet-400">{{ Number(dre.tempo_fabrica_dias ?? 0).toFixed(0) }} dias</strong>
+                Tempo de Fábrica: <strong class="text-[var(--ds-color-info-700)]">{{ Number(dre.tempo_fabrica_dias ?? 0).toFixed(0) }} dias</strong>
               </span>
             </div>
           </div>
@@ -204,7 +203,7 @@
                     </table>
                   </td>
                 </tr>
-                <tr class="border-b border-border-ui bg-amber-50/30 dark:bg-amber-900/10">
+                <tr class="border-b border-border-ui bg-[var(--ds-color-warning-50)]">
                   <td class="py-2.5 px-0 text-text-muted text-xs">Custo Fábrica (auditoria / comparação)</td>
                   <td class="py-2.5 px-0 text-right tabular-nums text-text-muted text-xs">
                     {{ formatarMoeda(dre.custo_fabrica_agregado) }}
@@ -235,21 +234,21 @@
                 <tr class="border-b border-border-ui">
                   <td colspan="2" class="py-1.5 px-0 text-xs font-semibold text-text-muted uppercase tracking-wide">Linha do tempo de custos</td>
                 </tr>
-                <tr class="border-b border-border-ui bg-amber-50/50 dark:bg-amber-900/10">
-                  <td class="py-2.5 px-0 text-amber-800 dark:text-amber-300">
+                <tr class="border-b border-border-ui bg-[var(--ds-color-warning-50)]">
+                  <td class="py-2.5 px-0 text-[var(--ds-color-warning-700)]">
                     Custo Comercial
                     <span class="block text-xs text-text-muted/80 mt-0.5">Cadastro → Fechamento (valor/hora comercial)</span>
                   </td>
-                  <td class="py-2.5 px-0 text-right tabular-nums text-amber-800 dark:text-amber-300">
+                  <td class="py-2.5 px-0 text-right tabular-nums text-[var(--ds-color-warning-700)]">
                     − {{ formatarMoeda(dre.custo_comercial) }}
                   </td>
                 </tr>
-                <tr class="border-b border-border-ui bg-violet-50/50 dark:bg-violet-900/10">
-                  <td class="py-2.5 px-0 text-violet-800 dark:text-violet-300">
+                <tr class="border-b border-border-ui bg-[var(--ds-color-info-50)]">
+                  <td class="py-2.5 px-0 text-[var(--ds-color-info-700)]">
                     Custo de Produção
                     <span class="block text-xs text-text-muted/80 mt-0.5">Fechamento → Conclusão (taxa de máquina)</span>
                   </td>
-                  <td class="py-2.5 px-0 text-right tabular-nums text-violet-800 dark:text-violet-300">
+                  <td class="py-2.5 px-0 text-right tabular-nums text-[var(--ds-color-info-700)]">
                     − {{ formatarMoeda(dre.custo_producao) }}
                   </td>
                 </tr>
@@ -268,7 +267,7 @@
               class="px-4 pb-4 pt-4 border-t border-border-ui"
             >
               <h4 class="text-xs font-semibold text-text-muted uppercase tracking-wide mb-3 flex items-center gap-2">
-                <i class="pi pi-chart-line text-amber-500" />
+                <i class="pi pi-chart-line text-[var(--ds-color-warning-500)]" />
                 Desperdício
               </h4>
               <div class="flex flex-wrap gap-4 items-center">
@@ -276,13 +275,13 @@
                   <span class="text-xs text-text-muted">Perda padrão:</span>
                   <span class="text-sm font-semibold text-text-main tabular-nums">{{ Number(dre.perda_padrao_percentual).toFixed(1) }}%</span>
                 </div>
-                <div v-if="dre.retalhos_m2 != null && Number(dre.retalhos_m2) > 0" class="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
+                <div v-if="dre.retalhos_m2 != null && Number(dre.retalhos_m2) > 0" class="flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--ds-color-success-50)] border border-[var(--ds-color-success-200)]">
                   <span class="text-xs text-text-muted">Retalhos (sobras) no período:</span>
-                  <span class="text-sm font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums">{{ Number(dre.retalhos_m2).toFixed(2) }} m²</span>
+                  <span class="text-sm font-semibold text-[var(--ds-color-success-700)] tabular-nums">{{ Number(dre.retalhos_m2).toFixed(2) }} m²</span>
                 </div>
-                <div v-if="dre.perda_real_m2 != null && Number(dre.perda_real_m2) > 0" class="flex items-center gap-2 px-3 py-2 rounded-xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800">
+                <div v-if="dre.perda_real_m2 != null && Number(dre.perda_real_m2) > 0" class="flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--ds-color-danger-50)] border border-[var(--ds-color-danger-200)]">
                   <span class="text-xs text-text-muted">Perda real (desvio):</span>
-                  <span class="text-sm font-semibold text-rose-700 dark:text-rose-400 tabular-nums">{{ Number(dre.perda_real_m2).toFixed(2) }} m²</span>
+                  <span class="text-sm font-semibold text-[var(--ds-color-danger-700)] tabular-nums">{{ Number(dre.perda_real_m2).toFixed(2) }} m²</span>
                 </div>
               </div>
               <p class="text-[10px] text-text-muted mt-2">
@@ -292,14 +291,16 @@
           </div>
         </div>
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { DreDetalhadaService } from '@/services/index'
 import DashboardConsumoProjeto from '@/components/dashboard/DashboardConsumoProjeto.vue'
+import PageShell from '@/components/ui/PageShell.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
 
 definePage({ meta: { perm: 'relatorios.dre_detalhada.ver' } })
 
@@ -351,15 +352,15 @@ const resumoPrazos = ref({
 
 const lucroClasse = computed(() =>
   Number(dre.value.lucro_liquido ?? 0) >= 0
-    ? 'text-emerald-700 dark:text-emerald-400'
-    : 'text-red-600 dark:text-red-400'
+    ? 'text-[var(--ds-color-success-700)]'
+    : 'text-[var(--ds-color-danger-600)]'
 )
 
 // Variação positiva = custo individual acima da média fábrica (menos eficiente); negativa = abaixo (mais eficiente)
 const variacaoClasse = computed(() => {
   const v = dre.value.variacao_eficiencia?.variacao ?? 0
-  if (v > 0) return 'text-amber-700 dark:text-amber-400'
-  if (v < 0) return 'text-emerald-700 dark:text-emerald-400'
+  if (v > 0) return 'text-[var(--ds-color-warning-700)]'
+  if (v < 0) return 'text-[var(--ds-color-success-700)]'
   return 'text-text-muted'
 })
 

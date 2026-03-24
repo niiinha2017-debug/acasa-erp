@@ -339,7 +339,14 @@ export class ComprasService {
     const list = await this.prisma.compras.findMany({
       where,
       orderBy: { id: 'desc' },
-      include: {
+      select: {
+        id: true,
+        tipo_compra: true,
+        regime_financeiro: true,
+        status: true,
+        data_compra: true,
+        vencimento_em: true,
+        valor_total: true,
         fornecedor: {
           select: {
             id: true,
@@ -348,8 +355,11 @@ export class ComprasService {
             cnpj: true,
           },
         },
-        itens: true,
-        rateios: true,
+        itens: {
+          select: {
+            nome_produto: true,
+          },
+        },
       },
     });
 
@@ -392,6 +402,28 @@ export class ComprasService {
 
   async criar(dto: CriarCompraDto) {
     const tipo = String((dto as any).tipo_compra || '').trim();
+    const fornecedorIdRaw = (dto as any).fornecedor_id;
+    const fornecedorId =
+      fornecedorIdRaw != null ? Number(fornecedorIdRaw) : Number.NaN;
+    if (!Number.isFinite(fornecedorId) || fornecedorId <= 0) {
+      throw new BadRequestException(
+        'fornecedor_id é obrigatório e deve ser um ID válido.',
+      );
+    }
+
+    const fornecedor = await this.prisma.fornecedor.findUnique({
+      where: { id: fornecedorId },
+      select: { regime_financeiro_padrao: true },
+    });
+    if (!fornecedor) {
+      throw new NotFoundException('Fornecedor não encontrado');
+    }
+
+    const regimeFinanceiro =
+      String((dto as any).regime_financeiro || '').trim() ||
+      String((fornecedor as any).regime_financeiro_padrao || '').trim() ||
+      'FECHAMENTO_MENSAL';
+
     const itensInput = (dto as any).itens;
     const total = this.calcTotalItens(itensInput);
 
@@ -466,14 +498,10 @@ export class ComprasService {
       ? new Date((dto as any).data_compra)
       : new Date();
 
-    const fornecedorId = (dto as any).fornecedor_id != null ? Number((dto as any).fornecedor_id) : null;
-    if (fornecedorId == null || !Number.isFinite(fornecedorId) || fornecedorId <= 0) {
-      throw new BadRequestException('fornecedor_id é obrigatório e deve ser um ID válido.');
-    }
-
     const compra = await this.prisma.compras.create({
       data: {
         tipo_compra: tipo,
+        regime_financeiro: regimeFinanceiro,
         venda_id: tipo === 'CLIENTE_AMBIENTE' ? (dto as any).venda_id : null,
         data_compra: dataEntrada,
         fornecedor_id: fornecedorId,
@@ -496,6 +524,9 @@ export class ComprasService {
       include: {
         itens: true,
         rateios: true,
+        fechamento: {
+          select: { id: true, mes_referencia: true, ano_referencia: true, status: true },
+        },
         fornecedor: { select: { id: true, razao_social: true, nome_fantasia: true, cnpj: true } },
       },
     });
@@ -661,6 +692,11 @@ export class ComprasService {
           (dto as any).status !== undefined
             ? String((dto as any).status || '').trim() || 'EM_ABERTO'
             : undefined,
+        regime_financeiro:
+          (dto as any).regime_financeiro !== undefined
+            ? String((dto as any).regime_financeiro || '').trim() ||
+              'FECHAMENTO_MENSAL'
+            : undefined,
         data_compra: (dto as any).data_compra
           ? new Date((dto as any).data_compra)
           : undefined,
@@ -673,6 +709,9 @@ export class ComprasService {
       include: {
         itens: true,
         rateios: true,
+        fechamento: {
+          select: { id: true, mes_referencia: true, ano_referencia: true, status: true },
+        },
         fornecedor: { select: { id: true, razao_social: true, nome_fantasia: true, cnpj: true } },
       },
     });

@@ -1,15 +1,13 @@
 <template>
-  <div class="login-font w-full h-full rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
-    <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
-    <PageHeader
-      title="Cadastro da Empresa"
-      subtitle="Registro da empresa, dados fiscais e de recebimento"
-      icon="pi pi-building"
-      :show-back="false"
-      class="border-b border-border-ui"
-    >
+  <PageShell :padded="false">
+    <section class="login-font configuracoes-empresa ds-page-context ds-page-context--editor animate-page-in">
+      <PageHeader
+        title="Cadastro da Empresa"
+        subtitle="Registro da empresa, dados fiscais e de recebimento"
+        icon="pi pi-building"
+      >
       <template #actions>
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+        <div class="configuracoes-empresa__header-actions ds-page-context__actions">
           <p v-if="ultimoSalvamento" class="text-[10px] text-slate-500 self-center sm:self-auto sm:mr-2 order-last sm:order-none">
             Último salvamento: {{ ultimoSalvamento }}
           </p>
@@ -33,41 +31,37 @@
           </div>
         </div>
       </template>
-    </PageHeader>
-      <div class="clientes-line-form border-t border-border-ui bg-gradient-to-b from-white to-slate-50/30 dark:from-slate-900 dark:to-slate-900">
-        <!-- Abas: Dados da Empresa | Operação e Documentos -->
-        <div class="flex border-b border-border-ui bg-white/80">
+      </PageHeader>
+
+      <div class="configuracoes-empresa__body ds-editor-body clientes-line-form">
+        <div class="configuracoes-empresa__tabs" role="tablist" aria-label="Etapas do cadastro da empresa">
           <button
+            v-for="etapa in ETAPAS_CONFIG"
+            :key="etapa.key"
             type="button"
-            :class="[
-              'flex-1 py-3.5 px-4 text-xs font-bold uppercase tracking-wider transition-colors',
-              abaConfig === 'empresa'
-                ? 'text-brand-primary border-b-2 border-brand-primary bg-slate-50/50'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50/50'
-            ]"
-            @click="abaConfig = 'empresa'"
+            class="configuracoes-empresa__tab"
+            :class="etapaAtual === etapa.key ? 'configuracoes-empresa__tab--active' : ''"
+            @click="irParaEtapa(etapa.key)"
           >
-            <i class="pi pi-building mr-2"></i> Dados da Empresa
-          </button>
-          <button
-            type="button"
-            :class="[
-              'flex-1 py-3.5 px-4 text-xs font-bold uppercase tracking-wider transition-colors',
-              abaConfig === 'operacao'
-                ? 'text-brand-primary border-b-2 border-brand-primary bg-slate-50/50'
-                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50/50'
-            ]"
-            @click="abaConfig = 'operacao'"
-          >
-            <i class="pi pi-cog mr-2"></i> Operação e Documentos
+            <span class="configuracoes-empresa__tab-index">{{ etapa.numero }}</span>
+            <span class="configuracoes-empresa__tab-copy">
+              <span class="configuracoes-empresa__tab-label">{{ etapa.label }}</span>
+              <span class="configuracoes-empresa__tab-description">{{ etapa.descricao }}</span>
+            </span>
           </button>
         </div>
 
-      <div class="grid grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-border-ui">
+        <div class="configuracoes-empresa__step-summary">
+          <p class="configuracoes-empresa__step-eyebrow">Etapa {{ etapaAtualMeta.numero }}</p>
+          <h2 class="configuracoes-empresa__step-title">{{ etapaAtualMeta.label }}</h2>
+          <p class="configuracoes-empresa__step-description">{{ etapaAtualMeta.descricao }}</p>
+        </div>
+
+        <div class="configuracoes-empresa__layout grid grid-cols-12">
         
-        <div class="col-span-12 lg:col-span-4 p-6 lg:p-8 bg-slate-50/70 dark:bg-slate-900/40 space-y-8">
+        <div class="configuracoes-empresa__sidebar col-span-12 lg:col-span-4 p-6 lg:p-8 space-y-8">
           
-          <section v-show="abaConfig === 'empresa'" class="pb-6 border-b border-border-ui/70">
+          <section v-show="etapaAtiva('cadastro')" class="pb-6">
             <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 text-center lg:text-left">
               Identidade
             </h3>
@@ -76,7 +70,7 @@
               <div>
                 <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Logo da Marca</p>
                 <div
-                  class="relative aspect-square w-48 mx-auto lg:ml-0 rounded-2xl border-2 border-dashed border-slate-200 bg-white flex items-center justify-center overflow-hidden group cursor-pointer hover:border-brand-primary transition-all"
+                  class="configuracoes-empresa__upload-surface relative aspect-square w-48 mx-auto lg:ml-0 rounded-2xl border-2 border-dashed border-slate-200 bg-white flex items-center justify-center overflow-hidden group cursor-pointer hover:border-brand-primary transition-all"
                   @click="fileInput?.click()"
                 >
                   <img
@@ -109,7 +103,7 @@
               <div>
                 <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Logo para Fundo Escuro</p>
                 <div
-                  class="relative aspect-square w-40 mx-auto lg:ml-0 rounded-xl border-2 border-dashed border-slate-200 bg-slate-800 flex items-center justify-center overflow-hidden group cursor-pointer hover:border-brand-primary transition-all"
+                  class="configuracoes-empresa__upload-surface configuracoes-empresa__upload-surface--dark relative aspect-square w-40 mx-auto lg:ml-0 rounded-xl border-2 border-dashed border-slate-200 bg-slate-800 flex items-center justify-center overflow-hidden group cursor-pointer hover:border-brand-primary transition-all"
                   @click="fileInputFundoEscuro?.click()"
                 >
                   <img
@@ -160,7 +154,7 @@
               <div>
                 <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Logotipo Secundário / Ícone</p>
                 <div
-                  class="relative aspect-square w-32 mx-auto lg:ml-0 rounded-xl border-2 border-dashed border-slate-200 bg-white flex items-center justify-center overflow-hidden group cursor-pointer hover:border-brand-primary transition-all"
+                  class="configuracoes-empresa__upload-surface relative aspect-square w-32 mx-auto lg:ml-0 rounded-xl border-2 border-dashed border-slate-200 bg-white flex items-center justify-center overflow-hidden group cursor-pointer hover:border-brand-primary transition-all"
                   @click="fileInputLogoSecundario?.click()"
                 >
                   <img
@@ -193,7 +187,7 @@
               <div>
                 <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Imagem da Assinatura Digital</p>
                 <div
-                  class="relative aspect-[3/1] w-full max-w-48 mx-auto lg:ml-0 rounded-xl border-2 border-dashed border-slate-200 bg-white flex items-center justify-center overflow-hidden group cursor-pointer hover:border-brand-primary transition-all"
+                  class="configuracoes-empresa__upload-surface relative aspect-[3/1] w-full max-w-48 mx-auto lg:ml-0 rounded-xl border-2 border-dashed border-slate-200 bg-white flex items-center justify-center overflow-hidden group cursor-pointer hover:border-brand-primary transition-all"
                   @click="fileInputAssinatura?.click()"
                 >
                   <img
@@ -225,7 +219,7 @@
             </div>
           </section>
 
-          <section v-show="abaConfig === 'operacao'">
+          <section v-show="etapaAtiva('operacao')">
             <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
               Arquivos e Documentos
             </h3>
@@ -234,7 +228,7 @@
               <div
                 v-for="doc in documentos"
                 :key="doc.id"
-                class="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl shadow-sm"
+                class="configuracoes-empresa__document-row flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl shadow-sm"
               >
                 <div class="flex items-center gap-2 overflow-hidden">
                   <i class="pi pi-file text-slate-400"></i>
@@ -262,14 +256,14 @@
                 </div>
               </div>
 
-              <div v-if="!documentos.length" class="text-center py-6 border-2 border-dashed border-slate-100 rounded-2xl">
+              <div v-if="!documentos.length" class="configuracoes-empresa__empty-dropzone text-center py-6 border-2 border-dashed border-slate-100 rounded-2xl">
                 <p class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Nenhum documento anexado</p>
               </div>
             </div>
 
             <Button
               variant="ghost"
-              class="w-full !h-11 !rounded-xl text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-slate-200 text-slate-500 hover:bg-slate-50"
+              class="configuracoes-empresa__attach-trigger w-full !h-11 !rounded-xl text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-slate-200 text-slate-500 hover:bg-slate-50"
               type="button"
               :loading="anexandoDoc"
               @click="triggerDocumentUpload"
@@ -286,9 +280,9 @@
           </section>
         </div>
 
-        <div class="col-span-12 lg:col-span-8 p-6 lg:p-10 space-y-8">
+        <div class="configuracoes-empresa__main col-span-12 lg:col-span-8 p-6 lg:p-10 space-y-8">
           
-          <section v-show="abaConfig === 'empresa'" class="pb-6 border-b border-border-ui/70">
+          <section v-show="etapaAtiva('cadastro')" class="pb-6">
             <div class="flex items-center gap-3 mb-6">
               <span class="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
               <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">Informações Fiscais</h3>
@@ -313,7 +307,7 @@
             </div>
           </section>
 
-          <section v-show="abaConfig === 'empresa'" class="pb-6 border-b border-border-ui/70">
+          <section v-show="etapaAtiva('operacao')" class="pb-6">
             <div class="flex items-center gap-3 mb-6">
               <span class="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
               <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">Contato</h3>
@@ -324,7 +318,7 @@
               <Input v-model="telefoneMask" label="WhatsApp (número)" icon="pi pi-whatsapp" placeholder="(00) 00000-0000" />
               <Input v-model="form.whatsapp_url" label="Link do WhatsApp" placeholder="https://wa.me/5511999999999" />
 
-              <div class="md:col-span-2 p-4 rounded-xl border border-slate-200 bg-slate-50/80 space-y-4">
+              <div class="md:col-span-2 configuracoes-empresa__inline-group space-y-4">
                 <div class="flex items-center gap-2">
                   <i class="pi pi-key text-slate-500"></i>
                   <h4 class="text-[11px] font-black text-slate-700 uppercase tracking-wider">WhatsApp – Base de autenticação (Evolution API)</h4>
@@ -378,30 +372,33 @@
               <!-- Modal QR Code / Pairing para conectar WhatsApp -->
               <div
                 v-if="showQrWhatsAppModal"
-                class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 backdrop-blur-[2px] p-4"
                 @click.self="showQrWhatsAppModal = false"
               >
-                <div class="bg-white rounded-lg shadow-xl max-w-sm w-full p-5">
-                  <div class="flex justify-between items-center mb-3">
-                    <h4 class="text-sm font-bold text-slate-800">Conectar WhatsApp</h4>
-                    <button type="button" class="text-slate-400 hover:text-slate-600" @click="showQrWhatsAppModal = false" aria-label="Fechar">
+                <div class="configuracoes-empresa__qr-modal max-w-sm w-full p-5">
+                  <div class="flex justify-between items-center mb-3 gap-3">
+                    <div>
+                      <p class="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">WhatsApp</p>
+                      <h4 class="text-sm font-bold text-slate-800">Conectar dispositivo</h4>
+                    </div>
+                    <button type="button" class="text-slate-400 hover:text-slate-600 transition-colors" @click="showQrWhatsAppModal = false" aria-label="Fechar">
                       <i class="pi pi-times text-lg"></i>
                     </button>
                   </div>
-                  <p class="text-xs text-slate-600 mb-3">Escaneie o QR Code no WhatsApp (Aparelhos conectados) ou use o código de vinculação. Se não aparecer, informe seu número abaixo e clique de novo em &quot;Conectar meu WhatsApp&quot;.</p>
-                  <div class="mb-3">
-                    <label class="block text-xs text-slate-600 mb-1">Número com DDI (opcional)</label>
+                  <p class="text-xs text-slate-600 mb-4 leading-relaxed">Escaneie o QR Code no WhatsApp em Aparelhos conectados ou use o código de vinculação. Se não aparecer, informe seu número abaixo e tente novamente.</p>
+                  <div class="mb-4">
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Número com DDI (opcional)</label>
                     <input
                       v-model="qrWhatsAppNumber"
                       type="text"
                       placeholder="5511999999999"
-                      class="w-full text-sm border border-slate-300 rounded px-2 py-1.5"
+                      class="w-full text-sm border-0 border-b border-slate-300 bg-transparent px-0 py-2 text-slate-700 outline-none transition-colors focus:border-brand-primary"
                     />
                   </div>
                   <div v-if="qrWhatsAppData?.code" class="flex justify-center mb-3">
-                    <img :src="'data:image/png;base64,' + qrWhatsAppData.code" alt="QR Code WhatsApp" class="w-48 h-48 object-contain border border-slate-200 rounded" />
+                    <img :src="'data:image/png;base64,' + qrWhatsAppData.code" alt="QR Code WhatsApp" class="w-48 h-48 object-contain border border-slate-200/80 rounded-xl bg-white p-2" />
                   </div>
-                  <div v-else-if="qrWhatsAppData?.pairingCode" class="mb-3 p-3 bg-slate-100 rounded text-center">
+                  <div v-else-if="qrWhatsAppData?.pairingCode" class="configuracoes-empresa__qr-state mb-3 text-center">
                     <p class="text-xs text-slate-600 mb-1">Código de vinculação:</p>
                     <p class="text-lg font-mono font-bold">{{ qrWhatsAppData.pairingCode }}</p>
                     <p class="text-[11px] text-slate-500 mt-1">WhatsApp → Ajustes → Aparelhos conectados → Conectar um aparelho → Código de vinculação</p>
@@ -409,7 +406,7 @@
                   <div v-else-if="qrWhatsAppData && !qrWhatsAppData.code && !qrWhatsAppData.pairingCode" class="text-sm text-amber-600 py-2">
                     Aguardando QR na Evolution API. Preencha seu número com DDI acima e clique em &quot;Buscar QR de novo&quot;.
                   </div>
-                  <div class="flex gap-2 mt-3">
+                  <div class="flex gap-2 mt-4">
                     <Button type="button" variant="outline" size="sm" :loading="loadingQrWhatsApp" @click="mostrarQrWhatsApp(true)">Buscar QR de novo</Button>
                     <Button type="button" variant="outline" size="sm" @click="showQrWhatsAppModal = false">Fechar</Button>
                   </div>
@@ -420,7 +417,7 @@
             </div>
           </section>
 
-          <section v-show="abaConfig === 'empresa'" class="py-2">
+          <section v-show="etapaAtiva('cadastro')" class="py-2">
             <div class="flex items-center gap-3 mb-6">
               <span class="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
               <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">Endereço Principal</h3>
@@ -439,7 +436,7 @@
             </div>
           </section>
 
-          <section v-show="abaConfig === 'operacao'" class="pb-6 border-b border-border-ui/70">
+          <section v-show="etapaAtiva('operacao')" class="pb-6">
             <div class="flex items-center gap-3 mb-6">
               <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
               <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">Controle de Estoque / Desperdício</h3>
@@ -460,7 +457,7 @@
             </div>
           </section>
 
-          <section v-show="abaConfig === 'operacao'" class="pb-6 border-b border-border-ui/70">
+          <section v-show="etapaAtiva('operacao')" class="pb-6">
             <div class="flex items-center gap-3 mb-6">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
               <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">Base de cálculo – Custos de Estrutura / Timeline</h3>
@@ -481,7 +478,7 @@
             </div>
           </section>
 
-          <section v-show="abaConfig === 'empresa'" class="pt-2">
+          <section v-show="etapaAtiva('financeiro')" class="pt-2">
             <div class="flex items-center gap-3 mb-6">
               <span class="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
               <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">
@@ -491,7 +488,7 @@
             <p class="text-[11px] text-slate-500 mb-4">
               Usados nos contratos quando o vendedor não preencher o &quot;Representante da venda&quot;. Representante legal (CNPJ) e Sócio/Proprietário podem ser a mesma pessoa ou diferentes.
             </p>
-            <div class="mb-4 p-4 rounded-xl bg-white border border-slate-200">
+            <div class="configuracoes-empresa__inline-group mb-4">
               <p class="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-3">Quando o vendedor não preencher o Representante da venda, usar no contrato:</p>
               <label class="flex items-center gap-3 cursor-pointer group">
                 <input
@@ -504,7 +501,7 @@
                 </span>
               </label>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 p-6 rounded-2xl bg-slate-50 border border-slate-100 space-y-6">
+            <div class="configuracoes-empresa__inline-group grid grid-cols-1 md:grid-cols-2 gap-5 space-y-6">
               <div class="md:col-span-2">
                 <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Representante Legal (CNPJ)</h4>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -543,13 +540,13 @@
               </div>
             </div>
 
-            <div class="mt-6 p-4 rounded-xl bg-white border border-slate-200">
+            <div class="configuracoes-empresa__inline-group mt-6">
               <p class="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-3">Assinatura do Responsável</p>
               <p class="text-[11px] text-slate-500 mb-3">
                 Imagem usada como variável em PDFs (contratos, orçamentos). Recomendado: assinatura escaneada ou desenhada em fundo transparente.
               </p>
               <div
-                class="relative aspect-[3/1] w-full max-w-56 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden group cursor-pointer hover:border-brand-primary transition-all"
+                class="configuracoes-empresa__upload-surface relative aspect-[3/1] w-full max-w-56 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden group cursor-pointer hover:border-brand-primary transition-all"
                 @click="fileInputAssinaturaResponsavel?.click()"
               >
                 <img
@@ -580,7 +577,7 @@
             </div>
           </section>
 
-          <section v-show="abaConfig === 'empresa'" class="pt-2">
+          <section v-show="etapaAtiva('financeiro')" class="pt-2">
             <div class="flex items-center gap-3 mb-6">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
               <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest text-emerald-600">
@@ -590,36 +587,35 @@
 
             <div
               v-if="avisoDadosBancariosVazios"
-              class="mb-4 p-4 rounded-xl border-2 border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 flex items-start gap-3"
+              class="mb-4 ds-alert ds-alert--warning p-4 flex items-start gap-3"
             >
-              <i class="pi pi-exclamation-triangle text-amber-600 dark:text-amber-400 text-xl mt-0.5"></i>
+              <i class="pi pi-exclamation-triangle text-xl mt-0.5"></i>
               <div>
-                <p class="text-sm font-bold text-amber-800 dark:text-amber-200">Dados bancários incompletos</p>
-                <p class="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                <p class="text-sm font-bold">Dados bancários incompletos</p>
+                <p class="text-xs mt-1">
                   Ao salvar, alguns campos de Dados Bancários e Pix estão vazios. Recomendamos preencher Titular, Banco, Agência, Conta e Chave Pix para orçamentos e documentos.
                 </p>
               </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 p-6 rounded-2xl bg-slate-50 border border-slate-100">
+            <div class="configuracoes-empresa__inline-group grid grid-cols-1 md:grid-cols-2 gap-5">
               <div class="md:col-span-2">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 block ml-1">
-                  Chave Pix (Aparece nos orçamentos)
-                </label>
-                <div class="relative">
-                  <input
-                    v-model="form.pix"
-                    class="w-full h-12 bg-white border border-slate-200 rounded-xl px-4 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary outline-none transition-all"
-                    placeholder="E-mail, CNPJ ou Celular"
-                  />
-                  <button
-                    type="button"
-                    @click="copiarPix"
-                    class="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-400 hover:text-brand-primary transition-colors"
-                  >
-                    <i class="pi pi-copy text-sm"></i>
-                  </button>
-                </div>
+                <Input
+                  v-model="form.pix"
+                  label="Chave Pix (Aparece nos orçamentos)"
+                  placeholder="E-mail, CNPJ ou Celular"
+                >
+                  <template #suffix>
+                    <button
+                      type="button"
+                      @click="copiarPix"
+                      class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-brand-primary transition-colors"
+                      aria-label="Copiar chave Pix"
+                    >
+                      <i class="pi pi-copy text-sm"></i>
+                    </button>
+                  </template>
+                </Input>
               </div>
 
               <Input v-model="form.banco_nome" label="Banco" />
@@ -630,8 +626,43 @@
           </section>
         </div>
       </div>
+
+        <div class="configuracoes-empresa__step-actions ds-editor-actions flex flex-wrap items-center justify-between gap-3">
+          <Button
+            type="button"
+            variant="ghost"
+            :disabled="isPrimeiraEtapa"
+            @click="voltarEtapa"
+          >
+            <i class="pi pi-arrow-left mr-2"></i>
+            Etapa anterior
+          </Button>
+
+          <div class="flex flex-wrap items-center justify-end gap-3">
+            <Button
+              v-if="!isUltimaEtapa"
+              type="button"
+              variant="outline"
+              @click="avancarEtapa"
+            >
+              Próxima etapa
+              <i class="pi pi-arrow-right ml-2"></i>
+            </Button>
+            <Button
+              v-else-if="can('configuracoes.empresa.editar')"
+              type="button"
+              variant="primary"
+              :loading="salvando"
+              @click="confirmarSalvarDadosEmpresa"
+            >
+              <i class="pi pi-check-circle mr-2"></i>
+              Salvar alterações
+            </Button>
           </div>
-  </div>
+        </div>
+      </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
@@ -654,7 +685,28 @@ definePage({ meta: { perm: 'configuracoes.empresa.ver' } })
 const fileInput = ref(null)
 const documentInput = ref(null)
 
-const abaConfig = ref('empresa')
+const ETAPAS_CONFIG = [
+  {
+    key: 'cadastro',
+    numero: '01',
+    label: 'Identidade e cadastro',
+    descricao: 'Marca, dados fiscais e endereço principal da empresa.',
+  },
+  {
+    key: 'operacao',
+    numero: '02',
+    label: 'Contato e operação',
+    descricao: 'Canais, WhatsApp, documentos e parâmetros operacionais.',
+  },
+  {
+    key: 'financeiro',
+    numero: '03',
+    label: 'Financeiro e jurídico',
+    descricao: 'Representantes, assinatura responsável e dados bancários.',
+  },
+]
+
+const etapaAtual = ref('cadastro')
 
 const salvando = ref(false)
 const testandoWhatsApp = ref(false)
@@ -681,6 +733,29 @@ const fileInputAssinaturaResponsavel = ref(null)
 const logoSecundarioPreview = ref('')
 const assinaturaResponsavelPreview = ref('')
 const ultimoSalvamento = ref('')
+
+const etapaAtualIndex = computed(() => ETAPAS_CONFIG.findIndex((etapa) => etapa.key === etapaAtual.value))
+const etapaAtualMeta = computed(() => ETAPAS_CONFIG[etapaAtualIndex.value] || ETAPAS_CONFIG[0])
+const isPrimeiraEtapa = computed(() => etapaAtualIndex.value <= 0)
+const isUltimaEtapa = computed(() => etapaAtualIndex.value >= ETAPAS_CONFIG.length - 1)
+
+function etapaAtiva(key) {
+  return etapaAtual.value === key
+}
+
+function irParaEtapa(key) {
+  etapaAtual.value = key
+}
+
+function avancarEtapa() {
+  if (isUltimaEtapa.value) return
+  etapaAtual.value = ETAPAS_CONFIG[etapaAtualIndex.value + 1].key
+}
+
+function voltarEtapa() {
+  if (isPrimeiraEtapa.value) return
+  etapaAtual.value = ETAPAS_CONFIG[etapaAtualIndex.value - 1].key
+}
 
 function triggerDocumentUpload() {
   documentInput.value?.click()
@@ -1340,10 +1415,338 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
-
 .login-font {
-  font-family: 'Manrope', 'Segoe UI', sans-serif;
+  font-family: var(--ds-font-sans);
+}
+
+.configuracoes-empresa__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.configuracoes-empresa__header-actions {
+  align-items: center;
+}
+
+.configuracoes-empresa__tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.configuracoes-empresa__tab {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  text-align: left;
+  min-width: 0;
+  border-radius: 0;
+  border: 0;
+  border-bottom: 1px solid rgba(214, 224, 234, 0.9);
+  background: transparent;
+  padding: 0.85rem 0.15rem 0.95rem;
+  color: rgb(100 116 139);
+  transition: all 0.2s ease;
+}
+
+.configuracoes-empresa__tab-index {
+  width: 1.75rem;
+  height: 1.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.12);
+  color: rgb(71 85 105);
+  font-size: 0.67rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.configuracoes-empresa__tab-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.configuracoes-empresa__tab-label {
+  color: rgb(30 41 59);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.configuracoes-empresa__tab-description {
+  color: rgb(100 116 139);
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.configuracoes-empresa__tab:hover {
+  border-bottom-color: rgba(37, 99, 235, 0.35);
+  color: rgb(30 41 59);
+}
+
+.configuracoes-empresa__tab--active {
+  border-bottom-color: rgba(37, 99, 235, 0.9);
+  color: rgb(15 23 42);
+  box-shadow: none;
+}
+
+.configuracoes-empresa__tab--active .configuracoes-empresa__tab-index {
+  background: rgba(37, 99, 235, 0.1);
+  color: rgb(37 99 235);
+}
+
+.configuracoes-empresa__tab--active .configuracoes-empresa__tab-label,
+.configuracoes-empresa__tab--active .configuracoes-empresa__tab-description {
+  color: inherit;
+}
+
+.configuracoes-empresa__step-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  padding: 0 0 0.15rem;
+}
+
+.configuracoes-empresa__step-eyebrow {
+  color: rgb(37 99 235);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.configuracoes-empresa__step-title {
+  color: rgb(15 23 42);
+  font-size: 1.15rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+
+.configuracoes-empresa__step-description {
+  color: rgb(100 116 139);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  max-width: 42rem;
+}
+
+.configuracoes-empresa__layout {
+  align-items: start;
+  gap: 2rem;
+}
+
+.configuracoes-empresa__sidebar,
+.configuracoes-empresa__main {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 0;
+}
+
+.configuracoes-empresa__sidebar > section,
+.configuracoes-empresa__main > section {
+  margin: 0 !important;
+  padding: 0 0 1.5rem !important;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.configuracoes-empresa__sidebar > section :deep(h3),
+.configuracoes-empresa__main > section :deep(h3) {
+  letter-spacing: 0.08em;
+}
+
+.configuracoes-empresa__sidebar > section:not(:last-child),
+.configuracoes-empresa__main > section:not(:last-child) {
+  border-bottom: 1px solid rgba(214, 224, 234, 0.62) !important;
+}
+
+.configuracoes-empresa__sidebar > section:last-child,
+.configuracoes-empresa__main > section:last-child {
+  margin-bottom: 0;
+}
+
+.configuracoes-empresa__step-actions {
+  padding-top: 1rem;
+}
+
+.configuracoes-empresa__inline-group {
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(214, 224, 234, 0.55);
+}
+
+.configuracoes-empresa__upload-surface {
+  background: transparent !important;
+  border-width: 1px !important;
+  border-color: rgba(214, 224, 234, 0.86) !important;
+  border-radius: 1rem !important;
+  box-shadow: none !important;
+}
+
+.configuracoes-empresa__upload-surface:hover {
+  border-color: rgba(37, 99, 235, 0.45) !important;
+  background: rgba(248, 250, 252, 0.4) !important;
+}
+
+.configuracoes-empresa__upload-surface--dark {
+  background: rgba(15, 23, 42, 0.78) !important;
+  border-color: rgba(71, 85, 105, 0.8) !important;
+}
+
+.configuracoes-empresa__document-row {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(214, 224, 234, 0.58) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.configuracoes-empresa__document-row:last-of-type {
+  border-bottom-color: transparent !important;
+}
+
+.configuracoes-empresa__empty-dropzone {
+  border-width: 1px !important;
+  border-color: rgba(214, 224, 234, 0.72) !important;
+  border-radius: 1rem !important;
+  background: transparent !important;
+}
+
+.configuracoes-empresa__attach-trigger {
+  border-width: 1px !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.configuracoes-empresa__qr-modal {
+  border: 1px solid rgba(214, 224, 234, 0.82);
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 22px 60px -36px rgba(15, 23, 42, 0.32);
+}
+
+.configuracoes-empresa__qr-state {
+  border: 1px solid rgba(214, 224, 234, 0.72);
+  border-radius: 1rem;
+  background: rgba(248, 250, 252, 0.72);
+  padding: 0.9rem;
+}
+
+.dark .configuracoes-empresa__tab {
+  border-bottom-color: rgba(51, 71, 102, 0.86);
+  background: transparent;
+  color: rgb(148 163 184);
+}
+
+.dark .configuracoes-empresa__tab-index {
+  background: rgba(51, 65, 85, 0.55);
+  color: rgb(148 163 184);
+}
+
+.dark .configuracoes-empresa__tab-label {
+  color: rgb(226 232 240);
+}
+
+.dark .configuracoes-empresa__tab-description,
+.dark .configuracoes-empresa__step-description {
+  color: rgb(148 163 184);
+}
+
+.dark .configuracoes-empresa__step-title {
+  color: rgb(241 245 249);
+}
+
+.dark .configuracoes-empresa__tab:hover {
+  border-bottom-color: rgba(59, 130, 246, 0.35);
+  color: rgb(226 232 240);
+}
+
+.dark .configuracoes-empresa__tab--active {
+  border-bottom-color: rgba(59, 130, 246, 0.92);
+}
+
+.dark .configuracoes-empresa__tab--active .configuracoes-empresa__tab-index {
+  background: rgba(59, 130, 246, 0.16);
+  color: rgb(147 197 253);
+}
+
+.dark .configuracoes-empresa__sidebar > section,
+.dark .configuracoes-empresa__main > section {
+  background: transparent;
+  box-shadow: none;
+}
+
+.dark .configuracoes-empresa__sidebar > section:not(:last-child),
+.dark .configuracoes-empresa__main > section:not(:last-child) {
+  border-bottom-color: rgba(51, 71, 102, 0.72) !important;
+}
+
+.dark .configuracoes-empresa__inline-group {
+  border-top-color: rgba(51, 71, 102, 0.58);
+}
+
+.dark .configuracoes-empresa__upload-surface {
+  border-color: rgba(71, 85, 105, 0.78) !important;
+}
+
+.dark .configuracoes-empresa__upload-surface:hover {
+  background: rgba(30, 41, 59, 0.28) !important;
+}
+
+.dark .configuracoes-empresa__document-row {
+  border-bottom-color: rgba(51, 71, 102, 0.68) !important;
+}
+
+.dark .configuracoes-empresa__empty-dropzone,
+.dark .configuracoes-empresa__attach-trigger {
+  border-color: rgba(71, 85, 105, 0.74) !important;
+}
+
+.dark .configuracoes-empresa__qr-modal {
+  border-color: rgba(71, 85, 105, 0.78);
+  background: rgba(15, 23, 42, 0.94);
+  box-shadow: none;
+}
+
+.dark .configuracoes-empresa__qr-state {
+  border-color: rgba(71, 85, 105, 0.72);
+  background: rgba(30, 41, 59, 0.5);
+}
+
+@media (max-width: 767px) {
+  .configuracoes-empresa__tabs {
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+  }
+
+  .configuracoes-empresa__tab {
+    padding: 0.8rem 0 0.9rem;
+  }
+
+  .configuracoes-empresa__sidebar > section,
+  .configuracoes-empresa__main > section {
+    padding: 0 0 1.2rem !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .configuracoes-empresa__sidebar {
+    padding-right: 1.25rem;
+  }
+
+  .configuracoes-empresa__main {
+    padding-left: 1.25rem;
+  }
 }
 
 .clientes-line-form :deep(.w-full.flex.flex-col.gap-1\.5 > label),

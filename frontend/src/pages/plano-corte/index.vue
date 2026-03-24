@@ -1,8 +1,6 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
+  <PageShell :padded="false">
+    <section class="plano-corte-list ds-page-context ds-page-context--list animate-page-in">
       <PageHeader
         title="Serviço de Corte"
         subtitle="Corte para fornecedor — industrialização e controle de produção"
@@ -10,80 +8,50 @@
         :show-back="false"
       >
         <template #actions>
-          <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:ml-auto">
-            <div class="flex-1 sm:flex-initial sm:w-48 min-w-0 order-2 sm:order-1">
+          <div class="plano-corte-list__actions ds-page-context__actions">
+            <div class="plano-corte-list__search ds-page-context__search">
               <SearchInput
                 v-model="busca"
-                placeholder="Buscar..."
+                placeholder="Buscar fornecedor, lote ou venda..."
               />
             </div>
-            <div class="flex items-center gap-1 order-1 sm:order-2">
-              <input
+            <div class="plano-corte-list__month-filter flex items-center gap-2">
+              <MonthReferenceField
                 v-model="mesFiltro"
-                type="month"
-                :title="mesFiltro ? `Filtrando: ${mesFiltro}` : 'Todos os meses'"
-                class="h-9 px-3 rounded-lg text-xs font-medium text-text-main bg-bg-card border border-border-ui focus:ring-1 focus:ring-brand-primary/20 focus:border-brand-primary/50 outline-none transition-colors"
+                class="plano-corte-list__month-field"
+                label="Mês de referência"
+                placeholder="Todos os meses"
               />
-              <button
+              <Button
                 v-if="mesFiltro"
                 type="button"
-                class="h-9 px-2 rounded-lg text-xs font-medium text-text-muted hover:text-text-main hover:bg-bg-card border border-border-ui"
-                title="Ver todos os meses"
+                variant="ghost"
+                size="sm"
                 @click="mesFiltro = ''"
               >
                 Todos
-              </button>
+              </Button>
             </div>
             <Button
               v-if="can('plano_corte.criar')"
               variant="primary"
-              size="sm"
-              class="order-3 flex-shrink-0 h-9 rounded-xl font-black uppercase tracking-[0.16em] text-[11px]"
               @click="novo()"
             >
-              <i class="pi pi-plus mr-2"></i>
-              Novo
+              <i class="pi pi-plus"></i>
+              Novo Serviço
             </Button>
           </div>
         </template>
       </PageHeader>
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <MetricCard
-            label="Serviços Ativos"
-            :value="filtradas.length"
-            icon="pi pi-cog"
-            color="slate"
-          />
-          <MetricCard
-            label="Vínculados a Vendas"
-            :value="filtradas.filter(r => r.venda_id).length"
-            icon="pi pi-shopping-cart"
-            color="blue"
-          />
-          <MetricCard
-            label="Total Vendido"
-            :value="format.currency(totalVendido)"
-            icon="pi pi-dollar"
-            color="emerald"
-          />
-          <MetricCard
-            label="Finalizados"
-            :value="filtradas.filter(r => r.status === 'FINALIZADO').length"
-            icon="pi pi-check"
-            color="amber"
-          />
-        </div>
-
-        <div class="native-table-flush overflow-visible">
+      <div class="plano-corte-list__content ds-page-context__content">
         <Table
           :columns="columns"
           :rows="filtradas"
           :loading="loading"
           empty-text="Nenhum serviço de corte encontrado."
           :boxed="false"
-          :flush="true"
+          :flush="false"
         >
           <template #cell-fornecedor="{ row }">
             <div class="flex flex-col py-1">
@@ -120,15 +88,15 @@
             </div>
           </template>
         </Table>
-        </div>
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import MonthReferenceField from '@/components/ui/MonthReferenceField.vue'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
@@ -197,7 +165,7 @@ async function confirmarExcluir(row) {
   if (!ok) return
   try {
     await api.delete(`/plano-corte/${row.id}`)
-    notify.success('Plano removido.')
+    notify.success('Serviço de corte removido.')
     await carregar()
   } catch {
     notify.error('Erro ao remover.')
@@ -206,3 +174,9 @@ async function confirmarExcluir(row) {
 
 onMounted(carregar)
 </script>
+
+<style scoped>
+.plano-corte-list__month-field {
+  min-width: 9.5rem;
+}
+</style>

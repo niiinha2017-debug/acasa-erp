@@ -37,6 +37,7 @@ import {
   validarTransicaoStatusProducao,
 } from '../shared/constantes/status-matrix';
 import { getDataCorteContasReceber } from '../shared/constantes/status-matrix';
+import { TwinFlowService } from './twin-flow.service';
 
 @Injectable()
 export class AgendaService {
@@ -46,7 +47,32 @@ export class AgendaService {
     'MANUTENCAO',
     'ASSISTENCIA',
   ];
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly twinFlowService: TwinFlowService,
+  ) {}
+
+  private async sincronizarFluxoGemeoAgenda(
+    tx: any,
+    params: {
+      setor: 'LOJA' | 'FABRICA';
+      agenda: any;
+      actorUserId?: number | null;
+      source?: string;
+      reason?: string;
+    },
+  ) {
+    if (!params?.agenda?.id) return;
+    await this.twinFlowService.syncAgendaFlow(tx, {
+      context: params.setor === 'LOJA' ? 'STORE' : 'FACTORY',
+      scheduleType: params.setor === 'LOJA' ? 'AGENDA_LOJA' : 'AGENDA_FABRICA',
+      scheduleId: Number(params.agenda.id),
+      schedule: params.agenda,
+      actorUserId: params.actorUserId ?? null,
+      source: params.source ?? 'AGENDA_SYNC',
+      reason: params.reason ?? 'Agendamento sincronizado com fluxo gêmeo.',
+    });
+  }
 
   /**
    * Sincroniza os apontamentos da agenda (loja ou fábrica) para apontamento_producao,
@@ -245,6 +271,33 @@ export class AgendaService {
     };
   }
 
+  /**
+   * Concluir grava `arquivado_em` (sai da agenda operacional); reabrir zera.
+   * Usado também por ApontamentoProducaoService ao finalizar etapa.
+   */
+  aplicarArquivamentoNoPayloadAgenda(
+    data: Record<string, unknown>,
+    opts?: { arquivadoMomento?: Date },
+  ) {
+    const momento = opts?.arquivadoMomento ?? new Date();
+    const touchesExec = Object.prototype.hasOwnProperty.call(data, 'execucao_etapa');
+    const touchesStatus = Object.prototype.hasOwnProperty.call(data, 'status');
+    if (!touchesExec && !touchesStatus) return;
+    const exec = String(data.execucao_etapa ?? '').toUpperCase();
+    const st = String(data.status ?? '').toUpperCase();
+    const concluido = exec === 'CONCLUIDO' || st === 'CONCLUIDO';
+    const reaberto =
+      (touchesExec && exec !== '' && exec !== 'CONCLUIDO') ||
+      (touchesStatus && st !== '' && st !== 'CONCLUIDO');
+    if (concluido) {
+      data.arquivado_em = momento;
+      return;
+    }
+    if (reaberto) {
+      data.arquivado_em = null;
+    }
+  }
+
   private resolverStatusClienteAgendamento(params: {
     subetapa?: string | null;
     categoria?: string | null;
@@ -335,7 +388,7 @@ export class AgendaService {
         ? Number(params.criado_por_usuario_id)
         : null;
 
-    return tx.agenda_fabrica.create({
+    const created = await tx.agenda_fabrica.create({
       data: {
         titulo: params.titulo,
         inicio_em: params.inicio_em,
@@ -358,6 +411,14 @@ export class AgendaService {
         }),
       },
     });
+    await this.sincronizarFluxoGemeoAgenda(tx, {
+      setor: 'FABRICA',
+      agenda: created,
+      actorUserId: criadoPorUsuarioId,
+      source: 'AGENDA_FABRICA_AUTOMATICA',
+      reason: 'Agendamento automático da fábrica sincronizado no fluxo gêmeo.',
+    });
+    return created;
   }
 
   async criarAgendaLojaAutomatica(
@@ -397,7 +458,7 @@ export class AgendaService {
         ? Number(params.criado_por_usuario_id)
         : null;
 
-    return tx.agenda_loja.create({
+    const created = await tx.agenda_loja.create({
       data: {
         titulo: params.titulo,
         inicio_em: params.inicio_em,
@@ -419,6 +480,14 @@ export class AgendaService {
         }),
       },
     });
+    await this.sincronizarFluxoGemeoAgenda(tx, {
+      setor: 'LOJA',
+      agenda: created,
+      actorUserId: criadoPorUsuarioId,
+      source: 'AGENDA_LOJA_AUTOMATICA',
+      reason: 'Agendamento automático da loja sincronizado no fluxo gêmeo.',
+    });
+    return created;
   }
 
   private registrarAuditoriaStatusPosVenda(params: {
@@ -1015,6 +1084,14 @@ export class AgendaService {
         });
       }
 
+
+      await this.sincronizarFluxoGemeoAgenda(tx, {
+        setor: isLoja ? 'LOJA' : 'FABRICA',
+        agenda: agendamento,
+        actorUserId: criadoPorUsuarioId,
+        source: 'AGENDA_CREATE',
+        reason: 'Criação manual de agendamento sincronizada no fluxo gêmeo.',
+      });
       const novoStatus = clienteStatus;
       // Serviço de corte é venda de fornecedor: não atualizar status da venda do cliente
       if (!dto.plano_corte_id) {
@@ -1616,6 +1693,8 @@ export class AgendaService {
           : null;
       }
 
+      this.aplicarArquivamentoNoPayloadAgenda(updateData);
+
       let agendamento: any;
       if (setor === 'LOJA') {
         agendamento = await tx.agenda_loja.update({
@@ -1711,6 +1790,22 @@ export class AgendaService {
           }
         }
       }
+
+      await this.sincronizarFluxoGemeoAgenda(tx, {
+        setor,
+        agenda: {
+          ...agendamento,
+          cliente_id: clienteId,
+          venda_id: vendaId,
+          orcamento_id: setor === 'LOJA' ? (atual as any).orcamento_id ?? null : (agendamento as any).orcamento_id ?? null,
+          subetapa: updateData.subetapa ?? agendamento?.subetapa ?? (atual as any).subetapa,
+          macroetapa: updateData.macroetapa ?? agendamento?.macroetapa ?? (atual as any).macroetapa,
+          execucao_etapa: updateData.execucao_etapa ?? agendamento?.execucao_etapa ?? (atual as any).execucao_etapa,
+        },
+        actorUserId: opts?.alteradoPorUsuarioId ?? null,
+        source: 'AGENDA_UPDATE',
+        reason: 'Edição de agendamento sincronizada no fluxo gêmeo.',
+      });
 
       const novoStatus = clienteStatus;
       // Agenda fábrica: ao editar evento "Aguardando medida fina" com data/hora, venda/cliente → Medida fina agendada
@@ -1993,10 +2088,18 @@ export class AgendaService {
         }),
       };
       if (categoriaDestino) data.categoria = categoriaDestino;
+      this.aplicarArquivamentoNoPayloadAgenda(data, { arquivadoMomento: concluidoEm });
       if (setor === 'LOJA') {
         const agendamento = await tx.agenda_loja.update({
           where: { id },
           data: data as any,
+        });
+        await this.sincronizarFluxoGemeoAgenda(tx, {
+          setor: 'LOJA',
+          agenda: agendamento,
+          actorUserId: opts?.alteradoPorUsuarioId ?? null,
+          source: 'AGENDA_STATUS_UPDATE',
+          reason: 'Mudança de status da agenda da loja sincronizada no fluxo gêmeo.',
         });
         return agendamento;
       }
@@ -2005,6 +2108,13 @@ export class AgendaService {
       const agendamento = await tx.agenda_fabrica.update({
         where: { id },
         data: data as any,
+      });
+      await this.sincronizarFluxoGemeoAgenda(tx, {
+        setor: 'FABRICA',
+        agenda: agendamento,
+        actorUserId: opts?.alteradoPorUsuarioId ?? null,
+        source: 'AGENDA_STATUS_UPDATE',
+        reason: 'Mudança de status da agenda da fábrica sincronizada no fluxo gêmeo.',
       });
       if (status === 'CONCLUIDO' && inFabrica?.plano_corte_id) {
         await tx.plano_corte.update({
@@ -2328,6 +2438,12 @@ export class AgendaService {
         },
         include: { equipe: true, venda: true, plano_corte: true },
       });
+      await this.sincronizarFluxoGemeoAgenda(tx, {
+        setor: 'FABRICA',
+        agenda: created,
+        source: 'AGENDA_TRANSFER_TO_FACTORY',
+        reason: 'Agendamento transferido da loja para a fábrica no fluxo gêmeo.',
+      });
       await tx.agenda_loja.update({
         where: { id },
         data: { status: 'CANCELADO' },
@@ -2400,7 +2516,7 @@ export class AgendaService {
       : 'Aguardando projeto técnico';
     const { inicio, fim } = this.inicioFimProximoEvento(params.dataConclusao);
     const subetapa = this.resolverSubetapaReferencia({ subetapa: 'PROJETO_TECNICO' });
-    await tx.agenda_fabrica.create({
+    const created = await tx.agenda_fabrica.create({
       data: {
         titulo,
         inicio_em: inicio,
@@ -2421,6 +2537,12 @@ export class AgendaService {
         venda_id: vendaId ?? undefined,
         cliente_id: clienteId ?? undefined,
       },
+    });
+    await this.sincronizarFluxoGemeoAgenda(tx, {
+      setor: 'FABRICA',
+      agenda: created,
+      source: 'AGENDA_FACTORY_NEXT_STEP',
+      reason: 'Criação automática da etapa aguardando projeto técnico no fluxo gêmeo.',
     });
     const proximoStatus = 'AGUARDANDO_PRECIFICACAO';
     if (vendaId) {
@@ -2473,7 +2595,7 @@ export class AgendaService {
       : 'Produção agendada';
     const { inicio, fim } = this.inicioFimProximoEvento(params.dataConclusao);
     const subetapa = this.resolverSubetapaReferencia({ subetapa: 'PRODUCAO' });
-    await tx.agenda_fabrica.create({
+    const created = await tx.agenda_fabrica.create({
       data: {
         titulo,
         inicio_em: inicio,
@@ -2494,6 +2616,12 @@ export class AgendaService {
         venda_id: vendaId ?? undefined,
         cliente_id: clienteId ?? undefined,
       },
+    });
+    await this.sincronizarFluxoGemeoAgenda(tx, {
+      setor: 'FABRICA',
+      agenda: created,
+      source: 'AGENDA_FACTORY_NEXT_STEP',
+      reason: 'Criação automática da etapa de produção no fluxo gêmeo.',
     });
     const proximoStatus = this.statusAposProjetoTecnico;
     if (vendaId) {
@@ -2567,6 +2695,12 @@ export class AgendaService {
         venda_id: vendaId ?? undefined,
         cliente_id: clienteId ?? undefined,
       },
+    });
+    await this.sincronizarFluxoGemeoAgenda(tx, {
+      setor: 'FABRICA',
+      agenda: created,
+      source: 'AGENDA_FACTORY_NEXT_STEP',
+      reason: 'Criação automática da etapa de montagem no fluxo gêmeo.',
     });
     const equipeIds = Array.isArray(params.equipe_ids)
       ? params.equipe_ids.filter((fid) => Number.isFinite(fid))
@@ -2775,15 +2909,17 @@ export class AgendaService {
           (ag as any).subetapa,
           `agendamento fábrica #${ag.id}`,
         );
+        const dataFabricaAuto: Record<string, unknown> = {
+          status: 'CONCLUIDO',
+          ...this.montarCamposStatusMatrixPorSubetapa({
+            subetapa: subetapaAtual,
+            status: 'CONCLUIDO',
+          }),
+        };
+        this.aplicarArquivamentoNoPayloadAgenda(dataFabricaAuto, { arquivadoMomento: now });
         await tx.agenda_fabrica.update({
           where: { id: ag.id },
-          data: {
-            status: 'CONCLUIDO',
-            ...this.montarCamposStatusMatrixPorSubetapa({
-              subetapa: subetapaAtual,
-              status: 'CONCLUIDO',
-            }),
-          },
+          data: dataFabricaAuto as any,
         });
         if (ag.plano_corte_id) {
           await tx.plano_corte.update({

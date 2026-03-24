@@ -26,6 +26,10 @@ export class ClientesService {
     PIPELINE_CLIENTE.find(
       (s) => String(s.key || '').toUpperCase() === 'ENCERRADO',
     )?.key || 'ENCERRADO';
+  private readonly includeRelacionamentosCliente = {
+    vendedor_responsavel: { select: { id: true, nome: true } },
+    criado_por_usuario: { select: { id: true, usuario: true, nome: true } },
+  } satisfies Prisma.ClienteInclude;
 
   /**
    * Regra automática:
@@ -81,7 +85,7 @@ export class ClientesService {
 
   async criar(
     dto: CriarClienteDto,
-    usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null,
+    usuario?: { id?: number | null; funcionario_id?: number | null; is_admin?: boolean } | null,
   ) {
     const statusInicialPipeline =
       PIPELINE_CLIENTE && PIPELINE_CLIENTE.length
@@ -117,6 +121,8 @@ export class ClientesService {
 
     const funcionarioId =
       usuario?.funcionario_id != null ? Number(usuario.funcionario_id) : null;
+    const criadoPorUsuarioId =
+      usuario?.id != null ? Number(usuario.id) : null;
     const isAdmin = !!usuario?.is_admin;
     const vendedorResponsavelId =
       dto.vendedor_responsavel_id ?? (isAdmin ? null : funcionarioId);
@@ -163,8 +169,10 @@ export class ClientesService {
 
           profissao: dto.profissao ?? null,
           vendedor_responsavel_id: vendedorResponsavelId,
+          criado_por_usuario_id: criadoPorUsuarioId,
           situacao: dto.situacao ?? null,
         },
+        include: this.includeRelacionamentosCliente,
       });
       return cliente;
     });
@@ -174,7 +182,7 @@ export class ClientesService {
    * Lista clientes. Se o usuário for vendedor (tem funcionario_id e não é admin),
    * retorna apenas clientes em que ele é o vendedor responsável pelo cadastro.
    */
-  async listar(usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null) {
+  async listar(usuario?: { id?: number | null; funcionario_id?: number | null; is_admin?: boolean } | null) {
     await this.aplicarStatusAutomaticoMedidaRealizada();
 
     const where: Prisma.ClienteWhereInput = {
@@ -195,9 +203,7 @@ export class ClientesService {
     const rows = await this.prisma.cliente.findMany({
       where,
       orderBy: { nome_completo: 'asc' },
-      include: {
-        vendedor_responsavel: { select: { id: true, nome: true } },
-      },
+      include: this.includeRelacionamentosCliente,
     });
 
     return rows;
@@ -261,7 +267,7 @@ export class ClientesService {
    */
   private async assertVendedorAcessoCliente(
     clienteId: number,
-    usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null,
+    usuario?: { id?: number | null; funcionario_id?: number | null; is_admin?: boolean } | null,
   ) {
     const funcionarioId = usuario?.funcionario_id != null ? Number(usuario.funcionario_id) : null;
     if (funcionarioId == null || !!usuario?.is_admin) return;
@@ -275,10 +281,13 @@ export class ClientesService {
     }
   }
 
-  async buscarPorId(id: number, usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null) {
+  async buscarPorId(id: number, usuario?: { id?: number | null; funcionario_id?: number | null; is_admin?: boolean } | null) {
     await this.aplicarStatusAutomaticoMedidaRealizada();
     await this.assertVendedorAcessoCliente(id, usuario);
-    const cliente = await this.prisma.cliente.findUnique({ where: { id } });
+    const cliente = await this.prisma.cliente.findUnique({
+      where: { id },
+      include: this.includeRelacionamentosCliente,
+    });
     if (!cliente) throw new NotFoundException('Cliente não encontrado');
     const datas_progresso = await this.getDatasProgresso(id);
     return { ...cliente, datas_progresso };
@@ -287,7 +296,7 @@ export class ClientesService {
   async atualizar(
     id: number,
     dto: AtualizarClienteDto,
-    usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null,
+    usuario?: { id?: number | null; funcionario_id?: number | null; is_admin?: boolean } | null,
   ) {
     await this.assertVendedorAcessoCliente(id, usuario);
     const atual = await this.buscarPorId(id, usuario);
@@ -401,10 +410,11 @@ export class ClientesService {
         vendedor_responsavel_id: dto.vendedor_responsavel_id ?? undefined,
         situacao: dto.situacao ?? undefined,
       },
+      include: this.includeRelacionamentosCliente,
     });
   }
 
-  async remover(id: number, usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null) {
+  async remover(id: number, usuario?: { id?: number | null; funcionario_id?: number | null; is_admin?: boolean } | null) {
     await this.assertVendedorAcessoCliente(id, usuario);
     await this.buscarPorId(id, usuario);
     try {
@@ -499,7 +509,7 @@ export class ClientesService {
     return { ok: true };
   }
 
-  async select(q?: string, usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null) {
+  async select(q?: string, usuario?: { id?: number | null; funcionario_id?: number | null; is_admin?: boolean } | null) {
     await this.aplicarStatusAutomaticoMedidaRealizada();
     const termo = String(q || '').trim();
 

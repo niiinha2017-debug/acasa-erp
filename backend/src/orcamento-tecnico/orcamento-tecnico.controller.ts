@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
 import { OrcamentoTecnicoService } from './orcamento-tecnico.service';
@@ -19,12 +19,72 @@ export class OrcamentoTecnicoController {
   }
 
   /**
+   * Lista agendamentos com medição do técnico concluída e sem OT criado.
+   */
+  @Get('com-medicao')
+  @Permissoes('agendamentos.vendas')
+  listarComMedicao() {
+    return this.orcamentoTecnicoService.listarAgendamentosComMedicao();
+  }
+
+  /**
    * Busca um orçamento técnico por id (com itens e dados do agendamento).
    */
   @Get(':id')
   @Permissoes('agendamentos.vendas')
   buscarPorId(@Param('id', ParseIntPipe) id: number) {
     return this.orcamentoTecnicoService.buscarPorId(id);
+  }
+
+  /**
+   * Finaliza o orçamento técnico: salva itens, pagamentos, NF e comissões.
+   */
+  @Post(':id/finalizar')
+  @Permissoes('agendamentos.vendas')
+  finalizar(
+    @Param('id', ParseIntPipe) id: number,
+    @Body()
+    body: {
+      ambientes?: Array<{
+        id?: string;
+        nome?: string;
+        medidaVendedor?: { largura_m?: number; altura_m?: number; profundidade_m?: number };
+        medidaTecnica?: { largura_m?: number; altura_m?: number; profundidade_m?: number };
+        itens?: Array<{
+          descricao?: string;
+          material?: string;
+          quantidade?: number;
+          area_m2?: number;
+          custo_unitario?: number;
+          preco_unitario?: number;
+          origem?: string;
+        }>;
+      }>;
+      preco_venda?: number;
+      pagamentos?: Array<{
+        forma_pagamento_chave?: string;
+        parcelas?: number;
+        valor?: number;
+      }>;
+      com_nota_fiscal?: boolean;
+      taxa_nf_reais?: number;
+      taxa_cartao_reais?: number;
+      comissoes?: Array<{
+        tipo: string;
+        nome: string;
+        percentual: number;
+        valor_reais: number;
+      }>;
+    },
+  ) {
+    return this.orcamentoTecnicoService.finalizarOrcamento(id, body);
+  }
+
+  @Delete(':id')
+  @Permissoes('orcamentos.excluir')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  remover(@Param('id', ParseIntPipe) id: number) {
+    return this.orcamentoTecnicoService.remover(id);
   }
 
   /**

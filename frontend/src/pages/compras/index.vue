@@ -1,20 +1,17 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
+  <PageShell :padded="false">
+    <section class="compras-list ds-page-context ds-page-context--list animate-page-in">
       <PageHeader
         title="Compras"
-        subtitle="Registro de entradas, insumos e rateios de custo"
+        subtitle="Registro de entradas, compras vinculadas e rateios de custo"
         icon="pi pi-shopping-cart"
-        :show-back="false"
       >
         <template #actions>
-          <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
-            <div class="w-full sm:w-64 order-1 sm:order-0">
+          <div class="compras-list__actions ds-page-context__actions">
+            <div class="compras-list__search ds-page-context__search">
               <SearchInput
                 v-model="filtro"
-                placeholder="Buscar descrição, fornecedor, categoria, status ou valor..."
+                placeholder="Buscar compra, fornecedor, categoria, status ou valor..."
               />
             </div>
 
@@ -22,80 +19,60 @@
               variant="secondary"
               @click="router.push('/compras/sugestao')"
             >
-              <i class="pi pi-shopping-bag mr-2"></i>
+              <i class="pi pi-shopping-bag"></i>
               Sugestão de Compra
             </Button>
+
             <Button
               v-if="can('compras.criar')"
               variant="primary"
               @click="router.push('/compras/novo')"
             >
-              <i class="pi pi-plus mr-2"></i>
+              <i class="pi pi-plus"></i>
               Nova Compra
             </Button>
           </div>
         </template>
       </PageHeader>
 
-      <div class="pb-5 md:pb-6 pt-4 border-t border-border-ui">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <MetricCard
-            label="Total Geral"
-            :value="format.currency(totalGeral)"
-            icon="pi pi-dollar"
-            color="slate"
-          />
-          <MetricCard
-            label="Estoque/Insumos"
-            :value="format.currency(totalInsumos)"
-            icon="pi pi-box"
-            color="blue"
-          />
-          <MetricCard
-            label="Despesas Fixas"
-            :value="format.currency(totalDespesas)"
-            icon="pi pi-wallet"
-            color="rose"
-          />
-          <MetricCard
-            label="Investimentos"
-            :value="format.currency(totalInvestimentos)"
-            icon="pi pi-chart-line"
-            color="emerald"
-          />
-        </div>
-
+      <div class="compras-list__content ds-page-context__content space-y-6">
         <Table
           :columns="columns"
-          :rows="rowsToShow"
+          :rows="rows"
           :loading="loading"
           empty-text="Nenhuma compra registrada."
           :boxed="false"
-          :flush="true"
+          :flush="false"
         >
           <template #cell-descricao="{ row }">
-            <div class="flex flex-col py-1">
-              <span class="text-sm font-bold text-text-main uppercase tracking-tight leading-tight">
-                {{ row.descricao }}
-              </span>
-              <span class="text-[10px] font-medium text-text-muted truncate">
-                {{ row.fornecedor?.nome_fantasia || 'Fornecedor não informado' }}
-              </span>
+            <div class="compras-list__identity">
+              <div class="compras-list__initials">
+                {{ row.tipo_abrev }}
+              </div>
+              <div class="compras-list__identity-copy">
+                <span class="compras-list__primary">
+                  {{ row.descricao_exibicao }}
+                </span>
+                <span class="compras-list__secondary">
+                  {{ row.fornecedor_exibicao }}
+                  <span v-if="row.vinculo_exibicao" class="compras-list__secondary-detail">{{ row.vinculo_exibicao }}</span>
+                </span>
+              </div>
             </div>
           </template>
 
           <template #cell-categoria="{ row }">
-            <span class="text-[10px] font-black uppercase text-text-muted tracking-wider border border-border-ui bg-bg-page px-2 py-1 rounded-lg">
-              {{ row.categoria }}
+            <span class="ds-status-pill" :class="row.categoria_class">
+              {{ row.categoria_exibicao }}
             </span>
           </template>
 
           <template #cell-data="{ row }">
-            <span class="text-xs font-bold text-text-main">{{ format.date(row.data_compra) }}</span>
+            <span class="compras-list__date">{{ format.date(row.data_compra) }}</span>
           </template>
 
           <template #cell-valor="{ row }">
-            <span class="text-sm font-bold text-text-main tabular-nums">
+            <span class="compras-list__amount">
               {{ format.currency(row.valor_total) }}
             </span>
           </template>
@@ -116,8 +93,8 @@
             </div>
           </template>
         </Table>
+
         <TablePagination
-          flush
           v-if="total > 0"
           :page="page"
           :page-size="pageSize"
@@ -125,8 +102,8 @@
           @update:page="setPage"
         />
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
@@ -147,7 +124,7 @@ const compras = ref([])
 const filtro = ref('')
 
 const columns = [
-  { key: 'descricao', label: 'DESCRIÇÃO / FORNECEDOR', width: '35%' },
+  { key: 'descricao', label: 'Compra', width: '40%' },
   { key: 'categoria', label: 'CATEGORIA', width: '15%' },
   { key: 'data', label: 'DATA', width: '15%' },
   { key: 'valor', label: 'VALOR', width: '15%', align: 'right' },
@@ -179,10 +156,24 @@ const { page, setPage, total, totalPages, pageSize, rowsToShow } = usePagination
 )
 watch(filtro, () => setPage(1))
 
-const totalGeral = computed(() => compras.value.reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
-const totalInsumos = computed(() => compras.value.filter(c => c.categoria === 'INSUMO').reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
-const totalDespesas = computed(() => compras.value.filter(c => c.categoria === 'DESPESA').reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
-const totalInvestimentos = computed(() => compras.value.filter(c => c.categoria === 'INVESTIMENTO').reduce((acc, c) => acc + Number(c.valor_total || 0), 0))
+const rows = computed(() =>
+  rowsToShow.value.map((row) => {
+    const tipo = String(row.tipo_compra || '').toUpperCase()
+    const categoria = String(row.categoria || '').toUpperCase()
+    const fornecedor = row.fornecedor?.nome_fantasia || row.fornecedor?.razao_social || 'Fornecedor não informado'
+    const vendaId = Number(row.venda_id || 0)
+
+    return {
+      ...row,
+      tipo_abrev: tipo === 'CLIENTE_AMBIENTE' ? 'VD' : 'ES',
+      descricao_exibicao: row.descricao || (tipo === 'CLIENTE_AMBIENTE' ? `Compra vinculada #${row.id}` : `Compra de estoque #${row.id}`),
+      fornecedor_exibicao: fornecedor,
+      vinculo_exibicao: vendaId > 0 ? `Venda #${vendaId}` : 'Estoque interno',
+      categoria_exibicao: categoria || 'SEM CATEGORIA',
+      categoria_class: categoriaClass(categoria),
+    }
+  }),
+)
 
 /** Verde = já chegou/pago. Vermelho = atrasado (vencimento passado e em aberto). */
 function statusExibicao(row) {
@@ -195,6 +186,14 @@ function statusExibicao(row) {
     if (vencimento < hoje) return 'ATRASADO'
   }
   return row.status || 'EM_ABERTO'
+}
+
+function categoriaClass(value) {
+  const categoria = String(value || '').toUpperCase()
+  if (categoria === 'INSUMO') return 'ds-status-pill--info'
+  if (categoria === 'DESPESA') return 'ds-status-pill--danger'
+  if (categoria === 'INVESTIMENTO') return 'ds-status-pill--success'
+  return 'ds-status-pill--neutral'
 }
 
 async function carregar() {
@@ -230,3 +229,102 @@ onMounted(async () => {
   if (can('compras.ver')) await carregar()
 })
 </script>
+
+<style scoped>
+.compras-list {
+  min-height: 100%;
+  background: var(--ds-color-surface);
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.compras-list__identity {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.compras-list__initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.05rem;
+  height: 2.05rem;
+  border-radius: 0.72rem;
+  border: 1px solid rgba(214, 224, 234, 0.78);
+  background: rgba(245, 248, 251, 0.92);
+  color: var(--ds-color-text-faint);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+
+.dark .compras-list__initials {
+  background: rgba(18, 30, 49, 0.62);
+  border-color: rgba(51, 71, 102, 0.76);
+}
+
+.compras-list__identity-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.compras-list__primary {
+  color: var(--ds-color-text);
+  font-size: 0.92rem;
+  font-weight: 560;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compras-list__secondary {
+  color: var(--ds-color-text-faint);
+  font-size: 0.72rem;
+  font-weight: 430;
+  line-height: 1.45;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compras-list__secondary-detail {
+  margin-left: 0.5rem;
+}
+
+.compras-list__date {
+  color: var(--ds-color-text);
+  font-size: 0.8rem;
+  font-weight: 520;
+}
+
+.compras-list__amount {
+  color: var(--ds-color-text);
+  font-size: 0.88rem;
+  font-weight: 620;
+  font-variant-numeric: tabular-nums;
+}
+
+.compras-list :deep(.ds-status-pill) {
+  max-width: 100%;
+  justify-content: center;
+  padding-inline: 0.55rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.05em;
+}
+
+@media (max-width: 768px) {
+  .compras-list__identity {
+    gap: 0.48rem;
+  }
+
+  .compras-list__initials {
+    width: 1.9rem;
+    height: 1.9rem;
+  }
+}
+</style>

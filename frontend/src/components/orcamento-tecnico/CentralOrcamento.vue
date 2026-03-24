@@ -1,25 +1,25 @@
 <template>
   <div class="space-y-4">
     <!-- ══ Header reativo do projeto ══════════════════════════════════════════ -->
-    <div class="sticky top-0 z-20 rounded-xl border border-brand-primary/20 bg-gradient-to-r from-brand-primary/5 via-white to-emerald-50 p-4 shadow-sm">
+    <div class="sticky top-0 z-20 rounded-xl border border-brand-primary/20 bg-gradient-to-r from-brand-primary/5 via-bg-card to-bg-page p-4 shadow-sm">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <!-- Totalizadores -->
         <div class="flex flex-wrap items-center gap-4">
           <div class="text-center min-w-[90px]">
             <p class="text-[10px] font-bold uppercase tracking-wider text-text-soft">Total do projeto</p>
-            <p class="text-xl font-black tabular-nums text-emerald-700">{{ formatCurrency(store.totalProjeto) }}</p>
+            <p class="text-xl font-black tabular-nums text-[color:var(--ds-color-success)]">{{ formatCurrency(store.totalProjeto) }}</p>
           </div>
           <div class="w-px h-8 bg-border-ui hidden sm:block" />
           <div class="text-center min-w-[70px]">
             <p class="text-[10px] font-bold uppercase tracking-wider text-text-soft">Custo fábrica</p>
-            <p class="text-base font-bold tabular-nums text-slate-700">{{ formatCurrency(store.totalCustoProducao) }}</p>
+            <p class="text-base font-bold tabular-nums text-text-main">{{ formatCurrency(store.totalCustoProducao) }}</p>
           </div>
           <div class="w-px h-8 bg-border-ui hidden sm:block" />
           <div class="text-center min-w-[60px]">
             <p class="text-[10px] font-bold uppercase tracking-wider text-text-soft">Margem</p>
             <p
               class="text-base font-bold tabular-nums"
-              :class="store.margemProjeto >= 30 ? 'text-emerald-600' : store.margemProjeto >= 15 ? 'text-amber-600' : 'text-rose-600'"
+              :class="store.margemProjeto >= 30 ? 'text-[color:var(--ds-color-success)]' : store.margemProjeto >= 15 ? 'text-[color:var(--ds-color-warning)]' : 'text-[color:var(--ds-color-danger)]'"
             >
               {{ store.margemProjeto.toFixed(1) }}%
             </p>

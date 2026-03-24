@@ -2,14 +2,14 @@
   <section class="rounded-xl border border-border-ui bg-white p-4 space-y-4">
     <header class="flex items-center justify-between gap-3 flex-wrap">
       <div>
-        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-600">Orcamento Tecnico de Marcenaria</h2>
+        <h2 class="text-sm font-bold uppercase tracking-wider text-text-soft">Orcamento Tecnico de Marcenaria</h2>
         <p class="text-xs text-text-soft">Calculo automatico por area + padrao interno/externo + acessorios.</p>
       </div>
-      <div class="inline-flex rounded-lg border border-border-ui bg-slate-50 p-1">
+      <div class="inline-flex rounded-lg border border-border-ui bg-bg-page p-1">
         <button
           type="button"
           class="px-3 py-1.5 text-xs font-semibold rounded-md"
-          :class="medidaOrigem === 'VENDEDOR' ? 'bg-white shadow text-slate-800' : 'text-slate-500'"
+          :class="medidaOrigem === 'VENDEDOR' ? 'bg-white shadow text-text-main' : 'text-text-soft'"
           @click="medidaOrigem = 'VENDEDOR'"
         >
           Medida do Vendedor
@@ -17,7 +17,7 @@
         <button
           type="button"
           class="px-3 py-1.5 text-xs font-semibold rounded-md"
-          :class="medidaOrigem === 'TECNICA' ? 'bg-white shadow text-slate-800' : 'text-slate-500'"
+          :class="medidaOrigem === 'TECNICA' ? 'bg-white shadow text-text-main' : 'text-text-soft'"
           @click="medidaOrigem = 'TECNICA'"
         >
           Medida Tecnica (Campo)
@@ -26,8 +26,8 @@
     </header>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div class="rounded-lg border border-slate-200 p-3 space-y-2">
-        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Medida do vendedor (mm)</p>
+      <div class="rounded-lg border border-border-ui p-3 space-y-2">
+        <p class="text-[11px] font-bold uppercase tracking-wider text-text-soft">Medida do vendedor (mm)</p>
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="block text-[10px] text-text-soft mb-1">Largura</label>
@@ -57,29 +57,29 @@
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
       <div>
-        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Estrutura interna</label>
+        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-soft mb-1">Estrutura interna</label>
         <select v-model="estruturaInternaCategoria" class="w-full rounded-xl border border-border-ui px-3 py-2 text-sm bg-white">
           <option v-for="cat in categorias" :key="`int-${cat.id}`" :value="cat.id">{{ cat.label }}</option>
         </select>
       </div>
       <div>
-        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Tamponamento/externo</label>
+        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-soft mb-1">Tamponamento/externo</label>
         <select v-model="externoCategoria" class="w-full rounded-xl border border-border-ui px-3 py-2 text-sm bg-white">
           <option v-for="cat in categorias" :key="`ext-${cat.id}`" :value="cat.id">{{ cat.label }}</option>
         </select>
       </div>
       <div>
-        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Markup</label>
+        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-soft mb-1">Markup</label>
         <input v-model.number="markup" type="number" min="0" step="0.01" class="w-full rounded-xl border border-border-ui px-3 py-2 text-sm" />
       </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
       <div>
-        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Percentual externo da area (%)</label>
+        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-soft mb-1">Percentual externo da area (%)</label>
         <input v-model.number="percentualExternoArea" type="number" min="0" max="100" step="0.01" class="w-full rounded-xl border border-border-ui px-3 py-2 text-sm" />
       </div>
-      <div class="md:col-span-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-600">
+      <div class="md:col-span-2 rounded-lg border border-border-ui bg-bg-page px-3 py-2.5 text-xs text-text-soft">
         <p>
           Base da Estrategia de Precos: <strong>{{ carregandoCategorias ? 'carregando...' : origemCategoriasLabel }}</strong>
         </p>
@@ -87,13 +87,13 @@
     </div>
 
     <div class="rounded-lg border border-border-ui overflow-hidden">
-      <div class="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-border-ui">
-        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Acessorios adicionais</p>
+      <div class="flex items-center justify-between px-3 py-2 bg-bg-page border-b border-border-ui">
+        <p class="text-xs font-bold uppercase tracking-wider text-text-soft">Acessorios adicionais</p>
         <button type="button" class="text-xs font-semibold text-brand-primary" @click="adicionarAcessorio">+ Adicionar</button>
       </div>
 
       <table class="w-full text-sm" v-if="acessorios.length">
-        <thead class="bg-white border-b border-border-ui text-xs text-slate-500">
+        <thead class="bg-white border-b border-border-ui text-xs text-text-soft">
           <tr>
             <th class="px-3 py-2 text-left">Descricao</th>
             <th class="px-3 py-2 text-right">Qtd</th>
@@ -109,7 +109,7 @@
             <td class="px-3 py-2"><input v-model.number="item.valorUnitario" type="number" min="0" step="0.01" class="w-full rounded-lg border border-border-ui px-2 py-1.5 text-sm text-right" /></td>
             <td class="px-3 py-2 text-right tabular-nums font-semibold">{{ formatCurrency(item.quantidade * item.valorUnitario) }}</td>
             <td class="px-3 py-2 text-center">
-              <button type="button" class="text-rose-500" @click="removerAcessorio(idx)"><i class="pi pi-trash text-xs" /></button>
+              <button type="button" class="text-[color:var(--ds-color-danger)]" @click="removerAcessorio(idx)"><i class="pi pi-trash text-xs" /></button>
             </td>
           </tr>
         </tbody>
@@ -117,31 +117,31 @@
       <div v-else class="p-3 text-xs text-text-soft">Nenhum acessorio adicionado.</div>
     </div>
 
-    <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 grid grid-cols-2 md:grid-cols-6 gap-3 text-sm">
+    <div class="rounded-xl border border-[color:rgba(22,124,92,0.2)] bg-[color:rgba(22,124,92,0.1)] p-4 grid grid-cols-2 md:grid-cols-6 gap-3 text-sm">
       <div>
-        <p class="text-[11px] text-emerald-700 uppercase tracking-wider font-semibold">Area total</p>
-        <p class="font-black text-emerald-800 tabular-nums">{{ areaTotalM2.toFixed(3) }} m2</p>
+        <p class="text-[11px] text-[color:var(--ds-color-success)] uppercase tracking-wider font-semibold">Area total</p>
+        <p class="font-black text-[color:var(--ds-color-success)] tabular-nums">{{ areaTotalM2.toFixed(3) }} m2</p>
       </div>
       <div>
-        <p class="text-[11px] text-emerald-700 uppercase tracking-wider font-semibold">Interno</p>
-        <p class="font-black text-emerald-800 tabular-nums">{{ formatCurrency(custoInterno) }}</p>
+        <p class="text-[11px] text-[color:var(--ds-color-success)] uppercase tracking-wider font-semibold">Interno</p>
+        <p class="font-black text-[color:var(--ds-color-success)] tabular-nums">{{ formatCurrency(custoInterno) }}</p>
       </div>
       <div>
-        <p class="text-[11px] text-emerald-700 uppercase tracking-wider font-semibold">Externo</p>
-        <p class="font-black text-emerald-800 tabular-nums">{{ formatCurrency(custoExterno) }}</p>
-        <p class="text-[10px] text-emerald-700 tabular-nums">{{ areaExternoM2.toFixed(3) }} m2</p>
+        <p class="text-[11px] text-[color:var(--ds-color-success)] uppercase tracking-wider font-semibold">Externo</p>
+        <p class="font-black text-[color:var(--ds-color-success)] tabular-nums">{{ formatCurrency(custoExterno) }}</p>
+        <p class="text-[10px] text-[color:var(--ds-color-success)] tabular-nums">{{ areaExternoM2.toFixed(3) }} m2</p>
       </div>
       <div>
-        <p class="text-[11px] text-emerald-700 uppercase tracking-wider font-semibold">Acessorios</p>
-        <p class="font-black text-emerald-800 tabular-nums">{{ formatCurrency(totalAcessorios) }}</p>
+        <p class="text-[11px] text-[color:var(--ds-color-success)] uppercase tracking-wider font-semibold">Acessorios</p>
+        <p class="font-black text-[color:var(--ds-color-success)] tabular-nums">{{ formatCurrency(totalAcessorios) }}</p>
       </div>
       <div>
-        <p class="text-[11px] text-emerald-700 uppercase tracking-wider font-semibold">Custo total</p>
-        <p class="font-black text-emerald-800 tabular-nums">{{ formatCurrency(custoTotal) }}</p>
+        <p class="text-[11px] text-[color:var(--ds-color-success)] uppercase tracking-wider font-semibold">Custo total</p>
+        <p class="font-black text-[color:var(--ds-color-success)] tabular-nums">{{ formatCurrency(custoTotal) }}</p>
       </div>
       <div>
-        <p class="text-[11px] text-emerald-700 uppercase tracking-wider font-semibold">Preco de venda</p>
-        <p class="text-lg font-black text-emerald-700 tabular-nums">{{ formatCurrency(precoVenda) }}</p>
+        <p class="text-[11px] text-[color:var(--ds-color-success)] uppercase tracking-wider font-semibold">Preco de venda</p>
+        <p class="text-lg font-black text-[color:var(--ds-color-success)] tabular-nums">{{ formatCurrency(precoVenda) }}</p>
       </div>
     </div>
   </section>

@@ -1,16 +1,25 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
+  <PageShell :padded="false" variant="minimal">
+    <section class="login-font ds-page-context ds-page-context--editor animate-page-in">
       <PageHeader
         :title="clienteNome"
         :subtitle="clienteTelefone ? `Contratos do cliente · ${clienteTelefone}` : 'Contratos do cliente'"
         icon="pi pi-file"
+        variant="minimal"
       >
         <template #actions>
-          <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
-            <div class="w-full sm:w-80 order-1 sm:order-0">
+          <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
+            <Button
+              variant="secondary"
+              size="sm"
+              type="button"
+              class="order-2 sm:order-none"
+              @click="router.push('/contratos')"
+            >
+              <i class="pi pi-arrow-left mr-1" />
+              Voltar
+            </Button>
+            <div class="w-full sm:w-80 order-1 sm:order-none">
               <SearchInput
                 v-model="filtro"
                 placeholder="Filtrar por número, status ou valor..."
@@ -19,136 +28,136 @@
             <Button
               v-if="can('contratos.criar')"
               variant="primary"
-              class="flex-shrink-0 h-11 rounded-xl font-black uppercase tracking-[0.16em] text-[11px]"
+              type="button"
+              class="order-3 flex-shrink-0"
               @click="router.push({ path: '/contratos/novo', query: { cliente_id: clienteId } })"
             >
               <i class="pi pi-plus mr-2" />
-              Novo Contrato
+              Novo contrato
             </Button>
           </div>
         </template>
       </PageHeader>
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-4">
-        <!-- Visualização do PDF na tela embaixo do menu (substitui a lista) -->
-        <div v-if="pdfModalOpen" class="flex flex-col h-[calc(100vh-12rem)] min-h-[400px]">
-          <div class="flex items-center justify-between gap-3 mb-3 flex-shrink-0">
-            <Button
-              variant="secondary"
-              size="sm"
-              class="rounded-xl font-black uppercase tracking-wider text-[10px]"
-              @click="fecharPdfModal"
-            >
+      <div class="ds-editor-body space-y-4">
+        <!-- Visualização do PDF (substitui a lista enquanto aberto) -->
+        <div v-if="pdfModalOpen" class="flex min-h-[400px] flex-col h-[calc(100vh-12rem)]">
+          <div class="mb-3 flex flex-shrink-0 items-center justify-between gap-3">
+            <Button variant="secondary" size="sm" type="button" @click="fecharPdfModal">
               <i class="pi pi-arrow-left mr-2" />
               Voltar para a lista
             </Button>
-            <span class="text-xs font-black uppercase tracking-wider text-text-soft flex items-center gap-2">
+            <span class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-text-soft">
               <i class="pi pi-file-pdf text-rose-500" />
               {{ pdfModalTitulo || 'PDF do contrato' }}
             </span>
           </div>
-          <div class="flex-1 min-h-0 rounded-xl border border-border-ui bg-bg-page overflow-hidden flex flex-col">
+          <div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--ds-color-border)] bg-[var(--ds-color-surface)]">
             <div
               v-if="pdfModalLoading"
-              class="flex-1 flex items-center justify-center text-[11px] font-black uppercase tracking-widest text-slate-400"
+              class="flex flex-1 items-center justify-center text-xs font-semibold uppercase tracking-wider text-text-soft"
             >
               Carregando PDF...
             </div>
             <div
               v-else-if="pdfModalError"
-              class="flex-1 flex items-center justify-center px-6 text-center text-[11px] font-black uppercase tracking-widest text-rose-600"
+              class="flex flex-1 items-center justify-center px-6 text-center text-xs font-semibold uppercase tracking-wider text-rose-600"
             >
               {{ pdfModalError }}
             </div>
             <iframe
               v-else-if="pdfBlobUrl"
               :src="pdfBlobUrl"
-              class="w-full h-full border-0 flex-1 min-h-0"
+              class="min-h-0 w-full flex-1 border-0"
               title="PDF do contrato"
             />
           </div>
         </div>
 
-        <!-- Lista de contratos (quando não está vendo PDF) -->
         <template v-else>
-        <div v-if="filtrados.length > 0" class="rounded-xl border border-border-ui bg-bg-page/50 px-4 py-2 flex justify-center items-center gap-2">
-          <span class="text-[10px] font-bold text-text-soft uppercase tracking-wider">Valor total</span>
-          <span class="text-lg font-black text-text-main">{{ format.currency(valorTotalFiltrado) }}</span>
-        </div>
-
-        <div class="native-table-flush overflow-visible">
-          <Table
-            :columns="columns"
-            :rows="filtrados"
-            :loading="loading"
-            empty-text="Nenhum contrato para este cliente."
-            :boxed="false"
-            :flush="true"
+          <div
+            v-if="filtrados.length > 0"
+            class="ds-card ds-card--default flex items-center justify-center gap-2 px-4 py-2"
           >
-            <template #cell-id="{ row }">
-              <span class="inline-flex items-center justify-center bg-bg-card border border-border-ui px-3 py-1 rounded-lg text-[10px] font-black text-text-main">
-                #{{ row.id }}
-              </span>
-            </template>
-            <template #cell-numero="{ row }">
-              <span class="text-xs font-bold text-text-main">{{ row.numero || '-' }}</span>
-            </template>
-            <template #cell-status="{ row }">
-              <div v-if="can('contratos.editar')" class="min-w-[130px]">
-                <select
-                  :value="String(row.status || 'RASCUNHO').toUpperCase()"
-                  class="w-full max-w-[130px] h-8 px-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-[11px] font-medium text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
-                  @change="(ev) => alterarStatus(row, ev.target.value)"
+            <span class="text-[10px] font-bold uppercase tracking-wider text-text-soft">Valor total</span>
+            <span class="text-lg font-black tabular-nums text-text-main">{{ format.currency(valorTotalFiltrado) }}</span>
+          </div>
+
+          <div class="native-table-flush overflow-visible">
+            <Table
+              :columns="columns"
+              :rows="filtrados"
+              :loading="loading"
+              empty-text="Nenhum contrato para este cliente."
+              :boxed="false"
+              :flush="true"
+            >
+              <template #cell-id="{ row }">
+                <span
+                  class="inline-flex items-center justify-center rounded-lg border border-[var(--ds-color-border)] bg-[var(--ds-color-surface)] px-3 py-1 text-[10px] font-black text-text-main"
                 >
-                  <option value="RASCUNHO">Rascunho</option>
-                  <option value="VIGENTE">Vigente</option>
-                  <option value="ENCERRADO">Encerrado</option>
-                </select>
-              </div>
-              <StatusBadge v-else :value="row.status" />
-            </template>
-            <template #cell-valor="{ row }">
-              <span class="text-sm font-black text-text-main tabular-nums">
-                {{ format.currency(row.valor) }}
-              </span>
-            </template>
-            <template #cell-data_inicio="{ row }">
-              <span class="text-xs font-medium text-text-main">
-                {{ row.data_inicio ? format.date(row.data_inicio) : '-' }}
-              </span>
-            </template>
-            <template #cell-data_fim="{ row }">
-              <span class="text-xs font-medium text-text-main">
-                {{ row.data_fim ? format.date(row.data_fim) : '-' }}
-              </span>
-            </template>
-            <template #cell-acoes="{ row }">
-              <div class="inline-flex items-center justify-end gap-1.5 flex-nowrap">
-                <button
-                  v-if="can('contratos.ver') && row.tem_pdf && row.pdf_arquivo_id"
-                  type="button"
-                  class="h-8 px-2.5 rounded-lg text-slate-500 hover:text-sky-600 hover:bg-sky-500/10 flex items-center gap-1.5 transition-colors text-[11px] font-medium whitespace-nowrap shrink-0 inline-flex items-center"
-                  title="Abrir PDF do contrato"
-                  @click.stop="abrirPdfModal(row)"
-                >
-                  <i class="pi pi-file-pdf text-[12px]" />
-                  Ver contrato
-                </button>
-                <TableActions
-                  :id="row.id"
-                  perm-edit="contratos.editar"
-                  perm-delete="contratos.excluir"
-                  @edit="router.push(`/contratos/${row.id}`)"
-                  @delete="confirmarExcluir(row.id)"
-                />
-              </div>
-            </template>
-          </Table>
-        </div>
+                  #{{ row.id }}
+                </span>
+              </template>
+              <template #cell-numero="{ row }">
+                <span class="text-xs font-bold text-text-main">{{ row.numero || '-' }}</span>
+              </template>
+              <template #cell-status="{ row }">
+                <div v-if="can('contratos.editar')" class="min-w-[130px]">
+                  <select
+                    :value="String(row.status || 'RASCUNHO').toUpperCase()"
+                    class="h-8 w-full max-w-[130px] rounded-lg border border-[var(--ds-color-border)] bg-[var(--ds-color-surface)] px-2 text-[11px] font-medium text-text-main focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                    @change="(ev) => alterarStatus(row, ev.target.value)"
+                  >
+                    <option value="RASCUNHO">Rascunho</option>
+                    <option value="VIGENTE">Vigente</option>
+                    <option value="ENCERRADO">Encerrado</option>
+                  </select>
+                </div>
+                <StatusBadge v-else :value="row.status" />
+              </template>
+              <template #cell-valor="{ row }">
+                <span class="text-sm font-black tabular-nums text-text-main">
+                  {{ format.currency(row.valor) }}
+                </span>
+              </template>
+              <template #cell-data_inicio="{ row }">
+                <span class="text-xs font-medium text-text-main">
+                  {{ row.data_inicio ? format.date(row.data_inicio) : '-' }}
+                </span>
+              </template>
+              <template #cell-data_fim="{ row }">
+                <span class="text-xs font-medium text-text-main">
+                  {{ row.data_fim ? format.date(row.data_fim) : '-' }}
+                </span>
+              </template>
+              <template #cell-acoes="{ row }">
+                <div class="inline-flex flex-nowrap items-center justify-end gap-1.5">
+                  <button
+                    v-if="can('contratos.ver') && row.tem_pdf && row.pdf_arquivo_id"
+                    type="button"
+                    class="inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[11px] font-medium text-text-soft transition-colors hover:bg-sky-500/10 hover:text-sky-600"
+                    title="Abrir PDF do contrato"
+                    @click.stop="abrirPdfModal(row)"
+                  >
+                    <i class="pi pi-file-pdf text-[12px]" />
+                    Ver contrato
+                  </button>
+                  <TableActions
+                    :id="row.id"
+                    perm-edit="contratos.editar"
+                    perm-delete="contratos.excluir"
+                    @edit="router.push(`/contratos/${row.id}`)"
+                    @delete="confirmarExcluir(row.id)"
+                  />
+                </div>
+              </template>
+            </Table>
+          </div>
         </template>
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
@@ -226,7 +235,7 @@ const filtrados = computed(() => {
 })
 
 const valorTotalFiltrado = computed(() =>
-  filtrados.value.reduce((acc, c) => acc + Number(c.valor || 0), 0)
+  filtrados.value.reduce((acc, c) => acc + Number(c.valor || 0), 0),
 )
 
 const clienteNome = computed(() => {
@@ -301,9 +310,9 @@ async function alterarStatus(row, novoStatus) {
 
 onMounted(carregar)
 
-// Limpa o filtro ao trocar de cliente (ex.: navegação entre clientes)
 watch(clienteId, () => {
   filtro.value = ''
+  carregar()
 })
 
 onBeforeUnmount(() => {

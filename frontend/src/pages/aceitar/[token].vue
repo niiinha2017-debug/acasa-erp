@@ -1,9 +1,9 @@
 <template>
   <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 flex flex-col items-center justify-center p-4">
     <div class="w-full max-w-4xl">
-      <div v-if="erroFatal" class="rounded-2xl border border-rose-200 bg-rose-50 dark:bg-rose-950/30 dark:border-rose-800 p-6 text-center">
-        <p class="font-semibold text-rose-700 dark:text-rose-300">{{ erroFatal }}</p>
-        <p class="text-sm text-rose-600 dark:text-rose-400 mt-2">O link pode ter expirado (válido 24h). Peça um novo ao responsável.</p>
+      <div v-if="erroFatal" class="card-minimal-tw p-6 text-center">
+        <p class="font-semibold ds-status-pill--danger rounded-lg px-3 py-2 inline-block">{{ erroFatal }}</p>
+        <p class="text-sm text-text-soft mt-2">O link pode ter expirado (válido 24h). Peça um novo ao responsável.</p>
       </div>
 
       <template v-else>
@@ -27,7 +27,7 @@
             </div>
             <div
               v-else
-              class="mt-4 rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-3 text-sm text-amber-700 dark:text-amber-300"
+              class="mt-4 ds-alert ds-alert--warning text-sm"
             >
               Não foi possível carregar a visualização do PDF no momento.
             </div>

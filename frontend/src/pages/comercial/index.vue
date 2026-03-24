@@ -1,60 +1,58 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
+  <PageShell :padded="false">
+    <section class="comercial-hub ds-page-context animate-page-in">
       <PageHeader
         title="Visão geral – Vendas"
         subtitle="Orçamentos, fechamento de venda e contratos (área comercial)"
         icon="pi pi-briefcase"
       />
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-6">
+      <div class="comercial-hub__body ds-page-context__content space-y-6 pb-6">
         <div
           v-if="can('vendas.criar')"
-          class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden"
+          class="ds-card ds-card--default"
         >
-          <div class="px-4 py-3 border-b border-border-ui">
-            <span class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
+          <div class="px-4 py-3 border-b border-[var(--ds-color-border)]">
+            <span class="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--ds-color-text-faint)]">
               Meu progresso em vendas
             </span>
           </div>
           <div class="p-4">
-            <div v-if="loadingResumoVendedor" class="py-4 text-sm text-text-soft">
+            <div v-if="loadingResumoVendedor" class="py-4 text-sm text-[var(--ds-color-text-soft)]">
               <i class="pi pi-spin pi-spinner mr-2" />
               Carregando progresso...
             </div>
             <div v-else class="space-y-3">
-              <div class="text-xs text-text-soft">
-                <span class="font-semibold text-text-main">
+              <div class="text-xs text-[var(--ds-color-text-soft)]">
+                <span class="font-semibold text-[var(--ds-color-text)]">
                   Vendedor: {{ resumoVendedor.vendedor || 'Não identificado' }}
                 </span>
                 <span class="mx-2">•</span>
                 <span>Fonte: {{ resumoVendedor.fonte_vendedor || 'Usuário autenticado' }}</span>
                 <RouterLink
                   :to="resumoVendedor.link_referencia || '/vendas/fechamento'"
-                  class="ml-2 font-semibold text-brand-primary hover:underline"
+                  class="ml-2 font-semibold text-[var(--ds-color-primary)] hover:underline"
                 >
                   Ver referência
                 </RouterLink>
               </div>
               <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div class="rounded-xl border border-border-ui bg-bg-card p-4">
-                <p class="text-[10px] font-bold uppercase tracking-wider text-text-soft mb-1">Minhas vendas</p>
-                <p class="text-xl font-black text-text-main">{{ resumoVendedor.minhas_vendas_total ?? 0 }}</p>
-              </div>
-              <div class="rounded-xl border border-border-ui bg-bg-card p-4">
-                <p class="text-[10px] font-bold uppercase tracking-wider text-text-soft mb-1">Fechadas no mês</p>
-                <p class="text-xl font-black text-text-main">{{ resumoVendedor.minhas_vendas_mes ?? 0 }}</p>
-              </div>
-              <div class="rounded-xl border border-border-ui bg-bg-card p-4">
-                <p class="text-[10px] font-bold uppercase tracking-wider text-text-soft mb-1">Em produção</p>
-                <p class="text-xl font-black text-text-main">{{ resumoVendedor.minhas_em_producao ?? 0 }}</p>
-              </div>
-              <div class="rounded-xl border border-border-ui bg-bg-card p-4">
-                <p class="text-[10px] font-bold uppercase tracking-wider text-text-soft mb-1">Finalizadas</p>
-                <p class="text-xl font-black text-text-main">{{ resumoVendedor.minhas_finalizadas ?? 0 }}</p>
-              </div>
+                <div class="ds-card ds-card--default p-4">
+                  <p class="text-[10px] font-bold uppercase tracking-wider text-[var(--ds-color-text-faint)] mb-1">Minhas vendas</p>
+                  <p class="text-xl font-black text-[var(--ds-color-text)]">{{ resumoVendedor.minhas_vendas_total ?? 0 }}</p>
+                </div>
+                <div class="ds-card ds-card--default p-4">
+                  <p class="text-[10px] font-bold uppercase tracking-wider text-[var(--ds-color-text-faint)] mb-1">Fechadas no mês</p>
+                  <p class="text-xl font-black text-[var(--ds-color-text)]">{{ resumoVendedor.minhas_vendas_mes ?? 0 }}</p>
+                </div>
+                <div class="ds-card ds-card--default p-4">
+                  <p class="text-[10px] font-bold uppercase tracking-wider text-[var(--ds-color-text-faint)] mb-1">Em produção</p>
+                  <p class="text-xl font-black text-[var(--ds-color-text)]">{{ resumoVendedor.minhas_em_producao ?? 0 }}</p>
+                </div>
+                <div class="ds-card ds-card--default p-4">
+                  <p class="text-[10px] font-bold uppercase tracking-wider text-[var(--ds-color-text-faint)] mb-1">Finalizadas</p>
+                  <p class="text-xl font-black text-[var(--ds-color-text)]">{{ resumoVendedor.minhas_finalizadas ?? 0 }}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -64,100 +62,99 @@
           <RouterLink
             v-if="can('orcamentos.ver')"
             to="/orcamentos"
-            class="group flex flex-col p-6 rounded-2xl border border-border-ui bg-bg-page hover:border-brand-primary/50 hover:shadow-lg transition-all duration-200"
+            class="ds-card ds-card--default ds-card--hoverable group flex flex-col p-6 no-underline text-inherit"
           >
-            <div class="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4 group-hover:bg-brand-primary/10 transition-colors">
-              <i class="pi pi-file-edit text-xl text-brand-primary"></i>
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-[color-mix(in_srgb,var(--ds-color-primary)_14%,transparent)] text-[var(--ds-color-primary)] group-hover:opacity-90 transition-colors">
+              <i class="pi pi-file-edit text-xl"></i>
             </div>
-            <h3 class="text-base font-bold text-text-main uppercase tracking-tight mb-1">Orçamento</h3>
-            <p class="text-xs text-text-soft">Propostas e negociações</p>
+            <h3 class="text-base font-bold text-[var(--ds-color-text)] uppercase tracking-tight mb-1">Orçamento</h3>
+            <p class="text-xs text-[var(--ds-color-text-soft)]">Propostas e negociações</p>
           </RouterLink>
 
           <RouterLink
             v-if="can('vendas.criar') && can('orcamentos.ver')"
             to="/vendas/fechamento"
-            class="group flex flex-col p-6 rounded-2xl border border-border-ui bg-bg-page hover:border-brand-primary/50 hover:shadow-lg transition-all duration-200"
+            class="ds-card ds-card--default ds-card--hoverable group flex flex-col p-6 no-underline text-inherit"
           >
-            <div class="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4 group-hover:bg-brand-primary/10 transition-colors">
-              <i class="pi pi-shopping-cart text-xl text-brand-primary"></i>
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-[color-mix(in_srgb,var(--ds-color-primary)_14%,transparent)] text-[var(--ds-color-primary)] group-hover:opacity-90 transition-colors">
+              <i class="pi pi-shopping-cart text-xl"></i>
             </div>
-            <h3 class="text-base font-bold text-text-main uppercase tracking-tight mb-1">Fechamento de venda</h3>
-            <p class="text-xs text-text-soft">Converter orçamento em venda</p>
+            <h3 class="text-base font-bold text-[var(--ds-color-text)] uppercase tracking-tight mb-1">Fechamento de venda</h3>
+            <p class="text-xs text-[var(--ds-color-text-soft)]">Converter orçamento em venda</p>
           </RouterLink>
 
           <RouterLink
             v-if="can('contratos.ver')"
             to="/contratos"
-            class="group flex flex-col p-6 rounded-2xl border border-border-ui bg-bg-page hover:border-brand-primary/50 hover:shadow-lg transition-all duration-200"
+            class="ds-card ds-card--default ds-card--hoverable group flex flex-col p-6 no-underline text-inherit"
           >
-            <div class="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4 group-hover:bg-brand-primary/10 transition-colors">
-              <i class="pi pi-file text-xl text-brand-primary"></i>
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-[color-mix(in_srgb,var(--ds-color-primary)_14%,transparent)] text-[var(--ds-color-primary)] group-hover:opacity-90 transition-colors">
+              <i class="pi pi-file text-xl"></i>
             </div>
-            <h3 class="text-base font-bold text-text-main uppercase tracking-tight mb-1">Contrato</h3>
-            <p class="text-xs text-text-soft">Contratos comerciais</p>
+            <h3 class="text-base font-bold text-[var(--ds-color-text)] uppercase tracking-tight mb-1">Contrato</h3>
+            <p class="text-xs text-[var(--ds-color-text-soft)]">Contratos comerciais</p>
           </RouterLink>
 
           <RouterLink
             v-if="can('contratos.clausulas.editar')"
             to="/contratos/clausulas"
-            class="group flex flex-col p-6 rounded-2xl border border-border-ui bg-bg-page hover:border-brand-primary/50 hover:shadow-lg transition-all duration-200"
+            class="ds-card ds-card--default ds-card--hoverable group flex flex-col p-6 no-underline text-inherit"
           >
-            <div class="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4 group-hover:bg-brand-primary/10 transition-colors">
-              <i class="pi pi-file-edit text-xl text-brand-primary"></i>
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-[color-mix(in_srgb,var(--ds-color-primary)_14%,transparent)] text-[var(--ds-color-primary)] group-hover:opacity-90 transition-colors">
+              <i class="pi pi-file-edit text-xl"></i>
             </div>
-            <h3 class="text-base font-bold text-text-main uppercase tracking-tight mb-1">Cláusulas</h3>
-            <p class="text-xs text-text-soft">Modelos de orçamento e contrato</p>
+            <h3 class="text-base font-bold text-[var(--ds-color-text)] uppercase tracking-tight mb-1">Cláusulas</h3>
+            <p class="text-xs text-[var(--ds-color-text-soft)]">Modelos de orçamento e contrato</p>
           </RouterLink>
 
           <RouterLink
             v-if="can('agendamentos.ver')"
-            to="/agendamentos/loja"
-            class="group flex flex-col p-6 rounded-2xl border border-border-ui bg-bg-page hover:border-brand-primary/50 hover:shadow-lg transition-all duration-200"
+            to="/agenda-geral"
+            class="ds-card ds-card--default ds-card--hoverable group flex flex-col p-6 no-underline text-inherit"
           >
-            <div class="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4 group-hover:bg-brand-primary/10 transition-colors">
-              <i class="pi pi-calendar-clock text-xl text-brand-primary"></i>
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-4 bg-[color-mix(in_srgb,var(--ds-color-primary)_14%,transparent)] text-[var(--ds-color-primary)] group-hover:opacity-90 transition-colors">
+              <i class="pi pi-calendar-clock text-xl"></i>
             </div>
-            <h3 class="text-base font-bold text-text-main uppercase tracking-tight mb-1">Agenda</h3>
-            <p class="text-xs text-text-soft">Produção, material carregado e montagem</p>
+            <h3 class="text-base font-bold text-[var(--ds-color-text)] uppercase tracking-tight mb-1">Agenda</h3>
+            <p class="text-xs text-[var(--ds-color-text-soft)]">Produção, material carregado e montagem</p>
           </RouterLink>
         </div>
 
-        <!-- Próximos agendamentos (agenda da produção) -->
         <div
           v-if="can('agendamentos.ver')"
-          class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden"
+          class="ds-card ds-card--default"
         >
-          <div class="px-4 py-3 border-b border-border-ui flex items-center justify-between">
-            <span class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
+          <div class="px-4 py-3 border-b border-[var(--ds-color-border)] flex items-center justify-between">
+            <span class="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--ds-color-text-faint)]">
               Próximos agendamentos (agenda produção)
             </span>
             <RouterLink
-              to="/agendamentos/fabrica"
-              class="text-xs font-bold text-brand-primary hover:underline"
+              to="/agenda-geral"
+              class="text-xs font-bold text-[var(--ds-color-primary)] hover:underline"
             >
               Ver agenda completa
             </RouterLink>
           </div>
           <div class="p-4">
-            <div v-if="loadingAgenda" class="py-6 text-center text-text-soft text-sm">
+            <div v-if="loadingAgenda" class="py-6 text-center text-[var(--ds-color-text-soft)] text-sm">
               <i class="pi pi-spin pi-spinner mr-2" />
               Carregando...
             </div>
-            <div v-else-if="proximosAgendamentos.length === 0" class="py-6 text-center text-text-soft text-sm">
+            <div v-else-if="proximosAgendamentos.length === 0" class="py-6 text-center text-[var(--ds-color-text-soft)] text-sm">
               Nenhum agendamento nos próximos dias.
             </div>
             <ul v-else class="space-y-2">
               <li
                 v-for="ev in proximosAgendamentos"
                 :key="ev.id"
-                class="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 border-b border-border-ui last:border-0 text-sm"
+                class="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 border-b border-[var(--ds-color-border)] last:border-0 text-sm"
               >
-                <span class="font-bold text-text-main shrink-0">
+                <span class="font-bold text-[var(--ds-color-text)] shrink-0">
                   {{ formatarDataAgenda(ev.inicio_em) }}
                 </span>
-                <span class="text-text-soft">{{ formatarHoraAgenda(ev.inicio_em) }} – {{ formatarHoraAgenda(ev.fim_em) }}</span>
-                <span class="font-medium text-text-main">{{ ev.titulo }}</span>
-                <span class="text-text-soft">
+                <span class="text-[var(--ds-color-text-soft)]">{{ formatarHoraAgenda(ev.inicio_em) }} – {{ formatarHoraAgenda(ev.fim_em) }}</span>
+                <span class="font-medium text-[var(--ds-color-text)]">{{ ev.titulo }}</span>
+                <span class="text-[var(--ds-color-text-soft)]">
                   — {{ ev.cliente?.nome_completo || ev.cliente?.razao_social || 'Cliente' }}
                   <span class="text-[10px] uppercase">({{ labelOrigemAgenda(ev) }})</span>
                 </span>
@@ -166,12 +163,12 @@
           </div>
         </div>
 
-        <div v-if="!temAlgumAcesso" class="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 p-6 text-center">
-          <p class="text-sm text-amber-800 dark:text-amber-200">Você não tem permissão para acessar nenhum módulo comercial.</p>
+        <div v-if="!temAlgumAcesso" class="ds-alert ds-alert--warning text-center">
+          <p class="text-sm text-[var(--ds-color-text)]">Você não tem permissão para acessar nenhum módulo comercial.</p>
         </div>
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
@@ -180,6 +177,8 @@ import { AgendaService } from '@/services'
 import api from '@/services/api'
 import { can } from '@/services/permissions'
 import storage from '@/utils/storage'
+import PageShell from '@/components/ui/PageShell.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
 
 definePage({ meta: { perm: 'orcamentos.ver' } })
 
@@ -271,4 +270,3 @@ onMounted(() => {
   carregarAgenda()
 })
 </script>
-

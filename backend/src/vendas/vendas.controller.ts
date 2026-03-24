@@ -58,10 +58,24 @@ export class VendasController {
     return this.service.listarComContratoVigente(req?.user);
   }
 
+  @Get('fluxo-operacional')
+  @Permissoes('agendamentos.vendas', 'agendamentos.producao')
+  listarFluxoOperacional(
+    @Req() req?: { user?: { funcionario_id?: number | null; is_admin?: boolean; permissoes?: string[] } },
+  ) {
+    return this.service.listarFluxoOperacional(req?.user);
+  }
+
   @Get(':id')
   @Permissoes('vendas.criar', 'vendas.editar', 'vendas.ver', 'posvenda.ver')
   buscar(@Param('id') id: string) {
     return this.service.buscarPorId(this.cleanId(id));
+  }
+
+  @Get(':id/fluxos-gemeos')
+  @Permissoes('vendas.criar', 'vendas.editar', 'vendas.ver', 'posvenda.ver', 'agendamentos.ver')
+  buscarFluxosGemeos(@Param('id') id: string) {
+    return this.service.buscarFluxosGemeos(this.cleanId(id));
   }
 
   @Post()

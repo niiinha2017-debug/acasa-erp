@@ -1,22 +1,19 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
+  <PageShell :padded="false">
+    <section class="plano-corte-venda ds-page-context ds-page-context--editor animate-page-in">
       <PageHeader
         title="Venda Serviço de Corte"
         subtitle="Cortes internos — cadastre os produtos na hora e venda por metragem"
         icon="pi pi-ruler"
         :backTo="'/plano-corte'"
-        class="border-b border-border-ui"
       />
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui">
+      <div class="plano-corte-venda__body ds-editor-body">
         <p v-if="!fornecedorSelecionado && fornecedorCarregado" class="mb-4 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs font-bold text-amber-800 dark:text-amber-200">
           Cadastre um fornecedor (próprio) em <strong>Produtos Serviço de Corte</strong> para usar cortes internos.
         </p>
 
-        <section class="grid grid-cols-12 gap-6 mb-8">
+        <section class="plano-corte-venda__lead ds-editor-lead-grid grid grid-cols-12 gap-6 mb-8">
           <div class="col-span-12 md:col-span-4">
             <Input v-model="dataVenda" label="Data do Pedido *" type="date" required />
           </div>
@@ -33,16 +30,16 @@
 
         <div class="relative mb-6">
           <div class="absolute inset-0 flex items-center">
-            <div class="w-full border-t border-border-ui/50"></div>
+            <div class="w-full border-t border-[color:var(--ds-color-border-ui)]/50"></div>
           </div>
           <div class="relative flex justify-center">
-            <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span class="bg-[color:var(--ds-color-page)] px-4 text-xs font-bold uppercase tracking-wider text-text-muted">
               Adicionar Itens por Metragem
             </span>
           </div>
         </div>
 
-        <div class="rounded-2xl border border-border-ui bg-slate-50/50 dark:bg-slate-800/20 p-6 mb-8">
+        <div class="ds-card ds-card--default p-6 mb-8">
           <div class="flex items-center justify-between mb-6">
             <span class="text-xs font-bold text-text-muted uppercase tracking-wider">Itens do pedido</span>
             <Button
@@ -89,11 +86,11 @@
             </div>
 
             <div class="col-span-12 md:col-span-9 flex flex-wrap items-end gap-3">
-              <div class="flex-1 min-w-[140px] px-4 py-3 rounded-xl border border-border-ui bg-bg-card flex flex-col justify-center">
+              <div class="flex-1 min-w-[140px] ds-card ds-card--default px-4 py-3 flex flex-col justify-center">
                 <span class="text-[10px] font-bold text-text-muted uppercase tracking-wider">Área por peça</span>
                 <span class="text-sm font-bold text-text-main">{{ areaPecaExibicao }}</span>
               </div>
-              <div class="flex-1 min-w-[140px] px-4 py-3 rounded-xl border border-border-ui bg-bg-card flex flex-col justify-center">
+              <div class="flex-1 min-w-[140px] ds-card ds-card--default px-4 py-3 flex flex-col justify-center">
                 <span class="text-[10px] font-bold text-text-muted uppercase tracking-wider">Total item</span>
                 <span class="text-sm font-bold text-text-main">{{ itemNovoTotalExibicao }}</span>
               </div>
@@ -154,7 +151,7 @@
         </div>
 
         <div class="flex justify-end mt-8">
-          <div class="rounded-2xl border border-border-ui bg-slate-50/50 dark:bg-slate-800/30 px-6 py-4 min-w-[240px] text-right">
+          <div class="ds-card ds-card--default px-6 py-4 min-w-[240px] text-right">
             <span class="text-[10px] font-bold text-text-muted uppercase tracking-wider">Total do Pedido</span>
             <span class="text-2xl font-bold text-text-main tabular-nums block mt-1">
               {{ maskMoneyBR(totalCalculado) }}
@@ -162,11 +159,11 @@
           </div>
         </div>
 
-        <div class="pt-10 mt-6 border-t border-border-ui flex flex-wrap items-center justify-between gap-4">
+        <div class="ds-editor-actions pt-10 mt-6 border-t border-[color:var(--ds-color-border-ui)] flex flex-wrap items-center justify-between gap-4">
           <Button type="button" variant="ghost" @click="router.push('/plano-corte')">
             Cancelar
           </Button>
-          <div class="flex flex-wrap items-center gap-3">
+          <div class="ds-editor-actions-main flex flex-wrap items-center gap-3">
             <Button
               v-if="can('plano_corte.criar')"
               variant="secondary"
@@ -200,7 +197,6 @@
           </div>
         </div>
       </div>
-    </div>
 
     <!-- Modal Enviar para Produção -->
     <Teleport to="body">
@@ -210,9 +206,9 @@
           class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
           @click.self="fecharModalEnviarProducao"
         >
-          <div class="w-full max-w-md rounded-2xl border border-border-ui bg-bg-card shadow-xl overflow-hidden flex flex-col">
+          <div class="w-full max-w-md ds-card ds-card--default shadow-xl overflow-hidden flex flex-col">
             <div class="h-1 w-full bg-brand-primary" />
-            <header class="flex items-center justify-between px-6 py-4 border-b border-border-ui">
+            <header class="flex items-center justify-between px-6 py-4 border-b border-[color:var(--ds-color-border-ui)]">
               <div class="flex items-center gap-3">
                 <i class="pi pi-send text-2xl text-text-soft"></i>
                 <div>
@@ -224,7 +220,7 @@
               </div>
               <button
                 type="button"
-                class="w-9 h-9 flex items-center justify-center rounded-lg border border-border-ui text-text-muted hover:text-rose-500 hover:border-rose-200 transition-all"
+                class="w-9 h-9 flex items-center justify-center rounded-lg border border-[var(--ds-color-border)] text-text-muted hover:text-rose-500 hover:border-rose-200 transition-all"
                 @click="fecharModalEnviarProducao"
               >
                 <i class="pi pi-times text-sm"></i>
@@ -251,7 +247,7 @@
                   required
                 />
               </div>
-              <div class="flex justify-end gap-3 pt-4 border-t border-border-ui">
+              <div class="flex justify-end gap-3 pt-4 border-t border-[color:var(--ds-color-border-ui)]">
                 <Button type="button" variant="ghost" @click="fecharModalEnviarProducao">
                   Cancelar
                 </Button>
@@ -273,9 +269,9 @@
           class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
           @click.self="fecharModalProduto"
         >
-          <div class="w-full max-w-2xl max-h-[85vh] rounded-2xl border border-border-ui bg-bg-card shadow-xl overflow-hidden flex flex-col">
+          <div class="w-full max-w-2xl max-h-[85vh] ds-card ds-card--default shadow-xl overflow-hidden flex flex-col">
             <div class="h-1 w-full bg-brand-primary" />
-            <header class="flex items-center justify-between px-6 py-4 border-b border-border-ui">
+            <header class="flex items-center justify-between px-6 py-4 border-b border-[color:var(--ds-color-border-ui)]">
               <div class="flex items-center gap-3">
                 <i class="pi pi-box text-2xl text-text-soft"></i>
                 <div>
@@ -287,7 +283,7 @@
               </div>
               <button
                 type="button"
-                class="w-9 h-9 flex items-center justify-center rounded-lg border border-border-ui text-text-muted hover:text-rose-500 hover:border-rose-200 transition-all"
+                class="w-9 h-9 flex items-center justify-center rounded-lg border border-[var(--ds-color-border)] text-text-muted hover:text-rose-500 hover:border-rose-200 transition-all"
                 @click="fecharModalProduto"
               >
                 <i class="pi pi-times text-sm"></i>
@@ -344,7 +340,7 @@
                   <Input v-model="modalProduto.form.precoM2Mask" label="Preco por m2" placeholder="0,00" />
                 </div>
 
-                <div class="col-span-12 flex items-center justify-end gap-4 pt-6 border-t border-border-ui mt-2">
+                <div class="col-span-12 flex items-center justify-end gap-4 pt-6 border-t border-[color:var(--ds-color-border-ui)] mt-2">
                   <Button type="button" variant="ghost" @click="fecharModalProduto">
                     Cancelar
                   </Button>
@@ -363,7 +359,8 @@
         </div>
       </Transition>
     </Teleport>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
@@ -565,7 +562,7 @@ async function salvarProduto() {
 async function confirmarRemoverItemPlano(index) {
   const row = itens.value?.[index]
   const nome = row?.item?.nome_produto || 'ITEM'
-  const ok = await confirm.show('Remover Item', `Deseja remover "${nome}" deste plano?`)
+  const ok = await confirm.show('Remover Item', `Deseja remover "${nome}" deste serviço?`)
   if (!ok) return
   itens.value.splice(index, 1)
 }
@@ -772,7 +769,7 @@ async function confirmarEnviarProducao() {
       equipe_ids: [],
       categoria: 'PRODUCAO',
     })
-    notify.success('Plano enviado para produção!')
+    notify.success('Serviço de corte enviado para produção!')
     fecharModalEnviarProducao()
     closeTabAndGo('/plano-corte')
   } catch (e) {

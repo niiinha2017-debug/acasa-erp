@@ -3,10 +3,12 @@ import { routes } from 'vue-router/auto-routes'
 import api from '@/services/api'
 import storage from '@/utils/storage'
 import { can } from '@/services/permissions'
+import { AGENDA_ROUTE_PATH, hasAgendaAccess } from '@/constantes/agenda-route'
 import { buildRoutePermMap, getRequiredPerm } from '@/services/navigation-perms'
 
 const router = createRouter({
-  history: createWebHistory('/'),
+  // Alinha com Vite `base` (web: `/`, Tauri empacotado: `./`) para rotas aninhadas carregarem certo.
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes,
 })
 
@@ -14,8 +16,7 @@ const routePermMap = buildRoutePermMap()
 
 let syncingMe = null
 function getAgendaHome() {
-  if (can('agendamentos.vendas')) return { path: '/agendamentos/loja' }
-  if (can('agendamentos.producao')) return { path: '/agendamentos/fabrica' }
+  if (hasAgendaAccess()) return { path: AGENDA_ROUTE_PATH }
   return null
 }
 
@@ -127,6 +128,7 @@ router.beforeEach(async (to) => {
     const agendaHome = getAgendaHome()
     if (agendaHome) return agendaHome
     if (can('index.visualizar')) return { path: '/' }
+    if (to.path === '/alterar-senha') return true
     return { path: '/alterar-senha' }
   }
 

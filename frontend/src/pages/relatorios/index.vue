@@ -1,66 +1,65 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
+  <PageShell :padded="false">
+    <section class="relatorios-dashboard ds-page-context animate-page-in">
+      <PageHeader
+        title="Relatórios"
+        subtitle="Gráficos de validação e indicadores da competência selecionada"
+        icon="pi pi-chart-bar"
+      >
+        <template #actions>
+          <div class="relatorios-dashboard__filters flex flex-wrap items-end justify-end gap-3 w-full">
+            <div class="flex items-center gap-2 shrink-0">
+              <label class="ds-field-label text-xs">Mês</label>
+              <select
+                v-model="mes"
+                class="ds-field-line ds-field-line--select h-10 w-[72px]"
+                @change="carregar"
+              >
+                <option v-for="m in 12" :key="m" :value="m">{{ String(m).padStart(2, '0') }}</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <label class="ds-field-label text-xs">Ano</label>
+              <select
+                v-model="ano"
+                class="ds-field-line ds-field-line--select h-10 w-[80px]"
+                @change="carregar"
+              >
+                <option v-for="y in anosDisponiveis" :key="y" :value="y">{{ y }}</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <label class="ds-field-label text-xs">Meta (R$)</label>
+              <input
+                v-model.number="metaComissao"
+                type="number"
+                min="0"
+                step="1000"
+                placeholder="0"
+                class="ds-field-line h-10 w-[100px]"
+                @change="carregar"
+              />
+            </div>
+          </div>
+        </template>
+      </PageHeader>
 
-      <div class="flex flex-row flex-nowrap items-center gap-4 px-4 md:px-6 py-4 border-b border-border-ui">
-        <h1 class="text-xl font-semibold text-text-main shrink-0 flex items-center gap-2">
-          <i class="pi pi-chart-bar text-text-muted"></i>
-          Relatórios
-        </h1>
-        <div class="flex flex-1 flex-nowrap items-center justify-end gap-3 min-w-0 ml-auto">
-          <div class="flex items-center gap-2 shrink-0">
-            <label class="text-xs font-medium text-text-muted">Mês</label>
-            <select
-              v-model="mes"
-              class="h-10 w-[72px] rounded-lg border border-border-ui bg-bg-page pl-2 pr-2 text-sm text-text-main"
-              @change="carregar"
-            >
-              <option v-for="m in 12" :key="m" :value="m">{{ String(m).padStart(2, '0') }}</option>
-            </select>
-          </div>
-          <div class="flex items-center gap-2 shrink-0">
-            <label class="text-xs font-medium text-text-muted">Ano</label>
-            <select
-              v-model="ano"
-              class="h-10 w-[80px] rounded-lg border border-border-ui bg-bg-page pl-2 pr-2 text-sm text-text-main"
-              @change="carregar"
-            >
-              <option v-for="y in anosDisponiveis" :key="y" :value="y">{{ y }}</option>
-            </select>
-          </div>
-          <div class="flex items-center gap-2 shrink-0">
-            <label class="text-xs font-medium text-text-muted">Meta (R$)</label>
-            <input
-              v-model.number="metaComissao"
-              type="number"
-              min="0"
-              step="1000"
-              placeholder="0"
-              class="h-10 w-[100px] rounded-lg border border-border-ui bg-bg-page px-2 text-sm text-text-main"
-              @change="carregar"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 space-y-6">
+      <div class="relatorios-dashboard__body ds-page-context__content space-y-6 pb-6">
         <div v-if="loading" class="flex items-center justify-center py-12">
-          <i class="pi pi-spin pi-spinner text-2xl text-brand-primary" />
+          <i class="pi pi-spin pi-spinner text-2xl text-[var(--ds-color-primary)]" />
         </div>
 
         <template v-else>
           <section class="space-y-2">
-            <h2 class="text-sm font-semibold text-text-muted uppercase tracking-wide">
+            <h2 class="text-sm font-semibold text-[var(--ds-color-text-soft)] uppercase tracking-wide">
               Gráficos de Validação
             </h2>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <!-- Gráfico 1: Composição do Custo (Doughnut) -->
-              <div class="rounded-xl border border-border-ui bg-white dark:bg-slate-900/40 p-4">
-                <p class="text-sm font-medium text-text-main mb-3">
+              <div class="ds-card ds-card--default p-4">
+                <p class="text-sm font-medium text-[var(--ds-color-text)] mb-3">
                   Composição do Custo
                 </p>
-                <p class="text-xs text-text-muted mb-3">
+                <p class="text-xs text-[var(--ds-color-text-soft)] mb-3">
                   Materiais, Custo Hora, Impostos e Lucro sobre o valor total
                 </p>
                 <ChartWrapper
@@ -71,12 +70,11 @@
                 />
               </div>
 
-              <!-- Gráfico 2: Lucro por Ambiente (Barras) -->
-              <div class="rounded-xl border border-border-ui bg-white dark:bg-slate-900/40 p-4">
-                <p class="text-sm font-medium text-text-main mb-3">
+              <div class="ds-card ds-card--default p-4">
+                <p class="text-sm font-medium text-[var(--ds-color-text)] mb-3">
                   Desempenho de Lucro por Ambiente
                 </p>
-                <p class="text-xs text-text-muted mb-3">
+                <p class="text-xs text-[var(--ds-color-text-soft)] mb-3">
                   Comparação de rentabilidade por tipo de ambiente
                 </p>
                 <ChartWrapper
@@ -88,42 +86,39 @@
               </div>
             </div>
 
-            <!-- Gráfico 3: Meta de Produção (Barra progressiva) -->
-            <div class="rounded-xl border border-border-ui bg-white dark:bg-slate-900/40 p-4">
-              <p class="text-sm font-medium text-text-main mb-3">
+            <div class="ds-card ds-card--default p-4">
+              <p class="text-sm font-medium text-[var(--ds-color-text)] mb-3">
                 Evolução da Meta de Produção
               </p>
-              <p class="text-xs text-text-muted mb-3">
+              <p class="text-xs text-[var(--ds-color-text-soft)] mb-3">
                 Comissão da fábrica gerada no mês em relação à meta
               </p>
               <div class="flex flex-col gap-2 max-w-md">
-                <div class="flex justify-between text-xs text-text-muted">
+                <div class="flex justify-between text-xs text-[var(--ds-color-text-soft)]">
                   <span>{{ formatarMoeda(dados.meta_producao.comissao_gerada) }} gerado</span>
                   <span>Meta {{ formatarMoeda(dados.meta_producao.meta) }}</span>
                 </div>
-                <div class="h-3 w-full rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                <div class="h-3 w-full rounded-full bg-[var(--ds-color-surface-muted)] overflow-hidden">
                   <div
-                    class="h-full rounded-full bg-brand-primary transition-all duration-500"
+                    class="h-full rounded-full bg-[var(--ds-color-primary)] transition-all duration-500"
                     :style="{ width: `${Math.min(100, dados.meta_producao.percentual)}%` }"
                   ></div>
                 </div>
-                <p class="text-sm font-medium text-text-main tabular-nums">
+                <p class="text-sm font-medium text-[var(--ds-color-text)] tabular-nums">
                   {{ dados.meta_producao.percentual }}% da meta
                 </p>
               </div>
             </div>
 
-            <!-- Gráficos analíticos -->
-            <h2 class="text-sm font-semibold text-text-muted uppercase tracking-wide pt-2">
+            <h2 class="text-sm font-semibold text-[var(--ds-color-text-soft)] uppercase tracking-wide pt-2">
               Gráficos analíticos
             </h2>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <!-- Previsto vs. Real (Barras) -->
-              <div class="rounded-xl border border-border-ui bg-white dark:bg-slate-900/40 p-4">
-                <p class="text-sm font-medium text-text-main mb-3">
+              <div class="ds-card ds-card--default p-4">
+                <p class="text-sm font-medium text-[var(--ds-color-text)] mb-3">
                   Previsto vs. Real
                 </p>
-                <p class="text-xs text-text-muted mb-3">
+                <p class="text-xs text-[var(--ds-color-text-soft)] mb-3">
                   Horas orçadas (estimativa) vs. horas reais apontadas por projeto
                 </p>
                 <ChartWrapper
@@ -134,12 +129,11 @@
                 />
               </div>
 
-              <!-- Margem por Categoria (Pizza) -->
-              <div class="rounded-xl border border-border-ui bg-white dark:bg-slate-900/40 p-4">
-                <p class="text-sm font-medium text-text-main mb-3">
+              <div class="ds-card ds-card--default p-4">
+                <p class="text-sm font-medium text-[var(--ds-color-text)] mb-3">
                   Margem por Categoria
                 </p>
-                <p class="text-xs text-text-muted mb-3">
+                <p class="text-xs text-[var(--ds-color-text-soft)] mb-3">
                   Margem de contribuição por tipo de material/acabamento
                 </p>
                 <ChartWrapper
@@ -150,12 +144,11 @@
                 />
               </div>
 
-              <!-- Índice de Produtividade (Linhas) -->
-              <div class="rounded-xl border border-border-ui bg-white dark:bg-slate-900/40 p-4 lg:col-span-1">
-                <p class="text-sm font-medium text-text-main mb-3">
+              <div class="ds-card ds-card--default p-4 lg:col-span-1">
+                <p class="text-sm font-medium text-[var(--ds-color-text)] mb-3">
                   Índice de Produtividade
                 </p>
-                <p class="text-xs text-text-muted mb-3">
+                <p class="text-xs text-[var(--ds-color-text-soft)] mb-3">
                   Evolução do lucro líquido gerado pela fábrica, semana a semana
                 </p>
                 <ChartWrapper
@@ -169,14 +162,16 @@
           </section>
         </template>
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { DreDetalhadaService } from '@/services/index'
 import ChartWrapper from '@/components/charts/ChartWrapper.vue'
+import PageShell from '@/components/ui/PageShell.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
 
 definePage({ meta: { perm: 'dashboard.visualizar' } })
 
@@ -217,14 +212,14 @@ const coresSobrias = {
 }
 
 const coresPastel = [
-  'rgba(167, 139, 250, 0.85)',  // violeta pastel
-  'rgba(134, 239, 172, 0.85)',  // verde menta
-  'rgba(253, 186, 116, 0.85)',  // laranja suave
-  'rgba(252, 211, 77, 0.85)',   // amarelo pastel
-  'rgba(248, 113, 113, 0.85)',  // coral
-  'rgba(129, 140, 248, 0.85)',  // índigo
-  'rgba(94, 234, 212, 0.85)',   // teal
-  'rgba(251, 191, 36, 0.85)',   // âmbar
+  'rgba(167, 139, 250, 0.85)',
+  'rgba(134, 239, 172, 0.85)',
+  'rgba(253, 186, 116, 0.85)',
+  'rgba(252, 211, 77, 0.85)',
+  'rgba(248, 113, 113, 0.85)',
+  'rgba(129, 140, 248, 0.85)',
+  'rgba(94, 234, 212, 0.85)',
+  'rgba(251, 191, 36, 0.85)',
 ]
 
 const chartComposicao = computed(() => {

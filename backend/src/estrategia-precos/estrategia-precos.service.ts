@@ -1,4 +1,4 @@
-﻿import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PriceStrategyFiltersDto } from './dto/price-strategy-filters.dto';
 import {
@@ -407,6 +407,7 @@ export class EstrategiaPrecosService {
       marca: true,
       valor_unitario: true,
       adicional_fita_m2: true,
+      fita_vinculada_id: true,
     };
   }
 
@@ -462,6 +463,7 @@ export class EstrategiaPrecosService {
       marca?: string | null;
       valor_unitario: any;
       adicional_fita_m2?: any;
+      fita_vinculada_id?: number | null;
     }>, lossMarginPct = this.CHAPA_LOSS_PCT) {
     const groups = new Map<
       string,
@@ -473,6 +475,7 @@ export class EstrategiaPrecosService {
         commercial_category: string;
         prices: number[];
         adicionaisFitaM2: number[];
+        fitaVinculadaIds: number[];
         search_terms: string[];
       }
     >();
@@ -496,11 +499,14 @@ export class EstrategiaPrecosService {
         commercial_category: commercialCategory,
         prices: [],
         adicionaisFitaM2: [],
+        fitaVinculadaIds: [],
         search_terms: [],
       };
       if (price > 0) entry.prices.push(price);
       const adicional = Number(p.adicional_fita_m2 ?? 0);
       if (Number.isFinite(adicional) && adicional >= 0) entry.adicionaisFitaM2.push(adicional);
+      const fitaId = Number(p.fita_vinculada_id ?? 0);
+      if (fitaId > 0) entry.fitaVinculadaIds.push(fitaId);
       entry.search_terms.push(
         String(p.nome_produto || '').trim(),
         String(p.cor || '').trim(),
@@ -511,8 +517,6 @@ export class EstrategiaPrecosService {
     }
 
     return Array.from(groups.values()).map((entry) => {
-      const min = entry.prices.length ? Math.min(...entry.prices) : 0;
-      const max = entry.prices.length ? Math.max(...entry.prices) : 0;
       const avg =
         entry.prices.length > 0
           ? entry.prices.reduce((sum, p) => sum + p, 0) / entry.prices.length
@@ -523,6 +527,15 @@ export class EstrategiaPrecosService {
           ? entry.adicionaisFitaM2.reduce((sum, value) => sum + value, 0) / entry.adicionaisFitaM2.length
           : 0;
 
+      // Fita vinculada: usa o ID mais frequente do grupo (ou o único disponível)
+      const fitaFreq = new Map<number, number>();
+      for (const id of entry.fitaVinculadaIds) {
+        fitaFreq.set(id, (fitaFreq.get(id) ?? 0) + 1);
+      }
+      const fitaVinculadaId = fitaFreq.size > 0
+        ? [...fitaFreq.entries()].sort((a, b) => b[1] - a[1])[0][0]
+        : null;
+
       return {
         category: entry.category,
         thickness: entry.thickness,
@@ -532,6 +545,7 @@ export class EstrategiaPrecosService {
         search_terms: entry.search_terms.filter(Boolean).join(' '),
         reference_purchase_price: avg,
         adicional_fita_m2: adicionalFitaM2,
+        fita_vinculada_id: fitaVinculadaId,
         cost_base: this.round4(this.applyMatrixCalc(avg, adicionalFitaM2, lossMarginPct)),
       };
     });
@@ -1207,7 +1221,8 @@ export class EstrategiaPrecosService {
       const costs = data.costs.filter((p) => Number.isFinite(p) && p > 0);
       if (!costs.length) continue;
 
-      const consolidatedCostBase = costs.reduce((sum, value) => sum + value, 0) / costs.length;
+      // Usa o maior custo MDF selecionado como teto da categoria (garante margem no pior caso)
+      const consolidatedCostBase = Math.max(...costs);
       const categoryAcrescimoPct = Number(
         selectedLinks.find(
           (link) =>

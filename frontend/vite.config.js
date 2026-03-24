@@ -33,6 +33,8 @@ export default defineConfig(({ mode }) => {
   ],
 
   resolve: {
+    // Um único módulo konva: evita Stage de um bundle + Layer de outro (erro "only add layers to the stage")
+    dedupe: ['konva'],
     alias: {
       '@': path.resolve(__dirname, './src'),
       // backend compartilhado (dev: ../backend; Docker: COPY coloca em /backend)

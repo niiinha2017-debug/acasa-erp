@@ -1,28 +1,25 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
+  <PageShell :padded="false">
+    <section class="produtos-index ds-page-context ds-page-context--list animate-page-in">
 
       <PageHeader
         title="Insumos e Materiais"
         subtitle="Catálogo de materiais e controle de insumos"
         icon="pi pi-box"
-        :show-back="false"
       >
         <template #actions>
-          <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end [&>*]:min-h-10 [&>*]:sm:h-10">
-            <div class="w-full sm:w-64 order-1 sm:order-0 flex items-center">
+          <div class="produtos-index__actions ds-page-context__actions">
+            <div class="produtos-index__search ds-page-context__search">
               <SearchInput
                 v-model="filtro"
                 mode="search"
                 placeholder="Buscar por nome, cor, medida ou marca..."
               />
             </div>
-            <!-- Novo Produto -->
             <Button
               v-if="can('produtos.criar')"
               variant="primary"
-              class="order-4 h-10 min-h-10 px-4"
+              class="produtos-index__toolbar-btn"
               @click="abrirNovoProduto"
             >
               <i class="pi pi-plus mr-2"></i>
@@ -32,101 +29,15 @@
         </template>
       </PageHeader>
 
-      <div class="pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-4">
-        <!-- Resumo, vista e contagem -->
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div class="flex items-center gap-4 text-sm">
-            <span class="font-semibold text-text-main tabular-nums">
-              {{ rows.length }} {{ rows.length === 1 ? 'produto' : 'produtos' }}
-            </span>
-            <span
-              v-if="totalEstoqueBaixo > 0"
-              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-medium"
-            >
-              <i class="pi pi-exclamation-triangle text-[10px]"></i>
-              {{ totalEstoqueBaixo }} com estoque abaixo do mínimo
-            </span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Ver como</span>
-            <button
-              type="button"
-              class="p-2 rounded-lg transition-colors"
-              :class="viewMode === 'table' ? 'bg-brand-primary/15 text-brand-primary' : 'bg-slate-100 dark:bg-slate-700 text-text-muted hover:text-text-main'"
-              title="Tabela"
-              @click="viewMode = 'table'"
-            >
-              <i class="pi pi-list" />
-            </button>
-            <button
-              type="button"
-              class="p-2 rounded-lg transition-colors"
-              :class="viewMode === 'cards' ? 'bg-brand-primary/15 text-brand-primary' : 'bg-slate-100 dark:bg-slate-700 text-text-muted hover:text-text-main'"
-              title="Cards"
-              @click="viewMode = 'cards'"
-            >
-              <i class="pi pi-th-large" />
-            </button>
-          </div>
-        </div>
-
-        <!-- Cards (galeria) -->
-        <div v-if="viewMode === 'cards'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          <div
-            v-for="row in rows"
-            :key="row.id"
-            class="rounded-xl border border-border-ui bg-bg-page overflow-hidden hover:border-brand-primary/40 transition-colors group"
-          >
-            <div class="aspect-square bg-slate-100 dark:bg-slate-800/50 flex items-center justify-center overflow-hidden relative">
-              <img
-                v-if="String(row.imagem_url || '').trim()"
-                :src="row.imagem_url"
-                class="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                alt=""
-              />
-              <span v-else class="text-4xl font-bold text-text-muted/60">{{ String(row.nome_produto || '').substring(0, 2).toUpperCase() }}</span>
-              <div class="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/90 dark:bg-slate-900/90 text-xs font-medium text-text-main shadow-sm">
-                <i class="pi pi-box text-amber-600 dark:text-amber-400" title="Chapa inteira" />
-                <span>Chapa</span>
-              </div>
-            </div>
-            <div class="p-3">
-              <div class="flex items-center gap-2 min-w-0">
-                <h3 class="text-sm font-semibold text-text-main truncate" :title="row.nome_produto">{{ row.nome_produto || '-' }}</h3>
-                <span
-                  class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide border shrink-0"
-                  :class="categoriaBaseBadgeClass(row?.categoria_base)"
-                >
-                  {{ getCategoriaBaseLabel(row?.categoria_base) }}
-                </span>
-              </div>
-              <p class="text-[10px] text-text-muted mt-0.5">Ref. {{ String(row.id || 0).padStart(4, '0') }}</p>
-              <div class="mt-2 flex items-center justify-between">
-                <span class="text-sm font-semibold text-text-main tabular-nums">{{ format.currency(row.valor_unitario) }}</span>
-                <div class="flex items-center gap-1">
-                  <StatusBadge :value="row.status || 'INATIVO'" />
-                  <TableActions
-                    :id="row.id"
-                    perm-edit="produtos.editar"
-                    perm-delete="produtos.excluir"
-                    @edit="(id) => router.push(`/produtos/${id}`)"
-                    @delete="() => confirmarExcluirProduto(row)"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Tabela em container definido -->
-        <div v-else class="rounded-xl border border-border-ui bg-bg-page overflow-hidden">
+      <div class="produtos-index__body ds-page-context__content">
+        <div class="produtos-index__table-wrap">
           <Table
             :columns="columns"
             :rows="rows"
             :loading="loading"
             :empty-text="emptyTableText"
             :boxed="false"
-            :flush="true"
+            :flush="false"
             :row-class="rowClassEstoque"
           >
           <template #cell-nome_produto="{ row }">
@@ -203,7 +114,7 @@
           </template>
 
           <template #cell-acoes="{ row }">
-            <div class="flex justify-end">
+            <div class="flex justify-center">
               <TableActions
                 :id="row.id"
                 perm-edit="produtos.editar"
@@ -215,7 +126,6 @@
           </template>
           </Table>
           <TablePagination
-            flush
             v-if="meta.total > 0"
             :page="meta.page"
             :page-size="meta.pageSize"
@@ -224,8 +134,8 @@
           />
         </div>
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
@@ -245,22 +155,21 @@ const meta = ref({ page: 1, pageSize: 20, total: 0, totalPages: 0 })
 const loading = ref(false)
 const router = useRouter()
 const filtro = ref('')
-const viewMode = ref('table') // 'table' | 'cards'
 
 function abrirNovoProduto() {
   router.push('/produtos/novo')
 }
 
 const columns = [
-  { key: 'nome_produto', label: 'Produto', width: '22%' },
-  { key: 'fornecedor_nome', label: 'Fornecedor', width: '14%' },
+  { key: 'nome_produto', label: 'Produto', width: '24%' },
+  { key: 'fornecedor_nome', label: 'Fornecedor', width: '16%' },
   { key: 'marca', label: 'Marca', width: '10%' },
   { key: 'cor', label: 'Cor', width: '8%' },
-  { key: 'medida', label: 'Medida', width: '9%' },
-  { key: 'unidade', label: 'Un.', width: '52px', align: 'center' },
+  { key: 'medida', label: 'Medida', width: '10%' },
+  { key: 'unidade', label: 'Un.', width: '6%', align: 'center' },
   { key: 'valor_unitario', label: 'Valor unit.', width: '10%', align: 'right' },
-  { key: 'status', label: 'Status', width: '80px', align: 'center' },
-  { key: 'acoes', label: '', align: 'right', width: '112px' },
+  { key: 'status', label: 'Status', width: '8%', align: 'center' },
+  { key: 'acoes', label: '', align: 'center', width: '8%' },
 ]
 
 function rowClassEstoque(row) {
@@ -325,12 +234,6 @@ const rows = computed(() =>
   })),
 )
 
-const totalEstoqueBaixo = computed(() => {
-  const min = (p) => Number(p.estoque_minimo ?? 0)
-  const qtd = (p) => Number(p.quantidade ?? 0)
-  return (filtrados.value || []).filter((p) => min(p) > 0 && qtd(p) < min(p)).length
-})
-
 const emptyTableText = computed(() => {
   return 'Nenhum produto encontrado.'
 })
@@ -383,3 +286,140 @@ onMounted(async () => {
   buscarDadosDoBanco(1)
 })
 </script>
+
+<style scoped>
+.produtos-index {
+  min-height: 100%;
+  background: var(--ds-color-surface);
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.produtos-index__toolbar-btn {
+  min-height: 2.55rem;
+  padding-inline: 1rem;
+  border-radius: 0.9rem;
+}
+
+.produtos-index__body {
+  padding-top: 0.2rem;
+  padding-bottom: 1.5rem;
+}
+
+.produtos-index__table-wrap {
+  width: 100%;
+  overflow: hidden;
+}
+
+.produtos-index :deep(.ds-table__element) {
+  table-layout: fixed;
+  min-width: 1120px;
+}
+
+.produtos-index :deep(.ds-table-head-row) {
+  background: transparent;
+  border-bottom-color: rgba(214, 224, 234, 0.55);
+}
+
+.produtos-index :deep(.ds-table__head-cell) {
+  padding-top: 0.62rem;
+  padding-bottom: 0.45rem;
+  color: var(--ds-color-text-faint);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  white-space: normal;
+}
+
+.produtos-index :deep(.ds-table__head-cell),
+.produtos-index :deep(.ds-table__cell) {
+  padding-left: 0.72rem;
+  padding-right: 0.72rem;
+}
+
+.produtos-index :deep(.ds-table__head-cell:last-child),
+.produtos-index :deep(.ds-table__cell:last-child) {
+  padding-right: 0.75rem;
+}
+
+.produtos-index :deep(.ds-table__cell) {
+  padding-top: 0.64rem;
+  padding-bottom: 0.64rem;
+  border-bottom: 1px solid rgba(214, 224, 234, 0.42);
+}
+
+.produtos-index :deep(.ds-table__row:hover) {
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.dark .produtos-index :deep(.ds-table__row:hover) {
+  background: rgba(18, 30, 49, 0.32);
+}
+
+.produtos-index :deep(.ds-table__row:hover td:first-child) {
+  box-shadow: inset 2px 0 0 0 rgba(188, 203, 221, 0.9);
+}
+
+.produtos-index :deep(.ds-table-pagination) {
+  padding-inline: 1rem;
+}
+
+@media (min-width: 768px) {
+  .produtos-index__body {
+    padding-bottom: 1.75rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .produtos-index__body {
+    padding-bottom: 2rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .produtos-index__toolbar-btn {
+    width: 100%;
+    max-width: none;
+  }
+
+  .produtos-index__body {
+    padding-bottom: 1.1rem;
+  }
+
+  .produtos-index :deep(.ds-table__element) {
+    min-width: 900px;
+  }
+
+  .produtos-index :deep(.ds-table__head-cell),
+  .produtos-index :deep(.ds-table__cell) {
+    padding-left: 0.56rem;
+    padding-right: 0.56rem;
+  }
+
+  .produtos-index :deep(.ds-table__head-cell) {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 1280px) {
+  .produtos-index :deep(.ds-table__element) {
+    min-width: 1120px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .produtos-index :deep(.ds-table__head-cell),
+  .produtos-index :deep(.ds-table__cell) {
+    padding-left: 0.62rem;
+    padding-right: 0.62rem;
+  }
+
+  .produtos-index :deep(.ds-table__head-cell) {
+    font-size: 11px;
+  }
+
+  .produtos-index :deep(.ds-table__element) {
+    min-width: 980px;
+  }
+}
+</style>

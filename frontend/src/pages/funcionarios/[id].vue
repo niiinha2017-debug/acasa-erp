@@ -1,25 +1,23 @@
 <template>
-  <div class="login-font w-full h-full rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
-    <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
-    <PageHeader
-      :title="isEdit ? `Editar Funcionário #${funcionarioId}` : 'Novo Funcionário'"
-      subtitle="Gerenciamento de dados pessoais e contratuais"
-      icon="pi pi-users"
-      :showBack="false"
-      class="border-b border-border-ui"
-    />
+  <PageShell :padded="false">
+    <section class="login-font funcionario-editor animate-page-in">
+      <PageHeader
+        :title="isEdit ? `Editar Funcionário #${funcionarioId}` : 'Novo Funcionário'"
+        subtitle="Gerenciamento de dados pessoais, contratuais e operacionais"
+        icon="pi pi-id-card"
+      />
 
-    <div class="px-4 py-4 md:px-6 md:py-6 lg:px-8 lg:py-8">
+      <div class="funcionario-body">
       <Loading v-if="loading" />
 
-      <form v-else class="space-y-10 clientes-line-form" @submit.prevent="confirmarSalvar" autocomplete="off">
+      <form v-else class="funcionario-form space-y-10 clientes-line-form" @submit.prevent="confirmarSalvar" autocomplete="off">
         
-        <div class="relative">
+        <div class="section-divider relative">
           <div class="absolute inset-0 flex items-center">
             <div class="w-full border-t border-border-ui/50"></div>
           </div>
           <div class="relative flex justify-center">
-            <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span class="section-title bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
               Dados Pessoais
             </span>
           </div>
@@ -102,12 +100,12 @@
           </div>
         </div>
 
-        <div class="relative">
+        <div class="section-divider relative">
           <div class="absolute inset-0 flex items-center">
             <div class="w-full border-t border-border-ui/50"></div>
           </div>
           <div class="relative flex justify-center">
-            <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span class="section-title bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
               Endereço
             </span>
           </div>
@@ -129,13 +127,13 @@
           <Input class="col-span-12 md:col-span-3" v-model="form.estado" label="UF" placeholder="EX: SP" force-upper />
         </div>
 
-        <div class="relative">
+        <div class="section-divider relative">
 
           <div class="absolute inset-0 flex items-center">
             <div class="w-full border-t border-border-ui/50"></div>
           </div>
           <div class="relative flex justify-center">
-            <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span class="section-title bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
               Contrato e Datas
             </span>
           </div>
@@ -162,12 +160,12 @@
           />
         </div>
 
-        <div class="relative">
+        <div class="section-divider relative">
           <div class="absolute inset-0 flex items-center">
             <div class="w-full border-t border-border-ui/50"></div>
           </div>
           <div class="relative flex justify-center">
-            <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span class="section-title bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
               Dados da Empresa
             </span>
           </div>
@@ -205,12 +203,12 @@
           />
         </div>
 
-        <div class="relative">
+        <div class="section-divider relative">
           <div class="absolute inset-0 flex items-center">
             <div class="w-full border-t border-border-ui/50"></div>
           </div>
           <div class="relative flex justify-center">
-            <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span class="section-title bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
               Remuneração e Benefícios
             </span>
           </div>
@@ -218,16 +216,30 @@
 
         <div class="grid grid-cols-12 gap-6">
           <Input class="col-span-12 md:col-span-4" v-model="salarioBaseMask" label="Salário Base (R$)" placeholder="0,00" />
-          <Input class="col-span-12 md:col-span-2" v-model="form.impostos_encargos_percentual" label="Impostos/Encargos (%)" type="number" step="0.01" min="0" placeholder="0" />
-          <div class="col-span-12 md:col-span-4 flex flex-col gap-1.5">
-            <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Custo Total Mensal (R$)</label>
-            <div class="text-lg font-bold text-slate-800 border-b-2 border-slate-200 pb-1 min-h-[2.25rem] flex items-center">
-              {{ custoTotalMensalFormatado }}
+          <Input class="col-span-12 md:col-span-4" v-model="salarioAdicionalMask" label="Complementos" placeholder="0,00" />
+          <Input class="col-span-12 md:col-span-4" v-model="form.impostos_encargos_percentual" label="Impostos/Encargos (%)" type="number" step="0.01" min="0" placeholder="0" />
+
+          <div class="col-span-12 funcionario-cost-grid">
+            <div class="funcionario-cost-card">
+              <span class="funcionario-cost-card__label">Salário base</span>
+              <strong class="funcionario-cost-card__value">{{ salarioBaseResumo }}</strong>
+            </div>
+            <div class="funcionario-cost-card">
+              <span class="funcionario-cost-card__label">Impostos estimados</span>
+              <strong class="funcionario-cost-card__value">{{ impostosEncargosValorFormatado }}</strong>
+              <span class="funcionario-cost-card__hint">{{ impostosEncargosResumo }}</span>
+            </div>
+            <div class="funcionario-cost-card">
+              <span class="funcionario-cost-card__label">Benefícios mensais</span>
+              <strong class="funcionario-cost-card__value">{{ beneficiosMensaisFormatado }}</strong>
+            </div>
+            <div class="funcionario-cost-card funcionario-cost-card--total">
+              <span class="funcionario-cost-card__label">Custo total mensal</span>
+              <strong class="funcionario-cost-card__value">{{ custoTotalMensalFormatado }}</strong>
             </div>
           </div>
-          <Input class="col-span-12 md:col-span-4" v-model="salarioAdicionalMask" label="Complementos" placeholder="0,00" />
 
-          <div class="col-span-12 md:col-span-6 space-y-4">
+          <div class="col-span-12 md:col-span-6 funcionario-benefit-card space-y-4">
             <CustomCheckbox
               v-model="form.tem_vale"
               label="Recebe vale alimentação/refeição?"
@@ -241,7 +253,7 @@
             />
           </div>
 
-          <div class="col-span-12 md:col-span-6 space-y-4">
+          <div class="col-span-12 md:col-span-6 funcionario-benefit-card space-y-4">
             <CustomCheckbox
               v-model="form.tem_vale_transporte"
               label="Recebe vale transporte?"
@@ -256,12 +268,12 @@
           </div>
         </div>
 
-        <div class="relative">
+        <div class="section-divider relative">
           <div class="absolute inset-0 flex items-center">
             <div class="w-full border-t border-border-ui/50"></div>
           </div>
           <div class="relative flex justify-center">
-            <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span class="section-title bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
               Horários e Carga Horária
             </span>
           </div>
@@ -279,12 +291,12 @@
           <Input class="col-span-12 md:col-span-3" v-model="custoHoraMask" label="Custo Hora" placeholder="0,00" />
         </div>
 
-        <div class="relative">
+        <div class="section-divider relative">
           <div class="absolute inset-0 flex items-center">
             <div class="w-full border-t border-border-ui/50"></div>
           </div>
           <div class="relative flex justify-center">
-            <span class="bg-bg-page dark:bg-slate-900 px-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            <span class="section-title bg-bg-page dark:bg-slate-900 px-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">
               Forma de Pagamento
             </span>
           </div>
@@ -300,9 +312,71 @@
           <Input class="col-span-12 md:col-span-4" v-model="form.pix_chave" label="Chave PIX" />
         </div>
 
-                <div class="pt-10 mt-6 border-t border-border-ui">
+        <template v-if="isEdit">
+          <div class="section-divider relative">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-border-ui/50"></div>
+            </div>
+            <div class="relative flex justify-center">
+              <span class="section-title bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+                Documentos do funcionário
+              </span>
+            </div>
+          </div>
 
-          <div class="flex flex-col-reverse gap-4 md:flex-row md:items-center md:justify-between">
+          <div class="funcionario-files">
+            <div class="funcionario-files__header">
+              <span class="funcionario-files__eyebrow">Arquivos vinculados ao cadastro</span>
+              <button
+                type="button"
+                class="funcionario-files__link"
+                @click="abrirArquivosFuncionario"
+              >
+                Gerenciar documentos
+              </button>
+            </div>
+
+            <div v-if="loadingArquivos" class="funcionario-files__state">
+              Carregando arquivos...
+            </div>
+
+            <div v-else-if="arquivosDoFuncionario.length === 0" class="funcionario-files__state funcionario-files__state--empty">
+              Nenhum documento vinculado a este funcionário.
+            </div>
+
+            <ul v-else class="funcionario-files__list">
+              <li
+                v-for="arquivo in arquivosDoFuncionario"
+                :key="arquivo.id"
+                class="funcionario-files__item"
+              >
+                <div class="funcionario-files__meta">
+                  <span class="funcionario-files__name">{{ arquivo.nome || arquivo.filename || `Arquivo #${arquivo.id}` }}</span>
+                  <span class="funcionario-files__info">
+                    {{ formatFileType(arquivo.mime_type) }}<span v-if="arquivo.categoria"> • {{ arquivo.categoria }}</span>
+                  </span>
+                </div>
+
+                <div class="funcionario-files__actions">
+                  <button
+                    type="button"
+                    class="funcionario-files__action"
+                    @click="abrirArquivoFuncionario(arquivo)"
+                  >
+                    Ver
+                  </button>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </template>
+
+              <div class="pt-10 mt-6 border-t border-border-ui">
+
+                <div
+                  class="funcionario-form__actions flex flex-col-reverse gap-4 md:flex-row md:items-center"
+                  :class="isEdit && can('funcionarios.excluir') ? 'md:justify-between' : 'md:justify-end'"
+                >
             <Button
               v-if="isEdit && can('funcionarios.excluir')"
               type="button"
@@ -316,17 +390,7 @@
               Excluir
             </Button>
 
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-              <Button
-                variant="secondary"
-                size="lg"
-                type="button"
-                class="!rounded-xl px-6"
-                @click="voltarParaLista"
-              >
-                Cancelar
-              </Button>
-
+            <div class="funcionario-form__actions-main flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
               <Button
                 variant="primary"
                 size="lg"
@@ -344,15 +408,26 @@
         </div>
 
       </form>
-    </div>
-  </div>
+      </div>
+
+      <ArquivosModal
+        v-if="arquivosModalOpen && isEdit"
+        :open="arquivosModalOpen"
+        ownerType="FUNCIONARIO"
+        :ownerId="funcionarioId"
+        :canManage="can('funcionarios.editar')"
+        @close="fecharArquivosFuncionario"
+      />
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { FuncionariosService } from '@/services/index'
+import { FuncionariosService, ArquivosService } from '@/services/index'
 import { notify } from '@/services/notify'
+import ArquivosModal from '@/components/modals/ArquivosModal.vue'
 
 definePage({ meta: { perm: 'funcionarios.ver' } })
 import { confirm } from '@/services/confirm'
@@ -376,6 +451,9 @@ const loading = ref(false)
 const saving = ref(false)
 const deleting = ref(false)
 const isHydrating = ref(false)
+const loadingArquivos = ref(false)
+const arquivosDoFuncionario = ref([])
+const arquivosModalOpen = ref(false)
 
 const funcionarioId = computed(() => Number(route.params?.id))
 const isEdit = computed(() => !!funcionarioId.value)
@@ -600,10 +678,43 @@ const custoTotalMensal = computed(() => {
   return base * (1 + pct / 100) + adicional + vale + vt
 })
 
+const impostosEncargosValor = computed(() => {
+  const base = moedaParaNumero(form.value.salario_base)
+  const pct = Number(String(form.value.impostos_encargos_percentual || '').replace(',', '.')) || 0
+  if (!base || !pct) return 0
+  return base * (pct / 100)
+})
+
+const beneficiosMensais = computed(() => {
+  const vale = form.value.tem_vale ? (moedaParaNumero(form.value.vale) || 0) : 0
+  const vt = form.value.tem_vale_transporte ? (moedaParaNumero(form.value.vale_transporte) || 0) : 0
+  return vale + vt
+})
+
 const custoTotalMensalFormatado = computed(() => {
   const v = custoTotalMensal.value
   if (v == null || (typeof v === 'number' && Number.isNaN(v))) return '–'
   return numeroParaMoeda(Math.round(v * 100) / 100)
+})
+
+const salarioBaseResumo = computed(() => {
+  const valor = moedaParaNumero(form.value.salario_base)
+  if (!valor && valor !== 0) return '–'
+  return numeroParaMoeda(Math.round(valor * 100) / 100)
+})
+
+const impostosEncargosValorFormatado = computed(() => {
+  return numeroParaMoeda(Math.round(impostosEncargosValor.value * 100) / 100)
+})
+
+const beneficiosMensaisFormatado = computed(() => {
+  return numeroParaMoeda(Math.round(beneficiosMensais.value * 100) / 100)
+})
+
+const impostosEncargosResumo = computed(() => {
+  const pct = Number(String(form.value.impostos_encargos_percentual || '').replace(',', '.')) || 0
+  if (!pct) return 'Informe a alíquota para compor o custo'
+  return `${pct.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}% sobre o salário base`
 })
 
 watch(() => form.value.tem_vale, (val) => {
@@ -678,6 +789,60 @@ async function tratarBuscaCep() {
 
 function voltarParaLista() {
   closeTabAndGo('/funcionarios')
+}
+
+function formatFileType(mimeType) {
+  const raw = String(mimeType || '').toLowerCase()
+  if (!raw) return 'Arquivo'
+  if (raw.includes('pdf')) return 'PDF'
+  if (raw.includes('image')) return 'Imagem'
+  if (raw.includes('sheet') || raw.includes('excel') || raw.includes('spreadsheet')) return 'Planilha'
+  if (raw.includes('word') || raw.includes('document')) return 'Documento'
+  return raw.split('/')[1] || 'Arquivo'
+}
+
+async function carregarArquivosFuncionario() {
+  if (!isEdit.value || !can('arquivos.ver')) {
+    arquivosDoFuncionario.value = []
+    return
+  }
+
+  loadingArquivos.value = true
+  try {
+    const resArquivos = await ArquivosService.listar({
+      ownerType: 'FUNCIONARIO',
+      ownerId: funcionarioId.value,
+    })
+    const payload = resArquivos?.data
+    const rows = Array.isArray(payload) ? payload : (payload?.data || [])
+    arquivosDoFuncionario.value = rows.sort((a, b) => Number(b?.id || 0) - Number(a?.id || 0))
+  } catch {
+    arquivosDoFuncionario.value = []
+  } finally {
+    loadingArquivos.value = false
+  }
+}
+
+function abrirArquivosFuncionario() {
+  if (!isEdit.value || !can('funcionarios.ver')) return
+  arquivosModalOpen.value = true
+}
+
+async function fecharArquivosFuncionario() {
+  arquivosModalOpen.value = false
+  await carregarArquivosFuncionario()
+}
+
+function abrirArquivoFuncionario(arquivo) {
+  if (!arquivo?.id || !isEdit.value) return
+  const nome = arquivo.nome || arquivo.filename || `ARQUIVO_${arquivo.id}`
+  const type = arquivo.mime_type || ''
+  const from = `/funcionarios/${funcionarioId.value}`
+  const path = String(type).toLowerCase().includes('pdf') ? `/arquivos/pdf/${arquivo.id}` : `/arquivos/${arquivo.id}`
+  router.push({
+    path,
+    query: { name: nome, type, from },
+  })
 }
 
 function aplicarCustosConstantesNoFormulario(data) {
@@ -783,6 +948,7 @@ async function carregarDados() {
     isHydrating.value = false
 
     await carregarCustosConstantes(funcionarioId.value)
+    await carregarArquivosFuncionario()
 
   } catch (e) {
     notify.error('Erro ao carregar funcionário.')
@@ -912,28 +1078,423 @@ onMounted(carregarDados)
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
-.login-font { font-family: 'DM Sans', sans-serif; }
-
-.clientes-line-form :deep(.w-full.flex.flex-col.gap-1\.5 > label) {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: rgb(100 116 139);
+.funcionario-editor {
+  min-height: 100%;
+  background: var(--ds-color-surface);
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.clientes-line-form :deep(input.w-full) {
-  border-top: 0; border-left: 0; border-right: 0;
-  border-bottom-width: 2px;
+.funcionario-editor :deep(.ds-shell-card) {
+  border: 0;
   border-radius: 0;
-  background: transparent;
-}
-
-.clientes-line-form :deep(select.w-full) {
-  border-top: 0; border-left: 0; border-right: 0;
-  border-bottom-width: 2px;
-  border-radius: 0;
-  background: transparent;
   box-shadow: none;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.funcionario-editor :deep(.ds-header-block) {
+  padding-top: 1rem;
+  padding-bottom: 0.8rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 768px) {
+  .funcionario-editor :deep(.ds-header-block) {
+    padding-top: 1.25rem;
+    padding-bottom: 1rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .funcionario-editor :deep(.ds-header-block) {
+    padding-top: 1.4rem;
+    padding-bottom: 1rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+.funcionario-editor :deep(.ds-header-title) {
+  font-size: clamp(1.35rem, 1.08rem + 0.45vw, 1.8rem);
+  font-weight: 620;
+  letter-spacing: -0.03em;
+}
+
+.funcionario-editor :deep(.ds-header-subtitle) {
+  max-width: 38rem;
+  color: var(--ds-color-text-faint);
+  font-size: 0.78rem;
+  font-weight: 430;
+}
+
+.funcionario-editor :deep(.ds-header-icon) {
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 999px;
+  border-color: rgba(214, 224, 234, 0.72);
+  background: transparent;
+  color: var(--ds-color-text-faint);
+  font-size: 0.84rem;
+  box-shadow: none;
+}
+
+.dark .funcionario-editor :deep(.ds-header-icon) {
+  border-color: rgba(51, 71, 102, 0.72);
+  background: transparent;
+}
+
+.funcionario-body {
+  width: min(100%, 1680px);
+  margin: 0 auto;
+  padding: 0.95rem 1rem 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .funcionario-body {
+    padding: 1.2rem 1.5rem 1.75rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .funcionario-body {
+    padding: 1.25rem 1.75rem 2rem;
+  }
+}
+
+.funcionario-form {
+  width: 100%;
+  max-width: none;
+  margin: 0 auto;
+}
+
+.funcionario-form__actions-main {
+  margin-left: auto;
+}
+
+.funcionario-form > * + * {
+  margin-top: 3.1rem !important;
+}
+
+.section-divider {
+  margin-top: 0.9rem;
+}
+
+.section-title {
+  background: var(--ds-color-surface);
+  display: block;
+  width: fit-content;
+  margin: 0 auto;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  color: var(--ds-color-text-faint);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.clientes-line-form :deep(.ds-field-label),
+.clientes-line-form :deep(.w-full.flex.flex-col.gap-1\.5 > label),
+.clientes-line-form :deep(.search-container > label) {
+  width: auto;
+  justify-content: flex-start;
+  margin-left: 0;
+  margin-bottom: 0.6rem;
+  color: var(--ds-color-text-faint);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-align: left;
+  text-transform: none;
+}
+
+.clientes-line-form :deep(input.ds-control-input) {
+  min-height: 46px !important;
+  height: 46px !important;
+  padding-left: 0.1rem !important;
+  padding-right: 0.1rem !important;
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.55rem !important;
+  font-size: 0.88rem !important;
+  font-weight: 430 !important;
+  line-height: 1.45 !important;
+  border-top: 0 !important;
+  border-left: 0 !important;
+  border-right: 0 !important;
+  border-bottom-width: 1px !important;
+  border-bottom-style: solid !important;
+  border-bottom-color: rgba(188, 203, 221, 0.75) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.clientes-line-form :deep(select.ds-control-input) {
+  min-height: 46px !important;
+  height: 46px !important;
+  padding-left: 0.1rem !important;
+  padding-right: 3.25rem !important;
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.55rem !important;
+  font-size: 0.88rem !important;
+  font-weight: 430 !important;
+  line-height: 1.45 !important;
+  border-top: 0 !important;
+  border-left: 0 !important;
+  border-right: 0 !important;
+  border-bottom-width: 1px !important;
+  border-bottom-style: solid !important;
+  border-bottom-color: rgba(188, 203, 221, 0.75) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.clientes-line-form :deep(.select-field__chevron-pill) {
+  width: 1.85rem !important;
+  height: 1.85rem !important;
+  border-color: rgba(188, 203, 221, 0.88) !important;
+  background: rgba(248, 250, 252, 0.96) !important;
+  box-shadow: none !important;
+}
+
+.clientes-line-form :deep(input.ds-control-input:focus) {
+  border-bottom-color: var(--ds-color-primary) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.clientes-line-form :deep(select.ds-control-input:focus) {
+  border-bottom-color: var(--ds-color-primary) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.clientes-line-form :deep(input.ds-control-input::placeholder) {
+  color: var(--ds-color-text-faint);
+  font-size: 0.84rem;
+  font-weight: 400;
+  opacity: 1;
+}
+
+.clientes-line-form :deep(select.ds-control-input option) {
+  font-size: 0.84rem;
+  font-weight: 500;
+}
+
+.clientes-line-form :deep(.ds-checkbox) {
+  padding-left: 0;
+  padding-right: 0;
+  border-radius: 0;
+  gap: 0.55rem;
+}
+
+.clientes-line-form :deep(.ds-checkbox:hover) {
+  background: transparent;
+  border-color: transparent;
+}
+
+.clientes-line-form :deep(.ds-checkbox__box) {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+}
+
+.clientes-line-form :deep(.ds-checkbox__label) {
+  font-size: 0.84rem;
+  font-weight: 450;
+}
+
+.clientes-line-form :deep(.ds-checkbox__description) {
+  font-size: 0.72rem;
+}
+
+.funcionario-cost-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 0.15rem;
+}
+
+.funcionario-cost-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-height: 5.4rem;
+  padding: 1rem 1rem 0.95rem;
+  border: 1px solid rgba(214, 224, 234, 0.72);
+  border-radius: 1rem;
+  background: rgba(248, 250, 252, 0.72);
+}
+
+.dark .funcionario-cost-card {
+  border-color: rgba(51, 71, 102, 0.72);
+  background: rgba(15, 23, 42, 0.46);
+}
+
+.funcionario-cost-card--total {
+  border-color: rgba(44, 111, 163, 0.2);
+  background: rgba(44, 111, 163, 0.06);
+}
+
+.funcionario-cost-card__label {
+  color: var(--ds-color-text-faint);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.funcionario-cost-card__value {
+  color: var(--ds-color-text);
+  font-size: 1.12rem;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.funcionario-cost-card__hint {
+  color: var(--ds-color-text-faint);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.funcionario-benefit-card {
+  padding: 1rem 1rem 1.1rem;
+  border: 1px solid rgba(214, 224, 234, 0.72);
+  border-radius: 1rem;
+  background: rgba(248, 250, 252, 0.48);
+}
+
+.dark .funcionario-benefit-card {
+  border-color: rgba(51, 71, 102, 0.72);
+  background: rgba(15, 23, 42, 0.34);
+}
+
+.funcionario-files {
+  border-top: 1px solid rgba(214, 224, 234, 0.55);
+  border-bottom: 1px solid rgba(214, 224, 234, 0.55);
+}
+
+.dark .funcionario-files {
+  border-top-color: rgba(51, 71, 102, 0.55);
+  border-bottom-color: rgba(51, 71, 102, 0.55);
+}
+
+.funcionario-files__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.95rem 0;
+}
+
+.funcionario-files__eyebrow {
+  color: var(--ds-color-text-faint);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.funcionario-files__link {
+  color: var(--ds-color-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.funcionario-files__state {
+  padding: 1rem 0 1.25rem;
+  color: var(--ds-color-text-soft);
+  font-size: 0.84rem;
+}
+
+.funcionario-files__state--empty {
+  color: var(--ds-color-text-faint);
+}
+
+.funcionario-files__list {
+  display: flex;
+  flex-direction: column;
+}
+
+.funcionario-files__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 0;
+  border-top: 1px solid rgba(214, 224, 234, 0.42);
+}
+
+.dark .funcionario-files__item {
+  border-top-color: rgba(51, 71, 102, 0.42);
+}
+
+.funcionario-files__meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.funcionario-files__name {
+  color: var(--ds-color-text);
+  font-size: 0.92rem;
+  font-weight: 540;
+  line-height: 1.35;
+}
+
+.funcionario-files__info {
+  color: var(--ds-color-text-faint);
+  font-size: 0.72rem;
+}
+
+.funcionario-files__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.funcionario-files__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.9rem;
+  padding: 0 0.65rem;
+  border: 1px solid rgba(214, 224, 234, 0.82);
+  border-radius: 0.7rem;
+  color: var(--ds-color-text-soft);
+  font-size: 0.72rem;
+  font-weight: 600;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.funcionario-files__action:hover {
+  border-color: rgba(44, 111, 163, 0.24);
+  color: var(--ds-color-primary);
+  background: rgba(44, 111, 163, 0.05);
+}
+
+@media (max-width: 768px) {
+  .funcionario-body {
+    padding: 0.9rem 0.75rem 1.35rem;
+  }
+
+  .funcionario-form > * + * {
+    margin-top: 2.5rem !important;
+  }
+
+  .funcionario-cost-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .funcionario-cost-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 </style>

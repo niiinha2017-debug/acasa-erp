@@ -15,14 +15,14 @@
         <!-- Alerta: perda acima do esperado -->
         <div
           v-if="alertaPerdaAcima"
-          class="mb-4 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 flex items-start gap-3"
+          class="mb-4 p-4 rounded-xl bg-[var(--ds-color-warning-50)] border border-[var(--ds-color-warning-200)] flex items-start gap-3"
         >
-          <i class="pi pi-exclamation-triangle text-amber-600 dark:text-amber-400 text-xl mt-0.5 shrink-0" />
+          <i class="pi pi-exclamation-triangle text-[var(--ds-color-warning-600)] text-xl mt-0.5 shrink-0" />
           <div>
-            <p class="text-sm font-semibold text-amber-800 dark:text-amber-200">
-              Revisar plano de corte — Perda acima do esperado
+            <p class="text-sm font-semibold text-[var(--ds-color-warning-800)]">
+              Revisar serviço de corte — Perda acima do esperado
             </p>
-            <p class="text-xs text-amber-700 dark:text-amber-300 mt-1">
+            <p class="text-xs text-[var(--ds-color-warning-700)] mt-1">
               A perda real ({{ perdaRealFormatada }} m²) está acima do esperado pela constante de perda padrão ({{ perdaPadraoPercentual }}%).
             </p>
           </div>
@@ -40,7 +40,7 @@
           </div>
           <div class="flex-1 flex flex-col justify-center gap-2 min-w-0">
             <div class="flex items-center gap-2">
-              <span class="w-3 h-3 rounded-full shrink-0 bg-emerald-500/90" />
+              <span class="w-3 h-3 rounded-full shrink-0 bg-[var(--ds-color-success-500)]" />
               <span class="text-sm text-text-main">Área útil (peças)</span>
               <span class="text-sm font-semibold tabular-nums text-text-main ml-auto">{{ areaPecasFormatada }} m²</span>
             </div>

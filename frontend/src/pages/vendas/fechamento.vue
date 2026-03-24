@@ -1,12 +1,11 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
+  <PageShell :padded="false" variant="minimal">
+    <section class="login-font ds-page-context ds-page-context--editor animate-page-in">
       <PageHeader
         title="Venda"
         subtitle="Selecione um cliente e faça o fechamento da venda a partir dos orçamentos"
         icon="pi pi-shopping-cart"
+        variant="minimal"
       >
         <template #actions>
           <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
@@ -20,7 +19,7 @@
         </template>
       </PageHeader>
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-8">
+      <div class="ds-editor-body space-y-4">
         <div v-if="loading" class="text-center py-10">
           <i class="pi pi-spin pi-spinner text-2xl text-text-soft" />
         </div>
@@ -53,14 +52,14 @@
             </h2>
             <div
               v-if="gruposFiltrados.length > 0"
-              class="rounded-xl border border-border-ui bg-bg-page/50 px-4 py-2 flex justify-between items-center"
+              class="ds-card ds-card--default px-4 py-2 flex justify-between items-center"
             >
               <span class="text-[10px] font-bold text-text-soft uppercase tracking-wider">Valor total da lista</span>
               <span class="text-lg font-black text-text-main">{{ format.currency(valorTotalLista) }}</span>
             </div>
             <div
               v-if="gruposFiltrados.length === 0"
-              class="rounded-xl border border-border-ui bg-bg-page py-12 text-center"
+              class="ds-card ds-card--default py-12 text-center"
             >
               <p class="text-text-soft text-sm">
                 {{ filtro ? 'Nenhum cliente encontrado para a busca.' : 'Nenhum cliente com orçamento para venda.' }}
@@ -70,11 +69,11 @@
               <div
                 v-for="grupo in gruposFiltrados"
                 :key="grupo.clienteId"
-                class="rounded-xl border border-border-ui bg-bg-page px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+                class="ds-card ds-card--default px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
               >
                 <div class="flex items-center gap-3 min-w-0">
                   <div
-                    class="w-10 h-10 rounded-lg bg-bg-card border border-border-ui flex items-center justify-center text-text-main font-black text-sm flex-shrink-0"
+                    class="w-10 h-10 rounded-lg bg-[var(--ds-color-surface)] border border-[var(--ds-color-border)] flex items-center justify-center text-text-main font-black text-sm flex-shrink-0"
                   >
                     {{ grupo.orcamentos.length }}
                   </div>
@@ -101,8 +100,8 @@
           </div>
         </template>
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
@@ -112,6 +111,7 @@ import { OrcamentosService } from '@/services'
 import { notify } from '@/services/notify'
 import { can } from '@/services/permissions'
 import { format } from '@/utils/format'
+import PageShell from '@/components/ui/PageShell.vue'
 
 definePage({ meta: { perm: 'vendas.fechamento.ver' } })
 

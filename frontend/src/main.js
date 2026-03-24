@@ -114,6 +114,7 @@ import Input from '@/components/ui/Input.vue'
 import MetricCard from '@/components/ui/MetricCard.vue'
 import NavMenu from '@/components/ui/NavMenu.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
+import PageShell from '@/components/ui/PageShell.vue'
 import SearchInput from '@/components/ui/SearchInput.vue'
 import StatusBadge from '@/components/ui/StatusBadge.vue'
 import Table from '@/components/ui/Table.vue'
@@ -193,6 +194,7 @@ app.component('Input', Input)
 app.component('MetricCard', MetricCard)
 app.component('NavMenu', NavMenu)
 app.component('PageHeader', PageHeader)
+app.component('PageShell', PageShell)
 app.component('SearchInput', SearchInput)
 app.component('StatusBadge', StatusBadge)
 app.component('Table', Table)

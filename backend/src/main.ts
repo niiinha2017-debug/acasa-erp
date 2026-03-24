@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
+import { json, urlencoded } from 'express';
 import { config as loadEnv } from 'dotenv';
 import { appendFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
@@ -45,7 +46,9 @@ process.on('uncaughtException', (error) => {
 });
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bodyParser: false });
+  app.use(json({ limit: '15mb' }));
+  app.use(urlencoded({ extended: true, limit: '15mb' }));
   app.useGlobalFilters(new HttpExceptionFilter());
 
   app.setGlobalPrefix('api');

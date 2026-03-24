@@ -1,40 +1,52 @@
 <template>
-  <div class="w-full max-w-7xl mx-auto space-y-6 animate-page-in px-2 md:px-4 pb-8">
-    <div class="relative rounded-2xl border border-border-ui bg-bg-card overflow-visible">
-      <div class="w-full h-2 rounded-t-2xl shrink-0 bg-brand-primary overflow-hidden" />
+  <PageShell :padded="false" variant="minimal">
+    <section class="login-font ds-page-context ds-page-context--list animate-page-in">
       <PageHeader
         title="Contratos em obra"
         subtitle="Contratos ativos (vigentes). Ao finalizar, o contrato sai desta lista."
         icon="pi pi-file-edit"
+        variant="minimal"
       />
 
-      <div class="px-4 md:px-8 pb-6 md:pb-8 pt-5 border-t border-border-ui overflow-visible">
-        <div v-if="loading" class="py-12 text-center text-slate-500 font-bold text-base">
+      <div class="ds-page-context__content px-4 md:px-8 pb-6 md:pb-8 pt-5 overflow-visible">
+        <div v-if="loading" class="py-12 text-center text-text-muted font-bold text-base">
           <i class="pi pi-spin pi-spinner text-2xl" />
           <p class="mt-2">Carregando contratos...</p>
         </div>
 
         <template v-else>
-          <p class="text-sm font-bold text-slate-500 dark:text-slate-400 mb-5">
-            Contratos com status <strong>Vigente</strong> (em obra). As colunas de valor e financeiro referem-se a <strong>contas a receber</strong> (pagamentos do cliente). Data de referência: dia atual.
-          </p>
-
-          <div v-if="contratos.length > 0" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div class="rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 p-4">
-              <p class="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Total contratos</p>
-              <p class="text-xl font-black text-slate-800 dark:text-white tabular-nums">{{ format.currency(totais.valor_total) }}</p>
-            </div>
-            <div class="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20 p-4">
-              <p class="text-[10px] font-black text-emerald-600 uppercase tracking-wider mb-1">Total já pago</p>
-              <p class="text-xl font-black text-emerald-700 dark:text-emerald-300 tabular-nums">{{ format.currency(totais.total_pago) }}</p>
-            </div>
-            <div class="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 p-4">
-              <p class="text-[10px] font-black text-amber-600 uppercase tracking-wider mb-1">Saldo a receber</p>
-              <p class="text-xl font-black text-amber-700 dark:text-amber-300 tabular-nums">{{ format.currency(totais.saldo_a_receber) }}</p>
-            </div>
+          <div class="mb-5 ds-card ds-card--default px-4 py-3 text-sm font-medium text-text-muted">
+            Contratos com status <strong class="text-text-main">Vigente</strong> (em obra). As colunas de valor e financeiro referem-se a <strong class="text-text-main">contas a receber</strong> (pagamentos do cliente). Data de referência: dia atual.
           </div>
 
-          <div class="rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800/50 overflow-x-auto overflow-y-visible contratos-table">
+          <div v-if="contratos.length > 0" class="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 xl:grid-cols-4">
+            <MetricCard
+              label="Total contratos"
+              :value="quantidadeContratos"
+              icon="pi pi-file"
+              color="slate"
+            />
+            <MetricCard
+              label="Valor total em obra"
+              :value="format.currency(totais.valor_total)"
+              icon="pi pi-wallet"
+              color="slate"
+            />
+            <MetricCard
+              label="Total já pago"
+              :value="format.currency(totais.total_pago)"
+              icon="pi pi-check-circle"
+              color="emerald"
+            />
+            <MetricCard
+              label="Saldo a receber"
+              :value="format.currency(totais.saldo_a_receber)"
+              icon="pi pi-clock"
+              color="amber"
+            />
+          </div>
+
+          <div class="ds-card ds-card--default overflow-x-auto overflow-y-visible contratos-table">
             <Table
               :columns="columns"
               :rows="contratos"
@@ -45,84 +57,75 @@
             >
               <template #cell-cliente="{ row }">
                 <div class="contratos-cell flex flex-col gap-1">
-                  <span class="text-sm font-semibold text-slate-800 dark:text-white leading-snug">
+                  <span class="text-sm font-semibold text-text-main leading-snug">
                     {{ row.cliente?.nome_completo || row.cliente?.razao_social || row.cliente?.nome || '—' }}
                   </span>
-                  <span v-if="row.numero" class="text-xs font-bold text-slate-500 dark:text-slate-400">
+                  <span v-if="row.numero" class="text-xs font-bold text-text-muted">
                     {{ row.numero }}
                   </span>
-                  <span
+                  <StatusBadge
                     v-if="row.aguardando_financeiro"
-                    class="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 text-xs font-medium leading-snug"
+                    value="pendente"
+                    label="Aguardando financeiro"
+                    class="w-fit"
                     title="Medição finalizada, mas há parcela(s) com vencimento já passado não paga(s). Não liberar corte/produção."
-                  >
-                    <i class="pi pi-exclamation-triangle text-[10px]" />
-                    AGUARDANDO FINANCEIRO
-                  </span>
+                  />
                 </div>
               </template>
               <template #cell-status_obra="{ row }">
-                <span class="contratos-cell text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <span class="contratos-cell text-[10px] font-bold uppercase tracking-wider text-text-muted">
                   {{ labelStatusObra(row.venda?.status) }}
                 </span>
               </template>
               <template #cell-valor="{ row }">
-                <span class="contratos-cell text-sm font-semibold text-slate-800 dark:text-white tabular-nums leading-snug block text-right">
+                <span class="contratos-cell text-sm font-semibold text-text-main tabular-nums leading-snug block text-right">
                   {{ format.currency(row.valor) }}
                 </span>
               </template>
               <template #cell-historico_pagamentos="{ row }">
                 <div v-if="row.resumo_financeiro != null" class="contratos-cell flex flex-col gap-0.5 leading-snug text-right">
-                  <span class="text-xs text-slate-500 dark:text-slate-400">
+                  <span class="text-xs text-text-muted">
                     Pago desde o início:
                   </span>
                   <span class="text-sm font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
                     {{ format.currency(row.resumo_financeiro.total_pago) }}
                   </span>
                 </div>
-                <span v-else class="contratos-cell text-sm text-slate-400 leading-snug">—</span>
+                <span v-else class="contratos-cell text-sm text-text-muted leading-snug">—</span>
               </template>
               <template #cell-status_pagamento="{ row }">
-                <span
+                <StatusBadge
                   v-if="row.status_pagamento === 'OK'"
-                  class="badge-compact inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wide bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-700/80"
-                >
-                  <i class="pi pi-check text-[9px]" />
-                  OK
-                </span>
-                <span
+                  value="pago"
+                  label="OK"
+                />
+                <StatusBadge
                   v-else-if="row.status_pagamento === 'PENDENTE'"
-                  class="badge-compact inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wide bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200/80 dark:border-amber-700/80"
-                >
-                  <i class="pi pi-clock text-[9px]" />
-                  PENDENTE
-                </span>
-                <span v-else class="contratos-cell text-sm text-slate-400 leading-snug">—</span>
+                  value="pendente"
+                  label="Pendente"
+                />
+                <span v-else class="contratos-cell text-sm text-text-muted leading-snug">—</span>
               </template>
               <template #cell-financeiro="{ row }">
                 <template v-if="row.resumo_financeiro != null">
-                  <span
+                  <StatusBadge
                     v-if="row.resumo_financeiro.quitado"
-                    class="badge-compact inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wide bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-700/80 whitespace-nowrap"
-                  >
-                    <i class="pi pi-check text-[9px]" />
-                    Quitado
-                  </span>
-                  <span
+                    value="pago"
+                    label="Quitado"
+                  />
+                  <StatusBadge
                     v-else
-                    class="badge-compact inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wide bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200/80 dark:border-amber-700/80 whitespace-nowrap"
-                  >
-                    <i class="pi pi-clock text-[9px]" />
-                    Parcelas em aberto
-                  </span>
+                    value="pendente"
+                    label="Parcelas em aberto"
+                  />
                 </template>
-                <span v-else class="contratos-cell text-sm text-slate-400 leading-snug">—</span>
+                <span v-else class="contratos-cell text-sm text-text-muted leading-snug">—</span>
               </template>
               <template #cell-acoes="{ row }">
                 <div class="contratos-cell flex items-center gap-1 justify-end">
                   <RouterLink
                     :to="`/contratos/${row.id}`"
-                    class="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200 hover:text-brand-primary transition-colors"
+                    class="p-2 rounded-lg text-text-muted hover:bg-[var(--ds-color-surface-muted)] hover:text-brand-primary transition-colors"
                     title="Ver contrato"
                   >
                     <i class="pi pi-eye text-sm" />
@@ -130,7 +133,7 @@
                   <RouterLink
                     v-if="row.cliente_id"
                     :to="`/contratos/cliente/${row.cliente_id}`"
-                    class="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200 hover:text-brand-primary transition-colors"
+                    class="p-2 rounded-lg text-text-muted hover:bg-[var(--ds-color-surface-muted)] hover:text-brand-primary transition-colors"
                     title="Lista cliente"
                   >
                     <i class="pi pi-list text-sm" />
@@ -141,8 +144,8 @@
           </div>
         </template>
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
@@ -182,6 +185,8 @@ const totais = computed(() => {
   }
 })
 
+const quantidadeContratos = computed(() => (contratos.value?.length || 0).toLocaleString('pt-BR'))
+
 function labelStatusObra(status) {
   return getStatusVendaOperacionalLabel(status) || '—'
 }
@@ -210,10 +215,7 @@ onMounted(carregar)
   line-height: 1.3;
   vertical-align: top;
   letter-spacing: 0.04em;
-  color: #64748b;
-}
-.dark .contratos-table :deep(thead th) {
-  color: #94a3b8;
+  color: var(--ds-color-text-muted);
 }
 .contratos-table :deep(tbody td) {
   padding: 0.875rem 1rem;

@@ -187,7 +187,8 @@ export class AuthService {
     return {
       token,
       refresh_token,
-      precisa_trocar_senha: !!recPendente,
+      precisa_trocar_senha:
+        String(registro.status || '').toUpperCase() !== 'ATIVO' && !!recPendente,
       usuario: {
         id: registro.id,
         nome: registro.nome,
@@ -234,7 +235,7 @@ export class AuthService {
         const permissoesDefault = await this.prisma.permissoes.findMany({
           where: {
             chave: {
-              in: ['agendamentos.ver', 'pendente.visualizar'],
+              in: ['agendamentos.ver', 'agendamentos.vendas', 'pendente.visualizar'],
             },
           },
         });
@@ -256,12 +257,30 @@ export class AuthService {
       if (!usarSenhaManual) {
         await this.criarRecuperacaoSenha(criado.id, emailLimpo, senhaHash, senhaHash);
 
-        await this.mailService.enviarSenhaProvisoria(
-          emailLimpo,
-          senhaFinal,
-          criado.nome,
-          criado.criado_em ?? new Date(),
-        );
+        try {
+          await this.mailService.enviarSenhaProvisoria(
+            emailLimpo,
+            senhaFinal,
+            criado.nome,
+            criado.criado_em ?? new Date(),
+          );
+        } catch (error) {
+          await this.prisma.$transaction([
+            this.prisma.recuperacao_senha.deleteMany({
+              where: {
+                usuario_id: criado.id,
+                email: emailLimpo,
+                senha_nova: senhaHash,
+                utilizado: false,
+              },
+            }),
+            this.prisma.usuarios_permissoes.deleteMany({
+              where: { usuario_id: criado.id },
+            }),
+            this.prisma.usuarios.delete({ where: { id: criado.id } }),
+          ]).catch(() => undefined);
+          throw error;
+        }
       }
 
       return { ...criado, email_enviado: !usarSenhaManual };
@@ -303,7 +322,8 @@ export class AuthService {
       is_admin: registro.is_admin,
       funcionario_id: registro.funcionario_id,
       permissoes,
-      precisa_trocar_senha: !!recPendente,
+      precisa_trocar_senha:
+        String(registro.status || '').toUpperCase() !== 'ATIVO' && !!recPendente,
     };
   }
 
@@ -321,22 +341,43 @@ export class AuthService {
     const senhaProvisoria = this.gerarSenhaProvisoria();
     const senhaNovaHash = await bcrypt.hash(senhaProvisoria, 10);
 
-    await this.prisma.$transaction(async (tx) => {
+    const recovery = await this.prisma.$transaction(async (tx) => {
       await tx.usuarios.update({
         where: { id: usuario.id },
         data: { senha: senhaNovaHash, status: 'PENDENTE' },
       });
-      await tx.$executeRaw`
-        INSERT INTO recuperacao_senha (usuario_id, email, senha_antiga, senha_nova, utilizado)
-        VALUES (${usuario.id}, ${emailLimpo}, ${usuario.senha}, ${senhaNovaHash}, 0)
-      `;
+      await tx.recuperacao_senha.updateMany({
+        where: { usuario_id: usuario.id, utilizado: false },
+        data: { utilizado: true },
+      });
+      return tx.recuperacao_senha.create({
+        data: {
+          usuario_id: usuario.id,
+          email: emailLimpo,
+          senha_antiga: usuario.senha,
+          senha_nova: senhaNovaHash,
+          utilizado: false,
+        },
+      });
     });
 
-    await this.mailService.enviarSenhaProvisoria(
-      emailLimpo,
-      senhaProvisoria,
-      usuario.nome,
-    );
+    try {
+      await this.mailService.enviarSenhaProvisoria(
+        emailLimpo,
+        senhaProvisoria,
+        usuario.nome,
+      );
+    } catch (error) {
+      await this.prisma.$transaction([
+        this.prisma.usuarios.update({
+          where: { id: usuario.id },
+          data: { senha: usuario.senha, status: usuario.status },
+        }),
+        this.prisma.recuperacao_senha.delete({ where: { id: recovery.id } }),
+      ]).catch(() => undefined);
+      throw error;
+    }
+
     return { ok: true };
   }
 
@@ -355,22 +396,42 @@ export class AuthService {
     const senhaProvisoria = this.gerarSenhaProvisoria();
     const senhaNovaHash = await bcrypt.hash(senhaProvisoria, 10);
 
-    await this.prisma.$transaction(async (tx) => {
+    const recovery = await this.prisma.$transaction(async (tx) => {
       await tx.usuarios.update({
         where: { id: usuario.id },
         data: { senha: senhaNovaHash, status: 'PENDENTE' },
       });
-      await tx.$executeRaw`
-        INSERT INTO recuperacao_senha (usuario_id, email, senha_antiga, senha_nova, utilizado)
-        VALUES (${usuario.id}, ${emailLimpo}, ${usuario.senha}, ${senhaNovaHash}, 0)
-      `;
+      await tx.recuperacao_senha.updateMany({
+        where: { usuario_id: usuario.id, utilizado: false },
+        data: { utilizado: true },
+      });
+      return tx.recuperacao_senha.create({
+        data: {
+          usuario_id: usuario.id,
+          email: emailLimpo,
+          senha_antiga: usuario.senha,
+          senha_nova: senhaNovaHash,
+          utilizado: false,
+        },
+      });
     });
 
-    await this.mailService.enviarSenhaProvisoria(
-      emailLimpo,
-      senhaProvisoria,
-      usuario.nome,
-    );
+    try {
+      await this.mailService.enviarSenhaProvisoria(
+        emailLimpo,
+        senhaProvisoria,
+        usuario.nome,
+      );
+    } catch (error) {
+      await this.prisma.$transaction([
+        this.prisma.usuarios.update({
+          where: { id: usuario.id },
+          data: { senha: usuario.senha, status: usuario.status },
+        }),
+        this.prisma.recuperacao_senha.delete({ where: { id: recovery.id } }),
+      ]).catch(() => undefined);
+      throw error;
+    }
 
     return { ok: true };
   }
@@ -386,25 +447,16 @@ export class AuthService {
     if (!senhaOk) throw new BadRequestException('Senha atual incorreta');
 
     const novaHash = await bcrypt.hash(senhaNova, 10);
-    const rec = await this.prisma.recuperacao_senha.findFirst({
-      where: { usuario_id: usuarioId, utilizado: false },
-      orderBy: { criado_em: 'desc' },
-      select: { id: true },
-    });
 
     await this.prisma.$transaction([
       this.prisma.usuarios.update({
         where: { id: usuarioId },
         data: { senha: novaHash, status: 'ATIVO' }, // Ativa aqui!
       }),
-      ...(rec
-        ? [
-            this.prisma.recuperacao_senha.update({
-              where: { id: rec.id },
-              data: { utilizado: true },
-            }),
-          ]
-        : []),
+      this.prisma.recuperacao_senha.updateMany({
+        where: { usuario_id: usuarioId, utilizado: false },
+        data: { utilizado: true },
+      }),
     ]);
 
     return { ok: true };
@@ -415,16 +467,20 @@ export class AuthService {
     return `ACASA-${n}`;
   }
 
-  /** Insere em recuperacao_senha sem usar coluna expira_em (compatível com DB atual). */
   private async criarRecuperacaoSenha(
     usuario_id: number,
     email: string,
     senha_antiga: string | null,
     senha_nova: string | null,
-  ): Promise<void> {
-    await this.prisma.$executeRaw`
-      INSERT INTO recuperacao_senha (usuario_id, email, senha_antiga, senha_nova, utilizado)
-      VALUES (${usuario_id}, ${email}, ${senha_antiga}, ${senha_nova}, 0)
-    `;
+  ) {
+    return this.prisma.recuperacao_senha.create({
+      data: {
+        usuario_id,
+        email,
+        senha_antiga,
+        senha_nova,
+        utilizado: false,
+      },
+    });
   }
 }

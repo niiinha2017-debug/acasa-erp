@@ -3,14 +3,17 @@
     <button
       @click.stop="toggleMenu"
       type="button"
-      class="flex items-center justify-center gap-1.5 px-0 py-0.5 rounded-md text-sm font-medium text-text-soft hover:text-text-main hover:bg-black/5 dark:hover:bg-white/5 border-b-2 border-transparent hover:border-slate-400 dark:hover:border-slate-500 transition-all duration-200 outline-none leading-none"
-      :class="{ 'text-text-main bg-black/5 dark:bg-white/5 border-slate-400 dark:border-slate-500': isOpen }"
+      class="ds-nav-menu-trigger outline-none"
+      :class="{ 'is-open': isOpen, 'is-active': hasActiveMatch }"
+      :aria-expanded="isOpen ? 'true' : 'false'"
     >
-      <span class="whitespace-nowrap">{{ label }}</span>
-      <i
-        class="pi pi-chevron-down text-[10px] opacity-60 transition-transform duration-200 flex-shrink-0"
-        :class="{ 'rotate-180': isOpen }"
-      />
+      <span class="ds-nav-menu-trigger__row">
+        <span class="ds-nav-menu-trigger__label">{{ label }}</span>
+        <i
+          class="pi pi-chevron-down text-[10px] opacity-60 transition-transform duration-200 flex-shrink-0"
+          :class="{ 'rotate-180': isOpen }"
+        />
+      </span>
     </button>
 
     <Teleport to="body">
@@ -18,71 +21,94 @@
         <div
           v-if="isOpen"
           ref="dropdownRef"
-          class="fixed min-w-[200px] p-1 bg-bg-card rounded-lg border border-border-ui z-[9999] overflow-visible shadow-sm"
+          class="ds-floating-panel ds-nav-menu-panel fixed z-[9999] overflow-visible"
           :style="dropdownStyle"
         >
-        <div v-if="visibleItems.length === 0" class="px-4 py-2.5 text-sm text-text-soft">
-          Nenhum item disponível
-        </div>
+          <div v-if="visibleItems.length === 0" class="px-4 py-2.5 text-sm text-text-soft">
+            Nenhum item disponível
+          </div>
 
-        <div v-else class="flex flex-col gap-0.5 overflow-visible">
-          <template v-for="(item, index) in visibleItems" :key="index">
-            <hr v-if="item.divider" class="my-0.5 border-border-ui" />
-
-            <div
-              v-else-if="item.heading"
-              class="px-4 py-1.5 pt-2 first:pt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500"
-            >
-              {{ item.heading }}
+          <div v-else class="flex flex-col gap-0.5 overflow-visible">
+            <div class="ds-nav-menu-panel-header">
+              <span class="ds-nav-menu-panel-eyebrow">{{ eyebrow || 'Navegação' }}</span>
+              <div class="ds-nav-menu-panel-copy">
+                <strong class="ds-nav-menu-panel-title">{{ label }}</strong>
+              </div>
             </div>
 
-            <div
-              v-else-if="item.children?.length"
-              class="nav-submenu-trigger relative flex items-center gap-3 px-4 py-2.5 text-sm text-text-main cursor-pointer overflow-visible rounded-md transition-colors duration-200"
-              :class="[item.etapaKey ? getStatusHoverBgClass(item.etapaKey) : 'hover:bg-slate-50 dark:hover:bg-slate-800/50', { 'bg-slate-50 dark:bg-slate-800/50': openSubmenuIndex === index }]"
-              @click.stop.prevent="toggleSubmenu(index)"
-              @mouseenter="clearSubmenuLeaveTimer(); openSubmenuIndex = index"
-              @mouseleave="scheduleSubmenuClose()"
-            >
-              <i v-if="item.icon" :class="[item.icon, 'pi text-xs opacity-70 w-5 flex-shrink-0']" />
-              <span class="font-medium truncate flex-1 min-w-0">{{ item.label }}</span>
-              <i class="pi pi-chevron-right text-[10px] opacity-60 flex-shrink-0" />
-              <!-- Lista lateral (flyout) à direita -->
-              <transition name="dropdown">
-                <div
-                  v-if="openSubmenuIndex === index"
-                  class="absolute left-full top-0 ml-0.5 min-w-[200px] p-1 bg-bg-card rounded-lg border border-border-ui shadow-sm z-[10001] overflow-visible"
-                  @click.stop
-                  @mouseenter="clearSubmenuLeaveTimer()"
-                  @mouseleave="scheduleSubmenuClose()"
-                >
-                  <template v-for="(child, childIndex) in visibleChildren(item)" :key="child.divider ? `div-${childIndex}` : (child.to || childIndex)">
-                    <hr v-if="child.divider" class="my-0.5 border-border-ui" />
-                    <a
-                      v-else
-                      @click="handleNavChild(child.to)"
-                      class="flex items-center gap-3 px-4 py-2.5 text-sm text-text-main hover:text-brand-primary rounded-md transition-colors duration-200"
-                      :class="child.etapaKey ? getStatusHoverBgClass(child.etapaKey) : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'"
-                    >
-                      <i v-if="child.icon" :class="[child.icon, 'pi text-xs opacity-70 w-5 flex-shrink-0']" />
-                      <span class="font-medium">{{ child.label }}</span>
-                    </a>
-                  </template>
-                </div>
-              </transition>
-            </div>
+            <template v-for="(item, index) in visibleItems" :key="index">
+              <hr v-if="item.divider" class="my-0.5 border-border-ui" />
 
-            <a
-              v-else
-              @click="handleNav(item.to)"
-              class="flex items-center gap-3 px-4 py-2.5 text-sm text-text-main hover:text-brand-primary rounded-md transition-colors duration-200"
-              :class="item.etapaKey ? getStatusHoverBgClass(item.etapaKey) : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'"
-            >
-              <i v-if="item.icon" :class="[item.icon, 'pi text-xs opacity-70 w-5 flex-shrink-0']" />
-              <span class="font-medium">{{ item.label }}</span>
-            </a>
-          </template>
-        </div>
+              <div
+                v-else-if="item.heading"
+                class="ds-nav-menu-heading"
+              >
+                {{ item.heading }}
+              </div>
+
+              <div
+                v-else-if="item.children?.length"
+                class="nav-submenu-trigger ds-nav-menu-item relative cursor-pointer overflow-visible"
+                :class="[
+                  item.etapaKey ? getStatusHoverBgClass(item.etapaKey) : '',
+                  { 'is-open': openSubmenuIndex === index, 'is-active': getItemState(item).isActive, 'is-current': getItemState(item).isCurrent },
+                ]"
+                @click.stop.prevent="toggleSubmenu(index)"
+                @mouseenter="clearSubmenuLeaveTimer(); openSubmenuIndex = index"
+                @mouseleave="scheduleSubmenuClose()"
+              >
+                <i v-if="item.icon" :class="[item.icon, 'pi text-xs opacity-70 w-5 flex-shrink-0']" />
+                <span class="ds-nav-menu-item__content">
+                  <span class="ds-nav-menu-item__label">{{ item.label }}</span>
+                </span>
+                <i class="pi pi-chevron-right text-[10px] opacity-60 flex-shrink-0" />
+                <transition name="dropdown">
+                  <div
+                    v-if="openSubmenuIndex === index"
+                    class="ds-floating-panel ds-nav-menu-panel absolute left-full top-0 ml-0.5 z-[10001] overflow-visible"
+                    @click.stop
+                    @mouseenter="clearSubmenuLeaveTimer()"
+                    @mouseleave="scheduleSubmenuClose()"
+                  >
+                    <template v-for="(child, childIndex) in visibleChildren(item)" :key="child.divider ? `div-${childIndex}` : (child.to || childIndex)">
+                      <hr v-if="child.divider" class="my-0.5 border-border-ui" />
+                      <button
+                        v-else
+                        type="button"
+                        @click="handleNavChild(child.to)"
+                        class="ds-nav-menu-item w-full text-left"
+                        :class="[
+                          child.etapaKey ? getStatusHoverBgClass(child.etapaKey) : '',
+                          { 'is-active': getItemState(child).isActive, 'is-current': getItemState(child).isCurrent },
+                        ]"
+                      >
+                        <i v-if="child.icon" :class="[child.icon, 'pi text-xs opacity-70 w-5 flex-shrink-0']" />
+                        <span class="ds-nav-menu-item__content">
+                          <span class="ds-nav-menu-item__label">{{ child.label }}</span>
+                        </span>
+                      </button>
+                    </template>
+                  </div>
+                </transition>
+              </div>
+
+              <button
+                v-else
+                type="button"
+                @click="handleNav(item.to)"
+                class="ds-nav-menu-item w-full text-left"
+                :class="[
+                  item.etapaKey ? getStatusHoverBgClass(item.etapaKey) : '',
+                  { 'is-active': getItemState(item).isActive, 'is-current': getItemState(item).isCurrent },
+                ]"
+              >
+                <i v-if="item.icon" :class="[item.icon, 'pi text-xs opacity-70 w-5 flex-shrink-0']" />
+                <span class="ds-nav-menu-item__content">
+                  <span class="ds-nav-menu-item__label">{{ item.label }}</span>
+                </span>
+              </button>
+            </template>
+          </div>
         </div>
       </transition>
     </Teleport>
@@ -93,10 +119,13 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { can } from '@/services/permissions'
+import { findBestNavItemMatch, getNavItemState } from '@/services/navigation'
 import { getStatusHoverBgClass } from '@/constantes'
 
 const props = defineProps({
   label: { type: String, required: true },
+  eyebrow: { type: String, default: '' },
+  description: { type: String, default: '' },
   items: { type: Array, required: true },
 })
 
@@ -120,6 +149,11 @@ function updateDropdownPosition() {
 
 watch(isOpen, (open) => {
   if (open) nextTick(updateDropdownPosition)
+})
+
+watch(() => route.fullPath, () => {
+  isOpen.value = false
+  openSubmenuIndex.value = null
 })
 
 const toggleMenu = () => {
@@ -183,6 +217,13 @@ const visibleItems = computed(() => {
     }
   })
 })
+
+const activeMatch = computed(() => findBestNavItemMatch(visibleItems.value, route))
+const hasActiveMatch = computed(() => activeMatch.value.state.score >= 0)
+
+function getItemState(item) {
+  return getNavItemState(item, route)
+}
 
 const handleNav = (to) => {
   isOpen.value = false

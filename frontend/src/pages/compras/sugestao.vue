@@ -1,88 +1,84 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-amber-500 rounded-t-2xl" />
-
+  <PageShell :padded="false">
+    <section class="compras-sugestao ds-page-context ds-page-context--list animate-page-in">
       <PageHeader
         title="Sugestão de Compra"
-        subtitle="Produtos com estoque abaixo do mínimo (Estoque Atual &lt; Estoque Mínimo)"
+        subtitle="Produtos abaixo do estoque mínimo para reposição"
         icon="pi pi-shopping-bag"
         :backTo="'/compras'"
       >
         <template #actions>
-          <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
-            <div class="w-full sm:w-64 order-1 sm:order-0">
+          <div class="compras-sugestao__actions ds-page-context__actions">
+            <div class="compras-sugestao__search ds-page-context__search">
               <SearchInput
                 v-model="filtro"
-                placeholder="Buscar produto ou fornecedor..."
+                placeholder="Buscar produto, fornecedor ou medida..."
               />
             </div>
+
             <Button
               v-if="can('compras.criar')"
               variant="primary"
               @click="irNovaCompra"
             >
-              <i class="pi pi-plus mr-2"></i>
+              <i class="pi pi-plus"></i>
               Nova Compra
             </Button>
           </div>
         </template>
       </PageHeader>
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui">
-        <div v-if="!loading && lista.length === 0" class="py-12 text-center rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-border-ui">
-          <i class="pi pi-check-circle text-4xl text-emerald-500 mb-3 block"></i>
-          <p class="text-sm font-bold text-text-main">Nenhum produto abaixo do estoque mínimo.</p>
-          <p class="text-xs text-text-muted mt-1">Todos os insumos estão dentro do nível configurado.</p>
+      <div class="compras-sugestao__content ds-page-context__content">
+        <div v-if="!loading && lista.length === 0" class="compras-sugestao__empty">
+          <p class="compras-sugestao__empty-title">Nenhum produto abaixo do estoque mínimo.</p>
+          <p class="compras-sugestao__empty-copy">Todos os itens estão dentro do nível configurado.</p>
         </div>
 
-        <div v-else class="native-table-flush overflow-visible">
         <Table
+          v-else
           :columns="columns"
-          :rows="filtradas"
+          :rows="rows"
           :loading="loading"
           empty-text="Nenhum produto encontrado para os filtros."
           :boxed="false"
-          :flush="true"
-          row-class="bg-red-50/50 dark:bg-red-950/20"
+          :flush="false"
         >
           <template #cell-nome_produto="{ row }">
-            <div class="flex flex-col py-1">
-              <span class="text-sm font-bold text-text-main uppercase tracking-tight">
-                {{ row.nome_produto || '-' }}
-              </span>
-              <span class="text-[10px] text-text-muted">
-                {{ [row.marca, row.cor, row.medida].filter(Boolean).join(' • ') || '—' }}
-              </span>
+            <div class="compras-sugestao__identity">
+              <div class="compras-sugestao__initials">
+                {{ row.sugestao_qtd }}
+              </div>
+              <div class="compras-sugestao__identity-copy">
+                <span class="compras-sugestao__primary">{{ row.nome_produto || '-' }}</span>
+                <span class="compras-sugestao__secondary">{{ row.detalhes_exibicao }}</span>
+              </div>
             </div>
           </template>
 
           <template #cell-fornecedor="{ row }">
-            <span class="text-sm text-text-main">
-              {{ row.fornecedor?.nome_fantasia || row.fornecedor?.razao_social || '-' }}
-            </span>
+            <span class="compras-sugestao__fornecedor">{{ row.fornecedor_exibicao }}</span>
           </template>
 
           <template #cell-estoque_atual="{ row }">
-            <span class="text-sm font-bold text-rose-600 dark:text-rose-400 tabular-nums">
+            <span class="compras-sugestao__stock compras-sugestao__stock--atual">
               {{ Number(row.quantidade ?? 0) }}
             </span>
           </template>
 
           <template #cell-estoque_minimo="{ row }">
-            <span class="text-sm font-semibold text-text-main tabular-nums">
+            <span class="compras-sugestao__stock">
               {{ Number(row.estoque_minimo ?? 0) }}
             </span>
           </template>
 
           <template #cell-sugestao_qtd="{ row }">
-            <span class="text-sm font-bold text-amber-600 dark:text-amber-400 tabular-nums">
-              {{ sugerirQuantidade(row) }}
+            <span class="compras-sugestao__stock compras-sugestao__stock--sugestao">
+              {{ row.sugestao_qtd }}
             </span>
           </template>
 
           <template #cell-valor_unitario="{ row }">
-            <span class="text-sm text-text-main tabular-nums">
+            <span class="compras-sugestao__amount">
               {{ format.currency(row.valor_unitario) }}
             </span>
           </template>
@@ -93,19 +89,18 @@
                 v-if="can('compras.criar')"
                 variant="ghost"
                 size="sm"
-                class="text-[10px] font-bold uppercase"
+                class="compras-sugestao__buy"
                 @click="irNovaCompraComFornecedor(row.fornecedor_id)"
               >
-                <i class="pi pi-shopping-cart mr-1"></i>
+                <i class="pi pi-shopping-cart"></i>
                 Comprar
               </Button>
             </div>
           </template>
         </Table>
-        </div>
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
@@ -124,7 +119,7 @@ const lista = ref([])
 const filtro = ref('')
 
 const columns = [
-  { key: 'nome_produto', label: 'PRODUTO', width: '25%' },
+  { key: 'nome_produto', label: 'Produto', width: '30%' },
   { key: 'fornecedor', label: 'FORNECEDOR', width: '20%' },
   { key: 'estoque_atual', label: 'ESTOQUE ATUAL', width: '12%', align: 'center' },
   { key: 'estoque_minimo', label: 'EST. MÍNIMO', width: '12%', align: 'center' },
@@ -149,6 +144,15 @@ const filtradas = computed(() => {
     return nome.includes(f) || forn.includes(f)
   })
 })
+
+const rows = computed(() =>
+  filtradas.value.map((row) => ({
+    ...row,
+    sugestao_qtd: sugerirQuantidade(row),
+    detalhes_exibicao: [row.marca, row.cor, row.medida].filter(Boolean).join(' • ') || 'Sem variação informada',
+    fornecedor_exibicao: row.fornecedor?.nome_fantasia || row.fornecedor?.razao_social || '-',
+  })),
+)
 
 async function carregar() {
   if (!can('compras.ver')) return
@@ -181,3 +185,145 @@ onMounted(() => {
   if (can('compras.ver')) carregar()
 })
 </script>
+
+<style scoped>
+.compras-sugestao {
+  min-height: 100%;
+  background: var(--ds-color-surface);
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.compras-sugestao__empty {
+  padding: 3rem 1rem;
+  text-align: center;
+  border: 1px solid rgba(214, 224, 234, 0.82);
+  border-radius: 1rem;
+  background: rgba(250, 252, 255, 0.88);
+}
+
+.dark .compras-sugestao__empty {
+  background: rgba(18, 30, 49, 0.45);
+  border-color: rgba(51, 71, 102, 0.72);
+}
+
+.compras-sugestao__empty-title {
+  color: var(--ds-color-text);
+  font-size: 0.95rem;
+  font-weight: 620;
+}
+
+.compras-sugestao__empty-copy {
+  margin-top: 0.35rem;
+  color: var(--ds-color-text-faint);
+  font-size: 0.78rem;
+}
+
+.compras-sugestao__identity {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.compras-sugestao__initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.1rem;
+  height: 2.1rem;
+  padding: 0 0.45rem;
+  border-radius: 0.72rem;
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  background: rgba(255, 247, 237, 0.95);
+  color: rgb(180, 83, 9);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.dark .compras-sugestao__initials {
+  background: rgba(69, 26, 3, 0.42);
+  border-color: rgba(217, 119, 6, 0.34);
+  color: rgb(253, 186, 116);
+}
+
+.compras-sugestao__identity-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.compras-sugestao__primary {
+  color: var(--ds-color-text);
+  font-size: 0.92rem;
+  font-weight: 560;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compras-sugestao__secondary {
+  color: var(--ds-color-text-faint);
+  font-size: 0.72rem;
+  font-weight: 430;
+  line-height: 1.45;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compras-sugestao__fornecedor {
+  color: var(--ds-color-text);
+  font-size: 0.84rem;
+}
+
+.compras-sugestao__stock {
+  font-size: 0.86rem;
+  font-weight: 620;
+  font-variant-numeric: tabular-nums;
+  color: var(--ds-color-text);
+}
+
+.compras-sugestao__stock--atual {
+  color: rgb(190, 24, 93);
+}
+
+.compras-sugestao__stock--sugestao {
+  color: rgb(180, 83, 9);
+}
+
+.dark .compras-sugestao__stock--atual {
+  color: rgb(251, 113, 133);
+}
+
+.dark .compras-sugestao__stock--sugestao {
+  color: rgb(253, 186, 116);
+}
+
+.compras-sugestao__amount {
+  color: var(--ds-color-text);
+  font-size: 0.88rem;
+  font-weight: 620;
+  font-variant-numeric: tabular-nums;
+}
+
+.compras-sugestao__buy {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 768px) {
+  .compras-sugestao__identity {
+    gap: 0.48rem;
+  }
+
+  .compras-sugestao__initials {
+    min-width: 1.9rem;
+    height: 1.9rem;
+  }
+}
+</style>

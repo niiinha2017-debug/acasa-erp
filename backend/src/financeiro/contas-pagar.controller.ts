@@ -17,6 +17,7 @@ import {
 } from '@nestjs/common';
 import { FinanceiroService } from './financeiro.service';
 import { FecharMesDto } from './dto/fechar-mes.dto';
+import { FecharMesFuncionarioDto } from './dto/fechar-mes-funcionario.dto';
 import { CreateContaPagarDto } from './dto/create-conta-pagar.dto';
 import { UpdateContaPagarDto } from './dto/update-conta-pagar.dto';
 import { PagarContaPagarDto } from './dto/pagar-conta-pagar.dto';
@@ -61,6 +62,7 @@ export class ContasPagarController {
     @Query('data_ini') data_ini?: string,
     @Query('data_fim') data_fim?: string,
     @Query('fornecedor_id') fornecedor_id?: string,
+    @Query('funcionario_id') funcionario_id?: string,
     @Query('mes') mes?: string,
     @Query('ano') ano?: string,
   ) {
@@ -76,6 +78,10 @@ export class ContasPagarController {
         visao: visaoNorm as 'PARA_FECHAR' | 'COMPENSADOS' | 'AGENDADOS' | 'PAGOS',
         data_ini: data_ini?.trim() || undefined,
         data_fim: data_fim?.trim() || undefined,
+        fornecedor_id: fornecedor_id ? this.cleanIdOrFail(fornecedor_id) : undefined,
+        funcionario_id: funcionario_id ? this.cleanIdOrFail(funcionario_id) : undefined,
+        mes: mes ? Number(mes) : undefined,
+        ano: ano ? Number(ano) : undefined,
       });
     }
 
@@ -84,6 +90,7 @@ export class ContasPagarController {
       data_ini: data_ini?.trim() || undefined,
       data_fim: data_fim?.trim() || undefined,
       fornecedor_id: fornecedor_id ? this.cleanIdOrFail(fornecedor_id) : undefined,
+      funcionario_id: funcionario_id ? this.cleanIdOrFail(funcionario_id) : undefined,
       mes: mes ? Number(mes) : undefined,
       ano: ano ? Number(ano) : undefined,
     });
@@ -111,6 +118,7 @@ export class ContasPagarController {
   @Permissoes('contas_pagar.ver')
   async listarFechamentos(
     @Query('fornecedor_id') fornecedor_id?: string,
+    @Query('funcionario_id') funcionario_id?: string,
     @Query('status') status?: string,
     @Query('data_ini') data_ini?: string,
     @Query('data_fim') data_fim?: string,
@@ -124,6 +132,9 @@ export class ContasPagarController {
     return this.service.listarContasPagarFechamentos({
       fornecedor_id: fornecedor_id
         ? this.cleanIdOrFail(fornecedor_id)
+        : undefined,
+      funcionario_id: funcionario_id
+        ? this.cleanIdOrFail(funcionario_id)
         : undefined,
       status: status?.trim() || undefined,
       data_ini: data_ini?.trim() || undefined,
@@ -167,6 +178,24 @@ export class ContasPagarController {
       this.logger.error(`fechar-mes 500: ${msg}`, stack);
       throw new InternalServerErrorException(
         msg || 'Erro ao fechar mês. Verifique os logs do servidor.',
+      );
+    }
+  }
+
+  // ✅ FECHAR MÊS FUNCIONÁRIO (consolida folha e gera conta_pagar)
+  @Post('fechar-mes-funcionario')
+  @Permissoes('contas_pagar.criar')
+  @HttpCode(HttpStatus.OK)
+  async fecharMesFuncionario(@Body() body: FecharMesFuncionarioDto) {
+    try {
+      return await this.service.fecharMesFuncionario(body);
+    } catch (err: any) {
+      if (err?.statusCode >= 400 && err?.statusCode < 500) throw err;
+      const msg = err?.message || String(err);
+      const stack = err?.stack;
+      this.logger.error(`fechar-mes-funcionario 500: ${msg}`, stack);
+      throw new InternalServerErrorException(
+        msg || 'Erro ao fechar mês do funcionário. Verifique os logs do servidor.',
       );
     }
   }

@@ -80,6 +80,10 @@ export class AtualizarCompraDto {
   tipo_compra?: string;
 
   @IsOptional()
+  @IsString()
+  regime_financeiro?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   venda_id?: number | null;

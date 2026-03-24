@@ -1,188 +1,740 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
+  <PageShell :padded="false">
+    <section class="permissoes-page ds-page-context ds-page-context--list animate-page-in">
       <PageHeader
         title="Permissões de Acesso"
         subtitle="Todos precisam estar logados. Aqui você libera ou bloqueia o que cada usuário pode acessar no sistema."
         icon="pi pi-lock"
-        :show-back="false"
       >
         <template #actions>
-          <Transition name="fade">
-            <div v-if="usuarioSelecionado" class="flex items-center gap-2 bg-brand-primary/5 px-3 py-1.5 rounded-lg border border-brand-primary/10">
-              <span class="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse"></span>
-              <span class="text-[10px] font-black uppercase text-brand-primary tracking-widest">
-                Editando: {{ usuarioSelecionado.nome }}
-              </span>
-            </div>
-          </Transition>
+          <div class="permissoes-page__header-actions">
+            <Transition name="fade">
+              <div v-if="usuarioSelecionado" class="permissoes-page__selection-chip">
+                <span class="permissoes-page__selection-dot"></span>
+                <span>Editando: {{ usuarioSelecionado.nome }}</span>
+              </div>
+            </Transition>
+
+            <Button
+              v-if="usuarioSelecionado && temAcesso('permissoes.gerenciar')"
+              variant="primary"
+              :loading="loadingSalvar"
+              @click="confirmarSalvarPermissoes"
+            >
+              <i class="pi pi-save"></i>
+              Salvar Alterações
+            </Button>
+          </div>
         </template>
       </PageHeader>
 
-      <div class="bg-white border-t border-border-ui overflow-hidden min-h-[650px] flex flex-col lg:flex-row">
-      
-      <aside class="w-full lg:w-80 border-b lg:border-b-0 lg:border-r border-slate-100 flex flex-col bg-slate-50/30">
-        <div class="p-4 border-b border-slate-100 bg-white">
-          <div class="relative group">
-            <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]"></i>
-            <input 
+      <div class="permissoes-page__layout ds-page-context__content">
+        <aside class="permissoes-page__sidebar">
+          <div class="permissoes-page__sidebar-search">
+            <SearchInput
               v-model="filtroUsuarios"
-              type="text"
-              placeholder="BUSCAR COLABORADOR..."
-              class="w-full pl-9 pr-3 h-10 bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-bold uppercase focus:bg-white focus:ring-2 focus:ring-brand-primary/10 focus:border-brand-primary outline-none transition-all"
+              placeholder="Buscar colaborador..."
             />
           </div>
-        </div>
 
-        <div class="flex-1 overflow-y-auto p-3 space-y-4 custom-scroll">
-          <div v-for="grupo in usuariosPorSetor" :key="grupo.setor" class="space-y-1">
-            <div class="px-2 py-1.5 flex items-center gap-2">
-              <span class="w-1 h-4 bg-brand-primary/60 rounded-full"></span>
-              <span class="text-[9px] font-black uppercase tracking-widest text-slate-500">
-                {{ grupo.setor }}
-              </span>
+          <div class="permissoes-page__sidebar-list custom-scroll">
+            <div v-for="grupo in usuariosPorSetor" :key="grupo.setor" class="permissoes-page__group">
+              <div class="permissoes-page__group-title">
+                <span class="permissoes-page__group-marker"></span>
+                <span>{{ grupo.setor }}</span>
+              </div>
+
+              <button
+                v-for="row in grupo.usuarios"
+                :key="row.id"
+                type="button"
+                @click="selecionarUsuario(row)"
+                :class="[
+                  'permissoes-page__user-card',
+                  usuarioSelecionado?.id === row.id ? 'permissoes-page__user-card--active' : '',
+                ]"
+              >
+                <div class="permissoes-page__user-identity">
+                  <div class="permissoes-page__user-initials">
+                    {{ userInitials(row.nome) }}
+                  </div>
+
+                  <div class="permissoes-page__user-copy">
+                    <span class="permissoes-page__user-name">{{ row.nome }}</span>
+                    <span class="permissoes-page__user-meta">{{ row.funcionario?.cargo || row.usuario || 'Sem cargo' }}</span>
+                    <div class="permissoes-page__user-status">
+                      <span class="ds-status-pill" :class="userStatusClass(row.status)">
+                        {{ userStatusLabel(row.status) }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </button>
             </div>
-            <button
-              v-for="row in grupo.usuarios"
-              :key="row.id"
-              @click="selecionarUsuario(row)"
-              :class="[
-                'w-full p-3 rounded-xl transition-all text-left group border',
-                usuarioSelecionado?.id === row.id
-                  ? 'bg-white border-brand-primary/20 shadow-sm ring-1 ring-brand-primary/10'
-                  : 'bg-transparent border-transparent hover:bg-white hover:border-slate-200'
-              ]"
-            >
-              <div class="flex flex-col">
-                <span :class="['text-[11px] font-black uppercase tracking-tight', usuarioSelecionado?.id === row.id ? 'text-brand-primary' : 'text-slate-700']">
-                  {{ row.nome }}
-                </span>
-                <span v-if="row.funcionario?.cargo" class="text-[9px] font-semibold text-slate-500 uppercase tracking-tighter mt-0.5">
-                  {{ row.funcionario.cargo }}
-                </span>
-                <div class="flex items-center gap-2 mt-1">
-                  <span :class="[
-                    'w-1 h-1 rounded-full shrink-0',
-                    String(row.status || '').toUpperCase() === 'ATIVO'
-                      ? 'bg-emerald-400'
-                      : String(row.status || '').toUpperCase() === 'PENDENTE'
-                        ? 'bg-amber-400'
-                        : 'bg-rose-400'
-                  ]"></span>
-                  <span class="text-[9px] font-bold uppercase text-slate-400 tracking-tighter">
-                    {{ String(row.status || '').toUpperCase() === 'ATIVO' ? 'Ativo' : String(row.status || '').toUpperCase() === 'PENDENTE' ? 'Pendente' : 'Inativo' }}
+          </div>
+        </aside>
+
+        <main class="permissoes-page__main">
+          <div v-if="!usuarioSelecionado" class="permissoes-page__empty-state">
+            <div class="permissoes-page__empty-icon">
+              <i class="pi pi-user-plus"></i>
+            </div>
+            <h4 class="permissoes-page__empty-title">Aguardando seleção</h4>
+            <p class="permissoes-page__empty-text">Escolha um colaborador para gerenciar os acessos.</p>
+          </div>
+
+          <template v-else>
+            <div class="permissoes-page__summary">
+              <div class="permissoes-page__summary-identity">
+                <div class="permissoes-page__summary-initials">
+                  {{ userInitials(usuarioSelecionado.nome) }}
+                </div>
+
+                <div class="permissoes-page__summary-copy">
+                  <span class="permissoes-page__summary-title">{{ usuarioSelecionado.nome }}</span>
+                  <span class="permissoes-page__summary-subtitle">
+                    {{ usuarioSelecionado.email || usuarioSelecionado.usuario || 'Sem e-mail cadastrado' }}
                   </span>
                 </div>
               </div>
-            </button>
-          </div>
-        </div>
-      </aside>
 
-      <main class="flex-1 flex flex-col bg-white">
-        
-        <div v-if="!usuarioSelecionado" class="flex-1 flex flex-col items-center justify-center p-12 text-center">
-          <div class="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center mb-4 border border-slate-100 text-slate-300">
-            <i class="pi pi-user-plus text-xl"></i>
-          </div>
-          <h4 class="text-[11px] font-black text-slate-800 uppercase tracking-widest">Aguardando Seleção</h4>
-          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tight mt-1">Escolha um colaborador para gerenciar os acessos.</p>
-        </div>
-
-        <template v-else>
-          <div class="px-6 pt-4 pb-2 border-b border-slate-100 bg-slate-50/50">
-            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-2">
-              <i class="pi pi-info-circle text-brand-primary"></i>
-              Acesso ao sistema exige login. Abaixo você define o que este usuário pode ver e fazer (liberar ou bloquear por permissão).
-            </p>
-          </div>
-          <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
-            <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
-                <i class="pi pi-shield text-xs"></i>
+              <div class="permissoes-page__summary-meta">
+                <span class="ds-status-pill" :class="userStatusClass(usuarioSelecionado.status)">
+                  {{ userStatusLabel(usuarioSelecionado.status) }}
+                </span>
+                <span class="permissoes-page__summary-count">
+                  {{ permissoesAtivas.length }} permissões ativas
+                </span>
               </div>
-              <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">Mapa de Acessos</h3>
             </div>
-            
 
-<Button
-  v-if="temAcesso('permissoes.gerenciar')"
-  variant="primary"
-  :loading="loadingSalvar"
-  @click="confirmarSalvarPermissoes"
-  class="!h-10 !px-6 !rounded-xl font-black text-[10px] uppercase tracking-widest shadow-sm"
->
-  Salvar Alterações
-</Button>
+            <div class="permissoes-page__notice">
+              <i class="pi pi-info-circle"></i>
+              <span>Acesso ao sistema exige login. Abaixo você define o que este usuário pode ver e fazer.</span>
+            </div>
 
-          </div>
+            <div v-if="loadingPermissoes" class="permissoes-page__loading">
+              <i class="pi pi-spin pi-spinner"></i>
+              <span>Carregando permissões...</span>
+            </div>
 
-          <div class="flex-1 overflow-y-auto p-8 space-y-12 custom-scroll bg-white">
-            <div v-for="(perms, modulo) in MAPA_PERMISSOES" :key="modulo" class="space-y-4">
-              <div class="flex items-center justify-between border-b border-slate-50 pb-2">
-                <h4 class="text-[11px] font-black uppercase tracking-[0.15em] text-slate-400 flex items-center gap-2">
-                  <span class="w-1 h-3 bg-brand-primary rounded-full"></span>
-                  {{ ROTULO_MODULO[modulo] || modulo }}
-                </h4>
-                <div class="flex gap-3">
-                  <button @click="confirmarMarcarTudoModulo(modulo, true)"class="text-[9px] font-black uppercase text-brand-primary/60 hover:text-brand-primary transition-colors">Marcar Todos</button>
-                  <button @click="confirmarMarcarTudoModulo(modulo, false)" class="text-[9px] font-black uppercase text-slate-300 hover:text-rose-500 transition-colors">Limpar</button>
-                </div>
-              </div>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                <label
-                  v-for="p in perms"
-                  :key="p.chave"
-                  :class="[
-                    'flex items-center p-3 rounded-xl border transition-all cursor-pointer group select-none',
-                    temPermissao(p.chave) 
-                      ? 'bg-brand-primary/5 border-brand-primary/10 shadow-sm shadow-brand-primary/5' 
-                      : 'bg-white border-slate-100 hover:border-slate-200'
-                  ]"
+            <div v-else class="permissoes-page__modules custom-scroll">
+              <section v-for="categoria in permissoesPorCategoria" :key="categoria.key" class="permissoes-page__category">
+                <button
+                  type="button"
+                  class="permissoes-page__category-toggle"
+                  @click="toggleCategoria(categoria.key)"
                 >
-                  <div class="relative flex items-center justify-center h-4 w-4 mr-3">
-                    <input
-                      type="checkbox"
-                      class="peer opacity-0 absolute inset-0 cursor-pointer z-10"
-                      :checked="temPermissao(p.chave)"
-                      @change="togglePermissao(p.chave)"
-                    />
-                    <div :class="[
-                      'h-4 w-4 rounded-md border flex items-center justify-center transition-all',
-                      temPermissao(p.chave) ? 'bg-brand-primary border-brand-primary' : 'bg-slate-50 border-slate-200'
-                    ]">
-                      <i v-if="temPermissao(p.chave)" class="pi pi-check text-[8px] text-white font-black"></i>
+                  <div class="permissoes-page__category-header">
+                    <span class="permissoes-page__category-eyebrow">Categoria</span>
+                    <div class="permissoes-page__category-heading-row">
+                      <h2 class="permissoes-page__category-title">{{ categoria.label }}</h2>
+                      <span class="permissoes-page__category-count">{{ categoria.modules.length }} módulos</span>
                     </div>
                   </div>
-                  
-                  <div class="flex flex-col min-w-0">
-                    <span :class="['text-[10px] font-black uppercase tracking-tight truncate transition-colors', temPermissao(p.chave) ? 'text-brand-primary' : 'text-slate-600']">
-                      {{ p.nome }}
-                    </span>
-                    <span class="text-[8px] font-bold text-slate-300 uppercase tracking-tighter">ID: {{ p.chave }}</span>
+
+                  <i
+                    :class="[
+                      'pi pi-chevron-down permissoes-page__category-chevron',
+                      isCategoriaExpandida(categoria.key) ? 'permissoes-page__category-chevron--open' : '',
+                    ]"
+                  ></i>
+                </button>
+
+                <div v-show="isCategoriaExpandida(categoria.key)" class="permissoes-page__category-body">
+                <section v-for="modulo in categoria.modules" :key="modulo.key" class="permissoes-page__module">
+                  <div class="permissoes-page__module-header">
+                    <div>
+                      <span class="permissoes-page__module-eyebrow">Módulo</span>
+                      <h3 class="permissoes-page__module-title">{{ modulo.label }}</h3>
+                    </div>
+
+                    <div class="permissoes-page__module-actions">
+                      <button type="button" @click="confirmarMarcarTudoModulo(modulo.key, true)">Marcar todos</button>
+                      <button type="button" @click="confirmarMarcarTudoModulo(modulo.key, false)">Limpar</button>
+                    </div>
                   </div>
-                </label>
-              </div>
+
+                  <div class="permissoes-page__permission-grid">
+                    <label
+                      v-for="p in modulo.perms"
+                      :key="p.chave"
+                      :class="[
+                        'permissoes-page__permission-card',
+                        temPermissao(p.chave) ? 'permissoes-page__permission-card--active' : '',
+                      ]"
+                    >
+                      <div class="permissoes-page__permission-check">
+                        <input
+                          type="checkbox"
+                          class="permissoes-page__permission-input"
+                          :checked="temPermissao(p.chave)"
+                          @change="togglePermissao(p.chave)"
+                        />
+                        <span class="permissoes-page__permission-box">
+                          <i v-if="temPermissao(p.chave)" class="pi pi-check"></i>
+                        </span>
+                      </div>
+
+                      <div class="permissoes-page__permission-copy">
+                        <span class="permissoes-page__permission-name">{{ p.nome }}</span>
+                        <span class="permissoes-page__permission-key">{{ p.chave }}</span>
+                      </div>
+                    </label>
+                  </div>
+                </section>
+                </div>
+              </section>
             </div>
-          </div>
-        </template>
-      </main>
+          </template>
+        </main>
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <style scoped>
-.custom-scroll::-webkit-scrollbar { width: 3px; }
-.custom-scroll::-webkit-scrollbar-track { background: transparent; }
-.custom-scroll::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-.custom-scroll::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+.permissoes-page {
+  min-height: 100%;
+  background: var(--ds-color-surface);
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
 
-.fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
+.permissoes-page__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.permissoes-page__selection-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.3rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid rgba(214, 224, 234, 0.82);
+  border-radius: 999px;
+  background: rgba(245, 248, 251, 0.9);
+  color: var(--ds-color-primary);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.permissoes-page__selection-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.permissoes-page__layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+  gap: 0;
+  align-items: stretch;
+  border: 1px solid rgba(214, 224, 234, 0.68);
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.permissoes-page__sidebar,
+.permissoes-page__main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.permissoes-page__sidebar {
+  overflow: hidden;
+  border-right: 1px solid rgba(214, 224, 234, 0.68);
+}
+
+.permissoes-page__sidebar-search {
+  padding: 1rem 1rem 0.85rem;
+  border-bottom: 1px solid rgba(214, 224, 234, 0.6);
+}
+
+.permissoes-page__sidebar-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.6rem 0;
+}
+
+.permissoes-page__group + .permissoes-page__group {
+  margin-top: 1rem;
+}
+
+.permissoes-page__group-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0 0.3rem 0.55rem;
+  color: var(--ds-color-text-faint);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.permissoes-page__group-marker {
+  width: 0.22rem;
+  height: 0.95rem;
+  border-radius: 999px;
+  background: rgba(44, 111, 163, 0.65);
+}
+
+.permissoes-page__user-card {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border: 0;
+  border-radius: 0;
+  border-left: 2px solid transparent;
+  background: transparent;
+  text-align: left;
+  transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+}
+
+.permissoes-page__user-card:hover {
+  background: rgba(248, 250, 252, 0.45);
+}
+
+.permissoes-page__user-card--active {
+  border-left-color: var(--ds-color-primary);
+  background: rgba(44, 111, 163, 0.04);
+}
+
+.permissoes-page__user-card + .permissoes-page__user-card {
+  margin-top: 0;
+}
+
+.permissoes-page__user-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.permissoes-page__user-initials,
+.permissoes-page__summary-initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.8rem;
+  border: 1px solid rgba(214, 224, 234, 0.78);
+  background: rgba(245, 248, 251, 0.9);
+  color: var(--ds-color-text-faint);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+}
+
+.permissoes-page__user-copy,
+.permissoes-page__summary-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.permissoes-page__user-name,
+.permissoes-page__summary-title {
+  color: var(--ds-color-text);
+  font-size: 0.9rem;
+  font-weight: 540;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.permissoes-page__user-meta,
+.permissoes-page__summary-subtitle,
+.permissoes-page__summary-count,
+.permissoes-page__permission-key {
+  color: var(--ds-color-text-faint);
+  font-size: 0.72rem;
+  font-weight: 430;
+  line-height: 1.45;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.permissoes-page__user-status {
+  margin-top: 0.3rem;
+}
+
+.permissoes-page__main {
+  overflow: hidden;
+}
+
+.permissoes-page__empty-state,
+.permissoes-page__loading {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.permissoes-page__empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 1.2rem;
+  border: 1px solid rgba(214, 224, 234, 0.78);
+  background: rgba(245, 248, 251, 0.9);
+  color: var(--ds-color-text-faint);
+  font-size: 1.15rem;
+}
+
+.permissoes-page__empty-title {
+  color: var(--ds-color-text);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.permissoes-page__empty-text,
+.permissoes-page__notice {
+  color: var(--ds-color-text-faint);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.permissoes-page__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.15rem 1.25rem;
+  border-bottom: 1px solid rgba(214, 224, 234, 0.6);
+  background: transparent;
+}
+
+.permissoes-page__summary-identity,
+.permissoes-page__summary-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.permissoes-page__summary-meta {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.permissoes-page__notice {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid rgba(214, 224, 234, 0.6);
+  background: transparent;
+}
+
+.permissoes-page__notice i {
+  color: var(--ds-color-primary);
+}
+
+.permissoes-page__modules {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 1.25rem 1.35rem;
+}
+
+.permissoes-page__category {
+  border-bottom: 1px solid rgba(214, 224, 234, 0.68);
+}
+
+.permissoes-page__category-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.95rem 0;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.permissoes-page__category-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.permissoes-page__category-heading-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.permissoes-page__category-eyebrow {
+  color: var(--ds-color-text-faint);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.permissoes-page__category-title {
+  color: var(--ds-color-text);
+  font-size: 1rem;
+  font-weight: 620;
+  line-height: 1.3;
+}
+
+.permissoes-page__category-count {
+  color: var(--ds-color-text-faint);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.permissoes-page__category-chevron {
+  color: var(--ds-color-text-faint);
+  font-size: 0.8rem;
+  transition: transform 0.18s ease, color 0.18s ease;
+}
+
+.permissoes-page__category-chevron--open {
+  transform: rotate(180deg);
+  color: var(--ds-color-primary);
+}
+
+.permissoes-page__category-body {
+  padding-bottom: 0.15rem;
+}
+
+.permissoes-page__module + .permissoes-page__module {
+  margin-top: 0;
+}
+
+.permissoes-page__module {
+  padding: 1.15rem 0;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid rgba(214, 224, 234, 0.68);
+  background: transparent;
+}
+
+.permissoes-page__module-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem;
+  margin-bottom: 0.9rem;
+}
+
+.permissoes-page__module-eyebrow {
+  display: inline-block;
+  margin-bottom: 0.2rem;
+  color: var(--ds-color-text-faint);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.permissoes-page__module-title {
+  color: var(--ds-color-text);
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.permissoes-page__module-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.permissoes-page__module-actions button {
+  color: var(--ds-color-text-faint);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  transition: color 0.18s ease;
+}
+
+.permissoes-page__module-actions button:hover {
+  color: var(--ds-color-primary);
+}
+
+.permissoes-page__permission-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.permissoes-page__permission-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.85rem 0.25rem;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid rgba(214, 224, 234, 0.62);
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+.permissoes-page__permission-card:hover {
+  background: rgba(248, 250, 252, 0.45);
+}
+
+.permissoes-page__permission-card--active {
+  background: rgba(44, 111, 163, 0.05);
+}
+
+.permissoes-page__permission-check {
+  position: relative;
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.08rem;
+}
+
+.permissoes-page__permission-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.permissoes-page__permission-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  border: 1px solid rgba(188, 203, 221, 0.9);
+  border-radius: 0.3rem;
+  background: rgba(248, 250, 252, 0.95);
+  color: white;
+  font-size: 0.55rem;
+}
+
+.permissoes-page__permission-card--active .permissoes-page__permission-box {
+  border-color: var(--ds-color-primary);
+  background: var(--ds-color-primary);
+}
+
+.permissoes-page__permission-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.permissoes-page__permission-name {
+  color: var(--ds-color-text);
+  font-size: 0.8rem;
+  font-weight: 550;
+  line-height: 1.35;
+}
+
+.permissoes-page__permission-card--active .permissoes-page__permission-name {
+  color: var(--ds-color-primary);
+}
+
+.permissoes-page :deep(.ds-status-pill) {
+  max-width: 100%;
+  justify-content: center;
+  padding-inline: 0.55rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.05em;
+}
+
+.custom-scroll::-webkit-scrollbar {
+  width: 3px;
+}
+
+.custom-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+@media (max-width: 1180px) {
+  .permissoes-page__permission-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 920px) {
+  .permissoes-page__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .permissoes-page__sidebar {
+    max-height: 24rem;
+    border-right: 0;
+    border-bottom: 1px solid rgba(214, 224, 234, 0.68);
+  }
+
+  .permissoes-page__summary,
+  .permissoes-page__module-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .permissoes-page__summary-meta,
+  .permissoes-page__header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 680px) {
+  .permissoes-page__permission-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .permissoes-page__modules,
+  .permissoes-page__summary,
+  .permissoes-page__notice,
+  .permissoes-page__sidebar-search {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .permissoes-page__module {
+    padding: 0.9rem;
+  }
+}
 </style>
 
 <script setup>
@@ -192,6 +744,7 @@ import { UsuariosService, PermissoesService } from '@/services/index'
 import { useAuth } from '@/services/useauth'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
+import { NAV_SCHEMA } from '@/services/navigation'
 
 definePage({ meta: { perm: 'permissoes.ver' } })
 
@@ -204,6 +757,7 @@ const usuarios = ref([])
 const filtroUsuarios = ref('')
 const usuarioSelecionado = ref(null)
 const permissoesAtivas = ref([])
+const categoriasExpandidas = ref([])
 const loadingSalvar = ref(false)
 const loadingDados = ref(false)
 const loadingPermissoes = ref(false)
@@ -236,6 +790,60 @@ const ROTULO_MODULO = {
   fechamento_fornecedor: 'Fechamento Fornecedor',
 }
 
+const SECTION_LABELS = {
+  comercial: '1 Comercial',
+  comercial_2: '2 Comercial',
+  producao: 'Produção',
+  financeiro: 'Financeiro',
+  cadastros: 'Cadastros',
+  configuracoes: 'Configurações',
+  relatorios: 'Relatórios',
+  sistema: 'Sistema',
+}
+
+const SECTION_ORDER = [
+  'comercial',
+  'comercial_2',
+  'producao',
+  'financeiro',
+  'cadastros',
+  'configuracoes',
+  'relatorios',
+  'sistema',
+]
+
+const MODULO_PARA_CATEGORIA = (() => {
+  const mapa = {}
+
+  const registrarPermissao = (perm, sectionKey) => {
+    if (!perm || typeof perm !== 'string' || perm === 'ADMIN') return
+    const modulo = perm.includes('.') ? perm.split('.')[0] : perm
+    if (modulo && !mapa[modulo]) mapa[modulo] = sectionKey
+  }
+
+  const registrarItem = (item, sectionKey) => {
+    if (!item || item.divider || item.heading) return
+    if (Array.isArray(item.perm)) {
+      item.perm.forEach((perm) => registrarPermissao(perm, sectionKey))
+    } else {
+      registrarPermissao(item.perm, sectionKey)
+    }
+    if (Array.isArray(item.children)) {
+      item.children.forEach((child) => registrarItem(child, sectionKey))
+    }
+  }
+
+  Object.entries(NAV_SCHEMA).forEach(([sectionKey, items]) => {
+    ;(items || []).forEach((item) => registrarItem(item, sectionKey))
+  })
+
+  mapa.dashboard = 'sistema'
+  mapa.index = 'sistema'
+  mapa.geral = 'sistema'
+
+  return mapa
+})()
+
 // Chave -> ID
 const mapaChaveParaId = computed(() => {
   const acc = {}
@@ -263,6 +871,35 @@ const MAPA_PERMISSOES = computed(() => {
     grupos[m].sort((a, b) => String(a.chave).localeCompare(String(b.chave)))
   }
   return grupos
+})
+
+const permissoesPorCategoria = computed(() => {
+  const categorias = {}
+
+  for (const [modulo, perms] of Object.entries(MAPA_PERMISSOES.value || {})) {
+    const categoryKey = MODULO_PARA_CATEGORIA[modulo] || 'sistema'
+    if (!categorias[categoryKey]) {
+      categorias[categoryKey] = {
+        key: categoryKey,
+        label: SECTION_LABELS[categoryKey] || categoryKey,
+        modules: [],
+      }
+    }
+
+    categorias[categoryKey].modules.push({
+      key: modulo,
+      label: ROTULO_MODULO[modulo] || modulo,
+      perms,
+    })
+  }
+
+  Object.values(categorias).forEach((categoria) => {
+    categoria.modules.sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'))
+  })
+
+  return Object.values(categorias).sort((a, b) => {
+    return SECTION_ORDER.indexOf(a.key) - SECTION_ORDER.indexOf(b.key)
+  })
 })
 
 // Nome do setor do usuário (funcionario.setor ou usuário)
@@ -295,6 +932,45 @@ const usuariosPorSetor = computed(() => {
   })
   return setores.map((setor) => ({ setor, usuarios: porSetor[setor] }))
 })
+
+function userInitials(nome) {
+  const partes = String(nome || '').trim().split(/\s+/).filter(Boolean)
+  const iniciais = `${partes[0]?.[0] || ''}${partes[1]?.[0] || partes[0]?.[1] || ''}`
+  return String(iniciais || '?').toUpperCase()
+}
+
+function userStatusClass(status) {
+  const currentStatus = String(status || '').toUpperCase()
+  if (currentStatus === 'ATIVO') return 'ds-status-pill--success'
+  if (currentStatus === 'PENDENTE') return 'ds-status-pill--warning'
+  return 'ds-status-pill--danger'
+}
+
+function userStatusLabel(status) {
+  const currentStatus = String(status || '').toUpperCase()
+  if (currentStatus === 'ATIVO') return 'Ativo'
+  if (currentStatus === 'PENDENTE') return 'Pendente'
+  return 'Inativo'
+}
+
+function isCategoriaExpandida(categoryKey) {
+  return categoriasExpandidas.value.includes(categoryKey)
+}
+
+function expandirCategoriaDoModulo(modulo) {
+  const categoryKey = MODULO_PARA_CATEGORIA[String(modulo || '')] || 'sistema'
+  if (isCategoriaExpandida(categoryKey) && categoriasExpandidas.value.length === 1) return
+  categoriasExpandidas.value = [categoryKey]
+}
+
+function toggleCategoria(categoryKey) {
+  if (isCategoriaExpandida(categoryKey)) {
+    categoriasExpandidas.value = categoriasExpandidas.value.filter((key) => key !== categoryKey)
+    return
+  }
+
+  categoriasExpandidas.value = [categoryKey]
+}
 
 // Funções de API
 const carregarCatalogo = async () => {
@@ -344,12 +1020,17 @@ const selecionarUsuario = async (u) => {
 const temPermissao = (chave) => permissoesAtivas.value.includes(chave)
 
 const togglePermissao = (chave) => {
+  const modulo = String(chave || '').includes('.') ? String(chave).split('.')[0] : String(chave || 'geral')
+  expandirCategoriaDoModulo(modulo)
+
   const idx = permissoesAtivas.value.indexOf(chave)
   if (idx >= 0) permissoesAtivas.value.splice(idx, 1)
   else permissoesAtivas.value.push(chave)
 }
 
 const marcarTudoModulo = (modulo, marcar) => {
+  expandirCategoriaDoModulo(modulo)
+
   const perms = MAPA_PERMISSOES.value?.[modulo] || []
   const chavesModulo = perms.map(p => p.chave)
   const set = new Set(permissoesAtivas.value)

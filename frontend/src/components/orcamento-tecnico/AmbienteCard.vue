@@ -38,7 +38,7 @@
       </button>
 
       <!-- Subtotal do ambiente -->
-      <span class="text-xs tabular-nums font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+      <span class="text-xs tabular-nums font-bold text-[var(--ds-color-success-700)] bg-[var(--ds-color-success-50)] border border-[var(--ds-color-success-200)] px-2 py-0.5 rounded-full">
         {{ formatCurrency(subtotal.preco) }}
       </span>
 
@@ -53,7 +53,7 @@
       <!-- Remover ambiente -->
       <button
         type="button"
-        class="text-rose-400 hover:text-rose-600 p-1 rounded text-xs"
+        class="text-[var(--ds-color-danger-400)] hover:text-[var(--ds-color-danger-600)] p-1 rounded text-xs"
         title="Excluir ambiente"
         @click.stop="pedirRemocao"
       >
@@ -67,9 +67,9 @@
       <!-- Medidas Vendedor | Técnico -->
       <div class="grid gap-4 md:grid-cols-2">
         <!-- Vendedor -->
-        <div class="rounded-lg border border-slate-200 bg-white p-3 space-y-2">
-          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
-            <i class="pi pi-user text-slate-400" />
+        <div class="rounded-lg border border-border-ui bg-white p-3 space-y-2">
+          <p class="text-[11px] font-bold uppercase tracking-wider text-text-soft flex items-center gap-1">
+            <i class="pi pi-user text-text-faint" />
             Medidas do Vendedor (pré-medição)
           </p>
           <div class="grid grid-cols-3 gap-2">
@@ -161,7 +161,7 @@
             <strong class="tabular-nums">
               {{ areaTecnica.toFixed(3) }} m²
             </strong>
-            <span v-if="diferencaArea !== 0" class="ml-2" :class="Math.abs(diferencaArea) > 0.5 ? 'text-amber-600' : 'text-emerald-600'">
+            <span v-if="diferencaArea !== 0" class="ml-2" :class="Math.abs(diferencaArea) > 0.5 ? 'text-[var(--ds-color-warning-600)]' : 'text-[var(--ds-color-success-600)]'">
               ({{ diferencaArea > 0 ? '+' : '' }}{{ diferencaArea.toFixed(3) }} m² vs. vendedor)
             </span>
           </p>
@@ -236,7 +236,7 @@
             <span class="text-text-soft">Venda {{ formatCurrency(ambiente.corSelecionada.valor_m2) }}/m²</span>
             <button
               type="button"
-              class="ml-auto text-text-soft hover:text-rose-500"
+              class="ml-auto text-text-soft hover:text-[var(--ds-color-danger-500)]"
               @click="removerCorSelecionada"
             >
               <i class="pi pi-times text-xs" />
@@ -262,18 +262,18 @@
           </div>
           <div>
             <p class="text-text-soft">m² de chapa</p>
-            <p class="font-bold text-emerald-600">{{ (areaVendedor * store.FATORES_CONSUMO_MODULO[ambiente.tipoModulo]).toFixed(3) }} m²</p>
+            <p class="font-bold text-[var(--ds-color-success-600)]">{{ (areaVendedor * store.FATORES_CONSUMO_MODULO[ambiente.tipoModulo]).toFixed(3) }} m²</p>
           </div>
           <div>
             <p class="text-text-soft">Preço de venda</p>
-            <p class="font-bold text-emerald-700">{{ formatCurrency((areaVendedor * store.FATORES_CONSUMO_MODULO[ambiente.tipoModulo]) * ambiente.corSelecionada.valor_m2) }}</p>
+            <p class="font-bold text-[var(--ds-color-success-700)]">{{ formatCurrency((areaVendedor * store.FATORES_CONSUMO_MODULO[ambiente.tipoModulo]) * ambiente.corSelecionada.valor_m2) }}</p>
           </div>
         </div>
       </div>
 
       <!-- Importação de arquivo Promob -->
       <div class="rounded-lg border border-dashed border-border-ui bg-white p-3">
-        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
+        <p class="text-[11px] font-bold uppercase tracking-wider text-text-soft mb-2">
           <i class="pi pi-upload mr-1" />
           Importar arquivo Promob (CSV/XML) — {{ ambiente.nome }}
         </p>
@@ -287,7 +287,7 @@
           />
           <button
             type="button"
-            class="inline-flex items-center gap-1.5 rounded-xl border border-border-ui bg-bg-page px-3 py-1.5 text-sm font-medium text-text-main hover:bg-slate-100 transition"
+            class="inline-flex items-center gap-1.5 rounded-xl border border-border-ui bg-bg-page px-3 py-1.5 text-sm font-medium text-text-main hover:bg-bg-page transition"
             @click="fileInput?.click()"
           >
             <i class="pi pi-folder-open text-xs" />
@@ -308,7 +308,7 @@
 
       <!-- Materiais adicionais / acessórios -->
       <div class="rounded-lg border border-border-ui bg-white p-3 space-y-3">
-        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+        <p class="text-[11px] font-bold uppercase tracking-wider text-text-soft">
           <i class="pi pi-sliders-h mr-1" />
           MATERIAIS ADICIONAIS / ACESSORIOS
         </p>
@@ -334,7 +334,7 @@
                 v-for="p in produtosFiltrados"
                 :key="p.id"
                 type="button"
-                class="w-full text-left px-3 py-2 hover:bg-slate-50 border-b border-border-ui/60 last:border-b-0"
+                class="w-full text-left px-3 py-2 hover:bg-bg-page border-b border-border-ui/60 last:border-b-0"
                 @click="selecionarProdutoAcessorio(p)"
               >
                 <p class="text-sm font-medium text-text-main">{{ p.nome_produto }}</p>
@@ -374,8 +374,8 @@
 
       <!-- Tabela de itens do ambiente -->
       <div class="rounded-lg border border-border-ui overflow-hidden">
-        <div class="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-border-ui">
-          <p class="text-xs font-bold uppercase tracking-wider text-slate-500">
+        <div class="flex items-center justify-between px-3 py-2 bg-bg-page border-b border-border-ui">
+          <p class="text-xs font-bold uppercase tracking-wider text-text-soft">
             Itens do ambiente
           </p>
           <button
@@ -389,7 +389,7 @@
         </div>
 
         <!-- Formulário de item manual (inline) -->
-        <div v-if="mostrarFormManual" class="p-3 border-b border-border-ui bg-emerald-50 grid gap-2 sm:grid-cols-4">
+        <div v-if="mostrarFormManual" class="p-3 border-b border-border-ui bg-[var(--ds-color-success-50)] grid gap-2 sm:grid-cols-4">
           <input
             v-model="novoItem.descricao"
             type="text"
@@ -437,7 +437,7 @@
             </button>
             <button
               type="button"
-              class="text-text-soft hover:text-rose-500 text-xs"
+              class="text-text-soft hover:text-[var(--ds-color-danger-500)] text-xs"
               @click="cancelarFormManual"
             >
               <i class="pi pi-times" />
@@ -447,15 +447,15 @@
 
         <!-- Lista de itens -->
         <table v-if="ambiente.itens.length" class="w-full text-sm">
-          <thead class="bg-slate-50 border-b border-border-ui text-xs">
+          <thead class="bg-bg-page border-b border-border-ui text-xs">
             <tr>
-              <th class="px-3 py-2 text-left font-semibold text-slate-500">Descrição</th>
-              <th class="px-3 py-2 text-left font-semibold text-slate-500">Material</th>
-              <th class="px-2 py-2 text-right font-semibold text-slate-500">Qtd</th>
-              <th class="px-2 py-2 text-right font-semibold text-slate-500">Área m²</th>
-              <th class="px-3 py-2 text-right font-semibold text-slate-500">Custo</th>
-              <th class="px-3 py-2 text-right font-semibold text-slate-500">Preço</th>
-              <th class="px-3 py-2 text-center font-semibold text-slate-500 w-8">Src</th>
+              <th class="px-3 py-2 text-left font-semibold text-text-soft">Descrição</th>
+              <th class="px-3 py-2 text-left font-semibold text-text-soft">Material</th>
+              <th class="px-2 py-2 text-right font-semibold text-text-soft">Qtd</th>
+              <th class="px-2 py-2 text-right font-semibold text-text-soft">Área m²</th>
+              <th class="px-3 py-2 text-right font-semibold text-text-soft">Custo</th>
+              <th class="px-3 py-2 text-right font-semibold text-text-soft">Preço</th>
+              <th class="px-3 py-2 text-center font-semibold text-text-soft w-8">Src</th>
               <th class="w-8" />
             </tr>
           </thead>
@@ -463,7 +463,7 @@
             <tr
               v-for="item in ambiente.itens"
               :key="item.id"
-              class="hover:bg-slate-50 transition-colors"
+              class="hover:bg-bg-page transition-colors"
             >
               <td class="px-3 py-2 text-text-main font-medium max-w-[200px] truncate">{{ item.descricao }}</td>
               <td class="px-3 py-2 text-text-soft text-xs">{{ item.material || '—' }}</td>
@@ -471,16 +471,16 @@
               <td class="px-2 py-2 text-right tabular-nums text-xs text-text-soft">
                 {{ item.area_m2 > 0 ? item.area_m2.toFixed(3) : '—' }}
               </td>
-              <td class="px-3 py-2 text-right tabular-nums text-xs text-slate-600">
+              <td class="px-3 py-2 text-right tabular-nums text-xs text-text-soft">
                 {{ formatCurrency(item.custo_unitario * (item.area_m2 > 0 ? item.area_m2 : 1) * item.quantidade) }}
               </td>
-              <td class="px-3 py-2 text-right tabular-nums font-semibold text-emerald-700">
+              <td class="px-3 py-2 text-right tabular-nums font-semibold text-[var(--ds-color-success-700)]">
                 {{ formatCurrency(item.preco_unitario * (item.area_m2 > 0 ? item.area_m2 : 1) * item.quantidade) }}
               </td>
               <td class="px-3 py-2 text-center">
                 <span
                   class="inline-block text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full"
-                  :class="item.origem === 'promob' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'"
+                  :class="item.origem === 'promob' ? 'bg-blue-100 text-blue-700' : 'bg-[var(--ds-color-warning-100)] text-[var(--ds-color-warning-700)]'"
                 >
                   {{ item.origem === 'promob' ? 'CSV' : 'Man.' }}
                 </span>
@@ -488,7 +488,7 @@
               <td class="px-2 py-2 text-center">
                 <button
                   type="button"
-                  class="text-rose-300 hover:text-rose-500 text-xs"
+                  class="text-[var(--ds-color-danger-300)] hover:text-[var(--ds-color-danger-500)] text-xs"
                   title="Remover item"
                   @click="store.removerItem(ambiente.id, item.id)"
                 >
@@ -497,13 +497,13 @@
               </td>
             </tr>
           </tbody>
-          <tfoot class="border-t-2 border-border-ui bg-slate-50">
+          <tfoot class="border-t-2 border-border-ui bg-bg-page">
             <tr>
               <td colspan="4" class="px-3 py-2 text-xs text-text-soft font-semibold">Subtotal do ambiente</td>
-              <td class="px-3 py-2 text-right tabular-nums font-bold text-slate-700 text-xs">
+              <td class="px-3 py-2 text-right tabular-nums font-bold text-text-main text-xs">
                 {{ formatCurrency(subtotal.custo) }}
               </td>
-              <td class="px-3 py-2 text-right tabular-nums font-bold text-emerald-700">
+              <td class="px-3 py-2 text-right tabular-nums font-bold text-[var(--ds-color-success-700)]">
                 {{ formatCurrency(subtotal.preco) }}
               </td>
               <td colspan="2" />

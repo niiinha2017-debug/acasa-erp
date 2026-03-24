@@ -1,8 +1,6 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
+  <PageShell :padded="false">
+    <section class="plano-corte-itens-list ds-page-context ds-page-context--list animate-page-in">
       <PageHeader
         title="Produtos Serviço de Corte"
         subtitle="Cadastro de itens por fornecedor"
@@ -10,51 +8,42 @@
         :show-back="false"
       >
         <template #actions>
-          <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end [&>*]:min-h-10 [&>*]:sm:h-10">
-            <div class="w-full sm:w-64 order-1 sm:order-0 flex items-center">
+          <div class="plano-corte-itens-list__actions ds-page-context__actions">
+            <div class="plano-corte-itens-list__search ds-page-context__search">
               <SearchInput
                 v-model="busca"
                 mode="search"
-                placeholder="Buscar nome, marca ou cor..."
+                placeholder="Buscar nome, marca, cor ou medida..."
               />
             </div>
-            <!-- Cadastrar item (abre mesma tela de cadastro de produtos) -->
+            <Button
+              variant="ghost"
+              size="sm"
+              :loading="loading"
+              @click="carregarItens"
+            >
+              Atualizar
+            </Button>
             <Button
               v-if="can('plano_corte.criar')"
               variant="primary"
-              class="order-4 h-10 min-h-10 px-4"
               @click="router.push('/plano-corte/itens/novo')"
             >
-              <i class="pi pi-plus mr-2"></i>
-              Cadastrar item
+              <i class="pi pi-plus"></i>
+              Cadastrar Item
             </Button>
           </div>
         </template>
       </PageHeader>
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui">
-        <div class="flex items-center justify-between gap-4 mb-4">
-          <span class="text-xs font-bold text-text-muted uppercase tracking-wider">
-            Itens cadastrados
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            :loading="loading"
-            @click="carregarItens"
-          >
-            Atualizar
-          </Button>
-        </div>
-
-        <div class="native-table-flush overflow-visible">
+      <div class="plano-corte-itens-list__content ds-page-context__content">
         <Table
           :columns="columns"
           :rows="rowsFiltradas"
           :loading="loading"
           empty-text="Nenhum item encontrado."
           :boxed="false"
-          :flush="true"
+          :flush="false"
         >
           <template #cell-nome_produto="{ row }">
             <div class="flex items-center gap-3 py-1">
@@ -102,10 +91,9 @@
             </div>
           </template>
         </Table>
-        </div>
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>

@@ -15,6 +15,7 @@ export { FUNCIONARIOS_LOCAL_SETOR_CARGO } from './funcionarios'
 export { CONTAS_BANCARIAS, CARTOES_CREDITO, TIPOS_CONTAS_BANCARIAS } from './banco'
 export { INDICACAO_ORIGENS } from './indicacao'
 export { VENDA_FECHAMENTO_REGRAS } from './venda-fechamento'
+export { buildTwinFlowMap, getTwinFlowProgressLabel, normalizeTwinFlowItem } from './twin-flow'
 export {
   getCategoriaAgendaFabricaPorSubetapa,
   getCategoriaProcessoLabel,

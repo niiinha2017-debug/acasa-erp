@@ -1,19 +1,16 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
+  <PageShell :padded="false">
+    <section class="rh-hub ds-page-context animate-page-in">
       <PageHeader
         title="RH"
         subtitle="Tudo de ponto e folha em um lugar. Escolha abaixo o que você quer fazer."
         icon="pi pi-users"
-        :show-back="false"
       />
 
-      <div class="px-4 md:px-6 pb-6 pt-4 border-t border-border-ui space-y-8">
+      <div class="rh-hub__body ds-page-context__content space-y-8 pb-6">
         <!-- Ponto: espelho e app -->
         <section v-if="atalhosPonto.length">
-          <h2 class="text-[10px] font-black uppercase tracking-wider text-text-soft mb-3 flex items-center gap-2">
+          <h2 class="text-[10px] font-black uppercase tracking-wider text-[var(--ds-color-text-faint)] mb-3 flex items-center gap-2">
             <i class="pi pi-stopwatch"></i>
             Ponto (espelho e app)
           </h2>
@@ -22,18 +19,18 @@
               v-for="item in atalhosPonto"
               :key="item.to"
               type="button"
-              class="w-full text-left block p-5 rounded-xl border border-border-ui bg-bg-page hover:border-brand-primary/50 hover:bg-slate-50 transition-colors cursor-pointer"
+              class="w-full text-left ds-card ds-card--default ds-card--hoverable p-5 cursor-pointer"
               @click="irPara(item.to)"
             >
               <div class="flex items-start gap-4">
-                <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl bg-brand-primary/10 text-brand-primary shrink-0">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 bg-[color-mix(in_srgb,var(--ds-color-primary)_14%,transparent)] text-[var(--ds-color-primary)]">
                   <i :class="item.icon" />
                 </div>
                 <div class="min-w-0 flex-1">
-                  <h3 class="font-bold text-text-main uppercase tracking-tight">{{ item.label }}</h3>
-                  <p class="text-xs text-text-muted mt-1">{{ item.desc }}</p>
+                  <h3 class="font-bold text-[var(--ds-color-text)] uppercase tracking-tight">{{ item.label }}</h3>
+                  <p class="text-xs text-[var(--ds-color-text-soft)] mt-1">{{ item.desc }}</p>
                 </div>
-                <i class="pi pi-chevron-right text-text-muted text-sm shrink-0" />
+                <i class="pi pi-chevron-right text-[var(--ds-color-text-faint)] text-sm shrink-0" />
               </div>
             </button>
           </div>
@@ -41,7 +38,7 @@
 
         <!-- Configuração: pessoas e feriados -->
         <section v-if="atalhosConfig.length">
-          <h2 class="text-[10px] font-black uppercase tracking-wider text-text-soft mb-3 flex items-center gap-2">
+          <h2 class="text-[10px] font-black uppercase tracking-wider text-[var(--ds-color-text-faint)] mb-3 flex items-center gap-2">
             <i class="pi pi-cog"></i>
             Configuração (pessoas e feriados)
           </h2>
@@ -50,26 +47,26 @@
               v-for="item in atalhosConfig"
               :key="item.to"
               type="button"
-              class="w-full text-left block p-5 rounded-xl border border-border-ui bg-bg-page hover:border-brand-primary/50 hover:bg-slate-50 transition-colors cursor-pointer"
+              class="w-full text-left ds-card ds-card--default ds-card--hoverable p-5 cursor-pointer"
               @click="irPara(item.to)"
             >
               <div class="flex items-start gap-4">
-                <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl bg-brand-primary/10 text-brand-primary shrink-0">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 bg-[color-mix(in_srgb,var(--ds-color-primary)_14%,transparent)] text-[var(--ds-color-primary)]">
                   <i :class="item.icon" />
                 </div>
                 <div class="min-w-0 flex-1">
-                  <h3 class="font-bold text-text-main uppercase tracking-tight">{{ item.label }}</h3>
-                  <p class="text-xs text-text-muted mt-1">{{ item.desc }}</p>
+                  <h3 class="font-bold text-[var(--ds-color-text)] uppercase tracking-tight">{{ item.label }}</h3>
+                  <p class="text-xs text-[var(--ds-color-text-soft)] mt-1">{{ item.desc }}</p>
                 </div>
-                <i class="pi pi-chevron-right text-text-muted text-sm shrink-0" />
+                <i class="pi pi-chevron-right text-[var(--ds-color-text-faint)] text-sm shrink-0" />
               </div>
             </button>
           </div>
         </section>
 
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
@@ -77,6 +74,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { can } from '@/services/permissions'
 import PageHeader from '@/components/ui/PageHeader.vue'
+import PageShell from '@/components/ui/PageShell.vue'
 
 definePage({ meta: { perm: 'ponto_relatorio.ver' } })
 

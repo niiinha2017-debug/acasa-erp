@@ -1,169 +1,162 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
-      <div class="flex flex-row flex-nowrap items-center gap-4 px-4 md:px-6 py-4 border-b border-border-ui">
-        <h1 class="text-xl font-semibold text-text-main shrink-0 flex items-center gap-2">
-          <i class="pi pi-list-check text-text-muted" />
-          Fluxo de clientes
-        </h1>
-        <div class="flex flex-1 flex-nowrap items-center justify-end gap-3 min-w-0 ml-auto">
-          <div class="min-w-0 w-48 sm:w-56 flex-shrink-0">
-            <SearchInput
-              v-model="filtro"
-              placeholder="Nome, CPF, endereço, telefone, e-mail..."
-            />
-          </div>
-          <div class="flex items-center gap-1.5 text-slate-400 dark:text-slate-500 shrink-0" title="Data de">
-            <i class="pi pi-calendar text-xs" />
-            <input
-              v-model="filtroDataInicio"
-              type="date"
-              class="h-10 w-[130px] rounded-lg border border-border-ui bg-bg-page pl-2 pr-2 text-sm font-medium text-text-main"
-            />
-          </div>
-          <div class="flex items-center gap-1.5 text-slate-400 dark:text-slate-500 shrink-0" title="Data até">
-            <i class="pi pi-calendar text-xs" />
-            <input
-              v-model="filtroDataFim"
-              type="date"
-              class="h-10 w-[130px] rounded-lg border border-border-ui bg-bg-page pl-2 pr-2 text-sm font-medium text-text-main"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui">
-        <!-- Lista de cards por cliente (uma linha/card por cliente) -->
-        <div v-if="loading" class="flex items-center justify-center py-12">
-          <i class="pi pi-spin pi-spinner text-2xl text-brand-primary" />
-        </div>
-
-        <div v-else class="flex flex-col gap-4">
-            <div
-              v-for="row in rowsPaginated"
-              :key="row.uniqueKey"
-              class="rounded-xl border border-border-ui bg-white dark:bg-slate-900/40 overflow-hidden transition-all duration-200"
-            >
-            <!-- Card Pai: cabeçalho fixo do cliente (Nome, Tel, Vendedor) -->
-            <div
-              class="flex flex-wrap items-center gap-3 md:gap-4 p-4 cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/[0.02]"
-              @click="toggleExpand(row.id)"
-            >
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-bold text-text-main truncate">
-                  {{ row.nome_exibicao }}
-                </p>
-                <p class="text-xs font-semibold text-text-muted truncate">
-                  {{ row.telefone_exibicao || 'Sem telefone' }}
-                </p>
-                <p v-if="row.vendedorCadastroExibicao || row.responsavelExibicao || row.origemExibicao" class="text-[10px] font-medium text-text-muted mt-0.5">
-                  <span v-if="row.vendedorCadastroExibicao || row.responsavelExibicao">Vendedor: {{ row.vendedorCadastroExibicao || row.responsavelExibicao }}</span><span v-if="(row.vendedorCadastroExibicao || row.responsavelExibicao) && row.origemExibicao"> · </span><span v-if="row.origemExibicao">Origem: {{ row.origemExibicao }}</span>
-                </p>
-              </div>
-              <button
-                type="button"
-                class="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-transform"
-                :class="{ 'rotate-180': expandedIds.has(row.id) }"
-                aria-label="Expandir blocos"
-              >
-                <i class="pi pi-chevron-down text-text-muted" />
-              </button>
+  <PageShell :padded="false">
+    <section class="fluxo-clientes ds-page-context ds-page-context--list animate-page-in">
+      <PageHeader
+        title="Fluxo de Clientes"
+        subtitle="Acompanhamento comercial e operacional por cliente e orçamento"
+        icon="pi pi-list-check"
+      >
+        <template #actions>
+          <div class="fluxo-clientes__actions ds-page-context__actions">
+            <div class="fluxo-clientes__search ds-page-context__search">
+              <SearchInput
+                v-model="filtro"
+                placeholder="Buscar cliente, documento, telefone, status..."
+              />
             </div>
 
-            <!-- Blocos filhos: card por orçamento/venda (dados por ID do orçamento) -->
-            <div
-              v-show="expandedIds.has(row.id)"
-              class="border-t border-border-ui bg-gray-50/50 dark:bg-slate-900/30 flex flex-col gap-4 p-4"
-            >
+            <div class="fluxo-clientes__filters">
+              <Input
+                v-model="filtroDataInicio"
+                type="date"
+                label="De"
+                :force-upper="false"
+                class="fluxo-clientes__date-field"
+              />
+              <Input
+                v-model="filtroDataFim"
+                type="date"
+                label="Até"
+                :force-upper="false"
+                class="fluxo-clientes__date-field"
+              />
+            </div>
+          </div>
+        </template>
+      </PageHeader>
+
+      <div class="fluxo-clientes__content ds-page-context__content">
+        <Table
+          :columns="columns"
+          :rows="rowsPaginated"
+          :loading="loading"
+          empty-text="Nenhum registro encontrado para os filtros."
+          :boxed="false"
+          :flush="false"
+          expandable
+          row-key="id"
+          :expanded="expandedRows"
+          :row-class="getFluxoRowClass"
+          @update:expanded="setExpandedRows"
+        >
+          <template #cell-cliente="{ row }">
+            <div class="fluxo-clientes__identity">
+              <div class="fluxo-clientes__initials">
+                {{ initialsFromName(row.nome_exibicao) }}
+              </div>
+              <div class="fluxo-clientes__identity-copy">
+                <span class="fluxo-clientes__primary">{{ row.nome_exibicao }}</span>
+                <span class="fluxo-clientes__secondary">
+                  {{ row.telefone_exibicao || 'Sem telefone' }}
+                </span>
+                <span v-if="row.vendedorCadastroExibicao || row.responsavelExibicao || row.origemExibicao" class="fluxo-clientes__secondary">
+                  <span v-if="row.vendedorCadastroExibicao || row.responsavelExibicao">Vendedor: {{ row.vendedorCadastroExibicao || row.responsavelExibicao }}</span>
+                  <span v-if="(row.vendedorCadastroExibicao || row.responsavelExibicao) && row.origemExibicao" class="fluxo-clientes__secondary-detail">{{ row.origemExibicao }}</span>
+                </span>
+              </div>
+            </div>
+          </template>
+
+          <template #cell-endereco="{ row }">
+            <div class="fluxo-clientes__stack">
+              <span class="fluxo-clientes__primary">{{ row.endereco_resumo }}</span>
+              <span class="fluxo-clientes__secondary">{{ [row.cidade, row.estado].filter(Boolean).join(' / ') || '-' }}</span>
+              <span v-if="row.email" class="fluxo-clientes__secondary">{{ row.email }}</span>
+            </div>
+          </template>
+
+          <template #cell-fluxo="{ row }">
+            <div class="fluxo-clientes__stack fluxo-clientes__stack--status">
+              <span class="ds-status-pill" :class="row.fluxo_comercial_class">
+                {{ row.fluxo_comercial || 'Cadastro' }}
+              </span>
+              <span class="fluxo-clientes__secondary">{{ row.etapas?.length || 0 }} etapa(s)</span>
+            </div>
+          </template>
+
+          <template #cell-prazo="{ row }">
+            <div class="fluxo-clientes__stack">
+              <span class="fluxo-clientes__primary">{{ getPrazoResumo(row) }}</span>
+              <span v-if="row.contadorTexto" :class="['fluxo-clientes__secondary', getPrazoTextClass(row.ehAtrasado)]">{{ row.contadorTexto }}</span>
+              <span v-else class="fluxo-clientes__secondary">{{ row.ultimaAtualizacao ? `Atualizado em ${row.ultimaAtualizacao}` : 'Sem prazo ativo' }}</span>
+            </div>
+          </template>
+
+          <template #cell-acoes="{ row }">
+            <div class="fluxo-clientes__actions-cell">
+              <Button size="sm" variant="primary" @click.stop="acompanharStatusCliente(row, row.etapas?.[0])">
+                Abrir
+              </Button>
+            </div>
+          </template>
+
+          <template #row-expand="{ row }">
+            <div class="fluxo-clientes__detail-shell border-t border-border-ui bg-gray-50/50 dark:bg-slate-900/30 flex flex-col gap-4 p-4">
+
+              <!-- ── BLOCOS POR ORÇAMENTO ──────────────────────────────── -->
               <article
                 v-for="(bloco, blocoIdx) in (row.blocos || [])"
                 :key="`${row.id}-${blocoIdx}-${bloco.orcDisplay?.id ?? 'cadastro'}`"
                 :class="['rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm overflow-hidden', getClasseTomCard(bloco.faseNum)]"
               >
-                <div class="p-4 flex flex-col gap-4">
-                  <!-- Foco nos dados: apenas ID do orçamento e valor total em negrito (dados exclusivos deste ID) -->
+                <div class="p-4 flex flex-col gap-3">
+
+                  <!-- Cabeçalho do bloco: título + botões primários do orçamento -->
                   <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div class="flex flex-col gap-0.5">
+                    <div class="flex flex-col gap-0.5 min-w-0">
                       <p class="text-[10px] font-bold uppercase tracking-wider text-brand-primary">
                         {{ bloco.tipo === 'cadastro' ? 'Cadastro (sem orçamento)' : `Orçamento #${bloco.orcDisplay?.numero != null ? String(bloco.orcDisplay.numero) : String(blocoIdx + 1).padStart(2, '0')}` }}
                       </p>
                       <template v-if="bloco.orcDisplay">
-                        <p class="text-lg font-bold text-gray-900 dark:text-slate-100 tabular-nums tracking-tight">
-                          {{ bloco.orcDisplay.valorFormatado }}
-                        </p>
-                        <p class="text-xs text-gray-500 dark:text-slate-400">
-                          {{ bloco.orcDisplay.dataExibicao }}
-                        </p>
+                        <p class="text-lg font-bold text-gray-900 dark:text-slate-100 tabular-nums tracking-tight">{{ bloco.orcDisplay.valorFormatado }}</p>
+                        <p class="text-xs text-gray-500 dark:text-slate-400">{{ bloco.orcDisplay.dataExibicao }}</p>
                       </template>
                     </div>
-                    <div class="flex flex-wrap items-center gap-2">
-                      <Button
-                        v-if="bloco.orcDisplay"
-                        size="sm"
-                        variant="primary"
-                        class="text-[10px] font-bold min-w-0 px-3 rounded-lg"
-                        @click.stop="abrirOrcamento(bloco.orcDisplay.id)"
-                      >
-                        <i class="pi pi-folder-open mr-1 text-[10px]" /> Abrir orçamento
+                    <!-- Ações do orçamento comercial (quando existe) -->
+                    <div v-if="bloco.orcDisplay" class="flex flex-wrap items-center gap-2 shrink-0">
+                      <Button size="sm" variant="primary" class="text-[10px] font-bold px-3 rounded-lg" @click.stop="abrirOrcamento(bloco.orcDisplay.id)">
+                        <i class="pi pi-folder-open mr-1 text-[10px]" />Abrir orçamento
                       </Button>
-                      <Button
-                        v-if="bloco.orcDisplay"
-                        size="sm"
-                        variant="secondary"
-                        class="text-[10px] font-bold min-w-0 px-3 rounded-lg"
-                        @click.stop="abrirPdf(bloco.orcDisplay.id)"
-                      >
-                        <i class="pi pi-file-pdf mr-1 text-[10px]" /> PDF
-                      </Button>
-                      <Button
-                        v-if="bloco.tipo === 'cadastro'"
-                        size="sm"
-                        variant="primary"
-                        class="text-[10px] font-bold rounded-lg"
-                        @click.stop="novoOrcamento(row)"
-                      >
-                        <i class="pi pi-plus mr-1 text-[10px]" /> Novo orçamento
+                      <Button size="sm" variant="secondary" class="text-[10px] font-bold px-3 rounded-lg" @click.stop="abrirPdf(bloco.orcDisplay.id)">
+                        <i class="pi pi-file-pdf mr-1 text-[10px]" />PDF
                       </Button>
                     </div>
                   </div>
 
-                  <!-- Status + vermelho restrito ao selo FINANCEIRO PENDENTE (tom sóbrio, ícone discreto) -->
+                  <!-- Badges de status e alertas -->
                   <div class="flex flex-wrap items-center gap-2">
                     <StatusBadge :value="bloco.etapa?.status_key ?? ''" :label="(bloco.etapa?.status_label ?? bloco.orcDisplay?.status_label) ?? ''" />
-                    <span
-                      v-if="bloco.pendencia_financeira"
-                      class="inline-flex items-center gap-1.5 rounded-md bg-red-50 dark:bg-red-950/40 px-2.5 py-1 text-[11px] font-semibold text-red-800 dark:text-red-200 border border-red-200/80 dark:border-red-900/60"
-                    >
-                      <i class="pi pi-minus-circle text-red-600 dark:text-red-300 text-[10px]" aria-hidden="true" />
-                      Financeiro pendente
+                    <span v-if="bloco.pendencia_financeira" class="inline-flex items-center gap-1.5 rounded-md bg-red-50 dark:bg-red-950/40 px-2.5 py-1 text-[11px] font-semibold text-red-800 dark:text-red-200 border border-red-200/80 dark:border-red-900/60">
+                      <i class="pi pi-minus-circle text-red-600 dark:text-red-300 text-[10px]" />Financeiro pendente
                     </span>
-                    <span v-if="bloco.alertaVigencia === 'perto'" class="text-[11px] font-medium text-gray-600 dark:text-slate-400">
-                      Contrato perto de expirar
-                    </span>
-                    <span v-if="bloco.vigenciaExpirada" class="text-[11px] font-medium text-gray-600 dark:text-slate-400">Vigência expirada</span>
+                    <span v-if="bloco.alertaVigencia === 'perto'" class="text-[11px] font-medium text-gray-500 dark:text-slate-400">Contrato perto de expirar</span>
+                    <span v-if="bloco.vigenciaExpirada" class="text-[11px] font-medium text-gray-500 dark:text-slate-400">Vigência expirada</span>
                   </div>
 
-                  <!-- Barra de progresso: 11 etapas, cor por etapa (pendente 500, em andamento 600+pulse, concluído slate-700) -->
+                  <!-- Barra de progresso das 11 etapas -->
                   <div class="flex flex-col gap-1.5 max-w-full overflow-x-auto">
                     <div class="grid grid-cols-11 gap-0 text-center text-[7px] font-medium uppercase tracking-wide min-w-[440px]">
                       <span v-for="step in 11" :key="step" class="flex flex-col items-center gap-0" :class="getClasseIconeEtapaBarra(step, bloco.faseNum)">
-                        <i :class="['pi text-[10px]', getIconeEtapaBarra(step)]" aria-hidden="true" />
+                        <i :class="['pi text-[10px]', getIconeEtapaBarra(step)]" />
                         <span>{{ getLabelEtapaBarra(step) }}</span>
                       </span>
                     </div>
                     <div class="h-1.5 rounded-full overflow-hidden flex gap-px bg-gray-200 dark:bg-slate-600 min-w-[440px]">
-                      <div
-                        v-for="step in 11"
-                        :key="step"
-                        class="h-full flex-1 min-w-0 rounded-full transition-colors duration-200"
-                        :class="getClasseSegmentoBarra(step, bloco.faseNum)"
-                      />
+                      <div v-for="step in 11" :key="step" class="h-full flex-1 min-w-0 rounded-full transition-colors duration-200" :class="getClasseSegmentoBarra(step, bloco.faseNum)" />
                     </div>
                   </div>
 
-                  <!-- Prazos (dados exclusivos deste orçamento) -->
+                  <!-- Prazo / vigência -->
                   <div class="flex flex-wrap items-center gap-2 text-[10px] text-gray-600 dark:text-slate-400">
                     <template v-if="bloco.vigenciaExibicao && !bloco.prazoEntregaExibicao">
                       <span>{{ bloco.vigenciaExibicao }}</span>
@@ -180,93 +173,78 @@
                     <p v-if="bloco.notaHistorica" class="text-[10px] italic w-full">{{ bloco.notaHistorica }}</p>
                   </div>
 
-                  <!-- Contrato/Financeiro (vinculado a este orçamento – dados do banco) -->
+                  <!-- Contrato vinculado -->
                   <div v-if="bloco.contratoDisplay" class="rounded-md border border-gray-200 dark:border-slate-600 bg-gray-50/80 dark:bg-slate-800/40 px-3 py-2">
                     <p class="text-[9px] font-medium uppercase text-gray-500 dark:text-slate-400 mb-1">Contrato</p>
                     <div class="flex flex-wrap items-center justify-between gap-2">
                       <span class="text-xs font-semibold text-brand-primary">{{ bloco.contratoDisplay.numero }}</span>
                       <span class="text-xs font-semibold tabular-nums text-brand-primary">{{ bloco.contratoDisplay.valorFormatado }}</span>
                       <span class="text-[10px] font-medium text-brand-primary">Vigência: {{ bloco.contratoDisplay.vigenciaAteExibicao }}</span>
-                      <Button size="sm" variant="secondary" class="text-[10px] font-bold min-w-0 px-3 rounded-lg" :disabled="!bloco.contratoDisplay.tem_pdf" @click.stop="abrirPdfContrato(bloco.contratoDisplay.id)">
-                        <i class="pi pi-file-pdf mr-0.5" /> PDF
+                      <Button size="sm" variant="secondary" class="text-[10px] font-bold px-3 rounded-lg" :disabled="!bloco.contratoDisplay.tem_pdf" @click.stop="abrirPdfContrato(bloco.contratoDisplay.id)">
+                        <i class="pi pi-file-pdf mr-0.5" />PDF
                       </Button>
                     </div>
                   </div>
                   <p v-else-if="!bloco.tipo && bloco.etapa?.status_key" class="text-[10px] text-gray-500 dark:text-slate-400 italic">Sem contrato vinculado a este orçamento.</p>
 
-                  <!-- Ação principal -->
+                  <!-- Ação contextual: próximo passo do fluxo -->
                   <div class="flex flex-wrap gap-2 pt-2 border-t border-gray-200 dark:border-slate-600">
                     <Button
-                      size="sm"
-                      variant="primary"
-                      class="text-[11px] font-bold rounded-lg"
+                      size="sm" variant="primary" class="text-[11px] font-bold rounded-lg"
                       :disabled="bloco.pendencia_financeira"
                       :title="bloco.pendencia_financeira ? 'Regularize Contas a Receber para liberar.' : getDestinoAcompanhar(row, bloco.etapa)?.label"
                       @click.stop="acompanharStatusCliente({ ...row, pendencia_financeira: bloco.pendencia_financeira, etapas: [bloco.etapa] }, bloco.etapa)"
                     >
-                      <i class="pi pi-calendar mr-1 text-[10px]" /> {{ getDestinoAcompanhar(row, bloco.etapa)?.label || 'Acompanhar status' }}
+                      <i class="pi pi-calendar mr-1 text-[10px]" />{{ getDestinoAcompanhar(row, bloco.etapa)?.label || 'Acompanhar status' }}
                     </Button>
                   </div>
                 </div>
               </article>
 
-              <div class="px-4 py-2 border-t border-border-ui flex flex-wrap gap-2">
+              <!-- ── RODAPÉ: AÇÕES GLOBAIS DO CLIENTE ─────────────────── -->
+              <div class="flex flex-wrap gap-2 px-1">
+                <!--
+                  Lógica de ação principal:
+                  1. Tem OT técnico → abre o OT técnico
+                  2. Sem OT e sem bloqueio por medição → cria novo orçamento comercial
+                  3. Em medição → desabilitado (aguardar conclusão)
+                -->
                 <Button
-                  size="sm"
-                  variant="primary"
-                  class="text-[10px] font-bold"
+                  v-if="row.orcamento_tecnico_id"
+                  size="sm" variant="primary" class="text-[10px] font-bold"
+                  @click.stop="router.push(`/orcamento-tecnico/${row.orcamento_tecnico_id}`)"
+                >
+                  <i class="pi pi-file-edit mr-1 text-[10px]" />Orçamento Técnico
+                </Button>
+                <Button
+                  v-else
+                  size="sm" variant="primary" class="text-[10px] font-bold"
                   :disabled="row.statusGlobalKey === 'MEDIDA_AGENDADA' || row.statusGlobalKey === 'MEDIDA_EM_ANDAMENTO'"
                   @click.stop="novoOrcamento(row)"
                 >
-                  <i class="pi pi-plus mr-1 text-[10px]" /> Novo orçamento
+                  <i class="pi pi-plus mr-1 text-[10px]" />Novo orçamento
                 </Button>
-                <Button size="sm" variant="secondary" class="text-[10px] font-bold" @click.stop="abrirOrcamentoCliente(row)">
-                  Ver orçamentos do cliente
-                </Button>
-                <Button size="sm" variant="secondary" class="text-[10px] font-bold" @click.stop="abrirCliente(row.id)">
-                  Ficha do cliente
+
+                <!-- Ações secundárias sempre disponíveis -->
+                <Button size="sm" variant="ghost" class="text-[10px] font-bold" @click.stop="router.push('/agenda-geral')">
+                  <i class="pi pi-calendar mr-1 text-[10px]" />Agenda geral
                 </Button>
               </div>
+
             </div>
-          </div>
-        </div>
+          </template>
+        </Table>
 
-        <p v-if="!loading && totalRows === 0" class="text-center text-text-muted py-8">
-          Nenhum registro encontrado para os filtros.
-        </p>
-
-        <div
-          v-if="!loading && totalRows > 0"
-          class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border-ui pt-4"
-        >
-          <span class="text-xs font-semibold text-text-muted">
-            {{ paginationLabel }}
-          </span>
-          <div class="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              :disabled="currentPage <= 1"
-              @click="currentPage = Math.max(1, currentPage - 1)"
-            >
-              Anterior
-            </Button>
-            <span class="text-xs font-semibold text-text-main min-w-[4rem] text-center">
-              Página {{ currentPage }} de {{ totalPages }}
-            </span>
-            <Button
-              size="sm"
-              variant="secondary"
-              :disabled="currentPage >= totalPages"
-              @click="currentPage = Math.min(totalPages, currentPage + 1)"
-            >
-              Próxima
-            </Button>
-          </div>
-        </div>
+        <TablePagination
+          v-if="totalRows > 0"
+          :page="currentPage"
+          :page-size="PAGE_SIZE"
+          :total="totalRows"
+          @update:page="(page) => { currentPage = page }"
+        />
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
@@ -276,6 +254,7 @@ import {
   PIPELINE_CLIENTE,
   normalizarStatusCliente,
   getStatusVendaOperacionalLabel,
+  getStatusVendaSubetapa,
   getStatusVendaFase5,
   getStatusVendaFase11,
   statusVendaEhOrcamento,
@@ -337,7 +316,8 @@ function getClasseIconeEtapaBarra(step, faseAtual) {
   if (step === current) return (BARRA_11_ICONE_EM_ANDAMENTO[step - 1] || BARRA_11_ICONE_EM_ANDAMENTO[0]) + ' font-semibold'
   return BARRA_11_ICONE_PENDENTE[step - 1] || BARRA_11_ICONE_PENDENTE[0]
 }
-import { AgendaLojaService, AgendaFabricaService, ClienteService, OrcamentosService, ApontamentoProducaoService, ContratosService } from '@/services/index'
+import { AgendaLojaService, AgendaFabricaService, ClienteService, OrcamentosService, ApontamentoProducaoService, ContratosService, OrcamentoTecnicoService } from '@/services/index'
+import Input from '@/components/ui/Input.vue'
 import { useAuth } from '@/services/useauth'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
@@ -351,7 +331,6 @@ const { usuarioLogado } = useAuth()
 
 const loading = ref(false)
 const filtro = ref('')
-const statusFiltro = ref('')
 
 /** Primeiro e último dia do mês atual (YYYY-MM-DD) para preenchimento automático dos filtros de data. */
 function getMesAtualInicioFim() {
@@ -369,20 +348,22 @@ const filtroDataInicio = ref(mesAtualInicio)
 const filtroDataFim = ref(mesAtualFim)
 const currentPage = ref(1)
 const PAGE_SIZE = 25
+const columns = [
+  { key: 'cliente', label: 'Cliente', width: '32%' },
+  { key: 'endereco', label: 'Endereco', width: '24%' },
+  { key: 'fluxo', label: 'Fluxo', width: '14%' },
+  { key: 'prazo', label: 'Prazo', width: '22%' },
+  { key: 'acoes', label: 'Acoes', align: 'center', width: '8%' },
+]
 
 /** IDs dos clientes com card expandido (exibir orçamentos) */
 const expandedIds = ref(new Set())
 
-function toggleExpand(clienteId) {
-  const next = new Set(expandedIds.value)
-  if (next.has(clienteId)) next.delete(clienteId)
-  else next.add(clienteId)
-  expandedIds.value = next
-}
-
 const clientes = ref([])
 const agendamentos = ref([])
 const orcamentos = ref([])
+/** clienteId → orcamento_tecnico.id (para clientes que têm OT mas ainda sem orçamento comercial) */
+const clientesComOrcamentoTecnico = ref(new Map())
 /** Contratos de todos os clientes (cliente_id -> lista ordenada do mais novo ao mais antigo) */
 const contratosPorCliente = ref(new Map())
 /** Medições em andamento (Timeline): cliente_id -> { funcionario_nome, inicio_em, pausa_total_segundos, pausa_inicio_em } */
@@ -409,13 +390,6 @@ const statusLabelMap = computed(() => {
   }
   return map
 })
-
-const statusOptions = computed(() =>
-  (PIPELINE_CLIENTE || []).map((item) => ({
-    value: String(item?.key || '').toUpperCase(),
-    label: getStatusDisplayLabel(item?.key) || String(item?.label || item?.key || ''),
-  })),
-)
 
 function statusKeyParaFase(statusKey) {
   const key = String(statusKey || '').toUpperCase()
@@ -659,6 +633,14 @@ function formatarDataExibicao(date) {
   return d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
 }
 
+/** Formata YYYY-MM-DD para exibição DD/MM/YYYY nos campos de data do filtro. */
+function formatDateDisplay(value) {
+  if (!value) return ''
+  const [y, m, d] = String(value).split('-')
+  if (!y || !m || !d) return value
+  return `${d}/${m}/${y}`
+}
+
 /** Para um status_key, retorna a etapa atual (1 a 11) no fluxo completo. Usado na barra de progresso e tom do card. */
 function etapaNumeroPorStatus(statusKey) {
   const fase = statusKeyParaFase11(statusKey)
@@ -867,7 +849,7 @@ function getDestinoAcompanhar(row, etapa) {
     return { path: `/orcamentos/cliente/${clienteId}`, label: 'Orçamentos do cliente' }
   }
   if (statusVendaEhAgenda(statusKey)) {
-    return { path: '/agendamentos/loja', label: 'Abrir agenda' }
+    return { path: '/agenda-geral', label: 'Abrir agenda' }
   }
   if (statusKey === 'CLIENTE_CADASTRADO') {
     return { path: `/clientes/${clienteId}`, label: 'Ver cliente' }
@@ -973,7 +955,6 @@ function montarAcoesPorStatus(row) {
 const rows = computed(() => {
   const termo = String(filtro.value || '').trim().toLowerCase()
   const termoDigits = onlyNumbers(termo)
-  const statusSelecionado = String(statusFiltro.value || '').toUpperCase()
 
   const orcamentosPorCliente = new Map()
   for (const o of orcamentos.value || []) {
@@ -1171,6 +1152,9 @@ const rows = computed(() => {
       agendamento_responsaveis: responsaveis,
       acoes: [],
 
+      /** ID do Orçamento Técnico vinculado (quando o cliente passou pelo fluxo de medição técnica) */
+      orcamento_tecnico_id: clientesComOrcamentoTecnico.value.get(clienteId) ?? null,
+
       /** Vendedor que criou/está no cadastro do cliente (vendedor_responsavel). Sempre exibido no fluxo quando existir. */
       vendedorCadastroExibicao: (c?.vendedor_responsavel?.nome ?? '').trim() || '',
       /** Origem do cliente (Instagram, E-mail, Loja Física, etc.) para exibir ao lado do responsável. */
@@ -1268,7 +1252,7 @@ const rows = computed(() => {
         }
         const key = normalizarStatusCliente(c?.status || 'CLIENTE_CADASTRADO')
         const fase = statusKeyParaFase(key)
-        if (clienteTemAgendamentoMedida(clienteId) && fase < 2) return 'MEDIDA_AGENDADA'
+        if (!clientesComOrcamentoTecnico.value.has(clienteId) && clienteTemAgendamentoMedida(clienteId) && fase < 2) return 'MEDIDA_AGENDADA'
         return key
       })(),
       statusGlobalLabel: (() => {
@@ -1283,7 +1267,7 @@ const rows = computed(() => {
                 return comFase[0]?.statusKey || 'CLIENTE_CADASTRADO'
               })()
             : normalizarStatusCliente(c?.status || 'CLIENTE_CADASTRADO')
-        if (orcs.length === 0 && clienteTemAgendamentoMedida(clienteId) && statusKeyParaFase(key) < 2) key = 'MEDIDA_AGENDADA'
+        if (orcs.length === 0 && !clientesComOrcamentoTecnico.value.has(clienteId) && clienteTemAgendamentoMedida(clienteId) && statusKeyParaFase(key) < 2) key = 'MEDIDA_AGENDADA'
         if (key === 'MEDIDA_EM_ANDAMENTO') return 'MEDIÇÃO EM ANDAMENTO ⏱️'
         return getStatusDisplayLabel(key) || statusLabelMap.value.get(key) || key
       })(),
@@ -1299,9 +1283,10 @@ const rows = computed(() => {
                 return comFase[0]?.statusKey || 'CLIENTE_CADASTRADO'
               })()
             : normalizarStatusCliente(c?.status || 'CLIENTE_CADASTRADO')
-        if (orcs.length === 0 && clienteTemAgendamentoMedida(clienteId) && statusKeyParaFase(key) < 2) key = 'MEDIDA_AGENDADA'
+        const temOt = clientesComOrcamentoTecnico.value.has(clienteId)
+        if (orcs.length === 0 && !temOt && clienteTemAgendamentoMedida(clienteId) && statusKeyParaFase(key) < 2) key = 'MEDIDA_AGENDADA'
         let fase = statusKeyParaFase(key)
-        if (orcs.length > 0 && fase < 3) fase = 3
+        if ((orcs.length > 0 || temOt) && fase < 3) fase = 3
         if (medidaFinaRealizada && fase >= 4) return 5
         return fase
       })(),
@@ -1445,6 +1430,8 @@ const rows = computed(() => {
   return listaRows
     .map((row) => ({
       ...row,
+      fluxo_comercial: row.statusGlobalLabel || getStatusDisplayLabel(row.statusGlobalKey) || 'Cadastro',
+      fluxo_comercial_class: fluxoComercialClass(row.statusGlobalKey),
       acoes: montarAcoesPorStatus(row),
     }))
     .filter((row) => {
@@ -1489,10 +1476,6 @@ const rows = computed(() => {
         }
       }
 
-      if (statusSelecionado) {
-        const bateFiltroStatus = row.etapas?.some((e) => e.status_key === statusSelecionado)
-        if (!bateFiltroStatus) return false
-      }
       if (!termo) return true
 
       const texto = [
@@ -1532,22 +1515,67 @@ const rows = computed(() => {
 })
 
 const totalRows = computed(() => rows.value.length)
-const totalPages = computed(() => Math.max(1, Math.ceil(totalRows.value / PAGE_SIZE)))
 const rowsPaginated = computed(() => {
   const start = (currentPage.value - 1) * PAGE_SIZE
   return rows.value.slice(start, start + PAGE_SIZE)
 })
 
-const paginationLabel = computed(() => {
-  const total = totalRows.value
-  if (total === 0) return 'Nenhum registro'
-  const start = (currentPage.value - 1) * PAGE_SIZE + 1
-  const end = Math.min(currentPage.value * PAGE_SIZE, total)
-  if (start === end) return `${total} registro${total !== 1 ? 's' : ''}`
-  return `Mostrando ${start}–${end} de ${total}`
-})
+const expandedRows = computed(() => Array.from(expandedIds.value).map(String))
 
-watch([filtro, statusFiltro, filtroDataInicio, filtroDataFim], () => {
+function setExpandedRows(values) {
+  expandedIds.value = new Set((values || []).map((value) => Number(value)).filter((value) => Number.isFinite(value)))
+}
+
+function initialsFromName(nome) {
+  const partes = String(nome || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+  if (!partes.length) return '--'
+  return partes.slice(0, 2).map((parte) => parte[0]).join('').toUpperCase()
+}
+
+function fluxoComercialClass(status) {
+  const subetapa = getStatusVendaSubetapa(status || 'CLIENTE_CADASTRADO')
+  const mapa = {
+    CADASTRO: 'ds-status-pill--neutral',
+    MEDIDA: 'ds-status-pill--warning',
+    ORCAMENTO: 'ds-status-pill--warning',
+    APRESENTACAO: 'ds-status-pill--warning',
+    FECHAMENTO: 'ds-status-pill--success',
+    MEDIDA_FINA: 'ds-status-pill--warning',
+    PROJETO_TECNICO: 'ds-status-pill--warning',
+    PRODUCAO: 'ds-status-pill--warning',
+    MONTAGEM: 'ds-status-pill--warning',
+    GARANTIA: 'ds-status-pill--warning',
+    ASSISTENCIA: 'ds-status-pill--warning',
+    MANUTENCAO: 'ds-status-pill--danger',
+  }
+  if (String(status || '').toUpperCase() === 'ENCERRADO') return 'ds-status-pill--neutral'
+  return mapa[subetapa] || 'ds-status-pill--warning'
+}
+
+function getPrazoResumo(row) {
+  if (row?.prazoEntregaExibicao) return row.prazoEntregaExibicao
+  if (row?.vigenciaExibicao) return row.vigenciaExibicao
+  if (row?.prazoFinalExibicao) return `Prazo: ${row.prazoFinalExibicao}`
+  return 'Sem prazo ativo'
+}
+
+function getAgendamentoResumo(row) {
+  if (row?.agendamento_data && row.agendamento_data !== '-') {
+    return row.agendamento_hora ? `${row.agendamento_data} às ${row.agendamento_hora}` : row.agendamento_data
+  }
+  return row?.ultimaAtualizacao ? `Atualizado em ${row.ultimaAtualizacao}` : 'Sem agendamento'
+}
+
+function getFluxoRowClass(row) {
+  if (row?.pendencia_financeira) return 'fluxo-clientes__row fluxo-clientes__row--danger'
+  if (row?.ehAtrasado) return 'fluxo-clientes__row fluxo-clientes__row--warning'
+  return 'fluxo-clientes__row'
+}
+
+watch([filtro, filtroDataInicio, filtroDataFim], () => {
   currentPage.value = 1
 })
 
@@ -1636,13 +1664,14 @@ function acompanharStatusCliente(row, etapa) {
 async function carregarClientes() {
   loading.value = true
   try {
-    const [resClientes, resAgendaLoja, resAgendaFabrica, resOrcamentos, resContratos, resMedicaoEmAndamento] = await Promise.all([
+    const [resClientes, resAgendaLoja, resAgendaFabrica, resOrcamentos, resContratos, resMedicaoEmAndamento, resOrcTecnico] = await Promise.all([
       ClienteService.listar(),
       AgendaLojaService.listarTodos(undefined, undefined, { incluir_cancelados: false }),
       AgendaFabricaService.listarTodos(undefined, undefined, { incluir_cancelados: false }),
       OrcamentosService.listar(),
       ContratosService.listar().catch(() => ({ data: [] })),
       ApontamentoProducaoService.getMedicaoEmAndamento().catch(() => ({ data: [] })),
+      OrcamentoTecnicoService.listar().catch(() => ({ data: [] })),
     ])
 
     const payloadClientes = resClientes?.data
@@ -1664,6 +1693,16 @@ async function carregarClientes() {
       : Array.isArray(payloadOrcamentos?.data)
         ? payloadOrcamentos.data
         : []
+
+    // Clientes que têm OT criado mas ainda não têm orçamento comercial: clienteId → otId
+    const listaOt = Array.isArray(resOrcTecnico?.data) ? resOrcTecnico.data
+      : Array.isArray(resOrcTecnico?.data?.data) ? resOrcTecnico.data.data : []
+    const mapOt = new Map()
+    for (const ot of listaOt) {
+      const cid = Number(ot?.agenda_loja?.cliente_id || ot?.cliente_id || 0)
+      if (cid && !mapOt.has(cid)) mapOt.set(cid, ot.id)
+    }
+    clientesComOrcamentoTecnico.value = mapOt
 
     const listaContratos = Array.isArray(resContratos?.data) ? resContratos.data : []
     const mapContratos = new Map()
@@ -1693,6 +1732,7 @@ async function carregarClientes() {
     clientes.value = []
     agendamentos.value = []
     orcamentos.value = []
+    clientesComOrcamentoTecnico.value = new Set()
     contratosPorCliente.value = new Map()
     medicaoEmAndamentoMap.value = new Map()
     vendaIdsComPendenciaFinanceira.value = new Set()
@@ -1724,3 +1764,217 @@ onBeforeUnmount(() => {
   }
 })
 </script>
+
+<style scoped>
+/* ── Layout raiz ─────────────────────────────────────────── */
+.fluxo-clientes {
+  min-height: 100%;
+  background: var(--ds-color-surface);
+}
+
+/* ── Barra de ações (search + datas) ─────────────────────── */
+.fluxo-clientes__actions {
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--ds-space-3);
+  flex-wrap: nowrap;
+}
+
+.fluxo-clientes__search {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.fluxo-clientes__filters {
+  display: flex;
+  gap: var(--ds-space-3);
+  flex-shrink: 0;
+}
+
+.fluxo-clientes__date-field {
+  width: 9.5rem;
+  flex-shrink: 0;
+}
+
+/* ── Conteúdo (tabela + paginação) ───────────────────────── */
+.fluxo-clientes__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+}
+
+/* ── Espaçamento das células da tabela ───────────────────── */
+.fluxo-clientes :deep(.ds-table__cell) {
+  padding-top: 0.9rem;
+  padding-bottom: 0.9rem;
+  padding-left: 0.85rem;
+  padding-right: 0.85rem;
+}
+
+.fluxo-clientes :deep(.ds-table__head-cell) {
+  padding-top: 0.72rem;
+  padding-bottom: 0.55rem;
+  padding-left: 0.85rem;
+  padding-right: 0.85rem;
+}
+
+/* ── Célula de identidade (avatar + texto) ───────────────── */
+.fluxo-clientes__identity {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  min-width: 0;
+}
+
+.fluxo-clientes__initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: 0.75rem;
+  border: 1px solid var(--ds-color-border);
+  background: var(--ds-color-surface-muted);
+  color: var(--ds-color-text-faint);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.dark .fluxo-clientes__initials {
+  background: var(--ds-color-surface-muted);
+  border-color: var(--ds-color-border-strong);
+}
+
+/* ── Pilhas de texto (nome+doc, endereço, etc.) ──────────── */
+.fluxo-clientes__identity-copy,
+.fluxo-clientes__stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.fluxo-clientes__stack--status {
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.fluxo-clientes__primary {
+  color: var(--ds-color-text);
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fluxo-clientes__secondary {
+  color: var(--ds-color-text-soft);
+  font-size: 0.76rem;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fluxo-clientes__secondary-detail {
+  color: var(--ds-color-text-faint);
+  margin-left: var(--ds-space-2);
+  font-size: 0.72rem;
+}
+
+/* ── Botões de ação da linha ─────────────────────────────── */
+.fluxo-clientes__actions-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-space-2);
+}
+
+/* ── Painel expansível ───────────────────────────────────── */
+.fluxo-clientes__detail-shell {
+  background: var(--ds-color-surface-muted);
+}
+
+.dark .fluxo-clientes__detail-shell {
+  background: var(--ds-color-page);
+}
+
+/* ── Status pill override (contexto lista) ───────────────── */
+.fluxo-clientes :deep(.ds-status-pill) {
+  justify-content: center;
+  max-width: 100%;
+  padding-inline: 0.55rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.05em;
+}
+
+/* ── Linhas com alerta (atraso / pendência) ──────────────── */
+.fluxo-clientes :deep(.fluxo-clientes__row--warning td) {
+  background: rgba(197, 138, 32, 0.08);
+}
+
+.fluxo-clientes :deep(.fluxo-clientes__row--danger td) {
+  background: rgba(196, 73, 73, 0.08);
+}
+
+.dark .fluxo-clientes :deep(.fluxo-clientes__row--warning td) {
+  background: rgba(197, 138, 32, 0.12);
+}
+
+.dark .fluxo-clientes :deep(.fluxo-clientes__row--danger td) {
+  background: rgba(196, 73, 73, 0.12);
+}
+
+/* ── Responsivo ──────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .fluxo-clientes :deep(.ds-table__cell) {
+    padding-left: 0.72rem;
+    padding-right: 0.72rem;
+  }
+
+  .fluxo-clientes :deep(.ds-table__head-cell) {
+    padding-left: 0.72rem;
+    padding-right: 0.72rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .fluxo-clientes__actions {
+    flex-wrap: wrap;
+  }
+
+  .fluxo-clientes__search {
+    flex-basis: 100%;
+  }
+
+  .fluxo-clientes__filters {
+    width: 100%;
+  }
+
+  .fluxo-clientes__date-field {
+    flex: 1;
+    width: auto;
+  }
+
+  .fluxo-clientes__actions-cell {
+    flex-direction: column;
+  }
+
+  .fluxo-clientes :deep(.ds-table__cell) {
+    padding-top: 0.72rem;
+    padding-bottom: 0.72rem;
+    padding-left: 0.56rem;
+    padding-right: 0.56rem;
+  }
+
+  .fluxo-clientes :deep(.ds-table__head-cell) {
+    padding-left: 0.56rem;
+    padding-right: 0.56rem;
+  }
+}
+</style>

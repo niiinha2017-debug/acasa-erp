@@ -38,7 +38,8 @@ export class UsuariosService {
 
     return usuarios.map((u) => ({
       ...u,
-      precisa_trocar_senha: idsComPendencia.has(u.id),
+      precisa_trocar_senha:
+        String(u.status || '').toUpperCase() !== 'ATIVO' && idsComPendencia.has(u.id),
     }));
   }
 

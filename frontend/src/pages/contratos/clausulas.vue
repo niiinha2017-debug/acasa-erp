@@ -1,44 +1,33 @@
 <template>
-  <div class="w-full max-w-[1000px] mx-auto space-y-6 animate-page-in">
-    <div class="rounded-2xl border border-border-ui bg-bg-card overflow-hidden">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
-
+  <PageShell :padded="false" variant="minimal">
+    <section class="clausulas-editor ds-page-context ds-page-context--editor animate-page-in">
       <PageHeader
         title="Modelos de Cláusulas"
-        subtitle="Textos padrão para Contratos e Orçamentos"
+        subtitle="Textos padrão para contratos e orçamentos"
         icon="pi pi-file"
-        class="border-b border-border-ui"
-      >
-        <template #actions>
-          <!-- Espaço reservado para logo; evitar erro enquanto PNG não existe -->
-          <div
-            class="h-10 px-3 flex items-center justify-center rounded bg-white/50 border border-border-ui text-[11px] font-semibold text-slate-600"
-          >
-            Cláusulas
-          </div>
-        </template>
-      </PageHeader>
+        variant="minimal"
+      />
 
-      <div class="p-6 md:p-8 space-y-6">
-        <form class="space-y-4" @submit.prevent="salvarAtual">
+      <div class="clausulas-editor__body ds-editor-body">
+        <form class="clausulas-editor__form ds-editor-form" @submit.prevent="salvarAtual">
           <!-- Abas: Contrato / Orçamento -->
-          <div class="flex items-center gap-2 mb-4">
+          <div class="clausulas-editor__tabs">
             <button
               type="button"
-              class="px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors"
+              class="clausulas-editor__tab"
               :class="abaAtiva === 'CONTRATO'
-                ? 'bg-brand-primary text-white border-brand-primary'
-                : 'bg-bg-card text-text-soft border-border-ui hover:bg-slate-100 dark:hover:bg-slate-800'"
+                ? 'clausulas-editor__tab--active'
+                : ''"
               @click="abaAtiva = 'CONTRATO'"
             >
               Contrato
             </button>
             <button
               type="button"
-              class="px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors"
+              class="clausulas-editor__tab"
               :class="abaAtiva === 'ORCAMENTO'
-                ? 'bg-brand-primary text-white border-brand-primary'
-                : 'bg-bg-card text-text-soft border-border-ui hover:bg-slate-100 dark:hover:bg-slate-800'"
+                ? 'clausulas-editor__tab--active'
+                : ''"
               @click="abaAtiva = 'ORCAMENTO'"
             >
               Orçamento
@@ -46,59 +35,69 @@
           </div>
 
           <!-- CONTRATO -->
-          <div v-if="abaAtiva === 'CONTRATO'" class="space-y-6">
+          <div v-if="abaAtiva === 'CONTRATO'" class="space-y-8">
             <div
               v-for="mod in modulosContrato"
               :key="mod.modulo_key"
-              class="rounded-xl border border-border-ui bg-white/70 dark:bg-slate-900/40 p-4 space-y-2"
+              class="clausulas-editor__module"
             >
+              <div class="clausulas-editor__module-head">
+                <span class="clausulas-editor__module-key">{{ mod.modulo_key }}</span>
+              </div>
+
               <Input
                 v-model="mod.titulo"
                 :label="`Título - ${mod.modulo_key}`"
+                variant="line"
               />
 
-              <label class="block text-xs font-semibold tracking-wide text-text-soft ml-0.5">
+              <label class="clausulas-editor__textarea-label">
                 Texto da cláusula ({{ mod.modulo_key }})
               </label>
               <textarea
                 v-model="mod.texto"
-                class="w-full min-h-[160px] rounded-xl border border-border-ui bg-bg-card text-sm text-text-main p-3 font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
+                class="clausulas-editor__textarea"
               ></textarea>
             </div>
 
-            <p class="text-[11px] text-slate-500">
+            <p class="clausulas-editor__helper-text">
               Este texto será usado como base para os contratos gerados. Use variáveis (por exemplo
               <code class="px-1 py-0.5 rounded bg-slate-100 text-[11px]">[[cliente_nome]]</code>,
               <code class="px-1 py-0.5 rounded bg-slate-100 text-[11px]">[[valor_final]]</code>)
               para montar o PDF de forma dinâmica.
             </p>
-            <p class="text-[11px] text-amber-600 bg-amber-50 dark:bg-amber-900/20 rounded-lg p-2">
+            <p class="clausulas-editor__warning-text">
               Os textos exibidos são os que estão salvos no sistema. Se não aparecerem as cláusulas atualizadas, use <strong>Restaurar textos padrão</strong> para carregar os modelos atuais e depois clique em <strong>Salvar Contrato</strong>.
             </p>
           </div>
 
           <!-- ORÇAMENTO -->
-          <div v-if="abaAtiva === 'ORCAMENTO'" class="space-y-6">
+          <div v-if="abaAtiva === 'ORCAMENTO'" class="space-y-8">
             <div
               v-for="mod in modulosOrcamento"
               :key="mod.modulo_key"
-              class="rounded-xl border border-border-ui bg-white/70 dark:bg-slate-900/40 p-4 space-y-2"
+              class="clausulas-editor__module"
             >
+              <div class="clausulas-editor__module-head">
+                <span class="clausulas-editor__module-key">{{ mod.modulo_key }}</span>
+              </div>
+
               <Input
                 v-model="mod.titulo"
                 :label="`Título - ${mod.modulo_key}`"
+                variant="line"
               />
 
-              <label class="block text-xs font-semibold tracking-wide text-text-soft ml-0.5">
+              <label class="clausulas-editor__textarea-label">
                 Texto da cláusula ({{ mod.modulo_key }})
               </label>
               <textarea
                 v-model="mod.texto"
-                class="w-full min-h-[160px] rounded-xl border border-border-ui bg-bg-card text-sm text-text-main p-3 font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
+                class="clausulas-editor__textarea"
               ></textarea>
             </div>
 
-            <p class="text-[11px] text-slate-500">
+            <p class="clausulas-editor__helper-text">
               Estes textos serão usados como base das <strong>cláusulas do orçamento</strong> (pré-contrato). Os dados do cliente, valores e demais informações serão preenchidos automaticamente pelo sistema usando variáveis como
               <code class="px-1 py-0.5 rounded bg-slate-100 text-[11px]">[[cliente_razao_social_ou_nome_completo]]</code>
               e
@@ -106,7 +105,7 @@
             </p>
           </div>
 
-          <div class="flex flex-wrap justify-end gap-3 pt-4 border-t border-border-ui">
+          <div class="clausulas-editor__actions ds-editor-actions flex flex-wrap justify-end gap-3">
             <Button
               type="button"
               variant="secondary"
@@ -127,9 +126,164 @@
           </div>
         </form>
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
+
+<style scoped>
+.clausulas-editor {
+  min-height: 100%;
+  background: var(--ds-color-surface);
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.clausulas-editor :deep(.ds-header-block) {
+  align-items: center;
+}
+
+.clausulas-editor :deep(.ds-header-block > div:first-child) {
+  justify-content: center;
+  width: 100%;
+}
+
+.clausulas-editor :deep(.ds-header-block > div:first-child > div:last-child) {
+  flex: 0 1 auto;
+  text-align: center;
+}
+
+.clausulas-editor :deep(.ds-header-subtitle) {
+  text-align: center;
+  margin-inline: auto;
+}
+
+.clausulas-editor__body {
+  width: min(100%, 1680px);
+}
+
+.clausulas-editor__form {
+  display: flex;
+  flex-direction: column;
+  gap: 2.25rem;
+}
+
+.clausulas-editor__tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.clausulas-editor__tab {
+  min-height: 2.2rem;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid rgba(214, 224, 234, 0.78);
+  border-radius: 999px;
+  color: var(--ds-color-text-faint);
+  font-size: 0.78rem;
+  font-weight: 600;
+  transition: color 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.clausulas-editor__tab:hover {
+  border-color: rgba(44, 111, 163, 0.24);
+  color: var(--ds-color-primary);
+}
+
+.clausulas-editor__tab--active {
+  border-color: var(--ds-color-primary);
+  background: rgba(44, 111, 163, 0.07);
+  color: var(--ds-color-primary);
+}
+
+.clausulas-editor__module {
+  padding-bottom: 1.3rem;
+  border-bottom: 1px solid rgba(214, 224, 234, 0.62);
+}
+
+.clausulas-editor__module-head {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.9rem;
+}
+
+.clausulas-editor__module :deep(.ds-field-label) {
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+}
+
+.clausulas-editor__module-key {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.75rem;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(245, 248, 251, 0.9);
+  color: var(--ds-color-text-faint);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.clausulas-editor__textarea-label {
+  display: block;
+  margin: 0.95rem 0 0.55rem;
+  color: var(--ds-color-text-faint);
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.clausulas-editor__textarea {
+  width: 100%;
+  min-height: 190px;
+  padding: 0.9rem 0.1rem 0.65rem;
+  border: 0;
+  border-bottom: 1px solid rgba(188, 203, 221, 0.75);
+  background: transparent;
+  color: var(--ds-color-text);
+  font-size: 0.92rem;
+  font-family: 'Consolas', 'Courier New', monospace;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.clausulas-editor__textarea:focus {
+  outline: none;
+  border-bottom-color: var(--ds-color-primary);
+}
+
+.clausulas-editor__helper-text {
+  color: var(--ds-color-text-faint);
+  font-size: 0.76rem;
+  line-height: 1.6;
+}
+
+.clausulas-editor__warning-text {
+  padding: 0.8rem 0.95rem;
+  border: 1px solid rgba(245, 158, 11, 0.18);
+  border-radius: 0.9rem;
+  background: rgba(245, 158, 11, 0.08);
+  color: #b45309;
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+
+.clausulas-editor__actions {
+  margin-top: 0.4rem;
+}
+
+@media (max-width: 768px) {
+  .clausulas-editor__body {
+    width: 100%;
+  }
+
+  .clausulas-editor__tab {
+    flex: 1 1 0;
+    justify-content: center;
+  }
+}
+</style>
 
 <script setup>
 import { ref, onMounted, watch } from 'vue'

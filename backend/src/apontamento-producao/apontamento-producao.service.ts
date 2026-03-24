@@ -11,11 +11,49 @@ import {
   validarTransicaoStatusCliente,
 } from '../shared/constantes/status-matrix';
 import { AgendaService } from '../agenda/agenda.service';
+import { MedicaoFinaService } from '../medicao-fina/medicao-fina.service';
 
 /** Categorias da agenda_loja que são "medição para orçamento" (funcionário vai ao cliente, conclui na volta). */
-const CATEGORIAS_AGENDA_LOJA_MEDICAO = ['MEDIDA', 'MEDIDA_AGENDADA', 'AGENDAR_MEDIDA'] as const;
+const CATEGORIAS_AGENDA_LOJA_MEDICAO = [
+  'MEDIDA',
+  'MEDIDA_AGENDADA',
+  'AGENDAR_MEDIDA',
+  'AGENDAR_MEDIDA_VENDA',
+  'MEDICAO_VENDA',
+  'MEDICAO',
+  'MEDIDA_EM_ANDAMENTO',
+] as const;
 /** Categorias da agenda_fabrica que são "medicação fina" (pós-venda, libera ordem de serviço). */
-const CATEGORIAS_AGENDA_FABRICA_MEDICAO_FINA = ['MEDIDA_FINA', 'AGENDAR_MEDIDA_FINA'] as const;
+const CATEGORIAS_AGENDA_FABRICA_MEDICAO_FINA = [
+  'MEDIDA_FINA',
+  'AGENDAR_MEDIDA_FINA',
+  'MEDIDA_FINA_AGENDADA',
+] as const;
+
+/** Categorias / subetapa de projeto técnico (engenharia pós–medida fina) — mesma fila operacional do Totem. */
+const CATEGORIAS_AGENDA_FABRICA_PROJETO_TECNICO = [
+  'AGUARDANDO_PROJETO_TECNICO',
+  'PROJETO_TECNICO_EM_ANDAMENTO',
+  'PROJETO_TECNICO_CONCLUIDO',
+  'PROJETO_TECNICO_APROVADO',
+] as const;
+
+/** Status que ainda aparecem no Totem (fila operacional). A agenda automática usa EM_ANDAMENTO; o play do totem grava EM_PRODUCAO. */
+const TOTEM_STATUS_TAREFA_ABERTA = ['PENDENTE', 'EM_PRODUCAO', 'EM_ANDAMENTO'] as const;
+
+/** Medição fina na fábrica: por categoria OU por subetapa (kanban Engenharia usa subetapa MEDIDA_FINA). */
+function agendaFabricaEhMedicaoFina(t: { categoria?: string | null; subetapa?: string | null }): boolean {
+  const cat = String(t.categoria ?? '').toUpperCase().trim();
+  if (CATEGORIAS_AGENDA_FABRICA_MEDICAO_FINA.includes(cat as any)) return true;
+  return String(t.subetapa ?? '').toUpperCase().trim() === 'MEDIDA_FINA';
+}
+
+/** Projeto técnico na fábrica: categorias de status do cliente OU subetapa PROJETO_TECNICO. */
+function agendaFabricaEhProjetoTecnico(t: { categoria?: string | null; subetapa?: string | null }): boolean {
+  const cat = String(t.categoria ?? '').toUpperCase().trim();
+  if (CATEGORIAS_AGENDA_FABRICA_PROJETO_TECNICO.includes(cat as any)) return true;
+  return String(t.subetapa ?? '').toUpperCase().trim() === 'PROJETO_TECNICO';
+}
 
 /** Categorias administrativas/comerciais que NÃO devem aparecer no Totem (só operacional: medição + ordens produção). */
 const CATEGORIAS_TOTEM_EXCLUIDAS = ['AGENDAR_APRESENTACAO', 'VENDA_FECHADA'] as const;
@@ -34,6 +72,7 @@ export class ApontamentoProducaoService {
     private readonly prisma: PrismaService,
     private readonly estoqueRetalhoService: EstoqueRetalhoService,
     private readonly agendaService: AgendaService,
+    private readonly medicaoFinaService: MedicaoFinaService,
   ) {}
 
   private getPreMedicaoDelegate() {
@@ -490,7 +529,12 @@ export class ApontamentoProducaoService {
           OR: [
             ...(somentePainelCats.length > 0 ? [{ categoria: { notIn: somentePainelCats } }] : []),
             { status: statusSempreVisivel },
-            ...somentePainelCats.map((c) => ({ categoria: c, status: statusAgendado })),
+            // Categorias "só painel" (ex.: AGENDAR_MEDIDA_FINA) nascem PENDENTE no totem/timeline;
+            // antes só passavam com EM_ANDAMENTO e sumiam da fila operacional.
+            ...somentePainelCats.map((c) => ({
+              categoria: c,
+              status: { in: ['PENDENTE', 'EM_PRODUCAO', statusAgendado] },
+            })),
           ],
         },
       ];
@@ -529,6 +573,170 @@ export class ApontamentoProducaoService {
     return { tarefas: [], tipo: 'venda' as const };
   }
 
+  private buildFuncionariosTotem(tarefa: {
+    equipe?: Array<{ funcionario_id?: number | null; funcionario?: { id?: number | null; nome?: string | null } | null }>;
+    apontamentos_producao?: Array<{ funcionario_id?: number | null; funcionario?: { id?: number | null; nome?: string | null } | null }>;
+  }) {
+    const unicos = new Map<string, { id: number | null; nome: string }>();
+    const candidatos = [
+      ...(Array.isArray(tarefa?.equipe) ? tarefa.equipe : []),
+      ...(Array.isArray(tarefa?.apontamentos_producao) ? tarefa.apontamentos_producao : []),
+    ];
+
+    for (const item of candidatos) {
+      const funcionario = item?.funcionario;
+      const id = funcionario?.id ?? item?.funcionario_id ?? null;
+      const nome = String(funcionario?.nome ?? '').trim();
+      if (!nome) continue;
+      const chave = id != null ? `id:${id}` : `nome:${nome.toLowerCase()}`;
+      if (!unicos.has(chave)) {
+        unicos.set(chave, { id, nome });
+      }
+    }
+
+    return Array.from(unicos.values());
+  }
+
+  /** Gera código único para tabela `projetos` (evita colisão com @unique). */
+  private async gerarCodigoProjetoUnico(base: string): Promise<string> {
+    for (let tentativa = 0; tentativa < 100; tentativa += 1) {
+      const codigo = tentativa === 0 ? base : `${base}-${tentativa + 1}`;
+      const existe = await this.prisma.projetos.findUnique({
+        where: { codigo },
+        select: { id: true },
+      });
+      if (!existe) return codigo;
+    }
+    throw new BadRequestException('Não foi possível gerar código único do projeto.');
+  }
+
+  /**
+   * Medição fina (fábrica): o vínculo vem do kanban (venda / orçamento / cliente + contrato vigente).
+   * O funcionário no Totem não escolhe pedido — o sistema resolve `projeto_id` na agenda.
+   */
+  async ensureProjetoVinculadoAgendaMedicaoFina(
+    agendaFabricaId: number,
+    alteradoPorUsuarioId?: number,
+  ): Promise<{ projeto_id: number | null }> {
+    const agenda = await this.prisma.agenda_fabrica.findUnique({
+      where: { id: agendaFabricaId },
+      select: {
+        id: true,
+        projeto_id: true,
+        venda_id: true,
+        orcamento_id: true,
+        cliente_id: true,
+        categoria: true,
+        subetapa: true,
+      },
+    });
+    if (!agenda) throw new BadRequestException('Tarefa não encontrada.');
+    if (!agendaFabricaEhMedicaoFina(agenda) && !agendaFabricaEhProjetoTecnico(agenda)) {
+      return { projeto_id: agenda.projeto_id ?? null };
+    }
+    if (agenda.projeto_id) {
+      return { projeto_id: agenda.projeto_id };
+    }
+
+    let vendaId = agenda.venda_id ?? null;
+    let orcamentoId = agenda.orcamento_id ?? null;
+    let clienteId = agenda.cliente_id ?? null;
+
+    if (!vendaId && clienteId) {
+      const contrato = await this.prisma.contratos.findFirst({
+        where: {
+          cliente_id: clienteId,
+          status: 'VIGENTE',
+          venda_id: { not: null },
+        },
+        orderBy: { id: 'desc' },
+        select: { venda_id: true },
+      });
+      if (contrato?.venda_id != null) {
+        vendaId = Number(contrato.venda_id);
+      }
+    }
+
+    if (vendaId) {
+      const venda = await this.prisma.vendas.findUnique({
+        where: { id: vendaId },
+        select: { id: true, cliente_id: true, orcamento_id: true },
+      });
+      if (venda) {
+        clienteId = clienteId ?? venda.cliente_id ?? null;
+        orcamentoId = orcamentoId ?? venda.orcamento_id ?? null;
+      }
+    }
+
+    if (!clienteId && orcamentoId) {
+      const o = await this.prisma.orcamentos.findUnique({
+        where: { id: orcamentoId },
+        select: { cliente_id: true },
+      });
+      clienteId = o?.cliente_id ?? null;
+    }
+
+    let projetoId: number | null = null;
+
+    if (vendaId) {
+      const p = await this.prisma.projetos.findFirst({
+        where: { venda_id: vendaId },
+        select: { id: true },
+      });
+      if (p) projetoId = p.id;
+    }
+
+    if (!projetoId && orcamentoId) {
+      const p = await this.prisma.projetos.findFirst({
+        where: { orcamento_id: orcamentoId },
+        select: { id: true, venda_id: true },
+      });
+      if (p) {
+        projetoId = p.id;
+        if (vendaId && p.venda_id == null) {
+          await this.prisma.projetos.update({
+            where: { id: p.id },
+            data: { venda_id: vendaId },
+          });
+        }
+      }
+    }
+
+    if (!projetoId && vendaId && clienteId) {
+      const codigo = await this.gerarCodigoProjetoUnico(`PROJ-${vendaId}`);
+      const created = await this.prisma.projetos.create({
+        data: {
+          codigo,
+          cliente_id: clienteId,
+          venda_id: vendaId,
+          orcamento_id: orcamentoId,
+        },
+        select: { id: true },
+      });
+      projetoId = created.id;
+    }
+
+    if (!projetoId) {
+      return { projeto_id: null };
+    }
+
+    const dataAgenda: Record<string, unknown> = {
+      projeto_id: projetoId,
+      ...(alteradoPorUsuarioId
+        ? { alterado_por_usuario_id: alteradoPorUsuarioId, alterado_em: new Date() }
+        : { alterado_em: new Date() }),
+    };
+    if (vendaId && !agenda.venda_id) dataAgenda.venda_id = vendaId;
+    if (clienteId && !agenda.cliente_id) dataAgenda.cliente_id = clienteId;
+
+    await this.prisma.agenda_fabrica.update({
+      where: { id: agendaFabricaId },
+      data: dataAgenda as any,
+    });
+
+    return { projeto_id: projetoId };
+  }
+
   /**
    * Totem Fábrica: apenas tarefas operacionais de fábrica:
    * - Medições externas (agenda_loja: AGENDAR_MEDIDA / MEDIDA / MEDIDA_AGENDADA) — aparecem como "MEDIÇÃO EXTERNA".
@@ -558,8 +766,9 @@ export class ApontamentoProducaoService {
 
     // 1) Medições externas (agenda_loja): só categorias de medição — caem no Totem automaticamente ao serem criadas na Agenda.
     const whereLoja = {
-      status: { in: ['PENDENTE', 'EM_PRODUCAO'] },
+      status: { in: [...TOTEM_STATUS_TAREFA_ABERTA] },
       categoria: { in: [...CATEGORIAS_AGENDA_LOJA_MEDICAO] },
+      arquivado_em: null,
       ...whereData,
       ...(whereVendedor ? { AND: [whereVendedor] } : {}),
     };
@@ -595,7 +804,10 @@ export class ApontamentoProducaoService {
         OR: [
           ...(somentePainelCats.length > 0 ? [{ categoria: { notIn: somentePainelCats } }] : []),
           { status: statusSempreVisivel },
-          ...somentePainelCats.map((c) => ({ categoria: c, status: statusAgendado })),
+          ...somentePainelCats.map((c) => ({
+            categoria: c,
+            status: { in: ['PENDENTE', 'EM_PRODUCAO', statusAgendado] },
+          })),
         ],
       },
       { OR: [{ categoria: { notIn: [...CATEGORIAS_TOTEM_EXCLUIDAS] } }, { categoria: null }] },
@@ -608,7 +820,8 @@ export class ApontamentoProducaoService {
 
     const tarefasFabrica = await this.prisma.agenda_fabrica.findMany({
       where: {
-        status: { in: ['PENDENTE', 'EM_PRODUCAO'] },
+        status: { in: [...TOTEM_STATUS_TAREFA_ABERTA] },
+        arquivado_em: null,
         ...whereData,
         AND: andProducao,
       },
@@ -626,21 +839,42 @@ export class ApontamentoProducaoService {
       },
     });
 
+    for (const t of tarefasFabrica) {
+      const precisaProjetoTotem =
+        (agendaFabricaEhMedicaoFina(t) || agendaFabricaEhProjetoTecnico(t)) &&
+        (t.projeto_id == null || t.projeto_id === undefined);
+      if (precisaProjetoTotem) {
+        try {
+          const { projeto_id } = await this.ensureProjetoVinculadoAgendaMedicaoFina(t.id);
+          if (projeto_id != null) {
+            (t as { projeto_id?: number | null }).projeto_id = projeto_id;
+          }
+        } catch {
+          /* gestão ajusta no kanban se não houver venda/contrato resolvível */
+        }
+      }
+    }
+
     type TarefaUnificada = {
       id_para_play: number;
       tipo: 'agenda_fabrica' | 'agenda_loja';
       is_medicao_externa: boolean;
-      tipo_medicao: 'MEDICAO_ORCAMENTO' | 'MEDICAO_FINA' | null;
+      tipo_medicao: 'MEDICAO_ORCAMENTO' | 'MEDICAO_FINA' | 'PROJETO_TECNICO' | null;
       titulo: string;
       inicio_em: Date;
       fim_em: Date;
       status: string;
       categoria: string | null;
+      fluxo_tipo: string | null;
+      macroetapa: string | null;
+      subetapa: string | null;
+      execucao_etapa: string | null;
       projeto_id: number | null;
       cliente: { id: number; nome_completo: string | null; razao_social: string | null } | null;
       criado_por_usuario: { id: number; nome: string | null } | null;
       equipe: unknown[];
       apontamentos_producao: unknown[];
+      funcionarios_etapa: Array<{ id: number | null; nome: string }>;
     };
 
     const normLoja: TarefaUnificada[] = tarefasLoja.map((t) => ({
@@ -653,31 +887,44 @@ export class ApontamentoProducaoService {
       fim_em: t.fim_em,
       status: t.status,
       categoria: t.categoria,
+      fluxo_tipo: t.fluxo_tipo ?? null,
+      macroetapa: t.macroetapa ?? null,
+      subetapa: t.subetapa ?? null,
+      execucao_etapa: t.execucao_etapa ?? null,
       projeto_id: t.projeto_id ?? null,
       cliente: t.cliente,
       criado_por_usuario: t.criado_por_usuario,
       equipe: t.equipe,
       apontamentos_producao: t.apontamentos_producao,
+      funcionarios_etapa: this.buildFuncionariosTotem(t),
     }));
 
     const normFabrica: TarefaUnificada[] = tarefasFabrica.map((t) => {
-      const cat = String(t.categoria ?? '').toUpperCase();
-      const ehMedicaoFina = CATEGORIAS_AGENDA_FABRICA_MEDICAO_FINA.includes(cat as any);
+      const ehMedicaoFina = agendaFabricaEhMedicaoFina(t);
+      const ehProjetoTecnico = agendaFabricaEhProjetoTecnico(t);
+      let tipoMedicao: TarefaUnificada['tipo_medicao'] = null;
+      if (ehProjetoTecnico) tipoMedicao = 'PROJETO_TECNICO';
+      else if (ehMedicaoFina) tipoMedicao = 'MEDICAO_FINA';
       return {
         id_para_play: t.id,
         tipo: 'agenda_fabrica' as const,
         is_medicao_externa: ehMedicaoFina,
-        tipo_medicao: ehMedicaoFina ? ('MEDICAO_FINA' as const) : null,
+        tipo_medicao: tipoMedicao,
         titulo: t.titulo,
         inicio_em: t.inicio_em,
         fim_em: t.fim_em,
         status: t.status,
         categoria: t.categoria,
+        fluxo_tipo: t.fluxo_tipo ?? null,
+        macroetapa: t.macroetapa ?? null,
+        subetapa: t.subetapa ?? null,
+        execucao_etapa: t.execucao_etapa ?? null,
         projeto_id: t.projeto_id ?? null,
         cliente: t.cliente,
         criado_por_usuario: t.criado_por_usuario,
         equipe: t.equipe,
         apontamentos_producao: t.apontamentos_producao,
+        funcionarios_etapa: this.buildFuncionariosTotem(t),
       };
     });
 
@@ -690,6 +937,154 @@ export class ApontamentoProducaoService {
   /**
    * Retorna uma única tarefa do totem por id e tipo (para páginas dedicadas de medição).
    */
+  /**
+   * Lista projetos do cliente da tarefa (totem medição fina sem projeto vinculado).
+   * Resolve cliente_id pela agenda, venda ou orçamento.
+   */
+  async listarProjetosClienteParaTotemMedicaoFina(agendaFabricaId: number) {
+    const agenda = await this.prisma.agenda_fabrica.findUnique({
+      where: { id: agendaFabricaId },
+      select: {
+        id: true,
+        cliente_id: true,
+        venda_id: true,
+        orcamento_id: true,
+        categoria: true,
+        subetapa: true,
+      },
+    });
+    if (!agenda) throw new BadRequestException('Tarefa não encontrada.');
+    if (!agendaFabricaEhMedicaoFina(agenda) && !agendaFabricaEhProjetoTecnico(agenda)) {
+      throw new BadRequestException('Esta tarefa não é de medição fina nem projeto técnico.');
+    }
+
+    await this.ensureProjetoVinculadoAgendaMedicaoFina(agendaFabricaId);
+
+    const agendaAtual = await this.prisma.agenda_fabrica.findUnique({
+      where: { id: agendaFabricaId },
+      select: {
+        id: true,
+        cliente_id: true,
+        venda_id: true,
+        orcamento_id: true,
+        categoria: true,
+        subetapa: true,
+      },
+    });
+    if (!agendaAtual) throw new BadRequestException('Tarefa não encontrada.');
+
+    let clienteId: number | null = agendaAtual.cliente_id ?? null;
+    if (!clienteId && agendaAtual.venda_id) {
+      const v = await this.prisma.vendas.findUnique({
+        where: { id: agendaAtual.venda_id },
+        select: { cliente_id: true },
+      });
+      clienteId = v?.cliente_id ?? null;
+    }
+    if (!clienteId && agendaAtual.orcamento_id) {
+      const o = await this.prisma.orcamentos.findUnique({
+        where: { id: agendaAtual.orcamento_id },
+        select: { cliente_id: true },
+      });
+      clienteId = o?.cliente_id ?? null;
+    }
+    if (!clienteId) {
+      throw new BadRequestException(
+        'Não foi possível identificar o cliente desta tarefa. Vincule cliente, venda ou orçamento na agenda da produção.',
+      );
+    }
+
+    const projetos = await this.medicaoFinaService.listarProjetosPorCliente(clienteId);
+
+    return {
+      cliente_id: clienteId,
+      explicacao:
+        'Não existe uma tela chamada “Projeto”. No sistema, “projeto” é só a ficha interna que liga este cliente ao orçamento ou à venda. Use a coluna “Origem” abaixo para achar o pedido certo (número da venda ou da proposta).',
+      projetos,
+    };
+  }
+
+  /**
+   * Vincula um projeto à agenda de medição fina (totem), validando cliente/venda/orçamento.
+   */
+  async vincularProjetoTotemMedicaoFina(
+    agendaFabricaId: number,
+    projetoId: number,
+    alteradoPorUsuarioId?: number,
+  ) {
+    if (!projetoId || projetoId <= 0) throw new BadRequestException('projeto_id inválido.');
+
+    const agenda = await this.prisma.agenda_fabrica.findUnique({
+      where: { id: agendaFabricaId },
+      select: {
+        id: true,
+        cliente_id: true,
+        venda_id: true,
+        orcamento_id: true,
+        projeto_id: true,
+        categoria: true,
+        subetapa: true,
+        status: true,
+      },
+    });
+    if (!agenda) throw new BadRequestException('Tarefa não encontrada.');
+    if (!agendaFabricaEhMedicaoFina(agenda) && !agendaFabricaEhProjetoTecnico(agenda)) {
+      throw new BadRequestException('Esta tarefa não é de medição fina nem projeto técnico.');
+    }
+    const statusNorm = String(agenda.status || '').toUpperCase();
+    if (statusNorm === 'CONCLUIDO' || statusNorm === 'CANCELADO') {
+      throw new BadRequestException('Tarefa encerrada; não é possível vincular projeto.');
+    }
+
+    const projeto = await this.prisma.projetos.findUnique({
+      where: { id: projetoId },
+      select: { id: true, cliente_id: true, venda_id: true, orcamento_id: true },
+    });
+    if (!projeto) throw new BadRequestException('Projeto não encontrado.');
+
+    let clienteAgenda: number | null = agenda.cliente_id ?? null;
+    if (!clienteAgenda && agenda.venda_id) {
+      const v = await this.prisma.vendas.findUnique({
+        where: { id: agenda.venda_id },
+        select: { cliente_id: true },
+      });
+      clienteAgenda = v?.cliente_id ?? null;
+    }
+    if (!clienteAgenda && agenda.orcamento_id) {
+      const o = await this.prisma.orcamentos.findUnique({
+        where: { id: agenda.orcamento_id },
+        select: { cliente_id: true },
+      });
+      clienteAgenda = o?.cliente_id ?? null;
+    }
+
+    const mesmoCliente = clienteAgenda != null && projeto.cliente_id === clienteAgenda;
+    const mesmaVenda =
+      agenda.venda_id != null && projeto.venda_id != null && agenda.venda_id === projeto.venda_id;
+    const mesmoOrcamento =
+      agenda.orcamento_id != null &&
+      projeto.orcamento_id != null &&
+      agenda.orcamento_id === projeto.orcamento_id;
+
+    if (!mesmoCliente && !mesmaVenda && !mesmoOrcamento) {
+      throw new BadRequestException(
+        'O projeto escolhido não corresponde ao cliente (ou venda/orçamento) desta tarefa.',
+      );
+    }
+
+    await this.prisma.agenda_fabrica.update({
+      where: { id: agendaFabricaId },
+      data: {
+        projeto_id: projetoId,
+        ...(alteradoPorUsuarioId
+          ? { alterado_por_usuario_id: alteradoPorUsuarioId, alterado_em: new Date() }
+          : { alterado_em: new Date() }),
+      },
+    });
+
+    return { ok: true, projeto_id: projetoId, agenda_fabrica_id: agendaFabricaId };
+  }
+
   async getTotemTarefaById(
     id: number,
     tipo: 'agenda_loja' | 'agenda_fabrica' = 'agenda_fabrica',
@@ -727,6 +1122,7 @@ export class ApontamentoProducaoService {
         criado_por_usuario: t.criado_por_usuario,
         equipe: t.equipe,
         apontamentos_producao: t.apontamentos_producao,
+        funcionarios_etapa: this.buildFuncionariosTotem(t),
       };
     }
     const t = await this.prisma.agenda_fabrica.findUnique({
@@ -742,13 +1138,25 @@ export class ApontamentoProducaoService {
       },
     });
     if (!t) throw new BadRequestException('Tarefa não encontrada.');
-    const cat = String(t.categoria ?? '').toUpperCase();
-    const ehMedicaoFina = CATEGORIAS_AGENDA_FABRICA_MEDICAO_FINA.includes(cat as any);
+    const ehMedicaoFina = agendaFabricaEhMedicaoFina(t);
+    const ehProjetoTecnico = agendaFabricaEhProjetoTecnico(t);
+    let projetoIdTotem = t.projeto_id ?? null;
+    if ((ehMedicaoFina || ehProjetoTecnico) && projetoIdTotem == null) {
+      await this.ensureProjetoVinculadoAgendaMedicaoFina(t.id);
+      const ref = await this.prisma.agenda_fabrica.findUnique({
+        where: { id: t.id },
+        select: { projeto_id: true },
+      });
+      projetoIdTotem = ref?.projeto_id ?? null;
+    }
+    let tipoMedicaoFabrica: 'MEDICAO_FINA' | 'PROJETO_TECNICO' | null = null;
+    if (ehProjetoTecnico) tipoMedicaoFabrica = 'PROJETO_TECNICO';
+    else if (ehMedicaoFina) tipoMedicaoFabrica = 'MEDICAO_FINA';
     return {
       id_para_play: t.id,
       tipo: 'agenda_fabrica' as const,
       is_medicao_externa: ehMedicaoFina,
-      tipo_medicao: ehMedicaoFina ? ('MEDICAO_FINA' as const) : null,
+      tipo_medicao: tipoMedicaoFabrica,
       titulo: t.titulo,
       inicio_em: t.inicio_em,
       fim_em: t.fim_em,
@@ -758,11 +1166,12 @@ export class ApontamentoProducaoService {
       macroetapa: t.macroetapa ?? null,
       subetapa: t.subetapa ?? null,
       execucao_etapa: t.execucao_etapa ?? null,
-      projeto_id: t.projeto_id ?? null,
+      projeto_id: projetoIdTotem,
       cliente: t.cliente,
       criado_por_usuario: t.criado_por_usuario,
       equipe: t.equipe,
       apontamentos_producao: t.apontamentos_producao,
+      funcionarios_etapa: this.buildFuncionariosTotem(t),
     };
   }
 
@@ -883,6 +1292,8 @@ export class ApontamentoProducaoService {
   }
 
   private async totemPlayAgendaFabrica(agendaFabricaId: number, alteradoPorUsuarioId?: number) {
+    await this.ensureProjetoVinculadoAgendaMedicaoFina(agendaFabricaId, alteradoPorUsuarioId);
+
     const agenda = await this.prisma.agenda_fabrica.findUnique({
       where: { id: agendaFabricaId },
       select: {
@@ -1078,8 +1489,26 @@ export class ApontamentoProducaoService {
         pe_direito_m: a.pe_direito_m,
         profundidade_m: a.profundidade_m,
         observacoes: a.observacoes,
+        medidas_json: a.medidas_json ?? null,
       })),
     };
+  }
+
+  private async encontrarAgendaLojaMedicaoAtivaPorCliente(clienteId: number) {
+    if (!clienteId) return null;
+
+    return this.prisma.agenda_loja.findFirst({
+      where: {
+        cliente_id: clienteId,
+        status: { notIn: ['CONCLUIDO', 'CANCELADO', 'Cancelado', 'cancelado'] },
+        OR: [
+          { subetapa: 'MEDIDA' },
+          { categoria: { in: [...CATEGORIAS_AGENDA_LOJA_MEDICAO] as any } },
+        ],
+      },
+      select: { id: true },
+      orderBy: [{ atualizado_em: 'desc' }, { id: 'desc' }],
+    });
   }
 
   async getOuCriarPreMedicaoByCliente(clienteId: number) {
@@ -1103,6 +1532,29 @@ export class ApontamentoProducaoService {
       });
     }
 
+    if (!pre.agenda_loja_id) {
+      const agendaMedicao = await this.encontrarAgendaLojaMedicaoAtivaPorCliente(clienteId);
+      if (agendaMedicao?.id) {
+        pre = await preMedicao.update({
+          where: { id: pre.id },
+          data: { agenda_loja_id: agendaMedicao.id },
+          include: { ambientes: { orderBy: { nome_ambiente: 'asc' } } },
+        });
+      }
+    }
+
+    return this.mapPreMedicao(pre);
+  }
+
+  async getPreMedicaoById(preMedicaoId: number) {
+    const preMedicao = this.getPreMedicaoDelegate();
+    const pre = await preMedicao.findUnique({
+      where: { id: preMedicaoId },
+      include: { ambientes: { orderBy: { nome_ambiente: 'asc' } } },
+    });
+
+    if (!pre) throw new BadRequestException('Pré-medição não encontrada.');
+
     return this.mapPreMedicao(pre);
   }
 
@@ -1114,6 +1566,7 @@ export class ApontamentoProducaoService {
       pe_direito_m?: number;
       profundidade_m?: number;
       observacoes?: string;
+      medidas_json?: string;
     },
   ) {
     const preMedicao = this.getPreMedicaoDelegate();
@@ -1142,12 +1595,14 @@ export class ApontamentoProducaoService {
         pe_direito_m: body.pe_direito_m != null ? body.pe_direito_m : null,
         profundidade_m: body.profundidade_m != null ? body.profundidade_m : null,
         observacoes: (body.observacoes || '').trim() || null,
+        medidas_json: body.medidas_json ?? null,
       },
       update: {
         largura_m: body.largura_m != null ? body.largura_m : null,
         pe_direito_m: body.pe_direito_m != null ? body.pe_direito_m : null,
         profundidade_m: body.profundidade_m != null ? body.profundidade_m : null,
         observacoes: (body.observacoes || '').trim() || null,
+        medidas_json: body.medidas_json ?? null,
       },
     });
 
@@ -2408,24 +2863,26 @@ export class ApontamentoProducaoService {
       }
 
       const { tempoTotalTarefa, custoTarefaFabrica } = await this.calcularCustoTarefaFabrica(agenda_loja_id, null);
+      const payloadLoja: Record<string, unknown> = {
+        status: 'CONCLUIDO',
+        ...this.agendaService.montarCamposStatusMatrixFromAtual({
+          categoria: agenda.categoria ?? null,
+          status: 'CONCLUIDO',
+          origemFluxo: agenda.origem_fluxo ?? null,
+          planoCorteId: null,
+          fluxoTipo: agenda.fluxo_tipo ?? null,
+          macroetapa: agenda.macroetapa ?? null,
+          subetapa: agenda.subetapa ?? null,
+          execucaoEtapa: agenda.execucao_etapa ?? null,
+        }),
+        alterado_em: agora,
+        tempo_total_tarefa: tempoTotalTarefa != null ? new Decimal(tempoTotalTarefa) : null,
+        custo_tarefa_fabrica: custoTarefaFabrica != null ? new Decimal(custoTarefaFabrica) : null,
+      };
+      this.agendaService.aplicarArquivamentoNoPayloadAgenda(payloadLoja, { arquivadoMomento: agora });
       await this.prisma.agenda_loja.update({
         where: { id: agenda_loja_id },
-        data: {
-          status: 'CONCLUIDO',
-          ...this.agendaService.montarCamposStatusMatrixFromAtual({
-            categoria: agenda.categoria ?? null,
-            status: 'CONCLUIDO',
-            origemFluxo: agenda.origem_fluxo ?? null,
-            planoCorteId: null,
-            fluxoTipo: agenda.fluxo_tipo ?? null,
-            macroetapa: agenda.macroetapa ?? null,
-            subetapa: agenda.subetapa ?? null,
-            execucaoEtapa: agenda.execucao_etapa ?? null,
-          }),
-          alterado_em: agora,
-          tempo_total_tarefa: tempoTotalTarefa != null ? new Decimal(tempoTotalTarefa) : null,
-          custo_tarefa_fabrica: custoTarefaFabrica != null ? new Decimal(custoTarefaFabrica) : null,
-        },
+        data: payloadLoja as any,
       });
 
       let mensagemVendedor: string | null = null;
@@ -2503,24 +2960,26 @@ export class ApontamentoProducaoService {
       }
 
       const { tempoTotalTarefa, custoTarefaFabrica } = await this.calcularCustoTarefaFabrica(null, agenda_fabrica_id);
+      const payloadFabrica: Record<string, unknown> = {
+        status: 'CONCLUIDO',
+        ...this.agendaService.montarCamposStatusMatrixFromAtual({
+          categoria: agenda.categoria ?? null,
+          status: 'CONCLUIDO',
+          origemFluxo: agenda.origem_fluxo ?? null,
+          planoCorteId: agenda.plano_corte_id ?? null,
+          fluxoTipo: agenda.fluxo_tipo ?? null,
+          macroetapa: agenda.macroetapa ?? null,
+          subetapa: agenda.subetapa ?? null,
+          execucaoEtapa: agenda.execucao_etapa ?? null,
+        }),
+        alterado_em: agora,
+        tempo_total_tarefa: tempoTotalTarefa != null ? new Decimal(tempoTotalTarefa) : null,
+        custo_tarefa_fabrica: custoTarefaFabrica != null ? new Decimal(custoTarefaFabrica) : null,
+      };
+      this.agendaService.aplicarArquivamentoNoPayloadAgenda(payloadFabrica, { arquivadoMomento: agora });
       await this.prisma.agenda_fabrica.update({
         where: { id: agenda_fabrica_id },
-        data: {
-          status: 'CONCLUIDO',
-          ...this.agendaService.montarCamposStatusMatrixFromAtual({
-            categoria: agenda.categoria ?? null,
-            status: 'CONCLUIDO',
-            origemFluxo: agenda.origem_fluxo ?? null,
-            planoCorteId: agenda.plano_corte_id ?? null,
-            fluxoTipo: agenda.fluxo_tipo ?? null,
-            macroetapa: agenda.macroetapa ?? null,
-            subetapa: agenda.subetapa ?? null,
-            execucaoEtapa: agenda.execucao_etapa ?? null,
-          }),
-          alterado_em: agora,
-          tempo_total_tarefa: tempoTotalTarefa != null ? new Decimal(tempoTotalTarefa) : null,
-          custo_tarefa_fabrica: custoTarefaFabrica != null ? new Decimal(custoTarefaFabrica) : null,
-        },
+        data: payloadFabrica as any,
       });
 
       const categoriaKey = String(agenda.categoria || '').toUpperCase().trim();

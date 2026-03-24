@@ -19,6 +19,7 @@ import type {
   FechamentoFornecedorItem,
   FechamentoFornecedorItemOrigem,
 } from './dto/fechamento-fornecedor.dto';
+import type { FecharMesFuncionarioDto } from './dto/fechar-mes-funcionario.dto';
 
 @Injectable()
 export class FinanceiroService {
@@ -307,6 +308,7 @@ export class FinanceiroService {
     data_ini?: string;
     data_fim?: string;
     fornecedor_id?: number;
+    funcionario_id?: number;
     mes?: number;
     ano?: number;
   }) {
@@ -341,6 +343,11 @@ export class FinanceiroService {
     if (fornecedorId != null) {
       whereContasPagar.fornecedor_id = fornecedorId;
       whereCompras.fornecedor_id = fornecedorId;
+    }
+    if (filtros.funcionario_id != null) {
+      whereContasPagar.funcionario_id = filtros.funcionario_id;
+      whereDespesas.funcionario_id = filtros.funcionario_id;
+      whereCompras.id = -1;
     }
     if (filtros.mes != null && filtros.ano != null) {
       whereContasPagar.mes_referencia = filtros.mes;
@@ -388,7 +395,9 @@ export class FinanceiroService {
         where: whereContasPagar,
         include: {
           fornecedor: true,
+          funcionario: true,
           fornecedor_cobrador: true,
+          fechamento_funcionario: true,
           titulos: { orderBy: { vencimento_em: 'asc' } },
         },
         orderBy: { vencimento_em: 'asc' },
@@ -567,7 +576,9 @@ export class FinanceiroService {
             classificacao_badge: 'PRODUÇÃO',
 
             fornecedor_id: cp.fornecedor_id,
-            fornecedor_nome: cp.fornecedor?.nome_fantasia || null,
+            fornecedor_nome: cp.fornecedor?.nome_fantasia || cp.funcionario?.nome || null,
+            funcionario_id: cp.funcionario_id,
+            funcionario_nome: cp.funcionario?.nome || null,
 
             descricao: desc,
             observacao: cp.observacao || null,
@@ -667,7 +678,11 @@ export class FinanceiroService {
         where: { id },
         include: {
           fornecedor: true,
+          funcionario: true,
           fornecedor_cobrador: true,
+          fechamento_funcionario: {
+            include: { itens: { orderBy: { id: 'asc' } } },
+          },
           despesa: true,
           titulos: true,
         },
@@ -892,6 +907,8 @@ export class FinanceiroService {
         where: {
           fornecedor_id,
           status: SF.EM_ABERTO,
+          fechamento_id: null,
+          regime_financeiro: 'FECHAMENTO_MENSAL',
           data_compra: { gte: inicio, lte: fim },
         },
         orderBy: { data_compra: 'asc' },
@@ -900,7 +917,6 @@ export class FinanceiroService {
           data_compra: true,
           valor_total: true,
           tipo_compra: true,
-          vencimento_em: true,
         },
       }),
       this.prisma.plano_corte.findMany({
@@ -961,7 +977,6 @@ export class FinanceiroService {
         data_compra: c.data_compra,
         valor_total: Number((c as any).valor_total || 0),
         tipo_compra: (c as any).tipo_compra,
-        vencimento_em: (c as any).vencimento_em,
       })),
       historico_planos: planos.map((p) => ({
         id: p.id,
@@ -981,9 +996,17 @@ export class FinanceiroService {
     const mes = this.toNumber(body?.mes, 'mes');
     const ano = this.toNumber(body?.ano, 'ano');
 
-    const tipo = String(body?.forma_pagamento_chave || '').trim(); // CHEQUE | CARTAO
-    if (!tipo)
-      throw new BadRequestException('forma_pagamento_chave é obrigatório');
+    const tipoBody = String(body?.forma_pagamento_chave || '')
+      .trim()
+      .toUpperCase(); // CHEQUE | CARTAO | BOLETO | ...
+    const usarMultiplasFormas = !!body?.usar_multiplas_formas;
+
+    const normalizarTipoTitulo = (tipo?: string) => {
+      const t = String(tipo || '').trim().toUpperCase();
+      if (!t) return '';
+      if (t === 'CREDITO' || t === 'CARTAO') return 'CARTAO';
+      return t;
+    };
 
     // opcional: se informado, títulos e conta são criados já como PAGO (não precisa dar baixa depois)
     const dataPagamentoStr = String(body?.data_pagamento ?? '').trim();
@@ -1026,24 +1049,33 @@ export class FinanceiroService {
       const parcelaNum = Number(p?.parcela || 0);
       const valor = Number(p?.valor || 0);
       const venc = String(p?.vencimento_em || '').trim();
+      const tipoParcela = normalizarTipoTitulo(
+        p?.forma_pagamento_chave || tipoBody,
+      );
 
       if (!Number.isFinite(parcelaNum) || parcelaNum <= 0)
         throw new BadRequestException('parcela inválida');
       if (!Number.isFinite(valor) || valor < 0)
         throw new BadRequestException('valor de parcela inválido');
+      if (!tipoParcela)
+        throw new BadRequestException(
+          'forma_pagamento_chave é obrigatória no fechamento',
+        );
       if (valor > 0 && !venc)
         throw new BadRequestException(
           'vencimento_em obrigatório quando parcela tem valor',
         );
       if (valor === 0 && !venc)
         p.vencimento_em = vencPadraoBody.toISOString().slice(0, 10);
+
+      p.forma_pagamento_chave = tipoParcela;
     }
 
     const vencPadrao = vencPadraoBody;
 
     return this.prisma.$transaction(async (tx) => {
       // 0) não duplicar fechamento
-      const jaExiste = await tx.contas_pagar.findFirst({
+      const jaExiste = await tx.fornecedor_fechamentos.findFirst({
         where: { fornecedor_id, mes_referencia: mes, ano_referencia: ano },
         select: { id: true },
       });
@@ -1074,6 +1106,8 @@ export class FinanceiroService {
         where: {
           fornecedor_id,
           status: SF.EM_ABERTO,
+          fechamento_id: null,
+          regime_financeiro: 'FECHAMENTO_MENSAL',
           data_compra: { gte: inicio, lte: fim },
         },
         select: { id: true, valor_total: true },
@@ -1125,6 +1159,19 @@ export class FinanceiroService {
       const parcelasComValor = parcelas.filter(
         (p: any) => Number(p?.valor || 0) > 0,
       );
+      const formasPagamentoTitulos: string[] = Array.from(
+        new Set(
+          parcelasComValor
+            .map((p: any) =>
+              normalizarTipoTitulo(p?.forma_pagamento_chave || tipoBody),
+            )
+            .filter(Boolean),
+        ),
+      );
+      const formaConta: string =
+        formasPagamentoTitulos.length > 1
+          ? 'MISTO'
+          : formasPagamentoTitulos[0] || normalizarTipoTitulo(tipoBody) || 'CHEQUE';
       const qtdParcelas = parcelasComValor.length || 1;
       const primeiroVenc =
         parcelasComValor.length > 0 && parcelasComValor[0]?.vencimento_em
@@ -1140,6 +1187,24 @@ export class FinanceiroService {
 
       // 2b) Valor Líquido <= 0: zerar dívida e salvar sobra como crédito no fornecedor
       if (total_final <= 0) {
+        const fechamentoCompensado = await tx.fornecedor_fechamentos.create({
+          data: {
+            fornecedor_id,
+            mes_referencia: mes,
+            ano_referencia: ano,
+            forma_pagamento_chave: formaConta,
+            total_compras: totalCompras,
+            total_planos: totalPlanos,
+            compensado_total,
+            desconto_valor,
+            valor_dever_manual: Math.max(valorDever, 0),
+            valor_creditar_manual: Math.max(valorCreditar, 0),
+            valor_final_apurado: 0,
+            status: SF.COMPENSADO,
+          },
+          select: { id: true },
+        });
+
         const novoSaldoCredito = this.round2(
           saldoCreditoAtual - usadoCredito + credito_sobra,
         );
@@ -1150,7 +1215,10 @@ export class FinanceiroService {
         if (compras.length) {
           await tx.compras.updateMany({
             where: { id: { in: compras.map((c) => c.id) } },
-            data: { status: SF.COMPENSADO },
+            data: {
+              status: SF.COMPENSADO,
+              fechamento_id: fechamentoCompensado.id,
+            },
           });
         }
         if (planos.length) {
@@ -1169,6 +1237,7 @@ export class FinanceiroService {
           total_final: 0,
           credito_sobra,
           saldo_credito_atualizado: novoSaldoCredito,
+          fechamento_id: fechamentoCompensado.id,
           conta_pagar_id: null,
         };
       }
@@ -1192,7 +1261,7 @@ export class FinanceiroService {
             classificacao: 'FECHAMENTO',
             local: `Fechamento ${String(mes).padStart(2, '0')}/${ano} - ${fornecedorNome}`,
             valor_total: total_final,
-            forma_pagamento: tipo,
+            forma_pagamento: formaConta,
             quantidade_parcelas: qtdParcelas,
             data_vencimento: primeiroVenc,
             data_pagamento: dataPagamento ?? null,
@@ -1203,12 +1272,34 @@ export class FinanceiroService {
         despesaId = despesa.id;
       }
 
+      const fechamento = await tx.fornecedor_fechamentos.create({
+        data: {
+          fornecedor_id,
+          mes_referencia: mes,
+          ano_referencia: ano,
+          forma_pagamento_chave: formaConta,
+          total_compras: totalCompras,
+          total_planos: totalPlanos,
+          compensado_total,
+          desconto_valor,
+          valor_dever_manual: Math.max(valorDever, 0),
+          valor_creditar_manual: Math.max(valorCreditar, 0),
+          valor_final_apurado: total_final,
+          status: statusFinal,
+        },
+        select: { id: true },
+      });
+
       // 3b) Cria FECHAMENTO (contas_pagar), vinculado à despesa apenas se foi criada
       const contaPagar = await tx.contas_pagar.create({
         data: {
+          fechamento_fornecedor_id: fechamento.id,
           despesa_id: despesaId,
           fornecedor_id,
           fornecedor_cobrador_id: fornecedor_cobrador_id || null,
+
+          origem_tipo: 'FORNECEDOR_FECHAMENTO',
+          origem_id: fechamento.id,
 
           mes_referencia: mes,
           ano_referencia: ano,
@@ -1218,7 +1309,7 @@ export class FinanceiroService {
             const txt = [
               `AUTO compras=${totalCompras} planos=${totalPlanos} cred_uso=${usadoCredito} planos_uso=${usadoPlanos} comp_total=${compensado_total}`,
               `MANUAL dever=${valorDever} creditar=${valorCreditar} pct=${pctLiberado}% desc=${descontoPct}% desc_val=${desconto_valor}`,
-              `total_final=${total_final} PAGTO tipo=${tipo} parcelas=${parcelas.length}`,
+              `total_final=${total_final} PAGTO tipo=${formaConta} parcelas=${parcelas.length} multi=${usarMultiplasFormas ? 'S' : 'N'}`,
             ].join(' | ');
             const maxLen = 191; // VARCHAR(191) na tabela contas_pagar
             return txt.length <= maxLen
@@ -1230,7 +1321,7 @@ export class FinanceiroService {
           valor_compensado: compensado_total,
 
           status: statusFinal,
-          forma_pagamento_chave: tipo,
+          forma_pagamento_chave: formaConta,
 
           parcelas_total: parcelas.length,
           parcela_numero: null,
@@ -1259,6 +1350,7 @@ export class FinanceiroService {
           credito_extra,
           compensado_total,
           total_final,
+          formas_pagamento_titulos: formasPagamentoTitulos,
         };
         const statusTitulo = dataPagamento ? SF.PAGO : SF.EM_ABERTO;
         const pagoEmTitulo = dataPagamento ?? null;
@@ -1267,9 +1359,12 @@ export class FinanceiroService {
             const venc = p.vencimento_em
               ? this.toDate(p.vencimento_em, 'vencimento_em')
               : vencPadrao;
+            const tipoTitulo = normalizarTipoTitulo(
+              p?.forma_pagamento_chave || tipoBody || formaConta,
+            );
             return {
               conta_pagar_id: contaPagar.id,
-              tipo,
+              tipo: tipoTitulo,
               valor: Number(p.valor),
               status: statusTitulo,
               vencimento_em: venc,
@@ -1286,7 +1381,10 @@ export class FinanceiroService {
       if (compras.length) {
         await tx.compras.updateMany({
           where: { id: { in: compras.map((c) => c.id) } },
-          data: { status: SF.COMPENSADO },
+          data: {
+            status: SF.COMPENSADO,
+            fechamento_id: fechamento.id,
+          },
         });
       }
 
@@ -1306,6 +1404,7 @@ export class FinanceiroService {
         compensado_auto,
         compensado_total,
         total_final,
+        fechamento_id: fechamento.id,
         conta_pagar_id: contaPagar.id,
       };
     });
@@ -1806,12 +1905,14 @@ export class FinanceiroService {
 
   async listarContasPagarFechamentos(filtros: {
     fornecedor_id?: number;
+    funcionario_id?: number;
     status?: string;
     data_ini?: string;
     data_fim?: string;
   }) {
     const where: any = {
       fornecedor_id: filtros.fornecedor_id || undefined,
+      funcionario_id: filtros.funcionario_id || undefined,
       status: filtros.status?.trim() || undefined,
     };
 
@@ -1827,7 +1928,9 @@ export class FinanceiroService {
       where,
       include: {
         fornecedor: true,
+        funcionario: true,
         fornecedor_cobrador: true,
+        fechamento_funcionario: true,
       },
       orderBy: [{ vencimento_em: 'asc' }, { id: 'desc' }],
     });
@@ -1841,8 +1944,14 @@ export class FinanceiroService {
     visao: 'PARA_FECHAR' | 'COMPENSADOS' | 'AGENDADOS' | 'PAGOS';
     data_ini?: string;
     data_fim?: string;
+    fornecedor_id?: number;
+    funcionario_id?: number;
+    mes?: number;
+    ano?: number;
   }): Promise<any[]> {
     const visao = filtros.visao;
+    const fornecedorId = filtros.fornecedor_id;
+    const funcionarioId = filtros.funcionario_id;
     let dataIni = filtros.data_ini
       ? new Date(filtros.data_ini + 'T00:00:00')
       : undefined;
@@ -1863,11 +1972,24 @@ export class FinanceiroService {
       dataIni = new Date(dataFim.getFullYear(), dataFim.getMonth(), 1, 0, 0, 0);
     }
 
+    const temCompetencia =
+      Number.isFinite(filtros.mes) && Number.isFinite(filtros.ano);
+    const range = dataIni && dataFim ? { gte: dataIni, lte: dataFim } : undefined;
+    const filtroContaPagarCompetencia = temCompetencia
+      ? {
+          mes_referencia: filtros.mes,
+          ano_referencia: filtros.ano,
+        }
+      : {};
+    const incluirDespesas = fornecedorId == null;
+    const statusAbertos = [SF.EM_ABERTO, SF.VENCIDO];
+
     if (visao === 'PARA_FECHAR') {
-      const range = dataIni && dataFim ? { gte: dataIni, lte: dataFim } : undefined;
       const compras = await this.prisma.compras.findMany({
         where: {
           status: SF.EM_ABERTO,
+          ...(fornecedorId != null ? { fornecedor_id: fornecedorId } : {}),
+          ...(funcionarioId != null ? { id: -1 } : {}),
           ...(range ? { data_compra: range } : {}),
         },
         include: {
@@ -1908,11 +2030,12 @@ export class FinanceiroService {
     }
 
     if (visao === 'COMPENSADOS') {
-      const range = dataIni && dataFim ? { gte: dataIni, lte: dataFim } : undefined;
       const [comprasComp, planosComp, fechamentosAguardandoQuitacao] = await Promise.all([
         this.prisma.compras.findMany({
           where: {
             status: SF.COMPENSADO,
+            ...(fornecedorId != null ? { fornecedor_id: fornecedorId } : {}),
+            ...(funcionarioId != null ? { id: -1 } : {}),
             ...(range ? { data_compra: range } : {}),
           },
           include: {
@@ -1924,6 +2047,8 @@ export class FinanceiroService {
         this.prisma.plano_corte.findMany({
           where: {
             status: SF.COMPENSADO,
+            ...(fornecedorId != null ? { fornecedor_id: fornecedorId } : {}),
+            ...(funcionarioId != null ? { id: -1 } : {}),
             ...(range ? { data_venda: range } : {}),
           },
           include: { fornecedor: true },
@@ -1933,10 +2058,14 @@ export class FinanceiroService {
           where: {
             valor_compensado: { gt: 0 },
             status: { in: [SF.EM_ABERTO, SF.VENCIDO] },
-            ...(range ? { vencimento_em: range } : {}),
+            ...(fornecedorId != null ? { fornecedor_id: fornecedorId } : {}),
+            ...(funcionarioId != null ? { funcionario_id: funcionarioId } : {}),
+            ...filtroContaPagarCompetencia,
+            ...(!temCompetencia && range ? { vencimento_em: range } : {}),
           },
           include: {
             fornecedor: true,
+            funcionario: true,
             fornecedor_cobrador: true,
             titulos: { where: { status: { in: [SF.EM_ABERTO, SF.VENCIDO] } }, orderBy: { vencimento_em: 'asc' } },
           },
@@ -2004,7 +2133,7 @@ export class FinanceiroService {
           conta_pagar_id: cp.id,
           origem: 'FECHAMENTO',
           fornecedor_id: cp.fornecedor_id,
-          fornecedor_nome: (cp as any).fornecedor?.nome_fantasia || null,
+          fornecedor_nome: (cp as any).fornecedor?.nome_fantasia || (cp as any).funcionario?.nome || null,
           descricao: desc,
           observacao: cp.observacao || null,
           relatorio_descritivo: `${desc} — Parcela ${Number(t.parcela_numero) || 1}/${Number(t.parcelas_total) || 1}`,
@@ -2026,22 +2155,70 @@ export class FinanceiroService {
     }
 
     if (visao === 'AGENDADOS') {
-      const range = dataIni && dataFim ? { gte: dataIni, lte: dataFim } : undefined;
-      const titulos = await this.prisma.titulos_financeiros.findMany({
-        where: {
-          conta_pagar_id: { not: null },
-          conta_pagar: { valor_compensado: { lte: 0 } },
-          status: { in: [SF.EM_ABERTO, SF.VENCIDO] },
-          ...(range ? { vencimento_em: range } : {}),
-        },
-        include: {
-          conta_pagar: {
-            include: { fornecedor: true, fornecedor_cobrador: true },
+      const [titulosContaPagar, despesasAbertas] = await Promise.all([
+        this.prisma.titulos_financeiros.findMany({
+          where: {
+            conta_pagar_id: { not: null },
+            conta_pagar: {
+              valor_compensado: { lte: 0 },
+              ...(fornecedorId != null ? { fornecedor_id: fornecedorId } : {}),
+              ...(funcionarioId != null ? { funcionario_id: funcionarioId } : {}),
+              ...filtroContaPagarCompetencia,
+            },
+            status: { in: statusAbertos },
+            ...(!temCompetencia && range ? { vencimento_em: range } : {}),
           },
-        },
-        orderBy: { vencimento_em: 'asc' },
-      });
-      return titulos.map((t) => {
+          include: {
+            conta_pagar: {
+              include: { fornecedor: true, funcionario: true, fornecedor_cobrador: true },
+            },
+          },
+          orderBy: { vencimento_em: 'asc' },
+        }),
+        incluirDespesas
+          ? this.prisma.despesas.findMany({
+              where: {
+                ...(funcionarioId != null ? { funcionario_id: funcionarioId } : {}),
+                ...(range
+                  ? {
+                      OR: [
+                        {
+                          titulos: {
+                            some: {
+                              status: { in: statusAbertos },
+                              vencimento_em: range,
+                            },
+                          },
+                        },
+                        {
+                          titulos: { none: {} },
+                          status: { in: statusAbertos },
+                          data_vencimento: range,
+                        },
+                      ],
+                    }
+                  : {
+                      OR: [
+                        { titulos: { some: { status: { in: statusAbertos } } } },
+                        { titulos: { none: {} }, status: { in: statusAbertos } },
+                      ],
+                    }),
+              },
+              include: {
+                titulos: {
+                  where: {
+                    status: { in: statusAbertos },
+                    ...(range ? { vencimento_em: range } : {}),
+                  },
+                  orderBy: { vencimento_em: 'asc' },
+                },
+              },
+              orderBy: { data_vencimento: 'asc' },
+            })
+          : Promise.resolve([] as any[]),
+      ]);
+
+      const rowsTitulosContaPagar = titulosContaPagar.map((t) => {
         const cp = (t as any).conta_pagar;
         const desc = cp?.descricao || `Fechamento ${cp?.mes_referencia || ''}/${cp?.ano_referencia || ''}`;
         const totalParc = Number(t.parcelas_total) || 1;
@@ -2052,7 +2229,9 @@ export class FinanceiroService {
           conta_pagar_id: cp?.id,
           origem: 'TITULO_FECHAMENTO',
           fornecedor_id: cp?.fornecedor_id ?? null,
-          fornecedor_nome: cp?.fornecedor?.nome_fantasia || null,
+          fornecedor_nome: cp?.fornecedor?.nome_fantasia || cp?.funcionario?.nome || null,
+          funcionario_id: cp?.funcionario_id ?? null,
+          funcionario_nome: cp?.funcionario?.nome || null,
           descricao: desc,
           observacao: cp?.observacao || null,
           relatorio_descritivo: `${desc} — Parcela ${numParc}/${totalParc}`,
@@ -2066,29 +2245,122 @@ export class FinanceiroService {
           forma_pagamento_chave: cp?.forma_pagamento_chave || null,
         };
       });
+
+      const rowsDespesas: any[] = [];
+      for (const d of despesasAbertas) {
+        const titulos = (d as any).titulos ?? [];
+        if (titulos.length > 0) {
+          for (const t of titulos) {
+            const totalParc = Number(t.parcelas_total) || titulos.length || 1;
+            const numParc = Number(t.parcela_numero) || 1;
+            rowsDespesas.push({
+              id: t.id,
+              id_despesa: d.id,
+              titulo_id: t.id,
+              origem: 'DESPESA',
+              classificacao_badge: (d as any).classificacao === 'FECHAMENTO' ? 'PRODUÇÃO' : 'OPERACIONAL',
+              forma_pagamento_chave: (t as any).tipo ?? null,
+              fornecedor_id: null,
+              fornecedor_nome: null,
+              funcionario_id: (d as any).funcionario_id ?? null,
+              descricao: d.local || d.categoria,
+              observacao: d.classificacao,
+              relatorio_descritivo:
+                totalParc > 1 ? `${d.local || d.categoria} — Parcela ${numParc}/${totalParc}` : (d.local || d.categoria),
+              valor: t.valor,
+              valor_compensado: 0,
+              vencimento_em: t.vencimento_em,
+              pago_em: t.pago_em,
+              status: t.status,
+              parcelas_total: totalParc,
+              parcela_numero: numParc,
+            });
+          }
+          continue;
+        }
+
+        rowsDespesas.push({
+          id: d.id,
+          id_despesa: d.id,
+          titulo_id: null,
+          origem: 'DESPESA',
+          classificacao_badge: (d as any).classificacao === 'FECHAMENTO' ? 'PRODUÇÃO' : 'OPERACIONAL',
+          forma_pagamento_chave: (d as any).forma_pagamento ?? null,
+          fornecedor_id: null,
+          fornecedor_nome: null,
+          funcionario_id: (d as any).funcionario_id ?? null,
+          descricao: d.local || d.categoria,
+          observacao: d.classificacao,
+          relatorio_descritivo: d.local || d.categoria,
+          valor: d.valor_total,
+          valor_compensado: 0,
+          vencimento_em: d.data_vencimento,
+          pago_em: d.data_pagamento,
+          status: d.status,
+          parcelas_total: 1,
+          parcela_numero: 1,
+        });
+      }
+
+      return [...rowsTitulosContaPagar, ...rowsDespesas].sort((a, b) => {
+        const va = a.vencimento_em ? new Date(a.vencimento_em).getTime() : 0;
+        const vb = b.vencimento_em ? new Date(b.vencimento_em).getTime() : 0;
+        return va - vb;
+      });
     }
 
     // PAGOS: histórico — titulos de fechamento PAGO + titulos de despesas PAGO
     const rangePago = dataIni && dataFim ? { gte: dataIni, lte: dataFim } : undefined;
 
-    const [titulosPagos, despesasComTitulosPagos] = await Promise.all([
+    const [titulosPagos, despesasPagas] = await Promise.all([
       this.prisma.titulos_financeiros.findMany({
         where: {
           conta_pagar_id: { not: null },
+          conta_pagar: {
+            ...(fornecedorId != null ? { fornecedor_id: fornecedorId } : {}),
+            ...(funcionarioId != null ? { funcionario_id: funcionarioId } : {}),
+            ...filtroContaPagarCompetencia,
+          },
           status: SF.PAGO,
-          ...(rangePago ? { pago_em: rangePago } : {}),
+          ...(!temCompetencia && rangePago ? { pago_em: rangePago } : {}),
         },
         include: {
-          conta_pagar: { include: { fornecedor: true } },
+          conta_pagar: { include: { fornecedor: true, funcionario: true } },
         },
         orderBy: { pago_em: 'desc' },
       }),
-      this.prisma.despesas.findMany({
-        where: {
-          titulos: { some: { status: SF.PAGO, ...(rangePago ? { pago_em: rangePago } : {}) } },
-        },
-        include: { titulos: { where: { status: SF.PAGO }, orderBy: { pago_em: 'desc' } } },
-      }),
+      incluirDespesas
+        ? this.prisma.despesas.findMany({
+            where: {
+              ...(funcionarioId != null ? { funcionario_id: funcionarioId } : {}),
+              OR: [
+                {
+                  titulos: {
+                    some: {
+                      status: SF.PAGO,
+                      ...(rangePago ? { pago_em: rangePago } : {}),
+                    },
+                  },
+                },
+                {
+                  titulos: { none: {} },
+                  status: SF.PAGO,
+                  ...(rangePago ? { data_pagamento: rangePago } : {}),
+                },
+              ],
+            },
+            include: {
+              titulos: {
+                where: {
+                  status: SF.PAGO,
+                  ...(rangePago ? { pago_em: rangePago } : {}),
+                },
+                orderBy: { pago_em: 'desc' },
+              },
+            },
+            orderBy: { data_pagamento: 'desc' },
+          })
+        : Promise.resolve([] as any[]),
     ]);
 
     const rows: any[] = [];
@@ -2102,7 +2374,8 @@ export class FinanceiroService {
         id: t.id,
         titulo_id: t.id,
         origem: 'TITULO_FECHAMENTO',
-        fornecedor_nome: cp?.fornecedor?.nome_fantasia || null,
+        fornecedor_nome: cp?.fornecedor?.nome_fantasia || cp?.funcionario?.nome || null,
+        funcionario_nome: cp?.funcionario?.nome || null,
         descricao: desc,
         relatorio_descritivo: `${desc} — Parcela ${numParc}/${totalParc}`,
         valor: t.valor,
@@ -2112,26 +2385,46 @@ export class FinanceiroService {
       });
     }
 
-    for (const d of despesasComTitulosPagos) {
+    for (const d of despesasPagas) {
       const titulosPagosDespesa = (d as any).titulos || [];
-      for (const t of titulosPagosDespesa) {
-        if (!t.pago_em) continue;
-        if (rangePago && (t.pago_em < dataIni! || t.pago_em > dataFim!)) continue;
-        const totalParc = titulosPagosDespesa.length || 1;
-        const numParc = Number(t.parcela_numero) || 0;
-        rows.push({
-          id: t.id,
-          titulo_id: t.id,
-          origem: 'DESPESA',
-          fornecedor_nome: null,
-          descricao: d.local || d.categoria,
-          relatorio_descritivo: totalParc > 1 ? `Parcela ${numParc}/${totalParc}` : (d.local || d.categoria),
-          valor: t.valor,
-          vencimento_em: t.vencimento_em,
-          pago_em: t.pago_em,
-          status: SF.PAGO,
-        });
+      if (titulosPagosDespesa.length > 0) {
+        for (const t of titulosPagosDespesa) {
+          if (!t.pago_em) continue;
+          if (rangePago && (t.pago_em < dataIni! || t.pago_em > dataFim!)) continue;
+          const totalParc = titulosPagosDespesa.length || 1;
+          const numParc = Number(t.parcela_numero) || 0;
+          rows.push({
+            id: t.id,
+            titulo_id: t.id,
+            id_despesa: d.id,
+            origem: 'DESPESA',
+            fornecedor_nome: null,
+            funcionario_id: (d as any).funcionario_id ?? null,
+            descricao: d.local || d.categoria,
+            relatorio_descritivo: totalParc > 1 ? `Parcela ${numParc}/${totalParc}` : (d.local || d.categoria),
+            valor: t.valor,
+            vencimento_em: t.vencimento_em,
+            pago_em: t.pago_em,
+            status: SF.PAGO,
+          });
+        }
+        continue;
       }
+
+      rows.push({
+        id: d.id,
+        id_despesa: d.id,
+        titulo_id: null,
+        origem: 'DESPESA',
+        fornecedor_nome: null,
+        funcionario_id: (d as any).funcionario_id ?? null,
+        descricao: d.local || d.categoria,
+        relatorio_descritivo: d.local || d.categoria,
+        valor: d.valor_total,
+        vencimento_em: d.data_vencimento,
+        pago_em: d.data_pagamento,
+        status: SF.PAGO,
+      });
     }
 
     rows.sort((a, b) => {
@@ -2140,6 +2433,188 @@ export class FinanceiroService {
       return pb - pa;
     });
     return rows;
+  }
+
+  async fecharMesFuncionario(body: FecharMesFuncionarioDto) {
+    const funcionario_id = this.toNumber(body?.funcionario_id, 'funcionario_id');
+    const mes = this.toNumber(body?.mes, 'mes');
+    const ano = this.toNumber(body?.ano, 'ano');
+
+    const toMoney = (v: unknown) => this.round2(Number(v ?? 0));
+
+    return this.prisma.$transaction(async (tx) => {
+      const jaExiste = await tx.funcionario_fechamentos.findFirst({
+        where: { funcionario_id, mes_referencia: mes, ano_referencia: ano },
+        select: { id: true },
+      });
+      if (jaExiste) {
+        throw new BadRequestException('Já existe fechamento deste funcionário para o mês/ano.');
+      }
+
+      const funcionario = await tx.funcionarios.findUnique({
+        where: { id: funcionario_id },
+        select: {
+          id: true,
+          nome: true,
+          salario_base: true,
+          salario_adicional: true,
+          vale: true,
+          vale_transporte: true,
+          forma_pagamento: true,
+          dia_pagamento: true,
+        },
+      });
+      if (!funcionario) {
+        throw new NotFoundException('Funcionário não encontrado.');
+      }
+
+      const salarioBase = toMoney(body?.salario_base ?? funcionario.salario_base ?? 0);
+      const salarioAdicional = toMoney(
+        body?.salario_adicional ?? funcionario.salario_adicional ?? 0,
+      );
+      const beneficios = toMoney(
+        body?.beneficios ?? Number(funcionario.vale ?? 0) + Number(funcionario.vale_transporte ?? 0),
+      );
+      const horasExtrasValor = toMoney(body?.horas_extras_valor ?? 0);
+      const descontos = toMoney(body?.descontos ?? 0);
+
+      const valorBruto = this.round2(salarioBase + salarioAdicional + beneficios + horasExtrasValor);
+      const valorLiquido = this.round2(Math.max(0, valorBruto - descontos));
+
+      const forma = String(
+        body?.forma_pagamento_chave || funcionario.forma_pagamento || 'PIX',
+      )
+        .trim()
+        .toUpperCase();
+      const diaPagamento = Number(body?.dia_pagamento ?? funcionario.dia_pagamento ?? 5);
+      const vencimento = body?.vencimento_em
+        ? this.toDate(body.vencimento_em, 'vencimento_em')
+        : new Date(ano, mes - 1, Math.min(Math.max(diaPagamento, 1), 28), 12, 0, 0);
+
+      const dataPagamento = body?.data_pagamento
+        ? this.toDate(body.data_pagamento, 'data_pagamento')
+        : null;
+      const statusFinal = dataPagamento ? SF.PAGO : SF.EM_ABERTO;
+      const dataRegistroDespesa = new Date(
+        ano,
+        mes - 1,
+        Math.min(Math.max(diaPagamento, 1), 28),
+        12,
+        0,
+        0,
+      );
+
+      const fechamento = await tx.funcionario_fechamentos.create({
+        data: {
+          funcionario_id,
+          mes_referencia: mes,
+          ano_referencia: ano,
+          forma_pagamento_chave: forma,
+          dia_pagamento_snapshot: diaPagamento,
+          salario_base_snapshot: salarioBase,
+          salario_adicional_snapshot: salarioAdicional,
+          beneficios_snapshot: beneficios,
+          descontos_snapshot: descontos,
+          horas_extras_valor: horasExtrasValor,
+          valor_bruto: valorBruto,
+          valor_liquido: valorLiquido,
+          status: statusFinal,
+          observacao: body?.observacao || null,
+          itens: {
+            create: [
+              { tipo_item: 'PROVENTO', rubrica: 'SALARIO_BASE', valor: salarioBase, ordem: 1 },
+              { tipo_item: 'PROVENTO', rubrica: 'SALARIO_ADICIONAL', valor: salarioAdicional, ordem: 2 },
+              { tipo_item: 'PROVENTO', rubrica: 'BENEFICIOS', valor: beneficios, ordem: 3 },
+              { tipo_item: 'PROVENTO', rubrica: 'HORA_EXTRA', valor: horasExtrasValor, ordem: 4 },
+              { tipo_item: 'DESCONTO', rubrica: 'DESCONTOS', valor: descontos, ordem: 5 },
+              ...((body?.itens || []).map((item, idx) => ({
+                tipo_item: String(item.tipo_item || '').toUpperCase(),
+                rubrica: String(item.rubrica || '').toUpperCase(),
+                valor: toMoney(item.valor),
+                observacao: item.observacao || null,
+                ordem: idx + 10,
+              })) as any[]),
+            ],
+          },
+        },
+        select: { id: true },
+      });
+
+      let despesaId: number | null = null;
+      if (valorLiquido > 0) {
+        const despesa = await tx.despesas.create({
+          data: {
+            tipo_movimento: 'SAIDA',
+            unidade: 'MATRIZ',
+            categoria: 'FOLHA',
+            classificacao: 'FECHAMENTO',
+            local: `Fechamento ${String(mes).padStart(2, '0')}/${ano} - ${funcionario.nome}`,
+            valor_total: valorLiquido,
+            forma_pagamento: forma,
+            quantidade_parcelas: 1,
+            data_registro: dataRegistroDespesa,
+            data_vencimento: vencimento,
+            data_pagamento: dataPagamento,
+            status: statusFinal,
+            funcionario_id,
+          },
+          select: { id: true },
+        });
+        despesaId = despesa.id;
+      }
+
+      const contaPagar = await tx.contas_pagar.create({
+        data: {
+          despesa_id: despesaId,
+          funcionario_id,
+          fechamento_funcionario_id: fechamento.id,
+          origem_tipo: 'FUNCIONARIO_FECHAMENTO',
+          origem_id: fechamento.id,
+          mes_referencia: mes,
+          ano_referencia: ano,
+          descricao: `Fechamento funcionário ${funcionario.nome} - ${String(mes).padStart(2, '0')}/${ano}`,
+          observacao: body?.observacao || null,
+          valor_original: valorLiquido,
+          valor_compensado: 0,
+          status: statusFinal,
+          forma_pagamento_chave: forma,
+          parcelas_total: 1,
+          parcela_numero: 1,
+          vencimento_em: vencimento,
+          pago_em: dataPagamento,
+        },
+        select: { id: true },
+      });
+
+      await tx.titulos_financeiros.create({
+        data: {
+          conta_pagar_id: contaPagar.id,
+          tipo: forma,
+          valor: valorLiquido,
+          status: statusFinal,
+          vencimento_em: vencimento,
+          pago_em: dataPagamento,
+          parcelas_total: 1,
+          parcela_numero: 1,
+          meta: {
+            origem: 'FUNCIONARIO_FECHAMENTO',
+            funcionario_id,
+            fechamento_id: fechamento.id,
+            mes,
+            ano,
+          },
+        },
+      });
+
+      return {
+        funcionario_id,
+        fechamento_id: fechamento.id,
+        conta_pagar_id: contaPagar.id,
+        valor_bruto: valorBruto,
+        valor_liquido: valorLiquido,
+        status: statusFinal,
+      };
+    });
   }
 
   // =========================================================

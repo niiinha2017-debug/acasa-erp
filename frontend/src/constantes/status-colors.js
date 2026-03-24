@@ -262,7 +262,7 @@ export function getStatusStepperDotClass(etapaKey) {
 }
 
 export function getPrazoTextClass(estaAtrasado) {
-  return estaAtrasado ? 'text-red-500' : 'text-emerald-500'
+  return estaAtrasado ? 'text-[color:var(--ds-color-danger)]' : 'text-[color:var(--ds-color-success)]'
 }
 
 export function getStatusEtapaKey(categoriaOuStatus) {
@@ -296,14 +296,14 @@ export function getProcessColorByStatus(categoria, statusTarefa) {
 const TIMELINE_CONCLUIDO_BY_ETAPA = {
   CADASTRO: { borderLeftClass: 'border-l-4 border-slate-700', dotClass: 'bg-slate-700', badgeClass: 'bg-slate-700/10 text-slate-700 dark:bg-slate-600/20 dark:text-slate-300' },
   MEDICAO: { borderLeftClass: 'border-l-4 border-blue-700', dotClass: 'bg-blue-700', badgeClass: 'bg-blue-700/10 text-blue-700 dark:bg-blue-600/20 dark:text-blue-300' },
-  ORCAMENTO: { borderLeftClass: 'border-l-4 border-amber-700', dotClass: 'bg-amber-700', badgeClass: 'bg-amber-700/10 text-amber-700 dark:bg-amber-600/20 dark:text-amber-300' },
-  AGENDAR_APRESENTACAO: { borderLeftClass: 'border-l-4 border-indigo-700', dotClass: 'bg-indigo-700', badgeClass: 'bg-indigo-700/10 text-indigo-700 dark:bg-indigo-600/20 dark:text-indigo-300' },
-  FECHAR_VENDA: { borderLeftClass: 'border-l-4 border-emerald-700', dotClass: 'bg-emerald-700', badgeClass: 'bg-emerald-700/10 text-emerald-700 dark:bg-emerald-600/20 dark:text-emerald-300' },
+  ORCAMENTO: { borderLeftClass: 'border-l-4 border-[color:var(--ds-color-warning)]', dotClass: 'bg-[color:var(--ds-color-warning)]', badgeClass: 'bg-[color:rgba(197,138,32,0.12)] text-[color:var(--ds-color-warning)] border border-[color:rgba(197,138,32,0.22)]' },
+  AGENDAR_APRESENTACAO: { borderLeftClass: 'border-l-4 border-[var(--ds-color-info-700)]', dotClass: 'bg-[var(--ds-color-info-700)]', badgeClass: 'bg-[var(--ds-color-info-100)] text-[var(--ds-color-info-700)] border border-[var(--ds-color-info-200)]' },
+  FECHAR_VENDA: { borderLeftClass: 'border-l-4 border-[color:var(--ds-color-success)]', dotClass: 'bg-[color:var(--ds-color-success)]', badgeClass: 'bg-[color:rgba(22,124,92,0.1)] text-[color:var(--ds-color-success)] border border-[color:rgba(22,124,92,0.2)]' },
   AGENDAR_FECHAMENTO: { borderLeftClass: 'border-l-4 border-lime-700', dotClass: 'bg-lime-700', badgeClass: 'bg-lime-700/10 text-lime-700 dark:bg-lime-600/20 dark:text-lime-300' },
   MEDIDA_FINA: { borderLeftClass: 'border-l-4 border-purple-700', dotClass: 'bg-purple-700', badgeClass: 'bg-purple-700/10 text-purple-700 dark:bg-purple-600/20 dark:text-purple-300' },
   PROJETO_TECNICO: { borderLeftClass: 'border-l-4 border-pink-700', dotClass: 'bg-pink-700', badgeClass: 'bg-pink-700/10 text-pink-700 dark:bg-pink-600/20 dark:text-pink-300' },
-  PRODUCAO: { borderLeftClass: 'border-l-4 border-orange-700', dotClass: 'bg-orange-700', badgeClass: 'bg-orange-700/10 text-orange-700 dark:bg-orange-600/20 dark:text-orange-300' },
-  MONTAGEM: { borderLeftClass: 'border-l-4 border-cyan-700', dotClass: 'bg-cyan-700', badgeClass: 'bg-cyan-700/10 text-cyan-700 dark:bg-cyan-600/20 dark:text-cyan-300' },
+  PRODUCAO: { borderLeftClass: 'border-l-4 border-[var(--ds-color-warning-700)]', dotClass: 'bg-[var(--ds-color-warning-700)]', badgeClass: 'bg-[var(--ds-color-warning-100)] text-[var(--ds-color-warning-700)] border border-[var(--ds-color-warning-200)]' },
+  MONTAGEM: { borderLeftClass: 'border-l-4 border-[var(--ds-color-info-700)]', dotClass: 'bg-[var(--ds-color-info-700)]', badgeClass: 'bg-[var(--ds-color-info-100)] text-[var(--ds-color-info-700)] border border-[var(--ds-color-info-200)]' },
   POS_VENDA_GARANTIA: { borderLeftClass: 'border-l-4 border-fuchsia-700', dotClass: 'bg-fuchsia-700', badgeClass: 'bg-fuchsia-700/10 text-fuchsia-700 dark:bg-fuchsia-600/20 dark:text-fuchsia-300' },
 }
 

@@ -1,17 +1,14 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
+  <PageShell :padded="false">
+    <section class="clientes-list ds-page-context ds-page-context--list animate-page-in">
       <PageHeader
         title="Clientes"
         subtitle="Gestão de relacionamento e base de contatos"
         icon="pi pi-users"
-        :show-back="false"
       >
         <template #actions>
-          <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
-            <div class="w-full sm:w-64 order-1 sm:order-0">
+          <div class="clientes-list__actions ds-page-context__actions">
+            <div class="clientes-list__search ds-page-context__search">
               <SearchInput
                 v-model="filtro"
                 placeholder="Buscar cliente, documento, email ou endereço..."
@@ -21,46 +18,45 @@
             <Button
               v-if="can('clientes.criar')"
               variant="primary"
-              class="flex-shrink-0 h-11 rounded-xl font-black uppercase tracking-[0.16em] text-[11px]"
               @click="router.push('/clientes/novo')"
             >
-              <i class="pi pi-plus mr-2"></i>
+              <i class="pi pi-plus"></i>
               Novo Cliente
             </Button>
           </div>
         </template>
       </PageHeader>
 
-      <div class="pb-5 md:pb-6 pt-4 border-t border-border-ui">
+      <div class="clientes-list__content ds-page-context__content">
         <Table
           :columns="columns"
           :rows="rows"
           :loading="loading"
           empty-text="Nenhum cliente encontrado."
           :boxed="false"
-          :flush="true"
+          :flush="false"
         >
           <template #cell-nome_completo="{ row }">
-            <div class="flex items-center gap-3 py-1">
-              <div class="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-text-muted text-xs bg-bg-page border border-border-ui">
+            <div class="clientes-list__identity">
+              <div class="clientes-list__initials">
                 {{ String(row.nome_exibicao || '?').substring(0, 2).toUpperCase() }}
               </div>
-              <div class="flex flex-col min-w-0">
-                <span class="text-sm font-bold text-text-main uppercase tracking-tight truncate">
+              <div class="clientes-list__identity-copy">
+                <span class="clientes-list__primary">
                   {{ row.nome_exibicao }}
                 </span>
-                <span class="text-[10px] font-medium text-text-muted truncate">
+                <span class="clientes-list__secondary">
                   {{ row.documento || 'Sem documento' }}
-                  <span v-if="row.email" class="ml-2 text-text-muted">{{ row.email }}</span>
+                  <span v-if="row.email" class="clientes-list__secondary-detail">{{ row.email }}</span>
                 </span>
               </div>
             </div>
           </template>
 
           <template #cell-endereco="{ row }">
-            <div class="flex flex-col">
-              <span class="text-sm font-medium text-text-main uppercase">{{ row.endereco_resumo }}</span>
-              <span class="text-[10px] font-bold text-text-muted uppercase tracking-tighter">
+            <div class="clientes-list__stack">
+              <span class="clientes-list__primary">{{ row.endereco_resumo }}</span>
+              <span class="clientes-list__secondary">
                 {{ [row.cidade, row.estado].filter(Boolean).join(' / ') || '-' }}
               </span>
             </div>
@@ -68,7 +64,7 @@
 
           <template #cell-status="{ row }">
             <span
-              class="inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
+              class="ds-status-pill"
               :class="row.fluxo_comercial_class"
             >
               {{ row.fluxo_comercial || 'Cadastro' }}
@@ -92,7 +88,6 @@
           </template>
         </Table>
         <TablePagination
-          flush
           v-if="total > 0"
           :page="page"
           :page-size="pageSize"
@@ -100,8 +95,8 @@
           @update:page="setPage"
         />
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
@@ -123,11 +118,11 @@ const loading = ref(false)
 const clientes = ref([])
 
 const columns = [
-  { key: 'nome_completo', label: 'CLIENTE', width: '40%' },
-  { key: 'endereco', label: 'ENDEREÇO', width: '25%' },
-  { key: 'status', label: 'FLUXO COMERCIAL', width: '15%' },
-  { key: 'situacao', label: 'SITUAÇÃO', width: '10%' },
-  { key: 'acoes', label: 'Ações', align: 'center', width: '10%' },
+  { key: 'nome_completo', label: 'Cliente', width: '36%' },
+  { key: 'endereco', label: 'Endereco', width: '23%' },
+  { key: 'status', label: 'Fluxo comercial', width: '16%' },
+  { key: 'situacao', label: 'Situacao', width: '13%' },
+  { key: 'acoes', label: 'Acoes', align: 'center', width: '12%' },
 ]
 
 const filtrados = computed(() => {
@@ -182,23 +177,23 @@ watch(filtro, () => setPage(1))
 function fluxoComercialClass(status) {
   const subetapa = getStatusVendaSubetapa(status || 'CLIENTE_CADASTRADO')
   const mapa = {
-    CADASTRO: 'border border-slate-200 bg-slate-100 text-slate-800',
-    MEDIDA: 'border border-sky-200 bg-sky-100 text-sky-800',
-    ORCAMENTO: 'border border-amber-200 bg-amber-100 text-amber-800',
-    APRESENTACAO: 'border border-indigo-200 bg-indigo-100 text-indigo-800',
-    FECHAMENTO: 'border border-emerald-200 bg-emerald-100 text-emerald-800',
-    MEDIDA_FINA: 'border border-cyan-200 bg-cyan-100 text-cyan-800',
-    PROJETO_TECNICO: 'border border-violet-200 bg-violet-100 text-violet-800',
-    PRODUCAO: 'border border-fuchsia-200 bg-fuchsia-100 text-fuchsia-800',
-    MONTAGEM: 'border border-orange-200 bg-orange-100 text-orange-800',
-    GARANTIA: 'border border-lime-200 bg-lime-100 text-lime-800',
-    ASSISTENCIA: 'border border-teal-200 bg-teal-100 text-teal-800',
-    MANUTENCAO: 'border border-rose-200 bg-rose-100 text-rose-800',
+    CADASTRO: 'ds-status-pill--neutral',
+    MEDIDA: 'ds-status-pill--warning',
+    ORCAMENTO: 'ds-status-pill--warning',
+    APRESENTACAO: 'ds-status-pill--warning',
+    FECHAMENTO: 'ds-status-pill--success',
+    MEDIDA_FINA: 'ds-status-pill--warning',
+    PROJETO_TECNICO: 'ds-status-pill--warning',
+    PRODUCAO: 'ds-status-pill--warning',
+    MONTAGEM: 'ds-status-pill--warning',
+    GARANTIA: 'ds-status-pill--warning',
+    ASSISTENCIA: 'ds-status-pill--warning',
+    MANUTENCAO: 'ds-status-pill--danger',
   }
   if (String(status || '').toUpperCase() === 'ENCERRADO') {
-    return 'border border-slate-300 bg-slate-200 text-slate-700'
+    return 'ds-status-pill--neutral'
   }
-  return mapa[subetapa] || 'border border-sky-200 bg-sky-50 text-sky-800'
+  return mapa[subetapa] || 'ds-status-pill--warning'
 }
 
 const rows = computed(() =>
@@ -274,3 +269,102 @@ onMounted(async () => {
   await carregarClientes()
 })
 </script>
+
+<style scoped>
+.clientes-list {
+  min-height: 100%;
+  background: var(--ds-color-surface);
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.clientes-list__identity {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.clientes-list__initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(214, 224, 234, 0.78);
+  background: rgba(245, 248, 251, 0.9);
+  color: var(--ds-color-text-faint);
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+}
+
+.dark .clientes-list__initials {
+  background: rgba(18, 30, 49, 0.62);
+  border-color: rgba(51, 71, 102, 0.76);
+}
+
+.clientes-list__identity-copy,
+.clientes-list__stack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.clientes-list__primary {
+  color: var(--ds-color-text);
+  font-size: 0.92rem;
+  font-weight: 540;
+  line-height: 1.4;
+  text-transform: none;
+  letter-spacing: -0.01em;
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clientes-list__secondary {
+  color: var(--ds-color-text-faint);
+  font-size: 0.72rem;
+  font-weight: 430;
+  line-height: 1.45;
+  text-transform: none;
+  letter-spacing: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clientes-list__secondary-detail {
+  margin-left: 0.5rem;
+}
+
+.clientes-list :deep(.ds-status-pill) {
+  max-width: 100%;
+  justify-content: center;
+  padding-inline: 0.55rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.05em;
+}
+
+@media (max-width: 1100px) {
+  .clientes-list__primary {
+    font-size: 0.88rem;
+  }
+
+  .clientes-list__secondary {
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .clientes-list__identity {
+    gap: 0.48rem;
+  }
+
+  .clientes-list__initials {
+    width: 1.9rem;
+    height: 1.9rem;
+  }
+}
+</style>

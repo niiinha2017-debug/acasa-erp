@@ -46,6 +46,13 @@ export class OrcamentosController {
     return this.orcamentoTecnicoService.listar(id);
   }
 
+  /** Lista agendamentos com medição do técnico concluída e sem OT criado. */
+  @Get('tecnico-com-medicao')
+  @Permissoes('agendamentos.vendas')
+  listarComMedicao() {
+    return this.orcamentoTecnicoService.listarAgendamentosComMedicao();
+  }
+
   @Get('tecnico/:id')
   @Permissoes('agendamentos.vendas')
   buscarOrcamentoTecnico(@Param('id') id: string) {
@@ -100,6 +107,22 @@ export class OrcamentosController {
           preco_unitario?: number;
           origem?: string;
         }>;
+      }>;
+      preco_venda?: number;
+      desconto_pct?: number;
+      pagamentos?: Array<{
+        forma_pagamento_chave?: string;
+        parcelas?: number;
+        valor?: number;
+      }>;
+      com_nota_fiscal?: boolean;
+      taxa_nf_reais?: number;
+      taxa_cartao_reais?: number;
+      comissoes?: Array<{
+        tipo: string;
+        nome: string;
+        percentual: number;
+        valor_reais: number;
       }>;
     },
   ) {
@@ -199,6 +222,12 @@ export class OrcamentosController {
   @Permissoes('orcamentos.ver', 'vendas.fechamento.ver')
   listar(@Req() req?: { user?: { funcionario_id?: number | null; is_admin?: boolean } }) {
     return this.service.listar(req?.user);
+  }
+
+  @Get('clausulas-padrao')
+  @Permissoes('orcamentos.ver')
+  listarClausulasPadrao() {
+    return this.service.listarClausulasPadrao();
   }
 
   @Get(':id')

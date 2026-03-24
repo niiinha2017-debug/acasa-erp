@@ -1,12 +1,12 @@
 <template>
-  <div class="login-font w-full h-full rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
-    <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
+  <PageShell :padded="false" variant="minimal">
+    <section class="login-font plano-corte-editor ds-page-context ds-page-context--editor animate-page-in">
     <PageHeader
       :title="isEdit ? `Editar Serviço de Corte #${planoId}` : 'Novo Serviço de Corte'"
       subtitle="Corte para fornecedor — industrialização e controle de produção"
       icon="pi pi-sitemap"
       :backTo="'/plano-corte'"
-      class="border-b border-border-ui"
+      variant="minimal"
     >
       <template #actions>
         <Button
@@ -22,12 +22,11 @@
       </template>
     </PageHeader>
 
-    <div class="px-4 py-4 md:px-6 md:py-6 lg:px-8 lg:py-8">
+    <div class="plano-corte-editor__body ds-editor-body">
       <Loading v-if="loading" />
 
-      <form v-else class="space-y-10" @submit.prevent="salvar" autocomplete="off">
-        <!-- Identificação (igual compras: sem venda) -->
-        <div class="grid grid-cols-12 gap-6 items-end bg-slate-50/50 dark:bg-slate-800/20 p-6 rounded-2xl">
+      <form v-else class="plano-corte-editor__form ds-editor-form space-y-10" @submit.prevent="salvar" autocomplete="off">
+        <div class="plano-corte-editor__lead ds-editor-lead-grid grid grid-cols-12 gap-6 items-end bg-slate-50/50 dark:bg-slate-800/20 p-6 rounded-2xl">
           <SearchInput
             class="col-span-12 md:col-span-5"
             v-model="fornecedorSelecionado"
@@ -42,7 +41,7 @@
           <Input
             class="col-span-12 md:col-span-3"
             v-model="dataPlano"
-            label="Data do Plano *"
+            label="Data do Serviço *"
             type="date"
             required
           />
@@ -58,7 +57,6 @@
           />
         </div>
 
-        <!-- Itens do Plano -->
         <div class="space-y-6">
           <div class="relative">
             <div class="absolute inset-0 flex items-center">
@@ -66,7 +64,7 @@
             </div>
             <div class="relative flex justify-center">
               <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
-                Itens do Plano
+                Itens do Serviço
               </span>
             </div>
           </div>
@@ -162,7 +160,7 @@
               </template>
             </Table>
             <div class="flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-800/20 border-t border-border-ui">
-              <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Total do Plano</span>
+              <span class="text-[10px] font-black uppercase tracking-widest text-slate-400">Total do Serviço</span>
               <span class="text-lg font-black">{{ maskMoneyBR(totalCalculado) }}</span>
             </div>
           </div>
@@ -252,8 +250,8 @@
         </div>
       </Transition>
     </Teleport>
-
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
@@ -510,7 +508,7 @@ async function confirmarExcluirPlano() {
   excluindo.value = true
   try {
     await PlanoCorteService.remover(planoId.value)
-    notify.success('Plano excluído.')
+    notify.success('Serviço de corte excluído.')
     closeTabAndGo('/plano-corte')
   } catch (e) {
     notify.error('Erro ao excluir.')

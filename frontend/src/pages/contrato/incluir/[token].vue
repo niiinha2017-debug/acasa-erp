@@ -1,9 +1,9 @@
 <template>
   <div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 flex flex-col items-center justify-center p-4">
     <div class="w-full max-w-lg">
-      <div v-if="erroFatal" class="rounded-2xl border border-rose-200 bg-rose-50 dark:bg-rose-950/30 dark:border-rose-800 p-6 text-center">
-        <p class="font-semibold text-rose-700 dark:text-rose-300">{{ erroFatal }}</p>
-        <p class="text-sm text-rose-600 dark:text-rose-400 mt-2">O link pode ter expirado (válido 24h). Peça um novo ao responsável.</p>
+      <div v-if="erroFatal" class="card-minimal-tw p-6 text-center">
+        <p class="font-semibold ds-status-pill--danger rounded-lg px-3 py-2 inline-block">{{ erroFatal }}</p>
+        <p class="text-sm text-text-soft mt-2">O link pode ter expirado (válido 24h). Peça um novo ao responsável.</p>
       </div>
 
       <div v-else class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl overflow-hidden">

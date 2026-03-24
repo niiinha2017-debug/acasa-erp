@@ -1,27 +1,27 @@
 <template>
-  <div class="login-font w-full h-full rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
-    <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
-    <PageHeader
-      :title="isEdit ? `Editar Item #${itemId}` : 'Novo Item'"
-      subtitle="Cadastro de itens por fornecedor (igual ao cadastro de produtos)"
-      icon="pi pi-box"
-      :backTo="'/plano-corte/itens'"
-      class="border-b border-border-ui"
-    />
+  <PageShell :padded="false">
+    <section class="plano-corte-item-editor ds-page-context ds-page-context--editor animate-page-in">
+      <PageHeader
+        :title="isEdit ? `Editar Item #${itemId}` : 'Novo Item'"
+        subtitle="Cadastro de itens por fornecedor"
+        icon="pi pi-box"
+        :backTo="'/plano-corte/itens'"
+      />
 
-    <div class="px-4 py-4 md:px-6 md:py-6 lg:px-8 lg:py-8">
+    <div class="plano-corte-item-editor__body ds-editor-body">
       <div v-if="loading" class="py-24 flex flex-col items-center justify-center gap-4">
         <div class="w-10 h-10 border-2 border-border-ui border-t-brand-primary rounded-full animate-spin"></div>
         <p class="text-xs font-medium text-text-muted uppercase tracking-widest">Carregando...</p>
       </div>
 
-      <form v-else class="space-y-10 produtos-line-form" @submit.prevent="confirmarSalvar" autocomplete="off">
-        <!-- Trava: só habilita o restante após selecionar o fornecedor -->
-        <div class="grid grid-cols-12 gap-6 items-end bg-slate-50/50 dark:bg-slate-800/20 p-6 rounded-2xl">
+      <form v-else class="plano-corte-item-editor__form ds-editor-form" @submit.prevent="confirmarSalvar" autocomplete="off">
+        <div class="plano-corte-item-editor__lead ds-editor-lead-grid grid grid-cols-12 items-end">
           <div class="col-span-12 md:col-span-6">
             <SearchInput
               v-model="form.fornecedor_id"
               mode="select"
+              variant="line"
+              hide-search-icon
               label="Fornecedor *"
               :options="fornecedorOptions"
               required
@@ -38,6 +38,8 @@
               <SearchInput
                 v-model="form.unidade"
                 mode="select"
+                variant="line"
+                hide-search-icon
                 label="Unidade"
                 :options="unidadesOptions"
                 required
@@ -48,6 +50,8 @@
               <SearchInput
                 v-model="form.status"
                 mode="select"
+                variant="line"
+                hide-search-icon
                 label="Status"
                 :options="statusOptions"
                 required
@@ -56,13 +60,13 @@
           </template>
         </div>
 
-        <div v-if="camposDesbloqueados" class="space-y-10">
-          <div class="relative">
+        <div v-if="camposDesbloqueados">
+          <div class="section-divider ds-section-divider relative">
             <div class="absolute inset-0 flex items-center">
               <div class="w-full border-t border-border-ui/50"></div>
             </div>
             <div class="relative flex justify-center">
-              <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+              <span class="section-title ds-section-title">
                 Dados Principais
               </span>
             </div>
@@ -72,6 +76,7 @@
             <Input
               class="col-span-12 md:col-span-8"
               v-model="form.nome_produto"
+              variant="line"
               label="Nome do Produto"
               placeholder="Ex: Chapa MDF Branco TX"
               required
@@ -81,6 +86,7 @@
             <Input
               class="col-span-12 md:col-span-4"
               v-model="quantidadeInput"
+              variant="line"
               label="Quantidade corte"
               type="number"
               required
@@ -89,6 +95,7 @@
             <Input
               class="col-span-12 md:col-span-4"
               v-model="form.marca"
+              variant="line"
               label="Marca"
               placeholder="Ex: Duratex"
               force-upper
@@ -96,6 +103,7 @@
             <Input
               class="col-span-12 md:col-span-4"
               v-model="form.cor"
+              variant="line"
               label="Cor"
               placeholder="Ex: Branco TX"
               force-upper
@@ -103,30 +111,31 @@
             <Input
               class="col-span-12 md:col-span-4"
               v-model="form.medida"
+              variant="line"
               label="Medida"
               placeholder="Ex: 2750x1840mm ou espessura"
               force-upper
             />
           </div>
 
-          <div class="relative">
+          <div class="section-divider ds-section-divider relative">
             <div class="absolute inset-0 flex items-center">
               <div class="w-full border-t border-border-ui/50"></div>
             </div>
             <div class="relative flex justify-center">
-              <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+              <span class="section-title ds-section-title">
                 Dimensões e Custos
               </span>
             </div>
           </div>
 
           <div class="grid grid-cols-12 gap-6">
-            <Input class="col-span-12 md:col-span-3" v-model="form.largura_mm" label="Largura (mm)" type="number" />
-            <Input class="col-span-12 md:col-span-3" v-model="form.comprimento_mm" label="Comprimento (mm)" type="number" />
-            <Input class="col-span-12 md:col-span-3" v-model="form.espessura_mm" label="Espessura (mm)" type="number" />
-            <Input class="col-span-12 md:col-span-3" v-model="precoM2Mask" label="Preço por m²" />
+            <Input class="col-span-12 md:col-span-3" v-model="form.largura_mm" variant="line" label="Largura (mm)" type="number" />
+            <Input class="col-span-12 md:col-span-3" v-model="form.comprimento_mm" variant="line" label="Comprimento (mm)" type="number" />
+            <Input class="col-span-12 md:col-span-3" v-model="form.espessura_mm" variant="line" label="Espessura (mm)" type="number" />
+            <Input class="col-span-12 md:col-span-3" v-model="precoM2Mask" variant="line" label="Preço por m²" />
 
-            <Input class="col-span-12 md:col-span-4" v-model="valorUnitarioMask" label="Custo Unitário (R$)" required />
+            <Input class="col-span-12 md:col-span-4" v-model="valorUnitarioMask" variant="line" label="Custo Unitário (R$)" required />
             <div class="col-span-12 md:col-span-8">
               <div class="p-4 bg-slate-900 rounded-xl text-white flex flex-col justify-center h-full">
                 <span class="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 mb-1">Total</span>
@@ -136,12 +145,12 @@
           </div>
         </div>
 
-        <div class="pt-10 mt-6 border-t border-border-ui">
-          <div class="flex items-center justify-between gap-4">
-            <Button type="button" variant="ghost" @click="confirmarDescartar">
-              Cancelar
-            </Button>
+        <div class="ds-editor-actions flex items-center justify-between gap-4">
+          <Button type="button" variant="ghost" @click="confirmarDescartar">
+            Cancelar
+          </Button>
 
+          <div class="ds-editor-actions-main flex items-center gap-3">
             <Button
               v-if="can(isEdit ? 'plano_corte.editar' : 'plano_corte.criar')"
               variant="primary"
@@ -149,52 +158,17 @@
               type="submit"
               :loading="salvando"
               :disabled="!camposDesbloqueados"
-              class="!rounded-xl px-8 py-3 bg-gradient-to-r from-brand-primary to-brand-primary/90 hover:from-brand-primary hover:to-brand-primary hover:shadow-2xl hover:shadow-brand-primary/30 active:scale-[0.98] transition-all duration-300 group relative overflow-hidden"
             >
-              <div class="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-              <span class="relative flex items-center justify-center gap-2 font-bold tracking-wide text-white">
-                <i class="pi pi-save text-[14px] group-hover:rotate-12 transition-transform"></i>
-                {{ isEdit ? 'ATUALIZAR ITEM' : 'CADASTRAR ITEM' }}
-              </span>
+              <i class="pi pi-save mr-2 text-[12px]"></i>
+              {{ isEdit ? 'ATUALIZAR ITEM' : 'CADASTRAR ITEM' }}
             </Button>
           </div>
         </div>
       </form>
     </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
-
-<style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
-
-.login-font {
-  font-family: 'Manrope', 'Segoe UI', sans-serif;
-}
-
-.produtos-line-form :deep(.w-full.flex.flex-col.gap-1\.5 > label),
-.produtos-line-form :deep(.search-container > label) {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: rgb(100 116 139);
-}
-
-.produtos-line-form :deep(input.w-full),
-.produtos-line-form :deep(select.w-full) {
-  border-top: 0;
-  border-left: 0;
-  border-right: 0;
-  border-bottom-width: 2px;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.produtos-line-form :deep(input.w-full:focus),
-.produtos-line-form :deep(select.w-full:focus) {
-  box-shadow: none;
-}
-</style>
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'

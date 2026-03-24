@@ -1,43 +1,43 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
-      <div class="flex flex-row flex-nowrap items-center gap-4 px-4 md:px-6 py-4 border-b border-border-ui">
-        <h1 class="text-xl font-semibold text-text-main shrink-0 flex items-center gap-2">
-          <i class="pi pi-chart-line text-text-muted" />
-          DRE Mensal
-        </h1>
-        <div class="flex flex-1 flex-nowrap items-center justify-end gap-3 min-w-0 ml-auto">
-          <div class="flex items-center gap-2 shrink-0">
-            <label class="text-xs font-medium text-text-muted">Mês</label>
-            <select
-              v-model="mes"
-              class="h-10 w-[100px] rounded-lg border border-border-ui bg-bg-page pl-2 pr-2 text-sm font-medium text-text-main"
-              @change="carregar"
-            >
-              <option v-for="m in 12" :key="m" :value="m">{{ String(m).padStart(2, '0') }}</option>
-            </select>
+  <PageShell :padded="false">
+    <section class="dre-mensal-page ds-page-context animate-page-in">
+      <PageHeader
+        title="DRE Mensal"
+        subtitle="Demonstrativo do resultado por competência"
+        icon="pi pi-chart-line"
+      >
+        <template #actions>
+          <div class="flex flex-wrap items-end justify-end gap-3 w-full">
+            <div class="flex items-center gap-2 shrink-0">
+              <label class="ds-field-label text-xs">Mês</label>
+              <select
+                v-model="mes"
+                class="ds-field-line ds-field-line--select h-10 w-[100px] text-sm font-medium"
+                @change="carregar"
+              >
+                <option v-for="m in 12" :key="m" :value="m">{{ String(m).padStart(2, '0') }}</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <label class="ds-field-label text-xs">Ano</label>
+              <select
+                v-model="ano"
+                class="ds-field-line ds-field-line--select h-10 w-[90px] text-sm font-medium"
+                @change="carregar"
+              >
+                <option v-for="y in anosDisponiveis" :key="y" :value="y">{{ y }}</option>
+              </select>
+            </div>
           </div>
-          <div class="flex items-center gap-2 shrink-0">
-            <label class="text-xs font-medium text-text-muted">Ano</label>
-            <select
-              v-model="ano"
-              class="h-10 w-[90px] rounded-lg border border-border-ui bg-bg-page pl-2 pr-2 text-sm font-medium text-text-main"
-              @change="carregar"
-            >
-              <option v-for="y in anosDisponiveis" :key="y" :value="y">{{ y }}</option>
-            </select>
-          </div>
-        </div>
-      </div>
+        </template>
+      </PageHeader>
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4">
+      <div class="dre-mensal-page__body ds-page-context__content pb-6">
         <div v-if="loading" class="flex items-center justify-center py-12">
-          <i class="pi pi-spin pi-spinner text-2xl text-brand-primary" />
+          <i class="pi pi-spin pi-spinner text-2xl text-[var(--ds-color-primary)]" />
         </div>
 
-        <div v-else class="native-table-flush border-y border-border-ui bg-white dark:bg-slate-900/40 overflow-hidden">
+        <div v-else class="ds-card ds-card--default overflow-hidden native-table-flush">
           <div class="native-table-flush-scroll overflow-x-auto">
           <table class="w-full text-sm min-w-[320px]">
             <tbody>
@@ -117,13 +117,15 @@
           </div>
         </div>
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { FinanceiroService } from '@/services/index'
+import PageShell from '@/components/ui/PageShell.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
 
 definePage({ meta: { perm: 'relatorios.dre_mensal.ver' } })
 

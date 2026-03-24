@@ -1,18 +1,15 @@
 <template>
   <template v-if="isAuthenticated && usuarioLogado">
-    <div class="w-full h-full">
-      <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-        <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
-
+    <PageShell :padded="false">
+      <section class="usuarios-list ds-page-context ds-page-context--list animate-page-in">
         <PageHeader
           title="Equipe"
           subtitle="Gestão de usuários e permissões"
           icon="pi pi-users"
-          :show-back="false"
         >
           <template #actions>
-            <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
-              <div class="w-full sm:w-64 order-1 sm:order-0">
+            <div class="usuarios-list__actions ds-page-context__actions">
+              <div class="usuarios-list__search ds-page-context__search">
                 <SearchInput
                   v-model="filtro"
                   placeholder="Buscar nome, e-mail ou usuário..."
@@ -24,232 +21,251 @@
                 variant="primary"
                 @click="abrirModal()"
               >
-                <i class="pi pi-user-plus mr-2"></i>
+                <i class="pi pi-user-plus"></i>
                 Novo Colaborador
               </Button>
             </div>
           </template>
         </PageHeader>
 
-        <div class="pb-5 md:pb-6 pt-4 border-t border-border-ui">
+        <div class="usuarios-list__content ds-page-context__content">
           <Table
             :columns="columns"
-            :rows="usuariosFiltrados"
+            :rows="rows"
             :loading="loadingTabela"
             empty-text="Nenhum colaborador encontrado."
             :boxed="false"
-            :flush="true"
+            :flush="false"
           >
-            <template #cell-nome="{ row }">
-              <div class="flex items-center gap-3 py-2">
-                <div class="w-9 h-9 rounded-lg flex items-center justify-center text-[10px] font-bold border bg-bg-page text-text-muted border-border-ui">
-                  {{ row.nome?.charAt(0).toUpperCase() }}
+              <template #cell-nome="{ row }">
+                <div class="usuarios-list__identity">
+                  <div class="usuarios-list__initials">
+                    {{ row.iniciais }}
+                  </div>
+
+                  <div class="usuarios-list__identity-copy">
+                    <span class="usuarios-list__primary">
+                      {{ row.nome }}
+                    </span>
+                    <span class="usuarios-list__secondary">
+                      {{ row.email_exibicao }}
+                    </span>
+                    <span class="usuarios-list__mobile-meta">
+                      @{{ row.usuario }}
+                    </span>
+                  </div>
                 </div>
+              </template>
 
-                <div class="flex flex-col">
-                  <span class="font-semibold text-text-main uppercase text-[10px] tracking-tight leading-none">
-                    {{ row.nome }}
-                  </span>
+              <template #cell-acesso="{ row }">
+                <div class="usuarios-list__stack">
+                  <span class="usuarios-list__primary">{{ row.cargo_label }}</span>
+                  <span class="usuarios-list__secondary">@{{ row.usuario }}</span>
+                </div>
+              </template>
 
-                  <span
-                    class="text-[9px] font-bold uppercase tracking-tighter mt-1"
-                    :class="
-                      row.status === 'ATIVO'
-                        ? 'text-emerald-600 dark:text-emerald-400'
-                        : row.status === 'PENDENTE'
-                          ? 'text-amber-600 dark:text-amber-400'
-                          : 'text-rose-600 dark:text-rose-400'
-                    "
-                  >
-                    {{ row.status }}
+              <template #cell-funcionario_vinculado="{ row }">
+                <div class="usuarios-list__stack">
+                  <span class="usuarios-list__primary">{{ row.funcionario_nome }}</span>
+                  <span class="usuarios-list__secondary">{{ row.funcionario_hint }}</span>
+                </div>
+              </template>
+
+              <template #cell-senha_status="{ row }">
+                <div class="usuarios-list__status-cell">
+                  <span class="ds-status-pill" :class="row.senha_class">
+                    {{ row.senha_label }}
                   </span>
                 </div>
-              </div>
-            </template>
+              </template>
 
-            <template #cell-acesso="{ row }">
-              <div class="flex flex-col">
-                <span class="text-[10px] font-semibold text-text-main tracking-tight">@{{ row.usuario }}</span>
-                <span class="text-[9px] font-medium text-text-muted lowercase">{{ row.email }}</span>
-              </div>
-            </template>
-
-            <template #cell-funcionario_vinculado="{ row }">
-              <span class="text-[10px] text-text-muted">
-                {{ row.funcionario?.nome || (row.funcionario_id ? `#${row.funcionario_id}` : '—') }}
-              </span>
-            </template>
-
-            <template #cell-senha_status="{ row }">
-              <div class="flex items-center gap-2">
-                <i
-                  v-if="row.senha_expirada"
-                  class="pi pi-key text-amber-600 dark:text-amber-400"
-                  title="Senha expirada"
-                />
-                <i
-                  v-else-if="row.precisa_trocar_senha"
-                  class="pi pi-key text-amber-600 dark:text-amber-400"
-                  title="Pendente troca de senha"
-                />
-                <i
-                  v-else
-                  class="pi pi-key text-emerald-600 dark:text-emerald-400"
-                  title="Senha alterada"
-                />
-                <span
+              <template #cell-status="{ row }">
+                <button
+                  v-if="can('usuarios.editar')"
+                  :disabled="row.id === usuarioLogado?.id"
+                  @click="confirmarAlterarStatus(row)"
                   :class="[
-                    'inline-flex items-center px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider border',
-                    row.senha_expirada
-                      ? 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20'
-                      : row.precisa_trocar_senha
-                        ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
-                        : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
+                    'ds-status-pill usuarios-list__status-toggle',
+                    row.status_class,
+                    row.id === usuarioLogado?.id ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer',
                   ]"
                 >
-                  {{ row.senha_expirada ? 'Expirada' : row.precisa_trocar_senha ? 'Pendente troca' : 'Alterada' }}
+                  {{ row.status_label }}
+                </button>
+
+                <span v-else class="ds-status-pill" :class="row.status_class">
+                  {{ row.status_label }}
                 </span>
-              </div>
-            </template>
+              </template>
 
-            <template #cell-status="{ row }">
-              <button
-                v-if="can('usuarios.editar')"
-                :disabled="row.id === usuarioLogado.value?.id"
-                @click="confirmarAlterarStatus(row)"
-                :class="[
-                  'px-3 py-1 rounded-lg text-[8px] font-bold uppercase tracking-widest border transition-all',
-                  row.status === 'ATIVO'
-                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-500'
-                    : row.status === 'PENDENTE'
-                      ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20 hover:bg-amber-600 hover:text-white dark:hover:bg-amber-500'
-                      : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 hover:bg-rose-600 hover:text-white dark:hover:bg-rose-500',
-                  row.id === usuarioLogado.value?.id ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer',
-                ]"
-              >
-                {{ row.status }}
-              </button>
+              <template #cell-acoes="{ row }">
+                <div class="flex justify-center">
+                  <div class="usuarios-list__row-actions">
+                  <button
+                    v-if="can('usuarios.editar') && row.senha_expirada"
+                    :disabled="reenviandoIds.has(row.id)"
+                    @click.stop="confirmarResetarAcesso(row)"
+                    class="usuarios-list__icon-action usuarios-list__icon-action--danger"
+                    title="Resetar acesso"
+                  >
+                    <i class="pi pi-refresh text-xs" />
+                  </button>
+                  <button
+                    v-else-if="can('usuarios.editar')"
+                    :disabled="reenviandoIds.has(row.id)"
+                    @click.stop="confirmarReenviarSenha(row)"
+                    class="usuarios-list__icon-action usuarios-list__icon-action--warning"
+                    title="Reenviar senha provisória"
+                  >
+                    <i class="pi pi-envelope text-xs" />
+                  </button>
 
-              <span v-else class="text-[9px] font-bold uppercase tracking-widest text-text-muted">
-                {{ row.status }}
-              </span>
-            </template>
-
-            <template #cell-acoes="{ row }">
-              <div class="flex justify-center">
-                <div class="inline-flex items-center gap-2">
-                <button
-                  v-if="can('usuarios.editar') && row.senha_expirada"
-                  :disabled="reenviandoIds.has(row.id)"
-                  @click.stop="confirmarResetarAcesso(row)"
-                  class="h-10 w-10 flex-shrink-0 rounded-lg flex items-center justify-center text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 dark:hover:bg-rose-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-border-ui bg-bg-card"
-                  title="Resetar Acesso"
-                >
-                  <i class="pi pi-refresh text-xs" />
-                </button>
-                <button
-                  v-else-if="can('usuarios.editar')"
-                  v-can="'usuarios.editar'"
-                  :disabled="reenviandoIds.has(row.id)"
-                  @click.stop="confirmarReenviarSenha(row)"
-                  class="h-10 w-10 flex-shrink-0 rounded-lg flex items-center justify-center text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 dark:hover:bg-amber-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-border-ui bg-bg-card"
-                  title="Reenviar senha provisória"
-                >
-                  <i class="pi pi-envelope text-xs" />
-                </button>
-                <TableActions
-                    :id="row.id"
-                    perm-edit="usuarios.editar"
-                    :perm-delete="row.id === usuarioLogado?.id ? '' : 'usuarios.excluir'"
-                    @edit="abrirModal(row)"
-                    @delete="(id) => { const r = usuariosFiltrados.find(u => u.id === id); if (r && r.id !== usuarioLogado?.id) confirmarExclusao(r); }"
-                />
+                    <TableActions
+                      :id="row.id"
+                      perm-edit="usuarios.editar"
+                      :perm-delete="row.id === usuarioLogado?.id ? '' : 'usuarios.excluir'"
+                      @edit="abrirModal(row)"
+                      @delete="(id) => { const registro = rows.find(u => u.id === id); if (registro && registro.id !== usuarioLogado?.id) confirmarExclusao(registro); }"
+                    />
+                  </div>
                 </div>
-              </div>
-            </template>
+              </template>
           </Table>
         </div>
-      </div>
-    </div>
+      </section>
+    </PageShell>
 
     <!-- MODAL (Teleport para body = abre no Tauri e no app/APK) -->
     <Teleport to="body">
-      <div v-if="exibirModal" class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/50 backdrop-blur-[2px]" @click.self="fecharModal">
-        <div class="relative z-10 w-full max-w-lg animate-in zoom-in-95 duration-200">
-        <div class="rounded-2xl overflow-hidden border border-border-ui bg-bg-card shadow-xl dark:shadow-none">
-          <header class="px-8 py-5 border-b border-border-ui flex justify-between items-center bg-bg-page">
-            <h3 class="text-[11px] font-black text-text-main uppercase tracking-widest">
-              {{ modoEdicao ? 'Editar Colaborador' : 'Novo Colaborador' }}
-            </h3>
-            <button @click="fecharModal" class="w-8 h-8 flex items-center justify-center rounded-lg text-text-muted hover:text-rose-500 hover:bg-rose-500/10 transition-colors">
-              <i class="pi pi-times text-sm"></i>
-            </button>
-          </header>
+      <Transition name="fade">
+        <div
+          v-if="exibirModal"
+          class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+          @click.self="fecharModal"
+        >
+          <div class="usuarios-modal w-full max-w-3xl rounded-xl border border-border-ui bg-bg-card shadow-lg overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <header class="usuarios-modal__header">
+              <div class="usuarios-modal__header-copy">
+                <div>
+                  <span class="usuarios-modal__eyebrow">Equipe</span>
+                  <h3 class="usuarios-modal__title">
+                    {{ modoEdicao ? 'Editar colaborador' : 'Novo colaborador' }}
+                  </h3>
+                  <p class="usuarios-modal__subtitle">
+                    Dados de acesso, cargo e vínculo
+                  </p>
+                </div>
+              </div>
 
-          <form class="p-8 space-y-5" @submit.prevent="confirmarSalvarUsuario">
-            <div class="grid grid-cols-2 gap-4">
-              <Input v-model="formUsuario.nome" label="Nome Completo" class="col-span-2" />
-              <Input v-model="formUsuario.usuario" label="Usuário Login" :forceUpper="false" />
-              <Input v-model="formUsuario.email" label="E-mail" type="email" :forceUpper="false" />
-              <Select
-                v-model="formUsuario.cargo"
-                label="Cargo"
-                placeholder="Selecione o cargo"
-                :options="cargoOptions"
-                class="col-span-2"
-              />
-              <Input
-                v-model="formUsuario.senha"
-                :label="modoEdicao ? 'Nova senha (deixe em branco para não alterar)' : 'Senha'"
-                type="password"
-                :forceUpper="false"
-                class="col-span-2"
-                autocomplete="new-password"
-              />
-              <p class="col-span-2 text-xs text-slate-500 dark:text-slate-400 -mt-1">
-                A senha provisória enviada por e-mail vem em maiúsculas. Ao definir uma nova senha, inclua pelo menos uma letra maiúscula.
-              </p>
-              <Select
-                v-if="modoEdicao"
-                v-model="formUsuario.funcionario_id"
-                label="Vincular a funcionário"
-                placeholder="Nenhum (desvincular)"
-                :options="funcionarioOptions"
-                class="col-span-2"
-              />
-            </div>
-
-            <p v-if="!modoEdicao" class="text-[10px] font-bold uppercase tracking-wider text-text-muted">
-              {{
-                formUsuario.senha
-                  ? 'Senha definida manualmente no cadastro.'
-                  : 'Se a senha ficar em branco, será enviada senha provisória por e-mail.'
-              }}
-            </p>
-
-            <div class="flex justify-end gap-3 pt-4 border-t border-border-ui">
               <button
                 type="button"
+                class="usuarios-modal__close"
                 @click="fecharModal"
-                class="text-[10px] font-black uppercase text-text-muted hover:text-text-main px-4 py-2 rounded-lg hover:bg-bg-page transition-colors"
               >
-                Cancelar
+                <i class="pi pi-times text-sm"></i>
               </button>
+            </header>
 
-              <Button
-                v-if="can(modoEdicao ? 'usuarios.editar' : 'usuarios.criar')"
-                variant="primary"
-                type="submit"
-                :loading="loadingSalvar"
-                class="!h-10 !rounded-xl !px-8 text-[10px] font-black uppercase tracking-widest"
-              >
-                {{ modoEdicao ? 'Salvar Alterações' : 'Criar Conta' }}
-              </Button>
-            </div>
-          </form>
+            <form class="usuarios-modal__form clientes-line-form" @submit.prevent="confirmarSalvarUsuario">
+              <div class="grid grid-cols-12 gap-4 items-start">
+                <div class="col-span-12">
+                  <Input
+                    v-model="formUsuario.nome"
+                    label="Nome completo"
+                    placeholder="EX: ANA PAULA COSTA DE SOUZA"
+                    variant="line"
+                  />
+                </div>
+
+                <div class="col-span-12 md:col-span-5">
+                  <Input
+                    v-model="formUsuario.usuario"
+                    label="Usuário login"
+                    placeholder="EX: ANA.P"
+                    :forceUpper="false"
+                    variant="line"
+                  />
+                </div>
+
+                <div class="col-span-12 md:col-span-7">
+                  <Input
+                    v-model="formUsuario.email"
+                    label="E-mail"
+                    type="email"
+                    placeholder="EX: ANA.PAULA@EMAIL.COM"
+                    :forceUpper="false"
+                    variant="line"
+                  />
+                </div>
+
+                <div class="col-span-12 md:col-span-6">
+                  <Select
+                    v-model="formUsuario.cargo"
+                    label="Cargo"
+                    placeholder="SELECIONE O CARGO"
+                    :options="cargoOptions"
+                    variant="line"
+                  />
+                </div>
+
+                <div class="col-span-12 md:col-span-6">
+                  <Select
+                    v-model="formUsuario.funcionario_id"
+                    label="Vincular a funcionário"
+                    placeholder="SELECIONE OU DEIXE SEM VÍNCULO"
+                    :options="funcionarioOptions"
+                    variant="line"
+                  />
+                </div>
+
+                <div class="col-span-12">
+                  <Input
+                    v-model="formUsuario.senha"
+                    :label="modoEdicao ? 'Nova senha (deixe em branco para não alterar)' : 'Senha'"
+                    type="password"
+                    placeholder="DIGITE UMA SENHA OU DEIXE EM BRANCO"
+                    :forceUpper="false"
+                    autocomplete="new-password"
+                    variant="line"
+                  />
+                </div>
+
+                <div class="col-span-12 usuarios-modal__hint-wrap">
+                  <p class="usuarios-modal__hint">
+                    A senha provisória enviada por e-mail vem em maiúsculas. Ao definir uma nova senha, inclua pelo menos uma letra maiúscula.
+                  </p>
+                </div>
+
+                <div v-if="!modoEdicao" class="col-span-12 usuarios-modal__hint-wrap usuarios-modal__hint-wrap--topless">
+                  <p class="usuarios-modal__hint usuarios-modal__hint--muted">
+                    {{
+                      formUsuario.senha
+                        ? 'Senha definida manualmente no cadastro.'
+                        : 'Se a senha ficar em branco, será enviada senha provisória por e-mail.'
+                    }}
+                  </p>
+                </div>
+              </div>
+
+              <div class="usuarios-modal__footer">
+                <Button type="button" variant="ghost" @click="fecharModal">
+                  Cancelar
+                </Button>
+
+                <Button
+                  v-if="can(modoEdicao ? 'usuarios.editar' : 'usuarios.criar')"
+                  variant="primary"
+                  type="submit"
+                  :loading="loadingSalvar"
+                >
+                  <i class="pi pi-check"></i>
+                  {{ modoEdicao ? 'Salvar alterações' : 'Criar conta' }}
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
-        </div>
-      </div>
+      </Transition>
     </Teleport>
   </template>
 
@@ -283,12 +299,12 @@ const loadingSalvar = ref(false)
 const reenviandoIds = ref(new Set())
 
 const columns = [
-  { key: 'nome', label: 'Colaborador' },
-  { key: 'acesso', label: 'Login' },
-  { key: 'funcionario_vinculado', label: 'Funcionário' },
-  { key: 'senha_status', label: 'Senha' },
-  { key: 'status', label: 'Status' },
-  { key: 'acoes', label: 'Ações', align: 'center' },
+  { key: 'nome', label: 'Colaborador', width: '24%' },
+  { key: 'acesso', label: 'Acesso', width: '17%' },
+  { key: 'funcionario_vinculado', label: 'Funcionário', width: '21%' },
+  { key: 'senha_status', label: 'Senha', width: '14%', align: 'center' },
+  { key: 'status', label: 'Status', width: '10%', align: 'center' },
+  { key: 'acoes', label: 'Ações', width: '14%', align: 'center' },
 ]
 
 const cargoOptions = [
@@ -340,7 +356,6 @@ const carregarFuncionarios = async () => {
 
 // --- MODAL ---
 const abrirModal = (user = null) => {
-  // permissão por ação
   if (user) {
     if (!can('usuarios.editar')) return notify.error('Acesso negado.')
   } else {
@@ -540,6 +555,74 @@ async function reenviarSenha(row, isReset = false) {
   }
 }
 
+function userStatusClass(status) {
+  const currentStatus = String(status || '').toUpperCase()
+  if (currentStatus === 'ATIVO') return 'ds-status-pill--success'
+  if (currentStatus === 'PENDENTE') return 'ds-status-pill--warning'
+  return 'ds-status-pill--danger'
+}
+
+function userStatusLabel(status) {
+  const currentStatus = String(status || '').toUpperCase()
+  if (currentStatus === 'ATIVO') return 'Ativo'
+  if (currentStatus === 'PENDENTE') return 'Pendente'
+  return 'Inativo'
+}
+
+function cargoLabel(cargo) {
+  const cargos = {
+    VENDEDOR_LOJA: 'Vendedor / Loja',
+    MONTADOR_FABRICA: 'Montador / Fábrica',
+  }
+
+  return cargos[String(cargo || '').toUpperCase()] || 'Sem cargo'
+}
+
+function senhaStatusMeta(row) {
+  if (row?.senha_expirada) {
+    return {
+      label: 'Expirada',
+      className: 'ds-status-pill--danger',
+    }
+  }
+
+  if (row?.precisa_trocar_senha) {
+    return {
+      label: 'Pendente troca',
+      className: 'ds-status-pill--warning',
+    }
+  }
+
+  return {
+    label: 'Alterada',
+    className: 'ds-status-pill--success',
+  }
+}
+
+const rows = computed(() =>
+  usuariosFiltrados.value.map((user) => {
+    const senhaMeta = senhaStatusMeta(user)
+    const nome = String(user?.nome || '-').trim() || '-'
+    const partes = nome.split(/\s+/).filter(Boolean)
+    const iniciais = `${partes[0]?.[0] || ''}${partes[1]?.[0] || partes[0]?.[1] || ''}`
+
+    return {
+      ...user,
+      iniciais: String(iniciais || '?').toUpperCase(),
+      email_exibicao: user.email || 'Sem e-mail',
+      cargo_label: cargoLabel(user.cargo),
+      funcionario_nome: user.funcionario?.nome || 'Não vinculado',
+      funcionario_hint: user.funcionario?.nome
+        ? 'Funcionário vinculado'
+        : (user.funcionario_id ? `Vínculo #${user.funcionario_id}` : 'Sem vínculo'),
+      status_label: userStatusLabel(user.status),
+      status_class: userStatusClass(user.status),
+      senha_label: senhaMeta.label,
+      senha_class: senhaMeta.className,
+    }
+  }),
+)
+
 
 // --- FILTRO ---
 const usuariosFiltrados = computed(() => {
@@ -561,27 +644,417 @@ onMounted(async () => {
 
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
-
-.login-font {
-  font-family: 'DM Sans', sans-serif;
+.usuarios-list {
+  min-height: 100%;
+  background: var(--ds-color-surface);
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.clientes-line-list :deep(.search-container input.w-full) {
-  border-top: 0;
-  border-left: 0;
-  border-right: 0;
-  border-bottom-width: 2px;
-  border-radius: 0;
+.usuarios-list__identity {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.usuarios-list__initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(214, 224, 234, 0.78);
+  background: rgba(245, 248, 251, 0.9);
+  color: var(--ds-color-text-faint);
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+}
+
+.dark .usuarios-list__initials {
+  background: rgba(18, 30, 49, 0.62);
+  border-color: rgba(51, 71, 102, 0.76);
+}
+
+.usuarios-list__identity-copy,
+.usuarios-list__stack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.usuarios-list__primary {
+  color: var(--ds-color-text);
+  font-size: 0.92rem;
+  font-weight: 540;
+  line-height: 1.4;
+  text-transform: none;
+  letter-spacing: -0.01em;
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.usuarios-list__secondary {
+  color: var(--ds-color-text-faint);
+  font-size: 0.72rem;
+  font-weight: 430;
+  line-height: 1.45;
+  text-transform: none;
+  letter-spacing: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.usuarios-list__mobile-meta {
+  display: none;
+  color: var(--ds-color-text-faint);
+  font-size: 0.7rem;
+  font-weight: 430;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.usuarios-list__status-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.usuarios-list__status-toggle {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.usuarios-list__status-toggle:not(:disabled):hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.usuarios-list__row-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.usuarios-list__icon-action {
+  width: 2.1rem;
+  height: 2.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.7rem;
+  border: 1px solid rgba(214, 224, 234, 0.82);
   background: transparent;
-  box-shadow: none;
+  color: var(--ds-color-text-soft);
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
 }
 
-.clientes-line-list :deep(.search-container input.w-full:focus) {
-  box-shadow: none;
+.usuarios-list__icon-action:hover:not(:disabled) {
+  border-color: rgba(44, 111, 163, 0.24);
+  color: var(--ds-color-primary);
+  background: rgba(44, 111, 163, 0.05);
 }
 
-.premium-table :deep(tr:hover) {
-  background-color: rgba(0, 0, 0, 0.01);
+.usuarios-list__icon-action--warning:hover:not(:disabled) {
+  border-color: rgba(197, 138, 32, 0.28);
+  color: var(--ds-color-warning);
+  background: rgba(197, 138, 32, 0.08);
+}
+
+.usuarios-list__icon-action--danger:hover:not(:disabled) {
+  border-color: rgba(196, 73, 73, 0.24);
+  color: var(--ds-color-danger);
+  background: rgba(196, 73, 73, 0.08);
+}
+
+.usuarios-list__icon-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.usuarios-list :deep(.ds-status-pill) {
+  max-width: 100%;
+  justify-content: center;
+  padding-inline: 0.55rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.05em;
+}
+
+.usuarios-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(214, 224, 234, 0.7);
+  background: transparent;
+}
+
+.usuarios-modal__header-copy {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.usuarios-modal__eyebrow {
+  display: inline-block;
+  color: var(--ds-color-text-faint);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.22rem;
+}
+
+.usuarios-modal__title {
+  color: var(--ds-color-text);
+  font-size: 0.98rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.usuarios-modal__subtitle {
+  margin-top: 0.15rem;
+  color: var(--ds-color-text-faint);
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.usuarios-modal__close {
+  width: 2.15rem;
+  height: 2.15rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.7rem;
+  border: 1px solid rgba(214, 224, 234, 0.78);
+  color: var(--ds-color-text-soft);
+  transition: color 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.usuarios-modal__close:hover {
+  color: var(--ds-color-danger);
+  border-color: rgba(196, 73, 73, 0.24);
+  background: rgba(196, 73, 73, 0.08);
+}
+
+.usuarios-modal__form {
+  padding: 1.15rem 1.25rem 1.25rem;
+}
+
+.clientes-line-form :deep(.ds-field-label),
+.clientes-line-form :deep(.w-full.flex.flex-col.gap-1\.5 > label),
+.clientes-line-form :deep(.search-container > label) {
+  width: auto;
+  justify-content: flex-start;
+  margin-left: 0;
+  margin-bottom: 0.6rem;
+  color: var(--ds-color-text-faint);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-align: left;
+  text-transform: none;
+}
+
+.clientes-line-form :deep(input.ds-control-input) {
+  min-height: 46px !important;
+  height: 46px !important;
+  padding-left: 0.1rem !important;
+  padding-right: 0.1rem !important;
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.55rem !important;
+  font-size: 0.88rem !important;
+  font-weight: 430 !important;
+  line-height: 1.45 !important;
+  border-top: 0 !important;
+  border-left: 0 !important;
+  border-right: 0 !important;
+  border-bottom-width: 1px !important;
+  border-bottom-style: solid !important;
+  border-bottom-color: rgba(188, 203, 221, 0.75) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.clientes-line-form :deep(select.ds-control-input) {
+  min-height: 46px !important;
+  height: 46px !important;
+  padding-left: 0.1rem !important;
+  padding-right: 3.25rem !important;
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.55rem !important;
+  font-size: 0.88rem !important;
+  font-weight: 430 !important;
+  line-height: 1.45 !important;
+  border-top: 0 !important;
+  border-left: 0 !important;
+  border-right: 0 !important;
+  border-bottom-width: 1px !important;
+  border-bottom-style: solid !important;
+  border-bottom-color: rgba(188, 203, 221, 0.75) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.clientes-line-form :deep(.select-field__chevron-pill) {
+  width: 1.85rem !important;
+  height: 1.85rem !important;
+  border-color: rgba(188, 203, 221, 0.88) !important;
+  background: rgba(248, 250, 252, 0.96) !important;
+  box-shadow: none !important;
+}
+
+.clientes-line-form :deep(input.ds-control-input:focus) {
+  border-bottom-color: var(--ds-color-primary) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.clientes-line-form :deep(select.ds-control-input:focus) {
+  border-bottom-color: var(--ds-color-primary) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.clientes-line-form :deep(input.ds-control-input::placeholder) {
+  color: var(--ds-color-text-faint);
+  font-size: 0.84rem;
+  font-weight: 400;
+  opacity: 1;
+}
+
+.clientes-line-form :deep(select.ds-control-input option) {
+  font-size: 0.84rem;
+  font-weight: 500;
+}
+
+.usuarios-modal__hint-wrap {
+  margin-top: -0.15rem;
+}
+
+.usuarios-modal__hint-wrap--topless {
+  margin-top: -0.45rem;
+}
+
+.usuarios-modal__hint {
+  color: var(--ds-color-text-faint);
+  font-size: 0.74rem;
+  line-height: 1.55;
+}
+
+.usuarios-modal__hint--muted {
+  font-weight: 500;
+}
+
+.usuarios-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid rgba(214, 224, 234, 0.7);
+}
+
+.dark .usuarios-modal__header {
+  background: transparent;
+}
+
+@media (min-width: 640px) {
+  .usuarios-list__search {
+    width: 19rem;
+  }
+}
+
+@media (max-width: 1100px) {
+  .usuarios-list__primary {
+    font-size: 0.88rem;
+  }
+
+  .usuarios-list__secondary {
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .usuarios-list__mobile-meta {
+    display: block;
+  }
+
+  .usuarios-list__identity {
+    gap: 0.48rem;
+  }
+
+  .usuarios-list__initials {
+    width: 1.9rem;
+    height: 1.9rem;
+  }
+
+  .usuarios-list__row-actions {
+    gap: 0.3rem;
+  }
+
+  .usuarios-list__icon-action {
+    width: 1.95rem;
+    height: 1.95rem;
+  }
+
+  .usuarios-list :deep(.ds-table__head-cell:nth-child(3)),
+  .usuarios-list :deep(.ds-table__cell:nth-child(3)),
+  .usuarios-list :deep(.ds-table__head-cell:nth-child(4)),
+  .usuarios-list :deep(.ds-table__cell:nth-child(4)) {
+    display: none;
+  }
+
+  .usuarios-list :deep(.ds-table__head-cell:last-child),
+  .usuarios-list :deep(.ds-table__cell:last-child) {
+    padding-left: 0.3rem;
+    padding-right: 0.3rem;
+  }
+
+  .usuarios-list__actions > :deep(.ds-btn--primary) {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .usuarios-modal__header,
+  .usuarios-modal__form {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .usuarios-modal__header {
+    align-items: flex-start;
+  }
+
+  .usuarios-modal__header-copy {
+    gap: 0.7rem;
+  }
+
+  .usuarios-modal__footer {
+    width: 100%;
+    flex-direction: column-reverse;
+  }
+
+  .usuarios-modal__footer :deep(.ds-btn) {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 560px) {
+  .usuarios-list :deep(.ds-table__head-cell:nth-child(2)),
+  .usuarios-list :deep(.ds-table__cell:nth-child(2)) {
+    display: none;
+  }
 }
 </style>

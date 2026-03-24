@@ -14,24 +14,24 @@ import { notifications, notify } from '@/services/notify'
           class="relative flex items-center gap-4 p-4 rounded-xl border bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl shadow-lg shadow-slate-200/50 dark:shadow-black/20 transition-all duration-300"
           :class="[
             n.type === 'error' 
-              ? 'border-red-100 dark:border-red-900/30' 
-              : 'border-emerald-100 dark:border-emerald-900/30'
+              ? 'border-[color:rgba(196,73,73,0.2)]' 
+              : 'border-[color:rgba(22,124,92,0.2)]'
           ]"
         >
           <div 
             class="absolute left-0 top-3 bottom-3 w-1 rounded-r-full"
-            :class="n.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'"
+            :class="n.type === 'error' ? 'bg-[color:var(--ds-color-danger)]' : 'bg-[color:var(--ds-color-success)]'"
           ></div>
 
           <div 
             class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
-            :class="n.type === 'error' ? 'bg-red-50 text-red-500 dark:bg-red-500/10' : 'bg-emerald-50 text-emerald-500 dark:bg-emerald-500/10'"
+            :class="n.type === 'error' ? 'bg-[color:rgba(196,73,73,0.1)] text-[color:var(--ds-color-danger)]' : 'bg-[color:rgba(22,124,92,0.1)] text-[color:var(--ds-color-success)]'"
           >
             <i :class="[n.type === 'error' ? 'pi pi-times-circle' : 'pi pi-check-circle', 'text-lg']"></i>
           </div>
 
           <div class="flex flex-col min-w-0 pr-4 gap-1 flex-1">
-            <span class="text-xs font-semibold" :class="n.type === 'error' ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'">
+            <span class="text-xs font-semibold" :class="n.type === 'error' ? 'text-[color:var(--ds-color-danger)]' : 'text-[color:var(--ds-color-success)]'">
               {{ n.type === 'error' ? 'Atenção' : 'Sucesso' }}
             </span>
             <p

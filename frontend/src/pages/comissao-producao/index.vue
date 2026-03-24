@@ -1,38 +1,39 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
-      <div class="flex flex-row flex-nowrap items-center gap-4 px-4 md:px-6 py-4 border-b border-border-ui">
-        <h1 class="text-xl font-semibold text-text-main shrink-0 flex items-center gap-2">
-          <i class="pi pi-percentage text-text-muted" />
-          Comissão de Produção
-        </h1>
-        <div class="flex flex-1 flex-nowrap items-center justify-end gap-3 min-w-0 ml-auto">
-          <div class="flex items-center gap-2 shrink-0">
-            <label class="text-xs font-medium text-text-muted">Mês</label>
-            <select
-              v-model="mes"
-              class="h-10 w-[72px] rounded-lg border border-border-ui bg-bg-page pl-2 pr-2 text-sm text-text-main"
-              @change="carregar"
-            >
-              <option v-for="m in 12" :key="m" :value="m">{{ String(m).padStart(2, '0') }}</option>
-            </select>
+  <PageShell :padded="false" variant="minimal">
+    <section class="login-font ds-page-context ds-page-context--list animate-page-in">
+      <PageHeader
+        title="Comissão de Produção"
+        subtitle="Resumo mensal de lucro gerado e comissão disponível para a equipe da fábrica."
+        icon="pi pi-percentage"
+        variant="minimal"
+      >
+        <template #actions>
+          <div class="flex flex-nowrap items-center justify-end gap-3 min-w-0">
+            <div class="flex items-center gap-2 shrink-0">
+              <label class="text-xs font-medium text-text-muted">Mês</label>
+              <select
+                v-model="mes"
+                class="h-10 w-[72px] rounded-lg border border-[var(--ds-color-border)] bg-[var(--ds-color-surface)] pl-2 pr-2 text-sm text-text-main"
+                @change="carregar"
+              >
+                <option v-for="m in 12" :key="m" :value="m">{{ String(m).padStart(2, '0') }}</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <label class="text-xs font-medium text-text-muted">Ano</label>
+              <select
+                v-model="ano"
+                class="h-10 w-[80px] rounded-lg border border-[var(--ds-color-border)] bg-[var(--ds-color-surface)] pl-2 pr-2 text-sm text-text-main"
+                @change="carregar"
+              >
+                <option v-for="y in anosDisponiveis" :key="y" :value="y">{{ y }}</option>
+              </select>
+            </div>
           </div>
-          <div class="flex items-center gap-2 shrink-0">
-            <label class="text-xs font-medium text-text-muted">Ano</label>
-            <select
-              v-model="ano"
-              class="h-10 w-[80px] rounded-lg border border-border-ui bg-bg-page pl-2 pr-2 text-sm text-text-main"
-              @change="carregar"
-            >
-              <option v-for="y in anosDisponiveis" :key="y" :value="y">{{ y }}</option>
-            </select>
-          </div>
-        </div>
-      </div>
+        </template>
+      </PageHeader>
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 space-y-6">
+      <div class="ds-page-context__content px-4 md:px-6 pb-5 md:pb-6 pt-4 space-y-6">
         <div v-if="loading" class="flex items-center justify-center py-12">
           <i class="pi pi-spin pi-spinner text-2xl text-brand-primary" />
         </div>
@@ -40,14 +41,14 @@
         <template v-else>
           <!-- Resumo do mês -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div class="rounded-xl border border-border-ui bg-white dark:bg-slate-900/40 p-4">
+            <div class="ds-card ds-card--default p-4">
               <p class="text-xs font-semibold text-text-muted uppercase tracking-wide">Total de Lucro Gerado</p>
               <p class="mt-1 text-xl font-bold tabular-nums text-text-main">
                 {{ formatarMoeda(resumo.total_lucro_gerado) }}
               </p>
               <p class="text-xs text-text-muted mt-0.5">Projetos com montagem concluída (lucro líquido após custos)</p>
             </div>
-            <div class="rounded-xl border border-border-ui bg-white dark:bg-slate-900/40 p-4">
+            <div class="ds-card ds-card--default p-4">
               <p class="text-xs font-semibold text-text-muted uppercase tracking-wide">Total Comissão Disponível</p>
               <p class="mt-1 text-xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
                 {{ formatarMoeda(resumo.total_comissao_disponivel) }}
@@ -57,8 +58,8 @@
           </div>
 
           <!-- Lista de projetos -->
-          <div class="rounded-xl border border-border-ui bg-white dark:bg-slate-900/40 overflow-hidden">
-            <div class="px-4 py-3 border-b border-border-ui bg-slate-50/50 dark:bg-slate-800/30">
+          <div class="ds-card ds-card--default overflow-hidden">
+            <div class="px-4 py-3 border-b border-[color:var(--ds-color-border-ui)] bg-[var(--ds-color-surface-muted)]">
               <h2 class="text-sm font-semibold text-text-main">Projetos finalizados (contribuição ao fundo)</h2>
               <p class="text-xs text-text-muted mt-0.5">Somente projetos com status Montagem Concluída e lucro positivo</p>
             </div>
@@ -68,7 +69,7 @@
             <div v-else class="overflow-x-auto">
               <table class="w-full text-sm min-w-[400px]">
                 <thead>
-                  <tr class="border-b border-border-ui bg-slate-50/50 dark:bg-slate-800/30">
+                  <tr class="border-b border-[color:var(--ds-color-border-ui)] bg-[var(--ds-color-surface-muted)]">
                     <th class="text-left py-2.5 px-4 font-semibold text-text-muted">Projeto</th>
                     <th class="text-left py-2.5 px-4 font-semibold text-text-muted">Cliente</th>
                     <th class="text-right py-2.5 px-4 font-semibold text-text-muted">Lucro Líquido</th>
@@ -79,7 +80,7 @@
                   <tr
                     v-for="p in resumo.projetos"
                     :key="p.projeto_id"
-                    class="border-b border-border-ui hover:bg-slate-50/50 dark:hover:bg-slate-800/20"
+                    class="border-b border-[color:var(--ds-color-border-ui)] hover:bg-[var(--ds-color-surface-muted)]/60"
                   >
                     <td class="py-2.5 px-4 font-medium text-text-main">{{ p.codigo }}</td>
                     <td class="py-2.5 px-4 text-text-main">{{ p.cliente_nome }}</td>
@@ -96,8 +97,8 @@
           </div>
         </template>
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>

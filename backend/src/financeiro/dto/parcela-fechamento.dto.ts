@@ -15,4 +15,8 @@ export class ParcelaFechamentoDto {
   @IsOptional()
   @IsString()
   vencimento_em?: string;
+
+  @IsOptional()
+  @IsString()
+  forma_pagamento_chave?: string;
 }

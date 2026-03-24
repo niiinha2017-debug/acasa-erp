@@ -1,52 +1,54 @@
 <template>
-  <div class="w-full h-full font-sans antialiased text-slate-900 dark:text-slate-100">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" aria-hidden />
+  <PageShell :padded="false">
+    <section class="timeline-page ds-page-context ds-page-context--list animate-page-in">
       <PageHeader
-        title="Timeline A Casa"
-        subtitle="Painel de controle"
-        icon="pi pi-list"
+        title="Timeline de Produção"
+        subtitle="Acompanhamento operacional de vendas, fábrica e execução em um único fluxo"
+        icon="pi pi-history"
       />
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui bg-slate-100/90 dark:bg-bg-page">
-      <TimelineFilters
-        v-model:visao="visaoTimeline"
-        :data-inicio="filtros.data_inicio"
-        :data-fim="filtros.data_fim"
-        :busca-cliente="filtros.busca_cliente"
-        :total-vendas="totalItensVendas"
-        :total-producao="totalItensProducao"
-        :link-ver-na-agenda="linkVerNaAgenda"
-        @update:data-inicio="filtros.data_inicio = $event"
-        @update:data-fim="filtros.data_fim = $event"
-        @update:busca-cliente="filtros.busca_cliente = $event"
-        @change-dates="carregarLista"
-      />
-
-      <!-- LISTA DE TAREFAS (cards compactos para timeline longa) -->
-      <div class="space-y-2 max-h-[70vh] overflow-y-auto mt-4">
-        <div v-if="!tarefas.length && !loading" class="py-12 text-center text-slate-500 dark:text-slate-400 text-sm">
-          Nenhuma tarefa no período. Ajuste as datas ou altere Vendas/Produção.
+      <div class="timeline-page__content ds-page-context__content">
+        <div class="timeline-page__filters">
+          <TimelineFilters
+            v-model:visao="visaoTimeline"
+            :data-inicio="filtros.data_inicio"
+            :data-fim="filtros.data_fim"
+            :busca-cliente="filtros.busca_cliente"
+            :total-vendas="totalItensVendas"
+            :total-producao="totalItensProducao"
+            :link-ver-na-agenda="linkVerNaAgenda"
+            @update:data-inicio="filtros.data_inicio = $event"
+            @update:data-fim="filtros.data_fim = $event"
+            @update:busca-cliente="filtros.busca_cliente = $event"
+            @change-dates="carregarLista"
+          />
         </div>
 
-        <!-- Tarefas ativas: border-l-4 na cor do processo + tom por status (pendente/em andamento/pausado) -->
-        <div
-          v-for="tarefa in tarefasAtivas"
-          :key="'ativa-' + tarefa.id"
-          class="group relative overflow-hidden border rounded-xl p-3 pl-4 shadow-sm dark:shadow-none transition-all duration-200"
-          :class="[
-            tarefa.plano_corte_id ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-700 border-l-4 border-l-amber-500' : 'bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-600',
-            !tarefa.plano_corte_id && tarefaAtrasada(tarefa) ? 'border-red-300 dark:border-red-500/70 ring-1 ring-red-200 dark:ring-red-900/50' : '',
-            !tarefa.plano_corte_id ? (coresTimelineAtiva(tarefa).borderLeftClass || '') : '',
-            coresTimelineAtiva(tarefa).pulse ? 'animate-pulse' : '',
-          ]"
-        >
+        <div class="timeline-page__board">
+          <!-- LISTA DE TAREFAS (cards compactos para timeline longa) -->
+          <div class="space-y-2 max-h-[70vh] overflow-y-auto mt-4 pr-1 timeline-page__scroll">
+            <div v-if="!tarefas.length && !loading" class="timeline-page__empty py-12 text-center text-text-muted text-sm">
+              Nenhuma tarefa no período. Ajuste as datas ou altere Vendas/Produção.
+            </div>
+
+            <!-- Tarefas ativas: border-l-4 na cor do processo + tom por status (pendente/em andamento/pausado) -->
+            <div
+              v-for="tarefa in tarefasAtivas"
+              :key="'ativa-' + tarefa.id"
+              class="group relative overflow-hidden border rounded-xl p-3 pl-4 shadow-sm dark:shadow-none transition-all duration-200"
+              :class="[
+                tarefa.plano_corte_id ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-700 border-l-4 border-l-amber-500' : 'bg-[var(--ds-color-surface-muted)] border-[var(--ds-color-border)]',
+                !tarefa.plano_corte_id && tarefaAtrasada(tarefa) ? 'border-red-300 dark:border-red-500/70 ring-1 ring-red-200 dark:ring-red-900/50' : '',
+                !tarefa.plano_corte_id ? (coresTimelineAtiva(tarefa).borderLeftClass || '') : '',
+                coresTimelineAtiva(tarefa).pulse ? 'animate-pulse' : '',
+              ]"
+            >
           <!-- Topo compacto: avatar + título + status + timer -->
           <div class="flex items-center gap-2 mb-2">
             <div class="w-9 h-9 rounded-lg shrink-0 font-bold text-xs flex items-center justify-center text-white" :class="tarefa.plano_corte_id ? 'bg-amber-600 dark:bg-amber-500 text-white' : [coresTimelineAtiva(tarefa).dotClass, coresTimelineAtiva(tarefa).pulse ? 'animate-pulse' : '']">
               {{ iniciaisTarefa(tarefa) }}
             </div>
             <div class="min-w-0 flex-1">
-              <h3 class="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate leading-tight flex items-center gap-2 flex-wrap">
+              <h3 class="text-sm font-semibold text-text-main truncate leading-tight flex items-center gap-2 flex-wrap">
                 {{ tituloTarefaTimeline(tarefa) }} #{{ tarefa.id }}
                 <span v-if="tarefa.plano_corte_id" class="inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase bg-amber-600 text-white dark:bg-amber-500 dark:text-amber-950 shrink-0">[APENAS CORTE]</span>
               </h3>
@@ -58,18 +60,18 @@
                       <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                       <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
                     </span>
-                    <span class="text-[9px] font-semibold text-slate-500 dark:text-slate-400 uppercase">{{ temCronometroRodandoNaTarefa(tarefa) ? 'Ativo' : 'Em produção' }}</span>
+                    <span class="text-[9px] font-semibold text-text-muted uppercase">{{ temCronometroRodandoNaTarefa(tarefa) ? 'Ativo' : 'Em produção' }}</span>
                   </template>
                 </template>
                 <template v-else>
                   <!-- Vendas/Produção: mesmo fluxo Início → Em produção → Ativo (cronômetro) -->
-                  <span v-if="!(tarefa.apontamentos_producao && tarefa.apontamentos_producao.length)" class="text-[9px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Início</span>
+                  <span v-if="!(tarefa.apontamentos_producao && tarefa.apontamentos_producao.length)" class="text-[9px] font-semibold text-text-muted uppercase">Início</span>
                   <template v-else>
                     <span v-if="temCronometroRodandoNaTarefa(tarefa)" class="relative flex h-1.5 w-1.5" :class="coresTimelineAtiva(tarefa).pulse ? 'animate-pulse' : ''">
                       <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                       <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
                     </span>
-                    <span class="text-[9px] font-semibold text-slate-500 dark:text-slate-400 uppercase">{{ temCronometroRodandoNaTarefa(tarefa) ? 'Ativo' : 'Em produção' }}</span>
+                    <span class="text-[9px] font-semibold text-text-muted uppercase">{{ temCronometroRodandoNaTarefa(tarefa) ? 'Ativo' : 'Em produção' }}</span>
                   </template>
                 </template>
                 <span v-if="tarefaAtrasada(tarefa)" class="text-[9px] font-bold uppercase text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 px-1.5 py-0.5 rounded" title="Prazo excedido">Excedido</span>
@@ -80,7 +82,7 @@
             </div>
           </div>
           <!-- Tabela compacta -->
-          <div class="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden bg-slate-100/90 dark:bg-slate-800/30">
+          <div class="rounded-lg border border-[color:var(--ds-color-border-ui)] overflow-hidden bg-[var(--ds-color-surface-muted)]">
             <table class="w-full text-xs table-fixed">
               <colgroup>
                 <col class="w-[28%]" />
@@ -89,7 +91,7 @@
                 <col class="w-[14%]" />
                 <col class="w-[22%]" />
               </colgroup>
-              <thead class="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-500 border-b border-slate-200 dark:border-slate-600 bg-slate-200/70 dark:bg-slate-800/50">
+              <thead class="text-[9px] font-bold uppercase tracking-wider text-text-muted border-b border-[color:var(--ds-color-border-ui)] bg-[var(--ds-color-surface-muted)]">
                 <tr>
                   <th class="text-left py-1 pr-1.5">Funcionário</th>
                   <th class="text-left py-1 px-1">Início</th>
@@ -99,26 +101,26 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-if="!(tarefa.apontamentos_producao && tarefa.apontamentos_producao.length)" class="text-slate-500 dark:text-slate-400">
+                <tr v-if="!(tarefa.apontamentos_producao && tarefa.apontamentos_producao.length)" class="text-text-muted">
                   <td colspan="5" class="py-2 text-xs">Nenhum funcionário atribuído.</td>
                 </tr>
                 <template v-else v-for="grupo in agruparApontamentosPorFuncionario(tarefa)" :key="'g-' + tarefa.id + '-' + grupo.funcionario_id">
-                  <tr class="border-b border-slate-200 dark:border-slate-700/50 hover:bg-slate-200/50 dark:hover:bg-slate-700/20">
-                    <td class="py-1.5 pr-1.5 font-medium text-slate-800 dark:text-slate-200 align-middle truncate">
+                  <tr class="border-b border-[var(--ds-color-border)] hover:bg-[var(--ds-color-surface-muted)]">
+                    <td class="py-1.5 pr-1.5 font-medium text-text-main align-middle truncate">
                       {{ grupo.funcionario?.nome || `#${grupo.funcionario_id}` }}
-                      <button v-if="grupo.apontamentos.length > 1" type="button" class="ml-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-[10px]" :title="grupoEstaExpandido(tarefa.id, grupo.funcionario_id) ? 'Recolher' : `Ver ${grupo.apontamentos.length} registros`" @click="toggleGrupoExpandido(tarefa.id, grupo.funcionario_id)">
+                      <button v-if="grupo.apontamentos.length > 1" type="button" class="ml-1 text-text-muted hover:text-text-main text-[10px]" :title="grupoEstaExpandido(tarefa.id, grupo.funcionario_id) ? 'Recolher' : `Ver ${grupo.apontamentos.length} registros`" @click="toggleGrupoExpandido(tarefa.id, grupo.funcionario_id)">
                         <i :class="grupoEstaExpandido(tarefa.id, grupo.funcionario_id) ? 'pi pi-chevron-up' : 'pi pi-chevron-down'"></i> ({{ grupo.apontamentos.length }})
                       </button>
                     </td>
-                    <td class="py-1.5 px-1 text-slate-600 dark:text-slate-400 align-middle">{{ grupo.primeiroInicio ? timeLabel(grupo.primeiroInicio) : '—' }}</td>
+                    <td class="py-1.5 px-1 text-text-muted align-middle">{{ grupo.primeiroInicio ? timeLabel(grupo.primeiroInicio) : '—' }}</td>
                     <td class="py-1.5 px-1 align-middle">
                       <template v-if="grupo.emAndamento">
                         <span v-if="isCronometroPausado(grupo.emAndamento)" class="text-amber-600 dark:text-amber-400 text-[10px] font-medium">Pausado</span>
-                        <span v-else class="text-slate-400 text-[10px]">—</span>
+                        <span v-else class="text-text-muted text-[10px]">—</span>
                       </template>
-                      <template v-else><span class="text-slate-600 dark:text-slate-400 text-[10px]">{{ grupo.ultimoFim ? timeLabel(grupo.ultimoFim) : '—' }}</span></template>
+                      <template v-else><span class="text-text-muted text-[10px]">{{ grupo.ultimoFim ? timeLabel(grupo.ultimoFim) : '—' }}</span></template>
                     </td>
-                    <td class="py-1.5 px-1 text-right font-mono font-medium text-slate-800 dark:text-slate-200 align-middle text-[10px]">
+                    <td class="py-1.5 px-1 text-right font-mono font-medium text-text-main align-middle text-[10px]">
                       <template v-if="grupo.emAndamento && !isCronometroPausado(grupo.emAndamento)">{{ formatElapsed(elapsedCronometro(grupo.emAndamento)) }}</template>
                       <template v-else>{{ formatarHorasParaExibicao(grupo.totalHoras) }}</template>
                     </td>
@@ -130,29 +132,29 @@
                           </template>
                           <template v-else>
                             <button type="button" class="w-7 h-7 flex items-center justify-center rounded-md bg-slate-800 dark:bg-slate-700 text-white hover:bg-slate-700 text-[10px]" title="Pausar" @click="pausarCronometroTimeline(grupo.emAndamento)"><i class="pi pi-pause text-xs"></i></button>
-                            <button type="button" class="w-7 h-7 flex items-center justify-center rounded-md border border-slate-200 dark:border-slate-600 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20" title="Concluir" @click="concluirCronometroTimeline(grupo.emAndamento)"><i class="pi pi-stop text-xs"></i></button>
+                            <button type="button" class="w-7 h-7 flex items-center justify-center rounded-md border border-[var(--ds-color-border)] text-text-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20" title="Concluir" @click="concluirCronometroTimeline(grupo.emAndamento)"><i class="pi pi-stop text-xs"></i></button>
                           </template>
                         </template>
                         <template v-else-if="grupo.apontamentos.length === 1">
-                          <button type="button" class="w-7 h-7 flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20" title="Excluir" @click="confirmarExcluir(grupo.apontamentos[0])"><i class="pi pi-trash text-xs"></i></button>
+                          <button type="button" class="w-7 h-7 flex items-center justify-center rounded-md text-text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20" title="Excluir" @click="confirmarExcluir(grupo.apontamentos[0])"><i class="pi pi-trash text-xs"></i></button>
                         </template>
                       </div>
                     </td>
                   </tr>
-                  <tr v-for="ap in grupo.apontamentos" v-show="grupoEstaExpandido(tarefa.id, grupo.funcionario_id)" :key="ap.id" class="border-b border-slate-200 dark:border-slate-700/50 bg-slate-50/70 dark:bg-slate-800/50">
-                    <td class="py-1 pr-1.5 pl-6 text-slate-500 dark:text-slate-400 text-[10px]">↳ {{ timeLabel(ap.inicio_em) }} – {{ ap.fim_em ? timeLabel(ap.fim_em) : '—' }}</td>
-                    <td class="py-1 px-1 text-slate-500 text-[10px]">{{ timeLabel(ap.inicio_em) }}</td>
-                    <td class="py-1 px-1 text-slate-500 text-[10px]">{{ ap.fim_em ? timeLabel(ap.fim_em) : (isApontamentoEmAndamento(ap) ? (isCronometroPausado(ap) ? 'Pausado' : '—') : '—') }}</td>
-                    <td class="py-1 px-1 text-right font-mono text-[10px] text-slate-600 dark:text-slate-400">{{ formatarHorasParaExibicao(horasExibir(ap)) }}</td>
+                  <tr v-for="ap in grupo.apontamentos" v-show="grupoEstaExpandido(tarefa.id, grupo.funcionario_id)" :key="ap.id" class="border-b border-[var(--ds-color-border)] bg-[var(--ds-color-surface-muted)]/90">
+                    <td class="py-1 pr-1.5 pl-6 text-text-muted text-[10px]">↳ {{ timeLabel(ap.inicio_em) }} – {{ ap.fim_em ? timeLabel(ap.fim_em) : '—' }}</td>
+                    <td class="py-1 px-1 text-text-muted text-[10px]">{{ timeLabel(ap.inicio_em) }}</td>
+                    <td class="py-1 px-1 text-text-muted text-[10px]">{{ ap.fim_em ? timeLabel(ap.fim_em) : (isApontamentoEmAndamento(ap) ? (isCronometroPausado(ap) ? 'Pausado' : '—') : '—') }}</td>
+                    <td class="py-1 px-1 text-right font-mono text-[10px] text-text-muted">{{ formatarHorasParaExibicao(horasExibir(ap)) }}</td>
                     <td class="py-1 pl-1">
-                      <button type="button" class="w-7 h-7 flex items-center justify-center rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20" title="Excluir" @click="confirmarExcluir(ap)"><i class="pi pi-trash text-xs"></i></button>
+                      <button type="button" class="w-7 h-7 flex items-center justify-center rounded-md text-text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20" title="Excluir" @click="confirmarExcluir(ap)"><i class="pi pi-trash text-xs"></i></button>
                     </td>
                   </tr>
                 </template>
               </tbody>
               <tfoot v-if="tarefa.apontamentos_producao && tarefa.apontamentos_producao.length">
-                <tr class="border-t border-slate-200 dark:border-slate-600 bg-slate-200/60 dark:bg-blue-900/10">
-                  <td colspan="3" class="py-1 pr-1.5 text-right font-bold text-slate-600 dark:text-slate-400 text-[10px]">Total</td>
+                <tr class="border-t border-[color:var(--ds-color-border-ui)] bg-[var(--ds-color-surface-muted)]/80 dark:bg-blue-900/10">
+                  <td colspan="3" class="py-1 pr-1.5 text-right font-bold text-text-muted text-[10px]">Total</td>
                   <td class="py-1 px-1 text-right font-mono font-bold text-blue-900 dark:text-blue-300 text-xs">{{ formatarHorasParaExibicao(totalHorasTarefa(tarefa)) }}</td>
                   <td class="py-1 pl-1"></td>
                 </tr>
@@ -161,10 +163,10 @@
           </div>
 
           <!-- Rodapé compacto -->
-          <div class="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700 flex flex-wrap items-center gap-2">
+          <div class="mt-2 pt-2 border-t border-[color:var(--ds-color-border-ui)] flex flex-wrap items-center gap-2">
             <select
               :value="getFuncionarioParaTarefa(tarefa.id)"
-              class="h-8 min-w-[140px] px-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-xs font-medium text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-blue-900/20"
+              class="h-8 min-w-[140px] px-2 rounded-lg border border-[var(--ds-color-border)] bg-[var(--ds-color-surface)] text-xs font-medium text-text-main focus:ring-1 focus:ring-blue-900/20"
               @input="setFuncionarioParaTarefa(tarefa.id, $event.target.value)"
             >
               <option value="">— Selecione —</option>
@@ -191,7 +193,7 @@
             </button>
             <button
               type="button"
-              class="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 shrink-0"
+              class="h-8 w-8 flex items-center justify-center rounded-lg border border-[var(--ds-color-border)] text-text-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 shrink-0"
               title="Excluir agendamento"
               @click="excluirAgendamentoDaTimeline(tarefa)"
             >
@@ -202,42 +204,42 @@
           <div v-if="temCronometroRodandoNaTarefa(tarefa)" class="absolute bottom-0 left-0 h-0.5 w-full overflow-hidden rounded-b-xl bg-blue-900/5 dark:bg-blue-400/10">
             <div class="h-full bg-blue-900/30 dark:bg-blue-400/30 w-1/4 animate-progress-slide"></div>
           </div>
-        </div>
+            </div>
 
-        <!-- Tarefas concluídas: cards compactos -->
-        <template v-if="tarefasConcluidas.length">
-          <div class="pt-4 mt-4 border-t border-slate-300 dark:border-slate-700">
-            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-500 mb-2">
-              Concluídas ({{ tarefasConcluidas.length }})
-            </p>
-            <div class="space-y-2">
-              <div
-                v-for="tarefa in tarefasConcluidas"
-                :key="'concluida-' + tarefa.id"
-                class="group relative border rounded-xl p-3 pl-4 opacity-90 hover:opacity-100 transition-all duration-200"
-                :class="[
-                  tarefa.plano_corte_id ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-700 border-l-4 border-l-amber-500' : 'bg-slate-50 dark:bg-slate-800 border-slate-300 dark:border-slate-600',
-                  tarefa.plano_corte_id ? '' : coresTimelineConcluida(tarefa).borderLeftClass,
-                ]"
-              >
+            <!-- Tarefas concluídas: cards compactos -->
+            <template v-if="tarefasConcluidas.length">
+              <div class="pt-4 mt-4 border-t border-[color:var(--ds-color-border-ui)]">
+                <p class="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-2">
+                  Concluídas ({{ tarefasConcluidas.length }})
+                </p>
+                <div class="space-y-2">
+                  <div
+                    v-for="tarefa in tarefasConcluidas"
+                    :key="'concluida-' + tarefa.id"
+                    class="group relative border rounded-xl p-3 pl-4 opacity-90 hover:opacity-100 transition-all duration-200"
+                    :class="[
+                      tarefa.plano_corte_id ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-700 border-l-4 border-l-amber-500' : 'bg-[var(--ds-color-surface-muted)] border-[var(--ds-color-border)]',
+                      tarefa.plano_corte_id ? '' : coresTimelineConcluida(tarefa).borderLeftClass,
+                    ]"
+                  >
                 <div class="flex items-center gap-2 mb-2">
                   <div class="w-9 h-9 rounded-lg shrink-0 font-bold text-xs flex items-center justify-center text-white" :class="tarefa.plano_corte_id ? 'bg-amber-600 dark:bg-amber-500 text-white' : coresTimelineConcluida(tarefa).dotClass">
                     {{ iniciaisTarefa(tarefa) }}
                   </div>
                   <div class="min-w-0 flex-1">
-                    <h3 class="text-sm font-semibold text-slate-500 dark:text-slate-400 truncate flex items-center gap-2 flex-wrap">
+                    <h3 class="text-sm font-semibold text-text-muted truncate flex items-center gap-2 flex-wrap">
                       {{ tituloTarefaTimeline(tarefa) }} #{{ tarefa.id }}
                       <span v-if="tarefa.plano_corte_id" class="inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase bg-amber-600 text-white dark:bg-amber-500 dark:text-amber-950 shrink-0">[APENAS CORTE]</span>
                     </h3>
-                    <span class="text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase">Concluída</span>
+                    <span class="text-[9px] font-semibold text-text-muted uppercase">Concluída</span>
                   </div>
                   <div class="px-2 py-1 rounded-lg shrink-0 font-mono text-xs" :class="coresTimelineConcluida(tarefa).badgeClass">
                     {{ formatarHorasParaExibicao(totalHorasTarefa(tarefa)) }}
                   </div>
                 </div>
-                <div class="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden bg-slate-100/90 dark:bg-slate-800/30">
+                <div class="rounded-lg border border-[color:var(--ds-color-border-ui)] overflow-hidden bg-[var(--ds-color-surface-muted)]">
                   <table class="w-full text-xs table-fixed">
-                    <thead class="text-[9px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200 dark:border-slate-600 bg-slate-200/70 dark:bg-slate-800/50">
+                    <thead class="text-[9px] font-bold uppercase tracking-wider text-text-muted border-b border-[color:var(--ds-color-border-ui)] bg-[var(--ds-color-surface-muted)]">
                       <tr>
                         <th class="text-left py-1 pr-1.5">Funcionário</th>
                         <th class="text-left py-1 px-1">Início</th>
@@ -249,40 +251,40 @@
                       <tr
                         v-for="grupo in agruparApontamentosPorFuncionario(tarefa)"
                         :key="'c-' + tarefa.id + '-' + grupo.funcionario_id"
-                        class="border-b border-slate-200 dark:border-slate-700/50"
+                        class="border-b border-[var(--ds-color-border)]"
                       >
-                        <td class="py-1 pr-1.5 font-medium text-slate-600 dark:text-slate-400 text-[10px] truncate">{{ grupo.funcionario?.nome || '—' }}</td>
-                        <td class="py-1 px-1 text-slate-500 text-[10px]">{{ grupo.primeiroInicio ? timeLabel(grupo.primeiroInicio) : '—' }}</td>
-                        <td class="py-1 px-1 text-slate-500 text-[10px]">{{ grupo.ultimoFim ? timeLabel(grupo.ultimoFim) : '—' }}</td>
-                        <td class="py-1 px-1 text-right font-medium text-slate-600 dark:text-slate-400 text-[10px]">{{ formatarHorasParaExibicao(grupo.totalHoras) }}</td>
+                        <td class="py-1 pr-1.5 font-medium text-text-muted text-[10px] truncate">{{ grupo.funcionario?.nome || '—' }}</td>
+                        <td class="py-1 px-1 text-text-muted text-[10px]">{{ grupo.primeiroInicio ? timeLabel(grupo.primeiroInicio) : '—' }}</td>
+                        <td class="py-1 px-1 text-text-muted text-[10px]">{{ grupo.ultimoFim ? timeLabel(grupo.ultimoFim) : '—' }}</td>
+                        <td class="py-1 px-1 text-right font-medium text-text-muted text-[10px]">{{ formatarHorasParaExibicao(grupo.totalHoras) }}</td>
                       </tr>
                     </tbody>
                     <tfoot v-if="tarefa.apontamentos_producao && tarefa.apontamentos_producao.length">
-                      <tr class="border-t border-slate-200 dark:border-slate-600 bg-slate-200/60 dark:bg-blue-900/10">
-                        <td colspan="3" class="py-1 pr-1.5 text-right font-bold text-slate-600 dark:text-slate-400 text-[10px]">Total</td>
-                        <td class="py-1 px-1 text-right font-mono font-bold text-slate-700 dark:text-slate-300 text-xs">{{ formatarHorasParaExibicao(totalHorasTarefa(tarefa)) }}</td>
+                      <tr class="border-t border-[color:var(--ds-color-border-ui)] bg-[var(--ds-color-surface-muted)]/80 dark:bg-blue-900/10">
+                        <td colspan="3" class="py-1 pr-1.5 text-right font-bold text-text-muted text-[10px]">Total</td>
+                        <td class="py-1 px-1 text-right font-mono font-bold text-text-main text-xs">{{ formatarHorasParaExibicao(totalHorasTarefa(tarefa)) }}</td>
                       </tr>
                     </tfoot>
                   </table>
                 </div>
+                  </div>
+                </div>
               </div>
-            </div>
+            </template>
           </div>
-        </template>
-      </div>
 
-      <!-- Botão Adicionar (estilo Fluxo A Casa) -->
-      <button
-        type="button"
-        class="w-full mt-8 py-5 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-[2rem] text-slate-500 dark:text-slate-500 font-bold text-xs tracking-[0.2em] uppercase hover:border-blue-900/40 dark:hover:border-blue-400/30 hover:text-blue-900/80 dark:hover:text-blue-400/70 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all flex items-center justify-center gap-3"
-        @click="abrirModalNovo"
-      >
-        <i class="pi pi-plus text-sm"></i>
-        Novo registro
-      </button>
+          <!-- Botão Adicionar (estilo Fluxo A Casa) -->
+          <button
+            type="button"
+            class="timeline-page__add w-full mt-8 py-5 border-2 border-dashed border-[var(--ds-color-border)] rounded-[2rem] text-text-muted font-bold text-xs tracking-[0.2em] uppercase hover:border-blue-900/40 dark:hover:border-blue-400/30 hover:text-blue-900/80 dark:hover:text-blue-400/70 hover:bg-[var(--ds-color-surface-muted)] transition-all flex items-center justify-center gap-3"
+            @click="abrirModalNovo"
+          >
+            <i class="pi pi-plus text-sm"></i>
+            Novo registro
+          </button>
+        </div>
       </div>
-    </div>
-  </div>
+    </section>
 
   <!-- Modal Adicionar funcionários (múltiplos por tarefa: Medição, Produção) -->
     <Teleport to="body">
@@ -292,11 +294,11 @@
           class="fixed inset-0 z-[9995] flex items-center justify-center p-4 bg-slate-900/50 dark:bg-black/50 backdrop-blur-sm overflow-y-auto"
           @click.self="fecharModalAtribuir"
         >
-          <div class="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-border-ui bg-bg-card shadow-xl overflow-hidden my-auto">
+          <div class="w-full max-w-2xl max-h-[90vh] flex flex-col ds-card ds-card--default shadow-xl overflow-hidden my-auto">
             <div class="h-1 flex-shrink-0 bg-brand-primary" />
-            <header class="flex-shrink-0 flex justify-between items-center px-5 py-3 border-b border-border-ui">
+            <header class="flex-shrink-0 flex justify-between items-center px-5 py-3 border-b border-[color:var(--ds-color-border-ui)]">
               <h2 class="text-lg font-semibold text-text-main">Adicionar funcionários à tarefa</h2>
-              <button type="button" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Fechar" @click="fecharModalAtribuir">
+              <button type="button" class="p-2 rounded-lg hover:bg-[var(--ds-color-surface-muted)]" aria-label="Fechar" @click="fecharModalAtribuir">
                 <i class="pi pi-times"></i>
               </button>
             </header>
@@ -307,7 +309,7 @@
               <p class="text-[10px] text-text-muted">
                 Período da tarefa: {{ pendenteAtribuir?._periodoLabel ?? '—' }}
               </p>
-              <div class="rounded-xl border border-border-ui bg-slate-50/50 dark:bg-slate-800/30 p-4 space-y-4">
+              <div class="ds-card ds-card--default p-4 space-y-4">
                 <p class="text-[10px] font-bold uppercase tracking-wider text-text-muted">Executáveis (funcionário + horário de cada um)</p>
                 <p class="text-[10px] text-text-muted">
                   Adicione uma linha por funcionário. Cada um pode ter início e fim diferentes.
@@ -316,7 +318,7 @@
                   <div
                     v-for="(linha, idx) in linhasAtribuir"
                     :key="idx"
-                    class="p-4 rounded-xl border border-border-ui bg-bg-card space-y-3"
+                    class="p-4 rounded-xl border border-[color:var(--ds-color-border-ui)] bg-[var(--ds-color-surface)] space-y-3"
                   >
                     <div class="flex items-center justify-between gap-2">
                       <span class="text-[10px] font-bold text-text-muted">Executável {{ idx + 1 }}</span>
@@ -337,7 +339,7 @@
                         <label class="block text-[10px] font-bold mb-0.5 text-text-muted">Funcionário *</label>
                         <select
                           v-model="linha.funcionario_id"
-                          class="w-full h-9 px-2 rounded-lg border border-border-ui bg-bg-card text-xs font-semibold text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                          class="w-full h-9 px-2 rounded-lg border border-[color:var(--ds-color-border-ui)] bg-[var(--ds-color-surface)] text-xs font-semibold text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                         >
                           <option value="">— Selecione —</option>
                           <option v-for="f in listaFuncionarios" :key="f.id" :value="String(f.id)">{{ f.nome }}</option>
@@ -348,7 +350,7 @@
                         <input
                           v-model="linha.inicio_em"
                           type="datetime-local"
-                          class="w-full h-9 px-2 rounded-lg border border-border-ui bg-bg-card text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                          class="w-full h-9 px-2 rounded-lg border border-[color:var(--ds-color-border-ui)] bg-[var(--ds-color-surface)] text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                         />
                       </div>
                       <div>
@@ -356,7 +358,7 @@
                         <input
                           v-model="linha.pausa_inicio_em"
                           type="datetime-local"
-                          class="w-full h-9 px-2 rounded-lg border border-border-ui bg-bg-card text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                          class="w-full h-9 px-2 rounded-lg border border-[color:var(--ds-color-border-ui)] bg-[var(--ds-color-surface)] text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                         />
                       </div>
                       <div>
@@ -364,7 +366,7 @@
                         <input
                           v-model="linha.pausa_fim_em"
                           type="datetime-local"
-                          class="w-full h-9 px-2 rounded-lg border border-border-ui bg-bg-card text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                          class="w-full h-9 px-2 rounded-lg border border-[color:var(--ds-color-border-ui)] bg-[var(--ds-color-surface)] text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                         />
                       </div>
                       <div>
@@ -372,7 +374,7 @@
                         <input
                           v-model="linha.fim_em"
                           type="datetime-local"
-                          class="w-full h-9 px-2 rounded-lg border border-border-ui bg-bg-card text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                          class="w-full h-9 px-2 rounded-lg border border-[color:var(--ds-color-border-ui)] bg-[var(--ds-color-surface)] text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                         />
                       </div>
                     </div>
@@ -384,7 +386,7 @@
                 </div>
               </div>
             </div>
-            <footer class="flex-shrink-0 flex justify-end gap-2 px-6 py-4 border-t border-border-ui">
+            <footer class="flex-shrink-0 flex justify-end gap-2 px-6 py-4 border-t border-[color:var(--ds-color-border-ui)]">
               <Button variant="secondary" @click="fecharModalAtribuir">Cancelar</Button>
               <Button
                 variant="primary"
@@ -407,7 +409,7 @@
           class="fixed inset-0 z-[9995] flex items-center justify-center p-4 bg-slate-900/50 dark:bg-black/50 backdrop-blur-sm overflow-y-auto"
           @click.self="fecharModal"
         >
-          <div class="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-xl overflow-hidden my-auto">
+          <div class="w-full max-w-2xl max-h-[90vh] flex flex-col ds-card ds-card--default shadow-xl overflow-hidden my-auto">
             <header class="flex-shrink-0 flex justify-between items-center px-6 py-4 bg-brand-primary">
               <h2 class="text-lg font-semibold text-white truncate pr-2">Novo registro</h2>
               <button type="button" class="p-2 rounded-lg hover:bg-white/20 text-white flex-shrink-0" aria-label="Fechar" @click="fecharModal">
@@ -417,7 +419,7 @@
             <div class="flex-1 min-h-0 overflow-y-auto p-6 flex flex-col gap-5">
               <!-- Data, hora e responsável da criação do agendamento -->
               <section
-                class="p-5 rounded-xl border border-border-ui bg-amber-50/80 dark:bg-amber-900/20 space-y-2 shrink-0 order-first"
+                class="p-5 rounded-xl border border-[color:var(--ds-color-border-ui)] bg-amber-50/80 dark:bg-amber-900/20 space-y-2 shrink-0 order-first"
               >
                 <div class="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">Data do agendamento (criação)</div>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
@@ -437,7 +439,7 @@
                 <p class="text-[10px] text-text-muted">Data, hora e quem criou o agendamento. Somente leitura.</p>
               </section>
 
-              <section class="p-5 rounded-xl border border-border-ui bg-slate-50/80 dark:bg-slate-800/30 space-y-3">
+              <section class="p-5 ds-card ds-card--default space-y-3">
                 <div class="text-[10px] font-bold uppercase tracking-wider text-text-muted">1. Dados do registro</div>
                 <div>
                   <label class="block text-xs font-bold mb-1 text-text-main">Agendamento (opcional)</label>
@@ -451,7 +453,7 @@
               </section>
 
               <!-- Vários executáveis, cada um com seu horário (início e fim) -->
-              <section class="p-5 rounded-xl border border-border-ui bg-slate-50/80 dark:bg-slate-800/30 space-y-4">
+              <section class="p-5 ds-card ds-card--default space-y-4">
                 <div class="text-[10px] font-bold uppercase tracking-wider text-text-muted">2. Executáveis (funcionário + horário de cada um)</div>
                 <p class="text-[10px] text-text-muted">
                   Vários funcionários podem executar a mesma tarefa em horários diferentes. Adicione uma linha por executável com início e fim.
@@ -460,7 +462,7 @@
                   <div
                     v-for="(linha, idx) in linhasExecucao"
                     :key="idx"
-                    class="p-4 rounded-xl border border-border-ui bg-bg-card space-y-3"
+                    class="p-4 rounded-xl border border-[color:var(--ds-color-border-ui)] bg-[var(--ds-color-surface)] space-y-3"
                   >
                     <div class="flex items-center justify-between gap-2">
                       <span class="text-[10px] font-bold text-text-muted">Executável {{ idx + 1 }}</span>
@@ -481,7 +483,7 @@
                         <label class="block text-[10px] font-bold mb-0.5 text-text-muted">Funcionário *</label>
                         <select
                           v-model="linha.funcionario_id"
-                          class="w-full h-9 px-2 rounded-lg border border-border-ui bg-bg-card text-xs font-semibold text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                          class="w-full h-9 px-2 rounded-lg border border-[color:var(--ds-color-border-ui)] bg-[var(--ds-color-surface)] text-xs font-semibold text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                         >
                           <option value="">— Selecione —</option>
                           <option v-for="f in listaFuncionarios" :key="f.id" :value="String(f.id)">{{ f.nome }}</option>
@@ -492,7 +494,7 @@
                         <input
                           v-model="linha.inicio_em"
                           type="datetime-local"
-                          class="w-full h-9 px-2 rounded-lg border border-border-ui bg-bg-card text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                          class="w-full h-9 px-2 rounded-lg border border-[color:var(--ds-color-border-ui)] bg-[var(--ds-color-surface)] text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                         />
                       </div>
                       <div>
@@ -500,7 +502,7 @@
                         <input
                           v-model="linha.pausa_inicio_em"
                           type="datetime-local"
-                          class="w-full h-9 px-2 rounded-lg border border-border-ui bg-bg-card text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                          class="w-full h-9 px-2 rounded-lg border border-[color:var(--ds-color-border-ui)] bg-[var(--ds-color-surface)] text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                         />
                       </div>
                       <div>
@@ -508,7 +510,7 @@
                         <input
                           v-model="linha.pausa_fim_em"
                           type="datetime-local"
-                          class="w-full h-9 px-2 rounded-lg border border-border-ui bg-bg-card text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                          class="w-full h-9 px-2 rounded-lg border border-[color:var(--ds-color-border-ui)] bg-[var(--ds-color-surface)] text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                         />
                       </div>
                       <div>
@@ -516,7 +518,7 @@
                         <input
                           v-model="linha.fim_em"
                           type="datetime-local"
-                          class="w-full h-9 px-2 rounded-lg border border-border-ui bg-bg-card text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                          class="w-full h-9 px-2 rounded-lg border border-[color:var(--ds-color-border-ui)] bg-[var(--ds-color-surface)] text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
                         />
                       </div>
                     </div>
@@ -528,7 +530,7 @@
                 </div>
               </section>
             </div>
-            <footer class="flex-shrink-0 flex justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-slate-600 bg-gray-50/50 dark:bg-slate-800/80">
+            <footer class="flex-shrink-0 flex justify-end gap-3 px-6 py-4 border-t border-[color:var(--ds-color-border-ui)] bg-[var(--ds-color-surface-muted)]/80">
               <Button variant="secondary" @click="fecharModal">Cancelar</Button>
               <Button variant="primary" :disabled="salvando" @click="salvar">
                 {{ salvando ? 'Salvando...' : 'Criar' }}
@@ -538,6 +540,8 @@
         </div>
       </Transition>
     </Teleport>
+
+  </PageShell>
 </template>
 
 <script setup>
@@ -551,6 +555,7 @@ import { can } from '@/services/permissions'
 import { getCategoriaProcessoLabel, getCategoriaVisualOperacionalPorSubetapa, getExecucaoEtapaLabel, getProcessColorByStatus, getSubetapaLabel, getTimelineConcluidoClass } from '@/constantes'
 import { useTimelineFormatters } from '@/composables/useTimelineFormatters'
 import { useTimelineCronometro } from '@/composables/useTimelineCronometro'
+import PageShell from '@/components/ui/PageShell.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import TimelineFilters from './components/TimelineFilters.vue'
 
@@ -790,13 +795,13 @@ const linkVerNaAgenda = computed(() => {
   if (!id) return null
   if (String(id).startsWith('l-')) {
     const num = String(id).replace('l-', '')
-    return num ? `/agendamentos/loja?agenda=${num}` : null
+    return num ? `/agenda-geral?agenda=${num}` : null
   }
   if (String(id).startsWith('f-')) {
     const num = String(id).replace('f-', '')
-    return num ? `/agendamentos/fabrica?agenda=${num}` : null
+    return num ? `/agenda-geral?agenda=${num}` : null
   }
-  return `/agendamentos/fabrica?agenda=${id}`
+  return `/agenda-geral?agenda=${id}`
 })
 
 const opcoesAgenda = computed(() => {
@@ -1723,6 +1728,56 @@ watch(() => form.inicio_em, (val) => {
 </script>
 
 <style scoped>
+.timeline-page {
+  min-height: 100%;
+  background:
+    radial-gradient(circle at top left, rgba(44, 111, 163, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(245, 248, 251, 0.96));
+}
+
+.dark .timeline-page {
+  background:
+    radial-gradient(circle at top left, rgba(101, 166, 223, 0.1), transparent 22%),
+    linear-gradient(180deg, rgba(13, 21, 35, 0.94), rgba(9, 15, 26, 0.98));
+}
+
+.timeline-page__content {
+  padding: 0 1rem 1.25rem;
+}
+
+.timeline-page__filters {
+  border-top: 1px solid rgba(214, 224, 234, 0.78);
+  padding-top: 0.95rem;
+}
+
+.timeline-page__board {
+  padding: 0.15rem 0 0.4rem;
+}
+
+.dark .timeline-page__board {
+  background: transparent;
+  box-shadow: none;
+}
+
+.timeline-page__scroll {
+  scrollbar-width: thin;
+}
+
+.timeline-page__empty {
+  border: 1px dashed rgba(188, 203, 221, 0.88);
+  border-radius: 1.25rem;
+  background: rgba(245, 248, 251, 0.82);
+}
+
+.dark .timeline-page__empty {
+  border-color: rgba(51, 71, 102, 0.78);
+  background: rgba(13, 21, 35, 0.54);
+}
+
+.timeline-page__add {
+  background: transparent;
+}
+
 @keyframes progress-slide {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(400%); }
@@ -1738,5 +1793,19 @@ watch(() => form.inicio_em, (val) => {
 .modal-fade-enter-from,
 .modal-fade-leave-to {
   opacity: 0;
+}
+
+@media (min-width: 768px) {
+  .timeline-page__content {
+    padding: 0 1.5rem 1.5rem;
+  }
+
+  .timeline-page__filters {
+    padding-top: 1.1rem;
+  }
+
+  .timeline-page__board {
+    padding: 0.2rem 0 0.55rem;
+  }
 }
 </style>

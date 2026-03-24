@@ -1,15 +1,13 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
+  <PageShell :padded="false">
+    <section class="venda-editor ds-page-context ds-page-context--editor animate-page-in">
       <PageHeader
         :title="isEdit ? `Venda #${vendaId}` : 'Nova Venda'"
         :subtitle="isContextoVenda ? 'Editar venda (loja). Itens, parcelas e comissões.' : 'Pós-venda: venda líquida, rateio, taxas e comissões.'"
         icon="pi pi-shopping-cart"
       />
 
-      <div class="p-6 md:p-8 border-t border-border-ui relative">
+      <div class="venda-editor__body ds-page-context__content p-6 md:p-8 relative">
       <Loading v-if="loading" />
 
       <div v-else class="space-y-8">
@@ -375,7 +373,7 @@
 
             <div class="text-sm font-black uppercase tracking-tight">
               Diferença:
-              <span :class="pagamentosBatendo ? 'text-emerald-600' : 'text-rose-600'">
+              <span :class="pagamentosBatendo ? 'text-[var(--ds-color-success-600)]' : 'text-[var(--ds-color-danger-600)]'">
                 {{ format.currency(diferencaRateio) }}
               </span>
             </div>
@@ -505,7 +503,7 @@
             </div>
 
             <div class="col-span-12 md:col-span-3">
-              <div class="rounded-2xl border border-border-ui bg-bg-page/60 p-3">
+              <div class="ds-card ds-card--default p-3">
                 <Input :modelValue="format.currency(lucro_bruto)" label="Resultado Líquido" readonly />
               </div>
             </div>
@@ -539,7 +537,7 @@
             <p class="text-[10px] font-bold text-text-soft uppercase tracking-wider">
               Imagens vinculadas à venda. Podem ser usadas em documentos ou PDFs.
             </p>
-            <div class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden max-h-[200px] overflow-y-auto">
+            <div class="ds-card ds-card--default overflow-hidden max-h-[200px] overflow-y-auto">
               <Table
                 :columns="colArquivos"
                 :rows="imagensParaPdf"
@@ -585,7 +583,7 @@
             <p class="text-[10px] font-bold text-text-soft uppercase tracking-wider">
               PDFs e outros arquivos anexados à venda (comprovantes, contratos, etc.).
             </p>
-            <div class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden max-h-[200px] overflow-y-auto">
+            <div class="ds-card ds-card--default overflow-hidden max-h-[200px] overflow-y-auto">
               <Table
                 :columns="colArquivos"
                 :rows="anexosDocumentos"
@@ -623,12 +621,11 @@
 
         </section>
       </div>
-      </div>
 
       <!-- ===================== -->
       <!-- FOOTER AÇÕES -->
       <!-- ===================== -->
-      <footer class="flex items-center justify-end gap-3 p-6 border-t border-border-ui bg-bg-page/50">
+      <footer class="venda-editor__footer flex items-center justify-end gap-3 p-6 border-t border-border-ui bg-[var(--ds-color-surface-muted)]/70">
         <Button
           v-if="can(permSalvarVenda())"
           variant="primary"
@@ -641,8 +638,8 @@
           Salvar Venda
         </Button>
       </footer>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 
   <!-- ===================== -->
   <!-- MODAL ITEM EXTRA -->
@@ -652,8 +649,8 @@
     class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
     @click.self="fecharModalItem"
   >
-    <div class="w-full max-w-[780px] overflow-hidden rounded-2xl border border-border-ui bg-bg-card shadow-xl">
-      <div class="p-5 border-b border-border-ui bg-bg-page/50 flex items-center justify-between">
+    <div class="w-full max-w-[780px] overflow-hidden ds-card ds-card--default shadow-xl">
+      <div class="p-5 border-b border-border-ui bg-[var(--ds-color-surface-muted)]/70 flex items-center justify-between">
         <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
           {{ modalItemEditando ? 'Editar item' : 'Novo item (extra na venda)' }}
         </div>
@@ -721,7 +718,7 @@
           </div>
         </div>
 
-      <div class="p-5 border-t border-border-ui bg-bg-page/50 flex justify-end gap-3">
+      <div class="p-5 border-t border-border-ui bg-[var(--ds-color-surface-muted)]/70 flex justify-end gap-3">
         <Button variant="secondary" type="button" @click="fecharModalItem">
           Cancelar
         </Button>
@@ -749,6 +746,7 @@ import { can } from '@/services/permissions'
 import { closeTabAndGo } from '@/utils/tabs'
 import { onlyNumbers, maskCEP } from '@/utils/masks'
 import { buscarCep } from '@/utils/utils'
+import PageShell from '@/components/ui/PageShell.vue'
 
 definePage({ meta: { perm: 'posvenda.ver' } })
 

@@ -1,12 +1,11 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
+  <PageShell :padded="false" variant="minimal">
+    <section class="login-font ds-page-context ds-page-context--editor animate-page-in">
       <PageHeader
         :title="`Venda #${vendaId}`"
         subtitle="Detalhe da venda. Use «Editar venda» para alterar itens, parcelas e comissões."
         icon="pi pi-shopping-cart"
+        variant="minimal"
       >
         <template #actions>
           <div class="flex items-center gap-2">
@@ -54,13 +53,13 @@
         </template>
       </PageHeader>
 
-      <div class="p-6 md:p-8 border-t border-border-ui space-y-6">
+      <div class="ds-editor-body space-y-6">
         <div v-if="loading" class="text-center py-10">
           <i class="pi pi-spin pi-spinner text-2xl text-text-soft" />
         </div>
 
         <template v-else-if="venda">
-          <section class="rounded-2xl border border-border-ui bg-bg-page p-4 space-y-3">
+          <section class="space-y-3">
             <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
               Dados da venda
             </div>
@@ -90,11 +89,11 @@
             </div>
           </section>
 
-          <section v-if="(venda.itens || []).length" class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden">
+          <section v-if="(venda.itens || []).length" class="space-y-3 border-t border-border-ui pt-6">
             <div class="px-4 py-3 border-b border-border-ui text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
               Itens da venda
             </div>
-            <Table :columns="columnsItens" :rows="rowsItens" :boxed="false" :flush="true">
+            <Table :columns="columnsItens" :rows="rowsItens" :boxed="true">
               <template #cell-descricao="{ row }">
                 <div class="whitespace-pre-line text-sm">{{ row.descricao || '-' }}</div>
               </template>
@@ -107,7 +106,7 @@
             </Table>
           </section>
 
-          <section v-if="disponibilidadeEstoque" class="rounded-2xl border border-border-ui bg-bg-page p-4 space-y-3">
+          <section v-if="disponibilidadeEstoque" class="space-y-3 border-t border-border-ui pt-6">
             <div class="flex items-center justify-between gap-2">
               <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
                 Disponibilidade em estoque
@@ -136,7 +135,7 @@
             </div>
           </section>
 
-          <section v-if="pagamentosParaExibir.length" class="rounded-2xl border border-border-ui bg-bg-page p-4 space-y-3">
+          <section v-if="pagamentosParaExibir.length" class="space-y-3 border-t border-border-ui pt-6">
             <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
               Pagamentos
             </div>
@@ -156,7 +155,7 @@
             </div>
           </section>
 
-          <section v-if="can('contratos.ver') && contratos.length" class="rounded-2xl border border-border-ui bg-bg-page p-4 space-y-3">
+          <section v-if="can('contratos.ver') && contratos.length" class="space-y-3 border-t border-border-ui pt-6">
             <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
               Contratos desta venda
             </div>
@@ -169,8 +168,8 @@
                 <span class="font-semibold text-text-main">#{{ c.numero || c.id }}</span>
                 <span class="text-xs px-2 py-0.5 rounded-full"
                   :class="{
-                    'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200': String(c.status || '').toUpperCase() === 'RASCUNHO',
-                    'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200': String(c.status || '').toUpperCase() === 'VIGENTE',
+                    'bg-[var(--ds-color-warning-100)] text-[var(--ds-color-warning-800)]': String(c.status || '').toUpperCase() === 'RASCUNHO',
+                    'bg-[var(--ds-color-success-100)] text-[var(--ds-color-success-800)]': String(c.status || '').toUpperCase() === 'VIGENTE',
                     'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300': !['RASCUNHO','VIGENTE'].includes(String(c.status || '').toUpperCase())
                   }"
                 >
@@ -194,9 +193,8 @@
           Venda não encontrada.
         </div>
       </div>
-    </div>
-
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>

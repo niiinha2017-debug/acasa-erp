@@ -1,16 +1,14 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
+  <PageShell :padded="false">
+    <section class="vendas-list ds-page-context ds-page-context--list animate-page-in">
       <PageHeader
         title="Pós-venda"
         subtitle="Acompanhamento de vendas fechadas, recebimentos e produção"
         icon="pi pi-shopping-cart"
       >
         <template #actions>
-          <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
-            <div class="w-full sm:w-80 order-1 sm:order-0">
+          <div class="vendas-list__actions ds-page-context__actions">
+            <div class="vendas-list__search ds-page-context__search">
               <SearchInput
                 v-model="filtro"
                 placeholder="Buscar cliente, status ou ID..."
@@ -19,17 +17,16 @@
             <Button
               v-if="can('vendas.criar')"
               variant="primary"
-              class="flex-shrink-0 h-11 rounded-xl font-black uppercase tracking-[0.16em] text-[11px]"
               @click="router.push('/vendas/novo')"
             >
-              <i class="pi pi-plus mr-2"></i>
+              <i class="pi pi-plus"></i>
               Novo Pós-venda
             </Button>
           </div>
         </template>
       </PageHeader>
 
-      <div class="pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-6">
+      <div class="vendas-list__content ds-page-context__content space-y-6 pb-6">
         <div v-if="loading" class="text-center py-10">
           <i class="pi pi-spin pi-spinner text-2xl text-text-soft"></i>
         </div>
@@ -62,7 +59,7 @@
             />
           </div>
 
-          <div class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden">
+          <div class="ds-card ds-card--default overflow-hidden">
             <Table
               :columns="columns"
               :rows="rowsToShow"
@@ -125,8 +122,8 @@
           </div>
         </template>
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
@@ -138,6 +135,7 @@ import { can } from '@/services/permissions'
 import api from '@/services/api'
 import { format } from '@/utils/format'
 import { usePagination } from '@/composables/usePagination'
+import PageShell from '@/components/ui/PageShell.vue'
 
 definePage({ meta: { perm: 'posvenda.ver' } })
 

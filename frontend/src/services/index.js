@@ -127,11 +127,11 @@ export const FuncionariosService = {
     return api.delete(`/funcionarios/${cleanId}`)
   },
 
-  gerarPdf(ids) {
+  gerarPdf(ids, formato = 'pdf') {
     if (!Array.isArray(ids) || !ids.length) {
       return Promise.reject(new Error('IDs não informados'))
     }
-    return api.post('/funcionarios/pdf', { ids })
+    return api.post('/funcionarios/pdf', { ids }, { params: formato ? { formato } : {} })
   },
 
   gerarPdfESalvar(ids) {
@@ -193,6 +193,7 @@ export const FuncionarioService = FuncionariosService
 // --- ORÇAMENTOS ---
 export const OrcamentosService = {
   listar: () => api.get('/orcamentos'),
+  clausulasPadrao: () => api.get('/orcamentos/clausulas-padrao'),
   aguardandoApresentacao: () => api.get('/orcamentos/aguardando-apresentacao'),
   detalhar: (id) => api.get(`/orcamentos/${id}`),
   criar: (dados) => api.post('/orcamentos', dados),
@@ -302,6 +303,7 @@ export const UsuariosService = {
 // --- VENDAS ---
 export const VendaService = {
   listar: () => api.get('/vendas'),
+  listarFluxoOperacional: () => api.get('/vendas/fluxo-operacional'),
   /** Vendas com contrato vigente – usado no módulo Compras (só clientes com contrato vigente). */
   listarComContratoVigente: () => api.get('/vendas/com-contrato-vigente'),
   aguardandoAgendamento: () => api.get('/vendas/aguardando-agendamento'),
@@ -385,6 +387,9 @@ export const FinanceiroService = {
   fecharMesFornecedor: (dados) =>
     api.post('/financeiro/contas-pagar/fechar-mes', dados),
 
+  fecharMesFuncionario: (dados) =>
+    api.post('/financeiro/contas-pagar/fechar-mes-funcionario', dados),
+
   // Painel de Obras Vigentes (apenas obras em medição, produção ou montagem)
   painelObrasVigentes: () => api.get('/financeiro/contas-pagar/painel-obras-vigentes'),
 
@@ -438,25 +443,73 @@ export const ComissaoProducaoService = {
     api.get('/comissao-producao/resumo', { params }),
 }
 
+const sanitizeMedicaoFinaId = (id) => {
+  const clean = String(id ?? '').replace(/\D/g, '')
+  return clean || null
+}
+
+const sanitizeMedicaoFinaAmbiente = (ambiente) =>
+  String(ambiente ?? '').trim()
+
 // --- Medição Fina (dados reais do ambiente antes da produção) ---
 export const MedicaoFinaService = {
   resolverProjeto: (q) =>
     api.get('/medicao-fina/projeto/resolver', { params: { q } }),
-  getProjetoDados: (projetoId) =>
-    api.get(`/medicao-fina/projeto/${projetoId}/dados`),
-  validarMedicao: (projetoId) =>
-    api.post(`/medicao-fina/projeto/${projetoId}/validar`),
-  listarAmbientes: (projetoId) =>
-    api.get(`/medicao-fina/projeto/${projetoId}/ambientes`),
+  getProjetoDados(projetoId) {
+    const cleanId = sanitizeMedicaoFinaId(projetoId)
+    if (!cleanId) return Promise.reject(new Error('Projeto não informado'))
+    return api.get(`/medicao-fina/projeto/${cleanId}/dados`)
+  },
+  validarMedicao(projetoId) {
+    const cleanId = sanitizeMedicaoFinaId(projetoId)
+    if (!cleanId) return Promise.reject(new Error('Projeto não informado'))
+    return api.post(`/medicao-fina/projeto/${cleanId}/validar`)
+  },
+  listarAmbientes(projetoId) {
+    const cleanId = sanitizeMedicaoFinaId(projetoId)
+    if (!cleanId) return Promise.reject(new Error('Projeto não informado'))
+    return api.get(`/medicao-fina/projeto/${cleanId}/ambientes`)
+  },
+  getComparativoPreOrcamento(projetoId) {
+    const cleanId = sanitizeMedicaoFinaId(projetoId)
+    if (!cleanId) return Promise.reject(new Error('Projeto não informado'))
+    return api.get(`/medicao-fina/projeto/${cleanId}/comparativo-pre`)
+  },
   /** Projetos do cliente (para buscar por cliente e depois escolher projeto) */
   projetosPorCliente: (clienteId) =>
     api.get(`/medicao-fina/projetos-por-cliente/${clienteId}`),
-  listarPorProjeto: (projetoId) =>
-    api.get(`/medicao-fina/projeto/${projetoId}`),
-  buscarPorProjetoAmbiente: (projetoId, ambiente) =>
-    api.get(`/medicao-fina/projeto/${projetoId}/ambiente`, { params: { ambiente } }),
+  listarPorProjeto(projetoId) {
+    const cleanId = sanitizeMedicaoFinaId(projetoId)
+    if (!cleanId) return Promise.reject(new Error('Projeto não informado'))
+    return api.get(`/medicao-fina/projeto/${cleanId}`)
+  },
+  buscarPorProjetoAmbiente(projetoId, ambiente) {
+    const cleanId = sanitizeMedicaoFinaId(projetoId)
+    const nomeAmbiente = sanitizeMedicaoFinaAmbiente(ambiente)
+    if (!cleanId) return Promise.reject(new Error('Projeto não informado'))
+    if (!nomeAmbiente) return Promise.reject(new Error('Ambiente não informado'))
+    return api.get(`/medicao-fina/projeto/${cleanId}/ambiente`, { params: { ambiente: nomeAmbiente } })
+  },
+  async carregarAmbienteInicial(projetoId) {
+    const cleanId = sanitizeMedicaoFinaId(projetoId)
+    if (!cleanId) throw new Error('Projeto não informado')
+
+    const ambientesRes = await MedicaoFinaService.listarAmbientes(cleanId)
+    const ambientes = Array.isArray(ambientesRes?.data) ? ambientesRes.data : []
+    const ambientePadrao = ambientes[0] || 'Ambiente'
+    const medicaoRes = await MedicaoFinaService.buscarPorProjetoAmbiente(cleanId, ambientePadrao)
+
+    return {
+      ambientes,
+      ambientePadrao,
+      medicao: medicaoRes?.data ?? medicaoRes,
+    }
+  },
   salvar: (dados) => api.post('/medicao-fina', dados),
   atualizar: (id, dados) => api.put(`/medicao-fina/${id}`, dados),
+  /** Persiste croqui + JSON extrudável em `planta_baixa_json` (campo Json no Prisma). */
+  salvarPlantaBaixaJson: (medicaoId, plantaBaixaJson) =>
+    api.put(`/medicao-fina/${medicaoId}`, { planta_baixa_json: plantaBaixaJson }),
   /** Totem: finalizar medição e enviar para engenharia (status Medido - Aguardando Técnico) */
   finalizarTotem: (dados) => api.post('/medicao-fina/finalizar-totem', dados),
 }
@@ -676,6 +729,16 @@ export const AgendaFabricaService = {
   }
 };
 
+/** Agenda Geral: visão operacional consolidada de todos os clientes e etapas (Loja + Fábrica). */
+export const AgendaGeralService = {
+  listar(filtros = {}) {
+    return api.get('/agenda-geral', { params: filtros });
+  },
+  resumo() {
+    return api.get('/agenda-geral/resumo');
+  },
+};
+
 /** Totem Fábrica: tela para usuário Fábrica — tarefas Pendente/Em Produção, botões Play e Check. Inclui medições externas (agenda_loja) e ordens produção (agenda_fabrica). */
 export const TotemFabricaService = {
   getTarefas(params = {}) {
@@ -687,6 +750,14 @@ export const TotemFabricaService = {
   },
   getConsumos(agendaFabricaId) {
     return api.get(`/totem-fabrica/${agendaFabricaId}/consumos`);
+  },
+  /** Medições fina sem projeto: lista projetos do cliente da tarefa (totem). */
+  listarProjetosMedicaoFina(agendaFabricaId) {
+    return api.get(`/totem-fabrica/${agendaFabricaId}/projetos-medicao-fina`);
+  },
+  /** Vincula projeto à tarefa de medição fina (agenda_fabrica). */
+  vincularProjetoMedicaoFina(agendaFabricaId, projeto_id) {
+    return api.post(`/totem-fabrica/${agendaFabricaId}/vincular-projeto`, { projeto_id });
   },
   /** tipo: 'agenda_fabrica' | 'agenda_loja' — agenda_loja = medição externa. */
   play(idParaPlay, body = {}) {
@@ -703,6 +774,10 @@ export const TotemFabricaService = {
   /** Pré-medição por cliente: retorna rascunho atual ou cria um novo. */
   getOuCriarPreMedicao(clienteId) {
     return api.get(`/totem-fabrica/pre-medicao/cliente/${clienteId}`);
+  },
+  /** Retorna rascunho de pré-medição pelo id. */
+  getPreMedicao(preMedicaoId) {
+    return api.get(`/totem-fabrica/pre-medicao/${preMedicaoId}`);
   },
   /** Salva/atualiza ambiente no rascunho da pré-medição. */
   salvarAmbientePreMedicao(preMedicaoId, body) {
@@ -755,6 +830,13 @@ export const OrcamentoTecnicoService = {
   /** Busca um orçamento técnico por id (com itens). */
   buscar(id) {
     return api.get(`/orcamentos/tecnico/${id}`);
+  },
+  remover(id) {
+    return api.delete(`/orcamento-tecnico/${id}`);
+  },
+  /** Lista agendamentos com medição concluída sem OT criado. */
+  listarComMedicao() {
+    return api.get('/orcamentos/tecnico-com-medicao');
   },
   /** Cria orçamento técnico a partir dos ambientes selecionados. Body: { agenda_loja_id, ambiente_ids: number[] }. */
   criarNovo(body) {

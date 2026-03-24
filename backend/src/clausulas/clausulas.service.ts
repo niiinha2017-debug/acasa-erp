@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
+import { CLAUSULAS_DEFAULTS } from './clausulas.defaults';
 
 export interface ClausulaModuloDto {
   id?: number;
@@ -14,85 +15,6 @@ export interface UpdateClausulasDto {
   modulos: ClausulaModuloDto[];
 }
 
-const DEFAULT_MODULOS: Record<
-  string,
-  { modulo_key: string; titulo: string; ordem: number }[]
-> = {
-  ORCAMENTO: [
-    { modulo_key: 'OBJETO', titulo: 'Cláusula Primeira: Do Objeto', ordem: 1 },
-    {
-      modulo_key: 'PRECO_CONDICOES',
-      titulo: 'Cláusula Segunda: Do Preço e Condições de Pagamento',
-      ordem: 2,
-    },
-    {
-      modulo_key: 'PRAZO_VALIDADE',
-      titulo: 'Cláusula Terceira: Do Prazo de Validade do Orçamento',
-      ordem: 3,
-    },
-  ],
-  CONTRATO: [
-    {
-      modulo_key: 'CABECALHO',
-      titulo:
-        'Contrato de Compra e Venda de Mercadorias e Prestação de Serviços',
-      ordem: 0,
-    },
-    { modulo_key: 'OBJETO', titulo: 'Cláusula Primeira: Do Objeto', ordem: 1 },
-    {
-      modulo_key: 'PRECO_CONDICOES',
-      titulo: 'Cláusula Segunda: Do Preço e Condição de Pagamento',
-      ordem: 2,
-    },
-    {
-      modulo_key: 'PRAZO_ENTREGA',
-      titulo: 'Cláusula Terceira: Do Prazo de Entrega dos Bens',
-      ordem: 3,
-    },
-    {
-      modulo_key: 'ARMAZENAGEM_DESISTENCIA',
-      titulo: 'Cláusula Quarta: Da Armazenagem e da Desistência',
-      ordem: 4,
-    },
-    {
-      modulo_key: 'GARANTIA',
-      titulo: 'Cláusula Quinta: Da Garantia',
-      ordem: 5,
-    },
-    {
-      modulo_key: 'SERVICOS',
-      titulo: 'Cláusula Sexta: Dos Serviços',
-      ordem: 6,
-    },
-    {
-      modulo_key: 'CONDICOES_GERAIS',
-      titulo: 'Cláusula Sétima: Das Condições Gerais',
-      ordem: 7,
-    },
-    {
-      modulo_key: 'RESPONSABILIDADES',
-      titulo: 'Cláusula Oitava: Das Responsabilidades e Obrigações',
-      ordem: 8,
-    },
-    {
-      modulo_key: 'CESSAO_IMAGEM',
-      titulo: 'Cláusula Nona: Da Cessão de Imagem e Voz',
-      ordem: 9,
-    },
-    {
-      modulo_key: 'FORO',
-      titulo: 'Cláusula Décima: Do Foro',
-      ordem: 10,
-    },
-    {
-      modulo_key: 'ASSINATURA_ELETRONICA',
-      titulo:
-        'Cláusula 11ª – Da Assinatura Eletrônica e Aceite por Meios Digitais',
-      ordem: 11,
-    },
-  ],
-};
-
 @Injectable()
 export class ClausulasService {
   constructor(private readonly prisma: PrismaService) {}
@@ -103,6 +25,10 @@ export class ClausulasService {
       .toUpperCase();
   }
 
+  private isBlankText(value: string | null | undefined): boolean {
+    return String(value ?? '').trim().length === 0;
+  }
+
   async buscarOuCriarPorTipo(tipo: string) {
     const t = this.normalizeTipo(tipo);
 
@@ -111,7 +37,7 @@ export class ClausulasService {
       orderBy: [{ ordem: 'asc' }, { id: 'asc' }],
     });
 
-    const padroes = DEFAULT_MODULOS[t] || [];
+    const padroes = CLAUSULAS_DEFAULTS[t] || [];
 
     // cria módulos padrão que ainda não existirem
     const faltando = padroes.filter(
@@ -124,7 +50,7 @@ export class ClausulasService {
           tipo: t,
           modulo_key: f.modulo_key,
           titulo: f.titulo,
-          texto: '',
+          texto: f.texto,
           ordem: f.ordem,
         })),
       });
@@ -135,17 +61,55 @@ export class ClausulasService {
       orderBy: [{ ordem: 'asc' }, { id: 'asc' }],
     });
 
-    // Para CONTRATO: corrige títulos pela numeração canônica (evita duas "Oitava" etc.)
-    if (t === 'CONTRATO' && padroes.length > 0) {
-      const tituloPorKey = Object.fromEntries(
-        padroes.map((p) => [p.modulo_key, p.titulo]),
-      );
-      return todos.map((row) => {
-        const tituloCanonico = tituloPorKey[row.modulo_key];
+    const defaultsPorKey = new Map(
+      padroes.map((padrao) => [padrao.modulo_key, padrao]),
+    );
+
+    const registrosParaAtualizar = todos
+      .map((row) => {
+        const padrao = defaultsPorKey.get(row.modulo_key);
+        if (!padrao) {
+          return null;
+        }
+
+        const proximoTitulo = padrao.titulo;
+        const proximaOrdem = padrao.ordem;
+        const proximoTexto = this.isBlankText(row.texto) ? padrao.texto : row.texto;
+
+        if (
+          row.titulo === proximoTitulo &&
+          row.ordem === proximaOrdem &&
+          row.texto === proximoTexto
+        ) {
+          return null;
+        }
+
         return {
-          ...row,
-          titulo: tituloCanonico ?? row.titulo,
+          id: row.id,
+          titulo: proximoTitulo,
+          ordem: proximaOrdem,
+          texto: proximoTexto,
         };
+      })
+      .filter(Boolean);
+
+    if (registrosParaAtualizar.length > 0) {
+      await this.prisma.$transaction(
+        registrosParaAtualizar.map((registro) =>
+          this.prisma.clausulas_modelos.update({
+            where: { id: registro!.id },
+            data: {
+              titulo: registro!.titulo,
+              ordem: registro!.ordem,
+              texto: registro!.texto,
+            },
+          }),
+        ),
+      );
+
+      return this.prisma.clausulas_modelos.findMany({
+        where: { tipo: t },
+        orderBy: [{ ordem: 'asc' }, { id: 'asc' }],
       });
     }
 

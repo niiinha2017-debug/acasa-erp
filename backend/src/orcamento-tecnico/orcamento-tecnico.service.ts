@@ -7,6 +7,7 @@ import { promises as fs } from 'fs';
 import { randomBytes } from 'crypto';
 import { renderHeaderA4Png } from '../pdf/render-header-a4';
 import { AgendaService } from '../agenda/agenda.service';
+import { validarTransicaoStatusCliente } from '../shared/constantes/status-matrix';
 
 // ─── Tipos internos para importação de projeto ───────────────────────────────
 
@@ -231,10 +232,103 @@ export class OrcamentoTecnicoService {
             titulo: true,
             cliente_id: true,
             cliente: { select: { id: true, nome_completo: true } },
+            medicao_orcamento: {
+              select: {
+                id: true,
+                concluida: true,
+                ambientes: {
+                  orderBy: { nome_ambiente: 'asc' },
+                  select: {
+                    id: true,
+                    nome_ambiente: true,
+                    largura_m: true,
+                    pe_direito_m: true,
+                    profundidade_m: true,
+                    paredes: {
+                      orderBy: { nome: 'asc' },
+                      select: {
+                        id: true,
+                        nome: true,
+                        largura_m: true,
+                        pe_direito_m: true,
+                        profundidade_m: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       },
       orderBy: { criado_em: 'desc' },
+    });
+  }
+
+  /**
+   * Lista agendamentos (agenda_loja) que possuem medição do técnico concluída
+   * mas ainda não têm orçamento técnico criado. Usado para alimentar o index
+   * do módulo de Orçamento Técnico com as medições disponíveis.
+   */
+  async listarAgendamentosComMedicao() {
+    const registros = await this.prisma.agenda_loja.findMany({
+      where: {
+        medicao_orcamento: {
+          concluida: true,
+          ambientes: { some: {} },
+        },
+        orcamentos_tecnicos: { none: {} },
+      },
+      select: {
+        id: true,
+        titulo: true,
+        cliente_id: true,
+        inicio_em: true,
+        cliente: { select: { id: true, nome_completo: true } },
+        medicao_orcamento: {
+          select: {
+            id: true,
+            concluida: true,
+            ambientes: {
+              orderBy: { nome_ambiente: 'asc' },
+              select: {
+                id: true,
+                nome_ambiente: true,
+                largura_m: true,
+                pe_direito_m: true,
+                profundidade_m: true,
+                paredes: {
+                  orderBy: { nome: 'asc' },
+                  select: {
+                    id: true,
+                    nome: true,
+                    largura_m: true,
+                    pe_direito_m: true,
+                    profundidade_m: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { inicio_em: 'desc' },
+    });
+
+    return registros.map((ag) => {
+      const ambientes = ag.medicao_orcamento?.ambientes ?? [];
+      const totalAmbientes = ambientes.length;
+      const areaTotal = this.calcularAreaRealMedicao(ambientes);
+      return {
+        agenda_loja_id: ag.id,
+        titulo: ag.titulo,
+        data_inicio: (ag as any).inicio_em,
+        cliente: ag.cliente,
+        medicao_id: ag.medicao_orcamento?.id ?? null,
+        total_ambientes: totalAmbientes,
+        area_total_m2: Math.round(areaTotal * 100) / 100,
+        ambientes,
+      };
     });
   }
 
@@ -270,6 +364,7 @@ export class OrcamentoTecnicoService {
                     largura_m: true,
                     pe_direito_m: true,
                     profundidade_m: true,
+                    medidas_json: true,
                     paredes: {
                       orderBy: { nome: 'asc' },
                       select: {
@@ -279,6 +374,7 @@ export class OrcamentoTecnicoService {
                         pe_direito_m: true,
                         profundidade_m: true,
                         observacoes: true,
+                        medidas_json: true,
                       },
                     },
                   },
@@ -309,6 +405,20 @@ export class OrcamentoTecnicoService {
         total_ambientes: ambientesMedidos.length,
       },
     };
+  }
+
+  async remover(id: number) {
+    if (!Number(id) || id <= 0) throw new BadRequestException('ID do orcamento tecnico invalido.');
+
+    const existente = await this.prisma.orcamento_tecnico.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+
+    if (!existente) throw new BadRequestException('Orcamento tecnico nao encontrado.');
+
+    await this.prisma.orcamento_tecnico.delete({ where: { id } });
+    return;
   }
 
   /**
@@ -399,15 +509,54 @@ export class OrcamentoTecnicoService {
       }
     }
 
-    const orcamentoTecnico = await this.prisma.orcamento_tecnico.create({
-      data: {
-        agenda_loja_id: agendaLojaId,
-        itens: {
-          create: itensCreate,
-        },
+    // Busca cliente_id da agenda para atualizar o status do cliente também
+    const agendaComCliente = await this.prisma.agenda_loja.findUnique({
+      where: { id: agendaLojaId },
+      select: {
+        cliente_id: true,
+        cliente: { select: { id: true, status: true } },
       },
-      include: { itens: true },
     });
+
+    const orcamentoTecnico = await this.prisma.$transaction(async (tx) => {
+      const ot = await tx.orcamento_tecnico.create({
+        data: {
+          agenda_loja_id: agendaLojaId,
+          itens: { create: itensCreate },
+        },
+        include: { itens: true },
+      });
+
+      // Avança o fluxo da agenda: MEDIDA → ORCAMENTO
+      await tx.agenda_loja.update({
+        where: { id: agendaLojaId },
+        data: {
+          subetapa: 'ORCAMENTO',
+          status: 'ORCAMENTO_EM_ANDAMENTO',
+          atualizado_em: new Date(),
+        },
+      });
+
+      // Avança o status do cliente — criação de OT sempre avança para ORCAMENTO_EM_ANDAMENTO
+      // exceto quando o cliente já está em fase mais avançada (contrato, produção etc.)
+      const clienteAtual = agendaComCliente?.cliente;
+      if (clienteAtual) {
+        const statusDestino = 'ORCAMENTO_EM_ANDAMENTO';
+        const statusAtual = String(clienteAtual.status || '').toUpperCase();
+        const validacao = validarTransicaoStatusCliente({ atual: statusAtual, proximo: statusDestino });
+        // Aceita também status que normalmente seriam inválidos por serem pré-medição
+        const statusPreMedicao = new Set(['ATIVO', 'CLIENTE_CADASTRADO', 'AGENDAR_MEDIDA', 'AGENDAR_MEDIDA_VENDA', 'MEDIDA_AGENDADA', 'MEDIDA_REALIZADA', 'MEDIDA_EM_ANDAMENTO', 'CRIAR_ORCAMENTO']);
+        if ((validacao.ok || statusPreMedicao.has(statusAtual)) && statusAtual !== statusDestino) {
+          await tx.cliente.update({
+            where: { id: clienteAtual.id },
+            data: { status: statusDestino },
+          });
+        }
+      }
+
+      return ot;
+    });
+
     return orcamentoTecnico;
   }
 
@@ -524,6 +673,22 @@ export class OrcamentoTecnicoService {
           origem?: string;
         }>;
       }>;
+      preco_venda?: number;
+      desconto_pct?: number;
+      pagamentos?: Array<{
+        forma_pagamento_chave?: string;
+        parcelas?: number;
+        valor?: number;
+      }>;
+      com_nota_fiscal?: boolean;
+      taxa_nf_reais?: number;
+      taxa_cartao_reais?: number;
+      comissoes?: Array<{
+        tipo: string;
+        nome: string;
+        percentual: number;
+        valor_reais: number;
+      }>;
     },
   ) {
     if (!Number(id) || id <= 0) throw new BadRequestException('ID do orcamento tecnico invalido.');
@@ -543,6 +708,13 @@ export class OrcamentoTecnicoService {
     if (!existente) throw new BadRequestException('Orcamento tecnico nao encontrado.');
 
     const ambientes = Array.isArray(body?.ambientes) ? body.ambientes : [];
+    const precoVendaBody = this.toNum(body?.preco_venda);
+    const descontoPct = this.toNum(body?.desconto_pct);
+    const pagamentosBody = Array.isArray(body?.pagamentos) ? body.pagamentos : [];
+    const comNotaFiscal = Boolean(body?.com_nota_fiscal);
+    const taxaNfReais = this.toNum(body?.taxa_nf_reais);
+    const taxaCartaoReais = this.toNum(body?.taxa_cartao_reais);
+    const comissoesBody = Array.isArray(body?.comissoes) ? body.comissoes : [];
 
     const resultado = await this.prisma.$transaction(async (tx) => {
       const medicao = await tx.medicao_orcamento.upsert({
@@ -558,6 +730,38 @@ export class OrcamentoTecnicoService {
         select: { id: true },
       });
 
+      // Preserva as paredes existentes antes de recriar os ambientes.
+      // O deleteMany em medicao_orcamento_ambiente cascateia para
+      // medicao_orcamento_parede (onDelete: Cascade), então precisamos
+      // ler e regravar as paredes junto com os ambientes.
+      const ambientesExistentes = await tx.medicao_orcamento_ambiente.findMany({
+        where: { medicao_orcamento_id: medicao.id },
+        select: {
+          nome_ambiente: true,
+          largura_m: true,
+          pe_direito_m: true,
+          profundidade_m: true,
+          medidas_json: true,
+          observacoes: true,
+          paredes: {
+            select: {
+              nome: true,
+              largura_m: true,
+              pe_direito_m: true,
+              profundidade_m: true,
+              observacoes: true,
+              medidas_json: true,
+            },
+          },
+        },
+      });
+
+      // Indexa por nome para reaproveitar paredes ao recriar
+      const paredesPorAmbiente = new Map<string, typeof ambientesExistentes[0]['paredes']>();
+      for (const a of ambientesExistentes) {
+        paredesPorAmbiente.set(a.nome_ambiente.trim().toLowerCase(), a.paredes);
+      }
+
       await tx.medicao_orcamento_ambiente.deleteMany({
         where: { medicao_orcamento_id: medicao.id },
       });
@@ -567,7 +771,7 @@ export class OrcamentoTecnicoService {
         const vendedor = amb?.medidaVendedor || {};
         const tecnica = amb?.medidaTecnica || {};
 
-        await tx.medicao_orcamento_ambiente.create({
+        const novoAmb = await tx.medicao_orcamento_ambiente.create({
           data: {
             medicao_orcamento_id: medicao.id,
             nome_ambiente: nomeAmb.slice(0, 191),
@@ -579,7 +783,24 @@ export class OrcamentoTecnicoService {
               medida_tecnica: tecnica,
             }),
           },
+          select: { id: true },
         });
+
+        // Regravar as paredes que pertenciam a este ambiente pelo nome
+        const paredesOriginais = paredesPorAmbiente.get(nomeAmb.trim().toLowerCase()) ?? [];
+        for (const parede of paredesOriginais) {
+          await tx.medicao_orcamento_parede.create({
+            data: {
+              medicao_orcamento_ambiente_id: novoAmb.id,
+              nome: parede.nome,
+              largura_m: parede.largura_m,
+              pe_direito_m: parede.pe_direito_m,
+              profundidade_m: parede.profundidade_m,
+              observacoes: parede.observacoes,
+              medidas_json: parede.medidas_json,
+            },
+          });
+        }
       }
 
       await tx.orcamento_tecnico_itens.deleteMany({ where: { orcamento_tecnico_id: id } });
@@ -620,17 +841,81 @@ export class OrcamentoTecnicoService {
         _sum: { valor_total: true },
       });
 
+      const totalCalculado = this.toNum(totais._sum.valor_total);
+      const precoFinal = precoVendaBody > 0 ? precoVendaBody : totalCalculado;
+
+      const fechamentoJson = JSON.stringify({
+        pagamentos: pagamentosBody,
+        com_nota_fiscal: comNotaFiscal,
+        taxa_nf_reais: taxaNfReais,
+        taxa_cartao_reais: taxaCartaoReais,
+        comissoes: comissoesBody,
+      });
+
+      await tx.orcamento_tecnico.update({
+        where: { id },
+        data: {
+          preco_venda: this.toDecimal2(precoFinal),
+          desconto_pct: descontoPct > 0 ? this.toDecimal2(descontoPct) : null,
+          pagamentos_json: fechamentoJson,
+        },
+      });
+
       return {
-        total_venda: this.toNum(totais._sum.valor_total),
+        total_venda: totalCalculado,
+        preco_venda: precoFinal,
       };
     });
+
+    // ── Criar orçamento comercial automaticamente se não existir ──
+    let orcamentoComercialId = existente.agenda_loja?.orcamento?.id ?? null;
+    if (!orcamentoComercialId) {
+      const clienteId = existente.agenda_loja?.cliente_id;
+      if (clienteId) {
+        const cliente = await this.prisma.cliente.findUnique({
+          where: { id: clienteId },
+          select: { id: true, nome_completo: true, razao_social: true, cpf: true, vendedor_responsavel_id: true },
+        });
+        if (cliente) {
+          const clienteNome = String(cliente.nome_completo || cliente.razao_social || '').trim() || 'Cliente';
+          const clienteCpf = String(cliente.cpf ?? '').trim();
+          const novoOrcamento = await this.prisma.$transaction(async (tx) => {
+            const orc = await tx.orcamentos.create({
+              data: {
+                cliente_id: cliente.id,
+                vendedor_responsavel_id: cliente.vendedor_responsavel_id ?? undefined,
+                cliente_nome_snapshot: clienteNome,
+                cliente_cpf_snapshot: clienteCpf,
+                qtd_ambientes: 0,
+                clausulas: '[]',
+              },
+              select: { id: true },
+            });
+            // Vincula o orçamento ao agenda_loja via medicao_orcamento
+            await tx.medicao_orcamento.updateMany({
+              where: { agenda_loja_id: existente.agenda_loja_id },
+              data: { orcamento_id: orc.id },
+            });
+            return orc;
+          });
+          orcamentoComercialId = novoOrcamento.id;
+        }
+      }
+    }
 
     return {
       ok: true,
       orcamento_tecnico_id: id,
       total_venda: Math.round(resultado.total_venda * 100) / 100,
-      pode_gerar_pdf_contrato: Boolean(existente.agenda_loja?.orcamento?.id),
-      orcamento_id: existente.agenda_loja?.orcamento?.id ?? null,
+      preco_venda: Math.round(resultado.preco_venda * 100) / 100,
+      desconto_pct: descontoPct,
+      pagamentos: pagamentosBody,
+      com_nota_fiscal: comNotaFiscal,
+      taxa_nf_reais: taxaNfReais,
+      taxa_cartao_reais: taxaCartaoReais,
+      comissoes: comissoesBody,
+      pode_gerar_pdf_contrato: Boolean(orcamentoComercialId),
+      orcamento_id: orcamentoComercialId,
     };
   }
 

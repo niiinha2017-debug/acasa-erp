@@ -277,11 +277,13 @@ function visualizar(arq) {
   const cat = props.categoria ? String(props.categoria || '').trim().toUpperCase() : ''
 
   const from = `/arquivos?owner_type=${encodeURIComponent(ot)}&owner_id=${encodeURIComponent(oid)}${cat ? `&categoria=${encodeURIComponent(cat)}` : ''}`
+  const mime = String(arq.mime_type || '').toLowerCase()
+  const path = mime.includes('pdf') ? `/arquivos/pdf/${arq.id}` : `/arquivos/${arq.id}`
 
   fechar()
 
   router.push({
-    path: `/arquivos/${arq.id}`,
+    path,
     query: {
       name: arq.nome || arq.filename || `ARQUIVO_${arq.id}`,
       type: arq.mime_type || '',

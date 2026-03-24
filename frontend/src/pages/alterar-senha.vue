@@ -31,6 +31,7 @@
           type="password"
           required
           :disabled="loading"
+          :force-upper="false"
         />
 
         <Input
@@ -39,6 +40,7 @@
           type="password"
           required
           :disabled="loading"
+          :force-upper="false"
         />
 
         <Input
@@ -47,6 +49,7 @@
           type="password"
           required
           :disabled="loading"
+          :force-upper="false"
         />
 
         <div v-if="error" class="text-xs font-bold text-rose-500">
@@ -71,12 +74,15 @@
 
 <script setup>
 import { reactive, ref, computed } from 'vue'
+import { AGENDA_ROUTE_PATH, hasAgendaAccess } from '@/constantes/agenda-route'
 import { useAuth } from '@/services/useauth'
 import { notify } from '@/services/notify'
+import { useRouter } from 'vue-router'
 
-definePage({ meta: { perm: 'alterar-senha' } })
+definePage({ meta: { layout: 'default' } })
 
-const { alterarSenha, loading } = useAuth()
+const { alterarSenha, loading, syncMe } = useAuth()
+const router = useRouter()
 const error = ref('')
 
 const form = reactive({
@@ -90,6 +96,11 @@ const canSubmit = computed(() => {
     form.senhaNova.length >= 6 &&
     form.senhaNova === form.senhaConfirmacao
 })
+
+function getAgendaPath() {
+  if (hasAgendaAccess()) return AGENDA_ROUTE_PATH
+  return '/'
+}
 
 async function handleSalvar() {
   error.value = ''
@@ -105,10 +116,13 @@ async function handleSalvar() {
       senha_nova: form.senhaNova,
     })
 
+    await syncMe()
+
     notify.success('Senha atualizada com sucesso.')
     form.senhaAtual = ''
     form.senhaNova = ''
     form.senhaConfirmacao = ''
+    router.replace(getAgendaPath())
   } catch (e) {
     error.value = e?.response?.data?.message || 'Erro ao alterar senha.'
   }

@@ -1,7 +1,6 @@
 <template>
   <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
+    <div class="relative overflow-hidden ds-card ds-card--default">
       <PageHeader
         title="Orçamento Técnico — Importar da medição"
         :subtitle="breadcrumb"
@@ -41,7 +40,7 @@
               v-for="amb in medicao.ambientes"
               :key="amb.id"
               class="flex cursor-pointer rounded-xl border-2 transition overflow-hidden"
-              :class="ambientesSelecionados.includes(amb.id) ? 'border-brand-primary bg-brand-primary/5' : 'border-border-ui bg-bg-card hover:border-slate-400'"
+              :class="ambientesSelecionados.includes(amb.id) ? 'border-brand-primary bg-brand-primary/5' : 'border-border-ui bg-bg-card hover:border-border-ui/60'"
             >
               <input
                 v-model="ambientesSelecionados"

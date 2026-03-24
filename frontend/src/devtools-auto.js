@@ -4,7 +4,7 @@ export async function openTauriDevtools() {
     const isTauri = typeof window !== 'undefined' && !!window.__TAURI_INTERNALS__
     if (!isTauri) return
 
-    const mod = await import('@tauri-apps/api')
+    const mod = await import('@tauri-apps/api/window')
     const win = mod.getCurrentWindow()
     await win.openDevtools()
   } catch (e) {

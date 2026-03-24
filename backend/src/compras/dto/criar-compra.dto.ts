@@ -74,6 +74,10 @@ export class CriarCompraDto {
   tipo_compra: string; // INSUMOS | CLIENTE_AMBIENTE
 
   @IsOptional()
+  @IsString()
+  regime_financeiro?: string; // FECHAMENTO_MENSAL | TITULO_NA_COMPRA
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   venda_id?: number | null;

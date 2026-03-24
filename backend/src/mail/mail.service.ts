@@ -24,25 +24,50 @@ export class MailService {
     });
   }
 
+  private async sendSmtpMail(
+    options: nodemailer.SendMailOptions,
+  ): Promise<nodemailer.SentMessageInfo> {
+    try {
+      const info = await this.transporter.sendMail(options);
+      const accepted = Array.isArray(info.accepted)
+        ? info.accepted.map((item) => String(item).toLowerCase())
+        : [];
+      const expectedRecipients = [options.to]
+        .flat()
+        .filter(Boolean)
+        .map((item) => String(item).toLowerCase());
+
+      if (
+        expectedRecipients.length > 0 &&
+        !expectedRecipients.some((recipient) => accepted.includes(recipient))
+      ) {
+        throw new InternalServerErrorException(
+          'SMTP nao confirmou o destinatario do e-mail.',
+        );
+      }
+
+      return info;
+    } catch (err: any) {
+      if (err instanceof InternalServerErrorException) throw err;
+      throw new InternalServerErrorException(
+        `Falha ao enviar e-mail: ${err?.message || 'erro desconhecido'}`,
+      );
+    }
+  }
+
   async enviarEmailTeste(para: string) {
     const from =
       this.config.get<string>('MAIL_FROM') ||
       this.config.get<string>('MAIL_USER');
 
-    try {
-      const info = await this.transporter.sendMail({
-        from,
-        to: para,
-        subject: 'ACASA-ERP - Teste de e-mail',
-        text: 'Se você recebeu este e-mail, o SMTP do ACASA-ERP está OK.',
-      });
+    const info = await this.sendSmtpMail({
+      from,
+      to: para,
+      subject: 'ACASA-ERP - Teste de e-mail',
+      text: 'Se você recebeu este e-mail, o SMTP do ACASA-ERP está OK.',
+    });
 
-      return { ok: true, messageId: info.messageId };
-    } catch (err: any) {
-      throw new InternalServerErrorException(
-        `Falha ao enviar e-mail: ${err?.message || 'erro desconhecido'}`,
-      );
-    }
+    return { ok: true, messageId: info.messageId };
   }
   /**
    * Envia e-mail com senha provisória. dataRegistro em UTC/Date; exibida em horário de Brasília.
@@ -74,14 +99,14 @@ Entre no sistema e altere sua senha imediatamente.
 
 — ACASA ERP`;
 
-    await this.transporter.sendMail({
+    const info = await this.sendSmtpMail({
       from,
       to: para,
       subject: 'ACASA-ERP - Senha provisória',
       text,
     });
 
-    return { ok: true };
+    return { ok: true, messageId: info.messageId };
   }
   async enviarAniversarioCliente(para: string, nome?: string) {
     const from =
@@ -94,14 +119,14 @@ Passando para te desejar um feliz aniversário! 🎉
 
 — ACASA ERP`;
 
-    await this.transporter.sendMail({
+    const info = await this.sendSmtpMail({
       from,
       to: para,
       subject: 'ACASA-ERP - Feliz aniversário!',
       text,
     });
 
-    return { ok: true };
+    return { ok: true, messageId: info.messageId };
   }
 
   /**
@@ -121,7 +146,7 @@ Passando para te desejar um feliz aniversário! 🎉
     const text = `Olá${nomeCliente ? `, ${nomeCliente}` : ''},\n\nSegue o link para visualizar e baixar o PDF do contrato (válido por 24h):\n\n${link}\n\nAtt.`;
     const html = `<!DOCTYPE html><html><body><p>Olá${nomeCliente ? `, ${nomeCliente}` : ''},</p><p>Segue o link para visualizar e baixar o PDF do contrato (válido por 24h):</p><p><a href="${link}">${link}</a></p><p>Att.</p></body></html>`;
 
-    await this.transporter.sendMail({
+    const info = await this.sendSmtpMail({
       from,
       to: para,
       subject,
@@ -129,7 +154,7 @@ Passando para te desejar um feliz aniversário! 🎉
       html,
     });
 
-    return { ok: true };
+    return { ok: true, messageId: info.messageId };
   }
 
   /**
@@ -213,7 +238,7 @@ Passando para te desejar um feliz aniversário! 🎉
         },
       ];
     }
-    await this.transporter.sendMail(mailOptions);
-    return { ok: true };
+    const info = await this.sendSmtpMail(mailOptions);
+    return { ok: true, messageId: info.messageId };
   }
 }

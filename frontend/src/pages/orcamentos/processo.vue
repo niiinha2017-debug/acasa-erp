@@ -1,6 +1,6 @@
 <template>
   <div class="p-4 md:p-6 space-y-5">
-    <header class="rounded-2xl border border-border-ui bg-bg-card p-4 md:p-5">
+    <header class="ds-card ds-card--default p-4 md:p-5">
       <h1 class="text-lg md:text-xl font-black text-text-main">Processo de Orcamento e Pos-venda</h1>
       <p class="text-xs md:text-sm text-text-soft mt-1">
         Fluxo unico para marcenaria: custos do projeto, formacao do preco e passagem para producao.
@@ -8,42 +8,42 @@
     </header>
 
     <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <article class="rounded-2xl border border-border-ui bg-bg-card p-4 space-y-3">
+      <article class="ds-card ds-card--default p-4 space-y-3">
         <h2 class="text-sm font-black uppercase tracking-wide text-text-main">Custos Base</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <label class="space-y-1">
             <span class="text-text-soft">Material (R$)</span>
-            <input v-model.number="material" type="number" min="0" class="w-full h-10 px-3 rounded-lg border border-border-ui bg-bg-page" />
+            <input v-model.number="material" type="number" min="0" class="ds-field-line w-full h-10 px-3" />
           </label>
           <label class="space-y-1">
             <span class="text-text-soft">Horas de mao de obra</span>
-            <input v-model.number="horasMaoObra" type="number" min="0" step="0.5" class="w-full h-10 px-3 rounded-lg border border-border-ui bg-bg-page" />
+            <input v-model.number="horasMaoObra" type="number" min="0" step="0.5" class="ds-field-line w-full h-10 px-3" />
           </label>
           <label class="space-y-1">
             <span class="text-text-soft">Custo/hora (R$)</span>
-            <input v-model.number="custoHora" type="number" min="0" step="0.01" class="w-full h-10 px-3 rounded-lg border border-border-ui bg-bg-page" />
+            <input v-model.number="custoHora" type="number" min="0" step="0.01" class="ds-field-line w-full h-10 px-3" />
           </label>
           <label class="space-y-1">
             <span class="text-text-soft">Custos indiretos (R$)</span>
-            <input v-model.number="indiretos" type="number" min="0" class="w-full h-10 px-3 rounded-lg border border-border-ui bg-bg-page" />
+            <input v-model.number="indiretos" type="number" min="0" class="ds-field-line w-full h-10 px-3" />
           </label>
         </div>
       </article>
 
-      <article class="rounded-2xl border border-border-ui bg-bg-card p-4 space-y-3">
+      <article class="ds-card ds-card--default p-4 space-y-3">
         <h2 class="text-sm font-black uppercase tracking-wide text-text-main">Taxas e Recebimento</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <label class="space-y-1">
             <span class="text-text-soft">Taxa maquininha (%)</span>
-            <input v-model.number="taxaMaquina" type="number" min="0" step="0.01" class="w-full h-10 px-3 rounded-lg border border-border-ui bg-bg-page" />
+            <input v-model.number="taxaMaquina" type="number" min="0" step="0.01" class="ds-field-line w-full h-10 px-3" />
           </label>
           <label class="space-y-1">
             <span class="text-text-soft">Margem desejada (%)</span>
-            <input v-model.number="margem" type="number" min="0" step="0.01" class="w-full h-10 px-3 rounded-lg border border-border-ui bg-bg-page" />
+            <input v-model.number="margem" type="number" min="0" step="0.01" class="ds-field-line w-full h-10 px-3" />
           </label>
           <label class="space-y-1 sm:col-span-2">
             <span class="text-text-soft">Prazo de recebimento</span>
-            <select v-model="prazo" class="w-full h-10 px-3 rounded-lg border border-border-ui bg-bg-page">
+            <select v-model="prazo" class="ds-field-line ds-field-line--select w-full h-10 px-3">
               <option value="A_VISTA">A vista</option>
               <option value="30_DIAS">30 dias</option>
               <option value="60_DIAS">60 dias</option>
@@ -54,40 +54,40 @@
       </article>
     </section>
 
-    <section class="rounded-2xl border border-border-ui bg-bg-card p-4">
+    <section class="ds-card ds-card--default p-4">
       <h2 class="text-sm font-black uppercase tracking-wide text-text-main mb-3">Resumo do Orcamento</h2>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <div class="rounded-xl border border-border-ui bg-bg-page p-3">
+        <div class="ds-card ds-card--default p-3">
           <p class="text-[11px] uppercase tracking-wide text-text-soft">Custo total</p>
           <p class="text-base font-black text-text-main">{{ moeda(custoTotal) }}</p>
         </div>
-        <div class="rounded-xl border border-border-ui bg-bg-page p-3">
+        <div class="ds-card ds-card--default p-3">
           <p class="text-[11px] uppercase tracking-wide text-text-soft">Preco sugerido</p>
           <p class="text-base font-black text-text-main">{{ moeda(precoSugerido) }}</p>
         </div>
-        <div class="rounded-xl border border-border-ui bg-bg-page p-3">
+        <div class="ds-card ds-card--default p-3">
           <p class="text-[11px] uppercase tracking-wide text-text-soft">Taxa estimada</p>
           <p class="text-base font-black text-text-main">{{ moeda(custoTaxa) }}</p>
         </div>
-        <div class="rounded-xl border border-border-ui bg-bg-page p-3">
+        <div class="ds-card ds-card--default p-3">
           <p class="text-[11px] uppercase tracking-wide text-text-soft">Liquido estimado</p>
           <p class="text-base font-black text-text-main">{{ moeda(valorLiquido) }}</p>
         </div>
       </div>
     </section>
 
-    <section class="rounded-2xl border border-border-ui bg-bg-card p-4">
+    <section class="ds-card ds-card--default p-4">
       <h2 class="text-sm font-black uppercase tracking-wide text-text-main mb-3">Fluxo Operacional</h2>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-        <div class="rounded-xl border border-border-ui bg-bg-page p-3">
+        <div class="ds-card ds-card--default p-3">
           <p class="font-black text-text-main">1. Orcamento</p>
           <p class="text-text-soft mt-1">Novo -> Em elaboracao -> Enviado -> Aprovado</p>
         </div>
-        <div class="rounded-xl border border-border-ui bg-bg-page p-3">
+        <div class="ds-card ds-card--default p-3">
           <p class="font-black text-text-main">2. Venda e Medida Fina</p>
           <p class="text-text-soft mt-1">Pedido confirmado -> Medida fina -> Projeto tecnico</p>
         </div>
-        <div class="rounded-xl border border-border-ui bg-bg-page p-3">
+        <div class="ds-card ds-card--default p-3">
           <p class="font-black text-text-main">3. Pos-venda e Agenda</p>
           <p class="text-text-soft mt-1">Producao -> Material carregado -> Montagem -> Pos-venda. Ao entrar em producao, vai para Agenda Geral.</p>
         </div>

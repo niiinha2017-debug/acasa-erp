@@ -1,17 +1,19 @@
 <template>
   <div
     ref="rootRef"
-    class="search-container relative flex flex-col gap-1.5"
-    :class="[colSpan, { 'z-[100]': open }]"
+    class="search-container ds-field relative"
+    :class="[colSpan, { 'z-[100]': open, 'ds-field--line': variant === 'line' }]"
     @click.stop
   >
-    <label v-if="label" class="text-xs font-semibold tracking-wide text-text-soft ml-0.5 mb-0.5">
-      {{ label }} <span v-if="required" class="text-rose-500 ml-0.5">*</span>
+    <label v-if="label" class="ds-field-label">
+      {{ label }} <span v-if="required" class="ds-field-label__required">*</span>
     </label>
 
-    <div class="relative group">
+    <div class="ds-control-shell ds-search-shell" :class="{ 'ds-search-shell--line': variant === 'line' }">
       <span
-        class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-primary transition-all duration-300 pointer-events-none"
+        v-if="!hideSearchIcon"
+        class="ds-control-icon ds-search-icon"
+        :class="{ 'ds-search-icon--line': variant === 'line' }"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8"></circle>
@@ -30,10 +32,13 @@
         :readonly="readonly"
         :disabled="disabled"
         autocomplete="off"
-        class="w-full h-10 pl-10 pr-16 transition-all duration-200 outline-none border rounded-xl text-sm
-               bg-bg-card text-text-main border-border-ui
-               focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 hover:border-slate-300 dark:hover:border-slate-600
-               placeholder:text-slate-400 placeholder:font-normal"
+        :class="[
+          'ds-control-input ds-search-input',
+          {
+            'ds-control-input--line ds-search-input--line': variant === 'line',
+            'ds-search-input--no-icon': hideSearchIcon,
+          }
+        ]"
         @focus="onFocus"
         @input="onInput"
         @keydown="onKeydown"
@@ -44,7 +49,7 @@
         v-if="props.mode === 'select'"
         type="button"
         @pointerdown.prevent.stop="toggleDropdown"
-        class="absolute right-8 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors p-1"
+        :class="['ds-search-action ds-search-action--caret', { 'ds-search-action--line': variant === 'line' }]"
         :disabled="disabled"
         aria-label="Abrir opções"
       >
@@ -58,7 +63,7 @@
         type="button"
         aria-label="Limpar"
         @pointerdown.prevent.stop="limparBusca"
-        class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors p-1"
+        :class="['ds-search-action ds-search-action--clear hover:!text-red-500', { 'ds-search-action--line': variant === 'line' }]"
         :disabled="disabled"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -73,24 +78,22 @@
             v-if="open && showDropdown"
             ref="dropdownRef"
             :style="floatingStyles"
-            class="fixed z-[100000] bg-bg-card border border-border-ui
-                   rounded-lg shadow-xl shadow-slate-200/50 dark:shadow-black/40 overflow-hidden pointer-events-auto"
+            class="ds-search-dropdown pointer-events-auto"
             @pointerdown.prevent
           >
             <div v-if="filtrados.length" class="max-h-60 overflow-y-auto p-1 custom-scroll">
               <div
                 v-for="opt in filtrados"
                 :key="opt.value"
-                class="flex items-center px-3 py-2 text-sm rounded-md cursor-pointer transition-all
-                       text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-brand-primary"
+                class="ds-search-option"
                 @pointerdown.prevent.stop="selecionar(opt)"
               >
-                <div class="w-1.5 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 mr-3 transition-all shrink-0"></div>
+                <div class="ds-search-option__dot"></div>
                 <span class="truncate font-medium">{{ opt.label }}</span>
               </div>
             </div>
 
-            <div v-else class="px-4 py-6 text-xs font-medium text-slate-400 text-center">
+            <div v-else class="ds-search-empty">
               Nenhum resultado encontrado
             </div>
           </div>
@@ -115,6 +118,8 @@ const props = defineProps({
   mode: { type: String, default: 'search' }, // 'search' | 'select'
   labelKey: { type: String, default: 'label' },
   valueKey: { type: String, default: 'value' },
+  variant: { type: String, default: 'line' },
+  hideSearchIcon: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['update:modelValue'])

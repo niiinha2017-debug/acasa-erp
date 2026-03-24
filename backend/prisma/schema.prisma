@@ -31,6 +31,7 @@ model usuarios {
   agenda_fabrica_alterados agenda_fabrica[] @relation("AgendaFabricaAlteradoPor")
   agenda_loja_criados agenda_loja[] @relation("AgendaLojaCriadoPor")
   agenda_fabrica_criados agenda_fabrica[] @relation("AgendaFabricaCriadoPor")
+  clientes_criados Cliente[] @relation("ClienteCriadoPorUsuario")
 
   @@map("usuarios")
  }
@@ -129,6 +130,8 @@ model Cliente {
   // Vendedor responsável (funcionário da loja) e profissão para contrato
   vendedor_responsavel_id Int?
   vendedor_responsavel    funcionarios? @relation("ClienteVendedorResponsavel", fields: [vendedor_responsavel_id], references: [id], onDelete: SetNull)
+  criado_por_usuario_id   Int?
+  criado_por_usuario      usuarios? @relation("ClienteCriadoPorUsuario", fields: [criado_por_usuario_id], references: [id], onDelete: SetNull)
   profissao               String?
 
   criado_em     DateTime @default(now())
@@ -141,6 +144,7 @@ model Cliente {
   contratos   contratos[]
   agendamentos_loja    agenda_loja[]
   agendamentos_fabrica agenda_fabrica[]
+  fluxos_gemeos        fluxo_entidade[]
   projetos     projetos[]
   medicoes_orcamento   medicao_orcamento[]
   pre_medicoes         pre_medicao[]
@@ -150,6 +154,7 @@ model Cliente {
   @@unique([email])
   @@index([indicacao_id])
   @@index([vendedor_responsavel_id])
+  @@index([criado_por_usuario_id])
   @@map("clientes")
  }
 
@@ -177,6 +182,7 @@ model orcamentos {
   itens       orcamento_itens[]
   agendamentos_loja agenda_loja[]
   agendamento_fabrica agenda_fabrica?
+  fluxos_gemeos fluxo_entidade[]
   medicoes_orcamento medicao_orcamento[]
 
   // ✅ agora é 0..1 venda por orçamento
@@ -264,6 +270,7 @@ model vendas {
   formas_pagamento vendas_formas_pagamento[] // formas agrupadas (valor base, com/sem juros) para contrato
   agendamentos_loja    agenda_loja[]
   agendamentos_fabrica agenda_fabrica[]
+  fluxos_gemeos        fluxo_entidade[]
   apontamentos_producao apontamento_producao[]
   representante_venda_usuario usuarios? @relation("vendas_representante_usuario", fields: [representante_venda_usuario_id], references: [id], onDelete: SetNull)
   representante_venda_funcionario funcionarios? @relation("vendas_representante_funcionario", fields: [representante_venda_funcionario_id], references: [id], onDelete: SetNull)
@@ -458,6 +465,9 @@ model Fornecedor {
   cidade          String?
   estado          String?
   forma_pagamento   String?
+  regime_financeiro_padrao String? @default("FECHAMENTO_MENSAL")
+  dia_fechamento_padrao    Int?
+  permite_multiplas_formas Boolean @default(false)
   data_vencimento   Int?
   ramo_atividade    String?
   prazo_entrega_dias Int?
@@ -475,12 +485,32 @@ model Fornecedor {
   contas_receber        contas_receber[] @relation("contas_receber_fornecedor")
 
   compensacoes_fornecedor fornecedor_compensacoes[]
+  formas_pagamento_habilitadas fornecedor_formas_pagamento[]
+  fechamentos                fornecedor_fechamentos[]
   compras                 compras[]
   agendamentos_loja       agenda_loja[]
   agendamentos_fabrica    agenda_fabrica[]
 
   @@map("fornecedor")
  }
+
+  model fornecedor_formas_pagamento {
+    id Int @id @default(autoincrement())
+
+    fornecedor_id Int
+    fornecedor    Fornecedor @relation(fields: [fornecedor_id], references: [id], onDelete: Cascade)
+
+    forma_pagamento_chave String
+    parcelas_padrao       Int?
+    ativo                 Boolean @default(true)
+
+    criado_em DateTime @default(now())
+
+    @@unique([fornecedor_id, forma_pagamento_chave])
+    @@index([fornecedor_id])
+    @@index([forma_pagamento_chave])
+    @@map("fornecedor_formas_pagamento")
+  }
 
 model produtos {
   id            Int        @id @default(autoincrement())
@@ -534,6 +564,7 @@ model produtos {
   compras_itens       compras_itens[]
   chapas_inteiras     estoque_chapa_inteira[]
   retalhos            estoque_retalho[]
+  chapas_projeto      plano_corte_projeto_chapa[]
 
   @@index([fornecedor_id])
   @@index([fita_vinculada_id])
@@ -556,9 +587,75 @@ model plano_corte {
   produtos     plano_corte_produto[]
   consumos     plano_corte_consumo[]
   agendamentos agenda_fabrica[]
+  projetos     plano_corte_projeto[]
 
   @@map("plano_corte")
  }
+
+model plano_corte_projeto {
+  id                    Int      @id @default(autoincrement())
+  plano_corte_id        Int?
+  nome                  String   @db.VarChar(180)
+  material              String?  @db.VarChar(120)
+  espessura_mm          Decimal? @db.Decimal(10, 2)
+  kerf_mm               Decimal   @default(3.00) @db.Decimal(10, 2)
+  resultado_otimizacao  Json?
+  status                String   @default("RASCUNHO")
+  criado_em             DateTime @default(now())
+  atualizado_em         DateTime @updatedAt
+
+  plano_corte plano_corte? @relation(fields: [plano_corte_id], references: [id], onDelete: SetNull)
+  pecas      plano_corte_projeto_peca[]
+  chapas     plano_corte_projeto_chapa[]
+
+  @@index([plano_corte_id])
+  @@index([status])
+  @@map("plano_corte_projeto")
+}
+
+model plano_corte_projeto_peca {
+  id                        Int      @id @default(autoincrement())
+  plano_corte_projeto_id    Int
+  nome                      String   @db.VarChar(180)
+  largura_nominal_mm        Decimal  @db.Decimal(10, 2)
+  altura_nominal_mm         Decimal  @db.Decimal(10, 2)
+  quantidade                Int      @default(1)
+  girar_peca                Boolean
+  fita_topo_mm              Decimal  @default(0.00) @db.Decimal(10, 2)
+  fita_base_mm              Decimal  @default(0.00) @db.Decimal(10, 2)
+  fita_esquerda_mm          Decimal  @default(0.00) @db.Decimal(10, 2)
+  fita_direita_mm           Decimal  @default(0.00) @db.Decimal(10, 2)
+  largura_corte_mm          Decimal  @db.Decimal(10, 2)
+  altura_corte_mm           Decimal  @db.Decimal(10, 2)
+  criado_em                 DateTime @default(now())
+  atualizado_em             DateTime @updatedAt
+
+  projeto plano_corte_projeto @relation(fields: [plano_corte_projeto_id], references: [id], onDelete: Cascade)
+
+  @@index([plano_corte_projeto_id])
+  @@index([girar_peca])
+  @@map("plano_corte_projeto_peca")
+}
+
+model plano_corte_projeto_chapa {
+  id                     Int      @id @default(autoincrement())
+  plano_corte_projeto_id Int
+  produto_id             Int?
+  codigo                 String?  @db.VarChar(120)
+  material               String?  @db.VarChar(120)
+  largura_mm             Decimal  @db.Decimal(10, 2)
+  altura_mm              Decimal  @db.Decimal(10, 2)
+  quantidade             Int      @default(1)
+  criado_em              DateTime @default(now())
+  atualizado_em          DateTime @updatedAt
+
+  projeto plano_corte_projeto @relation(fields: [plano_corte_projeto_id], references: [id], onDelete: Cascade)
+  produto produtos? @relation(fields: [produto_id], references: [id], onDelete: SetNull)
+
+  @@index([plano_corte_projeto_id])
+  @@index([produto_id])
+  @@map("plano_corte_projeto_chapa")
+}
 
 model plano_corte_item {
   id            Int @id @default(autoincrement())
@@ -750,6 +847,8 @@ model funcionarios {
   apontamentos_fabrica agenda_fabrica_apontamentos[]
   apontamentos_producao apontamento_producao[]
   custo_constante funcionario_custo_constante?
+  contas_pagar contas_pagar[]
+  fechamentos_pagamento funcionario_fechamentos[]
   clientes_vendedor    Cliente[] @relation("ClienteVendedorResponsavel")
   orcamentos_vendedor  orcamentos[] @relation("OrcamentoVendedor")
   vendas_vendedor      vendas[] @relation("VendaVendedor")
@@ -888,6 +987,9 @@ model medicao_fina {
   // Planta baixa interativa: JSON com paredes, pontos técnicos e textos (coordenadas e medidas para orçamento)
   planta_baixa_json Json?
 
+  // Captura do visualizador 3D (extrusão), data URL PNG (base64) — listagem / referência rápida
+  croqui_3d_thumbnail_data_url String? @db.LongText
+
   concluida Boolean @default(false)
   criado_em DateTime @default(now())
   atualizado_em DateTime @updatedAt
@@ -1003,6 +1105,10 @@ model orcamento_tecnico {
   agenda_loja    agenda_loja @relation(fields: [agenda_loja_id], references: [id], onDelete: Cascade)
   criado_em      DateTime @default(now())
 
+  preco_venda    Decimal? @db.Decimal(12, 2)
+  desconto_pct   Decimal? @db.Decimal(5, 2)
+  pagamentos_json String? @db.Text
+
   itens orcamento_tecnico_itens[]
 
   @@index([agenda_loja_id])
@@ -1022,6 +1128,116 @@ model orcamento_tecnico_itens {
 
   @@index([orcamento_tecnico_id])
   @@map("orcamento_tecnico_itens")
+}
+
+model fluxo_entidade {
+  id Int @id @default(autoincrement())
+
+  contexto String
+
+  cliente_id Int?
+  cliente    Cliente? @relation(fields: [cliente_id], references: [id], onDelete: SetNull)
+
+  venda_id Int?
+  venda    vendas? @relation(fields: [venda_id], references: [id], onDelete: SetNull)
+
+  orcamento_id Int?
+  orcamento    orcamentos? @relation(fields: [orcamento_id], references: [id], onDelete: SetNull)
+
+  disparado_por_fluxo_id Int?
+  disparado_por_fluxo    fluxo_entidade?  @relation("FluxoGemeoOrigem", fields: [disparado_por_fluxo_id], references: [id], onDelete: SetNull)
+  fluxos_disparados      fluxo_entidade[] @relation("FluxoGemeoOrigem")
+
+  status         String
+  subetapa       String
+  macroetapa     String?
+  execucao_etapa String?
+  label_etapa    String?
+  ordem_etapa    Int?
+  terminal       Boolean  @default(false)
+
+  origem_evento          String?
+  ultimo_agendamento_tipo String?
+  ultimo_agendamento_id   Int?
+  ultimo_snapshot         Json?
+
+  iniciado_em   DateTime @default(now())
+  concluido_em  DateTime?
+  cancelado_em  DateTime?
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  historico    fluxo_entidade_historico[]
+  agendamentos fluxo_entidade_agendamento[]
+
+  @@unique([contexto, venda_id])
+  @@unique([contexto, orcamento_id])
+  @@index([contexto])
+  @@index([cliente_id])
+  @@index([venda_id])
+  @@index([orcamento_id])
+  @@index([subetapa])
+  @@index([status])
+  @@index([disparado_por_fluxo_id])
+  @@map("fluxo_entidade")
+}
+
+model fluxo_entidade_historico {
+  id Int @id @default(autoincrement())
+
+  fluxo_entidade_id Int
+  fluxo_entidade    fluxo_entidade @relation(fields: [fluxo_entidade_id], references: [id], onDelete: Cascade)
+
+  contexto          String
+  status_anterior   String?
+  subetapa_anterior String?
+  execucao_anterior String?
+
+  status         String
+  subetapa       String
+  macroetapa     String?
+  execucao_etapa String?
+  label_etapa    String?
+  ordem_etapa    Int?
+
+  origem_evento         String?
+  motivo                String?
+  agenda_tipo           String?
+  agenda_id             Int?
+  payload               Json?
+  criado_por_usuario_id Int?
+  criado_em             DateTime @default(now())
+
+  @@index([fluxo_entidade_id])
+  @@index([contexto])
+  @@index([agenda_tipo, agenda_id])
+  @@index([criado_por_usuario_id])
+  @@map("fluxo_entidade_historico")
+}
+
+model fluxo_entidade_agendamento {
+  id Int @id @default(autoincrement())
+
+  fluxo_entidade_id Int
+  fluxo_entidade    fluxo_entidade @relation(fields: [fluxo_entidade_id], references: [id], onDelete: Cascade)
+
+  contexto       String
+  agenda_tipo    String
+  agenda_id      Int
+  titulo         String?
+  inicio_em      DateTime?
+  fim_em         DateTime?
+  status         String?
+  subetapa       String?
+  execucao_etapa String?
+  criado_em      DateTime @default(now())
+  atualizado_em  DateTime @updatedAt
+
+  @@unique([agenda_tipo, agenda_id])
+  @@index([fluxo_entidade_id])
+  @@index([contexto])
+  @@index([status])
+  @@map("fluxo_entidade_agendamento")
 }
 
 // ---------- Agenda Loja (setor LOJA) ----------
@@ -1055,6 +1271,7 @@ model agenda_loja {
   status    String   @default("PENDENTE")
   status_source String?
   status_aplicado_em DateTime?
+  arquivado_em DateTime? // conclusão → arquivo (agenda operacional vs arquivo)
 
   // Totem: custo coletivo (tempo total × custo hora médio fábrica) e tempo total para auditoria
   tempo_total_tarefa   Decimal? @db.Decimal(8, 2)
@@ -1090,6 +1307,7 @@ model agenda_loja {
   @@index([execucao_etapa])
   @@index([status])
   @@index([status_source])
+  @@index([arquivado_em])
   @@index([criado_por_usuario_id])
   @@index([alterado_por_usuario_id])
   @@map("agenda_loja")
@@ -1158,6 +1376,7 @@ model agenda_fabrica {
   status    String   @default("PENDENTE")
   status_source String?
   status_aplicado_em DateTime?
+  arquivado_em DateTime? // conclusão → arquivo (agenda operacional vs arquivo)
 
   // Ambientes desta tarefa (nomes). Vazio = todos da venda.
   ambientes_selecionados Json?
@@ -1200,6 +1419,7 @@ model agenda_fabrica {
   @@index([execucao_etapa])
   @@index([status])
   @@index([status_source])
+  @@index([arquivado_em])
   @@index([criado_por_usuario_id])
   @@index([alterado_por_usuario_id])
   @@map("agenda_fabrica")
@@ -1327,8 +1547,12 @@ model contas_pagar {
   id Int @id @default(autoincrement())
 
   // Fornecedor "centro" (ex: Cityfer)
-  fornecedor_id Int
-  fornecedor    Fornecedor @relation("contas_pagar_fornecedor", fields: [fornecedor_id], references: [id])
+  fornecedor_id Int?
+  fornecedor    Fornecedor? @relation("contas_pagar_fornecedor", fields: [fornecedor_id], references: [id])
+
+  // Funcionário (para fechamento de folha)
+  funcionario_id Int?
+  funcionario    funcionarios? @relation(fields: [funcionario_id], references: [id], onDelete: SetNull)
 
   // Fornecedor "cobrador" (ex: Rimad) - opcional
   fornecedor_cobrador_id Int?
@@ -1359,6 +1583,12 @@ model contas_pagar {
   vencimento_em DateTime
   pago_em       DateTime?
 
+  fechamento_fornecedor_id Int? @unique
+  fechamento_fornecedor    fornecedor_fechamentos? @relation(fields: [fechamento_fornecedor_id], references: [id], onDelete: SetNull)
+
+  fechamento_funcionario_id Int? @unique
+  fechamento_funcionario    funcionario_fechamentos? @relation(fields: [fechamento_funcionario_id], references: [id], onDelete: SetNull)
+
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
 
@@ -1370,12 +1600,104 @@ model contas_pagar {
   titulos titulos_financeiros[]
 
   @@index([fornecedor_id])
+  @@index([funcionario_id])
   @@index([fornecedor_cobrador_id])
   @@index([status])
   @@index([vencimento_em])
   @@index([origem_tipo])
   @@index([origem_id])
+  @@index([fechamento_fornecedor_id])
+  @@index([fechamento_funcionario_id])
   @@map("contas_pagar")
+}
+
+model fornecedor_fechamentos {
+  id Int @id @default(autoincrement())
+
+  fornecedor_id Int
+  fornecedor    Fornecedor @relation(fields: [fornecedor_id], references: [id], onDelete: Cascade)
+
+  mes_referencia Int
+  ano_referencia Int
+
+  forma_pagamento_chave String?
+
+  total_compras         Decimal @default(0.00) @db.Decimal(12, 2)
+  total_planos          Decimal @default(0.00) @db.Decimal(12, 2)
+  compensado_total      Decimal @default(0.00) @db.Decimal(12, 2)
+  desconto_valor        Decimal @default(0.00) @db.Decimal(12, 2)
+  valor_dever_manual    Decimal @default(0.00) @db.Decimal(12, 2)
+  valor_creditar_manual Decimal @default(0.00) @db.Decimal(12, 2)
+  valor_final_apurado   Decimal @default(0.00) @db.Decimal(12, 2)
+
+  status String @default("ABERTO")
+
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  conta_pagar contas_pagar?
+  compras     compras[]
+
+  @@unique([fornecedor_id, mes_referencia, ano_referencia])
+  @@index([fornecedor_id])
+  @@index([status])
+  @@map("fornecedor_fechamentos")
+}
+
+model funcionario_fechamentos {
+  id Int @id @default(autoincrement())
+
+  funcionario_id Int
+  funcionario    funcionarios @relation(fields: [funcionario_id], references: [id], onDelete: Cascade)
+
+  mes_referencia Int
+  ano_referencia Int
+
+  forma_pagamento_chave String?
+  dia_pagamento_snapshot Int?
+
+  salario_base_snapshot      Decimal @default(0.00) @db.Decimal(12, 2)
+  salario_adicional_snapshot Decimal @default(0.00) @db.Decimal(12, 2)
+  beneficios_snapshot        Decimal @default(0.00) @db.Decimal(12, 2)
+  descontos_snapshot         Decimal @default(0.00) @db.Decimal(12, 2)
+  horas_extras_valor         Decimal @default(0.00) @db.Decimal(12, 2)
+
+  valor_bruto  Decimal @default(0.00) @db.Decimal(12, 2)
+  valor_liquido Decimal @default(0.00) @db.Decimal(12, 2)
+
+  status String @default("EM_ABERTO")
+  observacao String?
+
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  conta_pagar contas_pagar?
+  itens funcionario_fechamento_itens[]
+
+  @@unique([funcionario_id, mes_referencia, ano_referencia])
+  @@index([funcionario_id])
+  @@index([status])
+  @@map("funcionario_fechamentos")
+}
+
+model funcionario_fechamento_itens {
+  id Int @id @default(autoincrement())
+
+  fechamento_id Int
+  fechamento funcionario_fechamentos @relation(fields: [fechamento_id], references: [id], onDelete: Cascade)
+
+  tipo_item String // PROVENTO | DESCONTO
+  rubrica   String // SALARIO_BASE | HORA_EXTRA_50 | VALE | AJUSTE ...
+  valor     Decimal @default(0.00) @db.Decimal(12, 2)
+  observacao String?
+  ordem      Int?
+
+  criado_em DateTime @default(now())
+
+  @@index([fechamento_id])
+  @@index([tipo_item])
+  @@index([rubrica])
+  @@map("funcionario_fechamento_itens")
 }
 
 model titulos_financeiros {
@@ -1505,6 +1827,7 @@ model compras {
   id Int @id @default(autoincrement())
 
   tipo_compra String
+  regime_financeiro String @default("FECHAMENTO_MENSAL")
 
   venda_id Int?
   venda    vendas? @relation(fields: [venda_id], references: [id], onDelete: Cascade)
@@ -1514,6 +1837,9 @@ model compras {
 
   venda_item_id Int?
   venda_item    vendas_itens? @relation(fields: [venda_item_id], references: [id], onDelete: SetNull)
+
+  fechamento_id Int?
+  fechamento    fornecedor_fechamentos? @relation(fields: [fechamento_id], references: [id], onDelete: SetNull)
 
   // ✅ agora é status financeiro (EM_ABERTO / VENCIDO / PAGO...)
   status String @default("EM_ABERTO")
@@ -1532,8 +1858,10 @@ model compras {
   rateios compras_rateio[]
 
   @@index([tipo_compra])
+  @@index([regime_financeiro])
   @@index([venda_id])
   @@index([fornecedor_id])
+  @@index([fechamento_id])
   @@index([status])
   @@index([vencimento_em])
   @@map("compras")

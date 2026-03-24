@@ -1,16 +1,14 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
+  <PageShell :padded="false">
+    <section class="contratos-list ds-page-context ds-page-context--list animate-page-in">
       <PageHeader
         title="Contratos"
         subtitle="Gestão de contratos comerciais"
         icon="pi pi-file"
       >
         <template #actions>
-          <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
-            <div class="w-full sm:w-80 order-1 sm:order-0">
+          <div class="contratos-list__actions ds-page-context__actions">
+            <div class="contratos-list__search ds-page-context__search">
               <SearchInput
                 v-model="filtro"
                 placeholder="Buscar por nome do cliente..."
@@ -19,93 +17,77 @@
             <Button
               v-if="can('contratos.criar')"
               variant="primary"
-              class="flex-shrink-0 h-11 rounded-xl font-black uppercase tracking-[0.16em] text-[11px]"
               @click="router.push('/contratos/novo')"
             >
-              <i class="pi pi-plus mr-2" />
-              Novo Contrato
+              <i class="pi pi-plus" />
+              Novo contrato
             </Button>
           </div>
         </template>
       </PageHeader>
 
-      <div class="pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-8">
+      <div class="contratos-list__content ds-page-context__content">
         <div v-if="loading" class="text-center py-10">
           <i class="pi pi-spin pi-spinner text-2xl text-text-soft" />
         </div>
 
         <template v-else>
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <MetricCard
-              label="Total de Contratos"
-              :value="contratos.length"
-              icon="pi pi-file"
-              color="slate"
-            />
-            <MetricCard
-              label="Valor Total"
-              :value="format.currency(valorTotalGeral)"
-              icon="pi pi-dollar"
-              color="emerald"
-            />
-            <MetricCard
-              label="Vigentes"
-              :value="contratos.filter((c) => String(c.status).toUpperCase() === 'VIGENTE').length"
-              icon="pi pi-check-circle"
-              color="blue"
-            />
-            <MetricCard
-              label="Encerrados"
-              :value="contratos.filter((c) => String(c.status).toUpperCase() === 'ENCERRADO').length"
-              icon="pi pi-lock"
-              color="amber"
-            />
+          <!-- Resumo no mesmo “tom” da barra de totais de Orçamentos -->
+          <div class="contratos-list__summary-strip" aria-label="Resumo de contratos">
+            <div class="contratos-list__summary-item">
+              <span class="contratos-list__summary-label">Total de contratos</span>
+              <span class="contratos-list__summary-value">{{ contratos.length }}</span>
+            </div>
+            <div class="contratos-list__summary-item">
+              <span class="contratos-list__summary-label">Valor total</span>
+              <span class="contratos-list__summary-value contratos-list__summary-value--accent">
+                {{ format.currency(valorTotalGeral) }}
+              </span>
+            </div>
+            <div class="contratos-list__summary-item">
+              <span class="contratos-list__summary-label">Vigentes</span>
+              <span class="contratos-list__summary-value">{{ resumo.vigentes }}</span>
+            </div>
+            <div class="contratos-list__summary-item">
+              <span class="contratos-list__summary-label">Encerrados</span>
+              <span class="contratos-list__summary-value">{{ resumo.encerrados }}</span>
+            </div>
           </div>
 
-          <div class="space-y-3">
-            <h2 class="text-xs font-black uppercase tracking-widest text-text-soft">
-              Clientes com contratos
-            </h2>
-            <div
-              v-if="gruposFiltrados.length > 0"
-              class="rounded-xl border border-border-ui bg-bg-page/50 px-4 py-2 flex justify-between items-center"
-            >
-              <span class="text-[10px] font-bold text-text-soft uppercase tracking-wider">Valor total da lista</span>
-              <span class="text-lg font-black text-text-main">{{ format.currency(valorTotalLista) }}</span>
+          <div class="contratos-list__clientes">
+            <h2 class="contratos-list__eyebrow">Clientes com contratos</h2>
+
+            <div v-if="gruposFiltrados.length > 0" class="contratos-list__total-bar">
+              <span class="contratos-list__total-label">Valor total da lista</span>
+              <span class="contratos-list__total-value">{{ format.currency(valorTotalLista) }}</span>
             </div>
-            <div
-              v-if="gruposFiltrados.length === 0"
-              class="rounded-xl border border-border-ui bg-bg-page py-12 text-center"
-            >
-              <p class="text-text-soft text-sm">
+
+            <div v-if="gruposFiltrados.length === 0" class="contratos-list__empty">
+              <p>
                 {{ filtro ? 'Nenhum cliente encontrado para a busca.' : 'Nenhum cliente com contrato.' }}
               </p>
             </div>
-            <div v-else class="space-y-2">
+
+            <div v-else class="contratos-list__grupo-list">
               <div
                 v-for="grupo in rowsToShow"
                 :key="grupo.clienteId"
-                class="rounded-xl border border-border-ui bg-bg-page px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+                class="contratos-list__grupo-row"
               >
-                <div class="flex items-center gap-3 min-w-0">
-                  <div
-                    class="w-10 h-10 rounded-lg bg-bg-card border border-border-ui flex items-center justify-center text-text-main font-black text-sm flex-shrink-0"
-                  >
+                <div class="contratos-list__grupo-identity">
+                  <div class="contratos-list__grupo-count">
                     {{ grupo.contratos.length }}
                   </div>
-                  <div class="min-w-0">
-                    <p class="text-sm font-black text-text-main uppercase tracking-tight truncate">
-                      {{ grupo.clienteNome }}
-                    </p>
-                    <p class="text-[10px] font-bold text-text-soft uppercase tracking-wider">
+                  <div class="contratos-list__grupo-copy">
+                    <span class="contratos-list__grupo-primary">{{ grupo.clienteNome }}</span>
+                    <span class="contratos-list__grupo-secondary">
                       {{ grupo.contratos.length }} contrato(s) · {{ format.currency(grupo.total) }}
-                    </p>
+                    </span>
                   </div>
                 </div>
                 <Button
                   variant="secondary"
                   size="sm"
-                  class="flex-shrink-0 rounded-xl font-black uppercase tracking-wider text-[10px]"
                   @click="router.push(`/contratos/cliente/${grupo.clienteId}`)"
                 >
                   <i class="pi pi-list mr-1" />
@@ -113,8 +95,8 @@
                 </Button>
               </div>
               <TablePagination
-                flush
                 v-if="total > 0"
+                flush
                 :page="page"
                 :page-size="pageSize"
                 :total="total"
@@ -124,8 +106,8 @@
           </div>
         </template>
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
@@ -169,19 +151,21 @@ const gruposFiltrados = computed(() => {
   return grupos.value.filter((g) => (g.clienteNome || '').toLowerCase().includes(termo))
 })
 
-const { page, setPage, total, totalPages, pageSize, rowsToShow } = usePagination(
-  gruposFiltrados,
-  { pageSize: 15 },
-)
+const { page, setPage, total, pageSize, rowsToShow } = usePagination(gruposFiltrados, { pageSize: 15 })
 watch(filtro, () => setPage(1))
 
 const valorTotalGeral = computed(() =>
-  contratos.value.reduce((acc, c) => acc + Number(c.valor || 0), 0)
+  contratos.value.reduce((acc, c) => acc + Number(c.valor || 0), 0),
 )
 
 const valorTotalLista = computed(() =>
-  gruposFiltrados.value.reduce((acc, g) => acc + Number(g.total || 0), 0)
+  gruposFiltrados.value.reduce((acc, g) => acc + Number(g.total || 0), 0),
 )
+
+const resumo = computed(() => ({
+  vigentes: contratos.value.filter((c) => String(c.status).toUpperCase() === 'VIGENTE').length,
+  encerrados: contratos.value.filter((c) => String(c.status).toUpperCase() === 'ENCERRADO').length,
+}))
 
 async function carregar() {
   if (!can('contratos.ver')) return notify.error('Acesso negado.')
@@ -205,3 +189,174 @@ onMounted(async () => {
   await carregar()
 })
 </script>
+
+<style scoped>
+.contratos-list {
+  min-height: 100%;
+  background: var(--ds-color-surface);
+  font-family: var(--ds-font-sans);
+}
+
+.contratos-list__summary-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+  align-items: flex-end;
+  padding: 0.65rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--ds-color-border);
+  background: color-mix(in srgb, var(--ds-color-page) 50%, transparent);
+}
+
+.contratos-list__summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 7.5rem;
+}
+
+.contratos-list__summary-label {
+  color: var(--ds-color-text-soft);
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.contratos-list__summary-value {
+  color: var(--ds-color-text);
+  font-size: 1.05rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.contratos-list__summary-value--accent {
+  color: var(--ds-color-primary);
+}
+
+.contratos-list__clientes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.contratos-list__eyebrow {
+  color: var(--ds-color-text-faint);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.contratos-list__total-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--ds-color-border);
+  background: color-mix(in srgb, var(--ds-color-page) 50%, transparent);
+}
+
+.contratos-list__total-label {
+  color: var(--ds-color-text-soft);
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.contratos-list__total-value {
+  color: var(--ds-color-text);
+  font-size: 1.1rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.contratos-list__empty {
+  padding: 3rem 1rem;
+  text-align: center;
+  border-radius: 0.75rem;
+  border: 1px solid var(--ds-color-border);
+  background: var(--ds-color-page);
+  color: var(--ds-color-text-soft);
+  font-size: 0.875rem;
+}
+
+.contratos-list__grupo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.contratos-list__grupo-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 0.25rem;
+  border-bottom: 1px solid var(--ds-color-border);
+  transition: background-color 0.18s ease;
+}
+
+.contratos-list__grupo-row:last-child {
+  border-bottom: none;
+}
+
+.contratos-list__grupo-row:hover {
+  background: color-mix(in srgb, var(--ds-color-primary) 4%, transparent);
+}
+
+.contratos-list__grupo-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.contratos-list__grupo-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--ds-color-border);
+  background: var(--ds-color-surface);
+  color: var(--ds-color-text);
+  font-size: 0.875rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.contratos-list__grupo-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.contratos-list__grupo-primary {
+  color: var(--ds-color-text);
+  font-size: 0.92rem;
+  font-weight: 540;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contratos-list__grupo-secondary {
+  color: var(--ds-color-text-faint);
+  font-size: 0.72rem;
+  font-weight: 430;
+  line-height: 1.45;
+}
+
+@media (max-width: 768px) {
+  .contratos-list__grupo-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+</style>

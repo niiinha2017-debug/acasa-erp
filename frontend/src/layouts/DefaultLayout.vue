@@ -1,30 +1,38 @@
 <template>
-  <div class="default-layout h-screen w-screen overflow-hidden flex flex-col bg-bg-card text-text-main transition-colors duration-300">
+  <div
+    class="default-layout h-screen w-screen overflow-hidden flex flex-col bg-bg-card text-text-main transition-colors duration-300"
+    :class="{
+      'default-layout--compact-chrome': isCompactChrome,
+      'default-layout--planta2d-immersive': hideChromeMedicaoImmersivo,
+    }"
+  >
     <!-- Header unificado: Menu + Abas (mesma cor de fundo, sem espaço entre eles) -->
-    <header class="flex-shrink-0 flex flex-col bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-700/80 shadow-sm pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
+    <header
+      v-show="!hideChromeMedicaoImmersivo"
+      class="default-layout__header flex-shrink-0 flex flex-col pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]"
+      :class="{ 'default-layout__header--compact': isCompactChrome }"
+    >
       <Menu />
       <!-- Barra de abas colada ao Menu -->
-      <div class="border-t border-slate-200/60 dark:border-slate-700/60">
-        <div class="px-2 sm:px-4 md:px-6 overflow-x-auto custom-scroll -mb-px">
-          <div class="flex items-center gap-1 sm:gap-1.5 py-2 sm:py-2.5 min-w-max">
+      <div v-if="showTabs" class="ds-tab-strip" :class="{ 'ds-tab-strip--compact': isCompactChrome }">
+        <div class="ds-tab-strip__scroller overflow-x-auto custom-scroll -mb-px">
+          <div class="ds-tab-strip__tabs flex items-center min-w-max">
             <div
               v-for="(tab, index) in openTabs"
               :key="tab.key"
-              class="group flex items-center gap-0 rounded-lg text-xs font-medium transition-all duration-200 overflow-hidden min-w-0 max-w-[140px] sm:max-w-[180px] md:max-w-[220px]"
-              :class="activeTabId === tab.key
-                ? 'bg-brand-primary/12 dark:bg-brand-primary/20 text-brand-primary dark:text-brand-primary shadow-sm ring-1 ring-brand-primary/25 dark:ring-brand-primary/30'
-                : 'bg-slate-100/80 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-200/80 dark:hover:bg-slate-700/80 hover:text-slate-800 dark:hover:text-slate-200'"
+              class="ds-tab-chip group text-xs font-medium"
+              :class="{ 'is-active': activeTabId === tab.key }"
             >
               <button
                 type="button"
-                class="flex-1 px-3 py-2 text-left truncate focus:outline-none focus:ring-0"
+                class="ds-tab-chip__button flex-1 text-left truncate focus:outline-none focus:ring-0"
                 @click="goToTab(tab)"
               >
                 {{ tab.title }}
               </button>
               <button
                 type="button"
-                class="flex-shrink-0 p-1.5 rounded-md transition-colors text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-600/50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                class="ds-tab-chip__close flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                 :disabled="openTabs.length <= 1"
                 aria-label="Fechar aba"
                 @click="closeTab(tab, index)"
@@ -37,7 +45,13 @@
       </div>
     </header>
     <!-- Área de conteúdo: único scroll da página -->
-    <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden bg-bg-card pb-[env(safe-area-inset-bottom)]">
+    <div
+      class="default-layout__content flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-[env(safe-area-inset-bottom)]"
+      :class="{
+        'default-layout__content--immersive': isMedicaoFinaFullscreen,
+        'default-layout__content--planta2d-chrome': hideChromeMedicaoImmersivo,
+      }"
+    >
       <PageShell :contained="false" :padded="false">
         <slot />
       </PageShell>
@@ -51,9 +65,28 @@ import { useRoute, useRouter } from 'vue-router'
 import Menu from '@/layouts/Menu.vue'
 import PageShell from '@/components/ui/PageShell.vue'
 import { NAV_SCHEMA } from '@/services/navigation'
+import { medicaoPlanta2dFullscreen } from '@/shared/medicao-planta-chrome'
+import { medicaoProjetoTecnicoImmersivo } from '@/shared/medicao-projeto-tecnico-chrome'
 
 const route = useRoute()
 const router = useRouter()
+const isAgendaFullscreen = computed(() => {
+  const p = route.path
+  return p === '/agendamentos' || p.startsWith('/agendamentos/')
+})
+/** Croqui / medição fina: máximo espaço vertical, sem barra de abas. */
+const isMedicaoFinaFullscreen = computed(() => {
+  const p = route.path
+  return p === '/medicao-fina' || p.startsWith('/medicao-fina/')
+})
+/** Menu + abas ocultos: planta 2D em obra ou modo Projeto Técnico (split 2D/3D). */
+const hideChromeMedicaoImmersivo = computed(
+  () =>
+    isMedicaoFinaFullscreen.value &&
+    (medicaoPlanta2dFullscreen.value || medicaoProjetoTecnicoImmersivo.value),
+)
+const isCompactChrome = computed(() => isAgendaFullscreen.value || isMedicaoFinaFullscreen.value)
+const showTabs = computed(() => !isAgendaFullscreen.value && !isMedicaoFinaFullscreen.value)
 const openTabs = ref([])
 const tabSeq = ref(0)
 const activeTabId = ref('')
@@ -145,18 +178,8 @@ function splitRouteTo(to) {
 }
 
 function resolveTabTitle(currentRoute) {
-  if (currentRoute?.path === '/agendamentos/loja') {
-    return 'Agenda Loja'
-  }
-  if (currentRoute?.path === '/agendamentos/fabrica') {
-    return 'Agenda Fábrica'
-  }
-  if (currentRoute?.path === '/agendamentos') {
-    const visao = String(currentRoute?.query?.visao || '').toUpperCase()
-    if (visao === 'GERAL') return 'Agenda Geral'
-    if (visao === 'LOJA') return 'Agenda Loja'
-    if (visao === 'FABRICA' || visao === 'PRODUCAO') return 'Agenda Fábrica'
-    return 'Agenda Loja'
+  if (currentRoute?.path === '/agendamentos' || currentRoute?.path === '/agenda-geral') {
+    return 'Agenda Operacional'
   }
 
   let candidate = null

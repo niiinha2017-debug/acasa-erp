@@ -1,21 +1,25 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
+  <PageShell :padded="false">
+    <section class="funcionarios-list animate-page-in">
       <PageHeader
         title="Equipe"
-        subtitle="Gestão de capital humano e colaboradores"
-        icon="pi pi-users"
-        :show-back="false"
+        subtitle="Gestão de capital humano, acessos e custos da operação"
+        icon="pi pi-id-card"
       >
         <template #actions>
-          <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:ml-auto">
+          <div class="funcionarios-list__actions">
+            <div class="funcionarios-list__search">
+              <SearchInput
+                v-model="filtro"
+                placeholder="Buscar colaborador, documento, cargo, setor ou unidade..."
+              />
+            </div>
+
             <div
               v-if="selectedCount"
-              class="flex items-center gap-2 w-full sm:w-auto order-3 justify-start sm:justify-end"
+              class="funcionarios-list__bulk-actions"
             >
-              <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              <span class="funcionarios-list__bulk-count">
                 {{ selectedCount }} selecionado(s)
               </span>
               <Button
@@ -23,142 +27,114 @@
                 size="sm"
                 :loading="pdfLoading"
                 @click="gerarPdfSelecionados"
-                class="text-text-soft hover:text-rose-600 hover:bg-rose-500/10"
               >
-                <i class="pi pi-file-pdf"></i>
-                PDF
+                <i class="pi pi-image"></i>
+                PNG
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                :loading="bulkDeleting"
-                @click="confirmarExcluirSelecionados"
-                class="text-text-soft hover:text-rose-500 hover:bg-rose-500/10"
-              >
-                <i class="pi pi-trash"></i>
-                Excluir
-              </Button>
-            </div>
-
-            <div class="flex-1 sm:flex-initial sm:w-56 min-w-0 order-1 sm:order-1">
-              <SearchInput
-                v-model="filtro"
-                placeholder="Buscar..."
-              />
             </div>
 
             <Button
-              class="order-2 sm:order-2"
               v-if="can('funcionarios.criar')"
               variant="primary"
               @click="novo"
             >
-              <i class="pi pi-plus mr-2"></i>
+              <i class="pi pi-plus"></i>
               Novo Colaborador
             </Button>
           </div>
         </template>
       </PageHeader>
 
-      <div class="pb-5 md:pb-6 pt-4 border-t border-border-ui">
+      <div class="funcionarios-list__content">
         <Table
-            :columns="columns"
-            :rows="rowsToShow"
-            :loading="loading"
-            empty-text="Nenhum colaborador encontrado."
-            :boxed="false"
-            :flush="true"
-          >
-            <template #cell-nome="{ row }">
-              <div class="flex items-center gap-3 py-1">
+          :columns="columns"
+          :rows="rows"
+          :loading="loading"
+          empty-text="Nenhum colaborador encontrado."
+          :boxed="false"
+          :flush="false"
+        >
+          <template #cell-nome="{ row }">
+            <div class="funcionarios-list__identity">
+              <CustomCheckbox
+                :modelValue="isSelected(row.id)"
+                @update:modelValue="toggle(row.id)"
+                label=""
+                class="funcionarios-list__checkbox"
+              />
 
-                <CustomCheckbox
-                  :modelValue="isSelected(row.id)"
-                  @update:modelValue="toggle(row.id)"
-                  label=""
-                  class="scale-90"
-                />
-                <div class="flex flex-col">
-                  <span class="text-sm font-bold text-slate-800 uppercase tracking-tight">{{ row.nome }}</span>
-                  <span class="text-[10px] font-medium text-slate-500">
-                    {{ row.cpf ? maskCPF(row.cpf) : '000.000.000-00' }}
-                    <span v-if="row.rg" class="ml-2 text-slate-400">RG: {{ maskRG(row.rg) }}</span>
-                  </span>
-                </div>
+              <div class="funcionarios-list__initials">
+                {{ row.iniciais }}
               </div>
-            </template>
 
-            <template #cell-cargo="{ row }">
-              <div class="flex flex-col">
-                <span class="text-sm font-medium text-slate-700 uppercase">{{ row.cargo }}</span>
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{{ row.setor }}</span>
+              <div class="funcionarios-list__identity-copy">
+                <span class="funcionarios-list__primary">
+                  {{ row.nome }}
+                </span>
+                <span class="funcionarios-list__secondary">
+                  {{ row.cpf_formatado || 'Sem CPF' }}
+                  <span v-if="row.rg_formatado" class="funcionarios-list__secondary-detail">RG: {{ row.rg_formatado }}</span>
+                </span>
               </div>
-            </template>
+            </div>
+          </template>
 
-            <template #cell-unidade="{ row }">
-              <span class="text-[11px] font-black text-slate-600 uppercase tracking-wider">
-                {{ row.unidade || '-' }}
-              </span>
-            </template>
+          <template #cell-cargo="{ row }">
+            <div class="funcionarios-list__stack">
+              <span class="funcionarios-list__primary">{{ row.cargo || '-' }}</span>
+              <span class="funcionarios-list__secondary">{{ row.setor || 'Sem setor' }}</span>
+            </div>
+          </template>
 
-            <template #cell-status="{ row }">
-              <span
-                class="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
-                :class="row.status_acesso === 'Pendente de Senha' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' : (row.status_acesso === 'Ativo' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300')"
+          <template #cell-unidade="{ row }">
+            <div class="funcionarios-list__stack">
+              <span class="funcionarios-list__primary">{{ row.unidade || '-' }}</span>
+              <span class="funcionarios-list__secondary">{{ row.setor_resumo }}</span>
+            </div>
+          </template>
+
+          <template #cell-contato="{ row }">
+            <div class="funcionarios-list__stack">
+              <span class="funcionarios-list__primary">{{ row.contato_principal }}</span>
+              <span class="funcionarios-list__secondary">{{ row.contato_secundario }}</span>
+            </div>
+          </template>
+
+          <template #cell-status="{ row }">
+            <span
+              class="ds-status-pill"
+              :class="row.status_class"
+            >
+              {{ row.status_label }}
+            </span>
+          </template>
+
+          <template #cell-acoes="{ row }">
+            <div class="funcionarios-list__row-actions">
+              <button
+                v-if="can('funcionarios.editar')"
+                type="button"
+                class="funcionarios-list__action-btn"
+                @click="editar(row.id)"
               >
-                {{ row.status_acesso ?? getStatus(row) }}
-              </span>
-            </template>
+                <i class="pi pi-pencil"></i>
+                Editar
+              </button>
 
-            <template #cell-custo_total_mensal="{ row }">
-              <span v-if="row.custo_total_mensal != null" class="text-[11px] font-semibold text-slate-700 tabular-nums">
-                R$ {{ formatCusto(row.custo_total_mensal) }}
-              </span>
-              <span v-else class="text-[10px] text-slate-400">–</span>
-            </template>
-
-            <template #cell-acoes="{ row }">
-              <div class="flex flex-row justify-end gap-1.5 flex-nowrap items-center min-h-[36px] w-full">
-                <button
-                  v-if="can('funcionarios.ver')"
-                  @click="abrirArquivos(row)"
-                  class="h-8 px-2.5 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-200 flex items-center gap-1.5 transition-colors text-[11px] font-medium whitespace-nowrap shrink-0"
-                >
-                  <i class="pi pi-paperclip text-[12px]"></i>
-                  Documentos
-                </button>
-
-                <button
-                  v-if="can('funcionarios.editar')"
-                  @click="reenviarSenhaProvisoria(row)"
-                  class="h-8 px-2.5 rounded-lg text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/20 flex items-center gap-1.5 transition-colors text-[11px] font-medium whitespace-nowrap shrink-0"
-                >
-                  <i class="pi pi-envelope text-[12px]"></i>
-                  Reenviar senha
-                </button>
-
-                <button
-                  v-if="can('funcionarios.editar')"
-                  @click="editar(row.id)"
-                  class="h-8 px-2.5 rounded-lg text-slate-500 hover:text-brand-primary hover:bg-brand-primary/10 flex items-center gap-1.5 transition-colors text-[11px] font-medium whitespace-nowrap shrink-0"
-                >
-                  <i class="pi pi-pencil text-[12px]"></i>
-                  Editar
-                </button>
-
-                <button
-                  v-if="can('funcionarios.excluir')"
-                  @click="confirmarExcluirFuncionario(row)"
-                  class="h-8 px-2.5 rounded-lg text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 flex items-center gap-1.5 transition-colors text-[11px] font-medium whitespace-nowrap shrink-0"
-                >
-                  <i class="pi pi-trash text-[12px]"></i>
-                  Excluir
-                </button>
-              </div>
-            </template>
+              <button
+                v-if="can('funcionarios.excluir')"
+                type="button"
+                class="funcionarios-list__action-btn funcionarios-list__action-btn--danger"
+                @click="confirmarExcluirFuncionario(row)"
+              >
+                <i class="pi pi-trash"></i>
+                Excluir
+              </button>
+            </div>
+          </template>
         </Table>
+
         <TablePagination
-          flush
           v-if="total > 0"
           :page="page"
           :page-size="pageSize"
@@ -166,18 +142,9 @@
           @update:page="setPage"
         />
       </div>
-    </div>
+    </section>
 
-    <ArquivosModal
-      v-if="arquivosModalOpen"
-      :open="arquivosModalOpen"
-      ownerType="FUNCIONARIO"
-      :ownerId="arquivosFuncionario?.id"
-      :canManage="can('funcionarios.editar')"
-      @close="arquivosModalOpen = false"
-    />
-
-    <!-- Modal PDF no mesmo template (evita quebrar navegação no Tauri) -->
+    <!-- Modal de exportação no mesmo template (evita quebrar navegação no Tauri) -->
     <Teleport to="body">
       <Transition name="modal-bounce">
         <div
@@ -188,8 +155,8 @@
           <div class="w-full max-w-5xl h-[90vh] bg-white dark:bg-slate-900 rounded-3xl border border-border-ui overflow-hidden flex flex-col shadow-2xl">
             <header class="flex items-center justify-between px-6 py-4 border-b border-border-ui bg-slate-50 dark:bg-slate-800/50 flex-shrink-0">
               <h3 class="text-sm font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-2">
-                <i class="pi pi-file-pdf text-rose-500"></i>
-                Relatório PDF – Funcionários
+                <i class="pi pi-image text-emerald-500"></i>
+                Relatório de Funcionários
               </h3>
               <button
                 type="button"
@@ -205,7 +172,7 @@
                 v-if="pdfModalLoading"
                 class="flex-1 flex items-center justify-center text-[11px] font-black uppercase tracking-widest text-slate-400"
               >
-                Carregando PDF...
+                Carregando imagem...
               </div>
               <div
                 v-else-if="pdfModalError"
@@ -213,18 +180,28 @@
               >
                 {{ pdfModalError }}
               </div>
+              <div
+                v-else-if="previewKind === 'image' && pdfBlobUrl"
+                class="flex-1 min-h-0 overflow-auto bg-slate-100 dark:bg-slate-900 p-6"
+              >
+                <img
+                  :src="pdfBlobUrl"
+                  class="mx-auto max-w-full h-auto rounded-2xl border border-border-ui bg-white shadow-sm"
+                  alt="Relatório de funcionários"
+                >
+              </div>
               <iframe
                 v-else-if="pdfBlobUrl"
                 :src="pdfBlobUrl"
                 class="w-full h-full border-0 flex-1 min-h-0"
-                title="PDF Funcionários"
+                title="Relatório Funcionários"
               />
             </div>
           </div>
         </div>
       </Transition>
     </Teleport>
-  </div>
+  </PageShell>
 </template>
 
 <script setup>
@@ -235,7 +212,6 @@ import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
 import { onlyNumbers, maskCPF, maskRG } from '@/utils/masks'
-import ArquivosModal from '@/components/modals/ArquivosModal.vue'
 import { usePagination } from '@/composables/usePagination'
 
 
@@ -246,27 +222,22 @@ const loading = ref(true)
 const filtro = ref('')
 const funcionarios = ref([])
 const selectedIds = ref(new Set())
-const arquivosModalOpen = ref(false)
-const arquivosFuncionario = ref(null)
 const pdfLoading = ref(false)
-const bulkDeleting = ref(false)
 const pdfModalOpen = ref(false)
 const pdfBlobUrl = ref('')
 const pdfModalLoading = ref(false)
 const pdfModalError = ref('')
-
-const isAdmin = computed(() => can('ADMIN'))
+const previewKind = ref('image')
 
 const columns = computed(() => {
-  const base = [
-    { key: 'nome', label: 'FUNCIONÁRIO', width: '38%' },
-    { key: 'cargo', label: 'CARGO / SETOR', width: '22%' },
-    { key: 'unidade', label: 'UNIDADE', width: '12%' },
-    { key: 'status', label: 'STATUS', width: '10%' },
-    ...(isAdmin.value ? [{ key: 'custo_total_mensal', label: 'CUSTO TOTAL', width: '12%' }] : []),
-    { key: 'acoes', label: '', align: 'right', width: '26%' }
+  return [
+    { key: 'nome', label: 'Colaborador', width: '27%' },
+    { key: 'cargo', label: 'Cargo', width: '17%' },
+    { key: 'unidade', label: 'Unidade', width: '14%' },
+    { key: 'contato', label: 'Contato', width: '22%' },
+    { key: 'status', label: 'Acesso', align: 'center', width: '8%' },
+    { key: 'acoes', label: 'Acoes', align: 'center', width: '12%' },
   ]
-  return base
 })
 
 function toggle(id) {
@@ -289,12 +260,6 @@ function getStatus(row) {
   const s = normUpper(row?.status)
   if (s === 'ATIVO' || s === 'INATIVO') return s
   return 'INATIVO'
-}
-
-function formatCusto(value) {
-  if (value == null || Number.isNaN(Number(value))) return '–'
-  const n = Number(value)
-  return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 const funcionariosFiltrados = computed(() => {
@@ -351,6 +316,37 @@ const { page, setPage, total, totalPages, pageSize, rowsToShow } = usePagination
 )
 watch(filtro, () => setPage(1))
 
+function getStatusLabel(row) {
+  return row?.status_acesso ?? getStatus(row)
+}
+
+function getStatusClass(status) {
+  if (status === 'Pendente de Senha') return 'ds-status-pill--warning'
+  if (status === 'Ativo' || status === 'ATIVO') return 'ds-status-pill--success'
+  return 'ds-status-pill--neutral'
+}
+
+const rows = computed(() =>
+  rowsToShow.value.map((row) => {
+    const nome = String(row.nome || '-').trim() || '-'
+    const partes = nome.split(/\s+/).filter(Boolean)
+    const iniciais = (partes[0]?.[0] || '') + (partes[1]?.[0] || partes[0]?.[1] || '')
+    const statusLabel = getStatusLabel(row)
+
+    return {
+      ...row,
+      iniciais: String(iniciais || '?').toUpperCase(),
+      cpf_formatado: row.cpf ? maskCPF(row.cpf) : '',
+      rg_formatado: row.rg ? maskRG(row.rg) : '',
+      setor_resumo: row.setor || 'Sem setor',
+      contato_principal: row.email || row.whatsapp || row.telefone || 'Sem contato cadastrado',
+      contato_secundario: row.whatsapp || row.telefone || 'Sem telefone cadastrado',
+      status_label: statusLabel,
+      status_class: getStatusClass(statusLabel),
+    }
+  }),
+)
+
 async function carregar() {
   loading.value = true
   try {
@@ -384,12 +380,6 @@ async function novo() {
   router.push('/funcionarios/novo')
 }
 
-function abrirArquivos(row) {
-  if (!can('funcionarios.ver')) return notify.error('Acesso negado.')
-  arquivosFuncionario.value = row
-  arquivosModalOpen.value = true
-}
-
 const editar = (id) => {
 
   if (!can('funcionarios.editar')) return notify.error('Acesso negado.')
@@ -417,18 +407,6 @@ async function excluir(row) {
   }
 }
 
-async function reenviarSenhaProvisoria(row) {
-  if (!can('funcionarios.editar')) return notify.error('Acesso negado.')
-
-    try {
-    await FuncionarioService.reenviarSenhaProvisoria(row.id)
-    notify.success('Senha provisória reenviada com sucesso.')
-  } catch (err) {
-
-    notify.error('Erro ao reenviar senha provisória.')
-  }
-}
-
 onMounted(carregar)
 
 onBeforeUnmount(() => {
@@ -441,6 +419,7 @@ function fecharPdfModal() {
     pdfBlobUrl.value = ''
   }
   pdfModalError.value = ''
+  previewKind.value = 'image'
   pdfModalOpen.value = false
 }
 
@@ -452,12 +431,12 @@ async function gerarPdfSelecionados() {
   pdfModalError.value = ''
   try {
     const ids = Array.from(selectedIds.value)
-    const resp = await FuncionarioService.gerarPdf(ids)
+    const resp = await FuncionarioService.gerarPdf(ids, 'png')
     const data = resp?.data || resp
     const arquivoId = data?.arquivoId || data?.arquivo_id
 
     if (!arquivoId) {
-      notify.error('Não foi possível gerar o PDF agora.')
+      notify.error('Não foi possível gerar a imagem agora.')
       return
     }
 
@@ -469,44 +448,476 @@ async function gerarPdfSelecionados() {
     }
     try {
       const res = await ArquivosService.baixarBlob(arquivoId)
-      const contentType = String(res?.headers?.['content-type'] || 'application/pdf')
+      const contentType = String(res?.headers?.['content-type'] || 'image/png')
       const blob = new Blob([res.data], { type: contentType })
+      previewKind.value = contentType.startsWith('image/') ? 'image' : 'document'
       pdfBlobUrl.value = URL.createObjectURL(blob)
     } catch (e) {
       console.error(e)
-      pdfModalError.value = 'Falha ao carregar o PDF.'
-      notify.error('Falha ao carregar o PDF.')
+      pdfModalError.value = 'Falha ao carregar a imagem.'
+      notify.error('Falha ao carregar a imagem.')
     } finally {
       pdfModalLoading.value = false
     }
   } catch (e) {
-    notify.error(e?.response?.data?.message || 'Erro ao gerar PDF.')
+    notify.error(e?.response?.data?.message || 'Erro ao gerar imagem.')
   } finally {
     pdfLoading.value = false
   }
 }
+</script>
 
-async function confirmarExcluirSelecionados() {
-  if (!selectedCount.value) return notify.warn('Selecione pelo menos 1 funcionário.')
-  if (!can('funcionarios.excluir')) return notify.error('Acesso negado.')
+<style scoped>
+.funcionarios-list {
+  min-height: 100%;
+  background: var(--ds-color-surface);
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
 
-  const ok = await confirm.show(
-    'Excluir selecionados',
-    `Deseja remover ${selectedCount.value} funcionário(s)? Esta ação não pode ser desfeita.`,
-  )
-  if (!ok) return
+.funcionarios-list :deep(.ds-shell-card) {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  backdrop-filter: none;
+}
 
-  bulkDeleting.value = true
-  try {
-    const ids = Array.from(selectedIds.value)
-    await Promise.all(ids.map((id) => FuncionarioService.remover(id)))
-    funcionarios.value = (funcionarios.value || []).filter((f) => !selectedIds.value.has(f.id))
-    selectedIds.value = new Set()
-    notify.success('Registros removidos.')
-  } catch (e) {
-    notify.error(e?.response?.data?.message || 'Erro ao excluir selecionados.')
-  } finally {
-    bulkDeleting.value = false
+.funcionarios-list :deep(.ds-header-block) {
+  padding-top: 1.25rem;
+  padding-bottom: 1rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 768px) {
+  .funcionarios-list :deep(.ds-header-block) {
+    padding-top: 1.6rem;
+    padding-bottom: 1.15rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
   }
 }
-</script>
+
+@media (min-width: 1024px) {
+  .funcionarios-list :deep(.ds-header-block) {
+    padding-top: 1.85rem;
+    padding-bottom: 1.25rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+.funcionarios-list :deep(.ds-header-title) {
+  font-size: clamp(1.48rem, 1.1rem + 0.7vw, 2rem);
+  font-weight: 620;
+  letter-spacing: -0.03em;
+}
+
+.funcionarios-list :deep(.ds-header-subtitle) {
+  max-width: 40rem;
+  color: var(--ds-color-text-faint);
+  font-size: 0.84rem;
+  font-weight: 430;
+}
+
+.funcionarios-list :deep(.ds-header-icon) {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 999px;
+  border-color: rgba(214, 224, 234, 0.7);
+  background: transparent;
+  color: var(--ds-color-primary);
+  font-size: 0.92rem;
+  box-shadow: none;
+}
+
+.dark .funcionarios-list :deep(.ds-header-icon) {
+  border-color: rgba(51, 71, 102, 0.72);
+  background: transparent;
+}
+
+.funcionarios-list__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.85rem;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.funcionarios-list__search {
+  width: 100%;
+  order: 1;
+}
+
+.funcionarios-list__bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.funcionarios-list__bulk-count {
+  color: var(--ds-color-text-faint);
+  font-size: 0.7rem;
+  font-weight: 520;
+}
+
+.funcionarios-list :deep(.ds-search-shell) {
+  position: relative;
+}
+
+.funcionarios-list :deep(.ds-search-input) {
+  height: 2.7rem;
+  border-top: 0;
+  border-left: 0;
+  border-right: 0;
+  border-bottom-width: 1px;
+  border-radius: 0;
+  border-color: rgba(214, 224, 234, 0.92);
+  background: transparent;
+  box-shadow: none;
+  padding-left: 1.9rem;
+  padding-right: 0.25rem;
+  font-size: 0.88rem;
+  color: var(--ds-color-text);
+  position: relative;
+  z-index: 1;
+}
+
+.dark .funcionarios-list :deep(.ds-search-input) {
+  border-color: rgba(51, 71, 102, 0.84);
+  background: transparent;
+}
+
+.funcionarios-list :deep(.ds-search-input::placeholder) {
+  color: var(--ds-color-text-faint);
+  font-size: 0.84rem;
+  font-weight: 400;
+}
+
+.funcionarios-list :deep(.ds-search-input:hover) {
+  border-color: rgba(188, 203, 221, 0.96);
+}
+
+.funcionarios-list :deep(.ds-search-input:focus) {
+  border-color: rgba(44, 111, 163, 0.28);
+  box-shadow: none;
+}
+
+.funcionarios-list :deep(.ds-search-icon) {
+  position: absolute;
+  top: 50%;
+  left: 0.35rem;
+  transform: translateY(-50%);
+  z-index: 2;
+  color: var(--ds-color-primary);
+  opacity: 1;
+  pointer-events: none;
+}
+
+.funcionarios-list :deep(.ds-search-action--clear) {
+  right: 0;
+}
+
+.funcionarios-list :deep(.ds-btn--primary) {
+  min-height: 2.55rem;
+  padding-inline: 1rem;
+  border-radius: 0.9rem;
+  box-shadow: none;
+  filter: none;
+}
+
+@media (min-width: 640px) {
+  .funcionarios-list__search {
+    width: 19rem;
+    order: 0;
+  }
+}
+
+.funcionarios-list__content {
+  width: min(100%, 1460px);
+  margin-inline: auto;
+  padding: 0.2rem 0.65rem 1.5rem;
+}
+
+.funcionarios-list :deep(.ds-table__element) {
+  table-layout: fixed;
+  min-width: 1120px;
+}
+
+.funcionarios-list :deep(.ds-table-head-row) {
+  background: transparent;
+  border-bottom-color: rgba(214, 224, 234, 0.55);
+}
+
+.funcionarios-list :deep(.ds-table__head-cell) {
+  padding-top: 0.62rem;
+  padding-bottom: 0.45rem;
+  color: var(--ds-color-text-faint);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  white-space: normal;
+}
+
+.funcionarios-list :deep(.ds-table__head-cell:last-child),
+.funcionarios-list :deep(.ds-table__cell:last-child) {
+  padding-right: 0.75rem;
+}
+
+.funcionarios-list :deep(.ds-table__cell) {
+  padding-top: 0.64rem;
+  padding-bottom: 0.64rem;
+  border-bottom: 1px solid rgba(214, 224, 234, 0.42);
+}
+
+.funcionarios-list :deep(.ds-table__head-cell),
+.funcionarios-list :deep(.ds-table__cell) {
+  padding-left: 0.72rem;
+  padding-right: 0.72rem;
+}
+
+.funcionarios-list :deep(.ds-table__head-cell:last-child),
+.funcionarios-list :deep(.ds-table__cell:last-child) {
+  text-align: center;
+}
+
+.funcionarios-list :deep(.ds-table__row:hover) {
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.dark .funcionarios-list :deep(.ds-table__row:hover) {
+  background: rgba(18, 30, 49, 0.32);
+}
+
+.funcionarios-list :deep(.ds-table__row:hover td:first-child) {
+  box-shadow: inset 2px 0 0 0 rgba(188, 203, 221, 0.9);
+}
+
+.funcionarios-list :deep(.ds-table-pagination) {
+  padding-inline: 1rem;
+}
+
+@media (min-width: 768px) {
+  .funcionarios-list :deep(.ds-table-pagination) {
+    padding-inline: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .funcionarios-list :deep(.ds-table-pagination) {
+    padding-inline: 2rem;
+  }
+}
+
+.funcionarios-list__identity {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.funcionarios-list__checkbox {
+  flex-shrink: 0;
+}
+
+.funcionarios-list__initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(214, 224, 234, 0.78);
+  background: rgba(245, 248, 251, 0.9);
+  color: var(--ds-color-text-faint);
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+}
+
+.dark .funcionarios-list__initials {
+  background: rgba(18, 30, 49, 0.62);
+  border-color: rgba(51, 71, 102, 0.76);
+}
+
+.funcionarios-list__identity-copy,
+.funcionarios-list__stack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.funcionarios-list__primary {
+  color: var(--ds-color-text);
+  font-size: 0.92rem;
+  font-weight: 540;
+  line-height: 1.4;
+  text-transform: none;
+  letter-spacing: -0.01em;
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.funcionarios-list__secondary {
+  color: var(--ds-color-text-faint);
+  font-size: 0.72rem;
+  font-weight: 430;
+  line-height: 1.45;
+  text-transform: none;
+  letter-spacing: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.funcionarios-list__secondary-detail {
+  margin-left: 0.5rem;
+}
+
+.funcionarios-list__row-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  flex-wrap: nowrap;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.funcionarios-list__action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 1.95rem;
+  padding-inline: 0.55rem;
+  border: 1px solid rgba(214, 224, 234, 0.82);
+  border-radius: 0.7rem;
+  color: var(--ds-color-text-soft);
+  font-size: 0.68rem;
+  font-weight: 600;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+  flex-shrink: 0;
+}
+
+.funcionarios-list__action-btn:hover {
+  border-color: rgba(44, 111, 163, 0.24);
+  color: var(--ds-color-primary);
+  background: rgba(44, 111, 163, 0.05);
+}
+
+.funcionarios-list__action-btn--danger:hover {
+  border-color: rgba(244, 63, 94, 0.2);
+  color: #e11d48;
+  background: rgba(244, 63, 94, 0.06);
+}
+
+.funcionarios-list :deep(.ds-status-pill) {
+  max-width: 100%;
+  justify-content: center;
+  padding-inline: 0.55rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.05em;
+}
+
+.funcionarios-list :deep(.ds-table__scroll) {
+  overflow-x: auto;
+}
+
+.funcionarios-list :deep(.ds-checkbox) {
+  padding-left: 0;
+  padding-right: 0;
+  border-radius: 0;
+  gap: 0.55rem;
+}
+
+.funcionarios-list :deep(.ds-checkbox:hover) {
+  background: transparent;
+  border-color: transparent;
+}
+
+.funcionarios-list :deep(.ds-checkbox__box) {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+}
+
+@media (max-width: 1280px) {
+  .funcionarios-list__content {
+    width: 100%;
+    padding-inline: 0.9rem;
+  }
+
+  .funcionarios-list :deep(.ds-table__element) {
+    min-width: 1000px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .funcionarios-list :deep(.ds-table__head-cell),
+  .funcionarios-list :deep(.ds-table__cell) {
+    padding-left: 0.62rem;
+    padding-right: 0.62rem;
+  }
+
+  .funcionarios-list :deep(.ds-table__head-cell) {
+    font-size: 11px;
+  }
+
+  .funcionarios-list :deep(.ds-table__element) {
+    min-width: 900px;
+  }
+
+  .funcionarios-list__primary {
+    font-size: 0.88rem;
+  }
+
+  .funcionarios-list__secondary {
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .funcionarios-list__content {
+    padding-inline: 0.65rem;
+    padding-bottom: 1.1rem;
+  }
+
+  .funcionarios-list :deep(.ds-table__element) {
+    min-width: 780px;
+  }
+
+  .funcionarios-list :deep(.ds-table__head-cell),
+  .funcionarios-list :deep(.ds-table__cell) {
+    padding-left: 0.56rem;
+    padding-right: 0.56rem;
+  }
+
+  .funcionarios-list__identity {
+    gap: 0.48rem;
+  }
+
+  .funcionarios-list__initials {
+    width: 1.9rem;
+    height: 1.9rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .funcionarios-list__content {
+    padding-inline: 0.5rem;
+  }
+
+  .funcionarios-list :deep(.ds-table__element) {
+    min-width: 720px;
+  }
+
+  .funcionarios-list :deep(.ds-table-pagination) {
+    padding-inline: 0.5rem;
+  }
+}
+</style>

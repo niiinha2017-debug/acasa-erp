@@ -1,31 +1,31 @@
 <template>
-  <div class="login-font cliente-editor w-full h-full rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
-    <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
+  <PageShell :padded="false" variant="minimal">
+    <section class="login-font cliente-editor ds-page-context ds-page-context--editor animate-page-in">
+      <PageHeader
+        :title="isEdit ? `Editar Cliente #${clienteId}` : 'Novo Cliente'"
+        subtitle="Gerenciamento de dados cadastrais e contato"
+        icon="pi pi-user-plus"
+        variant="minimal"
+      />
 
-    <PageHeader
-      :title="isEdit ? `Editar Cliente #${clienteId}` : 'Novo Cliente'"
-      subtitle="Gerenciamento de dados cadastrais e contato"
-      icon="pi pi-user-plus"
-      :showBack="false"
-      class="border-b border-border-ui"
-    />
-
-    <div class="cliente-body px-4 py-4 md:px-6 md:py-6 lg:px-8 lg:py-8">
+    <div class="cliente-body ds-editor-body">
       <Loading v-if="loading" />
 
-      <form v-else class="cliente-form space-y-12 clientes-line-form" @submit.prevent="confirmarSalvarCliente" autocomplete="off">
-        <div class="grid grid-cols-12 gap-8 items-end pb-4">
-          <div class="col-span-12 md:col-span-3 pb-2">
+      <form v-else class="cliente-form ds-editor-form space-y-12" @submit.prevent="confirmarSalvarCliente" autocomplete="off">
+        <div class="cliente-form__lead-grid ds-editor-lead-grid grid grid-cols-12 gap-8 items-end pb-4">
+          <div class="col-span-12 md:col-span-2 pb-2">
             <CustomCheckbox
               v-model="isJuridica"
               label="Pessoa Juridica"
             />
           </div>
 
-          <div class="col-span-12 md:col-span-5">
+          <div class="cliente-form__lead-search col-span-12 md:col-span-6">
             <SearchInput
               v-model="form.indicacao_id"
               mode="select"
+              variant="line"
+              hide-search-icon
               label="Indicacao de cliente"
               placeholder="Pesquisar cliente existente..."
               :options="clientesOptions"
@@ -34,24 +34,28 @@
             />
           </div>
 
-          <div class="col-span-12 md:col-span-4">
-            <Select
+          <div class="cliente-form__lead-select col-span-12 md:col-span-4">
+            <SearchInput
               v-model="form.indicacao_origem"
+              mode="select"
+              variant="line"
+              hide-search-icon
               label="Indicacao de rede social"
               placeholder="Selecione a origem"
               :options="indicacaoOrigens"
-              force-upper
+              labelKey="label"
+              valueKey="value"
             />
           </div>
 
         </div>
 
-        <div class="section-divider relative">
+        <div class="section-divider ds-section-divider relative">
           <div class="absolute inset-0 flex items-center">
             <div class="w-full border-t border-border-ui/50"></div>
           </div>
           <div class="relative flex justify-center">
-            <span class="section-title bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span class="section-title ds-section-title bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
               Dados Principais
             </span>
           </div>
@@ -59,6 +63,7 @@
 
         <div class="grid grid-cols-12 gap-x-6 gap-y-7">
           <Input
+            variant="line"
             :class="isJuridica ? 'col-span-12 md:col-span-6' : 'col-span-12 md:col-span-9'"
             v-model="form.nome_completo"
             :label="isJuridica ? 'Razao Social' : 'Nome Completo'"
@@ -68,6 +73,7 @@
           />
 
           <Input
+            variant="line"
             v-if="isJuridica"
             class="col-span-12 md:col-span-3"
             v-model="form.nome_fantasia"
@@ -77,6 +83,7 @@
           />
 
           <Input
+            variant="line"
             class="col-span-12 md:col-span-3"
             v-model="form.data_nascimento"
             :label="isJuridica ? 'Data de Abertura' : 'Data de Nascimento'"
@@ -87,6 +94,7 @@
         <div class="grid grid-cols-12 gap-x-6 gap-y-7">
           <template v-if="!isJuridica">
             <Input
+              variant="line"
               class="col-span-12 md:col-span-4"
               v-model="form.cpf"
               label="CPF"
@@ -95,6 +103,7 @@
             />
 
             <Input
+              variant="line"
               class="col-span-12 md:col-span-4"
               v-model="form.rg"
               label="RG"
@@ -105,6 +114,7 @@
 
           <template v-else>
             <Input
+              variant="line"
               class="col-span-12 md:col-span-4"
               v-model="form.cnpj"
               label="CNPJ"
@@ -114,6 +124,7 @@
             />
 
             <Input
+              variant="line"
               class="col-span-12 md:col-span-4"
               v-model="form.ie"
               label="IE"
@@ -122,23 +133,27 @@
             />
           </template>
 
-          <div class="col-span-12 md:col-span-2">
-            <Select
+          <div class="col-span-12 md:col-span-3">
+            <SearchInput
               v-model="form.situacao"
+              mode="select"
+              variant="line"
+              hide-search-icon
               label="Situação do cadastro"
               placeholder="Selecione a situação"
               :options="opcoesSituacao"
-              force-upper
+              labelKey="label"
+              valueKey="value"
             />
           </div>
         </div>
 
-        <div class="section-divider relative">
+        <div class="section-divider ds-section-divider relative">
           <div class="absolute inset-0 flex items-center">
             <div class="w-full border-t border-border-ui/50"></div>
           </div>
           <div class="relative flex justify-center">
-            <span class="section-title bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span class="section-title ds-section-title bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
               Contato
             </span>
           </div>
@@ -146,6 +161,7 @@
 
         <div class="grid grid-cols-12 gap-6">
           <Input
+            variant="line"
             class="col-span-12 md:col-span-4"
             v-model="form.email"
             label="E-mail"
@@ -155,6 +171,7 @@
           />
 
           <Input
+            variant="line"
             class="col-span-12 md:col-span-4"
             v-model="form.whatsapp"
             label="WhatsApp"
@@ -163,6 +180,7 @@
           />
 
           <Input
+            variant="line"
             class="col-span-12 md:col-span-4"
             v-model="form.telefone"
             label="Fixo"
@@ -186,17 +204,22 @@
           </div>
 
           <div class="col-span-12 md:col-span-4">
-            <Select
+            <SearchInput
               v-model="form.estado_civil"
+              mode="select"
+              variant="line"
+              hide-search-icon
               label="Estado Civil"
               placeholder="Selecione o estado civil"
               :options="opcoesEstadoCivil"
-              force-upper
+              labelKey="label"
+              valueKey="value"
             />
           </div>
 
           <div class="col-span-12 md:col-span-8">
             <Input
+              variant="line"
               v-if="form.estado_civil === 'CASADO'"
               v-model="form.nome_conjuge"
               label="Nome do Conjuge"
@@ -206,12 +229,12 @@
           </div>
         </div>
 
-        <div class="section-divider relative">
+        <div class="section-divider ds-section-divider relative">
           <div class="absolute inset-0 flex items-center">
             <div class="w-full border-t border-border-ui/50"></div>
           </div>
           <div class="relative flex justify-center">
-            <span class="section-title bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span class="section-title ds-section-title bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
               Endereco
             </span>
           </div>
@@ -219,6 +242,7 @@
 
         <div class="grid grid-cols-12 gap-x-6 gap-y-7">
           <Input
+            variant="line"
             class="col-span-12 md:col-span-3"
             v-model="form.cep"
             label="CEP"
@@ -227,6 +251,7 @@
             @blur="onBlurCep"
           />
           <Input
+            variant="line"
             class="col-span-12 md:col-span-7"
             v-model="form.endereco"
             label="Logradouro"
@@ -234,6 +259,7 @@
             force-upper
           />
           <Input
+            variant="line"
             class="col-span-12 md:col-span-2"
             v-model="form.numero"
             label="N"
@@ -242,6 +268,7 @@
           />
 
           <Input
+            variant="line"
             class="col-span-12 md:col-span-4"
             v-model="form.bairro"
             label="Bairro"
@@ -250,6 +277,7 @@
           />
 
           <Input
+            variant="line"
             class="col-span-12 md:col-span-5"
             v-model="form.cidade"
             label="Cidade"
@@ -258,6 +286,7 @@
           />
 
           <Input
+            variant="line"
             class="col-span-12 md:col-span-3"
             v-model="form.estado"
             label="UF"
@@ -266,6 +295,7 @@
           />
 
           <Input
+            variant="line"
             class="col-span-12"
             v-model="form.complemento"
             label="Complemento / Referencia"
@@ -273,6 +303,65 @@
             force-upper
           />
         </div>
+
+        <template v-if="isEdit">
+          <div class="section-divider ds-section-divider relative">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-border-ui/50"></div>
+            </div>
+            <div class="relative flex justify-center">
+              <span class="section-title ds-section-title bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+                Arquivos do cliente
+              </span>
+            </div>
+          </div>
+
+          <div class="cliente-files">
+            <div class="cliente-files__header">
+              <span class="cliente-files__eyebrow">Anexos vinculados ao cadastro</span>
+              <button
+                type="button"
+                class="cliente-files__link"
+                @click="abrirArquivosCliente"
+              >
+                Abrir tela de arquivos
+              </button>
+            </div>
+
+            <div v-if="loadingArquivos" class="cliente-files__state">
+              Carregando arquivos...
+            </div>
+
+            <div v-else-if="arquivosDoCliente.length === 0" class="cliente-files__state cliente-files__state--empty">
+              Nenhum arquivo vinculado a este cliente.
+            </div>
+
+            <ul v-else class="cliente-files__list">
+              <li
+                v-for="arquivo in arquivosDoCliente"
+                :key="arquivo.id"
+                class="cliente-files__item"
+              >
+                <div class="cliente-files__meta">
+                  <span class="cliente-files__name">{{ arquivo.nome || arquivo.filename || `Arquivo #${arquivo.id}` }}</span>
+                  <span class="cliente-files__info">
+                    {{ formatFileType(arquivo.mime_type) }}<span v-if="arquivo.categoria"> • {{ arquivo.categoria }}</span>
+                  </span>
+                </div>
+
+                <div class="cliente-files__actions">
+                  <button
+                    type="button"
+                    class="cliente-files__action"
+                    @click="abrirArquivoCliente(arquivo)"
+                  >
+                    Ver
+                  </button>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </template>
 
         <!-- Progresso do cliente (contratos) – apenas na edição -->
         <template v-if="isEdit && can('contratos.ver')">
@@ -312,11 +401,10 @@
                 <div class="flex items-center gap-3 min-w-0">
                   <span class="text-sm font-semibold text-slate-800 dark:text-white">{{ c.numero || `#${c.id}` }}</span>
                   <span
-                    class="px-2 py-0.5 rounded text-[10px] font-medium uppercase"
+                    class="ds-status-pill px-2 py-0.5 text-[10px]"
                     :class="{
-                      'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300': (c.status || '').toUpperCase() === 'RASCUNHO',
-                      'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300': (c.status || '').toUpperCase() === 'VIGENTE',
-                      'bg-slate-200 text-slate-600 dark:bg-slate-600 dark:text-slate-200': (c.status || '').toUpperCase() === 'ENCERRADO',
+                      'ds-status-pill--neutral': ['RASCUNHO', 'ENCERRADO'].includes((c.status || '').toUpperCase()),
+                      'ds-status-pill--success': (c.status || '').toUpperCase() === 'VIGENTE',
                     }"
                   >
                     {{ c.status === 'VIGENTE' ? 'Em obra' : c.status === 'ENCERRADO' ? 'Encerrado' : 'Rascunho' }}
@@ -338,7 +426,10 @@
         </template>
 
         <div class="pt-10 mt-6 border-t border-border-ui">
-          <div class="flex items-center justify-between gap-4">
+          <div
+            class="cliente-form__actions ds-editor-actions flex items-center gap-4"
+            :class="isEdit && can('clientes.excluir') ? 'justify-between' : 'justify-end'"
+          >
             <Button
               v-if="isEdit && can('clientes.excluir')"
               type="button"
@@ -350,8 +441,9 @@
               Excluir
             </Button>
 
-            <div class="flex items-center gap-3">
+            <div class="cliente-form__actions-main ds-editor-actions-main flex items-center gap-3 justify-end">
               <Button
+                v-if="isEdit"
                 variant="secondary"
                 type="button"
                 @click="router.push('/clientes')"
@@ -373,81 +465,159 @@
         </div>
       </form>
     </div>
-  </div>
+  </section>
+  </PageShell>
 </template>
 
 <style scoped>
-.login-font {
-  font-family: 'Segoe UI Variable', 'Segoe UI', Tahoma, Arial, sans-serif;
+.cliente-editor {
+  min-height: 100%;
+  background: var(--ds-color-surface);
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.cliente-form {
-  max-width: 1160px;
-  margin: 0 auto;
+.cliente-form__lead-search,
+.cliente-form__lead-select {
+  min-width: 0;
 }
 
-.cliente-form > * + * {
-  margin-top: 3.1rem !important;
+.cliente-form :deep(.ds-checkbox) {
+  padding-left: 0;
+  padding-right: 0;
+  border-radius: 0;
+  gap: 0.55rem;
 }
 
-.section-divider {
-  margin-top: 0.9rem;
+.cliente-form :deep(.ds-checkbox:hover) {
+  background: transparent;
+  border-color: transparent;
 }
 
-.section-title {
-  font-size: 11px;
-  letter-spacing: 0.2em;
-  color: rgb(148 163 184);
+.cliente-form :deep(.ds-checkbox__box) {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
 }
 
-.clientes-line-form :deep(.w-full.flex.flex-col.gap-1\.5 > label),
-.clientes-line-form :deep(.search-container > label) {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: rgb(100 116 139);
+.cliente-form :deep(.ds-checkbox__label) {
+  font-size: 0.84rem;
+  font-weight: 450;
 }
 
-.clientes-line-form :deep(.w-full.flex.flex-col.gap-1\.5 > .relative.group > input),
-.clientes-line-form :deep(.w-full.flex.flex-col.gap-1\.5 > .relative.group > select),
-.clientes-line-form :deep(.search-container > .relative.group > input) {
-  min-height: 46px !important;
-  height: 46px !important;
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-  padding-top: 0.75rem !important;
-  padding-bottom: 0.55rem !important;
-  font-size: 15px !important;
-  font-weight: 400 !important;
-  border-top: 0 !important;
-  border-left: 0 !important;
-  border-right: 0 !important;
-  border-bottom-width: 2px !important;
-  border-bottom-style: solid !important;
-  border-bottom-color: rgba(148, 163, 184, 0.65) !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
+.cliente-form :deep(.ds-checkbox__description) {
+  font-size: 0.72rem;
 }
 
-.clientes-line-form :deep(.w-full.flex.flex-col.gap-1\.5 > .relative.group > input:focus),
-.clientes-line-form :deep(.w-full.flex.flex-col.gap-1\.5 > .relative.group > select:focus),
-.clientes-line-form :deep(.search-container > .relative.group > input:focus) {
-  border-bottom-color: rgba(2, 132, 199, 0.9) !important;
-  box-shadow: none !important;
-  outline: none !important;
+.cliente-files {
+  border-top: 1px solid rgba(214, 224, 234, 0.55);
+  border-bottom: 1px solid rgba(214, 224, 234, 0.55);
 }
 
-.clientes-line-form :deep(.w-full.flex.flex-col.gap-1\.5 > .relative.group > input::placeholder),
-.clientes-line-form :deep(.search-container > .relative.group > input::placeholder) {
-  color: rgb(148 163 184);
+.dark .cliente-files {
+  border-top-color: rgba(51, 71, 102, 0.55);
+  border-bottom-color: rgba(51, 71, 102, 0.55);
+}
+
+.cliente-files__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.95rem 0;
+}
+
+.cliente-files__eyebrow {
+  color: var(--ds-color-text-faint);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.cliente-files__link {
+  color: var(--ds-color-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.cliente-files__state {
+  padding: 1rem 0 1.25rem;
+  color: var(--ds-color-text-soft);
+  font-size: 0.84rem;
+}
+
+.cliente-files__state--empty {
+  color: var(--ds-color-text-faint);
+}
+
+.cliente-files__list {
+  display: flex;
+  flex-direction: column;
+}
+
+.cliente-files__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 0;
+  border-top: 1px solid rgba(214, 224, 234, 0.42);
+}
+
+.dark .cliente-files__item {
+  border-top-color: rgba(51, 71, 102, 0.42);
+}
+
+.cliente-files__meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.cliente-files__name {
+  color: var(--ds-color-text);
+  font-size: 0.92rem;
+  font-weight: 540;
+  line-height: 1.35;
+}
+
+.cliente-files__info {
+  color: var(--ds-color-text-faint);
+  font-size: 0.72rem;
+}
+
+.cliente-files__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.cliente-files__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.9rem;
+  padding: 0 0.65rem;
+  border: 1px solid rgba(214, 224, 234, 0.82);
+  border-radius: 0.7rem;
+  color: var(--ds-color-text-soft);
+  font-size: 0.72rem;
+  font-weight: 600;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.cliente-files__action:hover {
+  border-color: rgba(44, 111, 163, 0.24);
+  color: var(--ds-color-primary);
+  background: rgba(44, 111, 163, 0.05);
 }
 </style>
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ClienteService, ContratosService } from '@/services/index'
+import { ArquivosService } from '@/services/arquivos.service'
 import { format } from '@/utils/format'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
@@ -465,11 +635,13 @@ const router = useRouter()
 
 const loading = ref(false)
 const loadingContratos = ref(false)
+const loadingArquivos = ref(false)
 const saving = ref(false)
 const deleting = ref(false)
 const isJuridica = ref(false)
 const listaClientes = ref([])
 const contratosDoCliente = ref([])
+const arquivosDoCliente = ref([])
 const indicacaoOrigens = INDICACAO_ORIGENS.map((item) => ({
   value: item.key,
   label: item.label,
@@ -521,7 +693,17 @@ const form = reactive({
 })
 
 const clientesOptions = computed(() => {
-  return listaClientes.value.filter((o) => !isEdit.value || Number(o.value) !== clienteId.value)
+  return (listaClientes.value || [])
+    .map((item) => {
+      const value = item?.value ?? item?.id ?? null
+      const label = item?.label || item?.nome_completo || item?.razao_social || item?.nome_fantasia || (value != null ? `CLIENTE #${value}` : '')
+      return {
+        value,
+        label,
+      }
+    })
+    .filter((item) => item.value != null && item.label)
+    .filter((item) => !isEdit.value || Number(item.value) !== clienteId.value)
 })
 
 async function onBlurCep() {
@@ -636,12 +818,66 @@ async function carregarDados() {
     } else {
       contratosDoCliente.value = []
     }
+
+    if (isEdit.value && can('arquivos.ver')) {
+      loadingArquivos.value = true
+      try {
+        const resArquivos = await ArquivosService.listar({
+          ownerType: 'CLIENTE',
+          ownerId: clienteId.value,
+        })
+        const payload = resArquivos?.data
+        const rows = Array.isArray(payload) ? payload : (payload?.data || [])
+        arquivosDoCliente.value = rows.sort((a, b) => Number(b?.id || 0) - Number(a?.id || 0))
+      } catch {
+        arquivosDoCliente.value = []
+      } finally {
+        loadingArquivos.value = false
+      }
+    } else {
+      arquivosDoCliente.value = []
+    }
   } catch (err) {
     console.error('Erro ao carregar dados:', err)
     notify.error('Erro ao carregar dados.')
   } finally {
     loading.value = false
   }
+}
+
+function formatFileType(mimeType) {
+  const raw = String(mimeType || '').toLowerCase()
+  if (!raw) return 'Arquivo'
+  if (raw.includes('pdf')) return 'PDF'
+  if (raw.includes('image')) return 'Imagem'
+  if (raw.includes('sheet') || raw.includes('excel') || raw.includes('spreadsheet')) return 'Planilha'
+  if (raw.includes('word') || raw.includes('document')) return 'Documento'
+  return raw.split('/')[1] || 'Arquivo'
+}
+
+function abrirArquivosCliente() {
+  if (!clienteId.value) return
+  router.push({
+    path: '/arquivos',
+    query: {
+      owner_type: 'CLIENTE',
+      owner_id: String(clienteId.value),
+      ownerType: 'CLIENTE',
+      ownerId: String(clienteId.value),
+    },
+  })
+}
+
+function abrirArquivoCliente(arquivo) {
+  if (!arquivo?.id) return
+  const nome = arquivo.nome || arquivo.filename || `ARQUIVO_${arquivo.id}`
+  const type = arquivo.mime_type || ''
+  const from = `/arquivos?owner_type=CLIENTE&owner_id=${encodeURIComponent(String(clienteId.value))}`
+  const path = String(type).toLowerCase().includes('pdf') ? `/arquivos/pdf/${arquivo.id}` : `/arquivos/${arquivo.id}`
+  router.push({
+    path,
+    query: { name: nome, type, from },
+  })
 }
 
 watch(isJuridica, (val) => {

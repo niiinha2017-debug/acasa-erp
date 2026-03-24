@@ -1,4 +1,25 @@
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsArray,
+  IsBoolean,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  ValidateNested,
+} from 'class-validator';
+
+export class FornecedorFormaPagamentoDto {
+  @IsString()
+  forma_pagamento_chave: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  parcelas_padrao?: number;
+}
 
 export class CreateFornecedorDto {
   @IsString()
@@ -59,6 +80,21 @@ export class CreateFornecedorDto {
   forma_pagamento?: string;
 
   @IsOptional()
+  @IsString()
+  regime_financeiro_padrao?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(31)
+  dia_fechamento_padrao?: number;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  permite_multiplas_formas?: boolean;
+
+  @IsOptional()
   @IsInt()
   @Min(1)
   @Max(31)
@@ -72,4 +108,10 @@ export class CreateFornecedorDto {
   @IsInt()
   @Min(0)
   prazo_entrega_dias?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => FornecedorFormaPagamentoDto)
+  formas_pagamento_habilitadas?: FornecedorFormaPagamentoDto[];
 }

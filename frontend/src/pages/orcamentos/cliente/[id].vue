@@ -1,12 +1,11 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
+  <PageShell :padded="false" variant="minimal">
+    <section class="login-font ds-page-context ds-page-context--editor animate-page-in">
       <PageHeader
         :title="clienteNome"
         :subtitle="clienteTelefone ? `Orçamentos do cliente · ${clienteTelefone}` : 'Orçamentos do cliente'"
         icon="pi pi-file-edit"
+        variant="minimal"
       >
         <template #actions>
           <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
@@ -29,8 +28,8 @@
         </template>
       </PageHeader>
 
-      <div class="px-4 md:px-6 pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-4">
-        <div v-if="filtrados.length > 0" class="rounded-xl border border-border-ui bg-bg-page/50 px-4 py-2 flex justify-center items-center gap-2">
+      <div class="ds-editor-body space-y-4">
+        <div v-if="filtrados.length > 0" class="ds-card ds-card--default px-4 py-2 flex justify-center items-center gap-2">
           <span class="text-[10px] font-bold text-text-soft uppercase tracking-wider">Valor total</span>
           <span class="text-lg font-black text-text-main">{{ format.currency(valorTotalFiltrado) }}</span>
         </div>
@@ -45,7 +44,7 @@
             :flush="true"
           >
             <template #cell-id="{ row }">
-              <span class="inline-flex items-center justify-center bg-bg-card border border-border-ui px-3 py-1 rounded-lg text-[10px] font-black text-text-main">
+              <span class="inline-flex items-center justify-center bg-[var(--ds-color-surface)] border border-[var(--ds-color-border)] px-3 py-1 rounded-lg text-[10px] font-black text-text-main">
                 #{{ row.id }}
               </span>
             </template>
@@ -76,7 +75,7 @@
                 <button
                   v-if="can('orcamentos.ver')"
                   type="button"
-                  class="w-7 h-7 rounded-lg bg-bg-page border border-border-ui text-text-main hover:bg-brand-primary hover:text-white hover:border-brand-primary transition-all flex items-center justify-center"
+                  class="w-7 h-7 rounded-lg bg-[var(--ds-color-surface)] border border-[var(--ds-color-border)] text-text-main hover:bg-brand-primary hover:text-white hover:border-brand-primary transition-all flex items-center justify-center"
                   title="Arquivos"
                   @click="openArquivos(row.id)"
                 >
@@ -105,7 +104,7 @@
           </Table>
         </div>
       </div>
-    </div>
+    </section>
 
     <ArquivosModal
       v-if="arquivosOpen && orcamentoSelecionado"
@@ -116,7 +115,7 @@
       :canManage="can('orcamentos.editar')"
       @close="arquivosOpen = false"
     />
-  </div>
+  </PageShell>
 </template>
 
 <script setup>
@@ -127,6 +126,7 @@ import { format } from '@/utils/format'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
 import { notify } from '@/services/notify'
+import PageShell from '@/components/ui/PageShell.vue'
 
 definePage({ meta: { perm: 'orcamentos.ver' } })
 

@@ -1,169 +1,216 @@
 <!-- src/pages/financeiro/contas-receber/index.vue -->
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
+  <PageShell :padded="false">
+    <section class="contas-receber-page ds-page-context ds-page-context--list animate-page-in">
       <PageHeader
         title="Contas a Receber"
-        subtitle="Receitas previstas e recebidas (cliente ou fornecedor)."
+        subtitle="Receitas previstas, vencidas e recebidas por cliente ou fornecedor."
         icon="pi pi-arrow-up-right"
-        :backTo="null"
-      />
-
-      <div class="pb-5 md:pb-6 pt-4 border-t border-border-ui space-y-6 relative">
-        <Loading v-if="loading" />
-
-        <template v-else>
-          <!-- FILTROS -->
-          <div class="flex flex-col sm:flex-row flex-wrap gap-4 items-end">
-            <div class="flex-1 min-w-0 sm:min-w-[220px]">
-              <label class="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-wider">Buscar</label>
-              <input
-                v-model="filtroTexto"
-                type="text"
-                placeholder="Cliente, ambiente, venda, observação..."
-                class="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-brand-primary/10 transition-all text-slate-700 placeholder:text-slate-400"
-              />
-            </div>
-            <div class="w-full sm:max-w-[160px]">
-              <label class="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-wider">Período (início)</label>
-              <input
-                v-model="filtros.data_ini"
-                type="date"
-                class="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-brand-primary/10 transition-all text-slate-700"
-                @change="ajustarFimAoInicio"
-              />
-            </div>
-            <div class="w-full sm:max-w-[160px]">
-              <label class="text-[10px] font-black text-slate-400 uppercase mb-1 block tracking-wider">Período (fim)</label>
-              <input
-                v-model="filtros.data_fim"
-                type="date"
-                class="w-full h-10 px-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-brand-primary/10 transition-all text-slate-700"
-                @change="ajustarInicioAoFim"
-              />
-            </div>
-            <Button @click="carregar" variant="primary" class="!h-10">
-              <i class="pi pi-search mr-2"></i>
-              Buscar
+      >
+        <template #actions>
+          <div class="contas-receber-page__actions ds-page-context__actions">
+            <Button v-if="mostrarPreviewReceber" @click="abrirReceberPreview" variant="secondary">
+              <i class="pi pi-eye"></i>
+              Pré-visualizar modal
+            </Button>
+            <Button @click="carregar" variant="primary">
+              <i class="pi pi-refresh"></i>
+              Atualizar dados
             </Button>
           </div>
+        </template>
+      </PageHeader>
 
-          <!-- RESUMO -->
-          <div class="grid grid-cols-12 gap-4">
-            <div class="col-span-12 md:col-span-4 px-4 py-3 rounded-2xl bg-gray-50 border border-gray-100">
-              <div class="text-[9px] font-black uppercase tracking-[0.22em] text-gray-400">Total</div>
-              <div class="text-lg font-black text-gray-900">{{ format.currency(totais.total) }}</div>
-              <div class="text-xs font-bold text-gray-500">{{ contagens.total }} registros</div>
-            </div>
-
-            <div class="col-span-12 md:col-span-4 px-4 py-3 rounded-2xl bg-green-50 border border-green-100">
-              <div class="text-[9px] font-black uppercase tracking-[0.22em] text-green-500">Recebidos</div>
-              <div class="text-lg font-black text-green-700">{{ format.currency(totais.recebido) }}</div>
-              <div class="text-xs font-bold text-green-600">{{ contagens.recebido }} registros</div>
-            </div>
-
-            <div class="col-span-12 md:col-span-4 px-4 py-3 rounded-2xl bg-amber-50 border border-amber-100">
-              <div class="text-[9px] font-black uppercase tracking-[0.22em] text-amber-500">Em aberto</div>
-              <div class="text-lg font-black text-amber-700">{{ format.currency(totais.aberto) }}</div>
-              <div class="text-xs font-bold text-amber-600">{{ contagens.aberto }} registros</div>
-            </div>
+      <div class="contas-receber-page__content ds-page-context__content">
+        <section class="contas-receber-page__hero">
+          <div class="contas-receber-page__hero-main">
+            <span class="contas-receber-page__eyebrow">Competência {{ competenciaAtual }}</span>
+            <h2 class="contas-receber-page__hero-title">{{ resumoAbaAtiva.titulo }}</h2>
+            <p class="contas-receber-page__hero-copy">{{ resumoAbaAtiva.descricao }}</p>
           </div>
 
-          <!-- TABELA -->
-          <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-            <div class="flex border-b border-slate-200">
+          <div class="contas-receber-page__hero-stats">
+            <article class="contas-receber-page__hero-stat">
+              <span class="contas-receber-page__hero-stat-label">Linhas exibidas</span>
+              <strong class="contas-receber-page__hero-stat-value">{{ contagens.total }}</strong>
+              <span class="contas-receber-page__hero-stat-help">Resultado da aba ativa após a busca local.</span>
+            </article>
+            <article class="contas-receber-page__hero-stat">
+              <span class="contas-receber-page__hero-stat-label">Recebido</span>
+              <strong class="contas-receber-page__hero-stat-value">{{ format.currency(totais.recebido) }}</strong>
+              <span class="contas-receber-page__hero-stat-help">Valores já baixados dentro da competência.</span>
+            </article>
+            <article class="contas-receber-page__hero-stat">
+              <span class="contas-receber-page__hero-stat-label">Em aberto</span>
+              <strong class="contas-receber-page__hero-stat-value">{{ format.currency(totais.aberto) }}</strong>
+              <span class="contas-receber-page__hero-stat-help">Saldo que ainda depende de recebimento.</span>
+            </article>
+          </div>
+        </section>
+
+        <section class="contas-receber-page__summary-grid">
+          <article class="contas-receber-page__summary-card ds-surface">
+            <div class="contas-receber-page__summary-head">
+              <div>
+                <p class="contas-receber-page__summary-label">Total da aba</p>
+                <p class="contas-receber-page__summary-value">{{ format.currency(totais.total) }}</p>
+              </div>
+              <span class="ds-status-pill ds-status-pill--neutral contas-receber-page__summary-pill">{{ contagens.total }} registros</span>
+            </div>
+            <p class="contas-receber-page__summary-help">Consolidado financeiro da visão selecionada.</p>
+          </article>
+
+          <article class="contas-receber-page__summary-card ds-alert ds-alert--success">
+            <div class="contas-receber-page__summary-head">
+              <div>
+                <p class="contas-receber-page__summary-label text-[color:var(--ds-color-success)]">Recebidos</p>
+                <p class="contas-receber-page__summary-value text-[color:var(--ds-color-success)]">{{ format.currency(totais.recebido) }}</p>
+              </div>
+              <span class="ds-status-pill ds-status-pill--success contas-receber-page__summary-pill">{{ contagens.recebido }} baixas</span>
+            </div>
+            <p class="contas-receber-page__summary-help text-[color:var(--ds-color-success)]">Entradas já confirmadas no caixa.</p>
+          </article>
+
+          <article class="contas-receber-page__summary-card ds-alert ds-alert--warning">
+            <div class="contas-receber-page__summary-head">
+              <div>
+                <p class="contas-receber-page__summary-label text-[color:var(--ds-color-warning)]">Em aberto</p>
+                <p class="contas-receber-page__summary-value text-[color:var(--ds-color-warning)]">{{ format.currency(totais.aberto) }}</p>
+              </div>
+              <span class="ds-status-pill ds-status-pill--warning contas-receber-page__summary-pill">{{ contagens.aberto }} pendências</span>
+            </div>
+            <p class="contas-receber-page__summary-help text-[color:var(--ds-color-warning)]">Títulos que ainda dependem de recebimento.</p>
+          </article>
+        </section>
+
+        <section class="contas-receber-page__filters">
+          <div class="contas-receber-page__filters-header">
+            <div>
+              <span class="contas-receber-page__section-kicker">Filtro operacional</span>
+              <h3 class="contas-receber-page__section-title">Recorte da central</h3>
+            </div>
+            <p class="contas-receber-page__section-copy">
+              Busque cliente, fornecedor, ambiente ou observação e ajuste a competência para recalcular os recebimentos desta central.
+            </p>
+          </div>
+
+          <div class="contas-receber-page__filters-grid">
+            <div class="contas-receber-page__field contas-receber-page__field--search">
+              <span class="contas-receber-page__field-label">Busca</span>
+              <SearchInput
+                v-model="filtroTexto"
+                placeholder="Buscar cliente, fornecedor, ambiente ou observação..."
+              />
+            </div>
+
+            <MonthReferenceField
+              v-model="mesReferencia"
+              class="contas-receber-page__date-field contas-receber-page__field--month"
+              label="Mês de referência"
+            />
+
+            <div class="contas-receber-page__field contas-receber-page__field--action">
+              <Button @click="carregar" variant="secondary" class="contas-receber-page__refresh-button">
+                <i class="pi pi-search"></i>
+                Aplicar filtros
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        <section class="contas-receber-page__tabs">
+          <div class="contas-receber-page__tabs-scroll no-scrollbar-x">
+            <nav class="contas-receber-page__tabs-nav">
               <button
                 v-for="tab in tabs"
                 :key="tab.id"
                 type="button"
-                class="flex-1 px-4 py-3 text-xs font-black uppercase tracking-wider transition-colors"
-                :class="abaAtiva === tab.id
-                  ? tab.activeClass
-                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'"
+                class="contas-receber-page__tab"
+                :class="{ 'contas-receber-page__tab--active': abaAtiva === tab.id }"
                 @click="abaAtiva = tab.id"
               >
-                {{ tab.label }}
-                <span class="ml-1 opacity-80">({{ tab.count }})</span>
+                <span>{{ tab.label }}</span>
+                <span class="contas-receber-page__tab-count">{{ tab.count }}</span>
               </button>
-            </div>
+            </nav>
+          </div>
+        </section>
 
-            <Table
-              :columns="columns"
-              :rows="rowsAbaAtiva"
-              :loading="false"
-              empty-text="Nenhuma conta a receber encontrada."
-              :boxed="false"
-              :flush="true"
-            >
+        <section class="contas-receber-page__table">
+          <Loading v-if="loading" />
+          <Table
+            v-else
+            :columns="columns"
+            :rows="rowsAbaAtiva"
+            :loading="false"
+            empty-text="Nenhuma conta a receber encontrada."
+            :boxed="false"
+            :flush="true"
+          >
             <template #cell-partes="{ row }">
-              <div class="font-black text-gray-900">
-                <template v-if="row.cliente_nome">{{ row.cliente_nome }}</template>
-                <template v-else-if="row.cliente_id">Cliente #{{ row.cliente_id }}</template>
-                <template v-else-if="row.fornecedor_id">Fornecedor #{{ row.fornecedor_id }}</template>
-                <template v-else>—</template>
-              </div>
-              <div v-if="Array.isArray(row.ambientes_venda) && row.ambientes_venda.length" class="text-xs font-bold text-indigo-600">
-                Ambientes: {{ row.ambientes_venda.join(', ') }}
-              </div>
-              <div class="text-xs font-bold text-gray-400">
-                <template v-if="row.descricao">{{ row.descricao }}</template>
-                <template v-else>Sem descrição</template>
+              <div class="contas-receber-page__identity">
+                <div class="contas-receber-page__identity-copy">
+                  <span class="contas-receber-page__primary">
+                    {{ partePrincipal(row) }}
+                  </span>
+                  <span v-if="Array.isArray(row.ambientes_venda) && row.ambientes_venda.length" class="contas-receber-page__ambient-copy">
+                    Ambientes: {{ row.ambientes_venda.join(', ') }}
+                  </span>
+                  <span class="contas-receber-page__secondary">
+                    {{ row.descricao || 'Sem descrição' }}
+                  </span>
+                </div>
               </div>
             </template>
 
             <template #cell-origem="{ row }">
-              <div class="font-black text-gray-900">{{ row.origem_tipo || '—' }}</div>
-              <div class="text-xs font-bold text-gray-400">
-                <template v-if="row.origem_id">#{{ row.origem_id }}</template>
-                <template v-else>—</template>
-              </div>
-              <div v-if="labelFormas(row)" class="text-[10px] font-bold text-slate-500">
-                {{ labelFormas(row) }}
+              <div class="contas-receber-page__origin-stack">
+                <span class="contas-receber-page__primary">{{ row.origem_tipo || '—' }}</span>
+                <span class="contas-receber-page__secondary">{{ row.origem_id ? `#${row.origem_id}` : '—' }}</span>
+                <span v-if="labelFormas(row)" class="contas-receber-page__secondary">{{ labelFormas(row) }}</span>
               </div>
             </template>
 
             <template #cell-vencimento="{ row }">
-              <div class="text-xs font-black text-gray-900">{{ format.date(row.vencimento_em) }}</div>
-              <div
-                v-if="Array.isArray(row.parcelas_venda) && row.parcelas_venda.length"
-                class="mt-1 max-h-20 overflow-y-auto pr-1 space-y-0.5"
-              >
+              <div class="contas-receber-page__date-stack">
+                <span class="contas-receber-page__date-value">{{ format.date(row.vencimento_em) }}</span>
                 <div
-                  v-for="p in row.parcelas_venda"
-                  :key="`parcela-${row.id}-${p.parcela}`"
-                  class="text-[10px] font-bold text-slate-500"
+                  v-if="Array.isArray(row.parcelas_venda) && row.parcelas_venda.length"
+                  class="contas-receber-page__installments"
                 >
-                  {{ p.parcela }}x — {{ format.date(p.vencimento_em) }}
+                  <div
+                    v-for="p in row.parcelas_venda"
+                    :key="`parcela-${row.id}-${p.parcela}`"
+                    class="contas-receber-page__installment-item"
+                  >
+                    {{ p.parcela }}x — {{ format.date(p.vencimento_em) }}
+                  </div>
                 </div>
-              </div>
-              <div
-                v-if="String(row.forma_recebimento_chave || '').toUpperCase() === 'PIX' && row.recebido_em"
-                class="text-xs font-bold text-blue-600"
-              >
-                PIX: {{ format.date(row.recebido_em) }}
+                <span
+                  v-if="String(row.forma_recebimento_chave || '').toUpperCase() === 'PIX' && row.recebido_em"
+                  class="contas-receber-page__pix-copy"
+                >
+                  PIX: {{ format.date(row.recebido_em) }}
+                </span>
               </div>
             </template>
 
             <template #cell-valor="{ row }">
-              <div class="font-black text-gray-900 text-right">
-                {{ format.currency(Number(row.valor_original || 0)) }}
-              </div>
-              <div
-                v-if="row.antecipacao?.valor_liquido != null"
-                class="text-xs font-bold text-emerald-600 text-right"
-              >
-                Liquido: {{ format.currency(Number(row.antecipacao.valor_liquido || 0)) }}
-              </div>
-              <div
-                v-if="row.antecipacao?.valor_taxa != null"
-                class="text-xs font-bold text-rose-500 text-right"
-              >
-                Taxa: {{ format.currency(Number(row.antecipacao.valor_taxa || 0)) }}
-              </div>
-              <div class="text-xs font-bold text-gray-400 text-right">
-                Comp.: {{ format.currency(Number(row.valor_compensado || 0)) }}
+              <div class="contas-receber-page__amount-stack">
+                <span class="contas-receber-page__amount">{{ format.currency(Number(row.valor_original || 0)) }}</span>
+                <span
+                  v-if="row.antecipacao?.valor_liquido != null"
+                  class="contas-receber-page__amount contas-receber-page__amount--success"
+                >
+                  Líquido: {{ format.currency(Number(row.antecipacao.valor_liquido || 0)) }}
+                </span>
+                <span
+                  v-if="row.antecipacao?.valor_taxa != null"
+                  class="contas-receber-page__amount contas-receber-page__amount--danger"
+                >
+                  Taxa: {{ format.currency(Number(row.antecipacao.valor_taxa || 0)) }}
+                </span>
+                <span class="contas-receber-page__secondary">Comp.: {{ format.currency(Number(row.valor_compensado || 0)) }}</span>
               </div>
             </template>
 
@@ -172,27 +219,23 @@
             </template>
 
             <template #cell-acoes="{ row }">
-              <div class="flex justify-end items-center gap-2 flex-nowrap">
+              <div class="contas-receber-page__actions-cell">
                 <template v-if="isContaRecebida(row)">
-                  <span class="h-8 px-3 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-wide inline-flex items-center gap-1.5 border border-emerald-200">
+                  <span class="contas-receber-page__done-pill">
                     <i class="pi pi-check text-[10px]"></i>
                     Pago
                   </span>
-                  <span class="text-[10px] font-bold text-slate-500 whitespace-nowrap">
-                    {{ formatarDataAcao(row.recebido_em) }}
-                  </span>
+                  <span class="contas-receber-page__action-date">{{ formatarDataAcao(row.recebido_em) }}</span>
                 </template>
 
                 <template v-else-if="normalizeStatus(row.status) === 'CANCELADO'">
-                  <span class="h-8 px-3 rounded-lg bg-slate-100 text-slate-500 text-[10px] font-black uppercase tracking-wide inline-flex items-center gap-1.5 border border-slate-200">
-                    Cancelado
-                  </span>
+                  <span class="contas-receber-page__cancel-pill">Cancelado</span>
                 </template>
 
                 <button
                   v-else
                   type="button"
-                  class="h-8 px-3 rounded-lg bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-wide hover:bg-emerald-600 active:scale-[0.98] transition-all inline-flex items-center gap-1.5 shrink-0 disabled:opacity-60"
+                  class="contas-receber-page__action-button"
                   :disabled="acaoLoadingId === row.id"
                   @click="abrirReceber(row)"
                 >
@@ -201,29 +244,44 @@
                 </button>
               </div>
             </template>
-            </Table>
-          </div>
-        </template>
+          </Table>
+        </section>
 
         <!-- MODAL: RECEBER -->
         <transition name="fade-slide">
           <div
             v-if="receberModal.open"
-            class="fixed inset-0 z-50 flex items-center justify-center p-4"
+            class="contas-receber-page__dialog"
             @mousedown.self="fecharReceber"
           >
-            <div class="absolute inset-0 bg-black/20 backdrop-blur-sm"></div>
+            <div class="contas-receber-page__dialog-backdrop"></div>
 
-            <div class="relative w-full max-w-2xl rounded-3xl bg-white shadow-2xl overflow-hidden">
-              <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/40">
-                <div class="text-xs font-black uppercase tracking-[0.22em] text-gray-400">Receber</div>
-                <div class="text-lg font-black text-gray-900">
-                  Conta a Receber #{{ receberModal.id }}
+            <div class="contas-receber-page__dialog-card">
+              <div class="contas-receber-page__dialog-header">
+                <div class="contas-receber-page__dialog-header-main">
+                  <div class="contas-receber-page__dialog-kicker">Receber</div>
+                  <div class="contas-receber-page__dialog-title">
+                    Conta a Receber #{{ receberModal.id }}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  class="contas-receber-page__dialog-close"
+                  aria-label="Fechar"
+                  @click="fecharReceber"
+                >
+                  <i class="pi pi-times text-sm"></i>
+                </button>
+                <div
+                  v-if="receberModal.preview"
+                  class="contas-receber-page__dialog-alert contas-receber-page__dialog-alert--preview"
+                >
+                  Prévia visual em desenvolvimento. A confirmação fica desabilitada e nenhum dado real será gravado.
                 </div>
               </div>
 
-              <div class="p-6 space-y-6">
-                <div class="grid grid-cols-12 gap-4">
+              <div class="contas-receber-page__dialog-body">
+                <div class="contas-receber-page__dialog-grid">
                   <div class="col-span-12 md:col-span-6">
                     <Input :modelValue="receberModal.parteLabel" label="Parte" readonly />
                   </div>
@@ -241,31 +299,30 @@
                   </div>
                 </div>
 
-                <div class="h-px bg-slate-100"></div>
+                <div class="contas-receber-page__dialog-divider"></div>
 
-                <div class="grid grid-cols-12 gap-4">
+                <div class="contas-receber-page__dialog-grid">
                   <div class="col-span-12 md:col-span-6">
-                    <SearchInput
+                    <Input
                       v-model="receberModal.forma_recebimento_chave"
-                      mode="search"
-                      label="Forma de recebimento (chave)"
+                      label="Forma de recebimento"
                       placeholder="Ex: PIX, DINHEIRO, CARTAO..."
                     />
                     <div
                       v-if="receberModal.formas_disponiveis.length > 1"
-                      class="mt-1 text-[10px] font-bold text-amber-600"
+                      class="contas-receber-page__dialog-alert contas-receber-page__dialog-alert--warning"
                     >
                       Pagamento misto: {{ receberModal.formas_disponiveis.join(' + ') }}. Selecione a forma desta baixa.
                     </div>
                   </div>
 
                   <div class="col-span-12 md:col-span-6">
-                    <label class="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400 mb-2 block">
+                    <label class="contas-receber-page__dialog-label">
                       {{ isPixNoModal ? 'Data do PIX' : 'Data de recebimento' }}
                     </label>
                     <input
                       type="datetime-local"
-                      class="w-full h-12 px-4 rounded-2xl bg-gray-100 border-none font-bolding text-gray-700 font-bold"
+                      class="contas-receber-page__dialog-input"
                       v-model="receberModal.recebido_em_input"
                     />
                   </div>
@@ -275,6 +332,7 @@
                       type="button"
                       variant="secondary"
                       size="sm"
+                      class="contas-receber-page__dialog-toggle"
                       :disabled="!podeAnteciparNoModal && !receberModal.antecipacao_ativa"
                       @click="toggleAntecipacao"
                     >
@@ -282,7 +340,7 @@
                     </Button>
                     <div
                       v-if="!podeAnteciparNoModal && !receberModal.antecipacao_ativa"
-                      class="mt-1 text-[10px] font-bold text-slate-500"
+                      class="contas-receber-page__dialog-note"
                     >
                       Antecipação disponível apenas para cartão (CREDITO/CARTAO).
                     </div>
@@ -291,42 +349,42 @@
                   <template v-if="receberModal.antecipacao_ativa">
                     <div
                       v-if="Array.isArray(receberModal.parcelas_venda) && receberModal.parcelas_venda.length"
-                      class="col-span-12 rounded-2xl border border-slate-200 bg-slate-50 p-3 space-y-2"
+                      class="col-span-12 contas-receber-page__anticipation-panel"
                     >
-                      <div class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
+                      <div class="contas-receber-page__anticipation-title">
                         Selecione parcelas para antecipar
                       </div>
-                      <div class="flex flex-wrap items-center gap-2">
+                      <div class="contas-receber-page__anticipation-toolbar">
                         <button
                           type="button"
-                          class="h-7 px-2.5 rounded-lg bg-white border border-slate-200 text-[10px] font-black uppercase tracking-wide text-slate-600 hover:bg-slate-100"
+                          class="contas-receber-page__anticipation-toolbar-button"
                           @click="selecionarTodasParcelasAntecipacao"
                         >
                           Selecionar todas
                         </button>
                         <button
                           type="button"
-                          class="h-7 px-2.5 rounded-lg bg-white border border-slate-200 text-[10px] font-black uppercase tracking-wide text-slate-600 hover:bg-slate-100"
+                          class="contas-receber-page__anticipation-toolbar-button"
                           @click="selecionarParcelasVencidasAntecipacao"
                         >
                           Selecionar vencidas
                         </button>
                         <button
                           type="button"
-                          class="h-7 px-2.5 rounded-lg bg-white border border-slate-200 text-[10px] font-black uppercase tracking-wide text-slate-500 hover:bg-slate-100"
+                          class="contas-receber-page__anticipation-toolbar-button contas-receber-page__anticipation-toolbar-button--muted"
                           @click="limparParcelasAntecipacao"
                         >
                           Limpar seleção
                         </button>
                       </div>
-                      <div class="max-h-36 overflow-y-auto pr-1 space-y-1">
+                      <div class="contas-receber-page__anticipation-list">
                         <label
                           v-for="p in receberModal.parcelas_venda"
                           :key="p.__key"
-                          class="flex items-center justify-between gap-2 text-xs font-bold"
+                          class="contas-receber-page__anticipation-item"
                           :class="parcelaElegivelAntecipacao(p) ? 'text-slate-700' : 'text-slate-400'"
                         >
-                          <span class="inline-flex items-center gap-2">
+                          <span class="contas-receber-page__anticipation-item-main">
                             <input
                               type="checkbox"
                               :checked="receberModal.parcelas_antecipacao_keys.includes(p.__key)"
@@ -335,7 +393,7 @@
                             />
                             {{ p.parcela }}x — {{ format.date(p.vencimento_em) }} — {{ format.currency(Number(p.valor || 0)) }}
                           </span>
-                          <span class="text-[10px] uppercase">{{ p.forma_pagamento_chave || '—' }}</span>
+                          <span class="contas-receber-page__anticipation-item-tag">{{ p.forma_pagamento_chave || '—' }}</span>
                         </label>
                       </div>
                     </div>
@@ -348,10 +406,13 @@
                       />
                     </div>
                     <div class="col-span-12 md:col-span-4">
-                      <SearchInput
+                      <Input
                         v-model="receberModal.antecipacao_taxa_percentual"
-                        mode="search"
+                        type="number"
                         label="Taxa antecipação (%)"
+                        :forceUpper="false"
+                        step="0.01"
+                        min="0"
                         placeholder="Ex: 3.5"
                       />
                     </div>
@@ -372,17 +433,23 @@
                   </template>
 
                   <div class="col-span-12">
-                    <SearchInput
-                      v-model="receberModal.observacao"
-                      mode="search"
-                      label="Observação"
-                      placeholder="Opcional..."
-                    />
+                    <label class="contas-receber-page__dialog-label" for="receber-observacao">
+                      Observação
+                    </label>
+                    <div class="ds-control-shell contas-receber-page__dialog-textarea-shell">
+                      <textarea
+                        id="receber-observacao"
+                        v-model="receberModal.observacao"
+                        class="ds-control-input contas-receber-page__dialog-textarea"
+                        placeholder="Opcional..."
+                        rows="3"
+                      ></textarea>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div class="px-6 py-4 border-t border-gray-100 bg-gray-50/40 flex items-center justify-end gap-3">
+              <div class="contas-receber-page__dialog-footer">
                 <Button variant="secondary" type="button" :disabled="receberModal.saving" @click="fecharReceber">
                   Cancelar
                 </Button>
@@ -393,22 +460,23 @@
                   :disabled="!podeConfirmarRecebimento"
                   @click="confirmarRecebimento"
                 >
-                  Confirmar
+                  {{ receberModal.preview ? 'Prévia bloqueada' : 'Confirmar' }}
                 </Button>
               </div>
             </div>
           </div>
         </transition>
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
-import { ref, computed, reactive, onMounted, watch } from 'vue'
+import { ref, computed, reactive, onMounted, onUnmounted, watch } from 'vue'
 import { FinanceiroService, VendaService } from '@/services/index'
 import { format } from '@/utils/format'
 import { ANTECIPACAO, getTaxaAntecipacaoPercentual } from '@/constantes'
+import MonthReferenceField from '@/components/ui/MonthReferenceField.vue'
 
 definePage({ meta: { perm: 'contas_receber.ver' } })
 
@@ -421,18 +489,39 @@ const filtroTexto = ref('')
 const abaAtiva = ref('A_PAGAR')
 
 const acaoLoadingId = ref(null)
-const periodoPadrao = () => {
-  const hoje = new Date()
-  const ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
-  const fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0)
+
+function getMesReferenciaAtual() {
+  const dataAtual = new Date()
+  const ano = dataAtual.getFullYear()
+  const mes = String(dataAtual.getMonth() + 1).padStart(2, '0')
+  return `${ano}-${mes}`
+}
+
+function intervaloDoMesReferencia(mesRef) {
+  const [anoStr, mesStr] = String(mesRef || '').split('-')
+  const ano = Number(anoStr)
+  const mes = Number(mesStr)
+
+  if (!ano || !mes) {
+    const fallback = getMesReferenciaAtual()
+    return intervaloDoMesReferencia(fallback)
+  }
+
+  const inicio = new Date(ano, mes - 1, 1)
+  const fim = new Date(ano, mes, 0)
   return {
-    data_ini: ini.toISOString().slice(0, 10),
+    data_ini: inicio.toISOString().slice(0, 10),
     data_fim: fim.toISOString().slice(0, 10),
+    ano,
+    mes,
   }
 }
-const filtros = reactive({
-  data_ini: periodoPadrao().data_ini,
-  data_fim: periodoPadrao().data_fim,
+
+const mesReferencia = ref(getMesReferenciaAtual())
+const filtros = ref(intervaloDoMesReferencia(mesReferencia.value))
+const competenciaAtual = computed(() => {
+  const { mes, ano } = intervaloDoMesReferencia(mesReferencia.value)
+  return `${String(mes).padStart(2, '0')}/${ano}`
 })
 
 // colunas
@@ -489,10 +578,31 @@ const rowsAbaAtiva = computed(() => {
   return rowsPagos.value
 })
 const tabs = computed(() => [
-  { id: 'VENCIDOS', label: 'Vencidas', count: rowsVencidos.value.length, activeClass: 'bg-rose-100 text-rose-700 border-b-2 border-rose-500' },
-  { id: 'A_PAGAR', label: 'A pagar', count: rowsAPagar.value.length, activeClass: 'bg-amber-100 text-amber-800 border-b-2 border-amber-500' },
-  { id: 'PAGOS', label: 'Pagos', count: rowsPagos.value.length, activeClass: 'bg-emerald-100 text-emerald-700 border-b-2 border-emerald-500' },
+  { id: 'VENCIDOS', label: 'Vencidas', count: rowsVencidos.value.length },
+  { id: 'A_PAGAR', label: 'Em aberto', count: rowsAPagar.value.length },
+  { id: 'PAGOS', label: 'Pagos', count: rowsPagos.value.length },
 ])
+
+const resumoAbaAtiva = computed(() => {
+  if (abaAtiva.value === 'VENCIDOS') {
+    return {
+      titulo: 'Receitas vencidas que exigem ação comercial',
+      descricao: 'Acompanhe os títulos já vencidos e priorize os recebimentos mais sensíveis do período.',
+    }
+  }
+
+  if (abaAtiva.value === 'PAGOS') {
+    return {
+      titulo: 'Histórico de recebimentos confirmados',
+      descricao: 'Use esta visão para auditoria das entradas já baixadas e conferência das antecipações.',
+    }
+  }
+
+  return {
+    titulo: 'Receitas previstas para a competência',
+    descricao: 'Visualize o que ainda está em aberto e avance nas baixas de cliente ou fornecedor sem sair da central.',
+  }
+})
 
 function normalizeStatus(status) {
   return String(status || '').trim().toUpperCase()
@@ -527,6 +637,13 @@ function labelFormas(row) {
   return `Formas: ${formas.join(' + ')}`
 }
 
+function partePrincipal(row) {
+  if (row?.cliente_nome) return row.cliente_nome
+  if (row?.cliente_id) return `Cliente #${row.cliente_id}`
+  if (row?.fornecedor_id) return `Fornecedor #${row.fornecedor_id}`
+  return '—'
+}
+
 const contagens = computed(() => {
   const base = rowsAbaAtiva.value || []
   const c = { total: base.length, recebido: 0, aberto: 0 }
@@ -556,8 +673,8 @@ async function carregar() {
   loading.value = true
   try {
     const params = {
-      data_ini: filtros.data_ini || undefined,
-      data_fim: filtros.data_fim || undefined,
+      data_ini: filtros.value.data_ini || undefined,
+      data_fim: filtros.value.data_fim || undefined,
     }
 
     const { data } = await FinanceiroService.listarReceber(params)
@@ -566,18 +683,6 @@ async function carregar() {
   } finally {
     loading.value = false
   }
-}
-function ajustarFimAoInicio() {
-  if (!filtros.data_ini) return
-  const d = new Date(filtros.data_ini + 'T12:00:00')
-  const fim = new Date(d.getFullYear(), d.getMonth() + 1, 0)
-  filtros.data_fim = fim.toISOString().slice(0, 10)
-}
-function ajustarInicioAoFim() {
-  if (!filtros.data_fim) return
-  const d = new Date(filtros.data_fim + 'T12:00:00')
-  const ini = new Date(d.getFullYear(), d.getMonth(), 1)
-  filtros.data_ini = ini.toISOString().slice(0, 10)
 }
 
 async function enriquecerRowsComVenda(baseRows) {
@@ -658,6 +763,7 @@ async function enriquecerRowsComVenda(baseRows) {
 const receberModal = reactive({
   open: false,
   saving: false,
+  preview: false,
 
   id: null,
 
@@ -683,6 +789,8 @@ const receberModal = reactive({
   antecipacao_ativa: false,
   antecipacao_taxa_percentual: 0,
 })
+
+const mostrarPreviewReceber = import.meta.env.DEV
 
 function round2(v) {
   return Math.round((Number(v || 0) + Number.EPSILON) * 100) / 100
@@ -740,6 +848,7 @@ function inputToISO(v) {
 
 const podeConfirmarRecebimento = computed(() => {
   if (receberModal.saving) return false
+  if (receberModal.preview) return false
   if (!receberModal.id) return false
   // data de recebimento pode ser agora se vazio, mas vou exigir preenchido pra não inventar
   if (!String(receberModal.recebido_em_input || '').trim()) return false
@@ -749,12 +858,10 @@ const podeConfirmarRecebimento = computed(() => {
   return true
 })
 
-function abrirReceber(row) {
-  const status = String(row?.status || '').toUpperCase()
-  if (status === 'PAGO' || status === 'RECEBIDO' || status === 'CANCELADO') return
-
+function preencherReceberModal(row, { preview = false } = {}) {
   receberModal.open = true
   receberModal.saving = false
+  receberModal.preview = preview
 
   receberModal.id = row.id
 
@@ -783,6 +890,54 @@ function abrirReceber(row) {
   receberModal.recebido_em_input = toInputDateTime(new Date().toISOString())
   receberModal.antecipacao_ativa = false
   receberModal.antecipacao_taxa_percentual = 0
+}
+
+function abrirReceber(row) {
+  const status = String(row?.status || '').toUpperCase()
+  if (status === 'PAGO' || status === 'RECEBIDO' || status === 'CANCELADO') return
+  preencherReceberModal(row)
+}
+
+function abrirReceberPreview() {
+  preencherReceberModal(
+    {
+      id: 'PREVIEW',
+      cliente_id: 184,
+      fornecedor_id: null,
+      origem_tipo: 'VENDA',
+      origem_id: 9821,
+      descricao: 'Prévia visual do modal',
+      observacao: 'Cliente pediu antecipação parcial no cartão.',
+      valor_original: 4280.5,
+      valor_compensado: 0,
+      vencimento_em: new Date().toISOString(),
+      forma_recebimento_chave: 'CARTAO',
+      parcelas_venda: [
+        {
+          parcela: 1,
+          valor: 1426.83,
+          forma_pagamento_chave: 'CARTAO',
+          status: 'PENDENTE',
+          vencimento_em: new Date(Date.now() - 86400000 * 5).toISOString(),
+        },
+        {
+          parcela: 2,
+          valor: 1426.83,
+          forma_pagamento_chave: 'CARTAO',
+          status: 'PENDENTE',
+          vencimento_em: new Date(Date.now() + 86400000 * 12).toISOString(),
+        },
+        {
+          parcela: 3,
+          valor: 1426.84,
+          forma_pagamento_chave: 'PIX',
+          status: 'PENDENTE',
+          vencimento_em: new Date(Date.now() + 86400000 * 28).toISOString(),
+        },
+      ],
+    },
+    { preview: true },
+  )
 }
 
 function toggleAntecipacao() {
@@ -837,6 +992,13 @@ function selecionarParcelasVencidasAntecipacao() {
 
 function fecharReceber() {
   receberModal.open = false
+  receberModal.preview = false
+}
+
+function handleReceberModalKeydown(event) {
+  if (event.key !== 'Escape') return
+  if (!receberModal.open) return
+  fecharReceber()
 }
 
 const parteLabel = computed(() => {
@@ -890,7 +1052,19 @@ async function confirmarRecebimento() {
   }
 }
 
-onMounted(carregar)
+onMounted(() => {
+  carregar()
+  window.addEventListener('keydown', handleReceberModalKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleReceberModalKeydown)
+})
+
+watch(mesReferencia, async (novoMes) => {
+  filtros.value = intervaloDoMesReferencia(novoMes)
+  await carregar()
+})
 watch(
   () => receberModal.forma_recebimento_chave,
   () => {
@@ -902,6 +1076,678 @@ watch(
 </script>
 
 <style scoped>
+.contas-receber-page {
+  min-height: 100%;
+  background: var(--ds-color-surface);
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.contas-receber-page__content {
+  width: min(100%, 1460px);
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 0.35rem 1rem 1.75rem;
+}
+
+.contas-receber-page__actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  width: 100%;
+}
+
+.contas-receber-page__hero {
+  display: grid;
+  gap: 1.25rem;
+  padding: 1.2rem 0 1.1rem;
+  border-top: 1px solid rgba(214, 224, 234, 0.58);
+  border-bottom: 1px solid rgba(214, 224, 234, 0.58);
+}
+
+.contas-receber-page__hero-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.contas-receber-page__eyebrow,
+.contas-receber-page__section-kicker,
+.contas-receber-page__field-label {
+  color: var(--ds-color-text-faint);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.contas-receber-page__hero-title,
+.contas-receber-page__section-title {
+  color: var(--ds-color-text);
+  font-size: 1.18rem;
+  font-weight: 640;
+  letter-spacing: -0.02em;
+}
+
+.contas-receber-page__hero-copy,
+.contas-receber-page__section-copy {
+  max-width: 54rem;
+  color: var(--ds-color-text-soft);
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+.contas-receber-page__hero-stats,
+.contas-receber-page__summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.85rem;
+}
+
+.contas-receber-page__hero-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(214, 224, 234, 0.82);
+  border-radius: 1rem;
+  background: rgba(245, 248, 251, 0.9);
+}
+
+.contas-receber-page__hero-stat-label,
+.contas-receber-page__summary-label {
+  color: var(--ds-color-text-faint);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.contas-receber-page__hero-stat-value,
+.contas-receber-page__summary-value {
+  color: var(--ds-color-text);
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.contas-receber-page__hero-stat-help,
+.contas-receber-page__summary-help {
+  color: var(--ds-color-text-soft);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.contas-receber-page__summary-card {
+  padding: 1rem 1.05rem;
+}
+
+.contas-receber-page__summary-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem;
+}
+
+.contas-receber-page__summary-pill {
+  justify-content: center;
+  padding-inline: 0.6rem;
+  font-size: 0.58rem;
+}
+
+.contas-receber-page__filters {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.2rem 0 1.15rem;
+  border-top: 1px solid rgba(214, 224, 234, 0.58);
+  border-bottom: 1px solid rgba(214, 224, 234, 0.58);
+}
+
+.contas-receber-page__filters-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 0.9rem 1.25rem;
+}
+
+.contas-receber-page__filters-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 0.9rem;
+  align-items: end;
+}
+
+.contas-receber-page__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.42rem;
+  min-width: 0;
+}
+
+.contas-receber-page__field--search {
+  grid-column: span 7;
+}
+
+.contas-receber-page__field--month {
+  grid-column: span 3;
+}
+
+.contas-receber-page__field--action {
+  grid-column: span 2;
+}
+
+.contas-receber-page__refresh-button {
+  width: 100%;
+}
+
+.contas-receber-page__tabs {
+  overflow: hidden;
+  padding: 0.25rem 0 0.1rem;
+  border-top: 1px solid rgba(214, 224, 234, 0.58);
+}
+
+.contas-receber-page__tabs-scroll {
+  overflow-x: auto;
+}
+
+.contas-receber-page__tabs-nav {
+  display: flex;
+  gap: 0.75rem;
+  min-width: max-content;
+}
+
+.contas-receber-page__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  border: 1px solid rgba(214, 224, 234, 0.86);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--ds-color-text-soft);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+}
+
+.contas-receber-page__tab:hover {
+  color: var(--ds-color-text);
+  border-color: rgba(177, 191, 205, 0.92);
+}
+
+.contas-receber-page__tab--active {
+  color: #fff;
+  border-color: rgba(24, 72, 124, 0.9);
+  background: linear-gradient(135deg, #204870 0%, #2b6aa0 100%);
+}
+
+.contas-receber-page__tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35rem;
+  min-height: 1.35rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 0.6rem;
+}
+
+.contas-receber-page__table {
+  overflow: hidden;
+  border-top: 1px solid rgba(214, 224, 234, 0.58);
+  border-bottom: 1px solid rgba(214, 224, 234, 0.58);
+}
+
+.contas-receber-page__identity,
+.contas-receber-page__identity-copy,
+.contas-receber-page__origin-stack,
+.contas-receber-page__date-stack,
+.contas-receber-page__amount-stack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.contas-receber-page__identity,
+.contas-receber-page__origin-stack,
+.contas-receber-page__date-stack,
+.contas-receber-page__amount-stack {
+  gap: 0.2rem;
+}
+
+.contas-receber-page__primary,
+.contas-receber-page__date-value,
+.contas-receber-page__amount {
+  color: var(--ds-color-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.contas-receber-page__secondary,
+.contas-receber-page__ambient-copy,
+.contas-receber-page__installment-item,
+.contas-receber-page__action-date {
+  color: var(--ds-color-text-soft);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.contas-receber-page__ambient-copy {
+  color: #3457a2;
+}
+
+.contas-receber-page__pix-copy {
+  color: #2563eb;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.contas-receber-page__installments {
+  max-height: 5rem;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.contas-receber-page__amount-stack {
+  text-align: right;
+}
+
+.contas-receber-page__amount--success {
+  color: var(--ds-color-success);
+}
+
+.contas-receber-page__amount--danger {
+  color: var(--ds-color-danger);
+}
+
+.contas-receber-page__actions-cell {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.contas-receber-page__done-pill,
+.contas-receber-page__cancel-pill {
+  min-height: 1.95rem;
+  padding: 0 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid transparent;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.contas-receber-page__done-pill {
+  background: rgba(22, 124, 92, 0.1);
+  border-color: rgba(22, 124, 92, 0.2);
+  color: var(--ds-color-success);
+}
+
+.contas-receber-page__cancel-pill {
+  background: rgba(148, 163, 184, 0.12);
+  border-color: rgba(203, 213, 225, 0.86);
+  color: #64748b;
+}
+
+.contas-receber-page__action-button {
+  min-height: 1.95rem;
+  padding: 0 0.8rem;
+  border: 1px solid rgba(25, 118, 82, 0.1);
+  border-radius: 0.75rem;
+  background: var(--ds-color-success);
+  color: #fff;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.contas-receber-page__action-button:hover {
+  opacity: 0.92;
+}
+
+.contas-receber-page__action-button:active {
+  transform: scale(0.98);
+}
+
+.contas-receber-page__dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.contas-receber-page__dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.2);
+  backdrop-filter: blur(6px);
+}
+
+.contas-receber-page__dialog-card {
+  position: relative;
+  width: min(100%, 56rem);
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  border-radius: 1.7rem;
+  background: #fff;
+  box-shadow: 0 28px 60px rgba(15, 23, 42, 0.18);
+}
+
+.contas-receber-page__dialog-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.9rem;
+  padding: 1.35rem 1.5rem 1.1rem;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.82);
+  background: rgba(248, 250, 252, 0.8);
+}
+
+.contas-receber-page__dialog-header-main {
+  min-width: 0;
+}
+
+.contas-receber-page__dialog-kicker {
+  color: var(--ds-color-text-faint);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.contas-receber-page__dialog-title {
+  margin-top: 0.3rem;
+  color: var(--ds-color-text);
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.25;
+  max-width: 32rem;
+}
+
+.contas-receber-page__dialog-close {
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 1px solid rgba(214, 224, 234, 0.92);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--ds-color-text-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.18s ease, color 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
+}
+
+.contas-receber-page__dialog-close:hover {
+  border-color: rgba(44, 111, 163, 0.22);
+  color: var(--ds-color-primary);
+  background: #fff;
+}
+
+.contas-receber-page__dialog-close:active {
+  transform: scale(0.97);
+}
+
+.contas-receber-page__dialog-body {
+  padding: 1.35rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.3rem;
+}
+
+.contas-receber-page__dialog-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.contas-receber-page__dialog-divider {
+  height: 1px;
+  background: rgba(226, 232, 240, 0.78);
+}
+
+.contas-receber-page__dialog-label {
+  display: block;
+  margin-bottom: 0.55rem;
+  color: var(--ds-color-text-faint);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.contas-receber-page__dialog-input {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0 1rem;
+  border: 1px solid rgba(214, 224, 234, 0.92);
+  border-radius: 1rem;
+  background: rgba(245, 248, 251, 0.88);
+  color: var(--ds-color-text);
+  font-size: 0.85rem;
+  font-weight: 700;
+  outline: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.contas-receber-page__dialog-input:focus {
+  border-color: rgba(44, 111, 163, 0.38);
+  box-shadow: 0 0 0 3px rgba(44, 111, 163, 0.12);
+}
+
+.contas-receber-page__dialog-textarea-shell {
+  align-items: stretch;
+}
+
+.contas-receber-page__dialog-textarea {
+  min-height: 6.4rem;
+  padding-top: 0.9rem;
+  padding-bottom: 0.9rem;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.contas-receber-page__dialog-alert,
+.contas-receber-page__dialog-note {
+  margin-top: 0.4rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.contas-receber-page__dialog-alert--preview {
+  grid-column: 1 / -1;
+}
+
+.contas-receber-page__dialog-alert--warning {
+  color: var(--ds-color-warning);
+}
+
+.contas-receber-page__dialog-note {
+  color: var(--ds-color-text-soft);
+}
+
+.contas-receber-page__dialog-toggle {
+  min-height: 2rem;
+}
+
+.contas-receber-page__anticipation-panel {
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(214, 224, 234, 0.9);
+  border-radius: 1rem;
+  background: rgba(248, 250, 252, 0.9);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.contas-receber-page__anticipation-title {
+  color: var(--ds-color-text-faint);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.contas-receber-page__anticipation-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.contas-receber-page__anticipation-toolbar-button {
+  min-height: 1.8rem;
+  padding: 0 0.7rem;
+  border-radius: 0.7rem;
+  border: 1px solid rgba(214, 224, 234, 0.92);
+  background: #fff;
+  color: #475569;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.contas-receber-page__anticipation-toolbar-button--muted {
+  color: #64748b;
+}
+
+.contas-receber-page__anticipation-list {
+  max-height: 9rem;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.contas-receber-page__anticipation-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.contas-receber-page__anticipation-item-main {
+  display: inline-flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  flex: 1;
+  gap: 0.55rem;
+}
+
+.contas-receber-page__anticipation-item-tag {
+  flex-shrink: 0;
+  color: var(--ds-color-text-soft);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.contas-receber-page__dialog-footer {
+  padding: 1rem 1.5rem 1.1rem;
+  border-top: 1px solid rgba(226, 232, 240, 0.82);
+  background: rgba(248, 250, 252, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+@media (max-width: 768px) {
+  .contas-receber-page__dialog {
+    padding: 0.75rem;
+    align-items: flex-end;
+  }
+
+  .contas-receber-page__dialog-card {
+    width: 100%;
+    max-height: calc(100vh - 1rem);
+    border-radius: 1.25rem;
+  }
+
+  .contas-receber-page__dialog-header,
+  .contas-receber-page__dialog-body,
+  .contas-receber-page__dialog-footer {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .contas-receber-page__dialog-header {
+    padding-top: 1rem;
+    padding-bottom: 0.9rem;
+  }
+
+  .contas-receber-page__dialog-body {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    gap: 1rem;
+  }
+
+  .contas-receber-page__dialog-grid {
+    gap: 0.85rem;
+  }
+
+  .contas-receber-page__anticipation-panel {
+    padding: 0.85rem;
+  }
+
+  .contas-receber-page__anticipation-toolbar-button {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+
+  .contas-receber-page__anticipation-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .contas-receber-page__dialog-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .contas-receber-page__dialog-footer :deep(button) {
+    width: 100%;
+  }
+}
+
+.no-scrollbar-x {
+  scrollbar-width: none;
+}
+
+.no-scrollbar-x::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 .fade-slide-enter-active,
 .fade-slide-leave-active {
   transition: all 0.16s ease;
@@ -910,5 +1756,47 @@ watch(
 .fade-slide-leave-to {
   opacity: 0;
   transform: translateY(-6px);
+}
+
+@media (max-width: 900px) {
+  .contas-receber-page__field--search {
+    grid-column: span 12;
+  }
+
+  .contas-receber-page__field--month,
+  .contas-receber-page__field--action {
+    grid-column: span 6;
+  }
+}
+
+@media (max-width: 768px) {
+  .contas-receber-page__content {
+    padding-inline: 0.75rem;
+    padding-bottom: 1.15rem;
+  }
+
+  .contas-receber-page__hero,
+  .contas-receber-page__filters {
+    padding: 1.05rem 0;
+  }
+
+  .contas-receber-page__field--month,
+  .contas-receber-page__field--action {
+    grid-column: span 12;
+  }
+}
+
+@media (min-width: 768px) {
+  .contas-receber-page__content {
+    padding-inline: 1.5rem;
+    padding-bottom: 1.9rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .contas-receber-page__content {
+    padding-inline: 2rem;
+    padding-bottom: 2rem;
+  }
 }
 </style>

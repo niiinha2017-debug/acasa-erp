@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AgendaService } from '../agenda/agenda.service';
+import { TwinFlowService } from '../agenda/twin-flow.service';
 import { EstoqueService } from '../estoque/estoque.service';
 import { CreateVendaDto } from './dto/create-venda.dto';
 import { UpdateVendaDto } from './dto/update-venda.dto';
@@ -28,6 +29,7 @@ export class VendasService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly agendaService: AgendaService,
+    private readonly twinFlowService: TwinFlowService,
     private readonly estoqueService: EstoqueService,
   ) {}
 
@@ -131,6 +133,84 @@ export class VendasService {
     });
   }
 
+  private async gerarCodigoProjetoUnico(base: string): Promise<string> {
+    let tentativa = 0;
+    while (tentativa < 100) {
+      const sufixo = tentativa === 0 ? '' : `-${tentativa + 1}`;
+      const codigo = `${base}${sufixo}`;
+      const existe = await this.prisma.projetos.findUnique({
+        where: { codigo },
+        select: { id: true },
+      });
+      if (!existe) return codigo;
+      tentativa += 1;
+    }
+    throw new BadRequestException(
+      'Não foi possível gerar código único para o projeto da venda.',
+    );
+  }
+
+  /**
+   * Garante que exista uma ficha de projeto vinculada à venda fechada.
+   * Prioridade de reaproveitamento:
+   * 1) projeto já vinculado pela venda_id;
+   * 2) projeto já existente pelo orcamento_id da venda.
+   */
+  private async garantirProjetoVinculadoPorVenda(vendaId: number) {
+    if (!Number.isFinite(vendaId) || vendaId <= 0) return;
+
+    const venda = await this.prisma.vendas.findUnique({
+      where: { id: vendaId },
+      select: { id: true, cliente_id: true, orcamento_id: true },
+    });
+    if (!venda?.cliente_id) return;
+
+    const projetoPorVenda = await this.prisma.projetos.findFirst({
+      where: { venda_id: venda.id },
+      select: { id: true },
+    });
+    if (projetoPorVenda) return;
+
+    const projetoPorOrcamento = venda.orcamento_id
+      ? await this.prisma.projetos.findFirst({
+          where: { orcamento_id: venda.orcamento_id },
+          select: { id: true, venda_id: true, cliente_id: true, orcamento_id: true },
+        })
+      : null;
+
+    if (projetoPorOrcamento) {
+      const data: {
+        venda_id?: number;
+        cliente_id?: number;
+        orcamento_id?: number | null;
+      } = {};
+      if (!projetoPorOrcamento.venda_id) data.venda_id = venda.id;
+      if (projetoPorOrcamento.cliente_id !== venda.cliente_id) {
+        data.cliente_id = venda.cliente_id;
+      }
+      if (!projetoPorOrcamento.orcamento_id && venda.orcamento_id) {
+        data.orcamento_id = venda.orcamento_id;
+      }
+      if (Object.keys(data).length) {
+        await this.prisma.projetos.update({
+          where: { id: projetoPorOrcamento.id },
+          data,
+        });
+      }
+      return;
+    }
+
+    const codigo = await this.gerarCodigoProjetoUnico(`PROJ-${venda.id}`);
+    await this.prisma.projetos.create({
+      data: {
+        codigo,
+        cliente_id: venda.cliente_id,
+        venda_id: venda.id,
+        orcamento_id: venda.orcamento_id ?? null,
+      },
+    });
+  }
+
   private async processarAutomacoesPosFechamento(
     vendaId: number,
     statusAnteriorRaw: string | null | undefined,
@@ -153,6 +233,16 @@ export class VendasService {
 
     if (entrouNoFechamento) {
       try {
+        await this.garantirProjetoVinculadoPorVenda(vendaId);
+      } catch (err: any) {
+        // Não pode bloquear o fechamento se a criação/vinculação do projeto falhar.
+        console.warn(
+          `[VendasService] Falha ao garantir projeto da venda #${vendaId}:`,
+          err?.message || err,
+        );
+      }
+
+      try {
         await this.estoqueService.reservarAutomaticoPorVendaFechada(vendaId);
       } catch (err: any) {
         // Reserva de estoque não pode bloquear o fechamento da venda.
@@ -162,6 +252,8 @@ export class VendasService {
         );
       }
     }
+
+    await this.twinFlowService.syncVendaTwinFlows(vendaId);
   }
 
   // ===============================
@@ -198,6 +290,40 @@ export class VendasService {
   private toIntOrNull(v: any): number | null {
     const n = Number(v);
     return Number.isInteger(n) && n > 0 ? n : null;
+  }
+
+  private validarEstruturaVendaAntesPersistir(dto: CreateVendaDto) {
+    const pagamentos = Array.isArray(dto.pagamentos) ? dto.pagamentos : [];
+    pagamentos.forEach((p, idx) => {
+      const forma = String((p as any)?.forma_pagamento_chave || '').trim();
+      const valor = Number((p as any)?.valor || 0);
+      if (!forma) {
+        throw new BadRequestException(
+          `Pagamento #${idx + 1}: forma_pagamento_chave é obrigatória.`,
+        );
+      }
+      if (!Number.isFinite(valor) || valor <= 0) {
+        throw new BadRequestException(
+          `Pagamento #${idx + 1}: valor deve ser maior que zero.`,
+        );
+      }
+    });
+
+    const itens = Array.isArray(dto.itens) ? dto.itens : [];
+    itens.forEach((it, idx) => {
+      const nomeAmbiente = String((it as any)?.nome_ambiente || '').trim();
+      const valorUnitario = Number((it as any)?.valor_unitario || 0);
+      if (!nomeAmbiente) {
+        throw new BadRequestException(
+          `Item #${idx + 1}: nome_ambiente é obrigatório.`,
+        );
+      }
+      if (!Number.isFinite(valorUnitario) || valorUnitario < 0) {
+        throw new BadRequestException(
+          `Item #${idx + 1}: valor_unitario inválido.`,
+        );
+      }
+    });
   }
 
   private async resolverResponsavelIds(input: {
@@ -557,6 +683,7 @@ export class VendasService {
   // ===============================
   async criar(dto: CreateVendaDto) {
     this.validarStatusDestino(dto.status, 'Criação de venda');
+    this.validarEstruturaVendaAntesPersistir(dto);
 
     if (!dto.orcamento_id)
       throw new BadRequestException('orcamento_id é obrigatório.');
@@ -607,15 +734,15 @@ export class VendasService {
     const itensClonados =
       dto.itens && dto.itens.length
         ? dto.itens.map((it) => ({
-            nome_ambiente: it.nome_ambiente,
-            descricao: it.descricao,
+            nome_ambiente: String(it.nome_ambiente || '').trim(),
+            descricao: String(it.descricao || '').trim(),
             observacao: (it as any).observacao?.trim?.() ?? '',
             quantidade: round2(toNumber(it.quantidade ?? 1)),
             valor_unitario: round2(toNumber(it.valor_unitario ?? 0)),
           }))
         : orc.itens.map((it) => ({
-            nome_ambiente: it.nome_ambiente,
-            descricao: it.descricao,
+            nome_ambiente: String(it.nome_ambiente || '').trim(),
+            descricao: String(it.descricao || '').trim(),
             observacao: (it as any).observacao?.trim?.() ?? '',
             quantidade: 1,
             valor_unitario: round2(toNumber(it.valor_unitario ?? 0)),
@@ -782,6 +909,7 @@ export class VendasService {
         '',
         String(dto.status || ''),
       );
+      await this.twinFlowService.syncVendaTwinFlows(vendaCriada.id);
     }
 
     return vendaCriada;
@@ -1032,6 +1160,7 @@ export class VendasService {
     const statusAnterior = String(atual.status || '').toUpperCase();
     const statusNovo = String(dto.status || statusAnterior).toUpperCase();
     await this.processarAutomacoesPosFechamento(id, statusAnterior, statusNovo);
+    await this.twinFlowService.syncVendaTwinFlows(id);
 
     return vendaAtualizada;
   }
@@ -1075,7 +1204,89 @@ export class VendasService {
     const statusAnterior = String(venda.status || '').toUpperCase();
     const statusNovo = String(status || '').toUpperCase();
     await this.processarAutomacoesPosFechamento(id, statusAnterior, statusNovo);
+    await this.twinFlowService.syncVendaTwinFlows(id);
     return vendaAtualizada;
+  }
+
+  async buscarFluxosGemeos(vendaId: number) {
+    return this.twinFlowService.syncVendaTwinFlows(vendaId);
+  }
+
+  // Status cujo contexto é LOJA (etapas comerciais: cadastro → fechamento)
+  private static readonly LOJA_STATUSES: readonly string[] = [
+    'ATIVO', 'CADASTRO', 'CLIENTE_CADASTRADO',
+    'MEDICAO_VENDA', 'MEDICAO', 'AGENDAR_MEDIDA', 'AGENDAR_MEDIDA_VENDA',
+    'MEDIDA_AGENDADA', 'MEDIDA_EM_ANDAMENTO', 'MEDIDA_REALIZADA',
+    'ORCAMENTO', 'AGENDAR_ORCAMENTO', 'CRIAR_ORCAMENTO', 'ORCAMENTO_EM_ANDAMENTO',
+    'ORCAMENTO_ENVIADO', 'ORCAMENTO_EM_NEGOCIACAO', 'ORCAMENTO_APROVADO', 'ORCAMENTO_REPROVADO',
+    'AGENDAR_APRESENTACAO', 'APRESENTACAO', 'APRESENTACAO_AGENDADA', 'ORCAMENTO_APRESENTADO',
+    'CONTRATO', 'VENDA_FECHADA', 'CONTRATO_GERADO', 'CONTRATO_ASSINADO',
+    'FECHAR_VENDA', 'AGENDAR_FECHAMENTO',
+  ];
+
+  // Status cujo contexto é FÁBRICA (etapas pós-fechamento: medida fina → garantia)
+  private static readonly FABRICA_STATUSES: readonly string[] = [
+    'AGENDAR_MEDIDA_FINA', 'MEDIDA_FINA', 'MEDIDA_FINA_AGENDADA', 'MEDIDA_FINA_REALIZADA',
+    'AGUARDANDO_PRECIFICACAO', 'AGUARDANDO_PROJETO_TECNICO', 'PROJETO_TECNICO_EM_ANDAMENTO',
+    'PROJETO_TECNICO_CONCLUIDO', 'PROJETO_TECNICO_APROVADO',
+    'PRODUCAO_RECEBIDA', 'PRODUCAO_AGENDADA', 'EM_PRODUCAO', 'PRODUCAO_FINALIZADA',
+    'CORTE', 'PREPARACAO_TECNICA', 'MONTAGEM_INTERNA', 'ACABAMENTO',
+    'CONFERENCIA_QUALIDADE', 'PRODUCAO_MONTAGEM',
+    'AGENDAR_MONTAGEM', 'MONTAGEM_AGENDADA', 'MONTAGEM_CLIENTE_AGENDADA',
+    'EM_MONTAGEM', 'EM_MONTAGEM_CLIENTE', 'MONTAGEM_FINALIZADA', 'MONTAGEM_CLIENTE_FINALIZADA',
+    'GARANTIA', 'ASSISTENCIA', 'MANUTENCAO',
+  ];
+
+  async listarFluxoOperacional(usuario?: {
+    funcionario_id?: number | null;
+    is_admin?: boolean;
+    permissoes?: string[] | null;
+  } | null) {
+    const perms = Array.isArray(usuario?.permissoes)
+      ? usuario!.permissoes!.map((p) => String(p || '').trim().toUpperCase())
+      : [];
+    const isAdmin = Boolean(usuario?.is_admin) || perms.includes('ADMIN');
+    const canVendas = isAdmin || perms.includes('AGENDAMENTOS.VENDAS');
+    const canFabrica = isAdmin || perms.includes('AGENDAMENTOS.PRODUCAO');
+
+    const statusBusca: string[] = [
+      ...(canVendas ? VendasService.LOJA_STATUSES : []),
+      ...(canFabrica ? VendasService.FABRICA_STATUSES : []),
+    ];
+    if (!statusBusca.length) return [];
+
+    // Vendedor sem admin vê apenas as próprias vendas
+    const funcionarioId =
+      !isAdmin && usuario?.funcionario_id != null
+        ? Number(usuario.funcionario_id)
+        : null;
+
+    const where: Record<string, unknown> = { status: { in: statusBusca } };
+    if (funcionarioId) {
+      where['OR'] = [
+        { vendedor_responsavel_id: funcionarioId },
+        { cliente: { vendedor_responsavel_id: funcionarioId } },
+      ];
+    }
+
+    const lojaSet = new Set<string>(VendasService.LOJA_STATUSES as unknown as string[]);
+
+    const vendas = await this.prisma.vendas.findMany({
+      where,
+      orderBy: { atualizado_em: 'desc' },
+      include: { cliente: true },
+    });
+
+    return vendas.map((v) => ({
+      id: v.id,
+      venda_id: v.id,
+      setor: lojaSet.has(v.status) ? 'LOJA' : 'FABRICA',
+      status: v.status,
+      cliente: v.cliente,
+      valor_vendido: v.valor_vendido,
+      atualizado_em: v.atualizado_em,
+      data_venda: v.data_venda,
+    }));
   }
 
   async remover(id: number) {
@@ -1125,7 +1336,11 @@ export class VendasService {
   }
 
   async listarAmbientes(vendaId: number) {
-    await this.buscarPorId(vendaId); // garante que existe e respeita o NotFound
+    const venda = await this.prisma.vendas.findUnique({
+      where: { id: vendaId },
+      select: { id: true },
+    });
+    if (!venda) throw new NotFoundException('Venda não encontrada');
 
     const itens = await this.prisma.vendas_itens.findMany({
       where: { venda_id: vendaId },

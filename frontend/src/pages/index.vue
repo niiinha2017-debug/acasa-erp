@@ -8,12 +8,13 @@
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { can } from '@/services/permissions'
+import { AGENDA_ROUTE_PATH, hasAgendaAccess } from '@/constantes/agenda-route'
 import { NAV_SCHEMA } from '@/services/navigation'
 
 definePage({ meta: { perm: 'index.visualizar' } })
 
 const router = useRouter()
-const AGENDA_HOME = '/agendamentos/loja'
+const AGENDA_HOME = AGENDA_ROUTE_PATH
 
 function getFirstAllowedRoute() {
   const flat = []
@@ -36,7 +37,7 @@ function getFirstAllowedRoute() {
 }
 
 onMounted(() => {
-  const target = can('agendamentos.ver') ? AGENDA_HOME : getFirstAllowedRoute()
+  const target = hasAgendaAccess() ? AGENDA_HOME : getFirstAllowedRoute()
   router.replace(target)
 })
 </script>

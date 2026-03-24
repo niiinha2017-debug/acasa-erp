@@ -1,5 +1,4 @@
 <template>
-  <!-- MODAL PRINCIPAL -->
   <Teleport to="body">
     <Transition name="fade">
       <div
@@ -7,8 +6,7 @@
         class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
         @click.self="emit('close')"
       >
-        <div class="w-full max-w-2xl max-h-[85vh] bg-bg-card dark:bg-slate-900 rounded-2xl shadow-2xl dark:shadow-none border border-border-ui overflow-hidden flex flex-col">
-          <!-- Header -->
+        <div class="w-full max-w-4xl max-h-[90vh] bg-bg-card dark:bg-slate-900 rounded-2xl shadow-2xl dark:shadow-none border border-border-ui overflow-hidden flex flex-col">
           <header class="flex items-center justify-between px-6 py-5 border-b border-border-ui bg-slate-50/50 dark:bg-slate-800/50">
             <div class="flex items-center gap-4">
               <div class="w-11 h-11 rounded-xl bg-brand-primary flex items-center justify-center text-white shadow-lg">
@@ -20,7 +18,7 @@
                   Cadastrar Produto
                 </h3>
                 <div class="flex items-center gap-2 mt-1">
-                  <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  <span class="w-2 h-2 rounded-full bg-[var(--ds-color-success-500)]"></span>
                   <p class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                     Ficha Técnica do Item
                   </p>
@@ -29,7 +27,7 @@
             </div>
 
             <button
-              class="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-400 hover:text-rose-500 hover:border-rose-200 dark:hover:border-rose-800 transition-all shadow-sm"
+              class="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-400 hover:text-[var(--ds-color-danger-500)] hover:border-[var(--ds-color-danger-200)] transition-all shadow-sm"
               @click="emit('close')"
               type="button"
             >
@@ -37,7 +35,6 @@
             </button>
           </header>
 
-          <!-- Body -->
           <div class="p-6 overflow-y-auto">
             <div class="grid grid-cols-12 gap-x-6 gap-y-6">
               <div class="col-span-12 md:col-span-5">
@@ -46,12 +43,18 @@
                   mode="select"
                   label="Fornecedor"
                   :options="fornecedorOptionsInternas"
-                  placeholder="SELECIONE..."
+                  :placeholder="fornecedorVinculado ? 'FORNECEDOR VINCULADO A COMPRA' : 'SELECIONE...'"
+                  :disabled="fornecedorVinculado"
                   required
                 />
+                <p
+                  v-if="fornecedorVinculado"
+                  class="mt-2 text-[9px] font-bold text-slate-300 uppercase tracking-widest"
+                >
+                  O fornecedor segue o cadastro selecionado no topo da compra.
+                </p>
               </div>
 
-              <!-- Nome -->
               <div class="col-span-12 md:col-span-7">
                 <Input
                   ref="nomeRef"
@@ -62,7 +65,6 @@
                 />
               </div>
 
-              <!-- Marca -->
               <div class="col-span-12 md:col-span-5">
                 <Input
                   v-model="form.marca"
@@ -71,7 +73,6 @@
                 />
               </div>
 
-              <!-- Cor -->
               <div class="col-span-12 md:col-span-4">
                 <Input
                   v-model="form.cor"
@@ -80,7 +81,17 @@
                 />
               </div>
 
-              <!-- Medida -->
+              <div class="col-span-12 md:col-span-3">
+                <SearchInput
+                  v-model="form.unidade"
+                  mode="select"
+                  label="Unidade Medida"
+                  :options="unidadesOptions"
+                  placeholder="SELECIONE..."
+                  required
+                />
+              </div>
+
               <div class="col-span-12 md:col-span-4">
                 <Input
                   v-if="ehFitaBorda"
@@ -97,19 +108,6 @@
                 />
               </div>
 
-              <!-- Unidade -->
-              <div class="col-span-12 md:col-span-4">
-                <SearchInput
-                  v-model="form.unidade"
-                  mode="select"
-                  label="Unidade Medida"
-                  :options="unidadesOptions"
-                  placeholder="SELECIONE..."
-                  required
-                />
-              </div>
-
-              <!-- Categoria Base -->
               <div class="col-span-12 md:col-span-4">
                 <SearchInput
                   v-model="form.categoria_base"
@@ -134,8 +132,7 @@
                 </p>
               </div>
 
-              <!-- Valor unitário -->
-              <div class="col-span-12 md:col-span-6">
+              <div class="col-span-12 md:col-span-4">
                 <div class="relative">
                   <Input
                     v-model="form.valor_unitario_mask"
@@ -148,16 +145,25 @@
                 </div>
               </div>
 
-              <!-- alinhamento -->
-              <div class="hidden md:block md:col-span-6"></div>
+              <div class="col-span-12 md:col-span-4">
+                <div class="h-full flex items-end">
+                  <div class="w-full bg-slate-50 p-5 rounded-2xl border border-slate-100/60">
+                    <CustomCheckbox
+                      label="Disponibilidade Ativa"
+                      description="HABILITAR ESTE PRODUTO PARA NOVOS PEDIDOS DE COMPRA"
+                      :model-value="form.status === 'ATIVO'"
+                      @update:model-value="(val) => (form.status = val ? 'ATIVO' : 'INATIVO')"
+                    />
+                  </div>
+                </div>
+              </div>
 
-              <!-- IMAGEM (embaixo do valor) -->
               <div class="col-span-12 md:col-span-8">
                 <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block ml-1">
                   Imagem do Produto (opcional)
                 </label>
 
-                <div class="flex items-center gap-3">
+                <div class="flex flex-wrap items-center gap-3">
                   <input
                     ref="imagemInput"
                     type="file"
@@ -179,7 +185,7 @@
 
                   <span
                     v-if="nomeArquivoImagem"
-                    class="text-[10px] font-black uppercase tracking-widest text-slate-400"
+                    class="text-[10px] font-black uppercase tracking-widest text-slate-400 break-all"
                   >
                     {{ nomeArquivoImagem }}
                   </span>
@@ -188,7 +194,7 @@
                     v-if="previewImagem"
                     type="button"
                     variant="ghost"
-                    class="!h-11 !rounded-xl !px-4 text-[10px] font-black uppercase tracking-widest border border-slate-200 text-rose-500 hover:bg-rose-50"
+                    class="!h-11 !rounded-xl !px-4 text-[10px] font-black uppercase tracking-widest border border-slate-200 text-[var(--ds-color-danger-500)] hover:bg-[var(--ds-color-danger-50)]"
                     :loading="salvando"
                     @click="removerImagemLocal"
                   >
@@ -202,7 +208,6 @@
                 </p>
               </div>
 
-              <!-- Preview -->
               <div class="col-span-12 md:col-span-4">
                 <div class="h-full flex flex-col justify-end">
                   <div
@@ -224,26 +229,9 @@
                 </div>
               </div>
 
-              <!-- Status -->
-              <div class="col-span-12 md:col-span-6">
-                <div class="h-full flex items-end">
-                  <div class="w-full bg-slate-50 p-5 rounded-2xl border border-slate-100/60">
-                    <CustomCheckbox
-                      label="Disponibilidade Ativa"
-                      description="HABILITAR ESTE PRODUTO PARA NOVOS PEDIDOS DE COMPRA"
-                      :model-value="form.status === 'ATIVO'"
-                      @update:model-value="(val) => (form.status = val ? 'ATIVO' : 'INATIVO')"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div class="hidden md:block md:col-span-6"></div>
-
-              <!-- Erro -->
               <div v-if="erroLocal" class="col-span-12">
-                <div class="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3">
-                  <p class="text-[10px] font-black uppercase tracking-widest text-rose-600">
+                <div class="rounded-xl border border-[var(--ds-color-danger-100)] bg-[var(--ds-color-danger-50)] px-4 py-3">
+                  <p class="text-[10px] font-black uppercase tracking-widest text-[var(--ds-color-danger-600)]">
                     {{ erroLocal }}
                   </p>
                 </div>
@@ -251,7 +239,6 @@
             </div>
           </div>
 
-          <!-- Footer -->
           <footer class="flex items-center justify-end gap-4 px-6 py-5 border-t border-slate-100 bg-slate-50/50">
             <button
               type="button"
@@ -276,7 +263,6 @@
     </Transition>
   </Teleport>
 
-  <!-- VIEWER DENTRO DO PWA -->
   <Teleport to="body">
     <Transition name="fade">
       <div
@@ -292,7 +278,7 @@
 
             <button
               type="button"
-              class="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-rose-500 hover:border-rose-200 transition-all shadow-sm"
+              class="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-[var(--ds-color-danger-500)] hover:border-[var(--ds-color-danger-200)] transition-all shadow-sm"
               @click="modalImagemOpen = false"
             >
               <i class="pi pi-times text-xs"></i>
@@ -313,7 +299,6 @@
     </Transition>
   </Teleport>
 </template>
-
 
 <script setup>
 import { reactive, ref, watch, onMounted, onUnmounted, computed, nextTick } from 'vue'
@@ -338,7 +323,6 @@ const salvando = ref(false)
 const erroLocal = ref('')
 const nomeRef = ref(null)
 
-// ===== imagem upload local =====
 const imagemInput = ref(null)
 const uploadingImagem = ref(false)
 const removendoImagem = ref(false)
@@ -347,8 +331,8 @@ const fitasBorda = ref([])
 const loadingFitasBorda = ref(false)
 const metragemRoloInput = ref('')
 
-const imagemFile = ref(null)          // File selecionado
-const imagemTempUrl = ref('')         // preview local (URL.createObjectURL)
+const imagemFile = ref(null)
+const imagemTempUrl = ref('')
 const nomeArquivoImagem = computed(() => imagemFile.value?.name || '')
 
 const form = reactive({
@@ -379,6 +363,7 @@ const unidadesOptions = computed(() =>
     label: u.label,
   })),
 )
+const fornecedorVinculado = computed(() => Number(props.fornecedorId || 0) > 0)
 const fornecedorOptionsInternas = computed(() =>
   (Array.isArray(props.fornecedorOptions) ? props.fornecedorOptions : [])
     .map((f) => ({
@@ -536,7 +521,6 @@ async function onImagemPick(e) {
     return
   }
 
-  // troca preview temporário
   if (imagemTempUrl.value) {
     try { URL.revokeObjectURL(imagemTempUrl.value) } catch {}
   }
@@ -573,6 +557,14 @@ watch(
     try {
       nomeRef.value?.$el?.querySelector?.('input')?.focus?.()
     } catch {}
+  },
+)
+
+watch(
+  () => props.fornecedorId,
+  (novoFornecedorId) => {
+    if (!fornecedorVinculado.value) return
+    form.fornecedor_id = Number(novoFornecedorId || 0) || null
   },
 )
 
@@ -639,10 +631,10 @@ async function salvar() {
   }
 
   const valorNum = moedaParaNumero(form.valor_unitario_mask)
-if (!Number(valorNum || 0)) {
-  notify.warn('Informe o valor unitário.')
-  return
-}
+  if (!Number(valorNum || 0)) {
+    notify.warn('Informe o valor unitário.')
+    return
+  }
 
   const payload = {
     fornecedor_id: fornecedorIdSelecionado,
@@ -666,7 +658,6 @@ if (!Number(valorNum || 0)) {
     imagem_url: null,
   }
 
-  // check duplicado no front
   try {
     const check = {
       nome_produto: norm(payload.nome_produto),
@@ -687,12 +678,10 @@ if (!Number(valorNum || 0)) {
 
   salvando.value = true
   try {
-    // 1) cria produto
     const res = await ProdutosService.salvar(null, payload)
     const produtoCriado = res?.data ?? res
     const id = produtoCriado?.id
 
-    // 2) se tiver imagem selecionada, sobe e grava imagem_url
     if (id && imagemFile.value) {
       uploadingImagem.value = true
       try {
@@ -711,8 +700,6 @@ if (!Number(valorNum || 0)) {
           form.imagem_url = url
           await ProdutosService.salvar(id, { imagem_url: url })
           produtoCriado.imagem_url = url
-
-          // ✅ troca o preview do blob pela url real
           limparImagemLocal()
         } else {
           notify.error('Upload ok, mas não retornou URL.')
@@ -735,7 +722,6 @@ if (!Number(valorNum || 0)) {
   }
 }
 </script>
-
 
 <style scoped>
 .fade-enter-active,

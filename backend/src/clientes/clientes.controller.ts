@@ -25,19 +25,25 @@ import { PIPELINE_CLIENTE } from '../shared/constantes/status-matrix';
 export class ClientesController {
   constructor(private readonly service: ClientesService) {}
 
+  private getUser(req?: {
+    user?: { id?: number | null; funcionario_id?: number | null; is_admin?: boolean };
+  }) {
+    return req?.user;
+  }
+
   @Post()
   @Permissoes('clientes.criar')
   criar(
     @Body() dto: CriarClienteDto,
-    @Req() req?: { user?: { funcionario_id?: number | null; is_admin?: boolean } },
+    @Req() req?: { user?: { id?: number | null; funcionario_id?: number | null; is_admin?: boolean } },
   ) {
-    return this.service.criar(dto, req?.user);
+    return this.service.criar(dto, this.getUser(req));
   }
 
   @Get()
   @Permissoes('clientes.ver')
-  listar(@Req() req: { user?: { funcionario_id?: number | null; is_admin?: boolean } }) {
-    return this.service.listar(req?.user);
+  listar(@Req() req: { user?: { id?: number | null; funcionario_id?: number | null; is_admin?: boolean } }) {
+    return this.service.listar(this.getUser(req));
   }
 
   // Rotas de relatórios antes do :id (ok)
@@ -68,19 +74,19 @@ export class ClientesController {
   @Permissoes('clientes.select', 'clientes.ver')
   select(
     @Query('q') q?: string,
-    @Req() req?: { user?: { funcionario_id?: number | null; is_admin?: boolean } },
+    @Req() req?: { user?: { id?: number | null; funcionario_id?: number | null; is_admin?: boolean } },
   ) {
-    return this.service.select(q, req?.user);
+    return this.service.select(q, this.getUser(req));
   }
 
   @Get(':id')
   @Permissoes('clientes.ver')
   buscar(
     @Param('id') id: string,
-    @Req() req?: { user?: { funcionario_id?: number | null; is_admin?: boolean } },
+    @Req() req?: { user?: { id?: number | null; funcionario_id?: number | null; is_admin?: boolean } },
   ) {
     const cleanId = Number(id.replace(/\D/g, ''));
-    return this.service.buscarPorId(cleanId, req?.user);
+    return this.service.buscarPorId(cleanId, this.getUser(req));
   }
 
   @Put(':id')
@@ -88,10 +94,10 @@ export class ClientesController {
   atualizar(
     @Param('id') id: string,
     @Body() dto: AtualizarClienteDto,
-    @Req() req?: { user?: { funcionario_id?: number | null; is_admin?: boolean } },
+    @Req() req?: { user?: { id?: number | null; funcionario_id?: number | null; is_admin?: boolean } },
   ) {
     const cleanId = Number(id.replace(/\D/g, ''));
-    return this.service.atualizar(cleanId, dto, req?.user);
+    return this.service.atualizar(cleanId, dto, this.getUser(req));
   }
 
   @Delete(':id')
@@ -99,9 +105,9 @@ export class ClientesController {
   @HttpCode(HttpStatus.NO_CONTENT)
   remover(
     @Param('id') id: string,
-    @Req() req?: { user?: { funcionario_id?: number | null; is_admin?: boolean } },
+    @Req() req?: { user?: { id?: number | null; funcionario_id?: number | null; is_admin?: boolean } },
   ) {
     const cleanId = Number(id.replace(/\D/g, ''));
-    return this.service.remover(cleanId, req?.user);
+    return this.service.remover(cleanId, this.getUser(req));
   }
 }

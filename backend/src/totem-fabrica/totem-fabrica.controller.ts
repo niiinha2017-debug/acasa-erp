@@ -15,6 +15,13 @@ export class TotemFabricaController {
     return this.apontamentoService.getOuCriarPreMedicaoByCliente(clienteId);
   }
 
+  /** Retorna um rascunho de pré-medição existente pelo id. */
+  @Get('pre-medicao/:preMedicaoId')
+  @Permissoes('agendamentos.producao', 'agendamentos.vendas')
+  getPreMedicaoById(@Param('preMedicaoId', ParseIntPipe) preMedicaoId: number) {
+    return this.apontamentoService.getPreMedicaoById(preMedicaoId);
+  }
+
   /** Salva/atualiza ambiente no rascunho da pré-medição (por nome). */
   @Post('pre-medicao/:preMedicaoId/ambiente')
   @Permissoes('agendamentos.producao', 'agendamentos.vendas')
@@ -27,6 +34,7 @@ export class TotemFabricaController {
       pe_direito_m?: number;
       profundidade_m?: number;
       observacoes?: string;
+      medidas_json?: string;
     },
   ) {
     return this.apontamentoService.salvarAmbientePreMedicao(preMedicaoId, body);
@@ -149,6 +157,33 @@ export class TotemFabricaController {
       data_fim: dataFim,
       usuario: req?.user,
     });
+  }
+
+  /**
+   * Medições fina sem projeto vinculado: lista projetos do cliente da tarefa (para escolher no totem).
+   */
+  @Get(':id/projetos-medicao-fina')
+  @Permissoes('agendamentos.producao')
+  listarProjetosMedicaoFinaTotem(@Param('id', ParseIntPipe) agendaFabricaId: number) {
+    return this.apontamentoService.listarProjetosClienteParaTotemMedicaoFina(agendaFabricaId);
+  }
+
+  /**
+   * Vincula um projeto à tarefa de medição fina (agenda_fabrica).
+   */
+  @Post(':id/vincular-projeto')
+  @Permissoes('agendamentos.producao')
+  vincularProjetoMedicaoFinaTotem(
+    @Param('id', ParseIntPipe) agendaFabricaId: number,
+    @Body() body: { projeto_id: number },
+    @Req() req: { user?: { id?: number } },
+  ) {
+    const uid = req?.user?.id != null ? Number(req.user.id) : undefined;
+    return this.apontamentoService.vincularProjetoTotemMedicaoFina(
+      agendaFabricaId,
+      Number(body?.projeto_id),
+      uid,
+    );
   }
 
   /**

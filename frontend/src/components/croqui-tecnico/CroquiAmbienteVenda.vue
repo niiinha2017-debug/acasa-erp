@@ -198,8 +198,11 @@ let layerRulers = null
 let layerGrid = null
 let layerBg = null
 let layerDraw = null
+let pontoClickTimer = null
 
 const SNAP_RADIUS = 24
+const MIN_COTA_SEGUNDO_CLIQUE_PX = 12
+const PONTO_CLICK_DEBOUNCE_MS = 320
 
 function getContentRect() {
   const size = getSize()
@@ -421,6 +424,7 @@ function redesenhar() {
     const circle = new Konva.Circle({ radius: 14, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 })
     const lbl = new Konva.Text({ y: 18, width: 50, text: p.alturaMm != null ? p.alturaMm + ' mm' : 'Ponto', fontSize: 10, fill: '#fff', align: 'center', offsetX: 25 })
     g.add(circle).add(lbl)
+    g.on('click', (e) => { e.cancelBubble = true })
     g.on('dragend', () => { p.x = toContentX(g.x()); p.y = toContentY(g.y()); emitData() })
     layerDraw.add(g)
   })
@@ -438,6 +442,7 @@ function redesenhar() {
     const circle = new Konva.Circle({ radius: 16, fill: cor(s.tipo), stroke: '#fff', strokeWidth: 2 })
     const lbl = new Konva.Text({ y: 20, width: 60, text: simbolosVisiveis.value.find(x => x.tipo === s.tipo)?.label || s.tipo, fontSize: 9, fill: '#fff', align: 'center', offsetX: 30 })
     g.add(circle).add(lbl)
+    g.on('click', (e) => { e.cancelBubble = true })
     g.on('dragend', () => {
       s.x = toContentX(g.x())
       s.y = toContentY(g.y())
@@ -580,7 +585,30 @@ function clampContent(px, py) {
   }
 }
 
+function clearPontoClickTimer() {
+  if (pontoClickTimer) {
+    clearTimeout(pontoClickTimer)
+    pontoClickTimer = null
+  }
+}
+
+function isBackgroundTarget(e) {
+  const t = e?.target
+  if (!t || !stage || !layerDraw) return false
+  if (t === stage) return true
+  if (t === layerDraw) return true
+  return false
+}
+
+function abrirModalNovoPonto(cx, cy) {
+  pontoPendente.value = { x: cx, y: cy }
+  pontoAlturaMm.value = ''
+  modalPonto.value = true
+  setTimeout(() => inputPontoRef.value?.focus(), 80)
+}
+
 function onStageClick(e) {
+  if (!isBackgroundTarget(e)) return
   const pos = stage.getPointerPosition()
   if (!pos) return
   const rect = getContentRect()
@@ -594,7 +622,11 @@ function onStageClick(e) {
       return
     }
     const lenPx = dist(cotaStart.value.x, cotaStart.value.y, snapped.x, snapped.y)
-    if (lenPx < 8) return
+    if (lenPx < MIN_COTA_SEGUNDO_CLIQUE_PX) {
+      cotaStart.value = null
+      redesenhar()
+      return
+    }
     cotas.value.push({
       x1: cotaStart.value.x,
       y1: cotaStart.value.y,
@@ -608,10 +640,20 @@ function onStageClick(e) {
     return
   }
   if (modo.value === 'ponto' && fotoDataUrl.value) {
-    pontoPendente.value = { x: cx, y: cy }
-    pontoAlturaMm.value = ''
-    modalPonto.value = true
-    setTimeout(() => inputPontoRef.value?.focus(), 80)
+    clearPontoClickTimer()
+    pontoClickTimer = setTimeout(() => {
+      pontoClickTimer = null
+      abrirModalNovoPonto(cx, cy)
+    }, PONTO_CLICK_DEBOUNCE_MS)
+  }
+}
+
+function onStageDblClick(e) {
+  if (!isBackgroundTarget(e)) return
+  clearPontoClickTimer()
+  if (modo.value === 'cota' && cotaStart.value) {
+    cotaStart.value = null
+    redesenhar()
   }
 }
 
@@ -698,12 +740,14 @@ function aplicarCota() {
 }
 
 function fecharPonto() {
+  clearPontoClickTimer()
   modalPonto.value = false
   pontoPendente.value = null
 }
 
 function aplicarPonto() {
   if (!pontoPendente.value) return
+  clearPontoClickTimer()
   const altura = parseInt(pontoAlturaMm.value, 10)
   pontos.value.push({
     x: pontoPendente.value.x,
@@ -736,6 +780,7 @@ function init() {
   layerDraw = new Konva.Layer()
   stage.add(layerRulers).add(layerGrid).add(layerBg).add(layerDraw)
   stage.on('click', onStageClick)
+  stage.on('dblclick dbltap', onStageDblClick)
   desenharRulers()
   desenharGrid()
   load(props.modelValue)

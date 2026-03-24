@@ -1,77 +1,102 @@
 <template>
-  <div class="w-full h-full rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
-    <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
+  <PageShell :padded="false" variant="minimal">
+    <section class="login-font estrategia-precos ds-page-context ds-page-context--editor animate-page-in">
+      <PageHeader
+        title="Estrategia de Precos"
+        subtitle="Matriz operacional: MDF, fita de borda, insumos base e custos internos"
+        icon="pi pi-chart-line"
+        variant="minimal"
+      >
+        <template #actions>
+          <div class="estrategia-precos__header-actions ds-page-context__actions">
+            <div class="estrategia-precos__header-meta">
+              <span class="estrategia-precos__header-kicker">Matriz operacional</span>
+              <span class="estrategia-precos__header-updated">
+                {{ matrizAtualizadoEm ? `Ultima atualizacao: ${formatDate(matrizAtualizadoEm)}` : 'Sem processamento salvo' }}
+              </span>
+            </div>
+          </div>
+        </template>
+      </PageHeader>
 
-    <PageHeader
-      title="Estrategia de Precos"
-      subtitle="Matriz operacional: MDF, fita e insumos base (ferragens tratadas no orçamento)"
-      icon="pi pi-chart-line"
-      :show-back="false"
-      class="border-b border-border-ui"
-    />
+      <div class="estrategia-precos__body ds-editor-body">
+        <div class="section-divider ds-section-divider relative">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-border-ui/50"></div>
+          </div>
+          <div class="relative flex justify-center">
+            <span class="section-title ds-section-title bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+              Fluxo da Matriz
+            </span>
+          </div>
+        </div>
 
-    <div class="p-4 md:p-6 space-y-6">
-      <section class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden">
-        <div class="px-4 md:px-5 py-3 border-b border-border-ui bg-slate-50/80 flex items-center justify-between gap-4 flex-wrap">
+        <section class="estrategia-precos__workspace">
+        <div class="estrategia-precos__workspace-head">
           <div>
-            <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-600">Matriz Operacional de Insumos Base</p>
-            <p class="text-[11px] text-text-muted mt-0.5">
+            <p class="estrategia-precos__workspace-eyebrow">Matriz Operacional de Insumos Base</p>
+            <p class="estrategia-precos__workspace-copy">
               Aba 1 calcula MDF por m2, Aba 2 fita por metro com +100%, Aba 3 trata somente insumos base de consumo, Aba 4 RH e despesas, e Aba 5 consolida o preço final por categoria.
             </p>
           </div>
-          <span v-if="matrizAtualizadoEm" class="text-[11px] text-text-muted whitespace-nowrap">
-            Ultima atualizacao: <span class="font-semibold text-text-main">{{ formatDate(matrizAtualizadoEm) }}</span>
-          </span>
+          <div class="estrategia-precos__workspace-status">
+            <span class="estrategia-precos__status-pill">Aba ativa: {{ activeTabMeta.label }}</span>
+            <span v-if="matrizAtualizadoEm" class="estrategia-precos__status-note">
+              Ultima atualizacao: <span class="font-semibold text-text-main">{{ formatDate(matrizAtualizadoEm) }}</span>
+            </span>
+          </div>
         </div>
 
-        <div class="px-4 md:px-5 py-4 border-b border-border-ui/60 bg-white">
-          <div class="flex flex-wrap gap-2">
+        <div class="estrategia-precos__workspace-toolbar">
+          <div class="estrategia-precos__tabs" role="tablist" aria-label="Abas da matriz operacional">
             <button
               v-for="tab in tabs"
               :key="tab.id"
               type="button"
-              class="inline-flex items-center rounded-xl px-4 py-2 text-xs font-black uppercase tracking-wider transition-all"
-              :class="activeTab === tab.id ? 'bg-brand-primary text-white shadow-sm' : 'border border-border-ui bg-bg-page text-slate-600 hover:border-brand-primary/30'"
+              class="estrategia-precos__tab"
+              :class="{ 'estrategia-precos__tab--active': activeTab === tab.id }"
               @click="trocarTab(tab.id)"
             >
               {{ tab.label }}
             </button>
           </div>
-          <p class="mt-2 text-[11px] text-slate-500">{{ fluxoAbaDescricao }}</p>
-          <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div class="rounded-xl border border-border-ui bg-bg-page p-3">
-              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Margem MDF (%)</label>
-              <input
-                v-model.number="mdfLossMarginPct"
+          <p class="estrategia-precos__toolbar-copy">{{ fluxoAbaDescricao }}</p>
+          <div class="estrategia-precos__controls-grid">
+            <div class="estrategia-precos__control-card">
+              <Input
+                v-model="mdfLossMarginPct"
                 type="number"
+                variant="line"
+                label="Margem MDF (%)"
                 min="0"
                 step="0.01"
-                class="w-full rounded-xl border border-border-ui bg-white px-3 py-2 text-sm"
+                :force-upper="false"
               />
-              <p class="mt-1 text-[11px] text-slate-500">Fórmula: (Preço Chapa / 5,06) + {{ Number(mdfLossMarginPct || 0).toFixed(2) }}%</p>
+              <p class="estrategia-precos__control-help">Formula: (Preco Chapa / 5,06) + {{ Number(mdfLossMarginPct || 0).toFixed(2) }}%</p>
             </div>
-            <div class="rounded-xl border border-border-ui bg-bg-page p-3">
-              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Markup Fita/Insumos (%)</label>
-              <input
-                v-model.number="markupBasePct"
+            <div class="estrategia-precos__control-card">
+              <Input
+                v-model="markupBasePct"
                 type="number"
+                variant="line"
+                label="Markup Fita/Insumos (%)"
                 min="0"
                 step="0.01"
-                class="w-full rounded-xl border border-border-ui bg-white px-3 py-2 text-sm"
+                :force-upper="false"
               />
-              <p class="mt-1 text-[11px] text-slate-500">Aplicado sobre valor original do banco: +{{ Number(markupBasePct || 0).toFixed(2) }}%</p>
+              <p class="estrategia-precos__control-help">Aplicado sobre valor original do banco: +{{ Number(markupBasePct || 0).toFixed(2) }}%</p>
             </div>
           </div>
         </div>
 
-        <div v-if="activeTab === 'mdf'" class="px-4 md:px-5 py-4 space-y-4 bg-white">
-          <div class="flex flex-wrap gap-2">
+        <div v-if="activeTab === 'mdf'" class="estrategia-precos__tab-panel space-y-4">
+          <div class="estrategia-precos__subtabs">
             <button
               v-for="cat in CATEGORIAS_ABA1"
               :key="cat.id"
               type="button"
-              class="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-black uppercase tracking-wider transition-all"
-              :class="activeSubTab === cat.id ? 'bg-slate-900 text-white shadow-sm' : 'border border-border-ui bg-bg-page text-slate-600 hover:border-slate-400/50'"
+              class="estrategia-precos__subtab"
+              :class="{ 'estrategia-precos__subtab--active': activeSubTab === cat.id }"
               @click="trocarSubTab(cat.id)"
             >
               <span
@@ -82,7 +107,7 @@
             </button>
           </div>
 
-          <div class="rounded-xl border border-border-ui overflow-hidden">
+          <div class="estrategia-precos__table-shell">
             <div class="px-3 py-2 bg-slate-50/70 border-b border-border-ui">
               <div class="grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
                 <div class="relative md:col-span-8">
@@ -91,21 +116,23 @@
                     v-model.trim="mdfSearch"
                     type="text"
                     placeholder="Digite o nome do MDF para buscar referencias nesta categoria"
-                    class="w-full rounded-xl border border-slate-200 bg-white pl-8 pr-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary/40"
+                    class="estrategia-precos__search-input"
                     @input="agendarBuscaCategoriaAutomatica()"
                     @keyup.enter="buscarCategoriaManual()"
                   />
                 </div>
                 <div class="md:col-span-4 flex items-center md:justify-end gap-3">
-                  <button
+                  <Button
                     type="button"
-                    class="inline-flex items-center gap-2 rounded-xl border border-border-ui bg-bg-page px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-slate-500 transition-all hover:border-slate-400/50"
+                    variant="ghost"
+                    size="sm"
+                    class="!rounded-xl border border-border-ui !px-3 !py-2 text-[11px] font-bold uppercase tracking-wide text-slate-500 hover:border-slate-400/50"
                     :disabled="!gruposMdfAtivo.length"
                     @click="limparResultadosCategoria()"
                   >
                     <i class="pi pi-times text-[10px]"></i>
                     Limpar
-                  </button>
+                  </Button>
                   <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wide whitespace-nowrap">Formula: (Preço Chapa / 5,06) + {{ Number(mdfLossMarginPct || 0).toFixed(2) }}%</span>
                   <span v-if="buscandoCategorias[activeSubTab]" class="text-[11px] text-slate-500 flex items-center gap-1">
                     <i class="pi pi-spin pi-spinner text-xs"></i>
@@ -116,21 +143,21 @@
             </div>
 
             <div class="max-h-[360px] overflow-auto">
-              <table class="w-full min-w-[860px]">
+              <table class="estrategia-precos__table estrategia-precos__table--mdf">
                 <thead>
-                  <tr class="bg-white border-b border-border-ui text-left text-[11px] uppercase tracking-wider text-slate-500">
-                    <th class="px-3 py-2">Selecionar</th>
-                    <th class="px-3 py-2">Material</th>
-                    <th class="px-3 py-2">Espessura</th>
-                    <th class="px-3 py-2">Preço Chapa</th>
-                    <th class="px-3 py-2">Preço Chapa / 5,06</th>
-                    <th class="px-3 py-2 text-emerald-700">Custo MDF / m2</th>
+                  <tr class="estrategia-precos__table-head-row">
+                    <th class="estrategia-precos__table-head-cell">Selecionar</th>
+                    <th class="estrategia-precos__table-head-cell">Material</th>
+                    <th class="estrategia-precos__table-head-cell">Espessura</th>
+                    <th class="estrategia-precos__table-head-cell">Preço Chapa</th>
+                    <th class="estrategia-precos__table-head-cell">Preço Chapa / 5,06</th>
+                    <th class="estrategia-precos__table-head-cell estrategia-precos__table-head-cell--accent">Custo MDF / m2</th>
                   </tr>
                 </thead>
                 <tbody>
                   <template v-if="buscandoCategorias[activeSubTab]">
-                    <tr v-for="n in 4" :key="n" class="border-b border-border-ui/70 animate-pulse">
-                      <td v-for="c in 6" :key="c" class="px-3 py-2">
+                    <tr v-for="n in 4" :key="n" class="estrategia-precos__table-row estrategia-precos__table-row--loading animate-pulse">
+                      <td v-for="c in 6" :key="c" class="estrategia-precos__table-cell">
                         <div class="h-3.5 rounded bg-slate-100 w-3/4"></div>
                       </td>
                     </tr>
@@ -139,11 +166,11 @@
                     <tr
                       v-for="row in gruposMdfAtivoFiltrado"
                       :key="row.key"
-                      class="border-b border-border-ui/70 last:border-b-0 transition-colors cursor-pointer"
-                      :class="row.selected ? 'bg-blue-50/70' : 'hover:bg-blue-50/40'"
+                      class="estrategia-precos__table-row estrategia-precos__table-row--interactive"
+                      :class="row.selected ? 'estrategia-precos__table-row--selected' : 'estrategia-precos__table-row--hover-blue'"
                       @click="toggleMdfRow(row)"
                     >
-                      <td class="px-3 py-2">
+                      <td class="estrategia-precos__table-cell estrategia-precos__table-cell--checkbox">
                         <input
                           v-model="row.selected"
                           type="checkbox"
@@ -151,28 +178,28 @@
                           @click.stop
                         />
                       </td>
-                      <td class="px-3 py-2 text-sm font-semibold text-text-main">{{ row.group }}</td>
-                      <td class="px-3 py-2 text-sm text-text-main">{{ row.thickness }} mm</td>
-                      <td class="px-3 py-2 text-sm text-text-main tabular-nums">{{ formatCurrency(precoReferenciaByStrategy(row)) }}</td>
-                      <td class="px-3 py-2 text-sm text-text-main tabular-nums">{{ formatCurrency(custoCompraM2(row)) }}</td>
-                      <td class="px-3 py-2">
-                        <span class="inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-black bg-emerald-100/70 text-emerald-700 tabular-nums">
+                      <td class="estrategia-precos__table-cell estrategia-precos__table-cell--strong">{{ row.group }}</td>
+                      <td class="estrategia-precos__table-cell">{{ row.thickness }} mm</td>
+                      <td class="estrategia-precos__table-cell estrategia-precos__table-cell--numeric">{{ formatCurrency(precoReferenciaByStrategy(row)) }}</td>
+                      <td class="estrategia-precos__table-cell estrategia-precos__table-cell--numeric">{{ formatCurrency(custoCompraM2(row)) }}</td>
+                      <td class="estrategia-precos__table-cell">
+                        <span class="estrategia-precos__table-value-pill">
                           {{ formatCurrency(custoMdfCalculadoM2(row)) }}/m2
                         </span>
                       </td>
                     </tr>
                     <tr v-if="!gruposMdfAtivo.length && !buscandoCategorias[activeSubTab] && mdfSearch.trim().length < 2">
-                      <td colspan="6" class="px-3 py-8 text-center text-sm text-text-muted">
+                      <td colspan="6" class="estrategia-precos__table-state">
                         Digite pelo menos 2 caracteres para buscar MDF automaticamente.
                       </td>
                     </tr>
                     <tr v-else-if="!gruposMdfAtivo.length">
-                      <td colspan="6" class="px-3 py-8 text-center text-sm text-text-muted">
+                      <td colspan="6" class="estrategia-precos__table-state">
                         Nenhuma referencia encontrada para esta busca.
                       </td>
                     </tr>
                     <tr v-else-if="!gruposMdfAtivoFiltrado.length">
-                      <td colspan="6" class="px-3 py-8 text-center text-sm text-text-muted">
+                      <td colspan="6" class="estrategia-precos__table-state">
                         Nenhum MDF corresponde ao filtro atual.
                       </td>
                     </tr>
@@ -182,13 +209,13 @@
             </div>
           </div>
 
-          <div class="rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-2 text-sm text-emerald-700">
+          <div class="estrategia-precos__stat-line estrategia-precos__stat-line--emerald">
             Custo MDF da categoria ativa: <strong>{{ formatCurrency(resumoVendaAtivo.materialCost) }}/m2</strong>
           </div>
         </div>
 
-        <div v-else-if="activeTab === 'fita'" class="px-4 md:px-5 py-4 space-y-4 bg-white">
-          <div class="rounded-xl border border-border-ui overflow-hidden">
+        <div v-else-if="activeTab === 'fita'" class="estrategia-precos__tab-panel space-y-4">
+          <div class="estrategia-precos__table-shell">
             <div class="px-3 py-2 bg-slate-50/70 border-b border-border-ui">
               <div class="grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
                 <div class="relative md:col-span-8">
@@ -197,7 +224,7 @@
                     v-model.trim="fitaSearch"
                     type="text"
                     placeholder="Buscar fita por nome, cor ou metragem"
-                    class="w-full rounded-xl border border-slate-200 bg-white pl-8 pr-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary/40"
+                    class="estrategia-precos__search-input"
                   />
                 </div>
                 <div class="md:col-span-4 flex items-center md:justify-end gap-3">
@@ -211,29 +238,29 @@
             </div>
 
             <div class="max-h-[360px] overflow-auto">
-              <table class="w-full min-w-[840px]">
+              <table class="estrategia-precos__table estrategia-precos__table--fita">
                 <thead>
-                  <tr class="bg-white border-b border-border-ui text-left text-[11px] uppercase tracking-wider text-slate-500">
-                    <th class="px-3 py-2">Selecionar</th>
-                    <th class="px-3 py-2">Produto</th>
-                    <th class="px-3 py-2">Cor</th>
-                    <th class="px-3 py-2">Metragem do Rolo</th>
-                    <th class="px-3 py-2">Preço do Rolo</th>
-                    <th class="px-3 py-2 text-emerald-700">Custo por Metro</th>
+                  <tr class="estrategia-precos__table-head-row">
+                    <th class="estrategia-precos__table-head-cell">Selecionar</th>
+                    <th class="estrategia-precos__table-head-cell">Produto</th>
+                    <th class="estrategia-precos__table-head-cell">Cor</th>
+                    <th class="estrategia-precos__table-head-cell">Metragem do Rolo</th>
+                    <th class="estrategia-precos__table-head-cell">Preço do Rolo</th>
+                    <th class="estrategia-precos__table-head-cell estrategia-precos__table-head-cell--accent">Custo por Metro</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-if="loadingFitasBorda">
-                    <td colspan="6" class="px-3 py-8 text-center text-sm text-text-muted">Carregando fitas de borda...</td>
+                    <td colspan="6" class="estrategia-precos__table-state">Carregando fitas de borda...</td>
                   </tr>
                   <template v-else>
                     <tr
                       v-for="fita in fitasBordaFiltradas"
                       :key="fita.id"
-                      class="border-b border-border-ui/70 last:border-b-0 transition-colors"
-                      :class="isFitaVinculada(fita) ? 'bg-orange-50/70' : 'hover:bg-orange-50/40'"
+                      class="estrategia-precos__table-row"
+                      :class="isFitaVinculada(fita) ? 'estrategia-precos__table-row--linked' : 'estrategia-precos__table-row--hover-orange'"
                     >
-                      <td class="px-3 py-2">
+                      <td class="estrategia-precos__table-cell estrategia-precos__table-cell--checkbox">
                         <input
                           type="checkbox"
                           class="h-4 w-4 rounded border-border-ui"
@@ -241,18 +268,18 @@
                           disabled
                         />
                       </td>
-                      <td class="px-3 py-2 text-sm font-semibold text-text-main">{{ fita.nome_produto || '-' }}</td>
-                      <td class="px-3 py-2 text-sm text-text-main">{{ fita.cor || '-' }}</td>
-                      <td class="px-3 py-2 text-sm text-text-main tabular-nums">{{ formatMetragemRolo(fita.metragem_rolo_m) }}</td>
-                      <td class="px-3 py-2 text-sm text-text-main tabular-nums">{{ formatCurrency(fita.valor_unitario) }}</td>
-                      <td class="px-3 py-2">
-                        <span class="inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-black bg-emerald-100/70 text-emerald-700 tabular-nums">
+                      <td class="estrategia-precos__table-cell estrategia-precos__table-cell--strong">{{ fita.nome_produto || '-' }}</td>
+                      <td class="estrategia-precos__table-cell">{{ fita.cor || '-' }}</td>
+                      <td class="estrategia-precos__table-cell estrategia-precos__table-cell--numeric">{{ formatMetragemRolo(fita.metragem_rolo_m) }}</td>
+                      <td class="estrategia-precos__table-cell estrategia-precos__table-cell--numeric">{{ formatCurrency(fita.valor_unitario) }}</td>
+                      <td class="estrategia-precos__table-cell">
+                        <span class="estrategia-precos__table-value-pill">
                           {{ formatCurrency(custoFitaPorMetro(fita)) }}/m
                         </span>
                       </td>
                     </tr>
                     <tr v-if="!fitasBordaFiltradas.length">
-                      <td colspan="6" class="px-3 py-8 text-center text-sm text-text-muted">
+                      <td colspan="6" class="estrategia-precos__table-state">
                         Nenhuma fita de borda encontrada.
                       </td>
                     </tr>
@@ -262,13 +289,13 @@
             </div>
           </div>
 
-          <div class="rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-2 text-sm text-emerald-700">
+          <div class="estrategia-precos__stat-line estrategia-precos__stat-line--emerald">
             Total medio de fita vinculada automaticamente: <strong>{{ formatCurrency(fitaTotal) }}</strong>
           </div>
         </div>
 
-        <div v-else-if="activeTab === 'unidade'" class="px-4 md:px-5 py-4 space-y-4 bg-white">
-          <div class="rounded-xl border border-border-ui overflow-hidden">
+        <div v-else-if="activeTab === 'unidade'" class="estrategia-precos__tab-panel space-y-4">
+          <div class="estrategia-precos__table-shell">
             <div class="px-3 py-2 bg-slate-50/70 border-b border-border-ui">
               <div class="grid grid-cols-1 md:grid-cols-12 gap-2 items-center">
                 <div class="relative md:col-span-8">
@@ -277,11 +304,11 @@
                     v-model.trim="unidadeSearch"
                     type="text"
                     placeholder="Buscar insumo base por nome"
-                    class="w-full rounded-xl border border-slate-200 bg-white pl-8 pr-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary/40"
+                    class="estrategia-precos__search-input"
                   />
                 </div>
                 <div class="md:col-span-4 flex items-center md:justify-end gap-3">
-                  <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wide whitespace-nowrap">Formula: (custo da unidade de referencia x consumo medio por m2) + {{ Number(markupBasePct || 0).toFixed(2) }}%</span>
+                  <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wide whitespace-nowrap">Fórmula: (val_compra ÷ fator) × consumo_m² × (1 + {{ Number(markupBasePct || 0).toFixed(2) }}%)</span>
                   <span v-if="loadingItensUnidade" class="text-[11px] text-slate-500 flex items-center gap-1">
                     <i class="pi pi-spin pi-spinner text-xs"></i>
                   </span>
@@ -291,33 +318,33 @@
             </div>
 
             <div class="max-h-[360px] overflow-auto">
-              <table class="w-full min-w-[980px]">
+              <table class="estrategia-precos__table estrategia-precos__table--unidade">
                 <thead>
-                  <tr class="bg-white border-b border-border-ui text-left text-[11px] uppercase tracking-wider text-slate-500">
-                    <th class="px-3 py-2">Selecionar</th>
-                    <th class="px-3 py-2">Tipo</th>
-                    <th class="px-3 py-2">Item</th>
-                    <th class="px-3 py-2">Unidade Compra</th>
-                    <th class="px-3 py-2">Unidade Referência</th>
-                    <th class="px-3 py-2">Fator</th>
-                    <th class="px-3 py-2">Valor Compra</th>
-                    <th class="px-3 py-2">Consumo / m2</th>
-                    <th class="px-3 py-2 text-emerald-700">Custo Estrategico / m2</th>
+                  <tr class="estrategia-precos__table-head-row">
+                    <th class="estrategia-precos__table-head-cell">Selecionar</th>
+                    <th class="estrategia-precos__table-head-cell">Tipo</th>
+                    <th class="estrategia-precos__table-head-cell">Item</th>
+                    <th class="estrategia-precos__table-head-cell">Unidade Compra</th>
+                    <th class="estrategia-precos__table-head-cell">Unidade Referência</th>
+                    <th class="estrategia-precos__table-head-cell">Fator</th>
+                    <th class="estrategia-precos__table-head-cell">Valor Compra</th>
+                    <th class="estrategia-precos__table-head-cell">Consumo / m2</th>
+                    <th class="estrategia-precos__table-head-cell estrategia-precos__table-head-cell--accent">Custo Estrategico / m2</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-if="loadingItensUnidade">
-                    <td colspan="9" class="px-3 py-8 text-center text-sm text-text-muted">Carregando insumos...</td>
+                    <td colspan="9" class="estrategia-precos__table-state">Carregando insumos...</td>
                   </tr>
                   <template v-else>
                     <tr
                       v-for="item in itensUnidadeFiltrados"
                       :key="item.key"
-                      class="border-b border-border-ui/70 last:border-b-0 transition-colors cursor-pointer"
-                      :class="item.selected ? 'bg-blue-50/70' : 'hover:bg-blue-50/40'"
+                      class="estrategia-precos__table-row estrategia-precos__table-row--interactive"
+                      :class="item.selected ? 'estrategia-precos__table-row--selected' : 'estrategia-precos__table-row--hover-blue'"
                       @click="toggleItemUnidade(item)"
                     >
-                      <td class="px-3 py-2">
+                      <td class="estrategia-precos__table-cell estrategia-precos__table-cell--checkbox">
                         <input
                           v-model="item.selected"
                           type="checkbox"
@@ -325,27 +352,25 @@
                           @click.stop
                         />
                       </td>
-                      <td class="px-3 py-2">
-                        <span
-                          class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide bg-blue-100 text-blue-700"
-                        >
+                      <td class="estrategia-precos__table-cell">
+                        <span class="estrategia-precos__table-tag estrategia-precos__table-tag--blue">
                           Insumo
                         </span>
                       </td>
-                      <td class="px-3 py-2 text-sm font-semibold text-text-main">{{ item.name }}</td>
-                      <td class="px-3 py-2 text-sm text-text-main">{{ item.unidade_compra || '-' }}</td>
-                      <td class="px-3 py-2 text-sm text-text-main">{{ item.unidade_referencia || '-' }}</td>
-                      <td class="px-3 py-2 text-sm text-text-main tabular-nums">{{ Number(item.fator_conversao || 1).toFixed(3) }}</td>
-                      <td class="px-3 py-2 text-sm text-text-main tabular-nums">{{ formatCurrency(item.value_compra) }}</td>
-                      <td class="px-3 py-2 text-sm text-text-main tabular-nums">{{ Number(item.consumo_m2 || 0).toFixed(4) }}</td>
-                      <td class="px-3 py-2">
-                        <span class="inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-black bg-emerald-100/70 text-emerald-700 tabular-nums">
+                      <td class="estrategia-precos__table-cell estrategia-precos__table-cell--strong">{{ item.name }}</td>
+                      <td class="estrategia-precos__table-cell">{{ item.unidade_compra || '-' }}</td>
+                      <td class="estrategia-precos__table-cell">{{ item.unidade_referencia || '-' }}</td>
+                      <td class="estrategia-precos__table-cell estrategia-precos__table-cell--numeric">{{ Number(item.fator_conversao || 1).toFixed(3) }}</td>
+                      <td class="estrategia-precos__table-cell estrategia-precos__table-cell--numeric">{{ formatCurrency(item.value_compra) }}</td>
+                      <td class="estrategia-precos__table-cell estrategia-precos__table-cell--numeric">{{ Number(item.consumo_m2 || 0).toFixed(4) }}</td>
+                      <td class="estrategia-precos__table-cell">
+                        <span class="estrategia-precos__table-value-pill">
                           {{ formatCurrency(valorUnitarioItem(item)) }}/m2
                         </span>
                       </td>
                     </tr>
                     <tr v-if="!itensUnidadeFiltrados.length">
-                      <td colspan="9" class="px-3 py-8 text-center text-sm text-text-muted">
+                      <td colspan="9" class="estrategia-precos__table-state">
                         Nenhum insumo encontrado.
                       </td>
                     </tr>
@@ -355,24 +380,25 @@
             </div>
           </div>
 
-          <div class="rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-2 text-sm text-emerald-700">
+          <div class="estrategia-precos__stat-line estrategia-precos__stat-line--emerald">
             Total de insumos base: <strong>{{ formatCurrency(unidadeTotal) }}</strong>
           </div>
         </div>
 
-        <div v-else-if="activeTab === 'rh'" class="px-4 md:px-5 py-4 space-y-4 bg-white">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div class="rounded-xl border border-border-ui bg-bg-page p-3">
-              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Capacidade M2/mês</label>
-              <input
-                v-model.number="capacidadeM2Mes"
+        <div v-else-if="activeTab === 'rh'" class="estrategia-precos__tab-panel space-y-4">
+          <div class="estrategia-precos__strip-grid estrategia-precos__strip-grid--three">
+            <div class="estrategia-precos__strip-panel estrategia-precos__strip-panel--neutral">
+              <Input
+                v-model="capacidadeM2Mes"
                 type="number"
+                variant="line"
+                label="Capacidade M2/mes"
                 min="0.01"
                 step="0.01"
-                class="w-full rounded-xl border border-border-ui bg-white px-3 py-2 text-sm"
+                :force-upper="false"
               />
             </div>
-            <div class="rounded-xl border border-border-ui bg-bg-page p-3">
+            <div class="estrategia-precos__strip-panel estrategia-precos__strip-panel--blue">
               <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Hora-Homem (R$ / m2)</label>
               <div class="flex items-center justify-between mb-2">
                 <span class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-600">
@@ -383,18 +409,20 @@
                 <p class="flex-1 text-lg font-black tabular-nums text-blue-800">
                   {{ formatCurrency(horaHomemValue) }}<span class="text-xs font-semibold text-blue-400 ml-1">/m²</span>
                 </p>
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   :disabled="calculandoCustosInternos"
                   @click="sincronizarRH()"
-                  class="rounded-lg p-1.5 text-blue-600 hover:bg-blue-100 transition-colors disabled:opacity-40"
+                  class="!h-9 !w-9 !rounded-lg text-blue-600 hover:bg-blue-100 disabled:opacity-40"
                   title="Sincronizar com Sistema RH"
                 >
                   <i :class="calculandoCustosInternos ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'" class="text-xs"></i>
-                </button>
+                </Button>
               </div>
             </div>
-            <div class="rounded-xl border border-border-ui bg-bg-page p-3">
+            <div class="estrategia-precos__strip-panel estrategia-precos__strip-panel--violet">
               <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">Custo Fixo Fábrica (R$ / m²)</label>
               <div class="flex items-center justify-between mb-2">
                 <span class="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold text-violet-600">
@@ -405,103 +433,107 @@
                 <p class="flex-1 text-lg font-black tabular-nums text-violet-800">
                   {{ formatCurrency(custoFixoFabricaValue) }}<span class="text-xs font-semibold text-violet-400 ml-1">/m²</span>
                 </p>
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   :disabled="calculandoCustosInternos"
                   @click="sincronizarRH()"
-                  class="rounded-lg p-1.5 text-violet-600 hover:bg-violet-100 transition-colors disabled:opacity-40"
+                  class="!h-9 !w-9 !rounded-lg text-violet-600 hover:bg-violet-100 disabled:opacity-40"
                   title="Recalcular despesas operacionais"
                 >
                   <i :class="calculandoCustosInternos ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'" class="text-xs"></i>
-                </button>
+                </Button>
               </div>
             </div>
           </div>
 
           <div class="flex flex-wrap items-center gap-2">
-            <button
+            <Button
               type="button"
-              :disabled="calculandoCustosInternos"
+              variant="primary"
+              size="sm"
+              :loading="calculandoCustosInternos"
               @click="sincronizarRH()"
-              class="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+              class="!rounded-xl text-xs font-bold uppercase tracking-wide"
             >
-              <i :class="calculandoCustosInternos ? 'pi pi-spin pi-spinner' : 'pi pi-sync'" class="text-xs"></i>
+              <i v-if="!calculandoCustosInternos" class="pi pi-sync text-xs"></i>
               {{ calculandoCustosInternos ? 'Sincronizando...' : 'Sincronizar com Sistema RH' }}
-            </button>
+            </Button>
             <span class="text-[11px] text-slate-500">Base: despesas de {{ custosInternosCompetenciaLabel }}</span>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div class="rounded-xl bg-blue-50 border border-blue-100 px-3 py-3 text-sm text-blue-700">
+          <div class="estrategia-precos__stat-grid estrategia-precos__stat-grid--three">
+            <div class="estrategia-precos__stat-line estrategia-precos__stat-line--blue">
               RH por m2: <strong>{{ formatCurrency(horaHomemValue) }}/m2</strong>
             </div>
-            <div class="rounded-xl bg-violet-50 border border-violet-100 px-3 py-3 text-sm text-violet-700">
+            <div class="estrategia-precos__stat-line estrategia-precos__stat-line--violet">
               Despesas por m2: <strong>{{ formatCurrency(custoFixoFabricaValue) }}/m2</strong>
             </div>
-            <div class="rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-3 text-sm text-emerald-700">
+            <div class="estrategia-precos__stat-line estrategia-precos__stat-line--emerald">
               Total RH + despesas: <strong>{{ formatCurrency(custosInternosTotal) }}/m2</strong>
             </div>
           </div>
         </div>
 
-        <div v-else-if="activeTab === 'venda'" class="px-4 md:px-5 py-4 space-y-4 bg-slate-50/30">
-          <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
-            <div class="rounded-xl border border-emerald-200 bg-white p-3">
+        <div v-else-if="activeTab === 'venda'" class="estrategia-precos__tab-panel space-y-4 estrategia-precos__tab-panel--contrast">
+          <div class="estrategia-precos__summary-grid">
+            <div class="estrategia-precos__summary-panel estrategia-precos__summary-panel--emerald">
               <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">MDF selecionado</p>
               <p class="mt-1 text-lg font-black tabular-nums text-emerald-700">{{ formatCurrency(resumoVendaAtivo.materialCost) }}</p>
               <p class="text-[11px] text-slate-500 mt-1">Categoria ativa: {{ categoriaAtivaResumoLabel }}</p>
             </div>
-            <div class="rounded-xl border border-orange-200 bg-white p-3">
+            <div class="estrategia-precos__summary-panel estrategia-precos__summary-panel--orange">
               <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Fita de Borda</p>
               <p class="mt-1 text-lg font-black tabular-nums text-orange-700">{{ formatCurrency(fitaTotal) }}</p>
               <p class="text-[11px] text-slate-500 mt-1">Total selecionado na Aba 2</p>
             </div>
-            <div class="rounded-xl border border-blue-200 bg-white p-3">
+            <div class="estrategia-precos__summary-panel estrategia-precos__summary-panel--blue">
               <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Insumos Base</p>
               <p class="mt-1 text-lg font-black tabular-nums text-blue-700">{{ formatCurrency(unidadeTotal) }}</p>
               <p class="text-[11px] text-slate-500 mt-1">Total de insumos base da Aba 3</p>
             </div>
-            <div class="rounded-xl border border-violet-200 bg-white p-3">
+            <div class="estrategia-precos__summary-panel estrategia-precos__summary-panel--violet">
               <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">RH + Despesas</p>
               <p class="mt-1 text-lg font-black tabular-nums text-violet-700">{{ formatCurrency(custosInternosTotal) }}</p>
               <p class="text-[11px] text-slate-500 mt-1">Vindo da Aba 4</p>
             </div>
-            <div class="rounded-xl border border-brand-primary/20 bg-gradient-to-r from-brand-primary/5 via-white to-emerald-50 p-3">
+            <div class="estrategia-precos__summary-panel estrategia-precos__summary-panel--brand">
               <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Valor final</p>
               <p class="mt-1 text-lg font-black tabular-nums text-brand-primary">{{ formatCurrency(resumoVendaAtivo.finalValue) }}</p>
               <p class="text-[11px] text-slate-500 mt-1">Custo MDF + Fita + Insumos Base + RH/Despesas</p>
             </div>
           </div>
 
-          <div class="rounded-xl border border-border-ui bg-white overflow-hidden">
+          <div class="estrategia-precos__table-shell">
             <div class="px-3 py-2 bg-slate-50 border-b border-border-ui flex items-center justify-between gap-3 flex-wrap">
               <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Preço Final de Venda por Categoria</p>
               <span class="text-[11px] text-slate-500">Aba 1 + Aba 2 + Aba 3 + Aba 4</span>
             </div>
             <div class="overflow-auto">
-              <table class="w-full min-w-[860px]">
+              <table class="estrategia-precos__table estrategia-precos__table--venda">
                 <thead>
-                  <tr class="bg-white border-b border-border-ui text-left text-[11px] uppercase tracking-wider text-slate-500">
-                    <th class="px-3 py-2">Categoria</th>
-                    <th class="px-3 py-2">Custo MDF</th>
-                    <th class="px-3 py-2">Fita</th>
-                    <th class="px-3 py-2">Unidade</th>
-                    <th class="px-3 py-2">RH + Despesas</th>
-                    <th class="px-3 py-2 text-emerald-700">Preço Final de Venda</th>
+                  <tr class="estrategia-precos__table-head-row">
+                    <th class="estrategia-precos__table-head-cell">Categoria</th>
+                    <th class="estrategia-precos__table-head-cell">Custo MDF</th>
+                    <th class="estrategia-precos__table-head-cell">Fita</th>
+                    <th class="estrategia-precos__table-head-cell">Unidade</th>
+                    <th class="estrategia-precos__table-head-cell">RH + Despesas</th>
+                    <th class="estrategia-precos__table-head-cell estrategia-precos__table-head-cell--accent">Preço Final de Venda</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr
                     v-for="cat in CATEGORIAS_ABA1"
                     :key="cat.id"
-                    class="border-b border-border-ui/70 last:border-b-0 hover:bg-slate-50 transition-colors"
+                    class="estrategia-precos__table-row estrategia-precos__table-row--hover-neutral"
                   >
-                    <td class="px-3 py-2 text-sm font-semibold text-text-main">{{ cat.label }}</td>
-                    <td class="px-3 py-2 text-sm tabular-nums">{{ formatCurrency(precoFinalPorCategoria[cat.id].materialCost) }}</td>
-                    <td class="px-3 py-2 text-sm tabular-nums">{{ formatCurrency(precoFinalPorCategoria[cat.id].fita) }}</td>
-                    <td class="px-3 py-2 text-sm tabular-nums">{{ formatCurrency(precoFinalPorCategoria[cat.id].unidade) }}</td>
-                    <td class="px-3 py-2 text-sm tabular-nums">{{ formatCurrency(precoFinalPorCategoria[cat.id].rh) }}</td>
-                    <td class="px-3 py-2 text-sm font-black tabular-nums text-emerald-700">{{ formatCurrency(precoFinalPorCategoria[cat.id].finalValue) }}</td>
+                    <td class="estrategia-precos__table-cell estrategia-precos__table-cell--strong">{{ cat.label }}</td>
+                    <td class="estrategia-precos__table-cell estrategia-precos__table-cell--numeric">{{ formatCurrency(precoFinalPorCategoria[cat.id].materialCost) }}</td>
+                    <td class="estrategia-precos__table-cell estrategia-precos__table-cell--numeric">{{ formatCurrency(precoFinalPorCategoria[cat.id].fita) }}</td>
+                    <td class="estrategia-precos__table-cell estrategia-precos__table-cell--numeric">{{ formatCurrency(precoFinalPorCategoria[cat.id].unidade) }}</td>
+                    <td class="estrategia-precos__table-cell estrategia-precos__table-cell--numeric">{{ formatCurrency(precoFinalPorCategoria[cat.id].rh) }}</td>
+                    <td class="estrategia-precos__table-cell estrategia-precos__table-cell--numeric estrategia-precos__table-cell--accent">{{ formatCurrency(precoFinalPorCategoria[cat.id].finalValue) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -509,34 +541,39 @@
           </div>
 
           <div class="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-            <div class="rounded-xl border border-border-ui bg-white p-3 text-sm text-slate-600">
+            <div class="estrategia-precos__note-panel">
               Ao processar, a persistência da matriz usa MDF como base e soma fita, insumos base e RH/despesas no componente consolidado. Ferragens por unidade seguem no orçamento técnico.
             </div>
             <div class="flex flex-col sm:flex-row gap-2">
-              <button
+              <Button
                 type="button"
-                class="inline-flex justify-center items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold border border-border-ui text-text-main hover:bg-slate-50 transition-all"
-                :disabled="loadingMatriz"
+                variant="outline"
+                size="md"
+                :loading="loadingMatriz"
+                class="!rounded-xl text-sm font-semibold"
                 @click="loadMatriz"
               >
-                <i :class="loadingMatriz ? 'pi pi-spin pi-spinner' : 'pi pi-refresh'" class="text-sm"></i>
+                <i v-if="!loadingMatriz" class="pi pi-refresh text-sm"></i>
                 Atualizar dados
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                class="inline-flex justify-center items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 text-white hover:scale-[1.02] hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                :disabled="processando"
+                variant="primary"
+                size="md"
+                :loading="processando"
+                class="!rounded-xl text-sm font-bold"
                 @click="processarMatriz"
               >
-                <i :class="processando ? 'pi pi-spin pi-spinner' : 'pi pi-calculator'" class="text-sm"></i>
+                <i v-if="!processando" class="pi pi-calculator text-sm"></i>
                 {{ processando ? 'Processando...' : 'Gerar Preço Final' }}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
-      </section>
-    </div>
-  </div>
+        </section>
+      </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
@@ -563,6 +600,8 @@ const CATEGORIAS_ABA1 = [
 
 const activeTab = ref('mdf')
 const activeSubTab = ref('essencial')
+
+const activeTabMeta = computed(() => tabs.find((item) => item.id === activeTab.value) || tabs[0])
 
 const mdfSearch = ref('')
 const fitaSearch = ref('')
@@ -655,8 +694,11 @@ const resumoCategoriaOperacional = computed(() => {
     const items = (gruposMdfPorCategoria.value[cat.id] || []).filter((row) => row.selected)
     const materialCosts = items.map((row) => custoMdfCalculadoM2(row)).filter((value) => value > 0)
     const fitaCosts = items.map((row) => custoFitaVinculadaPorMaterial(row)).filter((value) => value > 0)
-    const materialCost = materialCosts.length ? materialCosts.reduce((sum, value) => sum + value, 0) / materialCosts.length : 0
-    const fitaAvg = fitaCosts.length ? fitaCosts.reduce((sum, value) => sum + value, 0) / fitaCosts.length : 0
+
+    // Usa o maior custo MDF selecionado como teto da categoria (garante margem no pior caso)
+    const materialCost = materialCosts.length ? Math.max(...materialCosts) : 0
+    // Fita: maior custo vinculado ao MDF mais caro da categoria
+    const fitaAvg = fitaCosts.length ? Math.max(...fitaCosts) : 0
 
     result[cat.id] = {
       materialCost,
@@ -870,16 +912,27 @@ function custoFitaPorMetro(item) {
 }
 
 function encontrarFitaVinculadaPorMaterial(material) {
+  const fitas = Array.isArray(fitasBorda.value) ? fitasBorda.value : []
+
+  // 1ª prioridade: vínculo direto por ID (campo fita_vinculada_id do produto MDF)
+  const fitaId = Number(material?.fita_vinculada_id || 0)
+  if (fitaId > 0) {
+    const vinculada = fitas.find((item) => Number(item?.id) === fitaId)
+    if (vinculada) return vinculada
+  }
+
+  // 2ª prioridade: match exato de cor normalizada
   const corMaterial = normalizarCorVinculo(material?.color || material?.group || material?.cor || material?.nome_produto || '')
   if (!corMaterial) return null
 
-  const fitas = Array.isArray(fitasBorda.value) ? fitasBorda.value : []
   const exata = fitas.find((item) => normalizarCorVinculo(item?.cor || item?.nome_produto || '') === corMaterial)
   if (exata) return exata
 
+  // 3ª prioridade: match parcial (fallback)
   return fitas.find((item) => {
     const corFita = normalizarCorVinculo(item?.cor || item?.nome_produto || '')
-    return corFita && (corFita.includes(corMaterial) || corMaterial.includes(corFita))
+    return corFita && corFita.length >= 4 && corMaterial.length >= 4
+      && (corFita.includes(corMaterial) || corMaterial.includes(corFita))
   }) || null
 }
 
@@ -897,7 +950,12 @@ function valorUnitarioItem(item) {
       ? valorReferenciaInformado
       : (Number.isFinite(fator) && fator > 0 ? valorCompra / fator : valorCompra)
 
-  const valorComMarkup = valorReferencia * Number(markupFactor.value || 1)
+  // Custo real por m²: valor_referência × consumo_m² × markup
+  // Se consumo_m2 não informado, usa 1 (custo da unidade de referência direto)
+  const consumoM2 = Number(item?.consumo_m2 || 0)
+  const baseM2 = consumoM2 > 0 ? valorReferencia * consumoM2 : valorReferencia
+
+  const valorComMarkup = baseM2 * Number(markupFactor.value || 1)
   return Math.round((valorComMarkup + Number.EPSILON) * 10000) / 10000
 }
 
@@ -1068,6 +1126,7 @@ async function processarMatriz() {
         cost_base: Number(m.cost_base || 0),
         adicional_fita_m2: Number(custoFitaVinculadaPorMaterial(m) || 0),
         reference_purchase_price: Number(precoReferenciaByStrategy(m) || 0),
+        fita_vinculada_id: m.fita_vinculada_id ?? null,
         acrescimo_pct: 0,
         selected: !!m.selected,
       })),
@@ -1221,3 +1280,476 @@ onMounted(async () => {
   await carregarSelecoesSalvas()
 })
 </script>
+
+<style scoped>
+.estrategia-precos :deep(.ds-shell-card) {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.estrategia-precos :deep(.ds-header-block) {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.estrategia-precos__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem;
+}
+
+.estrategia-precos__header-actions {
+  width: 100%;
+  justify-content: flex-end;
+}
+
+.estrategia-precos__header-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  min-width: min(100%, 18rem);
+  padding: 0.25rem 0;
+}
+
+.estrategia-precos__header-kicker,
+.estrategia-precos__workspace-eyebrow {
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgb(100 116 139);
+}
+
+.estrategia-precos__header-updated,
+.estrategia-precos__workspace-copy,
+.estrategia-precos__toolbar-copy,
+.estrategia-precos__control-help {
+  font-size: 0.74rem;
+  line-height: 1.55;
+  color: var(--ds-color-text-muted, rgb(100 116 139));
+}
+
+.estrategia-precos__workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.estrategia-precos__workspace-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0 0 0.95rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--ds-color-primary) 8%, var(--ds-color-border) 92%);
+}
+
+.estrategia-precos__workspace-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.estrategia-precos__status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--ds-color-primary) 16%, var(--ds-color-border) 84%);
+  background: color-mix(in srgb, var(--ds-color-primary) 7%, white);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ds-color-primary) 58%, rgb(51 65 85));
+}
+
+.estrategia-precos__status-note {
+  font-size: 0.74rem;
+  color: var(--ds-color-text-muted, rgb(100 116 139));
+}
+
+.estrategia-precos__workspace-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0 0 1rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--ds-color-border) 88%, white);
+}
+
+.estrategia-precos__tabs,
+.estrategia-precos__subtabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.estrategia-precos__tab,
+.estrategia-precos__subtab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.8rem;
+  padding: 0.65rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--ds-color-border) 90%, white);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--ds-color-primary) 2%, white);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgb(71 85 105);
+  transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease, color 180ms ease;
+}
+
+.estrategia-precos__tab:hover,
+.estrategia-precos__subtab:hover {
+  border-color: color-mix(in srgb, var(--ds-color-primary) 28%, var(--ds-color-border) 72%);
+  transform: translateY(-1px);
+}
+
+.estrategia-precos__tab--active {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--ds-color-primary), color-mix(in srgb, var(--ds-color-primary) 72%, rgb(14 165 233)));
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.2);
+  color: white;
+}
+
+.estrategia-precos__subtab--active {
+  border-color: rgb(15 23 42);
+  background: rgb(15 23 42);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.18);
+  color: white;
+}
+
+.estrategia-precos__controls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.85rem;
+}
+
+.estrategia-precos__control-card {
+  padding: 0.95rem;
+  border: 1px solid color-mix(in srgb, var(--ds-color-border) 72%, transparent);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--ds-color-primary) 2%, transparent);
+}
+
+.estrategia-precos__search-input {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--ds-color-border) 86%, white);
+  border-radius: 0.95rem;
+  background: white;
+  color: rgb(51 65 85);
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.estrategia-precos__search-input {
+  padding: 0.72rem 0.85rem 0.72rem 2rem;
+  font-size: 0.9rem;
+}
+
+.estrategia-precos__search-input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--ds-color-primary) 36%, var(--ds-color-border) 64%);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--ds-color-primary) 10%, transparent);
+}
+
+.estrategia-precos__table-shell {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--ds-color-border) 78%, transparent);
+  border-radius: 1rem;
+  background: color-mix(in srgb, white 88%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.estrategia-precos__table {
+  width: 100%;
+}
+
+.estrategia-precos__table--mdf,
+.estrategia-precos__table--venda {
+  min-width: 860px;
+}
+
+.estrategia-precos__table--fita {
+  min-width: 840px;
+}
+
+.estrategia-precos__table--unidade {
+  min-width: 980px;
+}
+
+.estrategia-precos__table-head-row {
+  background: white;
+  border-bottom: 1px solid var(--ds-color-border);
+  text-align: left;
+}
+
+.estrategia-precos__table-head-cell {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgb(100 116 139);
+}
+
+.estrategia-precos__table-head-cell--accent {
+  color: rgb(4 120 87);
+}
+
+.estrategia-precos__table-row {
+  border-bottom: 1px solid color-mix(in srgb, var(--ds-color-border) 70%, transparent);
+  transition: background-color 180ms ease;
+}
+
+.estrategia-precos__table-row:last-child {
+  border-bottom: 0;
+}
+
+.estrategia-precos__table-row--interactive {
+  cursor: pointer;
+}
+
+.estrategia-precos__table-row--hover-blue:hover {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.estrategia-precos__table-row--hover-orange:hover {
+  background: rgba(249, 115, 22, 0.08);
+}
+
+.estrategia-precos__table-row--hover-neutral:hover {
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.estrategia-precos__table-row--selected {
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.estrategia-precos__table-row--linked {
+  background: rgba(249, 115, 22, 0.1);
+}
+
+.estrategia-precos__table-cell {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  color: var(--ds-color-text, rgb(15 23 42));
+  vertical-align: top;
+}
+
+.estrategia-precos__table-cell--checkbox {
+  width: 54px;
+}
+
+.estrategia-precos__table-cell--strong {
+  font-weight: 600;
+}
+
+.estrategia-precos__table-cell--numeric {
+  font-variant-numeric: tabular-nums;
+}
+
+.estrategia-precos__table-cell--accent {
+  font-weight: 900;
+  color: rgb(4 120 87);
+}
+
+.estrategia-precos__table-state {
+  padding: 2rem 0.75rem;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--ds-color-text-muted, rgb(100 116 139));
+}
+
+.estrategia-precos__table-value-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 0.7rem;
+  padding: 0.3rem 0.625rem;
+  background: rgba(16, 185, 129, 0.12);
+  color: rgb(4 120 87);
+  font-size: 0.76rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.estrategia-precos__table-tag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.estrategia-precos__table-tag--blue {
+  background: rgba(59, 130, 246, 0.14);
+  color: rgb(29 78 216);
+}
+
+.estrategia-precos__control-help {
+  margin-top: 0.45rem;
+}
+
+.estrategia-precos__strip-grid,
+.estrategia-precos__stat-grid,
+.estrategia-precos__summary-grid {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.estrategia-precos__strip-grid--three,
+.estrategia-precos__stat-grid--three {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.estrategia-precos__summary-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.estrategia-precos__strip-panel,
+.estrategia-precos__summary-panel,
+.estrategia-precos__note-panel,
+.estrategia-precos__stat-line {
+  border-radius: 1rem;
+  background: color-mix(in srgb, white 82%, transparent);
+}
+
+.estrategia-precos__strip-panel,
+.estrategia-precos__summary-panel,
+.estrategia-precos__note-panel {
+  padding: 0.95rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--ds-color-border) 78%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.estrategia-precos__strip-panel {
+  position: relative;
+}
+
+.estrategia-precos__strip-panel::before,
+.estrategia-precos__summary-panel::before,
+.estrategia-precos__stat-line::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.8rem;
+  bottom: 0.8rem;
+  width: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ds-color-border) 80%, transparent);
+}
+
+.estrategia-precos__strip-panel--neutral::before {
+  background: rgb(148 163 184);
+}
+
+.estrategia-precos__strip-panel--blue::before,
+.estrategia-precos__summary-panel--blue::before,
+.estrategia-precos__stat-line--blue::before {
+  background: rgb(59 130 246);
+}
+
+.estrategia-precos__strip-panel--violet::before,
+.estrategia-precos__summary-panel--violet::before,
+.estrategia-precos__stat-line--violet::before {
+  background: rgb(139 92 246);
+}
+
+.estrategia-precos__summary-panel {
+  position: relative;
+  min-height: 116px;
+  padding-left: 1.15rem;
+}
+
+.estrategia-precos__summary-panel--emerald::before,
+.estrategia-precos__stat-line--emerald::before {
+  background: rgb(16 185 129);
+}
+
+.estrategia-precos__summary-panel--orange::before {
+  background: rgb(249 115 22);
+}
+
+.estrategia-precos__summary-panel--brand::before {
+  background: var(--ds-color-primary);
+}
+
+.estrategia-precos__summary-panel--brand {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--ds-color-primary) 7%, white), white 62%, color-mix(in srgb, rgb(16 185 129) 7%, white));
+}
+
+.estrategia-precos__stat-line {
+  position: relative;
+  padding: 0.9rem 1rem 0.9rem 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--ds-color-border) 72%, transparent);
+  font-size: 0.92rem;
+  color: rgb(71 85 105);
+}
+
+.estrategia-precos__stat-line strong {
+  color: rgb(15 23 42);
+}
+
+.estrategia-precos__note-panel {
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: rgb(71 85 105);
+}
+
+.estrategia-precos__tab-panel {
+  padding: 0;
+}
+
+.estrategia-precos__tab-panel--contrast {
+  background: transparent;
+}
+
+@media (min-width: 768px) {
+  .estrategia-precos__body {
+    padding: 1rem 1.5rem 1.75rem;
+  }
+
+  .estrategia-precos :deep(.ds-header-block) {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  .estrategia-precos__workspace-head,
+  .estrategia-precos__workspace-toolbar,
+  .estrategia-precos__tab-panel {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .estrategia-precos__body {
+    padding: 1rem 2rem 2rem;
+  }
+
+  .estrategia-precos :deep(.ds-header-block) {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+
+  .estrategia-precos__workspace-head,
+  .estrategia-precos__workspace-toolbar,
+  .estrategia-precos__tab-panel {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+</style>

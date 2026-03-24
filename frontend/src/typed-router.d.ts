@@ -44,6 +44,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/agenda-geral/': RouteRecordInfo<
+      '/agenda-geral/',
+      '/agenda-geral',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/agendamentos/': RouteRecordInfo<
       '/agendamentos/',
       '/agendamentos',
@@ -51,23 +58,9 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/agendamentos/agenda-fabrica': RouteRecordInfo<
-      '/agendamentos/agenda-fabrica',
-      '/agendamentos/agenda-fabrica',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/agendamentos/fabrica': RouteRecordInfo<
-      '/agendamentos/fabrica',
-      '/agendamentos/fabrica',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/agendamentos/loja': RouteRecordInfo<
-      '/agendamentos/loja',
-      '/agendamentos/loja',
+    '/agendamentos/kanban': RouteRecordInfo<
+      '/agendamentos/kanban',
+      '/agendamentos/kanban',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -79,11 +72,25 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/arquivos/': RouteRecordInfo<
+      '/arquivos/',
+      '/arquivos',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/arquivos/[id]': RouteRecordInfo<
       '/arquivos/[id]',
       '/arquivos/:id',
       { id: ParamValue<true> },
       { id: ParamValue<false> },
+      | never
+    >,
+    '/arquivos/importacao/[clienteId]': RouteRecordInfo<
+      '/arquivos/importacao/[clienteId]',
+      '/arquivos/importacao/:clienteId',
+      { clienteId: ParamValue<true> },
+      { clienteId: ParamValue<false> },
       | never
     >,
     '/arquivos/pdf/[id]': RouteRecordInfo<
@@ -219,13 +226,6 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
-    '/estoque/': RouteRecordInfo<
-      '/estoque/',
-      '/estoque',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
     '/financeiro/contas-pagar/': RouteRecordInfo<
       '/financeiro/contas-pagar/',
       '/financeiro/contas-pagar',
@@ -243,6 +243,13 @@ declare module 'vue-router/auto-routes' {
     '/financeiro/custos-estrutura/': RouteRecordInfo<
       '/financeiro/custos-estrutura/',
       '/financeiro/custos-estrutura',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/fluxo-operacional': RouteRecordInfo<
+      '/fluxo-operacional',
+      '/fluxo-operacional',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -280,6 +287,20 @@ declare module 'vue-router/auto-routes' {
       '/login',
       Record<never, never>,
       Record<never, never>,
+      | never
+    >,
+    '/medicao/orcamento/[id]': RouteRecordInfo<
+      '/medicao/orcamento/[id]',
+      '/medicao/orcamento/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/medicao/pre/[id]': RouteRecordInfo<
+      '/medicao/pre/[id]',
+      '/medicao/pre/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
       | never
     >,
     '/medicao/venda/[id]': RouteRecordInfo<
@@ -457,6 +478,48 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/producao/medida-tecnica/': RouteRecordInfo<
+      '/producao/medida-tecnica/',
+      '/producao/medida-tecnica',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/producao/medida-tecnica/[projetoId]': RouteRecordInfo<
+      '/producao/medida-tecnica/[projetoId]',
+      '/producao/medida-tecnica/:projetoId',
+      { projetoId: ParamValue<true> },
+      { projetoId: ParamValue<false> },
+      | never
+    >,
+    '/producao/projeto-plano-corte/': RouteRecordInfo<
+      '/producao/projeto-plano-corte/',
+      '/producao/projeto-plano-corte',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/producao/projeto-plano-corte/[planoId]': RouteRecordInfo<
+      '/producao/projeto-plano-corte/[planoId]',
+      '/producao/projeto-plano-corte/:planoId',
+      { planoId: ParamValue<true> },
+      { planoId: ParamValue<false> },
+      | never
+    >,
+    '/producao/projeto-tecnico/': RouteRecordInfo<
+      '/producao/projeto-tecnico/',
+      '/producao/projeto-tecnico',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/producao/projeto-tecnico/[projetoId]': RouteRecordInfo<
+      '/producao/projeto-tecnico/[projetoId]',
+      '/producao/projeto-tecnico/:projetoId',
+      { projetoId: ParamValue<true> },
+      { projetoId: ParamValue<false> },
+      | never
+    >,
     '/produtos/': RouteRecordInfo<
       '/produtos/',
       '/produtos',
@@ -544,6 +607,13 @@ declare module 'vue-router/auto-routes' {
     '/totem-fabrica/medicao': RouteRecordInfo<
       '/totem-fabrica/medicao',
       '/totem-fabrica/medicao',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/totem-fabrica-preencher': RouteRecordInfo<
+      '/totem-fabrica-preencher',
+      '/totem-fabrica-preencher',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -649,27 +719,21 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/agenda-geral/index.vue': {
+      routes:
+        | '/agenda-geral/'
+      views:
+        | never
+    }
     'src/pages/agendamentos/index.vue': {
       routes:
         | '/agendamentos/'
       views:
         | never
     }
-    'src/pages/agendamentos/agenda-fabrica.vue': {
+    'src/pages/agendamentos/kanban.vue': {
       routes:
-        | '/agendamentos/agenda-fabrica'
-      views:
-        | never
-    }
-    'src/pages/agendamentos/fabrica.vue': {
-      routes:
-        | '/agendamentos/fabrica'
-      views:
-        | never
-    }
-    'src/pages/agendamentos/loja.vue': {
-      routes:
-        | '/agendamentos/loja'
+        | '/agendamentos/kanban'
       views:
         | never
     }
@@ -679,9 +743,21 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/arquivos/index.vue': {
+      routes:
+        | '/arquivos/'
+      views:
+        | never
+    }
     'src/pages/arquivos/[id].vue': {
       routes:
         | '/arquivos/[id]'
+      views:
+        | never
+    }
+    'src/pages/arquivos/importacao/[clienteId].vue': {
+      routes:
+        | '/arquivos/importacao/[clienteId]'
       views:
         | never
     }
@@ -799,12 +875,6 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/estoque/index.vue': {
-      routes:
-        | '/estoque/'
-      views:
-        | never
-    }
     'src/pages/financeiro/contas-pagar/index.vue': {
       routes:
         | '/financeiro/contas-pagar/'
@@ -820,6 +890,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/financeiro/custos-estrutura/index.vue': {
       routes:
         | '/financeiro/custos-estrutura/'
+      views:
+        | never
+    }
+    'src/pages/fluxo-operacional.vue': {
+      routes:
+        | '/fluxo-operacional'
       views:
         | never
     }
@@ -850,6 +926,18 @@ declare module 'vue-router/auto-routes' {
     'src/pages/login.vue': {
       routes:
         | '/login'
+      views:
+        | never
+    }
+    'src/pages/medicao/orcamento/[id].vue': {
+      routes:
+        | '/medicao/orcamento/[id]'
+      views:
+        | never
+    }
+    'src/pages/medicao/pre/[id].vue': {
+      routes:
+        | '/medicao/pre/[id]'
       views:
         | never
     }
@@ -1003,6 +1091,42 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/producao/medida-tecnica/index.vue': {
+      routes:
+        | '/producao/medida-tecnica/'
+      views:
+        | never
+    }
+    'src/pages/producao/medida-tecnica/[projetoId].vue': {
+      routes:
+        | '/producao/medida-tecnica/[projetoId]'
+      views:
+        | never
+    }
+    'src/pages/producao/projeto-plano-corte/index.vue': {
+      routes:
+        | '/producao/projeto-plano-corte/'
+      views:
+        | never
+    }
+    'src/pages/producao/projeto-plano-corte/[planoId].vue': {
+      routes:
+        | '/producao/projeto-plano-corte/[planoId]'
+      views:
+        | never
+    }
+    'src/pages/producao/projeto-tecnico/index.vue': {
+      routes:
+        | '/producao/projeto-tecnico/'
+      views:
+        | never
+    }
+    'src/pages/producao/projeto-tecnico/[projetoId].vue': {
+      routes:
+        | '/producao/projeto-tecnico/[projetoId]'
+      views:
+        | never
+    }
     'src/pages/produtos/index.vue': {
       routes:
         | '/produtos/'
@@ -1079,6 +1203,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/totem-fabrica/medicao.vue': {
       routes:
         | '/totem-fabrica/medicao'
+      views:
+        | never
+    }
+    'src/pages/totem-fabrica-preencher.vue': {
+      routes:
+        | '/totem-fabrica-preencher'
       views:
         | never
     }

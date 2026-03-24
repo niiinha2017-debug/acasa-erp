@@ -1,29 +1,24 @@
 <!-- src/pages/financeiro/custos-estrutura/index.vue -->
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
+  <PageShell :padded="false" variant="minimal">
+    <section class="login-font ds-page-context ds-page-context--editor animate-page-in">
+      <PageHeader
+        title="Custos de Estrutura"
+        subtitle="Visão geral: custo da fábrica parada (fixo, do Financeiro/Despesas), custo por hora (taxa de máquina) e projeção total com Compras do mês (almoxarifado — MDF, ferragens)."
+        icon="pi pi-building"
+        variant="minimal"
+      />
 
-      <div class="flex flex-col gap-4 px-4 md:px-6 py-4 border-b border-border-ui">
-        <h1 class="text-xl font-semibold text-text-main flex items-center gap-2">
-          <i class="pi pi-building text-text-muted" />
-          Custos de Estrutura
-        </h1>
-        <p class="text-sm text-text-muted">
-          Visão geral: custo da fábrica parada (fixo, do Financeiro/Despesas), custo por hora (taxa de máquina) e projeção total com Compras do mês (almoxarifado — MDF, ferragens).
-        </p>
-      </div>
-
-      <div class="px-4 md:px-6 pb-6 pt-4 space-y-6">
+      <div class="ds-editor-body space-y-6 px-4 md:px-6 pb-6 pt-4">
         <!-- Parâmetros unificados: período (mês ou ano) e pesquisas -->
-        <div class="rounded-xl border border-border-ui bg-slate-50/50 dark:bg-slate-800/30 p-4 flex flex-wrap items-end gap-4">
+        <div class="ds-card ds-card--default p-4 flex flex-wrap items-end gap-4">
           <h2 class="text-sm font-semibold text-text-main w-full mb-0">Parâmetros</h2>
           <div class="flex flex-wrap items-end gap-3">
             <div class="w-32">
               <label class="text-xs font-medium text-text-muted block mb-1">Período</label>
               <select
                 v-model="periodo"
-                class="w-full h-10 rounded-lg border border-border-ui bg-bg-page pl-2 pr-2 text-sm text-text-main"
+                class="w-full h-10 rounded-lg border border-[var(--ds-color-border)] bg-[var(--ds-color-surface)] pl-2 pr-2 text-sm text-text-main"
                 @change="carregar"
               >
                 <option value="mes">Por mês</option>
@@ -35,7 +30,7 @@
                 <label class="text-xs font-medium text-text-muted block mb-1">Mês</label>
                 <select
                   v-model.number="mesAno.mes"
-                  class="w-full h-10 rounded-lg border border-border-ui bg-bg-page pl-2 pr-2 text-sm text-text-main"
+                  class="w-full h-10 rounded-lg border border-[var(--ds-color-border)] bg-[var(--ds-color-surface)] pl-2 pr-2 text-sm text-text-main"
                   @change="carregar"
                 >
                   <option v-for="m in 12" :key="m" :value="m">{{ String(m).padStart(2, '0') }}</option>
@@ -46,7 +41,7 @@
               <label class="text-xs font-medium text-text-muted block mb-1">Ano</label>
               <select
                 v-model.number="mesAno.ano"
-                class="w-full h-10 rounded-lg border border-border-ui bg-bg-page pl-2 pr-2 text-sm text-text-main"
+                class="w-full h-10 rounded-lg border border-[var(--ds-color-border)] bg-[var(--ds-color-surface)] pl-2 pr-2 text-sm text-text-main"
                 @change="carregar"
               >
                 <option v-for="y in anosDisponiveis" :key="y" :value="y">{{ y }}</option>
@@ -54,7 +49,7 @@
             </div>
             <button
               type="button"
-              class="h-10 px-4 rounded-lg border border-border-ui bg-bg-page text-text-main text-sm hover:bg-black/5 dark:hover:bg-white/5"
+              class="h-10 px-4 rounded-lg border border-[var(--ds-color-border)] bg-[var(--ds-color-surface)] text-text-main text-sm hover:bg-black/5 dark:hover:bg-white/5"
               @click="carregar"
             >
               <i class="pi pi-refresh mr-2" />
@@ -65,17 +60,17 @@
 
         <!-- 3 métricas principais: somente valores automáticos (Despesas + Compras) -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div class="rounded-xl border border-border-ui bg-bg-page p-4 shadow-sm">
+          <div class="ds-card ds-card--default p-4">
             <p class="text-[10px] font-semibold text-text-muted uppercase tracking-wide">{{ periodo === 'ano' ? 'Custo Fábrica (Anual)' : 'Custo Fábrica (Mensal)' }}</p>
             <p class="mt-1 text-xl font-bold text-text-main tabular-nums">{{ formatarMoeda(totalCustos) }}</p>
             <p class="text-xs text-text-muted mt-0.5">Despesas (Ocupação + Operacional + Manutenção) — automático</p>
           </div>
-          <div class="rounded-xl border border-border-ui bg-bg-page p-4 shadow-sm">
+          <div class="ds-card ds-card--default p-4">
             <p class="text-[10px] font-semibold text-text-muted uppercase tracking-wide">Custo Hora (Taxa de Máquina)</p>
             <p class="mt-1 text-xl font-bold text-brand-primary tabular-nums">{{ formatarMoeda(custoFixoPorHora) }}/h</p>
             <p class="text-xs text-text-muted mt-0.5">Custo Fábrica ÷ {{ horasUteisExibicao }}h úteis</p>
           </div>
-          <div class="rounded-xl border border-border-ui bg-bg-page p-4 shadow-sm">
+          <div class="ds-card ds-card--default p-4">
             <p class="text-[10px] font-semibold text-text-muted uppercase tracking-wide">Projeção de Custo Total</p>
             <p class="mt-1 text-xl font-bold text-text-main tabular-nums">{{ formatarMoeda(projecaoCustoTotal) }}</p>
             <p class="text-xs text-text-muted mt-0.5">Despesas fixas + Compras (MDF, ferragens — almoxarifado)</p>
@@ -88,14 +83,14 @@
         </p>
 
         <!-- Gráfico de evolução -->
-        <div class="rounded-xl border border-border-ui bg-bg-page overflow-hidden">
-          <div class="px-4 py-3 border-b border-border-ui bg-slate-50/50 dark:bg-slate-800/30 flex flex-wrap items-center justify-between gap-3">
+        <div class="ds-card ds-card--default overflow-hidden">
+          <div class="px-4 py-3 border-b border-[color:var(--ds-color-border-ui)] bg-[var(--ds-color-surface-muted)] flex flex-wrap items-center justify-between gap-3">
             <h2 class="text-base font-semibold text-text-main">Evolução dos custos de estrutura</h2>
             <div class="flex items-center gap-2">
               <label class="text-xs font-medium text-text-muted">Período</label>
               <select
                 v-model.number="graficoMeses"
-                class="h-9 w-28 rounded-lg border border-border-ui bg-bg-page pl-2 pr-2 text-sm text-text-main"
+                class="h-9 w-28 rounded-lg border border-[var(--ds-color-border)] bg-[var(--ds-color-surface)] pl-2 pr-2 text-sm text-text-main"
                 @change="carregarGrafico"
               >
                 <option :value="6">6 meses</option>
@@ -130,8 +125,8 @@
         </div>
 
         <!-- Valores do período: somente leitura (automáticos do módulo Despesas) -->
-        <div class="rounded-xl border border-border-ui bg-bg-page overflow-hidden">
-          <div class="px-4 py-3 border-b border-border-ui bg-slate-50/50 dark:bg-slate-800/30">
+        <div class="ds-card ds-card--default overflow-hidden">
+          <div class="px-4 py-3 border-b border-[color:var(--ds-color-border-ui)] bg-[var(--ds-color-surface-muted)]">
             <h2 class="text-base font-semibold text-text-main">Valores do {{ periodo === 'ano' ? 'ano' : 'mês' }} (Módulo Despesas)</h2>
             <p class="text-xs text-text-muted mt-0.5">Soma das despesas por categoria — somente automático.</p>
           </div>
@@ -159,8 +154,8 @@
           </div>
         </div>
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>

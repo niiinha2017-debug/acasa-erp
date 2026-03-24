@@ -42,21 +42,21 @@
           <button
             type="button"
             class="px-4 py-2 rounded-xl text-sm font-medium transition-opacity"
-            :class="aguardandoCliqueParede ? 'bg-amber-500 text-white hover:opacity-90' : 'bg-brand-primary text-white hover:opacity-90'"
+            :class="aguardandoCliqueParede ? 'bg-[var(--ds-color-warning-500)] text-white hover:opacity-90' : 'bg-brand-primary text-white hover:opacity-90'"
             @click="aguardandoCliqueParede ? (aguardandoCliqueParede = false) : (aguardandoCliqueParede = true)"
           >
             {{ aguardandoCliqueParede ? 'Clique em uma parede para posicionar (ou aqui para cancelar)' : 'Adicionar Módulo' }}
           </button>
           <button
             type="button"
-            class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:opacity-90 transition-opacity"
+            class="px-4 py-2 rounded-xl bg-[var(--ds-color-success-600)] text-white text-sm font-medium hover:opacity-90 transition-opacity"
             @click="salvarAmbiente"
           >
             Salvar Projeto
           </button>
           <button
             type="button"
-            class="px-3 py-2 rounded-xl border border-amber-500 text-amber-700 dark:text-amber-300 text-sm font-medium hover:bg-amber-50 dark:hover:bg-amber-950/30"
+            class="px-3 py-2 rounded-xl border border-[var(--ds-color-warning-500)] text-[var(--ds-color-warning-700)] text-sm font-medium hover:bg-[var(--ds-color-warning-50)]"
             @click="adicionarPontoTecnico('tomada')"
           >
             + Tomada
@@ -71,7 +71,7 @@
           <button
             type="button"
             class="px-4 py-2 rounded-xl text-sm font-medium border-2 transition-colors"
-            :class="modoDesenhoParede ? 'border-amber-500 bg-amber-500 text-white' : 'border-slate-400 dark:border-slate-500 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'"
+            :class="modoDesenhoParede ? 'border-[var(--ds-color-warning-500)] bg-[var(--ds-color-warning-500)] text-white' : 'border-slate-400 dark:border-slate-500 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'"
             @click="toggleModoDesenhoParede"
           >
             Desenhar Parede
@@ -219,7 +219,7 @@
                   role="switch"
                   :aria-checked="modoMedicaoFina"
                   class="relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2"
-                  :class="modoMedicaoFina ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'"
+                  :class="modoMedicaoFina ? 'bg-[var(--ds-color-warning-500)]' : 'bg-slate-300 dark:bg-slate-600'"
                   @click="modoMedicaoFina = !modoMedicaoFina"
                 >
                   <span
@@ -343,10 +343,10 @@
                       placeholder="Ex: 3005"
                       class="w-full rounded-lg border px-2 py-1.5 text-sm"
                       :class="diferencaConferenciaLargura !== null && diferencaConferenciaLargura !== 0
-                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30'
+                        ? 'border-[var(--ds-color-warning-500)] bg-[var(--ds-color-warning-50)]'
                         : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'"
                     />
-                    <p v-if="diferencaConferenciaLargura !== null && diferencaConferenciaLargura !== 0" class="mt-1 font-medium" :class="diferencaConferenciaLargura > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-amber-700 dark:text-amber-300'">
+                    <p v-if="diferencaConferenciaLargura !== null && diferencaConferenciaLargura !== 0" class="mt-1 font-medium" :class="diferencaConferenciaLargura > 0 ? 'text-[var(--ds-color-warning-600)]' : 'text-[var(--ds-color-warning-700)]'">
                       {{ diferencaConferenciaLargura > 0 ? '+' : '' }}{{ diferencaConferenciaLargura }} mm em relação ao orçamento
                     </p>
                   </div>
@@ -359,10 +359,10 @@
                       placeholder="Ex: 2502"
                       class="w-full rounded-lg border px-2 py-1.5 text-sm"
                       :class="diferencaConferenciaProfundidade !== null && diferencaConferenciaProfundidade !== 0
-                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30'
+                        ? 'border-[var(--ds-color-warning-500)] bg-[var(--ds-color-warning-50)]'
                         : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'"
                     />
-                    <p v-if="diferencaConferenciaProfundidade !== null && diferencaConferenciaProfundidade !== 0" class="mt-1 font-medium" :class="diferencaConferenciaProfundidade > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-amber-700 dark:text-amber-300'">
+                    <p v-if="diferencaConferenciaProfundidade !== null && diferencaConferenciaProfundidade !== 0" class="mt-1 font-medium" :class="diferencaConferenciaProfundidade > 0 ? 'text-[var(--ds-color-warning-600)]' : 'text-[var(--ds-color-warning-700)]'">
                       {{ diferencaConferenciaProfundidade > 0 ? '+' : '' }}{{ diferencaConferenciaProfundidade }} mm em relação ao orçamento
                     </p>
                   </div>
@@ -387,7 +387,7 @@
                 <p class="text-slate-400 dark:text-slate-500 mb-2 text-xs">Simula o recebimento da medida da parede {{ labelParede(paredeSelecionada) }} e atualiza o comprimento no canvas.</p>
                 <button
                   type="button"
-                  class="w-full px-3 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium transition-colors"
+                  class="w-full px-3 py-2 rounded-lg bg-[var(--ds-color-warning-500)] hover:bg-[var(--ds-color-warning-600)] text-white text-sm font-medium transition-colors"
                   @click="simularCapturaMedidaFoto"
                 >
                   Capturar Medida via Foto
@@ -401,7 +401,7 @@
                   <span class="block">Distância Esquerda: {{ distEsquerdaMm }} mm</span>
                   <span class="block">Distância Topo: {{ distTopoMm }} mm</span>
                 </p>
-                <p v-if="modoMedicaoFina && moduloCobrePontoTecnico" class="mt-2 text-amber-600 dark:text-amber-400 text-xs font-medium">
+                <p v-if="modoMedicaoFina && moduloCobrePontoTecnico" class="mt-2 text-[var(--ds-color-warning-600)] text-xs font-medium">
                   Atenção: este módulo está sobre um ponto técnico (tomada/ponto de água). Posicione o ponto no canvas.
                 </p>
               </template>
@@ -415,7 +415,7 @@
                   <span class="block">Até chão (eixo Y): {{ cotaPontoChaoMm }} mm</span>
                   <span class="block mt-1 font-medium">Parede mais próxima: {{ cotaPontoParedeMaisProximaMm }} mm</span>
                 </p>
-                <p v-if="modoMedicaoFina && pontoDentroDeModulo" class="mt-2 text-amber-600 dark:text-amber-400 text-xs font-medium">
+                <p v-if="modoMedicaoFina && pontoDentroDeModulo" class="mt-2 text-[var(--ds-color-warning-600)] text-xs font-medium">
                   Este ponto está sob um módulo. Em Medição Fina é obrigatório posicioná-lo.
                 </p>
               </template>
@@ -455,7 +455,7 @@
                   <p class="mt-0.5 text-slate-400 dark:text-slate-500 text-xs">0 = chão; ex.: 1500 = armário aéreo.</p>
                   <button
                     type="button"
-                    class="mt-1 w-full px-2 py-1.5 rounded-lg border border-amber-500 text-amber-700 dark:text-amber-300 text-xs font-medium hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                    class="mt-1 w-full px-2 py-1.5 rounded-lg border border-[var(--ds-color-warning-500)] text-[var(--ds-color-warning-700)] text-xs font-medium hover:bg-[var(--ds-color-warning-50)]"
                     @click="definirArmarioAereo"
                   >
                     Definir como armário aéreo (1500 mm)
@@ -557,7 +557,7 @@
         </div>
         <button
           type="button"
-          class="px-4 py-2 rounded-xl bg-amber-600 text-white text-sm font-medium hover:opacity-90 transition-opacity"
+          class="px-4 py-2 rounded-xl bg-[var(--ds-color-warning-600)] text-white text-sm font-medium hover:opacity-90 transition-opacity"
           @click="gerarCubo3D"
         >
           Gerar Cubo 3D (MDF)

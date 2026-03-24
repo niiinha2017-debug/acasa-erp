@@ -1,59 +1,52 @@
 <template>
-  <div class="space-y-6">
+  <div class="medicao-form ds-editor-form space-y-10">
     <!-- Formulário de Conferência: checklist Elétrica, Hidráulica, Gás, Alvenaria -->
     <section class="space-y-3">
-      <h2 class="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-        Conferência da obra
-      </h2>
-      <p class="text-xs text-slate-500 dark:text-slate-400">
-        Marque quando cada item estiver conferido no local.
-      </p>
+      <div class="section-divider ds-section-divider relative">
+        <div class="absolute inset-0 flex items-center">
+          <div class="w-full border-t border-border-ui/50"></div>
+        </div>
+        <div class="relative flex justify-center">
+          <span class="section-title ds-section-title">Conferência da obra</span>
+        </div>
+      </div>
+      <p class="medicao-form__hint">Marque quando cada item estiver conferido no local.</p>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer transition">
-          <input
-            v-model="form.conferencia_eletrica_ok"
-            type="checkbox"
-            class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4"
-          />
-          <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Elétrica</span>
+        <label class="medicao-form__choice">
+          <input v-model="form.conferencia_eletrica_ok" type="checkbox" class="medicao-form__checkbox" />
+          <span class="medicao-form__choice-label">Elétrica</span>
         </label>
-        <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer transition">
-          <input
-            v-model="form.conferencia_hidraulica_ok"
-            type="checkbox"
-            class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4"
-          />
-          <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Hidráulica</span>
+        <label class="medicao-form__choice">
+          <input v-model="form.conferencia_hidraulica_ok" type="checkbox" class="medicao-form__checkbox" />
+          <span class="medicao-form__choice-label">Hidráulica</span>
         </label>
-        <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer transition">
-          <input
-            v-model="form.conferencia_gas_ok"
-            type="checkbox"
-            class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4"
-          />
-          <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Gás</span>
+        <label class="medicao-form__choice">
+          <input v-model="form.conferencia_gas_ok" type="checkbox" class="medicao-form__checkbox" />
+          <span class="medicao-form__choice-label">Gás</span>
         </label>
-        <label class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer transition">
-          <input
-            v-model="form.conferencia_alvenaria_ok"
-            type="checkbox"
-            class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4"
-          />
-          <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Alvenaria</span>
+        <label class="medicao-form__choice">
+          <input v-model="form.conferencia_alvenaria_ok" type="checkbox" class="medicao-form__checkbox" />
+          <span class="medicao-form__choice-label">Alvenaria</span>
         </label>
       </div>
     </section>
 
     <!-- Variáveis críticas -->
     <section class="space-y-4">
-      <h2 class="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-        Variáveis críticas (cm)
-      </h2>
-      <p class="text-xs text-slate-500 dark:text-slate-400">
+      <div class="section-divider ds-section-divider relative">
+        <div class="absolute inset-0 flex items-center">
+          <div class="w-full border-t border-border-ui/50"></div>
+        </div>
+        <div class="relative flex justify-center">
+          <span class="section-title ds-section-title">Variáveis críticas (cm)</span>
+        </div>
+      </div>
+      <p class="medicao-form__hint">
         Digite as medidas da obra em <strong>centímetros (cm)</strong>. Ex.: 270 = 2,70 m (pé-direito), 240 = 2,40 m (largura).
       </p>
       <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
         <Input
+          variant="line"
           v-model.number="form.altura_cm"
           type="number"
           label="Altura / Pé-direito (cm)"
@@ -62,6 +55,7 @@
           step="0.1"
         />
         <Input
+          variant="line"
           v-model.number="form.largura_cm"
           type="number"
           label="Largura (cm)"
@@ -70,6 +64,7 @@
           step="0.1"
         />
         <Input
+          variant="line"
           v-model.number="form.profundidade_cm"
           type="number"
           label="Profundidade (cm)"
@@ -83,31 +78,37 @@
           <input
             v-model="form.prumo_ok"
             type="checkbox"
-            class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+            class="medicao-form__checkbox"
           />
-          <span class="text-sm text-slate-700 dark:text-slate-300">Prumo OK</span>
+          <span class="medicao-form__choice-label">Prumo OK</span>
         </label>
         <label class="flex items-center gap-2 cursor-pointer">
           <input
             v-model="form.esquadro_ok"
             type="checkbox"
-            class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+            class="medicao-form__checkbox"
           />
-          <span class="text-sm text-slate-700 dark:text-slate-300">Esquadro OK</span>
+          <span class="medicao-form__choice-label">Esquadro OK</span>
         </label>
       </div>
     </section>
 
     <!-- Medidas do projeto Promob (conferência) -->
     <section class="space-y-4">
-      <h2 class="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-        Medida do projeto Promob (cm)
-      </h2>
-      <p class="text-xs text-slate-500 dark:text-slate-400">
+      <div class="section-divider ds-section-divider relative">
+        <div class="absolute inset-0 flex items-center">
+          <div class="w-full border-t border-border-ui/50"></div>
+        </div>
+        <div class="relative flex justify-center">
+          <span class="section-title ds-section-title">Medida do projeto Promob (cm)</span>
+        </div>
+      </div>
+      <p class="medicao-form__hint">
         Valores do projeto no Promob, também em <strong>cm</strong>, para conferir com a medida real.
       </p>
       <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
         <Input
+          variant="line"
           v-model.number="form.altura_promob_cm"
           type="number"
           label="Altura Promob (cm)"
@@ -116,6 +117,7 @@
           step="0.1"
         />
         <Input
+          variant="line"
           v-model.number="form.largura_promob_cm"
           type="number"
           label="Largura Promob (cm)"
@@ -124,6 +126,7 @@
           step="0.1"
         />
         <Input
+          variant="line"
           v-model.number="form.profundidade_promob_cm"
           type="number"
           label="Profundidade Promob (cm)"
@@ -136,34 +139,39 @@
 
     <!-- Tabela de Medidas: Medida do Projeto x Medida Real (alerta se diferença > 5mm) -->
     <section class="space-y-2">
-      <h2 class="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-        Tabela de medidas
-      </h2>
-      <p class="text-xs text-slate-500 dark:text-slate-400">
+      <div class="section-divider ds-section-divider relative">
+        <div class="absolute inset-0 flex items-center">
+          <div class="w-full border-t border-border-ui/50"></div>
+        </div>
+        <div class="relative flex justify-center">
+          <span class="section-title ds-section-title">Tabela de medidas</span>
+        </div>
+      </div>
+      <p class="medicao-form__hint">
         Informe a <strong>Medida Real</strong> (obra) ao lado da <strong>Medida do Projeto</strong>. Diferença &gt; 5 mm destaca em vermelho.
       </p>
-      <div class="rounded-xl border border-slate-200 dark:border-slate-600 overflow-hidden">
-        <table class="w-full text-sm">
-          <thead class="bg-slate-100 dark:bg-slate-700/50">
+      <div class="medicao-form__table-shell">
+        <table class="medicao-form__table">
+          <thead class="medicao-form__table-head">
             <tr>
-              <th class="text-left py-2 px-3 font-semibold text-slate-600 dark:text-slate-300">Dimensão</th>
-              <th class="text-right py-2 px-3 font-semibold text-slate-600 dark:text-slate-300">Medida do Projeto</th>
-              <th class="text-right py-2 px-3 font-semibold text-slate-600 dark:text-slate-300">Medida Real</th>
-              <th class="text-right py-2 px-3 font-semibold text-slate-600 dark:text-slate-300">Δ (cm)</th>
+              <th class="medicao-form__th medicao-form__th--left">Dimensão</th>
+              <th class="medicao-form__th">Medida do Projeto</th>
+              <th class="medicao-form__th">Medida Real</th>
+              <th class="medicao-form__th">Δ (cm)</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-200 dark:divide-slate-600">
+          <tbody class="medicao-form__table-body">
             <tr
               v-for="row in linhasConferencia"
               :key="row.key"
-              :class="row.alerta ? 'bg-red-500/10 dark:bg-red-500/20' : ''"
+              :class="row.alerta ? 'medicao-form__tr--danger' : ''"
             >
-              <td class="py-2 px-3 text-slate-700 dark:text-slate-300">{{ row.label }}</td>
-              <td class="py-2 px-3 text-right text-slate-600 dark:text-slate-400">{{ formatCm(row.promob) }}</td>
-              <td class="py-2 px-3 text-right text-slate-600 dark:text-slate-400">{{ formatCm(row.real) }}</td>
-              <td class="py-2 px-3 text-right font-medium" :class="row.alerta ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400'">
+              <td class="medicao-form__td medicao-form__td--left">{{ row.label }}</td>
+              <td class="medicao-form__td">{{ formatCm(row.promob) }}</td>
+              <td class="medicao-form__td">{{ formatCm(row.real) }}</td>
+              <td class="medicao-form__td medicao-form__td--bold" :class="row.alerta ? 'medicao-form__td--danger' : ''">
                 {{ formatCm(row.diff) }}
-                <span v-if="row.alerta" class="text-[10px] uppercase text-red-600 dark:text-red-400"> &gt; 5mm</span>
+                <span v-if="row.alerta" class="medicao-form__td-alert"> &gt; 5mm</span>
               </td>
             </tr>
           </tbody>
@@ -173,55 +181,68 @@
 
     <!-- Checklist interferências -->
     <section class="space-y-3">
-      <h2 class="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-        Interferências
-      </h2>
+      <div class="section-divider ds-section-divider relative">
+        <div class="absolute inset-0 flex items-center">
+          <div class="w-full border-t border-border-ui/50"></div>
+        </div>
+        <div class="relative flex justify-center">
+          <span class="section-title ds-section-title">Interferências</span>
+        </div>
+      </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <label
           v-for="item in interferenciasOpcoes"
           :key="item.key"
-          class="flex items-center gap-2 p-3 rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer"
+          class="medicao-form__choice"
         >
           <input
             v-model="form.interferencias"
             type="checkbox"
             :value="item.key"
-            class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+            class="medicao-form__checkbox"
           />
-          <span class="text-sm text-slate-700 dark:text-slate-300">{{ item.label }}</span>
+          <span class="medicao-form__choice-label">{{ item.label }}</span>
         </label>
       </div>
     </section>
 
     <!-- Observações do montador -->
     <section class="space-y-2">
-      <label class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-        Observações do montador
-      </label>
+      <div class="section-divider ds-section-divider relative">
+        <div class="absolute inset-0 flex items-center">
+          <div class="w-full border-t border-border-ui/50"></div>
+        </div>
+        <div class="relative flex justify-center">
+          <span class="section-title ds-section-title">Observações do montador</span>
+        </div>
+      </div>
       <textarea
         v-model="form.observacoes_montador"
         rows="3"
         placeholder="Ex: Parede de drywall, precisa de bucha específica"
-        class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm placeholder:text-slate-400 resize-y min-h-[80px]"
+        class="medicao-form__textarea"
       />
     </section>
 
     <!-- Fotos: situação da obra -->
     <section class="space-y-4">
-      <h2 class="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-        Fotos da obra
-      </h2>
-      <p class="text-xs text-slate-500 dark:text-slate-400">
+      <div class="section-divider ds-section-divider relative">
+        <div class="absolute inset-0 flex items-center">
+          <div class="w-full border-t border-border-ui/50"></div>
+        </div>
+        <div class="relative flex justify-center">
+          <span class="section-title ds-section-title">Fotos da obra</span>
+        </div>
+      </div>
+      <p class="medicao-form__hint">
         Registre a situação do ambiente com fotos (upload direto do celular).
       </p>
       <div
         v-for="cat in categoriasFoto"
         :key="cat.key"
-        class="rounded-xl border border-slate-200 dark:border-slate-600 p-4 bg-slate-50/50 dark:bg-slate-800/50"
+        class="medicao-form__gallery-group"
       >
-        <div class="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">
-          {{ cat.label }}
-        </div>
+        <div class="medicao-form__gallery-label">{{ cat.label }}</div>
         <div class="flex flex-wrap gap-3 items-start">
           <div
             v-for="(f, idx) in (fotosPorCategoria[cat.key] || [])"
@@ -231,91 +252,79 @@
             <img
               :src="previewUrl(f)"
               alt="Preview"
-              class="w-20 h-20 object-cover rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-100"
+              class="medicao-form__thumb"
               @error="($event.target).style.display = 'none'"
             />
             <button
               v-if="medicaoId"
               type="button"
-              class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+              class="medicao-form__thumb-remove"
               title="Remover"
               @click="$emit('remover-foto', f, cat.key)"
             >
               ×
             </button>
           </div>
-          <label
-            v-if="medicaoId"
-            class="w-20 h-20 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/20 cursor-pointer transition"
-          >
+          <label v-if="medicaoId" class="medicao-form__thumb-add">
             <input
               type="file"
               accept="image/*"
               class="hidden"
               @change="$emit('file-select', $event, cat.key)"
             />
-            <i class="pi pi-camera text-2xl text-slate-400 mb-0.5" />
-            <span class="text-[10px] text-slate-500">Add</span>
+            <i class="pi pi-camera text-2xl" style="color: var(--ds-color-text-faint)" />
+            <span class="medicao-form__thumb-add-label">Add</span>
           </label>
         </div>
       </div>
-      <p v-if="!medicaoId" class="text-xs text-slate-500">
+      <p v-if="!medicaoId" class="medicao-form__hint">
         Salve a medição primeiro para adicionar fotos.
       </p>
     </section>
 
     <!-- Galeria de fotos: Lado A (Medição) | Lado B (3D/Produção) — upload celular, associado ao ambiente -->
     <section class="space-y-4">
-      <h2 class="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-        Galeria de fotos
-      </h2>
-      <p class="text-xs text-slate-500 dark:text-slate-400">
+      <div class="section-divider ds-section-divider relative">
+        <div class="absolute inset-0 flex items-center">
+          <div class="w-full border-t border-border-ui/50"></div>
+        </div>
+        <div class="relative flex justify-center">
+          <span class="section-title ds-section-title">Galeria de fotos</span>
+        </div>
+      </div>
+      <p class="medicao-form__hint">
         Upload direto do celular. Fotos salvas no banco vinculadas a este ambiente.
       </p>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Lado A: Medição -->
-        <div class="rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/50 overflow-hidden">
-          <div class="px-4 py-3 bg-slate-100 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-600">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-              Lado A — Medição
-            </h3>
-            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-              Local vazio, pontos elétricos e hidráulicos (medidor)
-            </p>
+        <div class="medicao-form__gallery-column">
+          <div class="medicao-form__gallery-column-head">
+            <h3 class="medicao-form__gallery-column-title">Lado A — Medição</h3>
+            <p class="medicao-form__gallery-column-sub">Local vazio, pontos elétricos e hidráulicos (medidor)</p>
           </div>
-          <div class="p-4 space-y-4">
+          <div class="medicao-form__gallery-body">
             <template v-for="cat in galeriaLadoA" :key="cat.key">
               <div>
-                <div class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1.5">{{ cat.label }}</div>
+                <div class="medicao-form__gallery-cat-label">{{ cat.label }}</div>
                 <div class="grid grid-cols-4 sm:grid-cols-5 gap-2">
                   <div
                     v-for="(f, idx) in (fotosPorCategoria[cat.key] || [])"
                     :key="f.id || idx"
                     class="relative group aspect-square"
                   >
-                    <img
-                      :src="previewUrl(f)"
-                      alt="Foto"
-                      class="w-full h-full object-cover rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-100"
-                      @error="($event.target).style.display = 'none'"
-                    />
+                    <img :src="previewUrl(f)" alt="Foto" class="medicao-form__gallery-img" @error="($event.target).style.display = 'none'" />
                     <button
                       v-if="medicaoId"
                       type="button"
-                      class="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow"
+                      class="medicao-form__thumb-remove medicao-form__thumb-remove--corner"
                       title="Remover"
                       @click="$emit('remover-foto', f, cat.key)"
-                    >
-                      ×
-                    </button>
+                    >×</button>
                   </div>
-                  <label
-                    v-if="medicaoId"
-                    class="aspect-square flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/20 cursor-pointer transition"
-                  >
+                  <label v-if="medicaoId" class="medicao-form__gallery-add">
                     <input type="file" accept="image/*" capture="environment" class="hidden" @change="$emit('file-select', $event, cat.key)" />
-                    <i class="pi pi-camera text-xl text-slate-400 mb-0.5" />
-                    <span class="text-[10px] text-slate-500">Add</span>
+                    <i class="pi pi-camera text-xl" style="color: var(--ds-color-text-faint)" />
+                    <span class="medicao-form__thumb-add-label">Add</span>
                   </label>
                 </div>
               </div>
@@ -323,48 +332,34 @@
           </div>
         </div>
         <!-- Lado B: 3D/Produção -->
-        <div class="rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/50 overflow-hidden">
-          <div class="px-4 py-3 bg-slate-100 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-600">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-              Lado B — 3D / Produção
-            </h3>
-            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-              Print do Promob e fotos do móvel sendo montado
-            </p>
+        <div class="medicao-form__gallery-column">
+          <div class="medicao-form__gallery-column-head">
+            <h3 class="medicao-form__gallery-column-title">Lado B — 3D / Produção</h3>
+            <p class="medicao-form__gallery-column-sub">Print do Promob e fotos do móvel sendo montado</p>
           </div>
-          <div class="p-4 space-y-4">
+          <div class="medicao-form__gallery-body">
             <template v-for="cat in galeriaLadoB" :key="cat.key">
               <div>
-                <div class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1.5">{{ cat.label }}</div>
+                <div class="medicao-form__gallery-cat-label">{{ cat.label }}</div>
                 <div class="grid grid-cols-4 sm:grid-cols-5 gap-2">
                   <div
                     v-for="(f, idx) in (fotosPorCategoria[cat.key] || [])"
                     :key="f.id || idx"
                     class="relative group aspect-square"
                   >
-                    <img
-                      :src="previewUrl(f)"
-                      alt="Foto"
-                      class="w-full h-full object-cover rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-100"
-                      @error="($event.target).style.display = 'none'"
-                    />
+                    <img :src="previewUrl(f)" alt="Foto" class="medicao-form__gallery-img" @error="($event.target).style.display = 'none'" />
                     <button
                       v-if="medicaoId"
                       type="button"
-                      class="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition shadow"
+                      class="medicao-form__thumb-remove medicao-form__thumb-remove--corner"
                       title="Remover"
                       @click="$emit('remover-foto', f, cat.key)"
-                    >
-                      ×
-                    </button>
+                    >×</button>
                   </div>
-                  <label
-                    v-if="medicaoId"
-                    class="aspect-square flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-emerald-500 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/20 cursor-pointer transition"
-                  >
+                  <label v-if="medicaoId" class="medicao-form__gallery-add">
                     <input type="file" accept="image/*" capture="environment" class="hidden" @change="$emit('file-select', $event, cat.key)" />
-                    <i class="pi pi-camera text-xl text-slate-400 mb-0.5" />
-                    <span class="text-[10px] text-slate-500">Add</span>
+                    <i class="pi pi-camera text-xl" style="color: var(--ds-color-text-faint)" />
+                    <span class="medicao-form__thumb-add-label">Add</span>
                   </label>
                 </div>
               </div>
@@ -372,21 +367,17 @@
           </div>
         </div>
       </div>
-      <p v-if="!medicaoId" class="text-xs text-slate-500">
+      <p v-if="!medicaoId" class="medicao-form__hint">
         Salve a medição primeiro para adicionar fotos à galeria.
       </p>
     </section>
 
     <!-- Concluída + Salvar + Validar Medição -->
-    <section class="flex flex-col gap-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-      <div class="flex flex-wrap items-center gap-4">
-        <label class="flex items-center gap-2 cursor-pointer">
-          <input
-            v-model="form.concluida"
-            type="checkbox"
-            class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4"
-          />
-          <span class="text-sm font-semibold text-slate-700 dark:text-slate-300">
+    <section class="medicao-form__actions ds-editor-actions">
+      <div class="medicao-form__actions-row">
+        <label class="medicao-form__choice">
+          <input v-model="form.concluida" type="checkbox" class="medicao-form__checkbox" />
+          <span class="medicao-form__choice-label medicao-form__choice-label--bold">
             Medição concluída (projeto pronto para cálculo)
           </span>
         </label>
@@ -401,16 +392,15 @@
         <Button
           v-if="projetoId"
           type="button"
-          variant="primary"
+          variant="success"
           :disabled="validando"
-          class="bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600"
           @click="$emit('validar-medicao')"
         >
           <i v-if="validando" class="pi pi-spin pi-spinner mr-1" />
           {{ validando ? 'Validando...' : 'Validar Medição' }}
         </Button>
       </div>
-      <p v-if="projetoId" class="text-[11px] text-slate-500 dark:text-slate-400">
+      <p v-if="projetoId" class="medicao-form__hint">
         <strong>Validar Medição</strong> altera o status do projeto para &quot;Pronto para Produção&quot;.
       </p>
     </section>
@@ -461,3 +451,286 @@ const linhasConferencia = computed(() => {
   })
 })
 </script>
+
+<style scoped>
+/* ── Hints / descrições ── */
+.medicao-form__hint {
+  margin: 0;
+  color: var(--ds-color-text-faint);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+/* ── Checkbox / choice ── */
+.medicao-form__choice {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) 0;
+  border-top: 1px solid color-mix(in srgb, var(--ds-color-border) 55%, transparent);
+  cursor: pointer;
+  transition: color 0.18s ease, border-color 0.18s ease;
+}
+
+.medicao-form__checkbox {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 0.25rem;
+  border: 1px solid var(--ds-color-border);
+  accent-color: var(--ds-color-success);
+  flex-shrink: 0;
+}
+
+.medicao-form__choice-label {
+  color: var(--ds-color-text);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.medicao-form__choice-label--bold {
+  font-weight: 600;
+}
+
+/* ── Tabela de conferência ── */
+.medicao-form__table-shell {
+  border-top: 1px solid color-mix(in srgb, var(--ds-color-border) 70%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--ds-color-border) 70%, transparent);
+  overflow: hidden;
+}
+
+.medicao-form__table {
+  width: 100%;
+  font-size: 0.875rem;
+  border-collapse: collapse;
+}
+
+.medicao-form__table-head {
+  background: color-mix(in srgb, var(--ds-color-surface-muted) 80%, transparent);
+}
+
+.medicao-form__th {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ds-color-text-soft);
+  text-align: right;
+}
+
+.medicao-form__th--left {
+  text-align: left;
+}
+
+.medicao-form__table-body > tr + tr {
+  border-top: 1px solid color-mix(in srgb, var(--ds-color-border) 45%, transparent);
+}
+
+.medicao-form__tr--danger {
+  background: color-mix(in srgb, var(--ds-color-danger) 10%, transparent);
+}
+
+.dark .medicao-form__tr--danger {
+  background: color-mix(in srgb, var(--ds-color-danger) 18%, transparent);
+}
+
+.medicao-form__td {
+  padding: 0.5rem 0.75rem;
+  color: var(--ds-color-text-soft);
+  text-align: right;
+}
+
+.medicao-form__td--left {
+  color: var(--ds-color-text);
+  text-align: left;
+}
+
+.medicao-form__td--bold {
+  font-weight: 500;
+}
+
+.medicao-form__td--danger {
+  color: var(--ds-color-danger);
+}
+
+.medicao-form__td-alert {
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  color: var(--ds-color-danger);
+}
+
+/* ── Textarea ── */
+.medicao-form__textarea {
+  width: 100%;
+  min-height: 5rem;
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border: 1px solid var(--ds-color-border);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-color-surface);
+  color: var(--ds-color-text);
+  font-size: 0.875rem;
+  resize: vertical;
+}
+
+.medicao-form__textarea::placeholder {
+  color: var(--ds-color-text-faint);
+}
+
+.medicao-form__textarea:focus {
+  outline: none;
+  border-color: var(--ds-color-primary);
+}
+
+/* ── Galeria de fotos ── */
+.medicao-form__gallery-group {
+  padding: var(--ds-space-4) 0;
+  border-top: 1px solid color-mix(in srgb, var(--ds-color-border) 55%, transparent);
+}
+
+.medicao-form__gallery-label {
+  margin-bottom: 0.5rem;
+  color: var(--ds-color-text-soft);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.medicao-form__thumb {
+  width: 5rem;
+  height: 5rem;
+  object-fit: cover;
+  border-radius: 0.5rem;
+  border: 1px solid var(--ds-color-border);
+  background: var(--ds-color-surface-muted);
+}
+
+.medicao-form__thumb-remove {
+  position: absolute;
+  top: -0.25rem;
+  right: -0.25rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: var(--ds-color-danger);
+  color: #fff;
+  font-size: 0.75rem;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  cursor: pointer;
+}
+
+.group:hover .medicao-form__thumb-remove {
+  opacity: 1;
+}
+
+.medicao-form__thumb-remove--corner {
+  top: 0.125rem;
+  right: 0.125rem;
+  box-shadow: var(--ds-shadow-sm);
+}
+
+.medicao-form__thumb-add {
+  width: 5rem;
+  height: 5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--ds-color-border);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.medicao-form__thumb-add:hover {
+  border-color: var(--ds-color-success);
+  background: color-mix(in srgb, var(--ds-color-success) 6%, transparent);
+}
+
+.medicao-form__thumb-add-label {
+  font-size: 0.625rem;
+  color: var(--ds-color-text-faint);
+}
+
+/* ── Galeria (colunas Lado A / Lado B) ── */
+.medicao-form__gallery-column {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--ds-color-border) 70%, transparent);
+  border-radius: var(--ds-radius-sm);
+}
+
+.medicao-form__gallery-column-head {
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-bottom: 1px solid color-mix(in srgb, var(--ds-color-border) 55%, transparent);
+}
+
+.medicao-form__gallery-column-title {
+  margin: 0;
+  color: var(--ds-color-text-soft);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.medicao-form__gallery-column-sub {
+  margin: 0.125rem 0 0;
+  color: var(--ds-color-text-faint);
+  font-size: 0.68rem;
+}
+
+.medicao-form__gallery-body {
+  padding: var(--ds-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-4);
+}
+
+.medicao-form__gallery-cat-label {
+  margin-bottom: 0.375rem;
+  color: var(--ds-color-text-faint);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.medicao-form__gallery-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0.5rem;
+  border: 1px solid var(--ds-color-border);
+  background: var(--ds-color-surface-muted);
+}
+
+.medicao-form__gallery-add {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--ds-color-border);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.medicao-form__gallery-add:hover {
+  border-color: var(--ds-color-success);
+  background: color-mix(in srgb, var(--ds-color-success) 6%, transparent);
+}
+
+/* ── Ações (rodapé) ── */
+.medicao-form__actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-4);
+}
+
+@media (max-width: 767px) {
+  .medicao-form__choice {
+    padding: var(--ds-space-3) 0;
+  }
+}
+</style>

@@ -3,7 +3,7 @@
     <div ref="shellRef" class="ds-nav-shell menu-shell min-w-0 max-w-full" :class="{ 'is-collapsed': usarMenuCompacto }">
       <!-- ESQUERDA: Logo + Pílula de menus (PC) ou hamburger (celular/tablet) -->
       <div class="flex items-center justify-start min-w-0 flex-1 overflow-visible">
-        <RouterLink ref="brandRef" to="/agendamentos" class="flex items-center gap-0 min-w-0 flex-shrink-0 transition-opacity hover:opacity-90">
+        <RouterLink ref="brandRef" to="/agenda-geral" class="flex items-center gap-0 min-w-0 flex-shrink-0 transition-opacity hover:opacity-90">
           <div class="ds-nav-brand-mark flex-shrink-0" aria-hidden="true">
             A
           </div>

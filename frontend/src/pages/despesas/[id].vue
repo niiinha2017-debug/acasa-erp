@@ -1,254 +1,260 @@
 <template>
-  <div class="page-container">
-    <div class="rounded-2xl border border-border-ui bg-bg-card overflow-hidden">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
+  <PageShell :padded="false" variant="minimal">
+    <section class="login-font despesa-editor ds-page-context ds-page-context--editor animate-page-in">
       <PageHeader
         :title="isEdit ? `Editar lançamento #${despesaId}` : 'Novo lançamento'"
-        subtitle="Despesa ou receita operacional"
+        subtitle="Despesa ou receita operacional com dados financeiros e vencimento"
         icon="pi pi-wallet"
-        :show-back="false"
-        class="border-b border-border-ui"
+        variant="minimal"
       />
 
-      <div class="p-6 md:p-8 relative">
+      <div class="despesa-body ds-editor-body">
         <Loading v-if="loading" />
 
-        <template v-else>
-          <form class="space-y-8" @submit.prevent="salvar">
-            <div class="relative">
-              <div class="absolute inset-0 flex items-center">
-                <div class="w-full border-t border-border-ui/50" />
-              </div>
-              <div class="relative flex justify-center">
-                <span class="bg-bg-card px-3 text-xs font-medium text-text-soft">Tipo</span>
-              </div>
-            </div>
+        <form v-else class="despesa-form ds-editor-form space-y-12" @submit.prevent="salvar" autocomplete="off">
+          <div class="despesa-form__lead-grid ds-editor-lead-grid grid grid-cols-12 gap-6 items-end pb-4">
+            <div class="col-span-12 md:col-span-4">
+              <label class="block text-xs font-semibold tracking-wide text-text-soft ml-0.5 mb-2">
+                Tipo de lançamento
+              </label>
 
-            <div class="flex justify-center">
-              <div class="inline-flex p-0.5 rounded-2xl bg-slate-100/80 dark:bg-slate-800/50 w-full max-w-[280px]">
+              <div class="inline-flex w-full rounded-2xl border border-border-ui bg-transparent p-1 gap-1">
                 <button
                   type="button"
+                  class="flex-1 h-11 rounded-[14px] text-sm font-semibold transition-all duration-200"
+                  :class="form.tipo_movimento === 'SAIDA'
+                    ? 'bg-slate-100 dark:bg-slate-800 text-rose-600'
+                    : 'text-text-soft hover:text-text-main hover:bg-slate-50 dark:hover:bg-slate-900/60'"
                   @click="form.tipo_movimento = 'SAIDA'"
-                  :class="[
-                    'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[14px] text-sm font-medium transition-all duration-200',
-                    form.tipo_movimento === 'SAIDA'
-                      ? 'bg-white dark:bg-slate-700 text-rose-600 dark:text-rose-400 shadow-sm'
-                      : 'text-text-soft hover:text-text-main hover:bg-white/50 dark:hover:bg-slate-700/50'
-                  ]"
                 >
-                  <i class="pi pi-arrow-down text-[10px] opacity-70" />
                   Despesa
                 </button>
                 <button
                   type="button"
+                  class="flex-1 h-11 rounded-[14px] text-sm font-semibold transition-all duration-200"
+                  :class="form.tipo_movimento === 'ENTRADA'
+                    ? 'bg-slate-100 dark:bg-slate-800 text-emerald-600'
+                    : 'text-text-soft hover:text-text-main hover:bg-slate-50 dark:hover:bg-slate-900/60'"
                   @click="form.tipo_movimento = 'ENTRADA'"
-                  :class="[
-                    'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[14px] text-sm font-medium transition-all duration-200',
-                    form.tipo_movimento === 'ENTRADA'
-                      ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm'
-                      : 'text-text-soft hover:text-text-main hover:bg-white/50 dark:hover:bg-slate-700/50'
-                  ]"
                 >
-                  <i class="pi pi-arrow-up text-[10px] opacity-70" />
                   Receita
                 </button>
               </div>
             </div>
 
-            <div class="relative">
-              <div class="absolute inset-0 flex items-center">
-                <div class="w-full border-t border-border-ui/50" />
-              </div>
-              <div class="relative flex justify-center">
-                <span class="bg-bg-card px-3 text-xs font-medium text-text-soft">Dados do lançamento</span>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-12 gap-4">
-              <Input
-                class="col-span-12"
-                v-model="form.local"
-                label="Descrição"
-                placeholder="Ex: Aluguel, Salário, Venda"
-              />
-
-              <SearchInput
-                class="col-span-12 md:col-span-4"
-                v-model="form.unidade"
-                mode="select"
-                label="Unidade"
-                placeholder="Selecione"
-                :options="unidadesOptions"
-                labelKey="label"
-                valueKey="value"
-                :readonly="isEdit"
-              />
-
-              <SearchInput
-                class="col-span-12 md:col-span-4"
-                v-model="form.categoria"
-                mode="select"
-                label="Categoria"
-                placeholder="Selecione"
-                :options="categoriasOptions"
-                labelKey="label"
-                valueKey="value"
-              />
-
-              <div class="col-span-12 md:col-span-4">
-                <label class="block text-xs font-semibold tracking-wide text-text-soft ml-0.5 mb-1.5">Classificação</label>
-                <div class="h-10 px-3 rounded-xl border border-border-ui bg-bg-card flex items-center text-sm text-text-main">
-                  {{ classificacaoLabel || '–' }}
-                </div>
-              </div>
-
-              <div class="col-span-12 md:col-span-4">
-                <label class="block text-xs font-semibold tracking-wide text-text-soft ml-0.5 mb-1.5">Valor</label>
-                <div class="relative">
-                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-soft">R$</span>
-                  <input
-                    :value="numeroParaMoeda(form.valor_total)"
-                    @input="form.valor_total = moedaParaNumero($event.target.value)"
-                    type="text"
-                    inputmode="numeric"
-                    placeholder="0,00"
-                    class="w-full h-10 pl-9 pr-3 rounded-xl border border-border-ui bg-bg-card text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
-                  />
-                </div>
-              </div>
-
-              <SearchInput
-                class="col-span-12 md:col-span-4"
-                v-model="form.forma_pagamento"
-                mode="select"
-                label="Forma de pagamento"
-                placeholder="Selecione"
-                :options="formasPagamentoOptions"
-                labelKey="label"
-                valueKey="value"
-              />
-
-              <SearchInput
-                v-if="precisaBanco"
-                class="col-span-12 md:col-span-4"
-                v-model="form.conta_bancaria_key"
-                mode="select"
-                label="Banco/Conta"
-                placeholder="Selecione"
-                :options="contasBancariasOptions"
-                labelKey="label"
-                valueKey="value"
-              />
-
-              <SearchInput
-                v-if="precisaBanco"
-                class="col-span-12 md:col-span-4"
-                v-model="form.conta_bancaria_tipo_key"
-                mode="select"
-                label="Tipo da conta"
-                placeholder="Selecione"
-                :options="tiposContasBancariasOptions"
-                labelKey="label"
-                valueKey="value"
-              />
-
-              <SearchInput
-                v-if="precisaCartao"
-                class="col-span-12 md:col-span-4"
-                v-model="form.cartao_credito_key"
-                mode="select"
-                label="Cartão de crédito"
-                placeholder="Selecione"
-                :options="cartoesCreditoOptions"
-                labelKey="label"
-                valueKey="value"
-              />
-
-              <Input
-                class="col-span-12 md:col-span-4"
-                v-model.number="form.quantidade_parcelas"
-                type="number"
-                label="Parcelas"
-                placeholder="1"
-                :forceUpper="false"
-                min="1"
-                max="60"
-              />
-
-              <SearchInput
-                class="col-span-12 md:col-span-4"
-                v-model="form.status"
-                mode="select"
-                label="Status"
-                placeholder="Selecione"
-                :options="statusOptions"
-                labelKey="label"
-                valueKey="value"
-              />
-
-              <SearchInput
-                class="col-span-12 md:col-span-8"
-                v-model="form.funcionario_id"
-                mode="select"
-                label="Responsável"
-                placeholder="Selecione"
-                :options="funcionariosOptions"
-                labelKey="label"
-                valueKey="value"
-              />
-            </div>
-
-            <div class="relative">
-              <div class="absolute inset-0 flex items-center">
-                <div class="w-full border-t border-border-ui/50" />
-              </div>
-              <div class="relative flex justify-center">
-                <span class="bg-bg-card px-3 text-xs font-medium text-text-soft">Datas</span>
+            <div class="col-span-12 md:col-span-4">
+              <label class="block text-xs font-semibold tracking-wide text-text-soft ml-0.5 mb-1.5">Valor</label>
+              <div class="relative">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-soft">R$</span>
+                <input
+                  :value="numeroParaMoeda(form.valor_total)"
+                  @input="form.valor_total = moedaParaNumero($event.target.value)"
+                  type="text"
+                  inputmode="numeric"
+                  placeholder="0,00"
+                  class="w-full h-11 pl-9 pr-3 rounded-2xl border border-border-ui bg-transparent text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
+                />
               </div>
             </div>
 
-            <div class="grid grid-cols-12 gap-4">
-              <Input
-                class="col-span-12 md:col-span-4"
-                v-model="form.data_registro"
-                type="date"
-                label="Data do registro"
-                :forceUpper="false"
-              />
-              <Input
-                class="col-span-12 md:col-span-4"
-                v-model="form.data_vencimento"
-                type="date"
-                label="Vencimento"
-                :forceUpper="false"
-              />
-              <Input
-                class="col-span-12 md:col-span-4"
-                v-model="form.data_pagamento"
-                type="date"
-                label="Pagamento"
-                :forceUpper="false"
-                :disabled="form.status !== 'PAGO'"
-              />
-            </div>
-
-            <FormActions
-              :is-edit="isEdit"
-              :loading-save="actionLoading"
-              :loading-delete="actionLoading"
-              :show-delete="isEdit"
-              perm-create="despesas.criar"
-              perm-edit="despesas.editar"
-              perm-delete="despesas.excluir"
-              label-create="Criar"
-              @save="salvar"
-              @delete="excluir"
+            <SearchInput
+              class="col-span-12 md:col-span-4"
+              v-model="form.status"
+              mode="select"
+              variant="line"
+              label="Status"
+              placeholder="Selecione o status"
+              :options="statusOptions"
+              labelKey="label"
+              valueKey="value"
             />
-          </form>
-        </template>
+          </div>
+
+          <div class="section-divider ds-section-divider relative">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-border-ui/50"></div>
+            </div>
+            <div class="relative flex justify-center">
+              <span class="section-title ds-section-title bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+                Dados do lançamento
+              </span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-12 gap-x-6 gap-y-7">
+            <Input
+              variant="line"
+              class="col-span-12"
+              v-model="form.local"
+              label="Descrição"
+              placeholder="Ex: aluguel da fábrica, salário, venda avulsa"
+            />
+
+            <SearchInput
+              class="col-span-12 md:col-span-4"
+              v-model="form.unidade"
+              mode="select"
+              variant="line"
+              label="Unidade"
+              placeholder="Selecione a unidade"
+              :options="unidadesOptions"
+              labelKey="label"
+              valueKey="value"
+              :readonly="isEdit"
+            />
+
+            <SearchInput
+              class="col-span-12 md:col-span-4"
+              v-model="form.categoria"
+              mode="select"
+              variant="line"
+              label="Categoria"
+              placeholder="Selecione a categoria"
+              :options="categoriasOptions"
+              labelKey="label"
+              valueKey="value"
+            />
+
+            <div class="col-span-12 md:col-span-4">
+              <label class="block text-xs font-semibold tracking-wide text-text-soft ml-0.5 mb-1.5">Classificação</label>
+              <div class="h-11 rounded-2xl border border-border-ui bg-transparent px-3 flex items-center text-sm text-text-main">
+                {{ classificacaoLabel || '–' }}
+              </div>
+            </div>
+
+            <SearchInput
+              class="col-span-12 md:col-span-4"
+              v-model="form.forma_pagamento"
+              mode="select"
+              variant="line"
+              label="Forma de pagamento"
+              placeholder="Selecione a forma"
+              :options="formasPagamentoOptions"
+              labelKey="label"
+              valueKey="value"
+            />
+
+            <Input
+              variant="line"
+              class="col-span-12 md:col-span-4"
+              v-model.number="form.quantidade_parcelas"
+              type="number"
+              label="Parcelas"
+              placeholder="1"
+              :forceUpper="false"
+              min="1"
+              max="60"
+            />
+
+            <SearchInput
+              class="col-span-12 md:col-span-4"
+              v-model="form.funcionario_id"
+              mode="select"
+              variant="line"
+              label="Responsável"
+              placeholder="Selecione o responsável"
+              :options="funcionariosOptions"
+              labelKey="label"
+              valueKey="value"
+            />
+
+            <SearchInput
+              v-if="precisaBanco"
+              class="col-span-12 md:col-span-6"
+              v-model="form.conta_bancaria_key"
+              mode="select"
+              variant="line"
+              label="Banco/Conta"
+              placeholder="Selecione a conta"
+              :options="contasBancariasOptions"
+              labelKey="label"
+              valueKey="value"
+            />
+
+            <SearchInput
+              v-if="precisaBanco"
+              class="col-span-12 md:col-span-6"
+              v-model="form.conta_bancaria_tipo_key"
+              mode="select"
+              variant="line"
+              label="Tipo da conta"
+              placeholder="Selecione o tipo"
+              :options="tiposContasBancariasOptions"
+              labelKey="label"
+              valueKey="value"
+            />
+
+            <SearchInput
+              v-if="precisaCartao"
+              class="col-span-12 md:col-span-6"
+              v-model="form.cartao_credito_key"
+              mode="select"
+              variant="line"
+              label="Cartão de crédito"
+              placeholder="Selecione o cartão"
+              :options="cartoesCreditoOptions"
+              labelKey="label"
+              valueKey="value"
+            />
+          </div>
+
+          <div class="section-divider ds-section-divider relative">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-border-ui/50"></div>
+            </div>
+            <div class="relative flex justify-center">
+              <span class="section-title ds-section-title bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+                Datas
+              </span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-12 gap-x-6 gap-y-7">
+            <Input
+              variant="line"
+              class="col-span-12 md:col-span-4"
+              v-model="form.data_registro"
+              type="date"
+              label="Data do registro"
+              :forceUpper="false"
+            />
+
+            <Input
+              variant="line"
+              class="col-span-12 md:col-span-4"
+              v-model="form.data_vencimento"
+              type="date"
+              label="Vencimento"
+              :forceUpper="false"
+            />
+
+            <Input
+              variant="line"
+              class="col-span-12 md:col-span-4"
+              v-model="form.data_pagamento"
+              type="date"
+              label="Pagamento"
+              :forceUpper="false"
+              :disabled="form.status !== 'PAGO'"
+            />
+          </div>
+
+          <FormActions
+            :is-edit="isEdit"
+            :loading-save="actionLoading"
+            :loading-delete="actionLoading"
+            :show-delete="isEdit"
+            perm-create="despesas.criar"
+            perm-edit="despesas.editar"
+            perm-delete="despesas.excluir"
+            label-create="Criar lançamento"
+            @save="salvar"
+            @delete="excluir"
+          />
+        </form>
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>
@@ -477,3 +483,9 @@ onMounted(async () => {
   await init()
 })
 </script>
+
+<style scoped>
+.login-font {
+  font-family: var(--ds-font-sans);
+}
+</style>

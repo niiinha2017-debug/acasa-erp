@@ -1,18 +1,17 @@
 <template>
-  <div class="w-full max-w-[900px] mx-auto animate-page-in">
-    <div class="rounded-2xl border border-border-ui bg-bg-card overflow-hidden">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
+  <PageShell :padded="false" variant="minimal">
+    <section class="login-font ds-page-context ds-page-context--editor animate-page-in w-full max-w-[900px] mx-auto">
       <PageHeader
         :title="isEdit ? `Editar Contrato #${contratoId}` : 'Novo Contrato'"
         subtitle="Dados do contrato comercial"
         icon="pi pi-file"
-        class="border-b border-border-ui"
+        variant="minimal"
       >
         <template #actions>
           <RouterLink
             v-if="!isEdit && vendaIdFromQuery"
             :to="`/vendas/venda/${vendaIdFromQuery}`"
-            class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+            class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-text-soft hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"
           >
             <i class="pi pi-arrow-left text-xs"></i>
             Voltar ao fechamento
@@ -20,7 +19,7 @@
           <RouterLink
             v-else
             to="/contratos"
-            class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+            class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-text-soft hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"
           >
             <i class="pi pi-arrow-left text-xs"></i>
             Voltar
@@ -28,13 +27,13 @@
         </template>
       </PageHeader>
 
-      <div class="p-6 md:p-8 relative">
+      <div class="ds-editor-body relative">
         <Loading v-if="loading" />
 
         <form v-else class="space-y-8" @submit.prevent="salvar" autocomplete="off">
           <div
             v-if="clientePendenteValidacao"
-            class="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-200"
+            class="ds-alert ds-alert--warning px-4 py-3 text-sm"
           >
             <div class="font-semibold">Cliente não validado</div>
             <div class="text-xs mt-1">
@@ -121,7 +120,7 @@
           <!-- Enviar PDF por WhatsApp e e-mail -->
           <section
             v-if="isEdit"
-            class="rounded-2xl border border-border-ui bg-bg-page p-6 space-y-4"
+            class="space-y-4 border-t border-border-ui pt-6"
           >
             <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
               Enviar PDF por WhatsApp ou e-mail
@@ -164,7 +163,7 @@
           <!-- Incluir / excluir contrato assinado (upload PDF) – quando cliente assinou fora do sistema -->
           <section
             v-if="isEdit"
-            class="rounded-2xl border border-border-ui bg-bg-page p-6 space-y-4"
+            class="space-y-4 border-t border-border-ui pt-6"
           >
             <div class="text-[11px] font-black uppercase tracking-[0.18em] text-text-soft">
               Incluir contrato assinado
@@ -243,7 +242,7 @@
             <div class="flex justify-end gap-3 w-full sm:w-auto">
               <RouterLink
                 to="/contratos"
-                class="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 border border-border-ui rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                class="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-text-soft border border-border-ui rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
               >
                 Cancelar
               </RouterLink>
@@ -259,8 +258,8 @@
           </div>
         </form>
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 <script setup>

@@ -1,26 +1,26 @@
 <template>
-  <div class="login-font w-full h-full rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
-    <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
-    <PageHeader
-      :title="isEdit ? `Editar Produto #${produtoId}` : 'Novo Produto'"
-      subtitle="Gerenciamento de insumos e controle de materiais"
-      icon="pi pi-box"
-      :showBack="false"
-      class="border-b border-border-ui"
-    />
+  <PageShell :padded="false">
+    <section class="login-font produto-editor ds-page-context ds-page-context--editor animate-page-in">
+      <PageHeader
+        :title="isEdit ? `Editar Produto #${produtoId}` : 'Novo Produto'"
+        subtitle="Gerenciamento de insumos e controle de materiais"
+        icon="pi pi-box"
+      />
 
-    <div class="px-4 py-4 md:px-6 md:py-6 lg:px-8 lg:py-8">
+    <div class="produto-body ds-editor-body">
       <div v-if="loading" class="py-24 flex flex-col items-center justify-center gap-4">
         <div class="w-10 h-10 border-2 border-border-ui border-t-brand-primary rounded-full animate-spin"></div>
         <p class="text-xs font-medium text-text-muted uppercase tracking-widest">Carregando...</p>
       </div>
 
-      <form v-else class="space-y-10 produtos-line-form" @submit.prevent="confirmarSalvarProduto" autocomplete="off">
-        <div class="grid grid-cols-12 gap-6 items-end bg-slate-50/50 dark:bg-slate-800/20 p-6 rounded-2xl">
+      <form v-else class="produto-form ds-editor-form" @submit.prevent="confirmarSalvarProduto" autocomplete="off">
+        <div class="produto-form__lead produto-form__lead-grid ds-editor-lead-grid grid grid-cols-12 gap-6 items-end">
           <div class="col-span-12 md:col-span-6">
             <SearchInput
               v-model="form.fornecedor_id"
               mode="select"
+              variant="line"
+              hide-search-icon
               label="Fornecedor Principal *"
               :options="fornecedorOptions"
               required
@@ -32,6 +32,8 @@
             <SearchInput
               v-model="form.status"
               mode="select"
+              variant="line"
+              hide-search-icon
               label="Status"
               :options="statusOptions"
               required
@@ -39,13 +41,13 @@
           </div>
         </div>
 
-        <div class="space-y-10">
-        <div class="relative">
+        <div>
+        <div class="section-divider ds-section-divider relative">
           <div class="absolute inset-0 flex items-center">
             <div class="w-full border-t border-border-ui/50"></div>
           </div>
           <div class="relative flex justify-center">
-            <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span class="section-title ds-section-title">
               Dados Principais
             </span>
           </div>
@@ -53,6 +55,7 @@
 
         <div class="grid grid-cols-12 gap-6">
           <Input
+            variant="line"
             class="col-span-12 md:col-span-8"
             v-model="form.nome_produto"
             label="Nome do Produto"
@@ -62,6 +65,7 @@
           />
 
           <Input
+            variant="line"
             class="col-span-12 md:col-span-4"
             v-model="quantidadeInput"
             label="Qtd. em Estoque"
@@ -69,6 +73,7 @@
             required
           />
           <Input
+            variant="line"
             class="col-span-12 md:col-span-4"
             v-model="estoqueMinimoInput"
             label="Estoque Mínimo"
@@ -77,6 +82,7 @@
           />
 
           <Input
+            variant="line"
             class="col-span-12 md:col-span-4"
             v-model="form.marca"
             label="Marca"
@@ -84,6 +90,7 @@
             force-upper
           />
           <Input
+            variant="line"
             class="col-span-12 md:col-span-4"
             v-model="form.cor"
             label="Cor"
@@ -91,6 +98,7 @@
             force-upper
           />
           <Input
+            variant="line"
             v-if="ehFitaBorda"
             class="col-span-12 md:col-span-4"
             v-model="metragemRoloInput"
@@ -100,6 +108,7 @@
             placeholder="Ex: 50"
           />
           <Input
+            variant="line"
             v-else
             class="col-span-12 md:col-span-4"
             v-model="form.medida"
@@ -111,6 +120,8 @@
             class="col-span-12 md:col-span-6"
             v-model="form.categoria_base"
             mode="select"
+            variant="line"
+            hide-search-icon
             label="Categoria Base"
             :options="categoriasBaseOptions"
             placeholder="Selecione..."
@@ -122,6 +133,8 @@
               class="col-span-12 md:col-span-6"
               v-model="form.fita_vinculada_id"
               mode="select"
+              variant="line"
+              hide-search-icon
               label="Vincular Fita"
               :options="fitasBordaOptions"
               placeholder="Busque a fita de borda"
@@ -142,6 +155,8 @@
               class="col-span-12 md:col-span-6"
               v-model="form.categoria_ferragem"
               mode="select"
+              variant="line"
+              hide-search-icon
               label="Categoria da Ferragem *"
               :options="catsFerragem"
               placeholder="Selecione o tipo"
@@ -159,6 +174,8 @@
               class="col-span-12 md:col-span-3"
               v-model="form.unidade"
               mode="select"
+              variant="line"
+              hide-search-icon
               label="Unidade"
               :options="unidadesConversaoOptions"
               placeholder="Ex: CX, PAR, M, KG"
@@ -167,11 +184,14 @@
               class="col-span-12 md:col-span-3"
               v-model="form.insumo_unidade_referencia"
               mode="select"
+              variant="line"
+              hide-search-icon
               label="Unidade de Consumo"
               :options="unidadesConsumoOptions"
               placeholder="Ex: UN, G, MM, M2"
             />
             <Input
+              variant="line"
               class="col-span-12 md:col-span-3"
               v-model="insumoFatorConversaoInput"
               label="Fator de Conversão"
@@ -180,6 +200,7 @@
               placeholder="Ex: 100 (caixa), 1000 (kg)"
             />
             <Input
+              variant="line"
               class="col-span-12 md:col-span-3"
               v-model="insumoConsumoM2Input"
               label="Consumo Médio / m2"
@@ -196,12 +217,12 @@
           </template>
         </div>
 
-        <div class="relative">
+        <div class="section-divider ds-section-divider relative">
           <div class="absolute inset-0 flex items-center">
             <div class="w-full border-t border-border-ui/50"></div>
           </div>
           <div class="relative flex justify-center">
-            <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span class="section-title ds-section-title">
               Dimensoes e Custos
             </span>
           </div>
@@ -209,9 +230,9 @@
 
         <div class="grid grid-cols-12 gap-6">
           <div class="col-span-12 lg:col-span-4 xl:col-span-3">
-            <div class="w-full max-w-[200px]">
+            <div class="produto-imagem w-full max-w-[220px]">
               <div
-                class="relative group w-[200px] max-w-full h-[200px] rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center overflow-hidden transition-all hover:border-slate-300 cursor-pointer"
+                class="produto-imagem__dropzone relative group w-[200px] max-w-full h-[200px] flex flex-col items-center justify-center overflow-hidden cursor-pointer"
                 @click="previewImagem ? abrirPreviewImagem() : (imagemInput?.click())"
               >
                 <img v-if="previewImagem" :src="previewImagem" class="w-full h-full object-contain p-3" />
@@ -224,7 +245,7 @@
 
                 <div
                   v-if="(isEdit && can('produtos.editar')) || (!isEdit && can('produtos.criar'))"
-                  class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
+                  class="produto-imagem__actions absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
                   @click.stop
                 >
                   <button type="button" @click.stop="imagemInput?.click()" class="p-2 bg-white rounded-lg text-slate-900 hover:scale-110 transition-transform">
@@ -245,41 +266,41 @@
 
           <div class="col-span-12 lg:col-span-8 xl:col-span-9">
             <div class="grid grid-cols-12 gap-6">
-              <Input class="col-span-12 md:col-span-3" v-model="form.largura_mm" label="Largura (mm)" type="number" />
-              <Input class="col-span-12 md:col-span-3" v-model="form.comprimento_mm" label="Comprimento (mm)" type="number" />
-              <Input class="col-span-12 md:col-span-3" v-model="form.espessura_mm" label="Espessura (mm)" type="number" />
-              <Input class="col-span-12 md:col-span-3" v-model="precoM2Mask" label="Preco por m2" />
+              <Input variant="line" class="col-span-12 md:col-span-3" v-model="form.largura_mm" label="Largura (mm)" type="number" />
+              <Input variant="line" class="col-span-12 md:col-span-3" v-model="form.comprimento_mm" label="Comprimento (mm)" type="number" />
+              <Input variant="line" class="col-span-12 md:col-span-3" v-model="form.espessura_mm" label="Espessura (mm)" type="number" />
+              <Input variant="line" class="col-span-12 md:col-span-3" v-model="precoM2Mask" label="Preco por m2" />
 
-              <Input class="col-span-12 md:col-span-4" v-model="adicionalFitaM2Mask" label="ADIC. FITA / M2" />
+              <Input variant="line" class="col-span-12 md:col-span-4" v-model="adicionalFitaM2Mask" label="ADIC. FITA / M2" />
 
               <p v-if="ehCategoriaComercial && fitaVinculadaSelecionada" class="col-span-12 text-[11px] text-slate-500 -mt-2">
                 Cálculo automático: {{ valorFitaPorMetroLabel }} aplicado a partir da fita {{ fitaVinculadaSelecionada.nome_produto }}.
               </p>
 
-              <Input class="col-span-12 md:col-span-4" v-model="valorUnitarioMask" label="Custo Unitario (R$)" required />
+              <Input variant="line" class="col-span-12 md:col-span-4" v-model="valorUnitarioMask" label="Custo Unitario (R$)" required />
               <div class="col-span-12 md:col-span-8">
-                <div class="p-4 bg-slate-900 rounded-xl text-white flex flex-col justify-center h-full min-h-[70px]">
-                  <span class="text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 mb-1">Total em Inventario</span>
-                  <span class="text-xl font-semibold tabular-nums">{{ valorTotalMask }}</span>
+                <div class="produto-resumo">
+                  <span class="produto-resumo__label">Total em Inventario</span>
+                  <span class="produto-resumo__value">{{ valorTotalMask }}</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div v-if="isEdit && produtoId" class="relative">
+        <div v-if="isEdit && produtoId" class="section-divider ds-section-divider relative">
           <div class="absolute inset-0 flex items-center">
             <div class="w-full border-t border-border-ui/50"></div>
           </div>
           <div class="relative flex justify-center">
-            <span class="bg-bg-page dark:bg-slate-900 px-4 text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span class="section-title ds-section-title">
               Galeria e Retalhos
             </span>
           </div>
         </div>
 
-        <div v-if="isEdit && produtoId" class="grid grid-cols-12 gap-6">
-          <div class="col-span-12 lg:col-span-6 rounded-2xl border border-border-ui bg-slate-50/70 dark:bg-slate-800/30 p-4">
+        <div v-if="isEdit && produtoId" class="produto-assets grid grid-cols-12 gap-6">
+          <div class="produto-assets__panel col-span-12 lg:col-span-6">
             <p class="text-xs uppercase tracking-[0.14em] text-slate-500 font-semibold mb-2">Galeria de fotos</p>
             <div class="flex flex-wrap gap-2 items-start">
               <div
@@ -308,7 +329,7 @@
             <p class="text-[10px] text-slate-500 mt-2">Fotos adicionais do produto.</p>
           </div>
 
-          <div class="col-span-12 lg:col-span-6 rounded-2xl border border-border-ui bg-slate-50/70 dark:bg-slate-800/30 p-4">
+          <div class="produto-assets__panel col-span-12 lg:col-span-6">
             <p class="text-xs uppercase tracking-[0.14em] text-slate-500 font-semibold mb-2 flex items-center gap-2">
               <i class="pi pi-box text-amber-500" />
               Retalhos (sobras)
@@ -347,26 +368,21 @@
           </div>
         </div>
 
-        <div class="pt-10 mt-6 border-t border-border-ui">
-          <div class="flex items-center justify-between gap-4">
-            <Button type="button" variant="ghost" @click="confirmarDescartarProduto">
+        <div class="produto-form__actions ds-editor-actions">
+          <div class="produto-form__actions-main ds-editor-actions-main flex items-center gap-3 justify-end">
+            <Button type="button" variant="secondary" @click="confirmarDescartarProduto">
               Cancelar
             </Button>
 
             <Button
               v-if="can(isEdit ? 'produtos.editar' : 'produtos.criar')"
               variant="primary"
-              size="lg"
               type="submit"
               :loading="salvando"
               :disabled="!camposDesbloqueados"
-              class="!rounded-xl px-8 py-3 bg-gradient-to-r from-brand-primary to-brand-primary/90 hover:from-brand-primary hover:to-brand-primary hover:shadow-2xl hover:shadow-brand-primary/30 active:scale-[0.98] transition-all duration-300 group relative overflow-hidden"
             >
-              <div class="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-              <span class="relative flex items-center justify-center gap-2 font-bold tracking-wide text-white">
-                <i class="pi pi-save text-[14px] group-hover:rotate-12 transition-transform"></i>
-                {{ isEdit ? 'ATUALIZAR PRODUTO' : 'CADASTRAR PRODUTO' }}
-              </span>
+              <i class="pi pi-save mr-2 text-[12px]"></i>
+              {{ isEdit ? 'Atualizar Produto' : 'Cadastrar Produto' }}
             </Button>
           </div>
         </div>
@@ -392,38 +408,86 @@
         </div>
       </Transition>
     </Teleport>
-  </div>
+  </section>
+  </PageShell>
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
-
 .login-font {
-  font-family: 'Manrope', 'Segoe UI', sans-serif;
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.produtos-line-form :deep(.w-full.flex.flex-col.gap-1\.5 > label),
-.produtos-line-form :deep(.search-container > label) {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: rgb(100 116 139);
+.produto-editor {
+  min-height: 100%;
+  background: var(--ds-color-surface);
 }
 
-.produtos-line-form :deep(input.w-full),
-.produtos-line-form :deep(select.w-full) {
-  border-top: 0;
-  border-left: 0;
-  border-right: 0;
-  border-bottom-width: 2px;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+.produto-form__lead {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(214, 224, 234, 0.55);
 }
 
-.produtos-line-form :deep(input.w-full:focus),
-.produtos-line-form :deep(select.w-full:focus) {
-  box-shadow: none;
+.produto-imagem__dropzone {
+  border-radius: 1rem;
+  border: 1px dashed rgba(177, 190, 204, 0.9);
+  background: rgba(248, 250, 252, 0.86);
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.produto-imagem__dropzone:hover {
+  border-color: rgba(148, 163, 184, 0.95);
+  background: rgba(241, 245, 249, 0.92);
+}
+
+.produto-imagem__actions {
+  background: rgba(15, 23, 42, 0.38);
+}
+
+.produto-resumo {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 70px;
+  height: 100%;
+  padding: 0.95rem 1rem;
+  border-top: 1px solid rgba(214, 224, 234, 0.55);
+  border-bottom: 1px solid rgba(214, 224, 234, 0.55);
+}
+
+.produto-resumo__label {
+  color: var(--ds-color-text-faint);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.produto-resumo__value {
+  color: var(--ds-color-text);
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+}
+
+.produto-assets__panel {
+  padding: 0.95rem 0 0.25rem;
+  border-top: 1px solid rgba(214, 224, 234, 0.55);
+  border-bottom: 1px solid rgba(214, 224, 234, 0.55);
+}
+
+.dark .produto-imagem__dropzone {
+  border-color: rgba(71, 85, 105, 0.9);
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.dark .produto-imagem__dropzone:hover {
+  border-color: rgba(100, 116, 139, 0.95);
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.dark .produto-resumo,
+.dark .produto-assets__panel,
+.dark .produto-form__lead {
+  border-color: rgba(51, 71, 102, 0.55);
 }
 
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }

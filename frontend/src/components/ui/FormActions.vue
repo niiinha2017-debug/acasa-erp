@@ -1,15 +1,15 @@
 ﻿<template>
-  <footer class="flex flex-col sm:flex-row items-center justify-between mt-8 pt-6 border-t border-border-ui transition-colors duration-300 gap-4">
-    <div class="text-xs font-medium text-text-soft">
+  <footer class="ds-form-actions mt-8 transition-colors duration-300">
+    <div class="ds-section-note">
       <slot name="left"></slot>
     </div>
 
-    <div class="flex flex-wrap items-center justify-center sm:justify-end gap-3 w-full sm:w-auto">
+    <div class="ds-form-actions__group w-full sm:w-auto justify-center sm:justify-end">
       <Button
         v-if="showDelete && isEdit && canDelete"
         v-can="permDelete"
         variant="ghost"
-        class="!text-text-soft hover:!text-rose-600 dark:hover:bg-rose-500/10 !px-3 !rounded-lg"
+        class="ds-inline-action ds-inline-action--danger"
         type="button"
         @click="$emit('delete')"
         :loading="loadingDelete"
@@ -24,9 +24,9 @@
         variant="secondary"
         type="button"
         @click="$emit('production')"
-        class="!rounded-lg px-4"
+        class="min-w-[132px]"
       >
-        <i class="pi pi-cog text-xs mr-2"></i>
+        <i class="pi pi-cog text-xs"></i>
         Producao
       </Button>
 
@@ -36,10 +36,10 @@
         variant="primary"
         type="button"
         :loading="loadingSave"
-        class="min-w-[140px] !rounded-lg shadow-sm font-medium"
+        class="min-w-[148px]"
         @click="emit('save')"
       >
-        <i class="pi pi-check text-xs mr-2"></i>
+        <i class="pi pi-check text-xs"></i>
         {{ isEdit ? 'Salvar' : labelCreate || 'Cadastrar' }}
       </Button>
     </div>

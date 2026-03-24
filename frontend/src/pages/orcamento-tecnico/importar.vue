@@ -1,6 +1,5 @@
 <template>
-  <div class="w-full h-full rounded-2xl border border-border-ui bg-bg-card overflow-hidden animate-page-in">
-    <div class="h-1 w-full bg-brand-primary rounded-t-2xl"></div>
+  <div class="w-full h-full ds-card ds-card--default overflow-hidden animate-page-in">
 
     <PageHeader
       title="Importar Projeto"
@@ -10,7 +9,7 @@
     />
 
     <!-- Stepper -->
-    <div class="px-4 md:px-6 py-3 border-b border-border-ui bg-slate-50/60">
+    <div class="px-4 md:px-6 py-3 border-b border-border-ui bg-bg-page/60">
       <ol class="flex items-center gap-0">
         <li
           v-for="(step, idx) in steps"
@@ -23,8 +22,8 @@
             :class="activeStep === idx
               ? 'text-brand-primary'
               : idx < activeStep
-                ? 'text-emerald-600 cursor-pointer'
-                : 'text-slate-400 cursor-default'"
+                ? 'text-[color:var(--ds-color-success)] cursor-pointer'
+                : 'text-text-faint cursor-default'"
             :disabled="idx > activeStep"
             @click="idx < activeStep ? activeStep = idx : undefined"
           >
@@ -33,15 +32,15 @@
               :class="activeStep === idx
                 ? 'bg-brand-primary text-white'
                 : idx < activeStep
-                  ? 'bg-emerald-500 text-white'
-                  : 'bg-slate-200 text-slate-500'"
+                  ? 'ds-status-pill--success text-white'
+                  : 'bg-bg-page text-text-soft'"
             >
               <i v-if="idx < activeStep" class="pi pi-check text-[10px]"></i>
               <span v-else>{{ idx + 1 }}</span>
             </span>
             {{ step.label }}
           </button>
-          <span v-if="idx < steps.length - 1" class="mx-3 text-slate-300 text-sm select-none">›</span>
+          <span v-if="idx < steps.length - 1" class="mx-3 text-text-faint text-sm select-none">›</span>
         </li>
       </ol>
     </div>
@@ -53,7 +52,7 @@
         <!-- Zona de upload -->
         <div
           class="rounded-2xl border-2 border-dashed transition-colors cursor-pointer"
-          :class="arrastando ? 'border-brand-primary bg-blue-50' : 'border-border-ui bg-white hover:border-brand-primary/50 hover:bg-slate-50'"
+          :class="arrastando ? 'border-brand-primary bg-brand-primary/5' : 'border-border-ui bg-white hover:border-brand-primary/50 hover:bg-bg-page'"
           @dragover.prevent="arrastando = true"
           @dragleave.prevent="arrastando = false"
           @drop.prevent="onDrop"
@@ -62,25 +61,25 @@
           <div class="flex flex-col items-center gap-3 py-12 px-6 text-center">
             <span
               class="inline-flex h-14 w-14 items-center justify-center rounded-2xl"
-              :class="arquivo ? 'bg-emerald-100' : 'bg-slate-100'"
+              :class="arquivo ? 'ds-surface--success' : 'bg-bg-page'"
             >
               <i
                 class="text-2xl"
-                :class="arquivo ? 'pi pi-file-check text-emerald-600' : 'pi pi-cloud-upload text-slate-400'"
+                :class="arquivo ? 'pi pi-file-check text-[color:var(--ds-color-success)]' : 'pi pi-cloud-upload text-text-faint'"
               ></i>
             </span>
             <div>
               <p class="text-sm font-bold text-text-main">
                 {{ arquivo ? arquivo.name : 'Arraste o arquivo aqui ou clique para selecionar' }}
               </p>
-              <p class="text-xs text-text-muted mt-1">
+              <p class="text-xs text-text-soft mt-1">
                 {{ arquivo ? `${(arquivo.size / 1024).toFixed(1)} KB` : 'Formatos aceitos: CSV ou XML (Promob / Corte Cloud). Máx. 10 MB.' }}
               </p>
             </div>
             <button
               v-if="arquivo"
               type="button"
-              class="text-[11px] text-slate-400 hover:text-red-500 underline"
+              class="text-[11px] text-text-faint hover:text-[color:var(--ds-color-danger)] underline"
               @click.stop="arquivo = null"
             >
               Remover arquivo
@@ -97,12 +96,12 @@
 
         <!-- Configuração de custos da Aba 3 -->
         <div class="rounded-xl border border-border-ui bg-white p-4">
-          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-3">
+          <p class="text-[11px] font-bold uppercase tracking-wider text-text-soft mb-3">
             Valores da Aba 3 — RH + Fábrica (usados na estimativa de custo)
           </p>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
-              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-text-soft mb-1">
                 Hora-Homem (R$/m²)
               </label>
               <input
@@ -110,12 +109,12 @@
                 type="number"
                 min="0"
                 step="0.01"
-                class="w-full rounded-xl border border-border-ui bg-bg-page px-3 py-2 text-sm"
+                class="ds-field-line w-full px-3 py-2 text-sm"
                 placeholder="0.00"
               />
             </div>
             <div>
-              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-text-soft mb-1">
                 Custo Fixo Fábrica (R$/m²)
               </label>
               <input
@@ -123,12 +122,12 @@
                 type="number"
                 min="0"
                 step="0.01"
-                class="w-full rounded-xl border border-border-ui bg-bg-page px-3 py-2 text-sm"
+                class="ds-field-line w-full px-3 py-2 text-sm"
                 placeholder="0.00"
               />
             </div>
             <div>
-              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-text-soft mb-1">
                 Acréscimo Global (%)
               </label>
               <input
@@ -137,7 +136,7 @@
                 min="0"
                 max="100"
                 step="0.01"
-                class="w-full rounded-xl border border-border-ui bg-bg-page px-3 py-2 text-sm"
+                class="ds-field-line w-full px-3 py-2 text-sm"
                 placeholder="0.00"
               />
             </div>
@@ -163,30 +162,30 @@
         <!-- Resumo da importação -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div class="rounded-xl border border-border-ui bg-white p-3 text-center">
-            <p class="text-xs text-slate-500 mb-1">Total de peças</p>
+            <p class="text-xs text-text-soft mb-1">Total de peças</p>
             <p class="text-xl font-black text-text-main">{{ importResult.total_pecas_brutas }}</p>
           </div>
           <div class="rounded-xl border border-border-ui bg-white p-3 text-center">
-            <p class="text-xs text-slate-500 mb-1">Grupos de material</p>
+            <p class="text-xs text-text-soft mb-1">Grupos de material</p>
             <p class="text-xl font-black text-text-main">{{ importResult.total_grupos }}</p>
           </div>
-          <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-center">
-            <p class="text-xs text-emerald-700 mb-1">Encontrados</p>
-            <p class="text-xl font-black text-emerald-700">{{ encontrados }}</p>
+          <div class="rounded-xl border border-border-ui bg-white p-3 text-center">
+            <p class="text-xs text-text-soft mb-1">Encontrados</p>
+            <p class="text-xl font-black text-text-main">{{ encontrados }}</p>
           </div>
           <div
             class="rounded-xl p-3 text-center"
-            :class="importResult.nao_encontrados > 0 ? 'border border-amber-200 bg-amber-50' : 'border border-border-ui bg-white'"
+            :class="importResult.nao_encontrados > 0 ? 'ds-status-pill--warning border' : 'border border-border-ui bg-white'"
           >
-            <p class="text-xs mb-1" :class="importResult.nao_encontrados > 0 ? 'text-amber-700' : 'text-slate-500'">Pendentes</p>
-            <p class="text-xl font-black" :class="importResult.nao_encontrados > 0 ? 'text-amber-700' : 'text-text-main'">{{ importResult.nao_encontrados }}</p>
+            <p class="text-xs mb-1" :class="importResult.nao_encontrados > 0 ? '' : 'text-text-soft'">Pendentes</p>
+            <p class="text-xl font-black" :class="importResult.nao_encontrados > 0 ? '' : 'text-text-main'">{{ importResult.nao_encontrados }}</p>
           </div>
         </div>
 
         <!-- Tabela de itens -->
         <div class="rounded-xl border border-border-ui bg-white overflow-hidden">
-          <div class="px-3 py-2 bg-slate-50 border-b border-border-ui flex items-center justify-between gap-3">
-            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+          <div class="px-3 py-2 bg-bg-page border-b border-border-ui flex items-center justify-between gap-3">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-text-soft">
               Itens do Projeto ({{ importResult.itens.length }})
             </p>
             <div class="flex gap-1.5">
@@ -196,8 +195,8 @@
                 type="button"
                 class="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide transition-all"
                 :class="filtroTabela === f
-                  ? 'bg-slate-900 text-white'
-                  : 'border border-border-ui text-slate-500 hover:border-slate-400/60'"
+                  ? 'bg-text-main text-white'
+                  : 'border border-border-ui text-text-soft hover:border-border-ui/60'"
                 @click="filtroTabela = f"
               >
                 {{ f }}
@@ -207,7 +206,7 @@
           <div class="overflow-auto max-h-[340px]">
             <table class="w-full min-w-[700px]">
               <thead>
-                <tr class="border-b border-border-ui bg-white text-left text-[11px] uppercase tracking-wider text-slate-500">
+                <tr class="border-b border-border-ui bg-white text-left text-[11px] uppercase tracking-wider text-text-soft">
                   <th class="px-3 py-2.5 font-black">Status</th>
                   <th class="px-3 py-2.5 font-black">Material (arquivo)</th>
                   <th class="px-3 py-2.5 font-black">Produto vinculado</th>
@@ -221,14 +220,12 @@
                 <tr
                   v-for="item in itensFiltrados"
                   :key="item.nome_original + item.espessura_mm"
-                  class="border-b border-border-ui/70 last:border-b-0 hover:bg-slate-50/60 transition-colors"
+                  class="border-b border-border-ui/70 last:border-b-0 hover:bg-bg-page/60 transition-colors"
                 >
                   <td class="px-3 py-2">
                     <span
-                      class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide"
-                      :class="item.encontrado
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : 'bg-amber-100 text-amber-700'"
+                      class="ds-status-pill inline-flex items-center gap-1 px-2 py-0.5 text-[10px]"
+                      :class="item.encontrado ? 'ds-status-pill--success' : 'ds-status-pill--warning'"
                     >
                       <i :class="item.encontrado ? 'pi pi-check' : 'pi pi-exclamation-triangle'" class="text-[9px]"></i>
                       {{ item.encontrado ? 'OK' : 'Pendente' }}
@@ -237,26 +234,26 @@
                   <td class="px-3 py-2 text-xs font-semibold text-text-main max-w-[180px] truncate" :title="item.nome_original">
                     {{ item.nome_original }}
                   </td>
-                  <td class="px-3 py-2 text-xs text-slate-500 max-w-[180px] truncate" :title="item.produto_nome">
+                  <td class="px-3 py-2 text-xs text-text-soft max-w-[180px] truncate" :title="item.produto_nome">
                     {{ item.produto_nome || '—' }}
                   </td>
-                  <td class="px-3 py-2 text-xs text-text-muted">{{ item.espessura_mm ? `${item.espessura_mm}mm` : '—' }}</td>
+                  <td class="px-3 py-2 text-xs text-text-soft">{{ item.espessura_mm ? `${item.espessura_mm}mm` : '—' }}</td>
                   <td class="px-3 py-2 text-xs tabular-nums text-right font-semibold">{{ item.area_m2.toFixed(3) }}</td>
                   <td class="px-3 py-2 text-right">
-                    <span class="text-xs font-black tabular-nums text-emerald-700">{{ formatCurrency(item.custo_total) }}</span>
+                    <span class="text-xs font-black tabular-nums text-text-main">{{ formatCurrency(item.custo_total) }}</span>
                   </td>
                   <td class="px-3 py-2">
                     <select
                       v-if="!item.encontrado"
                       v-model="item._categoria_manual"
-                      class="w-full rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-800"
+                      class="ds-field-line w-full px-2 py-1 text-[11px] font-bold text-text-main"
                     >
                       <option value="">Selecione...</option>
                       <option value="PRIMARIA">Essencial</option>
                       <option value="SECUNDARIA">Desgner</option>
                       <option value="TERCIARIA">Premiun</option>
                     </select>
-                    <span v-else class="text-[11px] text-slate-400">—</span>
+                    <span v-else class="text-[11px] text-text-faint">—</span>
                   </td>
                 </tr>
               </tbody>
@@ -267,9 +264,9 @@
         <!-- Alerta pendentes sem categoria -->
         <div
           v-if="pendenteSemCategoria > 0"
-          class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800 flex items-center gap-2"
+          class="ds-alert ds-alert--warning text-sm flex items-center gap-2"
         >
-          <i class="pi pi-info-circle text-amber-600"></i>
+          <i class="pi pi-info-circle"></i>
           <span>
             <strong>{{ pendenteSemCategoria }} item(ns)</strong> ainda sem categoria definida.
             Preencha a coluna "Categoria manual" para incluí-los no orçamento.
@@ -279,7 +276,7 @@
         <div class="flex items-center justify-between gap-3 flex-wrap">
           <button
             type="button"
-            class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold border border-border-ui text-text-main hover:bg-slate-50 transition-all"
+            class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold border border-border-ui text-text-main hover:bg-bg-page transition-all"
             @click="activeStep = 0"
           >
             <i class="pi pi-arrow-left text-sm"></i>
@@ -319,14 +316,14 @@
             </div>
             <div class="space-y-1.5 text-xs">
               <div class="flex justify-between">
-                <span class="text-slate-500">Área total</span>
+                <span class="text-text-soft">Área total</span>
                 <span class="font-bold tabular-nums">{{ cat.area_m2.toFixed(3) }} m²</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-slate-500">Custo material</span>
+                <span class="text-text-soft">Custo material</span>
                 <span class="font-bold tabular-nums">{{ formatCurrency(cat.custo_material) }}</span>
               </div>
-              <div class="flex justify-between border-t border-slate-100 pt-1.5 mt-1.5">
+              <div class="flex justify-between border-t border-border-ui/40 pt-1.5 mt-1.5">
                 <span class="font-semibold" :class="catStyle(key).text">CMV estimado</span>
                 <span class="font-black tabular-nums" :class="catStyle(key).text">{{ formatCurrency(cat.custo_cmv) }}</span>
               </div>
@@ -336,74 +333,74 @@
 
         <!-- Resumo financeiro total -->
         <div class="rounded-xl border border-border-ui bg-white p-4">
-          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-3">Resumo Financeiro do Projeto</p>
+          <p class="text-[11px] font-bold uppercase tracking-wider text-text-soft mb-3">Resumo Financeiro do Projeto</p>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="space-y-2 text-sm">
               <div class="flex justify-between">
-                <span class="text-slate-500">Área vinculada</span>
+                <span class="text-text-soft">Área vinculada</span>
                 <span class="font-bold tabular-nums">{{ vinculoResult.area_vinculada_m2?.toFixed(3) }} m²</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-slate-500">Custo material real</span>
-                <span class="font-bold tabular-nums text-emerald-700">{{ formatCurrency(vinculoResult.custo_material_total) }}</span>
+                <span class="text-text-soft">Custo material real</span>
+                <span class="font-bold tabular-nums text-[color:var(--ds-color-success)]">{{ formatCurrency(vinculoResult.custo_material_total) }}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-slate-500">CMV total (fórmula matriz)</span>
+                <span class="text-text-soft">CMV total (fórmula matriz)</span>
                 <span class="font-bold tabular-nums text-blue-700">{{ formatCurrency(vinculoResult.custo_cmv_total) }}</span>
               </div>
               <div class="flex justify-between">
-                <span class="flex items-center gap-1.5 text-slate-500">
+                <span class="flex items-center gap-1.5 text-text-soft">
                   RH + Fábrica estimado
                   <span class="inline-flex items-center gap-0.5 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-600">
                     <i class="pi pi-sync text-[8px]"></i> Aba 3
                   </span>
                 </span>
-                <span class="font-bold tabular-nums text-violet-700">{{ formatCurrency(vinculoResult.custo_rh_estimado) }}</span>
+                <span class="font-bold tabular-nums text-text-main">{{ formatCurrency(vinculoResult.custo_rh_estimado) }}</span>
               </div>
               <div v-if="vinculoResult.acrescimo_valor > 0" class="flex justify-between">
-                <span class="text-slate-500">Acréscimo ({{ custoConfig.acrescimo_pct }}%)</span>
+                <span class="text-text-soft">Acréscimo ({{ custoConfig.acrescimo_pct }}%)</span>
                 <span class="font-bold tabular-nums">{{ formatCurrency(vinculoResult.acrescimo_valor) }}</span>
               </div>
-              <div class="flex justify-between border-t border-slate-200 pt-2 mt-1">
-                <span class="font-bold text-slate-700">Custo Total Estimado</span>
-                <span class="text-lg font-black tabular-nums text-slate-900">{{ formatCurrency(vinculoResult.custo_total_estimado) }}</span>
+              <div class="flex justify-between border-t border-border-ui pt-2 mt-1">
+                <span class="font-bold text-text-main">Custo Total Estimado</span>
+                <span class="text-lg font-black tabular-nums text-text-main">{{ formatCurrency(vinculoResult.custo_total_estimado) }}</span>
               </div>
             </div>
 
             <!-- Pendentes restantes -->
-            <div v-if="vinculoResult.nao_vinculados > 0" class="rounded-xl border border-amber-200 bg-amber-50 p-3">
-              <p class="text-[11px] font-bold uppercase tracking-wider text-amber-700 mb-2">
+            <div v-if="vinculoResult.nao_vinculados > 0" class="ds-alert ds-alert--warning">
+              <p class="text-[11px] font-bold uppercase tracking-wider mb-2">
                 <i class="pi pi-exclamation-triangle mr-1"></i>
                 {{ vinculoResult.nao_vinculados }} item(ns) não vinculado(s)
               </p>
-              <p class="text-xs text-amber-700 mb-2">Esses materiais não foram encontrados nem classificados manualmente. Eles não entram no custo acima.</p>
+              <p class="text-xs mb-2">Esses materiais não foram encontrados nem classificados manualmente. Eles não entram no custo acima.</p>
               <ul class="space-y-1">
                 <li
                   v-for="p in vinculoResult.itens_pendentes"
                   :key="p.nome_original"
-                  class="text-xs text-amber-800 font-semibold flex justify-between"
+                  class="text-xs font-semibold flex justify-between"
                 >
                   <span class="truncate mr-2">{{ p.nome_original }}</span>
                   <span class="whitespace-nowrap tabular-nums">{{ p.area_m2.toFixed(3) }} m²</span>
                 </li>
               </ul>
             </div>
-            <div v-else class="rounded-xl border border-emerald-200 bg-emerald-50 p-3 flex items-center gap-2">
-              <i class="pi pi-check-circle text-emerald-600 text-lg"></i>
-              <p class="text-sm font-bold text-emerald-700">Todos os materiais foram vinculados com sucesso.</p>
+            <div v-else class="ds-alert ds-alert--success flex items-center gap-2">
+              <i class="pi pi-check-circle text-lg"></i>
+              <p class="text-sm font-bold">Todos os materiais foram vinculados com sucesso.</p>
             </div>
           </div>
         </div>
 
         <!-- Tabela final de itens vinculados -->
         <div class="rounded-xl border border-border-ui bg-white overflow-hidden">
-          <div class="px-3 py-2 bg-slate-50 border-b border-border-ui">
-            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Itens Vinculados por Categoria</p>
+          <div class="px-3 py-2 bg-bg-page border-b border-border-ui">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-text-soft">Itens Vinculados por Categoria</p>
           </div>
           <div class="overflow-auto max-h-[320px]">
             <table class="w-full min-w-[760px]">
               <thead>
-                <tr class="border-b border-border-ui bg-white text-left text-[11px] uppercase tracking-wider text-slate-500">
+                <tr class="border-b border-border-ui bg-white text-left text-[11px] uppercase tracking-wider text-text-soft">
                   <th class="px-3 py-2.5 font-black">Categoria</th>
                   <th class="px-3 py-2.5 font-black">Material</th>
                   <th class="px-3 py-2.5 font-black">Produto</th>
@@ -417,7 +414,7 @@
                 <tr
                   v-for="item in vinculoResult.itens_vinculados"
                   :key="item.nome_original + item.categoria_comercial"
-                  class="border-b border-border-ui/70 last:border-b-0 hover:bg-slate-50/60 transition-colors"
+                  class="border-b border-border-ui/70 last:border-b-0 hover:bg-bg-page/60 transition-colors"
                 >
                   <td class="px-3 py-2">
                     <span
@@ -430,7 +427,7 @@
                   <td class="px-3 py-2 text-xs font-semibold text-text-main max-w-[160px] truncate" :title="item.nome_original">
                     {{ item.nome_original }}
                   </td>
-                  <td class="px-3 py-2 text-xs text-slate-500 max-w-[160px] truncate" :title="item.produto_nome">
+                  <td class="px-3 py-2 text-xs text-text-soft max-w-[160px] truncate" :title="item.produto_nome">
                     {{ item.produto_nome || '—' }}
                   </td>
                   <td class="px-3 py-2 text-xs tabular-nums text-right font-semibold">{{ item.area_m2.toFixed(3) }}</td>
@@ -441,7 +438,7 @@
                   </td>
                 </tr>
                 <tr v-if="!vinculoResult.itens_vinculados?.length">
-                  <td colspan="7" class="px-3 py-10 text-center text-sm text-text-muted">
+                  <td colspan="7" class="px-3 py-10 text-center text-sm text-text-soft">
                     Nenhum item vinculado.
                   </td>
                 </tr>
@@ -453,7 +450,7 @@
         <div class="flex items-center justify-between gap-3 flex-wrap">
           <button
             type="button"
-            class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold border border-border-ui text-text-main hover:bg-slate-50 transition-all"
+            class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold border border-border-ui text-text-main hover:bg-bg-page transition-all"
             @click="activeStep = 1"
           >
             <i class="pi pi-arrow-left text-sm"></i>
@@ -556,22 +553,22 @@ const catLabel = (key) => {
 
 const catStyle = (key) => {
   if (key === 'SECUNDARIA') return {
-    card:  'border-amber-200 bg-amber-50/60',
-    badge: 'bg-amber-100 text-amber-700',
-    text:  'text-amber-700',
-    muted: 'text-amber-500',
+    card:  'ds-alert ds-alert--warning',
+    badge: 'ds-status-pill ds-status-pill--warning',
+    text:  'text-[color:var(--ds-color-warning)]',
+    muted: 'text-text-soft',
   }
   if (key === 'TERCIARIA') return {
-    card:  'border-violet-200 bg-violet-50/60',
-    badge: 'bg-violet-100 text-violet-700',
-    text:  'text-violet-700',
-    muted: 'text-violet-500',
+    card:  'ds-surface',
+    badge: 'ds-status-pill ds-status-pill--neutral',
+    text:  'text-text-main',
+    muted: 'text-text-soft',
   }
   return {
-    card:  'border-emerald-200 bg-emerald-50/60',
-    badge: 'bg-emerald-100 text-emerald-700',
-    text:  'text-emerald-700',
-    muted: 'text-emerald-500',
+    card:  'ds-alert ds-alert--success',
+    badge: 'ds-status-pill ds-status-pill--success',
+    text:  'text-[color:var(--ds-color-success)]',
+    muted: 'text-text-soft',
   }
 }
 

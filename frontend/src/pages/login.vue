@@ -1,202 +1,207 @@
 <template>
-  <div class="login-screen">
-    <div class="login-shell">
-      <section class="login-brand-panel">
-        <div class="login-brand-panel__inner">
+  <div class="login-screen login-font">
+    <div class="login-screen__backdrop"></div>
+
+    <div class="login-layout animate-page-in">
+      <section class="login-brand">
+        <div class="login-brand__inner">
           <div class="login-mark">
-            <img src="/logo.png" alt="Logo" class="login-mark__logo" />
-            <div>
-              <p class="login-mark__eyebrow">Plataforma Operacional</p>
-              <h1 class="login-mark__title login-mark__title--single-line">A Casa Móveis Planejados LTDA</h1>
+            <div class="login-mark__badge">
+              <img src="/logo.png" alt="Logo A Casa" class="login-mark__logo" />
+            </div>
+
+            <div class="login-mark__copy">
+              <p class="login-mark__eyebrow">Plataforma operacional</p>
+              <h1 class="login-mark__title">A Casa Marcenaria</h1>
             </div>
           </div>
 
-          <div class="login-copy">
-            <h2 class="login-copy__headline login-copy__headline--single-line">Gestão comercial e finanças.</h2>
+          <div class="login-brand__content">
+            <p class="login-brand__lead">ERP interno para comercial, produção e financeiro.</p>
+            <p class="login-brand__copytext">
+              Acesse o ambiente da equipe para acompanhar clientes, agenda, fábrica, contratos, compras e rotina financeira.
+            </p>
           </div>
 
-          <div class="login-highlights">
-            <div class="login-highlight-card">
-              <div class="login-highlight-card__icon">
-                <i class="pi pi-chart-line" aria-hidden="true"></i>
-              </div>
-              <div>
-                <strong>Comercial</strong>
-                <p>Clientes, propostas e contratos em um só lugar.</p>
-              </div>
-            </div>
-
-            <div class="login-highlight-card">
-              <div class="login-highlight-card__icon">
-                <i class="pi pi-cog" aria-hidden="true"></i>
-              </div>
-              <div>
-                <strong>Operação</strong>
-                <p>Agenda, produção e acompanhamento de pedidos em tempo real.</p>
-              </div>
-            </div>
-
-            <div class="login-highlight-card">
-              <div class="login-highlight-card__icon">
-                <i class="pi pi-check-circle" aria-hidden="true"></i>
-              </div>
-              <div>
-                <strong>Controle</strong>
-                <p>Compras, estoque e gestão financeira integrados.</p>
-              </div>
-            </div>
+          <div class="login-brand__tags">
+            <span class="login-brand__tag">Comercial</span>
+            <span class="login-brand__tag">Produção</span>
+            <span class="login-brand__tag">Financeiro</span>
           </div>
         </div>
       </section>
 
-      <section class="login-access-panel">
-        <div class="login-access-panel__header">
-          <p class="login-access-panel__eyebrow">Acesso ao sistema</p>
-          <h3 class="login-access-panel__title">Entrar</h3>
-          <p class="login-access-panel__subtitle">Use seu usuário corporativo para acessar o ambiente operacional.</p>
-        </div>
+      <section class="login-access">
+        <div class="login-access__panel">
+          <div class="login-panel__header">
+            <p class="login-panel__eyebrow">Acesso ao sistema</p>
+            <h2 class="login-panel__title">Entrar</h2>
+            <p class="login-panel__subtitle">Use seu usuário corporativo para acessar o ambiente operacional.</p>
+          </div>
 
-        <form autocomplete="off" @submit.prevent="handleLoginSubmit" class="login-form">
-          <div class="login-field-list">
-            <label class="login-field">
-              <span class="login-field__label">Usuário</span>
-              <span class="login-field__control">
-                <i class="pi pi-envelope login-field__icon" aria-hidden="true"></i>
-                <input
-                  v-model="formLogin.usuario"
-                  name="acasa_login_user"
-                  type="text"
-                  :disabled="loading"
-                  autocomplete="username"
-                  autocapitalize="none"
-                  autocorrect="off"
-                  spellcheck="false"
-                  inputmode="email"
-                  class="login-field__input"
-                  placeholder="Usuário ou e-mail"
-                />
-              </span>
-            </label>
+          <form autocomplete="off" class="login-form" @submit.prevent="handleLoginSubmit">
+            <div class="login-form__fields">
+              <Input
+                v-model="formLogin.usuario"
+                label="Usuário"
+                name="acasa_login_user"
+                type="text"
+                placeholder="Usuário ou e-mail"
+                :disabled="loading"
+                autocomplete="username"
+                :spellcheck="false"
+                :force-upper="false"
+                variant="line"
+              />
 
-            <label class="login-field login-field--password">
-              <span class="login-field__label">Senha</span>
-              <span class="login-field__control">
-                <i class="pi pi-lock login-field__icon" aria-hidden="true"></i>
-                <input
-                  v-model="formLogin.senha"
-                  name="acasa_login_pass"
-                  :type="showPassword ? 'text' : 'password'"
-                  :disabled="loading"
-                  autocomplete="current-password"
-                  autocapitalize="none"
-                  autocorrect="off"
-                  spellcheck="false"
-                  inputmode="text"
-                  class="login-field__input"
-                  placeholder="Sua senha"
-                />
-              </span>
-              <button
-                type="button"
-                @click="togglePassword"
-                class="login-field__toggle"
-                :aria-label="showPassword ? 'Ocultar senha' : 'Mostrar senha'"
+              <Input
+                v-model="formLogin.senha"
+                label="Senha"
+                name="acasa_login_pass"
+                :type="showPassword ? 'text' : 'password'"
+                placeholder="Sua senha"
+                :disabled="loading"
+                autocomplete="current-password"
+                :spellcheck="false"
+                :force-upper="false"
+                variant="line"
               >
-                <i :class="showPassword ? 'pi pi-eye-slash' : 'pi pi-eye'" class="text-base" />
+                <template #suffix>
+                  <button
+                    type="button"
+                    class="login-password-toggle"
+                    :aria-label="showPassword ? 'Ocultar senha' : 'Mostrar senha'"
+                    @click="togglePassword"
+                  >
+                    <i :class="showPassword ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+                  </button>
+                </template>
+              </Input>
+            </div>
+
+            <div class="login-form__meta">
+              <button type="button" class="login-link" @click="openRecuperacao">
+                Esqueci a senha
               </button>
-            </label>
-          </div>
+            </div>
 
-          <div class="login-row">
-            <button type="button" @click="openRecuperacao" class="login-link">
-              Esqueci a senha
-            </button>
-          </div>
+            <div v-if="msgSenhaExpirada" class="ds-alert ds-alert--warning login-alert-block">
+              Senha provisória expirada. Peça ao administrador para resetar seu acesso na tela de Equipe.
+            </div>
 
-          <div v-if="msgSenhaExpirada" class="login-alert login-alert--warning">
-            Senha provisória expirada. Peça ao administrador para resetar seu acesso na tela de Equipe.
-          </div>
+            <div v-if="error" class="ds-alert ds-alert--danger login-alert-block">
+              {{ error }}
+            </div>
 
-          <div v-if="error" class="login-alert login-alert--error">
-            {{ error }}
-          </div>
+            <Button
+              type="submit"
+              :loading="loading"
+              :disabled="loading || !canSubmit"
+              fullWidth
+              class="login-submit"
+            >
+              Entrar no sistema
+            </Button>
+          </form>
 
-          <Button
-            type="submit"
-            :loading="loading"
-            fullWidth
-            class="login-submit"
-            :disabled="loading || !canSubmit"
-          >
-            Entrar no sistema
-          </Button>
-        </form>
+          <div class="login-panel__footer">
+            <span class="login-panel__footer-label">Ambiente interno</span>
+            <span class="login-panel__footer-copy">Acesso restrito para equipe autorizada.</span>
+          </div>
+        </div>
       </section>
     </div>
 
     <Teleport to="body">
       <Transition name="fade-scale">
-        <div v-if="showModalRecuperacao" class="login-modal-layer">
-          <div class="login-modal-layer__backdrop" @click="fecharRecuperacao"></div>
-
+        <div v-if="showModalRecuperacao" class="ds-modal-overlay login-modal-overlay" @click.self="fecharRecuperacao">
           <div class="login-modal">
             <div class="login-modal__header">
               <div>
-                <p class="login-modal__eyebrow">Recuperação</p>
+                <p class="login-panel__eyebrow">Recuperação</p>
                 <h3 class="login-modal__title">Redefinir acesso</h3>
+                <p class="login-modal__subtitle">Informe seu e-mail corporativo para receber uma senha provisória.</p>
               </div>
-              <button @click="fecharRecuperacao" class="login-modal__close" aria-label="Fechar recuperação de senha">
-                <i class="pi pi-times text-lg"></i>
+
+              <button
+                type="button"
+                class="login-modal__close"
+                aria-label="Fechar recuperação de senha"
+                @click="fecharRecuperacao"
+              >
+                <i class="pi pi-times"></i>
               </button>
             </div>
 
-            <div class="login-modal__body">
-              <form @submit.prevent="handleRecuperacaoSubmit" class="login-form login-form--modal">
-                <label class="login-field">
-                  <span class="login-field__label">E-mail</span>
-                  <span class="login-field__control">
-                    <i class="pi pi-envelope login-field__icon" aria-hidden="true"></i>
-                    <input
-                      v-model="emailRecuperacao"
-                      type="email"
-                      required
-                      :disabled="recuperacaoLoading"
-                      autocomplete="email"
-                      autocapitalize="none"
-                      autocorrect="off"
-                      spellcheck="false"
-                      inputmode="email"
-                      class="login-field__input"
-                      placeholder="nome@empresa.com"
-                    />
-                  </span>
-                </label>
+            <form v-if="!recuperacaoEnviada" class="login-modal__body" @submit.prevent="handleRecuperacaoSubmit">
+              <Input
+                v-model="emailRecuperacao"
+                label="E-mail"
+                type="email"
+                required
+                placeholder="nome@empresa.com"
+                :disabled="recuperacaoLoading"
+                autocomplete="email"
+                :spellcheck="false"
+                :force-upper="false"
+                variant="line"
+              />
 
-                <p class="login-modal__text">Enviaremos uma senha provisória para o e-mail informado.</p>
+              <div v-if="recuperacaoError" class="ds-alert ds-alert--danger login-alert-block">
+                {{ recuperacaoError }}
+              </div>
 
-                <div v-if="recuperacaoError" class="login-alert login-alert--error">
-                  {{ recuperacaoError }}
-                </div>
+              <div class="login-modal__actions">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  :disabled="recuperacaoLoading"
+                  @click="fecharRecuperacao"
+                >
+                  Cancelar
+                </Button>
 
-                <div class="login-modal__actions">
-                  <Button type="button" variant="secondary" @click="fecharRecuperacao" class="login-modal__button" :disabled="recuperacaoLoading">Cancelar</Button>
-                  <Button type="submit" :loading="recuperacaoLoading" class="login-modal__button login-modal__button--submit" :disabled="recuperacaoLoading || !emailRecuperacao">Enviar</Button>
-                </div>
-              </form>
+                <Button
+                  type="submit"
+                  :loading="recuperacaoLoading"
+                  :disabled="recuperacaoLoading || !emailRecuperacao"
+                >
+                  Enviar
+                </Button>
+              </div>
+            </form>
+
+            <div v-else class="login-modal__body login-modal__body--success">
+              <div class="login-modal__success-card">
+                <p class="login-modal__success-title">Senha provisoria enviada</p>
+                <p class="login-modal__success-copy">
+                  Se o e-mail existir na base, voce vai receber a senha provisoria para <strong>{{ emailRecuperacao }}</strong>.
+                </p>
+              </div>
+
+              <div class="login-modal__actions">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  @click="fecharRecuperacao"
+                >
+                  Fechar
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       </Transition>
     </Teleport>
-
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useAuth } from '@/services/useauth'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { AGENDA_ROUTE_PATH, hasAgendaAccess } from '@/constantes/agenda-route'
 import { getApiBaseUrl } from '@/services/api'
+import { useAuth } from '@/services/useauth'
 
 definePage({ meta: { public: true, layout: 'auth' } })
 
@@ -204,11 +209,16 @@ const router = useRouter()
 const route = useRoute()
 const msgSenhaExpirada = computed(() => route.query?.msg === 'senha_expirada')
 const { login, esqueciSenha, loading } = useAuth()
-const AGENDA_GERAL_PATH = '/agendamentos/loja'
+
+function getAgendaPath() {
+  if (hasAgendaAccess()) return AGENDA_ROUTE_PATH
+  return '/'
+}
 
 const showModalRecuperacao = ref(false)
 const recuperacaoLoading = ref(false)
 const recuperacaoError = ref('')
+const recuperacaoEnviada = ref(false)
 const formLogin = reactive({ usuario: '', senha: '' })
 const emailRecuperacao = ref('')
 const showPassword = ref(false)
@@ -231,6 +241,7 @@ onMounted(() => {
 
 function openRecuperacao() {
   recuperacaoError.value = ''
+  recuperacaoEnviada.value = false
   emailRecuperacao.value = ''
   showModalRecuperacao.value = true
 }
@@ -238,6 +249,7 @@ function openRecuperacao() {
 function fecharRecuperacao() {
   showModalRecuperacao.value = false
   recuperacaoError.value = ''
+  recuperacaoEnviada.value = false
   emailRecuperacao.value = ''
 }
 
@@ -249,28 +261,32 @@ async function handleLoginSubmit() {
 
     if (data?.precisa_trocar_senha) {
       router.push('/pendente')
-    } else {
-      router.push(AGENDA_GERAL_PATH)
+      return
     }
+
+    router.push(getAgendaPath())
   } catch (e) {
     const msg = e?.response?.data?.message
     if (msg) {
       error.value = Array.isArray(msg) ? msg.join(' | ') : msg
-    } else if (!e?.response && e?.message && /network|fetch|timeout|failed/i.test(String(e.message))) {
+      return
+    }
+
+    if (!e?.response && e?.message && /network|fetch|timeout|failed/i.test(String(e.message))) {
       const apiBase = getApiBaseUrl()
       const origin = typeof window !== 'undefined' ? window.location.origin : ''
       const requestUrl = `${apiBase.replace(/\/+$/, '')}/auth/login`
-      const detail = [
+      error.value = [
         'Falha ao conectar com o servidor.',
         `API: ${requestUrl}`,
         origin ? `Origem: ${origin}` : '',
         e?.code ? `Codigo: ${e.code}` : '',
         e?.message ? `Erro: ${String(e.message)}` : '',
       ].filter(Boolean).join(' ')
-      error.value = detail
-    } else {
-      error.value = 'Usuário ou senha inválidos.'
+      return
     }
+
+    error.value = 'Usuário ou senha inválidos.'
   }
 }
 
@@ -281,8 +297,7 @@ async function handleRecuperacaoSubmit() {
   recuperacaoLoading.value = true
   try {
     await esqueciSenha(emailRecuperacao.value)
-    alert('Enviamos uma senha provisória para o e-mail informado.')
-    fecharRecuperacao()
+    recuperacaoEnviada.value = true
   } catch (e) {
     const msg = e?.response?.data?.message
     recuperacaoError.value = msg
@@ -299,53 +314,71 @@ async function handleRecuperacaoSubmit() {
   position: relative;
   min-height: 100vh;
   min-height: 100dvh;
-  padding:
-    env(safe-area-inset-top)
-    env(safe-area-inset-right)
-    env(safe-area-inset-bottom)
-    env(safe-area-inset-left);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 0;
   overflow: hidden;
-  background: #e8eef5;
-  color: #0f172a;
-  font-family: 'Segoe UI Variable', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  background: var(--ds-color-page);
+  color: var(--ds-color-text);
 }
 
-.login-shell {
+.login-screen__backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 14% 22%, rgba(44, 111, 163, 0.12), transparent 26%),
+    radial-gradient(circle at 86% 10%, rgba(22, 124, 92, 0.08), transparent 20%),
+    linear-gradient(135deg, #f2f6f8 0%, #eef3f7 48%, #f6f8fa 100%);
+}
+
+.login-layout {
   position: relative;
+  z-index: 1;
   width: 100%;
   min-height: 100vh;
   min-height: 100dvh;
-  max-height: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.login-brand,
+.login-access {
   display: flex;
-  flex-direction: row;
-  border: 0;
-  border-radius: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.login-brand {
+  position: relative;
   overflow: hidden;
-  background: #ffffff;
-  box-shadow: none;
+  background:
+    radial-gradient(circle at top left, rgba(139, 192, 239, 0.12), transparent 28%),
+    linear-gradient(160deg, #153754 0%, #1b4566 55%, #204b6f 100%);
 }
 
-.login-brand-panel {
-  flex: 1.1 1 0;
-  min-width: 0;
-  padding: clamp(3rem, 6vw, 6rem);
-  display: flex;
-  align-items: center;
-  background: linear-gradient(160deg, #123b65 0%, #0f3256 55%, #0d2a4e 100%);
-  color: #ffffff;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+.login-brand::after {
+  content: '';
+  position: absolute;
+  right: -6rem;
+  bottom: -6rem;
+  width: 18rem;
+  height: 18rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  filter: blur(18px);
 }
 
-.login-brand-panel__inner {
+.login-brand__inner,
+.login-access__panel {
+  width: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.login-brand__inner {
+  position: relative;
+  z-index: 1;
   justify-content: center;
-  gap: 2.15rem;
-  width: min(100%, 30rem);
-  margin: 0 auto;
+  gap: 2rem;
+  padding: clamp(2rem, 5vw, 4.5rem);
 }
 
 .login-mark {
@@ -354,347 +387,255 @@ async function handleRecuperacaoSubmit() {
   gap: 1rem;
 }
 
+.login-mark__badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.75rem;
+  height: 4.75rem;
+  flex-shrink: 0;
+  border-radius: 1.35rem;
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.login-mark__copy {
+  min-width: 0;
+}
+
 .login-mark__logo {
-  width: 4rem;
-  height: 4rem;
-  padding: 0.75rem;
-  border-radius: 0.5rem;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  width: 2.75rem;
+  height: 2.75rem;
   object-fit: contain;
 }
 
 .login-mark__eyebrow,
-.login-modal__eyebrow,
-.login-access-panel__eyebrow {
-  margin: 0 0 0.35rem;
+.login-panel__eyebrow {
+  margin: 0 0 0.45rem;
   font-size: 0.625rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
 .login-mark__eyebrow {
-  color: rgba(226, 232, 240, 0.78);
+  color: rgba(235, 243, 251, 0.72);
 }
 
 .login-mark__title {
   margin: 0;
-  font-size: clamp(1.55rem, 1.2rem + 1vw, 2.25rem);
-  line-height: 1.08;
-  letter-spacing: -0.02em;
-  font-weight: 800;
-  color: #ffffff;
-}
-
-.login-mark__title--single-line {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.login-copy__headline {
-  margin: 0;
-  font-size: clamp(1.5rem, 1.2rem + 0.8vw, 2rem);
-  line-height: 1.28;
-  letter-spacing: -0.01em;
-  max-width: 26ch;
-  font-weight: 700;
-  color: #ffffff;
-}
-
-.login-copy__headline--single-line {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.login-copy__text {
-  margin: 0.4rem 0 0;
-  max-width: 32ch;
-  color: rgba(226, 232, 240, 0.88);
-  font-size: 0.9rem;
-  line-height: 1.6;
-  font-weight: 400;
-}
-
-.login-highlights {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-}
-
-.login-highlight-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.78rem 0.85rem;
-  border-radius: 0.5rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-}
-
-.login-highlight-card__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.6rem;
-  height: 1.6rem;
-  flex-shrink: 0;
-  border-radius: 0.35rem;
-  background: rgba(255, 255, 255, 0.18);
-  color: #ffffff;
-  font-size: 0.75rem;
-}
-
-.login-highlight-card strong {
-  display: block;
-  margin-bottom: 0.1rem;
-  color: rgba(248, 250, 252, 0.96);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.login-highlight-card p {
-  margin: 0;
-  color: rgba(226, 232, 240, 0.86);
-  font-size: 0.8rem;
-  line-height: 1.35;
-}
-
-.login-access-panel {
-  flex: 0.9 1 0;
-  min-width: 0;
-  padding: clamp(3rem, 6vw, 6rem);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  background: #fbfcfd;
-}
-
-.login-access-panel__header {
-  margin-bottom: 1.35rem;
-}
-
-.login-access-panel__eyebrow {
-  color: #9ca3af;
-  font-size: 0.6875rem;
-}
-
-.login-access-panel__title,
-.login-modal__title {
-  margin: 0;
-  color: #111827;
-  font-size: clamp(2rem, 1.65rem + 0.75vw, 2.5rem);
-  font-weight: 700;
+  font-size: clamp(2rem, 1.7rem + 0.95vw, 3.1rem);
   line-height: 1;
+  letter-spacing: -0.04em;
+  font-weight: 750;
+  color: #ffffff;
+}
+
+.login-brand__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: 34rem;
+}
+
+.login-brand__lead {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(1.3rem, 1.05rem + 0.55vw, 1.85rem);
+  font-weight: 650;
+  line-height: 1.25;
   letter-spacing: -0.03em;
 }
 
-.login-access-panel__subtitle,
-.login-modal__text {
-  margin: 0.65rem 0 0;
-  color: #9ca3af;
-  font-size: 0.875rem;
-  line-height: 1.6;
+.login-brand__copytext {
+  margin: 0;
+  color: rgba(235, 243, 251, 0.84);
+  font-size: 0.88rem;
+  line-height: 1.55;
 }
 
-.login-form,
-.login-field-list {
+.login-brand__tags {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
-.login-form {
-  gap: 1.1rem;
-  width: min(100%, 25rem);
-  margin: 0 auto;
+.login-brand__tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.3rem;
+  padding: 0 0.95rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.68rem;
 }
 
-.login-form--modal {
+.login-access {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.72);
+  padding: clamp(1.5rem, 4vw, 3.5rem);
+  backdrop-filter: blur(14px);
+}
+
+.login-access__panel {
+  max-width: 28rem;
   width: 100%;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
-.login-field-list {
-  gap: 1.1rem;
-}
-
-.login-field {
+.login-panel__header {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
 }
 
-.login-field__label {
-  color: #6b7280;
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+.login-panel__eyebrow {
+  color: var(--ds-color-text-faint);
 }
 
-.login-field__control {
-  position: relative;
+.login-panel__title,
+.login-modal__title {
+  margin: 0;
+  color: var(--ds-color-text);
+  font-size: clamp(2rem, 1.8rem + 0.5vw, 2.35rem);
+  font-weight: 720;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.login-panel__subtitle,
+.login-modal__copy {
+  margin: 0;
+  color: var(--ds-color-text-soft);
+  font-size: 0.9rem;
+  line-height: 1.65;
+}
+
+.login-form {
   display: flex;
-  align-items: center;
-  border: 0;
-  border-bottom: 1px solid #d4dbe4;
-  border-radius: 0;
-  background: transparent;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.login-field__control:focus-within {
-  border-bottom-color: #2563a8;
-  box-shadow: none;
-}
-
-.login-field__icon {
-  position: absolute;
-  left: 0.95rem;
-  z-index: 1;
-  color: #aeb7c2;
-  font-size: 0.85rem;
-  pointer-events: none;
-}
-
-.login-field__input {
-  width: 100%;
-  min-height: 3.15rem;
-  padding: 0.85rem 0 0.85rem 2.2rem;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: #0f172a;
-  font-size: clamp(0.95rem, 0.9rem + 0.15vw, 1rem);
-  font-weight: 500;
-  outline: none;
-  transition: color 0.2s ease, background 0.2s ease;
-}
-
-.login-field__input::placeholder {
-  color: #b8c0cb;
-  font-weight: 500;
-}
-
-.login-field__input:focus {
-  box-shadow: none;
-  background: transparent;
-}
-
-.login-field--password {
-  position: relative;
-}
-
-.login-field--password .login-field__input {
-  padding-right: 2.5rem;
-}
-
-.login-field__toggle {
-  position: absolute;
-  right: -0.15rem;
-  bottom: 0.45rem;
-  width: 1.9rem;
-  height: 1.9rem;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: #64748b;
-  cursor: pointer;
-  transition: color 0.2s ease, background 0.2s ease;
-}
-
-.login-field__toggle:hover {
-  color: #1d4f82;
-  background: rgba(148, 163, 184, 0.12);
-}
-
-.login-row {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
+  flex-direction: column;
   gap: 1rem;
-  flex-wrap: wrap;
+  margin-top: 1.25rem;
+}
+
+.login-access__panel :deep(.ds-field--line .ds-control-input--with-suffix) {
+  padding-right: 2rem !important;
+}
+
+.login-modal :deep(.ds-field--line .ds-control-input--with-suffix) {
+  padding-right: 2rem !important;
+}
+
+.login-form__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.95rem;
+}
+
+.login-form__meta {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -0.1rem;
 }
 
 .login-link {
   border: 0;
   padding: 0;
   background: transparent;
-  color: #60a5fa;
-  font-size: 0.8125rem;
-  font-weight: 500;
+  color: var(--ds-color-text-faint);
+  font-size: 0.82rem;
+  font-weight: 600;
   cursor: pointer;
+  transition: color 0.18s ease;
 }
 
 .login-link:hover {
-  color: #1d4f82;
-  text-decoration: underline;
+  color: var(--ds-color-primary);
 }
 
-.login-alert {
-  padding: 0.95rem 1rem;
-  border-radius: 0.5rem;
-  border: 1px solid;
-  font-size: 0.8125rem;
-  font-weight: 700;
+.login-alert-block {
+  font-size: 0.82rem;
+  font-weight: 600;
   line-height: 1.55;
 }
 
-.login-alert--warning {
-  background: #fff7ed;
-  border-color: #fed7aa;
-  color: #9a3412;
+.login-password-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ds-color-text-faint);
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease;
 }
 
-.login-alert--error {
-  background: #fff1f2;
-  border-color: #fecdd3;
-  color: #be123c;
+.login-password-toggle:hover {
+  background: rgba(44, 111, 163, 0.08);
+  color: var(--ds-color-primary);
 }
 
 .login-submit {
-  width: 100%;
-  min-height: 3.5rem;
-  border-radius: 0.5rem;
-  background: #004a99;
-  font-size: 0.75rem;
+  min-height: 3.35rem;
+  border-radius: 1rem;
+  font-size: 0.76rem;
   font-weight: 700;
-  letter-spacing: 0.0625rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  cursor: pointer;
-  transition: background 0.2s ease;
+  box-shadow: 0 18px 30px -24px rgba(44, 111, 163, 0.5);
 }
 
-.login-submit:hover {
-  background: #003f82;
-}
-
-.login-modal-layer {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
+.login-panel__footer {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-top: 1.15rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(214, 224, 234, 0.8);
 }
 
-.login-modal-layer__backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.42);
+.login-panel__footer-label {
+  color: var(--ds-color-text-faint);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.login-panel__footer-copy {
+  color: var(--ds-color-text-soft);
+  font-size: 0.84rem;
 }
 
 .login-modal {
   position: relative;
-  width: min(28rem, 100%);
-  border-radius: 0.75rem;
-  border: 1px solid #dbe3ea;
-  background: #ffffff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  z-index: 1;
+  width: min(100%, 32rem);
+  padding: 1.5rem;
+  border: 1px solid rgba(214, 224, 234, 0.88);
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 32px 70px -40px rgba(25, 43, 68, 0.42);
+  backdrop-filter: blur(16px);
+}
+
+.login-modal-overlay {
+  z-index: 1200;
 }
 
 .login-modal__header {
@@ -702,58 +643,76 @@ async function handleRecuperacaoSubmit() {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1.25rem 1.25rem 1rem;
-  border-bottom: 1px solid #eef2f7;
-}
-
-.login-modal__eyebrow {
-  color: #64748b;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--ds-color-border);
 }
 
 .login-modal__title {
-  font-size: 1.35rem;
+  font-size: 1.45rem;
+}
+
+.login-modal__subtitle {
+  margin: 0.45rem 0 0;
+  color: var(--ds-color-text-soft);
+  font-size: 0.88rem;
+  line-height: 1.6;
 }
 
 .login-modal__close {
-  width: 2.25rem;
-  height: 2.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.3rem;
+  height: 2.3rem;
   border: 0;
-  border-radius: 0.5rem;
+  border-radius: 0.85rem;
   background: transparent;
-  color: #64748b;
+  color: var(--ds-color-text-faint);
   cursor: pointer;
 }
 
 .login-modal__close:hover {
-  background: #f3f6f9;
-  color: #0f172a;
+  background: rgba(44, 111, 163, 0.08);
+  color: var(--ds-color-primary);
 }
 
 .login-modal__body {
-  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 1.2rem;
 }
 
-.login-modal__text {
+.login-modal__body--success {
+  gap: 1.1rem;
+}
+
+.login-modal__success-card {
+  padding: 1rem 1.05rem;
+  border: 1px solid rgba(44, 111, 163, 0.18);
+  border-radius: 1.1rem;
+  background: rgba(44, 111, 163, 0.06);
+}
+
+.login-modal__success-title {
   margin: 0;
+  color: var(--ds-color-text);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.login-modal__success-copy {
+  margin: 0.45rem 0 0;
+  color: var(--ds-color-text-soft);
+  font-size: 0.84rem;
+  line-height: 1.65;
 }
 
 .login-modal__actions {
   display: flex;
   gap: 0.75rem;
-}
-
-.login-modal__button {
-  flex: 1 1 0;
-  min-height: 3.25rem;
-  border-radius: 0.5rem;
-  cursor: pointer;
-}
-
-.login-modal__button--submit {
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.0625rem;
-  text-transform: uppercase;
+  justify-content: flex-end;
+  padding-top: 0.25rem;
 }
 
 .fade-scale-enter-active,
@@ -767,187 +726,126 @@ async function handleRecuperacaoSubmit() {
   transform: scale(0.985);
 }
 
-@media (max-width: 768px) {
-  .login-screen {
-    padding:
-      env(safe-area-inset-top)
-      env(safe-area-inset-right)
-      env(safe-area-inset-bottom)
-      env(safe-area-inset-left);
+@media (max-width: 960px) {
+  .login-layout {
+    grid-template-columns: 1fr;
   }
 
-  .login-shell {
-    min-height: 100dvh;
-    max-height: none;
-    flex-direction: column;
-  }
-
-  .login-brand-panel,
-  .login-access-panel {
-    padding: 2rem 1.5rem;
-    text-align: center;
-  }
-
-  .login-brand-panel {
+  .login-brand,
+  .login-access {
     min-height: auto;
-    border-right: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   }
 
-  .login-brand-panel__inner {
-    width: 100%;
-    gap: 1rem;
-    align-items: center;
+  .login-brand {
+    min-height: 42vh;
   }
 
-  .login-copy__text {
-    max-width: 42ch;
+  .login-brand__inner {
+    padding: 1.5rem;
   }
 
-  .login-mark {
-    justify-content: center;
+  .login-access {
+    padding: 1rem 1.5rem 1.5rem;
+    border-left: 0;
+    background: rgba(255, 255, 255, 0.78);
   }
 
-  .login-copy__headline {
-    max-width: 100%;
-  }
-
-  .login-form,
-  .login-access-panel__header {
-    text-align: center;
-  }
-
-  .login-row {
-    justify-content: center;
-  }
-
-  .login-highlights {
-    width: 100%;
+  .login-access__panel {
+    max-width: 32rem;
   }
 }
 
 @media (max-width: 640px) {
-  .login-brand-panel,
-  .login-access-panel {
-    padding: 1.35rem;
-  }
-
   .login-mark {
     align-items: flex-start;
   }
 
-  .login-mark__logo {
-    width: 3.5rem;
-    height: 3.5rem;
+  .login-mark__badge {
+    width: 4rem;
+    height: 4rem;
   }
 
-  .login-copy__headline {
+  .login-mark__logo {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .login-brand__content {
     max-width: 100%;
   }
 
-  .login-highlight-card {
-    text-align: left;
+  .login-access {
+    padding: 0.85rem;
+    backdrop-filter: blur(10px);
   }
 
-  .login-row,
-  .login-modal__actions {
-    justify-content: stretch;
-  }
-
-  .login-field__input,
-  .login-submit,
-  .login-modal__button {
-    min-height: 3.4rem;
-  }
-
-  .login-field__input {
-    padding: 0.9rem 0 0.9rem 2.3rem;
+  .login-access__panel {
+    max-width: 100%;
   }
 
   .login-modal {
     width: 100%;
+    max-width: 100%;
+    padding: 1.2rem;
   }
+
+  .login-modal__actions {
+    flex-direction: column-reverse;
+    justify-content: stretch;
+  }
+
 }
 
-@media (prefers-color-scheme: dark) {
-  .login-screen {
-    background: #0b1220;
-    color: #e8eef7;
-  }
+:global(html.dark) .login-screen__backdrop {
+  background:
+    radial-gradient(circle at 12% 14%, rgba(101, 166, 223, 0.16), transparent 28%),
+    radial-gradient(circle at 86% 10%, rgba(56, 180, 135, 0.1), transparent 22%),
+    linear-gradient(180deg, rgba(13, 21, 35, 0.75) 0%, rgba(13, 21, 35, 0.94) 100%);
+}
 
-  .login-shell {
-    background: #111827;
-    border-color: rgba(51, 65, 85, 0.9);
-    box-shadow: 0 22px 44px rgba(2, 6, 23, 0.32);
-  }
+:global(html.dark) .login-brand__tag {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+}
 
-  .login-access-panel {
-    background: #111827;
-  }
+:global(html.dark) .login-access__panel {
+  background: transparent;
+  box-shadow: none;
+}
 
-  .login-modal {
-    background: #111827;
-    border-color: rgba(51, 65, 85, 0.9);
-    box-shadow: 0 22px 44px rgba(2, 6, 23, 0.32);
-  }
+:global(html.dark) .login-access {
+  background: rgba(18, 30, 49, 0.72);
+}
 
-  .login-access-panel__eyebrow,
-  .login-modal__eyebrow,
-  .login-access-panel__subtitle,
-  .login-modal__text,
-  .login-field__label {
-    color: #94a3b8;
-  }
+:global(html.dark) .login-modal {
+  background: rgba(18, 30, 49, 0.94);
+  border-color: rgba(51, 71, 102, 0.82);
+  box-shadow: 0 32px 70px -40px rgba(2, 6, 23, 0.84);
+}
 
-  .login-field__input {
-    background: transparent;
-    border-color: transparent;
-    color: #e8eef7;
-  }
+:global(html.dark) .login-modal__success-card {
+  background: rgba(24, 37, 58, 0.92);
+  border-color: rgba(51, 71, 102, 0.72);
+}
 
-  .login-field__control {
-    background: transparent;
-    border-bottom-color: rgba(71, 85, 105, 0.8);
-  }
+:global(html.dark) .login-panel__footer {
+  border-top-color: rgba(51, 71, 102, 0.68);
+}
 
-  .login-field__input::placeholder {
-    color: #64748b;
-  }
+:global(html.dark) .login-link,
+:global(html.dark) .login-password-toggle,
+:global(html.dark) .login-modal__close {
+  color: var(--ds-color-text-soft);
+}
 
-  .login-field__input:focus {
-    background: rgba(15, 23, 42, 0.98);
-    box-shadow: 0 0 0 0.18rem rgba(74, 144, 217, 0.16);
-  }
+:global(html.dark) .login-link:hover,
+:global(html.dark) .login-password-toggle:hover,
+:global(html.dark) .login-modal__close:hover {
+  color: var(--ds-color-primary-strong);
+  background: rgba(101, 166, 223, 0.12);
+}
 
-  .login-field__toggle,
-  .login-mark__eyebrow {
-    color: #94a3b8;
-  }
-
-  .login-link,
-  .login-modal__close {
-    color: #93c5fd;
-  }
-
-  .login-modal__close:hover {
-    color: #e5eefc;
-    background: rgba(148, 163, 184, 0.12);
-  }
-
-  .login-alert--warning {
-    background: rgba(120, 53, 15, 0.32);
-    border-color: rgba(180, 83, 9, 0.45);
-    color: #fdba74;
-  }
-
-  .login-alert--error {
-    background: rgba(76, 5, 25, 0.35);
-    border-color: rgba(136, 19, 55, 0.5);
-    color: #fda4af;
-  }
-
-  .login-modal__header {
-    border-bottom-color: rgba(51, 65, 85, 0.55);
-  }
+:global(html.dark) .login-modal__header {
+  border-bottom-color: rgba(51, 71, 102, 0.55);
 }
 </style>

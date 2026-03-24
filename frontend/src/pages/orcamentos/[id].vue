@@ -1,12 +1,11 @@
 <template>
-  <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
+  <PageShell :padded="false" variant="minimal">
+    <section class="orcamento-form ds-page-context ds-page-context--editor animate-page-in">
       <PageHeader
         :title="isNovo ? 'Novo Orçamento' : `Orçamento #${orcamentoId}`"
         subtitle="Cadastro operacional do orçamento e termos"
         icon="pi pi-briefcase"
+        variant="minimal"
       >
         <template #actions>
           <RouterLink
@@ -30,7 +29,8 @@
         </template>
       </PageHeader>
 
-      <div class="p-6 md:p-8 border-t border-border-ui space-y-8">
+      <div class="orcamento-body ds-editor-body">
+        <form class="orcamento-editor ds-editor-form space-y-12" @submit.prevent="salvarTudo">
         <!-- CLIENTE -->
         <div class="space-y-3">
           <div class="text-xs font-black uppercase tracking-widest text-text-soft">
@@ -48,19 +48,16 @@
           </div>
         </div>
 
-        <div class="h-px bg-border-ui"></div>
+        <!-- section divider -->
+        <div class="ds-section-divider">
+          <span class="ds-section-title">Itens do Orçamento</span>
+        </div>
 
         <!-- ITEM (FORM) -->
         <div class="space-y-4">
-          <div class="space-y-1">
-            <div class="text-xs font-black uppercase tracking-widest text-text-soft">
-              Itens do Orçamento
-            </div>
-            <div class="text-[10px] font-bold uppercase text-text-soft tracking-wider">Ambiente</div>
-          </div>
+          <div class="text-[10px] font-bold uppercase text-text-soft tracking-wider">Ambiente</div>
 
-          <div class="p-6 rounded-2xl border border-border-ui bg-bg-page space-y-6">
-            <div class="grid grid-cols-12 gap-6">
+          <div class="grid grid-cols-12 gap-8 gap-y-7">
               <div class="col-span-12 md:col-span-8">
                 <Input
                   v-model="ambForm.nome_ambiente"
@@ -123,7 +120,6 @@
                 {{ editIdx !== null ? 'Atualizar Item' : 'Adicionar Item' }}
               </Button>
             </div>
-          </div>
 
           <!-- TABELA ITENS -->
           <div v-if="rowsTabela.length > 0">
@@ -158,10 +154,13 @@
           </div>
         </div>
 
-        <div class="h-px bg-border-ui"></div>
+        <!-- section divider -->
+        <div class="ds-section-divider">
+          <span class="ds-section-title">Arquivos</span>
+        </div>
 
         <!-- 1. IMAGENS PARA O PDF + 2. ANEXOS/DOCUMENTOS -->
-        <div class="space-y-6 border-t border-border-ui pt-5">
+        <div class="space-y-6">
             <!-- 1. Imagens para o PDF do orçamento -->
             <div class="space-y-3">
               <div class="space-y-2">
@@ -184,14 +183,12 @@
               <p class="text-xs font-medium text-text-soft leading-relaxed">
                 Estas imagens serão incluídas no PDF ao clicar em &quot;Gerar PDF&quot;. Cada imagem é redimensionada para caber na folha A4: até 2 imagens por página, com área útil de aproximadamente 199 mm (largura) × 131 mm (altura) por imagem. O PDF exibe ainda as dimensões em pixels abaixo de cada imagem.
               </p>
-              <div class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden">
                 <Table
                   :columns="colArquivos"
                   :rows="imagensParaPdf"
                   :loading="loadingImagensPdf"
                   empty-text="Nenhuma imagem para o PDF."
                   :boxed="false"
-                  :flush="true"
                 >
                   <template #cell-nome="{ row }">
                     <div class="flex flex-col">
@@ -206,7 +203,6 @@
                     </div>
                   </template>
                 </Table>
-              </div>
             </div>
 
             <!-- 2. Anexos e documentos (PDF etc) -->
@@ -231,14 +227,12 @@
               <p class="text-xs font-medium text-text-soft leading-relaxed">
                 PDFs e outros arquivos anexados ao orçamento. Não são inseridos no PDF gerado; ficam apenas vinculados ao orçamento.
               </p>
-              <div class="rounded-2xl border border-border-ui bg-bg-page overflow-hidden">
                 <Table
                   :columns="colArquivos"
                   :rows="anexosDocumentos"
                   :loading="loadingAnexos"
                   empty-text="Nenhum anexo ou documento."
                   :boxed="false"
-                  :flush="true"
                 >
                   <template #cell-nome="{ row }">
                     <div class="flex flex-col">
@@ -253,21 +247,23 @@
                     </div>
                   </template>
                 </Table>
-              </div>
             </div>
         </div>
 
-        <div class="h-px bg-border-ui"></div>
+        <!-- section divider -->
+        <div class="ds-section-divider">
+          <span class="ds-section-title">Termos e Condições</span>
+        </div>
 
         <!-- TERMOS E CONDIÇÕES / CLÁUSULAS ESPECÍFICAS DO ORÇAMENTO -->
-        <div class="space-y-4 border-t border-border-ui pt-5">
+        <div class="space-y-4">
           <div class="flex items-center justify-center">
             <div class="text-base font-semibold text-text-main">
               Termos e Condições (Cláusulas do Orçamento)
             </div>
           </div>
 
-          <div v-if="can('orcamentos.ver')" class="flex flex-wrap items-center gap-4 rounded-xl border border-border-ui bg-bg-page p-4">
+          <div v-if="can('orcamentos.ver')" class="flex flex-wrap items-center gap-4">
             <div class="flex items-center gap-3">
               <input
                 id="incluir-termos-pdf"
@@ -356,8 +352,9 @@
           </template>
         </div>
 
-        <!-- Barra de finalização fixa embaixo -->
-        <div class="sticky bottom-0 left-0 right-0 border-t border-border-ui bg-bg-card -mx-6 md:-mx-8 px-6 md:px-8 py-4 mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+        <!-- Barra de finalização -->
+        <div class="ds-section-divider"></div>
+        <div class="ds-editor-actions flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 pb-4">
           <div class="flex items-center gap-2">
             <span class="text-[10px] font-black uppercase text-text-soft tracking-widest">Total</span>
             <span class="text-xl font-black text-text-main">{{ format.currency(total) }}</span>
@@ -373,9 +370,10 @@
             class="flex-row-reverse gap-2 w-full sm:w-auto"
           />
         </div>
+        </form>
       </div>
-    </div>
-  </div>
+    </section>
+  </PageShell>
 </template>
 
 
@@ -498,6 +496,15 @@ function aplicarClausulasDoBackend(raw) {
   clausulas.prazo_validade = String(cPrazo?.texto || '').trim()
 
   preencherClausulasPadraoSeVazio()
+}
+
+async function carregarClausulasPadraoOrcamento() {
+  try {
+    const { data } = await OrcamentosService.clausulasPadrao()
+    aplicarClausulasDoBackend(data)
+  } catch {
+    preencherClausulasPadraoSeVazio()
+  }
 }
 
 async function handleAdicionarOuEditar() {
@@ -874,11 +881,19 @@ onMounted(async () => {
 
     await carregarArquivos()
   } else {
-    // novo orçamento: já deixa as cláusulas padrão preenchidas
-    preencherClausulasPadraoSeVazio()
+    // novo orçamento: herda do modelo central de ORÇAMENTO do comercial
+    await carregarClausulasPadraoOrcamento()
   }
 
   
 })
 
 </script>
+
+<style scoped>
+.orcamento-form {
+  min-height: 100%;
+  background: var(--ds-color-surface);
+  font-family: var(--ds-font-sans);
+}
+</style>

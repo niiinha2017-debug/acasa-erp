@@ -30,9 +30,9 @@ export class FuncionarioApontamentoDto {
 }
 
 export class CreateAgendaDto {
+  @IsOptional()
   @IsString()
-  @IsNotEmpty({ message: 'O título do agendamento é obrigatório' })
-  titulo: string;
+  titulo?: string;
 
   @IsDateString({}, { message: 'Data de início inválida' })
   inicio_em: Date;

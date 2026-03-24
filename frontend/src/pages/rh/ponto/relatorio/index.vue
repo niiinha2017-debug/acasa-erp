@@ -1,45 +1,21 @@
 <template>
-  <div class="w-full h-full animate-page-in">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
-
+  <PageShell :padded="false">
+    <section class="rh-ponto-relatorio ds-page-context ds-page-context--list animate-page-in">
       <PageHeader
         title="Relatório de Ponto"
-        subtitle="Correção e visualização do ponto. PDF para enviar à contabilidade e aos funcionários."
+        subtitle="Consulte e ajuste os registros do período. Gere o PDF e envie o comprovante ao colaborador."
         icon="pi pi-stopwatch"
-        :show-back="false"
       />
 
-      <div class="px-4 md:px-6 pb-6 pt-4 border-t border-border-ui">
+      <div class="rh-ponto-relatorio__body ds-page-context__content">
         <!-- Filtros -->
-        <div class="rounded-2xl border border-border-ui bg-bg-page/40 p-5 mb-6">
+        <div class="rh-ponto-relatorio__filters mb-6">
           <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-            <!-- Mês de referência -->
-            <div class="md:col-span-4 flex items-center gap-2">
-              <label class="text-[10px] font-black text-text-soft uppercase ml-2 mb-1 block w-12 shrink-0">Mês</label>
-              <div class="flex items-center gap-2 flex-1">
-                <button
-                  type="button"
-                  class="h-11 w-11 shrink-0 flex items-center justify-center rounded-xl border border-border-ui bg-bg-card hover:bg-bg-page text-text-main transition-colors"
-                  aria-label="Mês anterior"
-                  @click="mesAnterior"
-                >
-                  <i class="pi pi-angle-left text-sm font-bold"></i>
-                </button>
-                <div
-                  class="flex-1 min-w-0 h-11 flex items-center justify-center rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest px-4"
-                >
-                  {{ mesReferenciaLabel }}
-                </div>
-                <button
-                  type="button"
-                  class="h-11 w-11 shrink-0 flex items-center justify-center rounded-xl border border-border-ui bg-bg-card hover:bg-bg-page text-text-main transition-colors"
-                  aria-label="Mês seguinte"
-                  @click="mesSeguinte"
-                >
-                  <i class="pi pi-angle-right text-sm font-bold"></i>
-                </button>
-              </div>
+            <div class="md:col-span-4">
+              <MonthReferenceField
+                v-model="mesReferencia"
+                label="Mês de referência"
+              />
             </div>
             <div class="md:col-span-4">
               <label class="text-[10px] font-black text-text-soft uppercase ml-2 mb-1 block">Funcionário</label>
@@ -70,7 +46,7 @@
                 @click="gerarRelatorioMensal"
               >
                 <i class="pi pi-file-pdf mr-2 text-xs"></i>
-                PDF
+                Gerar PDF
               </Button>
               <button
                 v-if="funcionarioSelecionado?.whatsapp"
@@ -80,7 +56,7 @@
                 @click="abrirWhatsComprovante"
               >
                 <i class="pi pi-whatsapp text-xs"></i>
-                Enviar comprovante WhatsApp
+                Enviar comprovante
               </button>
             </div>
           </div>
@@ -101,9 +77,9 @@
                 </span>
               </div>
             </div>
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="rh-ponto-relatorio__metrics-grid grid grid-cols-2 lg:grid-cols-4 gap-4">
               <!-- Jornada: Seg–Sex + Sábado (só mostra Sáb quando preenchido) -->
-              <div class="rounded-2xl border border-border-ui/80 bg-bg-card p-5 min-h-[88px] flex flex-col justify-center shadow-sm">
+              <div class="rh-ponto-relatorio__metric min-h-[88px] flex flex-col justify-center">
                 <p class="text-[10px] font-black uppercase tracking-wider text-text-soft mb-2">Jornada</p>
                 <div class="space-y-1">
                   <p class="text-sm font-semibold text-text-main tabular-nums leading-snug">
@@ -114,21 +90,21 @@
                   </p>
                 </div>
               </div>
-              <div class="rounded-2xl border border-border-ui/80 bg-bg-card p-5 min-h-[88px] flex flex-col justify-center shadow-sm">
+              <div class="rh-ponto-relatorio__metric min-h-[88px] flex flex-col justify-center">
                 <p class="text-[10px] font-black uppercase tracking-wider text-text-soft mb-2">Carga horária</p>
                 <p class="text-sm font-semibold text-text-main tabular-nums">{{ cargaHorariaLabel }}</p>
               </div>
-              <div class="rounded-2xl border border-border-ui/80 bg-bg-card p-5 min-h-[88px] flex flex-col justify-center shadow-sm">
+              <div class="rh-ponto-relatorio__metric min-h-[88px] flex flex-col justify-center">
                 <p class="text-[10px] font-black uppercase tracking-wider text-text-soft mb-2">Valor da hora</p>
                 <p class="text-sm font-semibold text-text-main tabular-nums">{{ valorHoraLabel }}</p>
               </div>
-              <div class="rounded-2xl border border-border-ui/80 bg-bg-card p-5 min-h-[88px] flex items-center gap-4 shadow-sm">
-                <div :class="resumo.totalSaldo >= 0 ? 'bg-emerald-500/10' : 'bg-rose-500/10'" class="w-11 h-11 shrink-0 rounded-xl flex items-center justify-center">
-                  <i :class="resumo.totalSaldo >= 0 ? 'pi pi-arrow-up text-emerald-600' : 'pi pi-arrow-down text-rose-600'" class="text-lg"></i>
+              <div class="rh-ponto-relatorio__metric min-h-[88px] flex items-center gap-4">
+                <div :class="resumo.totalSaldo >= 0 ? 'rh-ponto-relatorio__metric-icon rh-ponto-relatorio__metric-icon--success' : 'rh-ponto-relatorio__metric-icon rh-ponto-relatorio__metric-icon--danger'" class="w-11 h-11 shrink-0 rounded-xl flex items-center justify-center">
+                  <i :class="resumo.totalSaldo >= 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'" class="text-lg"></i>
                 </div>
                 <div class="min-w-0">
                   <p class="text-[10px] font-black uppercase text-text-soft mb-0">Saldo</p>
-                  <p :class="resumo.totalSaldo >= 0 ? 'text-emerald-600' : 'text-rose-600'" class="text-sm font-bold tabular-nums italic">
+                  <p :class="resumo.totalSaldo >= 0 ? 'text-[var(--ds-color-success-600)]' : 'text-[var(--ds-color-danger-600)]'" class="text-sm font-bold tabular-nums italic">
                     {{ resumo.totalSaldoHHMM }}
                   </p>
                 </div>
@@ -137,37 +113,37 @@
           </div>
 
           <!-- Cards de resumo (Trabalhado, Horas Extras, Valor H.E., Dias com batida) -->
-          <div v-if="funcionarioSelecionado" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div class="rounded-2xl border border-border-ui/80 bg-bg-card p-5 flex items-center gap-4 min-h-[88px] shadow-sm">
-              <div class="w-11 h-11 shrink-0 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                <i class="pi pi-stopwatch text-blue-600 text-lg"></i>
+          <div v-if="funcionarioSelecionado" class="rh-ponto-relatorio__metrics-grid grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="rh-ponto-relatorio__metric flex items-center gap-4 min-h-[88px]">
+              <div class="rh-ponto-relatorio__metric-icon rh-ponto-relatorio__metric-icon--primary w-11 h-11 shrink-0 rounded-xl flex items-center justify-center">
+                <i class="pi pi-stopwatch text-lg"></i>
               </div>
               <div class="min-w-0">
                 <p class="text-[10px] font-black uppercase text-text-soft mb-0">Trabalhado</p>
                 <p class="text-sm font-bold text-text-main tabular-nums truncate">{{ resumo.totalHorasHHMM }}</p>
               </div>
             </div>
-            <div class="rounded-2xl border border-border-ui/80 bg-bg-card p-5 flex items-center gap-4 min-h-[88px] shadow-sm">
-              <div class="w-11 h-11 shrink-0 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                <i class="pi pi-clock text-amber-600 text-lg"></i>
+            <div class="rh-ponto-relatorio__metric flex items-center gap-4 min-h-[88px]">
+              <div class="rh-ponto-relatorio__metric-icon rh-ponto-relatorio__metric-icon--warning w-11 h-11 shrink-0 rounded-xl flex items-center justify-center">
+                <i class="pi pi-clock text-lg"></i>
               </div>
               <div class="min-w-0">
                 <p class="text-[10px] font-black uppercase text-text-soft mb-0">Horas extras</p>
-                <p class="text-sm font-bold text-amber-600 tabular-nums truncate">{{ horasExtrasHHMM }}</p>
+                <p class="text-sm font-bold text-[var(--ds-color-warning-600)] tabular-nums truncate">{{ horasExtrasHHMM }}</p>
               </div>
             </div>
-            <div class="rounded-2xl border border-border-ui/80 bg-bg-card p-5 flex items-center gap-4 min-h-[88px] shadow-sm">
-              <div class="w-11 h-11 shrink-0 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                <i class="pi pi-wallet text-emerald-600 text-lg"></i>
+            <div class="rh-ponto-relatorio__metric flex items-center gap-4 min-h-[88px]">
+              <div class="rh-ponto-relatorio__metric-icon rh-ponto-relatorio__metric-icon--success w-11 h-11 shrink-0 rounded-xl flex items-center justify-center">
+                <i class="pi pi-wallet text-lg"></i>
               </div>
               <div class="min-w-0">
                 <p class="text-[10px] font-black uppercase text-text-soft mb-0">Valor H.E.</p>
                 <p class="text-sm font-bold text-text-main tabular-nums truncate">{{ valorHorasExtrasLabel }}</p>
               </div>
             </div>
-            <div class="rounded-2xl border border-border-ui/80 bg-bg-card p-5 flex items-center gap-4 min-h-[88px] shadow-sm">
-              <div class="w-11 h-11 shrink-0 rounded-xl bg-brand-primary/10 flex items-center justify-center">
-                <i class="pi pi-calendar text-brand-primary text-lg"></i>
+            <div class="rh-ponto-relatorio__metric flex items-center gap-4 min-h-[88px]">
+              <div class="rh-ponto-relatorio__metric-icon rh-ponto-relatorio__metric-icon--primary-strong w-11 h-11 shrink-0 rounded-xl flex items-center justify-center">
+                <i class="pi pi-calendar text-lg"></i>
               </div>
               <div class="min-w-0">
                 <p class="text-[10px] font-black uppercase text-text-soft mb-0">Dias com batida</p>
@@ -177,7 +153,7 @@
           </div>
 
           <!-- Tabela espelho de ponto -->
-          <div class="native-table-flush border-y border-border-ui bg-bg-card overflow-hidden">
+          <div class="native-table-flush rh-ponto-relatorio__table border-y border-border-ui overflow-hidden">
             <div class="relative">
               <div class="absolute inset-0 flex items-center">
                 <div class="w-full border-t border-border-ui/50"></div>
@@ -189,7 +165,7 @@
               </div>
             </div>
 
-            <div v-if="!rows.length" class="p-12 text-center">
+            <div v-if="!rows.length" class="rh-ponto-relatorio__empty-state p-12 text-center">
               <i class="pi pi-inbox text-4xl text-slate-300 mb-4"></i>
               <p class="text-sm font-bold text-text-soft uppercase">Selecione um funcionário e clique em Buscar</p>
               <p class="text-xs text-text-soft mt-1">Os registros serão exibidos conforme o horário cadastrado</p>
@@ -239,7 +215,7 @@
                                 <button
                                   type="button"
                                   @click="abrirComprovante(batida.id)"
-                                  class="p-1 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
+                                  class="p-1 rounded-lg text-slate-400 hover:text-[var(--ds-color-success-600)] hover:bg-[var(--ds-color-success-50)]"
                                   title="Comprovante PDF"
                                 >
                                   <i class="pi pi-file-pdf text-xs"></i>
@@ -263,7 +239,7 @@
                                 <button
                                   type="button"
                                   @click="confirmarExcluirDireto(batida.id)"
-                                  class="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                                  class="p-1 rounded-lg text-slate-400 hover:text-[var(--ds-color-danger-600)] hover:bg-[var(--ds-color-danger-50)]"
                                   title="Excluir"
                                 >
                                   <i class="pi pi-trash text-xs"></i>
@@ -313,7 +289,7 @@
                       <span
                         v-else
                         class="tabular-nums font-bold text-sm"
-                        :class="linha.saldoMin != null && linha.saldoMin > 0 ? 'text-emerald-600' : linha.saldoMin != null && linha.saldoMin < 0 ? 'text-red-600' : 'text-text-main'"
+                        :class="linha.saldoMin != null && linha.saldoMin > 0 ? 'text-[var(--ds-color-success-600)]' : linha.saldoMin != null && linha.saldoMin < 0 ? 'text-red-600' : 'text-text-main'"
                       >
                         {{ linha.saldoHHMM }}
                       </span>
@@ -347,18 +323,19 @@
           </div>
         </template>
       </div>
-    </div>
+    </section>
+  </PageShell>
 
     <!-- Modal Editar / Novo -->
-    <div v-if="modalEditar.open" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <div class="bg-bg-card w-full max-w-md rounded-2xl overflow-hidden border border-border-ui">
-        <div class="p-6 border-b border-border-ui flex justify-between items-center bg-bg-page/60">
+    <div v-if="modalEditar.open" class="rh-ponto-relatorio__modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <div class="rh-ponto-relatorio__modal bg-bg-card w-full max-w-md overflow-hidden">
+        <div class="rh-ponto-relatorio__modal-head p-6 flex justify-between items-center">
           <h3 class="font-black text-text-main uppercase text-lg">{{ modalEditar.id ? 'Ajustar horário' : 'Novo horário' }}</h3>
-          <button type="button" @click="modalEditar.open = false" class="p-2 text-text-soft hover:text-rose-500 rounded-lg transition-colors">
+          <button type="button" @click="modalEditar.open = false" class="p-2 text-text-soft hover:text-[var(--ds-color-danger-500)] rounded-lg transition-colors">
             <i class="pi pi-times"></i>
           </button>
         </div>
-        <div class="p-6 space-y-4">
+        <div class="rh-ponto-relatorio__modal-body p-6 space-y-4">
           <div>
             <label class="text-[10px] font-black text-text-soft uppercase block mb-1">Data e hora</label>
             <input
@@ -387,7 +364,7 @@
             />
           </div>
         </div>
-        <div class="p-6 bg-bg-page/60 border-t border-border-ui flex gap-3">
+        <div class="rh-ponto-relatorio__modal-foot p-6 flex gap-3">
           <Button variant="outline" class="flex-1" @click="modalEditar.open = false">Cancelar</Button>
           <Button variant="primary" class="flex-1" :loading="modalEditar.saving" @click="confirmarSalvarEdicao">
             Salvar
@@ -397,20 +374,20 @@
     </div>
 
     <!-- Modal Justificativa -->
-    <div v-if="modalJust.open" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <div class="bg-bg-card w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col max-h-[90vh] border border-border-ui">
-        <div class="p-6 border-b border-border-ui flex justify-between items-center bg-bg-page/60">
+    <div v-if="modalJust.open" class="rh-ponto-relatorio__modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <div class="rh-ponto-relatorio__modal bg-bg-card w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div class="rh-ponto-relatorio__modal-head p-6 flex justify-between items-center">
           <div>
             <h3 class="font-black text-text-main uppercase text-lg">Justificativa</h3>
             <p class="text-[10px] font-bold text-text-soft uppercase mt-1">
               {{ modalJust.form.data_fim && modalJust.form.data_fim !== modalJust.form.data ? `Período: ${fmtData(modalJust.form.data)} a ${fmtData(modalJust.form.data_fim)}` : `Data: ${fmtData(modalJust.dia)}` }}
             </p>
           </div>
-          <button type="button" @click="modalJust.open = false" class="p-2 text-text-soft hover:text-rose-500 rounded-lg transition-colors">
+          <button type="button" @click="modalJust.open = false" class="p-2 text-text-soft hover:text-[var(--ds-color-danger-500)] rounded-lg transition-colors">
             <i class="pi pi-times"></i>
           </button>
         </div>
-        <div class="p-6 space-y-5 overflow-y-auto">
+        <div class="rh-ponto-relatorio__modal-body p-6 space-y-5 overflow-y-auto">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label class="text-[10px] font-black text-text-soft uppercase block mb-1">Tipo (ex: Atestado)</label>
@@ -479,10 +456,10 @@
             <input ref="justificativaFileRef" type="file" class="hidden" accept="image/*,.pdf,.doc,.docx" @change="onJustificativaFilePick" />
             <div
               @click="justificativaFileRef?.click()"
-              class="border-2 border-dashed border-border-ui rounded-xl p-4 cursor-pointer hover:border-brand-primary/50 hover:bg-brand-primary/5 transition-all flex items-center justify-between gap-3"
+              class="rh-ponto-relatorio__upload border-2 border-dashed border-border-ui rounded-xl p-4 cursor-pointer hover:border-brand-primary/50 hover:bg-brand-primary/5 transition-all flex items-center justify-between gap-3"
             >
               <div class="flex items-center gap-3 min-w-0">
-                <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 shrink-0">
+                <div class="rh-ponto-relatorio__upload-icon w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
                   <i class="pi pi-cloud-upload"></i>
                 </div>
                 <div class="min-w-0">
@@ -493,14 +470,14 @@
                 v-if="justificativaArquivoNome"
                 type="button"
                 @click.stop="limparJustificativaArquivo"
-                class="shrink-0 w-9 h-9 rounded-xl border border-border-ui text-text-soft hover:text-rose-500 flex items-center justify-center"
+                class="shrink-0 w-9 h-9 rounded-xl border border-border-ui text-text-soft hover:text-[var(--ds-color-danger-500)] flex items-center justify-center"
               >
                 <i class="pi pi-times text-xs"></i>
               </button>
             </div>
           </div>
         </div>
-        <div class="p-6 bg-bg-page/60 border-t border-border-ui flex gap-3">
+        <div class="rh-ponto-relatorio__modal-foot p-6 flex gap-3">
           <Button variant="outline" class="flex-1" @click="modalJust.open = false">Fechar</Button>
           <Button variant="primary" class="flex-1" :loading="modalJust.saving" @click="confirmarSalvarJustificativa">
             Lançar justificativa
@@ -508,11 +485,11 @@
         </div>
       </div>
     </div>
-  </div>
 </template>
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import MonthReferenceField from '@/components/ui/MonthReferenceField.vue'
 import { useRouter } from 'vue-router'
 import {
   PontoRelatorioService,
@@ -554,10 +531,18 @@ function getMesFimISO() {
   return new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).toISOString().slice(0, 10)
 }
 
-const mesReferenciaLabel = computed(() => {
-  const base = filtros.data_ini || getMesInicioISO()
-  const d = new Date(base + 'T12:00:00')
-  return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()
+const mesReferencia = computed({
+  get: () => {
+    const base = filtros.data_ini || getMesInicioISO()
+    return String(base).slice(0, 7)
+  },
+  set: (valor) => {
+    const [anoStr, mesStr] = String(valor || '').split('-')
+    const ano = Number(anoStr)
+    const mes = Number(mesStr)
+    if (!ano || !mes) return
+    aplicarMesReferencia(ano, mes - 1)
+  },
 })
 
 function aplicarMesReferencia(ano, mes) {
@@ -566,18 +551,6 @@ function aplicarMesReferencia(ano, mes) {
   filtros.data_ini = primeiro.toISOString().slice(0, 10)
   filtros.data_fim = ultimo.toISOString().slice(0, 10)
   buscar()
-}
-
-function mesAnterior() {
-  const base = filtros.data_ini || getMesInicioISO()
-  const d = new Date(base + 'T12:00:00')
-  aplicarMesReferencia(d.getFullYear(), d.getMonth() - 1)
-}
-
-function mesSeguinte() {
-  const base = filtros.data_ini || getMesInicioISO()
-  const d = new Date(base + 'T12:00:00')
-  aplicarMesReferencia(d.getFullYear(), d.getMonth() + 1)
 }
 
 const rowsFiltrados = computed(() => {
@@ -714,7 +687,7 @@ function classeLinhaDia(linha) {
   if (linha.inconsistente || (linha.saldoMin != null && linha.saldoMin < 0))
     return 'bg-red-50 dark:bg-red-950/30 border-l-4 border-red-500'
   if (linha.saldoMin != null && linha.saldoMin > 0)
-    return 'bg-emerald-50 dark:bg-emerald-950/20 border-l-4 border-emerald-500'
+    return 'bg-[var(--ds-color-success-50)] border-l-4 border-[var(--ds-color-success-500)]'
   return ''
 }
 
@@ -1198,3 +1171,358 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.rh-ponto-relatorio__body {
+  width: min(100%, 1460px);
+  margin: 0 auto;
+  padding: 0.85rem 1rem 1.5rem;
+}
+
+.rh-ponto-relatorio__filters {
+  padding: 0 0 1.25rem;
+  border-bottom: 1px solid rgba(214, 224, 234, 0.62);
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--ds-color-primary) 7%, transparent),
+      color-mix(in srgb, var(--ds-color-success) 5%, transparent) 42%,
+      transparent 78%
+    );
+}
+
+.rh-ponto-relatorio__month-nav {
+  border-radius: 999px !important;
+  box-shadow: none;
+  border-color: color-mix(in srgb, var(--ds-color-primary) 18%, var(--ds-color-border) 82%) !important;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--ds-color-surface) 96%, white 4%),
+    color-mix(in srgb, var(--ds-color-primary) 8%, var(--ds-color-surface) 92%)
+  ) !important;
+  color: var(--ds-color-primary-strong) !important;
+}
+
+.rh-ponto-relatorio__month-label {
+  border-bottom: 1px solid rgba(15, 23, 42, 0.18);
+  border-radius: 0 !important;
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--ds-color-primary) 16%, transparent) 18%,
+      color-mix(in srgb, var(--ds-color-success) 10%, transparent) 82%,
+      transparent
+    ) !important;
+  color: var(--ds-color-text) !important;
+}
+
+.rh-ponto-relatorio__metric {
+  padding: 1rem 0 0.95rem;
+  border-top: 1px solid rgba(214, 224, 234, 0.58);
+  background: transparent;
+}
+
+.rh-ponto-relatorio__metric-icon {
+  color: var(--ds-color-text);
+}
+
+.rh-ponto-relatorio__metric-icon--primary {
+  background: color-mix(in srgb, var(--ds-color-primary) 12%, var(--ds-color-surface) 88%);
+  color: var(--ds-color-primary);
+}
+
+.rh-ponto-relatorio__metric-icon--primary-strong {
+  background: color-mix(in srgb, var(--ds-color-primary-strong) 12%, var(--ds-color-surface) 88%);
+  color: var(--ds-color-primary-strong);
+}
+
+.rh-ponto-relatorio__metric-icon--success {
+  background: color-mix(in srgb, var(--ds-color-success) 12%, var(--ds-color-surface) 88%);
+  color: var(--ds-color-success);
+}
+
+.rh-ponto-relatorio__metric-icon--warning {
+  background: color-mix(in srgb, var(--ds-color-warning) 14%, var(--ds-color-surface) 86%);
+  color: var(--ds-color-warning);
+}
+
+.rh-ponto-relatorio__metric-icon--danger {
+  background: color-mix(in srgb, var(--ds-color-danger) 12%, var(--ds-color-surface) 88%);
+  color: var(--ds-color-danger);
+}
+
+.rh-ponto-relatorio__metrics-grid > .rh-ponto-relatorio__metric {
+  position: relative;
+}
+
+.rh-ponto-relatorio__metrics-grid > .rh-ponto-relatorio__metric::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  width: 72px;
+  height: 2px;
+  border-radius: 999px;
+  opacity: 0.9;
+}
+
+.rh-ponto-relatorio__metrics-grid > .rh-ponto-relatorio__metric:nth-child(4n + 1)::before {
+  background: linear-gradient(90deg, var(--ds-color-primary), color-mix(in srgb, var(--ds-color-primary) 22%, transparent));
+}
+
+.rh-ponto-relatorio__metrics-grid > .rh-ponto-relatorio__metric:nth-child(4n + 2)::before {
+  background: linear-gradient(90deg, var(--ds-color-warning), color-mix(in srgb, var(--ds-color-warning) 22%, transparent));
+}
+
+.rh-ponto-relatorio__metrics-grid > .rh-ponto-relatorio__metric:nth-child(4n + 3)::before {
+  background: linear-gradient(90deg, var(--ds-color-success), color-mix(in srgb, var(--ds-color-success) 22%, transparent));
+}
+
+.rh-ponto-relatorio__metrics-grid > .rh-ponto-relatorio__metric:nth-child(4n + 4)::before {
+  background: linear-gradient(90deg, var(--ds-color-primary-strong), color-mix(in srgb, var(--ds-color-primary-strong) 20%, transparent));
+}
+
+.rh-ponto-relatorio__metrics-grid {
+  gap: 0.75rem;
+}
+
+.rh-ponto-relatorio__table {
+  background: transparent;
+  border-top-width: 1px;
+  border-bottom-width: 1px;
+  border-image: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--ds-color-primary) 34%, transparent),
+    color-mix(in srgb, var(--ds-color-success) 22%, transparent),
+    color-mix(in srgb, var(--ds-color-primary-strong) 26%, transparent)
+  ) 1;
+}
+
+.rh-ponto-relatorio__empty-state {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--ds-color-primary) 10%, var(--ds-color-surface) 90%),
+      color-mix(in srgb, var(--ds-color-surface-muted) 32%, transparent)
+    );
+}
+
+.rh-ponto-relatorio__modal-overlay {
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: blur(8px);
+}
+
+.rh-ponto-relatorio__modal {
+  border: 1px solid rgba(214, 224, 234, 0.78);
+  border-radius: 1.5rem;
+  background: color-mix(in srgb, var(--ds-color-surface, #ffffff) 94%, transparent);
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.12);
+}
+
+.rh-ponto-relatorio__modal-head {
+  background: transparent;
+  border-bottom: 1px solid rgba(214, 224, 234, 0.72);
+}
+
+.rh-ponto-relatorio__modal-body {
+  background: transparent;
+}
+
+.rh-ponto-relatorio__modal-foot {
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0), rgba(248, 250, 252, 0.78));
+  border-top: 1px solid rgba(214, 224, 234, 0.72);
+}
+
+.rh-ponto-relatorio__modal :is(input, select, textarea) {
+  border-width: 0 0 1px;
+  border-radius: 0;
+  background: transparent;
+  padding-left: 0;
+  padding-right: 0;
+  box-shadow: none;
+}
+
+.rh-ponto-relatorio__modal :is(input, select, textarea):focus {
+  border-bottom-color: rgba(37, 99, 235, 0.55);
+  box-shadow: inset 0 -1px 0 rgba(37, 99, 235, 0.55);
+}
+
+.rh-ponto-relatorio__modal textarea {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+.rh-ponto-relatorio__upload {
+  border-color: rgba(214, 224, 234, 0.86);
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.68), rgba(248, 250, 252, 0.22));
+}
+
+.rh-ponto-relatorio__upload-icon {
+  background: rgba(241, 245, 249, 0.9);
+  color: rgb(100 116 139);
+}
+
+.rh-ponto-relatorio :deep(.ds-shell-card) {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.rh-ponto-relatorio :deep(.ds-header-block) {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.rh-ponto-relatorio__table :deep(thead tr) {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--ds-color-primary) 11%, var(--ds-color-surface) 89%),
+    color-mix(in srgb, var(--ds-color-success) 8%, var(--ds-color-surface) 92%)
+  ) !important;
+}
+
+.rh-ponto-relatorio__table :deep(tbody tr:hover) {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--ds-color-primary) 9%, transparent),
+    color-mix(in srgb, var(--ds-color-success) 6%, transparent)
+  ) !important;
+}
+
+.dark .rh-ponto-relatorio__filters {
+  border-bottom-color: rgba(51, 71, 102, 0.72);
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--ds-color-primary) 16%, transparent),
+      color-mix(in srgb, var(--ds-color-success) 10%, transparent) 42%,
+      transparent 78%
+    );
+}
+
+.dark .rh-ponto-relatorio__month-nav {
+  border-color: color-mix(in srgb, var(--ds-color-primary) 22%, var(--ds-color-border) 78%) !important;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--ds-color-surface-muted) 88%, black 12%),
+    color-mix(in srgb, var(--ds-color-primary) 10%, var(--ds-color-surface) 90%)
+  ) !important;
+  color: var(--ds-color-primary-strong) !important;
+}
+
+.dark .rh-ponto-relatorio__month-label {
+  border-bottom-color: rgba(148, 163, 184, 0.18);
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--ds-color-primary) 16%, transparent) 18%,
+      color-mix(in srgb, var(--ds-color-success) 10%, transparent) 82%,
+      transparent
+    ) !important;
+  color: rgb(241 245 249) !important;
+}
+
+.dark .rh-ponto-relatorio__metric {
+  border-top-color: rgba(51, 71, 102, 0.68);
+}
+
+.dark .rh-ponto-relatorio__metric-icon--primary {
+  background: color-mix(in srgb, var(--ds-color-primary) 18%, var(--ds-color-surface) 82%);
+  color: var(--ds-color-primary-strong);
+}
+
+.dark .rh-ponto-relatorio__metric-icon--primary-strong {
+  background: color-mix(in srgb, var(--ds-color-primary-strong) 18%, var(--ds-color-surface) 82%);
+  color: var(--ds-color-primary-strong);
+}
+
+.dark .rh-ponto-relatorio__metric-icon--success {
+  background: color-mix(in srgb, var(--ds-color-success) 18%, var(--ds-color-surface) 82%);
+  color: var(--ds-color-success);
+}
+
+.dark .rh-ponto-relatorio__metric-icon--warning {
+  background: color-mix(in srgb, var(--ds-color-warning) 20%, var(--ds-color-surface) 80%);
+  color: var(--ds-color-warning);
+}
+
+.dark .rh-ponto-relatorio__metric-icon--danger {
+  background: color-mix(in srgb, var(--ds-color-danger) 18%, var(--ds-color-surface) 82%);
+  color: var(--ds-color-danger);
+}
+
+.dark .rh-ponto-relatorio__empty-state {
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--ds-color-primary) 12%, var(--ds-color-surface) 88%),
+      color-mix(in srgb, var(--ds-color-surface-muted) 24%, transparent)
+    );
+}
+
+.dark .rh-ponto-relatorio__modal {
+  border-color: rgba(51, 71, 102, 0.9);
+  background: color-mix(in srgb, rgb(15 23 42) 94%, transparent);
+  box-shadow: 0 24px 70px rgba(2, 6, 23, 0.45);
+}
+
+.dark .rh-ponto-relatorio__modal-head {
+  border-bottom-color: rgba(51, 71, 102, 0.72);
+}
+
+.dark .rh-ponto-relatorio__modal-foot {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0), rgba(15, 23, 42, 0.84));
+  border-top-color: rgba(51, 71, 102, 0.72);
+}
+
+.dark .rh-ponto-relatorio__upload {
+  border-color: rgba(71, 85, 105, 0.9);
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.52), rgba(15, 23, 42, 0.3));
+}
+
+.dark .rh-ponto-relatorio__upload-icon {
+  background: rgba(30, 41, 59, 0.92);
+  color: rgb(148 163 184);
+}
+
+.dark .rh-ponto-relatorio__table :deep(thead tr) {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--ds-color-primary) 14%, var(--ds-color-surface) 86%),
+    color-mix(in srgb, var(--ds-color-success) 10%, var(--ds-color-surface) 90%)
+  ) !important;
+}
+
+.dark .rh-ponto-relatorio__table :deep(tbody tr:hover) {
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--ds-color-primary) 10%, transparent),
+    color-mix(in srgb, var(--ds-color-success) 7%, transparent)
+  ) !important;
+}
+
+@media (min-width: 768px) {
+  .rh-ponto-relatorio__body {
+    padding: 1rem 1.5rem 1.75rem;
+  }
+
+  .rh-ponto-relatorio :deep(.ds-header-block) {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .rh-ponto-relatorio__body {
+    padding: 1rem 2rem 2rem;
+  }
+
+  .rh-ponto-relatorio :deep(.ds-header-block) {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+</style>

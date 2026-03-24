@@ -1,7 +1,6 @@
 <template>
   <div class="w-full h-full">
-    <div class="relative overflow-hidden rounded-2xl border border-border-ui bg-bg-card">
-      <div class="h-1 w-full bg-brand-primary rounded-t-2xl" />
+    <div class="relative overflow-hidden ds-card ds-card--default">
 
       <div class="border-b border-border-ui px-4 md:px-6 py-4 bg-bg-card">
         <div class="flex items-center justify-between gap-3 flex-wrap">
@@ -12,7 +11,7 @@
           <div class="flex items-center gap-2">
             <button
               type="button"
-              class="inline-flex items-center gap-2 rounded-xl border border-border-ui bg-bg-page px-3 py-2 text-sm font-semibold text-text-main hover:bg-slate-50"
+              class="inline-flex items-center gap-2 rounded-xl border border-[var(--ds-color-border)] bg-[var(--ds-color-surface)] px-3 py-2 text-sm font-semibold text-text-main hover:bg-[var(--ds-color-surface-muted)]"
               @click="adicionarItem"
             >
               <i class="pi pi-plus text-xs" />
@@ -55,15 +54,15 @@
 
               <div class="overflow-auto rounded-xl border border-border-ui">
                 <table class="w-full min-w-[980px] text-sm">
-                  <thead class="bg-slate-50 border-b border-border-ui">
+                  <thead class="bg-bg-page border-b border-border-ui">
                     <tr>
-                      <th class="px-3 py-2 text-left text-[11px] uppercase tracking-wide text-slate-500">Modulo</th>
-                      <th class="px-3 py-2 text-left text-[11px] uppercase tracking-wide text-slate-500">Largura (cm)</th>
-                      <th class="px-3 py-2 text-left text-[11px] uppercase tracking-wide text-slate-500">Altura (cm)</th>
-                      <th class="px-3 py-2 text-left text-[11px] uppercase tracking-wide text-slate-500">Cor MDF</th>
-                      <th class="px-3 py-2 text-right text-[11px] uppercase tracking-wide text-slate-500">Area (m2)</th>
-                      <th class="px-3 py-2 text-right text-[11px] uppercase tracking-wide text-slate-500">Valor</th>
-                      <th class="px-3 py-2 text-center text-[11px] uppercase tracking-wide text-slate-500">Acao</th>
+                      <th class="px-3 py-2 text-left text-[11px] uppercase tracking-wide text-text-soft">Modulo</th>
+                      <th class="px-3 py-2 text-left text-[11px] uppercase tracking-wide text-text-soft">Largura (cm)</th>
+                      <th class="px-3 py-2 text-left text-[11px] uppercase tracking-wide text-text-soft">Altura (cm)</th>
+                      <th class="px-3 py-2 text-left text-[11px] uppercase tracking-wide text-text-soft">Cor MDF</th>
+                      <th class="px-3 py-2 text-right text-[11px] uppercase tracking-wide text-text-soft">Area (m2)</th>
+                      <th class="px-3 py-2 text-right text-[11px] uppercase tracking-wide text-text-soft">Valor</th>
+                      <th class="px-3 py-2 text-center text-[11px] uppercase tracking-wide text-text-soft">Acao</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-border-ui bg-white">
@@ -102,12 +101,12 @@
                           <option v-for="cor in MDF_COLORS" :key="cor.id" :value="cor.id">{{ cor.nome }}</option>
                         </select>
                       </td>
-                      <td class="px-3 py-2 text-right tabular-nums font-semibold text-slate-700">{{ item.areaTotalM2.toFixed(3) }}</td>
-                      <td class="px-3 py-2 text-right tabular-nums font-black text-emerald-700">{{ currencyBRL(item.precoVenda) }}</td>
+                      <td class="px-3 py-2 text-right tabular-nums font-semibold text-text-main">{{ item.areaTotalM2.toFixed(3) }}</td>
+                      <td class="px-3 py-2 text-right tabular-nums font-black text-[color:var(--ds-color-success)]">{{ currencyBRL(item.precoVenda) }}</td>
                       <td class="px-3 py-2 text-center">
                         <button
                           type="button"
-                          class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-rose-500 hover:bg-rose-50"
+                          class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[color:var(--ds-color-danger)] hover:bg-[color:rgba(196,73,73,0.08)]"
                           @click="removerItem(item.id)"
                           :disabled="itens.length <= 1"
                           title="Remover item"
@@ -135,21 +134,21 @@
           </div>
 
           <aside class="space-y-4 xl:sticky xl:top-4 self-start">
-            <section class="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 space-y-3">
-              <h2 class="text-xs font-bold uppercase tracking-wider text-emerald-700">3. Resumo financeiro</h2>
+            <section class="ds-alert ds-alert--success rounded-xl p-4 space-y-3">
+              <h2 class="text-xs font-bold uppercase tracking-wider text-[color:var(--ds-color-success)]">3. Resumo financeiro</h2>
 
               <div>
-                <label class="block text-[11px] font-semibold text-emerald-700 mb-1">Markup</label>
+                <label class="block text-[11px] font-semibold text-[color:var(--ds-color-success)] mb-1">Markup</label>
                 <input
                   v-model.number="markup"
                   type="number"
                   min="0"
                   step="0.01"
-                  class="w-full rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm"
+                  class="w-full rounded-xl border border-[color:rgba(22,124,92,0.2)] bg-white px-3 py-2 text-sm"
                 />
               </div>
 
-              <div class="rounded-lg border border-emerald-200 bg-white p-3 space-y-1.5 text-sm">
+              <div class="rounded-lg border border-[color:rgba(22,124,92,0.2)] bg-white p-3 space-y-1.5 text-sm">
                 <div class="flex items-center justify-between">
                   <span class="text-text-soft">Subtotal</span>
                   <strong class="tabular-nums text-text-main">{{ currencyBRL(subtotal) }}</strong>
@@ -172,11 +171,11 @@
                 </div>
                 <div class="flex items-center justify-between">
                   <span class="text-text-soft">Desconto aplicado</span>
-                  <strong class="tabular-nums text-rose-600">- {{ currencyBRL(descontoAplicado) }}</strong>
+                  <strong class="tabular-nums text-[color:var(--ds-color-danger)]">- {{ currencyBRL(descontoAplicado) }}</strong>
                 </div>
-                <div class="pt-2 border-t border-emerald-100 flex items-center justify-between">
-                  <span class="font-bold text-emerald-700">Total final</span>
-                  <strong class="text-lg font-black tabular-nums text-emerald-700">{{ currencyBRL(totalFinal) }}</strong>
+                <div class="pt-2 border-t border-[color:rgba(22,124,92,0.2)] flex items-center justify-between">
+                  <span class="font-bold text-[color:var(--ds-color-success)]">Total final</span>
+                  <strong class="text-lg font-black tabular-nums text-[color:var(--ds-color-success)]">{{ currencyBRL(totalFinal) }}</strong>
                 </div>
               </div>
             </section>
@@ -216,7 +215,7 @@
                 />
               </div>
 
-              <div class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm space-y-1">
+              <div class="ds-card ds-card--default p-3 text-sm space-y-1">
                 <div class="flex items-center justify-between">
                   <span class="text-text-soft">Valor de entrada</span>
                   <strong class="tabular-nums">{{ currencyBRL(valorEntrada) }}</strong>

@@ -1,6 +1,6 @@
 ﻿<template>
   <div :class="[
-    'flex items-center justify-between gap-3 pt-4 border-t border-border-ui',
+    'ds-table-pagination',
     flush ? 'table-pagination-flush' : ''
   ]">
     <div class="text-xs font-medium text-text-soft">
@@ -24,10 +24,8 @@
           v-for="p in pagesToShow"
           :key="p.key"
           type="button"
-          class="min-w-[32px] h-8 px-2 rounded-lg text-xs font-semibold border transition-colors"
-          :class="p.num === page
-            ? 'bg-brand-primary text-white border-brand-primary shadow-sm'
-            : 'bg-bg-card text-text-soft border-border-ui hover:bg-slate-50 hover:text-text-main hover:border-slate-300 dark:hover:bg-slate-800'"
+          class="ds-table-page-btn"
+          :class="{ 'is-active': p.num === page }"
           :disabled="p.disabled"
           @click="p.num && $emit('update:page', p.num)"
         >
