@@ -42,7 +42,7 @@ SET @ddl := IF(
       AND TABLE_NAME = 'contas_pagar'
       AND COLUMN_NAME = 'fechamento_funcionario_id'
   ) = 0,
-  'ALTER TABLE `contas_pagar` ADD COLUMN `fechamento_funcionario_id` INT NULL AFTER `fechamento_fornecedor_id`',
+  'ALTER TABLE `contas_pagar` ADD COLUMN `fechamento_funcionario_id` INT NULL',
   'SELECT 1'
 );
 PREPARE stmt FROM @ddl;

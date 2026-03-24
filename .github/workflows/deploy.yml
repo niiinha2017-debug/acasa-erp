@@ -45,12 +45,22 @@ jobs:
             MIGRATE_CODE=\${PIPESTATUS[0]}
             set -e
             if [ \$MIGRATE_CODE -ne 0 ]; then
+              RESOLVED=0
               if grep -q 'P3009' /tmp/prisma-migrate.log && grep -q '20260313180000_add_tipo_aplicacao_produtos' /tmp/prisma-migrate.log; then
                 echo 'Detectado P3009 na migration 20260313180000_add_tipo_aplicacao_produtos. Executando resolve --rolled-back e retry.'
                 npx prisma migrate resolve --rolled-back 20260313180000_add_tipo_aplicacao_produtos || true
+                RESOLVED=1
+              fi
+              if grep -q 'P3018\|P3009' /tmp/prisma-migrate.log && grep -q '20260320143000_funcionario_fechamento_contas_pagar' /tmp/prisma-migrate.log; then
+                echo 'Detectado erro na migration 20260320143000_funcionario_fechamento_contas_pagar. Executando resolve --rolled-back e retry.'
+                npx prisma migrate resolve --rolled-back 20260320143000_funcionario_fechamento_contas_pagar || true
+                RESOLVED=1
+              fi
+              if [ \$RESOLVED -eq 1 ]; then
                 npx prisma migrate deploy
               else
                 echo 'Falha no prisma migrate deploy (nao tratada automaticamente).'
+                cat /tmp/prisma-migrate.log
                 exit \$MIGRATE_CODE
               fi
             fi
