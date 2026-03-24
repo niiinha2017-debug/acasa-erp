@@ -137,7 +137,7 @@ Passando para te desejar um feliz aniversário! 🎉
     para: string,
     nomeCliente: string,
     link: string,
-  ): Promise<{ ok: boolean }> {
+  ): Promise<{ ok: boolean; messageId?: string }> {
     const from =
       this.config.get<string>('MAIL_FROM') ||
       this.config.get<string>('MAIL_USER');
@@ -168,7 +168,7 @@ Passando para te desejar um feliz aniversário! 🎉
     mes: number,
     ano: number,
     pdfBuffer?: Buffer,
-  ): Promise<{ ok: boolean }> {
+  ): Promise<{ ok: boolean; messageId?: string }> {
     const ref = `${String(mes).padStart(2, '0')}/${ano}`;
     const subject = `ACASA-ERP - Espelho de ponto ${ref}`;
     const text = `Olá${nome ? `, ${nome}` : ''}.\n\nSegue em anexo o espelho de ponto referente a ${ref}.\n\n— ACASA ERP`;

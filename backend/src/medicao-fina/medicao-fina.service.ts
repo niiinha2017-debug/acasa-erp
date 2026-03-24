@@ -261,17 +261,17 @@ export class MedicaoFinaService {
     });
 
     if (params.statusSource) {
-      const table =
-        agendaRef.setor === 'LOJA'
-          ? this.prisma.agenda_loja
-          : this.prisma.agenda_fabrica;
-      await table.update({
-        where: { id: agendaRef.id },
-        data: {
-          status_source: params.statusSource,
-          status_aplicado_em: new Date(),
-        },
-      });
+      if (agendaRef.setor === 'LOJA') {
+        await this.prisma.agenda_loja.update({
+          where: { id: agendaRef.id },
+          data: { status_source: params.statusSource, status_aplicado_em: new Date() },
+        });
+      } else {
+        await this.prisma.agenda_fabrica.update({
+          where: { id: agendaRef.id },
+          data: { status_source: params.statusSource, status_aplicado_em: new Date() },
+        });
+      }
     }
 
     return agendaRef;
