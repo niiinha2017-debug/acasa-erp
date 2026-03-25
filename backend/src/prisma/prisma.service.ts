@@ -20,6 +20,18 @@ function resolveWindowsHostForWsl() {
   }
 }
 
+/** Erros típicos quando MySQL/Podman ainda não subiu (boot ou `podman compose up`). */
+function isRetryableDbInitError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const e = err as { code?: string; message?: string };
+  if (e.code === 'P1001') return true;
+  const m = String(e.message || '');
+  if (m.includes("Can't reach database server")) return true;
+  if (m.includes('ECONNREFUSED')) return true;
+  if (m.includes('ETIMEDOUT')) return true;
+  return false;
+}
+
 function resolvePrismaDatabaseUrl() {
   const databaseUrl = process.env.DATABASE_URL;
 
@@ -74,7 +86,35 @@ export class PrismaService
   }
 
   async onModuleInit() {
-    await this.$connect();
+    const maxAttempts = Math.max(
+      1,
+      parseInt(process.env.PRISMA_CONNECT_RETRIES || '40', 10) || 40,
+    );
+    const delayMs = Math.max(
+      500,
+      parseInt(process.env.PRISMA_CONNECT_RETRY_MS || '2500', 10) || 2500,
+    );
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await this.$connect();
+        if (attempt > 1) {
+          console.log(
+            `Prisma: conexão com o banco estabelecida (tentativa ${attempt}/${maxAttempts}).`,
+          );
+        }
+        return;
+      } catch (err) {
+        const retry = isRetryableDbInitError(err) && attempt < maxAttempts;
+        if (!retry) {
+          throw err;
+        }
+        console.warn(
+          `Prisma: banco indisponível — nova tentativa em ${delayMs / 1000}s (${attempt}/${maxAttempts}).`,
+        );
+        await new Promise((r) => setTimeout(r, delayMs));
+      }
+    }
   }
 
   async onModuleDestroy() {

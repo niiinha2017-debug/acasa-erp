@@ -317,6 +317,13 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
+    '/migracao-drive/': RouteRecordInfo<
+      '/migracao-drive/',
+      '/migracao-drive',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/orcamento-tecnico/': RouteRecordInfo<
       '/orcamento-tecnico/',
       '/orcamento-tecnico',
@@ -950,6 +957,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/medicao-fina/[id].vue': {
       routes:
         | '/medicao-fina/[id]'
+      views:
+        | never
+    }
+    'src/pages/migracao-drive/index.vue': {
+      routes:
+        | '/migracao-drive/'
       views:
         | never
     }

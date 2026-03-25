@@ -19,6 +19,7 @@ import * as fs from 'fs';
 
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
+import { Public } from '../auth/public.decorator';
 import { ArquivosService, getUploadFolderFromOwnerType } from './arquivos.service';
 
 function onlySafeName(v: any) {
@@ -40,6 +41,22 @@ function todayYmd() {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+// Token simples para acesso temporário ao HTML do DOCX sem autenticação JWT
+function gerarTokenDocx(id: number): string {
+  const secret = 'acasa-docx-preview-2025';
+  const payload = `${id}:${secret}`;
+  // SHA-like simples com Buffer
+  const buf = Buffer.from(payload);
+  return buf.toString('base64url').slice(0, 32);
+}
+
+function gerarTokenDownload(id: number): string {
+  const secret = 'acasa-download-2026';
+  const payload = `${id}:${secret}`;
+  const buf = Buffer.from(payload);
+  return buf.toString('base64url').slice(0, 40);
 }
 
 @UseGuards(PermissionsGuard)
@@ -173,7 +190,145 @@ export class ArquivosController {
     return res.sendFile(abs);
   }
 
-  // 4. REMOVER
+  @Get(':id/download-token')
+  @Permissoes('arquivos.ver')
+  async downloadToken(@Param('id') id: string) {
+    const cleanId = Number(String(id).replace(/\D/g, ''));
+    if (!cleanId) throw new BadRequestException('ID inválido.');
+    return {
+      token: gerarTokenDownload(cleanId),
+      url: `/api/arquivos/${cleanId}/download-pub?token=${encodeURIComponent(
+        gerarTokenDownload(cleanId),
+      )}`,
+      id: cleanId,
+    };
+  }
+
+  @Public()
+  @Get(':id/download-pub')
+  async baixarPublico(
+    @Param('id') id: string,
+    @Query('token') token: string,
+    @Res() res: Response,
+  ) {
+    const cleanId = Number(String(id).replace(/\D/g, ''));
+    if (!cleanId) throw new BadRequestException('ID inválido.');
+    if (!token || token !== gerarTokenDownload(cleanId)) {
+      return res.status(403).send('Acesso negado.');
+    }
+
+    const { arquivo, resolvido } =
+      await this.arquivosService.resolverArquivoFisicoPorId(cleanId);
+    const abs = resolvido?.abs || '';
+
+    if (!fs.existsSync(abs)) {
+      throw new BadRequestException(`Arquivo físico não encontrado.`);
+    }
+
+    res.setHeader(
+      'Content-Type',
+      arquivo.mime_type || 'application/octet-stream',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${arquivo.filename}"`,
+    );
+    return res.sendFile(abs);
+  }
+
+  // 4. DOCX → HTML (para visualização inline)
+  // Gera token temporário para acesso sem JWT ao HTML do DOCX
+  @Get(':id/html-token')
+  @Permissoes('arquivos.ver')
+  async htmlDocxToken(@Param('id') id: string) {
+    const cleanId = Number(String(id).replace(/\D/g, ''));
+    if (!cleanId) throw new BadRequestException('ID inválido.');
+    return { token: gerarTokenDocx(cleanId), id: cleanId };
+  }
+
+  // Endpoint público — sem JWT, acesso via token na URL
+  @Public()
+  @Get(':id/html-pub')
+  async htmlDocxPublic(
+    @Param('id') id: string,
+    @Query('token') token: string,
+    @Res() res: Response,
+  ) {
+    const cleanId = Number(String(id).replace(/\D/g, ''));
+    if (!cleanId) throw new BadRequestException('ID inválido.');
+    if (!token || token !== gerarTokenDocx(cleanId)) {
+      return res.status(403).send('Acesso negado.');
+    }
+    // Reusa a lógica do endpoint autenticado
+    return this.servirHtmlDocx(cleanId, res);
+  }
+
+  @Get(':id/html')
+  @Permissoes('arquivos.ver')
+  async htmlDocx(@Param('id') id: string, @Res() res: Response) {
+    const cleanId = Number(String(id).replace(/\D/g, ''));
+    if (!cleanId) throw new BadRequestException('ID inválido.');
+    return this.servirHtmlDocx(cleanId, res);
+  }
+
+  private async servirHtmlDocx(cleanId: number, res: Response) {
+    const { arquivo, resolvido } =
+      await this.arquivosService.resolverArquivoFisicoPorId(cleanId);
+    const abs = resolvido?.abs || '';
+
+    if (!fs.existsSync(abs)) throw new BadRequestException('Arquivo não encontrado.');
+
+    const mime = (arquivo.mime_type || '').toLowerCase();
+    const nome = (arquivo.filename || '').toLowerCase();
+    const isDocx =
+      mime.includes('wordprocessingml') ||
+      mime.includes('msword') ||
+      nome.endsWith('.docx') ||
+      nome.endsWith('.doc');
+
+    if (!isDocx) throw new BadRequestException('Arquivo não é um DOCX.');
+
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mammoth = require('mammoth');
+    const result = await mammoth.convertToHtml({ path: abs });
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; width: 100%; background: #fff; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.7;
+      color: #1a1a1a;
+      padding: 2rem 2.5rem 3rem;
+    }
+    img { max-width: 100%; height: auto; display: block; margin: 0.5em 0; }
+    table { border-collapse: collapse; width: 100%; margin: 0.8em 0; }
+    td, th { border: 1px solid #d1d5db; padding: 6px 10px; vertical-align: top; }
+    th { background: #f8fafc; font-weight: 600; }
+    p { margin: 0 0 0.6em; }
+    h1 { font-size: 1.5em; margin: 0 0 0.5em; font-weight: 700; }
+    h2 { font-size: 1.25em; margin: 1em 0 0.4em; font-weight: 700; }
+    h3 { font-size: 1.05em; margin: 0.8em 0 0.3em; font-weight: 600; }
+    ul, ol { margin: 0 0 0.7em; padding-left: 1.5em; }
+    li { margin-bottom: 0.25em; }
+    strong, b { font-weight: 700; }
+  </style>
+</head>
+<body>${result.value}</body>
+</html>`;
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    return res.send(html);
+  }
+
+  // 5. REMOVER
   @Delete(':id')
   @Permissoes('arquivos.excluir')
   remover(@Param('id') id: string) {

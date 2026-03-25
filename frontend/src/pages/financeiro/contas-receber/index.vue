@@ -156,9 +156,6 @@
                   <span v-if="Array.isArray(row.ambientes_venda) && row.ambientes_venda.length" class="contas-receber-page__ambient-copy">
                     Ambientes: {{ row.ambientes_venda.join(', ') }}
                   </span>
-                  <span class="contas-receber-page__secondary">
-                    {{ row.descricao || 'Sem descrição' }}
-                  </span>
                 </div>
               </div>
             </template>
@@ -526,7 +523,7 @@ const competenciaAtual = computed(() => {
 
 // colunas
 const columns = [
-  { key: 'partes', label: 'Parte / Descrição' },
+  { key: 'partes', label: 'Parte' },
   { key: 'origem', label: 'Origem', width: '180px' },
   { key: 'vencimento', label: 'Vencimento', width: '160px' },
   { key: 'valor', label: 'Valor', width: '200px', align: 'right' },
@@ -1301,7 +1298,8 @@ watch(
 }
 
 .contas-receber-page__table {
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   border-top: 1px solid rgba(214, 224, 234, 0.58);
   border-bottom: 1px solid rgba(214, 224, 234, 0.58);
 }
@@ -1344,6 +1342,9 @@ watch(
 
 .contas-receber-page__ambient-copy {
   color: #3457a2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .contas-receber-page__pix-copy {

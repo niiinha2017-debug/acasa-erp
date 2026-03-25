@@ -1,101 +1,83 @@
 <template>
   <PageShell :padded="false" variant="minimal">
-    <section class="arquivo-viewer animate-page-in">
-      <PageHeader
-        :title="nomeArquivo || 'Visualizar Arquivo'"
-        subtitle="Visualize, baixe ou compartilhe o documento selecionado"
-        icon="pi pi-file"
-        variant="minimal"
-      >
-        <template #actions>
-          <div class="arquivo-viewer__header-actions">
-            <Button variant="secondary" class="arquivo-viewer__toolbar-btn" @click="voltar">
-              <i class="pi pi-arrow-left"></i>
-              Voltar
-            </Button>
-          </div>
-        </template>
-      </PageHeader>
+    <div class="av-wrap">
 
-      <div class="arquivo-viewer__content">
-        <section class="arquivo-viewer__summary-bar">
-          <div class="arquivo-viewer__summary-row">
-            <div class="arquivo-viewer__summary-item">
-              <span class="arquivo-viewer__meta-label">Formato</span>
-              <span class="arquivo-viewer__summary-value">{{ mimeFinal || 'ARQUIVO' }}</span>
-            </div>
-            <div class="arquivo-viewer__summary-item">
-              <span class="arquivo-viewer__meta-label">Visualização</span>
-              <span class="arquivo-viewer__summary-value">{{ tipoVisualizacao }}</span>
-            </div>
-            <div class="arquivo-viewer__summary-item">
-              <span class="arquivo-viewer__meta-label">Zoom</span>
-              <span class="arquivo-viewer__summary-value">{{ Math.round(zoom * 100) }}%</span>
-            </div>
-            <div class="arquivo-viewer__summary-item arquivo-viewer__summary-item--actions">
-              <div class="arquivo-viewer__zoom-controls">
-                <button type="button" class="arquivo-viewer__zoom-btn" @click="zoomOut" :disabled="!isImage">
-                  <i class="pi pi-minus"></i>
-                </button>
-                <button type="button" class="arquivo-viewer__zoom-btn" @click="zoomIn" :disabled="!isImage">
-                  <i class="pi pi-plus"></i>
-                </button>
-              </div>
-            </div>
+      <!-- Topbar fixa -->
+      <div class="av-topbar">
+        <div class="av-topbar__left">
+          <button class="av-btn av-btn--ghost" @click="voltar">
+            <i class="pi pi-arrow-left"></i> Voltar
+          </button>
+          <div class="av-title">
+            <span class="av-title__name">{{ nomeArquivo }}</span>
+            <span class="av-title__type">{{ tipoVisualizacao }}</span>
           </div>
-        </section>
-
-        <section class="arquivo-viewer__toolbar">
-          <Button variant="secondary" class="arquivo-viewer__toolbar-btn" @click="download" :disabled="!id || downloadEmAndamento">
+        </div>
+        <div class="av-topbar__right">
+          <template v-if="isImage">
+            <button class="av-btn av-btn--ghost" @click="zoomOut" :disabled="zoom <= 0.3">
+              <i class="pi pi-minus"></i>
+            </button>
+            <span class="av-zoom-label">{{ Math.round(zoom * 100) }}%</span>
+            <button class="av-btn av-btn--ghost" @click="zoomIn" :disabled="zoom >= 3">
+              <i class="pi pi-plus"></i>
+            </button>
+          </template>
+          <button class="av-btn av-btn--secondary" @click="download" :disabled="!id || downloadEmAndamento">
             <i class="pi pi-download"></i>
             {{ downloadEmAndamento ? 'Baixando...' : 'Download' }}
-          </Button>
-          <Button variant="primary" class="arquivo-viewer__toolbar-btn" @click="compartilharWhatsApp" :disabled="!id">
-            <i class="pi pi-whatsapp"></i>
-            Compartilhar pelo WhatsApp
-          </Button>
-        </section>
-
-        <section class="arquivo-viewer__panel">
-          <header class="arquivo-viewer__panel-head">
-            <div class="arquivo-viewer__panel-copy">
-              <div class="arquivo-viewer__panel-title">{{ nomeArquivo }}</div>
-              <div class="arquivo-viewer__panel-subtitle">{{ mimeFinal || 'Arquivo' }}</div>
-            </div>
-          </header>
-
-          <div class="arquivo-viewer__panel-body">
-            <div v-if="loading" class="arquivo-viewer__state">
-              Carregando...
-            </div>
-
-            <div v-else-if="erro" class="arquivo-viewer__state arquivo-viewer__state--error">
-              {{ erro }}
-            </div>
-
-            <div v-else class="arquivo-viewer__preview-shell">
-              <img
-                v-if="isImage"
-                :src="blobUrl"
-                :style="{ transform: `scale(${zoom})` }"
-                class="arquivo-viewer__image"
-                alt="arquivo"
-              />
-
-              <iframe
-                v-else-if="isPdf"
-                :src="blobUrl"
-                class="arquivo-viewer__pdf"
-              />
-
-              <div v-else class="arquivo-viewer__state arquivo-viewer__state--empty">
-                Visualização não suportada. Use Download.
-              </div>
-            </div>
-          </div>
-        </section>
+          </button>
+          <button class="av-btn av-btn--primary" @click="compartilharWhatsApp" :disabled="!id">
+            <i class="pi pi-whatsapp"></i> WhatsApp
+          </button>
+        </div>
       </div>
-    </section>
+
+      <!-- Área de visualização -->
+      <div class="av-body">
+        <div v-if="loading" class="av-state">
+          <i class="pi pi-spin pi-spinner" style="font-size:2rem;color:#94a3b8"></i>
+          <span>Carregando...</span>
+        </div>
+
+        <div v-else-if="erro" class="av-state av-state--error">
+          <i class="pi pi-exclamation-triangle"></i> {{ erro }}
+        </div>
+
+        <template v-else>
+          <!-- Imagem -->
+          <div v-if="isImage" class="av-image-wrap" :class="{ 'av-image-wrap--zoomed': zoom > 1 }">
+            <img
+              :src="blobUrl"
+              :style="zoom > 1 ? { transform: `scale(${zoom})`, transformOrigin: 'top center' } : {}"
+              class="av-image"
+              alt="arquivo"
+            />
+          </div>
+
+          <!-- PDF -->
+          <iframe
+            v-else-if="isPdf"
+            :src="blobUrl"
+            class="av-iframe"
+          />
+
+          <!-- DOCX renderizado direto no DOM -->
+          <div
+            v-else-if="isDocx"
+            class="av-docx"
+            v-html="docxHtml || '<p style=\'color:#94a3b8;padding:2rem\'>Carregando documento...</p>'"
+          />
+
+          <!-- Não suportado -->
+          <div v-else class="av-state">
+            <i class="pi pi-file" style="font-size:2rem;color:#94a3b8"></i>
+            <span>Visualização não suportada. Use o Download.</span>
+          </div>
+        </template>
+      </div>
+
+    </div>
   </PageShell>
 </template>
 
@@ -103,6 +85,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArquivosService } from '@/services/index'
+import { getApiBaseUrl } from '@/services/api'
 import { notify } from '@/services/notify'
 
 definePage({ meta: { perm: 'arquivos.ver' } })
@@ -174,9 +157,15 @@ const mimeFinal = computed(() => normalizeMime(mimeDetectado.value || mimeType.v
 
 const isImage = computed(() => mimeFinal.value.startsWith('image/'))
 const isPdf = computed(() => mimeFinal.value.includes('pdf'))
+const isDocx = computed(() => {
+  const m = mimeFinal.value
+  const n = nomeArquivo.value.toLowerCase()
+  return m.includes('wordprocessingml') || m.includes('msword') || n.endsWith('.docx') || n.endsWith('.doc')
+})
 const tipoVisualizacao = computed(() => {
   if (isImage.value) return 'Imagem'
   if (isPdf.value) return 'PDF'
+  if (isDocx.value) return 'DOCX'
   return 'Arquivo'
 })
 
@@ -185,6 +174,7 @@ const loading = ref(false)
 const downloadEmAndamento = ref(false)
 const erro = ref('')
 const blobUrl = ref('')
+const docxHtml = ref('')
 const zoom = ref(1)
 
 function zoomIn() { zoom.value = Math.min(3, zoom.value + 0.1) }
@@ -338,6 +328,19 @@ async function carregarBlob() {
 
     const blob = new Blob([rawBlob], { type: contentType })
     blobUrl.value = URL.createObjectURL(blob)
+
+    // Se for DOCX, busca o HTML autenticado e injeta direto no DOM
+    if (isDocx.value) {
+      try {
+        const htmlRes = await ArquivosService.htmlDocx(id.value)
+        // Extrai só o conteúdo do <body> para injetar no div
+        const raw = String(htmlRes.data || '')
+        const bodyMatch = raw.match(/<body[^>]*>([\s\S]*)<\/body>/i)
+        docxHtml.value = bodyMatch ? bodyMatch[1] : raw
+      } catch (e) {
+        console.warn('Falha ao carregar DOCX:', e)
+      }
+    }
   } catch (e) {
     console.error(e)
     erro.value = 'Falha ao abrir arquivo.'
@@ -353,6 +356,60 @@ async function download() {
   const nomeComExtensao = nome.includes('.') ? nome : `${nome}.pdf`
   downloadEmAndamento.value = true
   try {
+    const isTauri = typeof window !== 'undefined' && (!!window.__TAURI__ || !!window.__TAURI_INTERNALS__)
+    if (isTauri) {
+      try {
+        const nomeSeguro = String(nomeComExtensao)
+          .replace(/[\\/:*?"<>|]+/g, '_')
+          .replace(/\s+/g, ' ')
+          .trim() || `ARQUIVO_${id.value}`
+        const { save } = await import('@tauri-apps/plugin-dialog')
+        const { writeFile } = await import('@tauri-apps/plugin-fs')
+        const resNative = await ArquivosService.baixarBlob(id.value)
+        const blobNative = resNative?.data instanceof Blob
+          ? resNative.data
+          : new Blob([resNative?.data], { type: 'application/octet-stream' })
+        if (blobNative) {
+          const targetPath = await save({
+            defaultPath: nomeSeguro,
+            title: 'Salvar arquivo',
+          })
+          if (targetPath) {
+            const bytes = new Uint8Array(await blobNative.arrayBuffer())
+            await writeFile(targetPath, bytes)
+            notify.success('Arquivo salvo com sucesso.')
+            return
+          }
+          return
+        }
+      } catch (nativeErr) {
+        console.warn('[Download nativo Tauri fallback->url/blob]', nativeErr)
+      }
+
+      try {
+        const tk = await ArquivosService.downloadToken(id.value)
+        const relativeUrl = String(tk?.data?.url || '')
+        if (relativeUrl) {
+          const base = String(getApiBaseUrl() || '').replace(/\/+$/, '')
+          const root = /^https?:\/\//i.test(base)
+            ? base.replace(/\/api$/i, '')
+            : String(import.meta.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:3001').replace(/\/+$/, '')
+          const absoluteUrl = relativeUrl.startsWith('http')
+            ? relativeUrl
+            : `${root}${relativeUrl}`
+          const openerMod = await import('@tauri-apps/plugin-opener').catch(() => null)
+          const openUrlFn = openerMod?.openUrl ?? openerMod?.default?.openUrl
+          if (typeof openUrlFn === 'function') {
+            await openUrlFn(absoluteUrl)
+            notify.success('Download aberto no sistema.')
+            return
+          }
+        }
+      } catch (tauriErr) {
+        console.warn('[Download Tauri URL fallback->blob]', tauriErr)
+      }
+    }
+
     const res = await ArquivosService.baixarBlob(id.value)
     const rawBlob = res?.data instanceof Blob
       ? res.data
@@ -407,18 +464,201 @@ async function download() {
   }
 }
 
-onMounted(carregarBlob)
+onMounted(() => {
+  carregarBlob()
+  // Calcula o offset do topo baseado na altura real do header do layout
+  const header = document.querySelector('.default-layout__header')
+  if (header) {
+    const top = header.getBoundingClientRect().bottom
+    document.documentElement.style.setProperty('--av-top', `${top}px`)
+  }
+})
 
 onBeforeUnmount(() => {
+  document.documentElement.style.removeProperty('--av-top')
   if (blobUrl.value) URL.revokeObjectURL(blobUrl.value)
 })
 </script>
 
 <style scoped>
+/* ── Novo layout simplificado ─────────────────────────────────── */
+
+.av-wrap {
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: var(--av-top, 56px);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--ds-color-surface);
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', sans-serif;
+  z-index: 50;
+}
+
+.av-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 1.25rem;
+  border-bottom: 1px solid rgba(214,224,234,0.6);
+  background: var(--ds-color-surface);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.av-topbar__left,
+.av-topbar__right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.av-title { display: flex; flex-direction: column; }
+.av-title__name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ds-color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 40vw;
+}
+.av-title__type {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ds-color-text-soft);
+}
+
+.av-zoom-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ds-color-text-soft);
+  min-width: 3rem;
+  text-align: center;
+}
+
+.av-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.av-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.av-btn--ghost {
+  background: transparent;
+  border-color: rgba(214,224,234,0.8);
+  color: var(--ds-color-text-soft);
+}
+.av-btn--ghost:hover:not(:disabled) { background: rgba(0,0,0,0.04); }
+.av-btn--secondary {
+  background: rgba(214,224,234,0.35);
+  border-color: rgba(214,224,234,0.8);
+  color: var(--ds-color-text);
+}
+.av-btn--secondary:hover:not(:disabled) { background: rgba(214,224,234,0.6); }
+.av-btn--primary {
+  background: var(--ds-color-primary);
+  color: #fff;
+}
+.av-btn--primary:hover:not(:disabled) { opacity: 0.9; }
+
+/* Área principal de visualização */
+.av-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  background: #f8fafc;
+  position: relative;
+}
+
+.av-iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+  background: #fff;
+  overflow: auto;
+}
+
+.av-docx {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 2rem 3rem;
+  background: #fff;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #1a1a1a;
+}
+.av-docx :deep(img) { max-width: 100%; height: auto; display: block; margin: 0.5em 0; }
+.av-docx :deep(table) { border-collapse: collapse; width: 100%; margin: 0.8em 0; }
+.av-docx :deep(td), .av-docx :deep(th) { border: 1px solid #d1d5db; padding: 6px 10px; vertical-align: top; }
+.av-docx :deep(th) { background: #f8fafc; font-weight: 600; }
+.av-docx :deep(p) { margin: 0 0 0.6em; }
+.av-docx :deep(h1) { font-size: 1.5em; margin: 0 0 0.5em; font-weight: 700; }
+.av-docx :deep(h2) { font-size: 1.25em; margin: 1em 0 0.4em; font-weight: 700; }
+.av-docx :deep(h3) { font-size: 1.05em; margin: 0.8em 0 0.3em; font-weight: 600; }
+.av-docx :deep(ul), .av-docx :deep(ol) { margin: 0 0 0.7em; padding-left: 1.5em; }
+.av-docx :deep(li) { margin-bottom: 0.25em; }
+.av-docx :deep(strong), .av-docx :deep(b) { font-weight: 700; }
+
+.av-image-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  padding: 1rem;
+}
+.av-image-wrap--zoomed { align-items: flex-start; }
+
+.av-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+  transition: transform 0.15s ease;
+}
+
+.av-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: var(--ds-color-text-soft);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.av-state--error { color: #be123c; }
+
+/* ── CSS antigo (mantido para não quebrar outras referências) ─── */
 .arquivo-viewer {
-  min-height: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   background: var(--ds-color-surface);
   font-family: 'Segoe UI Variable Text', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow: hidden;
 }
 
 .arquivo-viewer :deep(.ds-shell-card) {
@@ -473,11 +713,15 @@ onBeforeUnmount(() => {
 }
 
 .arquivo-viewer__content {
+  flex: 1;
+  min-height: 0;
   width: 100%;
   margin-inline: auto;
-  padding: 0.35rem 1rem 1.75rem;
-  display: grid;
-  gap: 1rem;
+  padding: 0.35rem 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow: hidden;
 }
 
 .arquivo-viewer__summary-bar {
@@ -574,6 +818,10 @@ onBeforeUnmount(() => {
 }
 
 .arquivo-viewer__panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   border-top: 1px solid rgba(214, 224, 234, 0.45);
   border-bottom: 1px solid rgba(214, 224, 234, 0.45);
@@ -608,31 +856,65 @@ onBeforeUnmount(() => {
 }
 
 .arquivo-viewer__panel-body {
-  padding: 1rem 0 0;
+  flex: 1;
+  min-height: 0;
+  padding: 0.75rem 0 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .arquivo-viewer__preview-shell {
-  min-height: 60vh;
+  flex: 1;
+  min-height: 0;
   display: flex;
   justify-content: center;
-  align-items: flex-start;
+  align-items: center;
   overflow: auto;
   border: 1px solid rgba(214, 224, 234, 0.72);
   border-radius: 1rem;
   background: rgba(248, 250, 252, 0.45);
+  padding: 0.75rem;
 }
 
 .arquivo-viewer__image {
   max-width: 100%;
-  transform-origin: top center;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  transform-origin: center center;
+  display: block;
+  transition: transform 0.15s ease;
+}
+
+.arquivo-viewer__preview-shell--zoomed {
+  align-items: flex-start;
+  overflow: auto;
+}
+
+.arquivo-viewer__preview-shell--doc {
+  align-items: stretch;
+  padding: 0;
+  overflow: hidden;
 }
 
 .arquivo-viewer__pdf {
   width: 100%;
-  min-height: 75vh;
+  height: 100%;
+  flex: 1;
+  min-height: 0;
   border: 0;
   border-radius: 1rem;
   background: #fff;
+}
+
+.arquivo-viewer__docx {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 0;
 }
 
 .arquivo-viewer__state {
@@ -682,27 +964,27 @@ onBeforeUnmount(() => {
 
 @media (min-width: 768px) {
   .arquivo-viewer :deep(.ds-header-block) {
-    padding-top: 1.6rem;
-    padding-bottom: 1.15rem;
+    padding-top: 1.2rem;
+    padding-bottom: 0.85rem;
     padding-left: 1.5rem;
     padding-right: 1.5rem;
   }
 
   .arquivo-viewer__content {
-    padding: 0.35rem 1.5rem 1.9rem;
+    padding: 0.35rem 1.5rem 0.75rem;
   }
 }
 
 @media (min-width: 1024px) {
   .arquivo-viewer :deep(.ds-header-block) {
-    padding-top: 1.85rem;
-    padding-bottom: 1.25rem;
+    padding-top: 1.35rem;
+    padding-bottom: 1rem;
     padding-left: 2rem;
     padding-right: 2rem;
   }
 
   .arquivo-viewer__content {
-    padding: 0.35rem 2rem 2rem;
+    padding: 0.35rem 2rem 0.75rem;
   }
 }
 

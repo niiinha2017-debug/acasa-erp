@@ -37,6 +37,7 @@ export const NAV_SCHEMA = {
 
   cadastros: [
     { label: 'Clientes', to: '/clientes', icon: 'pi-users', perm: 'clientes.ver' },
+    { label: 'Importar do Drive', to: '/migracao-drive', icon: 'pi-cloud-download', perm: 'clientes.criar' },
     { label: 'Fornecedores', to: '/fornecedor', icon: 'pi-truck', perm: 'fornecedores.ver' },
     { label: 'Funcionários', to: '/funcionarios', icon: 'pi-id-card', perm: 'funcionarios.ver' },
     { label: 'Produtos', to: '/produtos', icon: 'pi-tag', perm: 'produtos.ver' },

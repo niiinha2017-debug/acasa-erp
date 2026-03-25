@@ -241,15 +241,31 @@
         </div>
 
         <div class="grid grid-cols-12 gap-x-6 gap-y-7">
-          <Input
-            variant="line"
-            class="col-span-12 md:col-span-3"
-            v-model="form.cep"
-            label="CEP"
-            placeholder="00000-000"
-            @input="form.cep = maskCEP(form.cep)"
-            @blur="onBlurCep"
-          />
+          <!-- CEP com busca automática -->
+          <div class="col-span-12 md:col-span-3 flex flex-col gap-1">
+            <div class="flex items-end gap-2">
+              <Input
+                variant="line"
+                class="flex-1"
+                v-model="form.cep"
+                label="CEP"
+                placeholder="00000-000"
+                @input="form.cep = maskCEP(form.cep)"
+                @blur="onBlurCep"
+              />
+              <button
+                type="button"
+                class="cep-btn"
+                :class="{ 'cep-btn--loading': cepCarregando }"
+                :disabled="cepCarregando"
+                title="Buscar CEP"
+                @click="onBlurCep"
+              >
+                <svg v-if="!cepCarregando" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+              </button>
+            </div>
+          </div>
           <Input
             variant="line"
             class="col-span-12 md:col-span-7"
@@ -294,14 +310,28 @@
             force-upper
           />
 
-          <Input
-            variant="line"
-            class="col-span-12"
-            v-model="form.complemento"
-            label="Complemento / Referencia"
-            placeholder="Apto, Bloco, Proximo a..."
-            force-upper
-          />
+          <div class="col-span-12 flex flex-col gap-1">
+            <Input
+              variant="line"
+              v-model="form.complemento"
+              label="Complemento / Referencia"
+              placeholder="Apto, Bloco, Proximo a..."
+              force-upper
+            />
+          </div>
+
+          <!-- Botão Google Maps -->
+          <div v-if="enderecoCompleto" class="col-span-12">
+            <a
+              :href="linkGoogleMaps"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="maps-btn"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              Ver no Google Maps
+            </a>
+          </div>
         </div>
 
         <template v-if="isEdit">
@@ -353,9 +383,17 @@
                   <button
                     type="button"
                     class="cliente-files__action"
+                    :disabled="!arquivoPodeVisualizar(arquivo)"
                     @click="abrirArquivoCliente(arquivo)"
                   >
                     Ver
+                  </button>
+                  <button
+                    type="button"
+                    class="cliente-files__action"
+                    @click="baixarArquivoCliente(arquivo)"
+                  >
+                    Baixar
                   </button>
                 </div>
               </li>
@@ -618,6 +656,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ClienteService, ContratosService } from '@/services/index'
 import { ArquivosService } from '@/services/arquivos.service'
+import { getApiBaseUrl } from '@/services/api'
 import { format } from '@/utils/format'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
@@ -706,9 +745,23 @@ const clientesOptions = computed(() => {
     .filter((item) => !isEdit.value || Number(item.value) !== clienteId.value)
 })
 
+const cepCarregando = ref(false)
+
+const enderecoCompleto = computed(() => {
+  const partes = [form.endereco, form.numero, form.bairro, form.cidade, form.estado].filter(Boolean)
+  return partes.length >= 2 ? partes.join(', ') : ''
+})
+
+const linkGoogleMaps = computed(() => {
+  if (!enderecoCompleto.value) return '#'
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(enderecoCompleto.value)}`
+})
+
 async function onBlurCep() {
   if (form.cep?.length < 9) return
+  cepCarregando.value = true
   const data = await buscarCep(form.cep)
+  cepCarregando.value = false
   if (data) {
     form.endereco = data.logradouro || form.endereco
     form.bairro = data.bairro || form.bairro
@@ -880,6 +933,104 @@ function abrirArquivoCliente(arquivo) {
   })
 }
 
+function arquivoPodeVisualizar(arquivo) {
+  const mime = String(arquivo?.mime_type || '').toLowerCase()
+  const nome = String(arquivo?.nome || arquivo?.filename || '').toLowerCase()
+  const ext = nome.includes('.') ? nome.split('.').pop() : ''
+  if (mime.includes('pdf') || mime.startsWith('image/')) return true
+  if (mime.includes('wordprocessingml') || mime.includes('msword')) return true
+  return ext === 'pdf' || ext === 'jpg' || ext === 'jpeg' || ext === 'png' || ext === 'webp' || ext === 'gif' || ext === 'doc' || ext === 'docx'
+}
+
+async function baixarArquivoCliente(arquivo) {
+  if (!arquivo?.id) return
+  try {
+    const isTauri = typeof window !== 'undefined' && (!!window.__TAURI__ || !!window.__TAURI_INTERNALS__)
+    if (isTauri) {
+      try {
+        const nomeOriginal = arquivo.nome || arquivo.filename || `ARQUIVO_${arquivo.id}`
+        const nomeSeguro = String(nomeOriginal)
+          .replace(/[\\/:*?"<>|]+/g, '_')
+          .replace(/\s+/g, ' ')
+          .trim() || `ARQUIVO_${arquivo.id}`
+        const { save } = await import('@tauri-apps/plugin-dialog')
+        const { writeFile } = await import('@tauri-apps/plugin-fs')
+        const resBlob = await ArquivosService.baixarBlob(arquivo.id)
+        const blob = resBlob?.data
+        if (blob) {
+          const targetPath = await save({
+            defaultPath: nomeSeguro,
+            title: 'Salvar arquivo',
+          })
+          if (targetPath) {
+            const bytes = new Uint8Array(await blob.arrayBuffer())
+            await writeFile(targetPath, bytes)
+            notify.success('Arquivo salvo com sucesso.')
+            return
+          }
+          return
+        }
+      } catch (nativeErr) {
+        console.warn('[Download nativo Tauri fallback->url/blob]', nativeErr)
+      }
+
+      try {
+        const tk = await ArquivosService.downloadToken(arquivo.id)
+        const relativeUrl = String(tk?.data?.url || '')
+        if (relativeUrl) {
+          const base = String(getApiBaseUrl() || '').replace(/\/+$/, '')
+          const root = /^https?:\/\//i.test(base)
+            ? base.replace(/\/api$/i, '')
+            : String(import.meta.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:3001').replace(/\/+$/, '')
+          const absoluteUrl = relativeUrl.startsWith('http')
+            ? relativeUrl
+            : `${root}${relativeUrl}`
+          const openerMod = await import('@tauri-apps/plugin-opener').catch(() => null)
+          const openUrlFn = openerMod?.openUrl ?? openerMod?.default?.openUrl
+          if (typeof openUrlFn === 'function') {
+            await openUrlFn(absoluteUrl)
+            notify.success('Download aberto no sistema.')
+            return
+          }
+        }
+      } catch (tauriErr) {
+        console.warn('[Download Tauri URL fallback->blob]', tauriErr)
+      }
+    }
+
+    const res = await ArquivosService.baixarBlob(arquivo.id)
+    const blob = res?.data
+    if (!blob) {
+      notify.error('Não foi possível baixar o arquivo.')
+      return
+    }
+    const nomeOriginal = arquivo.nome || arquivo.filename || `ARQUIVO_${arquivo.id}`
+    const nome = String(nomeOriginal)
+      .replace(/[\\/:*?"<>|]+/g, '_')
+      .replace(/\s+/g, ' ')
+      .trim() || `ARQUIVO_${arquivo.id}`
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = nome
+    a.rel = 'noopener'
+    a.style.display = 'none'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+
+    // Em alguns WebViews (ex.: Tauri/Windows), o atributo download pode falhar.
+    // Fallback: abre o blob em nova aba/janela.
+    setTimeout(() => {
+      try {
+        window.URL.revokeObjectURL(url)
+      } catch {}
+    }, 2000)
+  } catch (e) {
+    notify.error(e?.response?.data?.message || 'Erro ao baixar arquivo.')
+  }
+}
+
 watch(isJuridica, (val) => {
   if (val) {
     form.cpf = ''
@@ -1013,3 +1164,56 @@ onMounted(async () => {
   await carregarDados()
 })
 </script>
+
+<style scoped>
+/* Botão buscar CEP */
+.cep-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--ds-color-border, #e2e8f0);
+  background: var(--ds-color-surface-raised, #fff);
+  color: var(--ds-color-text-secondary, #64748b);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  margin-bottom: 1px;
+}
+.cep-btn:hover:not(:disabled) {
+  background: var(--ds-color-primary, #3b82f6);
+  color: #fff;
+  border-color: var(--ds-color-primary, #3b82f6);
+}
+.cep-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.cep-btn--loading svg {
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Botão Google Maps */
+.maps-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: #1a73e8;
+  text-decoration: none;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid #1a73e8;
+  border-radius: 6px;
+  background: transparent;
+  transition: background 0.15s, color 0.15s;
+}
+.maps-btn:hover {
+  background: #1a73e8;
+  color: #fff;
+}
+</style>

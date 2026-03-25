@@ -83,10 +83,10 @@ Código **NÃO tem erros**. A sensação de "travação" provavelmente vem de:
 - Suporta 3 origens (TECNICO/VENDEDOR/PROMOB)
 - Pode parecer "incompleta" ou "corrompida" por tamanho
 
-### 2.4 Mudança Infraestrutura (Docker → Podman)
-- Scripts atualizados para Podman
-- Container anterior ainda rodando?
-- Possível conflito de porta
+### 2.4 Infraestrutura (Podman Compose)
+- Stack na raiz: `compose.yaml`; uso: `podman compose up -d`
+- Limpeza: `scripts/podman-limpar.ps1` / `scripts/podman-limpar.sh`
+- Container anterior ainda rodando / conflito de porta
 
 ---
 
@@ -336,7 +336,7 @@ Fluxo:
 | **Backend Services** | ✅ Completo | Import + CMV + RH calc |
 | **State Management** | ✅ Pinia Stores | Reactivity funcionando |
 | **Permissions** | ✅ agendamentos.vendas | Atualizado |
-| **Container** | ⚠️ Podman | Docker → Podman (verificar se rode) |
+| **Container** | ⚠️ Podman | `compose.yaml`; `backend/.env.compose` quando API roda no stack |
 | **PDF Generation** | ⚠️ Skeleton | Signature existe, rendering falta |
 | **Pre-medição UI** | ⚠️ Backend único | Frontend page missing |
 

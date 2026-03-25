@@ -1,5 +1,5 @@
-# Contexto enxuto para Docker (gerado por scripts/prepare-docker-context.cjs)
-.docker-context
+# Contexto enxuto para Podman Compose (gerado por scripts/prepare-compose-context.cjs)
+.compose-context
 
 # Logs
 logs

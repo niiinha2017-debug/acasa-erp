@@ -61,4 +61,13 @@ export class CreateDespesaDto {
   @IsOptional() @IsString() conta_bancaria_tipo_key?: string;
   @IsOptional() @IsString() cartao_credito_key?: string;
   @IsOptional() @IsString() status?: string;
+
+  @IsOptional()
+  recorrente?: boolean;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  recorrencia_total?: number;
 }

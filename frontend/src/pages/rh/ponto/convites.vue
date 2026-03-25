@@ -224,6 +224,7 @@ import { PontoRelatorioService, PontoService } from '@/services/index'
 import { notify } from '@/services/notify'
 import { can } from '@/services/permissions'
 import { openExternalUrl } from '@/utils/url'
+import { saveBlobNativeOrBrowser } from '@/utils/native-download'
 import { APP_LINKS } from '@/config/app-links'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import PageShell from '@/components/ui/PageShell.vue'
@@ -493,14 +494,28 @@ function abrirOuBaixarApk() {
     return
   }
 
-  const a = document.createElement('a')
-  a.href = apkUrl
-  a.download = 'ponto.apk'
-  a.target = '_blank'
-  a.rel = 'noopener noreferrer'
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
+  baixarApkComFallback(apkUrl)
+}
+
+async function baixarApkComFallback(apkUrl) {
+  try {
+    const resp = await fetch(apkUrl)
+    if (!resp.ok) throw new Error('Falha ao baixar APK')
+    const blob = await resp.blob()
+    const result = await saveBlobNativeOrBrowser(blob, 'ponto.apk')
+    if (result?.cancelled) return
+    if (!result?.ok) throw new Error('Falha ao salvar APK')
+    return
+  } catch {
+    const a = document.createElement('a')
+    a.href = apkUrl
+    a.download = 'ponto.apk'
+    a.target = '_blank'
+    a.rel = 'noopener noreferrer'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
 }
 
 async function abrirWhatsAppComMensagem(mensagem) {

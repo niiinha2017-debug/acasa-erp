@@ -1,0 +1,1 @@
+export { TAXAS_CARTAO } from '@backend/shared/constantes/taxas-cartao'

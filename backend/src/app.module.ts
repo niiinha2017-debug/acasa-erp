@@ -41,6 +41,8 @@ import { EstoqueRetalhoModule } from './estoque-retalho/estoque-retalho.module';
 import { EstoqueModule } from './estoque/estoque.module';
 import { EstrategiaPrecosModule } from './estrategia-precos/estrategia-precos.module';
 import { PlanoCorteProjetoModule } from './plano-corte-projeto/plano-corte-projeto.module';
+import { ExtractionModule } from './extraction/extraction.module';
+import { MigracaoDriveModule } from './migracao-drive/migracao-drive.module';
 
 @Module({
   imports: [
@@ -108,6 +110,8 @@ import { PlanoCorteProjetoModule } from './plano-corte-projeto/plano-corte-proje
     EstoqueModule,
     EstrategiaPrecosModule,
     PlanoCorteProjetoModule,
+    ExtractionModule,
+    MigracaoDriveModule,
   ],
   controllers: [AppController],
   providers: [

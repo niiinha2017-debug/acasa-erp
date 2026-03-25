@@ -60,6 +60,23 @@ export const ArquivosService = {
     return api.get(`/arquivos/${cleanId}/blob`, { responseType: 'blob' })
   },
 
+  downloadToken: (id) => {
+    const cleanId = String(id || '').replace(/\D/g, '')
+    return api.get(`/arquivos/${cleanId}/download-token`)
+  },
+
+  // Busca o HTML do DOCX convertido pelo backend (autenticado)
+  htmlDocx: (id) => {
+    const cleanId = String(id || '').replace(/\D/g, '')
+    return api.get(`/arquivos/${cleanId}/html`, { responseType: 'text' })
+  },
+
+  // Gera token temporário para o iframe acessar o HTML sem JWT
+  htmlDocxToken: (id) => {
+    const cleanId = String(id || '').replace(/\D/g, '')
+    return api.get(`/arquivos/${cleanId}/html-token`)
+  },
+
   remover: (id) => {
     const cleanId = String(id || '').replace(/\D/g, '')
     return api.delete(`/arquivos/${cleanId}`)

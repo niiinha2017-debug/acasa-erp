@@ -1,0 +1,1 @@
+export { TAXA_NOTA_FISCAL } from '@backend/shared/constantes/taxa-nota-fiscal'

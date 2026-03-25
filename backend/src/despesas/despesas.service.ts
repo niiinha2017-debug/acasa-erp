@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { Prisma, despesas } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateDespesaDto } from './dto/create-despesa.dto';
@@ -208,51 +209,71 @@ export class DespesasService {
       (_, i) => baseCents + (i < resto ? 1 : 0),
     );
 
+    const recorrenciaTotalRaw = Number(dto.recorrencia_total ?? 1);
+    const recorrenciaTotal =
+      dto.recorrente && Number.isFinite(recorrenciaTotalRaw) && recorrenciaTotalRaw > 1
+        ? Math.min(Math.floor(recorrenciaTotalRaw), 120)
+        : 1;
+    const recorrenciaId = recorrenciaTotal > 1 ? randomUUID() : null;
+
     const result = await this.prisma.$transaction(async (tx) => {
-      // 1) cria UMA despesa
-      const despesa = await tx.despesas.create({
-        data: {
-          ...baseData,
-          // se for prazo, não marca pagamento na despesa
-          data_pagamento: ehPrazo ? null : dataPagamento,
-        },
-      });
+      let primeiraDespesa: despesas | null = null;
 
-      // 2) cria títulos (parcelas) no financeiro
-      if (ehPrazo) {
-        const tipoTitulo =
-          dto.forma_pagamento === 'CREDITO'
-            ? 'CARTAO'
-            : dto.forma_pagamento === 'CHEQUE'
-              ? 'CHEQUE'
-              : dto.forma_pagamento === 'BOLETO'
-                ? 'BOLETO'
-                : 'PARCELA';
+      for (let mesIdx = 0; mesIdx < recorrenciaTotal; mesIdx++) {
+        const vencimentoMes = this.addMeses(primeiroVenc, mesIdx);
+        const pagamentoMes = dataPagamento ? this.addMeses(dataPagamento, mesIdx) : null;
 
-        const meta: any = {};
-        if (dto.forma_pagamento === 'CREDITO')
-          meta.cartao_credito_key = dto.cartao_credito_key || null;
-        if (precisaBanco) {
-          meta.conta_bancaria_key = dto.conta_bancaria_key || null;
-          meta.conta_bancaria_tipo_key = dto.conta_bancaria_tipo_key || null;
-        }
-
-        await tx.titulos_financeiros.createMany({
-          data: valoresParcelasCents.map((cents, i) => ({
-            despesa_id: despesa.id,
-            tipo: tipoTitulo,
-            valor: new Prisma.Decimal((cents / 100).toFixed(2)),
-            status: SF.EM_ABERTO,
-            vencimento_em: this.addMeses(primeiroVenc, i),
-            pago_em: null,
-            parcelas_total: parcelas,
-            parcela_numero: parcelas > 1 ? i + 1 : 1,
-            meta,
-          })),
+        const despesa = await tx.despesas.create({
+          data: {
+            ...baseData,
+            data_vencimento: vencimentoMes,
+            data_pagamento: ehPrazo ? null : pagamentoMes,
+            recorrencia_id: recorrenciaId,
+            parcela_numero: recorrenciaTotal > 1 ? mesIdx + 1 : null,
+          },
         });
+
+        if (!primeiraDespesa) primeiraDespesa = despesa;
+
+        // cria títulos (parcelas) no financeiro
+        if (ehPrazo) {
+          const tipoTitulo =
+            dto.forma_pagamento === 'CREDITO'
+              ? 'CARTAO'
+              : dto.forma_pagamento === 'CHEQUE'
+                ? 'CHEQUE'
+                : dto.forma_pagamento === 'BOLETO'
+                  ? 'BOLETO'
+                  : 'PARCELA';
+
+          const meta: any = {};
+          if (dto.forma_pagamento === 'CREDITO')
+            meta.cartao_credito_key = dto.cartao_credito_key || null;
+          if (precisaBanco) {
+            meta.conta_bancaria_key = dto.conta_bancaria_key || null;
+            meta.conta_bancaria_tipo_key = dto.conta_bancaria_tipo_key || null;
+          }
+
+          await tx.titulos_financeiros.createMany({
+            data: valoresParcelasCents.map((cents, i) => ({
+              despesa_id: despesa.id,
+              tipo: tipoTitulo,
+              valor: new Prisma.Decimal((cents / 100).toFixed(2)),
+              status: SF.EM_ABERTO,
+              vencimento_em: this.addMeses(vencimentoMes, i),
+              pago_em: null,
+              parcelas_total: parcelas,
+              parcela_numero: parcelas > 1 ? i + 1 : 1,
+              meta,
+            })),
+          });
+        }
       }
 
-      return despesa;
+      if (!primeiraDespesa) {
+        throw new BadRequestException('Falha ao criar despesa');
+      }
+      return primeiraDespesa;
     });
 
     if (this.isFuncionarioDespesa({
@@ -703,5 +724,54 @@ export class DespesasService {
     }
 
     return result;
+  }
+
+  async updateRecorrencia(
+    recorrenciaId: string,
+    dto: UpdateDespesaDto,
+  ): Promise<{ atualizadas: number }> {
+    const id = String(recorrenciaId || '').trim();
+    if (!id) throw new BadRequestException('recorrencia_id inválido');
+
+    const despesasDaRecorrencia = await this.prisma.despesas.findMany({
+      where: { recorrencia_id: id },
+      select: { id: true },
+      orderBy: { data_vencimento: 'asc' },
+    });
+
+    if (!despesasDaRecorrencia.length) {
+      throw new NotFoundException('Recorrência não encontrada');
+    }
+
+    let atualizadas = 0;
+    for (const d of despesasDaRecorrencia) {
+      await this.update(d.id, dto);
+      atualizadas += 1;
+    }
+
+    return { atualizadas };
+  }
+
+  async removeRecorrencia(recorrenciaId: string): Promise<{ removidas: number }> {
+    const id = String(recorrenciaId || '').trim();
+    if (!id) throw new BadRequestException('recorrencia_id inválido');
+
+    const despesasDaRecorrencia = await this.prisma.despesas.findMany({
+      where: { recorrencia_id: id },
+      select: { id: true },
+      orderBy: { data_vencimento: 'asc' },
+    });
+
+    if (!despesasDaRecorrencia.length) {
+      throw new NotFoundException('Recorrência não encontrada');
+    }
+
+    let removidas = 0;
+    for (const d of despesasDaRecorrencia) {
+      await this.remove(d.id);
+      removidas += 1;
+    }
+
+    return { removidas };
   }
 }

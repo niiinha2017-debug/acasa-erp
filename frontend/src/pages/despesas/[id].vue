@@ -146,6 +146,27 @@
               max="60"
             />
 
+            <div class="col-span-12 md:col-span-4 flex items-end">
+              <CustomCheckbox
+                v-model="form.recorrente"
+                label="Despesa recorrente mensal"
+                description="Cria lançamentos mensais vinculados."
+              />
+            </div>
+
+            <Input
+              v-if="form.recorrente && !isEdit"
+              variant="line"
+              class="col-span-12 md:col-span-4"
+              v-model.number="form.recorrencia_total"
+              type="number"
+              label="Meses da recorrência"
+              placeholder="12"
+              :forceUpper="false"
+              min="2"
+              max="120"
+            />
+
             <SearchInput
               class="col-span-12 md:col-span-4"
               v-model="form.funcionario_id"
@@ -269,6 +290,7 @@ import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
 import { closeTabAndGo } from '@/utils/tabs'
 import FormActions from '@/components/ui/FormActions.vue'
+import CustomCheckbox from '@/components/ui/CustomCheckbox.vue'
 
 definePage({ meta: { perm: 'despesas.ver' } })
 
@@ -278,6 +300,7 @@ const loading = ref(false)
 const actionLoading = ref(false)
 const hidratando = ref(false)
 const funcionariosOptions = ref([])
+const recorrenciaOriginalId = ref(null)
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -298,6 +321,8 @@ const form = reactive({
   conta_bancaria_key: null,
   conta_bancaria_tipo_key: null,
   cartao_credito_key: null,
+  recorrente: false,
+  recorrencia_total: 12,
 })
 
 const despesaId = computed(() => {
@@ -398,7 +423,10 @@ async function init() {
         data_vencimento: despesa.data_vencimento?.slice(0, 10) || '',
         data_pagamento: despesa.data_pagamento?.slice(0, 10) || '',
         data_registro: despesa.data_registro?.slice(0, 10) || today(),
+        recorrente: Boolean(despesa.recorrencia_id),
+        recorrencia_total: 12,
       })
+      recorrenciaOriginalId.value = despesa.recorrencia_id || null
       setTimeout(() => { hidratando.value = false }, 150)
     }
   } catch (e) {
@@ -418,6 +446,12 @@ async function salvar() {
   const localFinal = upper(String(form.local || '').trim())
   if (!form.categoria) return notify.info('Selecione a categoria')
   if (!form.data_vencimento) return notify.info('Preencha a data de vencimento')
+  if (!isEdit.value && form.recorrente) {
+    const totalRec = Number(form.recorrencia_total || 0)
+    if (!Number.isFinite(totalRec) || totalRec < 2) {
+      return notify.info('Informe ao menos 2 meses para recorrência')
+    }
+  }
   if (formasQuePrecisamBanco.includes(form.forma_pagamento)) {
     if (!form.conta_bancaria_key) return notify.info('Selecione o banco/conta')
     if (!form.conta_bancaria_tipo_key) return notify.info('Selecione o tipo da conta')
@@ -433,6 +467,8 @@ async function salvar() {
       local: localFinal || 'SEM DESCRIÇÃO',
       valor_total: String(form.valor_total),
       quantidade_parcelas: Number(form.quantidade_parcelas || 1),
+      recorrente: Boolean(form.recorrente),
+      recorrencia_total: Number(form.recorrencia_total || 1),
       data_registro: form.data_registro ? isoToBR(form.data_registro) : undefined,
       data_vencimento: form.data_vencimento ? isoToBR(form.data_vencimento) : undefined,
       data_pagamento:
@@ -440,7 +476,11 @@ async function salvar() {
           ? isoToBR(form.data_pagamento)
           : undefined,
     }
-    await DespesaService.salvar(despesaId.value, payload)
+    if (isEdit.value && recorrenciaOriginalId.value && form.recorrente) {
+      await DespesaService.atualizarRecorrencia(recorrenciaOriginalId.value, payload)
+    } else {
+      await DespesaService.salvar(despesaId.value, payload)
+    }
     notify.success(isEdit.value ? 'Atualizado com sucesso.' : 'Lançamento criado.')
     closeTabAndGo('/despesas')
   } catch (e) {
@@ -462,7 +502,11 @@ async function excluir() {
 
   actionLoading.value = true
   try {
-    await DespesaService.remover(Number(despesaId.value))
+    if (recorrenciaOriginalId.value) {
+      await DespesaService.removerRecorrencia(recorrenciaOriginalId.value)
+    } else {
+      await DespesaService.remover(Number(despesaId.value))
+    }
     notify.success('Registro excluído.')
     closeTabAndGo('/despesas')
   } catch (e) {

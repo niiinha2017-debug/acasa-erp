@@ -504,6 +504,7 @@ import { can } from '@/services/permissions'
 import { listDays, groupRegistrosByDia, JORNADA_META_MIN } from '@/utils/ponto'
 import { onlyNumbers } from '@/utils/masks'
 import { numeroParaMoeda } from '@/utils/number'
+import { saveBlobNativeOrBrowser } from '@/utils/native-download'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import Button from '@/components/ui/Button.vue'
 import SearchInput from '@/components/ui/SearchInput.vue'
@@ -904,36 +905,13 @@ async function tentarImprimirPdf(blob) {
 }
 
 async function abrirBlobComFallback(blob, nomeArquivo) {
-  const url = URL.createObjectURL(blob)
-  const isTauri = typeof window !== 'undefined' && (window.__TAURI__ ?? window.__TAURI_INTERNALS__)
-
-  try {
-    if (isTauri) {
-      baixarBlob(url, nomeArquivo)
-      notify.info('Comprovante baixado. Abra o arquivo para imprimir.')
-      return
-    }
-    try {
-      const opened = window.open(url, '_blank', 'noopener,noreferrer')
-      if (opened) return
-    } catch {}
-
-    baixarBlob(url, nomeArquivo)
-  } finally {
-    setTimeout(() => URL.revokeObjectURL(url), 60000)
+  const result = await saveBlobNativeOrBrowser(blob, nomeArquivo)
+  if (result?.cancelled) return
+  if (result?.ok) {
+    notify.info('Comprovante baixado. Abra o arquivo para imprimir.')
+    return
   }
-}
-
-function baixarBlob(url, nomeArquivo) {
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = nomeArquivo
-  anchor.target = '_blank'
-  anchor.rel = 'noopener noreferrer'
-  anchor.style.display = 'none'
-  document.body.appendChild(anchor)
-  anchor.click()
-  document.body.removeChild(anchor)
+  notify.error('Não foi possível baixar o comprovante.')
 }
 
 function abrirWhatsComprovante() {

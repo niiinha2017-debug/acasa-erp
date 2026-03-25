@@ -6,7 +6,7 @@
         class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-brand-secondary/60 dark:bg-slate-900/80 backdrop-blur-md"
         @click.self="fechar"
       >
-        <div class="w-full max-w-4xl max-h-[90vh] bg-white dark:bg-slate-900 rounded-3xl shadow-none border border-brand-secondary/40 dark:border-slate-700 overflow-hidden flex flex-col">
+        <div class="w-full max-w-7xl h-[95vh] bg-white dark:bg-slate-900 rounded-3xl shadow-none border border-brand-secondary/40 dark:border-slate-700 overflow-hidden flex flex-col">
           
           <header class="flex items-center justify-between px-8 py-6 border-b border-brand-secondary/40 bg-white dark:bg-slate-900">
             <div class="flex items-center gap-5">
@@ -104,6 +104,9 @@
                   </div>
 
                   <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button @click="baixar(a)" class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-100 shadow-lg active:scale-90 transition-all">
+                      <i class="pi pi-download text-[10px]"></i>
+                    </button>
                     <button @click="visualizar(a)" class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-900 dark:bg-slate-700 text-white shadow-lg active:scale-90 transition-all">
                       <i class="pi pi-eye text-[10px]"></i>
                     </button>
@@ -139,6 +142,7 @@ import { useRouter } from 'vue-router'
 import { ArquivosService } from '@/services/arquivos.service'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
+import { saveBlobNativeOrBrowser } from '@/utils/native-download'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -290,6 +294,22 @@ function visualizar(arq) {
       from, // ✅ isso é o que o botão VOLTAR do viewer vai usar
     },
   })
+}
+
+async function baixar(arq) {
+  if (!arq?.id) return
+  try {
+    const res = await ArquivosService.baixarBlob(arq.id)
+    const blob = res?.data
+    if (!blob) throw new Error('Sem conteúdo')
+    const nome = arq.nome || arq.filename || `ARQUIVO_${arq.id}`
+    const result = await saveBlobNativeOrBrowser(blob, nome)
+    if (result?.cancelled) return
+    if (!result?.ok) throw new Error('Falha ao salvar')
+    notify.success('Arquivo salvo.')
+  } catch (e) {
+    notify.error(e?.response?.data?.message || 'Erro ao baixar arquivo.')
+  }
 }
 
 

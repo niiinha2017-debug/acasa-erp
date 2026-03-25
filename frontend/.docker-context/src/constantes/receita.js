@@ -1,0 +1,1 @@
+export { RECEITA_OPERACIONAL } from '@backend/shared/constantes/receita'

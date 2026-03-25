@@ -87,6 +87,15 @@ export class DespesasController {
     return this.service.update(cleanId, dto);
   }
 
+  @Put('recorrencia/:recorrenciaId')
+  @Permissoes('despesas.editar')
+  updateRecorrencia(
+    @Param('recorrenciaId') recorrenciaId: string,
+    @Body() dto: UpdateDespesaDto,
+  ) {
+    return this.service.updateRecorrencia(recorrenciaId, dto);
+  }
+
   /** Marca despesa como paga (tela de pagamento a funcionários). */
   @Post(':id/pagar')
   @Permissoes('despesas.editar')
@@ -103,5 +112,11 @@ export class DespesasController {
     const cleanId =
       typeof id === 'string' ? Number(id.replace(/\D/g, '')) : Number(id);
     return this.service.remove(cleanId);
+  }
+
+  @Delete('recorrencia/:recorrenciaId')
+  @Permissoes('despesas.excluir')
+  removeRecorrencia(@Param('recorrenciaId') recorrenciaId: string) {
+    return this.service.removeRecorrencia(recorrenciaId);
   }
 }

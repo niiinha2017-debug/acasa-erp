@@ -37,7 +37,7 @@ export default defineConfig(({ mode }) => {
     dedupe: ['konva'],
     alias: {
       '@': path.resolve(__dirname, './src'),
-      // backend compartilhado (dev: ../backend; Docker: COPY coloca em /backend)
+      // backend compartilhado (dev: ../backend; imagem OCI: COPY coloca em /backend)
       '@backend': path.resolve(__dirname, '..', 'backend'),
     },
   },

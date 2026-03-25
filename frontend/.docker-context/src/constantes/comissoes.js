@@ -1,0 +1,1 @@
+export { COMISSOES } from '@backend/shared/constantes/comissoes'

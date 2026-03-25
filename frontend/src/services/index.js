@@ -937,3 +937,40 @@ export const ApontamentoProducaoService = {
     return api.delete(`/apontamento-producao/${id}`);
   }
 };
+
+// --- MIGRAÇÃO DO GOOGLE DRIVE ---
+export const MigracaoDriveService = {
+  preview(arquivo, extrairDados = false) {
+    const form = new FormData()
+    form.append('arquivo', arquivo)
+    return api.post('/migracao-drive/preview', form, {
+      params: { extrair_dados: extrairDados ? 'true' : 'false' },
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 300000, // 5 min — ZIPs grandes podem demorar
+    })
+  },
+  importar(arquivo, opcoes = {}) {
+    const form = new FormData()
+    form.append('arquivo', arquivo)
+    return api.post('/migracao-drive/importar', form, {
+      params: {
+        extrair_dados: opcoes.extrairDados ? 'true' : 'false',
+        pular_existentes: opcoes.pularExistentes !== false ? 'true' : 'false',
+      },
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 600000, // 10 min — importação completa
+    })
+  },
+  resetarCliente(clienteId) {
+    return api.delete(`/migracao-drive/cliente/${clienteId}/reset`)
+  },
+  statsCliente(clienteId) {
+    return api.get(`/migracao-drive/cliente/${clienteId}/stats`)
+  },
+  listarImportados() {
+    return api.get('/migracao-drive/importados')
+  },
+  excluirCliente(clienteId) {
+    return api.delete(`/migracao-drive/cliente/${clienteId}/excluir`)
+  },
+};

@@ -1,0 +1,1 @@
+export { CONTAS_BANCARIAS, CARTOES_CREDITO, TIPOS_CONTAS_BANCARIAS } from '@backend/shared/constantes/banco'

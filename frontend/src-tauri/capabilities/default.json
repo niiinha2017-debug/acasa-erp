@@ -7,6 +7,8 @@
     "core:default",
     "core:window:allow-set-title",
     "updater:default",
+    "dialog:default",
+    "fs:default",
     "opener:default",
     {
       "identifier": "opener:allow-open-url",

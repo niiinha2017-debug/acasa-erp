@@ -48,7 +48,7 @@
     <div
       class="default-layout__content flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-[env(safe-area-inset-bottom)]"
       :class="{
-        'default-layout__content--immersive': isMedicaoFinaFullscreen,
+        'default-layout__content--immersive': isImmersiveContent,
         'default-layout__content--planta2d-chrome': hideChromeMedicaoImmersivo,
       }"
     >
@@ -79,6 +79,13 @@ const isMedicaoFinaFullscreen = computed(() => {
   const p = route.path
   return p === '/medicao-fina' || p.startsWith('/medicao-fina/')
 })
+/** Visualizador de arquivos: modo immersive mas mantém abas visíveis. */
+const isArquivoViewer = computed(() => {
+  const p = route.path
+  return p.startsWith('/arquivos/') && !p.startsWith('/arquivos/importacao')
+})
+/** Ativa layout immersive (sem overflow externo) para medição e visualizador. */
+const isImmersiveContent = computed(() => isMedicaoFinaFullscreen.value || isArquivoViewer.value)
 /** Menu + abas ocultos: planta 2D em obra ou modo Projeto Técnico (split 2D/3D). */
 const hideChromeMedicaoImmersivo = computed(
   () =>
@@ -178,7 +185,9 @@ function splitRouteTo(to) {
 }
 
 function resolveTabTitle(currentRoute) {
-  if (currentRoute?.path === '/agendamentos' || currentRoute?.path === '/agenda-geral') {
+  if (!currentRoute?.path) return 'Página'
+
+  if (currentRoute.path === '/agendamentos' || currentRoute.path === '/agenda-geral') {
     return 'Agenda Operacional'
   }
 
@@ -188,7 +197,8 @@ function resolveTabTitle(currentRoute) {
     if (parsed.path !== currentRoute.path) continue
 
     const expects = Array.from(parsed.params.entries())
-    const queryMatches = expects.every(([key, value]) => String(currentRoute?.query?.[key] || '') === value)
+    const query = currentRoute.query ?? {}
+    const queryMatches = expects.every(([key, value]) => String(query[key] || '') === value)
     if (queryMatches) return cleanLabel(item.label)
     if (!candidate) candidate = cleanLabel(item.label)
   }
@@ -198,6 +208,7 @@ function resolveTabTitle(currentRoute) {
 }
 
 function upsertTab(currentRoute) {
+  if (!currentRoute?.path) return
   if (currentRoute?.meta?.public) return
 
   const routeKey = currentRoute.fullPath || currentRoute.path

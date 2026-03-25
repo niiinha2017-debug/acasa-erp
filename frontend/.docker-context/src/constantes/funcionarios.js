@@ -1,0 +1,1 @@
+export { FUNCIONARIOS_LOCAL_SETOR_CARGO } from '@backend/shared/constantes/funcionarios'
