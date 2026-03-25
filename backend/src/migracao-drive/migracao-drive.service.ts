@@ -2,8 +2,7 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ExtractionService, ParcelaPagamento, AmbienteItem } from '../extraction/extraction.service';
 import { UtilsService } from '../utils/utils.service';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const AdmZip = require('adm-zip');
+import AdmZip = require('adm-zip');
 import * as path from 'path';
 import * as fs from 'fs';
 import { randomBytes } from 'crypto';
