@@ -225,4 +225,9 @@ export class CriarFuncionarioDto {
   @IsOptional()
   @IsString()
   pix_chave?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  comissao_producao_percentual?: number;
 }

@@ -70,8 +70,16 @@ export class AgendaFabricaController {
     @Query('funcionario_id') funcionarioId?: string,
     @Query('incluir_cancelados') incluirCancelados?: string,
     @Query('origem_fluxo') origemFluxoQuery?: string,
+    @Query('macroetapa') macroetapa?: string,
+    @Query('subetapas') subetapas?: string,
     @Req() req?: { user?: { funcionario_id?: number | null; is_admin?: boolean } },
   ) {
+    const subetapasIn = subetapas
+      ? subetapas
+          .split(',')
+          .map((s) => s.trim().toUpperCase())
+          .filter(Boolean)
+      : undefined;
     return this.agendaService.findAll(inicio, fim, {
       setorDestino: SETOR_FABRICA,
       includePlanoCorte: true,
@@ -82,6 +90,8 @@ export class AgendaFabricaController {
         String(incluirCancelados || '').toLowerCase() === 'true' ||
         incluirCancelados === '1',
       usuario: req?.user,
+      macroetapa: macroetapa?.trim() || undefined,
+      subetapasIn: subetapasIn?.length ? subetapasIn : undefined,
     });
   }
 
@@ -162,6 +172,27 @@ export class AgendaFabricaController {
       setorDestino: SETOR_FABRICA,
       ...(registrarAlteradoPor && req?.user?.id
         ? { alteradoPorUsuarioId: req.user.id }
+        : {}),
+    });
+  }
+
+  /**
+   * Encerra a tarefa manualmente após o totem ter concluído a execução física.
+   * Aplica status CONCLUIDO e arquiva a tarefa (remove da operação).
+   */
+  @Post(':id/encerrar')
+  @Permissoes('agendamentos.editar')
+  async encerrar(@Param('id') id: string, @Req() req?: any) {
+    await this.garantirSetorFabrica(+id);
+    const { pode, registrarAlteradoPor } = await this.podeEditarAgendaFabrica(+id, req);
+    if (!pode) {
+      throw new ForbiddenException(
+        'Só o responsável pela tarefa ou um administrador pode encerrar.',
+      );
+    }
+    return this.agendaService.encerrarTarefaFabrica(+id, {
+      ...(registrarAlteradoPor && req?.user?.id
+        ? { alteradoPorUsuarioId: Number(req.user.id) }
         : {}),
     });
   }

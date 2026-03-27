@@ -179,6 +179,33 @@ export const FuncionariosService = {
 
 export const FuncionarioService = FuncionariosService
 
+// Métodos trabalhistas (impostos, férias, fluxo de status)
+Object.assign(FuncionariosService, {
+  calcularImpostos(id, params = {}) {
+    const cleanId = sanitizeFuncionarioId(id)
+    if (!cleanId) return Promise.reject(new Error('ID inválido'))
+    return api.get(`/funcionarios/${cleanId}/impostos`, { params })
+  },
+
+  calcularFerias(id) {
+    const cleanId = sanitizeFuncionarioId(id)
+    if (!cleanId) return Promise.reject(new Error('ID inválido'))
+    return api.get(`/funcionarios/${cleanId}/ferias`)
+  },
+
+  listarTransicoesStatus(id) {
+    const cleanId = sanitizeFuncionarioId(id)
+    if (!cleanId) return Promise.reject(new Error('ID inválido'))
+    return api.get(`/funcionarios/${cleanId}/status/transicoes`)
+  },
+
+  atualizarStatus(id, dados) {
+    const cleanId = sanitizeFuncionarioId(id)
+    if (!cleanId) return Promise.reject(new Error('ID inválido'))
+    return api.put(`/funcionarios/${cleanId}/status`, dados)
+  },
+})
+
 
 
 
@@ -196,10 +223,9 @@ export const OrcamentosService = {
   clausulasPadrao: () => api.get('/orcamentos/clausulas-padrao'),
   aguardandoApresentacao: () => api.get('/orcamentos/aguardando-apresentacao'),
   detalhar: (id) => api.get(`/orcamentos/${id}`),
-  criar: (dados) => api.post('/orcamentos', dados),
   atualizar: (id, dados) => api.put(`/orcamentos/${id}`, dados),
   remover: (id) => api.delete(`/orcamentos/${id}`),
-  salvar: (id, dados) => (id ? api.put(`/orcamentos/${id}`, dados) : api.post('/orcamentos', dados)),
+  salvar: (id, dados) => api.put(`/orcamentos/${id}`, dados),
 
   adicionarItem: (id, item) => api.post(`/orcamentos/${id}/itens`, item),
   atualizarItem: (id, itemId, item) => api.put(`/orcamentos/${id}/itens/${itemId}`, item),
@@ -260,36 +286,6 @@ export const ProdutosService = {
     api.get('/produtos/buscar/filtros', { params: { ...filtros, categoria_base: 'FERRAGEM' } }),
 }
 
-export const EstoqueService = {
-  disponibilidade: (params = {}) => api.get('/estoque/disponibilidade', { params }),
-  darEntradaManual: (dados) => api.post('/estoque/dar-entrada/manual', dados),
-  darEntradaNf: (dados) => api.post('/estoque/dar-entrada/nf', dados),
-  reservarVenda: (vendaId, dados = {}) => api.post(`/estoque/reservar-venda/${vendaId}`, dados),
-}
-
-export const EstrategiaPrecosService = {
-  listarMateriais: (filtros = {}) => api.get('/configuracoes/estrategia-precos/materiais', { params: filtros }),
-  listarInsumosFixos: () => api.get('/configuracoes/estrategia-precos/insumos-fixos'),
-  listarMateriaisMdf: () => api.get('/configuracoes/estrategia-precos/materiais-mdf'),
-  buscarMateriaisMdfPorTermo: (termo) =>
-    api.get('/configuracoes/estrategia-precos/materiais-mdf/busca', { params: { termo } }),
-  buscarMdfPorCategoria: (categoriaComercial, termo = '') =>
-    api.get('/configuracoes/estrategia-precos/materiais-mdf/por-categoria', {
-      params: { categoria_comercial: categoriaComercial, termo },
-    }),
-  buscarCustoConsolidadoMdf: (produtoId) =>
-    api.get('/configuracoes/estrategia-precos/materiais-mdf/custo-consolidado', { params: { produto_id: produtoId } }),
-  buscarProdutoReferencia: (filtros = {}) => api.get('/configuracoes/estrategia-precos/produto-referencia', { params: filtros }),
-  // Matriz Operacional de Insumos Base
-  calcularCustosInternos: (params = {}) =>
-    api.get('/configuracoes/estrategia-precos/matriz-operacional/custos-internos', { params }),
-    calcularCustosRH: (params = {}) =>
-      api.get('/configuracoes/estrategia-precos/matriz-operacional/custos-rh', { params }),
-  processarMatriz: (payload = {}) => api.post('/configuracoes/estrategia-precos/matriz-operacional/processar', payload),
-  listarMatriz: (filtros = {}) => api.get('/configuracoes/estrategia-precos/matriz-operacional', { params: filtros }),
-    listarSelecoesMatriz: () => api.get('/configuracoes/estrategia-precos/matriz-operacional/selecoes'),
-  listarConfiguracoesPreco: () => api.get('/configuracoes/estrategia-precos/matriz-operacional/configuracoes-preco'),
-}
 
 // --- USUÁRIOS ---
 export const UsuariosService = {
@@ -365,6 +361,9 @@ export const FinanceiroService = {
     api.get('/financeiro/contas-pagar', { params: filtros }),
   listarContasPagarConsolidado: (filtros = {}) =>
     api.get('/financeiro/contas-pagar', { params: filtros }),
+  /** Retorna todas as abas (unificado, paraFechar, compensados, agendados, pagos) em 1 requisição */
+  listarTodasAbas: (filtros = {}) =>
+    api.get('/financeiro/contas-pagar/todas-abas', { params: filtros }),
   /** Fechamento agrupado por fornecedor (subtotal, abatimentos, valor líquido) + itens expansíveis */
   getFechamentoPorFornecedor: (filtros = {}) =>
     api.get('/financeiro/contas-pagar/fechamento-por-fornecedor', { params: filtros }),
@@ -393,16 +392,46 @@ export const FinanceiroService = {
   // Painel de Obras Vigentes (apenas obras em medição, produção ou montagem)
   painelObrasVigentes: () => api.get('/financeiro/contas-pagar/painel-obras-vigentes'),
 
+  // Relatório contas a pagar (dados agregados)
+  getRelatorioContasPagar: (params = {}) =>
+    api.get('/financeiro/contas-pagar/relatorio', { params }),
+
+  // Relatório contas a pagar (PDF blob)
+  getRelatorioContasPagarPdf: (params = {}) =>
+    api.get('/financeiro/contas-pagar/relatorio/pdf', { params, responseType: 'blob' }),
+
   // --- RECEBER (mantém) ---
   listarReceber: (filtros = {}) => api.get('/financeiro/contas-receber', { params: filtros }),
   buscarReceber: (id) => api.get(`/financeiro/contas-receber/${id}`),
   criarReceber: (dados) => api.post('/financeiro/contas-receber', dados),
   atualizarReceber: (id, dados) => api.put(`/financeiro/contas-receber/${id}`, dados),
   receber: (id, dados) => api.post(`/financeiro/contas-receber/${id}/receber`, dados),
+  estornarReceber: (id, dados = {}) => api.post(`/financeiro/contas-receber/${id}/estornar`, dados),
+  removerReceber: (id) => api.delete(`/financeiro/contas-receber/${id}`),
+
+  // Relatório contas a receber (dados agregados)
+  getRelatorioContasReceber: (params = {}) =>
+    api.get('/financeiro/contas-receber/relatorio', { params }),
+
+  // Relatório contas a receber (PDF blob)
+  getRelatorioContasReceberPdf: (params = {}) =>
+    api.get('/financeiro/contas-receber/relatorio/pdf', { params, responseType: 'blob' }),
+
+  // Relatório serviço de corte (dados agregados)
+  getRelatorioServicosCorte: (params = {}) =>
+    api.get('/relatorios/servico-corte', { params }),
+
+  // Relatório serviço de corte (PDF blob)
+  getRelatorioServicosCortePdf: (params = {}) =>
+    api.get('/relatorios/servico-corte/pdf', { params, responseType: 'blob' }),
 
   /** DRE Mensal: receita, CPV (materiais + mão de obra), margem e lucro */
   getDreMensal: (params = {}) =>
     api.get('/relatorios/dre-mensal', { params }),
+
+  /** Fluxo de Caixa: entradas × saídas realizadas/pendentes + meta de vendas */
+  getFluxoCaixa: (params = {}) =>
+    api.get('/relatorios/fluxo-caixa', { params }),
 }
 
 // --- Custos de Estrutura (Taxa de Máquina / Custo Hora Estrutura) ---
@@ -437,81 +466,16 @@ export const DreDetalhadaService = {
     api.get('/relatorios/dre-detalhada/graficos-validacao', { params }),
 }
 
+// --- Relatório Totem Produção ---
+export const RelatorioTotemService = {
+  get: (params = {}) =>
+    api.get('/relatorios/totem-producao', { params }),
+}
+
 // --- Comissão de Produtividade da Fábrica ---
 export const ComissaoProducaoService = {
   getResumo: (params = {}) =>
     api.get('/comissao-producao/resumo', { params }),
-}
-
-const sanitizeMedicaoFinaId = (id) => {
-  const clean = String(id ?? '').replace(/\D/g, '')
-  return clean || null
-}
-
-const sanitizeMedicaoFinaAmbiente = (ambiente) =>
-  String(ambiente ?? '').trim()
-
-// --- Medição Fina (dados reais do ambiente antes da produção) ---
-export const MedicaoFinaService = {
-  resolverProjeto: (q) =>
-    api.get('/medicao-fina/projeto/resolver', { params: { q } }),
-  getProjetoDados(projetoId) {
-    const cleanId = sanitizeMedicaoFinaId(projetoId)
-    if (!cleanId) return Promise.reject(new Error('Projeto não informado'))
-    return api.get(`/medicao-fina/projeto/${cleanId}/dados`)
-  },
-  validarMedicao(projetoId) {
-    const cleanId = sanitizeMedicaoFinaId(projetoId)
-    if (!cleanId) return Promise.reject(new Error('Projeto não informado'))
-    return api.post(`/medicao-fina/projeto/${cleanId}/validar`)
-  },
-  listarAmbientes(projetoId) {
-    const cleanId = sanitizeMedicaoFinaId(projetoId)
-    if (!cleanId) return Promise.reject(new Error('Projeto não informado'))
-    return api.get(`/medicao-fina/projeto/${cleanId}/ambientes`)
-  },
-  getComparativoPreOrcamento(projetoId) {
-    const cleanId = sanitizeMedicaoFinaId(projetoId)
-    if (!cleanId) return Promise.reject(new Error('Projeto não informado'))
-    return api.get(`/medicao-fina/projeto/${cleanId}/comparativo-pre`)
-  },
-  /** Projetos do cliente (para buscar por cliente e depois escolher projeto) */
-  projetosPorCliente: (clienteId) =>
-    api.get(`/medicao-fina/projetos-por-cliente/${clienteId}`),
-  listarPorProjeto(projetoId) {
-    const cleanId = sanitizeMedicaoFinaId(projetoId)
-    if (!cleanId) return Promise.reject(new Error('Projeto não informado'))
-    return api.get(`/medicao-fina/projeto/${cleanId}`)
-  },
-  buscarPorProjetoAmbiente(projetoId, ambiente) {
-    const cleanId = sanitizeMedicaoFinaId(projetoId)
-    const nomeAmbiente = sanitizeMedicaoFinaAmbiente(ambiente)
-    if (!cleanId) return Promise.reject(new Error('Projeto não informado'))
-    if (!nomeAmbiente) return Promise.reject(new Error('Ambiente não informado'))
-    return api.get(`/medicao-fina/projeto/${cleanId}/ambiente`, { params: { ambiente: nomeAmbiente } })
-  },
-  async carregarAmbienteInicial(projetoId) {
-    const cleanId = sanitizeMedicaoFinaId(projetoId)
-    if (!cleanId) throw new Error('Projeto não informado')
-
-    const ambientesRes = await MedicaoFinaService.listarAmbientes(cleanId)
-    const ambientes = Array.isArray(ambientesRes?.data) ? ambientesRes.data : []
-    const ambientePadrao = ambientes[0] || 'Ambiente'
-    const medicaoRes = await MedicaoFinaService.buscarPorProjetoAmbiente(cleanId, ambientePadrao)
-
-    return {
-      ambientes,
-      ambientePadrao,
-      medicao: medicaoRes?.data ?? medicaoRes,
-    }
-  },
-  salvar: (dados) => api.post('/medicao-fina', dados),
-  atualizar: (id, dados) => api.put(`/medicao-fina/${id}`, dados),
-  /** Persiste croqui + JSON extrudável em `planta_baixa_json` (campo Json no Prisma). */
-  salvarPlantaBaixaJson: (medicaoId, plantaBaixaJson) =>
-    api.put(`/medicao-fina/${medicaoId}`, { planta_baixa_json: plantaBaixaJson }),
-  /** Totem: finalizar medição e enviar para engenharia (status Medido - Aguardando Técnico) */
-  finalizarTotem: (dados) => api.post('/medicao-fina/finalizar-totem', dados),
 }
 
 
@@ -726,7 +690,11 @@ export const AgendaFabricaService = {
   /** Apaga do banco todos os agendamentos com status CANCELADO (limpeza). */
   purgeCancelados() {
     return api.post('/agenda-fabrica/purge-cancelados');
-  }
+  },
+  /** Encerra manualmente a tarefa após o totem ter concluído a execução física. */
+  encerrar(id) {
+    return api.post(`/agenda-fabrica/${id}/encerrar`);
+  },
 };
 
 /** Agenda Geral: visão operacional consolidada de todos os clientes e etapas (Loja + Fábrica). */
@@ -744,20 +712,8 @@ export const TotemFabricaService = {
   getTarefas(params = {}) {
     return api.get('/totem-fabrica/tarefas', { params });
   },
-  /** Uma tarefa por id (para páginas dedicadas de medição). tipo: 'agenda_loja' | 'agenda_fabrica' */
-  getTarefa(id, tipo = 'agenda_fabrica') {
-    return api.get(`/totem-fabrica/tarefa/${id}`, { params: { tipo } });
-  },
   getConsumos(agendaFabricaId) {
     return api.get(`/totem-fabrica/${agendaFabricaId}/consumos`);
-  },
-  /** Medições fina sem projeto: lista projetos do cliente da tarefa (totem). */
-  listarProjetosMedicaoFina(agendaFabricaId) {
-    return api.get(`/totem-fabrica/${agendaFabricaId}/projetos-medicao-fina`);
-  },
-  /** Vincula projeto à tarefa de medição fina (agenda_fabrica). */
-  vincularProjetoMedicaoFina(agendaFabricaId, projeto_id) {
-    return api.post(`/totem-fabrica/${agendaFabricaId}/vincular-projeto`, { projeto_id });
   },
   /** tipo: 'agenda_fabrica' | 'agenda_loja' — agenda_loja = medição externa. */
   play(idParaPlay, body = {}) {
@@ -767,123 +723,32 @@ export const TotemFabricaService = {
   check(idParaPlay, body = {}) {
     return api.post(`/totem-fabrica/${idParaPlay}/check`, body);
   },
-  /** Medição por ambiente: retorna medicao_orcamento com ambientes (ou null). */
-  getMedicaoOrcamento(agendaLojaId) {
-    return api.get(`/totem-fabrica/${agendaLojaId}/medicao-orcamento`);
-  },
-  /** Pré-medição por cliente: retorna rascunho atual ou cria um novo. */
-  getOuCriarPreMedicao(clienteId) {
-    return api.get(`/totem-fabrica/pre-medicao/cliente/${clienteId}`);
-  },
-  /** Retorna rascunho de pré-medição pelo id. */
-  getPreMedicao(preMedicaoId) {
-    return api.get(`/totem-fabrica/pre-medicao/${preMedicaoId}`);
-  },
-  /** Salva/atualiza ambiente no rascunho da pré-medição. */
-  salvarAmbientePreMedicao(preMedicaoId, body) {
-    return api.post(`/totem-fabrica/pre-medicao/${preMedicaoId}/ambiente`, body);
-  },
-  /** Remove ambiente do rascunho da pré-medição. */
-  removerAmbientePreMedicao(preMedicaoId, ambienteId) {
-    return api.delete(`/totem-fabrica/pre-medicao/${preMedicaoId}/ambiente/${ambienteId}`);
-  },
-  /** Vincula o rascunho ao agendamento técnico e importa os ambientes para a medição oficial. */
-  vincularPreMedicao(preMedicaoId, agendaLojaId) {
-    return api.post(`/totem-fabrica/pre-medicao/${preMedicaoId}/vincular-agendamento/${agendaLojaId}`);
-  },
-  /** Fluxo Venda Direta: cria agenda automática e libera geração imediata de orçamento técnico. */
-  iniciarVendaDiretaComPreMedicao(preMedicaoId) {
-    return api.post(`/totem-fabrica/pre-medicao/${preMedicaoId}/digitar-medidas-agora`);
-  },
-  /** Fluxo Visita Técnica: cria agendamento para preenchimento da medida real via Totem. */
-  solicitarMedicaoTecnicaComPreMedicao(preMedicaoId) {
-    return api.post(`/totem-fabrica/pre-medicao/${preMedicaoId}/solicitar-medicao-tecnica`);
-  },
-  /** Salva um único ambiente (Cozinha, Sala, etc.). Body: { nome_ambiente, largura_m?, pe_direito_m?, profundidade_m?, observacoes?, medidas? }. */
-  salvarAmbienteMedicao(agendaLojaId, body) {
-    return api.post(`/totem-fabrica/${agendaLojaId}/salvar-ambiente-medicao`, body);
-  },
-  /** Salva uma parede (lado) de um ambiente. Body: { nome, largura_m?, pe_direito_m?, profundidade_m?, observacoes?, medidas? }. */
-  salvarParedeMedicao(ambienteId, body) {
-    return api.post(`/totem-fabrica/ambiente/${ambienteId}/parede`, body);
-  },
-  /** Exclui uma parede de um ambiente da medição (pré-orçamento). */
-  removerParedeMedicao(ambienteId, paredeId) {
-    return api.delete(`/totem-fabrica/ambiente/${ambienteId}/parede/${paredeId}`);
-  },
-  /** Exclui um ambiente inteiro da medição (pré-orçamento). */
-  removerAmbienteMedicao(agendaLojaId, ambienteId) {
-    return api.delete(`/totem-fabrica/${agendaLojaId}/ambiente/${ambienteId}`);
-  },
-  /** Concluir Medição para Orçamento: finaliza a tarefa. Body opcional: { observacoes? }. */
-  concluirMedicaoOrcamento(id, body = {}) {
-    return api.post(`/totem-fabrica/${id}/concluir-medicao-orcamento`, body);
-  }
 };
 
-/** Orçamento Técnico (novo fluxo): converte ambientes/paredes da medição em itens em tabela independente. Rotas em /orcamentos. */
-export const OrcamentoTecnicoService = {
-  /** Lista orçamentos técnicos. Params opcional: { agenda_loja_id }. */
-  listar(params = {}) {
-    return api.get('/orcamentos/tecnico-lista', { params });
-  },
-  /** Busca um orçamento técnico por id (com itens). */
-  buscar(id) {
-    return api.get(`/orcamentos/tecnico/${id}`);
-  },
-  remover(id) {
-    return api.delete(`/orcamento-tecnico/${id}`);
-  },
-  /** Lista agendamentos com medição concluída sem OT criado. */
-  listarComMedicao() {
-    return api.get('/orcamentos/tecnico-com-medicao');
-  },
-  /** Cria orçamento técnico a partir dos ambientes selecionados. Body: { agenda_loja_id, ambiente_ids: number[] }. */
-  criarNovo(body) {
-    return api.post('/orcamentos/tecnico-novo', body);
-  },
-  criarDireto(body) {
-    return api.post('/orcamentos/tecnico-direto', body);
-  },
-  finalizar(id, body) {
-    return api.post(`/orcamentos/tecnico/${id}/finalizar`, body);
-  },
-  /**
-   * Importa arquivo CSV ou XML (Promob / Corte Cloud) e retorna custo real cruzado com Aba 1 + Aba 2 + Aba 3.
-   * formData: FormData com campo "arquivo" + campos opcionais hora_homem_value, custo_fixo_fabrica_value, acrescimo_pct
-   */
-  importarProjeto(formData) {
-    return api.post('/orcamentos/tecnico-importar', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-  },
-  /**
-   * Vincula os itens importados à categoria comercial do produto no DB.
-   * Itens sem match aparecem em `itens_pendentes` para classificação manual.
-   * Body: { itens, hora_homem_value?, custo_fixo_fabrica_value?, acrescimo_pct? }
-   */
-  vincularMateriais(dados) {
-    return api.post('/orcamentos/tecnico-vincular', dados);
-  },
-  /**
-   * Gera PDF de Proposta Técnica para o cliente (apenas preço de venda, sem custos internos).
-   */
-  gerarPdfProposta(id, body) {
-    return api.post(`/orcamento-tecnico/${id}/pdf-proposta`, body);
-  },
-};
 
 /** Retalhos (sobras de material) — gestão e listagem por produto. */
 export const EstoqueRetalhoService = {
-  listar(produtoId) {
-    return api.get('/estoque/retalhos', { params: produtoId != null ? { produto_id: produtoId } : {} });
+  listar(filtros) {
+    return api.get('/estoque/retalhos', { params: filtros || {} });
   },
   listarPorProduto(produtoId) {
     return api.get(`/estoque/retalhos/por-produto/${produtoId}`);
   },
+  buscar(id) {
+    return api.get(`/estoque/retalhos/${id}`);
+  },
   criar(dto) {
     return api.post('/estoque/retalhos', dto);
-  }
+  },
+  salvar(id, dto) {
+    return id ? api.put(`/estoque/retalhos/${id}`, dto) : api.post('/estoque/retalhos', dto);
+  },
+  remover(id) {
+    return api.delete(`/estoque/retalhos/${id}`);
+  },
+  etiquetaUrl(id) {
+    return `${api.defaults.baseURL || '/api'}/estoque/retalhos/${id}/etiqueta`;
+  },
 };
 
 /** Apontamento de produção: horas reais por funcionário/etapa (rateio de custo). Cronômetro: 1 tarefa, vários funcionários, cada um com seu cronômetro. */
@@ -910,8 +775,8 @@ export const ApontamentoProducaoService = {
   startCronometro(payload) {
     return api.post('/apontamento-producao/cronometro/iniciar', payload);
   },
-  pauseCronometro(id) {
-    return api.post(`/apontamento-producao/cronometro/${id}/pausar`);
+  pauseCronometro(id, motivo) {
+    return api.post(`/apontamento-producao/cronometro/${id}/pausar`, motivo ? { motivo } : {});
   },
   resumeCronometro(id) {
     return api.post(`/apontamento-producao/cronometro/${id}/retomar`);
@@ -973,4 +838,19 @@ export const MigracaoDriveService = {
   excluirCliente(clienteId) {
     return api.delete(`/migracao-drive/cliente/${clienteId}/excluir`)
   },
+  listarArquivosCliente(clienteId) {
+    return api.get(`/migracao-drive/cliente/${clienteId}/arquivos`)
+  },
+  analisarArquivosCliente(clienteId, arquivoIds) {
+    return api.post(`/migracao-drive/cliente/${clienteId}/analisar-arquivos`, { arquivo_ids: arquivoIds })
+  },
 };
+
+// --- SERVIÇO DE GARANTIAS ---
+export const GarantiaService = {
+  listar: (filtros = {}) => api.get('/garantias', { params: filtros }),
+  buscar: (id) => api.get(`/garantias/${id}`),
+  salvar: (id, dados) => (id ? api.put(`/garantias/${id}`, dados) : api.post('/garantias', dados)),
+  remover: (id) => api.delete(`/garantias/${id}`),
+  agendar: (id, dados) => api.post(`/garantias/${id}/agendar`, dados),
+}

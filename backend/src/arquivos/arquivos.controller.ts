@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Delete,
   Get,
@@ -21,6 +22,7 @@ import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
 import { Public } from '../auth/public.decorator';
 import { ArquivosService, getUploadFolderFromOwnerType } from './arquivos.service';
+import { ConfirmarImportacaoLeituraDto } from './dto/confirmar-importacao-leitura.dto';
 
 function onlySafeName(v: any) {
   return (
@@ -96,6 +98,64 @@ export class ArquivosController {
       owner_type,
       owner_id: oid,
       categoria,
+    });
+  }
+
+  /** Consolida leitura dos documentos do cliente (CONTRATO → financeiro; projeto/orçamento → produção). */
+  @Get('consolidacao/cliente/:clienteId')
+  @Permissoes('arquivos.ver', 'clientes.ver')
+  consolidacaoCliente(
+    @Param('clienteId') clienteId: string,
+    @Query('orc_ids') orcIds?: string,
+  ) {
+    const id = Number(String(clienteId || '').replace(/\D/g, ''));
+    if (!id) throw new BadRequestException('clienteId inválido.');
+    const orcamentoArquivoIds = orcIds
+      ? String(orcIds).split(',').map(Number).filter((n) => n > 0)
+      : undefined;
+    return this.arquivosService.consolidacaoCliente(id, { orcamentoArquivoIds });
+  }
+
+  /** Lista todas as versões de orçamento do cliente agrupadas por nome base, com valor e ambientes extraídos. */
+  @Get('orcamentos/cliente/:clienteId')
+  @Permissoes('arquivos.ver', 'clientes.ver')
+  listarOrcamentosCliente(@Param('clienteId') clienteId: string) {
+    const id = Number(String(clienteId || '').replace(/\D/g, ''));
+    if (!id) throw new BadRequestException('clienteId inválido.');
+    return this.arquivosService.listarOrcamentosCliente(id);
+  }
+
+  /** Retorna o markup salvo na última ordem de serviço do cliente. */
+  @Get('markup/cliente/:clienteId')
+  @Permissoes('arquivos.ver', 'clientes.ver')
+  markupSalvoCliente(@Param('clienteId') clienteId: string) {
+    const id = Number(String(clienteId || '').replace(/\D/g, ''));
+    if (!id) throw new BadRequestException('clienteId inválido.');
+    return this.arquivosService.markupSalvoCliente(id);
+  }
+
+  /** Grava parcelas em contas_receber, cria ordem_servico (entrega) e producao_etapas por ambiente. */
+  @Post('importacao-leitura/confirmar/:clienteId')
+  @Permissoes('contas_receber.criar')
+  confirmarImportacaoLeitura(
+    @Param('clienteId') clienteId: string,
+    @Body() body: ConfirmarImportacaoLeituraDto,
+  ) {
+    const id = Number(String(clienteId || '').replace(/\D/g, ''));
+    if (!id) throw new BadRequestException('clienteId inválido.');
+    return this.arquivosService.confirmarImportacaoLeitura(id, {
+      data_entrega_prevista: body?.data_entrega_prevista,
+      valor_bruto: body?.valor_bruto,
+      valor_impostos_nf: body?.valor_impostos_nf,
+      valor_comissao: body?.valor_comissao,
+      valor_taxas_cartao: body?.valor_taxas_cartao,
+      valor_taxas_processamento_cartao: body?.valor_taxas_processamento_cartao,
+      valor_taxas_antecipacao_credito: body?.valor_taxas_antecipacao_credito,
+      valor_liquido: body?.valor_liquido,
+      taxa_nota_percentual: body?.taxa_nota_percentual,
+      tem_nota_fiscal: body?.tem_nota_fiscal,
+      comissionados: body?.comissionados,
+      parcelas: body?.parcelas,
     });
   }
 

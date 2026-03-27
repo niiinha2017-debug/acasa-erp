@@ -9,6 +9,7 @@ import {
   BadRequestException,
   Query,
   Req,
+  Body,
   Logger,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -148,5 +149,39 @@ export class MigracaoDriveController {
       throw new BadRequestException('ID de cliente inválido.');
     }
     return this.migracaoService.excluirClienteImportado(clienteId);
+  }
+
+  /**
+   * GET /migracao-drive/cliente/:id/arquivos
+   * Lista os arquivos salvos de um cliente importado (nome, categoria, mime, tamanho).
+   */
+  @Get('cliente/:id/arquivos')
+  async listarArquivosCliente(@Param('id') id: string) {
+    const clienteId = parseInt(id, 10);
+    if (isNaN(clienteId) || clienteId < 1) {
+      throw new BadRequestException('ID de cliente inválido.');
+    }
+    return this.migracaoService.listarArquivosCliente(clienteId);
+  }
+
+  /**
+   * POST /migracao-drive/cliente/:id/analisar-arquivos
+   * Roda extração financeira nos arquivos selecionados (IDs do banco).
+   * Body: { arquivo_ids: number[] }
+   */
+  @Post('cliente/:id/analisar-arquivos')
+  async analisarArquivosCliente(
+    @Param('id') id: string,
+    @Body() body: { arquivo_ids: number[] },
+  ) {
+    const clienteId = parseInt(id, 10);
+    if (isNaN(clienteId) || clienteId < 1) {
+      throw new BadRequestException('ID de cliente inválido.');
+    }
+    const ids = Array.isArray(body?.arquivo_ids) ? body.arquivo_ids.map(Number).filter(Boolean) : [];
+    if (!ids.length) {
+      throw new BadRequestException('Nenhum arquivo selecionado.');
+    }
+    return this.migracaoService.analisarArquivosCliente(clienteId, ids);
   }
 }

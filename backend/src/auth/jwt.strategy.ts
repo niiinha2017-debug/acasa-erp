@@ -4,6 +4,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { PermissoesService } from '../permissoes/permissoes.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -28,24 +29,38 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const userId = Number(payload?.sub);
     if (!userId) throw new UnauthorizedException('Token inválido');
 
-    const user = await this.prisma.usuarios.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        nome: true,
-        usuario: true,
-        email: true,
-        status: true,
-        is_admin: true,
-        funcionario_id: true,
-        funcionario: {
-          select: {
-            setor: true,
-            unidade: true,
+    let user: any = null;
+    try {
+      user = await this.prisma.usuarios.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          nome: true,
+          usuario: true,
+          email: true,
+          status: true,
+          is_admin: true,
+          funcionario_id: true,
+          funcionario: {
+            select: {
+              setor: true,
+              unidade: true,
+            },
           },
         },
-      },
-    });
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError ||
+        error instanceof Prisma.PrismaClientInitializationError ||
+        error instanceof Prisma.PrismaClientValidationError ||
+        error instanceof Prisma.PrismaClientRustPanicError ||
+        error instanceof Prisma.PrismaClientUnknownRequestError
+      ) {
+        throw new UnauthorizedException('Sessão inválida. Faça login novamente.');
+      }
+      throw error;
+    }
 
     if (!user) throw new UnauthorizedException('Usuário inválido');
 

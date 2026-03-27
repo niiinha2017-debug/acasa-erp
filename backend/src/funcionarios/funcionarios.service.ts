@@ -17,7 +17,22 @@ import {
   FUNCIONARIOS_BASE_CALCULO,
   FUNCIONARIOS_TIPOS_CUSTO_KEYWORDS,
 } from '../shared/constantes/funcionarios-custos';
+import {
+  INSS_FAIXAS_2025,
+  INSS_TETO_CONTRIBUICAO,
+  IRRF_FAIXAS_2025,
+  IRRF_DEDUCAO_DEPENDENTE,
+  FGTS_ALIQUOTA,
+  FERIAS_PERIODO_AQUISITIVO_MESES,
+  FERIAS_DIAS_DIREITO,
+  FERIAS_ADICIONAL_TERCIO,
+  FERIAS_TABELA_FALTAS,
+  FUNCIONARIO_STATUS_TRANSICOES,
+  FUNCIONARIO_STATUS_MOTIVOS_OBRIGATORIOS,
+  FUNCIONARIO_STATUS_LABELS,
+} from '../shared/constantes/tabelas-impostos';
 import { UpsertFuncionarioCustoConstanteDto } from './dto/upsert-funcionario-custo-constante.dto';
+import { AtualizarStatusFuncionarioDto } from './dto/atualizar-status-funcionario.dto';
 
 @Injectable()
 export class FuncionariosService {
@@ -310,7 +325,60 @@ export class FuncionariosService {
   async listar() {
     const funcionarios = await this.prisma.funcionarios.findMany({
       orderBy: { id: 'desc' },
-      include: {
+      select: {
+        id: true,
+        usuario_id: true,
+        nome: true,
+        cpf: true,
+        pis: true,
+        rg: true,
+        data_nascimento: true,
+        telefone: true,
+        whatsapp: true,
+        email: true,
+        estado_civil: true,
+        escolaridade: true,
+        unidade: true,
+        setor: true,
+        cargo: true,
+        funcao: true,
+        cep: true,
+        endereco: true,
+        numero: true,
+        complemento: true,
+        bairro: true,
+        cidade: true,
+        estado: true,
+        data_inicio: true,
+        admissao: true,
+        demissao: true,
+        salario_base: true,
+        impostos_encargos_percentual: true,
+        custo_total_mensal: true,
+        salario_adicional: true,
+        custo_hora: true,
+        tem_vale: true,
+        vale: true,
+        tem_vale_transporte: true,
+        vale_transporte: true,
+        horario_entrada_1: true,
+        horario_saida_1: true,
+        horario_entrada_2: true,
+        horario_saida_2: true,
+        horario_sabado_entrada_1: true,
+        horario_sabado_saida_1: true,
+        carga_horaria_dia: true,
+        carga_horaria_semana: true,
+        forma_pagamento: true,
+        dia_pagamento: true,
+        banco: true,
+        agencia: true,
+        conta: true,
+        pix_tipo_chave: true,
+        pix_chave: true,
+        status: true,
+        criado_em: true,
+        atualizado_em: true,
         usuario: {
           select: { id: true, status: true },
         },
@@ -1047,5 +1115,461 @@ export class FuncionariosService {
     }
 
     return data;
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // BASE DE CÁLCULO DE IMPOSTOS
+  // ══════════════════════════════════════════════════════════════════
+
+  /**
+   * Calcula INSS progressivo sobre o salário bruto.
+   * Aplica a tabela de faixas 2025 e limita ao teto de contribuição.
+   */
+  private calcularINSS(salarioBruto: number): {
+    contribuicao: number;
+    detalheFaixas: Array<{ faixa: string; base: number; aliquota: number; contribuicao: number }>;
+  } {
+    let contribuicaoTotal = 0;
+    const detalheFaixas: Array<{ faixa: string; base: number; aliquota: number; contribuicao: number }> = [];
+    let baseRestante = salarioBruto;
+    let limiteAnterior = 0;
+
+    for (const faixa of INSS_FAIXAS_2025) {
+      if (baseRestante <= 0) break;
+
+      const limiteAtual = faixa.limiteAte ?? Infinity;
+      const baseFaixa = faixa.limiteAte
+        ? Math.min(baseRestante, faixa.limiteAte - limiteAnterior)
+        : baseRestante;
+
+      if (baseFaixa <= 0) break;
+
+      const contribuicaoFaixa = this.round2(baseFaixa * faixa.aliquota);
+      contribuicaoTotal += contribuicaoFaixa;
+
+      detalheFaixas.push({
+        faixa: faixa.limiteAte
+          ? `Até R$ ${faixa.limiteAte.toFixed(2)}`
+          : `Acima de R$ ${limiteAnterior.toFixed(2)} (teto)`,
+        base: this.round2(baseFaixa),
+        aliquota: faixa.aliquota,
+        contribuicao: contribuicaoFaixa,
+      });
+
+      baseRestante -= baseFaixa;
+      limiteAnterior = faixa.limiteAte ?? limiteAnterior;
+    }
+
+    // Garante que não ultrapasse o teto
+    const contribuicao = this.round2(Math.min(contribuicaoTotal, INSS_TETO_CONTRIBUICAO));
+    return { contribuicao, detalheFaixas };
+  }
+
+  /**
+   * Calcula IRRF mensal após deduzir INSS e dependentes.
+   */
+  private calcularIRRF(salarioBruto: number, inssContribuicao: number, dependentes: number): {
+    baseCalculo: number;
+    deducaoDependentes: number;
+    aliquota: number;
+    parcelaDeduzir: number;
+    irrf: number;
+    irrfEfetivo: number;
+    faixaLabel: string;
+  } {
+    const deducaoDependentes = this.round2(dependentes * IRRF_DEDUCAO_DEPENDENTE);
+    const baseCalculo = this.round2(Math.max(0, salarioBruto - inssContribuicao - deducaoDependentes));
+
+    let aliquota = 0;
+    let parcelaDeduzir = 0;
+    let faixaLabel = 'Isento';
+
+    for (const faixa of IRRF_FAIXAS_2025) {
+      if (faixa.limiteAte === null || baseCalculo <= faixa.limiteAte) {
+        aliquota = faixa.aliquota;
+        parcelaDeduzir = faixa.parcelaDeduzir;
+        faixaLabel =
+          faixa.limiteAte
+            ? `Até R$ ${faixa.limiteAte.toFixed(2)} (${(faixa.aliquota * 100).toFixed(1)}%)`
+            : `Acima de R$ 5.877,72 (27,5%)`;
+        break;
+      }
+    }
+
+    const irrf = this.round2(Math.max(0, baseCalculo * aliquota - parcelaDeduzir));
+    const irrfEfetivo = salarioBruto > 0 ? this.round4(irrf / salarioBruto) : 0;
+
+    return { baseCalculo, deducaoDependentes, aliquota, parcelaDeduzir, irrf, irrfEfetivo, faixaLabel };
+  }
+
+  /**
+   * Retorna o detalhamento completo de impostos para um funcionário no mês de referência.
+   */
+  async calcularImpostos(
+    funcionarioId: number,
+    params?: { dependentes?: number; mes?: number; ano?: number },
+  ) {
+    const funcionario = await this.prisma.funcionarios.findUnique({
+      where: { id: funcionarioId },
+      select: {
+        id: true,
+        nome: true,
+        salario_base: true,
+        salario_adicional: true,
+        tem_vale: true,
+        vale: true,
+        tem_vale_transporte: true,
+        vale_transporte: true,
+        admissao: true,
+        demissao: true,
+        data_inicio: true,
+        status: true,
+      },
+    });
+    if (!funcionario) throw new NotFoundException('Funcionário não encontrado.');
+
+    const dependentes = Math.max(0, Number(params?.dependentes ?? 0));
+    const now = new Date();
+    const mes = params?.mes ?? now.getMonth() + 1;
+    const ano = params?.ano ?? now.getFullYear();
+
+    const salarioBase = this.toNum(funcionario.salario_base);
+    const salarioAdicional = this.toNum(funcionario.salario_adicional);
+    const vale = funcionario.tem_vale ? this.toNum(funcionario.vale) : 0;
+    const valeTransporte = funcionario.tem_vale_transporte ? this.toNum(funcionario.vale_transporte) : 0;
+
+    // Salário bruto = base + adicional (sem vales, que são benefícios não incidentes em INSS/IRRF)
+    const salarioBruto = this.round2(salarioBase + salarioAdicional);
+
+    // INSS
+    const inssCalculo = this.calcularINSS(salarioBruto);
+    const inssContribuicao = inssCalculo.contribuicao;
+
+    // IRRF
+    const irrfCalculo = this.calcularIRRF(salarioBruto, inssContribuicao, dependentes);
+    const irrf = irrfCalculo.irrf;
+
+    // FGTS (pago pelo empregador sobre salário bruto)
+    const fgts = this.round2(salarioBruto * FGTS_ALIQUOTA);
+
+    // Líquido do funcionário
+    const salarioLiquido = this.round2(Math.max(0, salarioBruto - inssContribuicao - irrf));
+
+    // Custo total para a empresa (salário bruto + FGTS + vales)
+    const custoTotalEmpresa = this.round2(salarioBruto + fgts + vale + valeTransporte);
+
+    // 13º proporcional estimado (base: meses trabalhados no ano)
+    const admissaoBase = funcionario.admissao ?? funcionario.data_inicio;
+    const mesesTrabalhados = this.calcularMesesTrabalhados(admissaoBase, mes, ano);
+    const decimoTerceiroBruto = this.round2((salarioBruto / 12) * mesesTrabalhados);
+    const fgtsDecimoTerceiro = this.round2(decimoTerceiroBruto * FGTS_ALIQUOTA);
+    const inssDecimoTerceiro = this.calcularINSS(decimoTerceiroBruto).contribuicao;
+
+    return {
+      funcionario: { id: funcionario.id, nome: funcionario.nome, status: funcionario.status },
+      referencia: { mes, ano },
+      salarios: {
+        salario_base: this.round2(salarioBase),
+        salario_adicional: this.round2(salarioAdicional),
+        salario_bruto: salarioBruto,
+      },
+      inss: {
+        contribuicao: inssContribuicao,
+        teto: INSS_TETO_CONTRIBUICAO,
+        detalhe_faixas: inssCalculo.detalheFaixas,
+      },
+      irrf: {
+        dependentes,
+        deducao_dependentes: irrfCalculo.deducaoDependentes,
+        base_calculo: irrfCalculo.baseCalculo,
+        aliquota_efetiva: `${(irrfCalculo.aliquota * 100).toFixed(1)}%`,
+        faixa: irrfCalculo.faixaLabel,
+        imposto: irrf,
+        aliquota_real_salario: `${(irrfCalculo.irrfEfetivo * 100).toFixed(2)}%`,
+      },
+      fgts: {
+        aliquota: `${(FGTS_ALIQUOTA * 100).toFixed(0)}%`,
+        deposito_mensal: fgts,
+        nota: 'Depositado pelo empregador; não desconta do salário líquido.',
+      },
+      beneficios: {
+        vale_alimentacao: vale,
+        vale_transporte: valeTransporte,
+        total_beneficios: this.round2(vale + valeTransporte),
+      },
+      resultado: {
+        salario_liquido: salarioLiquido,
+        custo_total_empresa: custoTotalEmpresa,
+        encargos_total: this.round2(inssContribuicao + irrf + fgts),
+      },
+      decimo_terceiro_estimado: {
+        meses_trabalhados_no_ano: mesesTrabalhados,
+        bruto: decimoTerceiroBruto,
+        inss_estimado: inssDecimoTerceiro,
+        fgts_estimado: fgtsDecimoTerceiro,
+        liquido_estimado: this.round2(Math.max(0, decimoTerceiroBruto - inssDecimoTerceiro)),
+      },
+    };
+  }
+
+  /** Calcula quantos meses o funcionário trabalhou até o mês/ano de referência dentro do ano corrente */
+  private calcularMesesTrabalhados(admissao: Date | null | undefined, mesRef: number, anoRef: number): number {
+    if (!admissao) return mesRef; // sem data: assume início do ano
+    const admDate = new Date(admissao);
+    const admAno = admDate.getFullYear();
+    const admMes = admDate.getMonth() + 1;
+
+    if (admAno > anoRef) return 0;
+    if (admAno < anoRef) return mesRef; // trabalha o ano inteiro até mesRef
+    // mesmo ano: conta a partir do mês de admissão
+    return Math.max(0, mesRef - admMes + 1);
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // CÁLCULO DE FÉRIAS
+  // ══════════════════════════════════════════════════════════════════
+
+  /**
+   * Calcula os períodos aquisitivos de férias e o montante a receber.
+   * Considera admissao ou data_inicio como início do vínculo.
+   */
+  async calcularFerias(funcionarioId: number) {
+    const funcionario = await this.prisma.funcionarios.findUnique({
+      where: { id: funcionarioId },
+      select: {
+        id: true,
+        nome: true,
+        salario_base: true,
+        admissao: true,
+        data_inicio: true,
+        demissao: true,
+        status: true,
+      },
+    });
+    if (!funcionario) throw new NotFoundException('Funcionário não encontrado.');
+
+    const dataInicio = funcionario.admissao ?? funcionario.data_inicio;
+    if (!dataInicio) {
+      return {
+        funcionario: { id: funcionario.id, nome: funcionario.nome },
+        aviso: 'Funcionário sem data de admissão ou data de início; cálculo indisponível.',
+        periodos: [],
+      };
+    }
+
+    const hoje = new Date();
+    const salarioBase = this.toNum(funcionario.salario_base);
+    const inicio = new Date(dataInicio);
+
+    // Gera todos os períodos aquisitivos desde a admissão
+    const periodos: Array<{
+      periodo: string;
+      inicio_aquisitivo: string;
+      fim_aquisitivo: string;
+      situacao: 'VENCIDO' | 'EM_CURSO' | 'A_VENCER';
+      dias_direito: number;
+      valor_ferias: number;
+      adicional_tercio: number;
+      total_ferias: number;
+      fgts_ferias: number;
+    }> = [];
+
+    let inicioAquisitivo = new Date(inicio);
+    let numPeriodo = 1;
+
+    while (true) {
+      const fimAquisitivo = new Date(inicioAquisitivo);
+      fimAquisitivo.setMonth(fimAquisitivo.getMonth() + FERIAS_PERIODO_AQUISITIVO_MESES);
+
+      if (inicioAquisitivo > hoje) break;
+
+      const situacao: 'VENCIDO' | 'EM_CURSO' | 'A_VENCER' =
+        fimAquisitivo <= hoje ? 'VENCIDO' : 'EM_CURSO';
+
+      const diasDireito = FERIAS_DIAS_DIREITO;
+      const valorFeriasDia = this.round4(salarioBase / 30);
+      const valorFerias = this.round2(valorFeriasDia * diasDireito);
+      const adicionalTercio = this.round2(valorFerias * FERIAS_ADICIONAL_TERCIO);
+      const totalFerias = this.round2(valorFerias + adicionalTercio);
+      const fgtsFerias = this.round2(valorFerias * FGTS_ALIQUOTA);
+
+      periodos.push({
+        periodo: `${numPeriodo}º Período`,
+        inicio_aquisitivo: inicioAquisitivo.toISOString().slice(0, 10),
+        fim_aquisitivo: fimAquisitivo.toISOString().slice(0, 10),
+        situacao,
+        dias_direito: diasDireito,
+        valor_ferias: valorFerias,
+        adicional_tercio: adicionalTercio,
+        total_ferias: totalFerias,
+        fgts_ferias: fgtsFerias,
+      });
+
+      if (fimAquisitivo > hoje) break;
+
+      // Avança para o próximo período
+      inicioAquisitivo = new Date(fimAquisitivo);
+      numPeriodo++;
+
+      // Limite de segurança: máximo 50 períodos
+      if (numPeriodo > 50) break;
+    }
+
+    const periodosVencidos = periodos.filter((p) => p.situacao === 'VENCIDO');
+    const periodoAtual = periodos.find((p) => p.situacao === 'EM_CURSO') ?? null;
+
+    // Férias proporcionais (caso rescisão hoje ou em AVISO_PREVIO)
+    const mesesPeriodoAtual = periodoAtual
+      ? this.diffMeses(new Date(periodoAtual.inicio_aquisitivo), hoje)
+      : 0;
+    const feriasProporcionalBruto = this.round2(
+      (salarioBase / 12) * mesesPeriodoAtual,
+    );
+    const adicionalTercioProporcional = this.round2(feriasProporcionalBruto * FERIAS_ADICIONAL_TERCIO);
+    const totalFeriasProporcional = this.round2(feriasProporcionalBruto + adicionalTercioProporcional);
+    const fgtsFeriasProporcional = this.round2(feriasProporcionalBruto * FGTS_ALIQUOTA);
+
+    const totalVencidoDevido = this.round2(
+      periodosVencidos.reduce((s, p) => s + p.total_ferias, 0),
+    );
+
+    return {
+      funcionario: { id: funcionario.id, nome: funcionario.nome, status: funcionario.status },
+      dados_base: {
+        data_admissao: inicio.toISOString().slice(0, 10),
+        salario_base: salarioBase,
+        hoje: hoje.toISOString().slice(0, 10),
+      },
+      periodos,
+      resumo: {
+        total_periodos_vencidos: periodosVencidos.length,
+        total_vencido_devido: totalVencidoDevido,
+        periodo_atual: periodoAtual
+          ? {
+              inicio: periodoAtual.inicio_aquisitivo,
+              fim: periodoAtual.fim_aquisitivo,
+              meses_trabalhados: mesesPeriodoAtual,
+            }
+          : null,
+      },
+      ferias_proporcionais: {
+        meses_trabalhados_periodo_atual: mesesPeriodoAtual,
+        valor_proporcional: feriasProporcionalBruto,
+        adicional_tercio: adicionalTercioProporcional,
+        total: totalFeriasProporcional,
+        fgts_sobre_ferias: fgtsFeriasProporcional,
+        nota: 'Calculado como se houvesse rescisão hoje (sem justa causa).',
+      },
+    };
+  }
+
+  /** Diferença em meses inteiros entre duas datas (data2 >= data1) */
+  private diffMeses(data1: Date, data2: Date): number {
+    const anos = data2.getFullYear() - data1.getFullYear();
+    const meses = data2.getMonth() - data1.getMonth();
+    const total = anos * 12 + meses;
+    // ajuste se não fechou o mês completo
+    const dia1 = data1.getDate();
+    const dia2 = data2.getDate();
+    return dia2 >= dia1 ? total : Math.max(0, total - 1);
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // FLUXO DE STATUS DO FUNCIONÁRIO
+  // ══════════════════════════════════════════════════════════════════
+
+  /**
+   * Valida e aplica uma transição de status ao funcionário.
+   * Lança BadRequestException se a transição for inválida ou faltando motivo obrigatório.
+   */
+  async atualizarStatusComValidacao(id: number, dto: AtualizarStatusFuncionarioDto) {
+    const funcionario = await this.prisma.funcionarios.findUnique({
+      where: { id },
+      select: { id: true, nome: true, status: true, admissao: true, demissao: true },
+    });
+    if (!funcionario) throw new NotFoundException('Funcionário não encontrado.');
+
+    const statusAtual = String(funcionario.status ?? '').toUpperCase();
+    const novoStatus = String(dto.status ?? '').toUpperCase();
+
+    // Verifica transição válida
+    const transicoesPermitidas: string[] = FUNCIONARIO_STATUS_TRANSICOES[statusAtual] ?? [];
+    if (!transicoesPermitidas.includes(novoStatus)) {
+      const labelAtual = FUNCIONARIO_STATUS_LABELS[statusAtual] ?? statusAtual;
+      const labelNovo = FUNCIONARIO_STATUS_LABELS[novoStatus] ?? novoStatus;
+      throw new BadRequestException(
+        `Transição inválida: "${labelAtual}" → "${labelNovo}". ` +
+          (transicoesPermitidas.length
+            ? `Permitido: ${transicoesPermitidas.map((s) => FUNCIONARIO_STATUS_LABELS[s] ?? s).join(', ')}.`
+            : 'Nenhuma transição permitida a partir deste status.'),
+      );
+    }
+
+    // Valida motivo obrigatório
+    if (FUNCIONARIO_STATUS_MOTIVOS_OBRIGATORIOS[novoStatus] && !dto.motivo?.trim()) {
+      const labelNovo = FUNCIONARIO_STATUS_LABELS[novoStatus] ?? novoStatus;
+      throw new BadRequestException(
+        `O campo "motivo" é obrigatório para a transição para "${labelNovo}".`,
+      );
+    }
+
+    // Prepara dados adicionais por tipo de transição
+    const dataRef = dto.data_referencia ? new Date(dto.data_referencia) : new Date();
+    const updateData: Record<string, unknown> = { status: novoStatus };
+
+    if (novoStatus === 'ATIVO' && !funcionario.admissao) {
+      updateData.admissao = dataRef;
+    }
+    if (novoStatus === 'INATIVO' && !funcionario.demissao) {
+      updateData.demissao = dataRef;
+    }
+
+    const atualizado = await this.prisma.funcionarios.update({
+      where: { id },
+      data: updateData as any,
+      select: { id: true, nome: true, status: true, admissao: true, demissao: true },
+    });
+
+    return {
+      ok: true,
+      funcionario: atualizado,
+      transicao: {
+        de: statusAtual,
+        de_label: FUNCIONARIO_STATUS_LABELS[statusAtual] ?? statusAtual,
+        para: novoStatus,
+        para_label: FUNCIONARIO_STATUS_LABELS[novoStatus] ?? novoStatus,
+        motivo: dto.motivo ?? null,
+        data_referencia: dataRef.toISOString().slice(0, 10),
+      },
+    };
+  }
+
+  /** Retorna os status disponíveis para transição a partir do status atual do funcionário */
+  async listarTransicoesDisponiveis(id: number) {
+    const funcionario = await this.prisma.funcionarios.findUnique({
+      where: { id },
+      select: { id: true, nome: true, status: true },
+    });
+    if (!funcionario) throw new NotFoundException('Funcionário não encontrado.');
+
+    const statusAtual = String(funcionario.status ?? '').toUpperCase();
+    const transicoesPermitidas: string[] = FUNCIONARIO_STATUS_TRANSICOES[statusAtual] ?? [];
+
+    return {
+      funcionario: { id: funcionario.id, nome: funcionario.nome },
+      status_atual: {
+        valor: statusAtual,
+        label: FUNCIONARIO_STATUS_LABELS[statusAtual] ?? statusAtual,
+      },
+      transicoes_disponiveis: transicoesPermitidas.map((s) => ({
+        valor: s,
+        label: FUNCIONARIO_STATUS_LABELS[s] ?? s,
+        motivo_obrigatorio: Boolean(FUNCIONARIO_STATUS_MOTIVOS_OBRIGATORIOS[s]),
+      })),
+      todos_os_status: Object.entries(FUNCIONARIO_STATUS_LABELS).map(([valor, label]) => ({
+        valor,
+        label,
+      })),
+    };
   }
 }

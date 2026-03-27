@@ -7,11 +7,13 @@ import {
   Post,
   Put,
   Query,
+  Res,
   HttpCode,
   HttpStatus,
   UseGuards,
   BadRequestException,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { FinanceiroService } from './financeiro.service';
 import { CreateContaReceberDto } from './dto/create-conta-receber.dto';
 import { UpdateContaReceberDto } from './dto/update-conta-receber.dto';
@@ -53,6 +55,56 @@ export class ContasReceberController {
     });
   }
 
+  // ✅ RELATÓRIO CONTAS A RECEBER — dados agregados
+  @Get('relatorio')
+  @Permissoes('contas_receber.ver')
+  async relatorio(
+    @Query('mes') mes?: string,
+    @Query('ano') ano?: string,
+    @Query('cliente_id') clienteId?: string,
+    @Query('forma_recebimento') forma_recebimento?: string,
+    @Query('status') statusFiltro?: string,
+  ) {
+    return this.service.gerarRelatorioContasReceber({
+      mes: mes ? Number(mes) : undefined,
+      ano: ano ? Number(ano) : undefined,
+      cliente_id: clienteId ? this.cleanIdOrFail(clienteId) : undefined,
+      forma_recebimento: forma_recebimento?.trim() || undefined,
+      status: statusFiltro?.trim() || undefined,
+    });
+  }
+
+  // ✅ RELATÓRIO CONTAS A RECEBER — PDF
+  @Get('relatorio/pdf')
+  @Permissoes('contas_receber.ver')
+  async relatorioPdf(
+    @Query('mes') mes?: string,
+    @Query('ano') ano?: string,
+    @Query('cliente_id') clienteId?: string,
+    @Query('forma_recebimento') forma_recebimento?: string,
+    @Query('status') statusFiltro?: string,
+    @Res() res?: Response,
+  ) {
+    const buffer = await this.service.gerarRelatorioContasReceberPdf({
+      mes: mes ? Number(mes) : undefined,
+      ano: ano ? Number(ano) : undefined,
+      cliente_id: clienteId ? this.cleanIdOrFail(clienteId) : undefined,
+      forma_recebimento: forma_recebimento?.trim() || undefined,
+      status: statusFiltro?.trim() || undefined,
+    });
+
+    const mesStr = mes || String(new Date().getMonth() + 1);
+    const anoStr = ano || String(new Date().getFullYear());
+    const filename = `relatorio-contas-receber-${mesStr.padStart(2, '0')}-${anoStr}.pdf`;
+
+    res!.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': buffer.length,
+    });
+    res!.end(buffer);
+  }
+
   @Get(':id')
   @Permissoes('contas_receber.ver')
   buscar(@Param('id') id: string) {
@@ -76,6 +128,13 @@ export class ContasReceberController {
   @HttpCode(HttpStatus.OK)
   receber(@Param('id') id: string, @Body() dto: ReceberContaReceberDto) {
     return this.service.receberContaReceber(this.cleanIdOrFail(id), dto);
+  }
+
+  @Post(':id/estornar')
+  @Permissoes('contas_receber.editar')
+  @HttpCode(HttpStatus.OK)
+  estornar(@Param('id') id: string, @Body() dto: ReceberContaReceberDto) {
+    return this.service.estornarContaReceber(this.cleanIdOrFail(id), dto);
   }
 
   @Delete(':id')

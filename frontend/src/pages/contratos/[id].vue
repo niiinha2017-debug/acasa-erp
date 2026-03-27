@@ -9,16 +9,7 @@
       >
         <template #actions>
           <RouterLink
-            v-if="!isEdit && vendaIdFromQuery"
-            :to="`/vendas/venda/${vendaIdFromQuery}`"
-            class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-text-soft hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"
-          >
-            <i class="pi pi-arrow-left text-xs"></i>
-            Voltar ao fechamento
-          </RouterLink>
-          <RouterLink
-            v-else
-            to="/contratos"
+            to="/clientes"
             class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-text-soft hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition-colors"
           >
             <i class="pi pi-arrow-left text-xs"></i>
@@ -241,7 +232,7 @@
             </div>
             <div class="flex justify-end gap-3 w-full sm:w-auto">
               <RouterLink
-                to="/contratos"
+                to="/clientes"
                 class="inline-flex items-center justify-center px-4 py-2.5 text-sm font-medium text-text-soft border border-border-ui rounded-xl hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
               >
                 Cancelar
@@ -489,7 +480,7 @@ async function carregarContrato() {
     pdfAssinadoArquivoId.value = raw?.pdf_assinado_arquivo_id ?? null
   } catch (e) {
     notify.error('Contrato não encontrado.')
-    router.push('/contratos')
+    router.push('/clientes')
   } finally {
     loading.value = false
   }
@@ -644,7 +635,7 @@ async function salvar() {
     if (isEdit.value) {
       await ContratosService.salvar(contratoId.value, payload)
       notify.success('Contrato atualizado.')
-      closeTabAndGo('/contratos')
+      closeTabAndGo('/clientes')
     } else {
       const { data } = await ContratosService.salvar(null, payload)
       notify.success('Contrato criado. Gere o PDF e envie por WhatsApp ou e-mail.')
@@ -652,7 +643,7 @@ async function salvar() {
       if (novoId) {
         closeTabAndGo(`/contratos/${novoId}`)
       } else {
-        closeTabAndGo('/contratos')
+        closeTabAndGo('/clientes')
       }
       return
     }

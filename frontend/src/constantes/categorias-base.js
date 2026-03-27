@@ -1,20 +1,6 @@
-export const CATEGORIAS_BASE = [
-  { label: 'Essencial', value: 'PRIMARIA' },
-  { label: 'Design', value: 'SECUNDARIA' },
-  { label: 'Premium', value: 'TERCIARIA' },
-  { label: 'Fita de Borda', value: 'FITA_BORDA' },
-  { label: 'Insumos', value: 'INSUMO' },
-  { label: 'Ferragens', value: 'FERRAGEM' },
-]
+export const CATEGORIAS_BASE = []
 
-export const CATEGORIA_BASE_LABEL = {
-  PRIMARIA: 'Essencial',
-  SECUNDARIA: 'Design',
-  TERCIARIA: 'Premium',
-  FITA_BORDA: 'Fita de Borda',
-  INSUMO: 'Insumos',
-  FERRAGEM: 'Ferragens',
-}
+export const CATEGORIA_BASE_LABEL = {}
 
 export const CATS_FERRAGEM = [
   { label: 'Dobradiça', value: 'DOBRADICA' },

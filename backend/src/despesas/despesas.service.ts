@@ -9,8 +9,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateDespesaDto } from './dto/create-despesa.dto';
 import { UpdateDespesaDto } from './dto/update-despesa.dto';
 import { STATUS_FINANCEIRO_KEYS as SF } from '../shared/constantes/status-financeiro';
-import { FUNCIONARIOS_TIPOS_CUSTO_KEYWORDS } from '../shared/constantes/funcionarios-custos';
-import { EstrategiaPrecosService } from '../estrategia-precos/estrategia-precos.service';
 
 type FiltrosDespesas = {
   status?: string;
@@ -22,46 +20,7 @@ type FiltrosDespesas = {
 
 @Injectable()
 export class DespesasService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly estrategiaPrecos: EstrategiaPrecosService,
-  ) {}
-
-  /**
-   * Identifica se uma despesa é relacionada a pessoal (funcionário, salário, vale etc.)
-   * usando FUNCIONARIOS_TIPOS_CUSTO_KEYWORDS e/ou vínculo de funcionario_id.
-   */
-  private isFuncionarioDespesa(fields: {
-    categoria?: string | null;
-    classificacao?: string | null;
-    local?: string | null;
-    funcionario_id?: number | string | null;
-  }): boolean {
-    const norm = (v?: string | null) =>
-      String(v || '')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .trim()
-        .toUpperCase();
-
-    const texto = [norm(fields.categoria), norm(fields.classificacao), norm(fields.local)].join(' ');
-    const isByFK =
-      Number.isFinite(Number(fields.funcionario_id)) && Number(fields.funcionario_id) > 0;
-    const isByKeyword = (FUNCIONARIOS_TIPOS_CUSTO_KEYWORDS as readonly string[]).some((k) =>
-      texto.includes(k),
-    );
-    return isByFK || isByKeyword;
-  }
-
-  /** Fire-and-forget: sincroniza CMV da Estratégia de Preços ao mudar despesa de pessoal. */
-  private dispararRecalculoCMV(): void {
-    this.estrategiaPrecos.recalcularCMVPorFuncionarios().catch((err: unknown) => {
-      console.warn(
-        '[CMV-TRIGGER] Falha ao recalcular CMV por funcionários:',
-        err instanceof Error ? err.message : String(err),
-      );
-    });
-  }
+  constructor(private readonly prisma: PrismaService) {}
 
   private addMeses(date: Date, meses: number) {
     const d = new Date(date);
@@ -275,15 +234,6 @@ export class DespesasService {
       }
       return primeiraDespesa;
     });
-
-    if (this.isFuncionarioDespesa({
-      categoria: dto.categoria,
-      classificacao: dto.classificacao,
-      local: dto.local,
-      funcionario_id: dto.funcionario_id,
-    })) {
-      this.dispararRecalculoCMV();
-    }
 
     return result;
   }
@@ -691,15 +641,6 @@ export class DespesasService {
       return despesaAtualizada;
     });
 
-    if (this.isFuncionarioDespesa({
-      categoria: String(dto.categoria ?? (atual as any).categoria ?? ''),
-      classificacao: String(dto.classificacao ?? (atual as any).classificacao ?? ''),
-      local: String(dto.local ?? (atual as any).local ?? ''),
-      funcionario_id: dto.funcionario_id ?? (atual as any).funcionario_id,
-    })) {
-      this.dispararRecalculoCMV();
-    }
-
     return result;
   }
 
@@ -713,15 +654,6 @@ export class DespesasService {
       // 2) apaga a despesa
       return tx.despesas.delete({ where: { id } });
     });
-
-    if (this.isFuncionarioDespesa({
-      categoria: String((despesaParaRemover as any).categoria ?? ''),
-      classificacao: String((despesaParaRemover as any).classificacao ?? ''),
-      local: String((despesaParaRemover as any).local ?? ''),
-      funcionario_id: (despesaParaRemover as any).funcionario_id,
-    })) {
-      this.dispararRecalculoCMV();
-    }
 
     return result;
   }

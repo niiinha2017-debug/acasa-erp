@@ -347,15 +347,31 @@
           </div>
 
           <div class="cliente-files">
-            <div class="cliente-files__header">
-              <span class="cliente-files__eyebrow">Anexos vinculados ao cadastro</span>
-              <button
-                type="button"
-                class="cliente-files__link"
-                @click="abrirArquivosCliente"
-              >
-                Abrir tela de arquivos
-              </button>
+            <div class="cliente-files__header cliente-files__header--split">
+              <div class="cliente-files__header-titles">
+                <span class="cliente-files__eyebrow">Anexos vinculados ao cadastro</span>
+                <p class="cliente-files__hint text-[11px] text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
+                  O sistema pode <strong class="text-slate-600 dark:text-slate-300">ler o texto</strong> de PDF e Word (orçamento, contrato) e montar
+                  <strong class="text-slate-600 dark:text-slate-300">financeiro + produção</strong>.
+                  Arquivos Promob (.promob), backup (.bak) e imagens não têm texto extraível aqui — use PDF/DOCX ou descreva manualmente no fluxo.
+                </p>
+              </div>
+              <div class="cliente-files__header-actions flex flex-wrap items-center justify-end gap-2 shrink-0">
+                <button
+                  type="button"
+                  class="cliente-files__link"
+                  @click="abrirArquivosCliente"
+                >
+                  Abrir tela de arquivos
+                </button>
+                <RouterLink
+                  v-if="can('arquivos.ver') && clienteId"
+                  :to="`/comercial/pos-venda-markup/${clienteId}`"
+                  class="cliente-files__link cliente-files__link--cta"
+                >
+                  Markup → Contas a Receber
+                </RouterLink>
+              </div>
             </div>
 
             <div v-if="loadingArquivos" class="cliente-files__state">
@@ -417,12 +433,6 @@
           <div class="mt-6 rounded-xl border border-border-ui/70 overflow-hidden">
             <div class="px-4 py-3 border-b border-border-ui flex items-center justify-between gap-3 flex-wrap">
               <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Contratos</span>
-              <RouterLink
-                :to="`/contratos/cliente/${clienteId}`"
-                class="text-xs font-semibold text-brand-primary hover:underline"
-              >
-                Ver todos os contratos
-              </RouterLink>
             </div>
             <div v-if="loadingContratos" class="px-4 py-8 text-center text-slate-500 text-sm">
               Carregando contratos...
@@ -558,11 +568,20 @@
 
 .cliente-files__header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
   padding: 0.95rem 0;
+}
+
+.cliente-files__header--split {
+  align-items: flex-start;
+}
+
+.cliente-files__header-titles {
+  min-width: 0;
+  flex: 1 1 12rem;
 }
 
 .cliente-files__eyebrow {
@@ -575,6 +594,26 @@
   color: var(--ds-color-primary);
   font-size: 0.78rem;
   font-weight: 600;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+}
+
+.cliente-files__link--cta {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.85rem;
+  border-radius: 0.75rem;
+  background: rgba(44, 111, 163, 0.12);
+  color: var(--ds-color-primary);
+  font-weight: 700;
+}
+
+.dark .cliente-files__link--cta {
+  background: rgba(56, 189, 248, 0.12);
 }
 
 .cliente-files__state {

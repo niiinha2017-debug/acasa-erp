@@ -58,12 +58,6 @@
                     <span class="text-sm font-semibold text-text-main truncate" :title="row.nome_produto">
                       {{ row.nome_produto || '-' }}
                     </span>
-                    <span
-                      class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide border shrink-0"
-                      :class="categoriaBaseBadgeClass(row?.categoria_base)"
-                    >
-                      {{ getCategoriaBaseLabel(row?.categoria_base) }}
-                    </span>
                   </div>
                   <span class="text-[10px] text-text-muted mt-0.5">
                     Ref. {{ String(row.id || 0).padStart(4, '0') }}
@@ -146,7 +140,6 @@ import { confirm } from '@/services/confirm'
 import { notify } from '@/services/notify'
 import { format } from '@/utils/format'
 import { can } from '@/services/permissions'
-import { getCategoriaBaseLabel } from '@/constantes/categorias-base'
 
 definePage({ meta: { perm: 'produtos.ver' } })
 
@@ -179,22 +172,6 @@ function rowClassEstoque(row) {
   return ''
 }
 
-function categoriaBaseBadgeClass(value) {
-  const key = String(value || '').trim().toUpperCase()
-  if (key === 'TERCIARIA') {
-    return 'bg-amber-50 text-amber-800 border-amber-200'
-  }
-  if (key === 'SECUNDARIA') {
-    return 'bg-emerald-50 text-emerald-800 border-emerald-200'
-  }
-  if (key === 'FITA_BORDA') {
-    return 'bg-orange-50 text-orange-800 border-orange-200'
-  }
-  if (key === 'INSUMO') {
-    return 'bg-blue-50 text-blue-800 border-blue-200'
-  }
-  return 'bg-slate-100 text-slate-700 border-slate-200'
-}
 
 function normalizarBusca(valor) {
   return String(valor || '')

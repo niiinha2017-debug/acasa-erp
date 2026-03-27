@@ -54,10 +54,9 @@ async function main() {
     // Permissoes padrao de primeiro acesso
     { chave: 'index.visualizar', descricao: 'Acesso a pagina inicial' },
     { chave: 'dashboard.visualizar', descricao: 'Acesso ao hub de relatorios' },
-    // Acompanhamento de status – tela /relatorios/acompanhamento-status
-    { chave: 'relatorios.acompanhamento_status.ver', descricao: 'Acompanhamento de status' },
     { chave: 'relatorios.dre_mensal.ver', descricao: 'DRE Mensal' },
     { chave: 'relatorios.dre_detalhada.ver', descricao: 'DRE Detalhada por Cliente/Ambiente' },
+    { chave: 'relatorios.fluxo_caixa.ver', descricao: 'Fluxo de Caixa' },
     { chave: 'comissao_producao.ver', descricao: 'Comissão de Produtividade da Fábrica' },
     { chave: 'pendente.visualizar', descricao: 'Acesso a tela de primeiro acesso' },
     { chave: 'alterar-senha', descricao: 'Acesso a alterar senha' },
@@ -73,8 +72,6 @@ async function main() {
 
     { chave: 'configuracoes.empresa.ver', descricao: 'Visualizar empresa' },
     { chave: 'configuracoes.empresa.editar', descricao: 'Editar empresa' },
-    { chave: 'configuracoes.estrategia_precos.ver', descricao: 'Visualizar estrategia de precos' },
-    { chave: 'configuracoes.estrategia_precos.editar', descricao: 'Editar estrategia de precos' },
 
     { chave: 'arquivos.ver', descricao: 'Visualizar arquivos' },
     { chave: 'arquivos.criar', descricao: 'Criar arquivos' },
@@ -215,6 +212,25 @@ async function main() {
     })
     await prisma.permissoes.deleteMany({
       where: { id: { in: legadoDb.map((p) => p.id) } },
+    })
+  }
+
+  /** Permissões de telas removidas do ERP (estratégia de preços, fluxo de clientes). */
+  const permissoesObsoletas = [
+    'configuracoes.estrategia_precos.ver',
+    'configuracoes.estrategia_precos.editar',
+    'relatorios.acompanhamento_status.ver',
+  ]
+  const obsoletasDb = await prisma.permissoes.findMany({
+    where: { chave: { in: permissoesObsoletas } },
+    select: { id: true },
+  })
+  if (obsoletasDb.length) {
+    await prisma.usuarios_permissoes.deleteMany({
+      where: { permissao_id: { in: obsoletasDb.map((p) => p.id) } },
+    })
+    await prisma.permissoes.deleteMany({
+      where: { id: { in: obsoletasDb.map((p) => p.id) } },
     })
   }
 

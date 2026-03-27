@@ -590,32 +590,172 @@ export class ClientesService {
   }
 
   /**
-   * Venda_ids com status AGENDAR_MEDIDA_FINA que possuem parcela vencida no Contas a Receber (origem_tipo=VENDA).
-   * Usado no Fluxo de Clientes para exibir alerta e bloquear agendamento apenas no bloco daquela venda.
+   * Lista clientes com atraso financeiro no mês anterior.
+   * Retorna `venda_ids` vazio para não acionar bloqueios no front antigo.
    */
-  async getPendenciasAgendamento(): Promise<{ venda_ids: number[] }> {
-    const vendas = await this.prisma.vendas.findMany({
-      where: { status: 'AGENDAR_MEDIDA_FINA' },
-      select: { id: true },
-    });
-    const vendaIds = vendas.map((v) => v.id).filter((id) => id > 0);
-    if (vendaIds.length === 0) return { venda_ids: [] };
+  async getPendenciasAgendamento(): Promise<{
+    venda_ids: number[];
+    cliente_ids: number[];
+    referencia: { ano: number; mes: number };
+    clientes: Array<{
+      cliente_id: number;
+      nome: string;
+      valor_atrasado: number;
+      quantidade_parcelas: number;
+      primeiro_vencimento: string | null;
+      ultimo_vencimento: string | null;
+    }>;
+  }> {
+    const hoje = getDataCorteContasReceber();
+    const inicioMesAtual = new Date(hoje.getFullYear(), hoje.getMonth(), 1, 0, 0, 0, 0);
+    const inicioMesAnterior = new Date(
+      inicioMesAtual.getFullYear(),
+      inicioMesAtual.getMonth() - 1,
+      1,
+      0,
+      0,
+      0,
+      0,
+    );
+    const fimMesAnterior = new Date(inicioMesAtual.getTime() - 1);
 
-    const dataCorte = getDataCorteContasReceber();
-    const contas = await this.prisma.contas_receber.findMany({
+    const titulos = await this.prisma.titulos_financeiros.findMany({
       where: {
-        origem_tipo: 'VENDA',
-        origem_id: { in: vendaIds },
-        vencimento_em: { lte: dataCorte },
-        status: { not: 'PAGO' },
+        conta_receber_id: { not: null },
+        conta_receber: {
+          cliente_id: { not: null },
+        },
+        vencimento_em: {
+          gte: inicioMesAnterior,
+          lte: fimMesAnterior,
+        },
+        status: { notIn: ['PAGO', 'CANCELADO'] },
       },
-      select: { origem_id: true },
+      select: {
+        valor: true,
+        vencimento_em: true,
+        conta_receber_id: true,
+        conta_receber: {
+          select: { cliente_id: true },
+        },
+      },
     });
-    const idsComPendencia = [
+
+    const contaIdsComTitulos = [
       ...new Set(
-        contas.map((c) => c.origem_id).filter((id): id is number => id != null && id > 0),
+        titulos
+          .map((t) => Number(t.conta_receber_id || 0))
+          .filter((id) => id > 0),
       ),
     ];
-    return { venda_ids: idsComPendencia };
+
+    const contas = await this.prisma.contas_receber.findMany({
+      where: {
+        cliente_id: { not: null },
+        ...(contaIdsComTitulos.length
+          ? { id: { notIn: contaIdsComTitulos } }
+          : {}),
+        vencimento_em: {
+          gte: inicioMesAnterior,
+          lte: fimMesAnterior,
+        },
+        status: { notIn: ['PAGO', 'CANCELADO'] },
+      },
+      select: {
+        cliente_id: true,
+        valor_original: true,
+        vencimento_em: true,
+      },
+    });
+
+    const agregados = new Map<
+      number,
+      {
+        valor_atrasado: number;
+        quantidade_parcelas: number;
+        primeiro_vencimento: Date | null;
+        ultimo_vencimento: Date | null;
+      }
+    >();
+    const acumular = (clienteId: number, valor: number, vencimento?: Date | null) => {
+      if (!clienteId || clienteId <= 0) return;
+      const atual = agregados.get(clienteId) || {
+        valor_atrasado: 0,
+        quantidade_parcelas: 0,
+        primeiro_vencimento: null,
+        ultimo_vencimento: null,
+      };
+      atual.valor_atrasado += Number(valor || 0);
+      atual.quantidade_parcelas += 1;
+      if (vencimento && !Number.isNaN(vencimento.getTime())) {
+        if (!atual.primeiro_vencimento || vencimento < atual.primeiro_vencimento) {
+          atual.primeiro_vencimento = vencimento;
+        }
+        if (!atual.ultimo_vencimento || vencimento > atual.ultimo_vencimento) {
+          atual.ultimo_vencimento = vencimento;
+        }
+      }
+      agregados.set(clienteId, atual);
+    };
+
+    for (const titulo of titulos) {
+      acumular(
+        Number(titulo.conta_receber?.cliente_id || 0),
+        Number(titulo.valor || 0),
+        titulo.vencimento_em ?? null,
+      );
+    }
+    for (const conta of contas) {
+      acumular(
+        Number(conta.cliente_id || 0),
+        Number(conta.valor_original || 0),
+        conta.vencimento_em ?? null,
+      );
+    }
+
+    const clienteIdsComPendencia = [
+      ...new Set(
+        Array.from(agregados.keys()).filter((id) => id > 0),
+      ),
+    ];
+    const clientesRows = clienteIdsComPendencia.length
+      ? await this.prisma.cliente.findMany({
+          where: { id: { in: clienteIdsComPendencia } },
+          select: { id: true, nome_completo: true, razao_social: true },
+        })
+      : [];
+    const nomePorCliente = clientesRows.reduce((acc, cliente) => {
+      acc.set(
+        cliente.id,
+        String(cliente.nome_completo || cliente.razao_social || `Cliente #${cliente.id}`),
+      );
+      return acc;
+    }, new Map<number, string>());
+
+    return {
+      venda_ids: [],
+      cliente_ids: clienteIdsComPendencia,
+      referencia: {
+        ano: inicioMesAnterior.getFullYear(),
+        mes: inicioMesAnterior.getMonth() + 1,
+      },
+      clientes: clienteIdsComPendencia
+        .map((clienteId) => {
+          const agg = agregados.get(clienteId);
+          return {
+            cliente_id: clienteId,
+            nome: nomePorCliente.get(clienteId) || `Cliente #${clienteId}`,
+            valor_atrasado: Math.round(((agg?.valor_atrasado || 0) + Number.EPSILON) * 100) / 100,
+            quantidade_parcelas: Number(agg?.quantidade_parcelas || 0),
+            primeiro_vencimento: agg?.primeiro_vencimento
+              ? agg.primeiro_vencimento.toISOString()
+              : null,
+            ultimo_vencimento: agg?.ultimo_vencimento
+              ? agg.ultimo_vencimento.toISOString()
+              : null,
+          };
+        })
+        .sort((a, b) => b.valor_atrasado - a.valor_atrasado),
+    };
   }
 }

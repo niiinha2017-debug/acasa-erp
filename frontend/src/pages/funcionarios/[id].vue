@@ -296,6 +296,36 @@
             <div class="w-full border-t border-border-ui/50"></div>
           </div>
           <div class="relative flex justify-center">
+            <span class="section-title bg-bg-page dark:bg-slate-900 px-4 text-[10px] font-bold uppercase tracking-wider text-emerald-500">
+              Porcentagem da Comissão
+            </span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-6">
+          <Input
+            class="col-span-12 md:col-span-4"
+            v-model="form.comissao_producao_percentual"
+            label="% Comissão de Produção"
+            type="number"
+            step="0.01"
+            min="0"
+            max="100"
+            placeholder="0,00"
+          />
+          <div class="col-span-12 md:col-span-8 flex items-end">
+            <p class="text-xs text-text-muted pb-2">
+              Percentual individual que o funcionário recebe sobre o fundo de comissão de produção.
+              A soma de todos os percentuais dos funcionários ativos determina a distribuição.
+            </p>
+          </div>
+        </div>
+
+        <div class="section-divider relative">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-border-ui/50"></div>
+          </div>
+          <div class="relative flex justify-center">
             <span class="section-title bg-bg-page dark:bg-slate-900 px-4 text-[10px] font-bold uppercase tracking-wider text-slate-400">
               Forma de Pagamento
             </span>
@@ -505,6 +535,7 @@ const form = ref({
   horario_sabado_saida_1: '',
   carga_horaria_dia: '',
   carga_horaria_semana: '',
+  comissao_producao_percentual: '',
   criar_usuario: true,
 })
 

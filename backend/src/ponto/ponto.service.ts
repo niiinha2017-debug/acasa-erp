@@ -331,6 +331,9 @@ export class PontoService {
       })
       .catch(() => {});
 
+    // Sincronizar apontamentos de produção (fire-and-forget)
+    this.sincronizarApontamentosProducao(funcionario_id, tipo).catch(() => {});
+
     const transacao_id = createHash('sha256')
       .update(
         `${registro.id}|${registro.data_hora.toISOString()}|${registro.funcionario_id}`,
@@ -338,6 +341,91 @@ export class PontoService {
       .digest('hex')
       .slice(0, 32);
     return { ...registro, transacao_id };
+  }
+
+  /**
+   * Ao bater ponto de SAÍDA, pausa automaticamente todos os cronômetros
+   * ativos do funcionário (motivo ALMOCO).
+   * Ao bater ponto de ENTRADA, retoma os cronômetros que foram pausados
+   * automaticamente pelo almoço.
+   */
+  private async sincronizarApontamentosProducao(
+    funcionario_id: number,
+    tipo: PontoTipoRegistro,
+  ) {
+    if (tipo === PontoTipoRegistro.SAIDA) {
+      // Pausar todos os cronômetros ativos (rodando) deste funcionário
+      const rodando = await this.prisma.apontamento_producao.findMany({
+        where: {
+          funcionario_id,
+          inicio_em: { not: null },
+          fim_em: null,
+          OR: [
+            { pausa_inicio_em: null },
+            { pausa_fim_em: { not: null } },
+          ],
+        },
+        select: {
+          id: true,
+          pausa_inicio_em: true,
+          pausa_fim_em: true,
+          pausa_total_segundos: true,
+        },
+      });
+
+      const agora = new Date();
+      for (const ap of rodando) {
+        let pausaTotal = Number(ap.pausa_total_segundos ?? 0);
+        const data: Record<string, any> = {
+          pausa_inicio_em: agora,
+          pausa_fim_em: null,
+          motivo_pausa: 'ALMOCO',
+        };
+        if (ap.pausa_inicio_em && ap.pausa_fim_em) {
+          pausaTotal +=
+            (ap.pausa_fim_em.getTime() - ap.pausa_inicio_em.getTime()) / 1000;
+          data.pausa_total_segundos = Math.round(pausaTotal * 100) / 100;
+        }
+        await this.prisma.apontamento_producao.update({
+          where: { id: ap.id },
+          data,
+        });
+      }
+    } else {
+      // ENTRADA: retomar cronômetros pausados por ALMOCO
+      const pausados = await this.prisma.apontamento_producao.findMany({
+        where: {
+          funcionario_id,
+          inicio_em: { not: null },
+          fim_em: null,
+          pausa_inicio_em: { not: null },
+          pausa_fim_em: null,
+          motivo_pausa: 'ALMOCO',
+        },
+        select: {
+          id: true,
+          pausa_inicio_em: true,
+          pausa_total_segundos: true,
+        },
+      });
+
+      const agora = new Date();
+      for (const ap of pausados) {
+        let pausaTotal = Number(ap.pausa_total_segundos ?? 0);
+        if (ap.pausa_inicio_em) {
+          pausaTotal +=
+            (agora.getTime() - ap.pausa_inicio_em.getTime()) / 1000;
+        }
+        await this.prisma.apontamento_producao.update({
+          where: { id: ap.id },
+          data: {
+            pausa_fim_em: agora,
+            pausa_inicio_em: null,
+            pausa_total_segundos: Math.round(pausaTotal * 100) / 100,
+          },
+        });
+      }
+    }
   }
 
   private transacaoId(registro: {

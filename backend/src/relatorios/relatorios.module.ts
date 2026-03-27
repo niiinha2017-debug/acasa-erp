@@ -1,13 +1,18 @@
 import { Module } from '@nestjs/common';
 import { FinanceiroModule } from '../financeiro/financeiro.module';
+import { PrismaModule } from '../prisma/prisma.module';
 import { DreController } from './dre.controller';
 import { DreDetalhadaController } from './dre-detalhada.controller';
+import { RelatorioTotemController } from './relatorio-totem.controller';
+import { RelatorioServicosCorteController } from './relatorio-servico-corte.controller';
+import { RelatorioFluxoCaixaController } from './relatorio-fluxo-caixa.controller';
 import { DreDetalhadaService } from './dre-detalhada.service';
+import { RelatorioTotemService } from './relatorio-totem.service';
 
 @Module({
-  imports: [FinanceiroModule],
-  controllers: [DreController, DreDetalhadaController],
-  providers: [DreDetalhadaService],
-  exports: [DreDetalhadaService],
+  imports: [FinanceiroModule, PrismaModule],
+  controllers: [DreController, DreDetalhadaController, RelatorioTotemController, RelatorioServicosCorteController, RelatorioFluxoCaixaController],
+  providers: [DreDetalhadaService, RelatorioTotemService],
+  exports: [DreDetalhadaService, RelatorioTotemService],
 })
 export class RelatoriosModule {}

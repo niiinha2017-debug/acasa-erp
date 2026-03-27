@@ -2,139 +2,53 @@
 <template>
   <PageShell :padded="false">
     <section class="contas-receber-page ds-page-context ds-page-context--list animate-page-in">
-      <PageHeader
-        title="Contas a Receber"
-        subtitle="Receitas previstas, vencidas e recebidas por cliente ou fornecedor."
-        icon="pi pi-arrow-up-right"
-      >
-        <template #actions>
-          <div class="contas-receber-page__actions ds-page-context__actions">
-            <Button v-if="mostrarPreviewReceber" @click="abrirReceberPreview" variant="secondary">
-              <i class="pi pi-eye"></i>
-              Pré-visualizar modal
-            </Button>
-            <Button @click="carregar" variant="primary">
-              <i class="pi pi-refresh"></i>
-              Atualizar dados
-            </Button>
-          </div>
-        </template>
-      </PageHeader>
+      <div class="contas-receber-page__top-bar">
+        <h1 class="contas-receber-page__top-title">Contas a Receber</h1>
+
+        <div class="contas-receber-page__top-filters">
+          <SearchInput
+            v-model="filtroTexto"
+            placeholder="Buscar cliente, fornecedor..."
+            class="contas-receber-page__top-search"
+          />
+
+          <MonthReferenceField
+            v-model="mesReferencia"
+            class="contas-receber-page__top-month"
+            label=""
+          />
+        </div>
+      </div>
+
+      <div class="contas-receber-page__sub-bar">
+        <nav class="contas-receber-page__tabs-nav">
+          <button
+            v-for="tab in tabs"
+            :key="tab.id"
+            type="button"
+            class="contas-receber-page__tab"
+            :class="{ 'contas-receber-page__tab--active': abaAtiva === tab.id }"
+            @click="abaAtiva = tab.id"
+          >
+            <span>{{ tab.label }}</span>
+            <span class="contas-receber-page__tab-count">{{ tab.count }}</span>
+          </button>
+        </nav>
+
+        <div class="contas-receber-page__inline-totals">
+          <span class="contas-receber-page__inline-stat contas-receber-page__inline-stat--total">
+            Total <strong>{{ format.currency(totais.total) }}</strong>
+          </span>
+          <span class="contas-receber-page__inline-stat contas-receber-page__inline-stat--success">
+            Recebido <strong>{{ format.currency(totais.recebido) }}</strong>
+          </span>
+          <span class="contas-receber-page__inline-stat contas-receber-page__inline-stat--warning">
+            Aberto <strong>{{ format.currency(totais.aberto) }}</strong>
+          </span>
+        </div>
+      </div>
 
       <div class="contas-receber-page__content ds-page-context__content">
-        <section class="contas-receber-page__hero">
-          <div class="contas-receber-page__hero-main">
-            <span class="contas-receber-page__eyebrow">Competência {{ competenciaAtual }}</span>
-            <h2 class="contas-receber-page__hero-title">{{ resumoAbaAtiva.titulo }}</h2>
-            <p class="contas-receber-page__hero-copy">{{ resumoAbaAtiva.descricao }}</p>
-          </div>
-
-          <div class="contas-receber-page__hero-stats">
-            <article class="contas-receber-page__hero-stat">
-              <span class="contas-receber-page__hero-stat-label">Linhas exibidas</span>
-              <strong class="contas-receber-page__hero-stat-value">{{ contagens.total }}</strong>
-              <span class="contas-receber-page__hero-stat-help">Resultado da aba ativa após a busca local.</span>
-            </article>
-            <article class="contas-receber-page__hero-stat">
-              <span class="contas-receber-page__hero-stat-label">Recebido</span>
-              <strong class="contas-receber-page__hero-stat-value">{{ format.currency(totais.recebido) }}</strong>
-              <span class="contas-receber-page__hero-stat-help">Valores já baixados dentro da competência.</span>
-            </article>
-            <article class="contas-receber-page__hero-stat">
-              <span class="contas-receber-page__hero-stat-label">Em aberto</span>
-              <strong class="contas-receber-page__hero-stat-value">{{ format.currency(totais.aberto) }}</strong>
-              <span class="contas-receber-page__hero-stat-help">Saldo que ainda depende de recebimento.</span>
-            </article>
-          </div>
-        </section>
-
-        <section class="contas-receber-page__summary-grid">
-          <article class="contas-receber-page__summary-card ds-surface">
-            <div class="contas-receber-page__summary-head">
-              <div>
-                <p class="contas-receber-page__summary-label">Total da aba</p>
-                <p class="contas-receber-page__summary-value">{{ format.currency(totais.total) }}</p>
-              </div>
-              <span class="ds-status-pill ds-status-pill--neutral contas-receber-page__summary-pill">{{ contagens.total }} registros</span>
-            </div>
-            <p class="contas-receber-page__summary-help">Consolidado financeiro da visão selecionada.</p>
-          </article>
-
-          <article class="contas-receber-page__summary-card ds-alert ds-alert--success">
-            <div class="contas-receber-page__summary-head">
-              <div>
-                <p class="contas-receber-page__summary-label text-[color:var(--ds-color-success)]">Recebidos</p>
-                <p class="contas-receber-page__summary-value text-[color:var(--ds-color-success)]">{{ format.currency(totais.recebido) }}</p>
-              </div>
-              <span class="ds-status-pill ds-status-pill--success contas-receber-page__summary-pill">{{ contagens.recebido }} baixas</span>
-            </div>
-            <p class="contas-receber-page__summary-help text-[color:var(--ds-color-success)]">Entradas já confirmadas no caixa.</p>
-          </article>
-
-          <article class="contas-receber-page__summary-card ds-alert ds-alert--warning">
-            <div class="contas-receber-page__summary-head">
-              <div>
-                <p class="contas-receber-page__summary-label text-[color:var(--ds-color-warning)]">Em aberto</p>
-                <p class="contas-receber-page__summary-value text-[color:var(--ds-color-warning)]">{{ format.currency(totais.aberto) }}</p>
-              </div>
-              <span class="ds-status-pill ds-status-pill--warning contas-receber-page__summary-pill">{{ contagens.aberto }} pendências</span>
-            </div>
-            <p class="contas-receber-page__summary-help text-[color:var(--ds-color-warning)]">Títulos que ainda dependem de recebimento.</p>
-          </article>
-        </section>
-
-        <section class="contas-receber-page__filters">
-          <div class="contas-receber-page__filters-header">
-            <div>
-              <span class="contas-receber-page__section-kicker">Filtro operacional</span>
-              <h3 class="contas-receber-page__section-title">Recorte da central</h3>
-            </div>
-            <p class="contas-receber-page__section-copy">
-              Busque cliente, fornecedor, ambiente ou observação e ajuste a competência para recalcular os recebimentos desta central.
-            </p>
-          </div>
-
-          <div class="contas-receber-page__filters-grid">
-            <div class="contas-receber-page__field contas-receber-page__field--search">
-              <span class="contas-receber-page__field-label">Busca</span>
-              <SearchInput
-                v-model="filtroTexto"
-                placeholder="Buscar cliente, fornecedor, ambiente ou observação..."
-              />
-            </div>
-
-            <MonthReferenceField
-              v-model="mesReferencia"
-              class="contas-receber-page__date-field contas-receber-page__field--month"
-              label="Mês de referência"
-            />
-
-            <div class="contas-receber-page__field contas-receber-page__field--action">
-              <Button @click="carregar" variant="secondary" class="contas-receber-page__refresh-button">
-                <i class="pi pi-search"></i>
-                Aplicar filtros
-              </Button>
-            </div>
-          </div>
-        </section>
-
-        <section class="contas-receber-page__tabs">
-          <div class="contas-receber-page__tabs-scroll no-scrollbar-x">
-            <nav class="contas-receber-page__tabs-nav">
-              <button
-                v-for="tab in tabs"
-                :key="tab.id"
-                type="button"
-                class="contas-receber-page__tab"
-                :class="{ 'contas-receber-page__tab--active': abaAtiva === tab.id }"
-                @click="abaAtiva = tab.id"
-              >
-                <span>{{ tab.label }}</span>
-                <span class="contas-receber-page__tab-count">{{ tab.count }}</span>
-              </button>
-            </nav>
-          </div>
-        </section>
 
         <section class="contas-receber-page__table">
           <Loading v-if="loading" />
@@ -154,7 +68,7 @@
                     {{ partePrincipal(row) }}
                   </span>
                   <span v-if="Array.isArray(row.ambientes_venda) && row.ambientes_venda.length" class="contas-receber-page__ambient-copy">
-                    Ambientes: {{ row.ambientes_venda.join(', ') }}
+                    {{ row.ambientes_venda.slice(0, 3).join(', ') }}{{ row.ambientes_venda.length > 3 ? ` +${row.ambientes_venda.length - 3}` : '' }}
                   </span>
                 </div>
               </div>
@@ -223,6 +137,30 @@
                     Pago
                   </span>
                   <span class="contas-receber-page__action-date">{{ formatarDataAcao(row.recebido_em) }}</span>
+                  <button
+                    v-if="!temParcelas(row)"
+                    type="button"
+                    class="contas-receber-page__parcela-button contas-receber-page__parcela-button--danger"
+                    :disabled="acaoLoadingId === row.id"
+                    @click="estornarConta(row)"
+                  >
+                    Excluir baixa
+                  </button>
+                  <div
+                    v-if="temParcelas(row) && parcelasParaExcluirBaixa(row).length"
+                    class="contas-receber-page__parcelas-actions"
+                  >
+                    <button
+                      v-for="parcela in parcelasParaExcluirBaixa(row)"
+                      :key="`estornar-parcela-${row.id}-${parcela.id || parcela.parcela}`"
+                      type="button"
+                      class="contas-receber-page__parcela-button contas-receber-page__parcela-button--danger"
+                      :disabled="acaoLoadingId === row.id"
+                      @click="estornarParcelaRapida(row, parcela)"
+                    >
+                      Excluir {{ parcela.parcela }}x
+                    </button>
+                  </div>
                 </template>
 
                 <template v-else-if="normalizeStatus(row.status) === 'CANCELADO'">
@@ -230,7 +168,7 @@
                 </template>
 
                 <button
-                  v-else
+                  v-else-if="!temParcelas(row)"
                   type="button"
                   class="contas-receber-page__action-button"
                   :disabled="acaoLoadingId === row.id"
@@ -239,6 +177,45 @@
                   <i class="pi pi-check text-xs"></i>
                   Receber
                 </button>
+                <button
+                  v-if="podeExcluirLancamento(row)"
+                  type="button"
+                  class="contas-receber-page__parcela-button contas-receber-page__parcela-button--danger"
+                  :disabled="acaoLoadingId === row.id"
+                  @click="excluirContaAberta(row)"
+                >
+                  Excluir lançamento
+                </button>
+                <div
+                  v-if="!isContaRecebida(row) && parcelasPendentes(row).length"
+                  class="contas-receber-page__parcelas-actions"
+                >
+                  <button
+                    v-for="parcela in parcelasPendentes(row)"
+                    :key="`receber-parcela-${row.id}-${parcela.id || parcela.parcela}`"
+                    type="button"
+                    class="contas-receber-page__parcela-button"
+                    :disabled="acaoLoadingId === row.id"
+                    @click="abrirReceberParcela(row, parcela)"
+                  >
+                    {{ parcela.parcela }}x
+                  </button>
+                </div>
+                <div
+                  v-if="!isContaRecebida(row) && parcelasPagas(row).length"
+                  class="contas-receber-page__parcelas-actions"
+                >
+                  <button
+                    v-for="parcela in parcelasPagas(row)"
+                    :key="`estornar-parcela-open-${row.id}-${parcela.id || parcela.parcela}`"
+                    type="button"
+                    class="contas-receber-page__parcela-button contas-receber-page__parcela-button--danger"
+                    :disabled="acaoLoadingId === row.id"
+                    @click="estornarParcelaRapida(row, parcela)"
+                  >
+                    Excluir {{ parcela.parcela }}x
+                  </button>
+                </div>
               </div>
             </template>
           </Table>
@@ -279,12 +256,20 @@
 
               <div class="contas-receber-page__dialog-body">
                 <div class="contas-receber-page__dialog-grid">
-                  <div class="col-span-12 md:col-span-6">
-                    <Input :modelValue="receberModal.parteLabel" label="Parte" readonly />
+                  <div v-if="receberModal.parcela_numero" class="col-span-12 md:col-span-6">
+                    <Input
+                      :modelValue="`${receberModal.parcela_numero}x`"
+                      label="Parcela em baixa"
+                      readonly
+                    />
                   </div>
 
                   <div class="col-span-12 md:col-span-6">
-                    <Input :modelValue="receberModal.origemLabel" label="Origem" readonly />
+                    <Input :modelValue="parteLabel" label="Parte" readonly />
+                  </div>
+
+                  <div class="col-span-12 md:col-span-6">
+                    <Input :modelValue="origemLabel" label="Origem" readonly />
                   </div>
 
                   <div class="col-span-12 md:col-span-6">
@@ -300,16 +285,26 @@
 
                 <div class="contas-receber-page__dialog-grid">
                   <div class="col-span-12 md:col-span-6">
-                    <Input
+                    <label class="contas-receber-page__dialog-label">
+                      Forma de recebimento
+                    </label>
+                    <select
                       v-model="receberModal.forma_recebimento_chave"
-                      label="Forma de recebimento"
-                      placeholder="Ex: PIX, DINHEIRO, CARTAO..."
-                    />
+                      class="contas-receber-page__dialog-input"
+                    >
+                      <option
+                        v-for="opt in formasPagamentoOptions"
+                        :key="opt.value"
+                        :value="opt.value"
+                      >
+                        {{ opt.label }}
+                      </option>
+                    </select>
                     <div
-                      v-if="receberModal.formas_disponiveis.length > 1"
+                      v-if="receberModal.formas_previstas.length > 1"
                       class="contas-receber-page__dialog-alert contas-receber-page__dialog-alert--warning"
                     >
-                      Pagamento misto: {{ receberModal.formas_disponiveis.join(' + ') }}. Selecione a forma desta baixa.
+                      Pagamento misto: {{ receberModal.formas_previstas.join(' + ') }}. Selecione a forma desta baixa.
                     </div>
                   </div>
 
@@ -472,7 +467,7 @@
 import { ref, computed, reactive, onMounted, onUnmounted, watch } from 'vue'
 import { FinanceiroService, VendaService } from '@/services/index'
 import { format } from '@/utils/format'
-import { ANTECIPACAO, getTaxaAntecipacaoPercentual } from '@/constantes'
+import { ANTECIPACAO, FORMAS_PAGAMENTO, getTaxaAntecipacaoPercentual } from '@/constantes'
 import MonthReferenceField from '@/components/ui/MonthReferenceField.vue'
 
 definePage({ meta: { perm: 'contas_receber.ver' } })
@@ -483,7 +478,7 @@ const loading = ref(true)
 const rows = ref([])
 
 const filtroTexto = ref('')
-const abaAtiva = ref('A_PAGAR')
+const abaAtiva = ref('A_RECEBER')
 
 const acaoLoadingId = ref(null)
 
@@ -516,6 +511,12 @@ function intervaloDoMesReferencia(mesRef) {
 
 const mesReferencia = ref(getMesReferenciaAtual())
 const filtros = ref(intervaloDoMesReferencia(mesReferencia.value))
+const inicioCompetenciaAtiva = computed(() => {
+  const raw = filtros.value?.data_ini
+  if (!raw) return null
+  const d = new Date(`${raw}T00:00:00`)
+  return Number.isNaN(d.getTime()) ? null : d
+})
 const competenciaAtual = computed(() => {
   const { mes, ano } = intervaloDoMesReferencia(mesReferencia.value)
   return `${String(mes).padStart(2, '0')}/${ano}`
@@ -524,11 +525,11 @@ const competenciaAtual = computed(() => {
 // colunas
 const columns = [
   { key: 'partes', label: 'Parte' },
-  { key: 'origem', label: 'Origem', width: '180px' },
-  { key: 'vencimento', label: 'Vencimento', width: '160px' },
-  { key: 'valor', label: 'Valor', width: '200px', align: 'right' },
-  { key: 'status', label: 'Status', width: '160px' },
-  { key: 'acoes', label: 'Ações', width: '160px', align: 'right' },
+  { key: 'origem', label: 'Origem' },
+  { key: 'vencimento', label: 'Vencimento' },
+  { key: 'valor', label: 'Valor', align: 'right' },
+  { key: 'status', label: 'Status' },
+  { key: 'acoes', label: 'Ações', align: 'right' },
 ]
 
 // filtros em memória
@@ -540,7 +541,6 @@ const rowsFiltrados = computed(() => {
 
     const hay = [
       r.descricao,
-      r.observacao,
       r.cliente_nome,
       r.origem_tipo,
       r.origem_id,
@@ -557,11 +557,21 @@ const rowsFiltrados = computed(() => {
     return hay.includes(txt)
   })
 })
+function isLinhaVencida(row) {
+  if (isStatusRecebido(row?.status)) return false
+  const status = normalizeStatus(row?.status)
+  if (status === 'VENCIDO') return true
+  const inicio = inicioCompetenciaAtiva.value
+  if (!inicio || !row?.vencimento_em) return false
+  const venc = new Date(row.vencimento_em)
+  if (Number.isNaN(venc.getTime())) return false
+  return venc.getTime() < inicio.getTime()
+}
 const rowsVencidos = computed(() =>
-  rowsFiltrados.value.filter((r) => normalizeStatus(r.status) === 'VENCIDO'),
+  rowsFiltrados.value.filter((r) => isLinhaVencida(r)),
 )
 const rowsAPagar = computed(() =>
-  rowsFiltrados.value.filter((r) => normalizeStatus(r.status) === 'EM_ABERTO'),
+  rowsFiltrados.value.filter((r) => !isStatusRecebido(r?.status) && !isLinhaVencida(r)),
 )
 const rowsPagos = computed(() =>
   rowsFiltrados.value.filter((r) => {
@@ -571,20 +581,20 @@ const rowsPagos = computed(() =>
 )
 const rowsAbaAtiva = computed(() => {
   if (abaAtiva.value === 'VENCIDOS') return rowsVencidos.value
-  if (abaAtiva.value === 'A_PAGAR') return rowsAPagar.value
+  if (abaAtiva.value === 'A_RECEBER') return rowsAPagar.value
   return rowsPagos.value
 })
 const tabs = computed(() => [
   { id: 'VENCIDOS', label: 'Vencidas', count: rowsVencidos.value.length },
-  { id: 'A_PAGAR', label: 'Em aberto', count: rowsAPagar.value.length },
+  { id: 'A_RECEBER', label: 'Em aberto', count: rowsAPagar.value.length },
   { id: 'PAGOS', label: 'Pagos', count: rowsPagos.value.length },
 ])
 
 const resumoAbaAtiva = computed(() => {
   if (abaAtiva.value === 'VENCIDOS') {
     return {
-      titulo: 'Receitas vencidas que exigem ação comercial',
-      descricao: 'Acompanhe os títulos já vencidos e priorize os recebimentos mais sensíveis do período.',
+      titulo: 'Receitas vencidas acumuladas ate a competência',
+      descricao: 'Veja com clareza o que segue em aberto de meses anteriores para priorizar a cobrança.',
     }
   }
 
@@ -596,17 +606,20 @@ const resumoAbaAtiva = computed(() => {
   }
 
   return {
-    titulo: 'Receitas previstas para a competência',
-    descricao: 'Visualize o que ainda está em aberto e avance nas baixas de cliente ou fornecedor sem sair da central.',
+    titulo: 'Receitas em aberto da competência',
+    descricao: 'Acompanhe separadamente o que vence no mês selecionado e o que já ficou vencido de períodos anteriores.',
   }
 })
 
 function normalizeStatus(status) {
   return String(status || '').trim().toUpperCase()
 }
-function isContaRecebida(row) {
-  const s = normalizeStatus(row?.status)
+function isStatusRecebido(status) {
+  const s = normalizeStatus(status)
   return s === 'PAGO' || s === 'RECEBIDO'
+}
+function isContaRecebida(row) {
+  return isStatusRecebido(row?.status)
 }
 function formatarDataAcao(value) {
   if (!value) return 'sem data'
@@ -627,15 +640,50 @@ function formasDaLinha(row) {
   }
   return formas
 }
+const formasPagamentoOptions = (FORMAS_PAGAMENTO || []).map((item) => ({
+  label: item.label,
+  value: String(item.key || '').trim().toUpperCase(),
+}))
+const formasPagamentoKeys = formasPagamentoOptions.map((item) => item.value)
 function labelFormas(row) {
   const formas = formasDaLinha(row)
   if (!formas.length) return ''
   if (formas.length === 1) return `Forma: ${formas[0]}`
   return `Formas: ${formas.join(' + ')}`
 }
+function parcelasPendentes(row) {
+  const parcelas = Array.isArray(row?.parcelas_venda) ? row.parcelas_venda : []
+  return parcelas.filter((p) => !isStatusRecebido(p?.status))
+}
+function parcelasPagas(row) {
+  const parcelas = Array.isArray(row?.parcelas_venda) ? row.parcelas_venda : []
+  return parcelas.filter((p) => isStatusRecebido(p?.status))
+}
+function parcelasParaExcluirBaixa(row) {
+  const parcelas = Array.isArray(row?.parcelas_venda) ? row.parcelas_venda : []
+  if (!parcelas.length) return []
+  const pagas = parcelasPagas(row)
+  // Fallback: quando a conta está PAGA mas a API não marcou parcela a parcela.
+  return pagas.length ? pagas : parcelas
+}
+function temParcelas(row) {
+  return Array.isArray(row?.parcelas_venda) && row.parcelas_venda.length > 0
+}
+function podeExcluirLancamento(row) {
+  if (isContaRecebida(row)) return false
+  if (normalizeStatus(row?.status) === 'CANCELADO') return false
+  return Number(row?.valor_compensado || 0) <= 0
+}
 
 function partePrincipal(row) {
-  if (row?.cliente_nome) return row.cliente_nome
+  if (row?.cliente_nome) {
+    const partesNome = String(row.cliente_nome)
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+    if (partesNome.length <= 2) return partesNome.join(' ')
+    return `${partesNome[0]} ${partesNome[1]}`
+  }
   if (row?.cliente_id) return `Cliente #${row.cliente_id}`
   if (row?.fornecedor_id) return `Fornecedor #${row.fornecedor_id}`
   return '—'
@@ -717,7 +765,18 @@ async function enriquecerRowsComVenda(baseRows) {
           ),
         )
         const pagamentos = Array.isArray(venda?.pagamentos) ? venda.pagamentos : []
-        const parcelas = pagamentos.map((p, idx) => ({
+        const pagamentosOrdenados = [...pagamentos].sort((a, b) => {
+          const av = a?.data_prevista_recebimento
+            ? new Date(a.data_prevista_recebimento).getTime()
+            : Number.POSITIVE_INFINITY
+          const bv = b?.data_prevista_recebimento
+            ? new Date(b.data_prevista_recebimento).getTime()
+            : Number.POSITIVE_INFINITY
+          if (av !== bv) return av - bv
+          return Number(a?.id || 0) - Number(b?.id || 0)
+        })
+        const parcelas = pagamentosOrdenados.map((p, idx) => ({
+          id: Number(p?.id || 0) || null,
           parcela: idx + 1,
           valor: Number(p?.valor || 0),
           forma_pagamento_chave: p?.forma_pagamento_chave || null,
@@ -780,7 +839,10 @@ const receberModal = reactive({
 
   forma_recebimento_chave: '',
   formas_disponiveis: [],
+  formas_previstas: [],
   recebido_em_input: '',
+  venda_pagamento_id: null,
+  parcela_numero: null,
   parcelas_venda: [],
   parcelas_antecipacao_keys: [],
   antecipacao_ativa: false,
@@ -876,9 +938,19 @@ function preencherReceberModal(row, { preview = false } = {}) {
 
   receberModal.vencimento_em = row.vencimento_em ?? null
 
-  const formas = formasDaLinha(row)
-  receberModal.formas_disponiveis = formas
-  receberModal.forma_recebimento_chave = formas.length === 1 ? formas[0] : (row.forma_recebimento_chave ?? '')
+  const formasPrevistas = formasDaLinha(row)
+  const formaLinha = String(row?.forma_recebimento_chave || '').trim().toUpperCase()
+  const formaInicial = (
+    formasPrevistas.find((forma) => formasPagamentoKeys.includes(forma)) ||
+    (formasPagamentoKeys.includes(formaLinha) ? formaLinha : '') ||
+    formasPagamentoKeys[0] ||
+    ''
+  )
+  receberModal.formas_previstas = formasPrevistas
+  receberModal.formas_disponiveis = [...formasPagamentoKeys]
+  receberModal.forma_recebimento_chave = formaInicial
+  receberModal.venda_pagamento_id = null
+  receberModal.parcela_numero = null
   receberModal.parcelas_venda = (Array.isArray(row?.parcelas_venda) ? row.parcelas_venda : []).map((p, idx) => ({
     ...p,
     __key: `${p?.parcela ?? idx + 1}-${p?.vencimento_em ?? ''}-${idx}`,
@@ -893,6 +965,25 @@ function abrirReceber(row) {
   const status = String(row?.status || '').toUpperCase()
   if (status === 'PAGO' || status === 'RECEBIDO' || status === 'CANCELADO') return
   preencherReceberModal(row)
+}
+
+function abrirReceberParcela(row, parcela) {
+  const status = String(row?.status || '').toUpperCase()
+  if (status === 'PAGO' || status === 'RECEBIDO' || status === 'CANCELADO') return
+  if (!parcela) return
+
+  preencherReceberModal(row)
+  receberModal.venda_pagamento_id = Number(parcela?.id || 0) || null
+  receberModal.parcela_numero = Number(parcela?.parcela || 0) || null
+  if (Number(parcela?.valor || 0) > 0) {
+    receberModal.valor_original = Number(parcela.valor)
+  }
+  if (parcela?.forma_pagamento_chave) {
+    const formaParcela = String(parcela.forma_pagamento_chave).trim().toUpperCase()
+    if (formasPagamentoKeys.includes(formaParcela)) {
+      receberModal.forma_recebimento_chave = formaParcela
+    }
+  }
 }
 
 function abrirReceberPreview() {
@@ -1009,8 +1100,7 @@ const origemLabel = computed(() => {
   return t ? `${t} ${id}` : '—'
 })
 
-Object.defineProperty(receberModal, 'parteLabel', { get: () => parteLabel.value })
-Object.defineProperty(receberModal, 'origemLabel', { get: () => origemLabel.value })
+// parteLabel e origemLabel são computed refs — usar diretamente no template
 
 async function confirmarRecebimento() {
   if (!podeConfirmarRecebimento.value) return
@@ -1020,6 +1110,8 @@ async function confirmarRecebimento() {
   try {
     const payload = {
       recebido_em: inputToISO(receberModal.recebido_em_input),
+      venda_pagamento_id: receberModal.venda_pagamento_id || undefined,
+      parcela: receberModal.parcela_numero || undefined,
       forma_recebimento_chave: receberModal.forma_recebimento_chave
         ? String(receberModal.forma_recebimento_chave).trim()
         : null,
@@ -1045,6 +1137,63 @@ async function confirmarRecebimento() {
     await carregar()
   } finally {
     receberModal.saving = false
+    acaoLoadingId.value = null
+  }
+}
+
+async function receberParcelaRapida(row, parcela) {
+  if (!row?.id || !parcela) return
+  acaoLoadingId.value = row.id
+  try {
+    await FinanceiroService.receber(row.id, {
+      recebido_em: new Date().toISOString(),
+      venda_pagamento_id: parcela.id || undefined,
+      parcela: parcela.parcela || undefined,
+      forma_recebimento_chave: parcela.forma_pagamento_chave || row.forma_recebimento_chave || null,
+    })
+    await carregar()
+  } finally {
+    acaoLoadingId.value = null
+  }
+}
+
+async function estornarParcelaRapida(row, parcela) {
+  if (!row?.id || !parcela) return
+  acaoLoadingId.value = row.id
+  try {
+    await FinanceiroService.estornarReceber(row.id, {
+      venda_pagamento_id: parcela.id || undefined,
+      parcela: parcela.parcela || undefined,
+    })
+    await carregar()
+  } finally {
+    acaoLoadingId.value = null
+  }
+}
+
+async function estornarConta(row) {
+  if (!row?.id) return
+  acaoLoadingId.value = row.id
+  try {
+    await FinanceiroService.estornarReceber(row.id)
+    await carregar()
+  } finally {
+    acaoLoadingId.value = null
+  }
+}
+
+async function excluirContaAberta(row) {
+  if (!row?.id) return
+  if (!podeExcluirLancamento(row)) return
+  const ok = window.confirm(
+    'Excluir este lançamento de contas a receber? Esta ação não pode ser desfeita.',
+  )
+  if (!ok) return
+  acaoLoadingId.value = row.id
+  try {
+    await FinanceiroService.removerReceber(row.id)
+    await carregar()
+  } finally {
     acaoLoadingId.value = null
   }
 }
@@ -1077,15 +1226,97 @@ watch(
   min-height: 100%;
   background: var(--ds-color-surface);
   font-family: 'Segoe UI Variable Text', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow-x: hidden;
+}
+
+.contas-receber-page :deep(.ds-shell-card) {
+  overflow: visible !important;
+}
+
+.contas-receber-page__top-bar {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 0.75rem 1rem;
+}
+
+.contas-receber-page__top-title {
+  color: var(--ds-color-text);
+  font-size: 1.15rem;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.contas-receber-page__top-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.contas-receber-page__top-search {
+  flex: 1;
+  min-width: 140px;
+  max-width: 320px;
+}
+
+.contas-receber-page__top-month {
+  flex-shrink: 0;
+}
+
+.contas-receber-page__sub-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 1rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--ds-color-border) 60%, transparent);
+}
+
+.contas-receber-page__inline-totals {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-shrink: 0;
+}
+
+.contas-receber-page__inline-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ds-color-text-soft);
+}
+
+.contas-receber-page__inline-stat strong {
+  font-weight: 800;
+  font-size: 0.82rem;
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+
+.contas-receber-page__inline-stat--success strong {
+  color: var(--ds-color-success, #16a34a);
+}
+
+.contas-receber-page__inline-stat--warning strong {
+  color: var(--ds-color-warning, #d97706);
 }
 
 .contas-receber-page__content {
-  width: min(100%, 1460px);
-  margin-inline: auto;
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  padding: 0.35rem 1rem 1.75rem;
+  gap: 0;
+  padding: 0 0 1.75rem;
 }
 
 .contas-receber-page__actions {
@@ -1241,67 +1472,107 @@ watch(
   width: 100%;
 }
 
-.contas-receber-page__tabs {
-  overflow: hidden;
-  padding: 0.25rem 0 0.1rem;
-  border-top: 1px solid rgba(214, 224, 234, 0.58);
-}
-
-.contas-receber-page__tabs-scroll {
-  overflow-x: auto;
-}
-
 .contas-receber-page__tabs-nav {
   display: flex;
-  gap: 0.75rem;
+  gap: 0;
   min-width: max-content;
 }
 
 .contas-receber-page__tab {
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.45rem;
   min-height: 2.5rem;
-  padding: 0 1rem;
-  border: 1px solid rgba(214, 224, 234, 0.86);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.88);
+  padding: 0 0.85rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
   color: var(--ds-color-text-soft);
   font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
 }
 
 .contas-receber-page__tab:hover {
   color: var(--ds-color-text);
-  border-color: rgba(177, 191, 205, 0.92);
 }
 
 .contas-receber-page__tab--active {
-  color: #fff;
-  border-color: rgba(24, 72, 124, 0.9);
-  background: linear-gradient(135deg, #204870 0%, #2b6aa0 100%);
+  color: var(--ds-color-text);
+  border-bottom-color: var(--ds-color-primary, #2b6aa0);
 }
 
 .contas-receber-page__tab-count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 1.35rem;
-  min-height: 1.35rem;
-  padding: 0 0.35rem;
+  min-width: 1.2rem;
+  min-height: 1.2rem;
+  padding: 0 0.3rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.18);
+  background: color-mix(in srgb, var(--ds-color-border) 60%, transparent);
   font-size: 0.6rem;
+  font-weight: 800;
+}
+
+.contas-receber-page__tab--active .contas-receber-page__tab-count {
+  background: color-mix(in srgb, var(--ds-color-primary, #2b6aa0) 15%, transparent);
+  color: var(--ds-color-primary, #2b6aa0);
 }
 
 .contas-receber-page__table {
   overflow-x: auto;
   overflow-y: hidden;
-  border-top: 1px solid rgba(214, 224, 234, 0.58);
-  border-bottom: 1px solid rgba(214, 224, 234, 0.58);
+}
+
+.contas-receber-page__table :deep(.ds-table--flush) {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-inline: 0 !important;
+}
+
+.contas-receber-page__table :deep(.ds-table__scroll) {
+  overflow-x: hidden;
+  width: 100% !important;
+}
+
+.contas-receber-page__table :deep(.ds-table__element) {
+  table-layout: fixed !important;
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
+.contas-receber-page__table :deep(.ds-table__head-cell:first-child),
+.contas-receber-page__table :deep(.ds-table__cell:first-child) {
+  width: 25%;
+}
+
+.contas-receber-page__table :deep(.ds-table__head-cell:nth-child(2)),
+.contas-receber-page__table :deep(.ds-table__cell:nth-child(2)) {
+  width: 15%;
+}
+
+.contas-receber-page__table :deep(.ds-table__head-cell:nth-child(3)),
+.contas-receber-page__table :deep(.ds-table__cell:nth-child(3)) {
+  width: 15%;
+}
+
+.contas-receber-page__table :deep(.ds-table__head-cell:nth-child(4)),
+.contas-receber-page__table :deep(.ds-table__cell:nth-child(4)) {
+  width: 17%;
+}
+
+.contas-receber-page__table :deep(.ds-table__head-cell:nth-child(5)),
+.contas-receber-page__table :deep(.ds-table__cell:nth-child(5)) {
+  width: 14%;
+}
+
+.contas-receber-page__table :deep(.ds-table__head-cell:nth-child(6)),
+.contas-receber-page__table :deep(.ds-table__cell:nth-child(6)) {
+  width: 14%;
 }
 
 .contas-receber-page__identity,
@@ -1312,6 +1583,8 @@ watch(
   display: flex;
   flex-direction: column;
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .contas-receber-page__identity,
@@ -1321,7 +1594,15 @@ watch(
   gap: 0.2rem;
 }
 
-.contas-receber-page__primary,
+.contas-receber-page__primary {
+  color: var(--ds-color-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.4;
+  word-break: break-word;
+  white-space: normal;
+}
+
 .contas-receber-page__date-value,
 .contas-receber-page__amount {
   color: var(--ds-color-text);
@@ -1377,6 +1658,33 @@ watch(
   align-items: center;
   gap: 0.55rem;
   flex-wrap: wrap;
+}
+
+.contas-receber-page__parcelas-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.contas-receber-page__parcela-button {
+  min-height: 1.7rem;
+  padding: 0 0.5rem;
+  border: 1px solid rgba(25, 118, 82, 0.2);
+  border-radius: 0.6rem;
+  background: rgba(22, 124, 92, 0.08);
+  color: #0f766e;
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.contas-receber-page__parcela-button--danger {
+  border-color: rgba(185, 28, 28, 0.2);
+  background: rgba(185, 28, 28, 0.08);
+  color: #991b1b;
 }
 
 .contas-receber-page__done-pill,
@@ -1772,7 +2080,7 @@ watch(
 
 @media (max-width: 768px) {
   .contas-receber-page__content {
-    padding-inline: 0.75rem;
+    padding-inline: 0.5rem;
     padding-bottom: 1.15rem;
   }
 
@@ -1789,14 +2097,14 @@ watch(
 
 @media (min-width: 768px) {
   .contas-receber-page__content {
-    padding-inline: 1.5rem;
+    padding-inline: 0.9rem;
     padding-bottom: 1.9rem;
   }
 }
 
 @media (min-width: 1024px) {
   .contas-receber-page__content {
-    padding-inline: 2rem;
+    padding-inline: 1.1rem;
     padding-bottom: 2rem;
   }
 }

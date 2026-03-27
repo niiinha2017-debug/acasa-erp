@@ -791,8 +791,6 @@ const ROTULO_MODULO = {
 }
 
 const SECTION_LABELS = {
-  comercial: '1 Comercial',
-  comercial_2: '2 Comercial',
   producao: 'Produção',
   financeiro: 'Financeiro',
   cadastros: 'Cadastros',
@@ -802,8 +800,6 @@ const SECTION_LABELS = {
 }
 
 const SECTION_ORDER = [
-  'comercial',
-  'comercial_2',
   'producao',
   'financeiro',
   'cadastros',

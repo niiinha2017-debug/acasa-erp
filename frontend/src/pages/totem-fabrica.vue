@@ -78,9 +78,6 @@
                 <div class="totem-card__chips">
                   <span class="totem-card__chip"><i class="pi pi-tag" />{{ etapaLabel(tarefa) }}</span>
                   <span class="totem-card__chip"><i class="pi pi-calendar" />{{ periodoPlanejadoLabel(tarefa) }}</span>
-                  <span v-if="tarefa.tipo_medicao === 'MEDICAO_ORCAMENTO'" class="totem-card__chip totem-card__chip--amber">Orçamento</span>
-                  <span v-else-if="tarefa.tipo_medicao === 'MEDICAO_FINA'" class="totem-card__chip totem-card__chip--blue">Produção</span>
-                  <span v-else-if="tarefa.tipo_medicao === 'PROJETO_TECNICO'" class="totem-card__chip totem-card__chip--amber">Projeto técnico</span>
                   <span v-if="tarefa.is_medicao_externa" class="totem-card__chip totem-card__chip--amber">Medição externa</span>
                 </div>
 
@@ -110,9 +107,33 @@
                   class="totem-card__timer"
                   :class="{ 'totem-card__timer--paused': estaPausada(tarefa) }"
                 >
-                  <i class="totem-card__timer-dot" />
                   <div class="totem-card__timer-body">
-                    <span class="totem-card__timer-value">{{ tempoDecorrido(tarefa) }}</span>
+                    <div class="totem-card__timer-row totem-card__timer-row--total">
+                      <span class="totem-card__timer-row-label">
+                        <i class="totem-card__timer-dot" />
+                        Tempo da tarefa
+                      </span>
+                      <span class="totem-card__timer-row-value">{{ tempoTarefaLabel(tarefa) }}</span>
+                    </div>
+
+                    <div class="totem-card__timer-divider" />
+
+                    <div
+                      v-for="item in cronometrosPorFuncionario(tarefa)"
+                      :key="item.funcionarioId || item.nome"
+                      class="totem-card__timer-row totem-card__timer-row--func"
+                      :class="{ 'totem-card__timer-row--func-paused': item.pausado }"
+                    >
+                      <span class="totem-card__timer-row-label">
+                        <span class="totem-card__timer-func-avatar">{{ (item.nome || 'F').charAt(0) }}</span>
+                        {{ item.nome.split(' ')[0] }}
+                      </span>
+                      <span class="totem-card__timer-row-value totem-card__timer-row-value--func">
+                        {{ formatarSegundosHHMMSS(item.segundos) }}
+                        <span v-if="item.pausado" class="totem-card__timer-func-badge totem-card__timer-func-badge--paused">pausado</span>
+                      </span>
+                    </div>
+
                     <span class="totem-card__timer-label">{{ estaPausada(tarefa) ? 'pausado' : 'em andamento' }}</span>
                   </div>
                 </div>
@@ -124,7 +145,7 @@
                     v-if="podePlay(tarefa)"
                     class="totem-card__btn totem-card__btn--primary"
                     :disabled="acionando === tarefa.id_para_play"
-                    @click="playOuIrParaPagina(tarefa)"
+                    @click="play(tarefa)"
                   >
                     <i class="pi pi-play" />Iniciar
                   </button>
@@ -140,35 +161,20 @@
                       <i class="pi pi-play" />Retomar
                     </button>
                     <button
-                      v-else
+                      v-else-if="temCronometroAtivoNaoPausado(tarefa)"
                       class="totem-card__btn totem-card__btn--pause"
                       :disabled="pausando === tarefa.id_para_play"
                       @click="pausarTarefa(tarefa)"
                     >
                       <i class="pi pi-pause" />Pausar
                     </button>
-
-                    <!-- PREENCHER -->
                     <button
-                      v-if="tarefa.tipo_medicao === 'PROJETO_TECNICO'"
-                      class="totem-card__btn totem-card__btn--ghost"
-                      @click="irParaProjetoTecnico(tarefa)"
+                      v-else
+                      class="totem-card__btn totem-card__btn--primary"
+                      :disabled="acionando === tarefa.id_para_play"
+                      @click="play(tarefa)"
                     >
-                      <i class="pi pi-box" />Abrir projeto
-                    </button>
-                    <button
-                      v-else-if="tarefa.tipo_medicao === 'MEDICAO_FINA'"
-                      class="totem-card__btn totem-card__btn--ghost"
-                      @click="irParaMedicaoFina(tarefa)"
-                    >
-                      <i class="pi pi-pencil" />Preencher
-                    </button>
-                    <button
-                      v-else-if="tarefa.tipo_medicao === 'MEDICAO_ORCAMENTO'"
-                      class="totem-card__btn totem-card__btn--ghost"
-                      @click="irParaMedicaoVenda(tarefa)"
-                    >
-                      <i class="pi pi-pencil" />Preencher
+                      <i class="pi pi-play" />Iniciar fábrica
                     </button>
 
                     <!-- CONCLUIR -->
@@ -288,13 +294,50 @@
         </Transition>
       </Teleport>
 
+      <!-- Modal motivo da pausa -->
+      <Teleport to="body">
+        <Transition name="fade">
+          <div
+            v-if="modalPausaOpen"
+            class="totem-fabrica-page__modal-backdrop"
+            @click.self="fecharModalPausa"
+          >
+            <div class="totem-fabrica-page__modal ds-shell-card totem-pausa-modal">
+              <div class="totem-pausa-modal__head">
+                <h3 class="totem-fabrica-page__modal-title">Por que está pausando?</h3>
+                <p class="totem-fabrica-page__modal-copy">Selecione o motivo para registrar a pausa.</p>
+              </div>
+
+              <div class="totem-pausa-modal__grid">
+                <button
+                  v-for="opt in motivosPausa"
+                  :key="opt.id"
+                  type="button"
+                  class="totem-pausa-modal__btn"
+                  :disabled="pausando === tarefaPausa?.id_para_play"
+                  @click="confirmarPausa(opt.id)"
+                >
+                  <i :class="opt.icon" class="totem-pausa-modal__btn-icon" />
+                  <span class="totem-pausa-modal__btn-label">{{ opt.label }}</span>
+                </button>
+              </div>
+
+              <div class="totem-fabrica-page__modal-actions totem-fabrica-page__modal-actions--center">
+                <Button variant="outline" class="!rounded-xl" @click="fecharModalPausa">
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Transition>
+      </Teleport>
+
     </section>
   </PageShell>
 </template>
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
 import Input from '@/components/ui/Input.vue'
@@ -306,8 +349,6 @@ import { getCategoriaVisualOperacionalPorSubetapa, getExecucaoEtapaLabel, getPro
 import { notify } from '@/services/notify'
 
 definePage({ meta: { perm: 'agendamentos.producao' } })
-
-const router = useRouter()
 
 const tarefas = ref([])
 const loading = ref(false)
@@ -330,9 +371,8 @@ const filtros = ref({
 
 const cardsResumo = computed(() => {
   const total = tarefas.value.length
-  const medicaoExterna = tarefas.value.filter((tarefa) => tarefa.is_medicao_externa).length
-  const medicaoFina = tarefas.value.filter((tarefa) => tarefa.tipo_medicao === 'MEDICAO_FINA').length
-  const projetoTecnico = tarefas.value.filter((tarefa) => tarefa.tipo_medicao === 'PROJETO_TECNICO').length
+  const agendaLoja = tarefas.value.filter((tarefa) => tarefa.tipo === 'agenda_loja').length
+  const agendaFabrica = tarefas.value.filter((tarefa) => tarefa.tipo === 'agenda_fabrica').length
   const emProducao = tarefas.value.filter((tarefa) => String(tarefa?.status || '').toUpperCase() === 'EM_PRODUCAO').length
 
   return [
@@ -343,22 +383,16 @@ const cardsResumo = computed(() => {
       className: 'totem-fabrica-page__summary-chip--neutral',
     },
     {
-      id: 'externa',
-      label: 'Medições externas',
-      valor: String(medicaoExterna),
+      id: 'loja',
+      label: 'Agenda da loja',
+      valor: String(agendaLoja),
       className: 'totem-fabrica-page__summary-chip--warning',
     },
     {
-      id: 'fina',
-      label: 'Medições finas',
-      valor: String(medicaoFina),
+      id: 'fabrica',
+      label: 'Agenda da fábrica',
+      valor: String(agendaFabrica),
       className: 'totem-fabrica-page__summary-chip--success',
-    },
-    {
-      id: 'projeto-tecnico',
-      label: 'Projeto técnico',
-      valor: String(projetoTecnico),
-      className: 'totem-fabrica-page__summary-chip--warning',
     },
     {
       id: 'producao',
@@ -410,8 +444,9 @@ function periodoPlanejadoLabel(tarefa) {
 
 function nomeCliente(tarefa) {
   const c = tarefa?.cliente
-  if (!c) return 'Cliente não identificado'
-  return c.nome_completo || c.razao_social || 'Cliente'
+  if (c) return c.nome_completo || c.razao_social || 'Cliente'
+  if (tarefa?.cliente_nome_livre) return tarefa.cliente_nome_livre
+  return 'Cliente não identificado'
 }
 
 function tituloTarefa(tarefa) {
@@ -471,6 +506,11 @@ function estaPausada(tarefa) {
   return ativos.length > 0 && ativos.some((ap) => ap.pausa_inicio_em && !ap.pausa_fim_em)
 }
 
+function temCronometroAtivoNaoPausado(tarefa) {
+  const ativos = apontamentosAtivos(tarefa)
+  return ativos.some((ap) => !ap.pausa_inicio_em || ap.pausa_fim_em)
+}
+
 function podePlay(tarefa) {
   const s = String(tarefa?.status || '').toUpperCase()
   if (s === 'CONCLUIDO' || s === 'CANCELADO') return false
@@ -486,19 +526,47 @@ function podeCheck(tarefa) {
 
 const pausando = ref(null)
 
-async function pausarTarefa(tarefa) {
+const motivosPausa = [
+  { id: 'CAFE', label: 'Café', icon: 'pi pi-star' },
+  { id: 'BANHEIRO', label: 'Banheiro', icon: 'pi pi-user' },
+  { id: 'CIGARRO', label: 'Cigarro', icon: 'pi pi-clock' },
+  { id: 'ALMOCO', label: 'Almoço', icon: 'pi pi-sun' },
+  { id: 'OUTROS', label: 'Outros', icon: 'pi pi-ellipsis-h' },
+]
+
+const modalPausaOpen = ref(false)
+const tarefaPausa = ref(null)
+
+function abrirModalPausa(tarefa) {
+  tarefaPausa.value = tarefa
+  modalPausaOpen.value = true
+}
+
+function fecharModalPausa() {
+  modalPausaOpen.value = false
+  tarefaPausa.value = null
+}
+
+async function confirmarPausa(motivo) {
+  const tarefa = tarefaPausa.value
+  if (!tarefa) return
   const ativos = apontamentosAtivos(tarefa).filter((ap) => !ap.pausa_inicio_em || ap.pausa_fim_em)
-  if (!ativos.length) { notify.error('Nenhum cronômetro ativo para pausar.'); return }
+  if (!ativos.length) { notify.error('Nenhum cronômetro ativo para pausar.'); fecharModalPausa(); return }
   pausando.value = tarefa.id_para_play
   try {
-    await Promise.all(ativos.map((ap) => ApontamentoProducaoService.pauseCronometro(ap.id)))
+    await Promise.all(ativos.map((ap) => ApontamentoProducaoService.pauseCronometro(ap.id, motivo)))
     notify.success('Produção pausada.')
+    fecharModalPausa()
     await carregarTarefas()
   } catch (e) {
     notify.error(e?.response?.data?.message || 'Não foi possível pausar.')
   } finally {
     pausando.value = null
   }
+}
+
+async function pausarTarefa(tarefa) {
+  abrirModalPausa(tarefa)
 }
 
 async function retomarTarefa(tarefa) {
@@ -545,42 +613,6 @@ async function play(tarefa) {
     acionando.value = null
   }
 }
-
-async function playOuIrParaPagina(tarefa) {
-  const tipoPlay = tarefa.tipo === 'agenda_loja' ? 'agenda_loja' : 'agenda_fabrica'
-  const temTipoMedicao = ['MEDICAO_ORCAMENTO', 'MEDICAO_FINA', 'PROJETO_TECNICO'].includes(tarefa.tipo_medicao)
-
-  if (temTipoMedicao) {
-    acionando.value = tarefa.id_para_play
-    try {
-      await TotemFabricaService.play(tarefa.id_para_play, { tipo: tipoPlay })
-      notify.success('Produção iniciada.')
-      irParaPreencher(tarefa)
-    } catch (e) {
-      notify.error(e?.response?.data?.message || 'Não foi possível iniciar.')
-    } finally {
-      acionando.value = null
-    }
-    return
-  }
-  await play(tarefa)
-}
-
-function irParaPreencher(tarefa) {
-  router.push({
-    path: '/totem-fabrica-preencher',
-    query: {
-      agendaId: String(tarefa.id_para_play),
-      tipo: tarefa.tipo === 'agenda_loja' ? 'agenda_loja' : 'agenda_fabrica',
-      tipoMedicao: tarefa.tipo_medicao || undefined,
-      projetoId: tarefa?.projeto_id ? String(tarefa.projeto_id) : undefined,
-    },
-  })
-}
-
-function irParaMedicaoVenda(tarefa) { irParaPreencher(tarefa) }
-function irParaMedicaoFina(tarefa) { irParaPreencher(tarefa) }
-function irParaProjetoTecnico(tarefa) { irParaPreencher(tarefa) }
 
 const modalSobrasOpen = ref(false)
 const modalPassoSobras = ref(false)
@@ -686,39 +718,83 @@ function stopTick() {
 function inicioProducao(tarefa) {
   const s = String(tarefa?.status || '').toUpperCase()
   if (s !== 'EM_PRODUCAO' && s !== 'EM_ANDAMENTO') return null
-  const aps = tarefa?.apontamentos_producao || []
-  // pega o mais antigo inicio_em entre todos os apontamentos (momento real em que o operador clicou "Iniciar")
-  let mais_antigo = null
-  for (const ap of aps) {
-    if (!ap?.inicio_em) continue
-    const dt = new Date(ap.inicio_em)
-    if (Number.isNaN(dt.getTime())) continue
-    if (!mais_antigo || dt < mais_antigo) mais_antigo = dt
-  }
-  return mais_antigo
+  const inicioExecucao = tarefa?.inicio_execucao_em ? new Date(tarefa.inicio_execucao_em) : null
+  if (inicioExecucao && !Number.isNaN(inicioExecucao.getTime())) return inicioExecucao
+  const inicioAgenda = tarefa?.inicio_em ? new Date(tarefa.inicio_em) : null
+  if (inicioAgenda && !Number.isNaN(inicioAgenda.getTime())) return inicioAgenda
+  return null
 }
 
-function tempoDecorrido(tarefa) {
+function formatarSegundosHHMMSS(totalSegundos) {
+  const segundos = Math.max(0, Math.floor(Number(totalSegundos) || 0))
+  const h = Math.floor(segundos / 3600)
+  const m = Math.floor((segundos % 3600) / 60)
+  const s = segundos % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
+function tempoTarefaLabel(tarefa) {
   const inicio = inicioProducao(tarefa)
   if (!inicio) return '00:00:00'
+  const diffSeg = Math.floor((tickNow.value - inicio.getTime()) / 1000)
+  return formatarSegundosHHMMSS(diffSeg)
+}
 
-  const ativos = apontamentosAtivos(tarefa)
-  let pausaTotalSeg = 0
-  let pausaAtualSeg = 0
+function segundosApontamento(ap) {
+  if (!ap?.inicio_em) return 0
+  const inicio = new Date(ap.inicio_em).getTime()
+  if (Number.isNaN(inicio)) return 0
 
-  for (const ap of ativos) {
-    pausaTotalSeg += Number(ap.pausa_total_segundos ?? 0)
-    if (ap.pausa_inicio_em && !ap.pausa_fim_em) {
-      pausaAtualSeg = Math.max(pausaAtualSeg, Math.floor((tickNow.value - new Date(ap.pausa_inicio_em).getTime()) / 1000))
+  let fimTimestamp = tickNow.value
+  if (ap?.fim_em) {
+    const fimReal = new Date(ap.fim_em).getTime()
+    const diff = fimReal - inicio
+    // "Em andamento" no backend é salvo como fim_em ~= inicio_em (placeholder).
+    // Nessa situação o cronômetro deve usar o tempo atual.
+    if (!Number.isNaN(fimReal) && diff >= 3000) {
+      fimTimestamp = fimReal
+    }
+  }
+  if (Number.isNaN(fimTimestamp) || fimTimestamp <= inicio) return 0
+
+  let pausadoMs = (Number(ap?.pausa_total_segundos) || 0) * 1000
+  if (ap?.pausa_inicio_em && !ap?.pausa_fim_em) {
+    const pausaInicio = new Date(ap.pausa_inicio_em).getTime()
+    if (!Number.isNaN(pausaInicio) && fimTimestamp > pausaInicio) {
+      pausadoMs += fimTimestamp - pausaInicio
     }
   }
 
-  const bruto = Math.floor((tickNow.value - inicio.getTime()) / 1000)
-  const diff = Math.max(0, bruto - Math.floor(pausaTotalSeg) - pausaAtualSeg)
-  const h = Math.floor(diff / 3600)
-  const m = Math.floor((diff % 3600) / 60)
-  const s = diff % 60
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  return Math.max(0, Math.floor((fimTimestamp - inicio - pausadoMs) / 1000))
+}
+
+function cronometrosPorFuncionario(tarefa) {
+  const apontamentos = Array.isArray(tarefa?.apontamentos_producao)
+    ? tarefa.apontamentos_producao
+    : []
+  if (!apontamentos.length) return []
+
+  const mapa = new Map()
+  for (const ap of apontamentos) {
+    const funcId = ap?.funcionario_id ?? ap?.funcionario?.id ?? null
+    const nome = String(ap?.funcionario?.nome || 'Funcionário').trim()
+    const chave = funcId != null ? `id:${funcId}` : `nome:${nome.toLowerCase()}`
+
+    if (!mapa.has(chave)) {
+      mapa.set(chave, { funcionarioId: funcId, nome, segundos: 0, pausado: false })
+    }
+
+    const entry = mapa.get(chave)
+    entry.segundos += segundosApontamento(ap)
+
+    // Marca como pausado se tiver apontamento ativo pausado
+    const ativo = ap?.inicio_em && (!ap?.fim_em || (new Date(ap.fim_em).getTime() - new Date(ap.inicio_em).getTime()) < 3000)
+    if (ativo && ap?.pausa_inicio_em && !ap?.pausa_fim_em) {
+      entry.pausado = true
+    }
+  }
+
+  return [...mapa.values()].sort((a, b) => b.segundos - a.segundos)
 }
 
 onMounted(() => {
@@ -1005,7 +1081,7 @@ watch([() => filtros.value.data_inicio, () => filtros.value.data_fim], () => car
   flex-direction: column;
   align-items: stretch;
   gap: 0;
-  width: 200px;
+  width: 240px;
   flex-shrink: 0;
 }
 
@@ -1013,10 +1089,9 @@ watch([() => filtros.value.data_inicio, () => filtros.value.data_fim], () => car
 .totem-card__timer {
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
-  gap: 0.65rem;
-  padding: 0.85rem 1rem;
+  padding: 0.65rem 0.85rem;
   background: rgba(22,163,74,.06);
   border-bottom: 1px solid rgba(22,163,74,.18);
   transition: background 0.2s;
@@ -1028,12 +1103,15 @@ watch([() => filtros.value.data_inicio, () => filtros.value.data_fim], () => car
 }
 
 .totem-card__timer-dot {
-  width: 8px;
-  height: 8px;
+  display: inline-block;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: #16a34a;
   flex-shrink: 0;
   animation: totem-pulse 1.6s ease-in-out infinite;
+  vertical-align: middle;
+  margin-right: 0.3rem;
 }
 
 .totem-card__timer--paused .totem-card__timer-dot {
@@ -1044,17 +1122,102 @@ watch([() => filtros.value.data_inicio, () => filtros.value.data_fim], () => car
 .totem-card__timer-body {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 1px;
+  align-items: stretch;
+  gap: 0.25rem;
+  width: 100%;
 }
 
-.totem-card__timer-value {
-  font-size: 1.15rem;
+.totem-card__timer-divider {
+  height: 1px;
+  background: rgba(22,163,74,.15);
+  margin: 0.15rem 0;
+}
+
+.totem-card__timer--paused .totem-card__timer-divider {
+  background: rgba(245,158,11,.18);
+}
+
+.totem-card__timer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.totem-card__timer-row--total {
+  padding-bottom: 0.1rem;
+}
+
+.totem-card__timer-row--func {
+  padding: 0.12rem 0;
+}
+
+.totem-card__timer-row--func-paused {
+  opacity: 0.65;
+}
+
+.totem-card__timer-row-label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.55rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ds-color-text-soft);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.totem-card__timer-func-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ds-color-primary);
+  font-size: 7px;
+  font-weight: 900;
+  color: #fff;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.totem-card__timer-row-value {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.9rem;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   color: var(--ds-color-text);
+  line-height: 1.1;
+  flex-shrink: 0;
+}
+
+.totem-card__timer-row-value--func {
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.totem-card__timer-func-badge {
+  font-size: 0.45rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
   line-height: 1;
+}
+
+.totem-card__timer-func-badge--paused {
+  background: rgba(245,158,11,.15);
+  color: #92400e;
 }
 
 .totem-card__timer-label {
@@ -1063,6 +1226,7 @@ watch([() => filtros.value.data_inicio, () => filtros.value.data_fim], () => car
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: #16a34a;
+  margin-top: 0.1rem;
 }
 
 .totem-card__timer--paused .totem-card__timer-label { color: #f59e0b; }
@@ -1365,5 +1529,75 @@ watch([() => filtros.value.data_inicio, () => filtros.value.data_fim], () => car
 
   .totem-fabrica-page__modal-header-row,
   .totem-fabrica-page__modal-actions { flex-direction: column; }
+
+  .totem-pausa-modal__grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ══════════════════════════════════════════
+   MODAL PAUSA — botões de motivo
+══════════════════════════════════════════ */
+.totem-pausa-modal {
+  width: min(100%, 28rem) !important;
+}
+
+.totem-pausa-modal__head {
+  padding: 1.5rem 1.5rem 0.75rem;
+  text-align: center;
+}
+
+.totem-pausa-modal__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  padding: 0.5rem 1.5rem 1rem;
+}
+
+.totem-pausa-modal__btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 1rem 0.5rem;
+  border: 1.5px solid var(--ds-color-border);
+  border-radius: 12px;
+  background: var(--ds-color-surface);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.totem-pausa-modal__btn:hover {
+  border-color: var(--ds-color-primary);
+  background: rgba(37,99,235,.05);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,.06);
+}
+
+.totem-pausa-modal__btn:active {
+  transform: translateY(0);
+}
+
+.totem-pausa-modal__btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.totem-pausa-modal__btn-icon {
+  font-size: 1.4rem;
+  color: var(--ds-color-primary);
+}
+
+.totem-pausa-modal__btn-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ds-color-text);
+}
+
+@media (max-width: 480px) {
+  .totem-pausa-modal__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 </style>

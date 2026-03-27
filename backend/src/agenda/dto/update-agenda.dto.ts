@@ -17,6 +17,10 @@ export class UpdateAgendaDto {
   titulo?: string;
 
   @IsOptional()
+  @IsString()
+  cliente_nome_livre?: string;
+
+  @IsOptional()
   @IsDateString({}, { message: 'Data de início inválida' })
   inicio_em?: Date;
 

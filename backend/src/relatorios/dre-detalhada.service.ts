@@ -16,6 +16,18 @@ function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
+/** Overrides para DRE quando o valor vem da OS de importação/markup (não do item da venda). */
+export type DreAmbienteOptsImportacao = {
+  fonte_importacao_leitura: true;
+  valor_contrato: number;
+  impostos: number;
+  valor_total_venda: number;
+  venda_id: number | null;
+  cliente_id: number;
+};
+
+type DreFluxoAmbiente = 'VENDA' | 'IMPORTACAO' | 'GARANTIA';
+
 @Injectable()
 export class DreDetalhadaService {
   constructor(
@@ -33,6 +45,9 @@ export class DreDetalhadaService {
         { nome_fantasia: { contains: term } },
         { razao_social: { contains: term } },
       ];
+    } else {
+      // Sem termo de busca: exige pelo menos 2 caracteres no frontend, mas previne query sem filtro
+      return [];
     }
     const clientes = await this.prisma.cliente.findMany({
       where,
@@ -40,10 +55,15 @@ export class DreDetalhadaService {
       orderBy: { nome_completo: 'asc' },
       take: 30,
     });
-    return clientes.map((c) => ({
-      id: c.id,
-      nome: (c as any).nome_fantasia || (c as any).nome_completo || (c as any).razao_social || `Cliente #${(c as any).id}`,
-    }));
+    return clientes.map((c) => {
+      const nomeFantasia = String((c as any).nome_fantasia ?? '').trim();
+      const nomeCompleto = String((c as any).nome_completo ?? '').trim();
+      const razaoSocial = String((c as any).razao_social ?? '').trim();
+      return {
+        id: c.id,
+        nome: nomeFantasia || nomeCompleto || razaoSocial || `Cliente #${c.id}`,
+      };
+    });
   }
 
   /**
@@ -98,8 +118,19 @@ export class DreDetalhadaService {
     };
   }
 
-  /** Lista ambientes (vendas_itens) do cliente a partir do projeto com venda. */
+  /**
+   * Ambientes para DRE: itens da venda (fluxo clássico) + etapas da última OS de importação/markup.
+   */
   async listarAmbientes(clienteId: number) {
+    // Valida se o cliente existe antes de buscar projetos
+    const clienteExiste = await this.prisma.cliente.findUnique({
+      where: { id: clienteId },
+      select: { id: true },
+    });
+    if (!clienteExiste) {
+      return { projeto: null, ordem_importacao: null, ambientes: [] };
+    }
+
     const projetos = await this.prisma.projetos.findMany({
       where: { cliente_id: clienteId, venda_id: { not: null } },
       select: { id: true, codigo: true, venda_id: true },
@@ -107,25 +138,436 @@ export class DreDetalhadaService {
       take: 1,
     });
     const projeto = projetos[0];
-    if (!projeto || !(projeto as any).venda_id) {
-      return { projeto: null, ambientes: [] };
+    let projetoRes: { id: number; codigo: string; venda_id: number } | null = null;
+    const ambientes: Array<{
+      fluxo: DreFluxoAmbiente;
+      venda_item_id?: number;
+      producao_etapa_id?: number;
+      ordem_servico_id?: number;
+      garantia_id?: number;
+      nome_ambiente: string;
+      valor_contrato: number;
+      projeto_id: number | null;
+      venda_id?: number | null;
+    }> = [];
+
+    if (projeto && (projeto as any).venda_id) {
+      const vendaId = (projeto as any).venda_id;
+      projetoRes = {
+        id: (projeto as any).id,
+        codigo: (projeto as any).codigo,
+        venda_id: vendaId,
+      };
+      const itens = await this.prisma.vendas_itens.findMany({
+        where: { venda_id: vendaId },
+        select: { id: true, nome_ambiente: true, valor_total: true },
+        orderBy: { id: 'asc' },
+      });
+      for (const i of itens) {
+        ambientes.push({
+          fluxo: 'VENDA',
+          venda_item_id: (i as any).id,
+          nome_ambiente: (i as any).nome_ambiente,
+          valor_contrato: toNum((i as any).valor_total),
+          projeto_id: (projeto as any).id,
+          venda_id: vendaId,
+        });
+      }
     }
-    const vendaId = (projeto as any).venda_id;
-    const itens = await this.prisma.vendas_itens.findMany({
-      where: { venda_id: vendaId },
-      select: { id: true, nome_ambiente: true, valor_total: true },
-      orderBy: { id: 'asc' },
+
+    const osImport = await this.prisma.ordem_servico.findFirst({
+      where: { cliente_id: clienteId, origem: 'IMPORTACAO_LEITURA' },
+      orderBy: { criado_em: 'desc' },
+      include: {
+        etapas: { orderBy: { ordem: 'asc' } },
+      },
     });
-    const ambientes = itens.map((i) => ({
-      venda_item_id: (i as any).id,
-      nome_ambiente: (i as any).nome_ambiente,
-      valor_contrato: toNum((i as any).valor_total),
-      projeto_id: (projeto as any).id,
-      venda_id: vendaId,
-    }));
+
+    let ordem_importacao: {
+      id: number;
+      criado_em: Date;
+      valor_bruto: number | null;
+      valor_liquido: number | null;
+      etapas_count: number;
+    } | null = null;
+
+    if (osImport) {
+      const etapas = (osImport as any).etapas || [];
+      const n = etapas.length > 0 ? etapas.length : 1;
+      const brutoRaw = toNum((osImport as any).valor_bruto);
+      const bruto = brutoRaw > 0
+        ? brutoRaw
+        : DreDetalhadaService.lerTotalMarkupSnapshot((osImport as any).comissionados);
+      const porEtapa = bruto > 0 && n > 0 ? round2(bruto / n) : 0;
+      ordem_importacao = {
+        id: (osImport as any).id,
+        criado_em: (osImport as any).criado_em,
+        valor_bruto: bruto > 0 ? bruto : null,
+        valor_liquido:
+          (osImport as any).valor_liquido != null
+            ? toNum((osImport as any).valor_liquido)
+            : null,
+        etapas_count: etapas.length,
+      };
+      const pid = projetoRes?.id ?? null;
+      if (etapas.length === 0) {
+        ambientes.push({
+          fluxo: 'IMPORTACAO',
+          ordem_servico_id: (osImport as any).id,
+          nome_ambiente: 'Obra (importação — sem ambientes na OS)',
+          valor_contrato: bruto,
+          projeto_id: pid,
+          venda_id: projetoRes?.venda_id ?? null,
+        });
+      } else {
+        for (const e of etapas) {
+          ambientes.push({
+            fluxo: 'IMPORTACAO',
+            producao_etapa_id: (e as any).id,
+            ordem_servico_id: (osImport as any).id,
+            nome_ambiente: (e as any).nome_ambiente || `Etapa #${(e as any).id}`,
+            valor_contrato: porEtapa,
+            projeto_id: pid,
+            venda_id: projetoRes?.venda_id ?? null,
+          });
+        }
+      }
+    }
+
+    const garantias = await this.prisma.garantias.findMany({
+      where: {
+        cliente_id: clienteId,
+        status: { not: 'CANCELADA' },
+      },
+      select: {
+        id: true,
+        tipo: true,
+        titulo: true,
+        valor_venda: true,
+        venda_id: true,
+        data_abertura: true,
+      },
+      orderBy: [{ data_abertura: 'desc' }, { id: 'desc' }],
+    });
+
+    for (const garantia of garantias) {
+      const tipo = String((garantia as any).tipo || 'GARANTIA').toUpperCase();
+      const prefixo =
+        tipo === 'ASSISTENCIA'
+          ? 'Assistência'
+          : tipo === 'MANUTENCAO'
+            ? 'Manutenção'
+            : 'Garantia';
+      const titulo = String((garantia as any).titulo || '').trim();
+      ambientes.push({
+        fluxo: 'GARANTIA',
+        garantia_id: (garantia as any).id,
+        nome_ambiente: titulo ? `${prefixo} - ${titulo}` : `${prefixo} #${(garantia as any).id}`,
+        valor_contrato: toNum((garantia as any).valor_venda),
+        projeto_id: projetoRes?.id ?? null,
+        venda_id: (garantia as any).venda_id ?? projetoRes?.venda_id ?? null,
+      });
+    }
+
     return {
-      projeto: { id: (projeto as any).id, codigo: (projeto as any).codigo, venda_id: vendaId },
+      projeto: projetoRes,
+      ordem_importacao,
       ambientes,
+    };
+  }
+
+  private static lerTotalMarkupSnapshot(comissionados: unknown): number {
+    if (!comissionados || typeof comissionados !== 'object') return 0;
+    const o = comissionados as Record<string, unknown>;
+    if (o.schema !== 'MARKUP_V2') return 0;
+    const total = toNum(o.total_markup);
+    return total > 0 ? total : 0;
+  }
+
+  private static extrairParcelasMarkupSnapshot(comissionados: unknown): Array<{
+    parcela: number;
+    valor: number;
+    vencimento: string | null;
+    forma: string | null;
+  }> {
+    if (!comissionados || typeof comissionados !== 'object') return [];
+    const com = comissionados as Record<string, unknown>;
+    if (com.schema !== 'MARKUP_V2' || !Array.isArray(com.parcelas_markup)) return [];
+    return com.parcelas_markup
+      .filter((p: any) => p && typeof p === 'object' && toNum(p?.valor) > 0)
+      .map((p: any, idx: number) => ({
+        parcela: Number(p?.parcela ?? idx + 1),
+        valor: toNum(p?.valor),
+        vencimento: typeof p?.vencimento === 'string' ? p.vencimento : null,
+        forma: typeof p?.forma === 'string' ? p.forma : null,
+      }));
+  }
+
+  /**
+   * DRE de uma etapa da OS de importação (markup). Usa custos da venda/projeto quando existirem;
+   * senão devolve visão só do markup (parcelas / líquido) com custos zerados.
+   */
+  async getDreImportacaoEtapa(
+    ordemServicoId: number,
+    producaoEtapaId: number,
+    mes: number,
+    ano: number,
+  ) {
+    const os = await this.prisma.ordem_servico.findFirst({
+      where: { id: ordemServicoId, origem: 'IMPORTACAO_LEITURA' },
+      include: { etapas: { orderBy: { ordem: 'asc' } } },
+    });
+    if (!os) return null;
+    const etapas = (os as any).etapas || [];
+    const etapa =
+      producaoEtapaId > 0
+        ? etapas.find((e: any) => e.id === producaoEtapaId)
+        : null;
+    if (producaoEtapaId > 0 && !etapa) return null;
+    if (producaoEtapaId <= 0 && etapas.length > 0) return null;
+
+    const n = etapas.length > 0 ? etapas.length : 1;
+    const valorBrutoOs =
+      toNum((os as any).valor_bruto) ||
+      DreDetalhadaService.lerTotalMarkupSnapshot((os as any).comissionados);
+    const impostosOs = toNum((os as any).valor_impostos_nf);
+    // Sem valor bruto: não há dados financeiros suficientes para calcular DRE
+    if (valorBrutoOs <= 0) {
+      return this.buildDreSomenteImportacao(os as any, mes, ano, 0, 0, 0);
+    }
+    const valorContrato =
+      etapas.length === 0 ? valorBrutoOs : round2(valorBrutoOs / n);
+    const impostos =
+      etapas.length === 0 ? impostosOs : round2(impostosOs / n);
+
+    const clienteId = (os as any).cliente_id;
+    if (!clienteId || !Number.isFinite(clienteId) || clienteId <= 0) {
+      return this.buildDreSomenteImportacao(os as any, mes, ano, valorContrato, impostos, valorBrutoOs);
+    }
+    const projeto = await this.prisma.projetos.findFirst({
+      where: { cliente_id: clienteId, venda_id: { not: null } },
+      orderBy: { id: 'desc' },
+      select: { id: true, venda_id: true },
+    });
+
+    if (projeto && (projeto as any).venda_id) {
+      const venda = await this.prisma.vendas.findUnique({
+        where: { id: (projeto as any).venda_id },
+        select: { valor_total: true },
+      });
+      const valorTotalVenda = Math.max(toNum((venda as any)?.valor_total), valorBrutoOs) || 1;
+      const nomeAmbiente =
+        etapa && String((etapa as any).nome_ambiente || '').trim()
+          ? String((etapa as any).nome_ambiente)
+          : 'Obra (importação — sem ambientes na OS)';
+      const dre = await this.getDreAmbiente((projeto as any).id, nomeAmbiente, mes, ano, {
+        fonte_importacao_leitura: true,
+        valor_contrato: valorContrato,
+        impostos,
+        valor_total_venda: valorTotalVenda,
+        venda_id: (projeto as any).venda_id,
+        cliente_id: clienteId,
+      });
+      const parcelas = DreDetalhadaService.extrairParcelasMarkupSnapshot((os as any).comissionados);
+      if (dre && parcelas.length) {
+        return { ...dre, parcelas_markup: parcelas };
+      }
+      return dre;
+    }
+
+    return this.buildDreSomenteImportacao(os as any, mes, ano, valorContrato, impostos, valorBrutoOs);
+  }
+
+  private buildDreSomenteImportacao(
+    os: any,
+    mes: number,
+    ano: number,
+    valorContrato: number,
+    impostos: number,
+    valorBrutoTotal: number,
+  ) {
+    const safeContrato = Math.max(toNum(valorContrato), 0);
+    const safeImpostos = Math.max(toNum(impostos), 0);
+    const parcelas_markup = DreDetalhadaService.extrairParcelasMarkupSnapshot(os?.comissionados);
+    const lucroAprox = round2(safeContrato - safeImpostos);
+    return {
+      projeto_id: null,
+      nome_ambiente: 'Importação / markup (sem projeto com venda)',
+      mes,
+      ano,
+      valor_contrato: safeContrato,
+      impostos: safeImpostos,
+      materiais_diretos: 0,
+      custo_mao_de_obra: 0,
+      custo_estrutura: 0,
+      horas_totem: 0,
+      rateio_despesas_fixas: 0,
+      lucro_liquido: lucroAprox,
+      detalhamento_mao_obra: [],
+      detalhamento_compras: [],
+      compras_acumuladas_projeto: { total: 0, por_tipo: [] },
+      custo_por_etapa: [],
+      detalhamento_despesas: [],
+      custo_fabrica_agregado: 0,
+      variacao_eficiencia: {
+        custo_individual: 0,
+        custo_fabrica: 0,
+        variacao: 0,
+        percentual_sobre_media: 0,
+      },
+      taxa_absorcao_salarios: 0,
+      perda_padrao_percentual: null,
+      retalhos_m2: 0,
+      perda_real_m2: 0,
+      tempo_negociacao_dias: 0,
+      tempo_fabrica_dias: 0,
+      custo_comercial: 0,
+      custo_producao: 0,
+      fonte_dados: 'IMPORTACAO_SEM_PROJETO' as const,
+      ordem_servico_id: os?.id ?? null,
+      valor_bruto_os: Math.max(toNum(valorBrutoTotal), 0),
+      valor_liquido_os:
+        os?.valor_liquido != null ? toNum(os.valor_liquido) : null,
+      parcelas_markup,
+    };
+  }
+
+  async getDreGarantia(garantiaId: number, mes: number, ano: number) {
+    const inicioMes = new Date(ano, mes - 1, 1, 0, 0, 0);
+    const fimMes = new Date(ano, mes, 0, 23, 59, 59);
+
+    const garantia = await this.prisma.garantias.findUnique({
+      where: { id: garantiaId },
+      select: {
+        id: true,
+        tipo: true,
+        titulo: true,
+        valor_venda: true,
+        custo_produtos: true,
+        custo_mao_obra_previsto: true,
+        custo_fabrica_previsto: true,
+        horas_previstas: true,
+        criado_em: true,
+        data_abertura: true,
+        agendamentos: {
+          select: {
+            id: true,
+            apontamentos_producao: {
+              where: { data: { gte: inicioMes, lte: fimMes } },
+              select: {
+                horas: true,
+                custo_calculado: true,
+                funcionario: { select: { id: true, nome: true, custo_hora: true } },
+              },
+            },
+          },
+        },
+      } as any,
+    });
+    if (!garantia) return null;
+
+    const apontamentos = ((garantia as any).agendamentos || []).flatMap(
+      (ag: any) => ag.apontamentos_producao || [],
+    );
+
+    let horasTotem = 0;
+    let custoMaoDeObraReal = 0;
+    const porFuncionario = new Map<number, { nome: string; horas: number; custo: number }>();
+    for (const ap of apontamentos) {
+      const horas = toNum((ap as any).horas);
+      const custoCalculado = toNum((ap as any).custo_calculado);
+      const custo = custoCalculado > 0 ? custoCalculado : horas * toNum((ap as any).funcionario?.custo_hora);
+      horasTotem += horas;
+      custoMaoDeObraReal += custo;
+
+      const func = (ap as any).funcionario;
+      if (func?.id) {
+        const atual = porFuncionario.get(func.id) ?? { nome: func.nome ?? '', horas: 0, custo: 0 };
+        atual.horas += horas;
+        atual.custo += custo;
+        porFuncionario.set(func.id, atual);
+      }
+    }
+
+    const horasTotemArred = round2(horasTotem);
+    const custoMaoDeObraPrevisto = toNum((garantia as any).custo_mao_obra_previsto);
+    const custoMaoDeObra = round2(custoMaoDeObraReal > 0 ? custoMaoDeObraReal : custoMaoDeObraPrevisto);
+
+    let custoEstrutura = 0;
+    if (horasTotem > 0) {
+      const taxaEstrutura = await this.custosEstrutura.getCustoHoraEstrutura(mes, ano);
+      custoEstrutura = round2(horasTotem * taxaEstrutura);
+    } else {
+      custoEstrutura = round2(toNum((garantia as any).custo_fabrica_previsto));
+    }
+
+    const detalhamento_mao_obra = Array.from(porFuncionario.entries()).map(([funcionario_id, v]) => ({
+      funcionario_id,
+      funcionario_nome: v.nome,
+      horas: round2(v.horas),
+      custo_calculado: round2(v.custo),
+    }));
+
+    const tipoGarantia = String((garantia as any).tipo || 'GARANTIA').toUpperCase();
+    const prefixo =
+      tipoGarantia === 'ASSISTENCIA'
+        ? 'Assistência'
+        : tipoGarantia === 'MANUTENCAO'
+          ? 'Manutenção'
+          : 'Garantia';
+    const titulo = String((garantia as any).titulo || '').trim();
+    const nomeAmbiente = titulo ? `${prefixo} - ${titulo}` : `${prefixo} #${(garantia as any).id}`;
+    const valorContrato = round2(toNum((garantia as any).valor_venda));
+    const materiaisDiretos = round2(toNum((garantia as any).custo_produtos));
+    const lucroLiquido = round2(valorContrato - materiaisDiretos - custoMaoDeObra - custoEstrutura);
+
+    return {
+      projeto_id: null,
+      nome_ambiente: nomeAmbiente,
+      mes,
+      ano,
+      valor_contrato: valorContrato,
+      impostos: 0,
+      materiais_diretos: materiaisDiretos,
+      custo_mao_de_obra: custoMaoDeObra,
+      custo_estrutura: custoEstrutura,
+      horas_totem: horasTotemArred,
+      rateio_despesas_fixas: 0,
+      lucro_liquido: lucroLiquido,
+      detalhamento_mao_obra,
+      detalhamento_compras: materiaisDiretos > 0
+        ? [{
+            compra_id: (garantia as any).id,
+            fornecedor_nome: prefixo,
+            tipo_compra: 'POS_VENDA',
+            valor: materiaisDiretos,
+          }]
+        : [],
+      compras_acumuladas_projeto: {
+        total: materiaisDiretos,
+        por_tipo: materiaisDiretos > 0 ? [{ tipo: 'POS_VENDA', valor: materiaisDiretos }] : [],
+      },
+      custo_por_etapa: [],
+      detalhamento_despesas: [],
+      custo_fabrica_agregado: custoEstrutura,
+      variacao_eficiencia: {
+        custo_individual: custoMaoDeObra,
+        custo_fabrica: custoEstrutura,
+        variacao: round2(custoMaoDeObra - custoEstrutura),
+        percentual_sobre_media: custoEstrutura > 0 ? round2(((custoMaoDeObra - custoEstrutura) / custoEstrutura) * 100) : 0,
+      },
+      taxa_absorcao_salarios: 0,
+      perda_padrao_percentual: null,
+      retalhos_m2: 0,
+      perda_real_m2: 0,
+      tempo_negociacao_dias: 0,
+      tempo_fabrica_dias: 0,
+      custo_comercial: 0,
+      custo_producao: 0,
+      fonte_dados: 'GARANTIA' as const,
+      garantia_id: (garantia as any).id,
+      garantia_tipo: tipoGarantia,
+      horas_previstas: round2(toNum((garantia as any).horas_previstas)),
     };
   }
 
@@ -136,7 +578,13 @@ export class DreDetalhadaService {
   /** Horas úteis por dia para custo de tempo (negociação e fábrica). */
   private static readonly HORAS_POR_DIA = 8;
 
-  async getDreAmbiente(projetoId: number, nomeAmbiente: string, mes: number, ano: number) {
+  async getDreAmbiente(
+    projetoId: number,
+    nomeAmbiente: string,
+    mes: number,
+    ano: number,
+    opts?: DreAmbienteOptsImportacao,
+  ) {
     const inicioMes = new Date(ano, mes - 1, 1, 0, 0, 0);
     const fimMes = new Date(ano, mes, 0, 23, 59, 59);
 
@@ -153,15 +601,11 @@ export class DreDetalhadaService {
     if (!projeto || !(projeto as any).venda_id) {
       return null;
     }
-    const vendaId = (projeto as any).venda_id;
+    let vendaId = (projeto as any).venda_id as number;
+    if (opts?.fonte_importacao_leitura && opts.venda_id != null) {
+      vendaId = opts.venda_id;
+    }
 
-    const item = await this.prisma.vendas_itens.findFirst({
-      where: { venda_id: vendaId, nome_ambiente: nomeAmbiente },
-      select: { id: true, valor_total: true },
-    });
-    if (!item) return null;
-
-    const valorContrato = toNum((item as any).valor_total);
     const venda = await this.prisma.vendas.findUnique({
       where: { id: vendaId },
       select: {
@@ -171,9 +615,31 @@ export class DreDetalhadaService {
         data_venda: true,
       },
     });
-    const valorTotalVenda = toNum((venda as any)?.valor_total) || valorContrato || 1;
-    const impostosVenda = toNum((venda as any)?.valor_nota_fiscal) + toNum((venda as any)?.valor_taxa_pagamento);
-    const impostos = round2((valorContrato / valorTotalVenda) * impostosVenda);
+    // Venda pode ter sido excluída após importação — protege contra null
+    if (!venda && !opts?.fonte_importacao_leitura) {
+      return null;
+    }
+
+    let valorContrato: number;
+    let impostos: number;
+    let valorTotalVenda: number;
+
+    if (opts?.fonte_importacao_leitura) {
+      valorContrato = round2(opts.valor_contrato);
+      impostos = round2(opts.impostos);
+      valorTotalVenda = Math.max(toNum(opts.valor_total_venda), 1);
+    } else {
+      const item = await this.prisma.vendas_itens.findFirst({
+        where: { venda_id: vendaId, nome_ambiente: nomeAmbiente },
+        select: { id: true, valor_total: true },
+      });
+      if (!item) return null;
+      valorContrato = toNum((item as any).valor_total);
+      valorTotalVenda = toNum((venda as any)?.valor_total) || valorContrato || 1;
+      const impostosVenda =
+        toNum((venda as any)?.valor_nota_fiscal) + toNum((venda as any)?.valor_taxa_pagamento);
+      impostos = round2((valorContrato / valorTotalVenda) * impostosVenda);
+    }
 
     // Materiais diretos: compras com data_compra (referência) no mês, vinculadas a este venda, alocado ao ambiente
     const comprasMes = await this.prisma.compras.findMany({
@@ -184,44 +650,109 @@ export class DreDetalhadaService {
       select: {
         id: true,
         valor_total: true,
+        tipo_compra: true,
         venda_item_id: true,
+        fornecedor: { select: { id: true, nome_fantasia: true, razao_social: true } },
         rateios: { where: { nome_ambiente: nomeAmbiente }, select: { valor_alocado: true } },
         venda_item: { select: { nome_ambiente: true } },
       },
     });
     let materiaisDiretos = 0;
+    const detalhamento_compras: Array<{
+      compra_id: number;
+      fornecedor_nome: string;
+      tipo_compra: string;
+      valor: number;
+    }> = [];
     for (const c of comprasMes) {
       const itemAmbiente = (c as any).venda_item?.nome_ambiente === nomeAmbiente;
+      let valorAlocado = 0;
       if (itemAmbiente) {
-        materiaisDiretos += toNum((c as any).valor_total);
+        valorAlocado = toNum((c as any).valor_total);
       } else {
         const rateio = (c as any).rateios?.[0];
-        if (rateio) materiaisDiretos += toNum((rateio as any).valor_alocado);
+        if (rateio) valorAlocado = toNum((rateio as any).valor_alocado);
+      }
+      if (valorAlocado > 0) {
+        materiaisDiretos += valorAlocado;
+        const forn = (c as any).fornecedor;
+        detalhamento_compras.push({
+          compra_id: (c as any).id,
+          fornecedor_nome: forn?.nome_fantasia || forn?.razao_social || 'Sem fornecedor',
+          tipo_compra: (c as any).tipo_compra || 'Outros',
+          valor: round2(valorAlocado),
+        });
       }
     }
     materiaisDiretos = round2(materiaisDiretos);
 
+    // Compras totais acumuladas do projeto (todo o histórico, não só o mês)
+    const comprasProjetoTotal = await this.prisma.compras.findMany({
+      where: { venda_id: vendaId },
+      select: {
+        valor_total: true,
+        tipo_compra: true,
+        venda_item_id: true,
+        rateios: { where: { nome_ambiente: nomeAmbiente }, select: { valor_alocado: true } },
+        venda_item: { select: { nome_ambiente: true } },
+      },
+    });
+    let comprasAcumuladas = 0;
+    const compras_por_tipo: Map<string, number> = new Map();
+    for (const c of comprasProjetoTotal) {
+      const itemAmbiente = (c as any).venda_item?.nome_ambiente === nomeAmbiente;
+      let valorAlocado = 0;
+      if (itemAmbiente) {
+        valorAlocado = toNum((c as any).valor_total);
+      } else {
+        const rateio = (c as any).rateios?.[0];
+        if (rateio) valorAlocado = toNum((rateio as any).valor_alocado);
+      }
+      if (valorAlocado > 0) {
+        comprasAcumuladas += valorAlocado;
+        const tipo = (c as any).tipo_compra || 'Outros';
+        compras_por_tipo.set(tipo, (compras_por_tipo.get(tipo) || 0) + valorAlocado);
+      }
+    }
+    const detalhamento_compras_acumuladas = Array.from(compras_por_tipo.entries())
+      .map(([tipo, valor]) => ({ tipo, valor: round2(valor) }))
+      .sort((a, b) => b.valor - a.valor);
+
     // Custo mão de obra (individual: Custo_Funcionario_Alocado) e custo fábrica (coletivo) para auditoria
+    const apOrImportacao: any[] = [
+      { venda_id: vendaId },
+      { agenda_fabrica: { projeto_id: projetoId } },
+      { agenda_loja: { projeto_id: projetoId } },
+    ];
+    if (opts?.fonte_importacao_leitura && opts.cliente_id) {
+      apOrImportacao.push(
+        { agenda_fabrica: { cliente_id: opts.cliente_id } },
+        { agenda_loja: { cliente_id: opts.cliente_id } },
+      );
+    }
     const apontamentos = await this.prisma.apontamento_producao.findMany({
       where: {
         data: { gte: inicioMes, lte: fimMes },
-        OR: [
-          { venda_id: vendaId },
-          { agenda_fabrica: { projeto_id: projetoId } },
-          { agenda_loja: { projeto_id: projetoId } },
-        ],
+        OR: apOrImportacao,
       },
       select: {
         horas: true,
         custo_calculado: true,
+        categoria: true,
         agenda_fabrica_id: true,
         agenda_loja_id: true,
+        agenda_fabrica: { select: { subetapa: true } },
         funcionario: { select: { id: true, nome: true, custo_hora: true } },
       },
     });
     let custoMaoDeObraProjeto = 0;
     let horasTotemProjeto = 0;
     const porFuncionario = new Map<number, { nome: string; horas: number; custo: number }>();
+    // Agrupamento por etapa (categoria/subetapa) → funcionários
+    const porEtapa = new Map<
+      string,
+      { horas: number; custo: number; funcionarios: Map<number, { nome: string; horas: number; custo: number }> }
+    >();
     for (const ap of apontamentos) {
       const horas = toNum((ap as any).horas);
       horasTotemProjeto += horas;
@@ -235,6 +766,18 @@ export class DreDetalhadaService {
         cur.custo += custo;
         porFuncionario.set(func.id, cur);
       }
+      // Agrupamento por etapa
+      const etapaNome = (ap as any).agenda_fabrica?.subetapa || (ap as any).categoria || 'OUTROS';
+      const etapa = porEtapa.get(etapaNome) ?? { horas: 0, custo: 0, funcionarios: new Map() };
+      etapa.horas += horas;
+      etapa.custo += custo;
+      if (func) {
+        const ef = etapa.funcionarios.get(func.id) ?? { nome: func.nome ?? '', horas: 0, custo: 0 };
+        ef.horas += horas;
+        ef.custo += custo;
+        etapa.funcionarios.set(func.id, ef);
+      }
+      porEtapa.set(etapaNome, etapa);
     }
     const rateioAmbiente = valorTotalVenda > 0 ? valorContrato / valorTotalVenda : 0;
     const horasTotemAmbiente = round2(horasTotemProjeto * rateioAmbiente);
@@ -249,6 +792,21 @@ export class DreDetalhadaService {
       funcionario_nome: v.nome,
       horas: round2(rateioAmbiente * v.horas),
       custo_calculado: round2(rateioAmbiente * v.custo),
+    }));
+
+    // Custo hora por etapa de produção com detalhamento por funcionário
+    const custo_por_etapa = Array.from(porEtapa.entries()).map(([etapa, data]) => ({
+      etapa,
+      horas: round2(rateioAmbiente * data.horas),
+      custo: round2(rateioAmbiente * data.custo),
+      custo_hora: data.horas > 0 ? round2(data.custo / data.horas) : 0,
+      funcionarios: Array.from(data.funcionarios.entries()).map(([funcionario_id, f]) => ({
+        funcionario_id,
+        funcionario_nome: f.nome,
+        horas: round2(rateioAmbiente * f.horas),
+        custo: round2(rateioAmbiente * f.custo),
+        custo_hora: f.horas > 0 ? round2(f.custo / f.horas) : 0,
+      })),
     }));
 
     // Custo_Tarefa_Fabrica (coletivo): soma dos custo_tarefa_fabrica das agendas envolvidas no projeto no mês, rateado ao ambiente (auditoria)
@@ -320,11 +878,26 @@ export class DreDetalhadaService {
         data_registro: { gte: inicioMes, lte: fimMes },
         categoria: { notIn: categoriasExcluidasRateio },
       },
-      select: { valor_total: true },
+      select: { valor_total: true, categoria: true },
     });
     const totalDespesasFixas = despesasFixasOutras.reduce((s, d) => s + toNum((d as any).valor_total), 0);
     const rateioPorProjeto = totalDespesasFixas / nProjetosAtivos;
     const rateioDespesasFixas = round2((valorContrato / valorTotalVenda) * rateioPorProjeto);
+
+    // Detalhamento rateio de despesas por categoria
+    const despPorCategoria = new Map<string, number>();
+    for (const d of despesasFixasOutras) {
+      const cat = (d as any).categoria || 'Outros';
+      despPorCategoria.set(cat, (despPorCategoria.get(cat) || 0) + toNum((d as any).valor_total));
+    }
+    const rateioFracao = totalDespesasFixas > 0 ? rateioDespesasFixas / totalDespesasFixas : 0;
+    const detalhamento_despesas = Array.from(despPorCategoria.entries())
+      .map(([categoria, valorTotal]) => ({
+        categoria,
+        valor_total: round2(valorTotal * rateioFracao),
+        percentual: totalDespesasFixas > 0 ? round2((valorTotal / totalDespesasFixas) * 100) : 0,
+      }))
+      .sort((a, b) => b.valor_total - a.valor_total);
 
     let lucroLiquido = round2(
       valorContrato - impostos - materiaisDiretos - custoMaoDeObra - custoEstrutura - rateioDespesasFixas,
@@ -413,6 +986,13 @@ export class DreDetalhadaService {
       rateio_despesas_fixas: rateioDespesasFixas,
       lucro_liquido: lucroLiquido,
       detalhamento_mao_obra: detalhamento_mao_obra,
+      detalhamento_compras,
+      compras_acumuladas_projeto: {
+        total: round2(comprasAcumuladas),
+        por_tipo: detalhamento_compras_acumuladas,
+      },
+      custo_por_etapa,
+      detalhamento_despesas,
       custo_fabrica_agregado: custo_fabrica_agregado,
       variacao_eficiencia,
       taxa_absorcao_salarios: taxaAbsorcao,
@@ -424,6 +1004,9 @@ export class DreDetalhadaService {
       tempo_fabrica_dias: round2(tempoFabricaDias),
       custo_comercial: custoComercial,
       custo_producao: custoProducaoTimeline,
+      ...(opts?.fonte_importacao_leitura
+        ? { fonte_dados: 'IMPORTACAO_MARKUP' as const }
+        : { fonte_dados: 'VENDA' as const }),
     };
   }
 

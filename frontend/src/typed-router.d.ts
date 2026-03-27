@@ -114,11 +114,39 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
-    '/comercial/': RouteRecordInfo<
-      '/comercial/',
-      '/comercial',
+    '/comercial/orcamentos/': RouteRecordInfo<
+      '/comercial/orcamentos/',
+      '/comercial/orcamentos',
       Record<never, never>,
       Record<never, never>,
+      | never
+    >,
+    '/comercial/orcamentos/[clienteId]': RouteRecordInfo<
+      '/comercial/orcamentos/[clienteId]',
+      '/comercial/orcamentos/:clienteId',
+      { clienteId: ParamValue<true> },
+      { clienteId: ParamValue<false> },
+      | never
+    >,
+    '/comercial/orcamentos/editar/[id]': RouteRecordInfo<
+      '/comercial/orcamentos/editar/[id]',
+      '/comercial/orcamentos/editar/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/comercial/pos-venda-markup/': RouteRecordInfo<
+      '/comercial/pos-venda-markup/',
+      '/comercial/pos-venda-markup',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/comercial/pos-venda-markup/[clienteId]': RouteRecordInfo<
+      '/comercial/pos-venda-markup/[clienteId]',
+      '/comercial/pos-venda-markup/:clienteId',
+      { clienteId: ParamValue<true> },
+      { clienteId: ParamValue<false> },
       | never
     >,
     '/comissao-producao/': RouteRecordInfo<
@@ -156,13 +184,6 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/configuracoes/estrategia-precos': RouteRecordInfo<
-      '/configuracoes/estrategia-precos',
-      '/configuracoes/estrategia-precos',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
     '/configuracoes/permissoes': RouteRecordInfo<
       '/configuracoes/permissoes',
       '/configuracoes/permissoes',
@@ -184,13 +205,6 @@ declare module 'vue-router/auto-routes' {
       { token: ParamValue<false> },
       | never
     >,
-    '/contratos/': RouteRecordInfo<
-      '/contratos/',
-      '/contratos',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
     '/contratos/[id]': RouteRecordInfo<
       '/contratos/[id]',
       '/contratos/:id',
@@ -205,13 +219,6 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/contratos/cliente/[id]': RouteRecordInfo<
-      '/contratos/cliente/[id]',
-      '/contratos/cliente/:id',
-      { id: ParamValue<true> },
-      { id: ParamValue<false> },
-      | never
-    >,
     '/despesas/': RouteRecordInfo<
       '/despesas/',
       '/despesas',
@@ -222,6 +229,20 @@ declare module 'vue-router/auto-routes' {
     '/despesas/[id]': RouteRecordInfo<
       '/despesas/[id]',
       '/despesas/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
+    '/estoque-retalho/': RouteRecordInfo<
+      '/estoque-retalho/',
+      '/estoque-retalho',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/estoque-retalho/[id]': RouteRecordInfo<
+      '/estoque-retalho/[id]',
+      '/estoque-retalho/:id',
       { id: ParamValue<true> },
       { id: ParamValue<false> },
       | never
@@ -243,13 +264,6 @@ declare module 'vue-router/auto-routes' {
     '/financeiro/custos-estrutura/': RouteRecordInfo<
       '/financeiro/custos-estrutura/',
       '/financeiro/custos-estrutura',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/fluxo-operacional': RouteRecordInfo<
-      '/fluxo-operacional',
-      '/fluxo-operacional',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -282,6 +296,20 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
+    '/garantias/': RouteRecordInfo<
+      '/garantias/',
+      '/garantias',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/garantias/[id]': RouteRecordInfo<
+      '/garantias/[id]',
+      '/garantias/:id',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
+      | never
+    >,
     '/login': RouteRecordInfo<
       '/login',
       '/login',
@@ -289,100 +317,9 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/medicao/orcamento/[id]': RouteRecordInfo<
-      '/medicao/orcamento/[id]',
-      '/medicao/orcamento/:id',
-      { id: ParamValue<true> },
-      { id: ParamValue<false> },
-      | never
-    >,
-    '/medicao/pre/[id]': RouteRecordInfo<
-      '/medicao/pre/[id]',
-      '/medicao/pre/:id',
-      { id: ParamValue<true> },
-      { id: ParamValue<false> },
-      | never
-    >,
-    '/medicao/venda/[id]': RouteRecordInfo<
-      '/medicao/venda/[id]',
-      '/medicao/venda/:id',
-      { id: ParamValue<true> },
-      { id: ParamValue<false> },
-      | never
-    >,
-    '/medicao-fina/[id]': RouteRecordInfo<
-      '/medicao-fina/[id]',
-      '/medicao-fina/:id',
-      { id: ParamValue<true> },
-      { id: ParamValue<false> },
-      | never
-    >,
     '/migracao-drive/': RouteRecordInfo<
       '/migracao-drive/',
       '/migracao-drive',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/orcamento-tecnico/': RouteRecordInfo<
-      '/orcamento-tecnico/',
-      '/orcamento-tecnico',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/orcamento-tecnico/[id]': RouteRecordInfo<
-      '/orcamento-tecnico/[id]',
-      '/orcamento-tecnico/:id',
-      { id: ParamValue<true> },
-      { id: ParamValue<false> },
-      | never
-    >,
-    '/orcamento-tecnico/importar': RouteRecordInfo<
-      '/orcamento-tecnico/importar',
-      '/orcamento-tecnico/importar',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/orcamento-tecnico/marcenaria-rapido': RouteRecordInfo<
-      '/orcamento-tecnico/marcenaria-rapido',
-      '/orcamento-tecnico/marcenaria-rapido',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/orcamento-tecnico/novo/[agendamentoId]': RouteRecordInfo<
-      '/orcamento-tecnico/novo/[agendamentoId]',
-      '/orcamento-tecnico/novo/:agendamentoId',
-      { agendamentoId: ParamValue<true> },
-      { agendamentoId: ParamValue<false> },
-      | never
-    >,
-    '/orcamentos/': RouteRecordInfo<
-      '/orcamentos/',
-      '/orcamentos',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/orcamentos/[id]': RouteRecordInfo<
-      '/orcamentos/[id]',
-      '/orcamentos/:id',
-      { id: ParamValue<true> },
-      { id: ParamValue<false> },
-      | never
-    >,
-    '/orcamentos/cliente/[id]': RouteRecordInfo<
-      '/orcamentos/cliente/[id]',
-      '/orcamentos/cliente/:id',
-      { id: ParamValue<true> },
-      { id: ParamValue<false> },
-      | never
-    >,
-    '/orcamentos/processo': RouteRecordInfo<
-      '/orcamentos/processo',
-      '/orcamentos/processo',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -429,13 +366,6 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/plano-corte/venda': RouteRecordInfo<
-      '/plano-corte/venda',
-      '/plano-corte/venda',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
     '/producao/apontamento': RouteRecordInfo<
       '/producao/apontamento',
       '/producao/apontamento',
@@ -471,53 +401,11 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/producao/contratos': RouteRecordInfo<
-      '/producao/contratos',
-      '/producao/contratos',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/producao/medicao-fina/': RouteRecordInfo<
-      '/producao/medicao-fina/',
-      '/producao/medicao-fina',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/producao/medida-tecnica/': RouteRecordInfo<
-      '/producao/medida-tecnica/',
-      '/producao/medida-tecnica',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/producao/medida-tecnica/[projetoId]': RouteRecordInfo<
-      '/producao/medida-tecnica/[projetoId]',
-      '/producao/medida-tecnica/:projetoId',
-      { projetoId: ParamValue<true> },
-      { projetoId: ParamValue<false> },
-      | never
-    >,
-    '/producao/projeto-plano-corte/': RouteRecordInfo<
-      '/producao/projeto-plano-corte/',
-      '/producao/projeto-plano-corte',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/producao/projeto-plano-corte/[planoId]': RouteRecordInfo<
-      '/producao/projeto-plano-corte/[planoId]',
-      '/producao/projeto-plano-corte/:planoId',
-      { planoId: ParamValue<true> },
-      { planoId: ParamValue<false> },
-      | never
-    >,
-    '/producao/projeto-tecnico/': RouteRecordInfo<
-      '/producao/projeto-tecnico/',
-      '/producao/projeto-tecnico',
-      Record<never, never>,
-      Record<never, never>,
+    '/producao/pos-venda-markup/[clienteId]': RouteRecordInfo<
+      '/producao/pos-venda-markup/[clienteId]',
+      '/producao/pos-venda-markup/:clienteId',
+      { clienteId: ParamValue<true> },
+      { clienteId: ParamValue<false> },
       | never
     >,
     '/producao/projeto-tecnico/[projetoId]': RouteRecordInfo<
@@ -548,9 +436,16 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/relatorios/acompanhamento-status': RouteRecordInfo<
-      '/relatorios/acompanhamento-status',
-      '/relatorios/acompanhamento-status',
+    '/relatorios/contas-pagar': RouteRecordInfo<
+      '/relatorios/contas-pagar',
+      '/relatorios/contas-pagar',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/relatorios/contas-receber': RouteRecordInfo<
+      '/relatorios/contas-receber',
+      '/relatorios/contas-receber',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -565,6 +460,34 @@ declare module 'vue-router/auto-routes' {
     '/relatorios/dre-mensal': RouteRecordInfo<
       '/relatorios/dre-mensal',
       '/relatorios/dre-mensal',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/relatorios/fluxo-caixa': RouteRecordInfo<
+      '/relatorios/fluxo-caixa',
+      '/relatorios/fluxo-caixa',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/relatorios/folha-trabalhista': RouteRecordInfo<
+      '/relatorios/folha-trabalhista',
+      '/relatorios/folha-trabalhista',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/relatorios/servico-corte': RouteRecordInfo<
+      '/relatorios/servico-corte',
+      '/relatorios/servico-corte',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/relatorios/totem-producao': RouteRecordInfo<
+      '/relatorios/totem-producao',
+      '/relatorios/totem-producao',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -607,90 +530,6 @@ declare module 'vue-router/auto-routes' {
     '/totem-fabrica': RouteRecordInfo<
       '/totem-fabrica',
       '/totem-fabrica',
-      Record<never, never>,
-      Record<never, never>,
-      | '/totem-fabrica/medicao'
-    >,
-    '/totem-fabrica/medicao': RouteRecordInfo<
-      '/totem-fabrica/medicao',
-      '/totem-fabrica/medicao',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/totem-fabrica-preencher': RouteRecordInfo<
-      '/totem-fabrica-preencher',
-      '/totem-fabrica-preencher',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/vendas/': RouteRecordInfo<
-      '/vendas/',
-      '/vendas',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/vendas/[id]': RouteRecordInfo<
-      '/vendas/[id]',
-      '/vendas/:id',
-      { id: ParamValue<true> },
-      { id: ParamValue<false> },
-      | never
-    >,
-    '/vendas/cliente/[id]': RouteRecordInfo<
-      '/vendas/cliente/[id]',
-      '/vendas/cliente/:id',
-      { id: ParamValue<true> },
-      { id: ParamValue<false> },
-      | never
-    >,
-    '/vendas/fechamento': RouteRecordInfo<
-      '/vendas/fechamento',
-      '/vendas/fechamento',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/vendas/fechamento-venda/[orcamentoId]': RouteRecordInfo<
-      '/vendas/fechamento-venda/[orcamentoId]',
-      '/vendas/fechamento-venda/:orcamentoId',
-      { orcamentoId: ParamValue<true> },
-      { orcamentoId: ParamValue<false> },
-      | never
-    >,
-    '/vendas/kanban': RouteRecordInfo<
-      '/vendas/kanban',
-      '/vendas/kanban',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/vendas/nova-venda': RouteRecordInfo<
-      '/vendas/nova-venda',
-      '/vendas/nova-venda',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
-    '/vendas/venda/[id]': RouteRecordInfo<
-      '/vendas/venda/[id]',
-      '/vendas/venda/:id',
-      { id: ParamValue<true> },
-      { id: ParamValue<false> },
-      | '/vendas/venda/[id]/editar'
-    >,
-    '/vendas/venda/[id]/editar': RouteRecordInfo<
-      '/vendas/venda/[id]/editar',
-      '/vendas/venda/:id/editar',
-      { id: ParamValue<true> },
-      { id: ParamValue<false> },
-      | never
-    >,
-    '/visual-lab': RouteRecordInfo<
-      '/visual-lab',
-      '/visual-lab',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -786,9 +625,33 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/comercial/index.vue': {
+    'src/pages/comercial/orcamentos/index.vue': {
       routes:
-        | '/comercial/'
+        | '/comercial/orcamentos/'
+      views:
+        | never
+    }
+    'src/pages/comercial/orcamentos/[clienteId].vue': {
+      routes:
+        | '/comercial/orcamentos/[clienteId]'
+      views:
+        | never
+    }
+    'src/pages/comercial/orcamentos/editar/[id].vue': {
+      routes:
+        | '/comercial/orcamentos/editar/[id]'
+      views:
+        | never
+    }
+    'src/pages/comercial/pos-venda-markup/index.vue': {
+      routes:
+        | '/comercial/pos-venda-markup/'
+      views:
+        | never
+    }
+    'src/pages/comercial/pos-venda-markup/[clienteId].vue': {
+      routes:
+        | '/comercial/pos-venda-markup/[clienteId]'
       views:
         | never
     }
@@ -822,12 +685,6 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/configuracoes/estrategia-precos.vue': {
-      routes:
-        | '/configuracoes/estrategia-precos'
-      views:
-        | never
-    }
     'src/pages/configuracoes/permissoes.vue': {
       routes:
         | '/configuracoes/permissoes'
@@ -846,12 +703,6 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/contratos/index.vue': {
-      routes:
-        | '/contratos/'
-      views:
-        | never
-    }
     'src/pages/contratos/[id].vue': {
       routes:
         | '/contratos/[id]'
@@ -864,12 +715,6 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/contratos/cliente/[id].vue': {
-      routes:
-        | '/contratos/cliente/[id]'
-      views:
-        | never
-    }
     'src/pages/despesas/index.vue': {
       routes:
         | '/despesas/'
@@ -879,6 +724,18 @@ declare module 'vue-router/auto-routes' {
     'src/pages/despesas/[id].vue': {
       routes:
         | '/despesas/[id]'
+      views:
+        | never
+    }
+    'src/pages/estoque-retalho/index.vue': {
+      routes:
+        | '/estoque-retalho/'
+      views:
+        | never
+    }
+    'src/pages/estoque-retalho/[id].vue': {
+      routes:
+        | '/estoque-retalho/[id]'
       views:
         | never
     }
@@ -897,12 +754,6 @@ declare module 'vue-router/auto-routes' {
     'src/pages/financeiro/custos-estrutura/index.vue': {
       routes:
         | '/financeiro/custos-estrutura/'
-      views:
-        | never
-    }
-    'src/pages/fluxo-operacional.vue': {
-      routes:
-        | '/fluxo-operacional'
       views:
         | never
     }
@@ -930,93 +781,27 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
+    'src/pages/garantias/index.vue': {
+      routes:
+        | '/garantias/'
+      views:
+        | never
+    }
+    'src/pages/garantias/[id].vue': {
+      routes:
+        | '/garantias/[id]'
+      views:
+        | never
+    }
     'src/pages/login.vue': {
       routes:
         | '/login'
       views:
         | never
     }
-    'src/pages/medicao/orcamento/[id].vue': {
-      routes:
-        | '/medicao/orcamento/[id]'
-      views:
-        | never
-    }
-    'src/pages/medicao/pre/[id].vue': {
-      routes:
-        | '/medicao/pre/[id]'
-      views:
-        | never
-    }
-    'src/pages/medicao/venda/[id].vue': {
-      routes:
-        | '/medicao/venda/[id]'
-      views:
-        | never
-    }
-    'src/pages/medicao-fina/[id].vue': {
-      routes:
-        | '/medicao-fina/[id]'
-      views:
-        | never
-    }
     'src/pages/migracao-drive/index.vue': {
       routes:
         | '/migracao-drive/'
-      views:
-        | never
-    }
-    'src/pages/orcamento-tecnico/index.vue': {
-      routes:
-        | '/orcamento-tecnico/'
-      views:
-        | never
-    }
-    'src/pages/orcamento-tecnico/[id].vue': {
-      routes:
-        | '/orcamento-tecnico/[id]'
-      views:
-        | never
-    }
-    'src/pages/orcamento-tecnico/importar.vue': {
-      routes:
-        | '/orcamento-tecnico/importar'
-      views:
-        | never
-    }
-    'src/pages/orcamento-tecnico/marcenaria-rapido.vue': {
-      routes:
-        | '/orcamento-tecnico/marcenaria-rapido'
-      views:
-        | never
-    }
-    'src/pages/orcamento-tecnico/novo/[agendamentoId].vue': {
-      routes:
-        | '/orcamento-tecnico/novo/[agendamentoId]'
-      views:
-        | never
-    }
-    'src/pages/orcamentos/index.vue': {
-      routes:
-        | '/orcamentos/'
-      views:
-        | never
-    }
-    'src/pages/orcamentos/[id].vue': {
-      routes:
-        | '/orcamentos/[id]'
-      views:
-        | never
-    }
-    'src/pages/orcamentos/cliente/[id].vue': {
-      routes:
-        | '/orcamentos/cliente/[id]'
-      views:
-        | never
-    }
-    'src/pages/orcamentos/processo.vue': {
-      routes:
-        | '/orcamentos/processo'
       views:
         | never
     }
@@ -1056,12 +841,6 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/plano-corte/venda.vue': {
-      routes:
-        | '/plano-corte/venda'
-      views:
-        | never
-    }
     'src/pages/producao/apontamento.vue': {
       routes:
         | '/producao/apontamento'
@@ -1092,45 +871,9 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/producao/contratos.vue': {
+    'src/pages/producao/pos-venda-markup/[clienteId].vue': {
       routes:
-        | '/producao/contratos'
-      views:
-        | never
-    }
-    'src/pages/producao/medicao-fina/index.vue': {
-      routes:
-        | '/producao/medicao-fina/'
-      views:
-        | never
-    }
-    'src/pages/producao/medida-tecnica/index.vue': {
-      routes:
-        | '/producao/medida-tecnica/'
-      views:
-        | never
-    }
-    'src/pages/producao/medida-tecnica/[projetoId].vue': {
-      routes:
-        | '/producao/medida-tecnica/[projetoId]'
-      views:
-        | never
-    }
-    'src/pages/producao/projeto-plano-corte/index.vue': {
-      routes:
-        | '/producao/projeto-plano-corte/'
-      views:
-        | never
-    }
-    'src/pages/producao/projeto-plano-corte/[planoId].vue': {
-      routes:
-        | '/producao/projeto-plano-corte/[planoId]'
-      views:
-        | never
-    }
-    'src/pages/producao/projeto-tecnico/index.vue': {
-      routes:
-        | '/producao/projeto-tecnico/'
+        | '/producao/pos-venda-markup/[clienteId]'
       views:
         | never
     }
@@ -1158,9 +901,15 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/relatorios/acompanhamento-status.vue': {
+    'src/pages/relatorios/contas-pagar.vue': {
       routes:
-        | '/relatorios/acompanhamento-status'
+        | '/relatorios/contas-pagar'
+      views:
+        | never
+    }
+    'src/pages/relatorios/contas-receber.vue': {
+      routes:
+        | '/relatorios/contas-receber'
       views:
         | never
     }
@@ -1173,6 +922,30 @@ declare module 'vue-router/auto-routes' {
     'src/pages/relatorios/dre-mensal.vue': {
       routes:
         | '/relatorios/dre-mensal'
+      views:
+        | never
+    }
+    'src/pages/relatorios/fluxo-caixa.vue': {
+      routes:
+        | '/relatorios/fluxo-caixa'
+      views:
+        | never
+    }
+    'src/pages/relatorios/folha-trabalhista.vue': {
+      routes:
+        | '/relatorios/folha-trabalhista'
+      views:
+        | never
+    }
+    'src/pages/relatorios/servico-corte.vue': {
+      routes:
+        | '/relatorios/servico-corte'
+      views:
+        | never
+    }
+    'src/pages/relatorios/totem-producao.vue': {
+      routes:
+        | '/relatorios/totem-producao'
       views:
         | never
     }
@@ -1209,80 +982,6 @@ declare module 'vue-router/auto-routes' {
     'src/pages/totem-fabrica.vue': {
       routes:
         | '/totem-fabrica'
-        | '/totem-fabrica/medicao'
-      views:
-        | 'default'
-    }
-    'src/pages/totem-fabrica/medicao.vue': {
-      routes:
-        | '/totem-fabrica/medicao'
-      views:
-        | never
-    }
-    'src/pages/totem-fabrica-preencher.vue': {
-      routes:
-        | '/totem-fabrica-preencher'
-      views:
-        | never
-    }
-    'src/pages/vendas/index.vue': {
-      routes:
-        | '/vendas/'
-      views:
-        | never
-    }
-    'src/pages/vendas/[id].vue': {
-      routes:
-        | '/vendas/[id]'
-      views:
-        | never
-    }
-    'src/pages/vendas/cliente/[id].vue': {
-      routes:
-        | '/vendas/cliente/[id]'
-      views:
-        | never
-    }
-    'src/pages/vendas/fechamento.vue': {
-      routes:
-        | '/vendas/fechamento'
-      views:
-        | never
-    }
-    'src/pages/vendas/fechamento-venda/[orcamentoId].vue': {
-      routes:
-        | '/vendas/fechamento-venda/[orcamentoId]'
-      views:
-        | never
-    }
-    'src/pages/vendas/kanban.vue': {
-      routes:
-        | '/vendas/kanban'
-      views:
-        | never
-    }
-    'src/pages/vendas/nova-venda.vue': {
-      routes:
-        | '/vendas/nova-venda'
-      views:
-        | never
-    }
-    'src/pages/vendas/venda/[id].vue': {
-      routes:
-        | '/vendas/venda/[id]'
-        | '/vendas/venda/[id]/editar'
-      views:
-        | 'default'
-    }
-    'src/pages/vendas/venda/[id]/editar.vue': {
-      routes:
-        | '/vendas/venda/[id]/editar'
-      views:
-        | never
-    }
-    'src/pages/visual-lab.vue': {
-      routes:
-        | '/visual-lab'
       views:
         | never
     }

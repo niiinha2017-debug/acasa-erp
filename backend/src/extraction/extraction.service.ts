@@ -106,6 +106,9 @@ const AMBIENTES_CONHECIDOS = [
   'Closet', 'Hall', 'Varanda', 'Sacada',
   'Suite', 'Suíte', 'Master', 'Gourmet', 'Area Gourmet', 'Área Gourmet',
   'WC', 'Lavanderia', 'Corredor', 'Entrada', 'Rack', 'Painel',
+  'Quarto Casal', 'Quarto Solteiro', 'Quarto Infantil',
+  'Sala de Jantar', 'Sala de Estar', 'Sala de TV',
+  'Área Gourmet', 'Churrasqueira', 'Lavabo',
 ];
 
 @Injectable()
@@ -117,12 +120,9 @@ export class ExtractionService {
   async extrairDosArquivos(
     files: Express.Multer.File[],
   ): Promise<ResultadoExtracao> {
-    const resultados: ResultadoArquivo[] = [];
-
-    for (const file of files) {
-      const resultado = await this.processarArquivo(file);
-      resultados.push(resultado);
-    }
+    const resultados = await Promise.all(
+      files.map((file) => this.processarArquivo(file)),
+    );
 
     const consolidado = this.consolidar(resultados);
     const divergencias = this.detectarDivergencias(resultados, consolidado);
@@ -588,28 +588,44 @@ export class ExtractionService {
   }
 
   // ─── Extrai parcelas de pagamento do contrato ────────────────────────────
-  // Ex: "R$ 11.500,00 por transferência bancária PIX CNPJ ... na data do dia 06/02/26"
-  //     "cheque no valor R$ 11.000,00 para o dia 27/02/26"
+  // Ex: "presente de R$11.500,00 ... PIX ... na data do dia 06/02/26" → entrada (valor 11.500);
+  //     vencimento da entrada = data de fechamento do contrato (não a data citada no PIX).
+  // Ex: "cheque no valor R$ 11.000,00 para o dia 27/02/26"
   private extrairParcelas(texto: string): ParcelaPagamento[] {
-    const parcelas: ParcelaPagamento[] = [];
-
-    // Normaliza o texto para facilitar busca
     const linhas = texto.replace(/\r\n/g, '\n');
+    const valorTotal = this.extrairValor(texto);
+    const dataFechamento = this.extrairDataFechamento(texto);
 
-    // Padrão genérico: R$ valor ... (forma) ... (data)
-    // Captura blocos com valor monetário + forma de pagamento + data
-    const blocoRe = /R\$\s*([\d.,]+)\s*[^.]{0,200}?(?:para o dia|na data do dia|em|até o dia|data[:\s]+)\s*(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/gi;
+    const parcelas: ParcelaPagamento[] = [];
+    /** Valores já capturados como entrada PIX (evita duplicar no bloco genérico). */
+    const pixEntradaValores = new Set<number>();
+
+    // A) Entrada / PIX logo após "presente de R$" ou "de R$" (não o valor total do § do preço)
+    const pixEntradaRe =
+      /(?:presente\s+de|^\s*de|objeto\s+do\s+presente\s+de)\s+R\$\s*([\d.,]+)[\s\S]{0,500}?pix[\s\S]{0,900}?(?:na data do dia|para o dia)\s*(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/gim;
+
+    for (const m of linhas.matchAll(pixEntradaRe)) {
+      const valor = this.parseBRL(m[1]);
+      if (valor <= 0) continue;
+      if (valorTotal != null && Math.abs(valor - valorTotal) < 0.02) continue;
+      pixEntradaValores.add(Math.round(valor * 100) / 100);
+      parcelas.push({
+        valor,
+        forma: 'PIX',
+        // Regra de negócio: entrada na data do contrato (data de fechamento)
+        vencimento: dataFechamento ?? null,
+        descricao: m[0].trim().substring(0, 200),
+      });
+    }
+
+    // B) Genérico: R$ ... data (evita emparelhar o 1º R$ do parágrafo = total com a data do PIX)
+    const blocoRe =
+      /R\$\s*([\d.,]+)\s*[\s\S]{0,800}?(?:para o dia|na data do dia|em|até o dia|data[:\s]+)\s*(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/gi;
 
     for (const m of linhas.matchAll(blocoRe)) {
       const valor = this.parseBRL(m[1]);
       if (valor <= 0) continue;
 
-      const dia = m[2].padStart(2, '0');
-      const mes = m[3].padStart(2, '0');
-      const ano = m[4].length === 2 ? `20${m[4]}` : m[4];
-      const vencimento = `${ano}-${mes}-${dia}`;
-
-      // Extrai a forma de pagamento do trecho
       const trecho = m[0].toLowerCase();
       let forma = 'OUTROS';
       if (/pix/i.test(trecho)) forma = 'PIX';
@@ -619,6 +635,21 @@ export class ExtractionService {
       else if (/transfer[eê]ncia|ted|doc/i.test(trecho)) forma = 'TRANSFERENCIA';
       else if (/dinheiro|espécie|especie/i.test(trecho)) forma = 'DINHEIRO';
 
+      if (valorTotal != null && Math.abs(valor - valorTotal) < 0.02 && forma === 'PIX') {
+        continue;
+      }
+      if (
+        forma === 'PIX' &&
+        pixEntradaValores.has(Math.round(valor * 100) / 100)
+      ) {
+        continue;
+      }
+
+      const dia = m[2].padStart(2, '0');
+      const mes = m[3].padStart(2, '0');
+      const ano = m[4].length === 2 ? `20${m[4]}` : m[4];
+      const vencimento = `${ano}-${mes}-${dia}`;
+
       parcelas.push({
         valor,
         forma,
@@ -627,13 +658,15 @@ export class ExtractionService {
       });
     }
 
-    // Se não encontrou parcelas datadas, tenta capturar apenas valores + formas sem data
+    // C) Sem data (só se ainda vazio)
     if (!parcelas.length) {
-      const semDataRe = /(?:pix|cheque|transfer[eê]ncia|boleto|dinheiro)[^.]{0,100}R\$\s*([\d.,]+)|R\$\s*([\d.,]+)[^.]{0,100}(?:pix|cheque|transfer[eê]ncia|boleto|dinheiro)/gi;
+      const semDataRe =
+        /(?:pix|cheque|transfer[eê]ncia|boleto|dinheiro)[\s\S]{0,200}?R\$\s*([\d.,]+)|R\$\s*([\d.,]+)[\s\S]{0,200}?(?:pix|cheque|transfer[eê]ncia|boleto|dinheiro)/gi;
       for (const m of linhas.matchAll(semDataRe)) {
         const raw = m[1] || m[2];
         const valor = this.parseBRL(raw);
         if (valor <= 0) continue;
+        if (valorTotal != null && Math.abs(valor - valorTotal) < 0.02) continue;
         const trecho = m[0].toLowerCase();
         let forma = 'OUTROS';
         if (/pix/i.test(trecho)) forma = 'PIX';
@@ -641,7 +674,12 @@ export class ExtractionService {
         else if (/transfer[eê]ncia/i.test(trecho)) forma = 'TRANSFERENCIA';
         else if (/boleto/i.test(trecho)) forma = 'BOLETO';
         else if (/dinheiro/i.test(trecho)) forma = 'DINHEIRO';
-        parcelas.push({ valor, forma, vencimento: null, descricao: m[0].trim().substring(0, 200) });
+        parcelas.push({
+          valor,
+          forma,
+          vencimento: null,
+          descricao: m[0].trim().substring(0, 200),
+        });
       }
     }
 
@@ -714,14 +752,54 @@ export class ExtractionService {
 
   private extrairAmbientes(texto: string): string[] {
     const encontrados = new Set<string>();
-    for (const amb of AMBIENTES_CONHECIDOS) {
-      const re = new RegExp(`\\b${amb}\\b`, 'i');
-      if (re.test(texto)) {
-        // Normaliza para capitalizado
-        encontrados.add(amb.charAt(0).toUpperCase() + amb.slice(1));
+
+    // 1. Padrão de tabela: "Item/ ambiente:" ou "Item/ambiente:" seguido do nome
+    //    Ex: "Item/ ambiente:\nArea Gourmet" ou "Item/ ambiente:  Suite"
+    const tabelaRe = /Item\s*\/\s*ambiente[:\s]+([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s]{1,50}?)(?:\n|Descritivo|$)/gi;
+    for (const m of texto.matchAll(tabelaRe)) {
+      const nome = m[1].trim().replace(/\s+/g, ' ');
+      if (nome.length >= 2) encontrados.add(this.capitalizarAmbiente(nome));
+    }
+
+    // 2. Cada linha que contenha só (ou quase só) um nome de ambiente — padrão tabela
+    //    Ex: uma célula da tabela PDF que vira linha isolada "Area Gourmet"
+    const linhas = texto.replace(/\r\n/g, '\n').split('\n');
+    for (const linha of linhas) {
+      const l = linha.trim();
+      if (!l || l.length > 60) continue;
+      // Linha parece ser nome de ambiente se casa com algum dos conhecidos
+      for (const amb of AMBIENTES_CONHECIDOS) {
+        // Ignora word-boundary para ambientes com espaço (ex: "Area Gourmet")
+        const reAmb = new RegExp(
+          amb.includes(' ')
+            ? `(^|[^A-Za-zÀ-ÿ])(${amb.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})([^A-Za-zÀ-ÿ]|$)`
+            : `\\b(${amb.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})\\b`,
+          'i',
+        );
+        if (reAmb.test(l)) {
+          encontrados.add(this.capitalizarAmbiente(amb));
+          break;
+        }
       }
     }
+
+    // 3. Varredura geral no texto completo para ambientes de palavra única
+    for (const amb of AMBIENTES_CONHECIDOS) {
+      if (amb.includes(' ')) continue; // já coberto acima
+      const re = new RegExp(`\\b${amb.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+      if (re.test(texto)) {
+        encontrados.add(this.capitalizarAmbiente(amb));
+      }
+    }
+
     return Array.from(encontrados);
+  }
+
+  private capitalizarAmbiente(nome: string): string {
+    return nome
+      .split(' ')
+      .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+      .join(' ');
   }
 
   // ─── Conversão BRL → número ──────────────────────────────────────────────

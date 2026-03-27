@@ -3,11 +3,20 @@
     <section class="arquivos-import ds-page-context ds-page-context--list animate-page-in">
       <PageHeader
         :title="cliente ? getClienteNome(cliente) : 'Importação de Cliente'"
-        subtitle="Ajuste o status do fluxo e anexe os documentos migrados"
+        subtitle="Fluxo em 3 etapas: importar arquivos, validar o fluxo e gerar o markup"
         icon="pi pi-folder"
       >
         <template #actions>
           <div class="arquivos-import__actions ds-page-context__actions">
+            <Button
+              v-if="cliente && canViewFiles"
+              variant="primary"
+              class="arquivos-import__toolbar-btn"
+              @click="abrirMarkup"
+            >
+              <i class="pi pi-percentage"></i>
+              Etapa 3: Gerar Markup
+            </Button>
             <Button v-if="cliente" variant="secondary" class="arquivos-import__toolbar-btn" @click="abrirCadastroCompleto">
               <i class="pi pi-user"></i>
               Cadastro Completo
@@ -37,6 +46,29 @@
           </div>
 
           <section class="arquivos-import__summary-bar">
+            <div class="arquivos-import__steps">
+              <div class="arquivos-import__step">
+                <span class="arquivos-import__step-badge">1</span>
+                <div>
+                  <div class="arquivos-import__step-title">Importar arquivos</div>
+                  <div class="arquivos-import__step-copy">Anexe contrato, orçamento e projeto do cliente.</div>
+                </div>
+              </div>
+              <div class="arquivos-import__step">
+                <span class="arquivos-import__step-badge">2</span>
+                <div>
+                  <div class="arquivos-import__step-title">Validar o fluxo</div>
+                  <div class="arquivos-import__step-copy">Revise e ajuste o status do cliente.</div>
+                </div>
+              </div>
+              <div class="arquivos-import__step">
+                <span class="arquivos-import__step-badge">3</span>
+                <div>
+                  <div class="arquivos-import__step-title">Gerar o markup</div>
+                  <div class="arquivos-import__step-copy">Abra a etapa final com a leitura já pré-processada.</div>
+                </div>
+              </div>
+            </div>
             <div class="arquivos-import__summary-row">
               <div class="arquivos-import__summary-item">
                 <span class="arquivos-import__meta-label">Documento</span>
@@ -60,7 +92,7 @@
         <div class="arquivos-import__grid grid grid-cols-1 xl:grid-cols-[380px,minmax(0,1fr)] gap-6 items-start">
           <aside class="arquivos-import__sidebar">
             <div class="arquivos-import__sidebar-head">
-              <div class="ds-eyebrow">Atualizar Status</div>
+              <div class="ds-eyebrow">Etapa 2 · Validar Fluxo</div>
               <span
                 class="mt-2 ds-status-pill"
                 :class="getFluxoClass(cliente.status)"
@@ -143,13 +175,17 @@
               <div v-if="!canEditClientes" class="ds-alert ds-alert--warning px-3 py-2 text-xs font-bold">
                 Sem permissão para editar o status do cliente.
               </div>
+
+              <div class="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+                Depois de validar o status, siga para a Etapa 3 para gerar o markup.
+              </div>
             </div>
           </aside>
 
           <section class="arquivos-import__documents">
             <div class="arquivos-import__panel-head flex items-center justify-between gap-3">
               <div>
-                <div class="ds-eyebrow">Documentos Importados</div>
+                <div class="ds-eyebrow">Etapa 1 · Documentos Importados</div>
                 <div class="mt-1 text-sm text-text-soft">
                   {{ arquivosOrdenados.length }}
                   {{ arquivosOrdenados.length !== 1 ? 'arquivos' : 'arquivo' }} anexado{{ arquivosOrdenados.length !== 1 ? 's' : '' }}
@@ -494,6 +530,11 @@ function abrirCadastroCompleto() {
   router.push(`/clientes/${cliente.value.id}`)
 }
 
+function abrirMarkup() {
+  if (!cliente.value) return
+  router.push(`/comercial/pos-venda-markup/${cliente.value.id}`)
+}
+
 function aplicarStatusNosSelects(status) {
   const key = normalizeStatusKey(status)
   const reverso = _STATUS_REVERSO[key]
@@ -704,6 +745,51 @@ onMounted(async () => {
   overflow: hidden;
 }
 
+.arquivos-import__steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.arquivos-import__step {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(214, 224, 234, 0.8);
+  border-radius: 1rem;
+  background: rgba(248, 250, 252, 0.8);
+}
+
+.arquivos-import__step-badge {
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ds-color-primary, #0f766e);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.arquivos-import__step-title {
+  color: var(--ds-color-text);
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.arquivos-import__step-copy {
+  margin-top: 0.18rem;
+  color: var(--ds-color-text-soft);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
 .arquivos-import__summary-row {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -863,6 +949,11 @@ onMounted(async () => {
   background: rgba(15, 23, 42, 0.28);
 }
 
+.dark .arquivos-import__step {
+  border-color: rgba(51, 71, 102, 0.7);
+  background: rgba(15, 23, 42, 0.34);
+}
+
 @media (min-width: 768px) {
   .arquivos-import__content {
     padding-top: 0.7rem;
@@ -904,6 +995,10 @@ onMounted(async () => {
 }
 
 @media (max-width: 1280px) {
+  .arquivos-import__steps {
+    grid-template-columns: 1fr;
+  }
+
   .arquivos-import__summary-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

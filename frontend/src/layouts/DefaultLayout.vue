@@ -65,8 +65,6 @@ import { useRoute, useRouter } from 'vue-router'
 import Menu from '@/layouts/Menu.vue'
 import PageShell from '@/components/ui/PageShell.vue'
 import { NAV_SCHEMA } from '@/services/navigation'
-import { medicaoPlanta2dFullscreen } from '@/shared/medicao-planta-chrome'
-import { medicaoProjetoTecnicoImmersivo } from '@/shared/medicao-projeto-tecnico-chrome'
 
 const route = useRoute()
 const router = useRouter()
@@ -74,26 +72,16 @@ const isAgendaFullscreen = computed(() => {
   const p = route.path
   return p === '/agendamentos' || p.startsWith('/agendamentos/')
 })
-/** Croqui / medição fina: máximo espaço vertical, sem barra de abas. */
-const isMedicaoFinaFullscreen = computed(() => {
-  const p = route.path
-  return p === '/medicao-fina' || p.startsWith('/medicao-fina/')
-})
 /** Visualizador de arquivos: modo immersive mas mantém abas visíveis. */
 const isArquivoViewer = computed(() => {
   const p = route.path
   return p.startsWith('/arquivos/') && !p.startsWith('/arquivos/importacao')
 })
 /** Ativa layout immersive (sem overflow externo) para medição e visualizador. */
-const isImmersiveContent = computed(() => isMedicaoFinaFullscreen.value || isArquivoViewer.value)
-/** Menu + abas ocultos: planta 2D em obra ou modo Projeto Técnico (split 2D/3D). */
-const hideChromeMedicaoImmersivo = computed(
-  () =>
-    isMedicaoFinaFullscreen.value &&
-    (medicaoPlanta2dFullscreen.value || medicaoProjetoTecnicoImmersivo.value),
-)
-const isCompactChrome = computed(() => isAgendaFullscreen.value || isMedicaoFinaFullscreen.value)
-const showTabs = computed(() => !isAgendaFullscreen.value && !isMedicaoFinaFullscreen.value)
+const isImmersiveContent = computed(() => isArquivoViewer.value)
+const hideChromeMedicaoImmersivo = computed(() => false)
+const isCompactChrome = computed(() => isAgendaFullscreen.value)
+const showTabs = computed(() => !isAgendaFullscreen.value)
 const openTabs = ref([])
 const tabSeq = ref(0)
 const activeTabId = ref('')
@@ -295,7 +283,7 @@ function handleDuplicateTabEvent(event) {
 
 /** Fecha a aba atual e navega para o path (ex.: após salvar orçamento). */
 function handleCloseCurrentTabAndGo(event) {
-  const to = event?.detail?.to || '/orcamentos'
+  const to = event?.detail?.to || '/clientes'
   const idx = openTabs.value.findIndex((tab) => tab.key === activeTabId.value)
   if (openTabs.value.length <= 1) {
     router.push(to)
@@ -346,5 +334,3 @@ onUnmounted(() => {
   window.removeEventListener('acasa-close-current-tab-and-go', handleCloseCurrentTabAndGo)
 })
 </script>
-
-

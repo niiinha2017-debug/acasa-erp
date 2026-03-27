@@ -663,22 +663,6 @@ export class AgendaService {
     }
   }
 
-  /**
-   * Agenda Produção só recebe cliente (venda) quando o contrato está vigente;
-   * após contrato vigente o status do cliente pode ir para medida fina.
-   */
-  private async validarContratoVigenteParaFabrica(vendaId: number) {
-    const contratoVigente = await this.prisma.contratos.findFirst({
-      where: { venda_id: vendaId, status: 'VIGENTE' },
-      select: { id: true },
-    });
-    if (!contratoVigente) {
-      throw new BadRequestException(
-        'A Agenda da Produção só recebe cliente quando o contrato está vigente. Gere e assine o contrato da venda antes de agendar na fábrica (medida fina, montagem, etc.).',
-      );
-    }
-  }
-
   private validarPeriodo(inicio: Date, fim: Date) {
     if (Number.isNaN(inicio.getTime()) || Number.isNaN(fim.getTime())) {
       throw new BadRequestException('Período inválido para o agendamento');
@@ -934,9 +918,6 @@ export class AgendaService {
     });
 
     const isLoja = setorDestino === 'LOJA';
-    if (!isLoja && dto.venda_id) {
-      await this.validarContratoVigenteParaFabrica(dto.venda_id);
-    }
 
     const subetapaRef = this.resolverSubetapaReferencia({
       subetapa,
@@ -1211,6 +1192,10 @@ export class AgendaService {
       origemFluxo?: OrigemFluxo;
       incluirCancelados?: boolean;
       usuario?: { funcionario_id?: number | null; is_admin?: boolean } | null;
+      /** Filtro opcional (agenda fábrica): macroetapa exata, ex. LOGISTICA */
+      macroetapa?: string | null;
+      /** Filtro opcional (agenda fábrica): subetapas, ex. ENTREGA, MONTAGEM */
+      subetapasIn?: string[] | null;
     },
   ) {
     const setor = opts?.setorDestino ?? 'LOJA';
@@ -1321,6 +1306,14 @@ export class AgendaService {
           { equipe: { some: { funcionario_id: funcionarioIdVendedor } } },
         ],
       });
+    }
+    const macroFiltro = String(opts?.macroetapa || '').trim();
+    if (macroFiltro) {
+      andFabrica.push({ macroetapa: macroFiltro });
+    }
+    const subFiltro = (opts?.subetapasIn || []).map((s) => String(s || '').trim().toUpperCase()).filter(Boolean);
+    if (subFiltro.length > 0) {
+      andFabrica.push({ subetapa: { in: subFiltro } });
     }
     const whereFabrica: any = {
       ...where,
@@ -1578,10 +1571,6 @@ export class AgendaService {
       clienteId,
       fornecedorId,
     });
-
-    if (setor === 'FABRICA' && vendaId) {
-      await this.validarContratoVigenteParaFabrica(vendaId);
-    }
 
     const categoriaPersistida = this.resolverCategoriaPersistida({
       setor,
@@ -2346,6 +2335,64 @@ export class AgendaService {
   /**
    * Apaga definitivamente do banco todos os agendamentos com status CANCELADO (limpa os que foram "excluídos" antes da exclusão real).
    */
+  /**
+   * Encerra manualmente uma tarefa da fábrica (status → CONCLUIDO, arquiva).
+   * Chamado pelo gestor após o totem ter concluído a execução física.
+   */
+  async encerrarTarefaFabrica(
+    id: number,
+    opts?: { alteradoPorUsuarioId?: number },
+  ): Promise<{ ok: boolean; agenda_fabrica_id: number }> {
+    const agora = new Date();
+
+    const agenda = await this.prisma.agenda_fabrica.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        status: true,
+        categoria: true,
+        origem_fluxo: true,
+        plano_corte_id: true,
+        fluxo_tipo: true,
+        macroetapa: true,
+        subetapa: true,
+        execucao_etapa: true,
+        venda_id: true,
+        cliente_id: true,
+      },
+    });
+    if (!agenda) throw new BadRequestException('Tarefa não encontrada.');
+    if (String(agenda.status).toUpperCase() === 'CONCLUIDO') {
+      return { ok: true, agenda_fabrica_id: id };
+    }
+
+    const payload: Record<string, unknown> = {
+      status: 'CONCLUIDO',
+      ...this.montarCamposStatusMatrixFromAtual({
+        categoria: agenda.categoria ?? null,
+        status: 'CONCLUIDO',
+        origemFluxo: agenda.origem_fluxo ?? null,
+        planoCorteId: agenda.plano_corte_id ?? null,
+        fluxoTipo: agenda.fluxo_tipo ?? null,
+        macroetapa: agenda.macroetapa ?? null,
+        subetapa: agenda.subetapa ?? null,
+        execucaoEtapa: agenda.execucao_etapa ?? null,
+      }),
+      alterado_em: agora,
+      ...(opts?.alteradoPorUsuarioId
+        ? { alterado_por_usuario_id: opts.alteradoPorUsuarioId }
+        : {}),
+    };
+    this.aplicarArquivamentoNoPayloadAgenda(payload, { arquivadoMomento: agora });
+
+    await this.prisma.agenda_fabrica.update({
+      where: { id },
+      data: payload as any,
+    });
+
+    return { ok: true, agenda_fabrica_id: id };
+  }
+
   async purgeCancelados(setor: 'LOJA' | 'FABRICA'): Promise<{ deleted: number }> {
     return this.prisma.$transaction(async (tx) => {
       if (setor === 'LOJA') {

@@ -18,52 +18,16 @@ export const MENU_SECTIONS: MenuSection[] = [
     label: 'Comercial',
     items: [
       {
-        label: 'Acompanhamento de status',
-        to: '/relatorios/acompanhamento-status',
-        icon: 'pi-list-check',
-        perm: 'relatorios.acompanhamento_status.ver',
+        label: 'Leitura de documentos',
+        to: '/comercial/leitura-documentos',
+        icon: 'pi-book',
+        perm: 'clientes.ver',
       },
       {
-        label: 'Orçamento',
-        to: '/orcamentos',
-        icon: 'pi-file-edit',
-        perm: 'orcamentos.ver',
-      },
-      {
-        label: 'Fechamento de venda',
-        to: '/vendas/fechamento',
-        icon: 'pi-shopping-cart',
-        perm: 'vendas.criar',
-      },
-      {
-        label: 'Contrato',
-        to: '/contratos',
-        icon: 'pi-file',
-        perm: 'contratos.ver',
-      },
-      {
-        label: 'Histórico de Contratos',
-        to: '/contratos/historico',
-        icon: 'pi-history',
-        perm: 'contratos.ver',
-      },
-      {
-        label: 'Cláusulas (Orç./Contrato)',
-        to: '/contratos/clausulas',
-        icon: 'pi-file-edit',
-        perm: 'contratos.clausulas.editar',
-      },
-      {
-        label: 'Agenda de Venda',
-        to: '/agendamentos/loja',
-        icon: 'pi-calendar-clock',
-        perm: 'agendamentos.vendas',
-      },
-      {
-        label: 'Medição Fina',
-        to: '/producao/medicao-fina',
-        icon: 'pi-ruler',
-        perm: 'agendamentos.vendas',
+        label: 'Markup pós-venda',
+        to: '/comercial/pos-venda-markup',
+        icon: 'pi-percentage',
+        perm: 'clientes.ver',
       },
     ],
   },
@@ -71,24 +35,6 @@ export const MENU_SECTIONS: MenuSection[] = [
     key: 'producao',
     label: 'Produção',
     items: [
-      {
-        label: 'Visão geral',
-        to: '/producao',
-        icon: 'pi-cogs',
-        perm: 'posvenda.ver',
-      },
-      {
-        label: 'Contratos em obra',
-        to: '/producao/contratos',
-        icon: 'pi-file-edit',
-        perm: 'contratos.ver',
-      },
-      {
-        label: 'Pós-venda',
-        to: '/vendas',
-        icon: 'pi-cart-plus',
-        perm: 'posvenda.ver',
-      },
       {
         label: 'Agenda de Produção',
         to: '/agendamentos/fabrica',
@@ -101,17 +47,12 @@ export const MENU_SECTIONS: MenuSection[] = [
         icon: 'pi-sitemap',
         perm: 'plano_corte.ver',
       },
+
       {
         label: 'Produtos Serviço de Corte',
         to: '/plano-corte/itens',
         icon: 'pi-box',
         perm: 'plano_corte.ver',
-      },
-      {
-        label: 'Venda Serviço de Corte',
-        to: '/plano-corte/venda',
-        icon: 'pi-ruler',
-        perm: 'plano_corte.criar',
       },
     ],
   },
@@ -204,6 +145,12 @@ export const MENU_SECTIONS: MenuSection[] = [
         icon: 'pi-lock',
         perm: 'permissoes.ver',
       },
+      {
+        label: 'Cláusulas (contrato)',
+        to: '/contratos/clausulas',
+        icon: 'pi-file-edit',
+        perm: 'contratos.clausulas.editar',
+      },
       { divider: true, label: '', to: '' },
       {
         label: 'Ponto (Relatorio)',
@@ -224,12 +171,6 @@ export const MENU_SECTIONS: MenuSection[] = [
         icon: 'pi-sliders-h',
         perm: 'configuracoes.empresa.ver',
       },
-      {
-        label: 'Estrategia de Precos',
-        to: '/configuracoes/estrategia-precos',
-        icon: 'pi-chart-line',
-        perm: 'configuracoes.estrategia_precos.ver',
-      },
     ],
   },
   {
@@ -241,6 +182,12 @@ export const MENU_SECTIONS: MenuSection[] = [
         to: '/relatorios',
         icon: 'pi-chart-bar',
         perm: 'dashboard.visualizar',
+      },
+      {
+        label: 'Fluxo de Caixa',
+        to: '/relatorios/fluxo-caixa',
+        icon: 'pi-arrows-h',
+        perm: 'relatorios.fluxo_caixa.ver',
       },
       {
         label: 'DRE Mensal',
@@ -259,6 +206,18 @@ export const MENU_SECTIONS: MenuSection[] = [
         to: '/comissao-producao',
         icon: 'pi-percentage',
         perm: 'comissao_producao.ver',
+      },
+      {
+        label: 'Contas a Receber',
+        to: '/relatorios/contas-receber',
+        icon: 'pi-wallet',
+        perm: 'contas_receber.ver',
+      },
+      {
+        label: 'Serviço de Corte',
+        to: '/relatorios/servico-corte',
+        icon: 'pi-box',
+        perm: 'plano_corte.ver',
       },
     ],
   },

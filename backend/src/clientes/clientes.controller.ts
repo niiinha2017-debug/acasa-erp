@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -13,6 +14,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ClientesService } from './clientes.service';
+import { ArquivosService } from '../arquivos/arquivos.service';
 import { CriarClienteDto } from './dto/criar-cliente.dto';
 import { AtualizarClienteDto } from './dto/atualizar-cliente.dto';
 
@@ -23,7 +25,10 @@ import { PIPELINE_CLIENTE } from '../shared/constantes/status-matrix';
 @UseGuards(PermissionsGuard)
 @Controller('clientes')
 export class ClientesController {
-  constructor(private readonly service: ClientesService) {}
+  constructor(
+    private readonly service: ClientesService,
+    private readonly arquivosService: ArquivosService,
+  ) {}
 
   private getUser(req?: {
     user?: { id?: number | null; funcionario_id?: number | null; is_admin?: boolean };
@@ -47,7 +52,7 @@ export class ClientesController {
   }
 
   // Rotas de relatórios antes do :id (ok)
-  /** IDs de clientes com status AGENDAR_MEDIDA_FINA e parcela vencida no Contas a Receber (para alerta no Fluxo de Clientes). */
+  /** IDs de clientes com atraso financeiro no mês anterior (somente informativo; sem bloqueio). */
   @Get('relatorios/pendencias-agendamento')
   @Permissoes('clientes.ver')
   pendenciasAgendamento() {
@@ -77,6 +82,26 @@ export class ClientesController {
     @Req() req?: { user?: { id?: number | null; funcionario_id?: number | null; is_admin?: boolean } },
   ) {
     return this.service.select(q, this.getUser(req));
+  }
+
+  /**
+   * Compatibilidade: versões antigas do front chamavam /clientes/leitura-documentos/:id ou /clientes/:id/leitura-documentos.
+   * A rota canônica é GET /api/arquivos/consolidacao/cliente/:clienteId
+   */
+  @Get('leitura-documentos/:clienteId')
+  @Permissoes('arquivos.ver', 'clientes.ver')
+  leituraDocumentosCompat1(@Param('clienteId') clienteId: string) {
+    const id = Number(String(clienteId || '').replace(/\D/g, ''));
+    if (!id) throw new BadRequestException('clienteId inválido.');
+    return this.arquivosService.consolidacaoCliente(id);
+  }
+
+  @Get(':id/leitura-documentos')
+  @Permissoes('arquivos.ver', 'clientes.ver')
+  leituraDocumentosCompat2(@Param('id') id: string) {
+    const cleanId = Number(String(id || '').replace(/\D/g, ''));
+    if (!cleanId) throw new BadRequestException('clienteId inválido.');
+    return this.arquivosService.consolidacaoCliente(cleanId);
   }
 
   @Get(':id')

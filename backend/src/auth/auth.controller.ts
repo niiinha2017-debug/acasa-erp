@@ -81,7 +81,8 @@ export class AuthController {
   @Get('me')
   async me(@Req() req: Request) {
     const user = (req as any).user;
-    const userId = user.id || user.sub;
+    const userId = user?.id || user?.sub;
+    if (!userId) throw new UnauthorizedException('Token inválido');
 
     return await this.authService.me(Number(userId));
   }

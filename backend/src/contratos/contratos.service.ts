@@ -836,7 +836,7 @@ export class ContratosService {
 
   private readonly DEFAULT_TEXTOS_CONTRATO: Record<string, string> = {
     CABECALHO:
-      'Pelo presente instrumento e na melhor forma de direito, de um lado, [[contratada_razao_social]], inscrita no CNPJ sob o nº [[contratada_cnpj]][[contratada_ie_frase]], com sede em [[contratada_endereco_completo]], neste ato representada por [[contratada_representante_nome]], portador(a) do RG [[contratada_representante_rg]] e inscrito(a) no CPF sob o nº [[contratada_representante_cpf]], doravante denominada simplesmente como CONTRATADA, e do outro lado, [[cliente_razao_social_ou_nome_completo]] inscrito no [[cliente_documento_tipo]] sob o nº [[cliente_documento_numero]][[cliente_ie_frase]], residente e domiciliado em [[cliente_endereco_completo]], doravante denominado simplesmente como CONTRATANTE, têm entre si ajustado o presente negócio de compra e venda de mercadorias e prestação de serviços, mediante as cláusulas e condições a seguir.',
+      'Pelo presente instrumento e na melhor forma de direito, de um lado, [[contratada_razao_social]], inscrita no CNPJ sob o nº [[contratada_cnpj]][[contratada_ie_frase]], com sede em [[contratada_endereco_completo]], doravante denominada simplesmente como CONTRATADA, e do outro lado, [[cliente_razao_social_ou_nome_completo]] inscrito no [[cliente_documento_tipo]] sob o nº [[cliente_documento_numero]][[cliente_ie_frase]], residente e domiciliado em [[cliente_endereco_completo]], doravante denominado simplesmente como CONTRATANTE, têm entre si ajustado o presente negócio de compra e venda de mercadorias e prestação de serviços, mediante as cláusulas e condições a seguir.',
     OBJETO:
       '§ Primeiro – O objeto do presente contrato é a comercialização de móveis, descritos e caracterizados nos projetos anexos, previamente aprovados por rubrica pelo CONTRATANTE. Os móveis serão entregues em [[cliente_endereco_completo]].\n\nItem/ambiente: Descritivo:\n[[lista_itens_venda]]\n\nO CONTRATANTE declara-se ciente de que a partir deste momento iniciou-se o processo de produção dos produtos acima adquiridos, e que eles foram projetados e personalizados exclusivamente para seu ambiente, não possibilitando a comercialização para com terceiros.\n\n§ Segundo – Fazem parte integrante do presente instrumento as vistas dos projetos que foram definidos e assinados pelas partes, segundo descrito na cláusula acima, elaborados conforme as medidas e dimensões dos ambientes. A CONTRATADA não se responsabiliza por alterações de medidas e projetos posteriores à assinatura dos pedidos e projetos negociados.\n\n§ Terceiro – Os eletrodomésticos, iluminação, vidros, espelhos, cubas de pias, granitos e demais acessórios constantes nos projetos e não descritos no primeiro parágrafo não fazem parte do escopo de fornecimento da CONTRATADA.',
     PRECO_CONDICOES:
@@ -1226,9 +1226,6 @@ export class ContratosService {
     const spacing = 18;
     const margemInferiorAssinatura = 84; // margem padrão (60) + respiro visual extra
     const razao = mapa.contratada_razao_social || 'CONTRATADA';
-    const repNome = mapa.contratada_representante_nome || '';
-    const repCpf = mapa.contratada_representante_cpf || '';
-    const repRg = mapa.contratada_representante_rg || '';
     const clienteNome =
       mapa.cliente_razao_social_ou_nome_completo || 'CONTRATANTE';
     const docTipo = mapa.cliente_documento_tipo || 'CPF';
@@ -1332,13 +1329,10 @@ export class ContratosService {
       doc.y += spacing;
     };
 
-    // Bloco CONTRATADA (empresa): Ciente + imagem Assinatura do Responsável (se houver) + linha para assinatura + nome e dados do representante
+    // Bloco CONTRATADA (empresa): Ciente + imagem da assinatura do responsável (se houver) + linha para assinatura
     const assinaturaResponsavelPath = mapa.assinatura_responsavel_imagem_path || '';
     const linhasContratada = [
       `CONTRATADA: ${razao}`,
-      repNome ? `Nome: ${repNome}` : '',
-      repCpf ? `CPF: ${repCpf}` : '',
-      repRg ? `RG: ${repRg}` : '',
     ].filter(Boolean);
     drawCienteBlock(
       'Ciente:',
@@ -1824,7 +1818,6 @@ export class ContratosService {
       cidade_data_assinatura: `${
         cliente.cidade || empresa?.cidade || 'Ribeirão Preto'
       }, ${dataPorExtenso}`,
-      // Representante fixo do proprietário (cadastro da empresa)
       contratada_razao_social: razaoSocial,
       contratada_cnpj: this.maskCnpj(empresa?.cnpj ?? cnpj),
       contratada_ie: empresa?.ie ?? '',
@@ -1832,33 +1825,7 @@ export class ContratosService {
         ? `, inscrita na Inscrição Estadual sob o nº ${String(empresa.ie).trim()}`
         : '',
       contratada_endereco_completo: enderecoEmpresa,
-      // Representante: se o vendedor preencheu "Representante da venda", usa esses dados; senão usa cadastro da empresa conforme checkbox (sócio ou representante legal)
-      contratada_representante_nome: (() => {
-        const repVendaNome = String((venda as any)?.representante_venda_nome ?? '').trim();
-        if (repVendaNome) return repVendaNome;
-        const usarSocio = empresa?.contrato_usar_socio_quando_vazio !== false;
-        if (usarSocio && empresa?.representante_legal_socio_nome?.trim())
-          return empresa.representante_legal_socio_nome.trim();
-        return empresa?.representante_legal_nome?.trim() ?? '';
-      })(),
-      contratada_representante_estado_civil: 'Brasileira',
-      contratada_representante_rg: (() => {
-        const repVendaRg = (venda as any)?.representante_venda_rg;
-        if (repVendaRg != null && String(repVendaRg).trim()) return this.maskRg(String(repVendaRg).trim()) || '';
-        const usarSocio = empresa?.contrato_usar_socio_quando_vazio !== false;
-        if (usarSocio && empresa?.representante_legal_socio_rg) return this.maskRg(empresa.representante_legal_socio_rg) || '';
-        return this.maskRg(empresa?.representante_legal_rg) || '';
-      })(),
-      contratada_representante_cpf: (() => {
-        const repVendaCpf = (venda as any)?.representante_venda_cpf;
-        if (repVendaCpf != null && String(repVendaCpf).replace(/\D/g, '').length >= 11)
-          return this.maskCpf(String(repVendaCpf).replace(/\D/g, '').slice(0, 11)) || '';
-        const usarSocio = empresa?.contrato_usar_socio_quando_vazio !== false;
-        const cpfSocio = empresa?.representante_legal_socio_cpf?.trim();
-        if (usarSocio && cpfSocio) return this.maskCpf(cpfSocio) || '';
-        return this.maskCpf(empresa?.representante_legal_cpf ?? '') || '';
-      })(),
-      // Dados para pagamento (cadastro da empresa): nome = razão social da empresa, não do representante
+      // Dados para pagamento (cadastro da empresa)
       contratada_pix: empresa?.pix ?? '',
       contratada_banco_titular: empresa?.banco_titular ?? '',
       contratada_banco_nome: empresa?.banco_nome ?? '',
@@ -1881,7 +1848,7 @@ export class ContratosService {
       assinatura_digital_visivel: '', // Removido: não usar mais assinatura eletrônica no PDF
       assinatura_cliente_visivel: '', // Apenas linha para assinatura física; sem registro eletrônico no PDF
       assinatura_cliente_imagem_path: '',
-      // Variável para exibir imagem da Assinatura do Responsável (cadastro da empresa) em PDFs
+      // Variável para exibir imagem da assinatura do responsável em PDFs
       assinatura_responsavel_imagem_path: temAssinaturaResponsavelImagem
         ? assinaturaResponsavelImagemPath
         : '',

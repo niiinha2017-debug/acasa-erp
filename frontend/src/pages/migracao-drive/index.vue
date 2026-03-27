@@ -417,6 +417,15 @@
                 </div>
                 <div style="display:flex;gap:0.5rem;align-items:center">
                   <button
+                    class="migracao__btn-reset migracao__btn-reset--analise"
+                    :disabled="resetandoId === c.id || excluindoId === c.id || !c._arquivos"
+                    title="Selecionar arquivos e extrair dados financeiros"
+                    @click="abrirAnalise(c)"
+                  >
+                    <i class="pi pi-search"></i>
+                    Avaliar arquivos
+                  </button>
+                  <button
                     class="migracao__btn-reset"
                     style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1"
                     :disabled="resetandoId === c.id || excluindoId === c.id"
@@ -464,14 +473,274 @@
 
       </div>
     </section>
+
+    <!-- ── MODAL: Avaliar arquivos para análise financeira ─────────────── -->
+    <Teleport to="body">
+      <div v-if="analise.aberto" class="analise-overlay" @click.self="fecharAnalise">
+        <div class="analise-modal">
+          <!-- Cabeçalho -->
+          <div class="analise-modal__head">
+            <div>
+              <div class="analise-modal__title">
+                <i class="pi pi-search"></i>
+                Avaliar arquivos
+              </div>
+              <div class="analise-modal__subtitle">{{ analise.nomeCliente }}</div>
+            </div>
+            <button class="analise-modal__close" @click="fecharAnalise" title="Fechar">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+
+          <!-- Carregando lista de arquivos -->
+          <div v-if="analise.carregando" class="analise-modal__loading">
+            <i class="pi pi-spin pi-spinner"></i> Carregando arquivos...
+          </div>
+
+          <!-- Sem arquivos -->
+          <div v-else-if="!analise.arquivos.length" class="analise-modal__empty">
+            Nenhum arquivo encontrado para este cliente.
+          </div>
+
+          <!-- Lista de arquivos com checklist -->
+          <template v-else>
+            <div class="analise-modal__hint">
+              Selecione os documentos que contêm o orçamento ou contrato para extrair
+              valor, ambientes e parcelas.
+            </div>
+
+            <!-- Ações rápidas de seleção -->
+            <div class="analise-modal__quick">
+              <button class="migracao__btn-reset" @click="selecionarDocumentos">
+                <i class="pi pi-check-square"></i> Selecionar PDF/DOCX
+              </button>
+              <button class="migracao__btn-reset" @click="analise.selecionados = []">
+                <i class="pi pi-square"></i> Limpar seleção
+              </button>
+              <span class="migracao__muted">
+                {{ analise.selecionados.length }} de {{ analise.arquivos.length }} selecionado(s)
+              </span>
+            </div>
+
+            <!-- Tabela de arquivos -->
+            <div class="analise-modal__scroll">
+              <table class="migracao__table">
+                <thead>
+                  <tr>
+                    <th style="width:2rem"></th>
+                    <th>Arquivo</th>
+                    <th>Categoria</th>
+                    <th>Tipo</th>
+                    <th>Tamanho</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="arq in analise.arquivos"
+                    :key="arq.id"
+                    class="migracao__table-row analise-modal__row"
+                    :class="{ 'analise-modal__row--selected': analise.selecionados.includes(arq.id) }"
+                    @click="toggleArquivo(arq.id)"
+                  >
+                    <td>
+                      <input
+                        type="checkbox"
+                        :checked="analise.selecionados.includes(arq.id)"
+                        @change.stop="toggleArquivo(arq.id)"
+                        style="cursor:pointer;width:1rem;height:1rem"
+                      />
+                    </td>
+                    <td>
+                      <span class="analise-modal__nome">{{ arq.nome || '(sem nome)' }}</span>
+                    </td>
+                    <td>
+                      <span class="migracao__badge migracao__badge--file">
+                        {{ catLabel(arq.categoria) || '—' }}
+                      </span>
+                    </td>
+                    <td class="migracao__secondary" style="font-size:0.75rem">
+                      {{ arq.mime_type?.split('/').pop()?.toUpperCase() || '—' }}
+                    </td>
+                    <td class="migracao__secondary" style="font-size:0.75rem">
+                      {{ arq.tamanho ? formatBytes(arq.tamanho) : '—' }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Botão de análise -->
+            <div class="analise-modal__actions">
+              <button
+                class="migracao__btn-reset migracao__btn-reset--analise"
+                style="padding:0.5rem 1.2rem;font-size:0.88rem"
+                :disabled="!analise.selecionados.length || analise.analisando"
+                @click="analisarSelecionados"
+              >
+                <i :class="analise.analisando ? 'pi pi-spin pi-spinner' : 'pi pi-bolt'"></i>
+                {{ analise.analisando ? 'Analisando...' : 'Analisar selecionados' }}
+              </button>
+            </div>
+
+            <!-- Resultado da análise -->
+            <div v-if="analise.resultado" class="analise-resultado">
+              <div class="analise-resultado__title">
+                <i class="pi pi-chart-bar"></i> Resultado da análise financeira
+              </div>
+
+              <!-- Aviso de erro -->
+              <div v-if="analise.resultado.erro" class="migracao__alerta migracao__alerta--error">
+                {{ analise.resultado.erro }}
+              </div>
+
+              <template v-else-if="analise.resultado.consolidado">
+                <div class="analise-resultado__cards">
+                  <!-- Valor total -->
+                  <div class="analise-resultado__card" v-if="analise.resultado.consolidado.valorTotal">
+                    <div class="analise-resultado__card-label">Valor total</div>
+                    <div class="analise-resultado__card-value analise-resultado__card-value--green">
+                      {{ formatBRL(analise.resultado.consolidado.valorTotal) }}
+                    </div>
+                  </div>
+                  <!-- Data fechamento -->
+                  <div class="analise-resultado__card" v-if="analise.resultado.consolidado.dataFechamento">
+                    <div class="analise-resultado__card-label">Data fechamento</div>
+                    <div class="analise-resultado__card-value">
+                      {{ formatData(analise.resultado.consolidado.dataFechamento) }}
+                    </div>
+                  </div>
+                  <!-- Cliente -->
+                  <div class="analise-resultado__card" v-if="analise.resultado.consolidado.nomeCliente">
+                    <div class="analise-resultado__card-label">Nome no documento</div>
+                    <div class="analise-resultado__card-value" style="font-size:0.85rem">
+                      {{ analise.resultado.consolidado.nomeCliente }}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Base de cálculo -->
+                <div v-if="baseCalculoAnalise" class="analise-resultado__section">
+                  <div class="analise-resultado__section-title">Base de cálculo</div>
+                  <table class="migracao__table">
+                    <tbody>
+                      <tr>
+                        <td>Valor bruto</td>
+                        <td style="text-align:right" class="migracao__primary">{{ formatBRL(baseCalculoAnalise.bruto) }}</td>
+                      </tr>
+                      <tr v-if="baseCalculoAnalise.temCartao">
+                        <td class="migracao__secondary">(-) Taxa cartão <span class="migracao__badge migracao__badge--file">{{ baseCalculoAnalise.taxaCartaoPct }}%</span></td>
+                        <td style="text-align:right" class="migracao__secondary">- {{ formatBRL(baseCalculoAnalise.taxaCartaoValor) }}</td>
+                      </tr>
+                      <tr>
+                        <td class="migracao__secondary">(-) NF {{ baseCalculoAnalise.taxaNF }}% <span style="font-size:0.75rem;opacity:0.7">(se emitida)</span></td>
+                        <td style="text-align:right" class="migracao__secondary">- {{ formatBRL(baseCalculoAnalise.taxaNFValor) }}</td>
+                      </tr>
+                      <tr style="border-top:1px solid #e2e8f0">
+                        <td><strong>Líquido (sem NF)</strong></td>
+                        <td style="text-align:right"><strong style="color:#16a34a">{{ formatBRL(baseCalculoAnalise.liquidoSemNF) }}</strong></td>
+                      </tr>
+                      <tr>
+                        <td><strong>Líquido (com NF)</strong></td>
+                        <td style="text-align:right"><strong>{{ formatBRL(baseCalculoAnalise.liquidoComNF) }}</strong></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- Endereços -->
+                <div v-if="analise.resultado.consolidado.endereco_cliente || analise.resultado.consolidado.endereco_entrega" class="analise-resultado__section">
+                  <div class="analise-resultado__section-title">Endereços</div>
+                  <div v-if="analise.resultado.consolidado.endereco_cliente" class="migracao__secondary" style="font-size:0.82rem">
+                    🏠 Cadastro: {{ analise.resultado.consolidado.endereco_cliente }}
+                  </div>
+                  <div v-if="analise.resultado.consolidado.endereco_entrega" class="migracao__secondary" style="font-size:0.82rem;margin-top:0.3rem">
+                    📦 Entrega: {{ analise.resultado.consolidado.endereco_entrega }}
+                  </div>
+                </div>
+
+                <!-- Ambientes com valor -->
+                <div v-if="analise.resultado.consolidado.ambientes_com_valor?.length" class="analise-resultado__section">
+                  <div class="analise-resultado__section-title">
+                    Ambientes ({{ analise.resultado.consolidado.ambientes_com_valor.length }})
+                  </div>
+                  <table class="migracao__table">
+                    <thead>
+                      <tr>
+                        <th>Ambiente</th>
+                        <th style="text-align:right">Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(amb, i) in analise.resultado.consolidado.ambientes_com_valor" :key="i">
+                        <td class="migracao__secondary">{{ amb.nome }}</td>
+                        <td class="migracao__primary" style="text-align:right">
+                          {{ amb.valor > 0 ? formatBRL(amb.valor) : '—' }}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- Parcelas -->
+                <div v-if="analise.resultado.consolidado.parcelas?.length" class="analise-resultado__section">
+                  <div class="analise-resultado__section-title">
+                    Parcelas ({{ analise.resultado.consolidado.parcelas.length }})
+                  </div>
+                  <table class="migracao__table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Forma</th>
+                        <th>Vencimento</th>
+                        <th style="text-align:right">Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(p, i) in analise.resultado.consolidado.parcelas" :key="i">
+                        <td class="migracao__secondary">{{ i + 1 }}</td>
+                        <td>
+                          <span class="migracao__badge migracao__badge--file">{{ p.forma }}</span>
+                        </td>
+                        <td class="migracao__secondary">
+                          {{ p.vencimento ? formatData(p.vencimento) : '—' }}
+                        </td>
+                        <td class="migracao__primary" style="text-align:right">
+                          {{ formatBRL(p.valor) }}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- Divergências -->
+                <div v-if="analise.resultado.divergencias?.length" class="analise-resultado__section">
+                  <div class="analise-resultado__section-title analise-resultado__section-title--warn">
+                    <i class="pi pi-exclamation-triangle"></i>
+                    Divergências detectadas
+                  </div>
+                  <div
+                    v-for="(d, i) in analise.resultado.divergencias"
+                    :key="i"
+                    class="migracao__alerta migracao__alerta--warn migracao__alerta--sm"
+                  >
+                    {{ d }}
+                  </div>
+                </div>
+              </template>
+            </div>
+          </template>
+        </div>
+      </div>
+    </Teleport>
   </PageShell>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { MigracaoDriveService } from '@/services'
 import { notify } from '@/services/notify'
+import { TAXAS_CARTAO, TAXA_NOTA_FISCAL } from '@/constantes'
 
 definePage({ meta: { perm: 'clientes.criar', title: 'Importar do Drive' } })
 
@@ -498,6 +767,117 @@ const resetandoId = ref(null)
 const excluindoId = ref(null)
 const limpandoTudo = ref(false)
 const excluindoTudo = ref(false)
+
+// ── Modal de análise financeira por cliente ──────────────────────────────────
+const analise = ref({
+  aberto: false,
+  clienteId: null,
+  nomeCliente: '',
+  carregando: false,
+  arquivos: [],
+  selecionados: [],
+  analisando: false,
+  resultado: null,
+})
+
+async function abrirAnalise(cliente) {
+  analise.value = {
+    aberto: true,
+    clienteId: cliente.id,
+    nomeCliente: cliente.nome_completo,
+    carregando: true,
+    arquivos: [],
+    selecionados: [],
+    analisando: false,
+    resultado: null,
+  }
+  try {
+    const res = await MigracaoDriveService.listarArquivosCliente(cliente.id)
+    analise.value.arquivos = res.data ?? []
+    // Pré-seleciona documentos text (PDF / DOCX)
+    analise.value.selecionados = analisaveis(analise.value.arquivos)
+  } catch (e) {
+    notify.error('Erro ao carregar arquivos do cliente.')
+    analise.value.aberto = false
+  } finally {
+    analise.value.carregando = false
+  }
+}
+
+function fecharAnalise() {
+  analise.value.aberto = false
+}
+
+function analisaveis(lista) {
+  return lista
+    .filter(a => {
+      const m = (a.mime_type || '').toLowerCase()
+      const n = (a.nome || '').toLowerCase()
+      return m.includes('pdf') || m.includes('wordprocessingml') || m.includes('msword')
+        || n.endsWith('.pdf') || n.endsWith('.docx') || n.endsWith('.doc')
+    })
+    .map(a => a.id)
+}
+
+function selecionarDocumentos() {
+  analise.value.selecionados = analisaveis(analise.value.arquivos)
+}
+
+function toggleArquivo(id) {
+  const idx = analise.value.selecionados.indexOf(id)
+  if (idx >= 0) {
+    analise.value.selecionados.splice(idx, 1)
+  } else {
+    analise.value.selecionados.push(id)
+  }
+}
+
+async function analisarSelecionados() {
+  if (!analise.value.selecionados.length) return
+  analise.value.analisando = true
+  analise.value.resultado = null
+  try {
+    const res = await MigracaoDriveService.analisarArquivosCliente(
+      analise.value.clienteId,
+      analise.value.selecionados,
+    )
+    analise.value.resultado = res.data
+  } catch (e) {
+    const msg = e?.response?.data?.message || 'Erro ao analisar arquivos.'
+    notify.error(Array.isArray(msg) ? msg.join(' | ') : msg)
+  } finally {
+    analise.value.analisando = false
+  }
+}
+
+const baseCalculoAnalise = computed(() => {
+  const con = analise.value.resultado?.consolidado
+  if (!con || !con.valorTotal) return null
+  const bruto = Number(con.valorTotal)
+  // Taxa cartão: aplica TAXAS_CARTAO parcela a parcela
+  let taxaCartaoValor = 0
+  for (const p of (con.parcelas ?? [])) {
+    if (p.forma !== 'CARTAO') continue
+    const desc = String(p.descricao ?? '').toLowerCase()
+    let pct
+    if (/d[eé]bito|debito/i.test(desc)) {
+      pct = TAXAS_CARTAO?.DEBITO?.taxa ?? 1.99
+    } else {
+      const m = desc.match(/(\d+)\s*x\b/)
+      const n = m ? Math.min(18, Math.max(1, parseInt(m[1]))) : 1
+      const map = TAXAS_CARTAO?.CREDITO?.parcelas ?? {}
+      pct = map[n] ?? map[12] ?? 3.49
+    }
+    taxaCartaoValor += (p.valor * pct) / 100
+  }
+  taxaCartaoValor = Math.round((taxaCartaoValor + Number.EPSILON) * 100) / 100
+  const taxaCartaoPct = bruto > 0 ? Math.round((taxaCartaoValor / bruto) * 10000) / 100 : 0
+  const taxaNF = Number(TAXA_NOTA_FISCAL?.taxa ?? 4.5)
+  const taxaNFValor = Math.round((bruto * taxaNF) / 100 * 100) / 100
+  const liquidoSemNF = Math.round((bruto - taxaCartaoValor + Number.EPSILON) * 100) / 100
+  const liquidoComNF = Math.round((liquidoSemNF - taxaNFValor + Number.EPSILON) * 100) / 100
+  return { bruto, taxaCartaoValor, taxaCartaoPct, temCartao: taxaCartaoValor > 0, taxaNF, taxaNFValor, liquidoSemNF, liquidoComNF }
+})
 
 // ── Upload / drag-drop ───────────────────────────────────────────────────────
 function abrirSeletor() {
@@ -855,6 +1235,17 @@ function motivoIgnoradoLabel(motivo) {
   border-color: #ef4444 !important;
   color: #ef4444 !important;
   background: #fef2f2 !important;
+}
+.migracao__btn-reset--analise {
+  border-color: #3b82f6 !important;
+  color: #3b82f6 !important;
+}
+.migracao__btn-reset--analise:hover:not(:disabled) {
+  background: #eff6ff !important;
+}
+.migracao__btn-reset--analise:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .migracao__btn-reset {
@@ -1238,5 +1629,166 @@ function motivoIgnoradoLabel(motivo) {
 .dark .migracao__alerta--warn {
   background: rgba(234, 179, 8, 0.07);
   color: #fbbf24;
+}
+
+/* ── Modal de análise financeira ── */
+.analise-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+.analise-modal {
+  background: var(--ds-color-surface-raised, #fff);
+  border: 1px solid var(--ds-color-border, #e2e8f0);
+  border-radius: 1rem;
+  width: 100%;
+  max-width: 760px;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem 1.75rem 1.75rem;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
+}
+.analise-modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.analise-modal__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ds-color-text, #1e293b);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.analise-modal__subtitle {
+  font-size: 0.82rem;
+  color: var(--ds-color-text-muted, #64748b);
+  margin-top: 0.25rem;
+}
+.analise-modal__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ds-color-text-muted, #64748b);
+  font-size: 1rem;
+  padding: 0.25rem;
+  border-radius: 0.4rem;
+  line-height: 1;
+  transition: color 0.15s, background 0.15s;
+}
+.analise-modal__close:hover { color: #ef4444; background: #fef2f2; }
+.analise-modal__loading,
+.analise-modal__empty {
+  padding: 1.5rem 0;
+  text-align: center;
+  color: var(--ds-color-text-muted, #64748b);
+  font-size: 0.88rem;
+}
+.analise-modal__hint {
+  font-size: 0.83rem;
+  color: var(--ds-color-text-muted, #64748b);
+  line-height: 1.5;
+}
+.analise-modal__quick {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.analise-modal__scroll {
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--ds-color-border, #e2e8f0);
+  border-radius: 0.75rem;
+}
+.analise-modal__row {
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.analise-modal__row:hover {
+  background: var(--ds-color-surface-subtle, #f8fafc);
+}
+.analise-modal__row--selected {
+  background: rgba(59, 130, 246, 0.06) !important;
+}
+.analise-modal__nome {
+  font-size: 0.82rem;
+  color: var(--ds-color-text, #1e293b);
+  word-break: break-all;
+}
+.analise-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ── Resultado de análise financeira ── */
+.analise-resultado {
+  border-top: 1px solid var(--ds-color-border, #e2e8f0);
+  padding-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.analise-resultado__title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--ds-color-text, #1e293b);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.analise-resultado__cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.analise-resultado__card {
+  flex: 1 1 140px;
+  border: 1px solid var(--ds-color-border, #e2e8f0);
+  border-radius: 0.6rem;
+  padding: 0.55rem 0.75rem;
+  background: var(--ds-color-surface-subtle, #f8fafc);
+}
+.analise-resultado__card-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ds-color-text-faint, #94a3b8);
+}
+.analise-resultado__card-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--ds-color-text, #1e293b);
+  margin-top: 0.15rem;
+}
+.analise-resultado__card-value--green { color: #059669; }
+.analise-resultado__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.analise-resultado__section-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ds-color-text-faint, #94a3b8);
+}
+.analise-resultado__section-title--warn {
+  color: #92400e;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 </style>

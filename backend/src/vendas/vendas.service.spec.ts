@@ -3,7 +3,6 @@ import { VendasService } from './vendas.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AgendaService } from '../agenda/agenda.service';
 import { TwinFlowService } from '../agenda/twin-flow.service';
-import { EstoqueService } from '../estoque/estoque.service';
 
 describe('VendasService', () => {
   let service: VendasService;
@@ -15,7 +14,6 @@ describe('VendasService', () => {
         { provide: PrismaService, useValue: {} },
         { provide: AgendaService, useValue: {} },
         { provide: TwinFlowService, useValue: {} },
-        { provide: EstoqueService, useValue: {} },
       ],
     }).compile();
 

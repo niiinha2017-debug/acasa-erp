@@ -182,20 +182,6 @@
                 @input="itemNovo.valorUnitarioMask = maskMoneyBR($event.target.value)"
               />
 
-              <div class="col-span-12 md:col-span-4">
-                <label class="block text-xs font-semibold tracking-wide text-text-soft ml-0.5 mb-1.5">Categoria herdada</label>
-                <div class="h-10 rounded-xl border border-border-ui bg-transparent px-3 flex items-center">
-                  <span
-                    v-if="itemNovo.categoria_base"
-                    class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide border"
-                    :class="categoriaBaseBadgeClass(itemNovo.categoria_base)"
-                  >
-                    {{ getCategoriaBaseLabel(itemNovo.categoria_base) }}
-                  </span>
-                  <span v-else class="text-sm text-text-soft">Definida no cadastro do produto</span>
-                </div>
-              </div>
-
               <div class="col-span-12 md:col-span-8 flex justify-start md:justify-end pt-1">
                 <Button
                   variant="primary"
@@ -229,12 +215,6 @@
                       <div class="font-black text-slate-700 uppercase text-xs">
                         {{ row.nome_produto }}
                       </div>
-                      <span
-                        class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide border"
-                        :class="categoriaBaseBadgeClass(row?.categoria_base)"
-                      >
-                        {{ getCategoriaBaseLabel(row?.categoria_base) }}
-                      </span>
                     </div>
 
                     <div v-if="descDoItem(row)" class="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
@@ -334,7 +314,6 @@ import { maskMoneyBR } from '@/utils/masks'
 import { moedaParaNumero, numeroParaMoeda } from '@/utils/number'
 import { can } from '@/services/permissions'
 import { closeTabAndGo } from '@/utils/tabs'
-import { getCategoriaBaseLabel } from '@/constantes/categorias-base'
 import FormActions from '@/components/ui/FormActions.vue'
 
 definePage({ meta: { perm: 'compras.ver' } })
@@ -381,7 +360,7 @@ const itemNovoKey = ref(0)
 const itemNovo = reactive({
   produto_id: null,
   nome_produto: '',
-  categoria_base: 'PRIMARIA',
+  categoria_base: null,
   marca: null,
   cor: null,
   medida: null,
@@ -447,7 +426,7 @@ function resetarItemNovo() {
   Object.assign(itemNovo, {
     produto_id: null,
     nome_produto: '',
-    categoria_base: 'PRIMARIA',
+    categoria_base: null,
     marca: null,
     cor: null,
     medida: null,
@@ -509,7 +488,7 @@ const onSelecionarProdutoNovo = (id) => {
 
   itemNovo.produto_id = cleanId
   itemNovo.nome_produto = p.nome_produto
-  itemNovo.categoria_base = p.categoria_base || 'PRIMARIA'
+  itemNovo.categoria_base = p.categoria_base || null
   itemNovo.marca = p.marca ?? null
   itemNovo.cor = p.cor ?? null
   itemNovo.medida = p.medida ?? null
@@ -546,7 +525,7 @@ if (!itemNovo.unidade) {
     _key: Date.now() + Math.random(),
     produto_id: Number(itemNovo.produto_id),
     nome_produto: itemNovo.nome_produto,
-    categoria_base: itemNovo.categoria_base || 'PRIMARIA',
+    categoria_base: itemNovo.categoria_base || null,
     marca: itemNovo.marca,
     cor: itemNovo.cor,
     medida: itemNovo.medida,
@@ -687,7 +666,7 @@ const salvarCompra = async () => {
       itens: itens.value.map((it) => ({
         ...(it.id ? { id: Number(it.id) } : {}),
         produto_id: Number(it.produto_id),
-        categoria_base: it.categoria_base ? String(it.categoria_base).trim().toUpperCase() : 'PRIMARIA',
+        categoria_base: it.categoria_base ? String(it.categoria_base).trim().toUpperCase() : 'FITA_BORDA',
         quantidade: Number(it.quantidade),
         unidade: it.unidade,
         valor_unitario: Number(it.valor_unitario),
@@ -761,7 +740,7 @@ produtoOptions.value = arr.map((p) => {
       map.set(Number(p.id), {
         id: p.id,
         nome_produto: p.nome_produto,
-        categoria_base: p.categoria_base || 'PRIMARIA',
+        categoria_base: p.categoria_base || null,
         marca: p.marca ?? null,
         cor: p.cor ?? null,
         medida: p.medida ?? null,
@@ -824,19 +803,6 @@ function descDoItem(row) {
   return partes.join(' • ')
 }
 
-function categoriaBaseBadgeClass(value) {
-  const key = String(value || '').trim().toUpperCase()
-  if (key === 'TERCIARIA') {
-    return 'bg-amber-50 text-amber-800 border-amber-200'
-  }
-  if (key === 'SECUNDARIA') {
-    return 'bg-emerald-50 text-emerald-800 border-emerald-200'
-  }
-  if (key === 'INSUMO') {
-    return 'bg-blue-50 text-blue-800 border-blue-200'
-  }
-  return 'bg-slate-100 text-slate-700 border-slate-200'
-}
 
 
 const carregarDadosIniciais = async () => {

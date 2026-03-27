@@ -23,6 +23,9 @@ import type { FecharMesFuncionarioDto } from './dto/fechar-mes-funcionario.dto';
 
 @Injectable()
 export class FinanceiroService {
+  private _ultimaAtualizacaoVencidos: number = 0;
+  private readonly _throttleVencidosMs = 60_000;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly custosEstrutura: CustosEstruturaService,
@@ -321,7 +324,8 @@ export class FinanceiroService {
       ? new Date(filtros.data_fim + 'T23:59:59')
       : undefined;
 
-    // Compras: sempre período do mês (1º ao último dia). Se só data_ini veio, fecha no último dia do mês.
+    // Garante que dataIni/dataFim sempre cobrem o período correto.
+    // Se só data_ini veio, fecha no último dia do mês.
     if (dataIni && !dataFim) {
       dataFim = new Date(
         dataIni.getFullYear(),
@@ -334,6 +338,12 @@ export class FinanceiroService {
     }
     if (dataFim && !dataIni) {
       dataIni = new Date(dataFim.getFullYear(), dataFim.getMonth(), 1, 0, 0, 0);
+    }
+    // Se o caller enviou mes/ano mas não data_ini/data_fim, deriva o range para
+    // filtrar despesas por data (elas não têm mes_referencia).
+    if (filtros.mes != null && filtros.ano != null && !dataIni && !dataFim) {
+      dataIni = new Date(filtros.ano, filtros.mes - 1, 1, 0, 0, 0);
+      dataFim = new Date(filtros.ano, filtros.mes, 0, 23, 59, 59);
     }
 
     const whereDespesas: any = {};
@@ -620,8 +630,13 @@ export class FinanceiroService {
 
   // =========================================================
   // ✅ ATUALIZA VENCIDOS (FINANCEIRO) — INCLUI TÍTULOS
+  // Throttle: executa no máximo 1x por minuto para não sobrecarregar em listagens paralelas.
   // =========================================================
   async atualizarVencidos() {
+    const agora = Date.now();
+    if (agora - this._ultimaAtualizacaoVencidos < this._throttleVencidosMs) return;
+    this._ultimaAtualizacaoVencidos = agora;
+
     const hoje = new Date();
 
     await this.prisma.despesas.updateMany({
@@ -1592,8 +1607,6 @@ export class FinanceiroService {
     data_ini?: string;
     data_fim?: string;
   }) {
-    await this.sincronizarContasReceberContratosVigentes();
-
     const normalizeOrigem = (value: any) =>
       String(value || '')
         .trim()
@@ -1603,18 +1616,36 @@ export class FinanceiroService {
         .replace(/[\s-]+/g, '_');
 
     const origemRaw = normalizeOrigem(filtros.origem);
-    const where: any = {
+    const whereBase: any = {
       fornecedor_id: filtros.fornecedor_id || undefined,
       cliente_id: filtros.cliente_id || undefined,
       status: filtros.status || undefined,
     };
 
-    if (filtros.data_ini || filtros.data_fim) {
-      where.vencimento_em = {};
-      if (filtros.data_ini)
-        where.vencimento_em.gte = new Date(filtros.data_ini);
-      if (filtros.data_fim)
-        where.vencimento_em.lte = new Date(filtros.data_fim);
+    const inicioCompetencia = filtros.data_ini
+      ? new Date(`${filtros.data_ini}T00:00:00`)
+      : null;
+    const fimCompetencia = filtros.data_fim
+      ? new Date(`${filtros.data_fim}T23:59:59`)
+      : null;
+
+    let where: any = whereBase;
+    if (inicioCompetencia || fimCompetencia) {
+      const faixaCompetencia: any = {};
+      if (inicioCompetencia) faixaCompetencia.gte = inicioCompetencia;
+      if (fimCompetencia) faixaCompetencia.lte = fimCompetencia;
+
+      const or: any[] = [{ vencimento_em: faixaCompetencia }];
+      if (inicioCompetencia) {
+        or.push({
+          vencimento_em: { lt: inicioCompetencia },
+          status: { notIn: ['PAGO', 'RECEBIDO', 'CANCELADO'] },
+        });
+      }
+      where = {
+        ...whereBase,
+        OR: or,
+      };
     }
 
     const contas = await this.prisma.contas_receber.findMany({
@@ -1628,11 +1659,17 @@ export class FinanceiroService {
       origem.includes('VENDA') &&
       !origem.includes('PLANO') &&
       !isOrigemPosVenda(origem);
+    const isOrigemImportacaoLeitura = (origem: string) =>
+      origem === 'IMPORTACAO_LEITURA';
 
-    // Regra do módulo: somente venda/pós-venda; serviço de corte e demais origens ficam fora.
+    // Regra do módulo: venda, pós-venda e importação/leitura.
     let contasVendaPosVenda = contas.filter((c: any) => {
       const origem = normalizeOrigem(c?.origem_tipo);
-      return isOrigemVenda(origem) || isOrigemPosVenda(origem);
+      return (
+        isOrigemVenda(origem) ||
+        isOrigemPosVenda(origem) ||
+        isOrigemImportacaoLeitura(origem)
+      );
     });
 
     if (origemRaw === 'VENDA') {
@@ -1642,6 +1679,10 @@ export class FinanceiroService {
     } else if (origemRaw === 'POS_VENDA') {
       contasVendaPosVenda = contasVendaPosVenda.filter((c: any) =>
         isOrigemPosVenda(normalizeOrigem(c?.origem_tipo)),
+      );
+    } else if (origemRaw === 'IMPORTACAO_LEITURA') {
+      contasVendaPosVenda = contasVendaPosVenda.filter((c: any) =>
+        isOrigemImportacaoLeitura(normalizeOrigem(c?.origem_tipo)),
       );
     }
 
@@ -1686,6 +1727,10 @@ export class FinanceiroService {
     );
 
     const contasComContrato = contasVendaPosVenda.filter((c: any) => {
+      const origem = normalizeOrigem(c?.origem_tipo);
+      if (isOrigemImportacaoLeitura(origem)) {
+        return true;
+      }
       const vendaId = Number(c?.origem_id || 0);
       const clienteId = Number(c?.cliente_id || 0);
       return (
@@ -1707,7 +1752,6 @@ export class FinanceiroService {
         where: { venda_id: { in: vendaIdsContas } },
         orderBy: [
           { data_prevista_recebimento: 'asc' },
-          { data_recebimento: 'asc' },
           { id: 'asc' },
         ],
       });
@@ -1749,11 +1793,94 @@ export class FinanceiroService {
       }, new Map<number, any>());
     }
 
-    return contasComContrato.map((c: any) => {
+    let detalhesClientePorId = new Map<number, any>();
+    if (clienteIds.length) {
+      const clientes = await this.prisma.cliente.findMany({
+        where: { id: { in: clienteIds } },
+        select: {
+          id: true,
+          nome_completo: true,
+          razao_social: true,
+        },
+      });
+      detalhesClientePorId = clientes.reduce((acc: Map<number, any>, cliente: any) => {
+        const id = Number(cliente?.id || 0);
+        if (!id) return acc;
+        acc.set(id, cliente);
+        return acc;
+      }, new Map<number, any>());
+    }
+
+    // Snapshot de markup salvo na OS de importação (prioridade para montar parcelas na tela)
+    const clienteIdsContas = Array.from(
+      new Set(
+        contasComContrato
+          .map((c: any) => Number(c?.cliente_id || 0))
+          .filter((id: number) => Number.isFinite(id) && id > 0),
+      ),
+    );
+    const markupPorCliente = new Map<number, any[]>();
+    if (clienteIdsContas.length) {
+      const osRows = await this.prisma.ordem_servico.findMany({
+        where: {
+          cliente_id: { in: clienteIdsContas },
+          origem: 'IMPORTACAO_LEITURA',
+        },
+        select: {
+          cliente_id: true,
+          criado_em: true,
+          comissionados: true,
+        },
+        orderBy: [{ cliente_id: 'asc' }, { criado_em: 'desc' }, { id: 'desc' }],
+      });
+      for (const os of osRows as any[]) {
+        const clienteId = Number(os?.cliente_id || 0);
+        if (!clienteId || markupPorCliente.has(clienteId)) continue;
+        const payload = os?.comissionados;
+        const envelope =
+          payload &&
+          typeof payload === 'object' &&
+          (payload.schema === 'MARKUP_V2' || Array.isArray(payload.parcelas_markup));
+        const parcelasMarkup = envelope
+          ? Array.isArray(payload?.parcelas_markup)
+            ? payload.parcelas_markup
+            : []
+          : [];
+        if (parcelasMarkup.length) {
+          markupPorCliente.set(clienteId, parcelasMarkup);
+        }
+      }
+    }
+
+    // Contas de VENDA e POS_VENDA sempre aparecem; apenas IMPORTACAO_LEITURA
+    // depende do markup para montar as parcelas (sem markup, oculta só a importação).
+    const contasComMarkup = contasComContrato.filter((c: any) => {
+      const origem = normalizeOrigem(c?.origem_tipo);
+      if (!isOrigemImportacaoLeitura(origem)) return true;
+      const clienteId = Number(c?.cliente_id || 0);
+      return markupPorCliente.has(clienteId);
+    });
+
+    return contasComMarkup.map((c: any) => {
+      const origemConta = normalizeOrigem(c?.origem_tipo);
+      const isContaImportacaoLeitura = isOrigemImportacaoLeitura(origemConta);
       const vendaId = Number(c?.origem_id || 0);
       const pagamentos = pagamentosPorVenda.get(vendaId) || [];
       const venda = detalhesVendaPorId.get(vendaId);
-      const parcelas_venda = pagamentos.map((p: any, idx: number) => ({
+      const clienteId = Number(c?.cliente_id || 0);
+      const statusConta = String(c?.status || '')
+        .trim()
+        .toUpperCase();
+      const statusParcelaConta =
+        statusConta === 'PAGO' || statusConta === 'RECEBIDO' ? 'PAGO' : 'EM_ABERTO';
+      const parcelasMarkupCliente = markupPorCliente.get(clienteId) || [];
+      const valorCompensadoConta = Number(c?.valor_compensado || 0);
+      const valorVendaBruto = Number(
+        (venda as any)?.valor_vendido ?? (venda as any)?.valor_total ?? 0,
+      );
+
+      const parcelas_venda_padrao = pagamentos.map((p: any, idx: number) => ({
+        id: Number(p?.id || 0) || null,
         parcela: idx + 1,
         valor: Number(p?.valor || 0),
         forma_pagamento_chave: p?.forma_pagamento_chave || null,
@@ -1761,6 +1888,81 @@ export class FinanceiroService {
         vencimento_em:
           p?.data_prevista_recebimento || p?.data_recebimento || null,
       }));
+      let parcelas_venda_markup = parcelasMarkupCliente.map((p: any, idx: number) => ({
+        id: null,
+        parcela: Number(p?.parcela || idx + 1),
+        valor: Number(p?.valor || 0),
+        forma_pagamento_chave: p?.forma || c?.forma_recebimento_chave || null,
+        status: statusParcelaConta,
+        vencimento_em: p?.vencimento || null,
+      }));
+
+      // Exibição deve refletir valor bruto da venda (não líquido do markup).
+      if (parcelas_venda_markup.length && valorVendaBruto > 0) {
+        const somaMarkup = parcelas_venda_markup.reduce(
+          (s: number, p: any) => s + Number(p?.valor || 0),
+          0,
+        );
+        if (somaMarkup > 0 && Math.abs(somaMarkup - valorVendaBruto) > 0.01) {
+          const fator = valorVendaBruto / somaMarkup;
+          parcelas_venda_markup = parcelas_venda_markup.map((p: any) => ({
+            ...p,
+            valor: Math.round((Number(p?.valor || 0) * fator + Number.EPSILON) * 100) / 100,
+          }));
+          const somaSemUltima = parcelas_venda_markup
+            .slice(0, -1)
+            .reduce((s: number, p: any) => s + Number(p?.valor || 0), 0);
+          const ultima = parcelas_venda_markup[parcelas_venda_markup.length - 1];
+          parcelas_venda_markup[parcelas_venda_markup.length - 1] = {
+            ...ultima,
+            valor:
+              Math.round(
+                (Math.max(valorVendaBruto - somaSemUltima, 0) + Number.EPSILON) * 100,
+              ) / 100,
+          };
+        }
+      }
+
+      // Em conta parcialmente recebida, marca parcelas já baixadas para habilitar "Excluir".
+      if (
+        parcelas_venda_markup.length &&
+        statusParcelaConta === 'EM_ABERTO' &&
+        valorCompensadoConta > 0
+      ) {
+        let saldoCompensado = valorCompensadoConta;
+        parcelas_venda_markup = parcelas_venda_markup.map((p: any) => {
+          const valorParcela = Number(p?.valor || 0);
+          if (saldoCompensado >= valorParcela - 0.01) {
+            saldoCompensado -= valorParcela;
+            return { ...p, status: 'PAGO' };
+          }
+          return { ...p, status: 'EM_ABERTO' };
+        });
+      }
+
+      const matchParcelaDescricao = String(c?.descricao || '').match(/Parcela\s+(\d+)\/(\d+)/i);
+      const numeroParcelaAtual = matchParcelaDescricao
+        ? Number(matchParcelaDescricao[1] || 0)
+        : 0;
+      const parcelaAtualMarkup = numeroParcelaAtual
+        ? parcelas_venda_markup.find((p: any) => Number(p?.parcela || 0) === numeroParcelaAtual)
+        : null;
+
+      const usarMarkup = parcelas_venda_markup.length > 0;
+      let parcelas_venda = usarMarkup ? parcelas_venda_markup : parcelas_venda_padrao;
+      let valorOriginalFinal = usarMarkup
+        ? valorVendaBruto > 0
+          ? valorVendaBruto
+          : parcelas_venda.reduce((s: number, p: any) => s + Number(p?.valor || 0), 0)
+        : Number(c?.valor_original || 0);
+
+      if (isContaImportacaoLeitura) {
+        parcelas_venda = parcelaAtualMarkup ? [parcelaAtualMarkup] : [];
+        valorOriginalFinal = Number(
+          c?.valor_original ?? parcelaAtualMarkup?.valor ?? 0,
+        );
+      }
+
       const ambientes_venda = Array.from(
         new Set(
           (venda?.itens || [])
@@ -1768,8 +1970,13 @@ export class FinanceiroService {
             .filter(Boolean),
         ),
       );
+      const clienteConta = detalhesClientePorId.get(clienteId);
       const cliente_nome =
-        venda?.cliente?.nome_completo || venda?.cliente?.razao_social || null;
+        venda?.cliente?.nome_completo ||
+        venda?.cliente?.razao_social ||
+        clienteConta?.nome_completo ||
+        clienteConta?.razao_social ||
+        null;
 
       const obs = String(c?.observacao || '');
       const taxaMatch = obs.match(/taxa=([0-9.,-]+)/i);
@@ -1779,6 +1986,8 @@ export class FinanceiroService {
 
       return {
         ...c,
+        valor_original: valorOriginalFinal,
+        valor_compensado: Number(c?.valor_compensado || 0),
         cliente_nome,
         ambientes_venda,
         parcelas_venda,
@@ -1857,16 +2066,237 @@ export class FinanceiroService {
   }
 
   async receberContaReceber(id: number, dto: any) {
-    const { status: _status, recebido_em: _recebidoEm, ...rest } = dto || {};
+    const {
+      status: _status,
+      recebido_em: _recebidoEm,
+      venda_pagamento_id: _vendaPagamentoId,
+      parcela: _parcela,
+      ...rest
+    } = dto || {};
     const recebidoEm = _recebidoEm ? new Date(_recebidoEm) : new Date();
+    const vendaPagamentoId = Number(_vendaPagamentoId || 0);
+    const parcelaNumero = Number(_parcela || 0);
+    const recebidoEmFinal = Number.isNaN(recebidoEm.getTime()) ? new Date() : recebidoEm;
+
+    const normalizarStatus = (value: any) =>
+      String(value || '')
+        .trim()
+        .toUpperCase();
     try {
+      const conta = await this.prisma.contas_receber.findUnique({
+        where: { id },
+      });
+      if (!conta) throw new NotFoundException('Conta a receber não encontrada');
+
+      const origemTipoConta = normalizarStatus((conta as any).origem_tipo);
+      const origemIdConta = Number((conta as any).origem_id || 0);
+
+      // Baixa por parcela de venda: atualiza somente a parcela e recalcula a conta.
+      if (vendaPagamentoId > 0 || parcelaNumero > 0) {
+        if (!origemTipoConta.includes('VENDA') || !origemIdConta) {
+          throw new BadRequestException(
+            'Baixa por parcela disponível apenas para contas com origem VENDA.',
+          );
+        }
+
+        const pagamentos = await this.prisma.vendas_pagamentos.findMany({
+          where: { venda_id: origemIdConta },
+          orderBy: [
+            { data_prevista_recebimento: 'asc' },
+            { id: 'asc' },
+          ],
+        });
+        if (!pagamentos.length) {
+          throw new BadRequestException('Não há parcelas cadastradas para esta venda.');
+        }
+
+        const pagamentoAlvo =
+          vendaPagamentoId > 0
+            ? pagamentos.find((p: any) => Number(p?.id || 0) === vendaPagamentoId)
+            : pagamentos[parcelaNumero - 1];
+
+        if (!pagamentoAlvo) {
+          throw new BadRequestException('Parcela não encontrada para baixa.');
+        }
+
+        await this.prisma.vendas_pagamentos.update({
+          where: { id: Number((pagamentoAlvo as any).id) },
+          data: {
+            status_financeiro_chave: SF.PAGO,
+            data_recebimento: recebidoEmFinal,
+            forma_pagamento_chave: rest?.forma_recebimento_chave
+              ? String(rest.forma_recebimento_chave).trim().toUpperCase()
+              : undefined,
+          },
+        });
+
+        const pagamentosAtualizados = await this.prisma.vendas_pagamentos.findMany({
+          where: { venda_id: origemIdConta },
+        });
+        const pagamentosPagos = pagamentosAtualizados.filter(
+          (p: any) => normalizarStatus(p?.status_financeiro_chave) === SF.PAGO,
+        );
+        const valorCompensado = pagamentosPagos.reduce(
+          (sum: number, p: any) => sum + Number(p?.valor || 0),
+          0,
+        );
+        const todosPagos =
+          pagamentosAtualizados.length > 0 &&
+          pagamentosPagos.length === pagamentosAtualizados.length;
+        const dataRecebimentoFinal = pagamentosPagos
+          .map((p: any) => p?.data_recebimento || null)
+          .filter(Boolean)
+          .sort((a: any, b: any) => +new Date(b) - +new Date(a))[0];
+
+        return await this.prisma.contas_receber.update({
+          where: { id },
+          data: {
+            status: todosPagos ? SF.PAGO : SF.EM_ABERTO,
+            recebido_em: todosPagos
+              ? dataRecebimentoFinal
+                ? new Date(dataRecebimentoFinal)
+                : recebidoEmFinal
+              : null,
+            valor_compensado: valorCompensado as any,
+            ...rest,
+          },
+        });
+      }
+
+      // Proteção: venda parcelada não pode ser baixada em lote por este endpoint.
+      if (origemTipoConta.includes('VENDA') && origemIdConta > 0) {
+        const qtdParcelas = await this.prisma.vendas_pagamentos.count({
+          where: { venda_id: origemIdConta },
+        });
+        if (qtdParcelas > 0) {
+          throw new BadRequestException(
+            'Esta venda possui parcelas. Faça a baixa por parcela.',
+          );
+        }
+      }
+
       return await this.prisma.contas_receber.update({
         where: { id },
         data: {
           status: SF.PAGO,
-          recebido_em: Number.isNaN(recebidoEm.getTime())
-            ? new Date()
-            : recebidoEm,
+          recebido_em: recebidoEmFinal,
+          ...rest,
+        },
+      });
+    } catch (e: any) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025') {
+        throw new NotFoundException('Conta a receber não encontrada');
+      }
+      throw e;
+    }
+  }
+
+  async estornarContaReceber(id: number, dto: any) {
+    const {
+      venda_pagamento_id: _vendaPagamentoId,
+      parcela: _parcela,
+      ...rest
+    } = dto || {};
+    const vendaPagamentoId = Number(_vendaPagamentoId || 0);
+    const parcelaNumero = Number(_parcela || 0);
+
+    const normalizarStatus = (value: any) =>
+      String(value || '')
+        .trim()
+        .toUpperCase();
+
+    try {
+      const conta = await this.prisma.contas_receber.findUnique({
+        where: { id },
+      });
+      if (!conta) throw new NotFoundException('Conta a receber não encontrada');
+
+      const origemTipoConta = normalizarStatus((conta as any).origem_tipo);
+      const origemIdConta = Number((conta as any).origem_id || 0);
+
+      // Estorno por parcela de venda.
+      if (vendaPagamentoId > 0 || parcelaNumero > 0) {
+        if (!origemTipoConta.includes('VENDA') || !origemIdConta) {
+          throw new BadRequestException(
+            'Estorno por parcela disponível apenas para contas com origem VENDA.',
+          );
+        }
+
+        const pagamentos = await this.prisma.vendas_pagamentos.findMany({
+          where: { venda_id: origemIdConta },
+          orderBy: [
+            { data_prevista_recebimento: 'asc' },
+            { id: 'asc' },
+          ],
+        });
+        if (!pagamentos.length) {
+          throw new BadRequestException('Não há parcelas cadastradas para esta venda.');
+        }
+
+        const pagamentoAlvo =
+          vendaPagamentoId > 0
+            ? pagamentos.find((p: any) => Number(p?.id || 0) === vendaPagamentoId)
+            : pagamentos[parcelaNumero - 1];
+
+        if (!pagamentoAlvo) {
+          throw new BadRequestException('Parcela não encontrada para estorno.');
+        }
+
+        await this.prisma.vendas_pagamentos.update({
+          where: { id: Number((pagamentoAlvo as any).id) },
+          data: {
+            status_financeiro_chave: SF.EM_ABERTO,
+            data_recebimento: null,
+          },
+        });
+
+        const pagamentosAtualizados = await this.prisma.vendas_pagamentos.findMany({
+          where: { venda_id: origemIdConta },
+        });
+        const pagamentosPagos = pagamentosAtualizados.filter(
+          (p: any) => normalizarStatus(p?.status_financeiro_chave) === SF.PAGO,
+        );
+        const valorCompensado = pagamentosPagos.reduce(
+          (sum: number, p: any) => sum + Number(p?.valor || 0),
+          0,
+        );
+        const todosPagos =
+          pagamentosAtualizados.length > 0 &&
+          pagamentosPagos.length === pagamentosAtualizados.length;
+        const dataRecebimentoFinal = pagamentosPagos
+          .map((p: any) => p?.data_recebimento || null)
+          .filter(Boolean)
+          .sort((a: any, b: any) => +new Date(b) - +new Date(a))[0];
+
+        return await this.prisma.contas_receber.update({
+          where: { id },
+          data: {
+            status: todosPagos ? SF.PAGO : SF.EM_ABERTO,
+            recebido_em: todosPagos && dataRecebimentoFinal ? new Date(dataRecebimentoFinal) : null,
+            valor_compensado: valorCompensado as any,
+            ...rest,
+          },
+        });
+      }
+
+      // Proteção: venda parcelada deve ser estornada por parcela.
+      if (origemTipoConta.includes('VENDA') && origemIdConta > 0) {
+        const qtdParcelas = await this.prisma.vendas_pagamentos.count({
+          where: { venda_id: origemIdConta },
+        });
+        if (qtdParcelas > 0) {
+          throw new BadRequestException(
+            'Esta venda possui parcelas. Faça o estorno por parcela.',
+          );
+        }
+      }
+
+      return await this.prisma.contas_receber.update({
+        where: { id },
+        data: {
+          status: SF.EM_ABERTO,
+          recebido_em: null,
+          valor_compensado: 0 as any,
           ...rest,
         },
       });
@@ -1974,6 +2404,14 @@ export class FinanceiroService {
 
     const temCompetencia =
       Number.isFinite(filtros.mes) && Number.isFinite(filtros.ano);
+
+    // Se o caller passou mes/ano mas não data_ini/data_fim, deriva o range do mês para
+    // filtrar compras e despesas por data (esses campos não têm mes_referencia).
+    if (temCompetencia && !dataIni && !dataFim) {
+      dataIni = new Date(filtros.ano!, filtros.mes! - 1, 1, 0, 0, 0);
+      dataFim = new Date(filtros.ano!, filtros.mes!, 0, 23, 59, 59);
+    }
+
     const range = dataIni && dataFim ? { gte: dataIni, lte: dataFim } : undefined;
     const filtroContaPagarCompetencia = temCompetencia
       ? {
@@ -2907,6 +3345,314 @@ export class FinanceiroService {
     return rows;
   }
 
+  // =========================================================
+  // ✅ FLUXO DE CAIXA — Entradas × Saídas + Meta de Vendas
+  // =========================================================
+  async getFluxoCaixa(mes: number, ano: number) {
+    const inicioMes = new Date(ano, mes - 1, 1, 0, 0, 0);
+    const fimMes = new Date(ano, mes, 0, 23, 59, 59);
+    const hoje = new Date();
+
+    const statusPago = SF.PAGO;
+    const statusAbertos = [SF.EM_ABERTO, SF.VENCIDO, SF.AGENDADO].filter(Boolean) as string[];
+
+    // ── ENTRADAS REALIZADAS (recebimentos efetivos no mês) ──────────────
+    const contasReceberPagas = await this.prisma.contas_receber.findMany({
+      where: {
+        status: statusPago,
+        recebido_em: { gte: inicioMes, lte: fimMes },
+      },
+      select: {
+        id: true,
+        descricao: true,
+        valor_original: true,
+        valor_compensado: true,
+        forma_recebimento_chave: true,
+        origem_tipo: true,
+        recebido_em: true,
+        cliente: { select: { nome: true } },
+      },
+      orderBy: { recebido_em: 'desc' },
+    });
+
+    const entradasRealizadasItens = contasReceberPagas.map((c) => {
+      const valor = Number((c as any).valor_compensado ?? 0) > 0
+        ? Number((c as any).valor_compensado)
+        : Number((c as any).valor_original ?? 0);
+      return {
+        id: c.id,
+        descricao: (c as any).descricao || `Recebimento #${c.id}`,
+        valor,
+        forma: (c as any).forma_recebimento_chave || 'NÃO_INFORMADA',
+        origem_tipo: (c as any).origem_tipo || null,
+        data: (c as any).recebido_em,
+        cliente: (c as any).cliente?.nome || null,
+      };
+    });
+
+    const totalEntradasRealizadas = this.round2(
+      entradasRealizadasItens.reduce((s, i) => s + i.valor, 0),
+    );
+
+    // Agrupamento por forma de recebimento
+    const mapFormaEntrada = new Map<string, { forma: string; total: number; qtd: number }>();
+    for (const item of entradasRealizadasItens) {
+      const k = item.forma;
+      const e = mapFormaEntrada.get(k) || { forma: k, total: 0, qtd: 0 };
+      e.total = this.round2(e.total + item.valor);
+      e.qtd += 1;
+      mapFormaEntrada.set(k, e);
+    }
+    const entradasPorForma = [...mapFormaEntrada.values()].sort((a, b) => b.total - a.total);
+
+    // ── ENTRADAS PENDENTES (contas a receber em aberto) ─────────────────
+    const contasReceberAbertas = await this.prisma.contas_receber.findMany({
+      where: { status: { in: statusAbertos } },
+      select: {
+        id: true,
+        descricao: true,
+        valor_original: true,
+        status: true,
+        vencimento_em: true,
+        cliente: { select: { nome: true } },
+      },
+    });
+
+    let totalEntradasPendentesVencidas = 0;
+    let totalEntradasPendentesAVencer = 0;
+    for (const c of contasReceberAbertas) {
+      const v = Number((c as any).valor_original ?? 0);
+      const venc = (c as any).vencimento_em ? new Date((c as any).vencimento_em) : null;
+      if (venc && venc < hoje) totalEntradasPendentesVencidas = this.round2(totalEntradasPendentesVencidas + v);
+      else totalEntradasPendentesAVencer = this.round2(totalEntradasPendentesAVencer + v);
+    }
+    const totalEntradasPendentes = this.round2(totalEntradasPendentesVencidas + totalEntradasPendentesAVencer);
+
+    // ── SAÍDAS REALIZADAS (pagamentos efetivos no mês) ───────────────────
+    // 1) contas_pagar pagas no mês
+    const contasPagarPagas = await this.prisma.contas_pagar.findMany({
+      where: {
+        status: statusPago,
+        pago_em: { gte: inicioMes, lte: fimMes },
+      },
+      select: {
+        id: true,
+        descricao: true,
+        valor_original: true,
+        valor_compensado: true,
+        forma_pagamento_chave: true,
+        origem_tipo: true,
+        pago_em: true,
+        fornecedor: { select: { nome_fantasia: true } },
+        despesa: { select: { categoria: true, classificacao: true } },
+      },
+    });
+
+    const saidasCP = contasPagarPagas.map((c) => {
+      const v = Number((c as any).valor_compensado ?? 0) > 0
+        ? Number((c as any).valor_compensado)
+        : Number((c as any).valor_original ?? 0);
+      return {
+        id: c.id,
+        descricao: (c as any).descricao || `Pagamento #${c.id}`,
+        valor: v,
+        forma: (c as any).forma_pagamento_chave || 'NÃO_INFORMADA',
+        origem_tipo: (c as any).origem_tipo || 'CONTA_PAGAR',
+        categoria: (c as any).despesa?.categoria || (c as any).origem_tipo || 'OUTROS',
+        data: (c as any).pago_em,
+        fornecedor: (c as any).fornecedor?.nome_fantasia || null,
+      };
+    });
+
+    // 2) Despesas sem conta_pagar vinculada, pagas no mês (evita dupla contagem)
+    const despesasPagas = await this.prisma.despesas.findMany({
+      where: {
+        status: statusPago,
+        data_pagamento: { gte: inicioMes, lte: fimMes },
+        conta_pagar: null,
+      },
+      select: {
+        id: true,
+        categoria: true,
+        classificacao: true,
+        valor_total: true,
+        data_pagamento: true,
+        forma_pagamento: true,
+      },
+    });
+
+    const saidasDesp = despesasPagas.map((d) => ({
+      id: d.id,
+      descricao: `${(d as any).classificacao || (d as any).categoria || 'Despesa'} #${d.id}`,
+      valor: Number((d as any).valor_total ?? 0),
+      forma: (d as any).forma_pagamento || 'NÃO_INFORMADA',
+      origem_tipo: 'DESPESA',
+      categoria: (d as any).categoria || 'OUTROS',
+      data: (d as any).data_pagamento,
+      fornecedor: null as string | null,
+    }));
+
+    const todosSaidasRealizadas = [...saidasCP, ...saidasDesp];
+    const totalSaidasRealizadas = this.round2(
+      todosSaidasRealizadas.reduce((s, i) => s + i.valor, 0),
+    );
+
+    // Agrupamento por categoria de saída
+    const mapCategoriaSaida = new Map<string, { categoria: string; total: number; qtd: number }>();
+    for (const item of todosSaidasRealizadas) {
+      const k = item.categoria;
+      const e = mapCategoriaSaida.get(k) || { categoria: k, total: 0, qtd: 0 };
+      e.total = this.round2(e.total + item.valor);
+      e.qtd += 1;
+      mapCategoriaSaida.set(k, e);
+    }
+    const saidasPorCategoria = [...mapCategoriaSaida.values()].sort((a, b) => b.total - a.total);
+
+    // ── SAÍDAS PENDENTES (a pagar em aberto — sem filtro de mês para visão geral) ──
+    const cpAberto = await this.prisma.contas_pagar.findMany({
+      where: { status: { in: statusAbertos } },
+      select: {
+        id: true,
+        descricao: true,
+        valor_original: true,
+        status: true,
+        vencimento_em: true,
+        origem_tipo: true,
+        despesa: { select: { categoria: true } },
+      },
+    });
+
+    const despAberto = await this.prisma.despesas.findMany({
+      where: {
+        status: { in: [SF.EM_ABERTO, SF.VENCIDO].filter(Boolean) as string[] },
+        conta_pagar: null,
+      },
+      select: {
+        id: true,
+        valor_total: true,
+        status: true,
+        data_vencimento: true,
+        categoria: true,
+      },
+    });
+
+    let totalSaidasPendentesVencidas = 0;
+    let totalSaidasPendentesAVencer = 0;
+    const mapCategoriaPendente = new Map<string, { categoria: string; total: number; qtd: number }>();
+
+    const acumularPendente = (v: number, venc: Date | null, cat: string) => {
+      if (venc && venc < hoje) totalSaidasPendentesVencidas = this.round2(totalSaidasPendentesVencidas + v);
+      else totalSaidasPendentesAVencer = this.round2(totalSaidasPendentesAVencer + v);
+      const e = mapCategoriaPendente.get(cat) || { categoria: cat, total: 0, qtd: 0 };
+      e.total = this.round2(e.total + v);
+      e.qtd += 1;
+      mapCategoriaPendente.set(cat, e);
+    };
+
+    for (const c of cpAberto) {
+      const v = Number((c as any).valor_original ?? 0);
+      const venc = (c as any).vencimento_em ? new Date((c as any).vencimento_em) : null;
+      const cat = (c as any).despesa?.categoria || (c as any).origem_tipo || 'OUTROS';
+      acumularPendente(v, venc, cat);
+    }
+    for (const d of despAberto) {
+      const v = Number((d as any).valor_total ?? 0);
+      const venc = (d as any).data_vencimento ? new Date((d as any).data_vencimento) : null;
+      acumularPendente(v, venc, (d as any).categoria || 'OUTROS');
+    }
+
+    const totalSaidasPendentes = this.round2(totalSaidasPendentesVencidas + totalSaidasPendentesAVencer);
+    const saidasPendentesPorCategoria = [...mapCategoriaPendente.values()].sort((a, b) => b.total - a.total);
+
+    // ── TOTAIS E META ───────────────────────────────────────────────────
+    const totalEntradas = this.round2(totalEntradasRealizadas + totalEntradasPendentes);
+    const totalSaidas = this.round2(totalSaidasRealizadas + totalSaidasPendentes);
+
+    const saldoRealizado = this.round2(totalEntradasRealizadas - totalSaidasRealizadas);
+    const saldoProjetado = this.round2(totalEntradas - totalSaidas);
+
+    // "Quanto preciso vender": déficit considerando apenas o que já está comprometido
+    const totalComprometido = this.round2(totalSaidasRealizadas + totalSaidasPendentes);
+    const totalCoberto = this.round2(totalEntradasRealizadas + totalEntradasPendentes);
+    const deficitBruto = this.round2(Math.max(0, totalComprometido - totalCoberto));
+
+    // Margem bruta estimada: CPV/Receita do próprio mês (ou ~40% como baseline)
+    let margemBrutaPct = 0.40; // baseline conservador
+    if (totalEntradasRealizadas > 0) {
+      const cpvMesCP = saidasCP
+        .filter((s) => ['INSUMO', 'MATERIA_PRIMA', 'MATERIA PRIMA', 'INSUMOS', 'COMPRA'].some(
+          (c) => s.categoria.toUpperCase().includes(c),
+        ))
+        .reduce((s, i) => s + i.valor, 0);
+      const cpvMesDesp = saidasDesp
+        .filter((s) => ['INSUMO', 'MATERIA_PRIMA', 'MATERIA PRIMA', 'INSUMOS'].some(
+          (c) => s.categoria.toUpperCase().includes(c),
+        ))
+        .reduce((s, i) => s + i.valor, 0);
+      const cpvMes = cpvMesCP + cpvMesDesp;
+      if (cpvMes > 0 && totalEntradasRealizadas > 0) {
+        margemBrutaPct = Math.max(0.05, Math.min(0.95, 1 - (cpvMes / totalEntradasRealizadas)));
+      }
+    }
+
+    // Para cobrir o déficit em termos de receita bruta (considerando que parte da receita vai para CPV)
+    const vendasNecessariasComMargem = deficitBruto > 0
+      ? this.round2(deficitBruto / margemBrutaPct)
+      : 0;
+
+    return {
+      mes,
+      ano,
+      periodo: {
+        inicio: inicioMes.toISOString().split('T')[0],
+        fim: fimMes.toISOString().split('T')[0],
+      },
+      entradas: {
+        realizadas: {
+          total: totalEntradasRealizadas,
+          por_forma: entradasPorForma,
+          itens: entradasRealizadasItens.slice(0, 100),
+        },
+        pendentes: {
+          total: totalEntradasPendentes,
+          vencido: totalEntradasPendentesVencidas,
+          a_vencer: totalEntradasPendentesAVencer,
+        },
+        total: totalEntradas,
+      },
+      saidas: {
+        realizadas: {
+          total: totalSaidasRealizadas,
+          contas_pagar: this.round2(saidasCP.reduce((s, i) => s + i.valor, 0)),
+          despesas_avulsas: this.round2(saidasDesp.reduce((s, i) => s + i.valor, 0)),
+          por_categoria: saidasPorCategoria,
+          itens: todosSaidasRealizadas
+            .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
+            .slice(0, 100),
+        },
+        pendentes: {
+          total: totalSaidasPendentes,
+          vencido: totalSaidasPendentesVencidas,
+          a_vencer: totalSaidasPendentesAVencer,
+          por_categoria: saidasPendentesPorCategoria,
+        },
+        total: totalSaidas,
+      },
+      saldo: {
+        realizado: saldoRealizado,
+        projetado: saldoProjetado,
+      },
+      meta_vendas: {
+        total_comprometido: totalComprometido,
+        total_coberto: totalCoberto,
+        deficit_bruto: deficitBruto,
+        margem_bruta_pct: this.round2(margemBrutaPct * 100),
+        vendas_necessarias: vendasNecessariasComMargem,
+        situacao: deficitBruto === 0 ? 'COBERTO' : 'DEFICIT',
+      },
+    };
+  }
+
   /**
    * DRE Mensal: agrega receita (recebimentos Pix/Cartão/Cheque), CPV materiais e mão de obra.
    */
@@ -3012,5 +3758,797 @@ export class FinanceiroService {
       margemContribuicao,
       lucroLiquido,
     };
+  }
+
+  // =========================================================
+  // ✅ RELATÓRIO CONTAS A PAGAR — dados agregados para aba Relatório
+  // =========================================================
+  async gerarRelatorioContasPagar(filtros: {
+    mes?: number;
+    ano?: number;
+    fornecedor_id?: number;
+    forma_pagamento?: string;
+    status?: string;
+  }) {
+    const mes = filtros.mes ?? new Date().getMonth() + 1;
+    const ano = filtros.ano ?? new Date().getFullYear();
+
+    // Reutiliza o consolidado existente com os mesmos filtros
+    const consolidado = await this.listarContasPagarConsolidado({
+      mes,
+      ano,
+      fornecedor_id: filtros.fornecedor_id,
+    });
+
+    // Aplica filtros adicionais (forma de pagamento, status)
+    let dados = consolidado;
+    if (filtros.forma_pagamento) {
+      const fp = filtros.forma_pagamento.toUpperCase();
+      dados = dados.filter(
+        (r) => String(r.forma_pagamento_chave || '').toUpperCase() === fp,
+      );
+    }
+    if (filtros.status) {
+      const st = filtros.status.toUpperCase();
+      dados = dados.filter(
+        (r) => String(r.status || '').toUpperCase() === st,
+      );
+    }
+
+    // ---------- Totalizadores ----------
+    const totalGeral = this.round2(
+      dados.reduce((s, r) => s + Number(r.valor ?? 0), 0),
+    );
+
+    // Por fornecedor
+    const mapFornecedor = new Map<string, { nome: string; total: number; qtd: number }>();
+    for (const r of dados) {
+      const key = r.fornecedor_nome || 'Sem fornecedor';
+      const item = mapFornecedor.get(key) || { nome: key, total: 0, qtd: 0 };
+      item.total = this.round2(item.total + Number(r.valor ?? 0));
+      item.qtd += 1;
+      mapFornecedor.set(key, item);
+    }
+    const porFornecedor = [...mapFornecedor.values()]
+      .sort((a, b) => b.total - a.total);
+
+    // Por forma de pagamento
+    const mapForma = new Map<string, { forma: string; total: number; qtd: number }>();
+    for (const r of dados) {
+      const key = r.forma_pagamento_chave || 'NÃO DEFINIDA';
+      const item = mapForma.get(key) || { forma: key, total: 0, qtd: 0 };
+      item.total = this.round2(item.total + Number(r.valor ?? 0));
+      item.qtd += 1;
+      mapForma.set(key, item);
+    }
+    const porFormaPagamento = [...mapForma.values()]
+      .sort((a, b) => b.total - a.total);
+
+    // Por status
+    const mapStatus = new Map<string, { status: string; total: number; qtd: number }>();
+    for (const r of dados) {
+      const key = r.status || 'INDEFINIDO';
+      const item = mapStatus.get(key) || { status: key, total: 0, qtd: 0 };
+      item.total = this.round2(item.total + Number(r.valor ?? 0));
+      item.qtd += 1;
+      mapStatus.set(key, item);
+    }
+    const porStatus = [...mapStatus.values()]
+      .sort((a, b) => b.total - a.total);
+
+    // Por natureza/origem
+    const mapOrigem = new Map<string, { origem: string; total: number; qtd: number }>();
+    for (const r of dados) {
+      const key = r.origem || 'OUTROS';
+      const item = mapOrigem.get(key) || { origem: key, total: 0, qtd: 0 };
+      item.total = this.round2(item.total + Number(r.valor ?? 0));
+      item.qtd += 1;
+      mapOrigem.set(key, item);
+    }
+    const porOrigem = [...mapOrigem.values()]
+      .sort((a, b) => b.total - a.total);
+
+    return {
+      mes,
+      ano,
+      totalGeral,
+      totalLancamentos: dados.length,
+      porFornecedor,
+      porFormaPagamento,
+      porStatus,
+      porOrigem,
+      lancamentos: dados,
+    };
+  }
+
+  // =========================================================
+  // ✅ RELATÓRIO CONTAS A PAGAR — PDF
+  // =========================================================
+  async gerarRelatorioContasPagarPdf(filtros: {
+    mes?: number;
+    ano?: number;
+    fornecedor_id?: number;
+    forma_pagamento?: string;
+    status?: string;
+  }): Promise<Buffer> {
+    const relatorio = await this.gerarRelatorioContasPagar(filtros);
+    const PDFDocument = (await import('pdfkit')).default;
+
+    return new Promise((resolve, reject) => {
+      try {
+        const doc = new PDFDocument({ margin: 40, size: 'A4' });
+        const chunks: Buffer[] = [];
+        doc.on('data', (c: Buffer) => chunks.push(c));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+
+        const mesStr = String(relatorio.mes).padStart(2, '0');
+        const anoStr = String(relatorio.ano);
+        const formatMoeda = (v: number) =>
+          v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+        // ===== CABEÇALHO =====
+        doc
+          .fillColor('#19263a')
+          .fontSize(16)
+          .text('Relatório de Contas a Pagar', { align: 'center' });
+        doc
+          .fontSize(10)
+          .fillColor('#475569')
+          .text(`Competência: ${mesStr}/${anoStr}`, { align: 'center' });
+        doc.moveDown(0.5);
+        doc
+          .fontSize(8)
+          .fillColor('#94a3b8')
+          .text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, { align: 'center' });
+        doc.moveDown(1);
+
+        // ===== RESUMO GERAL =====
+        doc
+          .fillColor('#19263a')
+          .fontSize(12)
+          .text('Resumo Geral');
+        doc.moveDown(0.3);
+        doc
+          .fontSize(9)
+          .fillColor('#334155')
+          .text(`Total geral: ${formatMoeda(relatorio.totalGeral)}`)
+          .text(`Total de lançamentos: ${relatorio.totalLancamentos}`);
+        doc.moveDown(0.8);
+
+        // ===== POR NATUREZA =====
+        doc
+          .fillColor('#19263a')
+          .fontSize(11)
+          .text('Por Natureza');
+        doc.moveDown(0.3);
+
+        const origemLabels: Record<string, string> = {
+          COMPRA: 'Compra',
+          FECHAMENTO: 'Fechamento',
+          TITULO_FECHAMENTO: 'Parcela',
+          DESPESA: 'Despesa geral',
+          PLANO_CORTE: 'Serviço de Corte',
+        };
+
+        for (const item of relatorio.porOrigem) {
+          doc
+            .fontSize(8)
+            .fillColor('#475569')
+            .text(
+              `  ${origemLabels[item.origem] || item.origem}: ${formatMoeda(item.total)} (${item.qtd} lançamentos)`,
+            );
+        }
+        doc.moveDown(0.8);
+
+        // ===== POR STATUS =====
+        doc
+          .fillColor('#19263a')
+          .fontSize(11)
+          .text('Por Status');
+        doc.moveDown(0.3);
+
+        for (const item of relatorio.porStatus) {
+          doc
+            .fontSize(8)
+            .fillColor('#475569')
+            .text(
+              `  ${item.status}: ${formatMoeda(item.total)} (${item.qtd} lançamentos)`,
+            );
+        }
+        doc.moveDown(0.8);
+
+        // ===== POR FORMA DE PAGAMENTO =====
+        doc
+          .fillColor('#19263a')
+          .fontSize(11)
+          .text('Por Forma de Pagamento');
+        doc.moveDown(0.3);
+
+        for (const item of relatorio.porFormaPagamento) {
+          doc
+            .fontSize(8)
+            .fillColor('#475569')
+            .text(
+              `  ${item.forma}: ${formatMoeda(item.total)} (${item.qtd} lançamentos)`,
+            );
+        }
+        doc.moveDown(0.8);
+
+        // ===== POR FORNECEDOR =====
+        doc
+          .fillColor('#19263a')
+          .fontSize(11)
+          .text('Por Fornecedor');
+        doc.moveDown(0.3);
+
+        for (const item of relatorio.porFornecedor) {
+          doc
+            .fontSize(8)
+            .fillColor('#475569')
+            .text(
+              `  ${item.nome}: ${formatMoeda(item.total)} (${item.qtd} lançamentos)`,
+            );
+        }
+        doc.moveDown(1);
+
+        // ===== TABELA DE LANÇAMENTOS =====
+        doc
+          .fillColor('#19263a')
+          .fontSize(11)
+          .text('Detalhamento dos Lançamentos');
+        doc.moveDown(0.4);
+
+        // Cabeçalho da tabela
+        const colX = [40, 110, 210, 340, 430, 510];
+        const headerY = doc.y;
+        doc.fontSize(7).fillColor('#64748b');
+        doc.text('Natureza', colX[0], headerY);
+        doc.text('Vencimento', colX[1], headerY);
+        doc.text('Fornecedor/Titular', colX[2], headerY);
+        doc.text('Forma', colX[3], headerY);
+        doc.text('Status', colX[4], headerY);
+        doc.text('Valor', colX[5], headerY, { align: 'right', width: 50 });
+        doc.moveDown(0.3);
+
+        // Linha separadora
+        doc
+          .strokeColor('#d6e0ea')
+          .lineWidth(0.5)
+          .moveTo(40, doc.y)
+          .lineTo(560, doc.y)
+          .stroke();
+        doc.moveDown(0.15);
+
+        // Linhas da tabela
+        const pageBottom = 780;
+        for (const r of relatorio.lancamentos) {
+          if (doc.y > pageBottom) {
+            doc.addPage();
+          }
+
+          const y = doc.y;
+          doc.fontSize(7).fillColor('#334155');
+          doc.text(origemLabels[(r as any).origem] || (r as any).origem || '—', colX[0], y, { width: 65 });
+          doc.text(
+            r.vencimento_em
+              ? new Date(r.vencimento_em).toLocaleDateString('pt-BR')
+              : '—',
+            colX[1],
+            y,
+            { width: 90 },
+          );
+          doc.text(
+            (r as any).fornecedor_nome || (r as any).funcionario_nome || 'Despesa geral',
+            colX[2],
+            y,
+            { width: 125 },
+          );
+          doc.text(
+            (r as any).forma_pagamento_chave || '—',
+            colX[3],
+            y,
+            { width: 85 },
+          );
+          doc.text(r.status || '—', colX[4], y, { width: 75 });
+          doc.text(formatMoeda(Number(r.valor ?? 0)), colX[5], y, {
+            align: 'right',
+            width: 50,
+          });
+          doc.moveDown(0.6);
+        }
+
+        // ===== RODAPÉ =====
+        doc.moveDown(0.5);
+        doc
+          .strokeColor('#d6e0ea')
+          .lineWidth(0.5)
+          .moveTo(40, doc.y)
+          .lineTo(560, doc.y)
+          .stroke();
+        doc.moveDown(0.3);
+        doc
+          .fontSize(9)
+          .fillColor('#19263a')
+          .text(`Total: ${formatMoeda(relatorio.totalGeral)}`, { align: 'right' });
+
+        doc.end();
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  // =========================================================
+  // ✅ RELATÓRIO CONTAS A RECEBER — dados agregados
+  // =========================================================
+  async gerarRelatorioContasReceber(filtros: {
+    mes?: number;
+    ano?: number;
+    cliente_id?: number;
+    forma_recebimento?: string;
+    status?: string;
+  }) {
+    const mes = filtros.mes ?? new Date().getMonth() + 1;
+    const ano = filtros.ano ?? new Date().getFullYear();
+
+    const inicioMes = new Date(ano, mes - 1, 1);
+    const fimMes = new Date(ano, mes, 0, 23, 59, 59, 999);
+
+    const whereBase: any = {};
+    if (filtros.cliente_id) whereBase.cliente_id = filtros.cliente_id;
+    if (filtros.status) whereBase.status = filtros.status.toUpperCase();
+    if (filtros.forma_recebimento)
+      whereBase.forma_recebimento_chave = filtros.forma_recebimento.toUpperCase();
+
+    const contas = await this.prisma.contas_receber.findMany({
+      where: {
+        ...whereBase,
+        origem_tipo: { not: 'IMPORTACAO_LEITURA' },
+        OR: [
+          { vencimento_em: { gte: inicioMes, lte: fimMes } },
+          {
+            vencimento_em: { lt: inicioMes },
+            status: { notIn: ['PAGO', 'RECEBIDO', 'CANCELADO'] },
+          },
+        ],
+      },
+      include: {
+        cliente: { select: { nome_completo: true, razao_social: true } },
+        fornecedor: { select: { nome_fantasia: true, razao_social: true } },
+      },
+      orderBy: [{ vencimento_em: 'asc' }, { id: 'desc' }],
+    });
+
+    const dadosContas = contas.map((c: any) => ({
+      ...c,
+      valor: Number(c.valor_original ?? 0),
+      cliente_nome:
+        c.cliente?.nome_completo ||
+        c.cliente?.razao_social ||
+        c.fornecedor?.nome_fantasia ||
+        c.fornecedor?.razao_social ||
+        'Não identificado',
+      origem: c.origem_tipo || 'OUTROS',
+    }));
+
+    // ---- Planos de corte (receita de serviço de corte) ----
+    const whereCorte: any = {
+      data_venda: { gte: inicioMes, lte: fimMes },
+    };
+    if (filtros.status) whereCorte.status = filtros.status.toUpperCase();
+
+    const planos = await this.prisma.plano_corte.findMany({
+      where: whereCorte,
+      include: {
+        fornecedor: { select: { nome_fantasia: true, razao_social: true } },
+      },
+      orderBy: [{ data_venda: 'asc' }, { id: 'desc' }],
+    });
+
+    const dadosCorte = planos.map((p: any) => ({
+      id: p.id,
+      valor: Number(p.valor_total ?? 0),
+      cliente_nome:
+        p.fornecedor?.nome_fantasia ||
+        p.fornecedor?.razao_social ||
+        'Sem fornecedor',
+      origem: 'SERVICO_CORTE',
+      status: p.status,
+      vencimento_em: p.data_venda,
+      forma_recebimento_chave: null,
+      _tipo: 'corte',
+    }));
+
+    const dados = [...dadosContas, ...dadosCorte];
+
+    // ---------- Totalizadores ----------
+    const totalGeral = this.round2(
+      dados.reduce((s, r) => s + r.valor, 0),
+    );
+
+    // Por cliente
+    const mapCliente = new Map<string, { nome: string; total: number; qtd: number }>();
+    for (const r of dados) {
+      const key = r.cliente_nome;
+      const item = mapCliente.get(key) || { nome: key, total: 0, qtd: 0 };
+      item.total = this.round2(item.total + r.valor);
+      item.qtd += 1;
+      mapCliente.set(key, item);
+    }
+    const porCliente = [...mapCliente.values()].sort((a, b) => b.total - a.total);
+
+    // Por forma de recebimento
+    const mapForma = new Map<string, { forma: string; total: number; qtd: number }>();
+    for (const r of dados) {
+      const key = r.forma_recebimento_chave || 'NÃO DEFINIDA';
+      const item = mapForma.get(key) || { forma: key, total: 0, qtd: 0 };
+      item.total = this.round2(item.total + r.valor);
+      item.qtd += 1;
+      mapForma.set(key, item);
+    }
+    const porFormaRecebimento = [...mapForma.values()].sort((a, b) => b.total - a.total);
+
+    // Por status
+    const mapStatus = new Map<string, { status: string; total: number; qtd: number }>();
+    for (const r of dados) {
+      const key = r.status || 'INDEFINIDO';
+      const item = mapStatus.get(key) || { status: key, total: 0, qtd: 0 };
+      item.total = this.round2(item.total + r.valor);
+      item.qtd += 1;
+      mapStatus.set(key, item);
+    }
+    const porStatus = [...mapStatus.values()].sort((a, b) => b.total - a.total);
+
+    // Por origem
+    const mapOrigem = new Map<string, { origem: string; total: number; qtd: number }>();
+    for (const r of dados) {
+      const key = r.origem;
+      const item = mapOrigem.get(key) || { origem: key, total: 0, qtd: 0 };
+      item.total = this.round2(item.total + r.valor);
+      item.qtd += 1;
+      mapOrigem.set(key, item);
+    }
+    const porOrigem = [...mapOrigem.values()].sort((a, b) => b.total - a.total);
+
+    return {
+      mes,
+      ano,
+      totalGeral,
+      totalLancamentos: dados.length,
+      porCliente,
+      porFormaRecebimento,
+      porStatus,
+      porOrigem,
+      lancamentos: dados,
+    };
+  }
+
+  // =========================================================
+  // ✅ RELATÓRIO CONTAS A RECEBER — PDF
+  // =========================================================
+  async gerarRelatorioContasReceberPdf(filtros: {
+    mes?: number;
+    ano?: number;
+    cliente_id?: number;
+    forma_recebimento?: string;
+    status?: string;
+  }): Promise<Buffer> {
+    const relatorio = await this.gerarRelatorioContasReceber(filtros);
+    const PDFDocument = (await import('pdfkit')).default;
+
+    return new Promise((resolve, reject) => {
+      try {
+        const doc = new PDFDocument({ margin: 40, size: 'A4' });
+        const chunks: Buffer[] = [];
+        doc.on('data', (c: Buffer) => chunks.push(c));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+
+        const mesStr = String(relatorio.mes).padStart(2, '0');
+        const anoStr = String(relatorio.ano);
+        const formatMoeda = (v: number) =>
+          v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+        const origemLabels: Record<string, string> = {
+          VENDA: 'Venda',
+          POS_VENDA: 'Pós-venda',
+          IMPORTACAO_LEITURA: 'Importação/Leitura',
+          SERVICO_CORTE: 'Serviço de Corte',
+        };
+
+        // ===== CABEÇALHO =====
+        doc
+          .fillColor('#19263a')
+          .fontSize(16)
+          .text('Relatório de Contas a Receber', { align: 'center' });
+        doc
+          .fontSize(10)
+          .fillColor('#475569')
+          .text(`Competência: ${mesStr}/${anoStr}`, { align: 'center' });
+        doc.moveDown(0.5);
+        doc
+          .fontSize(8)
+          .fillColor('#94a3b8')
+          .text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, { align: 'center' });
+        doc.moveDown(1);
+
+        // ===== RESUMO GERAL =====
+        doc.fillColor('#19263a').fontSize(12).text('Resumo Geral');
+        doc.moveDown(0.3);
+        doc
+          .fontSize(9)
+          .fillColor('#334155')
+          .text(`Total geral: ${formatMoeda(relatorio.totalGeral)}`)
+          .text(`Total de lançamentos: ${relatorio.totalLancamentos}`);
+        doc.moveDown(0.8);
+
+        // ===== POR ORIGEM =====
+        doc.fillColor('#19263a').fontSize(11).text('Por Origem');
+        doc.moveDown(0.3);
+        for (const item of relatorio.porOrigem) {
+          doc
+            .fontSize(8)
+            .fillColor('#475569')
+            .text(`  ${origemLabels[item.origem] || item.origem}: ${formatMoeda(item.total)} (${item.qtd} lançamentos)`);
+        }
+        doc.moveDown(0.8);
+
+        // ===== POR STATUS =====
+        doc.fillColor('#19263a').fontSize(11).text('Por Status');
+        doc.moveDown(0.3);
+        for (const item of relatorio.porStatus) {
+          doc
+            .fontSize(8)
+            .fillColor('#475569')
+            .text(`  ${item.status}: ${formatMoeda(item.total)} (${item.qtd} lançamentos)`);
+        }
+        doc.moveDown(0.8);
+
+        // ===== POR FORMA DE RECEBIMENTO =====
+        doc.fillColor('#19263a').fontSize(11).text('Por Forma de Recebimento');
+        doc.moveDown(0.3);
+        for (const item of relatorio.porFormaRecebimento) {
+          doc
+            .fontSize(8)
+            .fillColor('#475569')
+            .text(`  ${item.forma}: ${formatMoeda(item.total)} (${item.qtd} lançamentos)`);
+        }
+        doc.moveDown(0.8);
+
+        // ===== POR CLIENTE =====
+        doc.fillColor('#19263a').fontSize(11).text('Por Cliente');
+        doc.moveDown(0.3);
+        for (const item of relatorio.porCliente) {
+          doc
+            .fontSize(8)
+            .fillColor('#475569')
+            .text(`  ${item.nome}: ${formatMoeda(item.total)} (${item.qtd} lançamentos)`);
+        }
+        doc.moveDown(1);
+
+        // ===== TABELA DE LANÇAMENTOS =====
+        doc.fillColor('#19263a').fontSize(11).text('Detalhamento dos Lançamentos');
+        doc.moveDown(0.4);
+
+        const colX = [40, 110, 210, 340, 430, 510];
+        const headerY = doc.y;
+        doc.fontSize(7).fillColor('#64748b');
+        doc.text('Origem', colX[0], headerY);
+        doc.text('Vencimento', colX[1], headerY);
+        doc.text('Cliente / Titular', colX[2], headerY);
+        doc.text('Forma', colX[3], headerY);
+        doc.text('Status', colX[4], headerY);
+        doc.text('Valor', colX[5], headerY, { align: 'right', width: 50 });
+        doc.moveDown(0.3);
+
+        doc.strokeColor('#d6e0ea').lineWidth(0.5).moveTo(40, doc.y).lineTo(560, doc.y).stroke();
+        doc.moveDown(0.15);
+
+        const pageBottom = 780;
+        for (const r of relatorio.lancamentos) {
+          if (doc.y > pageBottom) doc.addPage();
+          const y = doc.y;
+          doc.fontSize(7).fillColor('#334155');
+          doc.text(origemLabels[(r as any).origem] || (r as any).origem || '—', colX[0], y, { width: 65 });
+          doc.text(r.vencimento_em ? new Date(r.vencimento_em).toLocaleDateString('pt-BR') : '—', colX[1], y, { width: 90 });
+          doc.text((r as any).cliente_nome || 'Não identificado', colX[2], y, { width: 125 });
+          doc.text((r as any).forma_recebimento_chave || '—', colX[3], y, { width: 85 });
+          doc.text(r.status || '—', colX[4], y, { width: 75 });
+          doc.text(formatMoeda(Number(r.valor ?? 0)), colX[5], y, { align: 'right', width: 50 });
+          doc.moveDown(0.6);
+        }
+
+        doc.moveDown(0.5);
+        doc.strokeColor('#d6e0ea').lineWidth(0.5).moveTo(40, doc.y).lineTo(560, doc.y).stroke();
+        doc.moveDown(0.3);
+        doc.fontSize(9).fillColor('#19263a').text(`Total: ${formatMoeda(relatorio.totalGeral)}`, { align: 'right' });
+
+        doc.end();
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  // =========================================================
+  // ✅ RELATÓRIO SERVIÇO DE CORTE — dados agregados
+  // =========================================================
+  async gerarRelatorioServicosCorte(filtros: {
+    mes?: number;
+    ano?: number;
+    fornecedor_id?: number;
+    status?: string;
+  }) {
+    const mes = filtros.mes ?? new Date().getMonth() + 1;
+    const ano = filtros.ano ?? new Date().getFullYear();
+
+    const inicioMes = new Date(ano, mes - 1, 1);
+    const fimMes = new Date(ano, mes, 0, 23, 59, 59, 999);
+
+    const whereBase: any = {
+      data_venda: { gte: inicioMes, lte: fimMes },
+    };
+    if (filtros.fornecedor_id) whereBase.fornecedor_id = filtros.fornecedor_id;
+    if (filtros.status) whereBase.status = filtros.status.toUpperCase();
+
+    const planos = await this.prisma.plano_corte.findMany({
+      where: whereBase,
+      include: {
+        fornecedor: { select: { nome_fantasia: true, razao_social: true } },
+        produtos: {
+          select: { quantidade: true, valor_unitario: true, valor_total: true },
+        },
+      },
+      orderBy: [{ data_venda: 'asc' }, { id: 'desc' }],
+    });
+
+    const dados = planos.map((p: any) => ({
+      id: p.id,
+      fornecedor_id: p.fornecedor_id,
+      fornecedor_nome:
+        p.fornecedor?.nome_fantasia ||
+        p.fornecedor?.razao_social ||
+        'Sem fornecedor',
+      data_venda: p.data_venda,
+      valor_total: Number(p.valor_total ?? 0),
+      status: p.status,
+      qtd_produtos: p.produtos?.length ?? 0,
+    }));
+
+    const totalGeral = this.round2(
+      dados.reduce((s, r) => s + r.valor_total, 0),
+    );
+
+    // Por fornecedor
+    const mapFornecedor = new Map<string, { nome: string; total: number; qtd: number }>();
+    for (const r of dados) {
+      const key = r.fornecedor_nome;
+      const item = mapFornecedor.get(key) || { nome: key, total: 0, qtd: 0 };
+      item.total = this.round2(item.total + r.valor_total);
+      item.qtd += 1;
+      mapFornecedor.set(key, item);
+    }
+    const porFornecedor = [...mapFornecedor.values()].sort((a, b) => b.total - a.total);
+
+    // Por status
+    const mapStatus = new Map<string, { status: string; total: number; qtd: number }>();
+    for (const r of dados) {
+      const key = r.status || 'INDEFINIDO';
+      const item = mapStatus.get(key) || { status: key, total: 0, qtd: 0 };
+      item.total = this.round2(item.total + r.valor_total);
+      item.qtd += 1;
+      mapStatus.set(key, item);
+    }
+    const porStatus = [...mapStatus.values()].sort((a, b) => b.total - a.total);
+
+    return {
+      mes,
+      ano,
+      totalGeral,
+      totalLancamentos: dados.length,
+      porFornecedor,
+      porStatus,
+      lancamentos: dados,
+    };
+  }
+
+  // =========================================================
+  // ✅ RELATÓRIO SERVIÇO DE CORTE — PDF
+  // =========================================================
+  async gerarRelatorioServicosCortePdf(filtros: {
+    mes?: number;
+    ano?: number;
+    fornecedor_id?: number;
+    status?: string;
+  }): Promise<Buffer> {
+    const relatorio = await this.gerarRelatorioServicosCorte(filtros);
+    const PDFDocument = (await import('pdfkit')).default;
+
+    return new Promise((resolve, reject) => {
+      try {
+        const doc = new PDFDocument({ margin: 40, size: 'A4' });
+        const chunks: Buffer[] = [];
+        doc.on('data', (c: Buffer) => chunks.push(c));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+
+        const mesStr = String(relatorio.mes).padStart(2, '0');
+        const anoStr = String(relatorio.ano);
+        const formatMoeda = (v: number) =>
+          v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+        // ===== CABEÇALHO =====
+        doc.fillColor('#19263a').fontSize(16).text('Relatório de Serviço de Corte', { align: 'center' });
+        doc.fontSize(10).fillColor('#475569').text(`Competência: ${mesStr}/${anoStr}`, { align: 'center' });
+        doc.moveDown(0.5);
+        doc.fontSize(8).fillColor('#94a3b8').text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, { align: 'center' });
+        doc.moveDown(1);
+
+        // ===== RESUMO GERAL =====
+        doc.fillColor('#19263a').fontSize(12).text('Resumo Geral');
+        doc.moveDown(0.3);
+        doc.fontSize(9).fillColor('#334155')
+          .text(`Total geral: ${formatMoeda(relatorio.totalGeral)}`)
+          .text(`Total de planos: ${relatorio.totalLancamentos}`);
+        doc.moveDown(0.8);
+
+        // ===== POR STATUS =====
+        doc.fillColor('#19263a').fontSize(11).text('Por Status');
+        doc.moveDown(0.3);
+        for (const item of relatorio.porStatus) {
+          doc.fontSize(8).fillColor('#475569')
+            .text(`  ${item.status}: ${formatMoeda(item.total)} (${item.qtd} planos)`);
+        }
+        doc.moveDown(0.8);
+
+        // ===== POR FORNECEDOR =====
+        doc.fillColor('#19263a').fontSize(11).text('Por Fornecedor');
+        doc.moveDown(0.3);
+        for (const item of relatorio.porFornecedor) {
+          doc.fontSize(8).fillColor('#475569')
+            .text(`  ${item.nome}: ${formatMoeda(item.total)} (${item.qtd} planos)`);
+        }
+        doc.moveDown(1);
+
+        // ===== TABELA =====
+        doc.fillColor('#19263a').fontSize(11).text('Detalhamento dos Planos');
+        doc.moveDown(0.4);
+
+        const colX = [40, 80, 180, 340, 440, 510];
+        const headerY = doc.y;
+        doc.fontSize(7).fillColor('#64748b');
+        doc.text('#', colX[0], headerY);
+        doc.text('Data Venda', colX[1], headerY);
+        doc.text('Fornecedor', colX[2], headerY);
+        doc.text('Status', colX[3], headerY);
+        doc.text('Itens', colX[4], headerY);
+        doc.text('Valor', colX[5], headerY, { align: 'right', width: 50 });
+        doc.moveDown(0.3);
+
+        doc.strokeColor('#d6e0ea').lineWidth(0.5).moveTo(40, doc.y).lineTo(560, doc.y).stroke();
+        doc.moveDown(0.15);
+
+        const pageBottom = 780;
+        for (const r of relatorio.lancamentos) {
+          if (doc.y > pageBottom) doc.addPage();
+          const y = doc.y;
+          doc.fontSize(7).fillColor('#334155');
+          doc.text(String(r.id), colX[0], y, { width: 35 });
+          doc.text(r.data_venda ? new Date(r.data_venda).toLocaleDateString('pt-BR') : '—', colX[1], y, { width: 95 });
+          doc.text(r.fornecedor_nome, colX[2], y, { width: 155 });
+          doc.text(r.status || '—', colX[3], y, { width: 95 });
+          doc.text(String(r.qtd_produtos), colX[4], y, { width: 65 });
+          doc.text(formatMoeda(r.valor_total), colX[5], y, { align: 'right', width: 50 });
+          doc.moveDown(0.6);
+        }
+
+        doc.moveDown(0.5);
+        doc.strokeColor('#d6e0ea').lineWidth(0.5).moveTo(40, doc.y).lineTo(560, doc.y).stroke();
+        doc.moveDown(0.3);
+        doc.fontSize(9).fillColor('#19263a').text(`Total: ${formatMoeda(relatorio.totalGeral)}`, { align: 'right' });
+
+        doc.end();
+      } catch (err) {
+        reject(err);
+      }
+    });
   }
 }

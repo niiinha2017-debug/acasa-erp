@@ -290,7 +290,7 @@
                             Fechamento
                           </button>
                         </template>
-                        <template v-else-if="(abaAtiva === 'AGENDADOS' || abaAtiva === 'UNIFICADO' || abaAtiva === 'COMPENSADOS') && row.titulo_id && row.status !== 'PAGO'">
+                        <template v-else-if="(abaAtiva === 'AGENDADOS' || abaAtiva === 'UNIFICADO') && row.titulo_id && row.status !== 'PAGO'">
                           <button
                             type="button"
                             @click="darBaixaTitulo(row)"
@@ -452,6 +452,8 @@ const modalPagamentoOpen = ref(false)
 const pagamentoContext = ref(null) // { tipo: 'titulo'|'despesa', id, valor }
 const dataPagamento = ref('')
 
+
+
 const nomeFornecedorFechamento = computed(() => {
   const id = fornecedorIdFechamentoRef.value
   if (!id) return ''
@@ -598,7 +600,7 @@ const listaFiltrada = computed(() => {
   })
 })
 
-const mostrarAcoes = computed(() => ['UNIFICADO', 'PARA_FECHAR', 'COMPENSADOS', 'AGENDADOS', 'POR_FORNECEDOR'].includes(abaAtiva.value))
+const mostrarAcoes = computed(() => ['UNIFICADO', 'PARA_FECHAR', 'AGENDADOS', 'POR_FORNECEDOR'].includes(abaAtiva.value))
 
 const cardsResumoAba = computed(() => {
   if (abaAtiva.value === 'POR_FORNECEDOR') {
@@ -875,7 +877,9 @@ function fecharModalPagamento() {
 async function confirmarPagamento() {
   const ctx = pagamentoContext.value
   if (!ctx) return
-  const dataPag = dataPagamento.value ? `${dataPagamento.value}T12:00:00.000Z` : null
+  // Interpreta a data digitada como meia-noite no horário local (sem sufixo Z),
+  // evitando que diferenças de fuso deslocam o dia registrado.
+  const dataPag = dataPagamento.value ? new Date(`${dataPagamento.value}T00:00:00`).toISOString() : null
   const payload = dataPag ? { data_pagamento: dataPag } : {}
   try {
     if (ctx.tipo === 'titulo') {
@@ -923,34 +927,27 @@ async function carregarDashboard() {
 async function buscar() {
   try {
     loading.value = true
-    const { data_ini, data_fim } = periodoDoMes(filtros.mes, filtros.ano)
     const params = {
-      data_ini,
-      data_fim,
       fornecedor_id: filtros.fornecedor_id || undefined,
       mes: filtros.mes || undefined,
       ano: filtros.ano || undefined,
     }
 
-    const [resUnif, resPF, resComp, resAg, resPg] = await Promise.all([
-      FinanceiroService.listarContasPagarConsolidado(params),
-      FinanceiroService.listarContasPagarConsolidado({ ...params, visao: 'PARA_FECHAR' }),
-      FinanceiroService.listarContasPagarConsolidado({ ...params, visao: 'COMPENSADOS' }),
-      FinanceiroService.listarContasPagarConsolidado({ ...params, visao: 'AGENDADOS' }),
-      FinanceiroService.listarContasPagarConsolidado({ ...params, visao: 'PAGOS' }),
+    const [resAbas, resFech] = await Promise.all([
+      FinanceiroService.listarTodasAbas(params),
+      FinanceiroService.getFechamentoPorFornecedor({
+        mes: filtros.mes || new Date().getMonth() + 1,
+        ano: filtros.ano || new Date().getFullYear(),
+        fornecedor_id: filtros.fornecedor_id || undefined,
+      }),
     ])
 
-    listaUnificado.value = Array.isArray(resUnif?.data) ? resUnif.data : (Array.isArray(resUnif) ? resUnif : [])
-    listaParaFechar.value = Array.isArray(resPF?.data) ? resPF.data : (Array.isArray(resPF) ? resPF : [])
-    listaCompensados.value = Array.isArray(resComp?.data) ? resComp.data : (Array.isArray(resComp) ? resComp : [])
-    listaAgendados.value = Array.isArray(resAg?.data) ? resAg.data : (Array.isArray(resAg) ? resAg : [])
-    listaPagos.value = Array.isArray(resPg?.data) ? resPg.data : (Array.isArray(resPg) ? resPg : [])
-
-    const resFech = await FinanceiroService.getFechamentoPorFornecedor({
-      mes: filtros.mes || new Date().getMonth() + 1,
-      ano: filtros.ano || new Date().getFullYear(),
-      fornecedor_id: filtros.fornecedor_id || undefined,
-    })
+    const abas = resAbas?.data ?? resAbas ?? {}
+    listaUnificado.value = Array.isArray(abas.unificado) ? abas.unificado : []
+    listaParaFechar.value = Array.isArray(abas.paraFechar) ? abas.paraFechar : []
+    listaCompensados.value = Array.isArray(abas.compensados) ? abas.compensados : []
+    listaAgendados.value = Array.isArray(abas.agendados) ? abas.agendados : []
+    listaPagos.value = Array.isArray(abas.pagos) ? abas.pagos : []
     listaFechamentoPorFornecedor.value = Array.isArray(resFech?.data) ? resFech.data : (Array.isArray(resFech) ? resFech : [])
 
     await carregarDashboard()
@@ -974,7 +971,9 @@ const formatarData = (v) => v ? new Date(v).toLocaleDateString('pt-BR') : '—'
 
 watch(
   () => [filtros.mes, filtros.ano],
-  () => { buscar() },
+  () => {
+    buscar()
+  },
   { deep: true }
 )
 

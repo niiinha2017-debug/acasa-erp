@@ -13,6 +13,16 @@ import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class AuthService {
+  private readonly userSessionSelect = {
+    id: true,
+    nome: true,
+    usuario: true,
+    email: true,
+    status: true,
+    is_admin: true,
+    funcionario_id: true,
+  } as const;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
@@ -96,13 +106,7 @@ export class AuthService {
 
       const user = await this.prisma.usuarios.findUnique({
         where: { id: userId },
-        select: {
-          id: true,
-          usuario: true,
-          email: true,
-          status: true,
-          is_admin: true,
-        },
+        select: this.userSessionSelect,
       });
 
       if (!user || user.status === 'INATIVO') {
@@ -296,6 +300,7 @@ export class AuthService {
   async me(usuarioId: number) {
     const registro = await this.prisma.usuarios.findUnique({
       where: { id: usuarioId },
+      select: this.userSessionSelect,
     });
     if (!registro) throw new NotFoundException('Usuário não encontrado');
 

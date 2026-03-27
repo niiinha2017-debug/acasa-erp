@@ -6,7 +6,6 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { AgendaService } from '../agenda/agenda.service';
 import { TwinFlowService } from '../agenda/twin-flow.service';
-import { EstoqueService } from '../estoque/estoque.service';
 import { CreateVendaDto } from './dto/create-venda.dto';
 import { UpdateVendaDto } from './dto/update-venda.dto';
 import {
@@ -30,7 +29,6 @@ export class VendasService {
     private readonly prisma: PrismaService,
     private readonly agendaService: AgendaService,
     private readonly twinFlowService: TwinFlowService,
-    private readonly estoqueService: EstoqueService,
   ) {}
 
   private readonly statusPosVenda = STATUS_POS_VENDA;
@@ -242,15 +240,6 @@ export class VendasService {
         );
       }
 
-      try {
-        await this.estoqueService.reservarAutomaticoPorVendaFechada(vendaId);
-      } catch (err: any) {
-        // Reserva de estoque não pode bloquear o fechamento da venda.
-        console.warn(
-          `[VendasService] Falha na reserva automática de estoque da venda #${vendaId}:`,
-          err?.message || err,
-        );
-      }
     }
 
     await this.twinFlowService.syncVendaTwinFlows(vendaId);

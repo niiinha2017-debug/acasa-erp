@@ -2,6 +2,7 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ExtractionService, ParcelaPagamento, AmbienteItem } from '../extraction/extraction.service';
 import { UtilsService } from '../utils/utils.service';
+import { TAXAS_CARTAO } from '../../shared/constantes/taxas-cartao';
 import AdmZip = require('adm-zip');
 import * as path from 'path';
 import * as fs from 'fs';
@@ -142,6 +143,7 @@ export class MigracaoDriveService {
     ARQUIVO_OCULTO: 'arquivo_oculto',
     ARQUIVO_SISTEMA: 'arquivo_sistema',
     CAMINHO_NAO_IDENTIFICADO: 'caminho_nao_identificado',
+    ARQUIVO_CORROMPIDO_OU_NAO_SUPORTADO: 'arquivo_corrompido_ou_nao_suportado',
     THUMBNAIL_OU_ARQUIVO_PEQUENO: 'thumbnail_ou_arquivo_pequeno',
   } as const;
 
@@ -161,9 +163,11 @@ export class MigracaoDriveService {
     const clientes = leitura.clientes;
     const erros: string[] = [];
 
-    const previewClientes: PreviewMigracao['clientes'] = [];
+    // Processa clientes em paralelo (até 5 simultâneos para não sobrecarregar memória)
+    const CONCORRENCIA = 5;
+    const previewClientes: PreviewMigracao['clientes'] = new Array(clientes.length);
 
-    for (const cliente of clientes) {
+    const processarCliente = async (cliente: ClienteMigracao, idx: number) => {
       const arquivosPorCategoria: Record<string, number> = {};
       for (const arq of cliente.arquivos) {
         arquivosPorCategoria[arq.categoria] =
@@ -173,7 +177,6 @@ export class MigracaoDriveService {
       let dados_extraidos: ClienteMigracao['dados_extraidos'] | undefined;
       let alertas: string[] = [];
 
-      // Extrai dados dos PDFs/DOCXs se solicitado
       if (opcoes?.extrairDados) {
         try {
           const arquivosTexto = cliente.arquivos.filter(
@@ -228,7 +231,7 @@ export class MigracaoDriveService {
         }
       }
 
-      previewClientes.push({
+      previewClientes[idx] = {
         nome_drive: cliente.nome_drive,
         nome_cliente: cliente.nome_cliente,
         status_drive: cliente.status_drive,
@@ -237,7 +240,13 @@ export class MigracaoDriveService {
         arquivos_por_categoria: arquivosPorCategoria,
         dados_extraidos,
         alertas,
-      });
+      };
+    };
+
+    // Executa em lotes de CONCORRENCIA
+    for (let i = 0; i < clientes.length; i += CONCORRENCIA) {
+      const lote = clientes.slice(i, i + CONCORRENCIA);
+      await Promise.all(lote.map((c, j) => processarCliente(c, i + j)));
     }
 
     return {
@@ -295,12 +304,36 @@ export class MigracaoDriveService {
     },
     resultado: ResultadoImportacao,
   ) {
-    // Verifica se já existe no ERP pelo nome — SEMPRE, independente de pular_existentes
-    // pular_existentes=false apenas força recriar o fluxo, nunca duplica o cadastro
-    const existente = await this.prisma.cliente.findFirst({
-      where: { nome_completo: cliente.nome_cliente },
-      select: { id: true, nome_completo: true },
-    });
+    // Extrai dados dos documentos antes da deduplicação para comparar também por CPF/CNPJ.
+    let dadosExtras: ClienteMigracao['dados_extraidos'] = {};
+    if (opcoes.extrairDados) {
+      dadosExtras = await this.extrairDadosCliente(cliente);
+    }
+
+    const docsParaBusca = [
+      ...this.variantesDocumento(dadosExtras?.cpf ?? null),
+      ...this.variantesDocumento(dadosExtras?.cnpj ?? null),
+    ];
+    const docsUnicos = Array.from(new Set(docsParaBusca));
+
+    // Primeiro tenta deduplicar por CPF/CNPJ (mais confiável).
+    const existentePorDocumento =
+      docsUnicos.length > 0
+        ? await this.prisma.cliente.findFirst({
+            where: {
+              OR: docsUnicos.flatMap((doc) => [{ cpf: doc }, { cnpj: doc }]),
+            },
+            select: { id: true, nome_completo: true },
+          })
+        : null;
+
+    // Fallback por nome para arquivos sem documento.
+    const existente =
+      existentePorDocumento ??
+      (await this.prisma.cliente.findFirst({
+        where: { nome_completo: cliente.nome_cliente },
+        select: { id: true, nome_completo: true },
+      }));
 
     if (existente) {
       const forcarRecriar = opcoes.pular_existentes === false;
@@ -317,10 +350,8 @@ export class MigracaoDriveService {
         data: { situacao: 'Importado do Drive' },
       });
 
-      // Extrai dados sempre que extrairDados=true
+      // Processa fluxo complementar sempre que extrairDados=true
       if (opcoes.extrairDados) {
-        const dadosExtras = await this.extrairDadosCliente(cliente);
-
         const orcamentoExistente = await this.prisma.orcamentos.findFirst({
           where: { cliente_id: existente.id },
           select: { id: true },
@@ -348,12 +379,6 @@ export class MigracaoDriveService {
         motivo: forcarRecriar ? 'Fluxo recriado' : 'Já existe — dados completados',
       });
       return;
-    }
-
-    // Extrai dados dos documentos se solicitado
-    let dadosExtras: ClienteMigracao['dados_extraidos'] = {};
-    if (opcoes.extrairDados) {
-      dadosExtras = await this.extrairDadosCliente(cliente);
     }
 
     // ─── Resolve endereço em cascata ─────────────────────────────────────────
@@ -516,6 +541,15 @@ export class MigracaoDriveService {
     return cnpj;
   }
 
+  private variantesDocumento(documento: string | null): string[] {
+    const bruto = String(documento || '').trim();
+    if (!bruto) return [];
+    const apenasDigitos = bruto.replace(/\D/g, '');
+    return apenasDigitos && apenasDigitos !== bruto
+      ? [bruto, apenasDigitos]
+      : [bruto];
+  }
+
   async statsCliente(clienteId: number) {
     const [orcamentos, arquivos, contas] = await Promise.all([
       this.prisma.orcamentos.count({ where: { cliente_id: clienteId } }),
@@ -585,6 +619,59 @@ export class MigracaoDriveService {
 
     this.logger.log(`[Excluir] Cliente id ${clienteId} removido completamente.`);
     return { ok: true, mensagem: `Cliente id ${clienteId} excluído.` };
+  }
+
+  // Lista arquivos salvos de um cliente importado
+  async listarArquivosCliente(clienteId: number) {
+    return this.prisma.arquivos.findMany({
+      where: { owner_type: 'CLIENTE', owner_id: clienteId },
+      select: {
+        id: true,
+        nome: true,
+        categoria: true,
+        mime_type: true,
+        tamanho: true,
+        criado_em: true,
+      },
+      orderBy: [{ categoria: 'asc' }, { criado_em: 'desc' }],
+    });
+  }
+
+  // Lê arquivos do disco e roda extração financeira nos selecionados
+  async analisarArquivosCliente(clienteId: number, arquivoIds: number[]) {
+    const registros = await this.prisma.arquivos.findMany({
+      where: {
+        id: { in: arquivoIds },
+        owner_type: 'CLIENTE',
+        owner_id: clienteId,
+      },
+      select: { id: true, url: true, nome: true, mime_type: true },
+    });
+
+    const fakeFiles: Express.Multer.File[] = [];
+    for (const arq of registros) {
+      try {
+        const abs = arq.url.startsWith('/')
+          ? path.join(process.cwd(), arq.url)
+          : path.join(process.cwd(), '/', arq.url);
+        const buffer = fs.readFileSync(abs);
+        fakeFiles.push({
+          fieldname: 'files',
+          originalname: arq.nome ?? path.basename(arq.url),
+          mimetype: arq.mime_type ?? 'application/octet-stream',
+          buffer,
+          size: buffer.length,
+        } as Express.Multer.File);
+      } catch (err: any) {
+        this.logger.warn(`[Análise] Falha ao ler arquivo id ${arq.id}: ${err.message}`);
+      }
+    }
+
+    if (!fakeFiles.length) {
+      return { arquivos: [], consolidado: null, divergencias: [], erro: 'Não foi possível ler os arquivos selecionados do disco.' };
+    }
+
+    return this.extractionService.extrairDosArquivos(fakeFiles);
   }
 
   // Lista todos os clientes importados do Drive
@@ -869,6 +956,25 @@ export class MigracaoDriveService {
           status_financeiro_chave: 'EM_ABERTO',
         }];
 
+    // Calcula taxa de pagamento a partir das parcelas com cartão (regras de TAXAS_CARTAO)
+    let valorTaxaPagamento = 0;
+    for (const p of parcelas) {
+      if (p.forma !== 'CARTAO') continue;
+      const desc = (p.descricao ?? '').toLowerCase();
+      let pct: number;
+      if (/d[eé]bito|debito/i.test(desc)) {
+        pct = TAXAS_CARTAO.DEBITO.taxa; // 1.99%
+      } else {
+        const m = desc.match(/(\d+)\s*x\b/);
+        const n = m ? Math.min(18, Math.max(1, parseInt(m[1]))) : 1;
+        const map = TAXAS_CARTAO.CREDITO.parcelas as Record<number, number>;
+        pct = map[n] ?? map[12] ?? 3.49;
+      }
+      valorTaxaPagamento += (p.valor * pct) / 100;
+    }
+    valorTaxaPagamento = Math.round((valorTaxaPagamento + Number.EPSILON) * 100) / 100;
+    const valorTotalLiquido = Math.round((valorVendido - valorTaxaPagamento + Number.EPSILON) * 100) / 100;
+
     const venda = await this.prisma.vendas.create({
       data: {
         cliente_id: clienteId,
@@ -879,9 +985,9 @@ export class MigracaoDriveService {
         valor_vendido: valorVendido,
         valor_base_contrato: valorVendido,
         valor_bruto: valorVendido,
-        valor_taxa_pagamento: 0,
+        valor_taxa_pagamento: valorTaxaPagamento,
         valor_nota_fiscal: 0,
-        valor_total: valorVendido,
+        valor_total: valorTotalLiquido,
       },
     });
 
@@ -1204,7 +1310,19 @@ export class MigracaoDriveService {
 
       const nomeArquivo = parts[parts.length - 1];
       const mime = this.inferirMime(nomeArquivo);
-      const buffer = entry.getData();
+      let buffer: Buffer;
+      try {
+        buffer = entry.getData();
+      } catch (err: any) {
+        this.logger.warn(
+          `Falha ao ler entrada do ZIP "${fullPath}": ${err?.message || 'erro desconhecido'}`,
+        );
+        contarIgnorado(
+          MigracaoDriveService.IGNORAR_MOTIVO.ARQUIVO_CORROMPIDO_OU_NAO_SUPORTADO,
+          fullPath,
+        );
+        continue;
+      }
 
       // Ignora arquivos de sistema e muito pequenos (thumbnails do Drive)
       if (buffer.length < 100 && !nomeArquivo.toLowerCase().endsWith('.txt')) {

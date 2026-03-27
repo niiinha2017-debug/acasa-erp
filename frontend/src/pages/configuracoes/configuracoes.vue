@@ -479,68 +479,7 @@
           </section>
 
           <section v-show="etapaAtiva('financeiro')" class="pt-2">
-            <div class="flex items-center gap-3 mb-6">
-              <span class="w-1.5 h-1.5 rounded-full bg-brand-primary"></span>
-              <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">
-                Representante Legal e Sócio
-              </h3>
-            </div>
-            <p class="text-[11px] text-slate-500 mb-4">
-              Usados nos contratos quando o vendedor não preencher o &quot;Representante da venda&quot;. Representante legal (CNPJ) e Sócio/Proprietário podem ser a mesma pessoa ou diferentes.
-            </p>
-            <div class="configuracoes-empresa__inline-group mb-4">
-              <p class="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-3">Quando o vendedor não preencher o Representante da venda, usar no contrato:</p>
-              <label class="flex items-center gap-3 cursor-pointer group">
-                <input
-                  v-model="form.contrato_usar_socio_quando_vazio"
-                  type="checkbox"
-                  class="w-4 h-4 rounded border-border-ui text-brand-primary focus:ring-brand-primary/20"
-                />
-                <span class="text-sm text-text-main">
-                  <strong>Sócio / Proprietário</strong> (desmarque para usar Representante Legal)
-                </span>
-              </label>
-            </div>
-            <div class="configuracoes-empresa__inline-group grid grid-cols-1 md:grid-cols-2 gap-5 space-y-6">
-              <div class="md:col-span-2">
-                <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Representante Legal (CNPJ)</h4>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Input v-model="form.representante_legal_nome" label="Nome completo" placeholder="Nome do representante legal" />
-                  <Input
-                    :model-value="representanteLegalCpfMask"
-                    label="CPF"
-                    placeholder="000.000.000-00"
-                    @update:model-value="(v) => (form.representante_legal_cpf = onlyNumbers(v).slice(0, 11))"
-                  />
-                  <Input
-                    :model-value="representanteLegalRgMask"
-                    label="RG"
-                    placeholder="00.000.000-0"
-                    @update:model-value="(v) => (form.representante_legal_rg = (v || '').replace(/\D/g, '').slice(0, 14))"
-                  />
-                </div>
-              </div>
-              <div class="md:col-span-2">
-                <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Sócio / Proprietário</h4>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Input v-model="form.representante_legal_socio_nome" label="Nome completo" placeholder="Nome do sócio ou proprietário" />
-                  <Input
-                    :model-value="socioCpfMask"
-                    label="CPF"
-                    placeholder="000.000.000-00"
-                    @update:model-value="(v) => (form.representante_legal_socio_cpf = onlyNumbers(v).slice(0, 11))"
-                  />
-                  <Input
-                    :model-value="socioRgMask"
-                    label="RG"
-                    placeholder="00.000.000-0"
-                    @update:model-value="(v) => (form.representante_legal_socio_rg = (v || '').replace(/\D/g, '').slice(0, 14))"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div class="configuracoes-empresa__inline-group mt-6">
+            <div class="configuracoes-empresa__inline-group">
               <p class="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-3">Assinatura do Responsável</p>
               <p class="text-[11px] text-slate-500 mb-3">
                 Imagem usada como variável em PDFs (contratos, orçamentos). Recomendado: assinatura escaneada ou desenhada em fundo transparente.
@@ -671,7 +610,7 @@ import { ConfiguracaoService } from '@/services/index'
 import { ArquivosService } from '@/services/arquivos.service'
 import { notify } from '@/services/notify'
 import { confirm } from '@/services/confirm'
-import { maskCNPJ, maskCEP, maskTelefone, maskIE, maskCPF, maskRG, onlyNumbers } from '@/utils/masks'
+import { maskCNPJ, maskCEP, maskTelefone, maskIE, onlyNumbers } from '@/utils/masks'
 import { buscarCep, buscarCnpj } from '@/utils/utils'
 import { can } from '@/services/permissions'
 
@@ -702,7 +641,7 @@ const ETAPAS_CONFIG = [
     key: 'financeiro',
     numero: '03',
     label: 'Financeiro e jurídico',
-    descricao: 'Representantes, assinatura responsável e dados bancários.',
+    descricao: 'Assinatura responsável e dados bancários.',
   },
 ]
 
@@ -798,13 +737,6 @@ const form = ref({
   banco_agencia: '',
   banco_conta: '',
   pix: '',
-  representante_legal_nome: '',
-  representante_legal_cpf: '',
-  representante_legal_rg: '',
-  representante_legal_socio_nome: '',
-  representante_legal_socio_cpf: '',
-  representante_legal_socio_rg: '',
-  contrato_usar_socio_quando_vazio: true,
   perda_padrao_percentual: null,
   horas_uteis_mes_fabrica: null,
 })
@@ -830,10 +762,6 @@ const telefoneMask = computed({
   get: () => maskTelefone(form.value.telefone),
   set: (v) => (form.value.telefone = onlyNumbers(v).slice(0, 11)),
 })
-const representanteLegalCpfMask = computed(() => maskCPF(form.value.representante_legal_cpf || ''))
-const representanteLegalRgMask = computed(() => maskRG(form.value.representante_legal_rg || ''))
-const socioCpfMask = computed(() => maskCPF(form.value.representante_legal_socio_cpf || ''))
-const socioRgMask = computed(() => maskRG(form.value.representante_legal_socio_rg || ''))
 
 const avisoDadosBancariosVazios = computed(() => {
   const f = form.value

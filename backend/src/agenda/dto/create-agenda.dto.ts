@@ -34,6 +34,11 @@ export class CreateAgendaDto {
   @IsString()
   titulo?: string;
 
+  /** Nome livre do cliente, usado quando não há cliente cadastrado vinculado ao agendamento. */
+  @IsOptional()
+  @IsString()
+  cliente_nome_livre?: string;
+
   @IsDateString({}, { message: 'Data de início inválida' })
   inicio_em: Date;
 

@@ -17,7 +17,7 @@
           </div>
 
           <div class="login-brand__content">
-            <p class="login-brand__lead">ERP interno para comercial, produção e financeiro.</p>
+            <p class="login-brand__lead">ERP interno para produção, cadastros e financeiro.</p>
             <p class="login-brand__copytext">
               Acesse o ambiente da equipe para acompanhar clientes, agenda, fábrica, contratos, compras e rotina financeira.
             </p>

@@ -99,122 +99,24 @@
           />
           <Input
             variant="line"
-            v-if="ehFitaBorda"
-            class="col-span-12 md:col-span-4"
-            v-model="metragemRoloInput"
-            label="Metragem do Rolo (m)"
-            type="number"
-            step="0.001"
-            placeholder="Ex: 50"
-          />
-          <Input
-            variant="line"
-            v-else
             class="col-span-12 md:col-span-4"
             v-model="form.medida"
             label="Medida"
             placeholder="Ex: 2750x1840mm"
             force-upper
           />
+
           <SearchInput
-            class="col-span-12 md:col-span-6"
-            v-model="form.categoria_base"
+            class="col-span-12 md:col-span-3"
+            v-model="form.unidade"
             mode="select"
             variant="line"
             hide-search-icon
-            label="Categoria Base"
-            :options="categoriasBaseOptions"
-            placeholder="Selecione..."
+            label="Unidade *"
+            :options="unidadesConversaoOptions"
+            placeholder="Ex: UN, CX, PAR, M, KG"
             required
           />
-
-          <template v-if="ehCategoriaComercial">
-            <SearchInput
-              class="col-span-12 md:col-span-6"
-              v-model="form.fita_vinculada_id"
-              mode="select"
-              variant="line"
-              hide-search-icon
-              label="Vincular Fita"
-              :options="fitasBordaOptions"
-              placeholder="Busque a fita de borda"
-            />
-            <p class="col-span-12 text-[11px] text-slate-500">
-              {{ textoVinculoFita }}
-            </p>
-          </template>
-
-          <p v-if="ehFitaBorda" class="col-span-12 text-[11px] text-orange-600 font-semibold">
-            <i class="pi pi-tag mr-1" />
-            Produtos de Fita de Borda usam metragem do rolo para cálculo automático do custo vinculado aos MDFs.
-          </p>
-
-          <!-- Sub-categoria exclusiva para Ferragens -->
-          <template v-if="ehFerragem">
-            <SearchInput
-              class="col-span-12 md:col-span-6"
-              v-model="form.categoria_ferragem"
-              mode="select"
-              variant="line"
-              hide-search-icon
-              label="Categoria da Ferragem *"
-              :options="catsFerragem"
-              placeholder="Selecione o tipo"
-              required
-            />
-            <p class="col-span-12 text-[11px] text-amber-600 font-semibold">
-              <i class="pi pi-wrench mr-1" />
-              Este produto será listado como ferragem no Orçamento Técnico.<br />
-              Use <strong>Custo Unitário</strong> como preço de compra por unidade.
-            </p>
-          </template>
-
-          <template v-if="ehInsumo">
-            <SearchInput
-              class="col-span-12 md:col-span-3"
-              v-model="form.unidade"
-              mode="select"
-              variant="line"
-              hide-search-icon
-              label="Unidade"
-              :options="unidadesConversaoOptions"
-              placeholder="Ex: CX, PAR, M, KG"
-            />
-            <SearchInput
-              class="col-span-12 md:col-span-3"
-              v-model="form.insumo_unidade_referencia"
-              mode="select"
-              variant="line"
-              hide-search-icon
-              label="Unidade de Consumo"
-              :options="unidadesConsumoOptions"
-              placeholder="Ex: UN, G, MM, M2"
-            />
-            <Input
-              variant="line"
-              class="col-span-12 md:col-span-3"
-              v-model="insumoFatorConversaoInput"
-              label="Fator de Conversão"
-              type="number"
-              step="0.001"
-              placeholder="Ex: 100 (caixa), 1000 (kg)"
-            />
-            <Input
-              variant="line"
-              class="col-span-12 md:col-span-3"
-              v-model="insumoConsumoM2Input"
-              label="Consumo Médio / m2"
-              type="number"
-              step="0.0001"
-              placeholder="Ex: 0,0800"
-            />
-            <p class="col-span-12 text-[11px] text-slate-500">
-              {{ textoConferenciaConversao }}
-            </p>
-            <p class="col-span-12 text-[11px] text-emerald-700 font-semibold">
-              {{ textoCustoInsumoM2 }}
-            </p>
-          </template>
         </div>
 
         <div class="section-divider ds-section-divider relative">
@@ -270,12 +172,6 @@
               <Input variant="line" class="col-span-12 md:col-span-3" v-model="form.comprimento_mm" label="Comprimento (mm)" type="number" />
               <Input variant="line" class="col-span-12 md:col-span-3" v-model="form.espessura_mm" label="Espessura (mm)" type="number" />
               <Input variant="line" class="col-span-12 md:col-span-3" v-model="precoM2Mask" label="Preco por m2" />
-
-              <Input variant="line" class="col-span-12 md:col-span-4" v-model="adicionalFitaM2Mask" label="ADIC. FITA / M2" />
-
-              <p v-if="ehCategoriaComercial && fitaVinculadaSelecionada" class="col-span-12 text-[11px] text-slate-500 -mt-2">
-                Cálculo automático: {{ valorFitaPorMetroLabel }} aplicado a partir da fita {{ fitaVinculadaSelecionada.nome_produto }}.
-              </p>
 
               <Input variant="line" class="col-span-12 md:col-span-4" v-model="valorUnitarioMask" label="Custo Unitario (R$)" required />
               <div class="col-span-12 md:col-span-8">
@@ -498,7 +394,6 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { maskMoneyBR } from '@/utils/masks'
 import { UNIDADES } from '@/constantes'
-import { CATEGORIAS_BASE, CATS_FERRAGEM } from '@/constantes/categorias-base'
 import { ProdutosService, FornecedorService, EstoqueRetalhoService } from '@/services/index'
 import { confirm } from '@/services/confirm'
 import { ArquivosService } from '@/services/arquivos.service' 
@@ -533,8 +428,6 @@ const removendoImagem = ref(false)
 const galeriaFotos = ref([])
 const uploadingGaleria = ref(false)
 const retalhosList = ref([])
-const fitasBorda = ref([])
-const loadingFitasBorda = ref(false)
 
 const loading = ref(false)
 const salvando = ref(false)
@@ -563,20 +456,12 @@ const form = ref({
   largura_mm: null,
   comprimento_mm: null,
   espessura_mm: null,
-  metragem_rolo_m: null,
   preco_m2: 0,
-  adicional_fita_m2: 0,
   quantidade: 0,
   estoque_minimo: 0,
   valor_unitario: 0,
   valor_total: 0,
   status: 'ATIVO',
-  categoria_base: 'PRIMARIA',
-  fita_vinculada_id: null,
-  fita_vinculada: null,
-  insumo_fator_conversao: null,
-  insumo_unidade_referencia: null,
-  insumo_consumo_m2: null,
   imagem_url: '',
 })
 
@@ -608,12 +493,8 @@ const previewImagem = computed(() => {
 // ======= Inputs auxiliares (máscaras) =======
 const quantidadeInput = ref('')
 const estoqueMinimoInput = ref('')
-const insumoFatorConversaoInput = ref('')
-const insumoConsumoM2Input = ref('')
-const metragemRoloInput = ref('')
 const valorUnitarioMask = ref('R$ 0,00')
 const precoM2Mask = ref('R$ 0,00')
-const adicionalFitaM2Mask = ref('R$ 0,00')
 
 const valorTotalNumerico = computed(() => {
   const qtd = Number(form.value.quantidade || 0)
@@ -637,36 +518,6 @@ watch(estoqueMinimoInput, (v) => {
   form.value.estoque_minimo = n ? Number(n) : 0
 })
 
-watch(insumoFatorConversaoInput, (v) => {
-  const raw = String(v || '').replace(',', '.').trim()
-  if (!raw) {
-    form.value.insumo_fator_conversao = null
-    return
-  }
-  const n = Number(raw)
-  form.value.insumo_fator_conversao = Number.isFinite(n) && n > 0 ? n : null
-})
-
-watch(insumoConsumoM2Input, (v) => {
-  const raw = String(v || '').replace(',', '.').trim()
-  if (!raw) {
-    form.value.insumo_consumo_m2 = null
-    return
-  }
-  const n = Number(raw)
-  form.value.insumo_consumo_m2 = Number.isFinite(n) && n > 0 ? n : null
-})
-
-watch(metragemRoloInput, (v) => {
-  const raw = String(v || '').replace(',', '.').trim()
-  if (!raw) {
-    form.value.metragem_rolo_m = null
-    return
-  }
-  const n = Number(raw)
-  form.value.metragem_rolo_m = Number.isFinite(n) && n > 0 ? n : null
-})
-
 watch(valorUnitarioMask, (v) => {
   const n = String(v || '').replace(/\D/g, '')
   const valor = n ? Number(n) / 100 : 0
@@ -685,14 +536,6 @@ watch(precoM2Mask, (v) => {
   if (v !== formatado) precoM2Mask.value = formatado
 })
 
-watch(adicionalFitaM2Mask, (v) => {
-  const n = String(v || '').replace(/\D/g, '')
-  const valor = n ? Number(n) / 100 : 0
-  form.value.adicional_fita_m2 = valor
-
-  const formatado = maskMoneyBR(valor)
-  if (v !== formatado) adicionalFitaM2Mask.value = formatado
-})
 
 // Cálculo automático: Preço por M² = Custo Unitário / área em m² (quando Largura, Comprimento e Custo Unitário preenchidos)
 function calcularPrecoM2Automatico() {
@@ -712,49 +555,10 @@ watch(
   { deep: true },
 )
 
-// ======= UNIDADES (constantes) =======
-const categoriasBaseOptions = computed(() => CATEGORIAS_BASE)
-const catsFerragem = computed(() => CATS_FERRAGEM.map((c) => ({ label: c.label, value: c.value })))
-const ehInsumo = computed(() => String(form.value.categoria_base || '').trim().toUpperCase() === 'INSUMO')
-const ehFerragem = computed(() => String(form.value.categoria_base || '').trim().toUpperCase() === 'FERRAGEM')
-const ehFitaBorda = computed(() => String(form.value.categoria_base || '').trim().toUpperCase() === 'FITA_BORDA')
-const ehCategoriaComercial = computed(() => ['PRIMARIA', 'SECUNDARIA', 'TERCIARIA'].includes(String(form.value.categoria_base || '').trim().toUpperCase()))
+// ======= UNIDADES =======
 const unidadesConversaoOptions = computed(() =>
   UNIDADES.map((u) => ({ label: u.label, value: u.key })),
 )
-const unidadesConsumoOptions = [
-  { label: 'Unidade (un)', value: 'UN' },
-  { label: 'Grama (g)', value: 'G' },
-  { label: 'Milímetro (mm)', value: 'MM' },
-  { label: 'Metro² (m²)', value: 'M2' },
-]
-const unidadeCompra = computed(() => String(form.value.unidade || '').trim().toUpperCase())
-const custoInsumoReferencia = computed(() => {
-  const valorUnitario = Number(form.value.valor_unitario || 0)
-  const fator = Number(form.value.insumo_fator_conversao || 0)
-  if (fator > 0) return valorUnitario / fator
-  return valorUnitario
-})
-const custoInsumoM2 = computed(() => {
-  const consumoM2 = Number(form.value.insumo_consumo_m2 || 0)
-  if (!Number.isFinite(consumoM2) || consumoM2 <= 0) return 0
-  return custoInsumoReferencia.value * consumoM2
-})
-const textoConferenciaConversao = computed(() => {
-  const unidade = unidadeCompra.value || '-'
-  const fator = Number(form.value.insumo_fator_conversao || 0)
-  const fatorLabel = fator > 0 ? String(fator) : '-'
-  const unidadeConsumo = String(form.value.insumo_unidade_referencia || '-').toUpperCase()
-  return `Configuração: 1 ${unidade} será baixado como ${fatorLabel} ${unidadeConsumo} no estoque.`
-})
-const textoCustoInsumoM2 = computed(() => {
-  const consumoM2 = Number(form.value.insumo_consumo_m2 || 0)
-  if (!consumoM2 || consumoM2 <= 0) {
-    return 'Informe o consumo médio por m2 para o sistema calcular o custo automático do insumo base.'
-  }
-
-  return `Custo base calculado: ${maskMoneyBR(custoInsumoReferencia.value)} por ${String(form.value.insumo_unidade_referencia || 'UN').toUpperCase()} x ${consumoM2.toFixed(4)} = ${maskMoneyBR(custoInsumoM2.value)}/m².`
-})
 
 function normalizeNumber(value) {
   const raw = String(value ?? '').replace(',', '.').trim()
@@ -762,151 +566,14 @@ function normalizeNumber(value) {
   const parsed = Number(raw)
   return Number.isFinite(parsed) ? parsed : null
 }
-
-function formatarMetragemRolo(metragem) {
-  const valor = normalizeNumber(metragem)
-  if (valor == null || valor <= 0) return '-'
-  return `${valor.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 3 })} m`
-}
-
-function calcularValorFitaPorMetro(produto) {
-  const valorUnitario = Number(produto?.valor_unitario || 0)
-  const metragemRolo = normalizeNumber(produto?.metragem_rolo_m)
-  if (!metragemRolo || metragemRolo <= 0) return 0
-  return Math.round(((valorUnitario / metragemRolo) + Number.EPSILON) * 10000) / 10000
-}
-
-function montarLabelFita(produto) {
-  const partes = [
-    produto?.nome_produto,
-    produto?.cor,
-    formatarMetragemRolo(produto?.metragem_rolo_m),
-    maskMoneyBR(Number(produto?.valor_unitario || 0)),
-  ].filter(Boolean)
-
-  return partes.join(' · ')
-}
-
-const fitasBordaOptions = computed(() =>
-  (fitasBorda.value || []).map((produto) => ({
-    value: produto.id,
-    label: montarLabelFita(produto),
-  })),
-)
-
-const fitaVinculadaSelecionada = computed(() => {
-  const fitaId = Number(form.value.fita_vinculada_id || 0)
-  if (!fitaId) return form.value.fita_vinculada || null
-  return fitasBorda.value.find((produto) => Number(produto.id) === fitaId) || form.value.fita_vinculada || null
-})
-
-const valorFitaPorMetro = computed(() => calcularValorFitaPorMetro(fitaVinculadaSelecionada.value))
-const valorFitaPorMetroLabel = computed(() => `${maskMoneyBR(valorFitaPorMetro.value)}/m`)
-const textoVinculoFita = computed(() => {
-  if (loadingFitasBorda.value) {
-    return 'Carregando fitas de borda disponíveis para vínculo.'
-  }
-  if (!fitaVinculadaSelecionada.value) {
-    return 'Selecione uma Fita de Borda para preencher automaticamente o campo ADIC. FITA / M2.'
-  }
-  return `${valorFitaPorMetroLabel.value} calculado com base em ${maskMoneyBR(Number(fitaVinculadaSelecionada.value?.valor_unitario || 0))} por ${formatarMetragemRolo(fitaVinculadaSelecionada.value?.metragem_rolo_m)}.`
-})
-
-function aplicarDefaultsConversaoInsumo() {
-  if (!ehInsumo.value) {
-    form.value.insumo_fator_conversao = null
-    form.value.insumo_unidade_referencia = null
-    form.value.insumo_consumo_m2 = null
-    insumoFatorConversaoInput.value = ''
-    insumoConsumoM2Input.value = ''
-    return
-  }
-
-  if (unidadeCompra.value === 'CX') {
-    form.value.insumo_unidade_referencia = 'UN'
-    if (form.value.insumo_fator_conversao == null || Number(form.value.insumo_fator_conversao) <= 0) {
-      form.value.insumo_fator_conversao = null
-    }
-  } else if (unidadeCompra.value === 'PAR') {
-    form.value.insumo_unidade_referencia = 'UN'
-    form.value.insumo_fator_conversao = 2
-  } else if (unidadeCompra.value === 'M') {
-    form.value.insumo_unidade_referencia = 'MM'
-    form.value.insumo_fator_conversao = 1000
-  } else if (unidadeCompra.value === 'KG') {
-    form.value.insumo_unidade_referencia = 'G'
-    form.value.insumo_fator_conversao = 1000
-  } else {
-    if (!form.value.insumo_unidade_referencia) form.value.insumo_unidade_referencia = 'UN'
-  }
-
-  insumoFatorConversaoInput.value =
-    form.value.insumo_fator_conversao != null ? String(form.value.insumo_fator_conversao) : ''
-}
-
-watch(
-  () => [form.value.categoria_base, form.value.unidade],
-  () => aplicarDefaultsConversaoInsumo(),
-)
-
-watch(
-  () => form.value.categoria_base,
-  (categoriaAtual, categoriaAnterior) => {
-    const categoria = String(categoriaAtual || '').trim().toUpperCase()
-    const categoriaAnteriorNormalizada = String(categoriaAnterior || '').trim().toUpperCase()
-
-    if (!['PRIMARIA', 'SECUNDARIA', 'TERCIARIA'].includes(categoria)) {
-      form.value.fita_vinculada_id = null
-      form.value.fita_vinculada = null
-    }
-
-    if (categoria !== 'FITA_BORDA') {
-      form.value.metragem_rolo_m = null
-      metragemRoloInput.value = ''
-      if (categoriaAnteriorNormalizada === 'FITA_BORDA') {
-        form.value.medida = ''
-      }
-      return
-    }
-
-    form.value.medida = ''
-  },
-)
-
-watch(
-  () => form.value.fita_vinculada_id,
-  (fitaId) => {
-    if (!ehCategoriaComercial.value) return
-
-    const fitaSelecionada = fitasBorda.value.find((produto) => Number(produto.id) === Number(fitaId || 0))
-    form.value.fita_vinculada = fitaSelecionada || null
-
-    if (!fitaSelecionada) {
-      form.value.adicional_fita_m2 = 0
-      adicionalFitaM2Mask.value = maskMoneyBR(0)
-      return
-    }
-
-    const adicionalCalculado = calcularValorFitaPorMetro(fitaSelecionada)
-    form.value.adicional_fita_m2 = adicionalCalculado
-    adicionalFitaM2Mask.value = maskMoneyBR(adicionalCalculado)
-  },
-)
 // ======= CRUD =======
 function validar() {
   if (!form.value.fornecedor_id) return 'Selecione o fornecedor.'
   if (!form.value.nome_produto) return 'Informe o nome do produto.'
-  if (ehFitaBorda.value && (!form.value.metragem_rolo_m || Number(form.value.metragem_rolo_m) <= 0)) return 'Informe a metragem do rolo da fita.'
-  if (ehInsumo.value && !form.value.unidade) return 'Selecione a unidade.'
-  if (ehInsumo.value && !form.value.insumo_unidade_referencia) return 'Selecione a unidade de consumo.'
-  if (ehInsumo.value && (!form.value.insumo_consumo_m2 || Number(form.value.insumo_consumo_m2) <= 0)) return 'Informe o consumo médio por m2 do insumo.'
-  if (ehInsumo.value && unidadeCompra.value === 'CX' && (!form.value.insumo_fator_conversao || Number(form.value.insumo_fator_conversao) <= 0)) {
-    return 'Informe o fator de conversão da caixa (ex.: 500).'
-  }
+  if (!form.value.unidade) return 'Selecione a unidade do produto.'
   if (!form.value.quantidade || Number(form.value.quantidade) <= 0) return 'Informe a quantidade.'
   if (!form.value.valor_unitario || Number(form.value.valor_unitario) <= 0) return 'Informe o valor unitário.'
   if (!form.value.status) return 'Informe o status.'
-  if (!form.value.categoria_base) return 'Selecione a categoria base.'
   return null
 }
 
@@ -917,20 +584,11 @@ function resetForm() {
     marca: '',
     cor: '',
     medida: '',
-    categoria_base: 'PRIMARIA',
-    fita_vinculada_id: null,
-    fita_vinculada: null,
-    categoria_ferragem: null,
-    metragem_rolo_m: null,
-    insumo_fator_conversao: null,
-    insumo_unidade_referencia: null,
-    insumo_consumo_m2: null,
     unidade: '',
     largura_mm: null,
     comprimento_mm: null,
     espessura_mm: null,
     preco_m2: 0,
-    adicional_fita_m2: 0,
     quantidade: 0,
     estoque_minimo: 0,
     valor_unitario: 0,
@@ -940,12 +598,8 @@ function resetForm() {
   }
   quantidadeInput.value = ''
   estoqueMinimoInput.value = ''
-  insumoFatorConversaoInput.value = ''
-  insumoConsumoM2Input.value = ''
-  metragemRoloInput.value = ''
   valorUnitarioMask.value = 'R$ 0,00'
   precoM2Mask.value = 'R$ 0,00'
-  adicionalFitaM2Mask.value = 'R$ 0,00'
   pendingImagemFile.value = null
 }
 
@@ -955,25 +609,6 @@ async function carregarFornecedor() {
   fornecedor.value = Array.isArray(data) ? data : []
 }
 
-async function carregarFitasBorda() {
-  loadingFitasBorda.value = true
-  try {
-    const res = await ProdutosService.buscarComFiltros({ categoria_base: 'FITA_BORDA' })
-    const data = res?.data ?? res
-    const lista = Array.isArray(data) ? data : []
-    fitasBorda.value = lista.map((produto) => ({
-      ...produto,
-      metragem_rolo_m: normalizeNumber(produto?.metragem_rolo_m),
-      valor_unitario: Number(produto?.valor_unitario || 0),
-    }))
-  } catch (err) {
-    console.error(err)
-    fitasBorda.value = []
-    notify.error('Erro ao carregar fitas de borda.')
-  } finally {
-    loadingFitasBorda.value = false
-  }
-}
 
 async function carregarProduto() {
   const res = await ProdutosService.buscar(produtoId.value)
@@ -986,19 +621,9 @@ async function carregarProduto() {
     largura_mm: data.largura_mm ?? null,
     comprimento_mm: data.comprimento_mm ?? null,
     espessura_mm: data.espessura_mm ?? null,
-    metragem_rolo_m: data.metragem_rolo_m == null ? null : Number(data.metragem_rolo_m),
     preco_m2: Number(data.preco_m2 || 0),
-    adicional_fita_m2: Number(data.adicional_fita_m2 || 0),
     quantidade: Number(data.quantidade || 0),
     estoque_minimo: Number(data.estoque_minimo ?? 0),
-    categoria_base: data.categoria_base || 'PRIMARIA',
-    fita_vinculada_id: data.fita_vinculada_id ?? null,
-    fita_vinculada: data.fita_vinculada || null,
-    categoria_ferragem: data.categoria_ferragem ?? null,
-    insumo_fator_conversao:
-      data.insumo_fator_conversao == null ? null : Number(data.insumo_fator_conversao),
-    insumo_consumo_m2:
-      data.insumo_consumo_m2 == null ? null : Number(data.insumo_consumo_m2),
     unidade: data.unidade || '',
     valor_unitario: Number(data.valor_unitario || 0),
     valor_total: Number(data.valor_total || 0),
@@ -1008,25 +633,8 @@ async function carregarProduto() {
 
   quantidadeInput.value = form.value.quantidade ? String(form.value.quantidade) : ''
   estoqueMinimoInput.value = form.value.estoque_minimo != null && form.value.estoque_minimo !== '' ? String(form.value.estoque_minimo) : ''
-  insumoFatorConversaoInput.value =
-    form.value.insumo_fator_conversao != null ? String(form.value.insumo_fator_conversao) : ''
-  insumoConsumoM2Input.value =
-    form.value.insumo_consumo_m2 != null ? String(form.value.insumo_consumo_m2) : ''
-  metragemRoloInput.value = form.value.metragem_rolo_m != null ? String(form.value.metragem_rolo_m) : ''
   valorUnitarioMask.value = maskMoneyBR(form.value.valor_unitario || 0)
   precoM2Mask.value = maskMoneyBR(form.value.preco_m2 || 0)
-  adicionalFitaM2Mask.value = maskMoneyBR(form.value.adicional_fita_m2 || 0)
-
-  if (form.value.fita_vinculada && !fitasBorda.value.some((produto) => Number(produto.id) === Number(form.value.fita_vinculada.id))) {
-    fitasBorda.value = [
-      {
-        ...form.value.fita_vinculada,
-        metragem_rolo_m: normalizeNumber(form.value.fita_vinculada?.metragem_rolo_m),
-        valor_unitario: Number(form.value.fita_vinculada?.valor_unitario || 0),
-      },
-      ...fitasBorda.value,
-    ]
-  }
 }
 
 async function onImagemPick(e) {
@@ -1215,46 +823,24 @@ async function salvar() {
         form.value.espessura_mm === null || form.value.espessura_mm === ''
           ? null
           : Number(form.value.espessura_mm),
-      metragem_rolo_m:
-        ehFitaBorda.value && form.value.metragem_rolo_m != null
-          ? Number(form.value.metragem_rolo_m)
-          : null,
+      metragem_rolo_m: null,
       preco_m2: Number(form.value.preco_m2 || 0),
-      adicional_fita_m2: Number(form.value.adicional_fita_m2 || 0),
+      adicional_fita_m2: 0,
       quantidade: Number(form.value.quantidade || 0),
       valor_unitario: Number(form.value.valor_unitario || 0),
       valor_total: Number(form.value.valor_total || 0),
       unidade: form.value.unidade ? String(form.value.unidade) : null,
       marca: form.value.marca ? String(form.value.marca) : null,
       cor: form.value.cor ? String(form.value.cor) : null,
-      medida: ehFitaBorda.value ? null : (form.value.medida ? String(form.value.medida) : null),
-
-      // ✅ imagem opcional
+      medida: form.value.medida ? String(form.value.medida) : null,
       imagem_url: String(form.value.imagem_url || '').trim() || null,
       estoque_minimo: Number(form.value.estoque_minimo ?? 0),
-      categoria_base: form.value.categoria_base ? String(form.value.categoria_base).trim().toUpperCase() : 'PRIMARIA',
-      fita_vinculada_id:
-        ehCategoriaComercial.value && form.value.fita_vinculada_id
-          ? Number(form.value.fita_vinculada_id)
-          : null,
-      categoria_ferragem:
-        String(form.value.categoria_base || '').toUpperCase() === 'FERRAGEM'
-          ? (form.value.categoria_ferragem ? String(form.value.categoria_ferragem).trim().toUpperCase() : null)
-          : null,
-      insumo_fator_conversao:
-        String(form.value.categoria_base || '').toUpperCase() === 'INSUMO'
-          ? (form.value.insumo_fator_conversao == null ? null : Number(form.value.insumo_fator_conversao))
-          : null,
-      insumo_unidade_referencia:
-        String(form.value.categoria_base || '').toUpperCase() === 'INSUMO'
-          ? (form.value.insumo_unidade_referencia
-              ? String(form.value.insumo_unidade_referencia).trim().toUpperCase()
-              : null)
-          : null,
-      insumo_consumo_m2:
-        String(form.value.categoria_base || '').toUpperCase() === 'INSUMO'
-          ? (form.value.insumo_consumo_m2 == null ? null : Number(form.value.insumo_consumo_m2))
-          : null,
+      categoria_base: null,
+      fita_vinculada_id: null,
+      categoria_ferragem: null,
+      insumo_fator_conversao: null,
+      insumo_unidade_referencia: null,
+      insumo_consumo_m2: null,
     }
 
     const res = await ProdutosService.salvar(isEdit.value ? produtoId.value : null, payload)
@@ -1303,7 +889,7 @@ onMounted(async () => {
 
   loading.value = true
   try {
-    await Promise.all([carregarFornecedor(), carregarFitasBorda()])
+    await carregarFornecedor()
     if (isEdit.value) {
       await carregarProduto()
       await Promise.all([carregarGaleriaFotos(), carregarRetalhos()])

@@ -41,7 +41,7 @@ export class UpdateContratoDto {
   @IsDateString()
   data_fim?: string | null;
 
-  /** true = assinatura na loja (PDF com nome do sócio); false = eletrônica (PDF com representante legal/CNPJ) */
+  /** true = assinatura na loja; false = eletrônica */
   @IsOptional()
   @IsBoolean()
   assinatura_presencial?: boolean;

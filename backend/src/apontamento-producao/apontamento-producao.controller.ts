@@ -101,9 +101,9 @@ export class ApontamentoProducaoController {
     return this.service.getResumoPorAgenda(arr);
   }
 
-  /** Medições em andamento por cliente (Fluxo de Clientes: responsável + tempo decorrido). */
+  /** Medições em andamento por cliente (responsável + tempo decorrido). */
   @Get('medicao-em-andamento')
-  @Permissoes('relatorios.acompanhamento_status.ver', 'agendamentos.producao', 'agendamentos.vendas')
+  @Permissoes('agendamentos.producao', 'agendamentos.vendas')
   getMedicaoEmAndamento() {
     return this.service.getMedicaoEmAndamentoPorCliente();
   }
@@ -126,8 +126,11 @@ export class ApontamentoProducaoController {
 
   @Post('cronometro/:id/pausar')
   @Permissoes('agendamentos.producao', 'agendamentos.vendas')
-  pauseCronometro(@Param('id', ParseIntPipe) id: number) {
-    return this.service.pauseCronometro(id);
+  pauseCronometro(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body?: { motivo?: string },
+  ) {
+    return this.service.pauseCronometro(id, body?.motivo);
   }
 
   @Post('cronometro/:id/retomar')

@@ -1,27 +1,43 @@
 // src/services/navigation.js
 /** etapaKey: chave do mapa de cores A Casa (CADASTRO, MEDICAO, ORCAMENTO, AGENDAR_APRESENTACAO, FECHAR_VENDA, AGENDAR_FECHAMENTO, MEDIDA_FINA, PRODUCAO, MONTAGEM, POS_VENDA_GARANTIA) para indicador e hover no menu. */
 export const NAV_SCHEMA = {
-  comercial: [
-    { label: 'Orçamento', to: '/orcamentos', icon: 'pi-file-edit', perm: 'orcamentos.ver', etapaKey: 'ORCAMENTO' },
-    { label: 'Fechamento de Venda', to: '/vendas/fechamento', icon: 'pi-shopping-cart', perm: ['vendas.criar', 'vendas.fechamento.ver', 'vendas.fechamento.criar'], etapaKey: 'FECHAR_VENDA' },
-    { label: 'Contrato', to: '/contratos', icon: 'pi-file', perm: 'contratos.ver', etapaKey: 'FECHAR_VENDA' },
+  cadastros: [
+    { label: 'Clientes', to: '/clientes', icon: 'pi-users', perm: 'clientes.ver' },
+    { label: 'Importar do Drive', to: '/migracao-drive', icon: 'pi-cloud-download', perm: 'clientes.criar' },
+    { label: 'Fornecedores', to: '/fornecedor', icon: 'pi-truck', perm: 'fornecedores.ver' },
+    { label: 'Funcionários', to: '/funcionarios', icon: 'pi-id-card', perm: 'funcionarios.ver' },
+    { label: 'Produtos', to: '/produtos', icon: 'pi-tag', perm: 'produtos.ver' },
+    { label: 'Sobras / Retalhos', to: '/estoque-retalho', icon: 'pi-box', perm: 'produtos.ver', etapaKey: 'PRODUCAO' },
+    { label: 'Produtos Serviço de Corte', to: '/plano-corte/itens', icon: 'pi-box', perm: 'plano_corte.ver', etapaKey: 'PRODUCAO' },
   ],
 
-  comercial_2: [
-    { label: 'Visual Lab', to: '/visual-lab', icon: 'pi-box' },
-    { label: 'Agenda', to: '/agenda-geral', icon: 'pi-calendar-clock', perm: ['agendamentos.vendas', 'agendamentos.producao', 'agendamentos.ver'], etapaKey: 'AGENDAR_APRESENTACAO' },
-    { label: 'Fluxo de Clientes', to: '/relatorios/acompanhamento-status', icon: 'pi-list-check', perm: 'relatorios.acompanhamento_status.ver', etapaKey: 'MEDICAO' },
-    { label: 'Orçamento Técnico', to: '/orcamento-tecnico', icon: 'pi-file-edit', perm: 'agendamentos.vendas', etapaKey: 'ORCAMENTO' },
+  comercial: [
+    {
+      label: 'Orçamentos',
+      to: '/comercial/orcamentos',
+      icon: 'pi-file-edit',
+      perm: 'clientes.ver',
+      etapaKey: 'FECHAR_VENDA',
+    },
+    {
+      label: 'Markup pós-venda',
+      to: '/comercial/pos-venda-markup',
+      icon: 'pi-percentage',
+      perm: 'clientes.ver',
+      etapaKey: 'POS_VENDA_GARANTIA',
+    },
+    {
+      label: 'Garantias',
+      to: '/garantias',
+      icon: 'pi-wrench',
+      perm: 'garantias.ver',
+      etapaKey: 'POS_VENDA_GARANTIA',
+    },
   ],
 
   producao: [
     { label: 'Agenda Geral', to: '/agenda-geral', icon: 'pi-objects-column', perm: 'agendamentos.ver', etapaKey: 'PRODUCAO' },
-    { label: 'Medição Fina', to: '/producao/medicao-fina', icon: 'pi-sliders-h', perm: ['agendamentos.vendas', 'agendamentos.producao'], etapaKey: 'MEDIDA_FINA' },
-    { label: 'Medida Técnica', to: '/producao/medida-tecnica', icon: 'pi-compass', perm: ['agendamentos.vendas', 'agendamentos.producao'], etapaKey: 'MEDIDA_FINA' },
-    { label: 'Projeto técnico', to: '/producao/projeto-tecnico', icon: 'pi-box', perm: ['agendamentos.vendas', 'agendamentos.producao'], etapaKey: 'PROJETO_TECNICO' },
-    { label: 'Projeto Plano de Corte', to: '/producao/projeto-plano-corte', icon: 'pi-sitemap', perm: 'plano_corte.ver', etapaKey: 'PRODUCAO' },
     { label: 'Serviço de Corte', to: '/plano-corte', icon: 'pi-cog', perm: 'plano_corte.ver', etapaKey: 'PRODUCAO' },
-    { label: 'Venda Serviço de Corte', to: '/plano-corte/venda', icon: 'pi-dollar', perm: 'plano_corte.criar', etapaKey: 'PRODUCAO' },
     { divider: true },
     { label: 'Totem Fábrica', to: '/totem-fabrica', icon: 'pi-building', perm: 'agendamentos.producao', etapaKey: 'PRODUCAO' },
     { label: 'Timeline de Projetos', to: '/producao/apontamento', icon: 'pi-history', perm: ['agendamentos.producao', 'agendamentos.vendas'], etapaKey: 'PRODUCAO' },
@@ -33,16 +49,6 @@ export const NAV_SCHEMA = {
     { divider: true },
     { label: 'Compras', to: '/compras', icon: 'pi-shopping-cart', perm: 'compras.ver' },
     { label: 'Despesas Gerais', to: '/despesas', icon: 'pi-wallet', perm: 'despesas.ver' },
-  ],
-
-  cadastros: [
-    { label: 'Clientes', to: '/clientes', icon: 'pi-users', perm: 'clientes.ver' },
-    { label: 'Importar do Drive', to: '/migracao-drive', icon: 'pi-cloud-download', perm: 'clientes.criar' },
-    { label: 'Fornecedores', to: '/fornecedor', icon: 'pi-truck', perm: 'fornecedores.ver' },
-    { label: 'Funcionários', to: '/funcionarios', icon: 'pi-id-card', perm: 'funcionarios.ver' },
-    { label: 'Produtos', to: '/produtos', icon: 'pi-tag', perm: 'produtos.ver' },
-    { label: 'Estoque', to: '/estoque', icon: 'pi-database', perm: 'produtos.ver', etapaKey: 'PRODUCAO' },
-    { label: 'Produtos Serviço de Corte', to: '/plano-corte/itens', icon: 'pi-box', perm: 'plano_corte.ver', etapaKey: 'PRODUCAO' },
   ],
 
   configuracoes: [
@@ -63,26 +69,29 @@ export const NAV_SCHEMA = {
     },
     { divider: true },
     { label: 'Cadastro da Empresa', to: '/configuracoes/configuracoes', icon: 'pi-sliders-h', perm: 'configuracoes.empresa.ver' },
-    { label: 'Estratégia de Preços', to: '/configuracoes/estrategia-precos', icon: 'pi-chart-line', perm: 'configuracoes.estrategia_precos.ver' },
-    { label: 'Visual Lab', to: '/visual-lab', icon: 'pi-box' },
   ],
 
   relatorios: [
     { label: 'Custos de Estrutura', to: '/financeiro/custos-estrutura', icon: 'pi-chart-bar', perm: 'custos_estrutura.ver' },
+    { label: 'Fluxo de Caixa', to: '/relatorios/fluxo-caixa', icon: 'pi-arrows-h', perm: 'relatorios.fluxo_caixa.ver' },
     { label: 'DRE Mensal', to: '/relatorios/dre-mensal', icon: 'pi-chart-line', perm: 'relatorios.dre_mensal.ver' },
     { label: 'DRE Detalhada', to: '/relatorios/dre-detalhada', icon: 'pi-chart-pie', perm: 'relatorios.dre_detalhada.ver' },
+    { label: 'Contas a Pagar', to: '/relatorios/contas-pagar', icon: 'pi-file-check', perm: 'contas_pagar.ver' },
+    { label: 'Contas a Receber', to: '/relatorios/contas-receber', icon: 'pi-file-check', perm: 'contas_receber.ver' },
     { label: 'Comissão de Produção', to: '/comissao-producao', icon: 'pi-percentage', perm: 'comissao_producao.ver' },
+    { label: 'Totem Produção', to: '/relatorios/totem-producao', icon: 'pi-clock', perm: 'agendamentos.producao' },
+    { divider: true },
+    { label: 'Folha Trabalhista', to: '/relatorios/folha-trabalhista', icon: 'pi-briefcase', perm: 'funcionarios.ver' },
   ],
 
 }
 
 /** Metadados visuais de cada seção do menu (label, eyebrow, description). */
 export const NAV_SECTION_META = {
-  comercial:      { label: 'Comercial',      eyebrow: 'Vendas',      description: 'Orçamentos, vendas e contratos' },
-  comercial_2:    { label: 'Comercial',      eyebrow: 'Ferramentas', description: 'Agenda, fluxo e orçamento técnico' },
-  producao:       { label: 'Produção',       eyebrow: 'Fábrica',     description: 'Medição, corte e apontamento' },
-  financeiro:     { label: 'Financeiro',     eyebrow: 'Finanças',    description: 'Contas, compras e despesas' },
   cadastros:      { label: 'Cadastros',      eyebrow: 'Dados',       description: 'Clientes, fornecedores e produtos' },
+  comercial:      { label: 'Comercial',      eyebrow: 'Vendas',      description: 'Orçamentos e markup pós-venda' },
+  producao:       { label: 'Produção',       eyebrow: 'Fábrica',     description: 'Serviço de corte, agenda e apontamento' },
+  financeiro:     { label: 'Financeiro',     eyebrow: 'Finanças',    description: 'Contas, compras e despesas' },
   configuracoes:  { label: 'Configurações',  eyebrow: 'Sistema',     description: 'Usuários, permissões e empresa' },
   relatorios:     { label: 'Relatórios',     eyebrow: 'Análise',     description: 'DRE, custos e comissões' },
 }

@@ -35,14 +35,11 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { RelatoriosModule } from './relatorios/relatorios.module';
 import { ComissaoProducaoModule } from './comissao-producao/comissao-producao.module';
-import { MedicaoFinaModule } from './medicao-fina/medicao-fina.module';
 import { EvolutionModule } from './evolution/evolution.module';
 import { EstoqueRetalhoModule } from './estoque-retalho/estoque-retalho.module';
-import { EstoqueModule } from './estoque/estoque.module';
-import { EstrategiaPrecosModule } from './estrategia-precos/estrategia-precos.module';
-import { PlanoCorteProjetoModule } from './plano-corte-projeto/plano-corte-projeto.module';
 import { ExtractionModule } from './extraction/extraction.module';
 import { MigracaoDriveModule } from './migracao-drive/migracao-drive.module';
+import { GarantiasModule } from './garantias/garantias.module';
 
 @Module({
   imports: [
@@ -104,14 +101,11 @@ import { MigracaoDriveModule } from './migracao-drive/migracao-drive.module';
     NotificationsModule,
     RelatoriosModule,
     ComissaoProducaoModule,
-    MedicaoFinaModule,
     EvolutionModule,
     EstoqueRetalhoModule,
-    EstoqueModule,
-    EstrategiaPrecosModule,
-    PlanoCorteProjetoModule,
     ExtractionModule,
     MigracaoDriveModule,
+    GarantiasModule,
   ],
   controllers: [AppController],
   providers: [

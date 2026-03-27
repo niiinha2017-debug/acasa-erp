@@ -128,6 +128,9 @@
                         {{ ev._setor === 'FABRICA' ? 'Fábrica' : 'Loja' }}
                       </span>
                       <span class="agenda-card__chip" :class="badgeExecucao(ev)">{{ textoPrioridadeBadge(ev) }}</span>
+                      <span v-if="ev._setor === 'FABRICA' && ev.totem_concluido_em" class="agenda-card__chip agenda-card__chip--totem-ok">
+                        <i class="pi pi-check-circle text-[8px] mr-0.5" />Totem OK
+                      </span>
                     </div>
 
                     <!-- Conteúdo -->
@@ -156,14 +159,14 @@
                       <button v-if="podeCriar" type="button" class="agenda-card__action-btn" :disabled="salvandoStatus" @click.stop="abrirModalEditar(ev)">
                         <i class="pi pi-pencil text-[9px]" />Editar
                       </button>
-                      <button v-if="ev._setor === 'LOJA' && ev.subetapa === 'MEDIDA' && podeCriar" type="button" class="agenda-card__action-btn agenda-card__action-btn--sky" @click.stop="irParaAmbientes(ev)">
-                        <i class="pi pi-home text-[9px]" />Ambientes
-                      </button>
                       <button v-if="podeAvancar(ev)" type="button" class="agenda-card__action-btn" :class="proximoStatusClass(ev)" :disabled="salvandoStatus" @click.stop="avancarExecucao(ev)">
                         <i class="pi text-[9px]" :class="proximoStatusIcon(ev)" />{{ proximoStatusLabel(ev) }}
                       </button>
                       <button v-if="podeCriarNaOperacao && (ev.execucao_etapa || '').toUpperCase() === 'CONCLUIDO' && proximaSubetapaInfo(ev)" type="button" class="agenda-card__action-btn agenda-card__action-btn--next" :disabled="salvandoStatus" @click.stop="abrirModalCriar(null, proximaSubetapaInfo(ev).key, ev)">
                         <i class="pi pi-arrow-right text-[9px]" />{{ proximaSubetapaInfo(ev).label }}
+                      </button>
+                      <button v-if="podeCriar && ev._setor === 'FABRICA' && ev.totem_concluido_em && (ev.status || '').toUpperCase() !== 'CONCLUIDO'" type="button" class="agenda-card__action-btn agenda-card__action-btn--encerrar" :disabled="salvandoStatus" @click.stop="encerrarTarefa(ev)">
+                        <i class="pi pi-flag-fill text-[9px]" />Encerrar
                       </button>
                       <button v-if="podeCriar" type="button" class="agenda-card__action-btn agenda-card__action-btn--danger ml-auto" :disabled="salvandoStatus" @click.stop="excluirEvento(ev)">
                         <i class="pi pi-trash text-[9px]" />
@@ -222,6 +225,9 @@
                       <span class="agenda-card__chip agenda-card__chip--xs" :class="badgeExecucao(ev)">{{ textoPrioridadeBadge(ev) }}</span>
                       <span class="agenda-card__chip agenda-card__chip--xs" :class="ev._setor === 'FABRICA' ? 'agenda-card__chip--fabrica' : 'agenda-card__chip--loja'">{{ ev._setor === 'FABRICA' ? 'Fábrica' : 'Loja' }}</span>
                       <span class="agenda-card__chip agenda-card__chip--xs agenda-card__chip--neutral">{{ labelSubetapa(ev) }}</span>
+                      <span v-if="ev._setor === 'FABRICA' && ev.totem_concluido_em" class="agenda-card__chip agenda-card__chip--xs agenda-card__chip--totem-ok">
+                        <i class="pi pi-check-circle text-[8px] mr-0.5" />Totem OK
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -235,14 +241,14 @@
                     <button v-if="podeCriar" type="button" class="agenda-card__action-btn" :disabled="salvandoStatus" @click.stop="abrirModalEditar(ev)">
                       <i class="pi pi-pencil text-[9px]" />Editar
                     </button>
-                    <button v-if="ev._setor === 'LOJA' && ev.subetapa === 'MEDIDA' && podeCriar" type="button" class="agenda-card__action-btn agenda-card__action-btn--sky" @click.stop="irParaAmbientes(ev)">
-                      <i class="pi pi-home text-[9px]" />Ambientes
-                    </button>
                     <button v-if="podeAvancar(ev)" type="button" class="agenda-card__action-btn" :class="proximoStatusClass(ev)" :disabled="salvandoStatus" @click.stop="avancarExecucao(ev)">
                       <i class="pi text-[9px]" :class="proximoStatusIcon(ev)" />{{ proximoStatusLabel(ev) }}
                     </button>
                     <button v-if="podeCriarNaOperacao && (ev.execucao_etapa || '').toUpperCase() === 'CONCLUIDO' && proximaSubetapaInfo(ev)" type="button" class="agenda-card__action-btn agenda-card__action-btn--next" :disabled="salvandoStatus" @click.stop="abrirModalCriar(null, proximaSubetapaInfo(ev).key, ev)">
                       <i class="pi pi-arrow-right text-[9px]" />{{ proximaSubetapaInfo(ev).label }}
+                    </button>
+                    <button v-if="podeCriar && ev._setor === 'FABRICA' && ev.totem_concluido_em && (ev.status || '').toUpperCase() !== 'CONCLUIDO'" type="button" class="agenda-card__action-btn agenda-card__action-btn--encerrar" :disabled="salvandoStatus" @click.stop="encerrarTarefa(ev)">
+                      <i class="pi pi-flag-fill text-[9px]" />Encerrar
                     </button>
                     <button v-if="podeCriar" type="button" class="agenda-card__action-btn agenda-card__action-btn--danger ml-auto" :disabled="salvandoStatus" @click.stop="excluirEvento(ev)">
                       <i class="pi pi-trash text-[9px]" />
@@ -309,10 +315,6 @@
                       {{ s.label }}
                     </button>
                   </div>
-                  <p v-if="form.setor_destino === 'FABRICA'" class="text-[11px] mt-1 font-medium" style="color: var(--ds-color-warning);">
-                    <i class="pi pi-info-circle text-[10px] mr-0.5" />
-                    Fábrica: somente clientes com contrato vigente
-                  </p>
                 </div>
 
                 <!-- ─── Etapa / Subetapa (filtrada por setor) ─── -->
@@ -336,16 +338,13 @@
 
                 <!-- ─── Cliente ─── -->
                 <div class="ds-field">
-                  <label class="ds-field-label">
-                    Cliente
-                    <span v-if="form.setor_destino === 'FABRICA'" class="normal-case font-normal ml-1" style="color: var(--ds-color-text-faint);">(contrato vigente)</span>
-                  </label>
+                  <label class="ds-field-label">Cliente</label>
                   <div class="ds-control-shell">
                     <i class="pi pi-search ds-control-icon ds-control-icon--left text-xs" />
                     <input
                       v-model="buscaCliente"
                       type="text"
-                      :placeholder="form.setor_destino === 'FABRICA' ? 'Buscar cliente com contrato vigente...' : 'Buscar cliente...'"
+                      placeholder="Buscar cliente..."
                       class="ds-control-input ds-control-input--with-prefix text-sm"
                       @input="debouncedBuscarClientes"
                       @focus="mostrarDropCliente = true"
@@ -380,6 +379,19 @@
                       {{ nomeExibicaoCliente(cli) }}
                       <span v-if="cli.telefone" class="ml-auto text-[10px]" style="color: var(--ds-color-text-faint);">{{ cli.telefone }}</span>
                     </button>
+                  </div>
+                </div>
+
+                <!-- ─── Nome livre (quando não há cliente cadastrado) ─── -->
+                <div v-if="!form.cliente_id" class="ds-field">
+                  <label class="ds-field-label">Nome do cliente <span class="font-normal text-[10px]" style="color: var(--ds-color-text-faint);">(opcional, quando não cadastrado)</span></label>
+                  <div class="ds-control-shell">
+                    <input
+                      v-model="form.cliente_nome_livre"
+                      type="text"
+                      placeholder="Ex.: João Silva"
+                      class="ds-control-input px-3 text-sm"
+                    />
                   </div>
                 </div>
 
@@ -583,131 +595,13 @@
       </Transition>
     </Teleport>
 
-    <!-- ═══════════════════════ MODAL AMBIENTES ═══════════════════════ -->
-    <Teleport to="body">
-      <Transition name="modal-fade">
-        <div
-          v-if="modalAmbientesAberto"
-          class="fixed inset-0 z-[9998] flex items-center justify-center p-4"
-          style="background: rgba(0,0,0,0.45); backdrop-filter: blur(2px);"
-          @click.self="fecharModalAmbientes"
-        >
-          <div
-            class="relative w-full max-w-sm rounded-2xl shadow-2xl flex flex-col"
-            style="background: var(--ds-color-surface); border: 1px solid var(--ds-color-border); max-height: 90vh;"
-          >
-            <!-- Header -->
-            <div class="flex items-center justify-between px-5 py-4 border-b" style="border-color: var(--ds-color-border);">
-              <div>
-                <p class="ds-kicker mb-0.5">Medição inicial</p>
-                <h3 class="text-sm font-bold" style="color: var(--ds-color-text); letter-spacing: -0.02em;">
-                  Ambientes para medir
-                </h3>
-                <p v-if="ambientesClienteNome" class="text-xs mt-0.5" style="color: var(--ds-color-text-soft);">
-                  <i class="pi pi-user text-[10px] mr-1" />{{ ambientesClienteNome }}
-                </p>
-              </div>
-              <button
-                type="button"
-                class="w-8 h-8 flex items-center justify-center rounded-full transition-colors"
-                style="color: var(--ds-color-text-soft);"
-                @click="fecharModalAmbientes"
-              >
-                <i class="pi pi-times text-sm" />
-              </button>
-            </div>
-
-            <!-- Body -->
-            <div class="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-              <p class="text-xs" style="color: var(--ds-color-text-soft);">
-                Informe os ambientes que o técnico vai medir. O totem vai exibir exatamente esses ambientes durante a visita.
-              </p>
-
-              <!-- Loading -->
-              <div v-if="ambientesLoading" class="flex justify-center py-6">
-                <i class="pi pi-spin pi-spinner text-lg" style="color: var(--ds-color-primary);" />
-              </div>
-
-              <!-- Lista de ambientes -->
-              <div v-else class="space-y-2">
-                <div
-                  v-for="(amb, idx) in ambientesLista"
-                  :key="amb.uid"
-                  class="flex items-center gap-2 px-3 py-2 rounded-xl border"
-                  :class="amb.id ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20' : 'border-dashed'"
-                  style="border-color: var(--ds-color-border);"
-                >
-                  <i class="pi pi-home text-[11px]" style="color: var(--ds-color-text-faint);" />
-                  <span class="flex-1 text-sm font-medium" style="color: var(--ds-color-text);">
-                    {{ amb.nome_ambiente }}
-                  </span>
-                  <span v-if="amb.id" class="text-[10px] font-semibold text-green-600 dark:text-green-400">
-                    salvo
-                  </span>
-                  <button
-                    type="button"
-                    class="w-6 h-6 flex items-center justify-center rounded-full transition-colors hover:bg-rose-100 dark:hover:bg-rose-900/30"
-                    style="color: var(--ds-color-danger);"
-                    :disabled="ambientesSalvando"
-                    @click="removerAmbienteModal(amb, idx)"
-                  >
-                    <i class="pi pi-times text-[10px]" />
-                  </button>
-                </div>
-
-                <div v-if="!ambientesLista.length" class="text-center py-4">
-                  <p class="text-xs" style="color: var(--ds-color-text-faint);">Nenhum ambiente adicionado.</p>
-                </div>
-              </div>
-
-              <!-- Campo para adicionar -->
-              <div class="flex gap-2 pt-1">
-                <input
-                  v-model="ambienteNovo"
-                  type="text"
-                  class="ds-control-input flex-1 text-sm px-3"
-                  style="height: 2.25rem;"
-                  placeholder="Ex: Cozinha, Sala, Quarto 1..."
-                  :disabled="ambientesSalvando"
-                  @keyup.enter="adicionarAmbienteModal"
-                />
-                <button
-                  type="button"
-                  class="ds-btn ds-btn--primary ds-btn--sm !rounded-xl px-3"
-                  :disabled="!ambienteNovo.trim() || ambientesSalvando"
-                  @click="adicionarAmbienteModal"
-                >
-                  <i v-if="ambientesSalvando" class="pi pi-spin pi-spinner text-xs" />
-                  <i v-else class="pi pi-plus text-xs" />
-                </button>
-              </div>
-
-              <p v-if="ambientesErro" class="text-xs font-medium" style="color: var(--ds-color-danger);">
-                {{ ambientesErro }}
-              </p>
-            </div>
-
-            <!-- Footer -->
-            <div class="flex items-center justify-end gap-3 px-5 py-4 border-t" style="border-color: var(--ds-color-border);">
-              <button
-                type="button"
-                class="ds-btn ds-btn--secondary ds-btn--sm"
-                @click="fecharModalAmbientes"
-              >
-                Fechar
-              </button>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
   </PageShell>
 </template>
 
 <script setup>
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { AgendaGeralService, AgendaLojaService, AgendaFabricaService, ClienteService, FuncionariosService, VendaService, TotemFabricaService } from '@/services'
+import { AgendaGeralService, AgendaLojaService, AgendaFabricaService, ClienteService, FuncionariosService } from '@/services'
 import { can } from '@/services/permissions'
 import { confirm } from '@/services/confirm'
 import { notify } from '@/services/notify'
@@ -818,6 +712,7 @@ const formBase = () => ({
   inicio_em: '',
   fim_em: '',
   cliente_id: null,
+  cliente_nome_livre: '',
   venda_id: null,
   equipe_ids: [],
   origem_fluxo: 'TAREFA',
@@ -1005,7 +900,7 @@ function labelExecucao(ev) {
 
 // ─── Formatação ───
 function nomeCliente(ev) {
-  return ev?.cliente?.nome_completo || ev?.cliente?.razao_social || 'Cliente não informado'
+  return ev?.cliente?.nome_completo || ev?.cliente?.razao_social || ev?.cliente_nome_livre || 'Cliente não informado'
 }
 function formatarData(valor) {
   const dt = new Date(valor)
@@ -1086,94 +981,19 @@ async function avancarExecucao(ev) {
   }
 }
 
-// ─── Ambientes de Medição (abre modal inline) ───
-function irParaAmbientes(ev) {
-  abrirModalAmbientes(ev)
-}
-
-// ─── Modal Ambientes ───
-const modalAmbientesAberto = ref(false)
-const ambientesAgendaLojaId = ref(null)
-const ambientesClienteNome = ref('')
-const ambientesLista = ref([])
-const ambientesLoading = ref(false)
-const ambientesSalvando = ref(false)
-const ambientesErro = ref('')
-const ambienteNovo = ref('')
-
-function ambienteUid() {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-}
-
-async function abrirModalAmbientes(ev) {
-  ambientesAgendaLojaId.value = ev.id
-  ambientesClienteNome.value = ev?.cliente?.nome_completo || ev?.cliente?.razao_social || ''
-  ambientesLista.value = []
-  ambientesErro.value = ''
-  ambienteNovo.value = ''
-  modalAmbientesAberto.value = true
-  ambientesLoading.value = true
+async function encerrarTarefa(ev) {
+  if (ev._setor !== 'FABRICA') return
+  const ok = await confirm('Encerrar tarefa?', `Confirma o encerramento de "${ev.titulo || 'esta tarefa'}"? Ela será arquivada e não aparecerá mais na operação.`)
+  if (!ok) return
+  salvandoStatus.value = true
   try {
-    const res = await TotemFabricaService.getMedicaoOrcamento(ev.id)
-    const data = res?.data ?? res ?? {}
-    ambientesLista.value = Array.isArray(data?.ambientes)
-      ? data.ambientes.map((a) => ({ uid: ambienteUid(), id: a.id, nome_ambiente: a.nome_ambiente }))
-      : []
+    await AgendaFabricaService.encerrar(ev.id)
+    await carregar()
+    notify('Tarefa encerrada com sucesso.', 'success')
   } catch (e) {
-    ambientesErro.value = e?.response?.data?.message || 'Não foi possível carregar os ambientes.'
+    notify(e?.response?.data?.message || 'Erro ao encerrar a tarefa.', 'error')
   } finally {
-    ambientesLoading.value = false
-  }
-}
-
-function fecharModalAmbientes() {
-  modalAmbientesAberto.value = false
-  ambientesAgendaLojaId.value = null
-  ambientesLista.value = []
-  ambienteNovo.value = ''
-  ambientesErro.value = ''
-}
-
-async function adicionarAmbienteModal() {
-  const nome = String(ambienteNovo.value || '').trim()
-  if (!nome) return
-  if (ambientesLista.value.some((a) => a.nome_ambiente.toLowerCase() === nome.toLowerCase())) {
-    ambientesErro.value = `Ambiente "${nome}" já existe.`
-    return
-  }
-  ambientesErro.value = ''
-  ambientesSalvando.value = true
-  try {
-    await TotemFabricaService.salvarAmbienteMedicao(ambientesAgendaLojaId.value, { nome_ambiente: nome })
-    ambientesLista.value.push({ uid: ambienteUid(), id: null, nome_ambiente: nome })
-    // Recarrega para obter o id persistido
-    const res = await TotemFabricaService.getMedicaoOrcamento(ambientesAgendaLojaId.value)
-    const data = res?.data ?? res ?? {}
-    if (Array.isArray(data?.ambientes)) {
-      ambientesLista.value = data.ambientes.map((a) => ({ uid: ambienteUid(), id: a.id, nome_ambiente: a.nome_ambiente }))
-    }
-    ambienteNovo.value = ''
-  } catch (e) {
-    ambientesErro.value = e?.response?.data?.message || 'Não foi possível adicionar o ambiente.'
-  } finally {
-    ambientesSalvando.value = false
-  }
-}
-
-async function removerAmbienteModal(amb, idx) {
-  if (!amb?.id) {
-    ambientesLista.value.splice(idx, 1)
-    return
-  }
-  ambientesSalvando.value = true
-  ambientesErro.value = ''
-  try {
-    await TotemFabricaService.removerAmbienteMedicao(ambientesAgendaLojaId.value, amb.id)
-    ambientesLista.value.splice(idx, 1)
-  } catch (e) {
-    ambientesErro.value = e?.response?.data?.message || 'Não foi possível remover o ambiente.'
-  } finally {
-    ambientesSalvando.value = false
+    salvandoStatus.value = false
   }
 }
 
@@ -1264,6 +1084,7 @@ function abrirModalEditar(ev) {
   form.value.inicio_em = ev?.inicio_em ? toLocalISOString(new Date(ev.inicio_em)) : ''
   form.value.fim_em = ev?.fim_em ? toLocalISOString(new Date(ev.fim_em)) : ''
   form.value.cliente_id = ev?.cliente_id || ev?.cliente?.id || null
+  form.value.cliente_nome_livre = ev?.cliente_nome_livre || ''
   form.value.venda_id = ev?.venda_id || null
   form.value.equipe_ids = Array.isArray(ev?.equipe)
     ? ev.equipe.map((eq) => Number(eq?.funcionario_id || eq?.funcionario?.id)).filter(Boolean)
@@ -1366,27 +1187,8 @@ async function buscarClientes() {
   const q = buscaCliente.value.trim()
   if (q.length < 2) { clientesOpcoes.value = []; return }
   try {
-    if (form.value.setor_destino === 'FABRICA') {
-      const { data } = await VendaService.listarComContratoVigente()
-      const lista = Array.isArray(data) ? data : []
-      const termo = q.toLowerCase()
-      clientesOpcoes.value = lista
-        .filter((v) => {
-          const nome = (v?.cliente?.nome_completo || v?.cliente?.razao_social || v?.cliente?.nome || '').toLowerCase()
-          return nome.includes(termo)
-        })
-        .slice(0, 15)
-        .map((v) => ({
-          id: v?.cliente?.id || v?.cliente_id,
-          value: v?.cliente?.id || v?.cliente_id,
-          label: v?.cliente?.nome_completo || v?.cliente?.razao_social || v?.cliente?.nome || `Cliente #${v?.cliente_id}`,
-          venda_id: v?.id,
-          telefone: v?.cliente?.telefone,
-        }))
-    } else {
-      const { data } = await ClienteService.select(q)
-      clientesOpcoes.value = Array.isArray(data) ? data.slice(0, 15) : []
-    }
+    const { data } = await ClienteService.select(q)
+    clientesOpcoes.value = Array.isArray(data) ? data.slice(0, 15) : []
   } catch { clientesOpcoes.value = [] }
 }
 
@@ -1537,6 +1339,7 @@ async function salvarTarefa() {
       }
       if (apontamentos.length > 0) payload.apontamentos = apontamentos
       if (form.value.cliente_id) payload.cliente_id = form.value.cliente_id
+      if (!form.value.cliente_id && form.value.cliente_nome_livre?.trim()) payload.cliente_nome_livre = form.value.cliente_nome_livre.trim()
       if (form.value.venda_id) payload.venda_id = form.value.venda_id
       await service.atualizar(eventoEdicao.value.id, payload)
     } else {
@@ -1549,6 +1352,7 @@ async function salvarTarefa() {
         status: 'PENDENTE',
       }
       if (form.value.cliente_id) payload.cliente_id = form.value.cliente_id
+      if (!form.value.cliente_id && form.value.cliente_nome_livre?.trim()) payload.cliente_nome_livre = form.value.cliente_nome_livre.trim()
       if (form.value.venda_id) payload.venda_id = form.value.venda_id
       if (form.value.equipe_ids.length > 0) payload.equipe_ids = form.value.equipe_ids
       if (apontamentos.length > 0) payload.apontamentos = apontamentos
@@ -2078,6 +1882,12 @@ onMounted(carregar)
 }
 .agenda-card__action-btn--danger:hover { background: #ffe4e6; }
 
+.agenda-card__action-btn--encerrar {
+  background: #f0fdf4;
+  color: #15803d;
+}
+.agenda-card__action-btn--encerrar:hover { background: #dcfce7; }
+
 /* chips */
 .agenda-card__chip {
   display: inline-flex;
@@ -2095,9 +1905,10 @@ onMounted(carregar)
   height: 15px;
   font-size: 8.5px;
 }
-.agenda-card__chip--fabrica { background: #ede9fe; color: #6d28d9; }
-.agenda-card__chip--loja    { background: #e0f2fe; color: #0369a1; }
-.agenda-card__chip--neutral { background: var(--ds-color-bg-subtle); color: var(--ds-color-text-soft); }
+.agenda-card__chip--fabrica  { background: #ede9fe; color: #6d28d9; }
+.agenda-card__chip--loja     { background: #e0f2fe; color: #0369a1; }
+.agenda-card__chip--neutral  { background: var(--ds-color-bg-subtle); color: var(--ds-color-text-soft); }
+.agenda-card__chip--totem-ok { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
 
 /* ──────────────────────────────────────────────
    TIMELINE

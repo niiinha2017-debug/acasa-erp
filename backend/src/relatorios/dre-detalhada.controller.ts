@@ -19,7 +19,7 @@ export class DreDetalhadaController {
   listarAmbientes(@Query('cliente_id') clienteId?: string) {
     const id = clienteId ? parseInt(clienteId, 10) : 0;
     if (!Number.isFinite(id) || id <= 0) {
-      return { projeto: null, ambientes: [] };
+      return { projeto: null, ordem_importacao: null, ambientes: [] };
     }
     return this.service.listarAmbientes(id);
   }
@@ -31,14 +31,37 @@ export class DreDetalhadaController {
     @Query('nome_ambiente') nomeAmbiente?: string,
     @Query('mes') mes?: string,
     @Query('ano') ano?: string,
+    @Query('fluxo') fluxo?: string,
+    @Query('ordem_servico_id') ordemServicoId?: string,
+    @Query('producao_etapa_id') producaoEtapaId?: string,
+    @Query('garantia_id') garantiaId?: string,
   ) {
-    const pid = projetoId ? parseInt(projetoId, 10) : 0;
-    const nome = nomeAmbiente?.trim();
     const hoje = new Date();
     const m = mes ? parseInt(mes, 10) : hoje.getMonth() + 1;
     const a = ano ? parseInt(ano, 10) : hoje.getFullYear();
     const mesNum = Number.isFinite(m) && m >= 1 && m <= 12 ? m : hoje.getMonth() + 1;
     const anoNum = Number.isFinite(a) && a >= 2000 && a <= 2100 ? a : hoje.getFullYear();
+
+    const f = String(fluxo || '').toLowerCase();
+    if (f === 'importacao') {
+      const osid = ordemServicoId ? parseInt(ordemServicoId, 10) : 0;
+      const peid = producaoEtapaId != null ? parseInt(producaoEtapaId, 10) : 0;
+      if (!Number.isFinite(osid) || osid <= 0) {
+        return null;
+      }
+      return this.service.getDreImportacaoEtapa(osid, peid, mesNum, anoNum);
+    }
+
+    if (f === 'garantia') {
+      const gid = garantiaId ? parseInt(garantiaId, 10) : 0;
+      if (!Number.isFinite(gid) || gid <= 0) {
+        return null;
+      }
+      return this.service.getDreGarantia(gid, mesNum, anoNum);
+    }
+
+    const pid = projetoId ? parseInt(projetoId, 10) : 0;
+    const nome = nomeAmbiente?.trim();
     if (!Number.isFinite(pid) || pid <= 0 || !nome) {
       return null;
     }

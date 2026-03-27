@@ -148,6 +148,8 @@ model Cliente {
   projetos     projetos[]
   medicoes_orcamento   medicao_orcamento[]
   pre_medicoes         pre_medicao[]
+  ordens_servico       ordem_servico[]
+  garantias            garantias[]
 
   @@unique([cpf])
   @@unique([cnpj])
@@ -156,7 +158,51 @@ model Cliente {
   @@index([vendedor_responsavel_id])
   @@index([criado_por_usuario_id])
   @@map("clientes")
- }
+}
+
+/// Ordem de serviço gerada a partir da leitura/consolidação de documentos (ex.: importação Drive).
+model ordem_servico {
+  id                    Int      @id @default(autoincrement())
+  cliente_id            Int
+  cliente               Cliente  @relation(fields: [cliente_id], references: [id], onDelete: Cascade)
+  data_entrega_prevista DateTime
+  origem                String   @default("IMPORTACAO_LEITURA") @db.VarChar(64)
+  observacao            String?  @db.VarChar(500)
+
+  valor_bruto           Decimal? @db.Decimal(12, 2)
+  valor_impostos_nf     Decimal? @db.Decimal(12, 2)
+  valor_comissao        Decimal? @db.Decimal(12, 2)
+  valor_taxas_cartao    Decimal? @db.Decimal(12, 2)
+  valor_taxas_processamento_cartao Decimal? @db.Decimal(12, 2)
+  valor_taxas_antecipacao_credito  Decimal? @db.Decimal(12, 2)
+  valor_liquido         Decimal? @db.Decimal(12, 2)
+  taxa_nota_percentual  Decimal? @db.Decimal(5, 2)
+  tem_nota_fiscal       Boolean  @default(true)
+  comissionados         Json?
+
+  criado_em             DateTime @default(now())
+  atualizado_em         DateTime @updatedAt
+  etapas                producao_etapas[]
+
+  @@index([cliente_id])
+  @@map("ordem_servico")
+}
+
+/// Uma linha por ambiente lido (Cozinha, Sala, …) vinculada à ordem de serviço.
+model producao_etapas {
+  id               Int           @id @default(autoincrement())
+  ordem_servico_id Int
+  ordem_servico    ordem_servico @relation(fields: [ordem_servico_id], references: [id], onDelete: Cascade)
+  nome_ambiente    String        @db.VarChar(191)
+  ordem            Int           @default(0)
+  status           String        @default("PENDENTE") @db.VarChar(64)
+  observacao       String?       @db.Text
+  criado_em        DateTime      @default(now())
+  atualizado_em    DateTime      @updatedAt
+
+  @@index([ordem_servico_id])
+  @@map("producao_etapas")
+}
 
 model orcamentos {
   id Int @id @default(autoincrement())
@@ -279,6 +325,7 @@ model vendas {
 
   compras   compras[]
   contratos contratos[]
+  garantias garantias[]
 
   @@index([cliente_id])
   @@index([status])
@@ -309,7 +356,7 @@ model contratos {
   data_fim   DateTime?
   data_assinatura DateTime?  // quando o contrato foi assinado (ex.: assinatura online)
   zapsign_doc_token String?  // token do documento na ZapSign (assinatura por e-mail)
-  assinatura_presencial Boolean @default(false) // true = assinatura na loja (PDF sócio); false = eletrônica (PDF representante legal/CNPJ)
+  assinatura_presencial Boolean @default(false) // true = assinatura na loja; false = eletrônica
 
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
@@ -562,9 +609,7 @@ model produtos {
 
   plano_corte_consumo plano_corte_consumo[]
   compras_itens       compras_itens[]
-  chapas_inteiras     estoque_chapa_inteira[]
   retalhos            estoque_retalho[]
-  chapas_projeto      plano_corte_projeto_chapa[]
 
   @@index([fornecedor_id])
   @@index([fita_vinculada_id])
@@ -587,75 +632,9 @@ model plano_corte {
   produtos     plano_corte_produto[]
   consumos     plano_corte_consumo[]
   agendamentos agenda_fabrica[]
-  projetos     plano_corte_projeto[]
 
   @@map("plano_corte")
  }
-
-model plano_corte_projeto {
-  id                    Int      @id @default(autoincrement())
-  plano_corte_id        Int?
-  nome                  String   @db.VarChar(180)
-  material              String?  @db.VarChar(120)
-  espessura_mm          Decimal? @db.Decimal(10, 2)
-  kerf_mm               Decimal   @default(3.00) @db.Decimal(10, 2)
-  resultado_otimizacao  Json?
-  status                String   @default("RASCUNHO")
-  criado_em             DateTime @default(now())
-  atualizado_em         DateTime @updatedAt
-
-  plano_corte plano_corte? @relation(fields: [plano_corte_id], references: [id], onDelete: SetNull)
-  pecas      plano_corte_projeto_peca[]
-  chapas     plano_corte_projeto_chapa[]
-
-  @@index([plano_corte_id])
-  @@index([status])
-  @@map("plano_corte_projeto")
-}
-
-model plano_corte_projeto_peca {
-  id                        Int      @id @default(autoincrement())
-  plano_corte_projeto_id    Int
-  nome                      String   @db.VarChar(180)
-  largura_nominal_mm        Decimal  @db.Decimal(10, 2)
-  altura_nominal_mm         Decimal  @db.Decimal(10, 2)
-  quantidade                Int      @default(1)
-  girar_peca                Boolean
-  fita_topo_mm              Decimal  @default(0.00) @db.Decimal(10, 2)
-  fita_base_mm              Decimal  @default(0.00) @db.Decimal(10, 2)
-  fita_esquerda_mm          Decimal  @default(0.00) @db.Decimal(10, 2)
-  fita_direita_mm           Decimal  @default(0.00) @db.Decimal(10, 2)
-  largura_corte_mm          Decimal  @db.Decimal(10, 2)
-  altura_corte_mm           Decimal  @db.Decimal(10, 2)
-  criado_em                 DateTime @default(now())
-  atualizado_em             DateTime @updatedAt
-
-  projeto plano_corte_projeto @relation(fields: [plano_corte_projeto_id], references: [id], onDelete: Cascade)
-
-  @@index([plano_corte_projeto_id])
-  @@index([girar_peca])
-  @@map("plano_corte_projeto_peca")
-}
-
-model plano_corte_projeto_chapa {
-  id                     Int      @id @default(autoincrement())
-  plano_corte_projeto_id Int
-  produto_id             Int?
-  codigo                 String?  @db.VarChar(120)
-  material               String?  @db.VarChar(120)
-  largura_mm             Decimal  @db.Decimal(10, 2)
-  altura_mm              Decimal  @db.Decimal(10, 2)
-  quantidade             Int      @default(1)
-  criado_em              DateTime @default(now())
-  atualizado_em          DateTime @updatedAt
-
-  projeto plano_corte_projeto @relation(fields: [plano_corte_projeto_id], references: [id], onDelete: Cascade)
-  produto produtos? @relation(fields: [produto_id], references: [id], onDelete: SetNull)
-
-  @@index([plano_corte_projeto_id])
-  @@index([produto_id])
-  @@map("plano_corte_projeto_chapa")
-}
 
 model plano_corte_item {
   id            Int @id @default(autoincrement())
@@ -853,6 +832,9 @@ model funcionarios {
   orcamentos_vendedor  orcamentos[] @relation("OrcamentoVendedor")
   vendas_vendedor      vendas[] @relation("VendaVendedor")
   contratos_vendedor   contratos[] @relation("ContratoVendedor")
+  garantias_responsavel garantias[] @relation("GarantiaFuncionario")
+
+  comissao_producao_percentual Decimal? @db.Decimal(5, 2)
 
   @@map("funcionarios")
  }
@@ -944,7 +926,6 @@ model projetos {
 
   agendamentos_loja    agenda_loja[]
   agendamentos_fabrica agenda_fabrica[]
-  medicoes_fina        medicao_fina[]
 
   criado_em     DateTime @default(now())
   atualizado_em DateTime @updatedAt
@@ -952,51 +933,6 @@ model projetos {
   @@index([cliente_id])
   @@index([status_atual])
   @@map("projetos")
-}
-
-// Medição Fina: dados reais do ambiente antes da produção (por projeto + ambiente)
-model medicao_fina {
-  id         Int      @id @default(autoincrement())
-  projeto_id Int
-  projeto    projetos @relation(fields: [projeto_id], references: [id], onDelete: Cascade)
-
-  nome_ambiente String @db.VarChar(120)
-
-  // Variáveis críticas (cm)
-  altura_cm    Decimal? @db.Decimal(10, 2)
-  largura_cm   Decimal? @db.Decimal(10, 2)
-  profundidade_cm Decimal? @db.Decimal(10, 2)
-  // Medidas do projeto Promob (para conferência vs medida real)
-  altura_promob_cm    Decimal? @db.Decimal(10, 2)
-  largura_promob_cm   Decimal? @db.Decimal(10, 2)
-  profundidade_promob_cm Decimal? @db.Decimal(10, 2)
-  prumo_ok     Boolean?  // estado da parede: prumo
-  esquadro_ok  Boolean?  // estado da parede: esquadro
-
-  // Checklist interferências (JSON array de chaves: AGUA, GAS, ESGOTO, TOMADAS, AR_CONDICIONADO, RODAPES, GESSO)
-  interferencias Json?
-
-  // Checklist de conferência (obra pronta para medição)
-  conferencia_eletrica_ok   Boolean?
-  conferencia_hidraulica_ok Boolean?
-  conferencia_gas_ok        Boolean?
-  conferencia_alvenaria_ok  Boolean?
-
-  observacoes_montador String? @db.Text
-
-  // Planta baixa interativa: JSON com paredes, pontos técnicos e textos (coordenadas e medidas para orçamento)
-  planta_baixa_json Json?
-
-  // Captura do visualizador 3D (extrusão), data URL PNG (base64) — listagem / referência rápida
-  croqui_3d_thumbnail_data_url String? @db.LongText
-
-  concluida Boolean @default(false)
-  criado_em DateTime @default(now())
-  atualizado_em DateTime @updatedAt
-
-  @@unique([projeto_id, nome_ambiente])
-  @@index([projeto_id])
-  @@map("medicao_fina")
 }
 
 // Medição para Orçamento: visita no cliente, medidas gerais + observações (alimenta criação de orçamento)
@@ -1096,38 +1032,6 @@ model medicao_orcamento_parede {
   @@unique([medicao_orcamento_ambiente_id, nome], name: "moa_parede_ambiente_id_nome_unique")
   @@index([medicao_orcamento_ambiente_id])
   @@map("medicao_orcamento_parede")
-}
-
-// Orçamento Técnico (novo fluxo): origem na medição por ambiente/parede; itens em tabela independente.
-model orcamento_tecnico {
-  id             Int      @id @default(autoincrement())
-  agenda_loja_id Int
-  agenda_loja    agenda_loja @relation(fields: [agenda_loja_id], references: [id], onDelete: Cascade)
-  criado_em      DateTime @default(now())
-
-  preco_venda    Decimal? @db.Decimal(12, 2)
-  desconto_pct   Decimal? @db.Decimal(5, 2)
-  pagamentos_json String? @db.Text
-
-  itens orcamento_tecnico_itens[]
-
-  @@index([agenda_loja_id])
-  @@map("orcamento_tecnico")
-}
-
-model orcamento_tecnico_itens {
-  id              Int      @id @default(autoincrement())
-  orcamento_tecnico_id Int
-  orcamento_tecnico   orcamento_tecnico @relation(fields: [orcamento_tecnico_id], references: [id], onDelete: Cascade)
-  nome_ambiente   String   @db.VarChar(191)
-  descricao       String   @db.VarChar(500)
-  valor_unitario  Decimal  @db.Decimal(10, 2)
-  valor_total     Decimal  @db.Decimal(10, 2)
-  observacao      String   @db.VarChar(2000)
-  criado_em       DateTime @default(now())
-
-  @@index([orcamento_tecnico_id])
-  @@map("orcamento_tecnico_itens")
 }
 
 model fluxo_entidade {
@@ -1259,6 +1163,9 @@ model agenda_loja {
   projeto_id Int?
   projeto    projetos? @relation(fields: [projeto_id], references: [id])
 
+  garantia_id Int?
+  garantia    garantias? @relation(fields: [garantia_id], references: [id], onDelete: SetNull)
+
   titulo    String
   inicio_em DateTime
   fim_em    DateTime
@@ -1282,7 +1189,6 @@ model agenda_loja {
   apontamentos_producao apontamento_producao[]
   medicao_orcamento medicao_orcamento?
   pre_medicoes      pre_medicao[]
-  orcamentos_tecnicos orcamento_tecnico[]
 
   criado_por_usuario_id Int?
   criado_por_usuario     usuarios? @relation("AgendaLojaCriadoPor", fields: [criado_por_usuario_id], references: [id], onDelete: SetNull)
@@ -1298,6 +1204,7 @@ model agenda_loja {
   @@index([fornecedor_id])
   @@index([orcamento_id])
   @@index([venda_id])
+  @@index([garantia_id])
   @@index([inicio_em])
   @@index([categoria])
   @@index([origem_fluxo])
@@ -1364,12 +1271,14 @@ model agenda_fabrica {
   plano_corte_id Int?         @unique
   plano_corte    plano_corte? @relation(fields: [plano_corte_id], references: [id])
 
-  titulo    String
-  inicio_em DateTime
-  fim_em    DateTime
-  categoria String?
+  titulo             String
+  cliente_nome_livre String?
+
+  inicio_em    DateTime
+  fim_em       DateTime
+  categoria    String?
   origem_fluxo String?
-  fluxo_tipo String?
+  fluxo_tipo   String?
   macroetapa String?
   subetapa String?
   execucao_etapa String?
@@ -1384,6 +1293,9 @@ model agenda_fabrica {
   // Totem: custo coletivo (tempo total × custo hora médio fábrica) e tempo total para auditoria
   tempo_total_tarefa   Decimal? @db.Decimal(8, 2)
   custo_tarefa_fabrica Decimal? @db.Decimal(12, 2)
+
+  // Totem concluiu a execução física, mas a tarefa ainda aguarda encerramento manual pelo gestor
+  totem_concluido_em DateTime?
 
   // Consumo e desvio (área peças Promob + perda padrão → consumo estimado; consumo real = peças + retalhos; perda real para DRE)
   area_pecas_m2      Decimal? @db.Decimal(12, 4)
@@ -1438,6 +1350,7 @@ model estoque_retalho {
   reservado_para_ref String?
   reservado_em      DateTime?
   imagem_url        String?  @db.VarChar(500)
+  observacao        String?  @db.VarChar(800)
   criado_em         DateTime @default(now())
   atualizado_em     DateTime @updatedAt
 
@@ -1449,34 +1362,6 @@ model estoque_retalho {
   @@index([status])
   @@index([reservado_para_tipo, reservado_para_id])
   @@map("estoque_retalho")
-}
-
-model estoque_chapa_inteira {
-  id                  Int      @id @default(autoincrement())
-  produto_id          Int
-  origem_entrada      String   @default("MANUAL")
-  numero_nf           String?  @db.VarChar(80)
-  fornecedor_nome     String?  @db.VarChar(180)
-  lote                String?  @db.VarChar(120)
-  quantidade_total    Int
-  quantidade_disponivel Int
-  status              String   @default("DISPONIVEL")
-  reservado_para_tipo String?
-  reservado_para_id   Int?
-  reservado_para_ref  String?
-  reservado_em        DateTime?
-  observacao          String?  @db.VarChar(800)
-  criado_em           DateTime @default(now())
-  atualizado_em       DateTime @updatedAt
-
-  produto produtos @relation(fields: [produto_id], references: [id], onDelete: Restrict)
-
-  @@index([produto_id])
-  @@index([status])
-  @@index([origem_entrada])
-  @@index([numero_nf])
-  @@index([reservado_para_tipo, reservado_para_id])
-  @@map("estoque_chapa_inteira")
 }
 
 model agenda_fabrica_funcionarios {
@@ -1523,6 +1408,7 @@ model apontamento_producao {
   pausa_inicio_em       DateTime?  // início da pausa atual (enquanto pausado)
   pausa_fim_em          DateTime?  // fim da última pausa (legado; múltiplas pausas usam pausa_total_segundos)
   pausa_total_segundos  Float?     // soma de todas as pausas já encerradas (permite pausar/retomar várias vezes)
+  motivo_pausa          String?    @db.VarChar(60) // CAFE, BANHEIRO, CIGARRO, ALMOCO, OUTROS
   horas             Decimal?  @db.Decimal(6, 2) // opcional: horas decimais (ex: 2.5)
   custo_calculado   Decimal?  @db.Decimal(12, 2) // horas * funcionario.custo_hora
   observacao        String?   @db.VarChar(500)
@@ -1943,15 +1829,6 @@ model Empresa {
   banco_agencia String?
   banco_conta   String?
   pix           String?
-  // Representante legal (contratos e documentos)
-  representante_legal_nome     String?
-  representante_legal_cpf     String?
-  representante_legal_rg      String?
-  representante_legal_socio_nome String?
-  representante_legal_socio_cpf  String?
-  representante_legal_socio_rg   String?
-  // Quando o vendedor não preenche "Representante da venda": true = usar Sócio no contrato; false = usar Representante Legal
-  contrato_usar_socio_quando_vazio Boolean? @default(true)
   representante_estado_civil  String?
   // % de perda padrão para cálculo de desperdício (Material Comprado - Usado - Retalhos = Perda Real)
   perda_padrao_percentual     Decimal? @db.Decimal(5, 2)
@@ -1980,66 +1857,6 @@ model clausulas_modelos {
   @@unique([tipo, modulo_key])
   @@index([tipo, ordem])
   @@map("clausulas_modelos")
-}
-
-enum SearchStrategy {
-  MIN_PRICE
-  AVG_PRICE
-  MAX_PRICE
-}
-
-model GlobalConfig {
-  id              Int            @id @default(autoincrement())
-  key             String         @unique @db.VarChar(80)
-  search_strategy SearchStrategy @default(AVG_PRICE)
-  criado_em       DateTime       @default(now())
-  atualizado_em   DateTime       @updatedAt
-
-  @@map("global_config")
-}
-
-model OperationalMatrix {
-  id    Int    @id @default(autoincrement())
-
-  category  String @db.VarChar(100)
-  thickness Int
-  group     String @db.VarChar(200)
-
-  min_cost_base Float
-  avg_cost_base Float
-  max_cost_base Float
-
-  mdf_extra_pct Float @default(0)
-  fix_insumo_value Float
-
-  criado_em     DateTime @default(now())
-  atualizado_em DateTime @updatedAt
-
-  @@unique([category, thickness, group])
-  @@map("operational_matrix")
-}
-
-model ConfiguracoesPreco {
-  id Int @id @default(autoincrement())
-
-  categoria_comercial String @unique @db.VarChar(40)
-
-  mdf_min_value     Float @default(0)
-  mdf_avg_value     Float @default(0)
-  mdf_max_value     Float @default(0)
-  fita_value        Float @default(0)
-  insumo_value      Float @default(0)
-  rh_despesas_value Float @default(0)
-  final_min_value   Float @default(0)
-  final_avg_value   Float @default(0)
-  final_max_value   Float @default(0)
-
-  origem String @default("MATRIZ_OPERACIONAL") @db.VarChar(60)
-
-  criado_em   DateTime @default(now())
-  atualizado_em DateTime @updatedAt
-
-  @@map("configuracoes_preco")
 }
 
 enum PontoTipoRegistro {
@@ -2210,4 +2027,51 @@ model arquivos {
   @@index([owner_type, owner_id])
   @@index([owner_type, owner_id, categoria])
   @@map("arquivos")
+}
+
+// ---------- Garantias / Assistências Técnicas ----------
+model garantias {
+  id Int @id @default(autoincrement())
+
+  cliente_id Int
+  cliente    Cliente @relation(fields: [cliente_id], references: [id], onDelete: Cascade)
+
+  venda_id Int?
+  venda    vendas? @relation(fields: [venda_id], references: [id], onDelete: SetNull)
+
+  funcionario_responsavel_id Int?
+  funcionario_responsavel    funcionarios? @relation("GarantiaFuncionario", fields: [funcionario_responsavel_id], references: [id], onDelete: SetNull)
+
+  tipo      String @default("GARANTIA") // GARANTIA | ASSISTENCIA
+  titulo    String
+  descricao String? @db.Text
+  processo  String? @db.Text // Descrição do processo / serviço a ser realizado
+
+  horas_previstas Decimal? @db.Decimal(8, 2)
+  custo_produtos Decimal @default(0.00) @db.Decimal(10, 2)
+  custo_mao_obra_previsto Decimal @default(0.00) @db.Decimal(10, 2)
+  custo_fabrica_previsto Decimal @default(0.00) @db.Decimal(10, 2)
+
+  custo       Decimal @default(0.00) @db.Decimal(10, 2)
+  valor_venda Decimal @default(0.00) @db.Decimal(10, 2)
+
+  status String @default("PENDENTE") // PENDENTE | AGENDADA | EM_ANDAMENTO | CONCLUIDA | CANCELADA
+
+  data_abertura   DateTime @default(now())
+  data_previsao   DateTime?
+  data_conclusao  DateTime?
+
+  observacoes String? @db.Text
+
+  agendamentos agenda_loja[]
+
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  @@index([cliente_id])
+  @@index([venda_id])
+  @@index([funcionario_responsavel_id])
+  @@index([status])
+  @@index([tipo])
+  @@map("garantias")
 }

@@ -8,6 +8,7 @@ import {
   Put,
   Query,
   Req,
+  Res,
   HttpCode,
   HttpStatus,
   UseGuards,
@@ -15,6 +16,7 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { FinanceiroService } from './financeiro.service';
 import { FecharMesDto } from './dto/fechar-mes.dto';
 import { FecharMesFuncionarioDto } from './dto/fechar-mes-funcionario.dto';
@@ -51,6 +53,43 @@ export class ContasPagarController {
       mes: Number.isFinite(mesNum) ? mesNum : undefined,
       ano: Number.isFinite(anoNum) ? anoNum : undefined,
     });
+  }
+
+  // ✅ TODAS AS ABAS DE UMA VEZ — reduz 5 requisições para 1
+  @Get('todas-abas')
+  @Permissoes('contas_pagar.ver')
+  async todasAbas(
+    @Query('data_ini') data_ini?: string,
+    @Query('data_fim') data_fim?: string,
+    @Query('fornecedor_id') fornecedor_id?: string,
+    @Query('funcionario_id') funcionario_id?: string,
+    @Query('mes') mes?: string,
+    @Query('ano') ano?: string,
+  ) {
+    try {
+      await this.service.atualizarVencidos();
+    } catch (err) {
+      this.logger.warn('atualizarVencidos falhou (todas-abas continua):', err?.message || err);
+    }
+
+    const params = {
+      data_ini: data_ini?.trim() || undefined,
+      data_fim: data_fim?.trim() || undefined,
+      fornecedor_id: fornecedor_id ? this.cleanIdOrFail(fornecedor_id) : undefined,
+      funcionario_id: funcionario_id ? this.cleanIdOrFail(funcionario_id) : undefined,
+      mes: mes ? Number(mes) : undefined,
+      ano: ano ? Number(ano) : undefined,
+    };
+
+    const [unificado, paraFechar, compensados, agendados, pagos] = await Promise.all([
+      this.service.listarContasPagarConsolidado(params),
+      this.service.listarContasPagarPorAba({ ...params, visao: 'PARA_FECHAR' }),
+      this.service.listarContasPagarPorAba({ ...params, visao: 'COMPENSADOS' }),
+      this.service.listarContasPagarPorAba({ ...params, visao: 'AGENDADOS' }),
+      this.service.listarContasPagarPorAba({ ...params, visao: 'PAGOS' }),
+    ]);
+
+    return { unificado, paraFechar, compensados, agendados, pagos };
   }
 
   // ✅ LISTA POR ABA (Para Fechar | Agendados | Pagos) ou consolidada unificada
@@ -198,6 +237,56 @@ export class ContasPagarController {
         msg || 'Erro ao fechar mês do funcionário. Verifique os logs do servidor.',
       );
     }
+  }
+
+  // ✅ RELATÓRIO CONTAS A PAGAR — dados agregados
+  @Get('relatorio')
+  @Permissoes('contas_pagar.ver')
+  async relatorio(
+    @Query('mes') mes?: string,
+    @Query('ano') ano?: string,
+    @Query('fornecedor_id') fornecedor_id?: string,
+    @Query('forma_pagamento') forma_pagamento?: string,
+    @Query('status') status?: string,
+  ) {
+    return this.service.gerarRelatorioContasPagar({
+      mes: mes ? Number(mes) : undefined,
+      ano: ano ? Number(ano) : undefined,
+      fornecedor_id: fornecedor_id ? this.cleanIdOrFail(fornecedor_id) : undefined,
+      forma_pagamento: forma_pagamento?.trim() || undefined,
+      status: status?.trim() || undefined,
+    });
+  }
+
+  // ✅ RELATÓRIO CONTAS A PAGAR — PDF
+  @Get('relatorio/pdf')
+  @Permissoes('contas_pagar.ver')
+  async relatorioPdf(
+    @Query('mes') mes?: string,
+    @Query('ano') ano?: string,
+    @Query('fornecedor_id') fornecedor_id?: string,
+    @Query('forma_pagamento') forma_pagamento?: string,
+    @Query('status') status?: string,
+    @Res() res?: Response,
+  ) {
+    const buffer = await this.service.gerarRelatorioContasPagarPdf({
+      mes: mes ? Number(mes) : undefined,
+      ano: ano ? Number(ano) : undefined,
+      fornecedor_id: fornecedor_id ? this.cleanIdOrFail(fornecedor_id) : undefined,
+      forma_pagamento: forma_pagamento?.trim() || undefined,
+      status: status?.trim() || undefined,
+    });
+
+    const mesStr = mes || String(new Date().getMonth() + 1);
+    const anoStr = ano || String(new Date().getFullYear());
+    const filename = `relatorio-contas-pagar-${mesStr.padStart(2, '0')}-${anoStr}.pdf`;
+
+    res!.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Content-Length': buffer.length,
+    });
+    res!.end(buffer);
   }
 
   // ✅ Dar baixa em parcela (título) de despesa

@@ -18,6 +18,7 @@ import { CriarFuncionarioDto } from './dto/criar-funcionario.dto';
 import { AtualizarFuncionarioDto } from './dto/atualizar-funcionario.dto';
 import { GerarPdfFuncionariosDto } from './dto/gerar-pdf-funcionarios.dto';
 import { UpsertFuncionarioCustoConstanteDto } from './dto/upsert-funcionario-custo-constante.dto';
+import { AtualizarStatusFuncionarioDto } from './dto/atualizar-status-funcionario.dto';
 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions.guard';
@@ -62,6 +63,65 @@ export class FuncionariosController {
   buscarCustosConstantes(@Param('id') id: string) {
     const cleanId = id.replace(/\D/g, '');
     return this.service.obterConstanteCusto(Number(cleanId));
+  }
+
+  // ─── Impostos ───────────────────────────────────────────────────────────────
+  /**
+   * GET /funcionarios/:id/impostos?dependentes=0&mes=3&ano=2025
+   * Retorna o detalhamento de INSS, IRRF, FGTS e custo para a empresa.
+   */
+  @Get(':id/impostos')
+  @Permissoes('funcionarios.ver')
+  calcularImpostos(
+    @Param('id') id: string,
+    @Query('dependentes') dependentes?: string,
+    @Query('mes') mes?: string,
+    @Query('ano') ano?: string,
+  ) {
+    const cleanId = Number(id.replace(/\D/g, ''));
+    return this.service.calcularImpostos(cleanId, {
+      dependentes: dependentes !== undefined ? Number(dependentes) : undefined,
+      mes: mes !== undefined ? Number(mes) : undefined,
+      ano: ano !== undefined ? Number(ano) : undefined,
+    });
+  }
+
+  // ─── Férias ─────────────────────────────────────────────────────────────────
+  /**
+   * GET /funcionarios/:id/ferias
+   * Retorna todos os períodos aquisitivos, vencidos, em curso e férias proporcionais.
+   */
+  @Get(':id/ferias')
+  @Permissoes('funcionarios.ver')
+  calcularFerias(@Param('id') id: string) {
+    const cleanId = Number(id.replace(/\D/g, ''));
+    return this.service.calcularFerias(cleanId);
+  }
+
+  // ─── Fluxo de status ────────────────────────────────────────────────────────
+  /**
+   * GET /funcionarios/:id/status/transicoes
+   * Lista as transições de status disponíveis para o funcionário.
+   */
+  @Get(':id/status/transicoes')
+  @Permissoes('funcionarios.ver')
+  listarTransicoes(@Param('id') id: string) {
+    const cleanId = Number(id.replace(/\D/g, ''));
+    return this.service.listarTransicoesDisponiveis(cleanId);
+  }
+
+  /**
+   * PUT /funcionarios/:id/status
+   * Aplica uma transição de status com validação de fluxo CLT.
+   */
+  @Put(':id/status')
+  @Permissoes('funcionarios.editar')
+  atualizarStatus(
+    @Param('id') id: string,
+    @Body() dto: AtualizarStatusFuncionarioDto,
+  ) {
+    const cleanId = Number(id.replace(/\D/g, ''));
+    return this.service.atualizarStatusComValidacao(cleanId, dto);
   }
 
   @Post()

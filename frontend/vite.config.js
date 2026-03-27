@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, '')
   const lifecycle = String(process.env.npm_lifecycle_event || '')
   const devPort = Number(env.VITE_PORT || process.env.VITE_PORT || 5173)
-  const apiProxyTarget = String(env.VITE_API_PROXY_TARGET || process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:3001').replace(/\/+$/, '')
+  const apiProxyTarget = String(env.VITE_API_PROXY_TARGET || process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:3000').replace(/\/+$/, '')
   const isTauriBuild =
     Boolean(process.env.TAURI_PLATFORM) ||
     Boolean(process.env.TAURI_ENV_PLATFORM) ||

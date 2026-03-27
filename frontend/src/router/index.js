@@ -25,7 +25,7 @@ async function ensureMe() {
   if (!token) return null
 
   const u = storage.getUser()
-  // ✅ Sempre valida o token no servidor para evitar 401 em menu/orcamentos com token expirado
+  // ✅ Sempre valida o token no servidor para evitar 401 no menu com token expirado
   if (!syncingMe) {
     syncingMe = api.get('/auth/me')
       .then(({ data }) => {

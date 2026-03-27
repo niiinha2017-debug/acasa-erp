@@ -27,43 +27,6 @@
 
         <template v-else-if="projeto">
           <div class="flex flex-wrap gap-2">
-            <Button
-              v-if="projeto.venda_id"
-              type="button"
-              variant="secondary"
-              class="!rounded-xl"
-              @click="router.push(`/vendas/${projeto.venda_id}`)"
-            >
-              <i class="pi pi-shopping-bag mr-2 text-xs" />
-              Venda #{{ projeto.venda_id }}
-            </Button>
-            <Button
-              v-if="projeto.orcamento_id"
-              type="button"
-              variant="secondary"
-              class="!rounded-xl"
-              @click="router.push(`/orcamentos/${projeto.orcamento_id}`)"
-            >
-              <i class="pi pi-file-edit mr-2 text-xs" />
-              Orçamento #{{ projeto.orcamento_id }}
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              class="!rounded-xl"
-              @click="router.push({
-                path: `/medicao-fina/${projetoId}`,
-                query: {
-                  source: 'projeto',
-                  back: `/producao/projeto-tecnico/${projetoId}`,
-                  backLabel: 'Voltar ao projeto técnico',
-                  pageTitle: 'Medição fina',
-                },
-              })"
-            >
-              <i class="pi pi-ruler mr-2 text-xs" />
-              Medição fina
-            </Button>
             <Button type="button" variant="secondary" class="!rounded-xl" @click="arquivosOpen = true">
               <i class="pi pi-folder-open mr-2 text-xs" />
               Arquivos
@@ -71,11 +34,11 @@
           </div>
 
           <p class="text-xs text-text-soft max-w-3xl leading-relaxed">
-            Quem trabalha na fábrica costuma chegar aqui pelo <router-link class="underline font-medium text-text-main" to="/totem-fabrica">Totem Fábrica</router-link>
-            (Iniciar → abre esta tela; depois use <strong>Concluir</strong> no totem para encerrar a tarefa).
-            O avanço da subetapa no fluxo também pode ser feito na
-            <router-link class="underline font-medium text-text-main" to="/agenda-geral">Agenda geral</router-link>.
-            Nesta etapa usamos somente as medidas consolidadas da medição fina para avançar o projeto técnico.
+            O avanço da subetapa no fluxo pode ser feito pela
+            <router-link class="underline font-medium text-text-main" to="/agenda-geral">Agenda geral</router-link>
+            ou pelo
+            <router-link class="underline font-medium text-text-main" to="/totem-fabrica">Totem Fábrica</router-link>.
+            Nesta tela mantemos apenas a visão consolidada do projeto técnico dentro das etapas e subetapas ativas.
           </p>
 
           <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 min-h-[360px]">
@@ -126,70 +89,6 @@
             </div>
           </div>
 
-          <div class="ds-shell-card p-4 space-y-4">
-            <div class="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h3 class="text-sm font-black text-text-main uppercase tracking-wide">Importacao Promob</h3>
-                <p class="text-xs text-text-soft max-w-3xl mt-1">
-                  Importe CSV/XML do Promob para consolidar materiais e custos do projeto tecnico.
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="secondary"
-                class="!rounded-xl"
-                :disabled="importandoPromob"
-                @click="limparImportacaoPromob"
-              >
-                Limpar
-              </Button>
-            </div>
-
-            <div class="flex flex-col md:flex-row md:items-center gap-3">
-              <input
-                ref="inputPromobRef"
-                type="file"
-                accept=".csv,.xml,text/csv,text/xml,application/xml"
-                class="text-xs text-text-soft"
-                :disabled="importandoPromob"
-                @change="onArquivoPromobSelecionado"
-              />
-              <Button
-                type="button"
-                :disabled="!arquivoPromob || importandoPromob"
-                @click="importarPromob"
-              >
-                <i class="pi mr-2 text-xs" :class="importandoPromob ? 'pi-spin pi-spinner' : 'pi-upload'" />
-                {{ importandoPromob ? 'Importando...' : 'Importar arquivo' }}
-              </Button>
-            </div>
-
-            <p v-if="arquivoPromob" class="text-xs text-text-soft">
-              Arquivo selecionado: <strong class="text-text-main">{{ arquivoPromob.name }}</strong>
-            </p>
-            <p v-if="erroImportacaoPromob" class="text-xs text-red-600 dark:text-red-400">
-              {{ erroImportacaoPromob }}
-            </p>
-
-            <div v-if="resumoImportacaoPromob" class="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div class="rounded-xl border border-border-ui p-3">
-                <p class="text-[10px] uppercase tracking-wider text-text-soft font-black">Itens</p>
-                <p class="text-base font-black text-text-main">{{ resumoImportacaoPromob.itens }}</p>
-              </div>
-              <div class="rounded-xl border border-border-ui p-3">
-                <p class="text-[10px] uppercase tracking-wider text-text-soft font-black">Pendentes</p>
-                <p class="text-base font-black text-text-main">{{ resumoImportacaoPromob.pendentes }}</p>
-              </div>
-              <div class="rounded-xl border border-border-ui p-3">
-                <p class="text-[10px] uppercase tracking-wider text-text-soft font-black">Custo total</p>
-                <p class="text-base font-black text-text-main">{{ resumoImportacaoPromob.custoTotal }}</p>
-              </div>
-              <div class="rounded-xl border border-border-ui p-3">
-                <p class="text-[10px] uppercase tracking-wider text-text-soft font-black">Venda total</p>
-                <p class="text-base font-black text-text-main">{{ resumoImportacaoPromob.vendaTotal }}</p>
-              </div>
-            </div>
-          </div>
         </template>
       </div>
 
@@ -208,7 +107,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { MedicaoFinaService, OrcamentoTecnicoService } from '@/services'
+import { MedicaoFinaService } from '@/services'
 import { can } from '@/services/permissions'
 import Button from '@/components/ui/Button.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
@@ -231,16 +130,11 @@ const loading = ref(true)
 const erro = ref('')
 const projeto = ref(null)
 const arquivosOpen = ref(false)
-const inputPromobRef = ref(null)
-const arquivoPromob = ref(null)
-const importandoPromob = ref(false)
-const erroImportacaoPromob = ref('')
-const resumoImportacaoPromob = ref(null)
 const loadingMedidas = ref(false)
 const erroMedidas = ref('')
 const medicoesResumo = ref([])
 
-const backTo = computed(() => String(route.query?.back || '').trim() || '/producao/projeto-tecnico')
+const backTo = computed(() => String(route.query?.back || '').trim() || '/agenda-geral')
 const backLabel = computed(() => String(route.query?.backLabel || '').trim() || 'Voltar')
 
 const clienteNome = computed(() => {
@@ -272,57 +166,6 @@ const arquivosOwnerType = computed(() => arquivosOwner.value.type)
 const arquivosOwnerId = computed(() => arquivosOwner.value.id)
 
 const canManageArquivos = computed(() => can('arquivos.criar'))
-
-function formatarMoeda(valor) {
-  const numero = Number(valor || 0)
-  if (!Number.isFinite(numero)) return 'R$ 0,00'
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(numero)
-}
-
-function normalizarResumoImportacao(payload) {
-  const data = payload?.data ?? payload ?? {}
-  const itens = Array.isArray(data?.itens) ? data.itens : []
-  const pendentes = Array.isArray(data?.itens_pendentes) ? data.itens_pendentes : []
-  const custoTotal = data?.totais?.custo_total ?? data?.custo_total ?? 0
-  const vendaTotal = data?.totais?.valor_venda_total ?? data?.valor_venda_total ?? 0
-  return {
-    itens: itens.length || Number(data?.total_itens || 0),
-    pendentes: pendentes.length || Number(data?.total_pendentes || 0),
-    custoTotal: formatarMoeda(custoTotal),
-    vendaTotal: formatarMoeda(vendaTotal),
-  }
-}
-
-function onArquivoPromobSelecionado(event) {
-  erroImportacaoPromob.value = ''
-  resumoImportacaoPromob.value = null
-  const files = event?.target?.files
-  arquivoPromob.value = files && files[0] ? files[0] : null
-}
-
-function limparImportacaoPromob() {
-  arquivoPromob.value = null
-  erroImportacaoPromob.value = ''
-  resumoImportacaoPromob.value = null
-  if (inputPromobRef.value) inputPromobRef.value.value = ''
-}
-
-async function importarPromob() {
-  if (!arquivoPromob.value || importandoPromob.value) return
-  erroImportacaoPromob.value = ''
-  importandoPromob.value = true
-  try {
-    const formData = new FormData()
-    formData.append('arquivo', arquivoPromob.value)
-    if (projetoId.value) formData.append('projeto_id', String(projetoId.value))
-    const res = await OrcamentoTecnicoService.importarProjeto(formData)
-    resumoImportacaoPromob.value = normalizarResumoImportacao(res)
-  } catch (e) {
-    erroImportacaoPromob.value = e?.response?.data?.message || 'Nao foi possivel importar o arquivo do Promob.'
-  } finally {
-    importandoPromob.value = false
-  }
-}
 
 function extrairResumoAmbiente(medicao) {
   const largura = medicao?.largura_cm
