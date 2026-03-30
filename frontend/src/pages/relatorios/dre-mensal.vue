@@ -69,6 +69,12 @@
                   {{ formatarMoeda(dre.cpvMateriais) }}
                 </td>
               </tr>
+              <tr class="border-b border-border-ui">
+                <td class="py-3 px-4 text-text-muted">(−) Custo de Veículos / Rotas</td>
+                <td class="py-3 px-4 text-right tabular-nums text-text-muted">
+                  {{ formatarMoeda(dre.custoVeiculos) }}
+                </td>
+              </tr>
               <tr class="border-b border-border-ui bg-slate-50/50 dark:bg-slate-800/30">
                 <td class="py-3 px-4 font-medium text-text-main">Margem de Contribuição</td>
                 <td class="py-3 px-4 text-right tabular-nums font-semibold text-text-main">
@@ -145,6 +151,7 @@ const dre = ref({
   receitaBruta: 0,
   impostos: 0,
   cpvMateriais: 0,
+  custoVeiculos: 0,
   cpvTotal: 0,
   despesasFixasSalarios: 0,
   despesasFixasOutras: 0,
@@ -167,6 +174,7 @@ async function carregar() {
       receitaBruta: data.receitaBruta ?? 0,
       impostos: data.impostos ?? 0,
       cpvMateriais: data.cpvMateriais ?? 0,
+      custoVeiculos: data.custoVeiculos ?? 0,
       cpvTotal: data.cpvTotal ?? 0,
       despesasFixasSalarios: data.despesasFixasSalarios ?? 0,
       despesasFixasOutras: data.despesasFixasOutras ?? 0,
@@ -181,6 +189,7 @@ async function carregar() {
       receitaBruta: 0,
       impostos: 0,
       cpvMateriais: 0,
+      custoVeiculos: 0,
       cpvTotal: 0,
       despesasFixasSalarios: 0,
       despesasFixasOutras: 0,

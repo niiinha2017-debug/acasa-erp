@@ -3,8 +3,8 @@
     <section class="sobras-index ds-page-context ds-page-context--list animate-page-in">
 
       <PageHeader
-        title="Estoque de Sobras"
-        subtitle="Controle de retalhos e sobras de material"
+        title="Controle de Estoque"
+        subtitle="Contagem e reaproveitamento de sobras e retalhos"
         icon="pi pi-box"
       >
         <template #actions>
@@ -13,18 +13,9 @@
               <SearchInput
                 v-model="filtro"
                 mode="search"
-                placeholder="Buscar por material, cor ou dimensão..."
+                placeholder="Buscar por material, cor, dimensão ou status..."
               />
             </div>
-            <SearchInput
-              v-model="filtroStatus"
-              mode="select"
-              variant="line"
-              hide-search-icon
-              class="w-40"
-              :options="statusFilterOptions"
-              placeholder="Status"
-            />
             <Button
               v-if="can('produtos.criar')"
               variant="primary"
@@ -32,22 +23,21 @@
               @click="abrirNovaSobra"
             >
               <i class="pi pi-plus mr-2"></i>
-              Nova Sobra
+              Lançar Sobra
             </Button>
           </div>
         </template>
       </PageHeader>
 
       <div class="sobras-index__body ds-page-context__content">
-        <div class="sobras-index__table-wrap">
-          <Table
-            :columns="columns"
-            :rows="rows"
-            :loading="loading"
-            :empty-text="'Nenhuma sobra encontrada.'"
-            :boxed="false"
-            :flush="false"
-          >
+        <Table
+          :columns="columns"
+          :rows="rows"
+          :loading="loading"
+          :empty-text="'Nenhuma sobra encontrada.'"
+          :boxed="false"
+          :flush="false"
+        >
             <template #cell-material="{ row }">
               <div class="flex items-center gap-3 py-1 min-w-0">
                 <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-text-muted text-xs bg-slate-100 dark:bg-slate-700/50 border border-border-ui overflow-hidden shrink-0">
@@ -115,8 +105,7 @@
                 />
               </div>
             </template>
-          </Table>
-        </div>
+        </Table>
       </div>
     </section>
   </PageShell>
@@ -136,13 +125,6 @@ const sobras = ref([])
 const loading = ref(false)
 const router = useRouter()
 const filtro = ref('')
-const filtroStatus = ref('')
-
-const statusFilterOptions = [
-  { label: 'Todos', value: '' },
-  { label: 'Disponível', value: 'DISPONIVEL' },
-  { label: 'Reservado', value: 'RESERVADO' },
-]
 
 function abrirNovaSobra() {
   router.push('/estoque-retalho/novo')
@@ -169,16 +151,19 @@ function normalizarBusca(valor) {
 }
 
 const filtrados = computed(() => {
-  let lista = sobras.value || []
-  if (filtroStatus.value) {
-    lista = lista.filter((s) => s.status === filtroStatus.value)
-  }
   const busca = normalizarBusca(filtro.value)
-  if (!busca) return lista
+  if (!busca) return sobras.value || []
   const termos = busca.split(' ').filter(Boolean)
-  return lista.filter((s) => {
+  return (sobras.value || []).filter((s) => {
     const alvo = normalizarBusca(
-      [s.produto?.nome_produto, s.produto?.cor, s.produto?.medida, `${s.largura_mm}`, `${s.comprimento_mm}`]
+      [
+        s.produto?.nome_produto,
+        s.produto?.cor,
+        s.produto?.medida,
+        s.status === 'DISPONIVEL' ? 'Disponivel' : s.status === 'RESERVADO' ? 'Reservado' : s.status,
+        `${s.largura_mm}`,
+        `${s.comprimento_mm}`,
+      ]
         .filter(Boolean)
         .join(' '),
     )
@@ -256,11 +241,6 @@ onMounted(async () => {
 .sobras-index__body {
   padding-top: 0.2rem;
   padding-bottom: 1.5rem;
-}
-
-.sobras-index__table-wrap {
-  width: 100%;
-  overflow: hidden;
 }
 
 .sobras-index :deep(.ds-table__element) {

@@ -154,15 +154,19 @@ export class PontoRelatorioService {
     };
   }
 
-  /** Meta diária para uma data (0=Dom, 1-5=Seg-Sex, 6=Sáb). Sábado = 0 meta: toda hora no sábado contabiliza como hora extra. */
+  /** Meta diária para uma data (0=Dom, 1-5=Seg-Sex, 6=Sáb). No sábado, usa carga cadastrada quando houver. */
   private metaDiaParaData(dataStr: string, funcionario: any): number {
     const d = new Date(dataStr + 'T12:00:00').getDay();
     if (d === 0) return 0;
-    if (d === 6) return 0; // Sábado: meta zero, tudo que passar do cadastro (ou qualquer batida) = hora extra
 
     const cargaDia = Number(funcionario?.carga_horaria_dia || 0);
     const cargaSemana = Number(funcionario?.carga_horaria_semana || 0);
     const derivado = this.derivarCargaDosHorarios(funcionario);
+
+    if (d === 6) {
+      if (derivado.cargaSabado > 0) return derivado.cargaSabado;
+      return 0;
+    }
 
     if (derivado.cargaSegSex > 0 || derivado.cargaSabado > 0) {
       return derivado.cargaSegSex;
@@ -174,7 +178,6 @@ export class PontoRelatorioService {
 
   /**
    * Meta diária legal para fechamento: 44h/5 em Seg-Sex, 0 em sábado e feriados.
-   * Usado para que apenas o que exceder 44h/semana seja HE 50%; a diferença 44h - carga contratada vai para banco.
    */
   private metaDiaLegalParaFechamento(
     dataStr: string,
@@ -182,7 +185,8 @@ export class PontoRelatorioService {
   ): number {
     if (feriadosSemMeta.has(dataStr)) return 0;
     const d = new Date(dataStr + 'T12:00:00').getDay();
-    if (d === 0 || d === 6) return 0; // Dom e Sáb: meta zero (sábado = HE ou folga, sem desconto de falta)
+    if (d === 0) return 0;
+    if (d === 6) return 0;
     return JORNADA_LEGAL_DIARIA_HORAS;
   }
 
@@ -516,23 +520,49 @@ export class PontoRelatorioService {
       }
 
       let horasTrabalhadas = 0;
-      let metaTotal = 0;
-      let horasExtras = 0;
-      // Cálculo por dia: meta legal 44h/semana (8,8h Seg-Sex), tolerância até 1,5 min → banco de horas (não HE)
+      let metaLegalTotal = 0;
+      let metaContratadaTotal = 0;
+
+      // Cálculo por dia: acumula meta legal (44h) e meta contratada (cadastro do funcionário).
+      // Regra de pagamento: primeiro cobre diferença para 44h (hora obrigatória), depois vira HE 50%.
       for (const [key, arr] of porDiaF) {
         const hDia = this.calcularHorasTrabalhadasDia(arr);
         horasTrabalhadas += hDia;
-        const metaDia = this.metaDiaLegalParaFechamento(key, feriadosSemMeta);
-        metaTotal += metaDia;
-        const saldoDia = hDia - metaDia;
-        // Excedente até 1,5 min vai para banco de horas; só acima disso é HE remunerada (50%)
-        const heDia =
-          saldoDia > TOLERANCIA_BANCO_HORAS
-            ? saldoDia - TOLERANCIA_BANCO_HORAS
-            : 0;
-        horasExtras += heDia;
+
+        const metaLegalDia = this.metaDiaLegalParaFechamento(
+          key,
+          feriadosSemMeta,
+        );
+        metaLegalTotal += metaLegalDia;
+
+        const metaContratadaDia = feriadosSemMeta.has(key)
+          ? 0
+          : this.metaDiaParaData(key, f);
+        metaContratadaTotal += metaContratadaDia;
       }
-      const saldo = horasTrabalhadas - metaTotal;
+
+      const diferencaObrigatoria44 = Math.max(
+        0,
+        metaLegalTotal - metaContratadaTotal,
+      );
+      const excedenteSobreContratada = Math.max(
+        0,
+        horasTrabalhadas - metaContratadaTotal,
+      );
+      const horasObrigatorias = Math.min(
+        excedenteSobreContratada,
+        diferencaObrigatoria44,
+      );
+      const horasExtrasBrutas = Math.max(
+        0,
+        excedenteSobreContratada - diferencaObrigatoria44,
+      );
+      const horasExtras =
+        horasExtrasBrutas > TOLERANCIA_BANCO_HORAS
+          ? horasExtrasBrutas - TOLERANCIA_BANCO_HORAS
+          : 0;
+
+      const saldo = horasTrabalhadas - metaLegalTotal;
       const saldoDevedorHoras = saldo < 0 ? Math.abs(saldo) : 0;
 
       const custoHora = Number(f.custo_hora || 0) || 0;
@@ -558,6 +588,8 @@ export class PontoRelatorioService {
         nome: f.nome || '',
         sem_carga: false,
         horas_trabalhadas: Math.round(horasTrabalhadas * 100) / 100,
+        horas_obrigatorias: Math.round(horasObrigatorias * 100) / 100,
+        diferenca_obrigatoria_44h: Math.round(diferencaObrigatoria44 * 100) / 100,
         horas_extras: Math.round(horasExtras * 100) / 100,
         saldo_devedor_horas: Math.round(saldoDevedorHoras * 100) / 100,
         custo_hora: custoHora,
@@ -570,6 +602,8 @@ export class PontoRelatorioService {
         salario_contratado: Math.round(salarioContratado * 100) / 100,
         salario_apurado: Math.round(salarioApurado * 100) / 100,
         horas_trabalhadas_hhmm: hToHHMM(horasTrabalhadas),
+        horas_obrigatorias_hhmm: hToHHMM(horasObrigatorias),
+        diferenca_obrigatoria_44h_hhmm: hToHHMM(diferencaObrigatoria44),
         horas_extras_hhmm: hToHHMM(horasExtras),
         saldo_devedor_hhmm: hToHHMM(saldoDevedorHoras),
       };
@@ -580,6 +614,8 @@ export class PontoRelatorioService {
       nome: f.nome || '',
       sem_carga: true,
       horas_trabalhadas: 0,
+      horas_obrigatorias: 0,
+      diferenca_obrigatoria_44h: 0,
       horas_extras: 0,
       saldo_devedor_horas: 0,
       custo_hora: Number(f.custo_hora || 0) || 0,
@@ -592,6 +628,8 @@ export class PontoRelatorioService {
       salario_contratado: 0,
       salario_apurado: 0,
       horas_trabalhadas_hhmm: '00:00',
+      horas_obrigatorias_hhmm: '00:00',
+      diferenca_obrigatoria_44h_hhmm: '00:00',
       horas_extras_hhmm: '00:00',
       saldo_devedor_hhmm: '00:00',
     }));

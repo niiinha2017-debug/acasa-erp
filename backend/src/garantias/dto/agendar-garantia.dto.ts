@@ -1,10 +1,10 @@
 import { Type } from 'class-transformer';
 import {
-  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsArray,
+  IsNumber,
 } from 'class-validator';
 
 export class AgendarGarantiaDto {
@@ -23,6 +23,20 @@ export class AgendarGarantiaDto {
   @IsOptional()
   @IsArray()
   funcionario_ids?: number[];
+
+  @IsOptional()
+  @IsArray()
+  automovel_ids?: number[];
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  km_ida_prevista?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  km_volta_prevista?: number;
 
   @IsOptional()
   @IsString()

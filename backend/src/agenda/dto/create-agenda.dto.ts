@@ -88,6 +88,12 @@ export class CreateAgendaDto {
   @IsInt({ each: true })
   equipe_ids?: number[];
 
+  /** Veículos planejados para o agendamento da agenda loja (permite múltiplos). */
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  automovel_ids?: number[];
+
   @IsOptional()
   @IsString()
   subetapa?: string;

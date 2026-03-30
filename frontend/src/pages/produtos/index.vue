@@ -3,8 +3,8 @@
     <section class="produtos-index ds-page-context ds-page-context--list animate-page-in">
 
       <PageHeader
-        title="Insumos e Materiais"
-        subtitle="Catálogo de materiais e controle de insumos"
+        title="Cadastro de Produtos"
+        subtitle="Itens comprados para uso, consumo e vinculação operacional"
         icon="pi pi-box"
       >
         <template #actions>
@@ -23,7 +23,7 @@
               @click="abrirNovoProduto"
             >
               <i class="pi pi-plus mr-2"></i>
-              Novo Produto
+              Cadastrar Produto
             </Button>
           </div>
         </template>

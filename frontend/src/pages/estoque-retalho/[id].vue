@@ -2,8 +2,8 @@
   <PageShell :padded="false">
     <section class="login-font sobra-editor ds-page-context ds-page-context--editor animate-page-in">
       <PageHeader
-        :title="isEdit ? `Editar Sobra #${sobraId}` : 'Nova Sobra'"
-        subtitle="Cadastro de retalhos e sobras de material"
+        :title="isEdit ? `Editar Sobra #${sobraId}` : 'Lançar Sobra no Estoque'"
+        subtitle="Registro de sobra reaproveitável para contagem e controle de estoque"
         icon="pi pi-box"
       />
 

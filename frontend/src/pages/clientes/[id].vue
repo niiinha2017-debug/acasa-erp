@@ -353,7 +353,7 @@
                 <p class="cliente-files__hint text-[11px] text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
                   O sistema pode <strong class="text-slate-600 dark:text-slate-300">ler o texto</strong> de PDF e Word (orçamento, contrato) e montar
                   <strong class="text-slate-600 dark:text-slate-300">financeiro + produção</strong>.
-                  Arquivos Promob (.promob), backup (.bak) e imagens não têm texto extraível aqui — use PDF/DOCX ou descreva manualmente no fluxo.
+                  Arquivos de backup, modelos proprietários e imagens não têm texto extraível aqui — use PDF/DOCX ou descreva manualmente no fluxo.
                 </p>
               </div>
               <div class="cliente-files__header-actions flex flex-wrap items-center justify-end gap-2 shrink-0">

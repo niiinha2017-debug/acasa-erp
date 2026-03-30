@@ -776,6 +776,11 @@ export class ApontamentoProducaoService {
       include: {
         cliente: { select: { id: true, nome_completo: true, razao_social: true } },
         criado_por_usuario: { select: { id: true, nome: true } },
+        automoveis_planejados: {
+          include: {
+            automovel: { select: { id: true, placa: true, descricao: true, custo_km: true, status: true } },
+          },
+        },
         equipe: { include: { funcionario: { select: { id: true, nome: true, custo_hora: true } } } },
         apontamentos_producao: {
           orderBy: { inicio_em: 'asc' },
@@ -872,6 +877,7 @@ export class ApontamentoProducaoService {
       cliente: { id: number; nome_completo: string | null; razao_social: string | null } | null;
       criado_por_usuario: { id: number; nome: string | null } | null;
       equipe: unknown[];
+      automoveis_planejados: Array<{ id: number; placa: string; descricao: string | null; custo_km: unknown; status: string }>;
       apontamentos_producao: unknown[];
       funcionarios_etapa: Array<{ id: number | null; nome: string }>;
     };
@@ -916,6 +922,13 @@ export class ApontamentoProducaoService {
       cliente: t.cliente,
       criado_por_usuario: t.criado_por_usuario,
       equipe: t.equipe,
+      automoveis_planejados: (t.automoveis_planejados || []).map((r: any) => ({
+        id: r.automovel?.id,
+        placa: r.automovel?.placa,
+        descricao: r.automovel?.descricao ?? null,
+        custo_km: r.automovel?.custo_km ?? null,
+        status: r.automovel?.status ?? 'ATIVO',
+      })).filter((a: any) => a?.id),
       apontamentos_producao: t.apontamentos_producao,
       funcionarios_etapa: this.buildFuncionariosTotem(t),
     }));
@@ -945,6 +958,7 @@ export class ApontamentoProducaoService {
         cliente: t.cliente,
         criado_por_usuario: t.criado_por_usuario,
         equipe: t.equipe,
+        automoveis_planejados: [],
         apontamentos_producao: t.apontamentos_producao,
         funcionarios_etapa: this.buildFuncionariosTotem(t),
       };
@@ -966,6 +980,11 @@ export class ApontamentoProducaoService {
         include: {
           cliente: { select: { id: true, nome_completo: true, razao_social: true } },
           criado_por_usuario: { select: { id: true, nome: true } },
+          automoveis_planejados: {
+            include: {
+              automovel: { select: { id: true, placa: true, descricao: true, custo_km: true, status: true } },
+            },
+          },
           equipe: { include: { funcionario: { select: { id: true, nome: true, custo_hora: true } } } },
           apontamentos_producao: {
             orderBy: { inicio_em: 'asc' },
@@ -992,6 +1011,13 @@ export class ApontamentoProducaoService {
         cliente: t.cliente,
         criado_por_usuario: t.criado_por_usuario,
         equipe: t.equipe,
+        automoveis_planejados: (t.automoveis_planejados || []).map((r: any) => ({
+          id: r.automovel?.id,
+          placa: r.automovel?.placa,
+          descricao: r.automovel?.descricao ?? null,
+          custo_km: r.automovel?.custo_km ?? null,
+          status: r.automovel?.status ?? 'ATIVO',
+        })).filter((a: any) => a?.id),
         apontamentos_producao: t.apontamentos_producao,
         funcionarios_etapa: this.buildFuncionariosTotem(t),
       };
@@ -1041,6 +1067,7 @@ export class ApontamentoProducaoService {
       cliente: t.cliente,
       criado_por_usuario: t.criado_por_usuario,
       equipe: t.equipe,
+      automoveis_planejados: [],
       apontamentos_producao: t.apontamentos_producao,
       funcionarios_etapa: this.buildFuncionariosTotem(t),
     };

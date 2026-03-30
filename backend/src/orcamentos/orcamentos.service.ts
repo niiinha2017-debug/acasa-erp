@@ -394,7 +394,7 @@ export class OrcamentosService {
             .font('Helvetica-Bold')
             .fontSize(11)
             .fillColor('#000')
-            .text('RESUMO TECNICO PROMOB', left, doc.y, { width: tableWidth });
+            .text('RESUMO TECNICO', left, doc.y, { width: tableWidth });
           doc.y += 8;
           doc
             .font('Helvetica')

@@ -58,6 +58,11 @@ export class UpdateAgendaDto {
   equipe_ids?: number[];
 
   @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  automovel_ids?: number[];
+
+  @IsOptional()
   @IsString()
   subetapa?: string;
 

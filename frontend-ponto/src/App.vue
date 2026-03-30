@@ -61,6 +61,9 @@
               <span class="text-4xl font-black text-white uppercase tracking-wider">{{ proximoStatus }}</span>
             </template>
           </button>
+          <p v-if="gpsStatus" class="text-center text-[10px] font-bold text-slate-500 -mt-2">
+            {{ gpsStatus }}
+          </p>
 
           <div v-if="registrosHojeOrdenados.length" class="space-y-3">
             <p class="text-[9px] font-black text-[#94a3b8] uppercase tracking-widest">Registros de hoje</p>
@@ -127,6 +130,7 @@ const funcionarioPis = ref('')
 const parearCode = ref('')
 const registrosHoje = ref([])
 const erro = ref('')
+const gpsStatus = ref('')
 const agora = ref(new Date())
 let timerRelogio
 
@@ -392,6 +396,52 @@ async function carregarDados(éRetry = false) {
   }
 }
 
+function obterMensagemErroGps(error) {
+  if (!error) return 'Não foi possível obter sua localização.'
+  if (typeof error === 'string') return error
+  if (error.code === 1) {
+    return 'Permita o acesso à localização para registrar o ponto com GPS.'
+  }
+  if (error.code === 2) {
+    return 'Localização indisponível. Verifique se o GPS do aparelho está ativo.'
+  }
+  if (error.code === 3) {
+    return 'Tempo esgotado ao obter a localização. Tente novamente com o GPS ativo.'
+  }
+  return error.message || 'Não foi possível obter sua localização.'
+}
+
+function obterLocalizacaoAtual() {
+  return new Promise((resolve, reject) => {
+    if (typeof window === 'undefined' || !window.navigator?.geolocation) {
+      reject(new Error('Este dispositivo não suporta geolocalização.'))
+      return
+    }
+
+    window.navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude, accuracy } = position.coords || {}
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+          reject(new Error('Localização inválida retornada pelo dispositivo.'))
+          return
+        }
+
+        resolve({
+          latitude,
+          longitude,
+          precisao_metros: Number.isFinite(accuracy) ? Math.round(accuracy) : null,
+        })
+      },
+      (error) => reject(new Error(obterMensagemErroGps(error))),
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      },
+    )
+  })
+}
+
 async function baterPonto() {
   if (bloqueioTemporario.value || loading.value) return
   const t = getTokenEnviar()
@@ -402,10 +452,22 @@ async function baterPonto() {
   loading.value = true
   erro.value = ""
   try {
-    await PontoService.registrar({ tipo: proximoStatus.value }, t)
+    gpsStatus.value = 'Obtendo localização...'
+    const localizacao = await obterLocalizacaoAtual()
+    gpsStatus.value = localizacao.precisao_metros != null
+      ? `GPS capturado (${localizacao.precisao_metros}m)`
+      : 'GPS capturado'
+    await PontoService.registrar({
+      tipo: proximoStatus.value,
+      latitude: localizacao.latitude,
+      longitude: localizacao.longitude,
+      precisao_metros: localizacao.precisao_metros,
+    }, t)
     await carregarDados()
+    gpsStatus.value = 'Localização enviada com sucesso'
   } catch (e) {
-    erro.value = e.response?.data?.message || "ERRO NO REGISTRO"
+    gpsStatus.value = ''
+    erro.value = e?.response?.data?.message || e?.message || "ERRO NO REGISTRO"
   } finally {
     loading.value = false
   }

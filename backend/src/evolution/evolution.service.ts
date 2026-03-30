@@ -12,6 +12,12 @@ export interface EvolutionConfig {
   instanceName: string;
 }
 
+export interface EvolutionConfigInput {
+  baseUrl?: string;
+  apiKey?: string;
+  instanceName?: string;
+}
+
 export interface CreateInstanceResult {
   instanceName: string;
   instanceId?: string;
@@ -63,6 +69,24 @@ export class EvolutionService {
     return { baseUrl: url, apiKey: key, instanceName: instance };
   }
 
+  private normalizeConfig(config?: EvolutionConfigInput | null): EvolutionConfig | null {
+    const url = (config?.baseUrl || '').trim().replace(/\/$/, '');
+    const key = (config?.apiKey || '').trim();
+    const instance = ((config?.instanceName || 'acasa-erp').trim() || 'acasa-erp').toUpperCase();
+
+    if (!url || !key) return null;
+    return { baseUrl: url, apiKey: key, instanceName: instance };
+  }
+
+  async resolveConfig(overrides?: EvolutionConfigInput | null): Promise<EvolutionConfig | null> {
+    const normalizedOverrides = this.normalizeConfig(overrides);
+    if (normalizedOverrides) {
+      return normalizedOverrides;
+    }
+
+    return this.getConfig();
+  }
+
   private headers(apiKey: string): Record<string, string> {
     return {
       'Content-Type': 'application/json',
@@ -86,8 +110,8 @@ export class EvolutionService {
   /**
    * Testa a conexão com a Evolution API e o estado da instância (para exibir em Configurações).
    */
-  async testConnection(): Promise<{ ok: boolean; message?: string; details?: unknown }> {
-    const c = await this.getConfig();
+  async testConnection(overrides?: EvolutionConfigInput | null): Promise<{ ok: boolean; message?: string; details?: unknown }> {
+    const c = await this.resolveConfig(overrides);
     if (!c) {
       return { ok: false, message: 'Evolution API não configurada. Preencha URL, API Key e Nome da instância em Configurações > Contato.' };
     }
@@ -166,13 +190,11 @@ export class EvolutionService {
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response
         ?.status;
-      const data = (err as { response?: { data?: unknown } })?.response?.data;
-      if (status === 403 && data) {
-        throw new Error(
-          `Evolution API: instância "${name}" já existe ou nome em uso.`,
-        );
+      if (status === 403) {
+        // Instância já existe — apenas busca o QR da instância existente
+      } else {
+        throw err;
       }
-      throw err;
     }
 
     const connect = await this.fetchQrCode(name);

@@ -422,7 +422,7 @@
                   <span class="text-sm font-semibold text-text-main tabular-nums">{{ Number(dre.perda_padrao_percentual).toFixed(1) }}%</span>
                 </div>
                 <div v-if="dre.retalhos_m2 != null && Number(dre.retalhos_m2) > 0" class="flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--ds-color-success-50)] border border-[var(--ds-color-success-200)]">
-                  <span class="text-xs text-text-muted">Retalhos (sobras) no período:</span>
+                  <span class="text-xs text-text-muted">Sobras reaproveitáveis no período:</span>
                   <span class="text-sm font-semibold text-[var(--ds-color-success-700)] tabular-nums">{{ Number(dre.retalhos_m2).toFixed(2) }} m²</span>
                 </div>
                 <div v-if="dre.perda_real_m2 != null && Number(dre.perda_real_m2) > 0" class="flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--ds-color-danger-50)] border border-[var(--ds-color-danger-200)]">
@@ -431,7 +431,7 @@
                 </div>
               </div>
               <p class="text-[10px] text-text-muted mt-2">
-                Consumo estimado = Área peças + Perda padrão. Consumo real = Peças + Retalhos. Perda real = Estimado − Real (alimenta DRE por projeto).
+                Consumo estimado = Área peças + Perda padrão. Consumo real = Peças + Sobras reaproveitáveis. Perda real = Estimado − Real (alimenta DRE por projeto).
               </p>
             </div>
 

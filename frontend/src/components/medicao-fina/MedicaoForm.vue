@@ -93,92 +93,6 @@
       </div>
     </section>
 
-    <!-- Medidas do projeto Promob (conferência) -->
-    <section class="space-y-4">
-      <div class="section-divider ds-section-divider relative">
-        <div class="absolute inset-0 flex items-center">
-          <div class="w-full border-t border-border-ui/50"></div>
-        </div>
-        <div class="relative flex justify-center">
-          <span class="section-title ds-section-title">Medida do projeto Promob (cm)</span>
-        </div>
-      </div>
-      <p class="medicao-form__hint">
-        Valores do projeto no Promob, também em <strong>cm</strong>, para conferir com a medida real.
-      </p>
-      <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <Input
-          variant="line"
-          v-model.number="form.altura_promob_cm"
-          type="number"
-          label="Altura Promob (cm)"
-          placeholder="Ex: 270"
-          min="0"
-          step="0.1"
-        />
-        <Input
-          variant="line"
-          v-model.number="form.largura_promob_cm"
-          type="number"
-          label="Largura Promob (cm)"
-          placeholder="Ex: 240"
-          min="0"
-          step="0.1"
-        />
-        <Input
-          variant="line"
-          v-model.number="form.profundidade_promob_cm"
-          type="number"
-          label="Profundidade Promob (cm)"
-          placeholder="Ex: 150"
-          min="0"
-          step="0.1"
-        />
-      </div>
-    </section>
-
-    <!-- Tabela de Medidas: Medida do Projeto x Medida Real (alerta se diferença > 5mm) -->
-    <section class="space-y-2">
-      <div class="section-divider ds-section-divider relative">
-        <div class="absolute inset-0 flex items-center">
-          <div class="w-full border-t border-border-ui/50"></div>
-        </div>
-        <div class="relative flex justify-center">
-          <span class="section-title ds-section-title">Tabela de medidas</span>
-        </div>
-      </div>
-      <p class="medicao-form__hint">
-        Informe a <strong>Medida Real</strong> (obra) ao lado da <strong>Medida do Projeto</strong>. Diferença &gt; 5 mm destaca em vermelho.
-      </p>
-      <div class="medicao-form__table-shell">
-        <table class="medicao-form__table">
-          <thead class="medicao-form__table-head">
-            <tr>
-              <th class="medicao-form__th medicao-form__th--left">Dimensão</th>
-              <th class="medicao-form__th">Medida do Projeto</th>
-              <th class="medicao-form__th">Medida Real</th>
-              <th class="medicao-form__th">Δ (cm)</th>
-            </tr>
-          </thead>
-          <tbody class="medicao-form__table-body">
-            <tr
-              v-for="row in linhasConferencia"
-              :key="row.key"
-              :class="row.alerta ? 'medicao-form__tr--danger' : ''"
-            >
-              <td class="medicao-form__td medicao-form__td--left">{{ row.label }}</td>
-              <td class="medicao-form__td">{{ formatCm(row.promob) }}</td>
-              <td class="medicao-form__td">{{ formatCm(row.real) }}</td>
-              <td class="medicao-form__td medicao-form__td--bold" :class="row.alerta ? 'medicao-form__td--danger' : ''">
-                {{ formatCm(row.diff) }}
-                <span v-if="row.alerta" class="medicao-form__td-alert"> &gt; 5mm</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
     <!-- Checklist interferências -->
     <section class="space-y-3">
       <div class="section-divider ds-section-divider relative">
@@ -335,7 +249,7 @@
         <div class="medicao-form__gallery-column">
           <div class="medicao-form__gallery-column-head">
             <h3 class="medicao-form__gallery-column-title">Lado B — 3D / Produção</h3>
-            <p class="medicao-form__gallery-column-sub">Print do Promob e fotos do móvel sendo montado</p>
+            <p class="medicao-form__gallery-column-sub">Fotos de montagem e referências visuais do móvel</p>
           </div>
           <div class="medicao-form__gallery-body">
             <template v-for="cat in galeriaLadoB" :key="cat.key">
@@ -408,7 +322,6 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
 import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
 
@@ -428,28 +341,6 @@ const props = defineProps({
 
 defineEmits(['salvar', 'validar-medicao', 'file-select', 'remover-foto'])
 
-const LIMITE_DIFF_CM = 0.5 // 5mm
-
-function formatCm (v) {
-  if (v == null || v === '' || Number.isNaN(v)) return '—'
-  return Number(v).toFixed(2)
-}
-
-const linhasConferencia = computed(() => {
-  const f = props.form || {}
-  const rows = [
-    { key: 'altura', label: 'Altura', promob: f.altura_promob_cm, real: f.altura_cm },
-    { key: 'largura', label: 'Largura', promob: f.largura_promob_cm, real: f.largura_cm },
-    { key: 'profundidade', label: 'Profundidade', promob: f.profundidade_promob_cm, real: f.profundidade_cm },
-  ]
-  return rows.map((r) => {
-    const promob = r.promob != null && !Number.isNaN(Number(r.promob)) ? Number(r.promob) : null
-    const real = r.real != null && !Number.isNaN(Number(r.real)) ? Number(r.real) : null
-    const diff = (promob != null && real != null) ? Math.abs(real - promob) : null
-    const alerta = diff != null && diff > LIMITE_DIFF_CM
-    return { ...r, diff, alerta }
-  })
-})
 </script>
 
 <style scoped>

@@ -3,29 +3,6 @@ import { Decimal } from '@prisma/client/runtime/library';
 import PDFDocument from 'pdfkit';
 import { PrismaService } from '../prisma/prisma.service';
 import { mm } from '../pdf/units';
-import type { PecaPromobDto } from './dto/find-scrap-matches.dto';
-
-/** Retorno de uma peça após verificação de retalhos */
-export interface PecaComRetalho {
-  produto_id: number;
-  largura_mm: number;
-  comprimento_mm: number;
-  valor_total: number;
-  id_ref?: string | number;
-  /** Se encontrou retalho compatível */
-  usar_retalho_id?: number;
-  /** Mensagem para exibição: "Usar Retalho ID: XXX" */
-  mensagem?: string;
-}
-
-/** Resultado de findScrapMatches */
-export interface FindScrapMatchesResult {
-  pecas: PecaComRetalho[];
-  /** Soma do valor_total das peças que têm retalho (a subtrair do custo de materiais) */
-  economia_total: number;
-  /** Quantidade de peças que receberam indicação de retalho */
-  pecas_com_retalho: number;
-}
 
 @Injectable()
 export class EstoqueRetalhoService {
@@ -75,7 +52,7 @@ export class EstoqueRetalhoService {
         agenda_fabrica: { select: { id: true, titulo: true } },
       },
     });
-    if (!registro) throw new NotFoundException(`Retalho #${id} não encontrado.`);
+    if (!registro) throw new NotFoundException(`Sobra #${id} não encontrada.`);
     return registro;
   }
 
@@ -93,7 +70,7 @@ export class EstoqueRetalhoService {
     },
   ) {
     const existing = await this.prisma.estoque_retalho.findUnique({ where: { id: Number(id) } });
-    if (!existing) throw new NotFoundException(`Retalho #${id} não encontrado.`);
+    if (!existing) throw new NotFoundException(`Sobra #${id} não encontrada.`);
 
     const data: any = {};
     if (dto.largura_mm !== undefined) data.largura_mm = Number(dto.largura_mm);
@@ -122,9 +99,9 @@ export class EstoqueRetalhoService {
    */
   async remover(id: number) {
     const existing = await this.prisma.estoque_retalho.findUnique({ where: { id: Number(id) } });
-    if (!existing) throw new NotFoundException(`Retalho #${id} não encontrado.`);
+    if (!existing) throw new NotFoundException(`Sobra #${id} não encontrada.`);
     await this.prisma.estoque_retalho.delete({ where: { id: Number(id) } });
-    return { message: 'Retalho removido com sucesso.' };
+    return { message: 'Sobra removida com sucesso.' };
   }
 
   /**
@@ -156,7 +133,7 @@ export class EstoqueRetalhoService {
       const leftX = mm(5);
 
       // Título
-      doc.font('Helvetica-Bold').fontSize(11).text('SOBRA / RETALHO', leftX, mm(5), { width: pageW - mm(10), align: 'center' });
+      doc.font('Helvetica-Bold').fontSize(11).text('SOBRA DE ESTOQUE', leftX, mm(5), { width: pageW - mm(10), align: 'center' });
 
       // Linha separadora
       doc.moveTo(leftX, mm(12)).lineTo(pageW - mm(5), mm(12)).lineWidth(0.5).stroke();
@@ -252,86 +229,6 @@ export class EstoqueRetalhoService {
     }
     return criados;
   }
-
-  /**
-   * Compara a lista de peças do Promob com a tabela de Retalhos.
-   * Se encontrar retalho do mesmo material e maior que a peça necessária, marca a peça com "Usar Retalho ID: XXX".
-   * Retorna a economia total (valor das peças cobertas por retalho) para subtrair do custo de materiais e aumentar a margem real.
-   */
-  async findScrapMatches(pecas: PecaPromobDto[]): Promise<FindScrapMatchesResult> {
-    if (!pecas?.length) {
-      return { pecas: [], economia_total: 0, pecas_com_retalho: 0 };
-    }
-
-    const produtoIds = [...new Set(pecas.map((p) => Number(p.produto_id)).filter(Boolean))];
-    if (!produtoIds.length) {
-      return {
-        pecas: pecas.map((p) => ({
-          ...p,
-          valor_total: Number(p.valor_total) || 0,
-        })),
-        economia_total: 0,
-        pecas_com_retalho: 0,
-      };
-    }
-
-    const retalhos = await this.prisma.estoque_retalho.findMany({
-      where: { produto_id: { in: produtoIds } },
-      orderBy: [{ quantidade_m2: 'asc' }],
-    });
-
-    const toNum = (v: unknown): number =>
-      typeof v === 'number' && !Number.isNaN(v) ? v : Number(Decimal.isDecimal(v) ? (v as Decimal).toNumber() : v) || 0;
-
-    /** Retalhos já atribuídos nesta execução (um retalho por peça) */
-    const retalhoUsado = new Set<number>();
-    const resultado: PecaComRetalho[] = [];
-    let economia_total = 0;
-
-    for (const peca of pecas) {
-      const produto_id = Number(peca.produto_id);
-      const largura_mm = Number(peca.largura_mm) || 0;
-      const comprimento_mm = Number(peca.comprimento_mm) || 0;
-      const valor_total = toNum(peca.valor_total);
-
-      const item: PecaComRetalho = {
-        produto_id,
-        largura_mm,
-        comprimento_mm,
-        valor_total,
-        id_ref: peca.id_ref,
-      };
-
-      const candidatos = retalhos.filter(
-        (r) =>
-          r.produto_id === produto_id &&
-          !retalhoUsado.has(r.id) &&
-          this.retalhoCobrePeca(
-            toNum(r.largura_mm),
-            toNum(r.comprimento_mm),
-            largura_mm,
-            comprimento_mm,
-          ),
-      );
-
-      const escolhido = candidatos[0];
-      if (escolhido) {
-        retalhoUsado.add(escolhido.id);
-        item.usar_retalho_id = escolhido.id;
-        item.mensagem = `Usar Retalho ID: ${escolhido.id}`;
-        economia_total += valor_total;
-      }
-
-      resultado.push(item);
-    }
-
-    return {
-      pecas: resultado,
-      economia_total: Math.round(economia_total * 100) / 100,
-      pecas_com_retalho: retalhoUsado.size,
-    };
-  }
-
   /**
    * Verifica se um retalho (largura x comprimento) cobre a peça necessária.
    * Considera rotação: a peça pode ser colocada em 0° ou 90°.

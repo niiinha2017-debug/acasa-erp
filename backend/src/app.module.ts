@@ -40,6 +40,8 @@ import { EstoqueRetalhoModule } from './estoque-retalho/estoque-retalho.module';
 import { ExtractionModule } from './extraction/extraction.module';
 import { MigracaoDriveModule } from './migracao-drive/migracao-drive.module';
 import { GarantiasModule } from './garantias/garantias.module';
+import { AutomoveisModule } from './automoveis/automoveis.module';
+import { RotaCustoViagemModule } from './rota-custo-viagem/rota-custo-viagem.module';
 
 @Module({
   imports: [
@@ -106,6 +108,8 @@ import { GarantiasModule } from './garantias/garantias.module';
     ExtractionModule,
     MigracaoDriveModule,
     GarantiasModule,
+    AutomoveisModule,
+    RotaCustoViagemModule,
   ],
   controllers: [AppController],
   providers: [

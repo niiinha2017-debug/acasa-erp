@@ -2,7 +2,7 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ExtractionService, ParcelaPagamento, AmbienteItem } from '../extraction/extraction.service';
 import { UtilsService } from '../utils/utils.service';
-import { TAXAS_CARTAO } from '../../shared/constantes/taxas-cartao';
+import { TAXAS_CARTAO } from '../shared/constantes/taxas-cartao';
 import AdmZip = require('adm-zip');
 import * as path from 'path';
 import * as fs from 'fs';

@@ -286,6 +286,13 @@ export const ProdutosService = {
     api.get('/produtos/buscar/filtros', { params: { ...filtros, categoria_base: 'FERRAGEM' } }),
 }
 
+export const AutomoveisService = {
+  listar: (filtros = {}) => api.get('/automoveis', { params: filtros }),
+  buscar: (id) => api.get(`/automoveis/${id}`),
+  salvar: (id, dados) => (id ? api.patch(`/automoveis/${id}`, dados) : api.post('/automoveis', dados)),
+  remover: (id) => api.delete(`/automoveis/${id}`),
+}
+
 
 // --- USUÁRIOS ---
 export const UsuariosService = {
@@ -491,8 +498,8 @@ export const ConfiguracaoService = {
     return data
   },
   /** Testa a conexão com a Evolution API (configuração em Configurações > Contato) */
-  async whatsappTest() {
-    const { data } = await api.get('/configuracoes/empresa/whatsapp-test')
+  async whatsappTest(dados = {}) {
+    const { data } = await api.post('/configuracoes/empresa/whatsapp-test', dados)
     return data
   },
   /** Cria a instância na Evolution API (se não existir) e retorna o QR. Use antes de getEvolutionQrCode. */
@@ -853,4 +860,6 @@ export const GarantiaService = {
   salvar: (id, dados) => (id ? api.put(`/garantias/${id}`, dados) : api.post('/garantias', dados)),
   remover: (id) => api.delete(`/garantias/${id}`),
   agendar: (id, dados) => api.post(`/garantias/${id}/agendar`, dados),
+  gerarPdf: (id) => api.get(`/garantias/${id}/pdf`, { responseType: 'blob' }),
+  enviarWhatsapp: (id) => api.post(`/garantias/${id}/enviar-whatsapp`),
 }

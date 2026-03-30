@@ -3,7 +3,7 @@
     <section class="login-font produto-editor ds-page-context ds-page-context--editor animate-page-in">
       <PageHeader
         :title="isEdit ? `Editar Produto #${produtoId}` : 'Novo Produto'"
-        subtitle="Gerenciamento de insumos e controle de materiais"
+        subtitle="Cadastro de materiais e insumos comprados para uso no ERP"
         icon="pi pi-box"
       />
 
@@ -68,7 +68,7 @@
             variant="line"
             class="col-span-12 md:col-span-4"
             v-model="quantidadeInput"
-            label="Qtd. em Estoque"
+            label="Saldo Inicial / Atual"
             type="number"
             required
           />
@@ -76,7 +76,7 @@
             variant="line"
             class="col-span-12 md:col-span-4"
             v-model="estoqueMinimoInput"
-            label="Estoque Mínimo"
+            label="Ponto de Reposição"
             type="number"
             placeholder="0"
           />
@@ -176,7 +176,7 @@
               <Input variant="line" class="col-span-12 md:col-span-4" v-model="valorUnitarioMask" label="Custo Unitario (R$)" required />
               <div class="col-span-12 md:col-span-8">
                 <div class="produto-resumo">
-                  <span class="produto-resumo__label">Total em Inventario</span>
+                  <span class="produto-resumo__label">Valor Total Cadastrado</span>
                   <span class="produto-resumo__value">{{ valorTotalMask }}</span>
                 </div>
               </div>
@@ -190,7 +190,7 @@
           </div>
           <div class="relative flex justify-center">
             <span class="section-title ds-section-title">
-              Galeria e Retalhos
+              Galeria e Sobras Vinculadas
             </span>
           </div>
         </div>
@@ -228,12 +228,12 @@
           <div class="produto-assets__panel col-span-12 lg:col-span-6">
             <p class="text-xs uppercase tracking-[0.14em] text-slate-500 font-semibold mb-2 flex items-center gap-2">
               <i class="pi pi-box text-amber-500" />
-              Retalhos (sobras)
+              Sobras vinculadas
             </p>
-            <p class="text-[10px] text-slate-500 mb-3">Sobras cadastradas no Totem para este material.</p>
+            <p class="text-[10px] text-slate-500 mb-3">Lançamentos do controle de estoque vinculados a este produto.</p>
 
             <div v-if="retalhosList.length === 0" class="text-sm text-text-muted py-4 text-center">
-              Nenhum retalho registrado para este produto.
+              Nenhuma sobra vinculada a este produto.
             </div>
 
             <div v-else class="overflow-x-auto max-h-[260px] overflow-y-auto">

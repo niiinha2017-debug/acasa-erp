@@ -7,8 +7,10 @@ import {
   Post,
   Put,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { GarantiasService } from './garantias.service';
 import { CreateGarantiaDto } from './dto/create-garantia.dto';
 import { UpdateGarantiaDto } from './dto/update-garantia.dto';
@@ -31,6 +33,18 @@ export class GarantiasController {
       status: status?.trim() || undefined,
       tipo: tipo?.trim() || undefined,
     });
+  }
+
+  @Get(':id/pdf')
+  @Permissoes('garantias.ver')
+  async gerarPdf(@Param('id') id: string, @Res() res: Response) {
+    const buffer = await this.service.gerarPdf(this.cleanId(id));
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="garantia-${this.cleanId(id)}.pdf"`,
+      'Content-Length': buffer.length,
+    });
+    res.end(buffer);
   }
 
   @Get(':id')
@@ -62,6 +76,13 @@ export class GarantiasController {
   @Permissoes('garantias.editar', 'agendamentos.ver')
   agendar(@Param('id') id: string, @Body() dto: AgendarGarantiaDto) {
     return this.service.agendar(this.cleanId(id), dto);
+  }
+
+  /** Envia OS + link Google Maps via WhatsApp para os funcionários da garantia */
+  @Post(':id/enviar-whatsapp')
+  @Permissoes('garantias.ver')
+  enviarWhatsapp(@Param('id') id: string) {
+    return this.service.enviarWhatsapp(this.cleanId(id));
   }
 
   private cleanId(id: string): number {

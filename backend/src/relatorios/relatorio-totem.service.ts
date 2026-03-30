@@ -5,54 +5,88 @@ import { PrismaService } from '../prisma/prisma.service';
 export class RelatorioTotemService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private async buscarApontamentos(inicio: Date, fim: Date) {
+    const where = {
+      inicio_em: { gte: inicio, lte: fim },
+    };
+
+    try {
+      return await this.prisma.apontamento_producao.findMany({
+        where,
+        select: {
+          id: true,
+          funcionario_id: true,
+          inicio_em: true,
+          fim_em: true,
+          horas: true,
+          custo_calculado: true,
+          pausa_total_segundos: true,
+          pausa_inicio_em: true,
+          pausa_fim_em: true,
+          agenda_fabrica_id: true,
+          agenda_loja_id: true,
+          funcionario: { select: { id: true, nome: true, custo_hora: true } },
+          agenda_fabrica: {
+            select: {
+              id: true,
+              titulo: true,
+              subetapa: true,
+              status: true,
+              cliente: { select: { id: true, nome_completo: true, razao_social: true } },
+            },
+          },
+          agenda_loja: {
+            select: {
+              id: true,
+              titulo: true,
+              subetapa: true,
+              status: true,
+              cliente: { select: { id: true, nome_completo: true, razao_social: true } },
+            },
+          },
+        },
+        orderBy: { inicio_em: 'asc' },
+      });
+    } catch {
+      // Fallback para ambientes com divergencia de schema em campos nao essenciais.
+      return this.prisma.apontamento_producao.findMany({
+        where,
+        select: {
+          id: true,
+          funcionario_id: true,
+          inicio_em: true,
+          fim_em: true,
+          horas: true,
+          custo_calculado: true,
+          agenda_fabrica_id: true,
+          agenda_loja_id: true,
+          funcionario: { select: { id: true, nome: true, custo_hora: true } },
+          agenda_fabrica: {
+            select: {
+              id: true,
+              titulo: true,
+              status: true,
+            },
+          },
+          agenda_loja: {
+            select: {
+              id: true,
+              titulo: true,
+              status: true,
+            },
+          },
+        },
+        orderBy: { inicio_em: 'asc' },
+      });
+    }
+  }
+
   async getRelatorio(dataInicio?: string, dataFim?: string) {
     const hoje = new Date();
     const inicio = dataInicio ? new Date(`${dataInicio}T00:00:00`) : new Date(hoje.getFullYear(), hoje.getMonth(), 1);
     const fim = dataFim ? new Date(`${dataFim}T23:59:59.999`) : new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0, 23, 59, 59, 999);
 
-    const apontamentos = await this.prisma.apontamento_producao.findMany({
-      where: {
-        inicio_em: { gte: inicio, lte: fim },
-      },
-      select: {
-        id: true,
-        funcionario_id: true,
-        inicio_em: true,
-        fim_em: true,
-        horas: true,
-        custo_calculado: true,
-        pausa_total_segundos: true,
-        pausa_inicio_em: true,
-        pausa_fim_em: true,
-        agenda_fabrica_id: true,
-        agenda_loja_id: true,
-        funcionario: { select: { id: true, nome: true, custo_hora: true } },
-        agenda_fabrica: {
-          select: {
-            id: true,
-            titulo: true,
-            categoria: true,
-            subetapa: true,
-            execucao_etapa: true,
-            status: true,
-            totem_concluido_em: true,
-            cliente: { select: { id: true, nome_completo: true, razao_social: true } },
-          },
-        },
-        agenda_loja: {
-          select: {
-            id: true,
-            titulo: true,
-            categoria: true,
-            subetapa: true,
-            execucao_etapa: true,
-            status: true,
-            cliente: { select: { id: true, nome_completo: true, razao_social: true } },
-          },
-        },
-      },
-      orderBy: { inicio_em: 'asc' },
-    });
+    const apontamentos = await this.buscarApontamentos(inicio, fim);
 
     // Agregar por funcionário
     const porFuncionario = new Map<number, {

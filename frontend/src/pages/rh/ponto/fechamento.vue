@@ -56,6 +56,8 @@
                   <tr>
                     <th class="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-text-soft">Funcionário</th>
                     <th class="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-text-soft text-right">Horas trab.</th>
+                    <th class="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-text-soft text-right">Diferença 44h</th>
+                    <th class="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-text-soft text-right">Horas obrig.</th>
                     <th class="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-text-soft text-right">Horas extras</th>
                     <th class="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-text-soft text-right">Saldo devedor</th>
                     <th class="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-text-soft text-right">Feriados trab.</th>
@@ -75,6 +77,8 @@
                       <span v-if="row.sem_carga" class="ml-2 text-[10px] font-normal text-amber-700 dark:text-amber-400">(sem carga horária)</span>
                     </td>
                     <td class="px-4 py-3 text-text-main text-right tabular-nums">{{ row.horas_trabalhadas_hhmm }}</td>
+                    <td class="px-4 py-3 text-text-main text-right tabular-nums">{{ row.diferenca_obrigatoria_44h_hhmm || '00:00' }}</td>
+                    <td class="px-4 py-3 text-text-main text-right tabular-nums">{{ row.horas_obrigatorias_hhmm || '00:00' }}</td>
                     <td class="px-4 py-3 text-text-main text-right tabular-nums">{{ row.horas_extras_hhmm }}</td>
                     <td class="px-4 py-3 text-text-main text-right tabular-nums">{{ row.saldo_devedor_hhmm }}</td>
                     <td class="px-4 py-3 text-text-main text-right tabular-nums">{{ row.feriados_trabalhados_qtd }}</td>

@@ -180,7 +180,7 @@
                     <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-text-soft">Tempo</th>
                     <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-text-soft">
                       Saldo
-                      <span class="block text-[9px] font-normal text-slate-400 mt-0.5">(meta {{ JORNADA_META_MIN / 60 }}h)</span>
+                      <span class="block text-[9px] font-normal text-slate-400 mt-0.5">({{ metaSaldoLabel }})</span>
                     </th>
                     <th class="px-5 py-3 text-right text-[10px] font-black uppercase tracking-wider text-text-soft">Ações</th>
                   </tr>
@@ -501,7 +501,7 @@ import { notify } from '@/services/notify'
 import { consolidarSaldoPeriodo, derivarCargaDosHorarios } from '@/utils/utils'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
-import { listDays, groupRegistrosByDia, JORNADA_META_MIN } from '@/utils/ponto'
+import { listDays, groupRegistrosByDia } from '@/utils/ponto'
 import { onlyNumbers } from '@/utils/masks'
 import { numeroParaMoeda } from '@/utils/number'
 import { saveBlobNativeOrBrowser } from '@/utils/native-download'
@@ -642,6 +642,12 @@ const resumo = computed(() => {
     justificativasPorDia: justificativasPorDia.value,
   })
   return base
+})
+
+const metaSaldoLabel = computed(() => {
+  const base = Number(resumo.value?.metaDia || 0)
+  if (!base) return 'meta variavel por dia'
+  return `meta base ${base.toFixed(2)}h`
 })
 
 const diasComBatida = computed(() => {

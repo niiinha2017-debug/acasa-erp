@@ -3,7 +3,7 @@
     <section class="compras-sugestao ds-page-context ds-page-context--list animate-page-in">
       <PageHeader
         title="Sugestão de Compra"
-        subtitle="Produtos abaixo do estoque mínimo para reposição"
+        subtitle="Produtos abaixo do ponto de reposição para nova compra"
         icon="pi pi-shopping-bag"
         :backTo="'/compras'"
       >
@@ -30,7 +30,7 @@
 
       <div class="compras-sugestao__content ds-page-context__content">
         <div v-if="!loading && lista.length === 0" class="compras-sugestao__empty">
-          <p class="compras-sugestao__empty-title">Nenhum produto abaixo do estoque mínimo.</p>
+          <p class="compras-sugestao__empty-title">Nenhum produto abaixo do ponto de reposição.</p>
           <p class="compras-sugestao__empty-copy">Todos os itens estão dentro do nível configurado.</p>
         </div>
 
@@ -121,8 +121,8 @@ const filtro = ref('')
 const columns = [
   { key: 'nome_produto', label: 'Produto', width: '30%' },
   { key: 'fornecedor', label: 'FORNECEDOR', width: '20%' },
-  { key: 'estoque_atual', label: 'ESTOQUE ATUAL', width: '12%', align: 'center' },
-  { key: 'estoque_minimo', label: 'EST. MÍNIMO', width: '12%', align: 'center' },
+  { key: 'estoque_atual', label: 'SALDO ATUAL', width: '12%', align: 'center' },
+  { key: 'estoque_minimo', label: 'PONTO REP.', width: '12%', align: 'center' },
   { key: 'sugestao_qtd', label: 'SUGESTÃO QTD', width: '12%', align: 'center' },
   { key: 'valor_unitario', label: 'VALOR UNIT.', width: '12%', align: 'right' },
   { key: 'acoes', label: 'Ações', align: 'center', width: '100px' },

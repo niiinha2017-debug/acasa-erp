@@ -150,6 +150,7 @@ model Cliente {
   pre_medicoes         pre_medicao[]
   ordens_servico       ordem_servico[]
   garantias            garantias[]
+  rotas_viagem         rotas_custo_viagem[]
 
   @@unique([cpf])
   @@unique([cnpj])
@@ -835,6 +836,7 @@ model funcionarios {
   garantias_responsavel garantias[] @relation("GarantiaFuncionario")
 
   comissao_producao_percentual Decimal? @db.Decimal(5, 2)
+  rotas_viagem rotas_custo_viagem[]
 
   @@map("funcionarios")
  }
@@ -1183,12 +1185,16 @@ model agenda_loja {
   // Totem: custo coletivo (tempo total × custo hora médio fábrica) e tempo total para auditoria
   tempo_total_tarefa   Decimal? @db.Decimal(8, 2)
   custo_tarefa_fabrica Decimal? @db.Decimal(12, 2)
+  km_ida_prevista      Decimal? @db.Decimal(10, 2)
+  km_volta_prevista    Decimal? @db.Decimal(10, 2)
 
   equipe agenda_loja_funcionarios[]
   apontamentos agenda_loja_apontamentos[]
   apontamentos_producao apontamento_producao[]
   medicao_orcamento medicao_orcamento?
   pre_medicoes      pre_medicao[]
+  automoveis_planejados agenda_loja_automoveis[]
+  rotas_viagem rotas_custo_viagem[]
 
   criado_por_usuario_id Int?
   criado_por_usuario     usuarios? @relation("AgendaLojaCriadoPor", fields: [criado_por_usuario_id], references: [id], onDelete: SetNull)
@@ -1231,6 +1237,22 @@ model agenda_loja_funcionarios {
   @@index([agenda_loja_id])
   @@index([funcionario_id])
   @@map("agenda_loja_funcionarios")
+}
+
+model agenda_loja_automoveis {
+  id          Int @id @default(autoincrement())
+  agenda_loja_id Int
+  automovel_id Int
+
+  agenda_loja agenda_loja @relation(fields: [agenda_loja_id], references: [id], onDelete: Cascade)
+  automovel   automoveis @relation(fields: [automovel_id], references: [id], onDelete: Cascade)
+
+  criado_em DateTime @default(now())
+
+  @@unique([agenda_loja_id, automovel_id])
+  @@index([agenda_loja_id])
+  @@index([automovel_id])
+  @@map("agenda_loja_automoveis")
 }
 
 model agenda_loja_apontamentos {
@@ -2054,6 +2076,8 @@ model garantias {
 
   custo       Decimal @default(0.00) @db.Decimal(10, 2)
   valor_venda Decimal @default(0.00) @db.Decimal(10, 2)
+  forma_pagamento_chave String? @db.VarChar(30)
+  quantidade_parcelas Int @default(1)
 
   status String @default("PENDENTE") // PENDENTE | AGENDADA | EM_ANDAMENTO | CONCLUIDA | CANCELADA
 
@@ -2074,4 +2098,85 @@ model garantias {
   @@index([status])
   @@index([tipo])
   @@map("garantias")
+}
+
+// =============================================================================
+// AUTOMÓVEIS / FROTA
+// =============================================================================
+model automoveis {
+  id Int @id @default(autoincrement())
+
+  // Identificação
+  placa       String  @unique @db.VarChar(10)
+  descricao   String  @db.VarChar(200)   // ex.: "Fiat Doblo Cargo 2021 - Branco"
+  marca       String? @db.VarChar(60)
+  modelo      String? @db.VarChar(80)
+  ano         Int?
+  cor         String? @db.VarChar(40)
+  renavam     String? @db.VarChar(20)
+  chassi      String? @db.VarChar(30)
+  combustivel String? @db.VarChar(30)   // GASOLINA | ETANOL | FLEX | DIESEL | ELÉTRICO
+
+  // Custo operacional
+  custo_km    Decimal? @db.Decimal(10, 4)  // R$/km (combustível + manutenção estimada)
+  observacoes String?  @db.Text
+
+  status String @default("ATIVO") @db.VarChar(20) // ATIVO | INATIVO | MANUTENCAO
+
+  criado_em     DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  agendas_loja agenda_loja_automoveis[]
+  rotas rotas_custo_viagem[]
+
+  @@index([status])
+  @@map("automoveis")
+}
+
+// =============================================================================
+// ROTAS / CUSTO DE VIAGEM
+// Criada automaticamente ao agendar medida fina na agenda_loja.
+// Custo = km_total × automovel.custo_km (ou custo_km_manual se não houver veículo).
+// =============================================================================
+model rotas_custo_viagem {
+  id Int @id @default(autoincrement())
+
+  agenda_loja_id Int
+  agenda_loja    agenda_loja @relation(fields: [agenda_loja_id], references: [id], onDelete: Cascade)
+
+  funcionario_id Int
+  funcionario    funcionarios @relation(fields: [funcionario_id], references: [id], onDelete: Cascade)
+
+  automovel_id Int?
+  automovel    automoveis? @relation(fields: [automovel_id], references: [id], onDelete: SetNull)
+
+  cliente_id Int?
+  cliente    Cliente? @relation(fields: [cliente_id], references: [id], onDelete: SetNull)
+
+  // Quilometragem
+  km_ida     Decimal? @db.Decimal(10, 2)
+  km_volta   Decimal? @db.Decimal(10, 2)
+  km_total   Decimal? @db.Decimal(10, 2) // calculado: ida + volta
+
+  // Custo
+  custo_km_utilizado Decimal? @db.Decimal(10, 4) // snapshot do custo/km no momento do registro
+  custo_total        Decimal? @db.Decimal(12, 2) // km_total × custo_km_utilizado
+
+  // Rota geográfica (texto livre ou endereço destino)
+  endereco_destino String? @db.VarChar(400)
+
+  // Registrado via totem (play/check) ou manualmente
+  origem_registro String @default("MANUAL") @db.VarChar(20) // MANUAL | TOTEM
+
+  observacoes String? @db.Text
+
+  registrado_em DateTime @default(now())
+  atualizado_em DateTime @updatedAt
+
+  @@index([agenda_loja_id])
+  @@index([funcionario_id])
+  @@index([automovel_id])
+  @@index([cliente_id])
+  @@index([registrado_em])
+  @@map("rotas_custo_viagem")
 }

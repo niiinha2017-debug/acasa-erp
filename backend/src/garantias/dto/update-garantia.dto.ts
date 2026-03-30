@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   IsInt,
+  Min,
   IsOptional,
   IsString,
 } from 'class-validator';
@@ -60,6 +61,16 @@ export class UpdateGarantiaDto {
   @IsOptional()
   @IsString()
   valor_venda?: string;
+
+  @IsOptional()
+  @IsString()
+  forma_pagamento_chave?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  quantidade_parcelas?: number;
 
   @IsOptional()
   @IsString()

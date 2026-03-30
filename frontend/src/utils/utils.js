@@ -104,17 +104,22 @@ export function derivarCargaDosHorarios(f) {
 
 /**
  * Retorna a meta diária (em horas) para um dado dia da semana.
- * 0=Dom e 6=Sáb: meta 0 (sábado contabiliza como hora extra).
- * 1-5=Seg-Sex: meta = carga do cadastro; o que passar = hora extra.
+ * 0=Dom: meta 0.
+ * 1-5=Seg-Sex: meta = carga da semana.
+ * 6=Sáb: usa carga de sábado quando cadastrada; sem cadastro, meta 0.
  */
 export function metaDiaParaData(dataStr, funcionario) {
   const d = new Date(dataStr + 'T12:00:00').getDay()
   if (d === 0) return 0
-  if (d === 6) return 0 // Sábado: meta zero, toda hora no sábado = hora extra
 
   const cargaDia = Number(funcionario?.carga_horaria_dia || 0)
   const cargaSemana = Number(funcionario?.carga_horaria_semana || 0)
   const derivado = derivarCargaDosHorarios(funcionario)
+
+  if (d === 6) {
+    if (derivado.cargaSabado > 0) return derivado.cargaSabado
+    return 0
+  }
 
   if (derivado.cargaSegSex > 0 || derivado.cargaSabado > 0) {
     return derivado.cargaSegSex
@@ -225,17 +230,22 @@ export function consolidarSaldoPeriodo({
   )
 
   if (motorAcasa) {
-    const metaMinSegSex = JORNADA_META_MIN
+    const metaPadraoHoras = JORNADA_META_MIN / 60
     const justMap = justificativasPorDia && typeof justificativasPorDia === 'object' ? justificativasPorDia : {}
     const linhas = dias.map((dia) => {
       const diaSemana = new Date(`${dia}T12:00:00`).getDay()
-      let metaMin = diaSemana === 0 || diaSemana === 6 || setDiasSemMeta.has(dia) ? 0 : metaMinSegSex
+      let metaHoras = funcionario
+        ? metaDiaParaData(dia, funcionario)
+        : (diaSemana === 0 || diaSemana === 6 ? 0 : metaPadraoHoras)
+      if (setDiasSemMeta.has(dia)) metaHoras = 0
+
+      let metaMin = Math.round(metaHoras * 60)
       const minJust = Number(justMap[dia]) || 0
       if (minJust > 0) metaMin = Math.max(0, metaMin - minJust)
       const result = calcularDiaPonto(porDia.get(dia) || [], metaMin)
       const horas = result.tempoLiquidoMin != null ? result.tempoLiquidoMin / 60 : 0
       const saldo = result.saldoMin != null ? result.saldoMin / 60 : null
-      const metaHoras = metaMin / 60
+      const metaHorasCalculada = metaMin / 60
       return {
         dia,
         batidas: result.batidas,
@@ -244,8 +254,8 @@ export function consolidarSaldoPeriodo({
         inconsistente: result.inconsistente,
         horas,
         horasHHMM: result.tempoLiquidoMin != null ? horasDecimalParaHHMM(horas) : '--:--',
-        meta: metaHoras,
-        metaHHMM: horasDecimalParaHHMM(metaHoras),
+        meta: metaHorasCalculada,
+        metaHHMM: horasDecimalParaHHMM(metaHorasCalculada),
         saldo,
         saldoHHMM: result.inconsistente ? 'Inconsistente' : (saldo != null ? horasDecimalParaHHMMComSinal(saldo) : '--:--'),
       }
@@ -253,8 +263,12 @@ export function consolidarSaldoPeriodo({
     const linhasConsistentes = linhas.filter((l) => !l.inconsistente && l.saldo != null)
     const totalHoras = linhasConsistentes.reduce((acc, l) => acc + l.horas, 0)
     const totalSaldo = linhasConsistentes.reduce((acc, l) => acc + l.saldo, 0)
+    const derivado = funcionario ? derivarCargaDosHorarios(funcionario) : null
+    const metaDiaDisplay = funcionario
+      ? (derivado?.cargaSegSex > 0 ? derivado.cargaSegSex : Number(funcionario?.carga_horaria_dia || 0))
+      : metaPadraoHoras
     return {
-      metaDia: metaMinSegSex / 60,
+      metaDia: metaDiaDisplay,
       linhas,
       totalHoras,
       totalHorasHHMM: horasDecimalParaHHMM(totalHoras),

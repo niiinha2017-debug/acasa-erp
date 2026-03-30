@@ -3,7 +3,6 @@ import { Response } from 'express';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
 import { EstoqueRetalhoService } from './estoque-retalho.service';
-import { FindScrapMatchesDto } from './dto/find-scrap-matches.dto';
 
 @UseGuards(PermissionsGuard)
 @Controller('estoque/retalhos')
@@ -77,19 +76,5 @@ export class EstoqueRetalhoController {
       'Content-Length': buffer.length,
     });
     res.end(buffer);
-  }
-
-  /**
-   * Compara a lista de peças do Promob com a tabela de retalhos.
-   * Retorna peças marcadas com "Usar Retalho ID: XXX" quando houver retalho do mesmo material e maior que a peça.
-   * economia_total = valor a subtrair do custo de materiais (aumenta a margem de lucro real).
-   */
-  @Post('find-scrap-matches')
-  @Permissoes('produtos.ver')
-  findScrapMatches(@Body() dto: FindScrapMatchesDto) {
-    if (!dto?.pecas?.length) {
-      return { pecas: [], economia_total: 0, pecas_com_retalho: 0 };
-    }
-    return this.service.findScrapMatches(dto.pecas);
   }
 }

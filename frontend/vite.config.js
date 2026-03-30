@@ -26,7 +26,9 @@ export default defineConfig(({ mode }) => {
 
   plugins: [
     VueRouter({
-      dts: 'src/typed-router.d.ts',
+      // Em alguns ambientes Windows a escrita do arquivo gerado falha com UNKNOWN.
+      // Como este projeto usa JS, desativar o d.ts nao afeta runtime.
+      dts: false,
       routesFolder: 'src/pages',
     }),
     vue(),

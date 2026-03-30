@@ -879,6 +879,7 @@ export class AgendaService {
     }
     const {
       equipe_ids,
+      automovel_ids,
       subetapa,
       apontamentos,
       origem_fluxo,
@@ -961,6 +962,9 @@ export class AgendaService {
     const idsEquipe = Array.isArray(equipe_ids)
       ? Array.from(new Set(equipe_ids.map(Number).filter(Boolean)))
       : [];
+    const idsAutomoveis = Array.isArray(automovel_ids)
+      ? Array.from(new Set(automovel_ids.map(Number).filter(Boolean)))
+      : [];
 
     return this.prisma.$transaction(async (tx) => {
       await this.validarConflitosHorario(tx, {
@@ -1017,6 +1021,16 @@ export class AgendaService {
               venda: true,
             },
           });
+
+      if (isLoja && idsAutomoveis.length > 0) {
+        await (tx as any).agenda_loja_automoveis.createMany({
+          data: idsAutomoveis.map((automovelId) => ({
+            agenda_loja_id: agendamento.id,
+            automovel_id: automovelId,
+          })),
+          skipDuplicates: true,
+        });
+      }
 
       if (Array.isArray(apontamentos) && apontamentos.length) {
         const apontamentosDados = apontamentos.map((item: any) => ({
@@ -1264,6 +1278,15 @@ export class AgendaService {
       alterado_por_usuario: { select: { id: true, nome: true } },
       criado_por_usuario: { select: { id: true, nome: true } },
     };
+    if (setor === 'LOJA') {
+      include.automoveis_planejados = {
+        include: {
+          automovel: {
+            select: { id: true, placa: true, descricao: true, custo_km: true, status: true },
+          },
+        },
+      };
+    }
     if (setor === 'FABRICA') {
       include.plano_corte = true;
     }
@@ -1507,6 +1530,7 @@ export class AgendaService {
 
     const {
       equipe_ids,
+      automovel_ids,
       subetapa,
       apontamentos,
       origem_fluxo,
@@ -1603,6 +1627,9 @@ export class AgendaService {
     const equipeIds = Array.isArray(equipe_ids)
       ? Array.from(new Set(equipe_ids.map(Number).filter(Boolean)))
       : (atual.equipe as any[]).map((e) => e.funcionario_id);
+    const automovelIds = Array.isArray(automovel_ids)
+      ? Array.from(new Set(automovel_ids.map(Number).filter(Boolean)))
+      : [];
 
     const apontamentosParaConflito =
       Array.isArray(apontamentos) && apontamentos.length
@@ -1722,6 +1749,21 @@ export class AgendaService {
               })),
             });
           }
+        }
+      }
+
+      if (setor === 'LOJA' && Array.isArray(automovel_ids)) {
+        await (tx as any).agenda_loja_automoveis.deleteMany({
+          where: { agenda_loja_id: id },
+        });
+        if (automovelIds.length) {
+          await (tx as any).agenda_loja_automoveis.createMany({
+            data: automovelIds.map((automovelId) => ({
+              agenda_loja_id: id,
+              automovel_id: automovelId,
+            })),
+            skipDuplicates: true,
+          });
         }
       }
 

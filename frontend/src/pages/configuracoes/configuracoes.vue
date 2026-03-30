@@ -1183,7 +1183,11 @@ function normalizarNomeInstanciaEvolution() {
 async function testarTokenWhatsApp() {
   testandoWhatsApp.value = true
   try {
-    const data = await ConfiguracaoService.whatsappTest()
+    const data = await ConfiguracaoService.whatsappTest({
+      evolution_api_url: form.value.evolution_api_url,
+      evolution_api_key: form.value.evolution_api_key,
+      evolution_instance_name: form.value.evolution_instance_name,
+    })
     if (data?.ok) {
       notify.success(data.message || 'Evolution API conectada.')
     } else {

@@ -1,37 +1,35 @@
 <template>
   <PageShell :padded="false">
-    <section class="ds-page-context ds-page-context--list animate-page-in">
+    <section class="garantias-list ds-page-context ds-page-context--list animate-page-in">
       <PageHeader
         title="Garantias & Assistências"
         subtitle="Gerencie garantias, assistências técnicas e seus agendamentos"
         icon="pi pi-wrench"
       >
         <template #actions>
-          <div class="garantias-list__actions">
-            <div class="garantias-list__search-cluster">
-              <div class="garantias-list__search">
-                <SearchInput v-model="filtro" placeholder="Buscar cliente, título..." />
-              </div>
-
-              <button
+          <div class="garantias-list__actions ds-page-context__actions">
+            <div class="garantias-list__search ds-page-context__search">
+              <SearchInput v-model="filtro" placeholder="Buscar cliente, título..." />
+            </div>
+            <div class="garantias-list__month-filter flex items-center gap-2">
+              <MonthReferenceField
+                v-model="filtroMes"
+                class="garantias-list__month-field"
+                label="Mês de referência"
+                placeholder="Todos os meses"
+              />
+              <Button
+                v-if="filtroMes"
                 type="button"
-                class="garantias-list__month-trigger"
-                title="Filtrar por mês"
-                @click="abrirSeletorMes"
+                variant="ghost"
+                size="sm"
+                @click="filtroMes = ''"
               >
-                <i class="pi pi-calendar" />
-                <span>{{ filtroMesLabel }}</span>
-                <input
-                  ref="monthInputRef"
-                  v-model="filtroMes"
-                  type="month"
-                  class="garantias-list__month-input"
-                  @click.stop
-                />
-              </button>
+                Todos
+              </Button>
             </div>
 
-            <Button variant="primary" @click="router.push('/garantias/nova')">
+            <Button variant="primary" @click="router.push('/garantias/novo')">
               <i class="pi pi-plus" />
               Nova Garantia
             </Button>
@@ -39,7 +37,7 @@
         </template>
       </PageHeader>
 
-      <div class="ds-page-context__content px-4 md:px-8 pb-8">
+      <div class="garantias-list__content ds-page-context__content px-4 md:px-8 pb-8">
         <Table
           :columns="columns"
           :rows="rows"
@@ -102,14 +100,25 @@
           </template>
 
           <template #cell-acoes="{ row }">
-            <button
-              type="button"
-              class="ds-table-action inline-flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-sm font-semibold text-brand-primary hover:bg-[var(--ds-color-surface-muted)]"
-              @click="router.push(`/garantias/${row.id}`)"
-            >
-              <i class="pi pi-eye" />
-              Detalhes
-            </button>
+            <div class="garantias-list__row-actions">
+              <button
+                type="button"
+                class="ds-table-action inline-flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-sm font-semibold text-brand-primary hover:bg-[var(--ds-color-surface-muted)]"
+                @click="router.push(`/garantias/${row.id}`)"
+              >
+                <i class="pi pi-pencil" />
+                Editar
+              </button>
+              <button
+                v-if="podeExcluirGarantia"
+                type="button"
+                class="ds-table-action inline-flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-sm font-semibold text-red-600 hover:bg-[var(--ds-color-surface-muted)]"
+                @click="excluir(row)"
+              >
+                <i class="pi pi-trash" />
+                Excluir
+              </button>
+            </div>
           </template>
         </Table>
       </div>
@@ -121,12 +130,15 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Button from '@/components/ui/Button.vue'
+import MonthReferenceField from '@/components/ui/MonthReferenceField.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import PageShell from '@/components/ui/PageShell.vue'
 import SearchInput from '@/components/ui/SearchInput.vue'
 import Table from '@/components/ui/Table.vue'
 import { GarantiaService } from '@/services'
+import { confirm } from '@/services/confirm'
 import { notify } from '@/services/notify'
+import { can } from '@/services/permissions'
 
 definePage({ meta: { perm: 'garantias.ver' } })
 
@@ -135,7 +147,7 @@ const filtro = ref('')
 const filtroMes = ref('')
 const loading = ref(false)
 const garantias = ref([])
-const monthInputRef = ref(null)
+const podeExcluirGarantia = can('garantias.deletar')
 
 const columns = [
   { key: 'cliente', label: 'CLIENTE' },
@@ -169,13 +181,6 @@ const rows = computed(() =>
     cliente_contato: g.cliente?.whatsapp || g.cliente?.telefone || '—',
   }))
 )
-
-const filtroMesLabel = computed(() => {
-  if (!filtroMes.value) return 'Mes'
-  const [ano, mes] = String(filtroMes.value).split('-')
-  if (!ano || !mes) return 'Mes'
-  return `${mes}/${ano}`
-})
 
 function statusLabel(s) {
   const map = { PENDENTE: 'Pendente', AGENDADA: 'Agendada', EM_ANDAMENTO: 'Em andamento', CONCLUIDA: 'Concluída', CANCELADA: 'Cancelada' }
@@ -211,17 +216,6 @@ function sameMonth(dateValue, monthValue) {
   return `${date.getFullYear()}-${month}` === monthValue
 }
 
-function abrirSeletorMes() {
-  const input = monthInputRef.value
-  if (!input) return
-  if (typeof input.showPicker === 'function') {
-    input.showPicker()
-    return
-  }
-  input.focus()
-  input.click()
-}
-
 async function carregar() {
   loading.value = true
   try {
@@ -236,78 +230,48 @@ async function carregar() {
   }
 }
 
+async function excluir(row) {
+  const titulo = row?.titulo || 'esta garantia'
+  const ok = await confirm.show('Excluir garantia', `Deseja excluir "${titulo}"?`)
+  if (!ok) return
+
+  try {
+    await GarantiaService.remover(row.id)
+    notify.success('Garantia excluída.')
+    await carregar()
+  } catch (e) {
+    console.error(e)
+    notify.error(e?.response?.data?.message || 'Falha ao excluir garantia.')
+  }
+}
+
 onMounted(carregar)
 </script>
 
 <style scoped>
-.garantias-list__actions {
+.garantias-list__content {
+  padding-top: 0.25rem;
+}
+
+.garantias-list__row-actions {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
   justify-content: flex-end;
-  gap: 0.75rem;
-  width: 100%;
-}
-
-.garantias-list__search-cluster {
-  display: flex;
-  align-items: stretch;
-  flex: 1 1 32rem;
-  min-width: 20rem;
-  max-width: 38rem;
-}
-
-.garantias-list__search {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.garantias-list__month-trigger {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 7.5rem;
-  padding: 0 0.9rem;
-  margin-left: 0.5rem;
-  border: 1px solid var(--ds-color-border);
-  border-radius: 0.9rem;
-  background: var(--ds-color-surface);
-  color: var(--ds-color-text-soft);
-  font-size: 0.9rem;
-  white-space: nowrap;
-  cursor: pointer;
-  outline: none;
-}
-
-.garantias-list__month-trigger:hover {
-  border-color: var(--ds-color-border-strong);
-  color: var(--ds-color-text);
-}
-
-.garantias-list__month-input {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
+  gap: 0.35rem;
 }
 
 @media (max-width: 767px) {
-  .garantias-list__actions {
-    justify-content: stretch;
-  }
-
-  .garantias-list__search-cluster,
+  .garantias-list__month-filter,
   .garantias-list__search,
-  .garantias-list__month-trigger {
+  .garantias-list__month-field {
     min-width: 100%;
     max-width: none;
     width: 100%;
   }
 
-  .garantias-list__month-trigger {
-    min-height: 2.5rem;
-    margin-left: 0.5rem;
+  .garantias-list__month-filter {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
   }
 }
 </style>

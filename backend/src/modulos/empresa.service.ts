@@ -3,6 +3,12 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EvolutionService } from '../evolution/evolution.service';
 
+interface TestarEvolutionApiInput {
+  evolution_api_url?: string;
+  evolution_api_key?: string;
+  evolution_instance_name?: string;
+}
+
 @Injectable()
 export class EmpresaService {
   constructor(
@@ -29,7 +35,11 @@ export class EmpresaService {
   /**
    * Testa a conexão com a Evolution API (WhatsApp). Usa configuração salva na empresa ou .env.
    */
-  async testarEvolutionApi(): Promise<{ ok: boolean; message?: string; details?: unknown }> {
-    return this.evolution.testConnection();
+  async testarEvolutionApi(config?: TestarEvolutionApiInput): Promise<{ ok: boolean; message?: string; details?: unknown }> {
+    return this.evolution.testConnection({
+      baseUrl: config?.evolution_api_url,
+      apiKey: config?.evolution_api_key,
+      instanceName: config?.evolution_instance_name,
+    });
   }
 }

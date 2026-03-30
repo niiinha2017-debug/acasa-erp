@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { classificarVendaPorFluxoMatrixOuLegado } from '../shared/constantes/status-matrix';
+import { RotaCustoViagemService } from '../rota-custo-viagem/rota-custo-viagem.service';
 @Injectable()
 export class AnalyticsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly rotaCustoViagem: RotaCustoViagemService,
+  ) {}
 
   /** KPIs: total a pagar, a receber, clientes ativos */
   async getDashboardResumo(): Promise<{
@@ -528,11 +532,19 @@ export class AnalyticsService {
     }));
     despesas_por_categoria.sort((a, b) => b.total - a.total);
 
+    const resumoRotas = await this.rotaCustoViagem.getResumoCustos({
+      data_inicio: inicioMes.toISOString(),
+      data_fim: fimMes.toISOString().slice(0, 10),
+    });
+    const custo_veiculos_producao =
+      Math.round(Number(resumoRotas.custo_total ?? 0) * 100) / 100;
+
     const resultado =
       Math.round(
         (receita_total -
           custo_compra -
           custo_hora_producao -
+          custo_veiculos_producao -
           despesas_total) *
           100,
       ) / 100;
@@ -545,6 +557,7 @@ export class AnalyticsService {
       receita_total,
       custo_compra,
       custo_hora_producao,
+      custo_veiculos_producao,
       despesas_total,
       despesas_por_categoria,
       resultado,

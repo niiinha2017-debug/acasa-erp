@@ -5,7 +5,7 @@
         <i class="pi pi-chart-pie text-slate-400" />
         Consumo do projeto — {{ codigo }}
       </h3>
-      <p class="text-xs text-text-muted mt-0.5">Área útil (peças) × Retalhos × Perda real</p>
+      <p class="text-xs text-text-muted mt-0.5">Área útil (peças) × Sobras reaproveitáveis × Perda real</p>
     </div>
     <div class="p-4">
       <div v-if="loading" class="flex items-center justify-center py-12">
@@ -46,7 +46,7 @@
             </div>
             <div class="flex items-center gap-2">
               <span class="w-3 h-3 rounded-full shrink-0 bg-blue-500/90" />
-              <span class="text-sm text-text-main">Retalhos</span>
+              <span class="text-sm text-text-main">Sobras reaproveitáveis</span>
               <span class="text-sm font-semibold tabular-nums text-text-main ml-auto">{{ retalhosFormatada }} m²</span>
             </div>
             <div class="flex items-center gap-2">
@@ -71,7 +71,7 @@ const props = defineProps({
   codigo: { type: String, default: '' },
 })
 
-// Cores suaves: verde (útil), azul (retalhos), cinza (perda)
+// Cores suaves: verde (útil), azul (sobras), cinza (perda)
 const COR_UTIL = 'rgba(34, 197, 94, 0.82)'
 const COR_RETALHOS = 'rgba(59, 130, 246, 0.82)'
 const COR_PERDA = 'rgba(148, 163, 184, 0.82)'
@@ -118,7 +118,7 @@ const chartData = computed(() => {
     colors.push(COR_UTIL)
   }
   if (r > 0) {
-    labels.push('Retalhos')
+    labels.push('Sobras reaproveitáveis')
     data.push(r)
     colors.push(COR_RETALHOS)
   }

@@ -601,6 +601,7 @@
 <script setup>
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import api from '@/services/api'
 import { AgendaGeralService, AgendaLojaService, AgendaFabricaService, ClienteService, FuncionariosService } from '@/services'
 import { can } from '@/services/permissions'
 import { confirm } from '@/services/confirm'
@@ -704,6 +705,10 @@ const funcionariosCache = ref({}) // id -> nome
 const inputBuscaFuncRef = ref(null)
 const painelEquipeAberto = ref(false)
 const execucoesEquipe = ref({}) // funcionario_id -> { inicio_em, fim_em }
+const buscaAutomovel = ref('')
+const automoveisOpcoes = ref([])
+const automoveisCache = ref({})
+const painelAutomoveisAberto = ref(false)
 
 const formBase = () => ({
   setor_destino: 'LOJA',
@@ -715,6 +720,7 @@ const formBase = () => ({
   cliente_nome_livre: '',
   venda_id: null,
   equipe_ids: [],
+  automovel_ids: [],
   origem_fluxo: 'TAREFA',
 })
 const form = ref(formBase())
@@ -793,7 +799,7 @@ function subetapasPorMacro(macroKey) {
   return SUBETAPAS_CATALOGO.filter((s) => s.macroetapa === macroKey && !subetapaOcultaNaUI(s.key))
 }
 
-const MACROS_LOJA = ['COMERCIAL']
+const MACROS_LOJA = ['COMERCIAL', 'POS_VENDA']
 const MACROS_FABRICA = ['ENGENHARIA', 'FABRICA', 'LOGISTICA', 'POS_VENDA']
 
 const macroetapasDoSetor = computed(() => {
@@ -1169,12 +1175,18 @@ function onSetorChange(key) {
   clienteSelecionadoNome.value = ''
   buscaCliente.value = ''
   clientesOpcoes.value = []
+  if (key !== 'LOJA') {
+    form.value.automovel_ids = []
+    painelAutomoveisAberto.value = false
+  }
 }
 
 function fecharModal() {
   modalCriar.value = false
   eventoEdicao.value = null
   execucoesEquipe.value = {}
+  painelAutomoveisAberto.value = false
+  buscaAutomovel.value = ''
 }
 
 function toLocalISOString(d) {

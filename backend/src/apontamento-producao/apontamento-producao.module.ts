@@ -5,8 +5,9 @@ import { AgendaModule } from '../agenda/agenda.module';
 import { ApontamentoProducaoService } from './apontamento-producao.service';
 import { ApontamentoProducaoController } from './apontamento-producao.controller';
 import { TotemFabricaController } from '../totem-fabrica/totem-fabrica.controller';
+import { RotaCustoViagemModule } from '../rota-custo-viagem/rota-custo-viagem.module';
 @Module({
-  imports: [PrismaModule, EstoqueRetalhoModule, AgendaModule],
+  imports: [PrismaModule, EstoqueRetalhoModule, AgendaModule, RotaCustoViagemModule],
   controllers: [ApontamentoProducaoController, TotemFabricaController],
   providers: [ApontamentoProducaoService],
   exports: [ApontamentoProducaoService],

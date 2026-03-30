@@ -15,6 +15,7 @@ import {
   CustosEstruturaService,
   CATEGORIAS_DESPESA_FIXA_SALARIOS,
 } from './custos-estrutura.service';
+import { RotaCustoViagemService } from '../rota-custo-viagem/rota-custo-viagem.service';
 import type {
   FechamentoFornecedorItem,
   FechamentoFornecedorItemOrigem,
@@ -29,6 +30,7 @@ export class FinanceiroService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly custosEstrutura: CustosEstruturaService,
+    private readonly rotaCustoViagem: RotaCustoViagemService,
   ) {}
 
   // =========================================================
@@ -3739,7 +3741,13 @@ export class FinanceiroService {
     }
     const absorcaoProjetos = this.round2(totalHorasTotem * taxaAbsorcao);
 
-    const cpvTotal = this.round2(cpvMateriais);
+    const resumoRotas = await this.rotaCustoViagem.getResumoCustos({
+      data_inicio: inicioMes.toISOString(),
+      data_fim: fimMes.toISOString().slice(0, 10),
+    });
+    const custoVeiculos = this.round2(Number(resumoRotas.custo_total ?? 0));
+
+    const cpvTotal = this.round2(cpvMateriais + custoVeiculos);
     const receita = this.round2(receitaBruta);
     const margemContribuicao = this.round2(receita - impostos - cpvTotal);
     const lucroLiquido = this.round2(margemContribuicao - despesasFixasTotal);
@@ -3750,6 +3758,7 @@ export class FinanceiroService {
       receitaBruta: receita,
       impostos: this.round2(impostos),
       cpvMateriais: this.round2(cpvMateriais),
+      custoVeiculos,
       cpvTotal,
       despesasFixasSalarios,
       despesasFixasOutras,

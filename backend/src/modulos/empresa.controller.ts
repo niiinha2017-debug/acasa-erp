@@ -10,16 +10,16 @@ import { Permissoes } from '../auth/permissoes.decorator';
 export class EmpresaController {
   constructor(private readonly empresaService: EmpresaService) {}
 
-  @Get('whatsapp-test')
+  @Post('whatsapp-test')
   @Permissoes('configuracoes.empresa.ver')
-  whatsappTest() {
-    return this.empresaService.testarEvolutionApi();
+  whatsappTest(@Body() dados?: any) {
+    return this.empresaService.testarEvolutionApi(dados);
   }
 
-  @Get('evolution-test')
+  @Post('evolution-test')
   @Permissoes('configuracoes.empresa.ver')
-  evolutionTest() {
-    return this.empresaService.testarEvolutionApi();
+  evolutionTest(@Body() dados?: any) {
+    return this.empresaService.testarEvolutionApi(dados);
   }
 
   @Get()

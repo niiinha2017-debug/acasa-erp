@@ -4,6 +4,7 @@ import {
   CustosEstruturaService,
   CATEGORIAS_DESPESA_FIXA_SALARIOS,
 } from '../financeiro/custos-estrutura.service';
+import { RotaCustoViagemService } from '../rota-custo-viagem/rota-custo-viagem.service';
 
 const CATEGORIAS_MATERIAIS = ['INSUMO', 'MATERIA_PRIMA', 'MATERIA PRIMA', 'INSUMOS'];
 
@@ -33,6 +34,7 @@ export class DreDetalhadaService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly custosEstrutura: CustosEstruturaService,
+    private readonly rotaCustoViagem: RotaCustoViagemService,
   ) {}
 
   /** Busca clientes por nome (para autocomplete). */
@@ -517,9 +519,17 @@ export class DreDetalhadaService {
           : 'Garantia';
     const titulo = String((garantia as any).titulo || '').trim();
     const nomeAmbiente = titulo ? `${prefixo} - ${titulo}` : `${prefixo} #${(garantia as any).id}`;
+    const agendaIdsGarantia = ((garantia as any).agendamentos || []).map((ag: any) => Number(ag.id)).filter(Boolean);
+    const resumoRotasGarantia = await this.rotaCustoViagem.getResumoCustos({
+      agenda_loja_ids: agendaIdsGarantia,
+      data_inicio: inicioMes.toISOString(),
+      data_fim: fimMes.toISOString().slice(0, 10),
+    });
+    const custoVeiculo = round2(Number(resumoRotasGarantia.custo_total ?? 0));
+
     const valorContrato = round2(toNum((garantia as any).valor_venda));
     const materiaisDiretos = round2(toNum((garantia as any).custo_produtos));
-    const lucroLiquido = round2(valorContrato - materiaisDiretos - custoMaoDeObra - custoEstrutura);
+    const lucroLiquido = round2(valorContrato - materiaisDiretos - custoMaoDeObra - custoEstrutura - custoVeiculo);
 
     return {
       projeto_id: null,
@@ -530,6 +540,7 @@ export class DreDetalhadaService {
       impostos: 0,
       materiais_diretos: materiaisDiretos,
       custo_mao_de_obra: custoMaoDeObra,
+      custo_veiculo: custoVeiculo,
       custo_estrutura: custoEstrutura,
       horas_totem: horasTotemArred,
       rateio_despesas_fixas: 0,
@@ -899,6 +910,13 @@ export class DreDetalhadaService {
       }))
       .sort((a, b) => b.valor_total - a.valor_total);
 
+    const resumoRotasProjeto = await this.rotaCustoViagem.getResumoCustos({
+      projeto_id: projetoId,
+      data_inicio: inicioMes.toISOString(),
+      data_fim: fimMes.toISOString().slice(0, 10),
+    });
+    const custoVeiculoProjeto = round2(rateioAmbiente * Number(resumoRotasProjeto.custo_total ?? 0));
+
     let lucroLiquido = round2(
       valorContrato - impostos - materiaisDiretos - custoMaoDeObra - custoEstrutura - rateioDespesasFixas,
     );
@@ -938,7 +956,7 @@ export class DreDetalhadaService {
         : 0;
     const custoComercial = round2(tempoNegociacaoDias * DreDetalhadaService.HORAS_POR_DIA * valorHoraComercial);
     const custoProducaoTimeline = round2(tempoFabricaDias * DreDetalhadaService.HORAS_POR_DIA * taxaEstrutura);
-    lucroLiquido = round2(lucroLiquido - custoComercial - custoProducaoTimeline);
+    lucroLiquido = round2(lucroLiquido - custoComercial - custoProducaoTimeline - custoVeiculoProjeto);
 
     const agendasProjeto = await this.prisma.agenda_fabrica.findMany({
       where: { projeto_id: projetoId, status: 'CONCLUIDO' },
@@ -981,6 +999,7 @@ export class DreDetalhadaService {
       impostos,
       materiais_diretos: materiaisDiretos,
       custo_mao_de_obra: custoMaoDeObra,
+      custo_veiculo: custoVeiculoProjeto,
       custo_estrutura: custoEstrutura,
       horas_totem: horasTotemAmbiente,
       rateio_despesas_fixas: rateioDespesasFixas,

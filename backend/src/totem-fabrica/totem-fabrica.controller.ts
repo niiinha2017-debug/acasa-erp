@@ -2,11 +2,15 @@ import { Body, Controller, Get, Post, Param, Query, Req, UseGuards, ParseIntPipe
 import { ApontamentoProducaoService, SobraTotemDto } from '../apontamento-producao/apontamento-producao.service';
 import { PermissionsGuard } from '../auth/permissions.guard';
 import { Permissoes } from '../auth/permissoes.decorator';
+import { RotaCustoViagemService } from '../rota-custo-viagem/rota-custo-viagem.service';
 
 @UseGuards(PermissionsGuard)
 @Controller('totem-fabrica')
 export class TotemFabricaController {
-  constructor(private readonly apontamentoService: ApontamentoProducaoService) {}
+  constructor(
+    private readonly apontamentoService: ApontamentoProducaoService,
+    private readonly rotaService: RotaCustoViagemService,
+  ) {}
 
   /**
    * Lista tarefas para o totem: apenas status Pendente ou Em Produção, mesma ordem da Agenda (inicio_em asc).
@@ -63,6 +67,37 @@ export class TotemFabricaController {
   ) {
     const tipo = body?.tipo === 'agenda_loja' ? 'agenda_loja' : 'agenda_fabrica';
     return this.apontamentoService.totemCheck(id, body?.sobras, tipo);
+  }
+
+  /**
+   * Registrar km de rota de medida fina (ida + volta) via totem.
+   * Deve ser chamado junto ou após o check da agenda_loja (medida fina).
+   * Body: { funcionario_id, automovel_id?, km_ida, km_volta, endereco_destino?, observacoes? }
+   */
+  @Post(':id/rota-km')
+  @Permissoes('agendamentos.producao')
+  registrarRotaKm(
+    @Param('id', ParseIntPipe) agendaLojaId: number,
+    @Body()
+    body: {
+      funcionario_id: number;
+      automovel_id?: number;
+      km_ida?: number;
+      km_volta?: number;
+      endereco_destino?: string;
+      observacoes?: string;
+    },
+  ) {
+    return this.rotaService.create({
+      agenda_loja_id: agendaLojaId,
+      funcionario_id: body.funcionario_id,
+      automovel_id: body.automovel_id,
+      km_ida: body.km_ida,
+      km_volta: body.km_volta,
+      endereco_destino: body.endereco_destino,
+      observacoes: body.observacoes,
+      origem_registro: 'TOTEM',
+    });
   }
 
 }

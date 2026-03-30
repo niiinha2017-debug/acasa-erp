@@ -181,7 +181,7 @@
                     <button
                       class="totem-card__btn totem-card__btn--success"
                       :disabled="acionando === tarefa.id_para_play"
-                      @click="tarefa.is_medicao_externa ? confirmarCheckSemSobras(tarefa) : abrirModalSobras(tarefa)"
+                      @click="tarefa.tipo === 'agenda_loja' ? abrirModalRota(tarefa) : tarefa.is_medicao_externa ? confirmarCheckSemSobras(tarefa) : abrirModalSobras(tarefa)"
                     >
                       <i class="pi pi-check" />Concluir
                     </button>
@@ -205,7 +205,7 @@
                 <div class="totem-fabrica-page__modal-head">
                   <h3 class="totem-fabrica-page__modal-title">Sobra aproveitável</h3>
                   <p class="totem-fabrica-page__modal-copy">
-                    Deseja cadastrar alguma sobra antes de concluir esta tarefa?
+                    Deseja lançar alguma sobra no controle de estoque antes de concluir esta tarefa?
                   </p>
                 </div>
 
@@ -222,9 +222,9 @@
               <template v-else>
                 <div class="totem-fabrica-page__modal-header-row">
                   <div>
-                    <h3 class="totem-fabrica-page__modal-title">Cadastrar sobras</h3>
+                    <h3 class="totem-fabrica-page__modal-title">Lançar sobras</h3>
                     <p class="totem-fabrica-page__modal-copy">
-                      Informe as peças aproveitáveis em milímetros. O sistema registra tudo como retalho.
+                      Informe as peças aproveitáveis em milímetros. O sistema registra tudo no controle de estoque como sobra vinculada ao material original.
                     </p>
                   </div>
                   <button
@@ -325,6 +325,87 @@
               <div class="totem-fabrica-page__modal-actions totem-fabrica-page__modal-actions--center">
                 <Button variant="outline" class="!rounded-xl" @click="fecharModalPausa">
                   Cancelar
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Transition>
+      </Teleport>
+
+      <!-- ══ Modal: Registro de KM (medição externa / medida fina) ══ -->
+      <Teleport to="body">
+        <Transition name="fade">
+          <div
+            v-if="modalRotaOpen"
+            class="totem-fabrica-page__modal-backdrop"
+            @click.self="fecharModalRota"
+          >
+            <div class="totem-fabrica-page__modal ds-shell-card">
+              <div class="totem-fabrica-page__modal-head">
+                <h3 class="totem-fabrica-page__modal-title">Registrar KM da Rota</h3>
+                <p class="totem-fabrica-page__modal-copy">
+                  Informe os quilômetros percorridos nesta medida fina para controle de custo de rota.
+                </p>
+              </div>
+
+              <div class="rota-km-form">
+                <div class="rota-km-form__row">
+                  <div class="rota-km-form__field">
+                    <label class="rota-km-form__label">KM Ida</label>
+                    <input
+                      v-model.number="rotaForm.km_ida"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      class="totem-input"
+                      placeholder="0,0"
+                    />
+                  </div>
+                  <div class="rota-km-form__field">
+                    <label class="rota-km-form__label">KM Volta</label>
+                    <input
+                      v-model.number="rotaForm.km_volta"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      class="totem-input"
+                      placeholder="0,0"
+                    />
+                  </div>
+                </div>
+                <div v-if="rotaForm.km_ida || rotaForm.km_volta" class="rota-km-form__total">
+                  <span>Total: <strong>{{ ((rotaForm.km_ida || 0) + (rotaForm.km_volta || 0)).toFixed(1) }} km</strong></span>
+                </div>
+                <div v-if="tarefaRota?.equipe?.length > 1" class="rota-km-form__field">
+                  <label class="rota-km-form__label">Motorista / Responsável</label>
+                  <select v-model="rotaForm.funcionario_id" class="totem-input">
+                    <option v-for="m in tarefaRota.equipe" :key="m.funcionario?.id" :value="m.funcionario?.id">
+                      {{ m.funcionario?.nome }}
+                    </option>
+                  </select>
+                </div>
+                <div class="rota-km-form__field">
+                  <label class="rota-km-form__label">Veículo utilizado</label>
+                  <select v-model="rotaForm.automovel_id" class="totem-input">
+                    <option :value="null">Sem veículo cadastrado</option>
+                    <option v-for="a in automoveis" :key="a.id" :value="a.id">
+                      {{ a.placa }} – {{ a.descricao }}
+                    </option>
+                  </select>
+                </div>
+                <div class="rota-km-form__field">
+                  <label class="rota-km-form__label">Observações</label>
+                  <input v-model="rotaForm.observacoes" type="text" class="totem-input" placeholder="Opcional" />
+                </div>
+              </div>
+
+              <div class="totem-fabrica-page__modal-actions totem-fabrica-page__modal-actions--center">
+                <Button variant="outline" class="!rounded-xl" @click="pularRegistroRota">
+                  Pular
+                </Button>
+                <Button variant="primary" class="!rounded-xl" :loading="salvandoRota" @click="confirmarRegistroRota">
+                  <i class="pi pi-check mr-2 text-xs"></i>
+                  Registrar e Concluir
                 </Button>
               </div>
             </div>
@@ -620,6 +701,85 @@ const tarefaSobras = ref(null)
 const consumosTotem = ref([])
 const sobrasRows = ref([{ produto_id: null, largura_mm: null, comprimento_mm: null }])
 
+// ─── Modal Rota KM (medição externa) ───
+const modalRotaOpen = ref(false)
+const tarefaRota = ref(null)
+const salvandoRota = ref(false)
+const automoveis = ref([])
+const rotaForm = ref({ km_ida: null, km_volta: null, automovel_id: null, observacoes: '' })
+
+async function carregarAutomoveis() {
+  try {
+    const api = (await import('@/services/api')).default
+    const res = await api.get('/automoveis')
+    automoveis.value = res.data ?? []
+  } catch {
+    automoveis.value = []
+  }
+}
+
+function abrirModalRota(tarefa) {
+  tarefaRota.value = tarefa
+  rotaForm.value = {
+    km_ida: null,
+    km_volta: null,
+    automovel_id: null,
+    observacoes: '',
+    funcionario_id: tarefa.equipe?.[0]?.funcionario?.id ?? null,
+  }
+  modalRotaOpen.value = true
+}
+
+function fecharModalRota() {
+  modalRotaOpen.value = false
+  tarefaRota.value = null
+}
+
+async function confirmarRegistroRota() {
+  const t = tarefaRota.value
+  if (!t) return
+  salvandoRota.value = true
+  try {
+    const idPlay = t.id_para_play ?? t.id
+    // Registra km (pode ser 0 se funcionário não preencheu)
+    if (rotaForm.value.km_ida || rotaForm.value.km_volta) {
+      await TotemFabricaService.registrarRotaKm(idPlay, {
+        funcionario_id: rotaForm.value.funcionario_id ?? t.equipe?.[0]?.funcionario?.id,
+        automovel_id: rotaForm.value.automovel_id ?? undefined,
+        km_ida: rotaForm.value.km_ida ?? 0,
+        km_volta: rotaForm.value.km_volta ?? 0,
+        observacoes: rotaForm.value.observacoes || undefined,
+      })
+    }
+    // Conclui a tarefa
+    await TotemFabricaService.check(idPlay, { tipo: t.tipo })
+    notify.success('Rota registrada e tarefa concluída.')
+    fecharModalRota()
+    await carregarTarefas()
+  } catch (e) {
+    const msg = e?.response?.data?.message || 'Não foi possível concluir.'
+    notify.error(msg)
+  } finally {
+    salvandoRota.value = false
+  }
+}
+
+async function pularRegistroRota() {
+  const t = tarefaRota.value
+  if (!t) return
+  acionando.value = t.id_para_play ?? t.id
+  try {
+    await TotemFabricaService.check(t.id_para_play, { tipo: t.tipo })
+    notify.success('Tarefa concluída sem registro de rota.')
+    fecharModalRota()
+    await carregarTarefas()
+  } catch (e) {
+    notify.error(e?.response?.data?.message || 'Não foi possível concluir.')
+  } finally {
+    acionando.value = null
+  }
+}
+
 async function abrirModalSobras(tarefa) {
   tarefaSobras.value = tarefa
   modalPassoSobras.value = false
@@ -799,6 +959,7 @@ function cronometrosPorFuncionario(tarefa) {
 
 onMounted(() => {
   carregarTarefas()
+  carregarAutomoveis()
   startTick()
 })
 
@@ -1599,5 +1760,57 @@ watch([() => filtros.value.data_inicio, () => filtros.value.data_fim], () => car
   .totem-pausa-modal__grid {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+
+/* ══════════════════════════════════════════
+   MODAL ROTA KM
+══════════════════════════════════════════ */
+.rota-km-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+.rota-km-form__row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.rota-km-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.rota-km-form__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ds-color-text-soft, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rota-km-form__total {
+  font-size: 0.9rem;
+  color: var(--ds-color-text);
+  padding: 0.25rem 0;
+}
+
+.totem-input {
+  background: var(--ds-surface-subtle, #1a1a1a);
+  border: 1px solid var(--ds-border-color, #333);
+  border-radius: 8px;
+  color: var(--ds-color-text, #fff);
+  padding: 0.6rem 0.75rem;
+  font-size: 1rem;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.totem-input:focus {
+  border-color: var(--ds-color-primary, #3b82f6);
 }
 </style>

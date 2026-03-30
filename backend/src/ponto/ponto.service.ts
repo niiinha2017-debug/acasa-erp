@@ -72,6 +72,26 @@ export class PontoService {
       : PontoTipoRegistro.ENTRADA;
   }
 
+  private normalizarLatitude(raw: unknown): number | null {
+    const value = Number(raw);
+    if (!Number.isFinite(value)) return null;
+    if (value < -90 || value > 90) return null;
+    return value;
+  }
+
+  private normalizarLongitude(raw: unknown): number | null {
+    const value = Number(raw);
+    if (!Number.isFinite(value)) return null;
+    if (value < -180 || value > 180) return null;
+    return value;
+  }
+
+  private normalizarPrecisao(raw: unknown): number | null {
+    const value = Number(raw);
+    if (!Number.isFinite(value) || value < 0) return null;
+    return Math.round(value);
+  }
+
   private buildConviteUrl(code: string): string {
     const rawBase = String(this.config.get('PONTO_APP_URL') ?? '').trim();
     const fallback = 'https://ponto.acasamarcenaria.com.br';
@@ -254,6 +274,9 @@ export class PontoService {
     await this.assertFuncionarioAtivoParaPonto(funcionario_id);
     const dispositivo_id = this.getDispositivoId(req);
     const { inicio, fim } = this.rangeHoje();
+    const latitude = this.normalizarLatitude(dto.latitude);
+    const longitude = this.normalizarLongitude(dto.longitude);
+    const precisao_metros = this.normalizarPrecisao(dto.precisao_metros);
 
     const ultimoHoje = await this.prisma.ponto_registros.findFirst({
       where: {
@@ -296,9 +319,9 @@ export class PontoService {
         user_agent: user_agent || null,
         status: 'ATIVO',
         observacao: dto.observacao ?? null,
-        latitude: null,
-        longitude: null,
-        precisao_metros: null,
+        latitude,
+        longitude,
+        precisao_metros,
         cep: null,
         rua: null,
         bairro: null,

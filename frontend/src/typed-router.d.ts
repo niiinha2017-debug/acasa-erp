@@ -100,6 +100,20 @@ declare module 'vue-router/auto-routes' {
       { id: ParamValue<false> },
       | never
     >,
+    '/automoveis/': RouteRecordInfo<
+      '/automoveis/',
+      '/automoveis',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/automoveis/cadastro': RouteRecordInfo<
+      '/automoveis/cadastro',
+      '/automoveis/cadastro',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/clientes/': RouteRecordInfo<
       '/clientes/',
       '/clientes',
@@ -450,6 +464,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/relatorios/custo-rota/': RouteRecordInfo<
+      '/relatorios/custo-rota/',
+      '/relatorios/custo-rota',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/relatorios/dre-detalhada': RouteRecordInfo<
       '/relatorios/dre-detalhada',
       '/relatorios/dre-detalhada',
@@ -610,6 +631,18 @@ declare module 'vue-router/auto-routes' {
     'src/pages/arquivos/pdf/[id].vue': {
       routes:
         | '/arquivos/pdf/[id]'
+      views:
+        | never
+    }
+    'src/pages/automoveis/index.vue': {
+      routes:
+        | '/automoveis/'
+      views:
+        | never
+    }
+    'src/pages/automoveis/cadastro.vue': {
+      routes:
+        | '/automoveis/cadastro'
       views:
         | never
     }
@@ -910,6 +943,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/relatorios/contas-receber.vue': {
       routes:
         | '/relatorios/contas-receber'
+      views:
+        | never
+    }
+    'src/pages/relatorios/custo-rota/index.vue': {
+      routes:
+        | '/relatorios/custo-rota/'
       views:
         | never
     }
