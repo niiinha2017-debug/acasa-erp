@@ -1,11 +1,48 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+
+type AgendaTotem = {
+  id: number;
+  titulo: string;
+  status: string;
+  subetapa: string | null;
+  cliente: {
+    id: number;
+    nome_completo: string | null;
+    razao_social: string | null;
+  } | null;
+};
+
+type ApontamentoTotem = {
+  id: number;
+  funcionario_id: number | null;
+  inicio_em: Date;
+  fim_em: Date | null;
+  horas: Prisma.Decimal | number | null;
+  custo_calculado: Prisma.Decimal | number | null;
+  pausa_total_segundos?: number | null;
+  pausa_inicio_em?: Date | null;
+  pausa_fim_em?: Date | null;
+  agenda_fabrica_id: number | null;
+  agenda_loja_id: number | null;
+  funcionario: {
+    id: number;
+    nome: string;
+    custo_hora: Prisma.Decimal | number | null;
+  } | null;
+  agenda_fabrica: AgendaTotem | null;
+  agenda_loja: AgendaTotem | null;
+};
 
 @Injectable()
 export class RelatorioTotemService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private async buscarApontamentos(inicio: Date, fim: Date) {
+  private async buscarApontamentos(
+    inicio: Date,
+    fim: Date,
+  ): Promise<ApontamentoTotem[]> {
     const where = {
       inicio_em: { gte: inicio, lte: fim },
     };
@@ -49,7 +86,7 @@ export class RelatorioTotemService {
       });
     } catch {
       // Fallback para ambientes com divergencia de schema em campos nao essenciais.
-      return this.prisma.apontamento_producao.findMany({
+      const apontamentos = await this.prisma.apontamento_producao.findMany({
         where,
         select: {
           id: true,
@@ -78,6 +115,23 @@ export class RelatorioTotemService {
         },
         orderBy: { inicio_em: 'asc' },
       });
+      return apontamentos.map((ap) => ({
+        ...ap,
+        agenda_fabrica: ap.agenda_fabrica
+          ? {
+              ...ap.agenda_fabrica,
+              subetapa: null,
+              cliente: null,
+            }
+          : null,
+        agenda_loja: ap.agenda_loja
+          ? {
+              ...ap.agenda_loja,
+              subetapa: null,
+              cliente: null,
+            }
+          : null,
+      }));
     }
   }
 

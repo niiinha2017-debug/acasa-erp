@@ -3356,7 +3356,7 @@ export class FinanceiroService {
     const hoje = new Date();
 
     const statusPago = SF.PAGO;
-    const statusAbertos = [SF.EM_ABERTO, SF.VENCIDO, SF.AGENDADO].filter(Boolean) as string[];
+    const statusAbertos = [SF.EM_ABERTO, SF.VENCIDO];
 
     // ── ENTRADAS REALIZADAS (recebimentos efetivos no mês) ──────────────
     const contasReceberPagas = await this.prisma.contas_receber.findMany({
@@ -3372,7 +3372,7 @@ export class FinanceiroService {
         forma_recebimento_chave: true,
         origem_tipo: true,
         recebido_em: true,
-        cliente: { select: { nome: true } },
+        cliente: { select: { nome_completo: true, razao_social: true } },
       },
       orderBy: { recebido_em: 'desc' },
     });
@@ -3388,7 +3388,10 @@ export class FinanceiroService {
         forma: (c as any).forma_recebimento_chave || 'NÃO_INFORMADA',
         origem_tipo: (c as any).origem_tipo || null,
         data: (c as any).recebido_em,
-        cliente: (c as any).cliente?.nome || null,
+        cliente:
+          (c as any).cliente?.nome_completo ||
+          (c as any).cliente?.razao_social ||
+          null,
       };
     });
 
@@ -3416,7 +3419,7 @@ export class FinanceiroService {
         valor_original: true,
         status: true,
         vencimento_em: true,
-        cliente: { select: { nome: true } },
+        cliente: { select: { nome_completo: true, razao_social: true } },
       },
     });
 

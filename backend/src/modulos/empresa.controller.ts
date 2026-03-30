@@ -1,5 +1,5 @@
 // src/modulos/empresa/empresa.controller.ts
-import { Controller, Get, Put, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Put, Post, Body, UseGuards } from '@nestjs/common';
 import { EmpresaService } from './empresa.service';
 
 import { PermissionsGuard } from '../auth/permissions.guard';

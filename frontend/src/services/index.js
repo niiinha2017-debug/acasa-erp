@@ -323,6 +323,13 @@ export const VendaService = {
   listarAmbientes: (id) => api.get(`/vendas/${id}/ambientes`),
 }
 
+export const MedicaoFinaService = {
+  getProjetoDados: (id) => VendaService.buscar(id),
+  listarAmbientes: (id) => VendaService.listarAmbientes(id),
+  buscarPorProjetoAmbiente: (id, ambiente) =>
+    api.get(`/vendas/${id}/medicao-fina`, { params: { ambiente } }),
+}
+
 // --- CONTRATOS ---
 export const ContratosService = {
   listar: (params) => api.get('/contratos', { params: params || {} }),

@@ -434,6 +434,7 @@ export class AnalyticsService {
     receita_total: number;
     custo_compra: number;
     custo_hora_producao: number;
+    custo_veiculos_producao: number;
     despesas_total: number;
     despesas_por_categoria: { categoria: string; total: number }[];
     resultado: number;
