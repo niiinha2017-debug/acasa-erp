@@ -103,7 +103,7 @@
                   <i :class="resumo.totalSaldo >= 0 ? 'pi pi-arrow-up' : 'pi pi-arrow-down'" class="text-lg"></i>
                 </div>
                 <div class="min-w-0">
-                  <p class="text-[10px] font-black uppercase text-text-soft mb-0">Saldo</p>
+                  <p class="text-[10px] font-black uppercase text-text-soft mb-0">Saldo do período</p>
                   <p :class="resumo.totalSaldo >= 0 ? 'text-[var(--ds-color-success-600)]' : 'text-[var(--ds-color-danger-600)]'" class="text-sm font-bold tabular-nums italic">
                     {{ resumo.totalSaldoHHMM }}
                   </p>
@@ -112,7 +112,7 @@
             </div>
           </div>
 
-          <!-- Cards de resumo (Trabalhado, Horas Extras, Valor H.E., Dias com batida) -->
+          <!-- Cards de resumo (trabalhado, saldo do período, valor demonstrativo e dias com batida) -->
           <div v-if="funcionarioSelecionado" class="rh-ponto-relatorio__metrics-grid grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div class="rh-ponto-relatorio__metric flex items-center gap-4 min-h-[88px]">
               <div class="rh-ponto-relatorio__metric-icon rh-ponto-relatorio__metric-icon--primary w-11 h-11 shrink-0 rounded-xl flex items-center justify-center">
@@ -128,7 +128,7 @@
                 <i class="pi pi-clock text-lg"></i>
               </div>
               <div class="min-w-0">
-                <p class="text-[10px] font-black uppercase text-text-soft mb-0">Horas extras</p>
+                <p class="text-[10px] font-black uppercase text-text-soft mb-0">Saldo positivo</p>
                 <p class="text-sm font-bold text-[var(--ds-color-warning-600)] tabular-nums truncate">{{ horasExtrasHHMM }}</p>
               </div>
             </div>
@@ -137,8 +137,9 @@
                 <i class="pi pi-wallet text-lg"></i>
               </div>
               <div class="min-w-0">
-                <p class="text-[10px] font-black uppercase text-text-soft mb-0">Valor H.E.</p>
-                <p class="text-sm font-bold text-text-main tabular-nums truncate">{{ valorHorasExtrasLabel }}</p>
+                <p class="text-[10px] font-black uppercase text-text-soft mb-0">Valor demonstrativo</p>
+                <p class="text-sm font-bold text-text-main tabular-nums truncate">{{ valorHorasExtrasBaseLabel }}</p>
+                <p class="text-[10px] text-text-soft mt-0.5 truncate">Sem complemento até 44h e sem fechamento financeiro</p>
               </div>
             </div>
             <div class="rh-ponto-relatorio__metric flex items-center gap-4 min-h-[88px]">
@@ -488,9 +489,9 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import MonthReferenceField from '@/components/ui/MonthReferenceField.vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import {
   PontoRelatorioService,
   PontoJustificativasService,
@@ -512,6 +513,7 @@ import SearchInput from '@/components/ui/SearchInput.vue'
 definePage({ meta: { perm: 'ponto_relatorio.ver' } })
 
 const router = useRouter()
+const route = useRoute()
 const loadingTabela = ref(false)
 const loadingPdf = ref(false)
 const loadingComprovanteId = ref(null)
@@ -522,6 +524,7 @@ const funcionarios = ref([])
 
 const filtros = reactive({ funcionario_id: '', data_ini: '', data_fim: '' })
 const apenasAteHoje = ref(false)
+const hidratandoQuery = ref(false)
 
 function getMesInicioISO() {
   const hoje = new Date()
@@ -552,6 +555,57 @@ function aplicarMesReferencia(ano, mes) {
   filtros.data_ini = primeiro.toISOString().slice(0, 10)
   filtros.data_fim = ultimo.toISOString().slice(0, 10)
   buscar()
+}
+
+function aplicarEstadoDaQuery() {
+  hidratandoQuery.value = true
+  try {
+    const query = route.query || {}
+    const mesRef = String(query.mes || '').trim()
+    const funcionarioId = String(query.funcionario_id || '').trim()
+    const ateHoje = String(query.ate_hoje || '').trim()
+
+    if (/^\d{4}-\d{2}$/.test(mesRef)) {
+      const [anoStr, mesStr] = mesRef.split('-')
+      const ano = Number(anoStr)
+      const mes = Number(mesStr)
+      if (ano && mes) {
+        const primeiro = new Date(ano, mes - 1, 1)
+        const ultimo = new Date(ano, mes, 0)
+        filtros.data_ini = primeiro.toISOString().slice(0, 10)
+        filtros.data_fim = ultimo.toISOString().slice(0, 10)
+      }
+    } else {
+      filtros.data_ini = getMesInicioISO()
+      filtros.data_fim = getMesFimISO()
+    }
+
+    filtros.funcionario_id = funcionarioId || ''
+    apenasAteHoje.value = ateHoje === '1' || ateHoje === 'true'
+  } finally {
+    hidratandoQuery.value = false
+  }
+}
+
+async function sincronizarQueryDaTela() {
+  if (hidratandoQuery.value) return
+  const queryAtual = route.query || {}
+  const proximaQuery = {
+    ...queryAtual,
+    mes: String(filtros.data_ini || getMesInicioISO()).slice(0, 7),
+  }
+
+  if (filtros.funcionario_id) proximaQuery.funcionario_id = String(filtros.funcionario_id)
+  else delete proximaQuery.funcionario_id
+
+  if (apenasAteHoje.value) proximaQuery.ate_hoje = '1'
+  else delete proximaQuery.ate_hoje
+
+  const atualNormalizado = JSON.stringify(queryAtual)
+  const proximoNormalizado = JSON.stringify(proximaQuery)
+  if (atualNormalizado === proximoNormalizado) return
+
+  await router.replace({ query: proximaQuery })
 }
 
 const rowsFiltrados = computed(() => {
@@ -661,14 +715,14 @@ const horasExtrasHHMM = computed(() => {
   return resumo.value?.totalSaldoHHMM ?? '00:00'
 })
 
-/** Valor em R$ das horas extras (saldo positivo × custo/hora × 1,5). */
-const valorHorasExtrasLabel = computed(() => {
+/** Valor base em R$ das horas extras, sem adicional de 50%. */
+const valorHorasExtrasBaseLabel = computed(() => {
   const saldo = resumo.value?.totalSaldo ?? 0
   if (saldo <= 0) return 'R$ 0,00'
   const f = funcionarioSelecionado.value
   const custoHora = f ? Number(f.custo_hora || 0) : 0
   if (custoHora <= 0) return '—'
-  const valor = saldo * custoHora * 1.5
+  const valor = saldo * custoHora
   return `R$ ${numeroParaMoeda(valor)}`
 })
 
@@ -789,6 +843,26 @@ async function buscar() {
     loadingTabela.value = false
   }
 }
+
+watch(
+  () => [filtros.data_ini, filtros.funcionario_id, apenasAteHoje.value],
+  () => {
+    sincronizarQueryDaTela()
+  },
+)
+
+watch(
+  () => route.query,
+  () => {
+    if (hidratandoQuery.value) return
+    aplicarEstadoDaQuery()
+    if (filtros.funcionario_id) buscar()
+    else {
+      rows.value = []
+      justificativas.value = []
+    }
+  },
+)
 
 async function gerarRelatorioMensal() {
   if (!filtros.funcionario_id) return notify.warn('Selecione um funcionário')
@@ -1138,8 +1212,7 @@ async function confirmarSalvarJustificativa() {
 }
 
 onMounted(async () => {
-  filtros.data_ini = getMesInicioISO()
-  filtros.data_fim = getMesFimISO()
+  aplicarEstadoDaQuery()
   try {
     const { data } = await PontoRelatorioService.listarFuncionariosAtivos()
     const lista = data?.data || data || []
@@ -1153,6 +1226,8 @@ onMounted(async () => {
     funcionarioOptions.value = []
     notify.error('Não foi possível carregar funcionários.')
   }
+  await sincronizarQueryDaTela()
+  if (filtros.funcionario_id) await buscar()
 })
 </script>
 

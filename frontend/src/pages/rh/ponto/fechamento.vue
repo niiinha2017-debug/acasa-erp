@@ -61,6 +61,9 @@
                     <th class="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-text-soft text-right">Horas extras</th>
                     <th class="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-text-soft text-right">Saldo devedor</th>
                     <th class="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-text-soft text-right">Feriados trab.</th>
+                    <th class="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-text-soft text-right">Valor horas</th>
+                    <th class="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-text-soft text-right">Adic. 50%</th>
+                    <th class="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-text-soft text-right">Feriados R$</th>
                     <th class="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-text-soft text-right">Custo devido</th>
                     <th class="px-4 py-3 font-black text-[10px] uppercase tracking-wider text-text-soft text-center w-32">Ação</th>
                   </tr>
@@ -82,6 +85,9 @@
                     <td class="px-4 py-3 text-text-main text-right tabular-nums">{{ row.horas_extras_hhmm }}</td>
                     <td class="px-4 py-3 text-text-main text-right tabular-nums">{{ row.saldo_devedor_hhmm }}</td>
                     <td class="px-4 py-3 text-text-main text-right tabular-nums">{{ row.feriados_trabalhados_qtd }}</td>
+                    <td class="px-4 py-3 text-text-main text-right tabular-nums">{{ formatarMoeda(row.valor_horas_extras_base) }}</td>
+                    <td class="px-4 py-3 text-text-main text-right tabular-nums">{{ formatarMoeda(row.adicional_hora_extra) }}</td>
+                    <td class="px-4 py-3 text-text-main text-right tabular-nums">{{ formatarMoeda(row.valor_feriados_trabalhados) }}</td>
                     <td class="px-4 py-3 font-bold text-text-main text-right tabular-nums">{{ formatarMoeda(row.custo_devido) }}</td>
                     <td class="px-4 py-3 text-center">
                       <Button
@@ -210,7 +216,7 @@ async function efetuarPagamento(row) {
       mes: ref_mes,
       ano: ref_ano,
       horas_extras_valor: Number(row.custo_devido) || 0,
-      observacao: `Fechamento gerado pela tela de RH/Ponto. Horas extras e feriados do periodo ${dataIni.value || ''} a ${dataFim.value || ''}.`,
+      observacao: `Fechamento gerado pela tela de RH/Ponto. Valor horas: ${formatarMoeda(row.valor_horas_extras_base)}. Adicional 50%: ${formatarMoeda(row.adicional_hora_extra)}. Feriados: ${formatarMoeda(row.valor_feriados_trabalhados)}. Total do periodo ${dataIni.value || ''} a ${dataFim.value || ''}.`,
     })
     notify.success('Fechamento criado no Financeiro. A conta a pagar do funcionário foi gerada com sucesso.')
     await buscar()

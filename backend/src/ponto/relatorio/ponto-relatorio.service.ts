@@ -222,6 +222,72 @@ export class PontoRelatorioService {
     return `${isNegative ? '-' : ''}${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   }
 
+  private minutosParaHHMM(min: number): string {
+    const isNegative = min < 0;
+    const absMin = Math.abs(Math.round(min));
+    const h = Math.floor(absMin / 60);
+    const m = absMin % 60;
+    return `${isNegative ? '-' : ''}${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+
+  private hhmmParaMinutos(hhmm: string | null | undefined): number {
+    if (!hhmm || typeof hhmm !== 'string') return 0;
+    const parts = String(hhmm).trim().split(/[:\s]/).map(Number);
+    const h = Number(parts[0]) || 0;
+    const m = Number(parts[1]) || 0;
+    const s = Number(parts[2]) || 0;
+    return h * 60 + m + s / 60;
+  }
+
+  private calcularDiaPontoPdf(registrosDoDia: any[], metaMin: number) {
+    const regs = [...(registrosDoDia || [])]
+      .filter((r) => r?.status !== 'INVALIDADO')
+      .sort(
+        (a, b) =>
+          new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime(),
+      );
+
+    const batidas = regs.map((r) => ({
+      id: r.id,
+      data_hora: r.data_hora,
+      hora: this.formatHora(r.data_hora),
+      tipo: r.tipo,
+      observacao: r.observacao,
+    }));
+
+    const inconsistente = batidas.length % 2 !== 0;
+    if (inconsistente) {
+      return {
+        batidas,
+        tempoLiquidoMin: null,
+        saldoMin: null,
+        inconsistente: true,
+      };
+    }
+
+    let tempoLiquidoMin = 0;
+    let entradaPendente: (typeof batidas)[number] | null = null;
+    for (const batida of batidas) {
+      if (batida.tipo === 'ENTRADA') {
+        entradaPendente = batida;
+        continue;
+      }
+      if (batida.tipo === 'SAIDA' && entradaPendente) {
+        const entMin = this.hhmmParaMinutos(entradaPendente.hora);
+        const saiMin = this.hhmmParaMinutos(batida.hora);
+        if (saiMin > entMin) tempoLiquidoMin += saiMin - entMin;
+        entradaPendente = null;
+      }
+    }
+
+    return {
+      batidas,
+      tempoLiquidoMin,
+      saldoMin: tempoLiquidoMin - metaMin,
+      inconsistente: false,
+    };
+  }
+
   private horasParaDecimal(ms: number): number {
     return Math.round((ms / 3600000) * 100) / 100;
   }
@@ -572,6 +638,7 @@ export class PontoRelatorioService {
 
       const salarioApurado =
         horasTrabalhadas * custoHora + horasExtras * custoHora * 0.5;
+      const valorHorasExtrasBase = horasExtras * custoHora;
       const adicionalHoraExtra = horasExtras * custoHora * 0.5;
       const valorHoraExtra = custoHora * 1.5;
       const valorTotalHorasExtras = horasExtras * valorHoraExtra;
@@ -594,6 +661,7 @@ export class PontoRelatorioService {
         saldo_devedor_horas: Math.round(saldoDevedorHoras * 100) / 100,
         custo_hora: custoHora,
         valor_hora_extra: Math.round(valorHoraExtra * 100) / 100,
+        valor_horas_extras_base: Math.round(valorHorasExtrasBase * 100) / 100,
         adicional_hora_extra: Math.round(adicionalHoraExtra * 100) / 100,
         valor_total_horas_extras: Math.round(valorTotalHorasExtras * 100) / 100,
         feriados_trabalhados_qtd: feriadosTrabalhadosNoPeriodo.length,
@@ -620,6 +688,7 @@ export class PontoRelatorioService {
       saldo_devedor_horas: 0,
       custo_hora: Number(f.custo_hora || 0) || 0,
       valor_hora_extra: 0,
+      valor_horas_extras_base: 0,
       adicional_hora_extra: 0,
       valor_total_horas_extras: 0,
       feriados_trabalhados_qtd: 0,
@@ -773,35 +842,59 @@ export class PontoRelatorioService {
 
         const headerBottomY = renderHeaderA4Png(doc);
 
-        let totalTrabalhadoMs = 0;
-        let totalMetaMs = 0;
         const cargaDecimal = this.cargaDiaHoras(payload.funcionario);
         const diasNoMes = new Date(payload.ano, payload.mes, 0).getDate();
+        const justificativasPorDia = new Map<string, number>();
+        for (const justificativa of payload.justificativas || []) {
+          const dia = this.dateKeySP(justificativa.data);
+          const minutos = Number(justificativa.minutos_justificados ?? 0) || 0;
+          justificativasPorDia.set(
+            dia,
+            (justificativasPorDia.get(dia) || 0) + minutos,
+          );
+        }
+        const diasCalculados = new Map<
+          string,
+          {
+            batidas: Array<{
+              id: number;
+              data_hora: Date;
+              hora: string;
+              tipo: string;
+              observacao?: string | null;
+            }>;
+            tempoLiquidoMin: number | null;
+            saldoMin: number | null;
+            inconsistente: boolean;
+            metaMin: number;
+          }
+        >();
+        let totalTrabalhadoMin = 0;
+        let totalSaldoMin = 0;
 
-        // 1. Cálculos de Totais (meta variável: Seg-Sex vs Sábado)
+        // 1. Cálculos de totais com a mesma regra da tela.
         for (let d = 1; d <= diasNoMes; d++) {
-          const dt = new Date(payload.ano, payload.mes - 1, d);
           const diaKey = `${payload.ano}-${String(payload.mes).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-          const metaDia = this.metaDiaParaData(diaKey, payload.funcionario);
-          totalMetaMs += metaDia * 3600000;
+          let metaMin = Math.round(
+            this.metaDiaParaData(diaKey, payload.funcionario) * 60,
+          );
+          const minutosJustificados = justificativasPorDia.get(diaKey) || 0;
+          if (minutosJustificados > 0) {
+            metaMin = Math.max(0, metaMin - minutosJustificados);
+          }
 
           const diaRegs = payload.registros.filter(
             (r) => this.dateKeySP(r.data_hora) === diaKey,
           );
-          for (let i = 0; i < diaRegs.length; i += 2) {
-            if (
-              diaRegs[i] &&
-              diaRegs[i + 1] &&
-              diaRegs[i].tipo === 'ENTRADA' &&
-              diaRegs[i + 1].tipo === 'SAIDA'
-            ) {
-              totalTrabalhadoMs +=
-                new Date(diaRegs[i + 1].data_hora).getTime() -
-                new Date(diaRegs[i].data_hora).getTime();
-            }
+          const calculoDia = this.calcularDiaPontoPdf(diaRegs, metaMin);
+          diasCalculados.set(diaKey, { ...calculoDia, metaMin });
+          if (!calculoDia.inconsistente && calculoDia.tempoLiquidoMin != null) {
+            totalTrabalhadoMin += calculoDia.tempoLiquidoMin;
+          }
+          if (!calculoDia.inconsistente && calculoDia.saldoMin != null) {
+            totalSaldoMin += calculoDia.saldoMin;
           }
         }
-        const saldoMs = totalTrabalhadoMs - totalMetaMs;
 
         // 2. Cabeçalho Resumo
         const resY = headerBottomY + 10;
@@ -834,11 +927,11 @@ export class PontoRelatorioService {
         doc
           .fillColor('#0f172a')
           .fontSize(10)
-          .text(this.msToHHMM(totalTrabalhadoMs), 380, resY + 22);
+          .text(this.minutosParaHHMM(totalTrabalhadoMin), 380, resY + 22);
         doc.fillColor('#64748b').text('SALDO PERÍODO', 460, resY + 12);
         doc
-          .fillColor(saldoMs >= 0 ? '#10b981' : '#ef4444')
-          .text(this.msToHHMM(saldoMs), 460, resY + 22);
+          .fillColor(totalSaldoMin >= 0 ? '#10b981' : '#ef4444')
+          .text(this.minutosParaHHMM(totalSaldoMin), 460, resY + 22);
 
         // 3. Tabela
         const col = {
@@ -879,53 +972,54 @@ export class PontoRelatorioService {
           doc.text(dataLabel, col.d, curY + 4);
 
           const diaKey = `${payload.ano}-${String(payload.mes).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-          const dRegs = payload.registros
-            .filter((r) => this.dateKeySP(r.data_hora) === diaKey)
-            .sort(
-              (a, b) =>
-                new Date(a.data_hora).getTime() -
-                new Date(b.data_hora).getTime(),
-            );
+          const calculoDia = diasCalculados.get(diaKey) || {
+            batidas: [],
+            tempoLiquidoMin: null,
+            saldoMin: null,
+            inconsistente: false,
+            metaMin: 0,
+          };
+          const dRegs = calculoDia.batidas;
           const e1 = dRegs[0],
             s1 = dRegs[1],
             e2 = dRegs[2],
             s2 = dRegs[3];
 
           doc.text(
-            e1 ? this.formatHora(e1.data_hora) : '--:--',
+            e1 ? e1.hora : '--:--',
             col.e1,
             curY + 4,
           );
           doc.text(
-            s1 ? this.formatHora(s1.data_hora) : '--:--',
+            s1 ? s1.hora : '--:--',
             col.s1,
             curY + 4,
           );
           doc.text(
-            e2 ? this.formatHora(e2.data_hora) : '--:--',
+            e2 ? e2.hora : '--:--',
             col.e2,
             curY + 4,
           );
           doc.text(
-            s2 ? this.formatHora(s2.data_hora) : '--:--',
+            s2 ? s2.hora : '--:--',
             col.s2,
             curY + 4,
           );
 
-          let dMs = 0;
-          if (e1 && s1 && e1.tipo === 'ENTRADA' && s1.tipo === 'SAIDA')
-            dMs +=
-              new Date(s1.data_hora).getTime() -
-              new Date(e1.data_hora).getTime();
-          if (e2 && s2 && e2.tipo === 'ENTRADA' && s2.tipo === 'SAIDA')
-            dMs +=
-              new Date(s2.data_hora).getTime() -
-              new Date(e2.data_hora).getTime();
-
-          if (dMs > 0)
+          if (calculoDia.inconsistente) {
+            doc
+              .fillColor('#dc2626')
+              .font('Helvetica-Bold')
+              .text('Inconsistente', col.t, curY + 4)
+              .font('Helvetica');
+          } else if ((calculoDia.tempoLiquidoMin || 0) > 0)
             doc
               .font('Helvetica-Bold')
-              .text(this.msToHHMM(dMs), col.t, curY + 4)
+              .text(
+                this.minutosParaHHMM(calculoDia.tempoLiquidoMin || 0),
+                col.t,
+                curY + 4,
+              )
               .font('Helvetica');
 
           const j = payload.justificativas.find(
@@ -1404,7 +1498,7 @@ export class PontoRelatorioService {
   }
 
   // --- MÉTODO PRINCIPAL ---
-  async gerarPdfMensalESalvar(params: {
+  async gerarPdfMensalBuffer(params: {
     funcionario_id: number;
     mes: number;
     ano: number;
@@ -1415,13 +1509,25 @@ export class PontoRelatorioService {
     if (!funcionario)
       throw new BadRequestException('Funcionário não encontrado');
 
-    const pdfBuffer = await this.gerarPdfPontoBuffer({
+    return this.gerarPdfPontoBuffer({
       funcionario,
       registros,
       justificativas,
       mes: params.mes,
       ano: params.ano,
     });
+  }
+
+  async gerarPdfMensalESalvar(params: {
+    funcionario_id: number;
+    mes: number;
+    ano: number;
+  }) {
+    const { funcionario } = await this.relatorioMensalPdfData(params);
+    if (!funcionario)
+      throw new BadRequestException('Funcionário não encontrado');
+
+    const pdfBuffer = await this.gerarPdfMensalBuffer(params);
 
     const dir = path.join(process.cwd(), 'uploads', 'funcionarios');
     await fs.mkdir(dir, { recursive: true });
