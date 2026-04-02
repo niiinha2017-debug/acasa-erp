@@ -240,8 +240,22 @@ export function consolidarSaldoPeriodo({
       if (setDiasSemMeta.has(dia)) metaHoras = 0
 
       let metaMin = Math.round(metaHoras * 60)
-      const minJust = Number(justMap[dia]) || 0
-      if (minJust > 0) metaMin = Math.max(0, metaMin - minJust)
+      const justEntry = justMap[dia]
+      if (Array.isArray(justEntry) && justEntry.length) {
+        const abonoIntegral = justEntry.some((item) => item?.minutos_justificados == null)
+        if (abonoIntegral) {
+          metaMin = 0
+        } else {
+          const minJust = justEntry.reduce((acc, item) => {
+            const valor = Number(item?.minutos_justificados)
+            return Number.isFinite(valor) && valor > 0 ? acc + valor : acc
+          }, 0)
+          if (minJust > 0) metaMin = Math.max(0, metaMin - minJust)
+        }
+      } else {
+        const minJust = Number(justEntry) || 0
+        if (minJust > 0) metaMin = Math.max(0, metaMin - minJust)
+      }
       const result = calcularDiaPonto(porDia.get(dia) || [], metaMin)
       const horas = result.tempoLiquidoMin != null ? result.tempoLiquidoMin / 60 : 0
       const saldo = result.saldoMin != null ? result.saldoMin / 60 : null

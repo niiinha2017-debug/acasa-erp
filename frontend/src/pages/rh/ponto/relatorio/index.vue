@@ -706,8 +706,8 @@ const justificativasPorDia = computed(() => {
   for (const j of justificativas.value || []) {
     const dia = extrairDiaJustificativa(j.data)
     if (!dia) continue
-    const min = Number(j.minutos_justificados ?? 0) || 0
-    map[dia] = (map[dia] || 0) + min
+    if (!map[dia]) map[dia] = []
+    map[dia].push(j)
   }
   return map
 })

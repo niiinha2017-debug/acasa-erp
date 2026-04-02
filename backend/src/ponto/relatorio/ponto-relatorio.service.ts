@@ -470,6 +470,37 @@ export class PontoRelatorioService {
     return this.horasParaDecimal(totalMs);
   }
 
+  private buildJustificativasPorFuncionarioDia(justificativas: any[]) {
+    const mapa = new Map<string, any[]>();
+    for (const justificativa of justificativas || []) {
+      const funcionarioId = Number(justificativa?.funcionario_id || 0);
+      const dia = this.dateKeySP(justificativa?.data);
+      if (!funcionarioId || !dia) continue;
+      const chave = `${funcionarioId}|${dia}`;
+      if (!mapa.has(chave)) mapa.set(chave, []);
+      mapa.get(chave)?.push(justificativa);
+    }
+    return mapa;
+  }
+
+  private aplicarJustificativasNaMeta(metaHoras: number, justificativasDia: any[]) {
+    const metaBase = Number(metaHoras || 0);
+    if (!metaBase || !Array.isArray(justificativasDia) || !justificativasDia.length) {
+      return metaBase;
+    }
+    const temAbonoIntegral = justificativasDia.some(
+      (item) => item?.minutos_justificados == null,
+    );
+    if (temAbonoIntegral) return 0;
+
+    const minutos = justificativasDia.reduce((acc, item) => {
+      const valor = Number(item?.minutos_justificados);
+      return Number.isFinite(valor) && valor > 0 ? acc + valor : acc;
+    }, 0);
+
+    return Math.max(0, metaBase - minutos / 60);
+  }
+
   // --- FECHAMENTO FOLHA ---
   async fechamentoFolha(params: {
     data_ini: string;
@@ -538,6 +569,18 @@ export class PontoRelatorioService {
       },
       orderBy: { data_hora: 'asc' },
     });
+    const justificativas = await this.prisma.ponto_justificativas.findMany({
+      where: {
+        data: { gte: ini, lte: fim },
+      },
+      select: {
+        funcionario_id: true,
+        data: true,
+        minutos_justificados: true,
+      },
+    });
+    const justificativasPorFuncionarioDia =
+      this.buildJustificativasPorFuncionarioDia(justificativas);
 
     const porFuncionario = new Map<number, any[]>();
     for (const r of registros) {
@@ -584,6 +627,15 @@ export class PontoRelatorioService {
         if (!porDiaF.has(key)) porDiaF.set(key, []);
         porDiaF.get(key).push(r);
       }
+      const diasComJustificativa = Array.from(
+        justificativasPorFuncionarioDia.keys(),
+      )
+        .filter((chave) => chave.startsWith(`${f.id}|`))
+        .map((chave) => chave.split('|')[1])
+        .filter((dia) => new Date(dia + 'T12:00:00').getDay() !== 0);
+      for (const dia of diasComJustificativa) {
+        if (!porDiaF.has(dia)) porDiaF.set(dia, []);
+      }
 
       let horasTrabalhadas = 0;
       let metaLegalTotal = 0;
@@ -595,15 +647,22 @@ export class PontoRelatorioService {
         const hDia = this.calcularHorasTrabalhadasDia(arr);
         horasTrabalhadas += hDia;
 
-        const metaLegalDia = this.metaDiaLegalParaFechamento(
-          key,
-          feriadosSemMeta,
+        const justificativasDia =
+          justificativasPorFuncionarioDia.get(`${f.id}|${key}`) || [];
+
+        const metaLegalDia = this.aplicarJustificativasNaMeta(
+          this.metaDiaLegalParaFechamento(
+            key,
+            feriadosSemMeta,
+          ),
+          justificativasDia,
         );
         metaLegalTotal += metaLegalDia;
 
-        const metaContratadaDia = feriadosSemMeta.has(key)
-          ? 0
-          : this.metaDiaParaData(key, f);
+        const metaContratadaDia = this.aplicarJustificativasNaMeta(
+          feriadosSemMeta.has(key) ? 0 : this.metaDiaParaData(key, f),
+          justificativasDia,
+        );
         metaContratadaTotal += metaContratadaDia;
       }
 
