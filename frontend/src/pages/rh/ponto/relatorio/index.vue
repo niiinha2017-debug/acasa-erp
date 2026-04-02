@@ -202,10 +202,18 @@
                           <span
                             v-for="just in justificativasDetalhesPorDia[linha.dia]"
                             :key="just.id"
-                            class="inline-flex items-center rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 text-[10px] font-bold uppercase"
+                            class="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 text-[10px] font-bold uppercase"
                             :title="just.descricao || just.tipo"
                           >
                             {{ just.tipo }}
+                            <button
+                              type="button"
+                              class="inline-flex items-center justify-center w-4 h-4 rounded-full text-amber-700 hover:text-red-600 hover:bg-white/70 transition-colors"
+                              title="Excluir justificativa"
+                              @click.stop="confirmarExcluirJustificativa(just)"
+                            >
+                              <i class="pi pi-times text-[9px]"></i>
+                            </button>
                           </span>
                         </div>
                       </div>
@@ -683,11 +691,21 @@ const dataFimEfetivo = computed(() => {
   return hoje < filtros.data_fim ? hoje : filtros.data_fim
 })
 
+function extrairDiaJustificativa(valor) {
+  const texto = String(valor || '').trim()
+  const match = texto.match(/^(\d{4}-\d{2}-\d{2})/)
+  if (match) return match[1]
+  const data = new Date(texto)
+  if (Number.isNaN(data.getTime())) return ''
+  return data.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+}
+
 /** Mapa dia (YYYY-MM-DD) -> minutos justificados para reduzir a meta no cálculo */
 const justificativasPorDia = computed(() => {
   const map = {}
   for (const j of justificativas.value || []) {
-    const dia = new Date(j.data).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+    const dia = extrairDiaJustificativa(j.data)
+    if (!dia) continue
     const min = Number(j.minutos_justificados ?? 0) || 0
     map[dia] = (map[dia] || 0) + min
   }
@@ -697,7 +715,8 @@ const justificativasPorDia = computed(() => {
 const justificativasDetalhesPorDia = computed(() => {
   const map = {}
   for (const j of justificativas.value || []) {
-    const dia = new Date(j.data).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+    const dia = extrairDiaJustificativa(j.data)
+    if (!dia) continue
     if (!map[dia]) map[dia] = []
     map[dia].push(j)
   }
@@ -1228,6 +1247,18 @@ async function confirmarSalvarJustificativa() {
     notify.error(e?.response?.data?.message || 'Erro ao salvar')
   } finally {
     modalJust.saving = false
+  }
+}
+
+async function confirmarExcluirJustificativa(justificativa) {
+  const descricao = String(justificativa?.tipo || 'justificativa').trim()
+  if (!(await confirm.show('Excluir justificativa', `Deseja excluir "${descricao}"?`))) return
+  try {
+    await PontoJustificativasService.remover(justificativa.id)
+    notify.success('Justificativa excluída!')
+    await buscar()
+  } catch (e) {
+    notify.error(e?.response?.data?.message || 'Erro ao excluir justificativa')
   }
 }
 
