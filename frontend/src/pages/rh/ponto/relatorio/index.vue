@@ -198,6 +198,16 @@
                         <span class="text-sm font-bold text-text-main">{{ fmtData(linha.dia) }}</span>
                         <span class="text-[10px] font-medium text-text-soft uppercase">{{ getDiaSemana(linha.dia) }}</span>
                         <span v-if="linha.inconsistente" class="text-[10px] font-bold text-red-600 mt-0.5">Inconsistente</span>
+                        <div v-if="justificativasDetalhesPorDia[linha.dia]?.length" class="mt-1.5 flex flex-wrap gap-1.5">
+                          <span
+                            v-for="just in justificativasDetalhesPorDia[linha.dia]"
+                            :key="just.id"
+                            class="inline-flex items-center rounded-full bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 text-[10px] font-bold uppercase"
+                            :title="just.descricao || just.tipo"
+                          >
+                            {{ just.tipo }}
+                          </span>
+                        </div>
                       </div>
                     </td>
                     <td class="px-4 py-3">
@@ -680,6 +690,16 @@ const justificativasPorDia = computed(() => {
     const dia = new Date(j.data).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
     const min = Number(j.minutos_justificados ?? 0) || 0
     map[dia] = (map[dia] || 0) + min
+  }
+  return map
+})
+
+const justificativasDetalhesPorDia = computed(() => {
+  const map = {}
+  for (const j of justificativas.value || []) {
+    const dia = new Date(j.data).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+    if (!map[dia]) map[dia] = []
+    map[dia].push(j)
   }
   return map
 })

@@ -15,6 +15,33 @@
               />
             </div>
 
+            <div class="funcionarios-list__status-filter" role="group" aria-label="Filtrar colaboradores por status">
+              <button
+                type="button"
+                class="funcionarios-list__status-chip"
+                :class="{ 'is-active': filtroStatus === 'ATIVO' }"
+                @click="filtroStatus = 'ATIVO'"
+              >
+                Ativos
+              </button>
+              <button
+                type="button"
+                class="funcionarios-list__status-chip"
+                :class="{ 'is-active': filtroStatus === 'INATIVO' }"
+                @click="filtroStatus = 'INATIVO'"
+              >
+                Inativos
+              </button>
+              <button
+                type="button"
+                class="funcionarios-list__status-chip"
+                :class="{ 'is-active': filtroStatus === 'TODOS' }"
+                @click="filtroStatus = 'TODOS'"
+              >
+                Todos
+              </button>
+            </div>
+
             <div
               v-if="selectedCount"
               class="funcionarios-list__bulk-actions"
@@ -220,6 +247,7 @@ definePage({ meta: { perm: 'funcionarios.ver' } })
 const router = useRouter()
 const loading = ref(true)
 const filtro = ref('')
+const filtroStatus = ref('ATIVO')
 const funcionarios = ref([])
 const selectedIds = ref(new Set())
 const pdfLoading = ref(false)
@@ -267,6 +295,10 @@ const funcionariosFiltrados = computed(() => {
   const termoDigits = onlyNumbers(termo)
 
   return (funcionarios.value || []).filter((f) => {
+    const status = getStatus(f)
+    if (filtroStatus.value === 'ATIVO' && status !== 'ATIVO') return false
+    if (filtroStatus.value === 'INATIVO' && status !== 'INATIVO') return false
+
     if (!termo) return true
 
     const nome = String(f.nome || '').toLowerCase()
@@ -548,6 +580,34 @@ async function gerarPdfSelecionados() {
 .funcionarios-list__search {
   width: 100%;
   order: 1;
+}
+
+.funcionarios-list__status-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem;
+  border: 1px solid rgba(214, 224, 234, 0.92);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ds-color-surface) 96%, white 4%);
+}
+
+.funcionarios-list__status-chip {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.52rem 0.82rem;
+  background: transparent;
+  color: var(--ds-color-text-faint);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.funcionarios-list__status-chip.is-active {
+  background: color-mix(in srgb, var(--ds-color-primary) 12%, white 88%);
+  color: var(--ds-color-primary-strong);
 }
 
 .funcionarios-list__bulk-actions {

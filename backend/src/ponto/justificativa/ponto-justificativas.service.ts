@@ -3,10 +3,15 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { SalvarPontoJustificativaDto } from '../justificativa/salvar-ponto-justificativa.dto';
 
 function asDia00(data: string) {
-  // força 00:00:00
-  const d = new Date(data);
+  const s = String(data || '').trim();
+  const match = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) throw new BadRequestException('Data inválida');
+  const [, yearStr, monthStr, dayStr] = match;
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  const d = new Date(year, month - 1, day, 0, 0, 0, 0);
   if (Number.isNaN(d.getTime())) throw new BadRequestException('Data inválida');
-  d.setHours(0, 0, 0, 0);
   return d;
 }
 
