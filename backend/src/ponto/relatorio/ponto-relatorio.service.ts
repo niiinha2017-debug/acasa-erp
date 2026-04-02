@@ -943,21 +943,35 @@ export class PontoRelatorioService {
           t: 280,
           obs: 335,
         };
-        let curY = resY + 60;
         const rowH = 14.3;
+        const pageBottomY = 748;
+        const drawTableHeader = () => {
+          doc.rect(30, curY, 535, rowH).fill('#1e293b');
+          doc.fillColor('#fff').fontSize(7).font('Helvetica-Bold');
+          doc.text('DATA', col.d, curY + 4);
+          doc.text('ENT 1', col.e1, curY + 4);
+          doc.text('SAI 1', col.s1, curY + 4);
+          doc.text('ENT 2', col.e2, curY + 4);
+          doc.text('SAI 2', col.s2, curY + 4);
+          doc.text('TOTAL', col.t, curY + 4);
+          doc.text('OBSERVAÇÕES', col.obs, curY + 4);
+          curY += rowH;
+        };
 
-        doc.rect(30, curY, 535, rowH).fill('#1e293b');
-        doc.fillColor('#fff').fontSize(7).font('Helvetica-Bold');
-        doc.text('DATA', col.d, curY + 4);
-        doc.text('ENT 1', col.e1, curY + 4);
-        doc.text('SAI 1', col.s1, curY + 4);
-        doc.text('ENT 2', col.e2, curY + 4);
-        doc.text('SAI 2', col.s2, curY + 4);
-        doc.text('TOTAL', col.t, curY + 4);
-        doc.text('OBSERVAÇÕES', col.obs, curY + 4);
-        curY += rowH;
+        const newPage = () => {
+          doc.addPage({ margin: 30, size: 'A4' });
+          curY = 36;
+          drawTableHeader();
+        };
+
+        let curY = resY + 60;
+        drawTableHeader();
 
         for (let d = 1; d <= diasNoMes; d++) {
+          if (curY + rowH > pageBottomY) {
+            newPage();
+          }
+
           const dt = new Date(payload.ano, payload.mes - 1, d);
           const diaSem = dt.getDay();
           if (diaSem === 0 || diaSem === 6)

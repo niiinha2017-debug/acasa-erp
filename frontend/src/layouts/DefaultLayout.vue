@@ -105,7 +105,16 @@ function flattenNavItems() {
 }
 const navItems = flattenNavItems()
 
-const activeRouteKey = computed(() => route.fullPath || route.path)
+function normalizeRouteKey(currentRoute) {
+  const path = currentRoute?.path || '/'
+
+  // Nessas telas, a query representa estado interno do filtro e não deve abrir uma nova aba.
+  if (path === '/rh/ponto/relatorio') return path
+
+  return currentRoute?.fullPath || path
+}
+
+const activeRouteKey = computed(() => normalizeRouteKey(route))
 
 function makeTabKey(routeKey) {
   tabSeq.value += 1
@@ -199,8 +208,8 @@ function upsertTab(currentRoute) {
   if (!currentRoute?.path) return
   if (currentRoute?.meta?.public) return
 
-  const routeKey = currentRoute.fullPath || currentRoute.path
-  const to = routeKey
+  const routeKey = normalizeRouteKey(currentRoute)
+  const to = currentRoute.fullPath || currentRoute.path
   const title = resolveTabTitle(currentRoute)
   const matchingIndexes = openTabs.value
     .map((tab, index) => (tab.routeKey === routeKey ? index : -1))
@@ -228,7 +237,7 @@ function upsertTab(currentRoute) {
 function goToTab(tab) {
   if (!tab?.to) return
   activeTabId.value = tab.key
-  if (tab.to === route.fullPath) return
+  if (tab.routeKey === activeRouteKey.value) return
   router.push(tab.to)
 }
 
@@ -315,7 +324,7 @@ watch(
 onMounted(() => {
   restoreTabs()
   if (openTabs.value.length) {
-    const current = openTabs.value.find((tab) => tab.routeKey === route.fullPath)
+    const current = openTabs.value.find((tab) => tab.routeKey === activeRouteKey.value)
     if (current) {
       activeTabId.value = current.key
     } else {
