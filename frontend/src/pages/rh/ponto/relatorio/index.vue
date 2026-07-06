@@ -181,7 +181,7 @@
                     <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-text-soft">Tempo</th>
                     <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-text-soft">
                       Saldo
-                      <span class="block text-[9px] font-normal text-slate-400 mt-0.5">({{ metaSaldoLabel }})</span>
+                      <span class="block text-[9px] font-normal normal-case text-slate-400 mt-0.5">({{ metaSaldoLabel }})</span>
                     </th>
                     <th class="px-5 py-3 text-right text-[10px] font-black uppercase tracking-wider text-text-soft">Ações</th>
                   </tr>
@@ -517,7 +517,7 @@ import {
 } from '@/services/index'
 import { ArquivosService } from '@/services/arquivos.service'
 import { notify } from '@/services/notify'
-import { consolidarSaldoPeriodo, derivarCargaDosHorarios } from '@/utils/utils'
+import { consolidarSaldoPeriodo, derivarCargaDosHorarios, horasDecimalParaHHMM } from '@/utils/utils'
 import { confirm } from '@/services/confirm'
 import { can } from '@/services/permissions'
 import { listDays, groupRegistrosByDia } from '@/utils/ponto'
@@ -668,12 +668,12 @@ const cargaHorariaLabel = computed(() => {
   const sem = Number(f.carga_horaria_semana || 0)
   if (derivado.cargaSegSex > 0 || derivado.cargaSabado > 0) {
     const parts = []
-    if (derivado.cargaSegSex > 0) parts.push(`${derivado.cargaSegSex.toFixed(1)}h (Seg–Sex)`)
-    if (derivado.cargaSabado > 0) parts.push(`${derivado.cargaSabado.toFixed(1)}h (Sáb)`)
+    if (derivado.cargaSegSex > 0) parts.push(`${horasDecimalParaHHMM(derivado.cargaSegSex)} (Seg–Sex)`)
+    if (derivado.cargaSabado > 0) parts.push(`${horasDecimalParaHHMM(derivado.cargaSabado)} (Sáb)`)
     return parts.join(' / ')
   }
-  if (dia > 0) return `${dia}h/dia`
-  if (sem > 0) return `${sem}h/semana`
+  if (dia > 0) return `${horasDecimalParaHHMM(dia)}/dia`
+  if (sem > 0) return `${horasDecimalParaHHMM(sem)}/semana`
   return 'Não definido'
 })
 
@@ -738,9 +738,18 @@ const resumo = computed(() => {
 })
 
 const metaSaldoLabel = computed(() => {
+  const f = funcionarioSelecionado.value
+  if (!f) return 'meta por dia'
+  const derivado = derivarCargaDosHorarios(f)
+  if (derivado.cargaSegSex > 0 || derivado.cargaSabado > 0) {
+    const parts = []
+    if (derivado.cargaSegSex > 0) parts.push(`Seg–Sex ${horasDecimalParaHHMM(derivado.cargaSegSex)}`)
+    if (derivado.cargaSabado > 0) parts.push(`Sáb ${horasDecimalParaHHMM(derivado.cargaSabado)}`)
+    return `meta ${parts.join(' · ')}`
+  }
   const base = Number(resumo.value?.metaDia || 0)
-  if (!base) return 'meta variavel por dia'
-  return `meta base ${base.toFixed(2)}h`
+  if (!base) return 'meta variável por dia'
+  return `meta base ${horasDecimalParaHHMM(base)}`
 })
 
 const diasComBatida = computed(() => {

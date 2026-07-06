@@ -977,7 +977,7 @@ export class PontoRelatorioService {
           .fillColor('#64748b')
           .text('Carga Diária: ', 35, resY + 35, { continued: true })
           .fillColor('#1e293b')
-          .text(`${cargaDecimal.toFixed(2)}h`);
+          .text(this.minutosParaHHMM(Math.round(cargaDecimal * 60)));
 
         doc
           .fillColor('#64748b')
